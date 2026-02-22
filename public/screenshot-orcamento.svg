@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844">
+  <rect width="390" height="844" fill="#0F2F3A"/>
+  <rect x="20" y="50" width="350" height="44" rx="8" fill="#1a5f7a"/>
+  <text x="195" y="80" font-family="system-ui,sans-serif" font-size="16" fill="#fff" text-anchor="middle">Pedir Or�amento</text>
+  <rect x="20" y="120" width="350" height="56" rx="8" fill="#2d3a3f"/>
+  <rect x="20" y="196" width="350" height="56" rx="8" fill="#2d3a3f"/>
+  <rect x="20" y="272" width="350" height="120" rx="8" fill="#2d3a3f"/>
+  <rect x="20" y="420" width="350" height="52" rx="8" fill="#2d7d6e"/>
+  <text x="195" y="453" font-family="system-ui,sans-serif" font-size="18" fill="#fff" text-anchor="middle">Enviar solicita��o</text>
+  <text x="195" y="560" font-family="system-ui,sans-serif" font-size="14" fill="#8a9a9f" text-anchor="middle">Formul�rio de or�amento (exemplo)</text>
+</svg>

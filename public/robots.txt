@@ -1,0 +1,3 @@
+# Bloqueia todos os motores de busca de rastrear e indexar o site
+User-agent: *
+Disallow: /
