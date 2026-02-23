@@ -4,6 +4,7 @@
  * sessão expirada (useSessionExpiredHandler), redirect (getRedirectPathForProfile).
  */
 import { authApi } from "@/lib/api/auth.api";
+import { profileApi } from "@/lib/api/profile.api";
 import { getRedirectPathForProfile } from "@/lib/auth/getRedirectPath";
 import { logger } from "@/lib/logger";
 import { validatePasswordStrength } from "@/lib/passwordPolicy";
@@ -136,20 +137,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const getRedirectPath = useCallback(getRedirectPathForProfile, []);
 
-  const signInWithGoogle = useCallback(async () => {
-    try {
-      const { error } = await authApi.signInWithOAuth("google");
-      if (error) {
-        toast.error("Erro ao conectar com Google. Tente novamente.");
+  const signInWithGoogle = useCallback(
+    async (redirectTo?: string) => {
+      try {
+        const { error } = await authApi.signInWithOAuth("google", {
+          redirectTo,
+        });
+        if (error) {
+          toast.error("Erro ao conectar com Google. Tente novamente.");
+          throw error;
+        }
+      } catch (error) {
+        logger.error("auth_sign_in_google_error", {
+          error: error instanceof Error ? error.message : String(error),
+        });
         throw error;
       }
-    } catch (error) {
-      logger.error("auth_sign_in_google_error", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
-    }
-  }, []);
+    },
+    []
+  );
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
@@ -196,7 +202,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: string,
       password: string,
       fullName: string,
-      role: "client" | "provider"
+      role: "client" | "provider",
+      options?: { emailRedirectTo?: string }
     ) => {
       try {
         const passwordValidation = validatePasswordStrength(password);
@@ -209,6 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const { user: newUser, error } = await authApi.signUp(email, password, {
           data: { full_name: fullName, role },
+          emailRedirectTo: options?.emailRedirectTo,
         });
 
         if (error) {
@@ -223,6 +231,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (newUser) {
+          const { error: updateError } = await profileApi.updateRole(
+            newUser.id,
+            role
+          );
+          if (updateError) {
+            logger.warn("auth_signup_profile_role_update_failed", {
+              userId: newUser.id,
+              error: updateError,
+            });
+          }
           trackEvent("signup_completed", { method: "email", user_role: role });
           if (!newUser.email_confirmed_at) {
             toast.success(

@@ -64,3 +64,54 @@ export function validatePasswordStrength(
     strength: Math.min(5, strength),
   };
 }
+
+export function getPasswordStrengthLabel(strength: number): string {
+  switch (strength) {
+    case 0:
+    case 1:
+      return "Muito fraca";
+    case 2:
+      return "Fraca";
+    case 3:
+      return "Média";
+    case 4:
+      return "Forte";
+    case 5:
+      return "Muito forte";
+    default:
+      return "Desconhecido";
+  }
+}
+
+export function getPasswordStrengthColor(strength: number): string {
+  switch (strength) {
+    case 0:
+    case 1:
+      return "bg-red-500";
+    case 2:
+      return "bg-orange-500";
+    case 3:
+      return "bg-yellow-500";
+    case 4:
+      return "bg-green-500";
+    case 5:
+      return "bg-emerald-500";
+    default:
+      return "bg-gray-300";
+  }
+}
+
+export const PASSWORD_REQUIREMENTS = [
+  {
+    label: "Mínimo 10 caracteres",
+    test: (p: string) => p.length >= 10,
+  },
+  { label: "1 letra maiúscula", test: (p: string) => /[A-Z]/.test(p) },
+  { label: "1 letra minúscula", test: (p: string) => /[a-z]/.test(p) },
+  { label: "1 número", test: (p: string) => /[0-9]/.test(p) },
+  {
+    label: "1 caractere especial",
+    test: (p: string) =>
+      /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~`]/.test(p),
+  },
+];

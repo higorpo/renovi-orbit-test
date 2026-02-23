@@ -13,12 +13,13 @@ export interface AuthContextType {
   loading: boolean;
   loadingSession: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (redirectTo?: string) => Promise<void>;
   signUp: (
     email: string,
     password: string,
     fullName: string,
-    role: "client" | "provider"
+    role: "client" | "provider",
+    options?: { emailRedirectTo?: string }
   ) => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;

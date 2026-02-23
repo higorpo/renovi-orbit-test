@@ -70,6 +70,30 @@ async function createProfileFromCurrentUser(
   return { profile: data as Profile, error: null };
 }
 
+export interface UpdateRoleResult {
+  error: string | null;
+}
+
+export async function updateRole(
+  userId: string,
+  role: "client" | "provider"
+): Promise<UpdateRoleResult> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ role })
+    .eq("id", userId);
+
+  if (error) {
+    logger.error("profile_update_role_error", {
+      error: error.message,
+      userId,
+    });
+    return { error: error.message };
+  }
+  return { error: null };
+}
+
 export const profileApi = {
   getProfile,
+  updateRole,
 };
