@@ -1,0 +1,14 @@
+---
+description: Lembrar de rodar yarn generate-supabase-types para atualizar tipagem do Supabase
+alwaysApply: true
+---
+
+# Atualização da tipagem do Supabase
+
+Quando for necessário **atualizar a tipagem do projeto relacionada ao Supabase** (por exemplo após mudanças no schema do banco, novas tabelas ou colunas), execute:
+
+```bash
+yarn generate-supabase-types
+```
+
+Esse comando gera/atualiza o arquivo `src/lib/supabase/database.types.ts` usando o project ID definido em `VITE_SUPABASE_PROJECT_ID` (`.env.local` ou `.env`). Lembre o usuário desse comando quando o contexto for alteração de tipos, schema ou queries relacionadas ao Supabase.
