@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
-import { toast } from "sonner";
 
 const REMEMBER_ME_KEY = "renovi_remember_login";
 
@@ -102,25 +101,8 @@ export default function Login() {
 
       await signIn(formData.email, formData.password);
       setTimeout(() => setSubmitting(false), 5000);
-    } catch (error) {
+    } catch {
       setSubmitting(false);
-      const errorMessage =
-        error instanceof Error ? error.message : "Erro ao fazer login";
-
-      if (errorMessage.includes("Invalid login credentials")) {
-        toast.error("Credenciais inválidas", {
-          description:
-            "Email ou senha incorretos. Verifique e tente novamente.",
-        });
-      } else if (errorMessage.includes("Email not confirmed")) {
-        toast.error("Email não confirmado", {
-          description: "Por favor, verifique seu email e confirme sua conta.",
-        });
-      } else {
-        toast.error("Erro ao fazer login", {
-          description: errorMessage,
-        });
-      }
     }
   };
 

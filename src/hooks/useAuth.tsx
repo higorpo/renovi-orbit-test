@@ -163,14 +163,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isExplicitSignIn.current = false;
         const msg = error.message;
         if (msg.includes("Email not confirmed")) {
-          toast.error("Por favor, confirme seu email antes de fazer login.");
+          toast.error("Email não confirmado", {
+            description:
+              "Por favor, verifique seu email e confirme sua conta.",
+          });
           throw new Error("Email não confirmado");
         }
         if (msg.includes("Invalid login credentials")) {
-          toast.error("Email ou senha incorretos.");
+          toast.error("Credenciais inválidas", {
+            description:
+              "Email ou senha incorretos. Verifique e tente novamente.",
+          });
           throw new Error("Credenciais inválidas");
         }
-        toast.error(msg || "Erro ao fazer login");
+        toast.error("Erro ao fazer login", { description: msg || undefined });
         throw error;
       }
 
