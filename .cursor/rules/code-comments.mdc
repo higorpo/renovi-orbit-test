@@ -1,0 +1,23 @@
+---
+description: Comentários no código devem ser em inglês e mínimos
+alwaysApply: true
+---
+
+# Comentários no código
+
+**Comentários dentro de arquivos de código** (`.ts`, `.tsx`, `.js`, `.jsx`, etc.) devem ser:
+
+1. **Sempre em inglês** – evita mistura de idiomas e facilita leitura por qualquer dev.
+2. **Mínimos** – só quando agregam valor (explica *por quê*, não *o quê*). Código claro reduz necessidade de comentário.
+
+## Boas práticas
+
+- Preferir nomes de variáveis/funções claros em vez de comentários explicativos.
+- Comentários breves: uma linha quando possível (ex.: `// Only allow own profile`).
+- Para blocos maiores, usar comentários em inglês descrevendo intenção ou restrição, não passo a passo.
+- Evitar comentários óbvios que repetem o código (ex.: `// set loading to true` acima de `setLoading(true)`).
+
+## Exceções
+
+- Strings para usuário (UI, mensagens, toasts) seguem o idioma do produto (ex.: PT-BR).
+- Documentação de projeto (README, ADRs, docs em markdown) pode estar em português se for o padrão do time.
