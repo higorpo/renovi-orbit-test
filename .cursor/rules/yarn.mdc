@@ -1,0 +1,15 @@
+---
+description: Este projeto usa yarn como gerenciador de pacotes
+alwaysApply: true
+---
+
+# Gerenciador de pacotes
+
+Este projeto usa **yarn**, não npm.
+
+- Para instalar dependências: `yarn` ou `yarn install`
+- Para adicionar pacotes: `yarn add <pacote>` (ou `yarn add -D <pacote>` para devDependencies)
+- Para remover: `yarn remove <pacote>`
+- Para scripts: `yarn dev`, `yarn build`, etc.
+
+Não use comandos `npm install`, `npm i`, `npx` para instalação de pacotes; prefira os equivalentes com yarn (`yarn add`, `yarn dlx` quando precisar de npx).
