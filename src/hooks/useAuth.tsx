@@ -5,7 +5,6 @@
  */
 import { authApi } from "@/lib/api/auth.api";
 import { getRedirectPathForProfile } from "@/lib/auth/getRedirectPath";
-import { cacheRemove } from "@/lib/cache";
 import { logger } from "@/lib/logger";
 import { validatePasswordStrength } from "@/lib/passwordPolicy";
 import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
@@ -137,6 +136,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const getRedirectPath = useCallback(getRedirectPathForProfile, []);
 
+  const signInWithGoogle = useCallback(async () => {
+    try {
+      const { error } = await authApi.signInWithOAuth("google");
+      if (error) {
+        toast.error("Erro ao conectar com Google. Tente novamente.");
+        throw error;
+      }
+    } catch (error) {
+      logger.error("auth_sign_in_google_error", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }, []);
+
   const signIn = useCallback(async (email: string, password: string) => {
     try {
       setLoading(true);
@@ -262,6 +276,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         loadingSession,
         signIn,
+        signInWithGoogle,
         signUp,
         signOut,
         refreshProfile,

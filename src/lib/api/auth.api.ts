@@ -23,6 +23,14 @@ export interface SignOutResult {
   error: Error | null;
 }
 
+export interface SignInWithOAuthOptions {
+  redirectTo?: string;
+}
+
+export interface SignInWithOAuthResult {
+  error: Error | null;
+}
+
 export const authApi = {
   async getSession(): Promise<GetSessionResult> {
     const { data, error } = await supabase.auth.getSession();
@@ -80,6 +88,19 @@ export const authApi = {
 
   async signOut(): Promise<SignOutResult> {
     const { error } = await supabase.auth.signOut();
+    return { error: error ? new Error(error.message) : null };
+  },
+
+  async signInWithOAuth(
+    provider: "google",
+    options?: SignInWithOAuthOptions
+  ): Promise<SignInWithOAuthResult> {
+    const redirectTo =
+      options?.redirectTo ?? `${typeof window !== "undefined" ? window.location.origin : ""}/login`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo },
+    });
     return { error: error ? new Error(error.message) : null };
   },
 };

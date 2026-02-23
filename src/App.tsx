@@ -8,7 +8,7 @@ function App() {
   const [count, setCount] = useState(0)
 
   return (
-    <>
+    <div className="max-w-[1280px] mx-auto px-8 py-8 text-center">
       <div>
         <a href="https://vite.dev" target="_blank">
           <img src={appLogo} className="logo" alt="Renovi logo" />
@@ -30,7 +30,7 @@ function App() {
         Click on the Vite and React logos to learn more
       </p>
       <PWABadge />
-    </>
+    </div>
   )
 }
 

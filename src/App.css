@@ -1,9 +1,4 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
+/* Layout constraints only for the home page; #root stays full width for routes like /login */
 
 .logo {
   height: 6em;
