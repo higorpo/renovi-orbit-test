@@ -2,7 +2,7 @@ import { profileApi } from "@/lib/api/profile.api";
 import { cacheGet, cacheRemove, cacheSet } from "@/lib/cache";
 import { logger } from "@/lib/logger";
 import { useCallback, useRef } from "react";
-import type { Profile } from "./auth.types";
+import type { Profile } from "../lib/auth/auth.types";
 
 const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
 const DUPLICATE_FETCH_THRESHOLD_MS = 1000;

@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
 import { authApi } from "./auth.api";
-import type { Profile } from "@/hooks/auth.types";
+import type { Profile } from "@/lib/auth/auth.types";
 
 export interface GetProfileResult {
   profile: Profile | null;

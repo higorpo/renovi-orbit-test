@@ -19,8 +19,8 @@ import {
 } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import type { AuthContextType, Profile } from "./auth.types";
-import { processAuthEvent } from "./authStateHandlers";
+import type { AuthContextType, Profile } from "../lib/auth/auth.types";
+import { processAuthEvent } from "../lib/auth/authStateHandlers";
 import { useAnalytics } from "./useAnalytics";
 import { useProfileFetcher } from "./useProfileFetcher";
 

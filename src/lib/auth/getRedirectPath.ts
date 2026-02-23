@@ -1,4 +1,4 @@
-import type { Profile } from "@/hooks/auth.types";
+import type { Profile } from "@/lib/auth/auth.types";
 
 /**
  * Returns the redirect path after login based on profile role.
