@@ -50,7 +50,8 @@ Todo código migrado deve priorizar:
 
 - **Clean Code**: nomes claros, funções e arquivos com responsabilidade única, pouca duplicação, comentários apenas onde agregam valor.
 - **Clean Architecture** (adaptada ao front): separação clara entre UI, lógica de aplicação, serviços e dados; dependências apontando para dentro (regras de negócio não dependem de frameworks ou detalhes de UI).
-- Uso consistente dos padrões já adotados no Orbit (ex.: estrutura de pastas, convenções de componentes e hooks).
+- **Camada de API**: não chamar Supabase/backend direto em componentes ou hooks; usar `src/lib/api/` (ver regra em `.cursor/rules/api-layer.mdc`).
+- Uso consistente dos padrões já adotados no Orbit (ex.: estrutura de pastas, convenções de componentes e hooks, logger em `lib/`).
 
 ---
 
@@ -75,6 +76,7 @@ Todo código migrado deve priorizar:
   - o que era o problema,
   - o que foi alterado,
   - e por que essa alteração é mais segura.
+- **Supabase:** ao criar ou alterar tabelas com dados de usuário, sempre usar **RLS (Row Level Security)** e políticas explícitas; nunca deixar dados escopados por usuário acessíveis sem restrição (regra em `.cursor/rules/supabase-migrations.mdc`).
 
 ---
 
@@ -84,9 +86,53 @@ Todo código migrado deve priorizar:
 |-----------|------|
 | Planejamento | Sempre planejar e entender estrutura nova + legado + alterações antes de codar. |
 | Tarefas | Quebrar tarefas grandes em subtarefas menores e gerenciáveis. |
-| Arquivos grandes / muitos imports | Quebrar em passos; migrar dependências/imports em conjunto; ordem lógica (tipos → utils → componentes → agregados). |
+| Arquivos grandes / muitos imports | Quebrar em passos; migrar dependências/imports em conjunto; ordem lógica (tipos → utils → api → componentes → agregados). |
 | Qualidade | Clean Code e Clean Architecture; código funcional e sem erros. |
+| API / backend | Não chamar Supabase direto em hooks/componentes; usar `src/lib/api/`. Em `lib/` usar logger, não console. |
+| Supabase / SQL | RLS obrigatório em tabelas com dados de usuário; políticas explícitas. Todo texto em `.sql` em inglês. |
 | Incerteza | Perguntar ao usuário; nada inventado. |
-| Segurança | Corrigir com melhores práticas e avisar o usuário sobre o problema e a correção. |
+| Segurança | Corrigir com melhores práticas; RLS no Supabase; avisar o usuário sobre problema e correção. |
 
 Ao receber uma solicitação de migração, comece pelo **planejamento** (estrutura do Orbit, escopo do legado, plano de migração e ordem de execução) e só então prossiga para a implementação em passos incrementais.
+
+---
+
+## 9. Yarn e restrição de plataforma
+
+Este projeto usa **yarn** (ver regra em `.cursor/rules/yarn.mdc`). Ao adicionar pacotes, se a instalação falhar por incompatibilidade de engine (ex.: "The engine \"node\" is incompatible"), use **`yarn add --ignore-engines <pacote>`** ou `yarn install --ignore-engines`. Informe o usuário dessa restrição quando sugerir instalação de dependências que exijam Node mais recente.
+
+---
+
+## 10. Padrões do Orbit (API layer, logger, tipos)
+
+Ao migrar ou escrever código novo, siga os padrões já adotados no projeto:
+
+### 10.1 Camada de API (obrigatório)
+
+- **Não** coloque chamadas diretas ao Supabase (ou outro backend) dentro de componentes ou hooks.
+- Toda comunicação com o backend deve ficar em **`src/lib/api/`** (ex.: `auth.api.ts`, `profile.api.ts`).
+- Hooks e componentes apenas **chamam** funções dessa camada e tratam estado/UI (loading, toasts, navegação).
+- Detalhes: `.cursor/rules/api-layer.mdc`.
+
+### 10.2 Logger em vez de console
+
+- Em **`src/lib/`** (incluindo `src/lib/api/`), use sempre **`@/lib/logger`** (debug, info, warn, error) e **não** use `console.log` / `console.error` / `console.warn` diretamente.
+- Detalhes: `.cursor/rules/logger.mdc`.
+
+### 10.3 Tipos e retornos
+
+- APIs devem retornar objetos explícitos (ex.: `{ profile, error }`, `{ session, error }`).
+- Quando o shape do backend (ex.: linha do Supabase) for igual ao tipo do domínio (ex.: `Profile`), prefira **type assertion** (`data as Profile`) em vez de funções de mapeamento repetitivas.
+
+### 10.4 Supabase: segurança e SQL
+
+- **Segurança:** ao criar ou alterar tabelas com dados de usuário, **sempre** ativar **RLS (Row Level Security)** e definir políticas explícitas (SELECT/INSERT/UPDATE/DELETE) com princípio de menor privilégio (ex.: `auth.uid() = id`). Nunca deixar tabela sensível sem RLS ou sem políticas.
+- **SQL em inglês:** todo texto em arquivos `.sql` (comentários, `COMMENT ON`, mensagens) deve ser **sempre em inglês**.
+- Detalhes: `.cursor/rules/supabase-migrations.mdc`.
+
+### 10.5 Outros aprendizados
+
+- **Supabase types:** ao alterar schema ou tabelas, rodar `yarn generate-supabase-types` (regra em `.cursor/rules/supabase-types.mdc`).
+- **Constantes:** preferir constantes nomeadas no topo do arquivo (ex.: `PROFILE_CACHE_TTL_MS`, `AUTH_DEBOUNCE_MS`) em vez de números mágicos.
+- **Toast:** o projeto usa **sonner**; `<Toaster />` está em `RootLayout`. Instalar com `yarn add --ignore-engines sonner` se houver erro de engine.
+- **Migrações:** ficam em `supabase/migrations/` com nome `YYYYMMDDHHMMSS_descricao_em_ingles.sql`.

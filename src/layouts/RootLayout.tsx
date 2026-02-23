@@ -1,5 +1,11 @@
 import { Outlet } from 'react-router'
+import { Toaster } from 'sonner'
 
 export function RootLayout() {
-  return <Outlet />
+  return (
+    <>
+      <Outlet />
+      <Toaster richColors position="top-center" />
+    </>
+  )
 }

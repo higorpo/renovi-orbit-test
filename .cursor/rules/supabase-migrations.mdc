@@ -1,0 +1,52 @@
+---
+description: Migrações Supabase - segurança (RLS) e SQL sempre em inglês
+alwaysApply: true
+---
+
+# Migrações Supabase (SQL)
+
+## Idioma
+
+**Todo texto em arquivos `.sql` (comentários, `COMMENT ON`, mensagens) deve ser em inglês.** Isso inclui migrações em `supabase/migrations/` e qualquer outro SQL do projeto.
+
+## Segurança: RLS (Row Level Security)
+
+Ao criar ou alterar tabelas que armazenam dados de usuário no Supabase, **sempre considerar segurança**:
+
+1. **Ativar RLS** em toda tabela que tenha dados sensíveis ou escopados por usuário:
+   ```sql
+   alter table public.<table> enable row level security;
+   ```
+
+2. **Definir políticas** explícitas para SELECT, INSERT, UPDATE, DELETE. Não deixar tabela com RLS ativo e sem políticas (bloqueia todo acesso).
+
+3. **Princípio mínimo de privilégio**: cada política deve restringir ao mínimo necessário (ex.: usuário só acessa linhas onde `auth.uid() = user_id` ou `auth.uid() = id`).
+
+4. **Tabelas de perfil** (ex.: `profiles` com `id` = `auth.users.id`):
+   - `references auth.users(id) on delete cascade` para manter integridade.
+   - Políticas: usuário pode SELECT/UPDATE/INSERT apenas a linha onde `auth.uid() = id`.
+
+5. **Serviço/anon key**: lembrar que o cliente usa a anon key; as políticas RLS são avaliadas com `auth.uid()` (jwt). Se o usuário não estiver logado, `auth.uid()` é null — políticas que usam `auth.uid() = id` impedem acesso anônimo a dados de outros.
+
+## Nomenclatura e estrutura
+
+- Migrações em **`supabase/migrations/`** com nome **`YYYYMMDDHHMMSS_descricao_curta.sql`** (timestamp + descrição em inglês).
+- Comentários no SQL em inglês; `COMMENT ON table/column` em inglês.
+
+## Como rodar as migrações
+
+- **Requisito:** A CLI do Supabase é usada via **npx** (pacote **supabase** em devDependencies). Após `yarn` (ou `yarn install`), os scripts `db:migrate` e `db:reset` rodam **npx supabase**; não é necessário instalar a CLI globalmente.
+
+- **Aplicar migrações no projeto remoto (banco vinculado):**
+  ```bash
+  yarn db:migrate
+  ```
+  Ou diretamente: `supabase db push`. O projeto precisa estar vinculado (`supabase link`) ao projeto Supabase remoto.
+
+- **Banco local (desenvolvimento):** Se usar `supabase start`, as migrações em `supabase/migrations/` são aplicadas ao subir. Para recriar o banco e rodar todas de novo: `yarn db:reset` (ou `supabase db reset`).
+
+- Scripts no `package.json`: `db:migrate` (push para remoto), `db:reset` (reset + migrações no local).
+
+## Após alterar schema
+
+Rodar **`yarn generate-supabase-types`** para atualizar `src/lib/supabase/database.types.ts` (ver `.cursor/rules/supabase-types.mdc`).
