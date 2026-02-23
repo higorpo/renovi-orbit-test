@@ -18,16 +18,18 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      'rlig' 1,
+      'calt' 1;
     font-display: swap;
     min-height: 100vh;
   }
 
   /* Minimum touch target size for mobile (44x44px) */
   button,
-  a[role="button"],
-  input[type="button"],
-  input[type="submit"],
+  a[role='button'],
+  input[type='button'],
+  input[type='submit'],
   .btn {
     @apply min-h-[44px] min-w-[44px];
   }
@@ -149,7 +151,6 @@ All colors MUST be HSL.
    GLOBAL TABS STYLES - Responsividade
    ======================================== */
 @layer components {
-
   /* Container de tabs com scroll horizontal */
   .scrollbar-hide {
     -ms-overflow-style: none;
@@ -170,10 +171,9 @@ All colors MUST be HSL.
    FORM VALIDATION STYLES - Global
    ======================================== */
 @layer components {
-
   /* Label com indicador de obrigatório */
   .form-label-required::after {
-    content: " *";
+    content: ' *';
     @apply text-destructive ml-0.5;
   }
 
@@ -197,7 +197,6 @@ All colors MUST be HSL.
   }
 
   @keyframes shake {
-
     0%,
     100% {
       transform: translateX(0);
@@ -230,7 +229,6 @@ All colors MUST be HSL.
    GLOBAL RESPONSIVE UTILITIES
    ======================================== */
 @layer utilities {
-
   /* Truncate text with ellipsis */
   .truncate-responsive {
     @apply truncate;
@@ -311,7 +309,6 @@ All colors MUST be HSL.
    PREMIUM ANIMATIONS - Dashboard Header
    ======================================== */
 @layer utilities {
-
   /* Metal Shimmer - Para barras de progresso */
   @keyframes metal-shimmer {
     0% {
@@ -329,10 +326,12 @@ All colors MUST be HSL.
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(110deg,
-        transparent 25%,
-        rgba(255, 255, 255, 0.4) 50%,
-        transparent 75%);
+    background: linear-gradient(
+      110deg,
+      transparent 25%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 75%
+    );
     background-size: 200% 100%;
     animation: metal-shimmer 4s ease-in-out infinite;
     mix-blend-mode: overlay;
@@ -342,7 +341,6 @@ All colors MUST be HSL.
 
   /* Pulse Subtle - Para CTAs e destaques discretos */
   @keyframes pulse-subtle {
-
     0%,
     100% {
       opacity: 1;
@@ -361,7 +359,6 @@ All colors MUST be HSL.
 
   /* Glow Pulse - Para efeitos de brilho */
   @keyframes glow-pulse {
-
     0%,
     100% {
       box-shadow: 0 0 20px rgba(52, 211, 153, 0.3);
@@ -413,25 +410,24 @@ All colors MUST be HSL.
    ACCESSIBILITY - WCAG AA COMPLIANT
    ======================================== */
 @layer base {
-
   /* Focus states universais - visíveis e consistentes */
   a:focus-visible,
   button:focus-visible,
-  [role="button"]:focus-visible {
+  [role='button']:focus-visible {
     @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-background;
     outline-offset: 2px;
   }
 
   /* Focus dentro de cards escuros (ProviderHUD) */
-  [style*="background: linear-gradient(135deg, #0F2F3A"] a:focus-visible,
-  [style*="background: linear-gradient(135deg, #0F2F3A"] button:focus-visible {
+  [style*='background: linear-gradient(135deg, #0F2F3A'] a:focus-visible,
+  [style*='background: linear-gradient(135deg, #0F2F3A'] button:focus-visible {
     @apply ring-accent ring-offset-primary;
   }
 
   /* Garantir que elementos interativos sejam tabuláveis */
   a[href],
   button:not([disabled]),
-  [role="button"]:not([aria-disabled="true"]) {
+  [role='button']:not([aria-disabled='true']) {
     cursor: pointer;
   }
 
@@ -450,7 +446,6 @@ All colors MUST be HSL.
    HIGH CONTRAST MODE SUPPORT
    ======================================== */
 @media (prefers-contrast: high) {
-
   .glass-card,
   .glass-card-dark {
     border-width: 2px;
@@ -466,7 +461,6 @@ All colors MUST be HSL.
    REDUCED MOTION SUPPORT
    ======================================== */
 @media (prefers-reduced-motion: reduce) {
-
   *,
   *::before,
   *::after {

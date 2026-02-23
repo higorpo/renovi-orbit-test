@@ -1,9 +1,9 @@
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface SkeletonCardProps {
-  className?: string;
-  lines?: number;
+  className?: string
+  lines?: number
 }
 
 export function SkeletonCard({ className, lines = 3 }: SkeletonCardProps) {
@@ -16,7 +16,7 @@ export function SkeletonCard({ className, lines = 3 }: SkeletonCardProps) {
         ))}
       </div>
     </Card>
-  );
+  )
 }
 
 export function SkeletonJobCard() {
@@ -36,5 +36,5 @@ export function SkeletonJobCard() {
         <Skeleton className="h-5 w-1/3" />
       </div>
     </Card>
-  );
+  )
 }

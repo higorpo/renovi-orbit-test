@@ -1,8 +1,8 @@
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface SkeletonStatsProps {
-  count?: number;
+  count?: number
 }
 
 export function SkeletonStats({ count = 4 }: SkeletonStatsProps) {
@@ -15,14 +15,17 @@ export function SkeletonStats({ count = 4 }: SkeletonStatsProps) {
         </Card>
       ))}
     </div>
-  );
+  )
 }
 
 export function SkeletonList({ count = 3 }: { count?: number }) {
   return (
     <div className="space-y-3">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+        <div
+          key={i}
+          className="flex items-center gap-3 p-3 rounded-lg bg-muted/50"
+        >
           <Skeleton className="h-10 w-10 rounded-full" />
           <div className="flex-1 space-y-2">
             <Skeleton className="h-4 w-3/4" />
@@ -31,5 +34,5 @@ export function SkeletonList({ count = 3 }: { count?: number }) {
         </div>
       ))}
     </div>
-  );
+  )
 }
