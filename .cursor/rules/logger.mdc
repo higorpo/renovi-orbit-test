@@ -1,0 +1,32 @@
+---
+description: Usar logger em vez de console em lib e API
+alwaysApply: true
+---
+
+# Logger em vez de console
+
+Em **`src/lib/`** (incluindo `src/lib/api/`), **sempre use o logger** (`@/lib/logger`) e **não use** `console.log`, `console.error`, `console.warn` ou `console.debug` diretamente.
+
+## Uso
+
+```ts
+import { logger } from "@/lib/logger";
+
+logger.debug("evento_debug", { userId, step });
+logger.info("evento_info", { action: "created" });
+logger.warn("evento_warn", { reason: "cache_miss" });
+logger.error("evento_error", { error: err.message });
+```
+
+## Motivo
+
+- Logs estruturados (evento + contexto) facilitam análise e ferramentas (ex.: Sentry).
+- O logger pode ser configurado por ambiente (ex.: menos verbosidade em produção).
+- Consistência no formato em todo o projeto.
+
+## Onde vale
+
+- Módulos em `src/lib/` (api, cache, utils, etc.).
+- Hooks que fazem lógica relevante (ex.: useAuth) também podem usar o logger para eventos de fluxo (login, logout, erro de sessão).
+
+Em componentes de UI pura, evite logs; se precisar de feedback para o usuário, use toasts ou estado de erro.
