@@ -1,68 +1,487 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+@layer base {
+  * {
+    @apply border-border;
+  }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
+  html {
+    @apply overflow-x-hidden;
+    scroll-behavior: smooth;
+  }
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    font-display: swap;
+    min-height: 100vh;
+  }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
+  /* Minimum touch target size for mobile (44x44px) */
+  button,
+  a[role="button"],
+  input[type="button"],
+  input[type="submit"],
+  .btn {
+    @apply min-h-[44px] min-w-[44px];
+  }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
   :root {
-    color: #213547;
-    background-color: #ffffff;
+    /* Renovi Brand Colors - Azul Petróleo e Cobre */
+    --background: 0 0% 100%;
+    --foreground: 240 5% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 5% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 5% 11%;
+
+    /* Primary: Azul Petróleo #0F2F3A */
+    --primary: 196 60% 15%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: Cobre #C57A3A */
+    --secondary: 26 54% 50%;
+    --secondary-foreground: 0 0% 100%;
+
+    /* Muted: Cinza Claro */
+    --muted: 180 5% 91%;
+    --muted-foreground: 240 5% 11%;
+
+    /* Accent: Cobre para destaques */
+    --accent: 26 54% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 180 5% 91%;
+    --input: 180 5% 91%;
+    --ring: 196 60% 15%;
+
+    --radius: 0.75rem;
+
+    /* Sidebar */
+    --sidebar-background: 196 60% 15%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 26 54% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 196 50% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 196 50% 20%;
+    --sidebar-ring: 26 54% 50%;
+
+    /* Custom Renovi tokens */
+    --copper: 26 54% 50%;
+    --copper-dark: 26 54% 40%;
+    --teal: 196 60% 15%;
+    --teal-light: 196 50% 25%;
   }
-  a:hover {
-    color: #747bff;
+
+  .dark {
+    --background: 240 5% 11%;
+    --foreground: 0 0% 100%;
+
+    --card: 196 60% 15%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 196 60% 15%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 0 0% 100%;
+    --primary-foreground: 196 60% 15%;
+
+    --secondary: 26 54% 50%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 196 50% 20%;
+    --muted-foreground: 180 5% 91%;
+
+    --accent: 26 54% 50%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 196 50% 20%;
+    --input: 196 50% 20%;
+    --ring: 26 54% 50%;
+
+    --sidebar-background: 196 70% 10%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 26 54% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 196 50% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 196 50% 20%;
+    --sidebar-ring: 26 54% 50%;
   }
-  button {
-    background-color: #f9f9f9;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+/* ========================================
+   GLOBAL TABS STYLES - Responsividade
+   ======================================== */
+@layer components {
+
+  /* Container de tabs com scroll horizontal */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Text overflow ellipsis utility */
+  .text-overflow-ellipsis {
+    text-overflow: ellipsis;
+  }
+}
+
+/* ========================================
+   FORM VALIDATION STYLES - Global
+   ======================================== */
+@layer components {
+
+  /* Label com indicador de obrigatório */
+  .form-label-required::after {
+    content: " *";
+    @apply text-destructive ml-0.5;
+  }
+
+  /* Input com estado de erro */
+  .form-input-error {
+    @apply border-destructive focus-visible:ring-destructive;
+  }
+
+  .form-input-error::placeholder {
+    @apply text-destructive/60;
+  }
+
+  /* Mensagem de erro */
+  .form-error-message {
+    @apply text-xs text-destructive mt-1;
+  }
+
+  /* Grupo de campo com erro - adiciona animação sutil */
+  .form-field-error {
+    animation: shake 0.3s ease-in-out;
+  }
+
+  @keyframes shake {
+
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+
+    25% {
+      transform: translateX(-2px);
+    }
+
+    75% {
+      transform: translateX(2px);
+    }
+  }
+}
+
+/* ========================================
+   DARK MODE FORM STYLES
+   ======================================== */
+.dark {
+  .form-input-error {
+    @apply border-destructive;
+  }
+
+  .form-input-error::placeholder {
+    @apply text-destructive/70;
+  }
+}
+
+/* ========================================
+   GLOBAL RESPONSIVE UTILITIES
+   ======================================== */
+@layer utilities {
+
+  /* Truncate text with ellipsis */
+  .truncate-responsive {
+    @apply truncate;
+  }
+
+  /* Icon container that doesn't shrink */
+  .icon-container {
+    @apply flex-shrink-0 flex items-center justify-center;
+  }
+
+  /* KPI Grid responsivo */
+  .kpi-grid {
+    @apply grid gap-3 sm:gap-4;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (min-width: 768px) {
+    .kpi-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .kpi-grid {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+
+  /* Card content que não transborda */
+  .card-content-safe {
+    @apply overflow-hidden;
+  }
+
+  /* Value text responsivo */
+  .value-text {
+    @apply text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold;
+  }
+
+  /* Subtitle text responsivo */
+  .subtitle-text {
+    @apply text-xs sm:text-sm text-muted-foreground;
+  }
+
+  /* Icon responsivo */
+  .icon-responsive {
+    @apply h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6;
+  }
+
+  /* Container de tabela responsivo com scroll */
+  .table-responsive {
+    @apply w-full overflow-x-auto;
+  }
+
+  .table-responsive::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .table-responsive::-webkit-scrollbar-track {
+    @apply bg-muted rounded;
+  }
+
+  .table-responsive::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded;
+  }
+
+  /* Scrollbar hide utility */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ========================================
+   PREMIUM ANIMATIONS - Dashboard Header
+   ======================================== */
+@layer utilities {
+
+  /* Metal Shimmer - Para barras de progresso */
+  @keyframes metal-shimmer {
+    0% {
+      background-position: -200% center;
+    }
+
+    100% {
+      background-position: 200% center;
+    }
+  }
+
+  .progress-shimmer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(110deg,
+        transparent 25%,
+        rgba(255, 255, 255, 0.4) 50%,
+        transparent 75%);
+    background-size: 200% 100%;
+    animation: metal-shimmer 4s ease-in-out infinite;
+    mix-blend-mode: overlay;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  /* Pulse Subtle - Para CTAs e destaques discretos */
+  @keyframes pulse-subtle {
+
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    50% {
+      opacity: 0.85;
+      transform: scale(1.02);
+    }
+  }
+
+  .animate-pulse-subtle {
+    animation: pulse-subtle 3s ease-in-out infinite;
+  }
+
+  /* Glow Pulse - Para efeitos de brilho */
+  @keyframes glow-pulse {
+
+    0%,
+    100% {
+      box-shadow: 0 0 20px rgba(52, 211, 153, 0.3);
+    }
+
+    50% {
+      box-shadow: 0 0 30px rgba(52, 211, 153, 0.5);
+    }
+  }
+
+  .animate-glow-pulse {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+
+  /* Fade In Up - Para entradas suaves */
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Glassmorphism utility classes */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  .glass-card-dark {
+    background: rgba(15, 47, 58, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* ========================================
+   ACCESSIBILITY - WCAG AA COMPLIANT
+   ======================================== */
+@layer base {
+
+  /* Focus states universais - visíveis e consistentes */
+  a:focus-visible,
+  button:focus-visible,
+  [role="button"]:focus-visible {
+    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-background;
+    outline-offset: 2px;
+  }
+
+  /* Focus dentro de cards escuros (ProviderHUD) */
+  [style*="background: linear-gradient(135deg, #0F2F3A"] a:focus-visible,
+  [style*="background: linear-gradient(135deg, #0F2F3A"] button:focus-visible {
+    @apply ring-accent ring-offset-primary;
+  }
+
+  /* Garantir que elementos interativos sejam tabuláveis */
+  a[href],
+  button:not([disabled]),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  /* Indicador de skip para usuários de teclado */
+  .skip-to-content:focus {
+    @apply fixed top-4 left-4 z-50 bg-accent text-accent-foreground px-4 py-2 rounded-lg;
+    transform: translateY(0);
+  }
+
+  .skip-to-content:not(:focus) {
+    @apply sr-only;
+  }
+}
+
+/* ========================================
+   HIGH CONTRAST MODE SUPPORT
+   ======================================== */
+@media (prefers-contrast: high) {
+
+  .glass-card,
+  .glass-card-dark {
+    border-width: 2px;
+    border-color: currentColor;
+  }
+
+  .progress-shimmer {
+    opacity: 0.8;
+  }
+}
+
+/* ========================================
+   REDUCED MOTION SUPPORT
+   ======================================== */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .progress-shimmer {
+    animation: none;
+  }
+
+  .animate-pulse-subtle,
+  .animate-glow-pulse,
+  .animate-fade-in-up {
+    animation: none;
   }
 }
