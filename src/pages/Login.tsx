@@ -244,7 +244,7 @@ export default function Login() {
               </Button>
             </form>
 
-            <div className="flex items-center gap-3 my-6">
+            {/* <div className="flex items-center gap-3 my-6">
               <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/30 to-white/30" />
               <span className="text-sm text-white/70 font-medium">Ou</span>
               <div className="flex-1 h-px bg-gradient-to-l from-transparent via-white/30 to-white/30" />
@@ -276,7 +276,7 @@ export default function Login() {
                 />
               </svg>
               Entrar com Google
-            </Button>
+            </Button> */}
 
             <div className="mt-8 text-center space-y-4">
               <p className="text-white/70 text-sm">Não tem uma conta?</p>
