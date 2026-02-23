@@ -1,0 +1,94 @@
+import { useState, useEffect, useCallback } from "react";
+import {
+  signInSchema,
+  zodIssuesToFieldErrors,
+  type SignInFormData,
+} from "./validation";
+import {
+  loadRememberMe,
+  saveRememberMe,
+  clearRememberMe,
+} from "./rememberMe";
+
+const SUBMITTING_RESET_DELAY_MS = 5000;
+
+export interface UseLoginFormArgs {
+  signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  resetRedirect: () => void;
+}
+
+export function useLoginForm({
+  signIn,
+  signInWithGoogle,
+  resetRedirect,
+}: UseLoginFormArgs) {
+  const [formData, setFormData] = useState<SignInFormData>({
+    email: "",
+    password: "",
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  useEffect(() => {
+    const saved = loadRememberMe();
+    if (saved) {
+      setFormData((prev) => ({ ...prev, email: saved.email }));
+      setRememberMe(true);
+    }
+  }, []);
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setErrors({});
+      setSubmitting(true);
+      resetRedirect();
+
+      try {
+        const result = signInSchema.safeParse(formData);
+        if (!result.success) {
+          setErrors(zodIssuesToFieldErrors(result.error.issues));
+          setSubmitting(false);
+          return;
+        }
+
+        if (rememberMe) {
+          saveRememberMe(formData.email);
+        } else {
+          clearRememberMe();
+        }
+
+        await signIn(formData.email, formData.password);
+        setTimeout(() => setSubmitting(false), SUBMITTING_RESET_DELAY_MS);
+      } catch {
+        setSubmitting(false);
+      }
+    },
+    [formData, rememberMe, signIn, resetRedirect]
+  );
+
+  const handleGoogleLogin = useCallback(async () => {
+    try {
+      setSubmitting(true);
+      await signInWithGoogle();
+    } catch {
+      setSubmitting(false);
+    }
+  }, [signInWithGoogle]);
+
+  return {
+    formData,
+    setFormData,
+    errors,
+    submitting,
+    showPassword,
+    setShowPassword,
+    rememberMe,
+    setRememberMe,
+    handleSubmit,
+    handleGoogleLogin,
+  };
+}
