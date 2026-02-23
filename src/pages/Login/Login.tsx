@@ -115,19 +115,23 @@ export default function Login() {
                 </span>
               </div>
               <div className="flex items-center justify-center gap-3 text-xs text-white/50 flex-wrap">
-                <Link
-                  to="/juridico/termos-de-uso"
+                <a
+                  href={`${(import.meta.env.VITE_MAIN_SITE_URL ?? "").replace(/\/$/, "")}/juridico/termos-de-uso`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="hover:text-[#C57A3A] transition-colors"
                 >
                   Termos de Uso
-                </Link>
+                </a>
                 <span>•</span>
-                <Link
-                  to="/juridico/politica-de-privacidade"
+                <a
+                  href={`${(import.meta.env.VITE_MAIN_SITE_URL ?? "").replace(/\/$/, "")}/juridico/politica-de-privacidade`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="hover:text-[#C57A3A] transition-colors"
                 >
                   Privacidade
-                </Link>
+                </a>
               </div>
             </div>
           </div>
