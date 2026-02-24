@@ -39,12 +39,12 @@ export const router = createBrowserRouter([
           {
             path: 'esqueceu-senha',
             element: <ForgotPassword />,
-          },
-          {
-            path: 'recuperar-senha',
-            element: <ResetPassword />,
-          },
+          }
         ],
+      },
+      {
+        path: 'recuperar-senha',
+        element: <ResetPassword />,
       },
       {
         element: <ProtectedRoute allowedRoles={['client']}><Outlet /></ProtectedRoute>,

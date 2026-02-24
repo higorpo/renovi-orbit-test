@@ -49,7 +49,12 @@ export function useResetPassword() {
         const { error } = await authApi.updateUserPassword(formData.password);
 
         if (error) {
-          setErrors({ password: error.message });
+          if (error.message.includes('New password should be different')) {
+            setErrors({ password: 'A nova senha deve ser diferente da senha atual.' });
+          } else {
+            setErrors({ password: error.message });
+          }
+
           setSubmitting(false);
           return;
         }
