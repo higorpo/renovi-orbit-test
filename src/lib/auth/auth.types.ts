@@ -1,8 +1,20 @@
 import type { User, Session } from "@supabase/supabase-js";
 
+export type ProfileRole = "client" | "provider" | "admin";
+
+export const ALLOWED_ROLES: readonly ProfileRole[] = [
+  "client",
+  "provider",
+  "admin",
+] as const;
+
+export function isAllowedRole(role: string | null | undefined): role is ProfileRole {
+  return role != null && ALLOWED_ROLES.includes(role as ProfileRole);
+}
+
 export interface Profile {
   id: string;
-  role: "client" | "provider" | "admin";
+  role: ProfileRole;
   full_name: string;
 }
 

@@ -1,40 +1,17 @@
-import { useRef } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link } from "react-router";
 import { useAuth } from "@/hooks/useAuth";
-import { useRedirectWhenAuthenticated } from "./useRedirectWhenAuthenticated";
 import { useOAuthErrorFromUrl } from "./useOAuthErrorFromUrl";
 import { useLoginForm } from "./useLoginForm";
 import { LoginForm } from "./LoginForm";
 
 export default function Login() {
-  const [searchParams] = useSearchParams();
-  const redirectTo = searchParams.get("redirect");
-  const submittingRef = useRef(false);
-
-  const { signIn, signInWithGoogle, user, profile, loading, getRedirectPath } =
-    useAuth();
-
-  const resetRedirectRef = useRef<() => void>(() => {});
+  const { signIn, signInWithGoogle } = useAuth();
 
   const form = useLoginForm({
     signIn,
     signInWithGoogle,
-    resetRedirect: () => resetRedirectRef.current(),
   });
 
-  const { resetRedirect } = useRedirectWhenAuthenticated({
-    user,
-    profile,
-    loading,
-    submittingRef,
-    submitting: form.submitting,
-    redirectTo,
-    getRedirectPath,
-  });
-
-  resetRedirectRef.current = resetRedirect;
-
-  submittingRef.current = form.submitting;
   useOAuthErrorFromUrl();
 
   return (

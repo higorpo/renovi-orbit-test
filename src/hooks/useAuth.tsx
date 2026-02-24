@@ -1,11 +1,10 @@
 /**
  * AuthProvider: orquestra estado de auth e perfil.
  * Delega: carregamento de perfil (useProfileFetcher), eventos de auth (authStateHandlers),
- * sessão expirada (useSessionExpiredHandler), redirect (getRedirectPathForProfile).
+ * sessão expirada (useSessionExpiredHandler), redirect por role.
  */
 import { authApi } from "@/lib/api/auth.api";
 import { profileApi } from "@/lib/api/profile.api";
-import { getRedirectPathForProfile } from "@/lib/auth/getRedirectPath";
 import { logger } from "@/lib/logger";
 import { validatePasswordStrength } from "@/lib/passwordPolicy";
 import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
@@ -27,6 +26,17 @@ import { useProfileFetcher } from "./useProfileFetcher";
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_DEBOUNCE_MS = 300;
+
+function getRedirectPathForProfile(profile: Profile): string {
+  if (profile.role === "admin") return "/admin/dashboard";
+  if (profile.role === "provider") return "/dashboard/provider";
+  if (profile.role === "client") return "/dashboard/client";
+  if (import.meta.env.DEV) {
+    logger.warn("auth_unknown_role", { role: profile.role });
+  }
+  return "/onboarding";
+}
+
 const SESSION_FETCH_TIMEOUT_MS = 5000;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

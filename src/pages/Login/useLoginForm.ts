@@ -11,13 +11,11 @@ const SUBMITTING_RESET_DELAY_MS = 5000;
 export interface UseLoginFormArgs {
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
-  resetRedirect: () => void;
 }
 
 export function useLoginForm({
   signIn,
   signInWithGoogle,
-  resetRedirect,
 }: UseLoginFormArgs) {
   const [formData, setFormData] = useState<SignInFormData>({
     email: "",
@@ -37,7 +35,6 @@ export function useLoginForm({
       e.preventDefault();
       setErrors({});
       setSubmitting(true);
-      resetRedirect();
 
       try {
         const result = signInSchema.safeParse(formData);
@@ -54,7 +51,7 @@ export function useLoginForm({
         setSubmitting(false);
       }
     },
-    [formData, rememberMe, signIn, resetRedirect]
+    [formData, rememberMe, signIn]
   );
 
   const handleGoogleLogin = useCallback(async () => {
