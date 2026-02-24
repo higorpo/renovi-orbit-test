@@ -222,8 +222,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           throw new Error(passwordValidation.errors[0]);
         }
 
-        setLoading(true);
-
         const { user: newUser, error } = await authApi.signUp(email, password, {
           data: { full_name: fullName, role },
           emailRedirectTo: options?.emailRedirectTo,
