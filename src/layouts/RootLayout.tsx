@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router'
 import { Toaster } from 'sonner'
-import { AuthProvider } from '@/hooks/useAuth'
+import { AuthProvider } from '@/features/auth'
 
 export function RootLayout() {
   return (

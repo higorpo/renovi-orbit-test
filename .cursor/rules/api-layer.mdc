@@ -7,17 +7,17 @@ alwaysApply: true
 
 ## Regra principal
 
-**Não faça chamadas diretas ao Supabase (ou a outros clientes de backend) dentro de componentes React nem dentro de hooks de UI.** Toda comunicação com o backend deve passar por uma **camada de API** em `src/lib/api/`.
+**Não faça chamadas diretas ao Supabase (ou a outros clientes de backend) dentro de componentes React nem dentro de hooks de UI.** Toda comunicação com o backend deve passar por uma **camada de API** dentro da feature correspondente (`src/features/<feature>/api/`) ou, para serviços verdadeiramente transversais, em `src/lib/`.
 
 ## Padrão adotado
 
-- **`src/lib/api/`** – Módulos que encapsulam todas as chamadas ao backend (Supabase, REST, etc.).
-  - Ex.: `auth.api.ts` (getSession, signIn, signUp, signOut, onAuthStateChange), `profile.api.ts` (getProfile).
+- **`src/features/<feature>/api/`** – Módulos que encapsulam chamadas ao backend específicas de uma feature.
+  - Ex.: `src/features/auth/api/auth.api.ts` (getSession, signIn, signUp, signOut), `src/features/auth/api/profile.api.ts` (getProfile).
   - Retornam dados tipados e erros; não usam hooks, não acessam estado da UI nem navegação.
-  - Podem importar `@/lib/supabase/client`, `@/lib/logger` e tipos do projeto.
+  - Podem importar `@/lib/supabase/client`, `@/lib/logger` e tipos da própria feature.
 
 - **Hooks (ex.: `useAuth`)** – Orquestram estado, cache, efeitos e UI.
-  - Chamam apenas funções da camada de API (`authApi`, `profileApi`, etc.).
+  - Chamam apenas funções da camada de API da feature (`authApi`, `profileApi`, etc.).
   - Cuidam de loading, toasts, navegação, validações de formulário e debounce quando fizer sentido.
 
 - **Componentes** – Consomem hooks e exibem UI; não importam o cliente Supabase nem chamam a API diretamente.
@@ -34,6 +34,6 @@ alwaysApply: true
 - As funções da API devem retornar objetos explícitos, ex.: `{ profile, error }`, `{ session, error }`.
 - Quando o shape retornado pelo backend (ex.: linha do Supabase) for igual ao tipo do domínio (ex.: `Profile`), prefira **type assertion** (`data as Profile`) em vez de funções de mapeamento campo a campo, para evitar duplicação e manutenção desnecessária.
 
-## Ao migrar código legado
+## Ao criar código novo
 
-Se o código legado chama `supabase` diretamente no componente ou no hook, extraia essas chamadas para um novo arquivo em `src/lib/api/` (por domínio: auth, profile, etc.) e deixe o hook apenas invocando a API e tratando estado/UI.
+Coloque a camada de API dentro da feature correspondente (`src/features/<feature>/api/`). Não crie arquivos de API avulsos em `src/lib/api/` — esse diretório foi descontinuado em favor da arquitetura feature-based.
