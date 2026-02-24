@@ -1,4 +1,3 @@
-import { Link } from "react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -386,14 +385,14 @@ export function ClientSignupForm({
             </div>
           </div>
 
-          <div className="bg-white/5 rounded-xl p-4 space-y-2">
+          <div className="bg-white/5 rounded-xl p-4">
             <p className="text-white/60 text-sm">Nome</p>
             <p className="text-white font-medium">{formData.fullName}</p>
             <p className="text-white/60 text-sm mt-3">Email</p>
             <p className="text-white font-medium">{formData.email}</p>
           </div>
 
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-3">
             <Checkbox
               id="terms"
               checked={formData.termsAccepted}
@@ -410,23 +409,23 @@ export function ClientSignupForm({
               className="text-sm text-white/70 cursor-pointer"
             >
               Li e aceito os{" "}
-              <Link
-                to="/juridico/termos-de-uso"
+              <a
+                href={`${(import.meta.env.VITE_MAIN_SITE_URL ?? "").replace(/\/$/, "")}/juridico/termos-de-uso`}
                 className="text-[#C57A3A] hover:underline"
                 target="_blank"
                 rel="noopener noreferrer"
               >
                 Termos de Uso
-              </Link>{" "}
+              </a>{" "}
               e a{" "}
-              <Link
-                to="/juridico/politica-de-privacidade"
+              <a
+                href={`${(import.meta.env.VITE_MAIN_SITE_URL ?? "").replace(/\/$/, "")}/juridico/politica-de-privacidade`}
                 className="text-[#C57A3A] hover:underline"
                 target="_blank"
                 rel="noopener noreferrer"
               >
                 Política de Privacidade
-              </Link>
+              </a>
             </label>
           </div>
           {errors.termsAccepted && (
