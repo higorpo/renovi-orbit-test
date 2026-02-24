@@ -117,8 +117,18 @@ export const authApi = {
     provider: "google",
     options?: SignInWithOAuthOptions
   ): Promise<SignInWithOAuthResult> {
-    const redirectTo =
-      options?.redirectTo ?? `${typeof window !== "undefined" ? window.location.origin : ""}/login`;
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "";
+    let redirectTo = options?.redirectTo ?? `${origin}/login`;
+
+    // Only allow same-origin or relative path to prevent open redirect
+    if (redirectTo && !redirectTo.startsWith(origin) && !redirectTo.startsWith("/")) {
+      redirectTo = `${origin}/login`;
+    }
+    if (redirectTo.startsWith("/") && !redirectTo.startsWith("//")) {
+      redirectTo = `${origin}${redirectTo}`;
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo },

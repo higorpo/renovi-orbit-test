@@ -1,12 +1,14 @@
-/**
- * Route guards: centralised auth and role-based access.
- * - ProtectedRoute: requires auth; optional allowedRoles; redirects to login or role dashboard.
- * - GuestOnlyRoute: for login/signup; redirects to dashboard when already authenticated.
- */
 import { useEffect, type ReactNode } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router";
 import { useAuth } from "../hooks/useAuth";
 import { isAllowedRole, type ProfileRole } from "../types/auth.types";
+
+/** Only allow relative paths (same-origin). Prevents open redirect via ?redirect= */
+function isSafeRedirect(value: string | null): value is string {
+  if (!value || typeof value !== "string") return false;
+  const trimmed = value.trim();
+  return trimmed.startsWith("/") && !trimmed.startsWith("//");
+}
 
 function buildLoginRedirect(path: string, search: string): string {
   const redirect = path + search;
@@ -78,7 +80,7 @@ export function GuestOnlyRoute({ children }: GuestOnlyRouteProps) {
     if (loading || !user || !profile) return;
     if (!isAllowedRole(profile.role)) return;
 
-    const path = redirectTo ?? getRedirectPath(profile);
+    const path = isSafeRedirect(redirectTo) ? redirectTo : getRedirectPath(profile);
     navigate(path, { replace: true });
   }, [loading, user, profile, redirectTo, getRedirectPath, navigate]);
 

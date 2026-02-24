@@ -41,6 +41,15 @@ export function useResetPassword() {
           return;
         }
 
+        const passwordValidation = validatePasswordStrength(formData.password);
+        if (!passwordValidation.valid) {
+          setErrors({
+            password: passwordValidation.errors[0] ?? "Senha não atende aos requisitos de segurança.",
+          });
+          setSubmitting(false);
+          return;
+        }
+
         const { error } = await authApi.updateUserPassword(formData.password);
 
         if (error) {

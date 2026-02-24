@@ -78,6 +78,12 @@ export async function updateRole(
   userId: string,
   role: "client" | "provider"
 ): Promise<UpdateRoleResult> {
+  // Never allow admin via application; enforce even if type is bypassed
+  if (role === "admin") {
+    logger.warn("profile_update_role_rejected", { reason: "admin_not_allowed", userId });
+    return { error: "Role admin cannot be set via application." };
+  }
+
   const { error } = await supabase
     .from("profiles")
     .update({ role })
