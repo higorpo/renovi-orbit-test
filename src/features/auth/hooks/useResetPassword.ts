@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router";
 import {
   resetPasswordSchema,
@@ -6,12 +6,13 @@ import {
   type ResetPasswordFormData,
 } from "@/features/auth/types/resetPassword.validation";
 import { authApi } from "@/features/auth/api/auth.api";
+import { useAuth } from "@/features/auth";
 import { toast } from "sonner";
 import { validatePasswordStrength } from "@/features/auth/utils/passwordPolicy";
 
 export function useResetPassword() {
   const navigate = useNavigate();
-  const [recoveryMode, setRecoveryMode] = useState(false);
+  const { user } = useAuth();
   const [formData, setFormData] = useState<ResetPasswordFormData>({
     password: "",
     confirmPassword: "",
@@ -23,14 +24,8 @@ export function useResetPassword() {
 
   const passwordStrength = validatePasswordStrength(formData.password).strength;
 
-  useEffect(() => {
-    const { unsubscribe } = authApi.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setRecoveryMode(true);
-      }
-    });
-    return unsubscribe;
-  }, []);
+  // Show password form when user is logged in (e.g. via recovery link Supabase logs them in)
+  const recoveryMode = Boolean(user);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
