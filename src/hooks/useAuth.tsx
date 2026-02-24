@@ -169,13 +169,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
-      setLoading(true);
       isExplicitSignIn.current = true;
 
       const { error } = await authApi.signInWithPassword(email, password);
 
       if (error) {
-        setLoading(false);
         isExplicitSignIn.current = false;
         const msg = error.message;
         if (msg.includes("Email not confirmed")) {
@@ -201,7 +199,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logger.error("auth_sign_in_error", {
         error: error instanceof Error ? error.message : String(error),
       });
-      setLoading(false);
       isExplicitSignIn.current = false;
       throw error;
     }
@@ -228,7 +225,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (error) {
-          setLoading(false);
           if (error.message.includes("User already registered")) {
             toast.error(
               "Este email já está cadastrado. Faça login ou recupere sua senha."
@@ -254,7 +250,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             toast.success(
               "Cadastro realizado! Por favor, confirme seu email para fazer login."
             );
-            setLoading(false);
             return;
           }
           toast.success("Cadastro realizado! Redirecionando...");
@@ -263,7 +258,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logger.error("auth_signup_error", {
           error: error instanceof Error ? error.message : String(error),
         });
-        setLoading(false);
         const errMsg =
           error instanceof Error ? error.message : String(error);
         if (!errMsg.includes("Usuário já existe")) {
