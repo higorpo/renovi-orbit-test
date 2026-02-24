@@ -4,6 +4,8 @@ import App from './App'
 import Login from './pages/Login/Login'
 import ClientSignup from './pages/ClientSignup/ClientSignup'
 import ProviderSignup from './pages/ProviderSignup/ProviderSignup'
+import ForgotPassword from './pages/ForgotPassword/ForgotPassword'
+import ResetPassword from './pages/ResetPassword/ResetPassword'
 import { GuestOnlyRoute, ProtectedRoute } from '@/lib/auth/routeGuards'
 
 export const router = createBrowserRouter([
@@ -33,6 +35,14 @@ export const router = createBrowserRouter([
           {
             path: 'cadastro/profissional',
             element: <ProviderSignup />,
+          },
+          {
+            path: 'esqueceu-senha',
+            element: <ForgotPassword />,
+          },
+          {
+            path: 'recuperar-senha',
+            element: <ResetPassword />,
           },
         ],
       },

@@ -111,7 +111,7 @@ export function LoginForm({
           </label>
         </div>
         <Link
-          to="/forgot-password"
+          to="/esqueceu-senha"
           className="text-sm text-white/70 hover:text-[#C57A3A] transition-colors font-medium"
         >
           Esqueceu a senha?

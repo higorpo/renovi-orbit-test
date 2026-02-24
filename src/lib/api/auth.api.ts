@@ -32,6 +32,14 @@ export interface SignInWithOAuthResult {
   error: Error | null;
 }
 
+export interface ResetPasswordForEmailResult {
+  error: Error | null;
+}
+
+export interface UpdateUserPasswordResult {
+  error: Error | null;
+}
+
 export const authApi = {
   async getSession(): Promise<GetSessionResult> {
     const { data, error } = await supabase.auth.getSession();
@@ -116,5 +124,28 @@ export const authApi = {
       options: { redirectTo },
     });
     return { error: error ? new Error(error.message) : null };
+  },
+
+  async resetPasswordForEmail(
+    email: string,
+    redirectTo: string
+  ): Promise<ResetPasswordForEmailResult> {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo,
+    });
+    if (error) {
+      logger.warn("auth_reset_password_email_error", { error: error.message });
+      return { error: new Error(error.message) };
+    }
+    return { error: null };
+  },
+
+  async updateUserPassword(password: string): Promise<UpdateUserPasswordResult> {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) {
+      logger.warn("auth_update_password_error", { error: error.message });
+      return { error: new Error(error.message) };
+    }
+    return { error: null };
   },
 };
