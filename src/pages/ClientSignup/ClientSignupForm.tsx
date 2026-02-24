@@ -15,6 +15,10 @@ import {
   Wallet,
   Check,
   X,
+  Mail,
+  Inbox,
+  Link2,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -29,12 +33,33 @@ const INPUT_CLASS =
 const INPUT_ERROR_CLASS = "border-red-400";
 const ERROR_MESSAGE_CLASS = "text-sm text-red-400";
 
+const CONFIRM_STEPS = [
+  {
+    icon: Mail,
+    title: "Acesse sua caixa de entrada",
+    description: "Abra o email que você utilizou no cadastro.",
+  },
+  {
+    icon: Inbox,
+    title: "Procure o email da Renovi",
+    description:
+      "Assunto algo como \"Confirme seu email\" ou \"Confirmar cadastro\".",
+  },
+  {
+    icon: Link2,
+    title: "Clique no link de confirmação",
+    description: "Um único clique confirma sua conta e libera o login.",
+  },
+] as const;
+
 export interface ClientSignupFormProps {
   currentStep: number;
   formData: ClientSignupFormData;
   setFormData: React.Dispatch<React.SetStateAction<ClientSignupFormData>>;
   errors: Record<string, string>;
   submitting: boolean;
+  signupSuccess?: boolean;
+  registeredEmail?: string;
   showPassword: boolean;
   setShowPassword: (value: boolean) => void;
   showConfirmPassword: boolean;
@@ -52,6 +77,8 @@ export function ClientSignupForm({
   setFormData,
   errors,
   submitting,
+  signupSuccess = false,
+  registeredEmail = "",
   showPassword,
   setShowPassword,
   showConfirmPassword,
@@ -60,8 +87,73 @@ export function ClientSignupForm({
   onNext,
   onBack,
   onSubmit,
-  onGoogleSignup,
+  onGoogleSignup: _onGoogleSignup,
 }: ClientSignupFormProps) {
+  if (signupSuccess) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="space-y-6"
+      >
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#C57A3A]/20">
+            <CheckCircle2 className="h-8 w-8 text-[#C57A3A]" aria-hidden />
+          </div>
+          <h2 className="text-xl font-semibold text-white">
+            Cadastro realizado com sucesso!
+          </h2>
+          <p className="mt-2 text-sm text-white/80">
+            Enviamos um link de confirmação para{" "}
+            <span className="font-medium text-white">{registeredEmail}</span>.
+            Confirme sua conta para fazer login e usar a plataforma.
+          </p>
+        </div>
+
+        <div className="rounded-xl bg-white/5 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-white/90">
+            Como confirmar sua conta
+          </h3>
+          <ol className="space-y-4">
+            {CONFIRM_STEPS.map((step, idx) => {
+              const Icon = step.icon;
+              return (
+                <li key={idx} className="flex gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#C57A3A]/20 text-[#C57A3A]">
+                    <Icon className="h-4 w-4" aria-hidden />
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-white">
+                      {idx + 1}. {step.title}
+                    </p>
+                    <p className="mt-0.5 text-xs text-white/70">
+                      {step.description}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
+
+        <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" aria-hidden />
+          <div>
+            <p className="text-sm font-medium text-amber-200">
+              Não encontrou o email?
+            </p>
+            <p className="mt-1 text-xs text-white/80">
+              Verifique a pasta de <strong>spam</strong> ou{" "}
+              <strong>lixo eletrônico</strong>. O email pode levar alguns minutos
+              para chegar. Se ainda não aparecer, entre em contato conosco.
+            </p>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <>
       {/* Progress steps */}
@@ -152,7 +244,7 @@ export function ClientSignupForm({
 
           <Button
             type="button"
-            onClick={onGoogleSignup}
+            onClick={_onGoogleSignup}
             disabled={submitting}
             variant="outline"
             className="w-full h-12 bg-white hover:bg-gray-50 text-gray-900 border-white/30 font-semibold"

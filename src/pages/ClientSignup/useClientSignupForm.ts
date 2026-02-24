@@ -25,6 +25,7 @@ export function useClientSignupForm() {
   const { signUp, signInWithGoogle } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState<ClientSignupFormData>({
@@ -111,6 +112,7 @@ export function useClientSignupForm() {
       await signUp(formData.email, formData.password, formData.fullName, "client", {
         emailRedirectTo: getEmailRedirectTo(),
       });
+      setSignupSuccess(true);
     } finally {
       setSubmitting(false);
     }
@@ -125,6 +127,7 @@ export function useClientSignupForm() {
     setErrors,
     currentStep,
     submitting,
+    signupSuccess,
     showPassword,
     setShowPassword,
     showConfirmPassword,

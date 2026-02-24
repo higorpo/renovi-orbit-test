@@ -1,5 +1,6 @@
 import type { Session, User, AuthChangeEvent } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
+import { logger } from "../logger";
 
 export interface GetSessionResult {
   session: Session | null;
@@ -81,7 +82,8 @@ export const authApi = {
       },
     });
     if (error) {
-      return { user: data.user, error: new Error(error.message) };
+      logger.error('auth_signup_error', { error: error.message });
+      return { user: data.user, error: new Error('Não foi possível criar a conta. Tente novamente.') };
     }
     // When "Confirm email" is enabled, Supabase does not return an error for existing emails;
     // it returns a user with empty identities. Treat that as "already registered".

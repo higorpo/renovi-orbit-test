@@ -247,7 +247,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               "Cadastro realizado! Por favor, confirme seu email para fazer login."
             );
             setLoading(false);
-            navigate("/signup-success");
             return;
           }
           toast.success("Cadastro realizado! Redirecionando...");
@@ -265,7 +264,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
     },
-    [navigate, trackEvent]
+    [trackEvent]
   );
 
   const signOut = useCallback(async () => {

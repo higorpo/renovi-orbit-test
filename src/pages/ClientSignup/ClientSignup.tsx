@@ -43,6 +43,8 @@ export default function ClientSignup() {
               setFormData={form.setFormData}
               errors={form.errors}
               submitting={form.submitting}
+              signupSuccess={form.signupSuccess}
+              registeredEmail={form.formData.email}
               showPassword={form.showPassword}
               setShowPassword={form.setShowPassword}
               showConfirmPassword={form.showConfirmPassword}
