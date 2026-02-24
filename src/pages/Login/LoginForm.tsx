@@ -105,8 +105,9 @@ export function LoginForm({
           <label
             htmlFor="remember-me"
             className="text-sm text-white/70 cursor-pointer select-none hover:text-white/90 transition-colors"
+            title="Se desmarcado, você sairá ao fechar o navegador"
           >
-            Lembrar
+            Manter conectado
           </label>
         </div>
         <Link

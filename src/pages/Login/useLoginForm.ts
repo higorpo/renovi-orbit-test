@@ -4,11 +4,7 @@ import {
   zodIssuesToFieldErrors,
   type SignInFormData,
 } from "./validation";
-import {
-  loadRememberMe,
-  saveRememberMe,
-  clearRememberMe,
-} from "./rememberMe";
+import { getPersistSession, setPersistSession } from "@/lib/auth/persistSession";
 
 const SUBMITTING_RESET_DELAY_MS = 5000;
 
@@ -30,14 +26,10 @@ export function useLoginForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
   useEffect(() => {
-    const saved = loadRememberMe();
-    if (saved) {
-      setFormData((prev) => ({ ...prev, email: saved.email }));
-      setRememberMe(true);
-    }
+    setRememberMe(getPersistSession());
   }, []);
 
   const handleSubmit = useCallback(
@@ -55,12 +47,7 @@ export function useLoginForm({
           return;
         }
 
-        if (rememberMe) {
-          saveRememberMe(formData.email);
-        } else {
-          clearRememberMe();
-        }
-
+        setPersistSession(rememberMe);
         await signIn(formData.email, formData.password);
         setTimeout(() => setSubmitting(false), SUBMITTING_RESET_DELAY_MS);
       } catch {
@@ -73,11 +60,12 @@ export function useLoginForm({
   const handleGoogleLogin = useCallback(async () => {
     try {
       setSubmitting(true);
+      setPersistSession(rememberMe);
       await signInWithGoogle();
     } catch {
       setSubmitting(false);
     }
-  }, [signInWithGoogle]);
+  }, [signInWithGoogle, rememberMe]);
 
   return {
     formData,
