@@ -1,12 +1,14 @@
+import { lazy } from 'react'
 import { createBrowserRouter, Outlet } from 'react-router'
 import { RootLayout } from './layouts/RootLayout'
-import App from './App'
-import Login from './pages/Login/Login'
-import ClientSignup from './pages/ClientSignup/ClientSignup'
-import ProviderSignup from './pages/ProviderSignup/ProviderSignup'
-import ForgotPassword from './pages/ForgotPassword/ForgotPassword'
-import ResetPassword from './pages/ResetPassword/ResetPassword'
 import { GuestOnlyRoute, ProtectedRoute } from '@/lib/auth/routeGuards'
+
+const App = lazy(() => import('./App'))
+const Login = lazy(() => import('./pages/Login/Login'))
+const ClientSignup = lazy(() => import('./pages/ClientSignup/ClientSignup'))
+const ProviderSignup = lazy(() => import('./pages/ProviderSignup/ProviderSignup'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword/ForgotPassword'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword/ResetPassword'))
 
 export const router = createBrowserRouter([
   {
