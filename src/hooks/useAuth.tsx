@@ -4,7 +4,6 @@
  * sessão expirada (useSessionExpiredHandler), redirect por role.
  */
 import { authApi } from "@/lib/api/auth.api";
-import { profileApi } from "@/lib/api/profile.api";
 import { logger } from "@/lib/logger";
 import { validatePasswordStrength } from "@/lib/passwordPolicy";
 import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
@@ -235,16 +234,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (newUser) {
-          const { error: updateError } = await profileApi.updateRole(
-            newUser.id,
-            role
-          );
-          if (updateError) {
-            logger.warn("auth_signup_profile_role_update_failed", {
-              userId: newUser.id,
-              error: updateError,
-            });
-          }
           trackEvent("signup_completed", { method: "email", user_role: role });
           if (!newUser.email_confirmed_at) {
             toast.success(
