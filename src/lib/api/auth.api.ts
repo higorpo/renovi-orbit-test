@@ -80,9 +80,21 @@ export const authApi = {
         data: options.data,
       },
     });
+    if (error) {
+      return { user: data.user, error: new Error(error.message) };
+    }
+    // When "Confirm email" is enabled, Supabase does not return an error for existing emails;
+    // it returns a user with empty identities. Treat that as "already registered".
+    const identities = data.user?.identities ?? [];
+    if (data.user && identities.length === 0) {
+      return {
+        user: null,
+        error: new Error("User already registered"),
+      };
+    }
     return {
       user: data.user,
-      error: error ? new Error(error.message) : null,
+      error: null,
     };
   },
 
