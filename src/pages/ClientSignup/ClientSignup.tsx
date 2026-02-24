@@ -56,32 +56,40 @@ export default function ClientSignup() {
               onGoogleSignup={form.handleGoogleSignup}
             />
 
-            <div className="mt-6 text-center">
-              <p className="text-white/70 text-sm">
-                Já tem uma conta?{" "}
-                <Link
-                  to="/login"
-                  className="text-[#C57A3A] font-semibold hover:underline"
-                >
-                  Fazer login
-                </Link>
-              </p>
-            </div>
+            {
+              !form.signupSuccess && (
+                <div className="mt-6 text-center">
+                  <p className="text-white/70 text-sm">
+                    Já tem uma conta?{" "}
+                    <Link
+                      to="/login"
+                      className="text-[#C57A3A] font-semibold hover:underline"
+                    >
+                      Fazer login
+                    </Link>
+                  </p>
+                </div>
+              )
+            }
           </div>
 
-          <div className="mt-6 text-center">
-            <p className="text-white/60 text-sm mb-3">
-              Prefere solicitar um orçamento primeiro?
-            </p>
-            <Link to="/pedir-orcamento">
-              <Button
-                variant="outline"
-                className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-              >
-                Solicitar orçamento
-              </Button>
-            </Link>
-          </div>
+          {
+            !form.signupSuccess && (
+              <div className="mt-6 text-center">
+                <p className="text-white/60 text-sm mb-3">
+                  Prefere solicitar um orçamento primeiro?
+                </p>
+                <Link to="/pedir-orcamento">
+                  <Button
+                    variant="outline"
+                    className="bg-white/10 border-white/30 text-white hover:bg-white/20"
+                  >
+                    Solicitar orçamento
+                  </Button>
+                </Link>
+              </div> 
+            )
+          }
         </div>
       </div>
     </div>
