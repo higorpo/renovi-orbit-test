@@ -1,0 +1,104 @@
+---
+description: Arquitetura de testes E2E com Playwright — mocks Supabase, fixtures, page objects e convenções
+alwaysApply: true
+---
+
+# Testes E2E (Playwright)
+
+O projeto usa **Playwright** para testes end-to-end. As telas de autenticação (Login, ClientSignup, ProviderSignup, ForgotPassword, ResetPassword) e route guards têm testes que, **por padrão**, usam mocks: as chamadas ao Supabase são interceptadas em rede e não atingem o backend real. O usuário pode optar explicitamente por testes que chamam as **APIs reais** do Supabase.
+
+## Estrutura obrigatória
+
+```
+e2e/
+├── fixtures/          # Fixtures do Playwright (auth helpers)
+│   └── auth.fixture.ts
+├── mocks/              # Interceptação de rede (Supabase)
+│   └── supabase.mock.ts
+├── pages/              # Page Object Models (um por tela/fluxo)
+│   ├── login.page.ts
+│   ├── client-signup.page.ts
+│   ├── provider-signup.page.ts
+│   ├── forgot-password.page.ts
+│   └── reset-password.page.ts
+└── tests/              # Specs (arquivos .spec.ts)
+    ├── login.spec.ts
+    ├── client-signup.spec.ts
+    ├── provider-signup.spec.ts
+    ├── forgot-password.spec.ts
+    ├── reset-password.spec.ts
+    └── route-guards.spec.ts
+```
+
+## Regras fundamentais
+
+### 1. APIs reais vs mocks do Supabase
+- **Padrão:** usar **mocks** (fixture de auth: `mockSupabaseAsGuest()`, `mockSupabaseAsUser()`, `seedSession()`). Nenhuma request real é enviada ao Supabase.
+- **Se o usuário disser explicitamente** que os testes devem chamar as APIs reais do Supabase (ex.: "testes E2E contra Supabase real", "usar Supabase real nos testes"), seguir essa preferência: não instalar mocks nesses testes e garantir que ambiente (variáveis, projeto) esteja configurado para o backend real.
+- **Se o usuário não especificar** ao pedir criação ou alteração de testes E2E, **perguntar**: "Quer que esses testes usem as APIs reais do Supabase ou mocks (padrão do projeto)?"
+- Mocks ficam em `e2e/mocks/supabase.mock.ts`. Novos endpoints Supabase usados pela app devem ser interceptados nesse arquivo (via `page.route()`) quando estiver em modo mock.
+- Para URLs com query params (ex.: `?redirect_to=...`), usar **regex** no `page.route()`, ex.: `/\/auth\/v1\/recover(\?|$)/`.
+
+### 2. Testes de auth com mocks usam o fixture customizado
+- Quando estiver usando **mocks**, importar `test` e `expect` de `../fixtures/auth.fixture` (não de `@playwright/test`).
+- Em cada teste que use backend mockado: chamar `await mockSupabaseAsGuest()` ou `const mocks = await mockSupabaseAsUser(user, profile)` **antes** de `page.goto()` ou interações.
+- Para testes que exigem usuário já logado (ex.: Reset Password em modo recovery, Route Guards): usar `seedSession(user)` e em seguida `mockSupabaseAsUser(user, profile)`.
+- Quando estiver usando **APIs reais**, usar o `test` do Playwright e não o auth fixture; garantir que `.env`/variáveis apontem para o projeto Supabase desejado.
+
+### 3. Page Object Model (POM)
+- Cada tela ou fluxo relevante tem um Page Object em `e2e/pages/<nome>.page.ts`.
+- O POM encapsula locators e ações comuns (ex.: `goto()`, `fillEmail()`, `submit()`). Os specs usam o POM, não locators soltos no teste.
+- Novas telas/fluxos: criar novo arquivo `e2e/pages/<nome>.page.ts` e usar em `e2e/tests/<nome>.spec.ts`.
+
+### 4. Assertivas sobre requests
+- O retorno de `installSupabaseMocks` (via `mockSupabaseAsGuest()` / `mockSupabaseAsUser()`) expõe `capturedRequests` e `capturedUrls`.
+- Use `mocks.capturedRequests.signIn`, `signUp`, `recover`, `updateUser` para assertar corpo da request.
+- Use `mocks.capturedUrls.recover` (etc.) quando precisar assertar query params (ex.: `redirect_to`).
+- Para simular erro da API: usar `mocks.onSignIn()`, `mocks.onSignUp()`, `mocks.onRecover()`, `mocks.onUpdateUser()` e chamar `route.fulfill()` com status/body desejados.
+
+### 5. Layout e dispositivos móveis
+- O `playwright.config.ts` define projetos: **desktop-chromium**, **mobile-chrome** (Pixel 7), **mobile-safari** (iPhone 14).
+- Novos testes de auth devem rodar nos três projetos. Evitar locators que quebrem em viewport pequeno (ex.: preferir `getByRole`, `getByLabel`, ou IDs semânticos).
+- Para validar layout em mobile, incluir cenários nos specs que rodam no projeto mobile-chrome (e mobile-safari quando as dependências do WebKit estiverem instaladas).
+
+### 6. Comentários e nomes em inglês
+- Comentários dentro de arquivos em `e2e/` devem ser em **inglês** (alinhado às regras do projeto).
+- Strings exibidas ao usuário nas assertivas podem seguir o idioma da UI (ex.: PT-BR).
+
+## Como adicionar testes para uma nova tela de auth
+
+1. **Mocks:** Se a tela usar algum endpoint Supabase ainda não interceptado, adicionar o `page.route()` correspondente em `e2e/mocks/supabase.mock.ts` e, se fizer sentido, capturar em `capturedRequests`/`capturedUrls`.
+2. **Page Object:** Criar `e2e/pages/<nome>.page.ts` com locators e métodos de interação (ex.: `goto()`, preenchimento de formulário, submit).
+3. **Fixture:** Se precisar de um helper novo (ex.: “usuário já logado com role X”), estender `e2e/fixtures/auth.fixture.ts` em vez de duplicar lógica nos specs.
+4. **Spec:** Criar `e2e/tests/<nome>.spec.ts` importando `test`/`expect` do auth fixture e o POM; cobrir renderização, validação, sucesso, erro e navegação; rodar em desktop e mobile.
+
+## Como rodar os testes
+
+- **Todos (desktop + mobile Chrome):** `yarn test:e2e` ou `npx playwright test --project=desktop-chromium --project=mobile-chrome`
+- **Com UI:** `yarn test:e2e:ui`
+- **Com browser visível:** `yarn test:e2e:headed`
+- **Debug:** `yarn test:e2e:debug`
+- **Relatório HTML:** `yarn test:e2e:report` (após uma execução)
+
+O servidor de desenvolvimento é iniciado automaticamente pelo Playwright (`webServer` no config), a menos que já exista um processo em `localhost:5173` (`reuseExistingServer: !process.env.CI`).
+
+## Referência rápida: auth fixture
+
+```ts
+// Guest (sem sessão)
+await mockSupabaseAsGuest();
+
+// Usuário autenticado (mocks retornam esse user/profile)
+const mocks = await mockSupabaseAsUser(user, profile);
+
+// Sessão injetada no localStorage antes do goto (para telas que exigem “já logado”)
+await seedSession(user);
+await mockSupabaseAsUser(user, profile);
+
+// Sobrescrever resposta de um endpoint em um teste
+mocks.onSignUp(async (route) => {
+  await route.fulfill({ status: 200, body: JSON.stringify({ ... }) });
+});
+```
+
+Seguir essa arquitetura garante que novos testes E2E reutilizem mocks e page objects quando em modo mock, ou usem o Supabase real quando o usuário pedir explicitamente, e mantenham cobertura em desktop e mobile.
