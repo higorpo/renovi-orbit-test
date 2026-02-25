@@ -67,10 +67,14 @@ e2e/
 
 ## Como adicionar testes para uma nova tela de auth
 
-1. **Mocks:** Se a tela usar algum endpoint Supabase ainda não interceptado, adicionar o `page.route()` correspondente em `e2e/mocks/supabase.mock.ts` e, se fizer sentido, capturar em `capturedRequests`/`capturedUrls`.
-2. **Page Object:** Criar `e2e/pages/<nome>.page.ts` com locators e métodos de interação (ex.: `goto()`, preenchimento de formulário, submit).
-3. **Fixture:** Se precisar de um helper novo (ex.: “usuário já logado com role X”), estender `e2e/fixtures/auth.fixture.ts` em vez de duplicar lógica nos specs.
-4. **Spec:** Criar `e2e/tests/<nome>.spec.ts` importando `test`/`expect` do auth fixture e o POM; cobrir renderização, validação, sucesso, erro e navegação; rodar em desktop e mobile.
+- **Se for com mocks (padrão):**
+  1. **Mocks:** Se a tela usar algum endpoint Supabase ainda não interceptado, adicionar o `page.route()` correspondente em `e2e/mocks/supabase.mock.ts` e, se fizer sentido, capturar em `capturedRequests`/`capturedUrls`.
+  2. **Page Object:** Criar `e2e/pages/<nome>.page.ts` com locators e métodos de interação (ex.: `goto()`, preenchimento de formulário, submit).
+  3. **Fixture:** Se precisar de um helper novo (ex.: “usuário já logado com role X”), estender `e2e/fixtures/auth.fixture.ts` em vez de duplicar lógica nos specs.
+  4. **Spec:** Criar `e2e/tests/<nome>.spec.ts` importando `test`/`expect` do auth fixture e o POM; cobrir renderização, validação, sucesso, erro e navegação; rodar em desktop e mobile.
+
+- **Se o usuário tiver pedido explicitamente testes contra APIs reais:** não usar auth fixture nem mocks; usar `test`/`expect` do `@playwright/test`, garantir env configurado e avisar sobre riscos (criação de dados reais, rate limits, etc.).
+- **Se o usuário não tiver especificado:** perguntar se os testes devem usar APIs reais do Supabase ou mocks antes de implementar.
 
 ## Como rodar os testes
 
