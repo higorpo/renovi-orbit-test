@@ -1,0 +1,416 @@
+/**
+ * Demo schema — all block types across multiple steps for testing.
+ */
+
+import type { FormSchemaV2 } from "../../types";
+
+export const formDemoSchema: FormSchemaV2 = {
+  version: "2.0",
+  id: "demo-all-blocks",
+  title: "Formulário Demo — Todos os Blocos",
+  description: "Teste do motor de formulários dinâmicos com multi-steps",
+  metadata: {
+    categorySlug: "demo-form",
+    categoryId: null,
+    status: "active",
+  },
+  config: {
+    showProgressBar: true,
+  },
+  steps: [
+    {
+      id: "step-1",
+      order: 1,
+      title: "Informações iniciais (7 blocos)",
+      icon: "🏠",
+      description: "Este step tem 7 blocos — Sim/Não (obrigatório e opcional), 3 textos, tipo de imóvel e urgência.",
+      blocks: [
+        {
+          id: "yes_no_required",
+          type: "yes_no",
+          label: "Você já possui um imóvel?",
+          required: true,
+          helpText: "Selecione Sim ou Não para continuar.",
+        },
+        {
+          id: "yes_no_optional",
+          type: "yes_no",
+          label: "Deseja receber ofertas por e-mail?",
+          helpText: "Opcional. Podemos enviar novidades e promoções.",
+        },
+        {
+          id: "contact_name_step1",
+          type: "text",
+          label: "Nome para contato",
+          required: true,
+          placeholder: "Seu nome",
+          validation: {
+            minLength: 3,
+            maxLength: 5,
+            message: "O nome deve ter entre 3 e 5 caracteres",
+          },
+        },
+        {
+          id: "contact_email",
+          type: "text",
+          label: "E-mail",
+          required: true,
+          placeholder: "seu@email.com",
+          validation: {
+            pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
+            message: "Informe um e-mail válido",
+          },
+        },
+        {
+          id: "contact_phone",
+          type: "text",
+          label: "Telefone",
+          placeholder: "(00) 00000-0000",
+          validation: {
+            pattern: "^\\(\\d{2}\\) \\d{5}-\\d{4}$",
+            message: "Use o formato (00) 00000-0000",
+          },
+        },
+        {
+          id: "property_type",
+          type: "property_type",
+          label: "Tipo de imóvel",
+          required: true,
+          helpText: "Selecione o tipo do local.",
+        },
+        {
+          id: "urgency",
+          type: "urgency",
+          label: "Nível de urgência",
+          required: true,
+        },
+      ],
+    },
+    {
+      id: "step-2",
+      order: 2,
+      title: "Radio, Checkbox, Data, Hora e Slider",
+      icon: "📋",
+      description: "Blocos: radio (uma opção), checkbox (várias), data, hora e slider.",
+      visibility: [
+        { dependsOn: "property_type", operator: "in", value: ["house", "apartment"] },
+      ],
+      blocks: [
+        {
+          id: "demo_radio",
+          type: "radio",
+          label: "Escolha uma opção (radio)",
+          required: true,
+          options: [
+            { value: "a", label: "Opção A", emoji: "🅰️" },
+            { value: "b", label: "Opção B", emoji: "🅱️" },
+            { value: "c", label: "Opção C", emoji: "©️" },
+          ],
+        },
+        {
+          id: "demo_checkbox",
+          type: "checkbox",
+          label: "Marque as que se aplicam (checkbox)",
+          visibility: [{ dependsOn: "demo_radio", operator: "equals", value: "a" }],
+          options: [
+            { value: "x", label: "Item X" },
+            { value: "y", label: "Item Y" },
+            { value: "z", label: "Item Z" },
+          ],
+        },
+        {
+          id: "demo_static_info",
+          type: "static_text",
+          label: "Preencha os itens acima conforme sua necessidade.",
+          helpText: "Os campos abaixo são para data, horário e prioridade.",
+          visibility: [{ dependsOn: "demo_radio", operator: "equals", value: "a" }],
+          config: { variant: "p", size: "lg", color: "default" },
+        },
+        {
+          id: "demo_date",
+          type: "date",
+          label: "Data desejada",
+          required: true,
+          helpText: "Selecione uma data.",
+          validation: {
+            dateMin: "2026-02-20",
+            dateMax: "2026-03-03",
+            message: "A data deve ser entre 20/02/2026 e 03/03/2026",
+          },
+        },
+        {
+          id: "demo_time",
+          type: "time",
+          label: "Horário preferido",
+          helpText: "Selecione um horário (opcional).",
+          validation: {
+            timeMin: "14:00",
+            timeMax: "19:00",
+            message: "O horário deve ser entre 14h e 19h",
+          },
+        },
+        {
+          id: "demo_slider",
+          type: "slider",
+          label: "Nível de prioridade (0–10)",
+          required: true,
+          min: 0,
+          max: 10,
+          step: 1,
+          helpText: "Arraste o controle.",
+        },
+      ],
+    },
+    {
+      id: "step-3",
+      order: 3,
+      title: "Descrição",
+      icon: "✏️",
+      description: "Descreva o que precisa ser feito.",
+      blocks: [
+        {
+          id: "step3_intro",
+          type: "static_text",
+          label: "Descreva o serviço ou reparo desejado",
+          helpText: "Quanto mais detalhes, melhor conseguiremos entender sua necessidade.",
+          config: { variant: "h3", color: "default" },
+        },
+        {
+          id: "description_ai",
+          type: "description_ai",
+          label: "Descrição do serviço",
+          required: true,
+          placeholder: "Ex.: Pintura de dois cômodos, parede lisa...",
+          validation: { minLength: 10, maxLength: 500 },
+        },
+      ],
+    },
+    {
+      id: "step-4",
+      order: 4,
+      title: "Horário preferido",
+      icon: "🕐",
+      blocks: [
+        {
+          id: "preferred_time",
+          type: "single_select",
+          label: "Melhor horário para visita",
+          required: true,
+          config: { columns: 2, allowOther: true, otherLabel: "Outro" },
+          options: [
+            { value: "morning", label: "Manhã", emoji: "🌅", description: "8h–12h" },
+            { value: "afternoon", label: "Tarde", emoji: "☀️", description: "12h–18h" },
+            { value: "evening", label: "Noite", emoji: "🌙", description: "18h–20h" },
+            { value: "flexible", label: "Flexível", emoji: "📅" },
+          ],
+        },
+      ],
+    },
+    {
+      id: "step-5",
+      order: 5,
+      title: "Restrições",
+      icon: "⚠️",
+      description: "Selecione todas que se aplicam.",
+      blocks: [
+        {
+          id: "restrictions",
+          type: "multi_select",
+          label: "Restrições ou cuidados",
+          config: { columns: 2 },
+          options: [
+            { value: "pets", label: "Animais de estimação" },
+            { value: "children", label: "Crianças pequenas" },
+            { value: "elderly", label: "Idosos em casa" },
+            { value: "allergies", label: "Alergias" },
+            { value: "none", label: "Nenhuma", exclusive: true },
+          ],
+        },
+      ],
+    },
+    {
+      id: "step-multi-block",
+      order: 6,
+      title: "Local (2 blocos no mesmo step)",
+      icon: "📍",
+      description: "Este step tem dois blocos — você verá duas telas em sequência.",
+      blocks: [
+        {
+          id: "zipcode",
+          type: "text",
+          label: "CEP",
+          placeholder: "00000-000",
+          helpText: "Opcional. Primeiro bloco do step.",
+        },
+        {
+          id: "area_sqm",
+          type: "number",
+          label: "Área aproximada (m²)",
+          min: 1,
+          max: 1000,
+          step: 1,
+          unit: "m²",
+          placeholder: "0",
+          helpText: "Opcional. Segundo bloco do mesmo step.",
+        },
+      ],
+    },
+    {
+      id: "step-6",
+      order: 7,
+      title: "Contato",
+      icon: "📱",
+      blocks: [
+        {
+          id: "contact_name",
+          type: "text",
+          label: "Nome para contato",
+          required: true,
+          placeholder: "Seu nome",
+        },
+      ],
+    },
+    {
+      id: "step-7",
+      order: 8,
+      title: "Quantidade",
+      icon: "🔢",
+      blocks: [
+        {
+          id: "quantity",
+          type: "number",
+          label: "Quantidade de cômodos/áreas",
+          required: true,
+          min: 1,
+          max: 20,
+          step: 1,
+          unit: "un",
+          placeholder: "0",
+        },
+      ],
+    },
+    {
+      id: "step-8",
+      order: 9,
+      title: "Observações",
+      icon: "📝",
+      blocks: [
+        {
+          id: "observations",
+          type: "textarea",
+          label: "Observações adicionais",
+          placeholder: "Detalhes extras, acesso, etc.",
+          validation: { maxLength: 1000 },
+        },
+      ],
+    },
+    {
+      id: "step-9",
+      order: 10,
+      title: "Avisos",
+      icon: "ℹ️",
+      description: "Leia os avisos abaixo.",
+      blocks: [
+        {
+          id: "read_notices",
+          type: "text",
+          label: "Confirme que leu (opcional)",
+          placeholder: "Digite OK ou deixe em branco",
+        },
+        {
+          id: "alert_urgency",
+          type: "conditional_alert",
+          label: "Se você escolheu alta urgência, entraremos em contato em até 24h.",
+          visibility: [{ dependsOn: "urgency", operator: "equals", value: "high" }],
+          config: { alertType: "info", alertTitle: "Urgência alta" },
+        },
+        {
+          id: "alert_generic",
+          type: "conditional_alert",
+          label: "Revise os dados no próximo passo antes de enviar.",
+          visibility: [{ dependsOn: "read_notices", operator: "isEmpty" }],
+          config: { alertType: "warning", alertTitle: "Próximo: resumo" },
+        },
+      ],
+    },
+    {
+      id: "step-10",
+      order: 11,
+      title: "Estilo visual (galeria)",
+      icon: "🖼️",
+      description: "Escolha uma ou mais referências.",
+      blocks: [
+        {
+          id: "image_style",
+          type: "image_gallery",
+          label: "Estilo desejado",
+          config: { multiSelect: true, columns: 2 },
+          options: [
+            {
+              value: "modern",
+              label: "Moderno",
+              image: "https://picsum.photos/seed/1/400/300",
+              description: "Linhas limpas",
+              tags: ["moderno", "minimalista"],
+            },
+            {
+              value: "classic",
+              label: "Clássico",
+              image: "https://picsum.photos/seed/2/400/300",
+              description: "Tradicional",
+              tags: ["clássico"],
+            },
+            {
+              value: "rustic",
+              label: "Rústico",
+              image: "https://picsum.photos/seed/3/400/300",
+              tags: ["rústico", "natural"],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "step-11",
+      order: 12,
+      title: "Resumo",
+      icon: "✅",
+      description: "Confira e conclua.",
+      blocks: [
+        {
+          id: "preview_summary",
+          type: "preview_summary",
+          label: "Resumo do pedido",
+          config: {
+            sections: [
+              {
+                id: "contact",
+                title: "Contato",
+                icon: "📱",
+                fieldIds: ["yes_no_required", "yes_no_optional", "contact_name_step1", "contact_email", "contact_phone"],
+              },
+              {
+                id: "service",
+                title: "Serviço e local",
+                icon: "🏠",
+                fieldIds: ["property_type", "urgency", "description_ai", "zipcode", "area_sqm"],
+              },
+              {
+                id: "schedule",
+                title: "Data e horário",
+                icon: "📅",
+                fieldIds: ["preferred_time", "demo_date", "demo_time", "demo_slider"],
+              },
+              {
+                id: "details",
+                title: "Detalhes e observações",
+                icon: "📋",
+                fieldIds: ["demo_radio", "restrictions", "quantity", "observations", "image_style"],
+              },
+            ],
+          },
+        },
+      ],
+    },
+  ],
+};

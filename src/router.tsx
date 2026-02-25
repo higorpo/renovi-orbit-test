@@ -9,6 +9,10 @@ const ClientSignup = lazy(() => import('./features/auth/components/ClientSignup/
 const ProviderSignup = lazy(() => import('./features/auth/components/ProviderSignup/ProviderSignup'))
 const ForgotPassword = lazy(() => import('./features/auth/components/ForgotPassword/ForgotPassword'))
 const ResetPassword = lazy(() => import('./features/auth/components/ResetPassword/ResetPassword'))
+const FormDemoPage =
+  import.meta.env.DEV
+    ? lazy(() => import('@/features/dynamic-form').then(m => ({ default: m.FormDemoPage })))
+    : null
 
 export const router = createBrowserRouter([
   {
@@ -48,6 +52,9 @@ export const router = createBrowserRouter([
         path: 'recuperar-senha',
         element: <ResetPassword />,
       },
+      ...(import.meta.env.DEV && FormDemoPage
+        ? [{ path: 'demo/form', element: <FormDemoPage /> }]
+        : []),
       {
         element: <ProtectedRoute allowedRoles={['client']}><Outlet /></ProtectedRoute>,
         path: 'example',
