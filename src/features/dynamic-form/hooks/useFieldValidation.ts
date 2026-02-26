@@ -1,12 +1,6 @@
-/**
- * Field validation hook: real-time validation with clear feedback.
- * Validates on blur; optionally on change after first error.
- * Uses a ref for value so delayed markAsTouched (e.g. after setTimeout) sees latest value.
- */
-
 import { useState, useCallback, useEffect, useRef } from "react";
-import type { FormBlockV2 } from "../types";
-import { validateBlock } from "../types/formSchemaV2/helpers";
+import type { FormBlock } from "../types";
+import { validateBlockValue } from "../types/helpers";
 
 export type ValidationState = "idle" | "validating" | "valid" | "invalid";
 
@@ -18,7 +12,7 @@ export interface FieldValidationResult {
 }
 
 export interface UseFieldValidationOptions {
-  block: FormBlockV2;
+  block: FormBlock;
   value: unknown;
   validateOnChange?: boolean;
   debounceMs?: number;
@@ -47,7 +41,7 @@ export function useFieldValidation({
 
   const performValidation = useCallback(() => {
     const currentValue = valueRef.current;
-    const result = validateBlock(block, currentValue);
+    const result = validateBlockValue(block, currentValue);
     if (result.valid) {
       setValidationState("valid");
       setError(null);
@@ -91,7 +85,7 @@ export function useFieldValidation({
 }
 
 export function getValidationErrorMessage(
-  block: FormBlockV2,
+  block: FormBlock,
   error: string | null
 ): string {
   if (!error) return "";

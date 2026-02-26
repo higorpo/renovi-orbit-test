@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { FormBlockV2 } from "../../types";
+import type { FormBlock } from "../../types";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, AlertCircle, CheckCircle2 } from "lucide-react";
@@ -9,7 +9,7 @@ import {
 } from "../../hooks/useFieldValidation";
 
 interface NumberInputBlockProps {
-  block: FormBlockV2;
+  block: FormBlock;
   value: number | undefined;
   onChange: (value: number) => void;
 }

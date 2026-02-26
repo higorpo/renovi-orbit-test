@@ -19,19 +19,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Plus, Copy, Check, LayoutDashboard, Eye } from "lucide-react";
-import { MicroStepForm } from "../MicroStepForm/MicroStepForm";
+import { DynamicForm } from "../DynamicForm/DynamicForm";
 import { BlockPalette } from "./BlockPalette";
 import { SchemaCanvas } from "./SchemaCanvas";
 import { Inspector } from "./Inspector";
 import { useSchemaBuilder } from "./useSchemaBuilder";
 import { BLOCK_TYPE_ICONS, BLOCK_TYPE_LABELS } from "./builderDefaults";
 import { formDemoSchema } from "./demoSchema";
-import type { FormBlockType } from "../../types";
-import type { FormDataV2 } from "../../types";
+import type { FormBlockType, FormData, FormStep, FormBlock } from "../../types";
 
 export function FormDemoPage() {
   const [previewKey, setPreviewKey] = useState(0);
-  const [submittedData, setSubmittedData] = useState<FormDataV2 | null>(null);
+  const [submittedData, setSubmittedData] = useState<FormData | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isOverStepId, setIsOverStepId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -97,10 +96,10 @@ export function FormDemoPage() {
 
       if (activeData?.source === "step-block" && activeData?.stepId) {
         const stepId = activeData.stepId;
-        const step = schema.steps.find((s) => s.id === stepId);
+        const step = schema.steps.find((s: FormStep) => s.id === stepId);
         if (!step) return;
-        const fromIndex = step.blocks.findIndex((b) => b.id === activeIdStr);
-        const toIndex = step.blocks.findIndex((b) => b.id === overIdStr);
+        const fromIndex = step.blocks.findIndex((b: FormBlock) => b.id === activeIdStr);
+        const toIndex = step.blocks.findIndex((b: FormBlock) => b.id === overIdStr);
         if (fromIndex !== -1 && toIndex !== -1 && fromIndex !== toIndex) {
           moveBlock(stepId, fromIndex, toIndex);
         }
@@ -116,7 +115,7 @@ export function FormDemoPage() {
     setTimeout(() => setCopied(false), 2000);
   }, [schema]);
 
-  const handleComplete = useCallback((data: FormDataV2) => {
+  const handleComplete = useCallback((data: FormData) => {
     setSubmittedData(data);
   }, []);
 
@@ -288,7 +287,7 @@ export function FormDemoPage() {
                 trocar de aba.
               </p>
               <div className="min-h-[480px] rounded-xl border bg-card overflow-hidden">
-                <MicroStepForm
+                <DynamicForm
                   key={previewKey}
                   schema={schema}
                   initialData={{}}

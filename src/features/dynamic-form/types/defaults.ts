@@ -1,13 +1,9 @@
-/**
- * Default values and constants for FormSchema V2.
- */
-
 import type {
   SelectOption,
   FormSchemaMetadata,
   FormSchemaConfig,
-  FormSchemaV2,
-} from "./types";
+  FormSchema,
+} from "./schema";
 
 export const DEFAULT_PROPERTY_TYPE_OPTIONS: SelectOption[] = [
   { value: "house", label: "Casa", emoji: "🏠", description: "Casa térrea ou sobrado" },
@@ -40,12 +36,12 @@ export const DEFAULT_CONFIG: FormSchemaConfig = {
   showProgressBar: true,
 };
 
-export function normalizeSchemaV2(
-  schema: Partial<FormSchemaV2> | Record<string, unknown>,
+export function normalizeSchema(
+  schema: Partial<FormSchema> | Record<string, unknown>,
   categorySlug: string,
   categoryId?: string | null,
   formStatus: "draft" | "active" | "deprecated" = "draft"
-): FormSchemaV2 {
+): FormSchema {
   if (!schema || typeof schema !== "object") {
     throw new Error("Schema must be an object");
   }
@@ -73,6 +69,6 @@ export function normalizeSchemaV2(
     description: schema.description as string | undefined,
     metadata,
     config,
-    steps: (schema.steps as FormSchemaV2["steps"]) || [],
+    steps: (schema.steps as FormSchema["steps"]) || [],
   };
 }

@@ -1,9 +1,9 @@
 import { cn } from "@/lib/utils";
-import type { FormBlockV2 } from "../../types";
+import type { FormBlock } from "../../types";
 import { Info, CheckCircle, AlertTriangle } from "lucide-react";
 
 interface ConditionalAlertBlockProps {
-  block: FormBlockV2;
+  block: FormBlock;
 }
 
 export function ConditionalAlertBlock({ block }: ConditionalAlertBlockProps) {

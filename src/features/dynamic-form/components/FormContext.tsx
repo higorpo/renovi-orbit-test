@@ -1,8 +1,3 @@
-/**
- * Form context — global state for the dynamic form.
- * One step = one screen with all its blocks visible.
- */
-
 import {
   createContext,
   useContext,
@@ -12,17 +7,17 @@ import {
   useEffect,
 } from "react";
 import type {
-  FormSchemaV2,
-  FormDataV2,
-  FormStepV2,
-  FormBlockV2,
+  FormSchema,
+  FormData,
+  FormStep,
+  FormBlock,
   FormContextValue,
 } from "../types";
 import {
-  getVisibleStepsV2,
-  getVisibleBlocksV2,
-  isStepCompleteV2,
-} from "../types/formSchemaV2/helpers";
+  getVisibleSteps,
+  getVisibleBlocks as getVisibleBlocksForStep,
+  isStepComplete,
+} from "../types/helpers";
 
 const FormContext = createContext<FormContextValue | null>(null);
 
@@ -35,9 +30,9 @@ export function useFormContext(): FormContextValue {
 }
 
 interface FormProviderProps {
-  schema: FormSchemaV2;
-  initialData?: FormDataV2;
-  onChange?: (data: FormDataV2, stepIndex: number) => void;
+  schema: FormSchema;
+  initialData?: FormData;
+  onChange?: (data: FormData, stepIndex: number) => void;
   children: React.ReactNode;
 }
 
@@ -47,11 +42,11 @@ export function FormProvider({
   onChange,
   children,
 }: FormProviderProps) {
-  const [formData, setFormData] = useState<FormDataV2>(initialData);
+  const [formData, setFormData] = useState<FormData>(initialData);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
   const visibleSteps = useMemo(
-    () => getVisibleStepsV2(schema, formData),
+    () => getVisibleSteps(schema, formData),
     [schema, formData]
   );
   const totalSteps = visibleSteps.length;
@@ -95,7 +90,7 @@ export function FormProvider({
   const isStepValid = useCallback(
     (stepIndex: number) => {
       const step = visibleSteps[stepIndex];
-      return step ? isStepCompleteV2(step, formData) : false;
+      return step ? isStepComplete(step, formData) : false;
     },
     [visibleSteps, formData]
   );
@@ -105,7 +100,7 @@ export function FormProvider({
   }, [visibleSteps, isStepValid]);
 
   const getVisibleBlocks = useCallback(
-    (step: FormStepV2): FormBlockV2[] => getVisibleBlocksV2(step, formData),
+    (step: FormStep): FormBlock[] => getVisibleBlocksForStep(step, formData),
     [formData]
   );
 

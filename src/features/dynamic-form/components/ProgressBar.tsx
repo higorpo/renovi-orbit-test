@@ -1,7 +1,3 @@
-/**
- * Progress bar by step. One step = one screen (all blocks of that step).
- */
-
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
 import { useFormContext } from "./FormContext";

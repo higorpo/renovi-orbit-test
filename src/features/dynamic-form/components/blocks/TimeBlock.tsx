@@ -3,7 +3,7 @@
  */
 
 import { cn } from "@/lib/utils";
-import type { FormBlockV2 } from "../../types";
+import type { FormBlock } from "../../types";
 import { Input } from "@/components/ui/input";
 import {
   useFieldValidation,
@@ -12,7 +12,7 @@ import {
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 interface TimeBlockProps {
-  block: FormBlockV2;
+  block: FormBlock;
   value: string | undefined;
   onChange: (value: string) => void;
 }

@@ -1,11 +1,11 @@
 import { cn } from "@/lib/utils";
-import type { FormBlockV2 } from "../../types";
+import type { FormBlock } from "../../types";
 import { useFieldValidation, getValidationErrorMessage } from "../../hooks/useFieldValidation";
 import { Check, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 interface SingleSelectBlockProps {
-  block: FormBlockV2;
+  block: FormBlock;
   value: string | undefined;
   onChange: (value: string) => void;
   otherText?: string;

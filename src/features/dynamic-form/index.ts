@@ -1,15 +1,10 @@
-/**
- * Dynamic form feature — Public API.
- * Schema-driven forms: one step = one screen (all blocks of that step).
- */
-
 export { FormProvider, useFormContext } from "./components/FormContext";
-export { MicroStepForm } from "./components/MicroStepForm/MicroStepForm";
-export type { MicroStepFormProps } from "./components/MicroStepForm/MicroStepForm";
-export { MicroStepFormSkeleton } from "./components/MicroStepForm/MicroStepFormSkeleton";
+export { DynamicForm } from "./components/DynamicForm/DynamicForm";
+export type { DynamicFormProps } from "./components/DynamicForm/DynamicForm";
+export { DynamicFormSkeleton } from "./components/DynamicForm/DynamicFormSkeleton";
 export { ProgressBar } from "./components/ProgressBar";
-export { MicroStepRenderer } from "./components/MicroStepRenderer";
-export { SchemaError } from "./components/MicroStepForm/SchemaError";
+export { StepRenderer } from "./components/StepRenderer";
+export { SchemaError } from "./components/DynamicForm/SchemaError";
 export { FormDemoPage } from "./components/FormDemoPage/FormDemoPage";
 
 export { useFieldValidation, getValidationErrorMessage } from "./hooks/useFieldValidation";
@@ -20,10 +15,10 @@ export type {
 } from "./hooks/useFieldValidation";
 
 export type {
-  FormSchemaV2,
-  FormDataV2,
-  FormBlockV2,
-  FormStepV2,
+  FormSchema,
+  FormData,
+  FormBlock,
+  FormStep,
   FormContextValue,
   FormBlockType,
   SelectOption,
@@ -33,26 +28,26 @@ export type {
   PreviewSummaryBlockConfig,
 } from "./types";
 export {
-  getVisibleStepsV2,
-  getVisibleBlocksV2,
+  getVisibleSteps,
+  getVisibleBlocks,
   isBlockComplete,
-  isStepCompleteV2,
-  validateBlock,
+  isStepComplete,
+  validateBlockValue,
   getRelatedAlerts,
   getFormProgress,
   getBlockById,
-  checkVisibilityRule,
+  evaluateVisibilityRule,
   isBlockVisible,
   isStepVisible,
-} from "./types/formSchemaV2/helpers";
+} from "./types/helpers";
 export {
   DEFAULT_PROPERTY_TYPE_OPTIONS,
   DEFAULT_URGENCY_OPTIONS,
-  normalizeSchemaV2,
-} from "./types/formSchemaV2/defaults";
+  normalizeSchema,
+} from "./types/defaults";
 
 export {
-  validateFormSchemaV2,
+  validateFormSchema,
   formatValidationErrors,
   getValidationSummary,
 } from "./utils/schemaValidator";

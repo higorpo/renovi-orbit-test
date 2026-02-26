@@ -1,12 +1,7 @@
-/**
- * MicroStepRenderer — renders the current step: header + all visible blocks at once.
- * Uses a block registry for extensibility.
- */
-
 import type { ReactNode } from "react";
 import { useFormContext } from "./FormContext";
-import type { FormBlockV2, FormSchemaV2 } from "../types";
-import { getRelatedAlerts } from "../types/formSchemaV2/helpers";
+import type { FormBlock, FormSchema } from "../types";
+import { getRelatedAlerts } from "../types/helpers";
 import { cn } from "@/lib/utils";
 
 import { PropertyTypeBlock } from "./blocks/PropertyTypeBlock";
@@ -28,15 +23,15 @@ import { PreviewSummaryBlock } from "./blocks/PreviewSummaryBlock";
 import { ImageGalleryBlock } from "./blocks/ImageGalleryBlock";
 import { YesNoBlock } from "./blocks/YesNoBlock";
 
-interface MicroStepRendererProps {
+interface StepRendererProps {
   className?: string;
   onAutoAdvance?: () => void;
 }
 
-export function MicroStepRenderer({
+export function StepRenderer({
   className,
   onAutoAdvance,
-}: MicroStepRendererProps) {
+}: StepRendererProps) {
   const {
     formData,
     setFieldValue,
@@ -125,8 +120,8 @@ export function MicroStepRenderer({
 }
 
 function renderBlock(
-  schema: FormSchemaV2,
-  b: FormBlockV2,
+  schema: FormSchema,
+  b: FormBlock,
   formData: Record<string, unknown>,
   setFieldValue: (fieldId: string, value: unknown) => void,
   handleFieldChange: (blockId: string, value: unknown) => void,
@@ -281,7 +276,7 @@ function renderBlock(
       return (
         <div className="p-4 border border-destructive/50 bg-destructive/10 rounded-lg">
           <p className="text-destructive text-sm font-medium">
-            Tipo de bloco não suportado: &quot;{(b as FormBlockV2).type}&quot;
+            Tipo de bloco não suportado: &quot;{(b as FormBlock).type}&quot;
           </p>
           <p className="text-destructive/70 text-xs mt-1">ID: {b.id}</p>
         </div>

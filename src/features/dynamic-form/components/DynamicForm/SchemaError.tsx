@@ -1,7 +1,3 @@
-/**
- * Schema validation error display — blocks form when schema is invalid.
- */
-
 import { AlertTriangle } from "lucide-react";
 import type { SchemaValidationResult } from "../../utils/schemaValidator";
 import { formatValidationErrors } from "../../utils/schemaValidator";

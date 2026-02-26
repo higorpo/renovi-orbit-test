@@ -4,16 +4,16 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Edit2, CheckCircle2, AlertCircle } from "lucide-react";
 import type {
-  FormBlockV2,
-  FormDataV2,
-  FormSchemaV2,
+  FormBlock,
+  FormData,
+  FormSchema,
   PreviewSummaryBlockConfig,
 } from "../../types";
-import { getBlockById, getVisibleBlocksV2, getVisibleStepsV2 } from "../../types/formSchemaV2/helpers";
+import { getBlockById, getVisibleBlocks, getVisibleSteps } from "../../types/helpers";
 import {
   DEFAULT_PROPERTY_TYPE_OPTIONS,
   DEFAULT_URGENCY_OPTIONS,
-} from "../../types/formSchemaV2/defaults";
+} from "../../types/defaults";
 import { cn } from "@/lib/utils";
 
 const INPUT_BLOCK_TYPES = new Set([
@@ -49,7 +49,7 @@ interface PreviewSection {
   fields: PreviewField[];
 }
 
-function getDisplayValue(block: FormBlockV2, value: unknown): string {
+function getDisplayValue(block: FormBlock, value: unknown): string {
   if (value == null || (typeof value === "string" && value === "")) return "-";
   if (Array.isArray(value) && value.length === 0) return "-";
 
@@ -119,8 +119,8 @@ function getDisplayValue(block: FormBlockV2, value: unknown): string {
 }
 
 function buildSectionsFromConfig(
-  schema: FormSchemaV2,
-  formData: FormDataV2,
+  schema: FormSchema,
+  formData: FormData,
   config: PreviewSummaryBlockConfig
 ): PreviewSection[] {
   const sections: PreviewSection[] = [];
@@ -152,13 +152,13 @@ function buildSectionsFromConfig(
 }
 
 function buildSectionsFromSteps(
-  schema: FormSchemaV2,
-  formData: FormDataV2
+  schema: FormSchema,
+  formData: FormData
 ): PreviewSection[] {
-  const visibleSteps = getVisibleStepsV2(schema, formData);
+  const visibleSteps = getVisibleSteps(schema, formData);
   const sections: PreviewSection[] = [];
   for (const step of visibleSteps) {
-    const visibleBlocks = getVisibleBlocksV2(step, formData).filter(
+    const visibleBlocks = getVisibleBlocks(step, formData).filter(
       (b) =>
         INPUT_BLOCK_TYPES.has(b.type) &&
         b.type !== "preview_summary"
@@ -181,22 +181,22 @@ function buildSectionsFromSteps(
   return sections;
 }
 
-function getTotalInputBlocks(schema: FormSchemaV2, formData: FormDataV2): number {
+function getTotalInputBlocks(schema: FormSchema, formData: FormData): number {
   let count = 0;
-  const steps = getVisibleStepsV2(schema, formData);
+  const steps = getVisibleSteps(schema, formData);
   for (const step of steps) {
-    count += getVisibleBlocksV2(step, formData).filter(
+    count += getVisibleBlocks(step, formData).filter(
       (b) => INPUT_BLOCK_TYPES.has(b.type) && b.type !== "preview_summary"
     ).length;
   }
   return count;
 }
 
-function getFilledInputBlocks(schema: FormSchemaV2, formData: FormDataV2): number {
+function getFilledInputBlocks(schema: FormSchema, formData: FormData): number {
   let count = 0;
-  const steps = getVisibleStepsV2(schema, formData);
+  const steps = getVisibleSteps(schema, formData);
   for (const step of steps) {
-    for (const block of getVisibleBlocksV2(step, formData)) {
+    for (const block of getVisibleBlocks(step, formData)) {
       if (!INPUT_BLOCK_TYPES.has(block.type) || block.type === "preview_summary") continue;
       const v = formData[block.id];
       if (v != null && v !== "" && (!Array.isArray(v) || v.length > 0)) count++;
@@ -206,9 +206,9 @@ function getFilledInputBlocks(schema: FormSchemaV2, formData: FormDataV2): numbe
 }
 
 interface PreviewSummaryBlockProps {
-  schema: FormSchemaV2;
-  block: FormBlockV2;
-  formData: FormDataV2;
+  schema: FormSchema;
+  block: FormBlock;
+  formData: FormData;
   onEdit?: (fieldId: string) => void;
   className?: string;
 }

@@ -1,10 +1,10 @@
 import { cn } from "@/lib/utils";
-import type { FormBlockV2 } from "../../types";
+import type { FormBlock } from "../../types";
 import { useFieldValidation, getValidationErrorMessage } from "../../hooks/useFieldValidation";
 import { Check, AlertCircle } from "lucide-react";
 
 interface YesNoBlockProps {
-  block: FormBlockV2;
+  block: FormBlock;
   value: boolean | undefined;
   onChange: (value: boolean) => void;
 }

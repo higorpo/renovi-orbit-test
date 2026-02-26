@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, ImageIcon } from "lucide-react";
-import type { FormBlockV2 } from "../../types";
+import type { FormBlock } from "../../types";
 import { cn } from "@/lib/utils";
 
 interface ImageOption {
@@ -14,7 +14,7 @@ interface ImageOption {
 }
 
 interface ImageGalleryBlockProps {
-  block: FormBlockV2;
+  block: FormBlock;
   value: string | string[] | undefined;
   onChange: (value: string | string[]) => void;
 }

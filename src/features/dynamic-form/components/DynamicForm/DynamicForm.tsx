@@ -1,8 +1,3 @@
-/**
- * Micro-step form — schema-driven dynamic form (1 question = 1 screen).
- * No draft persistence in this migration; validation blocks invalid schemas.
- */
-
 import { useCallback, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -10,19 +5,19 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { FormProvider, useFormContext } from "../FormContext";
 import { ProgressBar } from "../ProgressBar";
-import { MicroStepRenderer } from "../MicroStepRenderer";
+import { StepRenderer } from "../StepRenderer";
 import { SchemaError } from "./SchemaError";
-import type { FormSchemaV2, FormDataV2 } from "../../types";
+import type { FormSchema, FormData } from "../../types";
 import type { SchemaValidationResult } from "../../utils/schemaValidator";
-import { validateFormSchemaV2 } from "../../utils/schemaValidator";
+import { validateFormSchema } from "../../utils/schemaValidator";
 
-export interface MicroStepFormProps {
-  schema: FormSchemaV2;
-  onComplete: (data: FormDataV2) => void;
-  onChange?: (data: FormDataV2, stepIndex: number) => void;
+export interface DynamicFormProps {
+  schema: FormSchema;
+  onComplete: (data: FormData) => void;
+  onChange?: (data: FormData, stepIndex: number) => void;
   onStepChange?: (stepIndex: number, direction: "next" | "back") => void;
   onCancel?: () => void;
-  initialData?: FormDataV2;
+  initialData?: FormData;
   className?: string;
 }
 
@@ -31,7 +26,7 @@ function FormContent({
   onStepChange,
   onCancel,
 }: {
-  onComplete: (data: FormDataV2) => void;
+  onComplete: (data: FormData) => void;
   onStepChange?: (stepIndex: number, direction: "next" | "back") => void;
   onCancel?: () => void;
 }) {
@@ -94,7 +89,7 @@ function FormContent({
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
           >
-            <MicroStepRenderer onAutoAdvance={handleAutoAdvance} />
+            <StepRenderer onAutoAdvance={handleAutoAdvance} />
           </motion.div>
         </AnimatePresence>
       </div>
@@ -137,7 +132,7 @@ function FormContent({
   );
 }
 
-export function MicroStepForm({
+export function DynamicForm({
   schema,
   onComplete,
   onChange,
@@ -145,9 +140,9 @@ export function MicroStepForm({
   onCancel,
   initialData = {},
   className,
-}: MicroStepFormProps) {
+}: DynamicFormProps) {
   const [validationResult] = useState<SchemaValidationResult>(() =>
-    validateFormSchemaV2(schema)
+    validateFormSchema(schema)
   );
 
   if (!validationResult.valid) {

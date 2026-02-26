@@ -3,7 +3,7 @@
  */
 
 import { cn } from "@/lib/utils";
-import type { FormBlockV2 } from "../../types";
+import type { FormBlock } from "../../types";
 import {
   useFieldValidation,
   getValidationErrorMessage,
@@ -11,7 +11,7 @@ import {
 import { AlertCircle, Check } from "lucide-react";
 
 interface CheckboxBlockProps {
-  block: FormBlockV2;
+  block: FormBlock;
   value: string[] | undefined;
   onChange: (value: string[]) => void;
 }

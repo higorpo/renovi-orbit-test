@@ -1,17 +1,13 @@
-/**
- * Helper functions for FormSchema V2 (visibility, micro-steps, validation).
- */
-
 import type {
-  FormBlockV2,
-  FormStepV2,
-  FormSchemaV2,
-  FormDataV2,
-  MicroStep,
+  FormBlock,
+  FormStep,
+  FormSchema,
+  FormData,
+  StepBlock,
   VisibilityRule,
-} from "./types";
+} from "./schema";
 
-export function checkVisibilityRule(rule: VisibilityRule, formData: FormDataV2): boolean {
+export function evaluateVisibilityRule(rule: VisibilityRule, formData: FormData): boolean {
   const fieldValue = formData[rule.dependsOn];
   const { operator, value } = rule;
 
@@ -49,46 +45,40 @@ export function checkVisibilityRule(rule: VisibilityRule, formData: FormDataV2):
   }
 }
 
-export function isBlockVisible(block: FormBlockV2, formData: FormDataV2): boolean {
+export function isBlockVisible(block: FormBlock, formData: FormData): boolean {
   if (!block.visibility || block.visibility.length === 0) return true;
-  return block.visibility.every((rule) => checkVisibilityRule(rule, formData));
+  return block.visibility.every((rule) => evaluateVisibilityRule(rule, formData));
 }
 
-export function isStepVisible(step: FormStepV2, formData: FormDataV2): boolean {
+export function isStepVisible(step: FormStep, formData: FormData): boolean {
   if (!step.visibility || step.visibility.length === 0) return true;
-  return step.visibility.every((rule) => checkVisibilityRule(rule, formData));
+  return step.visibility.every((rule) => evaluateVisibilityRule(rule, formData));
 }
 
-export function getVisibleStepsV2(schema: FormSchemaV2, formData: FormDataV2): FormStepV2[] {
+export function getVisibleSteps(schema: FormSchema, formData: FormData): FormStep[] {
   return schema.steps.filter((step) => isStepVisible(step, formData)).sort((a, b) => a.order - b.order);
 }
 
-export function getVisibleBlocksV2(
-  step: FormStepV2,
-  formData: FormDataV2
-): FormBlockV2[] {
+export function getVisibleBlocks(step: FormStep, formData: FormData): FormBlock[] {
   return step.blocks.filter((block) => isBlockVisible(block, formData));
 }
 
-export function generateMicroSteps(
-  schema: FormSchemaV2,
-  formData: FormDataV2
-): MicroStep[] {
-  const visibleSteps = getVisibleStepsV2(schema, formData);
-  const microSteps: MicroStep[] = [];
+export function buildStepBlocks(schema: FormSchema, formData: FormData): StepBlock[] {
+  const visibleSteps = getVisibleSteps(schema, formData);
+  const stepBlocks: StepBlock[] = [];
   let totalBlocks = 0;
 
   visibleSteps.forEach((step) => {
-    getVisibleBlocksV2(step, formData).forEach((block) => {
+    getVisibleBlocks(step, formData).forEach((block) => {
       if (block.type !== "conditional_alert" && block.type !== "static_text") totalBlocks++;
     });
   });
 
   let currentIndex = 0;
   visibleSteps.forEach((step) => {
-    getVisibleBlocksV2(step, formData).forEach((block) => {
+    getVisibleBlocks(step, formData).forEach((block) => {
       if (block.type === "conditional_alert" || block.type === "static_text") return;
-      microSteps.push({
+      stepBlocks.push({
         index: currentIndex,
         stepId: step.id,
         stepTitle: step.title,
@@ -102,36 +92,36 @@ export function generateMicroSteps(
     });
   });
 
-  return microSteps;
+  return stepBlocks;
 }
 
-export function isBlockComplete(block: FormBlockV2, formData: FormDataV2): boolean {
+export function isBlockComplete(block: FormBlock, formData: FormData): boolean {
   const value = formData[block.id];
-  const result = validateBlock(block, value);
+  const result = validateBlockValue(block, value);
   return result.valid;
 }
 
-export function isMicroStepComplete(microStep: MicroStep, formData: FormDataV2): boolean {
-  return isBlockComplete(microStep.block, formData);
+export function isStepBlockComplete(stepBlock: StepBlock, formData: FormData): boolean {
+  return isBlockComplete(stepBlock.block, formData);
 }
 
-export function isStepCompleteV2(step: FormStepV2, formData: FormDataV2): boolean {
-  const visibleBlocks = getVisibleBlocksV2(step, formData);
+export function isStepComplete(step: FormStep, formData: FormData): boolean {
+  const visibleBlocks = getVisibleBlocks(step, formData);
   return visibleBlocks.every((block) => {
     if (block.type === "conditional_alert" || block.type === "static_text") return true;
     return isBlockComplete(block, formData);
   });
 }
 
-export function getFormProgress(schema: FormSchemaV2, formData: FormDataV2): number {
-  const microSteps = generateMicroSteps(schema, formData);
-  if (microSteps.length === 0) return 0;
-  const completed = microSteps.filter((ms) => isMicroStepComplete(ms, formData)).length;
-  return Math.round((completed / microSteps.length) * 100);
+export function getFormProgress(schema: FormSchema, formData: FormData): number {
+  const stepBlocks = buildStepBlocks(schema, formData);
+  if (stepBlocks.length === 0) return 0;
+  const completed = stepBlocks.filter((sb) => isStepBlockComplete(sb, formData)).length;
+  return Math.round((completed / stepBlocks.length) * 100);
 }
 
-export function validateBlock(
-  block: FormBlockV2,
+export function validateBlockValue(
+  block: FormBlock,
   value: unknown
 ): { valid: boolean; error?: string } {
   if (block.type === "static_text") return { valid: true };
@@ -194,9 +184,9 @@ export function validateBlock(
 
 export function getRelatedAlerts(
   blockId: string,
-  step: FormStepV2 | null | undefined,
-  formData: FormDataV2
-): FormBlockV2[] {
+  step: FormStep | null | undefined,
+  formData: FormData
+): FormBlock[] {
   if (!step?.blocks || !Array.isArray(step.blocks) || !blockId || typeof formData !== "object")
     return [];
   return step.blocks.filter((block) => {
@@ -211,11 +201,7 @@ export function getRelatedAlerts(
   });
 }
 
-/** Find a block by id in the schema (any step). Returns undefined if not found. */
-export function getBlockById(
-  schema: FormSchemaV2,
-  blockId: string
-): FormBlockV2 | undefined {
+export function getBlockById(schema: FormSchema, blockId: string): FormBlock | undefined {
   for (const step of schema.steps) {
     const block = step.blocks.find((b) => b.id === blockId);
     if (block) return block;

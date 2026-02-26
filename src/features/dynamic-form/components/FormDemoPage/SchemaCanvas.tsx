@@ -1,7 +1,3 @@
-/**
- * Schema canvas — steps list with droppable areas and sortable blocks.
- */
-
 import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -12,15 +8,15 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import type { FormSchemaV2, FormStepV2, FormBlockV2, FormBlockType } from "@/features/dynamic-form/types";
+import type { FormSchema, FormStep, FormBlock, FormBlockType } from "@/features/dynamic-form/types";
 import { BLOCK_TYPE_ICONS } from "./builderDefaults";
 import { Settings } from "lucide-react";
 
 interface SchemaCanvasProps {
-  schema: FormSchemaV2;
+  schema: FormSchema;
   schemaSelected: boolean;
   onSelectSchema: () => void;
-  steps: FormStepV2[];
+  steps: FormStep[];
   selectedStepId: string | null;
   selectedBlockId: string | null;
   onSelectStep: (stepId: string) => void;
@@ -40,7 +36,7 @@ function SortableBlockItem({
   onSelect,
   onRemove,
 }: {
-  block: FormBlockV2;
+  block: FormBlock;
   stepId: string;
   isSelected: boolean;
   onSelect: () => void;
@@ -90,7 +86,7 @@ function SortableBlockItem({
         onClick={onSelect}
       >
         <span className="shrink-0" aria-hidden>
-          {BLOCK_TYPE_ICONS[block.type]}
+          {BLOCK_TYPE_ICONS[block.type as FormBlockType]}
         </span>
         <span className="truncate font-medium text-foreground">{block.label || block.id}</span>
       </button>
@@ -125,7 +121,7 @@ function StepCard({
   activeId: _activeId,
   isOver,
 }: {
-  step: FormStepV2;
+  step: FormStep;
   stepIndex: number;
   selectedStepId: string | null;
   selectedBlockId: string | null;
@@ -194,7 +190,7 @@ function StepCard({
 
       <div className="px-2 pb-2 pt-0 space-y-1.5">
         <SortableContext items={blockIds} strategy={verticalListSortingStrategy}>
-          {step.blocks.map((block) => (
+          {step.blocks.map((block: FormBlock) => (
             <SortableBlockItem
               key={block.id}
               block={block}

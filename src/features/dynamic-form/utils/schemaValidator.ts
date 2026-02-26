@@ -1,4 +1,4 @@
-import type { FormStepV2, FormBlockV2 } from "../types";
+import type { FormStep, FormBlock } from "../types";
 
 export type ValidationSeverity = "error" | "warning";
 
@@ -36,7 +36,7 @@ const VALID_BLOCK_TYPES = [
   "preview_summary",
 ] as const;
 
-export function validateFormSchemaV2(schema: unknown): SchemaValidationResult {
+export function validateFormSchema(schema: unknown): SchemaValidationResult {
   const errors: SchemaValidationError[] = [];
   const warnings: SchemaValidationError[] = [];
 
@@ -108,7 +108,7 @@ export function validateFormSchemaV2(schema: unknown): SchemaValidationResult {
     return { valid: false, errors, warnings };
   }
 
-  const steps = s.steps as FormStepV2[];
+  const steps = s.steps as FormStep[];
   const stepResult = validateSteps(steps);
   errors.push(...stepResult.errors);
   warnings.push(...stepResult.warnings);
@@ -126,7 +126,7 @@ export function validateFormSchemaV2(schema: unknown): SchemaValidationResult {
   };
 }
 
-function validateSteps(steps: FormStepV2[]): {
+function validateSteps(steps: FormStep[]): {
   errors: SchemaValidationError[];
   warnings: SchemaValidationError[];
 } {
@@ -193,7 +193,7 @@ function validateSteps(steps: FormStepV2[]): {
 }
 
 function validateBlocks(
-  blocks: FormBlockV2[],
+  blocks: FormBlock[],
   stepId: string,
   parentPath: string
 ): { errors: SchemaValidationError[]; warnings: SchemaValidationError[] } {
@@ -298,7 +298,7 @@ const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_REGEX = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
 
 function validateBlockValidation(
-  block: FormBlockV2,
+  block: FormBlock,
   parentPath: string
 ): SchemaValidationError[] {
   const errors: SchemaValidationError[] = [];
@@ -457,7 +457,7 @@ function validateBlockValidation(
   return errors;
 }
 
-function validateGlobalBlocks(steps: FormStepV2[]): {
+function validateGlobalBlocks(steps: FormStep[]): {
   errors: SchemaValidationError[];
   warnings: SchemaValidationError[];
 } {
@@ -491,7 +491,7 @@ function validateGlobalBlocks(steps: FormStepV2[]): {
   return { errors, warnings };
 }
 
-function validateGlobalOrder(steps: FormStepV2[]): {
+function validateGlobalOrder(steps: FormStep[]): {
   errors: SchemaValidationError[];
   warnings: SchemaValidationError[];
 } {

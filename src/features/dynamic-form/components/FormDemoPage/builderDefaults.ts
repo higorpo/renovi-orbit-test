@@ -1,17 +1,13 @@
-/**
- * Builder defaults: block type labels, default block/step factories.
- */
-
 import type {
-  FormBlockV2,
-  FormStepV2,
-  FormSchemaV2,
+  FormBlock,
+  FormStep,
+  FormSchema,
   FormBlockType,
   VisibilityRule,
   VisibilityOperator,
   SelectOption,
 } from "../../types";
-import { DEFAULT_PROPERTY_TYPE_OPTIONS, DEFAULT_URGENCY_OPTIONS } from "../../types/formSchemaV2/defaults";
+import { DEFAULT_PROPERTY_TYPE_OPTIONS, DEFAULT_URGENCY_OPTIONS } from "../../types/defaults";
 
 let blockIdCounter = 0;
 let stepIdCounter = 0;
@@ -81,9 +77,9 @@ export const VISIBILITY_OPERATORS: { value: VisibilityOperator; label: string }[
   { value: "isNotEmpty", label: "Não está vazio" },
 ];
 
-export function createBlock(type: FormBlockType, overrides?: Partial<FormBlockV2>): FormBlockV2 {
+export function createBlock(type: FormBlockType, overrides?: Partial<FormBlock>): FormBlock {
   const id = overrides?.id ?? nextBlockId();
-  const base: FormBlockV2 = {
+  const base: FormBlock = {
     id,
     type,
     label: overrides?.label ?? BLOCK_TYPE_LABELS[type],
@@ -146,7 +142,7 @@ export function createBlock(type: FormBlockType, overrides?: Partial<FormBlockV2
   }
 }
 
-export function createStep(overrides?: Partial<FormStepV2>): FormStepV2 {
+export function createStep(overrides?: Partial<FormStep>): FormStep {
   const id = overrides?.id ?? nextStepId();
   const order = overrides?.order ?? 0;
   return {
@@ -160,7 +156,7 @@ export function createStep(overrides?: Partial<FormStepV2>): FormStepV2 {
   };
 }
 
-export function createEmptySchema(): FormSchemaV2 {
+export function createEmptySchema(): FormSchema {
   const step = createStep({ order: 0, title: "Primeiro passo", blocks: [] });
   return {
     version: "2.0",

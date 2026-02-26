@@ -4,7 +4,7 @@
 
 import type { ElementType } from "react";
 import { cn } from "@/lib/utils";
-import type { FormBlockV2 } from "../../types";
+import type { FormBlock } from "../../types";
 
 type TextVariant = "h1" | "h2" | "h3" | "h4" | "p";
 type TextSize = "sm" | "md" | "lg";
@@ -16,7 +16,7 @@ type TextColor =
   | "success";
 
 interface StaticTextBlockProps {
-  block: FormBlockV2;
+  block: FormBlock;
 }
 
 const SIZE_CLASSES: Record<TextSize, string> = {

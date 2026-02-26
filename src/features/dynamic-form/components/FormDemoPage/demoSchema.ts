@@ -2,9 +2,9 @@
  * Demo schema — all block types across multiple steps for testing.
  */
 
-import type { FormSchemaV2 } from "../../types";
+import type { FormSchema } from "../../types";
 
-export const formDemoSchema: FormSchemaV2 = {
+export const formDemoSchema: FormSchema = {
   version: "2.0",
   id: "demo-all-blocks",
   title: "Formulário Demo — Todos os Blocos",

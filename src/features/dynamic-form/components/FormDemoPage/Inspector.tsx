@@ -1,7 +1,3 @@
-/**
- * Inspector — edit selected step or block properties in real time.
- */
-
 import { useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -17,9 +13,10 @@ import {
 import { Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
-  FormStepV2,
-  FormBlockV2,
-  FormSchemaV2,
+  FormStep,
+  FormBlock,
+  FormSchema,
+  FormBlockType,
   VisibilityRule,
   VisibilityOperator,
 } from "@/features/dynamic-form/types";
@@ -30,20 +27,20 @@ import {
 } from "./builderDefaults";
 
 interface InspectorProps {
-  schema: FormSchemaV2;
-  selectedStep: FormStepV2 | null;
-  selectedBlock: FormBlockV2 | null;
+  schema: FormSchema;
+  selectedStep: FormStep | null;
+  selectedBlock: FormBlock | null;
   selectionType: "schema" | "step" | "block" | null;
   stepId: string | null;
   blockId: string | null;
-  onUpdateSchemaRoot: (updates: Partial<Pick<FormSchemaV2, "id" | "title" | "description" | "metadata" | "config">>) => void;
-  onUpdateStep: (stepId: string, updates: Partial<FormStepV2>) => void;
-  onUpdateBlock: (stepId: string, blockId: string, updates: Partial<FormBlockV2>) => void;
+  onUpdateSchemaRoot: (updates: Partial<Pick<FormSchema, "id" | "title" | "description" | "metadata" | "config">>) => void;
+  onUpdateStep: (stepId: string, updates: Partial<FormStep>) => void;
+  onUpdateBlock: (stepId: string, blockId: string, updates: Partial<FormBlock>) => void;
 }
 
-function allBlockIds(schema: FormSchemaV2): string[] {
+function allBlockIds(schema: FormSchema): string[] {
   const ids: string[] = [];
-  schema.steps.forEach((s) => s.blocks.forEach((b) => ids.push(b.id)));
+  schema.steps.forEach((s: FormStep) => s.blocks.forEach((b: FormBlock) => ids.push(b.id)));
   return ids;
 }
 
@@ -335,12 +332,12 @@ export function Inspector(props: InspectorProps) {
 
   if (selectionType === "block" && selectedBlock && blockId) {
     const block = selectedBlock;
-    const update = (updates: Partial<FormBlockV2>) => onUpdateBlock(stepId, blockId, updates);
+    const update = (updates: Partial<FormBlock>) => onUpdateBlock(stepId, blockId, updates);
 
     return (
       <div className="space-y-4 overflow-auto">
         <h3 className="text-sm font-semibold text-foreground">
-          {BLOCK_TYPE_LABELS[block.type]}
+          {BLOCK_TYPE_LABELS[block.type as FormBlockType]}
         </h3>
         <div className="space-y-3">
           <div>

@@ -1,8 +1,4 @@
-/**
- * Skeleton for dynamic form loading state.
- */
-
-export function MicroStepFormSkeleton() {
+export function DynamicFormSkeleton() {
   return (
     <div className="flex flex-col h-full bg-background animate-pulse">
       <div className="px-4 pt-4 pb-2 border-b border-border/50">

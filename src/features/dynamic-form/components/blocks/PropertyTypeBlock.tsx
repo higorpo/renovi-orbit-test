@@ -1,11 +1,11 @@
 import { cn } from "@/lib/utils";
-import type { FormBlockV2 } from "../../types";
-import { DEFAULT_PROPERTY_TYPE_OPTIONS } from "../../types/formSchemaV2/defaults";
+import type { FormBlock, SelectOption } from "../../types";
+import { DEFAULT_PROPERTY_TYPE_OPTIONS } from "../../types/defaults";
 import { useFieldValidation } from "../../hooks/useFieldValidation";
 import { Check } from "lucide-react";
 
 interface PropertyTypeBlockProps {
-  block: FormBlockV2;
+  block: FormBlock;
   value: string | undefined;
   onChange: (value: string) => void;
 }
@@ -63,7 +63,7 @@ export function PropertyTypeBlock({ block, value, onChange }: PropertyTypeBlockP
           columns === 4 && "grid-cols-4"
         )}
       >
-        {options.map((option) => {
+        {options.map((option: SelectOption) => {
           const isSelected = value === option.value;
           return (
             <button
