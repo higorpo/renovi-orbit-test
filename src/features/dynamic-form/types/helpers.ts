@@ -6,6 +6,10 @@ import type {
   StepBlock,
   VisibilityRule,
 } from "./schema";
+import {
+  DEFAULT_PROPERTY_TYPE_OPTIONS,
+  DEFAULT_URGENCY_OPTIONS,
+} from "./defaults";
 
 export function evaluateVisibilityRule(rule: VisibilityRule, formData: FormData): boolean {
   const fieldValue = formData[rule.dependsOn];
@@ -120,64 +124,90 @@ export function getFormProgress(schema: FormSchema, formData: FormData): number 
   return Math.round((completed / stepBlocks.length) * 100);
 }
 
-export function validateBlockValue(
-  block: FormBlock,
-  value: unknown
-): { valid: boolean; error?: string } {
-  if (block.type === "static_text") return { valid: true };
+export type ValidateBlockResult = { valid: boolean; error?: string };
 
-  const isEmpty =
+function isValueEmpty(value: unknown): boolean {
+  return (
     value === undefined ||
     value === null ||
     value === "" ||
-    (Array.isArray(value) && value.length === 0);
+    (Array.isArray(value) && value.length === 0)
+  );
+}
 
-  if (isEmpty) {
+function validateNumberConstraints(
+  block: FormBlock,
+  value: number
+): ValidateBlockResult {
+  const validation = block.validation;
+  const minVal = validation?.min ?? block.min;
+  const maxVal = validation?.max ?? block.max;
+  if (minVal !== undefined && value < minVal) {
+    return { valid: false, error: `Valor mínimo: ${minVal}` };
+  }
+  if (maxVal !== undefined && value > maxVal) {
+    return { valid: false, error: `Valor máximo: ${maxVal}` };
+  }
+  return { valid: true };
+}
+
+function validateStringConstraints(
+  block: FormBlock,
+  value: string
+): ValidateBlockResult {
+  const { minLength, maxLength, pattern, dateMin, dateMax, timeMin, timeMax } =
+    block.validation ?? {};
+  if (minLength !== undefined && value.length < minLength) {
+    return { valid: false, error: `Mínimo de ${minLength} caracteres` };
+  }
+  if (maxLength !== undefined && value.length > maxLength) {
+    return { valid: false, error: `Máximo de ${maxLength} caracteres` };
+  }
+  if (pattern && !new RegExp(pattern).test(value)) {
+    return { valid: false, error: block.validation?.message || "Formato inválido" };
+  }
+  if (block.type === "date" && (dateMin !== undefined || dateMax !== undefined)) {
+    if (dateMin !== undefined && value < dateMin) {
+      return { valid: false, error: block.validation?.message || `Data mínima: ${dateMin}` };
+    }
+    if (dateMax !== undefined && value > dateMax) {
+      return { valid: false, error: block.validation?.message || `Data máxima: ${dateMax}` };
+    }
+  }
+  if (block.type === "time" && (timeMin !== undefined || timeMax !== undefined)) {
+    if (timeMin !== undefined && value < timeMin) {
+      return { valid: false, error: block.validation?.message || `Horário mínimo: ${timeMin}` };
+    }
+    if (timeMax !== undefined && value > timeMax) {
+      return { valid: false, error: block.validation?.message || `Horário máximo: ${timeMax}` };
+    }
+  }
+  return { valid: true };
+}
+
+export function validateBlockValue(
+  block: FormBlock,
+  value: unknown
+): ValidateBlockResult {
+  if (block.type === "static_text") return { valid: true };
+
+  if (isValueEmpty(value)) {
     if (!block.required) return { valid: true };
     return { valid: false, error: block.validation?.message || "Campo obrigatório" };
   }
 
   if (block.validation) {
-    const { min, max, minLength, maxLength, pattern, dateMin, dateMax, timeMin, timeMax } = block.validation;
-    if (typeof value === "number") {
-      const minVal = min ?? block.min;
-      const maxVal = max ?? block.max;
-      if (minVal !== undefined && value < minVal) return { valid: false, error: `Valor mínimo: ${minVal}` };
-      if (maxVal !== undefined && value > maxVal) return { valid: false, error: `Valor máximo: ${maxVal}` };
-    }
-    if (typeof value === "string") {
-      if (minLength !== undefined && value.length < minLength) {
-        return { valid: false, error: `Mínimo de ${minLength} caracteres` };
-      }
-      if (maxLength !== undefined && value.length > maxLength) {
-        return { valid: false, error: `Máximo de ${maxLength} caracteres` };
-      }
-      if (pattern && !new RegExp(pattern).test(value)) {
-        return { valid: false, error: block.validation.message || "Formato inválido" };
-      }
-      if (block.type === "date" && (dateMin !== undefined || dateMax !== undefined)) {
-        const v = value as string;
-        if (dateMin !== undefined && v < dateMin) {
-          return { valid: false, error: block.validation.message || `Data mínima: ${dateMin}` };
-        }
-        if (dateMax !== undefined && v > dateMax) {
-          return { valid: false, error: block.validation.message || `Data máxima: ${dateMax}` };
-        }
-      }
-      if (block.type === "time" && (timeMin !== undefined || timeMax !== undefined)) {
-        const v = value as string;
-        if (timeMin !== undefined && v < timeMin) {
-          return { valid: false, error: block.validation.message || `Horário mínimo: ${timeMin}` };
-        }
-        if (timeMax !== undefined && v > timeMax) {
-          return { valid: false, error: block.validation.message || `Horário máximo: ${timeMax}` };
-        }
-      }
-    }
+    if (typeof value === "number") return validateNumberConstraints(block, value);
+    if (typeof value === "string") return validateStringConstraints(block, value);
   }
+
   if (typeof value === "number" && !block.validation) {
-    if (block.min !== undefined && value < block.min) return { valid: false, error: `Valor mínimo: ${block.min}` };
-    if (block.max !== undefined && value > block.max) return { valid: false, error: `Valor máximo: ${block.max}` };
+    if (block.min !== undefined && value < block.min) {
+      return { valid: false, error: `Valor mínimo: ${block.min}` };
+    }
+    if (block.max !== undefined && value > block.max) {
+      return { valid: false, error: `Valor máximo: ${block.max}` };
+    }
   }
   return { valid: true };
 }
@@ -207,4 +237,73 @@ export function getBlockById(schema: FormSchema, blockId: string): FormBlock | u
     if (block) return block;
   }
   return undefined;
+}
+
+/** Format block value for display (summary, read-only views). Uses block options or defaults for property_type/urgency. */
+export function getDisplayValue(block: FormBlock, value: unknown): string {
+  if (value == null || (typeof value === "string" && value === "")) return "-";
+  if (Array.isArray(value) && value.length === 0) return "-";
+
+  const options =
+    block.type === "property_type"
+      ? (block.options?.length ? block.options : DEFAULT_PROPERTY_TYPE_OPTIONS)
+      : block.type === "urgency"
+        ? (block.options?.length ? block.options : DEFAULT_URGENCY_OPTIONS)
+        : (block.options ?? []);
+
+  const optionByValue = (v: string) => options.find((o) => o.value === v);
+
+  switch (block.type) {
+    case "single_select":
+    case "radio":
+    case "property_type":
+    case "urgency": {
+      const v = String(value);
+      const opt = optionByValue(v);
+      if (opt) return [opt.emoji, opt.label].filter(Boolean).join(" ");
+      return v;
+    }
+    case "multi_select":
+    case "checkbox": {
+      const arr = Array.isArray(value) ? value : [value];
+      return arr
+        .map((v) => {
+          const opt = optionByValue(String(v));
+          return opt ? [opt.emoji, opt.label].filter(Boolean).join(" ") : String(v);
+        })
+        .join(", ");
+    }
+    case "yes_no":
+      return value === true ? "Sim" : value === false ? "Não" : "-";
+    case "number":
+    case "slider": {
+      const num = typeof value === "number" ? value : Number(value);
+      const unit = block.unit ?? "";
+      return unit ? `${num} ${unit}`.trim() : String(num);
+    }
+    case "date":
+      try {
+        const str = String(value);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+          return new Date(str + "T12:00:00").toLocaleDateString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          });
+        }
+      } catch {
+        // ignore
+      }
+      return String(value);
+    case "time":
+      return String(value);
+    case "image_gallery":
+      if (Array.isArray(value)) return `${value.length} imagem(ns)`;
+      return String(value);
+    case "text":
+    case "textarea":
+    case "description_ai":
+    default:
+      return String(value);
+  }
 }

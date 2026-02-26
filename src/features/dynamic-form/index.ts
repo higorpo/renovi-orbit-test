@@ -27,6 +27,7 @@ export type {
   PreviewSummarySectionConfig,
   PreviewSummaryBlockConfig,
 } from "./types";
+export { FORM_BLOCK_TYPES } from "./types/schema";
 export {
   getVisibleSteps,
   getVisibleBlocks,
@@ -36,6 +37,7 @@ export {
   getRelatedAlerts,
   getFormProgress,
   getBlockById,
+  getDisplayValue,
   evaluateVisibilityRule,
   isBlockVisible,
   isStepVisible,

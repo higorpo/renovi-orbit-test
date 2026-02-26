@@ -8,7 +8,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import type { FormSchema, FormStep, FormBlock, FormBlockType } from "@/features/dynamic-form/types";
+import type { FormSchema, FormStep, FormBlock, FormBlockType } from "../../types";
 import { BLOCK_TYPE_ICONS } from "./builderDefaults";
 import { Settings } from "lucide-react";
 

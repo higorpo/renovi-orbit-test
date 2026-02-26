@@ -4,7 +4,7 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
-import type { FormBlockType } from "@/features/dynamic-form/types";
+import type { FormBlockType } from "../../types";
 import { BLOCK_TYPE_LABELS, BLOCK_TYPE_ICONS } from "./builderDefaults";
 
 const BLOCK_TYPES: FormBlockType[] = [

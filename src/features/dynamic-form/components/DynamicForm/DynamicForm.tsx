@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,6 @@ import { ProgressBar } from "../ProgressBar";
 import { StepRenderer } from "../StepRenderer";
 import { SchemaError } from "./SchemaError";
 import type { FormSchema, FormData } from "../../types";
-import type { SchemaValidationResult } from "../../utils/schemaValidator";
 import { validateFormSchema } from "../../utils/schemaValidator";
 
 export interface DynamicFormProps {
@@ -141,8 +140,9 @@ export function DynamicForm({
   initialData = {},
   className,
 }: DynamicFormProps) {
-  const [validationResult] = useState<SchemaValidationResult>(() =>
-    validateFormSchema(schema)
+  const validationResult = useMemo(
+    () => validateFormSchema(schema),
+    [schema]
   );
 
   if (!validationResult.valid) {

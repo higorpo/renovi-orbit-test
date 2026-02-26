@@ -9,11 +9,7 @@ import type {
   FormSchema,
   PreviewSummaryBlockConfig,
 } from "../../types";
-import { getBlockById, getVisibleBlocks, getVisibleSteps } from "../../types/helpers";
-import {
-  DEFAULT_PROPERTY_TYPE_OPTIONS,
-  DEFAULT_URGENCY_OPTIONS,
-} from "../../types/defaults";
+import { getBlockById, getVisibleBlocks, getVisibleSteps, getDisplayValue } from "../../types/helpers";
 import { cn } from "@/lib/utils";
 
 const INPUT_BLOCK_TYPES = new Set([
@@ -47,75 +43,6 @@ interface PreviewSection {
   title: string;
   icon: string;
   fields: PreviewField[];
-}
-
-function getDisplayValue(block: FormBlock, value: unknown): string {
-  if (value == null || (typeof value === "string" && value === "")) return "-";
-  if (Array.isArray(value) && value.length === 0) return "-";
-
-  const options =
-    block.type === "property_type"
-      ? (block.options?.length ? block.options : DEFAULT_PROPERTY_TYPE_OPTIONS)
-      : block.type === "urgency"
-        ? (block.options?.length ? block.options : DEFAULT_URGENCY_OPTIONS)
-        : (block.options ?? []);
-
-  const optionByValue = (v: string) =>
-    options.find((o) => o.value === v);
-
-  switch (block.type) {
-    case "single_select":
-    case "radio":
-    case "property_type":
-    case "urgency": {
-      const v = String(value);
-      const opt = optionByValue(v);
-      if (opt) return [opt.emoji, opt.label].filter(Boolean).join(" ");
-      return v;
-    }
-    case "multi_select":
-    case "checkbox": {
-      const arr = Array.isArray(value) ? value : [value];
-      return arr
-        .map((v) => {
-          const opt = optionByValue(String(v));
-          return opt ? [opt.emoji, opt.label].filter(Boolean).join(" ") : String(v);
-        })
-        .join(", ");
-    }
-    case "yes_no":
-      return value === true ? "Sim" : value === false ? "Não" : "-";
-    case "number":
-    case "slider": {
-      const num = typeof value === "number" ? value : Number(value);
-      const unit = block.unit ?? "";
-      return unit ? `${num} ${unit}`.trim() : String(num);
-    }
-    case "date":
-      try {
-        const str = String(value);
-        if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-          return new Date(str + "T12:00:00").toLocaleDateString("pt-BR", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-          });
-        }
-      } catch {
-        // ignore
-      }
-      return String(value);
-    case "time":
-      return String(value);
-    case "image_gallery":
-      if (Array.isArray(value)) return `${value.length} imagem(ns)`;
-      return String(value);
-    case "text":
-    case "textarea":
-    case "description_ai":
-    default:
-      return String(value);
-  }
 }
 
 function buildSectionsFromConfig(

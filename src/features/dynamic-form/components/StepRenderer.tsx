@@ -1,31 +1,24 @@
-import type { ReactNode } from "react";
 import { useFormContext } from "./FormContext";
-import type { FormBlock, FormSchema } from "../types";
+import type { FormBlock } from "../types";
 import { getRelatedAlerts } from "../types/helpers";
 import { cn } from "@/lib/utils";
-
-import { PropertyTypeBlock } from "./blocks/PropertyTypeBlock";
-import { UrgencyBlock } from "./blocks/UrgencyBlock";
-import { DescriptionBlock } from "./blocks/DescriptionBlock";
-import { SingleSelectBlock } from "./blocks/SingleSelectBlock";
-import { MultiSelectBlock } from "./blocks/MultiSelectBlock";
-import { RadioBlock } from "./blocks/RadioBlock";
-import { CheckboxBlock } from "./blocks/CheckboxBlock";
-import { TextInputBlock } from "./blocks/TextInputBlock";
-import { NumberInputBlock } from "./blocks/NumberInputBlock";
-import { TextareaBlock } from "./blocks/TextareaBlock";
-import { DateBlock } from "./blocks/DateBlock";
-import { TimeBlock } from "./blocks/TimeBlock";
-import { SliderBlock } from "./blocks/SliderBlock";
+import { blockRegistry, renderBlockByType, type BlockRenderProps } from "./blocks/registry";
 import { ConditionalAlertBlock } from "./blocks/ConditionalAlertBlock";
-import { StaticTextBlock } from "./blocks/StaticTextBlock";
-import { PreviewSummaryBlock } from "./blocks/PreviewSummaryBlock";
-import { ImageGalleryBlock } from "./blocks/ImageGalleryBlock";
-import { YesNoBlock } from "./blocks/YesNoBlock";
 
 interface StepRendererProps {
   className?: string;
   onAutoAdvance?: () => void;
+}
+
+function UnsupportedBlock({ block }: { block: FormBlock }) {
+  return (
+    <div className="p-4 border border-destructive/50 bg-destructive/10 rounded-lg">
+      <p className="text-destructive text-sm font-medium">
+        Tipo de bloco não suportado: &quot;{block.type}&quot;
+      </p>
+      <p className="text-destructive/70 text-xs mt-1">ID: {block.id}</p>
+    </div>
+  );
 }
 
 export function StepRenderer({
@@ -56,17 +49,14 @@ export function StepRenderer({
 
   const handleFieldChange = (blockId: string, value: unknown) => {
     setFieldValue(blockId, value);
-    if (
-      (visibleBlocks.find((b) => b.id === blockId)?.config?.autoAdvance as boolean) &&
-      value != null &&
-      value !== "" &&
-      onAutoAdvance
-    ) {
+    const block = visibleBlocks.find((b) => b.id === blockId);
+    const autoAdvance = block?.config?.autoAdvance as boolean | undefined;
+    if (autoAdvance && value != null && value !== "" && onAutoAdvance) {
       setTimeout(() => onAutoAdvance(), 300);
     }
   };
 
-  const handleEditFromSummary = (fieldId: string) => {
+  const onEditFromSummary = (fieldId: string) => {
     const stepIndex = visibleSteps.findIndex((step) =>
       getVisibleBlocks(step).some((b) => b.id === fieldId)
     );
@@ -74,6 +64,14 @@ export function StepRenderer({
   };
 
   const { title: stepTitle, description: stepDescription, icon: stepIcon } = currentStepData;
+
+  const blockRenderProps: Omit<BlockRenderProps, "block"> = {
+    schema,
+    formData,
+    setFieldValue,
+    handleFieldChange,
+    onEditFromSummary,
+  };
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -93,14 +91,9 @@ export function StepRenderer({
       <div className="space-y-6 py-2">
         {visibleBlocks.map((block) => {
           const relatedAlerts = getRelatedAlerts(block.id, currentStepData, formData);
-          const renderedBlock = renderBlock(
-            schema,
-            block,
-            formData,
-            setFieldValue,
-            (blockId, value) => handleFieldChange(blockId, value),
-            handleEditFromSummary
-          );
+          const renderedBlock = blockRegistry[block.type]
+            ? renderBlockByType({ ...blockRenderProps, block })
+            : <UnsupportedBlock block={block} />;
           return (
             <div key={block.id} className="space-y-2">
               {renderedBlock}
@@ -117,169 +110,4 @@ export function StepRenderer({
       </div>
     </div>
   );
-}
-
-function renderBlock(
-  schema: FormSchema,
-  b: FormBlock,
-  formData: Record<string, unknown>,
-  setFieldValue: (fieldId: string, value: unknown) => void,
-  handleFieldChange: (blockId: string, value: unknown) => void,
-  onEditFromSummary?: (fieldId: string) => void
-): ReactNode {
-  const value = formData[b.id];
-  const onChange = (val: unknown) => handleFieldChange(b.id, val);
-
-  switch (b.type) {
-    case "property_type":
-      return (
-        <PropertyTypeBlock
-          block={b}
-          value={value as string | undefined}
-          onChange={onChange as (v: string) => void}
-        />
-      );
-    case "urgency":
-      return (
-        <UrgencyBlock
-          block={b}
-          value={value as string | undefined}
-          onChange={onChange as (v: string) => void}
-        />
-      );
-    case "description_ai":
-      return (
-        <DescriptionBlock
-          block={b}
-          value={value as string | undefined}
-          onChange={onChange as (v: string) => void}
-        />
-      );
-    case "single_select":
-      return (
-        <SingleSelectBlock
-          block={b}
-          value={value as string | undefined}
-          onChange={onChange as (v: string) => void}
-          otherText={formData[`${b.id}_other_text`] as string | undefined}
-          onOtherTextChange={(text) =>
-            setFieldValue(`${b.id}_other_text`, text)
-          }
-        />
-      );
-    case "multi_select":
-      return (
-        <MultiSelectBlock
-          block={b}
-          value={value as string[] | undefined}
-          onChange={onChange as (v: string[]) => void}
-          otherText={formData[`${b.id}_other_text`] as string | undefined}
-          onOtherTextChange={(text) =>
-            setFieldValue(`${b.id}_other_text`, text)
-          }
-        />
-      );
-    case "radio":
-      return (
-        <RadioBlock
-          block={b}
-          value={value as string | undefined}
-          onChange={onChange as (v: string) => void}
-        />
-      );
-    case "checkbox":
-      return (
-        <CheckboxBlock
-          block={b}
-          value={value as string[] | undefined}
-          onChange={onChange as (v: string[]) => void}
-        />
-      );
-    case "yes_no":
-      return (
-        <YesNoBlock
-          block={b}
-          value={value as boolean | undefined}
-          onChange={onChange as (v: boolean) => void}
-        />
-      );
-    case "text":
-      return (
-        <TextInputBlock
-          block={b}
-          value={value as string | undefined}
-          onChange={onChange as (v: string) => void}
-        />
-      );
-    case "number":
-      return (
-        <NumberInputBlock
-          block={b}
-          value={value as number | undefined}
-          onChange={onChange as (v: number) => void}
-        />
-      );
-    case "textarea":
-      return (
-        <TextareaBlock
-          block={b}
-          value={value as string | undefined}
-          onChange={onChange as (v: string) => void}
-        />
-      );
-    case "date":
-      return (
-        <DateBlock
-          block={b}
-          value={value as string | undefined}
-          onChange={onChange as (v: string) => void}
-        />
-      );
-    case "time":
-      return (
-        <TimeBlock
-          block={b}
-          value={value as string | undefined}
-          onChange={onChange as (v: string) => void}
-        />
-      );
-    case "slider":
-      return (
-        <SliderBlock
-          block={b}
-          value={value as number | undefined}
-          onChange={onChange as (v: number) => void}
-        />
-      );
-    case "conditional_alert":
-      return <ConditionalAlertBlock block={b} />;
-    case "static_text":
-      return <StaticTextBlock block={b} />;
-    case "preview_summary":
-      return (
-        <PreviewSummaryBlock
-          schema={schema}
-          block={b}
-          formData={formData}
-          onEdit={onEditFromSummary}
-        />
-      );
-    case "image_gallery":
-      return (
-        <ImageGalleryBlock
-          block={b}
-          value={value as string | string[] | undefined}
-          onChange={onChange as (v: string | string[]) => void}
-        />
-      );
-    default:
-      return (
-        <div className="p-4 border border-destructive/50 bg-destructive/10 rounded-lg">
-          <p className="text-destructive text-sm font-medium">
-            Tipo de bloco não suportado: &quot;{(b as FormBlock).type}&quot;
-          </p>
-          <p className="text-destructive/70 text-xs mt-1">ID: {b.id}</p>
-        </div>
-      );
-  }
 }

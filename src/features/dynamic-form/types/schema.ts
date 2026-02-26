@@ -18,6 +18,28 @@ export type FormBlockType =
   | "image_gallery"
   | "preview_summary";
 
+/** Single source of truth for valid block types (used by schema validator and block registry). */
+export const FORM_BLOCK_TYPES: readonly FormBlockType[] = [
+  "property_type",
+  "urgency",
+  "description_ai",
+  "single_select",
+  "multi_select",
+  "radio",
+  "checkbox",
+  "yes_no",
+  "text",
+  "textarea",
+  "number",
+  "slider",
+  "date",
+  "time",
+  "conditional_alert",
+  "static_text",
+  "image_gallery",
+  "preview_summary",
+] as const;
+
 export type VisibilityOperator =
   | "equals"
   | "notEquals"
