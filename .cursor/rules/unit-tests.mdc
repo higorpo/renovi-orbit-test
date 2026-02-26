@@ -1,0 +1,47 @@
+---
+description: Testes unitários — manter/atualizar ao alterar código existente e cobrir código novo quando possível
+alwaysApply: true
+---
+
+# Testes unitários
+
+O projeto usa **Vitest** e **React Testing Library** para testes unitários. Os testes ficam próximos ao código (ex.: `__tests__/` dentro da feature ou ao lado do arquivo). Comando: `yarn test:run` ou `yarn test` (watch).
+
+## Ao modificar arquivos que já possuem testes
+
+Sempre que você **alterar um arquivo de produção** (componente, hook, API, util, validador) que **já tem testes unitários** associados:
+
+1. **Verificar impacto nos testes**
+   - Rodar os testes existentes (`yarn test:run`) e garantir que continuam passando.
+   - Se a alteração quebrar um teste, **ajustar o teste** para refletir o novo comportamento esperado (não remover ou desabilitar o teste sem motivo).
+
+2. **Avaliar necessidade de novos testes**
+   - Se a alteração introduz novo comportamento, novo branch lógico ou novo edge case, **adicionar ou estender testes** para cobri-los.
+   - Ex.: novo parâmetro opcional, nova validação, novo estado de UI, novo callback — adicionar casos de teste quando fizer sentido.
+
+3. **Não ignorar testes**
+   - Não deixar testes falhando após a alteração. Corrigir ou atualizar os testes como parte da mesma mudança.
+
+## Código novo deve ter testes quando possível
+
+Ao **criar código novo** (novo arquivo, nova função, novo componente, nova feature):
+
+1. **Incluir testes unitários** sempre que for viável:
+   - **API** (`src/features/<feature>/api/`): testes com mocks do cliente; cobrir sucesso, erro e chamadas corretas.
+   - **Hooks**: testes com `renderHook`, mock da API; cobrir estados e transições relevantes.
+   - **Componentes**: testes com React Testing Library; cobrir renderização, interações e estados expostos na UI.
+   - **Utils / validadores / pure functions**: testes puros (entrada → saída); cobrir edge cases.
+
+2. **Exceções aceitáveis** (código novo sem teste na mesma PR):
+   - Componentes de apresentação muito simples e sem lógica (ex.: wrapper de estilo) quando o time considerar desnecessário.
+   - Código declarativo (ex.: apenas reexport ou configuração) sem comportamento testável.
+   - Quando o usuário pedir explicitamente para não criar testes no momento.
+
+3. **Onde colocar os testes**
+   - Na mesma feature, em `__tests__/` (ex.: `src/features/auth/api/__tests__/auth.api.test.ts`).
+   - Seguir as convenções do comando `.cursor/commands/unit-tests.md` e das regras do projeto (feature-based, API layer, comentários em inglês nos testes).
+
+## Resumo
+
+- **Mexeu em arquivo que já tem teste?** → Rodar testes, corrigir se quebrou, avaliar se precisa de mais testes.
+- **Criou código novo?** → Incluir testes unitários quando possível (API, hooks, componentes com lógica, utils, validadores).
