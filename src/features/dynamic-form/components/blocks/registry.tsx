@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { FormBlock, FormSchema } from "../../types";
+import type { FormBlock, FormSchema, FormBlockType } from "../../types";
 import type { FormData } from "../../types";
 
 import { PropertyTypeBlock } from "./PropertyTypeBlock";
@@ -87,8 +87,8 @@ function renderPreviewSummary(props: BlockRenderProps): ReactNode {
   );
 }
 
-/** Registry: FormBlockType -> render function. Add new block types here instead of editing StepRenderer. */
-export const blockRegistry: Record<string, BlockRenderer> = {
+/** Registry: every FormBlockType must have an entry. Adding a new block type in schema forces adding one here. */
+export const blockRegistry: Record<FormBlockType, BlockRenderer> = {
   property_type: (p) => renderWithValue(p, PropertyTypeBlock),
   urgency: (p) => renderWithValue(p, UrgencyBlock),
   description_ai: (p) => renderWithValue(p, DescriptionBlock),
