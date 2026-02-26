@@ -16,6 +16,12 @@ export default defineConfig({
   server: {
     host: true,
   },
+  test: {
+    environment: 'happy-dom',
+    setupFiles: ['./src/test/setup.ts'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    globals: false,
+  },
   plugins: [react(), VitePWA({
     strategies: 'injectManifest',
     srcDir: 'src',
