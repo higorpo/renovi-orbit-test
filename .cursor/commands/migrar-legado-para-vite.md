@@ -136,3 +136,66 @@ Ao migrar ou escrever código novo, siga os padrões já adotados no projeto:
 - **Constantes:** preferir constantes nomeadas no topo do arquivo (ex.: `PROFILE_CACHE_TTL_MS`, `AUTH_DEBOUNCE_MS`) em vez de números mágicos.
 - **Toast:** o projeto usa **sonner**; `<Toaster />` está em `RootLayout`. Instalar com `yarn add --ignore-engines sonner` se houver erro de engine.
 - **Migrações:** ficam em `supabase/migrations/` com nome `YYYYMMDDHHMMSS_descricao_em_ingles.sql`.
+
+---
+
+## 11. Mapeamento Legado → Orbit: formulário dinâmico (MicroStepForm)
+
+Ao migrar código do **projeto legado (renovi)** que usa o motor de formulário dinâmico, tenha em mente que a implementação no **Orbit** foi refatorada e os nomes/estrutura mudaram.
+
+### 11.1 Onde fica no legado (renovi)
+
+- **Componente principal:** `renovi/src/components/forms/engine/MicroStepForm.tsx`
+- O legado pode expor ou importar esse componente e tipos/helpers associados a partir dessa área.
+
+### 11.2 Onde fica no Orbit
+
+- **Feature:** `orbit/src/features/dynamic-form/`
+- **Componente principal:** não se chama mais **MicroStepForm**; no Orbit o equivalente é **DynamicForm**.
+- **Ponto de entrada:** importe sempre da **Public API** da feature: `@/features/dynamic-form` (conforme o alias do projeto).
+
+### 11.3 O que mudou de nome / estrutura
+
+| Legado (renovi) | Orbit |
+|-----------------|--------|
+| `MicroStepForm` | **`DynamicForm`** |
+| `MicroStepRenderer` | **`StepRenderer`** |
+| `MicroStepFormSkeleton` | **`DynamicFormSkeleton`** |
+| Tipos `FormBlockV2`, `FormStepV2`, `FormSchemaV2`, `FormDataV2` | **`FormBlock`**, **`FormStep`**, **`FormSchema`**, **`FormData`** (sem sufixo V2) |
+| Helpers `getVisibleStepsV2`, `getVisibleBlocksV2`, `isStepCompleteV2` | **`getVisibleSteps`**, **`getVisibleBlocks`**, **`isStepComplete`** |
+| `validateFormSchemaV2`, `normalizeSchemaV2` | **`validateFormSchema`**, **`normalizeSchema`** |
+| `checkVisibilityRule` | **`evaluateVisibilityRule`** |
+| `validateBlock` (valor do bloco) | **`validateBlockValue`** |
+| Pasta de tipos `formSchemaV2/` | Tipos na raiz da feature: **`types/schema.ts`**, **`types/helpers.ts`**, **`types/defaults.ts`** |
+
+O schema continua com **`version: "2.0"`**; apenas os nomes de tipos e funções no código deixaram de usar "V2".
+
+### 11.4 Como importar no Orbit
+
+```ts
+// Componente principal do formulário (equivalente ao MicroStepForm do legado)
+import { DynamicForm, DynamicFormProps, DynamicFormSkeleton } from "@/features/dynamic-form";
+
+// Contexto e renderizador do step
+import { FormProvider, useFormContext, StepRenderer } from "@/features/dynamic-form";
+
+// Tipos
+import type { FormSchema, FormData, FormBlock, FormStep, FormContextValue } from "@/features/dynamic-form";
+
+// Helpers e validação
+import {
+  getVisibleSteps,
+  getVisibleBlocks,
+  isStepComplete,
+  validateBlockValue,
+  validateFormSchema,
+  normalizeSchema,
+  evaluateVisibilityRule,
+} from "@/features/dynamic-form";
+```
+
+### 11.5 Ao migrar do legado para o Orbit
+
+- Se o código legado importa **MicroStepForm** ou **MicroStepRenderer**, substitua por **DynamicForm** e **StepRenderer** e importe de `@/features/dynamic-form`.
+- Se usar tipos ou helpers com sufixo **V2**, use os novos nomes (sem V2) exportados pela mesma feature.
+- Não importe de caminhos internos da feature (ex.: `@/features/dynamic-form/types/formSchemaV2/...`); essa pasta não existe mais. Use apenas `@/features/dynamic-form`.
