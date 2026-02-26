@@ -79,7 +79,7 @@ export async function updateRole(
   role: "client" | "provider"
 ): Promise<UpdateRoleResult> {
   // Never allow admin via application; enforce even if type is bypassed
-  if (role === "admin") {
+  if ((role as unknown as 'admin') === "admin") {
     logger.warn("profile_update_role_rejected", { reason: "admin_not_allowed", userId });
     return { error: "Role admin cannot be set via application." };
   }

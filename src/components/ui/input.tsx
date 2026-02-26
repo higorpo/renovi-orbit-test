@@ -42,7 +42,8 @@ const AUTOCOMPLETE_MAP: Record<string, string> = {
   url: 'url',
 }
 
-export interface InputProps extends React.ComponentProps<'input'> {
+export interface InputProps
+  extends Omit<React.ComponentProps<'input'>, 'size'> {
   /** Estado de erro */
   error?: boolean
   /** Mensagem de erro (exibida abaixo do input se fornecida) */
