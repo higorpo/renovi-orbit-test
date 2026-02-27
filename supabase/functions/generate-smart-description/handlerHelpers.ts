@@ -203,7 +203,6 @@ export function processAIResponse(params: {
     rawContent,
     mode,
     enableStructured,
-    serviceDisplayName,
     formattingRules,
   } = params;
 
