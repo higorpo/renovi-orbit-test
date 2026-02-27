@@ -9,7 +9,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { checkRateLimit, getClientIP, getUserIdFromRequest } from "../_shared/rateLimiter.ts";
 
 import { corsHeaders, DEFAULT_MODEL } from "./constants.ts";
-import type { GenerateSmartDescriptionBody } from "./types.ts";
+import type { GenerateSmartDescriptionBody, PromptConfig } from "./types.ts";
 import { formatFormDataToContext } from "./formContext.ts";
 import { logPromptUsage } from "./usage.ts";
 import {
