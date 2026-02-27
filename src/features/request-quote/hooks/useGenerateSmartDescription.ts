@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { toast } from "sonner";
 import { invokeGenerateSmartDescription } from "../api/smartDescription.api";
 import type { RequestQuoteState } from "./useRequestQuoteState";
+import type { GenerateSmartDescriptionPayload } from "../types/request-quote.types";
 
 export interface UseGenerateSmartDescriptionParams {
   state: RequestQuoteState;
@@ -30,30 +31,12 @@ export function useGenerateSmartDescription({
     state.setGeneratingDescription(true);
     try {
       const additionalDetails = getAdditionalDetailsFromStep2(state.step2Data);
-      const payload = {
+      const payload: GenerateSmartDescriptionPayload = {
         serviceId: state.selectedService?.id ?? "",
         formData: state.step2Data,
         userNotes: additionalDetails ?? undefined,
         mode: "full_description" as const,
         useStructuredOutput: true,
-        city:
-          state.step4Data?.kind === "existing"
-            ? state.step4Data.city
-            : state.step4Data?.kind === "new"
-              ? state.step4Data.formData.address_city || null
-              : null,
-        neighborhood:
-          state.step4Data?.kind === "existing"
-            ? state.step4Data.neighborhood
-            : state.step4Data?.kind === "new"
-              ? state.step4Data.formData.address_neighborhood || null
-              : null,
-        state:
-          state.step4Data?.kind === "existing"
-            ? state.step4Data.state
-            : state.step4Data?.kind === "new"
-              ? state.step4Data.formData.address_state || null
-              : null,
       };
       const { data, error } = await invokeGenerateSmartDescription(payload);
       if (error) throw error;

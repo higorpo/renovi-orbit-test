@@ -1,5 +1,6 @@
 import type { FormSchema } from "@/features/dynamic-form";
 import type { Tables } from "@/lib/supabase/database.types";
+import type { GenerateSmartDescriptionBody } from "../../../../supabase/functions/generate-smart-description/types";
 
 export type Service = Tables<"services">;
 export type ServiceRow = Service;
@@ -17,19 +18,7 @@ export interface ServiceSchemaResult {
   isLoading: boolean;
 }
 
-export interface GenerateSmartDescriptionPayload {
-  serviceId: string;
-  formData: Record<string, unknown>;
-  mode: "full_description";
-  useStructuredOutput: boolean;
-  /** Optional: notes for the AI context (e.g. step 3 description). */
-  userNotes?: string | null;
-  /** Optional: when set, edge function can persist AI result to this service_requests row. */
-  requestId?: string | null;
-  city?: string | null;
-  neighborhood?: string | null;
-  state?: string | null;
-}
+export type GenerateSmartDescriptionPayload = GenerateSmartDescriptionBody
 
 export interface GenerateSmartDescriptionResponse {
   description?: string;

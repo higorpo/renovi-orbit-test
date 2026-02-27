@@ -15,15 +15,7 @@ export async function invokeGenerateSmartDescription(
 ): Promise<InvokeGenerateSmartDescriptionResult> {
   const { data, error } = await supabase.functions.invoke("generate-smart-description", {
     body: {
-      service: payload.serviceId,
-      formData: payload.formData,
-      userNotes: payload.userNotes ?? "",
-      requestId: payload.requestId ?? null,
-      mode: payload.mode,
-      useStructuredOutput: payload.useStructuredOutput,
-      city: payload.city ?? null,
-      neighborhood: payload.neighborhood ?? null,
-      state: payload.state ?? null,
+      ...payload,
     },
   });
 
