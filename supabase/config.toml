@@ -217,15 +217,17 @@ otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
-# Use Resend for auth emails (confirmation, password reset). Local: set RESEND_API_KEY in .env; prod: same or use Dashboard.
-[auth.email.smtp]
-enabled = true
-host = "smtp.resend.com"
-port = 465
-user = "resend"
-pass = "env(RESEND_API_KEY)"
-admin_email = "env(RESEND_FROM_EMAIL)"
-sender_name = "env(RESEND_FROM_NAME)"
+# Use Resend for auth emails (confirmation, password reset).
+# Local: comment out the block below so emails go to Inbucket (http://127.0.0.1:54324).
+# Prod: enable and set RESEND_* in Dashboard or env.
+# [auth.email.smtp]
+# enabled = true
+# host = "smtp.resend.com"
+# port = 465
+# user = "resend"
+# pass = "env(RESEND_API_KEY)"
+# admin_email = "env(RESEND_FROM_EMAIL)"
+# sender_name = "env(RESEND_FROM_NAME)"
 
 # Uncomment to customize email template
 # [auth.email.template.invite]
