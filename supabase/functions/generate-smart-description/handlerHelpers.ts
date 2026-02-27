@@ -34,12 +34,8 @@ function getDefaultPromptConfig(): PromptConfig {
 Gere uma descrição clara, em português brasileiro, com as seções: RESUMO DO SERVIÇO, DESCRIÇÃO DETALHADA e SUGESTÕES.
 Use APENAS as informações fornecidas no contexto. Não invente dados.
 Formato: texto puro, sem markdown.`,
-    user_prompt_template: null,
-    category_slug: null,
-    use_case: "description",
     max_tokens: 1500,
     temperature: 0.3,
-    variables_schema: {},
     formatting_rules: {
       use_caps_titles: true,
       use_block_separation: true,

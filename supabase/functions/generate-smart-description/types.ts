@@ -7,12 +7,8 @@ export interface PromptConfig {
   prompt_key: string;
   name: string;
   system_prompt: string;
-  user_prompt_template: string | null;
-  category_slug: string | null;
-  use_case: string;
   max_tokens: number;
   temperature: number;
-  variables_schema: Record<string, unknown>;
   formatting_rules: {
     use_caps_titles?: boolean;
     use_block_separation?: boolean;

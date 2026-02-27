@@ -12,8 +12,5 @@ create table if not exists public.rate_limits (
 
 comment on table public.rate_limits is 'Rate limit counters for edge functions (key = functionName:userIdOrIp).';
 
--- RLS: only service role should access (edge functions use service role).
+-- RLS: only edge functions (service role) can read/insert/update. No policies for anon/authenticated = no access.
 alter table public.rate_limits enable row level security;
-
--- No policies: table is intended for server-side use only (edge functions with service role bypass RLS).
--- If you need to allow anon/authenticated to read/write, add policies; by default only service role can access.

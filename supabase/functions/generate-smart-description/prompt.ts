@@ -71,9 +71,7 @@ export async function getPromptById(
   try {
     const { data, error } = await supabase
       .from("ai_prompts")
-      .select(
-        "id, prompt_key, name, system_prompt, user_prompt_template, category_slug, use_case, max_tokens, temperature, variables_schema, formatting_rules, version"
-      )
+      .select("*")
       .eq("id", promptId)
       .eq("is_active", true)
       .maybeSingle();
@@ -89,7 +87,6 @@ export async function getPromptById(
         use_caps_titles: true,
         use_block_separation: true,
         allow_markdown: false,
-        word_limit: 300,
         ...(typeof data.formatting_rules === "object" && data.formatting_rules
           ? (data.formatting_rules as object)
           : {}),
