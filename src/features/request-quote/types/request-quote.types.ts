@@ -1,6 +1,6 @@
 import type { FormSchema } from "@/features/dynamic-form";
 import type { Tables } from "@/lib/supabase/database.types";
-import type { GenerateSmartDescriptionBody } from "../../../../supabase/functions/generate-smart-description/types";
+import type { GenerateSmartDescriptionBody, StructuredAIResponse } from "../../../../supabase/functions/generate-smart-description/types";
 
 export type Service = Tables<"services">;
 export type ServiceRow = Service;
@@ -21,5 +21,7 @@ export interface ServiceSchemaResult {
 export type GenerateSmartDescriptionPayload = GenerateSmartDescriptionBody
 
 export interface GenerateSmartDescriptionResponse {
-  description?: string;
+  description: string;
+  metadata: Record<string, unknown>;
+  structured?: StructuredAIResponse;
 }
