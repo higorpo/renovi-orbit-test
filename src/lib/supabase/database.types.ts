@@ -215,6 +215,93 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_states: {
+        Row: {
+          id: string
+          ibge_code: number
+          name: string
+          abbreviation: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          ibge_code: number
+          name: string
+          abbreviation: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          ibge_code?: number
+          name?: string
+          abbreviation?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      platform_cities: {
+        Row: {
+          id: string
+          state_id: string
+          ibge_code: number
+          name: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          state_id: string
+          ibge_code: number
+          name: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          state_id?: string
+          ibge_code?: number
+          name?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      platform_neighborhoods: {
+        Row: {
+          id: string
+          city_id: string
+          name: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          city_id: string
+          name: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          city_id?: string
+          name?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

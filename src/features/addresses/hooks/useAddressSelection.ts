@@ -76,9 +76,6 @@ export function useAddressSelection({
       setFormData((prev) => ({
         ...prev,
         address_street: res.logradouro || prev.address_street,
-        address_neighborhood: res.bairro || prev.address_neighborhood,
-        address_city: res.localidade || prev.address_city,
-        address_state: res.uf || prev.address_state,
       }));
     }
   }, [formData.address_zip]);

@@ -1,0 +1,63 @@
+import { supabase } from "@/lib/supabase/client";
+import { logger } from "@/lib/logger";
+import type { PlatformState, PlatformCity, PlatformNeighborhood } from "../types/addresses.types";
+
+export type { PlatformState, PlatformCity, PlatformNeighborhood } from "../types/addresses.types";
+
+export interface ListStatesResult {
+  states: PlatformState[];
+  error: string | null;
+}
+
+export interface ListCitiesResult {
+  cities: PlatformCity[];
+  error: string | null;
+}
+
+export interface ListNeighborhoodsResult {
+  neighborhoods: PlatformNeighborhood[];
+  error: string | null;
+}
+
+export async function listStates(): Promise<ListStatesResult> {
+  const { data, error } = await supabase
+    .from("platform_states")
+    .select("id, ibge_code, name, abbreviation, is_active, created_at, updated_at")
+    .order("name", { ascending: true });
+
+  if (error) {
+    logger.error("platform_states_list_error", { error: error.message });
+    return { states: [], error: error.message };
+  }
+  return { states: (data ?? []) as PlatformState[], error: null };
+}
+
+export async function listCitiesByState(stateId: string): Promise<ListCitiesResult> {
+  const { data, error } = await supabase
+    .from("platform_cities")
+    .select("id, state_id, ibge_code, name, is_active, created_at, updated_at")
+    .eq("state_id", stateId)
+    .order("name", { ascending: true });
+
+  if (error) {
+    logger.error("platform_cities_list_error", { stateId, error: error.message });
+    return { cities: [], error: error.message };
+  }
+  return { cities: (data ?? []) as PlatformCity[], error: null };
+}
+
+export async function listNeighborhoodsByCity(
+  cityId: string
+): Promise<ListNeighborhoodsResult> {
+  const { data, error } = await supabase
+    .from("platform_neighborhoods")
+    .select("id, city_id, name, is_active, created_at, updated_at")
+    .eq("city_id", cityId)
+    .order("name", { ascending: true });
+
+  if (error) {
+    logger.error("platform_neighborhoods_list_error", { cityId, error: error.message });
+    return { neighborhoods: [], error: error.message };
+  }
+  return { neighborhoods: (data ?? []) as PlatformNeighborhood[], error: null };
+}

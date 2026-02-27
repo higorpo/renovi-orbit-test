@@ -2,8 +2,20 @@ import { MapPin, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { maskCEP } from "@/lib/masks";
 import { useAddressSelection } from "../../hooks/useAddressSelection";
+import {
+  usePlatformStates,
+  usePlatformCities,
+  usePlatformNeighborhoods,
+} from "../../hooks/usePlatformStatesAndCities";
 import type { AddressSelection } from "../../types/addresses.types";
 
 export interface AddressSelectionStepProps {
@@ -34,6 +46,48 @@ export function AddressSelectionStep({
     addresses,
     handleCepBlur,
   } = useAddressSelection({ userId, onSelectionChange });
+
+  const { states, isLoading: statesLoading } = usePlatformStates();
+  const { cities, isLoading: citiesLoading } = usePlatformCities(
+    formData.address_state_id || null
+  );
+  const { neighborhoods, isLoading: neighborhoodsLoading } = usePlatformNeighborhoods(
+    formData.address_city_id || null
+  );
+
+  const handleStateChange = (stateId: string) => {
+    const state = states.find((s) => s.id === stateId);
+    if (!state) return;
+    setFormData((prev) => ({
+      ...prev,
+      address_state_id: stateId,
+      address_state: state.abbreviation,
+      address_city_id: "",
+      address_city: "",
+    }));
+  };
+
+  const handleCityChange = (cityId: string) => {
+    const city = cities.find((c) => c.id === cityId);
+    if (!city) return;
+    setFormData((prev) => ({
+      ...prev,
+      address_city_id: cityId,
+      address_city: city.name,
+      address_neighborhood_id: "",
+      address_neighborhood: "",
+    }));
+  };
+
+  const handleNeighborhoodChange = (neighborhoodId: string) => {
+    const neighborhood = neighborhoods.find((n) => n.id === neighborhoodId);
+    if (!neighborhood) return;
+    setFormData((prev) => ({
+      ...prev,
+      address_neighborhood_id: neighborhoodId,
+      address_neighborhood: neighborhood.name,
+    }));
+  };
 
   if (userId && addresses.length > 0 && !showNewAddressForm) {
     return (
@@ -139,38 +193,61 @@ export function AddressSelectionStep({
           />
         </div>
         <div>
-          <Label className="text-white/90">Bairro</Label>
-          <Input
-            value={formData.address_neighborhood}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, address_neighborhood: e.target.value }))
-            }
-            className="bg-white/10 border-white/30 text-white"
-          />
+          <Label className="text-white/90">Estado</Label>
+          <Select
+            value={formData.address_state_id || ""}
+            onValueChange={handleStateChange}
+            disabled={statesLoading}
+          >
+            <SelectTrigger className="bg-white/10 border-white/30 text-white w-full">
+              <SelectValue placeholder="Selecione o estado" />
+            </SelectTrigger>
+            <SelectContent>
+              {states.map((s) => (
+                <SelectItem key={s.id} value={s.id} className="focus:bg-white/10">
+                  {s.name} ({s.abbreviation})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <Label className="text-white/90">Cidade</Label>
-          <Input
-            value={formData.address_city}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, address_city: e.target.value }))
-            }
-            className="bg-white/10 border-white/30 text-white"
-          />
+          <Select
+            value={formData.address_city_id || ""}
+            onValueChange={handleCityChange}
+            disabled={!formData.address_state_id || citiesLoading}
+          >
+            <SelectTrigger className="bg-white/10 border-white/30 text-white w-full">
+              <SelectValue placeholder="Selecione a cidade" />
+            </SelectTrigger>
+            <SelectContent>
+              {cities.map((c) => (
+                <SelectItem key={c.id} value={c.id} className="focus:bg-white/10">
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div>
-          <Label className="text-white/90">UF</Label>
-          <Input
-            value={formData.address_state}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                address_state: e.target.value.toUpperCase().slice(0, 2),
-              }))
-            }
-            placeholder="SC"
-            className="bg-white/10 border-white/30 text-white w-20"
-          />
+          <Label className="text-white/90">Bairro</Label>
+          <Select
+            value={formData.address_neighborhood_id || ""}
+            onValueChange={handleNeighborhoodChange}
+            disabled={!formData.address_city_id || neighborhoodsLoading}
+          >
+            <SelectTrigger className="bg-white/10 border-white/30 text-white w-full">
+              <SelectValue placeholder="Selecione o bairro" />
+            </SelectTrigger>
+            <SelectContent>
+              {neighborhoods.map((n) => (
+                <SelectItem key={n.id} value={n.id} className="focus:bg-white/10">
+                  {n.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </div>

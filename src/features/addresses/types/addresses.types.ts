@@ -2,6 +2,9 @@ import type { Tables } from "@/lib/supabase/database.types";
 import type { AddressFormData } from "./addressForm.validation";
 
 export type ClientAddress = Tables<"client_addresses">;
+export type PlatformState = Tables<"platform_states">;
+export type PlatformCity = Tables<"platform_cities">;
+export type PlatformNeighborhood = Tables<"platform_neighborhoods">;
 
 export interface ListAddressesResult {
   addresses: ClientAddress[];

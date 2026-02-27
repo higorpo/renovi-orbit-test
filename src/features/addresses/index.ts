@@ -10,6 +10,11 @@ export {
   createAddress,
   updateAddress,
 } from "./api/addresses.api";
+export {
+  listStates,
+  listCitiesByState,
+  listNeighborhoodsByCity,
+} from "./api/statesAndCities.api";
 export type {
   ClientAddress,
   ListAddressesResult,
@@ -17,11 +22,19 @@ export type {
   CreateAddressResult,
   UpdateAddressParams,
   UpdateAddressResult,
+  PlatformState,
+  PlatformCity,
+  PlatformNeighborhood,
   AddressSelection,
   AddressSelectionExisting,
   AddressSelectionNew,
   ResolveAddressResult,
 } from "./types/addresses.types";
+export type {
+  ListStatesResult,
+  ListCitiesResult,
+  ListNeighborhoodsResult,
+} from "./api/statesAndCities.api";
 export {
   addressFormSchema,
   defaultAddressFormData,
