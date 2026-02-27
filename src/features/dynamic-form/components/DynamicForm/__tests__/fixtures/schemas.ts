@@ -1,4 +1,4 @@
-import type { FormSchema, FormData } from "../../../../../types";
+import type { FormSchema, FormData } from "../../../../types";
 
 /** Minimal valid schema for a single step with one text field (smoke tests). */
 export const minimalSchema: FormSchema = {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { validateBlocks, validateBlockValidation } from "../blockValidator";
-import type { FormBlock } from "../../types";
+import type { FormBlock } from "../../../types";
 
 describe("validateBlocks", () => {
   it("reports error when block has no id", () => {

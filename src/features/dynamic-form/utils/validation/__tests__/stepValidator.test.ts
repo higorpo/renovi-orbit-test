@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { validateSteps } from "../stepValidator";
-import type { FormStep } from "../../types";
+import type { FormStep } from "../../../types";
 
 describe("validateSteps", () => {
   it("reports error when step has no id", () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { validateGlobalBlocks, validateGlobalOrder } from "../globalRulesValidator";
-import type { FormStep } from "../../types";
+import type { FormStep } from "../../../types";
 
 describe("validateGlobalBlocks", () => {
   it("reports error when schema has no property_type block", () => {
