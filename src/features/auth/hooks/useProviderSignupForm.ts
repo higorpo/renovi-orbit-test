@@ -109,14 +109,14 @@ export function useProviderSignupForm() {
 
     setSubmitting(true);
     try {
-      await signUp(
+      const result = await signUp(
         formData.email,
         formData.password,
         formData.fullName,
         "provider",
         { emailRedirectTo: getEmailRedirectTo() }
       );
-      setSignupSuccess(true);
+      if (result.success) setSignupSuccess(true);
     } finally {
       setSubmitting(false);
     }

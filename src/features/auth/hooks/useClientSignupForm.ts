@@ -109,10 +109,10 @@ export function useClientSignupForm() {
 
     setSubmitting(true);
     try {
-      await signUp(formData.email, formData.password, formData.fullName, "client", {
+      const result = await signUp(formData.email, formData.password, formData.fullName, "client", {
         emailRedirectTo: getEmailRedirectTo(),
       });
-      setSignupSuccess(true);
+      if (result.success) setSignupSuccess(true);
     } finally {
       setSubmitting(false);
     }

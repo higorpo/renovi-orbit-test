@@ -115,3 +115,24 @@ export const PASSWORD_REQUIREMENTS = [
       /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?~`]/.test(p),
   },
 ];
+
+export interface PasswordStrengthDisplay {
+  label: string;
+  colorClass: string;
+  widthPercent: number;
+}
+
+/** Returns label, Tailwind color class and width percent (0–100) for password strength UI. */
+export function getPasswordStrengthDisplay(
+  password: string
+): PasswordStrengthDisplay {
+  if (!password) {
+    return { label: "", colorClass: "", widthPercent: 0 };
+  }
+  const validation = validatePasswordStrength(password);
+  return {
+    label: getPasswordStrengthLabel(validation.strength),
+    colorClass: getPasswordStrengthColor(validation.strength),
+    widthPercent: (validation.strength / 5) * 100,
+  };
+}

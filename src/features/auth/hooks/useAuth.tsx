@@ -17,7 +17,7 @@ import {
 } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import type { AuthContextType, Profile } from "@/features/auth/types/auth.types";
+import type { AuthContextType, Profile, SignUpResult } from "@/features/auth/types/auth.types";
 import { processAuthEvent } from "@/features/auth/utils/authStateHandlers";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useProfileFetcher } from "@/features/auth/hooks/useProfileFetcher";
@@ -198,12 +198,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       fullName: string,
       role: "client" | "provider",
       options?: { emailRedirectTo?: string }
-    ) => {
+    ): Promise<SignUpResult> => {
       try {
         const passwordValidation = validatePasswordStrength(password);
         if (!passwordValidation.valid) {
-          toast.error(passwordValidation.errors[0]);
-          throw new Error(passwordValidation.errors[0]);
+          const message = passwordValidation.errors[0];
+          toast.error(message);
+          return { success: false, reason: "error", message };
         }
 
         const { user: newUser, error } = await authApi.signUp(email, password, {
@@ -212,38 +213,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (error) {
-          if (error.message.includes("User already registered")) {
+          if (
+            error.message.includes("User already registered") ||
+            error.message.includes("already registered")
+          ) {
             toast.error(
               "Este email já está cadastrado. Faça login ou recupere sua senha."
             );
-            throw new Error("Usuário já existe");
+            return { success: false, reason: "already_registered" };
           }
-          throw error;
+          const message = error.message || "Não foi possível criar sua conta.";
+          toast.error(message);
+          return { success: false, reason: "error", message };
         }
 
-        if (newUser) {
-          trackEvent("signup_completed", { method: "email", user_role: role });
-          if (!newUser.email_confirmed_at) {
-            toast.success(
-              "Cadastro realizado! Por favor, confirme seu email para fazer login."
-            );
-            return;
-          }
+        if (!newUser?.id) {
+          toast.error("Erro ao criar conta. Tente novamente.");
+          return {
+            success: false,
+            reason: "error",
+            message: "Erro ao criar conta. Tente novamente.",
+          };
+        }
+
+        const profile = await fetchProfile(newUser.id);
+        if (profile) setProfile(profile);
+
+        trackEvent("signup_completed", { method: "email", user_role: role });
+        if (!newUser.email_confirmed_at) {
+          toast.success(
+            "Cadastro realizado! Por favor, confirme seu email para fazer login."
+          );
+        } else {
           toast.success("Cadastro realizado! Redirecionando...");
         }
+        return { success: true, userId: newUser.id };
       } catch (error) {
         logger.error("auth_signup_error", {
           error: error instanceof Error ? error.message : String(error),
         });
-        const errMsg =
-          error instanceof Error ? error.message : String(error);
-        if (!errMsg.includes("Usuário já existe")) {
-          toast.error(errMsg || "Erro ao criar conta");
-        }
-        throw error;
+        const message =
+          error instanceof Error ? error.message : "Erro ao criar conta";
+        toast.error(message);
+        return { success: false, reason: "error", message };
       }
     },
-    [trackEvent]
+    [trackEvent, fetchProfile, setProfile]
   );
 
   const signOut = useCallback(async () => {

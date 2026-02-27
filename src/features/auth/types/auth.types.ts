@@ -32,8 +32,13 @@ export interface AuthContextType {
     fullName: string,
     role: "client" | "provider",
     options?: { emailRedirectTo?: string }
-  ) => Promise<void>;
+  ) => Promise<SignUpResult>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   getRedirectPath: (userProfile: Profile) => string;
 }
+
+export type SignUpResult =
+  | { success: true; userId: string }
+  | { success: false; reason: "already_registered" }
+  | { success: false; reason: "error"; message: string };

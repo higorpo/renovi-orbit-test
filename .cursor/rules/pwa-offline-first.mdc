@@ -1,0 +1,37 @@
+---
+description: PWA e offline-first — caching e ações sem conexão
+alwaysApply: true
+---
+
+# PWA e offline-first
+
+A aplicação é um **PWA** e deve **funcionar offline**. Toda implementação deve considerar **offline-first**: priorizar cache, dados locais e permitir que o usuário realize ações mesmo sem conexão com a internet.
+
+## Regras
+
+1. **Cache primeiro** – Ao buscar dados (API, Supabase, assets):
+   - Preferir estratégias que leiam do cache antes da rede (ex.: React Query com `staleTime`/cache, Service Worker cache).
+   - Definir política de invalidação clara (quando revalidar ao voltar online).
+
+2. **Dados críticos no cliente** – Para fluxos que precisam funcionar offline:
+   - Persistir no cliente o necessário (ex.: IndexedDB, localStorage, React Query persist) para listagens, formulários em rascunho, preferências.
+   - Sincronizar com o backend quando houver conexão (queue de ações, retry, conflitos).
+
+3. **Feedback de conectividade** – Onde fizer sentido:
+   - Detectar estado online/offline (navigator.onLine, listeners).
+   - Informar o usuário quando estiver offline e quando ações forem enfileiradas ou falharem por falta de rede.
+
+4. **Ações sem rede** – Permitir ações que não dependem do servidor imediatamente:
+   - Preenchimento e rascunho de formulários.
+   - Navegação em telas e dados já em cache.
+   - Enfileirar mutações (ex.: criar pedido, enviar mensagem) e processar ao reconectar.
+
+5. **Service Worker / PWA** – Respeitar o ciclo do SW:
+   - Cache de assets estáticos e de dados conforme estratégia (cache-first para estáticos, network-first ou stale-while-revalidate para API quando definido).
+   - Não assumir que `fetch` ou chamadas ao backend estão sempre disponíveis; tratar falhas de rede e timeouts.
+
+## Ao implementar
+
+- **Novas telas ou fluxos:** Avaliar o que deve funcionar offline (leitura de dados cacheados, rascunho, fila de envio) e expor estado de rede quando relevante.
+- **Chamadas à API:** Preferir camada que use cache (ex.: React Query) e tratar `network error` / offline de forma explícita (retry, enfileiramento, mensagem ao usuário).
+- **Assets e bundles:** Garantir que o PWA (manifest, SW) está configurado para cache adequado e que atualizações são aplicadas conforme a estratégia do projeto.

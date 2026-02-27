@@ -1,0 +1,48 @@
+-- Client addresses: one client can have multiple addresses.
+-- Used in request-quote and profile; no address data stored on profiles.
+
+create table if not exists public.client_addresses (
+  id uuid primary key default gen_random_uuid(),
+  client_id uuid not null references public.profiles (id) on delete cascade,
+  label text not null default 'Casa',
+  street text not null,
+  number text not null,
+  complement text,
+  neighborhood text not null,
+  city text not null,
+  state text not null,
+  zip_code text not null,
+  is_default boolean not null default false,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+comment on table public.client_addresses is 'Client addresses; one client can have multiple.';
+comment on column public.client_addresses.client_id is 'References profiles.id (client).';
+comment on column public.client_addresses.is_default is 'When true, used as default for new requests.';
+
+create index if not exists client_addresses_client_id_idx on public.client_addresses (client_id);
+
+alter table public.client_addresses enable row level security;
+
+create policy "Clients can read own addresses"
+  on public.client_addresses for select
+  using (auth.uid() = client_id);
+
+create policy "Clients can insert own addresses"
+  on public.client_addresses for insert
+  with check (auth.uid() = client_id);
+
+create policy "Clients can update own addresses"
+  on public.client_addresses for update
+  using (auth.uid() = client_id)
+  with check (auth.uid() = client_id);
+
+create policy "Clients can delete own addresses"
+  on public.client_addresses for delete
+  using (auth.uid() = client_id);
+
+create trigger client_addresses_updated_at
+  before update on public.client_addresses
+  for each row execute procedure public.set_updated_at();

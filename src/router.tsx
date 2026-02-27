@@ -14,6 +14,8 @@ const FormDemoPage =
     ? lazy(() => import('@/features/dynamic-form').then(m => ({ default: m.FormDemoPage })))
     : null
 
+const RequestQuote = lazy(() => import('@/features/request-quote').then(m => ({ default: m.RequestQuote })))
+
 export const router = createBrowserRouter([
   {
     path: '/',
@@ -55,6 +57,10 @@ export const router = createBrowserRouter([
       ...(import.meta.env.DEV && FormDemoPage
         ? [{ path: 'demo/form', element: <FormDemoPage /> }]
         : []),
+      {
+        path: 'pedir-orcamento',
+        element: <RequestQuote />,
+      },
       {
         element: <ProtectedRoute allowedRoles={['client']}><Outlet /></ProtectedRoute>,
         path: 'example',

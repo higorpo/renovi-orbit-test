@@ -32,6 +32,189 @@ export type Database = {
         }
         Relationships: []
       }
+      service_requests: {
+        Row: {
+          id: string
+          client_id: string
+          service_id: string
+          address_id: string | null
+          title: string
+          description: string | null
+          photos: string[] | null
+          form_data: Json | null
+          form_schema: Json | null
+          form_version: string | null
+          status: string
+          city: string | null
+          neighborhood: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          client_id: string
+          service_id: string
+          address_id?: string | null
+          title: string
+          description?: string | null
+          photos?: string[] | null
+          form_data?: Json | null
+          form_schema?: Json | null
+          form_version?: string | null
+          status?: string
+          city?: string | null
+          neighborhood?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          client_id?: string
+          service_id?: string
+          address_id?: string | null
+          title?: string
+          description?: string | null
+          photos?: string[] | null
+          form_data?: Json | null
+          form_schema?: Json | null
+          form_version?: string | null
+          status?: string
+          city?: string | null
+          neighborhood?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      services: {
+        Row: {
+          id: string
+          parent_id: string | null
+          form_id: string | null
+          title: string
+          description: string | null
+          image_url: string | null
+          slug: string
+          show_on_request_quote: boolean
+          active: boolean
+          sort_order: number
+          ai_prompt_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          parent_id?: string | null
+          form_id?: string | null
+          title: string
+          description?: string | null
+          image_url?: string | null
+          slug: string
+          show_on_request_quote?: boolean
+          active?: boolean
+          sort_order?: number
+          ai_prompt_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          parent_id?: string | null
+          form_id?: string | null
+          title?: string
+          description?: string | null
+          image_url?: string | null
+          slug?: string
+          show_on_request_quote?: boolean
+          active?: boolean
+          sort_order?: number
+          ai_prompt_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      forms: {
+        Row: {
+          id: string
+          form_schema: Json
+          form_version: string
+          form_status: string
+          description: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          form_schema: Json
+          form_version?: string
+          form_status?: string
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          form_schema?: Json
+          form_version?: string
+          form_status?: string
+          description?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      client_addresses: {
+        Row: {
+          id: string
+          client_id: string
+          label: string
+          street: string
+          number: string
+          complement: string | null
+          neighborhood: string
+          city: string
+          state: string
+          zip_code: string
+          is_default: boolean
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          client_id: string
+          label?: string
+          street: string
+          number: string
+          complement?: string | null
+          neighborhood: string
+          city: string
+          state: string
+          zip_code: string
+          is_default?: boolean
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          client_id?: string
+          label?: string
+          street?: string
+          number?: string
+          complement?: string | null
+          neighborhood?: string
+          city?: string
+          state?: string
+          zip_code?: string
+          is_default?: boolean
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -2,6 +2,20 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
+## Configuração do projeto
+
+### Supabase — Edge Function "generate-smart-description"
+
+A edge function de descrição inteligente (IA) usa a API da OpenAI. É necessário configurar a chave no projeto Supabase:
+
+1. No [Dashboard do Supabase](https://supabase.com/dashboard), abra o projeto (Orbit).
+2. Vá em **Project Settings** → **Edge Functions** (ou **Secrets**).
+3. Adicione o secret **`OPENAI_API_KEY`** com a chave da sua API OpenAI.
+
+Sem essa chave, a função retorna erro ao ser invocada. Em desenvolvimento local com Supabase CLI, use `supabase secrets set OPENAI_API_KEY=sk-...`.
+
+---
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
