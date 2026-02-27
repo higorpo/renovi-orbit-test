@@ -18,7 +18,7 @@ export const STEPS = [
 
 const CLIENT_ONBOARDING_PATH = "/onboarding/client";
 
-function getEmailRedirectTo(): string {
+export function getClientEmailRedirectTo(): string {
   if (typeof window === "undefined") return "";
   return `${window.location.origin}${CLIENT_ONBOARDING_PATH}`;
 }
@@ -119,7 +119,7 @@ export function useClientSignupForm() {
     setSubmitting(true);
     try {
       const result = await signUp(formData.email, formData.password, formData.fullName, "client", {
-        emailRedirectTo: getEmailRedirectTo(),
+        emailRedirectTo: getClientEmailRedirectTo(),
       });
       if (result.success) setSignupSuccess(true);
     } finally {

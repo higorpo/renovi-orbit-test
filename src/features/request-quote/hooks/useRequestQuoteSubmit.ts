@@ -6,6 +6,7 @@ import {
   validatePasswordStrength,
   clientSignupIdentitySchema,
   identityToFullName,
+  getClientEmailRedirectTo,
 } from "@/features/auth";
 import { createServiceRequest } from "../api/serviceRequests.api";
 import {
@@ -97,7 +98,7 @@ export function useRequestQuoteSubmit({
         state.step5Data.password,
         fullName,
         "client",
-        { emailRedirectTo: `${window.location.origin}/dashboard/client` }
+        { emailRedirectTo: getClientEmailRedirectTo() }
       );
       if (!result.success) {
         if (result.reason === "already_registered") {
