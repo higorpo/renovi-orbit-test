@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
-import { stepAddressSchema } from "../components/RequestQuote/schemas";
+import { addressFormSchema } from "@/features/addresses";
 import type { ServiceWithChildren } from "../types/request-quote.types";
 import type { RequestQuoteState } from "./useRequestQuoteState";
 
@@ -52,7 +52,7 @@ export function useRequestQuoteNavigation({
           return;
         }
         if (state.step4Data.kind === "new") {
-          const result = stepAddressSchema.safeParse(state.step4Data.formData);
+          const result = addressFormSchema.safeParse(state.step4Data.formData);
           if (!result.success) {
             toast.error(result.error.issues[0].message);
             return;
@@ -65,7 +65,7 @@ export function useRequestQuoteNavigation({
         toast.error("Preencha o endereço.");
         return;
       }
-      const result = stepAddressSchema.safeParse(state.step4Data.formData);
+      const result = addressFormSchema.safeParse(state.step4Data.formData);
       if (!result.success) {
         toast.error(result.error.issues[0].message);
         return;

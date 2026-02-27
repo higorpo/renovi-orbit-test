@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ServiceWithChildren } from "../types/request-quote.types";
 import type { ClientSignupIdentityData } from "@/features/auth";
 import { defaultClientSignupIdentity } from "@/features/auth";
-import type { Step4Data } from "../components/RequestQuote/schemas";
+import type { AddressSelection } from "@/features/addresses";
 
 export interface Step3Data {
   description: string;
@@ -27,8 +27,8 @@ export interface RequestQuoteState {
   setStep3Data: (d: Step3Data | ((prev: Step3Data) => Step3Data)) => void;
   generatingDescription: boolean;
   setGeneratingDescription: (value: boolean) => void;
-  step4Data: Step4Data;
-  setStep4Data: (d: Step4Data) => void;
+  step4Data: AddressSelection;
+  setStep4Data: (d: AddressSelection) => void;
   step5Data: ClientSignupIdentityData;
   setStep5Data: (d: ClientSignupIdentityData | ((prev: ClientSignupIdentityData) => ClientSignupIdentityData)) => void;
 }
@@ -46,7 +46,7 @@ export function useRequestQuoteState(): RequestQuoteState {
     photoPreviews: [],
   });
   const [generatingDescription, setGeneratingDescription] = useState(false);
-  const [step4Data, setStep4Data] = useState<Step4Data>(null);
+  const [step4Data, setStep4Data] = useState<AddressSelection>(null);
   const [step5Data, setStep5Data] = useState<ClientSignupIdentityData>(defaultClientSignupIdentity);
 
   return {

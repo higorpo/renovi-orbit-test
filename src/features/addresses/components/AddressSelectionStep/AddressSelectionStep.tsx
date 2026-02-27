@@ -3,18 +3,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { maskCEP } from "@/lib/masks";
-import { useStep4Address } from "../../hooks/useStep4Address";
-import type { Step4Data } from "./schemas";
+import { useAddressSelection } from "../../hooks/useAddressSelection";
+import type { AddressSelection } from "../../types/addresses.types";
 
-export interface Step4AddressProps {
-  user: { id: string } | null;
-  onStep4DataChange: (payload: Step4Data) => void;
+export interface AddressSelectionStepProps {
+  userId: string | null;
+  onSelectionChange: (payload: AddressSelection) => void;
+  title?: string;
+  choosePrompt?: string;
+  newAddressLabel?: string;
+  backToAddressesLabel?: string;
 }
 
-export function Step4Address({ user, onStep4DataChange }: Step4AddressProps) {
+export function AddressSelectionStep({
+  userId,
+  onSelectionChange,
+  title = "Endereço do serviço",
+  choosePrompt = "Escolha um endereço ou cadastre um novo.",
+  newAddressLabel = "Cadastrar novo endereço",
+  backToAddressesLabel = "Voltar para meus endereços",
+}: AddressSelectionStepProps) {
   const {
-    step4FormData,
-    setStep4FormData,
+    formData,
+    setFormData,
     selectedAddressId,
     setSelectedAddressId,
     showNewAddressForm,
@@ -22,13 +33,13 @@ export function Step4Address({ user, onStep4DataChange }: Step4AddressProps) {
     fetchingCep,
     addresses,
     handleCepBlur,
-  } = useStep4Address({ userId: user?.id ?? null, onStep4DataChange });
+  } = useAddressSelection({ userId, onSelectionChange });
 
-  if (user && addresses.length > 0 && !showNewAddressForm) {
+  if (userId && addresses.length > 0 && !showNewAddressForm) {
     return (
       <div className="space-y-6">
-        <h2 className="text-xl font-semibold text-white">Endereço do serviço</h2>
-        <p className="text-white/80">Escolha um endereço ou cadastre um novo.</p>
+        <h2 className="text-xl font-semibold text-white">{title}</h2>
+        <p className="text-white/80">{choosePrompt}</p>
         <div className="space-y-2">
           {addresses.map((addr) => (
             <button
@@ -63,7 +74,7 @@ export function Step4Address({ user, onStep4DataChange }: Step4AddressProps) {
           }}
         >
           <MapPin className="h-4 w-4 mr-2" />
-          Cadastrar novo endereço
+          {newAddressLabel}
         </Button>
       </div>
     );
@@ -71,7 +82,7 @@ export function Step4Address({ user, onStep4DataChange }: Step4AddressProps) {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-white">Endereço do serviço</h2>
+      <h2 className="text-xl font-semibold text-white">{title}</h2>
       {showNewAddressForm && (
         <Button
           type="button"
@@ -80,16 +91,16 @@ export function Step4Address({ user, onStep4DataChange }: Step4AddressProps) {
           className="text-white/80"
           onClick={() => setShowNewAddressForm(false)}
         >
-          Voltar para meus endereços
+          {backToAddressesLabel}
         </Button>
       )}
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Label className="text-white/90">CEP</Label>
           <Input
-            value={step4FormData.address_zip}
+            value={formData.address_zip}
             onChange={(e) =>
-              setStep4FormData((prev) => ({ ...prev, address_zip: maskCEP(e.target.value) }))
+              setFormData((prev) => ({ ...prev, address_zip: maskCEP(e.target.value) }))
             }
             onBlur={handleCepBlur}
             placeholder="00000-000"
@@ -100,9 +111,9 @@ export function Step4Address({ user, onStep4DataChange }: Step4AddressProps) {
         <div>
           <Label className="text-white/90">Rua</Label>
           <Input
-            value={step4FormData.address_street}
+            value={formData.address_street}
             onChange={(e) =>
-              setStep4FormData((prev) => ({ ...prev, address_street: e.target.value }))
+              setFormData((prev) => ({ ...prev, address_street: e.target.value }))
             }
             className="bg-white/10 border-white/30 text-white"
           />
@@ -110,9 +121,9 @@ export function Step4Address({ user, onStep4DataChange }: Step4AddressProps) {
         <div>
           <Label className="text-white/90">Número</Label>
           <Input
-            value={step4FormData.address_number}
+            value={formData.address_number}
             onChange={(e) =>
-              setStep4FormData((prev) => ({ ...prev, address_number: e.target.value }))
+              setFormData((prev) => ({ ...prev, address_number: e.target.value }))
             }
             className="bg-white/10 border-white/30 text-white"
           />
@@ -120,9 +131,9 @@ export function Step4Address({ user, onStep4DataChange }: Step4AddressProps) {
         <div>
           <Label className="text-white/90">Complemento</Label>
           <Input
-            value={step4FormData.address_complement}
+            value={formData.address_complement}
             onChange={(e) =>
-              setStep4FormData((prev) => ({ ...prev, address_complement: e.target.value }))
+              setFormData((prev) => ({ ...prev, address_complement: e.target.value }))
             }
             className="bg-white/10 border-white/30 text-white"
           />
@@ -130,9 +141,9 @@ export function Step4Address({ user, onStep4DataChange }: Step4AddressProps) {
         <div>
           <Label className="text-white/90">Bairro</Label>
           <Input
-            value={step4FormData.address_neighborhood}
+            value={formData.address_neighborhood}
             onChange={(e) =>
-              setStep4FormData((prev) => ({ ...prev, address_neighborhood: e.target.value }))
+              setFormData((prev) => ({ ...prev, address_neighborhood: e.target.value }))
             }
             className="bg-white/10 border-white/30 text-white"
           />
@@ -140,9 +151,9 @@ export function Step4Address({ user, onStep4DataChange }: Step4AddressProps) {
         <div>
           <Label className="text-white/90">Cidade</Label>
           <Input
-            value={step4FormData.address_city}
+            value={formData.address_city}
             onChange={(e) =>
-              setStep4FormData((prev) => ({ ...prev, address_city: e.target.value }))
+              setFormData((prev) => ({ ...prev, address_city: e.target.value }))
             }
             className="bg-white/10 border-white/30 text-white"
           />
@@ -150,9 +161,9 @@ export function Step4Address({ user, onStep4DataChange }: Step4AddressProps) {
         <div>
           <Label className="text-white/90">UF</Label>
           <Input
-            value={step4FormData.address_state}
+            value={formData.address_state}
             onChange={(e) =>
-              setStep4FormData((prev) => ({
+              setFormData((prev) => ({
                 ...prev,
                 address_state: e.target.value.toUpperCase().slice(0, 2),
               }))

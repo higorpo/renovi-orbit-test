@@ -2,19 +2,20 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { unmask } from "@/lib/masks";
 import { fetchAddressByCEP } from "@/lib/cep";
-import { listAddresses } from "@/features/addresses";
-import type { ClientAddress } from "@/features/addresses";
-import { defaultStep4 } from "../components/RequestQuote/schemas";
-import type { Step4Data, Step4FormData } from "../components/RequestQuote/schemas";
+import { listAddresses } from "../api/addresses.api";
+import type { ClientAddress } from "../types/addresses.types";
+import type { AddressSelection } from "../types/addresses.types";
+import { defaultAddressFormData } from "../types/addressForm.validation";
+import type { AddressFormData } from "../types/addressForm.validation";
 
-export interface UseStep4AddressParams {
+export interface UseAddressSelectionParams {
   userId: string | null;
-  onStep4DataChange: (payload: Step4Data) => void;
+  onSelectionChange: (payload: AddressSelection) => void;
 }
 
-export interface UseStep4AddressResult {
-  step4FormData: Step4FormData;
-  setStep4FormData: React.Dispatch<React.SetStateAction<Step4FormData>>;
+export interface UseAddressSelectionResult {
+  formData: AddressFormData;
+  setFormData: React.Dispatch<React.SetStateAction<AddressFormData>>;
   selectedAddressId: string | null;
   setSelectedAddressId: (id: string | null) => void;
   showNewAddressForm: boolean;
@@ -24,11 +25,11 @@ export interface UseStep4AddressResult {
   handleCepBlur: () => Promise<void>;
 }
 
-export function useStep4Address({
+export function useAddressSelection({
   userId,
-  onStep4DataChange,
-}: UseStep4AddressParams): UseStep4AddressResult {
-  const [step4FormData, setStep4FormData] = useState<Step4FormData>(defaultStep4);
+  onSelectionChange,
+}: UseAddressSelectionParams): UseAddressSelectionResult {
+  const [formData, setFormData] = useState<AddressFormData>(defaultAddressFormData);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
   const [fetchingCep, setFetchingCep] = useState(false);
@@ -49,7 +50,7 @@ export function useStep4Address({
       if (selectedAddressId) {
         const addr = addresses.find((a) => a.id === selectedAddressId);
         if (addr) {
-          onStep4DataChange({
+          onSelectionChange({
             kind: "existing",
             addressId: addr.id,
             city: addr.city,
@@ -59,20 +60,20 @@ export function useStep4Address({
           return;
         }
       }
-      onStep4DataChange(null);
+      onSelectionChange(null);
       return;
     }
-    onStep4DataChange({ kind: "new", formData: step4FormData });
-  }, [userId, addresses, selectedAddressId, showNewAddressForm, step4FormData, onStep4DataChange]);
+    onSelectionChange({ kind: "new", formData });
+  }, [userId, addresses, selectedAddressId, showNewAddressForm, formData, onSelectionChange]);
 
   const handleCepBlur = useCallback(async () => {
-    const cep = unmask(step4FormData.address_zip);
+    const cep = unmask(formData.address_zip);
     if (cep.length !== 8) return;
     setFetchingCep(true);
-    const res = await fetchAddressByCEP(step4FormData.address_zip);
+    const res = await fetchAddressByCEP(formData.address_zip);
     setFetchingCep(false);
     if (res) {
-      setStep4FormData((prev) => ({
+      setFormData((prev) => ({
         ...prev,
         address_street: res.logradouro || prev.address_street,
         address_neighborhood: res.bairro || prev.address_neighborhood,
@@ -80,11 +81,11 @@ export function useStep4Address({
         address_state: res.uf || prev.address_state,
       }));
     }
-  }, [step4FormData.address_zip]);
+  }, [formData.address_zip]);
 
   return {
-    step4FormData,
-    setStep4FormData,
+    formData,
+    setFormData,
     selectedAddressId,
     setSelectedAddressId,
     showNewAddressForm,

@@ -17,4 +17,16 @@ export type {
   CreateAddressResult,
   UpdateAddressParams,
   UpdateAddressResult,
-} from "./api/addresses.api";
+  AddressSelection,
+  AddressSelectionExisting,
+  AddressSelectionNew,
+  ResolveAddressResult,
+} from "./types/addresses.types";
+export {
+  addressFormSchema,
+  defaultAddressFormData,
+} from "./types/addressForm.validation";
+export type { AddressFormData } from "./types/addressForm.validation";
+export { resolveAddress } from "./utils/resolveAddress";
+export { useAddressSelection } from "./hooks/useAddressSelection";
+export { AddressSelectionStep } from "./components/AddressSelectionStep/AddressSelectionStep";

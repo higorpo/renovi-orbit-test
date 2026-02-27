@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-export const stepAddressSchema = z.object({
+/**
+ * Schema for address form fields (e.g. "new address" step in request-quote).
+ * Field names use address_ prefix for form state.
+ */
+export const addressFormSchema = z.object({
   address_zip: z.string().regex(/^\d{5}-?\d{3}$/, "CEP inválido (formato: 00000-000)"),
   address_street: z.string().min(3, "Rua é obrigatória"),
   address_number: z.string().min(1, "Número é obrigatório"),
@@ -10,15 +14,9 @@ export const stepAddressSchema = z.object({
   address_state: z.string().length(2, "UF deve ter 2 caracteres"),
 });
 
-export type Step4FormData = z.infer<typeof stepAddressSchema>;
+export type AddressFormData = z.infer<typeof addressFormSchema>;
 
-/** Data pushed by Step4 to parent for validation and submit. */
-export type Step4Data =
-  | { kind: "existing"; addressId: string; city: string; neighborhood: string; state: string }
-  | { kind: "new"; formData: Step4FormData }
-  | null;
-
-export const defaultStep4: Step4FormData = {
+export const defaultAddressFormData: AddressFormData = {
   address_zip: "",
   address_street: "",
   address_number: "",

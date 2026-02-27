@@ -9,8 +9,8 @@ import {
   getClientEmailRedirectTo,
 } from "@/features/auth";
 import { createServiceRequest } from "../api/serviceRequests.api";
+import { resolveAddress } from "@/features/addresses";
 import {
-  resolveAddressForSubmit,
   uploadPhotosForSubmit,
   buildServiceRequestParams,
 } from "../utils/requestQuoteSubmit.utils";
@@ -35,7 +35,7 @@ export function useRequestQuoteSubmit({
     if (!user || !state.selectedService) return;
     state.setLoading(true);
     try {
-      const addressResult = await resolveAddressForSubmit(user.id, state.step4Data, {
+      const addressResult = await resolveAddress(user.id, state.step4Data, {
         defaultLabel: "Casa",
         isDefault: false,
       });
@@ -109,7 +109,7 @@ export function useRequestQuoteSubmit({
       }
       const userId = result.userId!;
 
-      const addressResult = await resolveAddressForSubmit(userId, state.step4Data!, {
+      const addressResult = await resolveAddress(userId, state.step4Data!, {
         defaultLabel: "Endereço desconhecido",
         isDefault: true,
       });

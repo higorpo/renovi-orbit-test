@@ -9,7 +9,7 @@ import { useRequestQuoteNavigation } from "../../hooks/useRequestQuoteNavigation
 import { Step1ServiceSelect } from "./Step1ServiceSelect";
 import { Step2ServiceForm } from "./Step2ServiceForm";
 import { Step3DescriptionPhotos } from "./Step3DescriptionPhotos";
-import { Step4Address } from "./Step4Address";
+import { AddressSelectionStep } from "@/features/addresses";
 import { Step5Identity } from "./Step5Identity";
 
 export function RequestQuote() {
@@ -58,9 +58,13 @@ export function RequestQuote() {
       <Step3DescriptionPhotos state={state} />
     ),
     () => (
-      <Step4Address
-        user={user}
-        onStep4DataChange={state.setStep4Data}
+      <AddressSelectionStep
+        userId={user?.id ?? null}
+        onSelectionChange={state.setStep4Data}
+        title="Endereço do serviço"
+        choosePrompt="Escolha um endereço ou cadastre um novo."
+        newAddressLabel="Cadastrar novo endereço"
+        backToAddressesLabel="Voltar para meus endereços"
       />
     ),
     () => (
