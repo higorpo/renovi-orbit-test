@@ -1,25 +1,27 @@
 import { useState, useMemo } from "react";
-import { getPasswordStrengthDisplay } from "@/features/auth";
-import type { Step5Data } from "../components/RequestQuote/schemas";
+import { getPasswordStrengthDisplay } from "../utils/passwordPolicy";
+import type { PasswordStrengthDisplay } from "../utils/passwordPolicy";
 
-export interface UseStep5IdentityParams {
-  data: Step5Data;
+export interface UsePasswordFieldDisplayParams {
+  password: string;
 }
 
-export interface UseStep5IdentityResult {
+export interface UsePasswordFieldDisplayResult {
   showPassword: boolean;
   setShowPassword: (v: boolean) => void;
   showConfirmPassword: boolean;
   setShowConfirmPassword: (v: boolean) => void;
-  passwordDisplay: ReturnType<typeof getPasswordStrengthDisplay>;
+  passwordDisplay: PasswordStrengthDisplay;
 }
 
-export function useStep5Identity({ data }: UseStep5IdentityParams): UseStep5IdentityResult {
+export function usePasswordFieldDisplay({
+  password,
+}: UsePasswordFieldDisplayParams): UsePasswordFieldDisplayResult {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const passwordDisplay = useMemo(
-    () => getPasswordStrengthDisplay(data.password),
-    [data.password]
+    () => getPasswordStrengthDisplay(password),
+    [password]
   );
 
   return {

@@ -2,14 +2,17 @@ import { useCallback } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth";
-import { validatePasswordStrength } from "@/features/auth";
+import {
+  validatePasswordStrength,
+  clientSignupIdentitySchema,
+  identityToFullName,
+} from "@/features/auth";
 import { createServiceRequest } from "../api/serviceRequests.api";
 import {
   resolveAddressForSubmit,
   uploadPhotosForSubmit,
   buildServiceRequestParams,
 } from "../utils/requestQuoteSubmit.utils";
-import { stepIdentitySchema } from "../components/RequestQuote/schemas";
 import type { RequestQuoteState } from "./useRequestQuoteState";
 
 export interface UseRequestQuoteSubmitParams {
@@ -76,7 +79,7 @@ export function useRequestQuoteSubmit({
       await handleSubmitLoggedIn();
       return;
     }
-    const identityResult = stepIdentitySchema.safeParse(state.step5Data);
+    const identityResult = clientSignupIdentitySchema.safeParse(state.step5Data);
     if (!identityResult.success) {
       toast.error(identityResult.error.issues[0].message);
       return;
@@ -86,7 +89,7 @@ export function useRequestQuoteSubmit({
       toast.error(passwordValidation.errors[0]);
       return;
     }
-    const fullName = `${state.step5Data.firstName.trim()} ${state.step5Data.lastName.trim()}`.trim();
+    const fullName = identityToFullName(state.step5Data);
     state.setLoading(true);
     try {
       const result = await signUp(

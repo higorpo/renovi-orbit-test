@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { z } from "zod";
 import { useAuth } from "./useAuth";
 import { validatePasswordStrength } from "../utils/passwordPolicy";
+import { usePasswordFieldDisplay } from "./usePasswordFieldDisplay";
 import {
   signUpSchema,
   zodIssuesToFieldErrors,
@@ -27,8 +28,6 @@ export function useClientSignupForm() {
   const [currentStep, setCurrentStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState<ClientSignupFormData>({
     fullName: "",
     email: "",
@@ -37,6 +36,14 @@ export function useClientSignupForm() {
     termsAccepted: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const {
+    showPassword,
+    setShowPassword,
+    showConfirmPassword,
+    setShowConfirmPassword,
+    passwordDisplay,
+  } = usePasswordFieldDisplay({ password: formData.password });
 
   const validateStep = useCallback(
     (step: number): boolean => {
@@ -120,8 +127,6 @@ export function useClientSignupForm() {
     }
   }, [formData, signUp]);
 
-  const passwordValidation = validatePasswordStrength(formData.password);
-
   return {
     formData,
     setFormData,
@@ -134,11 +139,11 @@ export function useClientSignupForm() {
     setShowPassword,
     showConfirmPassword,
     setShowConfirmPassword,
+    passwordDisplay,
     validateStep,
     handleNext,
     handleBack,
     handleSubmit,
     handleGoogleSignup,
-    passwordStrength: passwordValidation.strength,
   };
 }

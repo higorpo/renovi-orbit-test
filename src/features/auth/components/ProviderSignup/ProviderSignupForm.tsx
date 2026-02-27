@@ -22,9 +22,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  getPasswordStrengthLabel,
   PASSWORD_REQUIREMENTS,
 } from "../../utils/passwordPolicy";
+import type { PasswordStrengthDisplay } from "../../utils/passwordPolicy";
 import type { ProviderSignupFormData } from "../../types/providerSignup.validation";
 import { STEPS } from "../../hooks/useProviderSignupForm";
 
@@ -66,7 +66,7 @@ export interface ProviderSignupFormProps {
   setShowPassword: (value: boolean) => void;
   showConfirmPassword: boolean;
   setShowConfirmPassword: (value: boolean) => void;
-  passwordStrength: number;
+  passwordDisplay: PasswordStrengthDisplay;
   onNext: () => void;
   onBack: () => void;
   onSubmit: () => void;
@@ -85,7 +85,7 @@ export function ProviderSignupForm({
   setShowPassword,
   showConfirmPassword,
   setShowConfirmPassword,
-  passwordStrength,
+  passwordDisplay,
   onNext,
   onBack,
   onSubmit,
@@ -290,25 +290,17 @@ export function ProviderSignupForm({
               </div>
               {formData.password && (
                 <div className="space-y-2">
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((level) => (
-                      <div
-                        key={level}
-                        className={cn(
-                          "h-1 flex-1 rounded",
-                          passwordStrength >= level
-                            ? passwordStrength >= 4
-                              ? "bg-green-500"
-                              : passwordStrength >= 2
-                                ? "bg-yellow-500"
-                                : "bg-red-500"
-                            : "bg-white/20"
-                        )}
-                      />
-                    ))}
+                  <div className="h-1.5 w-full rounded-full bg-white/20 overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all",
+                        passwordDisplay.colorClass
+                      )}
+                      style={{ width: `${passwordDisplay.widthPercent}%` }}
+                    />
                   </div>
                   <p className="text-xs text-white/50">
-                    {getPasswordStrengthLabel(passwordStrength)}
+                    {passwordDisplay.label}
                   </p>
                 </div>
               )}

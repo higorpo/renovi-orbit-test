@@ -49,7 +49,7 @@ export default function ClientSignup() {
               setShowPassword={form.setShowPassword}
               showConfirmPassword={form.showConfirmPassword}
               setShowConfirmPassword={form.setShowConfirmPassword}
-              passwordStrength={form.passwordStrength}
+              passwordDisplay={form.passwordDisplay}
               onNext={form.handleNext}
               onBack={form.handleBack}
               onSubmit={form.handleSubmit}

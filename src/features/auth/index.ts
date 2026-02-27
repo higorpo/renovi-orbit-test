@@ -26,3 +26,13 @@ export {
   PASSWORD_REQUIREMENTS,
 } from "./utils/passwordPolicy";
 export type { PasswordStrengthDisplay } from "./utils/passwordPolicy";
+
+// Inline client signup (e.g. request-quote flow) — first/last name fields + validation
+export {
+  clientSignupIdentitySchema,
+  defaultClientSignupIdentity,
+  identityToFullName,
+} from "./types/clientSignupIdentity.validation";
+export type { ClientSignupIdentityData } from "./types/clientSignupIdentity.validation";
+export { usePasswordFieldDisplay } from "./hooks/usePasswordFieldDisplay";
+export { InlineClientSignupFields } from "./components/InlineClientSignup/InlineClientSignupFields";

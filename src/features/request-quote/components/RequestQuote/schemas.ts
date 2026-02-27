@@ -10,22 +10,7 @@ export const stepAddressSchema = z.object({
   address_state: z.string().length(2, "UF deve ter 2 caracteres"),
 });
 
-export const stepIdentitySchema = z
-  .object({
-    firstName: z.string().min(2, "Nome muito curto"),
-    lastName: z.string().min(2, "Sobrenome muito curto"),
-    email: z.string().email("Email inválido"),
-    password: z.string().min(10, "Senha deve ter no mínimo 10 caracteres"),
-    confirmPassword: z.string(),
-    termsAccepted: z.boolean().refine((v) => v === true, "Você deve aceitar os termos"),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "As senhas não coincidem",
-    path: ["confirmPassword"],
-  });
-
 export type Step4FormData = z.infer<typeof stepAddressSchema>;
-export type Step5Data = z.infer<typeof stepIdentitySchema>;
 
 /** Data pushed by Step4 to parent for validation and submit. */
 export type Step4Data =
@@ -41,13 +26,4 @@ export const defaultStep4: Step4FormData = {
   address_neighborhood: "",
   address_city: "",
   address_state: "",
-};
-
-export const defaultStep5: Step5Data = {
-  firstName: "",
-  lastName: "",
-  email: "",
-  password: "",
-  confirmPassword: "",
-  termsAccepted: false,
 };

@@ -5,30 +5,31 @@ alwaysApply: true
 
 # Node.js e nvm
 
-Ao executar comandos que **dependem do Node.js** (build, dev, testes, scripts com yarn/npm, etc.), **sempre use o nvm** para garantir a versão correta do Node.
+O projeto usa **Node.js 24.13** via **nvm**. Ao executar comandos que **dependem do Node.js** (build, dev, testes, scripts com yarn/npm, etc.), **sempre use o nvm** com a versão **24.13** para garantir o ambiente correto.
 
 ## Regras
 
 1. **Antes de rodar** `yarn`, `yarn build`, `yarn dev`, `yarn test`, `npx`, ou qualquer script que use Node:
-   - Ative o nvm com `nvm use` (se existir `.nvmrc` no projeto) ou use a versão desejada explicitamente (ex.: `nvm use 20`).
+   - Ative o nvm com **`nvm use 24.13`** (ou `nvm use` se o `.nvmrc` do projeto já especificar 24.13).
    - Prefira rodar o comando **no mesmo shell** em que o nvm foi ativado, por exemplo:
      ```bash
-     nvm use && yarn build
+     nvm use 24.13 && yarn build
      ```
      ou, se o terminal já tiver carregado o nvm no profile:
      ```bash
-     source ~/.nvm/nvm.sh 2>/dev/null; nvm use; yarn build
+     source ~/.nvm/nvm.sh 2>/dev/null; nvm use 24.13; yarn build
      ```
 
 2. **Em comandos de terminal** sugeridos ou executados pelo agente:
-   - Incluir `nvm use` (ou `nvm use 20` / versão do `.nvmrc`) antes do comando que depende do Node quando o contexto for build, dev, testes ou instalação de dependências.
+   - Incluir **`nvm use 24.13`** (ou `nvm use` quando o `.nvmrc` especificar 24.13) antes do comando que depende do Node quando o contexto for build, dev, testes ou instalação de dependências.
 
 3. **Quando o usuário reportar** erro de versão do Node (ex.: "Node 18 incompatible", "crypto.hash is not a function"):
-   - Lembrar de usar nvm e indicar a versão mínima exigida (ex.: Node 20+ para Vite 7).
+   - Lembrar de usar nvm e indicar a versão do projeto: **Node 24.13** (`nvm use 24.13` ou instalar com `nvm install 24.13`).
 
 ## Exemplos
 
-- ✅ `nvm use && yarn build`
-- ✅ `nvm use 20 && yarn dev`
-- ✅ `nvm use && yarn test:run`
-- ❌ Rodar `yarn build` sem garantir que o shell está com o Node correto via nvm (em projetos que usam nvm/.nvmrc).
+- ✅ `nvm use 24.13 && yarn build`
+- ✅ `nvm use 24.13 && yarn dev`
+- ✅ `nvm use 24.13 && yarn test:run`
+- ✅ `nvm use && yarn build` (se o `.nvmrc` contiver `24.13`)
+- ❌ Rodar `yarn build` sem garantir que o shell está com o Node 24.13 via nvm.
