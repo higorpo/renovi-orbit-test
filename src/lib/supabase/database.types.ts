@@ -7,13 +7,333 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.1"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
+      ai_prompt_usage: {
+        Row: {
+          error_message: string | null
+          generation_time_ms: number | null
+          id: string
+          prompt_id: string
+          request_id: string | null
+          session_id: string | null
+          success: boolean
+          tokens_used: number | null
+          used_at: string
+          user_id: string | null
+        }
+        Insert: {
+          error_message?: string | null
+          generation_time_ms?: number | null
+          id?: string
+          prompt_id: string
+          request_id?: string | null
+          session_id?: string | null
+          success?: boolean
+          tokens_used?: number | null
+          used_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          error_message?: string | null
+          generation_time_ms?: number | null
+          id?: string
+          prompt_id?: string
+          request_id?: string | null
+          session_id?: string | null
+          success?: boolean
+          tokens_used?: number | null
+          used_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_prompt_usage_prompt_id_fkey"
+            columns: ["prompt_id"]
+            isOneToOne: false
+            referencedRelation: "ai_prompts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_prompt_usage_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_prompts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          formatting_rules: Json
+          id: string
+          impact_description: string
+          impact_location: string
+          is_active: boolean
+          max_tokens: number
+          name: string
+          prompt_key: string
+          system_prompt: string
+          temperature: number
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          formatting_rules?: Json
+          id?: string
+          impact_description?: string
+          impact_location?: string
+          is_active?: boolean
+          max_tokens?: number
+          name: string
+          prompt_key: string
+          system_prompt: string
+          temperature?: number
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          formatting_rules?: Json
+          id?: string
+          impact_description?: string
+          impact_location?: string
+          is_active?: boolean
+          max_tokens?: number
+          name?: string
+          prompt_key?: string
+          system_prompt?: string
+          temperature?: number
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
+      client_addresses: {
+        Row: {
+          city: string
+          client_id: string
+          complement: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          label: string
+          neighborhood: string
+          number: string
+          state: string
+          street: string
+          updated_at: string
+          zip_code: string
+        }
+        Insert: {
+          city: string
+          client_id: string
+          complement?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          label?: string
+          neighborhood: string
+          number: string
+          state: string
+          street: string
+          updated_at?: string
+          zip_code: string
+        }
+        Update: {
+          city?: string
+          client_id?: string
+          complement?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          label?: string
+          neighborhood?: string
+          number?: string
+          state?: string
+          street?: string
+          updated_at?: string
+          zip_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_addresses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forms: {
+        Row: {
+          created_at: string
+          description: string | null
+          form_schema: Json
+          form_status: string
+          form_version: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          form_schema: Json
+          form_status?: string
+          form_version?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          form_schema?: Json
+          form_status?: string
+          form_version?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      platform_cities: {
+        Row: {
+          created_at: string
+          ibge_code: number
+          id: string
+          is_active: boolean
+          name: string
+          state_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          ibge_code: number
+          id?: string
+          is_active?: boolean
+          name: string
+          state_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          ibge_code?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          state_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_cities_state_id_fkey"
+            columns: ["state_id"]
+            isOneToOne: false
+            referencedRelation: "platform_states"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_neighborhoods: {
+        Row: {
+          city_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          city_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          city_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_neighborhoods_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "platform_cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_states: {
+        Row: {
+          abbreviation: string
+          created_at: string
+          ibge_code: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          abbreviation: string
+          created_at?: string
+          ibge_code: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          abbreviation?: string
+          created_at?: string
+          ibge_code?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           full_name: string
@@ -32,282 +352,185 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          blocked_until: string | null
+          burst_count: number
+          count: number
+          key: string
+          reset_at: number
+          updated_at: string | null
+        }
+        Insert: {
+          blocked_until?: string | null
+          burst_count?: number
+          count?: number
+          key: string
+          reset_at: number
+          updated_at?: string | null
+        }
+        Update: {
+          blocked_until?: string | null
+          burst_count?: number
+          count?: number
+          key?: string
+          reset_at?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       service_requests: {
         Row: {
-          id: string
-          client_id: string
-          service_id: string
           address_id: string | null
-          title: string
+          city: string | null
+          client_id: string
+          created_at: string
           description: string | null
-          photos: string[] | null
           form_data: Json | null
           form_schema: Json | null
           form_version: string | null
-          status: string
-          city: string | null
+          id: string
           neighborhood: string | null
-          created_at: string
+          photos: string[] | null
+          service_id: string
+          status: string
+          title: string
           updated_at: string
         }
         Insert: {
-          id?: string
-          client_id: string
-          service_id: string
           address_id?: string | null
-          title: string
+          city?: string | null
+          client_id: string
+          created_at?: string
           description?: string | null
-          photos?: string[] | null
           form_data?: Json | null
           form_schema?: Json | null
           form_version?: string | null
-          status?: string
-          city?: string | null
+          id?: string
           neighborhood?: string | null
-          created_at?: string
+          photos?: string[] | null
+          service_id: string
+          status?: string
+          title: string
           updated_at?: string
         }
         Update: {
-          id?: string
-          client_id?: string
-          service_id?: string
           address_id?: string | null
-          title?: string
+          city?: string | null
+          client_id?: string
+          created_at?: string
           description?: string | null
-          photos?: string[] | null
           form_data?: Json | null
           form_schema?: Json | null
           form_version?: string | null
-          status?: string
-          city?: string | null
+          id?: string
           neighborhood?: string | null
-          created_at?: string
+          photos?: string[] | null
+          service_id?: string
+          status?: string
+          title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "service_requests_address_id_fkey"
+            columns: ["address_id"]
+            isOneToOne: false
+            referencedRelation: "client_addresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       services: {
         Row: {
-          id: string
-          parent_id: string | null
-          form_id: string | null
-          title: string
-          description: string | null
-          image_url: string | null
-          slug: string
-          show_on_request_quote: boolean
           active: boolean
-          sort_order: number
           ai_prompt_id: string | null
           created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          parent_id?: string | null
-          form_id?: string | null
-          title: string
-          description?: string | null
-          image_url?: string | null
-          slug: string
-          show_on_request_quote?: boolean
-          active?: boolean
-          sort_order?: number
-          ai_prompt_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          parent_id?: string | null
-          form_id?: string | null
-          title?: string
-          description?: string | null
-          image_url?: string | null
-          slug?: string
-          show_on_request_quote?: boolean
-          active?: boolean
-          sort_order?: number
-          ai_prompt_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      forms: {
-        Row: {
-          id: string
-          form_schema: Json
-          form_version: string
-          form_status: string
           description: string | null
-          created_at: string
+          form_id: string | null
+          id: string
+          image_url: string | null
+          parent_id: string | null
+          show_on_request_quote: boolean
+          slug: string
+          sort_order: number
+          title: string
           updated_at: string
         }
         Insert: {
-          id?: string
-          form_schema: Json
-          form_version?: string
-          form_status?: string
+          active?: boolean
+          ai_prompt_id?: string | null
+          created_at?: string
           description?: string | null
-          created_at?: string
+          form_id?: string | null
+          id?: string
+          image_url?: string | null
+          parent_id?: string | null
+          show_on_request_quote?: boolean
+          slug: string
+          sort_order?: number
+          title: string
           updated_at?: string
         }
         Update: {
-          id?: string
-          form_schema?: Json
-          form_version?: string
-          form_status?: string
+          active?: boolean
+          ai_prompt_id?: string | null
+          created_at?: string
           description?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      client_addresses: {
-        Row: {
-          id: string
-          client_id: string
-          label: string
-          street: string
-          number: string
-          complement: string | null
-          neighborhood: string
-          city: string
-          state: string
-          zip_code: string
-          is_default: boolean
-          is_active: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
+          form_id?: string | null
           id?: string
-          client_id: string
-          label?: string
-          street: string
-          number: string
-          complement?: string | null
-          neighborhood: string
-          city: string
-          state: string
-          zip_code: string
-          is_default?: boolean
-          is_active?: boolean
-          created_at?: string
+          image_url?: string | null
+          parent_id?: string | null
+          show_on_request_quote?: boolean
+          slug?: string
+          sort_order?: number
+          title?: string
           updated_at?: string
         }
-        Update: {
-          id?: string
-          client_id?: string
-          label?: string
-          street?: string
-          number?: string
-          complement?: string | null
-          neighborhood?: string
-          city?: string
-          state?: string
-          zip_code?: string
-          is_default?: boolean
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      platform_states: {
-        Row: {
-          id: string
-          ibge_code: number
-          name: string
-          abbreviation: string
-          is_active: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          ibge_code: number
-          name: string
-          abbreviation: string
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          ibge_code?: number
-          name?: string
-          abbreviation?: string
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      platform_cities: {
-        Row: {
-          id: string
-          state_id: string
-          ibge_code: number
-          name: string
-          is_active: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          state_id: string
-          ibge_code: number
-          name: string
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          state_id?: string
-          ibge_code?: number
-          name?: string
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      platform_neighborhoods: {
-        Row: {
-          id: string
-          city_id: string
-          name: string
-          is_active: boolean
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          city_id: string
-          name: string
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          city_id?: string
-          name?: string
-          is_active?: boolean
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "services_ai_prompt_id_fkey"
+            columns: ["ai_prompt_id"]
+            isOneToOne: false
+            referencedRelation: "ai_prompts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_prompt_by_key: { Args: { p_prompt_key: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
@@ -436,7 +659,11 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
 } as const
+

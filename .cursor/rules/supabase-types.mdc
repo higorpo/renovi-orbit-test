@@ -11,4 +11,4 @@ Quando for necessário **atualizar a tipagem do projeto relacionada ao Supabase*
 yarn generate-supabase-types
 ```
 
-Esse comando gera/atualiza o arquivo `src/lib/supabase/database.types.ts` usando o project ID definido em `VITE_SUPABASE_PROJECT_ID` (`.env.local` ou `.env`). Lembre o usuário desse comando quando o contexto for alteração de tipos, schema ou queries relacionadas ao Supabase.
+Esse comando gera/atualiza o arquivo `src/lib/supabase/database.types.ts` a partir do **banco local** (`supabase gen types --local`). O Supabase local precisa estar rodando (`npx supabase start`). Lembre o usuário desse comando quando o contexto for alteração de tipos, schema ou queries relacionadas ao Supabase.

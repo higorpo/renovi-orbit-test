@@ -82,38 +82,8 @@ values
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------
--- services (default + instalacao eletrica)
--- ---------------------------------------------------------------------------
-insert into public.services (id, parent_id, form_id, title, description, slug, show_on_request_quote, active, sort_order, ai_prompt_id)
-values
-  (
-    'e5f6a7b8-c9d0-4123-e456-000000000001'::uuid,
-    null,
-    'd4e5f6a7-b8c9-4012-d345-000000000001'::uuid,
-    'Serviço exemplo',
-    'Formulário de orçamento padrão para desenvolvimento local.',
-    'servico-exemplo',
-    true,
-    true,
-    0,
-    null
-  ),
-  (
-    'e5f6a7b8-c9d0-4123-e456-000000000002'::uuid,
-    null,
-    'd4e5f6a7-b8c9-4012-d345-000000000002'::uuid,
-    'Instalação elétrica',
-    'Orçamento para instalação, reforma ou manutenção elétrica residencial e comercial.',
-    'instalacao-eletrica',
-    true,
-    true,
-    1,
-    'f6a7b8c9-d0e1-4234-f567-000000000002'::uuid
-  )
-on conflict (slug) do nothing;
-
--- ---------------------------------------------------------------------------
 -- ai_prompts (default + instalacao eletrica for generate-smart-description)
+-- Must run before services (services.ai_prompt_id references ai_prompts.id).
 -- ---------------------------------------------------------------------------
 insert into public.ai_prompts (
   id,
@@ -156,3 +126,34 @@ values
     true
   )
 on conflict (prompt_key) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- services (default + instalacao eletrica)
+-- ---------------------------------------------------------------------------
+insert into public.services (id, parent_id, form_id, title, description, slug, show_on_request_quote, active, sort_order, ai_prompt_id)
+values
+  (
+    'e5f6a7b8-c9d0-4123-e456-000000000001'::uuid,
+    null,
+    'd4e5f6a7-b8c9-4012-d345-000000000001'::uuid,
+    'Serviço exemplo',
+    'Formulário de orçamento padrão para desenvolvimento local.',
+    'servico-exemplo',
+    true,
+    true,
+    0,
+    null
+  ),
+  (
+    'e5f6a7b8-c9d0-4123-e456-000000000002'::uuid,
+    null,
+    'd4e5f6a7-b8c9-4012-d345-000000000002'::uuid,
+    'Instalação elétrica',
+    'Orçamento para instalação, reforma ou manutenção elétrica residencial e comercial.',
+    'instalacao-eletrica',
+    true,
+    true,
+    1,
+    'f6a7b8c9-d0e1-4234-f567-000000000002'::uuid
+  )
+on conflict (slug) do nothing;
