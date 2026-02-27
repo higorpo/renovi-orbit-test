@@ -1,0 +1,350 @@
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import type {
+  PromptConfig,
+  StructuredAIResponse,
+  GenerateSmartDescriptionBody,
+  ParsedRequestParams,
+  ResolvedPromptResult,
+  ProcessedAIResult,
+  SmartDescriptionMode,
+} from "./types.ts";
+import { corsHeaders, DEFAULT_MODEL } from "./constants.ts";
+import { formatProfessionalDescription, postProcessDescription } from "./formatting.ts";
+import { logPromptUsage } from "./usage.ts";
+import {
+  validateStructuredResponse,
+  generateFallbackResponse,
+} from "./structured.ts";
+import {
+  getSuggestionSystemPrompt,
+  getSuggestionUserPrompt,
+  getStructuredSystemPrompt,
+  getStructuredUserPrompt,
+} from "./promptTemplates.ts";
+import { getPromptById, getPromptFromDB } from "./prompt.ts";
+
+const DEFAULT_SERVICE_DISPLAY_NAME = "Serviço não identificado";
+
+function getDefaultPromptConfig(): PromptConfig {
+  return {
+    id: "default-inline",
+    prompt_key: "description_default",
+    name: "Descrição padrão",
+    system_prompt: `Você é um assistente que gera descrições profissionais de solicitações de serviço para uma plataforma de orçamentos.
+Gere uma descrição clara, em português brasileiro, com as seções: RESUMO DO SERVIÇO, DESCRIÇÃO DETALHADA e SUGESTÕES.
+Use APENAS as informações fornecidas no contexto. Não invente dados.
+Formato: texto puro, sem markdown.`,
+    user_prompt_template: null,
+    category_slug: null,
+    use_case: "description",
+    max_tokens: 1500,
+    temperature: 0.3,
+    variables_schema: {},
+    formatting_rules: {
+      use_caps_titles: true,
+      use_block_separation: true,
+      allow_markdown: false,
+    },
+    version: 1,
+  };
+}
+
+export function parseRequestParams(
+  body: GenerateSmartDescriptionBody
+): ParsedRequestParams {
+  return {
+    serviceId: body.serviceId ?? "",
+    formData: body.formData ?? {},
+    userNotes: body.userNotes ?? "",
+    serviceRequestId: body.serviceRequestId ?? null,
+    forcePromptKey: body.forcePromptKey ?? null,
+    useStructuredOutput: body.useStructuredOutput !== false,
+    mode: body.mode ?? "full_description",
+  };
+}
+
+export function validateRequestParams(
+  params: ParsedRequestParams
+): Response | null {
+  if (params.serviceId) return null;
+  return jsonResponse(
+    { error: "service é obrigatório (id do serviço)" },
+    400
+  );
+}
+
+export function jsonResponse(
+  body: unknown,
+  status: number,
+  extraHeaders?: Record<string, string>
+): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json", ...extraHeaders },
+  });
+}
+
+export async function resolvePromptAndService(
+  supabase: SupabaseClient,
+  params: ParsedRequestParams
+): Promise<ResolvedPromptResult> {
+  const { serviceId, forcePromptKey } = params;
+  let promptConfig: PromptConfig | null = null;
+  let serviceDisplayName = DEFAULT_SERVICE_DISPLAY_NAME;
+
+  if (forcePromptKey) {
+    promptConfig = await getPromptFromDB(supabase, forcePromptKey);
+  } else {
+    const { data: serviceRow, error: serviceError } = await supabase
+      .from("services")
+      .select("id, ai_prompt_id, slug, title")
+      .eq("id", serviceId)
+      .maybeSingle();
+
+    if (serviceError) console.warn("[Service] Fetch error:", serviceError);
+    if (serviceRow) {
+      serviceDisplayName =
+        (serviceRow.title ?? serviceRow.slug ?? DEFAULT_SERVICE_DISPLAY_NAME) as string;
+      if (serviceRow.ai_prompt_id) {
+        promptConfig = await getPromptById(
+          supabase,
+          serviceRow.ai_prompt_id as string
+        );
+      }
+    }
+  }
+
+  if (!promptConfig) {
+    console.warn("⚠️ No prompt found, using inline default (Orbit fallback)");
+    promptConfig = getDefaultPromptConfig();
+  }
+
+  return { promptConfig, serviceDisplayName };
+}
+
+export function buildPrompts(params: {
+  promptConfig: PromptConfig;
+  context: string;
+  mode: SmartDescriptionMode;
+  enableStructured: boolean;
+  serviceDisplayName: string;
+}): { systemPrompt: string; userPrompt: string } {
+  const { promptConfig, context, mode, enableStructured, serviceDisplayName } = params;
+  let systemPrompt = promptConfig.system_prompt;
+  let userPrompt = context;
+
+  if (mode === "suggestion") {
+    systemPrompt = getSuggestionSystemPrompt();
+    userPrompt = getSuggestionUserPrompt(context);
+  } else if (enableStructured) {
+    systemPrompt = getStructuredSystemPrompt(systemPrompt, serviceDisplayName);
+    userPrompt = getStructuredUserPrompt(context);
+  }
+
+  return { systemPrompt, userPrompt };
+}
+
+export async function callOpenAI(params: {
+  systemPrompt: string;
+  userPrompt: string;
+  promptConfig: PromptConfig;
+  enableStructured: boolean;
+}): Promise<{ rawContent: string; tokensUsed?: number }> {
+  const { systemPrompt, userPrompt, promptConfig, enableStructured } = params;
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) {
+    throw new Error(
+      "OPENAI_API_KEY não configurada. Defina o secret no projeto Supabase."
+    );
+  }
+
+  const temperature = enableStructured
+    ? Math.min(promptConfig.temperature, 0.3)
+    : promptConfig.temperature;
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: DEFAULT_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      max_tokens: promptConfig.max_tokens,
+      temperature,
+      ...(enableStructured ? { response_format: { type: "json_object" } } : {}),
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenAI ${response.status}: ${errorText.substring(0, 200)}`);
+  }
+
+  const data = await response.json();
+  const rawContent = data.choices?.[0]?.message?.content ?? "";
+  const tokensUsed = data.usage?.total_tokens;
+
+  return { rawContent, tokensUsed };
+}
+
+export function processAIResponse(params: {
+  rawContent: string;
+  mode: SmartDescriptionMode;
+  enableStructured: boolean;
+  serviceDisplayName: string;
+  formattingRules: PromptConfig["formatting_rules"];
+}): ProcessedAIResult {
+  const {
+    rawContent,
+    mode,
+    enableStructured,
+    serviceDisplayName,
+    formattingRules,
+  } = params;
+
+  let structuredResponse: StructuredAIResponse | null = null;
+  let processedDescription = "";
+
+  if (mode === "suggestion") {
+    processedDescription = postProcessDescription(
+      rawContent,
+      formattingRules
+    );
+    console.log(
+      `[Mode: suggestion] ✅ Texto sugerido gerado: ${processedDescription.length} chars`
+    );
+    return { processedDescription, structuredResponse };
+  }
+
+  if (enableStructured) {
+    try {
+      const parsed = JSON.parse(rawContent);
+      structuredResponse = validateStructuredResponse(parsed);
+
+      if (structuredResponse) {
+        processedDescription = formatProfessionalDescription(
+          structuredResponse.professional_description
+        );
+
+        console.log(
+          `[Structured] ✅ JSON validado: ${structuredResponse.tags.length} tags, ${structuredResponse.missing_info_warnings.length} warnings`
+        );
+      } else {
+        console.warn("[Structured] ⚠️ JSON inválido, usando fallback");
+        processedDescription = postProcessDescription(
+          rawContent,
+          formattingRules
+        );
+        structuredResponse = generateFallbackResponse(
+          processedDescription,
+        );
+      }
+    } catch (parseError) {
+      console.warn("[Structured] ⚠️ Erro ao parsear JSON, usando fallback:", parseError);
+      processedDescription = postProcessDescription(
+        rawContent,
+        formattingRules
+      );
+      structuredResponse = generateFallbackResponse(
+        processedDescription,
+      );
+    }
+    return { processedDescription, structuredResponse };
+  }
+
+  processedDescription = postProcessDescription(
+    rawContent,
+    formattingRules
+  );
+  console.log(
+    `[Mode: full_description] ✅ Descrição gerada: ${processedDescription.length} chars`
+  );
+  return { processedDescription, structuredResponse: null };
+}
+
+export function buildSuccessResponse(params: {
+  processedDescription: string;
+  rawContent: string;
+  promptConfig: PromptConfig;
+  tokensUsed?: number;
+  generationTime: number;
+  mode: SmartDescriptionMode;
+  enableStructured: boolean;
+  structuredResponse: StructuredAIResponse | null;
+}): Response {
+  const {
+    processedDescription,
+    rawContent,
+    promptConfig,
+    tokensUsed,
+    generationTime,
+    mode,
+    enableStructured,
+    structuredResponse,
+  } = params;
+
+  const responseData: {
+    description: string;
+    metadata: Record<string, unknown>;
+    structured?: StructuredAIResponse;
+  } = {
+    description: processedDescription,
+    metadata: {
+      prompt_key: promptConfig.prompt_key,
+      prompt_version: promptConfig.version,
+      tokens_used: tokensUsed,
+      generation_time_ms: generationTime,
+      raw_length: rawContent.length,
+      processed_length: processedDescription.length,
+      mode,
+      structured: enableStructured && mode !== "suggestion",
+    },
+  };
+
+  if (structuredResponse && mode === "full_description") {
+    responseData.structured = structuredResponse;
+  }
+
+  return jsonResponse(responseData, 200);
+}
+
+export function buildErrorResponse(
+  errMessage: string,
+): Response {
+  const fallback = generateFallbackResponse(
+    `Erro ao gerar descrição: ${errMessage}`,
+  );
+  return jsonResponse(
+    {
+      error: errMessage,
+      hint: "Verifique a configuração no painel admin ou tente novamente",
+      description: fallback.professional_description,
+      structured: fallback,
+    },
+    500
+  );
+}
+
+export async function logUsageOnError(
+  supabase: SupabaseClient,
+  promptConfig: PromptConfig,
+  userId: string | null,
+  generationTime: number,
+  errMessage: string
+): Promise<void> {
+  await logPromptUsage(
+    supabase,
+    promptConfig.id,
+    userId,
+    null,
+    false,
+    undefined,
+    generationTime,
+    errMessage
+  );
+}
