@@ -2,8 +2,6 @@ import { useCallback } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth";
-import { unmask } from "@/lib/masks";
-import { validateCPF } from "@/lib/validators";
 import { validatePasswordStrength } from "@/features/auth";
 import { createServiceRequest } from "../api/serviceRequests.api";
 import {
@@ -81,11 +79,6 @@ export function useRequestQuoteSubmit({
     const identityResult = stepIdentitySchema.safeParse(state.step5Data);
     if (!identityResult.success) {
       toast.error(identityResult.error.issues[0].message);
-      return;
-    }
-    const cleanCpf = unmask(state.step5Data.cpf);
-    if (!validateCPF(cleanCpf)) {
-      toast.error("CPF inválido. Verifique os números digitados.");
       return;
     }
     const passwordValidation = validatePasswordStrength(state.step5Data.password);

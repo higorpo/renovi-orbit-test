@@ -14,8 +14,6 @@ export const stepIdentitySchema = z
   .object({
     firstName: z.string().min(2, "Nome muito curto"),
     lastName: z.string().min(2, "Sobrenome muito curto"),
-    cpf: z.string().regex(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/, "CPF inválido (formato: 000.000.000-00)"),
-    phone: z.string().regex(/^\(\d{2}\)\s\d{4,5}-\d{4}$/, "Telefone inválido (formato: (00) 00000-0000)"),
     email: z.string().email("Email inválido"),
     password: z.string().min(10, "Senha deve ter no mínimo 10 caracteres"),
     confirmPassword: z.string(),
@@ -48,8 +46,6 @@ export const defaultStep4: Step4FormData = {
 export const defaultStep5: Step5Data = {
   firstName: "",
   lastName: "",
-  cpf: "",
-  phone: "",
   email: "",
   password: "",
   confirmPassword: "",

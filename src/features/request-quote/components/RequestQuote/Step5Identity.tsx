@@ -5,8 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { PASSWORD_REQUIREMENTS } from "@/features/auth";
-import { maskCPF, maskPhone } from "@/lib/masks";
-import { validateCPF } from "@/lib/validators";
 import { useStep5Identity } from "../../hooks/useStep5Identity";
 import type { Step5Data } from "./schemas";
 
@@ -43,36 +41,6 @@ export function Step5Identity({ data, onDataChange }: Step5IdentityProps) {
             value={data.lastName}
             onChange={(e) => onDataChange((prev) => ({ ...prev, lastName: e.target.value }))}
             placeholder="Sobrenome"
-            className="bg-white/10 border-white/30 text-white"
-          />
-        </div>
-        <div>
-          <Label className="text-white/90">CPF</Label>
-          <Input
-            value={data.cpf}
-            onChange={(e) => onDataChange((prev) => ({ ...prev, cpf: maskCPF(e.target.value) }))}
-            placeholder="000.000.000-00"
-            className="bg-white/10 border-white/30 text-white"
-          />
-          {data.cpf.replace(/\D/g, "").length === 11 && (
-            <p
-              className={cn(
-                "text-xs mt-1",
-                validateCPF(data.cpf) ? "text-green-400" : "text-red-400"
-              )}
-            >
-              {validateCPF(data.cpf) ? "CPF válido" : "CPF inválido"}
-            </p>
-          )}
-        </div>
-        <div>
-          <Label className="text-white/90">Telefone</Label>
-          <Input
-            value={data.phone}
-            onChange={(e) =>
-              onDataChange((prev) => ({ ...prev, phone: maskPhone(e.target.value) }))
-            }
-            placeholder="(00) 00000-0000"
             className="bg-white/10 border-white/30 text-white"
           />
         </div>
