@@ -21,16 +21,30 @@ test.describe("Client Signup", () => {
     await expect(signup.logo).toBeVisible();
   });
 
-  test("step 0 validates short name", async ({ page, mockSupabaseAsGuest }) => {
+  test("step 0 validates single name (requires at least first and last name)", async ({
+    page,
+    mockSupabaseAsGuest,
+  }) => {
     await mockSupabaseAsGuest();
     const signup = new ClientSignupPage(page);
     await signup.goto();
 
-    await signup.fullNameInput.fill("Ab");
+    await signup.fullNameInput.fill("João");
     await signup.emailInput.fill("test@test.com");
     await signup.continueButton.click();
 
-    await expect(page.getByText("Nome deve ter no mínimo 3 caracteres")).toBeVisible();
+    await expect(page.getByText("Informe nome e sobrenome")).toBeVisible();
+  });
+
+  test("step 0 validates empty name", async ({ page, mockSupabaseAsGuest }) => {
+    await mockSupabaseAsGuest();
+    const signup = new ClientSignupPage(page);
+    await signup.goto();
+
+    await signup.emailInput.fill("test@test.com");
+    await signup.continueButton.click();
+
+    await expect(page.getByText("Nome é obrigatório")).toBeVisible();
   });
 
   test("step 0 validates invalid email", async ({ page, mockSupabaseAsGuest }) => {
@@ -189,15 +203,15 @@ test.describe("Client Signup", () => {
 
     await signup.completeSignup("João Silva", "joao@test.com", VALID_PASSWORD, VALID_PASSWORD);
 
-    await page.waitForTimeout(1000);
+    await expect(signup.getSuccessMessage()).toBeVisible({ timeout: 10000 });
 
     expect(mocks.capturedRequests.signUp.length).toBeGreaterThanOrEqual(1);
     const body = mocks.capturedRequests.signUp[0] as Record<string, unknown>;
     expect(body.email).toBe("joao@test.com");
     expect(body.password).toBe(VALID_PASSWORD);
 
-    // Supabase JS client sends user_metadata as `data` at the top level of the HTTP body
-    const data = body.data as Record<string, string> | undefined;
+    // Supabase JS client sends user_metadata in body.data
+    const data = (body.data ?? body.options?.data) as Record<string, string> | undefined;
     expect(data?.role).toBe("client");
     expect(data?.full_name).toBe("João Silva");
   });
@@ -207,6 +221,7 @@ test.describe("Client Signup", () => {
   test("duplicate email shows error toast", async ({ page, mockSupabaseAsGuest }) => {
     const mocks = await mockSupabaseAsGuest();
 
+    // Simulate Supabase "email already registered": 200 with user that has empty identities
     mocks.onSignUp(async (route) => {
       await route.fulfill({
         status: 200,
@@ -230,9 +245,8 @@ test.describe("Client Signup", () => {
 
     await signup.completeSignup("João Silva", "existing@test.com", VALID_PASSWORD, VALID_PASSWORD);
 
-    // Toast from useAuth.signUp: "Este email já está cadastrado..."
     await expect(
-      page.getByText("Este email já está cadastrado")
+      page.getByText(/Este email já está cadastrado/)
     ).toBeVisible({ timeout: 10000 });
   });
 

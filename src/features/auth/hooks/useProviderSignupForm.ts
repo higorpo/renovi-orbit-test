@@ -5,6 +5,7 @@ import { validatePasswordStrength } from "../utils/passwordPolicy";
 import {
   signUpSchema,
   zodIssuesToFieldErrors,
+  validateFullName,
   type ProviderSignupFormData,
 } from "../types/providerSignup.validation";
 
@@ -42,8 +43,9 @@ export function useProviderSignupForm() {
       setErrors({});
 
       if (step === 0) {
-        if (!formData.fullName || formData.fullName.length < 3) {
-          setErrors({ fullName: "Nome deve ter no mínimo 3 caracteres" });
+        const fullNameError = validateFullName(formData.fullName);
+        if (fullNameError) {
+          setErrors({ fullName: fullNameError });
           return false;
         }
         if (

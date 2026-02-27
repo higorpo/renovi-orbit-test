@@ -6,6 +6,16 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_OR_ANON_KEY
 const isProduction = import.meta.env.PROD
 
+// Expose storage key for E2E so seedSession can use the same key (avoids .env mismatch)
+const supabaseStorageKey =
+  typeof supabaseUrl === "string" && supabaseUrl.startsWith("http")
+    ? `sb-${new URL(supabaseUrl).hostname.split(".")[0]}-auth-token`
+    : ""
+if (typeof window !== "undefined" && supabaseStorageKey) {
+  ;(window as unknown as { __E2E_SUPABASE_STORAGE_KEY__?: string }).__E2E_SUPABASE_STORAGE_KEY__ =
+    supabaseStorageKey
+}
+
 /** Storage that uses localStorage when "remember me" is on, sessionStorage otherwise (logout on browser close). */
 function createAuthStorage(): Storage {
   return {

@@ -1,5 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Load .env so VITE_SUPABASE_URL is available for auth fixtures (seedSession storage key)
+import { loadEnv } from "vite";
+loadEnv("", process.cwd());
+
 const BASE_URL = "http://localhost:5173";
 
 export default defineConfig({

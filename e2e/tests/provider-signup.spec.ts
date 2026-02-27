@@ -22,16 +22,30 @@ test.describe("Provider Signup", () => {
 
   // ─── Validation ──────────────────────────────────────────────────────
 
-  test("step 0 validates short name", async ({ page, mockSupabaseAsGuest }) => {
+  test("step 0 validates single name (requires at least first and last name)", async ({
+    page,
+    mockSupabaseAsGuest,
+  }) => {
     await mockSupabaseAsGuest();
     const signup = new ProviderSignupPage(page);
     await signup.goto();
 
-    await signup.fullNameInput.fill("Jo");
+    await signup.fullNameInput.fill("Provider");
     await signup.emailInput.fill("pro@test.com");
     await signup.continueButton.click();
 
-    await expect(page.getByText("Nome deve ter no mínimo 3 caracteres")).toBeVisible();
+    await expect(page.getByText("Informe nome e sobrenome")).toBeVisible();
+  });
+
+  test("step 0 validates empty name", async ({ page, mockSupabaseAsGuest }) => {
+    await mockSupabaseAsGuest();
+    const signup = new ProviderSignupPage(page);
+    await signup.goto();
+
+    await signup.emailInput.fill("pro@test.com");
+    await signup.continueButton.click();
+
+    await expect(page.getByText("Nome é obrigatório")).toBeVisible();
   });
 
   test("step 0 validates invalid email", async ({ page, mockSupabaseAsGuest }) => {
@@ -117,14 +131,14 @@ test.describe("Provider Signup", () => {
 
     await signup.completeSignup("Provider Test", "pro@test.com", VALID_PASSWORD, VALID_PASSWORD);
 
-    await page.waitForTimeout(1000);
+    await expect(signup.getSuccessMessage()).toBeVisible({ timeout: 10000 });
 
     expect(mocks.capturedRequests.signUp.length).toBeGreaterThanOrEqual(1);
     const body = mocks.capturedRequests.signUp[0] as Record<string, unknown>;
     expect(body.email).toBe("pro@test.com");
     expect(body.password).toBe(VALID_PASSWORD);
 
-    const data = body.data as Record<string, string> | undefined;
+    const data = (body.data ?? body.options?.data) as Record<string, string> | undefined;
     expect(data?.role).toBe("provider");
     expect(data?.full_name).toBe("Provider Test");
   });
@@ -158,7 +172,7 @@ test.describe("Provider Signup", () => {
     await signup.completeSignup("Provider Test", "existing@test.com", VALID_PASSWORD, VALID_PASSWORD);
 
     await expect(
-      page.getByText("Este email já está cadastrado")
+      page.getByText(/Este email já está cadastrado/)
     ).toBeVisible({ timeout: 10000 });
   });
 });

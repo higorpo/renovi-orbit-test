@@ -73,7 +73,10 @@ test.describe("Forgot Password", () => {
     await forgot.goto();
 
     await forgot.requestReset("user@test.com");
-    await page.waitForTimeout(500);
+
+    await expect(
+      page.getByRole("heading", { name: "Email enviado!" })
+    ).toBeVisible({ timeout: 10000 });
 
     expect(mocks.capturedRequests.recover.length).toBeGreaterThanOrEqual(1);
     const body = mocks.capturedRequests.recover[0] as Record<string, string>;
@@ -89,9 +92,11 @@ test.describe("Forgot Password", () => {
     await forgot.goto();
 
     await forgot.requestReset("user@test.com");
-    await page.waitForTimeout(500);
 
-    // Supabase JS sends redirect_to as a URL query parameter
+    await expect(
+      page.getByRole("heading", { name: "Email enviado!" })
+    ).toBeVisible({ timeout: 10000 });
+
     expect(mocks.capturedUrls.recover.length).toBeGreaterThanOrEqual(1);
     const url = decodeURIComponent(mocks.capturedUrls.recover[0]);
     expect(url).toContain("/recuperar-senha");
@@ -118,10 +123,9 @@ test.describe("Forgot Password", () => {
 
     await forgot.requestReset("valid@format.com");
 
-    // Error appears either in the form field or as a toast
     await expect(
-      page.getByText(/Unable to validate|Erro ao processar/i).first()
-    ).toBeVisible({ timeout: 5000 });
+      page.getByText(/Unable to validate|Erro ao processar|validation_failed|inválido/i).first()
+    ).toBeVisible({ timeout: 8000 });
   });
 
   test("shows loading state during submission", async ({

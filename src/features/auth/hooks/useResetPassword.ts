@@ -12,7 +12,7 @@ import { validatePasswordStrength } from "@/features/auth/utils/passwordPolicy";
 
 export function useResetPassword() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile, getRedirectPath } = useAuth();
   const [formData, setFormData] = useState<ResetPasswordFormData>({
     password: "",
     confirmPassword: "",
@@ -63,14 +63,15 @@ export function useResetPassword() {
           return;
         }
 
-        toast.success("Senha alterada com sucesso! Faça login com a nova senha.");
-        navigate("/login", { replace: true });
+        toast.success("Senha alterada com sucesso!");
+        const path = profile ? getRedirectPath(profile) : "/login";
+        navigate(path, { replace: true });
       } catch {
         toast.error("Erro ao alterar senha. Tente novamente.");
         setSubmitting(false);
       }
     },
-    [formData, navigate]
+    [formData, navigate, profile, getRedirectPath]
   );
 
   return {

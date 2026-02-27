@@ -105,4 +105,6 @@ mocks.onSignUp(async (route) => {
 });
 ```
 
+**Requisito para `seedSession`:** testes que usam `seedSession` (ex.: Reset Password em modo recovery, Route Guards com usuário autenticado) precisam que **`VITE_SUPABASE_URL`** esteja definido em `.env`, `.env.local`, `.env.development` ou `.env.development.local` (a mesma URL que o app usa no dev). O fixture usa essa URL para gravar a sessão na mesma chave de storage que o Supabase client (`sb-<project-ref>-auth-token`). Se a variável não estiver definida, `seedSession` lança um erro explicativo. Em CI, defina `VITE_SUPABASE_URL` no ambiente para que esses testes passem.
+
 Seguir essa arquitetura garante que novos testes E2E reutilizem mocks e page objects quando em modo mock, ou usem o Supabase real quando o usuário pedir explicitamente, e mantenham cobertura em desktop e mobile.

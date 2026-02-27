@@ -61,7 +61,7 @@ export function createMockProfile(
   };
 }
 
-function buildSessionResponse(user: MockUser) {
+export function buildSessionResponse(user: MockUser) {
   return {
     access_token: "mock-access-token",
     token_type: "bearer",
@@ -134,6 +134,10 @@ export async function installSupabaseMocks(
     oauthSignIn: [],
   };
 
+  const capturedUrls: Record<string, string[]> = {
+    recover: [],
+  };
+
   // Runtime overrides — tests can mutate these between interactions
   let signInHandler: ((route: Route) => Promise<void>) | null = null;
   let signUpHandler: ((route: Route) => Promise<void>) | null = null;
@@ -164,7 +168,12 @@ export async function installSupabaseMocks(
   });
 
   // ── POST /auth/v1/signup ──────────────────────────────────────────────
-  await page.route("**/auth/v1/signup", async (route) => {
+  // Use regex so query params (e.g. from redirectTo) do not prevent matching
+  await page.route(/\/auth\/v1\/signup/, async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.fallback();
+      return;
+    }
     const body = route.request().postDataJSON();
     capturedRequests.signUp.push(body);
 
@@ -173,10 +182,12 @@ export async function installSupabaseMocks(
       return;
     }
 
+    // Supabase JS sends metadata in body.data, not body.options.data
+    const data = body?.data ?? body?.options?.data;
     const newUser = createMockUser({
       email: body?.email,
-      full_name: body?.options?.data?.full_name ?? "New User",
-      role: body?.options?.data?.role ?? "client",
+      full_name: data?.full_name ?? "New User",
+      role: data?.role ?? "client",
       email_confirmed_at: null,
       identities: [{ id: "new-id", provider: "email" }],
     });
@@ -189,7 +200,13 @@ export async function installSupabaseMocks(
   });
 
   // ── POST /auth/v1/recover ─────────────────────────────────────────────
-  await page.route("**/auth/v1/recover", async (route) => {
+  await page.route(/\/auth\/v1\/recover/, async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.fallback();
+      return;
+    }
+    const url = route.request().url();
+    capturedUrls.recover.push(url);
     const body = route.request().postDataJSON();
     capturedRequests.recover.push(body);
 
@@ -336,6 +353,7 @@ export async function installSupabaseMocks(
 
   return {
     capturedRequests,
+    capturedUrls,
 
     /** Override the signIn response for subsequent login attempts. */
     onSignIn(handler: (route: Route) => Promise<void>) {
@@ -400,9 +418,14 @@ function extractProjectRef(_page: Page): string {
 
 /**
  * Seed localStorage with a Supabase session for any project ref.
- * More robust than extractProjectRef since the env var isn't available here.
+ * Uses supabaseUrl (e.g. from env) to derive storage key so the app finds the session.
+ * If storageKeys are provided, those are used; otherwise keys are derived from supabaseUrl.
  */
-export async function seedAuthSessionUniversal(page: Page, user: MockUser) {
+export async function seedAuthSessionUniversal(
+  page: Page,
+  user: MockUser,
+  supabaseUrlOrKeys?: string | string[]
+) {
   const session = buildSessionResponse(user);
   const payload = JSON.stringify({
     access_token: session.access_token,
@@ -413,17 +436,22 @@ export async function seedAuthSessionUniversal(page: Page, user: MockUser) {
     user: session.user,
   });
 
+  const keys: string[] = Array.isArray(supabaseUrlOrKeys)
+    ? supabaseUrlOrKeys
+    : supabaseUrlOrKeys && supabaseUrlOrKeys.startsWith("http")
+      ? [`sb-${new URL(supabaseUrlOrKeys).hostname.split(".")[0]}-auth-token`, "sb-mock-auth-token"]
+      : ["sb-mock-auth-token"];
+
   await page.addInitScript(
-    (value: string) => {
-      // Find and set the Supabase auth key regardless of project ref
-      const key =
-        Object.keys(window.localStorage).find((k) =>
-          k.startsWith("sb-") && k.endsWith("-auth-token")
-        ) ?? "sb-mock-auth-token";
-      window.localStorage.setItem(key, value);
-      window.sessionStorage.setItem(key, value);
+    (value: string, storageKeys: string[]) => {
+      storageKeys.forEach((key) => {
+        window.localStorage.setItem(key, value);
+        window.sessionStorage.setItem(key, value);
+      });
       window.localStorage.setItem("persist_session", "true");
+      window.localStorage.setItem("renovi_persist_session", "true");
     },
-    payload
+    payload,
+    keys
   );
 }

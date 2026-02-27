@@ -160,14 +160,14 @@ test.describe("Reset Password", () => {
     expect(body.password).toBe(VALID_PASSWORD);
   });
 
-  test("successful reset navigates to login", async ({
+  test("successful reset navigates to dashboard", async ({
     page,
     mockSupabaseAsUser,
     seedSession,
   }) => {
     const user = createMockUser();
     await seedSession(user);
-    await mockSupabaseAsUser(user, createMockProfile({ id: user.id }));
+    await mockSupabaseAsUser(user, createMockProfile({ id: user.id, role: "client" }));
 
     const reset = new ResetPasswordPage(page);
     await reset.goto();
@@ -175,7 +175,7 @@ test.describe("Reset Password", () => {
 
     await reset.submitNewPassword(VALID_PASSWORD, VALID_PASSWORD);
 
-    await expect(page).toHaveURL(/\/login/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/dashboard\/client/, { timeout: 10000 });
   });
 
   // ─── Error Handling ──────────────────────────────────────────────────
