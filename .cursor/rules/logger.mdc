@@ -29,4 +29,4 @@ logger.error("evento_error", { error: err.message });
 - Módulos em `src/lib/` (api, cache, utils, etc.).
 - Hooks que fazem lógica relevante (ex.: useAuth) também podem usar o logger para eventos de fluxo (login, logout, erro de sessão).
 
-Em componentes de UI pura, evite logs; se precisar de feedback para o usuário, use toasts ou estado de erro.
+Em componentes de UI pura, evite logs; se precisar de feedback para o usuário, use toasts ou estado de erro. Para **eventos de produto/negócio que precisam ser medidos** (conversão, demanda, abandono), use o **tracking com Google Analytics** (regra `analytics-tracking.mdc`) em vez de apenas logger.

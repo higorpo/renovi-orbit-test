@@ -1,0 +1,37 @@
+---
+description: Tracking de eventos importantes com Google Analytics / GTM
+alwaysApply: true
+---
+
+# Tracking com Google Analytics (GTM/dataLayer)
+
+**Eventos importantes de produto e negócio devem ser rastreados** via Google Analytics (GTM/dataLayer) para decisões baseadas em dados: priorização de expansão, funil de conversão, demanda por região e comportamento do usuário.
+
+## Regras
+
+1. **Usar sempre o hook `useAnalytics`** – Não disparar eventos direto em `window.dataLayer`; usar `trackEvent` do hook `@/hooks/useAnalytics`.
+2. **Nome do evento em snake_case** – Ex.: `signup_completed`, `cep_not_available`, `quote_request_started`.
+3. **Propriedades relevantes e consistentes** – Incluir contexto útil (ex.: `user_role`, `cep_prefix`, `step`) para segmentação no GA. Evitar dados pessoais; preferir agregados (ex.: prefixo de CEP em vez de CEP completo quando fizer sentido).
+4. **Onde disparar** – Em **hooks** (lógica de negócio), junto ao fluxo que representa o evento (ex.: após sucesso de signup, quando CEP não está disponível na plataforma). Evitar disparos em componentes de UI pura sem contexto de negócio.
+
+## Uso
+
+```ts
+import { useAnalytics } from "@/hooks/useAnalytics";
+
+// No hook da feature
+const { trackEvent } = useAnalytics();
+
+// Evento com propriedades
+trackEvent("cep_not_available", { cep_prefix: cep.slice(0, 5) });
+trackEvent("signup_completed", { method: "email", user_role: role });
+```
+
+## O que considerar para tracking
+
+- **Conversão e funil**: conclusão de cadastro, início/conclusão de pedido ou solicitação de orçamento.
+- **Demanda e expansão**: CEP ou região não atendida, seleção de serviço ou localização.
+- **Erros e abandono**: falhas que impactam o usuário (ex.: região indisponível, validação que bloqueia o fluxo).
+- **Ações relevantes**: mudança de step em wizard, seleção de opção importante.
+
+Em desenvolvimento (`import.meta.env.DEV`), os eventos são logados no console além do dataLayer, para facilitar debug.
