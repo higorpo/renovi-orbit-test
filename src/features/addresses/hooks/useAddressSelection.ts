@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { unmask } from "@/lib/masks";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import { listAddresses } from "../api/addresses.api";
 import { resolveFormDataFromCep } from "../utils/resolveFormDataFromCep";
 import type { ClientAddressWithRelations } from "../types/addresses.types";
@@ -38,6 +39,7 @@ export function useAddressSelection({
   numberInputRef,
   initialSelection,
 }: UseAddressSelectionParams): UseAddressSelectionResult {
+  const { trackEvent } = useAnalytics();
   const [formData, setFormData] = useState<AddressFormData>(() =>
     initialSelection?.kind === "new" ? initialSelection.formData : defaultAddressFormData
   );
@@ -119,6 +121,7 @@ export function useAddressSelection({
 
       if (resolved.ok === false && "notAvailable" in resolved && resolved.notAvailable) {
         lastResolvedCepRef.current = null;
+        trackEvent("cep_not_available", { cep_prefix: cep.slice(0, 5) });
         setFormData((prev) => ({
           ...prev,
           address_zip: "",
