@@ -41,10 +41,16 @@ create policy "Anyone can read service requests"
   on public.service_requests for select
   using (true);
 
-create policy "Clients can update own service requests"
+create policy "Clients can update own service requests; admins can update any"
   on public.service_requests for update
-  using (auth.uid() = client_id)
-  with check (auth.uid() = client_id);
+  using (
+    auth.uid() = client_id
+    or exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+  )
+  with check (
+    auth.uid() = client_id
+    or exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+  );
 
 create trigger service_requests_updated_at
   before update on public.service_requests
