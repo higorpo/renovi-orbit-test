@@ -168,29 +168,25 @@ export function RequestQuote() {
                 ))}
           </div>
 
-          {showConfirmEmail ? (
-            <div className="flex-1 mx-3 sm:mx-0">
-              <span className="text-white/90 text-xs font-medium">Pedido criado</span>
+          {!showConfirmEmail && (
+            <div className="flex-1 max-w-[160px] mx-3 sm:hidden">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-white/90 text-xs font-medium">
+                  Etapa {state.currentStep} de {totalSteps}
+                </span>
+                <span className="text-white/70 text-[10px]">
+                  {stepLabels[state.currentStep - 1]?.time}
+                </span>
+              </div>
+              <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-accent"
+                  initial={{ width: "20%" }}
+                  animate={{ width: `${(state.currentStep / totalSteps) * 100}%` }}
+                  transition={{ duration: 0.3 }}
+                />
+              </div>
             </div>
-          ) : (
-          <div className="flex-1 max-w-[160px] mx-3 sm:hidden">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-white/90 text-xs font-medium">
-                Etapa {state.currentStep} de {totalSteps}
-              </span>
-              <span className="text-white/70 text-[10px]">
-                {stepLabels[state.currentStep - 1]?.time}
-              </span>
-            </div>
-            <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-              <motion.div
-                className="h-full bg-accent"
-                initial={{ width: "20%" }}
-                animate={{ width: `${(state.currentStep / totalSteps) * 100}%` }}
-                transition={{ duration: 0.3 }}
-              />
-            </div>
-          </div>
           )}
 
           <div className="flex items-center gap-2 md:gap-4">
