@@ -24,6 +24,7 @@ import {
   logUsageOnError,
   jsonResponse,
 } from "./handlerHelpers.ts";
+import { Database } from "../_shared/database.types.ts";
 
 const RATE_LIMIT_CONFIG = { perMinute: 60, burst: 10 };
 
@@ -77,7 +78,7 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient<Database>(supabaseUrl, supabaseKey);
 
     const enableStructured =
       params.mode !== "suggestion" && params.useStructuredOutput;
@@ -166,7 +167,8 @@ serve(async (req) => {
     if (promptConfig) {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
+      const supabase = createClient<Database>(supabaseUrl, supabaseKey);
+
       await logUsageOnError(
         supabase,
         promptConfig,

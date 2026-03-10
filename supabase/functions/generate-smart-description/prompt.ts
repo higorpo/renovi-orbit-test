@@ -1,12 +1,13 @@
 import type { PromptConfig } from "./types.ts";
 import { CACHE_TTL_MS } from "./constants.ts";
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { Database } from "../_shared/database.types.ts";
 
 const promptCache: Map<string, { data: PromptConfig; timestamp: number }> =
   new Map();
 
 export async function getPromptFromDB(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient<Database>,
   promptKey: string
 ): Promise<PromptConfig | null> {
   const cached = promptCache.get(promptKey);
@@ -28,15 +29,17 @@ export async function getPromptFromDB(
     }
 
     if (data) {
+      const promptConfig = data as unknown as PromptConfig;
+
       const normalizedData = {
-        ...data,
+        ...promptConfig,
         formatting_rules: {
           use_caps_titles: true,
           use_block_separation: true,
           allow_markdown: false,
           word_limit: 300,
-          ...(typeof data.formatting_rules === "object"
-            ? data.formatting_rules
+          ...(typeof promptConfig.formatting_rules === "object"
+            ? promptConfig.formatting_rules
             : {}),
         },
       };
@@ -58,7 +61,7 @@ export async function getPromptFromDB(
 }
 
 export async function getPromptById(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient<Database>,
   promptId: string
 ): Promise<PromptConfig | null> {
   const cacheKey = `id:${promptId}`;

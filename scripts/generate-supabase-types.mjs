@@ -8,8 +8,10 @@ import { execSync } from 'child_process';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, '..');
 const outputPath = join(rootDir, 'src/lib/supabase/database.types.ts');
+const outputPathEdgeFunctions = join(rootDir, 'supabase/functions/_shared/database.types.ts');
 
 mkdirSync(dirname(outputPath), { recursive: true });
+mkdirSync(dirname(outputPathEdgeFunctions), { recursive: true });
 
 try {
   const result = execSync('npx supabase gen types typescript --local', {
@@ -17,7 +19,8 @@ try {
     cwd: rootDir,
   });
   writeFileSync(outputPath, result, 'utf-8');
-  console.log('Tipos gerados do banco local em src/lib/supabase/database.types.ts');
+  writeFileSync(outputPathEdgeFunctions, result, 'utf-8');
+  console.log('Tipos gerados do banco local em src/lib/supabase/database.types.ts e supabase/functions/_shared/database.types.ts');
 } catch (err) {
   console.error('Erro ao gerar tipos:', err.message);
   console.error('Certifique-se de que o Supabase local está rodando (npx supabase start).');

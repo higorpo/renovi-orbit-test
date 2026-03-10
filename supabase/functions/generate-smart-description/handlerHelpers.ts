@@ -22,6 +22,7 @@ import {
   getStructuredUserPrompt,
 } from "./promptTemplates.ts";
 import { getPromptById, getPromptFromDB } from "./prompt.ts";
+import { Database } from "../_shared/database.types.ts";
 
 const DEFAULT_SERVICE_DISPLAY_NAME = "Serviço não identificado";
 
@@ -81,7 +82,7 @@ export function jsonResponse(
 }
 
 export async function resolvePromptAndService(
-  supabase: SupabaseClient,
+  supabase: SupabaseClient<Database>,
   params: ParsedRequestParams
 ): Promise<ResolvedPromptResult> {
   const { serviceId, forcePromptKey } = params;
