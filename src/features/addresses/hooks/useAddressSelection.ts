@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { unmask } from "@/lib/masks";
 import { listAddresses } from "../api/addresses.api";
 import { resolveFormDataFromCep } from "../utils/resolveFormDataFromCep";
-import type { ClientAddress } from "../types/addresses.types";
+import type { ClientAddressWithRelations } from "../types/addresses.types";
 import type { AddressSelection } from "../types/addresses.types";
 import { defaultAddressFormData } from "../types/addressForm.validation";
 import type { AddressFormData } from "../types/addressForm.validation";
@@ -28,7 +28,7 @@ export interface UseAddressSelectionResult {
   /** True when form was restored from persisted step data (returning to step); used to hide "back to list" button */
   restoredFromPersisted: boolean;
   fetchingCep: boolean;
-  addresses: ClientAddress[];
+  addresses: ClientAddressWithRelations[];
   handleCepBlur: () => void;
 }
 
@@ -66,7 +66,7 @@ export function useAddressSelection({
   });
 
   const addresses = useMemo(
-    () => (addressesData?.addresses ?? []) as ClientAddress[],
+    () => (addressesData?.addresses ?? []) as ClientAddressWithRelations[],
     [addressesData?.addresses]
   );
 
@@ -78,9 +78,6 @@ export function useAddressSelection({
           onSelectionChange({
             kind: "existing",
             addressId: addr.id,
-            city: addr.city,
-            neighborhood: addr.neighborhood,
-            state: addr.state,
           });
           return;
         }

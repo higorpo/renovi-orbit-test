@@ -8,15 +8,13 @@ export type CreateServiceRequestResult =
 interface Params {
   client_id: string;
   service_id: string;
-  address_id: string;
+  address_id: string | null;
   service_title: string;
   description: string;
   photoUrls: string[];
   form_data: Record<string, unknown>;
   form_schema: Record<string, unknown> | null;
   form_version: string | null;
-  city: string;
-  neighborhood: string;
 }
 
 export async function createServiceRequest(
@@ -37,8 +35,6 @@ export async function createServiceRequest(
     form_schema: params.form_schema as Json | null,
     form_version: params.form_version ?? null,
     status: "open",
-    city: params.city,
-    neighborhood: params.neighborhood,
   };
 
   const { data, error } = await supabase

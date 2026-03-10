@@ -144,7 +144,7 @@ export type Database = {
       }
       client_addresses: {
         Row: {
-          city: string
+          city_id: string
           client_id: string
           complement: string | null
           created_at: string
@@ -154,13 +154,13 @@ export type Database = {
           label: string
           neighborhood: string
           number: string
-          state: string
+          state_id: string
           street: string
           updated_at: string
           zip_code: string
         }
         Insert: {
-          city: string
+          city_id: string
           client_id: string
           complement?: string | null
           created_at?: string
@@ -170,13 +170,13 @@ export type Database = {
           label?: string
           neighborhood: string
           number: string
-          state: string
+          state_id: string
           street: string
           updated_at?: string
           zip_code: string
         }
         Update: {
-          city?: string
+          city_id?: string
           client_id?: string
           complement?: string | null
           created_at?: string
@@ -186,17 +186,31 @@ export type Database = {
           label?: string
           neighborhood?: string
           number?: string
-          state?: string
+          state_id?: string
           street?: string
           updated_at?: string
           zip_code?: string
         }
         Relationships: [
           {
+            foreignKeyName: "client_addresses_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "platform_cities"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "client_addresses_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_addresses_state_id_fkey"
+            columns: ["state_id"]
+            isOneToOne: false
+            referencedRelation: "platform_states"
             referencedColumns: ["id"]
           },
         ]
@@ -382,7 +396,6 @@ export type Database = {
       service_requests: {
         Row: {
           address_id: string | null
-          city: string | null
           client_id: string
           created_at: string
           description: string | null
@@ -390,7 +403,6 @@ export type Database = {
           form_schema: Json | null
           form_version: string | null
           id: string
-          neighborhood: string | null
           photos: string[] | null
           service_id: string
           status: string
@@ -399,7 +411,6 @@ export type Database = {
         }
         Insert: {
           address_id?: string | null
-          city?: string | null
           client_id: string
           created_at?: string
           description?: string | null
@@ -407,7 +418,6 @@ export type Database = {
           form_schema?: Json | null
           form_version?: string | null
           id?: string
-          neighborhood?: string | null
           photos?: string[] | null
           service_id: string
           status?: string
@@ -416,7 +426,6 @@ export type Database = {
         }
         Update: {
           address_id?: string | null
-          city?: string | null
           client_id?: string
           created_at?: string
           description?: string | null
@@ -424,7 +433,6 @@ export type Database = {
           form_schema?: Json | null
           form_version?: string | null
           id?: string
-          neighborhood?: string | null
           photos?: string[] | null
           service_id?: string
           status?: string

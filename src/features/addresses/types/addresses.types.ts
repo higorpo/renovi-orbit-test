@@ -2,12 +2,18 @@ import type { Tables } from "@/lib/supabase/database.types";
 import type { AddressFormData } from "./addressForm.validation";
 
 export type ClientAddress = Tables<"client_addresses">;
+
+/** Client address row with joined city/state names for display. */
+export interface ClientAddressWithRelations extends ClientAddress {
+  platform_cities: { name: string } | null;
+  platform_states: { abbreviation: string } | null;
+}
 export type PlatformState = Tables<"platform_states">;
 export type PlatformCity = Tables<"platform_cities">;
 export type PlatformNeighborhood = Tables<"platform_neighborhoods">;
 
 export interface ListAddressesResult {
-  addresses: ClientAddress[];
+  addresses: ClientAddressWithRelations[];
   error: string | null;
 }
 
@@ -18,8 +24,8 @@ export interface CreateAddressParams {
   number: string;
   complement?: string | null;
   neighborhood: string;
-  city: string;
-  state: string;
+  city_id: string;
+  state_id: string;
   zip_code: string;
   is_default?: boolean;
   is_active?: boolean;
@@ -36,8 +42,8 @@ export interface UpdateAddressParams {
   number?: string;
   complement?: string | null;
   neighborhood?: string;
-  city?: string;
-  state?: string;
+  city_id?: string;
+  state_id?: string;
   zip_code?: string;
   is_default?: boolean;
   is_active?: boolean;
@@ -51,9 +57,6 @@ export interface UpdateAddressResult {
 export interface AddressSelectionExisting {
   kind: "existing";
   addressId: string;
-  city: string;
-  neighborhood: string;
-  state: string;
 }
 
 /** Payload when user fills the new-address form. */
@@ -66,5 +69,5 @@ export interface AddressSelectionNew {
 export type AddressSelection = AddressSelectionExisting | AddressSelectionNew | null;
 
 export type ResolveAddressResult =
-  | { ok: true; addressId: string | null; city: string; neighborhood: string }
+  | { ok: true; addressId: string | null; city?: string; neighborhood?: string }
   | { ok: false; error: string };

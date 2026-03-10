@@ -118,7 +118,7 @@ export function AddressSelectionStep({
                 </span>
               </div>
               <span className="text-sm text-muted-foreground">
-                {addr.neighborhood}, {addr.city} - {addr.state}
+                {addr.neighborhood}, {addr.platform_cities?.name ?? ""} - {addr.platform_states?.abbreviation ?? ""}
               </span>
             </button>
           ))}

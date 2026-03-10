@@ -17,6 +17,7 @@ export {
 } from "./api/statesAndCities.api";
 export type {
   ClientAddress,
+  ClientAddressWithRelations,
   ListAddressesResult,
   CreateAddressParams,
   CreateAddressResult,

@@ -1,5 +1,6 @@
 -- Platform-recognized states and cities (IBGE codes). Only admins can write; anyone can read.
 -- Used to restrict address form to predefined state/city options.
+-- Runs before client_addresses so client_addresses can reference platform_cities/platform_states.
 
 create table if not exists public.platform_states (
   id uuid primary key default gen_random_uuid(),

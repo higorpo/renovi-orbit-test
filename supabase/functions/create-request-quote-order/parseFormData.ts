@@ -44,8 +44,8 @@ export async function parseFormData(formData: FormData): Promise<ParseFormDataRe
   try {
     const parsed = JSON.parse(typeof addressRaw === "string" ? addressRaw : "{}") as AddressPayload;
     if (parsed.kind === "existing") {
-      if (!parsed.addressId || !parsed.city || !parsed.neighborhood) {
-        return { ok: false, error: "Endereço existente deve ter addressId, city e neighborhood.", status: 400 };
+      if (!parsed.addressId) {
+        return { ok: false, error: "Endereço existente deve ter addressId.", status: 400 };
       }
       address = parsed;
     } else if (parsed.kind === "new") {

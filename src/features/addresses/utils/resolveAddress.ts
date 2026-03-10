@@ -15,8 +15,6 @@ export async function resolveAddress(
     return {
       ok: true,
       addressId: selection.addressId,
-      city: selection.city,
-      neighborhood: selection.neighborhood,
     };
   }
   const parsed = addressFormSchema.safeParse(selection.formData);
@@ -32,8 +30,8 @@ export async function resolveAddress(
     number: formData.address_number,
     complement: formData.address_complement || null,
     neighborhood: formData.address_neighborhood,
-    city: formData.address_city,
-    state: formData.address_state,
+    city_id: formData.address_city_id,
+    state_id: formData.address_state_id,
     zip_code: cleanCep,
     is_default: options.isDefault,
     is_active: true,
@@ -44,7 +42,5 @@ export async function resolveAddress(
   return {
     ok: true,
     addressId: newAddr?.id ?? null,
-    city: formData.address_city,
-    neighborhood: formData.address_neighborhood,
   };
 }

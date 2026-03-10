@@ -59,8 +59,6 @@ export async function createRequestQuoteOrder(
       ? {
           kind: "existing" as const,
           addressId: step4Data.addressId,
-          city: step4Data.city,
-          neighborhood: step4Data.neighborhood,
         }
       : {
           kind: "new" as const,

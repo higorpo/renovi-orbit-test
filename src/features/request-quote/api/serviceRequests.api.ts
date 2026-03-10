@@ -15,8 +15,6 @@ export interface CreateServiceRequestParams {
   form_schema?: Record<string, unknown> | null;
   form_version?: string | null;
   status?: string;
-  city?: string | null;
-  neighborhood?: string | null;
 }
 
 export interface CreateServiceRequestResult {
@@ -40,8 +38,6 @@ export async function createServiceRequest(
       form_schema: (params.form_schema ?? null) as import("@/lib/supabase/database.types").Json,
       form_version: params.form_version ?? null,
       status: params.status ?? "open",
-      city: params.city ?? null,
-      neighborhood: params.neighborhood ?? null,
     })
     .select()
     .single();

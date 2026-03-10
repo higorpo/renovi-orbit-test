@@ -82,13 +82,9 @@ serve(async (req) => {
   }
 
   let addressId: string | null = null;
-  let city: string;
-  let neighborhood: string;
 
   if (data.address.kind === "existing") {
     addressId = data.address.addressId;
-    city = data.address.city;
-    neighborhood = data.address.neighborhood;
   } else {
     const addrResult = await createAddress(
       supabaseUrl,
@@ -100,8 +96,6 @@ serve(async (req) => {
       return jsonResponse({ error: addrResult.error }, 400);
     }
     addressId = addrResult.addressId;
-    city = addrResult.city;
-    neighborhood = addrResult.neighborhood;
   }
 
   // Use public URL for storage links so frontend gets correct host (SUPABASE_URL in Edge Functions can be internal e.g. kong:8000).
@@ -141,8 +135,6 @@ serve(async (req) => {
       form_data: data.formData,
       form_schema: data.formSchema,
       form_version: data.formVersion,
-      city,
-      neighborhood,
     }
   );
 

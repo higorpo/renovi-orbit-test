@@ -9,9 +9,9 @@ create table if not exists public.client_addresses (
   number text not null,
   complement text,
   neighborhood text not null,
-  city text not null,
-  state text not null,
   zip_code text not null,
+  state_id uuid not null references public.platform_states (id) on delete restrict,
+  city_id uuid not null references public.platform_cities (id) on delete restrict,
   is_default boolean not null default false,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
@@ -21,8 +21,12 @@ create table if not exists public.client_addresses (
 comment on table public.client_addresses is 'Client addresses; one client can have multiple.';
 comment on column public.client_addresses.client_id is 'References profiles.id (client).';
 comment on column public.client_addresses.is_default is 'When true, used as default for new requests.';
+comment on column public.client_addresses.state_id is 'Reference to platform_states.';
+comment on column public.client_addresses.city_id is 'Reference to platform_cities.';
 
 create index if not exists client_addresses_client_id_idx on public.client_addresses (client_id);
+create index if not exists client_addresses_state_id_idx on public.client_addresses (state_id);
+create index if not exists client_addresses_city_id_idx on public.client_addresses (city_id);
 
 alter table public.client_addresses enable row level security;
 
@@ -39,9 +43,7 @@ create policy "Clients can update own addresses"
   using (auth.uid() = client_id)
   with check (auth.uid() = client_id);
 
-create policy "Clients can delete own addresses"
-  on public.client_addresses for delete
-  using (auth.uid() = client_id);
+-- Clients cannot delete own addresses (no delete policy).
 
 create trigger client_addresses_updated_at
   before update on public.client_addresses

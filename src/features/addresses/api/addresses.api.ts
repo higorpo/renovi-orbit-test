@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
 import type {
   ClientAddress,
+  ClientAddressWithRelations,
   ListAddressesResult,
   CreateAddressParams,
   CreateAddressResult,
@@ -11,6 +12,7 @@ import type {
 
 export type {
   ClientAddress,
+  ClientAddressWithRelations,
   ListAddressesResult,
   CreateAddressParams,
   CreateAddressResult,
@@ -21,7 +23,7 @@ export type {
 export async function listAddresses(clientId: string): Promise<ListAddressesResult> {
   const { data, error } = await supabase
     .from("client_addresses")
-    .select("*")
+    .select("*, platform_cities(name), platform_states(abbreviation)")
     .eq("client_id", clientId)
     .eq("is_active", true)
     .order("is_default", { ascending: false })
@@ -31,7 +33,7 @@ export async function listAddresses(clientId: string): Promise<ListAddressesResu
     logger.error("addresses_list_error", { clientId, error: error.message });
     return { addresses: [], error: error.message };
   }
-  return { addresses: (data ?? []) as ClientAddress[], error: null };
+  return { addresses: (data ?? []) as ClientAddressWithRelations[], error: null };
 }
 
 export async function createAddress(params: CreateAddressParams): Promise<CreateAddressResult> {
@@ -44,8 +46,8 @@ export async function createAddress(params: CreateAddressParams): Promise<Create
       number: params.number,
       complement: params.complement ?? null,
       neighborhood: params.neighborhood,
-      city: params.city,
-      state: params.state,
+      city_id: params.city_id,
+      state_id: params.state_id,
       zip_code: params.zip_code,
       is_default: params.is_default ?? false,
       is_active: params.is_active ?? true,

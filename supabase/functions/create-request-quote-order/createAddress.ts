@@ -3,7 +3,7 @@ import type { Database } from "../_shared/database.types.ts";
 import type { AddressPayloadNew } from "./types.ts";
 
 export type CreateAddressResult =
-  | { ok: true; addressId: string; city: string; neighborhood: string }
+  | { ok: true; addressId: string }
   | { ok: false; error: string };
 
 function toRow(clientId: string, payload: AddressPayloadNew) {
@@ -12,10 +12,10 @@ function toRow(clientId: string, payload: AddressPayloadNew) {
   const number = f?.address_number ?? payload.number ?? "";
   const complement = f?.address_complement ?? payload.complement ?? null;
   const neighborhood = f?.address_neighborhood ?? payload.neighborhood ?? "";
-  const city = f?.address_city ?? payload.city ?? "";
-  const state = f?.address_state ?? payload.state ?? "";
   const zipRaw = f?.address_zip ?? payload.zip_code ?? "";
   const zip_code = zipRaw.replace(/\D/g, "").slice(0, 8) || zipRaw;
+  const city_id = f?.address_city_id ?? payload.city_id ?? "";
+  const state_id = f?.address_state_id ?? payload.state_id ?? "";
 
   return {
     client_id: clientId,
@@ -24,8 +24,8 @@ function toRow(clientId: string, payload: AddressPayloadNew) {
     number,
     complement,
     neighborhood,
-    city,
-    state,
+    city_id,
+    state_id,
     zip_code,
     is_default: payload.is_default ?? false,
     is_active: true,
@@ -43,7 +43,7 @@ export async function createAddress(
   const { data, error } = await supabase
     .from("client_addresses")
     .insert(toRow(clientId, payload))
-    .select("id, city, neighborhood")
+    .select("id")
     .single();
 
   if (error) {
@@ -54,7 +54,5 @@ export async function createAddress(
   return {
     ok: true,
     addressId: data.id,
-    city: data.city,
-    neighborhood: data.neighborhood,
   };
 }

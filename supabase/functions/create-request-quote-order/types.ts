@@ -4,8 +4,8 @@ export interface AddressFormDataLike {
   address_number?: string;
   address_complement?: string;
   address_neighborhood?: string;
-  address_state?: string;
-  address_city?: string;
+  address_state_id?: string;
+  address_city_id?: string;
 }
 
 export interface AddressPayloadNew {
@@ -17,16 +17,14 @@ export interface AddressPayloadNew {
   number?: string;
   complement?: string | null;
   neighborhood?: string;
-  city?: string;
-  state?: string;
+  city_id?: string;
+  state_id?: string;
   zip_code?: string;
 }
 
 export interface AddressPayloadExisting {
   kind: "existing";
   addressId: string;
-  city: string;
-  neighborhood: string;
 }
 
 export type AddressPayload = AddressPayloadNew | AddressPayloadExisting;

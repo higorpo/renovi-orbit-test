@@ -16,8 +16,6 @@ export function buildServiceRequestParams(params: {
   service_id: string;
   service_title: string;
   address_id: string | null;
-  city: string;
-  neighborhood: string;
   description: string;
   photoUrls: string[];
   form_data: Record<string, unknown>;
@@ -35,7 +33,5 @@ export function buildServiceRequestParams(params: {
     form_schema: params.form_schema ?? null,
     form_version: params.form_version ?? null,
     status: "open" as const,
-    city: params.city,
-    neighborhood: params.neighborhood,
   };
 }
