@@ -12,7 +12,12 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // nsfwjs imports "buffer/"; resolve to buffer package for browser
+      'buffer/': path.resolve(__dirname, 'node_modules/buffer/'),
     },
+  },
+  optimizeDeps: {
+    include: ['nsfwjs', '@tensorflow/tfjs', 'buffer'],
   },
   server: {
     host: true,

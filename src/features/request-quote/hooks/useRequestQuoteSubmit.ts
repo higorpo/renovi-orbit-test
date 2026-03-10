@@ -9,6 +9,7 @@ import {
   getClientEmailRedirectTo,
 } from "@/features/auth";
 import { createRequestQuoteOrder } from "../api/createRequestQuoteOrder.api";
+import { checkPhotosContent } from "../utils/photoContentCheck";
 import type { RequestQuoteState } from "./useRequestQuoteState";
 
 export interface UseRequestQuoteSubmitParams {
@@ -30,6 +31,14 @@ export function useRequestQuoteSubmit({
     if (!user || !state.selectedService || !state.step4Data) return;
     state.setLoading(true);
     try {
+      if (state.step3Data.photos.length > 0) {
+        const check = await checkPhotosContent(state.step3Data.photos);
+        if (!check.allowed) {
+          toast.error(check.error);
+          state.setLoading(false);
+          return;
+        }
+      }
       const result = await createRequestQuoteOrder({
         userId: user.id,
         email: user.email ?? "",
@@ -89,6 +98,15 @@ export function useRequestQuoteSubmit({
         return;
       }
       const userId = signUpResult.userId!;
+
+      if (state.step3Data.photos.length > 0) {
+        const check = await checkPhotosContent(state.step3Data.photos);
+        if (!check.allowed) {
+          toast.error(check.error);
+          state.setLoading(false);
+          return;
+        }
+      }
 
       const result = await createRequestQuoteOrder({
         userId,
