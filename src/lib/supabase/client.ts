@@ -6,6 +6,14 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_OR_ANON_KEY
 const isProduction = import.meta.env.PROD
 
+/** Anon key used for Edge Function calls when user is not logged in (same as client). */
+export function getSupabaseAnonKey(): string {
+  if (typeof supabaseAnonKey !== "string" || !supabaseAnonKey) {
+    throw new Error("VITE_SUPABASE_PUBLISHABLE_OR_ANON_KEY is not set");
+  }
+  return supabaseAnonKey;
+}
+
 // Expose storage key for E2E so seedSession can use the same key (avoids .env mismatch)
 const supabaseStorageKey =
   typeof supabaseUrl === "string" && supabaseUrl.startsWith("http")

@@ -1,4 +1,5 @@
-import { MapPin, Check } from "lucide-react";
+import { MapPin, Check, Info, Loader2 } from "lucide-react";
+import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,7 @@ import type { AddressSelection } from "../../types/addresses.types";
 export interface AddressSelectionStepProps {
   userId: string | null;
   onSelectionChange: (payload: AddressSelection) => void;
+  step4Data?: AddressSelection | null;
   title?: string;
   choosePrompt?: string;
   newAddressLabel?: string;
@@ -30,11 +32,13 @@ export interface AddressSelectionStepProps {
 export function AddressSelectionStep({
   userId,
   onSelectionChange,
+  step4Data = null,
   title = "Endereço do serviço",
   choosePrompt = "Escolha um endereço ou cadastre um novo.",
   newAddressLabel = "Cadastrar novo endereço",
   backToAddressesLabel = "Voltar para meus endereços",
 }: AddressSelectionStepProps) {
+  const numberInputRef = useRef<HTMLInputElement>(null);
   const {
     formData,
     setFormData,
@@ -42,10 +46,11 @@ export function AddressSelectionStep({
     setSelectedAddressId,
     showNewAddressForm,
     setShowNewAddressForm,
+    restoredFromPersisted,
     fetchingCep,
     addresses,
     handleCepBlur,
-  } = useAddressSelection({ userId, onSelectionChange });
+  } = useAddressSelection({ userId, onSelectionChange, numberInputRef, initialSelection: step4Data });
 
   const { states, isLoading: statesLoading } = usePlatformStates();
   const { cities, isLoading: citiesLoading } = usePlatformCities(
@@ -92,8 +97,8 @@ export function AddressSelectionStep({
   if (userId && addresses.length > 0 && !showNewAddressForm) {
     return (
       <div className="space-y-6">
-        <h2 className="text-xl font-semibold text-white">{title}</h2>
-        <p className="text-white/80">{choosePrompt}</p>
+        <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+        <p className="text-muted-foreground">{choosePrompt}</p>
         <div className="space-y-2">
           {addresses.map((addr) => (
             <button
@@ -102,9 +107,9 @@ export function AddressSelectionStep({
               onClick={() => setSelectedAddressId(addr.id)}
               className={`w-full text-left p-4 rounded-lg border transition ${
                 selectedAddressId === addr.id
-                  ? "border-primary bg-white/10"
-                  : "border-white/20 hover:bg-white/5"
-              } text-white`}
+                  ? "border-primary bg-primary/10"
+                  : "border-border hover:bg-muted/50"
+              } text-foreground`}
             >
               <div className="flex items-center gap-2">
                 {selectedAddressId === addr.id && <Check className="h-4 w-4" />}
@@ -112,7 +117,7 @@ export function AddressSelectionStep({
                   {addr.street}, {addr.number}
                 </span>
               </div>
-              <span className="text-sm text-white/70">
+              <span className="text-sm text-muted-foreground">
                 {addr.neighborhood}, {addr.city} - {addr.state}
               </span>
             </button>
@@ -121,7 +126,7 @@ export function AddressSelectionStep({
         <Button
           type="button"
           variant="outline"
-          className="border-white/30 text-white"
+          className="border-border text-foreground hover:bg-muted"
           onClick={() => {
             setShowNewAddressForm(true);
             setSelectedAddressId(null);
@@ -136,13 +141,13 @@ export function AddressSelectionStep({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-white">{title}</h2>
-      {showNewAddressForm && (
+      <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+      {showNewAddressForm && !restoredFromPersisted && userId && addresses.length > 0 && (
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="text-white/80"
+          className="text-muted-foreground hover:text-foreground"
           onClick={() => setShowNewAddressForm(false)}
         >
           {backToAddressesLabel}
@@ -150,7 +155,7 @@ export function AddressSelectionStep({
       )}
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label className="text-white/90">CEP</Label>
+          <Label className="text-foreground">CEP</Label>
           <Input
             value={formData.address_zip}
             onChange={(e) =>
@@ -158,53 +163,27 @@ export function AddressSelectionStep({
             }
             onBlur={handleCepBlur}
             placeholder="00000-000"
-            className="bg-white/10 border-white/30 text-white"
-          />
-          {fetchingCep && <p className="text-xs text-white/60 mt-1">Buscando...</p>}
-        </div>
-        <div>
-          <Label className="text-white/90">Rua</Label>
-          <Input
-            value={formData.address_street}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, address_street: e.target.value }))
+            className="bg-background border-border text-foreground placeholder:text-muted-foreground"
+            rightIcon={
+              fetchingCep ? (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              ) : undefined
             }
-            className="bg-white/10 border-white/30 text-white"
           />
         </div>
         <div>
-          <Label className="text-white/90">Número</Label>
-          <Input
-            value={formData.address_number}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, address_number: e.target.value }))
-            }
-            className="bg-white/10 border-white/30 text-white"
-          />
-        </div>
-        <div>
-          <Label className="text-white/90">Complemento</Label>
-          <Input
-            value={formData.address_complement}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, address_complement: e.target.value }))
-            }
-            className="bg-white/10 border-white/30 text-white"
-          />
-        </div>
-        <div>
-          <Label className="text-white/90">Estado</Label>
+          <Label className="text-foreground">Estado</Label>
           <Select
             value={formData.address_state_id || ""}
             onValueChange={handleStateChange}
-            disabled={statesLoading}
+            disabled={statesLoading || fetchingCep}
           >
-            <SelectTrigger className="bg-white/10 border-white/30 text-white w-full">
+            <SelectTrigger className="bg-background border-border text-foreground w-full">
               <SelectValue placeholder="Selecione o estado" />
             </SelectTrigger>
             <SelectContent>
               {states.map((s) => (
-                <SelectItem key={s.id} value={s.id} className="focus:bg-white/10">
+                <SelectItem key={s.id} value={s.id}>
                   {s.name} ({s.abbreviation})
                 </SelectItem>
               ))}
@@ -212,18 +191,18 @@ export function AddressSelectionStep({
           </Select>
         </div>
         <div>
-          <Label className="text-white/90">Cidade</Label>
+          <Label className="text-foreground">Cidade</Label>
           <Select
             value={formData.address_city_id || ""}
             onValueChange={handleCityChange}
-            disabled={!formData.address_state_id || citiesLoading}
+            disabled={!formData.address_state_id || citiesLoading || fetchingCep}
           >
-            <SelectTrigger className="bg-white/10 border-white/30 text-white w-full">
+            <SelectTrigger className="bg-background border-border text-foreground w-full">
               <SelectValue placeholder="Selecione a cidade" />
             </SelectTrigger>
             <SelectContent>
               {cities.map((c) => (
-                <SelectItem key={c.id} value={c.id} className="focus:bg-white/10">
+                <SelectItem key={c.id} value={c.id}>
                   {c.name}
                 </SelectItem>
               ))}
@@ -231,24 +210,76 @@ export function AddressSelectionStep({
           </Select>
         </div>
         <div>
-          <Label className="text-white/90">Bairro</Label>
+          <Label className="text-foreground">Bairro</Label>
           <Select
             value={formData.address_neighborhood_id || ""}
             onValueChange={handleNeighborhoodChange}
-            disabled={!formData.address_city_id || neighborhoodsLoading}
+            disabled={!formData.address_city_id || neighborhoodsLoading || fetchingCep}
           >
-            <SelectTrigger className="bg-white/10 border-white/30 text-white w-full">
+            <SelectTrigger className="bg-background border-border text-foreground w-full">
               <SelectValue placeholder="Selecione o bairro" />
             </SelectTrigger>
             <SelectContent>
               {neighborhoods.map((n) => (
-                <SelectItem key={n.id} value={n.id} className="focus:bg-white/10">
+                <SelectItem key={n.id} value={n.id}>
                   {n.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
+        <div>
+          <Label className="text-foreground">Rua</Label>
+          <Input
+            value={formData.address_street}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, address_street: e.target.value }))
+            }
+            disabled={fetchingCep}
+            className="bg-background border-border text-foreground placeholder:text-muted-foreground"
+          />
+        </div>
+        <div>
+          <Label className="text-foreground">Número</Label>
+          <Input
+            ref={numberInputRef}
+            value={formData.address_number}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, address_number: e.target.value }))
+            }
+            disabled={fetchingCep}
+            className="bg-background border-border text-foreground placeholder:text-muted-foreground"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <Label className="text-foreground">Complemento</Label>
+          <Input
+            value={formData.address_complement}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, address_complement: e.target.value }))
+            }
+            placeholder="Apto, bloco, etc. (opcional)"
+            disabled={fetchingCep}
+            className="bg-background border-border text-foreground placeholder:text-muted-foreground"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border bg-muted/30 p-4 flex gap-3">
+        <Info className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+        <p className="text-sm text-muted-foreground">
+          Não conseguiu selecionar estado, cidade ou bairro? A Renovi ainda não está presente na sua região.
+          Você pode seguir nosso Instagram em{" "}
+          <a
+            href="https://www.instagram.com/renovi.com.br/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-accent hover:underline"
+          >
+            @renovi.com.br
+          </a>
+          {" "}para acompanhar novidades.
+        </p>
       </div>
     </div>
   );

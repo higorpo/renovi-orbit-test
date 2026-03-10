@@ -31,6 +31,9 @@ export interface RequestQuoteState {
   setStep4Data: (d: AddressSelection) => void;
   step5Data: ClientSignupIdentityData;
   setStep5Data: (d: ClientSignupIdentityData | ((prev: ClientSignupIdentityData) => ClientSignupIdentityData)) => void;
+  /** When set, show "confirm email" screen (guest flow after order created). */
+  orderCreatedEmail: string | null;
+  setOrderCreatedEmail: (email: string | null) => void;
 }
 
 export function useRequestQuoteState(): RequestQuoteState {
@@ -48,6 +51,7 @@ export function useRequestQuoteState(): RequestQuoteState {
   const [generatingDescription, setGeneratingDescription] = useState(false);
   const [step4Data, setStep4Data] = useState<AddressSelection>(null);
   const [step5Data, setStep5Data] = useState<ClientSignupIdentityData>(defaultClientSignupIdentity);
+  const [orderCreatedEmail, setOrderCreatedEmail] = useState<string | null>(null);
 
   return {
     currentStep,
@@ -70,5 +74,7 @@ export function useRequestQuoteState(): RequestQuoteState {
     setStep4Data,
     step5Data,
     setStep5Data,
+    orderCreatedEmail,
+    setOrderCreatedEmail,
   };
 }

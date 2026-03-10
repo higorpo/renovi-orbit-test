@@ -8,12 +8,7 @@ import {
   identityToFullName,
   getClientEmailRedirectTo,
 } from "@/features/auth";
-import { createServiceRequest } from "../api/serviceRequests.api";
-import { resolveAddress } from "@/features/addresses";
-import {
-  uploadPhotosForSubmit,
-  buildServiceRequestParams,
-} from "../utils/requestQuoteSubmit.utils";
+import { createRequestQuoteOrder } from "../api/createRequestQuoteOrder.api";
 import type { RequestQuoteState } from "./useRequestQuoteState";
 
 export interface UseRequestQuoteSubmitParams {
@@ -29,51 +24,36 @@ export function useRequestQuoteSubmit({
   state,
 }: UseRequestQuoteSubmitParams): UseRequestQuoteSubmitResult {
   const navigate = useNavigate();
-  const { user, signUp } = useAuth();
+  const { user, session, signUp } = useAuth();
 
   const handleSubmitLoggedIn = useCallback(async () => {
-    if (!user || !state.selectedService) return;
+    if (!user || !state.selectedService || !state.step4Data) return;
     state.setLoading(true);
     try {
-      const addressResult = await resolveAddress(user.id, state.step4Data, {
-        defaultLabel: "Casa",
-        isDefault: false,
+      const result = await createRequestQuoteOrder({
+        userId: user.id,
+        email: user.email ?? "",
+        step4Data: state.step4Data,
+        step3Data: state.step3Data,
+        selectedService: state.selectedService,
+        step2Data: state.step2Data,
+        step2FormSchema: state.step2FormSchema,
+        step2FormVersion: state.step2FormVersion,
+        session,
       });
-      if (!addressResult.ok) {
-        toast.error(addressResult.error);
-        state.setLoading(false);
-        return;
+      if (result.success) {
+        toast.success("Pedido enviado com sucesso!");
+        await new Promise((r) => setTimeout(r, 800));
+        navigate("/dashboard/client", { replace: true });
+      } else {
+        toast.error(result.retryAfter != null ? `Tente novamente em ${result.retryAfter} segundos.` : result.error);
       }
-      const photoUrls = await uploadPhotosForSubmit(user.id, state.step3Data.photos);
-      const { error: reqErr } = await createServiceRequest(
-        buildServiceRequestParams({
-          client_id: user.id,
-          service_id: state.selectedService.id,
-          service_title: state.selectedService.title,
-          address_id: addressResult.addressId,
-          city: addressResult.city,
-          neighborhood: addressResult.neighborhood,
-          description: state.step3Data.description,
-          photoUrls,
-          form_data: state.step2Data,
-          form_schema: state.step2FormSchema,
-          form_version: state.step2FormVersion,
-        })
-      );
-      if (reqErr) {
-        toast.error("Erro ao criar o pedido. Tente novamente.");
-        state.setLoading(false);
-        return;
-      }
-      toast.success("Pedido enviado com sucesso!");
-      await new Promise((r) => setTimeout(r, 800));
-      navigate("/dashboard/client", { replace: true });
     } catch {
-      toast.error("Erro ao processar. Tente novamente.");
+      toast.error("Ocorreu um erro. Tente novamente.");
     } finally {
       state.setLoading(false);
     }
-  }, [user, state, navigate]);
+  }, [user, session, state, navigate]);
 
   const handleSubmit = useCallback(async () => {
     if (user) {
@@ -91,69 +71,44 @@ export function useRequestQuoteSubmit({
       return;
     }
     const fullName = identityToFullName(state.step5Data);
+    const email = state.step5Data.email.toLowerCase().trim();
     state.setLoading(true);
     try {
-      const result = await signUp(
-        state.step5Data.email.toLowerCase().trim(),
+      const signUpResult = await signUp(
+        email,
         state.step5Data.password,
         fullName,
         "client",
         { emailRedirectTo: getClientEmailRedirectTo() }
       );
-      if (!result.success) {
-        if (result.reason === "already_registered") {
+      if (!signUpResult.success) {
+        if (signUpResult.reason === "already_registered") {
           navigate("/login", { state: { email: state.step5Data.email } });
         }
         state.setLoading(false);
         return;
       }
-      const userId = result.userId!;
+      const userId = signUpResult.userId!;
 
-      const addressResult = await resolveAddress(userId, state.step4Data!, {
-        defaultLabel: "Endereço desconhecido",
-        isDefault: true,
+      const result = await createRequestQuoteOrder({
+        userId,
+        email,
+        step4Data: state.step4Data!,
+        step3Data: state.step3Data,
+        selectedService: state.selectedService!,
+        step2Data: state.step2Data,
+        step2FormSchema: state.step2FormSchema,
+        step2FormVersion: state.step2FormVersion,
+        session: null,
       });
-      if (!addressResult.ok) {
-        toast.error(addressResult.error);
-        state.setLoading(false);
-        return;
+
+      if (result.success) {
+        state.setOrderCreatedEmail(email);
+      } else {
+        toast.error(result.retryAfter != null ? `Tente novamente em ${result.retryAfter} segundos.` : result.error);
       }
-      const photoUrls = await uploadPhotosForSubmit(userId, state.step3Data.photos, () =>
-        toast("Algumas fotos não foram enviadas.")
-      );
-      const { error: requestError } = await createServiceRequest(
-        buildServiceRequestParams({
-          client_id: userId,
-          service_id: state.selectedService!.id,
-          service_title: state.selectedService?.title ?? "serviço",
-          address_id: addressResult.addressId,
-          city: addressResult.city,
-          neighborhood: addressResult.neighborhood,
-          description: state.step3Data.description,
-          photoUrls,
-          form_data: state.step2Data,
-          form_schema: state.step2FormSchema,
-          form_version: state.step2FormVersion,
-        })
-      );
-      if (requestError) {
-        if (
-          requestError.includes("row-level security") ||
-          requestError.includes("RLS")
-        ) {
-          toast.error("Erro de permissão. Faça login e tente novamente.");
-          navigate("/login", { state: { email: state.step5Data.email } });
-        } else {
-          toast.error("Erro ao criar o pedido. Entre em contato com o suporte.");
-        }
-        state.setLoading(false);
-        return;
-      }
-      toast.success("Sua conta foi criada e o pedido foi enviado com sucesso!");
-      await new Promise((r) => setTimeout(r, 800));
-      navigate("/dashboard/client", { replace: true });
     } catch {
-      toast.error("Erro ao processar sua solicitação. Tente novamente.");
+      toast.error("Ocorreu um erro. Tente novamente.");
     } finally {
       state.setLoading(false);
     }

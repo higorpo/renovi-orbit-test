@@ -9,10 +9,19 @@ export interface ViaCepResult {
   bairro: string;
   localidade: string;
   uf: string;
+  estado?: string;
+  ibge?: string;
   erro?: boolean;
 }
 
-export async function fetchAddressByCEP(cep: string): Promise<ViaCepResult | null> {
+/** ViaCEP returns this when the CEP does not exist. */
+export interface ViaCepNotFound {
+  erro: true;
+}
+
+export async function fetchAddressByCEP(
+  cep: string
+): Promise<ViaCepResult | ViaCepNotFound | null> {
   const cleanCEP = cep.replace(/\D/g, "");
   if (cleanCEP.length !== 8) return null;
   try {
@@ -22,7 +31,7 @@ export async function fetchAddressByCEP(cep: string): Promise<ViaCepResult | nul
     });
     if (!response.ok) return null;
     const data = await response.json();
-    if (data.erro) return null;
+    if (data.erro) return { erro: true };
     return data as ViaCepResult;
   } catch (error) {
     logger.warn("viacep_fetch_error", { cep: cleanCEP, error: String(error) });

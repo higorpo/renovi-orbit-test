@@ -14,7 +14,6 @@ export function Step5Identity({ data, onDataChange }: Step5IdentityProps) {
       data={data}
       onDataChange={onDataChange}
       title="Seus dados"
-      termsLabel="Li e aceito os termos de uso e política de privacidade."
     />
   );
 }
