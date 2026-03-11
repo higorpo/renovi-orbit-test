@@ -8,6 +8,8 @@ import type { RequestQuoteState } from "../../hooks/useRequestQuoteState";
 import { useGenerateSmartDescription } from "../../hooks/useGenerateSmartDescription";
 import { stableStringify } from "../../utils/stableStringify";
 
+const MAX_DESCRIPTION_ATTEMPTS = 3;
+
 export interface Step3DescriptionPhotosProps {
   state: RequestQuoteState;
   /** Ref held by parent so it persists when step 3 unmounts; avoids re-calling API when returning without editing. */
@@ -16,14 +18,20 @@ export interface Step3DescriptionPhotosProps {
 
 export function Step3DescriptionPhotos({ state, step2DataSnapshotRef }: Step3DescriptionPhotosProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  /** Attempt count for this mount; resets on unmount. Max 3 (1 initial + 2 retries). */
+  const attemptCountRef = useRef(0);
 
   const onSuccessRef = useCallback(() => {
     step2DataSnapshotRef.current = stableStringify(state.step2Data);
   }, [state.step2Data, step2DataSnapshotRef]);
 
   const onFailureRef = useCallback(() => {
-    step2DataSnapshotRef.current = null;
-  }, [step2DataSnapshotRef]);
+    if (attemptCountRef.current < MAX_DESCRIPTION_ATTEMPTS) {
+      step2DataSnapshotRef.current = null;
+    } else {
+      step2DataSnapshotRef.current = stableStringify(state.step2Data);
+    }
+  }, [step2DataSnapshotRef, state.step2Data]);
 
   const { generateSmartDescription } = useGenerateSmartDescription({
     state,
@@ -75,15 +83,29 @@ export function Step3DescriptionPhotos({ state, step2DataSnapshotRef }: Step3Des
   };
 
   // Regenerate description only when entering step 3 FROM step 2 (details) and step2 form data changed.
-  // When coming from step 4 (address), do nothing. Use stableStringify so key order does not trigger false changes.
+  // When coming from step 4 (address), do nothing. Max 3 attempts per mount (1 initial + 2 retries); resets on unmount.
   useEffect(() => {
     if (state.currentStep !== 3 || state.previousStep !== 2) return;
     if (state.generatingDescription) return;
     const step2Key = stableStringify(state.step2Data);
     if (step2DataSnapshotRef.current === step2Key) return;
+
+    if (attemptCountRef.current >= MAX_DESCRIPTION_ATTEMPTS) {
+      step2DataSnapshotRef.current = step2Key;
+      return;
+    }
+
+    attemptCountRef.current += 1;
     step2DataSnapshotRef.current = step2Key;
     generateSmartDescription();
-  }, [state.currentStep, state.previousStep, state.step2Data, state.generatingDescription, generateSmartDescription, step2DataSnapshotRef]);
+  }, [
+    state.currentStep,
+    state.previousStep,
+    state.step2Data,
+    state.generatingDescription,
+    generateSmartDescription,
+    step2DataSnapshotRef,
+  ]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
