@@ -145,7 +145,7 @@ export function Step3DescriptionPhotos({ state }: Step3DescriptionPhotosProps) {
                     <button
                       type="button"
                       onClick={() => handleRemovePhoto(index)}
-                      className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
