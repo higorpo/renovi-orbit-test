@@ -6,6 +6,10 @@ import type { GenerateSmartDescriptionPayload } from "../types/request-quote.typ
 
 export interface UseGenerateSmartDescriptionParams {
   state: RequestQuoteState;
+  /** Called after description and structured data are set successfully. Used to track step2Data snapshot. */
+  onSuccess?: () => void;
+  /** Called when generation fails; allows caller to clear snapshot so user can retry. */
+  onFailure?: () => void;
 }
 
 export interface UseGenerateSmartDescriptionResult {
@@ -26,6 +30,8 @@ function getAdditionalDetailsFromStep2(step2Data: Record<string, unknown>): stri
 
 export function useGenerateSmartDescription({
   state,
+  onSuccess,
+  onFailure,
 }: UseGenerateSmartDescriptionParams): UseGenerateSmartDescriptionResult {
   const generateSmartDescription = useCallback(async () => {
     state.setGeneratingDescription(true);
@@ -59,7 +65,9 @@ export function useGenerateSmartDescription({
         throw new Error("Descrição não retornada");
       }
       toast.success("Descrição gerada com sucesso! Você pode editar se quiser.");
+      onSuccess?.();
     } catch {
+      onFailure?.();
       toast.error(
         "Não foi possível gerar a descrição automaticamente. Descreva o serviço manualmente.",
         { duration: 5000 }
@@ -67,7 +75,7 @@ export function useGenerateSmartDescription({
     } finally {
       state.setGeneratingDescription(false);
     }
-  }, [state]);
+  }, [state, onSuccess, onFailure]);
 
   return { generateSmartDescription };
 }

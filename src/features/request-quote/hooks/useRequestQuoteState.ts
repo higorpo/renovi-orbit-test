@@ -16,6 +16,8 @@ export interface Step3Data {
 export interface RequestQuoteState {
   currentStep: number;
   setCurrentStep: (updater: number | ((prev: number) => number)) => void;
+  previousStep: number;
+  setPreviousStep: (value: number) => void;
   loading: boolean;
   setLoading: (value: boolean) => void;
   selectedService: ServiceWithChildren | null;
@@ -41,6 +43,7 @@ export interface RequestQuoteState {
 
 export function useRequestQuoteState(): RequestQuoteState {
   const [currentStep, setCurrentStep] = useState(1);
+  const [previousStep, setPreviousStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [selectedService, setSelectedService] = useState<ServiceWithChildren | null>(null);
   const [step2Data, setStep2Data] = useState<Record<string, unknown>>({});
@@ -59,6 +62,8 @@ export function useRequestQuoteState(): RequestQuoteState {
   return {
     currentStep,
     setCurrentStep,
+    previousStep,
+    setPreviousStep,
     loading,
     setLoading,
     selectedService,

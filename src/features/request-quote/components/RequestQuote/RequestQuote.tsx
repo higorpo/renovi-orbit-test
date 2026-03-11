@@ -1,5 +1,5 @@
 import { useSearchParams, Link, useNavigate } from "react-router";
-import { useMemo } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, Loader2, Check, X, Clock, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,18 @@ export function RequestQuote() {
     onSubmitLoggedIn: handleSubmitLoggedIn,
   });
 
+  const prevStepRef = useRef(state.currentStep);
+  const { currentStep, setPreviousStep } = state;
+  useEffect(() => {
+    if (prevStepRef.current !== currentStep) {
+      setPreviousStep(prevStepRef.current);
+      prevStepRef.current = currentStep;
+    }
+  }, [currentStep, setPreviousStep]);
+
+  /** Persists across step navigation so we don't re-call the API when returning to step 3 without editing step 2. */
+  const step2DataSnapshotRef = useRef<string | null>(null);
+
   const steps = [
     () => (
       <Step1ServiceSelect
@@ -61,7 +73,7 @@ export function RequestQuote() {
       />
     ),
     () => (
-      <Step3DescriptionPhotos state={state} />
+      <Step3DescriptionPhotos state={state} step2DataSnapshotRef={step2DataSnapshotRef} />
     ),
     () => (
       <AddressSelectionStep
