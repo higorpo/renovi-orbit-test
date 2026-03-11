@@ -3,6 +3,7 @@ import { useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, Loader2, Check, X, Clock, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
 import { useAuth } from "@/features/auth";
 import { clientSignupIdentitySchema } from "@/features/auth";
 import { useRequestQuoteState } from "../../hooks/useRequestQuoteState";
@@ -261,21 +262,11 @@ export function RequestQuote() {
                   </>
                 )}
                 {state.currentStep === 2 && state.selectedService && (
-                  <div className="flex items-center gap-2.5 sm:gap-3 mb-3 sm:mb-4 md:mb-6">
-                    <div
-                      className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br ${getServiceCardStyle(state.selectedService.slug).color} flex items-center justify-center shrink-0`}
-                    >
-                      {(() => {
-                        const { Icon } = getServiceCardStyle(state.selectedService.slug);
-                        return <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />;
-                      })()}
-                    </div>
-                    <div>
-                      <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-primary leading-tight">
-                        Nos conte mais sobre o serviço
-                      </h1>
-                    </div>
-                  </div>
+                  <SectionTitleWithIcon
+                    title="Nos conte mais sobre o serviço"
+                    icon={getServiceCardStyle(state.selectedService.slug).Icon}
+                    iconGradient={getServiceCardStyle(state.selectedService.slug).color}
+                  />
                 )}
                 {currentRender()}
 

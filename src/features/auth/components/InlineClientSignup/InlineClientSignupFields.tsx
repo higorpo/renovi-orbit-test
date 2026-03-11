@@ -1,8 +1,9 @@
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
 import { cn } from "@/lib/utils";
 import { PASSWORD_REQUIREMENTS } from "../../utils/passwordPolicy";
 import { usePasswordFieldDisplay } from "../../hooks/usePasswordFieldDisplay";
@@ -69,7 +70,7 @@ export function InlineClientSignupFields({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <h2 className="text-lg sm:text-xl font-semibold text-foreground">{title}</h2>
+      <SectionTitleWithIcon title={title} icon={User} />
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
         <div>
           <Label className="text-foreground">Nome</Label>

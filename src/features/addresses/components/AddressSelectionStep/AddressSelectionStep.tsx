@@ -3,6 +3,7 @@ import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
 import {
   Select,
   SelectContent,
@@ -97,8 +98,12 @@ export function AddressSelectionStep({
   if (userId && addresses.length > 0 && !showNewAddressForm) {
     return (
       <div className="space-y-4 sm:space-y-6">
-        <h2 className="text-lg sm:text-xl font-semibold text-foreground">{title}</h2>
-        <p className="text-muted-foreground text-sm">{choosePrompt}</p>
+        <SectionTitleWithIcon
+          title={title}
+          icon={MapPin}
+          iconGradient="from-emerald-500 to-teal-500"
+          subtitle={choosePrompt}
+        />
         <div className="space-y-2">
           {addresses.map((addr) => (
             <button
@@ -141,7 +146,11 @@ export function AddressSelectionStep({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <h2 className="text-lg sm:text-xl font-semibold text-foreground">{title}</h2>
+      <SectionTitleWithIcon
+        title={title}
+        icon={MapPin}
+        iconGradient="from-emerald-500 to-teal-500"
+      />
       {showNewAddressForm && !restoredFromPersisted && userId && addresses.length > 0 && (
         <Button
           type="button"

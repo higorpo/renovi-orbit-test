@@ -1,5 +1,6 @@
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
 import { ImageIcon, Loader2, Trash2, Upload } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { useGenerateSmartDescription } from "../../hooks/useGenerateSmartDescription";
@@ -107,9 +108,11 @@ export function Step3DescriptionPhotos({ state, step2DataSnapshotRef }: Step3Des
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary mb-3 sm:mb-4 md:mb-6">
-        Descrição e Fotos
-      </h1>
+      <SectionTitleWithIcon
+        title="Descrição e Fotos"
+        icon={ImageIcon}
+        iconGradient="from-sky-400 to-indigo-500"
+      />
 
       {generatingDescription ? (
         <div className="flex flex-col items-center justify-center py-8 sm:py-12">
