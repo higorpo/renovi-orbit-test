@@ -15,6 +15,7 @@ import { logPromptUsage } from "./usage.ts";
 import {
   validateStructuredResponse,
   generateFallbackResponse,
+  stripJsonCodeFence,
 } from "./structured.ts";
 import {
   getSuggestionSystemPrompt,
@@ -223,7 +224,8 @@ export async function callGemini(params: {
     },
     generationConfig: {
       temperature,
-      maxOutputTokens: promptConfig.max_tokens,
+      maxOutputTokens: Math.max(promptConfig.max_tokens, 4096),
+      thinkingConfig: { thinkingBudget: 0 },
     },
   };
   if (enableStructured) {
@@ -245,10 +247,20 @@ export async function callGemini(params: {
   }
 
   const data = await response.json();
-  const textPart = data.candidates?.[0]?.content?.parts?.[0];
-  const rawContent =
-    textPart?.text ?? (typeof textPart === "string" ? textPart : "");
+  const parts = data.candidates?.[0]?.content?.parts ?? [];
+  const rawContent = parts
+    .map((p: { text?: string }) =>
+      typeof p?.text === "string" ? p.text : ""
+    )
+    .join("");
   const tokensUsed = data.usageMetadata?.totalTokenCount;
+  const finishReason = data.candidates?.[0]?.finishReason;
+
+  if (finishReason === "MAX_TOKENS" || (rawContent.length < 100 && enableStructured)) {
+    console.warn(
+      `[Gemini] Short or truncated response: rawLength=${rawContent.length}, finishReason=${finishReason ?? "unknown"}`
+    );
+  }
 
   return { rawContent, tokensUsed };
 }
@@ -294,7 +306,8 @@ export function processAIResponse(params: {
 
   if (enableStructured) {
     try {
-      const parsed = JSON.parse(rawContent);
+      const toParse = stripJsonCodeFence(rawContent);
+      const parsed = JSON.parse(toParse);
       structuredResponse = validateStructuredResponse(parsed);
 
       if (structuredResponse) {
