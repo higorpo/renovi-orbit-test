@@ -1,22 +1,21 @@
-import { useSearchParams, Link, useNavigate } from "react-router";
-import { useMemo, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronLeft, Loader2, Check, X, Clock, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
-import { useAuth } from "@/features/auth";
-import { clientSignupIdentitySchema } from "@/features/auth";
+import { AddressSelectionStep, addressFormSchema } from "@/features/addresses";
+import { clientSignupIdentitySchema, useAuth } from "@/features/auth";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, ChevronLeft, ChevronRight, Clock, Loader2, Shield } from "lucide-react";
+import { useEffect, useMemo, useRef } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router";
+import { useRequestQuoteNavigation } from "../../hooks/useRequestQuoteNavigation";
 import { useRequestQuoteState } from "../../hooks/useRequestQuoteState";
 import { useRequestQuoteSubmit } from "../../hooks/useRequestQuoteSubmit";
-import { useRequestQuoteNavigation } from "../../hooks/useRequestQuoteNavigation";
+import { getServiceCardStyle } from "../../utils/serviceCardStyle";
+import { ConfirmEmailScreen } from "../ConfirmEmailScreen/ConfirmEmailScreen";
+import { TrustSidebar } from "../TrustSidebar";
 import { Step1ServiceSelect } from "./Step1ServiceSelect";
 import { Step2ServiceForm } from "./Step2ServiceForm";
 import { Step3DescriptionPhotos } from "./Step3DescriptionPhotos";
-import { AddressSelectionStep, addressFormSchema } from "@/features/addresses";
 import { Step5Identity } from "./Step5Identity";
-import { TrustSidebar } from "../TrustSidebar";
-import { getServiceCardStyle } from "../../utils/serviceCardStyle";
-import { ConfirmEmailScreen } from "../ConfirmEmailScreen/ConfirmEmailScreen";
 
 export function RequestQuote() {
   const [searchParams] = useSearchParams();
@@ -146,7 +145,7 @@ export function RequestQuote() {
             <img src="/logo-renovi-white.webp" alt="Renovi" className="h-7 sm:h-8 md:h-10 w-auto" />
           </Link>
 
-          <div className="hidden sm:flex items-center gap-1 md:gap-2">
+          <div className="hidden sm:flex items-center gap-1 md:gap-2 mx-auto pr-[96px]">
             {!showConfirmEmail && stepLabels.map((item, index) => (
               <div key={item.step} className="flex items-center">
                 <div
@@ -201,23 +200,6 @@ export function RequestQuote() {
               </div>
             </div>
           )}
-
-          <div className="flex items-center gap-2 md:gap-4">
-            <Link
-              to="/login"
-              className="text-white/80 hover:text-white text-xs md:text-sm transition-colors"
-            >
-              Já tenho conta
-            </Link>
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="text-white/80 hover:text-white transition-colors p-1"
-              aria-label="Fechar"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
         </div>
       </header>
 
