@@ -77,6 +77,17 @@ export function InspectorBlock({
             placeholder="Help text"
           />
         </div>
+        <div>
+          <Label className="text-xs">Descrição para IA</Label>
+          <textarea
+            className={cn(
+              "mt-1 w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-xs"
+            )}
+            value={block.description_ai ?? ""}
+            onChange={(e) => update({ description_ai: e.target.value })}
+            placeholder="O que é este dado e como a IA deve interpretá-lo"
+          />
+        </div>
 
         {(block.type === "number" || block.type === "slider") && (
           <>

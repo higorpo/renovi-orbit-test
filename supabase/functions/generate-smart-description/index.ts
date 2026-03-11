@@ -103,6 +103,7 @@ serve(async (req) => {
       formData: params.formData,
       userNotes: params.userNotes,
       mode: params.mode,
+      formSchema: params.formSchema,
     });
     console.log("📤 Context prepared:", context.substring(0, 200) + "...");
 

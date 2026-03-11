@@ -10,7 +10,7 @@ vi.mock("../../types/helpers", () => ({
 const { validateBlockValue } = await import("../../types/helpers");
 
 describe("useFieldValidation", () => {
-  const block: FormBlock = { id: "f1", type: "text", label: "Field", required: true };
+  const block: FormBlock = { id: "f1", type: "text", label: "Field", required: true, description_ai: "Field" };
 
   beforeEach(() => {
     vi.mocked(validateBlockValue).mockReset();
@@ -74,7 +74,7 @@ describe("useFieldValidation", () => {
 });
 
 describe("getValidationErrorMessage", () => {
-  const block: FormBlock = { id: "b1", type: "text", label: "Nome" };
+  const block: FormBlock = { id: "b1", type: "text", label: "Nome", description_ai: "Nome" };
 
   it("returns empty string when error is null", () => {
     expect(getValidationErrorMessage(block, null)).toBe("");

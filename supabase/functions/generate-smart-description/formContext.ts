@@ -99,6 +99,43 @@ const keyTranslations: Record<string, string> = {
   additional_details: "Detalhes Adicionais",
 };
 
+/**
+ * Build "SIGNIFICADO DOS CAMPOS" section from formSchema.steps[].blocks[] when description_ai is present.
+ * Defensive: handles missing steps, blocks, or description_ai (legacy schemas).
+ */
+function buildSchemaFieldMeanings(
+  formSchema: Record<string, unknown> | null | undefined
+): string {
+  if (!formSchema || typeof formSchema !== "object") return "";
+  const steps = formSchema.steps;
+  if (!Array.isArray(steps) || steps.length === 0) return "";
+
+  const lines: string[] = [];
+  for (const step of steps) {
+    if (!step || typeof step !== "object") continue;
+    const blocks = step.blocks;
+    if (!Array.isArray(blocks)) continue;
+    for (const block of blocks) {
+      if (!block || typeof block !== "object") continue;
+      const id = block.id;
+      const label = block.label;
+      const descAi = block.description_ai;
+      if (
+        typeof id !== "string" ||
+        !id ||
+        typeof descAi !== "string" ||
+        !descAi.trim()
+      ) {
+        continue;
+      }
+      const labelStr = typeof label === "string" && label ? ` (${label})` : "";
+      lines.push(`${id}${labelStr}: ${descAi.trim()}`);
+    }
+  }
+  if (lines.length === 0) return "";
+  return `SIGNIFICADO DOS CAMPOS (para a IA):\n${lines.map((l) => `  ${l}`).join("\n")}\n\nDADOS PREENCHIDOS:\n`;
+}
+
 function translateValue(key: string, value: string): string {
   const keyLower = key.toLowerCase();
   const valueLower = value.toLowerCase();
@@ -176,14 +213,20 @@ function translateValue(key: string, value: string): string {
 }
 
 /**
- * Build readable context string from formData, notes, and optional provider/location context.
+ * Build readable context string from formData, notes, and optional formSchema (field meanings for AI).
  */
 export function formatFormDataToContext(
   params: FormatFormDataToContextParams
 ): string {
-  const { serviceName, formData, userNotes, mode } = params;
+  const { serviceName, formData, userNotes, mode, formSchema } = params;
   let context = "";
   context += `SERVIÇO: ${serviceName.toUpperCase()}\n\n`;
+
+  // Optional: add field meanings from form schema so the AI knows what each field represents
+  const schemaSection = buildSchemaFieldMeanings(formSchema);
+  if (schemaSection) {
+    context += schemaSection;
+  }
 
   const formDataSize = JSON.stringify(formData).length;
   if (formDataSize > FORM_DATA_MAX_BYTES) {
@@ -272,6 +315,10 @@ export function formatFormDataToContext(
   };
 
   const processedKeys = new Set<string>();
+
+  if (!schemaSection && Object.keys(formData).length > 0) {
+    context += "DADOS PREENCHIDOS:\n";
+  }
 
   for (const [key, value] of Object.entries(formData)) {
     if (value !== null && value !== undefined && value !== "") {

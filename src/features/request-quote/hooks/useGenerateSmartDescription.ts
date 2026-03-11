@@ -34,6 +34,7 @@ export function useGenerateSmartDescription({
       const payload: GenerateSmartDescriptionPayload = {
         serviceId: state.selectedService?.id ?? "",
         formData: state.step2Data,
+        formSchema: state.step2FormSchema ?? undefined,
         userNotes: additionalDetails ?? undefined,
         mode: "full_description" as const,
         useStructuredOutput: true,

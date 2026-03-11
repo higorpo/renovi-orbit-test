@@ -54,6 +54,8 @@ export interface GenerateSmartDescriptionBody {
   useStructuredOutput?: boolean;
   /** "full_description" (default) or "suggestion" (short "Detalhes Adicionais" only). */
   mode?: SmartDescriptionMode;
+  /** Form schema (steps with blocks) so the AI gets field meanings (description_ai per block). */
+  formSchema?: Record<string, unknown> | null;
 }
 
 /**
@@ -68,6 +70,8 @@ export interface FormatFormDataToContextParams {
   userNotes?: string;
   /** When "suggestion", long strings are truncated to save tokens. */
   mode?: SmartDescriptionMode;
+  /** Form schema (steps with blocks) to include field meanings (description_ai) in context. */
+  formSchema?: Record<string, unknown> | null;
 }
 
 /** Parsed and normalized request params from the body. */
@@ -79,6 +83,7 @@ export interface ParsedRequestParams {
   forcePromptKey: string | null;
   useStructuredOutput: boolean;
   mode: SmartDescriptionMode;
+  formSchema: Record<string, unknown> | null;
 }
 
 /** Result of resolving prompt config and service display name. */

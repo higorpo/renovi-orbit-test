@@ -61,18 +61,18 @@ values
     'd4e5f6a7-b8c9-4012-d345-000000000002'::uuid,
     '{"version":"2.0","id":"instalacao-eletrica-form","title":"Orçamento - Instalação elétrica","metadata":{"categorySlug":"instalacao-eletrica","categoryId":null,"status":"draft"},"config":{"showProgressBar":true},"steps":[
       {"id":"step-tipo","order":0,"title":"Tipo de serviço","blocks":[
-        {"id":"tipo_servico","type":"single_select","label":"Qual tipo de instalação?","required":true,"options":[{"value":"nova","label":"Nova instalação"},{"value":"reforma","label":"Reforma / ampliação"},{"value":"manutencao","label":"Manutenção ou correção"}]},
-        {"id":"tipo_imovel","type":"property_type","label":"Tipo de imóvel","required":true,"options":[{"value":"residencial","label":"Residencial"},{"value":"comercial","label":"Comercial"}]},
-        {"id":"urgency","type":"urgency","label":"Urgência","required":true,"options":[{"value":"low","label":"Baixa"},{"value":"medium","label":"Média"},{"value":"high","label":"Alta"}]}
+        {"id":"tipo_servico","type":"single_select","label":"Qual tipo de instalação?","required":true,"description_ai":"Type of electrical work: new installation, renovation/expansion, or maintenance/correction.","options":[{"value":"nova","label":"Nova instalação"},{"value":"reforma","label":"Reforma / ampliação"},{"value":"manutencao","label":"Manutenção ou correção"}]},
+        {"id":"tipo_imovel","type":"property_type","label":"Tipo de imóvel","required":true,"description_ai":"Property type: residential or commercial.","options":[{"value":"residencial","label":"Residencial"},{"value":"comercial","label":"Comercial"}]},
+        {"id":"urgency","type":"urgency","label":"Urgência","required":true,"description_ai":"How urgent the client needs the service: low, medium, or high.","options":[{"value":"low","label":"Baixa"},{"value":"medium","label":"Média"},{"value":"high","label":"Alta"}]}
       ]},
       {"id":"step-detalhes","order":1,"title":"Detalhes técnicos","blocks":[
-        {"id":"qtd_pontos","type":"number","label":"Quantidade de pontos ou circuitos","required":true,"min":1,"max":50,"unit":"pontos"},
-        {"id":"aterramento","type":"yes_no","label":"Precisa de aterramento (fio terra)?","required":true},
-        {"id":"descricao","type":"description_ai","label":"Descreva o que precisa (pode usar a IA para sugerir)","required":false}
+        {"id":"qtd_pontos","type":"number","label":"Quantidade de pontos ou circuitos","required":true,"min":1,"max":50,"unit":"pontos","description_ai":"Number of electrical points or circuits requested (1-50)."},
+        {"id":"aterramento","type":"yes_no","label":"Precisa de aterramento (fio terra)?","required":true,"description_ai":"Whether the client needs grounding (earth wire)."},
+        {"id":"descricao","type":"description_ai","label":"Descreva o que precisa (pode usar a IA para sugerir)","required":false,"description_ai":"Free-text description of what the client needs; can be enhanced by AI suggestion."}
       ]},
       {"id":"step-obs","order":2,"title":"Observações","blocks":[
-        {"id":"observacoes","type":"textarea","label":"Observações adicionais","required":false,"validation":{"maxLength":500}},
-        {"id":"data_preferida","type":"date","label":"Data preferida para o serviço","required":false}
+        {"id":"observacoes","type":"textarea","label":"Observações adicionais","required":false,"validation":{"maxLength":500},"description_ai":"Additional notes from the client."},
+        {"id":"data_preferida","type":"date","label":"Data preferida para o serviço","required":false,"description_ai":"Preferred date for the service."}
       ]}
     ]}'::jsonb,
     '2.0',

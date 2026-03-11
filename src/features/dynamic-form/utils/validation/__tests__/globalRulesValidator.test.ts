@@ -10,8 +10,8 @@ describe("validateGlobalBlocks", () => {
         order: 0,
         title: "S1",
         blocks: [
-          { id: "urgency", type: "urgency", label: "U", options: [{ value: "low", label: "Low" }] },
-          { id: "desc", type: "textarea", label: "D" },
+          { id: "urgency", type: "urgency", label: "U", description_ai: "U", options: [{ value: "low", label: "Low" }] },
+          { id: "desc", type: "textarea", label: "D", description_ai: "D" },
         ],
       },
     ];
@@ -26,8 +26,8 @@ describe("validateGlobalBlocks", () => {
         order: 0,
         title: "S1",
         blocks: [
-          { id: "pt", type: "property_type", label: "T", options: [{ value: "a", label: "A" }] },
-          { id: "desc", type: "textarea", label: "D" },
+          { id: "pt", type: "property_type", label: "T", description_ai: "T", options: [{ value: "a", label: "A" }] },
+          { id: "desc", type: "textarea", label: "D", description_ai: "D" },
         ],
       },
     ];
@@ -42,8 +42,8 @@ describe("validateGlobalBlocks", () => {
         order: 0,
         title: "S1",
         blocks: [
-          { id: "pt", type: "property_type", label: "T", options: [{ value: "a", label: "A" }] },
-          { id: "urgency", type: "urgency", label: "U", options: [{ value: "low", label: "Low" }] },
+          { id: "pt", type: "property_type", label: "T", description_ai: "T", options: [{ value: "a", label: "A" }] },
+          { id: "urgency", type: "urgency", label: "U", description_ai: "U", options: [{ value: "low", label: "Low" }] },
         ],
       },
     ];
@@ -58,9 +58,9 @@ describe("validateGlobalBlocks", () => {
         order: 0,
         title: "S1",
         blocks: [
-          { id: "pt", type: "property_type", label: "T", options: [{ value: "a", label: "A" }] },
-          { id: "urgency", type: "urgency", label: "U", options: [{ value: "low", label: "Low" }] },
-          { id: "desc", type: "textarea", label: "D" },
+          { id: "pt", type: "property_type", label: "T", description_ai: "T", options: [{ value: "a", label: "A" }] },
+          { id: "urgency", type: "urgency", label: "U", description_ai: "U", options: [{ value: "low", label: "Low" }] },
+          { id: "desc", type: "textarea", label: "D", description_ai: "D" },
         ],
       },
     ];
@@ -76,13 +76,13 @@ describe("validateGlobalOrder", () => {
         id: "s1",
         order: 0,
         title: "S1",
-        blocks: [{ id: "urgency", type: "urgency", label: "U", options: [{ value: "low", label: "L" }] }],
+        blocks: [{ id: "urgency", type: "urgency", label: "U", description_ai: "U", options: [{ value: "low", label: "L" }] }],
       },
       {
         id: "s2",
         order: 1,
         title: "S2",
-        blocks: [{ id: "pt", type: "property_type", label: "T", options: [{ value: "a", label: "A" }] }],
+        blocks: [{ id: "pt", type: "property_type", label: "T", description_ai: "T", options: [{ value: "a", label: "A" }] }],
       },
     ];
     const result = validateGlobalOrder(steps);
@@ -95,13 +95,13 @@ describe("validateGlobalOrder", () => {
         id: "s1",
         order: 0,
         title: "S1",
-        blocks: [{ id: "urgency", type: "urgency", label: "U", options: [{ value: "low", label: "L" }] }],
+        blocks: [{ id: "urgency", type: "urgency", label: "U", description_ai: "U", options: [{ value: "low", label: "L" }] }],
       },
       {
         id: "s2",
         order: 1,
         title: "S2",
-        blocks: [{ id: "pt", type: "property_type", label: "T", options: [{ value: "a", label: "A" }] }],
+        blocks: [{ id: "pt", type: "property_type", label: "T", description_ai: "T", options: [{ value: "a", label: "A" }] }],
       },
     ];
     const result = validateGlobalOrder(steps);
@@ -115,15 +115,15 @@ describe("validateGlobalOrder", () => {
         order: 0,
         title: "S1",
         blocks: [
-          { id: "pt", type: "property_type", label: "T", options: [{ value: "a", label: "A" }] },
-          { id: "desc", type: "description_ai", label: "D" },
+          { id: "pt", type: "property_type", label: "T", description_ai: "T", options: [{ value: "a", label: "A" }] },
+          { id: "desc", type: "description_ai", label: "D", description_ai: "D" },
         ],
       },
       {
         id: "s2",
         order: 1,
         title: "S2",
-        blocks: [{ id: "urgency", type: "urgency", label: "U", options: [{ value: "low", label: "L" }] }],
+        blocks: [{ id: "urgency", type: "urgency", label: "U", description_ai: "U", options: [{ value: "low", label: "L" }] }],
       },
     ];
     const result = validateGlobalOrder(steps);
@@ -137,9 +137,9 @@ describe("validateGlobalOrder", () => {
         order: 0,
         title: "S1",
         blocks: [
-          { id: "pt", type: "property_type", label: "T", options: [{ value: "a", label: "A" }] },
-          { id: "urgency", type: "urgency", label: "U", options: [{ value: "low", label: "L" }] },
-          { id: "desc", type: "textarea", label: "D" },
+          { id: "pt", type: "property_type", label: "T", description_ai: "T", options: [{ value: "a", label: "A" }] },
+          { id: "urgency", type: "urgency", label: "U", description_ai: "U", options: [{ value: "low", label: "L" }] },
+          { id: "desc", type: "textarea", label: "D", description_ai: "D" },
         ],
       },
     ];

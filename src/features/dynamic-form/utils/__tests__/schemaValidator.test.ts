@@ -13,9 +13,9 @@ describe("validateFormSchema", () => {
       order: 0,
       title: "Step 1",
       blocks: [
-        { id: "property_type", type: "property_type", label: "Tipo", options: [{ value: "a", label: "A" }] },
-        { id: "urgency", type: "urgency", label: "Urgência", options: [{ value: "low", label: "Low" }] },
-        { id: "desc", type: "textarea", label: "Descrição" },
+        { id: "property_type", type: "property_type", label: "Tipo", description_ai: "Tipo", options: [{ value: "a", label: "A" }] },
+        { id: "urgency", type: "urgency", label: "Urgência", description_ai: "Urgência", options: [{ value: "low", label: "Low" }] },
+        { id: "desc", type: "textarea", label: "Descrição", description_ai: "Descrição" },
       ],
     },
   ];

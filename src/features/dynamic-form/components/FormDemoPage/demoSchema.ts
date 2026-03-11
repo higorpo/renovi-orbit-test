@@ -31,12 +31,14 @@ export const formDemoSchema: FormSchema = {
           label: "Você já possui um imóvel?",
           required: true,
           helpText: "Selecione Sim ou Não para continuar.",
+          description_ai: "Whether the user already owns a property.",
         },
         {
           id: "yes_no_optional",
           type: "yes_no",
           label: "Deseja receber ofertas por e-mail?",
           helpText: "Opcional. Podemos enviar novidades e promoções.",
+          description_ai: "Whether the user wants to receive email offers.",
         },
         {
           id: "contact_name_step1",
@@ -44,6 +46,7 @@ export const formDemoSchema: FormSchema = {
           label: "Nome para contato",
           required: true,
           placeholder: "Seu nome",
+          description_ai: "Contact name for the request.",
           validation: {
             minLength: 3,
             maxLength: 5,
@@ -56,6 +59,7 @@ export const formDemoSchema: FormSchema = {
           label: "E-mail",
           required: true,
           placeholder: "seu@email.com",
+          description_ai: "Contact email address.",
           validation: {
             pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$",
             message: "Informe um e-mail válido",
@@ -66,6 +70,7 @@ export const formDemoSchema: FormSchema = {
           type: "text",
           label: "Telefone",
           placeholder: "(00) 00000-0000",
+          description_ai: "Contact phone number.",
           validation: {
             pattern: "^\\(\\d{2}\\) \\d{5}-\\d{4}$",
             message: "Use o formato (00) 00000-0000",
@@ -77,12 +82,14 @@ export const formDemoSchema: FormSchema = {
           label: "Tipo de imóvel",
           required: true,
           helpText: "Selecione o tipo do local.",
+          description_ai: "Type of property (e.g. house, apartment).",
         },
         {
           id: "urgency",
           type: "urgency",
           label: "Nível de urgência",
           required: true,
+          description_ai: "How urgent the user needs the service.",
         },
       ],
     },
@@ -101,6 +108,7 @@ export const formDemoSchema: FormSchema = {
           type: "radio",
           label: "Escolha uma opção (radio)",
           required: true,
+          description_ai: "Single choice from options A, B, or C.",
           options: [
             { value: "a", label: "Opção A", emoji: "🅰️" },
             { value: "b", label: "Opção B", emoji: "🅱️" },
@@ -112,6 +120,7 @@ export const formDemoSchema: FormSchema = {
           type: "checkbox",
           label: "Marque as que se aplicam (checkbox)",
           visibility: [{ dependsOn: "demo_radio", operator: "equals", value: "a" }],
+          description_ai: "Multiple selection from items X, Y, Z.",
           options: [
             { value: "x", label: "Item X" },
             { value: "y", label: "Item Y" },
@@ -125,6 +134,7 @@ export const formDemoSchema: FormSchema = {
           helpText: "Os campos abaixo são para data, horário e prioridade.",
           visibility: [{ dependsOn: "demo_radio", operator: "equals", value: "a" }],
           config: { variant: "p", size: "lg", color: "default" },
+          description_ai: "Static informational text; no user data.",
         },
         {
           id: "demo_date",
@@ -132,6 +142,7 @@ export const formDemoSchema: FormSchema = {
           label: "Data desejada",
           required: true,
           helpText: "Selecione uma data.",
+          description_ai: "Desired date within the allowed range.",
           validation: {
             dateMin: "2026-02-20",
             dateMax: "2026-03-03",
@@ -143,6 +154,7 @@ export const formDemoSchema: FormSchema = {
           type: "time",
           label: "Horário preferido",
           helpText: "Selecione um horário (opcional).",
+          description_ai: "Preferred time of day within allowed range.",
           validation: {
             timeMin: "14:00",
             timeMax: "19:00",
@@ -158,6 +170,7 @@ export const formDemoSchema: FormSchema = {
           max: 10,
           step: 1,
           helpText: "Arraste o controle.",
+          description_ai: "Priority level from 0 to 10.",
         },
       ],
     },
@@ -174,6 +187,7 @@ export const formDemoSchema: FormSchema = {
           label: "Descreva o serviço ou reparo desejado",
           helpText: "Quanto mais detalhes, melhor conseguiremos entender sua necessidade.",
           config: { variant: "h3", color: "default" },
+          description_ai: "Static intro text for the description step.",
         },
         {
           id: "description_ai",
@@ -181,6 +195,7 @@ export const formDemoSchema: FormSchema = {
           label: "Descrição do serviço",
           required: true,
           placeholder: "Ex.: Pintura de dois cômodos, parede lisa...",
+          description_ai: "Free-text description of the service or repair needed; can be enhanced by AI.",
           validation: { minLength: 10, maxLength: 500 },
         },
       ],
@@ -197,6 +212,7 @@ export const formDemoSchema: FormSchema = {
           label: "Melhor horário para visita",
           required: true,
           config: { columns: 2, allowOther: true, otherLabel: "Outro" },
+          description_ai: "Preferred time slot for the visit (morning, afternoon, evening, or flexible).",
           options: [
             { value: "morning", label: "Manhã", emoji: "🌅", description: "8h–12h" },
             { value: "afternoon", label: "Tarde", emoji: "☀️", description: "12h–18h" },
@@ -218,6 +234,7 @@ export const formDemoSchema: FormSchema = {
           type: "multi_select",
           label: "Restrições ou cuidados",
           config: { columns: 2 },
+          description_ai: "Restrictions or care considerations (pets, children, elderly, allergies, or none).",
           options: [
             { value: "pets", label: "Animais de estimação" },
             { value: "children", label: "Crianças pequenas" },
@@ -241,6 +258,7 @@ export const formDemoSchema: FormSchema = {
           label: "CEP",
           placeholder: "00000-000",
           helpText: "Opcional. Primeiro bloco do step.",
+          description_ai: "Brazilian postal code (CEP) for the service location.",
         },
         {
           id: "area_sqm",
@@ -252,6 +270,7 @@ export const formDemoSchema: FormSchema = {
           unit: "m²",
           placeholder: "0",
           helpText: "Opcional. Segundo bloco do mesmo step.",
+          description_ai: "Approximate area in square meters.",
         },
       ],
     },
@@ -267,6 +286,7 @@ export const formDemoSchema: FormSchema = {
           label: "Nome para contato",
           required: true,
           placeholder: "Seu nome",
+          description_ai: "Contact name for the request.",
         },
       ],
     },
@@ -286,6 +306,7 @@ export const formDemoSchema: FormSchema = {
           step: 1,
           unit: "un",
           placeholder: "0",
+          description_ai: "Number of rooms or areas to be serviced.",
         },
       ],
     },
@@ -300,6 +321,7 @@ export const formDemoSchema: FormSchema = {
           type: "textarea",
           label: "Observações adicionais",
           placeholder: "Detalhes extras, acesso, etc.",
+          description_ai: "Additional observations or details from the user.",
           validation: { maxLength: 1000 },
         },
       ],
@@ -316,6 +338,7 @@ export const formDemoSchema: FormSchema = {
           type: "text",
           label: "Confirme que leu (opcional)",
           placeholder: "Digite OK ou deixe em branco",
+          description_ai: "Optional confirmation that the user read the notices.",
         },
         {
           id: "alert_urgency",
@@ -323,6 +346,7 @@ export const formDemoSchema: FormSchema = {
           label: "Se você escolheu alta urgência, entraremos em contato em até 24h.",
           visibility: [{ dependsOn: "urgency", operator: "equals", value: "high" }],
           config: { alertType: "info", alertTitle: "Urgência alta" },
+          description_ai: "Informational alert shown when high urgency is selected.",
         },
         {
           id: "alert_generic",
@@ -330,6 +354,7 @@ export const formDemoSchema: FormSchema = {
           label: "Revise os dados no próximo passo antes de enviar.",
           visibility: [{ dependsOn: "read_notices", operator: "isEmpty" }],
           config: { alertType: "warning", alertTitle: "Próximo: resumo" },
+          description_ai: "Warning to review data before submitting.",
         },
       ],
     },
@@ -345,6 +370,7 @@ export const formDemoSchema: FormSchema = {
           type: "image_gallery",
           label: "Estilo desejado",
           config: { multiSelect: true, columns: 2 },
+          description_ai: "Visual style reference images selected by the user (modern, classic, rustic).",
           options: [
             {
               value: "modern",
@@ -381,6 +407,7 @@ export const formDemoSchema: FormSchema = {
           id: "preview_summary",
           type: "preview_summary",
           label: "Resumo do pedido",
+          description_ai: "Summary of the order built from other fields; read-only for AI.",
           config: {
             sections: [
               {

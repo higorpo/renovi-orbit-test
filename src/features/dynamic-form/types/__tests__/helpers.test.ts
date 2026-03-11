@@ -90,7 +90,7 @@ describe("evaluateVisibilityRule", () => {
 
 describe("isBlockVisible", () => {
   it("returns true when block has no visibility rules", () => {
-    const block: FormBlock = { id: "b1", type: "text", label: "X" };
+    const block: FormBlock = { id: "b1", type: "text", label: "X", description_ai: "X" };
     expect(isBlockVisible(block, {})).toBe(true);
   });
 
@@ -99,6 +99,7 @@ describe("isBlockVisible", () => {
       id: "b1",
       type: "text",
       label: "X",
+      description_ai: "X",
       visibility: [{ dependsOn: "show", operator: "equals", value: true }],
     };
     expect(isBlockVisible(block, { show: true })).toBe(true);
@@ -109,6 +110,7 @@ describe("isBlockVisible", () => {
       id: "b1",
       type: "text",
       label: "X",
+      description_ai: "X",
       visibility: [{ dependsOn: "show", operator: "equals", value: true }],
     };
     expect(isBlockVisible(block, { show: false })).toBe(false);
@@ -167,11 +169,12 @@ describe("getVisibleBlocks", () => {
       order: 0,
       title: "S1",
       blocks: [
-        { id: "b1", type: "text", label: "A" },
+        { id: "b1", type: "text", label: "A", description_ai: "A" },
         {
           id: "b2",
           type: "text",
           label: "B",
+          description_ai: "B",
           visibility: [{ dependsOn: "showB", operator: "equals", value: true }],
         },
       ],
@@ -196,8 +199,8 @@ describe("buildStepBlocks", () => {
           order: 0,
           title: "Step 1",
           blocks: [
-            { id: "b1", type: "text", label: "Field 1" },
-            { id: "b2", type: "static_text", label: "" },
+            { id: "b1", type: "text", label: "Field 1", description_ai: "Field 1" },
+            { id: "b2", type: "static_text", label: "", description_ai: "Static" },
           ],
         },
       ],
@@ -211,27 +214,27 @@ describe("buildStepBlocks", () => {
 
 describe("validateBlockValue", () => {
   it("returns valid for static_text always", () => {
-    const block: FormBlock = { id: "b1", type: "static_text", label: "" };
+    const block: FormBlock = { id: "b1", type: "static_text", label: "", description_ai: "Static" };
     expect(validateBlockValue(block, null)).toEqual({ valid: true });
   });
 
   it("returns invalid when required and value is empty", () => {
-    const block: FormBlock = { id: "b1", type: "text", label: "Name", required: true };
+    const block: FormBlock = { id: "b1", type: "text", label: "Name", required: true, description_ai: "Name" };
     expect(validateBlockValue(block, "")).toEqual({ valid: false, error: expect.any(String) });
   });
 
   it("returns valid when not required and value is empty", () => {
-    const block: FormBlock = { id: "b1", type: "text", label: "Name", required: false };
+    const block: FormBlock = { id: "b1", type: "text", label: "Name", required: false, description_ai: "Name" };
     expect(validateBlockValue(block, undefined)).toEqual({ valid: true });
   });
 
   it("returns invalid when number is below min", () => {
-    const block: FormBlock = { id: "b1", type: "number", label: "N", min: 10 };
+    const block: FormBlock = { id: "b1", type: "number", label: "N", min: 10, description_ai: "N" };
     expect(validateBlockValue(block, 5)).toEqual({ valid: false, error: "Valor mínimo: 10" });
   });
 
   it("returns invalid when number is above max", () => {
-    const block: FormBlock = { id: "b1", type: "number", label: "N", max: 10 };
+    const block: FormBlock = { id: "b1", type: "number", label: "N", max: 10, description_ai: "N" };
     expect(validateBlockValue(block, 15)).toEqual({ valid: false, error: "Valor máximo: 10" });
   });
 
@@ -240,6 +243,7 @@ describe("validateBlockValue", () => {
       id: "b1",
       type: "text",
       label: "T",
+      description_ai: "T",
       validation: { minLength: 5 },
     };
     expect(validateBlockValue(block, "ab")).toEqual({
@@ -253,6 +257,7 @@ describe("validateBlockValue", () => {
       id: "b1",
       type: "text",
       label: "T",
+      description_ai: "T",
       validation: { pattern: "^[0-9]+$", message: "Apenas números" },
     };
     expect(validateBlockValue(block, "abc")).toEqual({
@@ -264,12 +269,12 @@ describe("validateBlockValue", () => {
 
 describe("isBlockComplete", () => {
   it("returns true when value is valid", () => {
-    const block: FormBlock = { id: "b1", type: "text", label: "X", required: true };
+    const block: FormBlock = { id: "b1", type: "text", label: "X", required: true, description_ai: "X" };
     expect(isBlockComplete(block, { b1: "filled" })).toBe(true);
   });
 
   it("returns false when required and empty", () => {
-    const block: FormBlock = { id: "b1", type: "text", label: "X", required: true };
+    const block: FormBlock = { id: "b1", type: "text", label: "X", required: true, description_ai: "X" };
     expect(isBlockComplete(block, {})).toBe(false);
   });
 });
@@ -281,8 +286,8 @@ describe("isStepComplete", () => {
       order: 0,
       title: "S1",
       blocks: [
-        { id: "b1", type: "text", label: "A", required: true },
-        { id: "b2", type: "static_text", label: "" },
+        { id: "b1", type: "text", label: "A", required: true, description_ai: "A" },
+        { id: "b2", type: "static_text", label: "", description_ai: "Static" },
       ],
     };
     expect(isStepComplete(step, { b1: "x" })).toBe(true);
@@ -293,7 +298,7 @@ describe("isStepComplete", () => {
       id: "s1",
       order: 0,
       title: "S1",
-      blocks: [{ id: "b1", type: "text", label: "A", required: true }],
+      blocks: [{ id: "b1", type: "text", label: "A", required: true, description_ai: "A" }],
     };
     expect(isStepComplete(step, {})).toBe(false);
   });
@@ -312,7 +317,7 @@ describe("getFormProgress", () => {
           id: "s1",
           order: 0,
           title: "S1",
-          blocks: [{ id: "b1", type: "static_text", label: "" }],
+          blocks: [{ id: "b1", type: "static_text", label: "", description_ai: "Static" }],
         },
       ],
     };
@@ -331,7 +336,7 @@ describe("getFormProgress", () => {
           id: "s1",
           order: 0,
           title: "S1",
-          blocks: [{ id: "b1", type: "text", label: "X", required: true }],
+          blocks: [{ id: "b1", type: "text", label: "X", required: true, description_ai: "X" }],
         },
       ],
     };
@@ -350,11 +355,12 @@ describe("getRelatedAlerts", () => {
       order: 0,
       title: "S1",
       blocks: [
-        { id: "b1", type: "yes_no", label: "Yes?" },
+        { id: "b1", type: "yes_no", label: "Yes?", description_ai: "Yes/no" },
         {
           id: "alert1",
           type: "conditional_alert",
           label: "",
+          description_ai: "Alert",
           visibility: [{ dependsOn: "b1", operator: "equals", value: true }],
         },
       ],
@@ -378,7 +384,7 @@ describe("getBlockById", () => {
           id: "s1",
           order: 0,
           title: "S1",
-          blocks: [{ id: "target", type: "text", label: "X" }],
+          blocks: [{ id: "target", type: "text", label: "X", description_ai: "Target" }],
         },
       ],
     };
@@ -400,7 +406,7 @@ describe("getBlockById", () => {
 
 describe("getDisplayValue", () => {
   it("returns '-' for null or empty value", () => {
-    const block: FormBlock = { id: "b1", type: "text", label: "X" };
+    const block: FormBlock = { id: "b1", type: "text", label: "X", description_ai: "X" };
     expect(getDisplayValue(block, null)).toBe("-");
     expect(getDisplayValue(block, "")).toBe("-");
   });
@@ -410,24 +416,25 @@ describe("getDisplayValue", () => {
       id: "b1",
       type: "single_select",
       label: "X",
+      description_ai: "X",
       options: [{ value: "a", label: "Option A", emoji: "🅰️" }],
     };
     expect(getDisplayValue(block, "a")).toBe("🅰️ Option A");
   });
 
   it("returns 'Sim'/'Não' for yes_no", () => {
-    const block: FormBlock = { id: "b1", type: "yes_no", label: "X" };
+    const block: FormBlock = { id: "b1", type: "yes_no", label: "X", description_ai: "X" };
     expect(getDisplayValue(block, true)).toBe("Sim");
     expect(getDisplayValue(block, false)).toBe("Não");
   });
 
   it("returns number with unit for number block", () => {
-    const block: FormBlock = { id: "b1", type: "number", label: "N", unit: "m²" };
+    const block: FormBlock = { id: "b1", type: "number", label: "N", unit: "m²", description_ai: "N" };
     expect(getDisplayValue(block, 10)).toBe("10 m²");
   });
 
   it("formats date as pt-BR when value is YYYY-MM-DD", () => {
-    const block: FormBlock = { id: "b1", type: "date", label: "D" };
+    const block: FormBlock = { id: "b1", type: "date", label: "D", description_ai: "D" };
     expect(getDisplayValue(block, "2025-02-26")).toMatch(/\d{2}\/\d{2}\/2025/);
   });
 
@@ -436,6 +443,7 @@ describe("getDisplayValue", () => {
       id: "b1",
       type: "multi_select",
       label: "X",
+      description_ai: "X",
       options: [
         { value: "a", label: "A" },
         { value: "b", label: "B" },

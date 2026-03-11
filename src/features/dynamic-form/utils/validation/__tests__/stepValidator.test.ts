@@ -5,7 +5,7 @@ import type { FormStep } from "../../../types";
 describe("validateSteps", () => {
   it("reports error when step has no id", () => {
     const steps: FormStep[] = [
-      { id: "", order: 0, title: "S1", blocks: [{ id: "b1", type: "text", label: "X" }] },
+      { id: "", order: 0, title: "S1", blocks: [{ id: "b1", type: "text", label: "X", description_ai: "X" }] },
     ];
     const result = validateSteps(steps);
     expect(result.errors.some((e) => e.code === "STEP_MISSING_ID")).toBe(true);
@@ -13,8 +13,8 @@ describe("validateSteps", () => {
 
   it("reports error for duplicate step id", () => {
     const steps: FormStep[] = [
-      { id: "same", order: 0, title: "S1", blocks: [{ id: "b1", type: "text", label: "X" }] },
-      { id: "same", order: 1, title: "S2", blocks: [{ id: "b2", type: "text", label: "Y" }] },
+      { id: "same", order: 0, title: "S1", blocks: [{ id: "b1", type: "text", label: "X", description_ai: "X" }] },
+      { id: "same", order: 1, title: "S2", blocks: [{ id: "b2", type: "text", label: "Y", description_ai: "Y" }] },
     ];
     const result = validateSteps(steps);
     expect(result.errors.some((e) => e.code === "DUPLICATE_STEP_ID")).toBe(true);
@@ -26,7 +26,7 @@ describe("validateSteps", () => {
         id: "s1",
         order: undefined as unknown as number,
         title: "S1",
-        blocks: [{ id: "b1", type: "text", label: "X" }],
+        blocks: [{ id: "b1", type: "text", label: "X", description_ai: "X" }],
       },
     ];
     const result = validateSteps(steps);
@@ -35,7 +35,7 @@ describe("validateSteps", () => {
 
   it("reports error when step has no title", () => {
     const steps: FormStep[] = [
-      { id: "s1", order: 0, title: "", blocks: [{ id: "b1", type: "text", label: "X" }] },
+      { id: "s1", order: 0, title: "", blocks: [{ id: "b1", type: "text", label: "X", description_ai: "X" }] },
     ];
     const result = validateSteps(steps);
     expect(result.errors.some((e) => e.code === "STEP_MISSING_TITLE")).toBe(true);
@@ -49,7 +49,7 @@ describe("validateSteps", () => {
 
   it("returns no errors for valid steps", () => {
     const steps: FormStep[] = [
-      { id: "s1", order: 0, title: "Step 1", blocks: [{ id: "b1", type: "text", label: "Field" }] },
+      { id: "s1", order: 0, title: "Step 1", blocks: [{ id: "b1", type: "text", label: "Field", description_ai: "Field" }] },
     ];
     const result = validateSteps(steps);
     expect(result.errors).toHaveLength(0);
@@ -62,7 +62,7 @@ describe("validateSteps", () => {
         order: 0,
         title: "S1",
         blocks: [
-          { id: "b1", type: "single_select", label: "X" }, // missing options
+          { id: "b1", type: "single_select", label: "X", description_ai: "X" }, // missing options
         ],
       },
     ];

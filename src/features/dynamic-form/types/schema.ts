@@ -73,6 +73,8 @@ export interface FormBlock {
   id: string;
   type: FormBlockType;
   label: string;
+  /** Describes what this field is and how the AI should interpret it. */
+  description_ai: string;
   required?: boolean;
   placeholder?: string;
   helpText?: string;

@@ -57,6 +57,7 @@ export function parseRequestParams(
     forcePromptKey: body.forcePromptKey ?? null,
     useStructuredOutput: body.useStructuredOutput !== false,
     mode: body.mode ?? "full_description",
+    formSchema: body.formSchema ?? null,
   };
 }
 

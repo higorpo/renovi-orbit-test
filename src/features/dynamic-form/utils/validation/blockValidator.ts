@@ -61,6 +61,17 @@ export function validateBlocks(
       });
     }
 
+    const descAi =
+      typeof block.description_ai === "string" ? block.description_ai.trim() : "";
+    if (!descAi) {
+      errors.push({
+        code: "BLOCK_MISSING_DESCRIPTION_AI",
+        message: `Block "${block.id}" must have a non-empty description_ai (what the data is and how the AI should interpret it)`,
+        path,
+        severity: "error",
+      });
+    }
+
     if (["single_select", "multi_select", "radio", "checkbox"].includes(block.type)) {
       if (!Array.isArray(block.options) || block.options.length === 0) {
         errors.push({

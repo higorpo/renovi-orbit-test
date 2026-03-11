@@ -79,10 +79,13 @@ export const VISIBILITY_OPERATORS: { value: VisibilityOperator; label: string }[
 
 export function createBlock(type: FormBlockType, overrides?: Partial<FormBlock>): FormBlock {
   const id = overrides?.id ?? nextBlockId();
+  const defaultDescriptionAi =
+    "Descreva o que este campo representa e como a IA deve interpretá-lo.";
   const base: FormBlock = {
     id,
     type,
     label: overrides?.label ?? BLOCK_TYPE_LABELS[type],
+    description_ai: overrides?.description_ai ?? defaultDescriptionAi,
     required: overrides?.required ?? false,
     placeholder: overrides?.placeholder,
     helpText: overrides?.helpText,
