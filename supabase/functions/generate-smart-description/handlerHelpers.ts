@@ -9,7 +9,7 @@ import type {
   SmartDescriptionMode,
   SmartDescriptionProvider,
 } from "./types.ts";
-import { corsHeaders, DEFAULT_MODEL, GEMINI_DEFAULT_MODEL } from "./constants.ts";
+import { corsHeaders, OPEN_AI_DEFAULT_MODEL, GEMINI_DEFAULT_MODEL } from "./constants.ts";
 import { formatProfessionalDescription, postProcessDescription } from "./formatting.ts";
 import { logPromptUsage } from "./usage.ts";
 import {
@@ -171,7 +171,7 @@ export async function callOpenAI(params: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: DEFAULT_MODEL,
+      model: OPEN_AI_DEFAULT_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },

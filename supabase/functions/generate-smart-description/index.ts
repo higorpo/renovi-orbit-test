@@ -8,7 +8,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { checkRateLimit, getClientIP, getUserIdFromRequest } from "../_shared/rateLimiter.ts";
 
-import { corsHeaders, DEFAULT_MODEL, GEMINI_DEFAULT_MODEL } from "./constants.ts";
+import { corsHeaders, OPEN_AI_DEFAULT_MODEL, GEMINI_DEFAULT_MODEL } from "./constants.ts";
 import type { GenerateSmartDescriptionBody, PromptConfig } from "./types.ts";
 import { formatFormDataToContext } from "./formContext.ts";
 import { logPromptUsage } from "./usage.ts";
@@ -95,7 +95,7 @@ serve(async (req) => {
       `✅ Using prompt: ${promptConfig.name} (v${promptConfig.version})`
     );
     console.log(
-      `[Config] Provider=${params.provider}, Model=${params.provider === "gemini" ? GEMINI_DEFAULT_MODEL : DEFAULT_MODEL}, temp=${promptConfig.temperature}, max_tokens=${promptConfig.max_tokens}`
+      `[Config] Provider=${params.provider}, Model=${params.provider === "gemini" ? GEMINI_DEFAULT_MODEL : OPEN_AI_DEFAULT_MODEL}, temp=${promptConfig.temperature}, max_tokens=${promptConfig.max_tokens}`
     );
 
     const context = formatFormDataToContext({
@@ -125,7 +125,7 @@ serve(async (req) => {
 
     const generationTime = Date.now() - startTime;
     const modelLabel =
-      params.provider === "gemini" ? GEMINI_DEFAULT_MODEL : DEFAULT_MODEL;
+      params.provider === "gemini" ? GEMINI_DEFAULT_MODEL : OPEN_AI_DEFAULT_MODEL;
     console.log(
       `[${params.provider}] Model: ${modelLabel}, Temperature: ${enableStructured ? Math.min(promptConfig.temperature, 0.3) : promptConfig.temperature} (${enableStructured ? "structured" : "normal"})`
     );

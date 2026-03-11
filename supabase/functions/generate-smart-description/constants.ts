@@ -9,5 +9,5 @@ export const corsHeaders: Record<string, string> = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-export const DEFAULT_MODEL = "gpt-4o-mini";
-export const GEMINI_DEFAULT_MODEL = "gemini-2.5-flash";
+export const OPEN_AI_DEFAULT_MODEL = "gpt-4o-mini";
+export const GEMINI_DEFAULT_MODEL = "gemini-2.5-flash-lite";
