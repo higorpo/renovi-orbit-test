@@ -1,13 +1,18 @@
 import type { Session } from "@supabase/supabase-js";
 import { getSupabaseAnonKey } from "@/lib/supabase/client";
 import type { AddressSelection } from "@/features/addresses";
-import type { ServiceWithChildren } from "../types/request-quote.types";
+import type { ServiceWithChildren, ServiceRequestStructuredData } from "../types/request-quote.types";
 
 export interface CreateRequestQuoteOrderParams {
   userId: string;
   email: string;
   step4Data: AddressSelection;
-  step3Data: { description: string; photos: File[] };
+  step3Data: {
+    description: string;
+    photos: File[];
+    /** Optional AI-derived structured data to persist on service_requests. */
+    structured?: ServiceRequestStructuredData | null;
+  };
   selectedService: ServiceWithChildren;
   step2Data: Record<string, unknown>;
   step2FormSchema: Record<string, unknown> | null;
@@ -77,6 +82,20 @@ export async function createRequestQuoteOrder(
   formData.set("formData", JSON.stringify(step2Data));
   formData.set("formSchema", step2FormSchema ? JSON.stringify(step2FormSchema) : "");
   formData.set("formVersion", step2FormVersion ?? "");
+  formData.set(
+    "structuredData",
+    JSON.stringify(
+      step3Data.structured && Object.keys(step3Data.structured).length > 0
+        ? {
+            urgency: step3Data.structured.urgency ?? null,
+            scope_complexity: step3Data.structured.scope_complexity ?? null,
+            suggested_questions: step3Data.structured.suggested_questions ?? null,
+            tags: step3Data.structured.tags ?? null,
+            missing_info_warnings: step3Data.structured.missing_info_warnings ?? null,
+          }
+        : {}
+    )
+  );
 
   step3Data.photos.forEach((file, i) => {
     formData.set(`photo_${i}`, file);

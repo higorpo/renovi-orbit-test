@@ -15,6 +15,11 @@ interface Params {
   form_data: Record<string, unknown>;
   form_schema: Record<string, unknown> | null;
   form_version: string | null;
+  urgency?: "low" | "medium" | "high" | null;
+  scope_complexity?: "simple" | "medium" | "complex" | null;
+  suggested_questions?: string[] | null;
+  tags?: string[] | null;
+  missing_info_warnings?: string[] | null;
 }
 
 export async function createServiceRequest(
@@ -35,6 +40,11 @@ export async function createServiceRequest(
     form_schema: params.form_schema as Json | null,
     form_version: params.form_version ?? null,
     status: "open",
+    urgency: params.urgency ?? null,
+    scope_complexity: params.scope_complexity ?? null,
+    suggested_questions: params.suggested_questions?.length ? params.suggested_questions : null,
+    tags: params.tags?.length ? params.tags : null,
+    missing_info_warnings: params.missing_info_warnings?.length ? params.missing_info_warnings : null,
   };
 
   const { data, error } = await supabase

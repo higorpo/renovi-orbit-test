@@ -25,3 +25,6 @@ export interface GenerateSmartDescriptionResponse {
   metadata: Record<string, unknown>;
   structured?: StructuredAIResponse;
 }
+
+/** Subset of StructuredAIResponse saved on service_requests and sent to create-request-quote-order. */
+export type ServiceRequestStructuredData = Pick<StructuredAIResponse, "urgency" | "scope_complexity" | "suggested_questions" | "tags" | "missing_info_warnings">;

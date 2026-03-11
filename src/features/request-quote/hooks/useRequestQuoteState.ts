@@ -3,11 +3,14 @@ import type { ServiceWithChildren } from "../types/request-quote.types";
 import type { ClientSignupIdentityData } from "@/features/auth";
 import { defaultClientSignupIdentity } from "@/features/auth";
 import type { AddressSelection } from "@/features/addresses";
+import type { ServiceRequestStructuredData } from "../types/request-quote.types";
 
 export interface Step3Data {
   description: string;
   photos: File[];
   photoPreviews: string[];
+  /** AI-derived structured data from generate-smart-description (saved on service_requests). */
+  structured?: ServiceRequestStructuredData | null;
 }
 
 export interface RequestQuoteState {

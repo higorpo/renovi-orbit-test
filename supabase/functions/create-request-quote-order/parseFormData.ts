@@ -1,4 +1,4 @@
-import type { ParsedFormData, AddressPayload } from "./types.ts";
+import type { ParsedFormData, AddressPayload, StructuredDataPayload } from "./types.ts";
 
 export type ParseFormDataResult =
   | { ok: true; data: ParsedFormData }
@@ -77,6 +77,27 @@ export async function parseFormData(formData: FormData): Promise<ParseFormDataRe
 
   const formVersion = typeof formVersionStr === "string" && formVersionStr.trim() ? formVersionStr.trim() : null;
 
+  let structuredData: StructuredDataPayload | null = null;
+  const structuredDataStr = formData.get("structuredData");
+  if (typeof structuredDataStr === "string" && structuredDataStr.trim()) {
+    try {
+      const parsed = JSON.parse(structuredDataStr) as Record<string, unknown>;
+      if (parsed && typeof parsed === "object") {
+        structuredData = {
+          urgency: ["low", "medium", "high"].includes(parsed.urgency as string) ? (parsed.urgency as "low" | "medium" | "high") : null,
+          scope_complexity: ["simple", "medium", "complex"].includes(parsed.scope_complexity as string)
+            ? (parsed.scope_complexity as "simple" | "medium" | "complex")
+            : null,
+          suggested_questions: Array.isArray(parsed.suggested_questions) ? (parsed.suggested_questions as string[]) : null,
+          tags: Array.isArray(parsed.tags) ? (parsed.tags as string[]) : null,
+          missing_info_warnings: Array.isArray(parsed.missing_info_warnings) ? (parsed.missing_info_warnings as string[]) : null,
+        };
+      }
+    } catch {
+      structuredData = null;
+    }
+  }
+
   const photoBlobs: Blob[] = [];
   let i = 0;
   while (true) {
@@ -97,6 +118,7 @@ export async function parseFormData(formData: FormData): Promise<ParseFormDataRe
     formSchema: formSchemaObj,
     formVersion,
     photoFiles: photoBlobs,
+    structuredData: structuredData ?? undefined,
   };
 
   return { ok: true, data };

@@ -15,6 +15,11 @@ create table if not exists public.service_requests (
   status text not null default 'open' check (status in ('open', 'in_progress', 'closed', 'cancelled')),
   city text,
   neighborhood text,
+  urgency text check (urgency is null or urgency in ('low', 'medium', 'high')),
+  scope_complexity text check (scope_complexity is null or scope_complexity in ('simple', 'medium', 'complex')),
+  suggested_questions text[],
+  tags text[],
+  missing_info_warnings text[],
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -26,6 +31,11 @@ comment on column public.service_requests.form_data is 'Dynamic form answers (fr
 comment on column public.service_requests.form_schema is 'Snapshot of the form schema used when the request was created (dynamic-form schema).';
 comment on column public.service_requests.form_version is 'Schema version at creation time (e.g. 2.0).';
 comment on column public.service_requests.photos is 'Array of photo URLs (e.g. storage public URLs).';
+comment on column public.service_requests.urgency is 'AI-derived urgency: low, medium, high.';
+comment on column public.service_requests.scope_complexity is 'AI-derived scope complexity: simple, medium, complex.';
+comment on column public.service_requests.suggested_questions is 'AI-suggested follow-up questions for the client.';
+comment on column public.service_requests.tags is 'AI-derived tags for the request.';
+comment on column public.service_requests.missing_info_warnings is 'AI warnings about missing or unclear information.';
 
 create index if not exists service_requests_client_id_idx on public.service_requests (client_id);
 create index if not exists service_requests_service_id_idx on public.service_requests (service_id);

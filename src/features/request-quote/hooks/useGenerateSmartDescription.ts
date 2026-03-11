@@ -42,7 +42,19 @@ export function useGenerateSmartDescription({
       const { data, error } = await invokeGenerateSmartDescription(payload);
       if (error) throw error;
       if (data?.description) {
-        state.setStep3Data((prev) => ({ ...prev, description: data.description! }));
+        state.setStep3Data((prev) => ({
+          ...prev,
+          description: data.description!,
+          structured: data.structured
+            ? {
+                urgency: data.structured.urgency,
+                scope_complexity: data.structured.scope_complexity,
+                suggested_questions: data.structured.suggested_questions,
+                tags: data.structured.tags,
+                missing_info_warnings: data.structured.missing_info_warnings,
+              }
+            : undefined,
+        }));
       } else {
         throw new Error("Descrição não retornada");
       }

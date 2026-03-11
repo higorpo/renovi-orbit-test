@@ -403,11 +403,16 @@ export type Database = {
           form_schema: Json | null
           form_version: string | null
           id: string
+          missing_info_warnings: string[] | null
           photos: string[] | null
+          scope_complexity: string | null
           service_id: string
           status: string
+          suggested_questions: string[] | null
+          tags: string[] | null
           title: string
           updated_at: string
+          urgency: string | null
         }
         Insert: {
           address_id?: string | null
@@ -418,11 +423,16 @@ export type Database = {
           form_schema?: Json | null
           form_version?: string | null
           id?: string
+          missing_info_warnings?: string[] | null
           photos?: string[] | null
+          scope_complexity?: string | null
           service_id: string
           status?: string
+          suggested_questions?: string[] | null
+          tags?: string[] | null
           title: string
           updated_at?: string
+          urgency?: string | null
         }
         Update: {
           address_id?: string | null
@@ -433,11 +443,16 @@ export type Database = {
           form_schema?: Json | null
           form_version?: string | null
           id?: string
+          missing_info_warnings?: string[] | null
           photos?: string[] | null
+          scope_complexity?: string | null
           service_id?: string
           status?: string
+          suggested_questions?: string[] | null
+          tags?: string[] | null
           title?: string
           updated_at?: string
+          urgency?: string | null
         }
         Relationships: [
           {
