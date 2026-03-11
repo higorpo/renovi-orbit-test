@@ -1,11 +1,9 @@
-import { useRef, useEffect, useCallback } from "react";
-import { Loader2, Sparkles, Upload, Trash2, ImageIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { toast } from "sonner";
-import type { RequestQuoteState } from "../../hooks/useRequestQuoteState";
+import { ImageIcon, Loader2, Trash2, Upload } from "lucide-react";
+import { useCallback, useEffect, useRef } from "react";
 import { useGenerateSmartDescription } from "../../hooks/useGenerateSmartDescription";
+import type { RequestQuoteState } from "../../hooks/useRequestQuoteState";
 import { stableStringify } from "../../utils/stableStringify";
 
 const MAX_DESCRIPTION_ATTEMPTS = 3;
@@ -128,19 +126,6 @@ export function Step3DescriptionPhotos({ state, step2DataSnapshotRef }: Step3Des
                   (Gerada automaticamente, edite se necessário)
                 </span>
               </Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  toast.info("Você pode escrever manualmente.");
-                  state.setGeneratingDescription(false);
-                }}
-                className="text-xs w-full sm:w-auto shrink-0"
-              >
-                <Sparkles className="h-3 w-3 mr-1 shrink-0" />
-                Pular IA e escrever
-              </Button>
             </div>
             <Textarea
               value={description}
