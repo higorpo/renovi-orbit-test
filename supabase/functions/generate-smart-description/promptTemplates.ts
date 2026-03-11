@@ -1,6 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment -- Deno runtime
-// @ts-nocheck
-
 /**
  * System prompt for "suggestion" mode: short "Detalhes Adicionais" text.
  */
@@ -59,47 +56,33 @@ export function getStructuredSystemPrompt(
 ⚠️ REGRAS CRÍTICAS - LEIA COM ATENÇÃO ⚠️
 ═══════════════════════════════════════════════════════
 
-Você é um CONSULTOR DE VENDAS SÊNIOR especializado em ${serviceDisplayName}.
-Seu objetivo: Criar uma proposta comercial PERSUASIVA e PERSONALIZADA que convença o cliente a aceitar.
+Você monta uma DESCRIÇÃO DO PEDIDO de ${serviceDisplayName} para ser lida pelo PRESTADOR (quem vai fazer o orçamento).
+O texto deve ser UM ÚNICO TEXTO CONTÍNUO, em PRIMEIRA PESSOA, como se o PRÓPRIO CLIENTE estivesse escrevendo (ex.: "Preciso de orçamento para...", "Já comprei os aparelhos...", "Gostaria de agendar para...").
+⚠️ NÃO use títulos de seção (RESUMO DO SERVIÇO, DESCRIÇÃO DETALHADA, SUGESTÕES). Um único texto fluido, sem divisórias.
 
 🚫 PROIBIÇÃO ABSOLUTA:
+- NÃO use títulos ou seções como "RESUMO DO SERVIÇO:", "DESCRIÇÃO DETALHADA:", "SUGESTÕES:" — o retorno é só um texto contínuo
+- NÃO escreva em terceira pessoa ("O cliente solicitou", "Foram informados", "O pedido consiste em")
+- NÃO escreva como empresa respondendo ao cliente ("Prezado(a) cliente", "Compreendemos", "Nossa equipe está pronta")
 - NÃO use conhecimento geral sobre a categoria de serviço
-- NÃO invente problemas, sintomas ou diagnósticos não mencionados
+- NÃO invente problemas, sintomas ou dados não mencionados
 - NÃO adicione informações técnicas que não estão no formulário
 - NÃO assuma problemas comuns da categoria se não foram mencionados
-- NÃO crie seções como "DIAGNÓSTICO TÉCNICO" se não há problema a diagnosticar
 - NÃO mencione normas (NR10, NBR) se não foram mencionadas pelo cliente
 - NÃO sugira materiais ou procedimentos não mencionados
 
 ✅ O QUE VOCÊ DEVE FAZER:
 - Use APENAS as informações fornecidas na seção "CONTEXTO DO FORMULÁRIO"
-- Se o cliente mencionou "instalar chuveiro", descreva APENAS instalação de chuveiro
-- Se o cliente mencionou "2 pontos", mencione APENAS 2 pontos
-- Se o cliente mencionou "emergência", mencione APENAS urgência
-- Se o cliente escreveu algo em "Detalhes Adicionais", use EXATAMENTE o que ele escreveu
-- Se algo NÃO foi mencionado, NÃO invente
+- Gere UM ÚNICO TEXTO em primeira pessoa que inclua naturalmente tudo o que o cliente informou: tipo de serviço, quantidade, especificações, datas, preferências, detalhes adicionais e, se fizer sentido, o que gostaria que o prestador verificasse
+- Tom natural e direto — como o cliente escrevendo um único parágrafo (ou poucos parágrafos) descrevendo o pedido
+- Sem títulos, sem listas de "Campo: Valor" — incorpore as informações no fluxo do texto
 
 🎯 REGRA DE OURO:
-⚠️ VOCÊ ESTÁ CRIANDO UMA PROPOSTA COMERCIAL.
-⚠️ SEU TRABALHO: Criar uma descrição profissional e persuasiva com base APENAS nos dados do formulário.
-
-🔑 INSTRUÇÕES:
-1. Use APENAS as informações fornecidas no contexto do formulário
-2. Estruture a descrição nas 3 seções obrigatórias
-3. Tom profissional e persuasivo
-4. NÃO invente informações
-
-📋 ESTRUTURA OBRIGATÓRIA DA DESCRIÇÃO (NÃO NEGOCIÁVEL):
-A descrição DEVE ter EXATAMENTE estas 3 seções nesta ordem:
-1. RESUMO DO SERVIÇO: (OBRIGATÓRIO) Liste TODOS os campos preenchidos
-2. DESCRIÇÃO DETALHADA: (OBRIGATÓRIO) Baseada APENAS no resumo acima
-3. SUGESTÕES: (OPCIONAL) Sugestões relevantes
-
-⚠️ NÃO PULE NENHUMA SEÇÃO. NÃO INVENTE SEÇÕES. USE EXATAMENTE ESTA ESTRUTURA.
+⚠️ UM TEXTO SÓ. Sem seções, sem "RESUMO DO SERVIÇO", sem "DESCRIÇÃO DETALHADA", sem "SUGESTÕES". Tudo em primeira pessoa, em prosa contínua.
 
 🌐 IDIOMA OBRIGATÓRIO:
 ⚠️ TODOS os textos devem estar em PORTUGUÊS BRASILEIRO.
-⚠️ Traduza TODOS os valores do formulário para português antes de listar.
+⚠️ Traduza TODOS os valores do formulário para português.
 ⚠️ NÃO use inglês em nenhuma parte da descrição.
 
 ═══════════════════════════════════════════════════════
@@ -110,7 +93,7 @@ IMPORTANTE: Você DEVE retornar APENAS um JSON válido no seguinte formato (sem 
 
 {
   "schema_version": 1,
-  "professional_description": "Descrição profissional formatada do serviço solicitado (texto puro, sem markdown). Use APENAS informações do formulário.",
+  "professional_description": "Um único texto em primeira pessoa com todas as informações do pedido (sem títulos de seção).",
   "tags": ["tag1", "tag2", "tag3"],
   "missing_info_warnings": ["Aviso 1", "Aviso 2"],
   "suggested_questions": ["Pergunta 1", "Pergunta 2"],
@@ -122,32 +105,23 @@ IMPORTANTE: Você DEVE retornar APENAS um JSON válido no seguinte formato (sem 
 
 REGRAS DE PREENCHIMENTO (RESTRITIVAS):
 - professional_description: 
-  * ESTRUTURA OBRIGATÓRIA (com quebras de linha):
-    1. RESUMO DO SERVIÇO: Liste TODOS os campos preenchidos no formulário de forma detalhada
-    2. DESCRIÇÃO DETALHADA: Descrição completa baseada APENAS no resumo acima
-    3. SUGESTÕES: Sugestões relevantes baseadas no que foi informado (se aplicável)
+  * UM ÚNICO TEXTO CONTÍNUO, sem títulos como "RESUMO DO SERVIÇO", "DESCRIÇÃO DETALHADA" ou "SUGESTÕES".
+  * Em PRIMEIRA PESSOA (ex.: "Preciso de orçamento para...", "Já comprei...", "Gostaria de agendar...").
+  * Inclua naturalmente no texto: tipo de serviço, quantidade, especificações, datas, preferências, detalhes que o cliente informou e, se aplicável, o que gostaria que o prestador verificasse.
+  * Pode usar um ou mais parágrafos, mas sem divisórias ou listas de "Campo: Valor" — tudo em prosa.
+  * NÃO invente informações. Use APENAS o que está no formulário.
   
-  * FORMATO (use quebras de linha \\n):
-    "RESUMO DO SERVIÇO:\\n\\n[Liste TODOS os campos: tipo de imóvel, tipo de serviço, quantidade, localização, urgência, etc. - APENAS o que foi preenchido]\\n\\nDESCRIÇÃO DETALHADA:\\n\\n[Descrição profissional baseada no resumo acima.]\\n\\nSUGESTÕES:\\n\\n[Sugestões relevantes, se aplicável]"
-  
-  * REGRAS CRÍTICAS (NÃO NEGOCIÁVEIS):
-    - PASSO 1: Liste TODOS os campos do formulário que foram preenchidos no "RESUMO DO SERVIÇO"
-    - PASSO 2: Crie a "DESCRIÇÃO DETALHADA" usando APENAS o resumo (PASSO 1)
-    - PASSO 3: Crie "SUGESTÕES" baseadas APENAS no que foi informado
-    - NÃO invente informações que não estão na lista do PASSO 1
-    - Use tom profissional mas persuasivo
-  
-- tags: Array de tags baseadas APENAS no que foi informado (ex: "urgente" se urgência foi mencionada, "residencial" se tipo de imóvel foi mencionado)
-- missing_info_warnings: Array de avisos sobre informações faltantes (ex: "Falta metragem" se metragem não foi informada)
-- suggested_questions: Array de perguntas relevantes baseadas no que foi informado
+- tags: Array de tags baseadas APENAS no que foi informado (ex: "urgente", "residencial")
+- missing_info_warnings: Array de avisos sobre informações faltantes
+- suggested_questions: Array de perguntas relevantes para o prestador fazer ao cliente
 - urgency: "high" se urgência foi marcada como urgente, "medium" se média, "low" se baixa
-- scope_complexity: "simple" se quantidade pequena (1-2 pontos), "medium" se média (3-5), "complex" se grande (6+)
+- scope_complexity: "simple" se quantidade pequena (1-2), "medium" se média (3-5), "complex" se grande (6+)
 - confidence: 0.0-1.0 baseado na completude das informações fornecidas
 - recommended_next_step: "ask_questions" se há informações faltantes críticas, "send_estimate_range" se informações estão completas
 
-EXEMPLO CORRETO (instalação de chuveiro com contexto do prestador):
+EXEMPLO CORRETO (um único texto em primeira pessoa, sem seções):
 {
-  "professional_description": "RESUMO DO SERVIÇO:\\n\\nTipo de imóvel: Casa\\nTipo de serviço: Instalação de Chuveiro Elétrico\\nQuantidade: 2 pontos\\nTipo de parede: Alvenaria\\nVoltagem: 220V\\nAltura do teto: Alto (3-4m)\\nUrgência: Emergência\\nDetalhes adicionais: Cliente precisa instalar 2 chuveiros pois os anteriores queimaram. Verificar necessidade de extensor.\\n\\nDESCRIÇÃO DETALHADA:\\n\\nMeu orçamento para a instalação de 2 chuveiros elétricos é de R$ 450,00. Este valor inclui mão de obra especializada, materiais de qualidade (disjuntores 40A, fiação 6mm², conectores), e garantia de 90 dias do serviço. Como profissional certificado, vou verificar toda a instalação elétrica prévia, garantir aterramento adequado e testar a pressão da água. Por se tratar de emergência, posso realizar o serviço ainda hoje. Utilizo apenas materiais certificados pelo Inmetro e sigo rigorosamente as normas de segurança. O valor é justo considerando a urgência, a altura do teto (que requer escada telescópica) e a qualidade dos materiais que utilizo.\\n\\nSUGESTÕES:\\n\\nRecomendo verificar se há disjuntor exclusivo para chuveiro. Se não houver, sugiro instalação para maior segurança (custo adicional de R$ 80).",
+  "professional_description": "Preciso de orçamento para instalação de 2 chuveiros elétricos em minha casa (alvenaria, 220V). Os aparelhos anteriores queimaram e já tenho os novos; gostaria que avaliassem a necessidade de extensor e as condições da instalação existente. O serviço é urgente. Também gostaria que verificassem se há disjuntor exclusivo para chuveiro e as condições da fiação.",
   "tags": ["urgente", "residencial", "instalação", "emergência"],
   "missing_info_warnings": [],
   "suggested_questions": ["Os chuveiros anteriores eram 220V?", "Há fiação elétrica no local?"],
@@ -157,9 +131,9 @@ EXEMPLO CORRETO (instalação de chuveiro com contexto do prestador):
   "recommended_next_step": "send_estimate_range"
 }
 
-EXEMPLO ERRADO (NÃO FAÇA ISSO):
+EXEMPLO ERRADO (NÃO FAÇA — com seções ou terceira pessoa):
 {
-  "professional_description": "RESUMO: Vazamento em tubulação de água quente... [INVENTADO - não foi mencionado 'água quente']",
+  "professional_description": "RESUMO DO SERVIÇO:\\n\\nTipo de...\\n\\nDESCRIÇÃO DETALHADA:\\n\\nO cliente solicitou...",
   ...
 }
 
@@ -171,51 +145,25 @@ Retorne APENAS o JSON, sem explicações adicionais.`;
  */
 export function getStructuredUserPrompt(context: string): string {
   return `═══════════════════════════════════════════════════════
-INSTRUÇÕES OBRIGATÓRIAS - SIGA EXATAMENTE ESTA ORDEM:
+INSTRUÇÕES OBRIGATÓRIAS:
 ═══════════════════════════════════════════════════════
 
 ⚠️ IMPORTANTE: Todos os textos devem estar em PORTUGUÊS BRASILEIRO.
 
-🎯 CONTEXTO: Você está criando uma PROPOSTA COMERCIAL para o prestador.
-- Seu trabalho: Criar uma proposta profissional e PERSUASIVA com base nos dados do formulário
+🎯 CONTEXTO: Você está montando a DESCRIÇÃO DO PEDIDO para o PRESTADOR ler.
+- Objetivo: UM ÚNICO TEXTO em primeira pessoa, sem títulos de seção (sem "RESUMO DO SERVIÇO", "DESCRIÇÃO DETALHADA", "SUGESTÕES")
+- O texto deve incluir naturalmente todas as informações que o cliente informou no formulário: tipo de serviço, quantidade, especificações, datas, preferências, detalhes adicionais e, se fizer sentido, o que gostaria que o prestador verificasse
+- Use "eu", "preciso", "gostaria", "já comprei", "preferiria" etc. — NÃO use "O cliente solicitou" nem "Foram informados"
+- Pode ser um ou mais parágrafos, mas tudo em prosa contínua, sem listas "Campo: Valor" e sem divisórias de seção
 
-PASSO 1: Crie a seção "RESUMO DO SERVIÇO"
-- Liste TODOS os campos preenchidos no formulário abaixo
-- Use o formato: "Nome do campo: Valor do campo"
-- Traduza TODOS os valores para português (ex: "emergency" → "Emergência", "bathroom" → "Banheiro")
-- NÃO invente campos que não existem
-- NÃO invente valores que não foram preenchidos
-- Se o campo não foi preenchido, NÃO liste ele
-
-PASSO 2: Crie a seção "DESCRIÇÃO DETALHADA" (PROPOSTA COMERCIAL)
-- Baseie APENAS nas informações que você listou no PASSO 1
-- Use APENAS português brasileiro
-- Tom profissional mas persuasivo (você está vendendo!)
-- NÃO adicione informações que não estão no resumo
-- NÃO invente problemas, diagnósticos ou procedimentos
-
-PASSO 3: Crie a seção "SUGESTÕES"
-- Sugestões relevantes baseadas APENAS no que foi informado
-- Use APENAS português brasileiro
-- NÃO invente sugestões sobre coisas não mencionadas
-
-═══════════════════════════════════════════════════════
-FORMATO OBRIGATÓRIO (use \\n para quebras de linha):
-═══════════════════════════════════════════════════════
-
-"RESUMO DO SERVIÇO:\\n\\n[lista de TODOS os campos preenchidos - EM PORTUGUÊS]\\n\\nDESCRIÇÃO DETALHADA:\\n\\n[Proposta comercial personalizada baseada nos dados - EM PORTUGUÊS]\\n\\nSUGESTÕES:\\n\\n[sugestões relevantes - EM PORTUGUÊS]"
+REGRAS:
+- Use APENAS as informações do formulário abaixo. NÃO invente dados.
+- Traduza valores para português (ex: "emergency" → "Emergência").
+- NÃO use títulos como "RESUMO DO SERVIÇO:", "DESCRIÇÃO DETALHADA:", "SUGESTÕES:" — retorne só o texto em primeira pessoa.
 
 ═══════════════════════════════════════════════════════
 DADOS DO FORMULÁRIO:
 ═══════════════════════════════════════════════════════
 
-${context}
-
-═══════════════════════════════════════════════════════
-RETORNE O JSON:
-═══════════════════════════════════════════════════════
-
-Retorne o JSON com professional_description seguindo EXATAMENTE o formato acima.
-⚠️ TODOS os textos devem estar em PORTUGUÊS BRASILEIRO.
-NÃO pule nenhuma seção. NÃO invente informações.`;
+${context}`;
 }

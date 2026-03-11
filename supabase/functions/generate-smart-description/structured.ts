@@ -13,6 +13,31 @@ export function stripJsonCodeFence(raw: string): string {
 }
 
 /**
+ * If the model returned the full JSON inside professional_description (nested JSON),
+ * unwrap it and return an object that has the actual text in professional_description.
+ */
+export function unwrapNestedStructuredResponse(
+  parsed: Record<string, unknown>
+): Record<string, unknown> {
+  const desc = parsed.professional_description;
+  if (typeof desc !== "string" || !desc.trim().startsWith("{")) {
+    return parsed;
+  }
+  try {
+    const inner = JSON.parse(desc) as Record<string, unknown>;
+    if (inner && typeof inner.professional_description === "string") {
+      return {
+        ...parsed,
+        professional_description: inner.professional_description,
+      };
+    }
+  } catch {
+    // not valid JSON or wrong shape, use original
+  }
+  return parsed;
+}
+
+/**
  * Validate structured JSON response from AI.
  */
 export function validateStructuredResponse(

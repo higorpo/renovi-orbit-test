@@ -16,6 +16,7 @@ import {
   validateStructuredResponse,
   generateFallbackResponse,
   stripJsonCodeFence,
+  unwrapNestedStructuredResponse,
 } from "./structured.ts";
 import {
   getSuggestionSystemPrompt,
@@ -307,7 +308,8 @@ export function processAIResponse(params: {
   if (enableStructured) {
     try {
       const toParse = stripJsonCodeFence(rawContent);
-      const parsed = JSON.parse(toParse);
+      let parsed = JSON.parse(toParse) as Record<string, unknown>;
+      parsed = unwrapNestedStructuredResponse(parsed);
       structuredResponse = validateStructuredResponse(parsed);
 
       if (structuredResponse) {
