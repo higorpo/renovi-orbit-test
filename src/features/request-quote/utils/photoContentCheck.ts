@@ -30,7 +30,6 @@ function loadImage(file: File): Promise<HTMLImageElement> {
 export async function checkPhotosContent(files: File[]): Promise<PhotoContentCheckResult> {
   if (files.length === 0) return { allowed: true };
 
-  const errorVerification = "Não foi possível verificar as imagens. Tente novamente ou use fotos em JPEG/PNG.";
   const errorContent = "Conteúdo da imagem não permitido. Envie apenas fotos do local ou do serviço.";
 
   let model: Awaited<ReturnType<typeof nsfwjs.load>>;
@@ -38,7 +37,7 @@ export async function checkPhotosContent(files: File[]): Promise<PhotoContentChe
     model = await nsfwjs.load();
   } catch (e) {
     console.warn("[photoContentCheck] model load failed", e);
-    return { allowed: false, error: errorVerification };
+    return { allowed: true };
   }
 
   for (let i = 0; i < files.length; i++) {
@@ -48,7 +47,7 @@ export async function checkPhotosContent(files: File[]): Promise<PhotoContentChe
       img = await loadImage(file);
     } catch (e) {
       console.warn("[photoContentCheck] image load failed", file.name, e);
-      return { allowed: false, error: errorVerification };
+      return { allowed: true };
     }
 
     try {
@@ -61,7 +60,7 @@ export async function checkPhotosContent(files: File[]): Promise<PhotoContentChe
       }
     } catch (e) {
       console.warn("[photoContentCheck] classify failed", file.name, e);
-      return { allowed: false, error: errorVerification };
+      return { allowed: true };
     }
   }
 
