@@ -8,7 +8,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { checkRateLimit, getClientIP, getUserIdFromRequest } from "../_shared/rateLimiter.ts";
 
-import { corsHeaders, DEFAULT_MODEL } from "./constants.ts";
+import { corsHeaders, DEFAULT_MODEL, GEMINI_DEFAULT_MODEL } from "./constants.ts";
 import type { GenerateSmartDescriptionBody, PromptConfig } from "./types.ts";
 import { formatFormDataToContext } from "./formContext.ts";
 import { logPromptUsage } from "./usage.ts";
@@ -17,7 +17,7 @@ import {
   validateRequestParams,
   resolvePromptAndService,
   buildPrompts,
-  callOpenAI,
+  callAI,
   processAIResponse,
   buildSuccessResponse,
   buildErrorResponse,
@@ -95,7 +95,7 @@ serve(async (req) => {
       `✅ Using prompt: ${promptConfig.name} (v${promptConfig.version})`
     );
     console.log(
-      `[Config] Model=${DEFAULT_MODEL}, temp=${promptConfig.temperature}, max_tokens=${promptConfig.max_tokens}`
+      `[Config] Provider=${params.provider}, Model=${params.provider === "gemini" ? GEMINI_DEFAULT_MODEL : DEFAULT_MODEL}, temp=${promptConfig.temperature}, max_tokens=${promptConfig.max_tokens}`
     );
 
     const context = formatFormDataToContext({
@@ -115,7 +115,8 @@ serve(async (req) => {
       serviceDisplayName,
     });
 
-    const { rawContent, tokensUsed } = await callOpenAI({
+    const { rawContent, tokensUsed } = await callAI({
+      provider: params.provider,
       systemPrompt,
       userPrompt,
       promptConfig,
@@ -123,8 +124,10 @@ serve(async (req) => {
     });
 
     const generationTime = Date.now() - startTime;
+    const modelLabel =
+      params.provider === "gemini" ? GEMINI_DEFAULT_MODEL : DEFAULT_MODEL;
     console.log(
-      `[OpenAI] Model: ${DEFAULT_MODEL}, Temperature: ${enableStructured ? Math.min(promptConfig.temperature, 0.3) : promptConfig.temperature} (${enableStructured ? "structured" : "normal"})`
+      `[${params.provider}] Model: ${modelLabel}, Temperature: ${enableStructured ? Math.min(promptConfig.temperature, 0.3) : promptConfig.temperature} (${enableStructured ? "structured" : "normal"})`
     );
 
     const { processedDescription, structuredResponse } = processAIResponse({
@@ -158,6 +161,7 @@ serve(async (req) => {
       mode: params.mode,
       enableStructured,
       structuredResponse,
+      provider: params.provider,
     });
   } catch (error: unknown) {
     const generationTime = Date.now() - startTime;

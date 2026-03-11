@@ -1,5 +1,5 @@
 -- Seed data for local development and db reset.
--- Covers platform geography (states, cities, neighborhoods), one active form, one service, and default AI prompt.
+-- Covers platform geography (states, cities, neighborhoods), forms (default, instalacao eletrica, instalacao ar condicionado), services, and AI prompts.
 -- Profiles, client_addresses, service_requests, rate_limits, ai_prompt_usage are not seeded (auth/user/analytics data).
 
 -- ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ values
 on conflict (city_id, name) do nothing;
 
 -- ---------------------------------------------------------------------------
--- forms (default + instalacao eletrica)
+-- forms (default + instalacao eletrica + instalacao ar condicionado)
 -- ---------------------------------------------------------------------------
 insert into public.forms (id, form_schema, form_version, form_status, description)
 values
@@ -78,6 +78,30 @@ values
     '2.0',
     'active',
     'Form for electrical installation quote requests'
+  ),
+  (
+    'd4e5f6a7-b8c9-4012-d345-000000000003'::uuid,
+    '{"version":"2.0","id":"instalacao-ar-condicionado-form","title":"Orçamento - Instalação de ar condicionado","metadata":{"categorySlug":"instalacao-ar-condicionado","categoryId":null,"status":"active"},"config":{"showProgressBar":true},"steps":[
+      {"id":"step-tipo","order":0,"title":"Tipo de serviço","blocks":[
+        {"id":"tipo_servico","type":"single_select","label":"Qual tipo de serviço precisa?","required":true,"description_ai":"Type of AC service: new installation, maintenance/cleaning, or unit replacement.","options":[{"value":"instalacao_nova","label":"Instalação nova"},{"value":"manutencao","label":"Manutenção ou limpeza"},{"value":"troca","label":"Troca de aparelho"}]},
+        {"id":"tipo_imovel","type":"property_type","label":"Tipo de imóvel","required":true,"description_ai":"Property type: residential or commercial.","options":[{"value":"residencial","label":"Residencial"},{"value":"comercial","label":"Comercial"}]},
+        {"id":"urgency","type":"urgency","label":"Urgência","required":true,"description_ai":"How urgent the client needs the service."}
+      ]},
+      {"id":"step-detalhes","order":1,"title":"Detalhes do aparelho","blocks":[
+        {"id":"qtd_aparelhos","type":"number","label":"Quantidade de aparelhos","required":true,"min":1,"max":10,"unit":"un","description_ai":"Number of AC units to install or service (1-10)."},
+        {"id":"capacidade_btu","type":"single_select","label":"Capacidade (BTU) desejada","required":false,"helpText":"Aproximada por aparelho. Deixe em branco se não souber.","description_ai":"BTU capacity per unit.","options":[{"value":"9000","label":"9.000 BTU"},{"value":"12000","label":"12.000 BTU"},{"value":"18000","label":"18.000 BTU"},{"value":"24000","label":"24.000 BTU"},{"value":"30000","label":"30.000 BTU ou mais"}]},
+        {"id":"ja_tem_ponto","type":"yes_no","label":"Já possui ponto elétrico no local?","required":true,"description_ai":"Whether there is already an electrical outlet at the installation point."},
+        {"id":"descricao","type":"description_ai","label":"Descreva o que precisa (pode usar a IA para sugerir)","required":false,"description_ai":"Free-text description of the AC installation or service; can be enhanced by AI."}
+      ]},
+      {"id":"step-obs","order":2,"title":"Observações e data","blocks":[
+        {"id":"observacoes","type":"textarea","label":"Observações adicionais","required":false,"validation":{"maxLength":500},"description_ai":"Additional notes from the client."},
+        {"id":"data_preferida","type":"date","label":"Data preferida para o serviço","required":false,"description_ai":"Preferred date for the service."},
+        {"id":"horario_preferido","type":"single_select","label":"Melhor horário para visita","required":false,"description_ai":"Preferred time slot for the visit.","options":[{"value":"manha","label":"Manhã (8h–12h)"},{"value":"tarde","label":"Tarde (12h–18h)"},{"value":"noite","label":"Noite (18h–20h)"},{"value":"flexivel","label":"Flexível"}]}
+      ]}
+    ]}'::jsonb,
+    '2.0',
+    'active',
+    'Form for air conditioning installation quote requests'
   )
 on conflict (id) do nothing;
 
@@ -124,11 +148,24 @@ values
     '{"max_words": 350, "allow_markdown": false, "use_caps_for_titles": true, "use_block_separation": true}'::jsonb,
     1,
     true
+  ),
+  (
+    'f6a7b8c9-d0e1-4234-f567-000000000003'::uuid,
+    'description_instalacao_ar_condicionado',
+    'Smart description - Instalação de ar condicionado',
+    'You help users describe their air conditioning installation or service request (residential or commercial). Focus on: type of service (new installation, maintenance/cleaning, unit replacement), number of units, BTU capacity, whether electrical outlet already exists, room/location details. Output in plain text, no markdown. Be concise. Respect the max words and formatting rules.',
+    'Instalação, manutenção ou troca de ar condicionado.',
+    'Ambiente onde o(s) aparelho(s) será(ão) instalado(s) ou atendido(s).',
+    800,
+    0.7,
+    '{"max_words": 350, "allow_markdown": false, "use_caps_for_titles": true, "use_block_separation": true}'::jsonb,
+    1,
+    true
   )
 on conflict (prompt_key) do nothing;
 
 -- ---------------------------------------------------------------------------
--- services (default + instalacao eletrica)
+-- services (default + instalacao eletrica + instalacao ar condicionado)
 -- ---------------------------------------------------------------------------
 insert into public.services (id, parent_id, form_id, title, description, slug, show_on_request_quote, active, sort_order, ai_prompt_id)
 values
@@ -155,5 +192,17 @@ values
     true,
     1,
     'f6a7b8c9-d0e1-4234-f567-000000000002'::uuid
+  ),
+  (
+    'e5f6a7b8-c9d0-4123-e456-000000000003'::uuid,
+    null,
+    'd4e5f6a7-b8c9-4012-d345-000000000003'::uuid,
+    'Instalação de ar condicionado',
+    'Orçamento para instalação nova, manutenção, limpeza ou troca de ar condicionado residencial e comercial.',
+    'instalacao-ar-condicionado',
+    true,
+    true,
+    2,
+    'f6a7b8c9-d0e1-4234-f567-000000000003'::uuid
   )
 on conflict (slug) do nothing;

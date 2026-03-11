@@ -36,6 +36,9 @@ export interface StructuredAIResponse {
 export type SmartDescriptionMode = "full_description" | "suggestion";
 
 
+/** AI provider: OpenAI (default) or Google Gemini. */
+export type SmartDescriptionProvider = "openai" | "gemini";
+
 /**
  * Request body for the generate-smart-description edge function.
  */
@@ -56,6 +59,8 @@ export interface GenerateSmartDescriptionBody {
   mode?: SmartDescriptionMode;
   /** Form schema (steps with blocks) so the AI gets field meanings (description_ai per block). */
   formSchema?: Record<string, unknown> | null;
+  /** AI provider: "openai" (default) or "gemini". */
+  provider?: SmartDescriptionProvider;
 }
 
 /**
@@ -84,6 +89,7 @@ export interface ParsedRequestParams {
   useStructuredOutput: boolean;
   mode: SmartDescriptionMode;
   formSchema: Record<string, unknown> | null;
+  provider: SmartDescriptionProvider;
 }
 
 /** Result of resolving prompt config and service display name. */

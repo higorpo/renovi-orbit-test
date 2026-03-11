@@ -10,3 +10,4 @@ export const corsHeaders: Record<string, string> = {
 };
 
 export const DEFAULT_MODEL = "gpt-4o-mini";
+export const GEMINI_DEFAULT_MODEL = "gemini-2.5-flash";

@@ -7,8 +7,9 @@ import type {
   ResolvedPromptResult,
   ProcessedAIResult,
   SmartDescriptionMode,
+  SmartDescriptionProvider,
 } from "./types.ts";
-import { corsHeaders, DEFAULT_MODEL } from "./constants.ts";
+import { corsHeaders, DEFAULT_MODEL, GEMINI_DEFAULT_MODEL } from "./constants.ts";
 import { formatProfessionalDescription, postProcessDescription } from "./formatting.ts";
 import { logPromptUsage } from "./usage.ts";
 import {
@@ -58,6 +59,7 @@ export function parseRequestParams(
     useStructuredOutput: body.useStructuredOutput !== false,
     mode: body.mode ?? "full_description",
     formSchema: body.formSchema ?? null,
+    provider: body.provider ?? "gemini",
   };
 }
 
@@ -190,6 +192,78 @@ export async function callOpenAI(params: {
   return { rawContent, tokensUsed };
 }
 
+export async function callGemini(params: {
+  systemPrompt: string;
+  userPrompt: string;
+  promptConfig: PromptConfig;
+  enableStructured: boolean;
+}): Promise<{ rawContent: string; tokensUsed?: number }> {
+  const { systemPrompt, userPrompt, promptConfig, enableStructured } = params;
+  const apiKey = Deno.env.get("GEMINI_API_KEY");
+  if (!apiKey) {
+    throw new Error(
+      "GEMINI_API_KEY não configurada. Defina o secret no projeto Supabase."
+    );
+  }
+
+  const temperature = enableStructured
+    ? Math.min(promptConfig.temperature, 0.3)
+    : promptConfig.temperature;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_DEFAULT_MODEL}:generateContent?key=${apiKey}`;
+  const body: Record<string, unknown> = {
+    contents: [
+      {
+        role: "user",
+        parts: [{ text: userPrompt }],
+      },
+    ],
+    systemInstruction: {
+      parts: [{ text: systemPrompt }],
+    },
+    generationConfig: {
+      temperature,
+      maxOutputTokens: promptConfig.max_tokens,
+    },
+  };
+  if (enableStructured) {
+    (body.generationConfig as Record<string, unknown>).responseMimeType =
+      "application/json";
+  }
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Gemini ${response.status}: ${errorText.substring(0, 200)}`
+    );
+  }
+
+  const data = await response.json();
+  const textPart = data.candidates?.[0]?.content?.parts?.[0];
+  const rawContent =
+    textPart?.text ?? (typeof textPart === "string" ? textPart : "");
+  const tokensUsed = data.usageMetadata?.totalTokenCount;
+
+  return { rawContent, tokensUsed };
+}
+
+export function callAI(params: {
+  provider: SmartDescriptionProvider;
+  systemPrompt: string;
+  userPrompt: string;
+  promptConfig: PromptConfig;
+  enableStructured: boolean;
+}): Promise<{ rawContent: string; tokensUsed?: number }> {
+  const { provider, ...rest } = params;
+  return provider === "gemini" ? callGemini(rest) : callOpenAI(rest);
+}
+
 export function processAIResponse(params: {
   rawContent: string;
   mode: SmartDescriptionMode;
@@ -273,6 +347,7 @@ export function buildSuccessResponse(params: {
   mode: SmartDescriptionMode;
   enableStructured: boolean;
   structuredResponse: StructuredAIResponse | null;
+  provider: SmartDescriptionProvider;
 }): Response {
   const {
     processedDescription,
@@ -283,6 +358,7 @@ export function buildSuccessResponse(params: {
     mode,
     enableStructured,
     structuredResponse,
+    provider,
   } = params;
 
   const responseData: {
@@ -300,6 +376,7 @@ export function buildSuccessResponse(params: {
       processed_length: processedDescription.length,
       mode,
       structured: enableStructured && mode !== "suggestion",
+      provider,
     },
   };
 
