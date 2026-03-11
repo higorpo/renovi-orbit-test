@@ -68,9 +68,9 @@ export function InlineClientSignupFields({
   } = usePasswordFieldDisplay({ password: data.password });
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-foreground">{title}</h2>
-      <div className="grid gap-4 sm:grid-cols-2">
+    <div className="space-y-4 sm:space-y-6">
+      <h2 className="text-lg sm:text-xl font-semibold text-foreground">{title}</h2>
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
         <div>
           <Label className="text-foreground">Nome</Label>
           <Input

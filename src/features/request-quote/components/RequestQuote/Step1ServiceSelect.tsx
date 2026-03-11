@@ -37,9 +37,9 @@ export function Step1ServiceSelect({
   }, [services]);
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-foreground">Escolha o tipo de serviço</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3 md:gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <h2 className="text-lg sm:text-xl font-semibold text-foreground">Escolha o tipo de serviço</h2>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-2.5 md:gap-3 lg:gap-4">
         {flatServices.map((srv) => {
           const isSelected = selectedService?.id === srv.id;
           const { Icon, color } = getServiceCardStyle(srv.slug);
@@ -109,7 +109,7 @@ export function Step1ServiceSelect({
       {!isLoading && services.length === 0 && !error && (
         <p className="text-muted-foreground">Nenhum serviço disponível no momento.</p>
       )}
-      <p className="text-center text-xs sm:text-sm text-muted-foreground mt-6">
+      <p className="text-center text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6">
         Selecione um serviço para continuar.{" "}
         <span className="font-medium">Nenhuma cobrança será feita agora.</span>
       </p>

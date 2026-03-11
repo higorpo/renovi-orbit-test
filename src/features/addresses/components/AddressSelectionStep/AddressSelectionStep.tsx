@@ -96,16 +96,16 @@ export function AddressSelectionStep({
 
   if (userId && addresses.length > 0 && !showNewAddressForm) {
     return (
-      <div className="space-y-6">
-        <h2 className="text-xl font-semibold text-foreground">{title}</h2>
-        <p className="text-muted-foreground">{choosePrompt}</p>
+      <div className="space-y-4 sm:space-y-6">
+        <h2 className="text-lg sm:text-xl font-semibold text-foreground">{title}</h2>
+        <p className="text-muted-foreground text-sm">{choosePrompt}</p>
         <div className="space-y-2">
           {addresses.map((addr) => (
             <button
               key={addr.id}
               type="button"
               onClick={() => setSelectedAddressId(addr.id)}
-              className={`w-full text-left p-4 rounded-lg border transition ${
+              className={`w-full text-left p-3 sm:p-4 rounded-lg border transition ${
                 selectedAddressId === addr.id
                   ? "border-primary bg-primary/10"
                   : "border-border hover:bg-muted/50"
@@ -140,8 +140,8 @@ export function AddressSelectionStep({
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+    <div className="space-y-4 sm:space-y-6">
+      <h2 className="text-lg sm:text-xl font-semibold text-foreground">{title}</h2>
       {showNewAddressForm && !restoredFromPersisted && userId && addresses.length > 0 && (
         <Button
           type="button"
@@ -153,7 +153,7 @@ export function AddressSelectionStep({
           {backToAddressesLabel}
         </Button>
       )}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
         <div>
           <Label className="text-foreground">CEP</Label>
           <Input
@@ -265,9 +265,9 @@ export function AddressSelectionStep({
         </div>
       </div>
 
-      <div className="rounded-lg border border-border bg-muted/30 p-4 flex gap-3">
-        <Info className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-        <p className="text-sm text-muted-foreground">
+      <div className="rounded-lg border border-border bg-muted/30 p-3 sm:p-4 flex gap-2 sm:gap-3">
+        <Info className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground shrink-0 mt-0.5" />
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Não conseguiu selecionar estado, cidade ou bairro? A Renovi ainda não está presente na sua região.
           Você pode seguir nosso Instagram em{" "}
           <a

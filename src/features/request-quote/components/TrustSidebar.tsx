@@ -8,7 +8,7 @@ export function TrustSidebar({ variant = "desktop" }: TrustSidebarProps) {
   const isDesktop = variant === "desktop";
 
   return (
-    <div className={isDesktop ? "space-y-4" : "space-y-4 mt-6"}>
+    <div className={isDesktop ? "space-y-4" : "space-y-4"}>
       <div className="bg-white rounded-xl p-4 xl:p-5 shadow-md border border-border">
         <h3 className="font-semibold text-foreground mb-3 text-sm xl:text-base">
           Por que usar a Renovi?

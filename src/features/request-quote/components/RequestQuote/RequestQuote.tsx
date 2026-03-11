@@ -128,7 +128,7 @@ export function RequestQuote() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-primary to-primary/90 overflow-hidden">
       <header className="fixed top-0 left-0 right-0 z-50 bg-primary/95 backdrop-blur-lg border-b border-white/10">
-        <div className="container mx-auto px-2 sm:px-4 py-2 sm:py-3 flex items-center justify-between">
+        <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2">
           <Link to="/">
             <img src="/logo-renovi-white.webp" alt="Renovi" className="h-7 sm:h-8 md:h-10 w-auto" />
           </Link>
@@ -150,7 +150,7 @@ export function RequestQuote() {
                   >
                     {state.currentStep > item.step ? <Check className="w-3 h-3" /> : item.step}
                   </div>
-                  <span className="hidden md:inline text-xs font-medium">{item.label}</span>
+                  <span className="hidden lg:inline text-xs font-medium">{item.label}</span>
                   {state.currentStep === item.step && (
                     <span className="hidden lg:inline text-[10px] text-white/70 ml-0.5">
                       ~{item.time}
@@ -159,7 +159,7 @@ export function RequestQuote() {
                 </div>
                 {index < stepLabels.length - 1 && (
                   <div
-                    className={`w-4 md:w-8 h-0.5 mx-0.5 transition-all ${
+                    className={`w-4 lg:w-8 h-0.5 mx-0.5 transition-all ${
                       state.currentStep > item.step ? "bg-accent" : "bg-white/20"
                     }`}
                   />
@@ -208,9 +208,9 @@ export function RequestQuote() {
         </div>
       </header>
 
-      <div className="pt-20 sm:pt-24 md:pt-28 pb-8 sm:pb-12 px-2 sm:px-4">
-        <div className="container mx-auto flex gap-6 lg:gap-8 justify-center">
-          <div className="w-full max-w-4xl">
+      <div className="pt-20 sm:pt-20 md:pt-24 lg:pt-28 pb-6 sm:pb-8 md:pb-12 px-3 sm:px-4">
+        <div className="w-full mx-auto flex gap-4 lg:gap-8 justify-center">
+          <div className="w-full max-w-4xl min-w-0">
             <AnimatePresence mode="wait">
               <motion.div
                 key={showConfirmEmail ? "confirm-email" : state.currentStep}
@@ -218,7 +218,7 @@ export function RequestQuote() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.2 }}
-                className="bg-white rounded-xl sm:rounded-2xl shadow-xl p-2.5 sm:p-6 md:p-8 lg:p-10"
+                className="bg-white rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 lg:p-10"
               >
                 {showConfirmEmail ? (
                   <ConfirmEmailScreen email={state.orderCreatedEmail!} />
@@ -226,7 +226,7 @@ export function RequestQuote() {
                   <>
                 {state.currentStep === 1 && (
                   <>
-                    <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                    <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-3 sm:mb-4 md:mb-6">
                       <div className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium">
                         <Clock className="w-3.5 h-3.5" />
                         <span className="hidden sm:inline">Leva menos de</span> 2 min
@@ -236,7 +236,7 @@ export function RequestQuote() {
                         Pagamento Protegido
                       </div>
                     </div>
-                    <div className="text-center mb-6">
+                    <div className="text-center mb-4 sm:mb-6">
                       <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary mb-1.5 sm:mb-2">
                         Contrate profissionais verificados{" "}
                         <span className="md:block">com segurança e tranquilidade.</span>
@@ -249,7 +249,7 @@ export function RequestQuote() {
                   </>
                 )}
                 {state.currentStep === 2 && state.selectedService && (
-                  <div className="flex items-center gap-2.5 sm:gap-3 mb-4 sm:mb-6">
+                  <div className="flex items-center gap-2.5 sm:gap-3 mb-3 sm:mb-4 md:mb-6">
                     <div
                       className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br ${getServiceCardStyle(state.selectedService.slug).color} flex items-center justify-center shrink-0`}
                     >
@@ -268,36 +268,36 @@ export function RequestQuote() {
                 {currentRender()}
 
                 {state.currentStep >= 3 && !showConfirmEmail && (
-                  <div className="flex justify-between mt-8 pt-6 border-t border-border">
+                  <div className="flex flex-col-reverse sm:flex-row flex-wrap justify-between gap-3 mt-6 pt-4 sm:mt-8 sm:pt-6 border-t border-border">
                     <Button
                       type="button"
                       variant="outline"
-                      className="border-border text-foreground hover:bg-accent"
+                      className="border-border text-foreground hover:bg-accent w-full sm:w-auto min-w-0"
                       onClick={handleBack}
                       disabled={state.currentStep === 1}
                     >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      <ChevronLeft className="h-4 w-4 mr-1 shrink-0" />
                       Voltar
                     </Button>
                     {state.currentStep < totalSteps ? (
                       <Button
                         type="button"
-                        className="bg-primary text-primary-foreground hover:bg-primary/90"
+                        className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto min-w-0"
                         onClick={handleNext}
                         disabled={state.generatingDescription || (state.currentStep === 3 && !isDescriptionStepValid) || (state.currentStep === 4 && !isAddressStepValid)}
                       >
                         Próximo
-                        <ChevronRight className="h-4 w-4 ml-1" />
+                        <ChevronRight className="h-4 w-4 ml-1 shrink-0" />
                       </Button>
                     ) : (
                       <Button
                         type="button"
-                        className="bg-primary text-primary-foreground hover:bg-primary/90"
+                        className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto min-w-0"
                         onClick={handleSubmit}
                         disabled={state.loading || !isFinalStepValid}
                       >
                         {state.loading ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          <Loader2 className="h-4 w-4 animate-spin mr-2 shrink-0" />
                         ) : null}
                         Enviar pedido
                       </Button>
@@ -310,14 +310,14 @@ export function RequestQuote() {
             </AnimatePresence>
 
             {state.currentStep === 1 && (
-              <div className="lg:hidden mt-6">
+              <div className="lg:hidden mt-4">
                 <TrustSidebar variant="mobile" />
               </div>
             )}
           </div>
 
           <aside className="hidden lg:block w-64 xl:w-72 shrink-0">
-            <div className="sticky top-28">
+            <div className="sticky top-20 lg:top-24">
               <TrustSidebar variant="desktop" />
             </div>
           </aside>

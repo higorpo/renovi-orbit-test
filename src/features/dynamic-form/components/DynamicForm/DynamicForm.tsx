@@ -74,12 +74,12 @@ function FormContent({
   return (
     <div className="flex flex-col min-h-full">
       {schema.config.showProgressBar !== false && (
-        <div className="px-4 pt-4 pb-2 border-b border-border/50">
+        <div className="px-3 pt-3 pb-1.5 sm:px-4 sm:pt-4 sm:pb-2 border-b border-border/50">
           <ProgressBar variant="bar" showLabels />
         </div>
       )}
 
-      <div className="flex-1 px-4 py-6 overflow-auto">
+      <div className="flex-1 px-3 py-4 sm:px-4 sm:py-6 overflow-auto">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStepIndex}
@@ -93,8 +93,8 @@ function FormContent({
         </AnimatePresence>
       </div>
 
-      <div className="px-4 pb-4 pt-3 border-t border-border/50 bg-background">
-        <div className="flex items-center gap-3">
+      <div className="px-3 pb-3 pt-2 sm:px-4 sm:pb-4 sm:pt-3 border-t border-border/50 bg-background">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Button
             type="button"
             variant="outline"
@@ -147,7 +147,7 @@ export function DynamicForm({
 
   if (!validationResult.valid) {
     return (
-      <div className={cn("p-4", className)}>
+      <div className={cn("p-3 sm:p-4", className)}>
         <SchemaError
           validationResult={validationResult}
           schemaName={schema?.metadata?.categorySlug}
