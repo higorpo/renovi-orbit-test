@@ -1,3 +1,4 @@
+import { expect } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
 
 /**
@@ -144,80 +145,98 @@ export class RequestQuotePage {
   }
 
   getCepInput() {
-    return this.page.getByLabel("CEP");
+    return this.page.getByPlaceholder("00000-000");
   }
 
   getStateSelectTrigger() {
-    return this.page.getByLabel("Estado");
+    return this.page
+      .getByText("Estado", { exact: true })
+      .locator("..")
+      .getByRole("combobox");
   }
 
   getCitySelectTrigger() {
-    return this.page.getByLabel("Cidade");
+    return this.page
+      .getByText("Cidade", { exact: true })
+      .locator("..")
+      .getByRole("combobox");
   }
 
   getNeighborhoodSelectTrigger() {
-    return this.page.getByLabel("Bairro");
+    return this.page
+      .getByText("Bairro", { exact: true })
+      .locator("..")
+      .getByRole("combobox");
   }
 
   getStreetInput() {
-    return this.page.getByLabel("Rua");
+    return this.page
+      .getByText("Rua", { exact: true })
+      .locator("..")
+      .getByRole("textbox");
   }
 
   getNumberInput() {
-    return this.page.getByLabel("Número");
+    return this.page
+      .getByText("Número", { exact: true })
+      .locator("..")
+      .getByRole("textbox");
   }
 
   getComplementInput() {
-    return this.page.getByLabel("Complemento");
+    return this.page.getByPlaceholder("Apto, bloco, etc. (opcional)");
   }
 
   /** Select first available state (after opening the state dropdown). */
   async selectFirstState() {
     await this.getStateSelectTrigger().click();
-    await this.page.getByRole("option").first().click();
+    const firstOption = this.page.getByRole("option").first();
+    await firstOption.waitFor({ state: "visible", timeout: 8000 });
+    await firstOption.click();
   }
 
   /** Select first available city (state must be selected first). */
   async selectFirstCity() {
     await this.getCitySelectTrigger().click();
-    await this.page.getByRole("option").first().click();
+    const firstOption = this.page.getByRole("option").first();
+    await firstOption.waitFor({ state: "visible", timeout: 8000 });
+    await firstOption.click();
   }
 
   /** Select first available neighborhood (city must be selected first). */
   async selectFirstNeighborhood() {
     await this.getNeighborhoodSelectTrigger().click();
-    await this.page.getByRole("option").first().click();
+    const firstOption = this.page.getByRole("option").first();
+    await firstOption.waitFor({ state: "visible", timeout: 8000 });
+    await firstOption.click();
   }
 
-  /** Fill address form (guest flow). Assumes platform_states/cities/neighborhoods exist. */
+  /** Fill address form (guest flow). Fills CEP, waits for state to be enabled, then selects state/city/neighborhood and street/number. */
   async fillNewAddress(options: {
     cep?: string;
     street: string;
     number: string;
     complement?: string;
   }) {
-    const { cep = "01310-100", street, number, complement = "" } = options;
+    const { cep = "01001-000", street, number, complement = "" } = options;
     await this.getCepInput().fill(cep);
-    await this.page.waitForTimeout(600);
+    await this.page.waitForTimeout(2000);
     const stateTrigger = this.getStateSelectTrigger();
-    if (await stateTrigger.isVisible()) {
-      await this.selectFirstState();
-      await this.page.waitForTimeout(300);
-    }
-    const cityTrigger = this.getCitySelectTrigger();
-    if (await cityTrigger.isVisible()) {
-      await this.selectFirstCity();
-      await this.page.waitForTimeout(300);
-    }
-    const neighborhoodTrigger = this.getNeighborhoodSelectTrigger();
-    if (await neighborhoodTrigger.isVisible()) {
-      await this.selectFirstNeighborhood();
-    }
+    await stateTrigger.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
+    await expect(stateTrigger).toBeEnabled({ timeout: 10000 });
+    await this.selectFirstState();
+    await this.page.waitForTimeout(800);
+    await this.selectFirstCity();
+    await this.page.waitForTimeout(800);
+    await this.selectFirstNeighborhood();
+    await this.page.waitForTimeout(300);
     await this.getStreetInput().fill(street);
     await this.getNumberInput().fill(number);
     if (complement) {
       await this.getComplementInput().fill(complement);
     }
+    await this.page.waitForTimeout(800);
+    await expect(this.getNextButton()).toBeEnabled({ timeout: 15000 });
   }
 
   // ─── Step 5: Identity (guest only) ────────────────────────────────────────
@@ -226,15 +245,15 @@ export class RequestQuotePage {
   }
 
   getFirstNameInput() {
-    return this.page.getByLabel("Nome");
+    return this.page.getByPlaceholder("Nome", { exact: true });
   }
 
   getLastNameInput() {
-    return this.page.getByLabel("Sobrenome");
+    return this.page.getByPlaceholder("Sobrenome", { exact: true });
   }
 
   getEmailInput() {
-    return this.page.getByLabel("E-mail");
+    return this.page.getByPlaceholder("seu@email.com", { exact: true });
   }
 
   getPasswordInput() {
@@ -321,9 +340,11 @@ export class RequestQuotePage {
   }
 
   getToastSmartDescriptionError() {
-    return this.page.getByText(
-      "Não foi possível gerar a descrição automaticamente. Descreva o serviço manualmente."
-    );
+    return this.page
+      .getByText(
+        "Não foi possível gerar a descrição automaticamente. Descreva o serviço manualmente."
+      )
+      .first();
   }
 
   getToastGenericError() {
@@ -368,6 +389,7 @@ export class RequestQuotePage {
 
   /**
    * Complete step 2 (dynamic form): click Próximo until Concluir appears, then Concluir.
+   * Use only when the form has no required fields or they are already filled.
    * No-op if form is not configured. Returns true if step 3 (Descrição e Fotos) is reached.
    */
   async completeStep2ToStep3(): Promise<boolean> {
@@ -386,5 +408,79 @@ export class RequestQuotePage {
       await this.page.waitForTimeout(400);
     }
     return false;
+  }
+
+  /**
+   * Fills the step 2 form for "Instalação elétrica" (seed schema) and completes it to reach step 3.
+   * Step 0: Nova instalação -> Residencial -> Média -> Próximo.
+   * Step 1: Quantidade de pontos = 4, Precisa de aterramento = Sim -> Próximo.
+   * Step 2: Concluir (observações optional).
+   * Returns true if step 3 is reached. Call after selecting a service that uses this form.
+   */
+  async fillStep2ElectricalFormAndComplete(): Promise<boolean> {
+    const next = this.getDynamicFormNextButton();
+    const concluir = this.getDynamicFormConcluirButton();
+
+    if ((await next.count()) === 0 && (await concluir.count()) === 0) {
+      return false;
+    }
+
+    await this.page.waitForTimeout(500);
+
+    const novaInstalacao = this.page.getByRole("radio", { name: "Nova instalação" });
+    if (await novaInstalacao.isVisible()) {
+      await novaInstalacao.click();
+      await this.page.waitForTimeout(200);
+    }
+    const residencial = this.page.getByRole("radio", { name: "Residencial" });
+    if (await residencial.isVisible()) {
+      await residencial.click();
+      await this.page.waitForTimeout(200);
+    }
+    const media = this.page.getByRole("radio", { name: "Média" });
+    if (await media.isVisible()) {
+      await media.click();
+      await this.page.waitForTimeout(200);
+    }
+    if ((await next.count()) > 0 && !(await next.isDisabled())) {
+      await next.click();
+      await this.page.waitForTimeout(500);
+    }
+
+    const qtdPontos = this.page.getByLabel(/Quantidade de pontos ou circuitos/i);
+    if (await qtdPontos.isVisible()) {
+      await qtdPontos.fill("4");
+      await this.page.waitForTimeout(200);
+    }
+    const aterramentoGroup = this.page.getByLabel(/Precisa de aterramento/i);
+    if (await aterramentoGroup.isVisible()) {
+      await aterramentoGroup.getByRole("radio", { name: "Sim" }).click();
+      await this.page.waitForTimeout(200);
+    } else {
+      const simRadio = this.page.getByRole("radio", { name: "Sim" }).first();
+      if (await simRadio.isVisible()) {
+        await simRadio.click();
+        await this.page.waitForTimeout(200);
+      }
+    }
+    if ((await next.count()) > 0 && !(await next.isDisabled())) {
+      await next.click();
+      await this.page.waitForTimeout(500);
+    }
+
+    if ((await concluir.count()) > 0 && !(await concluir.isDisabled())) {
+      await concluir.click();
+      await this.page.waitForTimeout(600);
+    } else if ((await next.count()) > 0 && !(await next.isDisabled())) {
+      await next.click();
+      await this.page.waitForTimeout(500);
+      if ((await concluir.count()) > 0) {
+        await concluir.click();
+        await this.page.waitForTimeout(600);
+      }
+    }
+
+    const step3Visible = await this.getStep3SectionTitle().isVisible();
+    return step3Visible;
   }
 }
