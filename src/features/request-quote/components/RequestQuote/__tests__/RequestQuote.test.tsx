@@ -4,6 +4,7 @@ import type { AuthContextType } from "@/features/auth";
 import { RequestQuote } from "../RequestQuote";
 import {
   mockRequestQuoteState,
+  mockFormSchema,
 } from "./fixtures/requestQuoteTestFixtures";
 import { renderWithRequestQuoteProviders } from "./testUtils";
 
@@ -93,6 +94,9 @@ const useRequestQuoteDraft = await import("../../../hooks/useRequestQuoteDraft")
 );
 const useRequestQuoteState = await import("../../../hooks/useRequestQuoteState").then((m) =>
   vi.mocked(m.useRequestQuoteState)
+);
+const useServiceSchema = await import("../../../hooks/useServiceSchema").then((m) =>
+  vi.mocked(m.useServiceSchema)
 );
 
 describe("RequestQuote", () => {
@@ -193,5 +197,145 @@ describe("RequestQuote", () => {
   it("renders step labels for guest (5 steps)", () => {
     renderWithRequestQuoteProviders(<RequestQuote />);
     expect(screen.getByText(/Etapa 1 de 5/)).toBeInTheDocument();
+  });
+
+  it("logo links to home", () => {
+    renderWithRequestQuoteProviders(<RequestQuote />);
+    const logo = screen.getByRole("link", { name: /Renovi/i });
+    expect(logo).toHaveAttribute("href", "/");
+  });
+
+  it("passes urlServiceSlug from search params to draft and navigation", () => {
+    const searchParams = new URLSearchParams({ serviceSlug: "limpeza-profunda" });
+    useSearchParams.mockReturnValue([searchParams, vi.fn()]);
+    renderWithRequestQuoteProviders(<RequestQuote />);
+    expect(useRequestQuoteDraft).toHaveBeenCalledWith(
+      expect.anything(),
+      "limpeza-profunda"
+    );
+  });
+
+  it("shows SectionTitleWithIcon on step 2 when selectedService is set", () => {
+    const state = mockRequestQuoteState({
+      currentStep: 2,
+      selectedService: {
+        id: "svc-1",
+        slug: "limpeza",
+        title: "Limpeza",
+        description: "Serviço",
+        active: true,
+        show_on_request_quote: true,
+        parent_id: null,
+        form_id: "f1",
+        icon_key: "Wrench",
+        color_key: "slate",
+        image_url: null,
+        sort_order: 0,
+        created_at: "",
+        updated_at: "",
+        ai_prompt_id: null,
+      },
+      step2Data: { field1: "x" },
+    });
+    useRequestQuoteState.mockReturnValue(state);
+    useServiceSchema.mockReturnValue({
+      schema: mockFormSchema,
+      fallbackReason: null,
+      isLoading: false,
+    });
+    renderWithRequestQuoteProviders(<RequestQuote />);
+    expect(
+      screen.getByText("Nos conte mais sobre o serviço")
+    ).toBeInTheDocument();
+  });
+
+  it("Próximo is disabled on step 3 when description is empty", () => {
+    const state = mockRequestQuoteState({
+      currentStep: 3,
+      step3Data: {
+        description: "",
+        photos: [],
+        photoPreviews: [],
+      },
+      generatingDescription: false,
+    });
+    useRequestQuoteState.mockReturnValue(state);
+    renderWithRequestQuoteProviders(<RequestQuote />);
+    const nextBtn = screen.getByRole("button", { name: /Próximo/i });
+    expect(nextBtn).toBeDisabled();
+  });
+
+  it("Próximo is disabled on step 3 when generatingDescription is true", () => {
+    const state = mockRequestQuoteState({
+      currentStep: 3,
+      step3Data: {
+        description: "Some text",
+        photos: [],
+        photoPreviews: [],
+      },
+      generatingDescription: true,
+    });
+    useRequestQuoteState.mockReturnValue(state);
+    renderWithRequestQuoteProviders(<RequestQuote />);
+    const nextBtn = screen.getByRole("button", { name: /Próximo/i });
+    expect(nextBtn).toBeDisabled();
+  });
+
+  it("Voltar is visible on step 3 and handleBack is called when clicked", () => {
+    const state = mockRequestQuoteState({
+      currentStep: 3,
+      step3Data: {
+        description: "Done",
+        photos: [],
+        photoPreviews: [],
+      },
+    });
+    useRequestQuoteState.mockReturnValue(state);
+    renderWithRequestQuoteProviders(<RequestQuote />);
+    const voltarBtn = screen.getByRole("button", { name: /Voltar/i });
+    expect(voltarBtn).toBeInTheDocument();
+    fireEvent.click(voltarBtn);
+    const setCurrentStepMock = vi.mocked(state.setCurrentStep);
+    expect(setCurrentStepMock).toHaveBeenCalled();
+    const updater = setCurrentStepMock.mock.calls[0]?.[0];
+    expect(typeof updater).toBe("function");
+    expect((updater as (prev: number) => number)(3)).toBe(2);
+  });
+
+  it("Enviar pedido is disabled on step 5 when step5Data is invalid", () => {
+    const state = mockRequestQuoteState({
+      currentStep: 5,
+      step5Data: {
+        firstName: "J",
+        lastName: "S",
+        email: "invalid",
+        password: "short",
+        confirmPassword: "other",
+        termsAccepted: false,
+      },
+    });
+    useRequestQuoteState.mockReturnValue(state);
+    renderWithRequestQuoteProviders(<RequestQuote />);
+    const submitBtn = screen.getByRole("button", { name: /Enviar pedido/i });
+    expect(submitBtn).toBeDisabled();
+  });
+
+  it("Enviar pedido shows loader when loading is true", () => {
+    const state = mockRequestQuoteState({
+      currentStep: 5,
+      loading: true,
+      step5Data: {
+        firstName: "João",
+        lastName: "Silva",
+        email: "joao@example.com",
+        password: "SecurePass123!",
+        confirmPassword: "SecurePass123!",
+        termsAccepted: true,
+      },
+    });
+    useRequestQuoteState.mockReturnValue(state);
+    renderWithRequestQuoteProviders(<RequestQuote />);
+    expect(screen.getByRole("button", { name: /Enviar pedido/i })).toBeInTheDocument();
+    expect(document.querySelector(".animate-spin")).toBeInTheDocument();
   });
 });

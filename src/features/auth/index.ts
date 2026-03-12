@@ -36,4 +36,5 @@ export {
 export type { ClientSignupIdentityData } from "./types/clientSignupIdentity.validation";
 export { usePasswordFieldDisplay } from "./hooks/usePasswordFieldDisplay";
 export { InlineClientSignupFields } from "./components/InlineClientSignup/InlineClientSignupFields";
+export type { InlineClientSignupFieldsProps } from "./components/InlineClientSignup/InlineClientSignupFields";
 export { getClientEmailRedirectTo } from "./hooks/useClientSignupForm";

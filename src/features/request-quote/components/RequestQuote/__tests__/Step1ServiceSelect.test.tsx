@@ -4,7 +4,8 @@ import { SERVICE_PLACEHOLDER_IMAGE } from "../../../utils/serviceCardStyle";
 import { Step1ServiceSelect } from "../Step1ServiceSelect";
 import {
   mockServicesList,
-  mockServiceWithChildren
+  mockServiceWithChildren,
+  mockServiceWithChildrenNested,
 } from "./fixtures/requestQuoteTestFixtures";
 
 vi.mock("../../../hooks/useRequestQuoteServices", () => ({
@@ -257,5 +258,45 @@ describe("Step1ServiceSelect", () => {
     const grid = container.querySelector(".grid");
     expect(grid).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Limpeza/i })).not.toBeInTheDocument();
+  });
+
+  it("when error is set and services empty, does not show Nenhum serviço disponível", () => {
+    useRequestQuoteServices.mockReturnValue({
+      services: [],
+      isLoading: false,
+      error: "Network error",
+    });
+    render(
+      <Step1ServiceSelect
+        urlServiceSlug={null}
+        loadingSession={false}
+        selectedService={null}
+        onServiceSelect={onServiceSelect}
+      />
+    );
+    expect(screen.queryByText("Nenhum serviço disponível no momento.")).not.toBeInTheDocument();
+  });
+
+  it("renders only root when root has empty children array", () => {
+    const rootNoChildren = [
+      { ...mockServiceWithChildrenNested, id: "root-only", children: [] },
+    ];
+    useRequestQuoteServices.mockReturnValue({
+      services: rootNoChildren,
+      isLoading: false,
+      error: null,
+    });
+    render(
+      <Step1ServiceSelect
+        urlServiceSlug={null}
+        loadingSession={false}
+        selectedService={null}
+        onServiceSelect={onServiceSelect}
+      />
+    );
+    const buttons = screen.getAllByRole("button");
+    expect(buttons).toHaveLength(1);
+    expect(screen.getByText("Root Service")).toBeInTheDocument();
+    expect(screen.queryByText("Child 1")).not.toBeInTheDocument();
   });
 });

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
+import type { ClientSignupIdentityData, InlineClientSignupFieldsProps } from "@/features/auth";
 import { Step5Identity } from "../Step5Identity";
 import { mockStep5DataValid } from "./fixtures/requestQuoteTestFixtures";
 
@@ -7,11 +8,7 @@ vi.mock("@/features/auth", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/auth")>();
   return {
     ...actual,
-    InlineClientSignupFields: vi.fn((props: {
-      data: typeof mockStep5DataValid;
-      onDataChange: (data: unknown) => void;
-      title?: string;
-    }) => (
+    InlineClientSignupFields: vi.fn((props: InlineClientSignupFieldsProps) => (
       <div data-testid="inline-client-signup-fields">
         <span data-testid="title">{props.title}</span>
         <button
@@ -53,5 +50,36 @@ describe("Step5Identity", () => {
         firstName: "Updated",
       })
     );
+  });
+
+  it("calls onDataChange with updater function when wrapped component passes function", async () => {
+    const onDataChange = vi.fn();
+    const authModule = await import("@/features/auth");
+    const mockInline = vi.mocked(authModule.InlineClientSignupFields);
+    const previousImpl = mockInline.getMockImplementation();
+    mockInline.mockImplementation((props: InlineClientSignupFieldsProps) => (
+        <div data-testid="inline-client-signup-fields">
+          <button
+            type="button"
+            onClick={() =>
+              props.onDataChange((prev: ClientSignupIdentityData) => ({
+                ...prev,
+                lastName: "UpdatedLastName",
+              }))
+            }
+          >
+            Change with updater
+          </button>
+        </div>
+      )
+    );
+    render(<Step5Identity data={mockStep5DataValid} onDataChange={onDataChange} />);
+    fireEvent.click(screen.getByRole("button", { name: "Change with updater" }));
+    expect(onDataChange).toHaveBeenCalledTimes(1);
+    const arg = onDataChange.mock.calls[0]?.[0];
+    expect(typeof arg).toBe("function");
+    const result = arg(mockStep5DataValid);
+    expect(result).toMatchObject({ ...mockStep5DataValid, lastName: "UpdatedLastName" });
+    mockInline.mockImplementation(previousImpl ?? (() => <div />));
   });
 });

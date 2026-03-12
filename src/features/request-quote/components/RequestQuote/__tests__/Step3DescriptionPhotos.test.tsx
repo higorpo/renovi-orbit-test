@@ -240,4 +240,47 @@ describe("Step3DescriptionPhotos", () => {
     );
     expect(mockGenerateSmartDescription).not.toHaveBeenCalled();
   });
+
+  it("useEffect does not call generateSmartDescription when generatingDescription is true", () => {
+    state = mockRequestQuoteState({
+      currentStep: 3,
+      previousStep: 2,
+      step2Data: { x: 1 },
+      generatingDescription: true,
+    });
+    step2DataSnapshotRef.current = null;
+    render(
+      <Step3DescriptionPhotos state={state} step2DataSnapshotRef={step2DataSnapshotRef} />
+    );
+    expect(mockGenerateSmartDescription).not.toHaveBeenCalled();
+  });
+
+  it("processFiles appends multiple files from single input change", () => {
+    const file1 = new File(["a"], "a.png", { type: "image/png" });
+    const file2 = new File(["b"], "b.png", { type: "image/png" });
+    render(
+      <Step3DescriptionPhotos state={state} step2DataSnapshotRef={step2DataSnapshotRef} />
+    );
+    const input = document.querySelector('input[type="file"]');
+    fireEvent.change(input!, { target: { files: [file1, file2] } });
+    expect(createObjectURL).toHaveBeenCalledWith(file1);
+    expect(createObjectURL).toHaveBeenCalledWith(file2);
+    expect(state.setStep3Data).toHaveBeenCalled();
+    const updater = (state.setStep3Data as ReturnType<typeof vi.fn>).mock.calls[0]?.[0];
+    const prev = { description: "", photos: [] as File[], photoPreviews: [] as string[] };
+    const result = updater(prev);
+    expect(result.photos).toHaveLength(2);
+    expect(result.photoPreviews).toHaveLength(2);
+  });
+
+  it("clicking drop zone does not throw and file input is present", () => {
+    render(
+      <Step3DescriptionPhotos state={state} step2DataSnapshotRef={step2DataSnapshotRef} />
+    );
+    const dropZone = screen.getByText("Clique ou arraste e solte fotos aqui").closest("div");
+    expect(dropZone).toBeInTheDocument();
+    expect(() => fireEvent.click(dropZone!)).not.toThrow();
+    const input = document.querySelector('input[type="file"]');
+    expect(input).toBeInTheDocument();
+  });
 });
