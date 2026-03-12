@@ -50,12 +50,17 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
 
-    const hasCards =
-      (await rq.getFirstServiceCard().count()) > 0;
-    const hasEmpty = await rq.getServicesEmpty().isVisible();
-    const hasLoading = await rq.getServicesLoading().isVisible();
-
-    expect(hasCards || hasEmpty || hasLoading).toBeTruthy();
+    await expect
+      .poll(
+        async () => {
+          const hasCards = (await rq.getFirstServiceCard().count()) > 0;
+          const hasEmpty = await rq.getServicesEmpty().isVisible();
+          const hasLoading = await rq.getServicesLoading().isVisible();
+          return hasCards || hasEmpty || hasLoading;
+        },
+        { timeout: 15000, intervals: [500, 1000, 2000] }
+      )
+      .toBe(true);
   });
 
   test("step 1 shows hint text about no charge", async ({ page }) => {
@@ -135,15 +140,20 @@ test.describe("Request Quote - /pedir-orcamento", () => {
       return;
     }
     await firstCard.click();
-    await page.waitForTimeout(1500);
 
-    const formNotConfigured = await rq.getFormNotConfiguredAlert().isVisible();
-    const hasFormButtons =
-      (await rq.getDynamicFormCancelButton().count()) > 0 ||
-      (await rq.getDynamicFormNextButton().count()) > 0 ||
-      (await rq.getDynamicFormConcluirButton().count()) > 0;
-
-    expect(formNotConfigured || hasFormButtons).toBeTruthy();
+    await expect
+      .poll(
+        async () => {
+          const formNotConfigured = await rq.getFormNotConfiguredAlert().isVisible();
+          const hasFormButtons =
+            (await rq.getDynamicFormCancelButton().count()) > 0 ||
+            (await rq.getDynamicFormNextButton().count()) > 0 ||
+            (await rq.getDynamicFormConcluirButton().count()) > 0;
+          return formNotConfigured || hasFormButtons;
+        },
+        { timeout: 10000, intervals: [500, 1000, 2000] }
+      )
+      .toBe(true);
   });
 
   test("step 2 Cancelar returns to step 1", async ({ page }) => {
@@ -177,14 +187,23 @@ test.describe("Request Quote - /pedir-orcamento", () => {
       return;
     }
     await firstCard.click();
-    await page.waitForTimeout(1500);
+
+    await rq.getStep2SectionTitle().waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
     if (await rq.getFormNotConfiguredAlert().isVisible()) {
       test.skip();
       return;
     }
-    const hasNext = (await rq.getDynamicFormNextButton().count()) > 0;
-    const hasConcluir = (await rq.getDynamicFormConcluirButton().count()) > 0;
-    expect(hasNext || hasConcluir).toBeTruthy();
+
+    await expect
+      .poll(
+        async () => {
+          const hasNext = (await rq.getDynamicFormNextButton().count()) > 0;
+          const hasConcluir = (await rq.getDynamicFormConcluirButton().count()) > 0;
+          return hasNext || hasConcluir;
+        },
+        { timeout: 8000, intervals: [500, 1000] }
+      )
+      .toBe(true);
   });
 
   // ─── Step 3: Description ──────────────────────────────────────────────────
@@ -800,12 +819,17 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     await page.reload();
     await page.waitForTimeout(800);
     await rq.getDraftContinueButton().click();
-    await page.waitForTimeout(500);
-    await expect(rq.getDraftDialog()).not.toBeVisible();
-    const step2Visible =
-      (await rq.getStep2SectionTitle().isVisible()) ||
-      (await rq.getFormNotConfiguredAlert().isVisible());
-    expect(step2Visible).toBeTruthy();
+    await expect(rq.getDraftDialog()).not.toBeVisible({ timeout: 5000 });
+    await expect
+      .poll(
+        async () => {
+          const title = await rq.getStep2SectionTitle().isVisible();
+          const alert = await rq.getFormNotConfiguredAlert().isVisible();
+          return title || alert;
+        },
+        { timeout: 10000, intervals: [500, 1000, 2000] }
+      )
+      .toBe(true);
   });
 
   test("draft with wrong version does not show restore dialog", async ({
