@@ -1,11 +1,22 @@
 import { Button } from "@/components/ui/button";
 import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { AddressSelectionStep, addressFormSchema } from "@/features/addresses";
 import { clientSignupIdentitySchema, useAuth } from "@/features/auth";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, Clock, Loader2, Shield } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
+import { useRequestQuoteDraft } from "../../hooks/useRequestQuoteDraft";
 import { useRequestQuoteNavigation } from "../../hooks/useRequestQuoteNavigation";
 import { useRequestQuoteState } from "../../hooks/useRequestQuoteState";
 import { useRequestQuoteSubmit } from "../../hooks/useRequestQuoteSubmit";
@@ -23,6 +34,7 @@ export function RequestQuote() {
   const urlServiceSlug = searchParams.get("serviceSlug");
 
   const state = useRequestQuoteState();
+  const { hasRestorableDraft, restoreDraft, discardDraft } = useRequestQuoteDraft(state, urlServiceSlug ?? null);
   const { handleSubmit, handleSubmitLoggedIn } = useRequestQuoteSubmit({ state });
   const {
     handleNext,
@@ -137,6 +149,25 @@ export function RequestQuote() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-primary to-primary/90 overflow-hidden">
+      <AlertDialog open={hasRestorableDraft}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Continuar de onde parou?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Encontramos um preenchimento anterior. Deseja continuar de onde parou ou começar um novo pedido?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={discardDraft}>
+              Começar de novo
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={restoreDraft}>
+              Continuar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <header className="fixed top-0 left-0 right-0 z-50 bg-primary/95 backdrop-blur-lg border-b border-white/10">
         <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2">
           <Link to="/">

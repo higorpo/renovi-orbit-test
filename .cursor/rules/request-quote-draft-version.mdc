@@ -1,0 +1,11 @@
+---
+description: Bump REQUEST_QUOTE_DRAFT_VERSION quando o fluxo ou estado persistido do request-quote mudar
+alwaysApply: false
+globs: src/features/request-quote/**/*
+---
+
+# Versão do rascunho do Request Quote
+
+Ao alterar o **fluxo de solicitação de orçamento** (novo passo, campo removido ou renomeado, mudança no shape do estado persistido em `requestQuoteDraft.persistence.ts`), **incremente a constante** `REQUEST_QUOTE_DRAFT_VERSION` em `src/features/request-quote/utils/requestQuoteDraft.persistence.ts`.
+
+Exemplo: se hoje for `"1"`, passe para `"2"`. Rascunhos salvos com versão diferente não serão oferecidos para restauração (evita incompatibilidade entre dados antigos e o formulário novo).

@@ -10,6 +10,7 @@ import {
 } from "@/features/auth";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { createRequestQuoteOrder } from "../api/createRequestQuoteOrder.api";
+import { clearDraft } from "../utils/requestQuoteDraft.persistence";
 import { checkPhotosContent } from "../utils/photoContentCheck";
 import type { RequestQuoteState } from "./useRequestQuoteState";
 
@@ -61,6 +62,7 @@ export function useRequestQuoteSubmit({
           source: "logged_in",
           had_photos: state.step3Data.photos.length > 0,
         });
+        clearDraft();
         toast.success("Pedido enviado com sucesso!");
         await new Promise((r) => setTimeout(r, 800));
         navigate("/dashboard/client", { replace: true });
@@ -148,6 +150,7 @@ export function useRequestQuoteSubmit({
           source: "guest_signup",
           had_photos: state.step3Data.photos.length > 0,
         });
+        clearDraft();
         state.setOrderCreatedEmail(email);
       } else {
         trackEvent("quote_request_failed", {
