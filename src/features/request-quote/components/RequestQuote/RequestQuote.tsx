@@ -53,7 +53,6 @@ export function RequestQuote() {
         urlServiceSlug={urlServiceSlug}
         loadingSession={loadingSession}
         selectedService={state.selectedService}
-        setSelectedService={state.setSelectedService}
         onServiceSelect={handleServiceSelect}
       />
     ),

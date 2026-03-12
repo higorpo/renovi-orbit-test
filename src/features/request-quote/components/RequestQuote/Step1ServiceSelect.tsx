@@ -8,7 +8,6 @@ export interface Step1ServiceSelectProps {
   urlServiceSlug: string | null;
   loadingSession: boolean;
   selectedService: ServiceWithChildren | null;
-  setSelectedService: (service: ServiceWithChildren | null) => void;
   onServiceSelect: (service: ServiceWithChildren) => void;
 }
 
@@ -16,13 +15,12 @@ export function Step1ServiceSelect({
   urlServiceSlug,
   loadingSession,
   selectedService,
-  setSelectedService,
   onServiceSelect,
 }: Step1ServiceSelectProps) {
   const { services, isLoading, error } = useRequestQuoteServices({
     urlServiceSlug,
     loadingSession,
-    setSelectedService,
+    onServiceSelect,
   });
 
   const flatServices = useMemo(() => {

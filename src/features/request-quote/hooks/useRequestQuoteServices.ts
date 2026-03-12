@@ -6,7 +6,7 @@ import type { ServiceWithChildren } from "../types/request-quote.types";
 export interface UseRequestQuoteServicesParams {
   urlServiceSlug: string | null;
   loadingSession: boolean;
-  setSelectedService: (service: ServiceWithChildren | null) => void;
+  onServiceSelect: (service: ServiceWithChildren) => void;
 }
 
 export interface UseRequestQuoteServicesResult {
@@ -18,7 +18,7 @@ export interface UseRequestQuoteServicesResult {
 export function useRequestQuoteServices({
   urlServiceSlug,
   loadingSession,
-  setSelectedService,
+  onServiceSelect,
 }: UseRequestQuoteServicesParams): UseRequestQuoteServicesResult {
   const { data: servicesData, isLoading } = useQuery({
     queryKey: ["request-quote-services"],
@@ -35,8 +35,8 @@ export function useRequestQuoteServices({
     const found = services
       .flatMap((s) => (s.children ? [s, ...s.children] : [s]))
       .find((s) => s.slug === urlServiceSlug);
-    if (found) setSelectedService(found);
-  }, [urlServiceSlug, services, loadingSession, setSelectedService]);
+    if (found) onServiceSelect(found);
+  }, [urlServiceSlug, services, loadingSession, onServiceSelect]);
 
   return {
     services,
