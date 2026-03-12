@@ -33,6 +33,7 @@ export function RequestQuote() {
     state,
     user: user ?? null,
     onSubmitLoggedIn: handleSubmitLoggedIn,
+    urlServiceSlug: urlServiceSlug ?? null,
   });
 
   const prevStepRef = useRef(state.currentStep);

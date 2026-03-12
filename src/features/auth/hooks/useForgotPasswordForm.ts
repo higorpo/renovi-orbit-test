@@ -6,10 +6,12 @@ import {
 } from "../types/forgotPassword.validation";
 import { authApi } from "../api/auth.api";
 import { toast } from "sonner";
+import { useAnalytics } from "@/hooks/useAnalytics";
 
 const REDIRECT_PATH = "/recuperar-senha";
 
 export function useForgotPasswordForm() {
+  const { trackEvent } = useAnalytics();
   const [formData, setFormData] = useState<ForgotPasswordFormData>({
     email: "",
   });
@@ -48,6 +50,7 @@ export function useForgotPasswordForm() {
         }
 
         setSent(true);
+        trackEvent("forgot_password_requested");
         toast.success("Email enviado! Verifique sua caixa de entrada.");
       } catch {
         toast.error("Erro ao processar solicitação");
@@ -55,7 +58,7 @@ export function useForgotPasswordForm() {
         setSubmitting(false);
       }
     },
-    [formData]
+    [formData, trackEvent]
   );
 
   return {

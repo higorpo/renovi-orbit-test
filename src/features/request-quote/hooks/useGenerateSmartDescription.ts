@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import { invokeGenerateSmartDescription } from "../api/smartDescription.api";
 import type { RequestQuoteState } from "./useRequestQuoteState";
 import type { GenerateSmartDescriptionPayload } from "../types/request-quote.types";
@@ -33,6 +34,7 @@ export function useGenerateSmartDescription({
   onSuccess,
   onFailure,
 }: UseGenerateSmartDescriptionParams): UseGenerateSmartDescriptionResult {
+  const { trackEvent } = useAnalytics();
   const generateSmartDescription = useCallback(async () => {
     state.setGeneratingDescription(true);
     try {
@@ -64,6 +66,9 @@ export function useGenerateSmartDescription({
       } else {
         throw new Error("Descrição não retornada");
       }
+      trackEvent("smart_description_used", {
+        ...(state.selectedService?.slug && { service_slug: state.selectedService.slug }),
+      });
       toast.success("Descrição gerada com sucesso! Você pode editar se quiser.");
       onSuccess?.();
     } catch {
@@ -75,7 +80,7 @@ export function useGenerateSmartDescription({
     } finally {
       state.setGeneratingDescription(false);
     }
-  }, [state, onSuccess, onFailure]);
+  }, [state, onSuccess, onFailure, trackEvent]);
 
   return { generateSmartDescription };
 }

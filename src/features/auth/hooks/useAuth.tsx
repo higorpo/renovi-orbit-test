@@ -156,6 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           toast.error("Erro ao conectar com Google. Tente novamente.");
           throw error;
         }
+        trackEvent("login_completed", { method: "google" });
       } catch (error) {
         logger.error("auth_sign_in_google_error", {
           error: error instanceof Error ? error.message : String(error),
@@ -163,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
     },
-    []
+    [trackEvent]
   );
 
   const signIn = useCallback(async (email: string, password: string) => {
@@ -174,6 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         isExplicitSignIn.current = false;
+        trackEvent("login_failed", { reason: "invalid_credentials" });
         toast.error("Não foi possível entrar", {
           description:
             "Verifique seu email e senha. Se ainda não confirmou seu email, acesse o link enviado.",
@@ -181,6 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
 
+      trackEvent("login_completed", { method: "password" });
       toast.success("Login realizado!");
     } catch (error) {
       logger.error("auth_sign_in_error", {
@@ -189,7 +192,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isExplicitSignIn.current = false;
       throw error;
     }
-  }, []);
+  }, [trackEvent]);
 
   const signUp = useCallback(
     async (

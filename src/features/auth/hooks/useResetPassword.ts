@@ -9,9 +9,11 @@ import { authApi } from "@/features/auth/api/auth.api";
 import { useAuth } from "@/features/auth";
 import { toast } from "sonner";
 import { validatePasswordStrength } from "@/features/auth/utils/passwordPolicy";
+import { useAnalytics } from "@/hooks/useAnalytics";
 
 export function useResetPassword() {
   const navigate = useNavigate();
+  const { trackEvent } = useAnalytics();
   const { user, profile, getRedirectPath } = useAuth();
   const [formData, setFormData] = useState<ResetPasswordFormData>({
     password: "",
@@ -64,6 +66,7 @@ export function useResetPassword() {
         }
 
         toast.success("Senha alterada com sucesso!");
+        trackEvent("reset_password_completed", { recovery_mode: recoveryMode });
         const path = profile ? getRedirectPath(profile) : "/login";
         navigate(path, { replace: true });
       } catch {
@@ -71,7 +74,7 @@ export function useResetPassword() {
         setSubmitting(false);
       }
     },
-    [formData, navigate, profile, getRedirectPath]
+    [formData, navigate, profile, getRedirectPath, recoveryMode, trackEvent]
   );
 
   return {
