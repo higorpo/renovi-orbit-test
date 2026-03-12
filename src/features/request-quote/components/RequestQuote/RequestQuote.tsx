@@ -5,7 +5,7 @@ import { clientSignupIdentitySchema, useAuth } from "@/features/auth";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronLeft, ChevronRight, Clock, Loader2, Shield } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { useRequestQuoteNavigation } from "../../hooks/useRequestQuoteNavigation";
 import { useRequestQuoteState } from "../../hooks/useRequestQuoteState";
 import { useRequestQuoteSubmit } from "../../hooks/useRequestQuoteSubmit";
@@ -112,8 +112,6 @@ export function RequestQuote() {
         { step: 3, label: "Descrição", time: "2min" },
         { step: 4, label: "Endereço", time: "1min" },
       ];
-
-  const navigate = useNavigate();
 
   const isAddressStepValid = useMemo(() => {
     if (state.currentStep !== 4) return true;
@@ -246,8 +244,8 @@ export function RequestQuote() {
                 {state.currentStep === 2 && state.selectedService && (
                   <SectionTitleWithIcon
                     title="Nos conte mais sobre o serviço"
-                    icon={getServiceCardStyle(state.selectedService.slug).Icon}
-                    iconGradient={getServiceCardStyle(state.selectedService.slug).color}
+                    icon={getServiceCardStyle(state.selectedService).Icon}
+                    iconGradient={getServiceCardStyle(state.selectedService).color}
                   />
                 )}
                 {currentRender()}

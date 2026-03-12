@@ -39,6 +39,7 @@ serve(async (req) => {
   let userId: string | null = null;
 
   try {
+    throw Error('exemplo de error')
     const clientIP = getClientIP(req);
     userId = await getUserIdFromRequest(req);
     const rl = await checkRateLimit(

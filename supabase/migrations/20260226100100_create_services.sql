@@ -12,6 +12,8 @@ create table if not exists public.services (
   show_on_request_quote boolean not null default true,
   active boolean not null default true,
   sort_order int not null default 0,
+  icon_key text,
+  color_key text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint services_slug_unique unique (slug)
@@ -23,6 +25,8 @@ comment on column public.services.form_id is 'Form used for this service quote (
 comment on column public.services.show_on_request_quote is 'When true, service is listed on request-quote page.';
 comment on column public.services.active is 'When false, service is hidden from public read (RLS). When true, anyone can read.';
 comment on column public.services.sort_order is 'Display order on request-quote page (lower first).';
+comment on column public.services.icon_key is 'Lucid React icon name for this service (e.g. Wind, Zap). Used in request-quote UI.';
+comment on column public.services.color_key is 'Key for Tailwind gradient (see SERVICE_COLOR_KEYS in app). Used in request-quote UI.';
 
 -- Indexes:
 -- - parent_id: used for FK and for queries that filter by parent (e.g. top-level only or children of X).

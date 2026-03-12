@@ -42,7 +42,7 @@ export function Step1ServiceSelect({
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-2.5 md:gap-3 lg:gap-4">
         {flatServices.map((srv) => {
           const isSelected = selectedService?.id === srv.id;
-          const { Icon, color } = getServiceCardStyle(srv.slug);
+          const { Icon, color } = getServiceCardStyle(srv);
           const imageUrl = srv.image_url || SERVICE_PLACEHOLDER_IMAGE;
           const imageAlt = srv.description || srv.title;
           return (

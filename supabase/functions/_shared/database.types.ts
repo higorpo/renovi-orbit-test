@@ -482,9 +482,11 @@ export type Database = {
         Row: {
           active: boolean
           ai_prompt_id: string | null
+          color_key: string | null
           created_at: string
           description: string | null
           form_id: string | null
+          icon_key: string | null
           id: string
           image_url: string | null
           parent_id: string | null
@@ -497,9 +499,11 @@ export type Database = {
         Insert: {
           active?: boolean
           ai_prompt_id?: string | null
+          color_key?: string | null
           created_at?: string
           description?: string | null
           form_id?: string | null
+          icon_key?: string | null
           id?: string
           image_url?: string | null
           parent_id?: string | null
@@ -512,9 +516,11 @@ export type Database = {
         Update: {
           active?: boolean
           ai_prompt_id?: string | null
+          color_key?: string | null
           created_at?: string
           description?: string | null
           form_id?: string | null
+          icon_key?: string | null
           id?: string
           image_url?: string | null
           parent_id?: string | null

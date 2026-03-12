@@ -167,7 +167,7 @@ on conflict (prompt_key) do nothing;
 -- ---------------------------------------------------------------------------
 -- services (default + instalacao eletrica + instalacao ar condicionado)
 -- ---------------------------------------------------------------------------
-insert into public.services (id, parent_id, form_id, title, description, slug, show_on_request_quote, active, sort_order, ai_prompt_id)
+insert into public.services (id, parent_id, form_id, title, description, slug, show_on_request_quote, active, sort_order, ai_prompt_id, icon_key, color_key)
 values
   (
     'e5f6a7b8-c9d0-4123-e456-000000000001'::uuid,
@@ -179,7 +179,9 @@ values
     true,
     true,
     0,
-    null
+    null,
+    'Wrench',
+    'slate'
   ),
   (
     'e5f6a7b8-c9d0-4123-e456-000000000002'::uuid,
@@ -191,7 +193,9 @@ values
     true,
     true,
     1,
-    'f6a7b8c9-d0e1-4234-f567-000000000002'::uuid
+    'f6a7b8c9-d0e1-4234-f567-000000000002'::uuid,
+    'Zap',
+    'yellow_orange'
   ),
   (
     'e5f6a7b8-c9d0-4123-e456-000000000003'::uuid,
@@ -203,6 +207,8 @@ values
     true,
     true,
     2,
-    'f6a7b8c9-d0e1-4234-f567-000000000003'::uuid
+    'f6a7b8c9-d0e1-4234-f567-000000000003'::uuid,
+    'Wind',
+    'sky_indigo'
   )
 on conflict (slug) do nothing;
