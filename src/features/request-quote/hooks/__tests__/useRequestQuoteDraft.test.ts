@@ -24,6 +24,7 @@ const {
   getDraft,
   saveDraft,
   clearDraft,
+  buildSerializableDraft,
 } = await import("../../utils/requestQuoteDraft.persistence");
 
 function createMockState(overrides: Partial<RequestQuoteState> = {}): RequestQuoteState {
@@ -199,5 +200,107 @@ describe("useRequestQuoteDraft", () => {
     });
     expect(clearDraft).toHaveBeenCalled();
     expect(result.current.hasRestorableDraft).toBe(false);
+  });
+
+  it("restoreDraft does nothing when restorableDraft is null", () => {
+    vi.mocked(getDraft).mockReturnValue(null);
+    const state = createMockState();
+    const { result } = renderHook(() => useRequestQuoteDraft(state, null));
+    expect(result.current.hasRestorableDraft).toBe(false);
+    act(() => {
+      result.current.restoreDraft();
+    });
+    expect(state.setCurrentStep).not.toHaveBeenCalled();
+    expect(state.setStep2Data).not.toHaveBeenCalled();
+  });
+
+  it("persists draft after debounce when state is meaningful and no restorable dialog", () => {
+    vi.mocked(getDraft).mockReturnValue(null);
+    const state = createMockState({ currentStep: 2 });
+    renderHook(() => useRequestQuoteDraft(state, null));
+    expect(saveDraft).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(buildSerializableDraft).toHaveBeenCalledWith(state);
+    expect(saveDraft).toHaveBeenCalled();
+  });
+
+  it("does not persist when orderCreatedEmail is set", () => {
+    vi.mocked(getDraft).mockReturnValue(null);
+    const state = createMockState({
+      currentStep: 2,
+      orderCreatedEmail: "user@example.com",
+    });
+    renderHook(() => useRequestQuoteDraft(state, null));
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(clearDraft).toHaveBeenCalled();
+    expect(saveDraft).not.toHaveBeenCalled();
+  });
+
+  it("clears draft when orderCreatedEmail is set (effect)", () => {
+    vi.mocked(getDraft).mockReturnValue(null);
+    const state = createMockState({ orderCreatedEmail: "done@example.com" });
+    renderHook(() => useRequestQuoteDraft(state, null));
+    expect(clearDraft).toHaveBeenCalled();
+  });
+
+  it("does not persist when state is not meaningful", () => {
+    vi.mocked(getDraft).mockReturnValue(null);
+    const state = createMockState({
+      currentStep: 1,
+      selectedService: null,
+      step2Data: {},
+      step3Data: { description: "", photos: [], photoPreviews: [] },
+      step4Data: null,
+      step5Data: {
+        firstName: "",
+        lastName: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        termsAccepted: false,
+      },
+    });
+    renderHook(() => useRequestQuoteDraft(state, null));
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(saveDraft).not.toHaveBeenCalled();
+  });
+
+  it("restores step3Data with structured when draft has structured", () => {
+    const draftPayload = {
+      version: "2",
+      draft: {
+        currentStep: 2,
+        previousStep: 1,
+        selectedService: null,
+        step2Data: {},
+        step2FormSchema: null,
+        step2FormVersion: null,
+        step3Data: {
+          description: "d",
+          structured: { urgency: "high", scope_complexity: "medium" },
+        },
+        step4Data: null,
+      },
+    };
+    vi.mocked(getDraft).mockReturnValue(draftPayload as ReturnType<typeof getDraft>);
+    const state = createMockState();
+    const { result } = renderHook(() => useRequestQuoteDraft(state, null));
+    act(() => {
+      result.current.restoreDraft();
+    });
+    expect(state.setStep3Data).toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: "d",
+        structured: { urgency: "high", scope_complexity: "medium" },
+        photos: [],
+        photoPreviews: [],
+      })
+    );
   });
 });
