@@ -128,6 +128,21 @@ describe("requestQuoteDraft.persistence", () => {
       expect(result.step3Data).toEqual({ description: "desc", structured });
       expect(result).not.toHaveProperty("step5Data");
     });
+
+    it("sets step3Data.structured to null when not provided", () => {
+      const state = {
+        currentStep: 1,
+        previousStep: 0,
+        selectedService: null,
+        step2Data: {},
+        step2FormSchema: null,
+        step2FormVersion: null,
+        step3Data: { description: "only text" },
+        step4Data: null,
+      };
+      const result = buildSerializableDraft(state);
+      expect(result.step3Data).toEqual({ description: "only text", structured: null });
+    });
   });
 
   describe("version compatibility", () => {
