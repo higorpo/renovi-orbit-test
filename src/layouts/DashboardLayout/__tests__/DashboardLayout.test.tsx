@@ -33,18 +33,21 @@ describe("DashboardLayout", () => {
     } as ReturnType<typeof useAuth>);
   });
 
-  it("renders desktop header with client title when useBreakpointMd is true and role is client", () => {
+  it("renders desktop header with Renovi logo when useBreakpointMd is true", () => {
     useBreakpointMd.mockReturnValue(true);
     render(
       <MemoryRouter initialEntries={["/dashboard"]}>
         <DashboardLayout />
       </MemoryRouter>
     );
-    expect(screen.getByText("Área do cliente")).toBeInTheDocument();
+    const logo = screen.getByRole("img", { name: "Renovi" });
+    expect(logo).toBeInTheDocument();
+    const logoLink = screen.getByRole("link", { name: "Renovi" });
+    expect(logoLink.getAttribute("href")).toMatch(/^\/(dashboard)?$/);
     expect(screen.getByRole("navigation", { name: "Dashboard navigation" })).toBeInTheDocument();
   });
 
-  it("renders desktop header with provider title when role is provider", () => {
+  it("renders desktop header with logo when role is provider", () => {
     useAuth.mockReturnValue({
       profile: { id: "p1", role: "provider", full_name: "Provider" },
       user: null,
@@ -64,10 +67,10 @@ describe("DashboardLayout", () => {
         <DashboardLayout />
       </MemoryRouter>
     );
-    expect(screen.getByText("Prestador")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Renovi" })).toBeInTheDocument();
   });
 
-  it("defaults to client title when profile is null", () => {
+  it("renders desktop header with logo when profile is null", () => {
     useAuth.mockReturnValue({
       profile: null,
       user: null,
@@ -87,7 +90,7 @@ describe("DashboardLayout", () => {
         <DashboardLayout />
       </MemoryRouter>
     );
-    expect(screen.getByText("Área do cliente")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Renovi" })).toBeInTheDocument();
   });
 
   it("renders mobile nav when useBreakpointMd is false", () => {

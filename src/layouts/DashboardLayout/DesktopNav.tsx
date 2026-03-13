@@ -6,9 +6,11 @@ import type { DashboardMenuItem } from "./dashboardMenu";
 interface DesktopNavProps {
   items: DashboardMenuItem[];
   className?: string;
+  /** Use light text and accents (e.g. when nav is inside a dark header). */
+  inverted?: boolean;
 }
 
-export function DesktopNav({ items, className }: DesktopNavProps) {
+export function DesktopNav({ items, className, inverted }: DesktopNavProps) {
   const location = useLocation();
   const tabRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -51,7 +53,10 @@ export function DesktopNav({ items, className }: DesktopNavProps) {
       <div className="relative">
         {/* Hover pill */}
         <div
-          className="absolute h-[30px] rounded-md bg-muted/80 transition-all duration-300 ease-out flex items-center"
+          className={cn(
+            "absolute h-[30px] rounded-md transition-all duration-300 ease-out flex items-center",
+            inverted ? "bg-white/20" : "bg-muted/80"
+          )}
           style={{
             ...hoverStyle,
             opacity: hoveredIndex !== null ? 1 : 0,
@@ -59,7 +64,10 @@ export function DesktopNav({ items, className }: DesktopNavProps) {
         />
         {/* Active underline */}
         <div
-          className="absolute bottom-[-14px] h-[2px] bg-primary transition-all duration-300 ease-out"
+          className={cn(
+            "absolute bottom-[-14px] h-[2px] transition-all duration-300 ease-out",
+            inverted ? "bg-white" : "bg-primary"
+          )}
           style={activeStyle}
         />
         <div className="relative flex gap-1.5 items-center">
@@ -83,9 +91,13 @@ export function DesktopNav({ items, className }: DesktopNavProps) {
                   to={item.path}
                   className={cn(
                     "flex items-center gap-2 px-3 py-2 h-[30px] rounded-md text-sm font-medium transition-colors cursor-pointer",
-                    isActive
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
+                    inverted
+                      ? isActive
+                        ? "text-white"
+                        : "text-white/70 hover:text-white"
+                      : isActive
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <Icon className="h-4 w-4 shrink-0" aria-hidden />

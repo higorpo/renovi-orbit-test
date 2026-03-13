@@ -19,13 +19,23 @@ function renderMobileNav(
 }
 
 describe("MobileNav", () => {
-  it("renders with default title Dashboard when title is not passed", () => {
+  it("renders with Renovi logo in the top bar", () => {
     renderMobileNav("client");
+    const logo = screen.getByRole("img", { name: "Renovi" });
+    expect(logo).toBeInTheDocument();
+    const logoLink = screen.getByRole("link", { name: "Renovi" });
+    expect(logoLink.getAttribute("href")).toMatch(/^\/(dashboard)?$/);
+  });
+
+  it("renders with default title in sheet when title is not passed", () => {
+    renderMobileNav("client");
+    fireEvent.click(screen.getByRole("button", { name: "Abrir menu" }));
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
   });
 
-  it("renders with custom title when title prop is passed", () => {
+  it("renders with custom title in sheet when title prop is passed", () => {
     renderMobileNav("client", "Área do cliente");
+    fireEvent.click(screen.getByRole("button", { name: "Abrir menu" }));
     expect(screen.getByText("Área do cliente")).toBeInTheDocument();
   });
 
@@ -68,10 +78,9 @@ describe("MobileNav", () => {
     expect(screen.getByRole("link", { name: /Ganhos/ })).toBeInTheDocument();
   });
 
-  it("sheet shows SheetTitle with passed title", async () => {
+  it("sheet shows SheetTitle with passed title when open", async () => {
     renderMobileNav("client", "Minha Área");
-    const button = screen.getByRole("button", { name: "Abrir menu" });
-    fireEvent.click(button);
+    fireEvent.click(screen.getByRole("button", { name: "Abrir menu" }));
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveTextContent("Minha Área");
   });
