@@ -131,7 +131,7 @@ export function useServiceSchema(params: UseServiceSchemaParams): ServiceSchemaR
 
   const parsedSchema = parseSchemaFromJson(form.form_schema);
   if (!parsedSchema) {
-    logger.warn("request_quote_service_schema_fallback", {
+    logger.error("request_quote_service_schema_fallback", {
       fallbackReason: "no_v2_schema",
       formId: form.id,
       serviceId: service.id,
@@ -145,7 +145,7 @@ export function useServiceSchema(params: UseServiceSchemaParams): ServiceSchemaR
 
   const validationResult = validateFormSchema(parsedSchema);
   if (!validationResult.valid) {
-    logger.warn("request_quote_service_schema_fallback", {
+    logger.error("request_quote_service_schema_fallback", {
       fallbackReason: `schema_validation_failed: ${validationResult.errors.length} error(s)`,
       formId: form.id,
       serviceId: service.id,
