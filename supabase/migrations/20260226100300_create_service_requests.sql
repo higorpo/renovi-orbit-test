@@ -30,7 +30,7 @@ comment on column public.service_requests.address_id is 'Client address for the 
 comment on column public.service_requests.form_data is 'Dynamic form answers (from DynamicForm).';
 comment on column public.service_requests.form_schema is 'Snapshot of the form schema used when the request was created (dynamic-form schema).';
 comment on column public.service_requests.form_version is 'Schema version at creation time (e.g. 2.0).';
-comment on column public.service_requests.photos is 'Array of photo URLs (e.g. storage public URLs).';
+comment on column public.service_requests.photos is 'Array of storage paths (e.g. userId/timestamp_index.ext) for private bucket; use signed URLs to display.';
 comment on column public.service_requests.urgency is 'AI-derived urgency: low, medium, high.';
 comment on column public.service_requests.scope_complexity is 'AI-derived scope complexity: simple, medium, complex.';
 comment on column public.service_requests.suggested_questions is 'AI-suggested follow-up questions for the client.';
@@ -47,9 +47,12 @@ create policy "Clients can insert own service requests"
   on public.service_requests for insert
   with check (auth.uid() = client_id);
 
-create policy "Anyone can read service requests"
+create policy "Clients read own; providers and admins read all"
   on public.service_requests for select
-  using (true);
+  using (
+    auth.uid() = client_id
+    or exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin', 'provider'))
+  );
 
 create policy "Clients can update own service requests; admins can update any"
   on public.service_requests for update

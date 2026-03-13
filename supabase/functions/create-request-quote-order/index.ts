@@ -7,8 +7,9 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { checkRateLimit, getClientIP, getUserIdFromRequest } from "../_shared/rateLimiter.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
-import { corsHeaders, RATE_LIMIT_PER_MINUTE } from "./constants.ts";
+import { RATE_LIMIT_PER_MINUTE } from "./constants.ts";
 import type { CreateOrderSuccess } from "./types.ts";
 import { parseFormData } from "./parseFormData.ts";
 import { validateRequestUser } from "./validateRequestUser.ts";
@@ -18,14 +19,16 @@ import { createServiceRequest } from "./createServiceRequest.ts";
 
 const RATE_LIMIT_CONFIG = { perMinute: RATE_LIMIT_PER_MINUTE };
 
-function jsonResponse(body: unknown, status: number, extraHeaders?: Record<string, string>): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json", ...corsHeaders, ...(extraHeaders ?? {}) },
-  });
-}
-
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
+  function jsonResponse(body: unknown, status: number, extraHeaders?: Record<string, string>): Response {
+    return new Response(JSON.stringify(body), {
+      status,
+      headers: { "Content-Type": "application/json", ...corsHeaders, ...(extraHeaders ?? {}) },
+    });
+  }
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -98,23 +101,9 @@ serve(async (req) => {
     addressId = addrResult.addressId;
   }
 
-  // Use public URL for storage links so frontend gets correct host (SUPABASE_URL in Edge Functions can be internal e.g. kong:8000).
-  const supabaseUrlForStorage = (() => {
-    const publicUrl = Deno.env.get("SUPABASE_PUBLIC_URL");
-    if (publicUrl) return publicUrl;
-    try {
-      const u = new URL(supabaseUrl);
-      if (u.hostname === "kong" || u.hostname === "127.0.0.1") return "http://127.0.0.1:54321";
-    } catch {
-      /* ignore */
-    }
-    return supabaseUrl;
-  })();
-
   const photoResult = await uploadPhotos(
     supabaseUrl,
     supabaseKey,
-    supabaseUrlForStorage,
     data.userId,
     data.photoFiles
   );
@@ -131,7 +120,7 @@ serve(async (req) => {
       address_id: addressId,
       service_title: data.serviceTitle,
       description: data.description,
-      photoUrls: photoResult.urls,
+      photoUrls: photoResult.paths,
       form_data: data.formData,
       form_schema: data.formSchema,
       form_version: data.formVersion,

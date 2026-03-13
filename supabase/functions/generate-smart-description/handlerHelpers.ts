@@ -66,23 +66,28 @@ export function parseRequestParams(
 }
 
 export function validateRequestParams(
-  params: ParsedRequestParams
+  params: ParsedRequestParams,
+  cors?: Record<string, string>
 ): Response | null {
   if (params.serviceId) return null;
   return jsonResponse(
     { error: "service é obrigatório (id do serviço)" },
-    400
+    400,
+    undefined,
+    cors
   );
 }
 
 export function jsonResponse(
   body: unknown,
   status: number,
-  extraHeaders?: Record<string, string>
+  extraHeaders?: Record<string, string>,
+  cors?: Record<string, string>
 ): Response {
+  const headers = { ...(cors ?? corsHeaders), "Content-Type": "application/json", ...extraHeaders };
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json", ...extraHeaders },
+    headers,
   });
 }
 
@@ -353,17 +358,20 @@ export function processAIResponse(params: {
   return { processedDescription, structuredResponse: null };
 }
 
-export function buildSuccessResponse(params: {
-  processedDescription: string;
-  rawContent: string;
-  promptConfig: PromptConfig;
-  tokensUsed?: number;
-  generationTime: number;
-  mode: SmartDescriptionMode;
-  enableStructured: boolean;
-  structuredResponse: StructuredAIResponse | null;
-  provider: SmartDescriptionProvider;
-}): Response {
+export function buildSuccessResponse(
+  params: {
+    processedDescription: string;
+    rawContent: string;
+    promptConfig: PromptConfig;
+    tokensUsed?: number;
+    generationTime: number;
+    mode: SmartDescriptionMode;
+    enableStructured: boolean;
+    structuredResponse: StructuredAIResponse | null;
+    provider: SmartDescriptionProvider;
+  },
+  cors?: Record<string, string>
+): Response {
   const {
     processedDescription,
     rawContent,
@@ -399,11 +407,12 @@ export function buildSuccessResponse(params: {
     responseData.structured = structuredResponse;
   }
 
-  return jsonResponse(responseData, 200);
+  return jsonResponse(responseData, 200, undefined, cors);
 }
 
 export function buildErrorResponse(
   errMessage: string,
+  cors?: Record<string, string>
 ): Response {
   const fallback = generateFallbackResponse(
     `Erro ao gerar descrição: ${errMessage}`,
@@ -415,7 +424,9 @@ export function buildErrorResponse(
       description: fallback.professional_description,
       structured: fallback,
     },
-    500
+    500,
+    undefined,
+    cors
   );
 }
 

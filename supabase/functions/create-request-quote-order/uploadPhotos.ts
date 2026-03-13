@@ -5,9 +5,10 @@ import {
   MAX_PHOTO_BYTES,
   ALLOWED_PHOTO_TYPES,
 } from "./constants.ts";
+import { validateMagicBytes } from "./fileSignatures.ts";
 
 export type UploadPhotosResult =
-  | { ok: true; urls: string[] }
+  | { ok: true; paths: string[] }
   | { ok: false; error: string };
 
 const EXT_BY_TYPE: Record<string, string> = {
@@ -18,25 +19,19 @@ const EXT_BY_TYPE: Record<string, string> = {
   "image/heif": "heif",
 };
 
-function buildPublicUrl(baseUrl: string, bucket: string, path: string): string {
-  const base = baseUrl.replace(/\/$/, "");
-  return `${base}/storage/v1/object/public/${bucket}/${path}`;
-}
-
 export async function uploadPhotos(
   supabaseUrl: string,
   supabaseKey: string,
-  publicStorageBaseUrl: string,
   userId: string,
   photoBlobs: Blob[]
 ): Promise<UploadPhotosResult> {
-  if (photoBlobs.length === 0) return { ok: true, urls: [] };
+  if (photoBlobs.length === 0) return { ok: true, paths: [] };
   if (photoBlobs.length > MAX_PHOTOS) {
     return { ok: false, error: `Máximo de ${MAX_PHOTOS} fotos permitido.` };
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey);
-  const urls: string[] = [];
+  const paths: string[] = [];
   const ts = Date.now();
 
   for (let i = 0; i < photoBlobs.length; i++) {
@@ -47,6 +42,10 @@ export async function uploadPhotos(
     const type = blob.type?.toLowerCase() || "";
     if (!ALLOWED_PHOTO_TYPES.includes(type)) {
       return { ok: false, error: `Foto ${i + 1}: tipo não permitido. Use JPEG, PNG, WebP ou HEIC.` };
+    }
+    const contentMatches = await validateMagicBytes(blob, type);
+    if (!contentMatches) {
+      return { ok: false, error: `Foto ${i + 1}: tipo de arquivo não corresponde ao conteúdo.` };
     }
     const ext = EXT_BY_TYPE[type] || "jpg";
     const path = `${userId}/${ts}_${i}.${ext}`;
@@ -60,8 +59,8 @@ export async function uploadPhotos(
       return { ok: false, error: "Falha ao enviar fotos. Tente novamente." };
     }
 
-    urls.push(buildPublicUrl(publicStorageBaseUrl, SERVICE_REQUESTS_BUCKET, path));
+    paths.push(path);
   }
 
-  return { ok: true, urls };
+  return { ok: true, paths };
 }

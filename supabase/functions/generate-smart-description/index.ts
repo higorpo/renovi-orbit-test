@@ -7,8 +7,9 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { checkRateLimit, getClientIP, getUserIdFromRequest } from "../_shared/rateLimiter.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
-import { corsHeaders, OPEN_AI_DEFAULT_MODEL, GEMINI_DEFAULT_MODEL } from "./constants.ts";
+import { OPEN_AI_DEFAULT_MODEL, GEMINI_DEFAULT_MODEL } from "./constants.ts";
 import type { GenerateSmartDescriptionBody, PromptConfig } from "./types.ts";
 import { formatFormDataToContext } from "./formContext.ts";
 import { logPromptUsage } from "./usage.ts";
@@ -29,6 +30,8 @@ import { Database } from "../_shared/database.types.ts";
 const RATE_LIMIT_CONFIG = { perMinute: 60, burst: 10 };
 
 serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -57,7 +60,8 @@ serve(async (req) => {
           retryAfter: rl.retryAfter,
         },
         429,
-        { "Retry-After": String(rl.retryAfter) }
+        { "Retry-After": String(rl.retryAfter) },
+        corsHeaders
       );
     }
 
@@ -73,7 +77,7 @@ serve(async (req) => {
       mode: params.mode,
     });
 
-    const validationError = validateRequestParams(params);
+    const validationError = validateRequestParams(params, corsHeaders);
     if (validationError) return validationError;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -152,17 +156,20 @@ serve(async (req) => {
       generationTime
     );
 
-    return buildSuccessResponse({
-      processedDescription,
-      rawContent,
-      promptConfig,
-      tokensUsed,
-      generationTime,
-      mode: params.mode,
-      enableStructured,
-      structuredResponse,
-      provider: params.provider,
-    });
+    return buildSuccessResponse(
+      {
+        processedDescription,
+        rawContent,
+        promptConfig,
+        tokensUsed,
+        generationTime,
+        mode: params.mode,
+        enableStructured,
+        structuredResponse,
+        provider: params.provider,
+      },
+      corsHeaders
+    );
   } catch (error: unknown) {
     const generationTime = Date.now() - startTime;
     const errMessage =
@@ -183,6 +190,6 @@ serve(async (req) => {
       );
     }
 
-    return buildErrorResponse(errMessage);
+    return buildErrorResponse(errMessage, corsHeaders);
   }
 });

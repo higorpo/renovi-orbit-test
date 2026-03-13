@@ -3,12 +3,7 @@
  * Contract: multipart/form-data; validation with session (auth.uid) or without (user exists + email).
  */
 
-export const corsHeaders: Record<string, string> = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
+/** Set ALLOWED_ORIGINS (comma-separated) in Supabase Edge Function secrets for CORS. */
 export const SERVICE_REQUESTS_BUCKET = "service-requests";
 export const MAX_PHOTOS = 10;
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024; // 5 MB per file

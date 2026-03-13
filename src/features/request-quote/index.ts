@@ -6,6 +6,7 @@
 export { RequestQuote } from "./components/RequestQuote/RequestQuote";
 export { useServiceSchema } from "./hooks/useServiceSchema";
 export type { UseServiceSchemaParams } from "./hooks/useServiceSchema";
+export { useServiceRequestPhotoUrls } from "./hooks/useServiceRequestPhotoUrls";
 
 export type {
   Service,
