@@ -30,11 +30,9 @@ export function initSentry(): void {
       }),
     ],
     tracesSampleRate: IS_PROD ? 0.2 : 1,
-    tracePropagationTargets: [
-      /^\//,
-      /^https:\/\/[^/]*\.supabase\.co\//,
-      /^https:\/\/viacep\.com\.br\//,
-    ],
+    // Only propagate trace to our own backend. Exclude third-party APIs (e.g. ViaCEP)
+    // so CORS preflight is not triggered by sentry-trace/baggage headers.
+    tracePropagationTargets: [/^\//, /^https:\/\/[^/]*\.supabase\.co\//],
     // Session replay: 10% of sessions in prod, 50% in dev; 100% of sessions where an error is sent
     replaysSessionSampleRate: IS_PROD ? 0.1 : 0.5,
     replaysOnErrorSampleRate: 1,
