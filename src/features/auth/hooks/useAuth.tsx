@@ -29,8 +29,7 @@ const AUTH_DEBOUNCE_MS = 300;
 
 function getRedirectPathForProfile(profile: Profile): string {
   if (profile.role === "admin") return "/admin/dashboard";
-  if (profile.role === "provider") return "/dashboard/provider";
-  if (profile.role === "client") return "/dashboard/client";
+  if (profile.role === "provider" || profile.role === "client") return "/dashboard";
   if (import.meta.env.DEV) {
     logger.warn("auth_unknown_role", { role: profile.role });
   }

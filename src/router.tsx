@@ -16,6 +16,8 @@ const FormDemoPage =
     : null
 
 const RequestQuote = lazy(() => import('@/features/request-quote').then(m => ({ default: m.RequestQuote })))
+const DashboardLayout = lazy(() => import('@/layouts/DashboardLayout').then(m => ({ default: m.DashboardLayout })))
+const ServiceRequestsPage = lazy(() => import('@/features/view-service-requests').then(m => ({ default: m.ServiceRequestsPage })))
 
 export const router = createBrowserRouter([
   {
@@ -64,26 +66,21 @@ export const router = createBrowserRouter([
         element: <RequestQuote />,
       },
       {
+        element: (
+          <ProtectedRoute allowedRoles={['client', 'provider']}>
+            <DashboardLayout />
+          </ProtectedRoute>
+        ),
+        path: 'dashboard',
+        children: [
+          { index: true, element: <ServiceRequestsPage /> },
+        ],
+      },
+      {
         element: <ProtectedRoute allowedRoles={['client']}><Outlet /></ProtectedRoute>,
         path: 'example',
         children: [{ index: true, element: <div>Example page for client</div> }],
       },
-      // Example: protected routes by role (uncomment when you have dashboard pages)
-      // {
-      //   element: <ProtectedRoute allowedRoles={['client']}><Outlet /></ProtectedRoute>,
-      //   path: 'dashboard/client',
-      //   children: [{ index: true, element: <ClientDashboard /> }],
-      // },
-      // {
-      //   element: <ProtectedRoute allowedRoles={['provider']}><Outlet /></ProtectedRoute>,
-      //   path: 'dashboard/provider',
-      //   children: [{ index: true, element: <ProviderDashboard /> }],
-      // },
-      // {
-      //   element: <ProtectedRoute allowedRoles={['admin']}><Outlet /></ProtectedRoute>,
-      //   path: 'admin',
-      //   children: [{ path: 'dashboard', element: <AdminDashboard /> }],
-      // },
     ],
   },
 ])
