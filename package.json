@@ -52,6 +52,7 @@
     "@radix-ui/react-toggle": "^1.1.9",
     "@radix-ui/react-toggle-group": "^1.1.10",
     "@radix-ui/react-tooltip": "^1.2.7",
+    "@sentry/react": "^10.43.0",
     "@supabase/supabase-js": "^2.84.0",
     "@tanstack/react-query": "^5.83.0",
     "@tanstack/react-query-persist-client": "^5.90.18",
@@ -78,6 +79,7 @@
   "devDependencies": {
     "@eslint/js": "^9.37.0",
     "@playwright/test": "^1.58.2",
+    "@sentry/vite-plugin": "^5.1.1",
     "@tailwindcss/typography": "^0.5.19",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",

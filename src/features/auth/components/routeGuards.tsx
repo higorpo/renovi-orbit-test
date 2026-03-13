@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { useNavigate, useLocation, Outlet } from "react-router";
+import { addBreadcrumb } from "@/lib/sentry";
 import { useAuth } from "../hooks/useAuth";
 import { isAllowedRole, type ProfileRole } from "../types/auth.types";
 
@@ -41,10 +42,20 @@ export function ProtectedRoute({
   useEffect(() => {
     if (loading) return;
     if (!user || !profile) {
+      addBreadcrumb({
+        category: "auth",
+        message: "auth.route_redirect",
+        data: { reason: "unauthenticated", pathname },
+      });
       navigate(buildLoginRedirect(pathname, search), { replace: true });
       return;
     }
     if (allowedRoles?.length && !allowedRoles.includes(profile.role)) {
+      addBreadcrumb({
+        category: "auth",
+        message: "auth.route_redirect",
+        data: { reason: "forbidden", pathname, role: profile.role },
+      });
       const target = forbiddenRedirect ?? getRedirectPath(profile);
       navigate(target, { replace: true });
     }
@@ -80,6 +91,11 @@ export function GuestOnlyRoute({ children }: GuestOnlyRouteProps) {
     if (loading || !user || !profile) return;
     if (!isAllowedRole(profile.role)) return;
 
+    addBreadcrumb({
+      category: "auth",
+      message: "auth.guest_redirect",
+      data: { path: isSafeRedirect(redirectTo) ? redirectTo : getRedirectPath(profile) },
+    });
     const path = isSafeRedirect(redirectTo) ? redirectTo : getRedirectPath(profile);
     navigate(path, { replace: true });
   }, [loading, user, profile, redirectTo, getRedirectPath, navigate]);

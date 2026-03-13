@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { FormSchema } from "@/features/dynamic-form";
 import { validateFormSchema } from "@/features/dynamic-form";
+import { logger } from "@/lib/logger";
 import type { Json } from "@/lib/supabase/database.types";
 import { getServiceBySlug } from "../api/services.api";
 import { getServiceById } from "../api/services.api";
@@ -78,14 +79,25 @@ export function useServiceSchema(params: UseServiceSchemaParams): ServiceSchemaR
   }
 
   if (serviceError || serviceErr) {
+    const reason = `fetch_error: ${serviceErr ?? (serviceError as Error)?.message}`;
+    logger.warn("request_quote_service_schema_fallback", {
+      fallbackReason: reason,
+      serviceSlug: serviceSlug ?? undefined,
+      serviceId: serviceId ?? undefined,
+    });
     return {
       schema: null,
-      fallbackReason: `fetch_error: ${serviceErr ?? (serviceError as Error)?.message}`,
+      fallbackReason: reason,
       isLoading: false,
     };
   }
 
   if (!service) {
+    logger.warn("request_quote_service_schema_fallback", {
+      fallbackReason: "service_not_found",
+      serviceSlug: serviceSlug ?? undefined,
+      serviceId: serviceId ?? undefined,
+    });
     return {
       schema: null,
       fallbackReason: "service_not_found",
@@ -94,6 +106,10 @@ export function useServiceSchema(params: UseServiceSchemaParams): ServiceSchemaR
   }
 
   if (!formId || !form) {
+    logger.warn("request_quote_service_schema_fallback", {
+      fallbackReason: "no_form",
+      serviceId: service.id,
+    });
     return {
       schema: null,
       fallbackReason: "no_form",
@@ -102,6 +118,10 @@ export function useServiceSchema(params: UseServiceSchemaParams): ServiceSchemaR
   }
 
   if (form.form_status !== "active") {
+    logger.warn("request_quote_service_schema_fallback", {
+      fallbackReason: `form_status_not_active: ${form.form_status}`,
+      serviceId: service.id,
+    });
     return {
       schema: null,
       fallbackReason: `form_status_not_active: ${form.form_status}`,
@@ -111,6 +131,11 @@ export function useServiceSchema(params: UseServiceSchemaParams): ServiceSchemaR
 
   const parsedSchema = parseSchemaFromJson(form.form_schema);
   if (!parsedSchema) {
+    logger.warn("request_quote_service_schema_fallback", {
+      fallbackReason: "no_v2_schema",
+      formId: form.id,
+      serviceId: service.id,
+    });
     return {
       schema: null,
       fallbackReason: "no_v2_schema",
@@ -120,6 +145,11 @@ export function useServiceSchema(params: UseServiceSchemaParams): ServiceSchemaR
 
   const validationResult = validateFormSchema(parsedSchema);
   if (!validationResult.valid) {
+    logger.warn("request_quote_service_schema_fallback", {
+      fallbackReason: `schema_validation_failed: ${validationResult.errors.length} error(s)`,
+      formId: form.id,
+      serviceId: service.id,
+    });
     return {
       schema: null,
       fallbackReason: `schema_validation_failed: ${validationResult.errors.length} error(s)`,

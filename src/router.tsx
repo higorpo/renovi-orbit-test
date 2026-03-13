@@ -1,6 +1,7 @@
 import { lazy } from 'react'
 import { createBrowserRouter, Outlet } from 'react-router'
 import { RootLayout } from './layouts/RootLayout'
+import { RouterErrorBoundary } from '@/components/RouterErrorBoundary'
 import { GuestOnlyRoute, ProtectedRoute } from '@/features/auth'
 
 const App = lazy(() => import('./App'))
@@ -20,6 +21,7 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: <RootLayout />,
+    errorElement: <RouterErrorBoundary />,
     children: [
       {
         index: true,

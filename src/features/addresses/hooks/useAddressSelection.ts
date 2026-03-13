@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { unmask } from "@/lib/masks";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { addBreadcrumb } from "@/lib/sentry";
 import { listAddresses } from "../api/addresses.api";
 import { resolveFormDataFromCep } from "../utils/resolveFormDataFromCep";
 import type { ClientAddressWithRelations } from "../types/addresses.types";
@@ -103,6 +104,12 @@ export function useAddressSelection({
       if (resolved === null) return;
 
       if (resolved.ok === false && "cepNotFound" in resolved && resolved.cepNotFound) {
+        addBreadcrumb({
+          category: "address",
+          message: "address.cep_not_found",
+          level: "warning",
+          data: { cepPrefix: cep.slice(0, 5) },
+        });
         lastResolvedCepRef.current = null;
         setFormData((prev) => ({
           ...prev,
@@ -120,6 +127,12 @@ export function useAddressSelection({
       }
 
       if (resolved.ok === false && "notAvailable" in resolved && resolved.notAvailable) {
+        addBreadcrumb({
+          category: "address",
+          message: "address.cep_region_not_available",
+          level: "warning",
+          data: { cepPrefix: cep.slice(0, 5) },
+        });
         lastResolvedCepRef.current = null;
         trackEvent("cep_not_available", { cep_prefix: cep.slice(0, 5) });
         setFormData((prev) => ({
@@ -138,6 +151,11 @@ export function useAddressSelection({
       }
 
       if (resolved.ok && resolved.data) {
+        addBreadcrumb({
+          category: "address",
+          message: "address.cep_resolved",
+          data: { cepPrefix: cep.slice(0, 5) },
+        });
         lastResolvedCepRef.current = cep;
         setFormData((prev) => ({
           ...prev,

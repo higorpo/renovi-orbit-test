@@ -1,3 +1,5 @@
+import { captureException, addBreadcrumb, isSentryEnabled } from "@/lib/sentry";
+
 type LogLevel = "debug" | "info" | "warn" | "error";
 
 interface LogContext {
@@ -22,10 +24,26 @@ function log(level: LogLevel, event: string, context: LogContext = {}): void {
   const payload = { event, ...context, timestamp: new Date().toISOString() };
   if (level === "error") {
     console.error(`[${level}]`, event, context);
+    if (isSentryEnabled()) {
+      const err = context.error instanceof Error ? context.error : new Error(event);
+      captureException(err, { event, ...context });
+    }
   } else if (level === "warn") {
     console.warn(`[${level}]`, event, context);
+    if (isSentryEnabled()) {
+      const err = context.error instanceof Error ? context.error : new Error(event);
+      captureException(err, { event, level: "warn", ...context });
+    }
   } else if (import.meta.env.DEV) {
     console.debug(`[${level}]`, event, payload);
+  }
+  if (isSentryEnabled()) {
+    addBreadcrumb({
+      category: "logger",
+      message: event,
+      level: level === "debug" ? "debug" : level === "info" ? "info" : level === "warn" ? "warning" : "error",
+      data: context as Record<string, unknown>,
+    });
   }
 }
 

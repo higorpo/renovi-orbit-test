@@ -1,4 +1,5 @@
 import * as nsfwjs from "nsfwjs";
+import { logger } from "@/lib/logger";
 
 export type PhotoContentCheckResult =
   | { allowed: true }
@@ -36,7 +37,9 @@ export async function checkPhotosContent(files: File[]): Promise<PhotoContentChe
   try {
     model = await nsfwjs.load();
   } catch (e) {
-    console.warn("[photoContentCheck] model load failed", e);
+    logger.warn("photo_content_check_model_load_failed", {
+      error: e instanceof Error ? e.message : String(e),
+    });
     return { allowed: true };
   }
 
@@ -46,7 +49,10 @@ export async function checkPhotosContent(files: File[]): Promise<PhotoContentChe
     try {
       img = await loadImage(file);
     } catch (e) {
-      console.warn("[photoContentCheck] image load failed", file.name, e);
+      logger.warn("photo_content_check_image_load_failed", {
+        fileName: file.name,
+        error: e instanceof Error ? e.message : String(e),
+      });
       return { allowed: true };
     }
 
@@ -59,7 +65,10 @@ export async function checkPhotosContent(files: File[]): Promise<PhotoContentChe
         return { allowed: false, error: errorContent };
       }
     } catch (e) {
-      console.warn("[photoContentCheck] classify failed", file.name, e);
+      logger.warn("photo_content_check_classify_failed", {
+        fileName: file.name,
+        error: e instanceof Error ? e.message : String(e),
+      });
       return { allowed: true };
     }
   }

@@ -1,14 +1,24 @@
 /// <reference types="vitest/config" />
 import path from 'node:path'
+import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { VitePWA } from 'vite-plugin-pwa'
+import { sentryVitePlugin } from '@sentry/vite-plugin'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const pkg = JSON.parse(readFileSync(path.join(__dirname, 'package.json'), 'utf-8')) as { version?: string }
+const appVersion = pkg.version ?? '0.0.0'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  build: {
+    sourcemap: true,
+  },
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion),
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -124,5 +134,16 @@ export default defineConfig({
       suppressWarnings: true,
       type: 'module',
     },
-  })],
+  }),
+  sentryVitePlugin({
+    org: process.env.SENTRY_ORG ?? '',
+    project: process.env.SENTRY_PROJECT ?? '',
+    authToken: process.env.SENTRY_AUTH_TOKEN,
+    release: { name: `orbit@${appVersion}` },
+    sourcemaps: {
+      filesToDeleteAfterUpload: ['./dist/**/*.map'],
+    },
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  }),
+],
 })

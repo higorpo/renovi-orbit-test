@@ -3,6 +3,7 @@
  */
 
 import { logger } from "@/lib/logger";
+import { addBreadcrumb } from "@/lib/sentry";
 
 export interface ViaCepResult {
   logradouro: string;
@@ -29,9 +30,28 @@ export async function fetchAddressByCEP(
       method: "GET",
       headers: { Accept: "application/json" },
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      addBreadcrumb({
+        category: "cep",
+        message: "cep.lookup_failed",
+        data: { cepPrefix: cleanCEP.slice(0, 5), status: response.status },
+      });
+      return null;
+    }
     const data = await response.json();
-    if (data.erro) return { erro: true };
+    if (data.erro) {
+      addBreadcrumb({
+        category: "cep",
+        message: "cep.not_found",
+        data: { cepPrefix: cleanCEP.slice(0, 5) },
+      });
+      return { erro: true };
+    }
+    addBreadcrumb({
+      category: "cep",
+      message: "cep.lookup_ok",
+      data: { cepPrefix: cleanCEP.slice(0, 5) },
+    });
     return data as ViaCepResult;
   } catch (error) {
     logger.warn("viacep_fetch_error", { cep: cleanCEP, error: String(error) });

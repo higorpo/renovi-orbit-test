@@ -1,0 +1,64 @@
+---
+description: Uso do Sentry para erros, breadcrumbs e métricas
+alwaysApply: true
+---
+
+# Sentry (erros, observabilidade e métricas)
+
+O projeto usa **Sentry** para visibilidade de erros, contexto (breadcrumbs) e métricas. O Sentry só envia dados quando `VITE_SENTRY_DSN` está definido; sem DSN, as chamadas são no-op.
+
+**Usuário no Sentry:** quando o usuário está logado, o `AuthProvider` chama `setSentryUser({ id, email })` automaticamente. Todos os eventos (erros, breadcrumbs, métricas) passam a ser associados a esse usuário no dashboard do Sentry, permitindo filtrar por usuário. No logout, o contexto de usuário é limpo (`setSentryUser(null)`). Usuários anônimos (não logados) não têm `user` setado no Sentry.
+
+## Regras gerais
+
+1. **Erros** – Sempre que um erro for relevante para diagnóstico (API, fluxo de negócio, exceção não tratada), garantir que chegue ao Sentry:
+   - Em **`src/lib/`** e em **APIs de feature** (`src/features/<nome>/api/`): usar **`logger.error`** ou **`logger.warn`**. O logger já envia esses níveis ao Sentry e adiciona breadcrumb.
+   - Em **catch** de código que não usa o logger: usar **`captureException(error, context)`** de `@/lib/sentry` quando o erro for reportável (evitar ruído de erros esperados ou já tratados na UI).
+   - **Error boundaries** e **router errorElement** já estão instrumentados; não usar `console.error` para falhas que devem ser rastreadas.
+
+2. **Breadcrumbs** – Em fluxos importantes (auth, pedido de orçamento, endereço, recuperação de senha), adicionar **breadcrumbs** nos pontos-chave para que, quando um erro ocorrer, o trail no Sentry mostre o que o usuário fez antes:
+   - Use **`addBreadcrumb({ message, category?, level?, data? })`** de `@/lib/sentry`.
+   - Ex.: início de fluxo, conclusão de step, sucesso/falha de ação, redirecionamentos de rota.
+
+3. **Métricas** – Para eventos de sistema que você quer acompanhar no Sentry (contagens, distribuições):
+   - Use **`metrics.count(name, value?, attributes?)`** ou **`metrics.distribution(name, value, attributes?)`** de `@/lib/sentry`.
+   - Ex.: `auth.signin`, `auth.signup`, `auth.signout`, `request_quote.order_created`, `addresses.created`, `addresses.updated`, `request_quote.smart_description_generated`.
+
+4. **Não usar `console` para erros reportáveis** – Em módulos que devem ser observados (lib, api, hooks com lógica), usar **logger** (que integra com Sentry) em vez de `console.error`/`console.warn`. Ver regra `logger.mdc`.
+
+## Uso
+
+```ts
+import { captureException, addBreadcrumb, metrics } from "@/lib/sentry";
+
+// Erro fora do logger (ex.: em catch de hook)
+try {
+  await someApiCall();
+} catch (err) {
+  captureException(err, { step: "checkout", userId });
+  throw err;
+}
+
+// Breadcrumb em fluxo importante
+addBreadcrumb({
+  message: "request_quote.step_completed",
+  data: { step: 2, total_steps: 5 },
+});
+
+// Métrica de negócio
+metrics.count("request_quote.order_created", 1, { source: "logged_in" });
+```
+
+## Onde instrumentar
+
+- **APIs** – Erros já devem ser logados com `logger.error`/`logger.warn`; o logger envia ao Sentry. Em retornos de erro que não passam pelo logger, considerar `captureException` ou garantir que quem chama use o logger.
+- **Hooks** – Breadcrumbs e métricas em sucesso/falha de ações (login, signup, pedido criado, recuperação de senha, etc.). Em catch que não repassam ao logger, usar `captureException` quando fizer sentido.
+- **Utils/fluxos críticos** – Breadcrumbs em pontos de decisão ou resultado (ex.: CEP resolvido, rascunho restaurado, redirecionamento de rota).
+- **Componentes** – Preferir que a lógica esteja em hooks; os hooks chamam Sentry. Em componentes com catch próprio, usar `captureException` apenas para erros inesperados que devem ser rastreados.
+
+## Sentry vs Analytics (GA)
+
+- **Sentry** – Erros, exceções, breadcrumbs, métricas de sistema/observabilidade (contagens de ações importantes para saúde do produto).
+- **Google Analytics** (regra `analytics-tracking.mdc`) – Eventos de produto e comportamento do usuário para análise de funil, conversão e demanda. Use `trackEvent` do `useAnalytics` para isso.
+
+Ambos podem ser usados no mesmo fluxo: por exemplo, ao concluir um pedido, disparar `trackEvent("quote_request_completed", ...)` para GA e `metrics.count("request_quote.order_created", 1)` + breadcrumb para Sentry.

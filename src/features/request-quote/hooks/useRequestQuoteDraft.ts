@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { addBreadcrumb } from "@/lib/sentry";
 import type { RequestQuoteState } from "./useRequestQuoteState";
 import {
   getDraft,
@@ -51,6 +52,10 @@ export function useRequestQuoteDraft(
   const restoreDraft = useCallback(() => {
     const draft = restorableDraft?.draft;
     if (draft == null) return;
+    addBreadcrumb({
+      message: "request_quote.draft_restored",
+      data: { step: draft.currentStep },
+    });
     state.setCurrentStep(draft.currentStep);
     state.setPreviousStep(draft.previousStep);
     state.setSelectedService(draft.selectedService);
@@ -68,6 +73,7 @@ export function useRequestQuoteDraft(
   }, [restorableDraft, state]);
 
   const discardDraft = useCallback(() => {
+    addBreadcrumb({ message: "request_quote.draft_discarded" });
     clearDraft();
     setRestorableDraft(null);
   }, []);

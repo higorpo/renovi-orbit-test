@@ -1,5 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import { getSupabaseAnonKey } from "@/lib/supabase/client";
+import { logger } from "@/lib/logger";
 import type { AddressSelection } from "@/features/addresses";
 import type { ServiceWithChildren, ServiceRequestStructuredData } from "../types/request-quote.types";
 
@@ -28,6 +29,7 @@ export type CreateRequestQuoteOrderResult =
 function getSupabaseUrl(): string {
   const url = import.meta.env.VITE_SUPABASE_URL;
   if (typeof url !== "string" || !url) {
+    logger.error("request_quote_order_config_error", { error: "VITE_SUPABASE_URL is not set" });
     throw new Error("VITE_SUPABASE_URL is not set");
   }
   return url.replace(/\/$/, "");
@@ -56,6 +58,7 @@ export async function createRequestQuoteOrder(
   const accessToken = getBearerToken(session);
 
   if (!step4Data) {
+    logger.warn("request_quote_order_validation", { reason: "no_address", userId });
     return { success: false, error: "Selecione um endereço." };
   }
 
@@ -120,10 +123,12 @@ export async function createRequestQuoteOrder(
       typeof (body as { message?: string }).message === "string"
         ? (body as { message: string }).message
         : "Muitas requisições. Tente novamente em alguns segundos.";
+    logger.warn("request_quote_order_rate_limited", { status: 429, retryAfter: retryAfterNum });
     return { success: false, error: message, retryAfter: retryAfterNum };
   }
 
   if (res.status === 413) {
+    logger.warn("request_quote_order_payload_too_large", { status: 413 });
     return { success: false, error: "Arquivos muito grandes. Reduza o tamanho das fotos." };
   }
 
@@ -134,6 +139,11 @@ export async function createRequestQuoteOrder(
       typeof (data as { error?: string }).error === "string"
         ? (data as { error: string }).error
         : "Ocorreu um erro. Tente novamente.";
+    logger.error("request_quote_order_api_error", {
+      status: res.status,
+      error: message,
+      userId: params.userId,
+    });
     return { success: false, error: message };
   }
 
@@ -141,6 +151,10 @@ export async function createRequestQuoteOrder(
   const addressId = (data as { addressId?: string | null }).addressId ?? null;
 
   if (typeof requestId !== "string") {
+    logger.error("request_quote_order_invalid_response", {
+      userId: params.userId,
+      received: typeof requestId,
+    });
     return { success: false, error: "Resposta inválida do servidor." };
   }
 

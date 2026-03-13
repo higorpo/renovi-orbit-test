@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
+import { metrics } from "@/lib/sentry";
 import type {
   ClientAddress,
   ClientAddressWithRelations,
@@ -59,6 +60,7 @@ export async function createAddress(params: CreateAddressParams): Promise<Create
     logger.error("addresses_create_error", { clientId: params.client_id, error: error.message });
     return { address: null, error: error.message };
   }
+  metrics.count("addresses.created", 1);
   return { address: data as ClientAddress, error: null };
 }
 
@@ -77,5 +79,6 @@ export async function updateAddress(
     logger.error("addresses_update_error", { addressId, error: error.message });
     return { error: error.message };
   }
+  metrics.count("addresses.updated", 1);
   return { error: null };
 }

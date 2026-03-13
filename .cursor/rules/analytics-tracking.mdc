@@ -35,3 +35,5 @@ trackEvent("signup_completed", { method: "email", user_role: role });
 - **Ações relevantes**: mudança de step em wizard, seleção de opção importante.
 
 Em desenvolvimento (`import.meta.env.DEV`), os eventos são logados no console além do dataLayer, para facilitar debug.
+
+**Diferença em relação ao Sentry:** o GA/GTM é para eventos de produto e comportamento (funil, conversão, demanda). Para erros, exceções, breadcrumbs e métricas de observabilidade, use o **Sentry** (regra `sentry.mdc`).

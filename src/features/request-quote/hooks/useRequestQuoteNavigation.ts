@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { logger } from "@/lib/logger";
+import { addBreadcrumb } from "@/lib/sentry";
 import { addressFormSchema } from "@/features/addresses";
 import type { ServiceWithChildren } from "../types/request-quote.types";
 import type { RequestQuoteState } from "./useRequestQuoteState";
@@ -33,6 +35,10 @@ export function useRequestQuoteNavigation({
   useEffect(() => {
     if (state.currentStep !== 1 || hasTrackedStartedRef.current) return;
     hasTrackedStartedRef.current = true;
+    addBreadcrumb({
+      message: "request_quote.started",
+      data: { is_logged_in: !!user, ...(urlServiceSlug && { service_slug: urlServiceSlug }) },
+    });
     trackEvent("quote_request_started", {
       is_logged_in: !!user,
       ...(urlServiceSlug && { service_slug: urlServiceSlug }),
@@ -42,15 +48,18 @@ export function useRequestQuoteNavigation({
   const handleNext = useCallback(async () => {
     if (state.currentStep === 1) {
       if (!state.selectedService) {
+        logger.info("request_quote_validation_blocked", { step: 1, reason: "no_service" });
         toast.error("Selecione um serviço para continuar.");
         return;
       }
     }
     if (state.currentStep === 2) {
       if (Object.keys(state.step2Data).length === 0) {
+        logger.info("request_quote_validation_blocked", { step: 2, reason: "empty_form" });
         toast.error("Preencha os campos do formulário do serviço para continuar.");
         return;
       }
+      addBreadcrumb({ message: "request_quote.step_completed", data: { step: 2, total_steps: totalSteps } });
       trackEvent("quote_request_step_completed", {
         step: 2,
         is_logged_in: !!user,
@@ -61,6 +70,7 @@ export function useRequestQuoteNavigation({
     }
     if (state.currentStep === 3) {
       if (!state.step3Data.description.trim()) {
+        logger.info("request_quote_validation_blocked", { step: 3, reason: "no_description" });
         toast.error("Adicione uma descrição do serviço.");
         return;
       }
@@ -68,16 +78,23 @@ export function useRequestQuoteNavigation({
     if (state.currentStep === 4) {
       if (user) {
         if (!state.step4Data) {
+          logger.info("request_quote_validation_blocked", { step: 4, reason: "no_address" });
           toast.error("Selecione um endereço ou cadastre um novo.");
           return;
         }
         if (state.step4Data.kind === "new") {
           const result = addressFormSchema.safeParse(state.step4Data.formData);
           if (!result.success) {
+            logger.warn("request_quote_validation_blocked", {
+              step: 4,
+              reason: "address_validation",
+              message: result.error.issues[0].message,
+            });
             toast.error(result.error.issues[0].message);
             return;
           }
         }
+        addBreadcrumb({ message: "request_quote.step_completed", data: { step: 4, total_steps: totalSteps } });
         trackEvent("quote_request_step_completed", {
           step: 4,
           is_logged_in: true,
@@ -87,15 +104,25 @@ export function useRequestQuoteNavigation({
         return;
       }
       if (!state.step4Data || state.step4Data.kind !== "new") {
+        logger.info("request_quote_validation_blocked", { step: 4, reason: "no_address_data" });
         toast.error("Preencha o endereço.");
         return;
       }
       const result = addressFormSchema.safeParse(state.step4Data.formData);
       if (!result.success) {
+        logger.warn("request_quote_validation_blocked", {
+          step: 4,
+          reason: "address_validation",
+          message: result.error.issues[0].message,
+        });
         toast.error(result.error.issues[0].message);
         return;
       }
     }
+    addBreadcrumb({
+      message: "request_quote.step_completed",
+      data: { step: state.currentStep, total_steps: totalSteps },
+    });
     trackEvent("quote_request_step_completed", {
       step: state.currentStep,
       is_logged_in: !!user,

@@ -21,6 +21,7 @@ import type { AuthContextType, Profile, SignUpResult } from "@/features/auth/typ
 import { processAuthEvent } from "@/features/auth/utils/authStateHandlers";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useProfileFetcher } from "@/features/auth/hooks/useProfileFetcher";
+import { metrics, addBreadcrumb, setSentryUser } from "@/lib/sentry";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -144,6 +145,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- init once; loadingSession/lastFetchedUserId read inside effect only
   }, [navigate, fetchProfile]);
 
+  // Associate Sentry events with the current user for filtering in the dashboard
+  useEffect(() => {
+    if (user) {
+      setSentryUser({ id: user.id, email: user.email ?? undefined });
+    } else {
+      setSentryUser(null);
+    }
+  }, [user]);
+
   const getRedirectPath = useCallback(getRedirectPathForProfile, []);
 
   const signInWithGoogle = useCallback(
@@ -156,6 +166,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           toast.error("Erro ao conectar com Google. Tente novamente.");
           throw error;
         }
+        addBreadcrumb({ message: "auth.signin.success", data: { method: "google" } });
+        metrics.count("auth.signin", 1, { method: "google" });
         trackEvent("login_completed", { method: "google" });
       } catch (error) {
         logger.error("auth_sign_in_google_error", {
@@ -183,6 +195,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
 
+      addBreadcrumb({ message: "auth.signin.success", data: { method: "password" } });
+      metrics.count("auth.signin", 1, { method: "password" });
       trackEvent("login_completed", { method: "password" });
       toast.success("Login realizado!");
     } catch (error) {
@@ -242,6 +256,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const profile = await fetchProfile(newUser.id);
         if (profile) setProfile(profile);
 
+        addBreadcrumb({ message: "auth.signup.success", data: { role } });
+        metrics.count("auth.signup", 1, { role });
         trackEvent("signup_completed", { method: "email", user_role: role });
         if (!newUser.email_confirmed_at) {
           toast.success(
@@ -275,6 +291,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await authApi.signOut();
       if (error) throw error;
 
+      addBreadcrumb({ message: "auth.signout.success" });
+      metrics.count("auth.signout", 1);
       toast.success("Logout realizado com sucesso!");
       navigate("/", { replace: true });
     } catch (error) {

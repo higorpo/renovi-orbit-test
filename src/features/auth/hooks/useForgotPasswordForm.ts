@@ -7,6 +7,7 @@ import {
 import { authApi } from "../api/auth.api";
 import { toast } from "sonner";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { addBreadcrumb, metrics } from "@/lib/sentry";
 
 const REDIRECT_PATH = "/recuperar-senha";
 
@@ -49,10 +50,13 @@ export function useForgotPasswordForm() {
           return;
         }
 
+        addBreadcrumb({ message: "auth.password_reset_requested", data: { email: formData.email } });
+        metrics.count("auth.password_reset_requested", 1);
         setSent(true);
         trackEvent("forgot_password_requested");
         toast.success("Email enviado! Verifique sua caixa de entrada.");
       } catch {
+        addBreadcrumb({ message: "auth.password_reset_request_failed", level: "error" });
         toast.error("Erro ao processar solicitação");
       } finally {
         setSubmitting(false);

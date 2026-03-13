@@ -1,3 +1,4 @@
+import { logger } from "@/lib/logger";
 import { uploadPhotosForRequest } from "../api/serviceRequests.api";
 
 export async function uploadPhotosForSubmit(
@@ -7,7 +8,14 @@ export async function uploadPhotosForSubmit(
 ): Promise<string[]> {
   if (photos.length === 0) return [];
   const up = await uploadPhotosForRequest(clientId, photos);
-  if (up.error && onPartialError) onPartialError();
+  if (up.error) {
+    logger.warn("request_quote_upload_photos_submit_error", {
+      clientId,
+      photoCount: photos.length,
+      error: up.error,
+    });
+    onPartialError?.();
+  }
   return up.urls ?? [];
 }
 

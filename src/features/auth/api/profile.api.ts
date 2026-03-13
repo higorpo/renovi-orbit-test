@@ -62,6 +62,7 @@ async function createProfileFromCurrentUser(
     .single();
 
   if (error) {
+    logger.error("profile_create_error", { userId, error: error.message });
     return { profile: null, error: error.message };
   }
 

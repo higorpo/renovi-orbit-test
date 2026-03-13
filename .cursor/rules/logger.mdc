@@ -20,7 +20,8 @@ logger.error("evento_error", { error: err.message });
 
 ## Motivo
 
-- Logs estruturados (evento + contexto) facilitam análise e ferramentas (ex.: Sentry).
+- Logs estruturados (evento + contexto) facilitam análise e ferramentas.
+- **O logger está integrado ao Sentry**: chamadas a `logger.error` e `logger.warn` são enviadas ao Sentry (quando `VITE_SENTRY_DSN` está definido) e geram breadcrumbs para todos os níveis. Usar o logger em vez de `console` garante visibilidade de erros no Sentry (regra `sentry.mdc`).
 - O logger pode ser configurado por ambiente (ex.: menos verbosidade em produção).
 - Consistência no formato em todo o projeto.
 
@@ -29,4 +30,4 @@ logger.error("evento_error", { error: err.message });
 - Módulos em `src/lib/` (api, cache, utils, etc.).
 - Hooks que fazem lógica relevante (ex.: useAuth) também podem usar o logger para eventos de fluxo (login, logout, erro de sessão).
 
-Em componentes de UI pura, evite logs; se precisar de feedback para o usuário, use toasts ou estado de erro. Para **eventos de produto/negócio que precisam ser medidos** (conversão, demanda, abandono), use o **tracking com Google Analytics** (regra `analytics-tracking.mdc`) em vez de apenas logger.
+Em componentes de UI pura, evite logs; se precisar de feedback para o usuário, use toasts ou estado de erro. Para **eventos de produto/negócio que precisam ser medidos** (conversão, demanda, abandono), use o **tracking com Google Analytics** (regra `analytics-tracking.mdc`) em vez de apenas logger. Para **erros e observabilidade** (rastreamento de falhas, breadcrumbs, métricas de sistema), o projeto usa **Sentry** (regra `sentry.mdc`); o logger já envia erros e warns ao Sentry.

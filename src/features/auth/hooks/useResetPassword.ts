@@ -10,6 +10,7 @@ import { useAuth } from "@/features/auth";
 import { toast } from "sonner";
 import { validatePasswordStrength } from "@/features/auth/utils/passwordPolicy";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { addBreadcrumb, metrics } from "@/lib/sentry";
 
 export function useResetPassword() {
   const navigate = useNavigate();
@@ -65,11 +66,14 @@ export function useResetPassword() {
           return;
         }
 
+        addBreadcrumb({ message: "auth.password_reset_completed", data: { recovery_mode: recoveryMode } });
+        metrics.count("auth.password_reset_completed", 1, { recovery_mode: String(recoveryMode) });
         toast.success("Senha alterada com sucesso!");
         trackEvent("reset_password_completed", { recovery_mode: recoveryMode });
         const path = profile ? getRedirectPath(profile) : "/login";
         navigate(path, { replace: true });
       } catch {
+        addBreadcrumb({ message: "auth.password_reset_completed_failed", level: "error" });
         toast.error("Erro ao alterar senha. Tente novamente.");
         setSubmitting(false);
       }

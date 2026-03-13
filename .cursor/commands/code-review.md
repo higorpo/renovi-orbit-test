@@ -48,6 +48,7 @@ Você é o **agente de code review** deste projeto. Faça uma **revisão de cód
 - **React + TypeScript**: tipagem adequada; evitar `any` sem justificativa; uso correto de hooks (deps, cleanup).
 - **Vite**: imports e estrutura compatíveis; sem padrões específicos de CRA ou outros bundlers.
 - **Logger**: em `src/lib/` e em código que orquestra fluxos (ex.: auth), usar `@/lib/logger`; **não** usar `console.log`/`console.error` nesses contextos (regra em `.cursor/rules/logger.mdc`).
+- **Sentry**: erros reportáveis devem chegar ao Sentry via logger (em lib/api) ou `captureException`; em fluxos críticos (auth, pedido de orçamento, endereço), verificar se há breadcrumbs e métricas onde faz sentido (regra em `.cursor/rules/sentry.mdc`).
 - **Supabase**: em migrações e tabelas com dados de usuário, RLS ativo e políticas explícitas; texto em SQL em **inglês** (regra em `.cursor/rules/supabase-migrations.mdc`).
 - **Yarn**: projeto usa yarn; não sugerir npm/npx para instalação (regra em `.cursor/rules/yarn.mdc`).
 - **Tipos Supabase**: após mudanças de schema, lembrar de rodar `yarn generate-supabase-types` (regra em `.cursor/rules/supabase-types.mdc`).

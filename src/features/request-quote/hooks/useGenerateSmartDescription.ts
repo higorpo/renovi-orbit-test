@@ -1,6 +1,8 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { useAnalytics } from "@/hooks/useAnalytics";
+import { logger } from "@/lib/logger";
+import { addBreadcrumb, metrics } from "@/lib/sentry";
 import { invokeGenerateSmartDescription } from "../api/smartDescription.api";
 import type { RequestQuoteState } from "./useRequestQuoteState";
 import type { GenerateSmartDescriptionPayload } from "../types/request-quote.types";
@@ -48,7 +50,13 @@ export function useGenerateSmartDescription({
         useStructuredOutput: true,
       };
       const { data, error } = await invokeGenerateSmartDescription(payload);
-      if (error) throw error;
+      if (error) {
+        logger.error("request_quote_smart_description_api_error", {
+          error: error.message,
+          serviceId: state.selectedService?.id,
+        });
+        throw error;
+      }
       if (data?.description) {
         state.setStep3Data((prev) => ({
           ...prev,
@@ -64,14 +72,31 @@ export function useGenerateSmartDescription({
             : undefined,
         }));
       } else {
+        logger.warn("request_quote_smart_description_empty_response", {
+          serviceId: state.selectedService?.id,
+        });
         throw new Error("Descrição não retornada");
       }
+      addBreadcrumb({
+        message: "request_quote.smart_description_generated",
+        data: { serviceId: state.selectedService?.id },
+      });
+      metrics.count("request_quote.smart_description_generated", 1);
       trackEvent("smart_description_used", {
         ...(state.selectedService?.slug && { service_slug: state.selectedService.slug }),
       });
       toast.success("Descrição gerada com sucesso! Você pode editar se quiser.");
       onSuccess?.();
-    } catch {
+    } catch (err) {
+      logger.error("request_quote_smart_description_failed", {
+        error: err instanceof Error ? err.message : String(err),
+        serviceId: state.selectedService?.id,
+      });
+      addBreadcrumb({
+        message: "request_quote.smart_description_failed",
+        level: "warning",
+        data: { serviceId: state.selectedService?.id },
+      });
       onFailure?.();
       toast.error(
         "Não foi possível gerar a descrição automaticamente. Descreva o serviço manualmente.",
