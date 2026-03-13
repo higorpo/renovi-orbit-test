@@ -28,7 +28,6 @@ export function initSentry(): void {
         maskAllText: true,
         blockAllMedia: true,
       }),
-      Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
     ],
     tracesSampleRate: IS_PROD ? 0.2 : 1,
     tracePropagationTargets: [
