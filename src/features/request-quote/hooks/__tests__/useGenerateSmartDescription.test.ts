@@ -110,6 +110,9 @@ describe("useGenerateSmartDescription", () => {
           suggested_questions: [],
           tags: [],
           missing_info_warnings: [],
+          suggested_equipment: [],
+          suggested_materials: [],
+          estimated_duration_hint: null,
         },
       },
       error: null,
@@ -128,6 +131,9 @@ describe("useGenerateSmartDescription", () => {
       suggested_questions: [],
       tags: [],
       missing_info_warnings: [],
+      suggested_equipment: [],
+      suggested_materials: [],
+      estimated_duration_hint: null,
     });
   });
 

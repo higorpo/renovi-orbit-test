@@ -27,4 +27,14 @@ export interface GenerateSmartDescriptionResponse {
 }
 
 /** Subset of StructuredAIResponse saved on service_requests and sent to create-request-quote-order. */
-export type ServiceRequestStructuredData = Pick<StructuredAIResponse, "urgency" | "scope_complexity" | "suggested_questions" | "tags" | "missing_info_warnings">;
+export type ServiceRequestStructuredData = Pick<
+  StructuredAIResponse,
+  | "urgency"
+  | "scope_complexity"
+  | "suggested_questions"
+  | "tags"
+  | "missing_info_warnings"
+  | "suggested_equipment"
+  | "suggested_materials"
+  | "estimated_duration_hint"
+>;

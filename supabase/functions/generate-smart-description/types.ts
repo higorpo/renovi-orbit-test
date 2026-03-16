@@ -17,6 +17,12 @@ export interface PromptConfig {
   version: number;
 }
 
+import type {
+  SuggestedEquipmentKey,
+  SuggestedMaterialsKey,
+  EstimatedDurationHintKey,
+} from "./allowedValues.ts";
+
 /**
  * Structured AI response (phase 3) with professional_description, tags, metadata.
  */
@@ -30,6 +36,9 @@ export interface StructuredAIResponse {
   scope_complexity: "simple" | "medium" | "complex";
   confidence: number;
   recommended_next_step: "ask_questions" | "schedule_visit" | "send_estimate_range";
+  suggested_equipment: SuggestedEquipmentKey[];
+  suggested_materials: SuggestedMaterialsKey[];
+  estimated_duration_hint: EstimatedDurationHintKey | null;
 }
 
 /** Mode for AI output: full description (structured or plain) or short suggestion only. */

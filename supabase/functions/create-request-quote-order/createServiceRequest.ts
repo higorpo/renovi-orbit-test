@@ -20,6 +20,9 @@ interface Params {
   suggested_questions?: string[] | null;
   tags?: string[] | null;
   missing_info_warnings?: string[] | null;
+  suggested_equipment?: string[] | null;
+  suggested_materials?: string[] | null;
+  estimated_duration_hint?: string | null;
 }
 
 export async function createServiceRequest(
@@ -45,6 +48,9 @@ export async function createServiceRequest(
     suggested_questions: params.suggested_questions?.length ? params.suggested_questions : null,
     tags: params.tags?.length ? params.tags : null,
     missing_info_warnings: params.missing_info_warnings?.length ? params.missing_info_warnings : null,
+    suggested_equipment: params.suggested_equipment?.length ? params.suggested_equipment : null,
+    suggested_materials: params.suggested_materials?.length ? params.suggested_materials : null,
+    estimated_duration_hint: params.estimated_duration_hint ?? null,
   };
 
   const { data, error } = await supabase

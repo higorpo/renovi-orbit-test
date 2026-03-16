@@ -19,6 +19,15 @@ create table if not exists public.service_requests (
   suggested_questions text[],
   tags text[],
   missing_info_warnings text[],
+  suggested_equipment text[],
+  suggested_materials text[],
+  estimated_duration_hint text check (
+    estimated_duration_hint is null
+    or estimated_duration_hint in (
+      'under_1h', '1_to_2h', '2_to_4h', '4_to_8h',
+      '1_day', '1_to_2_days', '2_to_5_days', '5_to_10_days', 'over_10_days'
+    )
+  ),
   -- Snapshot of address coordinates at request creation; synced from client_addresses when address_id is set (trigger).
   location geography(Point, 4326),
   latitude double precision generated always as (st_y(location::geometry)) stored,
@@ -40,6 +49,9 @@ comment on column public.service_requests.scope_complexity is 'AI-derived scope 
 comment on column public.service_requests.suggested_questions is 'AI-suggested follow-up questions for the client.';
 comment on column public.service_requests.tags is 'AI-derived tags for the request.';
 comment on column public.service_requests.missing_info_warnings is 'AI warnings about missing or unclear information.';
+comment on column public.service_requests.suggested_equipment is 'AI-suggested equipment/tools keys (snake_case, from allowed list) the professional may need.';
+comment on column public.service_requests.suggested_materials is 'AI-suggested materials/consumables keys (snake_case, from allowed list) typically needed for the job.';
+comment on column public.service_requests.estimated_duration_hint is 'AI-derived estimated duration key: under_1h, 1_to_2h, 2_to_4h, 4_to_8h, 1_day, 1_to_2_days, 2_to_5_days, 5_to_10_days, over_10_days.';
 comment on column public.service_requests.location is 'Snapshot of address coordinates at request creation; synced from client_addresses when address_id is set. Used for region/geohash queries.';
 comment on column public.service_requests.latitude is 'WGS84 latitude derived from location.';
 comment on column public.service_requests.longitude is 'WGS84 longitude derived from location.';

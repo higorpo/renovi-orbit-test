@@ -1,4 +1,9 @@
-import type { ParsedFormData, AddressPayload, StructuredDataPayload } from "./types.ts";
+import type {
+  ParsedFormData,
+  AddressPayload,
+  StructuredDataPayload,
+} from "./types.ts";
+import { ESTIMATED_DURATION_HINT_VALUES } from "./types.ts";
 
 export type ParseFormDataResult =
   | { ok: true; data: ParsedFormData }
@@ -83,14 +88,36 @@ export async function parseFormData(formData: FormData): Promise<ParseFormDataRe
     try {
       const parsed = JSON.parse(structuredDataStr) as Record<string, unknown>;
       if (parsed && typeof parsed === "object") {
+        const durationHint =
+          typeof parsed.estimated_duration_hint === "string" &&
+          ESTIMATED_DURATION_HINT_VALUES.includes(
+            parsed.estimated_duration_hint as (typeof ESTIMATED_DURATION_HINT_VALUES)[number]
+          )
+            ? parsed.estimated_duration_hint
+            : null;
         structuredData = {
-          urgency: ["low", "medium", "high"].includes(parsed.urgency as string) ? (parsed.urgency as "low" | "medium" | "high") : null,
-          scope_complexity: ["simple", "medium", "complex"].includes(parsed.scope_complexity as string)
+          urgency: ["low", "medium", "high"].includes(parsed.urgency as string)
+            ? (parsed.urgency as "low" | "medium" | "high")
+            : null,
+          scope_complexity: ["simple", "medium", "complex"].includes(
+            parsed.scope_complexity as string
+          )
             ? (parsed.scope_complexity as "simple" | "medium" | "complex")
             : null,
-          suggested_questions: Array.isArray(parsed.suggested_questions) ? (parsed.suggested_questions as string[]) : null,
+          suggested_questions: Array.isArray(parsed.suggested_questions)
+            ? (parsed.suggested_questions as string[])
+            : null,
           tags: Array.isArray(parsed.tags) ? (parsed.tags as string[]) : null,
-          missing_info_warnings: Array.isArray(parsed.missing_info_warnings) ? (parsed.missing_info_warnings as string[]) : null,
+          missing_info_warnings: Array.isArray(parsed.missing_info_warnings)
+            ? (parsed.missing_info_warnings as string[])
+            : null,
+          suggested_equipment: Array.isArray(parsed.suggested_equipment)
+            ? (parsed.suggested_equipment as string[])
+            : null,
+          suggested_materials: Array.isArray(parsed.suggested_materials)
+            ? (parsed.suggested_materials as string[])
+            : null,
+          estimated_duration_hint: durationHint,
         };
       }
     } catch {

@@ -411,6 +411,7 @@ export type Database = {
           client_id: string
           created_at: string
           description: string | null
+          estimated_duration_hint: string | null
           form_data: Json | null
           form_schema: Json | null
           form_version: string | null
@@ -420,6 +421,8 @@ export type Database = {
           scope_complexity: string | null
           service_id: string
           status: string
+          suggested_equipment: string[] | null
+          suggested_materials: string[] | null
           suggested_questions: string[] | null
           tags: string[] | null
           title: string
@@ -431,6 +434,7 @@ export type Database = {
           client_id: string
           created_at?: string
           description?: string | null
+          estimated_duration_hint?: string | null
           form_data?: Json | null
           form_schema?: Json | null
           form_version?: string | null
@@ -440,6 +444,8 @@ export type Database = {
           scope_complexity?: string | null
           service_id: string
           status?: string
+          suggested_equipment?: string[] | null
+          suggested_materials?: string[] | null
           suggested_questions?: string[] | null
           tags?: string[] | null
           title: string
@@ -451,6 +457,7 @@ export type Database = {
           client_id?: string
           created_at?: string
           description?: string | null
+          estimated_duration_hint?: string | null
           form_data?: Json | null
           form_schema?: Json | null
           form_version?: string | null
@@ -460,6 +467,8 @@ export type Database = {
           scope_complexity?: string | null
           service_id?: string
           status?: string
+          suggested_equipment?: string[] | null
+          suggested_materials?: string[] | null
           suggested_questions?: string[] | null
           tags?: string[] | null
           title?: string

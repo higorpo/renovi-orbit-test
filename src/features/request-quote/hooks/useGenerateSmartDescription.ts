@@ -68,6 +68,9 @@ export function useGenerateSmartDescription({
                 suggested_questions: data.structured.suggested_questions,
                 tags: data.structured.tags,
                 missing_info_warnings: data.structured.missing_info_warnings,
+                suggested_equipment: data.structured.suggested_equipment,
+                suggested_materials: data.structured.suggested_materials,
+                estimated_duration_hint: data.structured.estimated_duration_hint,
               }
             : undefined,
         }));

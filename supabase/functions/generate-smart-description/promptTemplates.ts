@@ -1,3 +1,9 @@
+import {
+  SUGGESTED_EQUIPMENT_KEYS,
+  SUGGESTED_MATERIALS_KEYS,
+  ESTIMATED_DURATION_HINT_KEYS,
+} from "./allowedValues.ts";
+
 /**
  * System prompt for "suggestion" mode: short "Detalhes Adicionais" text.
  */
@@ -100,7 +106,10 @@ IMPORTANTE: Você DEVE retornar APENAS um JSON válido no seguinte formato (sem 
   "urgency": "low|medium|high",
   "scope_complexity": "simple|medium|complex",
   "confidence": 0.0-1.0,
-  "recommended_next_step": "ask_questions|schedule_visit|send_estimate_range"
+  "recommended_next_step": "ask_questions|schedule_visit|send_estimate_range",
+  "suggested_equipment": ["key1", "key2"],
+  "suggested_materials": ["key1", "key2"],
+  "estimated_duration_hint": "2_to_4h"
 }
 
 REGRAS DE PREENCHIMENTO (RESTRITIVAS):
@@ -119,6 +128,15 @@ REGRAS DE PREENCHIMENTO (RESTRITIVAS):
 - confidence: 0.0-1.0 baseado na completude das informações fornecidas
 - recommended_next_step: "ask_questions" se há informações faltantes críticas, "send_estimate_range" se informações estão completas
 
+- suggested_equipment: Array de chaves em INGLÊS, snake_case, indicando EQUIPAMENTOS/FERRAMENTAS que o profissional provavelmente precisará (não materiais consumíveis). Use APENAS chaves da lista permitida abaixo. Escolha de 0 a 20 itens mais relevantes para o tipo de serviço e o que o cliente descreveu. Se nada se aplicar, use [].
+  LISTA PERMITIDA (use somente estas chaves, exatamente como escritas): ${SUGGESTED_EQUIPMENT_KEYS.join(", ")}
+
+- suggested_materials: Array de chaves em INGLÊS, snake_case, indicando MATERIAIS/CONSUMÍVEIS típicos para o serviço (ex: fios, parafusos, argamassa, tinta). Use APENAS chaves da lista permitida abaixo. Escolha de 0 a 20 itens mais relevantes. Se nada se aplicar, use [].
+  LISTA PERMITIDA (use somente estas chaves, exatamente como escritas): ${SUGGESTED_MATERIALS_KEYS.join(", ")}
+
+- estimated_duration_hint: UMA ÚNICA chave em INGLÊS, snake_case, indicando a faixa de DURAÇÃO ESTIMADA do serviço com base no escopo descrito. Use APENAS uma das chaves da lista permitida abaixo. Escolha a faixa mais adequada (ex: troca de um chuveiro = "1_to_2h", reforma de banheiro = "5_to_10_days").
+  LISTA PERMITIDA (use somente uma destas chaves, exatamente como escrita): ${ESTIMATED_DURATION_HINT_KEYS.join(", ")}
+
 EXEMPLO CORRETO (um único texto em primeira pessoa, sem seções):
 {
   "professional_description": "Preciso de orçamento para instalação de 2 chuveiros elétricos em minha casa (alvenaria, 220V). Os aparelhos anteriores queimaram e já tenho os novos; gostaria que avaliassem a necessidade de extensor e as condições da instalação existente. O serviço é urgente. Também gostaria que verificassem se há disjuntor exclusivo para chuveiro e as condições da fiação.",
@@ -128,7 +146,10 @@ EXEMPLO CORRETO (um único texto em primeira pessoa, sem seções):
   "urgency": "high",
   "scope_complexity": "simple",
   "confidence": 0.9,
-  "recommended_next_step": "send_estimate_range"
+  "recommended_next_step": "send_estimate_range",
+  "suggested_equipment": ["insulated_screwdrivers", "wire_strippers", "voltage_tester", "drill", "measuring_tape"],
+  "suggested_materials": ["wire_nuts", "electrical_tape", "cable_wire"],
+  "estimated_duration_hint": "2_to_4h"
 }
 
 EXEMPLO ERRADO (NÃO FAÇA — com seções ou terceira pessoa):

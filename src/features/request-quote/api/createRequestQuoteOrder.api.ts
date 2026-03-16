@@ -96,6 +96,9 @@ export async function createRequestQuoteOrder(
             suggested_questions: step3Data.structured.suggested_questions ?? null,
             tags: step3Data.structured.tags ?? null,
             missing_info_warnings: step3Data.structured.missing_info_warnings ?? null,
+            suggested_equipment: step3Data.structured.suggested_equipment ?? null,
+            suggested_materials: step3Data.structured.suggested_materials ?? null,
+            estimated_duration_hint: step3Data.structured.estimated_duration_hint ?? null,
           }
         : {}
     )

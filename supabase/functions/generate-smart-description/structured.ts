@@ -1,4 +1,9 @@
 import type { StructuredAIResponse } from "./types.ts";
+import {
+  filterAllowedEquipment,
+  filterAllowedMaterials,
+  parseDurationHint,
+} from "./allowedValues.ts";
 
 /**
  * Strip markdown code fence around JSON (e.g. ```json ... ```) so it can be parsed.
@@ -56,6 +61,16 @@ export function validateStructuredResponse(
       return null;
     }
 
+    const suggested_equipment = Array.isArray(d.suggested_equipment)
+      ? filterAllowedEquipment(d.suggested_equipment as string[])
+      : [];
+    const suggested_materials = Array.isArray(d.suggested_materials)
+      ? filterAllowedMaterials(d.suggested_materials as string[])
+      : [];
+    const estimated_duration_hint = parseDurationHint(
+      d.estimated_duration_hint as string | null | undefined
+    );
+
     return {
       schema_version: (d.schema_version as number) || 1,
       professional_description: (d.professional_description as string) || "",
@@ -66,14 +81,21 @@ export function validateStructuredResponse(
       suggested_questions: Array.isArray(d.suggested_questions)
         ? (d.suggested_questions as string[])
         : [],
-      urgency: (d.urgency as 'low' | 'medium' | 'high') || "medium",
-      scope_complexity: (d.scope_complexity as 'simple' | 'medium' | 'complex') || "medium",
+      urgency: (d.urgency as "low" | "medium" | "high") || "medium",
+      scope_complexity:
+        (d.scope_complexity as "simple" | "medium" | "complex") || "medium",
       confidence:
         typeof d.confidence === "number"
           ? Math.max(0, Math.min(1, d.confidence))
           : 0.7,
       recommended_next_step:
-        (d.recommended_next_step as 'ask_questions' | 'schedule_visit' | 'send_estimate_range') || "send_estimate_range",
+        (d.recommended_next_step as
+          | "ask_questions"
+          | "schedule_visit"
+          | "send_estimate_range") || "send_estimate_range",
+      suggested_equipment,
+      suggested_materials,
+      estimated_duration_hint,
     };
   } catch (err) {
     console.error("[Validation] Erro ao validar resposta estruturada:", err);
@@ -85,17 +107,20 @@ export function validateStructuredResponse(
  * Generate fallback structured response on error.
  */
 export function generateFallbackResponse(
-  description: string,
+  description: string
 ): StructuredAIResponse {
   return {
     schema_version: 1,
     professional_description: description,
     tags: [],
     missing_info_warnings: [],
-    suggested_questions: [],  
+    suggested_questions: [],
     urgency: "medium",
     scope_complexity: "medium",
     confidence: 0.5,
     recommended_next_step: "send_estimate_range",
+    suggested_equipment: [],
+    suggested_materials: [],
+    estimated_duration_hint: null,
   };
 }

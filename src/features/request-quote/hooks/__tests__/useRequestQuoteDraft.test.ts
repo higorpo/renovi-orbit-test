@@ -283,7 +283,13 @@ describe("useRequestQuoteDraft", () => {
         step2FormVersion: null,
         step3Data: {
           description: "d",
-          structured: { urgency: "high", scope_complexity: "medium" },
+          structured: {
+            urgency: "high",
+            scope_complexity: "medium",
+            suggested_equipment: [],
+            suggested_materials: [],
+            estimated_duration_hint: null,
+          },
         },
         step4Data: null,
       },
@@ -297,7 +303,13 @@ describe("useRequestQuoteDraft", () => {
     expect(state.setStep3Data).toHaveBeenCalledWith(
       expect.objectContaining({
         description: "d",
-        structured: { urgency: "high", scope_complexity: "medium" },
+        structured: {
+          urgency: "high",
+          scope_complexity: "medium",
+          suggested_equipment: [],
+          suggested_materials: [],
+          estimated_duration_hint: null,
+        },
         photos: [],
         photoPreviews: [],
       })

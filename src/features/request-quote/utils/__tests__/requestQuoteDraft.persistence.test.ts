@@ -138,6 +138,9 @@ describe("requestQuoteDraft.persistence", () => {
         suggested_questions: [],
         tags: [],
         missing_info_warnings: [],
+        suggested_equipment: [],
+        suggested_materials: [],
+        estimated_duration_hint: null,
       };
       const state = {
         currentStep: 2,

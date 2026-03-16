@@ -129,6 +129,9 @@ serve(async (req) => {
       suggested_questions: data.structuredData?.suggested_questions ?? null,
       tags: data.structuredData?.tags ?? null,
       missing_info_warnings: data.structuredData?.missing_info_warnings ?? null,
+      suggested_equipment: data.structuredData?.suggested_equipment ?? null,
+      suggested_materials: data.structuredData?.suggested_materials ?? null,
+      estimated_duration_hint: data.structuredData?.estimated_duration_hint ?? null,
     }
   );
 
