@@ -14,6 +14,7 @@ export interface FiltersBarProps {
   filters: ServiceRequestsFilterState;
   onCategoryChange: (id: string | null) => void;
   onCityChange: (name: string | null) => void;
+  onNeighborhoodChange: (name: string | null) => void;
   onDateRangeChange: (from: string | null, to: string | null) => void;
   onHasProposalsChange: (v: boolean | null) => void;
   onHasImagesChange: (v: boolean | null) => void;
@@ -21,6 +22,8 @@ export interface FiltersBarProps {
   categoryOptions: string[];
   /** Unique city names for city dropdown. */
   cityOptions: string[];
+  /** Unique neighborhood names for neighborhood dropdown. */
+  neighborhoodOptions: string[];
   disabled?: boolean;
 }
 
@@ -28,11 +31,13 @@ export function FiltersBar({
   filters,
   onCategoryChange,
   onCityChange,
+  onNeighborhoodChange,
   onDateRangeChange,
   onHasProposalsChange,
   onHasImagesChange,
   categoryOptions,
   cityOptions,
+  neighborhoodOptions,
   disabled,
 }: FiltersBarProps) {
   const [open, setOpen] = useState(false);
@@ -40,6 +45,7 @@ export function FiltersBar({
   const hasActiveFilters =
     filters.categoryId != null ||
     filters.cityName != null ||
+    filters.neighborhoodName != null ||
     filters.dateFrom != null ||
     filters.dateTo != null ||
     filters.hasProposals !== null ||
@@ -71,8 +77,8 @@ export function FiltersBar({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72" align="start">
-        <div className="space-y-4">
+      <PopoverContent className="w-80 max-w-[calc(100vw-2rem)]" align="start">
+        <div className="space-y-4 overflow-hidden">
           <div className="flex items-center justify-between">
             <h3 className="font-medium">Filtros</h3>
             {hasActiveFilters && (
@@ -133,12 +139,36 @@ export function FiltersBar({
             </div>
           )}
 
+          {neighborhoodOptions.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="filter-neighborhood">Bairro</Label>
+              <select
+                id="filter-neighborhood"
+                className={cn(
+                  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                )}
+                value={filters.neighborhoodName ?? ""}
+                onChange={(e) =>
+                  onNeighborhoodChange(e.target.value || null)
+                }
+                aria-label="Filtrar por bairro"
+              >
+                <option value="">Todos</option>
+                {neighborhoodOptions.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label>Data</Label>
             <div className="flex gap-2">
               <input
                 type="date"
-                className="flex h-10 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                className="min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 value={filters.dateFrom ?? ""}
                 onChange={(e) =>
                   onDateRangeChange(e.target.value || null, filters.dateTo)
@@ -147,7 +177,7 @@ export function FiltersBar({
               />
               <input
                 type="date"
-                className="flex h-10 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                className="min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 value={filters.dateTo ?? ""}
                 onChange={(e) =>
                   onDateRangeChange(filters.dateFrom, e.target.value || null)

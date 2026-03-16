@@ -34,7 +34,12 @@ function makeRow(
       platform_cities: { name: "Florianópolis" },
       platform_states: { abbreviation: "SC" },
     },
-    services: { title: "Eletricista", slug: "eletricista" },
+    services: {
+      title: "Eletricista",
+      slug: "eletricista",
+      icon_key: "Zap",
+      color_key: "yellow_orange",
+    },
     ...overrides,
   } as ServiceRequestWithRelationsRow;
 }
@@ -54,6 +59,8 @@ describe("mapToServiceRequestCardModel", () => {
     expect(model.address?.stateAbbreviation).toBe("SC");
     expect(model.service?.title).toBe("Eletricista");
     expect(model.service?.slug).toBe("eletricista");
+    expect(model.service?.icon_key).toBe("Zap");
+    expect(model.service?.color_key).toBe("yellow_orange");
   });
 
   it("handles null address and service", () => {

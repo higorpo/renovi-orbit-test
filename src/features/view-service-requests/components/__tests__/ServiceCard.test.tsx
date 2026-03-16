@@ -1,11 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
+import { Wrench } from "lucide-react";
 import { ServiceCard } from "../ServiceCard";
 import type { ServiceRequestCardModel } from "../../types/service-request-view.types";
 
 vi.mock("@/features/request-quote", () => ({
   useServiceRequestPhotoUrls: vi.fn(() => ({ urls: [], isLoading: false })),
+  getServiceCardStyle: vi.fn(() => ({
+    Icon: Wrench,
+    color: "from-slate-500 to-slate-700",
+  })),
 }));
 
 function makeModel(
@@ -79,7 +84,7 @@ describe("ServiceCard", () => {
     expect(verDetalhesLinks.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders Excluir serviço button when onCancel is passed and status is open", () => {
+  it("renders Cancelar serviço button when onCancel is passed and status is open", () => {
     const onCancel = vi.fn();
     const model = makeModel({ status: "open", statusTabId: "waiting_proposals" });
     render(
@@ -87,10 +92,10 @@ describe("ServiceCard", () => {
         <ServiceCard model={model} onCancel={onCancel} />
       </MemoryRouter>
     );
-    expect(screen.getByRole("button", { name: /Excluir serviço/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Cancelar serviço/i })).toBeInTheDocument();
   });
 
-  it("opens confirm dialog and calls onCancel when user confirms exclude", () => {
+  it("opens confirm dialog and calls onCancel when user confirms cancel", () => {
     const onCancel = vi.fn();
     const model = makeModel({ status: "open", statusTabId: "waiting_proposals" });
     render(
@@ -98,10 +103,10 @@ describe("ServiceCard", () => {
         <ServiceCard model={model} onCancel={onCancel} />
       </MemoryRouter>
     );
-    const excludeBtn = screen.getByRole("button", { name: /Excluir serviço/i });
-    fireEvent.click(excludeBtn);
-    expect(screen.getByRole("alertdialog", { name: /Excluir serviço\?/i })).toBeInTheDocument();
-    const confirmBtn = screen.getByRole("button", { name: /^Excluir$/i });
+    const cancelBtn = screen.getByRole("button", { name: /Cancelar serviço/i });
+    fireEvent.click(cancelBtn);
+    expect(screen.getByRole("alertdialog", { name: /Cancelar serviço\?/i })).toBeInTheDocument();
+    const confirmBtn = screen.getByRole("button", { name: /^Cancelar$/i });
     fireEvent.click(confirmBtn);
     expect(onCancel).toHaveBeenCalledWith(model.id);
   });

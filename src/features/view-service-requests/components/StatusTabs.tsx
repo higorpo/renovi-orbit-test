@@ -1,6 +1,8 @@
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { STATUS_TABS } from "../constants/statusTabs";
+import { STATUS_TAB_DISPLAY } from "../constants/statusTabDisplay";
 import type { StatusTabId } from "../constants/statusTabs";
+import { cn } from "@/lib/utils";
 
 export interface StatusTabsProps {
   activeTabId: StatusTabId;
@@ -17,7 +19,12 @@ export function StatusTabs({
 }: StatusTabsProps) {
   return (
     <TabsList
-      className="w-full justify-start overflow-x-auto"
+      className={cn(
+        "w-full justify-start gap-2 overflow-x-auto p-0",
+        "bg-transparent min-h-0 rounded-none",
+        "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]",
+        "snap-x snap-mandatory scroll-smooth"
+      )}
       role="tablist"
       aria-label="Filtrar por status"
     >
@@ -27,6 +34,8 @@ export function StatusTabs({
           count !== undefined && count !== null
             ? `${tab.label} (${count})`
             : tab.label;
+        const { Icon, iconColor } = STATUS_TAB_DISPLAY[tab.id];
+        const isActive = activeTabId === tab.id;
         return (
           <TabsTrigger
             key={tab.id}
@@ -34,10 +43,23 @@ export function StatusTabs({
             onClick={() => onTabChange(tab.id)}
             disabled={disabled}
             role="tab"
-            aria-selected={activeTabId === tab.id}
+            aria-selected={isActive}
             aria-controls={`panel-${tab.id}`}
+            className={cn(
+              "gap-1.5 rounded-full border border-muted-foreground/10 bg-transparent",
+              "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+              "data-[state=active]:bg-muted data-[state=active]:border-muted-foreground/60 data-[state=active]:text-foreground data-[state=active]:shadow-none"
+            )}
           >
-            {label}
+            <Icon
+              className={cn(
+                "h-4 w-4 shrink-0",
+                isActive ? iconColor : "text-muted-foreground",
+                tab.id === "in_progress" && isActive && "animate-spin"
+              )}
+              aria-hidden
+            />
+            <span className="whitespace-nowrap">{label}</span>
           </TabsTrigger>
         );
       })}

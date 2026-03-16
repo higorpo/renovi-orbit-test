@@ -2,19 +2,19 @@ import { tabIncludesStatus } from "../constants/statusTabs";
 import type { ServiceRequestCardModel } from "../types/service-request-view.types";
 import type { ServiceRequestsFilterState } from "../types/service-request-view.types";
 import { formatLocationDisplay } from "./locationDisplay";
+import { normalizedIncludes } from "./normalizeForSearch";
 
 function matchesSearch(model: ServiceRequestCardModel, query: string): boolean {
   if (!query.trim()) return true;
-  const q = query.trim().toLowerCase();
-  const title = model.title.toLowerCase();
-  const desc = (model.description ?? "").toLowerCase();
-  const location = formatLocationDisplay(model.address).toLowerCase();
-  const category = model.service?.title.toLowerCase() ?? "";
+  const title = model.title;
+  const desc = model.description ?? "";
+  const location = formatLocationDisplay(model.address);
+  const category = model.service?.title ?? "";
   return (
-    title.includes(q) ||
-    desc.includes(q) ||
-    location.includes(q) ||
-    category.includes(q)
+    normalizedIncludes(title, query) ||
+    normalizedIncludes(desc, query) ||
+    normalizedIncludes(location, query) ||
+    normalizedIncludes(category, query)
   );
 }
 
@@ -43,6 +43,17 @@ function matchesCity(
   if (!cityName?.trim()) return true;
   return (
     model.address?.cityName?.toLowerCase() === cityName.trim().toLowerCase()
+  );
+}
+
+function matchesNeighborhood(
+  model: ServiceRequestCardModel,
+  neighborhoodName: string | null
+): boolean {
+  if (!neighborhoodName?.trim()) return true;
+  return (
+    model.address?.neighborhood?.toLowerCase() ===
+    neighborhoodName.trim().toLowerCase()
   );
 }
 
@@ -90,6 +101,7 @@ export function filterServiceRequests(
       matchesSearch(model, filters.searchQuery) &&
       matchesCategory(model, filters.categoryId) &&
       matchesCity(model, filters.cityName) &&
+      matchesNeighborhood(model, filters.neighborhoodName) &&
       matchesDateRange(model, filters.dateFrom, filters.dateTo) &&
       matchesHasProposals(model, filters.hasProposals) &&
       matchesHasImages(model, filters.hasImages)

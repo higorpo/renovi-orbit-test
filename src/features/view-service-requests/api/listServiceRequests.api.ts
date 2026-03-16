@@ -11,7 +11,7 @@ export interface ServiceRequestWithRelationsRow extends ServiceRequestRow {
     platform_cities?: { name: string } | null;
     platform_states?: { abbreviation: string } | null;
   } | null;
-  services?: { title: string; slug: string } | null;
+  services?: { title: string; slug: string; icon_key: string | null; color_key: string | null } | null;
 }
 
 export interface ListServiceRequestsParams {
@@ -44,7 +44,7 @@ export async function listServiceRequests(
         platform_cities ( name ),
         platform_states ( abbreviation )
       ),
-      services ( title, slug )
+      services ( title, slug, icon_key, color_key )
     `
     )
     .eq("client_id", params.clientId)

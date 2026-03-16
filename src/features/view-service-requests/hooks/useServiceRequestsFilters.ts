@@ -9,6 +9,7 @@ const INITIAL_FILTERS: Omit<ServiceRequestsFilterState, "searchQuery"> = {
   statusTabId: DEFAULT_STATUS_TAB_ID,
   categoryId: null,
   cityName: null,
+  neighborhoodName: null,
   dateFrom: null,
   dateTo: null,
   hasProposals: null,
@@ -26,6 +27,7 @@ export interface UseServiceRequestsFiltersResult {
   setStatusTabId: (id: StatusTabId) => void;
   setCategoryId: (id: string | null) => void;
   setCityName: (name: string | null) => void;
+  setNeighborhoodName: (name: string | null) => void;
   setDateRange: (from: string | null, to: string | null) => void;
   setHasProposals: (v: boolean | null) => void;
   setHasImages: (v: boolean | null) => void;
@@ -60,6 +62,10 @@ export function useServiceRequestsFilters({
     setFilters((prev) => ({ ...prev, cityName }));
   }, []);
 
+  const setNeighborhoodName = useCallback((neighborhoodName: string | null) => {
+    setFilters((prev) => ({ ...prev, neighborhoodName }));
+  }, []);
+
   const setDateRange = useCallback((dateFrom: string | null, dateTo: string | null) => {
     setFilters((prev) => ({ ...prev, dateFrom, dateTo }));
   }, []);
@@ -77,6 +83,7 @@ export function useServiceRequestsFilters({
     setStatusTabId,
     setCategoryId,
     setCityName,
+    setNeighborhoodName,
     setDateRange,
     setHasProposals,
     setHasImages,

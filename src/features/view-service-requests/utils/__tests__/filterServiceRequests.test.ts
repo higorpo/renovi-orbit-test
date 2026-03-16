@@ -34,6 +34,7 @@ describe("filterServiceRequests", () => {
       searchQuery: "",
       categoryId: null,
       cityName: null,
+      neighborhoodName: null,
       dateFrom: null,
       dateTo: null,
       hasProposals: null,
@@ -49,6 +50,7 @@ describe("filterServiceRequests", () => {
       searchQuery: "",
       categoryId: null,
       cityName: null,
+      neighborhoodName: null,
       dateFrom: null,
       dateTo: null,
       hasProposals: null,
@@ -65,6 +67,7 @@ describe("filterServiceRequests", () => {
       searchQuery: "Eletricista",
       categoryId: null,
       cityName: null,
+      neighborhoodName: null,
       dateFrom: null,
       dateTo: null,
       hasProposals: null,
@@ -80,6 +83,7 @@ describe("filterServiceRequests", () => {
       searchQuery: "",
       categoryId: null,
       cityName: "Florianópolis",
+      neighborhoodName: null,
       dateFrom: null,
       dateTo: null,
       hasProposals: null,
@@ -87,5 +91,58 @@ describe("filterServiceRequests", () => {
     };
     const result = filterServiceRequests([openItem], filters);
     expect(result).toHaveLength(1);
+  });
+
+  it("filters by neighborhood name", () => {
+    const trindadeItem = makeModel({
+      id: "3",
+      address: { neighborhood: "Trindade", cityName: "Florianópolis" },
+    });
+    const filters: ServiceRequestsFilterState = {
+      statusTabId: "all",
+      searchQuery: "",
+      categoryId: null,
+      cityName: null,
+      neighborhoodName: "Trindade",
+      dateFrom: null,
+      dateTo: null,
+      hasProposals: null,
+      hasImages: null,
+    };
+    const result = filterServiceRequests([openItem, trindadeItem], filters);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("3");
+    expect(result[0].address?.neighborhood).toBe("Trindade");
+  });
+
+  it("search is accent-insensitive and case-insensitive", () => {
+    const itemWithAccent = makeModel({
+      id: "4",
+      title: "Serviço de encanamento",
+      description: "Instalação e manutenção",
+      service: { title: "Encanador", slug: "encanador" },
+    });
+    const filters: ServiceRequestsFilterState = {
+      statusTabId: "all",
+      searchQuery: "encanamento",
+      categoryId: null,
+      cityName: null,
+      neighborhoodName: null,
+      dateFrom: null,
+      dateTo: null,
+      hasProposals: null,
+      hasImages: null,
+    };
+    const result = filterServiceRequests([itemWithAccent], filters);
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toBe("Serviço de encanamento");
+
+    const filtersNoAccent: ServiceRequestsFilterState = {
+      ...filters,
+      searchQuery: "encanador",
+    };
+    const result2 = filterServiceRequests([itemWithAccent], filtersNoAccent);
+    expect(result2).toHaveLength(1);
+    expect(result2[0].service?.title).toBe("Encanador");
   });
 });

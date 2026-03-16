@@ -29,7 +29,12 @@ function mapService(
 ): ServiceSummary | null {
   const svc = row.services;
   if (!svc) return null;
-  return { title: svc.title, slug: svc.slug };
+  return {
+    title: svc.title,
+    slug: svc.slug,
+    icon_key: svc.icon_key ?? null,
+    color_key: svc.color_key ?? null,
+  };
 }
 
 /**

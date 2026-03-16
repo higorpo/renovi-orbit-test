@@ -14,6 +14,8 @@ export interface AddressSummary {
 export interface ServiceSummary {
   title: string;
   slug: string;
+  icon_key?: string | null;
+  color_key?: string | null;
 }
 
 /** View model for a service request card. */
@@ -45,6 +47,8 @@ export interface ServiceRequestsFilterState {
   categoryId: string | null;
   /** City name for location filter. */
   cityName: string | null;
+  /** Neighborhood name for location filter. */
+  neighborhoodName: string | null;
   dateFrom: string | null;
   dateTo: string | null;
   hasProposals: boolean | null;

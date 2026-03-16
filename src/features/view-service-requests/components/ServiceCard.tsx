@@ -13,8 +13,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MapPin, MessageSquare, Wrench } from "lucide-react";
+import {
+  MapPin,
+  MessageSquare,
+  Wrench,
+  Pencil,
+  Eye,
+  Trash2,
+  Activity,
+  Star,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getServiceCardStyle } from "@/features/request-quote";
 import type { ServiceRequestCardModel } from "../types/service-request-view.types";
 import { STATUS_LABELS, STATUS_BADGE_VARIANT } from "../constants/statusBadge";
 import { formatLocationDisplay } from "../utils/locationDisplay";
@@ -54,37 +64,42 @@ function CardActions({
   const detailPath = getServiceDetailPath(model.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-  const actions: Array<{ label: string; href?: string; action?: "cancel" }> = [];
+  const actions: Array<{
+    label: string;
+    href?: string;
+    action?: "cancel";
+    icon: React.ComponentType<{ className?: string }>;
+  }> = [];
 
   switch (model.status) {
     case "open":
       actions.push(
-        { label: "Editar serviço", href: detailPath },
-        { label: "Ver detalhes", href: detailPath }
+        { label: "Editar serviço", href: detailPath, icon: Pencil },
+        { label: "Ver detalhes", href: detailPath, icon: Eye }
       );
       if (canCancelService(model)) {
-        actions.push({ label: "Excluir serviço", action: "cancel" });
+        actions.push({ label: "Cancelar serviço", action: "cancel", icon: Trash2 });
       }
       break;
     case "in_progress":
       actions.push(
-        { label: "Ver serviço", href: detailPath },
-        { label: "Ver atividades", href: detailPath }
+        { label: "Ver serviço", href: detailPath, icon: Eye },
+        { label: "Ver atividades", href: detailPath, icon: Activity }
       );
       break;
     case "closed":
       actions.push(
-        { label: "Ver detalhes", href: detailPath },
-        { label: "Avaliar profissional", href: detailPath }
+        { label: "Ver detalhes", href: detailPath, icon: Eye },
+        { label: "Avaliar profissional", href: detailPath, icon: Star }
       );
       break;
     case "cancelled":
-      actions.push({ label: "Ver detalhes", href: detailPath });
+      actions.push({ label: "Ver detalhes", href: detailPath, icon: Eye });
       break;
     default:
-      actions.push({ label: "Ver detalhes", href: detailPath });
+      actions.push({ label: "Ver detalhes", href: detailPath, icon: Eye });
       if (canCancelService(model)) {
-        actions.push({ label: "Excluir serviço", action: "cancel" });
+        actions.push({ label: "Cancelar serviço", action: "cancel", icon: Trash2 });
       }
   }
 
@@ -108,25 +123,26 @@ function CardActions({
               className="h-9 min-h-9 shrink-0"
               onClick={() => setDeleteDialogOpen(true)}
               disabled={isCancelling}
-              aria-label="Excluir serviço"
+              aria-label="Cancelar serviço"
             >
+              <action.icon className="h-3.5 w-3.5" aria-hidden />
               {action.label}
             </Button>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>Excluir serviço?</AlertDialogTitle>
+                <AlertDialogTitle>Cancelar serviço?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Ao excluir, o serviço será cancelado e não receberá mais
-                  propostas. Esta ação não pode ser desfeita.
+                  Ao cancelar, o serviço não receberá mais propostas. Esta
+                  ação não pode ser desfeita.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogCancel>Fechar</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleConfirmCancel}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 >
-                  {isCancelling ? "Excluindo…" : "Excluir"}
+                  {isCancelling ? "Cancelando…" : "Cancelar"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -139,7 +155,10 @@ function CardActions({
             className="h-9 min-h-9 shrink-0"
             asChild
           >
-            <Link to={action.href!}>{action.label}</Link>
+            <Link to={action.href!} className="inline-flex items-center gap-1.5">
+              <action.icon className="h-3.5 w-3.5" aria-hidden />
+              {action.label}
+            </Link>
           </Button>
         )
       )}
@@ -156,6 +175,7 @@ export function ServiceCard({
   const locationText = formatLocationDisplay(model.address);
   const variant = STATUS_BADGE_VARIANT[model.status];
   const detailPath = getServiceDetailPath(model.id);
+  const serviceStyle = getServiceCardStyle(model.service ?? undefined);
 
   return (
     <Card
@@ -171,15 +191,28 @@ export function ServiceCard({
       >
         <CardHeader className="!pb-2">
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
               {model.service && (
-                <p className="text-xs font-medium text-muted-foreground">
-                  {model.service.title}
-                </p>
+                <div
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-sm",
+                    serviceStyle.color
+                  )}
+                  aria-hidden
+                >
+                  <serviceStyle.Icon className="h-5 w-5" />
+                </div>
               )}
-              <h2 className="mt-0.5 text-lg font-semibold leading-tight">
-                {model.title}
-              </h2>
+              <div className="min-w-0 flex-1">
+                {model.service && (
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {model.service.title}
+                  </p>
+                )}
+                <h2 className="mt-0.5 text-lg font-semibold leading-tight">
+                  {model.title}
+                </h2>
+              </div>
             </div>
             <Badge variant={variant} className="shrink-0">
               {STATUS_LABELS[model.status]}

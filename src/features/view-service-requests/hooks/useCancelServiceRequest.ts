@@ -15,10 +15,10 @@ export function useCancelServiceRequest() {
       cancelServiceRequest({ id: requestId, clientId }),
     onSuccess: (_data, _requestId, _context) => {
       queryClient.invalidateQueries({ queryKey: LIST_QUERY_KEY });
-      toast.success("Serviço excluído com sucesso.");
+      toast.success("Serviço cancelado com sucesso.");
     },
     onError: (_err, _requestId, _context) => {
-      toast.error("Não foi possível excluir o serviço. Tente novamente.");
+      toast.error("Não foi possível cancelar o serviço. Tente novamente.");
     },
   });
 

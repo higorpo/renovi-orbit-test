@@ -17,6 +17,15 @@ export type {
 } from "./types/request-quote.types";
 
 export { getServiceBySlug, getServiceById, listServicesForRequestQuote } from "./api/services.api";
+export {
+  getServiceCardStyle,
+  SERVICE_COLOR_KEYS,
+} from "./utils/serviceCardStyle";
+export type {
+  ServiceCardStyle,
+  ServiceStyleInput,
+  ServiceColorKey,
+} from "./utils/serviceCardStyle";
 export { getFormById } from "./api/forms.api";
 export { createServiceRequest, uploadPhotosForRequest } from "./api/serviceRequests.api";
 export { invokeGenerateSmartDescription } from "./api/smartDescription.api";

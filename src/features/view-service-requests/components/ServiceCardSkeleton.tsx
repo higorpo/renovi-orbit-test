@@ -17,7 +17,7 @@ export function ServiceCardSkeleton() {
         <Skeleton className="mt-3 h-4 w-40" />
         <Skeleton className="mt-2 h-3 w-28" />
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="!pt-0">
         <div className="flex gap-2">
           <Skeleton className="h-12 w-12 rounded-md" />
           <Skeleton className="h-12 w-12 rounded-md" />

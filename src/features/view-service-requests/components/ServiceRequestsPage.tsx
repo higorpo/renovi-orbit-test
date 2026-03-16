@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Tabs } from "@/components/ui/tabs";
 import { MeusServicosHeader } from "./MeusServicosHeader";
 import { SearchBar } from "./SearchBar";
@@ -8,6 +8,7 @@ import { ServiceCard } from "./ServiceCard";
 import { ServiceCardSkeleton } from "./ServiceCardSkeleton";
 import { EmptyState } from "./EmptyState";
 import { ErrorState } from "./ErrorState";
+import { NoFilterResultsState } from "./NoFilterResultsState";
 import { useServiceRequestsList } from "../hooks/useServiceRequestsList";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useServiceRequestsFilters } from "../hooks/useServiceRequestsFilters";
@@ -45,6 +46,7 @@ export function ServiceRequestsPage() {
     setStatusTabId,
     setCategoryId,
     setCityName,
+    setNeighborhoodName,
     setDateRange,
     setHasProposals,
     setHasImages,
@@ -75,6 +77,30 @@ export function ServiceRequestsPage() {
     return Array.from(set).sort();
   }, [items]);
 
+  const neighborhoodOptions = useMemo(() => {
+    const set = new Set<string>();
+    items.forEach((i) => {
+      if (i.address?.neighborhood) set.add(i.address.neighborhood);
+    });
+    return Array.from(set).sort();
+  }, [items]);
+
+  const handleClearFilters = useCallback(() => {
+    setCategoryId(null);
+    setCityName(null);
+    setNeighborhoodName(null);
+    setDateRange(null, null);
+    setHasProposals(null);
+    setHasImages(null);
+  }, [
+    setCategoryId,
+    setCityName,
+    setNeighborhoodName,
+    setDateRange,
+    setHasProposals,
+    setHasImages,
+  ]);
+
   return (
     <div className="container max-w-4xl px-4 py-6">
       <MeusServicosHeader />
@@ -92,11 +118,13 @@ export function ServiceRequestsPage() {
             filters={filters}
             onCategoryChange={setCategoryId}
             onCityChange={setCityName}
+            onNeighborhoodChange={setNeighborhoodName}
             onDateRangeChange={setDateRange}
             onHasProposalsChange={setHasProposals}
             onHasImagesChange={setHasImages}
             categoryOptions={categoryOptions}
             cityOptions={cityOptions}
+            neighborhoodOptions={neighborhoodOptions}
             disabled={isLoading}
           />
         </div>
@@ -137,12 +165,7 @@ export function ServiceRequestsPage() {
           )}
 
           {!isLoading && !isError && items.length > 0 && filteredItems.length === 0 && (
-            <div
-              className="rounded-lg border border-dashed bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground"
-              role="status"
-            >
-              Nenhum serviço encontrado com os filtros aplicados.
-            </div>
+            <NoFilterResultsState onClearFilters={handleClearFilters} />
           )}
 
           {!isLoading && !isError && filteredItems.length > 0 && (
