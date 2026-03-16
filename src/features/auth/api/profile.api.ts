@@ -82,13 +82,31 @@ export interface UpdateProfileResult {
   error: string | null;
 }
 
+/** Allowed columns for profile update (prevents role/ID mass assignment). */
+const ALLOWED_UPDATE_KEYS: (keyof UpdateProfileParams)[] = [
+  "full_name",
+  "phone",
+  "cpf",
+  "profile_image_path",
+];
+
 export async function updateProfile(
   userId: string,
   params: UpdateProfileParams
 ): Promise<UpdateProfileResult> {
+  const payload: Record<string, unknown> = {};
+  for (const key of ALLOWED_UPDATE_KEYS) {
+    if (key in params) {
+      payload[key] = params[key];
+    }
+  }
+  if (Object.keys(payload).length === 0) {
+    return { error: null };
+  }
+
   const { error } = await supabase
     .from("profiles")
-    .update(params)
+    .update(payload)
     .eq("id", userId);
 
   if (error) {
