@@ -17,6 +17,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:report": "playwright show-report",
+    "test:e2e:mobile-safari": "playwright test --project=mobile-safari --workers=1",
     "test": "vitest",
     "test:run": "vitest run",
     "test:watch": "vitest --watch"

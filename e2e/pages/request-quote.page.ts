@@ -58,6 +58,24 @@ export class RequestQuotePage {
     return this.page.locator("button").filter({ has: this.page.getByRole("heading", { name: title, level: 3 }) });
   }
 
+  /** Card for "Instalação elétrica" — use when test uses fillStep2ElectricalFormAndComplete(). */
+  getElectricalServiceCard() {
+    return this.getServiceCardByTitle("Instalação elétrica");
+  }
+
+  /**
+   * Select the "Instalação elétrica" service: wait for card, scroll into view, then click.
+   * Use before step 2 form interactions (including fillStep2ElectricalFormAndComplete) for stable behavior on mobile-safari.
+   */
+  async selectElectricalService() {
+    const card = this.getElectricalServiceCard();
+    await card.waitFor({ state: "visible", timeout: 15000 });
+    await card.scrollIntoViewIfNeeded();
+    await this.page.waitForTimeout(500);
+    await card.click({ force: true });
+    await this.page.waitForTimeout(1500);
+  }
+
   getStep1Hint() {
     return this.page.getByText(/Selecione um serviço para continuar/);
   }
@@ -69,6 +87,19 @@ export class RequestQuotePage {
 
   getNextButton() {
     return this.page.getByRole("button", { name: /Próximo/ });
+  }
+
+  /**
+   * Waits for Next to be enabled, scrolls it into view (for mobile), allows layout to settle, then clicks.
+   * Use when moving from step 4 to step 5 to avoid flakiness (map/layout can delay stability on mobile).
+   * @param options.timeout - Max ms to wait for button to be enabled (default 15000). Use higher after map drag (reverse geocode can delay).
+   */
+  async clickNextFromStep4(options?: { timeout?: number }) {
+    const timeout = options?.timeout ?? 15000;
+    await expect(this.getNextButton()).toBeEnabled({ timeout });
+    await this.getNextButton().scrollIntoViewIfNeeded();
+    await this.page.waitForTimeout(500);
+    await this.getNextButton().click();
   }
 
   getSubmitOrderButton() {
@@ -185,6 +216,39 @@ export class RequestQuotePage {
 
   getComplementInput() {
     return this.page.getByPlaceholder("Apto, bloco, etc. (opcional)");
+  }
+
+  /** Map container (Leaflet). Visible in step 4 when new address form is shown; client-only so may appear after a short delay. */
+  getAddressMapContainer() {
+    return this.page.locator(".leaflet-container").first();
+  }
+
+  /** Draggable marker on the address map. Use after map is visible. */
+  getMapMarker() {
+    return this.page.locator(".leaflet-marker-icon").first();
+  }
+
+  /** Wait for the address map to be mounted and visible (client-side render). */
+  async waitForAddressMapReady() {
+    await this.getAddressMapContainer().waitFor({ state: "visible", timeout: 10000 });
+    await this.getMapMarker().waitFor({ state: "visible", timeout: 5000 });
+  }
+
+  /**
+   * Drag the map marker to a position inside the map.
+   * @param ratioX 0–1, horizontal ratio within map (e.g. 0.6 = 60% from left)
+   * @param ratioY 0–1, vertical ratio within map (e.g. 0.5 = middle)
+   */
+  async dragMapMarkerTo(ratioX: number, ratioY: number) {
+    const mapEl = this.getAddressMapContainer();
+    await mapEl.waitFor({ state: "visible", timeout: 5000 });
+    const box = await mapEl.boundingBox();
+    if (!box) throw new Error("Address map container has no bounding box");
+    const targetX = box.x + box.width * ratioX;
+    const targetY = box.y + box.height * ratioY;
+    await this.getMapMarker().dragTo(this.page.locator("body"), {
+      targetPosition: { x: targetX, y: targetY },
+    });
   }
 
   /** Select first available state (after opening the state dropdown). */
@@ -395,17 +459,20 @@ export class RequestQuotePage {
   async completeStep2ToStep3(): Promise<boolean> {
     const concluir = this.getDynamicFormConcluirButton();
     const next = this.getDynamicFormNextButton();
-    for (let i = 0; i < 10; i++) {
+    const clickOpt = { force: true } as const;
+    for (let i = 0; i < 15; i++) {
       if ((await concluir.count()) > 0) {
-        await concluir.click();
-        await this.page.waitForTimeout(600);
+        await concluir.scrollIntoViewIfNeeded();
+        await concluir.click(clickOpt);
+        await this.page.waitForTimeout(800);
         const step3Visible = await this.getStep3SectionTitle().isVisible();
         return step3Visible;
       }
       if ((await next.count()) === 0) return false;
       if (await next.isDisabled()) return false;
-      await next.click();
-      await this.page.waitForTimeout(400);
+      await next.scrollIntoViewIfNeeded();
+      await next.click(clickOpt);
+      await this.page.waitForTimeout(500);
     }
     return false;
   }
@@ -416,8 +483,12 @@ export class RequestQuotePage {
    * Step 1: Quantidade de pontos = 4, Precisa de aterramento = Sim -> Próximo.
    * Step 2: Concluir (observações optional).
    * Returns true if step 3 is reached. Call after selecting a service that uses this form.
+   * Uses scrollIntoView and visibility waits for stability on mobile (e.g. mobile-safari).
    */
   async fillStep2ElectricalFormAndComplete(): Promise<boolean> {
+    await this.getStep2SectionTitle().waitFor({ state: "visible", timeout: 10000 }).catch(() => {});
+    await this.page.waitForTimeout(800);
+
     const next = this.getDynamicFormNextButton();
     const concluir = this.getDynamicFormConcluirButton();
 
@@ -425,62 +496,82 @@ export class RequestQuotePage {
       return false;
     }
 
-    await this.page.waitForTimeout(500);
-
+    const clickOpt = { force: true } as const;
     const novaInstalacao = this.page.getByRole("radio", { name: "Nova instalação" });
     if (await novaInstalacao.isVisible()) {
-      await novaInstalacao.click();
-      await this.page.waitForTimeout(200);
+      await novaInstalacao.scrollIntoViewIfNeeded();
+      await novaInstalacao.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
+      await novaInstalacao.click(clickOpt);
+      await this.page.waitForTimeout(300);
     }
     const residencial = this.page.getByRole("radio", { name: "Residencial" });
     if (await residencial.isVisible()) {
-      await residencial.click();
-      await this.page.waitForTimeout(200);
+      await residencial.scrollIntoViewIfNeeded();
+      await residencial.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
+      await residencial.click(clickOpt);
+      await this.page.waitForTimeout(300);
     }
     const media = this.page.getByRole("radio", { name: "Média" });
     if (await media.isVisible()) {
-      await media.click();
-      await this.page.waitForTimeout(200);
+      await media.scrollIntoViewIfNeeded();
+      await media.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
+      await media.click(clickOpt);
+      await this.page.waitForTimeout(300);
     }
     if ((await next.count()) > 0 && !(await next.isDisabled())) {
-      await next.click();
-      await this.page.waitForTimeout(500);
+      await next.scrollIntoViewIfNeeded();
+      await next.click(clickOpt);
+      await this.page.waitForTimeout(600);
     }
 
     const qtdPontos = this.page.getByLabel(/Quantidade de pontos ou circuitos/i);
     if (await qtdPontos.isVisible()) {
+      await qtdPontos.scrollIntoViewIfNeeded();
+      await qtdPontos.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
       await qtdPontos.fill("4");
-      await this.page.waitForTimeout(200);
+      await this.page.waitForTimeout(300);
     }
     const aterramentoGroup = this.page.getByLabel(/Precisa de aterramento/i);
     if (await aterramentoGroup.isVisible()) {
-      await aterramentoGroup.getByRole("radio", { name: "Sim" }).click();
-      await this.page.waitForTimeout(200);
+      const simAterramento = aterramentoGroup.getByRole("radio", { name: "Sim" });
+      await simAterramento.scrollIntoViewIfNeeded();
+      await simAterramento.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
+      await simAterramento.click(clickOpt);
+      await this.page.waitForTimeout(300);
     } else {
       const simRadio = this.page.getByRole("radio", { name: "Sim" }).first();
       if (await simRadio.isVisible()) {
-        await simRadio.click();
-        await this.page.waitForTimeout(200);
+        await simRadio.scrollIntoViewIfNeeded();
+        await simRadio.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
+        await simRadio.click(clickOpt);
+        await this.page.waitForTimeout(300);
       }
     }
     if ((await next.count()) > 0 && !(await next.isDisabled())) {
-      await next.click();
-      await this.page.waitForTimeout(500);
+      await next.scrollIntoViewIfNeeded();
+      await next.click(clickOpt);
+      await this.page.waitForTimeout(600);
     }
 
     if ((await concluir.count()) > 0 && !(await concluir.isDisabled())) {
-      await concluir.click();
-      await this.page.waitForTimeout(600);
+      await concluir.scrollIntoViewIfNeeded();
+      await concluir.click(clickOpt);
+      await this.page.waitForTimeout(800);
     } else if ((await next.count()) > 0 && !(await next.isDisabled())) {
-      await next.click();
-      await this.page.waitForTimeout(500);
+      await next.scrollIntoViewIfNeeded();
+      await next.click(clickOpt);
+      await this.page.waitForTimeout(600);
       if ((await concluir.count()) > 0) {
-        await concluir.click();
-        await this.page.waitForTimeout(600);
+        await concluir.scrollIntoViewIfNeeded();
+        await concluir.click(clickOpt);
+        await this.page.waitForTimeout(800);
       }
     }
 
-    const step3Visible = await this.getStep3SectionTitle().isVisible();
+    let step3Visible = await this.getStep3SectionTitle().isVisible();
+    if (!step3Visible) {
+      step3Visible = await this.completeStep2ToStep3();
+    }
     return step3Visible;
   }
 }

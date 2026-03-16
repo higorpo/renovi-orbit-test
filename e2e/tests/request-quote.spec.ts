@@ -87,20 +87,11 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
 
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    // On step 1 there is no main "Próximo" button; we must select a service to advance.
-    // Select service then go back via step 2 Cancelar to confirm we can return to step 1.
-    await firstCard.click();
-    await page.waitForTimeout(800);
+    await rq.selectElectricalService();
     const cancelBtn = rq.getDynamicFormCancelButton();
-    if ((await cancelBtn.count()) > 0) {
-      await cancelBtn.click();
-      await expect(rq.getStep1Heading()).toBeVisible();
-    }
+    await cancelBtn.waitFor({ state: "visible", timeout: 10000 });
+    await cancelBtn.click();
+    await expect(rq.getStep1Heading()).toBeVisible();
   });
 
   // ─── Step 1 → 2: Service selection ────────────────────────────────────────
@@ -110,12 +101,13 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     await rq.waitForStep1Ready();
 
     const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
+    await firstCard.waitFor({ state: "visible", timeout: 15000 });
     await firstCard.click();
-    await page.waitForTimeout(800);
+    await Promise.race([
+      rq.getStep2SectionTitle().waitFor({ state: "visible", timeout: 10000 }),
+      rq.getFormNotConfiguredAlert().waitFor({ state: "visible", timeout: 10000 }),
+      rq.getDynamicFormNextButton().first().waitFor({ state: "visible", timeout: 10000 }),
+    ]).catch(() => {});
 
     const hasSectionTitle = await rq.getStep2SectionTitle().isVisible();
     const hasFormNotConfigured = await rq.getFormNotConfiguredAlert().isVisible();
@@ -135,10 +127,7 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
     const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
+    await firstCard.waitFor({ state: "visible", timeout: 15000 });
     await firstCard.click();
 
     await expect
@@ -159,19 +148,10 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   test("step 2 Cancelar returns to step 1", async ({ page }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(1000);
+    await rq.selectElectricalService();
 
     const cancelBtn = rq.getDynamicFormCancelButton();
-    if ((await cancelBtn.count()) === 0) {
-      test.skip();
-      return;
-    }
+    await cancelBtn.waitFor({ state: "visible", timeout: 10000 });
     await cancelBtn.click();
     await expect(rq.getStep1Heading()).toBeVisible();
   });
@@ -181,18 +161,10 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
+    await rq.selectElectricalService();
 
     await rq.getStep2SectionTitle().waitFor({ state: "visible", timeout: 8000 }).catch(() => {});
-    if (await rq.getFormNotConfiguredAlert().isVisible()) {
-      test.skip();
-      return;
-    }
+    await expect(rq.getFormNotConfiguredAlert()).not.toBeVisible({ timeout: 5000 });
 
     await expect
       .poll(
@@ -213,19 +185,9 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(1000);
-
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await page.waitForTimeout(1500);
     await expect(rq.getStep3SectionTitle()).toBeVisible();
     await expect(rq.getDescriptionTextarea()).toBeVisible();
@@ -241,19 +203,9 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(1000);
-
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await page.waitForTimeout(800);
 
     await rq.getDescriptionTextarea().fill("Preciso de um orçamento para o serviço.");
@@ -264,18 +216,9 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   test("step 3 clearing description disables Next again", async ({ page }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(1000);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await page.waitForTimeout(400);
     await rq.getDescriptionTextarea().fill("Alguma descrição");
     await page.waitForTimeout(200);
@@ -290,18 +233,9 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(1000);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await page.waitForTimeout(400);
     await rq.getDescriptionTextarea().fill("   \n\t  ");
     await page.waitForTimeout(200);
@@ -313,18 +247,9 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(1000);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await expect(rq.getPhotosDropzone()).toBeVisible();
     await expect(rq.page.getByText("Fotos (Opcional)")).toBeVisible();
   });
@@ -334,18 +259,9 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(1000);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await expect(rq.getStep3SectionTitle()).toBeVisible();
     const stepIndicator = rq.getStepIndicator();
     if (await stepIndicator.isVisible()) {
@@ -360,18 +276,9 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(800);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Descrição do serviço.");
     await rq.getNextButton().click();
     await page.waitForTimeout(500);
@@ -385,18 +292,9 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   test("step 4 Next is disabled without valid address", async ({ page }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(800);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Descrição.");
     await rq.getNextButton().click();
     await page.waitForTimeout(500);
@@ -410,18 +308,9 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(800);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Descrição preservada");
     await rq.getNextButton().click();
     await page.waitForTimeout(500);
@@ -435,18 +324,9 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   test("step 4 address form accepts empty complement", async ({ page }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(800);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Descrição.");
     await rq.getNextButton().click();
     await page.waitForTimeout(400);
@@ -454,32 +334,61 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     await expect(rq.getNextButton()).toBeEnabled({ timeout: 10000 });
   });
 
+  test("step 4 new address shows map and draggable marker", async ({ page }) => {
+    const rq = new RequestQuotePage(page);
+    await rq.waitForStep1Ready();
+    await rq.selectElectricalService();
+    const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
+    await rq.getDescriptionTextarea().fill("Descrição.");
+    await rq.getNextButton().click();
+    await page.waitForTimeout(500);
+    await expect(rq.getStep4Title()).toBeVisible();
+    await rq.waitForAddressMapReady();
+    await expect(rq.getAddressMapContainer()).toBeVisible();
+    await expect(rq.getMapMarker()).toBeVisible();
+  });
+
+  test("step 4 new address after dragging marker form remains usable", async ({
+    page,
+  }) => {
+    test.setTimeout(50000);
+    const rq = new RequestQuotePage(page);
+    await rq.waitForStep1Ready();
+    await rq.selectElectricalService();
+    const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
+    await rq.getDescriptionTextarea().fill("Descrição.");
+    await rq.getNextButton().click();
+    await page.waitForTimeout(500);
+    await rq.fillNewAddress({ street: "Rua Drag", number: "50" });
+    await expect(rq.getNextButton()).toBeEnabled({ timeout: 10000 });
+    await rq.waitForAddressMapReady();
+    await rq.dragMapMarkerTo(0.6, 0.5);
+    await page.waitForTimeout(4000);
+    await expect(rq.getStep4Title()).toBeVisible();
+    await expect(rq.getAddressMapContainer()).toBeVisible();
+    await expect(rq.getMapMarker()).toBeVisible();
+    await expect(rq.getNextButton()).toBeVisible();
+  });
+
   // ─── Step 5: Identity (guest) ──────────────────────────────────────────────
 
   test("step 5 shows identity form for guest", async ({ page }) => {
+    test.setTimeout(45000);
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(800);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Descrição do serviço.");
     await rq.getNextButton().click();
     await page.waitForTimeout(400);
     await rq.fillNewAddress({ street: "Rua Teste", number: "100" });
-    await expect(rq.getNextButton()).toBeEnabled({ timeout: 10000 });
-    await rq.getNextButton().click();
+    await rq.clickNextFromStep4();
     await page.waitForTimeout(400);
 
-    await expect(rq.getStep5Title()).toBeVisible();
+    await expect(rq.getStep5Title()).toBeVisible({ timeout: 10000 });
     await expect(rq.getFirstNameInput()).toBeVisible();
     await expect(rq.getLastNameInput()).toBeVisible();
     await expect(rq.getEmailInput()).toBeVisible();
@@ -493,24 +402,14 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(800);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Descrição.");
     await rq.getNextButton().click();
     await page.waitForTimeout(400);
     await rq.fillNewAddress({ street: "Rua A", number: "1" });
-    await page.waitForTimeout(400);
-    await rq.getNextButton().click();
+    await rq.clickNextFromStep4();
     await page.waitForTimeout(400);
 
     await expect(rq.getSubmitOrderButton()).toBeDisabled();
@@ -521,24 +420,14 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(800);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Descrição.");
     await rq.getNextButton().click();
     await page.waitForTimeout(400);
     await rq.fillNewAddress({ street: "Rua A", number: "1" });
-    await page.waitForTimeout(400);
-    await rq.getNextButton().click();
+    await rq.clickNextFromStep4();
     await page.waitForTimeout(400);
 
     await rq.getFirstNameInput().fill("Test");
@@ -553,28 +442,18 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   test("step 5 Voltar returns to step 4", async ({ page }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(800);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Descrição");
     await rq.getNextButton().click();
     await page.waitForTimeout(400);
     await rq.fillNewAddress({ street: "Rua A", number: "1" });
-    await rq.getNextButton().click();
+    await rq.clickNextFromStep4();
     await page.waitForTimeout(400);
-    await expect(rq.getStep5Title()).toBeVisible();
+    await expect(rq.getStep5Title()).toBeVisible({ timeout: 10000 });
     await rq.getBackButton().click();
-    await page.waitForTimeout(400);
-    await expect(rq.getStep4Title()).toBeVisible();
+    await expect(rq.getStep4Title()).toBeVisible({ timeout: 10000 });
   });
 
   test("step 5 Enviar pedido is disabled when first name is too short", async ({
@@ -582,23 +461,14 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(800);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Descrição");
     await rq.getNextButton().click();
     await page.waitForTimeout(400);
     await rq.fillNewAddress({ street: "Rua A", number: "1" });
-    await rq.getNextButton().click();
+    await rq.clickNextFromStep4();
     await page.waitForTimeout(400);
     await rq.getFirstNameInput().fill("A");
     await rq.getLastNameInput().fill("Silva");
@@ -615,23 +485,14 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(800);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Descrição");
     await rq.getNextButton().click();
     await page.waitForTimeout(400);
     await rq.fillNewAddress({ street: "Rua A", number: "1" });
-    await rq.getNextButton().click();
+    await rq.clickNextFromStep4();
     await page.waitForTimeout(400);
     await rq.getFirstNameInput().fill("Maria");
     await rq.getLastNameInput().fill("Silva");
@@ -646,25 +507,17 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   test("step 5 submit with weak password shows validation toast", async ({
     page,
   }) => {
+    test.setTimeout(45000);
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(800);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Descrição");
     await rq.getNextButton().click();
     await page.waitForTimeout(400);
     await rq.fillNewAddress({ street: "Rua A", number: "1" });
-    await rq.getNextButton().click();
+    await rq.clickNextFromStep4();
     await page.waitForTimeout(400);
     await rq.getFirstNameInput().fill("Maria");
     await rq.getLastNameInput().fill("Silva");
@@ -683,23 +536,14 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(800);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Descrição");
     await rq.getNextButton().click();
     await page.waitForTimeout(400);
     await rq.fillNewAddress({ street: "Rua A", number: "1" });
-    await rq.getNextButton().click();
+    await rq.clickNextFromStep4();
     await page.waitForTimeout(400);
     await rq.getFirstNameInput().fill("Maria");
     await rq.getLastNameInput().fill("Silva");
@@ -715,18 +559,9 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   test("Back button returns to previous step", async ({ page }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(1000);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await expect(rq.getStep3SectionTitle()).toBeVisible();
     await rq.getBackButton().click();
     await expect(rq.getStep2SectionTitle()).toBeVisible();
@@ -881,24 +716,14 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     test.setTimeout(60000);
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(1000);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Preciso de orçamento para o serviço solicitado.");
     await rq.getNextButton().click();
     await page.waitForTimeout(500);
     await rq.fillNewAddress({ street: "Rua E2E", number: "99" });
-    await expect(rq.getNextButton()).toBeEnabled({ timeout: 10000 });
-    await rq.getNextButton().click();
+    await rq.clickNextFromStep4();
     await page.waitForTimeout(500);
 
     const unique = `e2e.${Date.now()}@example.com`;
@@ -919,6 +744,41 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
+  test("full guest flow with new address and marker drag submits and shows confirm email", async ({
+    page,
+  }) => {
+    test.setTimeout(70000);
+    const rq = new RequestQuotePage(page);
+    await rq.waitForStep1Ready();
+    await rq.selectElectricalService();
+    const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
+    await rq.getDescriptionTextarea().fill("Pedido com endereço novo e marcador no mapa.");
+    await rq.getNextButton().click();
+    await page.waitForTimeout(500);
+    await rq.fillNewAddress({ street: "Rua E2E Map", number: "77" });
+    await expect(rq.getNextButton()).toBeEnabled({ timeout: 10000 });
+    await rq.waitForAddressMapReady();
+    await rq.dragMapMarkerTo(0.55, 0.45);
+    await page.waitForTimeout(3500);
+    await rq.clickNextFromStep4();
+    await page.waitForTimeout(500);
+
+    const unique = `e2e.map.${Date.now()}@example.com`;
+    await rq.getFirstNameInput().fill("E2E");
+    await rq.getLastNameInput().fill("Map");
+    await rq.getEmailInput().fill(unique);
+    await rq.getPasswordInput().fill("SecurePass123!");
+    await rq.getConfirmPasswordInput().fill("SecurePass123!");
+    await rq.getTermsCheckbox().click();
+    await page.waitForTimeout(300);
+    await rq.getSubmitOrderButton().click();
+
+    await expect(rq.getConfirmEmailHeading()).toBeVisible({ timeout: 15000 });
+    await expect(rq.getConfirmEmailDisplay(unique)).toBeVisible();
+    await expect(rq.getConfirmEmailMessage()).toBeVisible();
+  });
+
   // ─── Step 4: Address form structure ──────────────────────────────────────
 
   test("step 4 shows state and city selects after CEP or manually", async ({
@@ -926,18 +786,9 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(800);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Descrição");
     await rq.getNextButton().click();
     await page.waitForTimeout(500);
@@ -953,18 +804,9 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   }) => {
     const rq = new RequestQuotePage(page);
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(1000);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getBackButton().click();
     await page.waitForTimeout(400);
     await expect(rq.getStep2SectionTitle()).toBeVisible();
@@ -1013,17 +855,11 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     await rq.goto();
     await rq.waitForStep1Ready();
     const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
+    await firstCard.waitFor({ state: "visible", timeout: 15000 });
     await firstCard.click();
     await page.waitForTimeout(1500);
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await page.waitForTimeout(3000);
     await expect(rq.getToastSmartDescriptionError()).toBeVisible({ timeout: 8000 });
     await expect(rq.getDescriptionTextarea()).toBeVisible();
@@ -1045,18 +881,9 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     const rq = new RequestQuotePage(page);
     await rq.goto();
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(800);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Descrição");
     await rq.getNextButton().click();
     await page.waitForTimeout(500);
@@ -1074,32 +901,25 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     const rq = new RequestQuotePage(page);
     await rq.goto();
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(800);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Descrição");
     await rq.getNextButton().click();
     await page.waitForTimeout(500);
+    await expect(rq.getStep4Title()).toBeVisible({ timeout: 5000 });
     await rq.getCepInput().fill("01310100");
-    await page.waitForTimeout(2000);
-    await expect(rq.getStep4Title()).toBeVisible();
-    await expect(rq.getStateSelectTrigger()).toBeVisible();
+    await page.waitForTimeout(3000);
+    await expect(rq.getStateSelectTrigger()).toBeVisible({ timeout: 5000 });
     await rq.fillNewAddress({ cep: "01310-100", street: "Rua Manual", number: "1" });
-    await expect(rq.getNextButton()).toBeEnabled({ timeout: 10000 });
+    await rq.getNextButton().scrollIntoViewIfNeeded();
+    await expect(rq.getNextButton()).toBeEnabled({ timeout: 15000 });
   });
 
   test("when signup returns error, shows toast and stays on step 5", async ({
     page,
   }) => {
+    test.setTimeout(45000);
     await page.route("**/auth/v1/signup**", (route) =>
       route.fulfill({
         status: 400,
@@ -1113,23 +933,14 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     const rq = new RequestQuotePage(page);
     await rq.goto();
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(1000);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Descrição");
     await rq.getNextButton().click();
     await page.waitForTimeout(500);
     await rq.fillNewAddress({ street: "Rua E2E", number: "99" });
-    await rq.getNextButton().click();
+    await rq.clickNextFromStep4();
     await page.waitForTimeout(500);
     const unique = `e2e.err.${Date.now()}@example.com`;
     await rq.getFirstNameInput().fill("E2E");
@@ -1138,6 +949,9 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     await rq.getPasswordInput().fill("SecurePass123!");
     await rq.getConfirmPasswordInput().fill("SecurePass123!");
     await rq.getTermsCheckbox().click();
+    await page.waitForTimeout(300);
+    await expect(rq.getSubmitOrderButton()).toBeEnabled({ timeout: 10000 });
+    await rq.getSubmitOrderButton().scrollIntoViewIfNeeded();
     await page.waitForTimeout(300);
     await rq.getSubmitOrderButton().click();
     await expect(page.getByText(/não foi possível|erro|tente novamente/i)).toBeVisible({
@@ -1149,6 +963,7 @@ test.describe("Request Quote - /pedir-orcamento", () => {
   test("when create order (guest) returns error, shows toast and stays on step 5", async ({
     page,
   }) => {
+    test.setTimeout(45000);
     await page.route("**/auth/v1/signup**", (route) =>
       route.fulfill({
         status: 200,
@@ -1180,23 +995,14 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     const rq = new RequestQuotePage(page);
     await rq.goto();
     await rq.waitForStep1Ready();
-    const firstCard = rq.getFirstServiceCard();
-    if ((await firstCard.count()) === 0) {
-      test.skip();
-      return;
-    }
-    await firstCard.click();
-    await page.waitForTimeout(1000);
+    await rq.selectElectricalService();
     const reachedStep3 = await rq.fillStep2ElectricalFormAndComplete();
-    if (!reachedStep3) {
-      test.skip();
-      return;
-    }
+    expect(reachedStep3, "Step 3 should be reached; ensure step 2 form is configured and completable").toBe(true);
     await rq.getDescriptionTextarea().fill("Descrição");
     await rq.getNextButton().click();
     await page.waitForTimeout(500);
     await rq.fillNewAddress({ street: "Rua E2E", number: "99" });
-    await rq.getNextButton().click();
+    await rq.clickNextFromStep4();
     await page.waitForTimeout(500);
     const unique = `e2e.order.${Date.now()}@example.com`;
     await rq.getFirstNameInput().fill("E2E");
@@ -1205,6 +1011,9 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     await rq.getPasswordInput().fill("SecurePass123!");
     await rq.getConfirmPasswordInput().fill("SecurePass123!");
     await rq.getTermsCheckbox().click();
+    await page.waitForTimeout(300);
+    await expect(rq.getSubmitOrderButton()).toBeEnabled({ timeout: 10000 });
+    await rq.getSubmitOrderButton().scrollIntoViewIfNeeded();
     await page.waitForTimeout(300);
     await rq.getSubmitOrderButton().click();
     await expect(rq.getStep5Title()).toBeVisible({ timeout: 20000 });
