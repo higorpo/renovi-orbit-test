@@ -14,6 +14,10 @@ vi.mock("../../utils/resolveFormDataFromCep", () => ({
   resolveFormDataFromCep: vi.fn(),
 }));
 
+vi.mock("@/features/auth", () => ({
+  useAuth: vi.fn(),
+}));
+
 vi.mock("@/hooks/useAnalytics", () => ({
   useAnalytics: () => ({ trackEvent: vi.fn() }),
 }));
@@ -25,6 +29,7 @@ vi.mock("sonner", () => ({
   },
 }));
 
+const useAuth = vi.mocked(await import("@/features/auth").then((m) => m.useAuth));
 const listAddresses = vi.mocked(addressesApi.listAddresses);
 const resolveFormDataFromCep = vi.mocked(resolveFormDataFromCepModule.resolveFormDataFromCep);
 
@@ -54,11 +59,16 @@ describe("useAddressSelection", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuth.mockReturnValue({
+      user: { id: "user-1", email: "u@e.com" },
+      profile: null,
+    } as ReturnType<typeof useAuth>);
     listAddresses.mockResolvedValue({ addresses: mockAddresses, error: null });
     resolveFormDataFromCep.mockResolvedValue(null);
   });
 
   it("returns default formData and empty addresses when userId is null", async () => {
+    useAuth.mockReturnValue({ user: null, profile: null } as ReturnType<typeof useAuth>);
     const { result } = renderHook(
       () => useAddressSelection({ userId: null, onSelectionChange }),
       { wrapper: createWrapper() }
