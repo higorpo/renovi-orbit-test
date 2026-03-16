@@ -89,6 +89,36 @@ describe("requestQuoteDraft.persistence", () => {
       expect(got?.draft.currentStep).toBe(2);
       expect(got?.draft.step3Data.description).toBe("test desc");
     });
+
+    it("roundtrips step4Data with location", () => {
+      const draft = {
+        ...createMinimalDraft(),
+        step4Data: {
+          kind: "new" as const,
+          formData: {
+            address_zip: "88015-100",
+            address_street: "Rua Y",
+            address_number: "20",
+            address_complement: "",
+            address_neighborhood_id: "n1",
+            address_neighborhood: "Centro",
+            address_state_id: "s1",
+            address_state: "SC",
+            address_city_id: "c1",
+            address_city: "Florianópolis",
+          },
+          location: { latitude: -27.59, longitude: -48.54 },
+        },
+      };
+      saveDraft(draft);
+      const got = getDraft();
+      expect(got?.draft.step4Data).not.toBeNull();
+      expect((got?.draft.step4Data as { kind: string; location?: { latitude: number; longitude: number } }).kind).toBe("new");
+      expect((got?.draft.step4Data as { location: { latitude: number; longitude: number } }).location).toEqual({
+        latitude: -27.59,
+        longitude: -48.54,
+      });
+    });
   });
 
   describe("clearDraft", () => {
@@ -142,6 +172,41 @@ describe("requestQuoteDraft.persistence", () => {
       };
       const result = buildSerializableDraft(state);
       expect(result.step3Data).toEqual({ description: "only text", structured: null });
+    });
+
+    it("preserves step4Data with location when building serializable draft", () => {
+      const step4DataWithLocation = {
+        kind: "new" as const,
+        formData: {
+          address_zip: "88015-100",
+          address_street: "Rua X",
+          address_number: "10",
+          address_complement: "",
+          address_neighborhood_id: "n1",
+          address_neighborhood: "Centro",
+          address_state_id: "s1",
+          address_state: "SC",
+          address_city_id: "c1",
+          address_city: "Florianópolis",
+        },
+        location: { latitude: -27.5954, longitude: -48.548 },
+      };
+      const state = {
+        currentStep: 4,
+        previousStep: 3,
+        selectedService: null,
+        step2Data: {},
+        step2FormSchema: null,
+        step2FormVersion: null,
+        step3Data: { description: "" },
+        step4Data: step4DataWithLocation,
+      };
+      const result = buildSerializableDraft(state);
+      expect(result.step4Data).toEqual(step4DataWithLocation);
+      expect((result.step4Data as typeof step4DataWithLocation).location).toEqual({
+        latitude: -27.5954,
+        longitude: -48.548,
+      });
     });
   });
 

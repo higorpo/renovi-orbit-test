@@ -81,6 +81,8 @@ export class NominatimGeocodingAdapter implements GeocodingService {
     if (
       typeof latitude !== "number" ||
       typeof longitude !== "number" ||
+      Number.isNaN(latitude) ||
+      Number.isNaN(longitude) ||
       latitude < -90 ||
       latitude > 90 ||
       longitude < -180 ||

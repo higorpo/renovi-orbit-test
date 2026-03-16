@@ -372,5 +372,39 @@ describe("useRequestQuoteSubmit", () => {
       expect(createRequestQuoteOrder).toHaveBeenCalled();
       expect(signUp).not.toHaveBeenCalled();
     });
+
+    it("passes step4Data with location when new address has map coordinates", async () => {
+      const step4DataNewWithLocation = {
+        kind: "new" as const,
+        formData: {
+          address_zip: "88015-100",
+          address_street: "Rua Teste",
+          address_number: "100",
+          address_complement: "",
+          address_neighborhood_id: "n1",
+          address_neighborhood: "Centro",
+          address_state_id: "s1",
+          address_state: "SC",
+          address_city_id: "c1",
+          address_city: "Florianópolis",
+        },
+        location: { latitude: -27.5954, longitude: -48.548 },
+      };
+      const state = createMockState({
+        step4Data: step4DataNewWithLocation,
+      });
+      const { result } = renderHook(() => useRequestQuoteSubmit({ state }));
+      await act(async () => {
+        await result.current.handleSubmitLoggedIn();
+      });
+      expect(createRequestQuoteOrder).toHaveBeenCalledWith(
+        expect.objectContaining({
+          step4Data: expect.objectContaining({
+            kind: "new",
+            location: { latitude: -27.5954, longitude: -48.548 },
+          }),
+        })
+      );
+    });
   });
 });
