@@ -43,12 +43,38 @@ function buildLocationEwkt(latitude: number, longitude: number): string {
   return `SRID=4326;POINT(${longitude} ${latitude})`;
 }
 
+/** Ensure only one address per client is default: clear is_default on others. */
+async function clearOtherDefaults(clientId: string, exceptAddressId?: string): Promise<{ error: string | null }> {
+  let query = supabase
+    .from("client_addresses")
+    .update({ is_default: false })
+    .eq("client_id", clientId);
+  if (exceptAddressId) {
+    query = query.neq("id", exceptAddressId);
+  }
+  const { error } = await query;
+  if (error) return { error: error.message };
+  return { error: null };
+}
+
 export async function createAddress(params: CreateAddressParams): Promise<CreateAddressResult> {
   const hasLocation =
     params.latitude != null &&
     params.longitude != null &&
     Number.isFinite(params.latitude) &&
     Number.isFinite(params.longitude);
+
+  const setAsDefault = params.is_default ?? false;
+  if (setAsDefault) {
+    const cleared = await clearOtherDefaults(params.client_id);
+    if (cleared.error) {
+      logger.error("addresses_create_clear_defaults_error", {
+        clientId: params.client_id,
+        error: cleared.error,
+      });
+      return { address: null, error: cleared.error };
+    }
+  }
 
   const row: TablesInsert<"client_addresses"> = {
     client_id: params.client_id,
@@ -60,7 +86,7 @@ export async function createAddress(params: CreateAddressParams): Promise<Create
     city_id: params.city_id,
     state_id: params.state_id,
     zip_code: params.zip_code,
-    is_default: params.is_default ?? false,
+    is_default: setAsDefault,
     is_active: params.is_active ?? true,
     ...(hasLocation && {
       location: buildLocationEwkt(params.latitude!, params.longitude!),
@@ -91,6 +117,18 @@ export async function updateAddress(
     params.longitude != null &&
     Number.isFinite(params.latitude) &&
     Number.isFinite(params.longitude);
+
+  if (params.is_default === true) {
+    const cleared = await clearOtherDefaults(clientId, addressId);
+    if (cleared.error) {
+      logger.error("addresses_update_clear_defaults_error", {
+        addressId,
+        clientId,
+        error: cleared.error,
+      });
+      return { error: cleared.error };
+    }
+  }
 
   const { latitude: _lat, longitude: _lng, ...rest } = params;
   const updatePayload: TablesUpdate<"client_addresses"> = {
