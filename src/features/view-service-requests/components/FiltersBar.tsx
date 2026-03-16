@@ -1,12 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Label } from "@/components/ui/label";
 import { Filter, X } from "lucide-react";
+import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { cn } from "@/lib/utils";
 import type { ServiceRequestsFilterState } from "../types/service-request-view.types";
 
@@ -54,46 +64,27 @@ export function FiltersBar({
   const clearFilters = () => {
     onCategoryChange(null);
     onCityChange(null);
+    onNeighborhoodChange(null);
     onDateRangeChange(null, null);
     onHasProposalsChange(null);
     onHasImagesChange(null);
   };
 
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-          aria-expanded={open}
-          aria-haspopup="dialog"
-          aria-label="Abrir filtros"
-        >
-          <Filter className="h-4 w-4" aria-hidden />
-          Filtros
-          {hasActiveFilters && (
-            <span className="ml-1 h-2 w-2 rounded-full bg-primary" aria-hidden />
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 max-w-[calc(100vw-2rem)]" align="start">
-        <div className="space-y-4 overflow-hidden">
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium">Filtros</h3>
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-                className="h-8 text-xs"
-              >
-                <X className="h-3 w-3" /> Limpar
-              </Button>
-            )}
-          </div>
+  const isDesktop = useBreakpointMd();
 
-          {categoryOptions.length > 0 && (
+  // Lock body scroll when mobile bottom sheet is open
+  useEffect(() => {
+    if (isDesktop || !open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open, isDesktop]);
+
+  const filtersFormContent = (
+    <div className="space-y-4 overflow-hidden">
+      {categoryOptions.length > 0 && (
             <div className="space-y-2">
               <Label htmlFor="filter-category">Categoria</Label>
               <select
@@ -238,8 +229,88 @@ export function FiltersBar({
               <option value="no">Sem fotos</option>
             </select>
           </div>
+    </div>
+  );
+
+  const triggerButton = (
+    <Button
+      variant="outline"
+      size="sm"
+      disabled={disabled}
+      aria-expanded={open}
+      aria-haspopup="dialog"
+      aria-label="Abrir filtros"
+    >
+      <Filter className="h-4 w-4" aria-hidden />
+      Filtros
+      {hasActiveFilters && (
+        <span className="ml-1 h-2 w-2 rounded-full bg-primary" aria-hidden />
+      )}
+    </Button>
+  );
+
+  if (isDesktop) {
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
+        <PopoverContent
+          className="w-80 max-w-[calc(100vw-2rem)]"
+          align="start"
+        >
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium">Filtros</h3>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="h-8 text-xs"
+                >
+                  <X className="h-3 w-3" /> Limpar
+                </Button>
+              )}
+            </div>
+            {filtersFormContent}
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>{triggerButton}</SheetTrigger>
+      <SheetContent
+        side="bottom"
+        className="flex max-h-[85vh] flex-col rounded-t-2xl p-0"
+        hideCloseButton={false}
+      >
+        <div className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-muted" aria-hidden />
+        <SheetHeader className="shrink-0 flex flex-row items-center justify-between border-b px-4 py-3 pr-12 text-left">
+          <SheetTitle className="text-lg font-medium">Filtros</SheetTitle>
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="h-8 text-xs"
+            >
+              <X className="h-3 w-3" /> Limpar
+            </Button>
+          )}
+        </SheetHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+          {filtersFormContent}
         </div>
-      </PopoverContent>
-    </Popover>
+        <SheetFooter className="shrink-0 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <SheetClose asChild>
+            <Button className="w-full" size="lg">
+              Aplicar filtros
+            </Button>
+          </SheetClose>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
