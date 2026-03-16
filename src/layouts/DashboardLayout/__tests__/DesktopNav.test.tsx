@@ -28,7 +28,7 @@ describe("DesktopNav", () => {
     const menu = getDashboardMenu("client" as ProfileRole);
     renderDesktopNav(menu.allItems);
     expect(screen.getByRole("link", { name: /Visão geral/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Meus pedidos/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Meus Serviços/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Endereços/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Configurações/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Ajuda/ })).toBeInTheDocument();
@@ -52,7 +52,7 @@ describe("DesktopNav", () => {
       "href",
       "/dashboard"
     );
-    expect(screen.getByRole("link", { name: /Meus pedidos/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Meus Serviços/ })).toHaveAttribute(
       "href",
       "/dashboard/requests"
     );

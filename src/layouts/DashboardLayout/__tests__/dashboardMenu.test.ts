@@ -22,7 +22,7 @@ describe("getDashboardMenu", () => {
       "/dashboard/help",
     ]);
     expect(labels).toContain("Visão geral");
-    expect(labels).toContain("Meus pedidos");
+    expect(labels).toContain("Meus Serviços");
     expect(labels).toContain("Endereços");
     expect(labels).toContain("Configurações");
     expect(labels).toContain("Ajuda");

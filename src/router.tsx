@@ -4,6 +4,7 @@ import { RootLayout } from './layouts/RootLayout'
 import { RouterErrorBoundary } from '@/components/RouterErrorBoundary'
 import { GuestOnlyRoute, ProtectedRoute } from '@/features/auth'
 import { DashboardFakePage } from '@/layouts/DashboardLayout'
+import { ServiceRequestsPage } from '@/features/view-service-requests'
 
 const App = lazy(() => import('./App'))
 const Login = lazy(() => import('./features/auth/components/Login/Login'))
@@ -18,6 +19,7 @@ const FormDemoPage =
 
 const RequestQuote = lazy(() => import('@/features/request-quote').then(m => ({ default: m.RequestQuote })))
 const DashboardLayout = lazy(() => import('@/layouts/DashboardLayout').then(m => ({ default: m.DashboardLayout })))
+const ServiceDetailPlaceholder = lazy(() => import('@/features/view-service-requests').then(m => ({ default: m.ServiceDetailPlaceholder })))
 
 export const router = createBrowserRouter([
   {
@@ -76,11 +78,11 @@ export const router = createBrowserRouter([
           { index: true, element: <DashboardFakePage title="Visão geral" /> },
           {
             path: 'requests',
-            element: (
-              <DashboardFakePage
-                titleByRole={{ client: 'Meus pedidos', provider: 'Solicitações' }}
-              />
-            ),
+            element: <ServiceRequestsPage />,
+          },
+          {
+            path: 'services/:id',
+            element: <ServiceDetailPlaceholder />,
           },
           {
             path: 'addresses',

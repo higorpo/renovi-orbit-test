@@ -23,7 +23,7 @@ const PROVIDER_MAIN_COUNT = 4;
 function clientMenuItems(): DashboardMenuItem[] {
   return [
     { path: "/dashboard", label: "Visão geral", icon: LayoutDashboard },
-    { path: "/dashboard/requests", label: "Meus pedidos", icon: FileText },
+    { path: "/dashboard/requests", label: "Meus Serviços", icon: FileText },
     { path: "/dashboard/addresses", label: "Endereços", icon: MapPin },
     { path: "/dashboard/settings", label: "Configurações", icon: Settings },
     { path: "/dashboard/help", label: "Ajuda", icon: HelpCircle },

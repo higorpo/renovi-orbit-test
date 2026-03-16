@@ -1,0 +1,243 @@
+import { useState } from "react";
+import { Link } from "react-router";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { MapPin, MessageSquare, Wrench } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { ServiceRequestCardModel } from "../types/service-request-view.types";
+import { STATUS_LABELS, STATUS_BADGE_VARIANT } from "../constants/statusBadge";
+import { formatLocationDisplay } from "../utils/locationDisplay";
+import { formatServiceRequestDate } from "../utils/formatDate";
+import { getServiceDetailPath } from "../constants/routes";
+import { ImagePreviewStrip } from "./ImagePreviewStrip";
+
+const DESCRIPTION_CLAMP = "line-clamp-2 sm:line-clamp-3";
+
+/** Statuses that allow the user to exclude (cancel) the service. */
+const CANCELLABLE_STATUSES = ["open"] as const;
+const CANCELLABLE_STATUS_TABS = ["waiting_proposals", "negotiation"] as const;
+
+function canCancelService(model: ServiceRequestCardModel): boolean {
+  return (
+    CANCELLABLE_STATUSES.includes(model.status as "open") ||
+    CANCELLABLE_STATUS_TABS.includes(model.statusTabId as "negotiation")
+  );
+}
+
+export interface ServiceCardProps {
+  model: ServiceRequestCardModel;
+  onCancel?: (id: string) => void;
+  isCancelling?: boolean;
+  className?: string;
+}
+
+function CardActions({
+  model,
+  onCancel,
+  isCancelling,
+}: {
+  model: ServiceRequestCardModel;
+  onCancel?: (id: string) => void;
+  isCancelling?: boolean;
+}) {
+  const detailPath = getServiceDetailPath(model.id);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  const actions: Array<{ label: string; href?: string; action?: "cancel" }> = [];
+
+  switch (model.status) {
+    case "open":
+      actions.push(
+        { label: "Editar serviço", href: detailPath },
+        { label: "Ver detalhes", href: detailPath }
+      );
+      if (canCancelService(model)) {
+        actions.push({ label: "Excluir serviço", action: "cancel" });
+      }
+      break;
+    case "in_progress":
+      actions.push(
+        { label: "Ver serviço", href: detailPath },
+        { label: "Ver atividades", href: detailPath }
+      );
+      break;
+    case "closed":
+      actions.push(
+        { label: "Ver detalhes", href: detailPath },
+        { label: "Avaliar profissional", href: detailPath }
+      );
+      break;
+    case "cancelled":
+      actions.push({ label: "Ver detalhes", href: detailPath });
+      break;
+    default:
+      actions.push({ label: "Ver detalhes", href: detailPath });
+      if (canCancelService(model)) {
+        actions.push({ label: "Excluir serviço", action: "cancel" });
+      }
+  }
+
+  const handleConfirmCancel = () => {
+    onCancel?.(model.id);
+    setDeleteDialogOpen(false);
+  };
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {actions.map((action) =>
+        action.action === "cancel" ? (
+          <AlertDialog
+            key={action.label}
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 min-h-9 shrink-0"
+              onClick={() => setDeleteDialogOpen(true)}
+              disabled={isCancelling}
+              aria-label="Excluir serviço"
+            >
+              {action.label}
+            </Button>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir serviço?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Ao excluir, o serviço será cancelado e não receberá mais
+                  propostas. Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleConfirmCancel}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isCancelling ? "Excluindo…" : "Excluir"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : (
+          <Button
+            key={action.label}
+            variant="outline"
+            size="sm"
+            className="h-9 min-h-9 shrink-0"
+            asChild
+          >
+            <Link to={action.href!}>{action.label}</Link>
+          </Button>
+        )
+      )}
+    </div>
+  );
+}
+
+export function ServiceCard({
+  model,
+  onCancel,
+  isCancelling,
+  className,
+}: ServiceCardProps) {
+  const locationText = formatLocationDisplay(model.address);
+  const variant = STATUS_BADGE_VARIANT[model.status];
+  const detailPath = getServiceDetailPath(model.id);
+
+  return (
+    <Card
+      className={cn(
+        "flex flex-col transition-colors hover:border-primary/30",
+        className
+      )}
+    >
+      <Link
+        to={detailPath}
+        className="contents"
+        aria-label={`Ver detalhes do serviço: ${model.title}`}
+      >
+        <CardHeader className="!pb-2">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              {model.service && (
+                <p className="text-xs font-medium text-muted-foreground">
+                  {model.service.title}
+                </p>
+              )}
+              <h2 className="mt-0.5 text-lg font-semibold leading-tight">
+                {model.title}
+              </h2>
+            </div>
+            <Badge variant={variant} className="shrink-0">
+              {STATUS_LABELS[model.status]}
+            </Badge>
+          </div>
+          {model.descriptionPreview && (
+            <p
+              className={cn(
+                "mt-1.5 text-sm text-muted-foreground",
+                DESCRIPTION_CLAMP
+              )}
+            >
+              {model.descriptionPreview}
+            </p>
+          )}
+          {locationText && (
+            <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span>{locationText}</span>
+            </p>
+          )}
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span>Criado em {formatServiceRequestDate(model.createdAt)}</span>
+            {model.updatedAt !== model.createdAt && (
+              <span>Atualizado em {formatServiceRequestDate(model.updatedAt)}</span>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="!pt-0">
+          <ImagePreviewStrip photoPaths={model.photoPaths} />
+          {model.status === "in_progress" && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              {model.selectedProfessionalName && (
+                <span className="flex items-center gap-1">
+                  <Wrench className="h-3.5 w-3.5" aria-hidden />
+                  Profissional: {model.selectedProfessionalName}
+                </span>
+              )}
+              {model.progressPercent != null && (
+                <span>Progresso: {model.progressPercent}%</span>
+              )}
+            </div>
+          )}
+          {model.proposalCount != null && model.proposalCount > 0 && (
+            <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
+              <MessageSquare className="h-3.5 w-3.5" aria-hidden />
+              {model.proposalCount} proposta(s)
+            </p>
+          )}
+        </CardContent>
+      </Link>
+      <CardFooter className="mt-auto border-t pt-3">
+        <CardActions
+          model={model}
+          onCancel={onCancel}
+          isCancelling={isCancelling}
+        />
+      </CardFooter>
+    </Card>
+  );
+}
