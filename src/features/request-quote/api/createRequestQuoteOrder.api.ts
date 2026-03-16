@@ -73,6 +73,7 @@ export async function createRequestQuoteOrder(
           formData: step4Data.formData,
           label: "Casa",
           is_default: true,
+          ...(step4Data.location && { location: step4Data.location }),
         };
 
   const formData = new FormData();

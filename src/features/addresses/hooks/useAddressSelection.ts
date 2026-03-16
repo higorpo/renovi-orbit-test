@@ -7,7 +7,7 @@ import { addBreadcrumb } from "@/lib/sentry";
 import { listAddresses } from "../api/addresses.api";
 import { resolveFormDataFromCep } from "../utils/resolveFormDataFromCep";
 import type { ClientAddressWithRelations } from "../types/addresses.types";
-import type { AddressSelection } from "../types/addresses.types";
+import type { AddressSelection, AddressLocation } from "../types/addresses.types";
 import { defaultAddressFormData } from "../types/addressForm.validation";
 import type { AddressFormData } from "../types/addressForm.validation";
 
@@ -23,6 +23,9 @@ export interface UseAddressSelectionParams {
 export interface UseAddressSelectionResult {
   formData: AddressFormData;
   setFormData: React.Dispatch<React.SetStateAction<AddressFormData>>;
+  /** Coordinates from map or geocoding; persisted as client_addresses.location when creating address. */
+  location: AddressLocation | null;
+  setLocation: (loc: AddressLocation | null) => void;
   selectedAddressId: string | null;
   setSelectedAddressId: (id: string | null) => void;
   showNewAddressForm: boolean;
@@ -52,6 +55,11 @@ export function useAddressSelection({
   );
   const [restoredFromPersisted] = useState(() => initialSelection?.kind === "new");
   const [fetchingCep, setFetchingCep] = useState(false);
+  const [location, setLocation] = useState<AddressLocation | null>(() =>
+    initialSelection?.kind === "new" && initialSelection.location
+      ? initialSelection.location
+      : null
+  );
   const lastResolvedCepRef = useRef<string | null>(null);
 
   // When restoring from persisted step data, mark CEP as already resolved so we don't re-fetch
@@ -88,8 +96,8 @@ export function useAddressSelection({
       onSelectionChange(null);
       return;
     }
-    onSelectionChange({ kind: "new", formData });
-  }, [userId, addresses, selectedAddressId, showNewAddressForm, formData, onSelectionChange]);
+    onSelectionChange({ kind: "new", formData, location: location ?? undefined });
+  }, [userId, addresses, selectedAddressId, showNewAddressForm, formData, location, onSelectionChange]);
 
   const runCepResolution = useCallback(
     async (cepMasked: string) => {
@@ -115,6 +123,8 @@ export function useAddressSelection({
           ...prev,
           address_zip: "",
           address_street: "",
+          address_number: "",
+          address_complement: "",
           address_state_id: "",
           address_state: "",
           address_city_id: "",
@@ -139,6 +149,8 @@ export function useAddressSelection({
           ...prev,
           address_zip: "",
           address_street: "",
+          address_number: "",
+          address_complement: "",
           address_state_id: "",
           address_state: "",
           address_city_id: "",
@@ -182,6 +194,8 @@ export function useAddressSelection({
   return {
     formData,
     setFormData,
+    location,
+    setLocation,
     selectedAddressId,
     setSelectedAddressId,
     showNewAddressForm,

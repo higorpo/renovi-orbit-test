@@ -6,6 +6,21 @@ export type CreateAddressResult =
   | { ok: true; addressId: string }
   | { ok: false; error: string };
 
+/** Builds WKT for geography(Point, 4326). PostgREST/PostGIS accept WKT for insert. */
+function buildLocationWkt(lat: number, lng: number): string | null {
+  if (
+    typeof lat !== "number" ||
+    typeof lng !== "number" ||
+    lat < -90 ||
+    lat > 90 ||
+    lng < -180 ||
+    lng > 180
+  ) {
+    return null;
+  }
+  return `SRID=4326;POINT(${lng} ${lat})`;
+}
+
 function toRow(clientId: string, payload: AddressPayloadNew) {
   const f = payload.formData;
   const street = f?.address_street ?? payload.street ?? "";
@@ -16,6 +31,12 @@ function toRow(clientId: string, payload: AddressPayloadNew) {
   const zip_code = zipRaw.replace(/\D/g, "").slice(0, 8) || zipRaw;
   const city_id = f?.address_city_id ?? payload.city_id ?? "";
   const state_id = f?.address_state_id ?? payload.state_id ?? "";
+
+  const loc = payload.location;
+  const location =
+    loc && typeof loc.latitude === "number" && typeof loc.longitude === "number"
+      ? buildLocationWkt(loc.latitude, loc.longitude)
+      : null;
 
   return {
     client_id: clientId,
@@ -29,6 +50,7 @@ function toRow(clientId: string, payload: AddressPayloadNew) {
     zip_code,
     is_default: payload.is_default ?? false,
     is_active: true,
+    ...(location && { location }),
   };
 }
 

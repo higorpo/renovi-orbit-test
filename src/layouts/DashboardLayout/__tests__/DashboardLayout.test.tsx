@@ -118,7 +118,7 @@ describe("DashboardLayout", () => {
 
   it("applies padding bottom to main on mobile so content is not under bottom nav", () => {
     useBreakpointMd.mockReturnValue(false);
-    const { container } = render(
+    render(
       <MemoryRouter initialEntries={["/dashboard"]}>
         <DashboardLayout />
       </MemoryRouter>

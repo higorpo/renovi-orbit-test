@@ -8,6 +8,12 @@ export interface AddressFormDataLike {
   address_city_id?: string;
 }
 
+/** Coordinates for the address (from map or geocoding). Sent to backend to set client_addresses.location. */
+export interface AddressLocationPayload {
+  latitude: number;
+  longitude: number;
+}
+
 export interface AddressPayloadNew {
   kind: "new";
   label?: string;
@@ -20,6 +26,8 @@ export interface AddressPayloadNew {
   city_id?: string;
   state_id?: string;
   zip_code?: string;
+  /** Optional coordinates to set client_addresses.location (WGS84). */
+  location?: AddressLocationPayload | null;
 }
 
 export interface AddressPayloadExisting {

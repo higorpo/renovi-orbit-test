@@ -59,10 +59,18 @@ export interface AddressSelectionExisting {
   addressId: string;
 }
 
+/** Coordinates for the address (from map or geocoding). Persisted as client_addresses.location. */
+export interface AddressLocation {
+  latitude: number;
+  longitude: number;
+}
+
 /** Payload when user fills the new-address form. */
 export interface AddressSelectionNew {
   kind: "new";
   formData: AddressFormData;
+  /** Optional coordinates (WGS84) to persist on client_addresses.location. */
+  location?: AddressLocation | null;
 }
 
 /** Selection state: existing address, new form data, or none. */

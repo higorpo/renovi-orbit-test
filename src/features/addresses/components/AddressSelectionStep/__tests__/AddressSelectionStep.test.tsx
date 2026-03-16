@@ -14,6 +14,17 @@ vi.mock("../../../hooks/usePlatformStatesAndCities", () => ({
   usePlatformNeighborhoods: vi.fn(),
 }));
 
+vi.mock("../../../hooks/useAddressMapSync", () => ({
+  useAddressMapSync: vi.fn(() => ({
+    handleMapDrag: vi.fn(),
+    reverseGeocoding: false,
+  })),
+}));
+
+vi.mock("../../AddressMap/AddressMap", () => ({
+  AddressMap: () => <div data-testid="address-map">Map</div>,
+}));
+
 const useAddressSelection = vi.mocked(useAddressSelectionModule.useAddressSelection);
 const usePlatformStates = vi.mocked(usePlatformStatesModule.usePlatformStates);
 const usePlatformCities = vi.mocked(usePlatformStatesModule.usePlatformCities);
@@ -69,6 +80,8 @@ function defaultMocks() {
   useAddressSelection.mockReturnValue({
     formData: defaultFormData,
     setFormData: vi.fn(),
+    location: null,
+    setLocation: vi.fn(),
     selectedAddressId: null,
     setSelectedAddressId: vi.fn(),
     showNewAddressForm: false,
@@ -140,6 +153,8 @@ describe("AddressSelectionStep", () => {
     useAddressSelection.mockReturnValue({
       formData: defaultFormData,
       setFormData: vi.fn(),
+      location: null,
+      setLocation: vi.fn(),
       selectedAddressId: null,
       setSelectedAddressId,
       showNewAddressForm: false,
@@ -171,6 +186,8 @@ describe("AddressSelectionStep", () => {
     useAddressSelection.mockReturnValue({
       formData: defaultFormData,
       setFormData: vi.fn(),
+      location: null,
+      setLocation: vi.fn(),
       selectedAddressId: "addr-1",
       setSelectedAddressId,
       showNewAddressForm: false,
@@ -201,6 +218,8 @@ describe("AddressSelectionStep", () => {
     useAddressSelection.mockReturnValue({
       formData: defaultFormData,
       setFormData: vi.fn(),
+      location: null,
+      setLocation: vi.fn(),
       selectedAddressId: null,
       setSelectedAddressId: vi.fn(),
       showNewAddressForm: true,
@@ -220,6 +239,8 @@ describe("AddressSelectionStep", () => {
     useAddressSelection.mockReturnValue({
       formData: defaultFormData,
       setFormData: vi.fn(),
+      location: null,
+      setLocation: vi.fn(),
       selectedAddressId: null,
       setSelectedAddressId: vi.fn(),
       showNewAddressForm: true,
@@ -240,6 +261,8 @@ describe("AddressSelectionStep", () => {
     useAddressSelection.mockReturnValue({
       formData: defaultFormData,
       setFormData,
+      location: null,
+      setLocation: vi.fn(),
       selectedAddressId: null,
       setSelectedAddressId: vi.fn(),
       showNewAddressForm: false,
@@ -261,6 +284,8 @@ describe("AddressSelectionStep", () => {
     useAddressSelection.mockReturnValue({
       formData: defaultFormData,
       setFormData: vi.fn(),
+      location: null,
+      setLocation: vi.fn(),
       selectedAddressId: null,
       setSelectedAddressId: vi.fn(),
       showNewAddressForm: false,

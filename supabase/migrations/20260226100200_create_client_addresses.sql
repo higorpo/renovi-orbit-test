@@ -1,5 +1,7 @@
 -- Client addresses: one client can have multiple addresses.
 -- Used in request-quote and profile; no address data stored on profiles.
+-- PostGIS required for geography column.
+create extension if not exists postgis;
 
 create table if not exists public.client_addresses (
   id uuid primary key default gen_random_uuid(),
@@ -14,6 +16,13 @@ create table if not exists public.client_addresses (
   city_id uuid not null references public.platform_cities (id) on delete restrict,
   is_default boolean not null default false,
   is_active boolean not null default true,
+  -- Single source of truth for coordinates (WGS84). Set via ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography.
+  location geography(Point, 4326),
+  -- Derived from location for convenience (API, simple queries). Read-only.
+  latitude double precision generated always as (st_y(location::geometry)) stored,
+  longitude double precision generated always as (st_x(location::geometry)) stored,
+  -- Geohash derived from location (precision 7 ~ 150m). Used for spatial indexing/clustering.
+  geohash text generated always as (st_geohash(location::geometry, 7)) stored,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -23,10 +32,16 @@ comment on column public.client_addresses.client_id is 'References profiles.id (
 comment on column public.client_addresses.is_default is 'When true, used as default for new requests.';
 comment on column public.client_addresses.state_id is 'Reference to platform_states.';
 comment on column public.client_addresses.city_id is 'Reference to platform_cities.';
+comment on column public.client_addresses.location is 'PostGIS point (SRID 4326). Single source of truth; set from coordinates when inserting/updating.';
+comment on column public.client_addresses.latitude is 'WGS84 latitude, derived from location.';
+comment on column public.client_addresses.longitude is 'WGS84 longitude, derived from location.';
+comment on column public.client_addresses.geohash is 'Geohash (precision 7) derived from location for filtering and clustering.';
 
 create index if not exists client_addresses_client_id_idx on public.client_addresses (client_id);
 create index if not exists client_addresses_state_id_idx on public.client_addresses (state_id);
 create index if not exists client_addresses_city_id_idx on public.client_addresses (city_id);
+create index if not exists idx_client_addresses_location on public.client_addresses using gist (location);
+create index if not exists idx_client_addresses_geohash on public.client_addresses (geohash) where geohash is not null;
 
 alter table public.client_addresses enable row level security;
 

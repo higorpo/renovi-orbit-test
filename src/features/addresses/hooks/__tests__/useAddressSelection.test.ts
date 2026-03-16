@@ -227,6 +227,7 @@ describe("useAddressSelection", () => {
     await waitFor(() => {
       expect(result.current.formData.address_zip).toBe("");
       expect(result.current.formData.address_street).toBe("");
+      expect(result.current.formData.address_number).toBe("");
     });
   });
 
@@ -251,6 +252,7 @@ describe("useAddressSelection", () => {
     await waitFor(() => {
       expect(result.current.formData.address_zip).toBe("");
       expect(result.current.formData.address_street).toBe("");
+      expect(result.current.formData.address_number).toBe("");
     });
   });
 });

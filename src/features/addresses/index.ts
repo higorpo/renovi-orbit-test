@@ -29,6 +29,7 @@ export type {
   AddressSelection,
   AddressSelectionExisting,
   AddressSelectionNew,
+  AddressLocation,
   ResolveAddressResult,
 } from "./types/addresses.types";
 export type {

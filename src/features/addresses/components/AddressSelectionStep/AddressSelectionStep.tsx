@@ -11,14 +11,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { nominatimGeocodingService } from "@/lib/geocoding";
 import { maskCEP } from "@/lib/masks";
 import { useAddressSelection } from "../../hooks/useAddressSelection";
+import { useAddressMapSync } from "../../hooks/useAddressMapSync";
 import {
   usePlatformStates,
   usePlatformCities,
   usePlatformNeighborhoods,
 } from "../../hooks/usePlatformStatesAndCities";
 import type { AddressSelection } from "../../types/addresses.types";
+import { AddressMap } from "../AddressMap/AddressMap";
 
 export interface AddressSelectionStepProps {
   userId: string | null;
@@ -43,6 +46,8 @@ export function AddressSelectionStep({
   const {
     formData,
     setFormData,
+    location,
+    setLocation,
     selectedAddressId,
     setSelectedAddressId,
     showNewAddressForm,
@@ -52,6 +57,15 @@ export function AddressSelectionStep({
     addresses,
     handleCepBlur,
   } = useAddressSelection({ userId, onSelectionChange, numberInputRef, initialSelection: step4Data });
+
+  const { handleMapDrag, reverseGeocoding } = useAddressMapSync({
+    formData,
+    setFormData,
+    location,
+    setLocation,
+    geocodingService: nominatimGeocodingService,
+    disabled: fetchingCep,
+  });
 
   const { states, isLoading: statesLoading } = usePlatformStates();
   const { cities, isLoading: citiesLoading } = usePlatformCities(
@@ -272,6 +286,24 @@ export function AddressSelectionStep({
             className="bg-background border-border text-foreground placeholder:text-muted-foreground"
           />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-foreground">Localização no mapa</Label>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+          Arraste o marcador para ajustar o ponto exato do serviço. Rua e número podem ser atualizados automaticamente.
+        </p>
+        {reverseGeocoding && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Buscando endereço...</span>
+          </div>
+        )}
+        <AddressMap
+          location={location}
+          onLocationChange={handleMapDrag}
+          className="w-full border border-border rounded-lg"
+        />
       </div>
 
       <div className="rounded-lg border border-border bg-muted/30 p-3 sm:p-4 flex gap-2 sm:gap-3">
