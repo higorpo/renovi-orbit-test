@@ -16,13 +16,16 @@ describe("MeusServicosHeader", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders CTA link to request quote", () => {
+  it("renders CTA link(s) to request quote (header on desktop, FAB on mobile)", () => {
     render(
       <MemoryRouter>
         <MeusServicosHeader />
       </MemoryRouter>
     );
-    const link = screen.getByRole("link", { name: /Novo serviço/i });
-    expect(link).toHaveAttribute("href", "/pedir-orcamento");
+    const links = screen.getAllByRole("link", { name: /Novo serviço/i });
+    expect(links.length).toBeGreaterThanOrEqual(1);
+    links.forEach((link) => {
+      expect(link).toHaveAttribute("href", "/pedir-orcamento");
+    });
   });
 });
