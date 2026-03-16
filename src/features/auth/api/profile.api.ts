@@ -71,6 +71,36 @@ async function createProfileFromCurrentUser(
   return { profile: data as Profile, error: null };
 }
 
+export interface UpdateProfileParams {
+  full_name?: string;
+  phone?: string | null;
+  cpf?: string | null;
+  profile_image_path?: string | null;
+}
+
+export interface UpdateProfileResult {
+  error: string | null;
+}
+
+export async function updateProfile(
+  userId: string,
+  params: UpdateProfileParams
+): Promise<UpdateProfileResult> {
+  const { error } = await supabase
+    .from("profiles")
+    .update(params)
+    .eq("id", userId);
+
+  if (error) {
+    logger.error("profile_update_error", {
+      error: error.message,
+      userId,
+    });
+    return { error: error.message };
+  }
+  return { error: null };
+}
+
 export interface UpdateRoleResult {
   error: string | null;
 }
@@ -102,5 +132,6 @@ export async function updateRole(
 
 export const profileApi = {
   getProfile,
+  updateProfile,
   updateRole,
 };

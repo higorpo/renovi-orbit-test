@@ -18,13 +18,13 @@ describe("getDashboardMenu", () => {
       "/dashboard",
       "/dashboard/requests",
       "/dashboard/addresses",
-      "/dashboard/settings",
+      "/dashboard/conta",
       "/dashboard/help",
     ]);
     expect(labels).toContain("Visão geral");
     expect(labels).toContain("Meus Serviços");
     expect(labels).toContain("Endereços");
-    expect(labels).toContain("Configurações");
+    expect(labels).toContain("Minha conta");
     expect(labels).toContain("Ajuda");
   });
 

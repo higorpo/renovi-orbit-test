@@ -23,3 +23,9 @@ export function validateCPF(cpf: string): boolean {
   if (remainder !== parseInt(numbers[10], 10)) return false;
   return true;
 }
+
+/** Brazilian phone: 10 digits (landline) or 11 digits (mobile). */
+export function validateBrazilPhone(phone: string): boolean {
+  const numbers = phone.replace(/\D/g, "");
+  return numbers.length === 10 || numbers.length === 11;
+}

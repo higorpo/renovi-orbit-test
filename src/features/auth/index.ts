@@ -14,9 +14,10 @@ export { ProtectedRoute, GuestOnlyRoute } from "./components/routeGuards";
 
 // Types needed by other features (e.g. dashboard checks user role)
 export type { Profile, ProfileRole, AuthContextType, SignUpResult } from "./types/auth.types";
+export { validateFullName } from "./types/clientSignup.validation";
 export { isAllowedRole } from "./types/auth.types";
 
-export { getProfile } from "./api/profile.api";
+export { getProfile, profileApi } from "./api/profile.api";
 export { authApi } from "./api/auth.api";
 export {
   validatePasswordStrength,

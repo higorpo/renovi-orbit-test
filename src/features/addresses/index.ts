@@ -9,6 +9,7 @@ export {
   listAddresses,
   createAddress,
   updateAddress,
+  deleteAddress,
 } from "./api/addresses.api";
 export {
   listStates,
@@ -43,5 +44,25 @@ export {
 } from "./types/addressForm.validation";
 export type { AddressFormData } from "./types/addressForm.validation";
 export { resolveAddress } from "./utils/resolveAddress";
+export { resolveFormDataFromCep } from "./utils/resolveFormDataFromCep";
+export type { ResolveCepResult } from "./utils/resolveFormDataFromCep";
+export { addressToFormData } from "./utils/addressToFormData";
 export { useAddressSelection } from "./hooks/useAddressSelection";
+export {
+  useAddressesList,
+  ADDRESSES_LIST_QUERY_KEY,
+} from "./hooks/useAddressesList";
+export {
+  useSetDefaultAddress,
+  useDeleteAddress,
+} from "./hooks/useAddressMutations";
+export {
+  usePlatformStates,
+  usePlatformCities,
+  usePlatformNeighborhoods,
+} from "./hooks/usePlatformStatesAndCities";
 export { AddressSelectionStep } from "./components/AddressSelectionStep/AddressSelectionStep";
+export { AddressCard } from "./components/AddressCard/AddressCard";
+export { AddressFormDialog } from "./components/AddressFormDialog/AddressFormDialog";
+export { DeleteAddressDialog } from "./components/DeleteAddressDialog/DeleteAddressDialog";
+export { AddressesSection } from "./components/AddressesSection/AddressesSection";

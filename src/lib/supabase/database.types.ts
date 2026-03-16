@@ -365,16 +365,31 @@ export type Database = {
           full_name: string
           id: string
           role: string
+          phone: string | null
+          cpf: string | null
+          profile_image_path: string | null
+          created_at: string
+          updated_at: string
         }
         Insert: {
           full_name?: string
           id: string
           role?: string
+          phone?: string | null
+          cpf?: string | null
+          profile_image_path?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Update: {
           full_name?: string
           id?: string
           role?: string
+          phone?: string | null
+          cpf?: string | null
+          profile_image_path?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }

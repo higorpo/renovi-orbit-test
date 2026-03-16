@@ -29,6 +29,9 @@ export interface CreateAddressParams {
   zip_code: string;
   is_default?: boolean;
   is_active?: boolean;
+  /** WGS84 coordinates; when set, stored in client_addresses.location. */
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface CreateAddressResult {
@@ -47,6 +50,9 @@ export interface UpdateAddressParams {
   zip_code?: string;
   is_default?: boolean;
   is_active?: boolean;
+  /** WGS84 coordinates; when set, stored in client_addresses.location. */
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface UpdateAddressResult {

@@ -33,6 +33,8 @@ export interface UseAddressMapSyncResult {
   handleMapDrag: (lat: number, lng: number) => void;
   /** True while reverse geocoding after a drag. */
   reverseGeocoding: boolean;
+  /** Run geocode now with current form data and update map (e.g. on number field blur in dialog). */
+  triggerGeocodeNow: () => void;
 }
 
 export function useAddressMapSync({
@@ -43,6 +45,8 @@ export function useAddressMapSync({
   disabled = false,
 }: UseAddressMapSyncParams): UseAddressMapSyncResult {
   const ignoreGeocodeRef = useRef(false);
+  const formDataRef = useRef(formData);
+  formDataRef.current = formData;
   const [reverseGeocoding, setReverseGeocoding] = useState(false);
 
   const handleMapDrag = useCallback(
@@ -92,5 +96,21 @@ export function useAddressMapSync({
     return () => clearTimeout(timer);
   }, [disabled, formData, setLocation, geocodingService]);
 
-  return { handleMapDrag, reverseGeocoding };
+  const triggerGeocodeNow = useCallback(async () => {
+    if (disabled || ignoreGeocodeRef.current) return;
+    const data = formDataRef.current;
+    const hasMinimalAddress =
+      data.address_street?.trim() &&
+      data.address_city?.trim() &&
+      data.address_state?.trim();
+    if (!hasMinimalAddress) return;
+    const query = buildAddressString(data);
+    if (!query.trim()) return;
+    const result = await geocodingService.geocode(query);
+    if (result) {
+      setLocation({ latitude: result.latitude, longitude: result.longitude });
+    }
+  }, [disabled, geocodingService, setLocation]);
+
+  return { handleMapDrag, reverseGeocoding, triggerGeocodeNow };
 }

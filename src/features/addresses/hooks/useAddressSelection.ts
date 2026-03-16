@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { unmask } from "@/lib/masks";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { addBreadcrumb } from "@/lib/sentry";
-import { listAddresses } from "../api/addresses.api";
+import { useAddressesList } from "./useAddressesList";
 import { resolveFormDataFromCep } from "../utils/resolveFormDataFromCep";
 import type { ClientAddressWithRelations } from "../types/addresses.types";
 import type { AddressSelection, AddressLocation } from "../types/addresses.types";
@@ -70,16 +69,7 @@ export function useAddressSelection({
     }
   }, [initialSelection]);
 
-  const { data: addressesData } = useQuery({
-    queryKey: ["client-addresses", userId],
-    queryFn: () => listAddresses(userId!),
-    enabled: !!userId,
-  });
-
-  const addresses = useMemo(
-    () => (addressesData?.addresses ?? []) as ClientAddressWithRelations[],
-    [addressesData?.addresses]
-  );
+  const { addresses } = useAddressesList();
 
   useEffect(() => {
     if (userId && addresses.length > 0 && !showNewAddressForm) {

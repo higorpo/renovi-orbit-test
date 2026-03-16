@@ -16,6 +16,11 @@ export interface Profile {
   id: string;
   role: ProfileRole;
   full_name: string;
+  phone?: string | null;
+  cpf?: string | null;
+  profile_image_path?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export interface AuthContextType {

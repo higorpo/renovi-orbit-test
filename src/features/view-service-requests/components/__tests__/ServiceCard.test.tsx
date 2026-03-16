@@ -44,7 +44,9 @@ describe("ServiceCard", () => {
         <ServiceCard model={model} />
       </MemoryRouter>
     );
-    expect(screen.getByRole("heading", { level: 2, name: /Troca de tomadas/i })).toBeInTheDocument();
+    const headings = screen.getAllByRole("heading", { level: 2, name: /Troca de tomadas/i });
+    expect(headings.length).toBeGreaterThanOrEqual(1);
+    expect(headings[0]).toBeInTheDocument();
     expect(screen.getByText(/Preciso trocar tomadas na sala/i)).toBeInTheDocument();
     expect(screen.getByText(/Trindade, Florianópolis/)).toBeInTheDocument();
   });

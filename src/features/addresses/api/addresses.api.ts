@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
+import type { TablesInsert, TablesUpdate } from "@/lib/supabase/database.types";
 import { logger } from "@/lib/logger";
 import { metrics } from "@/lib/sentry";
 import type {
@@ -37,22 +38,38 @@ export async function listAddresses(clientId: string): Promise<ListAddressesResu
   return { addresses: (data ?? []) as ClientAddressWithRelations[], error: null };
 }
 
+/** Build PostGIS geography from WGS84 lat/lng for client_addresses.location. */
+function buildLocationEwkt(latitude: number, longitude: number): string {
+  return `SRID=4326;POINT(${longitude} ${latitude})`;
+}
+
 export async function createAddress(params: CreateAddressParams): Promise<CreateAddressResult> {
+  const hasLocation =
+    params.latitude != null &&
+    params.longitude != null &&
+    Number.isFinite(params.latitude) &&
+    Number.isFinite(params.longitude);
+
+  const row: TablesInsert<"client_addresses"> = {
+    client_id: params.client_id,
+    label: params.label ?? "Casa",
+    street: params.street,
+    number: params.number,
+    complement: params.complement ?? null,
+    neighborhood: params.neighborhood,
+    city_id: params.city_id,
+    state_id: params.state_id,
+    zip_code: params.zip_code,
+    is_default: params.is_default ?? false,
+    is_active: params.is_active ?? true,
+    ...(hasLocation && {
+      location: buildLocationEwkt(params.latitude!, params.longitude!),
+    }),
+  };
+
   const { data, error } = await supabase
     .from("client_addresses")
-    .insert({
-      client_id: params.client_id,
-      label: params.label ?? "Casa",
-      street: params.street,
-      number: params.number,
-      complement: params.complement ?? null,
-      neighborhood: params.neighborhood,
-      city_id: params.city_id,
-      state_id: params.state_id,
-      zip_code: params.zip_code,
-      is_default: params.is_default ?? false,
-      is_active: params.is_active ?? true,
-    })
+    .insert(row)
     .select()
     .single();
 
@@ -69,9 +86,23 @@ export async function updateAddress(
   clientId: string,
   params: UpdateAddressParams
 ): Promise<UpdateAddressResult> {
+  const hasLocation =
+    params.latitude != null &&
+    params.longitude != null &&
+    Number.isFinite(params.latitude) &&
+    Number.isFinite(params.longitude);
+
+  const { latitude: _lat, longitude: _lng, ...rest } = params;
+  const updatePayload: TablesUpdate<"client_addresses"> = {
+    ...rest,
+    ...(hasLocation && {
+      location: buildLocationEwkt(params.latitude!, params.longitude!),
+    }),
+  };
+
   const { error } = await supabase
     .from("client_addresses")
-    .update(params)
+    .update(updatePayload)
     .eq("id", addressId)
     .eq("client_id", clientId);
 
@@ -81,4 +112,16 @@ export async function updateAddress(
   }
   metrics.count("addresses.updated", 1);
   return { error: null };
+}
+
+export interface DeleteAddressResult {
+  error: string | null;
+}
+
+/** Soft-delete: sets is_active = false so the address no longer appears in listAddresses. */
+export async function deleteAddress(
+  addressId: string,
+  clientId: string
+): Promise<DeleteAddressResult> {
+  return updateAddress(addressId, clientId, { is_active: false });
 }

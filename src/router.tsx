@@ -20,6 +20,7 @@ const FormDemoPage =
 const RequestQuote = lazy(() => import('@/features/request-quote').then(m => ({ default: m.RequestQuote })))
 const DashboardLayout = lazy(() => import('@/layouts/DashboardLayout').then(m => ({ default: m.DashboardLayout })))
 const ServiceDetailPlaceholder = lazy(() => import('@/features/view-service-requests').then(m => ({ default: m.ServiceDetailPlaceholder })))
+const MyAccountPage = lazy(() => import('@/features/my-account').then(m => ({ default: m.MyAccountPage })))
 
 export const router = createBrowserRouter([
   {
@@ -89,6 +90,14 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute allowedRoles={['client']}>
                 <DashboardFakePage title="Endereços" />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'conta',
+            element: (
+              <ProtectedRoute allowedRoles={['client']}>
+                <MyAccountPage />
               </ProtectedRoute>
             ),
           },

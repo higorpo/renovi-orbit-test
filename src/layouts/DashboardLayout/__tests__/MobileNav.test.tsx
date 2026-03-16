@@ -58,7 +58,7 @@ describe("MobileNav", () => {
     expect(screen.getByRole("link", { name: /Visão geral/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Meus Serviços/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Endereços/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Configurações/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Minha conta/ })).toBeInTheDocument();
   });
 
   it("opens sheet when hamburger is clicked and shows all menu items", async () => {

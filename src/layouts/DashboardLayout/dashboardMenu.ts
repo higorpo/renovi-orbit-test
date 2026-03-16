@@ -25,7 +25,7 @@ function clientMenuItems(): DashboardMenuItem[] {
     { path: "/dashboard", label: "Visão geral", icon: LayoutDashboard },
     { path: "/dashboard/requests", label: "Meus Serviços", icon: FileText },
     { path: "/dashboard/addresses", label: "Endereços", icon: MapPin },
-    { path: "/dashboard/settings", label: "Configurações", icon: Settings },
+    { path: "/dashboard/conta", label: "Minha conta", icon: Settings },
     { path: "/dashboard/help", label: "Ajuda", icon: HelpCircle },
   ];
 }
