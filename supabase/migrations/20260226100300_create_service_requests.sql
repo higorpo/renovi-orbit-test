@@ -1,5 +1,6 @@
 -- Service requests: quote requests created by clients.
 -- Links client, service (or sub-service), optional address, and form data.
+-- City/neighborhood come from address_id -> client_addresses. Location/geohash are synced from client_addresses for list-by-region queries.
 
 create table if not exists public.service_requests (
   id uuid primary key default gen_random_uuid(),
@@ -13,13 +14,16 @@ create table if not exists public.service_requests (
   form_schema jsonb,
   form_version text,
   status text not null default 'open' check (status in ('open', 'in_progress', 'closed', 'cancelled')),
-  city text,
-  neighborhood text,
   urgency text check (urgency is null or urgency in ('low', 'medium', 'high')),
   scope_complexity text check (scope_complexity is null or scope_complexity in ('simple', 'medium', 'complex')),
   suggested_questions text[],
   tags text[],
   missing_info_warnings text[],
+  -- Snapshot of address coordinates at request creation; synced from client_addresses when address_id is set (trigger).
+  location geography(Point, 4326),
+  latitude double precision generated always as (st_y(location::geometry)) stored,
+  longitude double precision generated always as (st_x(location::geometry)) stored,
+  geohash text generated always as (st_geohash(location::geometry, 7)) stored,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -36,10 +40,41 @@ comment on column public.service_requests.scope_complexity is 'AI-derived scope 
 comment on column public.service_requests.suggested_questions is 'AI-suggested follow-up questions for the client.';
 comment on column public.service_requests.tags is 'AI-derived tags for the request.';
 comment on column public.service_requests.missing_info_warnings is 'AI warnings about missing or unclear information.';
+comment on column public.service_requests.location is 'Snapshot of address coordinates at request creation; synced from client_addresses when address_id is set. Used for region/geohash queries.';
+comment on column public.service_requests.latitude is 'WGS84 latitude derived from location.';
+comment on column public.service_requests.longitude is 'WGS84 longitude derived from location.';
+comment on column public.service_requests.geohash is 'Geohash (precision 7) derived from location for list-by-region queries.';
 
 create index if not exists service_requests_client_id_idx on public.service_requests (client_id);
 create index if not exists service_requests_service_id_idx on public.service_requests (service_id);
 create index if not exists service_requests_status_idx on public.service_requests (status);
+create index if not exists idx_service_requests_geohash on public.service_requests (geohash) where geohash is not null;
+create index if not exists idx_service_requests_status_geohash on public.service_requests (status, geohash) where geohash is not null and status = 'open';
+
+-- Sync location from client_addresses when address_id is set (insert or update).
+create or replace function public.sync_service_request_location()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.address_id is not null then
+    select ca.location into new.location
+    from public.client_addresses ca
+    where ca.id = new.address_id;
+  else
+    new.location := null;
+  end if;
+  return new;
+end;
+$$;
+
+comment on function public.sync_service_request_location() is 'Copies client_addresses.location into service_requests.location when address_id is set.';
+
+create trigger service_requests_sync_location
+  before insert or update of address_id on public.service_requests
+  for each row execute function public.sync_service_request_location();
 
 alter table public.service_requests enable row level security;
 
