@@ -204,12 +204,13 @@ export function ServiceCard({
                 </div>
               )}
               <div className="min-w-0 flex-1">
+                {/* Desktop: category and title next to icon (original layout) */}
                 {model.service && (
-                  <p className="text-xs font-medium text-muted-foreground">
+                  <p className="hidden text-xs font-medium text-muted-foreground sm:block">
                     {model.service.title}
                   </p>
                 )}
-                <h2 className="mt-0.5 text-lg font-semibold leading-tight">
+                <h2 className="mt-0.5 hidden text-lg font-semibold leading-tight sm:block">
                   {model.title}
                 </h2>
               </div>
@@ -217,6 +218,17 @@ export function ServiceCard({
             <Badge variant={variant} className="shrink-0">
               {STATUS_LABELS[model.status]}
             </Badge>
+          </div>
+          {/* Mobile only: service name and title below, full card width */}
+          <div className="mt-1 w-full min-w-0 space-y-0.5 sm:mt-0 sm:hidden">
+            {model.service && (
+              <p className="text-xs font-medium text-muted-foreground">
+                {model.service.title}
+              </p>
+            )}
+            <h2 className="text-lg font-semibold leading-tight">
+              {model.title}
+            </h2>
           </div>
           {model.descriptionPreview && (
             <p
