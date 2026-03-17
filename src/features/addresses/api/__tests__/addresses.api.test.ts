@@ -21,8 +21,19 @@ vi.mock("@/lib/sentry", () => ({
   metrics: { count: vi.fn() },
 }));
 
+vi.mock("../../utils/h3", () => ({
+  latLngToH3Index: vi.fn((lat: number, lng: number) =>
+    lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && Number.isFinite(lat) && Number.isFinite(lng)
+      ? "8f283082a9b1fff"
+      : null
+  ),
+}));
+
 const supabase = await import("@/lib/supabase/client").then((m) => m.supabase);
 const from = vi.mocked(supabase.from);
+
+/** Chain returned by makeChain(); used to assert insert/update call args. */
+type MockChain = { insert: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> };
 
 /** Queue of results to return when the chain is awaited (one per await in the API). */
 let terminalReturns: Promise<{ data: unknown; error: { message: string } | null }>[] = [];
@@ -39,7 +50,7 @@ function makeChain() {
   };
   const thenable = {
     ...chain,
-    then(onFulfilled: (v: { data: unknown; error: { message: string } | null }) => unknown) {
+    then(onFulfilled: (v: { data: unknown; error: { message: string } | null } | undefined) => unknown) {
       const p = terminalReturns.shift();
       return Promise.resolve(p).then(onFulfilled);
     },
@@ -151,6 +162,32 @@ describe("createAddress", () => {
     expect(result.address).toBeNull();
     expect(result.error).toBe("Insert failed");
   });
+
+  it("includes h3_index in insert when latitude and longitude are provided", async () => {
+    terminalReturns = [
+      Promise.resolve({
+        data: { id: "new-id", client_id: "user-1", street: "Rua X", h3_index: "8f283082a9b1fff" },
+        error: null,
+      }),
+    ];
+
+    await createAddress({
+      client_id: "user-1",
+      street: "Rua X",
+      number: "10",
+      neighborhood: "Centro",
+      city_id: "city-1",
+      state_id: "state-1",
+      zip_code: "01310100",
+      latitude: -23.55,
+      longitude: -46.63,
+    });
+
+    const chain = from.mock.results[0]?.value as MockChain | undefined;
+    const insertCall = chain?.insert.mock.calls[0]?.[0];
+    expect(insertCall).toHaveProperty("h3_index", "8f283082a9b1fff");
+    expect(insertCall).toHaveProperty("location");
+  });
 });
 
 describe("updateAddress", () => {
@@ -160,6 +197,21 @@ describe("updateAddress", () => {
     const result = await updateAddress("addr-1", "user-1", { street: "Rua Nova" });
 
     expect(result.error).toBeNull();
+  });
+
+  it("includes h3_index in update payload when latitude and longitude are provided", async () => {
+    terminalReturns = [Promise.resolve({ data: null, error: null })];
+
+    await updateAddress("addr-1", "user-1", {
+      street: "Rua Nova",
+      latitude: -23.55,
+      longitude: -46.63,
+    });
+
+    const chain = from.mock.results[0]?.value as MockChain | undefined;
+    const updateCall = chain?.update.mock.calls[0]?.[0];
+    expect(updateCall).toHaveProperty("h3_index", "8f283082a9b1fff");
+    expect(updateCall).toHaveProperty("location");
   });
 
   it("returns error when update fails", async () => {

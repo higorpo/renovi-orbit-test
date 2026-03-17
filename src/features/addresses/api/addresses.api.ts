@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { TablesInsert, TablesUpdate } from "@/lib/supabase/database.types";
 import { logger } from "@/lib/logger";
 import { metrics } from "@/lib/sentry";
+import { latLngToH3Index } from "../utils/h3";
 import type {
   ClientAddress,
   ClientAddressWithRelations,
@@ -76,6 +77,10 @@ export async function createAddress(params: CreateAddressParams): Promise<Create
     }
   }
 
+  const h3_index = hasLocation
+    ? latLngToH3Index(params.latitude!, params.longitude!)
+    : null;
+
   const row: TablesInsert<"client_addresses"> = {
     client_id: params.client_id,
     label: params.label ?? "Casa",
@@ -91,6 +96,7 @@ export async function createAddress(params: CreateAddressParams): Promise<Create
     ...(hasLocation && {
       location: buildLocationEwkt(params.latitude!, params.longitude!),
     }),
+    ...(h3_index && { h3_index }),
   };
 
   const { data, error } = await supabase
@@ -131,11 +137,16 @@ export async function updateAddress(
   }
 
   const { latitude: _lat, longitude: _lng, ...rest } = params;
+  const h3_index = hasLocation
+    ? latLngToH3Index(params.latitude!, params.longitude!)
+    : undefined;
+
   const updatePayload: TablesUpdate<"client_addresses"> = {
     ...rest,
     ...(hasLocation && {
       location: buildLocationEwkt(params.latitude!, params.longitude!),
     }),
+    ...(h3_index !== undefined && { h3_index: h3_index ?? null }),
   };
 
   const { error } = await supabase

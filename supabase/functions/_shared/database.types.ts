@@ -149,6 +149,7 @@ export type Database = {
           complement: string | null
           created_at: string
           geohash: string | null
+          h3_index: string | null
           id: string
           is_active: boolean
           is_default: boolean
@@ -169,6 +170,7 @@ export type Database = {
           complement?: string | null
           created_at?: string
           geohash?: string | null
+          h3_index?: string | null
           id?: string
           is_active?: boolean
           is_default?: boolean
@@ -189,6 +191,7 @@ export type Database = {
           complement?: string | null
           created_at?: string
           geohash?: string | null
+          h3_index?: string | null
           id?: string
           is_active?: boolean
           is_default?: boolean

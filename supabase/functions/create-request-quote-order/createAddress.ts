@@ -1,10 +1,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { latLngToCell } from "npm:h3-js@4.4.0";
 import type { Database } from "../_shared/database.types.ts";
 import type { AddressPayloadNew } from "./types.ts";
 
 export type CreateAddressResult =
   | { ok: true; addressId: string }
   | { ok: false; error: string };
+
+/** H3 resolution 9: ~0.1 km² hexagon, suitable for address-level indexing. */
+const H3_RESOLUTION_ADDRESS = 9;
 
 /** Builds WKT for geography(Point, 4326). PostgREST/PostGIS accept WKT for insert. */
 function buildLocationWkt(lat: number, lng: number): string | null {
@@ -21,6 +25,15 @@ function buildLocationWkt(lat: number, lng: number): string | null {
   return `SRID=4326;POINT(${lng} ${lat})`;
 }
 
+/** Returns H3 cell index for WGS84 point, or null if invalid. */
+function latLngToH3Index(lat: number, lng: number): string | null {
+  try {
+    return latLngToCell(lat, lng, H3_RESOLUTION_ADDRESS);
+  } catch {
+    return null;
+  }
+}
+
 function toRow(clientId: string, payload: AddressPayloadNew) {
   const f = payload.formData;
   const street = f?.address_street ?? payload.street ?? "";
@@ -33,9 +46,14 @@ function toRow(clientId: string, payload: AddressPayloadNew) {
   const state_id = f?.address_state_id ?? payload.state_id ?? "";
 
   const loc = payload.location;
-  const location =
-    loc && typeof loc.latitude === "number" && typeof loc.longitude === "number"
-      ? buildLocationWkt(loc.latitude, loc.longitude)
+  const hasValidLocation =
+    loc && typeof loc.latitude === "number" && typeof loc.longitude === "number";
+  const location = hasValidLocation
+    ? buildLocationWkt(loc!.latitude, loc!.longitude)
+    : null;
+  const h3_index =
+    hasValidLocation && location
+      ? latLngToH3Index(loc!.latitude, loc!.longitude)
       : null;
 
   return {
@@ -51,6 +69,7 @@ function toRow(clientId: string, payload: AddressPayloadNew) {
     is_default: payload.is_default ?? false,
     is_active: true,
     ...(location && { location }),
+    ...(h3_index && { h3_index }),
   };
 }
 

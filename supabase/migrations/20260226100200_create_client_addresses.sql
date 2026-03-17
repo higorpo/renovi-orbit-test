@@ -23,6 +23,8 @@ create table if not exists public.client_addresses (
   longitude double precision generated always as (st_x(location::geometry)) stored,
   -- Geohash derived from location (precision 7 ~ 150m). Used for spatial indexing/clustering.
   geohash text generated always as (st_geohash(location::geometry, 7)) stored,
+  -- H3 cell index (Uber) at resolution 9; computed in app (no native H3 in Postgres). Used for spatial indexing/clustering.
+  h3_index text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -36,12 +38,14 @@ comment on column public.client_addresses.location is 'PostGIS point (SRID 4326)
 comment on column public.client_addresses.latitude is 'WGS84 latitude, derived from location.';
 comment on column public.client_addresses.longitude is 'WGS84 longitude, derived from location.';
 comment on column public.client_addresses.geohash is 'Geohash (precision 7) derived from location for filtering and clustering.';
+comment on column public.client_addresses.h3_index is 'H3 cell index (Uber) at resolution 9, derived from location in app. Used for spatial indexing and clustering.';
 
 create index if not exists client_addresses_client_id_idx on public.client_addresses (client_id);
 create index if not exists client_addresses_state_id_idx on public.client_addresses (state_id);
 create index if not exists client_addresses_city_id_idx on public.client_addresses (city_id);
 create index if not exists idx_client_addresses_location on public.client_addresses using gist (location);
 create index if not exists idx_client_addresses_geohash on public.client_addresses (geohash) where geohash is not null;
+create index if not exists idx_client_addresses_h3_index on public.client_addresses (h3_index) where h3_index is not null;
 
 alter table public.client_addresses enable row level security;
 
