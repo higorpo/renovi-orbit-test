@@ -13,3 +13,4 @@ Urgentes:
 - [ ] permitir excluir conta
 - [ ] permitir exportar dados
 - [ ] permitir usuário se deslogar da plataforma
+- [ ] permitir adicionar/editar apelido para endereço
