@@ -14,8 +14,3 @@ Urgentes:
 - [ ] tela de onboarding do prestador
 
 
-
-- [ ] ha um loading de pelo menos 3 vezes da tabela de profiles para um mesmo usuário
-- [ ] está fazendo reloading de todas as infos quando edito alguma coisa no form
-
-- [ ] arrumar loading na tela de prestador e cliente meus dados

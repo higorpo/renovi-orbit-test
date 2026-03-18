@@ -20,6 +20,8 @@ import { DadosPessoaisSection } from "./DadosPessoaisSection";
 import { ContatoIdentidadeSection } from "./ContatoIdentidadeSection";
 import { PrivacySection } from "./PrivacySection";
 import { DangerZoneSection } from "./DangerZoneSection";
+import { ClientFormSkeleton } from "./AccountFormSkeletons";
+import { LogoutSection } from "./LogoutSection";
 
 const PAGE_TITLE = "Minha conta";
 const PAGE_SUBTITLE = "Gerencie seus dados, endereços e preferências de privacidade";
@@ -161,27 +163,33 @@ export function MyAccountClientPage() {
         </aside>
 
         <div className="lg:col-span-2 space-y-6">
-          <Form {...form}>
-            <DadosPessoaisSection form={form} email={email} />
-            <ContatoIdentidadeSection form={form} />
+          {profileLoading ? (
+            <ClientFormSkeleton />
+          ) : (
+            <Form {...form}>
+              <DadosPessoaisSection form={form} email={email} />
+              <ContatoIdentidadeSection form={form} />
 
-            <p className="text-sm text-muted-foreground flex items-center gap-2" aria-live="polite">
-              {isUpdating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
-                  Salvando…
-                </>
-              ) : (
-                "As alterações são salvas automaticamente."
-              )}
-            </p>
-          </Form>
+              <p className="text-sm text-muted-foreground flex items-center gap-2" aria-live="polite">
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
+                    Salvando…
+                  </>
+                ) : (
+                  "As alterações são salvas automaticamente."
+                )}
+              </p>
+            </Form>
+          )}
 
           <AddressesSection />
 
           <PrivacySection
             privacyPolicyUrl={PRIVACY_POLICY_URL}
           />
+
+          <LogoutSection />
 
           <DangerZoneSection />
         </div>

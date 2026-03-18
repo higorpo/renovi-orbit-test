@@ -12,6 +12,7 @@ import { usePortfolioItems } from "../hooks/usePortfolioItems";
 import { PRIVACY_POLICY_URL } from "../constants";
 import { AccountSummaryCard, AccountSummaryCardSkeleton } from "./AccountSummaryCard";
 import { AccountErrorState } from "./AccountErrorState";
+import { ProviderFormSkeleton } from "./AccountFormSkeletons";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,7 @@ import { PublicProfileSettingsSection } from "./PublicProfileSettingsSection";
 import { PortfolioManagementSection } from "./PortfolioManagementSection";
 import { PrivacySection } from "./PrivacySection";
 import { DangerZoneSection } from "./DangerZoneSection";
+import { LogoutSection } from "./LogoutSection";
 import {
   providerAccountFormSchema,
   type ProviderAccountFormData,
@@ -272,58 +274,62 @@ function MyAccountProviderPage() {
         </aside>
 
         <div className="lg:col-span-2 space-y-6">
-          <Form {...form}>
-            <ProviderDadosPessoaisAdapter form={form} email={email} />
-            <Card>
-              <CardHeader className="pb-3 sm:pb-0">
-                <SectionTitleWithIcon title="Contato" icon={Phone} iconGradient="from-sky-500 to-blue-600" size="compact" className="!mb-0" />
-              </CardHeader>
-              <CardContent className="!pt-4">
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telefone / WhatsApp</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="(00) 00000-0000"
-                          onChange={(e) => field.onChange(maskPhone(e.target.value))}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </CardContent>
-            </Card>
-            <EntityTypeSection
-              value={form.watch("entity_type")}
-              onChange={(v) => form.setValue("entity_type", v, { shouldDirty: true })}
-            />
-            <LegalIdentitySection form={form} entityType={form.watch("entity_type")} />
-            <OfferedServicesSection
-              selectedServiceIds={offeredServiceIds}
-              onSelectedChange={setOfferedServiceIds}
-              setServiceIdsAsync={setServiceIds}
-              isUpdating={isUpdatingServices}
-            />
-            <PublicProfileSettingsSection
-              form={form}
-              profileSlug={publicData?.slug ?? null}
-            />
-            <p className="text-sm text-muted-foreground flex items-center gap-2" aria-live="polite">
-              {isUpdating ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
-                  Salvando…
-                </>
-              ) : (
-                "As alterações são salvas automaticamente."
-              )}
-            </p>
-          </Form>
+          {profileLoading ? (
+            <ProviderFormSkeleton />
+          ) : (
+            <Form {...form}>
+              <ProviderDadosPessoaisAdapter form={form} email={email} />
+              <Card>
+                <CardHeader className="pb-3 sm:pb-0">
+                  <SectionTitleWithIcon title="Contato" icon={Phone} iconGradient="from-sky-500 to-blue-600" size="compact" className="!mb-0" />
+                </CardHeader>
+                <CardContent className="!pt-4">
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Telefone / WhatsApp</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="(00) 00000-0000"
+                            onChange={(e) => field.onChange(maskPhone(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </CardContent>
+              </Card>
+              <EntityTypeSection
+                value={form.watch("entity_type")}
+                onChange={(v) => form.setValue("entity_type", v, { shouldDirty: true })}
+              />
+              <LegalIdentitySection form={form} entityType={form.watch("entity_type")} />
+              <OfferedServicesSection
+                selectedServiceIds={offeredServiceIds}
+                onSelectedChange={setOfferedServiceIds}
+                setServiceIdsAsync={setServiceIds}
+                isUpdating={isUpdatingServices}
+              />
+              <PublicProfileSettingsSection
+                form={form}
+                profileSlug={publicData?.slug ?? null}
+              />
+              <p className="text-sm text-muted-foreground flex items-center gap-2" aria-live="polite">
+                {isUpdating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin shrink-0" aria-hidden />
+                    Salvando…
+                  </>
+                ) : (
+                  "As alterações são salvas automaticamente."
+                )}
+              </p>
+            </Form>
+          )}
 
           <PortfolioManagementSection
             items={portfolioItems}
@@ -341,6 +347,8 @@ function MyAccountProviderPage() {
           <PrivacySection
             privacyPolicyUrl={PRIVACY_POLICY_URL}
           />
+
+          <LogoutSection />
 
           <DangerZoneSection />
         </div>
