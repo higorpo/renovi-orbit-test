@@ -20,3 +20,6 @@ Urgentes:
 - [ ] ha um loading de pelo menos 3 vezes da tabela de profiles para um mesmo usuário
 - [ ] usar reorderPortfolioItems para permitir reordenar itens do portfólio
 - [ ] melhores tela de erro para cliente e provider no minha conta
+- remover uso de   service_area_city text,
+  service_area_regions text[],
+  service_area_neighborhoods text[],
