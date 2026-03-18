@@ -96,6 +96,7 @@ describe("requestQuoteDraft.persistence", () => {
         step4Data: {
           kind: "new" as const,
           formData: {
+            address_label: "Casa",
             address_zip: "88015-100",
             address_street: "Rua Y",
             address_number: "20",
@@ -180,19 +181,20 @@ describe("requestQuoteDraft.persistence", () => {
     it("preserves step4Data with location when building serializable draft", () => {
       const step4DataWithLocation = {
         kind: "new" as const,
-        formData: {
-          address_zip: "88015-100",
-          address_street: "Rua X",
-          address_number: "10",
-          address_complement: "",
-          address_neighborhood_id: "n1",
-          address_neighborhood: "Centro",
-          address_state_id: "s1",
-          address_state: "SC",
-          address_city_id: "c1",
-          address_city: "Florianópolis",
-        },
-        location: { latitude: -27.5954, longitude: -48.548 },
+          formData: {
+            address_label: "Casa",
+            address_zip: "88015-100",
+            address_street: "Rua X",
+            address_number: "10",
+            address_complement: "",
+            address_neighborhood_id: "n1",
+            address_neighborhood: "Centro",
+            address_state_id: "s1",
+            address_state: "SC",
+            address_city_id: "c1",
+            address_city: "Florianópolis",
+          },
+          location: { latitude: -27.5954, longitude: -48.548 },
       };
       const state = {
         currentStep: 4,

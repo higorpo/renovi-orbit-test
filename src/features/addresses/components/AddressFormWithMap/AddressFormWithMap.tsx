@@ -46,6 +46,8 @@ export interface AddressFormWithMapProps {
   showRegionInfo?: boolean;
   /** Optional callback when number input blurs (e.g. trigger map geocode in dialog). */
   onNumberBlur?: () => void;
+  /** When true, show the label (apelido) field above all other fields. */
+  showLabelField?: boolean;
 }
 
 export function AddressFormWithMap({
@@ -72,7 +74,9 @@ export function AddressFormWithMap({
   mapDescription = "Arraste o marcador para ajustar o ponto exato do serviço. Rua e número podem ser atualizados automaticamente.",
   showRegionInfo = false,
   onNumberBlur,
+  showLabelField = false,
 }: AddressFormWithMapProps) {
+  const labelId = idPrefix ? `${idPrefix}label` : "addr-label";
   const zipId = idPrefix ? `${idPrefix}zip` : "addr-zip";
   const streetId = idPrefix ? `${idPrefix}street` : "addr-street";
   const numberId = idPrefix ? `${idPrefix}number` : "addr-number";
@@ -80,6 +84,23 @@ export function AddressFormWithMap({
 
   return (
     <>
+      {showLabelField && (
+        <div className="space-y-2">
+          <Label htmlFor={labelId} className={inputClassName ? "text-foreground" : undefined}>
+            Apelido
+          </Label>
+          <Input
+            id={labelId}
+            value={formData.address_label}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, address_label: e.target.value }))
+            }
+            placeholder="Ex.: Casa, Trabalho, Academia..."
+            maxLength={50}
+            className={inputClassName}
+          />
+        </div>
+      )}
       <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor={zipId} className={inputClassName ? "text-foreground" : undefined}>

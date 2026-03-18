@@ -6,6 +6,10 @@ import { z } from "zod";
  * State, city and neighborhood must be selected from platform tables (by id).
  */
 export const addressFormSchema = z.object({
+  address_label: z
+    .string()
+    .min(1, "Apelido é obrigatório")
+    .max(50, "Apelido deve ter no máximo 50 caracteres"),
   address_zip: z.string().regex(/^\d{5}-?\d{3}$/, "CEP inválido (formato: 00000-000)"),
   address_street: z.string().min(3, "Rua é obrigatória"),
   address_number: z.string().min(1, "Número é obrigatório"),
@@ -21,6 +25,7 @@ export const addressFormSchema = z.object({
 export type AddressFormData = z.infer<typeof addressFormSchema>;
 
 export const defaultAddressFormData: AddressFormData = {
+  address_label: "Casa",
   address_zip: "",
   address_street: "",
   address_number: "",

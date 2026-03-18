@@ -29,12 +29,6 @@ vi.mock("../../hooks/useProfilePhotoMutation", () => ({
     isRemoving: false,
   })),
 }));
-vi.mock("../../hooks/useExportData", () => ({
-  useExportData: vi.fn(() => ({ requestExport: vi.fn(), isExporting: false })),
-}));
-vi.mock("../../hooks/useDeleteAccount", () => ({
-  useDeleteAccount: vi.fn(() => ({ requestDelete: vi.fn(), isDeleting: false })),
-}));
 vi.mock("../../hooks/useOfferedServices", () => ({
   useOfferedServices: vi.fn(() => ({
     serviceIds: [],

@@ -6,6 +6,7 @@ import {
 } from "../addressForm.validation";
 
 const validFormData: AddressFormData = {
+  address_label: "Casa",
   address_zip: "01310-100",
   address_street: "Avenida Paulista",
   address_number: "1000",
@@ -66,8 +67,9 @@ describe("addressFormSchema", () => {
 });
 
 describe("defaultAddressFormData", () => {
-  it("returns all fields empty strings", () => {
+  it("has label defaulting to 'Casa' and remaining fields as empty strings", () => {
     const data = defaultAddressFormData;
+    expect(data.address_label).toBe("Casa");
     expect(data.address_zip).toBe("");
     expect(data.address_street).toBe("");
     expect(data.address_number).toBe("");
@@ -78,5 +80,21 @@ describe("defaultAddressFormData", () => {
     expect(data.address_state).toBe("");
     expect(data.address_city_id).toBe("");
     expect(data.address_city).toBe("");
+  });
+
+  it("rejects empty label", () => {
+    const result = addressFormSchema.safeParse({
+      ...validFormData,
+      address_label: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects label longer than 50 characters", () => {
+    const result = addressFormSchema.safeParse({
+      ...validFormData,
+      address_label: "A".repeat(51),
+    });
+    expect(result.success).toBe(false);
   });
 });

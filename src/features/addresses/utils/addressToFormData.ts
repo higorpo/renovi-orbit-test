@@ -10,6 +10,7 @@ import { maskCEP } from "@/lib/masks";
 export function addressToFormData(addr: ClientAddressWithRelations): AddressFormData {
   return {
     ...defaultAddressFormData,
+    address_label: addr.label,
     address_zip: maskCEP(addr.zip_code),
     address_street: addr.street,
     address_number: addr.number,

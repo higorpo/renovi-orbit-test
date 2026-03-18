@@ -5,6 +5,7 @@ import type { GeocodingService, ReverseGeocodingResult } from "@/lib/geocoding";
 import type { AddressFormData } from "../../types/addressForm.validation";
 
 const defaultFormData: AddressFormData = {
+  address_label: "Casa",
   address_zip: "",
   address_street: "",
   address_number: "",

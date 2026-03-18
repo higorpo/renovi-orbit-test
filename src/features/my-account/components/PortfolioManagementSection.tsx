@@ -1,4 +1,21 @@
 import { useEffect, useRef, useState } from "react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
@@ -12,7 +29,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, ImageIcon, Trash2, Loader2, Paperclip, X, Pencil } from "lucide-react";
+import { Plus, ImageIcon, Trash2, Loader2, Paperclip, X, Pencil, GripVertical } from "lucide-react";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import {
   type ProviderPortfolioItem,
@@ -138,10 +155,112 @@ export interface PortfolioManagementSectionProps {
     imageFiles?: File[];
   }) => Promise<unknown>;
   onDeleteItem: (itemId: string) => Promise<unknown>;
+  onReorderItems?: (itemIds: string[]) => Promise<unknown>;
   isCreating: boolean;
   isUpdating?: boolean;
   isDeleting: boolean;
   disabled?: boolean;
+}
+
+interface SortablePortfolioItemProps {
+  item: ProviderPortfolioItem;
+  onEdit: (item: ProviderPortfolioItem) => void;
+  onDelete: (itemId: string) => void;
+  disabled?: boolean;
+  isDeleting: boolean;
+  deletingId: string | null;
+  showEditButton: boolean;
+}
+
+function SortablePortfolioItem({
+  item,
+  onEdit,
+  onDelete,
+  disabled,
+  isDeleting,
+  deletingId,
+  showEditButton,
+}: SortablePortfolioItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const hasExtraContent =
+    Boolean(item.description?.trim()) ||
+    Boolean(item.execution_date) ||
+    Boolean(item.image_paths?.length);
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={`flex gap-2 p-3 border rounded-md bg-background ${
+        hasExtraContent ? "items-start" : "items-center"
+      } ${isDragging ? "opacity-50 shadow-lg z-10" : ""}`}
+    >
+      <button
+        type="button"
+        className="cursor-grab active:cursor-grabbing shrink-0 mt-0.5 touch-none text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+        aria-label="Reordenar item"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <div className="min-w-0 flex-1">
+        <p className="font-medium truncate">{item.title}</p>
+        {item.description && (
+          <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
+            {item.description}
+          </p>
+        )}
+        {item.execution_date && (
+          <p className="text-xs text-muted-foreground mt-1">
+            {new Date(item.execution_date).toLocaleDateString("pt-BR")}
+          </p>
+        )}
+        {item.image_paths && item.image_paths.length > 0 && (
+          <PortfolioItemThumbnails paths={item.image_paths} />
+        )}
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {showEditButton && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="group hover:text-white"
+            onClick={() => onEdit(item)}
+            disabled={disabled}
+            aria-label={`Editar ${item.title}`}
+            title="Editar"
+          >
+            <Pencil className="h-4 w-4 group-hover:text-white" />
+          </Button>
+        )}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="group hover:text-white"
+          onClick={() => onDelete(item.id)}
+          disabled={disabled || isDeleting}
+          aria-label={`Excluir ${item.title}`}
+        >
+          {deletingId === item.id ? (
+            <Loader2 className="h-4 w-4 animate-spin group-hover:text-white" />
+          ) : (
+            <Trash2 className="h-4 w-4 text-destructive group-hover:text-white" />
+          )}
+        </Button>
+      </div>
+    </li>
+  );
 }
 
 export function PortfolioManagementSection({
@@ -149,6 +268,7 @@ export function PortfolioManagementSection({
   onCreateItem,
   onUpdateItem,
   onDeleteItem,
+  onReorderItems,
   isCreating,
   isUpdating = false,
   isDeleting,
@@ -163,11 +283,43 @@ export function PortfolioManagementSection({
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [orderedItems, setOrderedItems] = useState<ProviderPortfolioItem[]>(items);
+  const isDraggingRef = useRef(false);
   const isDesktop = useBreakpointMd();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const scrollYRef = useRef(0);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
   const dialogOpen = addOpen || editingItem !== null;
+
+  // Sync ordered items from server when not actively dragging
+  useEffect(() => {
+    if (!isDraggingRef.current) {
+      setOrderedItems(items);
+    }
+  }, [items]);
+
+  const handleDragStart = () => {
+    isDraggingRef.current = true;
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    isDraggingRef.current = false;
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setOrderedItems((prev) => {
+        const oldIndex = prev.findIndex((i) => i.id === active.id);
+        const newIndex = prev.findIndex((i) => i.id === over.id);
+        const newOrder = arrayMove(prev, oldIndex, newIndex);
+        onReorderItems?.(newOrder.map((i) => i.id));
+        return newOrder;
+      });
+    }
+  };
 
   useEffect(() => {
     if (editingItem) {
@@ -322,71 +474,98 @@ export function PortfolioManagementSection({
         <p className="text-sm">
           Adicione trabalhos realizados para exibir no seu perfil público.
         </p>
-        {items.length === 0 ? (
+        {orderedItems.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 border border-dashed rounded-md text-center">
             Nenhum item no portfólio. Clique em &quot;Adicionar trabalho&quot; para começar.
           </p>
+        ) : onReorderItems ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={orderedItems.map((i) => i.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <ul className="space-y-3">
+                {orderedItems.map((item) => (
+                  <SortablePortfolioItem
+                    key={item.id}
+                    item={item}
+                    onEdit={setEditingItem}
+                    onDelete={handleDelete}
+                    disabled={disabled}
+                    isDeleting={isDeleting}
+                    deletingId={deletingId}
+                    showEditButton={Boolean(onUpdateItem)}
+                  />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
         ) : (
           <ul className="space-y-3">
-            {items.map((item) => {
+            {orderedItems.map((item) => {
               const hasExtraContent =
                 Boolean(item.description?.trim()) ||
                 Boolean(item.execution_date) ||
                 Boolean(item.image_paths?.length);
               return (
-              <li
-                key={item.id}
-                className={`flex justify-between gap-2 p-3 border rounded-md ${hasExtraContent ? "items-start" : "items-center"}`}
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium truncate">{item.title}</p>
-                  {item.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
-                      {item.description}
-                    </p>
-                  )}
-                  {item.execution_date && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(item.execution_date).toLocaleDateString("pt-BR")}
-                    </p>
-                  )}
-                  {item.image_paths && item.image_paths.length > 0 && (
-                    <PortfolioItemThumbnails paths={item.image_paths} />
-                  )}
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {onUpdateItem ? (
+                <li
+                  key={item.id}
+                  className={`flex justify-between gap-2 p-3 border rounded-md ${hasExtraContent ? "items-start" : "items-center"}`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium truncate">{item.title}</p>
+                    {item.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">
+                        {item.description}
+                      </p>
+                    )}
+                    {item.execution_date && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(item.execution_date).toLocaleDateString("pt-BR")}
+                      </p>
+                    )}
+                    {item.image_paths && item.image_paths.length > 0 && (
+                      <PortfolioItemThumbnails paths={item.image_paths} />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {onUpdateItem ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="group hover:text-white"
+                        onClick={() => setEditingItem(item)}
+                        disabled={disabled}
+                        aria-label={`Editar ${item.title}`}
+                        title="Editar"
+                      >
+                        <Pencil className="h-4 w-4 group-hover:text-white" />
+                      </Button>
+                    ) : null}
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
                       className="group hover:text-white"
-                      onClick={() => setEditingItem(item)}
-                      disabled={disabled}
-                      aria-label={`Editar ${item.title}`}
-                      title="Editar"
+                      onClick={() => handleDelete(item.id)}
+                      disabled={disabled || isDeleting}
+                      aria-label={`Excluir ${item.title}`}
                     >
-                      <Pencil className="h-4 w-4 group-hover:text-white" />
+                      {deletingId === item.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin group-hover:text-white" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 text-destructive group-hover:text-white" />
+                      )}
                     </Button>
-                  ) : null}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="group hover:text-white"
-                    onClick={() => handleDelete(item.id)}
-                    disabled={disabled || isDeleting}
-                    aria-label={`Excluir ${item.title}`}
-                  >
-                    {deletingId === item.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin group-hover:text-white" />
-                    ) : (
-                      <Trash2 className="h-4 w-4 text-destructive group-hover:text-white" />
-                    )}
-                  </Button>
-                </div>
-              </li>
-            );
+                  </div>
+                </li>
+              );
             })}
           </ul>
         )}

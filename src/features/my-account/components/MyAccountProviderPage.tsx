@@ -7,12 +7,11 @@ import { useUpdateAccountProfile } from "../hooks/useUpdateAccountProfile";
 import { useProviderProfile } from "../hooks/useProviderProfile";
 import { useUpdateProviderProfile } from "../hooks/useUpdateProviderProfile";
 import { useUploadProfilePhoto, useRemoveProfilePhoto } from "../hooks/useProfilePhotoMutation";
-import { useExportData } from "../hooks/useExportData";
-import { useDeleteAccount } from "../hooks/useDeleteAccount";
 import { useOfferedServices } from "../hooks/useOfferedServices";
 import { usePortfolioItems } from "../hooks/usePortfolioItems";
 import { PRIVACY_POLICY_URL } from "../constants";
 import { AccountSummaryCard, AccountSummaryCardSkeleton } from "./AccountSummaryCard";
+import { AccountErrorState } from "./AccountErrorState";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -59,25 +58,23 @@ function ProviderDadosPessoaisAdapter({
 
 function MyAccountProviderPage() {
   const { user } = useAuth();
-  const { profile, isLoading: profileLoading, error: profileError, privateData, publicData } = useProviderProfile();
+  const { profile, isLoading: profileLoading, error: profileError, privateData, publicData, refetch } = useProviderProfile();
   const { updateProfileAsync, isUpdating: isUpdatingProfile } = useUpdateAccountProfile({ silent: true });
   const { updatePrivateAsync, updatePublicAsync, isUpdatingPrivate, isUpdatingPublic } = useUpdateProviderProfile();
   const { uploadPhotoAsync, isUploading } = useUploadProfilePhoto();
   const { removePhotoAsync, isRemoving } = useRemoveProfilePhoto();
-  const { requestExport, isExporting } = useExportData();
-  const { requestDelete, isDeleting: isDeletingAccount } = useDeleteAccount();
   const { serviceIds, setServiceIds, isUpdating: isUpdatingServices } = useOfferedServices();
   const {
     items: portfolioItems,
     createItemWithImages,
     updateItemWithImages,
     deleteItem,
+    reorderItems,
     isCreating: isCreatingPortfolio,
     isUpdating: isUpdatingPortfolio,
     isDeleting: isDeletingPortfolio,
   } = usePortfolioItems();
 
-  const [deleteAccountDialogOpen, setDeleteAccountDialogOpen] = useState(false);
   const [offeredServiceIds, setOfferedServiceIds] = useState<string[]>(serviceIds);
 
   const defaultValues = useMemo<ProviderAccountFormData>(() => ({
@@ -217,11 +214,7 @@ function MyAccountProviderPage() {
   };
 
   if (profileError && !profile) {
-    return (
-      <div className="container max-w-4xl px-4 py-6">
-        <p className="text-destructive">Não foi possível carregar seus dados.</p>
-      </div>
-    );
+    return <AccountErrorState onRetry={refetch} />;
   }
 
   const isUpdating = isUpdatingProfile || isUpdatingPrivate || isUpdatingPublic;
@@ -315,23 +308,17 @@ function MyAccountProviderPage() {
               updateItemWithImages(itemId, { ...params, visibility: "public" })
             }
             onDeleteItem={deleteItem}
+            onReorderItems={reorderItems}
             isCreating={isCreatingPortfolio}
             isUpdating={isUpdatingPortfolio}
             isDeleting={isDeletingPortfolio}
           />
 
           <PrivacySection
-            onExportData={requestExport}
-            isExporting={isExporting}
             privacyPolicyUrl={PRIVACY_POLICY_URL}
           />
 
-          <DangerZoneSection
-            deleteDialogOpen={deleteAccountDialogOpen}
-            onDeleteDialogOpen={setDeleteAccountDialogOpen}
-            onDeleteConfirm={requestDelete}
-            isDeleting={isDeletingAccount}
-          />
+          <DangerZoneSection />
         </div>
       </div>
     </div>

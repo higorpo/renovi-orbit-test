@@ -114,6 +114,7 @@ describe("useAddressSelection", () => {
 
   it("initializes from initialSelection new with formData and showNewAddressForm true", async () => {
     const initialForm = {
+      address_label: "Casa",
       address_zip: "01310-100",
       address_street: "Av Paulista",
       address_number: "100",

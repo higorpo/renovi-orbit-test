@@ -17,8 +17,6 @@ vi.mock("../../hooks/useProfilePhotoMutation", () => ({
   useUploadProfilePhoto: vi.fn(),
   useRemoveProfilePhoto: vi.fn(),
 }));
-vi.mock("../../hooks/useExportData", () => ({ useExportData: vi.fn() }));
-vi.mock("../../hooks/useDeleteAccount", () => ({ useDeleteAccount: vi.fn() }));
 vi.mock("@/features/addresses", () => ({
   AddressesSection: () => <div data-testid="addresses-section">Endereços</div>,
 }));
@@ -46,12 +44,6 @@ const useRemoveProfilePhoto = vi.mocked(
   await import("../../hooks/useProfilePhotoMutation").then(
     (m) => m.useRemoveProfilePhoto
   )
-);
-const useExportData = vi.mocked(
-  await import("../../hooks/useExportData").then((m) => m.useExportData)
-);
-const useDeleteAccount = vi.mocked(
-  await import("../../hooks/useDeleteAccount").then((m) => m.useDeleteAccount)
 );
 
 function createWrapper() {
@@ -107,14 +99,6 @@ describe("MyAccountClientPage", () => {
       removePhotoAsync: vi.fn(),
       isRemoving: false,
     } as ReturnType<typeof useRemoveProfilePhoto>);
-    useExportData.mockReturnValue({
-      requestExport: vi.fn(),
-      isExporting: false,
-    } as ReturnType<typeof useExportData>);
-    useDeleteAccount.mockReturnValue({
-      requestDelete: vi.fn(),
-      isDeleting: false,
-    } as ReturnType<typeof useDeleteAccount>);
   });
 
   it("renders page title and subtitle", () => {

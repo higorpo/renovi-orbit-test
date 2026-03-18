@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { Loader2 } from "lucide-react";
 import { Form } from "@/components/ui/form";
@@ -7,8 +7,6 @@ import { useAccountProfile } from "../hooks/useAccountProfile";
 import { useUpdateAccountProfile } from "../hooks/useUpdateAccountProfile";
 import { useClientPrivateProfile } from "../hooks/useClientPrivateProfile";
 import { useUploadProfilePhoto, useRemoveProfilePhoto } from "../hooks/useProfilePhotoMutation";
-import { useExportData } from "../hooks/useExportData";
-import { useDeleteAccount } from "../hooks/useDeleteAccount";
 import { AddressesSection } from "@/features/addresses";
 import {
   accountFormSchema,
@@ -17,6 +15,7 @@ import {
 } from "../schemas/accountForm.validation";
 import { PRIVACY_POLICY_URL } from "../constants";
 import { AccountSummaryCard, AccountSummaryCardSkeleton } from "./AccountSummaryCard";
+import { AccountErrorState } from "./AccountErrorState";
 import { DadosPessoaisSection } from "./DadosPessoaisSection";
 import { ContatoIdentidadeSection } from "./ContatoIdentidadeSection";
 import { PrivacySection } from "./PrivacySection";
@@ -30,15 +29,11 @@ const AUTO_SAVE_DEBOUNCE_MS = 1500;
 
 export function MyAccountClientPage() {
   const { user } = useAuth();
-  const { profile, isLoading: profileLoading, error: profileError } = useAccountProfile();
+  const { profile, isLoading: profileLoading, error: profileError, refetch } = useAccountProfile();
   const { cpf: clientPrivateCpf, updateCpfAsync } = useClientPrivateProfile();
   const { updateProfileAsync, isUpdating } = useUpdateAccountProfile();
   const { uploadPhotoAsync, isUploading } = useUploadProfilePhoto();
   const { removePhotoAsync, isRemoving } = useRemoveProfilePhoto();
-  const { requestExport, isExporting } = useExportData();
-  const { requestDelete, isDeleting: isDeletingAccount } = useDeleteAccount();
-
-  const [deleteAccountDialogOpen, setDeleteAccountDialogOpen] = useState(false);
 
   const defaultValues = useMemo(
     () =>
@@ -131,11 +126,7 @@ export function MyAccountClientPage() {
   };
 
   if (profileError && !profile) {
-    return (
-      <div className="container max-w-4xl px-4 py-6">
-        <p className="text-destructive">Não foi possível carregar seus dados.</p>
-      </div>
-    );
+    return <AccountErrorState onRetry={refetch} />;
   }
 
   return (
@@ -185,17 +176,10 @@ export function MyAccountClientPage() {
           <AddressesSection />
 
           <PrivacySection
-            onExportData={requestExport}
-            isExporting={isExporting}
             privacyPolicyUrl={PRIVACY_POLICY_URL}
           />
 
-          <DangerZoneSection
-            deleteDialogOpen={deleteAccountDialogOpen}
-            onDeleteDialogOpen={setDeleteAccountDialogOpen}
-            onDeleteConfirm={requestDelete}
-            isDeleting={isDeletingAccount}
-          />
+          <DangerZoneSection />
         </div>
       </div>
     </div>

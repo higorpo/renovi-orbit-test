@@ -377,6 +377,7 @@ describe("useRequestQuoteSubmit", () => {
       const step4DataNewWithLocation = {
         kind: "new" as const,
         formData: {
+          address_label: "Casa",
           address_zip: "88015-100",
           address_street: "Rua Teste",
           address_number: "100",

@@ -9,6 +9,7 @@ vi.mock("../../api/addresses.api", () => ({
 const createAddress = vi.mocked(addressesApi.createAddress);
 
 const validFormData = {
+  address_label: "Casa",
   address_zip: "01310-100",
   address_street: "Avenida Paulista",
   address_number: "1000",

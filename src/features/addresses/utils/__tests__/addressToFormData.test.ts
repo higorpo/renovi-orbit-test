@@ -25,6 +25,7 @@ describe("addressToFormData", () => {
 
     const result = addressToFormData(addr);
 
+    expect(result.address_label).toBe("Casa");
     expect(result.address_zip).toBe("01310-100");
     expect(result.address_street).toBe("Avenida Paulista");
     expect(result.address_number).toBe("1000");

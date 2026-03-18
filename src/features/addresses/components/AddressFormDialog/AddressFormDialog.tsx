@@ -197,7 +197,7 @@ export function AddressFormDialog({
       if (mode === "add") {
         const result = await createAddress({
           client_id: clientId,
-          label: "Casa",
+          label: data.address_label,
           street: data.address_street,
           number: data.address_number,
           complement: data.address_complement || null,
@@ -218,6 +218,7 @@ export function AddressFormDialog({
         }
       } else if (address) {
         const result = await updateAddress(address.id, clientId, {
+          label: data.address_label,
           street: data.address_street,
           number: data.address_number,
           complement: data.address_complement || null,
@@ -273,6 +274,7 @@ export function AddressFormDialog({
         numberInputRef={numberInputRef}
         onNumberBlur={triggerGeocodeNow}
         mapDescription="Arraste o marcador para ajustar o ponto exato. Rua e número podem ser atualizados automaticamente."
+        showLabelField
       />
     </form>
   );
