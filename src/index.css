@@ -55,7 +55,7 @@ All colors MUST be HSL.
 
     /* Muted: Cinza Claro */
     --muted: 180 5% 91%;
-    --muted-foreground: 240 5% 11%;
+    --muted-foreground: 240 4% 46%;
 
     /* Accent: Cobre para destaques */
     --accent: 26 54% 50%;
@@ -104,7 +104,7 @@ All colors MUST be HSL.
     --secondary-foreground: 0 0% 100%;
 
     --muted: 196 50% 20%;
-    --muted-foreground: 180 5% 91%;
+    --muted-foreground: 180 5% 63%;
 
     --accent: 26 54% 50%;
     --accent-foreground: 0 0% 100%;

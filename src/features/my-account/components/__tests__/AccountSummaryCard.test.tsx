@@ -162,6 +162,78 @@ describe("AccountSummaryCard", () => {
     );
     expect(screen.getByRole("button", { name: /Remover foto/ })).toBeDisabled();
   });
+
+  it("renders profile link and copy button when profileLink and onCopyProfileLink are provided", () => {
+    const onCopyProfileLink = vi.fn();
+    render(
+      <AccountSummaryCard
+        fullName="Maria"
+        email="m@e.com"
+        profileLink="https://example.com/p/maria"
+        onCopyProfileLink={onCopyProfileLink}
+      />
+    );
+    expect(screen.getByRole("link", { name: /Visualizar perfil/ })).toHaveAttribute("href", "https://example.com/p/maria");
+    const copyBtn = screen.getByRole("button", { name: /Copiar link do perfil/ });
+    fireEvent.click(copyBtn);
+    expect(onCopyProfileLink).toHaveBeenCalled();
+  });
+
+  it("renders custom sinceLabel when provided", () => {
+    render(
+      <AccountSummaryCard
+        fullName="Maria"
+        email="m@e.com"
+        createdAt="2024-06-01T00:00:00Z"
+        sinceLabel="No ar desde"
+      />
+    );
+    expect(screen.getByText(/No ar desde/)).toBeInTheDocument();
+  });
+
+  it("does not render since line when createdAt is not provided", () => {
+    render(
+      <AccountSummaryCard fullName="Maria" email="m@e.com" />
+    );
+    expect(screen.queryByText(/Cliente desde/)).not.toBeInTheDocument();
+  });
+
+  it("shows loading spinner in avatar fallback when isLoading and no url", () => {
+    useProfileImageUrl.mockReturnValue({ url: "", isLoading: true });
+    render(
+      <AccountSummaryCard fullName="Maria" email="m@e.com" />
+    );
+    expect(document.querySelector(".animate-spin")).toBeInTheDocument();
+  });
+
+  it("does not call onPhotoSelect when file input change has no files", () => {
+    const onPhotoSelect = vi.fn();
+    render(
+      <AccountSummaryCard fullName="Maria" email="m@e.com" onPhotoSelect={onPhotoSelect} />
+    );
+    const input = screen.getByLabelText(/Selecionar foto/);
+    fireEvent.change(input, { target: { files: [] } });
+    expect(onPhotoSelect).not.toHaveBeenCalled();
+  });
+
+  it("does not show photo actions when onPhotoSelect and onPhotoRemove are not provided", () => {
+    render(
+      <AccountSummaryCard fullName="Maria" email="m@e.com" profileImagePath="path" />
+    );
+    expect(screen.queryByRole("button", { name: /Alterar foto/ })).not.toBeInTheDocument();
+  });
+
+  it("shows Remover when onPhotoRemove and url is set without profileImagePath", () => {
+    useProfileImageUrl.mockReturnValue({ url: "https://img.example/photo.jpg", isLoading: false });
+    render(
+      <AccountSummaryCard
+        fullName="Maria"
+        email="m@e.com"
+        onPhotoRemove={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("button", { name: /Remover foto/ })).toBeInTheDocument();
+  });
 });
 
 describe("AccountSummaryCardSkeleton", () => {
@@ -169,5 +241,10 @@ describe("AccountSummaryCardSkeleton", () => {
     render(<AccountSummaryCardSkeleton />);
     const skeletons = document.querySelectorAll("[class*='animate-pulse']");
     expect(skeletons.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders card structure with skeletons", () => {
+    const { container } = render(<AccountSummaryCardSkeleton />);
+    expect(container.querySelector(".rounded-full")).toBeInTheDocument();
   });
 });

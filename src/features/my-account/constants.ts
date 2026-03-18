@@ -9,6 +9,31 @@ export function profileImagePath(userId: string, filename: string): string {
 /** Signed URL expiry in seconds (1 hour). */
 export const PROFILE_IMAGE_SIGNED_URL_EXPIRY_SEC = 3600;
 
+/** Storage bucket for provider portfolio images (private; use signed URLs). */
+export const PROVIDER_PORTFOLIO_IMAGES_BUCKET = "provider-portfolio-images";
+
+/** Path prefix for a portfolio image: providers/{providerId}/portfolio/{itemId}/{filename}. */
+export function providerPortfolioImagePath(
+  providerId: string,
+  itemId: string,
+  filename: string
+): string {
+  return `providers/${providerId}/portfolio/${itemId}/${filename}`;
+}
+
+/** Signed URL expiry in seconds (1 hour). */
+export const PROVIDER_PORTFOLIO_IMAGE_SIGNED_URL_EXPIRY_SEC = 3600;
+
+/** Max portfolio image file size in bytes (5 MB). */
+export const PROVIDER_PORTFOLIO_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+
+/** Allowed MIME types for portfolio image upload. */
+export const PROVIDER_PORTFOLIO_IMAGE_ALLOWED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+] as const;
+
 export const DPO_EMAIL = "dpo@renovi.com.br";
 
 /** Privacy policy URL (main site + path). Null when VITE_MAIN_SITE_URL is not set. */

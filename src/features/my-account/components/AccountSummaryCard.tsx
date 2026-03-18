@@ -18,6 +18,11 @@ export interface AccountSummaryCardProps {
   onPhotoRemove?: () => void;
   isUploading?: boolean;
   isRemoving?: boolean;
+  /** Label for "since" date, e.g. "Cliente desde" or "No ar desde". Default: "Cliente desde". */
+  sinceLabel?: string;
+  /** Profile URL for provider; when set, shows "View profile" and "Copy link" actions. */
+  profileLink?: string | null;
+  onCopyProfileLink?: () => void;
 }
 
 export function AccountSummaryCard({
@@ -29,11 +34,14 @@ export function AccountSummaryCard({
   onPhotoRemove,
   isUploading,
   isRemoving,
+  sinceLabel = "Cliente desde",
+  profileLink,
+  onCopyProfileLink,
 }: AccountSummaryCardProps) {
   const { url, isLoading } = useProfileImageUrl(profileImagePath);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const clientSince = formatClientSince(createdAt);
+  const sinceFormatted = formatClientSince(createdAt);
   const initials = initialsFromName(fullName);
   const busy = isUploading || isRemoving;
 
@@ -68,12 +76,24 @@ export function AccountSummaryCard({
             <div className="min-w-0 w-full space-y-0.5">
               <h2 className="text-lg font-semibold truncate px-1">{fullName || "—"}</h2>
               <p className="text-sm text-muted-foreground truncate px-1">{email || "—"}</p>
-              {clientSince ? (
+              {sinceFormatted ? (
                 <p className="text-sm text-muted-foreground">
-                  Cliente desde {clientSince}
+                  {sinceLabel} {sinceFormatted}
                 </p>
               ) : null}
             </div>
+            {profileLink && onCopyProfileLink && (
+              <div className="flex flex-wrap gap-2 justify-center pt-1">
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <a href={profileLink} target="_blank" rel="noopener noreferrer">
+                    Visualizar perfil
+                  </a>
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={onCopyProfileLink}>
+                  Copiar link do perfil
+                </Button>
+              </div>
+            )}
           </div>
           {(onPhotoSelect || (onPhotoRemove && (url || profileImagePath))) ? (
             <div className="flex flex-wrap gap-2 justify-center">

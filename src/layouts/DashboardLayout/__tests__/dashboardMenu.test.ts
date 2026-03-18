@@ -53,14 +53,14 @@ describe("getDashboardMenu", () => {
       "/dashboard/requests",
       "/dashboard/jobs",
       "/dashboard/earnings",
-      "/dashboard/settings",
+      "/dashboard/conta",
       "/dashboard/help",
     ]);
     expect(labels).toContain("Visão geral");
     expect(labels).toContain("Solicitações");
     expect(labels).toContain("Trabalhos");
     expect(labels).toContain("Ganhos");
-    expect(labels).toContain("Configurações");
+    expect(labels).toContain("Minha conta");
     expect(labels).toContain("Ajuda");
   });
 

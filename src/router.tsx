@@ -21,6 +21,7 @@ const RequestQuote = lazy(() => import('@/features/request-quote').then(m => ({ 
 const DashboardLayout = lazy(() => import('@/layouts/DashboardLayout').then(m => ({ default: m.DashboardLayout })))
 const ServiceDetailPlaceholder = lazy(() => import('@/features/view-service-requests').then(m => ({ default: m.ServiceDetailPlaceholder })))
 const MyAccountPage = lazy(() => import('@/features/my-account').then(m => ({ default: m.MyAccountPage })))
+const ProviderProfilePage = lazy(() => import('@/features/provider-profile').then(m => ({ default: m.ProviderProfilePage })))
 
 export const router = createBrowserRouter([
   {
@@ -69,6 +70,10 @@ export const router = createBrowserRouter([
         element: <RequestQuote />,
       },
       {
+        path: 'perfil/:slug',
+        element: <ProviderProfilePage />,
+      },
+      {
         element: (
           <ProtectedRoute allowedRoles={['client', 'provider']}>
             <DashboardLayout />
@@ -96,7 +101,7 @@ export const router = createBrowserRouter([
           {
             path: 'conta',
             element: (
-              <ProtectedRoute allowedRoles={['client']}>
+              <ProtectedRoute allowedRoles={['client', 'provider']}>
                 <MyAccountPage />
               </ProtectedRoute>
             ),

@@ -14,3 +14,9 @@ Urgentes:
 - [ ] permitir exportar dados
 - [ ] permitir usuário se deslogar da plataforma
 - [ ] permitir adicionar/editar apelido para endereço
+- [ ] tela de onboarding do prestador
+
+
+- [ ] ha um loading de pelo menos 3 vezes da tabela de profiles para um mesmo usuário
+- [ ] usar reorderPortfolioItems para permitir reordenar itens do portfólio
+- [ ] melhores tela de erro para cliente e provider no minha conta

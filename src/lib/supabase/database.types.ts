@@ -363,13 +363,38 @@ export type Database = {
         }
         Relationships: []
       }
+      client_profiles_private: {
+        Row: {
+          client_id: string
+          cpf: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          cpf?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          cpf?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_profiles_private_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       profiles: {
         Row: {
           full_name: string
           id: string
           role: string
           phone: string | null
-          cpf: string | null
           profile_image_path: string | null
           created_at: string
           updated_at: string
@@ -379,7 +404,6 @@ export type Database = {
           id: string
           role?: string
           phone?: string | null
-          cpf?: string | null
           profile_image_path?: string | null
           created_at?: string
           updated_at?: string
@@ -389,12 +413,228 @@ export type Database = {
           id?: string
           role?: string
           phone?: string | null
-          cpf?: string | null
           profile_image_path?: string | null
           created_at?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      provider_offered_services: {
+        Row: {
+          provider_id: string
+          service_id: string
+          sort_order: number
+        }
+        Insert: {
+          provider_id: string
+          service_id: string
+          sort_order?: number
+        }
+        Update: {
+          provider_id?: string
+          service_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_offered_services_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_offered_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      provider_portfolio_items: {
+        Row: {
+          id: string
+          provider_id: string
+          title: string
+          description: string | null
+          service_id: string | null
+          execution_date: string | null
+          image_paths: string[]
+          city_region: string | null
+          visibility: string
+          featured: boolean
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          provider_id: string
+          title: string
+          description?: string | null
+          service_id?: string | null
+          execution_date?: string | null
+          image_paths?: string[]
+          city_region?: string | null
+          visibility?: string
+          featured?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          provider_id?: string
+          title?: string
+          description?: string | null
+          service_id?: string | null
+          execution_date?: string | null
+          image_paths?: string[]
+          city_region?: string | null
+          visibility?: string
+          featured?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_portfolio_items_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_portfolio_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      provider_profiles_private: {
+        Row: {
+          provider_id: string
+          entity_type: string
+          cpf: string | null
+          cnpj: string | null
+          razao_social: string | null
+          nome_fantasia: string | null
+          legal_representative_name: string | null
+          legal_representative_cpf: string | null
+          commercial_contact: string | null
+          updated_at: string
+        }
+        Insert: {
+          provider_id: string
+          entity_type?: string
+          cpf?: string | null
+          cnpj?: string | null
+          razao_social?: string | null
+          nome_fantasia?: string | null
+          legal_representative_name?: string | null
+          legal_representative_cpf?: string | null
+          commercial_contact?: string | null
+          updated_at?: string
+        }
+        Update: {
+          provider_id?: string
+          entity_type?: string
+          cpf?: string | null
+          cnpj?: string | null
+          razao_social?: string | null
+          nome_fantasia?: string | null
+          legal_representative_name?: string | null
+          legal_representative_cpf?: string | null
+          commercial_contact?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_profiles_private_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      provider_profiles_public: {
+        Row: {
+          provider_id: string
+          slug: string
+          display_name: string | null
+          bio: string | null
+          profile_visibility: string
+          service_area_city: string | null
+          service_area_regions: string[] | null
+          service_area_neighborhoods: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          provider_id: string
+          slug: string
+          display_name?: string | null
+          bio?: string | null
+          profile_visibility?: string
+          service_area_city?: string | null
+          service_area_regions?: string[] | null
+          service_area_neighborhoods?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          provider_id?: string
+          slug?: string
+          display_name?: string | null
+          bio?: string | null
+          profile_visibility?: string
+          service_area_city?: string | null
+          service_area_regions?: string[] | null
+          service_area_neighborhoods?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_profiles_public_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      provider_service_area_neighborhoods: {
+        Row: {
+          provider_id: string
+          neighborhood_id: string
+        }
+        Insert: {
+          provider_id: string
+          neighborhood_id: string
+        }
+        Update: {
+          provider_id?: string
+          neighborhood_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_service_area_neighborhoods_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "provider_profiles_public"
+            referencedColumns: ["provider_id"]
+          },
+          {
+            foreignKeyName: "provider_service_area_neighborhoods_neighborhood_id_fkey"
+            columns: ["neighborhood_id"]
+            isOneToOne: false
+            referencedRelation: "platform_neighborhoods"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       rate_limits: {
         Row: {

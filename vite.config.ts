@@ -37,6 +37,17 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     globals: false,
+    coverage: {
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        '**/*.test.{ts,tsx}',
+        '**/*.spec.{ts,tsx}',
+        '**/__tests__/**',
+        '**/index.ts',
+        '**/types.ts',
+      ],
+      reporter: ['text', 'text-summary'],
+    },
   },
   plugins: [react(), VitePWA({
     strategies: 'injectManifest',

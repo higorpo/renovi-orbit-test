@@ -61,3 +61,89 @@ export async function listNeighborhoodsByCity(
   }
   return { neighborhoods: (data ?? []) as PlatformNeighborhood[], error: null };
 }
+
+/** City with state abbreviation for search results (e.g. "Florianópolis, SC"). */
+export interface CitySearchItem {
+  id: string;
+  name: string;
+  state_abbreviation: string;
+}
+
+export interface SearchCitiesResult {
+  cities: CitySearchItem[];
+  error: string | null;
+}
+
+/** Neighborhood with city info for grouping (e.g. provider service area display). */
+export interface NeighborhoodWithCity {
+  id: string;
+  name: string;
+  city_id: string;
+  city_name: string;
+  state_abbreviation: string;
+}
+
+export interface GetNeighborhoodsByIdsResult {
+  neighborhoods: NeighborhoodWithCity[];
+  error: string | null;
+}
+
+/**
+ * Fetch neighborhoods by IDs with city and state info. Used e.g. to display provider service area grouped by city.
+ */
+export async function getNeighborhoodsByIds(
+  ids: string[]
+): Promise<GetNeighborhoodsByIdsResult> {
+  if (ids.length === 0) return { neighborhoods: [], error: null };
+  const { data, error } = await supabase
+    .from("platform_neighborhoods")
+    .select("id, name, city_id, platform_cities(name, platform_states(abbreviation))")
+    .in("id", ids);
+
+  if (error) {
+    logger.error("platform_neighborhoods_by_ids_error", { error: error.message });
+    return { neighborhoods: [], error: error.message };
+  }
+
+  const neighborhoods: NeighborhoodWithCity[] = (data ?? []).map(
+    (row: {
+      id: string;
+      name: string;
+      city_id: string;
+      platform_cities: { name: string; platform_states: { abbreviation: string } | null } | null;
+    }) => ({
+      id: row.id,
+      name: row.name,
+      city_id: row.city_id,
+      city_name: row.platform_cities?.name ?? "",
+      state_abbreviation: row.platform_cities?.platform_states?.abbreviation ?? "",
+    })
+  );
+  return { neighborhoods, error: null };
+}
+
+/**
+ * Search platform cities by name (case-insensitive), returns city id, name and state abbreviation.
+ * Used e.g. for provider service area selection.
+ */
+export async function searchCities(query: string): Promise<SearchCitiesResult> {
+  const q = (query ?? "").trim();
+  const { data, error } = await supabase
+    .from("platform_cities")
+    .select("id, name, platform_states(abbreviation)")
+    .ilike("name", q ? `%${q}%` : "%")
+    .order("name", { ascending: true })
+    .limit(30);
+
+  if (error) {
+    logger.error("platform_cities_search_error", { error: error.message });
+    return { cities: [], error: error.message };
+  }
+
+  const cities: CitySearchItem[] = (data ?? []).map((row: { id: string; name: string; platform_states: { abbreviation: string } | null }) => ({
+    id: row.id,
+    name: row.name,
+    state_abbreviation: row.platform_states?.abbreviation ?? "",
+  }));
+  return { cities, error: null };
+}

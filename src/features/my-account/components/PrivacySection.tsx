@@ -28,7 +28,7 @@ export function PrivacySection({
       </CardHeader>
       <CardContent className="!pt-4 space-y-6">
         <div>
-          <p className="text-sm text-muted-foreground mb-3">
+          <p className="text-sm mb-3">
             Se você tiver dúvidas sobre como tratamos seus dados pessoais ou quiser
             exercer seus direitos previstos na LGPD, fale com o nosso encarregado de
             dados.
@@ -41,7 +41,7 @@ export function PrivacySection({
         </div>
 
         <div>
-          <p className="text-sm text-muted-foreground mb-3">
+          <p className="text-sm mb-3">
             Baixe uma cópia dos dados que a Renovi possui sobre você.
           </p>
           <Button
@@ -69,7 +69,7 @@ export function PrivacySection({
           </div>
         ) : (
           <div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm">
               Política de privacidade em breve.
             </p>
           </div>

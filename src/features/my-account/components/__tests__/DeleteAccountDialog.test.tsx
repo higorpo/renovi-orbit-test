@@ -43,4 +43,36 @@ describe("DeleteAccountDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: /Excluir minha conta/ }));
     expect(onConfirm).toHaveBeenCalled();
   });
+
+  it("calls onClose when Cancelar is clicked", () => {
+    const onClose = vi.fn();
+    render(
+      <DeleteAccountDialog open={true} onClose={onClose} onConfirm={vi.fn()} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Cancelar/ }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("does not call onConfirm when button is disabled and clicked", () => {
+    const onConfirm = vi.fn();
+    render(
+      <DeleteAccountDialog open={true} onClose={vi.fn()} onConfirm={onConfirm} />
+    );
+    const confirmBtn = screen.getByRole("button", { name: /Excluir minha conta/ });
+    expect(confirmBtn).toBeDisabled();
+    fireEvent.click(confirmBtn);
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it("does not throw when onConfirm is undefined and user confirms", () => {
+    render(
+      <DeleteAccountDialog open={true} onClose={vi.fn()} />
+    );
+    fireEvent.change(screen.getByPlaceholderText("EXCLUIR"), {
+      target: { value: "EXCLUIR" },
+    });
+    expect(() => {
+      fireEvent.click(screen.getByRole("button", { name: /Excluir minha conta/ }));
+    }).not.toThrow();
+  });
 });

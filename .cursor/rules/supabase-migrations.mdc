@@ -1,5 +1,5 @@
 ---
-description: Migrações Supabase - segurança (RLS) e SQL sempre em inglês
+description: Migrações Supabase - editar originais em dev, RLS, SQL em inglês
 alwaysApply: true
 ---
 
@@ -32,6 +32,15 @@ Ao criar ou alterar tabelas que armazenam dados de usuário no Supabase, **sempr
 
 - Migrações em **`supabase/migrations/`** com nome **`YYYYMMDDHHMMSS_descricao_curta.sql`** (timestamp + descrição em inglês).
 - Comentários no SQL em inglês; `COMMENT ON table/column` em inglês.
+
+## Desenvolvimento: editar migrações existentes
+
+**Enquanto a plataforma estiver em caráter de desenvolvimento** (banco local sendo resetado com frequência), **sempre alterar os arquivos originais de migração** em vez de criar novas migrações para cada mudança.
+
+- **Quando modificar** uma tabela, função, view, trigger, política RLS, bucket, etc.: localizar o arquivo de migração que **criou** esse objeto e **editar esse arquivo** diretamente.
+- **Não criar** uma nova migração (ex.: `ALTER TABLE ...`) só para adicionar coluna, índice ou política — incorporar a alteração no SQL da migração original.
+- **Objetivo:** evitar acúmulo de dezenas de migrações incrementais; após `yarn db:reset`, o schema reflete o estado atual em um conjunto menor de arquivos.
+- **Exceção:** se o usuário ou o time explicitamente pedir uma nova migração (ex.: ambiente já em produção com dados que não podem ser perdidos), seguir esse pedido e criar uma nova migração em vez de editar a original.
 
 ## Como rodar as migrações
 

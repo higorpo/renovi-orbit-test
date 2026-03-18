@@ -36,7 +36,7 @@ function providerMenuItems(): DashboardMenuItem[] {
     { path: "/dashboard/requests", label: "Solicitações", icon: FileText },
     { path: "/dashboard/jobs", label: "Trabalhos", icon: Briefcase },
     { path: "/dashboard/earnings", label: "Ganhos", icon: Wallet },
-    { path: "/dashboard/settings", label: "Configurações", icon: Settings },
+    { path: "/dashboard/conta", label: "Minha conta", icon: Settings },
     { path: "/dashboard/help", label: "Ajuda", icon: HelpCircle },
   ];
 }

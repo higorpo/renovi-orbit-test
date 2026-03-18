@@ -25,10 +25,22 @@ describe("validateProfileImageFile", () => {
     expect(validateProfileImageFile(file)).toBe(null);
   });
 
+  it("returns null for valid PNG", () => {
+    const file = new File(["x"], "a.png", { type: "image/png" });
+    Object.defineProperty(file, "size", { value: 1024 });
+    expect(validateProfileImageFile(file)).toBe(null);
+  });
+
+  it("returns null for valid WebP", () => {
+    const file = new File(["x"], "a.webp", { type: "image/webp" });
+    Object.defineProperty(file, "size", { value: 1024 });
+    expect(validateProfileImageFile(file)).toBe(null);
+  });
+
   it("returns error for type not in allowed list", () => {
     const file = new File(["x"], "a.gif", { type: "image/gif" });
     Object.defineProperty(file, "size", { value: 1024 });
-    expect(validateProfileImageFile(file)).not.toBe(null);
+    expect(validateProfileImageFile(file)).toBe("Formato não permitido. Use JPEG, PNG ou WebP.");
   });
 
   it("returns error when file exceeds max size", () => {
@@ -63,6 +75,22 @@ describe("uploadProfileImage", () => {
     expect(result.path).toMatch(/\.(jpg|jpeg|png|webp)$/);
     expect(result.error).toBeNull();
     expect(supabase.storage.from("profile-images").upload).toHaveBeenCalled();
+  });
+
+  it("returns validation error when file exceeds max size", async () => {
+    const file = new File(["x"], "a.jpg", { type: "image/jpeg" });
+    Object.defineProperty(file, "size", { value: 3 * 1024 * 1024 });
+    const result = await uploadProfileImage(supabase, "user-1", file);
+    expect(result).toEqual({ path: null, error: expect.stringContaining("2 MB") });
+    expect(supabase.storage.from("profile-images").upload).not.toHaveBeenCalled();
+  });
+
+  it("uses safe extension when file has unknown extension", async () => {
+    const file = new File(["x"], "avatar.xyz", { type: "image/jpeg" });
+    Object.defineProperty(file, "size", { value: 1024 });
+    const result = await uploadProfileImage(supabase, "user-1", file);
+    expect(result.path).toMatch(/avatar\.jpg$/);
+    expect(result.error).toBeNull();
   });
 
   it("returns error when storage upload fails", async () => {

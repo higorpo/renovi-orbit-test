@@ -54,14 +54,12 @@ describe("useUpdateAccountProfile", () => {
       await result.current.updateProfileAsync({
         full_name: "Novo Nome",
         phone: "48999999999",
-        cpf: null,
       });
     });
 
     expect(profileApi.updateProfile).toHaveBeenCalledWith("user-1", {
       full_name: "Novo Nome",
       phone: "48999999999",
-      cpf: null,
     });
     expect(toast.success).toHaveBeenCalledWith("Dados atualizados com sucesso.");
     expect(toast.error).not.toHaveBeenCalled();
@@ -100,6 +98,20 @@ describe("useUpdateAccountProfile", () => {
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("Não foi possível atualizar. Tente novamente.");
     });
+  });
+
+  it("does not show success toast when silent option is true", async () => {
+    const { result } = renderHook(() => useUpdateAccountProfile({ silent: true }), {
+      wrapper: createWrapper(),
+    });
+
+    await act(async () => {
+      await result.current.updateProfileAsync({ full_name: "Nome", phone: null });
+    });
+
+    expect(profileApi.updateProfile).toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
   });
 
   it("throws when user is null", async () => {

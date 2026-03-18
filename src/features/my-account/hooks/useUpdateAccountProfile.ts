@@ -6,12 +6,17 @@ import { ACCOUNT_PROFILE_QUERY_KEY } from "./useAccountProfile";
 export interface UpdateAccountProfileParams {
   full_name?: string;
   phone?: string | null;
-  cpf?: string | null;
 }
 
-export function useUpdateAccountProfile() {
+export interface UseUpdateAccountProfileOptions {
+  /** When true, success/error toasts are not shown (e.g. when caller shows a single toast). */
+  silent?: boolean;
+}
+
+export function useUpdateAccountProfile(options?: UseUpdateAccountProfileOptions) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const silent = options?.silent ?? false;
 
   const mutation = useMutation({
     mutationFn: (params: UpdateAccountProfileParams) => {
@@ -21,10 +26,10 @@ export function useUpdateAccountProfile() {
     onSuccess: (result) => {
       if (result.error) return;
       queryClient.invalidateQueries({ queryKey: ACCOUNT_PROFILE_QUERY_KEY });
-      toast.success("Dados atualizados com sucesso.");
+      if (!silent) toast.success("Dados atualizados com sucesso.");
     },
     onError: () => {
-      toast.error("Não foi possível atualizar. Tente novamente.");
+      if (!silent) toast.error("Não foi possível atualizar. Tente novamente.");
     },
   });
 

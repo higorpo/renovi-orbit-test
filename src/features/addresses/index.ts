@@ -15,6 +15,8 @@ export {
   listStates,
   listCitiesByState,
   listNeighborhoodsByCity,
+  searchCities,
+  getNeighborhoodsByIds,
 } from "./api/statesAndCities.api";
 export type {
   ClientAddress,
@@ -37,6 +39,10 @@ export type {
   ListStatesResult,
   ListCitiesResult,
   ListNeighborhoodsResult,
+  CitySearchItem,
+  SearchCitiesResult,
+  NeighborhoodWithCity,
+  GetNeighborhoodsByIdsResult,
 } from "./api/statesAndCities.api";
 export {
   addressFormSchema,

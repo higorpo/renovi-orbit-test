@@ -74,7 +74,6 @@ async function createProfileFromCurrentUser(
 export interface UpdateProfileParams {
   full_name?: string;
   phone?: string | null;
-  cpf?: string | null;
   profile_image_path?: string | null;
 }
 
@@ -82,11 +81,10 @@ export interface UpdateProfileResult {
   error: string | null;
 }
 
-/** Allowed columns for profile update (prevents role/ID mass assignment). */
+/** Allowed columns for profile update (prevents role/ID mass assignment). CPF is in client_profiles_private. */
 const ALLOWED_UPDATE_KEYS: (keyof UpdateProfileParams)[] = [
   "full_name",
   "phone",
-  "cpf",
   "profile_image_path",
 ];
 
