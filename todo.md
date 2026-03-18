@@ -20,3 +20,4 @@ Urgentes:
 - [ ] ha um loading de pelo menos 3 vezes da tabela de profiles para um mesmo usuário
 - [ ] usar reorderPortfolioItems para permitir reordenar itens do portfólio
 - [ ] melhores tela de erro para cliente e provider no minha conta
+- [ ] está fazendo reloading de todas as infos quando edito alguma coisa no form

@@ -230,6 +230,32 @@ export type Database = {
           },
         ]
       }
+      client_profiles_private: {
+        Row: {
+          client_id: string
+          cpf: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          cpf?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          cpf?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_profiles_private_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       forms: {
         Row: {
           created_at: string
@@ -365,21 +391,241 @@ export type Database = {
       }
       profiles: {
         Row: {
+          created_at: string
           full_name: string
           id: string
+          phone: string | null
+          profile_image_path: string | null
           role: string
+          updated_at: string
         }
         Insert: {
+          created_at?: string
           full_name?: string
           id: string
+          phone?: string | null
+          profile_image_path?: string | null
           role?: string
+          updated_at?: string
         }
         Update: {
+          created_at?: string
           full_name?: string
           id?: string
+          phone?: string | null
+          profile_image_path?: string | null
           role?: string
+          updated_at?: string
         }
         Relationships: []
+      }
+      provider_offered_services: {
+        Row: {
+          provider_id: string
+          service_id: string
+          sort_order: number
+        }
+        Insert: {
+          provider_id: string
+          service_id: string
+          sort_order?: number
+        }
+        Update: {
+          provider_id?: string
+          service_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_offered_services_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_offered_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_portfolio_items: {
+        Row: {
+          city_region: string | null
+          created_at: string
+          description: string | null
+          execution_date: string | null
+          featured: boolean
+          id: string
+          image_paths: string[]
+          provider_id: string
+          service_id: string | null
+          sort_order: number
+          title: string
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          city_region?: string | null
+          created_at?: string
+          description?: string | null
+          execution_date?: string | null
+          featured?: boolean
+          id?: string
+          image_paths?: string[]
+          provider_id: string
+          service_id?: string | null
+          sort_order?: number
+          title: string
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          city_region?: string | null
+          created_at?: string
+          description?: string | null
+          execution_date?: string | null
+          featured?: boolean
+          id?: string
+          image_paths?: string[]
+          provider_id?: string
+          service_id?: string | null
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_portfolio_items_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_portfolio_items_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_profiles_private: {
+        Row: {
+          cnpj: string | null
+          commercial_contact: string | null
+          cpf: string | null
+          entity_type: string
+          legal_representative_cpf: string | null
+          legal_representative_name: string | null
+          nome_fantasia: string | null
+          provider_id: string
+          razao_social: string | null
+          updated_at: string
+        }
+        Insert: {
+          cnpj?: string | null
+          commercial_contact?: string | null
+          cpf?: string | null
+          entity_type?: string
+          legal_representative_cpf?: string | null
+          legal_representative_name?: string | null
+          nome_fantasia?: string | null
+          provider_id: string
+          razao_social?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cnpj?: string | null
+          commercial_contact?: string | null
+          cpf?: string | null
+          entity_type?: string
+          legal_representative_cpf?: string | null
+          legal_representative_name?: string | null
+          nome_fantasia?: string | null
+          provider_id?: string
+          razao_social?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_profiles_private_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_profiles_public: {
+        Row: {
+          bio: string | null
+          display_name: string | null
+          profile_visibility: string
+          provider_id: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          bio?: string | null
+          display_name?: string | null
+          profile_visibility?: string
+          provider_id: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          bio?: string | null
+          display_name?: string | null
+          profile_visibility?: string
+          provider_id?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_profiles_public_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_service_area_neighborhoods: {
+        Row: {
+          neighborhood_id: string
+          provider_id: string
+        }
+        Insert: {
+          neighborhood_id: string
+          provider_id: string
+        }
+        Update: {
+          neighborhood_id?: string
+          provider_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_service_area_neighborhoods_neighborhood_id_fkey"
+            columns: ["neighborhood_id"]
+            isOneToOne: false
+            referencedRelation: "platform_neighborhoods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_service_area_neighborhoods_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "provider_profiles_public"
+            referencedColumns: ["provider_id"]
+          },
+        ]
       }
       rate_limits: {
         Row: {
@@ -418,7 +664,11 @@ export type Database = {
           form_data: Json | null
           form_schema: Json | null
           form_version: string | null
+          geohash: string | null
           id: string
+          latitude: number | null
+          location: unknown
+          longitude: number | null
           missing_info_warnings: string[] | null
           photos: string[] | null
           scope_complexity: string | null
@@ -441,7 +691,11 @@ export type Database = {
           form_data?: Json | null
           form_schema?: Json | null
           form_version?: string | null
+          geohash?: string | null
           id?: string
+          latitude?: number | null
+          location?: unknown
+          longitude?: number | null
           missing_info_warnings?: string[] | null
           photos?: string[] | null
           scope_complexity?: string | null
@@ -464,7 +718,11 @@ export type Database = {
           form_data?: Json | null
           form_schema?: Json | null
           form_version?: string | null
+          geohash?: string | null
           id?: string
+          latitude?: number | null
+          location?: unknown
+          longitude?: number | null
           missing_info_warnings?: string[] | null
           photos?: string[] | null
           scope_complexity?: string | null
@@ -808,6 +1066,10 @@ export type Database = {
         | { Args: { table_name: string }; Returns: string }
       enablelongtransactions: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      generate_unique_provider_slug: {
+        Args: { full_name: string; in_provider_id: string }
+        Returns: string
+      }
       geometry: { Args: { "": string }; Returns: unknown }
       geometry_above: {
         Args: { geom1: unknown; geom2: unknown }
@@ -907,6 +1169,10 @@ export type Database = {
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
       get_prompt_by_key: { Args: { p_prompt_key: string }; Returns: Json }
+      get_public_provider_by_slug: {
+        Args: { slug_param: string }
+        Returns: Json
+      }
       gettransactionid: { Args: never; Returns: unknown }
       longtransactionsenabled: { Args: never; Returns: boolean }
       populate_geometry_columns:
@@ -949,6 +1215,7 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      slugify_for_provider: { Args: { name_input: string }; Returns: string }
       st_3dclosestpoint: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: unknown

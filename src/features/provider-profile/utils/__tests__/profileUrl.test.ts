@@ -19,6 +19,15 @@ describe("buildProfileUrl", () => {
       "https://x.com/perfil/a%20b"
     );
   });
+
+  it("uses window.location.origin when no baseUrl", () => {
+    const result = buildProfileUrl("joao-silva");
+    expect(result).toContain("/perfil/joao-silva");
+  });
+
+  it("returns path only when baseUrl is empty string", () => {
+    expect(buildProfileUrl("joao-silva", "")).toBe("/perfil/joao-silva");
+  });
 });
 
 describe("getProviderProfilePath", () => {

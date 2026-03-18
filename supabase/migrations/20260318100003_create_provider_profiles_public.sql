@@ -6,7 +6,7 @@ create table if not exists public.provider_profiles_public (
   slug text not null,
   display_name text,
   bio text,
-  profile_visibility text not null default 'restricted' check (profile_visibility in ('public', 'restricted')),
+  profile_visibility text not null default 'public' check (profile_visibility in ('public', 'restricted')),
   updated_at timestamptz not null default now(),
   constraint provider_profiles_public_slug_unique unique (slug)
 );
