@@ -7,9 +7,6 @@ create table if not exists public.provider_profiles_public (
   display_name text,
   bio text,
   profile_visibility text not null default 'restricted' check (profile_visibility in ('public', 'restricted')),
-  service_area_city text,
-  service_area_regions text[],
-  service_area_neighborhoods text[],
   updated_at timestamptz not null default now(),
   constraint provider_profiles_public_slug_unique unique (slug)
 );
@@ -19,9 +16,6 @@ comment on column public.provider_profiles_public.slug is 'URL slug for /perfil/
 comment on column public.provider_profiles_public.display_name is 'Professional display name on profile.';
 comment on column public.provider_profiles_public.bio is 'Biography / about text.';
 comment on column public.provider_profiles_public.profile_visibility is 'public = anyone can view; restricted = only logged-in users.';
-comment on column public.provider_profiles_public.service_area_city is 'City or primary service area.';
-comment on column public.provider_profiles_public.service_area_regions is 'Regions served (optional).';
-comment on column public.provider_profiles_public.service_area_neighborhoods is 'Neighborhoods served (optional).';
 comment on column public.provider_profiles_public.updated_at is 'Last update of public profile.';
 
 create index provider_profiles_public_slug_idx on public.provider_profiles_public (slug);

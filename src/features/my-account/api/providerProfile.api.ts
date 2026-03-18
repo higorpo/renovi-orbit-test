@@ -5,9 +5,13 @@ import { PROVIDER_PORTFOLIO_IMAGE_SIGNED_URL_EXPIRY_SEC } from "../constants";
 
 export type ProviderPrivateProfile = Tables<"provider_profiles_private">;
 export type ProviderPublicProfile = Tables<"provider_profiles_public">;
-/** Public profile with service area neighborhood IDs from provider_service_area_neighborhoods. */
+/** Public profile with service area neighborhood IDs and display fields derived from provider_service_area_neighborhoods. */
 export type ProviderPublicProfileWithServiceArea = ProviderPublicProfile & {
   service_area_neighborhood_ids: string[];
+  /** Derived from neighborhoods for form display. */
+  service_area_city: string | null;
+  service_area_regions: string[] | null;
+  service_area_neighborhoods: string[] | null;
 };
 export type ProviderPortfolioItem = Tables<"provider_portfolio_items">;
 
@@ -37,10 +41,7 @@ export interface UpdateProviderPublicParams {
   display_name?: string | null;
   bio?: string | null;
   profile_visibility?: "public" | "restricted";
-  service_area_city?: string | null;
-  service_area_regions?: string[] | null;
-  service_area_neighborhoods?: string[] | null;
-  /** Replaces provider_service_area_neighborhoods rows; display text is synced from platform data. */
+  /** Replaces provider_service_area_neighborhoods rows; display text is derived from platform data when reading. */
   service_area_neighborhood_ids?: string[] | null;
 }
 
@@ -136,9 +137,43 @@ export async function getProviderPublicProfile(
     (r: { neighborhood_id: string }) => r.neighborhood_id
   );
 
+  let service_area_city: string | null = null;
+  let service_area_regions: string[] | null = null;
+  let service_area_neighborhoods: string[] | null = null;
+
+  if (service_area_neighborhood_ids.length > 0) {
+    const { data: neighborhoodRows } = await supabase
+      .from("platform_neighborhoods")
+      .select("name, platform_cities(name, platform_states(abbreviation))")
+      .in("id", service_area_neighborhood_ids)
+      .order("name", { ascending: true });
+
+    const rows = (neighborhoodRows ?? []) as {
+      name: string;
+      platform_cities: { name: string; platform_states: { abbreviation: string } | null } | null;
+    }[];
+    service_area_neighborhoods = rows.map((r) => r.name);
+    const cityNames = [...new Set(rows.map((r) => r.platform_cities?.name ?? "").filter(Boolean))];
+    service_area_city = cityNames.length > 0 ? cityNames.join(", ") : null;
+    const stateAbbrevs = [
+      ...new Set(
+        rows
+          .map((r) => r.platform_cities?.platform_states?.abbreviation ?? "")
+          .filter(Boolean)
+      ),
+    ];
+    service_area_regions = stateAbbrevs.length > 0 ? stateAbbrevs : null;
+  }
+
   return {
     data: data
-      ? ({ ...data, service_area_neighborhood_ids } as ProviderPublicProfileWithServiceArea)
+      ? ({
+          ...data,
+          service_area_neighborhood_ids,
+          service_area_city,
+          service_area_regions,
+          service_area_neighborhoods,
+        } as ProviderPublicProfileWithServiceArea)
       : null,
     error: null,
   };
@@ -195,29 +230,6 @@ export async function updateProviderPublicProfile(
         });
         return { error: insertError.message };
       }
-
-      const { data: neighborhoodRows } = await supabase
-        .from("platform_neighborhoods")
-        .select("name, platform_cities(name)")
-        .in("id", params.service_area_neighborhood_ids)
-        .order("name", { ascending: true });
-
-      const neighborhoodNames = (neighborhoodRows ?? []).map(
-        (r: { name: string }) => r.name
-      );
-      const cityNames = [
-        ...new Set(
-          (neighborhoodRows ?? []).map(
-            (r: { platform_cities: { name: string } | null }) =>
-              r.platform_cities?.name ?? ""
-          )
-        ),
-      ].filter(Boolean);
-      payload.service_area_neighborhoods = neighborhoodNames;
-      payload.service_area_city = cityNames.length > 0 ? cityNames.join(", ") : null;
-    } else {
-      payload.service_area_neighborhoods = null;
-      payload.service_area_city = null;
     }
   }
 

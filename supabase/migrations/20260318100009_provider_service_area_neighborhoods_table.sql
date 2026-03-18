@@ -1,7 +1,6 @@
 -- Provider service area: many-to-many between provider and neighborhoods.
 -- A provider can act in multiple cities by selecting neighborhoods from different cities.
--- Keeps provider_profiles_public.service_area_city and service_area_neighborhoods (text) for display;
--- app syncs them when saving.
+-- Public profile service-area fields are derived from this relation.
 
 create table if not exists public.provider_service_area_neighborhoods (
   provider_id uuid not null references public.provider_profiles_public (provider_id) on delete cascade,

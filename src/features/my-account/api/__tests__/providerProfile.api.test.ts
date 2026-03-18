@@ -166,8 +166,14 @@ describe("getProviderPublicProfile", () => {
     mockFrom.mockClear();
   });
 
-  it("returns public data with service_area_neighborhood_ids", async () => {
+  it("returns public data with service_area_neighborhood_ids and derived display fields", async () => {
     const publicRow = { provider_id: "p1", slug: "meu-perfil" };
+    const neighborhoodRows = [
+      {
+        name: "Centro",
+        platform_cities: { name: "Floripa", platform_states: { abbreviation: "SC" } },
+      },
+    ];
     mockFrom
       .mockReturnValueOnce(chainMock({ data: publicRow, error: null }))
       .mockReturnValueOnce(
@@ -175,7 +181,8 @@ describe("getProviderPublicProfile", () => {
           then: (resolve: (v: { data: { neighborhood_id: string }[] }) => void) =>
             resolve({ data: [{ neighborhood_id: "n1" }] }),
         })
-      );
+      )
+      .mockReturnValueOnce(chainMock({ data: neighborhoodRows, error: null }));
 
     const result = await getProviderPublicProfile("p1");
 
@@ -183,6 +190,9 @@ describe("getProviderPublicProfile", () => {
     expect(result.data).not.toBeNull();
     expect(result.data?.provider_id).toBe("p1");
     expect(result.data?.service_area_neighborhood_ids).toEqual(["n1"]);
+    expect(result.data?.service_area_city).toBe("Floripa");
+    expect(result.data?.service_area_regions).toEqual(["SC"]);
+    expect(result.data?.service_area_neighborhoods).toEqual(["Centro"]);
   });
 
   it("returns null data and error on public fetch error", async () => {
@@ -205,19 +215,7 @@ describe("updateProviderPublicProfile", () => {
   it("returns null error when only updating service_area_neighborhood_ids and insert succeeds", async () => {
     const deleteChain = chainMockUpdate({ error: null });
     const insertChain = chainMock({ data: null, error: null });
-    const neighborhoodRows = [
-      { name: "Centro", platform_cities: { name: "Floripa" } },
-    ];
-    const selectNeighborhoodsChain = chainMock({
-      data: neighborhoodRows,
-      error: null,
-    });
-    const updateChain = chainMockUpdate({ error: null });
-    mockFrom
-      .mockReturnValueOnce(deleteChain)
-      .mockReturnValueOnce(insertChain)
-      .mockReturnValueOnce(selectNeighborhoodsChain)
-      .mockReturnValueOnce(updateChain);
+    mockFrom.mockReturnValueOnce(deleteChain).mockReturnValueOnce(insertChain);
 
     const result = await updateProviderPublicProfile("p1", {
       service_area_neighborhood_ids: ["n1"],
