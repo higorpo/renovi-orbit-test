@@ -31,7 +31,8 @@ export function OfferedServicesSection({
   const searchResult = useQuery({
     queryKey: ["services-search", debouncedQuery],
     queryFn: () => searchServices(debouncedQuery || " "),
-    enabled: true,
+    enabled: showList,
+    staleTime: 5 * 60 * 1000,
   });
 
   const selectedTitlesQuery = useQuery({

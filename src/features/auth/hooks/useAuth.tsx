@@ -63,8 +63,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isMounted = true;
     const getIsMounted = () => isMounted;
 
+    // Fallback in case INITIAL_SESSION never fires (should not happen with Supabase SDK)
     const sessionTimeout = setTimeout(() => {
-      if (isMounted && loadingSession) {
+      if (isMounted) {
         logger.warn("auth_session_fetch_timeout", {
           afterMs: SESSION_FETCH_TIMEOUT_MS,
         });
@@ -73,39 +74,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }, SESSION_FETCH_TIMEOUT_MS);
 
-    authApi.getSession().then(({ session: currentSession, error }) => {
-      clearTimeout(sessionTimeout);
-      if (!isMounted) return;
-
-      if (error) {
-        logger.error("auth_session_error", { error: error.message });
-        setLoadingSession(false);
-        setLoading(false);
-        return;
-      }
-
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      setLoadingSession(false);
-
-      if (currentSession?.user) {
-        fetchProfile(currentSession.user.id)
-          .then((userProfile) => {
-            if (!isMounted) return;
-            if (userProfile) setProfile(userProfile);
-            setLoading(false);
-          })
-          .catch((err) => {
-            logger.error("auth_fetch_profile_error", {
-              error: err instanceof Error ? err.message : String(err),
-            });
-            setLoading(false);
-          });
-      } else {
-        setLoading(false);
-      }
-    });
-
     const { unsubscribe } = authApi.onAuthStateChange((event, currentSession) => {
       if (!isMounted) return;
       logger.debug("auth_state_change", {
@@ -113,24 +81,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         userId: currentSession?.user?.id,
       });
 
+      const ctx = {
+        getIsMounted,
+        setSession,
+        setUser,
+        setProfile,
+        setLoading,
+        setLoadingSession,
+        fetchProfile,
+        getRedirectPath: getRedirectPathForProfile,
+        navigate,
+        isExplicitSignIn,
+        lastFetchedUserId,
+      };
+
+      // INITIAL_SESSION is the Supabase-guaranteed initialization event: process it
+      // immediately (no debounce) so the app initializes as fast as a getSession() call,
+      // while avoiding the duplicate fetchProfile that the old getSession() path caused.
+      if (event === "INITIAL_SESSION") {
+        clearTimeout(sessionTimeout);
+        processAuthEvent(event, currentSession, ctx);
+        return;
+      }
+
+      // Debounce all other events to collapse rapid sequences (e.g. TOKEN_REFRESHED → SIGNED_IN)
       if (authDebounceRef.current) clearTimeout(authDebounceRef.current);
       lastAuthEventRef.current = { event, session: currentSession };
       authDebounceRef.current = setTimeout(() => {
         if (!isMounted || !lastAuthEventRef.current) return;
         const { event: e, session: s } = lastAuthEventRef.current;
-        const ctx = {
-          getIsMounted,
-          setSession,
-          setUser,
-          setProfile,
-          setLoading,
-          setLoadingSession,
-          fetchProfile,
-          getRedirectPath: getRedirectPathForProfile,
-          navigate,
-          isExplicitSignIn,
-          lastFetchedUserId,
-        };
         processAuthEvent(e, s, ctx);
       }, AUTH_DEBOUNCE_MS);
     });
@@ -141,7 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(sessionTimeout);
       unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- init once; loadingSession/lastFetchedUserId read inside effect only
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- init once
   }, [navigate, fetchProfile]);
 
   // Associate Sentry events with the current user for filtering in the dashboard

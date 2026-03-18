@@ -52,12 +52,16 @@ export function MyAccountClientPage() {
   });
 
   const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hydratedProfileIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (profile && defaultValues) {
+    if (!profile?.id) return;
+    if (hydratedProfileIdRef.current === profile.id) return;
+    if (!profileLoading && defaultValues) {
       form.reset(defaultValues);
+      hydratedProfileIdRef.current = profile.id;
     }
-  }, [profile, defaultValues, form]);
+  }, [profile?.id, profileLoading, defaultValues, form]);
 
   const email = user?.email ?? "";
   const watchedValues = form.watch();

@@ -78,7 +78,7 @@ export function createAuthEventHandlers(
     },
 
     TOKEN_REFRESHED(session) {
-      if (import.meta.env.DEV) console.log("[Auth] Token refreshed");
+      logger.debug("auth_token_refreshed", {});
       applySession(ctx, session);
     },
 

@@ -5,65 +5,64 @@ import { useCallback, useRef } from "react";
 import type { Profile } from "../types/auth.types";
 
 const PROFILE_CACHE_TTL_MS = 5 * 60 * 1000;
-const DUPLICATE_FETCH_THRESHOLD_MS = 1000;
 
 export function useProfileFetcher(
   setProfile: (p: Profile | null) => void,
   currentUserId: string | null
 ) {
-  const fetchingProfile = useRef(false);
+  // Stores the in-flight promise so concurrent callers share the same DB request
+  const inFlightFetch = useRef<Promise<Profile | null> | null>(null);
   const lastFetchedUserId = useRef<string | null>(null);
-  const lastFetchTime = useRef<number>(0);
 
   const fetchProfile = useCallback(
     async (userId: string, forceRefresh = false): Promise<Profile | null> => {
-      const now = Date.now();
-      if (
-        fetchingProfile.current &&
-        lastFetchedUserId.current === userId &&
-        now - lastFetchTime.current < DUPLICATE_FETCH_THRESHOLD_MS
-      ) {
-        logger.debug("auth_skip_duplicate_fetch", { userId });
-        return null;
+      // Return the in-flight promise for the same user to avoid concurrent DB hits.
+      // The promise is assigned synchronously (before any await) so this check is
+      // race-condition-free even when multiple callers enter in the same microtask burst.
+      if (!forceRefresh && inFlightFetch.current && lastFetchedUserId.current === userId) {
+        logger.debug("auth_reuse_inflight_fetch", { userId });
+        return inFlightFetch.current;
       }
 
-      if (!forceRefresh) {
-        const cached = await cacheGet<Profile>(`profile_${userId}`);
-        if (cached) {
-          logger.debug("auth_profile_from_cache", { userId });
-          return cached;
+      // Build the promise synchronously — assigned to the ref before the first await
+      // so any concurrent call that checks the ref right after will reuse it.
+      const promise = (async () => {
+        if (!forceRefresh) {
+          const cached = await cacheGet<Profile>(`profile_${userId}`);
+          if (cached) {
+            logger.debug("auth_profile_from_cache", { userId });
+            return cached;
+          }
         }
-      }
 
-      fetchingProfile.current = true;
-      lastFetchedUserId.current = userId;
-      lastFetchTime.current = now;
+        try {
+          logger.debug("auth_fetch_profile_db", { userId });
+          const { profile: profileData, error } = await profileApi.getProfile(userId);
 
-      try {
-        logger.debug("auth_fetch_profile_db", { userId });
-        const { profile: profileData, error } = await profileApi.getProfile(
-          userId
-        );
+          if (error) {
+            logger.error("auth_profile_fetch_error", { error, userId });
+            return null;
+          }
 
-        if (error) {
-          logger.error("auth_profile_fetch_error", { error, userId });
+          if (profileData) {
+            cacheSet(`profile_${userId}`, profileData, PROFILE_CACHE_TTL_MS);
+          }
+
+          return profileData;
+        } catch (error) {
+          logger.error("auth_fetch_profile_exception", {
+            error: error instanceof Error ? error.message : String(error),
+            userId,
+          });
           return null;
+        } finally {
+          inFlightFetch.current = null;
         }
+      })();
 
-        if (profileData) {
-          cacheSet(`profile_${userId}`, profileData, PROFILE_CACHE_TTL_MS);
-        }
-
-        return profileData;
-      } catch (error) {
-        logger.error("auth_fetch_profile_exception", {
-          error: error instanceof Error ? error.message : String(error),
-          userId,
-        });
-        return null;
-      } finally {
-        fetchingProfile.current = false;
-      }
+      inFlightFetch.current = promise;
+      lastFetchedUserId.current = userId;
+      return promise;
     },
     []
   );
@@ -71,7 +70,7 @@ export function useProfileFetcher(
   const refreshProfile = useCallback(async () => {
     if (!currentUserId) return;
     cacheRemove(`profile_${currentUserId}`);
-    fetchingProfile.current = false;
+    inFlightFetch.current = null;
     const updated = await fetchProfile(currentUserId, true);
     if (updated) {
       setProfile(updated);

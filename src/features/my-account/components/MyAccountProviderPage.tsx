@@ -140,9 +140,23 @@ function MyAccountProviderPage() {
         return;
       }
       const p = parsed.data;
-      Promise.all([
-        updateProfileAsync({ full_name: p.full_name.trim(), phone: p.phone?.trim() || null }),
-        updatePrivateAsync({
+      const dirty = form.formState.dirtyFields;
+
+      const profileGroupDirty = (["full_name", "phone"] as const).some((k) => dirty[k]);
+      const privateGroupDirty = (
+        ["entity_type", "cpf", "cnpj", "razao_social", "nome_fantasia",
+          "legal_representative_name", "legal_representative_cpf", "commercial_contact"] as const
+      ).some((k) => dirty[k]);
+      const publicGroupDirty = (
+        ["display_name", "bio", "profile_visibility", "service_area_neighborhood_ids"] as const
+      ).some((k) => dirty[k]);
+
+      const mutations: Promise<{ error: unknown } | undefined>[] = [];
+      if (profileGroupDirty) {
+        mutations.push(updateProfileAsync({ full_name: p.full_name.trim(), phone: p.phone?.trim() || null }));
+      }
+      if (privateGroupDirty) {
+        mutations.push(updatePrivateAsync({
           entity_type: p.entity_type,
           cpf: p.cpf?.trim() || null,
           cnpj: p.cnpj?.trim() || null,
@@ -151,17 +165,27 @@ function MyAccountProviderPage() {
           legal_representative_name: p.legal_representative_name?.trim() || null,
           legal_representative_cpf: p.legal_representative_cpf?.trim() || null,
           commercial_contact: p.commercial_contact?.trim() || null,
-        }),
-        updatePublicAsync({
+        }));
+      }
+      if (publicGroupDirty) {
+        const publicPayload: Parameters<typeof updatePublicAsync>[0] = {
           display_name: p.display_name?.trim() || null,
           bio: p.bio?.trim() || null,
           profile_visibility: p.profile_visibility,
-          service_area_neighborhood_ids:
-            p.service_area_neighborhood_ids?.length ? p.service_area_neighborhood_ids : null,
-        }),
-      ])
-        .then(([r1, r2, r3]) => {
-          const allOk = !r1?.error && !r2?.error && !r3?.error;
+        };
+        // Only sync neighborhoods when that field was explicitly changed to avoid unnecessary delete+insert
+        if (dirty.service_area_neighborhood_ids) {
+          publicPayload.service_area_neighborhood_ids =
+            p.service_area_neighborhood_ids?.length ? p.service_area_neighborhood_ids : null;
+        }
+        mutations.push(updatePublicAsync(publicPayload));
+      }
+
+      if (mutations.length === 0) return;
+
+      Promise.all(mutations)
+        .then((results) => {
+          const allOk = results.every((r) => !r?.error);
           if (allOk) {
             form.reset(parsed.data);
             toast.success("Dados atualizados com sucesso.");

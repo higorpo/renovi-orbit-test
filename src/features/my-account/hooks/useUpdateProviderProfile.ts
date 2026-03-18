@@ -8,6 +8,7 @@ import {
   updateProviderPublicProfile,
   type UpdateProviderPrivateParams,
   type UpdateProviderPublicParams,
+  type GetProviderPublicResult,
 } from "../api/providerProfile.api";
 
 const PROVIDER_PRIVATE_QUERY_KEY = ["provider-profiles-private"];
@@ -34,9 +35,28 @@ export function useUpdateProviderProfile() {
   const publicMutation = useMutation({
     mutationFn: (params: UpdateProviderPublicParams) =>
       updateProviderPublicProfile(providerId!, params),
-    onSuccess: (result) => {
+    onSuccess: (result, params) => {
       if (!result.error) {
-        queryClient.invalidateQueries({ queryKey: [...PROVIDER_PUBLIC_QUERY_KEY, providerId] });
+        const queryKey = [...PROVIDER_PUBLIC_QUERY_KEY, providerId];
+        if (params.service_area_neighborhood_ids !== undefined) {
+          // Neighborhoods changed: must refetch to get fresh JOIN data
+          queryClient.invalidateQueries({ queryKey });
+        } else {
+          // Only simple fields changed: patch cache directly to avoid refetching neighborhood JOINs
+          queryClient.setQueryData(queryKey, (old: GetProviderPublicResult | undefined) => {
+            if (!old?.data) return old;
+            return {
+              ...old,
+              data: {
+                ...old.data,
+                ...(params.display_name !== undefined && { display_name: params.display_name }),
+                ...(params.bio !== undefined && { bio: params.bio }),
+                ...(params.profile_visibility !== undefined && { profile_visibility: params.profile_visibility }),
+                ...(params.slug !== undefined && { slug: params.slug }),
+              },
+            };
+          });
+        }
       }
     },
     onError: () => {

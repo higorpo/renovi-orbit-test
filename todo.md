@@ -10,14 +10,12 @@ Interessantes de se ter
 Urgentes:
 - [ ] bug no endereço da agronomica, não está salvando o endereço certo.
 - [ ] renomear  rota para portugues de meus servicos
-- [ ] permitir excluir conta
-- [ ] permitir exportar dados
 - [ ] permitir usuário se deslogar da plataforma
-- [ ] permitir adicionar/editar apelido para endereço
 - [ ] tela de onboarding do prestador
 
 
+
 - [ ] ha um loading de pelo menos 3 vezes da tabela de profiles para um mesmo usuário
-- [ ] usar reorderPortfolioItems para permitir reordenar itens do portfólio
-- [ ] melhores tela de erro para cliente e provider no minha conta
 - [ ] está fazendo reloading de todas as infos quando edito alguma coisa no form
+
+- [ ] arrumar loading na tela de prestador e cliente meus dados

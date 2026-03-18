@@ -93,6 +93,7 @@ export function ServiceAreaField({ form, disabled }: ServiceAreaFieldProps) {
     queryFn: () => getNeighborhoodsByIds(neighborhoodIds),
     enabled: neighborhoodIds.length > 0,
     placeholderData: keepPreviousData,
+    staleTime: 10 * 60 * 1000,
   });
 
   const cities = useMemo(
