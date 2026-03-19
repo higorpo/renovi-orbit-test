@@ -19,6 +19,9 @@ Urgentes:
 - verificar se é possível colocar caching de mutations para caso o usuário esteja sem internet isso ser enviado/sincronizado depois
 - deu erro para enviar imagens mesmo elas não tendo conteúdo errado
 
+- testes unitários em todo o módulo de trabalhos do prestador de serviços.
+- quando clicar na foto expandir
+
 - Quando enviar proposta ou entrar para ver detalhes de um pedido fora da área, perguntar ao prestador se ele quer adicionar aquela área
 
 - Direcionar prestador para que ele cadastre serviços que ele atenda para exibir trabalhos

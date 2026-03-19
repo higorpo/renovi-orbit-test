@@ -37,12 +37,14 @@ import { formatDistance } from "@/lib/formatDistance";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
 import { FormResponsesSummary } from "./FormResponsesSummary";
 import { useProviderJobDetail } from "../hooks/useProviderJobDetail";
+import { useProviderJobQuestionComposer } from "../hooks/useProviderJobQuestionComposer";
 import { MAX_PROPOSALS_PER_REQUEST } from "../types/provider-jobs.types";
 import type { ProviderJobItem } from "../types/provider-jobs.types";
 import {
   mapSuggestedEquipmentToPt,
   mapSuggestedMaterialsToPt,
 } from "../utils/suggestedItemsMapper";
+import { JobQuestionComposerDialog } from "./JobQuestionComposerDialog";
 import type { EstimatedDurationHintKey } from "supabase/functions/generate-smart-description/allowedValues";
 
 const DURATION_LABELS: Record<EstimatedDurationHintKey, string> = {
@@ -187,6 +189,16 @@ export function JobDetailContent({ job }: { job: ProviderJobItem }) {
   const suggestedEquipmentPt = mapSuggestedEquipmentToPt(job.suggested_equipment);
   const suggestedMaterialsPt = mapSuggestedMaterialsToPt(job.suggested_materials);
   const suggestedQuestions = job.suggested_questions ?? [];
+  const {
+    isOpen,
+    isSubmitting,
+    questionDraft,
+    maxQuestionLength,
+    setQuestionDraft,
+    openComposer,
+    closeComposer,
+    submitQuestion,
+  } = useProviderJobQuestionComposer(job.id);
 
   const urgencyConfig = job.urgency ? URGENCY_CONFIG[job.urgency] : null;
 
@@ -353,7 +365,14 @@ export function JobDetailContent({ job }: { job: ProviderJobItem }) {
             pode escrever qualquer pergunta ou usar uma das perguntas sugeridas
             abaixo.
           </p>
-          <Button type="button" className="mt-3">
+          <p className="mt-1 text-xs font-medium text-primary">
+            Limite: até 3 perguntas por pedido.
+          </p>
+          <Button
+            type="button"
+            className="mt-3"
+            onClick={() => openComposer()}
+          >
             Fazer pergunta
           </Button>
 
@@ -376,6 +395,9 @@ export function JobDetailContent({ job }: { job: ProviderJobItem }) {
                           size="sm"
                           variant="outline"
                           className="mt-2"
+                          onClick={() =>
+                            openComposer({ prefilledQuestion: question })
+                          }
                         >
                           Usar pergunta sugerida
                         </Button>
@@ -391,6 +413,20 @@ export function JobDetailContent({ job }: { job: ProviderJobItem }) {
             </AccordionItem>
           </Accordion>
         </div>
+
+        <JobQuestionComposerDialog
+          open={isOpen}
+          questionDraft={questionDraft}
+          isSubmitting={isSubmitting}
+          maxQuestionLength={maxQuestionLength}
+          onOpenChange={(open) => {
+            if (!open) closeComposer();
+          }}
+          onQuestionDraftChange={setQuestionDraft}
+          onSubmit={async () => {
+            await submitQuestion();
+          }}
+        />
       </CardContent>
     </Card>
   );

@@ -597,6 +597,48 @@ export type Database = {
           },
         ]
       }
+      provider_proposals: {
+        Row: {
+          created_at: string
+          id: string
+          provider_id: string
+          service_request_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          provider_id: string
+          service_request_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          provider_id?: string
+          service_request_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_proposals_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_proposals_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provider_service_area_neighborhoods: {
         Row: {
           neighborhood_id: string
@@ -624,6 +666,54 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "provider_profiles_public"
             referencedColumns: ["provider_id"]
+          },
+        ]
+      }
+      provider_service_request_questions: {
+        Row: {
+          client_responded_at: string | null
+          client_response: string | null
+          created_at: string
+          id: string
+          provider_id: string
+          question: string
+          service_request_id: string
+          updated_at: string
+        }
+        Insert: {
+          client_responded_at?: string | null
+          client_response?: string | null
+          created_at?: string
+          id?: string
+          provider_id: string
+          question: string
+          service_request_id: string
+          updated_at?: string
+        }
+        Update: {
+          client_responded_at?: string | null
+          client_response?: string | null
+          created_at?: string
+          id?: string
+          provider_id?: string
+          question?: string
+          service_request_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_service_request_questions_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_service_request_questions_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -665,7 +755,6 @@ export type Database = {
           form_schema: Json | null
           form_version: string | null
           geohash: string | null
-          h3_index: string | null
           id: string
           latitude: number | null
           location: unknown
@@ -693,7 +782,6 @@ export type Database = {
           form_schema?: Json | null
           form_version?: string | null
           geohash?: string | null
-          h3_index?: string | null
           id?: string
           latitude?: number | null
           location?: unknown
@@ -721,7 +809,6 @@ export type Database = {
           form_schema?: Json | null
           form_version?: string | null
           geohash?: string | null
-          h3_index?: string | null
           id?: string
           latitude?: number | null
           location?: unknown
@@ -1036,6 +1123,14 @@ export type Database = {
             }
             Returns: string
           }
+      can_provider_ask_question: {
+        Args: { p_provider_id: string; p_service_request_id: string }
+        Returns: boolean
+      }
+      create_provider_service_request_question: {
+        Args: { p_question: string; p_service_request_id: string }
+        Returns: Json
+      }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {
@@ -1178,6 +1273,20 @@ export type Database = {
       }
       gettransactionid: { Args: never; Returns: unknown }
       longtransactionsenabled: { Args: never; Returns: boolean }
+      match_provider_jobs: {
+        Args: {
+          p_lat: number
+          p_lng: number
+          p_page?: number
+          p_page_size?: number
+          p_provider_id: string
+          p_radius_km?: number
+          p_service_id?: string
+          p_service_request_id?: string
+          p_sort_mode?: string
+        }
+        Returns: Json
+      }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
         | { Args: { use_typmod?: boolean }; Returns: string }
