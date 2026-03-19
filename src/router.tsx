@@ -22,6 +22,8 @@ const DashboardLayout = lazy(() => import('@/layouts/DashboardLayout').then(m =>
 const ServiceDetailPlaceholder = lazy(() => import('@/features/view-service-requests').then(m => ({ default: m.ServiceDetailPlaceholder })))
 const MyAccountPage = lazy(() => import('@/features/my-account').then(m => ({ default: m.MyAccountPage })))
 const ProviderProfilePage = lazy(() => import('@/features/provider-profile').then(m => ({ default: m.ProviderProfilePage })))
+const ProviderJobsPage = lazy(() => import('@/features/provider-jobs').then(m => ({ default: m.ProviderJobsPage })))
+const JobDetailPage = lazy(() => import('@/features/provider-jobs').then(m => ({ default: m.JobDetailPage })))
 
 export const router = createBrowserRouter([
   {
@@ -112,7 +114,15 @@ export const router = createBrowserRouter([
             path: 'jobs',
             element: (
               <ProtectedRoute allowedRoles={['provider']}>
-                <DashboardFakePage title="Trabalhos" />
+                <ProviderJobsPage />
+              </ProtectedRoute>
+            ),
+          },
+          {
+            path: 'jobs/:id',
+            element: (
+              <ProtectedRoute allowedRoles={['provider']}>
+                <JobDetailPage />
               </ProtectedRoute>
             ),
           },

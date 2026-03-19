@@ -12,6 +12,8 @@
     "generate-supabase-types": "node scripts/generate-supabase-types.mjs",
     "db:migrate": "npx supabase db push",
     "db:reset": "npx supabase db reset",
+    "seed:load-test-images": "node supabase/scripts/seed-load-test-images.mjs",
+    "seed:load-test-images-real": "node supabase/scripts/seed-load-test-images.mjs --picsum",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",

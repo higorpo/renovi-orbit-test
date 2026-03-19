@@ -5,12 +5,20 @@ Interessantes de se ter
 - [ ] prestador poder adicionar um contato que ele já fez serviço para ser verificado na plataforma
 - [ ] forma de validar que o prestador é indicado para mulheres também
 - [ ] precisa permitir alterar valor combinado, adicionar itens extras, cliente aprova etc
-
+- [ ] usar IA pra ela criar novas perguntas baseado em tudo o que o cliente respondeu para que ele responda em caso de ter ficado alguma coisa em aberto, alguma coisa que o prestador teria que saber
+- [ ] colocar a IA pra sugerir fotos pra ele tirar que seriam interessantes pro prestador entender melhor o problema
 
 Urgentes:
 - [ ] bug no endereço da agronomica, não está salvando o endereço certo.
 - [ ] renomear  rota para portugues de meus servicos
 - [ ] permitir usuário se deslogar da plataforma
 - [ ] tela de onboarding do prestador
+- [ ] caching persistente
+- [ ] IA sugerir nome do pedido para mostrar na tela de trabalhos. Hoje ele só faz: "Pedido + ${serviço}"
 
 
+- não está usando h3 no algoritmo
+
+- Quando enviar proposta ou entrar para ver detalhes de um pedido fora da área, perguntar ao prestador se ele quer adicionar aquela área
+
+- Direcionar prestador para que ele cadastre serviços que ele atenda para exibir trabalhos

@@ -1,0 +1,214 @@
+-- RPC function: match_provider_jobs
+-- Returns eligible, ranked service requests for a provider based on:
+--   - provider's offered services
+--   - provider's service area (city-level from neighborhoods)
+--   - geographic proximity (PostGIS ST_DWithin + ST_Distance)
+--   - proposal count limits
+-- Called by the match-provider-jobs Edge Function.
+
+create or replace function public.match_provider_jobs(
+  p_provider_id uuid,
+  p_lat double precision,
+  p_lng double precision,
+  p_radius_km integer default 10,
+  p_service_id uuid default null,
+  p_sort_mode text default 'nearest',
+  p_page_size integer default 20,
+  p_page integer default 1
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_result jsonb;
+  v_provider_point geography;
+  v_offset integer;
+  v_sort text;
+begin
+  -- Sanitize inputs
+  v_sort := case
+    when p_sort_mode in ('nearest', 'newest', 'least_competitive') then p_sort_mode
+    else 'nearest'
+  end;
+  p_page := greatest(p_page, 1);
+  p_page_size := least(greatest(p_page_size, 1), 50);
+  p_radius_km := least(greatest(p_radius_km, 1), 100);
+
+  v_provider_point := st_setsrid(st_makepoint(p_lng, p_lat), 4326)::geography;
+  v_offset := (p_page - 1) * p_page_size;
+
+  with eligible as (
+    select
+      sr.id,
+      sr.title,
+      sr.description,
+      sr.service_id,
+      sr.photos,
+      sr.form_data,
+      sr.form_schema,
+      sr.urgency,
+      sr.scope_complexity,
+      sr.estimated_duration_hint,
+      sr.tags,
+      sr.suggested_equipment,
+      sr.suggested_materials,
+      sr.created_at,
+      ca.neighborhood as address_neighborhood,
+      pc.name as city_name,
+      pst.abbreviation as state_abbreviation,
+      s.title as service_title,
+      s.slug as service_slug,
+      s.icon_key as service_icon_key,
+      s.color_key as service_color_key,
+      s.parent_id as service_parent_id,
+      -- Masked name: "FirstName L."
+      (
+        split_part(p.full_name, ' ', 1) ||
+        case
+          when array_length(string_to_array(p.full_name, ' '), 1) > 1
+          then ' ' || left(
+            split_part(
+              p.full_name, ' ',
+              array_length(string_to_array(p.full_name, ' '), 1)
+            ), 1
+          ) || '.'
+          else ''
+        end
+      ) as masked_client_name,
+      -- Distance in km (rounded to 1 decimal)
+      round(
+        (st_distance(sr.location, v_provider_point) / 1000.0)::numeric, 1
+      ) as distance_km,
+      -- Active proposal count for this request
+      (
+        select count(*)::integer
+        from provider_proposals pp
+        where pp.service_request_id = sr.id
+          and pp.status not in ('withdrawn', 'rejected')
+      ) as proposal_count,
+      -- Whether this request is in an exact neighborhood the provider covers
+      exists (
+        select 1
+        from provider_service_area_neighborhoods psan
+        join platform_neighborhoods pn on pn.id = psan.neighborhood_id
+        where psan.provider_id = p_provider_id
+          and pn.city_id = ca.city_id
+          and lower(trim(pn.name)) = lower(trim(ca.neighborhood))
+      ) as exact_area_match
+    from service_requests sr
+    join client_addresses ca on ca.id = sr.address_id
+    join platform_cities pc on pc.id = ca.city_id
+    join platform_states pst on pst.id = ca.state_id
+    join services s on s.id = sr.service_id
+    join profiles p on p.id = sr.client_id
+    where
+      sr.status = 'open'
+      and sr.location is not null
+      -- Service match: provider offers this exact service or its parent category
+      and (
+        sr.service_id in (
+          select pos.service_id
+          from provider_offered_services pos
+          where pos.provider_id = p_provider_id
+        )
+        or s.parent_id in (
+          select pos.service_id
+          from provider_offered_services pos
+          where pos.provider_id = p_provider_id
+        )
+      )
+      -- City-level area coverage
+      and ca.city_id in (
+        select distinct pn.city_id
+        from provider_service_area_neighborhoods psan
+        join platform_neighborhoods pn on pn.id = psan.neighborhood_id
+        where psan.provider_id = p_provider_id
+      )
+      -- Within radius
+      and st_dwithin(sr.location, v_provider_point, p_radius_km * 1000)
+      -- Provider has not already proposed (non-withdrawn)
+      and not exists (
+        select 1
+        from provider_proposals pp
+        where pp.service_request_id = sr.id
+          and pp.provider_id = p_provider_id
+          and pp.status <> 'withdrawn'
+      )
+      -- Fewer than 3 active proposals on this request
+      and (
+        select count(*)
+        from provider_proposals pp
+        where pp.service_request_id = sr.id
+          and pp.status not in ('withdrawn', 'rejected')
+      ) < 3
+      -- Optional: filter by specific service
+      and (p_service_id is null or sr.service_id = p_service_id)
+  ),
+  total as (
+    select count(*)::integer as cnt from eligible
+  ),
+  sorted as (
+    select *
+    from eligible
+    order by
+      case when v_sort = 'nearest' then distance_km end asc nulls last,
+      case when v_sort = 'least_competitive' then proposal_count end asc nulls last,
+      case when v_sort = 'newest' then extract(epoch from created_at) end desc nulls last,
+      created_at desc,
+      distance_km asc nulls last
+    limit p_page_size
+    offset v_offset
+  )
+  select jsonb_build_object(
+    'items', coalesce(
+      (select jsonb_agg(
+        jsonb_build_object(
+          'id', s.id,
+          'title', s.title,
+          'description', s.description,
+          'service_id', s.service_id,
+          'service_title', s.service_title,
+          'service_slug', s.service_slug,
+          'service_icon_key', s.service_icon_key,
+          'service_color_key', s.service_color_key,
+          'service_parent_id', s.service_parent_id,
+          'photos', s.photos,
+          'form_data', s.form_data,
+          'form_schema', s.form_schema,
+          'urgency', s.urgency,
+          'scope_complexity', s.scope_complexity,
+          'estimated_duration_hint', s.estimated_duration_hint,
+          'tags', s.tags,
+          'suggested_equipment', s.suggested_equipment,
+          'suggested_materials', s.suggested_materials,
+          'masked_client_name', s.masked_client_name,
+          'neighborhood', s.address_neighborhood,
+          'city', s.city_name,
+          'state', s.state_abbreviation,
+          'distance_km', s.distance_km,
+          'proposal_count', s.proposal_count,
+          'exact_area_match', s.exact_area_match,
+          'created_at', s.created_at
+        )
+      ) from sorted s),
+      '[]'::jsonb
+    ),
+    'total_count', (select cnt from total),
+    'page', p_page,
+    'page_size', p_page_size
+  ) into v_result;
+
+  return v_result;
+end;
+$$;
+
+comment on function public.match_provider_jobs is 'Returns paginated, ranked service requests matching a provider''s services and area. Used by the match-provider-jobs Edge Function.';
+
+-- Restrict execution to service_role only (called from Edge Function with service role key).
+-- This prevents authenticated users (clients) from bypassing the Edge Function's provider role check.
+revoke execute on function public.match_provider_jobs(uuid, double precision, double precision, integer, uuid, text, integer, integer) from anon;
+revoke execute on function public.match_provider_jobs(uuid, double precision, double precision, integer, uuid, text, integer, integer) from authenticated;
+

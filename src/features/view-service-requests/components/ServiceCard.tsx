@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
+import { useServiceRequestPhotoUrls } from "@/features/request-quote";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +31,7 @@ import { STATUS_LABELS, STATUS_BADGE_VARIANT } from "../constants/statusBadge";
 import { formatLocationDisplay } from "../utils/locationDisplay";
 import { formatServiceRequestDate } from "../utils/formatDate";
 import { getServiceDetailPath } from "../constants/routes";
-import { ImagePreviewStrip } from "./ImagePreviewStrip";
+import { ImagePreviewStrip } from "@/components/ImagePreviewStrip";
 
 const DESCRIPTION_CLAMP = "line-clamp-2 sm:line-clamp-3";
 
@@ -176,6 +177,8 @@ export function ServiceCard({
   const variant = STATUS_BADGE_VARIANT[model.status];
   const detailPath = getServiceDetailPath(model.id);
   const serviceStyle = getServiceCardStyle(model.service ?? undefined);
+  const { urls: photoUrls, isLoading: photoUrlsLoading } =
+    useServiceRequestPhotoUrls(model.photoPaths);
 
   return (
     <Card
@@ -254,7 +257,7 @@ export function ServiceCard({
           </div>
         </CardHeader>
         <CardContent className="!pt-0">
-          <ImagePreviewStrip photoPaths={model.photoPaths} />
+          <ImagePreviewStrip urls={photoUrls} isLoading={photoUrlsLoading} />
           {model.status === "in_progress" && (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               {model.selectedProfessionalName && (
