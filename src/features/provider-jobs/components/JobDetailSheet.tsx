@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { Loader2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useProviderJobDetail } from "../hooks/useProviderJobDetail";
 import type { ProviderJobItem } from "../types/provider-jobs.types";
 import { JobDetailContent } from "./JobDetailContent";
 import { JobDetailNotFound } from "./JobDetailStates";
+import { JobDetailSkeleton } from "./JobDetailSkeleton";
 
 interface JobDetailSheetProps {
   jobId: string;
@@ -45,15 +46,7 @@ export function JobDetailSheet({ jobId, initialJob }: JobDetailSheetProps) {
           </SheetClose>
         </SheetHeader>
         <div className="flex-1 overflow-y-auto p-4">
-          {isLoading && (
-            <div
-              className="flex justify-center py-12"
-              aria-busy="true"
-              aria-label="Carregando detalhes do trabalho"
-            >
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          )}
+          {isLoading && <JobDetailSkeleton />}
           {!isLoading && job && <JobDetailContent job={job} />}
           {!isLoading && !job && <JobDetailNotFound />}
         </div>
