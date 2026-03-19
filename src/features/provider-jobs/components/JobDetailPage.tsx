@@ -336,6 +336,32 @@ export function JobDetailContent({ job }: { job: ProviderJobItem }) {
             </div>
           </div>
         )}
+
+        {job.suggested_questions && job.suggested_questions.length > 0 && (
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">
+              Perguntas sugeridas
+            </h3>
+            <div className="mt-2 space-y-2">
+              {job.suggested_questions.map((question, index) => (
+                <div
+                  key={`${question}-${index}`}
+                  className="rounded-lg border bg-muted/20 p-3"
+                >
+                  <p className="text-sm text-foreground">{question}</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="mt-2"
+                  >
+                    Perguntar
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
