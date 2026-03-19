@@ -6,6 +6,8 @@ Interessantes de se ter
 - precisa permitir alterar valor combinado, adicionar itens extras, cliente aprova etc
 - usar IA pra ela criar novas perguntas baseado em tudo o que o cliente respondeu para que ele responda em caso de ter ficado alguma coisa em aberto, alguma coisa que o prestador teria que saber
 - colocar a IA pra sugerir fotos pra ele tirar que seriam interessantes pro prestador entender melhor o problema
+- Poder denunciar perguntas feitas em trabalhos por infringir as regras da plataforma
+- Poder denunciar pedidos de orçamento feitos na plataforma por infringir as regras 
 
 Urgentes:
 - bug no endereço da agronomica, não está salvando o endereço certo.
@@ -21,6 +23,7 @@ Urgentes:
 
 - testes unitários em todo o módulo de trabalhos do prestador de serviços.
 - quando clicar na foto expandir
+- shimmer effect quando carregando trabalho
 
 - Quando enviar proposta ou entrar para ver detalhes de um pedido fora da área, perguntar ao prestador se ele quer adicionar aquela área
 

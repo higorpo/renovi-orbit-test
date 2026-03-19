@@ -11,6 +11,16 @@ export interface CreateProviderJobQuestionResponse {
   created_at: string;
 }
 
+export interface ProviderJobQuestionItem {
+  id: string;
+  question: string;
+  client_response: string | null;
+  created_at: string;
+  client_responded_at: string | null;
+  is_own_question: boolean;
+  provider_first_name: string | null;
+}
+
 function isCreateProviderJobQuestionResponse(
   value: unknown,
 ): value is CreateProviderJobQuestionResponse {
@@ -53,4 +63,39 @@ export async function createProviderJobQuestion(
   }
 
   return { data, error: null };
+}
+
+export async function listProviderJobQuestions(
+  serviceRequestId: string,
+): Promise<{ data: ProviderJobQuestionItem[] | null; error: string | null }> {
+  const supabaseClient = supabase as unknown as {
+    rpc: (
+      fn: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: { message: string } | null }>;
+  };
+  const { data, error } = await supabaseClient.rpc(
+    "list_provider_service_request_questions",
+    {
+      p_service_request_id: serviceRequestId,
+    },
+  );
+
+  if (error) {
+    logger.error("list_provider_job_questions_error", {
+      error: error.message,
+      serviceRequestId,
+    });
+    return { data: null, error: error.message };
+  }
+
+  if (!Array.isArray(data)) {
+    logger.error("list_provider_job_questions_invalid_response", {
+      serviceRequestId,
+      data,
+    });
+    return { data: null, error: "Unexpected response from server" };
+  }
+
+  return { data: data as ProviderJobQuestionItem[], error: null };
 }

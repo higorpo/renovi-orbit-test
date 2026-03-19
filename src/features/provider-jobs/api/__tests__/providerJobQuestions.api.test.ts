@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createProviderJobQuestion } from "../providerJobQuestions.api";
+import {
+  createProviderJobQuestion,
+  listProviderJobQuestions,
+} from "../providerJobQuestions.api";
 
 vi.mock("@/lib/supabase/client", () => ({
   supabase: {
@@ -77,5 +80,50 @@ describe("createProviderJobQuestion", () => {
       "create_provider_job_question_invalid_response",
       expect.objectContaining({ serviceRequestId: "sr-1" }),
     );
+  });
+});
+
+describe("listProviderJobQuestions", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns list when rpc succeeds", async () => {
+    rpc.mockResolvedValue({
+      data: [
+        {
+          id: "q-1",
+          question: "Pergunta",
+          client_response: "Resposta",
+          created_at: "2026-03-19T10:00:00.000Z",
+          client_responded_at: "2026-03-19T11:00:00.000Z",
+          is_own_question: false,
+          provider_first_name: "João",
+        },
+      ],
+      error: null,
+    } as never);
+
+    const result = await listProviderJobQuestions("sr-1");
+
+    expect(rpc).toHaveBeenCalledWith("list_provider_service_request_questions", {
+      p_service_request_id: "sr-1",
+    });
+    expect(result.error).toBeNull();
+    expect(result.data).toHaveLength(1);
+  });
+
+  it("returns error message when rpc fails", async () => {
+    rpc.mockResolvedValue({
+      data: null,
+      error: { message: "Forbidden" },
+    } as never);
+
+    const result = await listProviderJobQuestions("sr-1");
+
+    expect(result).toEqual({
+      data: null,
+      error: "Forbidden",
+    });
   });
 });
