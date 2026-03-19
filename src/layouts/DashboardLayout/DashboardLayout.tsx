@@ -1,6 +1,7 @@
 import { Link, Outlet } from "react-router";
 import { useAuth } from "@/features/auth";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { getDashboardMenu } from "./dashboardMenu";
 import { DesktopNav } from "./DesktopNav";
 import { MobileNav } from "./MobileNav";
@@ -9,6 +10,7 @@ import { cn } from "@/lib/utils";
 export function DashboardLayout() {
   const { profile } = useAuth();
   const isDesktop = useBreakpointMd();
+  const isOnline = useOnlineStatus();
   const role = profile?.role ?? "client";
   const menu = getDashboardMenu(role);
 
@@ -16,7 +18,12 @@ export function DashboardLayout() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Desktop: top bar with logo + nav */}
       {isDesktop && (
-        <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header
+          className={cn(
+            "sticky z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+            isOnline ? "top-0" : "top-11"
+          )}
+        >
           <div className="container flex h-14 items-center justify-between px-4">
             <Link to="/dashboard" className="flex items-center shrink-0">
               <img
@@ -31,7 +38,7 @@ export function DashboardLayout() {
       )}
 
       {/* Mobile: top bar with hamburger + bottom nav */}
-      {!isDesktop && <MobileNav menu={menu} />}
+      {!isDesktop && <MobileNav menu={menu} isOffline={!isOnline} />}
 
       {/* Main content: padding bottom on mobile so content is not under the bottom nav */}
       <main

@@ -14,8 +14,9 @@ Urgentes:
 - tela de onboarding do prestador
 - IA sugerir nome do pedido para mostrar na tela de trabalhos. Hoje ele só faz: "Pedido + ${serviço}"
 - Ajustar algoritmo de matching para ter pesos em relação a várias variáveis para calcular quais serviços seriam mais interessantes de mostrar primeiro.
-
-
+- captcha para cadastros principais
+- remoteconfig para não permitir cadastrar profissionais etc
+- remoteconfig para redirecionar para grupo de whatsapp
 
 - Quando enviar proposta ou entrar para ver detalhes de um pedido fora da área, perguntar ao prestador se ele quer adicionar aquela área
 

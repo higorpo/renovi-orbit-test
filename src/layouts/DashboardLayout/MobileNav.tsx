@@ -16,16 +16,23 @@ interface MobileNavProps {
   menu: DashboardMenuConfig;
   /** Optional title shown in the sheet header (e.g. "Área do cliente"). */
   title?: string;
+  /** When true, header sticks below the offline banner. */
+  isOffline?: boolean;
 }
 
-export function MobileNav({ menu, title = "Dashboard" }: MobileNavProps) {
+export function MobileNav({ menu, title = "Dashboard", isOffline = false }: MobileNavProps) {
   const [open, setOpen] = useState(false);
   const { mainItems, allItems } = menu;
 
   return (
     <>
       {/* Top bar: hamburger left, logo centered, spacer right for balance */}
-      <header className="sticky top-0 z-40 flex h-14 w-full items-center border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden">
+      <header
+        className={cn(
+          "sticky z-40 flex h-14 w-full items-center border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden",
+          isOffline ? "top-11" : "top-0"
+        )}
+      >
         <div className="flex w-10 shrink-0 items-center">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>

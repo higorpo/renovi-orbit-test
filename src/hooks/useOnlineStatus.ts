@@ -12,7 +12,7 @@ const getConnectivityCheckUrls = (): string[] => {
   if (supabaseUrl) {
     urls.push(supabaseUrl)
   }
-  urls.push('https://api.github.com', 'https://www.cloudflare.com/cdn-cgi/trace')
+  urls.push('https://api.github.com')
   return urls
 }
 
