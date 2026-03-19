@@ -4,7 +4,8 @@ import { Loader2, X } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useProviderJobDetail } from "../hooks/useProviderJobDetail";
 import type { ProviderJobItem } from "../types/provider-jobs.types";
-import { JobDetailContent, JobDetailNotFound } from "./JobDetailPage";
+import { JobDetailContent } from "./JobDetailContent";
+import { JobDetailNotFound } from "./JobDetailStates";
 
 interface JobDetailSheetProps {
   jobId: string;

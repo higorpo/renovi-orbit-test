@@ -3,9 +3,5 @@
  * Smart feed of service request opportunities for providers.
  */
 
-export { ProviderJobsPage } from "./components/ProviderJobsPage";
-export { JobDetailPage } from "./components/JobDetailPage";
-export {
-  ProviderJobsShell,
-  ProviderJobsRouteSlot,
-} from "./components/ProviderJobsShell";
+export { ProviderJobsPage, JobDetailPage, ProviderJobsShell } from "./components";
+export { ProviderJobsRouteSlot } from "./components/ProviderJobsShell";
