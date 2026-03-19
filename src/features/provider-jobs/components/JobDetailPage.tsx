@@ -17,8 +17,14 @@ import {
   Timer,
   Briefcase,
   Loader2,
+  CircleHelp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { getServiceCardStyle } from "@/features/request-quote";
 import { useServiceRequestPhotoUrls } from "@/features/request-quote";
 import { formatDistance } from "@/lib/formatDistance";
@@ -27,6 +33,10 @@ import { FormResponsesSummary } from "./FormResponsesSummary";
 import { useProviderJobDetail } from "../hooks/useProviderJobDetail";
 import { MAX_PROPOSALS_PER_REQUEST } from "../types/provider-jobs.types";
 import type { ProviderJobItem } from "../types/provider-jobs.types";
+import {
+  mapSuggestedEquipmentToPt,
+  mapSuggestedMaterialsToPt,
+} from "../utils/suggestedItemsMapper";
 
 const DURATION_LABELS: Record<string, string> = {
   under_1h: "Menos de 1 hora",
@@ -51,6 +61,28 @@ const COMPLEXITY_LABELS: Record<string, string> = {
   medium: "Média",
   complex: "Complexo",
 };
+
+const SUGGESTED_ITEMS_TOOLTIP_TEXT =
+  "Itens sugeridos com base no pedido de orçamento do cliente. Eles podem ser utilizados, mas podem estar imprecisos.";
+
+function SuggestedItemsInfo({ ariaLabel }: { ariaLabel: string }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={ariaLabel}
+        >
+          <CircleHelp className="h-3.5 w-3.5" aria-hidden />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="max-w-xs text-xs leading-relaxed" align="start">
+        {SUGGESTED_ITEMS_TOOLTIP_TEXT}
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 function PhotoGallery({ photos }: { photos: string[] }) {
   const { urls, isLoading } = useServiceRequestPhotoUrls(photos);
@@ -143,6 +175,8 @@ export function JobDetailContent({ job }: { job: ProviderJobItem }) {
     icon_key: job.service_icon_key,
     color_key: job.service_color_key,
   });
+  const suggestedEquipmentPt = mapSuggestedEquipmentToPt(job.suggested_equipment);
+  const suggestedMaterialsPt = mapSuggestedMaterialsToPt(job.suggested_materials);
 
   const urgencyConfig = job.urgency ? URGENCY_CONFIG[job.urgency] : null;
 
@@ -256,13 +290,16 @@ export function JobDetailContent({ job }: { job: ProviderJobItem }) {
           </div>
         )}
 
-        {job.suggested_equipment && job.suggested_equipment.length > 0 && (
+        {suggestedEquipmentPt.length > 0 && (
           <div>
-            <h3 className="text-sm font-semibold text-foreground">
-              Equipamentos sugeridos
-            </h3>
+            <div className="flex items-center">
+              <h3 className="text-sm font-semibold text-foreground">
+                Equipamentos que podem ser úteis
+              </h3>
+              <SuggestedItemsInfo ariaLabel="Mais informações sobre equipamentos sugeridos" />
+            </div>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {job.suggested_equipment.map((eq) => (
+              {suggestedEquipmentPt.map((eq) => (
                 <span
                   key={eq}
                   className="inline-flex items-center gap-1 rounded-full border bg-blue-50 px-2.5 py-0.5 text-xs text-blue-700 dark:bg-blue-950/30 dark:text-blue-300"
@@ -275,13 +312,16 @@ export function JobDetailContent({ job }: { job: ProviderJobItem }) {
           </div>
         )}
 
-        {job.suggested_materials && job.suggested_materials.length > 0 && (
+        {suggestedMaterialsPt.length > 0 && (
           <div>
-            <h3 className="text-sm font-semibold text-foreground">
-              Materiais sugeridos
-            </h3>
+            <div className="flex items-center">
+              <h3 className="text-sm font-semibold text-foreground">
+                Materiais que podem ser úteis
+              </h3>
+              <SuggestedItemsInfo ariaLabel="Mais informações sobre materiais sugeridos" />
+            </div>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {job.suggested_materials.map((mat) => (
+              {suggestedMaterialsPt.map((mat) => (
                 <span
                   key={mat}
                   className="inline-flex items-center gap-1 rounded-full border bg-amber-50 px-2.5 py-0.5 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
