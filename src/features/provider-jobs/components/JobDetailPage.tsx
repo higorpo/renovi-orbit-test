@@ -37,8 +37,9 @@ import {
   mapSuggestedEquipmentToPt,
   mapSuggestedMaterialsToPt,
 } from "../utils/suggestedItemsMapper";
+import type { EstimatedDurationHintKey } from "supabase/functions/generate-smart-description/allowedValues";
 
-const DURATION_LABELS: Record<string, string> = {
+const DURATION_LABELS: Record<EstimatedDurationHintKey, string> = {
   under_1h: "Menos de 1 hora",
   "1_to_2h": "1 a 2 horas",
   "2_to_4h": "2 a 4 horas",
@@ -47,7 +48,9 @@ const DURATION_LABELS: Record<string, string> = {
   "1_to_2_days": "1 a 2 dias",
   "2_to_5_days": "2 a 5 dias",
   "5_to_10_days": "5 a 10 dias",
-  over_10_days: "Mais de 10 dias",
+  "10_to_20_days": "10 a 20 dias",
+  "20_to_30_days": "20 a 30 dias",
+  "over_30_days": "Mais de 30 dias",
 };
 
 const URGENCY_CONFIG: Record<string, { label: string; variant: "destructive" | "warning" | "default" }> = {
@@ -136,10 +139,10 @@ function MetadataBadges({ job }: { job: ProviderJobItem }) {
     className?: string;
   }> = [];
 
-  if (job.estimated_duration_hint) {
+  if (job.estimated_duration_hint && DURATION_LABELS[job.estimated_duration_hint as EstimatedDurationHintKey]) {
     items.push({
       icon: Timer,
-      label: DURATION_LABELS[job.estimated_duration_hint] ?? job.estimated_duration_hint,
+      label: DURATION_LABELS[job.estimated_duration_hint as EstimatedDurationHintKey] + ' (aprox.)',
     });
   }
 

@@ -453,7 +453,9 @@ export const ESTIMATED_DURATION_HINT_KEYS = [
   "1_to_2_days",
   "2_to_5_days",
   "5_to_10_days",
-  "over_10_days",
+  "10_to_20_days",
+  "20_to_30_days",
+  "over_30_days",
 ] as const;
 
 export type SuggestedEquipmentKey = (typeof SUGGESTED_EQUIPMENT_KEYS)[number];
