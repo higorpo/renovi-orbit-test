@@ -665,6 +665,7 @@ export type Database = {
           form_schema: Json | null
           form_version: string | null
           geohash: string | null
+          h3_index: string | null
           id: string
           latitude: number | null
           location: unknown
@@ -692,6 +693,7 @@ export type Database = {
           form_schema?: Json | null
           form_version?: string | null
           geohash?: string | null
+          h3_index?: string | null
           id?: string
           latitude?: number | null
           location?: unknown
@@ -719,6 +721,7 @@ export type Database = {
           form_schema?: Json | null
           form_version?: string | null
           geohash?: string | null
+          h3_index?: string | null
           id?: string
           latitude?: number | null
           location?: unknown

@@ -33,6 +33,7 @@ create table if not exists public.service_requests (
   latitude double precision generated always as (st_y(location::geometry)) stored,
   longitude double precision generated always as (st_x(location::geometry)) stored,
   geohash text generated always as (st_geohash(location::geometry, 7)) stored,
+  h3_index text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -56,6 +57,7 @@ comment on column public.service_requests.location is 'Snapshot of address coord
 comment on column public.service_requests.latitude is 'WGS84 latitude derived from location.';
 comment on column public.service_requests.longitude is 'WGS84 longitude derived from location.';
 comment on column public.service_requests.geohash is 'Geohash (precision 7) derived from location for list-by-region queries.';
+comment on column public.service_requests.h3_index is 'H3 cell index synced from client_addresses when address_id is set; used for spatial indexing and match-provider-jobs.';
 
 create index if not exists service_requests_client_id_idx on public.service_requests (client_id);
 create index if not exists service_requests_service_id_idx on public.service_requests (service_id);
@@ -63,8 +65,9 @@ create index if not exists service_requests_status_idx on public.service_request
 create index if not exists idx_service_requests_location on public.service_requests using gist (location) where location is not null;
 create index if not exists idx_service_requests_geohash on public.service_requests (geohash) where geohash is not null;
 create index if not exists idx_service_requests_status_geohash on public.service_requests (status, geohash) where geohash is not null and status = 'open';
+create index if not exists idx_service_requests_h3_index on public.service_requests (h3_index) where h3_index is not null;
 
--- Sync location from client_addresses when address_id is set (insert or update).
+-- Sync location and h3_index from client_addresses when address_id is set (insert or update).
 create or replace function public.sync_service_request_location()
 returns trigger
 language plpgsql
@@ -73,17 +76,18 @@ set search_path = public
 as $$
 begin
   if new.address_id is not null then
-    select ca.location into new.location
+    select ca.location, ca.h3_index into new.location, new.h3_index
     from public.client_addresses ca
     where ca.id = new.address_id;
   else
     new.location := null;
+    new.h3_index := null;
   end if;
   return new;
 end;
 $$;
 
-comment on function public.sync_service_request_location() is 'Copies client_addresses.location into service_requests.location when address_id is set.';
+comment on function public.sync_service_request_location() is 'Copies client_addresses.location and h3_index into service_requests when address_id is set.';
 
 create trigger service_requests_sync_location
   before insert or update of address_id on public.service_requests
