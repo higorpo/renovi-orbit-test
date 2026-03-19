@@ -60,6 +60,7 @@ comment on column public.service_requests.geohash is 'Geohash (precision 7) deri
 create index if not exists service_requests_client_id_idx on public.service_requests (client_id);
 create index if not exists service_requests_service_id_idx on public.service_requests (service_id);
 create index if not exists service_requests_status_idx on public.service_requests (status);
+create index if not exists idx_service_requests_location on public.service_requests using gist (location) where location is not null;
 create index if not exists idx_service_requests_geohash on public.service_requests (geohash) where geohash is not null;
 create index if not exists idx_service_requests_status_geohash on public.service_requests (status, geohash) where geohash is not null and status = 'open';
 

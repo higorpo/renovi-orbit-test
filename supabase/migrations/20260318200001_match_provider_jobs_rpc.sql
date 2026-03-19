@@ -5,6 +5,14 @@
 --   - geographic proximity (PostGIS ST_DWithin + ST_Distance)
 --   - proposal count limits
 -- Called by the match-provider-jobs Edge Function.
+--
+-- Spatial strategy: Uses PostGIS geography + GIST index on service_requests.location
+-- (idx_service_requests_location). ST_DWithin is index-accelerated for radius filter;
+-- ST_Distance is used only for the result distance_km and ordering. H3 is not used
+-- here because: (1) service_requests has no h3_index column; (2) Supabase has no
+-- built-in H3 extension; (3) with GIST, radius search is already efficient. To use
+-- H3 as a pre-filter later: add h3_index to service_requests (synced from address),
+-- compute grid ring in the Edge Function with h3-js, pass cell array to this RPC.
 
 create or replace function public.match_provider_jobs(
   p_provider_id uuid,
@@ -40,7 +48,22 @@ begin
   v_provider_point := st_setsrid(st_makepoint(p_lng, p_lat), 4326)::geography;
   v_offset := (p_page - 1) * p_page_size;
 
-  with eligible as (
+  -- Pre-aggregate proposal counts and provider-proposed requests once (avoids repeated subqueries per row).
+  with proposal_counts as (
+    select
+      pp.service_request_id,
+      count(*)::integer as active_count
+    from provider_proposals pp
+    where pp.status not in ('withdrawn', 'rejected')
+    group by pp.service_request_id
+  ),
+  provider_proposed_ids as (
+    select pp.service_request_id
+    from provider_proposals pp
+    where pp.provider_id = p_provider_id
+      and pp.status <> 'withdrawn'
+  ),
+  eligible as (
     select
       sr.id,
       sr.title,
@@ -82,14 +105,7 @@ begin
       round(
         (st_distance(sr.location, v_provider_point) / 1000.0)::numeric, 1
       ) as distance_km,
-      -- Active proposal count for this request
-      (
-        select count(*)::integer
-        from provider_proposals pp
-        where pp.service_request_id = sr.id
-          and pp.status not in ('withdrawn', 'rejected')
-      ) as proposal_count,
-      -- Whether this request is in an exact neighborhood the provider covers
+      coalesce(pc_agg.active_count, 0)::integer as proposal_count,
       exists (
         select 1
         from provider_service_area_neighborhoods psan
@@ -104,10 +120,11 @@ begin
     join platform_states pst on pst.id = ca.state_id
     join services s on s.id = sr.service_id
     join profiles p on p.id = sr.client_id
+    left join proposal_counts pc_agg on pc_agg.service_request_id = sr.id
     where
       sr.status = 'open'
       and sr.location is not null
-      -- Service match: provider offers this exact service or its parent category
+      and (p_service_id is null or sr.service_id = p_service_id)
       and (
         sr.service_id in (
           select pos.service_id
@@ -120,32 +137,15 @@ begin
           where pos.provider_id = p_provider_id
         )
       )
-      -- City-level area coverage
       and ca.city_id in (
         select distinct pn.city_id
         from provider_service_area_neighborhoods psan
         join platform_neighborhoods pn on pn.id = psan.neighborhood_id
         where psan.provider_id = p_provider_id
       )
-      -- Within radius
       and st_dwithin(sr.location, v_provider_point, p_radius_km * 1000)
-      -- Provider has not already proposed (non-withdrawn)
-      and not exists (
-        select 1
-        from provider_proposals pp
-        where pp.service_request_id = sr.id
-          and pp.provider_id = p_provider_id
-          and pp.status <> 'withdrawn'
-      )
-      -- Fewer than 3 active proposals on this request
-      and (
-        select count(*)
-        from provider_proposals pp
-        where pp.service_request_id = sr.id
-          and pp.status not in ('withdrawn', 'rejected')
-      ) < 3
-      -- Optional: filter by specific service
-      and (p_service_id is null or sr.service_id = p_service_id)
+      and sr.id not in (select service_request_id from provider_proposed_ids)
+      and coalesce(pc_agg.active_count, 0) < 3
   ),
   total as (
     select count(*)::integer as cnt from eligible
