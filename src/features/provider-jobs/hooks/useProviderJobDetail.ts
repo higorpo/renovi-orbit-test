@@ -37,17 +37,18 @@ export function useProviderJobDetail(
       if (error || !data) throw new Error(error ?? "Erro ao buscar trabalho");
       return data.items[0] ?? null;
     },
-    enabled: Boolean(jobId) && !seeded && lat != null && lng != null,
+    enabled: Boolean(jobId) && lat != null && lng != null,
+    initialData: seeded ? initial : undefined,
+    initialDataUpdatedAt: seeded ? 0 : undefined,
+    refetchOnMount: "always",
     staleTime: STALE_TIME_MS,
   });
 
-  const job: ProviderJobItem | null = seeded && initial
-    ? initial
-    : query.data ?? null;
+  const job: ProviderJobItem | null = query.data ?? null;
 
   return {
     job,
-    isLoading: !seeded && query.isLoading,
+    isLoading: query.isLoading,
     isError: query.isError,
     refetch: query.refetch,
   };

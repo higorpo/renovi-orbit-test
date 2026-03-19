@@ -58,3 +58,15 @@ export type {
   SchemaValidationError,
   ValidationSeverity,
 } from "./utils/schemaValidator";
+export {
+  INPUT_BLOCK_TYPES,
+  buildSummaryEntries,
+  buildSummarySections,
+  buildSummarySectionsFromConfig,
+  getFormCompleteness,
+} from "./utils/summaryDisplay";
+export type {
+  SummaryEntry,
+  SummarySection,
+  FormCompleteness,
+} from "./utils/summaryDisplay";

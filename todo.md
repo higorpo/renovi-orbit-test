@@ -18,6 +18,7 @@ Urgentes:
 - remoteconfig para não permitir cadastrar profissionais etc
 - remoteconfig para redirecionar para grupo de whatsapp
 - verificar se é possível colocar caching de mutations para caso o usuário esteja sem internet isso ser enviado/sincronizado depois
+- deu erro para enviar imagens mesmo elas não tendo conteúdo errado
 
 - Quando enviar proposta ou entrar para ver detalhes de um pedido fora da área, perguntar ao prestador se ele quer adicionar aquela área
 

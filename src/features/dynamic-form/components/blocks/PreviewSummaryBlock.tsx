@@ -9,128 +9,12 @@ import type {
   FormSchema,
   PreviewSummaryBlockConfig,
 } from "../../types";
-import { getBlockById, getVisibleBlocks, getVisibleSteps, getDisplayValue } from "../../types/helpers";
 import { cn } from "@/lib/utils";
-
-const INPUT_BLOCK_TYPES = new Set([
-  "text",
-  "textarea",
-  "number",
-  "single_select",
-  "multi_select",
-  "radio",
-  "checkbox",
-  "yes_no",
-  "date",
-  "time",
-  "slider",
-  "property_type",
-  "urgency",
-  "description_ai",
-  "image_gallery",
-]);
-
-interface PreviewField {
-  id: string;
-  label: string;
-  value: unknown;
-  displayValue: string;
-  emoji?: string;
-}
-
-interface PreviewSection {
-  id?: string;
-  title: string;
-  icon: string;
-  fields: PreviewField[];
-}
-
-function buildSectionsFromConfig(
-  schema: FormSchema,
-  formData: FormData,
-  config: PreviewSummaryBlockConfig
-): PreviewSection[] {
-  const sections: PreviewSection[] = [];
-  for (const sec of config.sections ?? []) {
-    const fields: PreviewField[] = [];
-    for (const fieldId of sec.fieldIds) {
-      const block = getBlockById(schema, fieldId);
-      if (!block || !INPUT_BLOCK_TYPES.has(block.type)) continue;
-      const value = formData[fieldId];
-      const displayValue = getDisplayValue(block, value);
-      fields.push({
-        id: fieldId,
-        label: block.label,
-        value,
-        displayValue,
-        emoji: block.options?.[0]?.emoji ?? undefined,
-      });
-    }
-    if (fields.length > 0) {
-      sections.push({
-        id: sec.id,
-        title: sec.title,
-        icon: sec.icon ?? "📋",
-        fields,
-      });
-    }
-  }
-  return sections;
-}
-
-function buildSectionsFromSteps(
-  schema: FormSchema,
-  formData: FormData
-): PreviewSection[] {
-  const visibleSteps = getVisibleSteps(schema, formData);
-  const sections: PreviewSection[] = [];
-  for (const step of visibleSteps) {
-    const visibleBlocks = getVisibleBlocks(step, formData).filter(
-      (b) =>
-        INPUT_BLOCK_TYPES.has(b.type) &&
-        b.type !== "preview_summary"
-    );
-    if (visibleBlocks.length === 0) continue;
-    const fields: PreviewField[] = visibleBlocks.map((block) => ({
-      id: block.id,
-      label: block.label,
-      value: formData[block.id],
-      displayValue: getDisplayValue(block, formData[block.id]),
-      emoji: block.options?.[0]?.emoji ?? undefined,
-    }));
-    sections.push({
-      id: step.id,
-      title: step.title,
-      icon: step.icon ?? "📋",
-      fields,
-    });
-  }
-  return sections;
-}
-
-function getTotalInputBlocks(schema: FormSchema, formData: FormData): number {
-  let count = 0;
-  const steps = getVisibleSteps(schema, formData);
-  for (const step of steps) {
-    count += getVisibleBlocks(step, formData).filter(
-      (b) => INPUT_BLOCK_TYPES.has(b.type) && b.type !== "preview_summary"
-    ).length;
-  }
-  return count;
-}
-
-function getFilledInputBlocks(schema: FormSchema, formData: FormData): number {
-  let count = 0;
-  const steps = getVisibleSteps(schema, formData);
-  for (const step of steps) {
-    for (const block of getVisibleBlocks(step, formData)) {
-      if (!INPUT_BLOCK_TYPES.has(block.type) || block.type === "preview_summary") continue;
-      const v = formData[block.id];
-      if (v != null && v !== "" && (!Array.isArray(v) || v.length > 0)) count++;
-    }
-  }
-  return count;
-}
+import {
+  buildSummarySections,
+  buildSummarySectionsFromConfig,
+  getFormCompleteness,
+} from "../../utils/summaryDisplay";
 
 interface PreviewSummaryBlockProps {
   schema: FormSchema;
@@ -154,13 +38,11 @@ export function PreviewSummaryBlock({
     config.sections.length > 0;
 
   const sections = useConfigSections
-    ? buildSectionsFromConfig(schema, formData, config)
-    : buildSectionsFromSteps(schema, formData);
+    ? buildSummarySectionsFromConfig(schema, formData, config)
+    : buildSummarySections(schema, formData);
 
-  const totalFields = getTotalInputBlocks(schema, formData);
-  const filledFields = getFilledInputBlocks(schema, formData);
-  const completeness =
-    totalFields === 0 ? 0 : Math.round((filledFields / totalFields) * 100);
+  const { total: totalFields, filled: filledFields, percentage: completeness } =
+    getFormCompleteness(schema, formData);
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -196,27 +78,27 @@ export function PreviewSummaryBlock({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {section.fields.map((field, fieldIndex) => (
-              <div key={field.id}>
+            {section.entries.map((entry, entryIndex) => (
+              <div key={entry.id}>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      {field.emoji && (
-                        <span className="text-base">{field.emoji}</span>
+                      {entry.emoji && (
+                        <span className="text-base">{entry.emoji}</span>
                       )}
                       <span className="text-sm font-medium text-muted-foreground">
-                        {field.label}
+                        {entry.label}
                       </span>
                     </div>
                     <p className="text-base font-medium break-words">
-                      {field.displayValue}
+                      {entry.displayValue}
                     </p>
                   </div>
                   {onEdit && (
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => onEdit(field.id)}
+                      onClick={() => onEdit(entry.id)}
                       className="shrink-0"
                     >
                       <Edit2 className="h-4 w-4" />
@@ -224,7 +106,7 @@ export function PreviewSummaryBlock({
                     </Button>
                   )}
                 </div>
-                {fieldIndex < section.fields.length - 1 && (
+                {entryIndex < section.entries.length - 1 && (
                   <Separator className="mt-4" />
                 )}
               </div>

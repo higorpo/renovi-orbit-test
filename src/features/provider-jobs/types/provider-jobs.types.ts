@@ -1,4 +1,5 @@
 import type { MatchProviderJobsBody } from "../../../../supabase/functions/match-provider-jobs/types";
+import type { FormSchema } from "@/features/dynamic-form";
 
 /** Request params for match-provider-jobs edge function. Re-exported from edge function types. */
 export type FetchProviderJobsParams = MatchProviderJobsBody;
@@ -30,20 +31,6 @@ export interface ProviderJobItem {
   proposal_count: number;
   exact_area_match: boolean;
   created_at: string;
-}
-
-export interface FormSchema {
-  version?: string;
-  fields?: FormSchemaField[];
-  [key: string]: unknown;
-}
-
-export interface FormSchemaField {
-  id: string;
-  type: string;
-  label: string;
-  options?: Array<{ label: string; value: string }>;
-  [key: string]: unknown;
 }
 
 export interface ProviderServiceSummary {

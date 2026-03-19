@@ -4,7 +4,7 @@ import { getPersistSession } from '@/features/auth/utils/persistSession'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_OR_ANON_KEY
-const isProduction = import.meta.env.PROD
+// const isProduction = import.meta.env.PROD
 
 /** Anon key used for Edge Function calls when user is not logged in (same as client). */
 export function getSupabaseAnonKey(): string {
@@ -57,6 +57,6 @@ function createAuthStorage(): Storage {
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: createAuthStorage(),
-    debug: !isProduction,
+    debug: false,
   }
 })
