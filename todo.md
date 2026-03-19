@@ -22,8 +22,6 @@ Urgentes:
 - deu erro para enviar imagens mesmo elas não tendo conteúdo errado
 
 - testes unitários em todo o módulo de trabalhos do prestador de serviços.
-- quando clicar na foto expandir
-- shimmer effect quando carregando trabalho
 
 - Quando enviar proposta ou entrar para ver detalhes de um pedido fora da área, perguntar ao prestador se ele quer adicionar aquela área
 
