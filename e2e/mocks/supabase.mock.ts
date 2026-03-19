@@ -449,7 +449,7 @@ export async function seedAuthSessionUniversal(
         window.sessionStorage.setItem(key, value);
       });
       window.localStorage.setItem("persist_session", "true");
-      window.localStorage.setItem("renovi_persist_session", "true");
+      window.localStorage.setItem("orbit_persist_session", "true");
     },
     payload,
     keys

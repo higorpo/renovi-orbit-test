@@ -141,7 +141,7 @@ export const test = base.extend<AuthFixtures>({
             window.sessionStorage.setItem(k, payload);
           });
           window.localStorage.setItem("persist_session", "true");
-          window.localStorage.setItem("renovi_persist_session", "true");
+          window.localStorage.setItem("orbit_persist_session", "true");
         },
         { storageKeys: keys, payload: payloadStr }
       );

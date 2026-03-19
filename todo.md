@@ -12,7 +12,6 @@ Urgentes:
 - bug no endereço da agronomica, não está salvando o endereço certo.
 - renomear  rota para portugues de meus servicos
 - tela de onboarding do prestador
-- caching persistente
 - IA sugerir nome do pedido para mostrar na tela de trabalhos. Hoje ele só faz: "Pedido + ${serviço}"
 - Ajustar algoritmo de matching para ter pesos em relação a várias variáveis para calcular quais serviços seriam mais interessantes de mostrar primeiro.
 

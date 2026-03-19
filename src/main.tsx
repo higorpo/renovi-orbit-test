@@ -1,8 +1,10 @@
 import { StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router/dom'
-import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@tanstack/react-query'
+import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query'
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import { initSentry, captureException } from '@/lib/sentry'
+import { createIDBPersister, PERSISTED_CACHE_MAX_AGE_MS } from '@/lib/queryClient'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import './index.css'
 import { router } from './router'
@@ -31,9 +33,13 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 60 * 1000,
       refetchOnWindowFocus: false,
+      // Keep cache at least as long as persisted data so hydration is not discarded by GC
+      gcTime: PERSISTED_CACHE_MAX_AGE_MS,
     },
   },
 })
+
+const persister = createIDBPersister()
 
 const RootFallback = () => (
   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
@@ -44,11 +50,14 @@ const RootFallback = () => (
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{ persister, maxAge: PERSISTED_CACHE_MAX_AGE_MS }}
+      >
         <Suspense fallback={<RootFallback />}>
           <RouterProvider router={router} />
         </Suspense>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </ErrorBoundary>
   </StrictMode>
 )
