@@ -1,4 +1,5 @@
-import { useLocation, Link } from "react-router";
+import type { ComponentType } from "react";
+import { Link } from "react-router";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import {
   Tag,
   Timer,
   Briefcase,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getServiceCardStyle } from "@/features/request-quote";
@@ -22,6 +24,7 @@ import { useServiceRequestPhotoUrls } from "@/features/request-quote";
 import { formatDistance } from "@/lib/formatDistance";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
 import { FormResponsesSummary } from "./FormResponsesSummary";
+import { useProviderJobDetail } from "../hooks/useProviderJobDetail";
 import { MAX_PROPOSALS_PER_REQUEST } from "../types/provider-jobs.types";
 import type { ProviderJobItem } from "../types/provider-jobs.types";
 
@@ -96,7 +99,7 @@ function PhotoGallery({ photos }: { photos: string[] }) {
 
 function MetadataBadges({ job }: { job: ProviderJobItem }) {
   const items: Array<{
-    icon: React.ComponentType<{ className?: string }>;
+    icon: ComponentType<{ className?: string }>;
     label: string;
     className?: string;
   }> = [];
@@ -135,7 +138,7 @@ function MetadataBadges({ job }: { job: ProviderJobItem }) {
   );
 }
 
-function JobDetailContent({ job }: { job: ProviderJobItem }) {
+export function JobDetailContent({ job }: { job: ProviderJobItem }) {
   const serviceStyle = getServiceCardStyle({
     icon_key: job.service_icon_key,
     color_key: job.service_color_key,
@@ -295,7 +298,7 @@ function JobDetailContent({ job }: { job: ProviderJobItem }) {
   );
 }
 
-function JobNotFound() {
+export function JobDetailNotFound() {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-dashed bg-muted/20 px-6 py-16 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
@@ -315,22 +318,56 @@ function JobNotFound() {
   );
 }
 
-export function JobDetailPage() {
-  const location = useLocation();
-  const job = (location.state as { job?: ProviderJobItem } | null)?.job ?? null;
+function JobDetailBackLink() {
+  return (
+    <div className="mb-4">
+      <Button variant="ghost" size="sm" asChild className="gap-1.5">
+        <Link to="/dashboard/jobs">
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          Voltar para Trabalhos
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
+export function JobDetailPage({ jobId }: { jobId: string }) {
+  const { job, isLoading, isError, refetch } = useProviderJobDetail(jobId);
 
   return (
     <div className="container max-w-3xl px-4 py-6">
-      <div className="mb-4">
-        <Button variant="ghost" size="sm" asChild className="gap-1.5">
-          <Link to="/dashboard/jobs">
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            Voltar para Trabalhos
-          </Link>
-        </Button>
-      </div>
+      <JobDetailBackLink />
 
-      {job ? <JobDetailContent job={job} /> : <JobNotFound />}
+      {isLoading && (
+        <div
+          className="flex justify-center py-16"
+          aria-busy="true"
+          aria-label="Carregando detalhes do trabalho"
+        >
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {isError && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            Não foi possível carregar este trabalho.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            type="button"
+            onClick={() => refetch()}
+          >
+            Tentar novamente
+          </Button>
+        </div>
+      )}
+
+      {!isLoading && !isError && job && <JobDetailContent job={job} />}
+
+      {!isLoading && !isError && !job && <JobDetailNotFound />}
     </div>
   );
 }

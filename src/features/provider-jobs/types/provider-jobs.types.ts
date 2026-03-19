@@ -77,3 +77,9 @@ export interface ProviderJobsFilterState {
 }
 
 export const MAX_PROPOSALS_PER_REQUEST = 3;
+
+/** Navigation state when opening a job from the list (sheet + URL). */
+export interface JobDetailLocationState {
+  job?: ProviderJobItem;
+  jobDetailPresentation?: "sheet";
+}

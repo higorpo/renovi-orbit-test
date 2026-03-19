@@ -14,6 +14,7 @@ import { getServiceCardStyle, useServiceRequestPhotoUrls } from "@/features/requ
 import { ImagePreviewStrip } from "@/components/ImagePreviewStrip";
 import { formatDistance } from "@/lib/formatDistance";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
+import type { JobDetailLocationState } from "../types/provider-jobs.types";
 import type { ProviderJobItem } from "../types/provider-jobs.types";
 import { MAX_PROPOSALS_PER_REQUEST } from "../types/provider-jobs.types";
 
@@ -26,7 +27,10 @@ export interface JobCardProps {
 
 export function JobCard({ job, className }: JobCardProps) {
   const detailPath = `/dashboard/jobs/${job.id}`;
-  const linkState = { job };
+  const linkState: JobDetailLocationState = {
+    job,
+    jobDetailPresentation: "sheet",
+  };
   const { urls: photoUrls, isLoading: photoUrlsLoading } =
     useServiceRequestPhotoUrls(job.photos ?? null);
 

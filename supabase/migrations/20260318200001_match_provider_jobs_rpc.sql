@@ -22,7 +22,8 @@ create or replace function public.match_provider_jobs(
   p_service_id uuid default null,
   p_sort_mode text default 'nearest',
   p_page_size integer default 20,
-  p_page integer default 1
+  p_page integer default 1,
+  p_service_request_id uuid default null
 )
 returns jsonb
 language plpgsql
@@ -124,6 +125,8 @@ begin
     where
       sr.status = 'open'
       and sr.location is not null
+      and (p_service_request_id is null or sr.id = p_service_request_id)
+      and (p_service_request_id is not null or st_dwithin(sr.location, v_provider_point, p_radius_km * 1000))
       and (p_service_id is null or sr.service_id = p_service_id)
       and (
         sr.service_id in (
@@ -143,7 +146,6 @@ begin
         join platform_neighborhoods pn on pn.id = psan.neighborhood_id
         where psan.provider_id = p_provider_id
       )
-      and st_dwithin(sr.location, v_provider_point, p_radius_km * 1000)
       and sr.id not in (select service_request_id from provider_proposed_ids)
       and coalesce(pc_agg.active_count, 0) < 3
   ),
@@ -205,10 +207,10 @@ begin
 end;
 $$;
 
-comment on function public.match_provider_jobs is 'Returns paginated, ranked service requests matching a provider''s services and area. Used by the match-provider-jobs Edge Function.';
+comment on function public.match_provider_jobs is 'Returns paginated, ranked service requests matching a provider''s services and area. Optional p_service_request_id returns that row only if eligible (radius filter skipped). Used by the match-provider-jobs Edge Function.';
 
 -- Restrict execution to service_role only (called from Edge Function with service role key).
 -- This prevents authenticated users (clients) from bypassing the Edge Function's provider role check.
-revoke execute on function public.match_provider_jobs(uuid, double precision, double precision, integer, uuid, text, integer, integer) from anon;
-revoke execute on function public.match_provider_jobs(uuid, double precision, double precision, integer, uuid, text, integer, integer) from authenticated;
+revoke execute on function public.match_provider_jobs(uuid, double precision, double precision, integer, uuid, text, integer, integer, uuid) from anon;
+revoke execute on function public.match_provider_jobs(uuid, double precision, double precision, integer, uuid, text, integer, integer, uuid) from authenticated;
 

@@ -5,3 +5,7 @@
 
 export { ProviderJobsPage } from "./components/ProviderJobsPage";
 export { JobDetailPage } from "./components/JobDetailPage";
+export {
+  ProviderJobsShell,
+  ProviderJobsRouteSlot,
+} from "./components/ProviderJobsShell";

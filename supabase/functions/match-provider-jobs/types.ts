@@ -16,4 +16,9 @@ export interface MatchProviderJobsBody {
   page?: number;
   /** Page size. Clamped to [1, 50] by RPC. Default 20. */
   page_size?: number;
+  /**
+   * When set, returns at most that service request if the provider is eligible.
+   * Geographic radius is not applied for this lookup (direct link / refresh).
+   */
+  service_request_id?: string | null;
 }
