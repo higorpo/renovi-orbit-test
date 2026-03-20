@@ -186,6 +186,7 @@ as $$
 declare
   v_provider_id uuid;
   v_role text;
+  v_service_request_status text;
   v_proposal_id uuid;
   v_previous_proposal_id uuid;
   v_previous_proposal_status text;
@@ -206,6 +207,19 @@ begin
 
   if p_service_request_id is null then
     raise exception 'Service request is required';
+  end if;
+
+  select sr.status
+  into v_service_request_status
+  from public.service_requests sr
+  where sr.id = p_service_request_id;
+
+  if v_service_request_status is null then
+    raise exception 'Service request not found';
+  end if;
+
+  if v_service_request_status <> 'open' then
+    raise exception 'This service request is not open for proposals';
   end if;
 
   if p_proposed_amount is null or p_proposed_amount <= 0 then
