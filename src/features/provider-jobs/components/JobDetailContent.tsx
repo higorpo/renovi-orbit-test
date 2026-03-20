@@ -20,6 +20,7 @@ import { formatDistance } from "@/lib/formatDistance";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
 import { cn } from "@/lib/utils";
 import { useProviderJobQuestionComposer } from "../hooks/useProviderJobQuestionComposer";
+import { useProviderProposalComposer } from "../hooks/useProviderProposalComposer";
 import { MAX_PROPOSALS_PER_REQUEST } from "../types/provider-jobs.types";
 import type { ProviderJobItem } from "../types/provider-jobs.types";
 import {
@@ -32,6 +33,7 @@ import { JobDetailPhotoGallery } from "./JobDetailPhotoGallery";
 import { JobQuestionComposerDialog } from "./JobQuestionComposerDialog";
 import { JobQuestionPromptCard } from "./JobQuestionPromptCard";
 import { JobQuestionsFeed } from "./JobQuestionsFeed";
+import { ProviderProposalComposerDialog } from "./ProviderProposalComposerDialog";
 import { SuggestedItemsInfo } from "./SuggestedItemsInfo";
 import { URGENCY_CONFIG } from "./JobDetail.constants";
 
@@ -61,6 +63,24 @@ export function JobDetailContent({
     closeComposer,
     submitQuestion,
   } = useProviderJobQuestionComposer(job.id);
+  const {
+    isOpen: isProposalOpen,
+    isSubmitting: isProposalSubmitting,
+    isPricingLoading,
+    priceInput,
+    descriptionDraft,
+    photos,
+    pricing,
+    maxDescriptionLength,
+    maxPhotos,
+    openComposer: openProposalComposer,
+    closeComposer: closeProposalComposer,
+    setPriceInput,
+    setDescriptionDraft,
+    addPhotos,
+    removePhoto,
+    submitProposal,
+  } = useProviderProposalComposer(job.id);
 
   const urgencyConfig = job.urgency ? URGENCY_CONFIG[job.urgency] : null;
 
@@ -243,6 +263,28 @@ export function JobDetailContent({
               await submitQuestion();
             }}
           />
+
+          <ProviderProposalComposerDialog
+            open={isProposalOpen}
+            isSubmitting={isProposalSubmitting}
+            isPricingLoading={isPricingLoading}
+            priceInput={priceInput}
+            descriptionDraft={descriptionDraft}
+            photos={photos}
+            pricing={pricing}
+            maxDescriptionLength={maxDescriptionLength}
+            maxPhotos={maxPhotos}
+            onOpenChange={(open) => {
+              if (!open) closeProposalComposer();
+            }}
+            onPriceInputChange={setPriceInput}
+            onDescriptionDraftChange={setDescriptionDraft}
+            onPhotoAdd={addPhotos}
+            onPhotoRemove={removePhoto}
+            onSubmit={async () => {
+              await submitProposal();
+            }}
+          />
         </CardContent>
       </Card>
 
@@ -264,6 +306,7 @@ export function JobDetailContent({
           size="icon"
           className="h-14 w-14 rounded-full shadow-lg"
           aria-label="Fazer orçamento"
+          onClick={() => openProposalComposer()}
         >
           <CircleDollarSign className="h-6 w-6" aria-hidden />
         </Button>
@@ -286,7 +329,12 @@ export function JobDetailContent({
           <HelpCircle className="h-4 w-4" aria-hidden />
           Quero fazer uma pergunta
         </Button>
-        <Button type="button" variant="secondary" className="w-full gap-2">
+        <Button
+          type="button"
+          variant="secondary"
+          className="w-full gap-2"
+          onClick={() => openProposalComposer()}
+        >
           <Send className="h-4 w-4" aria-hidden />
           Estou pronto para enviar uma proposta
         </Button>

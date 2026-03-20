@@ -10,6 +10,7 @@ export { JobDetailSheet } from "./JobDetailSheet";
 export { JobQuestionComposerDialog } from "./JobQuestionComposerDialog";
 export { JobQuestionPromptCard } from "./JobQuestionPromptCard";
 export { JobQuestionsFeed } from "./JobQuestionsFeed";
+export { ProviderProposalComposerDialog } from "./ProviderProposalComposerDialog";
 export { JobsEmptyState } from "./JobsEmptyState";
 export { JobsErrorState } from "./JobsErrorState";
 export { JobsFiltersBar } from "./JobsFiltersBar";

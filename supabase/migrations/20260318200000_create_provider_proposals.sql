@@ -6,6 +6,13 @@ create table if not exists public.provider_proposals (
   id uuid primary key default gen_random_uuid(),
   provider_id uuid not null references public.profiles (id) on delete cascade,
   service_request_id uuid not null references public.service_requests (id) on delete cascade,
+  proposed_amount numeric(10,2) not null check (proposed_amount > 0),
+  proposal_description text not null check (char_length(trim(proposal_description)) > 0 and char_length(trim(proposal_description)) <= 1200),
+  photos text[] not null default '{}'::text[],
+  tax_rate numeric(6,4) not null check (tax_rate >= 0 and tax_rate <= 1),
+  tax_amount numeric(10,2) not null check (tax_amount >= 0),
+  final_amount numeric(10,2) not null check (final_amount >= 0),
+  pricing_signature text not null,
   status text not null default 'submitted'
     check (status in ('submitted', 'accepted', 'rejected', 'withdrawn')),
   created_at timestamptz not null default now(),
@@ -15,6 +22,13 @@ create table if not exists public.provider_proposals (
 comment on table public.provider_proposals is 'Proposals from providers on open service requests; used for matching eligibility and future proposal workflow.';
 comment on column public.provider_proposals.provider_id is 'The provider who submitted the proposal.';
 comment on column public.provider_proposals.service_request_id is 'The service request this proposal is for.';
+comment on column public.provider_proposals.proposed_amount is 'Amount informed by provider before platform fee discount.';
+comment on column public.provider_proposals.proposal_description is 'Proposal details written by provider.';
+comment on column public.provider_proposals.photos is 'Storage paths of proposal images in provider-proposals bucket.';
+comment on column public.provider_proposals.tax_rate is 'Applied platform fee rate used in calculation.';
+comment on column public.provider_proposals.tax_amount is 'Amount discounted as platform fee.';
+comment on column public.provider_proposals.final_amount is 'Final amount the provider receives after fee discount.';
+comment on column public.provider_proposals.pricing_signature is 'HMAC signature for proposal pricing fields to prevent payload tampering.';
 comment on column public.provider_proposals.status is 'Lifecycle: submitted → accepted | rejected | withdrawn.';
 
 -- One active (non-withdrawn) proposal per provider per request.
@@ -37,12 +51,33 @@ create policy "Providers read own proposals"
 
 create policy "Providers insert own proposals"
   on public.provider_proposals for insert
-  with check (auth.uid() = provider_id);
+  with check (
+    auth.uid() = provider_id
+    and exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid()
+        and p.role = 'provider'
+    )
+  );
 
 create policy "Providers update own proposals"
   on public.provider_proposals for update
-  using (auth.uid() = provider_id)
-  with check (auth.uid() = provider_id);
+  using (
+    auth.uid() = provider_id
+    and exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid()
+        and p.role = 'provider'
+    )
+  )
+  with check (
+    auth.uid() = provider_id
+    and exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid()
+        and p.role = 'provider'
+    )
+  );
 
 create policy "Clients read proposals on own requests"
   on public.provider_proposals for select
@@ -63,3 +98,63 @@ create policy "Admins read all proposals"
 create trigger provider_proposals_updated_at
   before update on public.provider_proposals
   for each row execute procedure public.set_updated_at();
+
+-- Private storage bucket for proposal images.
+-- Path convention: providers/{provider_id}/proposals/{service_request_id}/{filename}
+insert into storage.buckets (id, name, public)
+values ('provider-proposals', 'provider-proposals', false)
+on conflict (id) do update set
+  name = excluded.name,
+  public = excluded.public;
+
+create policy "Providers can insert own proposal images"
+  on storage.objects for insert
+  to authenticated
+  with check (
+    bucket_id = 'provider-proposals'
+    and (storage.foldername(name))[1] = 'providers'
+    and (storage.foldername(name))[2] = auth.uid()::text
+  );
+
+create policy "Providers can update own proposal images"
+  on storage.objects for update
+  to authenticated
+  using (
+    bucket_id = 'provider-proposals'
+    and (storage.foldername(name))[1] = 'providers'
+    and (storage.foldername(name))[2] = auth.uid()::text
+  )
+  with check (
+    bucket_id = 'provider-proposals'
+    and (storage.foldername(name))[1] = 'providers'
+    and (storage.foldername(name))[2] = auth.uid()::text
+  );
+
+create policy "Providers can delete own proposal images"
+  on storage.objects for delete
+  to authenticated
+  using (
+    bucket_id = 'provider-proposals'
+    and (storage.foldername(name))[1] = 'providers'
+    and (storage.foldername(name))[2] = auth.uid()::text
+  );
+
+create policy "Providers clients and admins can read proposal images"
+  on storage.objects for select
+  using (
+    bucket_id = 'provider-proposals'
+    and (
+      (storage.foldername(name))[2] = auth.uid()::text
+      or exists (
+        select 1
+        from public.service_requests sr
+        where sr.id::text = (storage.foldername(name))[4]
+          and sr.client_id = auth.uid()
+      )
+      or exists (
+        select 1 from public.profiles p
+        where p.id = auth.uid()
+          and p.role = 'admin'
+      )
+    )
+  );

@@ -324,6 +324,27 @@ export type Database = {
           },
         ]
       }
+      platform_constants: {
+        Row: {
+          created_at: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          created_at?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       platform_neighborhoods: {
         Row: {
           city_id: string
@@ -600,26 +621,47 @@ export type Database = {
       provider_proposals: {
         Row: {
           created_at: string
+          final_amount: number
           id: string
+          photos: string[]
+          pricing_signature: string
+          proposal_description: string
+          proposed_amount: number
           provider_id: string
           service_request_id: string
           status: string
+          tax_amount: number
+          tax_rate: number
           updated_at: string
         }
         Insert: {
           created_at?: string
+          final_amount: number
           id?: string
+          photos?: string[]
+          pricing_signature: string
+          proposal_description: string
+          proposed_amount: number
           provider_id: string
           service_request_id: string
           status?: string
+          tax_amount: number
+          tax_rate: number
           updated_at?: string
         }
         Update: {
           created_at?: string
+          final_amount?: number
           id?: string
+          photos?: string[]
+          pricing_signature?: string
+          proposal_description?: string
+          proposed_amount?: number
           provider_id?: string
           service_request_id?: string
           status?: string
+          tax_amount?: number
+          tax_rate?: number
           updated_at?: string
         }
         Relationships: [
@@ -1123,9 +1165,32 @@ export type Database = {
             }
             Returns: string
           }
+      calculate_provider_service_pricing: {
+        Args: { p_original_amount: number; p_tax_key?: string }
+        Returns: {
+          final_amount: number
+          original_amount: number
+          pricing_signature: string
+          tax_amount: number
+          tax_rate: number
+        }[]
+      }
       can_provider_ask_question: {
         Args: { p_provider_id: string; p_service_request_id: string }
         Returns: boolean
+      }
+      create_provider_proposal: {
+        Args: {
+          p_final_amount: number
+          p_photos: string[]
+          p_pricing_signature: string
+          p_proposal_description: string
+          p_proposed_amount: number
+          p_service_request_id: string
+          p_tax_amount: number
+          p_tax_rate: number
+        }
+        Returns: Json
       }
       create_provider_service_request_question: {
         Args: { p_question: string; p_service_request_id: string }
@@ -1164,6 +1229,15 @@ export type Database = {
         | { Args: { table_name: string }; Returns: string }
       enablelongtransactions: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      generate_provider_pricing_signature: {
+        Args: {
+          p_final_amount: number
+          p_original_amount: number
+          p_tax_amount: number
+          p_tax_rate: number
+        }
+        Returns: string
+      }
       generate_unique_provider_slug: {
         Args: { full_name: string; in_provider_id: string }
         Returns: string
@@ -1272,6 +1346,10 @@ export type Database = {
         Returns: Json
       }
       gettransactionid: { Args: never; Returns: unknown }
+      list_provider_service_request_questions: {
+        Args: { p_service_request_id: string }
+        Returns: Json
+      }
       longtransactionsenabled: { Args: never; Returns: boolean }
       match_provider_jobs: {
         Args: {
