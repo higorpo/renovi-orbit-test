@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { createProviderJobQuestion } from "../api/providerJobQuestions.api";
 
@@ -9,6 +10,7 @@ interface OpenComposerOptions {
 }
 
 export function useProviderJobQuestionComposer(serviceRequestId: string) {
+  const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [questionDraft, setQuestionDraft] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,13 +55,17 @@ export function useProviderJobQuestionComposer(serviceRequestId: string) {
       }
 
       toast.success("Pergunta enviada com sucesso.");
+      await queryClient.invalidateQueries({
+        queryKey: ["provider-job-questions", serviceRequestId],
+        refetchType: "active",
+      });
       setIsOpen(false);
       setQuestionDraft("");
       return true;
     } finally {
       setIsSubmitting(false);
     }
-  }, [questionDraft, serviceRequestId]);
+  }, [questionDraft, queryClient, serviceRequestId]);
 
   return {
     isOpen,

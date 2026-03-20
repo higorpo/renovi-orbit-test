@@ -4,6 +4,16 @@ import { toast } from "sonner";
 import { useProviderJobQuestionComposer } from "../useProviderJobQuestionComposer";
 import * as providerJobQuestionsApi from "../../api/providerJobQuestions.api";
 
+const { mockInvalidateQueries } = vi.hoisted(() => ({
+  mockInvalidateQueries: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({
+    invalidateQueries: mockInvalidateQueries,
+  }),
+}));
+
 vi.mock("../../api/providerJobQuestions.api", () => ({
   createProviderJobQuestion: vi.fn(),
 }));
@@ -51,6 +61,10 @@ describe("useProviderJobQuestionComposer", () => {
     expect(createProviderJobQuestion).toHaveBeenCalledWith({
       serviceRequestId: "sr-1",
       question: "Há tomada próxima ao local?",
+    });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["provider-job-questions", "sr-1"],
+      refetchType: "active",
     });
     expect(toast.success).toHaveBeenCalledWith("Pergunta enviada com sucesso.");
     expect(result.current.isOpen).toBe(false);

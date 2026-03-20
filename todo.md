@@ -25,8 +25,10 @@ Urgentes:
 - não mostrar trabalhos que eu enviei proposta na tela de trabalhos
 - criar uma tela onde eu possa ver as  perguntas enviadas/propostas feitas.
 
-- provider poder dizer quais dias e horários ele tem disponível para fazer o serviço e  qual o tempo estimado
 - quando proposta aceita e entrar na tela de um trabalho específico, redirecionar para tela do serviço em si.
+- prestadores marcados como "Pioneiros" tem taxa de serviço menor
+
+-cliente tem 48hrs para responder a proposta, se não ela é automaticamente rejeitada
 
 - Quando enviar proposta ou entrar para ver detalhes de um pedido fora da área, perguntar ao prestador se ele quer adicionar aquela área
 
