@@ -17,6 +17,7 @@ import { formatRelativeDate } from "@/lib/formatRelativeDate";
 import type { JobDetailLocationState } from "../types/provider-jobs.types";
 import type { ProviderJobItem } from "../types/provider-jobs.types";
 import { MAX_PROPOSALS_PER_REQUEST } from "../types/provider-jobs.types";
+import { getUrgencyConfig } from "./JobDetail.constants";
 
 const DESCRIPTION_CLAMP = "line-clamp-2 sm:line-clamp-3";
 
@@ -39,11 +40,7 @@ export function JobCard({ job, className }: JobCardProps) {
     color_key: job.service_color_key,
   });
 
-  const urgencyBadge = job.urgency === "high"
-    ? { label: "Urgente", variant: "destructive" as const }
-    : job.urgency === "medium"
-      ? { label: "Média prioridade", variant: "warning" as const }
-      : null;
+  const urgencyBadge = getUrgencyConfig(job.urgency);
 
   return (
     <Card

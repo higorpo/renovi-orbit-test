@@ -14,6 +14,13 @@ export const DURATION_LABELS: Record<EstimatedDurationHintKey, string> = {
   over_30_days: "Mais de 30 dias",
 };
 
+export function getDurationLabel(
+  duration: string | null | undefined,
+): string | null {
+  if (!duration) return null;
+  return DURATION_LABELS[duration as EstimatedDurationHintKey] ?? null;
+}
+
 export const URGENCY_CONFIG: Record<
   string,
   { label: string; variant: "destructive" | "warning" | "default" }
@@ -23,11 +30,37 @@ export const URGENCY_CONFIG: Record<
   low: { label: "Baixa prioridade", variant: "default" },
 };
 
+export function getUrgencyConfig(
+  urgency: string | null | undefined,
+): { label: string; variant: "destructive" | "warning" | "default" } | null {
+  if (!urgency) return null;
+  return URGENCY_CONFIG[urgency] ?? null;
+}
+
 export const COMPLEXITY_LABELS: Record<string, string> = {
   simple: "Simples",
   medium: "Média",
   complex: "Complexo",
 };
+
+export function getComplexityLabel(
+  complexity: string | null | undefined,
+): string | null {
+  if (!complexity) return null;
+  return COMPLEXITY_LABELS[complexity] ?? complexity;
+}
+
+export const PROPOSAL_STATUS_LABELS: Record<string, string> = {
+  submitted: "Aguardando avaliação do cliente",
+  accepted: "Aceita pelo cliente",
+  rejected: "Rejeitada pelo cliente",
+  withdrawn: "Proposta retirada",
+};
+
+export function getProposalStatusLabel(status: string | null | undefined): string {
+  const normalized = (status ?? "submitted").toLowerCase();
+  return PROPOSAL_STATUS_LABELS[normalized] ?? PROPOSAL_STATUS_LABELS.submitted;
+}
 
 export const SUGGESTED_ITEMS_TOOLTIP_TEXT =
   "Itens sugeridos com base no pedido de orçamento do cliente. Eles podem ser utilizados, mas podem estar imprecisos.";

@@ -3,10 +3,9 @@ import { Timer, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ProviderJobItem } from "../types/provider-jobs.types";
 import {
-  COMPLEXITY_LABELS,
-  DURATION_LABELS,
+  getComplexityLabel,
+  getDurationLabel,
 } from "./JobDetail.constants";
-import type { EstimatedDurationHintKey } from "supabase/functions/generate-smart-description/allowedValues";
 
 export function JobDetailMetadataBadges({ job }: { job: ProviderJobItem }) {
   const items: Array<{
@@ -15,22 +14,19 @@ export function JobDetailMetadataBadges({ job }: { job: ProviderJobItem }) {
     className?: string;
   }> = [];
 
-  if (
-    job.estimated_duration_hint &&
-    DURATION_LABELS[job.estimated_duration_hint as EstimatedDurationHintKey]
-  ) {
+  const durationLabel = getDurationLabel(job.estimated_duration_hint);
+  if (durationLabel) {
     items.push({
       icon: Timer,
-      label:
-        DURATION_LABELS[job.estimated_duration_hint as EstimatedDurationHintKey] +
-        " (aprox.)",
+      label: `${durationLabel} (aprox.)`,
     });
   }
 
-  if (job.scope_complexity) {
+  const complexityLabel = getComplexityLabel(job.scope_complexity);
+  if (complexityLabel) {
     items.push({
       icon: Wrench,
-      label: `Complexidade: ${COMPLEXITY_LABELS[job.scope_complexity] ?? job.scope_complexity}`,
+      label: `Complexidade: ${complexityLabel}`,
     });
   }
 

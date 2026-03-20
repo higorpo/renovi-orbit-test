@@ -29,7 +29,7 @@ import { ProviderProposalComposerDialog } from "./ProviderProposalComposerDialog
 import { ProviderProposalSummaryCard } from "./ProviderProposalSummaryCard";
 import { JobDetailRequestSections } from "./JobDetailRequestSections";
 import { JobDetailFloatingActions } from "./JobDetailFloatingActions";
-import { URGENCY_CONFIG } from "./JobDetail.constants";
+import { getUrgencyConfig } from "./JobDetail.constants";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface JobDetailContentProps {
@@ -95,7 +95,7 @@ export function JobDetailContent({
     existingPhotoPaths,
   );
 
-  const urgencyConfig = job.urgency ? URGENCY_CONFIG[job.urgency] : null;
+  const urgencyConfig = getUrgencyConfig(job.urgency);
 
   return (
     <div className="space-y-4 pb-24 md:pb-28">

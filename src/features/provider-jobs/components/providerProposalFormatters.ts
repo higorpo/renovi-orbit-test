@@ -1,3 +1,5 @@
+import { getProposalStatusLabel } from "./JobDetail.constants";
+
 export function formatProposalCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -16,12 +18,5 @@ export function formatProposalDateTime(value: string | null | undefined): string
 }
 
 export function translateProposalStatus(status: string | null): string {
-  const normalized = (status ?? "submitted").toLowerCase();
-  const mapping: Record<string, string> = {
-    submitted: "Aguardando avaliação do cliente",
-    accepted: "Aceita pelo cliente",
-    rejected: "Rejeitada pelo cliente",
-    withdrawn: "Proposta retirada",
-  };
-  return mapping[normalized] ?? "Aguardando avaliação do cliente";
+  return getProposalStatusLabel(status);
 }
