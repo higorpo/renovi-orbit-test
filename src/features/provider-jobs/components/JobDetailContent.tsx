@@ -146,22 +146,25 @@ export function JobDetailContent({
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {urgencyConfig && (
-              <Badge variant={urgencyConfig.variant}>
-                <AlertTriangle className="mr-1 h-3 w-3" aria-hidden />
+              <Badge variant={urgencyConfig.variant} className="gap-1">
+                <AlertTriangle className="h-3 w-3" aria-hidden />
                 {urgencyConfig.label}
               </Badge>
             )}
             {job.exact_area_match && (
               <Badge
                 variant="outline"
-                className="gap-1 border-emerald-200 text-emerald-600 dark:border-emerald-800 dark:text-emerald-400"
+                className="gap-1 border-border/80 font-normal text-muted-foreground"
               >
-                <CheckCircle className="h-3 w-3" aria-hidden />
+                <CheckCircle className="h-3 w-3 opacity-80" aria-hidden />
                 Na sua área
               </Badge>
             )}
-            <Badge variant="secondary">
-              <MessageSquare className="mr-1 h-3 w-3" aria-hidden />
+            <Badge
+              variant="outline"
+              className="gap-1 border-border/80 font-normal text-muted-foreground"
+            >
+              <MessageSquare className="h-3 w-3 opacity-80" aria-hidden />
               {job.proposal_count} de {MAX_PROPOSALS_PER_REQUEST} propostas
             </Badge>
           </div>
