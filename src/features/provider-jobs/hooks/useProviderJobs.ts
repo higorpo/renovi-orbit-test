@@ -1,4 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { Sentry } from "@/lib/sentry";
 import { fetchProviderJobs } from "../api/providerJobs.api";
 import type { SortMode, ProviderJobsResponse } from "../types/provider-jobs.types";
 
@@ -31,15 +32,26 @@ export function useProviderJobs({
       sortMode,
     ],
     queryFn: async ({ pageParam }) => {
-      const { data, error } = await fetchProviderJobs({
-        latitude: latitude!,
-        longitude: longitude!,
-        radius_km: radiusKm,
-        service_id: serviceId,
-        sort_mode: sortMode,
-        page: pageParam as number,
-        page_size: PAGE_SIZE,
-      });
+      const { data, error } = await Sentry.startSpan(
+        { name: "provider_jobs.fetch_list", op: "function" },
+        async (span) => {
+          span?.setAttribute("provider_jobs.page", String(pageParam));
+          span?.setAttribute("provider_jobs.page_size", String(PAGE_SIZE));
+          span?.setAttribute("provider_jobs.sort_mode", sortMode);
+          span?.setAttribute("provider_jobs.has_service_filter", String(Boolean(serviceId)));
+          span?.setAttribute("provider_jobs.radius_km", String(radiusKm));
+
+          return fetchProviderJobs({
+            latitude: latitude!,
+            longitude: longitude!,
+            radius_km: radiusKm,
+            service_id: serviceId,
+            sort_mode: sortMode,
+            page: pageParam as number,
+            page_size: PAGE_SIZE,
+          });
+        }
+      );
       if (error || !data) throw new Error(error ?? "Erro ao buscar trabalhos");
       return data;
     },
