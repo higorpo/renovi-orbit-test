@@ -57,6 +57,7 @@ export function ProviderJobsPage() {
         <div className="mt-4">
           <LocationPermissionBanner
             permissionDenied={location.permissionDenied}
+            insecureContext={location.insecureContext}
             onRetry={location.retry}
           />
         </div>

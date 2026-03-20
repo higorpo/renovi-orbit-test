@@ -20,6 +20,13 @@ create table if not exists public.provider_proposals (
     check (status in ('submitted', 'accepted', 'rejected', 'withdrawn')),
   client_rejection_response text
     check (client_rejection_response is null or char_length(trim(client_rejection_response)) <= 2000),
+  -- Computed deadline for submitted proposals (48 hours from submission).
+  client_response_deadline_at timestamptz generated always as (
+    case
+      when status = 'submitted' then created_at + interval '48 hours'
+      else null
+    end
+  ) stored,
   constraint provider_proposals_rejection_response_required
     check (
       status <> 'rejected'
@@ -47,7 +54,8 @@ comment on column public.provider_proposals.tax_amount is 'Amount discounted as 
 comment on column public.provider_proposals.final_amount is 'Final amount the provider receives after fee discount.';
 comment on column public.provider_proposals.pricing_signature is 'HMAC signature for proposal pricing fields to prevent payload tampering.';
 comment on column public.provider_proposals.status is 'Lifecycle: submitted → accepted | rejected | withdrawn.';
-comment on column public.provider_proposals.client_rejection_response is 'Optional message from the client when rejecting this proposal.';
+comment on column public.provider_proposals.client_rejection_response is 'Message when rejecting (client or system auto-reject after 48h).';
+comment on column public.provider_proposals.client_response_deadline_at is 'When status is submitted, client must respond by this time (created_at + 48 hours).';
 
 -- One active (non-withdrawn) proposal per provider per request.
 create unique index if not exists provider_proposals_unique_active
@@ -65,6 +73,11 @@ create index if not exists provider_proposals_provider_request_latest_idx
 create index if not exists provider_proposals_active_request_idx
   on public.provider_proposals (service_request_id)
   where status not in ('withdrawn', 'rejected');
+
+-- Speeds up scheduled expiry of proposals past the client response window.
+create index if not exists provider_proposals_pending_client_response_idx
+  on public.provider_proposals (created_at)
+  where status = 'submitted';
 
 alter table public.provider_proposals enable row level security;
 
@@ -121,6 +134,78 @@ create policy "Admins read all proposals"
 create trigger provider_proposals_updated_at
   before update on public.provider_proposals
   for each row execute procedure public.set_updated_at();
+
+-- Block accepting a proposal after the 48-hour client response window (covers gaps between cron runs).
+create or replace function public.enforce_provider_proposal_client_response_deadline()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if old.status = 'submitted'
+     and new.status = 'accepted'
+     and old.created_at + interval '48 hours' < now() then
+    raise exception 'Proposal response window (48 hours) has expired';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger provider_proposals_enforce_client_response_deadline
+  before update of status on public.provider_proposals
+  for each row execute procedure public.enforce_provider_proposal_client_response_deadline();
+
+-- Called by pg_cron to auto-reject submitted proposals after 48 hours without client action.
+create or replace function public.expire_stale_provider_proposals()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_updated integer;
+begin
+  update public.provider_proposals
+  set
+    status = 'rejected',
+    client_rejection_response = 'Proposta recusada automaticamente: prazo de 48 horas para resposta expirado.'
+  where status = 'submitted'
+    and created_at + interval '48 hours' < now();
+  get diagnostics v_updated = row_count;
+  return coalesce(v_updated, 0);
+end;
+$$;
+
+revoke all on function public.expire_stale_provider_proposals() from public;
+grant execute on function public.expire_stale_provider_proposals() to postgres;
+
+-- Schedule periodic expiry (Supabase includes pg_cron on hosted projects; local CLI applies it via migration).
+create extension if not exists pg_cron with schema extensions;
+
+grant usage on schema cron to postgres;
+grant all privileges on all tables in schema cron to postgres;
+
+do $cron$
+declare
+  v_jobid integer;
+begin
+  select j.jobid
+  into v_jobid
+  from cron.job j
+  where j.jobname = 'expire_stale_provider_proposals';
+
+  if v_jobid is not null then
+    perform cron.unschedule(v_jobid);
+  end if;
+end;
+$cron$;
+
+select cron.schedule(
+  'expire_stale_provider_proposals',
+  '*/15 * * * *',
+  $$select public.expire_stale_provider_proposals();$$
+);
 
 -- Private storage bucket for proposal images.
 -- Path convention: providers/{provider_id}/proposals/{service_request_id}/{filename}

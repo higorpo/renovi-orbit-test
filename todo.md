@@ -9,6 +9,8 @@ Interessantes de se ter
 - Poder denunciar perguntas feitas em trabalhos por infringir as regras da plataforma
 - Poder denunciar pedidos de orçamento feitos na plataforma por infringir as regras 
 - Criar  mecanismo de descontos de taxas, onde a gente pode definir a % de desconto em cima da taxa original, título e descrição para o desconto e a data de início e fim que o desconto pode ser aplicado.
+- Usar IA para sugerir datas pro profissional na hora de montar o orçamento dele
+- Usar IA para melhorar a descrição do orçamento do profissional
 
 Urgentes:
 - bug no endereço da agronomica, não está salvando o endereço certo.
@@ -21,6 +23,7 @@ Urgentes:
 - remoteconfig para redirecionar para grupo de whatsapp
 - verificar se é possível colocar caching de mutations para caso o usuário esteja sem internet isso ser enviado/sincronizado depois
 - deu erro para enviar imagens mesmo elas não tendo conteúdo errado
+- adicionar google analytics em todos os fluxos
 
 - testes unitários em todo o módulo de trabalhos do prestador de serviços.
 - não mostrar trabalhos que eu enviei proposta na tela de trabalhos
@@ -29,8 +32,6 @@ Urgentes:
 - quando proposta aceita e entrar na tela de um trabalho específico, redirecionar para tela do serviço em si.
 - prestadores marcados como "Pioneiros" tem taxa de serviço menor
 - adicionar formato do android & ios para upload de imagens em todos os uploads da plataforma hoje
-
--cliente tem 48hrs para responder a proposta, se não ela é automaticamente rejeitada
 
 - Quando enviar proposta ou entrar para ver detalhes de um pedido fora da área, perguntar ao prestador se ele quer adicionar aquela área
 

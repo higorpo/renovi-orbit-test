@@ -21,6 +21,7 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
+import { cn } from "@/lib/utils";
 
 interface JobQuestionComposerDialogProps {
   open: boolean;
@@ -84,8 +85,14 @@ export function JobQuestionComposerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-screen w-screen max-w-none rounded-none border-0 p-0 [&>button]:hidden sm:h-auto sm:w-full sm:max-w-lg sm:rounded-lg sm:border sm:p-6">
-        <div className="flex h-full flex-col sm:h-auto">
+      <DialogContent
+        className={cn(
+          "flex flex-col gap-0 overflow-hidden p-0 [&>button]:hidden",
+          "max-sm:inset-0 max-sm:left-0 max-sm:top-0 max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:border-0",
+          "sm:w-full sm:max-w-lg sm:rounded-lg sm:border sm:p-6",
+        )}
+      >
+        <div className="flex min-h-0 flex-1 flex-col sm:h-auto">
         <DialogHeader className="shrink-0 border-b px-4 py-4 text-left sm:border-b-0 sm:px-0 sm:py-0">
           <div className="flex items-center justify-between gap-3">
             <DialogTitle className="flex items-center gap-2">
@@ -148,7 +155,7 @@ export function JobQuestionComposerDialog({
           </p>
         </div>
 
-        <DialogFooter className="shrink-0 flex-row gap-2 border-t px-4 py-3 sm:border-t-0 sm:px-0 sm:py-0 [&>button]:flex-1 sm:[&>button]:flex-none">
+        <DialogFooter className="shrink-0 flex-row gap-2 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:border-t-0 sm:px-0 sm:py-0 sm:pb-0 [&>button]:flex-1 sm:[&>button]:flex-none">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Cancelar
           </Button>
