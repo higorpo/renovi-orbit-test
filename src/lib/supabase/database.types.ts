@@ -620,6 +620,7 @@ export type Database = {
       }
       provider_proposals: {
         Row: {
+          client_rejection_response: string | null
           created_at: string
           final_amount: number
           id: string
@@ -635,6 +636,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          client_rejection_response?: string | null
           created_at?: string
           final_amount: number
           id?: string
@@ -650,6 +652,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          client_rejection_response?: string | null
           created_at?: string
           final_amount?: number
           id?: string

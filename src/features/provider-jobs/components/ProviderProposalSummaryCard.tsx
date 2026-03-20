@@ -15,6 +15,7 @@ import {
   FileText,
   Image as ImageIcon,
   Eye,
+  MessageSquareQuote,
   Percent,
 } from "lucide-react";
 import {
@@ -114,6 +115,9 @@ export function ProviderProposalSummaryCard({
   if (!job.provider_proposal_id) return null;
 
   const proposalStatus = translateProposalStatus(job.provider_proposal_status);
+  const canWithdrawProposal =
+    canEdit &&
+    (job.provider_proposal_status ?? "").toLowerCase() !== "rejected";
 
   return (
     <Card>
@@ -127,15 +131,17 @@ export function ProviderProposalSummaryCard({
               <Button type="button" size="sm" variant="outline" onClick={onEdit} className="w-full sm:w-auto">
                 Editar proposta
               </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="destructive"
-                className="w-full sm:w-auto"
-                onClick={() => setIsWithdrawConfirmOpen(true)}
-              >
-                Retirar proposta
-              </Button>
+              {canWithdrawProposal && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="destructive"
+                  className="w-full sm:w-auto"
+                  onClick={() => setIsWithdrawConfirmOpen(true)}
+                >
+                  Retirar proposta
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -176,6 +182,19 @@ export function ProviderProposalSummaryCard({
             {proposalStatus}
           </p>
         </div>
+
+        {(job.provider_proposal_status ?? "").toLowerCase() === "rejected" &&
+          job.provider_proposal_client_rejection_response?.trim() && (
+            <div className="rounded-lg border border-destructive/25 bg-destructive/5 p-3">
+              <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <MessageSquareQuote className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                Resposta do cliente sobre a rejeição
+              </p>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
+                {job.provider_proposal_client_rejection_response.trim()}
+              </p>
+            </div>
+          )}
 
         {job.provider_proposal_description && (
           <div className="rounded-lg border p-3">
@@ -267,6 +286,12 @@ export function ProviderProposalSummaryCard({
                           <p className="mt-2 text-xs font-medium capitalize text-foreground">
                             Status: {translateProposalStatus(proposal.status)}
                           </p>
+                          {(proposal.status ?? "").toLowerCase() === "rejected" &&
+                            proposal.client_rejection_response?.trim() && (
+                              <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">
+                                Cliente: {proposal.client_rejection_response.trim()}
+                              </p>
+                            )}
                         </div>
                         <Button
                           type="button"
@@ -327,8 +352,21 @@ export function ProviderProposalSummaryCard({
                   </div>
                 </div>
 
+                {(selectedProposal.status ?? "").toLowerCase() === "rejected" &&
+                  selectedProposal.client_rejection_response?.trim() && (
+                    <div className="rounded-lg border border-destructive/25 bg-destructive/5 p-3">
+                      <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                        <MessageSquareQuote className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        Resposta do cliente sobre a rejeição
+                      </p>
+                      <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
+                        {selectedProposal.client_rejection_response.trim()}
+                      </p>
+                    </div>
+                  )}
+
                 <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">Descricao</p>
+                  <p className="text-xs text-muted-foreground">Descrição</p>
                   <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
                     {selectedProposal.proposal_description}
                   </p>

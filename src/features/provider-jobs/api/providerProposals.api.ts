@@ -28,6 +28,7 @@ export interface ProviderProposalHistoryItem {
   photos: string[];
   created_at: string;
   updated_at: string;
+  client_rejection_response: string | null;
 }
 
 const PROVIDER_PROPOSALS_BUCKET = "provider-proposals";
@@ -191,7 +192,7 @@ export async function fetchProviderProposalHistory(
   const { data, error } = await supabase
     .from("provider_proposals")
     .select(
-      "id, proposed_amount, proposal_description, status, tax_rate, tax_amount, final_amount, photos, created_at, updated_at",
+      "id, proposed_amount, proposal_description, status, tax_rate, tax_amount, final_amount, photos, created_at, updated_at, client_rejection_response",
     )
     .eq("service_request_id", serviceRequestId)
     .order("updated_at", { ascending: false });

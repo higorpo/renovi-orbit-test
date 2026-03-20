@@ -15,6 +15,8 @@ create table if not exists public.provider_proposals (
   pricing_signature text not null,
   status text not null default 'submitted'
     check (status in ('submitted', 'accepted', 'rejected', 'withdrawn')),
+  client_rejection_response text
+    check (client_rejection_response is null or char_length(trim(client_rejection_response)) <= 2000),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -30,6 +32,7 @@ comment on column public.provider_proposals.tax_amount is 'Amount discounted as 
 comment on column public.provider_proposals.final_amount is 'Final amount the provider receives after fee discount.';
 comment on column public.provider_proposals.pricing_signature is 'HMAC signature for proposal pricing fields to prevent payload tampering.';
 comment on column public.provider_proposals.status is 'Lifecycle: submitted → accepted | rejected | withdrawn.';
+comment on column public.provider_proposals.client_rejection_response is 'Optional message from the client when rejecting this proposal.';
 
 -- One active (non-withdrawn) proposal per provider per request.
 create unique index if not exists provider_proposals_unique_active

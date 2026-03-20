@@ -38,6 +38,7 @@ export interface ProviderJobItem {
   provider_proposal_description: string | null;
   provider_proposal_photos: string[] | null;
   provider_proposal_status: string | null;
+  provider_proposal_client_rejection_response: string | null;
   exact_area_match: boolean;
   created_at: string;
 }

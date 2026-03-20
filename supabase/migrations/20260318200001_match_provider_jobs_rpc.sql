@@ -169,7 +169,8 @@ begin
       pp_latest.final_amount as provider_final_amount,
       pp_latest.proposal_description as provider_proposal_description,
       pp_latest.photos as provider_proposal_photos,
-      pp_latest.status as provider_proposal_status
+      pp_latest.status as provider_proposal_status,
+      pp_latest.client_rejection_response as provider_proposal_client_rejection_response
     from eligible_base eb
     left join proposal_counts pc_agg on pc_agg.service_request_id = eb.id
     left join lateral (
@@ -181,7 +182,8 @@ begin
         pp.final_amount,
         pp.proposal_description,
         pp.photos,
-        pp.status
+        pp.status,
+        pp.client_rejection_response
       from provider_proposals pp
       where pp.service_request_id = eb.id
         and pp.provider_id = p_provider_id
@@ -242,6 +244,7 @@ begin
           'provider_proposal_description', s.provider_proposal_description,
           'provider_proposal_photos', s.provider_proposal_photos,
           'provider_proposal_status', s.provider_proposal_status,
+          'provider_proposal_client_rejection_response', s.provider_proposal_client_rejection_response,
           'exact_area_match', s.exact_area_match,
           'created_at', s.created_at
         )
