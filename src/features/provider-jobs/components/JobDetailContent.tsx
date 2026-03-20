@@ -34,6 +34,7 @@ import { JobQuestionComposerDialog } from "./JobQuestionComposerDialog";
 import { JobQuestionPromptCard } from "./JobQuestionPromptCard";
 import { JobQuestionsFeed } from "./JobQuestionsFeed";
 import { ProviderProposalComposerDialog } from "./ProviderProposalComposerDialog";
+import { ProviderProposalSummaryCard } from "./ProviderProposalSummaryCard";
 import { SuggestedItemsInfo } from "./SuggestedItemsInfo";
 import { URGENCY_CONFIG } from "./JobDetail.constants";
 
@@ -83,6 +84,7 @@ export function JobDetailContent({
   } = useProviderProposalComposer(job.id);
 
   const urgencyConfig = job.urgency ? URGENCY_CONFIG[job.urgency] : null;
+  const hasActiveProposal = Boolean(job.provider_proposal_id);
 
   return (
     <div className="space-y-4 pb-24 md:pb-28">
@@ -242,27 +244,31 @@ export function JobDetailContent({
             </div>
           )}
 
-          <JobQuestionPromptCard
-            suggestedQuestions={suggestedQuestions}
-            onAskQuestion={() => openComposer()}
-            onUseSuggestedQuestion={(question) =>
-              openComposer({ prefilledQuestion: question })
-            }
-          />
+          {!hasActiveProposal && (
+            <JobQuestionPromptCard
+              suggestedQuestions={suggestedQuestions}
+              onAskQuestion={() => openComposer()}
+              onUseSuggestedQuestion={(question) =>
+                openComposer({ prefilledQuestion: question })
+              }
+            />
+          )}
 
-          <JobQuestionComposerDialog
-            open={isOpen}
-            questionDraft={questionDraft}
-            isSubmitting={isSubmitting}
-            maxQuestionLength={maxQuestionLength}
-            onOpenChange={(open) => {
-              if (!open) closeComposer();
-            }}
-            onQuestionDraftChange={setQuestionDraft}
-            onSubmit={async () => {
-              await submitQuestion();
-            }}
-          />
+          {!hasActiveProposal && (
+            <JobQuestionComposerDialog
+              open={isOpen}
+              questionDraft={questionDraft}
+              isSubmitting={isSubmitting}
+              maxQuestionLength={maxQuestionLength}
+              onOpenChange={(open) => {
+                if (!open) closeComposer();
+              }}
+              onQuestionDraftChange={setQuestionDraft}
+              onSubmit={async () => {
+                await submitQuestion();
+              }}
+            />
+          )}
 
           <ProviderProposalComposerDialog
             open={isProposalOpen}
@@ -289,56 +295,61 @@ export function JobDetailContent({
       </Card>
 
       <JobQuestionsFeed serviceRequestId={job.id} />
+      {hasActiveProposal && <ProviderProposalSummaryCard job={job} />}
 
-      <div
-        className={cn(
-          "fixed right-4 z-40 flex items-center gap-2 md:hidden",
-          isInsideSheet
-            ? "bottom-[calc(env(safe-area-inset-bottom)+1rem)]"
-            : "bottom-[calc(env(safe-area-inset-bottom)+5.5rem)]",
-        )}
-      >
-        <span className="rounded-full border bg-background/95 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/85">
-          Fazer orçamento &gt;
-        </span>
-        <Button
-          type="button"
-          size="icon"
-          className="h-14 w-14 rounded-full shadow-lg"
-          aria-label="Fazer orçamento"
-          onClick={() => openProposalComposer()}
+      {!hasActiveProposal && (
+        <div
+          className={cn(
+            "fixed right-4 z-40 flex items-center gap-2 md:hidden",
+            isInsideSheet
+              ? "bottom-[calc(env(safe-area-inset-bottom)+1rem)]"
+              : "bottom-[calc(env(safe-area-inset-bottom)+5.5rem)]",
+          )}
         >
-          <CircleDollarSign className="h-6 w-6" aria-hidden />
-        </Button>
-      </div>
+          <span className="rounded-full border bg-background/95 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/85">
+            Fazer orçamento &gt;
+          </span>
+          <Button
+            type="button"
+            size="icon"
+            className="h-14 w-14 rounded-full shadow-lg"
+            aria-label="Fazer orçamento"
+            onClick={() => openProposalComposer()}
+          >
+            <CircleDollarSign className="h-6 w-6" aria-hidden />
+          </Button>
+        </div>
+      )}
 
-      <div
-        className={cn(
-          "fixed bottom-5 z-40 hidden rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/85 md:grid md:grid-cols-2 md:gap-3",
-          isInsideSheet
-            ? "right-4 w-[calc(100%-2rem)] sm:w-[calc(36rem-2rem)] md:w-[calc(42rem-2rem)] lg:w-[calc(48rem-2rem)]"
-            : "left-1/2 w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2",
-        )}
-      >
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full gap-2"
-          onClick={() => openComposer()}
+      {!hasActiveProposal && (
+        <div
+          className={cn(
+            "fixed bottom-5 z-40 hidden rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/85 md:grid md:grid-cols-2 md:gap-3",
+            isInsideSheet
+              ? "right-4 w-[calc(100%-2rem)] sm:w-[calc(36rem-2rem)] md:w-[calc(42rem-2rem)] lg:w-[calc(48rem-2rem)]"
+              : "left-1/2 w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2",
+          )}
         >
-          <HelpCircle className="h-4 w-4" aria-hidden />
-          Quero fazer uma pergunta
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          className="w-full gap-2"
-          onClick={() => openProposalComposer()}
-        >
-          <Send className="h-4 w-4" aria-hidden />
-          Estou pronto para enviar uma proposta
-        </Button>
-      </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full gap-2"
+            onClick={() => openComposer()}
+          >
+            <HelpCircle className="h-4 w-4" aria-hidden />
+            Quero fazer uma pergunta
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full gap-2"
+            onClick={() => openProposalComposer()}
+          >
+            <Send className="h-4 w-4" aria-hidden />
+            Estou pronto para enviar uma proposta
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

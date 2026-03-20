@@ -21,6 +21,7 @@ const PROVIDER_PROPOSALS_BUCKET = "provider-proposals";
 const MAX_PROPOSAL_PHOTOS = 5;
 const MAX_PROPOSAL_PHOTO_BYTES = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+const SIGNED_URL_EXPIRY_SEC = 3600;
 
 function isPricingRow(value: unknown): value is ProviderProposalPricing {
   if (!value || typeof value !== "object") return false;
@@ -69,6 +70,24 @@ function validateProposalPhoto(file: File): string | null {
     return "Cada imagem deve ter no máximo 5 MB.";
   }
   return null;
+}
+
+function isStoragePath(item: string): boolean {
+  return (
+    item.length > 0 &&
+    !item.startsWith("http://") &&
+    !item.startsWith("https://")
+  );
+}
+
+export async function getProviderProposalPhotoDisplayUrl(item: string): Promise<string> {
+  if (!isStoragePath(item)) return item;
+  const { data, error } = await supabase.storage
+    .from(PROVIDER_PROPOSALS_BUCKET)
+    .createSignedUrl(item, SIGNED_URL_EXPIRY_SEC);
+
+  if (error) return "";
+  return data?.signedUrl ?? "";
 }
 
 export async function uploadProviderProposalPhotos(

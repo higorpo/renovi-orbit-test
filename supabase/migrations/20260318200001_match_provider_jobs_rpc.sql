@@ -108,6 +108,14 @@ begin
         (st_distance(sr.location, v_provider_point) / 1000.0)::numeric, 1
       ) as distance_km,
       coalesce(pc_agg.active_count, 0)::integer as proposal_count,
+      pp_own.id as provider_proposal_id,
+      pp_own.proposed_amount as provider_proposed_amount,
+      pp_own.tax_rate as provider_tax_rate,
+      pp_own.tax_amount as provider_tax_amount,
+      pp_own.final_amount as provider_final_amount,
+      pp_own.proposal_description as provider_proposal_description,
+      pp_own.photos as provider_proposal_photos,
+      pp_own.status as provider_proposal_status,
       exists (
         select 1
         from provider_service_area_neighborhoods psan
@@ -123,6 +131,10 @@ begin
     join services s on s.id = sr.service_id
     join profiles p on p.id = sr.client_id
     left join proposal_counts pc_agg on pc_agg.service_request_id = sr.id
+    left join provider_proposals pp_own
+      on pp_own.service_request_id = sr.id
+      and pp_own.provider_id = p_provider_id
+      and pp_own.status <> 'withdrawn'
     where
       sr.status = 'open'
       and sr.location is not null
@@ -147,7 +159,10 @@ begin
         join platform_neighborhoods pn on pn.id = psan.neighborhood_id
         where psan.provider_id = p_provider_id
       )
-      and sr.id not in (select service_request_id from provider_proposed_ids)
+      and (
+        p_service_request_id is not null
+        or sr.id not in (select service_request_id from provider_proposed_ids)
+      )
       and coalesce(pc_agg.active_count, 0) < 3
   ),
   total as (
@@ -194,6 +209,14 @@ begin
           'state', s.state_abbreviation,
           'distance_km', s.distance_km,
           'proposal_count', s.proposal_count,
+          'provider_proposal_id', s.provider_proposal_id,
+          'provider_proposed_amount', s.provider_proposed_amount,
+          'provider_tax_rate', s.provider_tax_rate,
+          'provider_tax_amount', s.provider_tax_amount,
+          'provider_final_amount', s.provider_final_amount,
+          'provider_proposal_description', s.provider_proposal_description,
+          'provider_proposal_photos', s.provider_proposal_photos,
+          'provider_proposal_status', s.provider_proposal_status,
           'exact_area_match', s.exact_area_match,
           'created_at', s.created_at
         )

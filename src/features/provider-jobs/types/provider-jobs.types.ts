@@ -30,6 +30,14 @@ export interface ProviderJobItem {
   state: string;
   distance_km: number;
   proposal_count: number;
+  provider_proposal_id: string | null;
+  provider_proposed_amount: number | null;
+  provider_tax_rate: number | null;
+  provider_tax_amount: number | null;
+  provider_final_amount: number | null;
+  provider_proposal_description: string | null;
+  provider_proposal_photos: string[] | null;
+  provider_proposal_status: string | null;
   exact_area_match: boolean;
   created_at: string;
 }
