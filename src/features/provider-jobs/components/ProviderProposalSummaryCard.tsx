@@ -118,19 +118,20 @@ export function ProviderProposalSummaryCard({
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-3">
-          <h3 className="text-base font-semibold text-foreground">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h3 className="w-full text-base font-semibold leading-tight text-foreground sm:w-auto">
             Sua proposta mais recente enviada
           </h3>
           {canEdit && (
-            <div className="flex items-center gap-2">
-              <Button type="button" size="sm" variant="outline" onClick={onEdit}>
+            <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:items-center">
+              <Button type="button" size="sm" variant="outline" onClick={onEdit} className="w-full sm:w-auto">
                 Editar proposta
               </Button>
               <Button
                 type="button"
                 size="sm"
                 variant="destructive"
+                className="w-full sm:w-auto"
                 onClick={() => setIsWithdrawConfirmOpen(true)}
               >
                 Retirar proposta
