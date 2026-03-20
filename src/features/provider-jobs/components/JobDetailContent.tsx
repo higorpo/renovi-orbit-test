@@ -38,6 +38,7 @@ import { ProviderProposalComposerDialog } from "./ProviderProposalComposerDialog
 import { ProviderProposalSummaryCard } from "./ProviderProposalSummaryCard";
 import { SuggestedItemsInfo } from "./SuggestedItemsInfo";
 import { URGENCY_CONFIG } from "./JobDetail.constants";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface JobDetailContentProps {
   job: ProviderJobItem;
@@ -106,6 +107,18 @@ export function JobDetailContent({
 
   return (
     <div className="space-y-4 pb-24 md:pb-28">
+      {job.provider_proposal_status === "rejected" && (
+        <Alert variant="destructive" className="border-destructive/30 bg-destructive/5">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle className="text-sm font-semibold">Proposta rejeitada pelo cliente</AlertTitle>
+          <AlertDescription className="mt-2 space-y-1">
+            <p className="whitespace-pre-wrap text-sm">
+              {job.provider_proposal_client_rejection_response?.trim() ||
+                "O cliente rejeitou a proposta sem deixar um comentário."}
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
       <Card>
         <CardHeader>
           <div className="flex items-start gap-3">
