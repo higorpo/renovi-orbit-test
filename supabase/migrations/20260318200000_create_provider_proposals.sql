@@ -17,6 +17,11 @@ create table if not exists public.provider_proposals (
     check (status in ('submitted', 'accepted', 'rejected', 'withdrawn')),
   client_rejection_response text
     check (client_rejection_response is null or char_length(trim(client_rejection_response)) <= 2000),
+  constraint provider_proposals_rejection_response_required
+    check (
+      status <> 'rejected'
+      or nullif(trim(client_rejection_response), '') is not null
+    ),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
