@@ -28,6 +28,7 @@ Urgentes:
 
 - quando proposta aceita e entrar na tela de um trabalho específico, redirecionar para tela do serviço em si.
 - prestadores marcados como "Pioneiros" tem taxa de serviço menor
+- adicionar formato do android & ios para upload de imagens em todos os uploads da plataforma hoje
 
 -cliente tem 48hrs para responder a proposta, se não ela é automaticamente rejeitada
 
