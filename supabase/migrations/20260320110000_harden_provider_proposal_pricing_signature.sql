@@ -187,6 +187,8 @@ declare
   v_provider_id uuid;
   v_role text;
   v_proposal_id uuid;
+  v_previous_proposal_id uuid;
+  v_previous_proposal_status text;
 begin
   v_provider_id := auth.uid();
   if v_provider_id is null then
@@ -214,6 +216,25 @@ begin
     raise exception 'Proposal description is required';
   end if;
 
+  select pp.id, pp.status
+  into v_previous_proposal_id, v_previous_proposal_status
+  from public.provider_proposals pp
+  where pp.provider_id = v_provider_id
+    and pp.service_request_id = p_service_request_id
+    and pp.status <> 'withdrawn'
+  order by pp.created_at desc
+  limit 1;
+
+  if v_previous_proposal_id is not null and v_previous_proposal_status = 'accepted' then
+    raise exception 'Accepted proposals cannot be replaced';
+  end if;
+
+  if v_previous_proposal_id is not null then
+    update public.provider_proposals
+    set status = 'withdrawn'
+    where id = v_previous_proposal_id;
+  end if;
+
   if exists (
     select 1
     from public.provider_proposals pp
@@ -221,7 +242,7 @@ begin
       and pp.service_request_id = p_service_request_id
       and pp.status <> 'withdrawn'
   ) then
-    raise exception 'Provider already submitted a proposal for this service request';
+    raise exception 'Unable to replace previous active proposal';
   end if;
 
   insert into public.provider_proposals (

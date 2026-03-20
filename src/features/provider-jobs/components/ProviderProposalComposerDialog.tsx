@@ -21,15 +21,19 @@ interface ProviderProposalComposerDialogProps {
   isPricingLoading: boolean;
   priceInput: string;
   descriptionDraft: string;
-  photos: File[];
+  existingPhotoUrls: string[];
+  newPhotos: File[];
+  photosCount: number;
   pricing: ProviderProposalPricing | null;
   maxDescriptionLength: number;
   maxPhotos: number;
+  canSubmit: boolean;
   onOpenChange: (open: boolean) => void;
   onPriceInputChange: (value: string) => void;
   onDescriptionDraftChange: (value: string) => void;
   onPhotoAdd: (files: FileList | null) => void;
-  onPhotoRemove: (index: number) => void;
+  onExistingPhotoRemove: (index: number) => void;
+  onNewPhotoRemove: (index: number) => void;
   onSubmit: () => Promise<void>;
 }
 
@@ -43,15 +47,19 @@ export function ProviderProposalComposerDialog({
   isPricingLoading,
   priceInput,
   descriptionDraft,
-  photos,
+  existingPhotoUrls,
+  newPhotos,
+  photosCount,
   pricing,
   maxDescriptionLength,
   maxPhotos,
+  canSubmit,
   onOpenChange,
   onPriceInputChange,
   onDescriptionDraftChange,
   onPhotoAdd,
-  onPhotoRemove,
+  onExistingPhotoRemove,
+  onNewPhotoRemove,
   onSubmit,
 }: ProviderProposalComposerDialogProps) {
   return (
@@ -165,15 +173,42 @@ export function ProviderProposalComposerDialog({
                 />
                 <span className="mt-2 inline-flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground">
                   <ImagePlus className="h-4 w-4" aria-hidden />
-                  {photos.length}/{maxPhotos} imagens selecionadas
+                  {photosCount}/{maxPhotos} imagens selecionadas
                 </span>
               </div>
-              {photos.length > 0 && (
+              {existingPhotoUrls.length > 0 && (
                 <div className="space-y-2">
-                  {photos.map((file, index) => (
+                  {existingPhotoUrls.map((photoUrl, index) => (
+                    <div
+                      key={`${photoUrl}-${index}`}
+                      className="flex items-center justify-between gap-3 rounded-md border px-3 py-2"
+                    >
+                      <div className="flex min-w-0 items-center gap-3">
+                        <img
+                          src={photoUrl}
+                          alt={`Imagem atual da proposta ${index + 1}`}
+                          className="h-10 w-10 rounded object-cover"
+                        />
+                        <p className="truncate text-sm text-muted-foreground">Imagem atual #{index + 1}</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onExistingPhotoRemove(index)}
+                      >
+                        Remover
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {newPhotos.length > 0 && (
+                <div className="space-y-2">
+                  {newPhotos.map((file, index) => (
                     <div key={`${file.name}-${index}`} className="flex items-center justify-between rounded-md border px-3 py-2">
                       <p className="truncate pr-3 text-sm">{file.name}</p>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => onPhotoRemove(index)}>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => onNewPhotoRemove(index)}>
                         Remover
                       </Button>
                     </div>
@@ -187,7 +222,7 @@ export function ProviderProposalComposerDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               Cancelar
             </Button>
-            <Button type="button" onClick={() => void onSubmit()} disabled={isSubmitting || !pricing}>
+            <Button type="button" onClick={() => void onSubmit()} disabled={isSubmitting || !canSubmit}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />

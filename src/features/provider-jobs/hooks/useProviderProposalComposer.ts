@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   calculateProviderServicePricing,
@@ -38,14 +39,45 @@ function parseCurrencyInputToNumber(value: string): number | null {
   return amount;
 }
 
-export function useProviderProposalComposer(serviceRequestId: string) {
+interface ExistingProposalDraft {
+  proposedAmount: number | null;
+  description: string | null;
+  photos: string[] | null;
+}
+
+interface OpenProposalComposerOptions {
+  mode?: "create" | "edit";
+}
+
+interface EditSnapshot {
+  proposedAmount: number | null;
+  description: string;
+  photos: string[];
+}
+
+function toInitialPriceInput(amount: number | null): string {
+  if (typeof amount !== "number" || amount <= 0) return "";
+  return amount.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+export function useProviderProposalComposer(
+  serviceRequestId: string,
+  existingProposal?: ExistingProposalDraft | null,
+) {
+  const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPricingLoading, setIsPricingLoading] = useState(false);
   const [priceInput, setPriceInput] = useState("");
   const [descriptionDraft, setDescriptionDraft] = useState("");
-  const [photos, setPhotos] = useState<File[]>([]);
+  const [newPhotos, setNewPhotos] = useState<File[]>([]);
+  const [existingPhotoPaths, setExistingPhotoPaths] = useState<string[]>([]);
   const [pricing, setPricing] = useState<ProviderProposalPricing | null>(null);
+  const [composerMode, setComposerMode] = useState<"create" | "edit">("create");
+  const [editSnapshot, setEditSnapshot] = useState<EditSnapshot | null>(null);
   const pricingRequestRef = useRef(0);
 
   const priceAsNumber = useMemo(() => parseCurrencyInputToNumber(priceInput), [priceInput]);
@@ -78,24 +110,57 @@ export function useProviderProposalComposer(serviceRequestId: string) {
     };
   }, [isOpen, priceAsNumber]);
 
-  const openComposer = useCallback(() => {
+  const openComposer = useCallback((options?: OpenProposalComposerOptions) => {
+    const mode = options?.mode ?? "create";
+    if (mode === "edit" && existingProposal) {
+      const initialDescription = existingProposal.description ?? "";
+      const initialPhotos = existingProposal.photos ?? [];
+      const initialPrice = toInitialPriceInput(existingProposal.proposedAmount);
+      setComposerMode("edit");
+      setEditSnapshot({
+        proposedAmount: existingProposal.proposedAmount,
+        description: initialDescription,
+        photos: initialPhotos,
+      });
+      setPriceInput(initialPrice);
+      setDescriptionDraft(initialDescription);
+      setExistingPhotoPaths(initialPhotos);
+      setNewPhotos([]);
+      setPricing(null);
+      setIsPricingLoading(false);
+      setIsOpen(true);
+      return;
+    }
+
+    setComposerMode("create");
+    setEditSnapshot(null);
+    setPriceInput("");
+    setDescriptionDraft("");
+    setExistingPhotoPaths([]);
+    setNewPhotos([]);
+    setPricing(null);
+    setIsPricingLoading(false);
     setIsOpen(true);
-  }, []);
+  }, [existingProposal]);
 
   const closeComposer = useCallback(() => {
     if (isSubmitting) return;
     setIsOpen(false);
+    setComposerMode("create");
+    setEditSnapshot(null);
     setPriceInput("");
     setDescriptionDraft("");
-    setPhotos([]);
+    setExistingPhotoPaths([]);
+    setNewPhotos([]);
     setPricing(null);
     setIsPricingLoading(false);
   }, [isSubmitting]);
 
   const addPhotos = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return;
-    setPhotos((prev) => {
-      const remaining = MAX_PROPOSAL_PHOTOS - prev.length;
+    setNewPhotos((prev) => {
+      const currentCount = prev.length + existingPhotoPaths.length;
+      const remaining = MAX_PROPOSAL_PHOTOS - currentCount;
       if (remaining <= 0) {
         toast.error(`Você pode anexar no máximo ${MAX_PROPOSAL_PHOTOS} imagens.`);
         return prev;
@@ -106,15 +171,41 @@ export function useProviderProposalComposer(serviceRequestId: string) {
       }
       return next;
     });
+  }, [existingPhotoPaths.length]);
+
+  const removeNewPhoto = useCallback((index: number) => {
+    setNewPhotos((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
   }, []);
 
-  const removePhoto = useCallback((index: number) => {
-    setPhotos((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
+  const removeExistingPhoto = useCallback((index: number) => {
+    setExistingPhotoPaths((prev) => prev.filter((_, currentIndex) => currentIndex !== index));
   }, []);
 
   const updatePriceInput = useCallback((value: string) => {
     setPriceInput(maskBudgetInput(value));
   }, []);
+
+  const hasEditedProposal = useMemo(() => {
+    if (composerMode !== "edit" || !editSnapshot) return true;
+
+    const priceChanged = priceAsNumber !== editSnapshot.proposedAmount;
+    const descriptionChanged = descriptionDraft.trim() !== editSnapshot.description.trim();
+    const existingPhotosChanged =
+      existingPhotoPaths.length !== editSnapshot.photos.length ||
+      existingPhotoPaths.some((path, index) => path !== editSnapshot.photos[index]);
+    const hasNewPhotos = newPhotos.length > 0;
+
+    return priceChanged || descriptionChanged || existingPhotosChanged || hasNewPhotos;
+  }, [
+    composerMode,
+    descriptionDraft,
+    editSnapshot,
+    existingPhotoPaths,
+    newPhotos.length,
+    priceAsNumber,
+  ]);
+
+  const canSubmitProposal = Boolean(pricing) && hasEditedProposal;
 
   const submitProposal = useCallback(async (): Promise<boolean> => {
     if (!priceAsNumber) {
@@ -145,7 +236,7 @@ export function useProviderProposalComposer(serviceRequestId: string) {
         setPricing(data);
       }
 
-      const uploadResult = await uploadProviderProposalPhotos(serviceRequestId, photos);
+      const uploadResult = await uploadProviderProposalPhotos(serviceRequestId, newPhotos);
       if (uploadResult.error) {
         toast.error(uploadResult.error);
         return false;
@@ -155,7 +246,7 @@ export function useProviderProposalComposer(serviceRequestId: string) {
         serviceRequestId,
         proposedAmount: effectivePricing.original_amount,
         proposalDescription: cleanDescription,
-        photos: uploadResult.paths,
+        photos: [...existingPhotoPaths, ...uploadResult.paths],
         pricing: effectivePricing,
       });
 
@@ -164,13 +255,29 @@ export function useProviderProposalComposer(serviceRequestId: string) {
         return false;
       }
 
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["provider-job", serviceRequestId],
+          refetchType: "active",
+        }),
+      ]);
+
       toast.success("Proposta enviada com sucesso.");
       closeComposer();
       return true;
     } finally {
       setIsSubmitting(false);
     }
-  }, [closeComposer, descriptionDraft, photos, priceAsNumber, pricing, serviceRequestId]);
+  }, [
+    closeComposer,
+    descriptionDraft,
+    existingPhotoPaths,
+    newPhotos,
+    priceAsNumber,
+    pricing,
+    queryClient,
+    serviceRequestId,
+  ]);
 
   return {
     isOpen,
@@ -178,16 +285,20 @@ export function useProviderProposalComposer(serviceRequestId: string) {
     isPricingLoading,
     priceInput,
     descriptionDraft,
-    photos,
+    existingPhotoPaths,
+    newPhotos,
     pricing,
+    photosCount: existingPhotoPaths.length + newPhotos.length,
     maxDescriptionLength: MAX_PROPOSAL_DESCRIPTION,
     maxPhotos: MAX_PROPOSAL_PHOTOS,
+    canSubmitProposal,
     openComposer,
     closeComposer,
     setPriceInput: updatePriceInput,
     setDescriptionDraft,
     addPhotos,
-    removePhoto,
+    removeExistingPhoto,
+    removeNewPhoto,
     submitProposal,
   };
 }

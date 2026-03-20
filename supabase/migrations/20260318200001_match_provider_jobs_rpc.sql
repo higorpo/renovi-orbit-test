@@ -49,14 +49,24 @@ begin
   v_provider_point := st_setsrid(st_makepoint(p_lng, p_lat), 4326)::geography;
   v_offset := (p_page - 1) * p_page_size;
 
-  -- Pre-aggregate proposal counts and provider-proposed requests once (avoids repeated subqueries per row).
-  with proposal_counts as (
+  with offered_services as (
+    select pos.service_id
+    from provider_offered_services pos
+    where pos.provider_id = p_provider_id
+  ),
+  provider_city_ids as (
+    select distinct pn.city_id
+    from provider_service_area_neighborhoods psan
+    join platform_neighborhoods pn on pn.id = psan.neighborhood_id
+    where psan.provider_id = p_provider_id
+  ),
+  provider_area_names as (
     select
-      pp.service_request_id,
-      count(*)::integer as active_count
-    from provider_proposals pp
-    where pp.status not in ('withdrawn', 'rejected')
-    group by pp.service_request_id
+      pn.city_id,
+      lower(trim(pn.name)) as normalized_name
+    from provider_service_area_neighborhoods psan
+    join platform_neighborhoods pn on pn.id = psan.neighborhood_id
+    where psan.provider_id = p_provider_id
   ),
   provider_proposed_ids as (
     select pp.service_request_id
@@ -64,7 +74,7 @@ begin
     where pp.provider_id = p_provider_id
       and pp.status <> 'withdrawn'
   ),
-  eligible as (
+  eligible_base as (
     select
       sr.id,
       sr.title,
@@ -107,22 +117,11 @@ begin
       round(
         (st_distance(sr.location, v_provider_point) / 1000.0)::numeric, 1
       ) as distance_km,
-      coalesce(pc_agg.active_count, 0)::integer as proposal_count,
-      pp_own.id as provider_proposal_id,
-      pp_own.proposed_amount as provider_proposed_amount,
-      pp_own.tax_rate as provider_tax_rate,
-      pp_own.tax_amount as provider_tax_amount,
-      pp_own.final_amount as provider_final_amount,
-      pp_own.proposal_description as provider_proposal_description,
-      pp_own.photos as provider_proposal_photos,
-      pp_own.status as provider_proposal_status,
       exists (
         select 1
-        from provider_service_area_neighborhoods psan
-        join platform_neighborhoods pn on pn.id = psan.neighborhood_id
-        where psan.provider_id = p_provider_id
-          and pn.city_id = ca.city_id
-          and lower(trim(pn.name)) = lower(trim(ca.neighborhood))
+        from provider_area_names pan
+        where pan.city_id = ca.city_id
+          and pan.normalized_name = lower(trim(ca.neighborhood))
       ) as exact_area_match
     from service_requests sr
     join client_addresses ca on ca.id = sr.address_id
@@ -130,11 +129,6 @@ begin
     join platform_states pst on pst.id = ca.state_id
     join services s on s.id = sr.service_id
     join profiles p on p.id = sr.client_id
-    left join proposal_counts pc_agg on pc_agg.service_request_id = sr.id
-    left join provider_proposals pp_own
-      on pp_own.service_request_id = sr.id
-      and pp_own.provider_id = p_provider_id
-      and pp_own.status <> 'withdrawn'
     where
       sr.status = 'open'
       and sr.location is not null
@@ -142,28 +136,59 @@ begin
       and (p_service_request_id is not null or st_dwithin(sr.location, v_provider_point, p_radius_km * 1000))
       and (p_service_id is null or sr.service_id = p_service_id)
       and (
-        sr.service_id in (
-          select pos.service_id
-          from provider_offered_services pos
-          where pos.provider_id = p_provider_id
-        )
-        or s.parent_id in (
-          select pos.service_id
-          from provider_offered_services pos
-          where pos.provider_id = p_provider_id
-        )
+        sr.service_id in (select os.service_id from offered_services os)
+        or s.parent_id in (select os.service_id from offered_services os)
       )
-      and ca.city_id in (
-        select distinct pn.city_id
-        from provider_service_area_neighborhoods psan
-        join platform_neighborhoods pn on pn.id = psan.neighborhood_id
-        where psan.provider_id = p_provider_id
-      )
+      and ca.city_id in (select pci.city_id from provider_city_ids pci)
       and (
         p_service_request_id is not null
-        or sr.id not in (select service_request_id from provider_proposed_ids)
+        or not exists (
+          select 1
+          from provider_proposed_ids ppi
+          where ppi.service_request_id = sr.id
+        )
       )
-      and coalesce(pc_agg.active_count, 0) < 3
+  ),
+  proposal_counts as (
+    select
+      pp.service_request_id,
+      count(*)::integer as active_count
+    from provider_proposals pp
+    join eligible_base eb on eb.id = pp.service_request_id
+    where pp.status not in ('withdrawn', 'rejected')
+    group by pp.service_request_id
+  ),
+  eligible as (
+    select
+      eb.*,
+      coalesce(pc_agg.active_count, 0)::integer as proposal_count,
+      pp_latest.id as provider_proposal_id,
+      pp_latest.proposed_amount as provider_proposed_amount,
+      pp_latest.tax_rate as provider_tax_rate,
+      pp_latest.tax_amount as provider_tax_amount,
+      pp_latest.final_amount as provider_final_amount,
+      pp_latest.proposal_description as provider_proposal_description,
+      pp_latest.photos as provider_proposal_photos,
+      pp_latest.status as provider_proposal_status
+    from eligible_base eb
+    left join proposal_counts pc_agg on pc_agg.service_request_id = eb.id
+    left join lateral (
+      select
+        pp.id,
+        pp.proposed_amount,
+        pp.tax_rate,
+        pp.tax_amount,
+        pp.final_amount,
+        pp.proposal_description,
+        pp.photos,
+        pp.status
+      from provider_proposals pp
+      where pp.service_request_id = eb.id
+        and pp.provider_id = p_provider_id
+      order by pp.updated_at desc, pp.created_at desc
+      limit 1
+    ) pp_latest on true
+    where coalesce(pc_agg.active_count, 0) < 3
   ),
   total as (
     select count(*)::integer as cnt from eligible

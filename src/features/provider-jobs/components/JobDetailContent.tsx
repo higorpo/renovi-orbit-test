@@ -20,6 +20,7 @@ import { formatDistance } from "@/lib/formatDistance";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
 import { cn } from "@/lib/utils";
 import { useProviderJobQuestionComposer } from "../hooks/useProviderJobQuestionComposer";
+import { useProviderProposalPhotoUrls } from "../hooks/useProviderProposalPhotoUrls";
 import { useProviderProposalComposer } from "../hooks/useProviderProposalComposer";
 import { MAX_PROPOSALS_PER_REQUEST } from "../types/provider-jobs.types";
 import type { ProviderJobItem } from "../types/provider-jobs.types";
@@ -64,27 +65,44 @@ export function JobDetailContent({
     closeComposer,
     submitQuestion,
   } = useProviderJobQuestionComposer(job.id);
+  const hasLatestProposal = Boolean(job.provider_proposal_id);
+  const hasActiveProposal =
+    hasLatestProposal && job.provider_proposal_status !== "withdrawn";
+  const canEditProposal =
+    hasLatestProposal &&
+    job.provider_proposal_status !== "accepted" &&
+    job.provider_proposal_status !== "withdrawn";
   const {
     isOpen: isProposalOpen,
     isSubmitting: isProposalSubmitting,
     isPricingLoading,
     priceInput,
     descriptionDraft,
-    photos,
+    existingPhotoPaths,
+    newPhotos,
+    photosCount,
     pricing,
     maxDescriptionLength,
     maxPhotos,
+    canSubmitProposal,
     openComposer: openProposalComposer,
     closeComposer: closeProposalComposer,
     setPriceInput,
     setDescriptionDraft,
     addPhotos,
-    removePhoto,
+    removeExistingPhoto,
+    removeNewPhoto,
     submitProposal,
-  } = useProviderProposalComposer(job.id);
+  } = useProviderProposalComposer(job.id, {
+    proposedAmount: job.provider_proposed_amount,
+    description: job.provider_proposal_description,
+    photos: job.provider_proposal_photos,
+  });
+  const { urls: existingProposalPhotoUrls } = useProviderProposalPhotoUrls(
+    existingPhotoPaths,
+  );
 
   const urgencyConfig = job.urgency ? URGENCY_CONFIG[job.urgency] : null;
-  const hasActiveProposal = Boolean(job.provider_proposal_id);
 
   return (
     <div className="space-y-4 pb-24 md:pb-28">
@@ -276,17 +294,21 @@ export function JobDetailContent({
             isPricingLoading={isPricingLoading}
             priceInput={priceInput}
             descriptionDraft={descriptionDraft}
-            photos={photos}
+            existingPhotoUrls={existingProposalPhotoUrls}
+            newPhotos={newPhotos}
+            photosCount={photosCount}
             pricing={pricing}
             maxDescriptionLength={maxDescriptionLength}
             maxPhotos={maxPhotos}
+            canSubmit={canSubmitProposal}
             onOpenChange={(open) => {
               if (!open) closeProposalComposer();
             }}
             onPriceInputChange={setPriceInput}
             onDescriptionDraftChange={setDescriptionDraft}
             onPhotoAdd={addPhotos}
-            onPhotoRemove={removePhoto}
+            onExistingPhotoRemove={removeExistingPhoto}
+            onNewPhotoRemove={removeNewPhoto}
             onSubmit={async () => {
               await submitProposal();
             }}
@@ -295,7 +317,13 @@ export function JobDetailContent({
       </Card>
 
       <JobQuestionsFeed serviceRequestId={job.id} />
-      {hasActiveProposal && <ProviderProposalSummaryCard job={job} />}
+      {hasLatestProposal && (
+        <ProviderProposalSummaryCard
+          job={job}
+          canEdit={canEditProposal}
+          onEdit={() => openProposalComposer({ mode: "edit" })}
+        />
+      )}
 
       {!hasActiveProposal && (
         <div

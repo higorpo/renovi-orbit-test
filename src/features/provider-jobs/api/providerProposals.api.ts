@@ -17,6 +17,19 @@ export interface CreateProviderProposalParams {
   pricing: ProviderProposalPricing;
 }
 
+export interface ProviderProposalHistoryItem {
+  id: string;
+  proposed_amount: number;
+  proposal_description: string;
+  status: string;
+  tax_rate: number;
+  tax_amount: number;
+  final_amount: number;
+  photos: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 const PROVIDER_PROPOSALS_BUCKET = "provider-proposals";
 const MAX_PROPOSAL_PHOTOS = 5;
 const MAX_PROPOSAL_PHOTO_BYTES = 5 * 1024 * 1024;
@@ -170,4 +183,49 @@ export async function createProviderProposal(
   }
 
   return { data: { id: (data as { id: string }).id }, error: null };
+}
+
+export async function fetchProviderProposalHistory(
+  serviceRequestId: string,
+): Promise<{ data: ProviderProposalHistoryItem[]; error: string | null }> {
+  const { data, error } = await supabase
+    .from("provider_proposals")
+    .select(
+      "id, proposed_amount, proposal_description, status, tax_rate, tax_amount, final_amount, photos, created_at, updated_at",
+    )
+    .eq("service_request_id", serviceRequestId)
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    logger.error("fetch_provider_proposal_history_error", {
+      serviceRequestId,
+      error: error.message,
+    });
+    return { data: [], error: error.message };
+  }
+
+  return { data: (data ?? []) as ProviderProposalHistoryItem[], error: null };
+}
+
+export async function withdrawProviderProposal(
+  serviceRequestId: string,
+): Promise<{ success: boolean; error: string | null }> {
+  const { data, error } = await supabase
+    .from("provider_proposals")
+    .update({ status: "withdrawn" })
+    .eq("service_request_id", serviceRequestId)
+    .neq("status", "withdrawn")
+    .neq("status", "accepted")
+    .select("id")
+    .limit(1);
+
+  if (error) {
+    logger.error("withdraw_provider_proposal_error", {
+      serviceRequestId,
+      error: error.message,
+    });
+    return { success: false, error: error.message };
+  }
+
+  return { success: (data ?? []).length > 0, error: null };
 }

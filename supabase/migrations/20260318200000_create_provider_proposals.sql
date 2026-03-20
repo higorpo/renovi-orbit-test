@@ -42,6 +42,11 @@ create index if not exists provider_proposals_provider_id_idx
   on public.provider_proposals (provider_id);
 create index if not exists provider_proposals_status_idx
   on public.provider_proposals (status);
+create index if not exists provider_proposals_provider_request_latest_idx
+  on public.provider_proposals (provider_id, service_request_id, updated_at desc, created_at desc);
+create index if not exists provider_proposals_active_request_idx
+  on public.provider_proposals (service_request_id)
+  where status not in ('withdrawn', 'rejected');
 
 alter table public.provider_proposals enable row level security;
 
