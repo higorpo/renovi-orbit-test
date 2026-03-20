@@ -1,4 +1,6 @@
+import { useEffect, useMemo, useState } from "react";
 import { CircleDollarSign, ImagePlus, Loader2, ShieldCheck, X } from "lucide-react";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -57,6 +59,23 @@ function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
+const slotSchema = z.object({
+  startDate: z.string(),
+  endDate: z.string(),
+  shift: z.enum(["morning", "afternoon", "full_day"]),
+});
+
+function isValidISODate(value: string): boolean {
+  if (!value) return false;
+  const parsedDate = new Date(`${value}T00:00:00`);
+  return !Number.isNaN(parsedDate.getTime());
+}
+
+function getTodayDateAtLocalMidnight(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
 /** Inclusive calendar days from start to end (matches proposal validation). */
 function getInclusiveDayRangeHint(startDate: string, endDate: string): {
   message: string;
@@ -107,6 +126,150 @@ export function ProviderProposalComposerDialog({
   onNewPhotoRemove,
   onSubmit,
 }: ProviderProposalComposerDialogProps) {
+  const [showValidationErrors, setShowValidationErrors] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setShowValidationErrors(false);
+  }, [open]);
+
+  const validationSchema = useMemo(
+    () =>
+      z
+        .object({
+          priceInput: z
+            .string()
+            .trim()
+            .min(1, "Informe quanto você quer cobrar."),
+          descriptionDraft: z
+            .string()
+            .trim()
+            .min(1, "Descreva sua proposta antes de enviar.")
+            .max(
+              maxDescriptionLength,
+              `A descrição deve ter no máximo ${maxDescriptionLength} caracteres.`,
+            ),
+          durationValueInput: z
+            .string()
+            .trim()
+            .min(1, "Informe o tempo estimado para executar o serviço.")
+            .regex(/^\d+$/, "O tempo estimado deve ser um número inteiro.")
+            .refine((value) => Number.parseInt(value, 10) > 0, {
+              message: "O tempo estimado deve ser maior que zero.",
+            }),
+          durationUnit: z.enum(["hours", "days"]),
+          availabilitySlots: z.array(slotSchema),
+        })
+        .superRefine((data, context) => {
+          if (data.availabilitySlots.length < 1 || data.availabilitySlots.length > 3) {
+            context.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["availabilitySlots"],
+              message: "Informe entre 1 e 3 opções de disponibilidade.",
+            });
+          }
+
+          const durationValue = Number.parseInt(data.durationValueInput, 10);
+          data.availabilitySlots.forEach((slot, index) => {
+            if (!slot.startDate.trim()) {
+              context.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["availabilitySlots", index, "startDate"],
+                message: "Informe a data de início.",
+              });
+            } else if (!isValidISODate(slot.startDate)) {
+              context.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["availabilitySlots", index, "startDate"],
+                message: "Data de início inválida.",
+              });
+            } else {
+              const start = new Date(`${slot.startDate}T00:00:00`);
+              const today = getTodayDateAtLocalMidnight();
+              if (start < today) {
+                context.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  path: ["availabilitySlots", index, "startDate"],
+                  message: "A data de início não pode ser anterior à data atual.",
+                });
+              }
+            }
+
+            if (data.durationUnit === "days") {
+              if (!slot.endDate.trim()) {
+                context.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  path: ["availabilitySlots", index, "endDate"],
+                  message: "Informe a data de fim para propostas em dias.",
+                });
+                return;
+              }
+
+              if (!isValidISODate(slot.endDate)) {
+                context.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  path: ["availabilitySlots", index, "endDate"],
+                  message: "Data de fim inválida.",
+                });
+                return;
+              }
+
+              const start = new Date(`${slot.startDate}T00:00:00`);
+              const end = new Date(`${slot.endDate}T00:00:00`);
+              if (end < start) {
+                context.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  path: ["availabilitySlots", index, "endDate"],
+                  message: "A data final não pode ser anterior à inicial.",
+                });
+                return;
+              }
+
+              const inclusiveDays =
+                Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+              if (inclusiveDays !== durationValue) {
+                context.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  path: ["availabilitySlots", index, "endDate"],
+                  message: `O intervalo deve ter exatamente ${durationValue} ${
+                    durationValue === 1 ? "dia" : "dias"
+                  }.`,
+                });
+              }
+            }
+          });
+        }),
+    [maxDescriptionLength],
+  );
+
+  const validationResult = validationSchema.safeParse({
+    priceInput,
+    descriptionDraft,
+    durationValueInput,
+    durationUnit,
+    availabilitySlots,
+  });
+  const validationIssues = validationResult.success ? [] : validationResult.error.issues;
+  const hasValidationErrors = validationIssues.length > 0;
+
+  const getFieldError = (path: Array<string | number>): string | null => {
+    const issue = validationIssues.find((entry) => entry.path.join(".") === path.join("."));
+    return issue?.message ?? null;
+  };
+
+  const priceError = getFieldError(["priceInput"]);
+  const descriptionError = getFieldError(["descriptionDraft"]);
+  const durationError = getFieldError(["durationValueInput"]);
+  const availabilityError = getFieldError(["availabilitySlots"]);
+
+  const handleSubmitClick = async () => {
+    if (hasValidationErrors) {
+      setShowValidationErrors(true);
+      return;
+    }
+    await onSubmit();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="h-screen w-screen max-w-none rounded-none border-0 p-0 [&>button]:hidden sm:h-auto sm:max-h-[90vh] sm:w-full sm:max-w-2xl sm:rounded-lg sm:border sm:p-6">
@@ -149,6 +312,9 @@ export function ProviderProposalComposerDialog({
                 value={priceInput}
                 onChange={(event) => onPriceInputChange(event.target.value)}
               />
+              {showValidationErrors && priceError && (
+                <p className="text-xs text-destructive">{priceError}</p>
+              )}
             </div>
 
             {(isPricingLoading || pricing) && (
@@ -185,6 +351,9 @@ export function ProviderProposalComposerDialog({
                 placeholder="Descreva como você vai executar o serviço, prazo estimado e diferenciais."
                 className="min-h-32 resize-y"
               />
+              {showValidationErrors && descriptionError && (
+                <p className="text-xs text-destructive">{descriptionError}</p>
+              )}
               <p className="text-xs text-muted-foreground">
                 {descriptionDraft.length}/{maxDescriptionLength} caracteres
               </p>
@@ -201,6 +370,9 @@ export function ProviderProposalComposerDialog({
                     value={durationValueInput}
                     onChange={(event) => onDurationValueInputChange(event.target.value)}
                   />
+                  {showValidationErrors && durationError && (
+                    <p className="text-xs text-destructive">{durationError}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="proposal-duration-unit">Unidade</Label>
@@ -229,6 +401,9 @@ export function ProviderProposalComposerDialog({
                     Adicionar opção
                   </Button>
                 </div>
+                {showValidationErrors && availabilityError && (
+                  <p className="text-xs text-destructive">{availabilityError}</p>
+                )}
                 <div className="space-y-2">
                   {availabilitySlots.map((slot, index) => {
                     const dayRangeHint =
@@ -259,6 +434,12 @@ export function ProviderProposalComposerDialog({
                             onChange={(event) =>
                               onAvailabilitySlotChange(index, "startDate", event.target.value)}
                           />
+                          {showValidationErrors &&
+                            getFieldError(["availabilitySlots", index, "startDate"]) && (
+                            <p className="text-xs text-destructive">
+                              {getFieldError(["availabilitySlots", index, "startDate"])}
+                            </p>
+                          )}
                         </div>
                         {durationUnit === "days" && (
                           <div className="space-y-1">
@@ -270,6 +451,12 @@ export function ProviderProposalComposerDialog({
                               onChange={(event) =>
                                 onAvailabilitySlotChange(index, "endDate", event.target.value)}
                             />
+                            {showValidationErrors &&
+                              getFieldError(["availabilitySlots", index, "endDate"]) && (
+                              <p className="text-xs text-destructive">
+                                {getFieldError(["availabilitySlots", index, "endDate"])}
+                              </p>
+                            )}
                           </div>
                         )}
                         <div className="space-y-1">
@@ -382,7 +569,11 @@ export function ProviderProposalComposerDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               Cancelar
             </Button>
-            <Button type="button" onClick={() => void onSubmit()} disabled={isSubmitting || !canSubmit}>
+            <Button
+              type="button"
+              onClick={() => void handleSubmitClick()}
+              disabled={isSubmitting || !canSubmit}
+            >
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />

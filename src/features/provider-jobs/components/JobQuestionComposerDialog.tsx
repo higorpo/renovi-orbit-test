@@ -1,4 +1,8 @@
+import { useEffect, useMemo } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import { Loader2, MessageCircleQuestion, X } from "lucide-react";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import {
   DialogClose,
@@ -10,6 +14,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "@/components/ui/form";
 
 interface JobQuestionComposerDialogProps {
   open: boolean;
@@ -21,6 +32,10 @@ interface JobQuestionComposerDialogProps {
   onSubmit: () => Promise<void>;
 }
 
+interface JobQuestionFormValues {
+  question: string;
+}
+
 export function JobQuestionComposerDialog({
   open,
   questionDraft,
@@ -30,8 +45,42 @@ export function JobQuestionComposerDialog({
   onQuestionDraftChange,
   onSubmit,
 }: JobQuestionComposerDialogProps) {
-  const charactersUsed = questionDraft.length;
+  const questionSchema = useMemo(
+    () =>
+      z.object({
+        question: z
+          .string()
+          .trim()
+          .min(1, "Escreva uma pergunta antes de enviar.")
+          .max(
+            maxQuestionLength,
+            `A pergunta deve ter no máximo ${maxQuestionLength} caracteres.`,
+          ),
+      }),
+    [maxQuestionLength],
+  );
+
+  const form = useForm<JobQuestionFormValues>({
+    mode: "onChange",
+    resolver: zodResolver(questionSchema),
+    defaultValues: {
+      question: questionDraft,
+    },
+  });
+
+  useEffect(() => {
+    form.reset({ question: questionDraft });
+  }, [form, questionDraft]);
+
+  const questionValue = form.watch("question") ?? "";
+  const charactersUsed = questionValue.length;
   const isOverLimit = charactersUsed > maxQuestionLength;
+  const hasRequiredError = Boolean(form.formState.errors.question);
+
+  const handleValidSubmit = async (values: JobQuestionFormValues) => {
+    onQuestionDraftChange(values.question);
+    await onSubmit();
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -60,13 +109,35 @@ export function JobQuestionComposerDialog({
         </DialogHeader>
 
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4 sm:px-0 sm:py-0">
-          <Textarea
-            autoFocus
-            value={questionDraft}
-            onChange={(event) => onQuestionDraftChange(event.target.value)}
-            placeholder="Ex.: O local possui ponto de energia próximo da área do serviço?"
-            className="min-h-40 resize-y"
-          />
+          <Form {...form}>
+            <form
+              id="job-question-composer-form"
+              onSubmit={form.handleSubmit(handleValidSubmit)}
+              className="space-y-2"
+            >
+              <FormField
+                control={form.control}
+                name="question"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <Textarea
+                        autoFocus
+                        {...field}
+                        onChange={(event) => {
+                          field.onChange(event.target.value);
+                          onQuestionDraftChange(event.target.value);
+                        }}
+                        placeholder="Ex.: O local possui ponto de energia próximo da área do serviço?"
+                        className="min-h-40 resize-y"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </form>
+          </Form>
           <p className="text-xs text-muted-foreground">
             Você pode enviar no máximo 3 perguntas para este pedido.
           </p>
@@ -81,7 +152,11 @@ export function JobQuestionComposerDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Cancelar
           </Button>
-          <Button type="button" onClick={() => void onSubmit()} disabled={isSubmitting || isOverLimit}>
+          <Button
+            type="submit"
+            form="job-question-composer-form"
+            disabled={isSubmitting || isOverLimit || hasRequiredError}
+          >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />

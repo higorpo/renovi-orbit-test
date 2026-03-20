@@ -40,6 +40,11 @@ function parseCurrencyInputToNumber(value: string): number | null {
   return amount;
 }
 
+function getTodayDateAtLocalMidnight(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
 interface ExistingProposalDraft {
   proposedAmount: number | null;
   description: string | null;
@@ -348,12 +353,17 @@ export function useProviderProposalComposer(
         toast.error("Preencha a data inicial em todas as sugestões.");
         return false;
       }
+      const start = new Date(`${slot.startDate}T00:00:00`);
+      const today = getTodayDateAtLocalMidnight();
+      if (Number.isNaN(start.getTime()) || start < today) {
+        toast.error("A data de início não pode ser anterior à data atual.");
+        return false;
+      }
       if (durationUnit === "days") {
         if (!slot.endDate) {
           toast.error("Preencha a data final para propostas em dias.");
           return false;
         }
-        const start = new Date(`${slot.startDate}T00:00:00`);
         const end = new Date(`${slot.endDate}T00:00:00`);
         if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
           toast.error("As datas sugeridas são inválidas.");

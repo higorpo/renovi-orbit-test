@@ -276,6 +276,10 @@ begin
       raise exception 'Invalid start_date in suggested slots';
     end;
 
+    if v_start_date < current_date then
+      raise exception 'Suggested slot start_date cannot be in the past';
+    end if;
+
     if p_proposal_duration_unit = 'hours' then
       if v_slot ? 'end_date' and coalesce(v_slot->>'end_date', '') <> '' then
         raise exception 'Hourly proposals must not include end_date in suggested slots';
