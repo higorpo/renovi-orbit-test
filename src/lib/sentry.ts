@@ -4,6 +4,7 @@
  */
 
 import * as Sentry from "@sentry/react";
+import { supabase } from "./supabase/client";
 
 const DSN = import.meta.env.VITE_SENTRY_DSN as string | undefined;
 const ENV = import.meta.env.MODE;
@@ -28,6 +29,8 @@ export function initSentry(): void {
         maskAllText: true,
         blockAllMedia: true,
       }),
+      Sentry.supabaseIntegration({ supabaseClient: supabase }),
+      Sentry.zodErrorsIntegration(),
     ],
     tracesSampleRate: IS_PROD ? 0.2 : 1,
     // Only propagate trace to our own backend. Exclude third-party APIs (e.g. ViaCEP)
