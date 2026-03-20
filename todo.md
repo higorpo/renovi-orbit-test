@@ -8,6 +8,7 @@ Interessantes de se ter
 - colocar a IA pra sugerir fotos pra ele tirar que seriam interessantes pro prestador entender melhor o problema
 - Poder denunciar perguntas feitas em trabalhos por infringir as regras da plataforma
 - Poder denunciar pedidos de orçamento feitos na plataforma por infringir as regras 
+- Criar  mecanismo de descontos de taxas, onde a gente pode definir a % de desconto em cima da taxa original, título e descrição para o desconto e a data de início e fim que o desconto pode ser aplicado.
 
 Urgentes:
 - bug no endereço da agronomica, não está salvando o endereço certo.
