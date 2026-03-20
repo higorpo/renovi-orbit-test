@@ -1,5 +1,6 @@
 import type { MatchProviderJobsBody } from "../../../../supabase/functions/match-provider-jobs/types";
 import type { FormSchema } from "@/features/dynamic-form";
+import type { ProviderProposalSuggestedSlot } from "../api/providerProposals.api";
 
 /** Request params for match-provider-jobs edge function. Re-exported from edge function types. */
 export type FetchProviderJobsParams = MatchProviderJobsBody;
@@ -36,6 +37,9 @@ export interface ProviderJobItem {
   provider_tax_amount: number | null;
   provider_final_amount: number | null;
   provider_proposal_description: string | null;
+  provider_proposal_duration_value: number | null;
+  provider_proposal_duration_unit: "hours" | "days" | null;
+  provider_proposal_suggested_slots: ProviderProposalSuggestedSlot[] | null;
   provider_proposal_photos: string[] | null;
   provider_proposal_status: string | null;
   provider_proposal_client_rejection_response: string | null;

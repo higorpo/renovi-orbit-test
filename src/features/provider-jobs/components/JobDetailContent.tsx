@@ -71,6 +71,9 @@ export function JobDetailContent({
     isPricingLoading,
     priceInput,
     descriptionDraft,
+    durationValueInput,
+    durationUnit,
+    availabilitySlots,
     existingPhotoPaths,
     newPhotos,
     photosCount,
@@ -82,6 +85,11 @@ export function JobDetailContent({
     closeComposer: closeProposalComposer,
     setPriceInput,
     setDescriptionDraft,
+    setDurationValueInput,
+    setDurationUnit,
+    updateAvailabilitySlot,
+    addAvailabilitySlot,
+    removeAvailabilitySlot,
     addPhotos,
     removeExistingPhoto,
     removeNewPhoto,
@@ -89,6 +97,9 @@ export function JobDetailContent({
   } = useProviderProposalComposer(job.id, {
     proposedAmount: job.provider_proposed_amount,
     description: job.provider_proposal_description,
+    durationValue: job.provider_proposal_duration_value,
+    durationUnit: job.provider_proposal_duration_unit,
+    suggestedSlots: job.provider_proposal_suggested_slots,
     photos: job.provider_proposal_photos,
   });
   const { urls: existingProposalPhotoUrls } = useProviderProposalPhotoUrls(
@@ -217,6 +228,9 @@ export function JobDetailContent({
             isPricingLoading={isPricingLoading}
             priceInput={priceInput}
             descriptionDraft={descriptionDraft}
+            durationValueInput={durationValueInput}
+            durationUnit={durationUnit}
+            availabilitySlots={availabilitySlots}
             existingPhotoUrls={existingProposalPhotoUrls}
             newPhotos={newPhotos}
             photosCount={photosCount}
@@ -229,6 +243,11 @@ export function JobDetailContent({
             }}
             onPriceInputChange={setPriceInput}
             onDescriptionDraftChange={setDescriptionDraft}
+            onDurationValueInputChange={setDurationValueInput}
+            onDurationUnitChange={setDurationUnit}
+            onAvailabilitySlotChange={updateAvailabilitySlot}
+            onAvailabilitySlotAdd={addAvailabilitySlot}
+            onAvailabilitySlotRemove={removeAvailabilitySlot}
             onPhotoAdd={addPhotos}
             onExistingPhotoRemove={removeExistingPhoto}
             onNewPhotoRemove={removeNewPhoto}

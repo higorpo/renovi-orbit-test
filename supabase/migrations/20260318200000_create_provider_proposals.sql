@@ -8,6 +8,9 @@ create table if not exists public.provider_proposals (
   service_request_id uuid not null references public.service_requests (id) on delete cascade,
   proposed_amount numeric(10,2) not null check (proposed_amount > 0),
   proposal_description text not null check (char_length(trim(proposal_description)) > 0 and char_length(trim(proposal_description)) <= 1200),
+  proposal_duration_value integer not null check (proposal_duration_value > 0),
+  proposal_duration_unit text not null check (proposal_duration_unit in ('hours', 'days')),
+  proposal_suggested_slots jsonb not null default '[]'::jsonb,
   photos text[] not null default '{}'::text[],
   tax_rate numeric(6,4) not null check (tax_rate >= 0 and tax_rate <= 1),
   tax_amount numeric(10,2) not null check (tax_amount >= 0),
@@ -22,6 +25,10 @@ create table if not exists public.provider_proposals (
       status <> 'rejected'
       or nullif(trim(client_rejection_response), '') is not null
     ),
+  constraint provider_proposals_suggested_slots_array
+    check (jsonb_typeof(proposal_suggested_slots) = 'array'),
+  constraint provider_proposals_suggested_slots_size
+    check (jsonb_array_length(proposal_suggested_slots) between 1 and 3),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -31,6 +38,9 @@ comment on column public.provider_proposals.provider_id is 'The provider who sub
 comment on column public.provider_proposals.service_request_id is 'The service request this proposal is for.';
 comment on column public.provider_proposals.proposed_amount is 'Amount informed by provider before platform fee discount.';
 comment on column public.provider_proposals.proposal_description is 'Proposal details written by provider.';
+comment on column public.provider_proposals.proposal_duration_value is 'Estimated duration value informed by provider.';
+comment on column public.provider_proposals.proposal_duration_unit is 'Estimated duration unit: hours or days.';
+comment on column public.provider_proposals.proposal_suggested_slots is 'Suggested availability slots (1-3 options) informed by provider.';
 comment on column public.provider_proposals.photos is 'Storage paths of proposal images in provider-proposals bucket.';
 comment on column public.provider_proposals.tax_rate is 'Applied platform fee rate used in calculation.';
 comment on column public.provider_proposals.tax_amount is 'Amount discounted as platform fee.';

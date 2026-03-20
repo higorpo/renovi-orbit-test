@@ -13,14 +13,26 @@ export interface CreateProviderProposalParams {
   serviceRequestId: string;
   proposedAmount: number;
   proposalDescription: string;
+  proposalDurationValue: number;
+  proposalDurationUnit: "hours" | "days";
+  proposalSuggestedSlots: ProviderProposalSuggestedSlot[];
   photos: string[];
   pricing: ProviderProposalPricing;
+}
+
+export interface ProviderProposalSuggestedSlot {
+  start_date: string;
+  end_date?: string | null;
+  shift: "morning" | "afternoon" | "full_day";
 }
 
 export interface ProviderProposalHistoryItem {
   id: string;
   proposed_amount: number;
   proposal_description: string;
+  proposal_duration_value: number;
+  proposal_duration_unit: "hours" | "days";
+  proposal_suggested_slots: ProviderProposalSuggestedSlot[];
   status: string;
   tax_rate: number;
   tax_amount: number;
@@ -160,6 +172,9 @@ export async function createProviderProposal(
     p_service_request_id: params.serviceRequestId,
     p_proposed_amount: params.proposedAmount,
     p_proposal_description: params.proposalDescription,
+    p_proposal_duration_value: params.proposalDurationValue,
+    p_proposal_duration_unit: params.proposalDurationUnit,
+    p_proposal_suggested_slots: params.proposalSuggestedSlots,
     p_photos: params.photos,
     p_tax_rate: params.pricing.tax_rate,
     p_tax_amount: params.pricing.tax_amount,
@@ -192,7 +207,7 @@ export async function fetchProviderProposalHistory(
   const { data, error } = await supabase
     .from("provider_proposals")
     .select(
-      "id, proposed_amount, proposal_description, status, tax_rate, tax_amount, final_amount, photos, created_at, updated_at, client_rejection_response",
+      "id, proposed_amount, proposal_description, proposal_duration_value, proposal_duration_unit, proposal_suggested_slots, status, tax_rate, tax_amount, final_amount, photos, created_at, updated_at, client_rejection_response",
     )
     .eq("service_request_id", serviceRequestId)
     .order("updated_at", { ascending: false });
@@ -205,7 +220,7 @@ export async function fetchProviderProposalHistory(
     return { data: [], error: error.message };
   }
 
-  return { data: (data ?? []) as ProviderProposalHistoryItem[], error: null };
+  return { data: (data ?? []) as unknown as ProviderProposalHistoryItem[], error: null };
 }
 
 export async function withdrawProviderProposal(

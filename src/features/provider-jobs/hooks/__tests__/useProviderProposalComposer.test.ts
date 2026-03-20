@@ -1,4 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 import { useProviderProposalComposer } from "../useProviderProposalComposer";
@@ -20,6 +22,12 @@ const calculateProviderServicePricing = vi.mocked(
 const createProviderProposal = vi.mocked(providerProposalsApi.createProviderProposal);
 const uploadProviderProposalPhotos = vi.mocked(providerProposalsApi.uploadProviderProposalPhotos);
 
+function createWrapper() {
+  const queryClient = new QueryClient();
+  return ({ children }: { children: ReactNode }) =>
+    createElement(QueryClientProvider, { client: queryClient }, children);
+}
+
 describe("useProviderProposalComposer", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -38,7 +46,9 @@ describe("useProviderProposalComposer", () => {
       error: null,
     });
 
-    const { result } = renderHook(() => useProviderProposalComposer("sr-1"));
+    const { result } = renderHook(() => useProviderProposalComposer("sr-1"), {
+      wrapper: createWrapper(),
+    });
 
     act(() => {
       result.current.openComposer();
@@ -77,12 +87,17 @@ describe("useProviderProposalComposer", () => {
       error: null,
     });
 
-    const { result } = renderHook(() => useProviderProposalComposer("sr-1"));
+    const { result } = renderHook(() => useProviderProposalComposer("sr-1"), {
+      wrapper: createWrapper(),
+    });
 
     act(() => {
       result.current.openComposer();
       result.current.setPriceInput("500");
       result.current.setDescriptionDraft("Posso executar com garantia e nota.");
+      result.current.setDurationValueInput("5");
+      result.current.updateAvailabilitySlot(0, "startDate", "2026-03-25");
+      result.current.updateAvailabilitySlot(0, "shift", "morning");
     });
 
     await act(async () => {

@@ -5,7 +5,9 @@ import { useProviderProposalPhotoUrls } from "../hooks/useProviderProposalPhotoU
 import { ProviderProposalPhotosGrid } from "./ProviderProposalPhotosGrid";
 import {
   formatProposalCurrency,
+  formatProposalDateOnly,
   formatProposalDateTime,
+  translateProposalShift,
   translateProposalStatus,
 } from "./providerProposalFormatters";
 
@@ -63,6 +65,41 @@ export function ProviderProposalDetailsDialog({
                 {proposal.proposal_description}
               </p>
             </div>
+
+            <div className="rounded-lg border p-3">
+              <p className="text-xs text-muted-foreground">Prazo estimado</p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {proposal.proposal_duration_value}{" "}
+                {proposal.proposal_duration_unit === "days"
+                  ? proposal.proposal_duration_value === 1
+                    ? "dia"
+                    : "dias"
+                  : proposal.proposal_duration_value === 1
+                    ? "hora"
+                    : "horas"}
+              </p>
+            </div>
+
+            {proposal.proposal_suggested_slots.length > 0 && (
+              <div className="rounded-lg border p-3">
+                <p className="text-xs text-muted-foreground">Datas sugeridas para execução</p>
+                <div className="mt-2 space-y-2">
+                  {proposal.proposal_suggested_slots.map((slot, index) => (
+                    <div key={`${slot.start_date}-${slot.end_date ?? "single"}-${index}`} className="rounded-md border bg-muted/20 px-3 py-2">
+                      <p className="text-sm font-medium text-foreground">
+                        Opção {index + 1}:{" "}
+                        {proposal.proposal_duration_unit === "days" && slot.end_date
+                          ? `${formatProposalDateOnly(slot.start_date)} até ${formatProposalDateOnly(slot.end_date)}`
+                          : formatProposalDateOnly(slot.start_date)}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Turno: {translateProposalShift(slot.shift)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {(proposal.status ?? "").toLowerCase() === "rejected" &&
               proposal.client_rejection_response?.trim() && (

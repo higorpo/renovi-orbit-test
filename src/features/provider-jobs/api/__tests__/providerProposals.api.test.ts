@@ -88,6 +88,11 @@ describe("createProviderProposal", () => {
       serviceRequestId: "sr-1",
       proposedAmount: 500,
       proposalDescription: "Consigo iniciar amanhã cedo.",
+      proposalDurationValue: 5,
+      proposalDurationUnit: "hours",
+      proposalSuggestedSlots: [
+        { start_date: "2026-03-25", shift: "morning" },
+      ],
       photos: ["providers/p-1/proposals/sr-1/photo-1.jpg"],
       pricing: {
         original_amount: 500,
@@ -102,6 +107,11 @@ describe("createProviderProposal", () => {
       p_service_request_id: "sr-1",
       p_proposed_amount: 500,
       p_proposal_description: "Consigo iniciar amanhã cedo.",
+      p_proposal_duration_value: 5,
+      p_proposal_duration_unit: "hours",
+      p_proposal_suggested_slots: [
+        { start_date: "2026-03-25", shift: "morning" },
+      ],
       p_photos: ["providers/p-1/proposals/sr-1/photo-1.jpg"],
       p_tax_rate: 0.15,
       p_tax_amount: 75,

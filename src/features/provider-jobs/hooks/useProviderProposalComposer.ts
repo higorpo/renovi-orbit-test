@@ -5,6 +5,7 @@ import {
   calculateProviderServicePricing,
   createProviderProposal,
   uploadProviderProposalPhotos,
+  type ProviderProposalSuggestedSlot,
   type ProviderProposalPricing,
 } from "../api/providerProposals.api";
 
@@ -42,6 +43,9 @@ function parseCurrencyInputToNumber(value: string): number | null {
 interface ExistingProposalDraft {
   proposedAmount: number | null;
   description: string | null;
+  durationValue: number | null;
+  durationUnit: "hours" | "days" | null;
+  suggestedSlots: ProviderProposalSuggestedSlot[] | null;
   photos: string[] | null;
 }
 
@@ -52,7 +56,16 @@ interface OpenProposalComposerOptions {
 interface EditSnapshot {
   proposedAmount: number | null;
   description: string;
+  durationValue: number | null;
+  durationUnit: "hours" | "days";
+  suggestedSlots: ProviderProposalSuggestedSlot[];
   photos: string[];
+}
+
+interface ProposalAvailabilitySlotDraft {
+  startDate: string;
+  endDate: string;
+  shift: "morning" | "afternoon" | "full_day";
 }
 
 function toInitialPriceInput(amount: number | null): string {
@@ -73,7 +86,26 @@ export function useProviderProposalComposer(
   const [isPricingLoading, setIsPricingLoading] = useState(false);
   const [priceInput, setPriceInput] = useState("");
   const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [durationValueInput, setDurationValueInput] = useState("");
+  const [durationUnit, setDurationUnit] = useState<"hours" | "days">("hours");
+  const [availabilitySlots, setAvailabilitySlots] = useState<ProposalAvailabilitySlotDraft[]>([
+    { startDate: "", endDate: "", shift: "full_day" },
+  ]);
   const [newPhotos, setNewPhotos] = useState<File[]>([]);
+  const durationValue = useMemo(() => {
+    const parsed = Number.parseInt(durationValueInput.trim(), 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) return null;
+    return parsed;
+  }, [durationValueInput]);
+
+  const mappedSuggestedSlots = useMemo<ProviderProposalSuggestedSlot[]>(() => (
+    availabilitySlots.map((slot) => ({
+      start_date: slot.startDate,
+      end_date: durationUnit === "days" ? slot.endDate || null : null,
+      shift: slot.shift,
+    }))
+  ), [availabilitySlots, durationUnit]);
+
   const [existingPhotoPaths, setExistingPhotoPaths] = useState<string[]>([]);
   const [pricing, setPricing] = useState<ProviderProposalPricing | null>(null);
   const [composerMode, setComposerMode] = useState<"create" | "edit">("create");
@@ -120,10 +152,28 @@ export function useProviderProposalComposer(
       setEditSnapshot({
         proposedAmount: existingProposal.proposedAmount,
         description: initialDescription,
+        durationValue: existingProposal.durationValue,
+        durationUnit: existingProposal.durationUnit ?? "hours",
+        suggestedSlots: existingProposal.suggestedSlots ?? [],
         photos: initialPhotos,
       });
       setPriceInput(initialPrice);
       setDescriptionDraft(initialDescription);
+      setDurationValueInput(
+        typeof existingProposal.durationValue === "number"
+          ? String(existingProposal.durationValue)
+          : "",
+      );
+      setDurationUnit(existingProposal.durationUnit ?? "hours");
+      setAvailabilitySlots(
+        (existingProposal.suggestedSlots ?? []).length > 0
+          ? (existingProposal.suggestedSlots ?? []).map((slot) => ({
+              startDate: slot.start_date,
+              endDate: slot.end_date ?? "",
+              shift: slot.shift,
+            }))
+          : [{ startDate: "", endDate: "", shift: "full_day" }],
+      );
       setExistingPhotoPaths(initialPhotos);
       setNewPhotos([]);
       setPricing(null);
@@ -136,6 +186,9 @@ export function useProviderProposalComposer(
     setEditSnapshot(null);
     setPriceInput("");
     setDescriptionDraft("");
+    setDurationValueInput("");
+    setDurationUnit("hours");
+    setAvailabilitySlots([{ startDate: "", endDate: "", shift: "full_day" }]);
     setExistingPhotoPaths([]);
     setNewPhotos([]);
     setPricing(null);
@@ -150,6 +203,9 @@ export function useProviderProposalComposer(
     setEditSnapshot(null);
     setPriceInput("");
     setDescriptionDraft("");
+    setDurationValueInput("");
+    setDurationUnit("hours");
+    setAvailabilitySlots([{ startDate: "", endDate: "", shift: "full_day" }]);
     setExistingPhotoPaths([]);
     setNewPhotos([]);
     setPricing(null);
@@ -185,22 +241,76 @@ export function useProviderProposalComposer(
     setPriceInput(maskBudgetInput(value));
   }, []);
 
+  const updateDurationValueInput = useCallback((value: string) => {
+    setDurationValueInput(value.replace(/[^\d]/g, ""));
+  }, []);
+
+  const updateAvailabilitySlot = useCallback((
+    index: number,
+    field: "startDate" | "endDate" | "shift",
+    value: string,
+  ) => {
+    setAvailabilitySlots((prev) => prev.map((slot, i) => (
+      i === index
+        ? {
+            ...slot,
+            [field]: value,
+          }
+        : slot
+    )));
+  }, []);
+
+  const addAvailabilitySlot = useCallback(() => {
+    setAvailabilitySlots((prev) => {
+      if (prev.length >= 3) {
+        toast.error("Você pode sugerir no máximo 3 opções de data.");
+        return prev;
+      }
+      return [...prev, { startDate: "", endDate: "", shift: "full_day" }];
+    });
+  }, []);
+
+  const removeAvailabilitySlot = useCallback((index: number) => {
+    setAvailabilitySlots((prev) => {
+      if (prev.length <= 1) {
+        toast.error("Informe pelo menos 1 opção de data.");
+        return prev;
+      }
+      return prev.filter((_, currentIndex) => currentIndex !== index);
+    });
+  }, []);
+
   const hasEditedProposal = useMemo(() => {
     if (composerMode !== "edit" || !editSnapshot) return true;
 
     const priceChanged = priceAsNumber !== editSnapshot.proposedAmount;
     const descriptionChanged = descriptionDraft.trim() !== editSnapshot.description.trim();
+    const durationValueChanged = durationValue !== editSnapshot.durationValue;
+    const durationUnitChanged = durationUnit !== editSnapshot.durationUnit;
+    const suggestedSlotsChanged =
+      JSON.stringify(mappedSuggestedSlots) !== JSON.stringify(editSnapshot.suggestedSlots);
     const existingPhotosChanged =
       existingPhotoPaths.length !== editSnapshot.photos.length ||
       existingPhotoPaths.some((path, index) => path !== editSnapshot.photos[index]);
     const hasNewPhotos = newPhotos.length > 0;
 
-    return priceChanged || descriptionChanged || existingPhotosChanged || hasNewPhotos;
+    return (
+      priceChanged ||
+      descriptionChanged ||
+      durationValueChanged ||
+      durationUnitChanged ||
+      suggestedSlotsChanged ||
+      existingPhotosChanged ||
+      hasNewPhotos
+    );
   }, [
+    durationUnit,
+    durationValue,
     composerMode,
     descriptionDraft,
     editSnapshot,
     existingPhotoPaths,
+    mappedSuggestedSlots,
     newPhotos.length,
     priceAsNumber,
   ]);
@@ -221,6 +331,42 @@ export function useProviderProposalComposer(
     if (cleanDescription.length > MAX_PROPOSAL_DESCRIPTION) {
       toast.error(`A descrição deve ter no máximo ${MAX_PROPOSAL_DESCRIPTION} caracteres.`);
       return false;
+    }
+
+    if (!durationValue) {
+      toast.error("Informe em quanto tempo você consegue executar o serviço.");
+      return false;
+    }
+
+    if (availabilitySlots.length < 1 || availabilitySlots.length > 3) {
+      toast.error("Informe entre 1 e 3 opções de disponibilidade.");
+      return false;
+    }
+
+    for (const slot of availabilitySlots) {
+      if (!slot.startDate) {
+        toast.error("Preencha a data inicial em todas as sugestões.");
+        return false;
+      }
+      if (durationUnit === "days") {
+        if (!slot.endDate) {
+          toast.error("Preencha a data final para propostas em dias.");
+          return false;
+        }
+        const start = new Date(`${slot.startDate}T00:00:00`);
+        const end = new Date(`${slot.endDate}T00:00:00`);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+          toast.error("As datas sugeridas são inválidas.");
+          return false;
+        }
+        const diffInDays = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        if (diffInDays !== durationValue) {
+          toast.error(
+            `Cada intervalo sugerido deve ter exatamente ${durationValue} ${durationValue === 1 ? "dia" : "dias"}.`,
+          );
+          return false;
+        }
+      }
     }
 
     setIsSubmitting(true);
@@ -246,6 +392,9 @@ export function useProviderProposalComposer(
         serviceRequestId,
         proposedAmount: effectivePricing.original_amount,
         proposalDescription: cleanDescription,
+        proposalDurationValue: durationValue,
+        proposalDurationUnit: durationUnit,
+        proposalSuggestedSlots: mappedSuggestedSlots,
         photos: [...existingPhotoPaths, ...uploadResult.paths],
         pricing: effectivePricing,
       });
@@ -269,9 +418,13 @@ export function useProviderProposalComposer(
       setIsSubmitting(false);
     }
   }, [
+    availabilitySlots,
     closeComposer,
+    durationUnit,
+    durationValue,
     descriptionDraft,
     existingPhotoPaths,
+    mappedSuggestedSlots,
     newPhotos,
     priceAsNumber,
     pricing,
@@ -285,6 +438,9 @@ export function useProviderProposalComposer(
     isPricingLoading,
     priceInput,
     descriptionDraft,
+    durationValueInput,
+    durationUnit,
+    availabilitySlots,
     existingPhotoPaths,
     newPhotos,
     pricing,
@@ -296,6 +452,11 @@ export function useProviderProposalComposer(
     closeComposer,
     setPriceInput: updatePriceInput,
     setDescriptionDraft,
+    setDurationValueInput: updateDurationValueInput,
+    setDurationUnit,
+    updateAvailabilitySlot,
+    addAvailabilitySlot,
+    removeAvailabilitySlot,
     addPhotos,
     removeExistingPhoto,
     removeNewPhoto,

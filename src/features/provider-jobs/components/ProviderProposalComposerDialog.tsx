@@ -21,6 +21,13 @@ interface ProviderProposalComposerDialogProps {
   isPricingLoading: boolean;
   priceInput: string;
   descriptionDraft: string;
+  durationValueInput: string;
+  durationUnit: "hours" | "days";
+  availabilitySlots: Array<{
+    startDate: string;
+    endDate: string;
+    shift: "morning" | "afternoon" | "full_day";
+  }>;
   existingPhotoUrls: string[];
   newPhotos: File[];
   photosCount: number;
@@ -31,6 +38,15 @@ interface ProviderProposalComposerDialogProps {
   onOpenChange: (open: boolean) => void;
   onPriceInputChange: (value: string) => void;
   onDescriptionDraftChange: (value: string) => void;
+  onDurationValueInputChange: (value: string) => void;
+  onDurationUnitChange: (value: "hours" | "days") => void;
+  onAvailabilitySlotChange: (
+    index: number,
+    field: "startDate" | "endDate" | "shift",
+    value: string,
+  ) => void;
+  onAvailabilitySlotAdd: () => void;
+  onAvailabilitySlotRemove: (index: number) => void;
   onPhotoAdd: (files: FileList | null) => void;
   onExistingPhotoRemove: (index: number) => void;
   onNewPhotoRemove: (index: number) => void;
@@ -41,12 +57,36 @@ function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
+/** Inclusive calendar days from start to end (matches proposal validation). */
+function getInclusiveDayRangeHint(startDate: string, endDate: string): {
+  message: string;
+  isError: boolean;
+} | null {
+  if (!startDate.trim() || !endDate.trim()) return null;
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+  if (end < start) {
+    return { message: "A data final não pode ser anterior à inicial.", isError: true };
+  }
+  const inclusiveDays =
+    Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const daysLabel = inclusiveDays === 1 ? "1 dia" : `${inclusiveDays} dias`;
+  return {
+    message: `Intervalo: ${daysLabel} (início e fim inclusos)`,
+    isError: false,
+  };
+}
+
 export function ProviderProposalComposerDialog({
   open,
   isSubmitting,
   isPricingLoading,
   priceInput,
   descriptionDraft,
+  durationValueInput,
+  durationUnit,
+  availabilitySlots,
   existingPhotoUrls,
   newPhotos,
   photosCount,
@@ -57,6 +97,11 @@ export function ProviderProposalComposerDialog({
   onOpenChange,
   onPriceInputChange,
   onDescriptionDraftChange,
+  onDurationValueInputChange,
+  onDurationUnitChange,
+  onAvailabilitySlotChange,
+  onAvailabilitySlotAdd,
+  onAvailabilitySlotRemove,
   onPhotoAdd,
   onExistingPhotoRemove,
   onNewPhotoRemove,
@@ -143,6 +188,121 @@ export function ProviderProposalComposerDialog({
               <p className="text-xs text-muted-foreground">
                 {descriptionDraft.length}/{maxDescriptionLength} caracteres
               </p>
+            </div>
+
+            <div className="space-y-3 rounded-lg border p-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="proposal-duration-value">Tempo estimado para executar</Label>
+                  <Input
+                    id="proposal-duration-value"
+                    inputMode="numeric"
+                    placeholder="Ex.: 5"
+                    value={durationValueInput}
+                    onChange={(event) => onDurationValueInputChange(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="proposal-duration-unit">Unidade</Label>
+                  <select
+                    id="proposal-duration-unit"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                    value={durationUnit}
+                    onChange={(event) => onDurationUnitChange(event.target.value as "hours" | "days")}
+                  >
+                    <option value="hours">Horas</option>
+                    <option value="days">Dias</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Dias sugeridos para execução (1 a 3 opções)</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={onAvailabilitySlotAdd}
+                    disabled={availabilitySlots.length >= 3}
+                  >
+                    Adicionar opção
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {availabilitySlots.map((slot, index) => {
+                    const dayRangeHint =
+                      durationUnit === "days"
+                        ? getInclusiveDayRangeHint(slot.startDate, slot.endDate)
+                        : null;
+                    return (
+                    <div key={`availability-slot-${index}`} className="rounded-md border p-3">
+                      <div className="mb-2 flex items-center justify-between">
+                        <p className="text-sm font-medium">Opção {index + 1}</p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onAvailabilitySlotRemove(index)}
+                          disabled={availabilitySlots.length <= 1}
+                        >
+                          Remover
+                        </Button>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <div className="space-y-1">
+                          <Label htmlFor={`slot-start-${index}`}>Início</Label>
+                          <Input
+                            id={`slot-start-${index}`}
+                            type="date"
+                            value={slot.startDate}
+                            onChange={(event) =>
+                              onAvailabilitySlotChange(index, "startDate", event.target.value)}
+                          />
+                        </div>
+                        {durationUnit === "days" && (
+                          <div className="space-y-1">
+                            <Label htmlFor={`slot-end-${index}`}>Fim</Label>
+                            <Input
+                              id={`slot-end-${index}`}
+                              type="date"
+                              value={slot.endDate}
+                              onChange={(event) =>
+                                onAvailabilitySlotChange(index, "endDate", event.target.value)}
+                            />
+                          </div>
+                        )}
+                        <div className="space-y-1">
+                          <Label htmlFor={`slot-shift-${index}`}>Turno</Label>
+                          <select
+                            id={`slot-shift-${index}`}
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                            value={slot.shift}
+                            onChange={(event) =>
+                              onAvailabilitySlotChange(index, "shift", event.target.value)}
+                          >
+                            <option value="morning">Manhã</option>
+                            <option value="afternoon">Tarde</option>
+                            <option value="full_day">Dia inteiro</option>
+                          </select>
+                        </div>
+                      </div>
+                      {dayRangeHint && (
+                        <p
+                          className={
+                            dayRangeHint.isError
+                              ? "mt-2 text-xs text-destructive"
+                              : "mt-2 text-xs text-muted-foreground"
+                          }
+                        >
+                          {dayRangeHint.message}
+                        </p>
+                      )}
+                    </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             <div className="space-y-2">
