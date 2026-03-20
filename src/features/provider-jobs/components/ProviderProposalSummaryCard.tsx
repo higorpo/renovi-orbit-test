@@ -68,12 +68,12 @@ function formatDateTime(value: string | null | undefined): string {
 function translateProposalStatus(status: string | null): string {
   const normalized = (status ?? "submitted").toLowerCase();
   const mapping: Record<string, string> = {
-    submitted: "Enviada",
-    accepted: "Aceita",
-    rejected: "Rejeitada",
-    withdrawn: "Retirada",
+    submitted: "Aguardando avaliação do cliente",
+    accepted: "Aceita pelo cliente",
+    rejected: "Rejeitada pelo cliente",
+    withdrawn: "Proposta retirada",
   };
-  return mapping[normalized] ?? "Enviada";
+  return mapping[normalized] ?? "Aguardando avaliação do cliente";
 }
 
 export function ProviderProposalSummaryCard({
@@ -178,10 +178,22 @@ export function ProviderProposalSummaryCard({
 
         <div className="rounded-lg border bg-muted/20 p-3">
           <p className="text-xs text-muted-foreground">Status da proposta</p>
-          <p className="mt-1 text-sm font-semibold capitalize text-foreground">
+          <p className="mt-1 text-sm font-semibold text-foreground">
             {proposalStatus}
           </p>
         </div>
+
+        {job.provider_proposal_description && (
+          <div className="rounded-lg border p-3">
+            <p className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
+              <FileText className="h-3.5 w-3.5" aria-hidden />
+              Descrição da proposta
+            </p>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
+              {job.provider_proposal_description}
+            </p>
+          </div>
+        )}
 
         {(job.provider_proposal_status ?? "").toLowerCase() === "rejected" &&
           job.provider_proposal_client_rejection_response?.trim() && (
@@ -195,18 +207,6 @@ export function ProviderProposalSummaryCard({
               </p>
             </div>
           )}
-
-        {job.provider_proposal_description && (
-          <div className="rounded-lg border p-3">
-            <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              <FileText className="h-3.5 w-3.5" aria-hidden />
-              Descrição enviada
-            </p>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
-              {job.provider_proposal_description}
-            </p>
-          </div>
-        )}
 
         {(isLoading || urls.length > 0) && (
           <div>
@@ -283,15 +283,9 @@ export function ProviderProposalSummaryCard({
                           <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
                             {proposal.proposal_description}
                           </p>
-                          <p className="mt-2 text-xs font-medium capitalize text-foreground">
+                          <p className="mt-2 text-xs font-medium text-foreground">
                             Status: {translateProposalStatus(proposal.status)}
                           </p>
-                          {(proposal.status ?? "").toLowerCase() === "rejected" &&
-                            proposal.client_rejection_response?.trim() && (
-                              <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">
-                                Cliente: {proposal.client_rejection_response.trim()}
-                              </p>
-                            )}
                         </div>
                         <Button
                           type="button"
@@ -352,6 +346,13 @@ export function ProviderProposalSummaryCard({
                   </div>
                 </div>
 
+                <div className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">Descrição</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
+                    {selectedProposal.proposal_description}
+                  </p>
+                </div>
+
                 {(selectedProposal.status ?? "").toLowerCase() === "rejected" &&
                   selectedProposal.client_rejection_response?.trim() && (
                     <div className="rounded-lg border border-destructive/25 bg-destructive/5 p-3">
@@ -364,13 +365,6 @@ export function ProviderProposalSummaryCard({
                       </p>
                     </div>
                   )}
-
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">Descrição</p>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
-                    {selectedProposal.proposal_description}
-                  </p>
-                </div>
 
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div className="rounded-lg border p-3">
