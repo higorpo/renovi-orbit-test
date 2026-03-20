@@ -13,26 +13,11 @@ import {
 import {
   CircleDollarSign,
   FileText,
-  Image as ImageIcon,
-  Eye,
   MessageSquareQuote,
   Percent,
 } from "lucide-react";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
   withdrawProviderProposal,
@@ -41,39 +26,18 @@ import {
 import type { ProviderJobItem } from "../types/provider-jobs.types";
 import { useProviderProposalHistory } from "../hooks/useProviderProposalHistory";
 import { useProviderProposalPhotoUrls } from "../hooks/useProviderProposalPhotoUrls";
+import { ProviderProposalPhotosGrid } from "./ProviderProposalPhotosGrid";
+import { ProviderProposalHistoryAccordion } from "./ProviderProposalHistoryAccordion";
+import { ProviderProposalDetailsDialog } from "./ProviderProposalDetailsDialog";
+import {
+  formatProposalCurrency,
+  translateProposalStatus,
+} from "./providerProposalFormatters";
 
 interface ProviderProposalSummaryCardProps {
   job: ProviderJobItem;
   canEdit: boolean;
   onEdit: () => void;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
-function formatDateTime(value: string | null | undefined): string {
-  if (!value) return "Data indisponível";
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) return "Data indisponível";
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(parsedDate);
-}
-
-function translateProposalStatus(status: string | null): string {
-  const normalized = (status ?? "submitted").toLowerCase();
-  const mapping: Record<string, string> = {
-    submitted: "Aguardando avaliação do cliente",
-    accepted: "Aceita pelo cliente",
-    rejected: "Rejeitada pelo cliente",
-    withdrawn: "Proposta retirada",
-  };
-  return mapping[normalized] ?? "Aguardando avaliação do cliente";
 }
 
 export function ProviderProposalSummaryCard({
@@ -92,8 +56,6 @@ export function ProviderProposalSummaryCard({
     isLoading: isHistoryLoading,
     isError: isHistoryError,
   } = useProviderProposalHistory(job.id, historyOpen);
-  const { urls: selectedProposalPhotoUrls, isLoading: isSelectedPhotosLoading } =
-    useProviderProposalPhotoUrls(selectedProposal?.photos ?? null);
   const withdrawMutation = useMutation({
     mutationFn: async () => withdrawProviderProposal(job.id),
     onSuccess: async ({ success, error }) => {
@@ -155,7 +117,7 @@ export function ProviderProposalSummaryCard({
                 Valor informado
               </p>
               <p className="mt-1 text-sm font-semibold text-foreground">
-                {formatCurrency(job.provider_proposed_amount)}
+                {formatProposalCurrency(job.provider_proposed_amount)}
               </p>
             </div>
           )}
@@ -167,7 +129,7 @@ export function ProviderProposalSummaryCard({
                 Taxa da plataforma
               </p>
               <p className="mt-1 text-sm font-semibold text-foreground">
-                {formatCurrency(job.provider_tax_amount)}
+                {formatProposalCurrency(job.provider_tax_amount)}
                 {typeof job.provider_tax_rate === "number"
                   ? ` (${(job.provider_tax_rate * 100).toFixed(0)}%)`
                   : ""}
@@ -208,216 +170,27 @@ export function ProviderProposalSummaryCard({
             </div>
           )}
 
-        {(isLoading || urls.length > 0) && (
-          <div>
-            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              <ImageIcon className="h-3.5 w-3.5" aria-hidden />
-              Fotos da proposta
-            </p>
-            {isLoading ? (
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                {(job.provider_proposal_photos ?? []).slice(0, 4).map((_, index) => (
-                  <div
-                    key={index}
-                    className="aspect-square animate-pulse rounded-lg bg-muted"
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                {urls.map((url, index) => (
-                  <div
-                    key={`${url}-${index}`}
-                    className="aspect-square overflow-hidden rounded-lg border bg-muted"
-                  >
-                    <img
-                      src={url}
-                      alt={`Foto da proposta ${index + 1}`}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        <ProviderProposalPhotosGrid
+          isLoading={isLoading}
+          urls={urls}
+          fallbackPhotos={job.provider_proposal_photos}
+        />
 
-        <Accordion
-          type="single"
-          collapsible
-          value={historyOpen ? "proposal-history" : ""}
-          onValueChange={(value) => setHistoryOpen(value === "proposal-history")}
-        >
-          <AccordionItem value="proposal-history">
-            <AccordionTrigger>Ver historico de propostas</AccordionTrigger>
-            <AccordionContent>
-              {isHistoryLoading && (
-                <div className="space-y-2">
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-20 w-full" />
-                </div>
-              )}
+        <ProviderProposalHistoryAccordion
+          historyOpen={historyOpen}
+          proposalHistory={proposalHistory}
+          isHistoryLoading={isHistoryLoading}
+          isHistoryError={isHistoryError}
+          onHistoryOpenChange={setHistoryOpen}
+          onProposalSelect={setSelectedProposal}
+        />
 
-              {!isHistoryLoading && isHistoryError && (
-                <p className="text-sm text-muted-foreground">
-                  Nao foi possivel carregar o historico de propostas.
-                </p>
-              )}
-
-              {!isHistoryLoading && !isHistoryError && proposalHistory.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Nenhuma proposta encontrada para este trabalho.
-                </p>
-              )}
-
-              {!isHistoryLoading && !isHistoryError && proposalHistory.length > 0 && (
-                <div className="space-y-2">
-                  {proposalHistory.map((proposal) => (
-                    <div key={proposal.id} className="rounded-lg border p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-foreground">
-                            {formatCurrency(proposal.proposed_amount)}
-                          </p>
-                          <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
-                            {proposal.proposal_description}
-                          </p>
-                          <p className="mt-2 text-xs font-medium text-foreground">
-                            Status: {translateProposalStatus(proposal.status)}
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          aria-label="Ver detalhes da proposta"
-                          onClick={() => setSelectedProposal(proposal)}
-                        >
-                          <Eye className="h-4 w-4" aria-hidden />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-
-        <Dialog
-          open={Boolean(selectedProposal)}
+        <ProviderProposalDetailsDialog
+          proposal={selectedProposal}
           onOpenChange={(open) => {
             if (!open) setSelectedProposal(null);
           }}
-        >
-          <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-2xl">
-            <DialogHeader className="shrink-0">
-              <DialogTitle>Detalhes da proposta</DialogTitle>
-            </DialogHeader>
-
-            {selectedProposal && (
-              <div className="min-h-0 space-y-4 overflow-y-auto pr-1">
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="rounded-lg border p-3">
-                    <p className="text-xs text-muted-foreground">Valor cobrado</p>
-                    <p className="mt-1 text-sm font-semibold text-foreground">
-                      {formatCurrency(selectedProposal.proposed_amount)}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border p-3">
-                    <p className="text-xs text-muted-foreground">Status</p>
-                    <p className="mt-1 text-sm font-semibold text-foreground">
-                      {translateProposalStatus(selectedProposal.status)}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border p-3">
-                    <p className="text-xs text-muted-foreground">Taxa da plataforma</p>
-                    <p className="mt-1 text-sm font-semibold text-foreground">
-                      {formatCurrency(selectedProposal.tax_amount)} (
-                      {(selectedProposal.tax_rate * 100).toFixed(0)}%)
-                    </p>
-                  </div>
-                  <div className="rounded-lg border p-3">
-                    <p className="text-xs text-muted-foreground">Valor a receber</p>
-                    <p className="mt-1 text-sm font-semibold text-foreground">
-                      {formatCurrency(selectedProposal.final_amount)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">Descrição</p>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
-                    {selectedProposal.proposal_description}
-                  </p>
-                </div>
-
-                {(selectedProposal.status ?? "").toLowerCase() === "rejected" &&
-                  selectedProposal.client_rejection_response?.trim() && (
-                    <div className="rounded-lg border border-destructive/25 bg-destructive/5 p-3">
-                      <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                        <MessageSquareQuote className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                        Resposta do cliente sobre a rejeição
-                      </p>
-                      <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
-                        {selectedProposal.client_rejection_response.trim()}
-                      </p>
-                    </div>
-                  )}
-
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <div className="rounded-lg border p-3">
-                    <p className="text-xs text-muted-foreground">Criada em</p>
-                    <p className="mt-1 text-sm text-foreground">
-                      {formatDateTime(selectedProposal.created_at)}
-                    </p>
-                  </div>
-                  <div className="rounded-lg border p-3">
-                    <p className="text-xs text-muted-foreground">Ultima edicao</p>
-                    <p className="mt-1 text-sm text-foreground">
-                      {formatDateTime(selectedProposal.updated_at)}
-                    </p>
-                  </div>
-                </div>
-
-                {(isSelectedPhotosLoading || selectedProposalPhotoUrls.length > 0) && (
-                  <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Fotos da proposta
-                    </p>
-                    {isSelectedPhotosLoading ? (
-                      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                        {(selectedProposal.photos ?? []).slice(0, 4).map((_, index) => (
-                          <div
-                            key={index}
-                            className="aspect-square animate-pulse rounded-lg bg-muted"
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                        {selectedProposalPhotoUrls.map((url, index) => (
-                          <div
-                            key={`${url}-${index}`}
-                            className="aspect-square overflow-hidden rounded-lg border bg-muted"
-                          >
-                            <img
-                              src={url}
-                              alt={`Foto da proposta ${index + 1}`}
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+        />
       </CardContent>
 
       <AlertDialog

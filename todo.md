@@ -22,7 +22,18 @@ Urgentes:
 - deu erro para enviar imagens mesmo elas não tendo conteúdo errado
 
 - testes unitários em todo o módulo de trabalhos do prestador de serviços.
+- não mostrar trabalhos que eu enviei proposta na tela de trabalhos
+- criar uma tela onde eu possa ver as  perguntas enviadas/propostas feitas.
+
+- provider poder dizer quais dias e horários ele tem disponível para fazer o serviço e  qual o tempo estimado
+- quando proposta aceita e entrar na tela de um trabalho específico, redirecionar para tela do serviço em si.
 
 - Quando enviar proposta ou entrar para ver detalhes de um pedido fora da área, perguntar ao prestador se ele quer adicionar aquela área
 
 - Direcionar prestador para que ele cadastre serviços que ele atenda para exibir trabalhos
+
+
+
+
+----
+Stitch AI Studio
