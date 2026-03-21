@@ -22,23 +22,22 @@ create index provider_profiles_public_slug_idx on public.provider_profiles_publi
 
 alter table public.provider_profiles_public enable row level security;
 
--- Select: public when profile_visibility = 'public'; otherwise only authenticated.
 create policy "Public or authenticated can read provider_profiles_public by visibility"
   on public.provider_profiles_public for select
   using (
     profile_visibility = 'public'
-    or (profile_visibility = 'restricted' and auth.role() = 'authenticated')
+    or (profile_visibility = 'restricted' and (select auth.role()) = 'authenticated')
   );
 
 create policy "Providers can update own provider_profiles_public"
   on public.provider_profiles_public for update
-  using (auth.uid() = provider_id)
-  with check (auth.uid() = provider_id);
+  using ((select auth.uid()) = provider_id)
+  with check ((select auth.uid()) = provider_id);
 
 create policy "Providers can insert own provider_profiles_public"
   on public.provider_profiles_public for insert
   with check (
-    auth.uid() = provider_id
+    (select auth.uid()) = provider_id
     and exists (
       select 1 from public.profiles
       where profiles.id = provider_id and profiles.role = 'provider'

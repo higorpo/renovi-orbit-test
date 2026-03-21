@@ -44,51 +44,49 @@ create index if not exists platform_cities_ibge_code_idx on public.platform_citi
 alter table public.platform_states enable row level security;
 alter table public.platform_cities enable row level security;
 
--- Everyone sees only active rows; admins see all (active and inactive).
 create policy "Select active platform_states or admin sees all"
   on public.platform_states for select
   using (
     is_active = true
-    or exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+    or exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin')
   );
 
 create policy "Select active platform_cities or admin sees all"
   on public.platform_cities for select
   using (
     is_active = true
-    or exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+    or exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin')
   );
 
--- Only admins can insert/update/delete.
 create policy "Admins can insert platform_states"
   on public.platform_states for insert
   with check (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+    exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin')
   );
 
 create policy "Admins can update platform_states"
   on public.platform_states for update
-  using (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'))
-  with check (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
+  using (exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin'))
+  with check (exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin'));
 
 create policy "Admins can delete platform_states"
   on public.platform_states for delete
-  using (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
+  using (exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin'));
 
 create policy "Admins can insert platform_cities"
   on public.platform_cities for insert
   with check (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+    exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin')
   );
 
 create policy "Admins can update platform_cities"
   on public.platform_cities for update
-  using (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'))
-  with check (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
+  using (exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin'))
+  with check (exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin'));
 
 create policy "Admins can delete platform_cities"
   on public.platform_cities for delete
-  using (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
+  using (exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin'));
 
 create trigger platform_states_updated_at
   before update on public.platform_states

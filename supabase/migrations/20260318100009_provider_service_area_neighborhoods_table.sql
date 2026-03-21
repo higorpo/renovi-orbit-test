@@ -19,23 +19,21 @@ create index if not exists provider_service_area_neighborhoods_neighborhood_id_i
 
 alter table public.provider_service_area_neighborhoods enable row level security;
 
--- Read: provider sees own; anyone can see rows when profile is public; authenticated users when restricted.
 create policy "Provider or public profile can read provider_service_area_neighborhoods"
   on public.provider_service_area_neighborhoods for select
   using (
-    auth.uid() = provider_id
+    (select auth.uid()) = provider_id
     or exists (
       select 1 from public.provider_profiles_public p
       where p.provider_id = provider_service_area_neighborhoods.provider_id
-        and (p.profile_visibility = 'public' or (p.profile_visibility = 'restricted' and auth.role() = 'authenticated'))
+        and (p.profile_visibility = 'public' or (p.profile_visibility = 'restricted' and (select auth.role()) = 'authenticated'))
     )
   );
 
--- Write: only the provider.
 create policy "Provider can insert own provider_service_area_neighborhoods"
   on public.provider_service_area_neighborhoods for insert
-  with check (auth.uid() = provider_id);
+  with check ((select auth.uid()) = provider_id);
 
 create policy "Provider can delete own provider_service_area_neighborhoods"
   on public.provider_service_area_neighborhoods for delete
-  using (auth.uid() = provider_id);
+  using ((select auth.uid()) = provider_id);

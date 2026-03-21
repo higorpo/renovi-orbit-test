@@ -23,23 +23,23 @@ create policy "Select active platform_neighborhoods or admin sees all"
   on public.platform_neighborhoods for select
   using (
     is_active = true
-    or exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+    or exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin')
   );
 
 create policy "Admins can insert platform_neighborhoods"
   on public.platform_neighborhoods for insert
   with check (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+    exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin')
   );
 
 create policy "Admins can update platform_neighborhoods"
   on public.platform_neighborhoods for update
-  using (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'))
-  with check (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
+  using (exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin'))
+  with check (exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin'));
 
 create policy "Admins can delete platform_neighborhoods"
   on public.platform_neighborhoods for delete
-  using (exists (select 1 from public.profiles where id = auth.uid() and role = 'admin'));
+  using (exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin'));
 
 create trigger platform_neighborhoods_updated_at
   before update on public.platform_neighborhoods

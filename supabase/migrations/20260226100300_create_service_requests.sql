@@ -97,24 +97,24 @@ alter table public.service_requests enable row level security;
 
 create policy "Clients can insert own service requests"
   on public.service_requests for insert
-  with check (auth.uid() = client_id);
+  with check ((select auth.uid()) = client_id);
 
 create policy "Clients read own; providers and admins read all"
   on public.service_requests for select
   using (
-    auth.uid() = client_id
-    or exists (select 1 from public.profiles p where p.id = auth.uid() and p.role in ('admin', 'provider'))
+    (select auth.uid()) = client_id
+    or exists (select 1 from public.profiles p where p.id = (select auth.uid()) and p.role in ('admin', 'provider'))
   );
 
 create policy "Clients can update own service requests; admins can update any"
   on public.service_requests for update
   using (
-    auth.uid() = client_id
-    or exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+    (select auth.uid()) = client_id
+    or exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin')
   )
   with check (
-    auth.uid() = client_id
-    or exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
+    (select auth.uid()) = client_id
+    or exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin')
   );
 
 create trigger service_requests_updated_at
@@ -152,10 +152,10 @@ alter table public.provider_service_request_questions enable row level security;
 create policy "Providers can insert own service request questions"
   on public.provider_service_request_questions for insert
   with check (
-    auth.uid() = provider_id
+    (select auth.uid()) = provider_id
     and exists (
       select 1 from public.profiles p
-      where p.id = auth.uid()
+      where p.id = (select auth.uid())
         and p.role = 'provider'
     )
   );
@@ -163,16 +163,16 @@ create policy "Providers can insert own service request questions"
 create policy "Providers can read own questions; clients read own requests; admins read all"
   on public.provider_service_request_questions for select
   using (
-    auth.uid() = provider_id
+    (select auth.uid()) = provider_id
     or exists (
       select 1
       from public.service_requests sr
       where sr.id = service_request_id
-        and sr.client_id = auth.uid()
+        and sr.client_id = (select auth.uid())
     )
     or exists (
       select 1 from public.profiles p
-      where p.id = auth.uid()
+      where p.id = (select auth.uid())
         and p.role = 'admin'
     )
   );

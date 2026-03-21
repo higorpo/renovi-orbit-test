@@ -16,36 +16,33 @@ create policy "Users can insert own profile image"
   with check (
     bucket_id = 'profile-images'
     and (storage.foldername(name))[1] = 'users'
-    and (storage.foldername(name))[2] = auth.uid()::text
+    and (storage.foldername(name))[2] = (select auth.uid())::text
   );
 
--- Update: only owner can replace their profile image
 create policy "Users can update own profile image"
   on storage.objects for update
   to authenticated
   using (
     bucket_id = 'profile-images'
     and (storage.foldername(name))[1] = 'users'
-    and (storage.foldername(name))[2] = auth.uid()::text
+    and (storage.foldername(name))[2] = (select auth.uid())::text
   )
   with check (
     bucket_id = 'profile-images'
     and (storage.foldername(name))[1] = 'users'
-    and (storage.foldername(name))[2] = auth.uid()::text
+    and (storage.foldername(name))[2] = (select auth.uid())::text
   );
 
--- Select: any authenticated user can read (for displaying profile images in app)
 create policy "Authenticated can read profile images"
   on storage.objects for select
   to authenticated
   using (bucket_id = 'profile-images');
 
--- Delete: only owner can delete their own profile image
 create policy "Users can delete own profile image"
   on storage.objects for delete
   to authenticated
   using (
     bucket_id = 'profile-images'
     and (storage.foldername(name))[1] = 'users'
-    and (storage.foldername(name))[2] = auth.uid()::text
+    and (storage.foldername(name))[2] = (select auth.uid())::text
   );

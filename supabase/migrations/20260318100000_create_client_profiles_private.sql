@@ -14,34 +14,29 @@ comment on column public.client_profiles_private.updated_at is 'Last update of p
 
 alter table public.client_profiles_private enable row level security;
 
--- Clients can read and update their own row only.
-create policy "Clients can read own client_profiles_private"
+-- Merged SELECT: own row for clients; all rows for admins.
+create policy "Clients read own or admins read all client_profiles_private"
   on public.client_profiles_private for select
-  using (auth.uid() = client_id);
-
-create policy "Clients can update own client_profiles_private"
-  on public.client_profiles_private for update
-  using (auth.uid() = client_id)
-  with check (auth.uid() = client_id);
-
--- Clients can insert their own row when they have a profile with role client.
-create policy "Clients can insert own client_profiles_private"
-  on public.client_profiles_private for insert
-  with check (
-    auth.uid() = client_id
-    and exists (
+  using (
+    (select auth.uid()) = client_id
+    or exists (
       select 1 from public.profiles
-      where profiles.id = client_id and profiles.role = 'client'
+      where profiles.id = (select auth.uid()) and profiles.role = 'admin'
     )
   );
 
--- Admins can read (for support); no policy for update/delete by admin (use service role if needed).
-create policy "Admins can read client_profiles_private"
-  on public.client_profiles_private for select
-  using (
-    exists (
+create policy "Clients can update own client_profiles_private"
+  on public.client_profiles_private for update
+  using ((select auth.uid()) = client_id)
+  with check ((select auth.uid()) = client_id);
+
+create policy "Clients can insert own client_profiles_private"
+  on public.client_profiles_private for insert
+  with check (
+    (select auth.uid()) = client_id
+    and exists (
       select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
+      where profiles.id = client_id and profiles.role = 'client'
     )
   );
 

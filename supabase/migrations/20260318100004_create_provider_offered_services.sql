@@ -15,19 +15,27 @@ create index provider_offered_services_service_id_idx on public.provider_offered
 
 alter table public.provider_offered_services enable row level security;
 
-create policy "Providers can manage own offered services"
-  on public.provider_offered_services for all
-  using (auth.uid() = provider_id)
-  with check (auth.uid() = provider_id);
-
--- Public read: via join with provider_profiles_public when profile is visible (handled in app/API).
--- For direct SELECT we allow read when the provider's public profile exists and is visible.
-create policy "Anyone can read offered services for public profiles"
+-- Merged SELECT: own rows for providers; public-profile rows for anyone.
+create policy "Providers or public can read offered services"
   on public.provider_offered_services for select
   using (
-    exists (
+    (select auth.uid()) = provider_id
+    or exists (
       select 1 from public.provider_profiles_public p
       where p.provider_id = provider_offered_services.provider_id
-      and (p.profile_visibility = 'public' or (p.profile_visibility = 'restricted' and auth.role() = 'authenticated'))
+      and (p.profile_visibility = 'public' or (p.profile_visibility = 'restricted' and (select auth.role()) = 'authenticated'))
     )
   );
+
+create policy "Providers can insert own offered services"
+  on public.provider_offered_services for insert
+  with check ((select auth.uid()) = provider_id);
+
+create policy "Providers can update own offered services"
+  on public.provider_offered_services for update
+  using ((select auth.uid()) = provider_id)
+  with check ((select auth.uid()) = provider_id);
+
+create policy "Providers can delete own offered services"
+  on public.provider_offered_services for delete
+  using ((select auth.uid()) = provider_id);

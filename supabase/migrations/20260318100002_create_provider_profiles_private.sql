@@ -27,31 +27,29 @@ comment on column public.provider_profiles_private.updated_at is 'Last update of
 
 alter table public.provider_profiles_private enable row level security;
 
-create policy "Providers can read own provider_profiles_private"
+-- Merged SELECT: own row for providers; all rows for admins.
+create policy "Providers read own or admins read all provider_profiles_private"
   on public.provider_profiles_private for select
-  using (auth.uid() = provider_id);
+  using (
+    (select auth.uid()) = provider_id
+    or exists (
+      select 1 from public.profiles
+      where profiles.id = (select auth.uid()) and profiles.role = 'admin'
+    )
+  );
 
 create policy "Providers can update own provider_profiles_private"
   on public.provider_profiles_private for update
-  using (auth.uid() = provider_id)
-  with check (auth.uid() = provider_id);
+  using ((select auth.uid()) = provider_id)
+  with check ((select auth.uid()) = provider_id);
 
 create policy "Providers can insert own provider_profiles_private"
   on public.provider_profiles_private for insert
   with check (
-    auth.uid() = provider_id
+    (select auth.uid()) = provider_id
     and exists (
       select 1 from public.profiles
       where profiles.id = provider_id and profiles.role = 'provider'
-    )
-  );
-
-create policy "Admins can read provider_profiles_private"
-  on public.provider_profiles_private for select
-  using (
-    exists (
-      select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
     )
   );
 

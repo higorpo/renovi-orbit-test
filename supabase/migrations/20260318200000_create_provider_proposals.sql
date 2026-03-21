@@ -76,17 +76,28 @@ create index if not exists provider_proposals_pending_client_response_idx
 
 alter table public.provider_proposals enable row level security;
 
-create policy "Providers read own proposals"
+-- Merged SELECT: own proposals for providers; proposals on own requests for clients; all for admins.
+create policy "Providers clients or admins read proposals"
   on public.provider_proposals for select
-  using (auth.uid() = provider_id);
+  using (
+    (select auth.uid()) = provider_id
+    or exists (
+      select 1 from public.service_requests sr
+      where sr.id = provider_proposals.service_request_id
+        and sr.client_id = (select auth.uid())
+    )
+    or exists (
+      select 1 from public.profiles where id = (select auth.uid()) and role = 'admin'
+    )
+  );
 
 create policy "Providers insert own proposals"
   on public.provider_proposals for insert
   with check (
-    auth.uid() = provider_id
+    (select auth.uid()) = provider_id
     and exists (
       select 1 from public.profiles p
-      where p.id = auth.uid()
+      where p.id = (select auth.uid())
         and p.role = 'provider'
     )
   );
@@ -94,36 +105,20 @@ create policy "Providers insert own proposals"
 create policy "Providers update own proposals"
   on public.provider_proposals for update
   using (
-    auth.uid() = provider_id
+    (select auth.uid()) = provider_id
     and exists (
       select 1 from public.profiles p
-      where p.id = auth.uid()
+      where p.id = (select auth.uid())
         and p.role = 'provider'
     )
   )
   with check (
-    auth.uid() = provider_id
+    (select auth.uid()) = provider_id
     and exists (
       select 1 from public.profiles p
-      where p.id = auth.uid()
+      where p.id = (select auth.uid())
         and p.role = 'provider'
     )
-  );
-
-create policy "Clients read proposals on own requests"
-  on public.provider_proposals for select
-  using (
-    exists (
-      select 1 from public.service_requests sr
-      where sr.id = provider_proposals.service_request_id
-        and sr.client_id = auth.uid()
-    )
-  );
-
-create policy "Admins read all proposals"
-  on public.provider_proposals for select
-  using (
-    exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
   );
 
 create or replace function public.sync_provider_proposal_client_response_deadline()
@@ -236,7 +231,7 @@ create policy "Providers can insert own proposal images"
   with check (
     bucket_id = 'provider-proposals'
     and (storage.foldername(name))[1] = 'providers'
-    and (storage.foldername(name))[2] = auth.uid()::text
+    and (storage.foldername(name))[2] = (select auth.uid())::text
   );
 
 create policy "Providers can update own proposal images"
@@ -245,12 +240,12 @@ create policy "Providers can update own proposal images"
   using (
     bucket_id = 'provider-proposals'
     and (storage.foldername(name))[1] = 'providers'
-    and (storage.foldername(name))[2] = auth.uid()::text
+    and (storage.foldername(name))[2] = (select auth.uid())::text
   )
   with check (
     bucket_id = 'provider-proposals'
     and (storage.foldername(name))[1] = 'providers'
-    and (storage.foldername(name))[2] = auth.uid()::text
+    and (storage.foldername(name))[2] = (select auth.uid())::text
   );
 
 create policy "Providers can delete own proposal images"
@@ -259,7 +254,7 @@ create policy "Providers can delete own proposal images"
   using (
     bucket_id = 'provider-proposals'
     and (storage.foldername(name))[1] = 'providers'
-    and (storage.foldername(name))[2] = auth.uid()::text
+    and (storage.foldername(name))[2] = (select auth.uid())::text
   );
 
 create policy "Providers clients and admins can read proposal images"
@@ -267,16 +262,16 @@ create policy "Providers clients and admins can read proposal images"
   using (
     bucket_id = 'provider-proposals'
     and (
-      (storage.foldername(name))[2] = auth.uid()::text
+      (storage.foldername(name))[2] = (select auth.uid())::text
       or exists (
         select 1
         from public.service_requests sr
         where sr.id::text = (storage.foldername(name))[4]
-          and sr.client_id = auth.uid()
+          and sr.client_id = (select auth.uid())
       )
       or exists (
         select 1 from public.profiles p
-        where p.id = auth.uid()
+        where p.id = (select auth.uid())
           and p.role = 'admin'
       )
     )

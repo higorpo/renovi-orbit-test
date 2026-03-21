@@ -1,7 +1,7 @@
 -- Client addresses: one client can have multiple addresses.
 -- Used in request-quote and profile; no address data stored on profiles.
--- PostGIS required for geography column.
-create extension if not exists postgis;
+-- PostGIS required for geography column; installed in extensions schema to keep public clean.
+create extension if not exists postgis schema extensions;
 
 create table if not exists public.client_addresses (
   id uuid primary key default gen_random_uuid(),
@@ -51,16 +51,16 @@ alter table public.client_addresses enable row level security;
 
 create policy "Clients can read own addresses"
   on public.client_addresses for select
-  using (auth.uid() = client_id);
+  using ((select auth.uid()) = client_id);
 
 create policy "Clients can insert own addresses"
   on public.client_addresses for insert
-  with check (auth.uid() = client_id);
+  with check ((select auth.uid()) = client_id);
 
 create policy "Clients can update own addresses"
   on public.client_addresses for update
-  using (auth.uid() = client_id)
-  with check (auth.uid() = client_id);
+  using ((select auth.uid()) = client_id)
+  with check ((select auth.uid()) = client_id);
 
 -- Clients cannot delete own addresses (no delete policy).
 

@@ -15,10 +15,10 @@ create policy "Authenticated read own folder or admin/provider read all"
   using (
     bucket_id = 'service-requests'
     and (
-      (storage.foldername(name))[1] = auth.uid()::text
+      (storage.foldername(name))[1] = (select auth.uid())::text
       or exists (
         select 1 from public.profiles p
-        where p.id = auth.uid() and p.role in ('admin', 'provider')
+        where p.id = (select auth.uid()) and p.role in ('admin', 'provider')
       )
     )
   );

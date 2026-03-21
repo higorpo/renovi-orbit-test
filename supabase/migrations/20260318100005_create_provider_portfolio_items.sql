@@ -27,22 +27,33 @@ create index provider_portfolio_items_visibility_sort_idx on public.provider_por
 
 alter table public.provider_portfolio_items enable row level security;
 
-create policy "Providers can manage own portfolio items"
-  on public.provider_portfolio_items for all
-  using (auth.uid() = provider_id)
-  with check (auth.uid() = provider_id);
-
--- Public read: items with visibility = 'public' when provider's profile is visible.
-create policy "Anyone can read public portfolio items when profile visible"
+-- Merged SELECT: all own rows for providers; public items when profile visible for anyone.
+create policy "Providers or public can read portfolio items"
   on public.provider_portfolio_items for select
   using (
-    visibility = 'public'
-    and exists (
-      select 1 from public.provider_profiles_public p
-      where p.provider_id = provider_portfolio_items.provider_id
-      and (p.profile_visibility = 'public' or (p.profile_visibility = 'restricted' and auth.role() = 'authenticated'))
+    (select auth.uid()) = provider_id
+    or (
+      visibility = 'public'
+      and exists (
+        select 1 from public.provider_profiles_public p
+        where p.provider_id = provider_portfolio_items.provider_id
+        and (p.profile_visibility = 'public' or (p.profile_visibility = 'restricted' and (select auth.role()) = 'authenticated'))
+      )
     )
   );
+
+create policy "Providers can insert own portfolio items"
+  on public.provider_portfolio_items for insert
+  with check ((select auth.uid()) = provider_id);
+
+create policy "Providers can update own portfolio items"
+  on public.provider_portfolio_items for update
+  using ((select auth.uid()) = provider_id)
+  with check ((select auth.uid()) = provider_id);
+
+create policy "Providers can delete own portfolio items"
+  on public.provider_portfolio_items for delete
+  using ((select auth.uid()) = provider_id);
 
 create trigger provider_portfolio_items_updated_at
   before update on public.provider_portfolio_items

@@ -40,22 +40,47 @@ create index if not exists services_active_sort_idx on public.services (active, 
 -- RLS: public can read services where active = true; only admin can insert/update/delete.
 alter table public.services enable row level security;
 
-create policy "Public can read active services"
+-- Merged SELECT: active services for anyone; all services for admins.
+create policy "Public or admins can read services"
   on public.services for select
-  using (active = true);
+  using (
+    active = true
+    or exists (
+      select 1 from public.profiles
+      where profiles.id = (select auth.uid()) and profiles.role = 'admin'
+    )
+  );
 
-create policy "Admins have full access to services"
-  on public.services for all
+create policy "Admins can insert services"
+  on public.services for insert
+  with check (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = (select auth.uid()) and profiles.role = 'admin'
+    )
+  );
+
+create policy "Admins can update services"
+  on public.services for update
   using (
     exists (
       select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
+      where profiles.id = (select auth.uid()) and profiles.role = 'admin'
     )
   )
   with check (
     exists (
       select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
+      where profiles.id = (select auth.uid()) and profiles.role = 'admin'
+    )
+  );
+
+create policy "Admins can delete services"
+  on public.services for delete
+  using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = (select auth.uid()) and profiles.role = 'admin'
     )
   );
 

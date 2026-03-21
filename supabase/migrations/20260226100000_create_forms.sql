@@ -19,24 +19,47 @@ comment on column public.forms.form_status is 'draft, active, or deprecated.';
 -- RLS: public read for active forms; only admin can insert/update/delete (enforced by policy).
 alter table public.forms enable row level security;
 
--- Anyone can read active forms (needed for request-quote page).
-create policy "Anyone can read active forms"
+-- Merged SELECT: active forms for anyone; all forms for admins.
+create policy "Anyone can read active forms or admins read all"
   on public.forms for select
-  using (form_status = 'active');
+  using (
+    form_status = 'active'
+    or exists (
+      select 1 from public.profiles
+      where profiles.id = (select auth.uid()) and profiles.role = 'admin'
+    )
+  );
 
--- Admins can read all forms and manage (insert/update/delete).
-create policy "Admins can manage forms"
-  on public.forms for all
+create policy "Admins can insert forms"
+  on public.forms for insert
+  with check (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = (select auth.uid()) and profiles.role = 'admin'
+    )
+  );
+
+create policy "Admins can update forms"
+  on public.forms for update
   using (
     exists (
       select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
+      where profiles.id = (select auth.uid()) and profiles.role = 'admin'
     )
   )
   with check (
     exists (
       select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
+      where profiles.id = (select auth.uid()) and profiles.role = 'admin'
+    )
+  );
+
+create policy "Admins can delete forms"
+  on public.forms for delete
+  using (
+    exists (
+      select 1 from public.profiles
+      where profiles.id = (select auth.uid()) and profiles.role = 'admin'
     )
   );
 

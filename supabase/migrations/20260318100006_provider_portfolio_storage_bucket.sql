@@ -14,7 +14,7 @@ create policy "Providers can insert own portfolio images"
   with check (
     bucket_id = 'provider-portfolio-images'
     and (storage.foldername(name))[1] = 'providers'
-    and (storage.foldername(name))[2] = auth.uid()::text
+    and (storage.foldername(name))[2] = (select auth.uid())::text
   );
 
 create policy "Providers can update own portfolio images"
@@ -23,12 +23,12 @@ create policy "Providers can update own portfolio images"
   using (
     bucket_id = 'provider-portfolio-images'
     and (storage.foldername(name))[1] = 'providers'
-    and (storage.foldername(name))[2] = auth.uid()::text
+    and (storage.foldername(name))[2] = (select auth.uid())::text
   )
   with check (
     bucket_id = 'provider-portfolio-images'
     and (storage.foldername(name))[1] = 'providers'
-    and (storage.foldername(name))[2] = auth.uid()::text
+    and (storage.foldername(name))[2] = (select auth.uid())::text
   );
 
 create policy "Providers can delete own portfolio images"
@@ -37,10 +37,9 @@ create policy "Providers can delete own portfolio images"
   using (
     bucket_id = 'provider-portfolio-images'
     and (storage.foldername(name))[1] = 'providers'
-    and (storage.foldername(name))[2] = auth.uid()::text
+    and (storage.foldername(name))[2] = (select auth.uid())::text
   );
 
--- Public read: same visibility as provider_profiles_public (public = anyone; restricted = authenticated only).
 create policy "Anyone can read portfolio images when provider profile is visible"
   on storage.objects for select
   using (
@@ -48,6 +47,6 @@ create policy "Anyone can read portfolio images when provider profile is visible
     and exists (
       select 1 from public.provider_profiles_public p
       where p.provider_id = ((storage.foldername(name))[2])::uuid
-      and (p.profile_visibility = 'public' or (p.profile_visibility = 'restricted' and auth.role() = 'authenticated'))
+      and (p.profile_visibility = 'public' or (p.profile_visibility = 'restricted' and (select auth.role()) = 'authenticated'))
     )
   );

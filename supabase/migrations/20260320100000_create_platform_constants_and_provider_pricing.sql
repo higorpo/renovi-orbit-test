@@ -21,13 +21,13 @@ create policy "Admins can manage platform constants"
   using (
     exists (
       select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
+      where profiles.id = (select auth.uid()) and profiles.role = 'admin'
     )
   )
   with check (
     exists (
       select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
+      where profiles.id = (select auth.uid()) and profiles.role = 'admin'
     )
   );
 

@@ -31,7 +31,7 @@ create policy "Allow admin insert ai_prompts"
   with check (
     exists (
       select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
+      where profiles.id = (select auth.uid()) and profiles.role = 'admin'
     )
   );
 
@@ -40,7 +40,7 @@ create policy "Allow admin update ai_prompts"
   using (
     exists (
       select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
+      where profiles.id = (select auth.uid()) and profiles.role = 'admin'
     )
   );
 
@@ -71,7 +71,7 @@ create policy "Allow admin select ai_prompt_usage"
   using (
     exists (
       select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
+      where profiles.id = (select auth.uid()) and profiles.role = 'admin'
     )
   );
 
