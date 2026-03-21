@@ -275,4 +275,3 @@ comment on function public.match_provider_jobs is 'Returns paginated, ranked ser
 -- This prevents authenticated users (clients) from bypassing the Edge Function's provider role check.
 revoke execute on function public.match_provider_jobs(uuid, double precision, double precision, integer, uuid, text, integer, integer, uuid) from anon;
 revoke execute on function public.match_provider_jobs(uuid, double precision, double precision, integer, uuid, text, integer, integer, uuid) from authenticated;
-
