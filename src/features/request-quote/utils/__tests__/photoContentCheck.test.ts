@@ -76,6 +76,7 @@ describe("photoContentCheck", () => {
       ]);
       const result = await checkPhotosContent([makeFile("a.jpg")]);
       expect(result).toEqual({ allowed: true });
+      expect(nsfwjs.load).toHaveBeenCalledWith("MobileNetV2");
     });
 
     it("returns allowed false with error when Porn exceeds threshold", async () => {

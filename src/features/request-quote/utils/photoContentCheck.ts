@@ -1,4 +1,3 @@
-import * as nsfwjs from "nsfwjs";
 import { logger } from "@/lib/logger";
 
 export type PhotoContentCheckResult =
@@ -27,15 +26,20 @@ function loadImage(file: File): Promise<HTMLImageElement> {
 /**
  * Check photos for NSFW content. Uses nsfwjs in the browser; no server call.
  * If the model cannot load or an image cannot be verified, we block upload (fail closed).
+ *
+ * nsfwjs and TensorFlow are loaded only on demand (dynamic import) so the main bundle stays smaller.
+ * We use MobileNetV2 only (smallest bundled model in nsfwjs).
  */
 export async function checkPhotosContent(files: File[]): Promise<PhotoContentCheckResult> {
   if (files.length === 0) return { allowed: true };
 
   const errorContent = "Conteúdo da imagem não permitido. Envie apenas fotos do local ou do serviço.";
 
-  let model: Awaited<ReturnType<typeof nsfwjs.load>>;
+  const { load } = await import("nsfwjs");
+
+  let model: Awaited<ReturnType<typeof load>>;
   try {
-    model = await nsfwjs.load();
+    model = await load("MobileNetV2");
   } catch (e) {
     logger.warn("photo_content_check_model_load_failed", {
       error: e instanceof Error ? e.message : String(e),

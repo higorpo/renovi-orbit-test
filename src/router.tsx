@@ -3,8 +3,6 @@ import { createBrowserRouter, Outlet } from 'react-router'
 import { RootLayout } from './layouts/RootLayout'
 import { RouterErrorBoundary } from '@/components/RouterErrorBoundary'
 import { GuestOnlyRoute, ProtectedRoute } from '@/features/auth'
-import { DashboardFakePage } from '@/layouts/DashboardLayout'
-import { ServiceRequestsPage } from '@/features/view-service-requests'
 
 const App = lazy(() => import('./App'))
 const Login = lazy(() => import('./features/auth/components/Login/Login'))
@@ -17,13 +15,52 @@ const FormDemoPage =
     ? lazy(() => import('@/features/dynamic-form').then(m => ({ default: m.FormDemoPage })))
     : null
 
-const RequestQuote = lazy(() => import('@/features/request-quote').then(m => ({ default: m.RequestQuote })))
-const DashboardLayout = lazy(() => import('@/layouts/DashboardLayout').then(m => ({ default: m.DashboardLayout })))
-const ServiceDetailPlaceholder = lazy(() => import('@/features/view-service-requests').then(m => ({ default: m.ServiceDetailPlaceholder })))
-const MyAccountPage = lazy(() => import('@/features/my-account').then(m => ({ default: m.MyAccountPage })))
-const ProviderProfilePage = lazy(() => import('@/features/provider-profile').then(m => ({ default: m.ProviderProfilePage })))
-const ProviderJobsShell = lazy(() => import('@/features/provider-jobs').then(m => ({ default: m.ProviderJobsShell })))
-const ProviderJobsRouteSlot = lazy(() => import('@/features/provider-jobs').then(m => ({ default: m.ProviderJobsRouteSlot })))
+/** Lazy routes use direct file paths (not feature barrels) so Rollup splits chunks per screen. */
+const RequestQuote = lazy(() =>
+  import('@/features/request-quote/components/RequestQuote/RequestQuote').then((m) => ({
+    default: m.RequestQuote,
+  })),
+)
+const DashboardLayout = lazy(() =>
+  import('@/layouts/DashboardLayout/DashboardLayout').then((m) => ({
+    default: m.DashboardLayout,
+  })),
+)
+const DashboardFakePage = lazy(() =>
+  import('@/layouts/DashboardLayout/DashboardFakePage').then((m) => ({
+    default: m.DashboardFakePage,
+  })),
+)
+const ServiceRequestsPage = lazy(() =>
+  import('@/features/view-service-requests/components/ServiceRequestsPage').then((m) => ({
+    default: m.ServiceRequestsPage,
+  })),
+)
+const ServiceDetailPlaceholder = lazy(() =>
+  import('@/features/view-service-requests/components/ServiceDetailPlaceholder').then((m) => ({
+    default: m.ServiceDetailPlaceholder,
+  })),
+)
+const MyAccountPage = lazy(() =>
+  import('@/features/my-account/components/MyAccountPage').then((m) => ({
+    default: m.MyAccountPage,
+  })),
+)
+const ProviderProfilePage = lazy(() =>
+  import('@/features/provider-profile/components/ProviderProfilePage').then((m) => ({
+    default: m.ProviderProfilePage,
+  })),
+)
+const ProviderJobsShell = lazy(() =>
+  import('@/features/provider-jobs/components/ProviderJobsShell').then((m) => ({
+    default: m.ProviderJobsShell,
+  })),
+)
+const ProviderJobsRouteSlot = lazy(() =>
+  import('@/features/provider-jobs/components/ProviderJobsShell').then((m) => ({
+    default: m.ProviderJobsRouteSlot,
+  })),
+)
 
 export const router = createBrowserRouter([
   {

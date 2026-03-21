@@ -6,6 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { stripUnusedNsfwModelAssets } from './vite-plugins/stripUnusedNsfwModelAssets'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const pkg = JSON.parse(readFileSync(path.join(__dirname, 'package.json'), 'utf-8')) as { version?: string }
@@ -31,6 +32,7 @@ export default defineConfig({
   },
   server: {
     host: true,
+    allowedHosts: ['renovi.loca.lt']
   },
   test: {
     environment: 'happy-dom',
@@ -49,7 +51,11 @@ export default defineConfig({
       reporter: ['text', 'text-summary'],
     },
   },
-  plugins: [react(), VitePWA({
+  plugins: [
+    react(),
+    // Drop InceptionV3 / MobileNetV2Mid assets; app only loads MobileNetV2 (see photoContentCheck.ts)
+    stripUnusedNsfwModelAssets(),
+    VitePWA({
     strategies: 'injectManifest',
     srcDir: 'src',
     filename: 'sw.ts',
@@ -136,7 +142,8 @@ export default defineConfig({
     },
 
     injectManifest: {
-      globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+      // Static build output; webp (public assets), woff/woff2 (self-hosted fonts via @fontsource)
+      globPatterns: ['**/*.{js,css,html,svg,png,ico,webp,woff2,woff}'],
       // nsfwjs / TensorFlow shards exceed Workbox default (2 MiB)
       maximumFileSizeToCacheInBytes: 7 * 1024 * 1024,
     },
