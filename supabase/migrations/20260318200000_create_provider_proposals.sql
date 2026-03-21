@@ -20,13 +20,8 @@ create table if not exists public.provider_proposals (
     check (status in ('submitted', 'accepted', 'rejected', 'withdrawn')),
   client_rejection_response text
     check (client_rejection_response is null or char_length(trim(client_rejection_response)) <= 2000),
-  -- Computed deadline for submitted proposals (48 hours from submission).
-  client_response_deadline_at timestamptz generated always as (
-    case
-      when status = 'submitted' then created_at + interval '48 hours'
-      else null
-    end
-  ) stored,
+  -- Set by trigger: submitted → created_at + 48h; otherwise null (generated expr with timestamptz is not immutable).
+  client_response_deadline_at timestamptz,
   constraint provider_proposals_rejection_response_required
     check (
       status <> 'rejected'
@@ -130,6 +125,26 @@ create policy "Admins read all proposals"
   using (
     exists (select 1 from public.profiles where id = auth.uid() and role = 'admin')
   );
+
+create or replace function public.sync_provider_proposal_client_response_deadline()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.status = 'submitted' then
+    new.client_response_deadline_at := new.created_at + interval '48 hours';
+  else
+    new.client_response_deadline_at := null;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger provider_proposals_sync_client_response_deadline
+  before insert or update of status, created_at on public.provider_proposals
+  for each row execute function public.sync_provider_proposal_client_response_deadline();
 
 create trigger provider_proposals_updated_at
   before update on public.provider_proposals
