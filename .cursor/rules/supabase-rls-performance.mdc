@@ -1,0 +1,61 @@
+---
+description: Supabase RLS performance and extension best practices for migration files
+globs: supabase/migrations/**/*.sql
+alwaysApply: false
+---
+
+# Supabase RLS & Extensions — Migration Best Practices
+
+## 1. Wrap `auth.*()` in `(select ...)`
+
+In **every** RLS policy expression (`USING` / `WITH CHECK`), wrap `auth.uid()`, `auth.role()`, and `current_setting()` in a scalar sub-SELECT so Postgres evaluates the value once (initplan) instead of per-row.
+
+```sql
+-- ❌ BAD — re-evaluated for every row
+using (auth.uid() = user_id)
+using (exists (select 1 from profiles where id = auth.uid() and role = 'admin'))
+
+-- ✅ GOOD — evaluated once as initplan
+using ((select auth.uid()) = user_id)
+using (exists (select 1 from profiles where id = (select auth.uid()) and role = 'admin'))
+```
+
+This applies to **all** policy types (SELECT, INSERT, UPDATE, DELETE, ALL) on both `public.*` and `storage.objects` tables.
+
+## 2. One permissive SELECT policy per table
+
+Never create **two or more** `PERMISSIVE` policies for the **same action** (especially SELECT) on the same table — Postgres must evaluate all of them for every query, which is slower than a single policy with `OR`.
+
+```sql
+-- ❌ BAD — two permissive SELECT policies
+create policy "Owners read own"  on t for select using ((select auth.uid()) = owner_id);
+create policy "Admins read all"  on t for select using (is_admin());
+
+-- ✅ GOOD — single policy with OR
+create policy "Owners or admins read"
+  on t for select
+  using (
+    (select auth.uid()) = owner_id
+    or is_admin()
+  );
+```
+
+When a table has an **admin `FOR ALL`** policy plus a **public/owner `FOR SELECT`** policy, split the admin `FOR ALL` into `FOR INSERT`, `FOR UPDATE`, `FOR DELETE` and merge the admin SELECT condition into the existing SELECT policy.
+
+## 3. Extensions in `extensions` schema
+
+Always install extensions in the `extensions` schema (not `public`):
+
+```sql
+-- ❌
+create extension if not exists postgis;
+
+-- ✅
+create extension if not exists postgis schema extensions;
+```
+
+Functions that reference extension types (e.g. `geography`, `geometry`) must include `extensions` in their `search_path`:
+
+```sql
+set search_path = public, extensions
+```
