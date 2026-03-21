@@ -149,6 +149,7 @@ export const mockStep4DataExisting: AddressSelection = {
 export const mockStep4DataNew: AddressSelection = {
   kind: "new",
   formData: {
+    address_label: "Casa",
     address_zip: "01310-100",
     address_street: "Avenida Paulista",
     address_number: "1000",

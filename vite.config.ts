@@ -137,6 +137,8 @@ export default defineConfig({
 
     injectManifest: {
       globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+      // nsfwjs / TensorFlow shards exceed Workbox default (2 MiB)
+      maximumFileSizeToCacheInBytes: 7 * 1024 * 1024,
     },
 
     devOptions: {

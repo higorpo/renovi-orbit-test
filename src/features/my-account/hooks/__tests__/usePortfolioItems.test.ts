@@ -3,8 +3,29 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement } from "react";
 import { usePortfolioItems } from "../usePortfolioItems";
+import type { ProviderPortfolioItem } from "../../api/providerProfile.api";
 
 const providerId = "prov-1";
+
+function makePortfolioItem(
+  partial: Partial<ProviderPortfolioItem> & Pick<ProviderPortfolioItem, "id" | "title">
+): ProviderPortfolioItem {
+  return {
+    id: partial.id,
+    provider_id: partial.provider_id ?? providerId,
+    title: partial.title,
+    description: partial.description ?? null,
+    image_paths: partial.image_paths ?? [],
+    sort_order: partial.sort_order ?? 0,
+    created_at: partial.created_at ?? "",
+    updated_at: partial.updated_at ?? "",
+    city_region: partial.city_region ?? null,
+    execution_date: partial.execution_date ?? null,
+    featured: partial.featured ?? false,
+    service_id: partial.service_id ?? null,
+    visibility: partial.visibility ?? "public",
+  };
+}
 const mockProfile = { id: providerId, role: "provider" as const };
 
 vi.mock("@/features/auth", () => ({
@@ -61,15 +82,10 @@ describe("usePortfolioItems", () => {
   describe("query", () => {
     it("returns items and loading state", async () => {
       const items = [
-        {
+        makePortfolioItem({
           id: "item-1",
-          provider_id: providerId,
           title: "Work",
-          description: null,
-          image_paths: [],
-          sort_order: 0,
-          created_at: "",
-        },
+        }),
       ];
       listPortfolioItems.mockResolvedValue({ items, error: null });
 
@@ -102,15 +118,10 @@ describe("usePortfolioItems", () => {
 
   describe("createItemWithImages", () => {
     it("creates item without images and returns data", async () => {
-      const created = {
+      const created = makePortfolioItem({
         id: "new-id",
-        provider_id: providerId,
         title: "Title",
-        description: null,
-        image_paths: [],
-        sort_order: 0,
-        created_at: "",
-      };
+      });
       createPortfolioItem.mockResolvedValue({ data: created, error: null });
 
       const { result } = renderHook(() => usePortfolioItems(), {
@@ -145,14 +156,14 @@ describe("usePortfolioItems", () => {
           path: "providers/prov-1/portfolio/xxx/image-2.png",
           error: null,
         });
-      const created = {
+      const created = makePortfolioItem({
         id: itemId,
-        provider_id: providerId,
         title: "Work",
-        image_paths: ["providers/prov-1/portfolio/xxx/image-1.jpg", "providers/prov-1/portfolio/xxx/image-2.png"],
-        sort_order: 0,
-        created_at: "",
-      };
+        image_paths: [
+          "providers/prov-1/portfolio/xxx/image-1.jpg",
+          "providers/prov-1/portfolio/xxx/image-2.png",
+        ],
+      });
       createPortfolioItem.mockResolvedValue({ data: created, error: null });
 
       const { result } = renderHook(() => usePortfolioItems(), {

@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Filter, X } from "lucide-react";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { cn } from "@/lib/utils";
-import { RADIUS_OPTIONS, DEFAULT_RADIUS_KM, DEFAULT_SORT_MODE } from "../constants/sortModes";
+import { RADIUS_OPTIONS, DEFAULT_RADIUS_KM } from "../constants/sortModes";
 import type { ProviderServiceSummary, ProviderJobsFilterState } from "../types/provider-jobs.types";
 
 export interface JobsFiltersBarProps {

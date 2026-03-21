@@ -15,7 +15,7 @@ describe("NominatimGeocodingAdapter", () => {
   beforeEach(() => {
     adapter = new NominatimGeocodingAdapter();
     fetchMock = vi.fn();
-    global.fetch = fetchMock;
+    globalThis.fetch = fetchMock as typeof fetch;
   });
 
   describe("geocode", () => {

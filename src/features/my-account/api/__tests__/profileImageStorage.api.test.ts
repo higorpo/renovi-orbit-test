@@ -56,7 +56,10 @@ describe("uploadProfileImage", () => {
   beforeEach(() => {
     supabase = createMockSupabase();
     const chain = supabase.storage.from("profile-images");
-    vi.mocked(chain.upload).mockResolvedValue({ data: { path: "path" }, error: null });
+    vi.mocked(chain.upload).mockResolvedValue({
+      data: { id: "id-1", path: "path", fullPath: "profile-images/path" },
+      error: null,
+    });
   });
 
   it("returns validation error for invalid file type", async () => {
@@ -109,7 +112,7 @@ describe("removeProfileImageFromStorage", () => {
   it("returns null error on success", async () => {
     const supabase = createMockSupabase();
     vi.mocked(supabase.storage.from("profile-images").remove).mockResolvedValue({
-      data: null,
+      data: [],
       error: null,
     });
     const result = await removeProfileImageFromStorage(
@@ -157,7 +160,7 @@ describe("getProfileImageSignedUrl", () => {
   it("returns empty string when data.signedUrl is missing", async () => {
     const supabase = createMockSupabase();
     vi.mocked(supabase.storage.from("profile-images").createSignedUrl).mockResolvedValue({
-      data: {},
+      data: { signedUrl: "" },
       error: null,
     });
     const url = await getProfileImageSignedUrl(supabase, "path");

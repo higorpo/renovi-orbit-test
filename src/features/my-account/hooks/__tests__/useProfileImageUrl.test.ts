@@ -69,7 +69,7 @@ describe("useProfileImageUrl", () => {
 
     const { result, rerender } = renderHook(
       ({ path }: { path: string | null }) => useProfileImageUrl(path),
-      { initialProps: { path: "path1" } }
+      { initialProps: { path: "path1" } as { path: string | null } }
     );
 
     rerender({ path: null });

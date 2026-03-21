@@ -15,29 +15,24 @@ describe("PrivacySection", () => {
     expect(screen.getByRole("link", { name: /Falar com o DPO/ }).getAttribute("href")).toContain("mailto:");
   });
 
-  it("renders Exportar meus dados button when onExportData provided", () => {
-    const onExportData = vi.fn();
-    render(<PrivacySection onExportData={onExportData} />);
-    const btn = screen.getByRole("button", { name: /Exportar meus dados/ });
-    expect(btn).toBeInTheDocument();
-    fireEvent.click(btn);
-    expect(onExportData).toHaveBeenCalled();
+  it("opens export info dialog when Exportar meus dados is clicked", () => {
+    render(<PrivacySection />);
+    fireEvent.click(screen.getByRole("button", { name: /Exportar meus dados/ }));
+    expect(
+      screen.getByRole("heading", { name: /Exportar meus dados/ })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/portabilidade/)
+    ).toBeInTheDocument();
   });
 
-  it("shows Preparando… when isExporting is true", () => {
-    render(
-      <PrivacySection onExportData={vi.fn()} isExporting />
-    );
-    expect(screen.getByText("Preparando…")).toBeInTheDocument();
-  });
-
-  it("disables export button when isExporting", () => {
-    render(
-      <PrivacySection onExportData={vi.fn()} isExporting />
-    );
-    expect(screen.getByText("Preparando…")).toBeInTheDocument();
-    const exportButton = screen.getByRole("button", { name: /Exportar meus dados/ });
-    expect(exportButton).toBeDisabled();
+  it("closes export dialog when Entendi is clicked", () => {
+    render(<PrivacySection />);
+    fireEvent.click(screen.getByRole("button", { name: /Exportar meus dados/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Entendi$/ }));
+    expect(
+      screen.queryByRole("heading", { name: /Exportar meus dados/ })
+    ).not.toBeInTheDocument();
   });
 
   it("renders Ver política de privacidade link when privacyPolicyUrl is set", () => {

@@ -93,22 +93,39 @@ describe("MyAccountProviderPage", () => {
     } as ReturnType<typeof useAuth>);
     useProviderProfile.mockReturnValue({
       profile: { id: "p1", role: "provider", full_name: "João" },
-      privateData: { provider_id: "p1", entity_type: "pf" },
+      privateData: {
+        provider_id: "p1",
+        entity_type: "pf",
+        cnpj: null,
+        commercial_contact: null,
+        cpf: null,
+        legal_representative_cpf: null,
+        legal_representative_name: null,
+        nome_fantasia: null,
+        razao_social: null,
+        updated_at: "2024-01-01T00:00:00Z",
+      },
       publicData: {
         provider_id: "p1",
         slug: "joao",
         display_name: "João",
         profile_visibility: "restricted",
+        bio: null,
+        updated_at: "2024-01-01T00:00:00Z",
         service_area_neighborhood_ids: [],
+        service_area_city: null,
+        service_area_regions: null,
+        service_area_neighborhoods: null,
       },
       isLoading: false,
       error: null,
       refetch: vi.fn(),
-    } as ReturnType<typeof useProviderProfile>);
+    } as unknown as ReturnType<typeof useProviderProfile>);
     useUpdateAccountProfile.mockReturnValue({
+      updateProfile: vi.fn(),
       updateProfileAsync: vi.fn().mockResolvedValue({ error: null }),
       isUpdating: false,
-    } as ReturnType<typeof useUpdateAccountProfile>);
+    } as unknown as ReturnType<typeof useUpdateAccountProfile>);
     useUpdateProviderProfile.mockReturnValue({
       updatePrivateAsync: vi.fn().mockResolvedValue({ error: null }),
       updatePublicAsync: vi.fn().mockResolvedValue({ error: null }),
@@ -125,13 +142,19 @@ describe("MyAccountProviderPage", () => {
     } as ReturnType<typeof useOfferedServices>);
     usePortfolioItems.mockReturnValue({
       items: [],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+      createItem: vi.fn(),
       createItemWithImages: vi.fn().mockResolvedValue({ data: null, error: null }),
+      updateItem: vi.fn(),
       updateItemWithImages: vi.fn().mockResolvedValue({ error: null }),
       deleteItem: vi.fn().mockResolvedValue({ error: null }),
+      reorderItems: vi.fn(),
       isCreating: false,
       isUpdating: false,
       isDeleting: false,
-    } as ReturnType<typeof usePortfolioItems>);
+    } as unknown as ReturnType<typeof usePortfolioItems>);
   });
 
   it("renders page title and subtitle", () => {

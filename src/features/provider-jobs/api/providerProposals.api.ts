@@ -1,5 +1,6 @@
 import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase/client";
+import type { Json } from "@/lib/supabase/database.types";
 
 export interface ProviderProposalPricing {
   original_amount: number;
@@ -174,7 +175,7 @@ export async function createProviderProposal(
     p_proposal_description: params.proposalDescription,
     p_proposal_duration_value: params.proposalDurationValue,
     p_proposal_duration_unit: params.proposalDurationUnit,
-    p_proposal_suggested_slots: params.proposalSuggestedSlots,
+    p_proposal_suggested_slots: params.proposalSuggestedSlots as unknown as Json,
     p_photos: params.photos,
     p_tax_rate: params.pricing.tax_rate,
     p_tax_amount: params.pricing.tax_amount,

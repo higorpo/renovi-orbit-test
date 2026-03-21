@@ -1,8 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { Dispatch, SetStateAction } from "react";
 import { renderHook, act } from "@testing-library/react";
 import { useAddressMapSync } from "../useAddressMapSync";
 import type { GeocodingService, ReverseGeocodingResult } from "@/lib/geocoding";
 import type { AddressFormData } from "../../types/addressForm.validation";
+import type { AddressLocation } from "../../types/addresses.types";
+
+function asSetFormData(fn: ReturnType<typeof vi.fn>): Dispatch<SetStateAction<AddressFormData>> {
+  return fn as unknown as Dispatch<SetStateAction<AddressFormData>>;
+}
+
+function asSetLocation(fn: ReturnType<typeof vi.fn>): (loc: AddressLocation | null) => void {
+  return fn as unknown as (loc: AddressLocation | null) => void;
+}
 
 const defaultFormData: AddressFormData = {
   address_label: "Casa",
@@ -27,14 +37,14 @@ function createMockGeocodingService(): GeocodingService {
 
 describe("useAddressMapSync", () => {
   let geocodingService: GeocodingService;
-  let setFormData: ReturnType<typeof vi.fn>;
-  let setLocation: ReturnType<typeof vi.fn>;
+  let setFormDataMock: ReturnType<typeof vi.fn>;
+  let setLocationMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.useFakeTimers();
     geocodingService = createMockGeocodingService();
-    setFormData = vi.fn();
-    setLocation = vi.fn();
+    setFormDataMock = vi.fn();
+    setLocationMock = vi.fn();
   });
 
   afterEach(() => {
@@ -45,9 +55,9 @@ describe("useAddressMapSync", () => {
     const { result } = renderHook(() =>
       useAddressMapSync({
         formData: defaultFormData,
-        setFormData,
+        setFormData: asSetFormData(setFormDataMock),
         location: null,
-        setLocation,
+        setLocation: asSetLocation(setLocationMock),
         geocodingService,
       })
     );
@@ -63,9 +73,9 @@ describe("useAddressMapSync", () => {
       const { result } = renderHook(() =>
         useAddressMapSync({
           formData: defaultFormData,
-          setFormData,
+          setFormData: asSetFormData(setFormDataMock),
           location: null,
-          setLocation,
+          setLocation: asSetLocation(setLocationMock),
           geocodingService,
         })
       );
@@ -74,7 +84,7 @@ describe("useAddressMapSync", () => {
         result.current.handleMapDrag(-27.5954, -48.548);
       });
 
-      expect(setLocation).toHaveBeenCalledWith({
+      expect(setLocationMock).toHaveBeenCalledWith({
         latitude: -27.5954,
         longitude: -48.548,
       });
@@ -86,9 +96,9 @@ describe("useAddressMapSync", () => {
       const { result } = renderHook(() =>
         useAddressMapSync({
           formData: defaultFormData,
-          setFormData,
+          setFormData: asSetFormData(setFormDataMock),
           location: null,
-          setLocation,
+          setLocation: asSetLocation(setLocationMock),
           geocodingService,
         })
       );
@@ -113,9 +123,9 @@ describe("useAddressMapSync", () => {
       const { result } = renderHook(() =>
         useAddressMapSync({
           formData: defaultFormData,
-          setFormData,
+          setFormData: asSetFormData(setFormDataMock),
           location: null,
-          setLocation,
+          setLocation: asSetLocation(setLocationMock),
           geocodingService,
         })
       );
@@ -124,8 +134,8 @@ describe("useAddressMapSync", () => {
         result.current.handleMapDrag(-27.59, -48.54);
       });
 
-      expect(setFormData).toHaveBeenCalledWith(expect.any(Function));
-      const updater = setFormData.mock.calls[0][0];
+      expect(setFormDataMock).toHaveBeenCalledWith(expect.any(Function));
+      const updater = setFormDataMock.mock.calls[0][0];
       const next = updater(defaultFormData);
       expect(next.address_street).toBe("Rua Nova");
       expect(next.address_number).toBe("200");
@@ -150,9 +160,9 @@ describe("useAddressMapSync", () => {
       const { result } = renderHook(() =>
         useAddressMapSync({
           formData: prevForm,
-          setFormData,
+          setFormData: asSetFormData(setFormDataMock),
           location: null,
-          setLocation,
+          setLocation: asSetLocation(setLocationMock),
           geocodingService,
         })
       );
@@ -161,7 +171,7 @@ describe("useAddressMapSync", () => {
         result.current.handleMapDrag(-27.59, -48.54);
       });
 
-      const updater = setFormData.mock.calls[0][0];
+      const updater = setFormDataMock.mock.calls[0][0];
       const next = updater(prevForm);
       expect(next.address_street).toBe("Rua Antiga");
       expect(next.address_number).toBe("50");
@@ -178,9 +188,9 @@ describe("useAddressMapSync", () => {
       const { result } = renderHook(() =>
         useAddressMapSync({
           formData: defaultFormData,
-          setFormData,
+          setFormData: asSetFormData(setFormDataMock),
           location: null,
-          setLocation,
+          setLocation: asSetLocation(setLocationMock),
           geocodingService,
         })
       );
@@ -189,13 +199,16 @@ describe("useAddressMapSync", () => {
 
       let dragPromise: Promise<void>;
       await act(async () => {
-        dragPromise = result.current.handleMapDrag(-27.59, -48.54);
+        dragPromise = result.current.handleMapDrag(
+          -27.59,
+          -48.54
+        ) as unknown as Promise<void>;
       });
 
       expect(result.current.reverseGeocoding).toBe(true);
 
       await act(async () => {
-        resolveReverse({ latitude: -27.59, longitude: -48.54 });
+        resolveReverse!({ latitude: -27.59, longitude: -48.54 });
         await dragPromise;
       });
 
@@ -224,9 +237,9 @@ describe("useAddressMapSync", () => {
       renderHook(() =>
         useAddressMapSync({
           formData: formWithAddress,
-          setFormData,
+          setFormData: asSetFormData(setFormDataMock),
           location: null,
-          setLocation,
+          setLocation: asSetLocation(setLocationMock),
           geocodingService,
         })
       );
@@ -240,7 +253,7 @@ describe("useAddressMapSync", () => {
       expect(geocodingService.geocode).toHaveBeenCalledWith(
         expect.stringMatching(/Rua Teste.*100.*Centro.*Florianópolis.*SC.*Brasil/)
       );
-      expect(setLocation).toHaveBeenCalledWith({
+      expect(setLocationMock).toHaveBeenCalledWith({
         latitude: -27.5954,
         longitude: -48.548,
       });
@@ -262,9 +275,9 @@ describe("useAddressMapSync", () => {
       renderHook(() =>
         useAddressMapSync({
           formData: formWithAddress,
-          setFormData,
+          setFormData: asSetFormData(setFormDataMock),
           location: null,
-          setLocation,
+          setLocation: asSetLocation(setLocationMock),
           geocodingService,
           disabled: true,
         })
@@ -289,9 +302,9 @@ describe("useAddressMapSync", () => {
       renderHook(() =>
         useAddressMapSync({
           formData: formMissingCity,
-          setFormData,
+          setFormData: asSetFormData(setFormDataMock),
           location: null,
-          setLocation,
+          setLocation: asSetLocation(setLocationMock),
           geocodingService,
         })
       );
@@ -320,9 +333,9 @@ describe("useAddressMapSync", () => {
       renderHook(() =>
         useAddressMapSync({
           formData: formWithAddress,
-          setFormData,
+          setFormData: asSetFormData(setFormDataMock),
           location: null,
-          setLocation,
+          setLocation: asSetLocation(setLocationMock),
           geocodingService,
         })
       );
@@ -332,7 +345,7 @@ describe("useAddressMapSync", () => {
       });
 
       expect(geocodingService.geocode).toHaveBeenCalled();
-      expect(setLocation).not.toHaveBeenCalled();
+      expect(setLocationMock).not.toHaveBeenCalled();
     });
   });
 });

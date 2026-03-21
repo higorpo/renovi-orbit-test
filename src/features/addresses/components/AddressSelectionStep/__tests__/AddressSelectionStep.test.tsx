@@ -31,6 +31,7 @@ const usePlatformCities = vi.mocked(usePlatformStatesModule.usePlatformCities);
 const usePlatformNeighborhoods = vi.mocked(usePlatformStatesModule.usePlatformNeighborhoods);
 
 const defaultFormData = {
+  address_label: "",
   address_zip: "",
   address_street: "",
   address_number: "",

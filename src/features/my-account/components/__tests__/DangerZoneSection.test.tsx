@@ -8,12 +8,7 @@ describe("DangerZoneSection", () => {
   });
 
   it("renders zone title and description", () => {
-    render(
-      <DangerZoneSection
-        deleteDialogOpen={false}
-        onDeleteDialogOpen={vi.fn()}
-      />
-    );
+    render(<DangerZoneSection />);
     expect(screen.getByText("Zona de perigo")).toBeInTheDocument();
     expect(
       screen.getByText(/Essa ação é irreversível/)
@@ -21,81 +16,29 @@ describe("DangerZoneSection", () => {
   });
 
   it("renders Excluir minha conta button", () => {
-    render(
-      <DangerZoneSection
-        deleteDialogOpen={false}
-        onDeleteDialogOpen={vi.fn()}
-      />
-    );
+    render(<DangerZoneSection />);
     expect(
       screen.getByRole("button", { name: /Excluir minha conta/ })
     ).toBeInTheDocument();
   });
 
-  it("calls onDeleteDialogOpen(true) when button is clicked", () => {
-    const onDeleteDialogOpen = vi.fn();
-    render(
-      <DangerZoneSection
-        deleteDialogOpen={false}
-        onDeleteDialogOpen={onDeleteDialogOpen}
-      />
-    );
+  it("opens delete info dialog when button is clicked", () => {
+    render(<DangerZoneSection />);
     fireEvent.click(screen.getByRole("button", { name: /Excluir minha conta/ }));
-    expect(onDeleteDialogOpen).toHaveBeenCalledWith(true);
-  });
-
-  it("disables button when isDeleting is true", () => {
-    render(
-      <DangerZoneSection
-        deleteDialogOpen={false}
-        onDeleteDialogOpen={vi.fn()}
-        isDeleting
-      />
-    );
-    expect(
-      screen.getByRole("button", { name: /Excluir minha conta/ })
-    ).toBeDisabled();
-  });
-
-  it("renders DeleteAccountDialog when deleteDialogOpen is true", () => {
-    render(
-      <DangerZoneSection
-        deleteDialogOpen={true}
-        onDeleteDialogOpen={vi.fn()}
-      />
-    );
     expect(
       screen.getByRole("heading", { name: /Excluir minha conta/ })
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(/encarregado de dados/)
+    ).toBeInTheDocument();
   });
 
-  it("calls onDeleteConfirm when dialog confirm is used", () => {
-    const onDeleteConfirm = vi.fn();
-    render(
-      <DangerZoneSection
-        deleteDialogOpen={true}
-        onDeleteDialogOpen={vi.fn()}
-        onDeleteConfirm={onDeleteConfirm}
-      />
-    );
-    fireEvent.change(screen.getByPlaceholderText("EXCLUIR"), {
-      target: { value: "EXCLUIR" },
-    });
-    fireEvent.click(
-      screen.getByRole("button", { name: /Excluir minha conta/ })
-    );
-    expect(onDeleteConfirm).toHaveBeenCalled();
-  });
-
-  it("calls onDeleteDialogOpen(false) when dialog Cancelar is clicked", () => {
-    const onDeleteDialogOpen = vi.fn();
-    render(
-      <DangerZoneSection
-        deleteDialogOpen={true}
-        onDeleteDialogOpen={onDeleteDialogOpen}
-      />
-    );
-    fireEvent.click(screen.getByRole("button", { name: /Cancelar/ }));
-    expect(onDeleteDialogOpen).toHaveBeenCalledWith(false);
+  it("closes dialog when Entendi is clicked", () => {
+    render(<DangerZoneSection />);
+    fireEvent.click(screen.getByRole("button", { name: /Excluir minha conta/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^Entendi$/ }));
+    expect(
+      screen.queryByRole("heading", { name: /Excluir minha conta/ })
+    ).not.toBeInTheDocument();
   });
 });

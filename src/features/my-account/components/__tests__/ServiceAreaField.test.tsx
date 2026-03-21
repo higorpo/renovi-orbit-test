@@ -38,7 +38,7 @@ const defaultValues: ProviderAccountFormData = {
 
 function TestWrapper({
   disabled,
-  children,
+  children: _children,
 }: {
   disabled?: boolean;
   children?: React.ReactNode;

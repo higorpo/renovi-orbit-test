@@ -22,7 +22,7 @@ vi.mock("../../AddressFormDialog/AddressFormDialog", () => ({
 vi.mock("../../DeleteAddressDialog/DeleteAddressDialog", () => ({
   DeleteAddressDialog: ({
     open,
-    address,
+    address: _address,
     onClose,
     onConfirm,
   }: {

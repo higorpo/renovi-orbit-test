@@ -1,4 +1,4 @@
-import { useRef, type RefObject } from "react";
+import type { RefObject } from "react";
 import { Loader2, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

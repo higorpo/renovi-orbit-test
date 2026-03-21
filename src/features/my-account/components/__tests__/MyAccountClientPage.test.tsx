@@ -88,17 +88,20 @@ describe("MyAccountClientPage", () => {
       isUpdating: false,
     } as ReturnType<typeof useClientPrivateProfile>);
     useUpdateAccountProfile.mockReturnValue({
+      updateProfile: vi.fn(),
       updateProfileAsync: vi.fn().mockResolvedValue({ error: null }),
       isUpdating: false,
-    } as ReturnType<typeof useUpdateAccountProfile>);
+    } as unknown as ReturnType<typeof useUpdateAccountProfile>);
     useUploadProfilePhoto.mockReturnValue({
+      uploadPhoto: vi.fn(),
       uploadPhotoAsync: vi.fn(),
       isUploading: false,
-    } as ReturnType<typeof useUploadProfilePhoto>);
+    } as unknown as ReturnType<typeof useUploadProfilePhoto>);
     useRemoveProfilePhoto.mockReturnValue({
+      removePhoto: vi.fn(),
       removePhotoAsync: vi.fn(),
       isRemoving: false,
-    } as ReturnType<typeof useRemoveProfilePhoto>);
+    } as unknown as ReturnType<typeof useRemoveProfilePhoto>);
   });
 
   it("renders page title and subtitle", () => {

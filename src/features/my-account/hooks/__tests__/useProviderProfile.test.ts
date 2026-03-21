@@ -3,6 +3,10 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement } from "react";
 import { useProviderProfile } from "../useProviderProfile";
+import type {
+  ProviderPrivateProfile,
+  ProviderPublicProfileWithServiceArea,
+} from "../../api/providerProfile.api";
 
 const mockProfile = {
   id: "prov-1",
@@ -13,11 +17,30 @@ const mockProfile = {
   created_at: "2024-01-15T00:00:00Z",
 };
 
-const mockPrivateData = { provider_id: "prov-1", entity_type: "pf" as const };
-const mockPublicData = {
+const mockPrivateData: ProviderPrivateProfile = {
+  provider_id: "prov-1",
+  entity_type: "pf",
+  cnpj: null,
+  commercial_contact: null,
+  cpf: null,
+  legal_representative_cpf: null,
+  legal_representative_name: null,
+  nome_fantasia: null,
+  razao_social: null,
+  updated_at: "2024-01-01T00:00:00Z",
+};
+
+const mockPublicData: ProviderPublicProfileWithServiceArea = {
   provider_id: "prov-1",
   slug: "provider-name",
-  service_area_neighborhood_ids: [] as string[],
+  display_name: null,
+  bio: null,
+  profile_visibility: "restricted",
+  updated_at: "2024-01-01T00:00:00Z",
+  service_area_neighborhood_ids: [],
+  service_area_city: null,
+  service_area_regions: null,
+  service_area_neighborhoods: null,
 };
 
 vi.mock("@/features/auth", () => ({
@@ -58,7 +81,7 @@ describe("useProviderProfile", () => {
     useAuth.mockReturnValue({
       user: { id: "prov-1", email: "p@e.com" },
       profile: mockProfile,
-    } as ReturnType<typeof useAuth>);
+    } as unknown as ReturnType<typeof useAuth>);
     useAccountProfile.mockReturnValue({
       profile: mockProfile,
       isLoading: false,
@@ -97,7 +120,7 @@ describe("useProviderProfile", () => {
     useAuth.mockReturnValue({
       user: { id: "u1", email: "u@e.com" },
       profile: { ...mockProfile, role: "client" as const },
-    } as ReturnType<typeof useAuth>);
+    } as unknown as ReturnType<typeof useAuth>);
 
     const { result } = renderHook(() => useProviderProfile(), {
       wrapper: createWrapper(),
