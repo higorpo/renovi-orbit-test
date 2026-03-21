@@ -73,7 +73,7 @@ export async function getPromptById(
 
   try {
     const { data, error } = await supabase
-      .from("ai_prompts")
+      .from("platform_ai_prompts")
       .select("*")
       .eq("id", promptId)
       .eq("is_active", true)

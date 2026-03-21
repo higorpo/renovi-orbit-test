@@ -60,7 +60,7 @@ begin
     '[]'::jsonb
   ) into services_json
   from public.provider_offered_services pos
-  join public.services s on s.id = pos.service_id and s.active = true
+  join public.platform_services s on s.id = pos.service_id and s.active = true
   where pos.provider_id = pub.provider_id;
 
   select coalesce(

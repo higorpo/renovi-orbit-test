@@ -285,7 +285,7 @@ export async function searchServices(query: string): Promise<{
 }> {
   const q = query.trim().toLowerCase();
   const { data, error } = await supabase
-    .from("services")
+    .from("platform_services")
     .select("id, title, icon_key, color_key")
     .eq("active", true)
     .ilike("title", q ? `%${q}%` : "%")
@@ -306,7 +306,7 @@ export async function getServicesByIds(ids: string[]): Promise<{
 }> {
   if (ids.length === 0) return { services: [], error: null };
   const { data, error } = await supabase
-    .from("services")
+    .from("platform_services")
     .select("id, title, icon_key, color_key")
     .in("id", ids);
 

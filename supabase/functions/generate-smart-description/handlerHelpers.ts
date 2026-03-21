@@ -103,7 +103,7 @@ export async function resolvePromptAndService(
     promptConfig = await getPromptFromDB(supabase, forcePromptKey);
   } else {
     const { data: serviceRow, error: serviceError } = await supabase
-      .from("services")
+      .from("platform_services")
       .select("id, ai_prompt_id, slug, title")
       .eq("id", serviceId)
       .maybeSingle();

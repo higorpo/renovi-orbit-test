@@ -1,5 +1,5 @@
 -- Seed data for local development and db reset.
--- Covers platform geography (states, cities, neighborhoods), forms, services, AI prompts,
+-- Covers platform geography (states, cities, neighborhoods), platform_forms, platform_services, platform_ai_prompts,
 -- and two test users (client + provider) with all related table data populated.
 --
 -- Test accounts (password: Abc123):
@@ -51,9 +51,9 @@ values
 on conflict (city_id, name) do nothing;
 
 -- ---------------------------------------------------------------------------
--- forms (default + instalacao eletrica + instalacao ar condicionado)
+-- platform_forms (default + instalacao eletrica + instalacao ar condicionado)
 -- ---------------------------------------------------------------------------
-insert into public.forms (id, form_schema, form_version, form_status, description)
+insert into public.platform_forms (id, form_schema, form_version, form_status, description)
 values
   (
     'd3eebc99-9c0b-4ef8-bb6d-6bb9bd380a42'::uuid,
@@ -104,10 +104,10 @@ values
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------
--- ai_prompts (default + instalacao eletrica for generate-smart-description)
--- Must run before services (services.ai_prompt_id references ai_prompts.id).
+-- platform_ai_prompts (default + instalacao eletrica for generate-smart-description)
+-- Must run before platform_services (platform_services.ai_prompt_id references platform_ai_prompts.id).
 -- ---------------------------------------------------------------------------
-insert into public.ai_prompts (
+insert into public.platform_ai_prompts (
   id,
   prompt_key,
   name,
@@ -163,9 +163,9 @@ values
 on conflict (prompt_key) do nothing;
 
 -- ---------------------------------------------------------------------------
--- services (default + instalacao eletrica + instalacao ar condicionado)
+-- platform_services (default + instalacao eletrica + instalacao ar condicionado)
 -- ---------------------------------------------------------------------------
-insert into public.services (id, parent_id, form_id, title, description, slug, show_on_request_quote, active, sort_order, ai_prompt_id, icon_key, color_key)
+insert into public.platform_services (id, parent_id, form_id, title, description, slug, show_on_request_quote, active, sort_order, ai_prompt_id, icon_key, color_key)
 values
   (
     'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a61'::uuid,

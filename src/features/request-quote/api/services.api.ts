@@ -19,7 +19,7 @@ export interface ListServicesForRequestQuoteResult {
 
 export async function getServiceBySlug(slug: string): Promise<GetServiceBySlugResult> {
   const { data, error } = await supabase
-    .from("services")
+    .from("platform_services")
     .select("*")
     .eq("slug", slug)
     .eq("show_on_request_quote", true)
@@ -34,7 +34,7 @@ export async function getServiceBySlug(slug: string): Promise<GetServiceBySlugRe
 
 export async function getServiceById(serviceId: string): Promise<GetServiceByIdResult> {
   const { data, error } = await supabase
-    .from("services")
+    .from("platform_services")
     .select("*")
     .eq("id", serviceId)
     .maybeSingle();
@@ -49,7 +49,7 @@ export async function getServiceById(serviceId: string): Promise<GetServiceByIdR
 /** Lists top-level services (and optionally sub-services) shown on request-quote page. */
 export async function listServicesForRequestQuote(): Promise<ListServicesForRequestQuoteResult> {
   const { data, error } = await supabase
-    .from("services")
+    .from("platform_services")
     .select("*")
     .eq("show_on_request_quote", true)
     .order("sort_order", { ascending: true })

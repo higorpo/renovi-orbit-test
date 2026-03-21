@@ -1,7 +1,7 @@
--- Forms table: stores dynamic form schemas for the request-quote flow.
+-- Platform forms table: stores dynamic form schemas for the request-quote flow.
 -- Schema format is compatible with @/features/dynamic-form (version 2.0).
 
-create table if not exists public.forms (
+create table if not exists public.platform_forms (
   id uuid primary key default gen_random_uuid(),
   form_schema jsonb not null,
   form_version text not null default '2.0',
@@ -11,17 +11,17 @@ create table if not exists public.forms (
   description text
 );
 
-comment on table public.forms is 'Form definitions for service quote requests (dynamic-form schema v2).';
-comment on column public.forms.form_schema is 'JSON schema for DynamicForm (version 2.0).';
-comment on column public.forms.form_version is 'Schema version (e.g. 2.0).';
-comment on column public.forms.form_status is 'draft, active, or deprecated.';
+comment on table public.platform_forms is 'Form definitions for service quote requests (dynamic-form schema v2).';
+comment on column public.platform_forms.form_schema is 'JSON schema for DynamicForm (version 2.0).';
+comment on column public.platform_forms.form_version is 'Schema version (e.g. 2.0).';
+comment on column public.platform_forms.form_status is 'draft, active, or deprecated.';
 
 -- RLS: public read for active forms; only admin can insert/update/delete (enforced by policy).
-alter table public.forms enable row level security;
+alter table public.platform_forms enable row level security;
 
 -- Merged SELECT: active forms for anyone; all forms for admins.
-create policy "Anyone can read active forms or admins read all"
-  on public.forms for select
+create policy "Anyone can read active platform_forms or admins read all"
+  on public.platform_forms for select
   using (
     form_status = 'active'
     or exists (
@@ -30,8 +30,8 @@ create policy "Anyone can read active forms or admins read all"
     )
   );
 
-create policy "Admins can insert forms"
-  on public.forms for insert
+create policy "Admins can insert platform_forms"
+  on public.platform_forms for insert
   with check (
     exists (
       select 1 from public.profiles
@@ -39,8 +39,8 @@ create policy "Admins can insert forms"
     )
   );
 
-create policy "Admins can update forms"
-  on public.forms for update
+create policy "Admins can update platform_forms"
+  on public.platform_forms for update
   using (
     exists (
       select 1 from public.profiles
@@ -54,8 +54,8 @@ create policy "Admins can update forms"
     )
   );
 
-create policy "Admins can delete forms"
-  on public.forms for delete
+create policy "Admins can delete platform_forms"
+  on public.platform_forms for delete
   using (
     exists (
       select 1 from public.profiles
@@ -72,6 +72,6 @@ begin
 end;
 $$;
 
-create trigger forms_updated_at
-  before update on public.forms
+create trigger platform_forms_updated_at
+  before update on public.platform_forms
   for each row execute procedure public.set_updated_at();

@@ -43,7 +43,7 @@ export async function checkRateLimit(
 
   try {
     const { data, error } = await supabase
-      .from("rate_limits")
+      .from("platform_rate_limits")
       .select("*")
       .eq("key", uniqueKey)
       .maybeSingle();
@@ -53,7 +53,7 @@ export async function checkRateLimit(
     }
 
     if (!data) {
-      await supabase.from("rate_limits").insert({
+      await supabase.from("platform_rate_limits").insert({
         key: uniqueKey,
         count: 1,
         reset_at: now + WINDOW_MS,
@@ -65,7 +65,7 @@ export async function checkRateLimit(
 
     if (now > data.reset_at) {
       await supabase
-        .from("rate_limits")
+        .from("platform_rate_limits")
         .update({
           count: 1,
           reset_at: now + WINDOW_MS,
@@ -84,7 +84,7 @@ export async function checkRateLimit(
       const msLeft = Math.max(0, data.reset_at - now);
       const retryAfter = Math.ceil(msLeft / 1000);
       await supabase
-        .from("rate_limits")
+        .from("platform_rate_limits")
         .update({
           count: newCount,
           burst_count: (data.burst_count ?? 0) + 1,
@@ -95,7 +95,7 @@ export async function checkRateLimit(
     }
 
     await supabase
-      .from("rate_limits")
+      .from("platform_rate_limits")
       .update({
         count: newCount,
         burst_count: (data.burst_count ?? 0) + 1,

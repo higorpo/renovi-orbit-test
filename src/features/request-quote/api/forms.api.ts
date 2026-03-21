@@ -9,7 +9,7 @@ export interface GetFormByIdResult {
 
 export async function getFormById(formId: string): Promise<GetFormByIdResult> {
   const { data, error } = await supabase
-    .from("forms")
+    .from("platform_forms")
     .select("*")
     .eq("id", formId)
     .maybeSingle();

@@ -11,7 +11,7 @@ export async function logPromptUsage(
   errorMessage?: string
 ): Promise<void> {
   try {
-    await supabase.from("ai_prompt_usage").insert({
+    await supabase.from("platform_ai_prompt_usage").insert({
       prompt_id: promptId,
       user_id: userId,
       request_id: requestId,

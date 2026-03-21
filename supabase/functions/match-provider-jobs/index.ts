@@ -53,7 +53,7 @@ import type { MatchProviderJobsBody } from "./types.ts";
 
 interface ProviderServiceRow {
   service_id: string;
-  services: {
+  platform_services: {
     id: string;
     title: string;
     slug: string;
@@ -181,7 +181,7 @@ serve(async (req: Request) => {
       }),
       supabase
         .from("provider_offered_services")
-        .select("service_id, services(id, title, slug, icon_key, color_key)")
+        .select("service_id, platform_services(id, title, slug, icon_key, color_key)")
         .eq("provider_id", user.id)
         .order("sort_order"),
       supabase
@@ -204,11 +204,11 @@ serve(async (req: Request) => {
     // Map provider offered services
     const providerServices = ((servicesResult.data ?? []) as unknown as ProviderServiceRow[])
       .map((row) => ({
-        id: row.services?.id ?? row.service_id,
-        title: row.services?.title ?? "",
-        slug: row.services?.slug ?? "",
-        icon_key: row.services?.icon_key ?? null,
-        color_key: row.services?.color_key ?? null,
+        id: row.platform_services?.id ?? row.service_id,
+        title: row.platform_services?.title ?? "",
+        slug: row.platform_services?.slug ?? "",
+        icon_key: row.platform_services?.icon_key ?? null,
+        color_key: row.platform_services?.color_key ?? null,
       }));
 
     // Map provider service area

@@ -5,7 +5,7 @@
 create table if not exists public.service_requests (
   id uuid primary key default gen_random_uuid(),
   client_id uuid not null references public.profiles (id) on delete cascade,
-  service_id uuid not null references public.services (id) on delete restrict,
+  service_id uuid not null references public.platform_services (id) on delete restrict,
   address_id uuid references public.client_addresses (id) on delete set null,
   title text not null,
   description text,

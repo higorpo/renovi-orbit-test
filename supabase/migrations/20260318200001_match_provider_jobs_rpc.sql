@@ -127,7 +127,7 @@ begin
     join client_addresses ca on ca.id = sr.address_id
     join platform_cities pc on pc.id = ca.city_id
     join platform_states pst on pst.id = ca.state_id
-    join services s on s.id = sr.service_id
+    join platform_services s on s.id = sr.service_id
     join profiles p on p.id = sr.client_id
     where
       sr.status = 'open'

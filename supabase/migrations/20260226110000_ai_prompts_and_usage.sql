@@ -1,5 +1,5 @@
--- ai_prompts: stores prompt configs for edge functions (e.g. generate-smart-description)
-create table public.ai_prompts (
+-- platform_ai_prompts: stores prompt configs for edge functions (e.g. generate-smart-description)
+create table public.platform_ai_prompts (
   id uuid primary key default gen_random_uuid(),
   prompt_key text not null unique,
   name text not null,
@@ -17,17 +17,17 @@ create table public.ai_prompts (
   updated_by uuid references auth.users(id) on delete set null
 );
 
-comment on table public.ai_prompts is 'AI prompt configurations for edge functions (e.g. generate-smart-description).';
+comment on table public.platform_ai_prompts is 'AI prompt configurations for edge functions (e.g. generate-smart-description).';
 
-create index idx_ai_prompts_active on public.ai_prompts (is_active) where is_active = true;
-create index idx_ai_prompts_prompt_key on public.ai_prompts (prompt_key);
+create index idx_platform_ai_prompts_active on public.platform_ai_prompts (is_active) where is_active = true;
+create index idx_platform_ai_prompts_prompt_key on public.platform_ai_prompts (prompt_key);
 
-alter table public.ai_prompts enable row level security;
+alter table public.platform_ai_prompts enable row level security;
 
--- ai_prompts: only edge functions (service role) can read; no SELECT policy for anon/authenticated.
+-- platform_ai_prompts: only edge functions (service role) can read; no SELECT policy for anon/authenticated.
 -- Only admins can insert and update.
-create policy "Allow admin insert ai_prompts"
-  on public.ai_prompts for insert
+create policy "Allow admin insert platform_ai_prompts"
+  on public.platform_ai_prompts for insert
   with check (
     exists (
       select 1 from public.profiles
@@ -35,8 +35,8 @@ create policy "Allow admin insert ai_prompts"
     )
   );
 
-create policy "Allow admin update ai_prompts"
-  on public.ai_prompts for update
+create policy "Allow admin update platform_ai_prompts"
+  on public.platform_ai_prompts for update
   using (
     exists (
       select 1 from public.profiles
@@ -44,10 +44,10 @@ create policy "Allow admin update ai_prompts"
     )
   );
 
--- ai_prompt_usage: analytics log for prompt usage
-create table public.ai_prompt_usage (
+-- platform_ai_prompt_usage: analytics log for prompt usage
+create table public.platform_ai_prompt_usage (
   id uuid primary key default gen_random_uuid(),
-  prompt_id uuid not null references public.ai_prompts(id) on delete cascade,
+  prompt_id uuid not null references public.platform_ai_prompts(id) on delete cascade,
   user_id uuid references auth.users(id) on delete set null,
   request_id uuid references public.service_requests(id) on delete set null,
   session_id text,
@@ -58,16 +58,16 @@ create table public.ai_prompt_usage (
   used_at timestamptz not null default now()
 );
 
-comment on table public.ai_prompt_usage is 'Usage log for AI prompts (analytics).';
+comment on table public.platform_ai_prompt_usage is 'Usage log for AI prompts (analytics).';
 
-create index idx_ai_prompt_usage_prompt_id on public.ai_prompt_usage (prompt_id);
-create index idx_ai_prompt_usage_used_at on public.ai_prompt_usage (used_at desc);
+create index idx_platform_ai_prompt_usage_prompt_id on public.platform_ai_prompt_usage (prompt_id);
+create index idx_platform_ai_prompt_usage_used_at on public.platform_ai_prompt_usage (used_at desc);
 
-alter table public.ai_prompt_usage enable row level security;
+alter table public.platform_ai_prompt_usage enable row level security;
 
--- ai_prompt_usage: only admins can read; only edge functions (service role) can insert/update (no policies = anon/auth cannot).
-create policy "Allow admin select ai_prompt_usage"
-  on public.ai_prompt_usage for select
+-- platform_ai_prompt_usage: only admins can read; only edge functions (service role) can insert/update (no policies = anon/auth cannot).
+create policy "Allow admin select platform_ai_prompt_usage"
+  on public.platform_ai_prompt_usage for select
   using (
     exists (
       select 1 from public.profiles
@@ -98,7 +98,7 @@ begin
     formatting_rules,
     version
   into v_prompt
-  from public.ai_prompts
+  from public.platform_ai_prompts
   where prompt_key = p_prompt_key
     and is_active = true;
 
@@ -114,7 +114,7 @@ begin
       formatting_rules,
       version
     into v_prompt
-    from public.ai_prompts
+    from public.platform_ai_prompts
     where prompt_key = split_part(p_prompt_key, '_', 1) || '_default'
       and is_active = true;
   end if;
@@ -140,8 +140,8 @@ $$;
 
 comment on function public.get_prompt_by_key(text) is 'Returns active prompt config by key, or default by key prefix (e.g. description_default).';
 
--- Optional reference from services to ai_prompts for generate-smart-description (service-specific prompt).
-alter table public.services
-  add column if not exists ai_prompt_id uuid references public.ai_prompts (id) on delete set null;
-comment on column public.services.ai_prompt_id is 'AI prompt used for this service in generate-smart-description; null falls back to default prompt.';
-create index if not exists services_ai_prompt_id_idx on public.services (ai_prompt_id) where ai_prompt_id is not null;
+-- Optional reference from platform_services to platform_ai_prompts for generate-smart-description (service-specific prompt).
+alter table public.platform_services
+  add column if not exists ai_prompt_id uuid references public.platform_ai_prompts (id) on delete set null;
+comment on column public.platform_services.ai_prompt_id is 'AI prompt used for this service in generate-smart-description; null falls back to default prompt.';
+create index if not exists platform_services_ai_prompt_id_idx on public.platform_services (ai_prompt_id) where ai_prompt_id is not null;

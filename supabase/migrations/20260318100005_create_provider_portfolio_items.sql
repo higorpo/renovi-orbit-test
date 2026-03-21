@@ -5,7 +5,7 @@ create table if not exists public.provider_portfolio_items (
   provider_id uuid not null references public.profiles (id) on delete cascade,
   title text not null,
   description text,
-  service_id uuid references public.services (id) on delete set null,
+  service_id uuid references public.platform_services (id) on delete set null,
   execution_date date,
   image_paths text[] not null default '{}',
   city_region text,

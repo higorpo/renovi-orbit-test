@@ -2,7 +2,7 @@
 
 create table if not exists public.provider_offered_services (
   provider_id uuid not null references public.profiles (id) on delete cascade,
-  service_id uuid not null references public.services (id) on delete cascade,
+  service_id uuid not null references public.platform_services (id) on delete cascade,
   sort_order int not null default 0,
   primary key (provider_id, service_id)
 );

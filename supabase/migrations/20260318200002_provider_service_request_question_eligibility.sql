@@ -14,7 +14,7 @@ as $$
   select exists (
     select 1
     from public.service_requests sr
-    join public.services s on s.id = sr.service_id
+    join public.platform_services s on s.id = sr.service_id
     join public.client_addresses ca on ca.id = sr.address_id
     where sr.id = p_service_request_id
       and sr.status = 'open'
