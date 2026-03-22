@@ -63,3 +63,6 @@ export type BudgetsTab = "enviados" | "perguntas";
 export type BudgetStatusFilter = "all" | "submitted" | "accepted" | "rejected" | "withdrawn";
 
 export type QuestionStatusFilter = "all" | "pending" | "answered" | "closed";
+
+/** Default tab used when opening the budgets screen (runtime value for consumers/tests). */
+export const DEFAULT_BUDGETS_TAB: BudgetsTab = "enviados";
