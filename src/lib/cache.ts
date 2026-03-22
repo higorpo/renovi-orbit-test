@@ -1,3 +1,9 @@
+/**
+ * In-memory TTL cache ({@link cacheGet} / {@link cacheSet}) plus optional
+ * {@link cachePersist*} helpers (localStorage) for the same logical keys when
+ * data must survive reloads (e.g. profile for offline route guards).
+ */
+
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
@@ -34,4 +40,44 @@ export function cacheSet<T>(
 
 export function cacheRemove(key: string): void {
   memory.delete(key);
+}
+
+/** Prefix for values written by cachePersist* (survives reload; use for offline fallbacks). */
+const PERSIST_STORAGE_PREFIX = "orbit.cache.persist.v1:";
+
+function persistStorageKey(logicalKey: string): string {
+  return PERSIST_STORAGE_PREFIX + logicalKey;
+}
+
+/**
+ * Read a value previously stored with {@link cachePersistSet}.
+ * Same logical `key` as {@link cacheGet} / {@link cacheSet} (e.g. `profile_${userId}`).
+ */
+export function cachePersistGet<T>(logicalKey: string): T | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(persistStorageKey(logicalKey));
+    if (!raw) return null;
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+export function cachePersistSet<T>(logicalKey: string, data: T): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(persistStorageKey(logicalKey), JSON.stringify(data));
+  } catch {
+    // quota / private mode
+  }
+}
+
+export function cachePersistRemove(logicalKey: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(persistStorageKey(logicalKey));
+  } catch {
+    // ignore
+  }
 }

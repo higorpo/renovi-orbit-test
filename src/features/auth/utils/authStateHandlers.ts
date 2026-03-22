@@ -1,5 +1,5 @@
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
-import { cacheRemove } from "@/lib/cache";
+import { cachePersistRemove, cacheRemove } from "@/lib/cache";
 import { logger } from "@/lib/logger";
 import type { Profile } from "../types/auth.types";
 
@@ -73,7 +73,10 @@ export function createAuthEventHandlers(
       ctx.setProfile(null);
       ctx.setLoading(false);
       if (ctx.lastFetchedUserId.current) {
-        cacheRemove(`profile_${ctx.lastFetchedUserId.current}`);
+        const uid = ctx.lastFetchedUserId.current;
+        const pk = `profile_${uid}`;
+        cacheRemove(pk);
+        cachePersistRemove(pk);
       }
     },
 
