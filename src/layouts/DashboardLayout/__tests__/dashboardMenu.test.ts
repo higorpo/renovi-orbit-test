@@ -37,11 +37,11 @@ describe("getDashboardMenu", () => {
     });
   });
 
-  it("returns provider menu with 4 main items and 6 all items", () => {
+  it("returns provider menu with 5 main items and 7 all items", () => {
     const result = getDashboardMenu("provider" as ProfileRole);
-    expect(result.mainItems).toHaveLength(4);
-    expect(result.allItems).toHaveLength(6);
-    expect(result.mainItems).toEqual(result.allItems.slice(0, 4));
+    expect(result.mainItems).toHaveLength(5);
+    expect(result.allItems).toHaveLength(7);
+    expect(result.mainItems).toEqual(result.allItems.slice(0, 5));
   });
 
   it("returns provider allItems with expected paths and labels", () => {
@@ -52,6 +52,7 @@ describe("getDashboardMenu", () => {
       "/dashboard",
       "/dashboard/requests",
       "/dashboard/jobs",
+      "/dashboard/budgets",
       "/dashboard/earnings",
       "/dashboard/conta",
       "/dashboard/help",
