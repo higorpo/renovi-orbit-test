@@ -34,8 +34,6 @@ Urgentes:
 - quando proposta aceita e entrar na tela de um trabalho específico, redirecionar para tela do serviço em si.
 - prestadores marcados como "Pioneiros" tem taxa de serviço menor
 - adicionar formato do android & ios para upload de imagens em todos os uploads da plataforma hoje
-- adequar usabilidade da tela de 'Trabalhos' para celular
-- trocar em todos os lugares o termo "proposta" para "orçamento"
 - criar a tela de orçamentos do prestador, onde ele vê os orçamentos enviados e as perguntas.
 
 - Quando enviar proposta ou entrar para ver detalhes de um pedido fora da área, perguntar ao prestador se ele quer adicionar aquela área
