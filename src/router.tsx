@@ -61,6 +61,16 @@ const ProviderJobsRouteSlot = lazy(() =>
     default: m.ProviderJobsRouteSlot,
   })),
 )
+const ProviderBudgetsShell = lazy(() =>
+  import('@/features/provider-budgets/components/ProviderBudgetsShell').then((m) => ({
+    default: m.ProviderBudgetsShell,
+  })),
+)
+const ProviderBudgetsRouteSlot = lazy(() =>
+  import('@/features/provider-budgets/components/ProviderBudgetsShell').then((m) => ({
+    default: m.ProviderBudgetsRouteSlot,
+  })),
+)
 
 export const router = createBrowserRouter([
   {
@@ -157,6 +167,18 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <ProviderJobsRouteSlot /> },
               { path: ':jobId', element: <ProviderJobsRouteSlot /> },
+            ],
+          },
+          {
+            path: 'budgets',
+            element: (
+              <ProtectedRoute allowedRoles={['provider']}>
+                <ProviderBudgetsShell />
+              </ProtectedRoute>
+            ),
+            children: [
+              { index: true, element: <ProviderBudgetsRouteSlot /> },
+              { path: 'pedido/:serviceRequestId', element: <ProviderBudgetsRouteSlot /> },
             ],
           },
           {

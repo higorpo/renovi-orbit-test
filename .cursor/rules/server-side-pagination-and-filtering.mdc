@@ -1,0 +1,113 @@
+---
+description: Paginação e filtros server-side - padrão obrigatório para listagens com potencial de muitos registros
+alwaysApply: true
+---
+
+# Paginação e Filtros Server-Side
+
+## Regra principal
+
+**Sempre que uma consulta ao banco puder retornar uma quantidade indeterminada ou crescente de registros, implemente paginação e filtros diretamente no servidor (banco de dados / RPC / edge function).** Nunca traga todos os registros para o cliente e filtre/pagine apenas em memória.
+
+## Quando aplicar
+
+- Listagens de entidades que crescem com o tempo (pedidos, propostas, perguntas, mensagens, transações, logs).
+- Telas de busca ou acompanhamento onde o usuário pode ter dezenas/centenas/milhares de itens.
+- Qualquer tela com filtros de status, busca textual ou ordenação.
+
+## Quando é aceitável NÃO paginar
+
+- Dados estáticos ou com limite natural pequeno (ex.: lista de serviços da plataforma, categorias, estados/cidades).
+- Dados já retornados dentro de um item paginado (ex.: fotos de um pedido individual, slots de uma proposta).
+
+## Padrão adotado no projeto
+
+### 1. RPC / Edge Function
+
+A função de banco deve aceitar parâmetros de paginação e filtragem:
+
+```sql
+CREATE FUNCTION list_<entidade>(
+  p_page       integer DEFAULT 1,
+  p_page_size  integer DEFAULT 20,
+  p_status     text    DEFAULT NULL,  -- filtro de status (NULL = todos)
+  p_search     text    DEFAULT NULL   -- busca textual (NULL = sem busca)
+)
+RETURNS jsonb  -- { items, total_count, page, page_size }
+```
+
+- **Paginação:** `LIMIT` + `OFFSET` baseados em `p_page` e `p_page_size`.
+- **Filtros:** cláusulas `WHERE` condicionais (ex.: `AND (p_status IS NULL OR status = p_status)`).
+- **Busca textual:** `LOWER(campo) LIKE '%' || v_search || '%'` nos campos relevantes.
+- **Contagem total:** `COUNT(*)` com os mesmos filtros (sem `LIMIT`/`OFFSET`) para que o frontend saiba quantas páginas existem.
+- **Retorno:** `jsonb_build_object('items', v_items, 'total_count', v_total, 'page', p_page, 'page_size', p_page_size)`.
+
+### 2. Camada de API (TypeScript)
+
+```typescript
+interface FetchParams {
+  page: number;
+  pageSize: number;
+  status: string | null;
+  search: string | null;
+}
+
+interface PaginatedResponse<T> {
+  items: T[];
+  total_count: number;
+  page: number;
+  page_size: number;
+}
+```
+
+A função de API recebe os parâmetros e valida o response como `PaginatedResponse<T>`.
+
+### 3. Hook (`useInfiniteQuery`)
+
+- Usar `useInfiniteQuery` do TanStack Query (React Query).
+- O `queryKey` deve incluir **todos** os parâmetros de filtro e busca para que a mudança de filtro invalide/refaça a query automaticamente.
+- `getNextPageParam` calcula se há próxima página baseado em `total_count / page_size`.
+- O hook retorna `items` (acumulado de todas as páginas), `totalCount`, `hasNextPage`, `fetchNextPage`, `isFetchingNextPage`.
+
+```typescript
+const query = useInfiniteQuery<PaginatedResponse<T>>({
+  queryKey: ["entidade", status, search],
+  queryFn: ({ pageParam }) => fetchEntidade({ page: pageParam, ... }),
+  initialPageParam: 1,
+  getNextPageParam: (lastPage) => {
+    const totalPages = Math.ceil(lastPage.total_count / lastPage.page_size);
+    return lastPage.page < totalPages ? lastPage.page + 1 : undefined;
+  },
+});
+```
+
+### 4. Busca textual com debounce
+
+- O input de busca deve usar `useDebouncedValue` (ex.: 400ms) antes de enviar ao `queryKey`.
+- Isso evita requisições a cada tecla pressionada.
+
+### 5. UI: Botão "Carregar mais"
+
+- A tela exibe a lista com os itens carregados até agora.
+- Se `hasNextPage` for verdadeiro, mostra um botão "Carregar mais".
+- O botão desabilita e mostra spinner durante `isFetchingNextPage`.
+- Mesma UX já usada em `ProviderJobsPage`.
+
+## Resumo do fluxo
+
+```
+[Filtro/Busca altera] → queryKey muda → query invalida → página 1 refetch
+[Carregar mais]       → fetchNextPage → página N+1 append
+```
+
+## Feature de referência
+
+- `provider-budgets`: RPCs `list_provider_sent_budgets` e `list_provider_own_questions` com paginação, filtro de status e busca.
+- `provider-jobs`: Edge function `match-provider-jobs` com `useInfiniteQuery`.
+
+## Anti-padrões a evitar
+
+- Trazer todos os registros e filtrar em `useMemo` / `Array.filter` no frontend.
+- Filtrar apenas no frontend enquanto paginação está ativa no backend (resultados inconsistentes).
+- Criar parâmetro de `LIMIT` sem `total_count` (frontend não sabe se há mais páginas).
+- Input de busca sem debounce disparando query a cada keystroke.
