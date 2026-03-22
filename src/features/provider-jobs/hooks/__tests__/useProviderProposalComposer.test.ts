@@ -109,7 +109,7 @@ describe("useProviderProposalComposer", () => {
     });
 
     expect(createProviderProposal).toHaveBeenCalled();
-    expect(toast.success).toHaveBeenCalledWith("Proposta enviada com sucesso.");
+    expect(toast.success).toHaveBeenCalledWith("Orçamento enviado com sucesso.");
     expect(result.current.isOpen).toBe(false);
   });
 });

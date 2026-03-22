@@ -16,7 +16,7 @@ describe("EmptyState", () => {
       })
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Crie seu primeiro serviço para começar a receber propostas/i)
+      screen.getByText(/Crie seu primeiro serviço para começar a receber orçamentos/i)
     ).toBeInTheDocument();
   });
 

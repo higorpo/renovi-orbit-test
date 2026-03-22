@@ -324,13 +324,13 @@ export function useProviderProposalComposer(
 
   const submitProposal = useCallback(async (): Promise<boolean> => {
     if (!priceAsNumber) {
-      toast.error("Informe um valor válido para a proposta.");
+      toast.error("Informe um valor válido para o orçamento.");
       return false;
     }
 
     const cleanDescription = descriptionDraft.trim();
     if (!cleanDescription) {
-      toast.error("Descreva sua proposta antes de enviar.");
+      toast.error("Descreva seu orçamento antes de enviar.");
       return false;
     }
     if (cleanDescription.length > MAX_PROPOSAL_DESCRIPTION) {
@@ -361,7 +361,7 @@ export function useProviderProposalComposer(
       }
       if (durationUnit === "days") {
         if (!slot.endDate) {
-          toast.error("Preencha a data final para propostas em dias.");
+          toast.error("Preencha a data final para orçamentos em dias.");
           return false;
         }
         const end = new Date(`${slot.endDate}T00:00:00`);
@@ -421,7 +421,7 @@ export function useProviderProposalComposer(
         }),
       ]);
 
-      toast.success("Proposta enviada com sucesso.");
+      toast.success("Orçamento enviado com sucesso.");
       closeComposer();
       return true;
     } finally {

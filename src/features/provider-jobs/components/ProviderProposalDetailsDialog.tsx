@@ -26,7 +26,7 @@ export function ProviderProposalDetailsDialog({
     <Dialog open={Boolean(proposal)} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-2xl">
         <DialogHeader className="shrink-0">
-          <DialogTitle>Detalhes da proposta</DialogTitle>
+          <DialogTitle>Detalhes do orçamento</DialogTitle>
         </DialogHeader>
 
         {proposal && (

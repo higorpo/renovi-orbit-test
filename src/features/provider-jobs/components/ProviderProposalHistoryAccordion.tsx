@@ -38,7 +38,7 @@ export function ProviderProposalHistoryAccordion({
       onValueChange={(value) => onHistoryOpenChange(value === "proposal-history")}
     >
       <AccordionItem value="proposal-history">
-        <AccordionTrigger>Ver histórico de propostas</AccordionTrigger>
+        <AccordionTrigger>Ver histórico de orçamentos</AccordionTrigger>
         <AccordionContent>
           {isHistoryLoading && (
             <div className="space-y-2">
@@ -49,13 +49,13 @@ export function ProviderProposalHistoryAccordion({
 
           {!isHistoryLoading && isHistoryError && (
             <p className="text-sm text-muted-foreground">
-              Não foi possível carregar o histórico de propostas.
+              Não foi possível carregar o histórico de orçamentos.
             </p>
           )}
 
           {!isHistoryLoading && !isHistoryError && proposalHistory.length === 0 && (
             <p className="text-sm text-muted-foreground">
-              Nenhuma proposta encontrada para este trabalho.
+              Nenhum orçamento encontrado para este trabalho.
             </p>
           )}
 
@@ -79,7 +79,7 @@ export function ProviderProposalHistoryAccordion({
                       type="button"
                       size="icon"
                       variant="ghost"
-                      aria-label="Ver detalhes da proposta"
+                      aria-label="Ver detalhes do orçamento"
                       onClick={() => onProposalSelect(proposal)}
                     >
                       <Eye className="h-4 w-4" aria-hidden />

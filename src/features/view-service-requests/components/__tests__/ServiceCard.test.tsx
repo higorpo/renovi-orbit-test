@@ -58,7 +58,7 @@ describe("ServiceCard", () => {
         <ServiceCard model={model} />
       </MemoryRouter>
     );
-    expect(screen.getByText(/Aguardando propostas/i)).toBeInTheDocument();
+    expect(screen.getByText(/Aguardando orçamentos/i)).toBeInTheDocument();
   });
 
   it("links card to service detail", () => {

@@ -118,7 +118,7 @@ export function JobQuestionComposerDialog({
         <div className="min-h-0 flex-1 touch-pan-y space-y-2 overflow-y-auto overscroll-y-contain px-4 py-4 [-webkit-overflow-scrolling:touch] sm:px-0 sm:py-0">
           <DialogDescription className="sm:pb-2">
             Escreva sua pergunta com clareza. O cliente poderá responder antes de
-            você enviar a proposta.
+            você enviar o orçamento.
           </DialogDescription>
           <Form {...form}>
             <form

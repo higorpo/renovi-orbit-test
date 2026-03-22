@@ -123,7 +123,7 @@ export function JobCard({ job, className }: JobCardProps) {
             </span>
             <span className="flex items-center gap-1">
               <MessageSquare className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              {job.proposal_count} de {MAX_PROPOSALS_PER_REQUEST} propostas
+              {job.proposal_count} de {MAX_PROPOSALS_PER_REQUEST} orçamentos
             </span>
             <span className="text-xs">
               {job.masked_client_name}

@@ -133,7 +133,7 @@ function CardActions({
               <AlertDialogHeader>
                 <AlertDialogTitle>Cancelar serviço?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Ao cancelar, o serviço não receberá mais propostas. Esta
+                  Ao cancelar, o serviço não receberá mais orçamentos. Esta
                   ação não pode ser desfeita.
                 </AlertDialogDescription>
               </AlertDialogHeader>
@@ -274,7 +274,7 @@ export function ServiceCard({
           {model.proposalCount != null && model.proposalCount > 0 && (
             <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
               <MessageSquare className="h-3.5 w-3.5" aria-hidden />
-              {model.proposalCount} proposta(s)
+              {model.proposalCount} orçamento(s)
             </p>
           )}
         </CardContent>

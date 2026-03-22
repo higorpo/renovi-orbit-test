@@ -35,7 +35,7 @@ export const STATUS_TABS: StatusTabConfig[] = [
   { id: "all", label: "Todos", statuses: [] },
   {
     id: "waiting_proposals",
-    label: "Aguardando propostas",
+    label: "Aguardando orçamentos",
     statuses: [SERVICE_REQUEST_DB_STATUS.OPEN],
   },
   { id: "negotiation", label: "Em negociação", statuses: [] },

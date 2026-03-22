@@ -179,7 +179,7 @@ export function FiltersBar({
           </div>
 
           <div className="space-y-2">
-            <Label>Propostas</Label>
+            <Label>Orçamentos</Label>
             <select
               className={cn(
                 "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
@@ -197,11 +197,11 @@ export function FiltersBar({
                   v === "" ? null : v === "yes"
                 );
               }}
-              aria-label="Filtrar por existência de propostas"
+              aria-label="Filtrar por existência de orçamentos"
             >
               <option value="">Qualquer</option>
-              <option value="yes">Com propostas</option>
-              <option value="no">Sem propostas</option>
+              <option value="yes">Com orçamentos</option>
+              <option value="no">Sem orçamentos</option>
             </select>
           </div>
 

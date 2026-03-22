@@ -147,7 +147,7 @@ export function ProviderProposalComposerDialog({
           descriptionDraft: z
             .string()
             .trim()
-            .min(1, "Descreva sua proposta antes de enviar.")
+            .min(1, "Descreva seu orçamento antes de enviar.")
             .max(
               maxDescriptionLength,
               `A descrição deve ter no máximo ${maxDescriptionLength} caracteres.`,
@@ -203,7 +203,7 @@ export function ProviderProposalComposerDialog({
                 context.addIssue({
                   code: z.ZodIssueCode.custom,
                   path: ["availabilitySlots", index, "endDate"],
-                  message: "Informe a data de fim para propostas em dias.",
+                  message: "Informe a data de fim para orçamentos em dias.",
                 });
                 return;
               }
@@ -288,7 +288,7 @@ export function ProviderProposalComposerDialog({
             <div className="flex items-center justify-between gap-3">
               <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <CircleDollarSign className="h-5 w-5 text-primary" aria-hidden />
-                Enviar proposta
+                Enviar orçamento
               </DialogTitle>
               <DialogClose asChild>
                 <button
@@ -354,7 +354,7 @@ export function ProviderProposalComposerDialog({
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="proposal-description">Descrição da proposta</Label>
+              <Label htmlFor="proposal-description">Descrição do orçamento</Label>
               <Textarea
                 id="proposal-description"
                 value={descriptionDraft}
@@ -506,7 +506,7 @@ export function ProviderProposalComposerDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="proposal-photos">Fotos da proposta (opcional)</Label>
+              <Label htmlFor="proposal-photos">Fotos do orçamento (opcional)</Label>
               <div className="rounded-lg border p-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
@@ -546,7 +546,7 @@ export function ProviderProposalComposerDialog({
                       <div className="flex min-w-0 items-center gap-3">
                         <img
                           src={photoUrl}
-                          alt={`Imagem atual da proposta ${index + 1}`}
+                          alt={`Imagem atual do orçamento ${index + 1}`}
                           className="h-10 w-10 rounded object-cover"
                         />
                         <p className="truncate text-sm text-muted-foreground">Imagem atual #{index + 1}</p>
@@ -593,7 +593,7 @@ export function ProviderProposalComposerDialog({
                   Enviando...
                 </>
               ) : (
-                "Enviar proposta"
+                "Enviar orçamento"
               )}
             </Button>
           </DialogFooter>

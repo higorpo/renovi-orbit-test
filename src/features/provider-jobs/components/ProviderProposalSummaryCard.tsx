@@ -60,10 +60,10 @@ export function ProviderProposalSummaryCard({
     mutationFn: async () => withdrawProviderProposal(job.id),
     onSuccess: async ({ success, error }) => {
       if (error || !success) {
-        toast.error(error ?? "Nao foi possivel retirar a proposta.");
+        toast.error(error ?? "Nao foi possivel retirar o orçamento.");
         return;
       }
-      toast.success("Proposta retirada com sucesso.");
+      toast.success("Orçamento retirado com sucesso.");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["provider-job", job.id] }),
         queryClient.invalidateQueries({ queryKey: ["provider-proposals-history", job.id] }),
@@ -71,7 +71,7 @@ export function ProviderProposalSummaryCard({
       setIsWithdrawConfirmOpen(false);
     },
     onError: () => {
-      toast.error("Nao foi possivel retirar a proposta.");
+      toast.error("Nao foi possivel retirar o orçamento.");
     },
   });
   if (!job.provider_proposal_id) return null;
@@ -86,12 +86,12 @@ export function ProviderProposalSummaryCard({
       <CardHeader className="pb-3">
         <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="w-full text-base font-semibold leading-tight text-foreground sm:w-auto">
-            Sua proposta mais recente enviada
+            Seu orçamento mais recente enviado
           </h3>
           {canEdit && (
             <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:items-center">
               <Button type="button" size="sm" variant="outline" onClick={onEdit} className="w-full sm:w-auto">
-                Editar proposta
+                Editar orçamento
               </Button>
               {canWithdrawProposal && (
                 <Button
@@ -101,7 +101,7 @@ export function ProviderProposalSummaryCard({
                   className="w-full sm:w-auto"
                   onClick={() => setIsWithdrawConfirmOpen(true)}
                 >
-                  Retirar proposta
+                  Retirar orçamento
                 </Button>
               )}
             </div>
@@ -139,7 +139,7 @@ export function ProviderProposalSummaryCard({
         </div>
 
         <div className="rounded-lg border bg-muted/20 p-3">
-          <p className="text-xs text-muted-foreground">Status da proposta</p>
+          <p className="text-xs text-muted-foreground">Status do orçamento</p>
           <p className="mt-1 text-sm font-semibold text-foreground">
             {proposalStatus}
           </p>
@@ -149,7 +149,7 @@ export function ProviderProposalSummaryCard({
           <div className="rounded-lg border p-3">
             <p className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
               <FileText className="h-3.5 w-3.5" aria-hidden />
-              Descrição da proposta
+              Descrição do orçamento
             </p>
             <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
               {job.provider_proposal_description}
@@ -201,10 +201,10 @@ export function ProviderProposalSummaryCard({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Retirar proposta?</AlertDialogTitle>
+            <AlertDialogTitle>Retirar orçamento?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja retirar esta proposta? Essa acao vai marcar a
-              proposta atual como retirada.
+              Tem certeza que deseja retirar este orçamento? Essa acao vai marcar o
+              orçamento atual como retirado.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

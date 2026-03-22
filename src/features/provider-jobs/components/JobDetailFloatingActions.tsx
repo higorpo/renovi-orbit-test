@@ -56,7 +56,7 @@ export function JobDetailFloatingActions({
           onClick={onOpenProposalComposer}
         >
           <Send className="h-4 w-4" aria-hidden />
-          Estou pronto para enviar uma proposta
+          Estou pronto para enviar um orçamento
         </Button>
       </div>
     </>

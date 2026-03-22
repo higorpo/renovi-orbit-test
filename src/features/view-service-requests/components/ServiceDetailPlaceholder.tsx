@@ -26,7 +26,7 @@ export function ServiceDetailPlaceholder() {
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
-            Aqui serão exibidos os detalhes completos do serviço, propostas e
+            Aqui serão exibidos os detalhes completos do serviço, orçamentos e
             ações.
           </p>
         </CardContent>

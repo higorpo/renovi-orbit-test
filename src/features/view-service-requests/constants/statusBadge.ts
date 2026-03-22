@@ -1,7 +1,7 @@
 import type { ServiceRequestDbStatus } from "./statusTabs";
 
 export const STATUS_LABELS: Record<ServiceRequestDbStatus, string> = {
-  open: "Aguardando propostas",
+  open: "Aguardando orçamentos",
   in_progress: "Em andamento",
   closed: "Concluído",
   cancelled: "Cancelado",

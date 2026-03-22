@@ -5,7 +5,7 @@ import { ROUTE_REQUEST_QUOTE } from "../constants/routes";
 
 const TITLE = "Você ainda não solicitou nenhum serviço";
 const SUPPORT_TEXT =
-  "Crie seu primeiro serviço para começar a receber propostas de profissionais.";
+  "Crie seu primeiro serviço para começar a receber orçamentos de profissionais.";
 const CTA_LABEL = "Solicitar serviço";
 
 export function EmptyState() {

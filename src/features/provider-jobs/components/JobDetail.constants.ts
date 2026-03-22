@@ -52,9 +52,9 @@ export function getComplexityLabel(
 
 export const PROPOSAL_STATUS_LABELS: Record<string, string> = {
   submitted: "Aguardando avaliação do cliente",
-  accepted: "Aceita pelo cliente",
-  rejected: "Rejeitada pelo cliente",
-  withdrawn: "Proposta retirada",
+  accepted: "Aceito pelo cliente",
+  rejected: "Rejeitado pelo cliente",
+  withdrawn: "Orçamento retirado",
 };
 
 export function getProposalStatusLabel(status: string | null | undefined): string {

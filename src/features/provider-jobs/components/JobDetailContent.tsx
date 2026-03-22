@@ -113,11 +113,11 @@ export function JobDetailContent({
       {job.provider_proposal_status === "rejected" && (
         <Alert variant="destructive" className="border-destructive/30 bg-destructive/5">
           <AlertTriangle className="h-4 w-4" />
-          <AlertTitle className="text-sm font-semibold">Proposta rejeitada pelo cliente</AlertTitle>
+          <AlertTitle className="text-sm font-semibold">Orçamento rejeitado pelo cliente</AlertTitle>
           <AlertDescription className="mt-2 space-y-1">
             <p className="whitespace-pre-wrap text-sm">
               {job.provider_proposal_client_rejection_response?.trim() ||
-                "O cliente rejeitou a proposta sem deixar um comentário."}
+                "O cliente rejeitou o orçamento sem deixar um comentário."}
             </p>
           </AlertDescription>
         </Alert>
@@ -165,7 +165,7 @@ export function JobDetailContent({
               className="gap-1 border-border/80 font-normal text-muted-foreground"
             >
               <MessageSquare className="h-3 w-3 opacity-80" aria-hidden />
-              {job.proposal_count} de {MAX_PROPOSALS_PER_REQUEST} propostas
+              {job.proposal_count} de {MAX_PROPOSALS_PER_REQUEST} orçamentos
             </Badge>
           </div>
 
