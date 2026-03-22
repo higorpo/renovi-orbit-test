@@ -61,6 +61,23 @@ describe("createProviderJobQuestion", () => {
     });
   });
 
+  it("returns fallback when rpc returns null data without error", async () => {
+    rpc.mockResolvedValue({
+      data: null,
+      error: null,
+    } as never);
+
+    const result = await createProviderJobQuestion({
+      serviceRequestId: "sr-1",
+      question: "Pergunta",
+    });
+
+    expect(result).toEqual({
+      data: null,
+      error: "Unexpected response from server",
+    });
+  });
+
   it("returns fallback error when rpc payload shape is invalid", async () => {
     rpc.mockResolvedValue({
       data: [{ id: "q-1", created_at: "2026-03-19T10:00:00.000Z" }],
@@ -125,5 +142,21 @@ describe("listProviderJobQuestions", () => {
       data: null,
       error: "Forbidden",
     });
+  });
+
+  it("returns fallback when rpc payload is not an array", async () => {
+    rpc.mockResolvedValue({
+      data: { rows: [] },
+      error: null,
+    } as never);
+
+    const result = await listProviderJobQuestions("sr-1");
+
+    expect(result.data).toBeNull();
+    expect(result.error).toBe("Unexpected response from server");
+    expect(logger.error).toHaveBeenCalledWith(
+      "list_provider_job_questions_invalid_response",
+      expect.objectContaining({ serviceRequestId: "sr-1" }),
+    );
   });
 });

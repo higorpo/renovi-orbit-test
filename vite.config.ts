@@ -51,6 +51,7 @@ export default defineConfig(({ mode }) => {
         '**/__tests__/**',
         '**/index.ts',
         '**/types.ts',
+        '**/fixtures/**',
       ],
       reporter: ['text', 'text-summary'],
     },

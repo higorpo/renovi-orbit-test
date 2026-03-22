@@ -86,4 +86,65 @@ describe("useProviderJobQuestionComposer", () => {
     expect(createProviderJobQuestion).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledWith("Escreva uma pergunta antes de enviar.");
   });
+
+  it("rejects questions longer than maxQuestionLength", async () => {
+    const { result } = renderHook(() => useProviderJobQuestionComposer("sr-1"));
+
+    const tooLong = "x".repeat(1001);
+    act(() => {
+      result.current.openComposer();
+      result.current.setQuestionDraft(tooLong);
+    });
+
+    await act(async () => {
+      await result.current.submitQuestion();
+    });
+
+    expect(createProviderJobQuestion).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringContaining("máximo"),
+    );
+  });
+
+  it("shows limit toast when API returns question limit error", async () => {
+    createProviderJobQuestion.mockResolvedValue({
+      data: null,
+      error: "Question limit reached for this request",
+    });
+
+    const { result } = renderHook(() => useProviderJobQuestionComposer("sr-1"));
+
+    act(() => {
+      result.current.openComposer();
+      result.current.setQuestionDraft("Uma pergunta");
+    });
+
+    await act(async () => {
+      await result.current.submitQuestion();
+    });
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "Você já atingiu o limite de 3 perguntas para este pedido.",
+    );
+  });
+
+  it("shows generic error toast when API returns other error", async () => {
+    createProviderJobQuestion.mockResolvedValue({
+      data: null,
+      error: "Server busy",
+    });
+
+    const { result } = renderHook(() => useProviderJobQuestionComposer("sr-1"));
+
+    act(() => {
+      result.current.openComposer();
+      result.current.setQuestionDraft("Uma pergunta");
+    });
+
+    await act(async () => {
+      await result.current.submitQuestion();
+    });
+
+    expect(toast.error).toHaveBeenCalledWith("Server busy");
+  });
 });
