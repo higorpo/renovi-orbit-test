@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { VitePWA } from 'vite-plugin-pwa'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { stripUnusedNsfwModelAssets } from './vite-plugins/stripUnusedNsfwModelAssets'
 
@@ -13,7 +13,11 @@ const pkg = JSON.parse(readFileSync(path.join(__dirname, 'package.json'), 'utf-8
 const appVersion = pkg.version ?? '0.0.0'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const pwaEnabled = env.VITE_ENABLE_PWA === 'true'
+
+  return {
   build: {
     sourcemap: true,
   },
@@ -32,7 +36,7 @@ export default defineConfig({
   },
   server: {
     host: true,
-    allowedHosts: ['renovi.loca.lt']
+    allowedHosts: ['renovi-2.loca.lt']
   },
   test: {
     environment: 'happy-dom',
@@ -56,6 +60,8 @@ export default defineConfig({
     // Drop InceptionV3 / MobileNetV2Mid assets; app only loads MobileNetV2 (see photoContentCheck.ts)
     stripUnusedNsfwModelAssets(),
     VitePWA({
+    disable: !pwaEnabled,
+    selfDestroying: !pwaEnabled,
     strategies: 'injectManifest',
     srcDir: 'src',
     filename: 'sw.ts',
@@ -148,12 +154,16 @@ export default defineConfig({
       maximumFileSizeToCacheInBytes: 7 * 1024 * 1024,
     },
 
-    devOptions: {
-      enabled: true,
-      navigateFallback: 'index.html',
-      suppressWarnings: true,
-      type: 'module',
-    },
+    ...(pwaEnabled
+      ? {
+          devOptions: {
+            enabled: true,
+            navigateFallback: 'index.html',
+            suppressWarnings: true,
+            type: 'module' as const,
+          },
+        }
+      : {}),
   }),
   sentryVitePlugin({
     org: process.env.SENTRY_ORG ?? '',
@@ -166,4 +176,5 @@ export default defineConfig({
     disable: !process.env.SENTRY_AUTH_TOKEN,
   }),
 ],
+}
 })
