@@ -37,7 +37,7 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: "yarn dev",
+    command: "yarn dev:vite",
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
