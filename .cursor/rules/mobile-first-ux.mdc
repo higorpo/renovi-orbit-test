@@ -1,0 +1,59 @@
+---
+description: Mobile-first UX — teclado virtual, dialogs, scroll e touch
+alwaysApply: true
+---
+
+# Mobile-first UX
+
+A plataforma é **mobile-first**. Toda UI deve ser pensada primeiro para telas pequenas e touch, e depois adaptada para desktop.
+
+## Teclado virtual e área visível
+
+1. **Dialogs e modais full-screen no mobile** — Quando o teclado virtual abre, a viewport visível encolhe mas `100dvh` não muda em todos os browsers. Usar o hook **`useMobileDialogViewport`** (`@/hooks/useMobileDialogViewport`) para manter o dialog dimensionado à `visualViewport`:
+   - Passar `ref={contentRef}` no `DialogContent`.
+   - Chamar `scheduleSync` no `onFocus` de inputs que abrem teclado.
+
+2. **Botões de ação sempre visíveis** — Rodapés com ações (Cancelar, Enviar, Salvar) devem ficar **acima do teclado**, nunca escondidos. No mobile, usar footer com `bg-background/95`, `backdrop-blur-md`, `shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)]` e `z-10`. Resetar esses estilos no `sm:` para manter o desktop limpo.
+
+3. **`safe-area-inset-bottom`** — Em footers fixos/sticky, usar `pb-[max(0.75rem,env(safe-area-inset-bottom))]` para respeitar a barra home de iPhones.
+
+## Scroll e touch
+
+1. **`overscroll-y-contain`** — Em áreas roláveis dentro de dialogs/sheets, evitar que o scroll vaze para o body.
+2. **`touch-pan-y`** — Garantir que gestos de scroll vertical funcionem em áreas com scroll interno.
+3. **`-webkit-overflow-scrolling: touch`** — Manter inércia de scroll no iOS.
+4. **`resize-none` em textareas no mobile** — Usar `max-sm:resize-none` para evitar conflito entre resize manual e layout flex/height do dialog.
+
+## Padrão de dialog full-screen (mobile)
+
+Toda dialog que ocupa a tela inteira no mobile deve seguir este layout:
+
+```tsx
+const { contentRef, scheduleSync } = useMobileDialogViewport(open);
+
+<DialogContent
+  ref={contentRef}
+  className={cn(
+    "flex flex-col gap-0 overflow-hidden p-0 [&>button]:hidden",
+    // Mobile: full-screen posicionado pelo hook
+    "max-sm:inset-x-0 max-sm:bottom-auto max-sm:top-0 max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:border-0",
+    // Desktop: dialog centrado normal
+    "sm:w-full sm:max-w-lg sm:rounded-lg sm:border sm:p-6",
+  )}
+>
+  <div className="flex min-h-0 flex-1 flex-col">
+    <Header />  {/* shrink-0 */}
+    <ScrollArea /> {/* flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y */}
+    <Footer />  {/* shrink-0, floating style no mobile */}
+  </div>
+</DialogContent>
+```
+
+## Checklist ao criar telas / componentes
+
+- [ ] Layout funciona em viewport de 360px de largura (device mínimo)?
+- [ ] Inputs com teclado virtual: botões de ação continuam visíveis?
+- [ ] Scroll interno em modal/sheet: consegue rolar para cima e para baixo sem travar?
+- [ ] Touch targets >= 44px (mínimo recomendado para acessibilidade)?
+- [ ] Textos não transbordam nem ficam cortados em tela pequena?
+- [ ] `safe-area-inset-bottom` respeitado em footers fixos?

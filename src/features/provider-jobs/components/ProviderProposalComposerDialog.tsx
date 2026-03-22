@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { useMobileDialogViewport } from "@/hooks/useMobileDialogViewport";
 import type { ProviderProposalPricing } from "../api/providerProposals.api";
 
 interface ProviderProposalComposerDialogProps {
@@ -128,6 +129,7 @@ export function ProviderProposalComposerDialog({
   onSubmit,
 }: ProviderProposalComposerDialogProps) {
   const [showValidationErrors, setShowValidationErrors] = useState(false);
+  const { contentRef, scheduleSync } = useMobileDialogViewport(open);
 
   useEffect(() => {
     if (!open) return;
@@ -274,15 +276,15 @@ export function ProviderProposalComposerDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
+        ref={contentRef}
         className={cn(
           "flex flex-col gap-0 overflow-hidden p-0 [&>button]:hidden",
-          // Full-screen on small viewports: avoid centered translate + 100vh clipping (mobile browser chrome / safe areas)
-          "max-sm:inset-0 max-sm:left-0 max-sm:top-0 max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:border-0",
+          "max-sm:inset-x-0 max-sm:bottom-auto max-sm:left-0 max-sm:right-0 max-sm:top-0 max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:border-0",
           "sm:max-h-[90vh] sm:w-full sm:max-w-2xl sm:rounded-lg sm:border sm:p-6",
         )}
       >
         <div className="flex min-h-0 flex-1 flex-col sm:max-h-[calc(90vh-3rem)]">
-          <DialogHeader className="shrink-0 border-b px-4 py-4 text-left sm:border-b-0 sm:px-0 sm:py-0">
+          <DialogHeader className="shrink-0 border-b px-4 py-3 text-left sm:border-b-0 sm:px-0 sm:py-0">
             <div className="flex items-center justify-between gap-3">
               <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <CircleDollarSign className="h-5 w-5 text-primary" aria-hidden />
@@ -298,7 +300,10 @@ export function ProviderProposalComposerDialog({
                 </button>
               </DialogClose>
             </div>
-            <DialogDescription className="space-y-2 sm:pb-4">
+          </DialogHeader>
+
+          <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto overscroll-y-contain px-4 py-4 [-webkit-overflow-scrolling:touch] sm:px-0 sm:py-0">
+            <DialogDescription className="space-y-2 sm:pb-2">
               <span className="block">
                 Defina seu valor com transparência. A taxa cobre intermediação segura, proteção para ambas as
                 partes e suporte da plataforma durante a negociação.
@@ -308,9 +313,6 @@ export function ProviderProposalComposerDialog({
                 Mais segurança para você e para o cliente.
               </span>
             </DialogDescription>
-          </DialogHeader>
-
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-0 sm:py-0">
             <div className="space-y-2">
               <Label htmlFor="proposal-price">Quanto você quer cobrar?</Label>
               <Input
@@ -319,6 +321,7 @@ export function ProviderProposalComposerDialog({
                 placeholder="Ex.: 500,00"
                 value={priceInput}
                 onChange={(event) => onPriceInputChange(event.target.value)}
+                onFocus={scheduleSync}
               />
               {showValidationErrors && priceError && (
                 <p className="text-xs text-destructive">{priceError}</p>
@@ -356,8 +359,9 @@ export function ProviderProposalComposerDialog({
                 id="proposal-description"
                 value={descriptionDraft}
                 onChange={(event) => onDescriptionDraftChange(event.target.value)}
+                onFocus={scheduleSync}
                 placeholder="Descreva como você vai executar o serviço, prazo estimado e diferenciais."
-                className="min-h-32 resize-y"
+                className="min-h-32 resize-y max-sm:resize-none"
               />
               {showValidationErrors && descriptionError && (
                 <p className="text-xs text-destructive">{descriptionError}</p>
@@ -377,6 +381,7 @@ export function ProviderProposalComposerDialog({
                     placeholder="Ex.: 5"
                     value={durationValueInput}
                     onChange={(event) => onDurationValueInputChange(event.target.value)}
+                    onFocus={scheduleSync}
                   />
                   {showValidationErrors && durationError && (
                     <p className="text-xs text-destructive">{durationError}</p>
@@ -573,7 +578,7 @@ export function ProviderProposalComposerDialog({
             </div>
           </div>
 
-          <DialogFooter className="mt-2 shrink-0 flex-row gap-2 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:mt-4 sm:border-t-0 sm:px-0 sm:py-0 sm:pb-0 [&>button]:flex-1 sm:[&>button]:flex-none">
+          <DialogFooter className="relative z-10 mt-2 shrink-0 flex-row gap-2 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:mt-4 sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pb-0 sm:shadow-none sm:backdrop-blur-none sm:supports-[backdrop-filter]:bg-transparent [&>button]:flex-1 sm:[&>button]:flex-none">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               Cancelar
             </Button>

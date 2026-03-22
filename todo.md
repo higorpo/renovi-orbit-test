@@ -42,6 +42,8 @@ Urgentes:
 
 - Direcionar prestador para que ele cadastre serviços que ele atenda para exibir trabalhos
 
+- componente de sem internet ainda fica em cima de cards atrapalhando, principalmente no mobile.
+
 
 
 
