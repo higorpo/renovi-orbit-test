@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useProviderSentBudgets } from "../hooks/useProviderSentBudgets";
 import { useProviderOwnQuestions } from "../hooks/useProviderOwnQuestions";
 import { useProviderPendingQuestionsCount } from "../hooks/useProviderPendingQuestionsCount";
+import { useProviderPendingApprovalBudgetsCount } from "../hooks/useProviderPendingApprovalBudgetsCount";
 import { useProviderBudgetsFilters } from "../hooks/useProviderBudgetsFilters";
 import { BudgetsHeader } from "./BudgetsHeader";
 import { BudgetsFilterChips } from "./BudgetsFilterChips";
@@ -46,6 +47,7 @@ export function ProviderBudgetsPage() {
   });
 
   const pendingQuestionsCount = useProviderPendingQuestionsCount();
+  const pendingApprovalBudgetsCount = useProviderPendingApprovalBudgetsCount();
 
   const isLoading =
     activeTab === "enviados" ? budgets.isLoading : questions.isLoading;
@@ -53,12 +55,15 @@ export function ProviderBudgetsPage() {
     activeTab === "enviados" ? budgets.isError : questions.isError;
 
   const headerLoading =
-    budgets.isLoading || questions.isLoading || pendingQuestionsCount.isLoading;
+    budgets.isLoading ||
+    questions.isLoading ||
+    pendingQuestionsCount.isLoading ||
+    pendingApprovalBudgetsCount.isLoading;
 
   return (
     <div className="container max-w-4xl px-4 py-6">
       <BudgetsHeader
-        budgetCount={budgets.totalCount}
+        pendingApprovalBudgetCount={pendingApprovalBudgetsCount.count}
         pendingQuestionsCount={pendingQuestionsCount.count}
         isLoading={headerLoading}
       />
