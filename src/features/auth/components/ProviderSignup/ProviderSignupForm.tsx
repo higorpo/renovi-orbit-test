@@ -490,6 +490,13 @@ export function ProviderSignupForm({
             {errors.termsAccepted && (
               <p className={ERROR_MESSAGE_CLASS}>{errors.termsAccepted}</p>
             )}
+            {errors.recaptcha && (
+              <p className={ERROR_MESSAGE_CLASS}>{errors.recaptcha}</p>
+            )}
+
+            <p className="text-xs text-white/60">
+              Esta ação é protegida por reCAPTCHA.
+            </p>
 
             <div className="flex gap-3">
               <Button

@@ -7,6 +7,7 @@ import type { ServiceWithChildren, ServiceRequestStructuredData } from "../types
 export interface CreateRequestQuoteOrderParams {
   userId: string;
   email: string;
+  recaptchaToken: string;
   step4Data: AddressSelection;
   step3Data: {
     description: string;
@@ -46,6 +47,7 @@ export async function createRequestQuoteOrder(
   const {
     userId,
     email,
+    recaptchaToken,
     step4Data,
     step3Data,
     selectedService,
@@ -79,6 +81,7 @@ export async function createRequestQuoteOrder(
   const formData = new FormData();
   formData.set("userId", userId);
   formData.set("email", email);
+  formData.set("recaptchaToken", recaptchaToken);
   formData.set("address", JSON.stringify(addressPayload));
   formData.set("serviceId", selectedService.id);
   formData.set("serviceTitle", selectedService.title ?? "Serviço");

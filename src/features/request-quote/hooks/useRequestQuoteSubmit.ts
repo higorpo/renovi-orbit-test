@@ -11,6 +11,7 @@ import {
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { logger } from "@/lib/logger";
 import { metrics, addBreadcrumb, Sentry } from "@/lib/sentry";
+import { executeRecaptcha } from "@/lib/recaptcha";
 import { createRequestQuoteOrder } from "../api/createRequestQuoteOrder.api";
 import { clearDraft } from "../utils/requestQuoteDraft.persistence";
 import { checkPhotosContent } from "../utils/photoContentCheck";
@@ -32,8 +33,19 @@ export function useRequestQuoteSubmit({
   const { trackEvent } = useAnalytics();
   const { user, session, signUp } = useAuth();
 
+  const getRequestQuoteRecaptchaToken = useCallback(async () => {
+    const token = await executeRecaptcha("request_quote_submit");
+    if (!token) {
+      toast.error("Não foi possível validar o reCAPTCHA. Tente novamente.");
+      return null;
+    }
+    return token;
+  }, []);
+
   const handleSubmitLoggedIn = useCallback(async () => {
     if (!user || !state.selectedService || !state.step4Data) return;
+    const recaptchaToken = await getRequestQuoteRecaptchaToken();
+    if (!recaptchaToken) return;
     state.setLoading(true);
     try {
       const selectedService = state.selectedService;
@@ -64,6 +76,7 @@ export function useRequestQuoteSubmit({
             step2FormSchema: state.step2FormSchema,
             step2FormVersion: state.step2FormVersion,
             session,
+            recaptchaToken,
           });
           if (result.success) {
             addBreadcrumb({
@@ -112,7 +125,7 @@ export function useRequestQuoteSubmit({
     } finally {
       state.setLoading(false);
     }
-  }, [user, session, state, navigate, trackEvent]);
+  }, [user, session, state, navigate, trackEvent, getRequestQuoteRecaptchaToken]);
 
   const handleSubmit = useCallback(async () => {
     if (user) {
@@ -140,6 +153,8 @@ export function useRequestQuoteSubmit({
     }
     const fullName = identityToFullName(state.step5Data);
     const email = state.step5Data.email.toLowerCase().trim();
+    const recaptchaToken = await getRequestQuoteRecaptchaToken();
+    if (!recaptchaToken) return;
     state.setLoading(true);
     try {
       await Sentry.startSpan(
@@ -193,6 +208,7 @@ export function useRequestQuoteSubmit({
             step2FormSchema: state.step2FormSchema,
             step2FormVersion: state.step2FormVersion,
             session: null,
+            recaptchaToken,
           });
 
           if (result.success) {
@@ -239,7 +255,7 @@ export function useRequestQuoteSubmit({
     } finally {
       state.setLoading(false);
     }
-  }, [user, state, signUp, navigate, handleSubmitLoggedIn, trackEvent]);
+  }, [user, state, signUp, navigate, handleSubmitLoggedIn, trackEvent, getRequestQuoteRecaptchaToken]);
 
   return { handleSubmit, handleSubmitLoggedIn };
 }

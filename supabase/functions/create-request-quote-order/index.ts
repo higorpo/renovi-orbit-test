@@ -16,6 +16,7 @@ import { validateRequestUser } from "./validateRequestUser.ts";
 import { createAddress } from "./createAddress.ts";
 import { uploadPhotos } from "./uploadPhotos.ts";
 import { createServiceRequest } from "./createServiceRequest.ts";
+import { validateRecaptchaToken } from "../_shared/recaptcha.ts";
 
 const RATE_LIMIT_CONFIG = { perMinute: RATE_LIMIT_PER_MINUTE };
 
@@ -78,6 +79,14 @@ serve(async (req) => {
   }
 
   const { data } = parseResult;
+
+  const recaptchaCheck = await validateRecaptchaToken(
+    data.recaptchaToken,
+    "request_quote_submit"
+  );
+  if (!recaptchaCheck.success) {
+    return jsonResponse({ error: recaptchaCheck.message ?? "Falha no reCAPTCHA." }, 400);
+  }
 
   const validation = await validateRequestUser(req, data.userId, data.email);
   if (!validation.ok) {

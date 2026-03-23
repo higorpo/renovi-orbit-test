@@ -11,6 +11,7 @@ Interessantes de se ter
 - Criar  mecanismo de descontos de taxas, onde a gente pode definir a % de desconto em cima da taxa original, título e descrição para o desconto e a data de início e fim que o desconto pode ser aplicado.
 - Usar IA para sugerir datas pro profissional na hora de montar o orçamento dele
 - Usar IA para melhorar a descrição do orçamento do profissional
+- Refatorar os uploads de imagens para ser mais compartilhado
 
 Urgentes:
 - bug no endereço da agronomica, não está salvando o endereço certo.

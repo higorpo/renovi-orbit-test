@@ -57,6 +57,7 @@ export interface StructuredDataPayload {
 export interface ParsedFormData {
   userId: string;
   email: string;
+  recaptchaToken: string;
   address: AddressPayload;
   serviceId: string;
   serviceTitle: string;

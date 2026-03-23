@@ -385,6 +385,10 @@ verify_jwt = true
 [functions.create-request-quote-order]
 verify_jwt = false
 
+# Edge function used to validate reCAPTCHA token before sensitive actions.
+[functions.verify-recaptcha]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

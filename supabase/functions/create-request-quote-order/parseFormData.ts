@@ -12,6 +12,7 @@ export type ParseFormDataResult =
 export async function parseFormData(formData: FormData): Promise<ParseFormDataResult> {
   const userId = formData.get("userId");
   const email = formData.get("email");
+  const recaptchaToken = formData.get("recaptchaToken");
   const addressRaw = formData.get("address");
   const serviceId = formData.get("serviceId");
   const serviceTitle = formData.get("serviceTitle");
@@ -28,6 +29,9 @@ export async function parseFormData(formData: FormData): Promise<ParseFormDataRe
   }
   if (typeof serviceId !== "string" || !serviceId.trim()) {
     return { ok: false, error: "serviceId é obrigatório.", status: 400 };
+  }
+  if (typeof recaptchaToken !== "string" || !recaptchaToken.trim()) {
+    return { ok: false, error: "recaptchaToken é obrigatório.", status: 400 };
   }
   if (typeof description !== "string") {
     return { ok: false, error: "description é obrigatório.", status: 400 };
@@ -137,6 +141,7 @@ export async function parseFormData(formData: FormData): Promise<ParseFormDataRe
   const data: ParsedFormData = {
     userId: userId.trim(),
     email: email.trim(),
+    recaptchaToken: recaptchaToken.trim(),
     address,
     serviceId: serviceId.trim(),
     serviceTitle: typeof serviceTitle === "string" ? serviceTitle.trim() : "Serviço",

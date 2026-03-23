@@ -47,6 +47,10 @@ vi.mock("../../utils/photoContentCheck", () => ({
   checkPhotosContent: vi.fn().mockResolvedValue({ allowed: true }),
 }));
 
+vi.mock("@/lib/recaptcha", () => ({
+  executeRecaptcha: vi.fn(),
+}));
+
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
@@ -55,6 +59,9 @@ const useAuth = await import("@/features/auth").then((m) => vi.mocked(m.useAuth)
 const useNavigate = await import("react-router").then((m) => vi.mocked(m.useNavigate));
 const createRequestQuoteOrder = await import("../../api/createRequestQuoteOrder.api").then(
   (m) => vi.mocked(m.createRequestQuoteOrder)
+);
+const executeRecaptcha = await import("@/lib/recaptcha").then((m) =>
+  vi.mocked(m.executeRecaptcha)
 );
 const authModule = await import("@/features/auth");
 const signUp = vi.fn();
@@ -145,6 +152,7 @@ describe("useRequestQuoteSubmit", () => {
       requestId: "req-1",
       addressId: null,
     });
+    executeRecaptcha.mockResolvedValue("recaptcha-token");
   });
 
   describe("handleSubmit (guest)", () => {
@@ -206,9 +214,26 @@ describe("useRequestQuoteSubmit", () => {
           userId: "u-new",
           email: "joao@example.com",
           session: null,
+          recaptchaToken: "recaptcha-token",
         })
       );
       expect(state.setOrderCreatedEmail).toHaveBeenCalledWith("joao@example.com");
+    });
+
+    it("bloqueia envio quando não consegue gerar token recaptcha", async () => {
+      executeRecaptcha.mockResolvedValue(null);
+      const state = createMockState();
+      const { result } = renderHook(() => useRequestQuoteSubmit({ state }));
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      expect(signUp).not.toHaveBeenCalled();
+      expect(createRequestQuoteOrder).not.toHaveBeenCalled();
+      expect((await import("sonner")).toast.error).toHaveBeenCalledWith(
+        "Não foi possível validar o reCAPTCHA. Tente novamente."
+      );
     });
 
     it("navigates to login when signUp returns already_registered", async () => {
@@ -344,6 +369,7 @@ describe("useRequestQuoteSubmit", () => {
           userId: "u1",
           email: "u@x.com",
           session: { access_token: "token" },
+          recaptchaToken: "recaptcha-token",
         })
       );
       expect((await import("sonner")).toast.success).toHaveBeenCalledWith(

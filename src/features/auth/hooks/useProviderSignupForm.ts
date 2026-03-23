@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { z } from "zod";
 import { useAuth } from "./useAuth";
+import { executeRecaptcha, verifyRecaptchaToken } from "@/lib/recaptcha";
 import { validatePasswordStrength } from "../utils/passwordPolicy";
 import { usePasswordFieldDisplay } from "./usePasswordFieldDisplay";
 import {
@@ -118,6 +119,19 @@ export function useProviderSignupForm() {
 
     setSubmitting(true);
     try {
+      const token = await executeRecaptcha("provider_signup_submit");
+      if (!token) {
+        setErrors({ recaptcha: "Não foi possível validar o reCAPTCHA. Tente novamente." });
+        return;
+      }
+      const recaptchaCheck = await verifyRecaptchaToken(token, "provider_signup_submit");
+      if (!recaptchaCheck.success) {
+        setErrors({
+          recaptcha:
+            recaptchaCheck.message ?? "Falha na validação anti-bot. Tente novamente.",
+        });
+        return;
+      }
       const result = await signUp(
         formData.email,
         formData.password,
