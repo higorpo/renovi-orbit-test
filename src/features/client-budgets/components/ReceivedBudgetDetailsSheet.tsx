@@ -1,7 +1,9 @@
 import { useMemo } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { X } from "lucide-react";
+import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ProviderProfileInlinePreview } from "@/features/provider-profile";
 import { useClientBudgetDetail } from "../hooks/useClientBudgetDetail";
 import { BudgetStatusBadge } from "./BudgetStatusBadge";
@@ -43,18 +45,60 @@ export function ReceivedBudgetDetailsSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full max-w-none overflow-y-auto p-0 sm:max-w-2xl"
+        hideCloseButton
+        className="flex w-full flex-col gap-0 border-l p-0 sm:max-w-2xl"
       >
-        <div className="space-y-4 p-4 sm:p-6">
-          <SheetHeader className="space-y-2 text-left">
-            <SheetTitle>{getReceivedBudgetSheetTitle(sheetMode)}</SheetTitle>
-            <p className="text-sm text-muted-foreground">
-              {detail?.service_request.title ?? "Carregando..."}
-            </p>
-          </SheetHeader>
+        <SheetHeader className="relative h-14 flex-row items-center space-y-0 border-b px-4 pr-16 sm:h-16 sm:px-6 sm:pr-20">
+          <SheetTitle>{getReceivedBudgetSheetTitle(sheetMode)}</SheetTitle>
+          <SheetClose asChild>
+            <button
+              type="button"
+              className="absolute right-4 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md border border-border bg-background opacity-80 ring-offset-background transition-all hover:bg-muted hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none sm:right-6"
+              aria-label="Fechar"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Fechar</span>
+            </button>
+          </SheetClose>
+        </SheetHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          <div className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              {isLoading ? (
+                <Skeleton className="h-4 w-[min(100%,18rem)]" aria-hidden />
+              ) : (
+                <p>{detail?.service_request.title ?? "—"}</p>
+              )}
+            </div>
 
-          {isLoading ? (
-            <p className="text-sm text-muted-foreground">Carregando detalhes...</p>
+            {isLoading ? (
+            <div
+              className="space-y-4"
+              aria-busy="true"
+              aria-label="Carregando detalhes do orçamento"
+            >
+              <div className="space-y-3 rounded-lg border p-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-3 w-28" />
+                  </div>
+                </div>
+                <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-6 w-24 rounded-full" />
+                  </div>
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                </div>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Skeleton className="h-9 w-36" />
+                  <Skeleton className="h-9 w-32" />
+                </div>
+              </div>
+            </div>
           ) : groupedByProvider.length === 0 ? (
             <Alert>
               <AlertTitle>Nenhum orçamento encontrado</AlertTitle>
@@ -104,6 +148,7 @@ export function ReceivedBudgetDetailsSheet({
               );
             })
           )}
+          </div>
         </div>
       </SheetContent>
     </Sheet>
