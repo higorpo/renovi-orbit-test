@@ -1,13 +1,14 @@
 import { FileText, MessageCircleQuestion } from "lucide-react";
 
 interface ClientBudgetsHeaderProps {
-  receivedCount: number;
+  /** Service requests with a budget awaiting client approval; not affected by list filters. */
+  pendingApprovalServiceCount: number;
   pendingQuestionsCount: number;
   isLoading: boolean;
 }
 
 export function ClientBudgetsHeader({
-  receivedCount,
+  pendingApprovalServiceCount,
   pendingQuestionsCount,
   isLoading,
 }: ClientBudgetsHeaderProps) {
@@ -23,7 +24,10 @@ export function ClientBudgetsHeader({
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground sm:text-sm">
           <span className="flex items-center gap-1.5 font-medium text-foreground">
             <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            {receivedCount} serviço{receivedCount !== 1 ? "s" : ""} com orçamento
+            {pendingApprovalServiceCount}{" "}
+            {pendingApprovalServiceCount === 1
+              ? "serviço com orçamento aguardando aprovação"
+              : "serviços com orçamento aguardando aprovação"}
           </span>
           <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
             <MessageCircleQuestion className="h-3.5 w-3.5 shrink-0" aria-hidden />

@@ -14,6 +14,7 @@ import { ClientBudgetsEmptyState } from "./ClientBudgetsEmptyState";
 import { useClientBudgetsFilters } from "../hooks/useClientBudgetsFilters";
 import { useClientReceivedBudgets } from "../hooks/useClientReceivedBudgets";
 import { useClientBudgetQuestions } from "../hooks/useClientBudgetQuestions";
+import { useClientPendingApprovalServicesCount } from "../hooks/useClientPendingApprovalServicesCount";
 import type { ClientBudgetsTab } from "../types/client-budgets.types";
 import { getReceivedBudgetSheetMode } from "../constants/status";
 
@@ -45,10 +46,13 @@ export function ClientBudgetsPage() {
     search: searchParam,
   });
 
+  const pendingApprovalServicesCount = useClientPendingApprovalServicesCount();
+
   const [detailsMode, setDetailsMode] = useState<"received" | "questions" | null>(null);
   const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<string | null>(null);
 
-  const headerLoading = received.isLoading || questions.isLoading;
+  const headerLoading =
+    received.isLoading || questions.isLoading || pendingApprovalServicesCount.isLoading;
   const pendingQuestionsBadgeCount = questions.items.reduce(
     (total, item) => total + item.pending_questions_count,
     0,
@@ -67,7 +71,7 @@ export function ClientBudgetsPage() {
   return (
     <div className="container max-w-5xl px-4 py-6">
       <ClientBudgetsHeader
-        receivedCount={received.totalCount}
+        pendingApprovalServiceCount={pendingApprovalServicesCount.count}
         pendingQuestionsCount={pendingQuestionsBadgeCount}
         isLoading={headerLoading}
       />
