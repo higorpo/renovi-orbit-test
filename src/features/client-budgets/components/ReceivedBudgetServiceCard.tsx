@@ -25,7 +25,7 @@ export function ReceivedBudgetServiceCard({ item, statusFilter, onOpenDetails }:
   const previews = item.budgets_preview.slice(0, 2);
   const extraCount = getReceivedExtraBudgetCount(item, statusFilter);
   const handleOpenDetails = () => onOpenDetails(item.service_request_id);
-  const ctaLabel = getReceivedCardCtaLabel(statusFilter);
+  const ctaLabel = getReceivedCardCtaLabel(statusFilter, item.submitted_count);
   const CtaIcon = statusFilter === "awaiting_decision" ? GitCompare : History;
 
   return (

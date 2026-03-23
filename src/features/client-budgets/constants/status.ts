@@ -55,8 +55,14 @@ export function getReceivedBudgetSheetTitle(mode: ReceivedBudgetSheetMode): stri
   return "Histórico de orçamentos";
 }
 
-export function getReceivedCardCtaLabel(filter: ReceivedStatusFilter): string {
-  if (filter === "awaiting_decision") return "Comparar orçamentos";
+export function getReceivedCardCtaLabel(
+  filter: ReceivedStatusFilter,
+  submittedCount?: number,
+): string {
+  if (filter === "awaiting_decision") {
+    if (submittedCount === 1) return "Ver detalhes do orçamento";
+    return "Comparar orçamentos";
+  }
   return "Ver histórico de orçamentos";
 }
 
