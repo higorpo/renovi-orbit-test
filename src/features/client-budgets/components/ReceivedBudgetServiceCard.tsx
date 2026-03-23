@@ -1,3 +1,4 @@
+import { GitCompare, History } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,8 @@ export function ReceivedBudgetServiceCard({ item, statusFilter, onOpenDetails }:
   const previews = item.budgets_preview.slice(0, 2);
   const extraCount = getReceivedExtraBudgetCount(item, statusFilter);
   const handleOpenDetails = () => onOpenDetails(item.service_request_id);
+  const ctaLabel = getReceivedCardCtaLabel(statusFilter);
+  const CtaIcon = statusFilter === "awaiting_decision" ? GitCompare : History;
 
   return (
     <Card
@@ -67,14 +70,17 @@ export function ReceivedBudgetServiceCard({ item, statusFilter, onOpenDetails }:
       </CardContent>
       <CardFooter className="border-t pt-3">
         <Button
+          type="button"
+          variant="outline"
           size="sm"
-          className="h-9 min-h-9"
+          className="h-9 min-h-9 inline-flex items-center gap-1.5"
           onClick={(event) => {
             event.stopPropagation();
             handleOpenDetails();
           }}
         >
-          {getReceivedCardCtaLabel(statusFilter)}
+          <CtaIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {ctaLabel}
         </Button>
       </CardFooter>
     </Card>
