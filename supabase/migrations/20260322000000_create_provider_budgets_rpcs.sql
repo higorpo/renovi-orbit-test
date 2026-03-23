@@ -106,12 +106,19 @@ BEGIN
       ca.neighborhood,
       pc.name            AS city,
       pst.abbreviation::text AS state_abbr,
-      CASE
-        WHEN p.full_name IS NULL OR p.full_name = '' THEN 'Cliente'
-        WHEN position(' ' in p.full_name) > 0 THEN
-          split_part(p.full_name, ' ', 1) || ' ' || left(split_part(p.full_name, ' ', 2), 1) || '.'
-        ELSE p.full_name
-      END AS masked_client_name
+      (
+        split_part(p.full_name, ' ', 1) ||
+        case
+          when array_length(string_to_array(p.full_name, ' '), 1) > 1
+          then ' ' || left(
+            split_part(
+              p.full_name, ' ',
+              array_length(string_to_array(p.full_name, ' '), 1)
+            ), 1
+          ) || '.'
+          else ''
+        end
+      ) AS masked_client_name
     FROM provider_proposals pp
     JOIN service_requests sr   ON sr.id  = pp.service_request_id
     JOIN platform_services ps  ON ps.id  = sr.service_id
@@ -260,12 +267,19 @@ BEGIN
       ca.neighborhood,
       pc.name            AS city,
       pst.abbreviation::text AS state_abbr,
-      CASE
-        WHEN p.full_name IS NULL OR p.full_name = '' THEN 'Cliente'
-        WHEN position(' ' in p.full_name) > 0 THEN
-          split_part(p.full_name, ' ', 1) || ' ' || left(split_part(p.full_name, ' ', 2), 1) || '.'
-        ELSE p.full_name
-      END AS masked_client_name,
+      (
+        split_part(p.full_name, ' ', 1) ||
+        case
+          when array_length(string_to_array(p.full_name, ' '), 1) > 1
+          then ' ' || left(
+            split_part(
+              p.full_name, ' ',
+              array_length(string_to_array(p.full_name, ' '), 1)
+            ), 1
+          ) || '.'
+          else ''
+        end
+      ) AS masked_client_name,
       EXISTS (
         SELECT 1 FROM provider_proposals pp2
         WHERE pp2.provider_id = v_provider_id
