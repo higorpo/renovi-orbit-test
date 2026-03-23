@@ -1,36 +1,36 @@
 import { useState, useCallback, useMemo } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import type {
-  BudgetsTab,
-  BudgetStatusFilter,
-  QuestionStatusFilter,
+import {
+  DEFAULT_BUDGET_STATUS_FILTER,
+  DEFAULT_QUESTION_STATUS_FILTER,
+  type BudgetsTab,
+  type BudgetStatusFilter,
+  type QuestionStatusFilter,
 } from "../types/provider-budgets.types";
 
 const SEARCH_DEBOUNCE_MS = 400;
 
 export function useProviderBudgetsFilters() {
   const [activeTab, setActiveTab] = useState<BudgetsTab>("enviados");
-  const [budgetStatusFilter, setBudgetStatusFilter] = useState<BudgetStatusFilter>("all");
-  const [questionStatusFilter, setQuestionStatusFilter] = useState<QuestionStatusFilter>("all");
+  const [budgetStatusFilter, setBudgetStatusFilter] = useState<BudgetStatusFilter>(
+    DEFAULT_BUDGET_STATUS_FILTER,
+  );
+  const [questionStatusFilter, setQuestionStatusFilter] = useState<QuestionStatusFilter>(
+    DEFAULT_QUESTION_STATUS_FILTER,
+  );
   const [searchQuery, setSearchQuery] = useState("");
 
   const debouncedSearch = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
 
   const resetFilters = useCallback(() => {
-    setBudgetStatusFilter("all");
-    setQuestionStatusFilter("all");
+    setBudgetStatusFilter(DEFAULT_BUDGET_STATUS_FILTER);
+    setQuestionStatusFilter(DEFAULT_QUESTION_STATUS_FILTER);
     setSearchQuery("");
   }, []);
 
-  const budgetStatusParam = useMemo(
-    () => (budgetStatusFilter === "all" ? null : budgetStatusFilter),
-    [budgetStatusFilter],
-  );
+  const budgetStatusParam = useMemo(() => budgetStatusFilter, [budgetStatusFilter]);
 
-  const questionStatusParam = useMemo(
-    () => (questionStatusFilter === "all" ? null : questionStatusFilter),
-    [questionStatusFilter],
-  );
+  const questionStatusParam = useMemo(() => questionStatusFilter, [questionStatusFilter]);
 
   const searchParam = useMemo(
     () => (debouncedSearch.trim() || null),
@@ -39,8 +39,8 @@ export function useProviderBudgetsFilters() {
 
   const hasActiveFilters = useMemo(
     () =>
-      budgetStatusFilter !== "all" ||
-      questionStatusFilter !== "all" ||
+      budgetStatusFilter !== DEFAULT_BUDGET_STATUS_FILTER ||
+      questionStatusFilter !== DEFAULT_QUESTION_STATUS_FILTER ||
       searchQuery.trim().length > 0,
     [budgetStatusFilter, questionStatusFilter, searchQuery],
   );

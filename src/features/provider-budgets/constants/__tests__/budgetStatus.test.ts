@@ -115,8 +115,10 @@ describe("budgetStatus", () => {
     });
   });
 
-  it("exposes filter option arrays", () => {
-    expect(BUDGET_STATUS_FILTERS.some((f) => f.id === "all")).toBe(true);
+  it("exposes filter option arrays without Todos/Todas/Encerradas chips", () => {
+    expect(BUDGET_STATUS_FILTERS.some((f) => f.id === "all")).toBe(false);
+    expect(QUESTION_STATUS_FILTERS.some((f) => f.id === "all")).toBe(false);
+    expect(QUESTION_STATUS_FILTERS.some((f) => f.id === "closed")).toBe(false);
     expect(QUESTION_STATUS_FILTERS.some((f) => f.id === "pending")).toBe(true);
   });
 });

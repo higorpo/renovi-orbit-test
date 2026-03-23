@@ -1,5 +1,9 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  DEFAULT_BUDGET_STATUS_FILTER,
+  DEFAULT_QUESTION_STATUS_FILTER,
+} from "../../types/provider-budgets.types";
 import { useProviderBudgetsFilters } from "../useProviderBudgetsFilters";
 
 describe("useProviderBudgetsFilters", () => {
@@ -11,26 +15,26 @@ describe("useProviderBudgetsFilters", () => {
     vi.useRealTimers();
   });
 
-  it("exposes initial state and null API params when filters are default", () => {
+  it("exposes initial state with default status filters mapped to API params", () => {
     const { result } = renderHook(() => useProviderBudgetsFilters());
 
     expect(result.current.activeTab).toBe("enviados");
-    expect(result.current.budgetStatusParam).toBeNull();
-    expect(result.current.questionStatusParam).toBeNull();
+    expect(result.current.budgetStatusParam).toBe(DEFAULT_BUDGET_STATUS_FILTER);
+    expect(result.current.questionStatusParam).toBe(DEFAULT_QUESTION_STATUS_FILTER);
     expect(result.current.searchParam).toBeNull();
     expect(result.current.hasActiveFilters).toBe(false);
   });
 
-  it("maps non-all filters to API params", () => {
+  it("maps status filters to API params", () => {
     const { result } = renderHook(() => useProviderBudgetsFilters());
 
     act(() => {
       result.current.setBudgetStatusFilter("accepted");
-      result.current.setQuestionStatusFilter("pending");
+      result.current.setQuestionStatusFilter("answered");
     });
 
     expect(result.current.budgetStatusParam).toBe("accepted");
-    expect(result.current.questionStatusParam).toBe("pending");
+    expect(result.current.questionStatusParam).toBe("answered");
   });
 
   it("debounces search into searchParam", () => {
@@ -63,8 +67,8 @@ describe("useProviderBudgetsFilters", () => {
       result.current.resetFilters();
     });
 
-    expect(result.current.budgetStatusFilter).toBe("all");
-    expect(result.current.questionStatusFilter).toBe("all");
+    expect(result.current.budgetStatusFilter).toBe(DEFAULT_BUDGET_STATUS_FILTER);
+    expect(result.current.questionStatusFilter).toBe(DEFAULT_QUESTION_STATUS_FILTER);
     expect(result.current.searchQuery).toBe("");
   });
 });

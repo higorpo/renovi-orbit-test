@@ -60,9 +60,15 @@ export interface PaginatedResponse<T> {
 
 export type BudgetsTab = "enviados" | "perguntas";
 
-export type BudgetStatusFilter = "all" | "submitted" | "accepted" | "rejected" | "withdrawn";
+export type BudgetStatusFilter = "submitted" | "accepted" | "rejected" | "withdrawn";
 
-export type QuestionStatusFilter = "all" | "pending" | "answered" | "closed";
+export type QuestionStatusFilter = "pending" | "answered";
+
+/** Filtro inicial na aba Enviados (sem opção “Todos”). */
+export const DEFAULT_BUDGET_STATUS_FILTER: BudgetStatusFilter = "submitted";
+
+/** Filtro inicial na aba Perguntas (sem opções “Todas” / “Encerradas”). */
+export const DEFAULT_QUESTION_STATUS_FILTER: QuestionStatusFilter = "pending";
 
 /** Default tab used when opening the budgets screen (runtime value for consumers/tests). */
 export const DEFAULT_BUDGETS_TAB: BudgetsTab = "enviados";

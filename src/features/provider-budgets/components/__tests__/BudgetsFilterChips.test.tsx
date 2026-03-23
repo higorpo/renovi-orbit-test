@@ -8,8 +8,8 @@ describe("BudgetsFilterChips", () => {
     render(
       <BudgetsFilterChips
         activeTab="enviados"
-        budgetStatusFilter="all"
-        questionStatusFilter="all"
+        budgetStatusFilter="submitted"
+        questionStatusFilter="pending"
         searchQuery=""
         onBudgetStatusChange={onBudget}
         onQuestionStatusChange={vi.fn()}
@@ -25,8 +25,8 @@ describe("BudgetsFilterChips", () => {
     render(
       <BudgetsFilterChips
         activeTab="perguntas"
-        budgetStatusFilter="all"
-        questionStatusFilter="all"
+        budgetStatusFilter="submitted"
+        questionStatusFilter="pending"
         searchQuery=""
         onBudgetStatusChange={vi.fn()}
         onQuestionStatusChange={onQuestion}
@@ -42,8 +42,8 @@ describe("BudgetsFilterChips", () => {
     render(
       <BudgetsFilterChips
         activeTab="enviados"
-        budgetStatusFilter="all"
-        questionStatusFilter="all"
+        budgetStatusFilter="submitted"
+        questionStatusFilter="pending"
         searchQuery="hi"
         onBudgetStatusChange={vi.fn()}
         onQuestionStatusChange={vi.fn()}
@@ -60,8 +60,8 @@ describe("BudgetsFilterChips", () => {
     render(
       <BudgetsFilterChips
         activeTab="enviados"
-        budgetStatusFilter="all"
-        questionStatusFilter="all"
+        budgetStatusFilter="submitted"
+        questionStatusFilter="pending"
         searchQuery=""
         onBudgetStatusChange={vi.fn()}
         onQuestionStatusChange={vi.fn()}
@@ -70,6 +70,6 @@ describe("BudgetsFilterChips", () => {
       />,
     );
     expect(screen.getByPlaceholderText(/buscar/i)).toBeDisabled();
-    expect(screen.getByRole("tab", { name: /^todos$/i })).toBeDisabled();
+    expect(screen.getByRole("tab", { name: /^aguardando$/i })).toBeDisabled();
   });
 });

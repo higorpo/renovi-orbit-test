@@ -19,7 +19,6 @@ export function getBudgetStatusConfig(
 }
 
 export const BUDGET_STATUS_FILTERS: { id: BudgetStatusFilter; label: string }[] = [
-  { id: "all", label: "Todos" },
   { id: "submitted", label: "Aguardando" },
   { id: "accepted", label: "Aceitos" },
   { id: "rejected", label: "Recusados" },
@@ -73,8 +72,6 @@ export function resolveQuestionStatus(question: {
 }
 
 export const QUESTION_STATUS_FILTERS: { id: QuestionStatusFilter; label: string }[] = [
-  { id: "all", label: "Todas" },
   { id: "pending", label: "Aguardando" },
   { id: "answered", label: "Respondidas" },
-  { id: "closed", label: "Encerradas" },
 ];
