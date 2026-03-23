@@ -1,4 +1,3 @@
-import { GitCompare, History } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { ServiceRequestSummaryBlock } from "./ServiceRequestSummaryBlock";
 import {
   formatReceivedExtraBudgetsLabel,
   getReceivedBudgetSummaryLine,
+  getReceivedCardCtaIcon,
   getReceivedCardCtaLabel,
   getReceivedExtraBudgetCount,
   getServiceBudgetFlowStatus,
@@ -26,7 +26,7 @@ export function ReceivedBudgetServiceCard({ item, statusFilter, onOpenDetails }:
   const extraCount = getReceivedExtraBudgetCount(item, statusFilter);
   const handleOpenDetails = () => onOpenDetails(item.service_request_id);
   const ctaLabel = getReceivedCardCtaLabel(statusFilter, item.submitted_count);
-  const CtaIcon = statusFilter === "awaiting_decision" ? GitCompare : History;
+  const CtaIcon = getReceivedCardCtaIcon(statusFilter, item.submitted_count);
 
   return (
     <Card

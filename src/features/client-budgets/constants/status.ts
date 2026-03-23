@@ -1,5 +1,12 @@
+import { FileText, GitCompare, History, type LucideIcon } from "lucide-react";
 import type { BadgeProps } from "@/components/ui/badge";
 import type { QuestionPreviewItem, ReceivedStatusFilter, QuestionStatusFilter } from "../types/client-budgets.types";
+
+const RECEIVED_CARD_CTA_ICONS = {
+  details: FileText,
+  compare: GitCompare,
+  history: History,
+} as const satisfies Record<string, LucideIcon>;
 
 export const RECEIVED_FILTERS: Array<{ id: ReceivedStatusFilter; label: string }> = [
   { id: "awaiting_decision", label: "Aguardando decisão" },
@@ -64,6 +71,17 @@ export function getReceivedCardCtaLabel(
     return "Comparar orçamentos";
   }
   return "Ver histórico de orçamentos";
+}
+
+export function getReceivedCardCtaIcon(
+  filter: ReceivedStatusFilter,
+  submittedCount?: number,
+): LucideIcon {
+  if (filter === "awaiting_decision") {
+    if (submittedCount === 1) return RECEIVED_CARD_CTA_ICONS.details;
+    return RECEIVED_CARD_CTA_ICONS.compare;
+  }
+  return RECEIVED_CARD_CTA_ICONS.history;
 }
 
 /** Extra rows beyond the two preview lines; derived from status counts (not preview length). */
