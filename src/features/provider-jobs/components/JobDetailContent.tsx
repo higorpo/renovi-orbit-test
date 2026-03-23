@@ -61,8 +61,11 @@ export function JobDetailContent({
   const hasLatestProposal = Boolean(job.provider_proposal_id);
   const hasActiveProposal =
     hasLatestProposal && job.provider_proposal_status !== "withdrawn";
+  const isViewingLatestProposalRow = job.is_latest_provider_proposal !== false;
+  const showBrowseCtas = !hasActiveProposal && isViewingLatestProposalRow;
   const canEditProposal =
     hasLatestProposal &&
+    isViewingLatestProposalRow &&
     job.provider_proposal_status !== "accepted" &&
     job.provider_proposal_status !== "withdrawn";
   const {
@@ -199,7 +202,7 @@ export function JobDetailContent({
             suggestedMaterialsPt={suggestedMaterialsPt}
           />
 
-          {!hasActiveProposal && (
+          {showBrowseCtas && (
             <JobQuestionPromptCard
               suggestedQuestions={suggestedQuestions}
               onAskQuestion={() => openComposer()}
@@ -209,7 +212,7 @@ export function JobDetailContent({
             />
           )}
 
-          {!hasActiveProposal && (
+          {showBrowseCtas && (
             <JobQuestionComposerDialog
               open={isOpen}
               questionDraft={questionDraft}
@@ -270,7 +273,7 @@ export function JobDetailContent({
         />
       )}
 
-      {!hasActiveProposal && (
+      {showBrowseCtas && (
         <JobDetailFloatingActions
           isInsideSheet={isInsideSheet}
           onAskQuestion={() => openComposer()}

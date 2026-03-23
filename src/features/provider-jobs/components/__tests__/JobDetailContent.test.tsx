@@ -162,6 +162,20 @@ describe("JobDetailContent", () => {
     expect(screen.getByText(/você tem alguma dúvida/i)).toBeInTheDocument();
   });
 
+  it("hides question prompt and floating CTAs when viewing a non-latest proposal", () => {
+    const job = createMinimalJob({
+      provider_proposal_id: "old-prop",
+      provider_proposal_status: "withdrawn",
+      is_latest_provider_proposal: false,
+    });
+    renderWithQuery(<JobDetailContent job={job} />);
+    expect(screen.queryByText(/você tem alguma dúvida/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /fazer pergunta/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /estou pronto para enviar um orçamento/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it("renders summary when provider proposal exists", () => {
     const job = createMinimalJob({
       provider_proposal_id: "prop-1",
