@@ -627,14 +627,14 @@ export function PortfolioManagementSection({
                   {isEditMode ? "Anexar mais imagens" : "Anexar imagens"}
                 </Button>
                 <span className="text-xs text-muted-foreground">
-                  JPEG, PNG ou WebP. Até 5 MB cada.
+                  JPEG, PNG, WebP, HEIC ou HEIF. Até 5 MB cada.
                 </span>
               </div>
               <input
                 ref={fileInputRef}
                 id="portfolio-images"
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
                 multiple
                 className="hidden"
                 onChange={(e) => handleFileSelection(e.target.files)}

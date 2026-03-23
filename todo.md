@@ -24,17 +24,13 @@ Urgentes:
 - verificar se é possível colocar caching de mutations para caso o usuário esteja sem internet isso ser enviado/sincronizado depois
 - deu erro para enviar imagens mesmo elas não tendo conteúdo errado
 - adicionar google analytics em todos os fluxos
-- No PWA quando fica sem Internet ele desloga o usuário.
 - Há um problema com a captura de localização no formato atual. Ele está trazendo localização errada no  PC, tem que chegar se no Windows está assim também.
 
-- testes unitários em todo o módulo de trabalhos do prestador de serviços.
 - não mostrar trabalhos que eu enviei proposta na tela de trabalhos
 - criar uma tela onde eu possa ver as  perguntas enviadas/propostas feitas.
 
 - quando proposta aceita e entrar na tela de um trabalho específico, redirecionar para tela do serviço em si.
 - prestadores marcados como "Pioneiros" tem taxa de serviço menor
-- adicionar formato do android & ios para upload de imagens em todos os uploads da plataforma hoje
-- criar a tela de orçamentos do prestador, onde ele vê os orçamentos enviados e as perguntas.
 
 - Quando enviar proposta ou entrar para ver detalhes de um pedido fora da área, perguntar ao prestador se ele quer adicionar aquela área
 

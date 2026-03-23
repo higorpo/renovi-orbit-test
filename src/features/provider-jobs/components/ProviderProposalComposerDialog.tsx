@@ -511,7 +511,9 @@ export function ProviderProposalComposerDialog({
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground">Anexe imagens de referência</p>
-                    <p className="text-xs text-muted-foreground">JPEG, PNG ou WebP, até 5 MB por imagem.</p>
+                    <p className="text-xs text-muted-foreground">
+                      JPEG, PNG, WebP, HEIC ou HEIF, até 5 MB por imagem.
+                    </p>
                   </div>
                   <label htmlFor="proposal-photos" className="w-full sm:w-auto">
                     <span className="inline-flex w-full cursor-pointer items-center justify-center rounded-md border px-3 py-2 text-sm font-medium transition-colors hover:bg-muted sm:w-auto">
@@ -523,7 +525,7 @@ export function ProviderProposalComposerDialog({
                 <Input
                   id="proposal-photos"
                   type="file"
-                  accept="image/jpeg,image/png,image/webp"
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
                   multiple
                   className="hidden"
                   onChange={(event) => {

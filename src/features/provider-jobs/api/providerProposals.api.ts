@@ -47,7 +47,13 @@ export interface ProviderProposalHistoryItem {
 const PROVIDER_PROPOSALS_BUCKET = "provider-proposals";
 const MAX_PROPOSAL_PHOTOS = 5;
 const MAX_PROPOSAL_PHOTO_BYTES = 5 * 1024 * 1024;
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+] as const;
 const SIGNED_URL_EXPIRY_SEC = 3600;
 
 function isPricingRow(value: unknown): value is ProviderProposalPricing {
@@ -91,7 +97,7 @@ export async function calculateProviderServicePricing(
 
 function validateProposalPhoto(file: File): string | null {
   if (!ALLOWED_IMAGE_TYPES.includes(file.type as (typeof ALLOWED_IMAGE_TYPES)[number])) {
-    return "Formato não permitido. Use JPEG, PNG ou WebP.";
+    return "Formato não permitido. Use JPEG, PNG, WebP, HEIC ou HEIF.";
   }
   if (file.size > MAX_PROPOSAL_PHOTO_BYTES) {
     return "Cada imagem deve ter no máximo 5 MB.";
@@ -145,7 +151,7 @@ export async function uploadProviderProposalPhotos(
     if (validationError) return { paths: uploadedPaths, error: validationError };
 
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const safeExt = ["jpg", "jpeg", "png", "webp"].includes(ext) ? ext : "jpg";
+    const safeExt = ["jpg", "jpeg", "png", "webp", "heic", "heif"].includes(ext) ? ext : "jpg";
     const filePath = `providers/${user.id}/proposals/${serviceRequestId}/${Date.now()}-${i}.${safeExt}`;
     const { error } = await supabase.storage
       .from(PROVIDER_PROPOSALS_BUCKET)

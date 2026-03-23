@@ -32,6 +32,8 @@ export const PROVIDER_PORTFOLIO_IMAGE_ALLOWED_TYPES = [
   "image/jpeg",
   "image/png",
   "image/webp",
+  "image/heic",
+  "image/heif",
 ] as const;
 
 export const DPO_EMAIL = "dpo@renovi.com.br";
@@ -50,4 +52,6 @@ export const PROFILE_IMAGE_ALLOWED_TYPES = [
   "image/jpeg",
   "image/png",
   "image/webp",
+  "image/heic",
+  "image/heif",
 ] as const;

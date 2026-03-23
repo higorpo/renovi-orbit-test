@@ -144,7 +144,7 @@ export function Step3DescriptionPhotos({ state, step2DataSnapshotRef }: Step3Des
               ref={fileInputRef}
               type="file"
               multiple
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
               onChange={handleFileInputChange}
               className="hidden"
             />
@@ -157,7 +157,7 @@ export function Step3DescriptionPhotos({ state, step2DataSnapshotRef }: Step3Des
               <Upload className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground shrink-0" />
               <p className="text-muted-foreground text-sm sm:text-base">Clique ou arraste e solte fotos aqui</p>
               <p className="text-[10px] sm:text-xs text-muted-foreground">
-                PNG, JPG até 10MB cada (otimizamos automaticamente)
+                JPEG, PNG, WebP, HEIC ou HEIF, até 10MB cada (otimizamos automaticamente)
               </p>
             </div>
 

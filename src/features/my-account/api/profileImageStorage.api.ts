@@ -24,7 +24,7 @@ export interface RemoveProfileImageResult {
 
 export function validateProfileImageFile(file: File): string | null {
   if (!PROFILE_IMAGE_ALLOWED_TYPES.includes(file.type as (typeof PROFILE_IMAGE_ALLOWED_TYPES)[number])) {
-    return "Formato não permitido. Use JPEG, PNG ou WebP.";
+    return "Formato não permitido. Use JPEG, PNG, WebP, HEIC ou HEIF.";
   }
   if (file.size > PROFILE_IMAGE_MAX_BYTES) {
     return "A imagem deve ter no máximo 2 MB.";
@@ -45,7 +45,7 @@ export async function uploadProfileImage(
   if (err) return { path: null, error: err };
 
   const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const safeExt = ["jpeg", "jpg", "png", "webp"].includes(ext) ? ext : "jpg";
+  const safeExt = ["jpeg", "jpg", "png", "webp", "heic", "heif"].includes(ext) ? ext : "jpg";
   const filename = `avatar.${safeExt}`;
   const path = profileImagePath(userId, filename);
 

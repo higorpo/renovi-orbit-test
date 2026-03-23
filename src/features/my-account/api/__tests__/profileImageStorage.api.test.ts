@@ -40,7 +40,9 @@ describe("validateProfileImageFile", () => {
   it("returns error for type not in allowed list", () => {
     const file = new File(["x"], "a.gif", { type: "image/gif" });
     Object.defineProperty(file, "size", { value: 1024 });
-    expect(validateProfileImageFile(file)).toBe("Formato não permitido. Use JPEG, PNG ou WebP.");
+    expect(validateProfileImageFile(file)).toBe(
+      "Formato não permitido. Use JPEG, PNG, WebP, HEIC ou HEIF.",
+    );
   });
 
   it("returns error when file exceeds max size", () => {
@@ -75,7 +77,7 @@ describe("uploadProfileImage", () => {
     Object.defineProperty(file, "size", { value: 1024 });
     const result = await uploadProfileImage(supabase, "user-1", file);
     expect(result.path).toContain("users/user-1/profile/");
-    expect(result.path).toMatch(/\.(jpg|jpeg|png|webp)$/);
+    expect(result.path).toMatch(/\.(jpg|jpeg|png|webp|heic|heif)$/);
     expect(result.error).toBeNull();
     expect(supabase.storage.from("profile-images").upload).toHaveBeenCalled();
   });

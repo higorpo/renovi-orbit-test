@@ -100,7 +100,7 @@ export function AccountSummaryCard({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
                 className="sr-only"
                 aria-label="Selecionar foto"
                 onChange={handleFileChange}

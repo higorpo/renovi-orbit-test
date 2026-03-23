@@ -27,7 +27,7 @@ export function validatePortfolioImageFile(file: File): string | null {
       file.type as (typeof PROVIDER_PORTFOLIO_IMAGE_ALLOWED_TYPES)[number]
     )
   ) {
-    return "Formato não permitido. Use JPEG, PNG ou WebP.";
+    return "Formato não permitido. Use JPEG, PNG, WebP, HEIC ou HEIF.";
   }
   if (file.size > PROVIDER_PORTFOLIO_IMAGE_MAX_BYTES) {
     return "A imagem deve ter no máximo 5 MB.";
@@ -46,7 +46,7 @@ export async function uploadPortfolioImage(
   if (err) return { path: null, error: err };
 
   const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const safeExt = ["jpeg", "jpg", "png", "webp"].includes(ext) ? ext : "jpg";
+  const safeExt = ["jpeg", "jpg", "png", "webp", "heic", "heif"].includes(ext) ? ext : "jpg";
   const filename = `image-${index + 1}.${safeExt}`;
   const path = providerPortfolioImagePath(providerId, itemId, filename);
 

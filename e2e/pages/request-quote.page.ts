@@ -155,7 +155,9 @@ export class RequestQuotePage {
   }
 
   getPhotosFileInput() {
-    return this.page.locator('input[type="file"][accept="image/*"]');
+    return this.page.locator(
+      'input[type="file"][accept="image/jpeg,image/png,image/webp,image/heic,image/heif"]',
+    );
   }
 
   // ─── Step 4: Address ─────────────────────────────────────────────────────

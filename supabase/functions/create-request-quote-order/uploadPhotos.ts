@@ -41,7 +41,10 @@ export async function uploadPhotos(
     }
     const type = blob.type?.toLowerCase() || "";
     if (!ALLOWED_PHOTO_TYPES.includes(type)) {
-      return { ok: false, error: `Foto ${i + 1}: tipo não permitido. Use JPEG, PNG, WebP ou HEIC.` };
+      return {
+        ok: false,
+        error: `Foto ${i + 1}: tipo não permitido. Use JPEG, PNG, WebP, HEIC ou HEIF.`,
+      };
     }
     const contentMatches = await validateMagicBytes(blob, type);
     if (!contentMatches) {

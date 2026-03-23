@@ -71,7 +71,7 @@ describe("uploadPortfolioImage", () => {
     Object.defineProperty(file, "size", { value: 1024 });
     const result = await uploadPortfolioImage(supabase, "prov-1", "item-1", file, 0);
     expect(result.path).toContain("providers/prov-1/portfolio/item-1/");
-    expect(result.path).toMatch(/image-1\.(jpg|jpeg|png|webp)$/);
+    expect(result.path).toMatch(/image-1\.(jpg|jpeg|png|webp|heic|heif)$/);
     expect(result.error).toBeNull();
     expect(supabase.storage.from("provider-portfolio-images").upload).toHaveBeenCalled();
   });
