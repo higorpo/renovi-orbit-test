@@ -44,9 +44,12 @@ export function useRequestQuoteSubmit({
 
   const handleSubmitLoggedIn = useCallback(async () => {
     if (!user || !state.selectedService || !state.step4Data) return;
-    const recaptchaToken = await getRequestQuoteRecaptchaToken();
-    if (!recaptchaToken) return;
     state.setLoading(true);
+    const recaptchaToken = await getRequestQuoteRecaptchaToken();
+    if (!recaptchaToken) {
+      state.setLoading(false);
+      return;
+    }
     try {
       const selectedService = state.selectedService;
       await Sentry.startSpan(
@@ -153,9 +156,12 @@ export function useRequestQuoteSubmit({
     }
     const fullName = identityToFullName(state.step5Data);
     const email = state.step5Data.email.toLowerCase().trim();
-    const recaptchaToken = await getRequestQuoteRecaptchaToken();
-    if (!recaptchaToken) return;
     state.setLoading(true);
+    const recaptchaToken = await getRequestQuoteRecaptchaToken();
+    if (!recaptchaToken) {
+      state.setLoading(false);
+      return;
+    }
     try {
       await Sentry.startSpan(
         { name: "request_quote.submit", op: "function" },

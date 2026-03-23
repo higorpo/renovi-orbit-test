@@ -118,20 +118,24 @@ export function useProviderSignupForm() {
     }
 
     setSubmitting(true);
+    const token = await executeRecaptcha("provider_signup_submit");
+    if (!token) {
+      setErrors({ recaptcha: "Não foi possível validar o reCAPTCHA. Tente novamente." });
+      setSubmitting(false);
+      return;
+    }
+
+    const recaptchaCheck = await verifyRecaptchaToken(token, "provider_signup_submit");
+    if (!recaptchaCheck.success) {
+      setErrors({
+        recaptcha:
+          recaptchaCheck.message ?? "Falha na validação anti-bot. Tente novamente.",
+      });
+      setSubmitting(false);
+      return;
+    }
+
     try {
-      const token = await executeRecaptcha("provider_signup_submit");
-      if (!token) {
-        setErrors({ recaptcha: "Não foi possível validar o reCAPTCHA. Tente novamente." });
-        return;
-      }
-      const recaptchaCheck = await verifyRecaptchaToken(token, "provider_signup_submit");
-      if (!recaptchaCheck.success) {
-        setErrors({
-          recaptcha:
-            recaptchaCheck.message ?? "Falha na validação anti-bot. Tente novamente.",
-        });
-        return;
-      }
       const result = await signUp(
         formData.email,
         formData.password,
