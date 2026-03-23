@@ -41,6 +41,7 @@ export function createMinimalJob(
     provider_proposal_photos: null,
     provider_proposal_status: null,
     provider_proposal_client_rejection_response: null,
+    is_latest_provider_proposal: true,
     exact_area_match: true,
     created_at: "2026-03-20T12:00:00.000Z",
     ...overrides,

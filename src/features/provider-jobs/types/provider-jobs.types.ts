@@ -43,6 +43,8 @@ export interface ProviderJobItem {
   provider_proposal_photos: string[] | null;
   provider_proposal_status: string | null;
   provider_proposal_client_rejection_response: string | null;
+  /** false when RPC returned a non-latest proposal row for this provider on the request. */
+  is_latest_provider_proposal?: boolean | null;
   exact_area_match: boolean;
   created_at: string;
 }

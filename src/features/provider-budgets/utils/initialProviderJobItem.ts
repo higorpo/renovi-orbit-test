@@ -50,6 +50,7 @@ export function initialProviderJobItemFromSentBudget(
     provider_proposal_photos: budget.photos?.length ? budget.photos : null,
     provider_proposal_status: budget.status,
     provider_proposal_client_rejection_response: budget.client_rejection_response,
+    is_latest_provider_proposal: true,
     exact_area_match: false,
     created_at: budget.service_request_created_at,
   };
@@ -99,6 +100,7 @@ export function initialProviderJobItemFromOwnQuestion(
     provider_proposal_photos: null,
     provider_proposal_status: null,
     provider_proposal_client_rejection_response: null,
+    is_latest_provider_proposal: null,
     exact_area_match: false,
     created_at: question.service_request_created_at,
   };

@@ -7,20 +7,28 @@ import * as providerJobsApi from "../../api/providerJobs.api";
 import * as useProviderLocationHook from "../useProviderLocation";
 
 vi.mock("../../api/providerJobs.api", () => ({
-  fetchProviderJobs: vi.fn(),
+  fetchProviderProposalJobDetail: vi.fn(),
 }));
 
 vi.mock("../useProviderLocation", () => ({
   useProviderLocation: vi.fn(),
 }));
 
-const fetchProviderJobs = vi.mocked(providerJobsApi.fetchProviderJobs);
+const fetchProviderProposalJobDetail = vi.mocked(
+  providerJobsApi.fetchProviderProposalJobDetail,
+);
 const useProviderLocation = vi.mocked(useProviderLocationHook.useProviderLocation);
 
 const baseJob = {
   id: "job-1",
   title: "Título",
 } as never;
+
+const expectedLocationArgs = {
+  latitude: -27.5,
+  longitude: -48.5,
+  radiusKm: 10,
+};
 
 function wrapper() {
   const client = new QueryClient({
@@ -42,15 +50,8 @@ describe("useProviderJobDetail", () => {
       isUsingDefault: false,
       retry: vi.fn(),
     });
-    fetchProviderJobs.mockResolvedValue({
-      data: {
-        items: [baseJob],
-        total_count: 1,
-        page: 1,
-        page_size: 1,
-        provider_services: [],
-        provider_area_summary: { cities: [], neighborhoods: [] },
-      },
+    fetchProviderProposalJobDetail.mockResolvedValue({
+      data: baseJob,
       error: null,
     });
   });
@@ -59,7 +60,7 @@ describe("useProviderJobDetail", () => {
     const { result } = renderHook(() => useProviderJobDetail(undefined), {
       wrapper: wrapper(),
     });
-    expect(fetchProviderJobs).not.toHaveBeenCalled();
+    expect(fetchProviderProposalJobDetail).not.toHaveBeenCalled();
     expect(result.current.job).toBeNull();
   });
 
@@ -74,23 +75,43 @@ describe("useProviderJobDetail", () => {
     expect(result.current.job).toEqual(baseJob);
   });
 
-  it("loads job from API when location is ready", async () => {
+  it("loads job from get_provider_proposal_job_detail", async () => {
     const { result } = renderHook(() => useProviderJobDetail("job-1"), {
       wrapper: wrapper(),
     });
 
     await waitFor(() => expect(result.current.job).toEqual(baseJob));
-    expect(fetchProviderJobs).toHaveBeenCalledWith(
-      expect.objectContaining({
-        service_request_id: "job-1",
-        page: 1,
-        page_size: 1,
-      }),
+    expect(fetchProviderProposalJobDetail).toHaveBeenCalledWith({
+      proposalId: null,
+      serviceRequestId: "job-1",
+      ...expectedLocationArgs,
+    });
+  });
+
+  it("passes proposal id when initial job includes it", async () => {
+    const initialJob = {
+      id: "job-1",
+      title: "Título",
+      provider_proposal_id: "prop-1",
+    } as never;
+    const { result } = renderHook(
+      () =>
+        useProviderJobDetail("job-1", {
+          initialJob,
+        }),
+      { wrapper: wrapper() },
     );
+
+    await waitFor(() => expect(result.current.job).toEqual(baseJob));
+    expect(fetchProviderProposalJobDetail).toHaveBeenCalledWith({
+      proposalId: "prop-1",
+      serviceRequestId: "job-1",
+      ...expectedLocationArgs,
+    });
   });
 
   it("isError when fetch fails", async () => {
-    fetchProviderJobs.mockResolvedValue({ data: null, error: "nope" });
+    fetchProviderProposalJobDetail.mockResolvedValue({ data: null, error: "nope" });
     const { result } = renderHook(() => useProviderJobDetail("job-1"), {
       wrapper: wrapper(),
     });

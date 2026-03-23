@@ -80,13 +80,17 @@ export function ProviderProposalSummaryCard({
   const canWithdrawProposal =
     canEdit &&
     (job.provider_proposal_status ?? "").toLowerCase() !== "rejected";
+  const summaryTitle =
+    job.is_latest_provider_proposal === false
+      ? "Detalhes do orçamento"
+      : "Seu orçamento mais recente enviado";
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="w-full text-base font-semibold leading-tight text-foreground sm:w-auto">
-            Seu orçamento mais recente enviado
+            {summaryTitle}
           </h3>
           {canEdit && (
             <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:items-center">

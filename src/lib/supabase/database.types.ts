@@ -833,6 +833,7 @@ export type Database = {
         Row: {
           client_responded_at: string | null
           client_response: string | null
+          client_response_images: string[]
           created_at: string
           id: string
           provider_id: string
@@ -843,6 +844,7 @@ export type Database = {
         Insert: {
           client_responded_at?: string | null
           client_response?: string | null
+          client_response_images?: string[]
           created_at?: string
           id?: string
           provider_id: string
@@ -853,6 +855,7 @@ export type Database = {
         Update: {
           client_responded_at?: string | null
           client_response?: string | null
+          client_response_images?: string[]
           created_at?: string
           id?: string
           provider_id?: string
@@ -1039,11 +1042,120 @@ export type Database = {
         Args: { full_name: string; in_provider_id: string }
         Returns: string
       }
+      get_client_budget_service_request_detail: {
+        Args: { p_service_request_id: string }
+        Returns: Json
+      }
       get_prompt_by_key: { Args: { p_prompt_key: string }; Returns: Json }
+      get_provider_proposal_job_detail: {
+        Args: {
+          p_lat?: number
+          p_lng?: number
+          p_proposal_id?: string
+          p_radius_km?: number
+          p_service_request_id?: string
+        }
+        Returns: Json
+      }
       get_public_provider_by_slug: {
         Args: { slug_param: string }
         Returns: Json
       }
+      list_client_budget_questions: {
+        Args: {
+          p_page?: number
+          p_page_size?: number
+          p_question_status?: string
+          p_search?: string
+        }
+        Returns: Json
+      }
+      list_client_received_budgets: {
+        Args: {
+          p_page?: number
+          p_page_size?: number
+          p_search?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
+      list_provider_own_questions:
+        | {
+            Args: never
+            Returns: {
+              city: string
+              client_responded_at: string
+              client_response: string
+              created_at: string
+              has_proposal: boolean
+              id: string
+              masked_client_name: string
+              neighborhood: string
+              question: string
+              service_color_key: string
+              service_icon_key: string
+              service_request_created_at: string
+              service_request_description: string
+              service_request_id: string
+              service_request_photos: string[]
+              service_request_status: string
+              service_request_title: string
+              service_request_urgency: string
+              service_slug: string
+              service_title: string
+              state_abbr: string
+            }[]
+          }
+        | {
+            Args: {
+              p_page?: number
+              p_page_size?: number
+              p_question_status?: string
+              p_search?: string
+            }
+            Returns: Json
+          }
+      list_provider_sent_budgets:
+        | {
+            Args: never
+            Returns: {
+              city: string
+              client_rejection_response: string
+              created_at: string
+              final_amount: number
+              id: string
+              masked_client_name: string
+              neighborhood: string
+              photos: string[]
+              proposal_description: string
+              proposed_amount: number
+              service_color_key: string
+              service_icon_key: string
+              service_request_created_at: string
+              service_request_description: string
+              service_request_id: string
+              service_request_photos: string[]
+              service_request_status: string
+              service_request_title: string
+              service_request_urgency: string
+              service_slug: string
+              service_title: string
+              state_abbr: string
+              status: string
+              tax_amount: number
+              tax_rate: number
+              updated_at: string
+            }[]
+          }
+        | {
+            Args: {
+              p_page?: number
+              p_page_size?: number
+              p_search?: string
+              p_status?: string
+            }
+            Returns: Json
+          }
       list_provider_service_request_questions: {
         Args: { p_service_request_id: string }
         Returns: Json
@@ -1057,8 +1169,15 @@ export type Database = {
           p_provider_id: string
           p_radius_km?: number
           p_service_id?: string
-          p_service_request_id?: string
           p_sort_mode?: string
+        }
+        Returns: Json
+      }
+      respond_client_budget_question: {
+        Args: {
+          p_question_id: string
+          p_response: string
+          p_response_images?: string[]
         }
         Returns: Json
       }

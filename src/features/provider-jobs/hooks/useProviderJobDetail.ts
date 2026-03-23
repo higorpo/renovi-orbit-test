@@ -1,14 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchProviderJobs } from "../api/providerJobs.api";
+import { fetchProviderProposalJobDetail } from "../api/providerJobs.api";
 import type { ProviderJobItem } from "../types/provider-jobs.types";
 import { useProviderLocation } from "./useProviderLocation";
 
 const STALE_TIME_MS = 60_000;
 
-/**
- * match-provider-jobs exige lat/lng no body; para busca por `service_request_id` o raio não é aplicado.
- * Usamos fallback quando o prestador ainda não compartilhou localização (ex.: abrindo detalhe a partir de Orçamentos).
- */
+/** Brazil centroid fallback when provider location is unavailable (RPC needs coordinates for distance/radius). */
 const FALLBACK_LAT = -14.235;
 const FALLBACK_LNG = -51.9253;
 
@@ -33,18 +30,24 @@ export function useProviderJobDetail(
     initial.id === jobId;
 
   const query = useQuery({
-    queryKey: ["provider-job", jobId, lat, lng],
+    queryKey: [
+      "provider-proposal-job-detail",
+      jobId,
+      options?.initialJob?.provider_proposal_id ?? null,
+      effectiveLat,
+      effectiveLng,
+    ],
     queryFn: async () => {
-      const { data, error } = await fetchProviderJobs({
+      if (!jobId) return null;
+      const { data, error } = await fetchProviderProposalJobDetail({
+        proposalId: options?.initialJob?.provider_proposal_id ?? null,
+        serviceRequestId: jobId,
         latitude: effectiveLat,
         longitude: effectiveLng,
-        radius_km: 10,
-        service_request_id: jobId,
-        page: 1,
-        page_size: 1,
+        radiusKm: 10,
       });
-      if (error || !data) throw new Error(error ?? "Erro ao buscar trabalho");
-      return data.items[0] ?? null;
+      if (error) throw new Error(error);
+      return data ?? null;
     },
     enabled: Boolean(jobId),
     initialData: seeded ? initial : undefined,

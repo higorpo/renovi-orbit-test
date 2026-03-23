@@ -1,4 +1,5 @@
 -- RPC function: match_provider_jobs
+
 -- Returns eligible, ranked service requests for a provider based on:
 --   - provider's offered services
 --   - provider's service area (city-level from neighborhoods)
@@ -22,8 +23,7 @@ create or replace function public.match_provider_jobs(
   p_service_id uuid default null,
   p_sort_mode text default 'nearest',
   p_page_size integer default 20,
-  p_page integer default 1,
-  p_service_request_id uuid default null
+  p_page integer default 1
 )
 returns jsonb
 language plpgsql
@@ -132,21 +132,17 @@ begin
     where
       sr.status = 'open'
       and sr.location is not null
-      and (p_service_request_id is null or sr.id = p_service_request_id)
-      and (p_service_request_id is not null or st_dwithin(sr.location, v_provider_point, p_radius_km * 1000))
+      and st_dwithin(sr.location, v_provider_point, p_radius_km * 1000)
       and (p_service_id is null or sr.service_id = p_service_id)
       and (
         sr.service_id in (select os.service_id from offered_services os)
         or s.parent_id in (select os.service_id from offered_services os)
       )
       and ca.city_id in (select pci.city_id from provider_city_ids pci)
-      and (
-        p_service_request_id is not null
-        or not exists (
-          select 1
-          from provider_proposed_ids ppi
-          where ppi.service_request_id = sr.id
-        )
+      and not exists (
+        select 1
+        from provider_proposed_ids ppi
+        where ppi.service_request_id = sr.id
       )
   ),
   proposal_counts as (
@@ -254,6 +250,7 @@ begin
           'provider_proposal_photos', s.provider_proposal_photos,
           'provider_proposal_status', s.provider_proposal_status,
           'provider_proposal_client_rejection_response', s.provider_proposal_client_rejection_response,
+          'is_latest_provider_proposal', case when s.provider_proposal_id is not null then true else null end,
           'exact_area_match', s.exact_area_match,
           'created_at', s.created_at
         )
@@ -269,9 +266,9 @@ begin
 end;
 $$;
 
-comment on function public.match_provider_jobs is 'Returns paginated, ranked service requests matching a provider''s services and area. Optional p_service_request_id returns that row only if eligible (radius filter skipped). Used by the match-provider-jobs Edge Function.';
+comment on function public.match_provider_jobs is 'Returns paginated, ranked service requests matching a provider''s services and area. Used by the match-provider-jobs Edge Function. Single-request detail uses get_provider_proposal_job_detail.';
 
 -- Restrict execution to service_role only (called from Edge Function with service role key).
 -- This prevents authenticated users (clients) from bypassing the Edge Function's provider role check.
-revoke execute on function public.match_provider_jobs(uuid, double precision, double precision, integer, uuid, text, integer, integer, uuid) from anon;
-revoke execute on function public.match_provider_jobs(uuid, double precision, double precision, integer, uuid, text, integer, integer, uuid) from authenticated;
+revoke execute on function public.match_provider_jobs(uuid, double precision, double precision, integer, uuid, text, integer, integer) from anon;
+revoke execute on function public.match_provider_jobs(uuid, double precision, double precision, integer, uuid, text, integer, integer) from authenticated;

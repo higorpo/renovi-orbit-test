@@ -148,7 +148,6 @@ serve(async (req: Request) => {
       sort_mode,
       page,
       page_size,
-      service_request_id,
     } = body;
 
     if (
@@ -177,7 +176,6 @@ serve(async (req: Request) => {
         p_sort_mode: sort_mode ?? "nearest",
         p_page_size: page_size ?? 20,
         p_page: page ?? 1,
-        p_service_request_id: service_request_id ?? null,
       }),
       supabase
         .from("provider_offered_services")

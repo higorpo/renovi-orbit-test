@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 import { toast } from "sonner";
@@ -70,6 +70,34 @@ describe("ProviderProposalSummaryCard", () => {
     withdrawProviderProposal.mockResolvedValue({ success: true, error: null });
   });
 
+  it("shows default summary title when proposal is the latest for this provider", () => {
+    const job = createMinimalJob({
+      provider_proposal_id: "p1",
+      provider_proposal_status: "submitted",
+      is_latest_provider_proposal: true,
+      provider_proposed_amount: 50,
+    });
+    render(<ProviderProposalSummaryCard job={job} canEdit={false} onEdit={vi.fn()} />, {
+      wrapper: wrapper(),
+    });
+    expect(
+      screen.getByRole("heading", { name: /seu orçamento mais recente enviado/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows details title when RPC marks a non-latest proposal row", () => {
+    const job = createMinimalJob({
+      provider_proposal_id: "p1",
+      provider_proposal_status: "submitted",
+      is_latest_provider_proposal: false,
+      provider_proposed_amount: 50,
+    });
+    render(<ProviderProposalSummaryCard job={job} canEdit={false} onEdit={vi.fn()} />, {
+      wrapper: wrapper(),
+    });
+    expect(screen.getByRole("heading", { name: /^detalhes do orçamento$/i })).toBeInTheDocument();
+  });
+
   it("returns null when no proposal id", () => {
     const job = createMinimalJob({ provider_proposal_id: null });
     const { container } = render(
@@ -133,7 +161,10 @@ describe("ProviderProposalSummaryCard", () => {
       screen.getByRole("button", { name: /ver detalhes do orçamento/i }),
     );
     await waitFor(() => {
-      expect(screen.getByText(/detalhes do orçamento/i)).toBeInTheDocument();
+      const dialog = screen.getByRole("dialog");
+      expect(
+        within(dialog).getByRole("heading", { name: /detalhes do orçamento/i }),
+      ).toBeInTheDocument();
     });
   });
 });
