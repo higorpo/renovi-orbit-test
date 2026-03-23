@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router";
 import { Tabs } from "@/components/ui/tabs";
 import { MeusServicosHeader } from "./MeusServicosHeader";
 import { SearchBar } from "./SearchBar";
@@ -9,11 +10,13 @@ import { ServiceCardSkeleton } from "./ServiceCardSkeleton";
 import { EmptyState } from "./EmptyState";
 import { ErrorState } from "./ErrorState";
 import { NoFilterResultsState } from "./NoFilterResultsState";
+import { ServiceRequestFocusBanner } from "./ServiceRequestFocusBanner";
 import { useServiceRequestsList } from "../hooks/useServiceRequestsList";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useServiceRequestsFilters } from "../hooks/useServiceRequestsFilters";
 import { useCancelServiceRequest } from "../hooks/useCancelServiceRequest";
-import { STATUS_TABS } from "../constants/statusTabs";
+import { SERVICE_REQUEST_FOCUS_QUERY } from "../constants/routes";
+import { STATUS_TABS, statusToTabId } from "../constants/statusTabs";
 import type { StatusTabId } from "../constants/statusTabs";
 import type { ServiceRequestCardModel } from "../types/service-request-view.types";
 
@@ -35,6 +38,9 @@ function computeTabCounts(
 }
 
 export function ServiceRequestsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusServiceRequestId = searchParams.get(SERVICE_REQUEST_FOCUS_QUERY);
+
   const { items, isLoading, isError, refetch } = useServiceRequestsList();
   const { cancelServiceRequest, isCancelling } = useCancelServiceRequest();
 
@@ -54,7 +60,34 @@ export function ServiceRequestsPage() {
   } = useServiceRequestsFilters({
     items,
     searchQueryDebounced,
+    focusServiceRequestId,
   });
+
+  const focusedRequest = useMemo(() => {
+    if (!focusServiceRequestId) return null;
+    return items.find((m) => m.id === focusServiceRequestId) ?? null;
+  }, [focusServiceRequestId, items]);
+
+  useEffect(() => {
+    if (!focusServiceRequestId || !focusedRequest) return;
+    setStatusTabId(statusToTabId(focusedRequest.status));
+  }, [focusServiceRequestId, focusedRequest, setStatusTabId]);
+
+  const scrolledToFocusIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focusServiceRequestId) {
+      scrolledToFocusIdRef.current = null;
+      return;
+    }
+    if (isLoading || filteredItems.length !== 1) return;
+    if (scrolledToFocusIdRef.current === focusServiceRequestId) return;
+    scrolledToFocusIdRef.current = focusServiceRequestId;
+    requestAnimationFrame(() => {
+      document
+        .getElementById(`service-request-${focusServiceRequestId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [focusServiceRequestId, filteredItems.length, isLoading]);
 
   const tabCounts = useMemo(
     () => computeTabCounts(items),
@@ -85,6 +118,14 @@ export function ServiceRequestsPage() {
     return Array.from(set).sort();
   }, [items]);
 
+  const handleClearFocusFilter = useCallback(() => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete(SERVICE_REQUEST_FOCUS_QUERY);
+      return next;
+    });
+  }, [setSearchParams]);
+
   const handleClearFilters = useCallback(() => {
     setCategoryId(null);
     setCityName(null);
@@ -92,6 +133,11 @@ export function ServiceRequestsPage() {
     setDateRange(null, null);
     setHasProposals(null);
     setHasImages(null);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete(SERVICE_REQUEST_FOCUS_QUERY);
+      return next;
+    });
   }, [
     setCategoryId,
     setCityName,
@@ -99,6 +145,7 @@ export function ServiceRequestsPage() {
     setDateRange,
     setHasProposals,
     setHasImages,
+    setSearchParams,
   ]);
 
   return (
@@ -106,6 +153,13 @@ export function ServiceRequestsPage() {
       <MeusServicosHeader />
 
       <div className="mt-6 space-y-4">
+        <ServiceRequestFocusBanner
+          focusServiceRequestId={focusServiceRequestId}
+          focusedRequest={focusedRequest}
+          isLoading={isLoading}
+          onClearFocus={handleClearFocusFilter}
+        />
+
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="flex-1">
             <SearchBar
@@ -171,7 +225,7 @@ export function ServiceRequestsPage() {
           {!isLoading && !isError && filteredItems.length > 0 && (
             <ul className="grid gap-4 sm:grid-cols-1">
               {filteredItems.map((model) => (
-                <li key={model.id}>
+                <li key={model.id} id={`service-request-${model.id}`}>
                   <ServiceCard
                     model={model}
                     onCancel={cancelServiceRequest}

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ServiceRequestCardModel } from "../../types/service-request-view.types";
 import { ServiceRequestsPage } from "../ServiceRequestsPage";
 
 vi.mock("@/features/auth", () => ({
@@ -16,22 +17,26 @@ vi.mock("@/hooks/useDebouncedValue", () => ({
   useDebouncedValue: vi.fn((value: string) => value),
 }));
 
-vi.mock("@/features/request-quote", () => ({
-  useServiceRequestPhotoUrls: vi.fn(() => ({ urls: [], isLoading: false })),
-}));
+vi.mock("@/features/request-quote", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/request-quote")>();
+  return {
+    ...actual,
+    useServiceRequestPhotoUrls: vi.fn(() => ({ urls: [], isLoading: false })),
+  };
+});
 
 const useServiceRequestsList = vi.mocked(
   await import("../../hooks/useServiceRequestsList").then((m) => m.useServiceRequestsList)
 );
 
-function createWrapper() {
+function createWrapper(initialEntries: string[] = ["/"]) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter>{children}</MemoryRouter>
+        <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>
       </QueryClientProvider>
     );
   };
@@ -95,6 +100,49 @@ describe("ServiceRequestsPage", () => {
       screen.getByRole("heading", {
         name: /Você ainda não solicitou nenhum serviço/i,
       })
+    ).toBeInTheDocument();
+  });
+
+  it("when serviceRequestId is in the URL, lists only that service request", () => {
+    vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
+
+    const focused: ServiceRequestCardModel = {
+      id: "sr-focus",
+      title: "Serviço focado",
+      description: null,
+      descriptionPreview: "",
+      status: "open",
+      statusTabId: "waiting_proposals",
+      createdAt: "2025-03-01T00:00:00Z",
+      updatedAt: "2025-03-01T00:00:00Z",
+      address: null,
+      service: { title: "Eletricista", slug: "eletricista" },
+      photoPaths: [],
+    };
+    const other: ServiceRequestCardModel = {
+      ...focused,
+      id: "sr-other",
+      title: "Outro pedido",
+    };
+
+    useServiceRequestsList.mockReturnValue({
+      items: [focused, other],
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    render(<ServiceRequestsPage />, {
+      wrapper: createWrapper(["/dashboard/requests?serviceRequestId=sr-focus"]),
+    });
+
+    expect(screen.queryByText("Outro pedido")).not.toBeInTheDocument();
+    expect(document.getElementById("service-request-sr-focus")).toBeTruthy();
+    expect(screen.getAllByText("Serviço focado").length).toBeGreaterThan(0);
+    expect(screen.getByText("Filtro ativo: um pedido")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Ver todos os serviços/i })
     ).toBeInTheDocument();
   });
 });

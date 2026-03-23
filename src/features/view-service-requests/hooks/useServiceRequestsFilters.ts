@@ -20,6 +20,8 @@ export interface UseServiceRequestsFiltersParams {
   items: ServiceRequestCardModel[];
   /** Debounced search query to apply. */
   searchQueryDebounced: string;
+  /** From URL: show only this service request. */
+  focusServiceRequestId: string | null;
 }
 
 export interface UseServiceRequestsFiltersResult {
@@ -37,6 +39,7 @@ export interface UseServiceRequestsFiltersResult {
 export function useServiceRequestsFilters({
   items,
   searchQueryDebounced,
+  focusServiceRequestId,
 }: UseServiceRequestsFiltersParams): UseServiceRequestsFiltersResult {
   const [filters, setFilters] = useState(INITIAL_FILTERS);
 
@@ -46,8 +49,11 @@ export function useServiceRequestsFilters({
   );
 
   const filteredItems = useMemo(
-    () => filterServiceRequests(items, filtersWithSearch),
-    [items, filtersWithSearch]
+    () =>
+      filterServiceRequests(items, filtersWithSearch, {
+        focusServiceRequestId,
+      }),
+    [items, filtersWithSearch, focusServiceRequestId]
   );
 
   const setStatusTabId = useCallback((statusTabId: StatusTabId) => {

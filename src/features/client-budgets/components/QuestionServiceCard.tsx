@@ -1,4 +1,6 @@
-import { MessageCircleQuestion } from "lucide-react";
+import { FileText, MessageCircleQuestion } from "lucide-react";
+import { Link } from "react-router";
+import { getServiceRequestsPageUrlWithFocus } from "@/features/view-service-requests";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { ClientQuestionServiceGroup, QuestionStatusFilter } from "../types/client-budgets.types";
@@ -59,19 +61,37 @@ export function QuestionServiceCard({ item, statusFilter, onOpenDetails }: Quest
         ) : null}
       </CardContent>
       <CardFooter className="border-t pt-3">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-9 min-h-9 inline-flex items-center gap-1.5 border-border bg-white text-zinc-900 hover:bg-white/90 hover:text-zinc-900 dark:bg-white dark:text-zinc-900 dark:hover:bg-white/90"
-          onClick={(event) => {
-            event.stopPropagation();
-            handleOpenDetails();
-          }}
-        >
-          <MessageCircleQuestion className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          {getQuestionCardCtaLabel()}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 min-h-9 inline-flex items-center gap-1.5 border-border bg-white text-zinc-900 hover:bg-white/90 hover:text-zinc-900 dark:bg-white dark:text-zinc-900 dark:hover:bg-white/90"
+            onClick={(event) => {
+              event.stopPropagation();
+              handleOpenDetails();
+            }}
+          >
+            <MessageCircleQuestion className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {getQuestionCardCtaLabel()}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 min-h-9 border-border bg-white text-zinc-900 hover:bg-white/90 hover:text-zinc-900 dark:bg-white dark:text-zinc-900 dark:hover:bg-white/90"
+            asChild
+          >
+            <Link
+              to={getServiceRequestsPageUrlWithFocus(item.service_request_id)}
+              className="inline-flex items-center gap-1.5"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              Gerenciar serviço
+            </Link>
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   );

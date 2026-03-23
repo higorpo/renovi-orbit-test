@@ -88,13 +88,25 @@ function matchesHasImages(
   return hasImages ? has : !has;
 }
 
+export interface FilterServiceRequestsOptions {
+  /** When set, only this request is shown (deep link from orçamentos / perguntas). */
+  focusServiceRequestId?: string | null;
+}
+
 /**
  * Filter card models by the current filter state.
  */
 export function filterServiceRequests(
   items: ServiceRequestCardModel[],
-  filters: ServiceRequestsFilterState
+  filters: ServiceRequestsFilterState,
+  options?: FilterServiceRequestsOptions
 ): ServiceRequestCardModel[] {
+  const focusId = options?.focusServiceRequestId?.trim() ?? null;
+  if (focusId) {
+    const target = items.find((m) => m.id === focusId);
+    return target ? [target] : [];
+  }
+
   return items.filter(
     (model) =>
       matchesStatusTab(model, filters.statusTabId) &&

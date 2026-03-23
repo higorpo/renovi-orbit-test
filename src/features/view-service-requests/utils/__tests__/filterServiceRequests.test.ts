@@ -145,4 +145,41 @@ describe("filterServiceRequests", () => {
     expect(result2).toHaveLength(1);
     expect(result2[0].service?.title).toBe("Encanador");
   });
+
+  it("focus mode returns only the matching service request when focusServiceRequestId is set", () => {
+    const filters: ServiceRequestsFilterState = {
+      statusTabId: "waiting_proposals",
+      searchQuery: "",
+      categoryId: null,
+      cityName: null,
+      neighborhoodName: null,
+      dateFrom: null,
+      dateTo: null,
+      hasProposals: null,
+      hasImages: null,
+    };
+    const result = filterServiceRequests([openItem, inProgressItem], filters, {
+      focusServiceRequestId: "2",
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("2");
+  });
+
+  it("focus mode returns empty when id does not exist", () => {
+    const filters: ServiceRequestsFilterState = {
+      statusTabId: "all",
+      searchQuery: "",
+      categoryId: null,
+      cityName: null,
+      neighborhoodName: null,
+      dateFrom: null,
+      dateTo: null,
+      hasProposals: null,
+      hasImages: null,
+    };
+    const result = filterServiceRequests([openItem], filters, {
+      focusServiceRequestId: "missing",
+    });
+    expect(result).toHaveLength(0);
+  });
 });

@@ -1,196 +1,264 @@
-create or replace function public.create_provider_proposal(
-  p_service_request_id uuid,
-  p_proposed_amount numeric,
-  p_proposal_description text,
-  p_proposal_duration_value integer,
-  p_proposal_duration_unit text,
-  p_proposal_suggested_slots jsonb,
-  p_photos text[],
-  p_tax_rate numeric,
-  p_tax_amount numeric,
-  p_final_amount numeric,
-  p_pricing_signature text
+create or replace function public.get_provider_proposal_job_detail(
+  p_proposal_id uuid default null,
+  p_service_request_id uuid default null,
+  p_lat double precision default null,
+  p_lng double precision default null,
+  p_radius_km integer default 10
 )
 returns jsonb
 language plpgsql
+stable
 security definer
-set search_path = public
+set search_path = public, extensions
 as $$
 declare
   v_provider_id uuid;
-  v_role text;
-  v_service_request_status text;
-  v_proposal_id uuid;
-  v_previous_proposal_id uuid;
-  v_previous_proposal_status text;
-  v_suggested_slots_count integer;
-  v_slot jsonb;
-  v_start_date date;
-  v_end_date date;
+  v_sr_id uuid;
+  v_point geography;
+  v_radius integer;
+  v_pp_id uuid;
+  v_result jsonb;
 begin
-  v_provider_id := auth.uid();
+  v_provider_id := (select auth.uid());
+
   if v_provider_id is null then
-    raise exception 'Unauthorized';
+    raise exception 'Authentication required' using errcode = '28000';
   end if;
 
-  select p.role
-  into v_role
-  from public.profiles p
-  where p.id = v_provider_id;
-
-  if v_role <> 'provider' then
-    raise exception 'Only providers can create proposals';
-  end if;
-
-  if p_service_request_id is null then
-    raise exception 'Service request is required';
-  end if;
-
-  select sr.status
-  into v_service_request_status
-  from public.service_requests sr
-  where sr.id = p_service_request_id;
-
-  if v_service_request_status is null then
-    raise exception 'Service request not found';
-  end if;
-
-  if v_service_request_status <> 'open' then
-    raise exception 'This service request is not open for proposals';
-  end if;
-
-  if p_proposed_amount is null or p_proposed_amount <= 0 then
-    raise exception 'Proposed amount must be greater than zero';
-  end if;
-
-  if nullif(trim(p_proposal_description), '') is null then
-    raise exception 'Proposal description is required';
-  end if;
-
-  if p_proposal_duration_value is null or p_proposal_duration_value <= 0 then
-    raise exception 'Proposal duration value must be greater than zero';
-  end if;
-
-  if p_proposal_duration_unit not in ('hours', 'days') then
-    raise exception 'Proposal duration unit must be hours or days';
-  end if;
-
-  if p_proposal_suggested_slots is null or jsonb_typeof(p_proposal_suggested_slots) <> 'array' then
-    raise exception 'Suggested slots must be a JSON array';
-  end if;
-
-  v_suggested_slots_count := jsonb_array_length(p_proposal_suggested_slots);
-  if v_suggested_slots_count < 1 or v_suggested_slots_count > 3 then
-    raise exception 'Suggested slots must contain between 1 and 3 options';
-  end if;
-
-  for v_slot in
-    select value
-    from jsonb_array_elements(p_proposal_suggested_slots)
-  loop
-    if jsonb_typeof(v_slot) <> 'object' then
-      raise exception 'Each suggested slot must be an object';
-    end if;
-
-    if coalesce(v_slot->>'shift', '') not in ('morning', 'afternoon', 'full_day') then
-      raise exception 'Each suggested slot must include a valid shift';
-    end if;
-
-    if coalesce(v_slot->>'start_date', '') = '' then
-      raise exception 'Each suggested slot must include start_date';
-    end if;
-
-    begin
-      v_start_date := (v_slot->>'start_date')::date;
-    exception when others then
-      raise exception 'Invalid start_date in suggested slots';
-    end;
-
-    if p_proposal_duration_unit = 'hours' then
-      if v_slot ? 'end_date' and coalesce(v_slot->>'end_date', '') <> '' then
-        raise exception 'Hourly proposals must not include end_date in suggested slots';
-      end if;
-    else
-      if coalesce(v_slot->>'end_date', '') = '' then
-        raise exception 'Day-based proposals must include end_date in suggested slots';
-      end if;
-
-      begin
-        v_end_date := (v_slot->>'end_date')::date;
-      exception when others then
-        raise exception 'Invalid end_date in suggested slots';
-      end;
-
-      if v_end_date < v_start_date then
-        raise exception 'Suggested slot end_date cannot be before start_date';
-      end if;
-
-      if (v_end_date - v_start_date + 1) <> p_proposal_duration_value then
-        raise exception 'Each day-based slot must match the informed duration value';
-      end if;
-    end if;
-  end loop;
-
-  select pp.id, pp.status
-  into v_previous_proposal_id, v_previous_proposal_status
-  from public.provider_proposals pp
-  where pp.provider_id = v_provider_id
-    and pp.service_request_id = p_service_request_id
-    and pp.status <> 'withdrawn'
-  order by pp.created_at desc
-  limit 1;
-
-  if v_previous_proposal_id is not null and v_previous_proposal_status = 'accepted' then
-    raise exception 'Accepted proposals cannot be replaced';
-  end if;
-
-  if v_previous_proposal_id is not null then
-    update public.provider_proposals
-    set status = 'withdrawn'
-    where id = v_previous_proposal_id;
-  end if;
-
-  if exists (
-    select 1
-    from public.provider_proposals pp
-    where pp.provider_id = v_provider_id
-      and pp.service_request_id = p_service_request_id
-      and pp.status <> 'withdrawn'
+  if not exists (
+    select 1 from public.profiles pr
+    where pr.id = v_provider_id and pr.role = 'provider'
   ) then
-    raise exception 'Unable to replace previous active proposal';
+    raise exception 'Only providers can load this resource' using errcode = '42501';
   end if;
 
-  insert into public.provider_proposals (
-    provider_id,
-    service_request_id,
-    proposed_amount,
-    proposal_description,
-    proposal_duration_value,
-    proposal_duration_unit,
-    proposal_suggested_slots,
-    photos,
-    tax_rate,
-    tax_amount,
-    final_amount,
-    pricing_signature,
-    status
-  ) values (
-    v_provider_id,
-    p_service_request_id,
-    round(p_proposed_amount::numeric, 2),
-    trim(p_proposal_description),
-    p_proposal_duration_value,
-    p_proposal_duration_unit,
-    p_proposal_suggested_slots,
-    coalesce(p_photos, '{}'::text[]),
-    round(p_tax_rate::numeric, 4),
-    round(p_tax_amount::numeric, 2),
-    round(p_final_amount::numeric, 2),
-    p_pricing_signature,
-    'submitted'
-  )
-  returning id into v_proposal_id;
+  if p_proposal_id is null and p_service_request_id is null then
+    raise exception 'Either p_proposal_id or p_service_request_id must be provided' using errcode = '22000';
+  end if;
 
-  return jsonb_build_object('id', v_proposal_id);
+  v_radius := least(greatest(coalesce(p_radius_km, 10), 1), 100);
+
+  if p_lat is not null and p_lng is not null then
+    v_point := st_setsrid(st_makepoint(p_lng, p_lat), 4326)::geography;
+  else
+    v_point := null;
+  end if;
+
+  -- Resolve target service request and optional proposal row id
+  if p_proposal_id is not null then
+    select pp.service_request_id, pp.id
+    into v_sr_id, v_pp_id
+    from public.provider_proposals pp
+    where pp.id = p_proposal_id and pp.provider_id = v_provider_id;
+    if v_sr_id is null then
+      return null;
+    end if;
+  else
+    v_sr_id := p_service_request_id;
+    select pp.id
+    into v_pp_id
+    from public.provider_proposals pp
+    where pp.provider_id = v_provider_id and pp.service_request_id = v_sr_id
+    order by pp.updated_at desc, pp.created_at desc
+    limit 1;
+  end if;
+
+  -- Case A: provider has a proposal row — return without match filters
+  if v_pp_id is not null then
+    select
+      jsonb_build_object(
+        'id', sr.id,
+        'title', sr.title,
+        'description', sr.description,
+        'service_id', sr.service_id,
+        'service_title', s.title,
+        'service_slug', s.slug,
+        'service_icon_key', s.icon_key,
+        'service_color_key', s.color_key,
+        'service_parent_id', s.parent_id,
+        'photos', sr.photos,
+        'form_data', sr.form_data,
+        'form_schema', sr.form_schema,
+        'urgency', sr.urgency,
+        'scope_complexity', sr.scope_complexity,
+        'estimated_duration_hint', sr.estimated_duration_hint,
+        'tags', to_jsonb(sr.tags),
+        'suggested_questions', to_jsonb(sr.suggested_questions),
+        'suggested_equipment', to_jsonb(sr.suggested_equipment),
+        'suggested_materials', to_jsonb(sr.suggested_materials),
+        'masked_client_name', (
+          split_part(p.full_name, ' ', 1) ||
+          case
+            when array_length(string_to_array(p.full_name, ' '), 1) > 1
+            then ' ' || left(
+              split_part(
+                p.full_name, ' ',
+                array_length(string_to_array(p.full_name, ' '), 1)
+              ), 1
+            ) || '.'
+            else ''
+          end
+        ),
+        'neighborhood', coalesce(ca.neighborhood, ''),
+        'city', coalesce(pc.name, ''),
+        'state', coalesce(pst.abbreviation::text, ''),
+        'distance_km', case
+          when sr.location is not null and v_point is not null then
+            round((st_distance(sr.location, v_point) / 1000.0)::numeric, 1)
+          else 0
+        end,
+        'proposal_count', (
+          select count(*)::integer
+          from public.provider_proposals pp2
+          where pp2.service_request_id = sr.id
+            and pp2.status not in ('withdrawn', 'rejected')
+        ),
+        'provider_proposal_id', pp.id,
+        'provider_proposed_amount', pp.proposed_amount,
+        'provider_tax_rate', pp.tax_rate,
+        'provider_tax_amount', pp.tax_amount,
+        'provider_final_amount', pp.final_amount,
+        'provider_proposal_description', pp.proposal_description,
+        'provider_proposal_duration_value', pp.proposal_duration_value,
+        'provider_proposal_duration_unit', pp.proposal_duration_unit,
+        'provider_proposal_suggested_slots', pp.proposal_suggested_slots,
+        'provider_proposal_photos', to_jsonb(pp.photos),
+        'provider_proposal_status', pp.status,
+        'provider_proposal_client_rejection_response', pp.client_rejection_response,
+        'is_latest_provider_proposal', (
+          pp.id = (
+            select pp_max.id
+            from public.provider_proposals pp_max
+            where pp_max.provider_id = v_provider_id
+              and pp_max.service_request_id = sr.id
+            order by pp_max.updated_at desc, pp_max.created_at desc
+            limit 1
+          )
+        ),
+        'exact_area_match', exists (
+          select 1
+          from public.provider_service_area_neighborhoods psan
+          join public.platform_neighborhoods pn on pn.id = psan.neighborhood_id
+          where psan.provider_id = v_provider_id
+            and ca.id is not null
+            and pn.city_id = ca.city_id
+            and lower(trim(pn.name)) = lower(trim(ca.neighborhood))
+        ),
+        'created_at', sr.created_at
+      )
+    into v_result
+    from public.provider_proposals pp
+    inner join public.service_requests sr on sr.id = pp.service_request_id
+    inner join public.platform_services s on s.id = sr.service_id
+    inner join public.profiles p on p.id = sr.client_id
+    left join public.client_addresses ca on ca.id = sr.address_id
+    left join public.platform_cities pc on pc.id = ca.city_id
+    left join public.platform_states pst on pst.id = ca.state_id
+    where pp.id = v_pp_id and pp.provider_id = v_provider_id;
+
+    return v_result;
+  end if;
+
+  -- Case B: no proposal — same eligibility as match feed (single-row lookup)
+  select
+    jsonb_build_object(
+      'id', sr.id,
+      'title', sr.title,
+      'description', sr.description,
+      'service_id', sr.service_id,
+      'service_title', s.title,
+      'service_slug', s.slug,
+      'service_icon_key', s.icon_key,
+      'service_color_key', s.color_key,
+      'service_parent_id', s.parent_id,
+      'photos', sr.photos,
+      'form_data', sr.form_data,
+      'form_schema', sr.form_schema,
+      'urgency', sr.urgency,
+      'scope_complexity', sr.scope_complexity,
+      'estimated_duration_hint', sr.estimated_duration_hint,
+      'tags', to_jsonb(sr.tags),
+      'suggested_questions', to_jsonb(sr.suggested_questions),
+      'suggested_equipment', to_jsonb(sr.suggested_equipment),
+      'suggested_materials', to_jsonb(sr.suggested_materials),
+      'masked_client_name', (
+        split_part(p.full_name, ' ', 1) ||
+        case
+          when array_length(string_to_array(p.full_name, ' '), 1) > 1
+          then ' ' || left(
+            split_part(
+              p.full_name, ' ',
+              array_length(string_to_array(p.full_name, ' '), 1)
+            ), 1
+          ) || '.'
+          else ''
+        end
+      ),
+      'neighborhood', coalesce(ca.neighborhood, ''),
+      'city', coalesce(pc.name, ''),
+      'state', coalesce(pst.abbreviation::text, ''),
+      'distance_km', round((st_distance(sr.location, v_point) / 1000.0)::numeric, 1),
+      'proposal_count', coalesce(pc_agg.active_count, 0),
+      'provider_proposal_id', null,
+      'provider_proposed_amount', null,
+      'provider_tax_rate', null,
+      'provider_tax_amount', null,
+      'provider_final_amount', null,
+      'provider_proposal_description', null,
+      'provider_proposal_duration_value', null,
+      'provider_proposal_duration_unit', null,
+      'provider_proposal_suggested_slots', null,
+      'provider_proposal_photos', null,
+      'provider_proposal_status', null,
+      'provider_proposal_client_rejection_response', null,
+      'is_latest_provider_proposal', null,
+      'exact_area_match', exists (
+        select 1
+        from public.provider_service_area_neighborhoods psan
+        join public.platform_neighborhoods pn on pn.id = psan.neighborhood_id
+        where psan.provider_id = v_provider_id
+          and pn.city_id = ca.city_id
+          and lower(trim(pn.name)) = lower(trim(ca.neighborhood))
+      ),
+      'created_at', sr.created_at
+    )
+  into v_result
+  from public.service_requests sr
+  inner join public.client_addresses ca on ca.id = sr.address_id
+  inner join public.platform_cities pc on pc.id = ca.city_id
+  inner join public.platform_states pst on pst.id = ca.state_id
+  inner join public.platform_services s on s.id = sr.service_id
+  inner join public.profiles p on p.id = sr.client_id
+  cross join lateral (
+    select count(*)::integer as active_count
+    from public.provider_proposals pp2
+    where pp2.service_request_id = sr.id
+      and pp2.status not in ('withdrawn', 'rejected')
+  ) pc_agg
+  where sr.id = v_sr_id
+    and sr.status = 'open'
+    and sr.location is not null
+    and v_point is not null
+    and st_dwithin(sr.location, v_point, v_radius * 1000)
+    and (
+      sr.service_id in (select pos.service_id from public.provider_offered_services pos where pos.provider_id = v_provider_id)
+      or s.parent_id in (select pos.service_id from public.provider_offered_services pos where pos.provider_id = v_provider_id)
+    )
+    and ca.city_id in (
+      select distinct pn.city_id
+      from public.provider_service_area_neighborhoods psan
+      join public.platform_neighborhoods pn on pn.id = psan.neighborhood_id
+      where psan.provider_id = v_provider_id
+    )
+    and not exists (
+      select 1
+      from public.provider_proposals ppi
+      where ppi.service_request_id = sr.id
+        and ppi.provider_id = v_provider_id
+        and ppi.status <> 'withdrawn'
+    )
+    and coalesce(pc_agg.active_count, 0) < 3;
+
+  return v_result;
 end;
 $$;

@@ -1,3 +1,6 @@
+import { FileText } from "lucide-react";
+import { Link } from "react-router";
+import { getServiceRequestsPageUrlWithFocus } from "@/features/view-service-requests";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,19 +72,31 @@ export function ReceivedBudgetServiceCard({ item, statusFilter, onOpenDetails }:
         ) : null}
       </CardContent>
       <CardFooter className="border-t pt-3">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-9 min-h-9 inline-flex items-center gap-1.5"
-          onClick={(event) => {
-            event.stopPropagation();
-            handleOpenDetails();
-          }}
-        >
-          <CtaIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          {ctaLabel}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 min-h-9 inline-flex items-center gap-1.5"
+            onClick={(event) => {
+              event.stopPropagation();
+              handleOpenDetails();
+            }}
+          >
+            <CtaIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {ctaLabel}
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="h-9 min-h-9" asChild>
+            <Link
+              to={getServiceRequestsPageUrlWithFocus(item.service_request_id)}
+              className="inline-flex items-center gap-1.5"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <FileText className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              Gerenciar serviço
+            </Link>
+          </Button>
+        </div>
       </CardFooter>
     </Card>
   );
