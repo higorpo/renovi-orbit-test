@@ -1,21 +1,25 @@
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { ClientQuestionServiceGroup } from "../types/client-budgets.types";
+import type { ClientQuestionServiceGroup, QuestionStatusFilter } from "../types/client-budgets.types";
+import {
+  formatQuestionExtraLabel,
+  getQuestionCardCtaLabel,
+  getQuestionCardSummaryLine,
+  getQuestionExtraCount,
+} from "../constants/status";
 import { QuestionPreviewRow } from "./QuestionPreviewRow";
 import { ServiceRequestSummaryBlock } from "./ServiceRequestSummaryBlock";
 
 interface QuestionServiceCardProps {
   item: ClientQuestionServiceGroup;
+  statusFilter: QuestionStatusFilter;
   onOpenDetails: (serviceRequestId: string) => void;
 }
 
-export function QuestionServiceCard({ item, onOpenDetails }: QuestionServiceCardProps) {
+export function QuestionServiceCard({ item, statusFilter, onOpenDetails }: QuestionServiceCardProps) {
   const location = [item.neighborhood, item.city].filter(Boolean).join(", ");
-  const pendingQuestions = item.questions_preview.filter(
-    (question) => question.client_responded_at === null && !question.client_response,
-  );
-  const previews = pendingQuestions.slice(0, 2);
-  const extraCount = Math.max(pendingQuestions.length - previews.length, 0);
+  const previews = item.questions_preview.slice(0, 2);
+  const extraCount = getQuestionExtraCount(item, statusFilter);
   const handleOpenDetails = () => onOpenDetails(item.service_request_id);
 
   return (
@@ -42,8 +46,7 @@ export function QuestionServiceCard({ item, onOpenDetails }: QuestionServiceCard
           createdAt={item.service_request_created_at}
         />
         <p className="text-xs font-medium text-muted-foreground">
-          {item.pending_questions_count} pendente{item.pending_questions_count !== 1 ? "s" : ""} de{" "}
-          {item.total_questions} pergunta{item.total_questions !== 1 ? "s" : ""} (até 3 por prestador)
+          {getQuestionCardSummaryLine(item, statusFilter)}
         </p>
       </CardHeader>
       <CardContent className="space-y-2 !pt-0">
@@ -51,7 +54,7 @@ export function QuestionServiceCard({ item, onOpenDetails }: QuestionServiceCard
           <QuestionPreviewRow key={question.id} question={question} />
         ))}
         {extraCount > 0 ? (
-          <p className="text-xs font-medium text-muted-foreground">+{extraCount} pergunta adicional</p>
+          <p className="text-xs font-medium text-muted-foreground">{formatQuestionExtraLabel(extraCount)}</p>
         ) : null}
       </CardContent>
       <CardFooter className="border-t pt-3">
@@ -63,7 +66,7 @@ export function QuestionServiceCard({ item, onOpenDetails }: QuestionServiceCard
             handleOpenDetails();
           }}
         >
-          Ver perguntas
+          {getQuestionCardCtaLabel(statusFilter)}
         </Button>
       </CardFooter>
     </Card>

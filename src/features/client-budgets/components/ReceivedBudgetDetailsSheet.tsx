@@ -7,6 +7,7 @@ import { useClientBudgetDetail } from "../hooks/useClientBudgetDetail";
 import { BudgetStatusBadge } from "./BudgetStatusBadge";
 import { CurrentProposalVersionBlock } from "./CurrentProposalVersionBlock";
 import type { ClientBudgetDetailProposal } from "../types/client-budgets.types";
+import { getReceivedBudgetSheetTitle, type ReceivedBudgetSheetMode } from "../constants/status";
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -15,12 +16,14 @@ function formatCurrency(value: number): string {
 interface ReceivedBudgetDetailsSheetProps {
   open: boolean;
   serviceRequestId: string | null;
+  sheetMode: ReceivedBudgetSheetMode;
   onOpenChange: (open: boolean) => void;
 }
 
 export function ReceivedBudgetDetailsSheet({
   open,
   serviceRequestId,
+  sheetMode,
   onOpenChange,
 }: ReceivedBudgetDetailsSheetProps) {
   const { detail, isLoading } = useClientBudgetDetail(serviceRequestId);
@@ -44,7 +47,7 @@ export function ReceivedBudgetDetailsSheet({
       >
         <div className="space-y-4 p-4 sm:p-6">
           <SheetHeader className="space-y-2 text-left">
-            <SheetTitle>Comparar orçamentos</SheetTitle>
+            <SheetTitle>{getReceivedBudgetSheetTitle(sheetMode)}</SheetTitle>
             <p className="text-sm text-muted-foreground">
               {detail?.service_request.title ?? "Carregando..."}
             </p>
@@ -56,7 +59,9 @@ export function ReceivedBudgetDetailsSheet({
             <Alert>
               <AlertTitle>Nenhum orçamento encontrado</AlertTitle>
               <AlertDescription>
-                Este pedido ainda não possui orçamentos ativos para comparação.
+                {sheetMode === "compare"
+                  ? "Este pedido ainda não possui orçamentos ativos para comparação."
+                  : "Este pedido ainda não possui orçamentos registrados."}
               </AlertDescription>
             </Alert>
           ) : (

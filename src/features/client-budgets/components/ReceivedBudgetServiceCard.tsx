@@ -1,26 +1,28 @@
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { ClientReceivedServiceGroup } from "../types/client-budgets.types";
+import type { ClientReceivedServiceGroup, ReceivedStatusFilter } from "../types/client-budgets.types";
 import { BudgetPreviewRow } from "./BudgetPreviewRow";
 import { ServiceRequestSummaryBlock } from "./ServiceRequestSummaryBlock";
-import { getServiceBudgetFlowStatus } from "../constants/status";
+import {
+  formatReceivedExtraBudgetsLabel,
+  getReceivedBudgetSummaryLine,
+  getReceivedCardCtaLabel,
+  getReceivedExtraBudgetCount,
+  getServiceBudgetFlowStatus,
+} from "../constants/status";
 
 interface ReceivedBudgetServiceCardProps {
   item: ClientReceivedServiceGroup;
+  statusFilter: ReceivedStatusFilter;
   onOpenDetails: (serviceRequestId: string) => void;
 }
 
-export function ReceivedBudgetServiceCard({ item, onOpenDetails }: ReceivedBudgetServiceCardProps) {
+export function ReceivedBudgetServiceCard({ item, statusFilter, onOpenDetails }: ReceivedBudgetServiceCardProps) {
   const budgetFlowStatus = getServiceBudgetFlowStatus(item);
   const location = [item.neighborhood, item.city].filter(Boolean).join(", ");
-  const activeBudgets = item.budgets_preview.filter(
-    (budget) =>
-      budget.status.toLowerCase() !== "withdrawn" &&
-      budget.status.toLowerCase() !== "rejected",
-  );
-  const previews = activeBudgets.slice(0, 2);
-  const extraCount = Math.max(activeBudgets.length - previews.length, 0);
+  const previews = item.budgets_preview.slice(0, 2);
+  const extraCount = getReceivedExtraBudgetCount(item, statusFilter);
   const handleOpenDetails = () => onOpenDetails(item.service_request_id);
 
   return (
@@ -52,8 +54,7 @@ export function ReceivedBudgetServiceCard({ item, onOpenDetails }: ReceivedBudge
           </Badge>
         </div>
         <p className="text-xs font-medium text-muted-foreground">
-          {item.total_budgets} orçamento{item.total_budgets !== 1 ? "s" : ""} recebido
-          {item.total_budgets !== 1 ? "s" : ""}
+          {getReceivedBudgetSummaryLine(item, statusFilter)}
         </p>
       </CardHeader>
       <CardContent className="space-y-2 !pt-0">
@@ -61,7 +62,7 @@ export function ReceivedBudgetServiceCard({ item, onOpenDetails }: ReceivedBudge
           <BudgetPreviewRow key={budget.id} budget={budget} />
         ))}
         {extraCount > 0 ? (
-          <p className="text-xs font-medium text-muted-foreground">+{extraCount} orçamento adicional</p>
+          <p className="text-xs font-medium text-muted-foreground">{formatReceivedExtraBudgetsLabel(extraCount)}</p>
         ) : null}
       </CardContent>
       <CardFooter className="border-t pt-3">
@@ -73,7 +74,7 @@ export function ReceivedBudgetServiceCard({ item, onOpenDetails }: ReceivedBudge
             handleOpenDetails();
           }}
         >
-          Comparar orçamentos
+          {getReceivedCardCtaLabel(statusFilter)}
         </Button>
       </CardFooter>
     </Card>

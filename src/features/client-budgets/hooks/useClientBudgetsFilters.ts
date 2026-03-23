@@ -10,29 +10,26 @@ const SEARCH_DEBOUNCE_MS = 400;
 
 export function useClientBudgetsFilters() {
   const [activeTab, setActiveTab] = useState<ClientBudgetsTab>("recebidos");
-  const [receivedStatusFilter, setReceivedStatusFilter] = useState<ReceivedStatusFilter>("all");
-  const [questionStatusFilter, setQuestionStatusFilter] = useState<QuestionStatusFilter>("all");
+  const [receivedStatusFilter, setReceivedStatusFilter] = useState<ReceivedStatusFilter>("awaiting_decision");
+  const [questionStatusFilter, setQuestionStatusFilter] = useState<QuestionStatusFilter>("pending");
   const [searchQuery, setSearchQuery] = useState("");
 
   const debouncedSearch = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
 
   const resetFilters = useCallback(() => {
-    setReceivedStatusFilter("all");
-    setQuestionStatusFilter("all");
+    setReceivedStatusFilter("awaiting_decision");
+    setQuestionStatusFilter("pending");
     setSearchQuery("");
   }, []);
 
-  const receivedStatusParam = useMemo(
-    () => (receivedStatusFilter === "all" ? null : receivedStatusFilter),
-    [receivedStatusFilter],
-  );
-  const questionStatusParam = useMemo(
-    () => (questionStatusFilter === "all" ? null : questionStatusFilter),
-    [questionStatusFilter],
-  );
+  const receivedStatusParam = useMemo(() => receivedStatusFilter, [receivedStatusFilter]);
+  const questionStatusParam = useMemo(() => questionStatusFilter, [questionStatusFilter]);
   const searchParam = useMemo(() => debouncedSearch.trim() || null, [debouncedSearch]);
   const hasActiveFilters = useMemo(
-    () => receivedStatusFilter !== "all" || questionStatusFilter !== "all" || Boolean(searchQuery.trim()),
+    () =>
+      receivedStatusFilter !== "awaiting_decision" ||
+      questionStatusFilter !== "pending" ||
+      Boolean(searchQuery.trim()),
     [receivedStatusFilter, questionStatusFilter, searchQuery],
   );
 

@@ -15,6 +15,7 @@ import { useClientBudgetsFilters } from "../hooks/useClientBudgetsFilters";
 import { useClientReceivedBudgets } from "../hooks/useClientReceivedBudgets";
 import { useClientBudgetQuestions } from "../hooks/useClientBudgetQuestions";
 import type { ClientBudgetsTab } from "../types/client-budgets.types";
+import { getReceivedBudgetSheetMode } from "../constants/status";
 
 const SKELETON_COUNT = 4;
 
@@ -129,7 +130,11 @@ export function ClientBudgetsPage() {
               <ul className="grid gap-4">
                 {received.items.map((item) => (
                   <li key={item.service_request_id}>
-                    <ReceivedBudgetServiceCard item={item} onOpenDetails={openReceivedDetails} />
+                    <ReceivedBudgetServiceCard
+                      item={item}
+                      statusFilter={receivedStatusFilter}
+                      onOpenDetails={openReceivedDetails}
+                    />
                   </li>
                 ))}
               </ul>
@@ -152,7 +157,11 @@ export function ClientBudgetsPage() {
               <ul className="grid gap-4">
                 {questions.items.map((item) => (
                   <li key={item.service_request_id}>
-                    <QuestionServiceCard item={item} onOpenDetails={openQuestionDetails} />
+                    <QuestionServiceCard
+                      item={item}
+                      statusFilter={questionStatusFilter}
+                      onOpenDetails={openQuestionDetails}
+                    />
                   </li>
                 ))}
               </ul>
@@ -164,6 +173,7 @@ export function ClientBudgetsPage() {
       <ReceivedBudgetDetailsSheet
         open={detailsMode === "received"}
         serviceRequestId={selectedServiceRequestId}
+        sheetMode={getReceivedBudgetSheetMode(receivedStatusFilter)}
         onOpenChange={(next) => {
           if (!next) setDetailsMode(null);
         }}

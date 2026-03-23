@@ -8,14 +8,13 @@ export interface PaginatedResponse<T> {
 export type ClientBudgetsTab = "recebidos" | "perguntas";
 
 export type ReceivedStatusFilter =
-  | "all"
   | "awaiting_decision"
   | "accepted"
   | "rejected"
   | "withdrawn"
   | "closed";
 
-export type QuestionStatusFilter = "all" | "pending" | "answered" | "closed";
+export type QuestionStatusFilter = "pending" | "answered" | "closed";
 
 export interface BudgetPreviewItem {
   id: string;
