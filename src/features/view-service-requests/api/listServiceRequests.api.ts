@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
 import type { ServiceRequestRow } from "@/features/request-quote/types/request-quote.types";
 
-/** Joined row: service_requests + client_addresses (with city/state) + services. */
+/** Joined row: service_requests + client_addresses (with city/state) + platform_services. */
 export interface ServiceRequestWithRelationsRow extends ServiceRequestRow {
   client_addresses?: {
     neighborhood: string;
@@ -11,7 +11,7 @@ export interface ServiceRequestWithRelationsRow extends ServiceRequestRow {
     platform_cities?: { name: string } | null;
     platform_states?: { abbreviation: string } | null;
   } | null;
-  services?: { title: string; slug: string; icon_key: string | null; color_key: string | null } | null;
+  platform_services?: { title: string; slug: string; icon_key: string | null; color_key: string | null } | null;
 }
 
 export interface ListServiceRequestsParams {
@@ -44,7 +44,7 @@ export async function listServiceRequests(
         platform_cities ( name ),
         platform_states ( abbreviation )
       ),
-      services ( title, slug, icon_key, color_key )
+      platform_services ( title, slug, icon_key, color_key )
     `
     )
     .eq("client_id", params.clientId)

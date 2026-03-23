@@ -1,0 +1,81 @@
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import type { ClientReceivedServiceGroup } from "../types/client-budgets.types";
+import { BudgetPreviewRow } from "./BudgetPreviewRow";
+import { ServiceRequestSummaryBlock } from "./ServiceRequestSummaryBlock";
+import { getServiceBudgetFlowStatus } from "../constants/status";
+
+interface ReceivedBudgetServiceCardProps {
+  item: ClientReceivedServiceGroup;
+  onOpenDetails: (serviceRequestId: string) => void;
+}
+
+export function ReceivedBudgetServiceCard({ item, onOpenDetails }: ReceivedBudgetServiceCardProps) {
+  const budgetFlowStatus = getServiceBudgetFlowStatus(item);
+  const location = [item.neighborhood, item.city].filter(Boolean).join(", ");
+  const activeBudgets = item.budgets_preview.filter(
+    (budget) =>
+      budget.status.toLowerCase() !== "withdrawn" &&
+      budget.status.toLowerCase() !== "rejected",
+  );
+  const previews = activeBudgets.slice(0, 2);
+  const extraCount = Math.max(activeBudgets.length - previews.length, 0);
+  const handleOpenDetails = () => onOpenDetails(item.service_request_id);
+
+  return (
+    <Card
+      className="flex cursor-pointer flex-col transition-colors hover:border-primary/30"
+      role="button"
+      tabIndex={0}
+      onClick={handleOpenDetails}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          handleOpenDetails();
+        }
+      }}
+    >
+      <CardHeader className="space-y-3 !pb-4">
+        <div className="flex items-start justify-between gap-2">
+          <ServiceRequestSummaryBlock
+            serviceTitle={item.service_title}
+            serviceRequestTitle={item.service_request_title}
+            description={item.service_request_description}
+            iconKey={item.service_icon_key}
+            colorKey={item.service_color_key}
+            location={location}
+            createdAt={item.service_request_created_at}
+          />
+          <Badge variant={budgetFlowStatus.variant} className="shrink-0">
+            {budgetFlowStatus.label}
+          </Badge>
+        </div>
+        <p className="text-xs font-medium text-muted-foreground">
+          {item.total_budgets} orçamento{item.total_budgets !== 1 ? "s" : ""} recebido
+          {item.total_budgets !== 1 ? "s" : ""}
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-2 !pt-0">
+        {previews.map((budget) => (
+          <BudgetPreviewRow key={budget.id} budget={budget} />
+        ))}
+        {extraCount > 0 ? (
+          <p className="text-xs font-medium text-muted-foreground">+{extraCount} orçamento adicional</p>
+        ) : null}
+      </CardContent>
+      <CardFooter className="border-t pt-3">
+        <Button
+          size="sm"
+          className="h-9 min-h-9"
+          onClick={(event) => {
+            event.stopPropagation();
+            handleOpenDetails();
+          }}
+        >
+          Comparar orçamentos
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}

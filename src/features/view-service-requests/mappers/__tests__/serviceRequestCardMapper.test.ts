@@ -34,7 +34,7 @@ function makeRow(
       platform_cities: { name: "Florianópolis" },
       platform_states: { abbreviation: "SC" },
     },
-    services: {
+    platform_services: {
       title: "Eletricista",
       slug: "eletricista",
       icon_key: "Zap",
@@ -67,7 +67,7 @@ describe("mapToServiceRequestCardModel", () => {
     const row = makeRow({
       address_id: null,
       client_addresses: null,
-      services: null,
+      platform_services: null,
     });
     const model = mapToServiceRequestCardModel(row);
     expect(model.address).toBeNull();

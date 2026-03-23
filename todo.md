@@ -40,6 +40,8 @@ Urgentes:
 - componente de sem internet ainda fica em cima de cards atrapalhando, principalmente no mobile.
 
 
+- Mostrar imagem respondida da pergunta do cliente para o prestador.
+
 
 
 ----

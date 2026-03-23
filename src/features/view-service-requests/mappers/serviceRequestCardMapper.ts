@@ -27,7 +27,7 @@ function mapAddress(
 function mapService(
   row: ServiceRequestWithRelationsRow
 ): ServiceSummary | null {
-  const svc = row.services;
+  const svc = row.platform_services;
   if (!svc) return null;
   return {
     title: svc.title,
