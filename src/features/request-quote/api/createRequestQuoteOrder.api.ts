@@ -11,6 +11,7 @@ export interface CreateRequestQuoteOrderParams {
   step4Data: AddressSelection;
   step3Data: {
     description: string;
+    suggestedTitle?: string | null;
     photos: File[];
     /** Optional AI-derived structured data to persist on service_requests. */
     structured?: ServiceRequestStructuredData | null;
@@ -85,6 +86,7 @@ export async function createRequestQuoteOrder(
   formData.set("address", JSON.stringify(addressPayload));
   formData.set("serviceId", selectedService.id);
   formData.set("serviceTitle", selectedService.title ?? "Serviço");
+  formData.set("serviceRequestTitle", step3Data.suggestedTitle?.trim() ?? "");
   formData.set("description", step3Data.description);
   formData.set("formData", JSON.stringify(step2Data));
   formData.set("formSchema", step2FormSchema ? JSON.stringify(step2FormSchema) : "");

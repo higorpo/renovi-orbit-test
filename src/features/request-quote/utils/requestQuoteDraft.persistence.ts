@@ -15,6 +15,7 @@ export const REQUEST_QUOTE_DRAFT_VERSION = "1";
 /** Step 3 persisted subset: description and structured data only (no files). */
 export interface SerializableStep3Data {
   description: string;
+  suggestedTitle?: string | null;
   structured?: ServiceRequestStructuredData | null;
 }
 
@@ -92,7 +93,11 @@ export function buildSerializableDraft(state: {
   step2Data: Record<string, unknown>;
   step2FormSchema: Record<string, unknown> | null;
   step2FormVersion: string | null;
-  step3Data: { description: string; structured?: ServiceRequestStructuredData | null };
+  step3Data: {
+    description: string;
+    suggestedTitle?: string | null;
+    structured?: ServiceRequestStructuredData | null;
+  };
   step4Data: AddressSelection;
 }): SerializableDraftState {
   return {
@@ -104,6 +109,7 @@ export function buildSerializableDraft(state: {
     step2FormVersion: state.step2FormVersion,
     step3Data: {
       description: state.step3Data.description,
+      suggestedTitle: state.step3Data.suggestedTitle ?? null,
       structured: state.step3Data.structured ?? null,
     },
     step4Data: state.step4Data,

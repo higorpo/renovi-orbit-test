@@ -23,6 +23,7 @@ export function buildServiceRequestParams(params: {
   client_id: string;
   service_id: string;
   service_title: string;
+  service_request_title?: string | null;
   address_id: string | null;
   description: string;
   photoUrls: string[];
@@ -34,7 +35,7 @@ export function buildServiceRequestParams(params: {
     client_id: params.client_id,
     service_id: params.service_id,
     address_id: params.address_id,
-    title: `Pedido de ${params.service_title}`,
+    title: params.service_request_title?.trim() || `Pedido de ${params.service_title}`,
     description: params.description,
     photos: params.photoUrls.length > 0 ? params.photoUrls : null,
     form_data: Object.keys(params.form_data).length > 0 ? params.form_data : null,

@@ -7,6 +7,7 @@ import type { ServiceRequestStructuredData } from "../types/request-quote.types"
 
 export interface Step3Data {
   description: string;
+  suggestedTitle?: string | null;
   photos: File[];
   photoPreviews: string[];
   /** AI-derived structured data from generate-smart-description (saved on service_requests). */

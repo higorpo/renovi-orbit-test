@@ -64,6 +64,7 @@ export function useRequestQuoteDraft(
     state.setStep2FormVersion(draft.step2FormVersion);
     state.setStep3Data({
       description: draft.step3Data.description,
+      suggestedTitle: draft.step3Data.suggestedTitle ?? null,
       structured: draft.step3Data.structured ?? null,
       photos: [],
       photoPreviews: [],
@@ -110,6 +111,7 @@ export function useRequestQuoteDraft(
     state.step2FormSchema,
     state.step2FormVersion,
     state.step3Data.description,
+    state.step3Data.suggestedTitle,
     state.step3Data.structured,
     state.step4Data,
     state.orderCreatedEmail,

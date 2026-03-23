@@ -9,7 +9,7 @@ vi.mock("../../api/serviceRequests.api");
 
 describe("requestQuoteSubmit.utils", () => {
   describe("buildServiceRequestParams", () => {
-    it("builds params with title prefixed by Pedido de", () => {
+    it("builds params with title prefixed by Pedido de when no suggested title is provided", () => {
       const result = buildServiceRequestParams({
         client_id: "c1",
         service_id: "s1",
@@ -31,6 +31,22 @@ describe("requestQuoteSubmit.utils", () => {
       expect(result.form_schema).toEqual({ type: "object" });
       expect(result.form_version).toBe("v1");
       expect(result.status).toBe("open");
+    });
+
+    it("uses AI suggested title when provided", () => {
+      const result = buildServiceRequestParams({
+        client_id: "c1",
+        service_id: "s1",
+        service_title: "Pintura",
+        service_request_title: "Pintura interna em apartamento",
+        address_id: "a1",
+        description: "Desc",
+        photoUrls: [],
+        form_data: {},
+        form_schema: null,
+        form_version: null,
+      });
+      expect(result.title).toBe("Pintura interna em apartamento");
     });
 
     it("sets photos to null when photoUrls is empty", () => {

@@ -61,6 +61,7 @@ export interface ParsedFormData {
   address: AddressPayload;
   serviceId: string;
   serviceTitle: string;
+  serviceRequestTitle: string;
   description: string;
   formData: Record<string, unknown>;
   formSchema: Record<string, unknown> | null;

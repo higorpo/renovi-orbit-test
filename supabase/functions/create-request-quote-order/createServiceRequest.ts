@@ -10,6 +10,7 @@ interface Params {
   service_id: string;
   address_id: string | null;
   service_title: string;
+  request_title: string;
   description: string;
   photoUrls: string[];
   form_data: Record<string, unknown>;
@@ -36,7 +37,7 @@ export async function createServiceRequest(
     client_id: params.client_id,
     service_id: params.service_id,
     address_id: params.address_id,
-    title: `Pedido de ${params.service_title}`,
+    title: params.request_title,
     description: params.description || null,
     photos: params.photoUrls.length > 0 ? params.photoUrls : null,
     form_data: Object.keys(params.form_data).length > 0 ? (params.form_data as Json) : null,

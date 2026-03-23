@@ -128,6 +128,7 @@ serve(async (req) => {
       service_id: data.serviceId,
       address_id: addressId,
       service_title: data.serviceTitle,
+      request_title: data.serviceRequestTitle,
       description: data.description,
       photoUrls: photoResult.paths,
       form_data: data.formData,

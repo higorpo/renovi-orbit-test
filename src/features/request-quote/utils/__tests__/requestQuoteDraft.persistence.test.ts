@@ -159,7 +159,11 @@ describe("requestQuoteDraft.persistence", () => {
       const result = buildSerializableDraft(state);
       expect(result.currentStep).toBe(2);
       expect(result.step2Data).toEqual({ a: 1 });
-      expect(result.step3Data).toEqual({ description: "desc", structured });
+      expect(result.step3Data).toEqual({
+        description: "desc",
+        suggestedTitle: null,
+        structured,
+      });
       expect(result).not.toHaveProperty("step5Data");
     });
 
@@ -175,7 +179,11 @@ describe("requestQuoteDraft.persistence", () => {
         step4Data: null,
       };
       const result = buildSerializableDraft(state);
-      expect(result.step3Data).toEqual({ description: "only text", structured: null });
+      expect(result.step3Data).toEqual({
+        description: "only text",
+        suggestedTitle: null,
+        structured: null,
+      });
     });
 
     it("preserves step4Data with location when building serializable draft", () => {

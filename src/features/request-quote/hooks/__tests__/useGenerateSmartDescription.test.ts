@@ -103,6 +103,7 @@ describe("useGenerateSmartDescription", () => {
         structured: {
           schema_version: 1,
           professional_description: "Pro desc",
+          suggested_title: "Instalação de chuveiro",
           confidence: 0.9,
           recommended_next_step: "send_estimate_range",
           urgency: "high",
@@ -135,6 +136,28 @@ describe("useGenerateSmartDescription", () => {
       suggested_materials: [],
       estimated_duration_hint: null,
     });
+    expect(next.suggestedTitle).toBe("Instalação de chuveiro");
+  });
+
+  it("uses top-level suggestedTitle when returned by API", async () => {
+    const state = createMockState();
+    invokeGenerateSmartDescription.mockResolvedValue({
+      data: {
+        description: "Desc",
+        suggestedTitle: "Troca de tomadas com revisão",
+        metadata: {},
+      },
+      error: null,
+    });
+    const { result } = renderHook(() =>
+      useGenerateSmartDescription({ state })
+    );
+    await act(async () => {
+      await result.current.generateSmartDescription();
+    });
+    const updater = (state.setStep3Data as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const next = updater({ description: "", photos: [], photoPreviews: [] });
+    expect(next.suggestedTitle).toBe("Troca de tomadas com revisão");
   });
 
   it("sends userNotes from step2Data when additional_details key exists", async () => {

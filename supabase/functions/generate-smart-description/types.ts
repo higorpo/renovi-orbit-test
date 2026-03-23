@@ -29,6 +29,7 @@ import type {
 export interface StructuredAIResponse {
   schema_version: number;
   professional_description: string;
+  suggested_title: string;
   tags: string[];
   missing_info_warnings: string[];
   suggested_questions: string[];

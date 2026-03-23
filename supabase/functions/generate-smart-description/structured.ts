@@ -52,6 +52,7 @@ export function validateStructuredResponse(
     if (!data || typeof data !== "object") return null;
     const d = data as Record<string, unknown>;
     if (typeof d.professional_description !== "string") return null;
+    if (typeof d.suggested_title !== "string") return null;
     if (!Array.isArray(d.tags)) return null;
     if (!Array.isArray(d.missing_info_warnings)) return null;
     if (!["low", "medium", "high"].includes(d.urgency as string)) return null;
@@ -74,6 +75,7 @@ export function validateStructuredResponse(
     return {
       schema_version: (d.schema_version as number) || 1,
       professional_description: (d.professional_description as string) || "",
+      suggested_title: (d.suggested_title as string).trim(),
       tags: Array.isArray(d.tags) ? (d.tags as string[]) : [],
       missing_info_warnings: Array.isArray(d.missing_info_warnings)
         ? (d.missing_info_warnings as string[])
@@ -112,6 +114,7 @@ export function generateFallbackResponse(
   return {
     schema_version: 1,
     professional_description: description,
+    suggested_title: "Pedido de Serviço",
     tags: [],
     missing_info_warnings: [],
     suggested_questions: [],

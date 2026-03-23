@@ -386,6 +386,7 @@ export function buildSuccessResponse(
 
   const responseData: {
     description: string;
+    suggestedTitle?: string;
     metadata: Record<string, unknown>;
     structured?: StructuredAIResponse;
   } = {
@@ -404,6 +405,7 @@ export function buildSuccessResponse(
   };
 
   if (structuredResponse && mode === "full_description") {
+    responseData.suggestedTitle = structuredResponse.suggested_title;
     responseData.structured = structuredResponse;
   }
 

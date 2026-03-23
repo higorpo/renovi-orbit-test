@@ -16,6 +16,7 @@ export async function parseFormData(formData: FormData): Promise<ParseFormDataRe
   const addressRaw = formData.get("address");
   const serviceId = formData.get("serviceId");
   const serviceTitle = formData.get("serviceTitle");
+  const serviceRequestTitle = formData.get("serviceRequestTitle");
   const description = formData.get("description");
   const formDataStr = formData.get("formData");
   const formSchemaStr = formData.get("formSchema");
@@ -145,6 +146,10 @@ export async function parseFormData(formData: FormData): Promise<ParseFormDataRe
     address,
     serviceId: serviceId.trim(),
     serviceTitle: typeof serviceTitle === "string" ? serviceTitle.trim() : "Serviço",
+    serviceRequestTitle:
+      typeof serviceRequestTitle === "string" && serviceRequestTitle.trim()
+        ? serviceRequestTitle.trim()
+        : `Pedido de ${typeof serviceTitle === "string" ? serviceTitle.trim() || "Serviço" : "Serviço"}`,
     description: description.trim(),
     formData: formDataObj,
     formSchema: formSchemaObj,

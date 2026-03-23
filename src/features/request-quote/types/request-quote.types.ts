@@ -22,6 +22,7 @@ export type GenerateSmartDescriptionPayload = GenerateSmartDescriptionBody
 
 export interface GenerateSmartDescriptionResponse {
   description: string;
+  suggestedTitle?: string;
   metadata: Record<string, unknown>;
   structured?: StructuredAIResponse;
 }

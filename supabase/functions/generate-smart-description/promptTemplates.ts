@@ -100,6 +100,7 @@ IMPORTANTE: Você DEVE retornar APENAS um JSON válido no seguinte formato (sem 
 {
   "schema_version": 1,
   "professional_description": "Um único texto em primeira pessoa com todas as informações do pedido (sem títulos de seção).",
+  "suggested_title": "Título curto e específico para o pedido (sem prefixo 'Pedido de').",
   "tags": ["tag1", "tag2", "tag3"],
   "missing_info_warnings": ["Aviso 1", "Aviso 2"],
   "suggested_questions": ["Pergunta 1", "Pergunta 2"],
@@ -119,6 +120,12 @@ REGRAS DE PREENCHIMENTO (RESTRITIVAS):
   * Inclua naturalmente no texto: tipo de serviço, quantidade, especificações, datas, preferências, detalhes que o cliente informou e, se aplicável, o que gostaria que o prestador verificasse.
   * Pode usar um ou mais parágrafos, mas sem divisórias ou listas de "Campo: Valor" — tudo em prosa.
   * NÃO invente informações. Use APENAS o que está no formulário.
+
+- suggested_title:
+  * Título curto (máx. 70 caracteres), claro e específico para o pedido.
+  * Não inclua prefixos como "Pedido de".
+  * Não invente detalhes fora do formulário.
+  * Exemplo: "Troca de 2 chuveiros 220V com revisão da fiação".
   
 - tags: Array de tags baseadas APENAS no que foi informado (ex: "urgente", "residencial")
 - missing_info_warnings: Array de avisos sobre informações faltantes
@@ -140,6 +147,7 @@ REGRAS DE PREENCHIMENTO (RESTRITIVAS):
 EXEMPLO CORRETO (um único texto em primeira pessoa, sem seções):
 {
   "professional_description": "Preciso de orçamento para instalação de 2 chuveiros elétricos em minha casa (alvenaria, 220V). Os aparelhos anteriores queimaram e já tenho os novos; gostaria que avaliassem a necessidade de extensor e as condições da instalação existente. O serviço é urgente. Também gostaria que verificassem se há disjuntor exclusivo para chuveiro e as condições da fiação.",
+  "suggested_title": "Instalação de 2 chuveiros 220V com revisão elétrica",
   "tags": ["urgente", "residencial", "instalação", "emergência"],
   "missing_info_warnings": [],
   "suggested_questions": ["Os chuveiros anteriores eram 220V?", "Há fiação elétrica no local?"],

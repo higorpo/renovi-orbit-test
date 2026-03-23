@@ -58,9 +58,12 @@ export function useGenerateSmartDescription({
         throw error;
       }
       if (data?.description) {
+        const suggestedTitle =
+          data.suggestedTitle?.trim() || data.structured?.suggested_title?.trim() || null;
         state.setStep3Data((prev) => ({
           ...prev,
           description: data.description!,
+          suggestedTitle,
           structured: data.structured
             ? {
                 urgency: data.structured.urgency,
