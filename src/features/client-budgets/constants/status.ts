@@ -6,13 +6,11 @@ export const RECEIVED_FILTERS: Array<{ id: ReceivedStatusFilter; label: string }
   { id: "accepted", label: "Aceitos" },
   { id: "rejected", label: "Recusados" },
   { id: "withdrawn", label: "Retirados" },
-  { id: "closed", label: "Encerrados" },
 ];
 
 export const QUESTION_FILTERS: Array<{ id: QuestionStatusFilter; label: string }> = [
   { id: "pending", label: "Não respondidas" },
   { id: "answered", label: "Respondidas" },
-  { id: "closed", label: "Encerradas" },
 ];
 
 const BUDGET_STATUS_MAP: Record<string, { label: string; variant: BadgeProps["variant"] }> = {
@@ -82,9 +80,6 @@ export function getReceivedExtraBudgetCount(
       return Math.max(item.rejected_count - 2, 0);
     case "withdrawn":
       return Math.max(item.withdrawn_count - 2, 0);
-    case "closed":
-      if (item.accepted_count > 0) return Math.max(item.accepted_count - 2, 0);
-      return Math.max(item.total_budgets - 2, 0);
     default:
       return 0;
   }
@@ -118,8 +113,7 @@ export function getReceivedBudgetSummaryLine(item: {
     const n = item.withdrawn_count;
     return `${n} retirado${n !== 1 ? "s" : ""} pelo prestador`;
   }
-  const n = item.total_budgets;
-  return `${n} orçamento${n !== 1 ? "s" : ""} no histórico`;
+  return "";
 }
 
 export function getQuestionExtraCount(
@@ -137,8 +131,6 @@ export function getQuestionExtraCount(
       return Math.max(item.pending_questions_count - shown, 0);
     case "answered":
       return Math.max(item.answered_questions_count - shown, 0);
-    case "closed":
-      return Math.max(item.total_questions - shown, 0);
     default:
       return 0;
   }
@@ -156,20 +148,16 @@ export function getQuestionCardSummaryLine(item: {
 }, filter: QuestionStatusFilter): string {
   if (filter === "pending") {
     const n = item.pending_questions_count;
-    const t = item.total_questions;
-    return `${n} pendente${n !== 1 ? "s" : ""} de ${t} pergunta${t !== 1 ? "s" : ""} (até 3 por prestador)`;
+    return `${n} perguntas pendente${n !== 1 ? "s" : ""}`;
   }
   if (filter === "answered") {
     const n = item.answered_questions_count;
-    const t = item.total_questions;
-    return `${n} respondida${n !== 1 ? "s" : ""} de ${t} pergunta${t !== 1 ? "s" : ""}`;
+    return `${n} perguntas respondida${n !== 1 ? "s" : ""}`;
   }
-  const t = item.total_questions;
-  return `${t} pergunta${t !== 1 ? "s" : ""} (pedido encerrado)`;
+  return "";
 }
 
-export function getQuestionCardCtaLabel(filter: QuestionStatusFilter): string {
-  if (filter === "closed") return "Ver histórico de perguntas";
+export function getQuestionCardCtaLabel(): string {
   return "Ver perguntas";
 }
 

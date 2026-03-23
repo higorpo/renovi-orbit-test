@@ -127,13 +127,13 @@ begin
     left join public.platform_cities pc on pc.id = ca.city_id
     left join public.platform_states pst on pst.id = ca.state_id
     where sr.client_id = v_client_id
+      and sr.status in ('open', 'in_progress')
       and (
         p_status is null
         or (p_status = 'awaiting_decision' and exists (select 1 from public.provider_proposals p2 where p2.service_request_id = sr.id and p2.status = 'submitted'))
         or (p_status = 'accepted' and exists (select 1 from public.provider_proposals p2 where p2.service_request_id = sr.id and p2.status = 'accepted'))
         or (p_status = 'rejected' and exists (select 1 from public.provider_proposals p2 where p2.service_request_id = sr.id and p2.status = 'rejected'))
         or (p_status = 'withdrawn' and exists (select 1 from public.provider_proposals p2 where p2.service_request_id = sr.id and p2.status = 'withdrawn'))
-        or (p_status = 'closed' and sr.status in ('closed', 'cancelled'))
       )
       and (
         v_search is null
@@ -173,13 +173,13 @@ begin
     left join public.platform_cities pc on pc.id = ca.city_id
     left join public.platform_states pst on pst.id = ca.state_id
     where sr.client_id = v_client_id
+      and sr.status in ('open', 'in_progress')
       and (
         p_status is null
         or (p_status = 'awaiting_decision' and exists (select 1 from public.provider_proposals p2 where p2.service_request_id = sr.id and p2.status = 'submitted'))
         or (p_status = 'accepted' and exists (select 1 from public.provider_proposals p2 where p2.service_request_id = sr.id and p2.status = 'accepted'))
         or (p_status = 'rejected' and exists (select 1 from public.provider_proposals p2 where p2.service_request_id = sr.id and p2.status = 'rejected'))
         or (p_status = 'withdrawn' and exists (select 1 from public.provider_proposals p2 where p2.service_request_id = sr.id and p2.status = 'withdrawn'))
-        or (p_status = 'closed' and sr.status in ('closed', 'cancelled'))
       )
       and (
         v_search is null
@@ -236,26 +236,6 @@ begin
                 or (p_status = 'accepted' and pp.status = 'accepted')
                 or (p_status = 'rejected' and pp.status = 'rejected')
                 or (p_status = 'withdrawn' and pp.status = 'withdrawn')
-                or (
-                  p_status = 'closed'
-                  and (
-                    (
-                      exists (
-                        select 1
-                        from public.provider_proposals p_acc
-                        where p_acc.service_request_id = g.service_request_id
-                          and p_acc.status = 'accepted'
-                      )
-                      and pp.status = 'accepted'
-                    )
-                    or not exists (
-                      select 1
-                      from public.provider_proposals p_acc
-                      where p_acc.service_request_id = g.service_request_id
-                        and p_acc.status = 'accepted'
-                    )
-                  )
-                )
               )
             order by pp.created_at desc
             limit 3
@@ -335,11 +315,11 @@ begin
     left join public.platform_cities pc on pc.id = ca.city_id
     left join public.platform_states pst on pst.id = ca.state_id
     where sr.client_id = v_client_id
+      and sr.status in ('open', 'in_progress')
       and (
         p_question_status is null
         or (p_question_status = 'pending' and q.client_response is null and sr.status = 'open')
         or (p_question_status = 'answered' and q.client_response is not null and sr.status = 'open')
-        or (p_question_status = 'closed' and sr.status in ('closed', 'cancelled'))
       )
       and (
         v_search is null
@@ -378,11 +358,11 @@ begin
     left join public.platform_cities pc on pc.id = ca.city_id
     left join public.platform_states pst on pst.id = ca.state_id
     where sr.client_id = v_client_id
+      and sr.status in ('open', 'in_progress')
       and (
         p_question_status is null
         or (p_question_status = 'pending' and q.client_response is null and sr.status = 'open')
         or (p_question_status = 'answered' and q.client_response is not null and sr.status = 'open')
-        or (p_question_status = 'closed' and sr.status in ('closed', 'cancelled'))
       )
       and (
         v_search is null
@@ -461,7 +441,6 @@ begin
                   and q.client_response is not null
                   and g.service_request_status = 'open'
                 )
-                or (p_question_status = 'closed')
               )
             order by
               case when p_question_status is null then (q.client_response is null) else true end desc,

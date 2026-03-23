@@ -11,10 +11,9 @@ export type ReceivedStatusFilter =
   | "awaiting_decision"
   | "accepted"
   | "rejected"
-  | "withdrawn"
-  | "closed";
+  | "withdrawn";
 
-export type QuestionStatusFilter = "pending" | "answered" | "closed";
+export type QuestionStatusFilter = "pending" | "answered";
 
 export interface BudgetPreviewItem {
   id: string;

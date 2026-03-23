@@ -66,7 +66,7 @@ export function QuestionServiceCard({ item, statusFilter, onOpenDetails }: Quest
             handleOpenDetails();
           }}
         >
-          {getQuestionCardCtaLabel(statusFilter)}
+          {getQuestionCardCtaLabel()}
         </Button>
       </CardFooter>
     </Card>
