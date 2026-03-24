@@ -7,14 +7,12 @@ import { cn } from "@/lib/utils";
 export interface StatusTabsProps {
   activeTabId: StatusTabId;
   onTabChange: (tabId: StatusTabId) => void;
-  counts?: Partial<Record<StatusTabId, number>>;
   disabled?: boolean;
 }
 
 export function StatusTabs({
   activeTabId,
   onTabChange,
-  counts = {},
   disabled,
 }: StatusTabsProps) {
   return (
@@ -29,11 +27,6 @@ export function StatusTabs({
       aria-label="Filtrar por status"
     >
       {STATUS_TABS.map((tab) => {
-        const count = counts[tab.id];
-        const label =
-          count !== undefined && count !== null
-            ? `${tab.label} (${count})`
-            : tab.label;
         const { Icon, iconColor } = STATUS_TAB_DISPLAY[tab.id];
         const isActive = activeTabId === tab.id;
         return (
@@ -59,7 +52,7 @@ export function StatusTabs({
               )}
               aria-hidden
             />
-            <span className="whitespace-nowrap">{label}</span>
+            <span className="whitespace-nowrap">{tab.label}</span>
           </TabsTrigger>
         );
       })}

@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Tabs } from "@/components/ui/tabs";
 import { MeusServicosHeader } from "./MeusServicosHeader";
 import { SearchBar } from "./SearchBar";
@@ -16,32 +18,15 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useServiceRequestsFilters } from "../hooks/useServiceRequestsFilters";
 import { useCancelServiceRequest } from "../hooks/useCancelServiceRequest";
 import { SERVICE_REQUEST_FOCUS_QUERY } from "../constants/routes";
-import { STATUS_TABS, statusToTabId } from "../constants/statusTabs";
+import { statusToTabId } from "../constants/statusTabs";
 import type { StatusTabId } from "../constants/statusTabs";
-import type { ServiceRequestCardModel } from "../types/service-request-view.types";
 
 const SEARCH_DEBOUNCE_MS = 300;
 const SKELETON_COUNT = 4;
 
-function computeTabCounts(
-  items: ServiceRequestCardModel[]
-): Partial<Record<StatusTabId, number>> {
-  const counts: Partial<Record<StatusTabId, number>> = {};
-  for (const tab of STATUS_TABS) {
-    if (tab.id === "all") {
-      counts.all = items.length;
-    } else {
-      counts[tab.id] = items.filter((i) => i.statusTabId === tab.id).length;
-    }
-  }
-  return counts;
-}
-
 export function ServiceRequestsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const focusServiceRequestId = searchParams.get(SERVICE_REQUEST_FOCUS_QUERY);
-
-  const { items, isLoading, isError, refetch } = useServiceRequestsList();
   const { cancelServiceRequest, isCancelling } = useCancelServiceRequest();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,12 +41,42 @@ export function ServiceRequestsPage() {
     setDateRange,
     setHasProposals,
     setHasImages,
-    filteredItems,
   } = useServiceRequestsFilters({
-    items,
     searchQueryDebounced,
-    focusServiceRequestId,
   });
+
+  const {
+    items,
+    isLoading,
+    isFetchingNextPage,
+    isError,
+    refetch,
+    hasNextPage,
+    fetchNextPage,
+  } = useServiceRequestsList({
+    statusTabId: filters.statusTabId,
+    search: filters.searchQuery,
+    categoryId: filters.categoryId,
+    cityName: filters.cityName,
+    neighborhoodName: filters.neighborhoodName,
+    dateFrom: filters.dateFrom,
+    dateTo: filters.dateTo,
+    hasProposals: filters.hasProposals,
+    hasImages: filters.hasImages,
+    serviceRequestId: focusServiceRequestId,
+  });
+
+  const hasActiveFilters =
+    filters.statusTabId !== "all" ||
+    filters.searchQuery.trim().length > 0 ||
+    filters.categoryId !== null ||
+    filters.cityName !== null ||
+    filters.neighborhoodName !== null ||
+    filters.dateFrom !== null ||
+    filters.dateTo !== null ||
+    filters.hasProposals !== null ||
+    filters.hasImages !== null ||
+    Boolean(focusServiceRequestId);
 
   const focusedRequest = useMemo(() => {
     if (!focusServiceRequestId) return null;
@@ -79,7 +94,7 @@ export function ServiceRequestsPage() {
       scrolledToFocusIdRef.current = null;
       return;
     }
-    if (isLoading || filteredItems.length !== 1) return;
+    if (isLoading || items.length !== 1) return;
     if (scrolledToFocusIdRef.current === focusServiceRequestId) return;
     scrolledToFocusIdRef.current = focusServiceRequestId;
     requestAnimationFrame(() => {
@@ -87,12 +102,7 @@ export function ServiceRequestsPage() {
         .getElementById(`service-request-${focusServiceRequestId}`)
         ?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
-  }, [focusServiceRequestId, filteredItems.length, isLoading]);
-
-  const tabCounts = useMemo(
-    () => computeTabCounts(items),
-    [items]
-  );
+  }, [focusServiceRequestId, items.length, isLoading]);
 
   const categoryOptions = useMemo(() => {
     const set = new Set<string>();
@@ -190,7 +200,6 @@ export function ServiceRequestsPage() {
           <StatusTabs
             activeTabId={filters.statusTabId}
             onTabChange={setStatusTabId}
-            counts={tabCounts}
             disabled={isLoading}
           />
         </Tabs>
@@ -214,17 +223,17 @@ export function ServiceRequestsPage() {
             <ErrorState onRetry={() => refetch()} />
           )}
 
-          {!isLoading && !isError && items.length === 0 && (
-            <EmptyState />
-          )}
-
-          {!isLoading && !isError && items.length > 0 && filteredItems.length === 0 && (
+          {!isLoading && !isError && items.length === 0 && hasActiveFilters && (
             <NoFilterResultsState onClearFilters={handleClearFilters} />
           )}
 
-          {!isLoading && !isError && filteredItems.length > 0 && (
+          {!isLoading && !isError && items.length === 0 && !hasActiveFilters && (
+            <EmptyState />
+          )}
+
+          {!isLoading && !isError && items.length > 0 && (
             <ul className="grid gap-4 sm:grid-cols-1">
-              {filteredItems.map((model) => (
+              {items.map((model) => (
                 <li key={model.id} id={`service-request-${model.id}`}>
                   <ServiceCard
                     model={model}
@@ -234,6 +243,27 @@ export function ServiceRequestsPage() {
                 </li>
               ))}
             </ul>
+          )}
+
+          {!isLoading && !isError && items.length > 0 && hasNextPage && (
+            <div className="mt-6 flex justify-center">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  void fetchNextPage();
+                }}
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    Carregando...
+                  </>
+                ) : (
+                  "Carregar mais"
+                )}
+              </Button>
+            </div>
           )}
         </section>
       </div>

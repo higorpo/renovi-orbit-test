@@ -2,8 +2,6 @@ import { useState, useMemo, useCallback } from "react";
 import { DEFAULT_STATUS_TAB_ID } from "../constants/statusTabs";
 import type { StatusTabId } from "../constants/statusTabs";
 import type { ServiceRequestsFilterState } from "../types/service-request-view.types";
-import { filterServiceRequests } from "../utils/filterServiceRequests";
-import type { ServiceRequestCardModel } from "../types/service-request-view.types";
 
 const INITIAL_FILTERS: Omit<ServiceRequestsFilterState, "searchQuery"> = {
   statusTabId: DEFAULT_STATUS_TAB_ID,
@@ -17,11 +15,8 @@ const INITIAL_FILTERS: Omit<ServiceRequestsFilterState, "searchQuery"> = {
 };
 
 export interface UseServiceRequestsFiltersParams {
-  items: ServiceRequestCardModel[];
   /** Debounced search query to apply. */
   searchQueryDebounced: string;
-  /** From URL: show only this service request. */
-  focusServiceRequestId: string | null;
 }
 
 export interface UseServiceRequestsFiltersResult {
@@ -33,27 +28,16 @@ export interface UseServiceRequestsFiltersResult {
   setDateRange: (from: string | null, to: string | null) => void;
   setHasProposals: (v: boolean | null) => void;
   setHasImages: (v: boolean | null) => void;
-  filteredItems: ServiceRequestCardModel[];
 }
 
 export function useServiceRequestsFilters({
-  items,
   searchQueryDebounced,
-  focusServiceRequestId,
 }: UseServiceRequestsFiltersParams): UseServiceRequestsFiltersResult {
   const [filters, setFilters] = useState(INITIAL_FILTERS);
 
   const filtersWithSearch: ServiceRequestsFilterState = useMemo(
     () => ({ ...filters, searchQuery: searchQueryDebounced }),
     [filters, searchQueryDebounced]
-  );
-
-  const filteredItems = useMemo(
-    () =>
-      filterServiceRequests(items, filtersWithSearch, {
-        focusServiceRequestId,
-      }),
-    [items, filtersWithSearch, focusServiceRequestId]
   );
 
   const setStatusTabId = useCallback((statusTabId: StatusTabId) => {
@@ -93,6 +77,5 @@ export function useServiceRequestsFilters({
     setDateRange,
     setHasProposals,
     setHasImages,
-    filteredItems,
   };
 }

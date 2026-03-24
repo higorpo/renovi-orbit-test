@@ -47,8 +47,11 @@ describe("ServiceRequestsPage", () => {
     vi.mocked(useServiceRequestsList).mockReturnValue({
       items: [],
       isLoading: false,
+      isFetchingNextPage: false,
       isError: false,
-      error: null,
+      hasNextPage: false,
+      totalCount: 0,
+      fetchNextPage: vi.fn(async () => undefined),
       refetch: vi.fn(),
     });
   });
@@ -63,8 +66,11 @@ describe("ServiceRequestsPage", () => {
     useServiceRequestsList.mockReturnValue({
       items: [],
       isLoading: true,
+      isFetchingNextPage: false,
       isError: false,
-      error: null,
+      hasNextPage: false,
+      totalCount: 0,
+      fetchNextPage: vi.fn(async () => undefined),
       refetch: vi.fn(),
     });
     render(<ServiceRequestsPage />, { wrapper: createWrapper() });
@@ -77,8 +83,11 @@ describe("ServiceRequestsPage", () => {
     useServiceRequestsList.mockReturnValue({
       items: [],
       isLoading: false,
+      isFetchingNextPage: false,
       isError: true,
-      error: "Network error",
+      hasNextPage: false,
+      totalCount: 0,
+      fetchNextPage: vi.fn(async () => undefined),
       refetch: vi.fn(),
     });
     render(<ServiceRequestsPage />, { wrapper: createWrapper() });
@@ -91,8 +100,11 @@ describe("ServiceRequestsPage", () => {
     useServiceRequestsList.mockReturnValue({
       items: [],
       isLoading: false,
+      isFetchingNextPage: false,
       isError: false,
-      error: null,
+      hasNextPage: false,
+      totalCount: 0,
+      fetchNextPage: vi.fn(async () => undefined),
       refetch: vi.fn(),
     });
     render(<ServiceRequestsPage />, { wrapper: createWrapper() });
@@ -119,17 +131,14 @@ describe("ServiceRequestsPage", () => {
       service: { title: "Eletricista", slug: "eletricista" },
       photoPaths: [],
     };
-    const other: ServiceRequestCardModel = {
-      ...focused,
-      id: "sr-other",
-      title: "Outro pedido",
-    };
-
     useServiceRequestsList.mockReturnValue({
-      items: [focused, other],
+      items: [focused],
       isLoading: false,
+      isFetchingNextPage: false,
       isError: false,
-      error: null,
+      hasNextPage: false,
+      totalCount: 1,
+      fetchNextPage: vi.fn(async () => undefined),
       refetch: vi.fn(),
     });
 
@@ -137,7 +146,6 @@ describe("ServiceRequestsPage", () => {
       wrapper: createWrapper(["/dashboard/requests?serviceRequestId=sr-focus"]),
     });
 
-    expect(screen.queryByText("Outro pedido")).not.toBeInTheDocument();
     expect(document.getElementById("service-request-sr-focus")).toBeTruthy();
     expect(screen.getAllByText("Serviço focado").length).toBeGreaterThan(0);
     expect(screen.getByText("Filtro ativo: um pedido")).toBeInTheDocument();
