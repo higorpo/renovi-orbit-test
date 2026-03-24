@@ -15,6 +15,7 @@ export interface ProviderJobQuestionItem {
   id: string;
   question: string;
   client_response: string | null;
+  client_response_images: string[];
   created_at: string;
   client_responded_at: string | null;
   is_own_question: boolean;

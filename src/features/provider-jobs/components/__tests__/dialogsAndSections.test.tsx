@@ -27,6 +27,17 @@ vi.mock("../../hooks/useProviderJobQuestions", () => ({
   useProviderJobQuestions: () => mockQuestions(),
 }));
 
+vi.mock("@/features/client-budgets/hooks/useQuestionResponseImageUrls", () => ({
+  useQuestionResponseImageUrls: (paths: string[] | null | undefined) => {
+    const p = paths ?? [];
+    if (p.length === 0) return { urls: [], isLoading: false };
+    return {
+      urls: p.map((_, i) => `https://signed.test/${i}.jpg`),
+      isLoading: false,
+    };
+  },
+}));
+
 const mockProposalPhotoUrls = vi.fn();
 vi.mock("../../hooks/useProviderProposalPhotoUrls", () => ({
   useProviderProposalPhotoUrls: () => mockProposalPhotoUrls(),
@@ -141,6 +152,7 @@ describe("JobQuestionsFeed", () => {
           id: "q1",
           question: "Oi?",
           client_response: "Sim",
+          client_response_images: [],
           created_at: "2026-03-20T10:00:00.000Z",
           client_responded_at: "2026-03-20T11:00:00.000Z",
           is_own_question: true,
@@ -154,6 +166,31 @@ describe("JobQuestionsFeed", () => {
     render(<JobQuestionsFeed serviceRequestId="sr-1" />);
     expect(screen.getByText("Oi?")).toBeInTheDocument();
     expect(screen.getByText("Sim")).toBeInTheDocument();
+  });
+
+  it("renders signed URLs for client response images", () => {
+    mockQuestions.mockReturnValue({
+      items: [
+        {
+          id: "q1",
+          question: "Manda foto?",
+          client_response: "",
+          client_response_images: ["clients/x/question-responses/sr/q/1.jpg"],
+          created_at: "2026-03-20T10:00:00.000Z",
+          client_responded_at: "2026-03-20T11:00:00.000Z",
+          is_own_question: true,
+          provider_first_name: "Ana",
+        },
+      ],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    render(<JobQuestionsFeed serviceRequestId="sr-1" />);
+    expect(screen.getByRole("img", { name: /imagem da resposta 1/i })).toHaveAttribute(
+      "src",
+      "https://signed.test/0.jpg",
+    );
   });
 });
 

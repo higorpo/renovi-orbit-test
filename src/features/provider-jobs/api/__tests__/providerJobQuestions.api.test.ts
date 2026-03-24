@@ -112,6 +112,7 @@ describe("listProviderJobQuestions", () => {
           id: "q-1",
           question: "Pergunta",
           client_response: "Resposta",
+          client_response_images: [],
           created_at: "2026-03-19T10:00:00.000Z",
           client_responded_at: "2026-03-19T11:00:00.000Z",
           is_own_question: false,

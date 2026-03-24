@@ -1,11 +1,5 @@
 -- Client "Orçamentos" RPCs and question response images support.
 
-alter table public.provider_service_request_questions
-  add column if not exists client_response_images text[] not null default '{}';
-
-comment on column public.provider_service_request_questions.client_response_images is
-  'Storage paths for optional client response images (max 5).';
-
 -- Private bucket for client response images.
 -- Path: clients/{client_id}/question-responses/{service_request_id}/{question_id}/{filename}
 insert into storage.buckets (id, name, public)
@@ -46,6 +40,8 @@ create policy "Clients can delete own question response images"
     and (storage.foldername(name))[2] = (select auth.uid())::text
   );
 
+drop policy if exists "Clients providers and admins can read question response images" on storage.objects;
+
 create policy "Clients providers and admins can read question response images"
   on storage.objects for select
   using (
@@ -59,6 +55,17 @@ create policy "Clients providers and admins can read question response images"
         where q.id::text = (storage.foldername(name))[5]
           and sr.id::text = (storage.foldername(name))[4]
           and q.provider_id = (select auth.uid())
+      )
+      or exists (
+        select 1
+        from public.provider_service_request_questions q
+        join public.service_requests sr on sr.id = q.service_request_id
+        join public.profiles p on p.id = (select auth.uid())
+        where q.id::text = (storage.foldername(name))[5]
+          and sr.id::text = (storage.foldername(name))[4]
+          and sr.status = 'open'
+          and q.client_response is not null
+          and p.role = 'provider'
       )
       or exists (
         select 1 from public.profiles p

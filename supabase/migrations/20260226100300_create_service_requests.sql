@@ -155,6 +155,7 @@ create table if not exists public.provider_service_request_questions (
   provider_id uuid not null references public.profiles (id) on delete cascade,
   question text not null check (char_length(trim(question)) > 0 and char_length(trim(question)) <= 1000),
   client_response text,
+  client_response_images text[] not null default '{}',
   client_responded_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -165,6 +166,7 @@ comment on column public.provider_service_request_questions.service_request_id i
 comment on column public.provider_service_request_questions.provider_id is 'Provider who asked the question.';
 comment on column public.provider_service_request_questions.question is 'Provider question text (max 1000 chars).';
 comment on column public.provider_service_request_questions.client_response is 'Client response text; null until client responds.';
+comment on column public.provider_service_request_questions.client_response_images is 'Storage paths for optional client response images (max 5).';
 comment on column public.provider_service_request_questions.client_responded_at is 'Timestamp of client response.';
 
 create index if not exists provider_sr_questions_service_request_idx
@@ -257,6 +259,7 @@ begin
       q.id,
       q.question,
       q.client_response,
+      q.client_response_images,
       q.created_at,
       q.client_responded_at,
       true as is_own_question,
@@ -270,6 +273,7 @@ begin
       q.id,
       q.question,
       q.client_response,
+      q.client_response_images,
       q.created_at,
       q.client_responded_at,
       false as is_own_question,
@@ -291,6 +295,7 @@ begin
         'id', vq.id,
         'question', vq.question,
         'client_response', vq.client_response,
+        'client_response_images', coalesce(to_jsonb(vq.client_response_images), '[]'::jsonb),
         'created_at', vq.created_at,
         'client_responded_at', vq.client_responded_at,
         'is_own_question', vq.is_own_question,

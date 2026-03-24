@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useQuestionResponseImageUrls } from "@/features/client-budgets/hooks/useQuestionResponseImageUrls";
 import { useProviderJobQuestions } from "../hooks/useProviderJobQuestions";
 
 function formatQuestionDateTime(date: string) {
@@ -8,6 +9,48 @@ function formatQuestionDateTime(date: string) {
     dateStyle: "short",
     timeStyle: "short",
   }).format(new Date(date));
+}
+
+function QuestionResponseImages({ paths }: { paths: string[] }) {
+  const { urls, isLoading } = useQuestionResponseImageUrls(paths);
+
+  if (paths.length === 0) return null;
+
+  if (isLoading) {
+    return (
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {paths.slice(0, 5).map((path, index) => (
+          <div
+            key={`${path}-${index}`}
+            className="aspect-[4/3] w-full animate-pulse rounded-md border bg-muted"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (urls.length === 0) return null;
+
+  return (
+    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {urls.map((url, index) => (
+        <div
+          key={`${url}-${index}`}
+          className="aspect-[4/3] w-full overflow-hidden rounded-md border bg-muted"
+        >
+          <img
+            src={url}
+            alt={`Imagem da resposta ${index + 1}`}
+            className="h-full w-full object-cover"
+            loading="lazy"
+            onError={(event) => {
+              event.currentTarget.style.display = "none";
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function JobQuestionsFeed({ serviceRequestId }: { serviceRequestId: string }) {
@@ -69,14 +112,17 @@ export function JobQuestionsFeed({ serviceRequestId }: { serviceRequestId: strin
 
                 <p className="text-sm text-foreground">{item.question}</p>
 
-                {item.client_response && (
+                {(item.client_response || (item.client_response_images?.length ?? 0) > 0) && (
                   <div className="mt-3 rounded-md border bg-background p-3">
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Resposta do cliente
                     </p>
-                    <p className="mt-1 text-sm text-foreground">
-                      {item.client_response}
-                    </p>
+                    {item.client_response ? (
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
+                        {item.client_response}
+                      </p>
+                    ) : null}
+                    <QuestionResponseImages paths={item.client_response_images ?? []} />
                     {item.client_responded_at && (
                       <p className="mt-1 text-xs text-muted-foreground">
                         Respondida em {formatQuestionDateTime(item.client_responded_at)}
