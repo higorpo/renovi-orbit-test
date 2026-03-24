@@ -75,11 +75,10 @@ function CardActions({
   switch (model.status) {
     case "open":
       actions.push(
-        { label: "Editar serviço", href: detailPath, icon: Pencil },
         { label: "Ver detalhes", href: detailPath, icon: Eye }
       );
       if (canCancelService(model)) {
-        actions.push({ label: "Cancelar serviço", action: "cancel", icon: Trash2 });
+        actions.push({ label: "Cancelar pedido", action: "cancel", icon: Trash2 });
       }
       break;
     case "in_progress":
