@@ -149,7 +149,7 @@ export function ServiceRequestsPage() {
   ]);
 
   return (
-    <div className="container max-w-4xl px-4 py-6">
+    <div className="container max-w-5xl px-4 py-6">
       <MeusServicosHeader />
 
       <div className="mt-6 space-y-4">
