@@ -27,7 +27,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getServiceCardStyle } from "@/features/request-quote";
 import type { ServiceRequestCardModel } from "../types/service-request-view.types";
-import { STATUS_LABELS, STATUS_BADGE_VARIANT } from "../constants/statusBadge";
+import { getStatusLabel, STATUS_BADGE_VARIANT } from "../constants/statusBadge";
 import { formatLocationDisplay } from "../utils/locationDisplay";
 import { formatServiceRequestDate } from "../utils/formatDate";
 import { getServiceDetailPath } from "../constants/routes";
@@ -219,7 +219,7 @@ export function ServiceCard({
               </div>
             </div>
             <Badge variant={variant} className="shrink-0">
-              {STATUS_LABELS[model.status]}
+              {getStatusLabel(model.status, model.hasSubmittedProposal)}
             </Badge>
           </div>
           {/* Mobile only: service name and title below, full card width */}

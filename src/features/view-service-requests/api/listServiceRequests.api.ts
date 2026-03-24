@@ -13,6 +13,7 @@ export interface ServiceRequestWithRelationsRow extends ServiceRequestRow {
     platform_states?: { abbreviation: string } | null;
   } | null;
   platform_services?: { title: string; slug: string; icon_key: string | null; color_key: string | null } | null;
+  provider_proposals?: { status: string }[] | null;
 }
 
 export interface ListServiceRequestsParams {
@@ -139,7 +140,8 @@ export async function listServiceRequests(
         platform_cities ( name ),
         platform_states ( abbreviation )
       ),
-      platform_services ( title, slug, icon_key, color_key )
+      platform_services ( title, slug, icon_key, color_key ),
+      provider_proposals ( status )
     `,
       { count: "exact" }
     )

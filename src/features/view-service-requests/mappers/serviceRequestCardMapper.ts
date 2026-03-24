@@ -47,6 +47,10 @@ export function mapToServiceRequestCardModel(
   const address = mapAddress(row);
   const service = mapService(row);
 
+  const proposals = Array.isArray(row.provider_proposals)
+    ? row.provider_proposals
+    : [];
+
   return {
     id: row.id,
     title: row.title ?? "",
@@ -59,5 +63,7 @@ export function mapToServiceRequestCardModel(
     address,
     service,
     photoPaths: Array.isArray(row.photos) ? row.photos : [],
+    proposalCount: proposals.length,
+    hasSubmittedProposal: proposals.some((proposal) => proposal.status === "submitted"),
   };
 }

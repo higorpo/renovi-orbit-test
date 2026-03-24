@@ -33,6 +33,8 @@ export interface ServiceRequestCardModel {
   photoPaths: string[];
   /** When backend supports it. */
   proposalCount?: number;
+  /** True when there is at least one proposal in submitted status. */
+  hasSubmittedProposal?: boolean;
   /** When backend supports it. */
   selectedProfessionalName?: string | null;
   /** Optional progress 0–100 when in_progress. */

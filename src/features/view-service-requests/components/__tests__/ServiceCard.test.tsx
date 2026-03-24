@@ -61,6 +61,19 @@ describe("ServiceCard", () => {
     expect(screen.getByText(/Aguardando orçamentos/i)).toBeInTheDocument();
   });
 
+  it("renders 'Aguardando decisão' when open has submitted proposal", () => {
+    const model = makeModel({
+      status: "open",
+      hasSubmittedProposal: true,
+    });
+    render(
+      <MemoryRouter>
+        <ServiceCard model={model} />
+      </MemoryRouter>
+    );
+    expect(screen.getByText(/Aguardando decisão/i)).toBeInTheDocument();
+  });
+
   it("links card to service detail", () => {
     const model = makeModel();
     render(

@@ -7,6 +7,17 @@ export const STATUS_LABELS: Record<ServiceRequestDbStatus, string> = {
   cancelled: "Cancelado",
 };
 
+export function getStatusLabel(
+  status: ServiceRequestDbStatus,
+  hasSubmittedProposal?: boolean
+): string {
+  if (status === "open" && hasSubmittedProposal) {
+    return "Aguardando decisão";
+  }
+
+  return STATUS_LABELS[status];
+}
+
 /** Badge variant for shadcn Badge component. */
 export type StatusBadgeVariant =
   | "default"

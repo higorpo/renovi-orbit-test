@@ -61,6 +61,8 @@ describe("mapToServiceRequestCardModel", () => {
     expect(model.service?.slug).toBe("eletricista");
     expect(model.service?.icon_key).toBe("Zap");
     expect(model.service?.color_key).toBe("yellow_orange");
+    expect(model.proposalCount).toBe(0);
+    expect(model.hasSubmittedProposal).toBe(false);
   });
 
   it("handles null address and service", () => {
@@ -78,5 +80,14 @@ describe("mapToServiceRequestCardModel", () => {
     const row = makeRow({ status: "closed" });
     const model = mapToServiceRequestCardModel(row);
     expect(model.statusTabId).toBe("completed");
+  });
+
+  it("maps submitted proposals metadata", () => {
+    const row = makeRow({
+      provider_proposals: [{ status: "submitted" }, { status: "draft" }],
+    });
+    const model = mapToServiceRequestCardModel(row);
+    expect(model.proposalCount).toBe(2);
+    expect(model.hasSubmittedProposal).toBe(true);
   });
 });
