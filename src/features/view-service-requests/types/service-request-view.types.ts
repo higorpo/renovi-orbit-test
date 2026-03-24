@@ -8,6 +8,10 @@ export interface AddressSummary {
   stateAbbreviation?: string;
   /** Street + number if safe to show in list. */
   streetSummary?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  zipCode?: string;
 }
 
 /** Service summary for list/card (from services table). */
@@ -24,6 +28,8 @@ export interface ServiceRequestCardModel {
   title: string;
   description: string | null;
   descriptionPreview: string;
+  formData: Record<string, unknown> | null;
+  formSchema: Record<string, unknown> | null;
   status: ServiceRequestDbStatus;
   statusTabId: StatusTabId;
   createdAt: string;
@@ -39,6 +45,7 @@ export interface ServiceRequestCardModel {
   selectedProfessionalName?: string | null;
   /** Optional progress 0–100 when in_progress. */
   progressPercent?: number | null;
+  tags?: string[] | null;
 }
 
 /** Filter state for the page. */

@@ -21,6 +21,10 @@ function mapAddress(
     cityName,
     stateAbbreviation: stateAbbr ?? undefined,
     streetSummary,
+    street: addr.street ?? undefined,
+    number: addr.number ?? undefined,
+    complement: addr.complement ?? undefined,
+    zipCode: addr.zip_code ?? undefined,
   };
 }
 
@@ -56,6 +60,16 @@ export function mapToServiceRequestCardModel(
     title: row.title ?? "",
     description: row.description ?? null,
     descriptionPreview: toDescriptionPreview(row.description ?? null),
+    formData:
+      row.form_data && typeof row.form_data === "object" && !Array.isArray(row.form_data)
+        ? (row.form_data as Record<string, unknown>)
+        : null,
+    formSchema:
+      row.form_schema &&
+      typeof row.form_schema === "object" &&
+      !Array.isArray(row.form_schema)
+        ? (row.form_schema as Record<string, unknown>)
+        : null,
     status,
     statusTabId: statusToTabId(status),
     createdAt: row.created_at,
@@ -65,5 +79,6 @@ export function mapToServiceRequestCardModel(
     photoPaths: Array.isArray(row.photos) ? row.photos : [],
     proposalCount: proposals.length,
     hasSubmittedProposal: proposals.some((proposal) => proposal.status === "submitted"),
+    tags: Array.isArray(row.tags) ? row.tags : null,
   };
 }

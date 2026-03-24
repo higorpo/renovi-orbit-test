@@ -123,6 +123,8 @@ describe("ServiceRequestsPage", () => {
       title: "Serviço focado",
       description: null,
       descriptionPreview: "",
+      formData: null,
+      formSchema: null,
       status: "open",
       statusTabId: "waiting_proposals",
       createdAt: "2025-03-01T00:00:00Z",

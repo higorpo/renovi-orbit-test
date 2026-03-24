@@ -9,6 +9,8 @@ function makeModel(overrides: Partial<ServiceRequestCardModel>): ServiceRequestC
     title: "Eletricista",
     description: "Troca de tomadas",
     descriptionPreview: "Troca de tomadas",
+    formData: null,
+    formSchema: null,
     status: "open",
     statusTabId: "waiting_proposals",
     createdAt: "2025-03-01T00:00:00Z",

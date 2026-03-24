@@ -9,6 +9,8 @@ export interface ServiceRequestWithRelationsRow extends ServiceRequestRow {
     neighborhood: string;
     street: string;
     number: string;
+    complement?: string | null;
+    zip_code?: string | null;
     platform_cities?: { name: string } | null;
     platform_states?: { abbreviation: string } | null;
   } | null;
@@ -137,6 +139,8 @@ export async function listServiceRequests(
         neighborhood,
         street,
         number,
+        complement,
+        zip_code,
         platform_cities ( name ),
         platform_states ( abbreviation )
       ),

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router";
 import { useServiceRequestPhotoUrls } from "@/features/request-quote";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,8 +19,6 @@ import {
   Wrench,
   Eye,
   Trash2,
-  Activity,
-  Star,
   GitCompare,
   MessageCircleQuestion,
 } from "lucide-react";
@@ -31,7 +28,6 @@ import type { ServiceRequestCardModel } from "../types/service-request-view.type
 import { getStatusBadgeVariant, getStatusLabel } from "../constants/statusBadge";
 import { formatLocationDisplay } from "../utils/locationDisplay";
 import { formatServiceRequestDate } from "../utils/formatDate";
-import { getServiceDetailPath } from "../constants/routes";
 import { ImagePreviewStrip } from "@/components/ImagePreviewStrip";
 
 const DESCRIPTION_CLAMP = "line-clamp-2 sm:line-clamp-3";
@@ -52,6 +48,7 @@ export interface ServiceCardProps {
   onCancel?: (id: string) => void;
   onOpenBudgets?: (serviceRequestId: string) => void;
   onOpenQuestions?: (serviceRequestId: string) => void;
+  onOpenDetails?: (model: ServiceRequestCardModel) => void;
   isCancelling?: boolean;
   className?: string;
 }
@@ -61,21 +58,21 @@ function CardActions({
   onCancel,
   onOpenBudgets,
   onOpenQuestions,
+  onOpenDetails,
   isCancelling,
 }: {
   model: ServiceRequestCardModel;
   onCancel?: (id: string) => void;
   onOpenBudgets?: (serviceRequestId: string) => void;
   onOpenQuestions?: (serviceRequestId: string) => void;
+  onOpenDetails?: (model: ServiceRequestCardModel) => void;
   isCancelling?: boolean;
 }) {
-  const detailPath = getServiceDetailPath(model.id);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const actions: Array<{
     label: string;
-    href?: string;
-    action?: "cancel" | "openBudgets" | "openQuestions";
+    action?: "cancel" | "openBudgets" | "openQuestions" | "openDetails";
     icon: React.ComponentType<{ className?: string }>;
   }> = [];
   const canOpenQuestions = model.status === "open" && (model.proposalCount ?? 0) !== 1;
@@ -86,7 +83,7 @@ function CardActions({
 
   switch (model.status) {
     case "open":
-      actions.push({ label: "Ver detalhes", href: detailPath, icon: Eye });
+      actions.push({ label: "Ver detalhes", action: "openDetails", icon: Eye });
       if (canOpenBudgets) {
         actions.push({ label: "Ver orçamentos", action: "openBudgets", icon: GitCompare });
       }
@@ -102,22 +99,16 @@ function CardActions({
       }
       break;
     case "in_progress":
-      actions.push(
-        { label: "Ver serviço", href: detailPath, icon: Eye },
-        { label: "Ver atividades", href: detailPath, icon: Activity }
-      );
+      actions.push({ label: "Ver detalhes", action: "openDetails", icon: Eye });
       break;
     case "closed":
-      actions.push(
-        { label: "Ver detalhes", href: detailPath, icon: Eye },
-        { label: "Avaliar profissional", href: detailPath, icon: Star }
-      );
+      actions.push({ label: "Ver detalhes", action: "openDetails", icon: Eye });
       break;
     case "cancelled":
-      actions.push({ label: "Ver detalhes", href: detailPath, icon: Eye });
+      actions.push({ label: "Ver detalhes", action: "openDetails", icon: Eye });
       break;
     default:
-      actions.push({ label: "Ver detalhes", href: detailPath, icon: Eye });
+      actions.push({ label: "Ver detalhes", action: "openDetails", icon: Eye });
       if (canCancelService(model)) {
         actions.push({ label: "Cancelar serviço", action: "cancel", icon: Trash2 });
       }
@@ -191,18 +182,22 @@ function CardActions({
             <action.icon className="h-3.5 w-3.5" aria-hidden />
             {action.label}
           </Button>
-        ) : (
+        ) : action.action === "openDetails" ? (
           <Button
             key={action.label}
             variant="outline"
             size="sm"
             className="h-9 min-h-9 shrink-0"
-            asChild
+            onClick={() => onOpenDetails?.(model)}
+            aria-label="Ver detalhes"
           >
-            <Link to={action.href!} className="inline-flex items-center gap-1.5">
-              <action.icon className="h-3.5 w-3.5" aria-hidden />
-              {action.label}
-            </Link>
+            <action.icon className="h-3.5 w-3.5" aria-hidden />
+            {action.label}
+          </Button>
+        ) : (
+          <Button key={action.label} variant="outline" size="sm" className="h-9 min-h-9 shrink-0">
+            <action.icon className="h-3.5 w-3.5" aria-hidden />
+            {action.label}
           </Button>
         )
       )}
@@ -215,12 +210,12 @@ export function ServiceCard({
   onCancel,
   onOpenBudgets,
   onOpenQuestions,
+  onOpenDetails,
   isCancelling,
   className,
 }: ServiceCardProps) {
   const locationText = formatLocationDisplay(model.address);
   const variant = getStatusBadgeVariant(model.status, model.proposalCount);
-  const detailPath = getServiceDetailPath(model.id);
   const serviceStyle = getServiceCardStyle(model.service ?? undefined);
   const { urls: photoUrls, isLoading: photoUrlsLoading } =
     useServiceRequestPhotoUrls(model.photoPaths);
@@ -232,12 +227,7 @@ export function ServiceCard({
         className
       )}
     >
-      <Link
-        to={detailPath}
-        className="contents"
-        aria-label={`Ver detalhes do serviço: ${model.title}`}
-      >
-        <CardHeader className="!pb-2">
+      <CardHeader className="!pb-2">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div className="flex min-w-0 flex-1 items-start gap-3">
               {model.service && (
@@ -300,8 +290,8 @@ export function ServiceCard({
               <span>Atualizado em {formatServiceRequestDate(model.updatedAt)}</span>
             )}
           </div>
-        </CardHeader>
-        <CardContent className="!pt-0">
+      </CardHeader>
+      <CardContent className="!pt-0">
           <ImagePreviewStrip urls={photoUrls} isLoading={photoUrlsLoading} />
           {model.status === "in_progress" && (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -322,14 +312,14 @@ export function ServiceCard({
               {model.proposalCount} orçamento(s)
             </p>
           )}
-        </CardContent>
-      </Link>
+      </CardContent>
       <CardFooter className="mt-auto border-t pt-3">
         <CardActions
           model={model}
           onCancel={onCancel}
           onOpenBudgets={onOpenBudgets}
           onOpenQuestions={onOpenQuestions}
+          onOpenDetails={onOpenDetails}
           isCancelling={isCancelling}
         />
       </CardFooter>

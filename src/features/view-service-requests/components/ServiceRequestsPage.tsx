@@ -18,9 +18,12 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useServiceRequestsFilters } from "../hooks/useServiceRequestsFilters";
 import { useCancelServiceRequest } from "../hooks/useCancelServiceRequest";
 import { QuestionThreadSheet, ReceivedBudgetDetailsSheet } from "@/features/client-budgets";
+import { toast } from "sonner";
 import { SERVICE_REQUEST_FOCUS_QUERY } from "../constants/routes";
 import { statusToTabId } from "../constants/statusTabs";
 import type { StatusTabId } from "../constants/statusTabs";
+import type { ServiceRequestCardModel } from "../types/service-request-view.types";
+import { OpenServiceDetailsSheet } from "./OpenServiceDetailsSheet";
 
 const SEARCH_DEBOUNCE_MS = 300;
 const SKELETON_COUNT = 4;
@@ -34,6 +37,9 @@ export function ServiceRequestsPage() {
   const searchQueryDebounced = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
   const [detailsMode, setDetailsMode] = useState<"budgets" | "questions" | null>(null);
   const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<string | null>(
+    null
+  );
+  const [selectedOpenService, setSelectedOpenService] = useState<ServiceRequestCardModel | null>(
     null
   );
 
@@ -173,8 +179,16 @@ export function ServiceRequestsPage() {
     setDetailsMode("questions");
   }, []);
 
+  const handleOpenDetails = useCallback((model: ServiceRequestCardModel) => {
+    if (model.status !== "open") {
+      toast.info("Visualização detalhada para este status ainda está em construção.");
+      return;
+    }
+    setSelectedOpenService(model);
+  }, []);
+
   useEffect(() => {
-    if (!detailsMode) return;
+    if (!detailsMode && !selectedOpenService) return;
 
     const previousBodyOverflow = document.body.style.overflow;
     const previousHtmlOverflow = document.documentElement.style.overflow;
@@ -186,7 +200,7 @@ export function ServiceRequestsPage() {
       document.body.style.overflow = previousBodyOverflow;
       document.documentElement.style.overflow = previousHtmlOverflow;
     };
-  }, [detailsMode]);
+  }, [detailsMode, selectedOpenService]);
 
   return (
     <div className="container max-w-5xl px-4 py-6">
@@ -270,6 +284,7 @@ export function ServiceRequestsPage() {
                     onCancel={cancelServiceRequest}
                     onOpenBudgets={handleOpenBudgets}
                     onOpenQuestions={handleOpenQuestions}
+                    onOpenDetails={handleOpenDetails}
                     isCancelling={isCancelling}
                   />
                 </li>
@@ -312,6 +327,13 @@ export function ServiceRequestsPage() {
         serviceRequestId={selectedServiceRequestId}
         onOpenChange={(next) => {
           if (!next) setDetailsMode(null);
+        }}
+      />
+      <OpenServiceDetailsSheet
+        open={Boolean(selectedOpenService)}
+        serviceRequest={selectedOpenService}
+        onOpenChange={(next) => {
+          if (!next) setSelectedOpenService(null);
         }}
       />
     </div>

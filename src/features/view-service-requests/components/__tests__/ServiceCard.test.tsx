@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
 import { Wrench } from "lucide-react";
 import { ServiceCard } from "../ServiceCard";
 import type { ServiceRequestCardModel } from "../../types/service-request-view.types";
@@ -21,6 +20,8 @@ function makeModel(
     title: "Troca de tomadas",
     description: "Preciso trocar tomadas na sala.",
     descriptionPreview: "Preciso trocar tomadas na sala.",
+    formData: null,
+    formSchema: null,
     status: "open",
     statusTabId: "waiting_proposals",
     createdAt: "2025-03-01T10:00:00Z",
@@ -39,11 +40,7 @@ describe("ServiceCard", () => {
 
   it("renders title, description preview, and location", () => {
     const model = makeModel();
-    render(
-      <MemoryRouter>
-        <ServiceCard model={model} />
-      </MemoryRouter>
-    );
+    render(<ServiceCard model={model} />);
     const headings = screen.getAllByRole("heading", { level: 2, name: /Troca de tomadas/i });
     expect(headings.length).toBeGreaterThanOrEqual(1);
     expect(headings[0]).toBeInTheDocument();
@@ -53,11 +50,7 @@ describe("ServiceCard", () => {
 
   it("renders status badge", () => {
     const model = makeModel();
-    render(
-      <MemoryRouter>
-        <ServiceCard model={model} />
-      </MemoryRouter>
-    );
+    render(<ServiceCard model={model} />);
     expect(screen.getByText(/Aguardando orçamentos/i)).toBeInTheDocument();
   });
 
@@ -66,25 +59,16 @@ describe("ServiceCard", () => {
       status: "open",
       hasSubmittedProposal: true,
     });
-    render(
-      <MemoryRouter>
-        <ServiceCard model={model} />
-      </MemoryRouter>
-    );
+    render(<ServiceCard model={model} />);
     expect(screen.getByText(/Aguardando decisão/i)).toBeInTheDocument();
   });
 
-  it("links card to service detail", () => {
+  it("calls onOpenDetails when details button is clicked", () => {
     const model = makeModel();
-    render(
-      <MemoryRouter>
-        <ServiceCard model={model} />
-      </MemoryRouter>
-    );
-    const link = screen.getByRole("link", {
-      name: /Ver detalhes do serviço: Troca de tomadas/i,
-    });
-    expect(link).toHaveAttribute("href", "/dashboard/services/sr-1");
+    const onOpenDetails = vi.fn();
+    render(<ServiceCard model={model} onOpenDetails={onOpenDetails} />);
+    fireEvent.click(screen.getByRole("button", { name: /Ver detalhes/i }));
+    expect(onOpenDetails).toHaveBeenCalledWith(model);
   });
 
   it("renders action buttons for open status", () => {
@@ -93,12 +77,8 @@ describe("ServiceCard", () => {
       statusTabId: "waiting_proposals",
       proposalCount: 2,
     });
-    render(
-      <MemoryRouter>
-        <ServiceCard model={model} />
-      </MemoryRouter>
-    );
-    expect(screen.getAllByRole("link", { name: /Ver detalhes/i }).length).toBeGreaterThan(0);
+    render(<ServiceCard model={model} />);
+    expect(screen.getByRole("button", { name: /Ver detalhes/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Ver orçamentos/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Ver perguntas/i })).toBeInTheDocument();
   });
@@ -109,11 +89,7 @@ describe("ServiceCard", () => {
       statusTabId: "waiting_proposals",
       proposalCount: 0,
     });
-    render(
-      <MemoryRouter>
-        <ServiceCard model={model} />
-      </MemoryRouter>
-    );
+    render(<ServiceCard model={model} />);
 
     expect(screen.queryByRole("button", { name: /Ver orçamentos/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Ver perguntas/i })).toBeInTheDocument();
@@ -125,11 +101,7 @@ describe("ServiceCard", () => {
       statusTabId: "negotiation",
       proposalCount: 1,
     });
-    render(
-      <MemoryRouter>
-        <ServiceCard model={model} />
-      </MemoryRouter>
-    );
+    render(<ServiceCard model={model} />);
 
     expect(screen.queryByRole("button", { name: /Ver orçamentos/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Ver perguntas/i })).not.toBeInTheDocument();
@@ -140,13 +112,11 @@ describe("ServiceCard", () => {
     const onOpenQuestions = vi.fn();
     const model = makeModel({ status: "open", proposalCount: 2 });
     render(
-      <MemoryRouter>
-        <ServiceCard
-          model={model}
-          onOpenBudgets={onOpenBudgets}
-          onOpenQuestions={onOpenQuestions}
-        />
-      </MemoryRouter>
+      <ServiceCard
+        model={model}
+        onOpenBudgets={onOpenBudgets}
+        onOpenQuestions={onOpenQuestions}
+      />
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Ver orçamentos/i }));
@@ -159,22 +129,14 @@ describe("ServiceCard", () => {
   it("renders Cancelar serviço button when onCancel is passed and status is open", () => {
     const onCancel = vi.fn();
     const model = makeModel({ status: "open", statusTabId: "waiting_proposals" });
-    render(
-      <MemoryRouter>
-        <ServiceCard model={model} onCancel={onCancel} />
-      </MemoryRouter>
-    );
+    render(<ServiceCard model={model} onCancel={onCancel} />);
     expect(screen.getByRole("button", { name: /Cancelar serviço/i })).toBeInTheDocument();
   });
 
   it("opens confirm dialog and calls onCancel when user confirms cancel", () => {
     const onCancel = vi.fn();
     const model = makeModel({ status: "open", statusTabId: "waiting_proposals" });
-    render(
-      <MemoryRouter>
-        <ServiceCard model={model} onCancel={onCancel} />
-      </MemoryRouter>
-    );
+    render(<ServiceCard model={model} onCancel={onCancel} />);
     const cancelBtn = screen.getByRole("button", { name: /Cancelar serviço/i });
     fireEvent.click(cancelBtn);
     expect(screen.getByRole("alertdialog", { name: /Cancelar serviço\?/i })).toBeInTheDocument();
