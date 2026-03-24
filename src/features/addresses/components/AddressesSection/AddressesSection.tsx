@@ -129,7 +129,7 @@ export function AddressesSection({
             Adicionar endereço
           </Button>
           {addresses.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="py-8 text-center text-sm text-muted-foreground">
               Nenhum endereço cadastrado. Adicione um para usar em seus pedidos.
             </p>
           ) : (

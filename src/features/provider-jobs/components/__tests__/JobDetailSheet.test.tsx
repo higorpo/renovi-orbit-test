@@ -28,7 +28,7 @@ describe("JobDetailSheet", () => {
     vi.clearAllMocks();
   });
 
-  it("locks scroll while open and shows content", () => {
+  it("shows content when job is loaded", () => {
     const job = createMinimalJob();
     mockDetail.mockReturnValue({
       job,
@@ -41,7 +41,6 @@ describe("JobDetailSheet", () => {
         <JobDetailSheet jobId="job-1" initialJob={job} />
       </MemoryRouter>,
     );
-    expect(document.body.style.overflow).toBe("hidden");
     expect(screen.getByTestId("sheet-content")).toBeInTheDocument();
   });
 

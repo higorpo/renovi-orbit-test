@@ -65,7 +65,7 @@ export function JobQuestionPromptCard({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
+              <p className="py-8 text-center text-sm text-muted-foreground">
                 Não há perguntas sugeridas para este pedido no momento.
               </p>
             )}

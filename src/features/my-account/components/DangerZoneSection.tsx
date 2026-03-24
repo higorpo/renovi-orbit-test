@@ -59,8 +59,8 @@ export function DangerZoneSection() {
             className="!mb-0"
           />
         </CardHeader>
-        <CardContent className="!pt-3">
-          <p className="text-sm mb-4">
+        <CardContent className="!pt-4">
+          <p className="mb-4 text-sm text-muted-foreground">
             Essa ação é irreversível. Seus dados serão removidos conforme as regras
             aplicáveis da LGPD e os requisitos legais de retenção.
           </p>

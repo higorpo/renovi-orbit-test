@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { X } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -17,21 +17,6 @@ export function JobDetailSheet({ jobId, initialJob }: JobDetailSheetProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(true);
   const { job, isLoading } = useProviderJobDetail(jobId, { initialJob });
-
-  useEffect(() => {
-    if (!open) return;
-
-    const previousBodyOverflow = document.body.style.overflow;
-    const previousHtmlOverflow = document.documentElement.style.overflow;
-
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousBodyOverflow;
-      document.documentElement.style.overflow = previousHtmlOverflow;
-    };
-  }, [open]);
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
@@ -60,7 +45,7 @@ export function JobDetailSheet({ jobId, initialJob }: JobDetailSheetProps) {
             </button>
           </SheetClose>
         </SheetHeader>
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           {isLoading && <JobDetailSkeleton />}
           {!isLoading && job && <JobDetailContent job={job} isInsideSheet />}
           {!isLoading && !job && <JobDetailNotFound />}

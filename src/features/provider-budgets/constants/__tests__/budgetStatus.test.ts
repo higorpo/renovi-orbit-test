@@ -116,9 +116,11 @@ describe("budgetStatus", () => {
   });
 
   it("exposes filter option arrays without Todos/Todas/Encerradas chips", () => {
-    expect(BUDGET_STATUS_FILTERS.some((f) => f.id === "all")).toBe(false);
-    expect(QUESTION_STATUS_FILTERS.some((f) => f.id === "all")).toBe(false);
-    expect(QUESTION_STATUS_FILTERS.some((f) => f.id === "closed")).toBe(false);
+    const budgetIds = BUDGET_STATUS_FILTERS.map((f) => f.id as string);
+    const questionIds = QUESTION_STATUS_FILTERS.map((f) => f.id as string);
+    expect(budgetIds.includes("all")).toBe(false);
+    expect(questionIds.includes("all")).toBe(false);
+    expect(questionIds.includes("closed")).toBe(false);
     expect(QUESTION_STATUS_FILTERS.some((f) => f.id === "pending")).toBe(true);
   });
 });

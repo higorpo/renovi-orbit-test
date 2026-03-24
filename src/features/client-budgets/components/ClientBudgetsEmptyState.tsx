@@ -1,3 +1,4 @@
+import { EmptyState } from "@/components/ui/empty-state";
 import { MessageCircleQuestion, ReceiptText, Search } from "lucide-react";
 import type { ClientBudgetsTab } from "../types/client-budgets.types";
 
@@ -14,50 +15,33 @@ export function ClientBudgetsEmptyState({
 }: ClientBudgetsEmptyStateProps) {
   if (hasFilters) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed bg-muted/20 px-6 py-12 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-          <Search className="h-6 w-6 text-muted-foreground" aria-hidden />
-        </div>
-        <h3 className="mt-4 text-base font-semibold">Nenhum resultado encontrado</h3>
-        <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-          Tente ajustar os filtros ou a busca para encontrar o que procura.
-        </p>
-        {onClearFilters ? (
-          <button
-            type="button"
-            onClick={onClearFilters}
-            className="mt-4 text-sm font-medium text-primary hover:underline"
-          >
-            Limpar filtros
-          </button>
-        ) : null}
-      </div>
+      <EmptyState
+        icon={Search}
+        title="Nenhum resultado encontrado"
+        description="Tente ajustar os filtros ou a busca para encontrar o que procura."
+        onClearFilters={onClearFilters}
+        ariaLabel="Nenhum resultado com os filtros aplicados"
+      />
     );
   }
 
   if (tab === "recebidos") {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed bg-muted/20 px-6 py-12 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-          <ReceiptText className="h-6 w-6 text-muted-foreground" aria-hidden />
-        </div>
-        <h3 className="mt-4 text-base font-semibold">Nenhum orçamento recebido ainda</h3>
-        <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-          Quando prestadores enviarem orçamentos para seus pedidos, eles aparecerão aqui.
-        </p>
-      </div>
+      <EmptyState
+        icon={ReceiptText}
+        title="Nenhum orçamento recebido ainda"
+        description="Quando prestadores enviarem orçamentos para seus pedidos, eles aparecerão aqui."
+        ariaLabel="Nenhum orçamento recebido"
+      />
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed bg-muted/20 px-6 py-12 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-        <MessageCircleQuestion className="h-6 w-6 text-muted-foreground" aria-hidden />
-      </div>
-      <h3 className="mt-4 text-base font-semibold">Nenhuma pergunta recebida ainda</h3>
-      <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-        Perguntas enviadas por prestadores sobre seus pedidos aparecerão aqui para resposta.
-      </p>
-    </div>
+    <EmptyState
+      icon={MessageCircleQuestion}
+      title="Nenhuma pergunta recebida ainda"
+      description="Perguntas enviadas por prestadores sobre seus pedidos aparecerão aqui para resposta."
+      ariaLabel="Nenhuma pergunta recebida"
+    />
   );
 }

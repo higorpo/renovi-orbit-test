@@ -109,6 +109,14 @@ vi.mock("../../hooks/useProviderPendingQuestionsCount", () => ({
   useProviderPendingQuestionsCount: () => mocks.pending,
 }));
 
+vi.mock("../../hooks/useProviderPendingApprovalBudgetsCount", () => ({
+  useProviderPendingApprovalBudgetsCount: () => ({
+    count: 0,
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
 vi.mock("../BudgetCard", () => ({
   BudgetCard: ({ budget }: { budget: { id: string; service_request_title: string } }) => (
     <div data-testid={`budget-${budget.id}`}>{budget.service_request_title}</div>

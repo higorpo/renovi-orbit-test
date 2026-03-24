@@ -1,50 +1,9 @@
-import { Search, type LucideIcon } from "lucide-react";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { FilterChip } from "@/components/ui/filter-chip";
 import { cn } from "@/lib/utils";
 import { QUESTION_FILTERS, RECEIVED_FILTERS } from "../constants/status";
 import type { ClientBudgetsTab, QuestionStatusFilter, ReceivedStatusFilter } from "../types/client-budgets.types";
-
-function FilterChip({
-  label,
-  icon: Icon,
-  iconColor,
-  isActive,
-  onClick,
-  disabled,
-}: {
-  label: string;
-  icon: LucideIcon;
-  iconColor: string;
-  isActive: boolean;
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={isActive}
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        "inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors sm:h-9 sm:px-4 sm:text-sm",
-        "whitespace-nowrap snap-start",
-        isActive
-          ? "border-muted-foreground/60 bg-muted text-foreground"
-          : "border-muted-foreground/10 bg-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-      )}
-    >
-      <Icon
-        className={cn(
-          "h-4 w-4 shrink-0",
-          isActive ? iconColor : "text-muted-foreground",
-        )}
-        aria-hidden
-      />
-      <span className="whitespace-nowrap">{label}</span>
-    </button>
-  );
-}
 
 interface ClientBudgetsFiltersBarProps {
   activeTab: ClientBudgetsTab;
@@ -98,13 +57,14 @@ export function ClientBudgetsFiltersBar({
           />
         ))}
       </div>
+
       <div className="relative w-full sm:w-64">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
         <Input
           type="search"
+          placeholder="Buscar..."
           value={searchQuery}
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Buscar por serviço, local ou prestador"
+          onChange={(e) => onSearchChange(e.target.value)}
           className="h-9 pl-9 text-sm"
           disabled={disabled}
         />

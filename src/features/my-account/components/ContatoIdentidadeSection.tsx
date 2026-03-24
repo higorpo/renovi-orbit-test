@@ -30,7 +30,7 @@ export function ContatoIdentidadeSection({ form }: ContatoIdentidadeSectionProps
           className="!mb-0"
         />
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="!pt-4 space-y-4">
         <FormField
           control={form.control}
           name="phone"

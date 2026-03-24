@@ -1,7 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router";
-import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { LoadMoreButton } from "@/components/ui/load-more-button";
 import { Tabs } from "@/components/ui/tabs";
 import { MeusServicosHeader } from "./MeusServicosHeader";
 import { SearchBar } from "./SearchBar";
@@ -293,24 +292,12 @@ export function ServiceRequestsPage() {
           )}
 
           {!isLoading && !isError && items.length > 0 && hasNextPage && (
-            <div className="mt-6 flex justify-center">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  void fetchNextPage();
-                }}
-                disabled={isFetchingNextPage}
-              >
-                {isFetchingNextPage ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                    Carregando...
-                  </>
-                ) : (
-                  "Carregar mais"
-                )}
-              </Button>
-            </div>
+            <LoadMoreButton
+              onLoadMore={() => {
+                void fetchNextPage();
+              }}
+              isLoading={isFetchingNextPage}
+            />
           )}
         </section>
       </div>

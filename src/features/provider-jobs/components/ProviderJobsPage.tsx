@@ -1,5 +1,4 @@
-import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { LoadMoreButton } from "@/components/ui/load-more-button";
 import { useProviderLocation } from "../hooks/useProviderLocation";
 import { useProviderJobs } from "../hooks/useProviderJobs";
 import { useProviderJobsFilters } from "../hooks/useProviderJobsFilters";
@@ -113,22 +112,12 @@ export function ProviderJobsPage() {
               </ul>
 
               {hasNextPage && (
-                <div className="mt-6 flex justify-center">
-                  <Button
-                    variant="outline"
-                    onClick={() => fetchNextPage()}
-                    disabled={isFetchingNextPage}
-                  >
-                    {isFetchingNextPage ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                        Carregando…
-                      </>
-                    ) : (
-                      "Carregar mais"
-                    )}
-                  </Button>
-                </div>
+                <LoadMoreButton
+                  onLoadMore={() => {
+                    void fetchNextPage();
+                  }}
+                  isLoading={isFetchingNextPage}
+                />
               )}
             </>
           )}

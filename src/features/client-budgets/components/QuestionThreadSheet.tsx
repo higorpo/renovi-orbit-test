@@ -72,7 +72,7 @@ export function QuestionThreadSheet({ open, serviceRequestId, onOpenChange }: Qu
         <SheetContent
           side="right"
           hideCloseButton
-          className="flex w-full flex-col gap-0 border-l p-0 sm:max-w-2xl"
+          className="flex w-full flex-col gap-0 border-l p-0 sm:max-w-xl md:max-w-2xl lg:max-w-3xl"
         >
           <SheetHeader className="relative h-14 flex-row items-center space-y-0 border-b px-4 pr-16 sm:h-16 sm:px-6 sm:pr-20">
             <SheetTitle>Perguntas dos prestadores</SheetTitle>
@@ -122,7 +122,9 @@ export function QuestionThreadSheet({ open, serviceRequestId, onOpenChange }: Qu
                   ))}
                 </div>
               ) : questions.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Nenhuma pergunta para este pedido.</p>
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  Nenhuma pergunta para este pedido.
+                </p>
               ) : (
                 <div className="space-y-3">
                   {questions.map((question) => (

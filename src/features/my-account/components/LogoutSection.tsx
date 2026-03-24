@@ -55,7 +55,7 @@ export function LogoutSection() {
             className="!mb-0"
           />
         </CardHeader>
-        <CardContent className="!pt-3">
+        <CardContent className="!pt-4">
           <p className="text-sm text-muted-foreground mb-4">
             Encerra sua sessão atual neste dispositivo. Você precisará fazer login novamente para acessar a plataforma.
           </p>

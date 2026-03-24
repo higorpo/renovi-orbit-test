@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -30,7 +31,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, ImageIcon, Trash2, Loader2, Paperclip, X, Pencil, GripVertical } from "lucide-react";
-import { useBreakpointMd } from "@/hooks/useBreakpoint";
+import { cn } from "@/lib/utils";
+import { useMobileDialogViewport } from "@/hooks/useMobileDialogViewport";
 import {
   type ProviderPortfolioItem,
   getPortfolioImageSignedUrl,
@@ -285,9 +287,7 @@ export function PortfolioManagementSection({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [orderedItems, setOrderedItems] = useState<ProviderPortfolioItem[]>(items);
   const isDraggingRef = useRef(false);
-  const isDesktop = useBreakpointMd();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const scrollYRef = useRef(0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -295,6 +295,7 @@ export function PortfolioManagementSection({
   );
 
   const dialogOpen = addOpen || editingItem !== null;
+  const { contentRef, scheduleSync } = useMobileDialogViewport(dialogOpen);
 
   // Sync ordered items from server when not actively dragging
   useEffect(() => {
@@ -329,29 +330,6 @@ export function PortfolioManagementSection({
       setSelectedFiles([]);
     }
   }, [editingItem]);
-
-  useEffect(() => {
-    if (!dialogOpen || isDesktop) return;
-    scrollYRef.current = window.scrollY;
-    const prevHtmlOverflow = document.documentElement.style.overflow;
-    const prevBodyOverflow = document.body.style.overflow;
-    const prevBodyPosition = document.body.style.position;
-    const prevBodyTop = document.body.style.top;
-    const prevBodyWidth = document.body.style.width;
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollYRef.current}px`;
-    document.body.style.width = "100%";
-    return () => {
-      document.documentElement.style.overflow = prevHtmlOverflow;
-      document.body.style.overflow = prevBodyOverflow;
-      document.body.style.position = prevBodyPosition;
-      document.body.style.top = prevBodyTop;
-      document.body.style.width = prevBodyWidth;
-      window.scrollTo(0, scrollYRef.current);
-    };
-  }, [dialogOpen, isDesktop]);
 
   useEffect(() => {
     const urls = selectedFiles.map((file) => URL.createObjectURL(file));
@@ -475,7 +453,7 @@ export function PortfolioManagementSection({
           Adicione trabalhos realizados para exibir no seu perfil público.
         </p>
         {orderedItems.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4 border border-dashed rounded-md text-center">
+          <p className="rounded-md border border-dashed py-8 text-center text-sm text-muted-foreground">
             Nenhum item no portfólio. Clique em &quot;Adicionar trabalho&quot; para começar.
           </p>
         ) : onReorderItems ? (
@@ -573,18 +551,31 @@ export function PortfolioManagementSection({
 
       <Dialog open={dialogOpen} onOpenChange={handleCloseDialog}>
         <DialogContent
-          className={
-            isDesktop
-              ? "max-h-[90vh] flex flex-col"
-              : "left-0 top-0 h-[100dvh] w-[100vw] max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:rounded-lg flex flex-col max-h-[100dvh]"
-          }
+          ref={contentRef}
+          className={cn(
+            "flex flex-col gap-0 overflow-hidden p-0 [&>button]:hidden",
+            "max-sm:inset-x-0 max-sm:bottom-auto max-sm:left-0 max-sm:right-0 max-sm:top-0 max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:border-0",
+            "sm:max-h-[90vh] sm:w-full sm:max-w-lg sm:rounded-lg sm:border sm:p-6",
+          )}
         >
-          <DialogHeader className="shrink-0">
-            <DialogTitle>
-              {isEditMode ? "Editar trabalho" : "Adicionar trabalho ao portfólio"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4 overflow-y-auto min-h-0 flex-1">
+          <div className="flex min-h-0 flex-1 flex-col">
+            <DialogHeader className="shrink-0 border-b px-4 py-3 text-left sm:border-b-0 sm:px-0 sm:py-0">
+              <div className="flex items-center justify-between gap-3">
+                <DialogTitle className="text-base sm:text-lg">
+                  {isEditMode ? "Editar trabalho" : "Adicionar trabalho ao portfólio"}
+                </DialogTitle>
+                <DialogClose asChild>
+                  <button
+                    type="button"
+                    aria-label="Fechar"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </DialogClose>
+              </div>
+            </DialogHeader>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 touch-pan-y overscroll-y-contain [-webkit-overflow-scrolling:touch] sm:px-0 sm:py-4">
             <div>
               <Label htmlFor="portfolio-title">Título</Label>
               <Input
@@ -593,6 +584,7 @@ export function PortfolioManagementSection({
                 onChange={(e) => setNewTitle(e.target.value)}
                 placeholder="Ex.: Instalação elétrica residencial"
                 disabled={disabled}
+                onFocus={scheduleSync}
               />
             </div>
             <div>
@@ -604,6 +596,8 @@ export function PortfolioManagementSection({
                 placeholder="Descreva o trabalho realizado..."
                 rows={3}
                 disabled={disabled}
+                className="max-sm:resize-none"
+                onFocus={scheduleSync}
               />
             </div>
             <div className="space-y-2">
@@ -662,7 +656,7 @@ export function PortfolioManagementSection({
               )}
             </div>
           </div>
-          <DialogFooter className="shrink-0 border-t pt-4">
+          <DialogFooter className="relative z-10 mt-2 shrink-0 flex-row gap-2 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:mt-4 sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pb-0 sm:shadow-none sm:backdrop-blur-none [&>button]:flex-1 sm:[&>button]:flex-none">
             <Button variant="outline" onClick={() => handleCloseDialog(false)}>
               Cancelar
             </Button>
@@ -679,6 +673,7 @@ export function PortfolioManagementSection({
               )}
             </Button>
           </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </Card>

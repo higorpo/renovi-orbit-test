@@ -41,8 +41,8 @@ export async function fetchProviderProposalJobDetail(params: {
 }): Promise<{ data: ProviderJobItem | null; error: string | null }> {
   const hasProposalId = Boolean(params.proposalId);
   const { data, error } = await supabase.rpc("get_provider_proposal_job_detail", {
-    p_proposal_id: hasProposalId ? params.proposalId : null,
-    p_service_request_id: hasProposalId ? null : params.serviceRequestId,
+    p_proposal_id: hasProposalId ? (params.proposalId ?? undefined) : undefined,
+    p_service_request_id: hasProposalId ? undefined : params.serviceRequestId,
     p_lat: params.latitude,
     p_lng: params.longitude,
     p_radius_km: params.radiusKm ?? 10,

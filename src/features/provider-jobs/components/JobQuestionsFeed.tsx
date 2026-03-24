@@ -47,7 +47,7 @@ export function JobQuestionsFeed({ serviceRequestId }: { serviceRequestId: strin
         )}
 
         {!isLoading && !isError && items.length === 0 && (
-          <p className="text-sm text-muted-foreground">
+          <p className="py-8 text-center text-sm text-muted-foreground">
             Ainda não há perguntas para este trabalho.
           </p>
         )}

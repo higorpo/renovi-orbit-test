@@ -47,14 +47,14 @@ export function SectionTitleWithIcon({
           />
         </div>
         <div>
-          <h1
+          <h2
             className={cn(
               "font-bold text-primary leading-tight",
               isCompact ? "text-xl" : "text-xl sm:text-2xl md:text-3xl lg:text-4xl"
             )}
           >
             {title}
-          </h1>
+          </h2>
         </div>
       </div>
       {subtitle ? (

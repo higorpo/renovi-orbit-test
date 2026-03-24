@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { Loader2, MessageCircleQuestion, ReceiptText } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { MessageCircleQuestion, ReceiptText } from "lucide-react";
+import { LoadMoreButton } from "@/components/ui/load-more-button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { ClientBudgetsHeader } from "./ClientBudgetsHeader";
@@ -11,6 +11,8 @@ import { ReceivedBudgetDetailsSheet } from "./ReceivedBudgetDetailsSheet";
 import { QuestionThreadSheet } from "./QuestionThreadSheet";
 import { ClientBudgetsErrorState } from "./ClientBudgetsErrorState";
 import { ClientBudgetsEmptyState } from "./ClientBudgetsEmptyState";
+import { ReceivedBudgetCardSkeleton } from "./ReceivedBudgetCardSkeleton";
+import { QuestionServiceCardSkeleton } from "./QuestionServiceCardSkeleton";
 import { useClientBudgetsFilters } from "../hooks/useClientBudgetsFilters";
 import { useClientReceivedBudgets } from "../hooks/useClientReceivedBudgets";
 import { useClientBudgetQuestions } from "../hooks/useClientBudgetQuestions";
@@ -219,10 +221,14 @@ function TabContent({
   children: ReactNode;
 }) {
   if (isLoading) {
+    const SkeletonComponent =
+      tab === "recebidos" ? ReceivedBudgetCardSkeleton : QuestionServiceCardSkeleton;
     return (
       <ul className="grid gap-4" aria-busy="true">
         {Array.from({ length: SKELETON_COUNT }).map((_, index) => (
-          <li key={index} className="h-48 animate-pulse rounded-lg border bg-muted/40" />
+          <li key={index}>
+            <SkeletonComponent />
+          </li>
         ))}
       </ul>
     );
@@ -246,18 +252,7 @@ function TabContent({
     <>
       {children}
       {hasNextPage ? (
-        <div className="mt-6 flex justify-center">
-          <Button variant="outline" onClick={onLoadMore} disabled={isFetchingNextPage}>
-            {isFetchingNextPage ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Carregando...
-              </>
-            ) : (
-              "Carregar mais"
-            )}
-          </Button>
-        </div>
+        <LoadMoreButton onLoadMore={onLoadMore} isLoading={isFetchingNextPage} />
       ) : null}
     </>
   );

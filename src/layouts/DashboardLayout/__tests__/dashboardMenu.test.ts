@@ -3,10 +3,10 @@ import { getDashboardMenu } from "../dashboardMenu";
 import type { ProfileRole } from "@/features/auth";
 
 describe("getDashboardMenu", () => {
-  it("returns client menu with 4 main items and 5 all items", () => {
+  it("returns client menu with 4 main items and 6 all items", () => {
     const result = getDashboardMenu("client" as ProfileRole);
     expect(result.mainItems).toHaveLength(4);
-    expect(result.allItems).toHaveLength(5);
+    expect(result.allItems).toHaveLength(6);
     expect(result.mainItems).toEqual(result.allItems.slice(0, 4));
   });
 
@@ -17,12 +17,14 @@ describe("getDashboardMenu", () => {
     expect(paths).toEqual([
       "/dashboard",
       "/dashboard/requests",
+      "/dashboard/orcamentos",
       "/dashboard/addresses",
       "/dashboard/conta",
       "/dashboard/help",
     ]);
     expect(labels).toContain("Visão geral");
     expect(labels).toContain("Meus Serviços");
+    expect(labels).toContain("Orçamentos");
     expect(labels).toContain("Endereços");
     expect(labels).toContain("Minha conta");
     expect(labels).toContain("Ajuda");

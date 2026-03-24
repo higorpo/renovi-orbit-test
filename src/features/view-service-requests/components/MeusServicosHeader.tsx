@@ -10,13 +10,13 @@ const CTA_LABEL = "Novo serviço";
 
 export function MeusServicosHeader() {
   return (
-    <header className="space-y-1">
+    <header className="space-y-2">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             {PAGE_TITLE}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">{PAGE_SUBTITLE}</p>
+          <p className="mt-1 text-sm text-muted-foreground sm:text-base">{PAGE_SUBTITLE}</p>
         </div>
         <Button
           asChild

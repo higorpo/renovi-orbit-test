@@ -46,7 +46,7 @@ export function ReceivedBudgetDetailsSheet({
       <SheetContent
         side="right"
         hideCloseButton
-        className="flex w-full flex-col gap-0 border-l p-0 sm:max-w-2xl"
+        className="flex w-full flex-col gap-0 border-l p-0 sm:max-w-xl md:max-w-2xl lg:max-w-3xl"
       >
         <SheetHeader className="relative h-14 flex-row items-center space-y-0 border-b px-4 pr-16 sm:h-16 sm:px-6 sm:pr-20">
           <SheetTitle>{getReceivedBudgetSheetTitle(sheetMode)}</SheetTitle>

@@ -1,6 +1,6 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { FileText, Loader2, MessageCircleQuestion } from "lucide-react";
+import { LoadMoreButton } from "@/components/ui/load-more-button";
+import { FileText, MessageCircleQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProviderSentBudgets } from "../hooks/useProviderSentBudgets";
 import { useProviderOwnQuestions } from "../hooks/useProviderOwnQuestions";
@@ -219,22 +219,7 @@ function BudgetsTabContent({
       {children}
 
       {hasNextPage && (
-        <div className="mt-6 flex justify-center">
-          <Button
-            variant="outline"
-            onClick={onLoadMore}
-            disabled={isFetchingNextPage}
-          >
-            {isFetchingNextPage ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                Carregando…
-              </>
-            ) : (
-              "Carregar mais"
-            )}
-          </Button>
-        </div>
+        <LoadMoreButton onLoadMore={onLoadMore} isLoading={isFetchingNextPage} />
       )}
     </>
   );
