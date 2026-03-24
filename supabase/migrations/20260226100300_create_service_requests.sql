@@ -121,6 +121,33 @@ create trigger service_requests_updated_at
   before update on public.service_requests
   for each row execute procedure public.set_updated_at();
 
+create or replace function public.reject_submitted_proposals_on_service_request_cancel()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if old.status is distinct from new.status and new.status = 'cancelled' then
+    update public.provider_proposals
+    set
+      status = 'rejected',
+      client_rejection_response = 'Proposta recusada automaticamente: pedido cancelado pelo cliente.'
+    where service_request_id = new.id
+      and status = 'submitted';
+  end if;
+
+  return new;
+end;
+$$;
+
+comment on function public.reject_submitted_proposals_on_service_request_cancel() is 'Rejects all submitted provider proposals when a service request status changes to cancelled.';
+
+drop trigger if exists service_requests_reject_submitted_proposals_on_cancel on public.service_requests;
+create trigger service_requests_reject_submitted_proposals_on_cancel
+  after update of status on public.service_requests
+  for each row execute function public.reject_submitted_proposals_on_service_request_cancel();
+
 -- Questions sent by providers to clients for a specific service request.
 create table if not exists public.provider_service_request_questions (
   id uuid primary key default gen_random_uuid(),
