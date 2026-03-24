@@ -1,7 +1,7 @@
 import { StrictMode, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router/dom'
-import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query'
+import { QueryClient, QueryCache, MutationCache, QueryClientProvider } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import { initSentry, captureException } from '@/lib/sentry'
 import { createIDBPersister, PERSISTED_CACHE_MAX_AGE_MS } from '@/lib/queryClient'
@@ -27,15 +27,20 @@ const mutationCache = new MutationCache({
   },
 })
 
+const disableReactQueryCache = import.meta.env.VITE_DISABLE_REACT_QUERY_CACHE === 'true'
+
 const queryClient = new QueryClient({
   queryCache,
   mutationCache,
   defaultOptions: {
     queries: {
-      staleTime: 60 * 1000,
-      refetchOnWindowFocus: false,
-      // Keep cache at least as long as persisted data so hydration is not discarded by GC
-      gcTime: PERSISTED_CACHE_MAX_AGE_MS,
+      staleTime: disableReactQueryCache ? 0 : 60 * 1000,
+      refetchOnMount: disableReactQueryCache ? 'always' : true,
+      refetchOnWindowFocus: disableReactQueryCache ? true : false,
+      refetchOnReconnect: disableReactQueryCache,
+      // When cache is disabled, clear inactive queries immediately.
+      // Otherwise, keep cache at least as long as persisted data so hydration is not discarded by GC.
+      gcTime: disableReactQueryCache ? 0 : PERSISTED_CACHE_MAX_AGE_MS,
     },
   },
 })
@@ -51,14 +56,22 @@ const RootFallback = () => (
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      <PersistQueryClientProvider
-        client={queryClient}
-        persistOptions={{ persister, maxAge: PERSISTED_CACHE_MAX_AGE_MS }}
-      >
-        <Suspense fallback={<RootFallback />}>
-          <RouterProvider router={router} />
-        </Suspense>
-      </PersistQueryClientProvider>
+      {disableReactQueryCache ? (
+        <QueryClientProvider client={queryClient}>
+          <Suspense fallback={<RootFallback />}>
+            <RouterProvider router={router} />
+          </Suspense>
+        </QueryClientProvider>
+      ) : (
+        <PersistQueryClientProvider
+          client={queryClient}
+          persistOptions={{ persister, maxAge: PERSISTED_CACHE_MAX_AGE_MS }}
+        >
+          <Suspense fallback={<RootFallback />}>
+            <RouterProvider router={router} />
+          </Suspense>
+        </PersistQueryClientProvider>
+      )}
     </ErrorBoundary>
   </StrictMode>
 )
