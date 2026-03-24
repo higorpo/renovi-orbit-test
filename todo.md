@@ -56,12 +56,7 @@ Coisas para verificar:
 
 
 Coisas para terminar do fluxo atual de trabalho:
-- Mostrar imagem respondida da pergunta do cliente para o prestador.
-- Adicionar botões "Ver orçamentos" e "Ver perguntas" na tela de meus serviços, que quando pressionado eles abrem as mesmas sheets da tela de orçamento.
 - Adicionar testes unitários no módulo de client-budget
-- Renomear view-service-requests para client-my-services
-- Ajustar o layout da tela de meus serviços para o cliente para deixar mais parecido com o restante do padrão 
-    - Ajustar também layout das telas de orçamento para ajustar ao padrão visual da tela de meus serviços  (filtros)
 - Testar a tela de orçamentos do cliente no fluxo do mobile
 - Testar a tela de meus serviços do cliente no fluxo do mobile
 - Adicionar ações para os botões de Aceitar orçamento e recusar orçamento
