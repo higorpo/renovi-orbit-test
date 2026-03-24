@@ -16,6 +16,7 @@ Itens interessantes de ter na plataforma (futuro)
 - Verificar se é possível colocar caching de mutations para caso o usuário esteja sem internet isso ser enviado/sincronizado depois
 - Quando enviar proposta ou entrar para ver detalhes de um pedido fora da área, perguntar ao prestador se ele quer adicionar aquela área
 - Prestador de serviços ter um calendário de serviços que ele pode gerenciar na plataforma, integrado com as datas que ele passa na hora de fazer o orçamento
+- Sistema de badges dos cards das telas de meus serviços e orçamentos para o cliente e prestador deveria ser unificado para manter consistência. Podemos unificar também o card de serviço para manter melhor consistência.
 
 
 
