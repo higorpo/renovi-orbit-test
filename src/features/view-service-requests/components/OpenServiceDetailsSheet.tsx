@@ -6,7 +6,7 @@ import { getServiceCardStyle } from "@/features/request-quote";
 import { cn } from "@/lib/utils";
 import { formatServiceRequestDate } from "../utils/formatDate";
 import type { ServiceRequestCardModel } from "../types/service-request-view.types";
-import { ServiceRequestSections } from "@/components/service-request/ServiceRequestSections";
+import { ServiceRequestSections } from "./ServiceRequestSections";
 import type { FormSchema } from "@/features/dynamic-form";
 
 interface OpenServiceDetailsSheetProps {
@@ -53,7 +53,7 @@ export function OpenServiceDetailsSheet({
         className="flex w-full flex-col gap-0 border-l p-0 sm:max-w-xl md:max-w-2xl lg:max-w-3xl"
       >
         <SheetHeader className="relative h-14 flex-row items-center space-y-0 border-b px-4 pr-16 sm:h-16 sm:px-6 sm:pr-20">
-          <SheetTitle>Detalhes do serviço</SheetTitle>
+          <SheetTitle>Detalhes do pedido de orçamento</SheetTitle>
           <SheetClose asChild>
             <button
               type="button"
