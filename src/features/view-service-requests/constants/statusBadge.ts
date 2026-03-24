@@ -36,3 +36,14 @@ export const STATUS_BADGE_VARIANT: Record<
   closed: "success",
   cancelled: "secondary",
 };
+
+export function getStatusBadgeVariant(
+  status: ServiceRequestDbStatus,
+  proposalCount?: number
+): StatusBadgeVariant {
+  if (status === "open" && (proposalCount ?? 0) === 0) {
+    return "secondary";
+  }
+
+  return STATUS_BADGE_VARIANT[status];
+}

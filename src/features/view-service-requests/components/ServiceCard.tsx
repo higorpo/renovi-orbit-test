@@ -27,7 +27,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getServiceCardStyle } from "@/features/request-quote";
 import type { ServiceRequestCardModel } from "../types/service-request-view.types";
-import { getStatusLabel, STATUS_BADGE_VARIANT } from "../constants/statusBadge";
+import { getStatusBadgeVariant, getStatusLabel } from "../constants/statusBadge";
 import { formatLocationDisplay } from "../utils/locationDisplay";
 import { formatServiceRequestDate } from "../utils/formatDate";
 import { getServiceDetailPath } from "../constants/routes";
@@ -174,7 +174,7 @@ export function ServiceCard({
   className,
 }: ServiceCardProps) {
   const locationText = formatLocationDisplay(model.address);
-  const variant = STATUS_BADGE_VARIANT[model.status];
+  const variant = getStatusBadgeVariant(model.status, model.proposalCount);
   const detailPath = getServiceDetailPath(model.id);
   const serviceStyle = getServiceCardStyle(model.service ?? undefined);
   const { urls: photoUrls, isLoading: photoUrlsLoading } =
