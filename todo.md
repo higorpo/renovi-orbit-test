@@ -39,6 +39,7 @@ Telas/fluxos restantes:
 - Visualização de detalhes de um serviço em execução
 - Chat realtime do serviço
 - Avaliação do serviço após sua conclusão
+- Sistema de disputas
 - Sistema de notificação/tela de notificação
 - Todo o painel administrativo
 

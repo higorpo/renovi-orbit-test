@@ -53,9 +53,10 @@ function getStatusFilterFromTab(tabId: StatusTabId): string | null | "__NO_STATU
       return "closed";
     case "cancelled":
       return "cancelled";
-    case "negotiation":
     case "dispute":
       return "__NO_STATUS__";
+    case "negotiation":
+      return "open";
     default:
       return null;
   }
@@ -85,11 +86,22 @@ export async function listServiceRequests(
     };
   }
 
+  const needsSubmittedProposalsFilter =
+    !focusedServiceRequestId &&
+    (params.statusTabId === "waiting_proposals" ||
+      params.statusTabId === "negotiation");
+
   let serviceRequestIdsWithProposals: string[] | null = null;
-  if (!focusedServiceRequestId && params.hasProposals !== null && params.hasProposals !== undefined) {
+  let submittedServiceRequestIdsWithProposals: string[] | null = null;
+  const needsAnyProposalsFilter =
+    !focusedServiceRequestId &&
+    params.hasProposals !== null &&
+    params.hasProposals !== undefined;
+
+  if (needsAnyProposalsFilter || needsSubmittedProposalsFilter) {
     const { data: proposalRows, error: proposalsError } = await supabase
       .from("provider_proposals")
-      .select("service_request_id, service_requests!inner(client_id)")
+      .select("service_request_id, status, service_requests!inner(client_id)")
       .eq("service_requests.client_id", params.clientId);
 
     if (proposalsError) {
@@ -101,11 +113,18 @@ export async function listServiceRequests(
     }
 
     const ids = new Set<string>();
+    const submittedIds = new Set<string>();
     (proposalRows ?? []).forEach((row) => {
-      const id = (row as { service_request_id?: string | null }).service_request_id;
+      const proposal = row as {
+        service_request_id?: string | null;
+        status?: string | null;
+      };
+      const id = proposal.service_request_id;
       if (id) ids.add(id);
+      if (id && proposal.status === "submitted") submittedIds.add(id);
     });
     serviceRequestIdsWithProposals = Array.from(ids);
+    submittedServiceRequestIdsWithProposals = Array.from(submittedIds);
   }
 
   let query = supabase
@@ -186,6 +205,29 @@ export async function listServiceRequests(
 
     if (params.hasProposals === false && serviceRequestIdsWithProposals?.length) {
       const excludedIds = serviceRequestIdsWithProposals
+        .map((id) => `"${id}"`)
+        .join(",");
+      query = query.not("id", "in", `(${excludedIds})`);
+    }
+
+    if (params.statusTabId === "negotiation") {
+      if (
+        !submittedServiceRequestIdsWithProposals ||
+        submittedServiceRequestIdsWithProposals.length === 0
+      ) {
+        return {
+          data: { items: [], total_count: 0, page, page_size: pageSize },
+          error: null,
+        };
+      }
+      query = query.in("id", submittedServiceRequestIdsWithProposals);
+    }
+
+    if (
+      params.statusTabId === "waiting_proposals" &&
+      submittedServiceRequestIdsWithProposals?.length
+    ) {
+      const excludedIds = submittedServiceRequestIdsWithProposals
         .map((id) => `"${id}"`)
         .join(",");
       query = query.not("id", "in", `(${excludedIds})`);
