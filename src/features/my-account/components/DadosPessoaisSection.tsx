@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
 import { User } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
-import type { AccountFormData } from "../schemas/accountForm.validation";
+import type { AccountFormData } from "../types/accountForm.validation";
 
 export interface DadosPessoaisSectionProps {
   form: UseFormReturn<AccountFormData>;

@@ -30,7 +30,7 @@ import {
   getNeighborhoodsByIds,
 } from "@/features/addresses";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
-import type { ProviderAccountFormData } from "../schemas/providerAccountForm.validation";
+import type { ProviderAccountFormData } from "../types/providerAccountForm.validation";
 
 export interface ServiceAreaFieldProps {
   form: UseFormReturn<ProviderAccountFormData>;

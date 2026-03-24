@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { useForm } from "react-hook-form";
 import { Form } from "@/components/ui/form";
 import { ContatoIdentidadeSection } from "../ContatoIdentidadeSection";
-import type { AccountFormData } from "../../schemas/accountForm.validation";
+import type { AccountFormData } from "../../types/accountForm.validation";
 
 function Wrapper({ defaultValues }: { defaultValues: AccountFormData }) {
   const form = useForm<AccountFormData>({ defaultValues });

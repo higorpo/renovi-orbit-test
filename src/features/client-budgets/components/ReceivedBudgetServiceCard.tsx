@@ -1,6 +1,6 @@
 import { FileText } from "lucide-react";
 import { Link } from "react-router";
-import { getServiceRequestsPageUrlWithFocus } from "@/features/view-service-requests";
+import { getServiceRequestsPageUrlWithFocus } from "@/features/client-my-services";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

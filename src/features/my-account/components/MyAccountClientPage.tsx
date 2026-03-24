@@ -12,7 +12,7 @@ import {
   accountFormSchema,
   defaultAccountFormData,
   type AccountFormData,
-} from "../schemas/accountForm.validation";
+} from "../types/accountForm.validation";
 import { PRIVACY_POLICY_URL } from "../constants";
 import { AccountSummaryCard, AccountSummaryCardSkeleton } from "./AccountSummaryCard";
 import { AccountErrorState } from "./AccountErrorState";

@@ -31,14 +31,14 @@ const DashboardFakePage = lazy(() =>
     default: m.DashboardFakePage,
   })),
 )
-const ServiceRequestsPage = lazy(() =>
-  import('@/features/view-service-requests/components/ServiceRequestsPage').then((m) => ({
-    default: m.ServiceRequestsPage,
+const ClientMyServicesPage = lazy(() =>
+  import('@/features/client-my-services/components/ClientMyServicesPage').then((m) => ({
+    default: m.ClientMyServicesPage,
   })),
 )
-const ServiceDetailPlaceholder = lazy(() =>
-  import('@/features/view-service-requests/components/ServiceDetailPlaceholder').then((m) => ({
-    default: m.ServiceDetailPlaceholder,
+const ClientMyServicesDetailPlaceholder = lazy(() =>
+  import('@/features/client-my-services/components/ClientMyServicesDetailPlaceholder').then((m) => ({
+    default: m.ClientMyServicesDetailPlaceholder,
   })),
 )
 const MyAccountPage = lazy(() =>
@@ -143,11 +143,11 @@ export const router = createBrowserRouter([
           { index: true, element: <DashboardFakePage title="Visão geral" /> },
           {
             path: 'requests',
-            element: <ServiceRequestsPage />,
+            element: <ClientMyServicesPage />,
           },
           {
             path: 'services/:id',
-            element: <ServiceDetailPlaceholder />,
+            element: <ClientMyServicesDetailPlaceholder />,
           },
           {
             path: 'addresses',

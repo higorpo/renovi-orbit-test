@@ -1,0 +1,328 @@
+import { useState } from "react";
+import { useServiceRequestPhotoUrls } from "@/features/request-quote";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  MapPin,
+  MessageSquare,
+  Wrench,
+  Eye,
+  Trash2,
+  GitCompare,
+  MessageCircleQuestion,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { getServiceCardStyle } from "@/features/request-quote";
+import type { ServiceRequestCardModel } from "../types/client-my-services.types";
+import { getStatusBadgeVariant, getStatusLabel } from "../constants/statusBadge";
+import { formatLocationDisplay } from "../utils/locationDisplay";
+import { formatServiceRequestDate } from "../utils/formatDate";
+import { ImagePreviewStrip } from "@/components/ImagePreviewStrip";
+
+const DESCRIPTION_CLAMP = "line-clamp-2 sm:line-clamp-3";
+
+/** Statuses that allow the user to exclude (cancel) the service. */
+const CANCELLABLE_STATUSES = ["open"] as const;
+const CANCELLABLE_STATUS_TABS = ["waiting_proposals", "negotiation"] as const;
+
+function canCancelService(model: ServiceRequestCardModel): boolean {
+  return (
+    CANCELLABLE_STATUSES.includes(model.status as "open") ||
+    CANCELLABLE_STATUS_TABS.includes(model.statusTabId as "negotiation")
+  );
+}
+
+export interface ServiceCardProps {
+  model: ServiceRequestCardModel;
+  onCancel?: (id: string) => void;
+  onOpenBudgets?: (serviceRequestId: string) => void;
+  onOpenQuestions?: (serviceRequestId: string) => void;
+  onOpenDetails?: (model: ServiceRequestCardModel) => void;
+  isCancelling?: boolean;
+  className?: string;
+}
+
+function CardActions({
+  model,
+  onCancel,
+  onOpenBudgets,
+  onOpenQuestions,
+  onOpenDetails,
+  isCancelling,
+}: {
+  model: ServiceRequestCardModel;
+  onCancel?: (id: string) => void;
+  onOpenBudgets?: (serviceRequestId: string) => void;
+  onOpenQuestions?: (serviceRequestId: string) => void;
+  onOpenDetails?: (model: ServiceRequestCardModel) => void;
+  isCancelling?: boolean;
+}) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  const actions: Array<{
+    label: string;
+    action?: "cancel" | "openBudgets" | "openQuestions" | "openDetails";
+    icon: React.ComponentType<{ className?: string }>;
+  }> = [];
+  const canOpenQuestions = model.status === "open" && (model.proposalCount ?? 0) !== 1;
+  const canOpenBudgets =
+    model.status === "open" &&
+    (model.proposalCount ?? 0) > 0 &&
+    (model.proposalCount ?? 0) !== 1;
+
+  switch (model.status) {
+    case "open":
+      actions.push({ label: "Ver detalhes", action: "openDetails", icon: Eye });
+      if (canOpenBudgets) {
+        actions.push({ label: "Ver orçamentos", action: "openBudgets", icon: GitCompare });
+      }
+      if (canOpenQuestions) {
+        actions.push({
+          label: "Ver perguntas",
+          action: "openQuestions",
+          icon: MessageCircleQuestion,
+        });
+      }
+      if (canCancelService(model)) {
+        actions.push({ label: "Cancelar pedido", action: "cancel", icon: Trash2 });
+      }
+      break;
+    case "in_progress":
+      actions.push({ label: "Ver detalhes", action: "openDetails", icon: Eye });
+      break;
+    case "closed":
+      actions.push({ label: "Ver detalhes", action: "openDetails", icon: Eye });
+      break;
+    case "cancelled":
+      actions.push({ label: "Ver detalhes", action: "openDetails", icon: Eye });
+      break;
+    default:
+      actions.push({ label: "Ver detalhes", action: "openDetails", icon: Eye });
+      if (canCancelService(model)) {
+        actions.push({ label: "Cancelar serviço", action: "cancel", icon: Trash2 });
+      }
+  }
+
+  const handleConfirmCancel = () => {
+    onCancel?.(model.id);
+    setDeleteDialogOpen(false);
+  };
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {actions.map((action) =>
+        action.action === "cancel" ? (
+          <AlertDialog
+            key={action.label}
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 min-h-9 shrink-0"
+              onClick={() => setDeleteDialogOpen(true)}
+              disabled={isCancelling}
+              aria-label="Cancelar serviço"
+            >
+              <action.icon className="h-3.5 w-3.5" aria-hidden />
+              {action.label}
+            </Button>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Cancelar serviço?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Ao cancelar, o serviço não receberá mais orçamentos. Esta
+                  ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Fechar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleConfirmCancel}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isCancelling ? "Cancelando…" : "Cancelar"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : action.action === "openBudgets" ? (
+          <Button
+            key={action.label}
+            variant="outline"
+            size="sm"
+            className="h-9 min-h-9 shrink-0"
+            onClick={() => onOpenBudgets?.(model.id)}
+            aria-label="Ver orçamentos"
+          >
+            <action.icon className="h-3.5 w-3.5" aria-hidden />
+            {action.label}
+          </Button>
+        ) : action.action === "openQuestions" ? (
+          <Button
+            key={action.label}
+            variant="outline"
+            size="sm"
+            className="h-9 min-h-9 shrink-0"
+            onClick={() => onOpenQuestions?.(model.id)}
+            aria-label="Ver perguntas"
+          >
+            <action.icon className="h-3.5 w-3.5" aria-hidden />
+            {action.label}
+          </Button>
+        ) : action.action === "openDetails" ? (
+          <Button
+            key={action.label}
+            variant="outline"
+            size="sm"
+            className="h-9 min-h-9 shrink-0"
+            onClick={() => onOpenDetails?.(model)}
+            aria-label="Ver detalhes"
+          >
+            <action.icon className="h-3.5 w-3.5" aria-hidden />
+            {action.label}
+          </Button>
+        ) : (
+          <Button key={action.label} variant="outline" size="sm" className="h-9 min-h-9 shrink-0">
+            <action.icon className="h-3.5 w-3.5" aria-hidden />
+            {action.label}
+          </Button>
+        )
+      )}
+    </div>
+  );
+}
+
+export function ClientMyServicesCard({
+  model,
+  onCancel,
+  onOpenBudgets,
+  onOpenQuestions,
+  onOpenDetails,
+  isCancelling,
+  className,
+}: ServiceCardProps) {
+  const locationText = formatLocationDisplay(model.address);
+  const variant = getStatusBadgeVariant(model.status, model.proposalCount);
+  const serviceStyle = getServiceCardStyle(model.service ?? undefined);
+  const { urls: photoUrls, isLoading: photoUrlsLoading } =
+    useServiceRequestPhotoUrls(model.photoPaths);
+
+  return (
+    <Card
+      className={cn(
+        "flex flex-col transition-colors hover:border-primary/30",
+        className
+      )}
+    >
+      <CardHeader className="!pb-2">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              {model.service && (
+                <div
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-sm",
+                    serviceStyle.color
+                  )}
+                  aria-hidden
+                >
+                  <serviceStyle.Icon className="h-5 w-5" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                {/* Desktop: category and title next to icon (original layout) */}
+                {model.service && (
+                  <p className="hidden text-xs font-medium text-muted-foreground sm:block">
+                    {model.service.title}
+                  </p>
+                )}
+                <h2 className="mt-0.5 hidden text-lg font-semibold leading-tight sm:block">
+                  {model.title}
+                </h2>
+              </div>
+            </div>
+            <Badge variant={variant} className="shrink-0">
+              {getStatusLabel(model.status, model.hasSubmittedProposal)}
+            </Badge>
+          </div>
+          {/* Mobile only: service name and title below, full card width */}
+          <div className="mt-1 w-full min-w-0 space-y-0.5 sm:mt-0 sm:hidden">
+            {model.service && (
+              <p className="text-xs font-medium text-muted-foreground">
+                {model.service.title}
+              </p>
+            )}
+            <h2 className="text-lg font-semibold leading-tight">
+              {model.title}
+            </h2>
+          </div>
+          {model.descriptionPreview && (
+            <p
+              className={cn(
+                "mt-1.5 text-sm text-muted-foreground",
+                DESCRIPTION_CLAMP
+              )}
+            >
+              {model.descriptionPreview}
+            </p>
+          )}
+          {locationText && (
+            <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
+              <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              <span>{locationText}</span>
+            </p>
+          )}
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <span>Criado em {formatServiceRequestDate(model.createdAt)}</span>
+            {model.updatedAt !== model.createdAt && (
+              <span>Atualizado em {formatServiceRequestDate(model.updatedAt)}</span>
+            )}
+          </div>
+      </CardHeader>
+      <CardContent className="!pt-0">
+          <ImagePreviewStrip urls={photoUrls} isLoading={photoUrlsLoading} />
+          {model.status === "in_progress" && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              {model.selectedProfessionalName && (
+                <span className="flex items-center gap-1">
+                  <Wrench className="h-3.5 w-3.5" aria-hidden />
+                  Profissional: {model.selectedProfessionalName}
+                </span>
+              )}
+              {model.progressPercent != null && (
+                <span>Progresso: {model.progressPercent}%</span>
+              )}
+            </div>
+          )}
+          {model.proposalCount != null && model.proposalCount > 0 && (
+            <p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
+              <MessageSquare className="h-3.5 w-3.5" aria-hidden />
+              {model.proposalCount} orçamento(s)
+            </p>
+          )}
+      </CardContent>
+      <CardFooter className="mt-auto border-t pt-3">
+        <CardActions
+          model={model}
+          onCancel={onCancel}
+          onOpenBudgets={onOpenBudgets}
+          onOpenQuestions={onOpenQuestions}
+          onOpenDetails={onOpenDetails}
+          isCancelling={isCancelling}
+        />
+      </CardFooter>
+    </Card>
+  );
+}

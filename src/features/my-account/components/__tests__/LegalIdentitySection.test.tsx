@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { useForm } from "react-hook-form";
 import { Form } from "@/components/ui/form";
 import { LegalIdentitySection } from "../LegalIdentitySection";
-import type { ProviderAccountFormData } from "../../schemas/providerAccountForm.validation";
+import type { ProviderAccountFormData } from "../../types/providerAccountForm.validation";
 
 const defaultPf: ProviderAccountFormData = {
   full_name: "Maria",

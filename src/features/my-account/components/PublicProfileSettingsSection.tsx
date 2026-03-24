@@ -9,7 +9,7 @@ import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
 import { Eye, Copy, Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import type { ProviderAccountFormData } from "../schemas/providerAccountForm.validation";
+import type { ProviderAccountFormData } from "../types/providerAccountForm.validation";
 import { ServiceAreaField } from "./ServiceAreaField";
 
 export interface PublicProfileSettingsSectionProps {

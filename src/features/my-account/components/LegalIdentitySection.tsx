@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
 import { FileText } from "lucide-react";
 import { maskCPF, maskCNPJ } from "@/lib/masks";
-import type { ProviderAccountFormData } from "../schemas/providerAccountForm.validation";
+import type { ProviderAccountFormData } from "../types/providerAccountForm.validation";
 import type { EntityType } from "./EntityTypeSection";
 
 export interface LegalIdentitySectionProps {

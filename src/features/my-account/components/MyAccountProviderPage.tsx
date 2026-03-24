@@ -31,7 +31,7 @@ import { LogoutSection } from "./LogoutSection";
 import {
   providerAccountFormSchema,
   type ProviderAccountFormData,
-} from "../schemas/providerAccountForm.validation";
+} from "../types/providerAccountForm.validation";
 import { toast } from "sonner";
 
 const PAGE_TITLE = "Minha conta";
@@ -52,7 +52,7 @@ function ProviderDadosPessoaisAdapter({
 }) {
   return (
     <DadosPessoaisSection
-      form={form as unknown as ReturnType<typeof useForm<import("../schemas/accountForm.validation").AccountFormData>>}
+      form={form as unknown as ReturnType<typeof useForm<import("../types/accountForm.validation").AccountFormData>>}
       email={email}
     />
   );

@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { useForm } from "react-hook-form";
 import { Form } from "@/components/ui/form";
 import { PublicProfileSettingsSection } from "../PublicProfileSettingsSection";
-import type { ProviderAccountFormData } from "../../schemas/providerAccountForm.validation";
+import type { ProviderAccountFormData } from "../../types/providerAccountForm.validation";
 
 vi.mock("../ServiceAreaField", () => ({
   ServiceAreaField: () => <div data-testid="service-area-field">Service area</div>,

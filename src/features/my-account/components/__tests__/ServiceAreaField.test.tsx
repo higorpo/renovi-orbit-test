@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { Form } from "@/components/ui/form";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ServiceAreaField } from "../ServiceAreaField";
-import type { ProviderAccountFormData } from "../../schemas/providerAccountForm.validation";
+import type { ProviderAccountFormData } from "../../types/providerAccountForm.validation";
 
 vi.mock("@/hooks/useBreakpoint", () => ({
   useBreakpointMd: vi.fn(() => true),
