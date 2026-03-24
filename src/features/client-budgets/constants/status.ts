@@ -1,4 +1,15 @@
-import { FileText, GitCompare, History, type LucideIcon } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  FileText,
+  GitCompare,
+  History,
+  MessageCircleQuestion,
+  MessageSquareReply,
+  Undo2,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react";
 import type { BadgeProps } from "@/components/ui/badge";
 import type { QuestionPreviewItem, ReceivedStatusFilter, QuestionStatusFilter } from "../types/client-budgets.types";
 
@@ -8,16 +19,56 @@ const RECEIVED_CARD_CTA_ICONS = {
   history: History,
 } as const satisfies Record<string, LucideIcon>;
 
-export const RECEIVED_FILTERS: Array<{ id: ReceivedStatusFilter; label: string }> = [
-  { id: "awaiting_decision", label: "Aguardando decisão" },
-  { id: "accepted", label: "Aceitos" },
-  { id: "rejected", label: "Recusados" },
-  { id: "withdrawn", label: "Retirados" },
+export const RECEIVED_FILTERS: Array<{
+  id: ReceivedStatusFilter;
+  label: string;
+  icon: LucideIcon;
+  iconColor: string;
+}> = [
+  {
+    id: "awaiting_decision",
+    label: "Aguardando decisão",
+    icon: Clock,
+    iconColor: "text-amber-500",
+  },
+  {
+    id: "accepted",
+    label: "Aceitos",
+    icon: CheckCircle2,
+    iconColor: "text-emerald-500",
+  },
+  {
+    id: "rejected",
+    label: "Recusados",
+    icon: XCircle,
+    iconColor: "text-rose-500",
+  },
+  {
+    id: "withdrawn",
+    label: "Retirados",
+    icon: Undo2,
+    iconColor: "text-slate-500",
+  },
 ];
 
-export const QUESTION_FILTERS: Array<{ id: QuestionStatusFilter; label: string }> = [
-  { id: "pending", label: "Não respondidas" },
-  { id: "answered", label: "Respondidas" },
+export const QUESTION_FILTERS: Array<{
+  id: QuestionStatusFilter;
+  label: string;
+  icon: LucideIcon;
+  iconColor: string;
+}> = [
+  {
+    id: "pending",
+    label: "Não respondidas",
+    icon: MessageCircleQuestion,
+    iconColor: "text-amber-500",
+  },
+  {
+    id: "answered",
+    label: "Respondidas",
+    icon: MessageSquareReply,
+    iconColor: "text-emerald-500",
+  },
 ];
 
 const BUDGET_STATUS_MAP: Record<string, { label: string; variant: BadgeProps["variant"] }> = {

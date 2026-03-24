@@ -45,7 +45,7 @@ export function ProviderJobsPage() {
     filters.sortMode !== DEFAULT_SORT_MODE;
 
   return (
-    <div className="container max-w-4xl px-4 py-6">
+    <div className="container max-w-5xl px-4 py-6">
       <JobsHeader
         totalCount={totalCount}
         isLoading={isLoading}

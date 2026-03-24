@@ -1,4 +1,13 @@
 import type { BadgeProps } from "@/components/ui/badge";
+import {
+  CheckCircle2,
+  Clock,
+  MessageCircleQuestion,
+  MessageSquareReply,
+  Undo2,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react";
 import type { BudgetStatusFilter, QuestionStatusFilter } from "../types/provider-budgets.types";
 
 export const BUDGET_STATUS_CONFIG: Record<
@@ -18,11 +27,36 @@ export function getBudgetStatusConfig(
   return BUDGET_STATUS_CONFIG[normalized] ?? BUDGET_STATUS_CONFIG.submitted;
 }
 
-export const BUDGET_STATUS_FILTERS: { id: BudgetStatusFilter; label: string }[] = [
-  { id: "submitted", label: "Aguardando" },
-  { id: "accepted", label: "Aceitos" },
-  { id: "rejected", label: "Recusados" },
-  { id: "withdrawn", label: "Retirados" },
+export const BUDGET_STATUS_FILTERS: Array<{
+  id: BudgetStatusFilter;
+  label: string;
+  icon: LucideIcon;
+  iconColor: string;
+}> = [
+  {
+    id: "submitted",
+    label: "Aguardando",
+    icon: Clock,
+    iconColor: "text-amber-500",
+  },
+  {
+    id: "accepted",
+    label: "Aceitos",
+    icon: CheckCircle2,
+    iconColor: "text-emerald-500",
+  },
+  {
+    id: "rejected",
+    label: "Recusados",
+    icon: XCircle,
+    iconColor: "text-rose-500",
+  },
+  {
+    id: "withdrawn",
+    label: "Retirados",
+    icon: Undo2,
+    iconColor: "text-slate-500",
+  },
 ];
 
 /** Pedidos que não estão mais em `open`: fluxo de perguntas/pré-orçamento considerado encerrado no produto. */
@@ -71,7 +105,22 @@ export function resolveQuestionStatus(question: {
   return "pending";
 }
 
-export const QUESTION_STATUS_FILTERS: { id: QuestionStatusFilter; label: string }[] = [
-  { id: "pending", label: "Aguardando" },
-  { id: "answered", label: "Respondidas" },
+export const QUESTION_STATUS_FILTERS: Array<{
+  id: QuestionStatusFilter;
+  label: string;
+  icon: LucideIcon;
+  iconColor: string;
+}> = [
+  {
+    id: "pending",
+    label: "Aguardando",
+    icon: MessageCircleQuestion,
+    iconColor: "text-amber-500",
+  },
+  {
+    id: "answered",
+    label: "Respondidas",
+    icon: MessageSquareReply,
+    iconColor: "text-emerald-500",
+  },
 ];
