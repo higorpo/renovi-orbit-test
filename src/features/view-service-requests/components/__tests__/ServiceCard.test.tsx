@@ -88,15 +88,72 @@ describe("ServiceCard", () => {
   });
 
   it("renders action buttons for open status", () => {
-    const model = makeModel({ status: "open", statusTabId: "waiting_proposals" });
+    const model = makeModel({
+      status: "open",
+      statusTabId: "waiting_proposals",
+      proposalCount: 2,
+    });
     render(
       <MemoryRouter>
         <ServiceCard model={model} />
       </MemoryRouter>
     );
-    expect(screen.getByRole("link", { name: /Editar serviço/i })).toBeInTheDocument();
-    const verDetalhesLinks = screen.getAllByRole("link", { name: /Ver detalhes/i });
-    expect(verDetalhesLinks.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByRole("link", { name: /Ver detalhes/i }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /Ver orçamentos/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ver perguntas/i })).toBeInTheDocument();
+  });
+
+  it("does not render budgets action when open has no proposals", () => {
+    const model = makeModel({
+      status: "open",
+      statusTabId: "waiting_proposals",
+      proposalCount: 0,
+    });
+    render(
+      <MemoryRouter>
+        <ServiceCard model={model} />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByRole("button", { name: /Ver orçamentos/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ver perguntas/i })).toBeInTheDocument();
+  });
+
+  it("does not render budgets/questions actions when open has exactly one proposal", () => {
+    const model = makeModel({
+      status: "open",
+      statusTabId: "negotiation",
+      proposalCount: 1,
+    });
+    render(
+      <MemoryRouter>
+        <ServiceCard model={model} />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByRole("button", { name: /Ver orçamentos/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Ver perguntas/i })).not.toBeInTheDocument();
+  });
+
+  it("calls callbacks when budgets/questions actions are clicked", () => {
+    const onOpenBudgets = vi.fn();
+    const onOpenQuestions = vi.fn();
+    const model = makeModel({ status: "open", proposalCount: 2 });
+    render(
+      <MemoryRouter>
+        <ServiceCard
+          model={model}
+          onOpenBudgets={onOpenBudgets}
+          onOpenQuestions={onOpenQuestions}
+        />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Ver orçamentos/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Ver perguntas/i }));
+
+    expect(onOpenBudgets).toHaveBeenCalledWith(model.id);
+    expect(onOpenQuestions).toHaveBeenCalledWith(model.id);
   });
 
   it("renders Cancelar serviço button when onCancel is passed and status is open", () => {

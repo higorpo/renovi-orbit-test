@@ -17,6 +17,7 @@ import { useServiceRequestsList } from "../hooks/useServiceRequestsList";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useServiceRequestsFilters } from "../hooks/useServiceRequestsFilters";
 import { useCancelServiceRequest } from "../hooks/useCancelServiceRequest";
+import { QuestionThreadSheet, ReceivedBudgetDetailsSheet } from "@/features/client-budgets";
 import { SERVICE_REQUEST_FOCUS_QUERY } from "../constants/routes";
 import { statusToTabId } from "../constants/statusTabs";
 import type { StatusTabId } from "../constants/statusTabs";
@@ -31,6 +32,10 @@ export function ServiceRequestsPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const searchQueryDebounced = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
+  const [detailsMode, setDetailsMode] = useState<"budgets" | "questions" | null>(null);
+  const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<string | null>(
+    null
+  );
 
   const {
     filters,
@@ -158,6 +163,31 @@ export function ServiceRequestsPage() {
     setSearchParams,
   ]);
 
+  const handleOpenBudgets = useCallback((serviceRequestId: string) => {
+    setSelectedServiceRequestId(serviceRequestId);
+    setDetailsMode("budgets");
+  }, []);
+
+  const handleOpenQuestions = useCallback((serviceRequestId: string) => {
+    setSelectedServiceRequestId(serviceRequestId);
+    setDetailsMode("questions");
+  }, []);
+
+  useEffect(() => {
+    if (!detailsMode) return;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+    };
+  }, [detailsMode]);
+
   return (
     <div className="container max-w-5xl px-4 py-6">
       <MeusServicosHeader />
@@ -238,6 +268,8 @@ export function ServiceRequestsPage() {
                   <ServiceCard
                     model={model}
                     onCancel={cancelServiceRequest}
+                    onOpenBudgets={handleOpenBudgets}
+                    onOpenQuestions={handleOpenQuestions}
                     isCancelling={isCancelling}
                   />
                 </li>
@@ -267,6 +299,21 @@ export function ServiceRequestsPage() {
           )}
         </section>
       </div>
+      <ReceivedBudgetDetailsSheet
+        open={detailsMode === "budgets"}
+        serviceRequestId={selectedServiceRequestId}
+        sheetMode="compare"
+        onOpenChange={(next) => {
+          if (!next) setDetailsMode(null);
+        }}
+      />
+      <QuestionThreadSheet
+        open={detailsMode === "questions"}
+        serviceRequestId={selectedServiceRequestId}
+        onOpenChange={(next) => {
+          if (!next) setDetailsMode(null);
+        }}
+      />
     </div>
   );
 }

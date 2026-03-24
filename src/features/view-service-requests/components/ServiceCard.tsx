@@ -18,11 +18,12 @@ import {
   MapPin,
   MessageSquare,
   Wrench,
-  Pencil,
   Eye,
   Trash2,
   Activity,
   Star,
+  GitCompare,
+  MessageCircleQuestion,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getServiceCardStyle } from "@/features/request-quote";
@@ -49,6 +50,8 @@ function canCancelService(model: ServiceRequestCardModel): boolean {
 export interface ServiceCardProps {
   model: ServiceRequestCardModel;
   onCancel?: (id: string) => void;
+  onOpenBudgets?: (serviceRequestId: string) => void;
+  onOpenQuestions?: (serviceRequestId: string) => void;
   isCancelling?: boolean;
   className?: string;
 }
@@ -56,10 +59,14 @@ export interface ServiceCardProps {
 function CardActions({
   model,
   onCancel,
+  onOpenBudgets,
+  onOpenQuestions,
   isCancelling,
 }: {
   model: ServiceRequestCardModel;
   onCancel?: (id: string) => void;
+  onOpenBudgets?: (serviceRequestId: string) => void;
+  onOpenQuestions?: (serviceRequestId: string) => void;
   isCancelling?: boolean;
 }) {
   const detailPath = getServiceDetailPath(model.id);
@@ -68,15 +75,28 @@ function CardActions({
   const actions: Array<{
     label: string;
     href?: string;
-    action?: "cancel";
+    action?: "cancel" | "openBudgets" | "openQuestions";
     icon: React.ComponentType<{ className?: string }>;
   }> = [];
+  const canOpenQuestions = model.status === "open" && (model.proposalCount ?? 0) !== 1;
+  const canOpenBudgets =
+    model.status === "open" &&
+    (model.proposalCount ?? 0) > 0 &&
+    (model.proposalCount ?? 0) !== 1;
 
   switch (model.status) {
     case "open":
-      actions.push(
-        { label: "Ver detalhes", href: detailPath, icon: Eye }
-      );
+      actions.push({ label: "Ver detalhes", href: detailPath, icon: Eye });
+      if (canOpenBudgets) {
+        actions.push({ label: "Ver orçamentos", action: "openBudgets", icon: GitCompare });
+      }
+      if (canOpenQuestions) {
+        actions.push({
+          label: "Ver perguntas",
+          action: "openQuestions",
+          icon: MessageCircleQuestion,
+        });
+      }
       if (canCancelService(model)) {
         actions.push({ label: "Cancelar pedido", action: "cancel", icon: Trash2 });
       }
@@ -147,6 +167,30 @@ function CardActions({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+        ) : action.action === "openBudgets" ? (
+          <Button
+            key={action.label}
+            variant="outline"
+            size="sm"
+            className="h-9 min-h-9 shrink-0"
+            onClick={() => onOpenBudgets?.(model.id)}
+            aria-label="Ver orçamentos"
+          >
+            <action.icon className="h-3.5 w-3.5" aria-hidden />
+            {action.label}
+          </Button>
+        ) : action.action === "openQuestions" ? (
+          <Button
+            key={action.label}
+            variant="outline"
+            size="sm"
+            className="h-9 min-h-9 shrink-0"
+            onClick={() => onOpenQuestions?.(model.id)}
+            aria-label="Ver perguntas"
+          >
+            <action.icon className="h-3.5 w-3.5" aria-hidden />
+            {action.label}
+          </Button>
         ) : (
           <Button
             key={action.label}
@@ -169,6 +213,8 @@ function CardActions({
 export function ServiceCard({
   model,
   onCancel,
+  onOpenBudgets,
+  onOpenQuestions,
   isCancelling,
   className,
 }: ServiceCardProps) {
@@ -282,6 +328,8 @@ export function ServiceCard({
         <CardActions
           model={model}
           onCancel={onCancel}
+          onOpenBudgets={onOpenBudgets}
+          onOpenQuestions={onOpenQuestions}
           isCancelling={isCancelling}
         />
       </CardFooter>
