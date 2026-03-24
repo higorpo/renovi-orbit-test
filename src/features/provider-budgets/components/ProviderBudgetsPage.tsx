@@ -61,7 +61,7 @@ export function ProviderBudgetsPage() {
     pendingApprovalBudgetsCount.isLoading;
 
   return (
-    <div className="container max-w-4xl px-4 py-6">
+    <div className="container max-w-5xl px-4 py-6">
       <BudgetsHeader
         pendingApprovalBudgetCount={pendingApprovalBudgetsCount.count}
         pendingQuestionsCount={pendingQuestionsCount.count}
