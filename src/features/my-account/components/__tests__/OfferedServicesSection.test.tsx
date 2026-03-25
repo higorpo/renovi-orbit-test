@@ -110,4 +110,55 @@ describe("OfferedServicesSection", () => {
     );
     expect(screen.getByPlaceholderText("Buscar serviços...")).toBeDisabled();
   });
+
+  it("shows loading state while search query is resolving", async () => {
+    searchServices.mockImplementation(
+      () => new Promise(() => {
+        /* intentionally unresolved */
+      })
+    );
+
+    render(
+      <OfferedServicesSection
+        selectedServiceIds={[]}
+        onSelectedChange={vi.fn()}
+        setServiceIdsAsync={vi.fn().mockResolvedValue(undefined)}
+        isUpdating={false}
+      />,
+      { wrapper: createWrapper() }
+    );
+
+    const input = screen.getByPlaceholderText("Buscar serviços...");
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "Pint" } });
+
+    expect(await screen.findByText("Buscando…")).toBeInTheDocument();
+  });
+
+  it("adds a service when user picks a search result", async () => {
+    const onSelectedChange = vi.fn();
+    const setServiceIdsAsync = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <OfferedServicesSection
+        selectedServiceIds={[]}
+        onSelectedChange={onSelectedChange}
+        setServiceIdsAsync={setServiceIdsAsync}
+        isUpdating={false}
+      />,
+      { wrapper: createWrapper() }
+    );
+
+    const input = screen.getByPlaceholderText("Buscar serviços...");
+    fireEvent.focus(input);
+
+    await vi.waitFor(() => {
+      expect(screen.getByRole("option", { name: "Pintura" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("option", { name: "Pintura" }));
+
+    expect(onSelectedChange).toHaveBeenCalledWith(["s1"]);
+    expect(setServiceIdsAsync).toHaveBeenCalledWith(["s1"]);
+  });
 });

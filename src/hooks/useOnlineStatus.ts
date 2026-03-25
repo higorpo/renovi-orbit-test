@@ -12,7 +12,7 @@ const getConnectivityCheckUrls = (): string[] => {
   if (supabaseUrl) {
     urls.push(supabaseUrl)
   }
-  urls.push('https://api.github.com')
+  // urls.push('https://api.github.com')
   return urls
 }
 

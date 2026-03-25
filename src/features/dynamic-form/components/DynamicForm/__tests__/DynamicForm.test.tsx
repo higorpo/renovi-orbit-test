@@ -278,7 +278,8 @@ describe("DynamicForm", () => {
       const input = screen.getByRole("spinbutton", { name: /Quantidade/i });
       fireEvent.click(increment);
       fireEvent.click(increment);
-      expect(Number(input.getAttribute("value"))).toBe(2);
+      // Controlled inputs: assert displayed value, not the HTML value attribute.
+      expect(input).toHaveValue(2);
     });
 
     it("renders and selects yes_no block", async () => {

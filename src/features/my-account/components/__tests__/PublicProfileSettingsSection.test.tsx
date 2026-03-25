@@ -4,9 +4,14 @@ import { useForm } from "react-hook-form";
 import { Form } from "@/components/ui/form";
 import { PublicProfileSettingsSection } from "../PublicProfileSettingsSection";
 import type { ProviderAccountFormData } from "../../types/providerAccountForm.validation";
+import { toast } from "sonner";
 
 vi.mock("../ServiceAreaField", () => ({
   ServiceAreaField: () => <div data-testid="service-area-field">Service area</div>,
+}));
+
+vi.mock("sonner", () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
 }));
 
 const defaultValues: ProviderAccountFormData = {
@@ -96,5 +101,40 @@ describe("PublicProfileSettingsSection", () => {
   it("renders ServiceAreaField", () => {
     render(<Wrapper profileSlug={null} />);
     expect(screen.getByTestId("service-area-field")).toBeInTheDocument();
+  });
+
+  it("opens public profile URL in a new tab when Visualizar perfil is clicked", () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    render(<Wrapper profileSlug="meu-slug" />);
+    fireEvent.click(screen.getByRole("button", { name: /Visualizar perfil/ }));
+    expect(openSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/perfil/meu-slug"),
+      "_blank"
+    );
+    openSpy.mockRestore();
+  });
+
+  it("switches visibility to public when the public radio is selected", () => {
+    render(<Wrapper profileSlug={null} />);
+    const publicRadio = screen
+      .getAllByRole("radio")
+      .find((el) => (el as HTMLInputElement).value === "public");
+    expect(publicRadio).toBeDefined();
+    fireEvent.click(publicRadio!);
+    expect(publicRadio).toBeChecked();
+  });
+
+  it("shows toast error when clipboard write fails on copy", async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error("denied"));
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+      writable: true,
+    });
+    render(<Wrapper profileSlug="slug" />);
+    fireEvent.click(screen.getByRole("button", { name: /Copiar link do perfil/ }));
+    await vi.waitFor(() => {
+      expect(toast.error).toHaveBeenCalled();
+    });
   });
 });

@@ -60,3 +60,4 @@ Coisas para terminar do fluxo atual de trabalho:
 - Testar a tela de orçamentos do cliente no fluxo do mobile
 - Testar a tela de meus serviços do cliente no fluxo do mobile
 - Adicionar ações para os botões de Aceitar orçamento e recusar orçamento
+- api.github.com precisa ser removida.

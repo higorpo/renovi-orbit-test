@@ -184,4 +184,75 @@ describe("filterServiceRequests", () => {
     });
     expect(result).toHaveLength(0);
   });
+
+  it("matches category filter by service slug", () => {
+    const filters: ServiceRequestsFilterState = {
+      statusTabId: "all",
+      searchQuery: "",
+      categoryId: "eletricista",
+      cityName: null,
+      neighborhoodName: null,
+      dateFrom: null,
+      dateTo: null,
+      hasProposals: null,
+      hasImages: null,
+    };
+    const result = filterServiceRequests([openItem], filters);
+    expect(result).toHaveLength(1);
+  });
+
+  it("filters by date range end boundary", () => {
+    const item = makeModel({
+      id: "d1",
+      createdAt: "2025-06-15T12:00:00Z",
+    });
+    const filters: ServiceRequestsFilterState = {
+      statusTabId: "all",
+      searchQuery: "",
+      categoryId: null,
+      cityName: null,
+      neighborhoodName: null,
+      dateFrom: null,
+      dateTo: "2025-06-10",
+      hasProposals: null,
+      hasImages: null,
+    };
+    expect(filterServiceRequests([item], filters)).toHaveLength(0);
+
+    const ok = filterServiceRequests([item], {
+      ...filters,
+      dateTo: "2025-06-20",
+    });
+    expect(ok).toHaveLength(1);
+  });
+
+  it("filters by proposals and images flags", () => {
+    const withAll = makeModel({ id: "p1", proposalCount: 2, photoPaths: ["a"] });
+    const empty = makeModel({ id: "p2", proposalCount: 0, photoPaths: [] });
+    const baseFilters = (partial: Partial<ServiceRequestsFilterState>): ServiceRequestsFilterState => ({
+      statusTabId: "all",
+      searchQuery: "",
+      categoryId: null,
+      cityName: null,
+      neighborhoodName: null,
+      dateFrom: null,
+      dateTo: null,
+      hasProposals: null,
+      hasImages: null,
+      ...partial,
+    });
+
+    expect(
+      filterServiceRequests([withAll, empty], baseFilters({ hasProposals: true }))
+    ).toEqual([withAll]);
+    expect(
+      filterServiceRequests([withAll, empty], baseFilters({ hasProposals: false }))
+    ).toEqual([empty]);
+    expect(
+      filterServiceRequests([withAll, empty], baseFilters({ hasImages: true }))
+    ).toEqual([withAll]);
+    expect(
+      filterServiceRequests([withAll, empty], baseFilters({ hasImages: false }))
+    ).toEqual([empty]);
+  });
 });

@@ -90,4 +90,36 @@ describe("mapToServiceRequestCardModel", () => {
     expect(model.proposalCount).toBe(2);
     expect(model.hasSubmittedProposal).toBe(true);
   });
+
+  it("builds streetSummary from street only when number is missing", () => {
+    const row = makeRow({
+      client_addresses: {
+        neighborhood: "N",
+        street: "Só rua",
+        number: "",
+        platform_cities: { name: "C" },
+        platform_states: { abbreviation: "ST" },
+      },
+    });
+    const model = mapToServiceRequestCardModel(row);
+    expect(model.address?.streetSummary).toBe("Só rua");
+  });
+
+  it("normalizes non-object form_data and form_schema to null", () => {
+    const row = makeRow({
+      form_data: [] as unknown as null,
+      form_schema: [] as unknown as null,
+      photos: "x" as unknown as null,
+    });
+    const model = mapToServiceRequestCardModel(row);
+    expect(model.formData).toBeNull();
+    expect(model.formSchema).toBeNull();
+    expect(model.photoPaths).toEqual([]);
+  });
+
+  it("defaults status to open when missing", () => {
+    const row = makeRow({ status: undefined as unknown as "open" });
+    const model = mapToServiceRequestCardModel(row);
+    expect(model.status).toBe("open");
+  });
 });

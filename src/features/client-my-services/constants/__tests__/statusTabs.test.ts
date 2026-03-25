@@ -18,6 +18,10 @@ describe("statusToTabId", () => {
   it("maps cancelled to cancelled", () => {
     expect(statusToTabId("cancelled")).toBe("cancelled");
   });
+
+  it("maps unknown status to all tab", () => {
+    expect(statusToTabId("not_a_db_status" as never)).toBe("all");
+  });
 });
 
 describe("tabIncludesStatus", () => {
@@ -32,6 +36,11 @@ describe("tabIncludesStatus", () => {
   it("in_progress includes only in_progress", () => {
     expect(tabIncludesStatus("in_progress", "in_progress")).toBe(true);
     expect(tabIncludesStatus("in_progress", "open")).toBe(false);
+  });
+
+  it("negotiation and dispute tabs do not include DB statuses", () => {
+    expect(tabIncludesStatus("negotiation", "open")).toBe(false);
+    expect(tabIncludesStatus("dispute", "open")).toBe(false);
   });
 });
 

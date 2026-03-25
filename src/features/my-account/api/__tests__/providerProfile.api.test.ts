@@ -205,6 +205,25 @@ describe("getProviderPublicProfile", () => {
     expect(result.data).toBeNull();
     expect(result.error).toBe("Not found");
   });
+
+  it("returns public row with empty service area when no neighborhoods linked", async () => {
+    const publicRow = { provider_id: "p1", slug: "x" };
+    mockFrom
+      .mockReturnValueOnce(chainMock({ data: publicRow, error: null }))
+      .mockReturnValueOnce(
+        Object.assign(chainMock({ data: [], error: null }), {
+          then: (resolve: (v: { data: unknown[] }) => void) => resolve({ data: [] }),
+        })
+      );
+
+    const result = await getProviderPublicProfile("p1");
+
+    expect(result.error).toBeNull();
+    expect(result.data?.service_area_neighborhood_ids).toEqual([]);
+    expect(result.data?.service_area_city).toBeNull();
+    expect(result.data?.service_area_regions).toBeNull();
+    expect(result.data?.service_area_neighborhoods).toBeNull();
+  });
 });
 
 describe("updateProviderPublicProfile", () => {
@@ -249,6 +268,56 @@ describe("updateProviderPublicProfile", () => {
     const updateCall = updateChain.update.mock.calls[0];
     expect(updateCall[0]).toMatchObject({ display_name: "Maria Santos" });
     expect(updateCall[0].slug).toMatch(/^maria-santos-[a-z0-9]+-[a-z0-9]+$/);
+  });
+
+  it("does not assign new slug when current slug is already custom", async () => {
+    const slugCheckChain = chainMock({
+      data: { slug: "slug-custom" },
+      error: null,
+    });
+    const updateChain = chainMockUpdate({ error: null });
+    mockFrom.mockReturnValueOnce(slugCheckChain).mockReturnValueOnce(updateChain);
+
+    const result = await updateProviderPublicProfile("p1", {
+      display_name: "Novo Nome",
+    });
+
+    expect(result.error).toBeNull();
+    const updateCall = updateChain.update.mock.calls[0];
+    expect(updateCall[0]).toMatchObject({ display_name: "Novo Nome" });
+    expect(updateCall[0]).not.toHaveProperty("slug");
+  });
+
+  it("clears service area neighborhoods without insert when ids array is empty", async () => {
+    const deleteChain = chainMockUpdate({ error: null });
+    mockFrom.mockReturnValueOnce(deleteChain);
+
+    const result = await updateProviderPublicProfile("p1", {
+      service_area_neighborhood_ids: [],
+    });
+
+    expect(result.error).toBeNull();
+  });
+
+  it("returns error when neighborhood insert fails after delete succeeds", async () => {
+    const deleteChain = chainMockUpdate({ error: null });
+    const insertChain = chainMock({ data: null, error: { message: "Insert nbr failed" } });
+    mockFrom.mockReturnValueOnce(deleteChain).mockReturnValueOnce(insertChain);
+
+    const result = await updateProviderPublicProfile("p1", {
+      service_area_neighborhood_ids: ["n1"],
+    });
+
+    expect(result.error).toBe("Insert nbr failed");
+  });
+
+  it("returns error when final public profile update fails", async () => {
+    const updateChain = chainMockUpdate({ error: { message: "Public update failed" } });
+    mockFrom.mockReturnValue(updateChain);
+
+    const result = await updateProviderPublicProfile("p1", { bio: "About me" });
+
+    expect(result.error).toBe("Public update failed");
   });
 });
 
@@ -297,6 +366,15 @@ describe("getServicesByIds", () => {
 
     expect(result.error).toBeNull();
     expect(result.services).toEqual(services);
+  });
+
+  it("returns empty services and error on supabase error", async () => {
+    mockFrom.mockReturnValue(chainMock({ data: null, error: { message: "By ids failed" } }));
+
+    const result = await getServicesByIds(["s1"]);
+
+    expect(result.services).toEqual([]);
+    expect(result.error).toBe("By ids failed");
   });
 });
 
@@ -357,6 +435,16 @@ describe("setOfferedServices", () => {
 
     expect(result.error).toBe("DB");
   });
+
+  it("returns error when insert fails after delete succeeds", async () => {
+    const deleteChain = chainMockUpdate({ error: null });
+    const insertChain = chainMock({ data: null, error: { message: "Insert conflict" } });
+    mockFrom.mockReturnValueOnce(deleteChain).mockReturnValueOnce(insertChain);
+
+    const result = await setOfferedServices("p1", ["s1"]);
+
+    expect(result.error).toBe("Insert conflict");
+  });
 });
 
 describe("listPortfolioItems", () => {
@@ -372,6 +460,15 @@ describe("listPortfolioItems", () => {
 
     expect(result.error).toBeNull();
     expect(result.items).toEqual(items);
+  });
+
+  it("returns empty items and error on failure", async () => {
+    mockFrom.mockReturnValue(chainMock({ data: null, error: { message: "List fail" } }));
+
+    const result = await listPortfolioItems("p1");
+
+    expect(result.items).toEqual([]);
+    expect(result.error).toBe("List fail");
   });
 });
 
@@ -413,6 +510,14 @@ describe("updatePortfolioItem", () => {
     expect(result.error).toBeNull();
   });
 
+  it("returns error message on supabase failure", async () => {
+    mockFrom.mockReturnValue(chainMockUpdate({ error: { message: "Update blocked" } }));
+
+    const result = await updatePortfolioItem("i1", "p1", { title: "New" });
+
+    expect(result.error).toBe("Update blocked");
+  });
+
   it("returns null error when params empty", async () => {
     const result = await updatePortfolioItem("i1", "p1", {});
     expect(result.error).toBeNull();
@@ -431,6 +536,14 @@ describe("deletePortfolioItem", () => {
     const result = await deletePortfolioItem("i1", "p1");
 
     expect(result.error).toBeNull();
+  });
+
+  it("returns error on supabase failure", async () => {
+    mockFrom.mockReturnValue(chainMockUpdate({ error: { message: "Delete denied" } }));
+
+    const result = await deletePortfolioItem("i1", "p1");
+
+    expect(result.error).toBe("Delete denied");
   });
 });
 
@@ -480,6 +593,20 @@ describe("getPortfolioImageSignedUrl", () => {
       createSignedUrl: vi.fn().mockResolvedValue({
         data: null,
         error: { message: "Err" },
+      }),
+    };
+    mockStorageFrom.mockReturnValue(chain);
+
+    const url = await getPortfolioImageSignedUrl("path");
+
+    expect(url).toBe("");
+  });
+
+  it("returns empty string when signedUrl is missing on success payload", async () => {
+    const chain = {
+      createSignedUrl: vi.fn().mockResolvedValue({
+        data: {},
+        error: null,
       }),
     };
     mockStorageFrom.mockReturnValue(chain);

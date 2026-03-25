@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { useForm } from "react-hook-form";
 import { Form } from "@/components/ui/form";
 import { LegalIdentitySection } from "../LegalIdentitySection";
@@ -76,5 +76,23 @@ describe("LegalIdentitySection", () => {
     }
     render(<DisabledTestWrapper />);
     expect(screen.getByLabelText(/^CPF$/)).toBeDisabled();
+  });
+
+  it("applies CPF mask on change for PF", () => {
+    render(<WrapperPf />);
+    const cpf = screen.getByLabelText(/^CPF$/);
+    fireEvent.change(cpf, { target: { value: "12345678901" } });
+    expect(cpf).toHaveValue("123.456.789-01");
+  });
+
+  it("applies CNPJ and representative CPF masks for PJ", () => {
+    render(<WrapperPj />);
+    const cnpj = screen.getByLabelText(/CNPJ/);
+    fireEvent.change(cnpj, { target: { value: "11222333000181" } });
+    expect(cnpj).toHaveValue("11.222.333/0001-81");
+
+    const repCpf = screen.getByLabelText(/CPF do representante legal/);
+    fireEvent.change(repCpf, { target: { value: "52998224725" } });
+    expect(repCpf).toHaveValue("529.982.247-25");
   });
 });

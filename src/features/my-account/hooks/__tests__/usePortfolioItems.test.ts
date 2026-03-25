@@ -45,6 +45,10 @@ vi.mock("../../api/portfolioImageStorage.api", () => ({
   removePortfolioImageFromStorage: vi.fn(),
 }));
 
+vi.mock("@/lib/supabase/client", () => ({
+  supabase: { from: vi.fn() },
+}));
+
 const useAuth = vi.mocked(await import("@/features/auth").then((m) => m.useAuth));
 const listPortfolioItems = vi.mocked(
   await import("../../api/providerProfile.api").then((m) => m.listPortfolioItems)
@@ -59,6 +63,15 @@ const removePortfolioImageFromStorage = vi.mocked(
   await import("../../api/portfolioImageStorage.api").then(
     (m) => m.removePortfolioImageFromStorage
   )
+);
+const deletePortfolioItem = vi.mocked(
+  await import("../../api/providerProfile.api").then((m) => m.deletePortfolioItem)
+);
+const updatePortfolioItem = vi.mocked(
+  await import("../../api/providerProfile.api").then((m) => m.updatePortfolioItem)
+);
+const reorderPortfolioItems = vi.mocked(
+  await import("../../api/providerProfile.api").then((m) => m.reorderPortfolioItems)
 );
 
 function createWrapper() {
@@ -113,6 +126,64 @@ describe("usePortfolioItems", () => {
       });
 
       expect(listPortfolioItems).not.toHaveBeenCalled();
+    });
+
+    it("does not fetch when user is not a provider", async () => {
+      useAuth.mockReturnValue({
+        profile: { id: "c1", role: "client" },
+      } as ReturnType<typeof useAuth>);
+
+      const { result } = renderHook(() => usePortfolioItems(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(listPortfolioItems).not.toHaveBeenCalled();
+      expect(result.current.items).toEqual([]);
+    });
+
+    it("surfaces API error from listPortfolioItems", async () => {
+      listPortfolioItems.mockResolvedValue({ items: [], error: "List failed" });
+
+      const { result } = renderHook(() => usePortfolioItems(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.error).toBe("List failed");
+      });
+    });
+
+    it("createItem delegates to createPortfolioItem", async () => {
+      const created = makePortfolioItem({ id: "new-1", title: "Job" });
+      createPortfolioItem.mockResolvedValue({ data: created, error: null });
+
+      const { result } = renderHook(() => usePortfolioItems(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await result.current.createItem({ title: "Job" });
+
+      expect(createPortfolioItem).toHaveBeenCalledWith(providerId, { title: "Job" });
+    });
+
+    it("updateItem delegates to updatePortfolioItem", async () => {
+      updatePortfolioItem.mockResolvedValue({ error: null });
+
+      const { result } = renderHook(() => usePortfolioItems(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await result.current.updateItem({ itemId: "i1", params: { title: "Renamed" } });
+
+      expect(updatePortfolioItem).toHaveBeenCalledWith("i1", providerId, { title: "Renamed" });
     });
   });
 
@@ -254,6 +325,152 @@ describe("usePortfolioItems", () => {
 
       await expect(
         result.current.createItemWithImages({ title: "T" })
+      ).rejects.toThrow("Not authenticated");
+    });
+  });
+
+  describe("deleteItem", () => {
+    it("removes images from storage then deletes the item", async () => {
+      const item = makePortfolioItem({
+        id: "item-del",
+        title: "Job",
+        image_paths: ["path/a.jpg", "path/b.jpg"],
+      });
+      listPortfolioItems.mockResolvedValue({ items: [item], error: null });
+      removePortfolioImageFromStorage.mockResolvedValue({ error: null });
+      deletePortfolioItem.mockResolvedValue({ error: null });
+
+      const { result } = renderHook(() => usePortfolioItems(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.items).toHaveLength(1));
+
+      await result.current.deleteItem("item-del");
+
+      expect(removePortfolioImageFromStorage).toHaveBeenCalledTimes(2);
+      expect(deletePortfolioItem).toHaveBeenCalledWith("item-del", providerId);
+    });
+
+    it("deletes item when there are no image paths", async () => {
+      const item = makePortfolioItem({
+        id: "item-plain",
+        title: "Job",
+        image_paths: [],
+      });
+      listPortfolioItems.mockResolvedValue({ items: [item], error: null });
+      deletePortfolioItem.mockResolvedValue({ error: null });
+
+      const { result } = renderHook(() => usePortfolioItems(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.items).toHaveLength(1));
+
+      await result.current.deleteItem("item-plain");
+
+      expect(removePortfolioImageFromStorage).not.toHaveBeenCalled();
+      expect(deletePortfolioItem).toHaveBeenCalledWith("item-plain", providerId);
+    });
+  });
+
+  describe("reorderItems", () => {
+    it("calls reorderPortfolioItems with ordered ids", async () => {
+      reorderPortfolioItems.mockResolvedValue({ error: null });
+
+      const { result } = renderHook(() => usePortfolioItems(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      await result.current.reorderItems(["b", "a"]);
+
+      expect(reorderPortfolioItems).toHaveBeenCalledWith(providerId, ["b", "a"]);
+    });
+  });
+
+  describe("updateItemWithImages", () => {
+    it("uploads new files, updates item, and removes paths from storage", async () => {
+      uploadPortfolioImage.mockResolvedValue({
+        path: "new/path.jpg",
+        error: null,
+      });
+      updatePortfolioItem.mockResolvedValue({ error: null });
+      removePortfolioImageFromStorage.mockResolvedValue({ error: null });
+
+      const { result } = renderHook(() => usePortfolioItems(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      const file = new File(["x"], "n.jpg", { type: "image/jpeg" });
+      const res = await result.current.updateItemWithImages("item-1", {
+        title: "Updated",
+        description: "D",
+        visibility: "public",
+        existingImagePaths: ["keep.jpg", "old.jpg"],
+        pathsToRemove: ["old.jpg"],
+        imageFiles: [file],
+      });
+
+      expect(res.error).toBeNull();
+      expect(uploadPortfolioImage).toHaveBeenCalled();
+      expect(updatePortfolioItem).toHaveBeenCalledWith("item-1", providerId, {
+        title: "Updated",
+        description: "D",
+        visibility: "public",
+        image_paths: ["keep.jpg", "new/path.jpg"],
+      });
+      expect(removePortfolioImageFromStorage).toHaveBeenCalledWith(
+        expect.anything(),
+        "old.jpg"
+      );
+    });
+
+    it("returns error and rolls back uploads when update fails", async () => {
+      uploadPortfolioImage.mockResolvedValue({
+        path: "uploaded/tmp.jpg",
+        error: null,
+      });
+      updatePortfolioItem.mockResolvedValue({ error: "Update failed" });
+      removePortfolioImageFromStorage.mockResolvedValue({ error: null });
+
+      const { result } = renderHook(() => usePortfolioItems(), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+      const file = new File(["x"], "n.jpg", { type: "image/jpeg" });
+      const res = await result.current.updateItemWithImages("item-1", {
+        title: "T",
+        existingImagePaths: [],
+        pathsToRemove: [],
+        imageFiles: [file],
+      });
+
+      expect(res.error).toBe("Update failed");
+      expect(removePortfolioImageFromStorage).toHaveBeenCalledWith(
+        expect.anything(),
+        "uploaded/tmp.jpg"
+      );
+    });
+
+    it("throws when providerId is null", async () => {
+      useAuth.mockReturnValue({ profile: null } as ReturnType<typeof useAuth>);
+
+      const { result } = renderHook(() => usePortfolioItems(), {
+        wrapper: createWrapper(),
+      });
+
+      await expect(
+        result.current.updateItemWithImages("x", {
+          title: "T",
+          existingImagePaths: [],
+          pathsToRemove: [],
+        })
       ).rejects.toThrow("Not authenticated");
     });
   });

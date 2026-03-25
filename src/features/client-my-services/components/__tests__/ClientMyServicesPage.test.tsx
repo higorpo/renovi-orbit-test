@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ServiceRequestCardModel } from "../../types/client-my-services.types";
@@ -22,6 +22,74 @@ vi.mock("@/features/request-quote", async (importOriginal) => {
   return {
     ...actual,
     useServiceRequestPhotoUrls: vi.fn(() => ({ urls: [], isLoading: false })),
+  };
+});
+
+vi.mock("@/features/client-budgets", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/features/client-budgets")>();
+  return {
+    ...mod,
+    ReceivedBudgetDetailsSheet: ({
+      open,
+      onOpenChange,
+    }: {
+      open: boolean;
+      onOpenChange: (v: boolean) => void;
+    }) =>
+      open ? (
+        <button
+          type="button"
+          data-testid="stub-close-budgets"
+          onClick={() => {
+            onOpenChange(false);
+          }}
+        >
+          close budgets
+        </button>
+      ) : null,
+    QuestionThreadSheet: ({
+      open,
+      onOpenChange,
+    }: {
+      open: boolean;
+      onOpenChange: (v: boolean) => void;
+    }) =>
+      open ? (
+        <button
+          type="button"
+          data-testid="stub-close-questions"
+          onClick={() => {
+            onOpenChange(false);
+          }}
+        >
+          close questions
+        </button>
+      ) : null,
+  };
+});
+
+vi.mock("../OpenServiceDetailsSheet", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("../OpenServiceDetailsSheet")>();
+  return {
+    ...mod,
+    OpenServiceDetailsSheet: ({
+      open,
+      onOpenChange,
+    }: {
+      open: boolean;
+      onOpenChange: (v: boolean) => void;
+    }) =>
+      open ? (
+        <button
+          type="button"
+          data-testid="stub-close-open-details"
+          onClick={() => {
+            onOpenChange(false);
+          }}
+        >
+          close open details
+        </button>
+      ) : null,
   };
 });
 
@@ -154,5 +222,150 @@ describe("ClientMyServicesPage", () => {
     expect(
       screen.getByRole("button", { name: /Ver todos os serviços/i })
     ).toBeInTheDocument();
+  });
+
+  it("shows no filter results when focus is active but list is empty", () => {
+    useClientMyServicesList.mockReturnValue({
+      items: [],
+      isLoading: false,
+      isFetchingNextPage: false,
+      isError: false,
+      hasNextPage: false,
+      totalCount: 0,
+      fetchNextPage: vi.fn(async () => undefined),
+      refetch: vi.fn(),
+    });
+
+    render(<ClientMyServicesPage />, {
+      wrapper: createWrapper(["/dashboard/requests?serviceRequestId=missing"]),
+    });
+
+    expect(
+      screen.getByRole("heading", { name: /Nenhum serviço encontrado/i })
+    ).toBeInTheDocument();
+  });
+
+  it("shows load more when there are items and a next page", () => {
+    const item: ServiceRequestCardModel = {
+      id: "sr-1",
+      title: "Serviço",
+      description: null,
+      descriptionPreview: "",
+      formData: null,
+      formSchema: null,
+      status: "open",
+      statusTabId: "waiting_proposals",
+      createdAt: "2025-03-01T00:00:00Z",
+      updatedAt: "2025-03-01T00:00:00Z",
+      address: null,
+      service: { title: "Eletricista", slug: "eletricista" },
+      photoPaths: [],
+    };
+    const fetchNextPage = vi.fn(async () => undefined);
+    useClientMyServicesList.mockReturnValue({
+      items: [item],
+      isLoading: false,
+      isFetchingNextPage: false,
+      isError: false,
+      hasNextPage: true,
+      totalCount: 40,
+      fetchNextPage,
+      refetch: vi.fn(),
+    });
+
+    render(<ClientMyServicesPage />, { wrapper: createWrapper() });
+    const loadMore = screen.getByRole("button", { name: /Carregar mais/i });
+    loadMore.click();
+    expect(fetchNextPage).toHaveBeenCalled();
+  });
+
+  it("passes new status tab to list hook when user selects a tab", () => {
+    render(<ClientMyServicesPage />, { wrapper: createWrapper() });
+    fireEvent.click(screen.getByRole("tab", { name: /Em andamento/i }));
+    const tabIds = useClientMyServicesList.mock.calls.map((c) => c[0].statusTabId);
+    expect(tabIds.some((id) => id === "in_progress")).toBe(true);
+  });
+
+  it("retries load when error state button is clicked", () => {
+    const refetch = vi.fn();
+    useClientMyServicesList.mockReturnValue({
+      items: [],
+      isLoading: false,
+      isFetchingNextPage: false,
+      isError: true,
+      hasNextPage: false,
+      totalCount: 0,
+      fetchNextPage: vi.fn(async () => undefined),
+      refetch,
+    });
+    render(<ClientMyServicesPage />, { wrapper: createWrapper() });
+    fireEvent.click(screen.getByRole("button", { name: /Tentar novamente/i }));
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  it("closes budget and question sheets via onOpenChange", () => {
+    const item: ServiceRequestCardModel = {
+      id: "sr-1",
+      title: "Serviço",
+      description: null,
+      descriptionPreview: "",
+      formData: null,
+      formSchema: null,
+      status: "open",
+      statusTabId: "waiting_proposals",
+      createdAt: "2025-03-01T00:00:00Z",
+      updatedAt: "2025-03-01T00:00:00Z",
+      address: null,
+      service: { title: "Eletricista", slug: "eletricista" },
+      photoPaths: [],
+      proposalCount: 2,
+    };
+    useClientMyServicesList.mockReturnValue({
+      items: [item],
+      isLoading: false,
+      isFetchingNextPage: false,
+      isError: false,
+      hasNextPage: false,
+      totalCount: 1,
+      fetchNextPage: vi.fn(async () => undefined),
+      refetch: vi.fn(),
+    });
+    render(<ClientMyServicesPage />, { wrapper: createWrapper() });
+    fireEvent.click(screen.getByRole("button", { name: /Ver or\u00e7amentos/i }));
+    fireEvent.click(screen.getByTestId("stub-close-budgets"));
+
+    fireEvent.click(screen.getByRole("button", { name: /Ver perguntas/i }));
+    fireEvent.click(screen.getByTestId("stub-close-questions"));
+  });
+
+  it("closes open-service details sheet via onOpenChange", () => {
+    const item: ServiceRequestCardModel = {
+      id: "sr-2",
+      title: "Aberto",
+      description: null,
+      descriptionPreview: "",
+      formData: null,
+      formSchema: null,
+      status: "open",
+      statusTabId: "waiting_proposals",
+      createdAt: "2025-03-01T00:00:00Z",
+      updatedAt: "2025-03-01T00:00:00Z",
+      address: null,
+      service: { title: "Pintura", slug: "pintura" },
+      photoPaths: [],
+    };
+    useClientMyServicesList.mockReturnValue({
+      items: [item],
+      isLoading: false,
+      isFetchingNextPage: false,
+      isError: false,
+      hasNextPage: false,
+      totalCount: 1,
+      fetchNextPage: vi.fn(async () => undefined),
+      refetch: vi.fn(),
+    });
+    render(<ClientMyServicesPage />, { wrapper: createWrapper() });
+    fireEvent.click(screen.getByRole("button", { name: /Ver detalhes/i }));
+    fireEvent.click(screen.getByTestId("stub-close-open-details"));
   });
 });
