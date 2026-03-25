@@ -124,6 +124,22 @@ export async function respondClientBudgetQuestion(params: {
   return { error: null, data };
 }
 
+export async function rejectClientBudgetProposal(params: { proposalId: string; reason: string }) {
+  const client = supabase as unknown as RpcClient;
+  const { data, error } = await client.rpc("reject_client_budget_proposal", {
+    p_proposal_id: params.proposalId,
+    p_reason: params.reason,
+  });
+  if (error) {
+    logger.error("reject_client_budget_proposal_error", {
+      error: error.message,
+      proposalId: params.proposalId,
+    });
+    return { error: error.message, data: null as unknown };
+  }
+  return { error: null, data };
+}
+
 function validateImage(file: File): string | null {
   if (!ALLOWED_IMAGE_TYPES.includes(file.type as (typeof ALLOWED_IMAGE_TYPES)[number])) {
     return "Formato não permitido. Use JPEG, PNG, WebP, HEIC ou HEIF.";

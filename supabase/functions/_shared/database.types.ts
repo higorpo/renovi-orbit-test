@@ -1173,6 +1173,10 @@ export type Database = {
         }
         Returns: Json
       }
+      reject_client_budget_proposal: {
+        Args: { p_proposal_id: string; p_reason: string }
+        Returns: Json
+      }
       respond_client_budget_question: {
         Args: {
           p_question_id: string

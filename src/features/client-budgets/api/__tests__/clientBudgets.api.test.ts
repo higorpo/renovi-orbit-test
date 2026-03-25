@@ -4,6 +4,7 @@ import {
   fetchClientBudgetQuestions,
   fetchClientBudgetDetail,
   respondClientBudgetQuestion,
+  rejectClientBudgetProposal,
   uploadQuestionResponseImages,
   getQuestionResponseImageUrl,
 } from "../clientBudgets.api";
@@ -157,6 +158,34 @@ describe("respondClientBudgetQuestion", () => {
       imagePaths: [],
     });
     expect(result.error).toBe("Cannot respond");
+  });
+});
+
+
+describe("rejectClientBudgetProposal", () => {
+  it("returns data on success", async () => {
+    rpcMock.mockResolvedValue({ data: { status: "rejected" }, error: null });
+
+    const result = await rejectClientBudgetProposal({
+      proposalId: "prop-1",
+      reason: "Too expensive",
+    });
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({ status: "rejected" });
+    expect(rpcMock).toHaveBeenCalledWith("reject_client_budget_proposal", {
+      p_proposal_id: "prop-1",
+      p_reason: "Too expensive",
+    });
+  });
+
+  it("returns error on RPC failure", async () => {
+    rpcMock.mockResolvedValue({ data: null, error: { message: "Cannot reject" } });
+
+    const result = await rejectClientBudgetProposal({
+      proposalId: "prop-1",
+      reason: "No",
+    });
+    expect(result.error).toBe("Cannot reject");
   });
 });
 

@@ -1,4 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createElement, type ReactElement } from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { ReceivedBudgetDetailsSheet } from "../ReceivedBudgetDetailsSheet";
 import { QuestionThreadSheet } from "../QuestionThreadSheet";
@@ -30,6 +32,14 @@ vi.mock("../QuestionResponseComposer", () => ({
   QuestionResponseComposer: ({ open }: { open: boolean }) =>
     open ? <div data-testid="question-composer">composer</div> : null,
 }));
+
+
+function renderReceivedSheet(ui: ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(createElement(QueryClientProvider, { client }, ui) as ReactElement);
+}
 
 const proposal: ClientBudgetDetailProposal = {
   id: "bp1",
@@ -76,7 +86,7 @@ describe("ReceivedBudgetDetailsSheet", () => {
       isError: false,
       refetch: vi.fn(),
     });
-    render(
+    renderReceivedSheet(
       <ReceivedBudgetDetailsSheet
         open
         serviceRequestId="sr1"
@@ -94,7 +104,7 @@ describe("ReceivedBudgetDetailsSheet", () => {
       isError: false,
       refetch: vi.fn(),
     });
-    render(
+    renderReceivedSheet(
       <ReceivedBudgetDetailsSheet
         open
         serviceRequestId="sr1"
@@ -112,7 +122,7 @@ describe("ReceivedBudgetDetailsSheet", () => {
       isError: false,
       refetch: vi.fn(),
     });
-    render(
+    renderReceivedSheet(
       <ReceivedBudgetDetailsSheet
         open
         serviceRequestId="sr1"
@@ -137,7 +147,7 @@ describe("ReceivedBudgetDetailsSheet", () => {
       isError: false,
       refetch: vi.fn(),
     });
-    render(
+    renderReceivedSheet(
       <ReceivedBudgetDetailsSheet
         open
         serviceRequestId="sr1"
@@ -155,7 +165,7 @@ describe("ReceivedBudgetDetailsSheet", () => {
       isError: false,
       refetch: vi.fn(),
     });
-    render(
+    renderReceivedSheet(
       <ReceivedBudgetDetailsSheet
         open
         serviceRequestId="sr1"
@@ -164,6 +174,43 @@ describe("ReceivedBudgetDetailsSheet", () => {
       />,
     );
     expect(screen.getByText(/registrados/i)).toBeInTheDocument();
+  });
+
+  it("opens reject reason dialog from compare mode", () => {
+    vi.mocked(detailHook.useClientBudgetDetail).mockReturnValue({
+      detail: detailBase,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    renderReceivedSheet(
+      <ReceivedBudgetDetailsSheet
+        open
+        serviceRequestId="sr1"
+        sheetMode="compare"
+        onOpenChange={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Recusar orçamento/i }));
+    expect(screen.getByRole("dialog", { name: /Recusar orçamento/i })).toBeInTheDocument();
+  });
+
+  it("disables reject in history mode", () => {
+    vi.mocked(detailHook.useClientBudgetDetail).mockReturnValue({
+      detail: detailBase,
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    renderReceivedSheet(
+      <ReceivedBudgetDetailsSheet
+        open
+        serviceRequestId="sr1"
+        sheetMode="history"
+        onOpenChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /Recusar orçamento/i })).toBeDisabled();
   });
 });
 

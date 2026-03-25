@@ -42,6 +42,7 @@ Telas/fluxos restantes:
 - Avaliação do serviço após sua conclusão
 - Sistema de disputas
 - Sistema de notificação/tela de notificação
+- Mesmo com cadastro manual precisa fazer aceite dos termos de uso
 - Todo o painel administrativo
 
 
