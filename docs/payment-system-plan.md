@@ -1,6 +1,6 @@
 # Renovi — Plano de Implementação do Sistema de Pagamentos
 ## Processador: Asaas | Modelo: Escrow
-### Versão 2.0 — 2026-03-25 (revisado com documentação oficial Asaas)
+### Versão 3.0 — 2026-03-25 (revisão do modelo de precificação do cliente)
 
 ---
 
@@ -15,11 +15,12 @@ final_amount = proposed_amount - tax_amount   (= proposed_amount * 0.85)
 Ou seja, `final_amount` é o **VALOR LÍQUIDO DO PRESTADOR**, não o que o cliente paga.
 O cliente atualmente paga `proposed_amount`.
 
-O novo sistema introduz uma **taxa do cliente** sobre o `proposed_amount`:
+O novo sistema introduz uma **taxa do cliente** — mas essa taxa **não é persistida em `provider_proposals`**.
+Ela é calculada dinamicamente sob demanda, separada do fluxo de precificação do prestador:
 
 ```
-client_charge_amount = proposed_amount + client_fee_amount   ← o que o cliente paga ao Asaas
-provider_net_amount  = proposed_amount - provider_fee_amount ← o que o prestador recebe (= atual final_amount)
+provider_net_amount  = proposed_amount - provider_fee_amount  ← armazenado na proposta (= atual final_amount)
+client_charge_amount = proposed_amount + client_fee_amount    ← calculado sob demanda via RPC; congelado no checkout
 ```
 
 O cliente **nunca** vê a composição da taxa. Apenas `client_charge_amount`.
@@ -46,7 +47,8 @@ O fluxo de aprovação de orçamento deve ser **bloqueado por pagamento**:
 | Split: fixo ou percentual? | **Fixo** (`fixedValue`) | Asaas calcula % sobre `netValue` (pós-taxas Asaas), que é imprevisível |
 | Escrow em V1? | **Sim — escrow é o modelo adotado desde V1** | Garante ao cliente que o prestador só recebe após confirmação |
 | Expiração do checkout? | Lock de 30 min no proposal + Pix válido por 12 meses a partir do due date | QR Pix não expira em 1h — é dinâmico, válido por 12 meses do due date |
-| `client_response_deadline_at` ainda relevante? | Sim para `submitted`; esvaziado quando `payment_pending` | Trigger atualizado para bloquear também `submitted → payment_pending` após 48h |
+| `client_charge_amount` em `provider_proposals`? | **NÃO** | Preço do cliente é dinâmico; calculado via RPC sob demanda; congelado apenas no `service_payments` |
+| `pricing_signature` cobre campos do cliente? | **NÃO** | Assinatura protege somente precificação do prestador (4 campos); cliente é domínio separado |
 
 ---
 
@@ -60,16 +62,17 @@ O fluxo de aprovação de orçamento deve ser **bloqueado por pagamento**:
 | `tax_rate` | Taxa do prestador (0.15) | Reutilizar — taxa do lado provedor |
 | `tax_amount` | `proposed_amount * tax_rate` | Reutilizar — taxa deduzida do prestador |
 | `final_amount` | `proposed_amount - tax_amount` | Reutilizar — **é o líquido do prestador** |
-| `pricing_signature` | HMAC dos 4 campos acima | Estender para cobrir 7 campos |
+| `pricing_signature` | HMAC dos 4 campos acima | Manter cobrindo exatamente estes 4 campos |
 | `status` | 4 valores | **Expandir para 7 valores** |
 | `client_response_deadline_at` | created_at + 48h | Manter; trigger atualizado |
 
-**Colunas ausentes:**
-- `client_fee_rate` — taxa cobrada do cliente
-- `client_fee_amount` — valor absoluto da taxa do cliente
-- `client_charge_amount` — valor final que o cliente paga
-- `checkout_locked_until` — lock de concorrência durante checkout ativo
+**Colunas ausentes (apenas colunas operacionais de lock):**
+- `checkout_locked_until` — timestamp de expiração do lock de concorrência durante checkout ativo
 - `locked_payment_id` — FK para `service_payments.id` ativo
+
+> **Nota arquitetural:** `client_fee_rate`, `client_fee_amount` e `client_charge_amount` **não pertencem a `provider_proposals`**.
+> O preço do cliente é dinâmico e calculado sob demanda via RPC `get_client_proposal_pricing`.
+> Estas colunas existem em `service_payments` como snapshot congelado no momento do checkout, não como dados da proposta.
 
 ### 2.2 `service_requests` — Problemas Encontrados
 
@@ -108,12 +111,9 @@ Faltam:
 ### 3.1 ALTER `provider_proposals`
 
 ```sql
--- Novos campos financeiros
+-- Lock de checkout (únicas adições nesta tabela)
+-- NÃO adicionar colunas de precificação do cliente aqui
 ALTER TABLE public.provider_proposals
-  ADD COLUMN client_fee_rate      numeric(6,4),
-  ADD COLUMN client_fee_amount    numeric(10,2),
-  ADD COLUMN client_charge_amount numeric(10,2),  -- proposed_amount + client_fee_amount
-  -- Lock de checkout
   ADD COLUMN checkout_locked_until timestamptz,
   ADD COLUMN locked_payment_id     uuid;          -- FK sem constraint (evita circular)
 
@@ -144,10 +144,12 @@ Limpar `client_response_deadline_at` também quando status = `payment_pending`.
 - **Pular propostas com `status = 'payment_pending'`** — essas têm expiração própria via `checkout_expires_at`
 
 **`pricing_signature`:**
-O HMAC deve cobrir todos os 7 campos financeiros:
+O HMAC cobre **exatamente os mesmos 4 campos atuais** — sem alteração:
 ```
-proposed_amount|tax_rate|tax_amount|final_amount|client_fee_rate|client_fee_amount|client_charge_amount
+proposed_amount|tax_rate|tax_amount|final_amount
 ```
+
+A precificação do cliente é um domínio separado, calculado sob demanda. Não integra a assinatura do prestador.
 
 ### 3.2 ALTER `service_requests`
 
@@ -292,18 +294,20 @@ CREATE TABLE public.service_payments (
   billing_type                text NOT NULL CHECK (billing_type IN ('PIX', 'CREDIT_CARD')),
 
   -- ────────────────────────────────────────────────────────────────
-  -- SNAPSHOT FINANCEIRO — congelado na criação do checkout (IMUTÁVEL)
+  -- SNAPSHOT FINANCEIRO — congelado no momento do checkout (IMUTÁVEL)
+  -- Calculado no initiate_checkout; nunca derivado de provider_proposals
   -- ────────────────────────────────────────────────────────────────
-  -- Lado do prestador
+  -- Lado do prestador (copiado de provider_proposals no momento do lock)
   proposed_amount             numeric(10,2) NOT NULL,   -- valor cotado pelo prestador
-  provider_fee_rate           numeric(6,4)  NOT NULL,   -- ex.: 0.15
-  provider_fee_amount         numeric(10,2) NOT NULL,   -- proposed_amount * provider_fee_rate
-  provider_net_amount         numeric(10,2) NOT NULL,   -- proposed_amount - provider_fee_amount
+  provider_fee_rate           numeric(6,4)  NOT NULL,   -- ex.: 0.15 (tax_rate da proposta)
+  provider_fee_amount         numeric(10,2) NOT NULL,   -- proposed_amount * provider_fee_rate (tax_amount)
+  provider_net_amount         numeric(10,2) NOT NULL,   -- proposed_amount - provider_fee_amount (final_amount)
 
-  -- Lado do cliente
-  client_fee_rate             numeric(6,4)  NOT NULL,   -- ex.: 0.05
+  -- Lado do cliente (calculado no initiate_checkout via _calculate_client_pricing)
+  -- Fonte: platform_constants.renovi_tax_client vigente no momento do checkout
+  client_fee_rate             numeric(6,4)  NOT NULL,   -- taxa do cliente no momento do checkout
   client_fee_amount           numeric(10,2) NOT NULL,   -- proposed_amount * client_fee_rate
-  client_charge_amount        numeric(10,2) NOT NULL,   -- proposed_amount + client_fee_amount (valor cobrado do cliente)
+  client_charge_amount        numeric(10,2) NOT NULL,   -- proposed_amount + client_fee_amount (cobrado do cliente)
 
   -- Plataforma
   platform_total_fee_amount   numeric(10,2) NOT NULL,   -- provider_fee_amount + client_fee_amount
@@ -339,31 +343,31 @@ CREATE TABLE public.service_payments (
   -- ────────────────────────────────────────────────────────────────
   -- DADOS DE ESCROW
   -- ────────────────────────────────────────────────────────────────
-  -- O escrow é configurado no subaccount do prestador.
-  -- Quando o split é recebido, o Asaas bloqueia o valor automaticamente.
-  -- A garantia (guarantee) está associada à cobrança no subaccount do prestador.
-  -- Para liberar: POST /v3/escrow/{asaas_escrow_guarantee_id}/finish
-  asaas_escrow_guarantee_id   text,            -- ID da garantia escrow no subaccount do prestador
+  asaas_escrow_guarantee_id   text,
   escrow_status               text DEFAULT 'not_applicable'
     CHECK (escrow_status IN (
-      'not_applicable',   -- escrow não ativo para este prestador
-      'blocked',          -- fundos retidos no escrow
-      'released',         -- fundos liberados (manual via /finish ou expiração)
-      'cancelled'         -- escrow cancelado (ex.: estorno)
+      'not_applicable',
+      'blocked',
+      'released',
+      'cancelled'
     )),
-  escrow_release_triggered_at timestamptz,     -- quando o release foi disparado (services.confirmed_at)
-  escrow_released_at          timestamptz,     -- quando o Asaas confirmou a liberação
+  escrow_release_triggered_at timestamptz,
+  escrow_released_at          timestamptz,
 
   -- ────────────────────────────────────────────────────────────────
-  -- INTEGRIDADE DE PRECIFICAÇÃO
+  -- INTEGRIDADE DE PRECIFICAÇÃO DO PRESTADOR
   -- ────────────────────────────────────────────────────────────────
-  proposal_pricing_signature  text NOT NULL,   -- cópia da pricing_signature da proposta no momento do checkout
+  -- Cópia da pricing_signature da proposta no momento do checkout (4 campos do prestador).
+  -- Garante que o provider_net_amount no snapshot corresponde à proposta original assinada.
+  -- A precificação do cliente (client_fee_rate/amount/charge_amount) é auditada pelo
+  -- contexto da data/hora do checkout e pelo platform_constant vigente — não por assinatura.
+  proposal_pricing_signature  text NOT NULL,
 
   -- ────────────────────────────────────────────────────────────────
   -- TEMPOS DO CHECKOUT
   -- ────────────────────────────────────────────────────────────────
   checkout_initiated_at       timestamptz NOT NULL DEFAULT now(),
-  checkout_expires_at         timestamptz NOT NULL,   -- checkout_initiated_at + lock_duration
+  checkout_expires_at         timestamptz NOT NULL,
   payment_confirmed_at        timestamptz,
   payment_received_at         timestamptz,
 
@@ -394,9 +398,8 @@ CREATE TABLE public.service_payment_events (
 
   service_payment_id       uuid NOT NULL REFERENCES public.service_payments(id) ON DELETE CASCADE,
 
-  -- Origem do evento
   event_source             text NOT NULL CHECK (event_source IN ('asaas_webhook', 'internal', 'manual_admin')),
-  event_type               text NOT NULL,   -- ex.: 'PAYMENT_CONFIRMED', 'checkout_expired', 'escrow_released'
+  event_type               text NOT NULL,
 
   -- Dados Asaas
   asaas_event_id           text,            -- ID único do evento Asaas (para idempotência)
@@ -410,10 +413,7 @@ CREATE TABLE public.service_payment_events (
   previous_request_status  text,
   new_request_status       text,
 
-  -- Dados brutos
-  raw_payload              jsonb,           -- corpo completo do webhook
-
-  -- Processamento
+  raw_payload              jsonb,
   processed_at             timestamptz NOT NULL DEFAULT now(),
   processing_error         text,
   is_duplicate             boolean NOT NULL DEFAULT false,
@@ -421,7 +421,6 @@ CREATE TABLE public.service_payment_events (
   created_at               timestamptz NOT NULL DEFAULT now()
 );
 
--- Guarda primária de idempotência: mesmo evento Asaas nunca processado duas vezes
 CREATE UNIQUE INDEX spe_asaas_event_id_unique
   ON public.service_payment_events (asaas_event_id)
   WHERE asaas_event_id IS NOT NULL;
@@ -436,25 +435,66 @@ CREATE INDEX spe_created_at_idx         ON public.service_payment_events (create
 
 ## 5. MODELO FINANCEIRO
 
+### 5.0 Separação de Domínios de Precificação
+
+O sistema adota um modelo de precificação em **três camadas distintas e independentes**:
+
+```
+CAMADA 1 — PRECIFICAÇÃO DO PRESTADOR (estática, na criação da proposta)
+───────────────────────────────────────────────────────────────────────
+Onde: provider_proposals
+Quando calculada: ao submeter a proposta (fluxo existente, sem alteração)
+Campos: proposed_amount, tax_rate, tax_amount, final_amount (= provider_net_amount)
+Proteção: pricing_signature = HMAC-SHA256 dos 4 campos acima
+Imutável após criação; jamais inclui dados do lado do cliente
+
+
+CAMADA 2 — PRECIFICAÇÃO DO CLIENTE (dinâmica, calculada sob demanda)
+───────────────────────────────────────────────────────────────────────
+Onde: NÃO é armazenada em provider_proposals
+Quando calculada: somente quando o cliente acessa a tela de orçamentos
+Como calculada: RPC pública get_client_proposal_pricing() invocada pelo frontend
+Fonte: platform_constants.renovi_tax_client (taxa vigente no momento da consulta)
+Preparada para evolução: aceita p_payment_method desde V1 (parâmetro ignorado
+por ora; será usado para taxas diferenciadas por método de pagamento no futuro)
+
+
+CAMADA 3 — SNAPSHOT FINANCEIRO (congelado no checkout, imutável)
+───────────────────────────────────────────────────────────────────────
+Onde: service_payments (criado em initiate_checkout)
+Quando criado: no exato momento em que o cliente confirma o checkout
+Contém: ambos os lados (prestador + cliente), valores fixados para sempre
+Autoridade: é o registro definitivo de quanto foi cobrado e quanto é devido
+```
+
+**Por que esta separação?**
+
+A taxa do cliente será **dinâmica no futuro**: poderá variar por método de pagamento (ex.: cartão com acréscimo), por região, por cupom de desconto ou por política comercial do produto. Se o `client_charge_amount` fosse armazenado na proposta no momento da criação, qualquer mudança de regra exigiria migração de dados históricos ou criaria inconsistências entre propostas antigas e novas. Ao calcular sob demanda, a lógica de precificação evolui sem tocar em dados persistidos. O snapshot em `service_payments` garante auditabilidade: para qualquer transação financeira passada, sempre é possível saber exatamente qual taxa foi aplicada e quando.
+
 ### 5.1 Definição dos Valores
 
 Dado `proposed_amount = R$1.000,00` com as taxas atuais:
 
 ```
-provider_fee_rate      = 0.15   (renovi_tax_provider — já existe)
-client_fee_rate        = 0.05   (renovi_tax_client — NOVO, confirmar com produto)
-
+── CAMADA 1 (armazenada em provider_proposals) ──────────────────────
+provider_fee_rate      = 0.15   (platform_constants.renovi_tax_provider)
 provider_fee_amount    = R$150,00
 provider_net_amount    = R$850,00   (= atual final_amount)
+pricing_signature      = HMAC(proposed_amount|tax_rate|tax_amount|final_amount)
 
+── CAMADA 2 (calculada em tempo de acesso via RPC) ───────────────────
+client_fee_rate        = 0.05   (platform_constants.renovi_tax_client — vigente no momento)
 client_fee_amount      = R$50,00
 client_charge_amount   = R$1.050,00  ← único valor mostrado ao cliente
 
-platform_total_fee     = R$200,00   (fica na conta principal da plataforma)
+── CAMADA 3 (congelada em service_payments no initiate_checkout) ─────
+Todos os campos acima + método de pagamento + wallet do split + timestamps
+platform_total_fee     = R$200,00   (provider_fee + client_fee — fica na plataforma)
 
-Cobrança Asaas         = R$1.050,00
-Split ao prestador     = R$850,00 (fixedValue)
-Plataforma retém       = R$200,00 (menos taxas Asaas — absorvidas pela plataforma)
+── Asaas ─────────────────────────────────────────────────────────────
+Cobrança Asaas         = R$1.050,00  (client_charge_amount)
+Split ao prestador     = R$850,00    (fixedValue = provider_net_amount)
+Plataforma retém       = R$200,00    (menos taxas Asaas — absorvidas pela plataforma)
 ```
 
 ### 5.2 Estratégia de Split: VALOR FIXO
@@ -478,6 +518,128 @@ Razão: O Asaas calcula splits percentuais sobre o `netValue` (valor após as pr
 O saldo restante (R$200,00 menos taxas Asaas) fica automaticamente na conta da plataforma.
 
 > **Atenção:** Não inclua o próprio walletId da conta principal no array de split — o Asaas bloqueia isso.
+
+### 5.3 RPC `get_client_proposal_pricing` — Precificação Dinâmica do Cliente
+
+Esta RPC é o **ponto central** da Camada 2. Toda lógica de precificação do cliente passa por ela.
+
+**Responsabilidade:** Receber um `proposal_id` e retornar o valor que o cliente pagará, calculado com a taxa vigente naquele momento.
+
+**Quando é chamada:**
+- Ao renderizar a lista de orçamentos (`list_client_received_budgets`) — em bulk inline
+- Ao renderizar o detalhe de uma proposta
+- Na tela de checkout ("Revisar e Pagar") — para exibir o total antes de confirmar
+- Internamente em `initiate_checkout` — para popular o snapshot financeiro
+
+**Não persiste nada.** É pura leitura + cálculo.
+
+#### 5.3.1 Função interna `_calculate_client_pricing`
+
+Esta função é a **única implementação** do cálculo de precificação do cliente. Tanto a RPC pública quanto o `initiate_checkout` a chamam, garantindo consistência:
+
+```sql
+-- Função interna (não exposta via RLS): calcula a precificação do lado do cliente.
+-- Aceita p_payment_method desde V1 para preparar evolução futura (ignorado por ora).
+-- Retorna todos os campos necessários ao snapshot financeiro.
+CREATE OR REPLACE FUNCTION public._calculate_client_pricing(
+  p_proposed_amount  numeric,
+  p_payment_method   text DEFAULT 'PIX'
+) RETURNS TABLE (
+  client_fee_rate        numeric,
+  client_fee_amount      numeric,
+  client_charge_amount   numeric
+) LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_client_fee_rate numeric(6,4);
+BEGIN
+  -- Fonte autoritativa: platform_constants vigente no momento da chamada.
+  -- Futuramente: lógica aqui pode diferenciar por p_payment_method, promoções etc.
+  SELECT (value::text)::numeric
+  INTO v_client_fee_rate
+  FROM public.platform_constants
+  WHERE key = 'renovi_tax_client';
+
+  IF v_client_fee_rate IS NULL THEN
+    RAISE EXCEPTION 'Configuração renovi_tax_client não encontrada em platform_constants';
+  END IF;
+
+  RETURN QUERY SELECT
+    v_client_fee_rate                                            AS client_fee_rate,
+    round(p_proposed_amount * v_client_fee_rate, 2)             AS client_fee_amount,
+    p_proposed_amount + round(p_proposed_amount * v_client_fee_rate, 2)  AS client_charge_amount;
+END;
+$$;
+
+-- Revogar acesso público; somente funções SECURITY DEFINER a chamam
+REVOKE ALL ON FUNCTION public._calculate_client_pricing FROM PUBLIC;
+```
+
+#### 5.3.2 RPC pública `get_client_proposal_pricing`
+
+```sql
+-- RPC pública chamada pelo frontend na tela de orçamentos e checkout.
+-- Retorna SOMENTE client_charge_amount ao cliente — nunca o breakdown de taxas.
+-- O parâmetro p_payment_method já está presente para evolução futura.
+CREATE OR REPLACE FUNCTION public.get_client_proposal_pricing(
+  p_proposal_id    uuid,
+  p_payment_method text DEFAULT 'PIX'
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_proposed_amount   numeric(10,2);
+  v_pricing           record;
+BEGIN
+  -- Validar que a proposta existe e está em estado visível ao cliente
+  SELECT proposed_amount
+  INTO v_proposed_amount
+  FROM public.provider_proposals
+  WHERE id = p_proposal_id
+    AND status NOT IN ('withdrawn', 'expired', 'closed_due_to_other_selection');
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Proposta não encontrada ou não disponível: %', p_proposal_id;
+  END IF;
+
+  -- RLS: verificar que o chamador é o cliente do pedido vinculado
+  IF NOT EXISTS (
+    SELECT 1 FROM public.provider_proposals pp
+    JOIN public.service_requests sr ON sr.id = pp.service_request_id
+    WHERE pp.id = p_proposal_id
+      AND sr.client_id = auth.uid()
+  ) THEN
+    RAISE EXCEPTION 'Acesso negado';
+  END IF;
+
+  SELECT * INTO v_pricing
+  FROM public._calculate_client_pricing(v_proposed_amount, p_payment_method);
+
+  -- Retornar APENAS o valor total — jamais expor o breakdown ao cliente
+  RETURN jsonb_build_object(
+    'proposal_id',         p_proposal_id,
+    'client_charge_amount', v_pricing.client_charge_amount
+    -- Intencionalmente omitido: client_fee_rate, client_fee_amount
+    -- O cliente não vê a composição da taxa
+  );
+END;
+$$;
+```
+
+#### 5.3.3 Uso em bulk na listagem de orçamentos
+
+A RPC `list_client_received_budgets` não chama `get_client_proposal_pricing` individualmente para cada proposta (evita N+1). Em vez disso, busca a taxa uma vez e aplica a todas:
+
+```sql
+-- Trecho dentro de list_client_received_budgets:
+DECLARE
+  v_client_fee_rate numeric(6,4);
+BEGIN
+  -- Buscar taxa vigente UMA vez para toda a query
+  SELECT (value::text)::numeric INTO v_client_fee_rate
+  FROM public.platform_constants WHERE key = 'renovi_tax_client';
+
+  -- Calcular client_charge_amount inline no SELECT para cada proposta:
+  -- proposed_amount + round(proposed_amount * v_client_fee_rate, 2) AS client_charge_amount
+  -- NUNCA retornar client_fee_rate ou client_fee_amount ao frontend
+```
 
 ---
 
@@ -568,18 +730,15 @@ CREATE TABLE public.service_payment_releases (
   service_id              uuid NOT NULL REFERENCES public.services(id),
   provider_id             uuid NOT NULL REFERENCES public.profiles(id),
 
-  -- Tipo de liberação
   release_type            text NOT NULL CHECK (release_type IN (
-    'escrow_manual',      -- chamada manual após confirmação do cliente
-    'escrow_auto',        -- expiração automática do daysToExpire
-    'escrow_cancelled'    -- escrow cancelado por estorno
+    'escrow_manual',
+    'escrow_auto',
+    'escrow_cancelled'
   )),
 
-  -- Dados do Asaas
   asaas_escrow_guarantee_id text,
   released_amount         numeric(10,2) NOT NULL,
 
-  -- Status
   status                  text NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending', 'completed', 'failed')),
   attempted_at            timestamptz,
@@ -666,7 +825,7 @@ POST /v3/payments
 {
   "customer": "<asaas_customer_id>",
   "billingType": "PIX" | "CREDIT_CARD",
-  "value": <client_charge_amount>,
+  "value": <client_charge_amount>,          ← vem do snapshot em service_payments
   "dueDate": "<hoje + 1 dia>",
   "description": "Renovi - <service_title> - <provider_display_name>",
   "externalReference": "<service_payments.id>",   ← CRÍTICO: fallback de lookup no webhook
@@ -731,28 +890,53 @@ Pós-confirmação: `confirmed → refunded`, `confirmed → chargeback`
 1.  Cliente em /orcamentos → aba "Recebidos"
 2.  Cliente clica em um pedido de serviço para ver detalhes
 3.  Tela mostra propostas dos prestadores
-4.  Para cada proposta: exibir SOMENTE client_charge_amount (ex.: "R$1.050,00")
+
+4.  Para cada proposta, exibir SOMENTE client_charge_amount.
+    Este valor NÃO está armazenado na proposta.
+    É calculado dinamicamente:
+    - Na listagem em bulk: list_client_received_budgets calcula inline com renovi_tax_client vigente
+    - No detalhe de uma proposta: get_client_proposal_pricing(proposal_id, payment_method='PIX')
+    - Na tela de checkout: idem (exibição antes do pagamento)
+
 5.  Cliente clica "Quero contratar" em uma proposta
+
 6.  ──── BACKEND: RPC initiate_checkout() ─────────────────────────────────
     Validações:
     a. proposal.status = 'submitted'
     b. service_request.status = 'open'
     c. proposal.checkout_locked_until IS NULL OR <= now()
     d. proposal.created_at + 48h > now() (não expirou)
-    e. pricing_signature confere (recomputar HMAC dos 7 campos)
+    e. Verificar pricing_signature da proposta (HMAC dos 4 campos do prestador)
     f. provider_profiles_private.asaas_wallet_id IS NOT NULL
     g. provider_profiles_private.asaas_onboarding_status = 'active'
     h. client_profiles_private.cpf IS NOT NULL (necessário para customer Asaas)
 
-    Transação:
+    Cálculo de precificação do cliente (dentro da transação):
+    → Chamar _calculate_client_pricing(proposal.proposed_amount, 'PIX')
+    → Obter: client_fee_rate, client_fee_amount, client_charge_amount (calculados com taxa VIGENTE)
+
+    Transação atômica:
     - SET proposal.status = 'payment_pending'
     - SET proposal.checkout_locked_until = now() + 30min
     - SET service_request.status = 'budget_selected_pending_payment'
-    - INSERT service_payments (snapshot financeiro congelado, checkout_expires_at definido)
+    - INSERT service_payments com snapshot completo:
+        proposed_amount     = proposal.proposed_amount
+        provider_fee_rate   = proposal.tax_rate
+        provider_fee_amount = proposal.tax_amount
+        provider_net_amount = proposal.final_amount
+        client_fee_rate     = (resultado de _calculate_client_pricing)
+        client_fee_amount   = (resultado de _calculate_client_pricing)
+        client_charge_amount= (resultado de _calculate_client_pricing)
+        platform_total_fee_amount = provider_fee_amount + client_fee_amount
+        proposal_pricing_signature = proposal.pricing_signature
+        split_wallet_id     = provider_profiles_private.asaas_wallet_id
+        split_fixed_value   = proposal.final_amount
+        checkout_expires_at = now() + 30min
     - SET proposal.locked_payment_id = service_payments.id
     - RETURN service_payments.id
 
 7.  Frontend redireciona para /orcamentos/checkout/{service_payment_id}
+
 8.  ──── TELA "Revisar e Pagar" ────────────────────────────────────────────
     Dados exibidos:
     - Resumo do pedido (serviço, título, bairro/cidade)
@@ -760,14 +944,16 @@ Pós-confirmação: `confirmed → refunded`, `confirmed → chargeback`
     - Detalhes da proposta (descrição, duração, fotos, slots sugeridos)
     - Garantia escrow: "Seu pagamento fica protegido. O prestador recebe
       apenas após a conclusão confirmada por você."
-    - Total: "R$1.050,00" ← SOMENTE ESTE VALOR
+    - Total: service_payments.client_charge_amount  ← lido do snapshot
     - Seletor de método: PIX (recomendado) | Cartão de crédito
     - Countdown: "Esta proposta está reservada por 28 min."
 
 9.  Cliente seleciona PIX → clica "Pagar com PIX"
+
 10. ──── BACKEND: Edge Function create-asaas-charge ───────────────────────
     a. Criar/obter Asaas customer para o cliente
-    b. POST /v3/payments (billingType=PIX, value=client_charge_amount, split=[...])
+    b. POST /v3/payments (billingType=PIX, value=service_payments.client_charge_amount,
+       split=[{walletId: split_wallet_id, fixedValue: split_fixed_value}])
     c. GET /v3/payments/{id}/pixQrCode → encodedImage, payload, expirationDate
     d. UPDATE service_payments: asaas_payment_id, status='pending', dados do QR
     e. Estender checkout_locked_until = asaas_pix_expiration_date (o QR dura 12 meses)
@@ -779,6 +965,7 @@ Pós-confirmação: `confirmed → refunded`, `confirmed → chargeback`
 12. Cliente paga via app bancário
 
 13. Asaas envia webhook: PAYMENT_RECEIVED
+
 14. ──── WEBHOOK HANDLER ────────────────────────────────────────────────────
     Transação única:
     a. Idempotência: INSERT service_payment_events(asaas_event_id)
@@ -814,7 +1001,7 @@ Pós-confirmação: `confirmed → refunded`, `confirmed → chargeback`
   - `service_request`: title, description, service_title, icon_key
   - `provider`: display_name, slug, profile_image_path, bio
   - `proposal`: proposal_description, photos, duration_value, duration_unit, proposed_slots
-  - `payment`: **client_charge_amount** (somente este campo financeiro)
+  - `payment`: **client_charge_amount** (somente este campo financeiro — vem do snapshot)
   - `checkout_expires_at`
 
 ### 10.3 Seções da Tela
@@ -829,7 +1016,7 @@ Pós-confirmação: `confirmed → refunded`, `confirmed → chargeback`
 > "Seu pagamento fica protegido. O prestador só recebe o valor após a conclusão do serviço confirmada por você."
 
 **5. Valor e método:**
-- Destaque: `Total: R$ 1.050,00`
+- Destaque: `Total: R$ 1.050,00` ← lido de `service_payments.client_charge_amount`
 - Cards de seleção: PIX (badge "Aprovação imediata") | Cartão de crédito
 - Aviso: "Esta proposta está reservada por 28 min."
 
@@ -848,54 +1035,41 @@ Pós-confirmação: `confirmed → refunded`, `confirmed → chargeback`
 - QR Pix inline no painel direito
 - Modal de confirmação ao tentar navegar para fora do checkout
 
-### 10.5 Estados da Tela
-
-| Estado | O que o cliente vê |
-|--------|-------------------|
-| Checkout ativo | Formulário normal |
-| Checkout expirado | "Este orçamento expirou. Volte aos orçamentos para tentar novamente." + CTA |
-| PIX pendente | QR code + countdown + "Aguardando pagamento via Pix..." |
-| PIX confirmado | "Pagamento confirmado! Redirecionando..." |
-| Cartão processando | Spinner "Processando pagamento..." |
-| Cartão em análise de risco | "Seu pagamento está em análise. Você será notificado em breve." |
-| Cartão recusado | "Pagamento recusado: [motivo]. Tente outro cartão ou use Pix." |
-
 ---
 
 ## 11. FLUXO PIX
 
-### 11.1 Criação da Cobrança
+### 11.1 Criação da Cobrança Pix
+
+Chamado pela Edge Function `create-asaas-charge` após o cliente selecionar PIX na tela de checkout:
 
 ```
 POST /v3/payments
-{ billingType: "PIX", customer, value, dueDate, externalReference, split }
-
-→ Retorna: payment.id (asaas_payment_id)
-
-GET /v3/payments/{id}/pixQrCode
-→ Retorna: encodedImage (Base64), payload (copy-paste), expirationDate
+{
+  "customer": "<asaas_customer_id>",
+  "billingType": "PIX",
+  "value": <service_payments.client_charge_amount>,
+  "dueDate": "<hoje + 1 dia>",
+  "externalReference": "<service_payments.id>",
+  "split": [{ "walletId": "...", "fixedValue": <service_payments.provider_net_amount> }]
+}
 ```
 
-**Sobre a expiração:**
-O QR code Pix dinâmico é válido por **12 meses a partir do `dueDate`**, não expira em horas. O `dueDate` marca quando a cobrança vence (fica overdue), mas o QR continua válido por 12 meses. O lock do checkout deve ser estendido para `asaas_pix_expiration_date` após criar a cobrança.
+### 11.2 Expiração do QR Pix
 
-**Registro em sandbox:** É necessário registrar uma chave Pix no sandbox antes de criar cobranças Pix. Sem chave cadastrada → erro 404.
+O QR code dinâmico do Asaas é válido por **12 meses a partir do `dueDate`**. Não por 60 minutos.
 
-### 11.2 Estado de Espera
+Isso significa:
+- O `checkout_locked_until` deve ser estendido para `asaas_pix_expiration_date` após criar o QR
+- O cliente pode pagar o mesmo QR code por até 12 meses
+- A expiração relevante do ponto de vista do **checkout** é a expiração interna (`checkout_expires_at`), não a do QR
 
-Frontend: subscrição Supabase Realtime em `service_payments WHERE id = current_payment_id`.
-Fallback: polling a cada 5s em `GET /checkout-status/{id}` (Edge Function RLS-safe).
+### 11.3 Falha de Pagamento Pix
 
-### 11.3 Webhook: `PAYMENT_RECEIVED` (Pix)
-
-Para Pix, `PAYMENT_RECEIVED` é o evento de sucesso terminal. Disparar o fluxo completo de sucesso.
-
-### 11.4 PIX Nunca Pago (Overdue)
-
+Se `PAYMENT_OVERDUE` (Pix não pago até o `dueDate`):
 ```
-Webhook PAYMENT_OVERDUE (quando dueDate passa) ou cron interno:
 → service_payments.status = 'expired'
-→ proposal.status = IF (created_at + 48h > now()) THEN 'submitted' ELSE 'expired'
+→ proposal.status = 'submitted' (se ainda dentro de 48h) ou 'expired'
 → proposal.checkout_locked_until = NULL
 → proposal.locked_payment_id = NULL
 → service_requests.status = 'open'
@@ -1157,71 +1331,101 @@ $$;
 
 ## 16. INTEGRIDADE DE PRECIFICAÇÃO E PRICING SIGNATURE
 
-### 16.1 Nova Função de Assinatura (7 Campos)
+### 16.1 Escopo da Assinatura
 
-```sql
-CREATE OR REPLACE FUNCTION public.generate_provider_pricing_signature_v2(
-  p_proposed_amount numeric,
-  p_provider_fee_rate numeric,
-  p_provider_fee_amount numeric,
-  p_provider_net_amount numeric,
-  p_client_fee_rate numeric,
-  p_client_fee_amount numeric,
-  p_client_charge_amount numeric
-) RETURNS text LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_secret jsonb;
-BEGIN
-  SELECT value INTO v_secret FROM public.platform_constants WHERE key = 'pricing_signature_secret';
-  RETURN encode(
-    extensions.hmac(
-      concat_ws('|',
-        round(p_proposed_amount::numeric, 2)::text,
-        round(p_provider_fee_rate::numeric, 4)::text,
-        round(p_provider_fee_amount::numeric, 2)::text,
-        round(p_provider_net_amount::numeric, 2)::text,
-        round(p_client_fee_rate::numeric, 4)::text,
-        round(p_client_fee_amount::numeric, 2)::text,
-        round(p_client_charge_amount::numeric, 2)::text
-      )::text,
-      trim(both '"' from v_secret::text)::text,
-      'sha256'::text
-    ),
-    'hex'
-  );
-END;
-$$;
+A `pricing_signature` em `provider_proposals` cobre **exclusivamente** os 4 campos de precificação do prestador:
+
+```
+proposed_amount | tax_rate | tax_amount | final_amount
 ```
 
-### 16.2 Validação no Checkout
+**Por que apenas 4 campos?**
+
+A assinatura protege a integridade do combinado financeiro entre prestador e plataforma: o prestador submete uma proposta, a plataforma calcula os valores do prestador e os assina. Esta assinatura garante que, no momento do checkout, o `provider_net_amount` que será enviado ao Asaas via split é exatamente o que estava na proposta original — nenhum ator consegue alterar os valores do prestador sem invalidar a assinatura.
+
+O preço do cliente é calculado *depois*, com base em `platform_constants.renovi_tax_client` vigente no momento do checkout. Ele não pode ser "forjado" via assinatura falsa porque é calculado pelo backend (nunca pelo cliente), diretamente de uma tabela interna. Sua auditabilidade vem do snapshot em `service_payments` (que registra `client_fee_rate` e o timestamp do checkout), não de uma assinatura na proposta.
+
+### 16.2 Função de Assinatura (sem alteração de V1)
+
+A função `generate_provider_pricing_signature` existente já cobre os 4 campos corretos. **Não precisa ser alterada.** O que muda é que deixamos de considerar a ideia de extendê-la para 7 campos:
+
+```sql
+-- Função existente — NÃO alterar
+-- Cobre: proposed_amount | tax_rate | tax_amount | final_amount
+-- Isso é suficiente e correto. Não adicionar campos do cliente aqui.
+```
+
+### 16.3 Validação no Checkout
 
 ```sql
 -- Dentro de initiate_checkout():
-SELECT generate_provider_pricing_signature_v2(
-  pp.proposed_amount, pp.tax_rate, pp.tax_amount, pp.final_amount,
-  pp.client_fee_rate, pp.client_fee_amount, pp.client_charge_amount
+-- 1. Verificar integridade do lado do prestador
+SELECT generate_provider_pricing_signature(
+  pp.proposed_amount, pp.tax_rate, pp.tax_amount, pp.final_amount
 ) AS expected_sig
 FROM provider_proposals pp WHERE pp.id = $proposal_id;
 
 IF expected_sig <> pp.pricing_signature THEN
-  RAISE EXCEPTION 'Falha na verificação de integridade da precificação';
+  RAISE EXCEPTION 'Falha na verificação de integridade da precificação do prestador';
 END IF;
+
+-- 2. Calcular preço do cliente (domínio separado, não assinado na proposta)
+SELECT * INTO v_client_pricing
+FROM _calculate_client_pricing(pp.proposed_amount, $billing_type);
+-- v_client_pricing.client_fee_rate, .client_fee_amount, .client_charge_amount
+-- Estes valores são congelados em service_payments — nunca ficam em provider_proposals
 ```
 
-### 16.3 Snapshot no Pagamento
+### 16.4 Cadeia de Integridade
+
+```
+provider_proposals.pricing_signature
+    ↓ validado em initiate_checkout
+    ↓ provider_net_amount (final_amount) é confiável
+    ↓ copiado em
+service_payments.proposal_pricing_signature  (imutável — prova do que estava na proposta)
+service_payments.provider_net_amount         → split_fixed_value → enviado ao Asaas
+
+platform_constants.renovi_tax_client (taxa vigente no momento do checkout)
+    ↓ calculado por _calculate_client_pricing(proposed_amount)
+    ↓ congelado em
+service_payments.client_fee_rate             (rastreabilidade da taxa aplicada)
+service_payments.client_charge_amount        → value enviado ao Asaas
+```
+
+Auditoria de qualquer transação:
+- **Provider side:** verificar `service_payments.proposal_pricing_signature` contra proposta original
+- **Client side:** verificar `service_payments.client_fee_rate` × `proposed_amount` = `client_fee_amount`; confirmar que `client_fee_rate` era a taxa vigente em `platform_constants` no `checkout_initiated_at`
+
+### 16.5 Imutabilidade do Snapshot
+
+O snapshot em `service_payments` é **imutável** após o INSERT. Adicionar trigger:
 
 ```sql
--- No INSERT de service_payments:
-proposal_pricing_signature = proposal.pricing_signature  -- congelado para sempre
-```
+CREATE OR REPLACE FUNCTION prevent_financial_snapshot_mutation()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  -- Campos do snapshot financeiro jamais podem ser alterados após criação
+  IF (
+    NEW.proposed_amount        <> OLD.proposed_amount        OR
+    NEW.provider_fee_rate      <> OLD.provider_fee_rate      OR
+    NEW.provider_fee_amount    <> OLD.provider_fee_amount    OR
+    NEW.provider_net_amount    <> OLD.provider_net_amount    OR
+    NEW.client_fee_rate        <> OLD.client_fee_rate        OR
+    NEW.client_fee_amount      <> OLD.client_fee_amount      OR
+    NEW.client_charge_amount   <> OLD.client_charge_amount   OR
+    NEW.split_fixed_value      <> OLD.split_fixed_value      OR
+    NEW.proposal_pricing_signature <> OLD.proposal_pricing_signature
+  ) THEN
+    RAISE EXCEPTION 'Snapshot financeiro de service_payments é imutável';
+  END IF;
+  RETURN NEW;
+END;
+$$;
 
-A cadeia de integridade:
-```
-proposal.pricing_signature (HMAC de 7 campos)
-    ↓ copiado em
-service_payments.proposal_pricing_signature (imutável)
-    ↓ determina
-service_payments.client_charge_amount → valor cobrado do Asaas
-service_payments.split_fixed_value   → valor do split para prestador
+CREATE TRIGGER service_payments_immutable_snapshot
+  BEFORE UPDATE ON public.service_payments
+  FOR EACH ROW EXECUTE FUNCTION prevent_financial_snapshot_mutation();
 ```
 
 ---
@@ -1326,13 +1530,15 @@ POST /v3/webhooks
 ### 19.2 Regra de Projeção para Clientes
 
 Em todas as RPCs e queries voltadas ao cliente, projetar **apenas**:
-- `client_charge_amount` ✓
+- `client_charge_amount` ✓ — o único número financeiro que o cliente vê
 - `billing_type` ✓
 - `status` ✓
 - `checkout_expires_at` ✓
 - `asaas_pix_qr_code`, `asaas_pix_qr_code_image` ✓
 
 **NUNCA retornar** ao cliente: `provider_fee_rate`, `provider_fee_amount`, `provider_net_amount`, `platform_total_fee_amount`, `client_fee_rate`, `client_fee_amount`.
+
+Esta regra aplica tanto a queries diretas em `service_payments` quanto à RPC `get_client_proposal_pricing` (que retorna somente `client_charge_amount`).
 
 ### 19.3 Segurança do Webhook
 
@@ -1554,7 +1760,7 @@ O sandbox envia emails e SMS reais. **Não criar clientes com dados reais de ter
 |--------|---------|----------------|---------------|-------------------|
 | Cliente inicia checkout | provider_proposals | submitted | payment_pending | Lock + checkout_expires_at |
 | Cliente inicia checkout | service_requests | open | budget_selected_pending_payment | — |
-| Cliente inicia checkout | service_payments | — | created (INSERT) | Snapshot financeiro congelado |
+| Cliente inicia checkout | service_payments | — | created (INSERT) | Snapshot financeiro congelado (inclui client pricing calculado) |
 | Cobrança Asaas criada | service_payments | created | pending | asaas_payment_id armazenado |
 | `PAYMENT_AWAITING_RISK_ANALYSIS` | service_payments | pending | awaiting_risk_analysis | — |
 | `PAYMENT_APPROVED_BY_RISK_ANALYSIS` | service_payments | awaiting_risk_analysis | confirmed | Fluxo completo de sucesso |
@@ -1639,6 +1845,11 @@ O sandbox envia emails e SMS reais. **Não criar clientes com dados reais de ter
 - Alertar admin; realizar release manual via dashboard Asaas
 - Prevenir: validar `asaas_account_api_key IS NOT NULL` no checkout
 
+### 23.12 Mudança de `renovi_tax_client` com Checkouts Ativos
+- Checkouts em andamento não são afetados: seu `client_charge_amount` já está congelado em `service_payments`
+- Apenas novos checkouts iniciados após a mudança usarão a nova taxa
+- A taxa aplicada a cada transação é sempre auditável via `service_payments.client_fee_rate`
+
 ---
 
 ## 24. FASES DE IMPLEMENTAÇÃO
@@ -1646,23 +1857,23 @@ O sandbox envia emails e SMS reais. **Não criar clientes com dados reais de ter
 ### Fase 1 — Fundação do Schema
 
 **Escopo:**
-- Migration: ALTER provider_proposals (novos campos financeiros + lock + status expandido)
+- Migration: ALTER provider_proposals (+`checkout_locked_until`, +`locked_payment_id`, expandir status CHECK para 7 valores)
 - Migration: ALTER service_requests (novos status)
-- Migration: ALTER profiles + provider_profiles_private (campos Asaas)
-- Migration: CREATE service_payments
-- Migration: CREATE services
-- Migration: CREATE service_payment_events
-- Migration: CREATE service_payment_releases
-- Migration: Novos platform_constants
-- Atualizar `calculate_provider_service_pricing` para incluir taxa do cliente
-- Atualizar `pricing_signature` para 7 campos
-- Atualizar `validate_provider_proposal_pricing` trigger
-- Atualizar `create_provider_proposal` para aceitar novos campos
+- Migration: ALTER profiles (+`asaas_customer_id`) e provider_profiles_private (+campos Asaas)
+- Migration: CREATE `service_payments`
+- Migration: CREATE `services`
+- Migration: CREATE `service_payment_events`
+- Migration: CREATE `service_payment_releases`
+- Migration: Novos platform_constants (`renovi_tax_client`, `checkout_lock_duration_minutes`, `escrow_days_to_expire`, `asaas_environment`)
+- Migration: CREATE `_calculate_client_pricing(p_proposed_amount, p_payment_method)`
+- Migration: CREATE `get_client_proposal_pricing(p_proposal_id, p_payment_method)`
+- Migration: Trigger `prevent_financial_snapshot_mutation` em service_payments
 - Atualizar `expire_stale_provider_proposals` para usar status `expired` e pular `payment_pending`
-- Backfill: preencher client_fee_* para propostas existentes com client_fee_rate=0 e recalcular signature
-- Atualizar `list_client_received_budgets` para retornar `client_charge_amount`
+- Atualizar `list_client_received_budgets` para calcular e retornar `client_charge_amount` (via `renovi_tax_client` inline — não mais `proposed_amount`)
+- **NÃO alterar** `calculate_provider_service_pricing`, `generate_provider_pricing_signature`, nem `validate_provider_proposal_pricing` — estes continuam cobrindo apenas os 4 campos do prestador, exatamente como hoje
+- **NÃO fazer backfill** de campos de precificação do cliente em `provider_proposals` — eles não pertencem lá
 
-**Risco principal:** Backfill das propostas existentes antes do deploy da nova trigger de validação.
+**Risco principal:** Atualizar `list_client_received_budgets` para retornar `client_charge_amount` calculado dinamicamente, sem quebrar a interface existente do frontend.
 
 **Dependências:** Nenhuma (primeira fase).
 
@@ -1688,9 +1899,9 @@ O sandbox envia emails e SMS reais. **Não criar clientes com dados reais de ter
 ### Fase 3 — Checkout e Pagamento Pix
 
 **Escopo:**
-- RPC `initiate_checkout`: lock atômico + criação de service_payments
-- RPC `get_checkout_details`: dados da tela de pagamento (projeção segura)
-- Edge Function `create-asaas-charge`: criação lazy de customer + cobrança Pix + QR code
+- RPC `initiate_checkout`: lock atômico + cálculo de client pricing via `_calculate_client_pricing` + criação de service_payments com snapshot completo
+- RPC `get_checkout_details`: dados da tela de pagamento (projeção segura — retorna `client_charge_amount` do snapshot)
+- Edge Function `create-asaas-charge`: criação lazy de customer + cobrança Pix (usando `client_charge_amount` e `split_fixed_value` do snapshot) + QR code
 - Tela frontend "Revisar e Pagar" (completa)
 - Supabase Realtime subscription em service_payments
 - Edge Function `asaas-webhook` (handler básico: PAYMENT_RECEIVED → fluxo completo de sucesso)
@@ -1709,6 +1920,7 @@ O sandbox envia emails e SMS reais. **Não criar clientes com dados reais de ter
 **Escopo:**
 - Tokenização do cartão no frontend (Asaas.js ou endpoint de tokenização)
 - Edge Function `create-asaas-charge` estendida para CREDIT_CARD
+- `_calculate_client_pricing` aceitar `'CREDIT_CARD'` como p_payment_method (pode adicionar surcharge aqui em versões futuras sem mudar a interface)
 - Webhook handlers: PAYMENT_AWAITING_RISK_ANALYSIS, PAYMENT_APPROVED_BY_RISK_ANALYSIS, PAYMENT_REPROVED_BY_RISK_ANALYSIS, PAYMENT_CREDIT_CARD_CAPTURE_REFUSED
 - UI states: análise de risco, recusado, captura recusada
 - Fluxo de retry (recusado → trocar para Pix)
@@ -1748,7 +1960,7 @@ O sandbox envia emails e SMS reais. **Não criar clientes com dados reais de ter
 - Sistema de alertas admin para eventos críticos
 - Ferramenta de reprocessamento manual para admin
 - Monitoramento de saúde da fila de webhooks
-- Relatório diário de inconsistências (pagamentos confirmados sem service, etc.)
+- Relatório diário de inconsistências
 
 **Dependências:** Fases 3 + 4 + 5.
 
@@ -1772,9 +1984,10 @@ O sandbox envia emails e SMS reais. **Não criar clientes com dados reais de ter
   "amount": 1050.00,
   "provider_net": 850.00,
   "platform_fee": 200.00,
+  "client_fee_rate_applied": 0.05,
   "escrow_status": "blocked",
   "processing_duration_ms": 45,
-  "result": "success" | "duplicate" | "error"
+  "result": "success | duplicate | error"
 }
 ```
 
@@ -1797,6 +2010,19 @@ JOIN services s ON s.proposal_id = sp.proposal_id
 WHERE sp.escrow_status = 'blocked'
   AND s.status = 'confirmed'
   AND s.confirmed_at < now() - interval '24 hours';
+
+-- Auditoria de taxas aplicadas (verificar consistência)
+SELECT
+  sp.id,
+  sp.checkout_initiated_at,
+  sp.client_fee_rate,
+  sp.proposed_amount,
+  sp.client_fee_amount,
+  sp.client_charge_amount,
+  round(sp.proposed_amount * sp.client_fee_rate, 2) AS expected_fee_amount
+FROM service_payments sp
+WHERE round(sp.proposed_amount * sp.client_fee_rate, 2) <> sp.client_fee_amount;
+-- Deve retornar 0 linhas; qualquer resultado indica inconsistência no snapshot
 ```
 
 ---
@@ -1813,6 +2039,7 @@ WHERE sp.escrow_status = 'blocked'
 | Fila de webhooks pausada (15 falhas consecutivas) | Alta | Monitor + alerta imediato; recuperação em < 14 dias |
 | Cliente sem CPF no perfil | Alta | Bloquear checkout; exigir CPF antes de prosseguir |
 | Escrow release falha silenciosamente | Alta | Cron monitor; alertar se 'blocked' + 'confirmed' > 24h |
+| `renovi_tax_client` alterado enquanto `get_client_proposal_pricing` é chamada e `initiate_checkout` usa outro valor | Baixa | Ambos usam `_calculate_client_pricing` (mesma fonte); risco real apenas se alterado *durante* a transação de checkout — janela de microsegundos |
 | `client_fee_rate` não confirmada pelo produto | Média | Aguardar confirmação antes da Fase 1 |
 | Emails/SMS reais disparados no sandbox | Média | Não usar emails/telefones reais de terceiros no sandbox |
 | Custo de escrow (R$9,90/prestador/mês) | Média | Considerar no modelo financeiro; pode ser repassado ao prestador |
@@ -1831,14 +2058,14 @@ WHERE sp.escrow_status = 'blocked'
 
 ## 27. RECOMENDAÇÕES ANTES DE CODIFICAR
 
-1. **Confirmar a taxa do cliente** (5%?) com o produto. Esta é a base de todo o cálculo de `client_charge_amount`.
+1. **Confirmar a taxa do cliente** (5%?) com o produto. É o valor de `renovi_tax_client` em `platform_constants`. Toda precificação do cliente deriva desta constante.
 
 2. **Testar o fluxo Pix completo no sandbox antes da Fase 3:**
-   - Criar conta sandbox → gerar API key → registrar chave Pix → criar customer → criar cobrança Pix → obter QR code → simular com `/receiveInCash` → verificar webhook.
+   Criar conta sandbox → gerar API key → registrar chave Pix → criar customer → criar cobrança Pix → obter QR code → simular com `/receiveInCash` → verificar webhook.
 
 3. **Proteger a `asaas_account_api_key`:** Criptografar com pgcrypto ou armazenar no Vault do Supabase. Nunca expor via RLS.
 
-4. **Backfill das propostas existentes antes do deploy da Fase 1:** Propostas ativas têm `pricing_signature` de 4 campos. Antes de mudar o HMAC, fazer migration para preencher os novos campos com `client_fee_rate = 0` e recalcular a signature.
+4. **Não há backfill de campos de cliente em `provider_proposals`:** A Fase 1 não exige migration de dados em propostas existentes para campos de precificação do cliente — porque estes campos não existem mais nessa tabela. Propostas existentes continuam válidas sem alteração.
 
 5. **Configurar ngrok imediatamente** para desenvolvimento de webhooks local. Sem isso, o ciclo de teste da Fase 3 é muito lento.
 
@@ -1852,18 +2079,20 @@ WHERE sp.escrow_status = 'blocked'
 
 10. **Não usar dados reais de terceiros no sandbox** — notificações são enviadas de verdade.
 
+11. **`_calculate_client_pricing` é a única implementação do cálculo do cliente:** Nunca duplicar a fórmula. Toda lógica de precificação do cliente passa por essa função interna. Se a fórmula mudar, muda em um único lugar.
+
 ---
 
 ## APÊNDICE A — Schema Resumido Antes/Depois
 
 | Tabela | Antes | Depois |
 |--------|-------|--------|
-| `provider_proposals` | 4 status, 9 campos principais | 7 status, +5 campos (fees, lock) |
+| `provider_proposals` | 4 status, 9 campos principais | 7 status, +2 campos de lock (`checkout_locked_until`, `locked_payment_id`); sem campos de precificação do cliente |
 | `service_requests` | 4 status | 6 status |
 | `profiles` | sem Asaas | +`asaas_customer_id` |
 | `provider_profiles_private` | dados legais apenas | +`asaas_wallet_id`, `asaas_subaccount_id`, `asaas_account_api_key`, `asaas_onboarding_status` |
 | `services` | não existe | NOVA (operacional) |
-| `service_payments` | não existe | NOVA (financeira + escrow) |
+| `service_payments` | não existe | NOVA (financeira + escrow; contém snapshot de ambos os lados de precificação, congelado no checkout) |
 | `service_payment_events` | não existe | NOVA (auditoria + idempotência) |
 | `service_payment_releases` | não existe | NOVA (tracking de release escrow) |
 
@@ -1884,3 +2113,14 @@ WHERE sp.escrow_status = 'blocked'
 | Reativar fila webhook | PUT | `/v3/webhooks/{id}` → `interrupted: false` |
 | [Sandbox] Simular Pix | POST | `/v3/payments/{id}/receiveInCash` |
 | [Sandbox] Forçar vencimento | POST | `/v3/payments/{id}/overdue` |
+
+## APÊNDICE C — Funções SQL do Modelo de Precificação
+
+| Função | Tipo | Responsabilidade |
+|--------|------|-----------------|
+| `calculate_provider_service_pricing` | existente, sem alteração | Calcula provider_fee, tax_amount, final_amount ao criar proposta |
+| `generate_provider_pricing_signature` | existente, sem alteração | HMAC-SHA256 dos 4 campos do prestador |
+| `validate_provider_proposal_pricing` | existente, sem alteração | Trigger de validação na INSERT/UPDATE de provider_proposals |
+| `_calculate_client_pricing(proposed_amount, payment_method)` | NOVA, interna | Única implementação do cálculo do lado do cliente; usada por get_client_proposal_pricing e initiate_checkout |
+| `get_client_proposal_pricing(proposal_id, payment_method)` | NOVA, pública | RPC chamada pelo frontend; retorna apenas client_charge_amount |
+| `prevent_financial_snapshot_mutation` | NOVA, trigger | Impede alteração de qualquer campo do snapshot em service_payments |
