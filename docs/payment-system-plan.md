@@ -217,6 +217,7 @@ INSERT INTO public.platform_constants (key, value) VALUES
   ('anticipation_fee_per_month_percent',  '0.0170'),   -- 1,70%/mês antecipação parcelado
   ('anticipation_fee_cash_percent',       '0.0125'),   -- 1,25%/mês antecipação à vista
   ('max_installments',                    '12'),       -- Máximo de parcelas (conservador; Visa/Master suporta 21)
+  ('min_installment_value',               '100.00'),   -- ✅ Confirmado: parcela mínima de R$100,00
   ('pix_processing_fee_percent',          '0.0099'),   -- 0,99% Pix (taxa Asaas padrão)
   ('pix_fixed_fee_per_transaction',       '0.00')      -- R$0,00 taxa fixa Pix
 ON CONFLICT (key) DO NOTHING;
@@ -696,6 +697,7 @@ DECLARE
   v_client_charge_amount    numeric(10,2);
   v_installment_value       numeric(10,2);
   v_max_installments        integer;
+  v_min_installment_value   numeric(10,2);
 
   -- Helper para buscar constante com validação
   FUNCTION _get_const(p_key text) RETURNS numeric AS $inner$
@@ -711,6 +713,7 @@ DECLARE
 BEGIN
   -- Validar installment_count
   v_max_installments := _get_const('max_installments')::integer;
+  v_min_installment_value := _get_const('min_installment_value');
   IF p_installment_count < 1 OR p_installment_count > v_max_installments THEN
     RAISE EXCEPTION 'Número de parcelas inválido: %. Permitido: 1 a %', p_installment_count, v_max_installments;
   END IF;
@@ -743,6 +746,7 @@ BEGIN
   v_gateway_fee_amount := round(v_subtotal * v_gateway_fee_percent, 2);
 
   -- ETAPA 4: Taxa de antecipação (SOMENTE parcelamento cartão, N >= 2)
+  -- ✅ Confirmado: antecipação automática no Asaas para parcelados
   IF p_payment_method = 'CREDIT_CARD' AND p_installment_count >= 2 THEN
     v_anticipation_rate := _get_const('anticipation_fee_per_month_percent');
     -- Fórmula: subtotal × rate × (N-1)/2 (média ponderada dos meses)
@@ -756,6 +760,9 @@ BEGIN
   -- ETAPA 6: Valor por parcela
   IF p_installment_count > 1 THEN
     v_installment_value := round(v_client_charge_amount / p_installment_count, 2);
+    IF v_installment_value < v_min_installment_value THEN
+      RAISE EXCEPTION 'Valor mínimo por parcela é R$%. Atual=R$%', v_min_installment_value, v_installment_value;
+    END IF;
   END IF;
 
   RETURN QUERY SELECT
@@ -1101,7 +1108,7 @@ POST /v3/payments
   "description": "Renovi - <service_title> - <provider_display_name>",
   "externalReference": "<service_payments.id>",
   "split": [
-    { "walletId": "<provider_asaas_wallet_id>", "fixedValue": <provider_net_amount> }
+    { "walletId": "<provider_asaas_wallet_id>", "totalFixedValue": <provider_net_amount> }
   ],
   "creditCard": { /* token */ },
   "creditCardHolderInfo": { ... }
@@ -1110,7 +1117,14 @@ POST /v3/payments
 
 > **REGRA CRÍTICA DE PARCELAMENTO:** Para 1x, usar `"value"`. Para 2x+, usar `"totalValue"` + `"installmentCount"` + `"installmentValue"`. Misturar os dois formatos causa erro na API Asaas.
 >
-> **Split em parcelamentos:** O split é aplicado **por parcela individual**, não sobre o total. O Asaas distribui proporcionalmente. O `fixedValue` do split se refere ao valor que o prestador recebe **no total** (soma de todas as parcelas). Verificar na documentação Asaas mais recente se o comportamento mudou.
+> **Split em parcelamentos (PADRÃO DEFINIDO):** Para cobranças com `installmentCount >= 2`, enviar split com **`totalFixedValue`** (valor total do split no parcelamento). O Asaas distribui automaticamente entre as parcelas (ajuste de centavos na última). Para 1x e Pix, manter **`fixedValue`**.
+>
+> **Exemplo (2x+):**
+> ```json
+> "split": [
+>   { "walletId": "<provider_asaas_wallet_id>", "totalFixedValue": <provider_net_amount> }
+> ]
+> ```
 >
 > **Endpoint de simulação (recomendado antes de criar):**
 > ```
@@ -2178,7 +2192,7 @@ O sandbox envia emails e SMS reais. **Não criar clientes com dados reais de ter
 - Ocorre quando o `fixedValue` do split é maior que o `netValue` da cobrança
 - Asaas bloqueia o valor por 2 dias úteis para ajuste
 - Alertar admin urgentemente
-- Prevenir: validar `split_fixed_value < client_charge_amount * 0.95` (com buffer) antes de criar cobrança
+- Prevenir: para cartão, executar `POST /v3/payments/simulate` e validar `netValue >= split_fixed_value` antes de criar cobrança
 
 ### 23.11 Subaccount Sem API Key Armazenada
 - Se `asaas_account_api_key IS NULL`: escrow release impossível
@@ -2214,7 +2228,12 @@ O sandbox envia emails e SMS reais. **Não criar clientes com dados reais de ter
   - Escrow: manter bloqueado até resolução
   - Ação futura: definir política de tolerância a parcelas inadimplentes
 
-### 23.16 Arredondamento em Parcelas
+### 23.16 Política de Cancelamento Após Serviço Criado (Confirmada)
+- Após `services` criado (`awaiting_start`, `in_progress`, `completed`, `confirmed`), o cliente não pode cancelar pelo app com estorno automático.
+- O fluxo padrão de estorno automático fica restrito ao período pré-serviço (antes de `services` existir).
+- Casos excepcionais (fraude, erro operacional, acordo comercial) seguem fluxo administrativo manual com auditoria.
+
+### 23.17 Arredondamento em Parcelas
 - `client_charge_amount / installment_count` pode não dar divisão exata
 - Regra: arredondar cada parcela para baixo (2 casas decimais)
 - Diferença é adicionada à ÚLTIMA parcela
@@ -2416,12 +2435,12 @@ WHERE round(sp.proposed_amount * sp.client_fee_rate, 2) <> sp.client_fee_amount;
 |-------|-----------|-----------|
 | `asaas_account_api_key` perdida na criação do subaccount | Crítica | Armazenar imediatamente; double-write em variável de ambiente de backup |
 | Prestador sem Pix key cadastrado no Asaas sandbox | Alta | Documentar pré-requisito; validar no onboarding |
-| Divergência de split (`fixedValue > netValue`) | Alta | Validar antes de criar cobrança; `split_fixed_value < client_charge_amount * 0.95` |
+| Divergência de split (`split > netValue`) | Alta | Em cartão, validar antes de criar cobrança com `POST /v3/payments/simulate` e bloquear quando `netValue < split_fixed_value` |
 | Fila de webhooks pausada (15 falhas consecutivas) | Alta | Monitor + alerta imediato; recuperação em < 14 dias |
 | Cliente sem CPF no perfil | Alta | Bloquear checkout; exigir CPF antes de prosseguir |
 | Escrow release falha silenciosamente | Alta | Cron monitor; alertar se 'blocked' + 'confirmed' > 24h |
 | `renovi_tax_client` alterado enquanto `get_client_proposal_pricing` é chamada e `initiate_checkout` usa outro valor | Baixa | Ambos usam `_calculate_client_pricing` (mesma fonte); risco real apenas se alterado *durante* a transação de checkout — janela de microsegundos |
-| `client_fee_rate` não confirmada pelo produto | Média | Aguardar confirmação antes da Fase 1 |
+| `client_fee_rate` alterada sem alinhamento operacional | Média | Mudança controlada via `platform_constants` + checklist de comunicação interna + auditoria de snapshot |
 | Emails/SMS reais disparados no sandbox | Média | Não usar emails/telefones reais de terceiros no sandbox |
 | Custo de escrow (R$9,90/prestador/mês) | Média | Considerar no modelo financeiro; pode ser repassado ao prestador |
 
@@ -2435,22 +2454,22 @@ WHERE round(sp.proposed_amount * sp.client_fee_rate, 2) <> sp.client_fee_amount;
 3. ~~**`daysToExpire` do escrow:**~~ ✅ 45 dias (máximo suportado pelo Asaas).
 5. ~~**Cartão parcelado:**~~ ✅ Suportado desde V1. PIX + Cartão 1x + Cartão parcelado (até 12x). Cliente paga todas as taxas.
 
-**Ainda abertas:**
-4. **Política de cancelamento pós-service:** Após `services` criado, sob quais condições o cliente pode cancelar e receber estorno?
-6. **Aprovação da subconta Asaas:** O fluxo de aprovação pode demorar. O que mostrar ao prestador enquanto aguarda?
-7. **Verificar IPs oficiais do Asaas:** Configurar allowlist em Supabase para aceitar webhooks apenas de IPs Asaas.
+**Pendências residuais (após decisões confirmadas):**
+4. **Política de cancelamento pós-service:** ~~Após `services` criado, sob quais condições o cliente pode cancelar e receber estorno?~~ ✅ Confirmado: após `services` criado (`in_progress`, `completed` ou `confirmed`), o cliente **não pode** cancelar com estorno automático. Qualquer exceção vira fluxo administrativo/manual (fora do fluxo padrão do cliente).
+6. **Aprovação da subconta Asaas:** ~~O fluxo de aprovação pode demorar. O que mostrar ao prestador enquanto aguarda?~~ ✅ Confirmado: exibir tela/estado de análise com mensagem: "Estamos analisando seus dados bancários para abertura da sua conta de recebimento. Enquanto isso, você ainda não pode sacar valores."
+7. **Verificar IPs oficiais do Asaas:** ~~Configurar allowlist em Supabase para aceitar webhooks apenas de IPs Asaas.~~ ✅ Confirmado: allowlist obrigatória para webhooks.
 
 // ADDED: Novas questões de parcelamento
 8. **Taxas Asaas promocionais vs padrão:** Nos primeiros 3 meses, as taxas de cartão são menores (ex.: 1,99% vs 2,99% para 1x). Os valores em `platform_constants` devem ser atualizados após o período promocional. Criar alerta/reminder para atualização.
-9. **Split em parcelamento:** Verificar comportamento exato do split quando a cobrança é parcelada — se o `fixedValue` é dividido entre parcelas ou aplicado ao total. Testar no sandbox antes de V1.
-10. **Antecipação automática vs manual:** Definir se a Renovi vai usar antecipação automática de recebíveis no Asaas ou se vai aguardar o recebimento natural de cada parcela. Impacta o cálculo da taxa de antecipação cobrada do cliente.
-11. **Valor mínimo por parcela:** Definir valor mínimo por parcela (ex.: R$20,00) para evitar parcelas muito pequenas. Implementar como `min_installment_value` em `platform_constants`.
+9. **Split em parcelamento:** ~~Verificar comportamento exato do split quando a cobrança é parcelada — se o `fixedValue` é dividido entre parcelas ou aplicado ao total.~~ ✅ Confirmado: para parcelado usar `totalFixedValue`; para Pix/1x usar `fixedValue`.
+10. **Antecipação automática vs manual:** ~~Definir se a Renovi vai usar antecipação automática de recebíveis no Asaas ou se vai aguardar o recebimento natural de cada parcela.~~ ✅ Confirmado: usar antecipação automática para parcelado.
+11. **Valor mínimo por parcela:** ~~Definir valor mínimo por parcela (ex.: R$20,00).~~ ✅ Confirmado: R$100,00 por parcela (`min_installment_value = 100`).
 
 ---
 
 ## 27. RECOMENDAÇÕES ANTES DE CODIFICAR
 
-1. **Confirmar a taxa do cliente** (5%?) com o produto. É o valor de `renovi_tax_client` em `platform_constants`. Toda precificação do cliente deriva desta constante.
+1. **Taxa do cliente definida:** `renovi_tax_client = 5%` em `platform_constants`. Toda precificação do cliente deriva desta constante.
 
 2. **Testar o fluxo Pix completo no sandbox antes da Fase 3:**
    Criar conta sandbox → gerar API key → registrar chave Pix → criar customer → criar cobrança Pix → obter QR code → simular com `/receiveInCash` → verificar webhook.
@@ -2463,7 +2482,7 @@ WHERE round(sp.proposed_amount * sp.client_fee_rate, 2) <> sp.client_fee_amount;
 
 6. **Testar o lock de concorrência:** Escrever um teste que dispara dois checkouts simultâneos para a mesma proposta e verifica que apenas um retorna sucesso.
 
-7. **Verificar IPs oficiais do Asaas** e configurar no Supabase para aceitar requisições de webhook apenas desses IPs.
+7. **Aplicar allowlist dos IPs oficiais do Asaas** no endpoint de webhook (Supabase + camada de borda/reverse proxy).
 
 8. **Sempre retornar 200 ao Asaas** — mesmo em erros de processamento. Nunca retornar 5xx (pausa a fila).
 
@@ -2472,6 +2491,8 @@ WHERE round(sp.proposed_amount * sp.client_fee_rate, 2) <> sp.client_fee_amount;
 10. **Não usar dados reais de terceiros no sandbox** — notificações são enviadas de verdade.
 
 11. **`_calculate_client_pricing` é a única implementação do cálculo do cliente:** Nunca duplicar a fórmula. Toda lógica de precificação do cliente passa por essa função interna. Se a fórmula mudar, muda em um único lugar.
+
+12. **Aplicar regra de parcela mínima:** validar `installment_value >= 100.00` (ou `client_charge_amount / installment_count >= 100.00`) antes de criar cobrança parcelada.
 
 ---
 

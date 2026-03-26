@@ -50,11 +50,11 @@ Transformar o fluxo atual — onde a proposta é aceita diretamente pelo cliente
 
 ## 2. Premissas e Decisões Confirmadas
 
-As decisões abaixo foram definidas na arquitetura. Antes de iniciar qualquer fase, confirme os itens marcados como **PENDENTE**:
+As decisões abaixo foram definidas na arquitetura e já estão confirmadas para execução:
 
 | # | Decisão | Status |
 |---|---------|--------|
-| D1 | Split por valor fixo (`fixedValue`), não percentual | Confirmado |
+| D1 | Split por valor fixo (Pix/1x: `fixedValue`; parcelado: `totalFixedValue`), não percentual | Confirmado |
 | D2 | Escrow ativo desde V1; configurado no subaccount do prestador | Confirmado |
 | D3 | `client_charge_amount` calculado sob demanda, nunca armazenado em `provider_proposals` | Confirmado |
 | D4 | `pricing_signature` cobre apenas os 4 campos do prestador (sem alteração) | Confirmado |
@@ -65,8 +65,11 @@ As decisões abaixo foram definidas na arquitetura. Antes de iniciar qualquer fa
 | D9 | `isFeePayer`: plataforma paga os R$9,90/mês do escrow | **Confirmado** — `isFeePayer: false`; Renovi absorve como custo operacional |
 | D10 | `daysToExpire` = 45 dias (máximo Asaas) para liberação automática do escrow | **Confirmado** — máximo suportado pela API Asaas |
 | D11 | Cartão parcelado: suportado desde V1 (PIX + Cartão 1x + Cartão parcelado até 12x) | **Confirmado** — cliente paga TODAS as taxas financeiras (gateway + antecipação) |
+| D14 | Antecipação de recebíveis no parcelado | **Confirmado** — antecipação automática no Asaas para parcelados |
+| D15 | Parcela mínima | **Confirmado** — mínimo de R$100,00 por parcela |
 | D12 | Cliente paga TODAS as taxas financeiras (Renovi + gateway + antecipação) | **Confirmado** — pipeline completo em `_calculate_client_pricing` |
 | D13 | Taxas de gateway configuráveis via `platform_constants` (nunca hardcoded) | **Confirmado** — fallback com exceção se chave ausente |
+| D16 | Segurança de webhook por origem | **Confirmado** — allowlist dos IPs oficiais do Asaas + `authToken` |
 
 > ✅ Todas as decisões confirmadas. A Fase 1 pode ser iniciada.
 
@@ -158,6 +161,7 @@ INSERT INTO public.platform_constants (key, value) VALUES
   ('anticipation_fee_per_month_percent',    '0.0170'),     -- 1,70%/mês antecipação parcelado
   ('anticipation_fee_cash_percent',         '0.0125'),     -- 1,25%/mês antecipação à vista
   ('max_installments',                      '12'),         -- Máximo de parcelas (conservador; Visa/Master suporta 21)
+  ('min_installment_value',                 '100.00'),     -- ✅ Confirmado (D15): mínimo de R$100 por parcela
   ('pix_processing_fee_percent',            '0.0099'),     -- 0,99% Pix
   ('pix_fixed_fee_per_transaction',         '0.00')        -- R$0,00 taxa fixa Pix
 ON CONFLICT (key) DO NOTHING;
@@ -854,6 +858,7 @@ DECLARE
   v_client_charge_amount    numeric(10,2);
   v_installment_value       numeric(10,2);
   v_max_installments        integer;
+  v_min_installment_value   numeric(10,2);
   v_const_value             numeric;
 BEGIN
   -- Helper: buscar constante com validação
@@ -863,6 +868,8 @@ BEGIN
   SELECT (value::text)::numeric INTO v_const_value FROM platform_constants WHERE key = 'max_installments';
   IF v_const_value IS NULL THEN RAISE EXCEPTION 'max_installments não encontrada'; END IF;
   v_max_installments := v_const_value::integer;
+  SELECT (value::text)::numeric INTO v_min_installment_value FROM platform_constants WHERE key = 'min_installment_value';
+  IF v_min_installment_value IS NULL THEN RAISE EXCEPTION 'min_installment_value não encontrada'; END IF;
 
   IF p_installment_count < 1 OR p_installment_count > v_max_installments THEN
     RAISE EXCEPTION 'Parcelas inválido: %. Permitido: 1 a %', p_installment_count, v_max_installments;
@@ -901,6 +908,7 @@ BEGIN
   v_gateway_fee_amount := round(v_subtotal * v_gateway_fee_percent, 2);
 
   -- ETAPA 4: Taxa de antecipação (SOMENTE parcelamento cartão)
+  -- ✅ Confirmado (D14): antecipação automática no Asaas para parcelado
   IF p_payment_method = 'CREDIT_CARD' AND p_installment_count >= 2 THEN
     SELECT (value::text)::numeric INTO v_anticipation_rate FROM platform_constants WHERE key = 'anticipation_fee_per_month_percent';
     IF v_anticipation_rate IS NULL THEN RAISE EXCEPTION 'anticipation_fee_per_month_percent não encontrada'; END IF;
@@ -915,6 +923,9 @@ BEGIN
   -- ETAPA 6: Valor por parcela
   IF p_installment_count > 1 THEN
     v_installment_value := round(v_client_charge_amount / p_installment_count, 2);
+    IF v_installment_value < v_min_installment_value THEN
+      RAISE EXCEPTION 'Valor mínimo por parcela é R$%. Atual=R$%', v_min_installment_value, v_installment_value;
+    END IF;
   END IF;
 
   -- V1: pipeline completo — taxa Renovi + gateway + antecipação.
@@ -1135,6 +1146,9 @@ A RPC `list_client_received_budgets` atualmente retorna `proposed_amount` no cam
 - [x] D9 confirmado: `isFeePayer` = false (plataforma paga) ✅
 - [x] D10 confirmado: `daysToExpire` = 45 (máximo Asaas) ✅
 - [x] D11 confirmado: Parcelamento suportado em V1 ✅
+- [x] D14 confirmado: antecipação automática no parcelado ✅
+- [x] D15 confirmado: parcela mínima de R$100,00 ✅
+- [x] D16 confirmado: allowlist de IP + authToken no webhook ✅
 - [ ] Trigger de imutabilidade testado (tentativa de UPDATE nos 17 campos do snapshot deve falhar)
 - [ ] `_calculate_client_pricing` testada com PIX, Cartão 1x, 6x, 12x
 - [ ] `get_client_proposal_pricing` retornando `payment_options[]` correto
@@ -1233,7 +1247,9 @@ Criar o fluxo de UI para que o prestador complete seu cadastro financeiro. Pode 
 - Em sucesso: redirecionar para lista de propostas/jobs com badge "Pronto para receber pagamentos"
 - Em erro: mostrar mensagem amigável e opção de tentar novamente
 
-**Estado "aguardando":** Se `asaas_onboarding_status = 'pending'`, todas as propostas enviadas pelo prestador mostram badge "Aguardando cadastro financeiro" (não bloqueia envio da proposta, apenas bloqueia que o cliente inicie checkout desta proposta).
+**Estado "aguardando":** Se `asaas_onboarding_status = 'pending'`, todas as propostas enviadas pelo prestador mostram badge "Aguardando análise financeira" (não bloqueia envio da proposta, apenas bloqueia que o cliente inicie checkout desta proposta).
+
+**Mensagem obrigatória no estado pendente:** "Estamos analisando seus dados bancários para abertura da sua conta de recebimento. Enquanto isso, você ainda não pode sacar valores."
 
 **Dependências:** Tarefa 2.1.
 
@@ -1345,7 +1361,8 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
      split_fixed_value= proposal.final_amount,
      split_snapshot   = jsonb_build_array(jsonb_build_object(
        'walletId', provider_profiles_private.asaas_wallet_id,
-       'fixedValue', proposal.final_amount
+       'fixedValue', proposal.final_amount,        -- usado em Pix/1x
+       'totalFixedValue', proposal.final_amount    -- usado em cartão parcelado (2x+)
      )),
      -- Integridade
      proposal_pricing_signature = proposal.pricing_signature,
@@ -1489,9 +1506,10 @@ await supabaseAdmin.from('provider_proposals').update({
 
 **Pontos críticos:**
 - O `value` enviado ao Asaas vem **do snapshot** (`service_payments.client_charge_amount`), nunca recalculado
-- O `split.fixedValue` também vem do snapshot (`service_payments.split_fixed_value`)
+- O split vem **do snapshot** (`service_payments.split_fixed_value`): usar `fixedValue` para Pix/1x e `totalFixedValue` para parcelado (2x+)
 - `externalReference` é o `service_payments.id` — fundamental para o webhook encontrar o pagamento por este campo quando `asaas_payment_id` ainda não está no banco
-- Validar: `split_fixed_value < client_charge_amount * 0.95` antes de criar a cobrança (previne divergência de split)
+- Em cartão parcelado, validar `installment_value >= min_installment_value` (R$100,00 no V1) antes de criar cobrança
+- Em cartão, validar via `POST /v3/payments/simulate` que `netValue >= split_fixed_value` antes de criar a cobrança
 
 **Dependências:** Tarefas 3.1, 2.1.
 
@@ -1507,6 +1525,8 @@ Handler básico cobrindo os eventos necessários para o fluxo Pix funcionar end-
 **Estrutura geral:**
 ```typescript
 export default async function handler(req: Request) {
+  // 0. Segurança de origem: endpoint protegido por allowlist de IPs oficiais Asaas
+  //    (firewall/reverse proxy) + validação de auth token no header.
   // 1. Validar token: req.headers.get('asaas-access-token') === ASAAS_WEBHOOK_SECRET
   //    Se inválido: return 403
 
@@ -1863,6 +1883,8 @@ if (billing_type === 'CREDIT_CARD') {
     paymentPayload.totalValue = sp.client_charge_amount;        // do snapshot
     paymentPayload.installmentCount = sp.installment_count;     // do snapshot
     paymentPayload.installmentValue = sp.installment_value;     // do snapshot
+    // ✅ Padrão Asaas para parcelado: usar totalFixedValue no split
+    paymentPayload.split = [{ walletId: sp.split_wallet_id, totalFixedValue: sp.split_fixed_value }];
   } else {
     // 1x — usar value (campo simples)
     paymentPayload.value = sp.client_charge_amount;             // do snapshot
@@ -2021,6 +2043,11 @@ Tela que mostra o progresso do serviço para ambos os lados (cliente e prestador
 - Status atual
 - Botão "Confirmar conclusão" (`completed → confirmed`) — aparece apenas quando prestador marcou como concluído
 - Valor protegido em escrow (mensagem tranquilizadora)
+- Regra de cancelamento: após `services` criado, não há cancelamento com estorno automático pelo cliente
+
+**Política de estorno pós-service (confirmada):**
+- Se `services` já existe (`awaiting_start`, `in_progress`, `completed` ou `confirmed`), o cliente não pode cancelar pelo app com estorno automático.
+- Qualquer exceção (erro operacional, fraude, acordo entre partes) é tratada em fluxo administrativo manual.
 
 ---
 
@@ -2217,9 +2244,10 @@ case 'PAYMENT_SPLIT_DIVERGENCE_BLOCK':
 
 **Prevenção (já implementar desde a Fase 3):**
 ```typescript
-// Em create-asaas-charge, antes de criar cobrança:
-if (sp.split_fixed_value >= sp.client_charge_amount * 0.95) {
-  throw new Error(`Split risk: fixedValue ${sp.split_fixed_value} muito próximo de value ${sp.client_charge_amount}`);
+// Em create-asaas-charge, antes de criar cobrança de cartão:
+const simulation = await asaasSimulate({ value: sp.client_charge_amount, billingType: 'CREDIT_CARD', installmentCount: sp.installment_count });
+if (simulation.netValue < sp.split_fixed_value) {
+  throw new Error(`Split risk: netValue ${simulation.netValue} menor que split ${sp.split_fixed_value}`);
 }
 ```
 
@@ -2307,6 +2335,7 @@ WHERE installment_count > 1
 - [ ] Handler `PAYMENT_CHARGEBACK_REQUESTED` testado (NÃO deve liberar escrow)
 - [ ] Alerta de `SPLIT_DIVERGENCE_BLOCK` registrado em `admin_alerts`
 - [ ] Fila de webhooks Asaas sendo monitorada (webhook de saúde configurado)
+- [ ] Allowlist de IPs oficiais do Asaas aplicada no endpoint de webhook
 - [ ] Consultas de monitoramento executadas sem resultados anômalos
 
 ---
@@ -2324,7 +2353,7 @@ WHERE installment_count > 1
 ### R2 — Divergência de split
 **Severidade:** Alta. `PAYMENT_SPLIT_DIVERGENCE_BLOCK` bloqueia os fundos por 2 dias úteis.
 
-**Prevenção:** Validar `split_fixed_value < client_charge_amount * 0.95` antes de criar qualquer cobrança.
+**Prevenção:** Em cartão, executar `POST /v3/payments/simulate` antes de criar cobrança e validar `netValue >= split_fixed_value`.
 
 **Causa típica:** `provider_net_amount` (split) muito próximo ou maior que `client_charge_amount` (cobrança total). Isso acontece se as taxas Asaas reduzirem o `netValue` abaixo do `fixedValue` do split.
 
@@ -2358,7 +2387,7 @@ WHERE installment_count > 1
 ### R8 — Split em parcelamento: distribuição proporcional
 **Severidade:** Média. Em cobranças parceladas, o Asaas distribui o split proporcionalmente entre as parcelas. Se o `fixedValue` total do split for maior que o `netValue` total (após taxas Asaas de todas as parcelas), ocorre `PAYMENT_SPLIT_DIVERGENCE_BLOCK`.
 
-**Mitigação:** Usar `POST /v3/payments/simulate` antes de criar a cobrança para validar que `netValue >= split_fixed_value`. Se não, alertar admin e bloquear criação.
+**Mitigação:** Em parcelado, padronizar payload com `split.totalFixedValue` e validar via `POST /v3/payments/simulate` que `netValue >= split_fixed_value`. Se não, alertar admin e bloquear criação.
 
 ### R9 — Parcela intermediária falha (cartão vencido, limite insuficiente)
 **Severidade:** Média. Se uma parcela individual de um parcelamento falha, o serviço já pode estar em andamento ou concluído.
@@ -2441,7 +2470,7 @@ curl -X POST https://api-sandbox.asaas.com/v3/webhooks \
 SELECT * FROM cron.job;
 # Se não existir a extensão: habilitar em Supabase dashboard → Extensions
 
-# 7. Confirmar decisões pendentes (D8, D9, D10, D11) com produto antes de rodar migrations
+# 7. Decisões já confirmadas com produto (D8, D9, D10, D11, D14, D15)
 ```
 
 ---
@@ -2450,7 +2479,7 @@ SELECT * FROM cron.job;
 
 | Fase | Arquivo | Conteúdo |
 |------|---------|----------|
-| 1 | `20260325100000` | platform_constants (14 entradas: taxa Renovi + taxas gateway + antecipação + max_installments) |
+| 1 | `20260325100000` | platform_constants (15 entradas: taxa Renovi + taxas gateway + antecipação + max_installments + min_installment_value) |
 | 1 | `20260325100100` | ALTER provider_proposals (lock + status) |
 | 1 | `20260325100200` | Triggers provider_proposals atualizados |
 | 1 | `20260325100300` | ALTER service_requests (status) |
