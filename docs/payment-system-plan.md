@@ -1,6 +1,6 @@
 # Renovi — Plano de Implementação do Sistema de Pagamentos
 ## Processador: Asaas | Modelo: Escrow
-### Versão 3.0 — 2026-03-25 (revisão do modelo de precificação do cliente)
+### Versão 4.0 — 2026-03-26 (parcelamento, taxas dinâmicas, decisões finais)
 
 ---
 
@@ -49,6 +49,10 @@ O fluxo de aprovação de orçamento deve ser **bloqueado por pagamento**:
 | Expiração do checkout? | Lock de 30 min no proposal + Pix válido por 12 meses a partir do due date | QR Pix não expira em 1h — é dinâmico, válido por 12 meses do due date |
 | `client_charge_amount` em `provider_proposals`? | **NÃO** | Preço do cliente é dinâmico; calculado via RPC sob demanda; congelado apenas no `service_payments` |
 | `pricing_signature` cobre campos do cliente? | **NÃO** | Assinatura protege somente precificação do prestador (4 campos); cliente é domínio separado |
+| Quem paga taxa mensal escrow (R$9,90)? | **Plataforma (Renovi)** | `isFeePayer: false` — a Renovi absorve o custo operacional do escrow como custo da plataforma |
+| `daysToExpire` do escrow? | **45 dias** (máximo suportado pelo Asaas) | Máximo buffer antes da liberação automática; garante proteção ao cliente |
+| Cartão parcelado em V1? | **SIM — Pix + Cartão 1x + Cartão parcelado desde o dia 1** | Cliente paga TODAS as taxas financeiras adicionais do parcelamento |
+| Quem paga taxas de gateway/cartão/antecipação? | **Cliente paga TUDO** | Renovi e prestador recebem valores líquidos sem dedução de taxas Asaas |
 
 ---
 
@@ -202,10 +206,27 @@ CREATE UNIQUE INDEX ppp_asaas_wallet_id_idx
 INSERT INTO public.platform_constants (key, value) VALUES
   ('renovi_tax_client',             '0.05'),
   ('checkout_lock_duration_minutes','30'),
-  ('escrow_days_to_expire',         '30'),
-  ('asaas_environment',             '"sandbox"')
+  ('escrow_days_to_expire',         '45'),       -- UPDATED: máximo suportado pelo Asaas
+  ('asaas_environment',             '"sandbox"'),
+  -- // ADDED: Constantes de taxas de gateway para cálculo dinâmico de parcelamento
+  ('card_processing_fee_1x_percent',      '0.0299'),   -- 2,99% cartão à vista
+  ('card_processing_fee_2_6x_percent',    '0.0349'),   -- 3,49% cartão 2-6x
+  ('card_processing_fee_7_12x_percent',   '0.0399'),   -- 3,99% cartão 7-12x
+  ('card_processing_fee_13_21x_percent',  '0.0429'),   -- 4,29% cartão 13-21x (Visa/Master apenas)
+  ('card_fixed_fee_per_transaction',      '0.49'),     -- R$0,49 por transação
+  ('anticipation_fee_per_month_percent',  '0.0170'),   -- 1,70%/mês antecipação parcelado
+  ('anticipation_fee_cash_percent',       '0.0125'),   -- 1,25%/mês antecipação à vista
+  ('max_installments',                    '12'),       -- Máximo de parcelas (conservador; Visa/Master suporta 21)
+  ('pix_processing_fee_percent',          '0.0099'),   -- 0,99% Pix (taxa Asaas padrão)
+  ('pix_fixed_fee_per_transaction',       '0.00')      -- R$0,00 taxa fixa Pix
 ON CONFLICT (key) DO NOTHING;
 ```
+
+> **IMPORTANTE — Configuração dinâmica de taxas:** Todas as taxas acima são lidas em tempo de execução pela função `_calculate_client_pricing`. NUNCA devem ser hardcoded no código. Mudanças de taxa Asaas são tratadas atualizando `platform_constants` — sem deploy de código.
+>
+> **Fallback:** Se uma chave de taxa estiver ausente, `_calculate_client_pricing` DEVE lançar exceção com mensagem descritiva. Não usar valores default silenciosos — isso mascara erros de configuração.
+>
+> **Atualização segura:** Alterações em `platform_constants` afetam apenas NOVOS checkouts. Checkouts em andamento (snapshot congelado em `service_payments`) não são afetados. Para auditoria retroativa, sempre verificar `service_payments.client_fee_rate` e os novos campos de taxa do snapshot.
 
 ---
 
@@ -305,12 +326,23 @@ CREATE TABLE public.service_payments (
 
   -- Lado do cliente (calculado no initiate_checkout via _calculate_client_pricing)
   -- Fonte: platform_constants.renovi_tax_client vigente no momento do checkout
-  client_fee_rate             numeric(6,4)  NOT NULL,   -- taxa do cliente no momento do checkout
-  client_fee_amount           numeric(10,2) NOT NULL,   -- proposed_amount * client_fee_rate
-  client_charge_amount        numeric(10,2) NOT NULL,   -- proposed_amount + client_fee_amount (cobrado do cliente)
+  client_fee_rate             numeric(6,4)  NOT NULL,   -- taxa Renovi do cliente no momento do checkout
+  client_fee_amount           numeric(10,2) NOT NULL,   -- proposed_amount * client_fee_rate (taxa Renovi)
+  client_charge_amount        numeric(10,2) NOT NULL,   -- valor TOTAL cobrado do cliente (inclui TODAS as taxas)
+
+  -- // ADDED: Snapshot de taxas de gateway e parcelamento (congelado no checkout)
+  -- Estas taxas são calculadas por _calculate_client_pricing e congeladas aqui
+  installment_count           integer       NOT NULL DEFAULT 1,    -- 1 = à vista; 2-12 = parcelado
+  installment_value           numeric(10,2),                       -- valor de cada parcela (NULL se 1x)
+  gateway_fee_percent         numeric(6,4)  NOT NULL DEFAULT 0,    -- taxa do gateway aplicada (varia por método/parcelas)
+  gateway_fee_amount          numeric(10,2) NOT NULL DEFAULT 0,    -- valor absoluto da taxa do gateway
+  gateway_fixed_fee           numeric(10,2) NOT NULL DEFAULT 0,    -- taxa fixa por transação (R$0,49 cartão, R$0,00 Pix)
+  anticipation_fee_percent    numeric(6,4)  NOT NULL DEFAULT 0,    -- taxa de antecipação aplicada (0 se Pix ou 1x)
+  anticipation_fee_amount     numeric(10,2) NOT NULL DEFAULT 0,    -- valor absoluto da antecipação
+  total_gateway_cost          numeric(10,2) NOT NULL DEFAULT 0,    -- gateway_fee_amount + gateway_fixed_fee + anticipation_fee_amount
 
   -- Plataforma
-  platform_total_fee_amount   numeric(10,2) NOT NULL,   -- provider_fee_amount + client_fee_amount
+  platform_total_fee_amount   numeric(10,2) NOT NULL,   -- provider_fee_amount + client_fee_amount (receita Renovi)
 
   -- Liquidação Asaas
   asaas_net_value             numeric(10,2),            -- preenchido via webhook (netValue após taxas Asaas)
@@ -334,6 +366,7 @@ CREATE TABLE public.service_payments (
   asaas_pix_qr_code           text,            -- payload copy-paste do Pix
   asaas_pix_qr_code_image     text,            -- imagem Base64 ou URL do QR code
   asaas_pix_expiration_date   timestamptz,     -- data de expiração do QR (12 meses a partir do due date)
+  asaas_installment_id        text,            -- // ADDED: ID do plano de parcelamento Asaas (null se 1x)
   asaas_due_date              date,
   asaas_paid_at               timestamptz,
   asaas_credit_date           date,
@@ -485,17 +518,109 @@ pricing_signature      = HMAC(proposed_amount|tax_rate|tax_amount|final_amount)
 ── CAMADA 2 (calculada em tempo de acesso via RPC) ───────────────────
 client_fee_rate        = 0.05   (platform_constants.renovi_tax_client — vigente no momento)
 client_fee_amount      = R$50,00
-client_charge_amount   = R$1.050,00  ← único valor mostrado ao cliente
+client_charge_amount   = R$1.050,00  ← único valor mostrado ao cliente (PIX / Cartão 1x)
 
 ── CAMADA 3 (congelada em service_payments no initiate_checkout) ─────
 Todos os campos acima + método de pagamento + wallet do split + timestamps
 platform_total_fee     = R$200,00   (provider_fee + client_fee — fica na plataforma)
 
 ── Asaas ─────────────────────────────────────────────────────────────
-Cobrança Asaas         = R$1.050,00  (client_charge_amount)
+Cobrança Asaas         = R$1.050,00  (client_charge_amount — PIX / Cartão 1x)
 Split ao prestador     = R$850,00    (fixedValue = provider_net_amount)
 Plataforma retém       = R$200,00    (menos taxas Asaas — absorvidas pela plataforma)
 ```
+
+// ADDED: Pipeline de cálculo com parcelamento e taxas de gateway
+### 5.1.1 Pipeline Completo de Composição de Preço (CRÍTICO)
+
+O cliente paga **TODAS** as taxas financeiras. O pipeline de cálculo é:
+
+```
+ETAPA 1 — Base
+  base_price           = proposed_amount                         (ex.: R$1.000,00)
+
+ETAPA 2 — Taxa Renovi (sempre aplicada)
+  renovi_fee           = base_price × renovi_tax_client          (ex.: R$50,00)
+  subtotal_1           = base_price + renovi_fee                 (ex.: R$1.050,00)
+
+ETAPA 3 — Taxa do gateway (varia por método e parcelas)
+  gateway_fee          = subtotal_1 × card_processing_fee_percent  (ex.: R$36,65 para 2-6x a 3,49%)
+  gateway_fixed        = card_fixed_fee_per_transaction             (ex.: R$0,49)
+
+ETAPA 4 — Taxa de antecipação (SOMENTE para parcelamento)
+  anticipation_fee     = subtotal_1 × anticipation_rate × parcelas_restantes_ponderadas
+                        (cálculo detalhado na seção 5.1.2)
+
+ETAPA 5 — Total do cliente
+  total_gateway_cost   = gateway_fee + gateway_fixed + anticipation_fee
+  client_charge_amount = subtotal_1 + total_gateway_cost
+
+ETAPA 6 — Valor por parcela
+  installment_value    = ceil_2(client_charge_amount / installment_count)
+  (última parcela ajustada para fechar o total exato)
+```
+
+**Regra de resultado garantido:**
+- Renovi SEMPRE recebe `provider_fee_amount + client_fee_amount` (R$200 no exemplo) — líquido, sem dedução de taxas Asaas
+- Prestador SEMPRE recebe `provider_net_amount` (R$850 no exemplo) — via split fixo
+- Cliente paga o `client_charge_amount` que já embute TODAS as taxas
+- Taxas Asaas são cobertas pelo spread entre `client_charge_amount` e `provider_net_amount + platform_total_fee`
+
+### 5.1.2 Exemplos Concretos de Parcelamento
+
+Dado `proposed_amount = R$1.000,00`:
+
+```
+── PIX ───────────────────────────────────────────────────────────────
+base_price           = R$1.000,00
+renovi_fee           = R$50,00       (5%)
+subtotal_1           = R$1.050,00
+gateway_fee          = R$10,40       (0,99%)
+gateway_fixed        = R$0,00
+anticipation_fee     = R$0,00
+client_charge_amount = R$1.060,40
+Resultado: Cliente paga R$1.060,40
+
+── CARTÃO 1x (à vista) ──────────────────────────────────────────────
+base_price           = R$1.000,00
+renovi_fee           = R$50,00       (5%)
+subtotal_1           = R$1.050,00
+gateway_fee          = R$31,40       (2,99%)
+gateway_fixed        = R$0,49
+anticipation_fee     = R$0,00        (sem antecipação à vista)
+client_charge_amount = R$1.081,89
+Resultado: Cliente paga R$1.081,89
+
+── CARTÃO 6x ─────────────────────────────────────────────────────────
+base_price           = R$1.000,00
+renovi_fee           = R$50,00       (5%)
+subtotal_1           = R$1.050,00
+gateway_fee          = R$36,65       (3,49%)
+gateway_fixed        = R$0,49
+anticipation_fee     = R$62,48       (1,70%/mês × média ponderada de 3,5 meses)
+client_charge_amount = R$1.149,62
+installment_value    = R$191,60      (6 × R$191,60 = R$1.149,60; última parcela R$191,62)
+Resultado: Cliente vê "6x de R$191,60"
+
+── CARTÃO 12x ────────────────────────────────────────────────────────
+base_price           = R$1.000,00
+renovi_fee           = R$50,00       (5%)
+subtotal_1           = R$1.050,00
+gateway_fee          = R$41,90       (3,99%)
+gateway_fixed        = R$0,49
+anticipation_fee     = R$116,03      (1,70%/mês × média ponderada de 6,5 meses)
+client_charge_amount = R$1.208,42
+installment_value    = R$100,70      (12 × R$100,70 = R$1.208,40; última parcela R$100,72)
+Resultado: Cliente vê "12x de R$100,70"
+```
+
+> **Fórmula de antecipação ponderada:** A antecipação é calculada sobre o número médio ponderado de meses.
+> Para N parcelas: `anticipation_fee = subtotal_1 × anticipation_rate × ((N+1)/2)`
+> Isso porque a parcela 1 é recebida imediatamente, a parcela 2 em 1 mês, ..., parcela N em (N-1) meses.
+> Média = (0 + 1 + 2 + ... + (N-1)) / N = (N-1)/2 meses.
+> Portanto: `anticipation_fee = subtotal_1 × rate_per_month × (N-1)/2`
+>
+> **Nota sobre Pix:** O Pix também tem taxa Asaas (0,99%). Para manter a garantia de que a Renovi e o prestador recebem seus valores líquidos, o cliente paga esta taxa também. Sem esta inclusão, a Renovi absorveria ~1% de cada transação Pix.
 
 ### 5.2 Estratégia de Split: VALOR FIXO
 
@@ -538,41 +663,121 @@ Esta RPC é o **ponto central** da Camada 2. Toda lógica de precificação do c
 Esta função é a **única implementação** do cálculo de precificação do cliente. Tanto a RPC pública quanto o `initiate_checkout` a chamam, garantindo consistência:
 
 ```sql
--- Função interna (não exposta via RLS): calcula a precificação do lado do cliente.
--- Aceita p_payment_method desde V1 para preparar evolução futura (ignorado por ora).
--- Retorna todos os campos necessários ao snapshot financeiro.
+-- // UPDATED: Função interna agora calcula TODAS as taxas financeiras (Renovi + gateway + antecipação)
+-- O cliente paga TODAS as taxas. Nenhuma taxa é hardcoded — todas vêm de platform_constants.
+-- Retorna todos os campos necessários ao snapshot financeiro, incluindo parcelamento.
 CREATE OR REPLACE FUNCTION public._calculate_client_pricing(
-  p_proposed_amount  numeric,
-  p_payment_method   text DEFAULT 'PIX'
+  p_proposed_amount    numeric,
+  p_payment_method     text DEFAULT 'PIX',
+  p_installment_count  integer DEFAULT 1           -- // ADDED: número de parcelas (1 = à vista)
 ) RETURNS TABLE (
-  client_fee_rate        numeric,
-  client_fee_amount      numeric,
-  client_charge_amount   numeric
+  client_fee_rate           numeric,
+  client_fee_amount         numeric,
+  client_charge_amount      numeric,
+  installment_count         integer,                -- // ADDED
+  installment_value         numeric,                -- // ADDED: valor de cada parcela (NULL se 1x)
+  gateway_fee_percent       numeric,                -- // ADDED
+  gateway_fee_amount        numeric,                -- // ADDED
+  gateway_fixed_fee         numeric,                -- // ADDED
+  anticipation_fee_percent  numeric,                -- // ADDED
+  anticipation_fee_amount   numeric,                -- // ADDED
+  total_gateway_cost        numeric                 -- // ADDED
 ) LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
-  v_client_fee_rate numeric(6,4);
-BEGIN
-  -- Fonte autoritativa: platform_constants vigente no momento da chamada.
-  -- Futuramente: lógica aqui pode diferenciar por p_payment_method, promoções etc.
-  SELECT (value::text)::numeric
-  INTO v_client_fee_rate
-  FROM public.platform_constants
-  WHERE key = 'renovi_tax_client';
+  v_client_fee_rate         numeric(6,4);
+  v_client_fee_amount       numeric(10,2);
+  v_subtotal                numeric(10,2);
+  v_gateway_fee_percent     numeric(6,4) := 0;
+  v_gateway_fee_amount      numeric(10,2) := 0;
+  v_gateway_fixed_fee       numeric(10,2) := 0;
+  v_anticipation_rate       numeric(6,4) := 0;
+  v_anticipation_fee_amount numeric(10,2) := 0;
+  v_total_gateway_cost      numeric(10,2) := 0;
+  v_client_charge_amount    numeric(10,2);
+  v_installment_value       numeric(10,2);
+  v_max_installments        integer;
 
-  IF v_client_fee_rate IS NULL THEN
-    RAISE EXCEPTION 'Configuração renovi_tax_client não encontrada em platform_constants';
+  -- Helper para buscar constante com validação
+  FUNCTION _get_const(p_key text) RETURNS numeric AS $inner$
+  DECLARE v numeric;
+  BEGIN
+    SELECT (value::text)::numeric INTO v FROM public.platform_constants WHERE key = p_key;
+    IF v IS NULL THEN
+      RAISE EXCEPTION 'Configuração "%" não encontrada em platform_constants', p_key;
+    END IF;
+    RETURN v;
+  END;
+  $inner$ LANGUAGE plpgsql;
+BEGIN
+  -- Validar installment_count
+  v_max_installments := _get_const('max_installments')::integer;
+  IF p_installment_count < 1 OR p_installment_count > v_max_installments THEN
+    RAISE EXCEPTION 'Número de parcelas inválido: %. Permitido: 1 a %', p_installment_count, v_max_installments;
+  END IF;
+  IF p_payment_method = 'PIX' AND p_installment_count > 1 THEN
+    RAISE EXCEPTION 'PIX não suporta parcelamento';
+  END IF;
+
+  -- ETAPA 1+2: Taxa Renovi
+  v_client_fee_rate := _get_const('renovi_tax_client');
+  v_client_fee_amount := round(p_proposed_amount * v_client_fee_rate, 2);
+  v_subtotal := p_proposed_amount + v_client_fee_amount;
+
+  -- ETAPA 3: Taxa do gateway (varia por método e faixa de parcelas)
+  IF p_payment_method = 'PIX' THEN
+    v_gateway_fee_percent := _get_const('pix_processing_fee_percent');
+    v_gateway_fixed_fee   := _get_const('pix_fixed_fee_per_transaction');
+  ELSIF p_payment_method = 'CREDIT_CARD' THEN
+    v_gateway_fixed_fee := _get_const('card_fixed_fee_per_transaction');
+    IF p_installment_count = 1 THEN
+      v_gateway_fee_percent := _get_const('card_processing_fee_1x_percent');
+    ELSIF p_installment_count BETWEEN 2 AND 6 THEN
+      v_gateway_fee_percent := _get_const('card_processing_fee_2_6x_percent');
+    ELSIF p_installment_count BETWEEN 7 AND 12 THEN
+      v_gateway_fee_percent := _get_const('card_processing_fee_7_12x_percent');
+    ELSE
+      v_gateway_fee_percent := _get_const('card_processing_fee_13_21x_percent');
+    END IF;
+  END IF;
+
+  v_gateway_fee_amount := round(v_subtotal * v_gateway_fee_percent, 2);
+
+  -- ETAPA 4: Taxa de antecipação (SOMENTE parcelamento cartão, N >= 2)
+  IF p_payment_method = 'CREDIT_CARD' AND p_installment_count >= 2 THEN
+    v_anticipation_rate := _get_const('anticipation_fee_per_month_percent');
+    -- Fórmula: subtotal × rate × (N-1)/2 (média ponderada dos meses)
+    v_anticipation_fee_amount := round(v_subtotal * v_anticipation_rate * (p_installment_count - 1)::numeric / 2, 2);
+  END IF;
+
+  -- ETAPA 5: Total
+  v_total_gateway_cost := v_gateway_fee_amount + v_gateway_fixed_fee + v_anticipation_fee_amount;
+  v_client_charge_amount := v_subtotal + v_total_gateway_cost;
+
+  -- ETAPA 6: Valor por parcela
+  IF p_installment_count > 1 THEN
+    v_installment_value := round(v_client_charge_amount / p_installment_count, 2);
   END IF;
 
   RETURN QUERY SELECT
-    v_client_fee_rate                                            AS client_fee_rate,
-    round(p_proposed_amount * v_client_fee_rate, 2)             AS client_fee_amount,
-    p_proposed_amount + round(p_proposed_amount * v_client_fee_rate, 2)  AS client_charge_amount;
+    v_client_fee_rate,
+    v_client_fee_amount,
+    v_client_charge_amount,
+    p_installment_count,
+    v_installment_value,
+    v_gateway_fee_percent,
+    v_gateway_fee_amount,
+    v_gateway_fixed_fee,
+    v_anticipation_rate,
+    v_anticipation_fee_amount,
+    v_total_gateway_cost;
 END;
 $$;
 
 -- Revogar acesso público; somente funções SECURITY DEFINER a chamam
 REVOKE ALL ON FUNCTION public._calculate_client_pricing FROM PUBLIC;
 ```
+
+> **Nota sobre inner function:** PostgreSQL 14+ suporta funções internas em PL/pgSQL via `CREATE FUNCTION` dentro do `DECLARE`. Se a versão do Supabase não suportar, extrair `_get_const` como função SQL auxiliar separada.
 
 #### 5.3.2 RPC pública `get_client_proposal_pricing`
 
@@ -609,19 +814,68 @@ BEGIN
     RAISE EXCEPTION 'Acesso negado';
   END IF;
 
-  SELECT * INTO v_pricing
-  FROM public._calculate_client_pricing(v_proposed_amount, p_payment_method);
+  -- // UPDATED: Calcular PIX + todas as opções de parcelamento de uma vez
+  -- Retornar opções de pagamento com taxas embutidas — jamais expor o breakdown
+  DECLARE
+    v_result       jsonb;
+    v_options      jsonb := '[]'::jsonb;
+    v_pricing      record;
+    v_max          integer;
+    i              integer;
+  BEGIN
+    -- PIX (sempre disponível)
+    SELECT * INTO v_pricing FROM public._calculate_client_pricing(v_proposed_amount, 'PIX', 1);
+    v_options := v_options || jsonb_build_array(jsonb_build_object(
+      'method', 'PIX', 'installments', 1,
+      'total', v_pricing.client_charge_amount,
+      'installment_value', v_pricing.client_charge_amount
+    ));
 
-  -- Retornar APENAS o valor total — jamais expor o breakdown ao cliente
-  RETURN jsonb_build_object(
-    'proposal_id',         p_proposal_id,
-    'client_charge_amount', v_pricing.client_charge_amount
-    -- Intencionalmente omitido: client_fee_rate, client_fee_amount
-    -- O cliente não vê a composição da taxa
-  );
+    -- Cartão 1x
+    SELECT * INTO v_pricing FROM public._calculate_client_pricing(v_proposed_amount, 'CREDIT_CARD', 1);
+    v_options := v_options || jsonb_build_array(jsonb_build_object(
+      'method', 'CREDIT_CARD', 'installments', 1,
+      'total', v_pricing.client_charge_amount,
+      'installment_value', v_pricing.client_charge_amount
+    ));
+
+    -- Cartão parcelado (2x até max_installments)
+    SELECT (value::text)::integer INTO v_max FROM platform_constants WHERE key = 'max_installments';
+    FOR i IN 2..COALESCE(v_max, 12) LOOP
+      SELECT * INTO v_pricing FROM public._calculate_client_pricing(v_proposed_amount, 'CREDIT_CARD', i);
+      v_options := v_options || jsonb_build_array(jsonb_build_object(
+        'method', 'CREDIT_CARD', 'installments', i,
+        'total', v_pricing.client_charge_amount,
+        'installment_value', v_pricing.installment_value
+      ));
+    END LOOP;
+
+    RETURN jsonb_build_object(
+      'proposal_id', p_proposal_id,
+      'payment_options', v_options
+      -- Intencionalmente omitido: client_fee_rate, gateway_fee, anticipation_fee
+      -- O cliente vê APENAS o total e o valor por parcela — nunca a composição
+    );
+  END;
 END;
 $$;
 ```
+
+> **Nota sobre performance:** Esta RPC calcula N+2 opções (PIX + 1x + 2x..Nx). Para `max_installments=12`, são 13 chamadas a `_calculate_client_pricing`. Cada chamada faz 1 SELECT em `platform_constants`. Para otimizar, uma versão futura pode buscar todas as constantes uma vez e passar como parâmetros.
+>
+> **Formato de retorno para o frontend:**
+> ```json
+> {
+>   "proposal_id": "uuid",
+>   "payment_options": [
+>     { "method": "PIX", "installments": 1, "total": 1060.40, "installment_value": 1060.40 },
+>     { "method": "CREDIT_CARD", "installments": 1, "total": 1081.89, "installment_value": 1081.89 },
+>     { "method": "CREDIT_CARD", "installments": 2, "total": 1100.53, "installment_value": 550.27 },
+>     { "method": "CREDIT_CARD", "installments": 6, "total": 1149.62, "installment_value": 191.60 },
+>     { "method": "CREDIT_CARD", "installments": 12, "total": 1208.42, "installment_value": 100.70 }
+>   ]
+> }
+> ```
 
 #### 5.3.3 Uso em bulk na listagem de orçamentos
 
@@ -663,8 +917,8 @@ O escrow do Asaas opera **no nível do subaccount do prestador**:
 POST /v3/accounts/{subaccount_id}/escrow
 {
   "enabled": true,
-  "isFeePayer": true,       // prestador paga a taxa de R$9,90/mês
-  "daysToExpire": 30        // liberação automática em 30 dias se o release manual não ocorrer
+  "isFeePayer": false,      // UPDATED: plataforma (Renovi) paga a taxa de R$9,90/mês — NÃO o prestador
+  "daysToExpire": 45        // UPDATED: máximo suportado pelo Asaas (45 dias); liberação automática como backup
 }
 ```
 
@@ -812,7 +1066,7 @@ CREATE TABLE public.service_payment_releases (
 **Após criar o subaccount:**
 ```
 POST /v3/accounts/{id}/escrow
-{ "enabled": true, "isFeePayer": true, "daysToExpire": 30 }
+{ "enabled": true, "isFeePayer": false, "daysToExpire": 45 }    // UPDATED: plataforma paga; 45 dias máximo Asaas
 Authorization: {api_key_da_PLATAFORMA}  ← configuração de escrow é feita pela conta principal
 ```
 
@@ -822,6 +1076,8 @@ Authorization: {api_key_da_PLATAFORMA}  ← configuração de escrow é feita pe
 
 ```
 POST /v3/payments
+
+── PIX ou Cartão 1x ──────────────────────────────────────────────────
 {
   "customer": "<asaas_customer_id>",
   "billingType": "PIX" | "CREDIT_CARD",
@@ -833,7 +1089,35 @@ POST /v3/payments
     { "walletId": "<provider_asaas_wallet_id>", "fixedValue": <provider_net_amount> }
   ]
 }
+
+── Cartão Parcelado (2x+) ── // ADDED ────────────────────────────────
+{
+  "customer": "<asaas_customer_id>",
+  "billingType": "CREDIT_CARD",
+  "totalValue": <client_charge_amount>,     ← ATENÇÃO: usar totalValue, NÃO value (que é só para 1x)
+  "installmentCount": <installment_count>,  ← do snapshot em service_payments
+  "installmentValue": <installment_value>,  ← do snapshot em service_payments
+  "dueDate": "<hoje>",
+  "description": "Renovi - <service_title> - <provider_display_name>",
+  "externalReference": "<service_payments.id>",
+  "split": [
+    { "walletId": "<provider_asaas_wallet_id>", "fixedValue": <provider_net_amount> }
+  ],
+  "creditCard": { /* token */ },
+  "creditCardHolderInfo": { ... }
+}
 ```
+
+> **REGRA CRÍTICA DE PARCELAMENTO:** Para 1x, usar `"value"`. Para 2x+, usar `"totalValue"` + `"installmentCount"` + `"installmentValue"`. Misturar os dois formatos causa erro na API Asaas.
+>
+> **Split em parcelamentos:** O split é aplicado **por parcela individual**, não sobre o total. O Asaas distribui proporcionalmente. O `fixedValue` do split se refere ao valor que o prestador recebe **no total** (soma de todas as parcelas). Verificar na documentação Asaas mais recente se o comportamento mudou.
+>
+> **Endpoint de simulação (recomendado antes de criar):**
+> ```
+> POST /v3/payments/simulate
+> { "value": <total>, "billingType": "CREDIT_CARD", "installmentCount": <N> }
+> ```
+> Retorna `netValue` e breakdown de taxas sem criar a cobrança. Usar para validar que o `netValue` cobre o split.
 
 ---
 
@@ -891,12 +1175,16 @@ Pós-confirmação: `confirmed → refunded`, `confirmed → chargeback`
 2.  Cliente clica em um pedido de serviço para ver detalhes
 3.  Tela mostra propostas dos prestadores
 
-4.  Para cada proposta, exibir SOMENTE client_charge_amount.
-    Este valor NÃO está armazenado na proposta.
-    É calculado dinamicamente:
-    - Na listagem em bulk: list_client_received_budgets calcula inline com renovi_tax_client vigente
-    - No detalhe de uma proposta: get_client_proposal_pricing(proposal_id, payment_method='PIX')
-    - Na tela de checkout: idem (exibição antes do pagamento)
+4.  // UPDATED: Tela de Orçamento — exibir APENAS valor base + taxa Renovi
+    Para cada proposta, exibir:
+    - Valor do serviço (proposed_amount): "Valor do orçamento: R$1.000,00"
+    - Taxa Renovi (+5%): "Taxa da plataforma: R$50,00"
+    - Total base: "Total: R$1.050,00"
+    NÃO exibir taxas de cartão, parcelamento, ou valores por parcela nesta tela.
+    O cálculo inline em list_client_received_budgets usa renovi_tax_client vigente.
+
+    O detalhamento de taxas de gateway e opções de parcelamento aparece
+    SOMENTE na tela de checkout (passo 8), após o cliente clicar "Quero contratar".
 
 5.  Cliente clica "Quero contratar" em uma proposta
 
@@ -1015,12 +1303,34 @@ Pós-confirmação: `confirmed → refunded`, `confirmed → chargeback`
 **4. Garantia e pagamento:**
 > "Seu pagamento fica protegido. O prestador só recebe o valor após a conclusão do serviço confirmada por você."
 
-**5. Valor e método:**
-- Destaque: `Total: R$ 1.050,00` ← lido de `service_payments.client_charge_amount`
-- Cards de seleção: PIX (badge "Aprovação imediata") | Cartão de crédito
+**5. Valor e método:** // UPDATED: agora com opções de parcelamento
+- Seletor de método de pagamento:
+  - **PIX** (badge "Aprovação imediata") → exibe total Pix (ex.: R$1.060,40)
+  - **Cartão de crédito** → abre seletor de parcelas:
+    - 1x de R$1.081,89 (à vista)
+    - 2x de R$550,27
+    - 3x de R$370,18
+    - ...até Nx de R$X
+    - Cada opção mostra: valor por parcela + total entre parênteses
+    - Ex.: "6x de R$191,60 (total R$1.149,62)"
+- O valor exibido em CADA opção já inclui TODAS as taxas (Renovi + gateway + antecipação)
+- O cliente NUNCA vê o breakdown das taxas — apenas o total e o valor por parcela
 - Aviso: "Esta proposta está reservada por 28 min."
 
+**Dados das opções:** Vindos de `get_client_proposal_pricing(proposal_id)` que retorna `payment_options[]`.
+
 **6. CTA:** "Pagar com PIX" / "Pagar com Cartão" + estado de carregamento
+
+> // ADDED: Regra de UX — Resumo de valores na tela
+> **Na tela de orçamento (ANTES de clicar "Quero contratar"):**
+> - Mostrar: Valor do serviço + Taxa Renovi (5%) = Total base
+> - NÃO mostrar: taxas de cartão, opções de parcelamento
+>
+> **Na tela de checkout (APÓS clicar "Quero contratar"):**
+> - Mostrar: opções de pagamento com valores finais por método
+> - PIX: valor total (com taxa gateway Pix embutida)
+> - Cartão: lista de parcelas com valores finais (todas as taxas embutidas)
+> - O total varia por método/parcelas — isso é esperado e correto
 
 ### 10.4 Mobile vs Desktop
 
@@ -1080,7 +1390,7 @@ O cliente volta para a tela de orçamentos. A proposta fica disponível para nov
 
 ---
 
-## 12. FLUXO CARTÃO DE CRÉDITO
+## 12. FLUXO CARTÃO DE CRÉDITO (INCLUI PARCELAMENTO)
 
 ### 12.1 Tokenização (PCI-DSS)
 
@@ -1093,14 +1403,35 @@ Usar tokenização do Asaas:
 4. Backend cria cobrança com token
 
 ```
+── Cartão 1x (à vista) ──────────────────────────────────────────────
 POST /v3/payments
 {
   billingType: "CREDIT_CARD",
-  customer, value, dueDate, externalReference, split,
+  customer, value: <client_charge_amount>, dueDate, externalReference, split,
+  creditCard: { /* tokenizado */ },
+  creditCardHolderInfo: { name, email, cpfCnpj, postalCode, phone }
+}
+
+── Cartão Parcelado (2x+) ── // ADDED ────────────────────────────────
+POST /v3/payments
+{
+  billingType: "CREDIT_CARD",
+  customer,
+  totalValue: <client_charge_amount>,      // ATENÇÃO: usar totalValue, não value
+  installmentCount: <installment_count>,   // do snapshot
+  installmentValue: <installment_value>,   // do snapshot
+  dueDate, externalReference, split,
   creditCard: { /* tokenizado */ },
   creditCardHolderInfo: { name, email, cpfCnpj, postalCode, phone }
 }
 ```
+
+> // ADDED: Regras de parcelamento
+> - Para 1x: usar campo `value`. Campos `installmentCount`/`installmentValue`/`totalValue` NÃO devem estar presentes.
+> - Para 2x+: usar `totalValue` + `installmentCount` + `installmentValue`. Campo `value` NÃO deve estar presente.
+> - O `installmentValue` e `installmentCount` vêm do snapshot congelado em `service_payments` — NUNCA recalcular no momento da criação da cobrança.
+> - A API Asaas retorna o ID do plano de parcelamento (`installment`) na resposta. Armazenar em `service_payments.asaas_installment_id` para consultas futuras.
+> - Consultar parcelas individuais: `GET /v3/installments/{installment_id}/payments`
 
 ### 12.2 Cenários de Resposta Imediata
 
@@ -1407,15 +1738,24 @@ RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   -- Campos do snapshot financeiro jamais podem ser alterados após criação
   IF (
-    NEW.proposed_amount        <> OLD.proposed_amount        OR
-    NEW.provider_fee_rate      <> OLD.provider_fee_rate      OR
-    NEW.provider_fee_amount    <> OLD.provider_fee_amount    OR
-    NEW.provider_net_amount    <> OLD.provider_net_amount    OR
-    NEW.client_fee_rate        <> OLD.client_fee_rate        OR
-    NEW.client_fee_amount      <> OLD.client_fee_amount      OR
-    NEW.client_charge_amount   <> OLD.client_charge_amount   OR
-    NEW.split_fixed_value      <> OLD.split_fixed_value      OR
-    NEW.proposal_pricing_signature <> OLD.proposal_pricing_signature
+    NEW.proposed_amount             IS DISTINCT FROM OLD.proposed_amount            OR
+    NEW.provider_fee_rate           IS DISTINCT FROM OLD.provider_fee_rate          OR
+    NEW.provider_fee_amount         IS DISTINCT FROM OLD.provider_fee_amount        OR
+    NEW.provider_net_amount         IS DISTINCT FROM OLD.provider_net_amount        OR
+    NEW.client_fee_rate             IS DISTINCT FROM OLD.client_fee_rate            OR
+    NEW.client_fee_amount           IS DISTINCT FROM OLD.client_fee_amount          OR
+    NEW.client_charge_amount        IS DISTINCT FROM OLD.client_charge_amount       OR
+    NEW.split_fixed_value           IS DISTINCT FROM OLD.split_fixed_value          OR
+    NEW.proposal_pricing_signature  IS DISTINCT FROM OLD.proposal_pricing_signature OR
+    -- // ADDED: campos de parcelamento e taxas de gateway também são imutáveis
+    NEW.installment_count           IS DISTINCT FROM OLD.installment_count          OR
+    NEW.installment_value           IS DISTINCT FROM OLD.installment_value          OR
+    NEW.gateway_fee_percent         IS DISTINCT FROM OLD.gateway_fee_percent        OR
+    NEW.gateway_fee_amount          IS DISTINCT FROM OLD.gateway_fee_amount         OR
+    NEW.gateway_fixed_fee           IS DISTINCT FROM OLD.gateway_fixed_fee          OR
+    NEW.anticipation_fee_percent    IS DISTINCT FROM OLD.anticipation_fee_percent   OR
+    NEW.anticipation_fee_amount     IS DISTINCT FROM OLD.anticipation_fee_amount    OR
+    NEW.total_gateway_cost          IS DISTINCT FROM OLD.total_gateway_cost
   ) THEN
     RAISE EXCEPTION 'Snapshot financeiro de service_payments é imutável';
   END IF;
@@ -1850,6 +2190,42 @@ O sandbox envia emails e SMS reais. **Não criar clientes com dados reais de ter
 - Apenas novos checkouts iniciados após a mudança usarão a nova taxa
 - A taxa aplicada a cada transação é sempre auditável via `service_payments.client_fee_rate`
 
+// ADDED: Edge cases de parcelamento e taxas de gateway
+
+### 23.13 Mudança de Taxas Asaas (gateway/antecipação)
+- As taxas Asaas podem mudar (ex.: fim do período promocional de 3 meses)
+- Checkouts em andamento NÃO são afetados — todas as taxas estão congeladas no snapshot (`gateway_fee_percent`, `anticipation_fee_percent`)
+- Para atualizar: modificar os valores em `platform_constants` (ex.: `card_processing_fee_1x_percent`)
+- Criar alerta para datas de mudança de taxa conhecidas (ex.: fim da promoção Asaas)
+
+### 23.14 Recálculo de Parcelas (Troca de Método de Pagamento no Checkout)
+- Se o cliente seleciona "6x Cartão", o `initiate_checkout` congela o snapshot com 6 parcelas
+- Se o cliente quer trocar para PIX ou para 12x: **deve iniciar um novo checkout**
+- O checkout anterior expira naturalmente (ou é cancelado), e o novo `initiate_checkout` cria um novo snapshot
+- Isso garante que o snapshot é SEMPRE consistente com o método/parcelas efetivamente escolhidos
+- **Alternativa mais fluida:** O `initiate_checkout` pode aceitar o `billing_type` e `installment_count` como parâmetros, e o snapshot é criado apenas quando o cliente confirma a opção. Neste caso, a tela de checkout exibe as opções (via `get_client_proposal_pricing`) ANTES do lock, e o lock + snapshot acontecem no momento do "Pagar"
+
+### 23.15 Pagamento Parcial de Parcelamento (Parcela Individual Falha)
+- Se uma parcela intermediária falha (ex.: cartão vencido na parcela 4 de 12):
+  - Asaas envia webhook `PAYMENT_OVERDUE` para a parcela individual
+  - A cobrança do parcelamento como um todo NÃO é cancelada automaticamente
+  - Asaas pode enviar `PAYMENT_DUNNING_REQUESTED` para tentativa de cobrança
+  - Ação Renovi: alertar admin; NÃO cancelar o serviço automaticamente (parcelas anteriores já foram pagas)
+  - Escrow: manter bloqueado até resolução
+  - Ação futura: definir política de tolerância a parcelas inadimplentes
+
+### 23.16 Arredondamento em Parcelas
+- `client_charge_amount / installment_count` pode não dar divisão exata
+- Regra: arredondar cada parcela para baixo (2 casas decimais)
+- Diferença é adicionada à ÚLTIMA parcela
+- Ex.: R$1.149,62 / 6 = R$191,60 × 5 + R$191,62 × 1
+- Usar `totalValue` no Asaas (não `installmentValue`) para que o Asaas faça este ajuste automaticamente
+
+### 23.17 Pagamento Expirado com Parcelas
+- Se o checkout expira antes do pagamento: todas as parcelas são canceladas
+- Proposta volta a `submitted`, SR volta a `open`
+- Comportamento idêntico ao checkout 1x — sem tratamento especial
+
 ---
 
 ## 24. FASES DE IMPLEMENTAÇÃO
@@ -1915,17 +2291,22 @@ O sandbox envia emails e SMS reais. **Não criar clientes com dados reais de ter
 
 ---
 
-### Fase 4 — Pagamento com Cartão de Crédito
+### Fase 4 — Pagamento com Cartão de Crédito (Inclui Parcelamento) // UPDATED
 
 **Escopo:**
 - Tokenização do cartão no frontend (Asaas.js ou endpoint de tokenização)
-- Edge Function `create-asaas-charge` estendida para CREDIT_CARD
-- `_calculate_client_pricing` aceitar `'CREDIT_CARD'` como p_payment_method (pode adicionar surcharge aqui em versões futuras sem mudar a interface)
+- Edge Function `create-asaas-charge` estendida para CREDIT_CARD (1x e parcelado)
+- `_calculate_client_pricing` com cálculo completo de taxas de gateway + antecipação por faixa de parcelas
+- `get_client_proposal_pricing` retornando `payment_options[]` com todas as opções de parcelamento
+- Seletor de parcelas no frontend (tela de checkout)
+- `initiate_checkout` recebendo `p_installment_count` e congelando snapshot com parcelas
+- Payload Asaas: `totalValue` + `installmentCount` + `installmentValue` para 2x+
+- Endpoint de simulação `POST /v3/payments/simulate` para validação pré-criação
 - Webhook handlers: PAYMENT_AWAITING_RISK_ANALYSIS, PAYMENT_APPROVED_BY_RISK_ANALYSIS, PAYMENT_REPROVED_BY_RISK_ANALYSIS, PAYMENT_CREDIT_CARD_CAPTURE_REFUSED
-- UI states: análise de risco, recusado, captura recusada
-- Fluxo de retry (recusado → trocar para Pix)
+- UI states: análise de risco, recusado, captura recusada, seletor de parcelas
+- Fluxo de retry (recusado → trocar para Pix ou tentar outro cartão)
 
-**Risco:** Conformidade PCI — nunca tocar no PAN; usar tokenização.
+**Risco:** Conformidade PCI — nunca tocar no PAN; usar tokenização. Split em parcelamento — testar no sandbox para validar distribuição proporcional.
 
 **Dependências:** Fase 3.
 
@@ -2044,15 +2425,26 @@ WHERE round(sp.proposed_amount * sp.client_fee_rate, 2) <> sp.client_fee_amount;
 | Emails/SMS reais disparados no sandbox | Média | Não usar emails/telefones reais de terceiros no sandbox |
 | Custo de escrow (R$9,90/prestador/mês) | Média | Considerar no modelo financeiro; pode ser repassado ao prestador |
 
-### 26.2 Questões Abertas
+### 26.2 Questões Resolvidas e Abertas
 
-1. **Taxa do cliente:** O valor de 5% (`renovi_tax_client`) está confirmado com o produto?
-2. **Quem paga o escrow:** A plataforma absorve os R$9,90/mês por prestador ou repassa?
-3. **`daysToExpire` do escrow:** 30 dias é adequado como backup? Ou usar valor menor (ex.: 15 dias)?
+// UPDATED: Questões 1-3 e 5 resolvidas; novas questões adicionadas
+
+**Resolvidas:**
+1. ~~**Taxa do cliente:**~~ ✅ Confirmado: 5% (`renovi_tax_client`).
+2. ~~**Quem paga o escrow:**~~ ✅ Plataforma (Renovi) paga R$9,90/mês por prestador. `isFeePayer: false`.
+3. ~~**`daysToExpire` do escrow:**~~ ✅ 45 dias (máximo suportado pelo Asaas).
+5. ~~**Cartão parcelado:**~~ ✅ Suportado desde V1. PIX + Cartão 1x + Cartão parcelado (até 12x). Cliente paga todas as taxas.
+
+**Ainda abertas:**
 4. **Política de cancelamento pós-service:** Após `services` criado, sob quais condições o cliente pode cancelar e receber estorno?
-5. **Cartão parcelado:** Não planejado no V1. Confirmar se será suportado.
 6. **Aprovação da subconta Asaas:** O fluxo de aprovação pode demorar. O que mostrar ao prestador enquanto aguarda?
 7. **Verificar IPs oficiais do Asaas:** Configurar allowlist em Supabase para aceitar webhooks apenas de IPs Asaas.
+
+// ADDED: Novas questões de parcelamento
+8. **Taxas Asaas promocionais vs padrão:** Nos primeiros 3 meses, as taxas de cartão são menores (ex.: 1,99% vs 2,99% para 1x). Os valores em `platform_constants` devem ser atualizados após o período promocional. Criar alerta/reminder para atualização.
+9. **Split em parcelamento:** Verificar comportamento exato do split quando a cobrança é parcelada — se o `fixedValue` é dividido entre parcelas ou aplicado ao total. Testar no sandbox antes de V1.
+10. **Antecipação automática vs manual:** Definir se a Renovi vai usar antecipação automática de recebíveis no Asaas ou se vai aguardar o recebimento natural de cada parcela. Impacta o cálculo da taxa de antecipação cobrada do cliente.
+11. **Valor mínimo por parcela:** Definir valor mínimo por parcela (ex.: R$20,00) para evitar parcelas muito pequenas. Implementar como `min_installment_value` em `platform_constants`.
 
 ---
 
@@ -2092,7 +2484,7 @@ WHERE round(sp.proposed_amount * sp.client_fee_rate, 2) <> sp.client_fee_amount;
 | `profiles` | sem Asaas | +`asaas_customer_id` |
 | `provider_profiles_private` | dados legais apenas | +`asaas_wallet_id`, `asaas_subaccount_id`, `asaas_account_api_key`, `asaas_onboarding_status` |
 | `services` | não existe | NOVA (operacional) |
-| `service_payments` | não existe | NOVA (financeira + escrow; contém snapshot de ambos os lados de precificação, congelado no checkout) |
+| `service_payments` | não existe | NOVA (financeira + escrow; contém snapshot de ambos os lados de precificação + taxas de gateway + parcelamento, congelado no checkout) |
 | `service_payment_events` | não existe | NOVA (auditoria + idempotência) |
 | `service_payment_releases` | não existe | NOVA (tracking de release escrow) |
 
@@ -2121,6 +2513,6 @@ WHERE round(sp.proposed_amount * sp.client_fee_rate, 2) <> sp.client_fee_amount;
 | `calculate_provider_service_pricing` | existente, sem alteração | Calcula provider_fee, tax_amount, final_amount ao criar proposta |
 | `generate_provider_pricing_signature` | existente, sem alteração | HMAC-SHA256 dos 4 campos do prestador |
 | `validate_provider_proposal_pricing` | existente, sem alteração | Trigger de validação na INSERT/UPDATE de provider_proposals |
-| `_calculate_client_pricing(proposed_amount, payment_method)` | NOVA, interna | Única implementação do cálculo do lado do cliente; usada por get_client_proposal_pricing e initiate_checkout |
-| `get_client_proposal_pricing(proposal_id, payment_method)` | NOVA, pública | RPC chamada pelo frontend; retorna apenas client_charge_amount |
+| `_calculate_client_pricing(proposed_amount, payment_method, installment_count)` | NOVA, interna | // UPDATED: Única implementação do cálculo do lado do cliente; inclui taxas de gateway, antecipação e parcelamento; usada por get_client_proposal_pricing e initiate_checkout |
+| `get_client_proposal_pricing(proposal_id, payment_method)` | NOVA, pública | // UPDATED: RPC chamada pelo frontend; retorna `payment_options[]` com todas as opções de parcelamento (PIX + Cartão 1x-12x) — nunca o breakdown de taxas |
 | `prevent_financial_snapshot_mutation` | NOVA, trigger | Impede alteração de qualquer campo do snapshot em service_payments |
