@@ -26,6 +26,12 @@
 - Regras do projeto: **`.cursor/rules/*.mdc`** (yarn, Supabase, testes, arquitetura, etc.).
 - Comandos reutilizáveis: **`.cursor/commands/`**.
 
+### Documentação de negócio (`docs/business`)
+
+- **Hook Cursor (`stop`):** [Hooks | Cursor Docs](https://cursor.com/docs/hooks) — em **`.cursor/hooks.json`** o evento `stop` roda `node .cursor/hooks/on-agent-stop-sync-docs.mjs`, que detecta mudanças em código de produto e grava **`.cursor/hooks/.business-docs-sync-pending.json`** (gitignored) + mensagem nos logs do hook. Isso **não** substitui a edição da documentação; apenas sinaliza pendência.
+- Regra **`business-docs-sync-after-code-changes`**: ao **concluir** um pedido com alterações relevantes, o agente deve disparar um **subagente (Task)** para atualizar `docs/business/` conforme **`.cursor/commands/atualizar-documentacao-negocio.md`**, remover o `.business-docs-sync-pending.json` se aplicável, e resumir na resposta final.
+- Comando manual: **`.cursor/commands/atualizar-documentacao-negocio.md`**.
+
 ## Worktree Git
 
 - Este diretório pode ser um **git worktree**: é a raiz do repositório para abrir no Cursor; não é necessário abrir o worktree pai.

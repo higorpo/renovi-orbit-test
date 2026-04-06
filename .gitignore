@@ -33,3 +33,6 @@ dev-dist
 
 # Coverage
 coverage/
+
+# Cursor hook stop: lembrete para sincronizar docs/business (regenerado automaticamente)
+.cursor/hooks/.business-docs-sync-pending.json

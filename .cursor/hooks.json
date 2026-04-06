@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/cursor-hooks@latest/schema/hooks.schema.json",
+  "version": 1,
+  "hooks": {
+    "stop": [
+      {
+        "command": "node .cursor/hooks/on-agent-stop-sync-docs.mjs"
+      }
+    ]
+  }
+}

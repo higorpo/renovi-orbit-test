@@ -1,0 +1,42 @@
+---
+description: Após mudanças de código de produto, disparar subagente para sincronizar docs/business
+alwaysApply: true
+---
+
+# Sincronização da documentação de negócio ao concluir o pedido
+
+## Hook oficial do Cursor (`stop`)
+
+O projeto define **`.cursor/hooks.json`** com o hook **`stop`**, documentado em [Hooks | Cursor Docs](https://cursor.com/docs/hooks). Ao **terminar** uma execução do agente, o Cursor executa:
+
+`node .cursor/hooks/on-agent-stop-sync-docs.mjs`
+
+Esse script compara `git status` com o workspace, e se houver mudanças em `src/`, `supabase/migrations/`, `supabase/functions/` ou `supabase/config.toml`, grava **`.cursor/hooks/.business-docs-sync-pending.json`** (gitignored) e emite aviso em **stderr** nos logs do hook.
+
+**Limitação:** o hook roda **fora** do modelo — ele **não** abre um subagente sozinho. Ele serve de **gatilho e lembrete**; a atualização dos `.md` continua sendo feita pelo agente (regra abaixo + **Task**) ou manualmente.
+
+Se existir **`.cursor/hooks/.business-docs-sync-pending.json`**, priorize neste pedido: (1) atualizar `docs/business/` conforme os arquivos listados; (2) apagar esse JSON após concluir a sincronização.
+
+## Quando aplicar (regra do agente)
+
+Antes de **encerrar** um pedido no qual você **alterou** arquivos que impactam comportamento de produto, execute o fluxo abaixo.
+
+**Caminhos que disparam o fluxo:** `src/` (app, features, router, layouts), `supabase/migrations/`, `supabase/functions/`, `supabase/config.toml` quando afetar funções ou auth.
+
+**Pode omitir** se a mudança for só: formatação, typos em comentários sem efeito de negócio, testes sem mudança de contrato, ou arquivos já sob `docs/business/` sem tocar código de produto.
+
+## Obrigatório: subagente (Task)
+
+1. Chame a ferramenta **Task** com `subagent_type` **`generalPurpose`** (análise + edição) ou **`explore`** (se for só mapear impacto antes de você editar).
+2. **Prompt do subagente (mínimo):**
+   - Listar arquivios tocados neste pedido (ou usar `git diff` / estado atual).
+   - Identificar módulos/features em `docs/business/modulos/` afetados.
+   - Atualizar os `.md` necessários (README do módulo, feature, `02-mapa-de-modulos-e-features.md`, `glossario-de-negocio.md`, `perfis-e-permissoes.md` quando couber).
+   - Ajustar **`docs/business/rastreabilidade.md`**, **`docs/business/matriz-cobertura-documental.md`** e **`docs/business/pendencias-e-incertezas.md`** se houver lacunas ou correções de comportamento documentado.
+   - Idioma: **português (Brasil)**; não inventar comportamento — só o que as mudanças comprovam.
+3. Na **resposta final ao usuário**, inclua um **breve resumo** do que o subagente atualizou (ou “nenhuma alteração em docs necessária”) e os caminhos dos arquivos editados.
+
+## Referência
+
+- Procedimento detalhado: **`.cursor/commands/atualizar-documentacao-negocio.md`**
+- Índice da documentação: **`docs/business/README.md`**
