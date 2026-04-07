@@ -24,7 +24,7 @@
     "test:e2e:mobile-safari": "playwright test --project=mobile-safari --workers=1",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage --coverage.reporter=html",
     "test:watch": "vitest --watch",
     "prerelease": "node scripts/prerelease.mjs"
   },
