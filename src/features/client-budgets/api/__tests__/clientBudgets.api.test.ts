@@ -229,6 +229,21 @@ describe("uploadQuestionResponseImages", () => {
     expect(result.error).toBe("Usuário não autenticado");
   });
 
+  it("returns auth error message from getUser when present", async () => {
+    authGetUserMock.mockResolvedValue({
+      data: { user: null },
+      error: { message: "Sessão expirada" },
+    } as never);
+
+    const files = [new File(["content"], "file.jpg", { type: "image/jpeg" })];
+    const result = await uploadQuestionResponseImages({
+      serviceRequestId: "sr-1",
+      questionId: "q-1",
+      files,
+    });
+    expect(result.error).toBe("Sessão expirada");
+  });
+
   it("returns error for disallowed file type", async () => {
     authGetUserMock.mockResolvedValue({
       data: { user: { id: "user-1" } },
@@ -298,6 +313,74 @@ describe("uploadQuestionResponseImages", () => {
     });
     expect(result.error).toBe("Upload failed");
   });
+
+  it("returns validation error on second file after first uploaded", async () => {
+    authGetUserMock.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    } as never);
+
+    const uploadMock = vi.fn().mockResolvedValue({ error: null });
+    storageFromMock.mockReturnValue({ upload: uploadMock } as never);
+
+    const files = [
+      new File(["ok"], "a.jpg", { type: "image/jpeg" }),
+      new File(["bad"], "b.pdf", { type: "application/pdf" }),
+    ];
+    const result = await uploadQuestionResponseImages({
+      serviceRequestId: "sr-1",
+      questionId: "q-1",
+      files,
+    });
+    expect(result.paths).toHaveLength(1);
+    expect(result.error).toContain("Formato não permitido");
+  });
+
+  it("uses jpg extension when filename has no extension", async () => {
+    authGetUserMock.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    } as never);
+
+    const uploadMock = vi.fn().mockResolvedValue({ error: null });
+    storageFromMock.mockReturnValue({ upload: uploadMock } as never);
+
+    const files = [new File(["x"], "noextension", { type: "image/jpeg" })];
+    const result = await uploadQuestionResponseImages({
+      serviceRequestId: "sr-1",
+      questionId: "q-1",
+      files,
+    });
+    expect(result.error).toBeNull();
+    expect(uploadMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\.jpg$/),
+      expect.any(File),
+      expect.any(Object),
+    );
+  });
+
+  it("normalizes unknown extension to jpg in storage path", async () => {
+    authGetUserMock.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+      error: null,
+    } as never);
+
+    const uploadMock = vi.fn().mockResolvedValue({ error: null });
+    storageFromMock.mockReturnValue({ upload: uploadMock } as never);
+
+    const files = [new File(["x"], "raw.bmp", { type: "image/jpeg" })];
+    const result = await uploadQuestionResponseImages({
+      serviceRequestId: "sr-1",
+      questionId: "q-1",
+      files,
+    });
+    expect(result.error).toBeNull();
+    expect(uploadMock).toHaveBeenCalledWith(
+      expect.stringMatching(/\.jpg$/),
+      expect.any(File),
+      expect.any(Object),
+    );
+  });
 });
 
 describe("getQuestionResponseImageUrl", () => {
@@ -309,6 +392,11 @@ describe("getQuestionResponseImageUrl", () => {
   it("returns path as-is for http URLs", async () => {
     const url = await getQuestionResponseImageUrl("https://example.com/image.jpg");
     expect(url).toBe("https://example.com/image.jpg");
+  });
+
+  it("returns path as-is for http (non-https) URLs", async () => {
+    const url = await getQuestionResponseImageUrl("http://example.com/image.jpg");
+    expect(url).toBe("http://example.com/image.jpg");
   });
 
   it("returns signed URL for storage path", async () => {
@@ -325,6 +413,14 @@ describe("getQuestionResponseImageUrl", () => {
     const createSignedUrlMock = vi
       .fn()
       .mockResolvedValue({ data: null, error: { message: "Error" } });
+    storageFromMock.mockReturnValue({ createSignedUrl: createSignedUrlMock } as never);
+
+    const url = await getQuestionResponseImageUrl("clients/user-1/image.jpg");
+    expect(url).toBe("");
+  });
+
+  it("returns empty string when signed URL payload has no signedUrl", async () => {
+    const createSignedUrlMock = vi.fn().mockResolvedValue({ data: {}, error: null });
     storageFromMock.mockReturnValue({ createSignedUrl: createSignedUrlMock } as never);
 
     const url = await getQuestionResponseImageUrl("clients/user-1/image.jpg");

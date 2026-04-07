@@ -177,6 +177,23 @@ describe("useGenerateSmartDescription", () => {
     );
   });
 
+  it("sends userNotes from observações key when other keys absent", async () => {
+    const state = createMockState({ step2Data: { observações: "  obs accent  " } });
+    invokeGenerateSmartDescription.mockResolvedValue({
+      data: { description: "OK", metadata: {} },
+      error: null,
+    });
+    const { result } = renderHook(() =>
+      useGenerateSmartDescription({ state })
+    );
+    await act(async () => {
+      await result.current.generateSmartDescription();
+    });
+    expect(invokeGenerateSmartDescription).toHaveBeenCalledWith(
+      expect.objectContaining({ userNotes: "obs accent" })
+    );
+  });
+
   it("sends userNotes from observacoes when additional_details missing", async () => {
     const state = createMockState({ step2Data: { observacoes: "obs" } });
     invokeGenerateSmartDescription.mockResolvedValue({
@@ -297,6 +314,111 @@ describe("useGenerateSmartDescription", () => {
     await act(async () => {
       await result.current.generateSmartDescription();
     });
+    expect(state.setGeneratingDescription).toHaveBeenLastCalledWith(false);
+  });
+
+  it("sends userNotes from detalhes key", async () => {
+    const state = createMockState({ step2Data: { detalhes: "  note  " } });
+    invokeGenerateSmartDescription.mockResolvedValue({
+      data: { description: "OK", metadata: {} },
+      error: null,
+    });
+    const { result } = renderHook(() =>
+      useGenerateSmartDescription({ state })
+    );
+    await act(async () => {
+      await result.current.generateSmartDescription();
+    });
+    expect(invokeGenerateSmartDescription).toHaveBeenCalledWith(
+      expect.objectContaining({ userNotes: "note" })
+    );
+  });
+
+  it("uses structured suggested_title when top-level suggestedTitle is blank", async () => {
+    const state = createMockState();
+    invokeGenerateSmartDescription.mockResolvedValue({
+      data: {
+        description: "Body",
+        suggestedTitle: "   ",
+        metadata: {},
+        structured: {
+          schema_version: 1,
+          professional_description: "",
+          suggested_title: "  From structured  ",
+          confidence: 1,
+          recommended_next_step: "ask_questions",
+          urgency: "medium",
+          scope_complexity: "medium",
+          suggested_questions: [],
+          tags: [],
+          missing_info_warnings: [],
+          suggested_equipment: [],
+          suggested_materials: [],
+          estimated_duration_hint: null,
+        },
+      },
+      error: null,
+    });
+    const { result } = renderHook(() =>
+      useGenerateSmartDescription({ state })
+    );
+    await act(async () => {
+      await result.current.generateSmartDescription();
+    });
+    const updater = (state.setStep3Data as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    const next = updater({ description: "", photos: [], photoPreviews: [] });
+    expect(next.suggestedTitle).toBe("From structured");
+  });
+
+  it("tracks smart_description_used without service_slug when slug is missing", async () => {
+    const state = createMockState({
+      selectedService: {
+        id: "s1",
+        slug: "",
+        title: "T",
+        description: "",
+        active: true,
+        show_on_request_quote: true,
+        parent_id: null,
+        form_id: "f1",
+        icon_key: "Wrench",
+        color_key: "slate",
+        image_url: null,
+        sort_order: 0,
+        created_at: "",
+        updated_at: "",
+        ai_prompt_id: null,
+      },
+    });
+    const { useAnalytics } = await import("@/hooks/useAnalytics");
+    const trackEvent = vi.fn();
+    vi.mocked(useAnalytics).mockReturnValue({
+      trackEvent: trackEvent as (eventName: string, properties?: unknown) => void,
+    });
+    invokeGenerateSmartDescription.mockResolvedValue({
+      data: { description: "Done", metadata: {} },
+      error: null,
+    });
+    const { result } = renderHook(() =>
+      useGenerateSmartDescription({ state })
+    );
+    await act(async () => {
+      await result.current.generateSmartDescription();
+    });
+    expect(trackEvent).toHaveBeenCalledWith("smart_description_used", {});
+  });
+
+  it("handles rejection that is not an Error instance", async () => {
+    const state = createMockState();
+    const onFailure = vi.fn();
+    invokeGenerateSmartDescription.mockRejectedValue("plain string");
+    const { result } = renderHook(() =>
+      useGenerateSmartDescription({ state, onFailure })
+    );
+    await act(async () => {
+      await result.current.generateSmartDescription();
+    });
+    expect(onFailure).toHaveBeenCalled();
     expect(state.setGeneratingDescription).toHaveBeenLastCalledWith(false);
   });
 });

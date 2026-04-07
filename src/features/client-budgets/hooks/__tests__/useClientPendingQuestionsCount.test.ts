@@ -54,4 +54,12 @@ describe("useClientPendingQuestionsCount", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
+
+  it("isError when data is missing and error is null", async () => {
+    fetchClientBudgetQuestions.mockResolvedValue({ data: null, error: null });
+
+    const { result } = renderHook(() => useClientPendingQuestionsCount(), { wrapper: wrapper() });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+  });
 });

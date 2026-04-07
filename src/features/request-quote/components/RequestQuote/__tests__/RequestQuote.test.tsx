@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import type { AuthContextType } from "@/features/auth";
 import { RequestQuote } from "../RequestQuote";
 import {
   mockRequestQuoteState,
   mockFormSchema,
+  mockServiceWithChildren,
 } from "./fixtures/requestQuoteTestFixtures";
 import { renderWithRequestQuoteProviders } from "./testUtils";
 
@@ -62,6 +63,16 @@ vi.mock("../../../hooks/useServiceSchema", () => ({
 vi.mock("../../../hooks/useGenerateSmartDescription", () => ({
   useGenerateSmartDescription: vi.fn(() => ({ generateSmartDescription: vi.fn() })),
 }));
+
+vi.mock("@/features/dynamic-form/utils/schemaValidator", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/features/dynamic-form/utils/schemaValidator")
+  >();
+  return {
+    ...actual,
+    validateFormSchema: vi.fn().mockReturnValue({ valid: true, errors: [], warnings: [] }),
+  };
+});
 
 vi.mock("@/hooks/useAnalytics", () => ({
   useAnalytics: vi.fn(() => ({ trackEvent: vi.fn() })),
@@ -319,6 +330,136 @@ describe("RequestQuote", () => {
     renderWithRequestQuoteProviders(<RequestQuote />);
     const submitBtn = screen.getByRole("button", { name: /Enviar pedido/i });
     expect(submitBtn).toBeDisabled();
+  });
+
+  it("renders address step on guest step 4", () => {
+    useRequestQuoteState.mockReturnValue(
+      mockRequestQuoteState({
+        currentStep: 4,
+        step3Data: { description: "ok", photos: [], photoPreviews: [] },
+        step4Data: { kind: "new", formData: {} as never },
+      }) as ReturnType<typeof useRequestQuoteState>
+    );
+    renderWithRequestQuoteProviders(<RequestQuote />);
+    expect(screen.getByTestId("address-selection-step")).toBeInTheDocument();
+    expect(screen.getByText(/Etapa 4 de 5/)).toBeInTheDocument();
+  });
+
+  it("renders address step on logged-in step 4", () => {
+    useAuth.mockReturnValue({
+      user: { id: "u1", email: "u@test.com" },
+      loadingSession: false,
+      session: null,
+      profile: null,
+      loading: false,
+      signIn: vi.fn(),
+      signInWithGoogle: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      refreshProfile: vi.fn(),
+      getRedirectPath: vi.fn(),
+    } as unknown as AuthContextType);
+    useRequestQuoteState.mockReturnValue(
+      mockRequestQuoteState({
+        currentStep: 4,
+        step3Data: { description: "ok", photos: [], photoPreviews: [] },
+        step4Data: { kind: "existing", addressId: "a1" },
+      }) as ReturnType<typeof useRequestQuoteState>
+    );
+    renderWithRequestQuoteProviders(<RequestQuote />);
+    expect(screen.getByTestId("address-selection-step")).toBeInTheDocument();
+    expect(screen.getByText(/Etapa 4 de 4/)).toBeInTheDocument();
+  });
+
+  it("shows step header labels for guest on step 3", () => {
+    useRequestQuoteState.mockReturnValue(
+      mockRequestQuoteState({
+        currentStep: 3,
+        step3Data: { description: "done", photos: [], photoPreviews: [] },
+      }) as ReturnType<typeof useRequestQuoteState>
+    );
+    renderWithRequestQuoteProviders(<RequestQuote />);
+    expect(screen.getByText("Serviço")).toBeInTheDocument();
+    expect(screen.getByText("Detalhes")).toBeInTheDocument();
+    expect(screen.getByText("Descrição")).toBeInTheDocument();
+  });
+
+  it("calls setPreviousStep with prior step when currentStep advances between renders", () => {
+    const stateAt2 = mockRequestQuoteState({ currentStep: 2 });
+    useRequestQuoteState.mockReturnValue(stateAt2 as ReturnType<typeof useRequestQuoteState>);
+    const { rerender } = renderWithRequestQuoteProviders(<RequestQuote />);
+    useRequestQuoteState.mockReturnValue({
+      ...stateAt2,
+      currentStep: 3,
+    } as ReturnType<typeof useRequestQuoteState>);
+    rerender(<RequestQuote />);
+    expect(stateAt2.setPreviousStep).toHaveBeenCalledWith(2);
+  });
+
+  it("clamps step to 4 when user is logged in and state was on guest step 5", () => {
+    const setCurrentStep = vi.fn();
+    useAuth.mockReturnValue({
+      user: { id: "u1", email: "u@test.com" },
+      loadingSession: false,
+      session: null,
+      profile: null,
+      loading: false,
+      signIn: vi.fn(),
+      signInWithGoogle: vi.fn(),
+      signUp: vi.fn(),
+      signOut: vi.fn(),
+      refreshProfile: vi.fn(),
+      getRedirectPath: vi.fn(),
+    } as unknown as AuthContextType);
+    useRequestQuoteState.mockReturnValue(
+      mockRequestQuoteState({
+        currentStep: 5,
+        setCurrentStep,
+      }) as ReturnType<typeof useRequestQuoteState>
+    );
+    renderWithRequestQuoteProviders(<RequestQuote />);
+    expect(setCurrentStep).toHaveBeenCalledWith(4);
+  });
+
+  it("advances to step 3 when guest completes DynamicForm on step 2", async () => {
+    useServiceSchema.mockReturnValue({
+      schema: mockFormSchema,
+      isLoading: false,
+      fallbackReason: null,
+    });
+    const state = mockRequestQuoteState({
+      currentStep: 2,
+      selectedService: mockServiceWithChildren,
+      step2Data: {},
+    });
+    useRequestQuoteState.mockReturnValue(state as ReturnType<typeof useRequestQuoteState>);
+    renderWithRequestQuoteProviders(<RequestQuote />);
+    fireEvent.change(screen.getByRole("textbox", { name: /Campo/i }), {
+      target: { value: "filled" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Concluir/i }));
+    await waitFor(() => {
+      expect(state.setCurrentStep).toHaveBeenCalledWith(3);
+    });
+    expect(state.setStep2FormSchema).toHaveBeenCalled();
+    expect(state.setStep2FormVersion).toHaveBeenCalledWith("2.0");
+  });
+
+  it("returns to step 1 when guest cancels DynamicForm on step 2", async () => {
+    useServiceSchema.mockReturnValue({
+      schema: mockFormSchema,
+      isLoading: false,
+      fallbackReason: null,
+    });
+    const state = mockRequestQuoteState({
+      currentStep: 2,
+      selectedService: mockServiceWithChildren,
+      step2Data: {},
+    });
+    useRequestQuoteState.mockReturnValue(state as ReturnType<typeof useRequestQuoteState>);
+    renderWithRequestQuoteProviders(<RequestQuote />);
+    fireEvent.click(screen.getByRole("button", { name: /Cancelar/i }));
+    expect(state.setCurrentStep).toHaveBeenCalledWith(1);
   });
 
   it("Enviar pedido shows loader when loading is true", () => {

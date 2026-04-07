@@ -98,6 +98,14 @@ describe("uploadProfileImage", () => {
     expect(result.error).toBeNull();
   });
 
+  it("uses jpg when filename splits to empty extension segment", async () => {
+    const file = new File(["x"], "..", { type: "image/jpeg" });
+    Object.defineProperty(file, "size", { value: 1024 });
+    const result = await uploadProfileImage(supabase, "user-1", file);
+    expect(result.path).toMatch(/avatar\.jpg$/);
+    expect(result.error).toBeNull();
+  });
+
   it("returns error when storage upload fails", async () => {
     vi.mocked(supabase.storage.from("profile-images").upload).mockResolvedValue({
       data: null,
@@ -165,6 +173,26 @@ describe("getProfileImageSignedUrl", () => {
       data: { signedUrl: "" },
       error: null,
     });
+    const url = await getProfileImageSignedUrl(supabase, "path");
+    expect(url).toBe("");
+  });
+
+  it("returns empty string when data is null but error is absent", async () => {
+    const supabase = createMockSupabase();
+    vi.mocked(supabase.storage.from("profile-images").createSignedUrl).mockResolvedValue({
+      data: null,
+      error: null,
+    } as never);
+    const url = await getProfileImageSignedUrl(supabase, "path");
+    expect(url).toBe("");
+  });
+
+  it("returns empty string when data exists without signedUrl property", async () => {
+    const supabase = createMockSupabase();
+    vi.mocked(supabase.storage.from("profile-images").createSignedUrl).mockResolvedValue({
+      data: {},
+      error: null,
+    } as never);
     const url = await getProfileImageSignedUrl(supabase, "path");
     expect(url).toBe("");
   });

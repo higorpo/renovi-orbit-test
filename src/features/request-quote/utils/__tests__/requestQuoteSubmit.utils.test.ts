@@ -49,6 +49,22 @@ describe("requestQuoteSubmit.utils", () => {
       expect(result.title).toBe("Pintura interna em apartamento");
     });
 
+    it("falls back to Pedido de title when service_request_title is only whitespace", () => {
+      const result = buildServiceRequestParams({
+        client_id: "c1",
+        service_id: "s1",
+        service_title: "Elétrica",
+        service_request_title: "   \n\t",
+        address_id: null,
+        description: "",
+        photoUrls: [],
+        form_data: {},
+        form_schema: null,
+        form_version: null,
+      });
+      expect(result.title).toBe("Pedido de Elétrica");
+    });
+
     it("sets photos to null when photoUrls is empty", () => {
       const result = buildServiceRequestParams({
         client_id: "c1",

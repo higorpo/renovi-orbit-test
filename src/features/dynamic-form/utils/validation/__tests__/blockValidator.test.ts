@@ -65,6 +65,35 @@ describe("validateBlocks", () => {
     const result = validateBlocks(blocks, "s1", "steps[0]");
     expect(result.errors).toHaveLength(0);
   });
+
+  it("reports OPTION_INVALID when option lacks value or label", () => {
+    const blocks: FormBlock[] = [
+      {
+        id: "b1",
+        type: "single_select",
+        label: "S",
+        description_ai: "S",
+        options: [{ value: "", label: "A" }],
+      },
+    ];
+    const result = validateBlocks(blocks, "s1", "steps[0]");
+    expect(result.errors.some((e) => e.code === "OPTION_INVALID")).toBe(true);
+  });
+
+  it("treats non-string description_ai as missing", () => {
+    const blocks: FormBlock[] = [
+      { id: "b1", type: "text", label: "X", description_ai: "   " as unknown as string },
+    ];
+    const blocksBad: FormBlock[] = [
+      { id: "b2", type: "text", label: "X", description_ai: 1 as unknown as string },
+    ];
+    expect(validateBlocks(blocks, "s1", "steps[0]").errors.some((e) => e.code === "BLOCK_MISSING_DESCRIPTION_AI")).toBe(
+      true
+    );
+    expect(validateBlocks(blocksBad, "s1", "steps[1]").errors.some((e) => e.code === "BLOCK_MISSING_DESCRIPTION_AI")).toBe(
+      true
+    );
+  });
 });
 
 describe("validateBlockValidation", () => {
@@ -150,5 +179,78 @@ describe("validateBlockValidation", () => {
     };
     const errors = validateBlockValidation(block, "path");
     expect(errors).toHaveLength(0);
+  });
+
+  it("reports INVALID_DATE_MAX and INVALID_DATE_RANGE for date block", () => {
+    const badMax: FormBlock = {
+      id: "b1",
+      type: "date",
+      label: "D",
+      description_ai: "Date",
+      validation: { dateMax: "not-a-date" },
+    };
+    expect(validateBlockValidation(badMax, "path").some((e) => e.code === "INVALID_DATE_MAX")).toBe(true);
+
+    const badRange: FormBlock = {
+      id: "b2",
+      type: "date",
+      label: "D",
+      description_ai: "Date",
+      validation: { dateMin: "2025-12-31", dateMax: "2025-01-01" },
+    };
+    expect(validateBlockValidation(badRange, "path").some((e) => e.code === "INVALID_DATE_RANGE")).toBe(true);
+  });
+
+  it("reports INVALID_TIME_MAX for time block", () => {
+    const block: FormBlock = {
+      id: "b1",
+      type: "time",
+      label: "T",
+      description_ai: "Time",
+      validation: { timeMax: "99:00" },
+    };
+    expect(validateBlockValidation(block, "path").some((e) => e.code === "INVALID_TIME_MAX")).toBe(true);
+  });
+
+  it("returns no validation errors when validation is absent", () => {
+    const block: FormBlock = {
+      id: "b1",
+      type: "text",
+      label: "T",
+      description_ai: "T",
+    };
+    expect(validateBlockValidation(block, "path")).toHaveLength(0);
+  });
+
+  it("reports forbidden date/time validation on text block", () => {
+    const withDate: FormBlock = {
+      id: "b1",
+      type: "text",
+      label: "T",
+      description_ai: "T",
+      validation: { dateMin: "2025-01-01" },
+    };
+    const withTime: FormBlock = {
+      id: "b2",
+      type: "textarea",
+      label: "T",
+      description_ai: "T",
+      validation: { timeMin: "09:00" },
+    };
+    expect(validateBlockValidation(withDate, "p").some((e) => e.code === "VALIDATION_DATE_FORBIDDEN")).toBe(true);
+    expect(validateBlockValidation(withTime, "p").some((e) => e.code === "VALIDATION_TIME_FORBIDDEN")).toBe(true);
+  });
+
+  it("reports VALIDATION_INVALID_NUMBER_RANGE for number block", () => {
+    const block: FormBlock = {
+      id: "b1",
+      type: "number",
+      label: "N",
+      description_ai: "N",
+      validation: { min: 10, max: 5 },
+    };
+    expect(
+      validateBlockValidation(block, "path").some((e) => e.code === "VALIDATION_INVALID_NUMBER_RANGE")
+    ).toBe(true);
   });
 });

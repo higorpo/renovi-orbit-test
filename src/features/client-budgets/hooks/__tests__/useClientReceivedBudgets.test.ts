@@ -65,6 +65,17 @@ describe("useClientReceivedBudgets", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
 
+  it("surfaces error when data is null and error message is missing", async () => {
+    fetchClientReceivedBudgets.mockResolvedValue({ data: null, error: null });
+
+    const { result } = renderHook(
+      () => useClientReceivedBudgets({ status: null, search: null }),
+      { wrapper: wrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+
   it("does not fetch next page on last page", async () => {
     fetchClientReceivedBudgets.mockResolvedValue({
       data: {

@@ -1,5 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+
+const toastError = vi.fn();
+vi.mock("sonner", () => ({
+  toast: {
+    error: (...args: unknown[]) => toastError(...args),
+    success: vi.fn(),
+  },
+}));
+
 import { Step3DescriptionPhotos } from "../Step3DescriptionPhotos";
 import { mockRequestQuoteState } from "./fixtures/requestQuoteTestFixtures";
 import { stableStringify } from "../../../utils/stableStringify";
@@ -9,9 +18,19 @@ const revokeObjectURL = vi.fn();
 
 const mockGenerateSmartDescription = vi.fn();
 vi.mock("../../../hooks/useGenerateSmartDescription", () => ({
-  useGenerateSmartDescription: vi.fn(() => ({
-    generateSmartDescription: mockGenerateSmartDescription,
-  })),
+  useGenerateSmartDescription: vi.fn(
+    (params?: { onSuccess?: () => void; onFailure?: () => void }) => ({
+      generateSmartDescription: async () => {
+        try {
+          const out = mockGenerateSmartDescription();
+          await out;
+          params?.onSuccess?.();
+        } catch {
+          params?.onFailure?.();
+        }
+      },
+    })
+  ),
 }));
 
 describe("Step3DescriptionPhotos", () => {
@@ -19,6 +38,7 @@ describe("Step3DescriptionPhotos", () => {
   let step2DataSnapshotRef: { current: string | null };
 
   beforeEach(() => {
+    toastError.mockClear();
     state = mockRequestQuoteState({
       currentStep: 3,
       previousStep: 2,
@@ -118,6 +138,26 @@ describe("Step3DescriptionPhotos", () => {
     expect(state.setStep3Data).not.toHaveBeenCalled();
   });
 
+  it("handleFileInputChange treats null files as empty selection", () => {
+    render(
+      <Step3DescriptionPhotos state={state} step2DataSnapshotRef={step2DataSnapshotRef} />
+    );
+    const input = document.querySelector('input[type="file"]');
+    (state.setStep3Data as ReturnType<typeof vi.fn>).mockClear();
+    fireEvent.change(input!, { target: { files: null } } as unknown as { target: { files: FileList | null } });
+    expect(state.setStep3Data).not.toHaveBeenCalled();
+  });
+
+  it("handleDrop treats null dataTransfer.files as empty", () => {
+    render(
+      <Step3DescriptionPhotos state={state} step2DataSnapshotRef={step2DataSnapshotRef} />
+    );
+    const dropZone = screen.getByText("Clique ou arraste e solte fotos aqui").closest("div");
+    (state.setStep3Data as ReturnType<typeof vi.fn>).mockClear();
+    fireEvent.drop(dropZone!, { dataTransfer: { files: null } });
+    expect(state.setStep3Data).not.toHaveBeenCalled();
+  });
+
   it("handleDrop adds files to state via processFiles", () => {
     const file = new File(["x"], "pic.jpg", { type: "image/jpeg" });
     const dataTransfer = { files: [file] };
@@ -128,6 +168,19 @@ describe("Step3DescriptionPhotos", () => {
     fireEvent.drop(dropZone!, { dataTransfer });
     expect(state.setStep3Data).toHaveBeenCalled();
     expect(createObjectURL).toHaveBeenCalledWith(file);
+  });
+
+  it("handleDrop keeps valid files when batched with unsupported type", () => {
+    const bad = new File(["x"], "x.gif", { type: "image/gif" });
+    const ok = new File(["y"], "y.png", { type: "image/png" });
+    render(
+      <Step3DescriptionPhotos state={state} step2DataSnapshotRef={step2DataSnapshotRef} />
+    );
+    const dropZone = screen.getByText("Clique ou arraste e solte fotos aqui").closest("div");
+    fireEvent.drop(dropZone!, { dataTransfer: { files: [bad, ok] } });
+    expect(toastError).toHaveBeenCalledWith(expect.stringContaining("Formato não suportado"));
+    expect(createObjectURL).toHaveBeenCalledWith(ok);
+    expect(createObjectURL).not.toHaveBeenCalledWith(bad);
   });
 
   it("handleDragOver can be fired without throwing", () => {
@@ -207,6 +260,23 @@ describe("Step3DescriptionPhotos", () => {
     expect(mockGenerateSmartDescription).toHaveBeenCalled();
   });
 
+  it("clears step2 snapshot ref on generateSmartDescription failure when under max attempts", async () => {
+    mockGenerateSmartDescription.mockRejectedValueOnce(new Error("api down"));
+    const ref: { current: string | null } = { current: null };
+    const s = mockRequestQuoteState({
+      currentStep: 3,
+      previousStep: 2,
+      step2Data: { id: "svc" },
+    });
+    render(<Step3DescriptionPhotos state={s} step2DataSnapshotRef={ref} />);
+    await waitFor(() => {
+      expect(mockGenerateSmartDescription).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(ref.current).toBeNull();
+    });
+  });
+
   it("useEffect does not call generateSmartDescription when currentStep is not 3", () => {
     state = mockRequestQuoteState({
       currentStep: 2,
@@ -271,6 +341,84 @@ describe("Step3DescriptionPhotos", () => {
     const result = updater(prev);
     expect(result.photos).toHaveLength(2);
     expect(result.photoPreviews).toHaveLength(2);
+  });
+
+  it("shows toast and rejects file larger than 10MB", () => {
+    const huge = new File([new Uint8Array(10 * 1024 * 1024 + 1)], "big.jpg", {
+      type: "image/jpeg",
+    });
+    render(
+      <Step3DescriptionPhotos state={state} step2DataSnapshotRef={step2DataSnapshotRef} />
+    );
+    const input = document.querySelector('input[type="file"]');
+    fireEvent.change(input!, { target: { files: [huge] } });
+    expect(toastError).toHaveBeenCalledWith(expect.stringContaining("excede 10MB"));
+    expect(state.setStep3Data).not.toHaveBeenCalled();
+  });
+
+  it("accepts valid files in the same batch after skipping an oversized file", () => {
+    const huge = new File([new Uint8Array(10 * 1024 * 1024 + 1)], "big.jpg", {
+      type: "image/jpeg",
+    });
+    const ok = new File(["x"], "ok.png", { type: "image/png" });
+    render(
+      <Step3DescriptionPhotos state={state} step2DataSnapshotRef={step2DataSnapshotRef} />
+    );
+    const input = document.querySelector('input[type="file"]');
+    fireEvent.change(input!, { target: { files: [huge, ok] } });
+    expect(toastError).toHaveBeenCalledWith(expect.stringContaining("excede 10MB"));
+    expect(state.setStep3Data).toHaveBeenCalled();
+    const updater = (state.setStep3Data as ReturnType<typeof vi.fn>).mock.calls[0]?.[0];
+    const prev = { description: "", photos: [] as File[], photoPreviews: [] as string[] };
+    const result = updater(prev);
+    expect(result.photos).toEqual([ok]);
+  });
+
+  it("shows toast for unsupported image type", () => {
+    const bad = new File(["x"], "doc.gif", { type: "image/gif" });
+    render(
+      <Step3DescriptionPhotos state={state} step2DataSnapshotRef={step2DataSnapshotRef} />
+    );
+    const input = document.querySelector('input[type="file"]');
+    fireEvent.change(input!, { target: { files: [bad] } });
+    expect(toastError).toHaveBeenCalledWith(expect.stringContaining("Formato não suportado"));
+  });
+
+  it("stops calling generateSmartDescription after max attempts for the same mount", async () => {
+    mockGenerateSmartDescription.mockImplementation(() => Promise.resolve());
+    const ref: { current: string | null } = { current: null };
+    const s1 = mockRequestQuoteState({
+      currentStep: 3,
+      previousStep: 2,
+      step2Data: { k: 1 },
+    });
+    const { rerender } = render(
+      <Step3DescriptionPhotos state={s1} step2DataSnapshotRef={ref} />
+    );
+    await waitFor(() => expect(mockGenerateSmartDescription).toHaveBeenCalledTimes(1));
+    const s2 = mockRequestQuoteState({
+      currentStep: 3,
+      previousStep: 2,
+      step2Data: { k: 2 },
+    });
+    rerender(<Step3DescriptionPhotos state={s2} step2DataSnapshotRef={ref} />);
+    await waitFor(() => expect(mockGenerateSmartDescription).toHaveBeenCalledTimes(2));
+    const s3 = mockRequestQuoteState({
+      currentStep: 3,
+      previousStep: 2,
+      step2Data: { k: 3 },
+    });
+    rerender(<Step3DescriptionPhotos state={s3} step2DataSnapshotRef={ref} />);
+    await waitFor(() => expect(mockGenerateSmartDescription).toHaveBeenCalledTimes(3));
+    const s4 = mockRequestQuoteState({
+      currentStep: 3,
+      previousStep: 2,
+      step2Data: { k: 4 },
+    });
+    rerender(<Step3DescriptionPhotos state={s4} step2DataSnapshotRef={ref} />);
+    await waitFor(() => {
+      expect(mockGenerateSmartDescription).toHaveBeenCalledTimes(3);
+    });
   });
 
   it("clicking drop zone does not throw and file input is present", () => {

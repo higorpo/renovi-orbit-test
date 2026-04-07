@@ -24,6 +24,13 @@ describe("JobsSortTabs disabled", () => {
     expect(onModeChange).toHaveBeenCalledWith("newest");
   });
 
+  it("notifies parent when least competitive tab is chosen", () => {
+    const onModeChange = vi.fn();
+    render(<JobsSortTabs activeMode="nearest" onModeChange={onModeChange} />);
+    fireEvent.click(screen.getByRole("tab", { name: /menos concorridos/i }));
+    expect(onModeChange).toHaveBeenCalledWith("least_competitive");
+  });
+
   it("disables triggers when disabled prop is set", () => {
     render(
       <JobsSortTabs
@@ -34,5 +41,28 @@ describe("JobsSortTabs disabled", () => {
     );
     const tabs = screen.getAllByRole("tab");
     expect(tabs.every((t) => t.hasAttribute("disabled") || t.getAttribute("data-disabled") !== null)).toBe(true);
+  });
+
+  it("marks newest tab as selected when activeMode is newest", () => {
+    render(<JobsSortTabs activeMode="newest" onModeChange={vi.fn()} />);
+    expect(screen.getByRole("tab", { name: /mais recentes/i })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("marks least competitive tab as selected when activeMode matches", () => {
+    render(<JobsSortTabs activeMode="least_competitive" onModeChange={vi.fn()} />);
+    expect(screen.getByRole("tab", { name: /menos concorridos/i })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("notifies parent when sort value changes via Tabs keyboard activation", () => {
+    const onModeChange = vi.fn();
+    render(<JobsSortTabs activeMode="nearest" onModeChange={onModeChange} />);
+    const newest = screen.getByRole("tab", { name: /mais recentes/i });
+    newest.focus();
+    fireEvent.keyDown(newest, { key: "Enter", code: "Enter" });
+    fireEvent.click(newest);
+    expect(onModeChange).toHaveBeenCalledWith("newest");
   });
 });

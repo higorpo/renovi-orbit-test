@@ -80,5 +80,22 @@ describe("serviceCardStyle", () => {
       expect(result.Icon).toBeDefined();
       expect(result.color).toBe(SERVICE_COLOR_KEYS.slate);
     });
+
+    it("uses default color when color_key is only whitespace", () => {
+      const result = getServiceCardStyle({
+        icon_key: "Wind",
+        color_key: "   ",
+      });
+      expect(result.color).toBe(SERVICE_COLOR_KEYS.slate);
+    });
+
+    it("covers amber_orange and gray color keys", () => {
+      expect(
+        getServiceCardStyle({ icon_key: "Wrench", color_key: "amber_orange" }).color
+      ).toBe(SERVICE_COLOR_KEYS.amber_orange);
+      expect(getServiceCardStyle({ icon_key: "Wrench", color_key: "gray" }).color).toBe(
+        SERVICE_COLOR_KEYS.gray
+      );
+    });
   });
 });

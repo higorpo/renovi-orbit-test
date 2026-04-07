@@ -58,4 +58,14 @@ describe("useClientPendingApprovalServicesCount", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
+
+  it("isError when data is missing and error is null", async () => {
+    fetchClientReceivedBudgets.mockResolvedValue({ data: null, error: null });
+
+    const { result } = renderHook(() => useClientPendingApprovalServicesCount(), {
+      wrapper: wrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+  });
 });

@@ -154,5 +154,33 @@ describe("photoContentCheck", () => {
       const result = await checkPhotosContent([makeFile("a.jpg")]);
       expect(result).toEqual({ allowed: false, error: VERIFICATION_FAILED });
     });
+
+    it("returns allowed false when image onerror fires (loadImage fails)", async () => {
+      (globalThis as unknown as { Image: unknown }).Image = class BadImage {
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        set src(_url: string) {
+          queueMicrotask(() => this.onerror?.());
+        }
+        get src() {
+          return "";
+        }
+      };
+      mockClassify.mockResolvedValue([]);
+      const result = await checkPhotosContent([makeFile("broken.jpg")]);
+      expect(result).toEqual({ allowed: false, error: VERIFICATION_FAILED });
+    });
+
+    it("logs non-Error when nsfwjs.load rejects with string", async () => {
+      vi.mocked(nsfwjs.load).mockRejectedValue("string failure");
+      const result = await checkPhotosContent([makeFile("a.jpg")]);
+      expect(result).toEqual({ allowed: false, error: VERIFICATION_FAILED });
+    });
+
+    it("logs non-Error when classify throws non-Error", async () => {
+      mockClassify.mockRejectedValue("boom");
+      const result = await checkPhotosContent([makeFile("a.jpg")]);
+      expect(result).toEqual({ allowed: false, error: VERIFICATION_FAILED });
+    });
   });
 });

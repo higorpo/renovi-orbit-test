@@ -245,6 +245,36 @@ describe("listServiceRequests", () => {
     });
     expect(result.error).toBeNull();
   });
+
+  it("collects proposal ids skipping rows without service_request_id", async () => {
+    terminalReturns = [
+      {
+        data: [
+          { service_request_id: null, status: "submitted" },
+          { status: "submitted" },
+          { service_request_id: "sr-ok", status: "draft" },
+          { service_request_id: "sr-sub", status: "submitted" },
+        ],
+        error: null,
+      },
+      { data: [{ id: "sr-sub" }], error: null, count: 1 },
+    ];
+    const result = await listServiceRequests({
+      ...baseParams,
+      statusTabId: "negotiation",
+    });
+    expect(result.error).toBeNull();
+    expect(result.data?.items).toEqual([{ id: "sr-sub" }]);
+  });
+
+  it("normalizes null data and count from successful query", async () => {
+    terminalReturns = [{ data: null, error: null, count: null as unknown as number }];
+
+    const result = await listServiceRequests(baseParams);
+    expect(result.error).toBeNull();
+    expect(result.data?.items).toEqual([]);
+    expect(result.data?.total_count).toBe(0);
+  });
 });
 
 describe("cancelServiceRequest", () => {

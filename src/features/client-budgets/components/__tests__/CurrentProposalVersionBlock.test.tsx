@@ -1,10 +1,15 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CurrentProposalVersionBlock } from "../CurrentProposalVersionBlock";
 import type { ClientBudgetDetailProposal } from "../../types/client-budgets.types";
 
+const useProviderProposalPhotoUrlsMock = vi.hoisted(() =>
+  vi.fn((_photos: string[] | null) => ({ urls: ["https://photo/1"], isLoading: false })),
+);
+
 vi.mock("@/features/provider-jobs/hooks/useProviderProposalPhotoUrls", () => ({
-  useProviderProposalPhotoUrls: () => ({ urls: ["https://photo/1"], isLoading: false }),
+  useProviderProposalPhotoUrls: (paths: string[] | null) =>
+    useProviderProposalPhotoUrlsMock(paths),
 }));
 
 vi.mock("@/features/provider-jobs/components/ProviderProposalPhotosGrid", () => ({
@@ -26,6 +31,14 @@ const baseProposal: ClientBudgetDetailProposal = {
 };
 
 describe("CurrentProposalVersionBlock", () => {
+  beforeEach(() => {
+    useProviderProposalPhotoUrlsMock.mockImplementation(() => ({
+      urls: ["https://photo/1"],
+      isLoading: false,
+    }));
+    useProviderProposalPhotoUrlsMock.mockClear();
+  });
+
   it("shows deadline banner when submitted and deadline parses", () => {
     render(<CurrentProposalVersionBlock proposal={baseProposal} />);
     expect(screen.getByText(/Versão atual/i)).toBeInTheDocument();
@@ -41,5 +54,19 @@ describe("CurrentProposalVersionBlock", () => {
       />,
     );
     expect(screen.queryByText(/Prazo para responder/i)).not.toBeInTheDocument();
+  });
+
+  it("hides deadline banner when deadline value is invalid", () => {
+    render(
+      <CurrentProposalVersionBlock
+        proposal={{ ...baseProposal, client_response_deadline_at: "invalid-date" }}
+      />,
+    );
+    expect(screen.queryByText(/Prazo para responder/i)).not.toBeInTheDocument();
+  });
+
+  it("passes null photo paths to hook when photos array is empty", () => {
+    render(<CurrentProposalVersionBlock proposal={{ ...baseProposal, photos: [] }} />);
+    expect(useProviderProposalPhotoUrlsMock).toHaveBeenCalledWith(null);
   });
 });

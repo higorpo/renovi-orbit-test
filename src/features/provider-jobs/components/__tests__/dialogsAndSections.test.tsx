@@ -352,6 +352,172 @@ describe("JobQuestionComposerDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: /^enviar pergunta$/i }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
   });
+
+  it("disables submit and highlights counter when draft exceeds max length", () => {
+    const long = "x".repeat(1001);
+    render(
+      <JobQuestionComposerDialog
+        open
+        questionDraft={long}
+        isSubmitting={false}
+        maxQuestionLength={1000}
+        onOpenChange={vi.fn()}
+        onQuestionDraftChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    const counter = screen.getByText(/1001\/1000/);
+    expect(counter).toHaveClass("text-destructive");
+    expect(screen.getByRole("button", { name: /^enviar pergunta$/i })).toBeDisabled();
+  });
+
+  it("uses muted counter styling when within the character limit", () => {
+    render(
+      <JobQuestionComposerDialog
+        open
+        questionDraft="Oi"
+        isSubmitting={false}
+        maxQuestionLength={500}
+        onOpenChange={vi.fn()}
+        onQuestionDraftChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    const counter = screen.getByText(/2\/500/);
+    expect(counter).toHaveClass("text-muted-foreground");
+    expect(counter).not.toHaveClass("text-destructive");
+  });
+
+  it("shows zero counter for empty draft and resyncs when questionDraft prop changes", () => {
+    const onDraft = vi.fn();
+    const { rerender } = render(
+      <JobQuestionComposerDialog
+        open
+        questionDraft=""
+        isSubmitting={false}
+        maxQuestionLength={400}
+        onOpenChange={vi.fn()}
+        onQuestionDraftChange={onDraft}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/^0\/400/)).toHaveClass("text-muted-foreground");
+    rerender(
+      <JobQuestionComposerDialog
+        open
+        questionDraft="Atualizado"
+        isSubmitting={false}
+        maxQuestionLength={400}
+        onOpenChange={vi.fn()}
+        onQuestionDraftChange={onDraft}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("textbox")).toHaveValue("Atualizado");
+    expect(screen.getByText(/^10\/400/)).toBeInTheDocument();
+  });
+
+  it("rebuilds validation when maxQuestionLength changes", () => {
+    const { rerender } = render(
+      <JobQuestionComposerDialog
+        open
+        questionDraft="abc"
+        isSubmitting={false}
+        maxQuestionLength={500}
+        onOpenChange={vi.fn()}
+        onQuestionDraftChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/^3\/500/)).toBeInTheDocument();
+    rerender(
+      <JobQuestionComposerDialog
+        open
+        questionDraft="abc"
+        isSubmitting={false}
+        maxQuestionLength={800}
+        onOpenChange={vi.fn()}
+        onQuestionDraftChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/^3\/800/)).toBeInTheDocument();
+  });
+
+  it("shows sending label while submitting", () => {
+    render(
+      <JobQuestionComposerDialog
+        open
+        questionDraft="Ok"
+        isSubmitting
+        maxQuestionLength={1000}
+        onOpenChange={vi.fn()}
+        onQuestionDraftChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/^enviando/i)).toBeInTheDocument();
+  });
+
+  it("closes when cancel is pressed", () => {
+    const onOpen = vi.fn();
+    render(
+      <JobQuestionComposerDialog
+        open
+        questionDraft=""
+        isSubmitting={false}
+        maxQuestionLength={500}
+        onOpenChange={onOpen}
+        onQuestionDraftChange={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^cancelar$/i }));
+    expect(onOpen).toHaveBeenCalledWith(false);
+  });
+
+  it("rejects whitespace-only question on submit", async () => {
+    const onSubmit = vi.fn();
+    render(
+      <JobQuestionComposerDialog
+        open
+        questionDraft="   "
+        isSubmitting={false}
+        maxQuestionLength={200}
+        onOpenChange={vi.fn()}
+        onQuestionDraftChange={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+    const form = document.getElementById("job-question-composer-form");
+    fireEvent.submit(form!);
+    await waitFor(() => {
+      expect(screen.getByText(/escreva uma pergunta antes de enviar/i)).toBeInTheDocument();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("does not submit empty question", async () => {
+    const onSubmit = vi.fn();
+    render(
+      <JobQuestionComposerDialog
+        open
+        questionDraft=""
+        isSubmitting={false}
+        maxQuestionLength={200}
+        onOpenChange={vi.fn()}
+        onQuestionDraftChange={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+    const form = document.getElementById("job-question-composer-form");
+    expect(form).toBeTruthy();
+    fireEvent.submit(form!);
+    await waitFor(() => {
+      expect(screen.getByText(/escreva uma pergunta antes de enviar/i)).toBeInTheDocument();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
 });
 
 const defaultComposerProps = {
@@ -737,5 +903,109 @@ describe("ProviderProposalComposerDialog", () => {
         screen.getByText(/tempo estimado deve ser maior que zero/i),
       ).toBeInTheDocument();
     });
+  });
+
+  it("hides pricing panel when not loading and pricing is null", () => {
+    render(
+      <ProviderProposalComposerDialog
+        {...defaultComposerProps}
+        isPricingLoading={false}
+        pricing={null}
+      />,
+    );
+    expect(screen.queryByText(/valor informado/i)).not.toBeInTheDocument();
+    expect(document.querySelectorAll(".animate-pulse").length).toBe(0);
+  });
+
+  it("notifies parent when shift changes on availability row", () => {
+    const onSlot = vi.fn();
+    render(
+      <ProviderProposalComposerDialog
+        {...defaultComposerProps}
+        onAvailabilitySlotChange={onSlot}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText(/^turno$/i), {
+      target: { value: "afternoon" },
+    });
+    expect(onSlot).toHaveBeenCalledWith(0, "shift", "afternoon");
+  });
+
+  it("flags empty start date on submit", async () => {
+    render(
+      <ProviderProposalComposerDialog
+        {...defaultComposerProps}
+        availabilitySlots={[{ startDate: "", endDate: "", shift: "morning" }]}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /enviar orçamento/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/informe a data de início/i)).toBeInTheDocument();
+    });
+  });
+
+  it("forwards field edits to parent handlers", () => {
+    const onPrice = vi.fn();
+    const onDesc = vi.fn();
+    const onDur = vi.fn();
+    const onSlot = vi.fn();
+    render(
+      <ProviderProposalComposerDialog
+        {...defaultComposerProps}
+        onPriceInputChange={onPrice}
+        onDescriptionDraftChange={onDesc}
+        onDurationValueInputChange={onDur}
+        onAvailabilitySlotChange={onSlot}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText(/quanto você quer cobrar/i), {
+      target: { value: "9" },
+    });
+    expect(onPrice).toHaveBeenCalledWith("9");
+    fireEvent.change(screen.getByLabelText(/descrição do orçamento/i), {
+      target: { value: "Novo texto" },
+    });
+    expect(onDesc).toHaveBeenCalledWith("Novo texto");
+    fireEvent.change(screen.getByLabelText(/^tempo estimado para executar/i), {
+      target: { value: "3" },
+    });
+    expect(onDur).toHaveBeenCalledWith("3");
+    fireEvent.change(screen.getByLabelText(/^início$/i), {
+      target: { value: "2099-07-01" },
+    });
+    expect(onSlot).toHaveBeenCalledWith(0, "startDate", "2099-07-01");
+  });
+
+  it("omits inclusive range hint when day range cannot be parsed", () => {
+    render(
+      <ProviderProposalComposerDialog
+        {...defaultComposerProps}
+        durationUnit="days"
+        durationValueInput="2"
+        availabilitySlots={[
+          { startDate: "2099-06-01", endDate: "not-a-date", shift: "morning" },
+        ]}
+      />,
+    );
+    expect(screen.queryByText(/intervalo:/i)).not.toBeInTheDocument();
+  });
+
+  it("resets visible validation flags when dialog opens", async () => {
+    const invalid = {
+      ...defaultComposerProps,
+      open: false,
+      priceInput: "",
+      descriptionDraft: "",
+      pricing: null,
+    };
+    const { rerender } = render(<ProviderProposalComposerDialog {...invalid} />);
+    rerender(<ProviderProposalComposerDialog {...invalid} open />);
+    fireEvent.click(screen.getByRole("button", { name: /enviar orçamento/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/informe quanto você quer cobrar/i)).toBeInTheDocument();
+    });
+    rerender(<ProviderProposalComposerDialog {...invalid} open={false} />);
+    rerender(<ProviderProposalComposerDialog {...invalid} open />);
+    expect(screen.queryByText(/informe quanto você quer cobrar/i)).not.toBeInTheDocument();
   });
 });

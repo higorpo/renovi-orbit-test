@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
 import path from 'node:path'
+import os from 'node:os'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -44,6 +45,8 @@ export default defineConfig(({ mode }) => {
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     globals: false,
     coverage: {
+      // Avoid coverage/.tmp under workspace paths with unicode (Vitest v8 merge ENOENT)
+      tempDirectory: path.join(os.tmpdir(), 'orbit-vitest-coverage'),
       include: ['src/**/*.{ts,tsx}'],
       exclude: [
         '**/*.test.{ts,tsx}',
@@ -51,6 +54,7 @@ export default defineConfig(({ mode }) => {
         '**/__tests__/**',
         '**/index.ts',
         '**/types.ts',
+        '**/*.types.ts',
         '**/fixtures/**',
       ],
       reporter: ['text', 'text-summary'],

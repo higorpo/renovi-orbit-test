@@ -86,6 +86,36 @@ describe("evaluateVisibilityRule", () => {
     const rule = { dependsOn: "x", operator: "unknown" as VisibilityRule["operator"] };
     expect(evaluateVisibilityRule(rule, { x: "y" })).toBe(true);
   });
+
+  it("returns false for in when value is not an array", () => {
+    const rule: VisibilityRule = { dependsOn: "x", operator: "in", value: "not-array" as unknown as string[] };
+    expect(evaluateVisibilityRule(rule, { x: "a" })).toBe(false);
+  });
+
+  it("returns false for notIn when field value is in array", () => {
+    const rule: VisibilityRule = { dependsOn: "x", operator: "notIn", value: ["a", "b"] };
+    expect(evaluateVisibilityRule(rule, { x: "a" })).toBe(false);
+  });
+
+  it("returns false for notIn when rule value is not an array", () => {
+    const rule: VisibilityRule = { dependsOn: "x", operator: "notIn", value: "x" as unknown as string[] };
+    expect(evaluateVisibilityRule(rule, { x: "a" })).toBe(false);
+  });
+
+  it("returns true for notIncludes when array does not contain value", () => {
+    const rule: VisibilityRule = { dependsOn: "x", operator: "notIncludes", value: "c" };
+    expect(evaluateVisibilityRule(rule, { x: ["a", "b"] })).toBe(true);
+  });
+
+  it("returns false for notIncludes when array contains value", () => {
+    const rule: VisibilityRule = { dependsOn: "x", operator: "notIncludes", value: "a" };
+    expect(evaluateVisibilityRule(rule, { x: ["a", "b"] })).toBe(false);
+  });
+
+  it("returns false for notIncludes when field is not an array", () => {
+    const rule: VisibilityRule = { dependsOn: "x", operator: "notIncludes", value: "a" };
+    expect(evaluateVisibilityRule(rule, { x: "a" })).toBe(false);
+  });
 });
 
 describe("isBlockVisible", () => {
@@ -265,6 +295,73 @@ describe("validateBlockValue", () => {
       error: "Apenas números",
     });
   });
+
+  it("returns invalid when pattern is not a valid RegExp", () => {
+    const block: FormBlock = {
+      id: "b1",
+      type: "text",
+      label: "T",
+      description_ai: "T",
+      validation: { pattern: "(", message: "Regex inválido" },
+    };
+    expect(validateBlockValue(block, "x")).toEqual({
+      valid: false,
+      error: "Regex inválido",
+    });
+  });
+
+  it("returns invalid when pattern string exceeds max length without testing", () => {
+    const longPattern = "a".repeat(501);
+    const block: FormBlock = {
+      id: "b1",
+      type: "text",
+      label: "T",
+      description_ai: "T",
+      validation: { pattern: longPattern, message: "Formato longo" },
+    };
+    expect(validateBlockValue(block, "any")).toEqual({
+      valid: false,
+      error: "Formato longo",
+    });
+  });
+
+  it("validates date min and max on date block", () => {
+    const block: FormBlock = {
+      id: "b1",
+      type: "date",
+      label: "D",
+      description_ai: "D",
+      validation: { dateMin: "2025-01-10", dateMax: "2025-01-20", message: "Data fora" },
+    };
+    expect(validateBlockValue(block, "2025-01-05")).toEqual({
+      valid: false,
+      error: "Data fora",
+    });
+    expect(validateBlockValue(block, "2025-01-25")).toEqual({
+      valid: false,
+      error: "Data fora",
+    });
+    expect(validateBlockValue(block, "2025-01-15")).toEqual({ valid: true });
+  });
+
+  it("validates time min and max on time block", () => {
+    const block: FormBlock = {
+      id: "b1",
+      type: "time",
+      label: "T",
+      description_ai: "T",
+      validation: { timeMin: "10:00", timeMax: "12:00", message: "Hora fora" },
+    };
+    expect(validateBlockValue(block, "09:00")).toEqual({
+      valid: false,
+      error: "Hora fora",
+    });
+    expect(validateBlockValue(block, "13:00")).toEqual({
+      valid: false,
+      error: "Hora fora",
+    });
+    expect(validateBlockValue(block, "11:00")).toEqual({ valid: true });
+  });
 });
 
 describe("isBlockComplete", () => {
@@ -347,6 +444,24 @@ describe("getFormProgress", () => {
 describe("getRelatedAlerts", () => {
   it("returns empty when step is null", () => {
     expect(getRelatedAlerts("b1", null, {})).toEqual([]);
+  });
+
+  it("returns empty when formData is not an object", () => {
+    const step: FormStep = {
+      id: "s1",
+      order: 0,
+      title: "S1",
+      blocks: [
+        {
+          id: "alert1",
+          type: "conditional_alert",
+          label: "A",
+          description_ai: "A",
+          visibility: [{ dependsOn: "b1", operator: "equals", value: true }],
+        },
+      ],
+    };
+    expect(getRelatedAlerts("b1", step, "not-an-object" as unknown as Record<string, unknown>)).toEqual([]);
   });
 
   it("returns conditional_alert blocks that depend on blockId and are visible", () => {
@@ -450,5 +565,56 @@ describe("getDisplayValue", () => {
       ],
     };
     expect(getDisplayValue(block, ["a", "b"])).toBe("A, B");
+  });
+
+  it("returns raw value for single_select when option is missing", () => {
+    const block: FormBlock = {
+      id: "b1",
+      type: "single_select",
+      label: "X",
+      description_ai: "X",
+      options: [{ value: "a", label: "A" }],
+    };
+    expect(getDisplayValue(block, "z")).toBe("z");
+  });
+
+  it("returns '-' for yes_no when value is not boolean", () => {
+    const block: FormBlock = { id: "b1", type: "yes_no", label: "X", description_ai: "X" };
+    expect(getDisplayValue(block, "maybe")).toBe("-");
+  });
+
+  it("returns slider value with optional unit", () => {
+    const block: FormBlock = { id: "b1", type: "slider", label: "S", description_ai: "S", unit: "px" };
+    expect(getDisplayValue(block, 42)).toBe("42 px");
+  });
+
+  it("returns image count for image_gallery array and string for scalar", () => {
+    const block: FormBlock = { id: "b1", type: "image_gallery", label: "G", description_ai: "G" };
+    expect(getDisplayValue(block, ["a", "b"])).toBe("2 imagem(ns)");
+    expect(getDisplayValue(block, "one")).toBe("one");
+  });
+
+  it("maps checkbox value from non-array to single label", () => {
+    const block: FormBlock = {
+      id: "b1",
+      type: "checkbox",
+      label: "X",
+      description_ai: "X",
+      options: [{ value: "c1", label: "C1" }],
+    };
+    expect(getDisplayValue(block, "c1")).toBe("C1");
+  });
+
+  it("uses default property_type options when block has no options", () => {
+    const block: FormBlock = {
+      id: "b1",
+      type: "property_type",
+      label: "P",
+      description_ai: "P",
+      options: [],
+    };
+    const display = getDisplayValue(block, "house");
+    expect(display.length).toBeGreaterThan(0);
+    expect(display).not.toBe("house");
   });
 });

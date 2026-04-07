@@ -152,7 +152,10 @@ vi.mock("../../hooks/useClientBudgetQuestions", () => ({
   useClientBudgetQuestions: () => questionsState,
 }));
 
-const pendingState = { count: 0, isLoading: false };
+const pendingState: { count: number; isLoading: boolean; isError?: boolean } = {
+  count: 0,
+  isLoading: false,
+};
 
 vi.mock("../../hooks/useClientPendingApprovalServicesCount", () => ({
   useClientPendingApprovalServicesCount: () => pendingState,
@@ -176,6 +179,9 @@ vi.mock("../ReceivedBudgetDetailsSheet", () => ({
       <button type="button" onClick={() => onOpenChange(false)}>
         fechar-orçamento
       </button>
+      <button type="button" onClick={() => onOpenChange(true)}>
+        manter-orçamento
+      </button>
     </div>
   ),
 }));
@@ -191,6 +197,9 @@ vi.mock("../QuestionThreadSheet", () => ({
     <div data-testid="question-sheet" data-open={open ? "true" : "false"}>
       <button type="button" onClick={() => onOpenChange(false)}>
         fechar-perguntas
+      </button>
+      <button type="button" onClick={() => onOpenChange(true)}>
+        manter-perguntas
       </button>
     </div>
   ),
@@ -208,15 +217,18 @@ function resetPageMocks() {
   filtersState.activeTab = "recebidos";
   filtersState.hasActiveFilters = false;
   receivedState.items = [receivedItem];
+  receivedState.totalCount = 1;
   receivedState.isLoading = false;
   receivedState.isError = false;
   receivedState.hasNextPage = true;
   questionsState.items = [questionGroup];
+  questionsState.totalCount = 1;
   questionsState.isLoading = false;
   questionsState.isError = false;
   questionsState.hasNextPage = false;
   pendingState.count = 0;
   pendingState.isLoading = false;
+  delete pendingState.isError;
   pendingQuestionsTotalState.count = 0;
   pendingQuestionsTotalState.isLoading = false;
   pendingQuestionsTotalState.isError = false;
@@ -290,6 +302,8 @@ describe("ClientBudgetsPage", () => {
     const cards = screen.getAllByRole("button", { name: /Pedido A/i });
     fireEvent.click(cards[0]);
     expect(screen.getByTestId("received-sheet")).toHaveAttribute("data-open", "true");
+    fireEvent.click(screen.getByRole("button", { name: /manter-orçamento/i }));
+    expect(screen.getByTestId("received-sheet")).toHaveAttribute("data-open", "true");
     fireEvent.click(screen.getByRole("button", { name: /fechar-orçamento/i }));
     expect(screen.getByTestId("received-sheet")).toHaveAttribute("data-open", "false");
   });
@@ -308,13 +322,15 @@ describe("ClientBudgetsPage", () => {
     const cards = screen.getAllByRole("button", { name: /Pedido Q/i });
     fireEvent.click(cards[0]);
     expect(screen.getByTestId("question-sheet")).toHaveAttribute("data-open", "true");
+    fireEvent.click(screen.getByRole("button", { name: /manter-perguntas/i }));
+    expect(screen.getByTestId("question-sheet")).toHaveAttribute("data-open", "true");
     fireEvent.click(screen.getByRole("button", { name: /fechar-perguntas/i }));
     expect(screen.getByTestId("question-sheet")).toHaveAttribute("data-open", "false");
   });
 
   it("calls setActiveTab and resetFilters when switching tabs", () => {
     renderPage();
-    const perguntasTab = screen.getByRole("tab", { name: "Perguntas" });
+    const perguntasTab = screen.getByRole("tab", { name: /^Perguntas\b/ });
     // Radix TabsTrigger commits selection on mouseDown, not click.
     fireEvent.mouseDown(perguntasTab, { button: 0, ctrlKey: false });
     expect(setActiveTab).toHaveBeenCalledWith("perguntas");
@@ -344,5 +360,27 @@ describe("ClientBudgetsPage", () => {
     questionsState.items = [];
     renderPage();
     expect(screen.getByText(/Nenhuma pergunta recebida ainda/i)).toBeInTheDocument();
+  });
+
+  it("shows dash in tab badges when totalCount is undefined", () => {
+    receivedState.totalCount = undefined as unknown as number;
+    questionsState.totalCount = undefined as unknown as number;
+    renderPage();
+    const recebidos = screen.getByRole("tab", { name: /^Recebidos\b/ });
+    const perguntas = screen.getByRole("tab", { name: /^Perguntas\b/ });
+    expect(recebidos.textContent).toContain("-");
+    expect(perguntas.textContent).toContain("-");
+  });
+
+  it("shows header error state for pending approval count", () => {
+    pendingState.isError = true;
+    renderPage();
+    expect(screen.getByText(/— serviços \(indisponível\)/)).toBeInTheDocument();
+  });
+
+  it("shows header error state for pending questions count", () => {
+    pendingQuestionsTotalState.isError = true;
+    renderPage();
+    expect(screen.getByText(/— perguntas \(indisponível\)/)).toBeInTheDocument();
   });
 });

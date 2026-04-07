@@ -131,14 +131,19 @@ describe("useClientMyServicesPage", () => {
       items: [{ ...openModel, id: "sr-scroll" }],
     });
 
-    renderHook(() => useClientMyServicesPage(), {
+    const { rerender } = renderHook(() => useClientMyServicesPage(), {
       wrapper: wrapper(["/dashboard/requests?serviceRequestId=sr-scroll"]),
     });
 
-    expect(scrollIntoView).toHaveBeenCalledWith({
-      behavior: "smooth",
-      block: "start",
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+
+    mockUseList.mockReturnValue({
+      ...defaultListReturn,
+      items: [{ ...openModel, id: "sr-scroll", title: "Updated title" }],
     });
+    rerender();
+
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
     gbid.mockRestore();
   });
 

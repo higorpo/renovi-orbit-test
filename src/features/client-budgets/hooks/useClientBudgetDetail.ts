@@ -7,8 +7,8 @@ export function useClientBudgetDetail(serviceRequestId: string | null) {
   const query = useQuery({
     queryKey: ["client-budget-detail", serviceRequestId],
     queryFn: async () => {
-      if (!serviceRequestId) return null;
-      const { data, error } = await fetchClientBudgetDetail(serviceRequestId);
+      // `enabled` is tied to serviceRequestId; when the query runs the id is always set.
+      const { data, error } = await fetchClientBudgetDetail(serviceRequestId!);
       if (error) throw new Error(error);
       return data;
     },

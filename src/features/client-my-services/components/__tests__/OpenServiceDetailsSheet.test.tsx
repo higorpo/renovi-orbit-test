@@ -80,4 +80,112 @@ describe("OpenServiceDetailsSheet", () => {
     fireEvent.click(closeButtons[0]);
     expect(onOpenChange).toHaveBeenCalled();
   });
+
+  it("renders fallback service label and omits icon when service is missing", () => {
+    render(
+      <OpenServiceDetailsSheet
+        open
+        serviceRequest={{ ...baseModel, service: undefined as unknown as typeof baseModel.service }}
+        onOpenChange={vi.fn()}
+      />
+    );
+    expect(screen.getByText("Serviço")).toBeInTheDocument();
+  });
+
+  it("formats address line2 without state segment when state is missing", () => {
+    render(
+      <OpenServiceDetailsSheet
+        open
+        serviceRequest={{
+          ...baseModel,
+          address: {
+            neighborhood: "Centro",
+            cityName: "Florianópolis",
+            stateAbbreviation: undefined,
+            street: "Rua C",
+            number: "5",
+            zipCode: "",
+            complement: "",
+          },
+        }}
+        onOpenChange={vi.fn()}
+      />
+    );
+    expect(
+      screen.getByText(/Rua C, 5 \| Centro, Florianópolis/)
+    ).toBeInTheDocument();
+  });
+
+  it("includes complement line when street and number are empty", () => {
+    render(
+      <OpenServiceDetailsSheet
+        open
+        serviceRequest={{
+          ...baseModel,
+          address: {
+            neighborhood: "Centro",
+            cityName: "São Paulo",
+            stateAbbreviation: "SP",
+            street: "",
+            number: "",
+            zipCode: "01000-000",
+            complement: "Bloco B",
+          },
+        }}
+        onOpenChange={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/Complemento: Bloco B/)).toBeInTheDocument();
+  });
+
+  it("formats address with only city and state when street is missing", () => {
+    render(
+      <OpenServiceDetailsSheet
+        open
+        serviceRequest={{
+          ...baseModel,
+          address: {
+            neighborhood: "",
+            cityName: "Florianópolis",
+            stateAbbreviation: "SC",
+            street: "",
+            number: "",
+            zipCode: "",
+            complement: "",
+          },
+        }}
+        onOpenChange={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/Florianópolis\s*-\s*SC/)).toBeInTheDocument();
+  });
+
+  it("formats address with only state when neighborhood and city are blank", () => {
+    render(
+      <OpenServiceDetailsSheet
+        open
+        serviceRequest={{
+          ...baseModel,
+          address: {
+            neighborhood: "  ",
+            cityName: "  ",
+            stateAbbreviation: "RJ",
+            street: "Rua B",
+            number: "1",
+            zipCode: "20000-000",
+            complement: undefined,
+          },
+        }}
+        onOpenChange={vi.fn()}
+      />
+    );
+    expect(
+      screen.getByText(/Rua B, 1 \| RJ \| CEP: 20000-000/)
+    ).toBeInTheDocument();
+  });
+
+  it("renders no inner card when serviceRequest is null", () => {
+    render(<OpenServiceDetailsSheet open serviceRequest={null} onOpenChange={vi.fn()} />);
+    expect(screen.queryByText("Título do pedido")).not.toBeInTheDocument();
+  });
 });

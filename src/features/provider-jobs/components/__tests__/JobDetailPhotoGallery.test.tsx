@@ -38,6 +38,15 @@ describe("JobDetailPhotoGallery", () => {
     fireEvent.click(screen.getByRole("button", { name: /fechar imagem ampliada/i }));
   });
 
+  it("renders placeholder when a resolved url is empty", () => {
+    mockPhotoUrls.mockReturnValue({
+      urls: [""],
+      isLoading: false,
+    });
+    render(<JobDetailPhotoGallery photos={["path/x.jpg"]} />);
+    expect(screen.queryByRole("button", { name: /ampliar foto/i })).not.toBeInTheDocument();
+  });
+
   it("hides broken thumbnails on image error", () => {
     mockPhotoUrls.mockReturnValue({
       urls: ["https://cdn.example.com/broken.jpg"],

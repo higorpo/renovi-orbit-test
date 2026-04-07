@@ -13,7 +13,6 @@ import { ClientMyServicesFocusBanner } from "./ClientMyServicesFocusBanner";
 import { QuestionThreadSheet, ReceivedBudgetDetailsSheet } from "@/features/client-budgets";
 import { OpenServiceDetailsSheet } from "./OpenServiceDetailsSheet";
 import { useClientMyServicesPage } from "../hooks/useClientMyServicesPage";
-import type { StatusTabId } from "../constants/statusTabs";
 const SKELETON_COUNT = 4;
 export function ClientMyServicesPage() {
   const {
@@ -85,10 +84,7 @@ export function ClientMyServicesPage() {
             disabled={isLoading}
           />
         </div>
-        <Tabs
-          value={filters.statusTabId}
-          onValueChange={(v) => setStatusTabId(v as StatusTabId)}
-        >
+        <Tabs value={filters.statusTabId}>
           <ClientMyServicesStatusTabs
             activeTabId={filters.statusTabId}
             onTabChange={setStatusTabId}

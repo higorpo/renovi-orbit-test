@@ -8,18 +8,9 @@ import {
   buildSerializableDraft,
   REQUEST_QUOTE_DRAFT_VERSION,
 } from "../utils/requestQuoteDraft.persistence";
+import { isRequestQuoteDraftStateMeaningful } from "../utils/requestQuoteDraftMeaningful";
 
 const PERSIST_DEBOUNCE_MS = 400;
-
-function isStateMeaningful(state: RequestQuoteState): boolean {
-  if (state.currentStep > 1) return true;
-  if (state.selectedService != null) return true;
-  if (Object.keys(state.step2Data).length > 0) return true;
-  if ((state.step3Data.description?.trim() ?? "") !== "") return true;
-  if (state.step4Data != null) return true;
-  if ((state.step5Data.email?.trim() ?? "") !== "") return true;
-  return false;
-}
 
 export interface UseRequestQuoteDraftResult {
   hasRestorableDraft: boolean;
@@ -90,7 +81,7 @@ export function useRequestQuoteDraft(
       clearDraft();
       return;
     }
-    if (!isStateMeaningful(state)) return;
+    if (!isRequestQuoteDraftStateMeaningful(state)) return;
 
     if (debounceRef.current != null) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {

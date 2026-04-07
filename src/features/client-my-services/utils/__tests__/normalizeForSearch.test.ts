@@ -19,6 +19,8 @@ describe("normalizeForSearch", () => {
   it("returns empty string for empty or invalid input", () => {
     expect(normalizeForSearch("")).toBe("");
     expect(normalizeForSearch("   ")).toBe("");
+    expect(normalizeForSearch(null as unknown as string)).toBe("");
+    expect(normalizeForSearch(42 as unknown as string)).toBe("");
   });
 });
 
@@ -40,5 +42,9 @@ describe("normalizedIncludes", () => {
 
   it("returns false when haystack does not contain needle", () => {
     expect(normalizedIncludes("Eletricista", "Encanador")).toBe(false);
+  });
+
+  it("returns true when needle normalizes to empty string", () => {
+    expect(normalizedIncludes("qualquer", "   ")).toBe(true);
   });
 });

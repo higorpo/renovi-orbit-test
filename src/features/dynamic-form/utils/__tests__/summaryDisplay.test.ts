@@ -62,6 +62,54 @@ describe("summaryDisplay", () => {
         rawValue: "Alice",
       });
     });
+
+    it("skips non-input blocks even when formData has a value for them", () => {
+      const schema: FormSchema = {
+        ...minimalSchema,
+        steps: [
+          {
+            id: "s",
+            order: 0,
+            title: "S",
+            blocks: [
+              { id: "st", type: "static_text", label: "Static", description_ai: "S" },
+              { id: "inp", type: "text", label: "Inp", required: false, description_ai: "I" },
+            ],
+          },
+        ],
+      };
+      const entries = buildSummaryEntries(
+        { st: "ignored", inp: "kept" } as Record<string, unknown>,
+        schema,
+      );
+      expect(entries).toHaveLength(1);
+      expect(entries[0].id).toBe("inp");
+    });
+
+    it("maps emoji from first option when present", () => {
+      const schema: FormSchema = {
+        ...minimalSchema,
+        steps: [
+          {
+            id: "s",
+            order: 0,
+            title: "S",
+            blocks: [
+              {
+                id: "m",
+                type: "single_select",
+                label: "Mood",
+                required: false,
+                description_ai: "M",
+                options: [{ value: "ok", label: "OK", emoji: "✨" }],
+              },
+            ],
+          },
+        ],
+      };
+      const entries = buildSummaryEntries({ m: "ok" } as Record<string, unknown>, schema);
+      expect(entries[0].emoji).toBe("✨");
+    });
   });
 
   describe("buildSummarySections", () => {
@@ -119,6 +167,35 @@ describe("summaryDisplay", () => {
       const sections = buildSummarySections(schema, { z: "zval" });
       expect(sections[0].icon).toBe("📋");
     });
+
+    it("skips steps that only have non-input blocks after visibility filter", () => {
+      const schema: FormSchema = {
+        version: "2.0",
+        id: "s",
+        title: "T",
+        metadata: { categorySlug: "x", categoryId: null, status: "draft" },
+        config: { showProgressBar: true },
+        steps: [
+          {
+            id: "empty_inputs",
+            order: 0,
+            title: "No inputs",
+            blocks: [
+              { id: "st", type: "static_text", label: "Note", description_ai: "N" },
+            ],
+          },
+          {
+            id: "with_input",
+            order: 1,
+            title: "Has field",
+            blocks: [{ id: "z", type: "text", label: "Z", required: true, description_ai: "Z" }],
+          },
+        ],
+      };
+      const sections = buildSummarySections(schema, { z: "v" });
+      expect(sections).toHaveLength(1);
+      expect(sections[0].title).toBe("Has field");
+    });
   });
 
   describe("buildSummarySectionsFromConfig", () => {
@@ -155,6 +232,35 @@ describe("summaryDisplay", () => {
     it("returns empty when no entries resolve", () => {
       const config: PreviewSummaryBlockConfig = { sections: [{ id: "s", title: "T", fieldIds: ["nope"] }] };
       expect(buildSummarySectionsFromConfig(minimalSchema, {}, config)).toEqual([]);
+    });
+
+    it("treats missing sections as empty list", () => {
+      expect(buildSummarySectionsFromConfig(minimalSchema, { text1: "x" }, {})).toEqual([]);
+    });
+
+    it("uses default section icon when config section omits icon", () => {
+      const schema: FormSchema = {
+        version: "2.0",
+        id: "s",
+        title: "T",
+        metadata: { categorySlug: "x", categoryId: null, status: "draft" },
+        config: { showProgressBar: true },
+        steps: [
+          {
+            id: "one",
+            order: 0,
+            title: "S",
+            blocks: [
+              { id: "f1", type: "text", label: "Field 1", required: true, description_ai: "F1" },
+            ],
+          },
+        ],
+      };
+      const config: PreviewSummaryBlockConfig = {
+        sections: [{ id: "sec", title: "Summary", fieldIds: ["f1"] }],
+      };
+      const sections = buildSummarySectionsFromConfig(schema, { f1: "v1" }, config);
+      expect(sections[0].icon).toBe("📋");
     });
   });
 
@@ -208,6 +314,40 @@ describe("summaryDisplay", () => {
       expect(c.total).toBe(2);
       expect(c.filled).toBe(1);
       expect(c.percentage).toBe(50);
+    });
+
+    it("counts non-empty multi_select values as filled", () => {
+      const schema: FormSchema = {
+        version: "2.0",
+        id: "s",
+        title: "T",
+        metadata: { categorySlug: "x", categoryId: null, status: "draft" },
+        config: { showProgressBar: true },
+        steps: [
+          {
+            id: "one",
+            order: 0,
+            title: "S",
+            blocks: [
+              {
+                id: "tags",
+                type: "multi_select",
+                label: "Tags",
+                required: false,
+                description_ai: "T",
+                options: [
+                  { value: "a", label: "A" },
+                  { value: "b", label: "B" },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+      const c = getFormCompleteness(schema, { tags: ["a", "b"] });
+      expect(c.total).toBe(1);
+      expect(c.filled).toBe(1);
+      expect(c.percentage).toBe(100);
     });
   });
 });

@@ -6,6 +6,7 @@ export { ProgressBar } from "./components/ProgressBar";
 export { StepRenderer } from "./components/StepRenderer";
 export { SchemaError } from "./components/DynamicForm/SchemaError";
 export { FormDemoPage } from "./components/FormDemoPage/FormDemoPage";
+export type { FormDemoPageProps } from "./components/FormDemoPage/FormDemoPage";
 
 export { useFieldValidation, getValidationErrorMessage } from "./hooks/useFieldValidation";
 export type {

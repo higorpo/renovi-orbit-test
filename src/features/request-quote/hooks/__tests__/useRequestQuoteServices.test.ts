@@ -180,6 +180,26 @@ describe("useRequestQuoteServices", () => {
     expect(onServiceSelect).not.toHaveBeenCalled();
   });
 
+  it("does not call onServiceSelect when urlServiceSlug does not match any service", async () => {
+    listServicesForRequestQuote.mockResolvedValue({
+      services: mockServices,
+      error: null,
+    });
+    const { result } = renderHook(
+      () =>
+        useRequestQuoteServices({
+          urlServiceSlug: "unknown-slug",
+          loadingSession: false,
+          onServiceSelect,
+        }),
+      { wrapper: createWrapper() }
+    );
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+    expect(onServiceSelect).not.toHaveBeenCalled();
+  });
+
   it("does not call onServiceSelect when urlServiceSlug is null", async () => {
     const { result } = renderHook(
       () =>

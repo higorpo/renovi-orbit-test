@@ -8,10 +8,7 @@ describe("ClientMyServicesStatusTabs", () => {
     const onTabChange = vi.fn();
     render(
       <Tabs value="all">
-        <ClientMyServicesStatusTabs
-          activeTabId="all"
-          onTabChange={onTabChange}
-        />
+        <ClientMyServicesStatusTabs activeTabId="all" onTabChange={onTabChange} />
       </Tabs>
     );
 
@@ -22,10 +19,7 @@ describe("ClientMyServicesStatusTabs", () => {
   it("marks active tab with aria-selected", () => {
     render(
       <Tabs value="in_progress">
-        <ClientMyServicesStatusTabs
-          activeTabId="in_progress"
-          onTabChange={vi.fn()}
-        />
+        <ClientMyServicesStatusTabs activeTabId="in_progress" onTabChange={vi.fn()} />
       </Tabs>
     );
 

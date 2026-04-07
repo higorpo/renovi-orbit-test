@@ -230,7 +230,9 @@ export function ProviderProposalSummaryCard({
             <AlertDialogAction
               onClick={(event) => {
                 event.preventDefault();
-                void withdrawMutation.mutateAsync();
+                void withdrawMutation.mutateAsync().catch(() => {
+                  // onError already shows toast; swallow rejection for mutateAsync
+                });
               }}
               disabled={withdrawMutation.isPending}
             >

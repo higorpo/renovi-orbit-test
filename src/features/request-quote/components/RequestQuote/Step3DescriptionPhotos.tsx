@@ -6,9 +6,11 @@ import { useCallback, useEffect, useRef } from "react";
 import { useGenerateSmartDescription } from "../../hooks/useGenerateSmartDescription";
 import type { RequestQuoteState } from "../../hooks/useRequestQuoteState";
 import { stableStringify } from "../../utils/stableStringify";
+import {
+  MAX_SMART_DESCRIPTION_ATTEMPTS,
+  updateSnapshotAfterSmartDescriptionFailure,
+} from "../../utils/step3SmartDescriptionSnapshot";
 import { toast } from "sonner";
-
-const MAX_DESCRIPTION_ATTEMPTS = 3;
 const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 const ALLOWED_PHOTO_TYPES = new Set([
   "image/jpeg",
@@ -50,11 +52,11 @@ export function Step3DescriptionPhotos({ state, step2DataSnapshotRef }: Step3Des
   }, [state.step2Data, step2DataSnapshotRef]);
 
   const onFailureRef = useCallback(() => {
-    if (attemptCountRef.current < MAX_DESCRIPTION_ATTEMPTS) {
-      step2DataSnapshotRef.current = null;
-    } else {
-      step2DataSnapshotRef.current = stableStringify(state.step2Data);
-    }
+    updateSnapshotAfterSmartDescriptionFailure({
+      attemptCount: attemptCountRef.current,
+      step2Data: state.step2Data,
+      step2DataSnapshotRef,
+    });
   }, [step2DataSnapshotRef, state.step2Data]);
 
   const { generateSmartDescription } = useGenerateSmartDescription({
@@ -115,7 +117,7 @@ export function Step3DescriptionPhotos({ state, step2DataSnapshotRef }: Step3Des
     const step2Key = stableStringify(state.step2Data);
     if (step2DataSnapshotRef.current === step2Key) return;
 
-    if (attemptCountRef.current >= MAX_DESCRIPTION_ATTEMPTS) {
+    if (attemptCountRef.current >= MAX_SMART_DESCRIPTION_ATTEMPTS) {
       step2DataSnapshotRef.current = step2Key;
       return;
     }

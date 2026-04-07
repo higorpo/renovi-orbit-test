@@ -93,6 +93,18 @@ describe("createAuthEventHandlers", () => {
     expect(ctx.fetchProfile).not.toHaveBeenCalled();
   });
 
+  it("SIGNED_IN clears loading when fetchProfile rejects", async () => {
+    const fetchProfile = vi.fn().mockRejectedValue(new Error("network"));
+    ctx = makeCtx({ fetchProfile });
+    const handlers = createAuthEventHandlers(ctx);
+    handlers.SIGNED_IN(makeSession());
+    for (let i = 0; i < 10; i++) {
+      await Promise.resolve();
+    }
+    expect(ctx.setLoading).toHaveBeenCalledWith(false);
+    expect((ctx.isExplicitSignIn as { current: boolean }).current).toBe(false);
+  });
+
   it("SIGNED_OUT clears session, user, and profile", () => {
     ctx = makeCtx({ lastFetchedUserId: { current: "user-123" } });
     const handlers = createAuthEventHandlers(ctx);

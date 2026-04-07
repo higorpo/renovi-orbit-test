@@ -23,6 +23,7 @@ describe("providerProposalFormatters", () => {
   it("formats date-only strings", () => {
     expect(formatProposalDateOnly("2026-03-20")).not.toBe("Data indisponível");
     expect(formatProposalDateOnly(null)).toBe("Data indisponível");
+    expect(formatProposalDateOnly("not-a-date")).toBe("Data indisponível");
   });
 
   it("translates proposal status via JobDetail.constants", () => {

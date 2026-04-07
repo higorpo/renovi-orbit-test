@@ -120,6 +120,12 @@ describe("ReceivedBudgetServiceCard", () => {
     onOpen.mockClear();
     fireEvent.keyDown(card, { key: "Enter" });
     expect(onOpen).toHaveBeenCalledWith("sr-recv");
+    onOpen.mockClear();
+    fireEvent.keyDown(card, { key: " " });
+    expect(onOpen).toHaveBeenCalledWith("sr-recv");
+    onOpen.mockClear();
+    fireEvent.keyDown(card, { key: "Escape" });
+    expect(onOpen).not.toHaveBeenCalled();
   });
 
   it("shows extra budgets label when more than two submitted", () => {
@@ -150,6 +156,23 @@ describe("ReceivedBudgetServiceCard", () => {
     const ctaButtons = screen.getAllByRole("button", { name: /Ver detalhes do orçamento/i });
     fireEvent.click(ctaButtons[ctaButtons.length - 1]);
     expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it("Gerenciar serviço link navigates without double-opening details", () => {
+    const onOpen = vi.fn();
+    render(
+      <MemoryRouter>
+        <ReceivedBudgetServiceCard
+          item={receivedItem}
+          statusFilter="awaiting_decision"
+          onOpenDetails={onOpen}
+        />
+      </MemoryRouter>,
+    );
+    const link = screen.getByRole("link", { name: /Gerenciar serviço/i });
+    expect(link).toHaveAttribute("href", "/dashboard/client/meus-servicos?serviceRequestId=sr-recv");
+    fireEvent.click(link);
+    expect(onOpen).not.toHaveBeenCalled();
   });
 });
 
@@ -185,6 +208,12 @@ describe("QuestionServiceCard", () => {
     const card = container.querySelector('[role="button"][tabindex="0"]') as HTMLElement;
     fireEvent.keyDown(card, { key: " " });
     expect(onOpen).toHaveBeenCalledWith("sr-q");
+    onOpen.mockClear();
+    fireEvent.keyDown(card, { key: "Enter" });
+    expect(onOpen).toHaveBeenCalledWith("sr-q");
+    onOpen.mockClear();
+    fireEvent.keyDown(card, { key: "Tab" });
+    expect(onOpen).not.toHaveBeenCalled();
   });
 
   it("shows extra questions label when more than two previews", () => {
@@ -201,6 +230,17 @@ describe("QuestionServiceCard", () => {
       </MemoryRouter>,
     );
     expect(screen.getByText(/\.\.\. e outras perguntas/i)).toBeInTheDocument();
+  });
+
+  it("Gerenciar serviço link does not trigger onOpenDetails", () => {
+    const onOpen = vi.fn();
+    render(
+      <MemoryRouter>
+        <QuestionServiceCard item={questionItem} statusFilter="pending" onOpenDetails={onOpen} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("link", { name: /Gerenciar serviço/i }));
+    expect(onOpen).not.toHaveBeenCalled();
   });
 });
 

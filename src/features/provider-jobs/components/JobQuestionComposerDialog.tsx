@@ -74,7 +74,7 @@ export function JobQuestionComposerDialog({
     form.reset({ question: questionDraft });
   }, [form, questionDraft]);
 
-  const questionValue = form.watch("question") ?? "";
+  const questionValue = form.watch("question", "");
   const charactersUsed = questionValue.length;
   const isOverLimit = charactersUsed > maxQuestionLength;
   const hasRequiredError = Boolean(form.formState.errors.question);

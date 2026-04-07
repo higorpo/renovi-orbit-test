@@ -86,6 +86,30 @@ describe("createServiceRequest", () => {
     expect(insertArg.address_id).toBe("addr-1");
     expect(insertArg.photos).toEqual(["photo-1.jpg"]);
   });
+
+  it("stores null description when omitted", async () => {
+    terminalResult = { data: { id: "r1" }, error: null };
+    await createServiceRequest({
+      client_id: "c1",
+      service_id: "s1",
+      title: "T",
+      description: null,
+    });
+    const chainCall = fromMock.mock.results[0]?.value;
+    expect(chainCall.insert.mock.calls[0][0].description).toBeNull();
+  });
+
+  it("passes custom status to insert payload", async () => {
+    const request = { id: "req-1", status: "draft" };
+    terminalResult = { data: request, error: null };
+
+    await createServiceRequest({
+      ...params,
+      status: "draft",
+    });
+    const chainCall = fromMock.mock.results[0]?.value;
+    expect(chainCall.insert.mock.calls[0][0].status).toBe("draft");
+  });
 });
 
 describe("uploadPhotosForRequest", () => {
@@ -120,5 +144,44 @@ describe("uploadPhotosForRequest", () => {
 
     expect(result.error).toBe("Upload failed");
     expect(result.urls).toEqual([]);
+  });
+
+  it("uses jpg extension when file name has no dot segment", async () => {
+    const uploadMock = vi.fn().mockResolvedValue({ error: null });
+    const getPublicUrlMock = vi.fn().mockReturnValue({
+      data: { publicUrl: "https://cdn.example.com/x.jpg" },
+    });
+    storageFromMock.mockReturnValue({
+      upload: uploadMock,
+      getPublicUrl: getPublicUrlMock,
+    } as never);
+
+    const file = new File(["c"], "", { type: "image/jpeg" });
+    await uploadPhotosForRequest("client-1", [file]);
+
+    expect(uploadMock.mock.calls[0][0]).toMatch(/\.jpg$/);
+  });
+
+  it("returns partial urls when second file upload fails", async () => {
+    const uploadMock = vi
+      .fn()
+      .mockResolvedValueOnce({ error: null })
+      .mockResolvedValueOnce({ error: { message: "Second failed" } });
+    const getPublicUrlMock = vi.fn().mockReturnValue({
+      data: { publicUrl: "https://cdn.example.com/only.jpg" },
+    });
+    storageFromMock.mockReturnValue({
+      upload: uploadMock,
+      getPublicUrl: getPublicUrlMock,
+    } as never);
+
+    const files = [
+      new File(["a"], "a.jpg", { type: "image/jpeg" }),
+      new File(["b"], "b.jpg", { type: "image/jpeg" }),
+    ];
+    const result = await uploadPhotosForRequest("client-1", files);
+
+    expect(result.error).toBe("Second failed");
+    expect(result.urls).toEqual(["https://cdn.example.com/only.jpg"]);
   });
 });

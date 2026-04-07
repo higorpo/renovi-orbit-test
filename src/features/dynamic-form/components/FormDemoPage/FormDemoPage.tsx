@@ -28,7 +28,12 @@ import { BLOCK_TYPE_ICONS, BLOCK_TYPE_LABELS } from "./builderDefaults";
 import { formDemoSchema } from "./demoSchema";
 import type { FormBlockType, FormData, FormStep, FormBlock } from "../../types";
 
-export function FormDemoPage() {
+export interface FormDemoPageProps {
+  /** Default tab (e.g. tests can start on preview without simulating Radix tab clicks). */
+  initialTab?: "builder" | "preview";
+}
+
+export function FormDemoPage({ initialTab = "builder" }: FormDemoPageProps) {
   const [previewKey, setPreviewKey] = useState(0);
   const [submittedData, setSubmittedData] = useState<FormData | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -184,7 +189,7 @@ export function FormDemoPage() {
       </div>
 
       <div className="container max-w-[1600px] mx-auto px-4 py-6">
-        <Tabs defaultValue="builder" className="w-full">
+        <Tabs defaultValue={initialTab} className="w-full">
           <TabsList className="grid w-full max-w-[400px] grid-cols-2 mb-6">
             <TabsTrigger value="builder" className="gap-2">
               <LayoutDashboard className="w-4 h-4" />

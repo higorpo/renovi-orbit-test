@@ -107,4 +107,35 @@ describe("useOfferedServices", () => {
 
     expect(result.current.error).toBe("List failed");
   });
+
+  it("uses null providerId when profile has no id (nullish coalescing)", async () => {
+    useAuth.mockReturnValue({
+      profile: { role: "provider" },
+    } as ReturnType<typeof useAuth>);
+
+    const { result } = renderHook(() => useOfferedServices(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(listOfferedServices).not.toHaveBeenCalled();
+    expect(result.current.serviceIds).toEqual([]);
+  });
+
+  it("surfaces query error message when listOfferedServices rejects", async () => {
+    listOfferedServices.mockRejectedValue(new Error("network down"));
+
+    const { result } = renderHook(() => useOfferedServices(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.error).toBe("network down");
+  });
 });

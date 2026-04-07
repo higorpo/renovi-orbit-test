@@ -63,6 +63,27 @@ describe("filterServiceRequests", () => {
     expect(result[0].id).toBe("1");
   });
 
+  it("matches search against description when title does not match", () => {
+    const item = makeModel({
+      id: "d-search",
+      title: "Outro título",
+      description: "Instalação de ventilador",
+      descriptionPreview: "Instalação de ventilador",
+    });
+    const filters: ServiceRequestsFilterState = {
+      statusTabId: "all",
+      searchQuery: "ventilador",
+      categoryId: null,
+      cityName: null,
+      neighborhoodName: null,
+      dateFrom: null,
+      dateTo: null,
+      hasProposals: null,
+      hasImages: null,
+    };
+    expect(filterServiceRequests([item], filters)).toHaveLength(1);
+  });
+
   it("filters by search query on title", () => {
     const filters: ServiceRequestsFilterState = {
       statusTabId: "all",
@@ -185,6 +206,21 @@ describe("filterServiceRequests", () => {
     expect(result).toHaveLength(0);
   });
 
+  it("matches category filter by service title when slug differs", () => {
+    const filters: ServiceRequestsFilterState = {
+      statusTabId: "all",
+      searchQuery: "",
+      categoryId: "Eletricista",
+      cityName: null,
+      neighborhoodName: null,
+      dateFrom: null,
+      dateTo: null,
+      hasProposals: null,
+      hasImages: null,
+    };
+    expect(filterServiceRequests([openItem], filters)).toHaveLength(1);
+  });
+
   it("matches category filter by service slug", () => {
     const filters: ServiceRequestsFilterState = {
       statusTabId: "all",
@@ -199,6 +235,47 @@ describe("filterServiceRequests", () => {
     };
     const result = filterServiceRequests([openItem], filters);
     expect(result).toHaveLength(1);
+  });
+
+  it("excludes items created before dateFrom", () => {
+    const item = makeModel({
+      id: "early",
+      createdAt: "2025-01-05T12:00:00Z",
+    });
+    const filters: ServiceRequestsFilterState = {
+      statusTabId: "all",
+      searchQuery: "",
+      categoryId: null,
+      cityName: null,
+      neighborhoodName: null,
+      dateFrom: "2025-01-10",
+      dateTo: null,
+      hasProposals: null,
+      hasImages: null,
+    };
+    expect(filterServiceRequests([item], filters)).toHaveLength(0);
+    expect(
+      filterServiceRequests([item], { ...filters, dateFrom: "2025-01-01" })
+    ).toHaveLength(1);
+  });
+
+  it("trims focusServiceRequestId when matching", () => {
+    const filters: ServiceRequestsFilterState = {
+      statusTabId: "all",
+      searchQuery: "",
+      categoryId: null,
+      cityName: null,
+      neighborhoodName: null,
+      dateFrom: null,
+      dateTo: null,
+      hasProposals: null,
+      hasImages: null,
+    };
+    const result = filterServiceRequests([openItem], filters, {
+      focusServiceRequestId: "  1  ",
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("1");
   });
 
   it("filters by date range end boundary", () => {

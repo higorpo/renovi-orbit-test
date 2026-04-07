@@ -187,6 +187,16 @@ describe("useServiceSchema", () => {
     expect(result.current.fallbackReason).toBe("loading");
   });
 
+  it("returns service_fetch_failed when getServiceBySlug throws", async () => {
+    getServiceBySlug.mockRejectedValue(new Error("network"));
+    const { result } = renderHook(() => useServiceSchema({ serviceSlug: "limpeza" }), {
+      wrapper: createWrapper(),
+    });
+    await waitFor(() => {
+      expect(result.current.fallbackReason).toBe("service_fetch_failed");
+    });
+  });
+
   it("returns service_fetch_failed when service API returns error", async () => {
     getServiceBySlug.mockResolvedValue({
       service: null,
@@ -296,6 +306,55 @@ describe("useServiceSchema", () => {
       expect(result.current.isLoading).toBe(false);
     });
     expect(result.current.fallbackReason).toBe("schema_validation_failed");
+  });
+
+  it("loads service by serviceId when slug is not provided", async () => {
+    getServiceById.mockResolvedValue({ service: mockService, error: null });
+    getFormById.mockResolvedValue({ form: mockForm(), error: null });
+    const { result } = renderHook(() => useServiceSchema({ serviceId: "s1" }), {
+      wrapper: createWrapper(),
+    });
+    await waitFor(() => {
+      expect(result.current.schema).not.toBeNull();
+    });
+    expect(getServiceById).toHaveBeenCalledWith("s1");
+    expect(getServiceBySlug).not.toHaveBeenCalled();
+  });
+
+  it("returns no_v2_schema when form_schema is a JSON array", async () => {
+    getServiceBySlug.mockResolvedValue({ service: mockService, error: null });
+    getFormById.mockResolvedValue({
+      form: mockForm({ form_schema: [] as unknown as FormRow["form_schema"] }),
+      error: null,
+    });
+    const { result } = renderHook(
+      () => useServiceSchema({ serviceSlug: "limpeza" }),
+      { wrapper: createWrapper() }
+    );
+    await waitFor(() => {
+      expect(result.current.fallbackReason).toBe("no_v2_schema");
+    });
+  });
+
+  it("preserves categorySlug from schema metadata when set", async () => {
+    const schemaWithMeta = {
+      ...validFormSchema,
+      metadata: { categorySlug: "custom-slug", categoryId: "keep-me" },
+    };
+    getServiceBySlug.mockResolvedValue({ service: mockService, error: null });
+    getFormById.mockResolvedValue({
+      form: mockForm({ form_schema: schemaWithMeta }),
+      error: null,
+    });
+    const { result } = renderHook(
+      () => useServiceSchema({ serviceSlug: "limpeza" }),
+      { wrapper: createWrapper() }
+    );
+    await waitFor(() => {
+      expect(result.current.schema).not.toBeNull();
+    });
+    expect(result.current.schema!.metadata.categorySlug).toBe("custom-slug");
+    expect(result.current.schema!.metadata.categoryId).toBe("keep-me");
   });
 
   it("uses service.id for categoryId when slug is missing", async () => {

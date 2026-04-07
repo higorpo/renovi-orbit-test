@@ -41,4 +41,50 @@ describe("ClientBudgetsHeader", () => {
       screen.getByText(/5 serviços com orçamento aguardando aprovação/),
     ).toBeInTheDocument();
   });
+
+  it("shows error copy when pending approval count failed", () => {
+    render(
+      <ClientBudgetsHeader
+        pendingApprovalServiceCount={0}
+        pendingQuestionsCount={0}
+        isLoading={false}
+        pendingApprovalCountError
+      />,
+    );
+    expect(screen.getByText(/— serviços \(indisponível\)/)).toBeInTheDocument();
+  });
+
+  it("shows error copy when pending questions count failed", () => {
+    render(
+      <ClientBudgetsHeader
+        pendingApprovalServiceCount={0}
+        pendingQuestionsCount={0}
+        isLoading={false}
+        pendingQuestionsCountError
+      />,
+    );
+    expect(screen.getByText(/— perguntas \(indisponível\)/)).toBeInTheDocument();
+  });
+
+  it("pluralizes pending questions summary", () => {
+    render(
+      <ClientBudgetsHeader
+        pendingApprovalServiceCount={0}
+        pendingQuestionsCount={3}
+        isLoading={false}
+      />,
+    );
+    expect(screen.getByText(/3 perguntas pendente/)).toBeInTheDocument();
+  });
+
+  it("uses singular pending question label when count is 1", () => {
+    render(
+      <ClientBudgetsHeader
+        pendingApprovalServiceCount={0}
+        pendingQuestionsCount={1}
+        isLoading={false}
+      />,
+    );
+    expect(screen.getByText(/1 pergunta pendente/)).toBeInTheDocument();
+  });
 });

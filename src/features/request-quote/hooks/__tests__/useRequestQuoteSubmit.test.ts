@@ -332,6 +332,18 @@ describe("useRequestQuoteSubmit", () => {
         "Ocorreu um erro. Tente novamente."
       );
     });
+
+    it("stops guest flow when signUp fails for a reason other than already_registered", async () => {
+      signUp.mockResolvedValue({ success: false, reason: "invalid_email" });
+      const state = createMockState();
+      const { result } = renderHook(() => useRequestQuoteSubmit({ state }));
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+      expect(navigate).not.toHaveBeenCalled();
+      expect(createRequestQuoteOrder).not.toHaveBeenCalled();
+      expect(state.setLoading).toHaveBeenCalledWith(false);
+    });
   });
 
   describe("handleSubmitLoggedIn", () => {
@@ -399,6 +411,114 @@ describe("useRequestQuoteSubmit", () => {
       });
       expect(createRequestQuoteOrder).toHaveBeenCalled();
       expect(signUp).not.toHaveBeenCalled();
+    });
+
+    it("returns early when recaptcha token is null", async () => {
+      executeRecaptcha.mockResolvedValue(null);
+      const state = createMockState();
+      const { result } = renderHook(() => useRequestQuoteSubmit({ state }));
+      await act(async () => {
+        await result.current.handleSubmitLoggedIn();
+      });
+      expect(createRequestQuoteOrder).not.toHaveBeenCalled();
+      expect(state.setLoading).toHaveBeenCalledWith(false);
+    });
+
+    it("blocks submit when photo content check fails for logged-in user", async () => {
+      const { checkPhotosContent } = await import("../../utils/photoContentCheck");
+      vi.mocked(checkPhotosContent).mockResolvedValue({
+        allowed: false,
+        error: "Bad photo",
+      });
+      const state = createMockState({
+        step3Data: {
+          description: "x",
+          photos: [new File([], "p.jpg", { type: "image/jpeg" })],
+          photoPreviews: [],
+        },
+      });
+      const { result } = renderHook(() => useRequestQuoteSubmit({ state }));
+      await act(async () => {
+        await result.current.handleSubmitLoggedIn();
+      });
+      expect(createRequestQuoteOrder).not.toHaveBeenCalled();
+      expect((await import("sonner")).toast.error).toHaveBeenCalledWith("Bad photo");
+    });
+
+    it("shows API error toast when createRequestQuoteOrder fails for logged-in user", async () => {
+      createRequestQuoteOrder.mockResolvedValue({
+        success: false,
+        error: "Fail",
+      });
+      const state = createMockState();
+      const { result } = renderHook(() => useRequestQuoteSubmit({ state }));
+      await act(async () => {
+        await result.current.handleSubmitLoggedIn();
+      });
+      expect((await import("sonner")).toast.error).toHaveBeenCalledWith(
+        "Não foi possível enviar o pedido. Tente novamente."
+      );
+    });
+
+    it("shows rate limit toast when retryAfter is set for logged-in user", async () => {
+      createRequestQuoteOrder.mockResolvedValue({
+        success: false,
+        error: "Slow down",
+        retryAfter: 12,
+      });
+      const state = createMockState();
+      const { result } = renderHook(() => useRequestQuoteSubmit({ state }));
+      await act(async () => {
+        await result.current.handleSubmitLoggedIn();
+      });
+      expect((await import("sonner")).toast.error).toHaveBeenCalledWith(
+        "Tente novamente em 12 segundos."
+      );
+    });
+
+    it("catches exception during logged-in submit and shows generic toast", async () => {
+      createRequestQuoteOrder.mockRejectedValue(new Error("network down"));
+      const state = createMockState();
+      const { result } = renderHook(() => useRequestQuoteSubmit({ state }));
+      await act(async () => {
+        await result.current.handleSubmitLoggedIn();
+      });
+      expect((await import("sonner")).toast.error).toHaveBeenCalledWith(
+        "Ocorreu um erro. Tente novamente."
+      );
+    });
+
+    it("passes empty email when user email is missing", async () => {
+      useAuth.mockReturnValue({
+        user: { id: "u1" },
+        session: { access_token: "token" },
+        signUp: vi.fn(),
+        signIn: vi.fn(),
+        signInWithGoogle: vi.fn(),
+        signOut: vi.fn(),
+        refreshProfile: vi.fn(),
+        getRedirectPath: vi.fn(),
+        loadingSession: false,
+        profile: null,
+        loading: false,
+      } as never);
+      const state = createMockState();
+      const { result } = renderHook(() => useRequestQuoteSubmit({ state }));
+      await act(async () => {
+        await result.current.handleSubmitLoggedIn();
+      });
+      expect(createRequestQuoteOrder).toHaveBeenCalledWith(
+        expect.objectContaining({ email: "" })
+      );
+    });
+
+    it("returns early when selectedService is missing for logged-in submit", async () => {
+      const state = createMockState({ selectedService: null });
+      const { result } = renderHook(() => useRequestQuoteSubmit({ state }));
+      await act(async () => {
+        await result.current.handleSubmitLoggedIn();
+      });
+      expect(createRequestQuoteOrder).not.toHaveBeenCalled();
     });
 
     it("passes step4Data with location when new address has map coordinates", async () => {

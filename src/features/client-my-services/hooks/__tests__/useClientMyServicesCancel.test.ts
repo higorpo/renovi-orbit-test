@@ -2,6 +2,7 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useAuth } from "@/features/auth";
 import { useClientMyServicesCancel } from "../useClientMyServicesCancel";
 import * as serviceRequestsApi from "../../api/serviceRequests.api";
 
@@ -79,6 +80,21 @@ describe("useClientMyServicesCancel", () => {
       expect(toast.error).toHaveBeenCalledWith("Não foi possível cancelar o serviço. Tente novamente.")
     );
     expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it("passes empty clientId when user is not logged in", async () => {
+    vi.mocked(useAuth).mockReturnValueOnce({ user: null } as never);
+    cancelServiceRequest.mockResolvedValue({ error: null });
+
+    const { result } = renderHook(() => useClientMyServicesCancel(), {
+      wrapper: createWrapper(),
+    });
+
+    act(() => {
+      result.current.cancelServiceRequest("sr-1");
+    });
+
+    await waitFor(() => expect(cancelServiceRequest).toHaveBeenCalledWith({ id: "sr-1", clientId: "" }));
   });
 
   it("sets isCancelling while mutation is pending", async () => {

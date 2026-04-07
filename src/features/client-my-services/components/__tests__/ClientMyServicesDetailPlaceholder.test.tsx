@@ -20,4 +20,16 @@ describe("ClientMyServicesDetailPlaceholder", () => {
       "/dashboard/requests"
     );
   });
+
+  it("shows em dash when route has no id param", () => {
+    render(
+      <MemoryRouter initialEntries={["/dashboard/services"]}>
+        <Routes>
+          <Route path="/dashboard/services" element={<ClientMyServicesDetailPlaceholder />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/ID:\s*—/)).toBeInTheDocument();
+  });
 });

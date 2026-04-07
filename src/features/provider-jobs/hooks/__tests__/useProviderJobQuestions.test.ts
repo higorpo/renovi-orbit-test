@@ -54,4 +54,14 @@ describe("useProviderJobQuestions", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
+
+  it("isError when API returns empty payload without error", async () => {
+    listProviderJobQuestions.mockResolvedValue({ data: null, error: null });
+
+    const { result } = renderHook(() => useProviderJobQuestions("sr-1"), {
+      wrapper: wrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+  });
 });

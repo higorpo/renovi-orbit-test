@@ -321,4 +321,84 @@ describe("useRequestQuoteDraft", () => {
       })
     );
   });
+
+  it("restores at most step 4 when loggedInUserId is set and draft was on step 5", () => {
+    const draftPayload = {
+      version: "2",
+      draft: {
+        currentStep: 5,
+        previousStep: 4,
+        selectedService: null,
+        step2Data: {},
+        step2FormSchema: null,
+        step2FormVersion: null,
+        step3Data: { description: "" },
+        step4Data: null,
+      },
+    };
+    vi.mocked(getDraft).mockReturnValue(draftPayload as ReturnType<typeof getDraft>);
+    const state = createMockState();
+    const { result } = renderHook(() => useRequestQuoteDraft(state, null, "user-1"));
+    act(() => {
+      result.current.restoreDraft();
+    });
+    expect(state.setCurrentStep).toHaveBeenCalledWith(4);
+  });
+
+  it("persists after debounce when only step5 email is meaningful", () => {
+    vi.mocked(getDraft).mockReturnValue(null);
+    const state = createMockState({
+      currentStep: 1,
+      step5Data: {
+        firstName: "",
+        lastName: "",
+        email: "guest@example.com",
+        password: "",
+        confirmPassword: "",
+        termsAccepted: false,
+      },
+    });
+    renderHook(() => useRequestQuoteDraft(state, null));
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(saveDraft).toHaveBeenCalled();
+  });
+
+  it("persists when on step 1 but step4Data is already set", () => {
+    vi.mocked(getDraft).mockReturnValue(null);
+    const state = createMockState({
+      currentStep: 1,
+      step4Data: { kind: "existing", addressId: "addr-1" } as never,
+    });
+    renderHook(() => useRequestQuoteDraft(state, null));
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(saveDraft).toHaveBeenCalled();
+  });
+
+  it("does not persist when step 3 description is only whitespace", () => {
+    vi.mocked(getDraft).mockReturnValue(null);
+    const state = createMockState({
+      currentStep: 1,
+      step3Data: { description: "   ", photos: [], photoPreviews: [] },
+    });
+    renderHook(() => useRequestQuoteDraft(state, null));
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(saveDraft).not.toHaveBeenCalled();
+  });
+
+  it("does not save when unmounted before debounce elapses", () => {
+    vi.mocked(getDraft).mockReturnValue(null);
+    const state = createMockState({ currentStep: 2 });
+    const { unmount } = renderHook(() => useRequestQuoteDraft(state, null));
+    unmount();
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(saveDraft).not.toHaveBeenCalled();
+  });
 });

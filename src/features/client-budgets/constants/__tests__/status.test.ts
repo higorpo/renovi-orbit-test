@@ -17,6 +17,7 @@ import {
   QUESTION_FILTERS,
   RECEIVED_FILTERS,
 } from "../status";
+import type { QuestionStatusFilter, ReceivedStatusFilter } from "../../types/client-budgets.types";
 
 describe("client-budgets status constants", () => {
   it("RECEIVED_FILTERS and QUESTION_FILTERS have ids and labels", () => {
@@ -71,6 +72,14 @@ describe("client-budgets status constants", () => {
           total_budgets: 2,
         }).variant,
       ).toBe("secondary");
+      expect(
+        getServiceBudgetFlowStatus({
+          service_request_status: "cancelled",
+          submitted_count: 1,
+          accepted_count: 0,
+          total_budgets: 1,
+        }).label,
+      ).toBe("Encerrado");
     });
 
     it("returns compare-ready when multiple submitted", () => {
@@ -166,6 +175,22 @@ describe("client-budgets status constants", () => {
       expect(getReceivedBudgetSummaryLine({ ...item, accepted_count: 2 }, "accepted")).toContain(
         "aceitos",
       );
+      expect(getReceivedBudgetSummaryLine({ ...item, rejected_count: 1 }, "rejected")).toContain(
+        "recusado",
+      );
+      expect(getReceivedBudgetSummaryLine({ ...item, rejected_count: 2 }, "rejected")).toContain(
+        "recusados",
+      );
+      expect(getReceivedBudgetSummaryLine({ ...item, withdrawn_count: 1 }, "withdrawn")).toContain(
+        "retirado",
+      );
+      expect(getReceivedBudgetSummaryLine({ ...item, withdrawn_count: 3 }, "withdrawn")).toContain(
+        "retirados",
+      );
+    });
+
+    it("getReceivedBudgetSummaryLine returns empty for invalid filter", () => {
+      expect(getReceivedBudgetSummaryLine(item, "bad" as ReceivedStatusFilter)).toBe("");
     });
   });
 
@@ -189,7 +214,30 @@ describe("client-budgets status constants", () => {
 
     it("getQuestionCardSummaryLine and CTA", () => {
       expect(getQuestionCardSummaryLine(qItem, "pending")).toContain("perguntas pendente");
+      expect(
+        getQuestionCardSummaryLine(
+          { ...qItem, pending_questions_count: 1 },
+          "pending",
+        ),
+      ).toBe("1 perguntas pendente");
+      expect(getQuestionCardSummaryLine(qItem, "answered")).toContain("respondidas");
+      expect(
+        getQuestionCardSummaryLine(
+          { ...qItem, answered_questions_count: 1 },
+          "answered",
+        ),
+      ).toContain("respondida");
       expect(getQuestionCardCtaLabel()).toBe("Ver perguntas");
+    });
+
+    it("getQuestionExtraCount default branch returns 0", () => {
+      expect(
+        getQuestionExtraCount(qItem, "other" as QuestionStatusFilter),
+      ).toBe(0);
+    });
+
+    it("getQuestionCardSummaryLine returns empty for invalid filter", () => {
+      expect(getQuestionCardSummaryLine(qItem, "x" as QuestionStatusFilter)).toBe("");
     });
 
     it("getQuestionStatusConfig branches", () => {
@@ -198,6 +246,22 @@ describe("client-budgets status constants", () => {
           client_response: null,
           client_responded_at: null,
           service_request_status: "closed",
+        }).label,
+      ).toBe("Encerrada");
+
+      expect(
+        getQuestionStatusConfig({
+          client_response: null,
+          client_responded_at: null,
+          service_request_status: "in_progress",
+        }).label,
+      ).toBe("Encerrada");
+
+      expect(
+        getQuestionStatusConfig({
+          client_response: null,
+          client_responded_at: null,
+          service_request_status: "cancelled",
         }).label,
       ).toBe("Encerrada");
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type { ServiceRequestStructuredData } from "../../types/request-quote.types";
 import {
   getDraft,
@@ -39,6 +39,10 @@ describe("requestQuoteDraft.persistence", () => {
     });
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   describe("getDraft", () => {
     it("returns null when storage is empty", () => {
       expect(getDraft()).toBeNull();
@@ -49,6 +53,15 @@ describe("requestQuoteDraft.persistence", () => {
       expect(getDraft()).toBeNull();
     });
 
+    it("returns null when JSON.parse throws a non-Error value", () => {
+      const spy = vi.spyOn(JSON, "parse").mockImplementationOnce(() => {
+        throw "parse boom";
+      });
+      storage[STORAGE_KEY] = '{"version":"1"}';
+      expect(getDraft()).toBeNull();
+      spy.mockRestore();
+    });
+
     it("returns null when stored value has no version", () => {
       storage[STORAGE_KEY] = JSON.stringify({ draft: createMinimalDraft() });
       expect(getDraft()).toBeNull();
@@ -56,6 +69,16 @@ describe("requestQuoteDraft.persistence", () => {
 
     it("returns null when stored value has no draft", () => {
       storage[STORAGE_KEY] = JSON.stringify({ version: "2" });
+      expect(getDraft()).toBeNull();
+    });
+
+    it("returns null when version is not a string", () => {
+      storage[STORAGE_KEY] = JSON.stringify({ version: 1, draft: createMinimalDraft() });
+      expect(getDraft()).toBeNull();
+    });
+
+    it("returns null when draft is not an object", () => {
+      storage[STORAGE_KEY] = JSON.stringify({ version: "1", draft: "invalid" });
       expect(getDraft()).toBeNull();
     });
 
@@ -128,6 +151,30 @@ describe("requestQuoteDraft.persistence", () => {
       expect(getDraft()).not.toBeNull();
       clearDraft();
       expect(getDraft()).toBeNull();
+    });
+
+    it("does not throw when removeItem fails", () => {
+      vi.stubGlobal("localStorage", {
+        getItem: () => null,
+        setItem: vi.fn(),
+        removeItem: () => {
+          throw new Error("remove failed");
+        },
+      });
+      expect(() => clearDraft()).not.toThrow();
+    });
+  });
+
+  describe("saveDraft errors", () => {
+    it("does not throw when setItem fails", () => {
+      vi.stubGlobal("localStorage", {
+        getItem: () => null,
+        setItem: () => {
+          throw new Error("quota exceeded");
+        },
+        removeItem: vi.fn(),
+      });
+      expect(() => saveDraft(createMinimalDraft())).not.toThrow();
     });
   });
 

@@ -117,4 +117,42 @@ describe("useProviderJobDetail", () => {
     });
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
+
+  it("uses Brazil centroid when provider location is unavailable", async () => {
+    useProviderLocation.mockReturnValue({
+      location: null,
+      error: "x",
+      isLoading: false,
+      permissionDenied: false,
+      insecureContext: false,
+      isUsingDefault: true,
+      retry: vi.fn(),
+    });
+
+    const { result } = renderHook(() => useProviderJobDetail("job-1"), {
+      wrapper: wrapper(),
+    });
+
+    await waitFor(() => expect(result.current.job).toEqual(baseJob));
+    expect(fetchProviderProposalJobDetail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        latitude: -14.235,
+        longitude: -51.9253,
+      }),
+    );
+  });
+
+  it("ignores initial job when its id does not match jobId", async () => {
+    const wrongInitial = { id: "other", title: "Other" } as never;
+    const { result } = renderHook(
+      () =>
+        useProviderJobDetail("job-1", {
+          initialJob: wrongInitial,
+        }),
+      { wrapper: wrapper() },
+    );
+
+    expect(result.current.job).toBeNull();
+    await waitFor(() => expect(result.current.job).toEqual(baseJob));
+  });
 });

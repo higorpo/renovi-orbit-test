@@ -23,6 +23,8 @@
 | Consumidor principal | `request-quote` Step 2 (`Step2ServiceForm`) |
 | API HTTP própria | Não — schema vem de `getFormById` / serviço |
 
+Na demo DEV, o componente **`FormDemoPage`** oferece abas *builder* e *preview*. Para **desenvolvimento e testes** (incluindo testes automatizados), aceita a prop opcional **`initialTab`** (`"builder"` \| `"preview"`); o padrão continua **`"builder"`**. As rotas de produção não passam essa prop — não há mudança de fluxo para o usuário final nesse ponto.
+
 ## 4. Perfis envolvidos
 
 - **Visitante/cliente** no pedido.
@@ -114,7 +116,7 @@ Os campos **não são fixos**: cada serviço define blocos no JSON. Para documen
 
 ## 19. Evidências
 
-- `src/features/dynamic-form/components/DynamicForm.tsx`, `FormProvider`, `StepRenderer`
+- `src/features/dynamic-form/components/DynamicForm.tsx`, `FormProvider`, `StepRenderer`, `FormDemoPage.tsx` (demo DEV; `initialTab` opcional para testes)
 - `src/features/dynamic-form/hooks/useFieldValidation.ts`
 - Helpers: `getVisibleSteps`, `evaluateVisibilityRule`, `validateFormSchema`
 - `supabase/migrations/20260226100000_create_forms.sql`

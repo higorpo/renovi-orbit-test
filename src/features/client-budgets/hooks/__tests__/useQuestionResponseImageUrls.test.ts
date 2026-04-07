@@ -21,6 +21,13 @@ describe("useQuestionResponseImageUrls", () => {
     expect(result.current.isLoading).toBe(false);
   });
 
+  it("returns empty when paths is an empty array", async () => {
+    const { result } = renderHook(() => useQuestionResponseImageUrls([]));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.urls).toEqual([]);
+    expect(getQuestionResponseImageUrl).not.toHaveBeenCalled();
+  });
+
   it("resolves urls for paths", async () => {
     const { result } = renderHook(() =>
       useQuestionResponseImageUrls(["a/b.jpg", "c/d.jpg"]),
@@ -34,5 +41,19 @@ describe("useQuestionResponseImageUrls", () => {
     const { result } = renderHook(() => useQuestionResponseImageUrls(["p1", "p2"]));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.urls).toEqual(["https://ok"]);
+  });
+
+  it("does not update state after unmount when urls resolve", async () => {
+    let release!: () => void;
+    getQuestionResponseImageUrl.mockImplementation(
+      () =>
+        new Promise<string>((resolve) => {
+          release = () => resolve("https://late");
+        }),
+    );
+    const { unmount } = renderHook(() => useQuestionResponseImageUrls(["only"]));
+    unmount();
+    release!();
+    await waitFor(() => expect(getQuestionResponseImageUrl).toHaveBeenCalled());
   });
 });

@@ -142,4 +142,66 @@ describe("useProviderJobs", () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
+
+  it("throws when API returns neither data nor error", async () => {
+    fetchProviderJobs.mockResolvedValue({ data: null, error: null });
+
+    const { result } = renderHook(
+      () =>
+        useProviderJobs({
+          latitude: -1,
+          longitude: -1,
+          radiusKm: 10,
+          serviceId: null,
+          sortMode: "nearest",
+        }),
+      { wrapper: wrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+
+  it("does not paginate when total_count is not finite", async () => {
+    fetchProviderJobs.mockResolvedValue({
+      data: { ...makePage({ page: 1 }), total_count: Number.NaN } as never,
+      error: null,
+    });
+
+    const { result } = renderHook(
+      () =>
+        useProviderJobs({
+          latitude: -1,
+          longitude: -1,
+          radiusKm: 10,
+          serviceId: null,
+          sortMode: "nearest",
+        }),
+      { wrapper: wrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.hasNextPage).toBe(false);
+  });
+
+  it("does not offer another page when total fits in one page", async () => {
+    fetchProviderJobs.mockResolvedValue({
+      data: makePage({ total_count: 15, page: 1 }),
+      error: null,
+    });
+
+    const { result } = renderHook(
+      () =>
+        useProviderJobs({
+          latitude: -1,
+          longitude: -1,
+          radiusKm: 10,
+          serviceId: null,
+          sortMode: "nearest",
+        }),
+      { wrapper: wrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.hasNextPage).toBe(false);
+  });
 });

@@ -342,6 +342,74 @@ describe("useRequestQuoteNavigation", () => {
     expect(state.setCurrentStep).toHaveBeenCalledWith(2);
   });
 
+  it("handleNext step 1 with selectedService advances to step 2", async () => {
+    const state = createMockState({
+      currentStep: 1,
+      selectedService: { id: "s1", slug: "x", title: "X" } as never,
+    });
+    const { result } = renderHook(() =>
+      useRequestQuoteNavigation({
+        state,
+        user: null,
+        onSubmitLoggedIn: vi.fn(),
+      })
+    );
+    await act(async () => {
+      await result.current.handleNext();
+    });
+    expect(state.setCurrentStep).toHaveBeenCalled();
+    const updater = (state.setCurrentStep as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(updater(1)).toBe(2);
+  });
+
+  it("handleNext step 4 logged in with new address and valid formData calls onSubmitLoggedIn", async () => {
+    const { addressFormSchema } = await import("@/features/addresses");
+    vi.mocked(addressFormSchema.safeParse).mockReturnValue({
+      success: true,
+      data: {},
+    } as never);
+    const state = createMockState({
+      currentStep: 4,
+      step4Data: { kind: "new", formData: { ok: true } as never },
+    });
+    const onSubmitLoggedIn = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(() =>
+      useRequestQuoteNavigation({
+        state,
+        user: { id: "u1" },
+        onSubmitLoggedIn,
+      })
+    );
+    await act(async () => {
+      await result.current.handleNext();
+    });
+    expect(onSubmitLoggedIn).toHaveBeenCalled();
+  });
+
+  it("handleNext step 4 guest with new valid address advances to step 5", async () => {
+    const { addressFormSchema } = await import("@/features/addresses");
+    vi.mocked(addressFormSchema.safeParse).mockReturnValue({
+      success: true,
+      data: {},
+    } as never);
+    const state = createMockState({
+      currentStep: 4,
+      step4Data: { kind: "new", formData: { ok: true } as never },
+    });
+    const { result } = renderHook(() =>
+      useRequestQuoteNavigation({
+        state,
+        user: null,
+        onSubmitLoggedIn: vi.fn(),
+      })
+    );
+    await act(async () => {
+      await result.current.handleNext();
+    });
+    const updater = (state.setCurrentStep as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(updater(4)).toBe(5);
+  });
+
   it("handleNext step 4 logged in with new address and invalid formData shows toast", async () => {
     const { addressFormSchema } = await import("@/features/addresses");
     vi.mocked(addressFormSchema.safeParse).mockReturnValue({

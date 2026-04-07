@@ -29,8 +29,23 @@ vi.mock("../../hooks/useQuestionResponseImageUrls", () => ({
 }));
 
 vi.mock("../QuestionResponseComposer", () => ({
-  QuestionResponseComposer: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="question-composer">composer</div> : null,
+  QuestionResponseComposer: ({
+    open,
+    onOpenChange,
+  }: {
+    open: boolean;
+    onOpenChange: (next: boolean) => void;
+  }) =>
+    open ? (
+      <div data-testid="question-composer">
+        <button type="button" onClick={() => onOpenChange(false)}>
+          fechar-composer
+        </button>
+        <button type="button" onClick={() => onOpenChange(true)}>
+          noop-composer
+        </button>
+      </div>
+    ) : null,
 }));
 
 
@@ -212,6 +227,48 @@ describe("ReceivedBudgetDetailsSheet", () => {
     );
     expect(screen.getByRole("button", { name: /Recusar orçamento/i })).toBeDisabled();
   });
+
+  it("shows load error and calls refetch on retry", () => {
+    const refetch = vi.fn();
+    vi.mocked(detailHook.useClientBudgetDetail).mockReturnValue({
+      detail: null,
+      isLoading: false,
+      isError: true,
+      refetch,
+    });
+    renderReceivedSheet(
+      <ReceivedBudgetDetailsSheet
+        open
+        serviceRequestId="sr1"
+        sheetMode="compare"
+        onOpenChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/Não foi possível carregar os detalhes/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Tentar novamente/i }));
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  it("disables reject in compare mode when latest proposal is not submitted", () => {
+    vi.mocked(detailHook.useClientBudgetDetail).mockReturnValue({
+      detail: {
+        ...detailBase,
+        budgets: [{ ...proposal, status: "accepted" as const }],
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    renderReceivedSheet(
+      <ReceivedBudgetDetailsSheet
+        open
+        serviceRequestId="sr1"
+        sheetMode="compare"
+        onOpenChange={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /Recusar orçamento/i })).toBeDisabled();
+  });
 });
 
 describe("QuestionThreadSheet", () => {
@@ -277,6 +334,14 @@ describe("QuestionThreadSheet", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /Responder/i }));
     expect(screen.getByTestId("question-composer")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: /noop-composer/i, hidden: true }),
+    );
+    expect(screen.getByTestId("question-composer")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: /fechar-composer/i, hidden: true }),
+    );
+    expect(screen.queryByTestId("question-composer")).not.toBeInTheDocument();
   });
 
   it("shows image placeholders while response images load", () => {
@@ -355,6 +420,94 @@ describe("QuestionThreadSheet", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("shows load error and refetches from retry", () => {
+    const refetch = vi.fn();
+    vi.mocked(detailHook.useClientBudgetDetail).mockReturnValue({
+      detail: null,
+      isLoading: false,
+      isError: true,
+      refetch,
+    });
+    render(<QuestionThreadSheet open serviceRequestId="sr1" onOpenChange={vi.fn()} />);
+    expect(screen.getByText(/Não foi possível carregar as perguntas/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Tentar novamente/i }));
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  it("sorts two pending questions by created_at descending", () => {
+    vi.mocked(detailHook.useClientBudgetDetail).mockReturnValue({
+      detail: {
+        ...detailBase,
+        questions: [
+          {
+            id: "q-old",
+            provider_id: "p1",
+            provider_name: "P",
+            provider_slug: "p",
+            provider_profile_image_path: null,
+            question: "OLDER",
+            client_response: null,
+            client_response_images: [],
+            created_at: "2020-01-01T00:00:00Z",
+            client_responded_at: null,
+          },
+          {
+            id: "q-new",
+            provider_id: "p1",
+            provider_name: "P",
+            provider_slug: "p",
+            provider_profile_image_path: null,
+            question: "NEWER",
+            client_response: null,
+            client_response_images: [],
+            created_at: "2024-06-01T00:00:00Z",
+            client_responded_at: null,
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    render(<QuestionThreadSheet open serviceRequestId="sr1" onOpenChange={vi.fn()} />);
+    const newer = screen.getByText("NEWER");
+    const older = screen.getByText("OLDER");
+    expect(
+      newer.compareDocumentPosition(older) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeGreaterThan(0);
+  });
+
+  it("hides image grid when signed URLs resolve empty", () => {
+    mockQuestionResponseImageUrls.mockReturnValue({ urls: [], isLoading: false });
+    vi.mocked(detailHook.useClientBudgetDetail).mockReturnValue({
+      detail: {
+        ...detailBase,
+        questions: [
+          {
+            id: "q2",
+            provider_id: "p1",
+            provider_name: "P",
+            provider_slug: "p",
+            provider_profile_image_path: null,
+            question: "Ok?",
+            client_response: "Sim",
+            client_response_images: ["path/1"],
+            created_at: "2024-01-02T00:00:00Z",
+            client_responded_at: "2024-01-03T00:00:00Z",
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    const { container } = render(
+      <QuestionThreadSheet open serviceRequestId="sr1" onOpenChange={vi.fn()} />,
+    );
+    expect(screen.getByText("Sim")).toBeInTheDocument();
+    expect(container.querySelectorAll("img").length).toBe(0);
+  });
+
   it("renders client response with images when answered", () => {
     vi.mocked(detailHook.useClientBudgetDetail).mockReturnValue({
       detail: {
@@ -386,5 +539,48 @@ describe("QuestionThreadSheet", () => {
     expect(img).toHaveAttribute("src", "https://img");
     fireEvent.error(img);
     expect(img).toHaveStyle({ display: "none" });
+  });
+
+  it("uses em dash when service request title is null after load", () => {
+    vi.mocked(detailHook.useClientBudgetDetail).mockReturnValue({
+      detail: {
+        ...detailBase,
+        service_request: { ...detailBase.service_request, title: null as unknown as string },
+        questions: [],
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    render(<QuestionThreadSheet open serviceRequestId="sr1" onOpenChange={vi.fn()} />);
+    expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
+  it("passes empty paths to ResponseImages when response images are undefined", () => {
+    mockQuestionResponseImageUrls.mockReturnValue({ urls: [], isLoading: false });
+    vi.mocked(detailHook.useClientBudgetDetail).mockReturnValue({
+      detail: {
+        ...detailBase,
+        questions: [
+          {
+            id: "q-undef-img",
+            provider_id: "p1",
+            provider_name: "P",
+            provider_slug: "p",
+            provider_profile_image_path: null,
+            question: "Fotos?",
+            client_response: "Segue",
+            client_response_images: undefined as unknown as string[],
+            created_at: "2024-01-02T00:00:00Z",
+            client_responded_at: "2024-01-03T00:00:00Z",
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    render(<QuestionThreadSheet open serviceRequestId="sr1" onOpenChange={vi.fn()} />);
+    expect(screen.getByText("Segue")).toBeInTheDocument();
   });
 });

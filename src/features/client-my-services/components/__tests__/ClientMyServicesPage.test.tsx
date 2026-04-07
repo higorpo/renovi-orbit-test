@@ -37,15 +37,26 @@ vi.mock("@/features/client-budgets", async (importOriginal) => {
       onOpenChange: (v: boolean) => void;
     }) =>
       open ? (
-        <button
-          type="button"
-          data-testid="stub-close-budgets"
-          onClick={() => {
-            onOpenChange(false);
-          }}
-        >
-          close budgets
-        </button>
+        <div>
+          <button
+            type="button"
+            data-testid="stub-close-budgets"
+            onClick={() => {
+              onOpenChange(false);
+            }}
+          >
+            close budgets
+          </button>
+          <button
+            type="button"
+            data-testid="stub-keep-open-budgets"
+            onClick={() => {
+              onOpenChange(true);
+            }}
+          >
+            keep budgets open
+          </button>
+        </div>
       ) : null,
     QuestionThreadSheet: ({
       open,
@@ -55,15 +66,26 @@ vi.mock("@/features/client-budgets", async (importOriginal) => {
       onOpenChange: (v: boolean) => void;
     }) =>
       open ? (
-        <button
-          type="button"
-          data-testid="stub-close-questions"
-          onClick={() => {
-            onOpenChange(false);
-          }}
-        >
-          close questions
-        </button>
+        <div>
+          <button
+            type="button"
+            data-testid="stub-close-questions"
+            onClick={() => {
+              onOpenChange(false);
+            }}
+          >
+            close questions
+          </button>
+          <button
+            type="button"
+            data-testid="stub-keep-open-questions"
+            onClick={() => {
+              onOpenChange(true);
+            }}
+          >
+            keep questions open
+          </button>
+        </div>
       ) : null,
   };
 });
@@ -80,15 +102,26 @@ vi.mock("../OpenServiceDetailsSheet", async (importOriginal) => {
       onOpenChange: (v: boolean) => void;
     }) =>
       open ? (
-        <button
-          type="button"
-          data-testid="stub-close-open-details"
-          onClick={() => {
-            onOpenChange(false);
-          }}
-        >
-          close open details
-        </button>
+        <div>
+          <button
+            type="button"
+            data-testid="stub-close-open-details"
+            onClick={() => {
+              onOpenChange(false);
+            }}
+          >
+            close open details
+          </button>
+          <button
+            type="button"
+            data-testid="stub-keep-open-details"
+            onClick={() => {
+              onOpenChange(true);
+            }}
+          >
+            keep details open
+          </button>
+        </div>
       ) : null,
   };
 });
@@ -336,6 +369,42 @@ describe("ClientMyServicesPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Ver perguntas/i }));
     fireEvent.click(screen.getByTestId("stub-close-questions"));
+  });
+
+  it("does not clear details mode when sheet reports stay open (onOpenChange true)", () => {
+    const item: ServiceRequestCardModel = {
+      id: "sr-2",
+      title: "Aberto",
+      description: null,
+      descriptionPreview: "",
+      formData: null,
+      formSchema: null,
+      status: "open",
+      statusTabId: "waiting_proposals",
+      createdAt: "2025-03-01T00:00:00Z",
+      updatedAt: "2025-03-01T00:00:00Z",
+      address: null,
+      service: { title: "Pintura", slug: "pintura" },
+      photoPaths: [],
+      proposalCount: 2,
+    };
+    useClientMyServicesList.mockReturnValue({
+      items: [item],
+      isLoading: false,
+      isFetchingNextPage: false,
+      isError: false,
+      hasNextPage: false,
+      totalCount: 1,
+      fetchNextPage: vi.fn(async () => undefined),
+      refetch: vi.fn(),
+    });
+    render(<ClientMyServicesPage />, { wrapper: createWrapper() });
+    fireEvent.click(screen.getByRole("button", { name: /Ver or\u00e7amentos/i }));
+    fireEvent.click(screen.getByTestId("stub-keep-open-budgets"));
+    fireEvent.click(screen.getByRole("button", { name: /Ver perguntas/i }));
+    fireEvent.click(screen.getByTestId("stub-keep-open-questions"));
+    fireEvent.click(screen.getByRole("button", { name: /Ver detalhes/i }));
+    fireEvent.click(screen.getByTestId("stub-keep-open-details"));
   });
 
   it("closes open-service details sheet via onOpenChange", () => {

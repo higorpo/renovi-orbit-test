@@ -51,6 +51,22 @@ describe("useQuestionResponseComposer", () => {
     expect(result.current.canSubmit).toBe(true);
   });
 
+  it("onSelectImages no-ops for null or empty file list", () => {
+    const { result } = renderHook(
+      () => useQuestionResponseComposer("sr-1", "q-1"),
+      { wrapper: wrapper() },
+    );
+    act(() => {
+      result.current.onSelectImages(null);
+    });
+    expect(result.current.selectedImages).toHaveLength(0);
+    act(() => {
+      const dt = new DataTransfer();
+      result.current.onSelectImages(dt.files);
+    });
+    expect(result.current.selectedImages).toHaveLength(0);
+  });
+
   it("onSelectImages appends files up to max", async () => {
     const { toast } = await import("sonner");
     const { result } = renderHook(

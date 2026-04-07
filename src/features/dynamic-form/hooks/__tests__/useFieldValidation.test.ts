@@ -92,4 +92,23 @@ describe("getValidationErrorMessage", () => {
   it("returns formatted message for required-like error when no custom message", () => {
     expect(getValidationErrorMessage(block, "Campo obrigatório")).toContain("obrigatório");
   });
+
+  it("uses Este campo when label is missing for required-like error", () => {
+    const noLabel = { ...block, label: undefined } as unknown as FormBlock;
+    expect(getValidationErrorMessage(noLabel, "required field")).toContain("Este campo");
+  });
+
+  it("appends helpText for formato-like errors", () => {
+    expect(getValidationErrorMessage(block, "formato inválido")).toContain("Formato inválido");
+  });
+
+  it("returns fixed copy for selecione-like errors", () => {
+    expect(getValidationErrorMessage(block, "Selecione uma opção")).toBe(
+      "Selecione pelo menos uma opção"
+    );
+  });
+
+  it("returns error unchanged when no rule matches", () => {
+    expect(getValidationErrorMessage(block, "Algo inesperado")).toBe("Algo inesperado");
+  });
 });

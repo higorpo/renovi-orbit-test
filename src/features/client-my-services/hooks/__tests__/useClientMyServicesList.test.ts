@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -151,6 +151,56 @@ describe("useClientMyServicesList", () => {
     });
 
     expect(result.current.isLoading).toBe(false);
+    expect(result.current.hasNextPage).toBe(false);
     expect(listServiceRequests).not.toHaveBeenCalled();
+  });
+
+  it("marks error when API returns neither data nor error message", async () => {
+    listServiceRequests.mockResolvedValue({ data: null, error: null });
+
+    const { result } = renderHook(() => useClientMyServicesList(baseParams), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+
+  it("refetch triggers an additional list request", async () => {
+    listServiceRequests.mockResolvedValue({
+      data: { items: [], total_count: 0, page: 1, page_size: 20 },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useClientMyServicesList(baseParams), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(listServiceRequests).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      result.current.refetch();
+    });
+
+    await waitFor(() => expect(listServiceRequests).toHaveBeenCalledTimes(2));
+  });
+
+  it("does not request a next page when all results fit in the first page", async () => {
+    listServiceRequests.mockResolvedValue({
+      data: {
+        items: [{ id: "only" } as never],
+        total_count: 5,
+        page: 1,
+        page_size: 20,
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useClientMyServicesList(baseParams), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.hasNextPage).toBe(false);
   });
 });

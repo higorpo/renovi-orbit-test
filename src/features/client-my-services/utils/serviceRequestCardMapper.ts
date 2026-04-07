@@ -11,10 +11,12 @@ function mapAddress(
   if (!addr) return null;
   const cityName = addr.platform_cities?.name ?? "";
   const stateAbbr = addr.platform_states?.abbreviation;
+  const streetPart = addr.street?.trim() ? addr.street.trim() : undefined;
+  const numberPart = addr.number?.trim() ? addr.number.trim() : undefined;
   const streetSummary =
-    addr.street && addr.number
-      ? `${addr.street}, ${addr.number}`
-      : addr.street ?? addr.number ?? undefined;
+    streetPart && numberPart
+      ? `${streetPart}, ${numberPart}`
+      : streetPart ?? numberPart ?? undefined;
 
   return {
     neighborhood: addr.neighborhood ?? "",

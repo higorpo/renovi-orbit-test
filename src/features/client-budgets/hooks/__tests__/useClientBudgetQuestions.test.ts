@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -62,5 +62,49 @@ describe("useClientBudgetQuestions", () => {
     );
 
     await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+
+  it("marks error when API returns null data without error string", async () => {
+    fetchClientBudgetQuestions.mockResolvedValue({ data: null, error: null });
+
+    const { result } = renderHook(
+      () => useClientBudgetQuestions({ questionStatus: null, search: null }),
+      { wrapper: wrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+
+  it("fetches next page when more pages exist", async () => {
+    fetchClientBudgetQuestions
+      .mockResolvedValueOnce({
+        data: {
+          items: [{ service_request_id: "a" } as never],
+          total_count: 40,
+          page: 1,
+          page_size: 20,
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          items: [{ service_request_id: "b" } as never],
+          total_count: 40,
+          page: 2,
+          page_size: 20,
+        },
+        error: null,
+      });
+
+    const { result } = renderHook(
+      () => useClientBudgetQuestions({ questionStatus: null, search: null }),
+      { wrapper: wrapper() },
+    );
+
+    await waitFor(() => expect(result.current.hasNextPage).toBe(true));
+    await act(async () => {
+      await result.current.fetchNextPage();
+    });
+    await waitFor(() => expect(result.current.items).toHaveLength(2));
   });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { DynamicForm } from "../DynamicForm";
 import {
   minimalSchema,
@@ -278,8 +278,10 @@ describe("DynamicForm", () => {
       const input = screen.getByRole("spinbutton", { name: /Quantidade/i });
       fireEvent.click(increment);
       fireEvent.click(increment);
-      // Controlled inputs: assert displayed value, not the HTML value attribute.
-      expect(input).toHaveValue(2);
+      // Controlled inputs: updates can lag one tick under load (coverage/parallel).
+      await waitFor(() => {
+        expect(input).toHaveValue(2);
+      });
     });
 
     it("renders and selects yes_no block", async () => {
@@ -296,9 +298,10 @@ describe("DynamicForm", () => {
         expect(screen.getByText(/Confirmar/i)).toBeInTheDocument();
       });
 
-      const simRadio = screen.getByRole("radio", { name: /^Sim$/i });
-      fireEvent.click(simRadio);
-      expect(simRadio).toHaveAttribute("aria-checked", "true");
+      fireEvent.click(screen.getByRole("radio", { name: /^Sim$/i }));
+      await waitFor(() => {
+        expect(screen.getByRole("radio", { name: /^Sim$/i })).toHaveAttribute("aria-checked", "true");
+      });
     });
 
     it("renders all block types in allBlocksSchema", () => {
@@ -343,6 +346,45 @@ describe("DynamicForm", () => {
         />
       );
       expect(screen.getByText(/Alerta quando Sim\/Não = Sim/i)).toBeInTheDocument();
+    });
+
+    it("exercises multi_select exclusive, allowOther, checkbox exclusive, slider, and description_ai", async () => {
+      vi.useFakeTimers();
+      try {
+        render(
+          <DynamicForm
+            schema={allBlocksSchema}
+            onComplete={vi.fn()}
+            initialData={{
+              ...allBlocksPartialData,
+              multi_select: ["a"],
+            }}
+          />
+        );
+        const multiExclusiveBtn = screen.getByText("(seleção exclusiva)").closest("button");
+        expect(multiExclusiveBtn).toBeTruthy();
+        fireEvent.click(multiExclusiveBtn!);
+        act(() => {
+          vi.runAllTimers();
+        });
+        fireEvent.click(screen.getByText("Outro item"));
+        fireEvent.change(screen.getByLabelText(/Descreva a opção outro/i), {
+          target: { value: "custom note" },
+        });
+        const checkboxExclusiveLabel = screen.getByText("(exclusivo)").closest("label");
+        expect(checkboxExclusiveLabel).toBeTruthy();
+        fireEvent.click(checkboxExclusiveLabel!);
+        act(() => {
+          vi.runAllTimers();
+        });
+        const sliderInput = screen.getByLabelText(/Slider/i);
+        fireEvent.change(sliderInput, { target: { value: "25" } });
+        const desc = screen.getByRole("textbox", { name: /Descrição IA/i });
+        fireEvent.change(desc, { target: { value: "Short" } });
+        expect(desc).toHaveValue("Short");
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 

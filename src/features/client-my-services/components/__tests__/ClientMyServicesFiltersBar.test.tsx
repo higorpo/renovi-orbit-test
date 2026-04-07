@@ -26,6 +26,28 @@ describe("ClientMyServicesFiltersBar", () => {
     vi.mocked(useBreakpointMd).mockReturnValue(true);
   });
 
+  it("desktop: shows clear control when filters are active", () => {
+    const onCategoryChange = vi.fn();
+    render(
+      <ClientMyServicesFiltersBar
+        filters={{ ...baseFilters, categoryId: "Pintura" }}
+        onCategoryChange={onCategoryChange}
+        onCityChange={vi.fn()}
+        onNeighborhoodChange={vi.fn()}
+        onDateRangeChange={vi.fn()}
+        onHasProposalsChange={vi.fn()}
+        onHasImagesChange={vi.fn()}
+        categoryOptions={["Pintura"]}
+        cityOptions={[]}
+        neighborhoodOptions={[]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Abrir filtros/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Limpar/i }));
+    expect(onCategoryChange).toHaveBeenCalledWith(null);
+  });
+
   it("desktop: opens popover and updates category filter", () => {
     const onCategoryChange = vi.fn();
     render(
@@ -47,6 +69,181 @@ describe("ClientMyServicesFiltersBar", () => {
     const select = screen.getByLabelText(/Filtrar por categoria/i);
     fireEvent.change(select, { target: { value: "Eletricista" } });
     expect(onCategoryChange).toHaveBeenCalledWith("Eletricista");
+  });
+
+  it("desktop: updates date range from popover", () => {
+    const onDateRangeChange = vi.fn();
+    render(
+      <ClientMyServicesFiltersBar
+        filters={{ ...baseFilters, dateTo: "2025-02-01" }}
+        onCategoryChange={vi.fn()}
+        onCityChange={vi.fn()}
+        onNeighborhoodChange={vi.fn()}
+        onDateRangeChange={onDateRangeChange}
+        onHasProposalsChange={vi.fn()}
+        onHasImagesChange={vi.fn()}
+        categoryOptions={[]}
+        cityOptions={[]}
+        neighborhoodOptions={[]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Abrir filtros/i }));
+    fireEvent.change(screen.getByLabelText(/Data inicial/i), {
+      target: { value: "2025-01-01" },
+    });
+    expect(onDateRangeChange).toHaveBeenCalledWith("2025-01-01", "2025-02-01");
+  });
+
+  it("desktop: toggles proposals and photos selects including reset to any", () => {
+    const onHasProposalsChange = vi.fn();
+    const onHasImagesChange = vi.fn();
+    render(
+      <ClientMyServicesFiltersBar
+        filters={baseFilters}
+        onCategoryChange={vi.fn()}
+        onCityChange={vi.fn()}
+        onNeighborhoodChange={vi.fn()}
+        onDateRangeChange={vi.fn()}
+        onHasProposalsChange={onHasProposalsChange}
+        onHasImagesChange={onHasImagesChange}
+        categoryOptions={[]}
+        cityOptions={[]}
+        neighborhoodOptions={[]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Abrir filtros/i }));
+
+    fireEvent.change(screen.getByLabelText(/Filtrar por existência de orçamentos/i), {
+      target: { value: "no" },
+    });
+    expect(onHasProposalsChange).toHaveBeenCalledWith(false);
+
+    fireEvent.change(screen.getByLabelText(/Filtrar por existência de fotos/i), {
+      target: { value: "yes" },
+    });
+    expect(onHasImagesChange).toHaveBeenCalledWith(true);
+
+    fireEvent.change(screen.getByLabelText(/Filtrar por existência de orçamentos/i), {
+      target: { value: "" },
+    });
+    expect(onHasProposalsChange).toHaveBeenLastCalledWith(null);
+  });
+
+  it("desktop: reflects selected proposal and photo filter values", () => {
+    render(
+      <ClientMyServicesFiltersBar
+        filters={{ ...baseFilters, hasProposals: true, hasImages: false }}
+        onCategoryChange={vi.fn()}
+        onCityChange={vi.fn()}
+        onNeighborhoodChange={vi.fn()}
+        onDateRangeChange={vi.fn()}
+        onHasProposalsChange={vi.fn()}
+        onHasImagesChange={vi.fn()}
+        categoryOptions={[]}
+        cityOptions={[]}
+        neighborhoodOptions={[]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Abrir filtros/i }));
+    const proposalsSelect = screen.getByLabelText(
+      /Filtrar por existência de orçamentos/i
+    ) as HTMLSelectElement;
+    const photosSelect = screen.getByLabelText(/Filtrar por existência de fotos/i) as HTMLSelectElement;
+    expect(proposalsSelect.value).toBe("yes");
+    expect(photosSelect.value).toBe("no");
+  });
+
+  it("desktop: updates only end date when start date is empty", () => {
+    const onDateRangeChange = vi.fn();
+    render(
+      <ClientMyServicesFiltersBar
+        filters={baseFilters}
+        onCategoryChange={vi.fn()}
+        onCityChange={vi.fn()}
+        onNeighborhoodChange={vi.fn()}
+        onDateRangeChange={onDateRangeChange}
+        onHasProposalsChange={vi.fn()}
+        onHasImagesChange={vi.fn()}
+        categoryOptions={[]}
+        cityOptions={[]}
+        neighborhoodOptions={[]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Abrir filtros/i }));
+    fireEvent.change(screen.getByLabelText(/Data final/i), {
+      target: { value: "2025-06-01" },
+    });
+    expect(onDateRangeChange).toHaveBeenCalledWith(null, "2025-06-01");
+  });
+
+  it("desktop: clears end date while keeping start date", () => {
+    const onDateRangeChange = vi.fn();
+    render(
+      <ClientMyServicesFiltersBar
+        filters={{ ...baseFilters, dateFrom: "2025-01-01", dateTo: "2025-01-31" }}
+        onCategoryChange={vi.fn()}
+        onCityChange={vi.fn()}
+        onNeighborhoodChange={vi.fn()}
+        onDateRangeChange={onDateRangeChange}
+        onHasProposalsChange={vi.fn()}
+        onHasImagesChange={vi.fn()}
+        categoryOptions={[]}
+        cityOptions={[]}
+        neighborhoodOptions={[]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Abrir filtros/i }));
+    fireEvent.change(screen.getByLabelText(/Data final/i), { target: { value: "" } });
+    expect(onDateRangeChange).toHaveBeenCalledWith("2025-01-01", null);
+  });
+
+  it("desktop: shows sem orçamentos and com fotos when filters are false and true", () => {
+    render(
+      <ClientMyServicesFiltersBar
+        filters={{ ...baseFilters, hasProposals: false, hasImages: true }}
+        onCategoryChange={vi.fn()}
+        onCityChange={vi.fn()}
+        onNeighborhoodChange={vi.fn()}
+        onDateRangeChange={vi.fn()}
+        onHasProposalsChange={vi.fn()}
+        onHasImagesChange={vi.fn()}
+        categoryOptions={[]}
+        cityOptions={[]}
+        neighborhoodOptions={[]}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Abrir filtros/i }));
+    expect(
+      (screen.getByLabelText(/Filtrar por existência de orçamentos/i) as HTMLSelectElement).value
+    ).toBe("no");
+    expect(
+      (screen.getByLabelText(/Filtrar por existência de fotos/i) as HTMLSelectElement).value
+    ).toBe("yes");
+  });
+
+  it("disables trigger when disabled prop is set", () => {
+    render(
+      <ClientMyServicesFiltersBar
+        filters={baseFilters}
+        onCategoryChange={vi.fn()}
+        onCityChange={vi.fn()}
+        onNeighborhoodChange={vi.fn()}
+        onDateRangeChange={vi.fn()}
+        onHasProposalsChange={vi.fn()}
+        onHasImagesChange={vi.fn()}
+        categoryOptions={[]}
+        cityOptions={[]}
+        neighborhoodOptions={[]}
+        disabled
+      />
+    );
+    expect(screen.getByRole("button", { name: /Abrir filtros/i })).toBeDisabled();
   });
 
   it("mobile: renders sheet layout and clears filters", () => {

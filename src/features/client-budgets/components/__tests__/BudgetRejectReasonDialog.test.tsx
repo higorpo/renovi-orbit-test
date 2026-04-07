@@ -81,4 +81,63 @@ describe("BudgetRejectReasonDialog", () => {
     });
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
   });
+
+  it("closes when user clicks Cancelar", () => {
+    const onOpenChange = vi.fn();
+    renderWithClient(
+      <BudgetRejectReasonDialog
+        open
+        onOpenChange={onOpenChange}
+        serviceRequestId="sr-1"
+        proposalId="p1"
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Cancelar/i }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("shows Enviando while mutation is pending", async () => {
+    rejectClientBudgetProposal.mockImplementation(
+      () => new Promise(() => {
+        /* never resolves */
+      }),
+    );
+    const onOpenChange = vi.fn();
+    renderWithClient(
+      <BudgetRejectReasonDialog
+        open
+        onOpenChange={onOpenChange}
+        serviceRequestId="sr-1"
+        proposalId="p1"
+      />,
+    );
+    fireEvent.change(screen.getByLabelText(/Motivo da recusa/i), {
+      target: { value: "Motivo" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Enviar recusa/i }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Enviando/i })).toBeInTheDocument();
+    });
+  });
+
+  it("does not call API when proposalId is null even if form is submitted", async () => {
+    const onOpenChange = vi.fn();
+    renderWithClient(
+      <BudgetRejectReasonDialog
+        open
+        onOpenChange={onOpenChange}
+        serviceRequestId="sr-1"
+        proposalId={null}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText(/Motivo da recusa/i), {
+      target: { value: "Algo" },
+    });
+    const form = document.getElementById("client-budget-reject-form");
+    expect(form).toBeTruthy();
+    fireEvent.submit(form!);
+    await waitFor(() => {
+      expect(rejectClientBudgetProposal).not.toHaveBeenCalled();
+    });
+  });
 });

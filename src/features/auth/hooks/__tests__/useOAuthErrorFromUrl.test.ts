@@ -61,4 +61,18 @@ describe("useOAuthErrorFromUrl", () => {
     const arg = toastError.mock.calls[0][1] as { description?: string };
     expect(arg.description).toContain("Google OAuth");
   });
+
+  it("falls back when decodeURIComponent throws on description", async () => {
+    const orig = globalThis.decodeURIComponent;
+    globalThis.decodeURIComponent = vi.fn(() => {
+      throw new URIError("bad");
+    }) as typeof decodeURIComponent;
+    setUrl("https://app.example.com/login?error=oauth_failed&error_description=%");
+    renderHook(() => useOAuthErrorFromUrl());
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalled();
+    });
+    expect(toastError).toHaveBeenCalledWith("Erro ao conectar com Google. Tente novamente.");
+    globalThis.decodeURIComponent = orig;
+  });
 });
