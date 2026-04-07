@@ -1,7 +1,10 @@
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { createProviderJobQuestion } from "../api/providerJobQuestions.api";
+import {
+  createProviderJobQuestion,
+  PROVIDER_JOB_QUESTION_LIMIT_EXCEPTION_MESSAGE,
+} from "../api/providerJobQuestions.api";
 
 const MAX_QUESTION_LENGTH = 1000;
 
@@ -46,11 +49,11 @@ export function useProviderJobQuestionComposer(serviceRequestId: string) {
       });
 
       if (error) {
-        if (error.includes("Question limit reached")) {
+        if (error === PROVIDER_JOB_QUESTION_LIMIT_EXCEPTION_MESSAGE) {
           toast.error("Você já atingiu o limite de 3 perguntas para este pedido.");
           return false;
         }
-        toast.error(error);
+        toast.error("Não foi possível enviar a pergunta. Tente novamente.");
         return false;
       }
 

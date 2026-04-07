@@ -8,11 +8,17 @@ const STALE_TIME_MS = 60_000;
 export interface UseProviderOwnQuestionsParams {
   questionStatus: string | null;
   search: string | null;
+  enabled?: boolean;
 }
 
-export function useProviderOwnQuestions({ questionStatus, search }: UseProviderOwnQuestionsParams) {
+export function useProviderOwnQuestions({
+  questionStatus,
+  search,
+  enabled = true,
+}: UseProviderOwnQuestionsParams) {
   const query = useInfiniteQuery<PaginatedResponse<ProviderOwnQuestion>>({
     queryKey: ["provider-own-questions", questionStatus, search],
+    enabled,
     queryFn: async ({ pageParam }) => {
       const { data, error } = await fetchProviderOwnQuestions({
         page: pageParam as number,
@@ -25,16 +31,25 @@ export function useProviderOwnQuestions({ questionStatus, search }: UseProviderO
     },
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
-      const totalPages = Math.ceil(lastPage.total_count / lastPage.page_size);
-      if (lastPage.page >= totalPages) return undefined;
-      return lastPage.page + 1;
+      const { total_count, page_size, page } = lastPage;
+      if (
+        !Number.isFinite(total_count) ||
+        !Number.isFinite(page_size) ||
+        !Number.isFinite(page) ||
+        page_size <= 0
+      ) {
+        return undefined;
+      }
+      const totalPages = Math.ceil(total_count / page_size);
+      if (page >= totalPages) return undefined;
+      return page + 1;
     },
     staleTime: STALE_TIME_MS,
     refetchOnWindowFocus: false,
   });
 
   const firstPage = query.data?.pages[0];
-  const allItems = query.data?.pages.flatMap((p) => p.items) ?? [];
+  const allItems = query.data?.pages.flatMap((p) => p?.items ?? []) ?? [];
   const totalCount = firstPage?.total_count ?? 0;
 
   return {

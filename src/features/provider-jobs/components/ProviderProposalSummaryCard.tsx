@@ -23,6 +23,11 @@ import {
   withdrawProviderProposal,
   type ProviderProposalHistoryItem,
 } from "../api/providerProposals.api";
+import {
+  PROVIDER_JOBS_LIST_QUERY_KEY,
+  PROVIDER_PROPOSAL_JOB_DETAIL_QUERY_KEY,
+  PROVIDER_PROPOSALS_HISTORY_QUERY_KEY,
+} from "../constants/queryKeys";
 import type { ProviderJobItem } from "../types/provider-jobs.types";
 import { useProviderProposalHistory } from "../hooks/useProviderProposalHistory";
 import { useProviderProposalPhotoUrls } from "../hooks/useProviderProposalPhotoUrls";
@@ -65,8 +70,15 @@ export function ProviderProposalSummaryCard({
       }
       toast.success("Orçamento retirado com sucesso.");
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["provider-job", job.id] }),
-        queryClient.invalidateQueries({ queryKey: ["provider-proposals-history", job.id] }),
+        queryClient.invalidateQueries({
+          queryKey: [PROVIDER_PROPOSAL_JOB_DETAIL_QUERY_KEY, job.id],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [PROVIDER_PROPOSALS_HISTORY_QUERY_KEY, job.id],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [PROVIDER_JOBS_LIST_QUERY_KEY],
+        }),
       ]);
       setIsWithdrawConfirmOpen(false);
     },

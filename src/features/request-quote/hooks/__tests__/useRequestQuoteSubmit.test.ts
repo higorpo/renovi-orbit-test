@@ -276,7 +276,9 @@ describe("useRequestQuoteSubmit", () => {
       expect(trackEvent).toHaveBeenCalledWith("quote_request_failed", {
         reason: "api",
       });
-      expect((await import("sonner")).toast.error).toHaveBeenCalledWith("Server error");
+      expect((await import("sonner")).toast.error).toHaveBeenCalledWith(
+        "Não foi possível enviar o pedido. Tente novamente.",
+      );
     });
 
     it("shows rate limit message when retryAfter is set", async () => {

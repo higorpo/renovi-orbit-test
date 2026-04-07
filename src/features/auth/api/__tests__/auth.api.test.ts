@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { authApi } from "../auth.api";
+import { authApi, resolveSafeOAuthRedirectTo } from "../auth.api";
 
 vi.mock("@/lib/supabase/client", () => ({
   supabase: {
@@ -181,11 +181,55 @@ describe("authApi.signInWithOAuth", () => {
     expect(callArgs.options.redirectTo).toContain("login");
   });
 
+  it("rejects same-origin-prefix attack (origin + .evil.com)", async () => {
+    authMock.signInWithOAuth.mockResolvedValue({ error: null });
+    const origin = window.location.origin;
+    const malicious = `${origin}.evil.com/path`;
+    await authApi.signInWithOAuth("google", { redirectTo: malicious });
+    const callArgs = authMock.signInWithOAuth.mock.calls[0][0];
+    expect(callArgs.options.redirectTo).toBe(`${origin}/login`);
+  });
+
+  it("rejects protocol-relative redirect", async () => {
+    authMock.signInWithOAuth.mockResolvedValue({ error: null });
+    await authApi.signInWithOAuth("google", { redirectTo: "//evil.com/x" });
+    const callArgs = authMock.signInWithOAuth.mock.calls[0][0];
+    expect(callArgs.options.redirectTo).toContain("login");
+  });
+
   it("returns error on OAuth failure", async () => {
     authMock.signInWithOAuth.mockResolvedValue({ error: { message: "OAuth failed" } });
 
     const result = await authApi.signInWithOAuth("google");
     expect(result.error).toBeInstanceOf(Error);
+  });
+});
+
+describe("resolveSafeOAuthRedirectTo", () => {
+  const origin = "https://app.example.com";
+
+  it("allows same-origin absolute URL", () => {
+    expect(resolveSafeOAuthRedirectTo(`${origin}/dashboard`, origin)).toBe(
+      "https://app.example.com/dashboard"
+    );
+  });
+
+  it("resolves relative path against origin", () => {
+    expect(resolveSafeOAuthRedirectTo("/me", origin)).toBe(
+      "https://app.example.com/me"
+    );
+  });
+
+  it("rejects different origin", () => {
+    expect(resolveSafeOAuthRedirectTo("https://evil.com/x", origin)).toBe(
+      `${origin}/login`
+    );
+  });
+
+  it("rejects userinfo in URL", () => {
+    expect(
+      resolveSafeOAuthRedirectTo("https://user:pass@app.example.com/x", origin)
+    ).toBe(`${origin}/login`);
   });
 });
 

@@ -79,15 +79,15 @@ export function useServiceSchema(params: UseServiceSchemaParams): ServiceSchemaR
   }
 
   if (serviceError || serviceErr) {
-    const reason = `fetch_error: ${serviceErr ?? (serviceError as Error)?.message}`;
     logger.warn("request_quote_service_schema_fallback", {
-      fallbackReason: reason,
+      fallbackReason: "service_fetch_failed",
+      serviceError: serviceErr ?? (serviceError as Error)?.message,
       serviceSlug: serviceSlug ?? undefined,
       serviceId: serviceId ?? undefined,
     });
     return {
       schema: null,
-      fallbackReason: reason,
+      fallbackReason: "service_fetch_failed",
       isLoading: false,
     };
   }
@@ -119,12 +119,13 @@ export function useServiceSchema(params: UseServiceSchemaParams): ServiceSchemaR
 
   if (form.form_status !== "active") {
     logger.warn("request_quote_service_schema_fallback", {
-      fallbackReason: `form_status_not_active: ${form.form_status}`,
+      fallbackReason: "form_inactive",
+      formStatus: form.form_status,
       serviceId: service.id,
     });
     return {
       schema: null,
-      fallbackReason: `form_status_not_active: ${form.form_status}`,
+      fallbackReason: "form_inactive",
       isLoading: false,
     };
   }
@@ -146,13 +147,14 @@ export function useServiceSchema(params: UseServiceSchemaParams): ServiceSchemaR
   const validationResult = validateFormSchema(parsedSchema);
   if (!validationResult.valid) {
     logger.error("request_quote_service_schema_fallback", {
-      fallbackReason: `schema_validation_failed: ${validationResult.errors.length} error(s)`,
+      fallbackReason: "schema_validation_failed",
+      errorCount: validationResult.errors.length,
       formId: form.id,
       serviceId: service.id,
     });
     return {
       schema: null,
-      fallbackReason: `schema_validation_failed: ${validationResult.errors.length} error(s)`,
+      fallbackReason: "schema_validation_failed",
       isLoading: false,
     };
   }

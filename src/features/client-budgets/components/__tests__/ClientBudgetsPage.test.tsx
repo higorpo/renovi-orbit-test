@@ -158,6 +158,12 @@ vi.mock("../../hooks/useClientPendingApprovalServicesCount", () => ({
   useClientPendingApprovalServicesCount: () => pendingState,
 }));
 
+const pendingQuestionsTotalState = { count: 0, isLoading: false, isError: false };
+
+vi.mock("../../hooks/useClientPendingQuestionsCount", () => ({
+  useClientPendingQuestionsCount: () => pendingQuestionsTotalState,
+}));
+
 vi.mock("../ReceivedBudgetDetailsSheet", () => ({
   ReceivedBudgetDetailsSheet: ({
     open,
@@ -211,6 +217,9 @@ function resetPageMocks() {
   questionsState.hasNextPage = false;
   pendingState.count = 0;
   pendingState.isLoading = false;
+  pendingQuestionsTotalState.count = 0;
+  pendingQuestionsTotalState.isLoading = false;
+  pendingQuestionsTotalState.isError = false;
 }
 
 describe("ClientBudgetsPage", () => {
@@ -305,7 +314,7 @@ describe("ClientBudgetsPage", () => {
 
   it("calls setActiveTab and resetFilters when switching tabs", () => {
     renderPage();
-    const perguntasTab = screen.getByRole("tab", { name: /^Perguntas / });
+    const perguntasTab = screen.getByRole("tab", { name: "Perguntas" });
     // Radix TabsTrigger commits selection on mouseDown, not click.
     fireEvent.mouseDown(perguntasTab, { button: 0, ctrlKey: false });
     expect(setActiveTab).toHaveBeenCalledWith("perguntas");

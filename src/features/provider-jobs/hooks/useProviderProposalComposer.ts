@@ -8,6 +8,10 @@ import {
   type ProviderProposalSuggestedSlot,
   type ProviderProposalPricing,
 } from "../api/providerProposals.api";
+import {
+  PROVIDER_JOBS_LIST_QUERY_KEY,
+  PROVIDER_PROPOSAL_JOB_DETAIL_QUERY_KEY,
+} from "../constants/queryKeys";
 
 const MAX_PROPOSAL_DESCRIPTION = 1200;
 const MAX_PROPOSAL_PHOTOS = 5;
@@ -416,8 +420,11 @@ export function useProviderProposalComposer(
 
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: ["provider-job", serviceRequestId],
+          queryKey: [PROVIDER_PROPOSAL_JOB_DETAIL_QUERY_KEY, serviceRequestId],
           refetchType: "active",
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [PROVIDER_JOBS_LIST_QUERY_KEY],
         }),
       ]);
 

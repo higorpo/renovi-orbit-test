@@ -25,7 +25,7 @@ function loadImage(file: File): Promise<HTMLImageElement> {
 
 /**
  * Check photos for NSFW content. Uses nsfwjs in the browser; no server call.
- * If the model cannot load or an image cannot be verified, we block upload (fail closed).
+ * If the model cannot load or an image cannot be verified, upload is blocked (fail closed).
  *
  * nsfwjs and TensorFlow are loaded only on demand (dynamic import) so the main bundle stays smaller.
  * We use MobileNetV2 only (smallest bundled model in nsfwjs).
@@ -34,6 +34,8 @@ export async function checkPhotosContent(files: File[]): Promise<PhotoContentChe
   if (files.length === 0) return { allowed: true };
 
   const errorContent = "Conteúdo da imagem não permitido. Envie apenas fotos do local ou do serviço.";
+  const verificationFailed =
+    "Não foi possível verificar as imagens. Tente outra foto ou tente novamente.";
 
   const { load } = await import("nsfwjs");
 
@@ -44,7 +46,7 @@ export async function checkPhotosContent(files: File[]): Promise<PhotoContentChe
     logger.warn("photo_content_check_model_load_failed", {
       error: e instanceof Error ? e.message : String(e),
     });
-    return { allowed: true };
+    return { allowed: false, error: verificationFailed };
   }
 
   for (let i = 0; i < files.length; i++) {
@@ -57,7 +59,7 @@ export async function checkPhotosContent(files: File[]): Promise<PhotoContentChe
         fileName: file.name,
         error: e instanceof Error ? e.message : String(e),
       });
-      return { allowed: true };
+      return { allowed: false, error: verificationFailed };
     }
 
     try {
@@ -73,7 +75,7 @@ export async function checkPhotosContent(files: File[]): Promise<PhotoContentChe
         fileName: file.name,
         error: e instanceof Error ? e.message : String(e),
       });
-      return { allowed: true };
+      return { allowed: false, error: verificationFailed };
     }
   }
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { logger } from "@/lib/logger";
 import { getPortfolioImageSignedUrl } from "../api/profileImagePublic.api";
 import type { ProviderPortfolioItemPublic } from "../types/providerProfilePublic.types";
 
@@ -43,8 +44,8 @@ export function usePortfolioImages(items: ProviderPortfolioItemPublic[]): {
     let cancelled = false;
     setIsLoading(true);
 
-    Promise.all(allPaths.map(({ path }) => getPortfolioImageSignedUrl(path))).then(
-      (urls) => {
+    Promise.all(allPaths.map(({ path }) => getPortfolioImageSignedUrl(path)))
+      .then((urls) => {
         if (cancelled) return;
         const map: PortfolioImageMap = {};
         for (let i = 0; i < allPaths.length; i++) {
@@ -54,8 +55,15 @@ export function usePortfolioImages(items: ProviderPortfolioItemPublic[]): {
         }
         setImageMap(map);
         setIsLoading(false);
-      },
-    );
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        logger.error("provider_portfolio_images_load_failed", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+        setImageMap({});
+        setIsLoading(false);
+      });
 
     return () => {
       cancelled = true;

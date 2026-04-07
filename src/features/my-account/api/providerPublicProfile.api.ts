@@ -77,10 +77,29 @@ export async function getProviderPublicProfile(
     return { data: null, error: error.message };
   }
 
-  const { data: areaRows } = await supabase
+  const { data: areaRows, error: areaError } = await supabase
     .from("provider_service_area_neighborhoods")
     .select("neighborhood_id")
     .eq("provider_id", providerId);
+
+  if (areaError) {
+    logger.error("provider_service_area_neighborhoods_fetch_error", {
+      error: areaError.message,
+      providerId,
+    });
+    return {
+      data: data
+        ? ({
+            ...data,
+            service_area_neighborhood_ids: [],
+            service_area_city: null,
+            service_area_regions: null,
+            service_area_neighborhoods: null,
+          } as ProviderPublicProfileWithServiceArea)
+        : null,
+      error: areaError.message,
+    };
+  }
 
   const service_area_neighborhood_ids = (areaRows ?? []).map(
     (r: { neighborhood_id: string }) => r.neighborhood_id
@@ -91,11 +110,30 @@ export async function getProviderPublicProfile(
   let service_area_neighborhoods: string[] | null = null;
 
   if (service_area_neighborhood_ids.length > 0) {
-    const { data: neighborhoodRows } = await supabase
+    const { data: neighborhoodRows, error: neighborhoodError } = await supabase
       .from("platform_neighborhoods")
       .select("name, platform_cities(name, platform_states(abbreviation))")
       .in("id", service_area_neighborhood_ids)
       .order("name", { ascending: true });
+
+    if (neighborhoodError) {
+      logger.error("platform_neighborhoods_for_provider_fetch_error", {
+        error: neighborhoodError.message,
+        providerId,
+      });
+      return {
+        data: data
+          ? ({
+              ...data,
+              service_area_neighborhood_ids,
+              service_area_city: null,
+              service_area_regions: null,
+              service_area_neighborhoods: null,
+            } as ProviderPublicProfileWithServiceArea)
+          : null,
+        error: neighborhoodError.message,
+      };
+    }
 
     const rows = (neighborhoodRows ?? []) as {
       name: string;

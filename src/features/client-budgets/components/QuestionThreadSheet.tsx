@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
@@ -54,7 +55,7 @@ function ResponseImages({ paths }: { paths: string[] }) {
 
 export function QuestionThreadSheet({ open, serviceRequestId, onOpenChange }: QuestionThreadSheetProps) {
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
-  const { detail, isLoading } = useClientBudgetDetail(serviceRequestId);
+  const { detail, isLoading, isError, refetch } = useClientBudgetDetail(serviceRequestId);
   const questions = useMemo(() => {
     const baseQuestions = detail?.questions ?? [];
     return [...baseQuestions].sort((a, b) => {
@@ -97,7 +98,17 @@ export function QuestionThreadSheet({ open, serviceRequestId, onOpenChange }: Qu
                 )}
               </div>
 
-              {isLoading ? (
+              {isError ? (
+                <Alert variant="destructive">
+                  <AlertTitle>Não foi possível carregar as perguntas</AlertTitle>
+                  <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <span>Tente novamente em alguns instantes.</span>
+                    <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>
+                      Tentar novamente
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              ) : isLoading ? (
                 <div
                   className="space-y-3"
                   aria-busy="true"

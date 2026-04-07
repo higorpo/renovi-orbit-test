@@ -29,7 +29,9 @@ export interface UseRequestQuoteDraftResult {
 
 export function useRequestQuoteDraft(
   state: RequestQuoteState,
-  urlServiceSlug: string | null
+  urlServiceSlug: string | null,
+  /** When set, wizard has 4 steps (no guest identity step); clamp restored step to 4. */
+  loggedInUserId?: string | null
 ): UseRequestQuoteDraftResult {
   const [restorableDraft, setRestorableDraft] = useState<ReturnType<typeof getDraft>>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -52,11 +54,13 @@ export function useRequestQuoteDraft(
   const restoreDraft = useCallback(() => {
     const draft = restorableDraft?.draft;
     if (draft == null) return;
+    const maxStep = loggedInUserId ? 4 : 5;
+    const step = Math.min(draft.currentStep, maxStep);
     addBreadcrumb({
       message: "request_quote.draft_restored",
-      data: { step: draft.currentStep },
+      data: { step },
     });
-    state.setCurrentStep(draft.currentStep);
+    state.setCurrentStep(step);
     state.setPreviousStep(draft.previousStep);
     state.setSelectedService(draft.selectedService);
     state.setStep2Data(draft.step2Data);
@@ -71,7 +75,7 @@ export function useRequestQuoteDraft(
     });
     state.setStep4Data(draft.step4Data);
     setRestorableDraft(null);
-  }, [restorableDraft, state]);
+  }, [restorableDraft, state, loggedInUserId]);
 
   const discardDraft = useCallback(() => {
     addBreadcrumb({ message: "request_quote.draft_discarded" });
@@ -114,6 +118,7 @@ export function useRequestQuoteDraft(
     state.step3Data.suggestedTitle,
     state.step3Data.structured,
     state.step4Data,
+    state.step5Data,
     state.orderCreatedEmail,
   ]);
 

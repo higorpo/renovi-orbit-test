@@ -55,6 +55,7 @@ export default function Login() {
               rememberMe={form.rememberMe}
               setRememberMe={form.setRememberMe}
               onSubmit={form.handleSubmit}
+              onGoogleLogin={form.handleGoogleLogin}
             />
 
             <div className="mt-8 text-center space-y-4">

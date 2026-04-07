@@ -26,8 +26,12 @@ export function ProviderProfileServiceArea({
         )}
         {neighborhoods.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {neighborhoods.map((n) => (
-              <Badge key={n} variant="outline" className="font-normal">
+            {neighborhoods.map((n, index) => (
+              <Badge
+                key={`${n}-${index}`}
+                variant="outline"
+                className="font-normal"
+              >
                 {n}
               </Badge>
             ))}

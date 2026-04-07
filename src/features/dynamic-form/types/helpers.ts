@@ -163,8 +163,18 @@ function validateStringConstraints(
   if (maxLength !== undefined && value.length > maxLength) {
     return { valid: false, error: `Máximo de ${maxLength} caracteres` };
   }
-  if (pattern && !new RegExp(pattern).test(value)) {
-    return { valid: false, error: block.validation?.message || "Formato inválido" };
+  if (pattern) {
+    if (pattern.length > 500) {
+      return { valid: false, error: block.validation?.message || "Formato inválido" };
+    }
+    try {
+      const re = new RegExp(pattern);
+      if (!re.test(value)) {
+        return { valid: false, error: block.validation?.message || "Formato inválido" };
+      }
+    } catch {
+      return { valid: false, error: block.validation?.message || "Formato inválido" };
+    }
   }
   if (block.type === "date" && (dateMin !== undefined || dateMax !== undefined)) {
     if (dateMin !== undefined && value < dateMin) {

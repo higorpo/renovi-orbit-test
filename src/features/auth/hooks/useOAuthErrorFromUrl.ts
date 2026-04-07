@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 function getOAuthErrorFromUrl(): string | null {
   const params = new URLSearchParams(window.location.search);
@@ -42,7 +43,8 @@ export function useOAuthErrorFromUrl(): void {
           "Verifique a configuração do Google OAuth no Supabase e no Google Cloud Console (redirect URI e Client Secret).",
       });
     } else {
-      toast.error("Erro ao conectar com Google", { description: oauthError });
+      logger.warn("auth_oauth_callback_error", { oauthError });
+      toast.error("Erro ao conectar com Google. Tente novamente.");
     }
   }, []);
 }

@@ -40,6 +40,60 @@ export interface UpdateUserPasswordResult {
   error: Error | null;
 }
 
+/**
+ * Resolves OAuth redirect URL and enforces same-origin (strict URL parsing).
+ * Prevents open redirects via substring tricks (e.g. origin + ".evil.com").
+ */
+export function resolveSafeOAuthRedirectTo(
+  redirectTo: string | undefined,
+  appOrigin: string
+): string {
+  const fallback = `${appOrigin}/login`;
+  if (!appOrigin) {
+    return redirectTo?.startsWith("/") && !redirectTo.startsWith("//")
+      ? redirectTo
+      : fallback;
+  }
+
+  let candidate = redirectTo ?? fallback;
+
+  if (candidate.startsWith("/") && !candidate.startsWith("//")) {
+    candidate = `${appOrigin}${candidate}`;
+  }
+
+  if (candidate.startsWith("//")) {
+    return fallback;
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(candidate);
+  } catch {
+    return fallback;
+  }
+
+  let originParsed: URL;
+  try {
+    originParsed = new URL(appOrigin);
+  } catch {
+    return fallback;
+  }
+
+  if (parsed.origin !== originParsed.origin) {
+    return fallback;
+  }
+
+  if (parsed.username !== "" || parsed.password !== "") {
+    return fallback;
+  }
+
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+    return fallback;
+  }
+
+  return parsed.href;
+}
+
 export const authApi = {
   async getSession(): Promise<GetSessionResult> {
     const { data, error } = await supabase.auth.getSession();
@@ -85,7 +139,11 @@ export const authApi = {
       email,
       password,
       options: {
-        emailRedirectTo: options.emailRedirectTo ?? "https://renovi.com.br/",
+        emailRedirectTo:
+          options.emailRedirectTo ??
+          (typeof window !== "undefined"
+            ? `${window.location.origin}/`
+            : "https://renovi.com.br/"),
         data: options.data,
       },
     });
@@ -119,15 +177,10 @@ export const authApi = {
   ): Promise<SignInWithOAuthResult> {
     const origin =
       typeof window !== "undefined" ? window.location.origin : "";
-    let redirectTo = options?.redirectTo ?? `${origin}/login`;
-
-    // Only allow same-origin or relative path to prevent open redirect
-    if (redirectTo && !redirectTo.startsWith(origin) && !redirectTo.startsWith("/")) {
-      redirectTo = `${origin}/login`;
-    }
-    if (redirectTo.startsWith("/") && !redirectTo.startsWith("//")) {
-      redirectTo = `${origin}${redirectTo}`;
-    }
+    const redirectTo = resolveSafeOAuthRedirectTo(
+      options?.redirectTo,
+      origin
+    );
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider,

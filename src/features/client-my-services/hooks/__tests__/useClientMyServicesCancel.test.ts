@@ -64,6 +64,23 @@ describe("useClientMyServicesCancel", () => {
     );
   });
 
+  it("shows error toast when API returns error without throwing", async () => {
+    cancelServiceRequest.mockResolvedValue({ error: "RLS policy" });
+
+    const { result } = renderHook(() => useClientMyServicesCancel(), {
+      wrapper: createWrapper(),
+    });
+
+    act(() => {
+      result.current.cancelServiceRequest("sr-1");
+    });
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Não foi possível cancelar o serviço. Tente novamente.")
+    );
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
   it("sets isCancelling while mutation is pending", async () => {
     let resolveCancel!: (v: { error: string | null }) => void;
     cancelServiceRequest.mockImplementation(

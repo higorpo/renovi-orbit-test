@@ -44,6 +44,12 @@ export interface ListServiceRequestsResult {
   error: string | null;
 }
 
+/** PostgREST `or()` uses commas as clause separators; ILIKE treats `%` and `_` as wildcards. */
+function sanitizeSearchForOrIlike(raw: string): string {
+  const noComma = raw.replace(/,/g, " ");
+  return noComma.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+}
+
 function getStatusFilterFromTab(tabId: StatusTabId): string | null | "__NO_STATUS__" {
   switch (tabId) {
     case "all":
@@ -163,8 +169,9 @@ export async function listServiceRequests(
 
     const search = params.search?.trim();
     if (search) {
+      const esc = sanitizeSearchForOrIlike(search);
       query = query.or(
-        `title.ilike.%${search}%,description.ilike.%${search}%`
+        `title.ilike.%${esc}%,description.ilike.%${esc}%`
       );
     }
 

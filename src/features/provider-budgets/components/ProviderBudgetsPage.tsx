@@ -66,6 +66,8 @@ export function ProviderBudgetsPage() {
         pendingApprovalBudgetCount={pendingApprovalBudgetsCount.count}
         pendingQuestionsCount={pendingQuestionsCount.count}
         isLoading={headerLoading}
+        pendingApprovalCountError={pendingApprovalBudgetsCount.isError}
+        pendingQuestionsCountError={pendingQuestionsCount.isError}
       />
 
       <div className="mt-6 space-y-4">
@@ -82,7 +84,7 @@ export function ProviderBudgetsPage() {
               Enviados
               {!budgets.isLoading && (
                 <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none text-muted-foreground">
-                  {budgets.totalCount}
+                  {budgets.totalCount ?? '-'}
                 </span>
               )}
             </TabsTrigger>
@@ -91,7 +93,7 @@ export function ProviderBudgetsPage() {
               Perguntas
               {!questions.isLoading && (
                 <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none text-muted-foreground">
-                  {questions.totalCount}
+                  {questions.totalCount ?? '-'}
                 </span>
               )}
             </TabsTrigger>

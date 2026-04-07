@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { validatePasswordStrength } from "@/features/auth/utils/passwordPolicy";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { addBreadcrumb, metrics } from "@/lib/sentry";
+import { logger } from "@/lib/logger";
 
 export function useResetPassword() {
   const navigate = useNavigate();
@@ -56,10 +57,17 @@ export function useResetPassword() {
         const { error } = await authApi.updateUserPassword(formData.password);
 
         if (error) {
-          if (error.message.includes('New password should be different')) {
-            setErrors({ password: 'A nova senha deve ser diferente da senha atual.' });
+          if (error.message.includes("New password should be different")) {
+            setErrors({
+              password: "A nova senha deve ser diferente da senha atual.",
+            });
           } else {
-            setErrors({ password: error.message });
+            logger.warn("auth_reset_password_api_error", {
+              error: error.message,
+            });
+            setErrors({
+              password: "Não foi possível alterar a senha. Tente novamente.",
+            });
           }
 
           setSubmitting(false);

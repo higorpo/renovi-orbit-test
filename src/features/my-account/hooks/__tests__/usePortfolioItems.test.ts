@@ -330,15 +330,22 @@ describe("usePortfolioItems", () => {
   });
 
   describe("deleteItem", () => {
-    it("removes images from storage then deletes the item", async () => {
+    it("deletes the DB row first, then removes images from storage", async () => {
       const item = makePortfolioItem({
         id: "item-del",
         title: "Job",
         image_paths: ["path/a.jpg", "path/b.jpg"],
       });
       listPortfolioItems.mockResolvedValue({ items: [item], error: null });
-      removePortfolioImageFromStorage.mockResolvedValue({ error: null });
-      deletePortfolioItem.mockResolvedValue({ error: null });
+      const order: string[] = [];
+      removePortfolioImageFromStorage.mockImplementation(async () => {
+        order.push("storage");
+        return { error: null };
+      });
+      deletePortfolioItem.mockImplementation(async () => {
+        order.push("db");
+        return { error: null };
+      });
 
       const { result } = renderHook(() => usePortfolioItems(), {
         wrapper: createWrapper(),
@@ -348,8 +355,9 @@ describe("usePortfolioItems", () => {
 
       await result.current.deleteItem("item-del");
 
-      expect(removePortfolioImageFromStorage).toHaveBeenCalledTimes(2);
       expect(deletePortfolioItem).toHaveBeenCalledWith("item-del", providerId);
+      expect(removePortfolioImageFromStorage).toHaveBeenCalledTimes(2);
+      expect(order).toEqual(["db", "storage", "storage"]);
     });
 
     it("deletes item when there are no image paths", async () => {

@@ -19,6 +19,17 @@ interface ImageGalleryBlockProps {
   onChange: (value: string | string[]) => void;
 }
 
+function isAllowedImageSrc(url: string): boolean {
+  const t = url.trim();
+  if (t.startsWith("/")) return true;
+  try {
+    const u = new URL(t, typeof window !== "undefined" ? window.location.href : "https://localhost");
+    return u.protocol === "https:" || u.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 export function ImageGalleryBlock({
   block,
   value,
@@ -88,7 +99,11 @@ export function ImageGalleryBlock({
               onClick={() => handleSelect(option.value)}
             >
               <div className="relative aspect-[4/3] bg-muted">
-                {!hasError ? (
+                {hasError ? (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                    <ImageIcon className="h-12 w-12" />
+                  </div>
+                ) : isAllowedImageSrc(option.image) ? (
                   <img
                     src={option.image}
                     alt={option.label}
@@ -98,7 +113,7 @@ export function ImageGalleryBlock({
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                    <ImageIcon className="h-12 w-12" />
+                    <ImageIcon className="h-10 w-10 opacity-40" aria-hidden />
                   </div>
                 )}
                 {isSelected && (

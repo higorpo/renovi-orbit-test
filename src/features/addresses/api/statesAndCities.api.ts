@@ -91,35 +91,49 @@ export interface GetNeighborhoodsByIdsResult {
 /**
  * Fetch neighborhoods by IDs with city and state info. Used e.g. to display provider service area grouped by city.
  */
+const MAX_NEIGHBORHOOD_IDS_PER_QUERY = 100;
+
 export async function getNeighborhoodsByIds(
   ids: string[]
 ): Promise<GetNeighborhoodsByIdsResult> {
-  if (ids.length === 0) return { neighborhoods: [], error: null };
-  const { data, error } = await supabase
-    .from("platform_neighborhoods")
-    .select("id, name, city_id, platform_cities(name, platform_states(abbreviation))")
-    .in("id", ids);
+  const unique = [...new Set(ids)].filter(Boolean);
+  if (unique.length === 0) return { neighborhoods: [], error: null };
 
-  if (error) {
-    logger.error("platform_neighborhoods_by_ids_error", { error: error.message });
-    return { neighborhoods: [], error: error.message };
+  const chunks: string[][] = [];
+  for (let i = 0; i < unique.length; i += MAX_NEIGHBORHOOD_IDS_PER_QUERY) {
+    chunks.push(unique.slice(i, i + MAX_NEIGHBORHOOD_IDS_PER_QUERY));
   }
 
-  const neighborhoods: NeighborhoodWithCity[] = (data ?? []).map(
-    (row: {
-      id: string;
-      name: string;
-      city_id: string;
-      platform_cities: { name: string; platform_states: { abbreviation: string } | null } | null;
-    }) => ({
-      id: row.id,
-      name: row.name,
-      city_id: row.city_id,
-      city_name: row.platform_cities?.name ?? "",
-      state_abbreviation: row.platform_cities?.platform_states?.abbreviation ?? "",
-    })
-  );
-  return { neighborhoods, error: null };
+  const merged: NeighborhoodWithCity[] = [];
+  for (const chunk of chunks) {
+    const { data, error } = await supabase
+      .from("platform_neighborhoods")
+      .select("id, name, city_id, platform_cities(name, platform_states(abbreviation))")
+      .in("id", chunk);
+
+    if (error) {
+      logger.error("platform_neighborhoods_by_ids_error", { error: error.message });
+      return { neighborhoods: [], error: error.message };
+    }
+
+    const neighborhoods: NeighborhoodWithCity[] = (data ?? []).map(
+      (row: {
+        id: string;
+        name: string;
+        city_id: string;
+        platform_cities: { name: string; platform_states: { abbreviation: string } | null } | null;
+      }) => ({
+        id: row.id,
+        name: row.name,
+        city_id: row.city_id,
+        city_name: row.platform_cities?.name ?? "",
+        state_abbreviation: row.platform_cities?.platform_states?.abbreviation ?? "",
+      })
+    );
+    merged.push(...neighborhoods);
+  }
+
+  return { neighborhoods: merged, error: null };
 }
 
 /**
@@ -128,10 +142,13 @@ export async function getNeighborhoodsByIds(
  */
 export async function searchCities(query: string): Promise<SearchCitiesResult> {
   const q = (query ?? "").trim();
+  if (!q) {
+    return { cities: [], error: null };
+  }
   const { data, error } = await supabase
     .from("platform_cities")
     .select("id, name, platform_states(abbreviation)")
-    .ilike("name", q ? `%${q}%` : "%")
+    .ilike("name", `%${q}%`)
     .order("name", { ascending: true })
     .limit(30);
 

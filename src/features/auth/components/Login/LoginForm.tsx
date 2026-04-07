@@ -23,6 +23,7 @@ export interface LoginFormProps {
   rememberMe: boolean;
   setRememberMe: (value: boolean) => void;
   onSubmit: (e: React.FormEvent) => void;
+  onGoogleLogin: () => void;
 }
 
 export function LoginForm({
@@ -35,6 +36,7 @@ export function LoginForm({
   rememberMe,
   setRememberMe,
   onSubmit,
+  onGoogleLogin,
 }: LoginFormProps) {
   return (
     <form onSubmit={onSubmit} className="space-y-5">
@@ -131,6 +133,27 @@ export function LoginForm({
         ) : (
           "Entrar na minha conta"
         )}
+      </Button>
+
+      <div className="relative py-1">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-white/20" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase tracking-wide">
+          <span className="bg-[#0F2F3A]/40 px-2 text-white/50 backdrop-blur-sm rounded">
+            ou
+          </span>
+        </div>
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full h-12 border-white/30 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+        disabled={submitting}
+        onClick={() => onGoogleLogin()}
+      >
+        Continuar com Google
       </Button>
     </form>
   );

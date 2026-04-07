@@ -51,39 +51,57 @@ export function usePortfolioItems() {
     queryClient.invalidateQueries({ queryKey: [...PORTFOLIO_QUERY_KEY, providerId] });
 
   const createMutation = useMutation({
-    mutationFn: (params: CreatePortfolioItemParams) =>
-      createPortfolioItem(providerId!, params),
+    mutationFn: async (params: CreatePortfolioItemParams) => {
+      const r = await createPortfolioItem(providerId!, params);
+      if (r.error) throw new Error(r.error);
+      return r.data;
+    },
     onSuccess: invalidate,
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       itemId,
       params,
-    }: { itemId: string; params: UpdatePortfolioItemParams }) =>
-      updatePortfolioItem(itemId, providerId!, params),
+    }: {
+      itemId: string;
+      params: UpdatePortfolioItemParams;
+    }) => {
+      const r = await updatePortfolioItem(itemId, providerId!, params);
+      if (r.error) throw new Error(r.error);
+      return r;
+    },
     onSuccess: invalidate,
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (itemId: string) => deletePortfolioItem(itemId, providerId!),
+    mutationFn: async (itemId: string) => {
+      const r = await deletePortfolioItem(itemId, providerId!);
+      if (r.error) throw new Error(r.error);
+      return r;
+    },
     onSuccess: invalidate,
   });
 
+  /** Deletes DB row first, then storage objects (avoids orphaned rows if DB delete fails). */
   const deleteItemWithStorageCleanup = async (itemId: string) => {
     const items = (query.data?.items ?? []) as ProviderPortfolioItem[];
     const item = items.find((i) => i.id === itemId);
     const paths = (item?.image_paths ?? []) as string[];
+    await deleteMutation.mutateAsync(itemId);
     if (paths.length > 0) {
       await Promise.all(
         paths.map((path) => removePortfolioImageFromStorage(supabase, path))
       );
     }
-    await deleteMutation.mutateAsync(itemId);
   };
 
   const reorderMutation = useMutation({
-    mutationFn: (itemIds: string[]) => reorderPortfolioItems(providerId!, itemIds),
+    mutationFn: async (itemIds: string[]) => {
+      const r = await reorderPortfolioItems(providerId!, itemIds);
+      if (r.error) throw new Error(r.error);
+      return r;
+    },
     onSuccess: invalidate,
   });
 

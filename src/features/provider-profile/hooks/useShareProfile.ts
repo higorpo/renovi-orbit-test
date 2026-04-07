@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { buildProfileUrl } from "../utils/profileUrl";
 import type { ProviderPublicProfile } from "../types/providerProfilePublic.types";
 
@@ -12,10 +13,21 @@ export function useShareProfile(profile: ProviderPublicProfile) {
   const profileUrl = buildProfileUrl(profile.slug);
 
   const copyLink = useCallback(async () => {
-    await navigator.clipboard?.writeText(profileUrl);
-    toast.success("Link copiado!", {
-      description: "O link do perfil foi copiado para a área de transferência.",
-    });
+    if (!navigator.clipboard?.writeText) {
+      toast.error("Não foi possível copiar o link neste dispositivo.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(profileUrl);
+      toast.success("Link copiado!", {
+        description: "O link do perfil foi copiado para a área de transferência.",
+      });
+    } catch (err) {
+      logger.warn("share_profile_clipboard_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      toast.error("Não foi possível copiar o link.");
+    }
   }, [profileUrl]);
 
   const share = useCallback(async () => {
@@ -28,7 +40,10 @@ export function useShareProfile(profile: ProviderPublicProfile) {
     if (navigator.share) {
       try {
         await navigator.share(shareData);
-      } catch {
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          return;
+        }
         await copyLink();
       }
     } else {

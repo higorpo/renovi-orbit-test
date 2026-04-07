@@ -29,7 +29,20 @@ export function TextInputBlock({
   const hasError = Boolean(validation.touched && validation.state === "invalid");
   const hasSuccess = Boolean(validation.touched && validation.state === "valid" && value);
 
-  const inputType = (block.config?.inputType as string) ?? "text";
+  const ALLOWED_INPUT_TYPES = new Set([
+    "text",
+    "tel",
+    "email",
+    "url",
+    "number",
+    "search",
+    "password",
+    "date",
+    "time",
+    "datetime-local",
+  ]);
+  const rawType = (block.config?.inputType as string) ?? "text";
+  const inputType = ALLOWED_INPUT_TYPES.has(rawType) ? rawType : "text";
   const inputMode = (block.config?.inputMode as string) ?? "text";
 
   const trailing = (

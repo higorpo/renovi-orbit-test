@@ -20,6 +20,7 @@ import { unmask } from "@/lib/masks";
 import { maskCEP } from "@/lib/masks";
 import { nominatimGeocodingService } from "@/lib/geocoding";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   addressFormSchema,
@@ -213,7 +214,8 @@ export function AddressFormDialog({
           }),
         });
         if (result.error) {
-          toast.error(result.error);
+          logger.error("address_form_save_error", { error: result.error });
+          toast.error("Não foi possível salvar o endereço. Tente novamente.");
           return;
         }
       } else if (address) {
@@ -232,7 +234,8 @@ export function AddressFormDialog({
           }),
         });
         if (result.error) {
-          toast.error(result.error);
+          logger.error("address_form_save_error", { error: result.error });
+          toast.error("Não foi possível salvar o endereço. Tente novamente.");
           return;
         }
       }

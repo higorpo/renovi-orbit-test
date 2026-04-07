@@ -53,15 +53,16 @@ export function createAuthEventHandlers(
           if (profile) {
             ctx.setProfile(profile);
             if (ctx.isExplicitSignIn.current) {
-              ctx.isExplicitSignIn.current = false;
               ctx.navigate(ctx.getRedirectPath(profile), { replace: true });
             }
           }
+          ctx.isExplicitSignIn.current = false;
           ctx.setLoading(false);
         }).catch((err) => {
           logger.error("auth_fetch_profile_error", {
             error: err instanceof Error ? err.message : String(err),
           });
+          ctx.isExplicitSignIn.current = false;
           ctx.setLoading(false);
         });
       }

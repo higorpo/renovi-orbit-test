@@ -72,8 +72,8 @@ export function ServiceAreaField({ form, disabled }: ServiceAreaFieldProps) {
 
   const citiesQuery = useQuery({
     queryKey: ["search-cities", debouncedCityQuery],
-    queryFn: () => searchCities(debouncedCityQuery || " "),
-    enabled: addPopoverOpen,
+    queryFn: () => searchCities(debouncedCityQuery.trim()),
+    enabled: addPopoverOpen && debouncedCityQuery.trim().length > 0,
   });
 
   const neighborhoodsForAddQuery = useQuery({

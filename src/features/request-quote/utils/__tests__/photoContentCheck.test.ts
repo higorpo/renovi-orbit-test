@@ -10,6 +10,8 @@ import * as nsfwjs from "nsfwjs";
 const NSFW_THRESHOLD = 0.45;
 const ERROR_MESSAGE =
   "Conteúdo da imagem não permitido. Envie apenas fotos do local ou do serviço.";
+const VERIFICATION_FAILED =
+  "Não foi possível verificar as imagens. Tente outra foto ou tente novamente.";
 
 describe("photoContentCheck", () => {
   let mockClassify: ReturnType<typeof vi.fn>;
@@ -60,12 +62,10 @@ describe("photoContentCheck", () => {
       expect(nsfwjs.load).not.toHaveBeenCalled();
     });
 
-    it("returns allowed true when nsfwjs.load fails", async () => {
+    it("returns allowed false when nsfwjs.load fails (fail closed)", async () => {
       vi.mocked(nsfwjs.load).mockRejectedValue(new Error("model load failed"));
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
       const result = await checkPhotosContent([makeFile("a.jpg")]);
-      expect(result).toEqual({ allowed: true });
-      warnSpy.mockRestore();
+      expect(result).toEqual({ allowed: false, error: VERIFICATION_FAILED });
     });
 
     it("returns allowed true when all predictions are below threshold", async () => {
@@ -149,12 +149,10 @@ describe("photoContentCheck", () => {
       expect(mockClassify).toHaveBeenCalledTimes(2);
     });
 
-    it("returns allowed true when model.classify throws", async () => {
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    it("returns allowed false when model.classify throws (fail closed)", async () => {
       mockClassify.mockRejectedValue(new Error("classify failed"));
       const result = await checkPhotosContent([makeFile("a.jpg")]);
-      expect(result).toEqual({ allowed: true });
-      warnSpy.mockRestore();
+      expect(result).toEqual({ allowed: false, error: VERIFICATION_FAILED });
     });
   });
 });

@@ -112,7 +112,11 @@ export function useRequestQuoteSubmit({
             trackEvent("quote_request_failed", {
               reason: result.retryAfter != null ? "rate_limit" : "api",
             });
-            toast.error(result.retryAfter != null ? `Tente novamente em ${result.retryAfter} segundos.` : result.error);
+            toast.error(
+              result.retryAfter != null
+                ? `Tente novamente em ${result.retryAfter} segundos.`
+                : "Não foi possível enviar o pedido. Tente novamente.",
+            );
           }
         }
       );
@@ -246,7 +250,11 @@ export function useRequestQuoteSubmit({
             trackEvent("quote_request_failed", {
               reason: result.retryAfter != null ? "rate_limit" : "api",
             });
-            toast.error(result.retryAfter != null ? `Tente novamente em ${result.retryAfter} segundos.` : result.error);
+            toast.error(
+              result.retryAfter != null
+                ? `Tente novamente em ${result.retryAfter} segundos.`
+                : "Não foi possível enviar o pedido. Tente novamente.",
+            );
           }
         }
       );

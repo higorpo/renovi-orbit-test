@@ -21,11 +21,18 @@ function isPaginatedResponse(value: unknown): value is {
 } {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
+  const tc = v.total_count;
+  const p = v.page;
+  const ps = v.page_size;
   return (
     Array.isArray(v.items) &&
-    typeof v.total_count === "number" &&
-    typeof v.page === "number" &&
-    typeof v.page_size === "number"
+    typeof tc === "number" &&
+    typeof p === "number" &&
+    typeof ps === "number" &&
+    Number.isFinite(tc) &&
+    Number.isFinite(p) &&
+    Number.isFinite(ps) &&
+    ps > 0
   );
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import type { GeocodingService } from "@/lib/geocoding";
+import { logger } from "@/lib/logger";
 import { maskCEP } from "@/lib/masks";
 import type { AddressFormData } from "../types/addressForm.validation";
 import type { AddressLocation } from "../types/addresses.types";
@@ -47,6 +48,7 @@ export function useAddressMapSync({
   const ignoreGeocodeRef = useRef(false);
   const formDataRef = useRef(formData);
   formDataRef.current = formData;
+  const geocodeGenerationRef = useRef(0);
   const [reverseGeocoding, setReverseGeocoding] = useState(false);
 
   const handleMapDrag = useCallback(
@@ -86,11 +88,19 @@ export function useAddressMapSync({
     if (!hasMinimalAddress) return;
 
     const timer = setTimeout(async () => {
+      const gen = ++geocodeGenerationRef.current;
       const query = buildAddressString(formData);
       if (!query.trim()) return;
-      const result = await geocodingService.geocode(query);
-      if (result) {
-        setLocation({ latitude: result.latitude, longitude: result.longitude });
+      try {
+        const result = await geocodingService.geocode(query);
+        if (gen !== geocodeGenerationRef.current) return;
+        if (result) {
+          setLocation({ latitude: result.latitude, longitude: result.longitude });
+        }
+      } catch (err) {
+        logger.error("address_geocode_forward_error", {
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
@@ -106,9 +116,17 @@ export function useAddressMapSync({
     if (!hasMinimalAddress) return;
     const query = buildAddressString(data);
     if (!query.trim()) return;
-    const result = await geocodingService.geocode(query);
-    if (result) {
-      setLocation({ latitude: result.latitude, longitude: result.longitude });
+    const gen = ++geocodeGenerationRef.current;
+    try {
+      const result = await geocodingService.geocode(query);
+      if (gen !== geocodeGenerationRef.current) return;
+      if (result) {
+        setLocation({ latitude: result.latitude, longitude: result.longitude });
+      }
+    } catch (err) {
+      logger.error("address_geocode_forward_error", {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }, [disabled, geocodingService, setLocation]);
 

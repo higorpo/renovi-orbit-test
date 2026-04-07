@@ -22,6 +22,8 @@ import { PrivacySection } from "./PrivacySection";
 import { DangerZoneSection } from "./DangerZoneSection";
 import { ClientFormSkeleton } from "./AccountFormSkeletons";
 import { LogoutSection } from "./LogoutSection";
+import { logger } from "@/lib/logger";
+import { toast } from "sonner";
 
 const PAGE_TITLE = "Minha conta";
 const PAGE_SUBTITLE = "Gerencie seus dados, endereços e preferências de privacidade";
@@ -91,12 +93,25 @@ export function MyAccountClientPage() {
         updateProfileAsync({ full_name, phone }),
         updateCpfAsync({ cpf: cpf || null }),
       ])
-        .then(([profileResult]) => {
-          if (!profileResult.error) {
+        .then(([profileResult, cpfResult]) => {
+          const profileOk = !profileResult?.error;
+          const cpfOk = !cpfResult?.error;
+          if (profileOk && cpfOk) {
             form.reset(parsed.data);
+          } else {
+            logger.warn("my_account_client_autosave_partial_failure", {
+              profileError: profileResult?.error ?? null,
+              cpfError: cpfResult?.error ?? null,
+            });
+            toast.error("Não foi possível salvar todas as alterações. Tente novamente.");
           }
         })
-        .catch(() => {});
+        .catch((err: unknown) => {
+          logger.error("my_account_client_autosave_error", {
+            error: err instanceof Error ? err.message : String(err),
+          });
+          toast.error("Não foi possível atualizar seus dados. Tente novamente.");
+        });
     }, AUTO_SAVE_DEBOUNCE_MS);
 
     return () => {

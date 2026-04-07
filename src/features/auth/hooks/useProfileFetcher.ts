@@ -36,7 +36,8 @@ export function useProfileFetcher(
 
       // Build the promise synchronously — assigned to the ref before the first await
       // so any concurrent call that checks the ref right after will reuse it.
-      const promise = (async () => {
+      const promiseRef: { current: Promise<Profile | null> | null } = { current: null };
+      promiseRef.current = (async () => {
         if (!forceRefresh) {
           const cached = await cacheGet<Profile>(profileCacheKey(userId));
           if (cached) {
@@ -93,10 +94,13 @@ export function useProfileFetcher(
           }
           return null;
         } finally {
-          inFlightFetch.current = null;
+          if (inFlightFetch.current === promiseRef.current) {
+            inFlightFetch.current = null;
+          }
         }
       })();
 
+      const promise = promiseRef.current!;
       inFlightFetch.current = promise;
       lastFetchedUserId.current = userId;
       return promise;

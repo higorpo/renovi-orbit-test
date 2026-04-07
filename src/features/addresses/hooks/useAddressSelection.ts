@@ -60,6 +60,9 @@ export function useAddressSelection({
       : null
   );
   const lastResolvedCepRef = useRef<string | null>(null);
+  /** Latest CEP in the form; used to ignore stale async CEP resolutions. */
+  const latestZipUnmaskedRef = useRef<string>("");
+  latestZipUnmaskedRef.current = unmask(formData.address_zip);
 
   // When restoring from persisted step data, mark CEP as already resolved so we don't re-fetch
   useEffect(() => {
@@ -95,8 +98,13 @@ export function useAddressSelection({
       if (cep.length !== 8) return;
       if (cep === lastResolvedCepRef.current) return;
 
+      const requestedCep = cep;
       setFetchingCep(true);
       const resolved = await resolveFormDataFromCep(cepMasked);
+      if (latestZipUnmaskedRef.current !== requestedCep) {
+        setFetchingCep(false);
+        return;
+      }
       setFetchingCep(false);
 
       if (resolved === null) return;

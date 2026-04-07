@@ -16,6 +16,8 @@ vi.mock("@tanstack/react-query", () => ({
 
 vi.mock("../../api/providerJobQuestions.api", () => ({
   createProviderJobQuestion: vi.fn(),
+  PROVIDER_JOB_QUESTION_LIMIT_EXCEPTION_MESSAGE:
+    "Question limit reached for this service request",
 }));
 
 vi.mock("sonner", () => ({
@@ -109,7 +111,7 @@ describe("useProviderJobQuestionComposer", () => {
   it("shows limit toast when API returns question limit error", async () => {
     createProviderJobQuestion.mockResolvedValue({
       data: null,
-      error: "Question limit reached for this request",
+      error: "Question limit reached for this service request",
     });
 
     const { result } = renderHook(() => useProviderJobQuestionComposer("sr-1"));
@@ -145,6 +147,8 @@ describe("useProviderJobQuestionComposer", () => {
       await result.current.submitQuestion();
     });
 
-    expect(toast.error).toHaveBeenCalledWith("Server busy");
+    expect(toast.error).toHaveBeenCalledWith(
+      "Não foi possível enviar a pergunta. Tente novamente.",
+    );
   });
 });

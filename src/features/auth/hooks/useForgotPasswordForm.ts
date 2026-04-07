@@ -8,6 +8,7 @@ import { authApi } from "../api/auth.api";
 import { toast } from "sonner";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { addBreadcrumb, metrics } from "@/lib/sentry";
+import { logger } from "@/lib/logger";
 
 const REDIRECT_PATH = "/recuperar-senha";
 
@@ -45,7 +46,12 @@ export function useForgotPasswordForm() {
         );
 
         if (error) {
-          setErrors({ email: error.message });
+          logger.warn("auth_forgot_password_api_error", {
+            error: error.message,
+          });
+          setErrors({
+            email: "Não foi possível enviar o email. Verifique o endereço ou tente novamente.",
+          });
           setSubmitting(false);
           return;
         }

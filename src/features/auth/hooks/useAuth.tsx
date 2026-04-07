@@ -260,14 +260,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     try {
+      const { error } = await authApi.signOut();
+      if (error) throw error;
+
       setUser(null);
       setSession(null);
       setProfile(null);
       setLoading(false);
       setLoadingSession(false);
-
-      const { error } = await authApi.signOut();
-      if (error) throw error;
 
       addBreadcrumb({ message: "auth.signout.success" });
       metrics.count("auth.signout", 1);
@@ -277,9 +277,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logger.error("auth_logout_error", {
         error: error instanceof Error ? error.message : String(error),
       });
-      toast.error(
-        error instanceof Error ? error.message : String(error) || "Erro ao fazer logout"
-      );
+      toast.error("Não foi possível sair. Tente novamente.");
     }
   }, [navigate]);
 

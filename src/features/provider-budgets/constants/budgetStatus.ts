@@ -23,8 +23,16 @@ export const BUDGET_STATUS_CONFIG: Record<
 export function getBudgetStatusConfig(
   status: string | null | undefined,
 ): { label: string; variant: BadgeProps["variant"] } {
-  const normalized = (status ?? "submitted").toLowerCase();
-  return BUDGET_STATUS_CONFIG[normalized] ?? BUDGET_STATUS_CONFIG.submitted;
+  if (status == null || status === "") {
+    return { label: "Desconhecido", variant: "secondary" };
+  }
+  const normalized = status.toLowerCase();
+  return (
+    BUDGET_STATUS_CONFIG[normalized] ?? {
+      label: "Desconhecido",
+      variant: "secondary" as const,
+    }
+  );
 }
 
 export const BUDGET_STATUS_FILTERS: Array<{

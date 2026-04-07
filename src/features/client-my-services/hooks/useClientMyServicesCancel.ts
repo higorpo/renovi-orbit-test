@@ -11,8 +11,11 @@ export function useClientMyServicesCancel() {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: (requestId: string) =>
-      cancelServiceRequest({ id: requestId, clientId }),
+    mutationFn: async (requestId: string) => {
+      const result = await cancelServiceRequest({ id: requestId, clientId });
+      if (result.error) throw new Error(result.error);
+      return result;
+    },
     onSuccess: (_data, _requestId, _context) => {
       queryClient.invalidateQueries({ queryKey: LIST_QUERY_KEY });
       toast.success("Serviço cancelado com sucesso.");

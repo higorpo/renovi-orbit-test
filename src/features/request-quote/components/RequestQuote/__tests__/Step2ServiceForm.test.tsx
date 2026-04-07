@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { formatServiceSchemaFallbackReason } from "../../../utils/serviceSchemaFallbackMessages";
 import { Step2ServiceForm } from "../Step2ServiceForm";
 import { mockFormSchema } from "./fixtures/requestQuoteTestFixtures";
 import { renderWithRequestQuoteProviders } from "./testUtils";
@@ -81,7 +82,9 @@ describe("Step2ServiceForm", () => {
         isLoading: false,
       });
       render(<Step2ServiceForm {...defaultProps} />);
-      expect(screen.getByText("Motivo: no_form")).toBeInTheDocument();
+      expect(
+        screen.getByText(`Motivo: ${formatServiceSchemaFallbackReason("no_form")}`)
+      ).toBeInTheDocument();
     });
 
     it("does not show Motivo when fallbackReason is null", () => {
@@ -170,7 +173,11 @@ describe("Step2ServiceForm", () => {
         />
       );
       expect(screen.getByText("Formulário não configurado")).toBeInTheDocument();
-      expect(screen.getByText("Motivo: no_service_slug_or_id")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          `Motivo: ${formatServiceSchemaFallbackReason("no_service_slug_or_id")}`
+        )
+      ).toBeInTheDocument();
     });
   });
 });

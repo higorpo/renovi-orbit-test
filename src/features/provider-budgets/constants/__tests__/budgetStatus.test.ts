@@ -15,10 +15,19 @@ describe("budgetStatus", () => {
       expect(getBudgetStatusConfig("REJECTED")).toEqual(BUDGET_STATUS_CONFIG.rejected);
     });
 
-    it("defaults to submitted when status is null or unknown", () => {
-      expect(getBudgetStatusConfig(null)).toEqual(BUDGET_STATUS_CONFIG.submitted);
-      expect(getBudgetStatusConfig(undefined)).toEqual(BUDGET_STATUS_CONFIG.submitted);
-      expect(getBudgetStatusConfig("unknown")).toEqual(BUDGET_STATUS_CONFIG.submitted);
+    it("returns unknown label when status is null, empty, or not in config", () => {
+      expect(getBudgetStatusConfig(null)).toEqual({
+        label: "Desconhecido",
+        variant: "secondary",
+      });
+      expect(getBudgetStatusConfig(undefined)).toEqual({
+        label: "Desconhecido",
+        variant: "secondary",
+      });
+      expect(getBudgetStatusConfig("unknown")).toEqual({
+        label: "Desconhecido",
+        variant: "secondary",
+      });
     });
   });
 

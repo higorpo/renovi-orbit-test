@@ -48,12 +48,7 @@ describe("useOAuthErrorFromUrl", () => {
     await waitFor(() => {
       expect(toastError).toHaveBeenCalledTimes(1);
     });
-    expect(toastError).toHaveBeenCalledWith(
-      "Erro ao conectar com Google",
-      expect.objectContaining({
-        description: "User cancelled",
-      }),
-    );
+    expect(toastError).toHaveBeenCalledWith("Erro ao conectar com Google. Tente novamente.");
     expect(replaceState).toHaveBeenCalled();
   });
 

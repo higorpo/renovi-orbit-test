@@ -6,8 +6,33 @@ import { useCallback, useEffect, useRef } from "react";
 import { useGenerateSmartDescription } from "../../hooks/useGenerateSmartDescription";
 import type { RequestQuoteState } from "../../hooks/useRequestQuoteState";
 import { stableStringify } from "../../utils/stableStringify";
+import { toast } from "sonner";
 
 const MAX_DESCRIPTION_ATTEMPTS = 3;
+const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+const ALLOWED_PHOTO_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+]);
+
+function filterAcceptedPhotoFiles(files: File[]): File[] {
+  const out: File[] = [];
+  for (const f of files) {
+    if (f.size > MAX_PHOTO_BYTES) {
+      toast.error(`O arquivo "${f.name}" excede 10MB.`);
+      continue;
+    }
+    if (!ALLOWED_PHOTO_TYPES.has(f.type)) {
+      toast.error(`Formato não suportado: ${f.name}`);
+      continue;
+    }
+    out.push(f);
+  }
+  return out;
+}
 
 export interface Step3DescriptionPhotosProps {
   state: RequestQuoteState;
@@ -47,9 +72,10 @@ export function Step3DescriptionPhotos({ state, step2DataSnapshotRef }: Step3Des
 
   const processFiles = useCallback(
     (newFiles: File[]) => {
-      if (!newFiles.length) return;
-      const allPhotos = [...state.step3Data.photos, ...newFiles];
-      const newPreviews = newFiles.map((f) => URL.createObjectURL(f));
+      const accepted = filterAcceptedPhotoFiles(newFiles);
+      if (!accepted.length) return;
+      const allPhotos = [...state.step3Data.photos, ...accepted];
+      const newPreviews = accepted.map((f) => URL.createObjectURL(f));
       const allPreviews = [...state.step3Data.photoPreviews, ...newPreviews];
       state.setStep3Data((prev) => ({ ...prev, photos: allPhotos, photoPreviews: allPreviews }));
     },

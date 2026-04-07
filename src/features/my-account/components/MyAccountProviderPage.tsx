@@ -33,6 +33,7 @@ import {
   type ProviderAccountFormData,
 } from "../types/providerAccountForm.validation";
 import { toast } from "sonner";
+import { logger } from "@/lib/logger";
 
 const PAGE_TITLE = "Minha conta";
 const PAGE_SUBTITLE = "Gerencie seus dados, identidade profissional e perfil público";
@@ -187,13 +188,25 @@ function MyAccountProviderPage() {
 
       Promise.all(mutations)
         .then((results) => {
-          const allOk = results.every((r) => !r?.error);
+          const allOk = results.every((r) => r && typeof r === "object" && !r.error);
           if (allOk) {
             form.reset(parsed.data);
             toast.success("Dados atualizados com sucesso.");
+          } else {
+            logger.warn("my_account_provider_autosave_partial_failure", {
+              errors: results.map((r) =>
+                r && typeof r === "object" && "error" in r ? r.error : null
+              ),
+            });
+            toast.error("Não foi possível salvar todas as alterações. Tente novamente.");
           }
         })
-        .catch(() => {});
+        .catch((err: unknown) => {
+          logger.error("my_account_provider_autosave_error", {
+            error: err instanceof Error ? err.message : String(err),
+          });
+          toast.error("Não foi possível atualizar seus dados. Tente novamente.");
+        });
     }, 2000);
     return () => {
       if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);

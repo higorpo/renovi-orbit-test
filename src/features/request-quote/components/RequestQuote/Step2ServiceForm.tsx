@@ -3,6 +3,7 @@ import type { FormSchema } from "@/features/dynamic-form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 import { useServiceSchema } from "../../hooks/useServiceSchema";
+import { formatServiceSchemaFallbackReason } from "../../utils/serviceSchemaFallbackMessages";
 
 export interface Step2ServiceFormProps {
   serviceSlug: string | null;
@@ -38,7 +39,9 @@ export function Step2ServiceForm({
         <AlertDescription className="mt-2">
           <p>O formulário para este serviço ainda não foi configurado no sistema.</p>
           {fallbackReason && (
-            <p className="text-xs text-muted-foreground mt-2">Motivo: {fallbackReason}</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Motivo: {formatServiceSchemaFallbackReason(fallbackReason)}
+            </p>
           )}
           <p className="text-sm mt-2">
             Por favor, entre em contato com o suporte ou tente novamente mais tarde.

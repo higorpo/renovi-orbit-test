@@ -17,6 +17,7 @@ import { useClientBudgetsFilters } from "../hooks/useClientBudgetsFilters";
 import { useClientReceivedBudgets } from "../hooks/useClientReceivedBudgets";
 import { useClientBudgetQuestions } from "../hooks/useClientBudgetQuestions";
 import { useClientPendingApprovalServicesCount } from "../hooks/useClientPendingApprovalServicesCount";
+import { useClientPendingQuestionsCount } from "../hooks/useClientPendingQuestionsCount";
 import type { ClientBudgetsTab } from "../types/client-budgets.types";
 import { getReceivedBudgetSheetMode } from "../constants/status";
 
@@ -49,16 +50,16 @@ export function ClientBudgetsPage() {
   });
 
   const pendingApprovalServicesCount = useClientPendingApprovalServicesCount();
+  const pendingQuestionsTotal = useClientPendingQuestionsCount();
 
   const [detailsMode, setDetailsMode] = useState<"received" | "questions" | null>(null);
   const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<string | null>(null);
 
   const headerLoading =
-    received.isLoading || questions.isLoading || pendingApprovalServicesCount.isLoading;
-  const pendingQuestionsBadgeCount = questions.items.reduce(
-    (total, item) => total + item.pending_questions_count,
-    0,
-  );
+    received.isLoading ||
+    questions.isLoading ||
+    pendingApprovalServicesCount.isLoading ||
+    pendingQuestionsTotal.isLoading;
 
   const openReceivedDetails = (serviceRequestId: string) => {
     setSelectedServiceRequestId(serviceRequestId);
@@ -74,8 +75,10 @@ export function ClientBudgetsPage() {
     <div className="container max-w-5xl px-4 py-6">
       <ClientBudgetsHeader
         pendingApprovalServiceCount={pendingApprovalServicesCount.count}
-        pendingQuestionsCount={pendingQuestionsBadgeCount}
+        pendingQuestionsCount={pendingQuestionsTotal.count}
         isLoading={headerLoading}
+        pendingApprovalCountError={pendingApprovalServicesCount.isError}
+        pendingQuestionsCountError={pendingQuestionsTotal.isError}
       />
 
       <div className="mt-6 space-y-4">
@@ -92,7 +95,7 @@ export function ClientBudgetsPage() {
               Recebidos
               {!received.isLoading ? (
                 <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none text-muted-foreground">
-                  {received.totalCount}
+                  {received.totalCount ?? '-'}
                 </span>
               ) : null}
             </TabsTrigger>
@@ -101,7 +104,7 @@ export function ClientBudgetsPage() {
               Perguntas
               {!questions.isLoading ? (
                 <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold leading-none text-muted-foreground">
-                  {pendingQuestionsBadgeCount}
+                  {questions.totalCount ?? '-'}
                 </span>
               ) : null}
             </TabsTrigger>

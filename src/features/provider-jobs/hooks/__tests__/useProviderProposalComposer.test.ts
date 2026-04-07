@@ -95,12 +95,16 @@ describe("useProviderProposalComposer", () => {
       wrapper: createWrapper(),
     });
 
+    const futureStart = new Date();
+    futureStart.setDate(futureStart.getDate() + 14);
+    const futureStartIso = futureStart.toISOString().slice(0, 10);
+
     act(() => {
       result.current.openComposer();
       result.current.setPriceInput("500");
       result.current.setDescriptionDraft("Posso executar com garantia e nota.");
       result.current.setDurationValueInput("5");
-      result.current.updateAvailabilitySlot(0, "startDate", "2026-03-25");
+      result.current.updateAvailabilitySlot(0, "startDate", futureStartIso);
       result.current.updateAvailabilitySlot(0, "shift", "morning");
     });
 

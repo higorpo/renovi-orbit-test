@@ -1,6 +1,10 @@
 import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase/client";
 
+/** Matches `raise exception` text in create_provider_service_request_question (migration). */
+export const PROVIDER_JOB_QUESTION_LIMIT_EXCEPTION_MESSAGE =
+  "Question limit reached for this service request";
+
 export interface CreateProviderJobQuestionParams {
   serviceRequestId: string;
   question: string;

@@ -25,8 +25,11 @@ export function useClientPrivateProfile() {
   });
 
   const mutation = useMutation({
-    mutationFn: (params: UpdateClientPrivateParams) =>
-      updateClientPrivateProfile(clientId!, params),
+    mutationFn: async (params: UpdateClientPrivateParams) => {
+      const r = await updateClientPrivateProfile(clientId!, params);
+      if (r.error) throw new Error(r.error);
+      return r;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...CLIENT_PRIVATE_QUERY_KEY, clientId] });
     },

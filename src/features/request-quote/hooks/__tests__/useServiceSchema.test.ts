@@ -187,7 +187,7 @@ describe("useServiceSchema", () => {
     expect(result.current.fallbackReason).toBe("loading");
   });
 
-  it("returns fetch_error when service API returns error", async () => {
+  it("returns service_fetch_failed when service API returns error", async () => {
     getServiceBySlug.mockResolvedValue({
       service: null,
       error: "Not found",
@@ -200,8 +200,7 @@ describe("useServiceSchema", () => {
       expect(result.current.isLoading).toBe(false);
     });
     expect(result.current.schema).toBeNull();
-    expect(result.current.fallbackReason).toContain("fetch_error");
-    expect(result.current.fallbackReason).toContain("Not found");
+    expect(result.current.fallbackReason).toBe("service_fetch_failed");
   });
 
   it("returns service_not_found when service is null", async () => {
@@ -244,7 +243,7 @@ describe("useServiceSchema", () => {
     expect(result.current.fallbackReason).toBe("no_form");
   });
 
-  it("returns form_status_not_active when form_status is not active", async () => {
+  it("returns form_inactive when form_status is not active", async () => {
     getServiceBySlug.mockResolvedValue({ service: mockService, error: null });
     getFormById.mockResolvedValue({
       form: mockForm({ form_status: "draft" }),
@@ -257,9 +256,7 @@ describe("useServiceSchema", () => {
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
-    expect(result.current.fallbackReason).toBe(
-      "form_status_not_active: draft"
-    );
+    expect(result.current.fallbackReason).toBe("form_inactive");
   });
 
   it("returns no_v2_schema when form_schema is invalid", async () => {
@@ -298,8 +295,7 @@ describe("useServiceSchema", () => {
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
-    expect(result.current.fallbackReason).toContain("schema_validation_failed");
-    expect(result.current.fallbackReason).toContain("1 error(s)");
+    expect(result.current.fallbackReason).toBe("schema_validation_failed");
   });
 
   it("uses service.id for categoryId when slug is missing", async () => {

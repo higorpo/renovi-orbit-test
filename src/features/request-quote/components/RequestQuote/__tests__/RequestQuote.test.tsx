@@ -211,7 +211,8 @@ describe("RequestQuote", () => {
     renderWithRequestQuoteProviders(<RequestQuote />);
     expect(useRequestQuoteDraft).toHaveBeenCalledWith(
       expect.anything(),
-      "limpeza-profunda"
+      "limpeza-profunda",
+      null,
     );
   });
 

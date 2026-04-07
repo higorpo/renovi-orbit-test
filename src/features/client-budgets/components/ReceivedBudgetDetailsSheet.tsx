@@ -29,7 +29,7 @@ export function ReceivedBudgetDetailsSheet({
   sheetMode,
   onOpenChange,
 }: ReceivedBudgetDetailsSheetProps) {
-  const { detail, isLoading } = useClientBudgetDetail(serviceRequestId);
+  const { detail, isLoading, isError, refetch } = useClientBudgetDetail(serviceRequestId);
   const [rejectProposalId, setRejectProposalId] = useState<string | null>(null);
 
   const groupedByProvider = useMemo(() => {
@@ -75,7 +75,17 @@ export function ReceivedBudgetDetailsSheet({
                 )}
               </div>
 
-              {isLoading ? (
+              {isError ? (
+                <Alert variant="destructive">
+                  <AlertTitle>Não foi possível carregar os detalhes</AlertTitle>
+                  <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <span>Tente novamente em alguns instantes.</span>
+                    <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>
+                      Tentar novamente
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              ) : isLoading ? (
                 <div
                   className="space-y-4"
                   aria-busy="true"

@@ -41,8 +41,12 @@ const VARIANT_CLASSES: Record<TextVariant, string> = {
   p: "text-base font-normal",
 };
 
+const ALLOWED_TEXT_VARIANTS = new Set<string>(["h1", "h2", "h3", "h4", "p"]);
+
 export function StaticTextBlock({ block }: StaticTextBlockProps) {
-  const variant = (block.config?.variant as TextVariant) ?? "p";
+  const rawVariant = block.config?.variant as string | undefined;
+  const variant: TextVariant =
+    rawVariant && ALLOWED_TEXT_VARIANTS.has(rawVariant) ? (rawVariant as TextVariant) : "p";
   const size = block.config?.size as TextSize | undefined;
   const color = (block.config?.color as TextColor) ?? "default";
 

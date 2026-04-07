@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchProviderProposalJobDetail } from "../api/providerJobs.api";
+import { PROVIDER_PROPOSAL_JOB_DETAIL_QUERY_KEY } from "../constants/queryKeys";
 import type { ProviderJobItem } from "../types/provider-jobs.types";
 import { useProviderLocation } from "./useProviderLocation";
 
@@ -31,7 +32,7 @@ export function useProviderJobDetail(
 
   const query = useQuery({
     queryKey: [
-      "provider-proposal-job-detail",
+      PROVIDER_PROPOSAL_JOB_DETAIL_QUERY_KEY,
       jobId,
       options?.initialJob?.provider_proposal_id ?? null,
       effectiveLat,
