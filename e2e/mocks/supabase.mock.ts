@@ -125,6 +125,38 @@ export async function installSupabaseMocks(
 ) {
   const { authenticatedUser, profile } = options;
 
+  // Signup flows call executeRecaptcha + verify-recaptcha; real Google/render fails on localhost.
+  await page.addInitScript(() => {
+    (
+      window as unknown as {
+        grecaptcha: {
+          ready: (cb: () => void) => void;
+          execute: (
+            _siteKey: string,
+            _opts: { action: string }
+          ) => Promise<string>;
+        };
+      }
+    ).grecaptcha = {
+      ready: (cb) => {
+        cb();
+      },
+      execute: async () => "e2e-mock-recaptcha-token",
+    };
+  });
+
+  await page.route("**/functions/v1/verify-recaptcha", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.fallback();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ success: true }),
+    });
+  });
+
   // Tracks intercepted request bodies so tests can assert on them
   const capturedRequests: Record<string, unknown[]> = {
     signIn: [],

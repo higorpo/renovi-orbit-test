@@ -53,6 +53,11 @@ export class ClientSignupPage {
     await this.page.goto("/cadastro/cliente");
   }
 
+  async clickContinue() {
+    await this.continueButton.scrollIntoViewIfNeeded();
+    await this.continueButton.click({ timeout: 45_000 });
+  }
+
   // Step 0 helpers
   async fillStep0(fullName: string, email: string) {
     await this.fullNameInput.fill(fullName);
@@ -61,7 +66,7 @@ export class ClientSignupPage {
 
   async advanceToStep1(fullName: string, email: string) {
     await this.fillStep0(fullName, email);
-    await this.continueButton.click();
+    await this.clickContinue();
   }
 
   // Step 1 helpers
@@ -79,13 +84,14 @@ export class ClientSignupPage {
     await this.advanceToStep1(fullName, email);
     await this.passwordInput.waitFor({ state: "visible" });
     await this.fillStep1(password, confirmPassword);
-    await this.continueButton.click();
+    await this.clickContinue();
   }
 
   // Step 2 helpers
   async acceptTermsAndSubmit() {
     await this.termsCheckbox.click();
-    await this.createAccountButton.click();
+    await this.createAccountButton.scrollIntoViewIfNeeded();
+    await this.createAccountButton.click({ timeout: 45_000 });
   }
 
   async completeSignup(

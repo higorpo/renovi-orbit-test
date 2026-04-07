@@ -4,6 +4,14 @@ import { ClientSignupPage } from "../pages/client-signup.page";
 const VALID_PASSWORD = "Str0ng!Pass@2024";
 const WEAK_PASSWORD = "weak";
 
+/** Shape of POST /auth/v1/signup body captured by Supabase mocks */
+type CapturedSignUpBody = {
+  email?: string;
+  password?: string;
+  data?: Record<string, string>;
+  options?: { data?: Record<string, string> };
+};
+
 test.describe("Client Signup", () => {
   // ─── Step 0: Basic Info ──────────────────────────────────────────────
 
@@ -31,7 +39,7 @@ test.describe("Client Signup", () => {
 
     await signup.fullNameInput.fill("João");
     await signup.emailInput.fill("test@test.com");
-    await signup.continueButton.click();
+    await signup.clickContinue();
 
     await expect(page.getByText("Informe nome e sobrenome")).toBeVisible();
   });
@@ -42,7 +50,7 @@ test.describe("Client Signup", () => {
     await signup.goto();
 
     await signup.emailInput.fill("test@test.com");
-    await signup.continueButton.click();
+    await signup.clickContinue();
 
     await expect(page.getByText("Nome é obrigatório")).toBeVisible();
   });
@@ -54,7 +62,7 @@ test.describe("Client Signup", () => {
 
     await signup.fullNameInput.fill("Test User");
     await signup.emailInput.fill("not-an-email");
-    await signup.continueButton.click();
+    await signup.clickContinue();
 
     await expect(page.getByText("Email inválido")).toBeVisible();
   });
@@ -113,7 +121,7 @@ test.describe("Client Signup", () => {
     await signup.advanceToStep1("João Silva", "joao@test.com");
 
     await signup.fillStep1(WEAK_PASSWORD, WEAK_PASSWORD);
-    await signup.continueButton.click();
+    await signup.clickContinue();
 
     await expect(signup.getFieldError()).toBeVisible();
   });
@@ -125,7 +133,7 @@ test.describe("Client Signup", () => {
     await signup.advanceToStep1("João Silva", "joao@test.com");
 
     await signup.fillStep1(VALID_PASSWORD, "DifferentPass123!");
-    await signup.continueButton.click();
+    await signup.clickContinue();
 
     await expect(page.getByText("As senhas não coincidem")).toBeVisible();
   });
@@ -166,10 +174,6 @@ test.describe("Client Signup", () => {
     page,
     mockSupabaseAsGuest,
   }) => {
-    test.skip(
-      test.info().project.name === "mobile-safari",
-      "Mobile Safari: step 2 submit button locator flaky"
-    );
     await mockSupabaseAsGuest();
     const signup = new ClientSignupPage(page);
     await signup.goto();
@@ -187,10 +191,6 @@ test.describe("Client Signup", () => {
     page,
     mockSupabaseAsGuest,
   }) => {
-    test.skip(
-      test.info().project.name === "mobile-safari",
-      "Mobile Safari: browser stability issues in this flow"
-    );
     await mockSupabaseAsGuest();
     const signup = new ClientSignupPage(page);
     await signup.goto();
@@ -205,10 +205,6 @@ test.describe("Client Signup", () => {
     page,
     mockSupabaseAsGuest,
   }) => {
-    test.skip(
-      test.info().project.name === "mobile-safari",
-      "Mobile Safari: timeout/stability in this flow"
-    );
     const mocks = await mockSupabaseAsGuest();
     const signup = new ClientSignupPage(page);
     await signup.goto();
@@ -218,12 +214,12 @@ test.describe("Client Signup", () => {
     await expect(signup.getSuccessMessage()).toBeVisible({ timeout: 10000 });
 
     expect(mocks.capturedRequests.signUp.length).toBeGreaterThanOrEqual(1);
-    const body = mocks.capturedRequests.signUp[0] as Record<string, unknown>;
+    const body = mocks.capturedRequests.signUp[0] as CapturedSignUpBody;
     expect(body.email).toBe("joao@test.com");
     expect(body.password).toBe(VALID_PASSWORD);
 
     // Supabase JS client sends user_metadata in body.data
-    const data = (body.data ?? body.options?.data) as Record<string, string> | undefined;
+    const data = body.data ?? body.options?.data;
     expect(data?.role).toBe("client");
     expect(data?.full_name).toBe("João Silva");
   });
@@ -282,7 +278,7 @@ test.describe("Client Signup", () => {
 
     // Advance to step 2
     await signup.fillStep1(VALID_PASSWORD, VALID_PASSWORD);
-    await signup.continueButton.click();
+    await signup.clickContinue();
     await expect(signup.termsCheckbox).toBeVisible();
   });
 });

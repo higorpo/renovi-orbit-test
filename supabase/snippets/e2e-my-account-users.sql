@@ -1,0 +1,17 @@
+-- E2E: Minha conta (Playwright + Supabase real)
+--
+-- Auth users must exist with known passwords. Prefer the Admin API (see yarn e2e:seed-my-account
+-- and e2e/scripts/seed-my-account-e2e-users.mjs) so passwords are hashed correctly.
+--
+-- If you only need to fix public.profiles after a manual auth.users insert, you can run:
+--
+-- update public.profiles
+-- set full_name = 'E2E Cliente Conta', role = 'client'
+-- where id = '<uuid-from-auth.users>';
+--
+-- update public.profiles
+-- set full_name = 'E2E Prestador Conta', role = 'provider'
+-- where id = '<uuid-from-auth.users>';
+--
+-- Role-specific rows (client_profiles_private, provider_profiles_*) are created by trigger
+-- profiles_sync_role_tables when role is set on profiles.
