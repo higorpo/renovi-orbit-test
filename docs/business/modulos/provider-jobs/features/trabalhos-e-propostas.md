@@ -286,3 +286,11 @@ flowchart LR
     D --> P[calculate + create_provider_proposal]
   end
 ```
+
+  ## 16. Atualização de auditoria (2026-04-27)
+
+  - **Query de trabalhos depende de coordenadas válidas:** `useProviderJobs` só habilita busca quando latitude/longitude estão preenchidos.
+  - **Fallbacks geográficos distintos por contexto:** lista usa Florianópolis quando geo falha; detalhe usa centróide do Brasil quando necessário.
+  - **Composer de proposta recalcula taxa com debounce:** preço é validado e enviado para cálculo após 1500 ms sem edição.
+  - **Uploads de proposta:** limite de 5 fotos por envio, até 5 MB por arquivo, com tipos de imagem explicitamente permitidos.
+  - **Edição de proposta é restrita por status:** UI permite editar apenas proposta latest e não `accepted`/`withdrawn`.

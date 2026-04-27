@@ -256,3 +256,10 @@ flowchart LR
   C[BudgetCard / QuestionCard] --> D[/budgets/pedido/:id]
   D --> J[JobDetailSheet JobDetailPage]
 ```
+
+## 15. Atualização de auditoria (2026-04-27)
+
+- **Filtros padrão da página:** enviados inicia em `submitted` e perguntas em `pending`; trocar de aba reseta filtros e busca.
+- **Busca textual com debounce de 400 ms:** só depois desse intervalo o valor é enviado como `p_search` para as RPCs.
+- **Paginação operacional do front:** `page_size = 20` em ambas as listas com infinite query.
+- **Badge/contadores independem da aba ativa:** as duas queries são executadas na montagem para alimentar contagem e resumo no header.

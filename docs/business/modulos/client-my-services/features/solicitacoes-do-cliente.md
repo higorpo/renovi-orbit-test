@@ -195,3 +195,10 @@ flowchart LR
 - `src/features/client-my-services/**/*`
 - `src/router.tsx`
 - `src/layouts/DashboardLayout/dashboardMenu.ts`
+
+## 17. Atualização de auditoria (2026-04-27)
+
+- **Escopo da listagem é estrito por cliente:** query sempre aplica `.eq("client_id", params.clientId)` antes dos demais filtros.
+- **Busca textual foi protegida para PostgREST:** `sanitizeSearchForOrIlike` remove vírgulas e escapa `%`, `_` e `\\`.
+- **Modo foco (`serviceRequestId`) domina a query:** quando presente, o backend passa a buscar por `id` específico e ignora filtros de barra para restrição final.
+- **Cancelamento funcional no código atual:** mutação de cancelamento só considera serviço cancelável quando `status === 'open'`.

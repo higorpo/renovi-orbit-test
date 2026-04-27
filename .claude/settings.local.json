@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"from ''@/features/auth/utils/persistSession''\" \"/home/higor/Área de Trabalho/Renovi/orbit/src\" --include=\"*.ts\" --include=\"*.tsx\" -l)",
+      "Bash(sed -i 's|from \"\"../api/listServiceRequests.api\"\"|from \"\"../api/serviceRequests.api\"\"|g' src/features/client-my-services/hooks/useServiceRequestsList.ts)",
+      "Bash(sed -i 's|from \"\"../api/cancelServiceRequest.api\"\"|from \"\"../api/serviceRequests.api\"\"|g' src/features/client-my-services/hooks/useCancelServiceRequest.ts)",
+      "Bash(yarn build:*)",
+      "Bash(yarn test:run)",
+      "Bash(__NEW_LINE_5e2fc4af7ca22f38__ echo:*)",
+      "Bash(cd \"/home/higor/Área de Trabalho/Renovi/orbit/src/features/client-my-services\" __NEW_LINE_777eedb0f345fea2__ echo \"=== ServiceCard.test.tsx component import ===\" grep \"from.*\\\\.\\\\.\" components/__tests__/ServiceCard.test.tsx)",
+      "Read(//home/higor/Área de Trabalho/Renovi/orbit/src/features/client-my-services/**)",
+      "Bash(BASE=\"/home/higor/Área de Trabalho/Renovi/orbit/src/features/client-my-services\")",
+      "Bash(mv \"$BASE/types/service-request-view.types.ts\" \"$BASE/types/client-my-services.types.ts\")",
+      "Bash(__NEW_LINE_3562f40dc48b3567__ mv:*)",
+      "Bash(__NEW_LINE_f1b5d394ea9c0408__ mv:*)",
+      "Bash(__NEW_LINE_f1b5d394ea9c0408__ echo:*)",
+      "Bash(nvm use:*)",
+      "Bash(yarn vitest:*)",
+      "Bash(source ~/.bashrc)",
+      "Bash(source ~/.nvm/nvm.sh)",
+      "WebFetch(domain:docs.asaas.com)",
+      "WebFetch(domain:asaas.com)",
+      "Bash(curl -s https://docs.asaas.com/reference/criar-nova-cobranca)",
+      "WebSearch",
+      "WebFetch(domain:www.asaas.com)"
+    ]
+  }
+}

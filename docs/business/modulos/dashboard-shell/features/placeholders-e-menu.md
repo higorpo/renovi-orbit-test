@@ -131,3 +131,10 @@ Nenhuma persistência ou query no layout/placeholder além de leitura de `profil
 |------|--------|------------|
 | Conteúdo futuro de `/dashboard/settings`, `/dashboard/help` | Não localizado | Apenas placeholder no código analisado |
 | Por que `/dashboard/addresses` não renderiza `AddressesSection` | Decisão de produto | Não explicitada em comentário no router; comportamento apenas inferido pela escolha de componente |
+
+## 14. Atualização de auditoria (2026-04-27)
+
+- **Rota mãe protegida:** todo `/dashboard/*` exige auth com papel `client` ou `provider`.
+- **Subguards por rota placeholder:** `/dashboard/addresses` é cliente-only e `/dashboard/earnings` provider-only.
+- **Menu é derivado de papel em runtime:** `getDashboardMenu(role)` controla itens desktop/mobile do shell.
+- **Comportamento offline no layout:** header ajusta offset quando `useOnlineStatus` indica ausência de conexão.

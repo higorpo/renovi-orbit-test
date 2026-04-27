@@ -134,3 +134,11 @@ stateDiagram-v2
 
 - Tabela campo a campo das sheets de UI.
 - Mapa completo códigos de erro → mensagem usuário.
+
+## 21. Atualização de auditoria (2026-04-27)
+
+- **Escopo de pedidos na listagem:** RPCs de cliente consideram apenas `service_requests.status IN ('open','in_progress')`.
+- **Filtros de orçamento realmente suportados no backend:** `awaiting_decision`, `accepted`, `rejected`, `withdrawn`.
+- **Paginação e preview:** resposta agrega `total_count/page/page_size`; previews retornam no máximo 3 itens por grupo (orçamentos/perguntas).
+- **Resposta de pergunta com mídia:** limite no front de **5 imagens**, **5 MB por arquivo**, tipos `jpeg/png/webp/heic/heif`, bucket `client-question-responses`.
+- **Texto de resposta do cliente:** limite de **1000 caracteres** no composer (`useQuestionResponseComposer`).

@@ -126,3 +126,11 @@ Os campos **não são fixos**: cada serviço define blocos no JSON. Para documen
 
 - Catálogo por serviço com **print/schema** aprovado pelo negócio.
 - Auditoria da **validação na Edge Function** de criação de pedido.
+
+## 21. Atualização de auditoria (2026-04-27)
+
+- **Validação de schema é bloqueante no render:** `DynamicForm` chama `validateFormSchema`; se inválido, não renderiza o formulário e exibe `SchemaError`.
+- **Contrato mínimo do schema v2:** `version = "2.0"`, `metadata` obrigatório com `categorySlug` e `status` (`draft|active|deprecated`), `config` obrigatório e ao menos 1 step.
+- **Enforcement de formulário ativo no consumo principal:** `useServiceSchema` (request-quote) recusa `form_status !== "active"` com fallback `form_inactive`.
+- **Parser de schema no request-quote:** só aceita JSON objeto com `version = "2.0"` e `steps` array; qualquer outro formato cai em fallback `no_v2_schema`.
+- **Metadados de serviço são normalizados no consumo:** quando ausentes no schema, `categorySlug`/`categoryId` são injetados a partir do serviço selecionado.

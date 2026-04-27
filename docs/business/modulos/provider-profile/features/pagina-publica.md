@@ -115,3 +115,11 @@ Helpers: `getProviderProfilePath`, `buildProfileUrl` (`provider-profile`).
 ## 20. Pendências
 
 - Descrever campo a campo o retorno público da RPC e o comportamento exato em `restricted`.
+
+## 21. Atualização de auditoria (2026-04-27)
+
+- **Regra de visibilidade confirmada na RPC:** perfil `public` é visível para todos; perfil `restricted` só retorna dados quando `auth.role() = 'authenticated'`; caso contrário retorna `null`.
+- **Serviços exibidos no perfil público:** somente serviços `platform_services.active = true` associados ao prestador.
+- **Portfólio público:** apenas itens com `provider_portfolio_items.visibility = 'public'` entram na resposta da RPC.
+- **Área de atuação pública:** cidade/UF/bairro são agregados por joins de `provider_service_area_neighborhoods`.
+- **CTA da página pública:** botão principal sempre leva para `/pedir-orcamento`.

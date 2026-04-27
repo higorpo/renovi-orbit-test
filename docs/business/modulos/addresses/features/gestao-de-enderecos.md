@@ -146,3 +146,11 @@ flowchart TD
 
 - Corrigir ou remover rota `/dashboard/addresses` placeholder alinhando ao menu.
 - Confirmar política de **endereço obrigatório** vs opcional em pedidos (código permite `address_id` opcional em migrations — validar regra comercial).
+
+## 21. Atualização de auditoria (2026-04-27)
+
+- **Exclusão é soft delete:** `deleteAddress` apenas seta `is_active = false`; a listagem padrão (`listAddresses`) sempre filtra `is_active = true`.
+- **Endereço padrão é único por cliente:** ao criar/editar com `is_default = true`, o sistema limpa `is_default` dos demais endereços do mesmo `client_id`.
+- **Ordenação da lista:** endereços vêm com `is_default` primeiro e, em seguida, por `created_at` ascendente.
+- **CEP só autopreenche quando há correspondência completa na base da plataforma:** UF + cidade + bairro precisam existir; caso contrário o retorno é `notAvailable`.
+- **Geodados persistidos no endereço:** quando latitude/longitude existem, o app grava `location` (EWKT SRID 4326) e `h3_index`.

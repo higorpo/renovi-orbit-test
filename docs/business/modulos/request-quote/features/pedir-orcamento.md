@@ -253,3 +253,10 @@ flowchart TD
 - `src/features/request-quote/api/createRequestQuoteOrder.api.ts`, `smartDescription.api.ts`, `services.api.ts`, `forms.api.ts`
 - `supabase/functions/create-request-quote-order/*`
 - `supabase/config.toml` — `[functions.create-request-quote-order]`, `[functions.generate-smart-description]`
+
+## 20. Atualização de auditoria (2026-04-27)
+
+- **Transição do passo 4 depende da sessão:** logado valida endereço e já submete; convidado valida endereço e avança para o passo 5 (identidade).
+- **Schema do passo 2 tem gate técnico explícito:** serviço só renderiza formulário quando `form_status = active` e schema JSON é v2 válido.
+- **Rascunho local evita dados sensíveis:** fotos e dados do passo 5 não são persistidos no `localStorage`.
+- **Envio convidado usa autorização anônima no cliente, com validação de identidade no servidor:** a Edge confere consistência de `userId`/`email` e aplica reCAPTCHA.

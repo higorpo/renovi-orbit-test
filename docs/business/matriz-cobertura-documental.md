@@ -1,14 +1,16 @@
 # Matriz de cobertura documental
 
+Última auditoria completa: **2026-04-27**.
+
 Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de inferência ou RPC/RLS não detalhados linha a linha; **N/A** = não aplicável como feature de produto.
 
 ## Por módulo (`src/features`)
 
 | Módulo | Features identificadas | Documentadas | Evidência parcial | Não localizadas / pendentes |
 |--------|------------------------|--------------|-------------------|-----------------------------|
-| addresses | CRUD endereços; seleção no wizard; CEP; geografia | OK (`gestao-de-enderecos.md`) | Políticas RLS finas por coluna | Página `/dashboard/addresses` (placeholder) |
+| addresses | CRUD endereços; seleção no wizard; CEP; geografia | OK (`gestao-de-enderecos.md`) | — | Página `/dashboard/addresses` (placeholder) |
 | auth | Sessão; guards; login/cadastro/recuperação; política de senha | OK (`autenticacao-e-sessao.md`) | Fluxos edge de e-mail Auth em produção | Painel admin no front |
-| client-budgets | Lista orçamentos; perguntas; detalhes | OK (`orcamentos-recebidos.md`) | Todas as mensagens RPC | — |
+| client-budgets | Lista orçamentos; perguntas; detalhes | OK (`orcamentos-recebidos.md`) | Mapa exaustivo de mensagens SQL por código/errcode | — |
 | client-my-services | Lista paginada; abas open/propostas; busca ILIKE; filtros join; deep link; sheets | OK (`solicitacoes-do-cliente.md`) | RLS/policies finas no update cancel | Placeholder `/dashboard/services/:id`; sheet detalhe só `open`; dropdowns só da página carregada |
 | dynamic-form | Schema; steps; validação; demo DEV | OK (`motor-de-formularios.md`) | — | — |
 | my-account | Conta cliente/prestador; portfólio; área; exclusão | OK (`minha-conta.md`) | Impacto legal de exclusão de conta | — |

@@ -178,3 +178,11 @@ Sem sessão de recuperação: cópia + link para `/esqueceu-senha` e login — `
 ## 21. Pendências
 
 - Implementar ou remover rotas de redirect órfãs.
+
+## 22. Atualização de auditoria (2026-04-27)
+
+- **Anti-open-redirect:** `GuestOnlyRoute` e `ProtectedRoute` só aceitam redirect relativo seguro (`/algo`, nunca `//` ou URL externa).
+- **Destino padrão pós-login por papel:** `client` e `provider` vão para `/dashboard`; `admin` para `/admin/dashboard`; papel desconhecido cai em `/onboarding`.
+- **Inicialização de sessão com fallback:** `INITIAL_SESSION` é processado imediatamente e há timeout defensivo de 5s para liberar a UI caso o evento não chegue.
+- **Debounce de eventos auth:** mudanças não iniciais de sessão passam por debounce de 300ms para evitar rajadas de refresh/signin.
+- **Cadastro com regra explícita de duplicidade:** e-mail já existente retorna `reason: "already_registered"` e mensagem orientando login/recuperação.

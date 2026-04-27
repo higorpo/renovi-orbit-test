@@ -252,3 +252,10 @@ flowchart TD
   D --> G[profiles + provider private/public]
   D --> H[offered_services + portfolio + storage]
 ```
+
+## 15. Atualização de auditoria (2026-04-27)
+
+- **Auto-save com debounces diferentes por perfil:** cliente (1500 ms) e prestador (2000 ms).
+- **Geração de slug público é conservadora:** `display_name` gera slug automaticamente apenas quando o slug anterior é vazio ou igual ao `providerId`.
+- **Validação de imagem de perfil no upload:** limite de 2 MB e tipos permitidos (`jpeg/png/webp/heic/heif`) antes de enviar ao storage.
+- **Zona de perigo no estado atual:** ação de exclusão não executa delete técnico; orienta contato via `dpo@renovi.com.br`.

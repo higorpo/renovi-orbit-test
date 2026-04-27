@@ -106,3 +106,9 @@ Nenhuma toast ou validação; apenas conteúdo estático da UI.
 | Item | Status | Observação |
 |------|--------|------------|
 | Produto final pretendido para `/` (landing, redirect por sessão, etc.) | Não localizado no código analisado | Implementação atual é deliberadamente mínima |
+
+## 14. Atualização de auditoria (2026-04-27)
+
+- **Sem regra de redirecionamento automático por sessão:** a página inicial não consulta auth; apenas renderiza conteúdo estático.
+- **Ação única de negócio na home atual:** botão `Login` navega para `/login`.
+- **Escopo intencionalmente enxuto:** não há coleta de dados, validação de formulário, integração de API ou persistência.
