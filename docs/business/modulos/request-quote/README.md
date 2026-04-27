@@ -2,54 +2,58 @@
 
 ## 1. Leitura para negócio
 
-- **Para que serve:** permitir que cliente ou visitante **inicie um pedido** selecionando serviço, respondendo formulário dinâmico, descrevendo a necessidade (com apoio de IA opcional), informando endereço e identidade (incluindo **cadastro inline** quando necessário).
-- **Quem usa:** visitantes e clientes logados.
-- **Processo:** topo do funil de demanda da plataforma.
-- **Valor:** gera `service_requests` alimentando o matching.
-- **Riscos:** abuso (mitigado por reCAPTCHA e rate limit); **redirect pós-sucesso possivelmente incorreto** — ver pendências.
+- **Para que serve:** canal principal de **entrada de pedidos** na plataforma — visitante ou cliente monta o pedido (serviço, detalhes estruturados, descrição com IA opcional, fotos, endereço, identidade se necessário) e o backend cria **`service_requests`** prontos para matching e orçamentos.
+- **Quem usa:** visitantes e clientes; não é fluxo do prestador.
+- **Valor:** padroniza dados do pedido (formulário versionado + opcionalmente metadados de IA) e geolocalização via endereço.
+- **Riscos:** abuso (rate limit + reCAPTCHA); **redirect pós-pedido logado** pode quebrar UX; **limite de tamanho de foto** diverge entre cliente (10 MB) e servidor (5 MB).
 
-## 2. Visão geral funcional
+## 2. Visão geral técnica
 
-- **Objetivo:** wizard multi-step até POST na Edge Function `create-request-quote-order`.
-- **Escopo:** serviços, formulário, fotos, validação de conteúdo de foto no cliente, draft local.
-- **Limites:** não exibe orçamentos recebidos (outros módulos).
-- **Relação:** `dynamic-form`, `addresses`, `auth`, Edge Functions, storage.
+| Aspecto | Detalhe |
+|---------|---------|
+| Rota pública | `/pedir-orcamento`; query opcional `?serviceSlug=` |
+| Passos | 5 (convidado) ou 4 (logado — sem passo “Cadastro”) |
+| Criação do pedido | POST multipart para Edge **`create-request-quote-order`** (`verify_jwt = false`; validação interna) |
+| IA | Edge **`generate-smart-description`** (`verify_jwt = true`), disparo automático ao entrar no passo 3 vindo do passo 2 |
+| Rascunho | `localStorage` com versão; sem PII do passo 5; debounce 400 ms |
+| Antes do POST | reCAPTCHA ação `request_quote_submit`; opcionalmente **nsfwjs** nas fotos |
 
-## 3. Features
+## 3. Documentação da feature
 
-| Feature | Documento |
-|---------|-----------|
-| Pedir orçamento | [features/pedir-orcamento.md](./features/pedir-orcamento.md) |
+| Documento | Conteúdo |
+|-----------|----------|
+| [features/pedir-orcamento.md](./features/pedir-orcamento.md) | Passos, validações, IA, rascunho, multipart, Edge, analytics, lacunas (redirect, fotos), evidências |
 
-## 4. Perfis
+## 4. Mapa de arquivos
 
-- Público: fluxo completo com criação de usuário no final quando aplicável.
-- Logado: envio direto amarrado ao `user.id`.
+| Área | Caminhos |
+|------|----------|
+| Página | `components/RequestQuote/RequestQuote.tsx` |
+| Passos | `Step1ServiceSelect.tsx`, `Step2ServiceForm.tsx`, `Step3DescriptionPhotos.tsx`, `Step5Identity.tsx` |
+| Pós-envio convidado | `components/ConfirmEmailScreen/ConfirmEmailScreen.tsx` |
+| Trust / social proof | `components/TrustSidebar.tsx` |
+| Estado e fluxo | `hooks/useRequestQuoteState.ts`, `useRequestQuoteNavigation.ts`, `useRequestQuoteSubmit.ts`, `useRequestQuoteDraft.ts`, `useRequestQuoteServices.ts`, `useServiceSchema.ts`, `useGenerateSmartDescription.ts` |
+| API | `api/createRequestQuoteOrder.api.ts`, `smartDescription.api.ts`, `services.api.ts`, `forms.api.ts`, `serviceRequests.api.ts` |
+| Rascunho / fotos / IA | `utils/requestQuoteDraft.persistence.ts`, `requestQuoteDraftMeaningful.ts`, `photoContentCheck.ts`, `step3SmartDescriptionSnapshot.ts`, `stableStringify.ts`, `serviceSchemaFallbackMessages.ts`, `serviceCardStyle.ts` |
+| Tipos | `types/request-quote.types.ts` |
 
-## 5. Fluxos
+## 5. Integrações
 
-- Seleção serviço → formulário → descrição/fotos → endereço → identidade/confirmação → sucesso.
+- **`dynamic-form`** — motor do passo 2.
+- **`addresses`** — passo 4 (`AddressSelectionStep`, `addressFormSchema`).
+- **`auth`** — sessão, signup inline, política de senha, redirect de e-mail.
+- **Supabase Functions:** `create-request-quote-order`, `generate-smart-description`; reCAPTCHA validado na Edge de pedido (e função dedicada `verify-recaptcha` no ecossistema).
+- **Storage:** bucket `service-requests` (upload na Edge).
 
-## 6. Regras transversais
+## 6. Edge Functions (referência)
 
-- Versão de formulário e schema enviados ao servidor para consistência.
-- Fotos: checagem heurística no cliente antes do envio (`photoContentCheck`).
+- `supabase/functions/create-request-quote-order/` — ordem completa: rate limit, multipart, reCAPTCHA, usuário, endereço, fotos, insert `service_requests` com `status: "open"`.
+- `supabase/functions/generate-smart-description/` — corpo JSON; usada via `supabase.functions.invoke` no app.
 
-## 7. Entidades
+## 7. API pública do pacote (`index.ts`)
 
-- `service_requests`, `client_addresses`, `platform_services`, `platform_forms`, uso de IA logs.
+Exporta o componente `RequestQuote`, hooks/tipos utilitários para outros módulos (ex.: `getServiceCardStyle`, `listServicesForRequestQuote`, `useServiceRequestPhotoUrls`) e chamadas de IA/API quando reexportadas — ver arquivo para lista exata.
 
-## 8. Integrações
+## 8. Pendência de produto cruzada
 
-- `create-request-quote-order`, `generate-smart-description`, `verify-recaptcha`, OpenAI/Gemini.
-
-## 9. Riscos
-
-- Função com `verify_jwt = false`: segurança delegada a validações internas e rate limit — revisar runbooks de segurança.
-
-## 10. Evidências
-
-- `src/features/request-quote/`
-- `supabase/functions/create-request-quote-order/`
-- `supabase/functions/generate-smart-description/`
-- `src/router.tsx` (`/pedir-orcamento`)
+- Redirecionamento após pedido logado: ver **[P-01](../../pendencias-e-incertezas.md)** e seção de lacunas em [pedir-orcamento.md](./features/pedir-orcamento.md).

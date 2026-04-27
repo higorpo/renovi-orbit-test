@@ -2,51 +2,55 @@
 
 ## 1. Leitura para negócio
 
-- **Para que serve:** ponto único de **configurações de conta** para cliente e prestador, com ramificações por papel.
-- **Quem usa:** cliente e prestador autenticados.
-- **Processo:** manter dados cadastrais, preferências, e no prestador **perfil público**, **serviços ofertados**, **área de atuação**, **portfólio** e dados legais.
-- **Valor:** qualidade do matching e confiança na contratação.
-- **Riscos:** exclusão de conta e dados sensíveis (CPF/CNPJ) exigem processo de atendimento alinhado à LGPD.
+- **Para que serve:** configuração central da conta (**cliente** e **prestador**): dados cadastrais, foto, privacidade/LGPD, sessão; no prestador, também identidade legal, **perfil público** (`/perfil/:slug`), **serviços ofertados**, **área de atuação** (bairros) e **portfólio** com imagens.
+- **Quem usa:** usuários com `role` `client` ou `provider` autenticados.
+- **Valor:** qualidade dos dados para matching, confiança na contratação e conformidade (LGPD).
+- **Riscos:** dados sensíveis (CPF/CNPJ); exclusão de conta hoje é **processo via DPO por e-mail**, não botão que apaga dados na API.
 
 ## 2. Visão geral funcional
 
-- **Objetivo:** `MyAccountPage` delega para `MyAccountClientPage` ou `MyAccountProviderPage`.
-- **Escopo:** CRUD sobre perfis privados/públicos, storage de imagens, listas relacionadas.
-- **Limites:** não é CRM nem backoffice admin.
-- **Relação:** `addresses` (cliente), catálogo de serviços da plataforma (prestador).
+- **Entrada:** `MyAccountPage` → `MyAccountClientPage` | `MyAccountProviderPage`.
+- **Persistência:** Supabase — `profiles`, `client_profiles_private`, `provider_profiles_private`, `provider_profiles_public`, `provider_offered_services`, `provider_service_area_neighborhoods`, `provider_portfolio_items`; storage `profile-images` e `provider-portfolio-images`.
+- **Padrão de UX:** formulários com **salvamento automático** (debounce **1,5 s** cliente, **2 s** prestador), exceto portfólio e serviços ofertados (ações explícitas ao selecionar/remover).
 
 ## 3. Features
 
 | Feature | Documento |
 |---------|-----------|
-| Minha conta | [features/minha-conta.md](./features/minha-conta.md) |
+| Minha conta (telas, campos, validações, mensagens, APIs) | [features/minha-conta.md](./features/minha-conta.md) |
 
-## 4. Perfis
+## 4. Rota e guard
 
-- Cliente: dados pessoais, endereços, privacidade.
-- Prestador: acima + identidade legal, perfil público, portfólio, área, serviços ofertados.
+| Rota | Guard |
+|------|--------|
+| `/dashboard/conta` | `ProtectedRoute` com `allowedRoles={['client', 'provider']}` (`src/router.tsx`) |
 
-## 5. Fluxos
+## 5. Mapa rápido de componentes
 
-- Entrada pelo menu “Minha conta” → seções tabuladas → salvar → feedback UI.
+| Componente | Uso |
+|------------|-----|
+| `AccountSummaryCard` | Avatar, nome, e-mail, “cliente desde” / “no ar desde”, foto, link público (prestador) |
+| `DadosPessoaisSection` | Nome completo + e-mail somente leitura |
+| `ContatoIdentidadeSection` | Cliente: telefone + CPF |
+| `EntityTypeSection` / `LegalIdentitySection` | Prestador: PF/PJ e documentos |
+| `OfferedServicesSection` | Busca e chips de `platform_services` |
+| `PublicProfileSettingsSection` + `ServiceAreaField` | Nome profissional, bio, visibilidade, bairros |
+| `PortfolioManagementSection` | CRUD e ordenação de itens + imagens |
+| `PrivacySection` / `DangerZoneSection` / `LogoutSection` | LGPD, exclusão orientada ao DPO, logout |
+| `AddressesSection` | Apenas **cliente** (feature `@/features/addresses`) |
 
-## 6. Regras transversais
+## 6. Hooks principais (orquestração)
 
-- Operações condicionadas a RLS e a papel `provider` para tabelas específicas.
+`useAccountProfile`, `useClientPrivateProfile`, `useUpdateAccountProfile`, `useProviderProfile`, `useUpdateProviderProfile`, `useOfferedServices`, `usePortfolioItems`, `useProfilePhotoMutation`, `useProfileImageUrl`.
 
-## 7. Entidades
+## 7. Constantes relevantes (`constants.ts`)
 
-- `client_profiles_private`, `provider_profiles_private`, `provider_profiles_public`, `provider_offered_services`, `provider_portfolio_items`, `provider_service_area_neighborhoods`, storage de imagens.
+- `PROFILE_IMAGE_MAX_BYTES` = 2 MB; `PROVIDER_PORTFOLIO_IMAGE_MAX_BYTES` = 5 MB.
+- `DPO_EMAIL` = `dpo@renovi.com.br`.
+- `PRIVACY_POLICY_URL` depende de `VITE_MAIN_SITE_URL`.
 
-## 8. Integrações
+## 8. Evidências
 
-- Upload em buckets `profile-images`, `provider-portfolio-images`.
-
-## 9. Riscos
-
-- Campos legais incorretos podem bloquear conformidade em auditorias externas.
-
-## 10. Evidências
-
-- `src/features/my-account/`
-- Migrações `20260318100000_*` a `20260318100010_*` (perfil cliente/prestador, sync triggers)
+- Pasta: `src/features/my-account/`
+- Documento detalhado: [features/minha-conta.md](./features/minha-conta.md)
+- Migrações típicas: `20260318100000_*` … `20260318100010_*` (perfil cliente/prestador; ver repositório)

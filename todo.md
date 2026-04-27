@@ -62,3 +62,4 @@ Coisas para terminar do fluxo atual de trabalho:
 - Testar a tela de meus serviços do cliente no fluxo do mobile
 - Adicionar ações para os botões de Aceitar orçamento e recusar orçamento
 - api.github.com precisa ser removida.
+- adicionar na tela de orçamento a escolha do cliente de uma data para realização do serviço, se o prestador tiver na plataforma um conflito de horário/data não mostrar aquela opção.

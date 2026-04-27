@@ -1,135 +1,197 @@
-# Solicitações de serviço do cliente (Meus Serviços)
+# Solicitações do cliente (Meus Serviços)
 
-## 1. Resumo executivo
+Documentação baseada em `src/features/client-my-services/`, `api/serviceRequests.api.ts` e integrações com `client-budgets` e `request-quote`.
 
-- **O que é:** lista e gestão dos **pedidos** (`service_requests`) do cliente no dashboard, com busca, filtros, abas por visão de status e atalhos para **orçamentos** e **perguntas**.
-- **Problema que resolve:** visibilidade do pipeline após “Pedir orçamento”.
-- **Quem usa:** cliente.
-- **Resultado esperado:** acompanhamento e ações permitidas (ex.: cancelar) sobre pedidos próprios.
+---
 
-## 2. Objetivo de negócio
+## 1. Visão geral
 
-- **Finalidade:** retenção e clareza pós-lead.
-- **Valor:** reduz chamados de “cadê meu pedido”.
-- **Impacto:** liga demanda a propostas.
-- **Contexto:** menu cliente rotula como **Meus Serviços** (`dashboardMenu.ts`).
+| Item | Descrição |
+|------|-----------|
+| **Objetivo** | Listar e gerenciar **pedidos** (`service_requests`) do cliente autenticado: filtros, busca, abas por visão de status, deep link para um pedido, sheets de orçamentos/perguntas e cancelamento quando aplicável. |
+| **Rotas** | **`/dashboard/requests`** — `ClientMyServicesPage`. **`/dashboard/services/:id`** — `ClientMyServicesDetailPlaceholder` (página **placeholder**, não é o fluxo principal de detalhe). |
+| **Menu** | Cliente: **“Meus Serviços”** (`dashboardMenu.ts`). Prestador vê **“Solicitações”** apontando para o **mesmo path** — a UI da página é pensada para o cliente; prestador compartilha rota no layout. |
+| **Guard** | `ProtectedRoute` com `allowedRoles={['client', 'provider']}` no segmento `dashboard`; não há guard exclusivo de cliente nesta rota. |
+| **Origem dos dados** | Pedidos criados em **`request-quote`** (e futuras origens que gravem `service_requests` com o mesmo `client_id`). |
 
-## 3. Localização na plataforma
+---
 
-| Rota | Tela |
-|------|------|
-| `/dashboard/requests` | `ClientMyServicesPage` |
-| `/dashboard/services/:id` | `ClientMyServicesDetailPlaceholder` (**placeholder**) |
+## 2. Arquitetura da página
 
-Constantes de foco: `SERVICE_REQUEST_FOCUS_QUERY`, `getServiceRequestsPageUrlWithFocus` (deep link).
+| Camada | Responsável |
+|--------|-------------|
+| Página | `ClientMyServicesPage.tsx` — composição de header, busca, filtros, abas, lista, `LoadMoreButton`, sheets. |
+| Orquestração | `useClientMyServicesPage.ts` — search params, foco, opções de filtro derivadas, scroll ao foco, bloqueio de scroll do `body` quando sheet aberto. |
+| Lista | `useClientMyServicesList.ts` — `useInfiniteQuery`, página **20**, chama `listServiceRequests`. |
+| Filtros (estado) | `useClientMyServicesFilters.ts` — estado local + `searchQuery` debounced vindo do hook da página. |
+| Cancelamento | `useClientMyServicesCancel.ts` — `useMutation` + `invalidateQueries` na chave da lista. |
 
-## 4. Perfis envolvidos
+---
 
-- **Cliente:** único operador.
-- **Prestador:** não usa esta rota; vê pedidos via `provider-jobs`.
+## 3. Lista e paginação (servidor)
 
-**Restrição:** layout dashboard exige `client` ou `provider`, mas a **página** é de cliente — ver `perfis-e-permissoes.md` para nuance de layout compartilhado.
+- **Função:** `listServiceRequests` em `api/serviceRequests.api.ts`.
+- **Cliente Supabase:** `.from("service_requests")` com **`.eq("client_id", params.clientId)`**; RLS no banco reforça que só linhas do usuário retornam.
+- **Joins (select):** `client_addresses` (com `platform_cities`, `platform_states`), `platform_services` (title, slug, icon_key, color_key), `provider_proposals (status)`.
+- **Ordenação:** `updated_at` descendente.
+- **Paginação:** `range(from, to)` com `page` 1-based, `pageSize` clamp **1–100** (UI usa 20).
+- **Contagem:** `{ count: "exact" }` para `total_count` e `getNextPageParam`.
 
-## 5. Fluxo funcional principal
+**Não há RPC dedicada:** a listagem é **PostgREST/query builder** no cliente, com filtros aplicados na query (servidor Supabase aplica filtros + limit).
 
-1. Cliente abre “Meus Serviços”.
-2. Aplica filtros (categoria, cidade, bairro, datas, propostas, imagens, etc. conforme API).
-3. Seleciona pedido → detalhe ou sheets de orçamento/perguntas.
-4. Opcional: **cancelar** pedido se permitido pela regra implementada.
+---
 
-## 6. Fluxos alternativos e exceções
+## 4. Abas de status (`StatusTabId`)
 
-- **Placeholder de detalhe:** `/dashboard/services/:id` pode não entregar detalhe completo.
-- **Foco por query:** abrir lista já destacando um pedido (deep link).
+Configuração em `constants/statusTabs.ts` + ícones/cores em `statusTabDisplay.ts`.
 
-## 7. Regras de negócio
+| Tab id | Label UI | Filtro real na query |
+|--------|----------|----------------------|
+| `all` | Todos | Sem filtro de `status`. |
+| `waiting_proposals` | Aguardando orçamentos | `status = 'open'` **e** exclui IDs que tenham proposta com `status = 'submitted'`. |
+| `negotiation` | Em negociação | `status = 'open'` **e** `id IN` pedidos com pelo menos uma proposta **`submitted`**. |
+| `in_progress` | Em andamento | `status = 'in_progress'`. |
+| `completed` | Concluídos | `status = 'closed'`. |
+| `cancelled` | Cancelados | `status = 'cancelled'`. |
+| `dispute` | Disputas | **Sem linhas** quando não há foco: retorno vazio reservado para futuro (sem valor `dispute` no CHECK atual do DB). |
 
-1. Pedido possui `status`: `open`, `in_progress`, `closed`, `cancelled` (CHECK migration).
-2. Filtros combinados reduzem o conjunto retornado — critérios exatos na `serviceRequests.api.ts`.
-3. Cancelamento: **pré-condições exatas** no front/API (evidência parcial — revisar função de cancelamento na API).
+**Queries auxiliares:** para abas que dependem de propostas, a API lê `provider_proposals` com join `service_requests!inner(client_id)` para obter conjuntos de IDs antes de filtrar `service_requests`.
 
-## 8. Campos e dados (pedido — modelo)
+---
 
-| Campo (tabela) | Significado de negócio |
-|----------------|------------------------|
-| status | Fase do pedido |
-| service_id | Tipo de serviço |
-| form_data / schema | Respostas do formulário dinâmico |
-| description | Texto livre do cliente |
-| photos | Metadados + storage |
-| urgency, scope_complexity, estimated_duration_hint | Opcionais de priorização |
-| geohash / H3 / lat-long | Matching geográfico |
+## 5. Busca e filtros adicionais
 
-**Labels de UI:** derivadas dos componentes de card — documentação fina pendente.
+### 5.1 Busca textual
 
-## 9. Validações de front-end
+- **Debounce:** **300 ms** (`useClientMyServicesPage` + `useDebouncedValue`).
+- **Campos:** `title` e `description` com **ILIKE** (`or`).
+- **Sanitização:** `sanitizeSearchForOrIlike` — remove vírgulas, escapa `%`, `_` e `\` para PostgREST.
 
-- Filtros: valores coerentes (datas, selects).
-- Ações destrutivas: confirmação modal (inferido por padrão do projeto — confirmar no componente).
+### 5.2 Filtros da barra (`ClientMyServicesFiltersBar`)
 
-## 10. Validações de back-end
+| Filtro | Parâmetro API | Implementação |
+|--------|---------------|----------------|
+| Categoria | `categoryId` | **Título do serviço:** `.eq("platform_services.title", value)` — o dropdown usa títulos agregados na UI (ver §5.3). |
+| Cidade | `cityName` | `.eq("client_addresses.platform_cities.name", ...)`. |
+| Bairro | `neighborhoodName` | `.eq("client_addresses.neighborhood", ...)`. |
+| Datas | `dateFrom` / `dateTo` | `created_at` com início/fim do dia. |
+| Com orçamentos | `hasProposals` true/false | Interseção com IDs de `provider_proposals`. |
+| Com imagens | `hasImages` true/false | `photos` não nulo e não `{}` vs nulo ou `{}`. |
 
-- RLS em `service_requests` para isolamento por cliente.
-- Updates de status via API Supabase/RPC conforme políticas.
+**Modo foco (`serviceRequestId` na URL):** se definido, a query aplica **apenas** `eq("id", id)` (além de `client_id` e joins) — **demais filtros não restringem** o resultado.
 
-## 11. Status, estados e transições
+### 5.3 Opções dos dropdowns de filtro
 
-| Status | Significado operacional (alto nível) |
-|--------|--------------------------------------|
-| open | Pedido aceito na plataforma, aguardando fluxo |
-| in_progress | Em tratativa (propostas/perguntas) — **detalhe exato:** validar uso no app |
-| closed | Encerrado positivamente |
-| cancelled | Cancelado pelo cliente ou processo |
+- `categoryOptions`, `cityOptions`, `neighborhoodOptions` vêm dos **`items` já carregados** na lista.
+- **Consequência:** opções **incompletas** com paginação — valores que só existem em outras páginas podem não aparecer. **Lacuna de UX.**
 
-**Quem altera:** cliente (cancelar), fluxos de proposta/pergunta (transições inferidas).
+### 5.4 `hasActiveFilters` (página)
 
-## 12. Persistência
+Inclui aba ≠ `all`, busca não vazia, qualquer filtro da barra ou presença de **`serviceRequestId`** na query.
 
-- **`service_requests`** principal.
-- Imagens em bucket `service-requests`.
+---
 
-## 13. Integrações
+## 6. Deep link e foco
 
-- Abertura de componentes de `client-budgets` (sheets) para orçamentos/perguntas sem sair do contexto.
+- **Query:** `SERVICE_REQUEST_FOCUS_QUERY` = **`serviceRequestId`**.
+- **Helper:** `getServiceRequestsPageUrlWithFocus(id)` → `/dashboard/requests?serviceRequestId=<uuid>`.
+- **Exportado** no `index.ts` da feature.
+- **Banner:** `ClientMyServicesFocusBanner` — carregando, pedido encontrado, ou não encontrado.
+- **Sincronização de aba:** com foco, `setStatusTabId(statusToTabId(focusedRequest.status))` — **`statusToTabId('open')` é sempre `waiting_proposals`**, não `negotiation`, mesmo com propostas submetidas.
+- **Scroll:** `scrollIntoView` em `id="service-request-{id}"` quando há um único item carregado.
 
-## 14. Listagens, buscas e filtros
+---
 
-- Busca textual.
-- Filtros múltiplos (categoria, localização, intervalo de datas, presença de propostas/imagens).
-- Paginação.
-- Abas por agrupamento de status (implementação em página).
+## 7. Modelo de card (`ServiceRequestCardModel`)
 
-## 15. Ações disponíveis
+Mapeamento em `utils/serviceRequestCardMapper.ts`:
 
-| Ação | Quem | Resultado |
-|------|------|-----------|
-| Filtrar/buscar | Cliente | Atualiza lista |
-| Abrir orçamentos | Cliente | Navegação/sheets |
-| Cancelar | Cliente | **Condicionado** — ver API |
-| Deep link foco | Cliente | UX de notificação/email futuro |
+- Preview de descrição, `form_data` / `form_schema`, `photoPaths`, `proposalCount`, `hasSubmittedProposal`, `tags`.
+- `selectedProfessionalName` e `progressPercent` **não preenchidos** pelo mapper atual.
 
-## 16. Dependências
+**Fotos:** `useServiceRequestPhotoUrls` (`request-quote`). **Ícone/cor:** `getServiceCardStyle`.
 
-- Pedido criado em `request-quote`.
-- Dados de catálogo (`platform_services`, cidades/bairros) para filtros.
+---
 
-## 17. Regras implícitas
+## 8. Labels e badges
 
-- Query `SERVICE_REQUEST_FOCUS_QUERY` sugere produto preparando **notificações** ou campanhas com retorno à lista.
+`constants/statusBadge.ts`: para `open` com proposta submetida, label **“Aguardando decisão”**; caso contrário **“Aguardando orçamentos”**. Variantes de `Badge` conforme `STATUS_BADGE_VARIANT` e contagem de propostas.
 
-## 18. Riscos
+---
 
-- Nome “Meus Serviços” vs entidade **pedido**.
-- Rota de detalhe placeholder.
+## 9. Ações por card
 
-## 19. Evidências
+### Ver detalhes (`OpenServiceDetailsSheet`)
 
-- `src/features/client-my-services/components/ClientMyServicesPage.tsx`
-- `src/features/client-my-services/api/serviceRequests.api.ts`
-- `supabase/migrations/20260226100300_create_service_requests.sql`
+- **Só** `model.status === 'open'` abre o sheet (`ClientMyServicesSections`: descrição, `buildSummaryEntries` do `dynamic-form`, fotos).
+- Outros status: toast *"Visualização detalhada para este status ainda está em construção."* — botão “Ver detalhes” ainda aparece.
+
+### Orçamentos e perguntas (`client-budgets`)
+
+- `ReceivedBudgetDetailsSheet` com `sheetMode="compare"`, `QuestionThreadSheet`.
+- **Ver orçamentos:** `open`, `proposalCount > 0` e `proposalCount !== 1`.
+- **Ver perguntas:** `open` e `proposalCount !== 1` (exatamente **uma** proposta oculta ambos os botões de orçamentos e perguntas nesta lógica).
+
+### Cancelar
+
+- `cancelServiceRequest`: usuário autenticado = `clientId`, `update` para `cancelled`.
+- `canCancelService`: na prática **apenas `status === 'open'`**; ramo `statusTabId === 'negotiation'` não ocorre com o mapper atual (`statusTabId` para `open` é `waiting_proposals`).
+
+---
+
+## 10. Estados de lista (copy)
+
+- **Vazio:** *"Você ainda não solicitou nenhum serviço"* + CTA `/pedir-orcamento`.
+- **Filtros sem resultado:** *"Nenhum serviço encontrado"* + limpar filtros.
+- **Erro:** *"Não foi possível carregar seus serviços"* + retry.
+
+---
+
+## 11. Header e CTA
+
+- **“Novo serviço”** → `/pedir-orcamento`; FAB no mobile.
+
+---
+
+## 12. Placeholder de rota de detalhe
+
+`ClientMyServicesDetailPlaceholder` em `/dashboard/services/:id`. `getServiceDetailPath` existe mas **não é usado** no app fora de testes.
+
+---
+
+## 13. `filterServiceRequests`
+
+Utilitário em `utils/filterServiceRequests.ts` usado **apenas em testes** — a página filtra sempre via `listServiceRequests`.
+
+---
+
+## 14. Diagrama
+
+```mermaid
+flowchart LR
+  P[ClientMyServicesPage] --> L[listServiceRequests]
+  P --> B[ReceivedBudgetDetailsSheet]
+  P --> Q[QuestionThreadSheet]
+  P --> D[OpenServiceDetailsSheet]
+  L --> SR[(service_requests)]
+  L --> PP[(provider_proposals)]
+```
+
+---
+
+## 15. Lacunas
+
+- Detalhe em sheet só para **`open`**.
+- Deep link ajusta aba para `waiting_proposals` em todo `open`.
+- Dropdowns de filtro limitados aos itens carregados.
+- Condição `negotiation` em `canCancelService` ineficaz com mapper atual.
+- Prestador e cliente compartilham path no menu com UIs distintas no menu.
+- Página `/dashboard/services/:id` placeholder.
+
+---
+
+## 16. Evidências
+
+- `src/features/client-my-services/**/*`
+- `src/router.tsx`
 - `src/layouts/DashboardLayout/dashboardMenu.ts`
-
-## 20. Pendências
-
-- Mapear **exatamente** quando `cancelled` é permitido e por qual API.
-- Completar documentação de detalhe quando `/dashboard/services/:id` for implementado.

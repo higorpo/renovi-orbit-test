@@ -2,6 +2,15 @@
 
 Inventário alinhado ao código em `src/features/`. “Localização no código” indica a pasta raiz do módulo. “Rotas” referem-se a `src/router.tsx` e shells internos.
 
+**Índice consolidado com cobertura:** [modulos/README.md](./modulos/README.md).
+
+## Superfícies fora de `src/features`
+
+| Área | Documento | Rotas / código |
+|------|-----------|----------------|
+| Shell do dashboard e placeholders | [dashboard-shell](./modulos/dashboard-shell/README.md) | `DashboardLayout`, `DashboardFakePage`, `dashboardMenu.ts` |
+| Página inicial | [app-home](./modulos/app-home/README.md) | `/` → `src/App.tsx` |
+
 ## Tabela mestra
 
 | Módulo (`src/features`) | Feature documentada | Rotas / telas principais | Dependências de outros módulos |

@@ -2,52 +2,53 @@
 
 ## 1. Leitura para negócio
 
-- **Para que serve:** **descobrir pedidos** compatíveis com o prestador, **entender o detalhe**, **perguntar** ao cliente e **enviar proposta**.
-- **Quem usa:** prestador.
-- **Processo:** núcleo da oferta de serviço na plataforma (lado supply).
-- **Valor:** gera receita potencial para o prestador e liquidez para o marketplace.
-- **Riscos:** dependência de geolocalização, raio e serviços ofertados — suporte deve saber onde o prestador configura cada parte (`my-account`).
+- **Para que serve:** o prestador **encontra pedidos abertos** compatíveis (serviço ofertado, área de atuação, distância), abre o **detalhe**, pode **perguntar** ao cliente (até **3** perguntas por pedido, conforme tratamento de erro no front) e **envia ou edita** **orçamento** com cálculo de taxa e assinatura no banco.
+- **Quem usa:** apenas **prestador** autenticado.
+- **Valor:** liquidez do marketplace no lado da oferta.
+- **Riscos:** matching depende de **geolocalização** (ou fallback Florianópolis / centróide BR no detalhe), configuração em **Minha conta** (serviços e bairros) e regras SQL; suporte deve saber onde o prestador ajusta raio e filtros na própria lista.
 
-## 2. Visão geral funcional
+## 2. Visão geral técnica
 
-- **Objetivo:** lista com infinite scroll, filtros, detalhe com abas, composer de proposta.
-- **Escopo:** Edge `match-provider-jobs` + RPC `match_provider_jobs`; APIs de propostas e perguntas.
-- **Limites:** não executa o serviço físico nem pagamento.
-- **Relação:** `provider-budgets` (pós-envio), `client-budgets` / `client-my-services` (lado cliente).
+| Aspecto | Detalhe |
+|---------|---------|
+| Rotas | `/dashboard/jobs`, `/dashboard/jobs/:jobId` (sheet ou página conforme `location.state`) |
+| Lista | Edge **`match-provider-jobs`** → RPC `match_provider_jobs`; página **20** itens; infinite query |
+| Detalhe | RPC **`get_provider_proposal_job_detail`** |
+| Proposta | RPCs **`calculate_provider_service_pricing`**, **`create_provider_proposal`**; storage **`provider-proposals`** |
+| Perguntas | RPCs **`create_provider_service_request_question`**, **`list_provider_service_request_questions`** |
+| Retirada | `update` em **`provider_proposals`** → status `withdrawn` |
 
-## 3. Features
+## 3. Documentação da feature
 
-| Feature | Documento |
-|---------|-----------|
-| Trabalhos e propostas | [features/trabalhos-e-propostas.md](./features/trabalhos-e-propostas.md) |
+| Documento | Conteúdo |
+|-----------|----------|
+| [features/trabalhos-e-propostas.md](./features/trabalhos-e-propostas.md) | Telas, geo, critérios de matching (Edge), sort modes, filtros, perguntas, composer de proposta, retirada, mensagens, APIs, lacunas |
 
-## 4. Perfis
+## 4. Arquivos-chave (mapa rápido)
 
-- Prestador; admin pode ter leituras no banco — sem UI aqui.
+| Área | Caminhos |
+|------|----------|
+| Shell / rotas internas | `components/ProviderJobsShell.tsx`, `ProviderJobsRouteSlot.tsx` |
+| Lista | `ProviderJobsPage.tsx`, `JobCard.tsx`, `JobsHeader.tsx`, `JobsSortTabs.tsx`, `JobsFiltersBar.tsx` |
+| Estados lista | `JobsEmptyState.tsx`, `JobsErrorState.tsx`, `LocationPermissionBanner.tsx` |
+| Detalhe | `JobDetailPage.tsx`, `JobDetailSheet.tsx`, `JobDetailContent.tsx`, `JobDetailFloatingActions.tsx` |
+| Proposta | `ProviderProposalComposerDialog.tsx`, `useProviderProposalComposer.ts`, `ProviderProposalSummaryCard.tsx`, `providerProposals.api.ts` |
+| Perguntas | `JobQuestionComposerDialog.tsx`, `JobQuestionPromptCard.tsx`, `JobQuestionsFeed.tsx`, `useProviderJobQuestionComposer.ts` |
+| Tipos / constantes | `types/provider-jobs.types.ts`, `constants/sortModes.ts`, `constants/queryKeys.ts` |
+| Geo | `hooks/useProviderLocation.ts` |
+| Lista remota | `hooks/useProviderJobs.ts`, `api/providerJobs.api.ts` |
 
-## 5. Fluxos
+## 5. Edge Function (referência)
 
-- Obter geo → listar jobs → abrir detalhe → (opcional) pergunta → enviar proposta com valores validados no servidor.
+- Código e comentários de negócio: `supabase/functions/match-provider-jobs/index.ts` (auth `profile.role = provider`, validação de coords, elegibilidade, `sort_mode`, paginação).
 
-## 6. Regras transversais
+## 6. Migrações e SQL (referência)
 
-- Proposta ativa única por par prestador+pedido exceto `withdrawn` (índice parcial único — migration).
+- Matching / propostas: ex. `supabase/migrations/20260318200001_match_provider_jobs_rpc.sql`, `20260318200000_create_provider_proposals.sql`, hardening de assinatura em migrações posteriores (ver grep por `create_provider_proposal` / `pricing_signature`).
 
-## 7. Entidades
+## 7. Relação com outros módulos
 
-- `service_requests`, `provider_proposals`, `provider_service_request_questions`.
-
-## 8. Integrações
-
-- `supabase/functions/match-provider-jobs/index.ts`
-- RPCs de criação de proposta com assinatura de preço.
-
-## 9. Riscos
-
-- Complexidade das regras SQL de matching — manter alinhamento com produto quando mudar.
-
-## 10. Evidências
-
-- `src/features/provider-jobs/`
-- `supabase/migrations/20260318200001_match_provider_jobs_rpc.sql`
-- `supabase/migrations/20260318200000_create_provider_proposals.sql`
+- **`my-account`:** serviços ofertados e bairros alimentam o matching (ver comentários na Edge).
+- **`provider-budgets`:** reutiliza `JobDetailSheet` / `JobDetailPage` e navegação de retorno (`constants/jobDetailReturnNavigation.ts`).
+- **`request-quote`:** fotos do pedido na lista; estilos de card de serviço.
+- **`client-budgets` / `client-my-services`:** lado cliente para respostas e orçamentos recebidos.

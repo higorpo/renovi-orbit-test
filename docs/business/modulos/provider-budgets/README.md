@@ -2,50 +2,46 @@
 
 ## 1. Leitura para negócio
 
-- **Para que serve:** o prestador **acompanha orçamentos já enviados** e **perguntas** feitas aos clientes, com filtros e indicadores de pendências.
-- **Quem usa:** prestador autenticado.
-- **Processo:** pós-envio de proposta — follow-up e clareza antes da decisão do cliente.
-- **Valor:** reduz perda de contexto em negociações simultâneas.
-- **Riscos:** sincronização mental com o módulo “Trabalhos” (origem das propostas).
+- **Para que serve:** depois de enviar orçamentos ou perguntas em **Trabalhos**, o prestador **acompanha** tudo em um só lugar: status da proposta, respostas do cliente e contexto do pedido, com busca e filtros.
+- **Quem usa:** apenas **prestador** autenticado.
+- **Valor:** reduz perda de follow-up em várias negociações paralelas.
+- **Risco de suporte:** diferenciar mentalmente **Trabalhos** (oportunidades novas) e **Orçamentos** (já interagiu); contadores do topo ajudam (“aguardando aprovação”, “perguntas aguardando resposta”).
 
-## 2. Visão geral funcional
+## 2. Visão geral técnica
 
-- **Objetivo:** abas, busca, paginação, contadores; rota com parâmetro de pedido para contexto.
-- **Escopo:** RPCs `list_provider_sent_budgets`, `list_provider_own_questions`, etc.
-- **Limites:** não cria proposta (isso é `provider-jobs` em geral).
-- **Relação:** `provider-jobs`, `client-budgets` (lado cliente).
+| Aspecto | Detalhe |
+|---------|---------|
+| Rotas | `/dashboard/budgets`, `/dashboard/budgets/pedido/:serviceRequestId` |
+| Lista | RPCs `list_provider_sent_budgets`, `list_provider_own_questions` — paginação **20**, busca server-side |
+| Detalhe | Reutiliza **`JobDetailSheet` / `JobDetailPage`** de `provider-jobs`; query `?from=budgets` para voltar |
+| Segurança | RPCs `SECURITY DEFINER`; escopo `auth.uid()` e `role = provider` (ver migration) |
 
-## 3. Features
+## 3. Documentação da feature
 
-| Feature | Documento |
-|---------|-----------|
-| Orçamentos enviados | [features/orcamentos-enviados.md](./features/orcamentos-enviados.md) |
+| Documento | Conteúdo |
+|-----------|----------|
+| [features/orcamentos-enviados.md](./features/orcamentos-enviados.md) | Rotas, abas, filtros, debounce, parâmetros RPC, campos SQL de busca, cards, mapeamento para detalhe, mensagens, lacuna do filtro `closed` |
 
-## 4. Perfis
+## 4. Mapa de arquivos
 
-- Somente **prestador** na rota.
+| Área | Caminhos |
+|------|----------|
+| Página e shell | `components/ProviderBudgetsPage.tsx`, `ProviderBudgetsShell.tsx` |
+| API | `api/providerBudgets.api.ts` |
+| Hooks | `hooks/useProviderSentBudgets.ts`, `useProviderOwnQuestions.ts`, `useProviderBudgetsFilters.ts`, `useProviderPendingApprovalBudgetsCount.ts`, `useProviderPendingQuestionsCount.ts` |
+| UI | `BudgetsHeader.tsx`, `BudgetsFilterChips.tsx`, `BudgetCard.tsx`, `QuestionCard.tsx`, skeletons, `BudgetsEmptyState.tsx`, `BudgetsErrorState.tsx` |
+| Tipos / labels | `types/provider-budgets.types.ts`, `constants/budgetStatus.ts` |
+| Navegação para job | `utils/initialProviderJobItem.ts` |
 
-## 5. Fluxos
+## 5. Integrações
 
-- Abrir “Orçamentos” → aba enviados ou perguntas → aprofundar por pedido quando aplicável.
+- **`provider-jobs`:** componentes de detalhe + constantes de retorno (`jobDetailReturnNavigation.ts`).
+- **`request-quote`:** fotos e estilo de serviço nos cards.
 
-## 6. Regras transversais
+## 6. Migração de referência
 
-- Dados limitados ao `provider_id` autenticado.
+- `supabase/migrations/20260322000000_create_provider_budgets_rpcs.sql` — definição completa das duas RPCs, comentários de segurança e mapeamento `pending` / `answered` / `closed`.
 
-## 7. Entidades
+## 7. API pública do pacote
 
-- `provider_proposals`, `provider_service_request_questions`.
-
-## 8. Integrações
-
-- RPCs definidas em `20260322000000_create_provider_budgets_rpcs.sql` e relacionadas.
-
-## 9. Riscos
-
-- **Evidência parcial:** todas as combinações de filtro e mensagens de retorno RPC.
-
-## 10. Evidências
-
-- `src/features/provider-budgets/`
-- `src/router.tsx` (`/dashboard/budgets`)
+- `index.ts` exporta apenas `ProviderBudgetsPage` (o router importa `ProviderBudgetsShell` pelo caminho do arquivo).

@@ -140,7 +140,41 @@ Transição: eventos `onAuthStateChange` do Supabase.
 - `src/router.tsx`
 - `supabase/migrations/20260224140000_restrict_role_admin_security.sql`
 
-## 20. Pendências
+## 20. Anexo — campos e validações por tela (evidência no código)
+
+### Login (`/login`)
+
+| Campo | Label UI | Validação | Origem / persistência |
+|-------|----------|-----------|------------------------|
+| email | Email | `signInSchema` — formato e-mail (`login.validation.ts`) | Enviado a `authApi.signInWithPassword` |
+| password | Senha | mín. 1 caractere (“Senha é obrigatória”) | Supabase Auth |
+| rememberMe | Manter conectado | fora do Zod | `setPersistSession` (`persistSession.ts`) |
+
+### Cadastro cliente / profissional (`/cadastro/cliente`, `/cadastro/profissional`)
+
+| Campo | Label UI | Validação | Observação |
+|-------|----------|-----------|------------|
+| fullName | Nome Completo | `signUpSchema` / passos — nome com 2+ partes | `signup.validation.ts`, `useSignupForm` |
+| email | Email | e-mail válido | — |
+| password / confirmPassword | Senha / Confirmar | mín. 10, política `validatePasswordStrength`, iguais | `passwordPolicy.ts` |
+| termsAccepted | Termos e privacidade | obrigatório true no submit | links nos componentes de formulário |
+
+Fluxo: reCAPTCHA → `authApi.signUp` com metadata `full_name`, `role`; redirect de e-mail conforme `emailRedirectTo` (`useClientSignupForm` / `useProviderSignupForm`).
+
+### Esqueci senha (`/esqueceu-senha`)
+
+| Campo | Validação |
+|-------|-----------|
+| email | `forgotPasswordSchema` — “Email inválido” se inválido |
+
+### Redefinir senha (`/recuperar-senha`)
+
+| Campo | Validação |
+|-------|-----------|
+| password / confirmPassword | `resetPasswordSchema` — mín. 10, confirmação, iguais; depois `validatePasswordStrength` |
+
+Sem sessão de recuperação: cópia + link para `/esqueceu-senha` e login — `useResetPassword.ts`.
+
+## 21. Pendências
 
 - Implementar ou remover rotas de redirect órfãs.
-- Documento separado de **campos por tela** de signup se produto exigir nível formulário detalhado.

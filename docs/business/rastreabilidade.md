@@ -7,6 +7,8 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | Artefato | Uso na documentação |
 |----------|---------------------|
 | `src/router.tsx` | Rotas, lazy loading, guards, placeholders |
+| `src/App.tsx` | Rota index `/` (ver [app-home](./modulos/app-home/README.md)) |
+| `docs/business/modulos/README.md` | Índice de módulos, cobertura, lacunas |
 | `src/main.tsx` | Montagem do `RouterProvider` |
 | `src/layouts/DashboardLayout/dashboardMenu.ts` | Menus por papel |
 | `src/layouts/DashboardLayout/DashboardLayout.tsx` | Layout autenticado |
@@ -30,13 +32,13 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 |-------|------------------------------|--------------|
 | `addresses/` | `api/addresses.api.ts`, `api/statesAndCities.api.ts` | `AddressSelectionStep`, `AddressesSection`, `AddressFormDialog` |
 | `client-budgets/` | `api/clientBudgets.api.ts` | `ClientBudgetsPage`, sheets |
-| `client-my-services/` | `api/serviceRequests.api.ts` | `ClientMyServicesPage` |
+| `client-my-services/` | `api/serviceRequests.api.ts` (list + cancel); hooks page/list/filters/cancel | `ClientMyServicesPage`, cards, sheets (`OpenServiceDetailsSheet`), `client-budgets` sheets, placeholder detalhe |
 | `dynamic-form/` | — | `DynamicForm`, `FormDemoPage` |
 | `my-account/` | `api/*Profile*.api.ts`, `portfolio.api.ts`, `offeredServices.api.ts` | `MyAccountPage`, `MyAccountClientPage`, `MyAccountProviderPage`, `ServiceAreaField` |
-| `provider-budgets/` | `api/providerBudgets.api.ts` | `ProviderBudgetsShell`, página |
+| `provider-budgets/` | `api/providerBudgets.api.ts`, hooks `useProviderSentBudgets` / `useProviderOwnQuestions`, contadores pendentes | `ProviderBudgetsShell`, `ProviderBudgetsPage`, cards; RPCs em `20260322000000_create_provider_budgets_rpcs.sql` |
 | `provider-jobs/` | `api/providerJobs.api.ts`, `providerProposals.api.ts`, `providerJobQuestions.api.ts` | `ProviderJobsShell`, `JobDetailPage` |
 | `provider-profile/` | hooks + componentes públicos | `ProviderProfilePage` |
-| `request-quote/` | `api/createRequestQuoteOrder.api.ts`, `smartDescription.api.ts`, `services.api.ts`, `forms.api.ts` | `RequestQuote.tsx`, steps |
+| `request-quote/` | `api/createRequestQuoteOrder.api.ts`, `smartDescription.api.ts`, `services.api.ts`, `forms.api.ts`; hooks submit/navigation/draft/IA | `RequestQuote.tsx`, passos 1–5, `ConfirmEmailScreen`, `TrustSidebar`; rascunho `requestQuoteDraft.persistence.ts` |
 | `auth/` | (já listado) | — |
 
 ## Supabase — dados e regras

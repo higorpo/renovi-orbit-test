@@ -9,22 +9,32 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 | addresses | CRUD endereços; seleção no wizard; CEP; geografia | OK (`gestao-de-enderecos.md`) | Políticas RLS finas por coluna | Página `/dashboard/addresses` (placeholder) |
 | auth | Sessão; guards; login/cadastro/recuperação; política de senha | OK (`autenticacao-e-sessao.md`) | Fluxos edge de e-mail Auth em produção | Painel admin no front |
 | client-budgets | Lista orçamentos; perguntas; detalhes | OK (`orcamentos-recebidos.md`) | Todas as mensagens RPC | — |
-| client-my-services | Lista pedidos; filtros; cancelamento; foco URL | OK (`solicitacoes-do-cliente.md`) | Regras de cancelamento no DB | Detalhe `/dashboard/services/:id` (placeholder) |
+| client-my-services | Lista paginada; abas open/propostas; busca ILIKE; filtros join; deep link; sheets | OK (`solicitacoes-do-cliente.md`) | RLS/policies finas no update cancel | Placeholder `/dashboard/services/:id`; sheet detalhe só `open`; dropdowns só da página carregada |
 | dynamic-form | Schema; steps; validação; demo DEV | OK (`motor-de-formularios.md`) | — | — |
 | my-account | Conta cliente/prestador; portfólio; área; exclusão | OK (`minha-conta.md`) | Impacto legal de exclusão de conta | — |
-| provider-budgets | Enviados; perguntas; filtros | OK (`orcamentos-enviados.md`) | — | — |
+| provider-budgets | Enviados; perguntas; filtros; paginação; busca; integração detalhe `provider-jobs` | OK (`orcamentos-enviados.md`) | Filtro `closed` em perguntas existe só na RPC (sem chip na UI) | — |
 | provider-jobs | Match; detalhe; perguntas; proposta | OK (`trabalhos-e-propostas.md`) | Algoritmo de sort/geo completo no SQL | — |
 | provider-profile | Página pública; SEO; URL | OK (`pagina-publica.md`) | — | — |
-| request-quote | Wizard completo; IA; convidado; Edge order | OK (`pedir-orcamento.md`) | Rate limit internos | Redirecionamento pós-sucesso (ver pendências) |
+| request-quote | Wizard 4/5 passos; IA automática passo 3; rascunho local; multipart Edge; reCAPTCHA; nsfwjs | OK (`pedir-orcamento.md`) | Validação server-side fina do form na Edge | P-01 redirect `/dashboard/client`; mismatch 10 MB front / 5 MB Edge fotos |
+
+## Módulos fora de `src/features` (documentados em `modulos/`)
+
+| Módulo | Escopo | Documento |
+|--------|--------|-----------|
+| dashboard-shell | `DashboardLayout`, menu, `DashboardFakePage`, rotas placeholder do dashboard | `modulos/dashboard-shell/` |
+| app-home | Rota index `/`, componente `App` | `modulos/app-home/` |
 
 ## Contagens
 
 | Métrica | Valor |
 |---------|-------|
 | Pastas em `src/features` (módulos de topo) | 10 |
-| READMEs de módulo gerados | 10 |
-| Arquivos de feature gerados | 10 |
+| Módulos adicionais documentados (shell + home) | 2 |
+| **Total módulos no índice** `modulos/README.md` | **12** |
+| READMEs de módulo em `docs/business/modulos/` | 12 |
+| Arquivos de feature em `modulos/*/features/` | 12+ |
 | Rotas placeholder identificadas | ≥6 |
+| Cobertura documental (critério do índice) | **100%** dos 12 módulos |
 
 ## Features globais fora de `src/features`
 
