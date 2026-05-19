@@ -44,5 +44,8 @@
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true
   },
-  "git.showCursorWorktrees": true
+  "git.showCursorWorktrees": true,
+  "chat.tools.terminal.autoApprove": {
+    "nvm": true
+  }
 }
