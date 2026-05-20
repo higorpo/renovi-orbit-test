@@ -35,6 +35,10 @@ vi.mock("@/hooks/useAnalytics", () => ({
   useAnalytics: () => ({ trackEvent: vi.fn() }),
 }));
 
+vi.mock("@/features/device-beacon", () => ({
+  unregisterDeviceBeaconOnLogout: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/lib/sentry", () => ({
   setSentryUser: vi.fn(),
   addBreadcrumb: vi.fn(),

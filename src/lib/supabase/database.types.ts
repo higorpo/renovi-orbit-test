@@ -989,6 +989,71 @@ export type Database = {
           },
         ]
       }
+      user_device_beacons: {
+        Row: {
+          android_sdk_version: number | null
+          created_at: string
+          device_id: string
+          device_name: string | null
+          fcm_token: string | null
+          ios_version: number | null
+          is_virtual: boolean
+          manufacturer: string | null
+          model: string | null
+          operating_system: string | null
+          os_version: string | null
+          platform: string
+          profile_id: string
+          push_enabled: boolean
+          updated_at: string
+          web_view_version: string | null
+        }
+        Insert: {
+          android_sdk_version?: number | null
+          created_at?: string
+          device_id: string
+          device_name?: string | null
+          fcm_token?: string | null
+          ios_version?: number | null
+          is_virtual?: boolean
+          manufacturer?: string | null
+          model?: string | null
+          operating_system?: string | null
+          os_version?: string | null
+          platform: string
+          profile_id: string
+          push_enabled?: boolean
+          updated_at?: string
+          web_view_version?: string | null
+        }
+        Update: {
+          android_sdk_version?: number | null
+          created_at?: string
+          device_id?: string
+          device_name?: string | null
+          fcm_token?: string | null
+          ios_version?: number | null
+          is_virtual?: boolean
+          manufacturer?: string | null
+          model?: string | null
+          operating_system?: string | null
+          os_version?: string | null
+          platform?: string
+          profile_id?: string
+          push_enabled?: boolean
+          updated_at?: string
+          web_view_version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_device_beacons_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

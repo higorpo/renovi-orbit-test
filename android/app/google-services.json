@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "451707949870",
+    "project_id": "orbit-c98b6",
+    "storage_bucket": "orbit-c98b6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:451707949870:android:17e9f2524491935b0320bf",
+        "android_client_info": {
+          "package_name": "br.com.renovi.orbit"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAD5t8Ea_v-sdgOhQJmZhTxqk3_NdpzL7A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

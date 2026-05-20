@@ -1,4 +1,6 @@
 /// <reference lib="webworker" />
+import { initializeApp } from 'firebase/app'
+import { getMessaging, onBackgroundMessage } from 'firebase/messaging/sw'
 import {
   cleanupOutdatedCaches,
   createHandlerBoundToURL,
@@ -6,6 +8,8 @@ import {
 } from 'workbox-precaching'
 import { clientsClaim } from 'workbox-core'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
+
+import { getFirebaseClientConfig } from './lib/firebase/config'
 
 declare let self: ServiceWorkerGlobalScope
 
@@ -26,3 +30,23 @@ registerRoute(
 
 self.skipWaiting()
 clientsClaim()
+
+const firebaseConfig = getFirebaseClientConfig()
+if (firebaseConfig) {
+  const firebaseApp = initializeApp(firebaseConfig)
+  const messaging = getMessaging(firebaseApp)
+
+  onBackgroundMessage(messaging, (payload) => {
+    const title = payload.notification?.title ?? payload.data?.title ?? 'Renovi'
+    const body = payload.notification?.body ?? payload.data?.body ?? ''
+    const tag = payload.data?.tag ?? payload.messageId ?? 'renovi-push'
+
+    return self.registration.showNotification(title, {
+      body,
+      icon: '/icon-192.svg',
+      badge: '/icon-192.svg',
+      tag,
+      data: payload.data,
+    })
+  })
+}

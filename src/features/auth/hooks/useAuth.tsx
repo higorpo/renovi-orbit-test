@@ -4,6 +4,7 @@
  * sessão expirada (useSessionExpiredHandler), redirect por role.
  */
 import { authApi } from "@/features/auth/api/auth.api";
+import { unregisterDeviceBeaconOnLogout } from "@/features/device-beacon";
 import { logger } from "@/lib/logger";
 import { validatePasswordStrength } from "@/features/auth/utils/passwordPolicy";
 import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
@@ -259,7 +260,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
+    const profileId = user?.id ?? profile?.id;
     try {
+      if (profileId) {
+        await unregisterDeviceBeaconOnLogout(profileId);
+      }
+
       const { error } = await authApi.signOut();
       if (error) throw error;
 
@@ -279,7 +285,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       toast.error("Não foi possível sair. Tente novamente.");
     }
-  }, [navigate]);
+  }, [navigate, user?.id, profile?.id]);
 
   return (
     <AuthContext.Provider
