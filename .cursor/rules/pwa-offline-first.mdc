@@ -5,7 +5,7 @@ alwaysApply: true
 
 # PWA e offline-first
 
-A aplicação é um **PWA** e deve **funcionar offline**. Toda implementação deve considerar **offline-first**: priorizar cache, dados locais e permitir que o usuário realize ações mesmo sem conexão com a internet.
+A aplicação é um **PWA** (web) e também roda como **app nativo** (Capacitor) na mesma codebase — deve **funcionar offline** em ambas as superfícies quando fizer sentido. Toda implementação deve considerar **offline-first**: priorizar cache, dados locais (incl. Capacitor Preferences em `src/lib/capacitor/`) e permitir que o usuário realize ações mesmo sem conexão. Ver `capacitor-multi-platform` para contexto nativo e **mobile-first / app-first** em `mobile-first-ux`.
 
 ## Regras
 

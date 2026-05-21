@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Mobile-first UX
 
-A plataforma é **mobile-first**. Toda UI deve ser pensada primeiro para telas pequenas e touch, e depois adaptada para desktop.
+A plataforma é **mobile-first e app-first**: a mesma codebase entrega **web/PWA** e **app nativo** (Capacitor — Android ativo, iOS em breve). Toda UI deve ser pensada **primeiro para celular e para o app nativo** (touch, safe areas, teclado do SO), e depois adaptada para desktop. Ver também `capacitor-multi-platform` e `pwa-offline-first`.
 
 ## Teclado virtual e área visível
 

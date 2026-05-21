@@ -69,7 +69,5 @@ Coisas para terminar do fluxo atual de trabalho:
 
 Coisas para fazer next
 
-- Substituir os locais que estão usando localstorage pela API nativa de storage do capacitor
-- Adicionar explicações sobre capacitor no projeto (contexto)
 - Adicionar message dispatcher
 - No android ele não mostra dialog de  permissão de notificação antes de mostrar a nativa
