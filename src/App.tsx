@@ -4,7 +4,6 @@ import { Device } from '@capacitor/device'
 import './App.css'
 import { useCallback, useEffect, useState } from 'react'
 import {
-  formatPushNotificationMessage,
   getWebPushPermission,
   setupPushNotifications,
   type PushPlatform,
@@ -21,13 +20,6 @@ function mapPermissionForUi(
 }
 import { isFirebaseConfigured } from './lib/firebase/config'
 import { logger } from './lib/logger'
-
-const pushCallbacks = {
-  onToken: () => {},
-  onForegroundNotification: (payload: Parameters<typeof formatPushNotificationMessage>[0]) => {
-    alert(formatPushNotificationMessage(payload))
-  },
-}
 
 function App() {
   const navigate = useNavigate()
@@ -64,7 +56,6 @@ function App() {
               setPushToken(token)
               setPushPlatform(pushPlat)
             },
-            onForegroundNotification: pushCallbacks.onForegroundNotification,
           },
           { requestPermission },
         )

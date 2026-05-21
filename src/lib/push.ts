@@ -45,7 +45,12 @@ export interface PushSetupResult {
 let nativeListenersAttached = false
 let webForegroundListenerAttached = false
 
+const PUSH_NOTIFICATION_ICON = '/icon-192.svg'
+const DEFAULT_PUSH_NOTIFICATION_TITLE = 'Renovi'
+const DEFAULT_PUSH_NOTIFICATION_TAG = 'renovi-push'
+
 const pushStateListeners = new Set<(state: PushRegistrationState) => void>()
+let activePushCallbacks: PushSetupCallbacks | undefined
 
 export interface PushRegistrationState {
   platform: PushPlatform | 'web'
@@ -101,6 +106,52 @@ export async function getPushPermissionStatus(): Promise<PushPermissionStatus> {
   return getWebPushPermission()
 }
 
+function resolveForegroundNotificationContent(payload: PushNotificationPayload): {
+  title: string
+  body: string
+  tag: string
+} {
+  const title = payload.title?.trim() || DEFAULT_PUSH_NOTIFICATION_TITLE
+  const body = payload.body?.trim() ?? ''
+  const tag = payload.data?.tag?.trim() || DEFAULT_PUSH_NOTIFICATION_TAG
+
+  return { title, body, tag }
+}
+
+/** Shows a system notification while the app is in the foreground (web/PWA only). */
+export async function showWebForegroundSystemNotification(
+  payload: PushNotificationPayload,
+): Promise<void> {
+  if (Capacitor.isNativePlatform()) return
+  if (!('Notification' in window) || Notification.permission !== 'granted') return
+  if (!('serviceWorker' in navigator)) return
+
+  const { title, body, tag } = resolveForegroundNotificationContent(payload)
+
+  try {
+    const registration = await navigator.serviceWorker.ready
+    await registration.showNotification(title, {
+      body,
+      icon: PUSH_NOTIFICATION_ICON,
+      badge: PUSH_NOTIFICATION_ICON,
+      tag,
+      data: payload.data,
+    })
+  } catch (error) {
+    logger.warn('[PUSH] foreground system notification failed (web)', {
+      message: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
+function handleForegroundPushNotification(payload: PushNotificationPayload): void {
+  if (!Capacitor.isNativePlatform()) {
+    void showWebForegroundSystemNotification(payload)
+  }
+
+  activePushCallbacks?.onForegroundNotification?.(payload)
+}
+
 export function formatPushNotificationMessage(payload: PushNotificationPayload): string {
   const title = payload.title?.trim() || 'Notificação'
   const body = payload.body?.trim()
@@ -145,14 +196,14 @@ function mapFirebaseMessage(payload: MessagePayload): PushNotificationPayload {
   }
 }
 
-function attachNativeListeners(callbacks?: PushSetupCallbacks): void {
+function attachNativeListeners(): void {
   if (nativeListenersAttached) return
   nativeListenersAttached = true
 
   PushNotifications.addListener('pushNotificationReceived', (notification) => {
     const payload = mapCapacitorNotification(notification)
     logger.info('[PUSH] foreground received (native)', { payload })
-    callbacks?.onForegroundNotification?.(payload)
+    handleForegroundPushNotification(payload)
   })
 
   PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
@@ -193,7 +244,7 @@ async function setupNativePush(
     return result
   }
 
-  attachNativeListeners(callbacks)
+  attachNativeListeners()
 
   return new Promise((resolve, reject) => {
     const onRegistered = (token: Token) => {
@@ -239,17 +290,14 @@ async function waitForServiceWorkerRegistration(timeoutMs = 15_000): Promise<Ser
   })
 }
 
-function attachWebForegroundListener(
-  messaging: ReturnType<typeof getFirebaseMessaging>,
-  callbacks?: PushSetupCallbacks,
-): void {
+function attachWebForegroundListener(messaging: ReturnType<typeof getFirebaseMessaging>): void {
   if (webForegroundListenerAttached) return
   webForegroundListenerAttached = true
 
   onMessage(messaging, (payload) => {
     const mapped = mapFirebaseMessage(payload)
     logger.info('[PUSH] foreground received (web)', { payload: mapped })
-    callbacks?.onForegroundNotification?.(mapped)
+    handleForegroundPushNotification(mapped)
   })
 }
 
@@ -302,7 +350,7 @@ async function setupWebPush(
   }
 
   const serviceWorkerRegistration = await waitForServiceWorkerRegistration()
-  attachWebForegroundListener(messaging, callbacks)
+  attachWebForegroundListener(messaging)
 
   const token = await getToken(messaging, {
     vapidKey,
@@ -328,6 +376,8 @@ export async function setupPushNotifications(
   callbacks?: PushSetupCallbacks,
   options?: PushSetupOptions,
 ): Promise<PushSetupResult> {
+  activePushCallbacks = callbacks
+
   if (Capacitor.isNativePlatform()) {
     return setupNativePush(callbacks, options)
   }
@@ -339,5 +389,6 @@ export async function setupPushNotifications(
 export function resetPushModuleStateForTests(): void {
   nativeListenersAttached = false
   webForegroundListenerAttached = false
+  activePushCallbacks = undefined
   pushStateListeners.clear()
 }

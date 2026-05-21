@@ -55,12 +55,16 @@ import {
   isPushPermissionPending,
   resetPushModuleStateForTests,
   setupPushNotifications,
+  showWebForegroundSystemNotification,
   subscribePushRegistrationState,
   toPushRegistrationState,
 } from '../push'
 
 function mockServiceWorkerRegistration() {
-  const registration = { active: {} } as ServiceWorkerRegistration
+  const showNotification = vi.fn().mockResolvedValue(undefined)
+  const registration = { active: {}, showNotification } as ServiceWorkerRegistration & {
+    showNotification: ReturnType<typeof vi.fn>
+  }
   Object.defineProperty(navigator, 'serviceWorker', {
     value: {
       getRegistration: vi.fn().mockResolvedValue(registration),
@@ -337,6 +341,46 @@ describe('push helpers', () => {
 
       expect(onForeground).toHaveBeenCalledWith(
         expect.objectContaining({ title: 'Hi', body: 'There' }),
+      )
+    })
+
+    it('shows a system notification in foreground via service worker', async () => {
+      Object.defineProperty(globalThis, 'Notification', {
+        value: { permission: 'granted' },
+        configurable: true,
+      })
+      const registration = mockServiceWorkerRegistration()
+
+      await showWebForegroundSystemNotification({ title: 'Hi', body: 'There', data: { tag: 'x' } })
+
+      expect(registration.showNotification).toHaveBeenCalledWith(
+        'Hi',
+        expect.objectContaining({
+          body: 'There',
+          tag: 'x',
+          icon: '/icon-192.svg',
+        }),
+      )
+    })
+
+    it('displays system notification when onMessage fires', async () => {
+      Object.defineProperty(globalThis, 'Notification', {
+        value: { permission: 'granted' },
+        configurable: true,
+      })
+      const registration = mockServiceWorkerRegistration()
+      fcmMocks.onMessage.mockImplementation((_messaging, cb) => {
+        cb({
+          notification: { title: 'Hi', body: 'There' },
+          data: { tag: 'msg-1' },
+        })
+      })
+
+      await setupPushNotifications()
+
+      expect(registration.showNotification).toHaveBeenCalledWith(
+        'Hi',
+        expect.objectContaining({ body: 'There', tag: 'msg-1' }),
       )
     })
 
