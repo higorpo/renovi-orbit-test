@@ -21,7 +21,7 @@ import { Device } from '@capacitor/device'
 
 async function syncDeviceBeaconForUser(profileId: string, force: boolean): Promise<void> {
   const payload = await collectDeviceBeaconPayload(profileId)
-  const snapshot = getDeviceBeaconSyncSnapshot(profileId, payload.device_id)
+  const snapshot = await getDeviceBeaconSyncSnapshot(profileId, payload.device_id)
 
   if (!shouldSyncDeviceBeacon(snapshot, payload, force)) {
     return
@@ -33,7 +33,7 @@ async function syncDeviceBeaconForUser(profileId: string, force: boolean): Promi
     return
   }
 
-  saveDeviceBeaconSyncSnapshot(payload)
+  await saveDeviceBeaconSyncSnapshot(payload)
   logger.info('device_beacon_synced', {
     profileId,
     deviceId: payload.device_id,
@@ -49,7 +49,7 @@ async function syncFromPushState(
 ): Promise<void> {
   const [{ identifier }, info] = await Promise.all([Device.getId(), Device.getInfo()])
   const payload = buildPayloadFromPushState(profileId, identifier, info, pushState)
-  const snapshot = getDeviceBeaconSyncSnapshot(profileId, payload.device_id)
+  const snapshot = await getDeviceBeaconSyncSnapshot(profileId, payload.device_id)
 
   if (!shouldSyncDeviceBeacon(snapshot, payload, force)) {
     return
@@ -61,7 +61,7 @@ async function syncFromPushState(
     return
   }
 
-  saveDeviceBeaconSyncSnapshot(payload)
+  await saveDeviceBeaconSyncSnapshot(payload)
   logger.info('device_beacon_synced', {
     profileId,
     deviceId: payload.device_id,

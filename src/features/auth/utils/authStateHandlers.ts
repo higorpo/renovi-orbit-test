@@ -77,7 +77,7 @@ export function createAuthEventHandlers(
         const uid = ctx.lastFetchedUserId.current;
         const pk = `profile_${uid}`;
         cacheRemove(pk);
-        cachePersistRemove(pk);
+        void cachePersistRemove(pk);
       }
     },
 

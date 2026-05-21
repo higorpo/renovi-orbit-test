@@ -50,7 +50,7 @@ export function useProfileFetcher(
           typeof navigator !== "undefined" && "onLine" in navigator && !navigator.onLine;
 
         if (!forceRefresh && offline) {
-          const disk = cachePersistGet<Profile>(profileCacheKey(userId));
+          const disk = await cachePersistGet<Profile>(profileCacheKey(userId));
           if (disk) {
             logger.debug("auth_profile_from_persist_offline", { userId });
             cacheSet(profileCacheKey(userId), disk, PROFILE_CACHE_TTL_MS);
@@ -66,7 +66,7 @@ export function useProfileFetcher(
           if (profileData) {
             const pk = profileCacheKey(userId);
             cacheSet(pk, profileData, PROFILE_CACHE_TTL_MS);
-            cachePersistSet(pk, profileData);
+            await cachePersistSet(pk, profileData);
             return profileData;
           }
 
@@ -74,7 +74,7 @@ export function useProfileFetcher(
             logger.error("auth_profile_fetch_error", { error, userId });
           }
 
-          const diskFallback = cachePersistGet<Profile>(profileCacheKey(userId));
+          const diskFallback = await cachePersistGet<Profile>(profileCacheKey(userId));
           if (diskFallback) {
             logger.debug("auth_profile_from_persist_fallback", { userId });
             cacheSet(profileCacheKey(userId), diskFallback, PROFILE_CACHE_TTL_MS);
@@ -87,7 +87,7 @@ export function useProfileFetcher(
             error: error instanceof Error ? error.message : String(error),
             userId,
           });
-          const diskFallback = cachePersistGet<Profile>(profileCacheKey(userId));
+          const diskFallback = await cachePersistGet<Profile>(profileCacheKey(userId));
           if (diskFallback) {
             cacheSet(profileCacheKey(userId), diskFallback, PROFILE_CACHE_TTL_MS);
             return diskFallback;

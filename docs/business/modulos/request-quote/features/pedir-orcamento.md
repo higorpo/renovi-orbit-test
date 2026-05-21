@@ -164,7 +164,7 @@ Documentação baseada em `src/features/request-quote/`, Edge Functions `create-
 
 | Item | Detalhe |
 |------|---------|
-| Chave | `localStorage` **`renovi_request_quote_draft`** |
+| Chave | Capacitor **Preferences** **`renovi_request_quote_draft`** (via `preferencesGet` / `preferencesSet` em `requestQuoteDraft.persistence.ts`) |
 | Versão | **`REQUEST_QUOTE_DRAFT_VERSION`** (`"1"` em `requestQuoteDraft.persistence.ts`) — alterar fluxo persistido exige **incrementar** (regra do projeto). |
 | Conteúdo | Passo atual, serviço, step2 + schema/version, step3 **só texto/structured/title** (sem fotos), step4. **Step 5 (PII) não é persistido.** |
 | Debounce gravação | **400 ms** (`PERSIST_DEBOUNCE_MS`) |
@@ -258,5 +258,6 @@ flowchart TD
 
 - **Transição do passo 4 depende da sessão:** logado valida endereço e já submete; convidado valida endereço e avança para o passo 5 (identidade).
 - **Schema do passo 2 tem gate técnico explícito:** serviço só renderiza formulário quando `form_status = active` e schema JSON é v2 válido.
-- **Rascunho local evita dados sensíveis:** fotos e dados do passo 5 não são persistidos no `localStorage`.
+- **Rascunho local evita dados sensíveis:** fotos e dados do passo 5 não entram no payload persistido em Preferences.
+- **Armazenamento:** rascunho usa Capacitor Preferences (mesma camada transversal do auth).
 - **Envio convidado usa autorização anônima no cliente, com validação de identidade no servidor:** a Edge confere consistência de `userId`/`email` e aplica reCAPTCHA.

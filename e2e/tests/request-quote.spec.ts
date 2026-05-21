@@ -589,7 +589,8 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     });
     await page.goto("/pedir-orcamento");
     await page.evaluate(
-      ({ key, value }) => localStorage.setItem(key, value),
+      ({ key, value }) =>
+        localStorage.setItem(`CapacitorStorage.${key}`, value),
       { key: storageKey, value: draftPayload }
     );
     await page.reload();
@@ -619,7 +620,8 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     });
     await page.goto("/pedir-orcamento");
     await page.evaluate(
-      ({ key, value }) => localStorage.setItem(key, value),
+      ({ key, value }) =>
+        localStorage.setItem(`CapacitorStorage.${key}`, value),
       { key: storageKey, value: draftPayload }
     );
     await page.reload();
@@ -648,7 +650,8 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     });
     await page.goto("/pedir-orcamento");
     await page.evaluate(
-      ({ key, value }) => localStorage.setItem(key, value),
+      ({ key, value }) =>
+        localStorage.setItem(`CapacitorStorage.${key}`, value),
       { key: storageKey, value: draftPayload }
     );
     await page.reload();
@@ -687,7 +690,8 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     });
     await page.goto("/pedir-orcamento");
     await page.evaluate(
-      ({ key, value }) => localStorage.setItem(key, value),
+      ({ key, value }) =>
+        localStorage.setItem(`CapacitorStorage.${key}`, value),
       { key: storageKey, value: draftPayload }
     );
     await page.reload();

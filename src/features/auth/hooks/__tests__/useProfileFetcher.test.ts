@@ -38,7 +38,7 @@ describe("useProfileFetcher", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(cache.cacheGet).mockResolvedValue(null);
-    vi.mocked(cache.cachePersistGet).mockReturnValue(null);
+    vi.mocked(cache.cachePersistGet).mockResolvedValue(null);
     Object.defineProperty(navigator, "onLine", {
       configurable: true,
       value: true,
@@ -62,7 +62,7 @@ describe("useProfileFetcher", () => {
 
   it("returns persist cache when offline and memory miss", async () => {
     vi.mocked(cache.cacheGet).mockResolvedValue(null);
-    vi.mocked(cache.cachePersistGet).mockReturnValue(profile);
+    vi.mocked(cache.cachePersistGet).mockResolvedValue(profile);
     Object.defineProperty(navigator, "onLine", {
       configurable: true,
       value: false,
@@ -83,7 +83,7 @@ describe("useProfileFetcher", () => {
 
   it("returns null offline with no persist cache", async () => {
     vi.mocked(cache.cacheGet).mockResolvedValue(null);
-    vi.mocked(cache.cachePersistGet).mockReturnValue(null);
+    vi.mocked(cache.cachePersistGet).mockResolvedValue(null);
     Object.defineProperty(navigator, "onLine", {
       configurable: true,
       value: false,
@@ -103,7 +103,7 @@ describe("useProfileFetcher", () => {
   it("uses disk fallback when API returns no profile", async () => {
     vi.mocked(cache.cacheGet).mockResolvedValue(null);
     getProfile.mockResolvedValue({ profile: null, error: new Error("404") });
-    vi.mocked(cache.cachePersistGet).mockReturnValue(profile);
+    vi.mocked(cache.cachePersistGet).mockResolvedValue(profile);
 
     const setProfile = vi.fn();
     const { result } = renderHook(() => useProfileFetcher(setProfile, "u1"));
@@ -133,7 +133,7 @@ describe("useProfileFetcher", () => {
   it("uses persist fallback when getProfile throws", async () => {
     vi.mocked(cache.cacheGet).mockResolvedValue(null);
     getProfile.mockRejectedValue(new Error("boom"));
-    vi.mocked(cache.cachePersistGet).mockReturnValue(profile);
+    vi.mocked(cache.cachePersistGet).mockResolvedValue(profile);
 
     const setProfile = vi.fn();
     const { result } = renderHook(() => useProfileFetcher(setProfile, "u1"));

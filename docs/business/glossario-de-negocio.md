@@ -29,6 +29,8 @@ Termos extraídos ou inferidos a partir de nomes de entidades, rotas e interface
 | **Assinatura de precificação** | Mecanismo HMAC para integridade dos valores calculados no servidor ao criar proposta. | RPCs `generate_provider_pricing_signature`, `create_provider_proposal`. |
 | **reCAPTCHA** | Validação anti-abuso em cadastro e envio de pedido. | `verify-recaptcha`, `src/lib/recaptcha.ts`. |
 | **Rate limit** | Controle por chave na tabela `platform_rate_limits` (usado nas Edge Functions). | `_shared/rateLimiter.ts`. |
+| **Manter conectado** | Preferência do usuário no login: quando ativa, a sessão Supabase persiste em **Capacitor Preferences**; quando inativa, fica só em memória até o app encerrar. | `orbit_persist_session`, `LoginForm`, `createSupabaseAuthStorage`. |
+| **Capacitor Preferences** | API de armazenamento chave-valor do app (nativo ou fallback web); substitui o uso direto de `localStorage` do browser nos fluxos mapeados. | `@capacitor/preferences`, `preferencesStorage.ts`. |
 
 ## Siglas
 

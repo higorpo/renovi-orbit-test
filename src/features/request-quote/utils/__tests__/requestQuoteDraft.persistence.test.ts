@@ -1,5 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { ServiceRequestStructuredData } from "../../types/request-quote.types";
+import "@/lib/capacitor/__tests__/preferencesStorage.harness";
+import { clearPreferencesTestStore, getPreferencesTestStore } from "@/lib/capacitor/__tests__/preferencesStorage.harness";
+import { preferencesSet } from "@/lib/capacitor/preferencesStorage";
 import {
   getDraft,
   saveDraft,
@@ -24,68 +27,59 @@ function createMinimalDraft() {
 }
 
 describe("requestQuoteDraft.persistence", () => {
-  let storage: Record<string, string>;
-
   beforeEach(() => {
-    storage = {};
-    vi.stubGlobal("localStorage", {
-      getItem: (key: string) => storage[key] ?? null,
-      setItem: (key: string, value: string) => {
-        storage[key] = value;
-      },
-      removeItem: (key: string) => {
-        delete storage[key];
-      },
-    });
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
+    clearPreferencesTestStore();
   });
 
   describe("getDraft", () => {
-    it("returns null when storage is empty", () => {
-      expect(getDraft()).toBeNull();
+    it("returns null when storage is empty", async () => {
+      await expect(getDraft()).resolves.toBeNull();
     });
 
-    it("returns null when stored value is invalid JSON", () => {
-      storage[STORAGE_KEY] = "not json";
-      expect(getDraft()).toBeNull();
+    it("returns null when stored value is invalid JSON", async () => {
+      getPreferencesTestStore()[STORAGE_KEY] = "not json";
+      await expect(getDraft()).resolves.toBeNull();
     });
 
-    it("returns null when JSON.parse throws a non-Error value", () => {
+    it("returns null when JSON.parse throws a non-Error value", async () => {
       const spy = vi.spyOn(JSON, "parse").mockImplementationOnce(() => {
         throw "parse boom";
       });
-      storage[STORAGE_KEY] = '{"version":"1"}';
-      expect(getDraft()).toBeNull();
+      getPreferencesTestStore()[STORAGE_KEY] = '{"version":"1"}';
+      await expect(getDraft()).resolves.toBeNull();
       spy.mockRestore();
     });
 
-    it("returns null when stored value has no version", () => {
-      storage[STORAGE_KEY] = JSON.stringify({ draft: createMinimalDraft() });
-      expect(getDraft()).toBeNull();
+    it("returns null when stored value has no version", async () => {
+      getPreferencesTestStore()[STORAGE_KEY] = JSON.stringify({ draft: createMinimalDraft() });
+      await expect(getDraft()).resolves.toBeNull();
     });
 
-    it("returns null when stored value has no draft", () => {
-      storage[STORAGE_KEY] = JSON.stringify({ version: "2" });
-      expect(getDraft()).toBeNull();
+    it("returns null when stored value has no draft", async () => {
+      getPreferencesTestStore()[STORAGE_KEY] = JSON.stringify({ version: "2" });
+      await expect(getDraft()).resolves.toBeNull();
     });
 
-    it("returns null when version is not a string", () => {
-      storage[STORAGE_KEY] = JSON.stringify({ version: 1, draft: createMinimalDraft() });
-      expect(getDraft()).toBeNull();
+    it("returns null when version is not a string", async () => {
+      getPreferencesTestStore()[STORAGE_KEY] = JSON.stringify({
+        version: 1,
+        draft: createMinimalDraft(),
+      });
+      await expect(getDraft()).resolves.toBeNull();
     });
 
-    it("returns null when draft is not an object", () => {
-      storage[STORAGE_KEY] = JSON.stringify({ version: "1", draft: "invalid" });
-      expect(getDraft()).toBeNull();
+    it("returns null when draft is not an object", async () => {
+      getPreferencesTestStore()[STORAGE_KEY] = JSON.stringify({
+        version: "1",
+        draft: "invalid",
+      });
+      await expect(getDraft()).resolves.toBeNull();
     });
 
-    it("returns parsed draft when storage has valid payload", () => {
+    it("returns parsed draft when storage has valid payload", async () => {
       const draft = createMinimalDraft();
-      saveDraft(draft);
-      const got = getDraft();
+      await saveDraft(draft);
+      const got = await getDraft();
       expect(got).not.toBeNull();
       expect(got?.version).toBe(REQUEST_QUOTE_DRAFT_VERSION);
       expect(got?.draft).toEqual(draft);
@@ -93,27 +87,28 @@ describe("requestQuoteDraft.persistence", () => {
   });
 
   describe("saveDraft", () => {
-    it("writes version and draft to storage", () => {
+    it("writes version and draft to storage", async () => {
       const draft = createMinimalDraft();
-      saveDraft(draft);
-      const raw = storage[STORAGE_KEY];
+      await saveDraft(draft);
+      const raw = getPreferencesTestStore()[STORAGE_KEY];
       expect(raw).toBeDefined();
       const parsed = JSON.parse(raw!) as { version: string; draft: unknown };
       expect(parsed.version).toBe(REQUEST_QUOTE_DRAFT_VERSION);
       expect(parsed.draft).toEqual(draft);
     });
 
-    it("roundtrips with getDraft", () => {
+    it("roundtrips with getDraft", async () => {
       const draft = createMinimalDraft();
       (draft as unknown as { currentStep: number }).currentStep = 2;
-      (draft as unknown as { step3Data: { description: string } }).step3Data.description = "test desc";
-      saveDraft(draft);
-      const got = getDraft();
+      (draft as unknown as { step3Data: { description: string } }).step3Data.description =
+        "test desc";
+      await saveDraft(draft);
+      const got = await getDraft();
       expect(got?.draft.currentStep).toBe(2);
       expect(got?.draft.step3Data.description).toBe("test desc");
     });
 
-    it("roundtrips step4Data with location", () => {
+    it("roundtrips step4Data with location", async () => {
       const draft = {
         ...createMinimalDraft(),
         step4Data: {
@@ -134,11 +129,16 @@ describe("requestQuoteDraft.persistence", () => {
           location: { latitude: -27.59, longitude: -48.54 },
         },
       };
-      saveDraft(draft);
-      const got = getDraft();
+      await saveDraft(draft);
+      const got = await getDraft();
       expect(got?.draft.step4Data).not.toBeNull();
-      expect((got?.draft.step4Data as { kind: string; location?: { latitude: number; longitude: number } }).kind).toBe("new");
-      expect((got?.draft.step4Data as { location: { latitude: number; longitude: number } }).location).toEqual({
+      expect(
+        (got?.draft.step4Data as { kind: string; location?: { latitude: number; longitude: number } })
+          .kind,
+      ).toBe("new");
+      expect(
+        (got?.draft.step4Data as { location: { latitude: number; longitude: number } }).location,
+      ).toEqual({
         latitude: -27.59,
         longitude: -48.54,
       });
@@ -146,35 +146,24 @@ describe("requestQuoteDraft.persistence", () => {
   });
 
   describe("clearDraft", () => {
-    it("removes key from storage", () => {
-      saveDraft(createMinimalDraft());
-      expect(getDraft()).not.toBeNull();
-      clearDraft();
-      expect(getDraft()).toBeNull();
+    it("removes key from storage", async () => {
+      await saveDraft(createMinimalDraft());
+      expect(await getDraft()).not.toBeNull();
+      await clearDraft();
+      expect(await getDraft()).toBeNull();
     });
 
-    it("does not throw when removeItem fails", () => {
-      vi.stubGlobal("localStorage", {
-        getItem: () => null,
-        setItem: vi.fn(),
-        removeItem: () => {
-          throw new Error("remove failed");
-        },
-      });
-      expect(() => clearDraft()).not.toThrow();
+    it("does not throw when remove fails", async () => {
+      const { preferencesRemove } = await import("@/lib/capacitor/preferencesStorage");
+      vi.mocked(preferencesRemove).mockRejectedValueOnce(new Error("remove failed"));
+      await expect(clearDraft()).resolves.toBeUndefined();
     });
   });
 
   describe("saveDraft errors", () => {
-    it("does not throw when setItem fails", () => {
-      vi.stubGlobal("localStorage", {
-        getItem: () => null,
-        setItem: () => {
-          throw new Error("quota exceeded");
-        },
-        removeItem: vi.fn(),
-      });
-      expect(() => saveDraft(createMinimalDraft())).not.toThrow();
+    it("does not throw when set fails", async () => {
+      vi.mocked(preferencesSet).mockRejectedValueOnce(new Error("quota exceeded"));
+      await expect(saveDraft(createMinimalDraft())).resolves.toBeUndefined();
     });
   });
 
@@ -236,20 +225,20 @@ describe("requestQuoteDraft.persistence", () => {
     it("preserves step4Data with location when building serializable draft", () => {
       const step4DataWithLocation = {
         kind: "new" as const,
-          formData: {
-            address_label: "Casa",
-            address_zip: "88015-100",
-            address_street: "Rua X",
-            address_number: "10",
-            address_complement: "",
-            address_neighborhood_id: "n1",
-            address_neighborhood: "Centro",
-            address_state_id: "s1",
-            address_state: "SC",
-            address_city_id: "c1",
-            address_city: "Florianópolis",
-          },
-          location: { latitude: -27.5954, longitude: -48.548 },
+        formData: {
+          address_label: "Casa",
+          address_zip: "88015-100",
+          address_street: "Rua X",
+          address_number: "10",
+          address_complement: "",
+          address_neighborhood_id: "n1",
+          address_neighborhood: "Centro",
+          address_state_id: "s1",
+          address_state: "SC",
+          address_city_id: "c1",
+          address_city: "Florianópolis",
+        },
+        location: { latitude: -27.5954, longitude: -48.548 },
       };
       const state = {
         currentStep: 4,
@@ -271,12 +260,12 @@ describe("requestQuoteDraft.persistence", () => {
   });
 
   describe("version compatibility", () => {
-    it("getDraft returns payload with stored version so hook can compare to REQUEST_QUOTE_DRAFT_VERSION", () => {
-      storage[STORAGE_KEY] = JSON.stringify({
+    it("getDraft returns payload with stored version so hook can compare to REQUEST_QUOTE_DRAFT_VERSION", async () => {
+      getPreferencesTestStore()[STORAGE_KEY] = JSON.stringify({
         version: "0",
         draft: createMinimalDraft(),
       });
-      const got = getDraft();
+      const got = await getDraft();
       expect(got).not.toBeNull();
       expect(got?.version).toBe("0");
       expect(got?.version).not.toBe(REQUEST_QUOTE_DRAFT_VERSION);

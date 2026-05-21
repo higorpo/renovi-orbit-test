@@ -96,8 +96,20 @@ Transição: eventos `onAuthStateChange` do Supabase.
 
 ## 12. Persistência
 
+### Servidor
+
 - `auth.users` + `profiles` (1:1 por id).
 - Metadados de signup podem alimentar trigger `handle_new_user` (migrations).
+
+### Cliente (sessão e preferências)
+
+| Chave / mecanismo | Onde | Comportamento |
+|-------------------|------|---------------|
+| `sb-{project-ref}-auth-token` | Capacitor **Preferences** via `createSupabaseAuthStorage()` | Token de sessão Supabase; gravado só se **Manter conectado** estiver ativo |
+| `orbit_persist_session` | Capacitor Preferences (`persistSession.ts`) | `"true"` / `"false"` — espelha a escolha de **Manter conectado**; hidratado no boot antes do render (`hydratePersistSessionPreference`) |
+| Sessão sem “Manter conectado” | Armazenamento **em memória** (`sessionOnlyStore` em `preferencesStorage.ts`) | Sessão não sobrevive ao encerramento do processo do app |
+
+**Boot da SPA (`main.tsx`):** `initCapacitorPlugins()` → `hydratePersistSessionPreference()` → montagem da árvore React.
 
 ## 13. Integrações
 
@@ -137,6 +149,10 @@ Transição: eventos `onAuthStateChange` do Supabase.
 - `src/features/auth/hooks/useAuth.tsx`
 - `src/features/auth/api/auth.api.ts`, `profile.api.ts`
 - `src/features/auth/utils/passwordPolicy.ts`
+- `src/lib/persistSession.ts`
+- `src/lib/capacitor/preferencesStorage.ts` (`createSupabaseAuthStorage`)
+- `src/lib/supabase/client.ts` (storage de auth + `__E2E_SUPABASE_STORAGE_KEY__` no `window`)
+- `src/main.tsx` (bootstrap: hydrate de sessão antes de `renderApp`)
 - `src/router.tsx`
 - `supabase/migrations/20260224140000_restrict_role_admin_security.sql`
 
@@ -148,7 +164,7 @@ Transição: eventos `onAuthStateChange` do Supabase.
 |-------|----------|-----------|------------------------|
 | email | Email | `signInSchema` — formato e-mail (`login.validation.ts`) | Enviado a `authApi.signInWithPassword` |
 | password | Senha | mín. 1 caractere (“Senha é obrigatória”) | Supabase Auth |
-| rememberMe | Manter conectado | fora do Zod | `setPersistSession` (`persistSession.ts`) |
+| rememberMe | Manter conectado | fora do Zod | `setPersistSession` → grava `orbit_persist_session` em Capacitor Preferences e altera se o JWT Supabase persiste em Preferences ou só em memória |
 
 ### Cadastro cliente / profissional (`/cadastro/cliente`, `/cadastro/profissional`)
 
@@ -186,3 +202,8 @@ Sem sessão de recuperação: cópia + link para `/esqueceu-senha` e login — `
 - **Inicialização de sessão com fallback:** `INITIAL_SESSION` é processado imediatamente e há timeout defensivo de 5s para liberar a UI caso o evento não chegue.
 - **Debounce de eventos auth:** mudanças não iniciais de sessão passam por debounce de 300ms para evitar rajadas de refresh/signin.
 - **Cadastro com regra explícita de duplicidade:** e-mail já existente retorna `reason: "already_registered"` e mensagem orientando login/recuperação.
+
+## 23. Atualização de auditoria (2026-05-21)
+
+- **Persistência de sessão:** uso de **Capacitor Preferences** (não `localStorage` do browser) para token Supabase e flag `orbit_persist_session` quando “Manter conectado” está ativo; caso contrário, token só em memória até o app encerrar.
+- **Boot:** hidratação de `orbit_persist_session` antes do primeiro render (`main.tsx`).

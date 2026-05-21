@@ -7,6 +7,7 @@ import {
   clearDraft,
   buildSerializableDraft,
   REQUEST_QUOTE_DRAFT_VERSION,
+  type PersistedDraft,
 } from "../utils/requestQuoteDraft.persistence";
 import { isRequestQuoteDraftStateMeaningful } from "../utils/requestQuoteDraftMeaningful";
 
@@ -24,22 +25,29 @@ export function useRequestQuoteDraft(
   /** When set, wizard has 4 steps (no guest identity step); clamp restored step to 4. */
   loggedInUserId?: string | null
 ): UseRequestQuoteDraftResult {
-  const [restorableDraft, setRestorableDraft] = useState<ReturnType<typeof getDraft>>(null);
+  const [restorableDraft, setRestorableDraft] = useState<PersistedDraft | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // On mount: load draft and validate version; ignore draft when entering with a specific service (deep link)
   useEffect(() => {
     if (urlServiceSlug != null) {
-      clearDraft();
+      void clearDraft();
       return;
     }
-    const persisted = getDraft();
-    if (persisted == null) return;
-    if (persisted.version !== REQUEST_QUOTE_DRAFT_VERSION) {
-      clearDraft();
-      return;
-    }
-    setRestorableDraft(persisted);
+    let cancelled = false;
+    void (async () => {
+      const persisted = await getDraft();
+      if (cancelled) return;
+      if (persisted == null) return;
+      if (persisted.version !== REQUEST_QUOTE_DRAFT_VERSION) {
+        await clearDraft();
+        return;
+      }
+      setRestorableDraft(persisted);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [urlServiceSlug]);
 
   const restoreDraft = useCallback(() => {
@@ -70,7 +78,7 @@ export function useRequestQuoteDraft(
 
   const discardDraft = useCallback(() => {
     addBreadcrumb({ message: "request_quote.draft_discarded" });
-    clearDraft();
+    void clearDraft();
     setRestorableDraft(null);
   }, []);
 
@@ -78,7 +86,7 @@ export function useRequestQuoteDraft(
   useEffect(() => {
     if (restorableDraft != null) return; // Wait until user resolves restore prompt
     if (state.orderCreatedEmail != null) {
-      clearDraft();
+      void clearDraft();
       return;
     }
     if (!isRequestQuoteDraftStateMeaningful(state)) return;
@@ -86,7 +94,7 @@ export function useRequestQuoteDraft(
     if (debounceRef.current != null) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       debounceRef.current = null;
-      saveDraft(buildSerializableDraft(state));
+      void saveDraft(buildSerializableDraft(state));
     }, PERSIST_DEBOUNCE_MS);
 
     return () => {
@@ -115,7 +123,7 @@ export function useRequestQuoteDraft(
 
   // Clear draft when order is created (success screen)
   useEffect(() => {
-    if (state.orderCreatedEmail != null) clearDraft();
+    if (state.orderCreatedEmail != null) void clearDraft();
   }, [state.orderCreatedEmail]);
 
   const hasRestorableDraft = restorableDraft != null;

@@ -1,6 +1,6 @@
 # Matriz de cobertura documental
 
-Última auditoria completa: **2026-05-21** (revisão parcial: Capacitor).
+Última auditoria completa: **2026-05-21** (revisão: Capacitor Preferences / persistência cliente).
 
 Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de inferência ou RPC/RLS não detalhados linha a linha; **N/A** = não aplicável como feature de produto.
 
@@ -43,7 +43,7 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 | Item | Status |
 |------|--------|
 | PWA / Service worker (`src/sw.ts`) | Não documentado em profundidade |
-| App nativo Capacitor (Android) | **Parcial** — rastreabilidade lista artefatos; comportamento de shell documentado abaixo; sem módulo em `modulos/` |
+| App nativo Capacitor (Android) | **Parcial** — shell + persistência Preferences documentados abaixo; `device-beacon` / `push-permission` só na rastreabilidade; sem módulo em `modulos/` |
 | Observabilidade (Sentry) | Mencionado na rastreabilidade |
 | Analytics (`useAnalytics`) | Mencionado pontualmente em fluxos críticos |
 
@@ -58,8 +58,23 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 | Teclado virtual: variável CSS `--keyboard-height` no `html` | listeners `keyboardWillShow` / `keyboardWillHide` |
 | Android: botão voltar navega `history.back()` ou encerra app | listener `App.backButton` |
 | Ciclo de vida: `document.documentElement.dataset.appActive` | listener `App.appStateChange` |
-| Storage nativo via Preferences | API exportada em `preferencesStorage.ts`; **nenhum fluxo de negócio** consome ainda |
+| Persistência cliente (Preferences) | **OK (transversal)** — ver tabela abaixo; documentado em auth, request-quote, rastreabilidade |
 | Haptics | Pacote em `package.json`; **sem uso** em `src/` |
+
+### Persistência em Capacitor Preferences (evidência verificada)
+
+| Chave lógica | Consumidor | Documentado em |
+|--------------|------------|----------------|
+| `sb-{ref}-auth-token` | Supabase Auth (`createSupabaseAuthStorage`) | `auth` — autenticacao-e-sessao |
+| `orbit_persist_session` | Manter conectado | `auth` — autenticacao-e-sessao |
+| `orbit.cache.persist.v1:*` | `cachePersist*` (`src/lib/cache.ts`) | rastreabilidade |
+| `renovi_request_quote_draft` | Rascunho do wizard | `request-quote` — pedir-orcamento |
+| `orbit_device_beacon_last_sync_v1` | `device-beacon` / `syncSchedule.ts` | rastreabilidade (**sem** `modulos/device-beacon/`) |
+| `orbit_push_permission_prompt_dismissed_at` | `push-permission` / cooldown do dialog | rastreabilidade (**sem** `modulos/push-permission/`) |
+
+| Comportamento transversal | Onde |
+|---------------------------|------|
+| Web / E2E: prefixo `CapacitorStorage.` no `localStorage` | `PREFERENCES_WEB_KEY_PREFIX`, `e2e/fixtures/auth.fixture.ts` |
 
 ## Próximas expansões sugeridas (fora do escopo mínimo cumprido)
 

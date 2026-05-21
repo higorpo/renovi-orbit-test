@@ -1,4 +1,9 @@
 import { logger } from "@/lib/logger";
+import {
+  preferencesGet,
+  preferencesRemove,
+  preferencesSet,
+} from "@/lib/capacitor/preferencesStorage";
 import type { AddressSelection } from "@/features/addresses";
 import type { ServiceWithChildren } from "../types/request-quote.types";
 import type { ServiceRequestStructuredData } from "../types/request-quote.types";
@@ -19,7 +24,7 @@ export interface SerializableStep3Data {
   structured?: ServiceRequestStructuredData | null;
 }
 
-/** Draft state stored in localStorage. Step 5 (personal data) is excluded for security. */
+/** Draft state stored in Capacitor Preferences. Step 5 (personal data) is excluded for security. */
 export interface SerializableDraftState {
   currentStep: number;
   previousStep: number;
@@ -36,9 +41,9 @@ export interface PersistedDraft {
   draft: SerializableDraftState;
 }
 
-export function getDraft(): PersistedDraft | null {
+export async function getDraft(): Promise<PersistedDraft | null> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = await preferencesGet(STORAGE_KEY);
     if (raw == null) return null;
     const parsed = JSON.parse(raw) as unknown;
     if (
@@ -60,13 +65,13 @@ export function getDraft(): PersistedDraft | null {
   }
 }
 
-export function saveDraft(draft: SerializableDraftState): void {
+export async function saveDraft(draft: SerializableDraftState): Promise<void> {
   try {
     const payload: PersistedDraft = {
       version: REQUEST_QUOTE_DRAFT_VERSION,
       draft,
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    await preferencesSet(STORAGE_KEY, JSON.stringify(payload));
   } catch (e) {
     logger.debug("request_quote_draft_save_failed", {
       error: e instanceof Error ? e.message : String(e),
@@ -74,9 +79,9 @@ export function saveDraft(draft: SerializableDraftState): void {
   }
 }
 
-export function clearDraft(): void {
+export async function clearDraft(): Promise<void> {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    await preferencesRemove(STORAGE_KEY);
   } catch {
     // Ignore
   }

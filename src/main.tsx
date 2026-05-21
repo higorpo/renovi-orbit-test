@@ -4,6 +4,7 @@ import { RouterProvider } from 'react-router/dom'
 import { QueryClient, QueryCache, MutationCache, QueryClientProvider } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import { initCapacitorPlugins } from '@/lib/capacitor'
+import { hydratePersistSessionPreference } from '@/lib/persistSession'
 import { initSentry, captureException } from '@/lib/sentry'
 import { createIDBPersister, PERSISTED_CACHE_MAX_AGE_MS } from '@/lib/queryClient'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -12,7 +13,6 @@ import './index.css'
 import { router } from './router'
 
 initSentry()
-void initCapacitorPlugins()
 
 const queryCache = new QueryCache({
   onError: (error, query) => {
@@ -49,25 +49,35 @@ const queryClient = new QueryClient({
 
 const persister = createIDBPersister()
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ErrorBoundary>
-      {disableReactQueryCache ? (
-        <QueryClientProvider client={queryClient}>
-          <Suspense fallback={null}>
-            <RouterProvider router={router} />
-          </Suspense>
-        </QueryClientProvider>
-      ) : (
-        <PersistQueryClientProvider
-          client={queryClient}
-          persistOptions={{ persister, maxAge: PERSISTED_CACHE_MAX_AGE_MS }}
-        >
-          <Suspense fallback={null}>
-            <RouterProvider router={router} />
-          </Suspense>
-        </PersistQueryClientProvider>
-      )}
-    </ErrorBoundary>
-  </StrictMode>
-)
+function renderApp() {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <ErrorBoundary>
+        {disableReactQueryCache ? (
+          <QueryClientProvider client={queryClient}>
+            <Suspense fallback={null}>
+              <RouterProvider router={router} />
+            </Suspense>
+          </QueryClientProvider>
+        ) : (
+          <PersistQueryClientProvider
+            client={queryClient}
+            persistOptions={{ persister, maxAge: PERSISTED_CACHE_MAX_AGE_MS }}
+          >
+            <Suspense fallback={null}>
+              <RouterProvider router={router} />
+            </Suspense>
+          </PersistQueryClientProvider>
+        )}
+      </ErrorBoundary>
+    </StrictMode>
+  )
+}
+
+async function bootstrap() {
+  await initCapacitorPlugins()
+  await hydratePersistSessionPreference()
+  renderApp()
+}
+
+void bootstrap()

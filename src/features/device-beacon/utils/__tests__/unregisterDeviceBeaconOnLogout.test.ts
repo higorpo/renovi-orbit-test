@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import '@/lib/capacitor/__tests__/preferencesStorage.harness'
+import { clearPreferencesTestStore, getPreferencesTestStore } from '@/lib/capacitor/__tests__/preferencesStorage.harness'
 import { DEVICE_BEACON_SYNC_STORAGE_KEY } from '../../types/deviceBeacon.types'
 import { unregisterDeviceBeaconOnLogout } from '../unregisterDeviceBeaconOnLogout'
 
@@ -18,19 +20,16 @@ const { deleteDeviceBeacon } = await import('../../api/deviceBeacon.api')
 describe('unregisterDeviceBeaconOnLogout', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    localStorage.clear()
-    localStorage.setItem(
-      DEVICE_BEACON_SYNC_STORAGE_KEY,
-      JSON.stringify([
-        {
-          profileId: 'user-1',
-          deviceId: 'device-xyz',
-          lastSyncedAt: new Date().toISOString(),
-          pushEnabled: true,
-          fcmToken: 'token',
-        },
-      ]),
-    )
+    clearPreferencesTestStore()
+    getPreferencesTestStore()[DEVICE_BEACON_SYNC_STORAGE_KEY] = JSON.stringify([
+      {
+        profileId: 'user-1',
+        deviceId: 'device-xyz',
+        lastSyncedAt: new Date().toISOString(),
+        pushEnabled: true,
+        fcmToken: 'token',
+      },
+    ])
   })
 
   it('deletes beacon and clears local sync snapshot', async () => {
@@ -39,7 +38,7 @@ describe('unregisterDeviceBeaconOnLogout', () => {
     expect(deleteDeviceBeacon).toHaveBeenCalledWith('user-1', 'device-xyz')
 
     const remaining = JSON.parse(
-      localStorage.getItem(DEVICE_BEACON_SYNC_STORAGE_KEY) ?? '[]',
+      getPreferencesTestStore()[DEVICE_BEACON_SYNC_STORAGE_KEY] ?? '[]',
     ) as unknown[]
     expect(remaining).toHaveLength(0)
   })
@@ -50,7 +49,7 @@ describe('unregisterDeviceBeaconOnLogout', () => {
     await unregisterDeviceBeaconOnLogout('user-1')
 
     const remaining = JSON.parse(
-      localStorage.getItem(DEVICE_BEACON_SYNC_STORAGE_KEY) ?? '[]',
+      getPreferencesTestStore()[DEVICE_BEACON_SYNC_STORAGE_KEY] ?? '[]',
     ) as unknown[]
     expect(remaining).toHaveLength(1)
   })

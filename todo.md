@@ -71,6 +71,5 @@ Coisas para fazer next
 
 - Substituir os locais que estão usando localstorage pela API nativa de storage do capacitor
 - Adicionar explicações sobre capacitor no projeto (contexto)
-- Adicionar plugins uteis ao capacitor (status bar)
 - Adicionar message dispatcher
--Quando eu envio uma push e ele está em foreground ele exibe alerta,deveria mostrar notificação mesmo assim
+- No android ele não mostra dialog de  permissão de notificação antes de mostrar a nativa

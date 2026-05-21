@@ -1,8 +1,10 @@
 /**
  * In-memory TTL cache ({@link cacheGet} / {@link cacheSet}) plus optional
- * {@link cachePersist*} helpers (localStorage) for the same logical keys when
+ * {@link cachePersist*} helpers (Capacitor Preferences) for the same logical keys when
  * data must survive reloads (e.g. profile for offline route guards).
  */
+
+import { preferencesGet, preferencesRemove, preferencesSet } from '@/lib/capacitor/preferencesStorage'
 
 interface CacheEntry<T> {
   data: T;
@@ -53,10 +55,10 @@ function persistStorageKey(logicalKey: string): string {
  * Read a value previously stored with {@link cachePersistSet}.
  * Same logical `key` as {@link cacheGet} / {@link cacheSet} (e.g. `profile_${userId}`).
  */
-export function cachePersistGet<T>(logicalKey: string): T | null {
+export async function cachePersistGet<T>(logicalKey: string): Promise<T | null> {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(persistStorageKey(logicalKey));
+    const raw = await preferencesGet(persistStorageKey(logicalKey));
     if (!raw) return null;
     return JSON.parse(raw) as T;
   } catch {
@@ -64,19 +66,19 @@ export function cachePersistGet<T>(logicalKey: string): T | null {
   }
 }
 
-export function cachePersistSet<T>(logicalKey: string, data: T): void {
+export async function cachePersistSet<T>(logicalKey: string, data: T): Promise<void> {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(persistStorageKey(logicalKey), JSON.stringify(data));
+    await preferencesSet(persistStorageKey(logicalKey), JSON.stringify(data));
   } catch {
     // quota / private mode
   }
 }
 
-export function cachePersistRemove(logicalKey: string): void {
+export async function cachePersistRemove(logicalKey: string): Promise<void> {
   if (typeof window === "undefined") return;
   try {
-    localStorage.removeItem(persistStorageKey(logicalKey));
+    await preferencesRemove(persistStorageKey(logicalKey));
   } catch {
     // ignore
   }

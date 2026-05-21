@@ -410,7 +410,7 @@ export async function installSupabaseMocks(
 }
 
 // ---------------------------------------------------------------------------
-// Helpers to inject authenticated session into localStorage
+// Helpers to inject authenticated session into Capacitor Preferences (web: prefixed localStorage)
 // ---------------------------------------------------------------------------
 
 /**
@@ -431,9 +431,8 @@ export async function seedAuthSession(page: Page, user: MockUser) {
 
   await page.addInitScript(
     ([key, value]) => {
-      window.localStorage.setItem(key, value);
-      window.sessionStorage.setItem(key, value);
-      window.localStorage.setItem("persist_session", "true");
+      window.localStorage.setItem(`CapacitorStorage.${key}`, value);
+      window.localStorage.setItem("CapacitorStorage.orbit_persist_session", "true");
     },
     [storageKey, payload]
   );
@@ -477,11 +476,9 @@ export async function seedAuthSessionUniversal(
   await page.addInitScript(
     (value: string, storageKeys: string[]) => {
       storageKeys.forEach((key) => {
-        window.localStorage.setItem(key, value);
-        window.sessionStorage.setItem(key, value);
+        window.localStorage.setItem(`CapacitorStorage.${key}`, value);
       });
-      window.localStorage.setItem("persist_session", "true");
-      window.localStorage.setItem("orbit_persist_session", "true");
+      window.localStorage.setItem("CapacitorStorage.orbit_persist_session", "true");
     },
     payload,
     keys

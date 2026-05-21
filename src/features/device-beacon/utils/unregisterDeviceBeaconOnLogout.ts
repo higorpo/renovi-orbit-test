@@ -20,7 +20,7 @@ export async function unregisterDeviceBeaconOnLogout(profileId: string): Promise
       return
     }
 
-    removeDeviceBeaconSyncSnapshot(profileId, identifier)
+    await removeDeviceBeaconSyncSnapshot(profileId, identifier)
     logger.info('device_beacon_removed_on_logout', { profileId, deviceId: identifier })
   } catch (error) {
     logger.warn('device_beacon_logout_unregister_failed', {

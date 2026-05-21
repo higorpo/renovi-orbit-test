@@ -27,7 +27,7 @@ vi.mock('@/lib/logger', () => ({
 }))
 
 vi.mock('../../utils/pushPermissionPrompt.storage', () => ({
-  isPushPermissionPromptDismissed: vi.fn(() => false),
+  isPushPermissionPromptDismissed: vi.fn(async () => false),
   markPushPermissionPromptDismissed: vi.fn(),
   clearPushPermissionPromptDismissed: vi.fn(),
 }))
@@ -46,7 +46,7 @@ describe('usePushPermissionPrompt', () => {
     authMocks.loadingSession = false
     pushMocks.getPushPermissionStatus.mockResolvedValue('default')
     pushMocks.setupPushNotifications.mockResolvedValue(undefined)
-    vi.mocked(isPushPermissionPromptDismissed).mockReturnValue(false)
+    vi.mocked(isPushPermissionPromptDismissed).mockResolvedValue(false)
   })
 
   it('opens dialog when permission is pending', async () => {
@@ -86,7 +86,7 @@ describe('usePushPermissionPrompt', () => {
   })
 
   it('does not open when user dismissed soft prompt', async () => {
-    vi.mocked(isPushPermissionPromptDismissed).mockReturnValue(true)
+    vi.mocked(isPushPermissionPromptDismissed).mockResolvedValue(true)
     const { result } = renderHook(() => usePushPermissionPrompt())
 
     await waitFor(() => expect(pushMocks.getPushPermissionStatus).toHaveBeenCalled())

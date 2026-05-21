@@ -12,6 +12,7 @@ vi.mock('@capacitor/preferences', () => ({
 }))
 
 import {
+  createSupabaseAuthStorage,
   preferencesClear,
   preferencesGet,
   preferencesRemove,
@@ -50,5 +51,32 @@ describe('preferencesStorage', () => {
   it('preferencesClear delegates to Preferences.clear', async () => {
     await preferencesClear()
     expect(preferencesMocks.clear).toHaveBeenCalledTimes(1)
+  })
+
+  describe('createSupabaseAuthStorage', () => {
+    it('persists auth token via Preferences when remember-me is on', async () => {
+      const storage = createSupabaseAuthStorage(() => true)
+      await storage.setItem('sb-test-auth-token', '{"access_token":"a"}')
+      expect(preferencesMocks.set).toHaveBeenCalledWith({
+        key: 'sb-test-auth-token',
+        value: '{"access_token":"a"}',
+      })
+      await expect(storage.getItem('sb-test-auth-token')).resolves.toBe('stored')
+    })
+
+    it('keeps auth token in memory only when remember-me is off', async () => {
+      const storage = createSupabaseAuthStorage(() => false)
+      await storage.setItem('sb-test-auth-token', '{"access_token":"b"}')
+      expect(preferencesMocks.set).not.toHaveBeenCalled()
+      await expect(storage.getItem('sb-test-auth-token')).resolves.toBe('{"access_token":"b"}')
+    })
+
+    it('removeItem clears both persistent and ephemeral stores', async () => {
+      const storage = createSupabaseAuthStorage(() => false)
+      await storage.setItem('sb-test-auth-token', 'x')
+      await storage.removeItem('sb-test-auth-token')
+      expect(preferencesMocks.remove).toHaveBeenCalledWith({ key: 'sb-test-auth-token' })
+      await expect(storage.getItem('sb-test-auth-token')).resolves.toBeNull()
+    })
   })
 })

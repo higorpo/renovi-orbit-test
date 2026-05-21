@@ -15,7 +15,7 @@
 | Passos | 5 (convidado) ou 4 (logado — sem passo “Cadastro”) |
 | Criação do pedido | POST multipart para Edge **`create-request-quote-order`** (`verify_jwt = false`; validação interna) |
 | IA | Edge **`generate-smart-description`** (`verify_jwt = true`), disparo automático ao entrar no passo 3 vindo do passo 2 |
-| Rascunho | `localStorage` com versão; sem PII do passo 5; debounce 400 ms |
+| Rascunho | Capacitor **Preferences** (`renovi_request_quote_draft`), versão `REQUEST_QUOTE_DRAFT_VERSION`; sem PII do passo 5; debounce 400 ms |
 | Antes do POST | reCAPTCHA ação `request_quote_submit`; opcionalmente **nsfwjs** nas fotos |
 
 ## 3. Documentação da feature

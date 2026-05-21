@@ -137,11 +137,9 @@ export const test = base.extend<AuthFixtures>({
       await page.evaluate(
         ({ storageKeys, payload }: { storageKeys: string[]; payload: string }) => {
           storageKeys.forEach((k) => {
-            window.localStorage.setItem(k, payload);
-            window.sessionStorage.setItem(k, payload);
+            window.localStorage.setItem(`CapacitorStorage.${k}`, payload);
           });
-          window.localStorage.setItem("persist_session", "true");
-          window.localStorage.setItem("orbit_persist_session", "true");
+          window.localStorage.setItem("CapacitorStorage.orbit_persist_session", "true");
         },
         { storageKeys: keys, payload: payloadStr }
       );

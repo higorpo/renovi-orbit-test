@@ -68,6 +68,8 @@ vi.mock('@/lib/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
 
+import '@/lib/capacitor/__tests__/preferencesStorage.harness'
+import { clearPreferencesTestStore, getPreferencesTestStore } from '@/lib/capacitor/__tests__/preferencesStorage.harness'
 import { saveDeviceBeaconSyncSnapshot } from '../../utils/syncSchedule'
 import { DeviceBeaconProvider } from '../DeviceBeaconProvider'
 
@@ -76,7 +78,7 @@ describe('DeviceBeaconProvider', () => {
     vi.clearAllMocks()
     authMocks.user = { id: 'user-1' }
     authMocks.loadingSession = false
-    localStorage.clear()
+    clearPreferencesTestStore()
     collectPayloadMock.mockResolvedValue(defaultPayload)
     upsertMock.mockResolvedValue({ error: null })
     subscribePushMock.mockImplementation((listener) => {
@@ -141,7 +143,7 @@ describe('DeviceBeaconProvider', () => {
     )
 
     await waitFor(() => expect(upsertMock).toHaveBeenCalled())
-    expect(localStorage.getItem('orbit_device_beacon_last_sync_v1')).toBeNull()
+    expect(getPreferencesTestStore()['orbit_device_beacon_last_sync_v1']).toBeUndefined()
   })
 
   it('skips upsert when API returns error', async () => {
@@ -156,7 +158,7 @@ describe('DeviceBeaconProvider', () => {
     )
 
     await waitFor(() => expect(upsertMock).toHaveBeenCalled())
-    expect(localStorage.getItem('orbit_device_beacon_last_sync_v1')).toBeNull()
+    expect(getPreferencesTestStore()['orbit_device_beacon_last_sync_v1']).toBeUndefined()
   })
 
   it('syncs again when push token callback fires', async () => {
@@ -207,7 +209,7 @@ describe('DeviceBeaconProvider', () => {
   it('skips sync when shouldSyncDeviceBeacon returns false', async () => {
     subscribePushMock.mockImplementation(() => vi.fn())
     setupPushMock.mockImplementation(() => Promise.resolve(undefined))
-    saveDeviceBeaconSyncSnapshot(defaultPayload)
+    await saveDeviceBeaconSyncSnapshot(defaultPayload)
 
     render(
       <DeviceBeaconProvider>
@@ -232,7 +234,9 @@ describe('DeviceBeaconProvider', () => {
 
     await waitFor(() => expect(upsertMock).toHaveBeenCalled())
 
-    const snapshots = JSON.parse(localStorage.getItem(DEVICE_BEACON_SYNC_STORAGE_KEY) ?? '[]') as {
+    const snapshots = JSON.parse(
+      getPreferencesTestStore()[DEVICE_BEACON_SYNC_STORAGE_KEY] ?? '[]',
+    ) as {
       profileId: string
       deviceId: string
       lastSyncedAt: string
@@ -241,7 +245,8 @@ describe('DeviceBeaconProvider', () => {
       snapshots[0].lastSyncedAt = new Date(
         Date.now() - DEVICE_BEACON_SYNC_INTERVAL_MS - 1000,
       ).toISOString()
-      localStorage.setItem(DEVICE_BEACON_SYNC_STORAGE_KEY, JSON.stringify(snapshots))
+      getPreferencesTestStore()[DEVICE_BEACON_SYNC_STORAGE_KEY] =
+        JSON.stringify(snapshots)
     }
 
     const callsBefore = upsertMock.mock.calls.length

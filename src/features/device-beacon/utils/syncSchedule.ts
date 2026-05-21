@@ -1,3 +1,4 @@
+import { preferencesGet, preferencesSet } from '@/lib/capacitor/preferencesStorage'
 import {
   DEVICE_BEACON_SYNC_INTERVAL_MS,
   DEVICE_BEACON_SYNC_STORAGE_KEY,
@@ -5,9 +6,9 @@ import {
   type DeviceBeaconUpsertPayload,
 } from '../types/deviceBeacon.types'
 
-function readAllSnapshots(): DeviceBeaconSyncSnapshot[] {
+async function readAllSnapshots(): Promise<DeviceBeaconSyncSnapshot[]> {
   try {
-    const raw = localStorage.getItem(DEVICE_BEACON_SYNC_STORAGE_KEY)
+    const raw = await preferencesGet(DEVICE_BEACON_SYNC_STORAGE_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw) as unknown
     return Array.isArray(parsed) ? (parsed as DeviceBeaconSyncSnapshot[]) : []
@@ -16,20 +17,21 @@ function readAllSnapshots(): DeviceBeaconSyncSnapshot[] {
   }
 }
 
-function writeAllSnapshots(snapshots: DeviceBeaconSyncSnapshot[]): void {
-  localStorage.setItem(DEVICE_BEACON_SYNC_STORAGE_KEY, JSON.stringify(snapshots))
+async function writeAllSnapshots(snapshots: DeviceBeaconSyncSnapshot[]): Promise<void> {
+  await preferencesSet(DEVICE_BEACON_SYNC_STORAGE_KEY, JSON.stringify(snapshots))
 }
 
-export function getDeviceBeaconSyncSnapshot(
+export async function getDeviceBeaconSyncSnapshot(
   profileId: string,
   deviceId: string,
-): DeviceBeaconSyncSnapshot | null {
-  return readAllSnapshots().find((s) => s.profileId === profileId && s.deviceId === deviceId) ?? null
+): Promise<DeviceBeaconSyncSnapshot | null> {
+  const snapshots = await readAllSnapshots()
+  return snapshots.find((s) => s.profileId === profileId && s.deviceId === deviceId) ?? null
 }
 
-export function saveDeviceBeaconSyncSnapshot(
+export async function saveDeviceBeaconSyncSnapshot(
   payload: DeviceBeaconUpsertPayload,
-): DeviceBeaconSyncSnapshot {
+): Promise<DeviceBeaconSyncSnapshot> {
   const snapshot: DeviceBeaconSyncSnapshot = {
     profileId: payload.profile_id,
     deviceId: payload.device_id,
@@ -38,18 +40,23 @@ export function saveDeviceBeaconSyncSnapshot(
     fcmToken: payload.fcm_token,
   }
 
-  const rest = readAllSnapshots().filter(
+  const snapshots = await readAllSnapshots()
+  const rest = snapshots.filter(
     (s) => !(s.profileId === snapshot.profileId && s.deviceId === snapshot.deviceId),
   )
-  writeAllSnapshots([...rest, snapshot])
+  await writeAllSnapshots([...rest, snapshot])
   return snapshot
 }
 
-export function removeDeviceBeaconSyncSnapshot(profileId: string, deviceId: string): void {
-  const rest = readAllSnapshots().filter(
+export async function removeDeviceBeaconSyncSnapshot(
+  profileId: string,
+  deviceId: string,
+): Promise<void> {
+  const snapshots = await readAllSnapshots()
+  const rest = snapshots.filter(
     (s) => !(s.profileId === profileId && s.deviceId === deviceId),
   )
-  writeAllSnapshots(rest)
+  await writeAllSnapshots(rest)
 }
 
 export function shouldSyncDeviceBeacon(

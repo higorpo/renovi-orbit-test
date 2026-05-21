@@ -9,7 +9,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `src/router.tsx` | Rotas, lazy loading, guards, placeholders |
 | `src/App.tsx` | Rota index `/` (ver [app-home](./modulos/app-home/README.md)) |
 | `docs/business/modulos/README.md` | Índice de módulos, cobertura, lacunas |
-| `src/main.tsx` | Montagem do `RouterProvider` |
+| `src/main.tsx` | Bootstrap assíncrono: `initCapacitorPlugins` → `hydratePersistSessionPreference` → `RouterProvider` |
 | `src/layouts/DashboardLayout/dashboardMenu.ts` | Menus por papel |
 | `src/layouts/DashboardLayout/DashboardLayout.tsx` | Layout autenticado |
 | `src/layouts/DashboardLayout/DashboardFakePage.tsx` | Placeholders de seção |
@@ -66,16 +66,22 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 |----------|---------------------|
 | `src/lib/recaptcha.ts` | Cliente reCAPTCHA v3 |
 | `src/lib/logger.ts` / `src/lib/sentry.ts` | Observabilidade (mencionado onde impacta fluxo) |
+| `src/lib/cache.ts` | Cache em memória + `cachePersist*` em Preferences (`orbit.cache.persist.v1:`) |
+| `src/lib/persistSession.ts` | Reexport de preferência **Manter conectado** |
+| `src/lib/supabase/client.ts` | Cliente Supabase com `createSupabaseAuthStorage` |
 
 ## App nativo (Capacitor)
 
 | Artefato | Uso na documentação |
 |----------|---------------------|
 | `src/lib/capacitor/initCapacitorPlugins.ts` | Bootstrap: SystemBars (`@capacitor/core`), splash manual, teclado (`--keyboard-height`), ciclo de vida (`data-app-active`), botão voltar Android |
-| `src/lib/capacitor/preferencesStorage.ts` | Wrapper `@capacitor/preferences` (get/set/remove/clear) — **sem consumidores** em `src/` na última revisão |
+| `src/lib/capacitor/preferencesStorage.ts` | Capacitor Preferences: auth storage (`createSupabaseAuthStorage`), helpers `preferencesGet/Set/Remove`, prefixo web `CapacitorStorage.` para E2E |
+| `src/lib/persistSession.ts` | Chave `orbit_persist_session`; hydrate no boot |
 | `src/lib/capacitor/constants.ts` | Cor de marca `#0F2F3A` (splash / tema) |
 | `capacitor.config.ts` | `appId` `br.com.renovi.orbit`, plugins `SystemBars`, `SplashScreen`, `Keyboard`; `server.url` aponta para dev local (evidência de ambiente de desenvolvimento) |
-| `src/main.tsx` | Chama `initCapacitorPlugins()` antes do `RouterProvider` |
+| `src/features/device-beacon/utils/syncSchedule.ts` | Snapshots de sync em Preferences (`orbit_device_beacon_last_sync_v1`) |
+| `src/features/push-permission/utils/pushPermissionPrompt.storage.ts` | Cooldown do prompt de push (`orbit_push_permission_prompt_dismissed_at`) |
+| `e2e/fixtures/auth.fixture.ts`, `e2e/helpers/preferencesStorage.ts` | `seedSession` grava em `localStorage` com prefixo `CapacitorStorage.` (espelho do fallback web do plugin) |
 | `src/index.css` | `padding-top` com `--safe-area-inset-top` injetado pelo SystemBars no Android WebView |
 | `android/app/src/main/res/values/colors.xml`, `drawable/splash.xml` | Splash nativo Android alinhado à cor de marca |
 | `package.json` | Dependências `@capacitor/app`, `keyboard`, `splash-screen`, `preferences`, `haptics` — **haptics** instalado, **sem import** em `src/` |

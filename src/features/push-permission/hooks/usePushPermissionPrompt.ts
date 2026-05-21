@@ -29,13 +29,13 @@ export function usePushPermissionPrompt() {
     const status = await getPushPermissionStatus()
     if (!isPushPermissionPending(status)) {
       if (status === 'granted') {
-        clearPushPermissionPromptDismissed()
+        await clearPushPermissionPromptDismissed()
       }
       setOpen(false)
       return
     }
 
-    if (isPushPermissionPromptDismissed()) {
+    if (await isPushPermissionPromptDismissed()) {
       setOpen(false)
       return
     }
@@ -57,7 +57,7 @@ export function usePushPermissionPrompt() {
   }, [user?.id, loadingSession, evaluatePrompt])
 
   const dismiss = useCallback(() => {
-    markPushPermissionPromptDismissed()
+    void markPushPermissionPromptDismissed()
     setOpen(false)
   }, [])
 
@@ -65,7 +65,7 @@ export function usePushPermissionPrompt() {
     setRequesting(true)
     try {
       await setupPushNotifications(undefined, { requestPermission: true })
-      clearPushPermissionPromptDismissed()
+      await clearPushPermissionPromptDismissed()
       setOpen(false)
     } catch (error) {
       logger.warn('push_permission_request_failed', {

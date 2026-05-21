@@ -69,7 +69,7 @@ function createMockState(overrides: Partial<RequestQuoteState> = {}): RequestQuo
 
 describe("useRequestQuoteDraft", () => {
   beforeEach(() => {
-    vi.mocked(getDraft).mockReturnValue(null);
+    vi.mocked(getDraft).mockResolvedValue(null);
     vi.mocked(clearDraft).mockClear();
     vi.mocked(saveDraft).mockClear();
     vi.useFakeTimers();
@@ -80,7 +80,7 @@ describe("useRequestQuoteDraft", () => {
   });
 
   it("returns hasRestorableDraft false when getDraft returns null", () => {
-    vi.mocked(getDraft).mockReturnValue(null);
+    vi.mocked(getDraft).mockResolvedValue(null);
     const state = createMockState();
     const { result } = renderHook(() => useRequestQuoteDraft(state, null));
     expect(result.current.hasRestorableDraft).toBe(false);
@@ -100,7 +100,7 @@ describe("useRequestQuoteDraft", () => {
         step4Data: null,
       },
     };
-    vi.mocked(getDraft).mockReturnValue(draftPayload as ReturnType<typeof getDraft>);
+    vi.mocked(getDraft).mockResolvedValue(draftPayload as Awaited<ReturnType<typeof getDraft>>);
     const state = createMockState();
     const { result } = renderHook(() => useRequestQuoteDraft(state, null));
     expect(result.current.hasRestorableDraft).toBe(true);
@@ -120,7 +120,7 @@ describe("useRequestQuoteDraft", () => {
         step4Data: null,
       },
     };
-    vi.mocked(getDraft).mockReturnValue(draftPayload as ReturnType<typeof getDraft>);
+    vi.mocked(getDraft).mockResolvedValue(draftPayload as Awaited<ReturnType<typeof getDraft>>);
     const state = createMockState();
     const { result } = renderHook(() => useRequestQuoteDraft(state, null));
     expect(clearDraft).toHaveBeenCalled();
@@ -141,7 +141,7 @@ describe("useRequestQuoteDraft", () => {
         step4Data: null,
       },
     };
-    vi.mocked(getDraft).mockReturnValue(draftPayload as ReturnType<typeof getDraft>);
+    vi.mocked(getDraft).mockResolvedValue(draftPayload as Awaited<ReturnType<typeof getDraft>>);
     const state = createMockState();
     const { result } = renderHook(() => useRequestQuoteDraft(state, "limpeza-profunda"));
     expect(clearDraft).toHaveBeenCalled();
@@ -162,7 +162,7 @@ describe("useRequestQuoteDraft", () => {
         step4Data: null,
       },
     };
-    vi.mocked(getDraft).mockReturnValue(draftPayload as ReturnType<typeof getDraft>);
+    vi.mocked(getDraft).mockResolvedValue(draftPayload as Awaited<ReturnType<typeof getDraft>>);
     const state = createMockState();
     const { result } = renderHook(() => useRequestQuoteDraft(state, null));
     expect(result.current.hasRestorableDraft).toBe(true);
@@ -192,7 +192,7 @@ describe("useRequestQuoteDraft", () => {
         step4Data: null,
       },
     };
-    vi.mocked(getDraft).mockReturnValue(draftPayload as ReturnType<typeof getDraft>);
+    vi.mocked(getDraft).mockResolvedValue(draftPayload as Awaited<ReturnType<typeof getDraft>>);
     const state = createMockState();
     const { result } = renderHook(() => useRequestQuoteDraft(state, null));
     act(() => {
@@ -203,7 +203,7 @@ describe("useRequestQuoteDraft", () => {
   });
 
   it("restoreDraft does nothing when restorableDraft is null", () => {
-    vi.mocked(getDraft).mockReturnValue(null);
+    vi.mocked(getDraft).mockResolvedValue(null);
     const state = createMockState();
     const { result } = renderHook(() => useRequestQuoteDraft(state, null));
     expect(result.current.hasRestorableDraft).toBe(false);
@@ -215,7 +215,7 @@ describe("useRequestQuoteDraft", () => {
   });
 
   it("persists draft after debounce when state is meaningful and no restorable dialog", () => {
-    vi.mocked(getDraft).mockReturnValue(null);
+    vi.mocked(getDraft).mockResolvedValue(null);
     const state = createMockState({ currentStep: 2 });
     renderHook(() => useRequestQuoteDraft(state, null));
     expect(saveDraft).not.toHaveBeenCalled();
@@ -227,7 +227,7 @@ describe("useRequestQuoteDraft", () => {
   });
 
   it("does not persist when orderCreatedEmail is set", () => {
-    vi.mocked(getDraft).mockReturnValue(null);
+    vi.mocked(getDraft).mockResolvedValue(null);
     const state = createMockState({
       currentStep: 2,
       orderCreatedEmail: "user@example.com",
@@ -241,14 +241,14 @@ describe("useRequestQuoteDraft", () => {
   });
 
   it("clears draft when orderCreatedEmail is set (effect)", () => {
-    vi.mocked(getDraft).mockReturnValue(null);
+    vi.mocked(getDraft).mockResolvedValue(null);
     const state = createMockState({ orderCreatedEmail: "done@example.com" });
     renderHook(() => useRequestQuoteDraft(state, null));
     expect(clearDraft).toHaveBeenCalled();
   });
 
   it("does not persist when state is not meaningful", () => {
-    vi.mocked(getDraft).mockReturnValue(null);
+    vi.mocked(getDraft).mockResolvedValue(null);
     const state = createMockState({
       currentStep: 1,
       selectedService: null,
@@ -297,7 +297,7 @@ describe("useRequestQuoteDraft", () => {
         step4Data: null,
       },
     };
-    vi.mocked(getDraft).mockReturnValue(draftPayload as ReturnType<typeof getDraft>);
+    vi.mocked(getDraft).mockResolvedValue(draftPayload as Awaited<ReturnType<typeof getDraft>>);
     const state = createMockState();
     const { result } = renderHook(() => useRequestQuoteDraft(state, null));
     act(() => {
@@ -336,7 +336,7 @@ describe("useRequestQuoteDraft", () => {
         step4Data: null,
       },
     };
-    vi.mocked(getDraft).mockReturnValue(draftPayload as ReturnType<typeof getDraft>);
+    vi.mocked(getDraft).mockResolvedValue(draftPayload as Awaited<ReturnType<typeof getDraft>>);
     const state = createMockState();
     const { result } = renderHook(() => useRequestQuoteDraft(state, null, "user-1"));
     act(() => {
@@ -346,7 +346,7 @@ describe("useRequestQuoteDraft", () => {
   });
 
   it("persists after debounce when only step5 email is meaningful", () => {
-    vi.mocked(getDraft).mockReturnValue(null);
+    vi.mocked(getDraft).mockResolvedValue(null);
     const state = createMockState({
       currentStep: 1,
       step5Data: {
@@ -366,7 +366,7 @@ describe("useRequestQuoteDraft", () => {
   });
 
   it("persists when on step 1 but step4Data is already set", () => {
-    vi.mocked(getDraft).mockReturnValue(null);
+    vi.mocked(getDraft).mockResolvedValue(null);
     const state = createMockState({
       currentStep: 1,
       step4Data: { kind: "existing", addressId: "addr-1" } as never,
@@ -379,7 +379,7 @@ describe("useRequestQuoteDraft", () => {
   });
 
   it("does not persist when step 3 description is only whitespace", () => {
-    vi.mocked(getDraft).mockReturnValue(null);
+    vi.mocked(getDraft).mockResolvedValue(null);
     const state = createMockState({
       currentStep: 1,
       step3Data: { description: "   ", photos: [], photoPreviews: [] },
@@ -392,7 +392,7 @@ describe("useRequestQuoteDraft", () => {
   });
 
   it("does not save when unmounted before debounce elapses", () => {
-    vi.mocked(getDraft).mockReturnValue(null);
+    vi.mocked(getDraft).mockResolvedValue(null);
     const state = createMockState({ currentStep: 2 });
     const { unmount } = renderHook(() => useRequestQuoteDraft(state, null));
     unmount();

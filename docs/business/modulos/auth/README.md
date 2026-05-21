@@ -30,8 +30,9 @@
 ## 5. Principais fluxos
 
 - Cadastro → confirmação de e-mail (Auth) → perfil criado por trigger.
-- Login → redirect por `role`.
+- Login → redirect por `role`; opção **Manter conectado** define se a sessão Supabase persiste em Capacitor Preferences ou só em memória.
 - Recuperação de senha por e-mail.
+- No boot da app: hidratação da preferência de sessão (`orbit_persist_session`) antes da UI.
 
 ## 6. Regras transversais
 
@@ -55,6 +56,8 @@
 ## 10. Evidências
 
 - `src/features/auth/`
+- `src/lib/capacitor/preferencesStorage.ts`, `src/lib/persistSession.ts`, `src/lib/supabase/client.ts`
+- `src/main.tsx` (bootstrap de sessão)
 - `supabase/migrations/20260223100000_create_public_profiles.sql`
 - `supabase/migrations/20260224140000_restrict_role_admin_security.sql`
 - `src/router.tsx`
