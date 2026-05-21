@@ -16,6 +16,7 @@ MMD SHALL be delivered as a **database-centric transactional outbox** with a per
 | W3 | Phase 6–7: Edge worker, `report_delivery_outcome`, HTTP classification | End-to-end delivery, Req. 7 |
 | W4 | Phase 7–8: `pg_cron`/`pg_net`, webhook, audit timeline | Async ops, Req. 6 |
 | W5 | Phase 9–11: recovery runbooks, security hardening, perf tests | Production readiness |
+| W5b | Phase 12a: unit tests + **80% coverage gate** (Tasks 121–125) | Blocks merge of MMD code |
 | W6 | Phase 12: E2E, Orbit integration, phased rollout | GA |
 
 ### Architectural dependencies (hard gates)
@@ -54,6 +55,41 @@ reclaim_leases → promote_retries (cron order: reclaim before promote recommend
 - **Edge integration:** HTTP 429→`FAILED_RETRYABLE`; 400 invalid token→`FAILED_TERMINAL` + beacon disable.
 - **E2E:** ingest→cron→worker→mock provider→`DELIVERED`; webhook reconcile path.
 - **Chaos:** worker wall-clock >30s lease without report → janitor reclaim.
+
+### Mandatory quality gate — unit test coverage (80%)
+
+**Policy (applies to every implementation task in this document):** All source code produced to complete Tasks **1–120** MUST ship with **automated unit tests** and MUST meet **≥ 80% coverage on every coverage dimension** before the task is considered done. No exceptions for “small” modules.
+
+| Coverage metric | Minimum | Tooling (Orbit stack) |
+|-----------------|---------|------------------------|
+| **Statements** | **80%** | Vitest + `@vitest/coverage-v8` (`statements` in v8 report) |
+| **Branches** | **80%** | Same (`branches`) |
+| **Functions** | **80%** | Same (`functions`) |
+| **Lines** | **80%** | Same (`lines`) |
+
+**In-scope artifacts (all paths introduced by MMD tasks):**
+
+| Layer | Paths (representative) | Test runner |
+|-------|------------------------|-------------|
+| Edge Functions | `supabase/functions/message-dispatcher-worker/**`, `supabase/functions/message-dispatcher-webhook-resend/**` (exclude `index.ts` barrel if re-export only) | Vitest (Deno-compatible) or project-standard Edge test harness |
+| Orbit feature / client | `src/features/**/message-dispatcher/**`, `src/features/**/api/*dispatch*`, hooks/wrappers from Tasks 112–115 | `yarn test:run` (Vitest) |
+| Shared MMD TS | Any `src/**` or `supabase/functions/_shared/**` modules created solely for MMD | Vitest |
+| PL/pgSQL | RPCs, triggers, FSM helpers in `supabase/migrations/*message_dispatcher*` | pgTAP / `supabase test db` or SQL integration suite; **every `IF`/`CASE`/exception branch** MUST have at least one test (branch coverage via scenario matrix when line coverage tools are unavailable) |
+
+**CI enforcement (hard gate):**
+
+- A dedicated CI step (Task **125**) MUST run coverage with **thresholds configured to 80** for `statements`, `branches`, `functions`, and `lines`.
+- Pull requests that add or modify MMD code MUST **fail** if any metric falls below 80% for the **MMD coverage scope** (see Task **121**).
+- Coverage reports MUST be generated in CI (`text-summary` minimum; HTML artifact recommended).
+
+**Definition of Done (per implementation task):**
+
+1. Production code merged for the task scope.
+2. Unit tests colocated (`__tests__/*.test.ts` or `*.test.sql`) covering happy path, error paths, and concurrency-relevant branches.
+3. Coverage report shows **≥ 80%** on statements, branches, functions, and lines for files touched by the task.
+4. No decrease of global MMD module coverage below 80% after merge.
+
+**Relationship to integration/E2E tasks (88–118):** Integration and E2E tests are **additive**; they do **not** replace unit tests or the 80% unit coverage gate.
 
 ### Risk isolation and rollback
 
@@ -5334,6 +5370,245 @@ Req.6 AC3
 
 # Phase 12: Verification & Rollout
 
+> **Coverage reminder:** Tasks **121–125** define the mandatory **≥ 80%** unit coverage gate (statements, branches, functions, lines) for all MMD code. Tasks **88–118** are integration/E2E and do not satisfy the unit coverage policy alone. Every task **1–120** that produces code MUST include unit tests meeting the gate before marking complete.
+
+# Phase 12a: Unit Test Coverage Gate (80% mandatory)
+
+## 121. [ ] Configure Vitest coverage scope and 80% thresholds for MMD
+
+Description:
+Extend Orbit Vitest configuration (`vite.config.ts` or dedicated `vitest.mmd.config.ts`) so all TypeScript/Deno modules introduced by MMD tasks are included in coverage collection, with **hard thresholds of 80** for `statements`, `branches`, `functions`, and `lines`. CI and local `yarn test:run` MUST fail when thresholds are not met.
+
+Responsibilities:
+- Define explicit `coverage.include` globs for MMD artifacts
+- Set `coverage.thresholds` to 80 for all four metrics
+- Exclude only test files, fixtures, and pure re-export barrels
+
+Implementation Details:
+- Add globs: `supabase/functions/message-dispatcher-worker/**/*.ts`, `supabase/functions/message-dispatcher-webhook-resend/**/*.ts`, `src/features/**/messageDispatcher*.ts` (and paths created in Tasks 112–115)
+- In `vite.config.ts` `test.coverage`: `thresholds: { statements: 80, branches: 80, functions: 80, lines: 80 }` scoped via `coverage.include` to MMD paths (or use Vitest 4 `coverage.thresholds` per-directory if supported)
+- Add script `yarn test:mmd:coverage` → `vitest run --coverage --config vitest.mmd.config.ts` (or filtered include)
+- Document in `docs/message-dispatcher/tasks.md` cross-link (this file) as source of truth for the 80% policy
+
+Deliverables:
+- Updated `vite.config.ts` and/or `vitest.mmd.config.ts`
+- `package.json` script `test:mmd:coverage`
+- README snippet in `supabase/functions/message-dispatcher-worker/README.md` (how to run coverage locally)
+
+Dependencies:
+- Task 52 (worker scaffold)
+- Task 71 (webhook scaffold)
+
+Runtime Guarantees:
+- Coverage gate is deterministic on CI — same command as local
+- Thresholds apply to **all** metrics; one metric at 79% fails the build
+
+Failure Handling:
+- If threshold fail: developer adds unit tests until all four metrics ≥ 80%
+- No `--coverage.skipFull` or threshold bypass in CI
+
+Observability:
+- CI publishes `text-summary` coverage output
+- Optional HTML artifact upload for PR review
+
+Security Considerations:
+- Test fixtures MUST NOT embed production secrets
+
+Performance Considerations:
+- Run MMD coverage job in parallel with main test job; cache `node_modules`
+
+Requirements covered:
+All (quality gate)
+
+Acceptance Criteria covered:
+All ACs (verification infrastructure)
+
+## 122. [ ] Unit test suite — `message-dispatcher-worker` (≥ 80% all metrics)
+
+Description:
+Implement Vitest unit tests for every worker module: auth validation, checkout client, template render (email/push), HTTP classifier (429/503/400/timeout), Resend/FCM client wrappers (mocked), and report RPC client. **Statements, branches, functions, and lines MUST each be ≥ 80%.**
+
+Responsibilities:
+- Cover all HTTP classification branches (retryable vs terminal)
+- Cover empty checkout batch, single item, multi-delivery push
+- Cover auth failure paths (missing secret, invalid JWT)
+- Mock provider I/O; no live Resend/FCM in unit tests
+
+Implementation Details:
+- Colocate tests under `supabase/functions/message-dispatcher-worker/__tests__/`
+- Use `vi.mock` for `fetch`, Supabase RPC client, and template registry reads
+- Table-driven tests for classifier: input status → expected `p_success` / retryable flag
+- Assert `Idempotency-Key` header uses `correlation_id` from payload
+- Run `yarn test:mmd:coverage` before PR; fix gaps until four metrics ≥ 80%
+
+Deliverables:
+- `*.test.ts` files covering 80%+ on all metrics (worker package)
+- Coverage screenshot or CI log attached to epic PR
+
+Dependencies:
+- Task 121
+- Tasks 54–60, 68–69
+
+Runtime Guarantees:
+- Tests run offline; no Flake from network
+
+Failure Handling:
+- Flaky tests forbidden — mock timers for backoff display-only logic
+
+Observability:
+- N/A
+
+Security Considerations:
+- No real API keys in tests
+
+Performance Considerations:
+- Keep suite < 30s total
+
+Requirements covered:
+2, 3, 5, 7
+
+Acceptance Criteria covered:
+Req.2 AC1–AC2, Req.3 AC1, Req.5 AC3, Req.7 AC1–AC2
+
+## 123. [ ] Unit test suite — `message-dispatcher-webhook-resend` (≥ 80% all metrics)
+
+Description:
+Vitest unit tests for webhook handler: HMAC signature verification (valid/invalid/missing), payload parsing, reconcile RPC invocation (mocked), duplicate event noop. **All coverage metrics ≥ 80%.**
+
+Responsibilities:
+- 100% branch coverage on signature verification paths
+- Cover malformed JSON, unknown event types, missing `vendor_event_id`
+
+Implementation Details:
+- `supabase/functions/message-dispatcher-webhook-resend/__tests__/`
+- Fixtures from Resend sample payloads (sanitized)
+- Mock `reconcile_vendor_event` RPC responses
+
+Deliverables:
+- Webhook `*.test.ts` with ≥ 80% statements/branches/functions/lines
+
+Dependencies:
+- Task 121
+- Tasks 71–73, 78
+
+Runtime Guarantees:
+- Unit tests do not hit production DB
+
+Failure Handling:
+- Invalid signature → 401 without RPC call (assert mock not called)
+
+Observability:
+- N/A
+
+Security Considerations:
+- Test vectors for timing-safe compare if implemented
+
+Performance Considerations:
+- N/A
+
+Requirements covered:
+6
+
+Acceptance Criteria covered:
+Req.6 AC2
+
+## 124. [ ] Unit/integration SQL tests — PL/pgSQL RPCs and FSM (branch matrix ≥ 80%)
+
+Description:
+Create SQL test suite (pgTAP recommended under `supabase/tests/message_dispatcher/`) covering **every RPC and trigger branch**: ingest (quota, cooldown, idempotency, template reject), cancel (409 paths), checkout (SKIP LOCKED, no email, no devices), report (success, retryable, terminal, max_retries, stale worker), reconcile (duplicate vendor_event), activate/promote/reclaim cron RPCs, FSM matrix. Where PG line coverage tooling is unavailable, maintain a **branch checklist** mapping each `IF`/`CASE` to a test name; suite MUST document **≥ 80% branch coverage** via matrix review + `pg_prove` pass.
+
+Responsibilities:
+- One test file per RPC minimum
+- FSM: test all legal transitions and representative illegal transitions
+- Concurrency: two-session tests for ingest quota (Req. 1 AC3) may live here or Task 104
+
+Implementation Details:
+- Files: `supabase/tests/message_dispatcher/ingest.test.sql`, `checkout.test.sql`, `report.test.sql`, etc.
+- Use `BEGIN; ... ROLLBACK;` fixtures with seed profile/beacon/auth.users test data
+- `supabase test db` or CI `pg_prove` step
+- Branch matrix spreadsheet or markdown table in `supabase/tests/message_dispatcher/BRANCH_MATRIX.md` signed off when SQL coverage tools cannot emit Istanbul-style reports
+
+Deliverables:
+- SQL test files + BRANCH_MATRIX.md
+- CI step running SQL tests
+- Evidence of ≥ 80% branch coverage (tool output or matrix audit)
+
+Dependencies:
+- Task 11, 12
+- Tasks 21–37, 43–51, 61–67, 74–80
+
+Runtime Guarantees:
+- Tests idempotent; clean rollback per test
+
+Failure Handling:
+- Failed SQL test blocks merge same as Vitest threshold
+
+Observability:
+- N/A
+
+Security Considerations:
+- Tests use test profiles only
+
+Performance Considerations:
+- Parallel-safe tests only where isolated with unique idempotency_keys
+
+Requirements covered:
+1–7
+
+Acceptance Criteria covered:
+All Req. 1–7 ACs (DB layer)
+
+## 125. [ ] CI pipeline — enforce MMD unit coverage ≥ 80% (all metrics)
+
+Description:
+Add CI job (GitHub Actions or existing Orbit pipeline) that runs `yarn test:mmd:coverage` and SQL MMD tests on every PR touching `supabase/**/message_dispatcher*`, `supabase/functions/message-dispatcher-*`, or `src/**` MMD wrappers. Job MUST fail if **any** of statements/branches/functions/lines **< 80%** for in-scope files.
+
+Responsibilities:
+- Hard gate — no merge without green coverage
+- PR comment or summary with four metric percentages
+- Run on `pull_request` and `push` to main for affected paths
+
+Implementation Details:
+- Path filters: `supabase/migrations/*message_dispatcher*`, `supabase/functions/message-dispatcher-*/**`, `src/features/**/*dispatch*`, `supabase/tests/message_dispatcher/**`
+- Steps: `nvm use 24.13`, `yarn install`, `yarn test:mmd:coverage`, `supabase test db` (or pg_prove)
+- Upload coverage artifact optional
+- Document bypass policy: **no bypass** except explicit architect approval with tech debt ticket
+
+Deliverables:
+- `.github/workflows/mmd-coverage.yml` (or equivalent)
+- Branch protection rule requiring check
+
+Dependencies:
+- Task 121
+- Task 122
+- Task 123
+- Task 124
+
+Runtime Guarantees:
+- Same command locally and CI — developers reproduce failures
+
+Failure Handling:
+- CI fail → add tests; thresholds MUST NOT be lowered below 80% without ADR
+
+Observability:
+- Coverage summary in CI logs
+
+Security Considerations:
+- CI secrets for DB tests use ephemeral local Supabase only
+
+Performance Considerations:
+- Cache yarn; run only when paths change
+
+Requirements covered:
+All
+
+Acceptance Criteria covered:
+All (delivery gate)
+
+---
+
+# Phase 12: Verification & Rollout
+
 ## 111. [ ] yarn generate-supabase-types
 
 Description:
@@ -5790,7 +6065,7 @@ Responsibilities:
 - Maintain one-command rollback without data destruction
 
 Implementation Details:
-- Pre-GA checklist: Tasks 88–93 green; Task 100 idempotency; Task 103 five-worker checkout
+- Pre-GA checklist: Tasks **88–93**, **100**, **103** green; Tasks **121–125** green (**≥ 80%** unit coverage on statements, branches, functions, lines for all MMD code)
 - Canary: 1% traffic or `source_system` allowlist for 24h; watch `FAILED_TERMINAL` rate <5%/15m
 - Enable Sentry + Logflare dashboards (Task 81–84)
 - Resend webhook: verify HMAC in staging before DNS cutover
@@ -5877,6 +6152,19 @@ Design §8.5
 | Req. 6 Observability | 7–8, 19, 38–39, 74–80, 115, 118 |
 | Req. 7 Failover/Backoff | 35–37, 63–65, 66, 68, 89–91 |
 
-**Document version:** 1.0.0  
+## Appendix E: Unit test coverage policy (mandatory)
+
+| Rule | Value |
+|------|-------|
+| Minimum **statements** | **80%** |
+| Minimum **branches** | **80%** |
+| Minimum **functions** | **80%** |
+| Minimum **lines** | **80%** |
+| Applies to | All code from Tasks 1–120 |
+| Enforcement tasks | **121** (config), **122–124** (suites), **125** (CI gate) |
+| Per-task DoD | Unit tests + four metrics ≥ 80% before task complete |
+| Integration/E2E (88–118) | Required in addition; does not replace unit coverage |
+
+**Document version:** 1.1.0  
 **Last updated:** 2026-05-21  
 **Sources:** `requirements.md`, `design.md`
