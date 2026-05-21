@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,6 +7,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SignInFormData } from "../../types/login.validation";
+
+const LoginDevQuickFill = import.meta.env.DEV
+  ? lazy(() =>
+      import("./LoginDevQuickFill").then((m) => ({ default: m.LoginDevQuickFill }))
+    )
+  : null;
 
 const INPUT_CLASS =
   "bg-white/10 border-white/30 text-white placeholder:text-white/50 h-12 focus:border-[#C57A3A] focus:ring-[#C57A3A]/20";
@@ -40,6 +47,12 @@ export function LoginForm({
 }: LoginFormProps) {
   return (
     <form onSubmit={onSubmit} className="space-y-5">
+      {LoginDevQuickFill ? (
+        <Suspense fallback={null}>
+          <LoginDevQuickFill setFormData={setFormData} />
+        </Suspense>
+      ) : null}
+
       <div className="space-y-2">
         <Label htmlFor="email" className="text-white/90 font-medium">
           Email
