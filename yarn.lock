@@ -876,6 +876,11 @@
   resolved "https://registry.yarnpkg.com/@capacitor/android/-/android-8.3.4.tgz#9719f46d16eeea1c8e00ba57dff55d8cd2a09140"
   integrity sha512-7gJjrG3X32Am1QMLqgMztWTYMLMVNE+VZwhekNxhvYizH4mOV05vH+rC9B+f17bCkYZfyu/qXQX6hoY7kLeVZw==
 
+"@capacitor/app@^8.1.0":
+  version "8.1.0"
+  resolved "https://registry.yarnpkg.com/@capacitor/app/-/app-8.1.0.tgz#fd8da0994a02a767981c8a235d2b6524d36a3aae"
+  integrity sha512-MlmttTOWHDedr/G4SrhNRxsXMqY+R75S4MM4eIgzsgCzOYhb/MpCkA5Q3nuOCfL1oHm26xjUzqZ5aupbOwdfYg==
+
 "@capacitor/cli@^8.3.4":
   version "8.3.4"
   resolved "https://registry.yarnpkg.com/@capacitor/cli/-/cli-8.3.4.tgz#0e90e9b96e55aef56db74450b16191039bacd937"
@@ -911,10 +916,30 @@
   resolved "https://registry.yarnpkg.com/@capacitor/device/-/device-8.0.2.tgz#e4bab2df1d03dd01899cc5993b53b5530499d570"
   integrity sha512-fIqSXnG0s6bz5A/0xFgSXDkbU+Xl65ti80LhucNvLI4kGhJzcNn6SwWVwpXN9SJTOFWXblXknHNppheP8X1frQ==
 
+"@capacitor/haptics@^8.0.2":
+  version "8.0.2"
+  resolved "https://registry.yarnpkg.com/@capacitor/haptics/-/haptics-8.0.2.tgz#821d2687b81ff8855327273314d0d146476f069f"
+  integrity sha512-c2hZzRR5Fk1tbTvhG1jhh2XBAf3EhnIerMIb2sl7Mt41Gxx1fhBJFDa0/BI1IbY4loVepyyuqNC9820/GZuoWQ==
+
+"@capacitor/keyboard@^8.0.3":
+  version "8.0.3"
+  resolved "https://registry.yarnpkg.com/@capacitor/keyboard/-/keyboard-8.0.3.tgz#5dd28e92dcba4643ba0bfa8ccdfed5c5d5d493b8"
+  integrity sha512-27Bv5/2w1Ss2njguBgTS98O0Bb8DRJhAARyzXYib0JlT/n6BrJw/EZ0CokM4C8GFUjFDjJnEKF1Ie01buTMEXQ==
+
+"@capacitor/preferences@^8.0.1":
+  version "8.0.1"
+  resolved "https://registry.yarnpkg.com/@capacitor/preferences/-/preferences-8.0.1.tgz#9924997d694242a5f378e9ddba9711ad1ca611dc"
+  integrity sha512-T6no3ebi79XJCk91U3Jp/liJUwgBdvHR+s6vhvPkPxSuch7z3zx5Rv1bdWM6sWruNx+pViuEGqZvbfCdyBvcHQ==
+
 "@capacitor/push-notifications@^8.1.1":
   version "8.1.1"
   resolved "https://registry.yarnpkg.com/@capacitor/push-notifications/-/push-notifications-8.1.1.tgz#ee910f95350395b9a0362d5b5a7bd3d5ca8ef095"
   integrity sha512-WqzjPKIbYbARMN+GC0XMAJcxJpUUzqgzS/Ny8RODLrro38pQhm3GXYwX2Mwd+LZlLY39rGImkCkrKyQSNfuikA==
+
+"@capacitor/splash-screen@^8.0.1":
+  version "8.0.1"
+  resolved "https://registry.yarnpkg.com/@capacitor/splash-screen/-/splash-screen-8.0.1.tgz#17d2cf051ec2e2b884cfa5abb5e337f9077df167"
+  integrity sha512-c/ew/Z3eA7z8l06WoRAtzVF16VwYYrExmHmfGq1Cg675pVzaC/yuucB8/1xG1vhEfnW4fZ1KhSf/kzR1RiVYgg==
 
 "@csstools/color-helpers@^6.0.2":
   version "6.0.2"

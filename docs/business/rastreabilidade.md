@@ -67,6 +67,19 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `src/lib/recaptcha.ts` | Cliente reCAPTCHA v3 |
 | `src/lib/logger.ts` / `src/lib/sentry.ts` | Observabilidade (mencionado onde impacta fluxo) |
 
+## App nativo (Capacitor)
+
+| Artefato | Uso na documentação |
+|----------|---------------------|
+| `src/lib/capacitor/initCapacitorPlugins.ts` | Bootstrap: SystemBars (`@capacitor/core`), splash manual, teclado (`--keyboard-height`), ciclo de vida (`data-app-active`), botão voltar Android |
+| `src/lib/capacitor/preferencesStorage.ts` | Wrapper `@capacitor/preferences` (get/set/remove/clear) — **sem consumidores** em `src/` na última revisão |
+| `src/lib/capacitor/constants.ts` | Cor de marca `#0F2F3A` (splash / tema) |
+| `capacitor.config.ts` | `appId` `br.com.renovi.orbit`, plugins `SystemBars`, `SplashScreen`, `Keyboard`; `server.url` aponta para dev local (evidência de ambiente de desenvolvimento) |
+| `src/main.tsx` | Chama `initCapacitorPlugins()` antes do `RouterProvider` |
+| `src/index.css` | `padding-top` com `--safe-area-inset-top` injetado pelo SystemBars no Android WebView |
+| `android/app/src/main/res/values/colors.xml`, `drawable/splash.xml` | Splash nativo Android alinhado à cor de marca |
+| `package.json` | Dependências `@capacitor/app`, `keyboard`, `splash-screen`, `preferences`, `haptics` — **haptics** instalado, **sem import** em `src/` |
+
 ## Documentação pré-existente (não como fonte de comportamento)
 
 | Artefato | Nota |

@@ -53,6 +53,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | Admin UI | **Não localizada** no router — evidência parcial |
 | Pagamentos | Planejamento em `docs/` apenas — fora do escopo comportamental |
 | PWA / Sentry / analytics | Mencionados na rastreabilidade; não detalhados por feature |
+| App nativo (Capacitor / Android) | Shell documentado em [rastreabilidade](./rastreabilidade.md) e [matriz](./matriz-cobertura-documental.md); não é módulo em `src/features/` |
 
 ## Diagrama de dependências entre módulos (simplificado)
 

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router/dom'
 import { QueryClient, QueryCache, MutationCache, QueryClientProvider } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
+import { initCapacitorPlugins } from '@/lib/capacitor'
 import { initSentry, captureException } from '@/lib/sentry'
 import { createIDBPersister, PERSISTED_CACHE_MAX_AGE_MS } from '@/lib/queryClient'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -11,6 +12,7 @@ import './index.css'
 import { router } from './router'
 
 initSentry()
+void initCapacitorPlugins()
 
 const queryCache = new QueryCache({
   onError: (error, query) => {
@@ -47,18 +49,12 @@ const queryClient = new QueryClient({
 
 const persister = createIDBPersister()
 
-const RootFallback = () => (
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-    Carregando…
-  </div>
-)
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       {disableReactQueryCache ? (
         <QueryClientProvider client={queryClient}>
-          <Suspense fallback={<RootFallback />}>
+          <Suspense fallback={null}>
             <RouterProvider router={router} />
           </Suspense>
         </QueryClientProvider>
@@ -67,7 +63,7 @@ createRoot(document.getElementById('root')!).render(
           client={queryClient}
           persistOptions={{ persister, maxAge: PERSISTED_CACHE_MAX_AGE_MS }}
         >
-          <Suspense fallback={<RootFallback />}>
+          <Suspense fallback={null}>
             <RouterProvider router={router} />
           </Suspense>
         </PersistQueryClientProvider>

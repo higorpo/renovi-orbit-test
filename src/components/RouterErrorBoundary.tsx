@@ -1,4 +1,5 @@
 import { useRouteError, isRouteErrorResponse } from "react-router";
+import { CapacitorSplashHider } from "@/lib/capacitor";
 import { captureException, captureUserFeedback } from "@/lib/sentry";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,8 @@ export function RouterErrorBoundary() {
         : "Algo deu errado";
 
   return (
+    <>
+      <CapacitorSplashHider />
     <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 p-6 text-center">
       <h2 className="text-lg font-semibold">Erro ao carregar a página</h2>
       <p className="max-w-md text-muted-foreground text-sm">{message}</p>
@@ -74,5 +77,6 @@ export function RouterErrorBoundary() {
         Voltar ao início
       </Button>
     </div>
+    </>
   );
 }

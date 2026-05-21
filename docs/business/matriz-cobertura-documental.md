@@ -1,6 +1,6 @@
 # Matriz de cobertura documental
 
-Última auditoria completa: **2026-04-27**.
+Última auditoria completa: **2026-05-21** (revisão parcial: Capacitor).
 
 Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de inferência ou RPC/RLS não detalhados linha a linha; **N/A** = não aplicável como feature de produto.
 
@@ -43,8 +43,23 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 | Item | Status |
 |------|--------|
 | PWA / Service worker (`src/sw.ts`) | Não documentado em profundidade |
+| App nativo Capacitor (Android) | **Parcial** — rastreabilidade lista artefatos; comportamento de shell documentado abaixo; sem módulo em `modulos/` |
 | Observabilidade (Sentry) | Mencionado na rastreabilidade |
 | Analytics (`useAnalytics`) | Mencionado pontualmente em fluxos críticos |
+
+### App nativo Capacitor (evidência verificada)
+
+| Comportamento | Onde |
+|---------------|------|
+| Inicialização no boot da SPA | `src/main.tsx` → `initCapacitorPlugins()` |
+| SystemBars estilo escuro em plataforma nativa | `initCapacitorPlugins.ts` + `capacitor.config.ts` (`insetsHandling: css`, `style: DARK`) — API de `@capacitor/core`, não `@capacitor/status-bar` |
+| Splash exibido no launch e ocultado pela app (`launchAutoHide: false`) | `SplashScreen.hide()` após init |
+| Safe area superior no layout global | `src/index.css` (`--safe-area-inset-top`) |
+| Teclado virtual: variável CSS `--keyboard-height` no `html` | listeners `keyboardWillShow` / `keyboardWillHide` |
+| Android: botão voltar navega `history.back()` ou encerra app | listener `App.backButton` |
+| Ciclo de vida: `document.documentElement.dataset.appActive` | listener `App.appStateChange` |
+| Storage nativo via Preferences | API exportada em `preferencesStorage.ts`; **nenhum fluxo de negócio** consome ainda |
+| Haptics | Pacote em `package.json`; **sem uso** em `src/` |
 
 ## Próximas expansões sugeridas (fora do escopo mínimo cumprido)
 

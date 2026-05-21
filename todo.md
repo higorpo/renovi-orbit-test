@@ -65,3 +65,12 @@ Coisas para terminar do fluxo atual de trabalho:
 - Permitir que o prestador veja perguntas feitas por outros prestadores (não precisa estar respondida)
 - Permitir que um cliente receba até 5 propostas ao invés de 3
 - Adicionar integração com IA que avalia a melhor proposta e faz um resumo
+
+
+Coisas para fazer next
+
+- Substituir os locais que estão usando localstorage pela API nativa de storage do capacitor
+- Adicionar explicações sobre capacitor no projeto (contexto)
+- Adicionar plugins uteis ao capacitor (status bar)
+- Adicionar message dispatcher
+-Quando eu envio uma push e ele está em foreground ele exibe alerta,deveria mostrar notificação mesmo assim
