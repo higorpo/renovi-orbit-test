@@ -1,109 +1,22 @@
 ---
-description: Arquitetura Feature-Based (Vertical Slices) - estrutura obrigatória para features
+description: Feature-Based (Vertical Slices) — estrutura e Public API
 alwaysApply: true
 ---
 
-# Arquitetura Feature-Based (Vertical Slices)
+# Arquitetura Feature-Based
 
-O projeto usa **Feature-Based Architecture** onde cada funcionalidade é um módulo isolado e autossuficiente dentro de `src/features/`.
-
-## Estrutura de uma feature
+Cada funcionalidade em `src/features/<nome>/`:
 
 ```
-src/features/<nome>/
-├── api/          # Chamadas ao backend (Supabase, REST, etc.) — sem hooks, sem estado
-├── components/   # Componentes de UI exclusivos da feature
-├── hooks/        # Hooks de lógica (estado, formulários, side-effects)
-├── types/        # Interfaces TypeScript e Zod schemas
-├── utils/        # Helpers que não são usados fora desta feature
-└── index.ts      # PUBLIC API — único ponto de entrada para o resto do app
+api/  components/  hooks/  types/  utils/  index.ts  ← Public API
 ```
 
-## Regras fundamentais
+## Regras
 
-### 1. Public API (`index.ts`)
-- Todo consumo externo de uma feature **deve** importar do `index.ts` (barrel file).
-- Exemplo: `import { useAuth, AuthProvider } from '@/features/auth'`
-- **Nunca** importe diretamente de subpastas internas de outra feature (ex.: `@/features/auth/hooks/useAuth` **de fora** da feature).
-- Exporte apenas o mínimo necessário: hooks de estado global, componentes de página, tipos compartilhados e route guards.
+1. **Public API** — Consumo externo só via `index.ts` (ex.: `import { useAuth } from '@/features/auth'`). Nunca importar internals de outra feature.
+2. **Isolamento** — Compartilhado entre features → `src/lib/`, `src/hooks/`, `src/components/ui/`. Exceção: tipos da Public API (`import type { Profile } from '@/features/auth'`).
+3. **Backend** — Chamadas em `<feature>/api/`; hooks consomem API; componentes consomem hooks. Ver `api-layer`.
+4. **Tipos** — Zod e interfaces em `<feature>/types/`.
+5. **Rotas** — Páginas com `lazy()` em `router.tsx`; guards da Public API de `auth`.
 
-### 2. Isolamento entre features
-- Uma feature **não** deve importar de pastas internas de outra feature.
-- Se duas features precisam compartilhar algo, esse recurso deve estar em `src/lib/`, `src/hooks/`, ou `src/components/ui/`.
-- Exceção: tipos da Public API de outra feature (ex.: `import type { Profile } from '@/features/auth'`).
-
-### 3. Código compartilhado (Shared)
-- **`src/hooks/`** — Apenas hooks verdadeiramente globais (ex.: `useAnalytics`, `useTheme`, `useMediaQuery`).
-- **`src/components/ui/`** — Design system (Button, Input, Modal, etc.) sem lógica de negócio.
-- **`src/lib/`** — Infraestrutura e utilitários universais:
-  - `supabase/client.ts` — cliente Supabase
-  - `cache.ts` — cache in-memory
-  - `logger.ts` — logger estruturado
-  - `utils.ts` — helpers como `cn()` (Tailwind merge)
-
-### 4. Camada de API dentro da feature
-- Chamadas ao backend ficam em `<feature>/api/` — não em `src/lib/api/`.
-- Funções de API retornam objetos tipados (`{ data, error }`), sem side-effects de UI.
-- Hooks da feature consomem a API; componentes consomem os hooks.
-
-### 5. Validação e tipos
-- Schemas Zod ficam em `<feature>/types/` junto com as interfaces TypeScript.
-- Utilitários de validação compartilhados dentro da feature ficam em `types/validation.utils.ts`.
-
-### 6. Lazy loading de páginas
-- No `router.tsx`, importe componentes de página via `lazy(() => import('./features/<feature>/components/<Page>/<Page>'))`.
-- Route guards (ex.: `ProtectedRoute`, `GuestOnlyRoute`) são importados da Public API da feature auth.
-
-## Feature de referência: `auth`
-
-A feature `auth` é o **blueprint** do projeto. Use-a como exemplo ao criar novas features:
-
-```
-src/features/auth/
-├── api/           → auth.api.ts, profile.api.ts
-├── components/    → Login/, ClientSignup/, ProviderSignup/, ForgotPassword/, ResetPassword/, routeGuards.tsx
-├── hooks/         → useAuth.tsx, useProfileFetcher.ts, useLoginForm.ts, etc.
-├── types/         → auth.types.ts, login.validation.ts, validation.utils.ts, etc.
-├── utils/         → authStateHandlers.ts, persistSession.ts, passwordPolicy.ts
-└── index.ts       → Exporta: AuthProvider, useAuth, ProtectedRoute, GuestOnlyRoute, Profile, ProfileRole
-```
-
-## Fluxo de dados entre features
-
-```
-[Feature A]                          [Feature B]
-    │                                     │
-    ├── components/ ← hooks/ ← api/      │
-    │        │                            │
-    │    usa useAuth() ─────────────── importa de @/features/auth (Public API)
-    │        │                            │
-    │    usa <Button> ─────────────── importa de @/components/ui (Shared)
-    │        │
-    └── index.ts (exporta o mínimo)
-```
-
-### Como outra feature acessa o estado de auth
-
-```typescript
-// Em qualquer feature (ex.: src/features/dashboard/hooks/useDashboard.ts)
-import { useAuth } from '@/features/auth';
-import type { Profile } from '@/features/auth';
-
-export function useDashboard() {
-  const { user, profile, loading } = useAuth();
-  // ...lógica específica do dashboard
-}
-```
-
-A feature `auth` expõe `useAuth()` via Public API. Qualquer outra feature pode consumir o estado de autenticação (user, profile, loading) sem acessar os arquivos internos da pasta `auth/`.
-
-## Checklist para criar uma nova feature
-
-1. Criar `src/features/<nome>/` com subpastas: `api/`, `components/`, `hooks/`, `types/`, `utils/`
-2. Implementar a camada de API em `api/`
-3. Criar tipos e schemas em `types/`
-4. Implementar hooks em `hooks/` (consomem a API)
-5. Criar componentes em `components/` (consomem os hooks)
-6. Criar `index.ts` exportando apenas o necessário
-7. Registrar rotas em `src/router.tsx` com lazy loading
-8. Verificar que nenhum import acessa internals de outra feature
+**Blueprint:** `src/features/auth/`. Checklist nova feature: pastas → api → types → hooks → components → `index.ts` → rota lazy → sem imports cruzados de internals.

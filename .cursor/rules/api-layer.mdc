@@ -22,13 +22,6 @@ alwaysApply: true
 
 - **Componentes** – Consomem hooks e exibem UI; não importam o cliente Supabase nem chamam a API diretamente.
 
-## Benefícios
-
-- Código mais testável (mock da API no hook).
-- Um único lugar para alterar queries ou trocar backend.
-- Hooks mais legíveis (menos ruído de chamadas ao banco).
-- Separação clara: API = dados; hooks = orquestração + estado; componentes = apresentação.
-
 ## Tipos e retornos da API
 
 - As funções da API devem retornar objetos explícitos, ex.: `{ profile, error }`, `{ session, error }`.

@@ -1,50 +1,12 @@
 ---
-description: Priorizar lógica de negócio dentro de hooks; componentes focados em apresentação
+description: Lógica de negócio em hooks; componentes só apresentação
 alwaysApply: true
 ---
 
 # Lógica de negócio em hooks
 
-**Sempre priorize colocar lógica de negócio dentro de hooks**, em vez de dentro de componentes React.
+- **Componentes** — UI, eventos, props. Evitar queries, submit multi-step, regras de negócio.
+- **Hooks** — Estado, API (via camada `api/`), validação, navegação de wizard, submit.
+- **Utils** — Funções puras/helpers em `utils/` da feature; hooks consomem.
 
-## Regras
-
-1. **Componentes** – Focados em **apresentação**: renderização, eventos de UI, passar props. Evite em componentes:
-   - Queries (useQuery, fetch)
-   - Validações complexas ou regras de negócio
-   - Orquestração de fluxos (submit, multi-step)
-   - Cálculos ou derivações de estado que não sejam puramente visuais
-
-2. **Hooks** – Onde fica a **lógica**: estado, side-effects, chamadas à API, validação, navegação entre steps, submit. Um hook por responsabilidade (SRP) quando fizer sentido.
-
-3. **Utils** – Funções puras ou helpers assíncronos reutilizáveis (ex.: montar payload, resolver endereço) podem ficar em `utils/` da feature; hooks consomem esses utils.
-
-## Exemplo
-
-```tsx
-// ❌ Evitar: lógica de negócio no componente
-function RequestQuote() {
-  const [step, setStep] = useState(1);
-  const { data } = useQuery({ ... });  // query no componente
-  const handleSubmit = async () => {     // submit com várias chamadas no componente
-    const res = await resolveAddress(...);
-    await createRequest(...);
-  };
-  return <div>...</div>;
-}
-
-// ✅ Preferir: hooks com a lógica; componente só orquestra e renderiza
-function RequestQuote() {
-  const state = useRequestQuoteState();
-  const { handleSubmit } = useRequestQuoteSubmit({ state });
-  const { handleNext, handleBack } = useRequestQuoteNavigation({ state, ... });
-  return (
-    <div>
-      {steps[state.currentStep - 1]()}
-      <Button onClick={handleNext}>Próximo</Button>
-    </div>
-  );
-}
-```
-
-Ao criar ou alterar fluxos (formulários, wizards, telas com submit), extraia primeiro a lógica para hooks (ou utils) e deixe o componente apenas consumindo esses hooks e renderizando a UI.
+Ao criar fluxos com formulário/wizard: extrair hooks primeiro; componente só consome hooks e renderiza.

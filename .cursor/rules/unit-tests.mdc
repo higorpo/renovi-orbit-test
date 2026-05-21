@@ -1,6 +1,7 @@
 ---
 description: Testes unitários — manter/atualizar ao alterar código existente e cobrir código novo quando possível
-alwaysApply: true
+alwaysApply: false
+globs: src/**/*,e2e/**/*,**/*.test.ts,**/*.test.tsx,**/__tests__/**/*
 ---
 
 # Testes unitários

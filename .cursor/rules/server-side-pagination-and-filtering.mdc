@@ -1,6 +1,7 @@
 ---
 description: Paginação e filtros server-side - padrão obrigatório para listagens com potencial de muitos registros
-alwaysApply: true
+alwaysApply: false
+globs: src/features/**/*
 ---
 
 # Paginação e Filtros Server-Side

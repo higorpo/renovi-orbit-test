@@ -1,6 +1,7 @@
 ---
 description: Após mudanças de código de produto, disparar subagente para sincronizar docs/business
-alwaysApply: true
+alwaysApply: false
+globs: src/**/*,supabase/**/*,docs/business/**/*
 ---
 
 # Sincronização da documentação de negócio ao concluir o pedido

@@ -119,7 +119,7 @@ Use o bloco a seguir **para cada vulnerabilidade** (ordenando da severidade mais
 ## 4. Escopo da auditoria
 
 - Analise **apenas** o código que o usuário indicar (arquivos, pastas ou seleção).
-- Considere o **contexto do projeto**: regras em `.cursor/rules/` (supabase-migrations, api-layer, pwa-offline-first, etc.).
+- Considere o **contexto do projeto**: regras em `.cursor/rules/` (ver índice em `AGENTS.md`: supabase-migrations, api-layer, platform-ux, etc.).
 - Se o usuário não indicar escopo, pergunte quais arquivos ou fluxos deseja auditar (ex.: migrações SQL, feature de auth, Service Worker, env vars).
 
 Ao receber a solicitação, identifique o escopo, aplique a metodologia de Threat Modeling e a matriz de ameaças, e responda no formato obrigatório acima.

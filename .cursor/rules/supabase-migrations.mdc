@@ -1,6 +1,7 @@
 ---
 description: Migrações Supabase - editar originais em dev, RLS, SQL em inglês
-alwaysApply: true
+alwaysApply: false
+globs: supabase/**/*
 ---
 
 # Migrações Supabase (SQL)

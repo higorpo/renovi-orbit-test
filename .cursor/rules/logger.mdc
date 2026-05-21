@@ -1,6 +1,7 @@
 ---
 description: Usar logger em vez de console em lib e API
-alwaysApply: true
+alwaysApply: false
+globs: src/**/*
 ---
 
 # Logger em vez de console

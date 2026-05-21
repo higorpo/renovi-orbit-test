@@ -1,6 +1,7 @@
 ---
 description: Arquitetura de testes E2E com Playwright — mocks Supabase, fixtures, page objects e convenções
-alwaysApply: true
+alwaysApply: false
+globs: e2e/**/*
 ---
 
 # Testes E2E (Playwright)

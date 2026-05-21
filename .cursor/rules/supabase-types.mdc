@@ -1,6 +1,7 @@
 ---
 description: Lembrar de rodar yarn generate-supabase-types para atualizar tipagem do Supabase
-alwaysApply: true
+alwaysApply: false
+globs: supabase/**/*,src/lib/supabase/**/*
 ---
 
 # Atualização da tipagem do Supabase

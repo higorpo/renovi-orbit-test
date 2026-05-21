@@ -1,6 +1,7 @@
 ---
 description: Tracking de eventos importantes com Google Analytics / GTM
-alwaysApply: true
+alwaysApply: false
+globs: src/**/*
 ---
 
 # Tracking com Google Analytics (GTM/dataLayer)

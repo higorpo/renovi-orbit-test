@@ -1,6 +1,7 @@
 ---
 description: Uso do Sentry para erros, breadcrumbs e métricas
-alwaysApply: true
+alwaysApply: false
+globs: src/**/*
 ---
 
 # Sentry (erros, observabilidade e métricas)

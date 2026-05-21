@@ -1,0 +1,46 @@
+---
+description: Web/PWA + Capacitor — mobile/app-first, offline, UX de teclado e dialogs
+alwaysApply: false
+globs: src/**/*,android/**/*,capacitor.config.ts
+---
+
+# Plataforma e UX (Web/PWA + Capacitor)
+
+Uma codebase React (Vite) → **Web/PWA** (`src/sw.ts`), **Android** (`android/`, `br.com.renovi.orbit`), **iOS em breve**. **Mobile-first e app-first** antes de desktop (`max-sm:` / `sm:`).
+
+## Capacitor
+
+| Área | Caminho |
+|------|---------|
+| Config | `capacitor.config.ts` (`webDir: dist`) |
+| Bootstrap | `src/main.tsx` → `initCapacitorPlugins()` → `hydratePersistSessionPreference()` |
+| Plugins | `src/lib/capacitor/initCapacitorPlugins.ts` |
+| Storage | `src/lib/capacitor/preferencesStorage.ts` — não usar `localStorage` direto para dados de produto |
+| Plataforma | `Capacitor.isNativePlatform()` — features não importam plugins Capacitor direto |
+
+Push: `src/lib/push.ts`, `src/features/push-permission/`. Build nativo: `yarn build` → `yarn cap:sync` → `yarn android`.
+
+## Offline-first
+
+- Cache/dados locais primeiro (React Query `staleTime`, SW, Preferences).
+- Rascunhos e fila de mutações ao reconectar; feedback online/offline quando relevante.
+- Tratar `network error` / offline explicitamente (retry, mensagem ao usuário).
+
+## Mobile UX
+
+- Dialogs full-screen no mobile: **`useMobileDialogViewport`** — `ref={contentRef}` no `DialogContent`, `scheduleSync` no `onFocus` de inputs.
+- Footer de ações **acima do teclado** no mobile (`bg-background/95`, `backdrop-blur-md`, `z-10`); reset no `sm:`.
+- `pb-[max(0.75rem,env(safe-area-inset-bottom))]` em footers fixos.
+- Scroll interno: `overscroll-y-contain`, `touch-pan-y`; textareas `max-sm:resize-none`.
+- Touch targets ≥ 44px; validar em ~360px de largura.
+
+```tsx
+const { contentRef, scheduleSync } = useMobileDialogViewport(open);
+// DialogContent: max-sm full-screen (inset-0, h-[100dvh]); sm: dialog centrado normal
+```
+
+## Anti-padrões
+
+- Assumir desktop/hover como padrão.
+- APIs de browser sem checar nativo ou `src/lib/capacitor/`.
+- Ignorar offline “porque é app nativo”.

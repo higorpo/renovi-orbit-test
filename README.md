@@ -10,7 +10,7 @@ Plataforma mobile-first da Renovi: **uma codebase** React (Vite) que entrega **w
 | **Android (nativo)** | Ativo | Projeto em `android/`; `appId` `br.com.renovi.orbit` |
 | **iOS (nativo)** | Em breve | Mesmo código; projeto Capacitor iOS ainda não disponível no repositório |
 
-Toda feature nova deve ser pensada **app-first e mobile-first** (touch, telas estreitas, safe areas, teclado nativo, persistência local), e depois adaptada para desktop. Detalhes de UX: regra Cursor `mobile-first-ux`; offline/cache: `pwa-offline-first`; Capacitor: `capacitor-multi-platform`.
+Toda feature nova deve ser pensada **app-first e mobile-first** (touch, telas estreitas, safe areas, teclado nativo, persistência local), e depois adaptada para desktop. Detalhes: regra Cursor `platform-ux`.
 
 ## Stack
 
@@ -64,7 +64,7 @@ Outros comandos úteis: `yarn db:migrate`, `yarn db:reset`, `yarn generate-supab
 
 - **Agentes (Cursor):** `AGENTS.md` — contexto, comandos e regras em `.cursor/rules/`
 - **Negócio:** `docs/business/`
-- **Regras Cursor:** `.cursor/rules/` — inclui `capacitor-multi-platform`, `mobile-first-ux`, `pwa-offline-first`
+- **Regras Cursor:** `.cursor/rules/` — índice em `AGENTS.md`; plataforma/UX: `platform-ux`
 
 ## Estrutura de código
 
