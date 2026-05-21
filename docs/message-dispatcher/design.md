@@ -1,6 +1,6 @@
 # Multichannel Message Dispatcher (MMD) — Design Document
 
-**Covers:** Requirements 1–7 (Rate Limiting, Templates, Multi-Worker Orchestration, Scheduling/Cancellation, Idempotency, Observability, Failover/Backoff), Operational Architecture Constraints, Scalability Req. 4/7, Concurrency Req. 4–8, Infrastructure Constraints §6.
+**Covers:** Requirements 1–7 (Rate Limiting, Templates, Multi-Worker Orchestration, Scheduling/Cancellation, Idempotency, Observability, Failover/Backoff), Operational Architecture Constraints, Scalability Req. 4/7, Concurrency Req. 4–8, Infrastructure Constraints §6, dedicated schema `message_dispatcher`, delivery targets (`auth.users.email`, `public.user_device_beacons.fcm_token`).
 
 **Status:** Implementation-ready architecture specification (HL + LL).  
 **Stack:** Supabase PostgreSQL 15+, PL/pgSQL RPCs, `pg_cron`, `pg_net`, Deno Edge Functions, Resend, FCM.  
@@ -38,6 +38,8 @@ flowchart TB
     Dispatch[(message_dispatches)]
     Limits[(message_dispatcher_user_limits)]
     Templates[(message_templates)]
+    AuthUsers[(auth.users email)]
+    Beacons[(user_device_beacons)]
   end
 
   subgraph schedulers [Schedulers]
@@ -67,6 +69,8 @@ flowchart TB
   Net --> Worker
   Worker -->|service_role| CheckoutRPC
   CheckoutRPC --> Dispatch
+  CheckoutRPC --> AuthUsers
+  CheckoutRPC --> Beacons
   Worker -->|render + HTTP| Resend
   Worker -->|render + HTTP| FCM
   Worker -->|service_role| CompleteRPC
@@ -146,19 +150,53 @@ No Edge Function polls the database in a loop; each invocation processes **one b
 
 # 2. Data Models and Relationships
 
+## 2.0 Dedicated schema (`message_dispatcher`)
+
+All **MMD-owned** tables, enums, triggers, and `SECURITY DEFINER` RPCs MUST live in the PostgreSQL schema **`message_dispatcher`**, not in `public`. This isolates the notification subsystem for grants, migrations, observability, and future extraction.
+
+| Location | Contents |
+|----------|----------|
+| **`message_dispatcher`** | `message_dispatches`, `message_dispatch_deliveries`, `message_dispatcher_audit`, `message_dispatcher_user_limits`, `message_templates`, `message_dispatcher_vendor_events`, enums, FSM functions, cron-called RPCs |
+| **`public`** | Platform domain tables consumed read-only by MMD (e.g. `profiles`, `user_device_beacons`) |
+| **`auth`** | Supabase Auth (`auth.users`) — email recipient source |
+
+**Cross-schema references:**
+
+- `message_dispatcher.message_dispatches.profile_id` → `public.profiles (id)` (`profiles.id = auth.users.id`).
+- Checkout reads `public.user_device_beacons` and `auth.users` inside RPCs with `SET search_path = message_dispatcher, public, auth`.
+
+**API exposure:** Register schema `message_dispatcher` in Supabase API settings (or expose RPCs via thin `public` wrappers if PostgREST schema list is restricted). Client/features MUST call RPCs by name (`message_dispatcher_ingest`, etc.) with schema-qualified grants — never direct table writes from the app.
+
+**Migrations:** First migration file MUST `CREATE SCHEMA IF NOT EXISTS message_dispatcher` and set default privileges for `service_role` / `postgres` only on MMD objects.
+
 ## 2.1 Entity-relationship model
 
 ```mermaid
 erDiagram
+  auth_users ||--|| profiles : same_id
   profiles ||--o{ message_dispatches : receives
+  profiles ||--o{ user_device_beacons : devices
   profiles ||--|| message_dispatcher_user_limits : serializes
   message_dispatches ||--o{ message_dispatch_deliveries : fanout
   message_dispatches ||--o{ message_dispatcher_audit : audited
   message_templates ||--o{ message_dispatches : defines
   message_dispatches ||--o{ message_dispatcher_vendor_events : reconciles
+  user_device_beacons ||--o{ message_dispatch_deliveries : snapshot_at_checkout
+
+  auth_users {
+    uuid id PK
+    text email
+  }
 
   profiles {
     uuid id PK
+  }
+
+  user_device_beacons {
+    uuid profile_id PK
+    text device_id PK
+    text fcm_token
+    boolean push_enabled
   }
 
   message_dispatches {
@@ -254,16 +292,68 @@ erDiagram
 - **Checkout:** Same transaction sets `PROCESSING` + `locked_until` → no other worker sees row in `QUEUED` (Req. 3).
 - **Completion:** Parent + deliveries + audit in **one transaction** (Concurrency Req. 4).
 
+## 2.6 Delivery targets (email and FCM)
+
+Recipient addresses are **not** stored on `message_dispatches`. They are resolved at **checkout** (and snapshotted for push) from existing platform tables. Ingest only persists `profile_id`.
+
+### Email (`channel = 'email'`)
+
+| Source | Rule |
+|--------|------|
+| **Table** | `auth.users` |
+| **Column** | `email` |
+| **Join** | `auth.users.id = message_dispatches.profile_id` (same UUID as `public.profiles.id`) |
+
+- Resolution runs inside `message_dispatcher_checkout_batch` (or a helper called from it) under `SECURITY DEFINER` with `search_path` including `auth`.
+- The checkout payload returned to the Edge worker MUST include `recipient_email` (snapshot at checkout time).
+- If `email` IS NULL or empty → do not call Resend; complete checkout txn with parent → `FAILED_TERMINAL`, `failure_code = 'no_email_on_file'`.
+- Edge MUST send Resend `to:` using **only** `recipient_email` from the RPC payload — never a client-supplied address.
+
+### Push (`channel = 'push'`)
+
+| Source | Rule |
+|--------|------|
+| **Table** | `public.user_device_beacons` |
+| **Column** | `fcm_token` (one row per installation) |
+| **Join** | `user_device_beacons.profile_id = message_dispatches.profile_id` |
+
+**Eligible rows at checkout** (all MUST hold):
+
+```sql
+select device_id, fcm_token
+from public.user_device_beacons b
+where b.profile_id = :profile_id
+  and b.push_enabled = true
+  and b.fcm_token is not null
+  and trim(b.fcm_token) <> '';
+```
+
+- **Fan-out:** zero eligible devices → `FAILED_TERMINAL`, `failure_code = 'no_push_targets'` (no FCM call).
+- **One row per device** in `message_dispatcher.message_dispatch_deliveries` with `fcm_token_snapshot` copied at checkout (immutable for retry dedup).
+- Edge sends **one FCM HTTP request per delivery row**, using `fcm_token_snapshot` — not live beacon reads during I/O (token may change later; invalid token → terminal + beacon cleanup per §11.7).
+
+### Responsibility split
+
+| Step | Layer |
+|------|--------|
+| Resolve email / enumerate devices | PostgreSQL checkout RPC |
+| Render template + HTTPS | Edge worker |
+| Disable bad `fcm_token` | PostgreSQL completion RPC → `public.user_device_beacons` |
+
 ---
 
 # 3. Table Schemas with Constraints
 
+All definitions below are created inside schema **`message_dispatcher`** unless noted.
+
 ## 3.1 Enums
 
 ```sql
-create type public.message_channel as enum ('email', 'push');
+create schema if not exists message_dispatcher;
 
-create type public.message_dispatch_status as enum (
+create type message_dispatcher.message_channel as enum ('email', 'push');
+
+create type message_dispatcher.message_dispatch_status as enum (
   'PENDING_EVALUATION',
   'SCHEDULED',
   'CANCELED',
@@ -274,7 +364,7 @@ create type public.message_dispatch_status as enum (
   'FAILED_TERMINAL'
 );
 
-create type public.message_delivery_outcome as enum (
+create type message_dispatcher.message_delivery_outcome as enum (
   'pending',
   'sent',
   'failed_retryable',
@@ -285,9 +375,9 @@ create type public.message_delivery_outcome as enum (
 ## 3.2 `message_templates`
 
 ```sql
-create table public.message_templates (
+create table message_dispatcher.message_templates (
   template_key text not null,
-  channel public.message_channel not null,
+  channel message_dispatcher.message_channel not null,
   subject_template text,          -- push title / email subject
   body_template text not null,    -- push body / email html skeleton
   variable_schema jsonb not null default '{}'::jsonb,  -- JSON Schema subset
@@ -296,7 +386,7 @@ create table public.message_templates (
   primary key (template_key, channel)
 );
 
-comment on table public.message_templates is
+comment on table message_dispatcher.message_templates is
   'Registry of renderable templates; inactive or missing channel rejects at ingest.';
 ```
 
@@ -305,14 +395,14 @@ comment on table public.message_templates is
 ## 3.3 `message_dispatches`
 
 ```sql
-create table public.message_dispatches (
+create table message_dispatcher.message_dispatches (
   id uuid primary key default gen_random_uuid(),
   idempotency_key uuid not null,
   profile_id uuid not null references public.profiles (id) on delete cascade,
-  channel public.message_channel not null,
+  channel message_dispatcher.message_channel not null,
   template_key text not null,
   template_variables jsonb not null default '{}'::jsonb,
-  status public.message_dispatch_status not null default 'PENDING_EVALUATION',
+  status message_dispatcher.message_dispatch_status not null default 'PENDING_EVALUATION',
   scheduled_for timestamptz not null default now(),
   locked_until timestamptz,
   locked_by text,
@@ -332,23 +422,23 @@ create table public.message_dispatches (
   constraint message_dispatches_retry_count_nonneg check (retry_count >= 0),
   constraint message_dispatches_max_retries_positive check (max_retries > 0),
   foreign key (template_key, channel)
-    references public.message_templates (template_key, channel)
+    references message_dispatcher.message_templates (template_key, channel)
 );
 
-comment on column public.message_dispatches.locked_until is
+comment on column message_dispatcher.message_dispatches.locked_until is
   'Lease expiry; NULL when not in PROCESSING.';
-comment on column public.message_dispatches.correlation_id is
+comment on column message_dispatcher.message_dispatches.correlation_id is
   'Stable id for logs, FCM collapse_key, Resend idempotency header.';
 ```
 
 ### 3.3.1 FSM transition guard (trigger)
 
 ```sql
-create or replace function public.message_dispatches_validate_transition()
+create or replace function message_dispatcher.message_dispatches_validate_transition()
 returns trigger language plpgsql as $$
 begin
   if tg_op = 'UPDATE' and old.status is distinct from new.status then
-    if not public.message_dispatch_status_allowed(old.status, new.status) then
+    if not message_dispatcher.message_dispatch_status_allowed(old.status, new.status) then
       raise exception 'invalid status transition: % -> %', old.status, new.status
         using errcode = 'P0001';
     end if;
@@ -365,27 +455,27 @@ $$;
 ```sql
 -- Worker polling: eligible QUEUED rows
 create index message_dispatches_queued_poll_idx
-  on public.message_dispatches (scheduled_for, created_at)
+  on message_dispatcher.message_dispatches (scheduled_for, created_at)
   where status = 'QUEUED';
 
 -- Scheduler: due SCHEDULED
 create index message_dispatches_scheduled_due_idx
-  on public.message_dispatches (scheduled_for)
+  on message_dispatcher.message_dispatches (scheduled_for)
   where status = 'SCHEDULED';
 
 -- Retry promoter
 create index message_dispatches_retry_due_idx
-  on public.message_dispatches (next_retry_at)
+  on message_dispatcher.message_dispatches (next_retry_at)
   where status = 'FAILED_RETRYABLE';
 
 -- Janitor: stale PROCESSING
 create index message_dispatches_stale_lease_idx
-  on public.message_dispatches (locked_until)
+  on message_dispatcher.message_dispatches (locked_until)
   where status = 'PROCESSING';
 
 -- Rate limit analytics / support
 create index message_dispatches_profile_channel_created_idx
-  on public.message_dispatches (profile_id, channel, created_at desc);
+  on message_dispatcher.message_dispatches (profile_id, channel, created_at desc);
 
 -- Idempotency already UNIQUE
 ```
@@ -398,7 +488,7 @@ create index message_dispatches_profile_channel_created_idx
 Serialization anchor for Req. 1 — one row per profile (not per channel) to allow single lock for dual-channel ingest races.
 
 ```sql
-create table public.message_dispatcher_user_limits (
+create table message_dispatcher.message_dispatcher_user_limits (
   profile_id uuid primary key references public.profiles (id) on delete cascade,
   last_push_sent_at timestamptz,
   email_window_start timestamptz not null default now(),
@@ -410,17 +500,17 @@ create table public.message_dispatcher_user_limits (
 
 **Counter refresh:** On ingest, if `now() - window_start > 24h`, reset counter and window atomically in same txn.
 
-**Quota counting (Req. 1 AC1):** For email evaluation, count rows in `message_dispatches` where `channel = 'email'` and `status in ('DELIVERED','QUEUED','PROCESSING','SCHEDULED')` and `created_at > now() - interval '24 hours'` **OR** use maintained counters incremented at ingest when entering those states — design uses **live COUNT** inside ingest txn after lock for correctness (counters are optimization cache only).
+**Quota counting (Req. 1 AC1):** For email evaluation, count rows in `message_dispatcher.message_dispatches` where `channel = 'email'` and `status in ('DELIVERED','QUEUED','PROCESSING','SCHEDULED')` and `created_at > now() - interval '24 hours'` **OR** use maintained counters incremented at ingest when entering those states — design uses **live COUNT** inside ingest txn after lock for correctness (counters are optimization cache only).
 
 ## 3.5 `message_dispatch_deliveries`
 
 ```sql
-create table public.message_dispatch_deliveries (
+create table message_dispatcher.message_dispatch_deliveries (
   id uuid primary key default gen_random_uuid(),
-  dispatch_id uuid not null references public.message_dispatches (id) on delete cascade,
+  dispatch_id uuid not null references message_dispatcher.message_dispatches (id) on delete cascade,
   device_id text not null,
   fcm_token_snapshot text,
-  outcome public.message_delivery_outcome not null default 'pending',
+  outcome message_dispatcher.message_delivery_outcome not null default 'pending',
   vendor_error_code text,
   vendor_response jsonb,
   attempt_no integer not null default 1,
@@ -430,17 +520,17 @@ create table public.message_dispatch_deliveries (
 );
 ```
 
-Push checkout snapshots tokens from `user_device_beacons` where `push_enabled = true` and `fcm_token is not null`.
+Push checkout snapshots tokens from `public.user_device_beacons` (see §2.6) where `push_enabled = true` and `fcm_token is not null`.
 
 ## 3.6 `message_dispatcher_audit`
 
 ```sql
-create table public.message_dispatcher_audit (
+create table message_dispatcher.message_dispatcher_audit (
   id bigserial primary key,
-  dispatch_id uuid not null references public.message_dispatches (id) on delete cascade,
+  dispatch_id uuid not null references message_dispatcher.message_dispatches (id) on delete cascade,
   profile_id uuid not null,
-  old_status public.message_dispatch_status,
-  new_status public.message_dispatch_status not null,
+  old_status message_dispatcher.message_dispatch_status,
+  new_status message_dispatcher.message_dispatch_status not null,
   changed_by text not null default 'system',
   correlation_id uuid,
   delta jsonb not null default '{}'::jsonb,
@@ -448,10 +538,10 @@ create table public.message_dispatcher_audit (
 );
 
 create index message_dispatcher_audit_dispatch_created_idx
-  on public.message_dispatcher_audit (dispatch_id, created_at desc);
+  on message_dispatcher.message_dispatcher_audit (dispatch_id, created_at desc);
 
 create index message_dispatcher_audit_profile_created_idx
-  on public.message_dispatcher_audit (profile_id, created_at desc);
+  on message_dispatcher.message_dispatcher_audit (profile_id, created_at desc);
 ```
 
 **Partitioning (Growth phase):** `PARTITION BY RANGE (created_at)` monthly; attach indexes per partition for Req. 6 AC3 (&lt;1s support queries).
@@ -459,13 +549,13 @@ create index message_dispatcher_audit_profile_created_idx
 ### 3.6.1 Audit trigger
 
 ```sql
-create or replace function public.message_dispatcher_audit_on_dispatch_update()
-returns trigger language plpgsql security definer set search_path = public as $$
+create or replace function message_dispatcher.message_dispatcher_audit_on_dispatch_update()
+returns trigger language plpgsql security definer set search_path = message_dispatcher, public as $$
 begin
   if tg_op = 'UPDATE' and (old.status is distinct from new.status
       or old.scheduled_for is distinct from new.scheduled_for
       or old.locked_until is distinct from new.locked_until) then
-    insert into public.message_dispatcher_audit (
+    insert into message_dispatcher.message_dispatcher_audit (
       dispatch_id, profile_id, old_status, new_status, correlation_id, delta, changed_by
     ) values (
       new.id,
@@ -491,9 +581,9 @@ $$;
 ## 3.7 `message_dispatcher_vendor_events`
 
 ```sql
-create table public.message_dispatcher_vendor_events (
+create table message_dispatcher.message_dispatcher_vendor_events (
   vendor_event_id text primary key,
-  dispatch_id uuid references public.message_dispatches (id),
+  dispatch_id uuid references message_dispatcher.message_dispatches (id),
   vendor text not null check (vendor in ('resend', 'fcm')),
   event_type text not null,
   payload jsonb not null,
@@ -503,13 +593,15 @@ create table public.message_dispatcher_vendor_events (
 
 ## 3.8 RLS
 
-| Table | Policy |
-|-------|--------|
+RLS applies to tables in schema **`message_dispatcher`**. `auth.users` and `public.user_device_beacons` keep their existing policies; MMD reads them only inside `SECURITY DEFINER` RPCs (never exposed to the client for dispatch I/O).
+
+| Table (`message_dispatcher.*`) | Policy |
+|--------------------------------|--------|
 | `message_dispatches` | `SELECT` where `(select auth.uid()) = profile_id`; **no** direct INSERT/UPDATE for `authenticated` |
 | `message_dispatcher_audit` | `SELECT` same scope |
 | `message_dispatch_deliveries` | `SELECT` via join dispatch owner |
 | `message_templates` | `SELECT` authenticated read-only |
-| RPCs | `SECURITY DEFINER`; ingest/checkout **service_role** only except `message_dispatcher_cancel` for owner |
+| RPCs | `SECURITY DEFINER` with `search_path = message_dispatcher, public, auth`; ingest/checkout **service_role** only except `message_dispatcher_cancel` for owner |
 
 ---
 
@@ -558,7 +650,7 @@ sequenceDiagram
 **Cron:** `message_dispatcher_activate_scheduled` every **60s**:
 
 ```sql
-update message_dispatches d
+update message_dispatcher.message_dispatches d
 set status = 'PENDING_EVALUATION', updated_at = now()
 where d.status = 'SCHEDULED'
   and d.scheduled_for <= now();
@@ -593,14 +685,14 @@ sequenceDiagram
 ```sql
 with candidates as (
   select d.id
-  from public.message_dispatches d
+  from message_dispatcher.message_dispatches d
   where d.status = 'QUEUED'
     and d.scheduled_for <= now()
   order by d.scheduled_for, d.created_at
   for update skip locked
   limit p_limit
 )
-update public.message_dispatches d
+update message_dispatcher.message_dispatches d
 set
   status = 'PROCESSING',
   locked_until = now() + interval '30 seconds',
@@ -613,12 +705,19 @@ returning d.*;
 
 **Guarantee:** At-most-one worker owns a row while `locked_until > now()` and `status = PROCESSING`.
 
+**Recipient resolution in the same checkout transaction** (after `PROCESSING` update, before `COMMIT`):
+
+1. **`email`:** `SELECT u.email FROM auth.users u WHERE u.id = d.profile_id` → attach as `recipient_email` on the returned JSON item. On missing email → set dispatch `FAILED_TERMINAL`, skip Edge payload for that row.
+2. **`push`:** `INSERT INTO message_dispatcher.message_dispatch_deliveries (dispatch_id, device_id, fcm_token_snapshot)` from eligible `public.user_device_beacons` rows (§2.6). On zero rows → `FAILED_TERMINAL` (`no_push_targets`).
+
+The worker MUST NOT query `auth.users` or `user_device_beacons` directly; it only consumes the checkout RPC payload.
+
 ## 4.4 Delivery & compile (Phase 6)
 
 | Channel | Edge steps | Provider idempotency |
 |---------|------------|----------------------|
-| `email` | Validate vars vs JSON Schema → render HTML → `POST Resend` | Header `Idempotency-Key: {correlation_id}` |
-| `push` | Validate title/body templates → build FCM payload per delivery row | `android.notification.tag` / `apns-collapse-id` = `correlation_id` |
+| `email` | Use `recipient_email` from checkout payload → validate vars → render HTML → Resend `to: recipient_email` | Header `Idempotency-Key: {correlation_id}` |
+| `push` | For each `deliveries[]` entry, use `fcm_token_snapshot` → validate title/body → FCM HTTP v1 | `android.notification.tag` / `apns-collapse-id` = `correlation_id` |
 
 **Timeout:** HTTP client timeout **25s** (below 30s lease; if exceeded, worker may die → janitor requeues).
 
@@ -661,7 +760,7 @@ next_retry_at = now() + (power(2, retry_count) * interval '60 seconds')
 After `next_retry_at`, cron `message_dispatcher_promote_retries`:
 
 ```sql
-update message_dispatches
+update message_dispatcher.message_dispatches
 set status = 'QUEUED', locked_until = null, locked_by = null, updated_at = now()
 where status = 'FAILED_RETRYABLE' and next_retry_at <= now();
 ```
@@ -703,7 +802,7 @@ sequenceDiagram
 **Cron every 60s:** `message_dispatcher_reclaim_leases`:
 
 ```sql
-update message_dispatches d
+update message_dispatcher.message_dispatches d
 set
   status = case
     when d.retry_count >= d.max_retries then 'FAILED_TERMINAL'
@@ -799,7 +898,36 @@ Then `promote_retries` moves eligible `FAILED_RETRYABLE` → `QUEUED`.
 }
 ```
 
-**Returns:** array of dispatch DTOs including `template_variables`, `correlation_id`, `deliveries[]` for push.
+**Returns:** array of dispatch DTOs. Each item includes dispatch fields plus channel-specific targets resolved at checkout (§2.6):
+
+```json
+{
+  "id": "uuid",
+  "profile_id": "uuid",
+  "channel": "email",
+  "template_key": "welcome_template",
+  "template_variables": { "name": "Higor" },
+  "correlation_id": "uuid",
+  "recipient_email": "user@example.com",
+  "deliveries": []
+}
+```
+
+```json
+{
+  "id": "uuid",
+  "channel": "push",
+  "correlation_id": "uuid",
+  "recipient_email": null,
+  "deliveries": [
+    {
+      "delivery_id": "uuid",
+      "device_id": "capacitor-device-id",
+      "fcm_token_snapshot": "fcm-registration-token"
+    }
+  ]
+}
+```
 
 **Idempotency:** Re-invocation with same worker before lease expiry returns **empty batch** for already locked rows.
 
@@ -1203,6 +1331,8 @@ where profile_id = $1 and device_id = $2;
 | **Req. 7** Failover | 429/503 → FAILED_RETRYABLE | §4.6, §8.2 | Edge classifies → `report_delivery_outcome` |
 | **Req. 7** | 400 bad token → terminal | §8.1, §11.7 | Terminal + beacon disable |
 | **Req. 7** | max_retries exceeded → terminal | §4.6, §8.2 | `retry_count >= max_retries` in report RPC |
+| **Delivery targets** | Email to user / push to devices | §2.6, §4.3–4.4, §5.3 | `auth.users.email`; `public.user_device_beacons` → checkout payload |
+| **Schema isolation** | MMD tables separate from `public` | §2.0, §3 | Schema `message_dispatcher` for all dispatcher-owned objects |
 
 ---
 
@@ -1210,8 +1340,8 @@ where profile_id = $1 and device_id = $2;
 
 ## 13.1 Migration delivery order
 
-1. `20260621100000_create_message_dispatcher_enums_tables.sql`  
-2. `20260621100100_create_message_dispatcher_fsm_functions.sql`  
+1. `20260621100000_create_message_dispatcher_schema_enums_tables.sql` — `CREATE SCHEMA message_dispatcher`, enums, all MMD tables (§3), grants  
+2. `20260621100100_create_message_dispatcher_fsm_functions.sql` — RPCs with `search_path = message_dispatcher, public, auth` (reads `auth.users.email`, `public.user_device_beacons`)  
 3. `20260621100200_create_message_dispatcher_audit_triggers.sql`  
 4. `20260621100300_create_message_dispatcher_cron_jobs.sql`  
 5. Edge functions + `supabase/config.toml` entries  
@@ -1231,7 +1361,8 @@ where profile_id = $1 and device_id = $2;
 | Webhook dedup UNIQUE | At-least-once webhook (Concurrency Req. 7) |
 | `pg_cron` scheduling | No external orchestrator (Infra §11) |
 | Scheduled activation | Time-based eligibility (Req. 4) |
-| Push device snapshot at checkout | Consistent fan-out targets |
+| Push device snapshot at checkout | Read `public.user_device_beacons.fcm_token`; insert `message_dispatch_deliveries` |
+| Email recipient at checkout | Read `auth.users.email` by `profile_id`; pass `recipient_email` to Edge |
 
 ## 13.3 O que deve ficar em Edge Functions
 
@@ -1266,7 +1397,7 @@ Worker == Edge function `message-dispatcher-worker` invoked by cron — **no sep
 | Generate `idempotency_key` UUID v4/v7 | Req. 5 client responsibility |
 | Cancel UI → `message_dispatcher_cancel` | Req. 4 user intent |
 | Read-only status / audit for support tools | Req. 6 dashboards |
-| FCM token registration | Existing `user_device_beacons` sync |
+| FCM token registration | Existing `public.user_device_beacons` sync (Capacitor / web); dispatcher only reads at checkout |
 
 ## 13.7 O que deve ficar em Cache
 
