@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { latLngToCell } from "npm:h3-js@4.4.0";
 import type { Database } from "../_shared/database.types.ts";
 import type { AddressPayloadNew } from "./types.ts";
@@ -74,12 +74,10 @@ function toRow(clientId: string, payload: AddressPayloadNew) {
 }
 
 export async function createAddress(
-  supabaseUrl: string,
-  supabaseKey: string,
+  supabase: SupabaseClient<Database>,
   clientId: string,
   payload: AddressPayloadNew
 ): Promise<CreateAddressResult> {
-  const supabase = createClient<Database>(supabaseUrl, supabaseKey);
 
   const { data, error } = await supabase
     .from("client_addresses")

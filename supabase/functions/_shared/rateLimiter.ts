@@ -13,7 +13,7 @@
  * or a single INSERT ... ON CONFLICT UPDATE count = count + 1 RETURNING).
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { createServiceRoleClient } from "./serviceRoleClient.ts";
 
 export interface RateLimitConfig {
   perMinute: number;
@@ -36,14 +36,13 @@ export async function checkRateLimit(
   functionName: string,
   config: RateLimitConfig
 ): Promise<RateLimitResult> {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-  if (!supabaseUrl || !supabaseKey) {
+  let supabase;
+  try {
+    supabase = createServiceRoleClient();
+  } catch {
     return { allowed: true, remaining: config.perMinute ?? 60, retryAfter: 0 };
   }
 
-  const supabase = createClient(supabaseUrl, supabaseKey);
   const now = Date.now();
   const uniqueKey = `${functionName}:${userId ?? ip ?? "anonymous"}`;
   const perMinute = config.perMinute || 60;
@@ -132,10 +131,7 @@ export async function getUserIdFromRequest(req: Request): Promise<string | null>
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !supabaseKey) return null;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createServiceRoleClient();
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) return null;

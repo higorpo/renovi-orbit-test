@@ -8,6 +8,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { checkRateLimit, getClientIP, getUserIdFromRequest } from "../_shared/rateLimiter.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { createServiceRoleClient } from "../_shared/serviceRoleClient.ts";
 
 import { RATE_LIMIT_PER_MINUTE } from "./constants.ts";
 import type { CreateOrderSuccess } from "./types.ts";
@@ -38,11 +39,7 @@ serve(async (req) => {
     return jsonResponse({ error: "Método não permitido." }, 405);
   }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !supabaseKey) {
-    return jsonResponse({ error: "Erro de configuração." }, 500);
-  }
+  const supabase = createServiceRoleClient();
 
   const clientIP = getClientIP(req);
   const userIdFromAuth = await getUserIdFromRequest(req);
@@ -88,7 +85,7 @@ serve(async (req) => {
     return jsonResponse({ error: recaptchaCheck.message ?? "Falha no reCAPTCHA." }, 400);
   }
 
-  const validation = await validateRequestUser(req, data.userId, data.email);
+  const validation = await validateRequestUser(supabase, req, data.userId, data.email);
   if (!validation.ok) {
     return jsonResponse({ error: validation.message }, validation.status);
   }
@@ -99,8 +96,7 @@ serve(async (req) => {
     addressId = data.address.addressId;
   } else {
     const addrResult = await createAddress(
-      supabaseUrl,
-      supabaseKey,
+      supabase,
       data.userId,
       data.address
     );
@@ -111,8 +107,7 @@ serve(async (req) => {
   }
 
   const photoResult = await uploadPhotos(
-    supabaseUrl,
-    supabaseKey,
+    supabase,
     data.userId,
     data.photoFiles
   );
@@ -121,8 +116,7 @@ serve(async (req) => {
   }
 
   const reqResult = await createServiceRequest(
-    supabaseUrl,
-    supabaseKey,
+    supabase,
     {
       client_id: data.userId,
       service_id: data.serviceId,

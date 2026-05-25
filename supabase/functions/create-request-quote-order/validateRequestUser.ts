@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getUserIdFromRequest } from "../_shared/rateLimiter.ts";
 
 export type ValidateUserResult =
@@ -6,6 +6,7 @@ export type ValidateUserResult =
   | { ok: false; status: number; message: string };
 
 export async function validateRequestUser(
+  supabase: SupabaseClient,
   req: Request,
   userId: string,
   email: string
@@ -22,14 +23,6 @@ export async function validateRequestUser(
     }
     return { ok: true };
   }
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!supabaseUrl || !supabaseKey) {
-    return { ok: false, status: 500, message: "Erro interno." };
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseKey);
   const { data: user, error } = await supabase.auth.admin.getUserById(userId);
 
   if (error || !user?.user) {

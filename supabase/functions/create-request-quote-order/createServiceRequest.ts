@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "../_shared/database.types.ts";
 
 export type CreateServiceRequestResult =
@@ -27,11 +27,9 @@ interface Params {
 }
 
 export async function createServiceRequest(
-  supabaseUrl: string,
-  supabaseKey: string,
+  supabase: SupabaseClient<Database>,
   params: Params
 ): Promise<CreateServiceRequestResult> {
-  const supabase = createClient<Database>(supabaseUrl, supabaseKey);
 
   const row = {
     client_id: params.client_id,

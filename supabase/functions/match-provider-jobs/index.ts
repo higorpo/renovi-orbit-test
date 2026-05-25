@@ -47,8 +47,8 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { createServiceRoleClient } from "../_shared/serviceRoleClient.ts";
 import type { MatchProviderJobsBody } from "./types.ts";
 
 interface ProviderServiceRow {
@@ -100,18 +100,7 @@ serve(async (req: Request) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !serviceRoleKey) {
-      console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
-      return jsonResponse(
-        { error: "Server configuration error" },
-        500,
-        corsHeaders,
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const supabase = createServiceRoleClient();
 
     // Authenticate user from token
     const token = authHeader.replace("Bearer ", "");

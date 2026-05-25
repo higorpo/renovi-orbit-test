@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   SERVICE_REQUESTS_BUCKET,
   MAX_PHOTOS,
@@ -20,8 +20,7 @@ const EXT_BY_TYPE: Record<string, string> = {
 };
 
 export async function uploadPhotos(
-  supabaseUrl: string,
-  supabaseKey: string,
+  supabase: SupabaseClient,
   userId: string,
   photoBlobs: Blob[]
 ): Promise<UploadPhotosResult> {
@@ -29,8 +28,6 @@ export async function uploadPhotos(
   if (photoBlobs.length > MAX_PHOTOS) {
     return { ok: false, error: `Máximo de ${MAX_PHOTOS} fotos permitido.` };
   }
-
-  const supabase = createClient(supabaseUrl, supabaseKey);
   const paths: string[] = [];
   const ts = Date.now();
 

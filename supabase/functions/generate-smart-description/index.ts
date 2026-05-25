@@ -5,9 +5,9 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 import { checkRateLimit, getClientIP, getUserIdFromRequest } from "../_shared/rateLimiter.ts";
 import { getCorsHeaders } from "../_shared/cors.ts";
+import { createServiceRoleClient } from "../_shared/serviceRoleClient.ts";
 
 import { OPEN_AI_DEFAULT_MODEL, GEMINI_DEFAULT_MODEL } from "./constants.ts";
 import type { GenerateSmartDescriptionBody, PromptConfig } from "./types.ts";
@@ -25,7 +25,6 @@ import {
   logUsageOnError,
   jsonResponse,
 } from "./handlerHelpers.ts";
-import { Database } from "../_shared/database.types.ts";
 
 const RATE_LIMIT_CONFIG = { perMinute: 60, burst: 10 };
 
@@ -80,9 +79,7 @@ serve(async (req) => {
     const validationError = validateRequestParams(params, corsHeaders);
     if (validationError) return validationError;
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient<Database>(supabaseUrl, supabaseKey);
+    const supabase = createServiceRoleClient();
 
     const enableStructured =
       params.mode !== "suggestion" && params.useStructuredOutput;
@@ -177,9 +174,7 @@ serve(async (req) => {
     console.error("❌ Error:", errMessage);
 
     if (promptConfig) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient<Database>(supabaseUrl, supabaseKey);
+      const supabase = createServiceRoleClient();
 
       await logUsageOnError(
         supabase,
