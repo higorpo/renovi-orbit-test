@@ -312,20 +312,21 @@ revoke all on message_dispatcher.message_dispatcher_vendor_events from public;
 grant select, insert, update on message_dispatcher.message_dispatcher_vendor_events to service_role;
 
 -- platform_constants defaults (design Appendix B, task 17). RPCs read keys at runtime.
-insert into public.platform_constants (key, value)
+insert into public.platform_constants (key, value, description)
 values
-  ('message_dispatcher.email_daily_limit', '5'::jsonb),
-  ('message_dispatcher.push_daily_limit', '20'::jsonb),
-  ('message_dispatcher.push_cooldown_minutes', '20'::jsonb),
-  ('message_dispatcher.lease_seconds', '90'::jsonb),
-  ('message_dispatcher.max_retries', '3'::jsonb),
-  ('message_dispatcher.checkout_batch_size', '50'::jsonb),
-  ('message_dispatcher.backoff_base_seconds', '60'::jsonb),
-  ('message_dispatcher.max_devices_per_dispatch', '10'::jsonb),
-  ('message_dispatcher.max_parallel_workers', '5'::jsonb),
-  ('message_dispatcher.retryable_depth_alert_threshold', '10000'::jsonb)
+  ('message_dispatcher.email_daily_limit', '5'::jsonb, 'Maximum number of emails that can be sent to a single user per day'),
+  ('message_dispatcher.push_daily_limit', '20'::jsonb, 'Maximum number of push notifications that can be sent to a single user per day'),
+  ('message_dispatcher.push_cooldown_minutes', '20'::jsonb, 'Minimum minutes between consecutive push notifications to the same user'),
+  ('message_dispatcher.lease_seconds', '90'::jsonb, 'Duration in seconds a worker holds a lease on a dispatch before it expires'),
+  ('message_dispatcher.max_retries', '3'::jsonb, 'Maximum number of delivery retry attempts before marking a dispatch as failed'),
+  ('message_dispatcher.checkout_batch_size', '50'::jsonb, 'Number of dispatches a worker checks out in a single batch'),
+  ('message_dispatcher.backoff_base_seconds', '60'::jsonb, 'Base interval in seconds for exponential backoff between retries'),
+  ('message_dispatcher.max_devices_per_dispatch', '10'::jsonb, 'Maximum number of devices targeted per single dispatch operation'),
+  ('message_dispatcher.max_parallel_workers', '5'::jsonb, 'Maximum number of worker instances allowed to run concurrently'),
+  ('message_dispatcher.retryable_depth_alert_threshold', '10000'::jsonb, 'Queue depth threshold that triggers a backpressure alert for retryable dispatches')
 on conflict (key) do update set
   value = excluded.value,
+  description = excluded.description,
   updated_at = now();
 
 -- Audit timeline indexes (design §3.6, task 19). Support dispatch and profile+date queries.

@@ -2,9 +2,9 @@
 -- This migration centralizes pricing signature generation/validation and
 -- updates RPCs so proposal creation is verified server-side.
 
-insert into public.platform_constants (key, value)
-values ('pricing_signature_secret', to_jsonb('renovi-provider-pricing-secret-v1'::text))
-on conflict (key) do update set value = excluded.value;
+insert into public.platform_constants (key, value, description)
+values ('pricing_signature_secret', to_jsonb('renovi-provider-pricing-secret-v1'::text), 'Secret key used to generate and validate HMAC signatures for provider pricing payloads')
+on conflict (key) do update set value = excluded.value, description = excluded.description;
 
 create or replace function public.generate_provider_pricing_signature(
   p_original_amount numeric,

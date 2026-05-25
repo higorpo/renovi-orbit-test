@@ -57,10 +57,11 @@ create trigger trg_message_dispatcher_audit
   execute function message_dispatcher.message_dispatcher_audit_on_dispatch_update();
 
 -- Task 110: Growth stub — monthly RANGE(created_at) partitioning (design §3.6). MVP stays unpartitioned.
-insert into public.platform_constants (key, value)
-values ('message_dispatcher.audit_partitioning_phase', to_jsonb('mvp_unpartitioned'::text))
+insert into public.platform_constants (key, value, description)
+values ('message_dispatcher.audit_partitioning_phase', to_jsonb('mvp_unpartitioned'::text), 'Current partitioning strategy for the audit table (mvp_unpartitioned | monthly_range)')
 on conflict (key) do update set
   value = excluded.value,
+  description = excluded.description,
   updated_at = now();
 
 create or replace function message_dispatcher.message_dispatcher_audit_partitioning_growth_stub_sql()

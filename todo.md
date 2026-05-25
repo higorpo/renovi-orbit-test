@@ -69,7 +69,8 @@ Coisas para terminar do fluxo atual de trabalho:
 
 Coisas para fazer next
 
-
+-mover platform_constants pricing_signature_secret para um env usando vault
+-remover platform_constants desnecessárias
 -permitir enviar mensagem forçada (sem limites) no MD
 -envio de emailem modo dev ir para o mesmo local que os outros
 -trackear visualização de notificação/email

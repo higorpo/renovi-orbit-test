@@ -427,7 +427,7 @@ export type Database = {
         }
         Returns: Json
       }
-      message_dispatcher_invoke_worker: { Args: never; Returns: undefined }
+      message_dispatcher_invoke_worker: { Args: never; Returns: number }
       message_dispatcher_is_resend_delivered_event: {
         Args: { p_event_type: string }
         Returns: boolean
@@ -467,14 +467,6 @@ export type Database = {
       message_dispatcher_should_disable_beacon: {
         Args: { p_error_code: string }
         Returns: boolean
-      }
-      message_dispatcher_try_claim_worker_invoke: {
-        Args: never
-        Returns: boolean
-      }
-      message_dispatcher_worker_invoke_min_interval_seconds: {
-        Args: never
-        Returns: number
       }
     }
     Enums: {
@@ -763,18 +755,21 @@ export type Database = {
       platform_constants: {
         Row: {
           created_at: string
+          description: string | null
           key: string
           updated_at: string
           value: Json
         }
         Insert: {
           created_at?: string
+          description?: string | null
           key: string
           updated_at?: string
           value: Json
         }
         Update: {
           created_at?: string
+          description?: string | null
           key?: string
           updated_at?: string
           value?: Json
