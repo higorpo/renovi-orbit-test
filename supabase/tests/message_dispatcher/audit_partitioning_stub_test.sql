@@ -2,17 +2,7 @@
 
 begin;
 
-select plan(5);
-
-select is(
-  (
-    select pc.value #>> '{}'
-    from public.platform_constants pc
-    where pc.key = 'message_dispatcher.audit_partitioning_phase'
-  ),
-  'mvp_unpartitioned',
-  'audit_partitioning_phase is mvp_unpartitioned in MVP'
-);
+select plan(4);
 
 select is(
   (

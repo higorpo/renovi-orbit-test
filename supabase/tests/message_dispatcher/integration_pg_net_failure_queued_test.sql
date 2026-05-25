@@ -29,13 +29,15 @@ select
 from _queued_fixture f;
 
 -- Simulate cron firing pg_net against an unreachable worker (worker down).
-update public.platform_constants
-set value = to_jsonb('http://127.0.0.1:9/message-dispatcher-worker'::text)
-where key = 'message_dispatcher.worker_url';
-
-update public.platform_constants
-set value = to_jsonb('cron-secret-pgnet-test'::text)
-where key = 'message_dispatcher.cron_secret';
+-- worker_url and cron_secret live in vault; override via vault API for test scope.
+select vault.update_secret(
+  (select id from vault.secrets where name = 'dispatcher_worker_url'),
+  'http://127.0.0.1:9/message-dispatcher-worker'
+);
+select vault.update_secret(
+  (select id from vault.secrets where name = 'dispatcher_cron_secret'),
+  'cron-secret-pgnet-test'
+);
 
 select lives_ok(
   $$select message_dispatcher.message_dispatcher_invoke_worker()$$,

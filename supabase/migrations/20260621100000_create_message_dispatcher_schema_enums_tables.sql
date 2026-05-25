@@ -318,7 +318,6 @@ values
   ('message_dispatcher.push_daily_limit', '20'::jsonb, 'Maximum number of push notifications that can be sent to a single user per day'),
   ('message_dispatcher.push_cooldown_minutes', '20'::jsonb, 'Minimum minutes between consecutive push notifications to the same user'),
   ('message_dispatcher.lease_seconds', '90'::jsonb, 'Duration in seconds a worker holds a lease on a dispatch before it expires'),
-  ('message_dispatcher.max_retries', '3'::jsonb, 'Maximum number of delivery retry attempts before marking a dispatch as failed'),
   ('message_dispatcher.checkout_batch_size', '50'::jsonb, 'Number of dispatches a worker checks out in a single batch'),
   ('message_dispatcher.backoff_base_seconds', '60'::jsonb, 'Base interval in seconds for exponential backoff between retries'),
   ('message_dispatcher.max_devices_per_dispatch', '10'::jsonb, 'Maximum number of devices targeted per single dispatch operation'),

@@ -51,6 +51,7 @@ max_client_conn = 100
 [db.vault]
 dispatcher_worker_url = "env(DISPATCHER_WORKER_URL)"
 dispatcher_cron_secret = "env(DISPATCHER_CRON_SECRET)"
+pricing_signature_secret = "env(PRICING_SIGNATURE_SECRET)"
 
 [db.migrations]
 # If disabled, migrations will be skipped during a db push or reset.

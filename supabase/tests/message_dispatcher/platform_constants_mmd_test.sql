@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(7);
+select plan(6);
 
 select is(
   (select (value #>> '{}')::int from public.platform_constants where key = 'message_dispatcher.email_daily_limit'),
@@ -26,12 +26,6 @@ select is(
   (select (value #>> '{}')::int from public.platform_constants where key = 'message_dispatcher.lease_seconds'),
   90,
   'lease_seconds'
-);
-
-select is(
-  (select (value #>> '{}')::int from public.platform_constants where key = 'message_dispatcher.max_retries'),
-  3,
-  'max_retries'
 );
 
 select is(

@@ -16,10 +16,10 @@ begin
 end;
 $cron$;
 
--- Stop pg_net POSTs even if cron is re-added by mistake
-update public.platform_constants
-set value = to_jsonb(''::text), updated_at = now()
-where key = 'message_dispatcher.worker_url';
+-- Stop pg_net POSTs even if cron is re-added by mistake (worker_url lives in vault)
+update vault.secrets
+set secret = ''
+where name = 'dispatcher_worker_url';
 
 -- Optional nuclear: uncomment to block worker RPCs (re-enable requires GRANT after incident)
 -- revoke execute on function message_dispatcher.message_dispatcher_checkout_batch(text, integer) from service_role;

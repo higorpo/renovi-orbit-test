@@ -2,9 +2,8 @@
 -- This migration centralizes pricing signature generation/validation and
 -- updates RPCs so proposal creation is verified server-side.
 
-insert into public.platform_constants (key, value, description)
-values ('pricing_signature_secret', to_jsonb('renovi-provider-pricing-secret-v1'::text), 'Secret key used to generate and validate HMAC signatures for provider pricing payloads')
-on conflict (key) do update set value = excluded.value, description = excluded.description;
+-- pricing_signature_secret stored in Supabase Vault (db.vault in config.toml).
+-- Local dev: PRICING_SIGNATURE_SECRET env var; production: Supabase Dashboard → Vault.
 
 create or replace function public.generate_provider_pricing_signature(
   p_original_amount numeric,
@@ -15,18 +14,18 @@ create or replace function public.generate_provider_pricing_signature(
 returns text
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, vault, extensions
 as $$
 declare
-  v_secret jsonb;
+  v_secret text;
 begin
-  select value
+  select decrypted_secret
   into v_secret
-  from public.platform_constants
-  where key = 'pricing_signature_secret';
+  from vault.decrypted_secrets
+  where name = 'pricing_signature_secret';
 
-  if v_secret is null or jsonb_typeof(v_secret) <> 'string' then
-    raise exception 'Pricing signature secret is not configured';
+  if v_secret is null or trim(v_secret) = '' then
+    raise exception 'Pricing signature secret is not configured in vault';
   end if;
 
   return encode(
@@ -38,7 +37,7 @@ begin
         round(p_tax_amount::numeric, 2)::text,
         round(p_final_amount::numeric, 2)::text
       )::text,
-      trim(both '"' from v_secret::text)::text,
+      v_secret::text,
       'sha256'::text
     ),
     'hex'
