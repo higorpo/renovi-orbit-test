@@ -48,16 +48,16 @@ There is no per-`source_system` rate limit in MVP RPCs — coordination is at th
 
 If Supabase/Edge returns **429** or worker logs show rate limiting:
 
-- Increase `message_dispatcher.worker_invoke_min_interval_seconds` (floor 15) in `platform_constants`.
-- Temporarily unschedule or slow `mmd_invoke_worker` in `cron.job` (minimum schedule still subject to RPC throttle).
+- Decrease `message_dispatcher.max_parallel_workers` in `platform_constants` (default 5, minimum 1).
+- Temporarily unschedule or slow `mmd_invoke_worker` in `cron.job`.
 
-Do **not** set interval below 15s — risks invocation storms (`design.md` §1.6).
+Do **not** set `max_parallel_workers` above 5 — risks Edge Function concurrency exhaustion.
 
 ### 4. Lower DB batch pressure
 
 On statement timeouts or slow `checkout` / `promote_retries`:
 
-- Lower `message_dispatcher.checkout_batch_size` (default 25, max 50).
+- Lower `message_dispatcher.checkout_batch_size` (default 50).
 - Ensure `mmd_reclaim_leases` runs before `mmd_promote_retries` (design §6.4).
 
 ### 5. Provider outage

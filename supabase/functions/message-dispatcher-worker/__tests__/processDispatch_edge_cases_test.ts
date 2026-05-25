@@ -93,28 +93,45 @@ function baseDeps(overrides: Partial<ProcessDispatchDeps> = {}): ProcessDispatch
 
 // --- Missing recipient_email ---
 
-Deno.test("processDispatch email: counts renderFailed when recipient_email is null", async () => {
+Deno.test("processDispatch email: reports terminal failure when recipient_email is null", async () => {
+  const reportCalls: Array<{ dispatchId: string; errorCode?: string | null }> = [];
+  const deps = baseDeps({
+    reportDeliveryOutcome: async (_supabase, input) => {
+      reportCalls.push({ dispatchId: input.dispatchId, errorCode: input.errorCode });
+      return { applied: true, status: "FAILED_TERMINAL" };
+    },
+  });
   const item = emailItem({ recipient_email: null });
   const counts = await processDispatchItem(
     {} as SupabaseClient,
     item,
     "worker-1",
-    baseDeps(),
+    deps,
   );
-  assertEquals(counts.renderFailed, 1);
+  assertEquals(counts.sendFailed, 1);
+  assertEquals(counts.renderFailed, 0);
   assertEquals(counts.sendSucceeded, 0);
-  assertEquals(counts.sendFailed, 0);
+  assertEquals(reportCalls.length, 1);
+  assertEquals(reportCalls[0].errorCode, "missing_recipient_email");
 });
 
-Deno.test("processDispatch email: counts renderFailed when recipient_email is empty", async () => {
+Deno.test("processDispatch email: reports terminal failure when recipient_email is empty", async () => {
+  const reportCalls: Array<{ dispatchId: string }> = [];
+  const deps = baseDeps({
+    reportDeliveryOutcome: async (_supabase, input) => {
+      reportCalls.push({ dispatchId: input.dispatchId });
+      return { applied: true, status: "FAILED_TERMINAL" };
+    },
+  });
   const item = emailItem({ recipient_email: "   " });
   const counts = await processDispatchItem(
     {} as SupabaseClient,
     item,
     "worker-1",
-    baseDeps(),
+    deps,
   );
-  assertEquals(counts.renderFailed, 1);
+  assertEquals(counts.sendFailed, 1);
+  assertEquals(reportCalls.length, 1);
 });
 
 // --- Unknown channel ---

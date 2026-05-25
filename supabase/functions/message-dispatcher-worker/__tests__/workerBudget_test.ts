@@ -11,10 +11,10 @@ import {
 } from "../workerBudget.ts";
 import { clampCheckoutLimit } from "../checkout.ts";
 
-Deno.test("batch limits: default 25 max 50 (design §5.5)", () => {
-  assertEquals(DEFAULT_CHECKOUT_LIMIT, 25);
+Deno.test("batch limits: default 50 max 50 (design §5.5)", () => {
+  assertEquals(DEFAULT_CHECKOUT_LIMIT, 50);
   assertEquals(MAX_CHECKOUT_LIMIT, 50);
-  assertEquals(clampCheckoutLimit(25), 25);
+  assertEquals(clampCheckoutLimit(50), 50);
 });
 
 Deno.test("wall clock budget targets 60s p95 with 120s hard ceiling", () => {

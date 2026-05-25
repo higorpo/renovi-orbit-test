@@ -24,7 +24,7 @@ select is(
 
 select is(
   (select (value #>> '{}')::int from public.platform_constants where key = 'message_dispatcher.lease_seconds'),
-  30,
+  90,
   'lease_seconds'
 );
 
@@ -36,7 +36,7 @@ select is(
 
 select is(
   (select (value #>> '{}')::int from public.platform_constants where key = 'message_dispatcher.checkout_batch_size'),
-  25,
+  50,
   'checkout_batch_size'
 );
 

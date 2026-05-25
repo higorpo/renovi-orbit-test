@@ -1,4 +1,4 @@
-import Ajv, { type ErrorObject } from "ajv";
+import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
 import { validateTemplateVariablesSize } from "./templateVariables.ts";
 
 export class TemplateSchemaValidationError extends Error {
@@ -18,6 +18,22 @@ function formatAjvErrors(errors: ErrorObject[] | null | undefined): string {
 }
 
 const ajv = new Ajv({ allErrors: true, strict: false });
+const compiledSchemaCache = new Map<string, ValidateFunction>();
+
+function getOrCompileSchema(schema: Record<string, unknown>): ValidateFunction {
+  const cacheKey = JSON.stringify(schema);
+  const cached = compiledSchemaCache.get(cacheKey);
+  if (cached) return cached;
+
+  const validate = ajv.compile(schema);
+  compiledSchemaCache.set(cacheKey, validate);
+  return validate;
+}
+
+/** Clears compiled schema cache (tests only). */
+export function resetSchemaCache(): void {
+  compiledSchemaCache.clear();
+}
 
 /** Validates variables against message_templates.variable_schema (design §4.4, task 57). */
 export function validateTemplateVariablesAgainstSchema(
@@ -29,7 +45,7 @@ export function validateTemplateVariablesAgainstSchema(
   const schema = variableSchema ?? {};
   if (Object.keys(schema).length === 0) return;
 
-  const validate = ajv.compile(schema);
+  const validate = getOrCompileSchema(schema);
   const valid = validate(variables);
 
   if (!valid) {

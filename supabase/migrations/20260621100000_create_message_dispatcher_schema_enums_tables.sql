@@ -319,10 +319,10 @@ values
   ('message_dispatcher.push_cooldown_minutes', '20'::jsonb),
   ('message_dispatcher.lease_seconds', '90'::jsonb),
   ('message_dispatcher.max_retries', '3'::jsonb),
-  ('message_dispatcher.checkout_batch_size', '25'::jsonb),
+  ('message_dispatcher.checkout_batch_size', '50'::jsonb),
   ('message_dispatcher.backoff_base_seconds', '60'::jsonb),
   ('message_dispatcher.max_devices_per_dispatch', '10'::jsonb),
-  ('message_dispatcher.worker_invoke_min_interval_seconds', '15'::jsonb),
+  ('message_dispatcher.max_parallel_workers', '5'::jsonb),
   ('message_dispatcher.retryable_depth_alert_threshold', '10000'::jsonb)
 on conflict (key) do update set
   value = excluded.value,

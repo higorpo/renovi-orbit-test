@@ -406,15 +406,6 @@ values (
 )
 on conflict (id) do nothing;
 
-insert into public.platform_constants (key, value)
-values
-  ('message_dispatcher.worker_url', to_jsonb('http://host.docker.internal:54321/functions/v1/message-dispatcher-worker'::text)),
-  ('message_dispatcher.cron_secret', to_jsonb('dev-cron-secret-min-16-chars'::text)),
-  ('message_dispatcher.last_worker_invoke_at', 'null'::jsonb)
-on conflict (key) do update set
-  value = excluded.value,
-  updated_at = now();
-
 -- Message Dispatcher templates
 insert into message_dispatcher.message_templates (
   template_key,

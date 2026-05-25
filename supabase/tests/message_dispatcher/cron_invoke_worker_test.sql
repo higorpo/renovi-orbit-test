@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(5);
+select plan(4);
 
 select ok(
   exists (
@@ -15,9 +15,10 @@ select ok(
   'message_dispatcher_invoke_worker function exists'
 );
 
-select lives_ok(
-  $$select message_dispatcher.message_dispatcher_invoke_worker()$$,
-  'invoke_worker no-ops when worker_url or cron_secret unset'
+select is(
+  message_dispatcher.message_dispatcher_invoke_worker(),
+  0,
+  'invoke_worker returns 0 when vault secrets are unset'
 );
 
 select ok(
@@ -39,12 +40,6 @@ select ok(
       and j.active = true
   ),
   'mmd_invoke_worker cron job is active'
-);
-
-select is(
-  message_dispatcher.message_dispatcher_worker_invoke_min_interval_seconds(),
-  15,
-  'worker invoke min interval is at least 15 seconds'
 );
 
 select finish();

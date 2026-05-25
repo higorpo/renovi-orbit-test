@@ -96,12 +96,29 @@ async function processEmailDispatch(
     );
 
     if (!item.recipient_email?.trim()) {
-      counts.renderFailed += 1;
+      counts.sendFailed += 1;
       log.warn("worker.email.send_skipped", {
         correlation_id: item.correlation_id,
         dispatch_id: item.id,
         code: "missing_recipient_email",
       });
+
+      try {
+        await deps.reportDeliveryOutcome(supabase, {
+          dispatchId: item.id,
+          workerId,
+          channel: "email",
+          success: false,
+          errorCode: "missing_recipient_email",
+          errorBody: "No recipient email in checkout payload",
+          retryable: false,
+        });
+      } catch (reportErr) {
+        log.error("worker.email.missing_email_report_failed", {
+          dispatch_id: item.id,
+          error: reportErr instanceof Error ? reportErr.message : String(reportErr),
+        });
+      }
       return counts;
     }
 

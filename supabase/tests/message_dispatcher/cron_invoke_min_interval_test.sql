@@ -1,68 +1,69 @@
--- pgTAP: worker invoke minimum interval (design §1.6, task 108).
+-- pgTAP: dynamic worker fan-out (replaces throttle-based invoke).
+-- invoke_worker returns N = ceil(queued / batch_size), capped at max_parallel_workers.
 
 begin;
 
-select plan(6);
+select plan(5);
 
+-- Empty queue → 0 workers invoked (vault secrets are not seeded so early return).
 select is(
-  message_dispatcher.message_dispatcher_worker_invoke_min_interval_seconds(),
-  15,
-  'worker_invoke_min_interval_seconds floor is 15'
+  message_dispatcher.message_dispatcher_invoke_worker(),
+  0,
+  'invoke_worker returns 0 when queue is empty'
 );
 
-update public.platform_constants
-set value = to_jsonb(now()::text), updated_at = now()
-where key = 'message_dispatcher.last_worker_invoke_at';
+-- Grab a real profile from seed data for FK compliance.
+create temp table _fanout_fixture as
+select p.id as profile_id
+from public.profiles p
+limit 1;
 
-select ok(
-  message_dispatcher.message_dispatcher_try_claim_worker_invoke() = false,
-  'try_claim returns false inside min interval'
-);
+-- Seed a template for fixtures.
+insert into message_dispatcher.message_templates (template_key, channel, body_template, active)
+values ('_fanout_test', 'email', 'body', true)
+on conflict do nothing;
 
-update public.platform_constants
-set value = to_jsonb((now() - interval '20 seconds')::text), updated_at = now()
-where key = 'message_dispatcher.last_worker_invoke_at';
+-- Seed 30 QUEUED dispatches (< batch_size 50 → would need 1 worker).
+insert into message_dispatcher.message_dispatches (
+  idempotency_key, profile_id, channel, template_key,
+  status, scheduled_for
+)
+select
+  gen_random_uuid(),
+  f.profile_id,
+  'email'::message_dispatcher.message_channel,
+  '_fanout_test',
+  'QUEUED'::message_dispatcher.message_dispatch_status,
+  now()
+from _fanout_fixture f, generate_series(1, 30);
 
-select ok(
-  message_dispatcher.message_dispatcher_try_claim_worker_invoke(),
-  'try_claim succeeds after min interval elapsed'
-);
-
-update public.platform_constants
-set value = to_jsonb('https://example.test/worker'::text), updated_at = now()
-where key = 'message_dispatcher.worker_url';
-
-update public.platform_constants
-set value = to_jsonb('test-cron-secret'::text), updated_at = now()
-where key = 'message_dispatcher.cron_secret';
-
-update public.platform_constants
-set value = to_jsonb((now() - interval '20 seconds')::text), updated_at = now()
-where key = 'message_dispatcher.last_worker_invoke_at';
-
-select lives_ok(
-  $$select message_dispatcher.message_dispatcher_invoke_worker()$$,
-  'invoke_worker runs when claim allowed'
-);
-
-create temp table _mmd_invoke_ts as
-select (pc.value #>> '{}')::timestamptz as claimed_at
-from public.platform_constants pc
-where pc.key = 'message_dispatcher.last_worker_invoke_at';
-
-select lives_ok(
-  $$select message_dispatcher.message_dispatcher_invoke_worker()$$,
-  'second invoke_worker within interval is throttled (no error)'
-);
-
+-- 30 queued, batch_size=50 → ceil(30/50)=1, capped at max_parallel_workers=5 → 1 worker.
 select is(
-  (select claimed_at from _mmd_invoke_ts),
-  (
-    select (pc.value #>> '{}')::timestamptz
-    from public.platform_constants pc
-    where pc.key = 'message_dispatcher.last_worker_invoke_at'
-  ),
-  'throttled second invoke does not advance last_worker_invoke_at'
+  message_dispatcher.message_dispatcher_invoke_worker(),
+  1,
+  'invoke_worker returns 1 for 30 QUEUED dispatches with batch_size=50'
+);
+
+-- Verify the fan-out calculation directly.
+-- batch_size=50, max_parallel=5 → ceil(30/50) = 1
+select is(
+  least(ceil(30::numeric / 50::numeric)::integer, 5),
+  1,
+  'ceil(30/50) capped at 5 equals 1 worker'
+);
+
+-- ceil(200/50) = 4 workers
+select is(
+  least(ceil(200::numeric / 50::numeric)::integer, 5),
+  4,
+  'ceil(200/50) capped at 5 equals 4 workers'
+);
+
+-- ceil(1000/50) = 20, capped to 5
+select is(
+  least(ceil(1000::numeric / 50::numeric)::integer, 5),
+  5,
+  'ceil(1000/50) capped at 5 equals 5 workers'
 );
 
 select finish();

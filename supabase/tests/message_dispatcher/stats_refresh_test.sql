@@ -42,7 +42,7 @@ select ok(
     select 1
     from cron.job j
     where j.jobname = 'mmd_refresh_stats'
-      and j.schedule = '* * * * *'
+      and j.schedule = '*/5 * * * *'
       and j.command like '%message_dispatcher_refresh_stats%'
   ),
   'mmd_refresh_stats cron job exists'

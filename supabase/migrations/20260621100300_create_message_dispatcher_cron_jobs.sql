@@ -73,70 +73,10 @@ select cron.schedule(
   $$select message_dispatcher.message_dispatcher_reclaim_leases();$$
 );
 
-create or replace function message_dispatcher.message_dispatcher_worker_invoke_min_interval_seconds()
-returns integer
-language sql
-stable
-security definer
-set search_path = message_dispatcher, public, auth
-as $$
-  select greatest(
-    coalesce(
-      (
-        select (pc.value #>> '{}')::int
-        from public.platform_constants pc
-        where pc.key = 'message_dispatcher.worker_invoke_min_interval_seconds'
-      ),
-      15
-    ),
-    15
-  );
-$$;
-
-comment on function message_dispatcher.message_dispatcher_worker_invoke_min_interval_seconds() is
-  'Minimum seconds between pg_net worker POSTs (design §1.6; floor 15).';
-
-revoke all on function message_dispatcher.message_dispatcher_worker_invoke_min_interval_seconds() from public;
-revoke all on function message_dispatcher.message_dispatcher_worker_invoke_min_interval_seconds() from authenticated;
-grant execute on function message_dispatcher.message_dispatcher_worker_invoke_min_interval_seconds() to postgres;
-
-create or replace function message_dispatcher.message_dispatcher_try_claim_worker_invoke()
-returns boolean
-language plpgsql
-security definer
-set search_path = message_dispatcher, public, auth
-as $$
-declare
-  v_min_seconds integer;
-begin
-  v_min_seconds := message_dispatcher.message_dispatcher_worker_invoke_min_interval_seconds();
-
-  update public.platform_constants pc
-  set
-    value = to_jsonb(now()::text),
-    updated_at = now()
-  where pc.key = 'message_dispatcher.last_worker_invoke_at'
-    and (
-      pc.value is null
-      or pc.value = 'null'::jsonb
-      or nullif(trim(pc.value #>> '{}'), '') is null
-      or (pc.value #>> '{}')::timestamptz
-        <= now() - make_interval(secs => v_min_seconds)
-    );
-
-  return found;
-end;
-$$;
-
-comment on function message_dispatcher.message_dispatcher_try_claim_worker_invoke() is
-  'Atomically claim a worker invoke slot; false when within min interval (design §1.6, task 108).';
-
-revoke all on function message_dispatcher.message_dispatcher_try_claim_worker_invoke() from public;
-revoke all on function message_dispatcher.message_dispatcher_try_claim_worker_invoke() from authenticated;
-grant execute on function message_dispatcher.message_dispatcher_try_claim_worker_invoke() to postgres;
-
+-- Dynamic fan-out: invoke N workers based on QUEUED depth (design §6.4).
+-- Concurrency is safe: checkout uses FOR UPDATE SKIP LOCKED, report uses locked_by guard.
 create or replace function message_dispatcher.message_dispatcher_invoke_worker()
-returns void
+returns integer
 language plpgsql
 security definer
 set search_path = message_dispatcher, public, auth, extensions
@@ -144,8 +84,12 @@ as $$
 declare
   v_url text;
   v_secret text;
+  v_queued_count bigint;
+  v_batch_size integer;
+  v_max_workers integer;
+  v_worker_count integer;
+  v_i integer;
 begin
-  -- Secrets seeded by config.toml [db.vault] from .env via env().
   select nullif(trim(decrypted_secret), '')
   into v_url
   from vault.decrypted_secrets
@@ -157,28 +101,63 @@ begin
   where name = 'dispatcher_cron_secret';
 
   if v_url is null or v_secret is null then
-    return;
+    return 0;
   end if;
 
-  if not message_dispatcher.message_dispatcher_try_claim_worker_invoke() then
-    return;
+  select count(*)
+  into v_queued_count
+  from message_dispatcher.message_dispatches d
+  where d.status = 'QUEUED'
+    and d.scheduled_for <= now();
+
+  if v_queued_count = 0 then
+    return 0;
   end if;
 
-  perform net.http_post(
-    url := v_url,
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || v_secret,
-      'X-Dispatcher-Secret', v_secret
+  select coalesce((pc.value #>> '{}')::integer, 50)
+  into v_batch_size
+  from public.platform_constants pc
+  where pc.key = 'message_dispatcher.checkout_batch_size';
+  v_batch_size := greatest(coalesce(v_batch_size, 50), 1);
+
+  select least(
+    coalesce(
+      (
+        select (pc.value #>> '{}')::integer
+        from public.platform_constants pc
+        where pc.key = 'message_dispatcher.max_parallel_workers'
+      ),
+      5
     ),
-    body := '{}'::jsonb,
-    timeout_milliseconds := 25000
+    5
+  )
+  into v_max_workers;
+  v_max_workers := greatest(coalesce(v_max_workers, 5), 1);
+
+  v_worker_count := least(
+    ceil(v_queued_count::numeric / v_batch_size::numeric)::integer,
+    v_max_workers
   );
+
+  for v_i in 1 .. v_worker_count loop
+    perform net.http_post(
+      url := v_url,
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'Authorization', 'Bearer ' || v_secret,
+        'X-Dispatcher-Secret', v_secret
+      ),
+      body := '{}'::jsonb,
+      timeout_milliseconds := 25000
+    );
+  end loop;
+
+  return v_worker_count;
 end;
 $$;
 
 comment on function message_dispatcher.message_dispatcher_invoke_worker() is
-  'Fire-and-forget POST to message-dispatcher-worker via pg_net (design §6.4, task 70). Reads URL/secret from Vault (config.toml [db.vault] → .env). Throttled to worker_invoke_min_interval_seconds (≥15, task 108).';
+  'Dynamic fan-out: fires ceil(queued/batch_size) workers (cap max_parallel_workers). Reads URL/secret from Vault. SKIP LOCKED in checkout guarantees no double-processing.';
 
 revoke all on function message_dispatcher.message_dispatcher_invoke_worker() from public;
 revoke all on function message_dispatcher.message_dispatcher_invoke_worker() from authenticated;
@@ -204,7 +183,6 @@ begin
 end;
 $cron$;
 
--- MVP pg_cron granularity is 60s (design §6.4); RPC enforces ≥15s between pg_net POSTs (design §1.6).
 select cron.schedule(
   'mmd_invoke_worker',
   '*/1 * * * *',

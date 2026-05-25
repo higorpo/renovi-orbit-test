@@ -44,20 +44,25 @@ select ok(
 select ok(
   exists (
     select 1
-    from public.platform_constants pc
-    where pc.key = 'message_dispatcher.worker_url'
+    from vault.decrypted_secrets
+    where name = 'dispatcher_worker_url'
   )
   and exists (
     select 1
-    from public.platform_constants pc
-    where pc.key = 'message_dispatcher.cron_secret'
+    from vault.decrypted_secrets
+    where name = 'dispatcher_cron_secret'
   ),
-  'worker_url and cron_secret platform_constants exist'
+  'worker_url and cron_secret vault secrets exist'
 );
 
 select ok(
-  message_dispatcher.message_dispatcher_worker_invoke_min_interval_seconds() >= 15,
-  'worker invoke min interval enforces >= 15s throttle'
+  exists (
+    select 1
+    from public.platform_constants pc
+    where pc.key = 'message_dispatcher.max_parallel_workers'
+      and (pc.value #>> '{}')::integer between 1 and 5
+  ),
+  'max_parallel_workers platform_constant exists and is between 1 and 5'
 );
 
 select finish();

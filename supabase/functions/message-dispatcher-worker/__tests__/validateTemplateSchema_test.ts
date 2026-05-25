@@ -1,5 +1,6 @@
 import { assertEquals, assertThrows } from "std/testing/asserts";
 import {
+  resetSchemaCache,
   TemplateSchemaValidationError,
   validateTemplateVariablesAgainstSchema,
 } from "../validateTemplateSchema.ts";
@@ -43,6 +44,23 @@ Deno.test("validateTemplateVariablesAgainstSchema rejects additional properties"
         { name: "Ana", headline: "Hi", body: "x", extra: true },
         engagementPushSchema,
       ),
+    TemplateSchemaValidationError,
+  );
+});
+
+Deno.test("validateTemplateVariablesAgainstSchema uses cached compiled schema on second call", () => {
+  resetSchemaCache();
+  const schema = {
+    type: "object",
+    properties: { x: { type: "number" } },
+    required: ["x"],
+  };
+
+  validateTemplateVariablesAgainstSchema({ x: 1 }, schema);
+  validateTemplateVariablesAgainstSchema({ x: 2 }, schema);
+
+  assertThrows(
+    () => validateTemplateVariablesAgainstSchema({ x: "not a number" }, schema),
     TemplateSchemaValidationError,
   );
 });

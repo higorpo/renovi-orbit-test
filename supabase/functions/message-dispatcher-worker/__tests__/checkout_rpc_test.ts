@@ -87,7 +87,7 @@ Deno.test("parseCheckoutBatch returns empty array for non-array input", () => {
 });
 
 Deno.test("clampCheckoutLimit handles NaN", () => {
-  assertEquals(clampCheckoutLimit(NaN), 25);
+  assertEquals(clampCheckoutLimit(NaN), 50);
 });
 
 Deno.test("clampCheckoutLimit floors fractional values", () => {

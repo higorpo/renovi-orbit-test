@@ -2,7 +2,7 @@ import { assertEquals } from "std/testing/asserts";
 import { clampCheckoutLimit, parseCheckoutBatch } from "../checkout.ts";
 
 Deno.test("clampCheckoutLimit enforces 1..50", () => {
-  assertEquals(clampCheckoutLimit(undefined), 25);
+  assertEquals(clampCheckoutLimit(undefined), 50);
   assertEquals(clampCheckoutLimit(0), 1);
   assertEquals(clampCheckoutLimit(100), 50);
 });
