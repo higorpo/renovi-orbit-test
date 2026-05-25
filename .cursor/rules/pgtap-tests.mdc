@@ -1,0 +1,81 @@
+---
+description: Testes pgTAP para lógica SQL complexa e de alto risco no banco de dados
+alwaysApply: false
+globs: supabase/**/*
+---
+
+# Testes pgTAP (banco de dados)
+
+O projeto usa **pgTAP** para testar lógica SQL no banco de dados. Os testes ficam em `supabase/tests/<domínio>/` como arquivos `.sql`.
+
+## Quando criar testes pgTAP
+
+Criar testes pgTAP **sempre que** a mudança envolver:
+
+- **Funções PL/pgSQL** com lógica de negócio (máquinas de estado, cálculos, validações)
+- **Triggers** que alteram dados ou impõem invariantes
+- **Políticas RLS** complexas (múltiplas condições, subqueries, joins)
+- **Constraints e validações** customizadas (CHECK, exclusion constraints)
+- **Queries críticas** de concorrência (locks, `SKIP LOCKED`, idempotência)
+- **Transições de estado** (FSM) e guards de transição
+- **Cron jobs / scheduled functions** que manipulam dados
+
+**Regra geral:** se a lógica SQL é complexa, de alto risco, ou difícil de testar via aplicação — escreva um teste pgTAP.
+
+## Estrutura dos testes
+
+```sql
+-- pgTAP: breve descrição do cenário testado.
+
+begin;
+
+select plan(N);  -- N = número de assertivas
+
+-- Setup: criar fixtures temporárias
+create temp table _fixture as ...;
+
+-- Assertivas
+select ok(..., 'description');
+select is(..., 'description');
+select isnt(..., 'description');
+select throws_ok(..., 'description');
+
+select * from finish();
+rollback;
+```
+
+## Convenções
+
+1. **Um cenário por arquivo**: `supabase/tests/<domínio>/<cenário>_test.sql`.
+2. **Transação com rollback**: todo teste abre `begin;` e termina com `rollback;` para não poluir o banco.
+3. **Fixtures temporárias** (`create temp table`): montar dados de teste sem depender de estado externo.
+4. **Comentários em inglês** nos arquivos de teste.
+5. **Nome descritivo** no arquivo e nas mensagens das assertivas.
+
+## Assertivas comuns
+
+| Função | Uso |
+|--------|-----|
+| `ok(bool, msg)` | Condição booleana verdadeira |
+| `is(got, expected, msg)` | Igualdade exata |
+| `isnt(got, unexpected, msg)` | Diferença |
+| `throws_ok(sql, errcode, msg)` | Espera erro específico |
+| `results_eq(sql, sql, msg)` | Resultado de queries iguais |
+| `lives_ok(sql, msg)` | Execução sem erro |
+
+## Como rodar
+
+```bash
+# Rodar todos os testes pgTAP (requer Supabase local rodando)
+npx supabase test db
+
+# Rodar testes de um domínio específico
+npx supabase test db --filter message_dispatcher
+```
+
+## Checklist ao alterar lógica SQL
+
+- [ ] Funções/triggers com lógica de negócio têm testes pgTAP cobrindo sucesso, erro e edge cases
+- [ ] Políticas RLS complexas têm testes verificando acesso permitido e negado
+- [ ] Lógica de concorrência testada (parallel ingest, checkout, cancel)
+- [ ] Testes passando com `npx supabase test db` antes de finalizar

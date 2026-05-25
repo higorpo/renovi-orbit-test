@@ -25,6 +25,8 @@ Features em `src/features/<nome>/` (`api`, `components`, `hooks`, `types`, `util
 | `yarn`, `nvm-node` | `platform-ux` → `src/**`, `android/**` |
 | `api-layer`, `feature-architecture` | `e2e-testing` → `e2e/**` |
 | `business-logic-in-hooks`, `code-comments` | `supabase-migrations`, `supabase-types`, `supabase-rls-performance` → `supabase/**` |
+| | `edge-function-tests` → `supabase/functions/**` |
+| | `pgtap-tests` → `supabase/**` |
 | | `server-side-pagination-and-filtering` → `src/features/**` |
 | | `sentry`, `logger`, `analytics-tracking` → `src/**` |
 | | `unit-tests` → `src/**`, `e2e/**`, testes |

@@ -1,0 +1,45 @@
+---
+description: Testes obrigatórios para Edge Functions (Deno) — unitários e de integração
+alwaysApply: false
+globs: supabase/functions/**/*
+---
+
+# Testes de Edge Functions (Deno)
+
+Toda Edge Function em `supabase/functions/` **deve ter testes**. Os testes ficam em `supabase/functions/<function-name>/__tests__/` e usam `Deno.test` + `assertEquals`/`assertRejects` de `std/testing/asserts`.
+
+## Quando criar testes
+
+- **Novo módulo/função**: criar arquivo `<module>_test.ts` em `__tests__/` cobrindo cenários de sucesso, erro e edge cases.
+- **Alteração em módulo existente**: verificar e atualizar os testes existentes; adicionar casos para comportamento novo.
+- **Código compartilhado** (`_shared/`): testes em `_shared/__tests__/`.
+
+## Tipos de teste
+
+| Tipo | Prefixo / convenção | Descrição |
+|------|---------------------|-----------|
+| Unitário | `<module>_test.ts` | Testa funções puras e helpers isolados com mocks/stubs de dependências externas |
+| Integração | `integration_<cenário>_test.ts` | Testa fluxo completo de um cenário (mock de HTTP externo, mas lógica real encadeada) |
+
+## Convenções
+
+1. **Dependency injection**: módulos expõem tipo `Deps` com dependências injetáveis; testes fornecem fakes/stubs em vez de mockar globalmente.
+2. **Sem chamadas reais** a serviços externos (Supabase, Resend, FCM) nos testes — usar stubs que registram chamadas e retornam dados controlados.
+3. **Nomes descritivos** no `Deno.test("descrição clara do comportamento", ...)`.
+4. **Comentários em inglês** nos arquivos de teste.
+
+## Como rodar
+
+```bash
+# Todos os testes da função
+deno test supabase/functions/<function-name>/__tests__/ --allow-env --allow-read
+
+# Teste específico
+deno test supabase/functions/<function-name>/__tests__/<test>_test.ts --allow-env --allow-read
+```
+
+## Checklist ao criar/alterar Edge Functions
+
+- [ ] Testes unitários para cada módulo/helper com lógica
+- [ ] Testes de integração para fluxos críticos (pipeline completa)
+- [ ] Testes passando localmente antes de finalizar a mudança
