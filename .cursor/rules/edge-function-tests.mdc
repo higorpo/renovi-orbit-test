@@ -30,13 +30,23 @@ Toda Edge Function em `supabase/functions/` **deve ter testes**. Os testes ficam
 
 ## Como rodar
 
+O projeto possui o script **`yarn test:deno`** que executa todos os testes Deno das Edge Functions de uma vez. **Prefira usar esse script** em vez de invocar `deno test` diretamente — ele já configura `--config`, permissões (`-A`) e `--no-check`.
+
 ```bash
-# Todos os testes da função
-deno test supabase/functions/<function-name>/__tests__/ --allow-env --allow-read
+# Todos os testes de todas as Edge Functions (preferido)
+yarn test:deno
+
+# Filtrar por nome do teste (flag --filter do Deno)
+yarn test:deno --filter "checkout"
+
+# Rodar testes de uma função específica (passando path após --)
+yarn test:deno -- supabase/functions/<function-name>/__tests__/
 
 # Teste específico
-deno test supabase/functions/<function-name>/__tests__/<test>_test.ts --allow-env --allow-read
+yarn test:deno -- supabase/functions/<function-name>/__tests__/<test>_test.ts
 ```
+
+> **Nota:** `yarn test:deno` roda `deno test --config supabase/functions/deno.json supabase/functions/ -A --no-check`. Não precisa de `nvm use` — Deno é independente do Node.
 
 ## Checklist ao criar/alterar Edge Functions
 

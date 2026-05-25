@@ -12,7 +12,11 @@ React 19, Vite 7, TS, React Router 7, TanStack Query, Tailwind, Capacitor 8, Sup
 
 ## Comandos
 
-Node **24.13**: `nvm use` antes de yarn. `yarn dev` | `yarn build` | `yarn cap:sync` | `yarn android` | `yarn test:run` | `yarn test:e2e` | `yarn lint` | `yarn generate-supabase-types` | `yarn db:migrate` | `yarn db:reset`.
+Node **24.13**: `nvm use` antes de yarn. `yarn dev` | `yarn build` | `yarn cap:sync` | `yarn android` | `yarn test:run` | `yarn test:deno` | `yarn test:e2e` | `yarn lint` | `yarn generate-supabase-types` | `yarn db:migrate` | `yarn db:reset`.
+
+- **`yarn test:run`** — testes unitários do app (Vitest, `src/`).
+- **`yarn test:deno`** — testes unitários das Edge Functions (Deno, `supabase/functions/`). Aceita `--filter "nome"` ou `-- <path>` para filtrar.
+- **`yarn test:e2e`** — testes end-to-end (Playwright).
 
 ## Código
 

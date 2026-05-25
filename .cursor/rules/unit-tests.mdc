@@ -42,7 +42,12 @@ Ao **criar código novo** (novo arquivo, nova função, novo componente, nova fe
    - Na mesma feature, em `__tests__/` (ex.: `src/features/auth/api/__tests__/auth.api.test.ts`).
    - Seguir as convenções do comando `.cursor/commands/unit-tests.md` e das regras do projeto (feature-based, API layer, comentários em inglês nos testes).
 
+## Edge Functions (Deno)
+
+Para testes de **Edge Functions** (`supabase/functions/`), usar `yarn test:deno` (Deno) em vez de `yarn test:run` (Vitest). Ver regra `edge-function-tests` para convenções e estrutura.
+
 ## Resumo
 
 - **Mexeu em arquivo que já tem teste?** → Rodar testes, corrigir se quebrou, avaliar se precisa de mais testes.
 - **Criou código novo?** → Incluir testes unitários quando possível (API, hooks, componentes com lógica, utils, validadores).
+- **Mexeu em Edge Function?** → Usar `yarn test:deno` para rodar os testes Deno correspondentes.

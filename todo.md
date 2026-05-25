@@ -69,10 +69,7 @@ Coisas para terminar do fluxo atual de trabalho:
 
 Coisas para fazer next
 
--mover platform_constants pricing_signature_secret para um env usando vault
--remover platform_constants desnecessárias
 -permitir enviar mensagem forçada (sem limites) no MD
 -envio de emailem modo dev ir para o mesmo local que os outros
 -trackear visualização de notificação/email
 -comando ci para rodar todos os testes e verificar cobertura de teste
--adicionar nas rules como funciona o uso de yarn test:deno para rodar os testes.
