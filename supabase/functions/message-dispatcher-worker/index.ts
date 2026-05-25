@@ -1,7 +1,8 @@
 /**
  * Edge Function: message-dispatcher-worker (design §5.5).
  *
- * Stateless worker: checkout → sequential render/send/report per dispatch.
+ * Stateless worker with re-checkout loop: drains QUEUED items until the
+ * wall-clock budget is exhausted or the queue is empty.
  */
 
 import "xhr";
@@ -14,6 +15,11 @@ import { validateWorkerAuth } from "./auth.ts";
 import { checkoutBatch } from "./checkout.ts";
 import { createServiceRoleClient } from "../_shared/serviceRoleClient.ts";
 import { processCheckoutItemsSequential } from "./processDispatch.ts";
+import {
+  createWorkerWallClockBudget,
+  isWorkerWallClockExceeded,
+  workerWallClockElapsedMs,
+} from "./workerBudget.ts";
 import type { WorkerRunResult } from "./types.ts";
 
 const log = createLogger("message-dispatcher-worker");
@@ -40,36 +46,82 @@ serve(async (req) => {
 
   return withSpan("worker.run", "function", {}, async () => {
     const workerId = crypto.randomUUID();
+    const budget = createWorkerWallClockBudget();
     log.info("worker.run.started", { worker_id: workerId });
+
+    const totals: WorkerRunResult = {
+      processed: 0,
+      succeeded: 0,
+      failed: 0,
+      skipped: 0,
+      batches: 0,
+      budget_exceeded: false,
+    };
 
     try {
       const supabase = createServiceRoleClient();
-      const checkout = await withSpan(
-        "checkout",
-        "queue",
-        { worker_id: workerId },
-        () => checkoutBatch(supabase, workerId),
-      );
-      if (checkout.error) {
-        log.error("worker.checkout.failed", {
-          worker_id: workerId,
-          error: checkout.error.message,
-        });
-        return jsonResponse({ error: "checkout_failed" }, 500, corsHeaders);
+
+      while (!isWorkerWallClockExceeded(budget)) {
+        const checkout = await withSpan(
+          "checkout",
+          "queue",
+          { worker_id: workerId, batch: totals.batches! + 1 },
+          () => checkoutBatch(supabase, workerId),
+        );
+
+        if (checkout.error) {
+          log.error("worker.checkout.failed", {
+            worker_id: workerId,
+            batch: totals.batches! + 1,
+            error: checkout.error.message,
+          });
+          break;
+        }
+
+        if (checkout.items.length === 0) {
+          log.info("worker.queue_drained", {
+            worker_id: workerId,
+            batches_completed: totals.batches,
+          });
+          break;
+        }
+
+        const batchResult = await processCheckoutItemsSequential(
+          supabase,
+          checkout.items,
+          workerId,
+          undefined,
+          budget,
+        );
+
+        totals.batches! += 1;
+        totals.processed += batchResult.processed;
+        totals.succeeded += batchResult.succeeded;
+        totals.failed += batchResult.failed;
+        totals.skipped! += batchResult.skipped;
+
+        if (batchResult.budget_exceeded) {
+          totals.budget_exceeded = true;
+          break;
+        }
       }
 
-      const result: WorkerRunResult = await processCheckoutItemsSequential(
-        supabase,
-        checkout.items,
-        workerId,
-      );
+      if (!totals.budget_exceeded && isWorkerWallClockExceeded(budget)) {
+        totals.budget_exceeded = true;
+      }
 
-      log.info("worker.run.completed", { worker_id: workerId, ...result });
+      totals.wall_clock_ms = Math.round(workerWallClockElapsedMs(budget));
+      log.info("worker.run.completed", { worker_id: workerId, ...totals });
 
-      return jsonResponse(result, 200, corsHeaders);
+      return jsonResponse(totals, 200, corsHeaders);
     } catch (err) {
       const message = err instanceof Error ? err.message : "worker_run_failed";
-      log.error("worker.run.exception", { worker_id: workerId, error: message });
+      log.error("worker.run.exception", {
+        worker_id: workerId,
+        error: message,
+        batches_completed: totals.batches,
+        processed_before_error: totals.processed,
+      });
       return jsonResponse({ error: "worker_run_failed" }, 500, corsHeaders);
     }
   });

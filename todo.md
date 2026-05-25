@@ -70,9 +70,8 @@ Coisas para terminar do fluxo atual de trabalho:
 Coisas para fazer next
 
 
--adicionar descrição na tabela de platform_constants
 -permitir enviar mensagem forçada (sem limites) no MD
 -envio de emailem modo dev ir para o mesmo local que os outros
--ao invés de usar platform_constants ver se tem como usar env. adicionar uma rule sobre isso se for funcional.
 -trackear visualização de notificação/email
 -comando ci para rodar todos os testes e verificar cobertura de teste
+-adicionar nas rules como funciona o uso de yarn test:deno para rodar os testes.

@@ -29,4 +29,6 @@ export interface WorkerRunResult {
   skipped?: number;
   wall_clock_ms?: number;
   budget_exceeded?: boolean;
+  /** Number of checkout batches consumed in this invocation. */
+  batches?: number;
 }
