@@ -28,9 +28,11 @@
     "test:watch": "vitest --watch",
     "prerelease": "node scripts/prerelease.mjs",
     "cap:sync": "npx cap sync",
-    "android": "npm run build && npx cap sync android && npx cap open android",
-    "ios": "npm run build && npx cap sync ios && npx cap open ios",
-    "dev:host": "portless run --name orbit --app-port 5854 vite --host --port 5854"
+    "android": "yarn build && npx cap sync android && npx cap open android",
+    "ios": "yarn build && npx cap sync ios && npx cap open ios",
+    "dev:host": "portless run --name orbit --app-port 5854 vite --host --port 5854",
+    "enable-resend-webhook": "lt -p 54321 -s pj-orbit-sb",
+    "test:deno": "deno test --config supabase/functions/deno.json supabase/functions/ -A --no-check"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.4",

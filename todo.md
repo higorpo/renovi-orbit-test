@@ -69,5 +69,14 @@ Coisas para terminar do fluxo atual de trabalho:
 
 Coisas para fazer next
 
-- Adicionar message dispatcher
-- No android ele não mostra dialog de  permissão de notificação antes de mostrar a nativa
+
+-adicionar descrição na tabela de platform_constants
+-permitir enviar mensagem forçada (sem limites) no MD
+-envio de email em modo dev ir para o mesmo local que os outros
+-ao invés de usar platform_constants ver se tem como usar env. adicionar uma rule sobre isso se for funcional.
+-trackear visualização de notificação/email
+-modificar locais que usam Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") para centralizar usando serviceRoleClient
+-padronizar jsonResponse que está duplicado entre arquivos  do functions
+-pedir pra IA revisar se realmente vai funcionar no modelo de edge function
+-pedir pra IA gerar código de teste
+-adicionar regras para sempre fazer testes unitários no deno e no supabase

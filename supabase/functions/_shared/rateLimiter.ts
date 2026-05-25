@@ -4,9 +4,16 @@
  * - Limit by IP/user
  * - 60s window
  * - No long blocks (fail open on DB error)
+ *
+ * NOTE: The SELECT-then-UPDATE pattern has a TOCTOU race under concurrent
+ * requests — two callers can read the same count and both increment to the
+ * same value, effectively allowing one extra request through the window.
+ * For this soft limiter (fail-open) the risk is acceptable. If strict
+ * enforcement is needed, migrate to an atomic RPC (e.g. SELECT ... FOR UPDATE
+ * or a single INSERT ... ON CONFLICT UPDATE count = count + 1 RETURNING).
  */
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 
 export interface RateLimitConfig {
   perMinute: number;

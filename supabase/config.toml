@@ -10,9 +10,10 @@ enabled = true
 port = 54321
 # Schemas to expose in your API. Tables, views and stored procedures in this schema will get API
 # endpoints. `public` and `graphql_public` schemas are included by default.
-schemas = ["public", "graphql_public"]
+# message_dispatcher: MMD RPCs and read-only tables (design §2.0; tasks.md task 10).
+schemas = ["public", "graphql_public", "message_dispatcher"]
 # Extra schemas to add to the search_path of every request.
-extra_search_path = ["public", "extensions"]
+extra_search_path = ["public", "extensions", "message_dispatcher"]
 # The maximum number of rows returns from a view, table, or stored procedure. Limits payload size
 # for accidental or malicious requests.
 max_rows = 1000
@@ -388,6 +389,18 @@ verify_jwt = false
 # Edge function used to validate reCAPTCHA token before sensitive actions.
 [functions.verify-recaptcha]
 verify_jwt = false
+
+# Internal cron/pg_net worker; auth via X-Dispatcher-Secret or service_role bearer (design §5.5).
+[functions.message-dispatcher-worker]
+verify_jwt = false
+
+# Public Resend webhook; auth via Svix signature (design §5.6).
+[functions.message-dispatcher-webhook-resend]
+verify_jwt = false
+
+# Orbit ingest wrapper → service_role message_dispatcher_ingest (design §5.1, task 112).
+[functions.message-dispatcher-ingest]
+verify_jwt = true
 
 [analytics]
 enabled = true

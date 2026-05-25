@@ -32,6 +32,472 @@ export type Database = {
       [_ in never]: never
     }
   }
+  message_dispatcher: {
+    Tables: {
+      message_dispatch_deliveries: {
+        Row: {
+          attempt_no: number
+          created_at: string
+          device_id: string
+          dispatch_id: string
+          fcm_token_snapshot: string | null
+          id: string
+          outcome: Database["message_dispatcher"]["Enums"]["message_delivery_outcome"]
+          updated_at: string
+          vendor_error_code: string | null
+          vendor_response: Json | null
+        }
+        Insert: {
+          attempt_no?: number
+          created_at?: string
+          device_id: string
+          dispatch_id: string
+          fcm_token_snapshot?: string | null
+          id?: string
+          outcome?: Database["message_dispatcher"]["Enums"]["message_delivery_outcome"]
+          updated_at?: string
+          vendor_error_code?: string | null
+          vendor_response?: Json | null
+        }
+        Update: {
+          attempt_no?: number
+          created_at?: string
+          device_id?: string
+          dispatch_id?: string
+          fcm_token_snapshot?: string | null
+          id?: string
+          outcome?: Database["message_dispatcher"]["Enums"]["message_delivery_outcome"]
+          updated_at?: string
+          vendor_error_code?: string | null
+          vendor_response?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_dispatch_deliveries_dispatch_id_fkey"
+            columns: ["dispatch_id"]
+            isOneToOne: false
+            referencedRelation: "message_dispatches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_dispatcher_audit: {
+        Row: {
+          changed_by: string
+          correlation_id: string | null
+          created_at: string
+          delta: Json
+          dispatch_id: string
+          id: number
+          new_status: Database["message_dispatcher"]["Enums"]["message_dispatch_status"]
+          old_status:
+            | Database["message_dispatcher"]["Enums"]["message_dispatch_status"]
+            | null
+          profile_id: string
+        }
+        Insert: {
+          changed_by?: string
+          correlation_id?: string | null
+          created_at?: string
+          delta?: Json
+          dispatch_id: string
+          id?: number
+          new_status: Database["message_dispatcher"]["Enums"]["message_dispatch_status"]
+          old_status?:
+            | Database["message_dispatcher"]["Enums"]["message_dispatch_status"]
+            | null
+          profile_id: string
+        }
+        Update: {
+          changed_by?: string
+          correlation_id?: string | null
+          created_at?: string
+          delta?: Json
+          dispatch_id?: string
+          id?: number
+          new_status?: Database["message_dispatcher"]["Enums"]["message_dispatch_status"]
+          old_status?:
+            | Database["message_dispatcher"]["Enums"]["message_dispatch_status"]
+            | null
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_dispatcher_audit_dispatch_id_fkey"
+            columns: ["dispatch_id"]
+            isOneToOne: false
+            referencedRelation: "message_dispatches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_dispatcher_stats: {
+        Row: {
+          collected_at: string
+          labels: Json
+          metric_name: string
+          value: number
+        }
+        Insert: {
+          collected_at?: string
+          labels?: Json
+          metric_name: string
+          value: number
+        }
+        Update: {
+          collected_at?: string
+          labels?: Json
+          metric_name?: string
+          value?: number
+        }
+        Relationships: []
+      }
+      message_dispatcher_user_limits: {
+        Row: {
+          email_count_24h: number
+          email_window_start: string
+          last_push_sent_at: string | null
+          profile_id: string
+          push_count_24h: number
+          push_window_start: string
+        }
+        Insert: {
+          email_count_24h?: number
+          email_window_start?: string
+          last_push_sent_at?: string | null
+          profile_id: string
+          push_count_24h?: number
+          push_window_start?: string
+        }
+        Update: {
+          email_count_24h?: number
+          email_window_start?: string
+          last_push_sent_at?: string | null
+          profile_id?: string
+          push_count_24h?: number
+          push_window_start?: string
+        }
+        Relationships: []
+      }
+      message_dispatcher_vendor_events: {
+        Row: {
+          dispatch_id: string | null
+          event_type: string
+          payload: Json
+          processed_at: string
+          vendor: string
+          vendor_event_id: string
+        }
+        Insert: {
+          dispatch_id?: string | null
+          event_type: string
+          payload: Json
+          processed_at?: string
+          vendor: string
+          vendor_event_id: string
+        }
+        Update: {
+          dispatch_id?: string | null
+          event_type?: string
+          payload?: Json
+          processed_at?: string
+          vendor?: string
+          vendor_event_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_dispatcher_vendor_events_dispatch_id_fkey"
+            columns: ["dispatch_id"]
+            isOneToOne: false
+            referencedRelation: "message_dispatches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_dispatches: {
+        Row: {
+          cancel_reason: string | null
+          channel: Database["message_dispatcher"]["Enums"]["message_channel"]
+          correlation_id: string
+          created_at: string
+          failure_code: string | null
+          failure_reason: string | null
+          id: string
+          idempotency_key: string
+          locked_by: string | null
+          locked_until: string | null
+          max_retries: number
+          metadata: Json
+          next_retry_at: string | null
+          profile_id: string
+          retry_count: number
+          scheduled_for: string
+          source_system: string
+          status: Database["message_dispatcher"]["Enums"]["message_dispatch_status"]
+          template_key: string
+          template_variables: Json
+          updated_at: string
+          vendor_message_id: string | null
+        }
+        Insert: {
+          cancel_reason?: string | null
+          channel: Database["message_dispatcher"]["Enums"]["message_channel"]
+          correlation_id?: string
+          created_at?: string
+          failure_code?: string | null
+          failure_reason?: string | null
+          id?: string
+          idempotency_key: string
+          locked_by?: string | null
+          locked_until?: string | null
+          max_retries?: number
+          metadata?: Json
+          next_retry_at?: string | null
+          profile_id: string
+          retry_count?: number
+          scheduled_for?: string
+          source_system?: string
+          status?: Database["message_dispatcher"]["Enums"]["message_dispatch_status"]
+          template_key: string
+          template_variables?: Json
+          updated_at?: string
+          vendor_message_id?: string | null
+        }
+        Update: {
+          cancel_reason?: string | null
+          channel?: Database["message_dispatcher"]["Enums"]["message_channel"]
+          correlation_id?: string
+          created_at?: string
+          failure_code?: string | null
+          failure_reason?: string | null
+          id?: string
+          idempotency_key?: string
+          locked_by?: string | null
+          locked_until?: string | null
+          max_retries?: number
+          metadata?: Json
+          next_retry_at?: string | null
+          profile_id?: string
+          retry_count?: number
+          scheduled_for?: string
+          source_system?: string
+          status?: Database["message_dispatcher"]["Enums"]["message_dispatch_status"]
+          template_key?: string
+          template_variables?: Json
+          updated_at?: string
+          vendor_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_dispatches_template_key_channel_fkey"
+            columns: ["template_key", "channel"]
+            isOneToOne: false
+            referencedRelation: "message_templates"
+            referencedColumns: ["template_key", "channel"]
+          },
+        ]
+      }
+      message_templates: {
+        Row: {
+          active: boolean
+          body_template: string
+          channel: Database["message_dispatcher"]["Enums"]["message_channel"]
+          created_at: string
+          subject_template: string | null
+          template_key: string
+          variable_schema: Json
+        }
+        Insert: {
+          active?: boolean
+          body_template: string
+          channel: Database["message_dispatcher"]["Enums"]["message_channel"]
+          created_at?: string
+          subject_template?: string | null
+          template_key: string
+          variable_schema?: Json
+        }
+        Update: {
+          active?: boolean
+          body_template?: string
+          channel?: Database["message_dispatcher"]["Enums"]["message_channel"]
+          created_at?: string
+          subject_template?: string | null
+          template_key?: string
+          variable_schema?: Json
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      alert_janitor_churn_v: {
+        Row: {
+          lease_reclaims_1m: number | null
+        }
+        Relationships: []
+      }
+      alert_queue_lag_v: {
+        Row: {
+          lag_count: number | null
+        }
+        Relationships: []
+      }
+      alert_retryable_by_source_v: {
+        Row: {
+          retryable_count: number | null
+          source_system: string | null
+        }
+        Relationships: []
+      }
+      alert_retryable_depth_v: {
+        Row: {
+          retryable_count: number | null
+        }
+        Relationships: []
+      }
+      alert_terminal_spike_v: {
+        Row: {
+          ingested_15m: number | null
+          terminal_15m: number | null
+          terminal_rate: number | null
+        }
+        Relationships: []
+      }
+    }
+    Functions: {
+      message_dispatch_status_allowed: {
+        Args: {
+          p_from: Database["message_dispatcher"]["Enums"]["message_dispatch_status"]
+          p_to: Database["message_dispatcher"]["Enums"]["message_dispatch_status"]
+        }
+        Returns: boolean
+      }
+      message_dispatcher_activate_scheduled: { Args: never; Returns: number }
+      message_dispatcher_audit_partitioning_growth_stub_sql: {
+        Args: never
+        Returns: string
+      }
+      message_dispatcher_audit_timeline: {
+        Args: { p_dispatch_id: string }
+        Returns: Json
+      }
+      message_dispatcher_build_checkout_dto: {
+        Args: {
+          p_channel: Database["message_dispatcher"]["Enums"]["message_channel"]
+          p_correlation_id: string
+          p_deliveries: Json
+          p_id: string
+          p_locked_by: string
+          p_locked_until: string
+          p_profile_id: string
+          p_recipient_email: string
+          p_status: Database["message_dispatcher"]["Enums"]["message_dispatch_status"]
+          p_template_key: string
+          p_template_variables: Json
+        }
+        Returns: Json
+      }
+      message_dispatcher_cancel: {
+        Args: { p_dispatch_id: string; p_reason?: string }
+        Returns: Json
+      }
+      message_dispatcher_checkout_batch: {
+        Args: { p_limit?: number; p_worker_id?: string }
+        Returns: Json
+      }
+      message_dispatcher_compute_next_retry_at: {
+        Args: { p_retry_count: number }
+        Returns: string
+      }
+      message_dispatcher_disable_device_beacon: {
+        Args: { p_device_id: string; p_profile_id: string }
+        Returns: undefined
+      }
+      message_dispatcher_evaluate_alerts: { Args: never; Returns: Json }
+      message_dispatcher_evaluate_pending: { Args: never; Returns: number }
+      message_dispatcher_ingest: {
+        Args: {
+          p_channel: Database["message_dispatcher"]["Enums"]["message_channel"]
+          p_idempotency_key: string
+          p_metadata?: Json
+          p_profile_id: string
+          p_scheduled_for?: string
+          p_source_system?: string
+          p_template_key: string
+          p_template_variables?: Json
+        }
+        Returns: Json
+      }
+      message_dispatcher_invoke_worker: { Args: never; Returns: undefined }
+      message_dispatcher_is_resend_delivered_event: {
+        Args: { p_event_type: string }
+        Returns: boolean
+      }
+      message_dispatcher_is_resend_hard_bounce_event: {
+        Args: { p_event_type: string }
+        Returns: boolean
+      }
+      message_dispatcher_promote_retries: { Args: never; Returns: number }
+      message_dispatcher_reclaim_leases: { Args: never; Returns: number }
+      message_dispatcher_reconcile_vendor_event: {
+        Args: {
+          p_event_type: string
+          p_payload?: Json
+          p_vendor: string
+          p_vendor_event_id: string
+          p_vendor_message_id: string
+        }
+        Returns: Json
+      }
+      message_dispatcher_refresh_stats: { Args: never; Returns: undefined }
+      message_dispatcher_report_delivery_outcome: {
+        Args: {
+          p_channel: Database["message_dispatcher"]["Enums"]["message_channel"]
+          p_deliveries?: Json
+          p_dispatch_id: string
+          p_error_body?: string
+          p_error_code?: string
+          p_http_status?: number
+          p_retryable?: boolean
+          p_success: boolean
+          p_vendor_message_id?: string
+          p_worker_id: string
+        }
+        Returns: Json
+      }
+      message_dispatcher_should_disable_beacon: {
+        Args: { p_error_code: string }
+        Returns: boolean
+      }
+      message_dispatcher_try_claim_worker_invoke: {
+        Args: never
+        Returns: boolean
+      }
+      message_dispatcher_worker_invoke_min_interval_seconds: {
+        Args: never
+        Returns: number
+      }
+    }
+    Enums: {
+      message_channel: "email" | "push"
+      message_delivery_outcome:
+        | "pending"
+        | "sent"
+        | "failed_retryable"
+        | "failed_terminal"
+      message_dispatch_status:
+        | "PENDING_EVALUATION"
+        | "SCHEDULED"
+        | "CANCELED"
+        | "QUEUED"
+        | "PROCESSING"
+        | "DELIVERED"
+        | "FAILED_RETRYABLE"
+        | "FAILED_TERMINAL"
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       client_addresses: {
@@ -989,6 +1455,71 @@ export type Database = {
           },
         ]
       }
+      user_device_beacons: {
+        Row: {
+          android_sdk_version: number | null
+          created_at: string
+          device_id: string
+          device_name: string | null
+          fcm_token: string | null
+          ios_version: number | null
+          is_virtual: boolean
+          manufacturer: string | null
+          model: string | null
+          operating_system: string | null
+          os_version: string | null
+          platform: string
+          profile_id: string
+          push_enabled: boolean
+          updated_at: string
+          web_view_version: string | null
+        }
+        Insert: {
+          android_sdk_version?: number | null
+          created_at?: string
+          device_id: string
+          device_name?: string | null
+          fcm_token?: string | null
+          ios_version?: number | null
+          is_virtual?: boolean
+          manufacturer?: string | null
+          model?: string | null
+          operating_system?: string | null
+          os_version?: string | null
+          platform: string
+          profile_id: string
+          push_enabled?: boolean
+          updated_at?: string
+          web_view_version?: string | null
+        }
+        Update: {
+          android_sdk_version?: number | null
+          created_at?: string
+          device_id?: string
+          device_name?: string | null
+          fcm_token?: string | null
+          ios_version?: number | null
+          is_virtual?: boolean
+          manufacturer?: string | null
+          model?: string | null
+          operating_system?: string | null
+          os_version?: string | null
+          platform?: string
+          profile_id?: string
+          push_enabled?: boolean
+          updated_at?: string
+          web_view_version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_device_beacons_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1079,83 +1610,24 @@ export type Database = {
         }
         Returns: Json
       }
-      list_provider_own_questions:
-        | {
-            Args: never
-            Returns: {
-              city: string
-              client_responded_at: string
-              client_response: string
-              created_at: string
-              has_proposal: boolean
-              id: string
-              masked_client_name: string
-              neighborhood: string
-              question: string
-              service_color_key: string
-              service_icon_key: string
-              service_request_created_at: string
-              service_request_description: string
-              service_request_id: string
-              service_request_photos: string[]
-              service_request_status: string
-              service_request_title: string
-              service_request_urgency: string
-              service_slug: string
-              service_title: string
-              state_abbr: string
-            }[]
-          }
-        | {
-            Args: {
-              p_page?: number
-              p_page_size?: number
-              p_question_status?: string
-              p_search?: string
-            }
-            Returns: Json
-          }
-      list_provider_sent_budgets:
-        | {
-            Args: never
-            Returns: {
-              city: string
-              client_rejection_response: string
-              created_at: string
-              final_amount: number
-              id: string
-              masked_client_name: string
-              neighborhood: string
-              photos: string[]
-              proposal_description: string
-              proposed_amount: number
-              service_color_key: string
-              service_icon_key: string
-              service_request_created_at: string
-              service_request_description: string
-              service_request_id: string
-              service_request_photos: string[]
-              service_request_status: string
-              service_request_title: string
-              service_request_urgency: string
-              service_slug: string
-              service_title: string
-              state_abbr: string
-              status: string
-              tax_amount: number
-              tax_rate: number
-              updated_at: string
-            }[]
-          }
-        | {
-            Args: {
-              p_page?: number
-              p_page_size?: number
-              p_search?: string
-              p_status?: string
-            }
-            Returns: Json
-          }
+      list_provider_own_questions: {
+        Args: {
+          p_page?: number
+          p_page_size?: number
+          p_question_status?: string
+          p_search?: string
+        }
+        Returns: Json
+      }
+      list_provider_sent_budgets: {
+        Args: {
+          p_page?: number
+          p_page_size?: number
+          p_search?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
       list_provider_service_request_questions: {
         Args: { p_service_request_id: string }
         Returns: Json
@@ -1173,6 +1645,7 @@ export type Database = {
         }
         Returns: Json
       }
+      purge_stale_user_device_beacons: { Args: never; Returns: number }
       reject_client_budget_proposal: {
         Args: { p_proposal_id: string; p_reason: string }
         Returns: Json
@@ -1316,6 +1789,27 @@ export type CompositeTypes<
 export const Constants = {
   graphql_public: {
     Enums: {},
+  },
+  message_dispatcher: {
+    Enums: {
+      message_channel: ["email", "push"],
+      message_delivery_outcome: [
+        "pending",
+        "sent",
+        "failed_retryable",
+        "failed_terminal",
+      ],
+      message_dispatch_status: [
+        "PENDING_EVALUATION",
+        "SCHEDULED",
+        "CANCELED",
+        "QUEUED",
+        "PROCESSING",
+        "DELIVERED",
+        "FAILED_RETRYABLE",
+        "FAILED_TERMINAL",
+      ],
+    },
   },
   public: {
     Enums: {},
