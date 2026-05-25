@@ -128,14 +128,18 @@ export async function getFcmAccessToken(
     .sign(privateKey);
 
   const fetchFn = options?.fetchFn ?? fetch;
-  const response = await fetchFn(OAUTH_TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion,
-    }),
-  });
+  const response = await fetchWithTimeout(
+    OAUTH_TOKEN_URL,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion,
+      }),
+    },
+    { timeoutMs: FCM_HTTP_TIMEOUT_MS, fetchFn },
+  );
 
   const data = await response.json() as {
     access_token?: string;

@@ -36,7 +36,7 @@ begin
         'locked_until', jsonb_build_object('old', old.locked_until, 'new', new.locked_until),
         'retry_count', jsonb_build_object('old', old.retry_count, 'new', new.retry_count),
         'failure_code', new.failure_code,
-        'metadata', new.metadata
+        'failure_reason', new.failure_reason
       ),
       coalesce(nullif(current_setting('app.changed_by', true), ''), 'system')
     );

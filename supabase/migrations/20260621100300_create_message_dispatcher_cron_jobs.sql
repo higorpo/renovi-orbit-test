@@ -145,15 +145,16 @@ declare
   v_url text;
   v_secret text;
 begin
-  select nullif(trim(pc.value #>> '{}'), '')
+  -- Secrets seeded by config.toml [db.vault] from .env via env().
+  select nullif(trim(decrypted_secret), '')
   into v_url
-  from public.platform_constants pc
-  where pc.key = 'message_dispatcher.worker_url';
+  from vault.decrypted_secrets
+  where name = 'dispatcher_worker_url';
 
-  select nullif(trim(pc.value #>> '{}'), '')
+  select nullif(trim(decrypted_secret), '')
   into v_secret
-  from public.platform_constants pc
-  where pc.key = 'message_dispatcher.cron_secret';
+  from vault.decrypted_secrets
+  where name = 'dispatcher_cron_secret';
 
   if v_url is null or v_secret is null then
     return;
@@ -177,11 +178,16 @@ end;
 $$;
 
 comment on function message_dispatcher.message_dispatcher_invoke_worker() is
-  'Fire-and-forget POST to message-dispatcher-worker via pg_net (design §6.4, task 70). Throttled to worker_invoke_min_interval_seconds (≥15, task 108).';
+  'Fire-and-forget POST to message-dispatcher-worker via pg_net (design §6.4, task 70). Reads URL/secret from Vault (config.toml [db.vault] → .env). Throttled to worker_invoke_min_interval_seconds (≥15, task 108).';
 
 revoke all on function message_dispatcher.message_dispatcher_invoke_worker() from public;
 revoke all on function message_dispatcher.message_dispatcher_invoke_worker() from authenticated;
 grant execute on function message_dispatcher.message_dispatcher_invoke_worker() to postgres;
+
+-- SECURITY NOTE (design §11.1): All SECURITY DEFINER functions in message_dispatcher schema
+-- have explicit REVOKE from public/anon/authenticated. If this schema is added to PostgREST
+-- [api].schemas, any new SECURITY DEFINER function MUST follow the same REVOKE+GRANT pattern.
+-- Long-term: migrate privileged functions to a private (non-API-exposed) schema.
 
 do $cron$
 declare
@@ -206,7 +212,7 @@ select cron.schedule(
 );
 
 -- Task 84: SQL alert views (design §10.5).
-create or replace view message_dispatcher.alert_queue_lag_v as
+create or replace view message_dispatcher.alert_queue_lag_v with (security_invoker = true) as
 select count(*)::bigint as lag_count
 from message_dispatcher.message_dispatches d
 where d.status = 'QUEUED'
@@ -215,29 +221,24 @@ where d.status = 'QUEUED'
 comment on view message_dispatcher.alert_queue_lag_v is
   'Queue lag: QUEUED rows overdue by 5m (alert when lag_count > 1000).';
 
-create or replace view message_dispatcher.alert_terminal_spike_v as
-with windowed as (
-  select
-    count(*) filter (where d.created_at > now() - interval '15 minutes')::bigint as ingested_15m,
-    count(*) filter (
-      where d.created_at > now() - interval '15 minutes'
-        and d.status = 'FAILED_TERMINAL'
-    )::bigint as terminal_15m
-  from message_dispatcher.message_dispatches d
-)
+create or replace view message_dispatcher.alert_terminal_spike_v with (security_invoker = true) as
 select
-  ingested_15m,
-  terminal_15m,
+  count(*)::bigint as ingested_15m,
+  count(*) filter (where d.status = 'FAILED_TERMINAL')::bigint as terminal_15m,
   case
-    when ingested_15m = 0 then 0::numeric
-    else round(terminal_15m::numeric / ingested_15m::numeric, 4)
+    when count(*) = 0 then 0::numeric
+    else round(
+      count(*) filter (where d.status = 'FAILED_TERMINAL')::numeric / count(*)::numeric,
+      4
+    )
   end as terminal_rate
-from windowed;
+from message_dispatcher.message_dispatches d
+where d.created_at > now() - interval '15 minutes';
 
 comment on view message_dispatcher.alert_terminal_spike_v is
   'Terminal spike: FAILED_TERMINAL share of ingests in last 15m (alert when rate > 0.05).';
 
-create or replace view message_dispatcher.alert_janitor_churn_v as
+create or replace view message_dispatcher.alert_janitor_churn_v with (security_invoker = true) as
 select count(*)::bigint as lease_reclaims_1m
 from message_dispatcher.message_dispatches d
 where d.failure_code = 'lease_expired'
@@ -247,7 +248,7 @@ comment on view message_dispatcher.alert_janitor_churn_v is
   'Janitor churn: lease_expired reclaims in last 1m (alert when lease_reclaims_1m > 100).';
 
 -- Task 109: backpressure when FAILED_RETRYABLE backlog is high (design §9.5).
-create or replace view message_dispatcher.alert_retryable_depth_v as
+create or replace view message_dispatcher.alert_retryable_depth_v with (security_invoker = true) as
 select count(*)::bigint as retryable_count
 from message_dispatcher.message_dispatches d
 where d.status = 'FAILED_RETRYABLE';
@@ -255,7 +256,7 @@ where d.status = 'FAILED_RETRYABLE';
 comment on view message_dispatcher.alert_retryable_depth_v is
   'Retryable backlog depth (alert when retryable_count > retryable_depth_alert_threshold, default 10k).';
 
-create or replace view message_dispatcher.alert_retryable_by_source_v as
+create or replace view message_dispatcher.alert_retryable_by_source_v with (security_invoker = true) as
 select
   coalesce(nullif(trim(d.source_system), ''), 'orbit') as source_system,
   count(*)::bigint as retryable_count
@@ -369,7 +370,7 @@ as $$
 declare
   v_alerts jsonb;
 begin
-  delete from message_dispatcher.message_dispatcher_stats;
+  truncate message_dispatcher.message_dispatcher_stats;
 
   insert into message_dispatcher.message_dispatcher_stats (metric_name, labels, value)
   select
@@ -453,6 +454,6 @@ $cron$;
 
 select cron.schedule(
   'mmd_refresh_stats',
-  '* * * * *',
+  '*/5 * * * *',
   $$select message_dispatcher.message_dispatcher_refresh_stats();$$
 );

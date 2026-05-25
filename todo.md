@@ -72,7 +72,7 @@ Coisas para fazer next
 
 -adicionar descrição na tabela de platform_constants
 -permitir enviar mensagem forçada (sem limites) no MD
--envio de email em modo dev ir para o mesmo local que os outros
+-envio de emailem modo dev ir para o mesmo local que os outros
 -ao invés de usar platform_constants ver se tem como usar env. adicionar uma rule sobre isso se for funcional.
 -trackear visualização de notificação/email
 -modificar locais que usam Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") para centralizar usando serviceRoleClient

@@ -17,6 +17,8 @@ function formatAjvErrors(errors: ErrorObject[] | null | undefined): string {
     .join("; ");
 }
 
+const ajv = new Ajv({ allErrors: true, strict: false });
+
 /** Validates variables against message_templates.variable_schema (design §4.4, task 57). */
 export function validateTemplateVariablesAgainstSchema(
   variables: unknown,
@@ -27,7 +29,6 @@ export function validateTemplateVariablesAgainstSchema(
   const schema = variableSchema ?? {};
   if (Object.keys(schema).length === 0) return;
 
-  const ajv = new Ajv({ allErrors: true, strict: false });
   const validate = ajv.compile(schema);
   const valid = validate(variables);
 

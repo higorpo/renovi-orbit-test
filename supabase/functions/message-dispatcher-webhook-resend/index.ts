@@ -48,12 +48,7 @@ serve(async (req) => {
     return jsonResponse({ error: "svix_id_missing" }, 400, corsHeaders);
   }
 
-  let rawPayload: Record<string, unknown>;
-  try {
-    rawPayload = JSON.parse(rawBody) as Record<string, unknown>;
-  } catch {
-    return jsonResponse({ error: "invalid_payload" }, 400, corsHeaders);
-  }
+  const rawPayload = event as unknown as Record<string, unknown>;
 
   try {
     const supabase = createServiceRoleClient();

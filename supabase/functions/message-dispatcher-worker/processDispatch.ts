@@ -188,12 +188,30 @@ async function processEmailDispatch(
     const code = err instanceof ResendConfigError
       ? err.code
       : failureCodeFromError(err);
+    const message = err instanceof Error ? err.message : String(err);
     log.warn("worker.email.render_or_send_failed", {
       correlation_id: item.correlation_id,
       dispatch_id: item.id,
       code,
-      error: err instanceof Error ? err.message : String(err),
+      error: message,
     });
+
+    try {
+      await deps.reportDeliveryOutcome(supabase, {
+        dispatchId: item.id,
+        workerId,
+        channel: "email",
+        success: false,
+        errorCode: code,
+        errorBody: message,
+        retryable: false,
+      });
+    } catch (reportErr) {
+      log.error("worker.email.render_failure_report_failed", {
+        dispatch_id: item.id,
+        error: reportErr instanceof Error ? reportErr.message : String(reportErr),
+      });
+    }
   }
 
   return counts;
@@ -374,12 +392,30 @@ async function processPushDispatch(
     const code = err instanceof FcmConfigError
       ? err.code
       : failureCodeFromError(err);
+    const message = err instanceof Error ? err.message : String(err);
     log.warn("worker.push.render_or_send_failed", {
       correlation_id: item.correlation_id,
       dispatch_id: item.id,
       code,
-      error: err instanceof Error ? err.message : String(err),
+      error: message,
     });
+
+    try {
+      await deps.reportDeliveryOutcome(supabase, {
+        dispatchId: item.id,
+        workerId,
+        channel: "push",
+        success: false,
+        errorCode: code,
+        errorBody: message,
+        retryable: false,
+      });
+    } catch (reportErr) {
+      log.error("worker.push.render_failure_report_failed", {
+        dispatch_id: item.id,
+        error: reportErr instanceof Error ? reportErr.message : String(reportErr),
+      });
+    }
   }
 
   return counts;

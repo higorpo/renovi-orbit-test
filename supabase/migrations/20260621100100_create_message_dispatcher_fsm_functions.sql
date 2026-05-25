@@ -530,142 +530,222 @@ security definer
 set search_path = message_dispatcher, public, auth
 as $$
 declare
-  v_dispatch message_dispatcher.message_dispatches%rowtype;
-  v_limits message_dispatcher.message_dispatcher_user_limits%rowtype;
   v_email_limit integer;
-  v_email_count integer;
   v_push_limit integer;
-  v_push_count integer;
   v_push_cooldown_minutes integer;
-  v_cooldown_until timestamptz;
-  v_rate_limit_meta jsonb;
-  v_new_status message_dispatcher.message_dispatch_status;
-  v_new_scheduled timestamptz;
   v_evaluated integer := 0;
+  v_terminal_email integer := 0;
+  v_terminal_push integer := 0;
+  v_cooldown_push integer := 0;
+  v_queued integer := 0;
+  v_scheduled integer := 0;
 begin
-  for v_dispatch in
-    select *
+  -- Read limits once
+  select coalesce((pc.value #>> '{}')::integer, 5)
+  into v_email_limit
+  from public.platform_constants pc
+  where pc.key = 'message_dispatcher.email_daily_limit';
+  v_email_limit := coalesce(v_email_limit, 5);
+
+  select coalesce((pc.value #>> '{}')::integer, 20)
+  into v_push_limit
+  from public.platform_constants pc
+  where pc.key = 'message_dispatcher.push_daily_limit';
+  v_push_limit := coalesce(v_push_limit, 20);
+
+  select coalesce((pc.value #>> '{}')::integer, 20)
+  into v_push_cooldown_minutes
+  from public.platform_constants pc
+  where pc.key = 'message_dispatcher.push_cooldown_minutes';
+  v_push_cooldown_minutes := coalesce(v_push_cooldown_minutes, 20);
+
+  -- Ensure user_limits rows exist for all profiles in the pending batch
+  insert into message_dispatcher.message_dispatcher_user_limits (profile_id)
+  select distinct d.profile_id
+  from message_dispatcher.message_dispatches d
+  where d.status = 'PENDING_EVALUATION'
+  on conflict (profile_id) do nothing;
+
+  -- Email quota exceeded → FAILED_TERMINAL (set-based)
+  with pending_email as (
+    select d.id, d.profile_id, d.created_at
+    from message_dispatcher.message_dispatches d
+    where d.status = 'PENDING_EVALUATION'
+      and d.channel = 'email'
+    order by d.created_at
+    limit 500
+    for update of d skip locked
+  ),
+  quota as (
+    select
+      pe.id,
+      pe.profile_id,
+      (
+        select count(*)::integer
+        from message_dispatcher.message_dispatches dx
+        where dx.profile_id = pe.profile_id
+          and dx.channel = 'email'
+          and dx.status in ('DELIVERED', 'QUEUED', 'PROCESSING', 'SCHEDULED')
+          and dx.created_at > now() - interval '24 hours'
+          and dx.id <> pe.id
+      ) + (
+        -- Count earlier pending siblings to preserve sequential quota semantics
+        select count(*)::integer
+        from pending_email earlier
+        where earlier.profile_id = pe.profile_id
+          and earlier.created_at < pe.created_at
+      ) as email_count
+    from pending_email pe
+  ),
+  over_quota as (
+    select q.id, q.profile_id, q.email_count
+    from quota q
+    where q.email_count >= v_email_limit
+  ),
+  terminated as (
+    update message_dispatcher.message_dispatches d
+    set
+      status = 'FAILED_TERMINAL',
+      failure_code = 'email_daily_quota_exceeded',
+      failure_reason = 'Email daily quota exceeded',
+      metadata = coalesce(d.metadata, '{}'::jsonb)
+        || jsonb_build_object('rate_limit', jsonb_build_object(
+          'channel', 'email',
+          'limit', v_email_limit,
+          'count_in_window', oq.email_count,
+          'window_hours', 24
+        )),
+      updated_at = now()
+    from over_quota oq
+    where d.id = oq.id
+    returning d.id
+  )
+  select count(*) into v_terminal_email from terminated;
+
+  -- Push quota exceeded → FAILED_TERMINAL (set-based)
+  with pending_push as (
+    select d.id, d.profile_id, d.created_at
+    from message_dispatcher.message_dispatches d
+    where d.status = 'PENDING_EVALUATION'
+      and d.channel = 'push'
+    order by d.created_at
+    limit 500
+    for update of d skip locked
+  ),
+  quota as (
+    select
+      pp.id,
+      pp.profile_id,
+      (
+        select count(*)::integer
+        from message_dispatcher.message_dispatches dx
+        where dx.profile_id = pp.profile_id
+          and dx.channel = 'push'
+          and dx.status in ('DELIVERED', 'QUEUED', 'PROCESSING', 'SCHEDULED')
+          and dx.created_at > now() - interval '24 hours'
+          and dx.id <> pp.id
+      ) + (
+        -- Count earlier pending siblings to preserve sequential quota semantics
+        select count(*)::integer
+        from pending_push earlier
+        where earlier.profile_id = pp.profile_id
+          and earlier.created_at < pp.created_at
+      ) as push_count
+    from pending_push pp
+  ),
+  over_quota as (
+    select q.id, q.profile_id, q.push_count
+    from quota q
+    where q.push_count >= v_push_limit
+  ),
+  terminated as (
+    update message_dispatcher.message_dispatches d
+    set
+      status = 'FAILED_TERMINAL',
+      failure_code = 'push_daily_quota_exceeded',
+      failure_reason = 'Push daily quota exceeded',
+      metadata = coalesce(d.metadata, '{}'::jsonb)
+        || jsonb_build_object('rate_limit', jsonb_build_object(
+          'channel', 'push',
+          'limit', v_push_limit,
+          'count_in_window', oq.push_count,
+          'window_hours', 24
+        )),
+      updated_at = now()
+    from over_quota oq
+    where d.id = oq.id
+    returning d.id
+  )
+  select count(*) into v_terminal_push from terminated;
+
+  -- Push cooldown → SCHEDULED at cooldown_until (set-based)
+  with pending_push_cooldown as (
+    select d.id, d.profile_id, ul.last_push_sent_at
+    from message_dispatcher.message_dispatches d
+    join message_dispatcher.message_dispatcher_user_limits ul
+      on ul.profile_id = d.profile_id
+    where d.status = 'PENDING_EVALUATION'
+      and d.channel = 'push'
+      and ul.last_push_sent_at is not null
+      and now() < ul.last_push_sent_at + make_interval(mins => v_push_cooldown_minutes)
+    order by d.created_at
+    limit 500
+    for update of d skip locked
+  ),
+  rescheduled as (
+    update message_dispatcher.message_dispatches d
+    set
+      status = 'SCHEDULED',
+      scheduled_for = ppc.last_push_sent_at + make_interval(mins => v_push_cooldown_minutes),
+      updated_at = now()
+    from pending_push_cooldown ppc
+    where d.id = ppc.id
+    returning d.id
+  )
+  select count(*) into v_cooldown_push from rescheduled;
+
+  -- Remaining: future scheduled_for → SCHEDULED, else → QUEUED
+  with remaining_future as (
+    select d.id
+    from message_dispatcher.message_dispatches d
+    where d.status = 'PENDING_EVALUATION'
+      and d.scheduled_for > now()
+    order by d.created_at
+    limit 500
+    for update of d skip locked
+  ),
+  kept_scheduled as (
+    update message_dispatcher.message_dispatches d
+    set
+      status = 'SCHEDULED',
+      updated_at = now()
+    from remaining_future rf
+    where d.id = rf.id
+    returning d.id
+  )
+  select count(*) into v_scheduled from kept_scheduled;
+
+  -- Everything else PENDING_EVALUATION → QUEUED
+  with remaining as (
+    select d.id
     from message_dispatcher.message_dispatches d
     where d.status = 'PENDING_EVALUATION'
     order by d.created_at
     limit 500
     for update of d skip locked
-  loop
-    insert into message_dispatcher.message_dispatcher_user_limits (profile_id)
-    values (v_dispatch.profile_id)
-    on conflict (profile_id) do nothing;
-
-    select *
-    into v_limits
-    from message_dispatcher.message_dispatcher_user_limits ul
-    where ul.profile_id = v_dispatch.profile_id
-    for update;
-
-    v_new_status := 'QUEUED';
-    v_new_scheduled := v_dispatch.scheduled_for;
-
-    if v_dispatch.channel = 'email' then
-      select coalesce((pc.value #>> '{}')::integer, 5)
-      into v_email_limit
-      from public.platform_constants pc
-      where pc.key = 'message_dispatcher.email_daily_limit';
-      v_email_limit := coalesce(v_email_limit, 5);
-
-      select count(*)::integer
-      into v_email_count
-      from message_dispatcher.message_dispatches d
-      where d.profile_id = v_dispatch.profile_id
-        and d.channel = 'email'
-        and d.status in ('DELIVERED', 'QUEUED', 'PROCESSING', 'SCHEDULED')
-        and d.created_at > now() - interval '24 hours'
-        and d.id <> v_dispatch.id;
-
-      if v_email_count >= v_email_limit then
-        v_rate_limit_meta := jsonb_build_object(
-          'channel', 'email',
-          'limit', v_email_limit,
-          'count_in_window', v_email_count,
-          'window_hours', 24
-        );
-        v_new_status := 'FAILED_TERMINAL';
-        update message_dispatcher.message_dispatches d
-        set
-          status = v_new_status,
-          failure_code = 'email_daily_quota_exceeded',
-          failure_reason = 'Email daily quota exceeded',
-          metadata = coalesce(d.metadata, '{}'::jsonb)
-            || jsonb_build_object('rate_limit', v_rate_limit_meta),
-          updated_at = now()
-        where d.id = v_dispatch.id;
-        v_evaluated := v_evaluated + 1;
-        continue;
-      end if;
-    elsif v_dispatch.channel = 'push' then
-      select coalesce((pc.value #>> '{}')::integer, 20)
-      into v_push_limit
-      from public.platform_constants pc
-      where pc.key = 'message_dispatcher.push_daily_limit';
-      v_push_limit := coalesce(v_push_limit, 20);
-
-      select count(*)::integer
-      into v_push_count
-      from message_dispatcher.message_dispatches d
-      where d.profile_id = v_dispatch.profile_id
-        and d.channel = 'push'
-        and d.status in ('DELIVERED', 'QUEUED', 'PROCESSING', 'SCHEDULED')
-        and d.created_at > now() - interval '24 hours'
-        and d.id <> v_dispatch.id;
-
-      if v_push_count >= v_push_limit then
-        v_rate_limit_meta := jsonb_build_object(
-          'channel', 'push',
-          'limit', v_push_limit,
-          'count_in_window', v_push_count,
-          'window_hours', 24
-        );
-        v_new_status := 'FAILED_TERMINAL';
-        update message_dispatcher.message_dispatches d
-        set
-          status = v_new_status,
-          failure_code = 'push_daily_quota_exceeded',
-          failure_reason = 'Push daily quota exceeded',
-          metadata = coalesce(d.metadata, '{}'::jsonb)
-            || jsonb_build_object('rate_limit', v_rate_limit_meta),
-          updated_at = now()
-        where d.id = v_dispatch.id;
-        v_evaluated := v_evaluated + 1;
-        continue;
-      end if;
-
-      select coalesce((pc.value #>> '{}')::integer, 20)
-      into v_push_cooldown_minutes
-      from public.platform_constants pc
-      where pc.key = 'message_dispatcher.push_cooldown_minutes';
-      v_push_cooldown_minutes := coalesce(v_push_cooldown_minutes, 20);
-
-      if v_limits.last_push_sent_at is not null
-        and now() < v_limits.last_push_sent_at + make_interval(mins => v_push_cooldown_minutes)
-      then
-        v_new_status := 'SCHEDULED';
-        v_new_scheduled := v_limits.last_push_sent_at + make_interval(mins => v_push_cooldown_minutes);
-      end if;
-    end if;
-
-    if v_new_status = 'QUEUED' and v_dispatch.scheduled_for > now() then
-      v_new_status := 'SCHEDULED';
-      v_new_scheduled := v_dispatch.scheduled_for;
-    end if;
-
+  ),
+  moved_to_queued as (
     update message_dispatcher.message_dispatches d
     set
-      status = v_new_status,
-      scheduled_for = v_new_scheduled,
+      status = 'QUEUED',
       updated_at = now()
-    where d.id = v_dispatch.id;
+    from remaining r
+    where d.id = r.id
+    returning d.id
+  )
+  select count(*) into v_queued from moved_to_queued;
 
-    v_evaluated := v_evaluated + 1;
-  end loop;
-
+  v_evaluated := v_terminal_email + v_terminal_push + v_cooldown_push + v_scheduled + v_queued;
   return v_evaluated;
 end;
 $$;

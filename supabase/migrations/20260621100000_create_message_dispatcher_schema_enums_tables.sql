@@ -147,6 +147,10 @@ create index message_dispatches_stale_lease_idx
 create index message_dispatches_profile_channel_created_idx
   on message_dispatcher.message_dispatches (profile_id, channel, created_at desc);
 
+create index message_dispatches_vendor_message_id_idx
+  on message_dispatcher.message_dispatches (vendor_message_id)
+  where vendor_message_id is not null;
+
 -- message_dispatcher_user_limits (design §3.4, task 5). One row per profile; ingest locks FOR UPDATE.
 create table message_dispatcher.message_dispatcher_user_limits (
   profile_id uuid primary key references public.profiles (id) on delete cascade,
@@ -313,7 +317,7 @@ values
   ('message_dispatcher.email_daily_limit', '5'::jsonb),
   ('message_dispatcher.push_daily_limit', '20'::jsonb),
   ('message_dispatcher.push_cooldown_minutes', '20'::jsonb),
-  ('message_dispatcher.lease_seconds', '30'::jsonb),
+  ('message_dispatcher.lease_seconds', '90'::jsonb),
   ('message_dispatcher.max_retries', '3'::jsonb),
   ('message_dispatcher.checkout_batch_size', '25'::jsonb),
   ('message_dispatcher.backoff_base_seconds', '60'::jsonb),
