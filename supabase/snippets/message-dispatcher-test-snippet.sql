@@ -18,7 +18,7 @@ select message_dispatcher.message_dispatcher_ingest(
 -- Send one email
 select message_dispatcher.message_dispatcher_ingest(
   gen_random_uuid(),
-  '93d14fb7-b054-4bd1-83fc-9269c3abe697'::uuid,
+  '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid,
   'email'::message_dispatcher.message_channel,
   'welcome_template',
   jsonb_build_object(

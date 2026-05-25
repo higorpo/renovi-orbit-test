@@ -70,6 +70,5 @@ Coisas para terminar do fluxo atual de trabalho:
 Coisas para fazer next
 
 -permitir enviar mensagem forçada (sem limites) no MD
--envio de emailem modo dev ir para o mesmo local que os outros
 -trackear visualização de notificação/email
 -comando ci para rodar todos os testes e verificar cobertura de teste

@@ -17,6 +17,7 @@ import {
 } from "./report.ts";
 import { renderEmailFromTemplate } from "./renderEmail.ts";
 import { validateAndRenderPush } from "./renderPush.ts";
+import { InbucketConfigError, sendInbucketEmail } from "./inbucketEmail.ts";
 import { ResendConfigError, sendResendEmail, type SendResendEmailInput } from "./resend.ts";
 import { fetchEmailTemplate, fetchPushTemplate } from "./templates.ts";
 import { TemplateVariablesSizeError } from "./templateVariables.ts";
@@ -61,12 +62,18 @@ export interface ProcessDispatchDeps {
   ) => Promise<ReportDeliveryOutcomeResult>;
 }
 
+export function resolveEmailSender(): ProcessDispatchDeps["sendResendEmail"] {
+  return Deno.env.get("INBUCKET_SMTP_HOST")
+    ? sendInbucketEmail
+    : sendResendEmail;
+}
+
 export const defaultProcessDispatchDeps: ProcessDispatchDeps = {
   fetchEmailTemplate,
   fetchPushTemplate,
   renderEmailFromTemplate,
   validateAndRenderPush,
-  sendResendEmail,
+  sendResendEmail: resolveEmailSender(),
   sendFcmPush,
   reportDeliveryOutcome,
 };
@@ -202,7 +209,7 @@ async function processEmailDispatch(
     });
   } catch (err) {
     counts.renderFailed += 1;
-    const code = err instanceof ResendConfigError
+    const code = err instanceof ResendConfigError || err instanceof InbucketConfigError
       ? err.code
       : failureCodeFromError(err);
     const message = err instanceof Error ? err.message : String(err);
