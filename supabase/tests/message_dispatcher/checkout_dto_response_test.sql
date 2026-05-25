@@ -12,9 +12,12 @@ select is(
 
 create temp table _dto_email_fixture as
 select
-  '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid as profile_id,
+  u.id as profile_id,
   gen_random_uuid() as dispatch_id,
-  gen_random_uuid() as correlation_id;
+  gen_random_uuid() as correlation_id
+from auth.users u
+where u.email is not null and trim(u.email) <> ''
+limit 1;
 
 insert into message_dispatcher.message_dispatches (
   id,
@@ -37,14 +40,10 @@ select
   f.correlation_id,
   'QUEUED'::message_dispatcher.message_dispatch_status,
   now()
-from _dto_email_fixture f
-where exists (
-  select 1 from auth.users u where u.id = f.profile_id
-);
+from _dto_email_fixture f;
 
 create temp table _dto_email_payload as
-select message_dispatcher.message_dispatcher_checkout_batch(1, 'worker-dto-email') as payload
-where exists (select 1 from _dto_email_fixture);
+select message_dispatcher.message_dispatcher_checkout_batch(1, 'worker-dto-email') as payload;
 
 select ok(
   (
@@ -61,15 +60,13 @@ select ok(
     from _dto_email_payload
   ),
   'email DTO includes correlation_id, recipient_email, deliveries'
-)
-where exists (select 1 from _dto_email_payload);
+);
 
 select is(
   (select payload -> 0 ->> 'correlation_id' from _dto_email_payload),
   (select correlation_id::text from _dto_email_fixture),
   'correlation_id preserved in checkout DTO'
-)
-where exists (select 1 from _dto_email_payload);
+);
 
 select ok(
   (
@@ -78,8 +75,7 @@ select ok(
     from _dto_email_payload
   ),
   'email DTO has recipient_email and deliveries array'
-)
-where exists (select 1 from _dto_email_payload);
+);
 
 select finish();
 

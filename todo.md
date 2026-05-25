@@ -80,3 +80,4 @@ Coisas para fazer next
 -pedir pra IA revisar se realmente vai funcionar no modelo de edge function
 -pedir pra IA gerar código de teste
 -adicionar regras para sempre fazer testes unitários no deno e no supabase
+-comando ci para rodar todos os testes e verificar cobertura de teste
