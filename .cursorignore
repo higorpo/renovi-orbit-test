@@ -1,0 +1,5 @@
+# Sensitive files — never read, index or edit
+.env.local
+.env.production
+.env.staging
+supabase/functions/.env
