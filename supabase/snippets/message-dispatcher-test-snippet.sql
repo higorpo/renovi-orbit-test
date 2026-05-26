@@ -11,7 +11,8 @@ select message_dispatcher.message_dispatcher_ingest(
   ),
   now(),              -- scheduled_for (agora → tende a QUEUED)
   'orbit',
-  '{}'::jsonb
+  '{}'::jsonb,
+  true
 ) as ingest_result;
 
 
@@ -68,7 +69,7 @@ BEGIN
 END $$;
 
 -- Check status
-select id, status, scheduled_for, failure_code, metadata
+select id, status, scheduled_for, failure_code, metadata, bypass_limits
 from message_dispatcher.message_dispatches
 where profile_id = '5d09e025-20a2-4842-aeef-324d42a431e1'
 order by created_at desc;
