@@ -106,6 +106,7 @@ create table message_dispatcher.message_dispatches (
   correlation_id uuid not null default gen_random_uuid(),
   source_system text not null default 'orbit',
   metadata jsonb not null default '{}'::jsonb,
+  bypass_limits boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint message_dispatches_idempotency_key_unique unique (idempotency_key),

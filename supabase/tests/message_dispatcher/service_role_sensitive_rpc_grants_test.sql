@@ -5,9 +5,9 @@ begin;
 select plan(4);
 
 select ok(
-  has_function_privilege('service_role', 'message_dispatcher.message_dispatcher_ingest(uuid,uuid,message_dispatcher.message_channel,text,jsonb,timestamptz,text,jsonb)', 'EXECUTE')
-  and not has_function_privilege('authenticated', 'message_dispatcher.message_dispatcher_ingest(uuid,uuid,message_dispatcher.message_channel,text,jsonb,timestamptz,text,jsonb)', 'EXECUTE')
-  and not has_function_privilege('anon', 'message_dispatcher.message_dispatcher_ingest(uuid,uuid,message_dispatcher.message_channel,text,jsonb,timestamptz,text,jsonb)', 'EXECUTE'),
+  has_function_privilege('service_role', 'message_dispatcher.message_dispatcher_ingest(uuid,uuid,message_dispatcher.message_channel,text,jsonb,timestamptz,text,jsonb,boolean)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'message_dispatcher.message_dispatcher_ingest(uuid,uuid,message_dispatcher.message_channel,text,jsonb,timestamptz,text,jsonb,boolean)', 'EXECUTE')
+  and not has_function_privilege('anon', 'message_dispatcher.message_dispatcher_ingest(uuid,uuid,message_dispatcher.message_channel,text,jsonb,timestamptz,text,jsonb,boolean)', 'EXECUTE'),
   'ingest: service_role only'
 );
 

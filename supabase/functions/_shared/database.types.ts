@@ -266,6 +266,7 @@ export type Database = {
       }
       message_dispatches: {
         Row: {
+          bypass_limits: boolean
           cancel_reason: string | null
           channel: Database["message_dispatcher"]["Enums"]["message_channel"]
           correlation_id: string
@@ -290,6 +291,7 @@ export type Database = {
           vendor_message_id: string | null
         }
         Insert: {
+          bypass_limits?: boolean
           cancel_reason?: string | null
           channel: Database["message_dispatcher"]["Enums"]["message_channel"]
           correlation_id?: string
@@ -314,6 +316,7 @@ export type Database = {
           vendor_message_id?: string | null
         }
         Update: {
+          bypass_limits?: boolean
           cancel_reason?: string | null
           channel?: Database["message_dispatcher"]["Enums"]["message_channel"]
           correlation_id?: string
@@ -466,6 +469,7 @@ export type Database = {
       message_dispatcher_evaluate_pending: { Args: never; Returns: number }
       message_dispatcher_ingest: {
         Args: {
+          p_bypass_limits?: boolean
           p_channel: Database["message_dispatcher"]["Enums"]["message_channel"]
           p_idempotency_key: string
           p_metadata?: Json

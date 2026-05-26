@@ -64,6 +64,7 @@ serve(async (req) => {
       p_scheduled_for: body.scheduledFor,
       p_source_system: body.sourceSystem ?? "orbit",
       p_metadata: (body.metadata ?? {}) as Json,
+      p_bypass_limits: body.bypassLimits ?? false,
     },
   );
 

@@ -69,5 +69,5 @@ Coisas para terminar do fluxo atual de trabalho:
 
 Coisas para fazer next
 
--permitir enviar mensagem forçada (sem limites) no MD
 -comando ci para rodar todos os testes e verificar cobertura de teste
+-não enviar mensagens durante horários 22h-06h.

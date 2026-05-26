@@ -36,6 +36,7 @@ export async function ingestDispatch(
         scheduledFor: params.scheduledFor,
         sourceSystem: params.sourceSystem ?? "orbit",
         metadata: params.metadata ?? {},
+        bypassLimits: params.bypassLimits ?? false,
       },
     });
 

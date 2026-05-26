@@ -15,6 +15,7 @@ export interface IngestDispatchParams {
   scheduledFor?: string;
   sourceSystem?: string;
   metadata?: Record<string, unknown>;
+  bypassLimits?: boolean;
 }
 
 export interface IngestDispatchResult {

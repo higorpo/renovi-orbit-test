@@ -75,7 +75,8 @@ create or replace function message_dispatcher.message_dispatcher_ingest(
   p_template_variables jsonb default '{}'::jsonb,
   p_scheduled_for timestamptz default now(),
   p_source_system text default 'orbit',
-  p_metadata jsonb default '{}'::jsonb
+  p_metadata jsonb default '{}'::jsonb,
+  p_bypass_limits boolean default false
 )
 returns jsonb
 language plpgsql
@@ -153,7 +154,7 @@ begin
       using errcode = '22023';
   end if;
 
-  if p_channel = 'email' then
+  if p_channel = 'email' and not coalesce(p_bypass_limits, false) then
     select coalesce((pc.value #>> '{}')::integer, 5)
     into v_email_limit
     from public.platform_constants pc
@@ -189,6 +190,7 @@ begin
         scheduled_for,
         source_system,
         metadata,
+        bypass_limits,
         failure_code,
         failure_reason
       )
@@ -202,6 +204,7 @@ begin
         coalesce(p_scheduled_for, now()),
         coalesce(nullif(trim(p_source_system), ''), 'orbit'),
         v_dispatch_metadata,
+        coalesce(p_bypass_limits, false),
         'email_daily_quota_exceeded',
         'Email daily quota exceeded'
       )
@@ -217,7 +220,7 @@ begin
     end if;
   end if;
 
-  if p_channel = 'push' then
+  if p_channel = 'push' and not coalesce(p_bypass_limits, false) then
     select coalesce((pc.value #>> '{}')::integer, 20)
     into v_push_limit
     from public.platform_constants pc
@@ -253,6 +256,7 @@ begin
         scheduled_for,
         source_system,
         metadata,
+        bypass_limits,
         failure_code,
         failure_reason
       )
@@ -266,6 +270,7 @@ begin
         coalesce(p_scheduled_for, now()),
         coalesce(nullif(trim(p_source_system), ''), 'orbit'),
         v_dispatch_metadata,
+        coalesce(p_bypass_limits, false),
         'push_daily_quota_exceeded',
         'Push daily quota exceeded'
       )
@@ -301,7 +306,8 @@ begin
         status,
         scheduled_for,
         source_system,
-        metadata
+        metadata,
+        bypass_limits
       )
       values (
         p_idempotency_key,
@@ -312,7 +318,8 @@ begin
         'SCHEDULED',
         v_cooldown_until,
         coalesce(nullif(trim(p_source_system), ''), 'orbit'),
-        coalesce(p_metadata, '{}'::jsonb)
+        coalesce(p_metadata, '{}'::jsonb),
+        coalesce(p_bypass_limits, false)
       )
       returning id, status, scheduled_for
       into v_dispatch_id, v_dispatch_status, v_dispatch_scheduled;
@@ -343,7 +350,8 @@ begin
     status,
     scheduled_for,
     source_system,
-    metadata
+    metadata,
+    bypass_limits
   )
   values (
     p_idempotency_key,
@@ -354,7 +362,8 @@ begin
     v_dispatch_status,
     v_dispatch_scheduled,
     coalesce(nullif(trim(p_source_system), ''), 'orbit'),
-    coalesce(p_metadata, '{}'::jsonb)
+    coalesce(p_metadata, '{}'::jsonb),
+    coalesce(p_bypass_limits, false)
   )
   returning id, status, scheduled_for
   into v_dispatch_id, v_dispatch_status, v_dispatch_scheduled;
@@ -386,24 +395,24 @@ end;
 $$;
 
 comment on function message_dispatcher.message_dispatcher_ingest(
-  uuid, uuid, message_dispatcher.message_channel, text, jsonb, timestamptz, text, jsonb
+  uuid, uuid, message_dispatcher.message_channel, text, jsonb, timestamptz, text, jsonb, boolean
 ) is
-  'Ingest dispatch intent (design §5.1). SECURITY DEFINER; service_role only. NULL p_idempotency_key → 22023; UNIQUE race → duplicate replay.';
+  'Ingest dispatch intent (design §5.1). SECURITY DEFINER; service_role only. NULL p_idempotency_key → 22023; UNIQUE race → duplicate replay. p_bypass_limits skips quota/cooldown.';
 
 revoke all on function message_dispatcher.message_dispatcher_ingest(
-  uuid, uuid, message_dispatcher.message_channel, text, jsonb, timestamptz, text, jsonb
+  uuid, uuid, message_dispatcher.message_channel, text, jsonb, timestamptz, text, jsonb, boolean
 ) from public;
 
 revoke all on function message_dispatcher.message_dispatcher_ingest(
-  uuid, uuid, message_dispatcher.message_channel, text, jsonb, timestamptz, text, jsonb
+  uuid, uuid, message_dispatcher.message_channel, text, jsonb, timestamptz, text, jsonb, boolean
 ) from authenticated;
 
 revoke all on function message_dispatcher.message_dispatcher_ingest(
-  uuid, uuid, message_dispatcher.message_channel, text, jsonb, timestamptz, text, jsonb
+  uuid, uuid, message_dispatcher.message_channel, text, jsonb, timestamptz, text, jsonb, boolean
 ) from anon;
 
 grant execute on function message_dispatcher.message_dispatcher_ingest(
-  uuid, uuid, message_dispatcher.message_channel, text, jsonb, timestamptz, text, jsonb
+  uuid, uuid, message_dispatcher.message_channel, text, jsonb, timestamptz, text, jsonb, boolean
 ) to service_role;
 
 -- Cancel RPC (design §5.2, §4.7). Task 30: cancelable states; task 31: 409 on PROCESSING/DELIVERED.
@@ -566,12 +575,13 @@ begin
   where d.status = 'PENDING_EVALUATION'
   on conflict (profile_id) do nothing;
 
-  -- Email quota exceeded → FAILED_TERMINAL (set-based)
+  -- Email quota exceeded → FAILED_TERMINAL (set-based); bypass_limits rows skip this path
   with pending_email as (
     select d.id, d.profile_id, d.created_at
     from message_dispatcher.message_dispatches d
     where d.status = 'PENDING_EVALUATION'
       and d.channel = 'email'
+      and d.bypass_limits = false
     order by d.created_at
     limit 500
     for update of d skip locked
@@ -622,12 +632,13 @@ begin
   )
   select count(*) into v_terminal_email from terminated;
 
-  -- Push quota exceeded → FAILED_TERMINAL (set-based)
+  -- Push quota exceeded → FAILED_TERMINAL (set-based); bypass_limits rows skip this path
   with pending_push as (
     select d.id, d.profile_id, d.created_at
     from message_dispatcher.message_dispatches d
     where d.status = 'PENDING_EVALUATION'
       and d.channel = 'push'
+      and d.bypass_limits = false
     order by d.created_at
     limit 500
     for update of d skip locked
@@ -678,7 +689,7 @@ begin
   )
   select count(*) into v_terminal_push from terminated;
 
-  -- Push cooldown → SCHEDULED at cooldown_until (set-based)
+  -- Push cooldown → SCHEDULED at cooldown_until (set-based); bypass_limits rows skip this path
   with pending_push_cooldown as (
     select d.id, d.profile_id, ul.last_push_sent_at
     from message_dispatcher.message_dispatches d
@@ -686,6 +697,7 @@ begin
       on ul.profile_id = d.profile_id
     where d.status = 'PENDING_EVALUATION'
       and d.channel = 'push'
+      and d.bypass_limits = false
       and ul.last_push_sent_at is not null
       and now() < ul.last_push_sent_at + make_interval(mins => v_push_cooldown_minutes)
     order by d.created_at
