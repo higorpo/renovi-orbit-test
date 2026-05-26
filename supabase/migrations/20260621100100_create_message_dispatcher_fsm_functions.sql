@@ -285,7 +285,7 @@ begin
     from public.platform_constants pc
     where pc.key = 'message_dispatcher.push_cooldown_minutes';
 
-    v_push_cooldown_minutes := coalesce(v_push_cooldown_minutes, 20);
+    v_push_cooldown_minutes := coalesce(v_push_cooldown_minutes, 10);
 
     if v_limits.last_push_sent_at is not null
       and now() < v_limits.last_push_sent_at + make_interval(mins => v_push_cooldown_minutes)
@@ -553,11 +553,11 @@ begin
   where pc.key = 'message_dispatcher.push_daily_limit';
   v_push_limit := coalesce(v_push_limit, 20);
 
-  select coalesce((pc.value #>> '{}')::integer, 20)
+  select coalesce((pc.value #>> '{}')::integer, 10)
   into v_push_cooldown_minutes
   from public.platform_constants pc
   where pc.key = 'message_dispatcher.push_cooldown_minutes';
-  v_push_cooldown_minutes := coalesce(v_push_cooldown_minutes, 20);
+  v_push_cooldown_minutes := coalesce(v_push_cooldown_minutes, 10);
 
   -- Ensure user_limits rows exist for all profiles in the pending batch
   insert into message_dispatcher.message_dispatcher_user_limits (profile_id)

@@ -41,10 +41,10 @@ select is(
     join _cooldown_fixture f on d.idempotency_key = f.ingest_key
   ),
   (
-    select f.last_sent + interval '20 minutes'
+    select f.last_sent + interval '10 minutes'
     from _cooldown_fixture f
   ),
-  'scheduled_for is last_push_sent_at + 20 minutes'
+  'scheduled_for is last_push_sent_at + 10 minutes'
 );
 
 select is(

@@ -316,7 +316,7 @@ insert into public.platform_constants (key, value, description)
 values
   ('message_dispatcher.email_daily_limit', '5'::jsonb, 'Maximum number of emails that can be sent to a single user per day'),
   ('message_dispatcher.push_daily_limit', '20'::jsonb, 'Maximum number of push notifications that can be sent to a single user per day'),
-  ('message_dispatcher.push_cooldown_minutes', '20'::jsonb, 'Minimum minutes between consecutive push notifications to the same user'),
+  ('message_dispatcher.push_cooldown_minutes', '10'::jsonb, 'Minimum minutes between consecutive push notifications to the same user'),
   ('message_dispatcher.lease_seconds', '90'::jsonb, 'Duration in seconds a worker holds a lease on a dispatch before it expires'),
   ('message_dispatcher.checkout_batch_size', '50'::jsonb, 'Number of dispatches a worker checks out in a single batch'),
   ('message_dispatcher.backoff_base_seconds', '60'::jsonb, 'Base interval in seconds for exponential backoff between retries'),

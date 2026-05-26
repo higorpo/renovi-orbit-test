@@ -22,7 +22,7 @@ select message_dispatcher.message_dispatcher_ingest(
   'email'::message_dispatcher.message_channel,
   'welcome_template',
   jsonb_build_object(
-    'name', 'test2',
+    'name', 'oisd',
     'coupon', 'ORBIT10'
   ),
   now(),
@@ -71,8 +71,7 @@ END $$;
 select id, status, scheduled_for, failure_code, metadata
 from message_dispatcher.message_dispatches
 where profile_id = '5d09e025-20a2-4842-aeef-324d42a431e1'
-order by created_at desc
-limit 3;
+order by created_at desc;
 
 -- Check status (email)
 select id, status, failure_code, vendor_message_id, updated_at
