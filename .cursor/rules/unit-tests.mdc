@@ -8,6 +8,31 @@ globs: src/**/*,e2e/**/*,**/*.test.ts,**/*.test.tsx,**/__tests__/**/*
 
 O projeto usa **Vitest** e **React Testing Library** para testes unitários. Os testes ficam próximos ao código (ex.: `__tests__/` dentro da feature ou ao lado do arquivo). Comando: `yarn test:run` ou `yarn test` (watch).
 
+## Ambiente de teste (Vitest projects)
+
+O projeto usa **dois projetos Vitest** configurados em `vite.config.ts` para otimizar performance:
+
+| Projeto | Ambiente | Include | Setup |
+|---------|----------|---------|-------|
+| `dom` | `happy-dom` | `src/**/*.{test,spec}.tsx` | `src/test/setup.ts` (jest-dom, cleanup, polyfills) |
+| `unit` | `node` | `src/**/*.{test,spec}.ts` | nenhum |
+
+**Regra de diretiva `@vitest-environment`:** arquivos `.test.ts` rodam em `node` por padrão. Se o teste precisar de DOM (usa `renderHook`, `render`, acessa `window`, `document`, ou importa código que usa `@capacitor/*`), **adicione na primeira linha do arquivo**:
+
+```ts
+// @vitest-environment happy-dom
+```
+
+**Quando adicionar a diretiva:**
+- Testes de **hooks** que usam `renderHook` de `@testing-library/react`.
+- Testes que acessam `window`, `document`, `navigator`, `localStorage` ou APIs do browser.
+- Testes que importam módulos que transitivamente acessam `window` (ex.: `@capacitor/preferences`, `preferencesStorage`).
+
+**Quando NÃO adicionar:**
+- Testes de **API** (`*.api.test.ts`) que só mockam o Supabase client — não precisam de DOM.
+- Testes de **utils**, **validadores**, **tipos** e **pure functions** — rodam em `node`.
+- Arquivos `.test.tsx` — já rodam em `happy-dom` automaticamente pelo projeto `dom`.
+
 ## Ao modificar arquivos que já possuem testes
 
 Sempre que você **alterar um arquivo de produção** (componente, hook, API, util, validador) que **já tem testes unitários** associados:

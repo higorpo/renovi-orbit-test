@@ -40,13 +40,12 @@ export default defineConfig(({ mode }) => {
     allowedHosts: ['renovi-2.loca.lt']
   },
   test: {
-    environment: 'happy-dom',
-    setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
     globals: false,
+    pool: 'threads',
     coverage: {
       // Avoid coverage/.tmp under workspace paths with unicode (Vitest v8 merge ENOENT)
       tempDirectory: path.join(os.tmpdir(), 'orbit-vitest-coverage'),
+      reportOnFailure: true,
       include: ['src/**/*.{ts,tsx}'],
       exclude: [
         '**/*.test.{ts,tsx}',
@@ -59,6 +58,25 @@ export default defineConfig(({ mode }) => {
       ],
       reporter: ['text', 'text-summary'],
     },
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'dom',
+          environment: 'happy-dom',
+          include: ['src/**/*.{test,spec}.tsx'],
+          setupFiles: ['./src/test/setup.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'unit',
+          environment: 'node',
+          include: ['src/**/*.{test,spec}.ts'],
+        },
+      },
+    ],
   },
   plugins: [
     react(),

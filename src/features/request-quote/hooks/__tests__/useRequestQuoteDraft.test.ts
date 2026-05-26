@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useRequestQuoteDraft } from "../useRequestQuoteDraft";
@@ -86,7 +87,7 @@ describe("useRequestQuoteDraft", () => {
     expect(result.current.hasRestorableDraft).toBe(false);
   });
 
-  it("returns hasRestorableDraft true when getDraft returns draft with matching version", () => {
+  it("returns hasRestorableDraft true when getDraft returns draft with matching version", async () => {
     const draftPayload = {
       version: "2",
       draft: {
@@ -103,10 +104,11 @@ describe("useRequestQuoteDraft", () => {
     vi.mocked(getDraft).mockResolvedValue(draftPayload as Awaited<ReturnType<typeof getDraft>>);
     const state = createMockState();
     const { result } = renderHook(() => useRequestQuoteDraft(state, null));
+    await act(async () => {});
     expect(result.current.hasRestorableDraft).toBe(true);
   });
 
-  it("calls clearDraft and does not set restorable when version does not match", () => {
+  it("calls clearDraft and does not set restorable when version does not match", async () => {
     const draftPayload = {
       version: "0",
       draft: {
@@ -123,6 +125,7 @@ describe("useRequestQuoteDraft", () => {
     vi.mocked(getDraft).mockResolvedValue(draftPayload as Awaited<ReturnType<typeof getDraft>>);
     const state = createMockState();
     const { result } = renderHook(() => useRequestQuoteDraft(state, null));
+    await act(async () => {});
     expect(clearDraft).toHaveBeenCalled();
     expect(result.current.hasRestorableDraft).toBe(false);
   });
@@ -148,7 +151,7 @@ describe("useRequestQuoteDraft", () => {
     expect(result.current.hasRestorableDraft).toBe(false);
   });
 
-  it("calls state setters when restoreDraft is called (step5 not restored)", () => {
+  it("calls state setters when restoreDraft is called (step5 not restored)", async () => {
     const draftPayload = {
       version: "2",
       draft: {
@@ -165,6 +168,7 @@ describe("useRequestQuoteDraft", () => {
     vi.mocked(getDraft).mockResolvedValue(draftPayload as Awaited<ReturnType<typeof getDraft>>);
     const state = createMockState();
     const { result } = renderHook(() => useRequestQuoteDraft(state, null));
+    await act(async () => {});
     expect(result.current.hasRestorableDraft).toBe(true);
     act(() => {
       result.current.restoreDraft();
@@ -271,7 +275,7 @@ describe("useRequestQuoteDraft", () => {
     expect(saveDraft).not.toHaveBeenCalled();
   });
 
-  it("restores step3Data with structured when draft has structured", () => {
+  it("restores step3Data with structured when draft has structured", async () => {
     const draftPayload = {
       version: "2",
       draft: {
@@ -300,6 +304,7 @@ describe("useRequestQuoteDraft", () => {
     vi.mocked(getDraft).mockResolvedValue(draftPayload as Awaited<ReturnType<typeof getDraft>>);
     const state = createMockState();
     const { result } = renderHook(() => useRequestQuoteDraft(state, null));
+    await act(async () => {});
     act(() => {
       result.current.restoreDraft();
     });
@@ -322,7 +327,7 @@ describe("useRequestQuoteDraft", () => {
     );
   });
 
-  it("restores at most step 4 when loggedInUserId is set and draft was on step 5", () => {
+  it("restores at most step 4 when loggedInUserId is set and draft was on step 5", async () => {
     const draftPayload = {
       version: "2",
       draft: {
@@ -339,6 +344,7 @@ describe("useRequestQuoteDraft", () => {
     vi.mocked(getDraft).mockResolvedValue(draftPayload as Awaited<ReturnType<typeof getDraft>>);
     const state = createMockState();
     const { result } = renderHook(() => useRequestQuoteDraft(state, null, "user-1"));
+    await act(async () => {});
     act(() => {
       result.current.restoreDraft();
     });

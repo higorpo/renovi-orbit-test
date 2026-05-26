@@ -17,6 +17,9 @@ Node **24.13**: `nvm use` antes de yarn. `yarn dev` | `yarn build` | `yarn cap:s
 - **`yarn test:run`** — testes unitários do app (Vitest, `src/`).
 - **`yarn test:deno`** — testes unitários das Edge Functions (Deno, `supabase/functions/`). Aceita `--filter "nome"` ou `-- <path>` para filtrar.
 - **`yarn test:e2e`** — testes end-to-end (Playwright).
+- **`yarn ci`** — roda Vitest + Deno + pgTAP e imprime resumo consolidado com cobertura.
+
+**Vitest projects:** `.test.tsx` → projeto `dom` (happy-dom); `.test.ts` → projeto `unit` (node). Se um `.test.ts` precisa de DOM (`renderHook`, `window`, `@capacitor/*`), adicionar `// @vitest-environment happy-dom` na primeira linha. Ver regra `unit-tests`.
 
 ## Código
 

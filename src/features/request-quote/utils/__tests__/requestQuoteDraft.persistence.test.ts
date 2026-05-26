@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { ServiceRequestStructuredData } from "../../types/request-quote.types";
 import "@/lib/capacitor/__tests__/preferencesStorage.harness";
