@@ -328,6 +328,46 @@ on conflict (key) do update set
   description = excluded.description,
   updated_at = now();
 
+-- Engagement tracking enum and table (orthogonal to FSM lifecycle).
+create type message_dispatcher.message_engagement_type as enum ('opened', 'clicked');
+
+comment on type message_dispatcher.message_engagement_type is
+  'User-side interaction types tracked per dispatch (email opened, push clicked).';
+
+create table message_dispatcher.message_dispatch_engagements (
+  id              uuid        primary key default gen_random_uuid(),
+  dispatch_id     uuid        not null references message_dispatcher.message_dispatches(id) on delete cascade,
+  profile_id      uuid        not null references public.profiles(id) on delete cascade,
+  engagement_type message_dispatcher.message_engagement_type not null,
+  channel         message_dispatcher.message_channel not null,
+  source          text        not null,
+  first_seen_at   timestamptz not null default now(),
+  last_seen_at    timestamptz not null default now(),
+  seen_count      integer     not null default 1 check (seen_count > 0),
+  metadata        jsonb       not null default '{}',
+  created_at      timestamptz not null default now(),
+  unique (dispatch_id, engagement_type)
+);
+
+comment on table message_dispatcher.message_dispatch_engagements is
+  'Upsert-based engagement tracking per dispatch (email opens, push clicks). Orthogonal to FSM status.';
+
+create index message_dispatch_engagements_profile_idx
+  on message_dispatcher.message_dispatch_engagements (profile_id, created_at desc);
+
+-- RLS: message_dispatch_engagements. Owner SELECT only; mutations via SECURITY DEFINER RPCs.
+alter table message_dispatcher.message_dispatch_engagements enable row level security;
+
+create policy message_dispatch_engagements_select_owner
+  on message_dispatcher.message_dispatch_engagements
+  for select
+  to authenticated
+  using ((select auth.uid()) = profile_id);
+
+revoke insert, update, delete on message_dispatcher.message_dispatch_engagements from authenticated;
+revoke insert, update, delete on message_dispatcher.message_dispatch_engagements from anon;
+revoke insert, update, delete on message_dispatcher.message_dispatch_engagements from public;
+
 -- Audit timeline indexes (design §3.6, task 19). Support dispatch and profile+date queries.
 create index message_dispatcher_audit_dispatch_created_idx
   on message_dispatcher.message_dispatcher_audit (dispatch_id, created_at desc);

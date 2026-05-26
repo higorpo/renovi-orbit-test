@@ -34,6 +34,8 @@ export interface CancelDispatchResult {
   status: MessageDispatchStatus;
 }
 
+export type MessageEngagementType = "opened" | "clicked";
+
 export interface AuditTimelineEntry {
   id: number;
   dispatch_id: string;

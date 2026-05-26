@@ -54,6 +54,7 @@ Deno.test("sendFcmPush maps 401 as non-retryable failure", async () => {
       body: "Body",
       correlationId: "corr-401",
       deliveryId: "del-401",
+      dispatchId: "dispatch-401",
     },
     {
       fetchFn: mockFetch,
@@ -90,6 +91,7 @@ Deno.test("sendFcmPush maps 404 NOT_FOUND as invalid token failure", async () =>
       body: "Body",
       correlationId: "corr-404",
       deliveryId: "del-404",
+      dispatchId: "dispatch-404",
     },
     {
       fetchFn: mockFetch,
@@ -124,6 +126,7 @@ Deno.test("sendFcmPush maps timeout (AbortError) as fcm_timeout", async () => {
       body: "Body",
       correlationId: "corr-timeout",
       deliveryId: "del-timeout",
+      dispatchId: "dispatch-timeout",
     },
     {
       fetchFn: mockFetch,
@@ -158,6 +161,7 @@ Deno.test("sendFcmPush maps generic network error to fcm_request_failed", async 
       body: "Body",
       correlationId: "corr-dns",
       deliveryId: "del-dns",
+      dispatchId: "dispatch-dns",
     },
     {
       fetchFn: mockFetch,
@@ -195,6 +199,7 @@ Deno.test("sendFcmPush handles 429 rate limiting response", async () => {
       body: "Body",
       correlationId: "corr-429",
       deliveryId: "del-429",
+      dispatchId: "dispatch-429",
     },
     {
       fetchFn: mockFetch,

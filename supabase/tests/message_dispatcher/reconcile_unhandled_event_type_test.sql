@@ -20,7 +20,7 @@ select
   now(), 're_vendor_unhandled_1', 'worker-1', now() + interval '30 seconds'
 from _unhandled_fixture f;
 
--- Unknown event type (e.g. email.opened, email.clicked) → noop
+-- email.opened → engagement tracking (no FSM change)
 select is(
   (
     select message_dispatcher.message_dispatcher_reconcile_vendor_event(
@@ -29,10 +29,10 @@ select is(
       'email.opened',
       're_vendor_unhandled_1',
       '{"type":"email.opened"}'::jsonb
-    )->>'reason'
+    )->>'engagement_recorded'
   ),
-  'unhandled_event_type',
-  'email.opened is unhandled — noop'
+  'true',
+  'email.opened records engagement'
 );
 
 select is(

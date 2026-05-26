@@ -20,6 +20,7 @@ Deno.test("buildFcmV1MessageBody sets collapse id and uses token snapshot", () =
     body: "Body text",
     correlationId: "550e8400-e29b-41d4-a716-446655440000",
     deliveryId: "delivery-1",
+    dispatchId: "dispatch-abc-123",
   });
 
   assertEquals(body.message.token, "fcm-snapshot-token");
@@ -28,6 +29,8 @@ Deno.test("buildFcmV1MessageBody sets collapse id and uses token snapshot", () =
     body.message.apns.headers["apns-collapse-id"],
     "550e8400-e29b-41d4-a716-446655440000",
   );
+  assertEquals(body.message.data.dispatch_id, "dispatch-abc-123");
+  assertEquals(body.message.data.correlation_id, "550e8400-e29b-41d4-a716-446655440000");
 });
 
 Deno.test("fcmSendUrl targets FCM v1 messages endpoint", () => {
@@ -59,6 +62,7 @@ Deno.test("sendFcmPush sends one FCM HTTP v1 request per delivery", async () => 
       body: "There",
       correlationId: "corr-abc",
       deliveryId: "del-1",
+      dispatchId: "dispatch-xyz",
     },
     {
       fetchFn: mockFetch,

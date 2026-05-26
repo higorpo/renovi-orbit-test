@@ -8,6 +8,7 @@ import {
 } from '@capacitor/push-notifications'
 import { getToken, onMessage, type MessagePayload } from 'firebase/messaging'
 
+import { recordPushClick } from '@/features/notifications'
 import { getFirebaseApp } from './firebase/app'
 import { getFirebaseVapidKey, isFirebaseConfigured } from './firebase/config'
 import { getFirebaseMessaging } from './firebase/messaging'
@@ -196,6 +197,17 @@ function mapFirebaseMessage(payload: MessagePayload): PushNotificationPayload {
   }
 }
 
+async function trackPushClick(dispatchId: string): Promise<void> {
+  try {
+    await recordPushClick({ dispatchId })
+  } catch (err) {
+    logger.warn('[PUSH] engagement tracking failed', {
+      dispatchId,
+      error: err instanceof Error ? err.message : String(err),
+    })
+  }
+}
+
 function attachNativeListeners(): void {
   if (nativeListenersAttached) return
   nativeListenersAttached = true
@@ -207,10 +219,15 @@ function attachNativeListeners(): void {
   })
 
   PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
+    const dispatchId = action.notification.data?.dispatch_id as string | undefined
     logger.info('[PUSH] notification action (native)', {
       actionId: action.actionId,
       notification: action.notification,
     })
+
+    if (dispatchId) {
+      void trackPushClick(dispatchId)
+    }
   })
 }
 

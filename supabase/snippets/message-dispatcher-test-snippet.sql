@@ -5,7 +5,7 @@ select message_dispatcher.message_dispatcher_ingest(
   'push'::message_dispatcher.message_channel,
   'engagement_push',
   jsonb_build_object(
-    'name', 'Higor',
+    'name', 'X',
     'headline', 'Teste Orbit',
     'body', 'MMD push local'
   ),

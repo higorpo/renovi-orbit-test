@@ -81,6 +81,56 @@ export type Database = {
           },
         ]
       }
+      message_dispatch_engagements: {
+        Row: {
+          channel: Database["message_dispatcher"]["Enums"]["message_channel"]
+          created_at: string
+          dispatch_id: string
+          engagement_type: Database["message_dispatcher"]["Enums"]["message_engagement_type"]
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          metadata: Json
+          profile_id: string
+          seen_count: number
+          source: string
+        }
+        Insert: {
+          channel: Database["message_dispatcher"]["Enums"]["message_channel"]
+          created_at?: string
+          dispatch_id: string
+          engagement_type: Database["message_dispatcher"]["Enums"]["message_engagement_type"]
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          metadata?: Json
+          profile_id: string
+          seen_count?: number
+          source: string
+        }
+        Update: {
+          channel?: Database["message_dispatcher"]["Enums"]["message_channel"]
+          created_at?: string
+          dispatch_id?: string
+          engagement_type?: Database["message_dispatcher"]["Enums"]["message_engagement_type"]
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          metadata?: Json
+          profile_id?: string
+          seen_count?: number
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_dispatch_engagements_dispatch_id_fkey"
+            columns: ["dispatch_id"]
+            isOneToOne: false
+            referencedRelation: "message_dispatches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_dispatcher_audit: {
         Row: {
           changed_by: string
@@ -436,6 +486,10 @@ export type Database = {
         Args: { p_event_type: string }
         Returns: boolean
       }
+      message_dispatcher_is_resend_opened_event: {
+        Args: { p_event_type: string }
+        Returns: boolean
+      }
       message_dispatcher_promote_retries: { Args: never; Returns: number }
       message_dispatcher_reclaim_leases: { Args: never; Returns: number }
       message_dispatcher_reconcile_vendor_event: {
@@ -446,6 +500,19 @@ export type Database = {
           p_vendor_event_id: string
           p_vendor_message_id: string
         }
+        Returns: Json
+      }
+      message_dispatcher_record_engagement: {
+        Args: {
+          p_dispatch_id: string
+          p_engagement_type: Database["message_dispatcher"]["Enums"]["message_engagement_type"]
+          p_metadata?: Json
+          p_source: string
+        }
+        Returns: Json
+      }
+      message_dispatcher_record_push_click: {
+        Args: { p_dispatch_id: string; p_metadata?: Json }
         Returns: Json
       }
       message_dispatcher_refresh_stats: { Args: never; Returns: undefined }
@@ -485,6 +552,7 @@ export type Database = {
         | "DELIVERED"
         | "FAILED_RETRYABLE"
         | "FAILED_TERMINAL"
+      message_engagement_type: "opened" | "clicked"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1804,6 +1872,7 @@ export const Constants = {
         "FAILED_RETRYABLE",
         "FAILED_TERMINAL",
       ],
+      message_engagement_type: ["opened", "clicked"],
     },
   },
   public: {

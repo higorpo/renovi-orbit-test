@@ -1618,6 +1618,168 @@ as $$
   select lower(trim(coalesce(p_event_type, ''))) = 'email.bounced';
 $$;
 
+create or replace function message_dispatcher.message_dispatcher_is_resend_opened_event(
+  p_event_type text
+)
+returns boolean
+language sql
+immutable
+parallel safe
+as $$
+  select lower(trim(coalesce(p_event_type, ''))) = 'email.opened';
+$$;
+
+comment on function message_dispatcher.message_dispatcher_is_resend_opened_event(text) is
+  'Classifier: true when p_event_type is email.opened (engagement tracking).';
+
+-- Internal engagement upsert RPC (service_role only).
+create or replace function message_dispatcher.message_dispatcher_record_engagement(
+  p_dispatch_id uuid,
+  p_engagement_type message_dispatcher.message_engagement_type,
+  p_source text,
+  p_metadata jsonb default '{}'::jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = message_dispatcher, public, auth
+as $$
+declare
+  v_dispatch record;
+  v_engagement_id uuid;
+  v_is_first boolean;
+begin
+  if p_dispatch_id is null then
+    raise exception 'p_dispatch_id is required'
+      using errcode = '22023';
+  end if;
+
+  select id, profile_id, channel
+  into v_dispatch
+  from message_dispatcher.message_dispatches d
+  where d.id = p_dispatch_id;
+
+  if not found then
+    return jsonb_build_object(
+      'applied', false,
+      'reason', 'dispatch_not_found'
+    );
+  end if;
+
+  insert into message_dispatcher.message_dispatch_engagements (
+    dispatch_id,
+    profile_id,
+    engagement_type,
+    channel,
+    source,
+    metadata
+  )
+  values (
+    p_dispatch_id,
+    v_dispatch.profile_id,
+    p_engagement_type,
+    v_dispatch.channel,
+    coalesce(nullif(trim(p_source), ''), 'unknown'),
+    coalesce(p_metadata, '{}'::jsonb)
+  )
+  on conflict (dispatch_id, engagement_type) do update set
+    last_seen_at = now(),
+    seen_count = message_dispatcher.message_dispatch_engagements.seen_count + 1
+  returning id,
+    (xmax = 0) as is_insert
+  into v_engagement_id, v_is_first;
+
+  return jsonb_build_object(
+    'applied', true,
+    'first_engagement', v_is_first,
+    'engagement_id', v_engagement_id
+  );
+end;
+$$;
+
+comment on function message_dispatcher.message_dispatcher_record_engagement(
+  uuid, message_dispatcher.message_engagement_type, text, jsonb
+) is
+  'Internal upsert for engagement tracking. First call inserts; repeats increment seen_count.';
+
+revoke all on function message_dispatcher.message_dispatcher_record_engagement(
+  uuid, message_dispatcher.message_engagement_type, text, jsonb
+) from public;
+
+revoke all on function message_dispatcher.message_dispatcher_record_engagement(
+  uuid, message_dispatcher.message_engagement_type, text, jsonb
+) from authenticated;
+
+revoke all on function message_dispatcher.message_dispatcher_record_engagement(
+  uuid, message_dispatcher.message_engagement_type, text, jsonb
+) from anon;
+
+grant execute on function message_dispatcher.message_dispatcher_record_engagement(
+  uuid, message_dispatcher.message_engagement_type, text, jsonb
+) to service_role;
+
+-- Public push click RPC (authenticated + service_role).
+create or replace function message_dispatcher.message_dispatcher_record_push_click(
+  p_dispatch_id uuid,
+  p_metadata jsonb default '{}'::jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = message_dispatcher, public, auth
+as $$
+declare
+  v_dispatch record;
+begin
+  if p_dispatch_id is null then
+    raise exception 'p_dispatch_id is required'
+      using errcode = '22023';
+  end if;
+
+  select id, profile_id, channel
+  into v_dispatch
+  from message_dispatcher.message_dispatches d
+  where d.id = p_dispatch_id;
+
+  if not found then
+    return jsonb_build_object(
+      'applied', false,
+      'reason', 'dispatch_not_found'
+    );
+  end if;
+
+  if coalesce(auth.role(), '') <> 'service_role'
+    and (select auth.uid()) is distinct from v_dispatch.profile_id
+  then
+    raise exception 'not authorized to record click for this dispatch'
+      using errcode = '42501';
+  end if;
+
+  if v_dispatch.channel <> 'push'::message_dispatcher.message_channel then
+    return jsonb_build_object(
+      'applied', false,
+      'reason', 'channel_not_push'
+    );
+  end if;
+
+  return message_dispatcher.message_dispatcher_record_engagement(
+    p_dispatch_id,
+    'clicked'::message_dispatcher.message_engagement_type,
+    'client_app',
+    p_metadata
+  );
+end;
+$$;
+
+comment on function message_dispatcher.message_dispatcher_record_push_click(uuid, jsonb) is
+  'Public RPC for recording push click engagement. Validates ownership and channel=push.';
+
+revoke all on function message_dispatcher.message_dispatcher_record_push_click(uuid, jsonb) from public;
+revoke all on function message_dispatcher.message_dispatcher_record_push_click(uuid, jsonb) from anon;
+
+grant execute on function message_dispatcher.message_dispatcher_record_push_click(uuid, jsonb) to authenticated;
+grant execute on function message_dispatcher.message_dispatcher_record_push_click(uuid, jsonb) to service_role;
+
 -- Webhook reconcile ingress (design §4.5, §5.6, task 74, Req.6 AC2).
 create or replace function message_dispatcher.message_dispatcher_reconcile_vendor_event(
   p_vendor_event_id text,
@@ -1773,6 +1935,23 @@ begin
       'dispatch_updated', true,
       'status', 'FAILED_TERMINAL',
       'failure_code', 'hard_bounce',
+      'dispatch_id', v_dispatch.id
+    );
+  end if;
+
+  -- Email opened → engagement tracking only, no FSM status change.
+  if message_dispatcher.message_dispatcher_is_resend_opened_event(p_event_type) then
+    perform message_dispatcher.message_dispatcher_record_engagement(
+      v_dispatch.id,
+      'opened'::message_dispatcher.message_engagement_type,
+      'resend_webhook',
+      p_payload
+    );
+
+    return jsonb_build_object(
+      'applied', true,
+      'dispatch_updated', false,
+      'engagement_recorded', true,
       'dispatch_id', v_dispatch.id
     );
   end if;

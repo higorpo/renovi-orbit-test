@@ -298,6 +298,7 @@ async function processPushDispatch(
             body: rendered.body,
             correlationId: item.correlation_id,
             deliveryId: delivery.delivery_id,
+            dispatchId: item.id,
           }),
       );
 

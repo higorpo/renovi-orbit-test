@@ -34,6 +34,7 @@ export interface SendFcmPushInput {
   body: string;
   correlationId: string;
   deliveryId: string;
+  dispatchId: string;
 }
 
 export type FcmSendSuccess = {
@@ -55,6 +56,7 @@ export interface FcmV1MessageBody {
   message: {
     token: string;
     notification: { title: string; body: string };
+    data: { dispatch_id: string; correlation_id: string };
     android: { notification: { tag: string } };
     apns: { headers: { "apns-collapse-id": string } };
   };
@@ -86,6 +88,10 @@ export function buildFcmV1MessageBody(input: SendFcmPushInput): FcmV1MessageBody
       notification: {
         title: input.title,
         body: input.body,
+      },
+      data: {
+        dispatch_id: input.dispatchId,
+        correlation_id: input.correlationId,
       },
       android: {
         notification: {
