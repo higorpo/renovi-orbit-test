@@ -66,6 +66,44 @@ create trigger message_dispatches_validate_transition
   for each row
   execute function message_dispatcher.message_dispatches_validate_transition();
 
+-- Quiet hours helpers (22:00–06:00 America/Sao_Paulo). Used by ingest and evaluate_pending.
+create or replace function message_dispatcher.message_dispatcher_is_quiet_hours(
+  p_ts timestamptz default now()
+)
+returns boolean
+language sql
+stable
+parallel safe
+as $$
+  select extract(hour from p_ts at time zone 'America/Sao_Paulo')::int >= 22
+      or extract(hour from p_ts at time zone 'America/Sao_Paulo')::int < 6;
+$$;
+
+comment on function message_dispatcher.message_dispatcher_is_quiet_hours(timestamptz) is
+  'Returns true when the hour in America/Sao_Paulo is >= 22 or < 6 (quiet hours window).';
+
+grant execute on function message_dispatcher.message_dispatcher_is_quiet_hours(timestamptz) to service_role;
+
+create or replace function message_dispatcher.message_dispatcher_next_send_window(
+  p_ts timestamptz default now()
+)
+returns timestamptz
+language sql
+stable
+parallel safe
+as $$
+  select case
+    when extract(hour from p_ts at time zone 'America/Sao_Paulo')::int < 6
+      then date_trunc('day', p_ts at time zone 'America/Sao_Paulo') + interval '6 hours'
+    else date_trunc('day', p_ts at time zone 'America/Sao_Paulo') + interval '1 day 6 hours'
+  end at time zone 'America/Sao_Paulo';
+$$;
+
+comment on function message_dispatcher.message_dispatcher_next_send_window(timestamptz) is
+  'Returns the next 06:00 America/Sao_Paulo. If hour < 6 same day; otherwise next day.';
+
+grant execute on function message_dispatcher.message_dispatcher_next_send_window(timestamptz) to service_role;
+
 -- Ingest RPC (design §5.1). Body extended in tasks 22–29; task 21: reject NULL idempotency key.
 create or replace function message_dispatcher.message_dispatcher_ingest(
   p_idempotency_key uuid,
@@ -97,6 +135,7 @@ declare
   v_dispatch_scheduled timestamptz;
   v_rate_limit_meta jsonb;
   v_dispatch_metadata jsonb;
+  v_quiet_rescheduled boolean := false;
 begin
   if p_idempotency_key is null then
     raise exception 'p_idempotency_key is required'
@@ -297,6 +336,11 @@ begin
     then
       v_cooldown_until := v_limits.last_push_sent_at + make_interval(mins => v_push_cooldown_minutes);
 
+      if message_dispatcher.message_dispatcher_is_quiet_hours(v_cooldown_until) then
+        v_cooldown_until := message_dispatcher.message_dispatcher_next_send_window(v_cooldown_until);
+        v_quiet_rescheduled := true;
+      end if;
+
       insert into message_dispatcher.message_dispatches (
         idempotency_key,
         profile_id,
@@ -319,7 +363,7 @@ begin
         v_cooldown_until,
         coalesce(nullif(trim(p_source_system), ''), 'orbit'),
         coalesce(p_metadata, '{}'::jsonb),
-        coalesce(p_bypass_limits, false)
+        coalesce(p_bypass_limits, false) or v_quiet_rescheduled
       )
       returning id, status, scheduled_for
       into v_dispatch_id, v_dispatch_status, v_dispatch_scheduled;
@@ -339,6 +383,12 @@ begin
     v_dispatch_status := 'SCHEDULED';
   else
     v_dispatch_status := 'QUEUED';
+  end if;
+
+  if message_dispatcher.message_dispatcher_is_quiet_hours(v_dispatch_scheduled) then
+    v_dispatch_scheduled := message_dispatcher.message_dispatcher_next_send_window(v_dispatch_scheduled);
+    v_dispatch_status := 'SCHEDULED';
+    v_quiet_rescheduled := true;
   end if;
 
   insert into message_dispatcher.message_dispatches (
@@ -363,7 +413,7 @@ begin
     v_dispatch_scheduled,
     coalesce(nullif(trim(p_source_system), ''), 'orbit'),
     coalesce(p_metadata, '{}'::jsonb),
-    coalesce(p_bypass_limits, false)
+    coalesce(p_bypass_limits, false) or v_quiet_rescheduled
   )
   returning id, status, scheduled_for
   into v_dispatch_id, v_dispatch_status, v_dispatch_scheduled;
@@ -548,6 +598,7 @@ declare
   v_cooldown_push integer := 0;
   v_queued integer := 0;
   v_scheduled integer := 0;
+  v_quiet_hours integer := 0;
 begin
   -- Read limits once
   select coalesce((pc.value #>> '{}')::integer, 5)
@@ -708,7 +759,22 @@ begin
     update message_dispatcher.message_dispatches d
     set
       status = 'SCHEDULED',
-      scheduled_for = ppc.last_push_sent_at + make_interval(mins => v_push_cooldown_minutes),
+      scheduled_for = case
+        when message_dispatcher.message_dispatcher_is_quiet_hours(
+          ppc.last_push_sent_at + make_interval(mins => v_push_cooldown_minutes)
+        )
+        then message_dispatcher.message_dispatcher_next_send_window(
+          ppc.last_push_sent_at + make_interval(mins => v_push_cooldown_minutes)
+        )
+        else ppc.last_push_sent_at + make_interval(mins => v_push_cooldown_minutes)
+      end,
+      bypass_limits = case
+        when message_dispatcher.message_dispatcher_is_quiet_hours(
+          ppc.last_push_sent_at + make_interval(mins => v_push_cooldown_minutes)
+        )
+        then true
+        else d.bypass_limits
+      end,
       updated_at = now()
     from pending_push_cooldown ppc
     where d.id = ppc.id
@@ -737,27 +803,51 @@ begin
   )
   select count(*) into v_scheduled from kept_scheduled;
 
-  -- Everything else PENDING_EVALUATION → QUEUED
-  with remaining as (
-    select d.id
-    from message_dispatcher.message_dispatches d
-    where d.status = 'PENDING_EVALUATION'
-    order by d.created_at
-    limit 500
-    for update of d skip locked
-  ),
-  moved_to_queued as (
-    update message_dispatcher.message_dispatches d
-    set
-      status = 'QUEUED',
-      updated_at = now()
-    from remaining r
-    where d.id = r.id
-    returning d.id
-  )
-  select count(*) into v_queued from moved_to_queued;
+  -- Quiet hours: remaining PENDING_EVALUATION → SCHEDULED at next 06:00 BRT
+  if message_dispatcher.message_dispatcher_is_quiet_hours(now()) then
+    with quiet_hours_remaining as (
+      select d.id
+      from message_dispatcher.message_dispatches d
+      where d.status = 'PENDING_EVALUATION'
+      order by d.created_at
+      limit 500
+      for update of d skip locked
+    ),
+    rescheduled_quiet as (
+      update message_dispatcher.message_dispatches d
+      set
+        status = 'SCHEDULED',
+        scheduled_for = message_dispatcher.message_dispatcher_next_send_window(now()),
+        bypass_limits = true,
+        updated_at = now()
+      from quiet_hours_remaining qhr
+      where d.id = qhr.id
+      returning d.id
+    )
+    select count(*) into v_quiet_hours from rescheduled_quiet;
+  else
+    -- Everything else PENDING_EVALUATION → QUEUED (only outside quiet hours)
+    with remaining as (
+      select d.id
+      from message_dispatcher.message_dispatches d
+      where d.status = 'PENDING_EVALUATION'
+      order by d.created_at
+      limit 500
+      for update of d skip locked
+    ),
+    moved_to_queued as (
+      update message_dispatcher.message_dispatches d
+      set
+        status = 'QUEUED',
+        updated_at = now()
+      from remaining r
+      where d.id = r.id
+      returning d.id
+    )
+    select count(*) into v_queued from moved_to_queued;
+  end if;
 
-  v_evaluated := v_terminal_email + v_terminal_push + v_cooldown_push + v_scheduled + v_queued;
+  v_evaluated := v_terminal_email + v_terminal_push + v_cooldown_push + v_scheduled + v_quiet_hours + v_queued;
   return v_evaluated;
 end;
 $$;

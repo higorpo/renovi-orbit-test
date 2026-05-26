@@ -1,6 +1,6 @@
 # Matriz de cobertura documental
 
-Última auditoria completa: **2026-05-21** (revisão: Capacitor Preferences / persistência cliente).
+Última auditoria completa: **2026-05-26** (revisão: adição do módulo Message Dispatcher com feature de horário silencioso).
 
 Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de inferência ou RPC/RLS não detalhados linha a linha; **N/A** = não aplicável como feature de produto.
 
@@ -25,18 +25,19 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 |--------|--------|-----------|
 | dashboard-shell | `DashboardLayout`, menu, `DashboardFakePage`, rotas placeholder do dashboard | `modulos/dashboard-shell/` |
 | app-home | Rota index `/`, componente `App` | `modulos/app-home/` |
+| message-dispatcher | Notificações multicanal (backend); FSM, quotas, horário silencioso, checkout, reconciliação | `modulos/message-dispatcher/` |
 
 ## Contagens
 
 | Métrica | Valor |
 |---------|-------|
 | Pastas em `src/features` (módulos de topo) | 10 |
-| Módulos adicionais documentados (shell + home) | 2 |
-| **Total módulos no índice** `modulos/README.md` | **12** |
-| READMEs de módulo em `docs/business/modulos/` | 12 |
-| Arquivos de feature em `modulos/*/features/` | 12+ |
+| Módulos adicionais documentados (shell + home + backend) | 3 |
+| **Total módulos no índice** `modulos/README.md` | **13** |
+| READMEs de módulo em `docs/business/modulos/` | 13 |
+| Arquivos de feature em `modulos/*/features/` | 13+ |
 | Rotas placeholder identificadas | ≥6 |
-| Cobertura documental (critério do índice) | **100%** dos 12 módulos |
+| Cobertura documental (critério do índice) | **100%** dos 13 módulos |
 
 ## Features globais fora de `src/features`
 
@@ -46,6 +47,7 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 | App nativo Capacitor (Android) | **Parcial** — shell + persistência Preferences documentados abaixo; `device-beacon` / `push-permission` só na rastreabilidade; sem módulo em `modulos/` |
 | Observabilidade (Sentry) | Mencionado na rastreabilidade |
 | Analytics (`useAnalytics`) | Mencionado pontualmente em fluxos críticos |
+| Message Dispatcher (backend) | **Parcial** — README do módulo + feature quiet hours documentados; features de quota, checkout, reconciliação e engagement cobertas na visão geral mas sem feature doc dedicada |
 
 ### App nativo Capacitor (evidência verificada)
 

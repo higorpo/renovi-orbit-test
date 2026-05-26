@@ -59,6 +59,18 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `supabase/functions/match-provider-jobs/index.ts` | Lista de jobs |
 | `supabase/functions/verify-recaptcha/index.ts` | Validação Google |
 | `supabase/functions/_shared/*` | CORS, rate limit, tipos |
+| `supabase/functions/message-dispatcher-worker/*` | Worker de entrega multicanal (Resend/FCM) |
+| `supabase/functions/message-dispatcher-webhook-resend/*` | Webhook Resend (delivered, bounce, opened) |
+
+## Message Dispatcher (backend)
+
+| Artefato | Uso na documentação |
+|----------|---------------------|
+| `supabase/migrations/20260621100100_create_message_dispatcher_fsm_functions.sql` | FSM, RPCs core (ingest, cancel, checkout, report, reconcile), quiet hours, quotas |
+| `supabase/tests/message_dispatcher/quiet_hours_helpers_test.sql` | Testes pgTAP dos helpers de horário silencioso |
+| `supabase/tests/message_dispatcher/quiet_hours_ingest_reschedule_test.sql` | Testes pgTAP do reagendamento no ingest |
+| `supabase/tests/message_dispatcher/quiet_hours_evaluate_pending_test.sql` | Testes pgTAP da rede de segurança no evaluate_pending |
+| `src/features/notifications/api/engagementTracking.api.ts` | API client-side para registro de push click |
 
 ## Bibliotecas transversais
 

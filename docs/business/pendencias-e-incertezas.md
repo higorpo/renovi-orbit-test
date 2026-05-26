@@ -35,4 +35,12 @@ Itens que exigem validação humana, evidência parcial ou conflito entre trecho
 ## Inferências explicitamente não comprovadas
 
 - Uso de **Realtime** Supabase para notificações push ao usuário (config habilitado no `config.toml`, uso no `src` não mapeado de forma exaustiva).
-- **Envio de e-mail** em produção: Resend aparece em comentários de config; ambiente local usa Inbucket.
+- ~~**Envio de e-mail** em produção: Resend aparece em comentários de config; ambiente local usa Inbucket.~~ **Resolvido:** o Message Dispatcher utiliza Resend como vendor de e-mail e FCM para push, com integração completa (ingest → checkout → worker → report → webhook reconcile). Evidência: `supabase/functions/message-dispatcher-worker/`, `supabase/functions/message-dispatcher-webhook-resend/`, migration FSM.
+
+## Observações do Message Dispatcher
+
+| ID | Tema | Descrição | Severidade sugerida |
+|----|------|-----------|---------------------|
+| P-08 | Janela de horário silencioso hardcoded | A janela 22:00–06:00 America/Sao_Paulo está fixa nas funções SQL `message_dispatcher_is_quiet_hours` e `message_dispatcher_next_send_window`. Para alterar é necessário modificar a migration. Sugestão: parametrizar via `platform_constants`. | Baixa — operacional |
+| P-09 | Fuso horário único | O horário silencioso não considera o fuso horário do perfil do usuário; todos são tratados em BRT. Para operação futura em outros fusos, será necessário adaptar. | Baixa — evolução futura |
+| P-10 | Cobertura documental parcial do Message Dispatcher | Apenas a feature de horário silencioso possui documento dedicado. As demais capacidades (quotas, checkout, reconciliação, engagement) estão descritas no README do módulo mas sem feature doc individual. | Baixa — documentação |

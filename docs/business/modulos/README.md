@@ -18,6 +18,7 @@ Este diretório concentra a **documentação funcional e técnica por módulo**,
 | 10 | [dynamic-form](./dynamic-form/README.md) | Motor de formulários + demo DEV | `/demo/form` (somente `import.meta.env.DEV`) | `src/features/dynamic-form/` | Concluída |
 | 11 | [dashboard-shell](./dashboard-shell/README.md) | Placeholders do dashboard (visão geral, endereços, config, ajuda, ganhos) | `/dashboard`, `/dashboard/addresses`, `/dashboard/settings`, `/dashboard/help`, `/dashboard/earnings` | `src/layouts/DashboardLayout/` | Concluída |
 | 12 | [app-home](./app-home/README.md) | Página inicial mínima | `/` (index) | `src/App.tsx` | Concluída |
+| 13 | [message-dispatcher](./message-dispatcher/README.md) | Notificações multicanal (e-mail, push); horário silencioso, quotas, FSM | *Sem rota de UI; backend-only* | `supabase/migrations/`, `supabase/functions/message-dispatcher-*` | Parcial (quiet hours) |
 
 ### Rotas adicionais fora da tabela (evidência direta)
 
@@ -47,11 +48,11 @@ Um módulo conta como documentado quando o conjunto **README do módulo + arquiv
 
 | Métrica | Valor |
 |---------|------:|
-| Módulos identificados no escopo do produto (features + shell + home) | **12** |
-| Módulos documentados (critério acima) | **12** |
+| Módulos identificados no escopo do produto (features + shell + home + backend) | **13** |
+| Módulos documentados (critério acima) | **13** |
 | **Percentual** | **100%** |
 
-Os **10** diretórios em `src/features/` estão espelhados em subpastas deste índice. Acrescentam-se **dashboard-shell** e **app-home**, que não são pastas em `src/features/` mas são **superfícies reais** expostas pelo roteador e pelo menu.
+Os **10** diretórios em `src/features/` estão espelhados em subpastas deste índice. Acrescentam-se **dashboard-shell** e **app-home** (superfícies do roteador/menu) e **message-dispatcher** (subsistema backend de notificações em `supabase/`).
 
 ---
 

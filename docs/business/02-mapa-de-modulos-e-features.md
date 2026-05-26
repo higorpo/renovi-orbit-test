@@ -25,6 +25,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | **provider-jobs** | [trabalhos-e-propostas](./modulos/provider-jobs/features/trabalhos-e-propostas.md) | `/dashboard/jobs`, `/dashboard/jobs/:jobId` | Edge `match-provider-jobs`, propostas, perguntas |
 | **provider-profile** | [pagina-publica](./modulos/provider-profile/features/pagina-publica.md) | `/perfil/:slug` | RPC `get_public_provider_by_slug`, storage |
 | **request-quote** | [pedir-orcamento](./modulos/request-quote/features/pedir-orcamento.md) | `/pedir-orcamento` | `dynamic-form`, `addresses`, `auth`, Edge Functions |
+| **message-dispatcher** *(backend)* | [horario-silencioso](./modulos/message-dispatcher/features/horario-silencioso.md) | *Sem rota de UI* | Supabase schema `message_dispatcher`, Edge Functions `message-dispatcher-worker` / `message-dispatcher-webhook-resend` |
 
 ## Telas placeholder (evidência)
 
@@ -44,6 +45,8 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | `generate-smart-description` | `request-quote` |
 | `verify-recaptcha` | `auth`, `request-quote` |
 | `match-provider-jobs` | `provider-jobs` |
+| `message-dispatcher-worker` | `message-dispatcher` — consome fila, renderiza templates, envia via Resend/FCM |
+| `message-dispatcher-webhook-resend` | `message-dispatcher` — recebe webhooks Resend (delivered, bounce, opened) |
 
 ## Status da documentação
 
@@ -54,6 +57,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | Pagamentos | Planejamento em `docs/` apenas — fora do escopo comportamental |
 | PWA / Sentry / analytics | Mencionados na rastreabilidade; não detalhados por feature |
 | App nativo (Capacitor / Android) | Shell + **persistência cliente** (Preferences) em [rastreabilidade](./rastreabilidade.md) e [matriz](./matriz-cobertura-documental.md); `device-beacon` e `push-permission` em `src/features/` sem pasta em `modulos/` |
+| Message Dispatcher (backend) | **Parcial** — módulo em `modulos/message-dispatcher/`; feature documentada: horário silencioso. Demais features (quotas, FSM, checkout, reconciliação) cobrem visão geral no README mas sem feature doc dedicada |
 
 ## Diagrama de dependências entre módulos (simplificado)
 

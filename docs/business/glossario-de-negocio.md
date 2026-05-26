@@ -31,6 +31,10 @@ Termos extraídos ou inferidos a partir de nomes de entidades, rotas e interface
 | **Rate limit** | Controle por chave na tabela `platform_rate_limits` (usado nas Edge Functions). | `_shared/rateLimiter.ts`. |
 | **Manter conectado** | Preferência do usuário no login: quando ativa, a sessão Supabase persiste em **Capacitor Preferences**; quando inativa, fica só em memória até o app encerrar. | `orbit_persist_session`, `LoginForm`, `createSupabaseAuthStorage`. |
 | **Capacitor Preferences** | API de armazenamento chave-valor do app (nativo ou fallback web); substitui o uso direto de `localStorage` do browser nos fluxos mapeados. | `@capacitor/preferences`, `preferencesStorage.ts`. |
+| **Message Dispatcher** | Subsistema backend de envio de notificações multicanal (e-mail via Resend, push via FCM). Opera no schema `message_dispatcher` com máquina de estados (FSM), controle de quota e horário silencioso. | Schema `message_dispatcher`, Edge Functions `message-dispatcher-worker`, `message-dispatcher-webhook-resend`. |
+| **Dispatch** | Registro individual de intenção de envio no Message Dispatcher. Cada dispatch possui canal, template, perfil destinatário e status na FSM. | Tabela `message_dispatcher.message_dispatches`. |
+| **Horário silencioso (Quiet Hours)** | Janela das 22:00 às 06:00 (America/Sao_Paulo) na qual o Message Dispatcher não envia mensagens. Dispatches nessa janela são reagendados para 06:00 BRT. | Funções `message_dispatcher_is_quiet_hours`, `message_dispatcher_next_send_window`. |
+| **bypass_limits** | Flag no dispatch que indica que verificações de quota/cooldown devem ser puladas. Ativada automaticamente quando uma mensagem é reagendada por horário silencioso. | Campo `message_dispatches.bypass_limits`. |
 
 ## Siglas
 
@@ -38,6 +42,9 @@ Termos extraídos ou inferidos a partir de nomes de entidades, rotas e interface
 |-------|-------------|
 | **RLS** | Row Level Security — políticas de acesso por linha no Postgres (Supabase). |
 | **RPC** | Função exposta no Postgres chamada pelo cliente ou Edge Function. |
+| **FSM** | Finite State Machine — máquina de estados finita; usada no Message Dispatcher para gerenciar ciclo de vida dos dispatches. |
+| **FCM** | Firebase Cloud Messaging — serviço do Google para envio de notificações push. |
+| **BRT** | Horário de Brasília (America/Sao_Paulo); referência para janela de horário silencioso. |
 | **JWT** | Token de sessão Supabase (uso em funções com `verify_jwt` ou validação manual). |
 | **CEP** | Código de endereçamento postal — usado em fluxos de endereço. |
 | **IA / LLM** | Modelos OpenAI ou Google Gemini conforme configuração da função de descrição inteligente. |
