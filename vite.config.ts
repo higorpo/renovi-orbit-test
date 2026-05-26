@@ -42,6 +42,7 @@ export default defineConfig(({ mode }) => {
   test: {
     globals: false,
     pool: 'threads',
+    deps: { optimizer: { ssr: { enabled: true } } },
     coverage: {
       // Avoid coverage/.tmp under workspace paths with unicode (Vitest v8 merge ENOENT)
       tempDirectory: path.join(os.tmpdir(), 'orbit-vitest-coverage'),
