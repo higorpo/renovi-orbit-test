@@ -68,6 +68,12 @@ S --> T["Todas outras propostas\nPROPOSAL STATUS: REJECTED_AUTOMATICALLY"]
 T --> AZ["Service Request\nSTATUS: COMPLETED\n(orçamento aprovado)"]
 
 %% =====================================================
+%% SERVICE CREATION (POST-ACCEPTANCE)
+%% =====================================================
+
+AZ --> BA["Service criado (tabela services)\nSTATUS: PENDING_PAYMENT"]
+
+%% =====================================================
 %% REJECT PROPOSAL
 %% =====================================================
 
@@ -119,7 +125,7 @@ AC -->|Encerrar conversa| W
 
 AA -->|Menos de 2 revisões| AD["Cliente seleciona motivo"]
 
-AD --> AE["Motivos:\n- preço alto\n- reduzir escopo\n- data não funciona\n- alterar prazo\n- esclarecer detalhes]
+AD --> AE["Motivos:\n- preço alto\n- reduzir escopo\n- data não funciona\n- alterar prazo\n- esclarecer detalhes\n- outro"]
 
 AE --> AF["Prestador analisa solicitação"]
 
@@ -239,4 +245,12 @@ subgraph REQUEST_STATES ["SERVICE REQUEST STATES"]
 RS1["OPEN"]
 RS2["COMPLETED"]
 RS3["CANCELLED"]
+end
+
+%% =====================================================
+%% SERVICE STATES LEGEND
+%% =====================================================
+
+subgraph SERVICE_STATES ["SERVICE STATES (tabela services)"]
+SS1["PENDING_PAYMENT"]
 end
