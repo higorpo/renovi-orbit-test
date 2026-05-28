@@ -12,18 +12,16 @@ B --> C["Platform gera batch inicial de prestadores"]
 %% =====================================================
 
 C --> D["Prestador envia primeira mensagem"]
-D --> E["Chat criado\nCHAT STATUS: ACTIVE"]
-E --> F["Service Request\nSTATUS: IN_NEGOTIATION"]
+D --> E["Chat criado\nCHAT STATUS: ACTIVE\nService Request permanece OPEN"]
+E --> F["Descoberta do serviço\nEscopo + fotos + disponibilidade + dúvidas"]
 
 %% =====================================================
 %% DISCOVERY / NEGOTIATION PHASE
 %% =====================================================
 
-F --> G["Descoberta do serviço\nEscopo + fotos + disponibilidade + dúvidas"]
+F --> H{"Existe reciprocidade\nnas últimas 24h?"}
 
-G --> H{"Existe reciprocidade\nnas últimas 24h?"}
-
-H -->|Sim| G
+H -->|Sim| F
 
 H -->|Não| I["Chat vira INACTIVE\nSlot operacional liberado"]
 
@@ -35,7 +33,7 @@ I --> J{"Cliente ou prestador\nmanda nova mensagem?"}
 
 J -->|Sim| K["Chat reativado\nCHAT STATUS: ACTIVE"]
 
-K --> G
+K --> F
 
 J -->|Não| I
 
@@ -43,7 +41,7 @@ J -->|Não| I
 %% PROVIDER SENDS PROPOSAL
 %% =====================================================
 
-G --> L["Prestador envia proposta"]
+F --> L["Prestador envia proposta"]
 
 L --> M["PROPOSAL STATUS: PENDING\nContém:\n- preço\n- escopo\n- prazo\n- datas disponíveis\n- observações"]
 
@@ -61,13 +59,13 @@ N -->|Aceitar proposta| O["Cliente escolhe uma das datas sugeridas"]
 
 O --> P["PROPOSAL STATUS: ACCEPTED"]
 
-P --> Q["Service Request\nSTATUS: SCHEDULED"]
-
-Q --> R["Platform encerra automaticamente\noutros chats"]
+P --> R["Platform encerra automaticamente\noutros chats"]
 
 R --> S["Todos outros chats\nCHAT STATUS: CLOSED"]
 
 S --> T["Todas outras propostas\nPROPOSAL STATUS: REJECTED_AUTOMATICALLY"]
+
+T --> AZ["Service Request\nSTATUS: COMPLETED\n(orçamento aprovado)"]
 
 %% =====================================================
 %% REJECT PROPOSAL
@@ -77,7 +75,7 @@ N -->|Recusar proposta| U["PROPOSAL STATUS: REJECTED"]
 
 U --> V{"Cliente ou prestador\nquer continuar conversando?"}
 
-V -->|Sim| G
+V -->|Sim| F
 
 V -->|Não| W["CHAT STATUS: CLOSED"]
 
@@ -89,7 +87,7 @@ N -->|Não responde em 24h| X["PROPOSAL STATUS: EXPIRED"]
 
 X --> Y{"Chat ainda possui\natividade recente?"}
 
-Y -->|Sim| G
+Y -->|Sim| F
 
 Y -->|Não| I
 
@@ -157,7 +155,7 @@ AL -->|Encerrar conversa| W
 %% MANUAL CHAT CLOSURE
 %% =====================================================
 
-G --> AM{"Cliente ou prestador\nencerra conversa manualmente?"}
+F --> AM{"Cliente ou prestador\nencerra conversa manualmente?"}
 
 AM -->|Sim| AN["CHAT STATUS: CLOSED"]
 
@@ -185,7 +183,7 @@ I --> AP
 %% PROVIDER GHOSTING
 %% =====================================================
 
-G --> AS{"Prestador parou\nde responder?"}
+F --> AS{"Prestador parou\nde responder?"}
 
 AS -->|Mais de 24h| I
 
@@ -193,7 +191,7 @@ AS -->|Mais de 24h| I
 %% CLIENT GHOSTING
 %% =====================================================
 
-G --> AT{"Cliente parou\nde responder?"}
+F --> AT{"Cliente parou\nde responder?"}
 
 AT -->|Mais de 24h| I
 
@@ -208,14 +206,6 @@ AU -->|Sim| AV["Service Request\nSTATUS: CANCELLED"]
 AV --> AW["Todos chats\nSTATUS: CLOSED"]
 
 AW --> AX["Todas propostas\nSTATUS: REJECTED"]
-
-%% =====================================================
-%% COMPLETION FLOW
-%% =====================================================
-
-Q --> AY["Serviço executado"]
-
-AY --> AZ["Service Request\nSTATUS: COMPLETED"]
 
 %% =====================================================
 %% CHAT STATES LEGEND
@@ -247,8 +237,6 @@ end
 
 subgraph REQUEST_STATES ["SERVICE REQUEST STATES"]
 RS1["OPEN"]
-RS2["IN_NEGOTIATION"]
-RS3["SCHEDULED"]
-RS4["COMPLETED"]
-RS5["CANCELLED"]
+RS2["COMPLETED"]
+RS3["CANCELLED"]
 end
