@@ -4,12 +4,25 @@
 
 O **Sistema de Negociação Conversacional Cliente ↔ Prestador** (doravante *Chat & Negotiation System*, CNS) é o subsistema transacional da plataforma **Orbit** (Renovi) responsável por orquestrar comunicação bilateral, descoberta de escopo, envio estruturado de propostas, revisões limitadas, aceite atômico e encerramento coordenado de negociações concorrentes — tudo ancorado a um **Service Request** (`service_request`) em estado `OPEN`.
 
-O CNS resolve o problema operacional de marketplaces de serviços onde múltiplos prestadores competem simultaneamente pela preferência do cliente, sem degradar a experiência do cliente (sobrecarga cognitiva, spam, perda de contexto) nem a eficiência do marketplace (slots de visibilidade, batches de dispatch, cotas de engajamento). O fluxo canônico de negócio está especificado em [`platform-flow.mmd`](../platform-flow.mmd) e constitui a referência normativa para transições entre **Service Request**, **Chat**, **Proposal** e **Service** pós-aceite.
+O CNS resolve o problema operacional de marketplaces de serviços onde múltiplos prestadores competem simultaneamente pela preferência do cliente, sem degradar a experiência do cliente (sobrecarga cognitiva, spam, perda de contexto) nem a eficiência do marketplace (slots de chats ativos por pedido, cotas de engajamento). O fluxo canônico de negócio está especificado em [`platform-flow.mmd`](../platform-flow.mmd) e constitui a referência normativa para transições entre **Service Request**, **Chat**, **Proposal** e **Service** pós-aceite.
+
+### Escopo e fronteira do subsistema
+
+O CNS cobre o ciclo **a partir do momento em que o prestador já possui acesso ao Service Request do cliente** — tipicamente ao abrir o detalhe do pedido e enviar a **primeira mensagem** — até o aceite/recusa/encerramento da negociação e efeitos colaterais no SR.
+
+| Dentro do escopo CNS | Fora do escopo CNS (pré-condição ou outro subsistema) |
+|----------------------|--------------------------------------------------------|
+| Chat, mensagens, propostas, revisões, aceite, slots `ACTIVE`, reciprocidade, notificações de negociação | Criação do SR pelo cliente, elegibilidade geográfica, ranking, batches progressivos, notificação de “novo job” ao prestador |
+| Prestador **já vinculado** ao SR (visibilidade concedida por qualquer mecanismo atual ou futuro) | **Matching progressivo** (`DISPATCH_*`) — **não implementado** no repositório; especificado em [`matching-algorithm/requirements.md`](../matching-algorithm/requirements.md) |
+
+**O CNS MUST NOT ser bloqueado pela ausência do matching progressivo.** A implementação desta feature MUST funcionar com os mecanismos já existentes de visibilidade do pedido ao prestador (ex.: feed de trabalhos, orçamentos, convite direto). Integrações com `DISPATCH_*` são **opcionais e futuras**: o CNS MAY emitir eventos de domínio (ex.: `SLOT_RELEASED`) para consumo posterior pelo matching, mas MUST NOT exigir estado `DISPATCH_PAUSED` / retomada de batch para cumprir seus invariantes.
+
+O diagrama [`platform-flow.mmd`](../platform-flow.mmd) inclui nós de dispatch (`AP`, `AQ`, `AR`) por completude do fluxo de marketplace; eles representam comportamento **planejado** do subsistema de matching, não requisitos de entrega do CNS na fase atual.
 
 ### Objetivos de negócio
 
 - Permitir **negociação pré-proposta** (perguntas, fotos, alinhamento de disponibilidade) antes do envio formal de orçamento.
-- Limitar **pressão operacional** sobre o cliente via slots de chats `ACTIVE` por pedido e pausa de dispatch quando a capacidade de negociação simultânea é atingida.
+- Limitar **pressão operacional** sobre o cliente via slots de chats `ACTIVE` por pedido (configurável em `platform_constants`, default 4).
 - Garantir **fechamento determinístico** do pedido quando uma proposta é aceita: encerramento automático de chats concorrentes, rejeição automática de propostas pendentes e criação do registro de **Service** em `PENDING_PAYMENT`.
 - Preservar **auditabilidade** e rastreabilidade histórica de mensagens, propostas versionadas e motivos de encerramento.
 - Integrar comunicação transacional ao **Multichannel Message Dispatcher (MMD)** para push/e-mail sem fragmentar políticas de rate limit.
@@ -23,14 +36,15 @@ O CNS resolve o problema operacional de marketplaces de serviços onde múltiplo
 
 ### Como o sistema opera
 
-1. Cliente cria **Service Request** (`OPEN`); plataforma executa elegibilidade, ranking e **batch inicial** de prestadores ([`matching-algorithm/requirements.md`](../matching-algorithm/requirements.md)).
-2. Prestador envia **primeira mensagem** → **Chat** criado em `ACTIVE`; SR permanece `OPEN`.
+**Pré-condição (fora do CNS):** existe `service_request` em `OPEN` e o prestador já recebeu visibilidade do pedido (mecanismo de exposição atual da plataforma — não exige matching progressivo).
+
+1. Prestador envia **primeira mensagem** no contexto desse SR → **Chat** criado em `ACTIVE`; SR permanece `OPEN`.
 3. Fase de **descoberta/negociação**: mensagens texto/imagem/sistema; reciprocidade bilateral monitorada em janela de **24 horas**.
 4. Ausência de reciprocidade por **> 24h** → Chat `INACTIVE` (slot liberado); nova mensagem de qualquer parte → `ACTIVE` (reativação **não** exige slot livre).
 5. Prestador envia **proposta** → `PENDING` (preço, escopo, prazo, 1–3 datas sugeridas, observações, fotos opcionais).
 6. Cliente decide: **aceitar** (data obrigatória), **recusar**, **solicitar revisão** (máx. 2 por negociação), ou **inércia 24h** → `EXPIRED`.
 7. **Aceite** → transação atômica: proposta `ACCEPTED`, SR `COMPLETED`, demais chats `CLOSED`, demais propostas `REJECTED_AUTOMATICALLY`, **Service** `PENDING_PAYMENT`.
-8. **Encerramento manual** de chat → `CLOSED` (irreversível), slot liberado, dispatch pode abrir novo batch se elegível.
+8. **Encerramento manual** de chat → `CLOSED` (irreversível), slot operacional liberado; outro prestador com visibilidade ao SR MAY iniciar nova conversa se houver slot disponível (sem depender de matching progressivo).
 
 ### Prioridades operacionais
 
@@ -49,7 +63,7 @@ O CNS resolve o problema operacional de marketplaces de serviços onde múltiplo
 |---------|-----------|-------|
 | Estado no Postgres vs. Edge | Consistência sob concorrência | Mais RPCs e migrações |
 | Timeline com mensagens dinâmicas referenciando entidades | Histórico único, UI evolutiva | Hidratação e sincronização Realtime |
-| Reativação sem exigir slot | Retomada de negociação inativa | Pode exceder visualmente o teto configurado até janitor — slot só para **novos** prestadores via dispatch |
+| Reativação sem exigir slot | Retomada de negociação inativa | Pode exceder visualmente o teto configurado até janitor — slot só para **novo** par prestador+SR (primeira mensagem), não para reativação |
 | MMD assíncrono para notificações | Escala e rate limit transacional | Entrega at-least-once; UI não depende de push |
 
 ### Problemas de escalabilidade endereçados
@@ -72,12 +86,14 @@ O CNS resolve o problema operacional de marketplaces de serviços onde múltiplo
 - **Serviços externos:** Supabase Storage (imagens), FCM (push web/nativo), Resend (e-mail), OpenAI (fora do escopo CNS exceto se mensagens automáticas futuras).
 - **Scheduling:** `pg_cron` para avaliação periódica de reciprocidade (24h), expiração de proposta (24h SLA cliente), janitor de leases.
 - **Observabilidade:** Sentry no frontend; logs estruturados (`logger`) em Edge; tabelas de auditoria append-only para transições críticas.
-- **Geoespacial:** Dispatch e elegibilidade de prestadores via H3/PostGIS no matching — CNS consome resultado, não recalcula geo.
+- **Geoespacial:** Elegibilidade geo do prestador ao SR é resolvida **antes** do CNS (matching futuro ou mecanismos atuais); o CNS não recalcula H3/PostGIS.
 - **Transacional:** Isolamento Read Committed; transições de estado + audit na mesma transação RPC.
 - **Retry:** Mensagens falhadas no cliente com retry manual/ automático limitado; workers com backoff exponencial; MMD at-least-once com `idempotency_key`.
 - **Persistência:** WAL/ACID Postgres; anexos em Storage; rascunhos locais apenas para composição de proposta (debounce), não para estado de workflow.
 - **Edge stateless / DB stateful:** Toda máquina de estados e slot counter no Postgres.
-- **Dependências:** Matching progressivo (`DISPATCH_*`), MMD, feature `provider-jobs` (`ProviderProposalComposerDialog` a extrair para feature isolada), auth/RLS existentes.
+- **Dependências obrigatórias (implementação CNS):** Supabase Auth, RLS existente, Service Request `OPEN`/`COMPLETED`/`CANCELLED`, **MMD** (notificações), feature `provider-jobs` (`ProviderProposalComposerDialog` a extrair para feature isolada de proposta).
+- **Dependências opcionais / futuras:** **Matching progressivo** (`DISPATCH_*`) — **ainda não implementado**; não bloqueia entrega do CNS. Quando existir, MAY consumir eventos do CNS (ex.: slot liberado, proposta aceita) e compartilhar `platform_constants` (`chats.max_active_slots_per_service_request`). Ver Requirement 24.
+- **Pré-condição de negócio:** prestador já possui visibilidade do SR (qualquer fluxo de produto que leve o prestador ao detalhe do pedido); o CNS inicia na primeira mensagem, não na geração de batches.
 
 ### Constantes operacionais (normativas até override em `platform_constants`)
 
@@ -94,19 +110,18 @@ O CNS resolve o problema operacional de marketplaces de serviços onde múltiplo
 
 ## Operational Phases
 
-1. **Service Request Exposure Phase** — SR `OPEN`; dispatch em batches; elegibilidade e ranking de prestadores.
-2. **Chat Initiation Phase** — primeira mensagem do prestador; criação idempotente de Chat `ACTIVE`; consumo de slot se aplicável.
-3. **Discovery & Negotiation Phase** — mensagens bilaterais; reciprocidade; anexos; mensagens de sistema e dinâmicas.
-4. **Reciprocity Evaluation Phase** — job periódico verifica troca bilateral na janela 24h; transição para `INACTIVE` ou manutenção `ACTIVE`.
-5. **Proposal Composition Phase** — prestador estrutura proposta (modal/tela dedicada); validação Zod + RPC.
-6. **Proposal Pending Phase** — `PENDING`; SLA 24h; countdown UI; notificações MMD.
-7. **Client Decision Phase** — aceitar / recusar / revisão / inércia.
-8. **Revision Orchestration Phase** — `REVISION_REQUESTED`; limite de revisões; resposta do prestador; versionamento.
-9. **Acceptance Cascade Phase** — transação atômica de aceite, fechamento concorrente, SR `COMPLETED`, Service `PENDING_PAYMENT`.
-10. **Closure & Slot Reclamation Phase** — manual `CLOSED`, automático pós-aceite, cancelamento SR; liberação de slot e retomada de dispatch.
-11. **Notification Dispatch Phase** — ingestão MMD com `idempotency_key`; rate limits transacionais.
-12. **Realtime Delivery Phase** — publicação Realtime; reconciliação por cursor no cliente.
-13. **Recovery & Janitor Phase** — leases expirados, mensagens órfãs, reprocessamento seguro.
+1. **Chat Initiation Phase** — prestador com visibilidade ao SR envia primeira mensagem; criação idempotente de Chat `ACTIVE`; consumo de slot se aplicável.
+2. **Discovery & Negotiation Phase** — mensagens bilaterais; reciprocidade; anexos; mensagens de sistema e dinâmicas.
+3. **Reciprocity Evaluation Phase** — job periódico verifica troca bilateral na janela 24h; transição para `INACTIVE` ou manutenção `ACTIVE`.
+4. **Proposal Composition Phase** — prestador estrutura proposta (modal/tela dedicada); validação Zod + RPC.
+5. **Proposal Pending Phase** — `PENDING`; SLA 24h; countdown UI; notificações MMD.
+6. **Client Decision Phase** — aceitar / recusar / revisão / inércia.
+7. **Revision Orchestration Phase** — `REVISION_REQUESTED`; limite de revisões; resposta do prestador; versionamento.
+8. **Acceptance Cascade Phase** — transação atômica de aceite, fechamento concorrente, SR `COMPLETED`, Service `PENDING_PAYMENT`.
+9. **Closure & Slot Reclamation Phase** — manual `CLOSED`, automático pós-aceite, cancelamento SR; liberação de slot operacional; MAY emitir evento para integração futura com matching.
+10. **Notification Dispatch Phase** — ingestão MMD com `idempotency_key`; rate limits transacionais.
+11. **Realtime Delivery Phase** — publicação Realtime; reconciliação por cursor no cliente.
+12. **Recovery & Janitor Phase** — leases expirados, mensagens órfãs, reprocessamento seguro.
 
 ---
 
@@ -138,9 +153,9 @@ O CNS resolve o problema operacional de marketplaces de serviços onde múltiplo
 
 * `PENDING_PAYMENT` (estado inicial documentado em `platform-flow.mmd`)
 
-### Dispatch (integração matching — somente leitura pelo CNS)
+### Dispatch (subsistema de matching progressivo — **fora do escopo de implementação CNS**)
 
-* `DISPATCH_ACTIVE`, `DISPATCH_PAUSED`, `DISPATCH_STOPPED`, `DISPATCH_FALLBACK_OPEN_MARKET`, `DISPATCH_EXPIRED` (ver matching)
+Estados planejados em [`matching-algorithm/requirements.md`](../matching-algorithm/requirements.md), **não implementados** no repositório: `DISPATCH_ACTIVE`, `DISPATCH_PAUSED`, `DISPATCH_STOPPED`, `DISPATCH_FALLBACK_OPEN_MARKET`, `DISPATCH_EXPIRED`. O CNS não transiciona nem persiste esses estados; MAY publicar eventos consumíveis pelo matching quando este existir (Requirement 24).
 
 ### State Definitions
 
@@ -184,7 +199,7 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 - **Idempotency:** Criação de chat, envio de mensagem, aceite e ingestão de notificação MUST aceitar `idempotency_key` (UUID) com constraint `UNIQUE`; requisição duplicada MUST retornar o mesmo resultado sem duplicar efeitos.
 - **Retry Mechanisms:** Upload de mídia e envio de mensagem MAY retentar no cliente com a mesma `idempotency_key`; workers de expiração MUST ser seguros sob at-least-once (transição condicional `WHERE status = expected`).
 - **Scheduling:** Reciprocidade e expiração de proposta MUST ser avaliadas por `pg_cron` (intervalo recomendado: 5–15 min) com RPC idempotente por chat/proposta.
-- **Resumable Execution:** Jobs de dispatch após liberação de slot MUST retomar do estado persistido em `dispatch` (matching); CNS MUST NOT depender de memória de sessão.
+- **Resumable Execution:** Jobs internos do CNS (reciprocidade, expiração) MUST ser retomáveis via estado no Postgres; CNS MUST NOT depender de memória de sessão nem do subsistema de matching progressivo para completar transições de chat/proposta.
 - **Restart Safety:** Crash após commit DB MUST NOT exigir compensação no cliente; crash antes do commit MUST permitir retry idempotente.
 - **Fault Tolerance:** Falha de push/e-mail MUST NOT reverter transição de aceite já commitada (desacoplamento I/O — concurrency G5).
 - **Isolation:** RLS MUST garantir que usuário A não leia mensagens/propostas do chat de usuário B; RPCs `SECURITY DEFINER` MUST revalidar `auth.uid()` e papel (`client` | `provider`).
@@ -206,11 +221,11 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 ### Acceptance Criteria
 
-- **GIVEN** um Service Request em status `OPEN` e dispatch elegível
-- **WHEN** um prestador visível envia a primeira mensagem textual ou com mídia
+- **GIVEN** um Service Request em status `OPEN` e um prestador que já possui visibilidade autorizada ao pedido (pré-condição; não exige matching progressivo)
+- **WHEN** o prestador envia a primeira mensagem textual ou com mídia
 - **THEN** o sistema MUST criar exatamente um Chat vinculado ao par `(service_request_id, provider_id)`, definir `chat.status = ACTIVE`, registrar `activated_at`, e manter `service_request.status = OPEN`.
 
-- **GIVEN** múltiplos prestadores em batches distintos do mesmo SR
+- **GIVEN** múltiplos prestadores com visibilidade ao mesmo SR
 - **WHEN** cada um envia primeira mensagem em momentos diferentes
 - **THEN** o sistema MUST permitir chats paralelos independentes, respeitando o limite de slots `ACTIVE` (Requirement 4).
 
@@ -259,8 +274,8 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 - **THEN** exatamente uma MUST vencer; a outra MUST falhar com `409` sem estado parcial.
 
 - **GIVEN** SR cancelado ou completado
-- **WHEN** dispatch é avaliado
-- **THEN** estado de dispatch MUST ser `DISPATCH_STOPPED` ou equivalente (integração matching Req. 5.15).
+- **WHEN** subsistema de matching progressivo existir e estiver integrado
+- **THEN** MAY publicar evento ou sinalizar `DISPATCH_STOPPED` (Requirement 24); na ausência de matching, CNS MUST encerrar chats/propostas apenas via suas próprias transações.
 
 - **GIVEN** necessidade operacional de métricas
 - **WHEN** SR transiciona
@@ -336,7 +351,7 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 - **GIVEN** chat transiciona `ACTIVE` → `INACTIVE` por falta de reciprocidade
 - **WHEN** job de reciprocidade commita
-- **THEN** slot MUST ser decrementado atomicamente e dispatch MAY avaliar abertura de novo batch (`platform-flow.mmd` `I` → `AP`).
+- **THEN** slot MUST ser decrementado atomicamente; CNS MAY registrar evento `SLOT_RELEASED` para consumo futuro pelo matching (`platform-flow.mmd` `I` → `AP` é comportamento do matching, não requisito do CNS).
 
 - **GIVEN** reciprocidade definida como troca bilateral
 - **WHEN** na janela `RECIPROCITY_WINDOW_HOURS` (24h) existir ao menos uma mensagem do cliente e uma do prestador (ordem irrelevante)
@@ -351,8 +366,8 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 - **THEN** MUST aparecer com indicação visual reduzida (Requirement 20, checklist 34–35).
 
 - **GIVEN** número de chats `ACTIVE` no SR &gt;= `chats.max_active_slots_per_service_request` (lido de `platform_constants`, default 4)
-- **WHEN** novo batch está para abrir
-- **THEN** dispatch MUST ir para `DISPATCH_PAUSED` — integração obrigatória com matching; ambos os subsistemas MUST usar a **mesma chave** (Requirement 33).
+- **WHEN** outro prestador **sem chat existente** tenta enviar primeira mensagem
+- **THEN** RPC MUST rejeitar até slot disponível (invariante CNS); quando matching progressivo existir, o mesmo limite SHOULD ser lido da mesma chave para pausar batches (Requirement 24, 33).
 
 - **GIVEN** duplicata `(service_request_id, provider_id)`
 - **WHEN** prestador tenta criar segundo chat
@@ -602,9 +617,9 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 - **WHEN** slot era consumido (`ACTIVE` anterior)
 - **THEN** slot MUST ser liberado na mesma transação (`AN` → `AO`).
 
-- **GIVEN** slot liberado e dispatch elegível
-- **WHEN** condições de matching satisfeitas
-- **THEN** plataforma MAY executar próximo batch (`AP`–`AR`).
+- **GIVEN** slot liberado após `INACTIVE` ou encerramento manual
+- **WHEN** outro prestador com visibilidade ao SR tenta primeira mensagem
+- **THEN** CNS MUST permitir nova conversa se contagem `ACTIVE` &lt; limite configurado; retomada de batch de matching é opcional/futura (Requirement 24).
 
 - **GIVEN** encerramento
 - **WHEN** UI lista conversas
@@ -1000,23 +1015,43 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 ---
 
-## Requirement 24: Integration with Dispatch & Matching
+## Requirement 24: Future Integration with Progressive Matching (`DISPATCH_*`) — Non-Blocking
 
-*User Story*: Como sistema de dispatch, eu quero pausar e retomar batches conforme slots e propostas, para não sobrecarregar clientes.
+*User Story*: Como arquiteto, eu quero pontos de extensão claros para o matching progressivo quando for implementado, sem tornar o CNS dependente dele hoje.
+
+### Status
+
+O **matching progressivo** descrito em [`matching-algorithm/requirements.md`](../matching-algorithm/requirements.md) **não está implementado** no repositório. **Este requirement é opcional** e MUST NOT bloquear entrega, testes ou aceite do CNS. A feature de chat/negociação opera sobre a pré-condição: *prestador já tem o Service Request*.
 
 ### Acceptance Criteria
 
-- **GIVEN** liberação de slot (inatividade ou fechamento manual)
-- **WHEN** contagem de ativos &lt; `chats.max_active_slots_per_service_request` e dispatch `DISPATCH_PAUSED` por slot
-- **THEN** sistema SHOULD avaliar retomada de batches conforme matching Req. 5.
+- **GIVEN** CNS em produção sem subsistema `DISPATCH_*`
+- **WHEN** prestador com visibilidade ao SR envia primeira mensagem
+- **THEN** todos os Requirements 1–23 e 25–33 MUST ser satisfeitos sem referência a estado de dispatch.
 
-- **GIVEN** &gt;= 4 propostas pendentes não rejeitadas OU proposta aceita
-- **WHEN** avaliado
-- **THEN** dispatch → `DISPATCH_STOPPED` (matching Req. 5.15).
+- **GIVEN** liberação de slot operacional (chat `INACTIVE` ou `CLOSED` manual)
+- **WHEN** transação CNS commita
+- **THEN** CNS SHOULD append evento `SLOT_RELEASED` em `domain_events` (Requirement 28) com `service_request_id` e contagem atual de `ACTIVE`; matching futuro MAY consumir — CNS MUST NOT invocar RPC de batch.
 
-- **GIVEN** prestador já tem chat ou proposta no SR
-- **WHEN** feed é montado
-- **THEN** SR MAY ser ocultado ou despriorizado (matching Req. 5.8).
+- **GIVEN** aceite de proposta ou cancelamento de SR
+- **WHEN** transação commita
+- **THEN** CNS MAY emitir `NEGOTIATION_TERMINATED` / equivalente para matching futuro parar exposição; encerramento de chats/propostas MUST permanecer responsabilidade exclusiva do RPC CNS.
+
+- **GIVEN** matching progressivo implementado posteriormente
+- **WHEN** avalia pausa de batches por capacidade de chat
+- **THEN** MUST ler `chats.max_active_slots_per_service_request` de `platform_constants` (mesma chave que Requirement 33), alinhado a matching Req. 5.14 (valor default 4, não 10).
+
+- **GIVEN** matching progressivo implementado
+- **WHEN** &gt;= 4 propostas pendentes não rejeitadas OU proposta aceita
+- **THEN** matching MAY transicionar para `DISPATCH_STOPPED` (matching Req. 5.15); CNS já MUST ter encerrado chats concorrentes no aceite (Requirement 7) independentemente.
+
+- **GIVEN** matching progressivo implementado
+- **WHEN** feed do prestador é montado
+- **THEN** ocultar/despriorizar SR com chat ou proposta existente MAY ser feito no matching (Req. 5.8), não no CNS.
+
+- **GIVEN** [`platform-flow.mmd`](../platform-flow.mmd) nós `AP`–`AR`
+- **WHEN** documentação de produto é lida
+- **THEN** MUST entender-se como fluxo **futuro** de exposição de prestadores, não como passo obrigatório do backlog atual do CNS.
 
 ---
 
@@ -1143,8 +1178,8 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 - **THEN** negócio transacional MUST permanecer válido — analytics é best-effort (SHOULD).
 
 - **GIVEN** evento `SLOT_RELEASED`
-- **WHEN** consumido pelo subsistema de matching
-- **THEN** MAY disparar avaliação de `DISPATCH_PAUSED` → retomada sem bloquear RPC de chat.
+- **WHEN** subsistema de matching progressivo existir e consumir o evento
+- **THEN** MAY disparar avaliação de `DISPATCH_PAUSED` → retomada de batches; na ausência de matching, o evento MAY ser ignorado sem impacto no CNS.
 
 - **GIVEN** ordenação de eventos por `conversation_id`
 - **WHEN** múltiplos eventos enfileirados
@@ -1168,19 +1203,19 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 - **GIVEN** prestador com chat `CLOSED` manual
 - **WHEN** tenta enviar mensagem
-- **THEN** MUST falhar; nova negociação só via novo ciclo de dispatch/batch se política permitir novo par (produto: geralmente não — chat fechado é terminal).
+- **THEN** MUST falhar; chat `CLOSED` manual é terminal (produto: geralmente sem reabertura do mesmo par prestador+SR).
 
-- **GIVEN** slot liberado após `INACTIVE` (`platform-flow.mmd` `I` → `AP`)
-- **WHEN** dispatch abre novo batch
-- **THEN** prestador ainda não exposto MAY receber visibilidade e iniciar chat via nó `AR` → `D`.
+- **GIVEN** slot liberado após `INACTIVE` e outro prestador com visibilidade ao SR
+- **WHEN** envia primeira mensagem e há slot disponível
+- **THEN** CNS MUST criar/reativar conversa conforme Requirement 4; exposição adicional via matching (`AP`–`AR`) é futura e opcional.
 
-- **GIVEN** prestador já exposto com proposta `REJECTED`
-- **WHEN** acessa feed
-- **THEN** SR MAY permanecer visível para nova proposta conforme matching Req. 5.8.
+- **GIVEN** prestador com chat existente ou proposta `REJECTED`
+- **WHEN** continua negociação no mesmo chat
+- **THEN** CNS MUST aplicar regras de mensagem/proposta; despriorização no feed é responsabilidade do módulo de listagem de jobs, não do CNS.
 
-- **GIVEN** SR em marketplace fallback
-- **WHEN** prestador elegível inicia chat
-- **THEN** mesmas regras de slot e reciprocidade MUST aplicar.
+- **GIVEN** qualquer mecanismo de visibilidade ao SR (feed atual ou marketplace fallback futuro)
+- **WHEN** prestador inicia primeira mensagem
+- **THEN** mesmas regras de slot e reciprocidade MUST aplicar, independentemente de como a visibilidade foi concedida.
 
 - **GIVEN** tentativa de criar chat duplicado
 - **WHEN** `UNIQUE(service_request_id, provider_id)` violado
@@ -1298,9 +1333,9 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 - **WHEN** avalia elegibilidade de novo prestador
 - **THEN** MUST ler o limite via `SELECT (value #>> '{}')::int FROM platform_constants WHERE key = 'chats.max_active_slots_per_service_request'` (ou helper SQL compartilhado `platform_constant_int(p_key)`) **dentro da transação**, não via constante hardcoded no PL/pgSQL.
 
-- **GIVEN** RPC de dispatch/matching que pausa batches por capacidade de chat
-- **WHEN** compara contagem de chats `ACTIVE`
-- **THEN** MUST usar a **mesma chave** `chats.max_active_slots_per_service_request` — MUST NOT duplicar limite em segundo parâmetro divergente.
+- **GIVEN** subsistema de matching progressivo implementado no futuro
+- **WHEN** pausa batches por capacidade de chat
+- **THEN** MUST usar a **mesma chave** `chats.max_active_slots_per_service_request` — MUST NOT duplicar limite em segundo parâmetro divergente (integração opcional; ver Requirement 24).
 
 - **GIVEN** operador atualiza `platform_constants.value` para `6` (via painel admin futuro ou SQL autorizado)
 - **WHEN** próxima transação de criação de chat executa **sem redeploy**
@@ -1318,9 +1353,9 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 - **WHEN** executados
 - **THEN** MUST existir cenário com seed `4`, cenário com override temporário para `2`, e assertiva de que a 3ª criação de chat `ACTIVE` falha.
 
-- **GIVEN** documentação de matching ([`matching-algorithm/requirements.md`](../matching-algorithm/requirements.md) Req. 5.14)
-- **WHEN** implementação convergir
-- **THEN** referência ao número fixo **10** MUST ser substituída por leitura de `chats.max_active_slots_per_service_request` (default 4) para evitar divergência entre subsistemas.
+- **GIVEN** documentação de matching ([`matching-algorithm/requirements.md`](../matching-algorithm/requirements.md) Req. 5.14) ainda referenciando limite fixo **10**
+- **WHEN** matching progressivo for implementado
+- **THEN** SHOULD ler `chats.max_active_slots_per_service_request` (default 4); até lá, apenas o CNS aplica o limite de slots.
 
 - **GIVEN** checklist §4 item 51 (“limitar quantidade de chats ACTIVE”)
 - **WHEN** produto altera política
@@ -1337,7 +1372,7 @@ insert into public.platform_constants (key, value, description)
 values (
   'chats.max_active_slots_per_service_request',
   '4'::jsonb,
-  'Maximum concurrent ACTIVE chats per service request; pauses dispatch when reached'
+  'Maximum concurrent ACTIVE chats per service request; optional hook for future dispatch pause'
 )
 on conflict (key) do update set
   value = excluded.value,
@@ -1352,7 +1387,7 @@ on conflict (key) do update set
 | Checklist § | Requirement(s) |
 |-------------|----------------|
 | §1 Estrutura geral 1–10 | 1, 2, 4, 11 |
-| §2 Service Request 11–20 | 2, 7, 23, 24 |
+| §2 Service Request 11–20 | 2, 7, 23 |
 | §3 Chat 21–50 | 3, 4, 11, 13, 18 |
 | §4 Limites 51–60 | 4, 14, 33 |
 | §5 Descoberta 61–70 | 5 |
@@ -1369,6 +1404,7 @@ on conflict (key) do update set
 | platform-flow.mmd | 1–11, 23–32 (transições e jobs) |
 | Tipos NFR (scheduling, recovery, events, fallback, leasing) | 25–32 |
 | Limites dinâmicos (`platform_constants`) | 33 |
+| Matching progressivo (`DISPATCH_*`, não implementado) | 24 (opcional, não bloqueante) |
 
 ---
 
@@ -1434,7 +1470,7 @@ Orquestração visual de próxima ação: **hook** `useChatActionBannerState` de
 | [`scalability-requirements.md`](../scalability-requirements.md) | NFR escala |
 | [`concurrency-requirements.md`](../concurrency-requirements.md) | NFR concorrência |
 | [`infrastructure-constraints.md`](../infrastructure-constraints.md) | RPC vs Edge |
-| [`matching-algorithm/requirements.md`](../matching-algorithm/requirements.md) | Dispatch e pausa por slots (alinhado via `platform_constants`) |
+| [`matching-algorithm/requirements.md`](../matching-algorithm/requirements.md) | Integração **futura** opcional (`DISPATCH_*`, não implementado); Req. 24 |
 | [`message-dispatcher/requirements.md`](../message-dispatcher/requirements.md) | Notificações |
 
 **Última atualização:** 2026-05-28 — compilado a partir dos checklists, design specs, platform-flow e restrições transversais do repositório.
