@@ -69,4 +69,4 @@ Coisas para terminar do fluxo atual de trabalho:
 
 Coisas para fazer next
 
--comando ci para rodar todos os testes e verificar cobertura de teste
+-verificar se devo manter colunas de status como text ou transformar em enum

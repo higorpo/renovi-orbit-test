@@ -1,0 +1,254 @@
+flowchart TD
+
+%% =====================================================
+%% SERVICE REQUEST CREATION
+%% =====================================================
+
+A["Cliente cria Service Request\nSTATUS: OPEN"] --> B["Platform executa eligibility + ranking"]
+B --> C["Platform gera batch inicial de prestadores"]
+
+%% =====================================================
+%% PROVIDER INITIATES CHAT
+%% =====================================================
+
+C --> D["Prestador envia primeira mensagem"]
+D --> E["Chat criado\nCHAT STATUS: ACTIVE"]
+E --> F["Service Request\nSTATUS: IN_NEGOTIATION"]
+
+%% =====================================================
+%% DISCOVERY / NEGOTIATION PHASE
+%% =====================================================
+
+F --> G["Descoberta do serviço\nEscopo + fotos + disponibilidade + dúvidas"]
+
+G --> H{"Existe reciprocidade\nnas últimas 24h?"}
+
+H -->|Sim| G
+
+H -->|Não| I["Chat vira INACTIVE\nSlot operacional liberado"]
+
+%% =====================================================
+%% CHAT REACTIVATION
+%% =====================================================
+
+I --> J{"Cliente ou prestador\nmanda nova mensagem?"}
+
+J -->|Sim| K["Chat reativado\nCHAT STATUS: ACTIVE"]
+
+K --> G
+
+J -->|Não| I
+
+%% =====================================================
+%% PROVIDER SENDS PROPOSAL
+%% =====================================================
+
+G --> L["Prestador envia proposta"]
+
+L --> M["PROPOSAL STATUS: PENDING\nContém:\n- preço\n- escopo\n- prazo\n- datas disponíveis\n- observações"]
+
+%% =====================================================
+%% CLIENT DECISION
+%% =====================================================
+
+M --> N{"Cliente decide"}
+
+%% =====================================================
+%% ACCEPT PROPOSAL
+%% =====================================================
+
+N -->|Aceitar proposta| O["Cliente escolhe uma das datas sugeridas"]
+
+O --> P["PROPOSAL STATUS: ACCEPTED"]
+
+P --> Q["Service Request\nSTATUS: SCHEDULED"]
+
+Q --> R["Platform encerra automaticamente\noutros chats"]
+
+R --> S["Todos outros chats\nCHAT STATUS: CLOSED"]
+
+S --> T["Todas outras propostas\nPROPOSAL STATUS: REJECTED_AUTOMATICALLY"]
+
+%% =====================================================
+%% REJECT PROPOSAL
+%% =====================================================
+
+N -->|Recusar proposta| U["PROPOSAL STATUS: REJECTED"]
+
+U --> V{"Cliente ou prestador\nquer continuar conversando?"}
+
+V -->|Sim| G
+
+V -->|Não| W["CHAT STATUS: CLOSED"]
+
+%% =====================================================
+%% PROPOSAL EXPIRES
+%% =====================================================
+
+N -->|Não responde em 24h| X["PROPOSAL STATUS: EXPIRED"]
+
+X --> Y{"Chat ainda possui\natividade recente?"}
+
+Y -->|Sim| G
+
+Y -->|Não| I
+
+%% =====================================================
+%% REVISION REQUEST FLOW
+%% =====================================================
+
+N -->|Solicitar revisão| Z["PROPOSAL STATUS:\nREVISION_REQUESTED"]
+
+Z --> AA{"Quantidade de revisões\njá realizadas?"}
+
+%% =====================================================
+%% REVISION LIMIT REACHED
+%% =====================================================
+
+AA -->|2 revisões já feitas| AB["Cliente NÃO pode mais\npedir revisão"]
+
+AB --> AC{"Cliente decide"}
+
+AC -->|Aceitar| O
+
+AC -->|Recusar| U
+
+AC -->|Encerrar conversa| W
+
+%% =====================================================
+%% REVISION ALLOWED
+%% =====================================================
+
+AA -->|Menos de 2 revisões| AD["Cliente seleciona motivo"]
+
+AD --> AE["Motivos:\n- preço alto\n- reduzir escopo\n- data não funciona\n- alterar prazo\n- esclarecer detalhes\n- outro"]
+
+AE --> AF["Prestador analisa solicitação"]
+
+AF --> AG{"Prestador decide"}
+
+%% =====================================================
+%% PROVIDER ACCEPTS REVISION
+%% =====================================================
+
+AG -->|Aceita revisão| AH["Prestador envia nova proposta"]
+
+AH --> AI["Proposta anterior\nSTATUS: REVISED"]
+
+AI --> AJ["Nova proposta\nSTATUS: PENDING"]
+
+AJ --> AK["Revision Count +1"]
+
+AK --> N
+
+%% =====================================================
+%% PROVIDER REFUSES REVISION
+%% =====================================================
+
+AG -->|Recusa revisão| AL{"Cliente decide"}
+
+AL -->|Aceitar proposta atual| O
+
+AL -->|Recusar| U
+
+AL -->|Encerrar conversa| W
+
+%% =====================================================
+%% MANUAL CHAT CLOSURE
+%% =====================================================
+
+G --> AM{"Cliente ou prestador\nencerra conversa manualmente?"}
+
+AM -->|Sim| AN["CHAT STATUS: CLOSED"]
+
+AN --> AO["Slot operacional liberado"]
+
+%% =====================================================
+%% NEW PROVIDERS ENTER
+%% =====================================================
+
+AO --> AP["Platform identifica slot livre"]
+
+AP --> AQ["Platform executa próximo batch"]
+
+AQ --> AR["Novo prestador\npode iniciar conversa"]
+
+AR --> D
+
+%% =====================================================
+%% CHAT INACTIVE ALSO RELEASES SLOT
+%% =====================================================
+
+I --> AP
+
+%% =====================================================
+%% PROVIDER GHOSTING
+%% =====================================================
+
+G --> AS{"Prestador parou\nde responder?"}
+
+AS -->|Mais de 24h| I
+
+%% =====================================================
+%% CLIENT GHOSTING
+%% =====================================================
+
+G --> AT{"Cliente parou\nde responder?"}
+
+AT -->|Mais de 24h| I
+
+%% =====================================================
+%% REQUEST CANCELLATION
+%% =====================================================
+
+F --> AU{"Cliente cancela\nservice request?"}
+
+AU -->|Sim| AV["Service Request\nSTATUS: CANCELLED"]
+
+AV --> AW["Todos chats\nSTATUS: CLOSED"]
+
+AW --> AX["Todas propostas\nSTATUS: REJECTED"]
+
+%% =====================================================
+%% COMPLETION FLOW
+%% =====================================================
+
+Q --> AY["Serviço executado"]
+
+AY --> AZ["Service Request\nSTATUS: COMPLETED"]
+
+%% =====================================================
+%% CHAT STATES LEGEND
+%% =====================================================
+
+subgraph CHAT_STATES ["CHAT STATES"]
+CS1["ACTIVE\nNegociação viva"]
+CS2["INACTIVE\nSem reciprocidade >24h\nSlot liberado"]
+CS3["CLOSED\nEncerrado definitivamente"]
+end
+
+%% =====================================================
+%% PROPOSAL STATES LEGEND
+%% =====================================================
+
+subgraph PROPOSAL_STATES ["PROPOSAL STATES"]
+PS1["PENDING"]
+PS2["ACCEPTED"]
+PS3["REJECTED"]
+PS4["EXPIRED"]
+PS5["REVISION_REQUESTED"]
+PS6["REVISED"]
+PS7["REJECTED_AUTOMATICALLY"]
+end
+
+%% =====================================================
+%% SERVICE REQUEST STATES LEGEND
+%% =====================================================
+
+subgraph REQUEST_STATES ["SERVICE REQUEST STATES"]
+RS1["OPEN"]
+RS2["IN_NEGOTIATION"]
+RS3["SCHEDULED"]
+RS4["COMPLETED"]
+RS5["CANCELLED"]
+end
