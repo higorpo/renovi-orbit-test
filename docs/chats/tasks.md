@@ -6,7 +6,7 @@ CNS delivery SHALL follow a **database-first, RPC-centric, async-decoupled** imp
 
 ### Implementation order and architectural dependencies
 
-1. **Wave A (Foundation)** — Enums, core tables (`conversations`, `chat_messages`, `service_request_negotiation_stats`, `domain_events`, audit, idempotency), RLS helper functions, read-only RLS policies, `platform_constants` seeds, Storage bucket scaffolding. **Unblocks:** schema validation, pgTAP fixtures, type generation.
+1. **Wave A (Foundation)** — Enums, core tables (`chats`, `chat_messages`, `service_request_negotiation_stats`, `domain_events`, audit, idempotency), RLS helper functions, read-only RLS policies, `platform_constants` seeds, Storage bucket scaffolding. **Unblocks:** schema validation, pgTAP fixtures, type generation.
 2. **Wave B (Transactional core)** — All `cns_*` mutation RPCs behind `VITE_ENABLE_CNS` feature flag; helper functions (`cns_chat_free_messaging_allowed`, rate limit, reciprocity probe, domain event recorder, idempotency cache). **Unblocks:** integration tests, shadow RPC invocation.
 3. **Wave C (Proposal evolution)** — `provider_proposals` column migration; status map `submitted`→`PENDING`; partial unique index one `PENDING` per conversation; legacy 48h SLA removal. **Unblocks:** composer migration.
 4. **Wave D (Composer cutover)** — `negotiation-proposals` feature; `cns_submit_proposal` from client; legacy `create_provider_proposal` delegates internally. **Unblocks:** proposal-gated messaging E2E.
@@ -21,7 +21,7 @@ CNS delivery SHALL follow a **database-first, RPC-centric, async-decoupled** imp
 
 - **Feature flag:** `VITE_ENABLE_CNS` gates all new UI routes and RPC calls; default `false` in production until Wave F validation completes.
 - **Phased enablement:** internal dogfood → staging soak (72h) with cron jobs active → canary cohort (5% providers) → full rollout.
-- **Backward compatibility:** Legacy quote/proposal flows MUST remain functional until Wave D; SR status migration MUST include data backfill with manual review for ambiguous `closed` rows (design Schema evolution note).
+- **Backward compatibility:** Legacy quote/proposal flows MUST remain functional until Wave D; SR status migration uses enum cast for local dev (production backfill deferred).
 - **Shadow execution:** In Wave B, MAY exercise RPC-only staging tests without client exposure.
 
 ### Validation strategy
@@ -64,7 +64,7 @@ Squads MAY parallelize after Wave A: **DB** (Phases 1–3, 11), **Async** (Phase
 
 # Phase 1: Database Foundation
 
-## 1. [ ] Create CNS PostgreSQL enum types
+## 1. [x] Create CNS PostgreSQL enum types
 
 Description:
 Implement migration creating all normative CNS enum types per design §3.1.
@@ -75,7 +75,7 @@ Responsibilities:
 
 Implementation Details:
 - Migration YYYYMMDDHHMMSS_create_cns_enums.sql
-- Types: cns_conversation_status, cns_closure_type, cns_inactivation_reason, cns_message_type, cns_delivery_status, cns_proposal_status, cns_revision_reason, cns_service_request_status, cns_contracted_service_status
+- Types: cns_conversation_status, cns_closure_type, cns_inactivation_reason, cns_message_type, cns_delivery_status, proposal_status, proposal_revision_reason, service_request_status, contracted_service_status
 
 Deliverables:
 - Migration SQL
@@ -105,10 +105,10 @@ Requirements covered:
 Acceptance Criteria covered:
 R2-AC01, R15-AC01, R15-AC02, OAC-01
 
-## 2. [ ] Create public.conversations table and indexes
+## 2. [x] Create public.chats table and indexes
 
 Description:
-Create conversations with UNIQUE(service_request_id, provider_id) and reciprocity partial index per design §3.2.
+Create chats with UNIQUE(service_request_id, provider_id) and reciprocity partial index per design §3.2.
 
 Responsibilities:
 - Persist ACTIVE|INACTIVE|CLOSED FSM
@@ -146,7 +146,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R1-AC01, R4-AC07, R15-AC01, R29-AC06
 
-## 3. [ ] Create service_request_negotiation_stats slot counter
+## 3. [x] Create service_request_negotiation_stats slot counter
 
 Description:
 Materialized per-SR active_chat_count counter per design §3.3; semantics §3.3.1.
@@ -190,13 +190,13 @@ Requirements covered:
 Acceptance Criteria covered:
 R4-AC01, R4-AC02, R32-AC04, OAC-14
 
-## 4. [ ] Create public.chat_messages table and indexes
+## 4. [x] Create public.chat_messages table and indexes
 
 Description:
 Append-only messages with scoped idempotency and keyset indexes per design §3.4.
 
 Responsibilities:
-- UNIQUE(conversation_id, sender_user_id, idempotency_key)
+- UNIQUE(chat_id, sender_user_id, idempotency_key)
 - Payload cap 65536 bytes
 
 Implementation Details:
@@ -222,7 +222,7 @@ Security Considerations:
 - RLS Task 73
 
 Performance Considerations:
-- conversation_id leading indexes
+- chat_id leading indexes
 
 Requirements covered:
 3, 14, 15, 16
@@ -230,10 +230,10 @@ Requirements covered:
 Acceptance Criteria covered:
 R3-AC01, R3-AC08, R14-AC01, R15-AC02
 
-## 5. [ ] Create public.chat_read_receipts table
+## 5. [x] Create public.chat_read_receipts table
 
 Description:
-Per-user read cursor PK(conversation_id, user_id) per design §3.5.
+Per-user read cursor PK(chat_id, user_id) per design §3.5.
 
 Responsibilities:
 - Upsert from cns_mark_conversation_read
@@ -269,7 +269,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R3-AC10, R17-AC04
 
-## 6. [ ] Create public.services contracted service table
+## 6. [x] Create public.services contracted service table
 
 Description:
 Contracted service row created only in accept cascade per design §3.7.
@@ -278,9 +278,10 @@ Responsibilities:
 - UNIQUE(service_request_id)
 - UNIQUE(accepted_proposal_id)
 - PENDING_PAYMENT initial status
+- Agreed execution window from client selected_slot (not a single date): duration_unit/value, scheduled_start_date, scheduled_end_date (days only), scheduled_shift, agreed_slot jsonb
 
 Implementation Details:
-- DDL §3.7
+- DDL §3.7; aligns with provider composer (proposal_suggested_slots) and accept picker
 
 Deliverables:
 - Migration SQL
@@ -309,7 +310,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R2-AC04, R7-AC02, R15-AC05, R23-AC01, R23-AC03
 
-## 7. [ ] Create public.domain_events transactional outbox
+## 7. [x] Create public.domain_events transactional outbox
 
 Description:
 Outbox with lease, retry, dead_letter columns per design §3.8.
@@ -351,7 +352,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R24-AC02, R28-AC01, R28-AC02, OAC-09
 
-## 8. [ ] Create public.cns_idempotency_records table
+## 8. [x] Create public.rpc_idempotency_records table
 
 Description:
 RPC response cache per design §3.10.
@@ -389,7 +390,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R14-AC01, R27-AC03, OAC-04, OAC-08
 
-## 9. [ ] Create conversation_audit and proposal_audit tables
+## 9. [x] Create chat_audit and proposal_audit tables
 
 Description:
 Append-only audit per design §3.11; triggers in Task 20.
@@ -399,7 +400,7 @@ Responsibilities:
 
 Implementation Details:
 - bigserial PK
-- Index conversation_id/proposal_id + created_at
+- Index chat_id/proposal_id + created_at
 
 Deliverables:
 - Migration SQL
@@ -428,7 +429,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R15-AC07, R21-AC01, R21-AC04
 
-## 10. [ ] Seed platform_constants and platform_constant_int helper
+## 10. [x] Seed platform_constants and platform_constant_int helper
 
 Description:
 Operational limits seeds and runtime reader per design §3.12.
@@ -469,7 +470,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R33-AC01, R33-AC02, R33-AC04, R33-AC05, R33-AC06, R33-AC07
 
-## 11. [ ] Create chat_rate_limit_buckets table
+## 11. [x] Create chat_rate_limit_buckets table
 
 Description:
 Anti-spam sliding window per design §3.14.
@@ -478,7 +479,7 @@ Responsibilities:
 - 30 msg/min/conversation/user default
 
 Implementation Details:
-- PK (conversation_id, user_id, window_started_at)
+- PK (chat_id, user_id, window_started_at)
 
 Deliverables:
 - Migration SQL
@@ -507,7 +508,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R3-AC11
 
-## 12. [ ] Create job_runs batch telemetry table
+## 12. [x] Create job_runs batch telemetry table
 
 Description:
 Cron job metrics per design §3.15.
@@ -547,22 +548,21 @@ R25-AC05, R21-AC05
 
 # Phase 2: Persistence Layer & Schema Evolution
 
-## 13. [ ] Migrate service_requests status to CNS enum
+## 13. [x] Migrate service_requests status to CNS enum
 
 Description:
 Evolve service_requests to OPEN|COMPLETED|CANCELLED; add completed_at, cancelled_at, contracted_service_id per design §3.16.
 
 Responsibilities:
-- Data migration open→OPEN, cancelled→CANCELLED, closed→COMPLETED with review
+- Cast legacy text status to enum for local seeds (open→OPEN, cancelled→CANCELLED, closed→OPEN in dev)
 - MUST NOT add accepted_proposal_id to SR (R15-AC04)
 
 Implementation Details:
-- ALTER CHECK to cns_service_request_status
-- Backfill script with manual review queue
+- ALTER to service_request_status enum; add completed_at, cancelled_at, contracted_service_id
 
 Deliverables:
 - Migration SQL
-- Data migration script
+- Optional dev sanity-check script
 
 Dependencies:
 - Tasks 1, 6
@@ -571,10 +571,10 @@ Runtime Guarantees:
 - Terminal timestamps immutable (R2-AC08)
 
 Failure Handling:
-- Ambiguous closed rows quarantined for manual review
+- n/a (dev cast only)
 
 Observability:
-- Migration row counts logged
+- Optional script reports status distribution
 
 Security Considerations:
 - No contract fields on SR
@@ -591,7 +591,7 @@ R2-AC01, R2-AC03, R15-AC04, R23-AC02
 ## 14. [ ] Evolve provider_proposals for CNS versioning
 
 Description:
-Add conversation_id, version, revision_count, revision_reason, submitted_at, expired_at, selected_slot; partial unique PENDING per conversation §3.6.
+Add chat_id, version, revision_count, revision_reason, submitted_at, expired_at, selected_slot; partial unique PENDING per conversation §3.6.
 
 Responsibilities:
 - Map submitted→PENDING
@@ -599,7 +599,7 @@ Responsibilities:
 
 Implementation Details:
 - ALTER TABLE §3.6
-- Index conversation_id+status
+- Index chat_id+status
 - One PENDING partial unique
 
 Deliverables:
@@ -632,7 +632,7 @@ R6-AC02, R10-AC01, R15-AC03
 ## 15. [ ] Create chat_media_upload_sessions and Storage bucket chat-media
 
 Description:
-Two-phase upload session binding per design §3.13; bucket path {conversation_id}/{upload_session_id}/{filename}.
+Two-phase upload session binding per design §3.13; bucket path {chat_id}/{upload_session_id}/{filename}.
 
 Responsibilities:
 - status pending|completed|expired
@@ -673,11 +673,11 @@ R3-AC06, R26-AC02, R35-AC04
 ## 16. [ ] Create optional chat_maintenance_queue table
 
 Description:
-Optional queue for heavy backfill per design §3.9; MAY defer if cron scans conversations directly.
+Optional queue for heavy backfill per design §3.9; MAY defer if cron scans chats directly.
 
 Responsibilities:
 - job_type reciprocity_check|reconcile_delivery
-- UNIQUE(job_type, conversation_id)
+- UNIQUE(job_type, chat_id)
 
 Implementation Details:
 - DDL §3.9
@@ -799,7 +799,7 @@ Responsibilities:
 
 Implementation Details:
 - Trigger functions SECURITY DEFINER minimal
-- Attach to conversations and provider_proposals
+- Attach to chats and provider_proposals
 
 Deliverables:
 - Trigger migration
@@ -875,7 +875,7 @@ Description:
 Register chat.new_message, proposal.*, proposal.expiring_soon templates with normative variables §5.5.
 
 Responsibilities:
-- Variables: conversation_id, service_request_id, deep_link_path
+- Variables: chat_id, service_request_id, deep_link_path
 - Align with message_dispatcher schema
 
 Implementation Details:
@@ -959,7 +959,7 @@ SECURITY DEFINER helper inserting domain_events rows with validated event_type a
 
 Responsibilities:
 - Reject unknown event_type
-- Populate service_request_id/conversation_id FKs when provided
+- Populate service_request_id/chat_id FKs when provided
 
 Implementation Details:
 - Called inside mutation RPCs same TX
@@ -993,10 +993,10 @@ Requirements covered:
 Acceptance Criteria covered:
 R28-AC01, R28-AC06
 
-## 24. [ ] Implement cns_idempotency_begin and cns_idempotency_commit helpers
+## 24. [ ] Implement idempotency_begin and idempotency_commit helpers
 
 Description:
-Internal helpers managing cns_idempotency_records lookup/insert for mutation RPCs.
+Internal helpers managing rpc_idempotency_records lookup/insert for mutation RPCs (cross-feature).
 
 Responsibilities:
 - begin: return cached response if exists
@@ -1122,7 +1122,7 @@ Responsibilities:
 - Use chats.reciprocity_window_hours constant
 
 Implementation Details:
-- Parameterized conversation_id and window_hours
+- Parameterized chat_id and window_hours
 
 Deliverables:
 - SQL function
@@ -1261,7 +1261,7 @@ Dependencies:
 
 Runtime Guarantees:
 - Single TX: proposal+message+event (R32-AC03)
-- Idempotent via cns_idempotency_records
+- Idempotent via rpc_idempotency_records
 
 Failure Handling:
 - Second PENDING → 409
@@ -1578,7 +1578,7 @@ R3-AC10, R17-AC04
 ## 38. [ ] Implement cns_evaluate_reciprocity_batch RPC
 
 Description:
-Cron batch: SKIP LOCKED ACTIVE conversations past window pre-filter; bilateral check; INACTIVE+slot-1+events per design §4.6.
+Cron batch: SKIP LOCKED ACTIVE chats past window pre-filter; bilateral check; INACTIVE+slot-1+events per design §4.6.
 
 Responsibilities:
 - Batch size 500 default
@@ -2475,7 +2475,7 @@ Implementation Details:
 
 Deliverables:
 - SQL RPC
-- Index conversations_last_interaction
+- Index chats_last_interaction
 
 Dependencies:
 - Tasks 2, 5, 25
@@ -2666,7 +2666,7 @@ Security Considerations:
 - Participant read
 
 Performance Considerations:
-- Index conversation_id
+- Index chat_id
 
 Requirements covered:
 10, 16
@@ -2679,7 +2679,7 @@ R10-AC11, R10-AC12, R5-AC05
 ## 63. [ ] Implement audit replay support query for operations
 
 Description:
-Support query joining conversation_audit and proposal_audit by service_request_id ordered created_at §10.4.
+Support query joining chat_audit and proposal_audit by service_request_id ordered created_at §10.4.
 
 Responsibilities:
 - MAY expose admin-only RPC get_negotiation_audit_timeline
@@ -2687,7 +2687,7 @@ Responsibilities:
 
 Implementation Details:
 - Normative reference: design.md — task 63: `Implement audit replay support query for operations`.
-- Scope: Support query joining conversation_audit and proposal_audit by service_request_id ordered created_at §10.4.
+- Scope: Support query joining chat_audit and proposal_audit by service_request_id ordered created_at §10.4.
 - Execute: MAY expose admin-only RPC get_negotiation_audit_timeline
 - Execute: Used by support tooling
 - Gate: automated tests in Phase 14 (pgTAP/Vitest/E2E) green before merge.
@@ -2810,7 +2810,7 @@ R21-AC02, R26-AC06
 ## 66. [ ] Configure frontend Sentry scrubbing for chats feature
 
 Description:
-Tags feature=chats, conversation_id, service_request_id; scrub payload.text §10.2.
+Tags feature=chats, chat_id, service_request_id; scrub payload.text §10.2.
 
 Responsibilities:
 - beforeSend scrub message content
@@ -2818,7 +2818,7 @@ Responsibilities:
 
 Implementation Details:
 - Normative reference: design.md — task 66: `Configure frontend Sentry scrubbing for chats feature`.
-- Scope: Tags feature=chats, conversation_id, service_request_id; scrub payload.text §10.2.
+- Scope: Tags feature=chats, chat_id, service_request_id; scrub payload.text §10.2.
 - Execute: Implement per design.md; see Description for normative section reference
 - Execute: beforeSend scrub message content
 - Execute: Breadcrumbs exclude PII
@@ -3071,7 +3071,7 @@ R14-AC01, R27-AC03, R26-AC06, R30-AC05, OAC-08
 
 # Phase 11: Security & Isolation (RLS per table group)
 
-## 72. [ ] Implement RLS policies for conversations table
+## 72. [ ] Implement RLS policies for chats table
 
 Description:
 SELECT admin OR participant; deny INSERT/UPDATE/DELETE for authenticated §11.2.
@@ -3081,7 +3081,7 @@ Responsibilities:
 - Policies use is_platform_admin OR is_chat_participant
 
 Implementation Details:
-- Normative reference: design.md — task 72: `Implement RLS policies for conversations table`.
+- Normative reference: design.md — task 72: `Implement RLS policies for chats table`.
 - Scope: SELECT admin OR participant; deny INSERT/UPDATE/DELETE for authenticated §11.2.
 - Execute: ENABLE ROW LEVEL SECURITY
 - Execute: Policies use is_platform_admin OR is_chat_participant
@@ -3243,7 +3243,7 @@ R23-AC02, R35-AC01
 ## 76. [ ] Implement RLS policies for domain_events and operational tables
 
 Description:
-domain_events, cns_idempotency_records, job_runs: admin/service_role only; deny authenticated broad access.
+domain_events, rpc_idempotency_records, job_runs: admin/service_role only; deny authenticated broad access.
 
 Responsibilities:
 - chat_rate_limit_buckets participant invisible
@@ -3251,7 +3251,7 @@ Responsibilities:
 
 Implementation Details:
 - Normative reference: design.md — task 76: `Implement RLS policies for domain_events and operational tables`.
-- Scope: domain_events, cns_idempotency_records, job_runs: admin/service_role only; deny authenticated broad access.
+- Scope: domain_events, rpc_idempotency_records, job_runs: admin/service_role only; deny authenticated broad access.
 - Execute: Implement per design.md; see Description for normative section reference
 - Execute: chat_rate_limit_buckets participant invisible
 - Execute: Audit tables admin read
@@ -3290,7 +3290,7 @@ Description:
 Participant read; admin read; write via Edge service role only §3.13.
 
 Responsibilities:
-- Path prefix conversation_id validation
+- Path prefix chat_id validation
 
 Implementation Details:
 - Normative reference: design.md — task 77: `Implement Storage RLS for chat-media bucket`.
@@ -3332,7 +3332,7 @@ Description:
 Defense in depth: GRANT SELECT only; mutations via RPC SECURITY DEFINER §11.2.
 
 Responsibilities:
-- Explicit REVOKE on conversations, chat_messages, provider_proposals
+- Explicit REVOKE on chats, chat_messages, provider_proposals
 
 Implementation Details:
 - Normative reference: design.md — task 78: `Revoke direct INSERT/UPDATE on CNS mutable tables from authenticated`.
@@ -3853,7 +3853,7 @@ Suppress FCM toast when foreground+activeConversationId match; web hidden tab = 
 
 Responsibilities:
 - Integrate Capacitor and SW handlers
-- Compare payload.conversation_id
+- Compare payload.chat_id
 
 Implementation Details:
 - Normative reference: design.md — task 90: `Implement usePushNotificationSuppression hook`.
@@ -4727,7 +4727,7 @@ Implementation Details:
 - Execute: Define FSM enum values matching platform-flow.mmd
 - Execute: Document legacy provider_proposals.status mapping
 - Execute: Migration YYYYMMDDHHMMSS_create_cns_enums.sql
-- Execute: Types: cns_conversation_status, cns_closure_type, cns_inactivation_reason, cns_message_type, cns_delivery_status, cns_proposal_status, cns_revision_reason, cns_service_request_status, cns_contracted_service_status
+- Execute: Types: cns_conversation_status, cns_closure_type, cns_inactivation_reason, cns_message_type, cns_delivery_status, proposal_status, proposal_revision_reason, service_request_status, contracted_service_status
 - Execute: Migration SQL
 - Execute: Mapping comment block
 - Execute: None — first CNS migration
@@ -4812,7 +4812,7 @@ R5-AC04, R27-AC04
 ## 112. [ ] Implement optional discovery system welcome message
 
 Description:
-Product-configurable MAY insert `message_type = system` on first chat activation orienting discovery (Req. 5, R5-AC03).
+Product-configurable MAY insert `message_type = SYSTEM` on first chat activation orienting discovery (Req. 5, R5-AC03).
 
 Responsibilities:
 - Gate via `platform_constants` key e.g. `chats.discovery_welcome_enabled` (default false)

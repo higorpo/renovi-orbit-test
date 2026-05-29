@@ -16,7 +16,7 @@
 | **Authority** | PostgreSQL 15+ (Supabase) — all workflow state |
 | **Delivery** | `src/features/chats/` + `src/features/negotiation-proposals/` (split from `provider-jobs`) |
 | **Out of scope** | `DISPATCH_*` matching (Req. 24); payment execution beyond `services.PENDING_PAYMENT` insert |
-| **Legacy alignment** | Evolves `service_requests`, `provider_proposals`; adds `conversations`, `chat_messages`, `services` (contracted) |
+| **Legacy alignment** | Evolves `service_requests`, `provider_proposals`; adds `chats`, `chat_messages`, `services` (contracted) |
 
 ### Schema evolution note (repository today → target)
 
@@ -24,9 +24,9 @@ The repository **today** implements quote flow without CNS tables:
 
 | Artifact (today) | CNS target | Migration strategy |
 |------------------|------------|-------------------|
-| `service_requests.status` ∈ `{open, in_progress, closed, cancelled}` | `{OPEN, COMPLETED, CANCELLED}` | `ALTER` CHECK + data migration: `open`→`OPEN`, `cancelled`→`CANCELLED`, `closed`→`COMPLETED` only where linked accepted proposal exists, else manual review |
-| `provider_proposals.status` ∈ `{submitted, accepted, rejected, withdrawn}` | CNS proposal FSM (§2) | Extend CHECK; map `submitted`→`PENDING`; add columns `conversation_id`, `revision_count`, `revision_reason`, `version`, `submitted_at`; deprecate direct PostgREST insert — **RPC-only** mutations |
-| No `conversations` | New | Migration `YYYYMMDDHHMMSS_create_cns_conversations.sql` |
+| `service_requests.status` ∈ `{open, in_progress, closed, cancelled}` | `{OPEN, COMPLETED, CANCELLED}` | `ALTER` to `service_request_status` enum; dev migration maps legacy text (`closed`→`OPEN`). Production backfill/review queue deferred until prod cutover. |
+| `provider_proposals.status` ∈ `{submitted, accepted, rejected, withdrawn}` | CNS proposal FSM (§2) | Extend CHECK; map `submitted`→`PENDING`; add columns `chat_id`, `revision_count`, `revision_reason`, `version`, `submitted_at`; deprecate direct PostgREST insert — **RPC-only** mutations |
+| No `chats` | New | Migration `YYYYMMDDHHMMSS_create_cns_chats.sql` |
 | No `services` (contracted) | New `public.services` | Distinct from `platform_services`; FK to `provider_proposals` |
 | 48h proposal SLA (legacy cron + trigger on `created_at`) | **24h** (`chats.proposal_response_sla_hours` / `PROPOSAL_CLIENT_RESPONSE_SLA_HOURS`) | Drop or replace `expire_stale_provider_proposals` and the 48h accept guard trigger; `cns_expire_pending_proposals` MUST use `submitted_at + interval '1 hour' * platform_constant_int('chats.proposal_response_sla_hours', 24)`; `cns_accept_proposal` MUST reject expired proposals with the same SLA source |
 | MMD (`message_dispatcher` schema) | Producer from CNS RPCs | Templates `chat.new_message`, `proposal.*` registered in migration |
@@ -161,14 +161,14 @@ sequenceDiagram
 
 ```mermaid
 erDiagram
-  service_requests ||--o{ conversations : "1:N"
-  conversations ||--o{ chat_messages : "1:N"
-  conversations ||--o{ provider_proposals : "1:N versions"
+  service_requests ||--o{ chats : "1:N"
+  chats ||--o{ chat_messages : "1:N"
+  chats ||--o{ provider_proposals : "1:N versions"
   service_requests ||--o{ provider_proposals : "1:N"
   provider_proposals ||--o| services : "accepted creates 1"
   service_requests ||--o| services : "origin"
-  conversations ||--o{ chat_read_receipts : "per user"
-  conversations ||--o{ conversation_audit : "append-only"
+  chats ||--o{ chat_read_receipts : "per user"
+  chats ||--o{ chat_audit : "append-only"
   provider_proposals ||--o{ proposal_audit : "append-only"
   service_requests ||--|| service_request_negotiation_stats : "slot counter"
   domain_events }o--|| service_requests : "optional FK"
@@ -182,7 +182,7 @@ erDiagram
     uuid contracted_service_id FK "nullable pointer"
   }
 
-  conversations {
+  chats {
     uuid id PK
     uuid service_request_id FK
     uuid client_id FK
@@ -197,7 +197,7 @@ erDiagram
 
   chat_messages {
     uuid id PK
-    uuid conversation_id FK
+    uuid chat_id FK
     uuid sender_user_id FK
     text message_type
     jsonb payload
@@ -208,7 +208,7 @@ erDiagram
 
   provider_proposals {
     uuid id PK
-    uuid conversation_id FK
+    uuid chat_id FK
     uuid service_request_id FK
     uuid provider_id FK
     text status
@@ -220,7 +220,12 @@ erDiagram
     uuid id PK
     uuid service_request_id FK
     uuid accepted_proposal_id FK
-    date scheduled_service_date
+    date scheduled_start_date
+    date scheduled_end_date
+    text scheduled_shift
+    text duration_unit
+    int duration_value
+    jsonb agreed_slot
     text status "PENDING_PAYMENT|..."
   }
 ```
@@ -229,7 +234,7 @@ erDiagram
 
 | Entity | Owner (write) | Readers |
 |--------|---------------|---------|
-| `conversations` | Participants via RPC; status via RPC/cron | Participants + `admin` SELECT |
+| `chats` | Participants via RPC; status via RPC/cron | Participants + `admin` SELECT |
 | `chat_messages` | Participants (`text`/`image`); system via `SECURITY DEFINER` | Same |
 | `provider_proposals` | Provider participant via `cns_submit_proposal` | Client + provider of conversation + admin |
 | `service_requests` | Client cancel; system via accept cascade | Per existing RLS + CNS rules |
@@ -239,12 +244,12 @@ erDiagram
 
 | Table | Mutable state machine? | Append-only? |
 |-------|------------------------|--------------|
-| `conversations` | Yes (`status`) | Audit in `conversation_audit` |
+| `chats` | Yes (`status`) | Audit in `chat_audit` |
 | `chat_messages` | `delivery_status` only | Inserts immutable (no content edit v1) |
 | `provider_proposals` | Yes | Audit in `proposal_audit`; prior versions `REVISED` |
 | `chat_messages` (type `proposal`) | No — pointer only | Timeline slot fixed; card hydrates live proposal |
 | `domain_events` | `processed_at` only | Insert-only until processed |
-| `conversation_audit` | No | Yes |
+| `chat_audit` | No | Yes |
 
 ## 2.4 Consistency semantics
 
@@ -256,7 +261,7 @@ erDiagram
 
 - **Slot acquisition:** `SELECT … FOR UPDATE` on `service_request_negotiation_stats` row (create if missing) before first-message chat creation.
 - **Acceptance:** `FOR UPDATE` on `service_requests` + all non-terminal `provider_proposals` for SR.
-- **Reciprocity job:** `FOR UPDATE SKIP LOCKED` on candidate `conversations` rows.
+- **Reciprocity job:** `FOR UPDATE SKIP LOCKED` on candidate `chats` rows.
 
 ---
 
@@ -268,26 +273,26 @@ erDiagram
 create type public.cns_conversation_status as enum ('ACTIVE', 'INACTIVE', 'CLOSED');
 create type public.cns_closure_type as enum ('MANUAL', 'PROPOSAL_ACCEPTED_ELSEWHERE', 'SERVICE_REQUEST_CANCELLED');
 create type public.cns_inactivation_reason as enum ('NO_RECIPROCITY');
-create type public.cns_message_type as enum ('text', 'image', 'system', 'proposal', 'workflow_action');
-create type public.cns_delivery_status as enum ('pending', 'sent', 'delivered', 'read', 'failed');
-create type public.cns_proposal_status as enum (
+create type public.cns_message_type as enum ('TEXT', 'IMAGE', 'SYSTEM', 'PROPOSAL', 'WORKFLOW_ACTION');
+create type public.cns_delivery_status as enum ('PENDING', 'SENT', 'DELIVERED', 'READ', 'FAILED');
+create type public.proposal_status as enum (
   'PENDING', 'ACCEPTED', 'REJECTED', 'EXPIRED',
   'REVISION_REQUESTED', 'REVISED', 'REJECTED_AUTOMATICALLY'
 );
-create type public.cns_revision_reason as enum (
+create type public.proposal_revision_reason as enum (
   'PRICE_TOO_HIGH', 'REDUCE_SCOPE', 'DATE_NOT_AVAILABLE',
   'CHANGE_TIMELINE', 'CLARIFY_DETAILS', 'OTHER'
 );
-create type public.cns_service_request_status as enum ('OPEN', 'COMPLETED', 'CANCELLED');
-create type public.cns_contracted_service_status as enum ('PENDING_PAYMENT'); -- extend later for payments
+create type public.service_request_status as enum ('OPEN', 'COMPLETED', 'CANCELLED');
+create type public.contracted_service_status as enum ('PENDING_PAYMENT'); -- extend later for payments
 ```
 
 **Mapping from legacy `provider_proposals.status`:** `submitted`→`PENDING`, `accepted`→`ACCEPTED`, `rejected`→`REJECTED`, `withdrawn`→`REVISED` (or archive row).
 
-## 3.2 `public.conversations`
+## 3.2 `public.chats`
 
 ```sql
-create table public.conversations (
+create table public.chats (
   id uuid primary key default gen_random_uuid(),
   service_request_id uuid not null references public.service_requests(id) on delete restrict,
   client_id uuid not null references public.profiles(id) on delete restrict,
@@ -303,22 +308,22 @@ create table public.conversations (
   last_interaction_at timestamptz not null default now(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint conversations_unique_pair unique (service_request_id, provider_id),
-  constraint conversations_closed_fields check (
+  constraint chats_unique_pair unique (service_request_id, provider_id),
+  constraint chats_closed_fields check (
     (status <> 'CLOSED')
     or (closed_at is not null and closure_type is not null)
   ),
-  constraint conversations_inactive_fields check (
+  constraint chats_inactive_fields check (
     (status <> 'INACTIVE')
     or (inactivated_at is not null and inactivation_reason is not null)
   )
 );
 
-create index conversations_sr_status_idx on public.conversations (service_request_id, status);
-create index conversations_last_interaction_idx on public.conversations (last_interaction_at desc);
-create index conversations_provider_status_idx on public.conversations (provider_id, status, last_interaction_at desc);
-create index conversations_client_status_idx on public.conversations (client_id, status, last_interaction_at desc);
-create index conversations_reciprocity_poll_idx on public.conversations (status, last_interaction_at)
+create index chats_sr_status_idx on public.chats (service_request_id, status);
+create index chats_last_interaction_idx on public.chats (last_interaction_at desc);
+create index chats_provider_status_idx on public.chats (provider_id, status, last_interaction_at desc);
+create index chats_client_status_idx on public.chats (client_id, status, last_interaction_at desc);
+create index chats_reciprocity_poll_idx on public.chats (status, last_interaction_at)
   where status = 'ACTIVE';
 ```
 
@@ -337,7 +342,7 @@ create table public.service_request_negotiation_stats (
 );
 ```
 
-Updated inside RPCs that transition `conversations.status` to/from `ACTIVE` per §3.3.1.
+Updated inside RPCs that transition `chats.status` to/from `ACTIVE` per §3.3.1.
 
 ### 3.3.1 Slot accounting (normative)
 
@@ -360,17 +365,17 @@ Updated inside RPCs that transition `conversations.status` to/from `ACTIVE` per 
 ```sql
 create table public.chat_messages (
   id uuid primary key default gen_random_uuid(),
-  conversation_id uuid not null references public.conversations(id) on delete restrict,
+  chat_id uuid not null references public.chats(id) on delete restrict,
   sender_user_id uuid references public.profiles(id), -- null for system
   message_type public.cns_message_type not null,
   payload jsonb not null default '{}'::jsonb,
   linked_entity_type text check (linked_entity_type in ('proposal', 'service_request', 'workflow')),
   linked_entity_id uuid,
   idempotency_key uuid not null,
-  delivery_status public.cns_delivery_status not null default 'sent',
+  delivery_status public.cns_delivery_status not null default 'SENT',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint chat_messages_idempotency_scoped unique (conversation_id, sender_user_id, idempotency_key),
+  constraint chat_messages_idempotency_scoped unique (chat_id, sender_user_id, idempotency_key),
   constraint chat_messages_payload_size check (octet_length(payload::text) <= 65536),
   constraint chat_messages_linked_pair check (
     (linked_entity_type is null and linked_entity_id is null)
@@ -379,49 +384,60 @@ create table public.chat_messages (
 );
 
 create index chat_messages_conversation_created_idx
-  on public.chat_messages (conversation_id, created_at desc, id desc);
+  on public.chat_messages (chat_id, created_at desc, id desc);
 create index chat_messages_conversation_cursor_idx
-  on public.chat_messages (conversation_id, created_at asc, id asc);
+  on public.chat_messages (chat_id, created_at asc, id asc);
 ```
 
 **Keyset pagination index** supports `list_chat_messages(p_cursor_created_at, p_cursor_id, p_limit)`.
 
-**Idempotency (Req. 14):** scope is **`(conversation_id, sender_user_id, idempotency_key)`** — not global per key. Clients MUST generate a **new UUID per logical operation** (`send_message`, `submit_proposal`, `accept_proposal`, etc.). RPC-level replay uses `cns_idempotency_records (actor_user_id, operation, idempotency_key)`. On duplicate `send_message`, return the existing row for that triple without inserting again.
+**Idempotency (Req. 14):** scope is **`(chat_id, sender_user_id, idempotency_key)`** — not global per key. Clients MUST generate a **new UUID per logical operation** (`send_message`, `submit_proposal`, `accept_proposal`, etc.). RPC-level replay uses `rpc_idempotency_records (actor_user_id, operation, idempotency_key)`. On duplicate `send_message`, return the existing row for that triple without inserting again.
 
 ## 3.5 `public.chat_read_receipts`
 
 ```sql
 create table public.chat_read_receipts (
-  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  chat_id uuid not null references public.chats(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
   last_read_at timestamptz not null default now(),
   last_read_message_id uuid references public.chat_messages(id),
-  primary key (conversation_id, user_id)
+  primary key (chat_id, user_id)
 );
 ```
 
 ## 3.6 `public.provider_proposals` (evolved)
 
+**Availability (provider composer — `ProviderProposalComposerDialog`):** before accept, scheduling lives on the proposal:
+
+- `proposal_duration_unit` — `hours` | `days`.
+- `proposal_duration_value` — positive integer (hours count or inclusive calendar days per option).
+- `proposal_suggested_slots` — JSON array of **1–3** options. Each object:
+  - `start_date` (ISO date, required; not in the past).
+  - `shift` — `morning` | `afternoon` | `full_day`.
+  - `end_date` — required when unit is `days` (inclusive range must equal `proposal_duration_value`); MUST be omitted or empty when unit is `hours`.
+
+On accept, the client picks one option (`selected_slot`, same shape). `cns_accept_proposal` copies it into `services` (§3.7) together with frozen `duration_*`.
+
 Add columns (retain pricing columns from existing schema):
 
 ```sql
 alter table public.provider_proposals
-  add column if not exists conversation_id uuid references public.conversations(id),
+  add column if not exists chat_id uuid references public.chats(id),
   add column if not exists version int not null default 1,
   add column if not exists revision_count int not null default 0 check (revision_count >= 0 and revision_count <= 2),
-  add column if not exists revision_reason public.cns_revision_reason,
+  add column if not exists revision_reason public.proposal_revision_reason,
   add column if not exists revision_notes text check (revision_notes is null or char_length(trim(revision_notes)) <= 2000),
   add column if not exists submitted_at timestamptz,
   add column if not exists expired_at timestamptz,
-  add column if not exists selected_slot jsonb; -- set on accept
+  add column if not exists selected_slot jsonb; -- client choice at accept; one of proposal_suggested_slots
 
 -- Partial unique: one PENDING per conversation
 create unique index provider_proposals_one_pending_per_conversation
-  on public.provider_proposals (conversation_id)
+  on public.provider_proposals (chat_id)
   where status = 'PENDING';
 
 create index provider_proposals_conversation_status_idx
-  on public.provider_proposals (conversation_id, status);
+  on public.provider_proposals (chat_id, status);
 ```
 
 ## 3.7 `public.services` (contracted service — new)
@@ -433,8 +449,13 @@ create table public.services (
   accepted_proposal_id uuid not null references public.provider_proposals(id) on delete restrict,
   client_id uuid not null references public.profiles(id),
   provider_id uuid not null references public.profiles(id),
-  scheduled_service_date date not null,
-  status public.cns_contracted_service_status not null default 'PENDING_PAYMENT',
+  duration_unit text not null check (duration_unit in ('hours', 'days')),
+  duration_value int not null check (duration_value > 0),
+  scheduled_start_date date not null,
+  scheduled_end_date date, -- null when duration_unit = hours
+  scheduled_shift text not null check (scheduled_shift in ('morning', 'afternoon', 'full_day')),
+  agreed_slot jsonb not null, -- snapshot of selected_slot at accept
+  status public.contracted_service_status not null default 'PENDING_PAYMENT',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint services_one_per_request unique (service_request_id),
@@ -453,7 +474,7 @@ create table public.domain_events (
   aggregate_type text not null,
   aggregate_id uuid not null,
   service_request_id uuid references public.service_requests(id),
-  conversation_id uuid references public.conversations(id),
+  chat_id uuid references public.chats(id),
   payload jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   processed_at timestamptz,
@@ -491,7 +512,7 @@ Event types (normative):
 | `PROPOSAL_REVISION_REQUESTED` | Client revision request | |
 | `CONVERSATION_INACTIVATED` | Reciprocity job | Per conversation |
 | `CONVERSATION_CLOSED` | Manual `cns_close_conversation` | Single conversation |
-| `CHATS_CLOSED_BULK` | Accept cascade or SR cancel | **One row per SR**; `payload` MUST include `service_request_id` and `conversation_ids` (uuid[]) or `closed_count` — satisfies Req. 28 (`CHATS_CLOSED_BULK`); consumers MUST NOT require N separate `CONVERSATION_CLOSED` rows for bulk |
+| `CHATS_CLOSED_BULK` | Accept cascade or SR cancel | **One row per SR**; `payload` MUST include `service_request_id` and `chat_ids` (uuid[]) or `closed_count` — satisfies Req. 28 (`CHATS_CLOSED_BULK`); consumers MUST NOT require N separate `CONVERSATION_CLOSED` rows for bulk |
 | `SLOT_RELEASED` | `ACTIVE`→`INACTIVE` | Optional matching hook |
 | `SERVICE_REQUEST_COMPLETED` | Accept | |
 | `SERVICE_REQUEST_CANCELLED` | Client cancel | |
@@ -501,27 +522,27 @@ Do not emit ad-hoc aliases for the same semantic event; use the table above only
 
 ## 3.9 `public.chat_maintenance_queue` (optional — Req. 27)
 
-For heavy reciprocity backfill; **MAY** be omitted if cron RPC scans indexed `conversations` directly.
+For heavy reciprocity backfill; **MAY** be omitted if cron RPC scans indexed `chats` directly.
 
 ```sql
 create table public.chat_maintenance_queue (
   id uuid primary key default gen_random_uuid(),
   job_type text not null check (job_type in ('reciprocity_check', 'reconcile_delivery')),
-  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  chat_id uuid not null references public.chats(id) on delete cascade,
   status text not null default 'queued' check (status in ('queued', 'processing', 'done', 'failed')),
   locked_until timestamptz,
   locked_by text,
   created_at timestamptz not null default now(),
-  unique (job_type, conversation_id)
+  unique (job_type, chat_id)
 );
 ```
 
-## 3.10 `public.cns_idempotency_records`
+## 3.10 `public.rpc_idempotency_records`
 
-Unified idempotency for RPC responses (Req. 14):
+Cross-feature RPC response idempotency (Req. 14). CNS RPCs use namespaced `operation` values (e.g. `chats.accept_proposal`):
 
 ```sql
-create table public.cns_idempotency_records (
+create table public.rpc_idempotency_records (
   id uuid primary key default gen_random_uuid(),
   actor_user_id uuid not null references public.profiles(id),
   operation text not null,
@@ -530,16 +551,16 @@ create table public.cns_idempotency_records (
   response_status int not null,
   response_body jsonb not null,
   created_at timestamptz not null default now(),
-  constraint cns_idempotency_unique unique (actor_user_id, operation, idempotency_key)
+  constraint rpc_idempotency_actor_operation_key_unique unique (actor_user_id, operation, idempotency_key)
 );
 ```
 
 ## 3.11 Audit tables (append-only)
 
 ```sql
-create table public.conversation_audit (
+create table public.chat_audit (
   id bigserial primary key,
-  conversation_id uuid not null,
+  chat_id uuid not null,
   from_status public.cns_conversation_status,
   to_status public.cns_conversation_status not null,
   actor_id uuid,
@@ -550,15 +571,15 @@ create table public.conversation_audit (
 create table public.proposal_audit (
   id bigserial primary key,
   proposal_id uuid not null,
-  from_status public.cns_proposal_status,
-  to_status public.cns_proposal_status not null,
+  from_status public.proposal_status,
+  to_status public.proposal_status not null,
   actor_id uuid,
   metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
 ```
 
-Triggers: `AFTER UPDATE OF status` on `conversations` / `provider_proposals` → insert audit **in same transaction**.
+Triggers: `AFTER UPDATE OF status` on `chats` / `provider_proposals` → insert audit **in same transaction**.
 
 ## 3.12 `platform_constants` seeds (Req. 33)
 
@@ -593,14 +614,14 @@ $$;
 
 | Bucket | Path pattern | RLS |
 |--------|--------------|-----|
-| `chat-media` | `{conversation_id}/{upload_session_id}/{filename}` | Participant read; admin read |
+| `chat-media` | `{chat_id}/{upload_session_id}/{filename}` | Participant read; admin read |
 
-`chat_media_upload_sessions` table: `id`, `conversation_id`, `uploader_id`, `status`, `expires_at` — binds Edge upload to RPC insert.
+`chat_media_upload_sessions` table: `id`, `chat_id`, `uploader_id`, `status`, `expires_at` — binds Edge upload to RPC insert.
 
 ```sql
 create table public.chat_media_upload_sessions (
   id uuid primary key default gen_random_uuid(),
-  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  chat_id uuid not null references public.chats(id) on delete cascade,
   uploader_id uuid not null references public.profiles(id),
   status text not null default 'pending' check (status in ('pending', 'completed', 'expired')),
   expires_at timestamptz not null default (now() + interval '24 hours'),
@@ -614,11 +635,11 @@ Per Req. 3 anti-spam (30 msg/min/conversation/user). Sliding window in Postgres 
 
 ```sql
 create table public.chat_rate_limit_buckets (
-  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  chat_id uuid not null references public.chats(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
   window_started_at timestamptz not null,
   message_count int not null default 1,
-  primary key (conversation_id, user_id, window_started_at)
+  primary key (chat_id, user_id, window_started_at)
 );
 ```
 
@@ -652,14 +673,14 @@ alter table public.service_requests
   add column if not exists completed_at timestamptz,
   add column if not exists cancelled_at timestamptz,
   add column if not exists contracted_service_id uuid references public.services(id);
--- status CHECK migrated to cns_service_request_status
+-- status CHECK migrated to service_request_status
 ```
 
-**MUST NOT** add `accepted_proposal_id` or `scheduled_service_date` to `service_requests` (Req. 15).
+**MUST NOT** add `accepted_proposal_id` or agreed scheduling fields to `service_requests` (Req. 15).
 
 ## 3.17 `workflow_action` messages (Req. 3, 16)
 
-`message_type = 'workflow_action'` with `payload.action_key` (e.g. `revision_requested`, `chat_closed`). Renderer registry in `DynamicMessageRenderer` — **fallback** component for unknown keys (Req. 16 R16-AC04) MUST NOT crash timeline.
+`message_type = 'WORKFLOW_ACTION'` with `payload.action_key` (e.g. `revision_requested`, `chat_closed`). Renderer registry in `DynamicMessageRenderer` — **fallback** component for unknown keys (Req. 16 R16-AC04) MUST NOT crash timeline.
 
 ## 3.18 Product analytics events (Req. 21)
 
@@ -683,7 +704,7 @@ sequenceDiagram
   alt SR not OPEN
     RPC-->>P: 409 SR_NOT_OPEN
   end
-  RPC->>DB: SELECT conversations by (sr, provider)
+  RPC->>DB: SELECT chats by (sr, provider)
   alt conversation exists CLOSED
     RPC-->>P: 409 CONVERSATION_CLOSED
   else conversation exists INACTIVE
@@ -700,7 +721,7 @@ sequenceDiagram
   RPC->>DB: UPDATE last_interaction_at
   RPC->>DB: INSERT domain_events
   RPC->>DB: COMMIT
-  RPC-->>P: 200 message + conversation_id
+  RPC-->>P: 200 message + chat_id
 ```
 
 **Reactivation (Req. 4, 29):** `INACTIVE` → `ACTIVE` on valid message **without** slot check and **without** incrementing `active_chat_count` (§3.3.1). **New** `(sr, provider)` pair **requires** slot and **+1** on stats.
@@ -710,20 +731,20 @@ sequenceDiagram
 **Preconditions evaluated in order:**
 
 1. `auth.uid()` is participant (not admin write).
-2. `conversations.status <> 'CLOSED'`.
+2. `chats.status <> 'CLOSED'`.
 3. `service_requests.status = 'OPEN'`.
-4. `cns_chat_free_messaging_allowed(conversation_id)` (Req. 34) — see §4.2.1.
+4. `cns_chat_free_messaging_allowed(chat_id)` (Req. 34) — see §4.2.1.
 5. Rate limit: `cns_check_message_rate_limit` — sliding window in `chat_rate_limit_buckets` or `platform_constants` (429 + `retry_after_seconds`).
 
 ```sql
 -- Req. 34 authoritative gate — callable only by participants (or inside RPC after participant check)
-create or replace function public.cns_chat_free_messaging_allowed(p_conversation_id uuid)
+create or replace function public.cns_chat_free_messaging_allowed(p_chat_id uuid)
 returns boolean language sql stable security invoker set search_path = public as $$
   select
-    (select public.is_chat_participant(p_conversation_id))
+    (select public.is_chat_participant(p_chat_id))
     and not exists (
       select 1 from public.provider_proposals pp
-      where pp.conversation_id = p_conversation_id
+      where pp.chat_id = p_chat_id
         and pp.status = 'PENDING'
     );
 $$;
@@ -772,12 +793,12 @@ sequenceDiagram
   RPC->>DB: UPDATE target proposal ACCEPTED + selected_slot
   RPC->>DB: UPDATE SR COMPLETED + completed_at
   RPC->>DB: UPDATE other proposals REJECTED_AUTOMATICALLY
-  RPC->>DB: UPDATE all conversations CLOSED (bulk)
+  RPC->>DB: UPDATE all chats CLOSED (bulk)
   RPC->>DB: UPDATE negotiation_stats active_chat_count = 0
   RPC->>DB: INSERT services PENDING_PAYMENT
   RPC->>DB: UPDATE SR.contracted_service_id (optional FK)
   RPC->>DB: INSERT audit rows + domain_events
-  RPC->>DB: INSERT cns_idempotency_records
+  RPC->>DB: INSERT rpc_idempotency_records
   RPC->>DB: COMMIT
   RPC-->>C: 200 + service_id
 ```
@@ -806,17 +827,17 @@ sequenceDiagram
 
 | `message_type` | Counts? |
 |----------------|---------|
-| `text`, `image` | **Yes** — must be from client profile and provider profile respectively (both sides at least once) |
-| `proposal` | **Yes** — counts as provider-side activity in window (timeline insert on submit) |
-| `system` | **No** |
-| `workflow_action` | **No** |
+| `TEXT`, `IMAGE` | **Yes** — must be from client profile and provider profile respectively (both sides at least once) |
+| `PROPOSAL` | **Yes** — counts as provider-side activity in window (timeline insert on submit) |
+| `SYSTEM` | **No** |
+| `WORKFLOW_ACTION` | **No** |
 
-`last_interaction_at` on `conversations` is updated for all persisted message types (including `system` / `proposal`) for list ordering; reciprocity evaluation MUST use the table above, not `last_interaction_at` alone.
+`last_interaction_at` on `chats` is updated for all persisted message types (including `SYSTEM` / `PROPOSAL`) for list ordering; reciprocity evaluation MUST use the table above, not `last_interaction_at` alone.
 
 **Algorithm per claimed row:**
 
-1. `SELECT id FROM conversations WHERE status = 'ACTIVE' AND last_interaction_at < now() - interval '1 hour' * platform_constant_int('chats.reciprocity_window_hours', 24) FOR UPDATE SKIP LOCKED LIMIT 500` (cheap pre-filter).
-2. For each: `cns_has_bilateral_reciprocity(conversation_id, window_hours)` — `EXISTS` client-originated and provider-originated rows in `chat_messages` where `message_type IN ('text', 'image', 'proposal')` and `created_at >= now() - window`.
+1. `SELECT id FROM chats WHERE status = 'ACTIVE' AND last_interaction_at < now() - interval '1 hour' * platform_constant_int('chats.reciprocity_window_hours', 24) FOR UPDATE SKIP LOCKED LIMIT 500` (cheap pre-filter).
+2. For each: `cns_has_bilateral_reciprocity(chat_id, window_hours)` — `EXISTS` client-originated and provider-originated rows in `chat_messages` where `message_type IN ('TEXT', 'IMAGE', 'PROPOSAL')` and `created_at >= now() - window`.
 3. If unilateral: `UPDATE status = 'INACTIVE'`, decrement `active_chat_count`, set `inactivation_reason = 'NO_RECIPROCITY'`, emit `SLOT_RELEASED` + `CONVERSATION_INACTIVATED`.
 4. **Conditional update:** `WHERE status = 'ACTIVE'` — `ROW_COUNT` 0 or 1 (Req. 14).
 
@@ -832,7 +853,7 @@ Post-update trigger or in-RPC: if conversation has no other `PENDING`, free mess
 
 ## 4.9 Realtime & reconciliation (Req. 13)
 
-**Channel:** `realtime.topic('conversation:' || conversation_id)` subscribing to `chat_messages` INSERT and `provider_proposals` UPDATE (filtered by RLS).
+**Channel:** `realtime.topic('conversation:' || chat_id)` subscribing to `chat_messages` INSERT and `provider_proposals` UPDATE (filtered by RLS).
 
 **Client reconciliation:** On reconnect, `list_chat_messages(p_cursor := last_seen)` keyset: `(created_at, id) > cursor`.
 
@@ -854,7 +875,7 @@ Wrapper `cns_mmd_ingest` calls `message_dispatcher.message_dispatcher_ingest` wi
 
 `useActiveConversation()` in `src/features/chats/hooks/usePushNotificationSuppression.ts`:
 
-- On FCM payload: if `appState === 'foreground'` AND `payload.conversation_id === activeConversationId` → **return early** (no toast).
+- On FCM payload: if `appState === 'foreground'` AND `payload.chat_id === activeConversationId` → **return early** (no toast).
 - Realtime still updates timeline.
 - **Web tab background (Req. 12 R12-AC11):** `document.visibilityState === 'hidden'` SHALL be treated as background → allow OS/browser notification even if route is `/chats/:id`.
 
@@ -868,7 +889,7 @@ Client MUST show summary modal with mandatory `selected_slot` picker before call
 
 ## 4.14 Revision history & comparison (Req. 10 — R10-AC12)
 
-RPC `list_proposal_versions(p_conversation_id)` returns all `provider_proposals` rows for conversation ordered by `version`, including `REVISED` / `REJECTED` / `EXPIRED`, for expand/compare UI (checklist 86–88). Card shows “Revised” badge when `version > 1` (R10-AC11).
+RPC `list_proposal_versions(p_chat_id)` returns all `provider_proposals` rows for conversation ordered by `version`, including `REVISED` / `REJECTED` / `EXPIRED`, for expand/compare UI (checklist 86–88). Card shows “Revised” badge when `version > 1` (R10-AC11).
 
 ## 4.15 Service Request detail in header (Req. 5 — R5-AC02)
 
@@ -920,7 +941,7 @@ If `cns_mmd_ingest` fails, domain event consumer logs `NOTIFICATION_SKIPPED` in 
 
 ### `chat-upload-media` (new)
 
-- **Input:** `multipart/form-data`, JWT required, fields: `conversation_id`, `upload_session_id`, `file[]`.
+- **Input:** `multipart/form-data`, JWT required, fields: `chat_id`, `upload_session_id`, `file[]`.
 - **Flow:** validate participant via RPC `cns_validate_upload_session` → Storage put → return paths; client then calls `cns_send_message` with paths in payload (two-phase, no distributed TX).
 - **Output:** `{ paths: string[] }`.
 - **Timeout:** < 30s; max 5 images × 5MB (align request-quote limits).
@@ -937,7 +958,7 @@ Unchanged; consumes MMD queue only.
 // chats.api.ts — illustrative
 export async function sendMessage(input: SendMessageInput): Promise<ApiResult<ChatMessage>> {
   return supabase.rpc('cns_send_message', {
-    p_conversation_id: input.conversationId,
+    p_chat_id: input.conversationId,
     p_message_type: input.type,
     p_payload: input.payload,
     p_idempotency_key: input.idempotencyKey,
@@ -961,9 +982,9 @@ alter publication supabase_realtime add table public.provider_proposals;
 
 **Client subscription:**
 
-- **Topic:** `supabase.channel('conversation:' || conversation_id)` (private channel).
-- **Postgres changes:** `event: 'INSERT'`, `schema: 'public'`, `table: 'chat_messages'`, `filter: 'conversation_id=eq.<uuid>'`.
-- **Proposal updates:** `event: 'UPDATE'`, `table: 'provider_proposals'`, `filter: 'conversation_id=eq.<uuid>'` — invalidates proposal card / `get_proposal_for_timeline` query.
+- **Topic:** `supabase.channel('conversation:' || chat_id)` (private channel).
+- **Postgres changes:** `event: 'INSERT'`, `schema: 'public'`, `table: 'chat_messages'`, `filter: 'chat_id=eq.<uuid>'`.
+- **Proposal updates:** `event: 'UPDATE'`, `table: 'provider_proposals'`, `filter: 'chat_id=eq.<uuid>'` — invalidates proposal card / `get_proposal_for_timeline` query.
 - **List screen:** separate channel or poll — subscribe only to open conversation; list uses `last_interaction_at` invalidation from a lightweight “inbox” refetch (Req. 22), not global `chat_messages` fanout.
 
 **Presence (optional Req. 5):** channel `conversation:{id}:presence` with TTL 10s; payload `{ user_id, typing: boolean }`; throttle 1 event/2s/client; no server persistence.
@@ -972,12 +993,12 @@ alter publication supabase_realtime add table public.provider_proposals;
 
 ```json
 {
-  "conversation_id": "uuid",
+  "chat_id": "uuid",
   "service_request_id": "uuid",
   "service_request_title": "string",
   "sender_display_name": "string",
   "message_preview": "string",
-  "deep_link_path": "/chats/{conversation_id}"
+  "deep_link_path": "/chats/{chat_id}"
 }
 ```
 
@@ -1070,14 +1091,14 @@ Default **Read Committed**. All CNS critical RPCs use explicit row locks — no 
 
 ## 7.4 Deadlock prevention
 
-**Lock ordering norm:** Always acquire locks in order: `service_requests` → `service_request_negotiation_stats` → `conversations` → `provider_proposals` → `chat_messages`. Cron jobs lock conversations only — never SR then conversation in reverse order in same TX.
+**Lock ordering norm:** Always acquire locks in order: `service_requests` → `service_request_negotiation_stats` → `chats` → `provider_proposals` → `chat_messages`. Cron jobs lock chats only — never SR then chat in reverse order in same TX.
 
 ## 7.5 Delivery guarantees (summary)
 
 | Effect | Guarantee |
 |--------|-----------|
 | Accept cascade | Exactly-once via idempotency + transaction |
-| Chat message insert | Exactly-once per `(conversation_id, sender_user_id, idempotency_key)` |
+| Chat message insert | Exactly-once per `(chat_id, sender_user_id, idempotency_key)` |
 | Push notification | At-least-once (MMD) |
 | Realtime | At-least-once |
 
@@ -1139,7 +1160,7 @@ Checkout query MUST use `WHERE processed_at IS NULL AND dead_letter = false` (§
 
 ## 9.2 Query optimization
 
-- **Denormalized** `last_interaction_at` on `conversations` — avoid `MAX(created_at)` subquery on list.
+- **Denormalized** `last_interaction_at` on `chats` — avoid `MAX(created_at)` subquery on list.
 - **List RPC** returns preview from last message via lateral join limited 1 — not full history.
 - **Proposal card hydration:** list includes `linked_entity_id` only; `get_proposal_for_timeline` on expand (Req. 22).
 
@@ -1155,7 +1176,7 @@ Checkout query MUST use `WHERE processed_at IS NULL AND dead_letter = false` (§
 
 - UUID v4 conversation ids — spread writes.
 - Batch cron uses `SKIP LOCKED` — multiple cron invocations safe (Req. 25).
-- Partition `conversation_audit` / `proposal_audit` by month when > 10M rows (future).
+- Partition `chat_audit` / `proposal_audit` by month when > 10M rows (future).
 
 ## 9.5 Client scale
 
@@ -1169,11 +1190,11 @@ Checkout query MUST use `WHERE processed_at IS NULL AND dead_letter = false` (§
 
 ## 10.1 Structured logging (Edge)
 
-Fields: `correlation_id`, `conversation_id`, `service_request_id`, `idempotency_key`, `event_type`, `worker_id`.
+Fields: `correlation_id`, `chat_id`, `service_request_id`, `idempotency_key`, `event_type`, `worker_id`.
 
 ## 10.2 Sentry (frontend)
 
-Tags: `feature=chats`, `conversation_id`, `service_request_id`. **Scrub** message `payload.text` (Req. 31).
+Tags: `feature=chats`, `chat_id`, `service_request_id`. **Scrub** message `payload.text` (Req. 31).
 
 ## 10.3 Metrics (recommended)
 
@@ -1189,7 +1210,7 @@ Tags: `feature=chats`, `conversation_id`, `service_request_id`. **Scrub** messag
 
 ## 10.4 Audit replay
 
-`conversation_audit` ⋈ `proposal_audit` filtered by `service_request_id` via join on `conversations` — ordered `created_at` (Req. 21).
+`chat_audit` ⋈ `proposal_audit` filtered by `service_request_id` via join on `chats` — ordered `created_at` (Req. 21).
 
 ## 10.5 Analytics events (client, post-server-confirm)
 
@@ -1218,11 +1239,11 @@ language sql stable security invoker set search_path = public as $$
   );
 $$;
 
-create or replace function public.is_chat_participant(p_conversation_id uuid) returns boolean
+create or replace function public.is_chat_participant(p_chat_id uuid) returns boolean
 language sql stable security invoker set search_path = public as $$
   select exists (
-    select 1 from public.conversations c
-    where c.id = p_conversation_id
+    select 1 from public.chats c
+    where c.id = p_chat_id
       and (select auth.uid()) in (c.client_id, c.provider_id)
   );
 $$;
@@ -1233,11 +1254,11 @@ $$;
 ```sql
 create policy chat_messages_select on public.chat_messages for select using (
   (select public.is_platform_admin())
-  or (select public.is_chat_participant(conversation_id))
+  or (select public.is_chat_participant(chat_id))
 );
 ```
 
-**Mutations:** `INSERT` denied for `authenticated` on `chat_messages`, `conversations`, `provider_proposals` — **RPC only** (defense in depth).
+**Mutations:** `INSERT` denied for `authenticated` on `chat_messages`, `chats`, `provider_proposals` — **RPC only** (defense in depth).
 
 **Admin:** SELECT all; INSERT/UPDATE/DELETE denied on chat tables (Req. 35).
 
@@ -1282,12 +1303,12 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | **7** Accept cascade | Atomic: ACCEPTED, SR COMPLETED, other chats CLOSED, proposals REJECTED_AUTOMATICALLY, `services` insert; concurrent → 409 | §4.4 | Single RPC transaction + idempotency |
 | **8** Rejection | `REJECTED`; free messaging re-enabled; optional manual close | §4.5 `cns_reject_proposal` | Status transition + `cns_chat_free_messaging_allowed` |
 | **9** Expiration | 24h → `EXPIRED`; accept fails; free chat restored; optional INACTIVE; reminder notification SHOULD | §4.7, §6.1 cron | `cns_expire_pending_proposals` + `platform_constants` SLA |
-| **10** Revisions (max 2) | `REVISION_REQUESTED` + reason enum; free chat on; new proposal → `PENDING`/`REVISED`; limit at 2 | §4.5, §3.1 `cns_revision_reason` | `revision_count` CHECK + RPC guards |
+| **10** Revisions (max 2) | `REVISION_REQUESTED` + reason enum; free chat on; new proposal → `PENDING`/`REVISED`; limit at 2 | §4.5, §3.1 `proposal_revision_reason` | `revision_count` CHECK + RPC guards |
 | **11** Manual close | Confirm → `CLOSED` irreversible; slot freed; new provider chat if slot available | §4.8 | `cns_close_conversation` |
 | **12** MMD notifications | Chat → push only + `bypass_limits`; proposal → push/email + limits; dedupe key; foreground suppression | §4.10–4.11, §5.5 | `domain_events` → `cns_mmd_ingest`; client `usePushNotificationSuppression` |
 | **13** Realtime & reconcile | Channel per conversation; cursor gap fill; optimistic replace; list reorder on `last_interaction_at` | §4.9, §5.4 | Supabase Realtime + `list_chat_messages` keyset |
-| **14** Idempotency | Keys on create/send/accept/submit; concurrent accept serialized; cron conditional UPDATE | §3.10, §7.2 | `cns_idempotency_records` + UNIQUE constraints |
-| **15** Schema SOT | `conversations`, `chat_messages`, proposals authoritative; SR without contract fields; `services` for contract | §2, §3 | Tables §3.2–3.7 |
+| **14** Idempotency | Keys on create/send/accept/submit; concurrent accept serialized; cron conditional UPDATE | §3.10, §7.2 | `rpc_idempotency_records` + UNIQUE constraints |
+| **15** Schema SOT | `chats`, `chat_messages`, proposals authoritative; SR without contract fields; `services` for contract | §2, §3 | Tables §3.2–3.7 |
 | **16** Dynamic timeline cards | Hydrate from `proposals`; update on status Realtime; role-based CTAs; expansion preserves scroll | §5.1 `get_proposal_for_timeline`, frontend `DynamicProposalCard` | `linked_entity_id` + TanStack Query |
 | **17** Chat list | Paginated `last_interaction_at DESC`; preview types; unread; empty state; desktop split | §5.1 `list_conversations`, `ChatListPage` | RPC + design spec components |
 | **18** Chat screen | Header/layout; disabled input when `PENDING`; enabled on `REVISION_REQUESTED`; keyboard safe areas | `ChatScreen`, `useChatComposerState` | Hook reads `cns_chat_free_messaging_allowed` via query |
@@ -1324,17 +1345,17 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | R2-AC01 | 2 | tabela `service_requests` (ou equivalente) | persistido | `status` MUST ser restrito a `OPEN`, `COMPLETED`, `CANCELLED` via `CHECK` ou enum. | §4–§13 | See §12.1; SR RPCs |
 | R2-AC02 | 2 | SR em `COMPLETED` | prestador tenta criar chat ou enviar primeira mensagem | o RPC MUST falhar com erro de negócio documentado e MUST NOT criar chat. | §4–§13 | See §12.1; SR RPCs |
 | R2-AC03 | 2 | SR em `COMPLETED` por aceite de proposta | a transação de aceite commita | em `service_requests` MUST persistir apenas `status = COMPLETED` e `completed_at` (e opcionalmente `service_id` FK); MUST NOT persistir `accepted_proposal_id` nem `scheduled_servic | §4–§13 | See §12.1; SR RPCs |
-| R2-AC04 | 2 | aceite de proposta na mesma transação | SR transiciona para `COMPLETED` | MUST existir insert em `services` com `accepted_proposal_id`, `scheduled_service_date` (data escolhida em `selected_slot`), `status = PENDING_PAYMENT`, e vínculos `service_request_ | §4–§13 | See §12.1; SR RPCs |
+| R2-AC04 | 2 | aceite de proposta na mesma transação | SR transiciona para `COMPLETED` | MUST existir insert em `services` com `accepted_proposal_id`, `scheduled_start_date`, `scheduled_end_date`, `scheduled_shift`, `duration_unit`, `duration_value`, `agreed_slot` (data escolhida em `selected_slot`), `status = PENDING_PAYMENT`, e vínculos `service_request_ | §4–§13 | See §12.1; SR RPCs |
 | R2-AC05 | 2 | cliente autenticado dono do SR | solicita cancelamento manual | SR MUST transicionar para `CANCELLED`, todos os chats para `CLOSED`, todas as propostas não terminais para `REJECTED` (ou `REJECTED_AUTOMATICALLY` conforme política única documenta | §4–§13 | See §12.1; SR RPCs |
 | R2-AC06 | 2 | cancelamento em andamento | outra transação tenta aceitar proposta simultaneamente | exatamente uma MUST vencer; a outra MUST falhar com `409` sem estado parcial. | §4–§13 | See §12.1; SR RPCs |
 | R2-AC07 | 2 | SR cancelado ou completado | subsistema de matching progressivo existir e estiver integrado | MAY publicar evento ou sinalizar `DISPATCH_STOPPED` (Requirement 24); na ausência de matching, CNS MUST encerrar chats/propostas apenas via suas próprias transações. | §4–§13 | See §12.1; SR RPCs |
 | R2-AC08 | 2 | necessidade operacional de métricas | SR transiciona | timestamps `created_at`, `updated_at`, `completed_at`, `cancelled_at` MUST ser registrados e imutáveis após terminal. | §4–§13 | See §12.1; SR RPCs |
 | R2-AC09 | 2 | checklist §2 itens 11–20 | implementado | cada item MUST possuir correspondência neste requirement ou em Requirement 9/10. | §4–§13 | See §12.1; SR RPCs |
-| R3-AC01 | 3 | chat com `status IN (ACTIVE, INACTIVE)` e **mensagens livres permitidas** (sem proposta `PENDING` vigente — Requirement 34) | participante autorizado envia `message_type` `text` ou `image` | mensagem MUST ser persistida com `sender_user_id`, `message_type`, `payload` jsonb, `created_at` monotônico. | §4–§13 | See §12.1; `cns_send_message` |
-| R3-AC02 | 3 | proposta `PENDING` vigente na conversa | cliente ou prestador tenta `send_message` com `text` ou `image` | RPC MUST falhar com erro de negócio documentado (ex.: `FREE_MESSAGING_DISABLED_PROPOSAL_PENDING`); UI MUST manter input desabilitado (Requirement 34). | §4–§13 | See §12.1; `cns_send_message` |
+| R3-AC01 | 3 | chat com `status IN (ACTIVE, INACTIVE)` e **mensagens livres permitidas** (sem proposta `PENDING` vigente — Requirement 34) | participante autorizado envia `message_type` `TEXT` ou `IMAGE` | mensagem MUST ser persistida com `sender_user_id`, `message_type`, `payload` jsonb, `created_at` monotônico. | §4–§13 | See §12.1; `cns_send_message` |
+| R3-AC02 | 3 | proposta `PENDING` vigente na conversa | cliente ou prestador tenta `send_message` com `TEXT` ou `IMAGE` | RPC MUST falhar com erro de negócio documentado (ex.: `FREE_MESSAGING_DISABLED_PROPOSAL_PENDING`); UI MUST manter input desabilitado (Requirement 34). | §4–§13 | See §12.1; `cns_send_message` |
 | R3-AC03 | 3 | chat `INACTIVE` | qualquer participante envia mensagem válida | chat MUST transicionar para `ACTIVE` antes ou na mesma transação de insert da mensagem, **sem** verificar disponibilidade de slot (checklist item 37). | §4–§13 | See §12.1; `cns_send_message` |
 | R3-AC04 | 3 | chat `CLOSED` | tentativa de envio | MUST falhar; UI MUST exibir motivo de encerramento (`closure_reason`, `closed_by_role`). | §4–§13 | See §12.1; `cns_send_message` |
-| R3-AC05 | 3 | tipos suportados inicialmente | `message_type` é `text`, `image`, `system`, `proposal`, `workflow_action` | renderer MUST rotear para componente adequado (Requirement 16). | §4–§13 | See §12.1; `cns_send_message` |
+| R3-AC05 | 3 | tipos suportados inicialmente | `message_type` é `TEXT`, `IMAGE`, `SYSTEM`, `PROPOSAL`, `WORKFLOW_ACTION` | renderer MUST rotear para componente adequado (Requirement 16). | §4–§13 | See §12.1; `cns_send_message` |
 | R3-AC06 | 3 | envio de imagens | 1..N arquivos são anexados | upload MUST usar Storage com validação de tamanho/contagem alinhada a política de fotos; URLs MUST ser entregues via signed URL ou path RLS-protegido. | §4–§13 | See §12.1; `cns_send_message` |
 | R3-AC07 | 3 | mensagem em voo | usuário aguarda confirmação | UI MUST exibir loading state; falha MUST permitir retry com mesma `idempotency_key` (checklist 47–48). | §4–§13 | See §12.1; `cns_send_message` |
 | R3-AC08 | 3 | histórico longo | usuário abre conversa | mensagens MUST carregar paginadas (`list_chat_messages(p_cursor, p_limit)`), ordenação `created_at DESC` na RPC, exibição ASC no cliente. | §4–§13 | See §12.1; `cns_send_message` |
@@ -1353,7 +1374,7 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | R4-AC09 | 4 | checklist §4 itens 51–60 | testado sob concorrência de dois prestadores disputando último slot | apenas um MUST obter slot; o outro MUST receber erro previsível. | §4–§13 | See §12.1; slots+cron |
 | R5-AC01 | 5 | chat `ACTIVE` sem proposta `PENDING` vigente | prestador envia perguntas | sistema MUST permitir mensagens longas/multiline e múltiplas imagens (checklist 61–68). | §4–§13 | See §12.1; UI detail panel |
 | R5-AC02 | 5 | contexto do SR | participante abre detalhes pelo header | painel MUST exibir dados do pedido (categoria, endereço mascarado conforme política, fotos do SR) — design spec chat-screen §Details. | §4–§13 | See §12.1; UI detail panel |
-| R5-AC03 | 5 | início de conversa | configurado em produto | sistema MAY inserir mensagem automática orientativa (tipo `system`) sugerindo perguntas estruturadas. | §4–§13 | See §12.1; UI detail panel |
+| R5-AC03 | 5 | início de conversa | configurado em produto | sistema MAY inserir mensagem automática orientativa (tipo `SYSTEM`) sugerindo perguntas estruturadas. | §4–§13 | See §12.1; UI detail panel |
 | R5-AC04 | 5 | typing indicator | suportado via Realtime presence com TTL | MUST expirar em &lt;= 10s sem heartbeat e MUST NOT gerar tráfego &gt; 1 evento/2s por usuário. | §4–§13 | See §12.1; UI detail panel |
 | R5-AC05 | 5 | revisões posteriores de proposta | cliente negocia alterações | histórico de mensagens MUST permanecer íntegro e contextualizar versões (checklist 66). | §4–§13 | See §12.1; UI detail panel |
 | R5-AC06 | 5 | checklist §5 | validado | itens 61–70 MUST estar cobertos. | §4–§13 | See §12.1; UI detail panel |
@@ -1364,7 +1385,7 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | R6-AC05 | 6 | nova versão após revisão aceita pelo prestador | nova proposta é submetida | proposta anterior MUST transicionar para `REVISED`, nova linha ou nova versão com `PENDING`, `revision_count` incrementado (platform-flow `AI`–`AK`). | §4–§13 | See §12.1; `cns_submit_proposal` |
 | R6-AC06 | 6 | UI de listagem de datas | cliente visualiza proposta | cada data sugerida MUST ser exibida distintamente (checklist 79–80). | §4–§13 | See §12.1; `cns_submit_proposal` |
 | R6-AC07 | 6 | envio em andamento | rede falha | UI MUST suportar retry idempotente; estado local MUST NOT marcar sucesso sem confirmação server (concurrency Req. 3). | §4–§13 | See §12.1; `cns_submit_proposal` |
-| R6-AC08 | 6 | mensagem dinâmica na timeline | proposta é criada | MUST inserir `chat_message` com `message_type = proposal`, `linked_entity_type = proposal`, `linked_entity_id` apontando para entidade autoritativa (Requirement 16). | §4–§13 | See §12.1; `cns_submit_proposal` |
+| R6-AC08 | 6 | mensagem dinâmica na timeline | proposta é criada | MUST inserir `chat_message` com `message_type = PROPOSAL`, `linked_entity_type = proposal`, `linked_entity_id` apontando para entidade autoritativa (Requirement 16). | §4–§13 | See §12.1; `cns_submit_proposal` |
 | R6-AC09 | 6 | checklist §6 itens 71–90 | auditoria de requisitos | cobertura MUST ser 100%. | §4–§13 | See §12.1; `cns_submit_proposal` |
 | R7-AC01 | 7 | proposta `PENDING` não expirada e SR `OPEN` | cliente inicia aceite | UI MUST exibir resumo completo e exigir seleção obrigatória de uma das datas em `proposal_suggested_slots` (checklist 91–93). | §4–§13 | See §12.1; `cns_accept_proposal` |
 | R7-AC02 | 7 | confirmação explícita do cliente (sem etapa bilateral posterior — checklist 94) | RPC `accept_proposal` executa com `proposal_id`, `selected_slot`, `idempotency_key` | em uma transação atômica (`platform-flow.mmd` `O`–`BA`): (1) proposta alvo → `ACCEPTED`; (2) SR → `COMPLETED` com `completed_at`; (3) demais chats do SR → `CLOSED` (`PROPOSAL_ACCEP | §4–§13 | See §12.1; `cns_accept_proposal` |
@@ -1403,21 +1424,21 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | R11-AC03 | 11 | chat `CLOSED` manual | slot era consumido (`ACTIVE` anterior) | slot MUST ser liberado na mesma transação (`AN` → `AO`). | §4–§13 | See §12.1; `cns_close_conversation` |
 | R11-AC04 | 11 | slot liberado após `INACTIVE` ou encerramento manual | outro prestador com visibilidade ao SR tenta primeira mensagem | CNS MUST permitir nova conversa se contagem `ACTIVE` &lt; limite configurado; retomada de batch de matching é opcional/futura (Requirement 24). | §4–§13 | See §12.1; `cns_close_conversation` |
 | R11-AC05 | 11 | encerramento | UI lista conversas | estado `CLOSED` MUST ser claramente identificado (checklist 40, 151). | §4–§13 | See §12.1; `cns_close_conversation` |
-| R12-AC01 | 12 | nova mensagem livre ou mídia confirmada em chat (`message_type` `text` ou `image`) | mensagem é persistida e destinatário deve ser alertado | produtor MUST chamar `message_dispatcher_ingest` (ou RPC wrapper) com: `p_channel = 'push'` **somente** (MUST NOT enfileirar `email` para mensagens de chat); `p_bypass_limits = tru | §4–§13 | See §12.1; MMD+suppression |
+| R12-AC01 | 12 | nova mensagem livre ou mídia confirmada em chat (`message_type` `TEXT` ou `IMAGE`) | mensagem é persistida e destinatário deve ser alertado | produtor MUST chamar `message_dispatcher_ingest` (ou RPC wrapper) com: `p_channel = 'push'` **somente** (MUST NOT enfileirar `email` para mensagens de chat); `p_bypass_limits = tru | §4–§13 | See §12.1; MMD+suppression |
 | R12-AC02 | 12 | ingestão de push de mensagem de chat com `p_bypass_limits = true` | `message_dispatcher_ingest` avalia quota diária de push (20/dia) e cooldown (20 min) | essas verificações MUST ser ignoradas para esse dispatch (comportamento documentado de `p_bypass_limits` na função `message_dispatcher_ingest`); MUST NOT marcar `FAILED_TERMINAL` p | §4–§13 | See §12.1; MMD+suppression |
 | R12-AC03 | 12 | eventos críticos de **proposta ou lifecycle** (proposta recebida, revisão solicitada, aceite, encerramento de chat, lembrete de expiração de proposta) | transição commita | ingestão MMD MUST ocorrer **após commit** (desacoplamento), com `p_bypass_limits = false` salvo reagendamento por quiet hours já coberto pelo MMD; MAY usar `push` e `email` conform | §4–§13 | See §12.1; MMD+suppression |
 | R12-AC04 | 12 | `idempotency_key` duplicada | segunda ingestão do mesmo evento | MUST NOT duplicar notificação entregue. | §4–§13 | See §12.1; MMD+suppression |
 | R12-AC05 | 12 | falha FCM terminal | MMD marca `FAILED_TERMINAL` | token MUST ser invalidado conforme scalability Req. 7. | §4–§13 | See §12.1; MMD+suppression |
 | R12-AC06 | 12 | checklist item 45 | verificado | integração MUST usar MMD exclusivamente, não envio ad-hoc FCM/Resend paralelo. | §4–§13 | See §12.1; MMD+suppression |
-| R12-AC07 | 12 | usuário com app em **foreground** e tela de chat aberta para `conversation_id = X` | push FCM de **nova mensagem de chat** para `conversation_id = X` é recebido (Service Worker web ou Capacitor Push) | app MUST **suprimir** exibição de banner/toast/heads-up dessa notificação; MUST NOT duplicar alerta visual — a UI MUST atualizar via Realtime/histórico (Requirement 13). | §4–§13 | See §12.1; MMD+suppression |
-| R12-AC08 | 12 | mesmo cenário com app em foreground mas usuário em **outra** tela (lista de chats, outro chat, home) | push de nova mensagem para `conversation_id = X` chega | app MAY exibir notificação in-app (banner/toast) ou badge conforme UX do produto; MUST NOT suprimir. | §4–§13 | See §12.1; MMD+suppression |
+| R12-AC07 | 12 | usuário com app em **foreground** e tela de chat aberta para `chat_id = X` | push FCM de **nova mensagem de chat** para `chat_id = X` é recebido (Service Worker web ou Capacitor Push) | app MUST **suprimir** exibição de banner/toast/heads-up dessa notificação; MUST NOT duplicar alerta visual — a UI MUST atualizar via Realtime/histórico (Requirement 13). | §4–§13 | See §12.1; MMD+suppression |
+| R12-AC08 | 12 | mesmo cenário com app em foreground mas usuário em **outra** tela (lista de chats, outro chat, home) | push de nova mensagem para `chat_id = X` chega | app MAY exibir notificação in-app (banner/toast) ou badge conforme UX do produto; MUST NOT suprimir. | §4–§13 | See §12.1; MMD+suppression |
 | R12-AC09 | 12 | app em **background** ou fechado | push de mensagem de chat chega | sistema operacional MUST exibir notificação push normalmente (sujeito a permissões do usuário). | §4–§13 | See §12.1; MMD+suppression |
-| R12-AC10 | 12 | implementação da supressão | arquitetada | MUST rastrear `activeConversationId` (ou rota equivalente) no estado da aplicação; handler de push MUST comparar `conversation_id` do payload com conversa ativa **antes** de chamar | §4–§13 | See §12.1; MMD+suppression |
-| R12-AC11 | 12 | push de **marco de proposta** (não mensagem de chat) | usuário está na tela do mesmo chat | supressão de banner MAY ser aplicada pela mesma regra se payload indicar `conversation_id` coincidente (SHOULD para consistência); Realtime MUST atualizar card da proposta. | §4–§13 | See §12.1; MMD+suppression |
+| R12-AC10 | 12 | implementação da supressão | arquitetada | MUST rastrear `activeConversationId` (ou rota equivalente) no estado da aplicação; handler de push MUST comparar `chat_id` do payload com conversa ativa **antes** de chamar | §4–§13 | See §12.1; MMD+suppression |
+| R12-AC11 | 12 | push de **marco de proposta** (não mensagem de chat) | usuário está na tela do mesmo chat | supressão de banner MAY ser aplicada pela mesma regra se payload indicar `chat_id` coincidente (SHOULD para consistência); Realtime MUST atualizar card da proposta. | §4–§13 | See §12.1; MMD+suppression |
 | R12-AC12 | 12 | usuário na tela do chat mas **sem** foco na aba/app (web: tab em background) | definido comportamento | SHOULD tratar como background para push de mensagem (exibir notificação) — documentar em implementação mobile-first. | §4–§13 | See §12.1; MMD+suppression |
 | R13-AC01 | 13 | usuário na tela do chat com Realtime conectado | nova mensagem do outro participante chega | timeline MUST atualizar via Realtime; push recebido simultaneamente MUST ser suprimido na UI conforme Requirement 12 (sem toast/banner duplicado). | §4–§13 | See §12.1; Realtime |
-| R13-AC02 | 13 | Supabase Realtime habilitado | cliente assina canal | `channel` MUST ser `conversation:{conversation_id}` (ou equivalente), filtrando apenas inserts/updates autorizados por RLS. | §4–§13 | See §12.1; Realtime |
-| R13-AC03 | 13 | mensagem enviada | persistida | metadata MUST suportar `delivery_status` (`pending`, `sent`, `delivered`, `read`) atualizável. | §4–§13 | See §12.1; Realtime |
+| R13-AC02 | 13 | Supabase Realtime habilitado | cliente assina canal | `channel` MUST ser `conversation:{chat_id}` (ou equivalente), filtrando apenas inserts/updates autorizados por RLS. | §4–§13 | See §12.1; Realtime |
+| R13-AC03 | 13 | mensagem enviada | persistida | metadata MUST suportar `delivery_status` (`PENDING`, `SENT`, `DELIVERED`, `READ`) atualizável. | §4–§13 | See §12.1; Realtime |
 | R13-AC04 | 13 | desconexão &gt; 5s | app reconecta | cliente MUST buscar mensagens com `created_at > last_seen_cursor` paginado, mesclando sem duplicar `id`. | §4–§13 | See §12.1; Realtime |
 | R13-AC05 | 13 | envio otimista no UI | confirmação chega | mensagem temporária MUST ser substituída pela confirmada ou marcada falha com retry. | §4–§13 | See §12.1; Realtime |
 | R13-AC06 | 13 | checklist chat-requirements-list 87, 13–14 | nova mensagem chega na lista | lista MUST reordenar por `last_interaction_at` e atualizar preview. | §4–§13 | See §12.1; Realtime |
@@ -1426,14 +1447,14 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | R14-AC02 | 14 | aceite concorrente | duas transações bloqueiam SR | segunda MUST falhar após primeira commitar. | §4–§13 | See §12.1; idempotency |
 | R14-AC03 | 14 | política de concorrência global ([`concurrency-requirements.md`](../concurrency-requirements.md)) | implementado CNS | MUST NOT usar lock em memória na Edge; MUST NOT optimistic update em aceite. | §4–§13 | See §12.1; idempotency |
 | R14-AC04 | 14 | fila de jobs de inatividade | dois workers processam mesmo chat | transição `ACTIVE`→`INACTIVE` MUST ser condicional `WHERE status = 'ACTIVE'`; linhas afetadas 0 ou 1. | §4–§13 | See §12.1; idempotency |
-| R15-AC01 | 15 | tabela `conversations` (ou `chats`) | definida | MUST incluir: `id`, `service_request_id`, `client_id`, `provider_id`, `status`, `last_interaction_at`, timestamps de ciclo de vida, `UNIQUE(service_request_id, provider_id)`. | §4–§13 | See §12.1; schema |
-| R15-AC02 | 15 | tabela `chat_messages` | definida | MUST incluir: `id`, `conversation_id`, `sender_user_id`, `message_type`, `payload jsonb`, `linked_entity_type`, `linked_entity_id`, `idempotency_key`, `created_at`, `updated_at` (d | §4–§13 | See §12.1; schema |
+| R15-AC01 | 15 | tabela `chats` | definida | MUST incluir: `id`, `service_request_id`, `client_id`, `provider_id`, `status`, `last_interaction_at`, timestamps de ciclo de vida, `UNIQUE(service_request_id, provider_id)`. | §4–§13 | See §12.1; schema |
+| R15-AC02 | 15 | tabela `chat_messages` | definida | MUST incluir: `id`, `chat_id`, `sender_user_id`, `message_type`, `payload jsonb`, `linked_entity_type`, `linked_entity_id`, `idempotency_key`, `created_at`, `updated_at` (d | §4–§13 | See §12.1; schema |
 | R15-AC03 | 15 | tabela `proposals` com versionamento | consultada | MUST ser fonte autoritativa de preço, escopo, status; `chat_messages` MUST NOT duplicar dados autoritativos além de snapshot leve para render offline. | §4–§13 | See §12.1; schema |
-| R15-AC04 | 15 | tabela `service_requests` | modelada | MUST restringir-se ao ciclo pré-contrato (pedido + negociação); MUST NOT incluir colunas `accepted_proposal_id` ou `scheduled_service_date`. | §4–§13 | See §12.1; schema |
-| R15-AC05 | 15 | tabela `services` | modelada | MUST incluir `accepted_proposal_id` (FK → `proposals`), `scheduled_service_date` (timestamptz ou date), `service_request_id` (origem do pedido), `status`, `client_id`, `provider_id | §4–§13 | See §12.1; schema |
+| R15-AC04 | 15 | tabela `service_requests` | modelada | MUST restringir-se ao ciclo pré-contrato (pedido + negociação); MUST NOT incluir `accepted_proposal_id` nem campos de agendamento contratado (ficam em `services`). | §4–§13 | See §12.1; schema |
+| R15-AC05 | 15 | tabela `services` | modelada | MUST incluir `accepted_proposal_id`, `service_request_id`, `status`, `client_id`, `provider_id`, `duration_unit`, `duration_value`, `scheduled_start_date`, `scheduled_end_date`, `scheduled_shift`, `agreed_slot` (snapshot de `selected_slot`). | §4–§13 | See §12.1; schema |
 | R15-AC06 | 15 | políticas RLS do domínio CNS | implementadas | MUST seguir Requirement 35 (admin leitura global; client/provider somente chats em que participam). | §4–§13 | See §12.1; schema |
 | R15-AC07 | 15 | auditoria | transição crítica ocorre | append em `chat_audit` / `proposal_audit` com `from_status`, `to_status`, `actor_id`, `metadata jsonb`. | §4–§13 | See §12.1; schema |
-| R16-AC01 | 16 | `message_type = proposal` | renderizado | componente MUST hidratar da entidade `proposals` via `linked_entity_id` e re-renderizar em mudança de status Realtime (design spec dynamic message). | §4–§13 | See §12.1; DynamicProposalCard |
+| R16-AC01 | 16 | `message_type = PROPOSAL` | renderizado | componente MUST hidratar da entidade `proposals` via `linked_entity_id` e re-renderizar em mudança de status Realtime (design spec dynamic message). | §4–§13 | See §12.1; DynamicProposalCard |
 | R16-AC02 | 16 | transição para `ACCEPTED`, `REJECTED`, `EXPIRED`, `REVISION_REQUESTED` | estado muda | mesmo registro de mensagem MUST atualizar UI (evitar duplicata) salvo quando workflow exigir novo evento distinto. | §4–§13 | See §12.1; DynamicProposalCard |
 | R16-AC03 | 16 | tipos iniciais | documentados | MUST suportar: proposal sent/updated/revision requested/accepted/rejected/expired/cancelled. | §4–§13 | See §12.1; DynamicProposalCard |
 | R16-AC04 | 16 | tipo desconhecido | renderizado | fallback MUST NOT quebrar timeline (checklist 19–20). | §4–§13 | See §12.1; DynamicProposalCard |
@@ -1476,18 +1497,18 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | R20-AC06 | 20 | erro | falha de rede | error state acionável (159). | §4–§13 | See §12.1; a11y UI |
 | R20-AC07 | 20 | checklist §12–13 (responsividade e acessibilidade 163–180) | validação | touch targets &gt;= 44px, foco visível desktop, suporte screen reader em mudanças de estado. | §4–§13 | See §12.1; a11y UI |
 | R21-AC01 | 21 | qualquer transição de status em chat/proposta/SR | commita | audit log imutável MUST registrar actor, timestamps, from/to. | §4–§13 | See §12.1; observability |
-| R21-AC02 | 21 | Sentry no frontend | erro em hook de chat | MUST incluir `conversation_id`, `service_request_id` em contexto. | §4–§13 | See §12.1; observability |
+| R21-AC02 | 21 | Sentry no frontend | erro em hook de chat | MUST incluir `chat_id`, `service_request_id` em contexto. | §4–§13 | See §12.1; observability |
 | R21-AC03 | 21 | métricas de produto (checklist §14) | eventos ocorrem | sistema MUST registrar: tempo até primeira resposta, tempo até proposta, taxa de aceite, revisão, expiração, motivos de encerramento (analytics events com schema versionado). | §4–§13 | See §12.1; observability |
-| R21-AC04 | 21 | suporte operacional | consulta audit por `conversation_id` | resposta MUST permitir replay ordenado de transições (checklist 191). | §4–§13 | See §12.1; observability |
+| R21-AC04 | 21 | suporte operacional | consulta audit por `chat_id` | resposta MUST permitir replay ordenado de transições (checklist 191). | §4–§13 | See §12.1; observability |
 | R21-AC05 | 21 | SLA de proposta | monitorado | alerta SHOULD disparar se job de expiração atrasar &gt; 30 min (métrica operacional). | §4–§13 | See §12.1; observability |
 | R22-AC01 | 22 | listagem de conversas e mensagens | implementadas | MUST seguir paginação server-side ([`scalability-requirements.md`](../scalability-requirements.md) Req. 1–2). | §4–§13 | See §12.1; scale |
 | R22-AC02 | 22 | Realtime | configurado | MUST seguir Req. 9 (canal por conversa, reconciliação por cursor). | §4–§13 | See §12.1; scale |
-| R22-AC03 | 22 | índices | migração criada | MUST existir índice em `(service_request_id, status)` para chats, `(conversation_id, created_at DESC)` para mensagens, `(service_request_id, status)` para propostas. | §4–§13 | See §12.1; scale |
+| R22-AC03 | 22 | índices | migração criada | MUST existir índice em `(service_request_id, status)` para chats, `(chat_id, created_at DESC)` para mensagens, `(service_request_id, status)` para propostas. | §4–§13 | See §12.1; scale |
 | R22-AC04 | 22 | payload de lista | retornado | JSON MUST NOT exceder 1 MB; projeção mínima de colunas. | §4–§13 | See §12.1; scale |
 | R22-AC05 | 22 | dynamic cards | hidratação | lazy load de detalhes expandidos SHOULD usar query separada. | §4–§13 | See §12.1; scale |
-| R23-AC01 | 23 | aceite commitado (`Requirement 7`) | transação completa | registro em `services` MUST ser criado com `status = PENDING_PAYMENT`, `service_request_id`, `accepted_proposal_id`, `scheduled_service_date` (data escolhida pelo cliente no aceite | §4–§13 | See §12.1; `services` |
+| R23-AC01 | 23 | aceite commitado (`Requirement 7`) | transação completa | registro em `services` MUST ser criado com `status = PENDING_PAYMENT`, `service_request_id`, `accepted_proposal_id`, `scheduled_start_date`, `scheduled_end_date`, `scheduled_shift`, `duration_unit`, `duration_value`, `agreed_slot` (data escolhida pelo cliente no aceite | §4–§13 | See §12.1; `services` |
 | R23-AC02 | 23 | consulta à data oficial do serviço ou à proposta contratada após aceite | implementada em API ou relatório | MUST ler de `services`, não de `service_requests` nem inferir apenas de `proposals.status = ACCEPTED`. | §4–§13 | See §12.1; `services` |
-| R23-AC03 | 23 | falha na criação de `services` após aceite | detectada | transação de aceite MUST rollback — MUST NOT haver SR `COMPLETED` sem linha correspondente em `services` com `accepted_proposal_id` e `scheduled_service_date`. | §4–§13 | See §12.1; `services` |
+| R23-AC03 | 23 | falha na criação de `services` após aceite | detectada | transação de aceite MUST rollback — MUST NOT haver SR `COMPLETED` sem linha correspondente em `services` com `accepted_proposal_id` e `scheduled_start_date`, `scheduled_end_date`, `scheduled_shift`, `duration_unit`, `duration_value`, `agreed_slot`. | §4–§13 | See §12.1; `services` |
 | R23-AC04 | 23 | `platform-flow.mmd` nó `BA` | documentado | pagamentos detalhados ficam em `payment-system-plan.md` (fora de escopo CNS além da criação). | §4–§13 | See §12.1; `services` |
 | R24-AC01 | 24 | CNS em produção sem subsistema `DISPATCH_*` | prestador com visibilidade ao SR envia primeira mensagem | todos os Requirements 1–23 e 25–33 MUST ser satisfeitos sem referência a estado de dispatch. | §4–§13 | See §12.1; domain_events |
 | R24-AC02 | 24 | liberação de slot operacional (chat `INACTIVE` ou `CLOSED` manual) | transação CNS commita | CNS SHOULD append evento `SLOT_RELEASED` em `domain_events` (Requirement 28) com `service_request_id` e contagem atual de `ACTIVE`; matching futuro MAY consumir — CNS MUST NOT invo | §4–§13 | See §12.1; domain_events |
@@ -1504,7 +1525,7 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | R25-AC06 | 25 | carga nacional (10⁵ chats) | job executa | MUST completar varredura em &lt; 15 min via índice `(status, last_interaction_at)` e paginação de candidatos. | §4–§13 | See §12.1; cron |
 | R25-AC07 | 25 | SR `COMPLETED` ou `CANCELLED` | jobs avaliam chats do SR | MUST pular processamento de reciprocidade (chat já terminal ou encerrado). | §4–§13 | See §12.1; cron |
 | R25-AC08 | 25 | checklist temporal (24h reciprocidade, 24h proposta) | validado em staging com relógio controlado | transições MUST ocorrer dentro de janela `scheduled_interval + 10 min` do SLA operacional. | §4–§13 | See §12.1; cron |
-| R26-AC01 | 26 | mensagem com `delivery_status = pending` há &gt; 5 min sem confirmação | job de reconciliação executa | MUST marcar como `failed` ou reenfileirar envio conforme política; MUST NOT duplicar mensagem visível se `idempotency_key` já commitada. | §4–§13 | See §12.1; recovery |
+| R26-AC01 | 26 | mensagem com `delivery_status = PENDING` há &gt; 5 min sem confirmação | job de reconciliação executa | MUST marcar como `FAILED` ou reenfileirar envio conforme política; MUST NOT duplicar mensagem visível se `idempotency_key` já commitada. | §4–§13 | See §12.1; recovery |
 | R26-AC02 | 26 | upload de imagem concluído em Storage mas insert de mensagem falhou | janitor executa | objetos órfãos MUST ser identificados por `upload_session_id` expirado (&gt; 24h) e MAY ser removidos após política de retenção. | §4–§13 | See §12.1; recovery |
 | R26-AC03 | 26 | aceite de proposta com commit parcial impossível por design | qualquer sub-passo falha | transação inteira MUST rollback — nenhum chat parcialmente fechado. | §4–§13 | See §12.1; recovery |
 | R26-AC04 | 26 | Realtime desconectado por &gt; 1 h | usuário retorna | full sync via paginação MUST reconciliar gap sem perda; mensagens duplicadas por `id` MUST ser deduplicadas no cliente. | §4–§13 | See §12.1; recovery |
@@ -1520,9 +1541,9 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | R28-AC02 | 28 | consumidor de outbox | processa evento | MUST usar `SKIP LOCKED` e MUST marcar `processed_at` atomicamente. | §4–§13 | See §12.1; outbox |
 | R28-AC03 | 28 | falha no consumidor de analytics | evento permanece não processado | negócio transacional MUST permanecer válido — analytics é best-effort (SHOULD). | §4–§13 | See §12.1; outbox |
 | R28-AC04 | 28 | evento `SLOT_RELEASED` | subsistema de matching progressivo existir e consumir o evento | MAY disparar avaliação de `DISPATCH_PAUSED` → retomada de batches; na ausência de matching, o evento MAY ser ignorado sem impacto no CNS. | §4–§13 | See §12.1; outbox |
-| R28-AC05 | 28 | ordenação de eventos por `conversation_id` | múltiplos eventos enfileirados | processamento MAY ser paralelo entre conversas; dentro da mesma conversa SHOULD preservar ordem por `created_at`. | §4–§13 | See §12.1; outbox |
+| R28-AC05 | 28 | ordenação de eventos por `chat_id` | múltiplos eventos enfileirados | processamento MAY ser paralelo entre conversas; dentro da mesma conversa SHOULD preservar ordem por `created_at`. | §4–§13 | See §12.1; outbox |
 | R28-AC06 | 28 | checklist observabilidade item 191 (replay) | suporte consulta `domain_events` por `service_request_id` | ordem causal MUST ser reconstruível. | §4–§13 | See §12.1; outbox |
-| R29-AC01 | 29 | prestador com chat `INACTIVE` existente | envia nova mensagem | MUST reutilizar mesmo `conversation_id` e transicionar para `ACTIVE` (checklist 58). | §4–§13 | See §12.1; re-entry |
+| R29-AC01 | 29 | prestador com chat `INACTIVE` existente | envia nova mensagem | MUST reutilizar mesmo `chat_id` e transicionar para `ACTIVE` (checklist 58). | §4–§13 | See §12.1; re-entry |
 | R29-AC02 | 29 | prestador com chat `CLOSED` manual | tenta enviar mensagem | MUST falhar; chat `CLOSED` manual é terminal (produto: geralmente sem reabertura do mesmo par prestador+SR). | §4–§13 | See §12.1; re-entry |
 | R29-AC03 | 29 | slot liberado após `INACTIVE` e outro prestador com visibilidade ao SR | envia primeira mensagem e há slot disponível | CNS MUST criar/reativar conversa conforme Requirement 4; exposição adicional via matching (`AP`–`AR`) é futura e opcional. | §4–§13 | See §12.1; re-entry |
 | R29-AC04 | 29 | prestador com chat existente ou proposta `REJECTED` | continua negociação no mesmo chat | CNS MUST aplicar regras de mensagem/proposta; despriorização no feed é responsabilidade do módulo de listagem de jobs, não do CNS. | §4–§13 | See §12.1; re-entry |
@@ -1534,7 +1555,7 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | R30-AC04 | 30 | Storage temporariamente indisponível | upload de imagem | UI MUST permitir retry; mensagem de texto MUST permanecer disponível. | §4–§13 | See §12.1; fallback |
 | R30-AC05 | 30 | modo offline (`navigator.onLine === false`) | usuário tenta aceitar proposta | MUST bloquear com mensagem clara — aceite MUST NOT ser otimista (concurrency Req. 3). | §4–§13 | See §12.1; fallback |
 | R30-AC06 | 30 | rate limit 429 em envio de mensagem | recebido | UI MUST exibir `retry_after` e desabilitar envio temporariamente. | §4–§13 | See §12.1; fallback |
-| R31-AC01 | 31 | políticas RLS em `chat_messages`, `conversations` e tabelas relacionadas (Requirement 35) | usuário autenticado com `profiles.role` `client` ou `provider` **não** participante do chat consulta via PostgREST | zero linhas MUST retornar para `SELECT`; `INSERT`/`UPDATE`/`DELETE` MUST falhar em `WITH CHECK` / `USING`. | §4–§13 | See §12.1; RLS |
+| R31-AC01 | 31 | políticas RLS em `chat_messages`, `chats` e tabelas relacionadas (Requirement 35) | usuário autenticado com `profiles.role` `client` ou `provider` **não** participante do chat consulta via PostgREST | zero linhas MUST retornar para `SELECT`; `INSERT`/`UPDATE`/`DELETE` MUST falhar em `WITH CHECK` / `USING`. | §4–§13 | See §12.1; RLS |
 | R31-AC02 | 31 | usuário com `profiles.role = 'admin'` | consulta chats e mensagens | políticas RLS MUST permitir `SELECT` em todas as linhas do domínio CNS (Requirement 35); admin MUST NOT enviar mensagens ou aceitar propostas como se fosse participante salvo fluxo | §4–§13 | See §12.1; RLS |
 | R31-AC03 | 31 | ação em card dinâmico (Accept) | RPC executa | MUST revalidar que `auth.uid()` é o `client_id` do SR. | §4–§13 | See §12.1; RLS |
 | R31-AC04 | 31 | prestador A | tenta ler chat do prestador B no mesmo SR | MUST falhar. | §4–§13 | See §12.1; RLS |
@@ -1542,7 +1563,7 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | R31-AC06 | 31 | signed URL de imagem | expira | MUST retornar 403; cliente MUST refrescar URL via RPC. | §4–§13 | See §12.1; RLS |
 | R31-AC07 | 31 | dynamic message checklist §Permissions 88–91 | testado | todos MUST passar. | §4–§13 | See §12.1; RLS |
 | R32-AC01 | 32 | operação `send_message` | executada | transação MUST incluir: validação `free_messaging_allowed` (Requirement 34); insert mensagem; atualizar `last_interaction_at`; opcionalmente `ACTIVE` se `INACTIVE`; sem alterar SR. | §4–§13 | See §12.1; TX map |
-| R32-AC02 | 32 | operação `accept_proposal` | executada | transação MUST incluir: lock SR; validar proposta; proposta → `ACCEPTED`; SR → `COMPLETED` + `completed_at` (sem `accepted_proposal_id` / `scheduled_service_date` no SR); encerrame | §4–§13 | See §12.1; TX map |
+| R32-AC02 | 32 | operação `accept_proposal` | executada | transação MUST incluir: lock SR; validar proposta; proposta → `ACCEPTED`; SR → `COMPLETED` + `completed_at` (sem `accepted_proposal_id` / `scheduled_start_date`, `scheduled_end_date`, `scheduled_shift`, `duration_unit`, `duration_value`, `agreed_slot` no SR); encerrame | §4–§13 | See §12.1; TX map |
 | R32-AC03 | 32 | operação `submit_proposal` | executada | transação MUST incluir: insert/update proposta, insert mensagem timeline, atualizar chat `last_interaction_at`. | §4–§13 | See §12.1; TX map |
 | R32-AC04 | 32 | duas transações competindo por slot | contador atinge o limite configurado em `platform_constants` (`chats.max_active_slots_per_service_request`) | lock em linha `service_request_dispatch_slots` (ou contagem materializada) MUST serializar. | §4–§13 | See §12.1; TX map |
 | R32-AC05 | 32 | documentação de anti-padrões ([`concurrency-requirements.md`](../concurrency-requirements.md)) | revisão de código CNS | MUST NOT introduzir lock distribuído em Edge nem segunda fonte de verdade de status. | §4–§13 | See §12.1; TX map |
@@ -1567,23 +1588,23 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | R34-AC08 | 34 | cliente recusa proposta (`REJECTED`) ou proposta expira (`EXPIRED`) e chat não está `CLOSED` | transição commita | mensagens livres MUST ser reabilitadas, permitindo retorno à fase Discovery (Requirements 8, 9). | §4–§13 | See §12.1; free messaging+banner |
 | R34-AC09 | 34 | não existe proposta `PENDING` nem bloqueio por chat `CLOSED`/SR terminal | fase Discovery | mensagens livres MUST ser permitidas (comportamento atual do Requirement 3). | §4–§13 | See §12.1; free messaging+banner |
 | R34-AC10 | 34 | duas abas: uma tenta enviar mensagem livre, outra aceita proposta | aceite commita primeiro | `send_message` na outra aba MUST falhar (chat encerrado ou SR `COMPLETED`); MUST NOT haver mensagem livre após aceite. | §4–§13 | See §12.1; free messaging+banner |
-| R34-AC11 | 34 | função auxiliar `chat_free_messaging_allowed(p_conversation_id)` (ou derivada em RPC) | avaliada no servidor | MUST retornar `false` se existir proposta da conversa com `status = PENDING`; MUST retornar `true` se `REVISION_REQUESTED` (mesmo que ainda exista linha histórica `REVISED`); MUST  | §4–§13 | See §12.1; free messaging+banner |
-| R34-AC12 | 34 | mensagem `system` gerada pela plataforma (ex.: “Proposal submitted”) | inserida por trigger ou RPC interno | MAY ser persistida mesmo com proposta `PENDING`; isso não reabre mensagens livres para usuários. | §4–§13 | See §12.1; free messaging+banner |
+| R34-AC11 | 34 | função auxiliar `chat_free_messaging_allowed(p_chat_id)` (ou derivada em RPC) | avaliada no servidor | MUST retornar `false` se existir proposta da conversa com `status = PENDING`; MUST retornar `true` se `REVISION_REQUESTED` (mesmo que ainda exista linha histórica `REVISED`); MUST  | §4–§13 | See §12.1; free messaging+banner |
+| R34-AC12 | 34 | mensagem `SYSTEM` gerada pela plataforma (ex.: “Proposal submitted”) | inserida por trigger ou RPC interno | MAY ser persistida mesmo com proposta `PENDING`; isso não reabre mensagens livres para usuários. | §4–§13 | See §12.1; free messaging+banner |
 | R34-AC13 | 34 | prestador tenta enviar segunda proposta enquanto já existe `PENDING` | `submit_proposal` é chamado | MUST falhar (Requirement 6); mensagens livres MUST permanecer desabilitadas. | §4–§13 | See §12.1; free messaging+banner |
 | R34-AC14 | 34 | testes pgTAP ou integração | cenários executados | MUST cobrir: (1) Discovery → envio livre OK; (2) após `PENDING` → `send_message` falha; (3) `REVISION_REQUESTED` → `send_message` OK; (4) nova `PENDING` → falha novamente; (5) `REJ | §4–§13 | See §12.1; free messaging+banner |
 | R34-AC15 | 34 | proposta `PENDING` e mensagens livres desabilitadas | banner contextual é exibido (Requirement 19) | copy SHOULD orientar cliente a “Review proposal” e prestador a aguardar decisão, não a “Continue conversation” via input livre. | §4–§13 | See §12.1; free messaging+banner |
-| R35-AC01 | 35 | usuário autenticado com `profiles.role = 'admin'` | executa `SELECT` em `conversations` e `chat_messages` via PostgREST com JWT `authenticated` | MUST retornar **todas** as linhas, **independentemente** de ser participante do chat. | §4–§13 | See §12.1; RLS |
+| R35-AC01 | 35 | usuário autenticado com `profiles.role = 'admin'` | executa `SELECT` em `chats` e `chat_messages` via PostgREST com JWT `authenticated` | MUST retornar **todas** as linhas, **independentemente** de ser participante do chat. | §4–§13 | See §12.1; RLS |
 | R35-AC02 | 35 | admin | executa `SELECT` em `proposals` do domínio CNS | MUST retornar todas as propostas (suporte, auditoria, moderação). | §4–§13 | See §12.1; RLS |
-| R35-AC03 | 35 | admin | tenta `INSERT`/`UPDATE`/`DELETE` em `chat_messages` ou `conversations` como usuário comum (sem RPC de suporte dedicado) | política MUST **negar** na v1 (admin com acesso **somente leitura** em chats); escrita administrativa MAY existir apenas via RPC `SECURITY DEFINER` auditado em fase posterior. | §4–§13 | See §12.1; RLS |
+| R35-AC03 | 35 | admin | tenta `INSERT`/`UPDATE`/`DELETE` em `chat_messages` ou `chats` como usuário comum (sem RPC de suporte dedicado) | política MUST **negar** na v1 (admin com acesso **somente leitura** em chats); escrita administrativa MAY existir apenas via RPC `SECURITY DEFINER` auditado em fase posterior. | §4–§13 | See §12.1; RLS |
 | R35-AC04 | 35 | admin | acessa objeto Storage de imagem anexada ao chat | política de bucket MUST permitir **leitura**; escrita MUST seguir mesma restrição (leitura-only v1 salvo RPC). | §4–§13 | See §12.1; RLS |
-| R35-AC05 | 35 | cliente participante (`conversations.client_id` = `(select auth.uid())` ou FK equivalente) | `SELECT` na própria conversa e mensagens | MUST permitir. | §4–§13 | See §12.1; RLS |
+| R35-AC05 | 35 | cliente participante (`chats.client_id` = `(select auth.uid())` ou FK equivalente) | `SELECT` na própria conversa e mensagens | MUST permitir. | §4–§13 | See §12.1; RLS |
 | R35-AC06 | 35 | cliente **não** participante | `SELECT`, `INSERT`, `UPDATE` ou `DELETE` em conversa/mensagem alheia | MUST negar (zero linhas em `SELECT`; falha em mutações). | §4–§13 | See §12.1; RLS |
 | R35-AC07 | 35 | cliente participante, chat elegível (`≠ CLOSED`), SR `OPEN`, Requirement 34 | envia mensagem livre ou executa ação de proposta permitida ao cliente | políticas `WITH CHECK` MUST permitir **somente** na conversa em que é o cliente vinculado. | §4–§13 | See §12.1; RLS |
-| R35-AC08 | 35 | prestador participante (`conversations.provider_id` vinculado ao prestador autenticado) | `SELECT` na própria conversa e mensagens | MUST permitir. | §4–§13 | See §12.1; RLS |
+| R35-AC08 | 35 | prestador participante (`chats.provider_id` vinculado ao prestador autenticado) | `SELECT` na própria conversa e mensagens | MUST permitir. | §4–§13 | See §12.1; RLS |
 | R35-AC09 | 35 | prestador **não** participante (ex.: prestador B no mesmo SR que chat cliente↔prestador A) | tenta ler ou mutar conversa/mensagem | MUST negar. | §4–§13 | See §12.1; RLS |
 | R35-AC10 | 35 | prestador participante | envia mensagem, mídia ou proposta (RPC/`INSERT` permitidos) | MUST permitir **somente** na conversa em que é o prestador vinculado; MUST NOT gravar em conversa de outro prestador. | §4–§13 | See §12.1; RLS |
 | R35-AC11 | 35 | qualquer tabela nova do CNS | criada em migração | `ENABLE ROW LEVEL SECURITY` e políticas para `SELECT`/`INSERT`/`UPDATE`/`DELETE` MUST ser criadas na **mesma** migração; MUST NOT expor tabela sem RLS em produção. | §4–§13 | See §12.1; RLS |
-| R35-AC12 | 35 | política `SELECT` em `chat_messages` | definida | SHOULD usar forma única: `(select public.is_platform_admin()) OR (select public.is_chat_participant(conversation_id))` — uma política permissiva por ação, com `OR`, em vez de polít | §4–§13 | See §12.1; RLS |
+| R35-AC12 | 35 | política `SELECT` em `chat_messages` | definida | SHOULD usar forma única: `(select public.is_platform_admin()) OR (select public.is_chat_participant(chat_id))` — uma política permissiva por ação, com `OR`, em vez de polít | §4–§13 | See §12.1; RLS |
 | R35-AC13 | 35 | expressões com `auth.uid()` | escritas | MUST usar `(select auth.uid())` (initplan). | §4–§13 | See §12.1; RLS |
 | R35-AC14 | 35 | RPC `SECURITY DEFINER` (`send_message`, `accept_proposal`, etc.) | executada | MUST revalidar participação e papel **dentro** da função; RLS não substitui autorização de mutações críticas (defense in depth). | §4–§13 | See §12.1; RLS |
 | R35-AC15 | 35 | cliente PostgREST com role `authenticated` | acessa CNS | MUST depender exclusivamente de RLS + RPC; MUST NOT usar `service_role` no bundle do app. | §4–§13 | See §12.1; RLS |
@@ -1596,7 +1617,7 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | OAC-01 | **Execution Model**: Transições de Chat, Proposal e efeitos colaterais em SR MUST ser executadas exclusivamente via **RPC… | §1.3 | RPC-only FSM |
 | OAC-02 | **Persistence Strategy**: Todo evento que altere slot, status ou versão de proposta MUST ser persistido antes de retornar suce… | §1.6 | Commit-before-200 |
 | OAC-03 | **Concurrency Control**: Aceite de proposta MUST usar `SELECT … FOR UPDATE` na linha do SR e das propostas elegíveis na mesma… | §7 | `FOR UPDATE` accept |
-| OAC-04 | **Idempotency**: Criação de chat, envio de mensagem, aceite e ingestão de notificação MUST aceitar `idempotency_key` … | §3.4, §3.10 | Scoped UNIQUE on messages; `cns_idempotency_records` for RPCs |
+| OAC-04 | **Idempotency**: Criação de chat, envio de mensagem, aceite e ingestão de notificação MUST aceitar `idempotency_key` … | §3.4, §3.10 | Scoped UNIQUE on messages; `rpc_idempotency_records` for RPCs |
 | OAC-05 | **Retry Mechanisms**: Upload de mídia e envio de mensagem MAY retentar no cliente com a mesma `idempotency_key`; workers d… | §8.2 | Conditional cron UPDATE |
 | OAC-06 | **Scheduling**: Reciprocidade e expiração de proposta MUST ser avaliadas por `pg_cron` (intervalo recomendado: 5–15 … | §6.1 | pg_cron |
 | OAC-07 | **Resumable Execution**: Jobs internos do CNS (reciprocidade, expiração) MUST ser retomáveis via estado no Postgres; CNS MUST… | §6 | Postgres state |
@@ -1728,7 +1749,7 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 
 ```
 src/features/chats/
-  api/           # chats.api.ts, conversations.rpc.ts — only supabase.rpc
+  api/           # chats.api.ts, chats.rpc.ts — only supabase.rpc
   hooks/         # useChatMessages, useConversationRealtime, usePushNotificationSuppression
   components/    # ChatList, ChatScreen, DynamicProposalCard, ChatActionBanner
   types/         # Zod schemas mirroring RPC JSON
@@ -1744,7 +1765,7 @@ src/features/negotiation-proposals/
 
 ## 13.10 Migration & cutover plan
 
-1. **Wave A:** Add tables/enums/helpers RLS read-only; backfill `conversations` from historical data if any.
+1. **Wave A:** Add tables/enums/helpers RLS read-only; backfill `chats` from historical data if any.
 2. **Wave B:** Deploy RPCs behind feature flag `VITE_ENABLE_CNS`.
 3. **Wave C:** Migrate `provider_proposals.status` values; update client budgets RPCs to use `PENDING` semantics.
 4. **Wave D:** Switch composer to `cns_submit_proposal`; deprecate direct `create_provider_proposal` from client.
@@ -1767,7 +1788,7 @@ src/features/negotiation-proposals/
 
 ```sql
 -- Illustrative core — full function in migration
-perform cns_idempotency_begin('accept_proposal', p_idempotency_key);
+perform idempotency_begin('chats.accept_proposal', p_idempotency_key);
 select * into v_sr from service_requests where id = v_sr_id for update;
 if v_sr.status <> 'OPEN' then raise exception 'SR_NOT_OPEN'; end if;
 select * into v_pp from provider_proposals where id = p_proposal_id for update;
@@ -1777,13 +1798,13 @@ end if;
 update provider_proposals set status = 'ACCEPTED', selected_slot = p_selected_slot where id = p_proposal_id;
 update service_requests set status = 'COMPLETED', completed_at = now() where id = v_sr_id;
 update provider_proposals set status = 'REJECTED_AUTOMATICALLY' where service_request_id = v_sr_id and id <> p_proposal_id and status = 'PENDING';
-update conversations set status = 'CLOSED', closure_type = 'PROPOSAL_ACCEPTED_ELSEWHERE', closed_at = now() where service_request_id = v_sr_id and status <> 'CLOSED';
+update chats set status = 'CLOSED', closure_type = 'PROPOSAL_ACCEPTED_ELSEWHERE', closed_at = now() where service_request_id = v_sr_id and status <> 'CLOSED';
 update service_request_negotiation_stats set active_chat_count = 0 where service_request_id = v_sr_id;
 insert into services (...) values (...) returning id into v_service_id;
 perform cns_record_domain_event('PROPOSAL_ACCEPTED', ...);
-perform cns_record_domain_event('CHATS_CLOSED_BULK', ...); -- payload.conversation_ids
+perform cns_record_domain_event('CHATS_CLOSED_BULK', ...); -- payload.chat_ids
 perform cns_record_domain_event('SERVICE_REQUEST_COMPLETED', ...);
-perform cns_idempotency_commit(...);
+perform idempotency_commit(...);
 ```
 
 ---
@@ -1792,8 +1813,8 @@ perform cns_idempotency_commit(...);
 
 | Effect | Technique |
 |--------|-----------|
-| Duplicate message send | `UNIQUE (conversation_id, sender_user_id, idempotency_key)` on `chat_messages` |
-| Duplicate accept | `cns_idempotency_records` + SR terminal state guard |
+| Duplicate message send | `UNIQUE (chat_id, sender_user_id, idempotency_key)` on `chat_messages` |
+| Duplicate accept | `rpc_idempotency_records` + SR terminal state guard |
 | Duplicate push | MMD `idempotency_key` UNIQUE |
 | Duplicate slot consumption | Stats updated only on `ACTIVE` transition with lock |
 | Duplicate reciprocity INACTIVE | `UPDATE … WHERE status = 'ACTIVE'` |

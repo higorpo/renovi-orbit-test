@@ -434,7 +434,7 @@ Example:
 
 ```json id="swifph"
 {
-  "message_type": "proposal",
+  "message_type": "PROPOSAL",
   "linked_entity_type": "proposal",
   "linked_entity_id": "proposal_123",
   "payload": {

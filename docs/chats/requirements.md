@@ -164,9 +164,9 @@ Estados planejados em [`matching-algorithm/requirements.md`](../matching-algorit
 | Tabela | Responsabilidade de domínio | Conteúdo típico |
 |--------|----------------------------|-----------------|
 | **`service_requests`** | Pedido de serviço **antes** do orçamento ser fechado | Descrição do pedido, local, fotos, estado `OPEN` / `CANCELLED` / `COMPLETED` (negociação encerrada), chats, propostas em fluxo |
-| **`services`** | Serviço contratado **depois** do orçamento aceito (fechado) | `accepted_proposal_id`, `scheduled_service_date`, prestador contratado, `PENDING_PAYMENT` e estados posteriores de execução/pagamento |
+| **`services`** | Serviço contratado **depois** do orçamento aceito (fechado) | `accepted_proposal_id`, janela agendada (`scheduled_*`, `duration_*`, `agreed_slot`), prestador contratado, `PENDING_PAYMENT` e estados posteriores |
 
-- `service_requests` MUST NOT armazenar `accepted_proposal_id` nem `scheduled_service_date` — esses campos pertencem exclusivamente a `services`.
+- `service_requests` MUST NOT armazenar `accepted_proposal_id` nem campos de agendamento contratado — pertencem exclusivamente a `services`.
 - No aceite, o SR transiciona para `COMPLETED` (fim da fase de pedido/orçamento); na mesma transação nasce **uma** linha em `services` com a proposta aceita e a data escolhida.
 - Opcionalmente, o SR MAY manter `service_id` (FK) apontando para o registro criado em `services`, apenas para navegação/histórico — sem duplicar dados contratuais no SR.
 
@@ -186,8 +186,8 @@ Estados planejados em [`matching-algorithm/requirements.md`](../matching-algorit
 
 #### Proposal
 
-- **`PENDING`** *(aguardando cliente)* — Proposta **ativa** aguardando decisão; SLA 24h. Enquanto vigente, **bloqueia** envio de mensagens livres (`text`/`image`) no chat; única interação bilateral permitida é via card da proposta e CTAs (aceitar, recusar, solicitar revisão). Requirement 34.
-- **`ACCEPTED`** *(terminal sucesso)* — Cliente selecionou data; efeito contratual materializado na linha `services` criada no aceite (`accepted_proposal_id`, `scheduled_service_date`).
+- **`PENDING`** *(aguardando cliente)* — Proposta **ativa** aguardando decisão; SLA 24h. Enquanto vigente, **bloqueia** envio de mensagens livres (`TEXT`/`IMAGE`) no chat; única interação bilateral permitida é via card da proposta e CTAs (aceitar, recusar, solicitar revisão). Requirement 34.
+- **`ACCEPTED`** *(terminal sucesso)* — Cliente escolheu uma opção de `proposal_suggested_slots` (`selected_slot`); efeito contratual na linha `services` (`accepted_proposal_id`, `scheduled_*`, `duration_*`, `agreed_slot`).
 - **`REJECTED`** *(terminal por cliente)* — Recusa explícita; chat pode continuar em negociação ou encerrar.
 - **`EXPIRED`** *(terminal por tempo)* — Cliente não agiu em 24h; chat pode permanecer ativo se houver atividade recente (`platform-flow.mmd`).
 - **`REVISION_REQUESTED`** *(transitório)* — Cliente pediu revisão estruturada; prestador deve enviar nova proposta ou recusar o pedido. **Reabilita** mensagens livres no chat até nova proposta `PENDING` ou encerramento da negociação (Requirement 34).
@@ -196,7 +196,7 @@ Estados planejados em [`matching-algorithm/requirements.md`](../matching-algorit
 
 #### Service (tabela `services`)
 
-- **`PENDING_PAYMENT`** — Estado inicial após aceite; registro nasce na mesma transação que fecha o SR. Campos obrigatórios no insert: `service_request_id`, `accepted_proposal_id`, `scheduled_service_date` (data escolhida pelo cliente), `client_id`, `provider_id`, timestamps. Pagamentos Asaas e estados posteriores ficam fora do escopo detalhado deste documento.
+- **`PENDING_PAYMENT`** — Estado inicial após aceite; registro nasce na mesma transação que fecha o SR. Campos obrigatórios no insert: `service_request_id`, `accepted_proposal_id`, `duration_unit`, `duration_value`, `scheduled_start_date`, `scheduled_shift`, `scheduled_end_date` (quando `duration_unit = days`), `agreed_slot`, `client_id`, `provider_id`, timestamps. Pagamentos Asaas ficam fora do escopo deste documento.
 
 ### Diagrama de transição (referência)
 
@@ -218,7 +218,7 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 - **Isolation:** RLS MUST garantir isolamento entre participantes não relacionados e acesso administrativo de leitura global para `profiles.role = 'admin'` (Requirement 35); RPCs `SECURITY DEFINER` MUST revalidar `auth.uid()` e papel mesmo quando RLS permitir leitura admin.
 - **Atomicity:** Aceite, cancelamento de SR e encerramento em massa de chats MUST ser uma única transação.
 - **Ownership Semantics:** Apenas o participante do chat (cliente ou prestador vinculado) MAY enviar mensagens livres quando `free_messaging` estiver habilitado (Requirement 34); apenas o prestador dono da proposta MAY submeter nova proposta; apenas o cliente do SR MAY aceitar/recusar/solicitar revisão via fluxos da proposta.
-- **Proposal-Gated Messaging:** Enquanto existir proposta `PENDING` na conversa, RPC `send_message` MUST rejeitar `message_type IN ('text', 'image')` para cliente e prestador; interação MUST ocorrer via entidade `proposals` e componente dinâmico na timeline (Requirement 34).
+- **Proposal-Gated Messaging:** Enquanto existir proposta `PENDING` na conversa, RPC `send_message` MUST rejeitar `message_type IN ('TEXT', 'IMAGE')` para cliente e prestador; interação MUST ocorrer via entidade `proposals` e componente dinâmico na timeline (Requirement 34).
 - **Locking Semantics:** Slot counter MUST ser atualizado na mesma transação que transiciona chat para/de `ACTIVE`.
 - **Polling Constraints:** Listagens MUST NOT ser polled &lt; 5s em estado estável; Realtime é preferido para mensagens ativas.
 - **Orchestration Semantics:** Cascata pós-aceite é orquestrada pelo RPC `accept_proposal` (nome ilustrativo), não por corrente de chamadas do cliente.
@@ -277,11 +277,11 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 - **GIVEN** SR em `COMPLETED` por aceite de proposta
 - **WHEN** a transação de aceite commita
-- **THEN** em `service_requests` MUST persistir apenas `status = COMPLETED` e `completed_at` (e opcionalmente `service_id` FK); MUST NOT persistir `accepted_proposal_id` nem `scheduled_service_date` no SR.
+- **THEN** em `service_requests` MUST persistir apenas `status = COMPLETED` e `completed_at` (e opcionalmente `service_id` FK); MUST NOT persistir `accepted_proposal_id` nem campos de agendamento no SR (ficam em `services`).
 
 - **GIVEN** aceite de proposta na mesma transação
 - **WHEN** SR transiciona para `COMPLETED`
-- **THEN** MUST existir insert em `services` com `accepted_proposal_id`, `scheduled_service_date` (data escolhida em `selected_slot`), `status = PENDING_PAYMENT`, e vínculos `service_request_id`, `client_id`, `provider_id` (Requirements 7, 23).
+- **THEN** MUST existir insert em `services` com `accepted_proposal_id`, janela agendada copiada de `selected_slot` (`scheduled_*`, `duration_*`, `agreed_slot`), `status = PENDING_PAYMENT`, e vínculos `service_request_id`, `client_id`, `provider_id` (Requirements 7, 23).
 
 - **GIVEN** cliente autenticado dono do SR
 - **WHEN** solicita cancelamento manual
@@ -312,11 +312,11 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 ### Acceptance Criteria
 
 - **GIVEN** chat com `status IN (ACTIVE, INACTIVE)` e **mensagens livres permitidas** (sem proposta `PENDING` vigente — Requirement 34)
-- **WHEN** participante autorizado envia `message_type` `text` ou `image`
+- **WHEN** participante autorizado envia `message_type` `TEXT` ou `IMAGE`
 - **THEN** mensagem MUST ser persistida com `sender_user_id`, `message_type`, `payload` jsonb, `created_at` monotônico.
 
 - **GIVEN** proposta `PENDING` vigente na conversa
-- **WHEN** cliente ou prestador tenta `send_message` com `text` ou `image`
+- **WHEN** cliente ou prestador tenta `send_message` com `TEXT` ou `IMAGE`
 - **THEN** RPC MUST falhar com erro de negócio documentado (ex.: `FREE_MESSAGING_DISABLED_PROPOSAL_PENDING`); UI MUST manter input desabilitado (Requirement 34).
 
 - **GIVEN** chat `INACTIVE`
@@ -328,7 +328,7 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 - **THEN** MUST falhar; UI MUST exibir motivo de encerramento (`closure_reason`, `closed_by_role`).
 
 - **GIVEN** tipos suportados inicialmente
-- **WHEN** `message_type` é `text`, `image`, `system`, `proposal`, `workflow_action`
+- **WHEN** `message_type` é `TEXT`, `IMAGE`, `SYSTEM`, `PROPOSAL`, `WORKFLOW_ACTION`
 - **THEN** renderer MUST rotear para componente adequado (Requirement 16).
 
 - **GIVEN** envio de imagens
@@ -367,7 +367,7 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 ### Definições (reciprocidade e slots)
 
-- **Mensagens que contam para reciprocidade bilateral** na janela `RECIPROCITY_WINDOW_HOURS`: `message_type` `text`, `image` e `proposal` (uma por lado: ao menos uma do cliente e uma do prestador). **`system` e `workflow_action` NÃO contam.**
+- **Mensagens que contam para reciprocidade bilateral** na janela `RECIPROCITY_WINDOW_HOURS`: `message_type` `TEXT`, `IMAGE` e `PROPOSAL` (uma por lado: ao menos uma do cliente e uma do prestador). **`SYSTEM` e `WORKFLOW_ACTION` NÃO contam.**
 - **Contador de slots (`active_chat_count`):** incrementa somente na **primeira** ativação de um par `(service_request_id, provider_id)`; **reativação** `INACTIVE` → `ACTIVE` **não** consome slot e **não** incrementa o contador — o SR **pode** ter temporariamente mais chats `ACTIVE` que o limite configurado (comportamento esperado; ver `design.md` §3.3.1).
 
 ### Acceptance Criteria
@@ -426,7 +426,7 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 - **GIVEN** início de conversa
 - **WHEN** configurado em produto
-- **THEN** sistema MAY inserir mensagem automática orientativa (tipo `system`) sugerindo perguntas estruturadas.
+- **THEN** sistema MAY inserir mensagem automática orientativa (tipo `SYSTEM`) sugerindo perguntas estruturadas.
 
 - **GIVEN** typing indicator
 - **WHEN** suportado via Realtime presence com TTL
@@ -445,6 +445,16 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 ## Requirement 6: Structured Proposal Creation & Versioning
 
 *User Story*: Como prestador, eu quero enviar proposta formal com preço, escopo, prazo e datas, para que o cliente decida com informação completa.
+
+**Disponibilidade sugerida (composer — alinhado a `ProviderProposalComposerDialog` e `create_provider_proposal`):**
+
+- `proposal_duration_unit`: `hours` | `days`; `proposal_duration_value`: inteiro positivo.
+- `proposal_suggested_slots`: array JSON com **1–3** opções independentes. Cada opção:
+  - `start_date` (obrigatório; não no passado).
+  - `shift`: `morning` | `afternoon` | `full_day`.
+  - **Horas:** sem `end_date` — “posso neste dia/turno”.
+  - **Dias:** `end_date` obrigatório; intervalo inclusivo `(end_date - start_date + 1)` MUST igualar `proposal_duration_value`.
+- No aceite, o cliente escolhe **uma** opção (`selected_slot`, mesmo shape); `services` congela essa escolha (Requirement 7, 23).
 
 ### Acceptance Criteria
 
@@ -478,7 +488,7 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 - **GIVEN** mensagem dinâmica na timeline
 - **WHEN** proposta é criada
-- **THEN** MUST inserir `chat_message` com `message_type = proposal`, `linked_entity_type = proposal`, `linked_entity_id` apontando para entidade autoritativa (Requirement 16).
+- **THEN** MUST inserir `chat_message` com `message_type = PROPOSAL`, `linked_entity_type = proposal`, `linked_entity_id` apontando para entidade autoritativa (Requirement 16).
 
 - **GIVEN** checklist §6 itens 71–90
 - **WHEN** auditoria de requisitos
@@ -498,7 +508,7 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 - **GIVEN** confirmação explícita do cliente (sem etapa bilateral posterior — checklist 94)
 - **WHEN** RPC `accept_proposal` executa com `proposal_id`, `selected_slot`, `idempotency_key`
-- **THEN** em uma transação atômica (`platform-flow.mmd` `O`–`BA`): (1) proposta alvo → `ACCEPTED`; (2) SR → `COMPLETED` com `completed_at`; (3) demais chats do SR → `CLOSED` (`PROPOSAL_ACCEPTED_ELSEWHERE`); (4) demais propostas pendentes → `REJECTED_AUTOMATICALLY`; (5) insert em `services` com `status = PENDING_PAYMENT`, `accepted_proposal_id` = proposta aceita, `scheduled_service_date` = data derivada de `selected_slot`, mais `service_request_id`, `client_id`, `provider_id`.
+- **THEN** em uma transação atômica (`platform-flow.mmd` `O`–`BA`): (1) proposta alvo → `ACCEPTED` + `selected_slot`; (2) SR → `COMPLETED` com `completed_at`; (3) demais chats do SR → `CLOSED` (`PROPOSAL_ACCEPTED_ELSEWHERE`); (4) demais propostas pendentes → `REJECTED_AUTOMATICALLY`; (5) insert em `services` com `status = PENDING_PAYMENT`, `accepted_proposal_id`, `duration_unit`, `duration_value`, `scheduled_start_date`, `scheduled_shift`, `scheduled_end_date` (se dias), `agreed_slot`, `service_request_id`, `client_id`, `provider_id`.
 
 - **GIVEN** duas abas tentam aceitar propostas diferentes simultaneamente
 - **WHEN** ambas chamam RPC
@@ -682,14 +692,14 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 | Origem do evento | Canais MMD | `bypass_limits` | Limites MMD padrão (20 push/dia, 5 e-mail/dia, cooldown 20 min push) |
 |------------------|------------|-----------------|----------------------------------------------------------------------|
-| **Nova mensagem de chat** (`text`/`image` confirmada) | **`push` apenas** | **`true`** | **Não aplicam** à cota diária de push (ingest com bypass) |
+| **Nova mensagem de chat** (`TEXT`/`IMAGE` confirmada) | **`push` apenas** | **`true`** | **Não aplicam** à cota diária de push (ingest com bypass) |
 | **Marcos de proposta** (recebida, revisão, aceite, encerramento, lembrete SLA) | `push` e/ou `email` conforme template | `false` (default) | **Aplicam** (MMD Req. 1) |
 
 Horário silencioso (22:00–06:00 BRT) e demais regras do MMD continuam válidos salvo onde `bypass_limits` dispensa reavaliação de quota na reativação (ver [`message-dispatcher/requirements.md`](../message-dispatcher/requirements.md) e docs de negócio de `bypass_limits`).
 
 ### Acceptance Criteria — ingestão (servidor)
 
-- **GIVEN** nova mensagem livre ou mídia confirmada em chat (`message_type` `text` ou `image`)
+- **GIVEN** nova mensagem livre ou mídia confirmada em chat (`message_type` `TEXT` ou `IMAGE`)
 - **WHEN** mensagem é persistida e destinatário deve ser alertado
 - **THEN** produtor MUST chamar `message_dispatcher_ingest` (ou RPC wrapper) com: `p_channel = 'push'` **somente** (MUST NOT enfileirar `email` para mensagens de chat); `p_bypass_limits = true`; `idempotency_key` única estável (ex.: `chat_message:{message_id}:push`); template/payload MUST incluir `conversation_id` (e `service_request_id` se útil) para roteamento no cliente.
 
@@ -757,7 +767,7 @@ Horário silencioso (22:00–06:00 BRT) e demais regras do MMD continuam válido
 
 - **GIVEN** mensagem enviada
 - **WHEN** persistida
-- **THEN** metadata MUST suportar `delivery_status` (`pending`, `sent`, `delivered`, `read`) atualizável.
+- **THEN** metadata MUST suportar `delivery_status` (`PENDING`, `SENT`, `DELIVERED`, `READ`) atualizável.
 
 - **GIVEN** desconexão &gt; 5s
 - **WHEN** app reconecta
@@ -807,13 +817,13 @@ Horário silencioso (22:00–06:00 BRT) e demais regras do MMD continuam válido
 
 ### Acceptance Criteria
 
-- **GIVEN** tabela `conversations` (ou `chats`)
+- **GIVEN** tabela `chats`
 - **WHEN** definida
 - **THEN** MUST incluir: `id`, `service_request_id`, `client_id`, `provider_id`, `status`, `last_interaction_at`, timestamps de ciclo de vida, `UNIQUE(service_request_id, provider_id)`.
 
 - **GIVEN** tabela `chat_messages`
 - **WHEN** definida
-- **THEN** MUST incluir: `id`, `conversation_id`, `sender_user_id`, `message_type`, `payload jsonb`, `linked_entity_type`, `linked_entity_id`, `idempotency_key`, `created_at`, `updated_at` (design spec §Suggested Database Structure).
+- **THEN** MUST incluir: `id`, `chat_id`, `sender_user_id`, `message_type`, `payload jsonb`, `linked_entity_type`, `linked_entity_id`, `idempotency_key`, `created_at`, `updated_at` (design spec §Suggested Database Structure).
 
 - **GIVEN** tabela `proposals` com versionamento
 - **WHEN** consultada
@@ -821,11 +831,11 @@ Horário silencioso (22:00–06:00 BRT) e demais regras do MMD continuam válido
 
 - **GIVEN** tabela `service_requests`
 - **WHEN** modelada
-- **THEN** MUST restringir-se ao ciclo pré-contrato (pedido + negociação); MUST NOT incluir colunas `accepted_proposal_id` ou `scheduled_service_date`.
+- **THEN** MUST restringir-se ao ciclo pré-contrato (pedido + negociação); MUST NOT incluir colunas `accepted_proposal_id` ou janela agendada (`scheduled_*`, `duration_*`, `agreed_slot`).
 
 - **GIVEN** tabela `services`
 - **WHEN** modelada
-- **THEN** MUST incluir `accepted_proposal_id` (FK → `proposals`), `scheduled_service_date` (timestamptz ou date), `service_request_id` (origem do pedido), `status`, `client_id`, `provider_id`; MUST ser a única fonte de verdade da data oficial e da proposta contratada após aceite.
+- **THEN** MUST incluir `accepted_proposal_id` (FK → `proposals`), `duration_unit`, `duration_value`, `scheduled_start_date`, `scheduled_end_date`, `scheduled_shift`, `agreed_slot`, `service_request_id`, `status`, `client_id`, `provider_id`; MUST ser a única fonte de verdade do agendamento contratado após aceite.
 
 - **GIVEN** políticas RLS do domínio CNS
 - **WHEN** implementadas
@@ -843,7 +853,7 @@ Horário silencioso (22:00–06:00 BRT) e demais regras do MMD continuam válido
 
 ### Acceptance Criteria
 
-- **GIVEN** `message_type = proposal`
+- **GIVEN** `message_type = PROPOSAL`
 - **WHEN** renderizado
 - **THEN** componente MUST hidratar da entidade `proposals` via `linked_entity_id` e re-renderizar em mudança de status Realtime (design spec dynamic message).
 
@@ -1089,7 +1099,7 @@ Horário silencioso (22:00–06:00 BRT) e demais regras do MMD continuam válido
 
 - **GIVEN** índices
 - **WHEN** migração criada
-- **THEN** MUST existir índice em `(service_request_id, status)` para chats, `(conversation_id, created_at DESC)` para mensagens, `(service_request_id, status)` para propostas.
+- **THEN** MUST existir índice em `(service_request_id, status)` para chats, `(chat_id, created_at DESC)` para mensagens, `(service_request_id, status)` para propostas.
 
 - **GIVEN** payload de lista
 - **WHEN** retornado
@@ -1109,7 +1119,7 @@ Horário silencioso (22:00–06:00 BRT) e demais regras do MMD continuam válido
 
 - **GIVEN** aceite commitado (`Requirement 7`)
 - **WHEN** transação completa
-- **THEN** registro em `services` MUST ser criado com `status = PENDING_PAYMENT`, `service_request_id`, `accepted_proposal_id`, `scheduled_service_date` (data escolhida pelo cliente no aceite), `client_id`, `provider_id`, `created_at`.
+- **THEN** registro em `services` MUST ser criado com `status = PENDING_PAYMENT`, `service_request_id`, `accepted_proposal_id`, janela agendada (`scheduled_*`, `duration_*`, `agreed_slot`) (data escolhida pelo cliente no aceite), `client_id`, `provider_id`, `created_at`.
 
 - **GIVEN** consulta à data oficial do serviço ou à proposta contratada após aceite
 - **WHEN** implementada em API ou relatório
@@ -1117,7 +1127,7 @@ Horário silencioso (22:00–06:00 BRT) e demais regras do MMD continuam válido
 
 - **GIVEN** falha na criação de `services` após aceite
 - **WHEN** detectada
-- **THEN** transação de aceite MUST rollback — MUST NOT haver SR `COMPLETED` sem linha correspondente em `services` com `accepted_proposal_id` e `scheduled_service_date`.
+- **THEN** transação de aceite MUST rollback — MUST NOT haver SR `COMPLETED` sem linha correspondente em `services` com `accepted_proposal_id` e janela agendada (`scheduled_*`, `duration_*`, `agreed_slot`).
 
 - **GIVEN** `platform-flow.mmd` nó `BA`
 - **WHEN** documentado
@@ -1211,7 +1221,7 @@ O **matching progressivo** descrito em [`matching-algorithm/requirements.md`](..
 
 ### Acceptance Criteria
 
-- **GIVEN** mensagem com `delivery_status = pending` há &gt; 5 min sem confirmação
+- **GIVEN** mensagem com `delivery_status = PENDING` há &gt; 5 min sem confirmação
 - **WHEN** job de reconciliação executa
 - **THEN** MUST marcar como `failed` ou reenfileirar envio conforme política; MUST NOT duplicar mensagem visível se `idempotency_key` já commitada.
 
@@ -1371,7 +1381,7 @@ O **matching progressivo** descrito em [`matching-algorithm/requirements.md`](..
 
 ### Acceptance Criteria
 
-- **GIVEN** políticas RLS em `chat_messages`, `conversations` e tabelas relacionadas (Requirement 35)
+- **GIVEN** políticas RLS em `chat_messages`, `chats` e tabelas relacionadas (Requirement 35)
 - **WHEN** usuário autenticado com `profiles.role` `client` ou `provider` **não** participante do chat consulta via PostgREST
 - **THEN** zero linhas MUST retornar para `SELECT`; `INSERT`/`UPDATE`/`DELETE` MUST falhar em `WITH CHECK` / `USING`.
 
@@ -1413,7 +1423,7 @@ O **matching progressivo** descrito em [`matching-algorithm/requirements.md`](..
 
 - **GIVEN** operação `accept_proposal`
 - **WHEN** executada
-- **THEN** transação MUST incluir: lock SR; validar proposta; proposta → `ACCEPTED`; SR → `COMPLETED` + `completed_at` (sem `accepted_proposal_id` / `scheduled_service_date` no SR); encerramento de chats/propostas concorrentes; **insert `services`** com `accepted_proposal_id`, `scheduled_service_date`, `PENDING_PAYMENT`; outbox events.
+- **THEN** transação MUST incluir: lock SR; validar proposta; proposta → `ACCEPTED`; SR → `COMPLETED` + `completed_at` (sem `accepted_proposal_id` / janela agendada (`scheduled_*`, `duration_*`, `agreed_slot`) no SR); encerramento de chats/propostas concorrentes; **insert `services`** com `accepted_proposal_id`, janela agendada (`scheduled_*`, `duration_*`, `agreed_slot`), `PENDING_PAYMENT`; outbox events.
 
 - **GIVEN** operação `submit_proposal`
 - **WHEN** executada
@@ -1502,7 +1512,7 @@ on conflict (key) do update set
 
 ### Definições
 
-- **Mensagem livre:** `message_type` `text` ou `image` enviada por cliente ou prestador via `send_message` (não inclui mensagens `system` inseridas pela plataforma, nem submissão formal de proposta via RPC dedicado).
+- **Mensagem livre:** `message_type` `TEXT` ou `IMAGE` enviada por cliente ou prestador via `send_message` (não inclui mensagens `SYSTEM` inseridas pela plataforma, nem submissão formal de proposta via RPC dedicado).
 - **Proposta ativa (para bloqueio de chat):** proposta vigente da conversa com `status = PENDING` aguardando decisão do cliente (aceitar, recusar ou solicitar revisão).
 - **Canal da proposta:** card dinâmico na timeline + CTAs (Accept, Reject, Request Revision, View Details) e fluxos modais associados — único meio de interação permitido enquanto houver proposta `PENDING`.
 
@@ -1552,7 +1562,7 @@ on conflict (key) do update set
 - **WHEN** avaliada no servidor
 - **THEN** MUST retornar `false` se existir proposta da conversa com `status = PENDING`; MUST retornar `true` se `REVISION_REQUESTED` (mesmo que ainda exista linha histórica `REVISED`); MUST retornar `true` se última proposta vigente for `REJECTED`/`EXPIRED` e não houver nova `PENDING`; MUST NOT depender apenas de estado no cliente.
 
-- **GIVEN** mensagem `system` gerada pela plataforma (ex.: “Proposal submitted”)
+- **GIVEN** mensagem `SYSTEM` gerada pela plataforma (ex.: “Proposal submitted”)
 - **WHEN** inserida por trigger ou RPC interno
 - **THEN** MAY ser persistida mesmo com proposta `PENDING`; isso não reabre mensagens livres para usuários.
 
@@ -1582,7 +1592,7 @@ RLS MUST estar **habilitado** (`ENABLE ROW LEVEL SECURITY`) e coberto por polít
 
 | Tabela | SELECT | INSERT | UPDATE | DELETE |
 |--------|--------|--------|--------|--------|
-| `conversations` (ou `chats`) | Regras abaixo | Participante | Participante / regras de estado | Restrito (proibido v1 salvo RPC) |
+| `chats` | Regras abaixo | Participante | Participante / regras de estado | Restrito (proibido v1 salvo RPC) |
 | `chat_messages` | Regras abaixo | Participante + system | Participante limitado | Restrito |
 | `proposals` | Regras abaixo | Prestador participante | Conforme RPC | Restrito |
 | `chat_read_receipts` | Participante + admin | Participante dono | Participante dono | — |
@@ -1592,14 +1602,14 @@ RLS MUST estar **habilitado** (`ENABLE ROW LEVEL SECURITY`) e coberto por polít
 ### Funções auxiliares SQL (SHOULD)
 
 - **`public.is_platform_admin()`** — retorna `true` se `exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin')`.
-- **`public.is_chat_participant(p_conversation_id uuid)`** — retorna `true` se `(select auth.uid())` é o `client_id` ou `provider_id` da conversa (ajustar nomes de coluna ao schema final).
+- **`public.is_chat_participant(p_chat_id uuid)`** — retorna `true` se `(select auth.uid())` é o `client_id` ou `provider_id` da conversa (ajustar nomes de coluna ao schema final).
 
 Funções MUST ser `STABLE`, `SECURITY INVOKER`, com `search_path` fixo; políticas MUST usar `(select public.is_platform_admin())` para initplan (regra `supabase-rls-performance`).
 
 ### Acceptance Criteria — administrador (`profiles.role = 'admin'`)
 
 - **GIVEN** usuário autenticado com `profiles.role = 'admin'`
-- **WHEN** executa `SELECT` em `conversations` e `chat_messages` via PostgREST com JWT `authenticated`
+- **WHEN** executa `SELECT` em `chats` e `chat_messages` via PostgREST com JWT `authenticated`
 - **THEN** MUST retornar **todas** as linhas, **independentemente** de ser participante do chat.
 
 - **GIVEN** admin
@@ -1607,7 +1617,7 @@ Funções MUST ser `STABLE`, `SECURITY INVOKER`, com `search_path` fixo; políti
 - **THEN** MUST retornar todas as propostas (suporte, auditoria, moderação).
 
 - **GIVEN** admin
-- **WHEN** tenta `INSERT`/`UPDATE`/`DELETE` em `chat_messages` ou `conversations` como usuário comum (sem RPC de suporte dedicado)
+- **WHEN** tenta `INSERT`/`UPDATE`/`DELETE` em `chat_messages` ou `chats` como usuário comum (sem RPC de suporte dedicado)
 - **THEN** política MUST **negar** na v1 (admin com acesso **somente leitura** em chats); escrita administrativa MAY existir apenas via RPC `SECURITY DEFINER` auditado em fase posterior.
 
 - **GIVEN** admin
@@ -1616,7 +1626,7 @@ Funções MUST ser `STABLE`, `SECURITY INVOKER`, com `search_path` fixo; políti
 
 ### Acceptance Criteria — cliente (`profiles.role = 'client'`)
 
-- **GIVEN** cliente participante (`conversations.client_id` = `(select auth.uid())` ou FK equivalente)
+- **GIVEN** cliente participante (`chats.client_id` = `(select auth.uid())` ou FK equivalente)
 - **WHEN** `SELECT` na própria conversa e mensagens
 - **THEN** MUST permitir.
 
@@ -1630,7 +1640,7 @@ Funções MUST ser `STABLE`, `SECURITY INVOKER`, com `search_path` fixo; políti
 
 ### Acceptance Criteria — prestador (`profiles.role = 'provider'`)
 
-- **GIVEN** prestador participante (`conversations.provider_id` vinculado ao prestador autenticado)
+- **GIVEN** prestador participante (`chats.provider_id` vinculado ao prestador autenticado)
 - **WHEN** `SELECT` na própria conversa e mensagens
 - **THEN** MUST permitir.
 
@@ -1718,7 +1728,7 @@ Orquestração visual de próxima ação: **hook** `useChatActionBannerState` de
 | Responsabilidade | Local |
 |------------------|-------|
 | Máquinas de estado (chat, proposal, SR) | Tabelas + enums + `CHECK` em `service_requests` (pré-fechamento) |
-| Contrato pós-aceite (`accepted_proposal_id`, `scheduled_service_date`, `PENDING_PAYMENT`) | Tabela `services` + RPC `accept_proposal` |
+| Contrato pós-aceite (`accepted_proposal_id`, janela agendada (`scheduled_*`, `duration_*`, `agreed_slot`), `PENDING_PAYMENT`) | Tabela `services` + RPC `accept_proposal` |
 | Transições atômicas (aceite, cancelamento, encerramento em massa) | RPC `SECURITY DEFINER` |
 | Slot counter / reciprocidade / expiração SLA | RPC + `pg_cron`; limite de slots lido de `platform_constants` |
 | Limites operacionais configuráveis | `platform_constants` (`chats.max_active_slots_per_service_request`, default 4) |

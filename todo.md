@@ -71,3 +71,8 @@ Coisas para fazer next
 
 -verificar se devo manter colunas de status como text ou transformar em enum
 -ajustar para que mensagens do message dispatcher com bypass não contem no total de mensagens do dia
+-verificar necessidade de usar outbound  (domain_events) em outros eventos assíncronos
+-serviços podem ter agendamento multi-dias
+-verificar se precisaria usar cns_idempotency_records em outros lugares (talvez vou precisar criar antes)
+  - adicionar nas regras que temos esse mecanismo para ser usado para que no futuro outras features possam usar quando necessário
+-verificar se no sistema atual tenho coisas para usar job_runs (talvez vou precisar criar antes)
