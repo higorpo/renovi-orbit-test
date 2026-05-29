@@ -2255,6 +2255,98 @@ export type Database = {
         Args: { p_provider_id: string; p_service_request_id: string }
         Returns: boolean
       }
+      cns_chat_free_messaging_allowed: {
+        Args: { p_chat_id: string }
+        Returns: boolean
+      }
+      cns_check_message_rate_limit: {
+        Args: { p_chat_id: string }
+        Returns: undefined
+      }
+      cns_has_bilateral_reciprocity: {
+        Args: { p_chat_id: string; p_window_hours?: number }
+        Returns: boolean
+      }
+      cns_initiate_conversation: {
+        Args: { p_service_request_id: string; p_idempotency_key: string }
+        Returns: Json
+      }
+      cns_mark_conversation_read: {
+        Args: {
+          p_chat_id: string
+          p_last_read_message_id?: string
+        }
+        Returns: Json
+      }
+      cancel_service_request: {
+        Args: { p_service_request_id: string; p_idempotency_key: string }
+        Returns: Json
+      }
+      cns_close_conversation: {
+        Args: {
+          p_chat_id: string
+          p_idempotency_key: string
+          p_confirm: boolean
+          p_closure_reason?: string
+        }
+        Returns: Json
+      }
+      decline_revision_request: {
+        Args: { p_proposal_id: string; p_idempotency_key: string }
+        Returns: Json
+      }
+      request_proposal_revision: {
+        Args: {
+          p_proposal_id: string
+          p_idempotency_key: string
+          p_revision_reason: Database["public"]["Enums"]["proposal_revision_reason"]
+          p_revision_notes?: string
+        }
+        Returns: Json
+      }
+      reject_proposal: {
+        Args: {
+          p_proposal_id: string
+          p_idempotency_key: string
+          p_rejection_reason: string
+        }
+        Returns: Json
+      }
+      accept_proposal: {
+        Args: {
+          p_proposal_id: string
+          p_selected_slot: Json
+          p_idempotency_key: string
+        }
+        Returns: Json
+      }
+      submit_proposal: {
+        Args: {
+          p_chat_id: string
+          p_idempotency_key: string
+          p_proposed_amount: number
+          p_proposal_description: string
+          p_proposal_duration_value: number
+          p_proposal_duration_unit: string
+          p_proposal_suggested_slots: Json
+          p_pricing_signature: string
+          p_tax_rate: number
+          p_tax_amount: number
+          p_final_amount: number
+          p_photos?: string[]
+        }
+        Returns: Json
+      }
+      cns_send_message: {
+        Args: {
+          p_message_type: Database["public"]["Enums"]["cns_message_type"]
+          p_idempotency_key: string
+          p_payload?: Json
+          p_chat_id?: string
+          p_service_request_id?: string
+        }
+        Returns: Json
+      }
       create_provider_proposal: {
         Args: {
           p_final_amount: number

@@ -28,10 +28,10 @@ The repository **today** implements quote flow without CNS tables:
 | `provider_proposals.status` ∈ `{submitted, accepted, rejected, withdrawn}` | CNS proposal FSM (§2) | Extend CHECK; map `submitted`→`PENDING`; add columns `chat_id`, `revision_count`, `revision_reason`, `version`, `submitted_at`; deprecate direct PostgREST insert — **RPC-only** mutations |
 | No `chats` | New | Migration `YYYYMMDDHHMMSS_create_cns_chats.sql` |
 | No `services` (contracted) | New `public.services` | Distinct from `platform_services`; FK to `provider_proposals` |
-| 48h proposal SLA (legacy cron + trigger on `created_at`) | **24h** (`chats.proposal_response_sla_hours` / `PROPOSAL_CLIENT_RESPONSE_SLA_HOURS`) | Drop or replace `expire_stale_provider_proposals` and the 48h accept guard trigger; `cns_expire_pending_proposals` MUST use `submitted_at + interval '1 hour' * platform_constant_int('chats.proposal_response_sla_hours', 24)`; `cns_accept_proposal` MUST reject expired proposals with the same SLA source |
+| 48h proposal SLA (legacy cron + trigger on `created_at`) | **24h** (`chats.proposal_response_sla_hours` / `PROPOSAL_CLIENT_RESPONSE_SLA_HOURS`) | Drop or replace `expire_stale_provider_proposals` and the 48h accept guard trigger; `cns_expire_pending_proposals` MUST use `submitted_at + interval '1 hour' * platform_constant_int('chats.proposal_response_sla_hours', 24)`; `accept_proposal` MUST reject expired proposals with the same SLA source |
 | MMD (`message_dispatcher` schema) | Producer from CNS RPCs | Templates `chat.new_message`, `proposal.*` registered in migration |
 
-All **new** CNS RPCs SHALL be prefixed `cns_*` until cutover; legacy `create_provider_proposal` SHALL delegate to `cns_submit_proposal` internally.
+All **new** CNS RPCs SHALL be prefixed `cns_*` until cutover; legacy `create_provider_proposal` SHALL delegate to `submit_proposal` internally.
 
 ---
 
@@ -109,7 +109,7 @@ flowchart TB
 
 ## 1.5 Orchestration model
 
-**Synchronous orchestration (in-DB):** `cns_accept_proposal`, `cns_cancel_service_request`, `cns_close_conversation`, `cns_submit_proposal` — single `BEGIN … COMMIT` per user intent.
+**Synchronous orchestration (in-DB):** `accept_proposal`, `cancel_service_request`, `cns_close_conversation`, `submit_proposal` — single `BEGIN … COMMIT` per user intent.
 
 **Asynchronous orchestration (outbox):** After commit, `domain_events` rows consumed by:
 
@@ -236,9 +236,9 @@ erDiagram
 |--------|---------------|---------|
 | `chats` | Participants via RPC; status via RPC/cron | Participants + `admin` SELECT |
 | `chat_messages` | Participants (`text`/`image`); system via `SECURITY DEFINER` | Same |
-| `provider_proposals` | Provider participant via `cns_submit_proposal` | Client + provider of conversation + admin |
+| `provider_proposals` | Provider participant via `submit_proposal` | Client + provider of conversation + admin |
 | `service_requests` | Client cancel; system via accept cascade | Per existing RLS + CNS rules |
-| `services` | Created only inside `cns_accept_proposal` | Client + provider + admin |
+| `services` | Created only inside `accept_proposal` | Client + provider + admin |
 
 ## 2.3 Lifecycle semantics
 
@@ -416,7 +416,7 @@ create table public.chat_read_receipts (
   - `shift` — `morning` | `afternoon` | `full_day`.
   - `end_date` — required when unit is `days` (inclusive range must equal `proposal_duration_value`); MUST be omitted or empty when unit is `hours`.
 
-On accept, the client picks one option (`selected_slot`, same shape). `cns_accept_proposal` copies it into `services` (§3.7) together with frozen `duration_*`.
+On accept, the client picks one option (`selected_slot`, same shape). `accept_proposal` copies it into `services` (§3.7) together with frozen `duration_*`.
 
 Add columns (retain pricing columns from existing schema):
 
@@ -505,8 +505,8 @@ Event types (normative):
 | `event_type` | When emitted | Notes |
 |--------------|--------------|-------|
 | `CHAT_MESSAGE_SENT` | After `text`/`image` persisted | MMD push, `bypass_limits` |
-| `PROPOSAL_SUBMITTED` | `cns_submit_proposal` commit | |
-| `PROPOSAL_ACCEPTED` | `cns_accept_proposal` commit | |
+| `PROPOSAL_SUBMITTED` | `submit_proposal` commit | |
+| `PROPOSAL_ACCEPTED` | `accept_proposal` commit | |
 | `PROPOSAL_REJECTED` | Client reject | |
 | `PROPOSAL_EXPIRED` | Expiry cron | |
 | `PROPOSAL_REVISION_REQUESTED` | Client revision request | |
@@ -746,7 +746,7 @@ $$;
 ```mermaid
 sequenceDiagram
   participant Pr as Provider
-  participant RPC as cns_submit_proposal
+  participant RPC as submit_proposal
   participant DB as PostgreSQL
 
   Pr->>RPC: proposal payload + pricing_signature + idempotency_key
@@ -768,7 +768,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
   participant C as Client
-  participant RPC as cns_accept_proposal
+  participant RPC as accept_proposal
   participant DB as PostgreSQL
 
   C->>RPC: proposal_id, selected_slot, idempotency_key
@@ -794,16 +794,16 @@ sequenceDiagram
 
 **Concurrent accept (Req. 7, 14):** Second transaction blocks on `FOR UPDATE` SR; after first commit sees `status <> 'OPEN'` → `409 SR_ALREADY_COMPLETED`.
 
-**Cancel vs accept (Req. 2):** `cns_cancel_service_request` also locks SR `FOR UPDATE`; one wins.
+**Cancel vs accept (Req. 2):** `cancel_service_request` also locks SR `FOR UPDATE`; one wins.
 
 ## 4.5 Reject / revision / expire (Req. 8–10, 9)
 
 | Action | RPC | Free messaging after |
 |--------|-----|----------------------|
-| Client reject | `cns_reject_proposal` | Enabled (Req. 34) |
-| Client request revision | `cns_request_proposal_revision` | Enabled while `REVISION_REQUESTED` |
-| Provider new proposal after revision | `cns_submit_proposal` | Disabled (`PENDING`) |
-| Provider decline revision | `cns_decline_revision_request` | Disabled (stay `PENDING`) |
+| Client reject | `reject_proposal` | Enabled (Req. 34) |
+| Client request revision | `request_proposal_revision` | Enabled while `REVISION_REQUESTED` |
+| Provider new proposal after revision | `submit_proposal` | Disabled (`PENDING`) |
+| Provider decline revision | `decline_revision_request` | Disabled (stay `PENDING`) |
 | SLA expiry (cron) | `cns_expire_pending_proposals` | Enabled if chat not `CLOSED` |
 
 **Revision limit (Req. 10):** `revision_count >= 2` → `409 REVISION_LIMIT_EXCEEDED`.
@@ -874,7 +874,7 @@ When `submitted_at + SLA - 4h < now() < submitted_at + SLA` and status `PENDING`
 
 ## 4.13 Accept / reject UI confirmation (Req. 7 — R7-AC01, R7-AC02)
 
-Client MUST show summary modal with mandatory `selected_slot` picker before calling `cns_accept_proposal` (no second bilateral step — R7-AC02). `AcceptProposalDialog` in `negotiation-proposals` feature; blocks offline accept (Req. 30).
+Client MUST show summary modal with mandatory `selected_slot` picker before calling `accept_proposal` (no second bilateral step — R7-AC02). `AcceptProposalDialog` in `negotiation-proposals` feature; blocks offline accept (Req. 30).
 
 ## 4.14 Revision history & comparison (Req. 10 — R10-AC12)
 
@@ -898,13 +898,13 @@ If `cns_mmd_ingest` fails, domain event consumer logs `NOTIFICATION_SKIPPED` in 
 |-----|--------|-------------|-------|---------|
 | `cns_send_message` | participant | required UUID | conversation, maybe stats | `{ message, conversation }` |
 | `cns_initiate_conversation` | provider | required | SR, stats | `{ conversation }` — optional if folded into send |
-| `cns_submit_proposal` | provider | required | conversation, SR | `{ proposal, timeline_message }` |
-| `cns_accept_proposal` | client | required | SR, all proposals | `{ service, proposal }` |
-| `cns_reject_proposal` | client | required | proposal | `{ proposal }` |
-| `cns_request_proposal_revision` | client | required | proposal | `{ proposal }` |
-| `cns_decline_revision_request` | provider | required | proposal | `{ proposal }` |
+| `submit_proposal` | provider | required | conversation, SR | `{ proposal, timeline_message }` |
+| `accept_proposal` | client | required | SR, all proposals | `{ service, proposal }` |
+| `reject_proposal` | client | required | proposal | `{ proposal }` |
+| `request_proposal_revision` | client | required | proposal | `{ proposal }` |
+| `decline_revision_request` | provider | required | proposal | `{ proposal }` |
 | `cns_close_conversation` | participant | required | conversation | `{ conversation }` |
-| `cns_cancel_service_request` | client | required | SR | `{ service_request }` |
+| `cancel_service_request` | client | required | SR | `{ service_request }` |
 | `cns_mark_conversation_read` | participant | optional | receipt row | `{ last_read_at }` |
 | `list_conversations` | authenticated | n/a | none | paginated JSON |
 | `list_chat_messages` | participant | n/a | none | keyset paginated |
@@ -1145,7 +1145,7 @@ Checkout query MUST use `WHERE processed_at IS NULL AND dead_letter = false` (§
 | `list_conversations` page 20 | < 500ms |
 | `list_chat_messages` page 20 | < 500ms |
 | `cns_send_message` | < 500ms (excl. upload) |
-| `cns_accept_proposal` | < 3s |
+| `accept_proposal` | < 3s |
 
 ## 9.2 Query optimization
 
@@ -1190,7 +1190,7 @@ Tags: `feature=chats`, `chat_id`, `service_request_id`. **Scrub** message `paylo
 | Metric | Type | Alert |
 |--------|------|-------|
 | `cns_send_message_duration_ms` | histogram | p95 > 1s |
-| `cns_accept_proposal_total` | counter | — |
+| `accept_proposal_total` | counter | — |
 | `cns_active_chats_per_sr` | gauge | — |
 | `cns_reciprocity_transitions_total` | counter | — |
 | `cns_proposal_expiry_lag_seconds` | gauge | > 1800 (Req. 21) |
@@ -1284,13 +1284,13 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | Requirement | Acceptance Criteria (runtime behavior) | Implementation Section | Mechanism |
 |-------------|----------------------------------------|------------------------|-----------|
 | **1** E2E negotiation | First provider message creates `ACTIVE` conversation; SR stays `OPEN`; parallel chats per provider; cross-device same SOT | §4.1, §5.1 `cns_send_message` | `UNIQUE(sr, provider)` + slot check on new pair only |
-| **2** SR lifecycle | `OPEN`/`COMPLETED`/`CANCELLED`; no chat on terminal SR; accept creates `services`; cancel closes all; concurrent cancel vs accept → one winner | §3.1 enum, §4.4, §4.5 `cns_cancel_service_request` | `FOR UPDATE` on SR; CHECK constraints |
+| **2** SR lifecycle | `OPEN`/`COMPLETED`/`CANCELLED`; no chat on terminal SR; accept creates `services`; cancel closes all; concurrent cancel vs accept → one winner | §3.1 enum, §4.4, §4.5 `cancel_service_request` | `FOR UPDATE` on SR; CHECK constraints |
 | **3** Messaging & media | Persist text/image; fail on `CLOSED`; reactivate `INACTIVE`; paginated history; read receipts; rate limit 429 | §3.4, §4.2, §5.2 Edge upload | `cns_send_message` + `chat_read_receipts` + rate bucket |
 | **4** Slots & reciprocity | Max ACTIVE slots from `platform_constants`; INACTIVE frees slot; bilateral 24h keeps ACTIVE; reactivate no slot; duplicate pair idempotent | §3.3, §4.1, §4.6, §3.12 | `service_request_negotiation_stats` + reciprocity cron |
 | **5** Discovery | Long text/multi-image; SR details panel; optional system message; typing TTL ≤10s | §5.4 presence, §5.2 UI hooks | Realtime presence channel; no server state for typing |
-| **6** Proposal creation | Validate pricing; `PENDING` disables free chat; timeline `proposal` message; no in-place edit | §4.3, §3.6 | `cns_submit_proposal` + partial unique index |
+| **6** Proposal creation | Validate pricing; `PENDING` disables free chat; timeline `proposal` message; no in-place edit | §4.3, §3.6 | `submit_proposal` + partial unique index |
 | **7** Accept cascade | Atomic: ACCEPTED, SR COMPLETED, other chats CLOSED, proposals REJECTED_AUTOMATICALLY, `services` insert; concurrent → 409 | §4.4 | Single RPC transaction + idempotency |
-| **8** Rejection | `REJECTED`; free messaging re-enabled; optional manual close | §4.5 `cns_reject_proposal` | Status transition + `cns_chat_free_messaging_allowed` |
+| **8** Rejection | `REJECTED`; free messaging re-enabled; optional manual close | §4.5 `reject_proposal` | Status transition + `cns_chat_free_messaging_allowed` |
 | **9** Expiration | 24h → `EXPIRED`; accept fails; free chat restored; optional INACTIVE; reminder notification SHOULD | §4.7, §6.1 cron | `cns_expire_pending_proposals` + `platform_constants` SLA |
 | **10** Revisions (max 2) | `REVISION_REQUESTED` + reason enum; free chat on; new proposal → `PENDING`/`REVISED`; limit at 2 | §4.5, §3.1 `proposal_revision_reason` | `revision_count` CHECK + RPC guards |
 | **11** Manual close | Confirm → `CLOSED` irreversible; slot freed; new provider chat if slot available | §4.8 | `cns_close_conversation` |
@@ -1367,27 +1367,27 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | R5-AC04 | 5 | typing indicator | suportado via Realtime presence com TTL | MUST expirar em &lt;= 10s sem heartbeat e MUST NOT gerar tráfego &gt; 1 evento/2s por usuário. | §4–§13 | See §12.1; UI detail panel |
 | R5-AC05 | 5 | revisões posteriores de proposta | cliente negocia alterações | histórico de mensagens MUST permanecer íntegro e contextualizar versões (checklist 66). | §4–§13 | See §12.1; UI detail panel |
 | R5-AC06 | 5 | checklist §5 | validado | itens 61–70 MUST estar cobertos. | §4–§13 | See §12.1; UI detail panel |
-| R6-AC01 | 6 | prestador autenticado participante do chat | submete proposta via composer (extraído de `ProviderProposalComposerDialog` para feature isolada) | RPC MUST validar: valor &gt; 0, descrição de escopo obrigatória, prazo estimado, `proposal_suggested_slots` jsonb array com 1–3 datas, observações opcionais, fotos opcionais. | §4–§13 | See §12.1; `cns_submit_proposal` |
-| R6-AC02 | 6 | proposta enviada com sucesso | transação commita | `proposal.status = PENDING`, `version = 1` (ou `revision_number = 0`), timestamps `submitted_at`/`updated_at` registrados; **mensagens livres** no chat MUST ser desabilitadas na me | §4–§13 | See §12.1; `cns_submit_proposal` |
-| R6-AC03 | 6 | proposta recém-`PENDING` | participantes visualizam o chat | área de input de mensagem livre MUST estar oculta ou desabilitada; interações MUST concentrar-se no card dinâmico da proposta. | §4–§13 | See §12.1; `cns_submit_proposal` |
-| R6-AC04 | 6 | proposta já enviada | prestador tenta editar campos in-place | MUST falhar; alteração só via nova versão após fluxo de revisão ou reenvio pós-expiração (checklist 84). | §4–§13 | See §12.1; `cns_submit_proposal` |
-| R6-AC05 | 6 | nova versão após revisão aceita pelo prestador | nova proposta é submetida | proposta anterior MUST transicionar para `REVISED`, nova linha ou nova versão com `PENDING`, `revision_count` incrementado (platform-flow `AI`–`AK`). | §4–§13 | See §12.1; `cns_submit_proposal` |
-| R6-AC06 | 6 | UI de listagem de datas | cliente visualiza proposta | cada data sugerida MUST ser exibida distintamente (checklist 79–80). | §4–§13 | See §12.1; `cns_submit_proposal` |
-| R6-AC07 | 6 | envio em andamento | rede falha | UI MUST suportar retry idempotente; estado local MUST NOT marcar sucesso sem confirmação server (concurrency Req. 3). | §4–§13 | See §12.1; `cns_submit_proposal` |
-| R6-AC08 | 6 | mensagem dinâmica na timeline | proposta é criada | MUST inserir `chat_message` com `message_type = PROPOSAL`, `linked_entity_type = proposal`, `linked_entity_id` apontando para entidade autoritativa (Requirement 16). | §4–§13 | See §12.1; `cns_submit_proposal` |
-| R6-AC09 | 6 | checklist §6 itens 71–90 | auditoria de requisitos | cobertura MUST ser 100%. | §4–§13 | See §12.1; `cns_submit_proposal` |
-| R7-AC01 | 7 | proposta `PENDING` não expirada e SR `OPEN` | cliente inicia aceite | UI MUST exibir resumo completo e exigir seleção obrigatória de uma das datas em `proposal_suggested_slots` (checklist 91–93). | §4–§13 | See §12.1; `cns_accept_proposal` |
-| R7-AC02 | 7 | confirmação explícita do cliente (sem etapa bilateral posterior — checklist 94) | RPC `accept_proposal` executa com `proposal_id`, `selected_slot`, `idempotency_key` | em uma transação atômica (`platform-flow.mmd` `O`–`BA`): (1) proposta alvo → `ACCEPTED`; (2) SR → `COMPLETED` com `completed_at`; (3) demais chats do SR → `CLOSED` (`PROPOSAL_ACCEP | §4–§13 | See §12.1; `cns_accept_proposal` |
-| R7-AC03 | 7 | duas abas tentam aceitar propostas diferentes simultaneamente | ambas chamam RPC | exatamente uma MUST suceder; a outra MUST falhar com `409` (checklist 99). | §4–§13 | See §12.1; `cns_accept_proposal` |
-| R7-AC04 | 7 | aceite bem-sucedido | outros prestadores visualizam chat | input de mensagem MUST estar desabilitado e mensagem de sistema MUST indicar encerramento (checklist 103). | §4–§13 | See §12.1; `cns_accept_proposal` |
-| R7-AC05 | 7 | aceite | notificações são enfileiradas | MMD MUST receber eventos com `idempotency_key` derivada de `proposal_id` + event type para fechamento (checklist 102). | §4–§13 | See §12.1; `cns_accept_proposal` |
-| R7-AC06 | 7 | proposta expirada | cliente tenta aceitar | MUST falhar (Requirement 9). | §4–§13 | See §12.1; `cns_accept_proposal` |
-| R7-AC07 | 7 | checklist §7 | teste de integração pgTAP ou RPC | rollback de qualquer passo intermediário MUST ser impossível após commit. | §4–§13 | See §12.1; `cns_accept_proposal` |
-| R8-AC01 | 8 | proposta `PENDING` | cliente recusa explicitamente | `proposal.status = REJECTED`, `rejected_at` persistido (`platform-flow.mmd` `U`). | §4–§13 | See §12.1; `cns_reject_proposal` |
-| R8-AC02 | 8 | proposta `REJECTED` | ambas as partes desejam continuar | chat MAY permanecer `ACTIVE`/`INACTIVE`, **mensagens livres** MUST ser reabilitadas, e negociação retorna à fase Discovery (`V` → `F`) (Requirement 34). | §4–§13 | See §12.1; `cns_reject_proposal` |
-| R8-AC03 | 8 | proposta `REJECTED` | cliente ou prestador escolhe encerrar | chat → `CLOSED` manual (`W`). | §4–§13 | See §12.1; `cns_reject_proposal` |
-| R8-AC04 | 8 | recusa | mensagem dinâmica na timeline | componente MUST atualizar estado visual para Declined sem duplicar card (Requirement 16). | §4–§13 | See §12.1; `cns_reject_proposal` |
-| R8-AC05 | 8 | checklist §10 implícito (rejeição entre expiração e revisão) | mapeado | comportamento MUST seguir `platform-flow.mmd` nó `N` → `U`. | §4–§13 | See §12.1; `cns_reject_proposal` |
+| R6-AC01 | 6 | prestador autenticado participante do chat | submete proposta via composer (extraído de `ProviderProposalComposerDialog` para feature isolada) | RPC MUST validar: valor &gt; 0, descrição de escopo obrigatória, prazo estimado, `proposal_suggested_slots` jsonb array com 1–3 datas, observações opcionais, fotos opcionais. | §4–§13 | See §12.1; `submit_proposal` |
+| R6-AC02 | 6 | proposta enviada com sucesso | transação commita | `proposal.status = PENDING`, `version = 1` (ou `revision_number = 0`), timestamps `submitted_at`/`updated_at` registrados; **mensagens livres** no chat MUST ser desabilitadas na me | §4–§13 | See §12.1; `submit_proposal` |
+| R6-AC03 | 6 | proposta recém-`PENDING` | participantes visualizam o chat | área de input de mensagem livre MUST estar oculta ou desabilitada; interações MUST concentrar-se no card dinâmico da proposta. | §4–§13 | See §12.1; `submit_proposal` |
+| R6-AC04 | 6 | proposta já enviada | prestador tenta editar campos in-place | MUST falhar; alteração só via nova versão após fluxo de revisão ou reenvio pós-expiração (checklist 84). | §4–§13 | See §12.1; `submit_proposal` |
+| R6-AC05 | 6 | nova versão após revisão aceita pelo prestador | nova proposta é submetida | proposta anterior MUST transicionar para `REVISED`, nova linha ou nova versão com `PENDING`, `revision_count` incrementado (platform-flow `AI`–`AK`). | §4–§13 | See §12.1; `submit_proposal` |
+| R6-AC06 | 6 | UI de listagem de datas | cliente visualiza proposta | cada data sugerida MUST ser exibida distintamente (checklist 79–80). | §4–§13 | See §12.1; `submit_proposal` |
+| R6-AC07 | 6 | envio em andamento | rede falha | UI MUST suportar retry idempotente; estado local MUST NOT marcar sucesso sem confirmação server (concurrency Req. 3). | §4–§13 | See §12.1; `submit_proposal` |
+| R6-AC08 | 6 | mensagem dinâmica na timeline | proposta é criada | MUST inserir `chat_message` com `message_type = PROPOSAL`, `linked_entity_type = proposal`, `linked_entity_id` apontando para entidade autoritativa (Requirement 16). | §4–§13 | See §12.1; `submit_proposal` |
+| R6-AC09 | 6 | checklist §6 itens 71–90 | auditoria de requisitos | cobertura MUST ser 100%. | §4–§13 | See §12.1; `submit_proposal` |
+| R7-AC01 | 7 | proposta `PENDING` não expirada e SR `OPEN` | cliente inicia aceite | UI MUST exibir resumo completo e exigir seleção obrigatória de uma das datas em `proposal_suggested_slots` (checklist 91–93). | §4–§13 | See §12.1; `accept_proposal` |
+| R7-AC02 | 7 | confirmação explícita do cliente (sem etapa bilateral posterior — checklist 94) | RPC `accept_proposal` executa com `proposal_id`, `selected_slot`, `idempotency_key` | em uma transação atômica (`platform-flow.mmd` `O`–`BA`): (1) proposta alvo → `ACCEPTED`; (2) SR → `COMPLETED` com `completed_at`; (3) demais chats do SR → `CLOSED` (`PROPOSAL_ACCEP | §4–§13 | See §12.1; `accept_proposal` |
+| R7-AC03 | 7 | duas abas tentam aceitar propostas diferentes simultaneamente | ambas chamam RPC | exatamente uma MUST suceder; a outra MUST falhar com `409` (checklist 99). | §4–§13 | See §12.1; `accept_proposal` |
+| R7-AC04 | 7 | aceite bem-sucedido | outros prestadores visualizam chat | input de mensagem MUST estar desabilitado e mensagem de sistema MUST indicar encerramento (checklist 103). | §4–§13 | See §12.1; `accept_proposal` |
+| R7-AC05 | 7 | aceite | notificações são enfileiradas | MMD MUST receber eventos com `idempotency_key` derivada de `proposal_id` + event type para fechamento (checklist 102). | §4–§13 | See §12.1; `accept_proposal` |
+| R7-AC06 | 7 | proposta expirada | cliente tenta aceitar | MUST falhar (Requirement 9). | §4–§13 | See §12.1; `accept_proposal` |
+| R7-AC07 | 7 | checklist §7 | teste de integração pgTAP ou RPC | rollback de qualquer passo intermediário MUST ser impossível após commit. | §4–§13 | See §12.1; `accept_proposal` |
+| R8-AC01 | 8 | proposta `PENDING` | cliente recusa explicitamente | `proposal.status = REJECTED`, `rejected_at` persistido (`platform-flow.mmd` `U`). | §4–§13 | See §12.1; `reject_proposal` |
+| R8-AC02 | 8 | proposta `REJECTED` | ambas as partes desejam continuar | chat MAY permanecer `ACTIVE`/`INACTIVE`, **mensagens livres** MUST ser reabilitadas, e negociação retorna à fase Discovery (`V` → `F`) (Requirement 34). | §4–§13 | See §12.1; `reject_proposal` |
+| R8-AC03 | 8 | proposta `REJECTED` | cliente ou prestador escolhe encerrar | chat → `CLOSED` manual (`W`). | §4–§13 | See §12.1; `reject_proposal` |
+| R8-AC04 | 8 | recusa | mensagem dinâmica na timeline | componente MUST atualizar estado visual para Declined sem duplicar card (Requirement 16). | §4–§13 | See §12.1; `reject_proposal` |
+| R8-AC05 | 8 | checklist §10 implícito (rejeição entre expiração e revisão) | mapeado | comportamento MUST seguir `platform-flow.mmd` nó `N` → `U`. | §4–§13 | See §12.1; `reject_proposal` |
 | R9-AC01 | 9 | proposta `PENDING` com `submitted_at` | `now() - submitted_at >= PROPOSAL_CLIENT_RESPONSE_SLA_HOURS` (24h) sem ação do cliente | job MUST transicionar para `EXPIRED`, registrar `expired_at` (platform-flow `X`). | §4–§13 | See §12.1; expiry cron |
 | R9-AC02 | 9 | proposta `EXPIRED` | cliente tenta aceitar | MUST falhar com erro claro (checklist 133). | §4–§13 | See §12.1; expiry cron |
 | R9-AC03 | 9 | proposta expirada (`EXPIRED`) | transição commita | **mensagens livres** MUST ser reabilitadas se chat não estiver `CLOSED` (Requirement 34). | §4–§13 | See §12.1; expiry cron |
@@ -1618,7 +1618,7 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | OAC-13 | **Proposal-Gated Messaging**: Enquanto existir proposta `PENDING` na conversa, RPC `send_message` MUST rejeitar `message_type IN (… | §4.2.1 | `cns_chat_free_messaging_allowed` |
 | OAC-14 | **Locking Semantics**: Slot counter MUST ser atualizado na mesma transação que transiciona chat para/de `ACTIVE`.… | §3.3 | Stats in same TX |
 | OAC-15 | **Polling Constraints**: Listagens MUST NOT ser polled &lt; 5s em estado estável; Realtime é preferido para mensagens ativas.… | §9.3 | ≥5s stable poll |
-| OAC-16 | **Orchestration Semantics**: Cascata pós-aceite é orquestrada pelo RPC `accept_proposal` (nome ilustrativo), não por corrente de … | §4.4 | `cns_accept_proposal` |
+| OAC-16 | **Orchestration Semantics**: Cascata pós-aceite é orquestrada pelo RPC `accept_proposal` (nome ilustrativo), não por corrente de … | §4.4 | `accept_proposal` |
 | OAC-17 | **Stateless Constraints**: Edge Functions MUST NOT cache estado de conversa entre invocações.… | §1.3 | No Edge state |
 | OAC-18 | **Distributed Guarantees**: At-least-once em notificações e Realtime; exactly-once em efeitos financeiros e aceite via idempotên… | §7.5 | At-least-once + idempotent accept |
 ### High-risk paths (quick verification index)
@@ -1654,7 +1654,7 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | `list_*` paginated RPCs | Sargable filters; no client-side filter |
 | MMD ingest invocation (`cns_mmd_ingest`) | Secrets + quota evaluation near data |
 | Idempotency response cache | Survive PostgREST timeout after commit |
-| Pricing signature validation | Existing vault HMAC — reuse in `cns_submit_proposal` |
+| Pricing signature validation | Existing vault HMAC — reuse in `submit_proposal` |
 
 ## 13.2 O que deve ficar em Edge Functions
 
@@ -1757,7 +1757,7 @@ src/features/negotiation-proposals/
 1. **Wave A:** Add tables/enums/helpers RLS read-only; backfill `chats` from historical data if any.
 2. **Wave B:** Deploy mutation RPCs and helpers (no client feature flag; staging validation via pgTAP/integration tests).
 3. **Wave C:** Migrate `provider_proposals.status` values; update client budgets RPCs to use `PENDING` semantics.
-4. **Wave D:** Switch composer to `cns_submit_proposal`; deprecate direct `create_provider_proposal` from client.
+4. **Wave D:** Switch composer to `submit_proposal`; deprecate direct `create_provider_proposal` from client.
 5. **Wave E:** Align SR status enum; add `services` table; enable accept cascade; **switch proposal SLA to 24h** (remove 48h cron/trigger).
 6. **Wave F:** Register MMD templates; enable push suppression in client.
 
@@ -1773,7 +1773,7 @@ src/features/negotiation-proposals/
 
 ---
 
-## Appendix A — `cns_accept_proposal` pseudocode (implementation reference)
+## Appendix A — `accept_proposal` pseudocode (implementation reference)
 
 ```sql
 -- Illustrative core — full function in migration

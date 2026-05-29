@@ -1,5 +1,5 @@
 -- CNS Wave A — task 6: contracted service row post-accept (design §3.7).
--- Distinct from public.platform_services (catalog). Insert only in cns_accept_proposal TX.
+-- Distinct from public.platform_services (catalog). Insert only in accept_proposal TX.
 -- Depends on contracted_service_status enum (task 1).
 -- Scheduling mirrors provider_proposals.proposal_suggested_slots + client selected_slot at accept.
 

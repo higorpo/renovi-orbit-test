@@ -44,8 +44,8 @@ create index domain_events_stale_lease_idx
  * | event_type                  | When emitted                          | Notes |
  * |-----------------------------|---------------------------------------|-------|
  * | CHAT_MESSAGE_SENT           | After text/image persisted            | MMD push |
- * | PROPOSAL_SUBMITTED          | cns_submit_proposal commit            | |
- * | PROPOSAL_ACCEPTED           | cns_accept_proposal commit            | |
+ * | PROPOSAL_SUBMITTED          | submit_proposal commit            | |
+ * | PROPOSAL_ACCEPTED           | accept_proposal commit            | |
  * | PROPOSAL_REJECTED           | Client reject                         | |
  * | PROPOSAL_EXPIRED            | Expiry cron                           | |
  * | PROPOSAL_REVISION_REQUESTED | Client revision request               | |

@@ -31,7 +31,7 @@ alter table public.provider_proposals
   check (revision_notes is null or char_length(trim(revision_notes)) <= 2000);
 
 comment on column public.provider_proposals.chat_id is
-  'CNS conversation this proposal version belongs to; set by cns_submit_proposal.';
+  'CNS conversation this proposal version belongs to; set by submit_proposal.';
 
 comment on column public.provider_proposals.version is
   'Monotonic version within a conversation (1 = initial submit).';

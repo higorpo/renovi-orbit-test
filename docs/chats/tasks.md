@@ -9,8 +9,8 @@ CNS delivery SHALL follow a **database-first, RPC-centric, async-decoupled** imp
 1. **Wave A (Foundation)** — Enums, core tables (`chats`, `chat_messages`, `service_request_negotiation_stats`, `domain_events`, audit, idempotency), RLS helper functions, read-only RLS policies, `platform_constants` seeds, Storage bucket scaffolding. **Unblocks:** schema validation, pgTAP fixtures, type generation.
 2. **Wave B (Transactional core)** — All `cns_*` mutation RPCs and helper functions (`cns_chat_free_messaging_allowed`, rate limit, reciprocity probe, domain event recorder, idempotency cache). **Unblocks:** integration tests, RPC invocation from client once UI ships.
 3. **Wave C (Proposal evolution)** — `provider_proposals` column migration; status map `submitted`→`PENDING`; partial unique index one `PENDING` per conversation; legacy 48h SLA removal. **Unblocks:** composer migration.
-4. **Wave D (Composer cutover)** — `negotiation-proposals` feature; `cns_submit_proposal` from client; legacy `create_provider_proposal` delegates internally. **Unblocks:** proposal-gated messaging E2E.
-5. **Wave E (Accept cascade)** — `service_requests` status enum migration; `services` table; `cns_accept_proposal` + `cns_cancel_service_request`; 24h SLA via `chats.proposal_response_sla_hours`. **Unblocks:** contractual service creation (Req. 23).
+4. **Wave D (Composer cutover)** — `negotiation-proposals` feature; `submit_proposal` from client; legacy `create_provider_proposal` delegates internally. **Unblocks:** proposal-gated messaging E2E.
+5. **Wave E (Accept cascade)** — `service_requests` status enum migration; `services` table; `accept_proposal` + `cancel_service_request`; 24h SLA via `chats.proposal_response_sla_hours`. **Unblocks:** contractual service creation (Req. 23).
 6. **Wave F (Notifications & UX)** — MMD template registration; `cns_process_domain_events` + `cns_mmd_ingest`; push suppression hook; Realtime publication; full frontend feature split (`chats` + `negotiation-proposals`).
 
 **Critical path:** Wave A → `cns_send_message` → reciprocity/expiry cron → `cns_process_domain_events` → RLS hardening → frontend → verification.
@@ -315,7 +315,7 @@ Failure Handling:
 - FK violation aborts accept
 
 Observability:
-- cns_accept_proposal_total counter
+- accept_proposal_total counter
 
 Security Considerations:
 - RLS Task 75
@@ -1067,9 +1067,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R14-AC01, R14-AC02, R27-AC03
 
-## 25. [ ] Implement cns_chat_free_messaging_allowed function
-
-**Blocker:** Wave B loop stopped 2026-05-29 — requires **task 14** (`provider_proposals` CNS columns + `PENDING` status) and **task 17** (`is_chat_participant`); both still `[ ]`. Cannot implement authoritative gate until schema and participant helper exist.
+## 25. [x] Implement cns_chat_free_messaging_allowed function
 
 Description:
 Authoritative Req. 34 gate: false when PENDING proposal exists; true when REVISION_REQUESTED and no PENDING per design §4.2.1.
@@ -1109,7 +1107,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R34-AC01, R34-AC11, R34-AC05, OAC-13
 
-## 26. [ ] Implement cns_check_message_rate_limit function
+## 26. [x] Implement cns_check_message_rate_limit function
 
 Description:
 Increment sliding window bucket; RAISE RATE_LIMITED with retry_after_seconds DETAIL jsonb.
@@ -1148,7 +1146,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R3-AC11, R30-AC06
 
-## 27. [ ] Implement cns_has_bilateral_reciprocity function
+## 27. [x] Implement cns_has_bilateral_reciprocity function
 
 Description:
 EXISTS client and provider messages types text|image|proposal in window per design §4.6.
@@ -1188,7 +1186,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R4-AC03, R4-AC04, R25-AC01
 
-## 28. [ ] Implement cns_send_message RPC
+## 28. [x] Implement cns_send_message RPC
 
 Description:
 Primary message ingress: first-message chat creation, slot check §3.3.1, reactivation without slot, free messaging gate, rate limit, outbox CHAT_MESSAGE_SENT per design §4.1-4.2.
@@ -1234,7 +1232,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R1-AC01, R1-AC02, R1-AC03, R3-AC01, R3-AC02, R3-AC03, R3-AC04, R3-AC09, R4-AC01, R4-AC07, R29-AC01, R32-AC01, OAC-02, OAC-12, OAC-13
 
-## 29. [ ] Implement cns_initiate_conversation RPC (optional standalone)
+## 29. [x] Implement cns_initiate_conversation RPC (optional standalone)
 
 Description:
 Provider-only explicit chat creation if not folded into cns_send_message; same slot semantics §3.3.1.
@@ -1273,7 +1271,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R1-AC01, R4-AC07, R29-AC03
 
-## 30. [ ] Implement cns_submit_proposal RPC
+## 30. [x] Implement submit_proposal RPC
 
 Description:
 Provider proposal submission: validate pricing_signature, no concurrent PENDING, insert proposal+timeline message, PROPOSAL_SUBMITTED event per design §4.3.
@@ -1318,7 +1316,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R6-AC01, R6-AC02, R6-AC05, R6-AC08, R10-AC03, R10-AC08, R10-AC10, R34-AC06, R34-AC13, R32-AC03
 
-## 31. [ ] Implement cns_accept_proposal RPC
+## 31. [x] Implement accept_proposal RPC
 
 Description:
 Atomic accept cascade per design §4.4 and Appendix A: ACCEPTED, SR COMPLETED, bulk CLOSED, REJECTED_AUTOMATICALLY, services insert, stats=0, bulk domain events.
@@ -1348,7 +1346,7 @@ Failure Handling:
 - Any step failure full rollback
 
 Observability:
-- cns_accept_proposal_total
+- accept_proposal_total
 - Audit rows
 
 Security Considerations:
@@ -1363,7 +1361,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R7-AC01, R7-AC02, R7-AC03, R7-AC05, R7-AC06, R7-AC07, R2-AC04, R23-AC01, R23-AC03, R32-AC02, OAC-03, OAC-11, OAC-16
 
-## 32. [ ] Implement cns_reject_proposal RPC
+## 32. [x] Implement reject_proposal RPC
 
 Description:
 Client reject PENDING→REJECTED; emit PROPOSAL_REJECTED; free messaging re-enabled per Req. 34.
@@ -1402,7 +1400,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R8-AC01, R8-AC02, R34-AC08
 
-## 33. [ ] Implement cns_request_proposal_revision RPC
+## 33. [x] Implement request_proposal_revision RPC
 
 Description:
 Client revision request PENDING→REVISION_REQUESTED with reason enum; revision_count unchanged until resubmit; free chat enabled.
@@ -1441,7 +1439,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R10-AC01, R10-AC02, R10-AC05, R10-AC06, R34-AC04, R34-AC05
 
-## 34. [ ] Implement cns_decline_revision_request RPC
+## 34. [x] Implement decline_revision_request RPC
 
 Description:
 Provider declines revision: REVISION_REQUESTED→PENDING; free messaging remains disabled per design §4.5.
@@ -1482,7 +1480,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R10-AC04, R10-AC09, R34-AC07
 
-## 35. [ ] Implement cns_close_conversation RPC
+## 35. [x] Implement cns_close_conversation RPC
 
 Description:
 Manual close with confirmation token; CLOSED irreversible; MANUAL closure_type; slot decrement if was ACTIVE §4.8.
@@ -1522,7 +1520,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R11-AC01, R11-AC02, R11-AC03, R11-AC04
 
-## 36. [ ] Implement cns_cancel_service_request RPC
+## 36. [x] Implement cancel_service_request RPC
 
 Description:
 Client cancel SR: CANCELLED, all chats CLOSED, proposals terminal REJECTED_AUTOMATICALLY; competes with accept via SR FOR UPDATE §4.4.
@@ -1533,7 +1531,7 @@ Responsibilities:
 - CHATS_CLOSED_BULK event
 
 Implementation Details:
-- Normative reference: design.md — task 36: `Implement cns_cancel_service_request RPC`.
+- Normative reference: design.md — task 36: `Implement cancel_service_request RPC`.
 - Scope: Client cancel SR: CANCELLED, all chats CLOSED, proposals terminal REJECTED_AUTOMATICALLY; competes with accept via SR FOR UPDATE §4.4.
 - Execute: SR lock FOR UPDATE
 - Execute: NEGOTIATION_TERMINATED event optional
@@ -1568,7 +1566,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R2-AC05, R2-AC06, R2-AC07, OAC-11
 
-## 37. [ ] Implement cns_mark_conversation_read RPC
+## 37. [x] Implement cns_mark_conversation_read RPC
 
 Description:
 Upsert chat_read_receipts; return last_read_at per design §5.1.
@@ -2447,18 +2445,18 @@ Requirements covered:
 Acceptance Criteria covered:
 R31-AC06
 
-## 57. [ ] Delegate legacy create_provider_proposal to cns_submit_proposal
+## 57. [ ] Delegate legacy create_provider_proposal to submit_proposal
 
 Description:
-Wave D cutover: legacy RPC wraps cns_submit_proposal internally per design §Schema evolution.
+Wave D cutover: legacy RPC wraps submit_proposal internally per design §Schema evolution.
 
 Responsibilities:
 - Maintain backward compat during migration
 - Log deprecation warning
 
 Implementation Details:
-- Normative reference: design.md — task 57: `Delegate legacy create_provider_proposal to cns_submit_proposal`.
-- Scope: Wave D cutover: legacy RPC wraps cns_submit_proposal internally per design §Schema evolution.
+- Normative reference: design.md — task 57: `Delegate legacy create_provider_proposal to submit_proposal`.
+- Scope: Wave D cutover: legacy RPC wraps submit_proposal internally per design §Schema evolution.
 - Execute: Implement per design.md; see Description for normative section reference
 - Execute: Maintain backward compat during migration
 - Execute: Log deprecation warning
@@ -3538,14 +3536,14 @@ R22-AC04
 ## 82. [ ] Add statement_timeout guard to accept and batch RPCs
 
 Description:
-SET LOCAL statement_timeout on cns_accept_proposal and batch jobs to prevent runaway locks.
+SET LOCAL statement_timeout on accept_proposal and batch jobs to prevent runaway locks.
 
 Responsibilities:
 - Accept 5s local timeout with idempotency recovery path
 
 Implementation Details:
 - Normative reference: design.md — task 82: `Add statement_timeout guard to accept and batch RPCs`.
-- Scope: SET LOCAL statement_timeout on cns_accept_proposal and batch jobs to prevent runaway locks.
+- Scope: SET LOCAL statement_timeout on accept_proposal and batch jobs to prevent runaway locks.
 - Execute: Implement per design.md; see Description for normative section reference
 - Execute: Accept 5s local timeout with idempotency recovery path
 - Gate: automated tests in Phase 14 (pgTAP/Vitest/E2E) green before merge.
@@ -3755,14 +3753,14 @@ R3-AC07, R17-AC01, OAC-01
 ## 87. [ ] Implement negotiation-proposals API layer
 
 Description:
-Wrap cns_submit_proposal, accept, reject, revision, decline, list_versions.
+Wrap submit_proposal, accept, reject, revision, decline, list_versions.
 
 Responsibilities:
 - UUID idempotency_key per mutation
 
 Implementation Details:
 - Normative reference: design.md — task 87: `Implement negotiation-proposals API layer`.
-- Scope: Wrap cns_submit_proposal, accept, reject, revision, decline, list_versions.
+- Scope: Wrap submit_proposal, accept, reject, revision, decline, list_versions.
 - Execute: Implement per design.md; see Description for normative section reference
 - Execute: UUID idempotency_key per mutation
 - Gate: automated tests in Phase 14 (pgTAP/Vitest/E2E) green before merge.
