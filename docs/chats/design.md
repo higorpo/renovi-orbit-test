@@ -4,7 +4,7 @@
 
 **Status:** Architecture review draft — implementation kickoff  
 **Normative language:** RFC 2119 (`MUST` / `SHALL` / `SHOULD` / `MAY`)  
-**Last updated:** 2026-05-29
+**Last updated:** 2026-05-29 (post review — slot semantics, idempotency, reciprocity, dead-letter, events, Realtime, media)
 
 ---
 
@@ -28,7 +28,7 @@ The repository **today** implements quote flow without CNS tables:
 | `provider_proposals.status` ∈ `{submitted, accepted, rejected, withdrawn}` | CNS proposal FSM (§2) | Extend CHECK; map `submitted`→`PENDING`; add columns `conversation_id`, `revision_count`, `revision_reason`, `version`, `submitted_at`; deprecate direct PostgREST insert — **RPC-only** mutations |
 | No `conversations` | New | Migration `YYYYMMDDHHMMSS_create_cns_conversations.sql` |
 | No `services` (contracted) | New `public.services` | Distinct from `platform_services`; FK to `provider_proposals` |
-| 48h proposal SLA (cron + trigger) | 24h (`PROPOSAL_CLIENT_RESPONSE_SLA_HOURS`) | `platform_constants` + replace `expire_stale_provider_proposals` with `cns_expire_pending_proposals` |
+| 48h proposal SLA (legacy cron + trigger on `created_at`) | **24h** (`chats.proposal_response_sla_hours` / `PROPOSAL_CLIENT_RESPONSE_SLA_HOURS`) | Drop or replace `expire_stale_provider_proposals` and the 48h accept guard trigger; `cns_expire_pending_proposals` MUST use `submitted_at + interval '1 hour' * platform_constant_int('chats.proposal_response_sla_hours', 24)`; `cns_accept_proposal` MUST reject expired proposals with the same SLA source |
 | MMD (`message_dispatcher` schema) | Producer from CNS RPCs | Templates `chat.new_message`, `proposal.*` registered in migration |
 
 All **new** CNS RPCs SHALL be prefixed `cns_*` until cutover; legacy `create_provider_proposal` SHALL delegate to `cns_submit_proposal` internally.
@@ -144,8 +144,8 @@ sequenceDiagram
 |-----------|-----------|
 | Horizontal workers | `SKIP LOCKED` on `domain_events`, `chat_maintenance_queue`, MMD `message_dispatches` |
 | Read scale | Paginated RPCs; partial indexes; no full-table Realtime |
-| Hot SR | Slot counter on `service_request_negotiation_stats` (materialized per SR, updated in same TX as chat status) |
-| Fanout | Max 4 `ACTIVE` chats/SR (configurable); push per message, not per SR |
+| Hot SR | Slot counter on `service_request_negotiation_stats` (materialized per SR, updated on **new** `ACTIVE` and `ACTIVE`→`INACTIVE`/`CLOSED`; see §3.3.1) |
+| Fanout | Max 4 `ACTIVE` chats/SR for **new** provider pairs (configurable); reactivation MAY exceed cap temporarily (product intent); push per message, not per SR |
 
 ## 1.8 Fault isolation
 
@@ -337,7 +337,23 @@ create table public.service_request_negotiation_stats (
 );
 ```
 
-Updated **only** inside RPCs that transition `conversations.status` to/from `ACTIVE`.
+Updated inside RPCs that transition `conversations.status` to/from `ACTIVE` per §3.3.1.
+
+### 3.3.1 Slot accounting (normative)
+
+`active_chat_count` is a **performance counter for new-chat admission**, not a hard invariant that the number of `ACTIVE` rows always equals the counter.
+
+| Transition | Slot check before TX? | `active_chat_count` delta |
+|------------|----------------------|---------------------------|
+| New `(service_request_id, provider_id)` → `ACTIVE` | **Yes** — reject if `count >= limit` | **+1** |
+| `INACTIVE` → `ACTIVE` (reactivation message) | **No** | **0** (intentional — product allows resuming without consuming a slot) |
+| `ACTIVE` → `INACTIVE` (reciprocity job) | n/a | **−1** |
+| `ACTIVE` → `CLOSED` (manual / cascade) | n/a | **−1** if was `ACTIVE` |
+| Accept cascade (bulk close) | n/a | Set **0** for SR |
+
+**Consequence (expected):** an SR MAY temporarily have more than `chats.max_active_slots_per_service_request` rows with `status = ACTIVE` when multiple `INACTIVE` chats reactivate. The counter MAY under-count vs `COUNT(*) WHERE status = 'ACTIVE'`; admission for **new** providers still uses the counter + `FOR UPDATE` on stats. No reconciliation job is required for v1.
+
+**Provider visibility:** enforcement that a provider “may see” the SR before first message is **out of scope v1** (product precondition only); RPCs validate SR `OPEN` and participant role, not feed/matching grants.
 
 ## 3.4 `public.chat_messages`
 
@@ -354,7 +370,7 @@ create table public.chat_messages (
   delivery_status public.cns_delivery_status not null default 'sent',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint chat_messages_idempotency_unique unique (idempotency_key),
+  constraint chat_messages_idempotency_scoped unique (conversation_id, sender_user_id, idempotency_key),
   constraint chat_messages_payload_size check (octet_length(payload::text) <= 65536),
   constraint chat_messages_linked_pair check (
     (linked_entity_type is null and linked_entity_id is null)
@@ -369,6 +385,8 @@ create index chat_messages_conversation_cursor_idx
 ```
 
 **Keyset pagination index** supports `list_chat_messages(p_cursor_created_at, p_cursor_id, p_limit)`.
+
+**Idempotency (Req. 14):** scope is **`(conversation_id, sender_user_id, idempotency_key)`** — not global per key. Clients MUST generate a **new UUID per logical operation** (`send_message`, `submit_proposal`, `accept_proposal`, etc.). RPC-level replay uses `cns_idempotency_records (actor_user_id, operation, idempotency_key)`. On duplicate `send_message`, return the existing row for that triple without inserting again.
 
 ## 3.5 `public.chat_read_receipts`
 
@@ -442,19 +460,44 @@ create table public.domain_events (
   locked_until timestamptz,
   locked_by text,
   retry_count int not null default 0,
+  dead_letter boolean not null default false,
+  dead_letter_at timestamptz,
+  last_error text,
   constraint domain_events_type_check check (event_type ~ '^[A-Z][A-Z0-9_]*$')
 );
 
 create index domain_events_unprocessed_idx
   on public.domain_events (created_at)
-  where processed_at is null;
+  where processed_at is null and dead_letter = false;
+
+create index domain_events_dead_letter_idx
+  on public.domain_events (dead_letter_at)
+  where dead_letter = true and processed_at is null;
 
 create index domain_events_stale_lease_idx
   on public.domain_events (locked_until)
   where processed_at is null and locked_until is not null;
 ```
 
-Event types (normative): `CHAT_MESSAGE_SENT`, `PROPOSAL_SUBMITTED`, `PROPOSAL_ACCEPTED`, `PROPOSAL_REJECTED`, `PROPOSAL_EXPIRED`, `PROPOSAL_REVISION_REQUESTED`, `CONVERSATION_INACTIVATED`, `CONVERSATION_CLOSED`, `SLOT_RELEASED`, `SERVICE_REQUEST_COMPLETED`, `SERVICE_REQUEST_CANCELLED`, `NEGOTIATION_TERMINATED`.
+Event types (normative):
+
+| `event_type` | When emitted | Notes |
+|--------------|--------------|-------|
+| `CHAT_MESSAGE_SENT` | After `text`/`image` persisted | MMD push, `bypass_limits` |
+| `PROPOSAL_SUBMITTED` | `cns_submit_proposal` commit | |
+| `PROPOSAL_ACCEPTED` | `cns_accept_proposal` commit | |
+| `PROPOSAL_REJECTED` | Client reject | |
+| `PROPOSAL_EXPIRED` | Expiry cron | |
+| `PROPOSAL_REVISION_REQUESTED` | Client revision request | |
+| `CONVERSATION_INACTIVATED` | Reciprocity job | Per conversation |
+| `CONVERSATION_CLOSED` | Manual `cns_close_conversation` | Single conversation |
+| `CHATS_CLOSED_BULK` | Accept cascade or SR cancel | **One row per SR**; `payload` MUST include `service_request_id` and `conversation_ids` (uuid[]) or `closed_count` — satisfies Req. 28 (`CHATS_CLOSED_BULK`); consumers MUST NOT require N separate `CONVERSATION_CLOSED` rows for bulk |
+| `SLOT_RELEASED` | `ACTIVE`→`INACTIVE` | Optional matching hook |
+| `SERVICE_REQUEST_COMPLETED` | Accept | |
+| `SERVICE_REQUEST_CANCELLED` | Client cancel | |
+| `NEGOTIATION_TERMINATED` | Accept or cancel | SR-level; optional matching hook |
+
+Do not emit ad-hoc aliases for the same semantic event; use the table above only.
 
 ## 3.9 `public.chat_maintenance_queue` (optional — Req. 27)
 
@@ -660,7 +703,7 @@ sequenceDiagram
   RPC-->>P: 200 message + conversation_id
 ```
 
-**Reactivation (Req. 4, 29):** `INACTIVE` → `ACTIVE` on valid message **without** slot check. **New** `(sr, provider)` pair **requires** slot.
+**Reactivation (Req. 4, 29):** `INACTIVE` → `ACTIVE` on valid message **without** slot check and **without** incrementing `active_chat_count` (§3.3.1). **New** `(sr, provider)` pair **requires** slot and **+1** on stats.
 
 ## 4.2 Send message (Req. 3, 34, 32)
 
@@ -673,18 +716,20 @@ sequenceDiagram
 5. Rate limit: `cns_check_message_rate_limit` — sliding window in `chat_rate_limit_buckets` or `platform_constants` (429 + `retry_after_seconds`).
 
 ```sql
--- Req. 34 authoritative gate
+-- Req. 34 authoritative gate — callable only by participants (or inside RPC after participant check)
 create or replace function public.cns_chat_free_messaging_allowed(p_conversation_id uuid)
-returns boolean language sql stable security definer set search_path = public as $$
-  select not exists (
-    select 1 from public.provider_proposals pp
-    where pp.conversation_id = p_conversation_id
-      and pp.status = 'PENDING'
-  );
+returns boolean language sql stable security invoker set search_path = public as $$
+  select
+    (select public.is_chat_participant(p_conversation_id))
+    and not exists (
+      select 1 from public.provider_proposals pp
+      where pp.conversation_id = p_conversation_id
+        and pp.status = 'PENDING'
+    );
 $$;
 ```
 
-**`REVISION_REQUESTED`:** function returns `true` (no `PENDING` row). **After new submit:** `PENDING` blocks again.
+**`REVISION_REQUESTED`:** function returns `true` when participant and no `PENDING` row. **After new submit:** `PENDING` blocks again. Non-participants receive `false` (no proposal-state leak). `cns_send_message` MUST NOT rely on this alone — it revalidates `auth.uid()` as participant.
 
 ## 4.3 Submit proposal (Req. 6, 34)
 
@@ -757,10 +802,21 @@ sequenceDiagram
 
 **Schedule:** `*/10 * * * *` (every 10 minutes) → `cns_evaluate_reciprocity_batch(p_batch_size := 500)`.
 
+**Messages that count toward bilateral reciprocity** (within `chats.reciprocity_window_hours`, default 24):
+
+| `message_type` | Counts? |
+|----------------|---------|
+| `text`, `image` | **Yes** — must be from client profile and provider profile respectively (both sides at least once) |
+| `proposal` | **Yes** — counts as provider-side activity in window (timeline insert on submit) |
+| `system` | **No** |
+| `workflow_action` | **No** |
+
+`last_interaction_at` on `conversations` is updated for all persisted message types (including `system` / `proposal`) for list ordering; reciprocity evaluation MUST use the table above, not `last_interaction_at` alone.
+
 **Algorithm per claimed row:**
 
-1. `SELECT id FROM conversations WHERE status = 'ACTIVE' AND last_interaction_at < now() - interval '1 hour' * platform_constant_int('chats.reciprocity_window_hours', 24) FOR UPDATE SKIP LOCKED LIMIT 500`.
-2. For each: check bilateral messages in window via `EXISTS` on `chat_messages` grouped by sender role (client vs provider profile ids).
+1. `SELECT id FROM conversations WHERE status = 'ACTIVE' AND last_interaction_at < now() - interval '1 hour' * platform_constant_int('chats.reciprocity_window_hours', 24) FOR UPDATE SKIP LOCKED LIMIT 500` (cheap pre-filter).
+2. For each: `cns_has_bilateral_reciprocity(conversation_id, window_hours)` — `EXISTS` client-originated and provider-originated rows in `chat_messages` where `message_type IN ('text', 'image', 'proposal')` and `created_at >= now() - window`.
 3. If unilateral: `UPDATE status = 'INACTIVE'`, decrement `active_chat_count`, set `inactivation_reason = 'NO_RECIPROCITY'`, emit `SLOT_RELEASED` + `CONVERSATION_INACTIVATED`.
 4. **Conditional update:** `WHERE status = 'ACTIVE'` — `ROW_COUNT` 0 or 1 (Req. 14).
 
@@ -845,8 +901,8 @@ If `cns_mmd_ingest` fails, domain event consumer logs `NOTIFICATION_SKIPPED` in 
 | `get_conversation_detail` | participant | n/a | none | header + SR summary |
 | `get_proposal_for_timeline` | participant | n/a | none | full proposal for card hydration |
 | `list_proposal_versions` | participant | n/a | none | revision history (Req. 10) |
-| `get_conversation_detail` | participant | n/a | none | header + SR panel (Req. 5) |
 | `cns_refresh_media_signed_urls` | participant | n/a | none | refresh expired Storage URLs (Req. 31) |
+| `cns_replay_domain_event` | service_role / admin | n/a | event row | replay dead-letter outbox row (§8.4) |
 
 **Error contract (JSON in `RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = '...', DETAIL = jsonb`):**
 
@@ -865,9 +921,11 @@ If `cns_mmd_ingest` fails, domain event consumer logs `NOTIFICATION_SKIPPED` in 
 ### `chat-upload-media` (new)
 
 - **Input:** `multipart/form-data`, JWT required, fields: `conversation_id`, `upload_session_id`, `file[]`.
-- **Flow:** validate participant via RPC `cns_validate_upload_session` → Storage put → return paths.
+- **Flow:** validate participant via RPC `cns_validate_upload_session` → Storage put → return paths; client then calls `cns_send_message` with paths in payload (two-phase, no distributed TX).
 - **Output:** `{ paths: string[] }`.
 - **Timeout:** < 30s; max 5 images × 5MB (align request-quote limits).
+
+**Orphan recovery (Req. 26):** if Storage upload succeeds but `cns_send_message` never commits, `chat_media_upload_sessions` remains `pending` until `expires_at` (24h). Job `cns_janitor_orphan_media` (daily 03:00) deletes Storage objects for sessions `pending` with `expires_at < now() - interval '24 hours'` and marks session `expired`. **SLO:** orphan bytes removed within 48h of failed attach. Client retry with same `idempotency_key` on send is safe; new upload session if prior expired.
 
 ### `message-dispatcher-worker` (existing)
 
@@ -891,9 +949,24 @@ export async function sendMessage(input: SendMessageInput): Promise<ApiResult<Ch
 
 ## 5.4 Realtime contract
 
-- **Topic:** `conversation:{uuid}`
-- **Events:** `INSERT` on `chat_messages`; `UPDATE` on `provider_proposals` where `conversation_id` matches.
-- **Presence (optional Req. 5):** channel `conversation:{id}:presence` with TTL 10s; payload `{ user_id, typing: boolean }`; throttle 1 event/2s/client.
+**Publication (migration MUST include):**
+
+```sql
+alter publication supabase_realtime add table public.chat_messages;
+alter publication supabase_realtime add table public.provider_proposals;
+```
+
+- `chat_messages` and `provider_proposals` MUST use **RLS enabled**; Realtime delivers only rows the subscriber’s JWT may `SELECT`.
+- `provider_proposals` SHOULD use `REPLICA IDENTITY FULL` if clients need old/new on `UPDATE` for card state; otherwise `DEFAULT` is sufficient when only `status` changes matter.
+
+**Client subscription:**
+
+- **Topic:** `supabase.channel('conversation:' || conversation_id)` (private channel).
+- **Postgres changes:** `event: 'INSERT'`, `schema: 'public'`, `table: 'chat_messages'`, `filter: 'conversation_id=eq.<uuid>'`.
+- **Proposal updates:** `event: 'UPDATE'`, `table: 'provider_proposals'`, `filter: 'conversation_id=eq.<uuid>'` — invalidates proposal card / `get_proposal_for_timeline` query.
+- **List screen:** separate channel or poll — subscribe only to open conversation; list uses `last_interaction_at` invalidation from a lightweight “inbox” refetch (Req. 22), not global `chat_messages` fanout.
+
+**Presence (optional Req. 5):** channel `conversation:{id}:presence` with TTL 10s; payload `{ user_id, typing: boolean }`; throttle 1 event/2s/client; no server persistence.
 
 ## 5.5 MMD template variables (normative minimum)
 
@@ -931,7 +1004,9 @@ stateDiagram-v2
   Unprocessed --> Processing: checkout sets locked_until
   Processing --> Processed: consumer success
   Processing --> Unprocessed: lease expired (janitor)
-  Processing --> Failed: max retries exceeded
+  Processing --> DeadLetter: max retries exceeded
+  DeadLetter --> Unprocessed: cns_replay_domain_event
+  note right of DeadLetter: dead_letter=true<br/>processed_at still null
 ```
 
 **Checkout SQL pattern:**
@@ -940,6 +1015,7 @@ stateDiagram-v2
 with claimed as (
   select id from public.domain_events
   where processed_at is null
+    and dead_letter = false
     and (locked_until is null or locked_until < now())
   order by created_at
   for update skip locked
@@ -956,7 +1032,7 @@ returning e.*;
 
 | Work type | Mechanism |
 |-----------|-----------|
-| Domain event | `processed_at` set in same TX as side effect; unique business idempotency in MMD |
+| Domain event | `processed_at` set in same TX as side effect; `dead_letter` rows never auto-`processed_at`; unique business idempotency in MMD |
 | Reciprocity | `WHERE status = 'ACTIVE'` on update |
 | Proposal expiry | `WHERE status = 'PENDING'` |
 | MMD | existing `idempotency_key` UNIQUE |
@@ -1001,7 +1077,7 @@ Default **Read Committed**. All CNS critical RPCs use explicit row locks — no 
 | Effect | Guarantee |
 |--------|-----------|
 | Accept cascade | Exactly-once via idempotency + transaction |
-| Chat message insert | Exactly-once per `idempotency_key` |
+| Chat message insert | Exactly-once per `(conversation_id, sender_user_id, idempotency_key)` |
 | Push notification | At-least-once (MMD) |
 | Realtime | At-least-once |
 
@@ -1036,9 +1112,17 @@ Default **Read Committed**. All CNS critical RPCs use explicit row locks — no 
 - **MAY** partially process reciprocity batch — per-row savepoint (Req. 25).
 - **SHALL NOT** rollback accept on email failure (Req. 12, G5).
 
-## 8.4 Poison messages
+## 8.4 Poison messages and dead-letter replay
 
-Domain event exceeding `max_retries` → `processed_at = now()`, `payload.dead_letter = true`, alert metric `cns_domain_events_dead_letter_total`.
+When `retry_count` exceeds `max_retries` (default 5) after consumer failures:
+
+1. Set `dead_letter = true`, `dead_letter_at = now()`, `last_error = <sanitized message>`.
+2. **MUST NOT** set `processed_at` — the row stays in the unprocessed set for operators.
+3. Increment metric `cns_domain_events_dead_letter_total` and log structured `event_id`, `event_type`, `service_request_id`.
+
+**Replay:** `cns_replay_domain_event(p_event_id uuid)` (service_role or admin-audited RPC) resets `retry_count = 0`, `dead_letter = false`, `dead_letter_at = null`, `locked_until = null`, `last_error = null` — row becomes eligible for `cns_process_domain_events` again. Replay MUST NOT duplicate MMD deliveries if consumer uses stable `idempotency_key` from payload.
+
+Checkout query MUST use `WHERE processed_at IS NULL AND dead_letter = false` (§6.2).
 
 ---
 
@@ -1512,7 +1596,7 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | OAC-01 | **Execution Model**: Transições de Chat, Proposal e efeitos colaterais em SR MUST ser executadas exclusivamente via **RPC… | §1.3 | RPC-only FSM |
 | OAC-02 | **Persistence Strategy**: Todo evento que altere slot, status ou versão de proposta MUST ser persistido antes de retornar suce… | §1.6 | Commit-before-200 |
 | OAC-03 | **Concurrency Control**: Aceite de proposta MUST usar `SELECT … FOR UPDATE` na linha do SR e das propostas elegíveis na mesma… | §7 | `FOR UPDATE` accept |
-| OAC-04 | **Idempotency**: Criação de chat, envio de mensagem, aceite e ingestão de notificação MUST aceitar `idempotency_key` … | §3.10 | UNIQUE keys |
+| OAC-04 | **Idempotency**: Criação de chat, envio de mensagem, aceite e ingestão de notificação MUST aceitar `idempotency_key` … | §3.4, §3.10 | Scoped UNIQUE on messages; `cns_idempotency_records` for RPCs |
 | OAC-05 | **Retry Mechanisms**: Upload de mídia e envio de mensagem MAY retentar no cliente com a mesma `idempotency_key`; workers d… | §8.2 | Conditional cron UPDATE |
 | OAC-06 | **Scheduling**: Reciprocidade e expiração de proposta MUST ser avaliadas por `pg_cron` (intervalo recomendado: 5–15 … | §6.1 | pg_cron |
 | OAC-07 | **Resumable Execution**: Jobs internos do CNS (reciprocidade, expiração) MUST ser retomáveis via estado no Postgres; CNS MUST… | §6 | Postgres state |
@@ -1664,7 +1748,7 @@ src/features/negotiation-proposals/
 2. **Wave B:** Deploy RPCs behind feature flag `VITE_ENABLE_CNS`.
 3. **Wave C:** Migrate `provider_proposals.status` values; update client budgets RPCs to use `PENDING` semantics.
 4. **Wave D:** Switch composer to `cns_submit_proposal`; deprecate direct `create_provider_proposal` from client.
-5. **Wave E:** Align SR status enum; add `services` table; enable accept cascade.
+5. **Wave E:** Align SR status enum; add `services` table; enable accept cascade; **switch proposal SLA to 24h** (remove 48h cron/trigger).
 6. **Wave F:** Register MMD templates; enable push suppression in client.
 
 ## 13.11 Test strategy
@@ -1697,6 +1781,8 @@ update conversations set status = 'CLOSED', closure_type = 'PROPOSAL_ACCEPTED_EL
 update service_request_negotiation_stats set active_chat_count = 0 where service_request_id = v_sr_id;
 insert into services (...) values (...) returning id into v_service_id;
 perform cns_record_domain_event('PROPOSAL_ACCEPTED', ...);
+perform cns_record_domain_event('CHATS_CLOSED_BULK', ...); -- payload.conversation_ids
+perform cns_record_domain_event('SERVICE_REQUEST_COMPLETED', ...);
 perform cns_idempotency_commit(...);
 ```
 
@@ -1706,7 +1792,7 @@ perform cns_idempotency_commit(...);
 
 | Effect | Technique |
 |--------|-----------|
-| Duplicate message send | `chat_messages.idempotency_key` UNIQUE |
+| Duplicate message send | `UNIQUE (conversation_id, sender_user_id, idempotency_key)` on `chat_messages` |
 | Duplicate accept | `cns_idempotency_records` + SR terminal state guard |
 | Duplicate push | MMD `idempotency_key` UNIQUE |
 | Duplicate slot consumption | Stats updated only on `ACTIVE` transition with lock |

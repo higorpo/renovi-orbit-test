@@ -365,6 +365,11 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 *User Story*: Como marketplace, eu quero limitar chats simultaneamente ativos por pedido e liberar capacidade quando negociações esfriam, para equilibrar oferta e demanda.
 
+### Definições (reciprocidade e slots)
+
+- **Mensagens que contam para reciprocidade bilateral** na janela `RECIPROCITY_WINDOW_HOURS`: `message_type` `text`, `image` e `proposal` (uma por lado: ao menos uma do cliente e uma do prestador). **`system` e `workflow_action` NÃO contam.**
+- **Contador de slots (`active_chat_count`):** incrementa somente na **primeira** ativação de um par `(service_request_id, provider_id)`; **reativação** `INACTIVE` → `ACTIVE` **não** consome slot e **não** incrementa o contador — o SR **pode** ter temporariamente mais chats `ACTIVE` que o limite configurado (comportamento esperado; ver `design.md` §3.3.1).
+
 ### Acceptance Criteria
 
 - **GIVEN** contagem de chats com `status = ACTIVE` para um `service_request_id`
