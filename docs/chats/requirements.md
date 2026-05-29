@@ -93,7 +93,7 @@ O diagrama [`platform-flow.mmd`](../platform-flow.mmd) inclui nós de dispatch (
 - **Retry:** Mensagens falhadas no cliente com retry manual/ automático limitado; workers com backoff exponencial; MMD at-least-once com `idempotency_key`.
 - **Persistência:** WAL/ACID Postgres; anexos em Storage; rascunhos locais apenas para composição de proposta (debounce), não para estado de workflow.
 - **Edge stateless / DB stateful:** Toda máquina de estados e slot counter no Postgres.
-- **Dependências obrigatórias (implementação CNS):** Supabase Auth, RLS existente, Service Request `OPEN`/`COMPLETED`/`CANCELLED`, **MMD** (notificações), feature `provider-jobs` (`ProviderProposalComposerDialog` a extrair para feature isolada de proposta).
+- **Dependências obrigatórias (implementação CNS):** Supabase Auth, RLS por papel (`client` / `provider` / `admin` — Requirement 35), Service Request `OPEN`/`COMPLETED`/`CANCELLED`, **MMD** (notificações), feature `provider-jobs` (`ProviderProposalComposerDialog` a extrair para feature isolada de proposta).
 - **Dependências opcionais / futuras:** **Matching progressivo** (`DISPATCH_*`) — **ainda não implementado**; não bloqueia entrega do CNS. Quando existir, MAY consumir eventos do CNS (ex.: slot liberado, proposta aceita) e compartilhar `platform_constants` (`chats.max_active_slots_per_service_request`). Ver Requirement 24.
 - **Pré-condição de negócio:** prestador já possui visibilidade do SR (qualquer fluxo de produto que leve o prestador ao detalhe do pedido); o CNS inicia na primeira mensagem, não na geração de batches.
 
@@ -215,7 +215,7 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 - **Resumable Execution:** Jobs internos do CNS (reciprocidade, expiração) MUST ser retomáveis via estado no Postgres; CNS MUST NOT depender de memória de sessão nem do subsistema de matching progressivo para completar transições de chat/proposta.
 - **Restart Safety:** Crash após commit DB MUST NOT exigir compensação no cliente; crash antes do commit MUST permitir retry idempotente.
 - **Fault Tolerance:** Falha de push/e-mail MUST NOT reverter transição de aceite já commitada (desacoplamento I/O — concurrency G5).
-- **Isolation:** RLS MUST garantir que usuário A não leia mensagens/propostas do chat de usuário B; RPCs `SECURITY DEFINER` MUST revalidar `auth.uid()` e papel (`client` | `provider`).
+- **Isolation:** RLS MUST garantir isolamento entre participantes não relacionados e acesso administrativo de leitura global para `profiles.role = 'admin'` (Requirement 35); RPCs `SECURITY DEFINER` MUST revalidar `auth.uid()` e papel mesmo quando RLS permitir leitura admin.
 - **Atomicity:** Aceite, cancelamento de SR e encerramento em massa de chats MUST ser uma única transação.
 - **Ownership Semantics:** Apenas o participante do chat (cliente ou prestador vinculado) MAY enviar mensagens livres quando `free_messaging` estiver habilitado (Requirement 34); apenas o prestador dono da proposta MAY submeter nova proposta; apenas o cliente do SR MAY aceitar/recusar/solicitar revisão via fluxos da proposta.
 - **Proposal-Gated Messaging:** Enquanto existir proposta `PENDING` na conversa, RPC `send_message` MUST rejeitar `message_type IN ('text', 'image')` para cliente e prestador; interação MUST ocorrer via entidade `proposals` e componente dinâmico na timeline (Requirement 34).
@@ -822,9 +822,9 @@ Horário silencioso (22:00–06:00 BRT) e demais regras do MMD continuam válido
 - **WHEN** modelada
 - **THEN** MUST incluir `accepted_proposal_id` (FK → `proposals`), `scheduled_service_date` (timestamptz ou date), `service_request_id` (origem do pedido), `status`, `client_id`, `provider_id`; MUST ser a única fonte de verdade da data oficial e da proposta contratada após aceite.
 
-- **GIVEN** políticas RLS
-- **WHEN** cliente ou prestador acessa
-- **THEN** apenas participantes do chat e dono do SR MUST ler/escrever conforme papel.
+- **GIVEN** políticas RLS do domínio CNS
+- **WHEN** implementadas
+- **THEN** MUST seguir Requirement 35 (admin leitura global; client/provider somente chats em que participam).
 
 - **GIVEN** auditoria
 - **WHEN** transição crítica ocorre
@@ -1362,13 +1362,17 @@ O **matching progressivo** descrito em [`matching-algorithm/requirements.md`](..
 
 ## Requirement 31: Security, Authorization & Data Leakage Prevention
 
-*User Story*: Como participante, eu quero garantia de que apenas as partes da negociação acessam mensagens e propostas.
+*User Story*: Como participante, eu quero garantia de que apenas as partes da negociação acessam e alteram mensagens e propostas, com exceção controlada de leitura administrativa (Requirement 35).
 
 ### Acceptance Criteria
 
-- **GIVEN** política RLS em `chat_messages`
-- **WHEN** usuário não participante consulta
-- **THEN** zero linhas MUST retornar.
+- **GIVEN** políticas RLS em `chat_messages`, `conversations` e tabelas relacionadas (Requirement 35)
+- **WHEN** usuário autenticado com `profiles.role` `client` ou `provider` **não** participante do chat consulta via PostgREST
+- **THEN** zero linhas MUST retornar para `SELECT`; `INSERT`/`UPDATE`/`DELETE` MUST falhar em `WITH CHECK` / `USING`.
+
+- **GIVEN** usuário com `profiles.role = 'admin'`
+- **WHEN** consulta chats e mensagens
+- **THEN** políticas RLS MUST permitir `SELECT` em todas as linhas do domínio CNS (Requirement 35); admin MUST NOT enviar mensagens ou aceitar propostas como se fosse participante salvo fluxo explícito futuro de suporte/impersonação (fora do escopo v1).
 
 - **GIVEN** ação em card dinâmico (Accept)
 - **WHEN** RPC executa
@@ -1563,6 +1567,111 @@ on conflict (key) do update set
 
 ---
 
+## Requirement 35: Row Level Security — Admin, Client & Provider
+
+*User Story*: Como plataforma, eu quero políticas RLS explícitas e auditáveis em todas as tabelas do chat, garantindo que clientes e prestadores só vejam e interajam com negociações das quais participam, enquanto administradores podem inspecionar qualquer conversa e mensagem para suporte e compliance.
+
+### Escopo de tabelas (normativo)
+
+RLS MUST estar **habilitado** (`ENABLE ROW LEVEL SECURITY`) e coberto por políticas em **todas** as tabelas do CNS, incluindo no mínimo:
+
+| Tabela | SELECT | INSERT | UPDATE | DELETE |
+|--------|--------|--------|--------|--------|
+| `conversations` (ou `chats`) | Regras abaixo | Participante | Participante / regras de estado | Restrito (proibido v1 salvo RPC) |
+| `chat_messages` | Regras abaixo | Participante + system | Participante limitado | Restrito |
+| `proposals` | Regras abaixo | Prestador participante | Conforme RPC | Restrito |
+| `chat_read_receipts` | Participante + admin | Participante dono | Participante dono | — |
+| `*_audit` (chat/proposal) | Admin + participante read-only | Service role / trigger | — | — |
+| Storage — mídia do chat | Participante + admin read | Participante | — | — |
+
+### Funções auxiliares SQL (SHOULD)
+
+- **`public.is_platform_admin()`** — retorna `true` se `exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'admin')`.
+- **`public.is_chat_participant(p_conversation_id uuid)`** — retorna `true` se `(select auth.uid())` é o `client_id` ou `provider_id` da conversa (ajustar nomes de coluna ao schema final).
+
+Funções MUST ser `STABLE`, `SECURITY INVOKER`, com `search_path` fixo; políticas MUST usar `(select public.is_platform_admin())` para initplan (regra `supabase-rls-performance`).
+
+### Acceptance Criteria — administrador (`profiles.role = 'admin'`)
+
+- **GIVEN** usuário autenticado com `profiles.role = 'admin'`
+- **WHEN** executa `SELECT` em `conversations` e `chat_messages` via PostgREST com JWT `authenticated`
+- **THEN** MUST retornar **todas** as linhas, **independentemente** de ser participante do chat.
+
+- **GIVEN** admin
+- **WHEN** executa `SELECT` em `proposals` do domínio CNS
+- **THEN** MUST retornar todas as propostas (suporte, auditoria, moderação).
+
+- **GIVEN** admin
+- **WHEN** tenta `INSERT`/`UPDATE`/`DELETE` em `chat_messages` ou `conversations` como usuário comum (sem RPC de suporte dedicado)
+- **THEN** política MUST **negar** na v1 (admin com acesso **somente leitura** em chats); escrita administrativa MAY existir apenas via RPC `SECURITY DEFINER` auditado em fase posterior.
+
+- **GIVEN** admin
+- **WHEN** acessa objeto Storage de imagem anexada ao chat
+- **THEN** política de bucket MUST permitir **leitura**; escrita MUST seguir mesma restrição (leitura-only v1 salvo RPC).
+
+### Acceptance Criteria — cliente (`profiles.role = 'client'`)
+
+- **GIVEN** cliente participante (`conversations.client_id` = `(select auth.uid())` ou FK equivalente)
+- **WHEN** `SELECT` na própria conversa e mensagens
+- **THEN** MUST permitir.
+
+- **GIVEN** cliente **não** participante
+- **WHEN** `SELECT`, `INSERT`, `UPDATE` ou `DELETE` em conversa/mensagem alheia
+- **THEN** MUST negar (zero linhas em `SELECT`; falha em mutações).
+
+- **GIVEN** cliente participante, chat elegível (`≠ CLOSED`), SR `OPEN`, Requirement 34
+- **WHEN** envia mensagem livre ou executa ação de proposta permitida ao cliente
+- **THEN** políticas `WITH CHECK` MUST permitir **somente** na conversa em que é o cliente vinculado.
+
+### Acceptance Criteria — prestador (`profiles.role = 'provider'`)
+
+- **GIVEN** prestador participante (`conversations.provider_id` vinculado ao prestador autenticado)
+- **WHEN** `SELECT` na própria conversa e mensagens
+- **THEN** MUST permitir.
+
+- **GIVEN** prestador **não** participante (ex.: prestador B no mesmo SR que chat cliente↔prestador A)
+- **WHEN** tenta ler ou mutar conversa/mensagem
+- **THEN** MUST negar.
+
+- **GIVEN** prestador participante
+- **WHEN** envia mensagem, mídia ou proposta (RPC/`INSERT` permitidos)
+- **THEN** MUST permitir **somente** na conversa em que é o prestador vinculado; MUST NOT gravar em conversa de outro prestador.
+
+### Acceptance Criteria — engenharia de políticas
+
+- **GIVEN** qualquer tabela nova do CNS
+- **WHEN** criada em migração
+- **THEN** `ENABLE ROW LEVEL SECURITY` e políticas para `SELECT`/`INSERT`/`UPDATE`/`DELETE` MUST ser criadas na **mesma** migração; MUST NOT expor tabela sem RLS em produção.
+
+- **GIVEN** política `SELECT` em `chat_messages`
+- **WHEN** definida
+- **THEN** SHOULD usar forma única: `(select public.is_platform_admin()) OR (select public.is_chat_participant(conversation_id))` — uma política permissiva por ação, com `OR`, em vez de políticas redundantes (regra `supabase-rls-performance`).
+
+- **GIVEN** expressões com `auth.uid()`
+- **WHEN** escritas
+- **THEN** MUST usar `(select auth.uid())` (initplan).
+
+- **GIVEN** RPC `SECURITY DEFINER` (`send_message`, `accept_proposal`, etc.)
+- **WHEN** executada
+- **THEN** MUST revalidar participação e papel **dentro** da função; RLS não substitui autorização de mutações críticas (defense in depth).
+
+- **GIVEN** cliente PostgREST com role `authenticated`
+- **WHEN** acessa CNS
+- **THEN** MUST depender exclusivamente de RLS + RPC; MUST NOT usar `service_role` no bundle do app.
+
+### Acceptance Criteria — testes
+
+- **GIVEN** suite pgTAP ou testes RLS (`supabase test db`)
+- **WHEN** executada para o domínio CNS
+- **THEN** MUST incluir: (1) `admin` lê conversa entre usuários A e B sem ser participante; (2) prestador C não lê conversa A–B; (3) cliente participante lê/escreve na própria conversa; (4) cliente não participante não lê conversa alheia; (5) `anon` sem JWT não acessa linhas.
+
+### Referências
+
+- Papéis: `profiles.role IN ('client', 'provider', 'admin')` — migração [`20260223100000_create_public_profiles.sql`](../../supabase/migrations/20260223100000_create_public_profiles.sql).
+- Negócio: [`docs/business/perfis-e-permissoes.md`](../business/perfis-e-permissoes.md).
+
+---
+
 ## Traceability Matrix (Checklist → Requirements)
 
 | Checklist § | Requirement(s) |
@@ -1586,6 +1695,7 @@ on conflict (key) do update set
 | Tipos NFR (scheduling, recovery, events, fallback, leasing) | 25–32 |
 | Limites dinâmicos (`platform_constants`) | 33 |
 | Bloqueio de chat com proposta `PENDING` / reabertura em `REVISION_REQUESTED` | 34 |
+| RLS admin / client / provider | 35 |
 | Matching progressivo (`DISPATCH_*`, não implementado) | 24 (opcional, não bloqueante) |
 
 ---
@@ -1611,7 +1721,8 @@ Orquestração visual de próxima ação: **hook** `useChatActionBannerState` de
 | Regra `chat_free_messaging_allowed` / bloqueio por proposta `PENDING` | RPC `send_message` + função SQL auxiliar consultando `proposals` |
 | Idempotency keys | `UNIQUE` constraints |
 | Auditoria append-only | `*_audit` tables |
-| RLS e isolamento tenant | Policies em todas as tabelas |
+| RLS e isolamento tenant | Policies em todas as tabelas CNS; `is_platform_admin()` + `is_chat_participant()` (Requirement 35) |
+| Leitura global admin em chats/mensagens | Políticas `SELECT` com `OR is_platform_admin()` |
 | Listagens paginadas | `list_conversations`, `list_chat_messages` |
 | Fila de jobs inatividade/expiração | Tabela opcional `chat_scheduled_jobs` com `SKIP LOCKED` ou cron idempotente por `chat_id` |
 | Ingestão de notificações | Chamada a `message_dispatcher.*` após commit (via RPC ou trigger controlado) |
@@ -1658,5 +1769,6 @@ Orquestração visual de próxima ação: **hook** `useChatActionBannerState` de
 | [`infrastructure-constraints.md`](../infrastructure-constraints.md) | RPC vs Edge |
 | [`matching-algorithm/requirements.md`](../matching-algorithm/requirements.md) | Integração **futura** opcional (`DISPATCH_*`, não implementado); Req. 24 |
 | [`message-dispatcher/requirements.md`](../message-dispatcher/requirements.md) | Notificações |
+| [`docs/business/perfis-e-permissoes.md`](../business/perfis-e-permissoes.md) | Papéis `client` / `provider` / `admin` |
 
 **Última atualização:** 2026-05-28 — compilado a partir dos checklists, design specs, platform-flow e restrições transversais do repositório.
