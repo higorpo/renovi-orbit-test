@@ -21,7 +21,7 @@ O diagrama [`platform-flow.mmd`](../platform-flow.mmd) inclui nós de dispatch (
 
 ### Objetivos de negócio
 
-- Permitir **negociação pré-proposta** (perguntas, fotos, alinhamento de disponibilidade) antes do envio formal de orçamento.
+- Permitir **negociação pré-proposta** (perguntas, fotos, alinhamento de disponibilidade) antes do envio formal de orçamento; após o envio, concentrar a interação no **card da proposta**, reabrindo o chat livre apenas em **revisão solicitada** ou após recusa/expiração (Requirement 34).
 - Limitar **pressão operacional** sobre o cliente via slots de chats `ACTIVE` por pedido (configurável em `platform_constants`, default 4).
 - Garantir **fechamento determinístico** do pedido quando uma proposta é aceita: encerramento automático de chats concorrentes, rejeição automática de propostas pendentes e criação do registro de **Service** em `PENDING_PAYMENT`.
 - Preservar **auditabilidade** e rastreabilidade histórica de mensagens, propostas versionadas e motivos de encerramento.
@@ -39,12 +39,14 @@ O diagrama [`platform-flow.mmd`](../platform-flow.mmd) inclui nós de dispatch (
 **Pré-condição (fora do CNS):** existe `service_request` em `OPEN` e o prestador já recebeu visibilidade do pedido (mecanismo de exposição atual da plataforma — não exige matching progressivo).
 
 1. Prestador envia **primeira mensagem** no contexto desse SR → **Chat** criado em `ACTIVE`; SR permanece `OPEN`.
-3. Fase de **descoberta/negociação**: mensagens texto/imagem/sistema; reciprocidade bilateral monitorada em janela de **24 horas**.
-4. Ausência de reciprocidade por **> 24h** → Chat `INACTIVE` (slot liberado); nova mensagem de qualquer parte → `ACTIVE` (reativação **não** exige slot livre).
-5. Prestador envia **proposta** → `PENDING` (preço, escopo, prazo, 1–3 datas sugeridas, observações, fotos opcionais).
-6. Cliente decide: **aceitar** (data obrigatória), **recusar**, **solicitar revisão** (máx. 2 por negociação), ou **inércia 24h** → `EXPIRED`.
+2. Fase de **descoberta/negociação**: mensagens texto/imagem/sistema livres; reciprocidade bilateral monitorada em janela de **24 horas**.
+3. Ausência de reciprocidade por **> 24h** → Chat `INACTIVE` (slot liberado); nova mensagem de qualquer parte → `ACTIVE` (reativação **não** exige slot livre), **somente se** mensagens livres estiverem permitidas (Requirement 34).
+4. Prestador envia **proposta** → `PENDING`; **mensagens livres bloqueadas** — cliente e prestador interagem apenas via card/ações da proposta (Requirement 34).
+5. Cliente decide: **aceitar** (data obrigatória), **recusar**, **solicitar revisão** (máx. 2 por negociação), ou **inércia 24h** → `EXPIRED`.
+6. Se cliente **solicita revisão** → proposta `REVISION_REQUESTED`; **mensagens livres reabilitadas** até o prestador enviar nova proposta (`PENDING`) ou recusar o pedido de revisão (Requirement 34).
 7. **Aceite** → transação atômica: proposta `ACCEPTED`, SR `COMPLETED`, demais chats `CLOSED`, demais propostas `REJECTED_AUTOMATICALLY`, **Service** `PENDING_PAYMENT`.
 8. **Encerramento manual** de chat → `CLOSED` (irreversível), slot operacional liberado; outro prestador com visibilidade ao SR MAY iniciar nova conversa se houver slot disponível (sem depender de matching progressivo).
+9. Após **recusa** ou **expiração** da proposta, mensagens livres MAY voltar se a negociação continuar (Requirement 8, 9, 34).
 
 ### Prioridades operacionais
 
@@ -114,9 +116,9 @@ O diagrama [`platform-flow.mmd`](../platform-flow.mmd) inclui nós de dispatch (
 2. **Discovery & Negotiation Phase** — mensagens bilaterais; reciprocidade; anexos; mensagens de sistema e dinâmicas.
 3. **Reciprocity Evaluation Phase** — job periódico verifica troca bilateral na janela 24h; transição para `INACTIVE` ou manutenção `ACTIVE`.
 4. **Proposal Composition Phase** — prestador estrutura proposta (modal/tela dedicada); validação Zod + RPC.
-5. **Proposal Pending Phase** — `PENDING`; SLA 24h; countdown UI; notificações MMD.
-6. **Client Decision Phase** — aceitar / recusar / revisão / inércia.
-7. **Revision Orchestration Phase** — `REVISION_REQUESTED`; limite de revisões; resposta do prestador; versionamento.
+5. **Proposal Pending Phase** — `PENDING`; SLA 24h; countdown UI; notificações MMD; **canal livre de chat desabilitado** (Requirement 34).
+6. **Client Decision Phase** — aceitar / recusar / revisão / inércia; interação somente via proposta enquanto `PENDING`.
+7. **Revision Orchestration Phase** — `REVISION_REQUESTED`; limite de revisões; **chat livre reabilitado**; resposta do prestador; nova proposta retorna a fase 5.
 8. **Acceptance Cascade Phase** — transação atômica de aceite, fechamento concorrente, SR `COMPLETED`, Service `PENDING_PAYMENT`.
 9. **Closure & Slot Reclamation Phase** — manual `CLOSED`, automático pós-aceite, cancelamento SR; liberação de slot operacional; MAY emitir evento para integração futura com matching.
 10. **Notification Dispatch Phase** — ingestão MMD com `idempotency_key`; rate limits transacionais.
@@ -178,17 +180,17 @@ Estados planejados em [`matching-algorithm/requirements.md`](../matching-algorit
 
 #### Chat
 
-- **`ACTIVE`** *(operacional)* — Negociação viva; **consome slot** operacional do SR. Permite envio de mensagens e propostas (se SR `OPEN` e demais regras).
+- **`ACTIVE`** *(operacional)* — Negociação viva; **consome slot** operacional do SR. Permite envio de **mensagens livres** apenas quando não houver proposta `PENDING` vigente na conversa (Requirement 34); propostas seguem regras próprias.
 - **`INACTIVE`** *(pausa)* — Sem reciprocidade bilateral na janela de 24h (ghosting cliente ou prestador). **Não consome slot**; permanece no histórico; reativável por nova mensagem sem exigir slot livre.
 - **`CLOSED`** *(terminal)* — Encerramento manual (com confirmação, irreversível) ou automático (aceite de outra proposta / cancelamento SR). MUST NOT aceitar novas mensagens nem reativação.
 
 #### Proposal
 
-- **`PENDING`** *(aguardando cliente)* — Proposta vigente aguardando decisão; SLA 24h para ação do cliente.
+- **`PENDING`** *(aguardando cliente)* — Proposta **ativa** aguardando decisão; SLA 24h. Enquanto vigente, **bloqueia** envio de mensagens livres (`text`/`image`) no chat; única interação bilateral permitida é via card da proposta e CTAs (aceitar, recusar, solicitar revisão). Requirement 34.
 - **`ACCEPTED`** *(terminal sucesso)* — Cliente selecionou data; efeito contratual materializado na linha `services` criada no aceite (`accepted_proposal_id`, `scheduled_service_date`).
 - **`REJECTED`** *(terminal por cliente)* — Recusa explícita; chat pode continuar em negociação ou encerrar.
 - **`EXPIRED`** *(terminal por tempo)* — Cliente não agiu em 24h; chat pode permanecer ativo se houver atividade recente (`platform-flow.mmd`).
-- **`REVISION_REQUESTED`** *(transitório)* — Cliente pediu revisão estruturada; prestador deve aceitar/recusar pedido antes de nova proposta.
+- **`REVISION_REQUESTED`** *(transitório)* — Cliente pediu revisão estruturada; prestador deve enviar nova proposta ou recusar o pedido. **Reabilita** mensagens livres no chat até nova proposta `PENDING` ou encerramento da negociação (Requirement 34).
 - **`REVISED`** *(histórico)* — Proposta anterior substituída por nova versão `PENDING`.
 - **`REJECTED_AUTOMATICALLY`** *(terminal sistêmico)* — Outra proposta foi aceita ou SR cancelado.
 
@@ -215,7 +217,8 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 - **Fault Tolerance:** Falha de push/e-mail MUST NOT reverter transição de aceite já commitada (desacoplamento I/O — concurrency G5).
 - **Isolation:** RLS MUST garantir que usuário A não leia mensagens/propostas do chat de usuário B; RPCs `SECURITY DEFINER` MUST revalidar `auth.uid()` e papel (`client` | `provider`).
 - **Atomicity:** Aceite, cancelamento de SR e encerramento em massa de chats MUST ser uma única transação.
-- **Ownership Semantics:** Apenas o participante do chat (cliente ou prestador vinculado) MAY enviar mensagens; apenas o prestador dono da proposta MAY enviar revisão; apenas o cliente do SR MAY aceitar/recusar/solicitar revisão.
+- **Ownership Semantics:** Apenas o participante do chat (cliente ou prestador vinculado) MAY enviar mensagens livres quando `free_messaging` estiver habilitado (Requirement 34); apenas o prestador dono da proposta MAY submeter nova proposta; apenas o cliente do SR MAY aceitar/recusar/solicitar revisão via fluxos da proposta.
+- **Proposal-Gated Messaging:** Enquanto existir proposta `PENDING` na conversa, RPC `send_message` MUST rejeitar `message_type IN ('text', 'image')` para cliente e prestador; interação MUST ocorrer via entidade `proposals` e componente dinâmico na timeline (Requirement 34).
 - **Locking Semantics:** Slot counter MUST ser atualizado na mesma transação que transiciona chat para/de `ACTIVE`.
 - **Polling Constraints:** Listagens MUST NOT ser polled &lt; 5s em estado estável; Realtime é preferido para mensagens ativas.
 - **Orchestration Semantics:** Cascata pós-aceite é orquestrada pelo RPC `accept_proposal` (nome ilustrativo), não por corrente de chamadas do cliente.
@@ -304,13 +307,17 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 ## Requirement 3: Chat Entity, Messaging & Media
 
-*User Story*: Como participante da negociação, eu quero enviar mensagens em tempo quase real com histórico confiável, para alinhar escopo antes e depois da proposta.
+*User Story*: Como participante da negociação, eu quero enviar mensagens em tempo quase real com histórico confiável para alinhar escopo antes da proposta e durante pedidos de revisão, sem competir com o canal formal do orçamento enquanto ele estiver pendente.
 
 ### Acceptance Criteria
 
-- **GIVEN** chat com `status IN (ACTIVE, INACTIVE)`
-- **WHEN** participante autorizado envia mensagem
+- **GIVEN** chat com `status IN (ACTIVE, INACTIVE)` e **mensagens livres permitidas** (sem proposta `PENDING` vigente — Requirement 34)
+- **WHEN** participante autorizado envia `message_type` `text` ou `image`
 - **THEN** mensagem MUST ser persistida com `sender_user_id`, `message_type`, `payload` jsonb, `created_at` monotônico.
+
+- **GIVEN** proposta `PENDING` vigente na conversa
+- **WHEN** cliente ou prestador tenta `send_message` com `text` ou `image`
+- **THEN** RPC MUST falhar com erro de negócio documentado (ex.: `FREE_MESSAGING_DISABLED_PROPOSAL_PENDING`); UI MUST manter input desabilitado (Requirement 34).
 
 - **GIVEN** chat `INACTIVE`
 - **WHEN** qualquer participante envia mensagem válida
@@ -442,7 +449,11 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 - **GIVEN** proposta enviada com sucesso
 - **WHEN** transação commita
-- **THEN** `proposal.status = PENDING`, `version = 1` (ou `revision_number = 0`), timestamps `submitted_at`/`updated_at` registrados.
+- **THEN** `proposal.status = PENDING`, `version = 1` (ou `revision_number = 0`), timestamps `submitted_at`/`updated_at` registrados; **mensagens livres** no chat MUST ser desabilitadas na mesma transação lógica (Requirement 34).
+
+- **GIVEN** proposta recém-`PENDING`
+- **WHEN** participantes visualizam o chat
+- **THEN** área de input de mensagem livre MUST estar oculta ou desabilitada; interações MUST concentrar-se no card dinâmico da proposta.
 
 - **GIVEN** proposta já enviada
 - **WHEN** prestador tenta editar campos in-place
@@ -518,7 +529,7 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 - **GIVEN** proposta `REJECTED`
 - **WHEN** ambas as partes desejam continuar
-- **THEN** chat MAY permanecer `ACTIVE`/`INACTIVE` e negociação retorna à fase Discovery (`V` → `F`).
+- **THEN** chat MAY permanecer `ACTIVE`/`INACTIVE`, **mensagens livres** MUST ser reabilitadas, e negociação retorna à fase Discovery (`V` → `F`) (Requirement 34).
 
 - **GIVEN** proposta `REJECTED`
 - **WHEN** cliente ou prestador escolhe encerrar
@@ -547,6 +558,10 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 - **GIVEN** proposta `EXPIRED`
 - **WHEN** cliente tenta aceitar
 - **THEN** MUST falhar com erro claro (checklist 133).
+
+- **GIVEN** proposta expirada (`EXPIRED`)
+- **WHEN** transição commita
+- **THEN** **mensagens livres** MUST ser reabilitadas se chat não estiver `CLOSED` (Requirement 34).
 
 - **GIVEN** proposta expirada
 - **WHEN** chat possui atividade de mensagem recente (&lt; 24h)
@@ -578,7 +593,19 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 - **GIVEN** proposta `PENDING` e `revision_count < 2`
 - **WHEN** cliente solicita revisão
-- **THEN** proposta MUST → `REVISION_REQUESTED`, MUST persistir motivo em enum: `PRICE_TOO_HIGH`, `REDUCE_SCOPE`, `DATE_NOT_AVAILABLE`, `CHANGE_TIMELINE`, `CLARIFY_DETAILS`, `OTHER` + `custom_notes` opcional (checklist 108–110).
+- **THEN** proposta MUST → `REVISION_REQUESTED`, MUST persistir motivo em enum: `PRICE_TOO_HIGH`, `REDUCE_SCOPE`, `DATE_NOT_AVAILABLE`, `CHANGE_TIMELINE`, `CLARIFY_DETAILS`, `OTHER` + `custom_notes` opcional (checklist 108–110); **mensagens livres** MUST ser reabilitadas no chat (Requirement 34).
+
+- **GIVEN** proposta em `REVISION_REQUESTED`
+- **WHEN** prestador ou cliente envia mensagem de texto/imagem
+- **THEN** MUST ser permitido (negociação complementar à revisão), sujeito às demais regras do chat (`ACTIVE`/`INACTIVE`, anti-spam).
+
+- **GIVEN** proposta em `REVISION_REQUESTED`
+- **WHEN** prestador envia **nova** proposta formal
+- **THEN** nova versão MUST → `PENDING`, versão anterior → `REVISED`; mensagens livres MUST ser desabilitadas novamente (Requirement 34).
+
+- **GIVEN** proposta em `REVISION_REQUESTED`
+- **WHEN** prestador **recusa** o pedido de revisão sem enviar nova proposta
+- **THEN** proposta permanece `PENDING` (ou política única documentada); mensagens livres MUST permanecer desabilitadas até aceite, recusa, expiração ou nova transição explícita — cliente MAY aceitar/recusar proposta atual via card (platform-flow `AL`).
 
 - **GIVEN** solicitação de novas datas
 - **WHEN** submetida
@@ -871,6 +898,14 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 - **GIVEN** input area
 - **WHEN** usuário digita multiline
 - **THEN** campo expande até altura máxima segura; botão enviar circular desabilitado se vazio.
+
+- **GIVEN** proposta `PENDING` vigente (Requirement 34)
+- **WHEN** chat screen renderiza
+- **THEN** input de mensagem livre, botão de anexo e botão enviar MUST estar desabilitados ou substituídos por copy orientando uso do card da proposta; histórico de mensagens anteriores MUST permanecer legível.
+
+- **GIVEN** proposta `REVISION_REQUESTED`
+- **WHEN** chat screen renderiza
+- **THEN** input de mensagem livre MUST estar habilitado (sujeito a `ACTIVE`/`INACTIVE` e chat não `CLOSED`).
 
 - **GIVEN** teclado virtual (Capacitor Keyboard)
 - **WHEN** abre
@@ -1322,7 +1357,7 @@ O **matching progressivo** descrito em [`matching-algorithm/requirements.md`](..
 
 - **GIVEN** operação `send_message`
 - **WHEN** executada
-- **THEN** transação MUST incluir: insert mensagem, atualizar `last_interaction_at`, opcionalmente `ACTIVE` se `INACTIVE`, sem alterar SR.
+- **THEN** transação MUST incluir: validação `free_messaging_allowed` (Requirement 34); insert mensagem; atualizar `last_interaction_at`; opcionalmente `ACTIVE` se `INACTIVE`; sem alterar SR.
 
 - **GIVEN** operação `accept_proposal`
 - **WHEN** executada
@@ -1409,18 +1444,94 @@ on conflict (key) do update set
 
 ---
 
+## Requirement 34: Proposal-Gated Free Messaging (Chat Lock While Proposal Active)
+
+*User Story*: Como cliente e prestador, quero que, após o envio de uma proposta formal, a negociação ocorra pelo próprio orçamento — e não por mensagens paralelas no chat — exceto quando uma revisão estiver em andamento e o diálogo livre for necessário para alinhar mudanças.
+
+### Definições
+
+- **Mensagem livre:** `message_type` `text` ou `image` enviada por cliente ou prestador via `send_message` (não inclui mensagens `system` inseridas pela plataforma, nem submissão formal de proposta via RPC dedicado).
+- **Proposta ativa (para bloqueio de chat):** proposta vigente da conversa com `status = PENDING` aguardando decisão do cliente (aceitar, recusar ou solicitar revisão).
+- **Canal da proposta:** card dinâmico na timeline + CTAs (Accept, Reject, Request Revision, View Details) e fluxos modais associados — único meio de interação permitido enquanto houver proposta `PENDING`.
+
+### Acceptance Criteria
+
+- **GIVEN** prestador submete proposta e transação commita com `status = PENDING`
+- **WHEN** cliente ou prestador tenta enviar mensagem livre
+- **THEN** RPC `send_message` MUST retornar erro de negócio (`FREE_MESSAGING_DISABLED_PROPOSAL_PENDING` ou equivalente) e MUST NOT persistir a mensagem.
+
+- **GIVEN** proposta `PENDING` vigente
+- **WHEN** UI do chat é exibida
+- **THEN** input de texto, botão de anexo de imagem e botão enviar MUST estar desabilitados para **cliente e prestador**; MUST exibir texto de apoio indicando que a decisão ocorre na proposta (Requirement 18).
+
+- **GIVEN** proposta `PENDING` vigente
+- **WHEN** cliente usa CTAs do card dinâmico (aceitar, recusar, solicitar revisão)
+- **THEN** fluxos MUST funcionar normalmente; isso não constitui mensagem livre.
+
+- **GIVEN** cliente solicita revisão com sucesso
+- **WHEN** proposta transiciona para `REVISION_REQUESTED`
+- **THEN** mensagens livres MUST ser reabilitadas imediatamente para cliente e prestador, na mesma transação ou antes da resposta HTTP, desde que chat `≠ CLOSED` e SR `OPEN`.
+
+- **GIVEN** proposta em `REVISION_REQUESTED`
+- **WHEN** prestador e cliente trocam mensagens de texto/imagem
+- **THEN** MUST ser permitido, inclusive para esclarecer escopo da revisão antes de nova proposta.
+
+- **GIVEN** proposta em `REVISION_REQUESTED`
+- **WHEN** prestador envia nova proposta formal
+- **THEN** nova proposta MUST entrar em `PENDING` (versão anterior `REVISED`); mensagens livres MUST ser desabilitadas novamente.
+
+- **GIVEN** proposta em `REVISION_REQUESTED`
+- **WHEN** prestador recusa o pedido de revisão e proposta permanece `PENDING` para decisão do cliente
+- **THEN** mensagens livres MUST permanecer desabilitadas (retorno ao canal somente-proposta).
+
+- **GIVEN** cliente recusa proposta (`REJECTED`) ou proposta expira (`EXPIRED`) e chat não está `CLOSED`
+- **WHEN** transição commita
+- **THEN** mensagens livres MUST ser reabilitadas, permitindo retorno à fase Discovery (Requirements 8, 9).
+
+- **GIVEN** não existe proposta `PENDING` nem bloqueio por chat `CLOSED`/SR terminal
+- **WHEN** fase Discovery
+- **THEN** mensagens livres MUST ser permitidas (comportamento atual do Requirement 3).
+
+- **GIVEN** duas abas: uma tenta enviar mensagem livre, outra aceita proposta
+- **WHEN** aceite commita primeiro
+- **THEN** `send_message` na outra aba MUST falhar (chat encerrado ou SR `COMPLETED`); MUST NOT haver mensagem livre após aceite.
+
+- **GIVEN** função auxiliar `chat_free_messaging_allowed(p_conversation_id)` (ou derivada em RPC)
+- **WHEN** avaliada no servidor
+- **THEN** MUST retornar `false` se existir proposta da conversa com `status = PENDING`; MUST retornar `true` se `REVISION_REQUESTED` (mesmo que ainda exista linha histórica `REVISED`); MUST retornar `true` se última proposta vigente for `REJECTED`/`EXPIRED` e não houver nova `PENDING`; MUST NOT depender apenas de estado no cliente.
+
+- **GIVEN** mensagem `system` gerada pela plataforma (ex.: “Proposal submitted”)
+- **WHEN** inserida por trigger ou RPC interno
+- **THEN** MAY ser persistida mesmo com proposta `PENDING`; isso não reabre mensagens livres para usuários.
+
+- **GIVEN** prestador tenta enviar segunda proposta enquanto já existe `PENDING`
+- **WHEN** `submit_proposal` é chamado
+- **THEN** MUST falhar (Requirement 6); mensagens livres MUST permanecer desabilitadas.
+
+- **GIVEN** testes pgTAP ou integração
+- **WHEN** cenários executados
+- **THEN** MUST cobrir: (1) Discovery → envio livre OK; (2) após `PENDING` → `send_message` falha; (3) `REVISION_REQUESTED` → `send_message` OK; (4) nova `PENDING` → falha novamente; (5) `REJECTED` → OK; (6) `EXPIRED` → OK.
+
+### UI / Banner (cross-reference)
+
+- **GIVEN** proposta `PENDING` e mensagens livres desabilitadas
+- **WHEN** banner contextual é exibido (Requirement 19)
+- **THEN** copy SHOULD orientar cliente a “Review proposal” e prestador a aguardar decisão, não a “Continue conversation” via input livre.
+
+---
+
 ## Traceability Matrix (Checklist → Requirements)
 
 | Checklist § | Requirement(s) |
 |-------------|----------------|
 | §1 Estrutura geral 1–10 | 1, 2, 4, 11 |
 | §2 Service Request 11–20 | 2, 7, 23 |
-| §3 Chat 21–50 | 3, 4, 11, 13, 18 |
+| §3 Chat 21–50 | 3, 4, 11, 13, 18, 34 |
 | §4 Limites 51–60 | 4, 14, 33 |
 | §5 Descoberta 61–70 | 5 |
-| §6 Proposta 71–90 | 6, 16 |
+| §6 Proposta 71–90 | 6, 16, 34 |
 | §7 Aceite 91–105 | 7, 23 |
-| §8 Revisão 106–123 | 10 |
+| §8 Revisão 106–123 | 10, 34 |
 | §9 Expiração 124–134 | 9 |
 | §11 Visual 148–162 | 16, 20 |
 | §12 Responsividade 163–171 | 17, 18, 20 |
@@ -1431,6 +1542,7 @@ on conflict (key) do update set
 | platform-flow.mmd | 1–11, 23–32 (transições e jobs) |
 | Tipos NFR (scheduling, recovery, events, fallback, leasing) | 25–32 |
 | Limites dinâmicos (`platform_constants`) | 33 |
+| Bloqueio de chat com proposta `PENDING` / reabertura em `REVISION_REQUESTED` | 34 |
 | Matching progressivo (`DISPATCH_*`, não implementado) | 24 (opcional, não bloqueante) |
 
 ---
@@ -1453,6 +1565,7 @@ Orquestração visual de próxima ação: **hook** `useChatActionBannerState` de
 | Slot counter / reciprocidade / expiração SLA | RPC + `pg_cron`; limite de slots lido de `platform_constants` |
 | Limites operacionais configuráveis | `platform_constants` (`chats.max_active_slots_per_service_request`, default 4) |
 | Mensagens e read receipts | Tabelas `chat_messages`, `chat_read_receipts` |
+| Regra `chat_free_messaging_allowed` / bloqueio por proposta `PENDING` | RPC `send_message` + função SQL auxiliar consultando `proposals` |
 | Idempotency keys | `UNIQUE` constraints |
 | Auditoria append-only | `*_audit` tables |
 | RLS e isolamento tenant | Policies em todas as tabelas |
