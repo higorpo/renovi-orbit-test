@@ -482,6 +482,10 @@ export type Database = {
         Returns: Json
       }
       message_dispatcher_invoke_worker: { Args: never; Returns: number }
+      message_dispatcher_is_quiet_hours: {
+        Args: { p_ts?: string }
+        Returns: boolean
+      }
       message_dispatcher_is_resend_delivered_event: {
         Args: { p_event_type: string }
         Returns: boolean
@@ -493,6 +497,10 @@ export type Database = {
       message_dispatcher_is_resend_opened_event: {
         Args: { p_event_type: string }
         Returns: boolean
+      }
+      message_dispatcher_next_send_window: {
+        Args: { p_ts?: string }
+        Returns: string
       }
       message_dispatcher_promote_retries: { Args: never; Returns: number }
       message_dispatcher_reclaim_leases: { Args: never; Returns: number }
@@ -564,6 +572,309 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_audit: {
+        Row: {
+          actor_id: string | null
+          chat_id: string
+          created_at: string
+          from_status:
+            | Database["public"]["Enums"]["cns_conversation_status"]
+            | null
+          id: number
+          metadata: Json
+          to_status: Database["public"]["Enums"]["cns_conversation_status"]
+        }
+        Insert: {
+          actor_id?: string | null
+          chat_id: string
+          created_at?: string
+          from_status?:
+            | Database["public"]["Enums"]["cns_conversation_status"]
+            | null
+          id?: number
+          metadata?: Json
+          to_status: Database["public"]["Enums"]["cns_conversation_status"]
+        }
+        Update: {
+          actor_id?: string | null
+          chat_id?: string
+          created_at?: string
+          from_status?:
+            | Database["public"]["Enums"]["cns_conversation_status"]
+            | null
+          id?: number
+          metadata?: Json
+          to_status?: Database["public"]["Enums"]["cns_conversation_status"]
+        }
+        Relationships: []
+      }
+      chat_media_upload_sessions: {
+        Row: {
+          chat_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          status: string
+          uploader_id: string
+        }
+        Insert: {
+          chat_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          status?: string
+          uploader_id: string
+        }
+        Update: {
+          chat_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          status?: string
+          uploader_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_media_upload_sessions_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_media_upload_sessions_uploader_id_fkey"
+            columns: ["uploader_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          chat_id: string
+          created_at: string
+          delivery_status: Database["public"]["Enums"]["cns_delivery_status"]
+          id: string
+          idempotency_key: string
+          linked_entity_id: string | null
+          linked_entity_type: string | null
+          message_type: Database["public"]["Enums"]["cns_message_type"]
+          payload: Json
+          sender_user_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          chat_id: string
+          created_at?: string
+          delivery_status?: Database["public"]["Enums"]["cns_delivery_status"]
+          id?: string
+          idempotency_key: string
+          linked_entity_id?: string | null
+          linked_entity_type?: string | null
+          message_type: Database["public"]["Enums"]["cns_message_type"]
+          payload?: Json
+          sender_user_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          chat_id?: string
+          created_at?: string
+          delivery_status?: Database["public"]["Enums"]["cns_delivery_status"]
+          id?: string
+          idempotency_key?: string
+          linked_entity_id?: string | null
+          linked_entity_type?: string | null
+          message_type?: Database["public"]["Enums"]["cns_message_type"]
+          payload?: Json
+          sender_user_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_sender_user_id_fkey"
+            columns: ["sender_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_rate_limit_buckets: {
+        Row: {
+          chat_id: string
+          message_count: number
+          user_id: string
+          window_started_at: string
+        }
+        Insert: {
+          chat_id: string
+          message_count?: number
+          user_id: string
+          window_started_at: string
+        }
+        Update: {
+          chat_id?: string
+          message_count?: number
+          user_id?: string
+          window_started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_rate_limit_buckets_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_rate_limit_buckets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_read_receipts: {
+        Row: {
+          chat_id: string
+          last_read_at: string
+          last_read_message_id: string | null
+          user_id: string
+        }
+        Insert: {
+          chat_id: string
+          last_read_at?: string
+          last_read_message_id?: string | null
+          user_id: string
+        }
+        Update: {
+          chat_id?: string
+          last_read_at?: string
+          last_read_message_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_read_receipts_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_read_receipts_last_read_message_id_fkey"
+            columns: ["last_read_message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_read_receipts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chats: {
+        Row: {
+          activated_at: string
+          client_id: string
+          closed_at: string | null
+          closed_by_user_id: string | null
+          closure_reason: string | null
+          closure_type: Database["public"]["Enums"]["cns_closure_type"] | null
+          created_at: string
+          id: string
+          inactivated_at: string | null
+          inactivation_reason:
+            | Database["public"]["Enums"]["cns_inactivation_reason"]
+            | null
+          last_interaction_at: string
+          provider_id: string
+          service_request_id: string
+          status: Database["public"]["Enums"]["cns_conversation_status"]
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string
+          client_id: string
+          closed_at?: string | null
+          closed_by_user_id?: string | null
+          closure_reason?: string | null
+          closure_type?: Database["public"]["Enums"]["cns_closure_type"] | null
+          created_at?: string
+          id?: string
+          inactivated_at?: string | null
+          inactivation_reason?:
+            | Database["public"]["Enums"]["cns_inactivation_reason"]
+            | null
+          last_interaction_at?: string
+          provider_id: string
+          service_request_id: string
+          status?: Database["public"]["Enums"]["cns_conversation_status"]
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string
+          client_id?: string
+          closed_at?: string | null
+          closed_by_user_id?: string | null
+          closure_reason?: string | null
+          closure_type?: Database["public"]["Enums"]["cns_closure_type"] | null
+          created_at?: string
+          id?: string
+          inactivated_at?: string | null
+          inactivation_reason?:
+            | Database["public"]["Enums"]["cns_inactivation_reason"]
+            | null
+          last_interaction_at?: string
+          provider_id?: string
+          service_request_id?: string
+          status?: Database["public"]["Enums"]["cns_conversation_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chats_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chats_closed_by_user_id_fkey"
+            columns: ["closed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chats_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chats_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_addresses: {
         Row: {
           city_id: string
@@ -677,6 +988,111 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      domain_events: {
+        Row: {
+          aggregate_id: string
+          aggregate_type: string
+          chat_id: string | null
+          created_at: string
+          dead_letter: boolean
+          dead_letter_at: string | null
+          event_type: string
+          id: string
+          last_error: string | null
+          locked_by: string | null
+          locked_until: string | null
+          payload: Json
+          processed_at: string | null
+          retry_count: number
+          service_request_id: string | null
+        }
+        Insert: {
+          aggregate_id: string
+          aggregate_type: string
+          chat_id?: string | null
+          created_at?: string
+          dead_letter?: boolean
+          dead_letter_at?: string | null
+          event_type: string
+          id?: string
+          last_error?: string | null
+          locked_by?: string | null
+          locked_until?: string | null
+          payload?: Json
+          processed_at?: string | null
+          retry_count?: number
+          service_request_id?: string | null
+        }
+        Update: {
+          aggregate_id?: string
+          aggregate_type?: string
+          chat_id?: string | null
+          created_at?: string
+          dead_letter?: boolean
+          dead_letter_at?: string | null
+          event_type?: string
+          id?: string
+          last_error?: string | null
+          locked_by?: string | null
+          locked_until?: string | null
+          payload?: Json
+          processed_at?: string | null
+          retry_count?: number
+          service_request_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "domain_events_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "domain_events_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_runs: {
+        Row: {
+          duration_ms: number | null
+          error_count: number
+          finished_at: string | null
+          id: number
+          job_name: string
+          metadata: Json
+          processed_count: number
+          started_at: string
+          transitioned_count: number
+        }
+        Insert: {
+          duration_ms?: number | null
+          error_count?: number
+          finished_at?: string | null
+          id?: number
+          job_name: string
+          metadata?: Json
+          processed_count?: number
+          started_at?: string
+          transitioned_count?: number
+        }
+        Update: {
+          duration_ms?: number | null
+          error_count?: number
+          finished_at?: string | null
+          id?: number
+          job_name?: string
+          metadata?: Json
+          processed_count?: number
+          started_at?: string
+          transitioned_count?: number
+        }
+        Relationships: []
       }
       platform_ai_prompt_usage: {
         Row: {
@@ -1076,6 +1492,36 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_audit: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          from_status: Database["public"]["Enums"]["proposal_status"] | null
+          id: number
+          metadata: Json
+          proposal_id: string
+          to_status: Database["public"]["Enums"]["proposal_status"]
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["proposal_status"] | null
+          id?: number
+          metadata?: Json
+          proposal_id: string
+          to_status: Database["public"]["Enums"]["proposal_status"]
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["proposal_status"] | null
+          id?: number
+          metadata?: Json
+          proposal_id?: string
+          to_status?: Database["public"]["Enums"]["proposal_status"]
+        }
+        Relationships: []
+      }
       provider_offered_services: {
         Row: {
           provider_id: string
@@ -1256,9 +1702,11 @@ export type Database = {
       }
       provider_proposals: {
         Row: {
+          chat_id: string | null
           client_rejection_response: string | null
           client_response_deadline_at: string | null
           created_at: string
+          expired_at: string | null
           final_amount: number
           id: string
           photos: string[]
@@ -1269,16 +1717,26 @@ export type Database = {
           proposal_suggested_slots: Json
           proposed_amount: number
           provider_id: string
+          revision_count: number
+          revision_notes: string | null
+          revision_reason:
+            | Database["public"]["Enums"]["proposal_revision_reason"]
+            | null
+          selected_slot: Json | null
           service_request_id: string
-          status: string
+          status: Database["public"]["Enums"]["proposal_status"]
+          submitted_at: string | null
           tax_amount: number
           tax_rate: number
           updated_at: string
+          version: number
         }
         Insert: {
+          chat_id?: string | null
           client_rejection_response?: string | null
           client_response_deadline_at?: string | null
           created_at?: string
+          expired_at?: string | null
           final_amount: number
           id?: string
           photos?: string[]
@@ -1289,16 +1747,26 @@ export type Database = {
           proposal_suggested_slots?: Json
           proposed_amount: number
           provider_id: string
+          revision_count?: number
+          revision_notes?: string | null
+          revision_reason?:
+            | Database["public"]["Enums"]["proposal_revision_reason"]
+            | null
+          selected_slot?: Json | null
           service_request_id: string
-          status?: string
+          status?: Database["public"]["Enums"]["proposal_status"]
+          submitted_at?: string | null
           tax_amount: number
           tax_rate: number
           updated_at?: string
+          version?: number
         }
         Update: {
+          chat_id?: string | null
           client_rejection_response?: string | null
           client_response_deadline_at?: string | null
           created_at?: string
+          expired_at?: string | null
           final_amount?: number
           id?: string
           photos?: string[]
@@ -1309,13 +1777,28 @@ export type Database = {
           proposal_suggested_slots?: Json
           proposed_amount?: number
           provider_id?: string
+          revision_count?: number
+          revision_notes?: string | null
+          revision_reason?:
+            | Database["public"]["Enums"]["proposal_revision_reason"]
+            | null
+          selected_slot?: Json | null
           service_request_id?: string
-          status?: string
+          status?: Database["public"]["Enums"]["proposal_status"]
+          submitted_at?: string | null
           tax_amount?: number
           tax_rate?: number
           updated_at?: string
+          version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "provider_proposals_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "provider_proposals_provider_id_fkey"
             columns: ["provider_id"]
@@ -1413,10 +1896,83 @@ export type Database = {
           },
         ]
       }
+      rpc_idempotency_records: {
+        Row: {
+          actor_user_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          operation: string
+          request_hash: string | null
+          response_body: Json
+          response_status: number
+        }
+        Insert: {
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          operation: string
+          request_hash?: string | null
+          response_body: Json
+          response_status: number
+        }
+        Update: {
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          operation?: string
+          request_hash?: string | null
+          response_body?: Json
+          response_status?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rpc_idempotency_records_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_request_negotiation_stats: {
+        Row: {
+          active_chat_count: number
+          service_request_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          active_chat_count?: number
+          service_request_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          active_chat_count?: number
+          service_request_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_request_negotiation_stats_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: true
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_requests: {
         Row: {
           address_id: string | null
+          cancelled_at: string | null
           client_id: string
+          completed_at: string | null
+          contracted_service_id: string | null
           created_at: string
           description: string | null
           estimated_duration_hint: string | null
@@ -1433,7 +1989,7 @@ export type Database = {
           photos: string[] | null
           scope_complexity: string | null
           service_id: string
-          status: string
+          status: Database["public"]["Enums"]["service_request_status"]
           suggested_equipment: string[] | null
           suggested_materials: string[] | null
           suggested_questions: string[] | null
@@ -1444,7 +2000,10 @@ export type Database = {
         }
         Insert: {
           address_id?: string | null
+          cancelled_at?: string | null
           client_id: string
+          completed_at?: string | null
+          contracted_service_id?: string | null
           created_at?: string
           description?: string | null
           estimated_duration_hint?: string | null
@@ -1461,7 +2020,7 @@ export type Database = {
           photos?: string[] | null
           scope_complexity?: string | null
           service_id: string
-          status?: string
+          status?: Database["public"]["Enums"]["service_request_status"]
           suggested_equipment?: string[] | null
           suggested_materials?: string[] | null
           suggested_questions?: string[] | null
@@ -1472,7 +2031,10 @@ export type Database = {
         }
         Update: {
           address_id?: string | null
+          cancelled_at?: string | null
           client_id?: string
+          completed_at?: string | null
+          contracted_service_id?: string | null
           created_at?: string
           description?: string | null
           estimated_duration_hint?: string | null
@@ -1489,7 +2051,7 @@ export type Database = {
           photos?: string[] | null
           scope_complexity?: string | null
           service_id?: string
-          status?: string
+          status?: Database["public"]["Enums"]["service_request_status"]
           suggested_equipment?: string[] | null
           suggested_materials?: string[] | null
           suggested_questions?: string[] | null
@@ -1514,10 +2076,97 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "service_requests_contracted_service_id_fkey"
+            columns: ["contracted_service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "service_requests_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "platform_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          accepted_proposal_id: string
+          agreed_slot: Json
+          client_id: string
+          created_at: string
+          duration_unit: string
+          duration_value: number
+          id: string
+          provider_id: string
+          scheduled_end_date: string | null
+          scheduled_shift: string
+          scheduled_start_date: string
+          service_request_id: string
+          status: Database["public"]["Enums"]["contracted_service_status"]
+          updated_at: string
+        }
+        Insert: {
+          accepted_proposal_id: string
+          agreed_slot: Json
+          client_id: string
+          created_at?: string
+          duration_unit: string
+          duration_value: number
+          id?: string
+          provider_id: string
+          scheduled_end_date?: string | null
+          scheduled_shift: string
+          scheduled_start_date: string
+          service_request_id: string
+          status?: Database["public"]["Enums"]["contracted_service_status"]
+          updated_at?: string
+        }
+        Update: {
+          accepted_proposal_id?: string
+          agreed_slot?: Json
+          client_id?: string
+          created_at?: string
+          duration_unit?: string
+          duration_value?: number
+          id?: string
+          provider_id?: string
+          scheduled_end_date?: string | null
+          scheduled_shift?: string
+          scheduled_start_date?: string
+          service_request_id?: string
+          status?: Database["public"]["Enums"]["contracted_service_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_accepted_proposal_id_fkey"
+            columns: ["accepted_proposal_id"]
+            isOneToOne: true
+            referencedRelation: "provider_proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: true
+            referencedRelation: "service_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -1626,7 +2275,6 @@ export type Database = {
         Args: { p_question: string; p_service_request_id: string }
         Returns: Json
       }
-      expire_stale_provider_proposals: { Args: never; Returns: number }
       generate_provider_pricing_signature: {
         Args: {
           p_final_amount: number
@@ -1659,6 +2307,26 @@ export type Database = {
         Args: { slug_param: string }
         Returns: Json
       }
+      idempotency_begin: {
+        Args: {
+          p_idempotency_key: string
+          p_operation: string
+          p_request_hash?: string
+        }
+        Returns: Json
+      }
+      idempotency_commit: {
+        Args: {
+          p_idempotency_key: string
+          p_operation: string
+          p_request_hash: string
+          p_response_body: Json
+          p_response_status: number
+        }
+        Returns: undefined
+      }
+      is_chat_participant: { Args: { p_chat_id: string }; Returns: boolean }
+      is_platform_admin: { Args: never; Returns: boolean }
       list_client_budget_questions: {
         Args: {
           p_page?: number
@@ -1712,7 +2380,22 @@ export type Database = {
         }
         Returns: Json
       }
+      platform_constant_int: {
+        Args: { p_default: number; p_key: string }
+        Returns: number
+      }
       purge_stale_user_device_beacons: { Args: never; Returns: number }
+      record_domain_event: {
+        Args: {
+          p_aggregate_id: string
+          p_aggregate_type: string
+          p_chat_id?: string
+          p_event_type: string
+          p_payload?: Json
+          p_service_request_id?: string
+        }
+        Returns: string
+      }
       reject_client_budget_proposal: {
         Args: { p_proposal_id: string; p_reason: string }
         Returns: Json
@@ -1728,7 +2411,36 @@ export type Database = {
       slugify_for_provider: { Args: { name_input: string }; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      cns_closure_type:
+        | "MANUAL"
+        | "PROPOSAL_ACCEPTED_ELSEWHERE"
+        | "SERVICE_REQUEST_CANCELLED"
+      cns_conversation_status: "ACTIVE" | "INACTIVE" | "CLOSED"
+      cns_delivery_status: "PENDING" | "SENT" | "DELIVERED" | "READ" | "FAILED"
+      cns_inactivation_reason: "NO_RECIPROCITY"
+      cns_message_type:
+        | "TEXT"
+        | "IMAGE"
+        | "SYSTEM"
+        | "PROPOSAL"
+        | "WORKFLOW_ACTION"
+      contracted_service_status: "PENDING_PAYMENT"
+      proposal_revision_reason:
+        | "PRICE_TOO_HIGH"
+        | "REDUCE_SCOPE"
+        | "DATE_NOT_AVAILABLE"
+        | "CHANGE_TIMELINE"
+        | "CLARIFY_DETAILS"
+        | "OTHER"
+      proposal_status:
+        | "PENDING"
+        | "ACCEPTED"
+        | "REJECTED"
+        | "EXPIRED"
+        | "REVISION_REQUESTED"
+        | "REVISED"
+        | "REJECTED_AUTOMATICALLY"
+      service_request_status: "OPEN" | "COMPLETED" | "CANCELLED"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1880,7 +2592,42 @@ export const Constants = {
     },
   },
   public: {
-    Enums: {},
+    Enums: {
+      cns_closure_type: [
+        "MANUAL",
+        "PROPOSAL_ACCEPTED_ELSEWHERE",
+        "SERVICE_REQUEST_CANCELLED",
+      ],
+      cns_conversation_status: ["ACTIVE", "INACTIVE", "CLOSED"],
+      cns_delivery_status: ["PENDING", "SENT", "DELIVERED", "READ", "FAILED"],
+      cns_inactivation_reason: ["NO_RECIPROCITY"],
+      cns_message_type: [
+        "TEXT",
+        "IMAGE",
+        "SYSTEM",
+        "PROPOSAL",
+        "WORKFLOW_ACTION",
+      ],
+      contracted_service_status: ["PENDING_PAYMENT"],
+      proposal_revision_reason: [
+        "PRICE_TOO_HIGH",
+        "REDUCE_SCOPE",
+        "DATE_NOT_AVAILABLE",
+        "CHANGE_TIMELINE",
+        "CLARIFY_DETAILS",
+        "OTHER",
+      ],
+      proposal_status: [
+        "PENDING",
+        "ACCEPTED",
+        "REJECTED",
+        "EXPIRED",
+        "REVISION_REQUESTED",
+        "REVISED",
+        "REJECTED_AUTOMATICALLY",
+      ],
+      service_request_status: ["OPEN", "COMPLETED", "CANCELLED"],
+    },
   },
 } as const
 

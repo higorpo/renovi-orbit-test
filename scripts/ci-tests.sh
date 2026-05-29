@@ -20,6 +20,7 @@ PGTAP_LOG="$CI_TMP/pgtap.log"
 VITEST_EXIT=0
 DENO_EXIT=0
 PGTAP_EXIT=0
+TYPES_EXIT=0
 
 COV_THRESHOLD=80
 
@@ -56,14 +57,14 @@ echo -e "${BOLD}╚════════════════════�
 
 # ── 1. Vitest (Frontend Unit Tests) ──────────────────────────
 
-section "$BLUE" "1/3" "Vitest — Frontend Unit Tests"
+section "$BLUE" "1/4" "Vitest — Frontend Unit Tests"
 
 vitest run --coverage 2>&1 | tee "$VITEST_LOG"
 VITEST_EXIT=${PIPESTATUS[0]}
 
 # ── 2. Deno (Edge Function Tests) ────────────────────────────
 
-section "$CYAN" "2/3" "Deno — Supabase Edge Function Tests"
+section "$CYAN" "2/4" "Deno — Supabase Edge Function Tests"
 
 DENO_COV_DIR="$CI_TMP/deno-cov"
 deno test --config supabase/functions/deno.json supabase/functions/ -A --no-check \
@@ -72,10 +73,18 @@ DENO_EXIT=${PIPESTATUS[0]}
 
 # ── 3. pgTAP (Database Tests) ────────────────────────────────
 
-section "$YELLOW" "3/3" "pgTAP — Database Tests"
+section "$YELLOW" "3/4" "pgTAP — Database Tests"
 
 npx supabase test db 2>&1 | tee "$PGTAP_LOG"
 PGTAP_EXIT=${PIPESTATUS[0]}
+
+# ── 4. Supabase types drift check ─────────────────────────────
+
+section "$GREEN" "4/4" "Supabase Types — Schema Drift Check"
+
+TYPES_LOG="$CI_TMP/types.log"
+yarn check-supabase-types 2>&1 | tee "$TYPES_LOG"
+TYPES_EXIT=${PIPESTATUS[0]}
 
 # ── Parse results ────────────────────────────────────────────
 
@@ -180,12 +189,22 @@ print_result "pgTAP (Database)" "$PGTAP_EXIT" "$pgtap_passed" "$pgtap_failed" "$
 echo -e "    ${DIM}$pgtap_files test files (no coverage available for pgTAP)${NC}"
 echo ""
 
+if [ "$TYPES_EXIT" -eq 0 ]; then
+  echo -e "  ${BOLD}Supabase Types${NC}  ${GREEN}PASS${NC}"
+  echo -e "    ${DIM}database.types.ts matches local schema${NC}"
+else
+  echo -e "  ${BOLD}Supabase Types${NC}  ${RED}FAIL${NC}"
+  echo -e "    ${RED}Run yarn generate-supabase-types and commit${NC}"
+fi
+echo ""
+
 # ── Overall ──────────────────────────────────────────────────
 
 OVERALL=0
 [ "$VITEST_EXIT"    -ne 0 ] && OVERALL=1
 [ "$DENO_EXIT"      -ne 0 ] && OVERALL=1
 [ "$PGTAP_EXIT"     -ne 0 ] && OVERALL=1
+[ "$TYPES_EXIT"     -ne 0 ] && OVERALL=1
 [ "$VITEST_COV_FAIL" -eq 1 ] && OVERALL=1
 [ "$DENO_COV_FAIL"   -eq 1 ] && OVERALL=1
 
@@ -195,7 +214,7 @@ TOTAL_ALL=$((vitest_total + deno_total + pgtap_total))
 
 echo -e "${BOLD}──────────────────────────────────────────────────────────────${NC}"
 if [ "$OVERALL" -eq 0 ]; then
-  echo -e "  ${GREEN}${BOLD}ALL SUITES PASSED${NC}  ${DIM}($TOTAL_PASSED/$TOTAL_ALL tests across 3 suites)${NC}"
+  echo -e "  ${GREEN}${BOLD}ALL SUITES PASSED${NC}  ${DIM}($TOTAL_PASSED/$TOTAL_ALL tests across 3 suites + types check)${NC}"
 else
   echo -e "  ${RED}${BOLD}SOME SUITES FAILED${NC}  ${DIM}($TOTAL_PASSED passed, $TOTAL_FAILED failed, $TOTAL_ALL total)${NC}"
 fi

@@ -12,6 +12,7 @@
     "lint": "eslint src --cache --cache-location node_modules/.cache/eslint",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "generate-supabase-types": "node scripts/generate-supabase-types.mjs",
+    "check-supabase-types": "node scripts/check-supabase-types.mjs",
     "db:migrate": "npx supabase db push",
     "db:reset": "npx supabase db reset",
     "seed:load-test-images": "node supabase/scripts/seed-load-test-images.mjs",

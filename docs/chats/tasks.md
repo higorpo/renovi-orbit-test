@@ -67,7 +67,7 @@ Dev-first: **one migration file per SQL task**, timestamp `YYYYMMDDHHMMSS` defin
 |------|-------------------------------|-----------------------------------------------------|
 | 14 | `20260701101300` | `20260701101300_evolve_provider_proposals_cns.sql` |
 | 15 | `20260701101400` | `20260701101400_create_chat_media_upload_sessions.sql` |
-| 16 | `20260701101500` | `20260701101500_create_chat_maintenance_queue.sql` (optional table) |
+| ~~16~~ | ~~`20260701101500`~~ | ~~`chat_maintenance_queue`~~ — **cancelled** (cron scans `chats` directly; no maintenance queue in v1) |
 | 17 | `20260701101600` | `20260701101600_create_cns_rls_helper_functions.sql` |
 | 18 | `20260701101700` | `20260701101700_enable_cns_realtime_publication.sql` |
 | 19 | `20260701101800` | `20260701101800_create_cns_audit_triggers.sql` |
@@ -607,7 +607,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R2-AC01, R2-AC03, R15-AC04, R23-AC02
 
-## 14. [ ] Evolve provider_proposals for CNS versioning
+## 14. [x] Evolve provider_proposals for CNS versioning
 
 Description:
 Add chat_id, version, revision_count, revision_reason, submitted_at, expired_at, selected_slot; partial unique PENDING per conversation §3.6.
@@ -649,7 +649,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R6-AC02, R10-AC01, R15-AC03
 
-## 15. [ ] Create chat_media_upload_sessions and Storage bucket chat-media
+## 15. [x] Create chat_media_upload_sessions and Storage bucket chat-media
 
 Description:
 Two-phase upload session binding per design §3.13; bucket path {chat_id}/{upload_session_id}/{filename}.
@@ -691,48 +691,50 @@ Requirements covered:
 Acceptance Criteria covered:
 R3-AC06, R26-AC02, R35-AC04
 
-## 16. [ ] Create optional chat_maintenance_queue table
+## 16. [cancelled] Create optional chat_maintenance_queue table
+
+**Cancelled:** v1 uses cron RPCs that scan indexed `chats` directly (`cns_evaluate_reciprocity_batch`, etc.). No `chat_maintenance_queue` table or `USE_MAINTENANCE_QUEUE` flag. Leases for async work use `domain_events` and MMD `message_dispatches` (Req. 27).
 
 Description:
 Optional queue for heavy backfill per design §3.9; MAY defer if cron scans chats directly.
 
 Responsibilities:
-- job_type reciprocity_check|reconcile_delivery
-- UNIQUE(job_type, chat_id)
+- ~~job_type reciprocity_check|reconcile_delivery~~
+- ~~UNIQUE(job_type, chat_id)~~
 
 Implementation Details:
-- DDL §3.9
-- Feature flag env USE_MAINTENANCE_QUEUE default false
-- Migration file (order): `supabase/migrations/20260701101500_create_chat_maintenance_queue.sql` — see §Migration file order
+- ~~DDL §3.9~~
+- ~~Feature flag env USE_MAINTENANCE_QUEUE default false~~
+- ~~Migration file (order): `supabase/migrations/20260701101500_create_chat_maintenance_queue.sql`~~ — removed
 
 Deliverables:
-- Migration SQL (optional)
+- ~~Migration SQL (optional)~~ — none
 
 Dependencies:
 - Task 2
 
 Runtime Guarantees:
-- Lease 30s on checkout (R27-AC01)
+- Lease 30s on checkout (R27-AC01) — satisfied via `domain_events` consumer (task 45/47), not this table
 
 Failure Handling:
-- Janitor requeues expired leases
+- Janitor requeues expired leases — `cns_release_stale_leases` on `domain_events` (task 47)
 
 Observability:
-- Queue depth gauge if enabled
+- Queue depth gauge if enabled — N/A without queue
 
 Security Considerations:
-- Worker-only access
+- Worker-only access — N/A
 
 Performance Considerations:
-- SKIP LOCKED dequeue
+- SKIP LOCKED dequeue — cron batch on `chats` partial indexes instead
 
 Requirements covered:
 27
 
 Acceptance Criteria covered:
-R27-AC01, R27-AC02
+R27-AC01, R27-AC02 — re-mapped to `domain_events` / task 47 in traceability matrix
 
-## 17. [ ] Create RLS helper functions is_platform_admin and is_chat_participant
+## 17. [x] Create RLS helper functions is_platform_admin and is_chat_participant
 
 Description:
 Security invoker helpers per design §11.2 with initplan-safe auth.uid() usage.
@@ -772,7 +774,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R35-AC12, R35-AC13, R35-AC14
 
-## 18. [ ] Enable Supabase Realtime publication for CNS tables
+## 18. [x] Enable Supabase Realtime publication for CNS tables
 
 Description:
 Add chat_messages and provider_proposals to supabase_realtime publication per design §5.4.
@@ -812,7 +814,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R13-AC02, R22-AC02, OAC-18
 
-## 19. [ ] Implement audit triggers on conversation and proposal status
+## 19. [x] Implement audit triggers on conversation and proposal status
 
 Description:
 AFTER UPDATE OF status triggers insert audit rows in same transaction per design §3.11.
@@ -854,7 +856,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R15-AC07, R21-AC01, R21-AC04
 
-## 20. [ ] Remove legacy 48h proposal expiry cron and accept guard
+## 20. [x] Remove legacy 48h proposal expiry cron and accept guard
 
 Description:
 Drop expire_stale_provider_proposals and 48h trigger; prepare for 24h cns_expire_pending_proposals per design Schema evolution.
@@ -895,7 +897,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R9-AC01, R25-AC02
 
-## 21. [ ] Register MMD notification templates for CNS events
+## 21. [x] Register MMD notification templates for CNS events
 
 Description:
 Register chat.new_message, proposal.*, proposal.expiring_soon templates with normative variables §5.5.
@@ -937,7 +939,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R12-AC01, R12-AC03, R9-AC07
 
-## 22. [ ] Run yarn generate-supabase-types after Wave A schema
+## 22. [x] Run yarn generate-supabase-types after Wave A schema
 
 Description:
 Regenerate TypeScript database types for new CNS tables and enums.
@@ -2019,7 +2021,7 @@ Responsibilities:
 
 Implementation Details:
 - Normative reference: design.md — task 47: `Implement cns_release_stale_leases RPC`.
-- Scope: Clear locked_until on domain_events (and optional maintenance queue) where lease expired; run before each checkout §6.4.
+- Scope: Clear locked_until on domain_events where lease expired; run before each checkout §6.4.
 - Execute: Also reset orphaned locked_by
 - Execute: Invoked at start of cns_process_domain_events
 - Gate: automated tests in Phase 14 (pgTAP/Vitest/E2E) green before merge.
@@ -5189,7 +5191,7 @@ R32-AC05, R32-AC06, OAC-01, OAC-02, OAC-03, OAC-04, OAC-05, OAC-06, OAC-07, OAC-
 | R26-AC05 | 26 | 69 | replay idempotency |
 | R26-AC06 | 26 | 54 | Deno retry |
 | R26-AC07 | 26 | 28 | pgTAP reactivation |
-| R27-AC01 | 27 | 16 | maintenance queue |
+| R27-AC01 | 27 | 45 | domain_events checkout lease |
 | R27-AC02 | 27 | 47 | lease janitor |
 | R27-AC03 | 27 | 24 | idempotency query |
 | R27-AC04 | 27 | 111 | typing TTL |

@@ -1257,13 +1257,13 @@ O **matching progressivo** descrito em [`matching-algorithm/requirements.md`](..
 
 ### Acceptance Criteria
 
-- **GIVEN** fila interna `chat_maintenance_queue` (se adotada)
-- **WHEN** worker faz checkout
-- **THEN** MUST definir `locked_until = now() + interval '30 seconds'` na mesma transação que marca `processing = true`.
+- **GIVEN** consumidor de outbox (`domain_events`) ou worker MMD faz checkout
+- **WHEN** adquire lease na linha
+- **THEN** MUST definir `locked_until = now() + interval '30 seconds'` na mesma transação que seta `locked_by` (e demais campos de processamento).
 
-- **GIVEN** worker morre com lease ativo
+- **GIVEN** worker morre com lease ativo em `domain_events` ou `message_dispatches`
 - **WHEN** `locked_until &lt; now()`
-- **THEN** janitor MUST retornar item a `queued` para reprocessamento.
+- **THEN** janitor (`cns_release_stale_leases`) MUST tornar a linha elegível para novo checkout.
 
 - **GIVEN** RPC de longa duração (aceite)
 - **WHEN** excede timeout PostgREST

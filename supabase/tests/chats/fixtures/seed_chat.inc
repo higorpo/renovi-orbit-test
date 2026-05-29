@@ -1,14 +1,7 @@
--- pgTAP fixture seed helper for public.chats (CNS task 2).
--- Include at the start of a test transaction: \ir fixture_seed_chat.sql
+-- pgTAP fixture: idempotent chat seed helper (CNS task 2).
+-- Included via: \ir fixtures/seed_chat.inc
 --
--- Prerequisites (existing rows): service_requests.id, profiles for client_id and provider_id.
---
--- Usage:
---   select pg_temp.cns_seed_chat(
---     p_service_request_id := '<sr uuid>',
---     p_client_id := '<client profile uuid>',
---     p_provider_id := '<provider profile uuid>'
---   );
+-- Prerequisites: service_requests + profiles rows from supabase/seed.sql.
 
 create or replace function pg_temp.cns_seed_chat(
   p_service_request_id uuid,
@@ -47,6 +40,3 @@ begin
   return v_chat_id;
 end;
 $$;
-
-comment on function pg_temp.cns_seed_chat(uuid, uuid, uuid, public.cns_conversation_status, timestamptz) is
-  'pgTAP-only: idempotent chat insert for CNS tests (unique pair upsert).';

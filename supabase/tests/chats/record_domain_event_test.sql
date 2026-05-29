@@ -2,9 +2,9 @@
 
 begin;
 
-\ir fixture_seed_chat.sql
+\ir fixtures/seed_chat.inc
 
-select plan(6);
+select plan(7);
 
 select ok(
   (
@@ -55,30 +55,35 @@ select throws_ok(
   'requires idempotency_key for notification events'
 );
 
+create temp table _slot_released_fixture as
+select pg_temp.cns_seed_chat(
+  p_service_request_id := '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid,
+  p_client_id := '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
+  p_provider_id := '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid
+) as chat_id;
+
+create temp table _slot_released_event as
+select public.record_domain_event(
+  'SLOT_RELEASED',
+  'chat',
+  f.chat_id,
+  '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid,
+  f.chat_id,
+  jsonb_build_object('active_chat_count', 0)
+) as event_id
+from _slot_released_fixture f;
+
+select ok(
+  (select event_id is not null from _slot_released_event),
+  'record_domain_event returns id for SLOT_RELEASED'
+);
+
 select ok(
   (
-    with seeded as (
-      select pg_temp.cns_seed_chat(
-        p_service_request_id := '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid,
-        p_client_id := '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
-        p_provider_id := '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid
-      ) as chat_id
-    ),
-    inserted as (
-      select public.record_domain_event(
-        'SLOT_RELEASED',
-        'chat',
-        s.chat_id,
-        '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid,
-        s.chat_id,
-        jsonb_build_object('active_chat_count', 0)
-      ) as event_id
-      from seeded s
-    )
     select exists (
       select 1
       from public.domain_events de
-      join inserted i on i.event_id = de.id
+      join _slot_released_event e on e.event_id = de.id
       where de.event_type = 'SLOT_RELEASED'
         and de.processed_at is null
         and de.dead_letter = false

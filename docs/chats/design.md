@@ -142,7 +142,7 @@ sequenceDiagram
 
 | Dimension | Mechanism |
 |-----------|-----------|
-| Horizontal workers | `SKIP LOCKED` on `domain_events`, `chat_maintenance_queue`, MMD `message_dispatches` |
+| Horizontal workers | `SKIP LOCKED` on `domain_events`, MMD `message_dispatches` |
 | Read scale | Paginated RPCs; partial indexes; no full-table Realtime |
 | Hot SR | Slot counter on `service_request_negotiation_stats` (materialized per SR, updated on **new** `ACTIVE` and `ACTIVE`→`INACTIVE`/`CLOSED`; see §3.3.1) |
 | Fanout | Max 4 `ACTIVE` chats/SR for **new** provider pairs (configurable); reactivation MAY exceed cap temporarily (product intent); push per message, not per SR |
@@ -520,22 +520,11 @@ Event types (normative):
 
 Do not emit ad-hoc aliases for the same semantic event; use the table above only.
 
-## 3.9 `public.chat_maintenance_queue` (optional — Req. 27)
+## 3.9 Maintenance jobs (no internal queue in v1)
 
-For heavy reciprocity backfill; **MAY** be omitted if cron RPC scans indexed `chats` directly.
+Reciprocity, proposal expiry, and delivery reconciliation **do not** use a separate `chat_maintenance_queue` table. Cron RPCs scan indexed `chats` / `provider_proposals` / `chat_messages` directly (§6.1). Async lease semantics (Req. 27) apply to **`domain_events`** checkout (`locked_until`, `locked_by`) and existing MMD `message_dispatches` — see §6.2–§6.4.
 
-```sql
-create table public.chat_maintenance_queue (
-  id uuid primary key default gen_random_uuid(),
-  job_type text not null check (job_type in ('reciprocity_check', 'reconcile_delivery')),
-  chat_id uuid not null references public.chats(id) on delete cascade,
-  status text not null default 'queued' check (status in ('queued', 'processing', 'done', 'failed')),
-  locked_until timestamptz,
-  locked_by text,
-  created_at timestamptz not null default now(),
-  unique (job_type, chat_id)
-);
-```
+If heavy backfill ever requires a dedicated queue, introduce it in a future migration; it is **out of scope** for the current schema.
 
 ## 3.10 `public.rpc_idempotency_records`
 
@@ -1320,7 +1309,7 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | **24** Matching (future) | CNS works without dispatch; emit `SLOT_RELEASED` / `NEGOTIATION_TERMINATED` optional | §3.8 `domain_events` | Consumer no-op until matching exists |
 | **25** Scheduled jobs | 10 min cron; batch 500 `SKIP LOCKED`; per-row savepoint; skip terminal SR; metrics logged | §6.1, §4.6–4.7 | `pg_cron` + `job_runs` table |
 | **26** Recovery | Idempotent retry; orphan media janitor; no partial accept; Realtime dedupe by id | §8, §4.9 | §8.1 matrix |
-| **27** Leases | 30s `locked_until`; janitor requeue; accept status via idempotency query | §6.2 | `domain_events` + `chat_maintenance_queue` |
+| **27** Leases | 30s `locked_until`; janitor requeue; accept status via idempotency query | §6.2 | `domain_events`, MMD `message_dispatches` |
 | **28** Domain events | Outbox in TX; consumer `SKIP LOCKED`; analytics best-effort; per-conversation ordering SHOULD | §3.8, §6.2 | `cns_process_domain_events` |
 | **29** Re-entry | Reuse conversation id; `CLOSED` terminal; slot on new provider | §4.1 | Same as Req. 4 |
 | **30** Degraded mode | 15s poll open chat only; send succeeds if MMD down; offline blocks accept | §9.3, §8 | `useConversationPollingFallback` |
@@ -1532,8 +1521,8 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | R26-AC05 | 26 | MMD falhou após aceite | operador reinsere manualmente | re-ingestão com mesma `idempotency_key` MUST NOT reprocessar efeito de negócio. | §4–§13 | See §12.1; recovery |
 | R26-AC06 | 26 | crash de Edge durante upload | cliente retenta com mesma key | servidor MUST retornar mensagem existente ou completar insert pendente. | §4–§13 | See §12.1; recovery |
 | R26-AC07 | 26 | `platform-flow.mmd` caminhos de retomada pós-`INACTIVE` | nova mensagem chega | estado MUST ser `ACTIVE` independentemente de falhas anteriores de job. | §4–§13 | See §12.1; recovery |
-| R27-AC01 | 27 | fila interna `chat_maintenance_queue` (se adotada) | worker faz checkout | MUST definir `locked_until = now() + interval '30 seconds'` na mesma transação que marca `processing = true`. | §4–§13 | See §12.1; leases |
-| R27-AC02 | 27 | worker morre com lease ativo | `locked_until &lt; now()` | janitor MUST retornar item a `queued` para reprocessamento. | §4–§13 | See §12.1; leases |
+| R27-AC01 | 27 | consumidor faz checkout de `domain_events` (ou MMD dispatch) | worker adquire lease | MUST definir `locked_until = now() + interval '30 seconds'` na mesma transação que marca o row como em processamento (`locked_by`). | §4–§13 | See §12.1; leases |
+| R27-AC02 | 27 | worker morre com lease ativo em `domain_events` / MMD | `locked_until &lt; now()` | janitor (`cns_release_stale_leases`) MUST tornar o row elegível de novo para checkout. | §4–§13 | See §12.1; leases |
 | R27-AC03 | 27 | RPC de longa duração (aceite) | excede timeout PostgREST | cliente MUST poder consultar status por `idempotency_key` (resposta idempotente do resultado commitado). | §4–§13 | See §12.1; leases |
 | R27-AC04 | 27 | typing presence | TTL expira (10s) | indicador MUST desaparecer sem job adicional (expiração client-side + server TTL). | §4–§13 | See §12.1; leases |
 | R27-AC05 | 27 | sessão de composição de proposta abandonada | &gt; 7 dias sem submit | rascunho local MAY ser expurgado pelo cliente; servidor MUST NOT depender de rascunho. | §4–§13 | See §12.1; leases |
