@@ -59,6 +59,26 @@ Squads MAY parallelize after Wave A: **DB** (Phases 1–3, 11), **Async** (Phase
 - Audit triggers on conversation/proposal status changes (R21-AC01).
 - Cron jobs registered only after corresponding RPC pgTAP green.
 
+### Migration file order (`supabase/migrations/`)
+
+Dev-first: **one migration file per SQL task**, timestamp `YYYYMMDDHHMMSS` defines apply order on `yarn db:reset`. Tasks **1–13** use `20260701100000`–`20260701101200`. **Do not** place task 23+ SQL before the slots reserved for tasks **14–21**.
+
+| Task | Timestamp (reserved / applied) | Expected migration file (create when implementing) |
+|------|-------------------------------|-----------------------------------------------------|
+| 14 | `20260701101300` | `20260701101300_evolve_provider_proposals_cns.sql` |
+| 15 | `20260701101400` | `20260701101400_create_chat_media_upload_sessions.sql` |
+| 16 | `20260701101500` | `20260701101500_create_chat_maintenance_queue.sql` (optional table) |
+| 17 | `20260701101600` | `20260701101600_create_cns_rls_helper_functions.sql` |
+| 18 | `20260701101700` | `20260701101700_enable_cns_realtime_publication.sql` |
+| 19 | `20260701101800` | `20260701101800_create_cns_audit_triggers.sql` |
+| 20 | `20260701101900` | `20260701101900_remove_legacy_proposal_expiry_48h.sql` |
+| 21 | `20260701102000` | `20260701102000_seed_cns_mmd_notification_templates.sql` |
+| 22 | — | No SQL migration (run `yarn generate-supabase-types` after 14–21 land) |
+| **23** | **`20260701102200`** | **`20260701102200_create_record_domain_event.sql`** (implemented; moved from `01300` so 14–21 apply first) |
+| **24** | **`20260701102300`** | **`20260701102300_create_idempotency_helpers.sql`** (implemented; moved from `01400`) |
+
+**Note:** Tasks 23–24 were implemented early (Wave B loop). Their files were renumbered to `02200` / `02300` so a full reset applies Wave A completion (14–21) before `record_domain_event` and idempotency helpers. New Wave B SQL from task 25 onward SHOULD use timestamps `20260701102400` and up unless this table is updated.
+
 ---
 
 # Phase 1: Database Foundation
@@ -600,6 +620,7 @@ Implementation Details:
 - ALTER TABLE §3.6
 - Index chat_id+status
 - One PENDING partial unique
+- Migration file (order): `supabase/migrations/20260701101300_evolve_provider_proposals_cns.sql` — see §Migration file order
 
 Deliverables:
 - Migration SQL
@@ -640,6 +661,7 @@ Responsibilities:
 Implementation Details:
 - Storage bucket RLS participant read
 - Session table DDL §3.13
+- Migration file (order): `supabase/migrations/20260701101400_create_chat_media_upload_sessions.sql` — see §Migration file order
 
 Deliverables:
 - Migration SQL
@@ -681,6 +703,7 @@ Responsibilities:
 Implementation Details:
 - DDL §3.9
 - Feature flag env USE_MAINTENANCE_QUEUE default false
+- Migration file (order): `supabase/migrations/20260701101500_create_chat_maintenance_queue.sql` — see §Migration file order
 
 Deliverables:
 - Migration SQL (optional)
@@ -720,6 +743,7 @@ Responsibilities:
 
 Implementation Details:
 - CREATE FUNCTION §11.2
+- Migration file (order): `supabase/migrations/20260701101600_create_cns_rls_helper_functions.sql` — see §Migration file order
 
 Deliverables:
 - Migration SQL
@@ -759,6 +783,7 @@ Responsibilities:
 
 Implementation Details:
 - ALTER PUBLICATION statements §5.4
+- Migration file (order): `supabase/migrations/20260701101700_enable_cns_realtime_publication.sql` — see §Migration file order
 
 Deliverables:
 - Migration SQL
@@ -799,6 +824,7 @@ Responsibilities:
 Implementation Details:
 - Trigger functions SECURITY DEFINER minimal
 - Attach to chats and provider_proposals
+- Migration file (order): `supabase/migrations/20260701101800_create_cns_audit_triggers.sql` — see §Migration file order
 
 Deliverables:
 - Trigger migration
@@ -840,6 +866,7 @@ Responsibilities:
 Implementation Details:
 - DROP cron job migration
 - DROP trigger migration
+- Migration file (order): `supabase/migrations/20260701101900_remove_legacy_proposal_expiry_48h.sql` — see §Migration file order
 
 Deliverables:
 - Migration SQL
@@ -880,6 +907,7 @@ Responsibilities:
 Implementation Details:
 - SQL seed migration in message_dispatcher
 - Template variable JSON schema doc
+- Migration file (order): `supabase/migrations/20260701102000_seed_cns_mmd_notification_templates.sql` — see §Migration file order
 
 Deliverables:
 - Migration SQL
@@ -920,13 +948,14 @@ Responsibilities:
 
 Implementation Details:
 - yarn generate-supabase-types
+- No SQL migration (run after migrations for tasks 14–21; see §Migration file order)
 
 Deliverables:
 - Updated types file
 - CI check
 
 Dependencies:
-- Tasks 1-12 complete
+- Tasks 1-21 SQL complete (tasks 1–13 applied; 14–21 when implemented)
 
 Runtime Guarantees:
 - Types match deployed schema
@@ -951,7 +980,7 @@ R15-AC01, R15-AC02
 
 # Phase 3: Core Transactional Orchestration
 
-## 23. [x] Implement cns_record_domain_event helper function
+## 23. [x] Implement record_domain_event helper function
 
 Description:
 SECURITY DEFINER helper inserting domain_events rows with validated event_type and payload shape.
@@ -963,9 +992,11 @@ Responsibilities:
 Implementation Details:
 - Called inside mutation RPCs same TX
 - Payload MUST include MMD idempotency_key when notification expected
+- Migration file (order): `supabase/migrations/20260701102200_create_record_domain_event.sql` — MUST apply after tasks 14–21 (see §Migration file order)
+- pgTAP: `supabase/tests/chats/record_domain_event_test.sql`
 
 Deliverables:
-- SQL function
+- SQL function `public.record_domain_event`
 - Unit pgTAP insert test
 
 Dependencies:
@@ -1003,9 +1034,11 @@ Responsibilities:
 
 Implementation Details:
 - Used by accept, submit, cancel, close
+- Migration file (order): `supabase/migrations/20260701102300_create_idempotency_helpers.sql` — MUST apply after task 23 / tasks 14–21 (see §Migration file order)
+- pgTAP: `supabase/tests/chats/idempotency_duplicate_accept_test.sql`
 
 Deliverables:
-- SQL functions
+- SQL functions `public.idempotency_begin`, `public.idempotency_commit`
 - pgTAP duplicate accept test
 
 Dependencies:

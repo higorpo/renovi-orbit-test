@@ -1,4 +1,5 @@
 -- CNS Wave B — task 23: transactional outbox insert helper (design §3.8, §4.10).
+-- Migration order: runs AFTER tasks 14–21 (timestamps 20260701101300–20260701102000). See docs/chats/tasks.md §Migration file order.
 
 create or replace function public.record_domain_event(
   p_event_type text,

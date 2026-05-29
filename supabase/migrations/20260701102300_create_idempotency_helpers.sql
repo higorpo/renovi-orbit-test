@@ -1,4 +1,5 @@
 -- CNS Wave B — task 24: rpc_idempotency_records helpers (design §3.10, Req. 14).
+-- Migration order: runs AFTER tasks 14–21 and task 23 (20260701102200). See docs/chats/tasks.md §Migration file order.
 
 create or replace function public.idempotency_begin(
   p_operation text,
