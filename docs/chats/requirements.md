@@ -157,13 +157,24 @@ O diagrama [`platform-flow.mmd`](../platform-flow.mmd) inclui nós de dispatch (
 
 Estados planejados em [`matching-algorithm/requirements.md`](../matching-algorithm/requirements.md), **não implementados** no repositório: `DISPATCH_ACTIVE`, `DISPATCH_PAUSED`, `DISPATCH_STOPPED`, `DISPATCH_FALLBACK_OPEN_MARKET`, `DISPATCH_EXPIRED`. O CNS não transiciona nem persiste esses estados; MAY publicar eventos consumíveis pelo matching quando este existir (Requirement 24).
 
+### Modelo de dados: `service_requests` vs `services`
+
+| Tabela | Responsabilidade de domínio | Conteúdo típico |
+|--------|----------------------------|-----------------|
+| **`service_requests`** | Pedido de serviço **antes** do orçamento ser fechado | Descrição do pedido, local, fotos, estado `OPEN` / `CANCELLED` / `COMPLETED` (negociação encerrada), chats, propostas em fluxo |
+| **`services`** | Serviço contratado **depois** do orçamento aceito (fechado) | `accepted_proposal_id`, `scheduled_service_date`, prestador contratado, `PENDING_PAYMENT` e estados posteriores de execução/pagamento |
+
+- `service_requests` MUST NOT armazenar `accepted_proposal_id` nem `scheduled_service_date` — esses campos pertencem exclusivamente a `services`.
+- No aceite, o SR transiciona para `COMPLETED` (fim da fase de pedido/orçamento); na mesma transação nasce **uma** linha em `services` com a proposta aceita e a data escolhida.
+- Opcionalmente, o SR MAY manter `service_id` (FK) apontando para o registro criado em `services`, apenas para navegação/histórico — sem duplicar dados contratuais no SR.
+
 ### State Definitions
 
 #### Service Request
 
-- **`OPEN`** *(transitório operacional)* — Permite criação de chats (sujeito a slots), envio de propostas e negociação. SR MUST NOT aceitar novo chat de prestador externo após transição para terminal.
-- **`COMPLETED`** *(terminal)* — Disparado por aceite de proposta (`platform-flow.mmd`: orçamento aprovado). MUST NOT permitir novas negociações, mensagens em chats não encerrados, nem novas propostas.
-- **`CANCELLED`** *(terminal)* — Cancelamento manual pelo cliente. MUST encerrar todos os chats (`CLOSED`) e rejeitar propostas relacionadas.
+- **`OPEN`** *(transitório operacional)* — Fase de pedido e negociação: chats, propostas, revisões. Permite criação de chats (sujeito a slots) e envio de propostas. SR MUST NOT aceitar novo chat de prestador externo após transição para terminal.
+- **`COMPLETED`** *(terminal no domínio do pedido)* — Orçamento fechado por aceite de proposta (`platform-flow.mmd`). Encerra negociação no SR; MUST NOT permitir novas negociações nem novas propostas. Dados do contrato (proposta aceita, data agendada) persistem em `services`, não no SR.
+- **`CANCELLED`** *(terminal)* — Cancelamento manual pelo cliente antes do fechamento. MUST encerrar todos os chats (`CLOSED`) e rejeitar propostas relacionadas; MUST NOT criar linha em `services`.
 
 #### Chat
 
@@ -174,16 +185,16 @@ Estados planejados em [`matching-algorithm/requirements.md`](../matching-algorit
 #### Proposal
 
 - **`PENDING`** *(aguardando cliente)* — Proposta vigente aguardando decisão; SLA 24h para ação do cliente.
-- **`ACCEPTED`** *(terminal sucesso)* — Cliente selecionou data; vincula data oficial do serviço.
+- **`ACCEPTED`** *(terminal sucesso)* — Cliente selecionou data; efeito contratual materializado na linha `services` criada no aceite (`accepted_proposal_id`, `scheduled_service_date`).
 - **`REJECTED`** *(terminal por cliente)* — Recusa explícita; chat pode continuar em negociação ou encerrar.
 - **`EXPIRED`** *(terminal por tempo)* — Cliente não agiu em 24h; chat pode permanecer ativo se houver atividade recente (`platform-flow.mmd`).
 - **`REVISION_REQUESTED`** *(transitório)* — Cliente pediu revisão estruturada; prestador deve aceitar/recusar pedido antes de nova proposta.
 - **`REVISED`** *(histórico)* — Proposta anterior substituída por nova versão `PENDING`.
 - **`REJECTED_AUTOMATICALLY`** *(terminal sistêmico)* — Outra proposta foi aceita ou SR cancelado.
 
-#### Service
+#### Service (tabela `services`)
 
-- **`PENDING_PAYMENT`** — Criado após aceite; fora do escopo detalhado deste documento (pagamentos Asaas planejados).
+- **`PENDING_PAYMENT`** — Estado inicial após aceite; registro nasce na mesma transação que fecha o SR. Campos obrigatórios no insert: `service_request_id`, `accepted_proposal_id`, `scheduled_service_date` (data escolhida pelo cliente), `client_id`, `provider_id`, timestamps. Pagamentos Asaas e estados posteriores ficam fora do escopo detalhado deste documento.
 
 ### Diagrama de transição (referência)
 
@@ -263,7 +274,11 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 - **GIVEN** SR em `COMPLETED` por aceite de proposta
 - **WHEN** a transação de aceite commita
-- **THEN** `completed_at`, `accepted_proposal_id`, `scheduled_service_date` (data escolhida) MUST ser persistidos atomicamente.
+- **THEN** em `service_requests` MUST persistir apenas `status = COMPLETED` e `completed_at` (e opcionalmente `service_id` FK); MUST NOT persistir `accepted_proposal_id` nem `scheduled_service_date` no SR.
+
+- **GIVEN** aceite de proposta na mesma transação
+- **WHEN** SR transiciona para `COMPLETED`
+- **THEN** MUST existir insert em `services` com `accepted_proposal_id`, `scheduled_service_date` (data escolhida em `selected_slot`), `status = PENDING_PAYMENT`, e vínculos `service_request_id`, `client_id`, `provider_id` (Requirements 7, 23).
 
 - **GIVEN** cliente autenticado dono do SR
 - **WHEN** solicita cancelamento manual
@@ -467,7 +482,7 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 - **GIVEN** confirmação explícita do cliente (sem etapa bilateral posterior — checklist 94)
 - **WHEN** RPC `accept_proposal` executa com `proposal_id`, `selected_slot`, `idempotency_key`
-- **THEN** em uma transação: proposta → `ACCEPTED`; SR → `COMPLETED`; demais chats do SR → `CLOSED` com motivo `PROPOSAL_ACCEPTED_ELSEWHERE`; demais propostas pendentes → `REJECTED_AUTOMATICALLY`; criar `services` row com `PENDING_PAYMENT` (`platform-flow.mmd` `O`–`BA`).
+- **THEN** em uma transação atômica (`platform-flow.mmd` `O`–`BA`): (1) proposta alvo → `ACCEPTED`; (2) SR → `COMPLETED` com `completed_at`; (3) demais chats do SR → `CLOSED` (`PROPOSAL_ACCEPTED_ELSEWHERE`); (4) demais propostas pendentes → `REJECTED_AUTOMATICALLY`; (5) insert em `services` com `status = PENDING_PAYMENT`, `accepted_proposal_id` = proposta aceita, `scheduled_service_date` = data derivada de `selected_slot`, mais `service_request_id`, `client_id`, `provider_id`.
 
 - **GIVEN** duas abas tentam aceitar propostas diferentes simultaneamente
 - **WHEN** ambas chamam RPC
@@ -728,6 +743,14 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 - **GIVEN** tabela `proposals` com versionamento
 - **WHEN** consultada
 - **THEN** MUST ser fonte autoritativa de preço, escopo, status; `chat_messages` MUST NOT duplicar dados autoritativos além de snapshot leve para render offline.
+
+- **GIVEN** tabela `service_requests`
+- **WHEN** modelada
+- **THEN** MUST restringir-se ao ciclo pré-contrato (pedido + negociação); MUST NOT incluir colunas `accepted_proposal_id` ou `scheduled_service_date`.
+
+- **GIVEN** tabela `services`
+- **WHEN** modelada
+- **THEN** MUST incluir `accepted_proposal_id` (FK → `proposals`), `scheduled_service_date` (timestamptz ou date), `service_request_id` (origem do pedido), `status`, `client_id`, `provider_id`; MUST ser a única fonte de verdade da data oficial e da proposta contratada após aceite.
 
 - **GIVEN** políticas RLS
 - **WHEN** cliente ou prestador acessa
@@ -1003,11 +1026,15 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 - **GIVEN** aceite commitado (`Requirement 7`)
 - **WHEN** transação completa
-- **THEN** registro em `services` MUST ser criado com `status = PENDING_PAYMENT`, vinculado a `service_request_id`, `proposal_id`, `client_id`, `provider_id`, `scheduled_date` = data escolhida.
+- **THEN** registro em `services` MUST ser criado com `status = PENDING_PAYMENT`, `service_request_id`, `accepted_proposal_id`, `scheduled_service_date` (data escolhida pelo cliente no aceite), `client_id`, `provider_id`, `created_at`.
 
-- **GIVEN** falha na criação de service após aceite
+- **GIVEN** consulta à data oficial do serviço ou à proposta contratada após aceite
+- **WHEN** implementada em API ou relatório
+- **THEN** MUST ler de `services`, não de `service_requests` nem inferir apenas de `proposals.status = ACCEPTED`.
+
+- **GIVEN** falha na criação de `services` após aceite
 - **WHEN** detectada
-- **THEN** transação de aceite MUST rollback — MUST NOT haver SR `COMPLETED` sem service row.
+- **THEN** transação de aceite MUST rollback — MUST NOT haver SR `COMPLETED` sem linha correspondente em `services` com `accepted_proposal_id` e `scheduled_service_date`.
 
 - **GIVEN** `platform-flow.mmd` nó `BA`
 - **WHEN** documentado
@@ -1299,7 +1326,7 @@ O **matching progressivo** descrito em [`matching-algorithm/requirements.md`](..
 
 - **GIVEN** operação `accept_proposal`
 - **WHEN** executada
-- **THEN** transação MUST incluir: lock SR, validar proposta, atualizar proposta, SR, todos chats concorrentes, todas propostas concorrentes, insert service, outbox events.
+- **THEN** transação MUST incluir: lock SR; validar proposta; proposta → `ACCEPTED`; SR → `COMPLETED` + `completed_at` (sem `accepted_proposal_id` / `scheduled_service_date` no SR); encerramento de chats/propostas concorrentes; **insert `services`** com `accepted_proposal_id`, `scheduled_service_date`, `PENDING_PAYMENT`; outbox events.
 
 - **GIVEN** operação `submit_proposal`
 - **WHEN** executada
@@ -1420,7 +1447,8 @@ Orquestração visual de próxima ação: **hook** `useChatActionBannerState` de
 
 | Responsabilidade | Local |
 |------------------|-------|
-| Máquinas de estado (chat, proposal, SR) | Tabelas + enums + `CHECK` |
+| Máquinas de estado (chat, proposal, SR) | Tabelas + enums + `CHECK` em `service_requests` (pré-fechamento) |
+| Contrato pós-aceite (`accepted_proposal_id`, `scheduled_service_date`, `PENDING_PAYMENT`) | Tabela `services` + RPC `accept_proposal` |
 | Transições atômicas (aceite, cancelamento, encerramento em massa) | RPC `SECURITY DEFINER` |
 | Slot counter / reciprocidade / expiração SLA | RPC + `pg_cron`; limite de slots lido de `platform_constants` |
 | Limites operacionais configuráveis | `platform_constants` (`chats.max_active_slots_per_service_request`, default 4) |
