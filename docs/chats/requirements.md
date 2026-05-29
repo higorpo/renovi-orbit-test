@@ -25,7 +25,7 @@ O diagrama [`platform-flow.mmd`](../platform-flow.mmd) inclui nós de dispatch (
 - Limitar **pressão operacional** sobre o cliente via slots de chats `ACTIVE` por pedido (configurável em `platform_constants`, default 4).
 - Garantir **fechamento determinístico** do pedido quando uma proposta é aceita: encerramento automático de chats concorrentes, rejeição automática de propostas pendentes e criação do registro de **Service** em `PENDING_PAYMENT`.
 - Preservar **auditabilidade** e rastreabilidade histórica de mensagens, propostas versionadas e motivos de encerramento.
-- Integrar comunicação transacional ao **Multichannel Message Dispatcher (MMD)** para push/e-mail sem fragmentar políticas de rate limit.
+- Integrar comunicação transacional ao **Multichannel Message Dispatcher (MMD)** com políticas por tipo de evento: **mensagens de chat** → somente push com `bypass_limits` (sem cota diária de 20); **marcos de proposta** → push/e-mail com limites padrão (Requirement 12).
 
 ### Objetivos técnicos
 
@@ -121,7 +121,7 @@ O diagrama [`platform-flow.mmd`](../platform-flow.mmd) inclui nós de dispatch (
 7. **Revision Orchestration Phase** — `REVISION_REQUESTED`; limite de revisões; **chat livre reabilitado**; resposta do prestador; nova proposta retorna a fase 5.
 8. **Acceptance Cascade Phase** — transação atômica de aceite, fechamento concorrente, SR `COMPLETED`, Service `PENDING_PAYMENT`.
 9. **Closure & Slot Reclamation Phase** — manual `CLOSED`, automático pós-aceite, cancelamento SR; liberação de slot operacional; MAY emitir evento para integração futura com matching.
-10. **Notification Dispatch Phase** — ingestão MMD com `idempotency_key`; rate limits transacionais.
+10. **Notification Dispatch Phase** — ingestão MMD com `idempotency_key`; push de mensagem com `bypass_limits`; marcos de proposta com limites padrão; supressão de banner push no cliente se chat aberto (Requirement 12).
 11. **Realtime Delivery Phase** — publicação Realtime; reconciliação por cursor no cliente.
 12. **Recovery & Janitor Phase** — leases expirados, mensagens órfãs, reprocessamento seguro.
 
@@ -671,20 +671,33 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 ## Requirement 12: Multichannel Notifications via MMD
 
-*User Story*: Como usuário, eu quero ser notificado de novas mensagens e marcos de proposta sem excesso de comunicação.
+*User Story*: Como usuário, eu quero ser notificado de novas mensagens e marcos de proposta de forma adequada ao contexto — push imediato e ilimitado para mensagens de chat em segundo plano, e-mails para eventos importantes de proposta, sem banner redundante quando já estou na conversa.
 
-### Acceptance Criteria
+### Política de canais e limites (resumo)
 
-- **GIVEN** nova mensagem em chat com destinatário offline
-- **WHEN** mensagem é persistida
-- **THEN** produtor MUST chamar `message_dispatcher_ingest` com `idempotency_key` única, canais permitidos (`push`, `email`), respeitando limites 20 push/dia e 5 e-mail/dia e cooldown 20 min (MMD Req. 1).
+| Origem do evento | Canais MMD | `bypass_limits` | Limites MMD padrão (20 push/dia, 5 e-mail/dia, cooldown 20 min push) |
+|------------------|------------|-----------------|----------------------------------------------------------------------|
+| **Nova mensagem de chat** (`text`/`image` confirmada) | **`push` apenas** | **`true`** | **Não aplicam** à cota diária de push (ingest com bypass) |
+| **Marcos de proposta** (recebida, revisão, aceite, encerramento, lembrete SLA) | `push` e/ou `email` conforme template | `false` (default) | **Aplicam** (MMD Req. 1) |
 
-- **GIVEN** eventos críticos (proposta recebida, revisão solicitada, aceite, encerramento)
+Horário silencioso (22:00–06:00 BRT) e demais regras do MMD continuam válidos salvo onde `bypass_limits` dispensa reavaliação de quota na reativação (ver [`message-dispatcher/requirements.md`](../message-dispatcher/requirements.md) e docs de negócio de `bypass_limits`).
+
+### Acceptance Criteria — ingestão (servidor)
+
+- **GIVEN** nova mensagem livre ou mídia confirmada em chat (`message_type` `text` ou `image`)
+- **WHEN** mensagem é persistida e destinatário deve ser alertado
+- **THEN** produtor MUST chamar `message_dispatcher_ingest` (ou RPC wrapper) com: `p_channel = 'push'` **somente** (MUST NOT enfileirar `email` para mensagens de chat); `p_bypass_limits = true`; `idempotency_key` única estável (ex.: `chat_message:{message_id}:push`); template/payload MUST incluir `conversation_id` (e `service_request_id` se útil) para roteamento no cliente.
+
+- **GIVEN** ingestão de push de mensagem de chat com `p_bypass_limits = true`
+- **WHEN** `message_dispatcher_ingest` avalia quota diária de push (20/dia) e cooldown (20 min)
+- **THEN** essas verificações MUST ser ignoradas para esse dispatch (comportamento documentado de `p_bypass_limits` na função `message_dispatcher_ingest`); MUST NOT marcar `FAILED_TERMINAL` por quota diária de push.
+
+- **GIVEN** eventos críticos de **proposta ou lifecycle** (proposta recebida, revisão solicitada, aceite, encerramento de chat, lembrete de expiração de proposta)
 - **WHEN** transição commita
-- **THEN** ingestão MMD MUST ocorrer após commit (desacoplamento).
+- **THEN** ingestão MMD MUST ocorrer **após commit** (desacoplamento), com `p_bypass_limits = false` salvo reagendamento por quiet hours já coberto pelo MMD; MAY usar `push` e `email` conforme política de produto/template, respeitando limites 20 push/dia, 5 e-mail/dia e cooldown 20 min (MMD Req. 1).
 
 - **GIVEN** `idempotency_key` duplicada
-- **WHEN** segunda ingestão
+- **WHEN** segunda ingestão do mesmo evento
 - **THEN** MUST NOT duplicar notificação entregue.
 
 - **GIVEN** falha FCM terminal
@@ -693,15 +706,45 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
 
 - **GIVEN** checklist item 45
 - **WHEN** verificado
-- **THEN** integração MUST usar MMD exclusivamente, não envio ad-hoc.
+- **THEN** integração MUST usar MMD exclusivamente, não envio ad-hoc FCM/Resend paralelo.
+
+### Acceptance Criteria — apresentação no cliente (supressão em foreground)
+
+- **GIVEN** usuário com app em **foreground** e tela de chat aberta para `conversation_id = X`
+- **WHEN** push FCM de **nova mensagem de chat** para `conversation_id = X` é recebido (Service Worker web ou Capacitor Push)
+- **THEN** app MUST **suprimir** exibição de banner/toast/heads-up dessa notificação; MUST NOT duplicar alerta visual — a UI MUST atualizar via Realtime/histórico (Requirement 13).
+
+- **GIVEN** mesmo cenário com app em foreground mas usuário em **outra** tela (lista de chats, outro chat, home)
+- **WHEN** push de nova mensagem para `conversation_id = X` chega
+- **THEN** app MAY exibir notificação in-app (banner/toast) ou badge conforme UX do produto; MUST NOT suprimir.
+
+- **GIVEN** app em **background** ou fechado
+- **WHEN** push de mensagem de chat chega
+- **THEN** sistema operacional MUST exibir notificação push normalmente (sujeito a permissões do usuário).
+
+- **GIVEN** implementação da supressão
+- **WHEN** arquitetada
+- **THEN** MUST rastrear `activeConversationId` (ou rota equivalente) no estado da aplicação; handler de push MUST comparar `conversation_id` do payload com conversa ativa **antes** de chamar API de notificação local; lógica MUST residir em hook/camada `src/features/chats/` ou `src/lib/push.ts`, não no MMD.
+
+- **GIVEN** push de **marco de proposta** (não mensagem de chat)
+- **WHEN** usuário está na tela do mesmo chat
+- **THEN** supressão de banner MAY ser aplicada pela mesma regra se payload indicar `conversation_id` coincidente (SHOULD para consistência); Realtime MUST atualizar card da proposta.
+
+- **GIVEN** usuário na tela do chat mas **sem** foco na aba/app (web: tab em background)
+- **WHEN** definido comportamento
+- **THEN** SHOULD tratar como background para push de mensagem (exibir notificação) — documentar em implementação mobile-first.
 
 ---
 
 ## Requirement 13: Realtime, Reconciliation & Message Delivery States
 
-*User Story*: Como usuário em conversa ativa, eu quero ver mensagens quase instantaneamente e recuperar gaps após reconexão.
+*User Story*: Como usuário em conversa ativa, eu quero ver mensagens quase instantaneamente e recuperar gaps após reconexão, sem notificações push redundantes na mesma tela.
 
 ### Acceptance Criteria
+
+- **GIVEN** usuário na tela do chat com Realtime conectado
+- **WHEN** nova mensagem do outro participante chega
+- **THEN** timeline MUST atualizar via Realtime; push recebido simultaneamente MUST ser suprimido na UI conforme Requirement 12 (sem toast/banner duplicado).
 
 - **GIVEN** Supabase Realtime habilitado
 - **WHEN** cliente assina canal
@@ -1526,10 +1569,10 @@ on conflict (key) do update set
 |-------------|----------------|
 | §1 Estrutura geral 1–10 | 1, 2, 4, 11 |
 | §2 Service Request 11–20 | 2, 7, 23 |
-| §3 Chat 21–50 | 3, 4, 11, 13, 18, 34 |
+| §3 Chat 21–50 | 3, 4, 11, 12, 13, 18, 34 |
 | §4 Limites 51–60 | 4, 14, 33 |
 | §5 Descoberta 61–70 | 5 |
-| §6 Proposta 71–90 | 6, 16, 34 |
+| §6 Proposta 71–90 | 6, 12, 16, 34 |
 | §7 Aceite 91–105 | 7, 23 |
 | §8 Revisão 106–123 | 10, 34 |
 | §9 Expiração 124–134 | 9 |
@@ -1591,6 +1634,8 @@ Orquestração visual de próxima ação: **hook** `useChatActionBannerState` de
 |------------------|-------|
 | Upload multipart de imagens de mensagem/proposta | Edge fina → Storage + RPC insert |
 | Entrega MMD (push/e-mail) | `message-dispatcher-worker` (existente) |
+| Ingestão push de mensagem de chat (`bypass_limits`, push-only) | RPC pós-`send_message` → `message_dispatcher_ingest` |
+| Supressão de banner push com chat aberto | Cliente: `src/features/chats/hooks/`, `src/lib/push.ts`, SW/FCM handler |
 | Renderização de template de notificação | Edge (CPU) pós-payload do DB |
 | **Não** colocar: transições de estado, slot logic, aceite | — |
 

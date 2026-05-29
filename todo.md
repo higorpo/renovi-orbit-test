@@ -70,3 +70,4 @@ Coisas para terminar do fluxo atual de trabalho:
 Coisas para fazer next
 
 -verificar se devo manter colunas de status como text ou transformar em enum
+-ajustar para que mensagens do message dispatcher com bypass não contem no total de mensagens do dia
