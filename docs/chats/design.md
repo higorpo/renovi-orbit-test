@@ -1801,9 +1801,9 @@ update provider_proposals set status = 'REJECTED_AUTOMATICALLY' where service_re
 update chats set status = 'CLOSED', closure_type = 'PROPOSAL_ACCEPTED_ELSEWHERE', closed_at = now() where service_request_id = v_sr_id and status <> 'CLOSED';
 update service_request_negotiation_stats set active_chat_count = 0 where service_request_id = v_sr_id;
 insert into services (...) values (...) returning id into v_service_id;
-perform cns_record_domain_event('PROPOSAL_ACCEPTED', ...);
-perform cns_record_domain_event('CHATS_CLOSED_BULK', ...); -- payload.chat_ids
-perform cns_record_domain_event('SERVICE_REQUEST_COMPLETED', ...);
+perform record_domain_event('PROPOSAL_ACCEPTED', ...);
+perform record_domain_event('CHATS_CLOSED_BULK', ...); -- payload.chat_ids
+perform record_domain_event('SERVICE_REQUEST_COMPLETED', ...);
 perform idempotency_commit(...);
 ```
 
