@@ -1766,7 +1766,7 @@ src/features/negotiation-proposals/
 ## 13.10 Migration & cutover plan
 
 1. **Wave A:** Add tables/enums/helpers RLS read-only; backfill `chats` from historical data if any.
-2. **Wave B:** Deploy RPCs behind feature flag `VITE_ENABLE_CNS`.
+2. **Wave B:** Deploy mutation RPCs and helpers (no client feature flag; staging validation via pgTAP/integration tests).
 3. **Wave C:** Migrate `provider_proposals.status` values; update client budgets RPCs to use `PENDING` semantics.
 4. **Wave D:** Switch composer to `cns_submit_proposal`; deprecate direct `create_provider_proposal` from client.
 5. **Wave E:** Align SR status enum; add `services` table; enable accept cascade; **switch proposal SLA to 24h** (remove 48h cron/trigger).

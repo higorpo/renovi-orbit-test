@@ -7,7 +7,7 @@ CNS delivery SHALL follow a **database-first, RPC-centric, async-decoupled** imp
 ### Implementation order and architectural dependencies
 
 1. **Wave A (Foundation)** — Enums, core tables (`chats`, `chat_messages`, `service_request_negotiation_stats`, `domain_events`, audit, idempotency), RLS helper functions, read-only RLS policies, `platform_constants` seeds, Storage bucket scaffolding. **Unblocks:** schema validation, pgTAP fixtures, type generation.
-2. **Wave B (Transactional core)** — All `cns_*` mutation RPCs behind `VITE_ENABLE_CNS` feature flag; helper functions (`cns_chat_free_messaging_allowed`, rate limit, reciprocity probe, domain event recorder, idempotency cache). **Unblocks:** integration tests, shadow RPC invocation.
+2. **Wave B (Transactional core)** — All `cns_*` mutation RPCs and helper functions (`cns_chat_free_messaging_allowed`, rate limit, reciprocity probe, domain event recorder, idempotency cache). **Unblocks:** integration tests, RPC invocation from client once UI ships.
 3. **Wave C (Proposal evolution)** — `provider_proposals` column migration; status map `submitted`→`PENDING`; partial unique index one `PENDING` per conversation; legacy 48h SLA removal. **Unblocks:** composer migration.
 4. **Wave D (Composer cutover)** — `negotiation-proposals` feature; `cns_submit_proposal` from client; legacy `create_provider_proposal` delegates internally. **Unblocks:** proposal-gated messaging E2E.
 5. **Wave E (Accept cascade)** — `service_requests` status enum migration; `services` table; `cns_accept_proposal` + `cns_cancel_service_request`; 24h SLA via `chats.proposal_response_sla_hours`. **Unblocks:** contractual service creation (Req. 23).
@@ -19,10 +19,9 @@ CNS delivery SHALL follow a **database-first, RPC-centric, async-decoupled** imp
 
 ### Rollout strategy
 
-- **Feature flag:** `VITE_ENABLE_CNS` gates all new UI routes and RPC calls; default `false` in production until Wave F validation completes.
-- **Phased enablement:** internal dogfood → staging soak (72h) with cron jobs active → canary cohort (5% providers) → full rollout.
+- **Phased enablement:** internal dogfood → staging soak (72h) with cron jobs active → canary cohort (5% providers) → full rollout. No client feature flag gates CNS routes or RPC calls; waves sequence backend and UI delivery, not a toggle.
 - **Backward compatibility:** Legacy quote/proposal flows MUST remain functional until Wave D; SR status migration uses enum cast for local dev (production backfill deferred).
-- **Shadow execution:** In Wave B, MAY exercise RPC-only staging tests without client exposure.
+- **Wave B validation:** MAY exercise mutation RPCs in staging (pgTAP, integration tests) before Wave F UI is complete; client cutover follows route registration in Phase 13–14.
 
 ### Validation strategy
 
@@ -47,7 +46,7 @@ Squads MAY parallelize after Wave A: **DB** (Phases 1–3, 11), **Async** (Phase
 
 ### Recovery and rollback
 
-- **Rollback Wave F:** Disable feature flag; legacy proposal path remains if Wave D not cutover.
+- **Rollback Wave F:** Revert UI deploy or route registration if needed; legacy proposal path remains if Wave D not cutover.
 - **Rollback Wave E:** MUST NOT rollback SR `COMPLETED` with existing `services` FK — forward-fix only pre-production.
 - **Dead-letter outbox:** `cns_replay_domain_event` for operator recovery; MMD dedupe via stable `idempotency_key`.
 - **Orphan media:** `cns_janitor_orphan_media` daily `0 3 * * *`; client retry with same message `idempotency_key`.
@@ -4287,14 +4286,14 @@ R9-AC07, R9-AC08
 ## 100. [ ] Implement ChatsLayout desktop split view and lazy router routes
 
 Description:
-React Router lazy routes; feature flag VITE_ENABLE_CNS; ChatsLayout sidebar+panel §17.
+React Router lazy routes; ChatsLayout sidebar+panel §17.
 
 Responsibilities:
 - lazy() imports in router.tsx
 
 Implementation Details:
 - Normative reference: design.md — task 100: `Implement ChatsLayout desktop split view and lazy router routes`.
-- Scope: React Router lazy routes; feature flag VITE_ENABLE_CNS; ChatsLayout sidebar+panel §17.
+- Scope: React Router lazy routes; ChatsLayout sidebar+panel §17.
 - Execute: lazy() imports in router.tsx
 - Gate: automated tests in Phase 14 (pgTAP/Vitest/E2E) green before merge.
 
@@ -4305,7 +4304,7 @@ Dependencies:
 - Tasks 92-93, 84
 
 Runtime Guarantees:
-- Flag off hides routes
+- Routes registered when Phase 13–14 tasks merge; auth guard protects access
 
 Failure Handling:
 - N/A
@@ -4626,25 +4625,25 @@ Requirements covered:
 Acceptance Criteria covered:
 R15-AC01, R35-AC11, OAC-01
 
-## 108. [ ] Execute Wave B-F staged rollout with feature flag
+## 108. [ ] Execute Wave B-F staged rollout
 
 Description:
 Progressive enablement per §13.10; monitor job_runs and domain_events backlog between waves.
 
 Responsibilities:
-- VITE_ENABLE_CNS flag
+- Wave-by-wave deploy order (B→F) per §13.10
 - Canary cohort monitoring 72h
 
 Implementation Details:
-- Normative reference: design.md — task 108: `Execute Wave B-F staged rollout with feature flag`.
+- Normative reference: design.md — task 108: `Execute Wave B-F staged rollout`.
 - Scope: Progressive enablement per §13.10; monitor job_runs and domain_events backlog between waves.
-- Execute: VITE_ENABLE_CNS flag
+- Execute: Wave-by-wave deploy order (B→F) per §13.10
 - Execute: Canary cohort monitoring 72h
 - Gate: automated tests in Phase 14 (pgTAP/Vitest/E2E) green before merge.
 
 Deliverables:
 - Rollout runbook
-- Flag toggle config
+- Wave checklist and monitoring dashboards
 
 Dependencies:
 - Tasks 26-99
@@ -4906,7 +4905,7 @@ R4-AC05, R11-AC05, R20-AC01, R20-AC02, R20-AC03, R20-AC04, R20-AC07
 ## 114. [ ] AC traceability closure gate (pre–Wave F)
 
 Description:
-Governance task: verify every `R{n}-AC{ii}` in design §12.2 and OAC-01–18 maps to ≥1 implementation task and ≥1 verification artifact before enabling `VITE_ENABLE_CNS` in production.
+Governance task: verify every `R{n}-AC{ii}` in design §12.2 and OAC-01–18 maps to ≥1 implementation task and ≥1 verification artifact before Wave F production cutover.
 
 Responsibilities:
 - Run automated AC coverage script against `tasks.md` + this supplement
