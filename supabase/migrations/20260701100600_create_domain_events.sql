@@ -21,7 +21,7 @@ create table public.domain_events (
 );
 
 comment on table public.domain_events is
-  'CNS transactional outbox. Insert in same TX as mutation; cns_process_domain_events consumes at-least-once.';
+  'Platform transactional outbox. CNS mutations insert rows here; cns_process_domain_events claims CNS-scoped event types at-least-once; other consumers (e.g. matching) claim their own types.';
 
 comment on column public.domain_events.processed_at is
   'Set when consumer succeeds; null rows are eligible for checkout (SKIP LOCKED batches).';

@@ -37,7 +37,7 @@ CNS delivery SHALL follow a **database-first, RPC-centric, async-decoupled** imp
 | Accept cascade partial failure | Single RPC transaction; pgTAP proves atomicity (R7-AC07, R26-AC03) |
 | Slot counter drift | §3.3.1: counter is admission gate; temporary ACTIVE count MAY exceed limit on reactivation |
 | MMD outage | Outbox decoupling; G5 — committed state survives notification loss (R30-AC02) |
-| Legacy SLA conflict | Wave E drops 48h cron before enabling 24h `cns_expire_pending_proposals` |
+| Legacy SLA conflict | Wave E drops 48h cron before enabling 24h `expire_pending_proposals` |
 | RLS exposure | Wave A enables RLS on all new tables before production read paths |
 
 ### Incremental strategy
@@ -859,7 +859,7 @@ R15-AC07, R21-AC01, R21-AC04
 ## 20. [x] Remove legacy 48h proposal expiry cron and accept guard
 
 Description:
-Drop expire_stale_provider_proposals and 48h trigger; prepare for 24h cns_expire_pending_proposals per design Schema evolution.
+Drop expire_stale_provider_proposals and 48h trigger; prepare for 24h expire_pending_proposals per design Schema evolution.
 
 Responsibilities:
 - Document cutover timing with Wave E
@@ -1609,7 +1609,7 @@ R3-AC10, R17-AC04
 
 # Phase 4: Scheduling Engine
 
-## 38. [ ] Implement cns_evaluate_reciprocity_batch RPC
+## 38. [x] Implement cns_evaluate_reciprocity_batch RPC
 
 Description:
 Cron batch: SKIP LOCKED ACTIVE chats past window pre-filter; bilateral check; INACTIVE+slot-1+events per design §4.6.
@@ -1653,7 +1653,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R4-AC02, R4-AC03, R4-AC04, R25-AC01, R25-AC04, R25-AC06, R25-AC07, R14-AC04
 
-## 39. [ ] Implement cns_expire_pending_proposals RPC
+## 39. [x] Implement expire_pending_proposals RPC
 
 Description:
 Batch expire PENDING where submitted_at+SLA<now using platform_constant_int proposal_response_sla_hours §4.7.
@@ -1697,7 +1697,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R9-AC01, R9-AC03, R9-AC04, R9-AC05, R25-AC02, R25-AC03, R25-AC08
 
-## 40. [ ] Register pg_cron jobs for reciprocity and proposal expiry
+## 40. [x] Register pg_cron jobs for reciprocity and proposal expiry
 
 Description:
 Wire */10 cron invocations to batch RPCs with job_runs wrapper per design §6.1.
@@ -1714,7 +1714,7 @@ Implementation Details:
 - Gate: automated tests in Phase 14 (pgTAP/Vitest/E2E) green before merge.
 
 Deliverables:
-- cron.schedule migrations
+- `supabase/migrations/20260701103900_register_cron_batch_jobs.sql` (cron.schedule + `cron_chat_evaluate_reciprocity`, `cron_proposal_expire_pending`)
 - Wrapper functions inserting job_runs
 
 Dependencies:
@@ -1741,7 +1741,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R25-AC01, R25-AC02, R25-AC05, OAC-06
 
-## 41. [ ] Implement slot accounting integration tests in SQL
+## 41. [x] Implement slot accounting integration tests in SQL
 
 Description:
 pgTAP tests proving §3.3.1 matrix: new +1, reactivate 0, INACTIVE -1, accept reset 0.
@@ -1782,7 +1782,7 @@ R4-AC01, R4-AC06, R4-AC09, R33-AC07, R32-AC04
 
 # Phase 5: Eventing & Async Coordination
 
-## 42. [ ] Implement cns_mmd_ingest SECURITY DEFINER wrapper
+## 42. [x] Implement cns_mmd_ingest SECURITY DEFINER wrapper
 
 Description:
 Calls message_dispatcher.message_dispatcher_ingest with service_role; maps event types to templates/channels/bypass_limits per design §4.10.
@@ -1828,7 +1828,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R12-AC01, R12-AC02, R12-AC03, R12-AC04, R30-AC02, OAC-09
 
-## 43. [ ] Implement cns_enqueue_notifications domain event consumer
+## 43. [x] Implement cns_enqueue_notifications domain event consumer
 
 Description:
 Consumer handler routing domain_events to cns_mmd_ingest with template selection per event_type.
@@ -1871,7 +1871,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R12-AC01, R12-AC03, R12-AC06, R7-AC05
 
-## 44. [ ] Implement cns_emit_analytics domain event consumer
+## 44. [x] Implement cns_emit_analytics domain event consumer
 
 Description:
 Best-effort analytics fan-out; failure MUST NOT block processed_at for notification handler (R28-AC03).
@@ -1915,7 +1915,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R21-AC03, R28-AC03
 
-## 45. [ ] Implement cns_process_domain_events batch processor
+## 45. [x] Implement cns_process_domain_events batch processor
 
 Description:
 Checkout with SKIP LOCKED, locked_until 30s, invoke enqueue+analytics, set processed_at or retry/dead_letter §6.2.
@@ -1963,7 +1963,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R28-AC01, R28-AC02, R28-AC05, R28-AC06, OAC-09
 
-## 46. [ ] Implement proposal.expiring_soon reminder enqueue in consumer
+## 46. [x] Implement proposal.expiring_soon reminder enqueue in consumer
 
 Description:
 When PENDING and submitted_at+SLA-4h<now<SLA enqueue MMD template proposal.expiring_soon bypass_limits=false §4.12.

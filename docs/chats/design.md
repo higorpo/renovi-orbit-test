@@ -28,7 +28,7 @@ The repository **today** implements quote flow without CNS tables:
 | `provider_proposals.status` ∈ `{submitted, accepted, rejected, withdrawn}` | CNS proposal FSM (§2) | Extend CHECK; map `submitted`→`PENDING`; add columns `chat_id`, `revision_count`, `revision_reason`, `version`, `submitted_at`; deprecate direct PostgREST insert — **RPC-only** mutations |
 | No `chats` | New | Migration `YYYYMMDDHHMMSS_create_cns_chats.sql` |
 | No `services` (contracted) | New `public.services` | Distinct from `platform_services`; FK to `provider_proposals` |
-| 48h proposal SLA (legacy cron + trigger on `created_at`) | **24h** (`chats.proposal_response_sla_hours` / `PROPOSAL_CLIENT_RESPONSE_SLA_HOURS`) | Drop or replace `expire_stale_provider_proposals` and the 48h accept guard trigger; `cns_expire_pending_proposals` MUST use `submitted_at + interval '1 hour' * platform_constant_int('chats.proposal_response_sla_hours', 24)`; `accept_proposal` MUST reject expired proposals with the same SLA source |
+| 48h proposal SLA (legacy cron + trigger on `created_at`) | **24h** (`chats.proposal_response_sla_hours` / `PROPOSAL_CLIENT_RESPONSE_SLA_HOURS`) | Drop or replace `expire_stale_provider_proposals` and the 48h accept guard trigger; `expire_pending_proposals` MUST use `submitted_at + interval '1 hour' * platform_constant_int('chats.proposal_response_sla_hours', 24)`; `accept_proposal` MUST reject expired proposals with the same SLA source |
 | MMD (`message_dispatcher` schema) | Producer from CNS RPCs | Templates `chat.new_message`, `proposal.*` registered in migration |
 
 All **new** CNS RPCs SHALL be prefixed `cns_*` until cutover; legacy `create_provider_proposal` SHALL delegate to `submit_proposal` internally.
@@ -94,7 +94,7 @@ flowchart TB
 | **PostgREST** | No | Transport + RLS enforcement on reads | Own business rules |
 | **Edge `chat-upload-media`** | No | Multipart → Storage; magic-byte validation; call `cns_attach_message_media` | Hold conversation state |
 | **Edge `message-dispatcher-worker`** | No | Dequeue MMD, render templates, FCM/Resend | Transition CNS FSM |
-| **pg_cron jobs** | No (scheduler) | Invoke `cns_evaluate_reciprocity_batch`, `cns_expire_pending_proposals`, `cns_domain_events_consume`, janitors | Long-running loops |
+| **pg_cron jobs** | No (scheduler) | Invoke `cns_evaluate_reciprocity_batch`, `expire_pending_proposals`, `cns_domain_events_consume`, janitors | Long-running loops |
 | **React feature `chats`** | Client cache only | UI, Realtime subscribe, optimistic send, push suppression | Call Supabase from components |
 | **React feature `negotiation-proposals`** | Client cache only | Composer, accept/reject/revision modals | Duplicate proposal state |
 
@@ -229,6 +229,8 @@ erDiagram
     text status "PENDING_PAYMENT|..."
   }
 ```
+
+> **Diagrama completo** (tabelas de suporte, RPCs, triggers, cron e pipeline assíncrono): [`schema-runtime-diagram.md`](./schema-runtime-diagram.md)
 
 ## 2.2 Ownership semantics
 
@@ -804,7 +806,7 @@ sequenceDiagram
 | Client request revision | `request_proposal_revision` | Enabled while `REVISION_REQUESTED` |
 | Provider new proposal after revision | `submit_proposal` | Disabled (`PENDING`) |
 | Provider decline revision | `decline_revision_request` | Disabled (stay `PENDING`) |
-| SLA expiry (cron) | `cns_expire_pending_proposals` | Enabled if chat not `CLOSED` |
+| SLA expiry (cron) | `expire_pending_proposals` | Enabled if chat not `CLOSED` |
 
 **Revision limit (Req. 10):** `revision_count >= 2` → `409 REVISION_LIMIT_EXCEEDED`.
 
@@ -832,7 +834,7 @@ sequenceDiagram
 
 ## 4.7 Proposal expiration job (Req. 9, 25)
 
-`cns_expire_pending_proposals`: `UPDATE provider_proposals SET status = 'EXPIRED', expired_at = now() WHERE status = 'PENDING' AND submitted_at + sla < now()`.
+`expire_pending_proposals`: `UPDATE provider_proposals SET status = 'EXPIRED', expired_at = now() WHERE status = 'PENDING' AND submitted_at + sla < now()`.
 
 Post-update trigger or in-RPC: if conversation has no other `PENDING`, free messaging enabled; optionally transition conversation to `INACTIVE` if no messages in reciprocity window.
 
@@ -999,8 +1001,8 @@ alter publication supabase_realtime add table public.provider_proposals;
 
 | Job | Cron | RPC | Batch | Lease |
 |-----|------|-----|-------|-------|
-| Reciprocity | `*/10 * * * *` | `cns_evaluate_reciprocity_batch` | 500 | row `SKIP LOCKED` |
-| Proposal expiry | `*/10 * * * *` | `cns_expire_pending_proposals` | 500 | conditional UPDATE |
+| `chat_evaluate_reciprocity` | `*/10 * * * *` | `cns_evaluate_reciprocity_batch` | 500 | row `SKIP LOCKED` |
+| `proposal_expire_pending` | `*/10 * * * *` | `expire_pending_proposals` | 500 | conditional UPDATE |
 | Domain events | `* * * * *` (1 min) | `cns_process_domain_events` | 100 | `locked_until` 30s |
 | MMD (existing) | per migration | `message_dispatcher_checkout` | platform-defined | 30s |
 | Orphan media | `0 3 * * *` | `cns_janitor_orphan_media` | n/a | n/a |
@@ -1019,7 +1021,7 @@ stateDiagram-v2
   note right of DeadLetter: dead_letter=true<br/>processed_at still null
 ```
 
-**Checkout SQL pattern:**
+**Checkout SQL pattern** (`cns_process_domain_events` claims CNS-scoped types only; `SLOT_RELEASED` and `NEGOTIATION_TERMINATED` are reserved for a future matching consumer per R28-AC04):
 
 ```sql
 with claimed as (
@@ -1027,6 +1029,12 @@ with claimed as (
   where processed_at is null
     and dead_letter = false
     and (locked_until is null or locked_until < now())
+    and event_type = any(array[
+      'CHAT_MESSAGE_SENT', 'PROPOSAL_SUBMITTED', 'PROPOSAL_ACCEPTED',
+      'PROPOSAL_REJECTED', 'PROPOSAL_EXPIRED', 'PROPOSAL_REVISION_REQUESTED',
+      'CONVERSATION_INACTIVATED', 'CONVERSATION_CLOSED', 'CHATS_CLOSED_BULK',
+      'SERVICE_REQUEST_COMPLETED', 'SERVICE_REQUEST_CANCELLED'
+    ])
   order by created_at
   for update skip locked
   limit p_batch
@@ -1291,7 +1299,7 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | **6** Proposal creation | Validate pricing; `PENDING` disables free chat; timeline `proposal` message; no in-place edit | §4.3, §3.6 | `submit_proposal` + partial unique index |
 | **7** Accept cascade | Atomic: ACCEPTED, SR COMPLETED, other chats CLOSED, proposals REJECTED_AUTOMATICALLY, `services` insert; concurrent → 409 | §4.4 | Single RPC transaction + idempotency |
 | **8** Rejection | `REJECTED`; free messaging re-enabled; optional manual close | §4.5 `reject_proposal` | Status transition + `cns_chat_free_messaging_allowed` |
-| **9** Expiration | 24h → `EXPIRED`; accept fails; free chat restored; optional INACTIVE; reminder notification SHOULD | §4.7, §6.1 cron | `cns_expire_pending_proposals` + `platform_constants` SLA |
+| **9** Expiration | 24h → `EXPIRED`; accept fails; free chat restored; optional INACTIVE; reminder notification SHOULD | §4.7, §6.1 cron | `expire_pending_proposals` + `platform_constants` SLA |
 | **10** Revisions (max 2) | `REVISION_REQUESTED` + reason enum; free chat on; new proposal → `PENDING`/`REVISED`; limit at 2 | §4.5, §3.1 `proposal_revision_reason` | `revision_count` CHECK + RPC guards |
 | **11** Manual close | Confirm → `CLOSED` irreversible; slot freed; new provider chat if slot available | §4.8 | `cns_close_conversation` |
 | **12** MMD notifications | Chat → push only + `bypass_limits`; proposal → push/email + limits; dedupe key; foreground suppression | §4.10–4.11, §5.5 | `domain_events` → `cns_mmd_ingest`; client `usePushNotificationSuppression` |

@@ -1,5 +1,5 @@
 -- CNS Wave A — task 20: remove legacy 48h proposal expiry path (design Schema evolution).
--- Cutover: disable legacy cron/triggers here; enable cns_expire_pending_proposals in Wave E (task 46).
+-- Cutover: disable legacy cron/triggers here; enable expire_pending_proposals in Wave E (task 46).
 -- Avoid running legacy and 24h expiry jobs concurrently in the same environment.
 
 do $drop$
@@ -33,6 +33,6 @@ drop function if exists public.expire_stale_provider_proposals();
 do $obs$
 begin
   raise notice 'Legacy 48h proposal expiry removed: triggers enforce/sync client_response_deadline, function expire_stale_provider_proposals';
-  raise notice 'Next: Wave E cns_expire_pending_proposals uses submitted_at + platform_constant_int(chats.proposal_response_sla_hours, 24)';
+  raise notice 'Next: Wave E expire_pending_proposals uses submitted_at + platform_constant_int(chats.proposal_response_sla_hours, 24)';
 end;
 $obs$;

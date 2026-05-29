@@ -49,7 +49,7 @@ comment on column public.provider_proposals.submitted_at is
   'When proposal entered PENDING; SLA anchor for client response (24h default).';
 
 comment on column public.provider_proposals.expired_at is
-  'When a PENDING proposal was expired by cns_expire_pending_proposals.';
+  'When a PENDING proposal was expired by expire_pending_proposals.';
 
 comment on column public.provider_proposals.selected_slot is
   'Client slot choice at accept; one object from proposal_suggested_slots.';
