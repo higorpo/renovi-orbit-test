@@ -951,7 +951,7 @@ R15-AC01, R15-AC02
 
 # Phase 3: Core Transactional Orchestration
 
-## 23. [ ] Implement cns_record_domain_event helper function
+## 23. [x] Implement cns_record_domain_event helper function
 
 Description:
 SECURITY DEFINER helper inserting domain_events rows with validated event_type and payload shape.
@@ -992,7 +992,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R28-AC01, R28-AC06
 
-## 24. [ ] Implement idempotency_begin and idempotency_commit helpers
+## 24. [x] Implement idempotency_begin and idempotency_commit helpers
 
 Description:
 Internal helpers managing rpc_idempotency_records lookup/insert for mutation RPCs (cross-feature).
@@ -1033,6 +1033,8 @@ Acceptance Criteria covered:
 R14-AC01, R14-AC02, R27-AC03
 
 ## 25. [ ] Implement cns_chat_free_messaging_allowed function
+
+**Blocker:** Wave B loop stopped 2026-05-29 — requires **task 14** (`provider_proposals` CNS columns + `PENDING` status) and **task 17** (`is_chat_participant`); both still `[ ]`. Cannot implement authoritative gate until schema and participant helper exist.
 
 Description:
 Authoritative Req. 34 gate: false when PENDING proposal exists; true when REVISION_REQUESTED and no PENDING per design §4.2.1.

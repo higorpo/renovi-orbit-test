@@ -76,3 +76,63 @@ Coisas para fazer next
 -verificar se precisaria usar cns_idempotency_records em outros lugares (talvez vou precisar criar antes)
   - adicionar nas regras que temos esse mecanismo para ser usado para que no futuro outras features possam usar quando necessário
 -verificar se no sistema atual tenho coisas para usar job_runs (talvez vou precisar criar antes)
+
+
+
+
+
+
+ATUALIZAR:
+Essas são as **funções/RPCs** que ainda comparam `service_requests.status` com os valores legados em texto (`'open'`, `'in_progress'`, `'closed'`, `'cancelled'`). Com o enum novo (`OPEN`, `COMPLETED`, `CANCELLED`), essas comparações **param de bater** — em geral retornam vazio ou lançam erro.
+
+### Matching e propostas (provider)
+
+| RPC | Arquivo | Comparação legada |
+|-----|---------|-------------------|
+| `public.match_provider_jobs` | `20260318200001_match_provider_jobs_rpc.sql` | `sr.status = 'open'` |
+| `public.get_provider_proposal_job_detail` | `20260323120000_get_provider_proposal_job_detail.sql` | `sr.status = 'open'` |
+| `public.create_provider_proposal` | `20260320110000_harden_provider_proposal_pricing_signature.sql` | `v_service_request_status <> 'open'` (recebe `'OPEN'` do enum e sempre falha) |
+
+### Perguntas (provider ↔ client)
+
+| RPC | Arquivo | Comparação legada |
+|-----|---------|-------------------|
+| `public.can_provider_ask_question` | `20260318200002_provider_service_request_question_eligibility.sql` | `sr.status = 'open'` |
+| `public.create_provider_service_request_question` | mesmo arquivo | indireto — chama `can_provider_ask_question` |
+| `public.list_provider_service_request_questions` | `20260226100300_create_service_requests.sql` | `sr.status = 'open'` |
+| `public.list_provider_own_questions` | `20260322000000_create_provider_budgets_rpcs.sql` | `'open'`, `'in_progress'`, `'closed'`, `'cancelled'` (filtro `p_question_status`) |
+
+### Orçamentos — tela do provider
+
+| RPC | Arquivo | Comparação legada |
+|-----|---------|-------------------|
+| `public.list_provider_sent_budgets` | `20260322000000_create_provider_budgets_rpcs.sql` | **não filtra** por status legado; só **retorna** `sr.status` no JSON (valor passa a ser `'OPEN'`, etc.) |
+
+### Orçamentos — tela do client
+
+| RPC | Arquivo | Comparação legada |
+|-----|---------|-------------------|
+| `public.list_client_received_budgets` | `20260323090000_create_client_budgets_rpcs.sql` | `sr.status in ('open', 'in_progress')` |
+| `public.list_client_budget_questions` | mesmo arquivo | `'open'`, `'in_progress'` (filtros, counts e `g.service_request_status = 'open'`) |
+| `public.reject_client_budget_proposal` | mesmo arquivo | `sr.status in ('open', 'in_progress')` |
+
+### Sem comparação legada (só leem/devolvem status)
+
+Estas **não quebram** por comparação, mas o JSON passa a expor enum (`OPEN`, etc.) em vez de texto minúsculo:
+
+- `public.get_client_budget_service_request_detail`
+- `public.respond_client_budget_question`
+
+---
+
+**Resumo:** **10 RPCs** precisam de atualização explícita; **1** (`list_provider_sent_budgets`) só muda o formato do valor retornado; **2** só propagam o enum no response.
+
+**Mapeamento sugerido** (conforme a migration CNS):
+
+| Legado | Novo enum |
+|--------|-----------|
+| `'open'`, `'in_progress'`, `'closed'` | `'OPEN'` |
+| `'cancelled'` | `'CANCELLED'` |
+| aceite de proposta | `'COMPLETED'` |
+
+A policy de storage `"Clients providers and admins can read question response images"` já foi corrigida na migration `20260701101200`. A definição original em `20260323090000_create_client_budgets_rpcs.sql` ainda tem `'open'`, mas é sobrescrita na migration CNS.

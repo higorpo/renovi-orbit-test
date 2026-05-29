@@ -401,7 +401,7 @@ values (
     "descricao": "Preciso instalar 5 pontos de tomada novos na sala e cozinha. A casa é antiga e não tem aterramento."
   }'::jsonb,
   '2.0',
-  'open',
+  'OPEN',
   'medium'
 )
 on conflict (id) do nothing;

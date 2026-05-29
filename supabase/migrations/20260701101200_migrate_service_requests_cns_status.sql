@@ -21,30 +21,81 @@ alter table public.service_requests
 alter table public.service_requests
   alter column status drop default;
 
-alter table public.service_requests
-  alter column status type public.service_request_status
-  using (
-    case lower(status::text)
-      when 'open' then 'OPEN'::public.service_request_status
-      when 'in_progress' then 'OPEN'::public.service_request_status
-      when 'cancelled' then 'CANCELLED'::public.service_request_status
-      when 'closed' then 'OPEN'::public.service_request_status
-      else 'OPEN'::public.service_request_status
-    end
-  );
+drop trigger if exists service_requests_reject_submitted_proposals_on_cancel on public.service_requests;
+
+drop policy if exists "Clients providers and admins can read question response images" on storage.objects;
+
+create or replace function public._migrate_legacy_service_request_status(p_status text)
+returns public.service_request_status
+language sql
+immutable
+as $$
+  select case lower(btrim(p_status))
+    when 'open' then 'OPEN'::public.service_request_status
+    when 'in_progress' then 'OPEN'::public.service_request_status
+    when 'cancelled' then 'CANCELLED'::public.service_request_status
+    when 'closed' then 'OPEN'::public.service_request_status
+    else 'OPEN'::public.service_request_status
+  end;
+$$;
+
+-- Rename avoids PG ambiguity between column "status" and type service_request_status in USING.
+alter table public.service_requests rename column status to legacy_status;
 
 alter table public.service_requests
-  alter column status set default 'OPEN'::public.service_request_status;
+  add column status public.service_request_status not null default 'OPEN'::public.service_request_status;
+
+update public.service_requests sr
+set status = public._migrate_legacy_service_request_status(sr.legacy_status);
+
+alter table public.service_requests drop column legacy_status;
+
+drop function public._migrate_legacy_service_request_status(text);
 
 comment on column public.service_requests.status is
   'SR lifecycle: OPEN, COMPLETED (accept), CANCELLED.';
 
 -- Partial index for open jobs by geohash; recreate for enum OPEN.
 drop index if exists public.idx_service_requests_status_geohash;
+drop index if exists public.service_requests_status_idx;
+
+create index service_requests_status_idx on public.service_requests (status);
 
 create index idx_service_requests_status_geohash
   on public.service_requests (status, geohash)
   where geohash is not null and status = 'OPEN'::public.service_request_status;
+
+create policy "Clients providers and admins can read question response images"
+  on storage.objects for select
+  using (
+    bucket_id = 'client-question-responses'
+    and (
+      (storage.foldername(name))[2] = (select auth.uid())::text
+      or exists (
+        select 1
+        from public.provider_service_request_questions q
+        join public.service_requests sr on sr.id = q.service_request_id
+        where q.id::text = (storage.foldername(name))[5]
+          and sr.id::text = (storage.foldername(name))[4]
+          and q.provider_id = (select auth.uid())
+      )
+      or exists (
+        select 1
+        from public.provider_service_request_questions q
+        join public.service_requests sr on sr.id = q.service_request_id
+        join public.profiles p on p.id = (select auth.uid())
+        where q.id::text = (storage.foldername(name))[5]
+          and sr.id::text = (storage.foldername(name))[4]
+          and sr.status = 'OPEN'::public.service_request_status
+          and q.client_response is not null
+          and p.role = 'provider'
+      )
+      or exists (
+        select 1 from public.profiles p
+        where p.id = (select auth.uid()) and p.role = 'admin'
+      )
+    )
+  );
 
 create or replace function public.reject_submitted_proposals_on_service_request_cancel()
 returns trigger
@@ -68,3 +119,7 @@ $$;
 
 comment on function public.reject_submitted_proposals_on_service_request_cancel() is
   'Rejects submitted provider proposals when service_requests.status becomes CANCELLED.';
+
+create trigger service_requests_reject_submitted_proposals_on_cancel
+  after update of status on public.service_requests
+  for each row execute function public.reject_submitted_proposals_on_service_request_cancel();
