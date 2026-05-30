@@ -19,6 +19,7 @@ function extractFiles(formData: FormData): File[] {
 export function parseFormData(formData: FormData): ParseFormDataResult {
   const chatId = formData.get("chat_id")?.toString().trim() ?? "";
   const uploadSessionId = formData.get("upload_session_id")?.toString().trim() ?? "";
+  const idempotencyKey = formData.get("idempotency_key")?.toString().trim() ?? "";
 
   if (!chatId) {
     return { ok: false, error: "chat_id is required.", status: 400 };
@@ -32,5 +33,5 @@ export function parseFormData(formData: FormData): ParseFormDataResult {
     return { ok: false, error: "At least one image file is required.", status: 400 };
   }
 
-  return { ok: true, chatId, uploadSessionId, files };
+  return { ok: true, chatId, uploadSessionId, idempotencyKey: idempotencyKey || undefined, files };
 }

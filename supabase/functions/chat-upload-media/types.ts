@@ -16,6 +16,7 @@ export type ParseFormDataResult =
       ok: true;
       chatId: string;
       uploadSessionId: string;
+      idempotencyKey?: string;
       files: File[];
     }
   | { ok: false; error: string; status: number };

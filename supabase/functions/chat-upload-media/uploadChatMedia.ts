@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createLogger } from "../_shared/logger.ts";
 import { validateMagicBytes } from "../create-request-quote-order/fileSignatures.ts";
 import {
   ALLOWED_PHOTO_TYPES,
@@ -8,6 +9,8 @@ import {
   MAX_IMAGES,
 } from "./constants.ts";
 
+const logger = createLogger("chat-upload-media.upload");
+
 export type UploadChatMediaResult =
   | { ok: true; paths: string[] }
   | { ok: false; error: string; status: number };
@@ -16,6 +19,7 @@ export async function uploadChatMedia(
   supabase: SupabaseClient,
   storagePathPrefix: string,
   files: File[],
+  logContext: Record<string, string | undefined> = {},
 ): Promise<UploadChatMediaResult> {
   if (files.length > MAX_IMAGES) {
     return {
@@ -64,7 +68,12 @@ export async function uploadChatMedia(
       .upload(path, file, { cacheControl: "3600", upsert: false });
 
     if (error) {
-      console.error("[chat-upload-media] storage upload failed", path, error.message);
+      logger.error("storage_upload_failed", {
+        ...logContext,
+        event_type: "storage_upload_failed",
+        storage_path: path,
+        error: error.message,
+      });
       return {
         ok: false,
         error: "Failed to upload images. Please try again.",

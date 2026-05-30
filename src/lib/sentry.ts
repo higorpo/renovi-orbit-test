@@ -5,12 +5,39 @@
 
 import * as Sentry from "@sentry/react";
 import { supabase } from "./supabase/client";
+import { scrubSentryBreadcrumbData, scrubSentryEvent } from "./sentryPiiScrubbing";
+import {
+  isChatSentryFeature,
+  scrubChatBreadcrumbData,
+  scrubChatSentryEvent,
+} from "@/features/chats/utils/sentryChatScrubbing";
 
 const DSN = import.meta.env.VITE_SENTRY_DSN as string | undefined;
 const ENV = import.meta.env.MODE;
 const IS_PROD = import.meta.env.PROD;
 
 let initialized = false;
+
+function scrubErrorEvent(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
+  let next = scrubSentryEvent(event);
+  if (isChatSentryFeature(event.tags as Record<string, unknown> | undefined)) {
+    next = scrubChatSentryEvent(next);
+  }
+  return next;
+}
+
+function scrubBreadcrumbData(
+  data: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+  if (!data) return data;
+
+  let next = scrubSentryBreadcrumbData(data) ?? data;
+  const scopeTags = Sentry.getCurrentScope().getScopeData().tags as Record<string, unknown>;
+  if (isChatSentryFeature(scopeTags)) {
+    next = scrubChatBreadcrumbData(next) ?? next;
+  }
+  return next;
+}
 
 export function isSentryEnabled(): boolean {
   return Boolean(DSN && DSN.length > 0);
@@ -47,7 +74,14 @@ export function initSentry(): void {
           return null;
         }
       }
-      return event;
+      return scrubErrorEvent(event);
+    },
+    beforeBreadcrumb(breadcrumb) {
+      if (!breadcrumb.data) return breadcrumb;
+      return {
+        ...breadcrumb,
+        data: scrubBreadcrumbData(breadcrumb.data as Record<string, unknown>),
+      };
     },
     ignoreErrors: [
       "ResizeObserver loop",
@@ -110,7 +144,7 @@ export function addBreadcrumb(breadcrumb: {
     category: breadcrumb.category ?? "app",
     message: breadcrumb.message,
     level: breadcrumb.level ?? "info",
-    data: breadcrumb.data,
+    data: scrubBreadcrumbData(breadcrumb.data),
   });
 }
 

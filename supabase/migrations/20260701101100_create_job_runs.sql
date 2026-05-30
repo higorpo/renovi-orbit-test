@@ -14,7 +14,7 @@ create table public.job_runs (
 );
 
 comment on table public.job_runs is
-  'Append-mostly cron metrics for CNS jobs (reciprocity, expiry, domain_events, janitor).';
+  'Append-mostly cron/batch telemetry for platform jobs (any feature may record runs by job_name).';
 
 comment on column public.job_runs.finished_at is
   'Set when job completes; NULL beyond expected duration may alert ops (stale run).';

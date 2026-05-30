@@ -2490,7 +2490,7 @@ R6-AC01, R6-AC07
 
 # Phase 8: Read APIs & Query RPCs
 
-## 58. [ ] Implement list_conversations RPC
+## 58. [x] Implement list_conversations RPC
 
 Description:
 Paginated inbox last_interaction_at DESC page 20 max 100; lateral last message preview; unread flag §5.1 §9.2.
@@ -2534,7 +2534,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R17-AC01, R17-AC02, R17-AC03, R17-AC04, R22-AC01, R22-AC04
 
-## 59. [ ] Implement list_chat_messages RPC
+## 59. [x] Implement list_chat_messages RPC
 
 Description:
 Keyset pagination (created_at, id) DESC query ASC display; cursor params §3.4.
@@ -2577,7 +2577,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R3-AC08, R13-AC04, R22-AC01, R22-AC03
 
-## 60. [ ] Implement get_conversation_detail RPC
+## 60. [x] Implement get_conversation_detail RPC
 
 Description:
 Header panel: masked address, category, SR photos §4.15.
@@ -2621,7 +2621,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R5-AC02, R18-AC02
 
-## 61. [ ] Implement get_proposal_for_timeline RPC
+## 61. [x] Implement get_proposal_for_timeline RPC
 
 Description:
 Hydrate DynamicProposalCard from linked_entity_id; full proposal projection §5.1.
@@ -2665,7 +2665,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R16-AC01, R16-AC07, R22-AC05
 
-## 62. [ ] Implement list_proposal_versions RPC
+## 62. [x] Implement list_proposal_versions RPC
 
 Description:
 All provider_proposals rows for conversation ordered by version §4.14.
@@ -2709,7 +2709,7 @@ R10-AC11, R10-AC12, R5-AC05
 
 # Phase 9: Observability & Auditability
 
-## 63. [ ] Implement audit replay support query for operations
+## 63. [x] Implement audit replay support query for operations
 
 Description:
 Support query joining chat_audit and proposal_audit by service_request_id ordered created_at §10.4.
@@ -2752,7 +2752,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R21-AC04, R28-AC06
 
-## 64. [ ] Instrument cron wrappers with job_runs logging
+## 64. [x] Instrument cron wrappers with job_runs logging
 
 Description:
 All pg_cron entrypoints insert/update job_runs with counts and duration §3.15.
@@ -2796,7 +2796,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R25-AC05, R21-AC05
 
-## 65. [ ] Configure Edge structured logging for chat-upload-media
+## 65. [x] Configure Edge structured logging for chat-upload-media
 
 Description:
 Fields: correlation_id, conversation_id, upload_session_id, idempotency_key §10.1.
@@ -2840,7 +2840,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R21-AC02, R26-AC06
 
-## 66. [ ] Configure frontend Sentry scrubbing for chats feature
+## 66. [x] Configure frontend Sentry scrubbing for chats feature
 
 Description:
 Tags feature=chats, chat_id, service_request_id; scrub payload.text §10.2.
@@ -2885,7 +2885,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R21-AC02, R31-AC05
 
-## 67. [ ] Register client analytics events schema v1
+## 67. [x] Register client analytics events schema v1
 
 Description:
 Post-confirm events: negotiation_message_sent, proposal_submitted, proposal_accepted, etc. §10.5.
@@ -2929,7 +2929,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R21-AC03
 
-## 68. [ ] Document operational metrics and alert thresholds
+## 68. [x] Document operational metrics and alert thresholds
 
 Description:
 Runbook for cns_* metrics §10.3: backlog, expiry lag, slot rejection, send duration.

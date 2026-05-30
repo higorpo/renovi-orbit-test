@@ -78,6 +78,9 @@ Coisas para fazer next
 -verificar se no sistema atual tenho coisas para usar job_runs (talvez vou precisar criar antes)
 -depois que migrar todo o sistema e tiver tudo funcionando, podemos excluir /home/higor/Área de Trabalho/Renovi/orbit/supabase/migrations/20260701105400_delegate_create_provider_proposal_to_submit.sql e as rpcs relacionadas ao modelo antigo
 -talvez não precisamos da tabela exclusiva de rate limit do chat e podemos usar a genérica
+-verificar se usos anteriores a /home/higor/Área de Trabalho/Renovi/orbit/supabase/migrations/20260701106100_create_job_run_helpers.sql não poderiam se beneficiar desses helpers
+- /home/higor/Área de Trabalho/Renovi/orbit/src/lib/analytics/pushChatAnalyticsEvent.ts provavelmente é desnecessário
+- /home/higor/Área de Trabalho/Renovi/orbit/src/lib/analytics/events.ts é exclusivo do chat, talvez faça mais sentido mover o arquivo depois
 
 
 
