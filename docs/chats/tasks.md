@@ -50,7 +50,7 @@ Squads MAY parallelize after Wave A: **DB** (Phases 1–3, 11), **Async** (Phase
 - **Rollback Wave E:** MUST NOT rollback SR `COMPLETED` with existing `services` FK — forward-fix only pre-production.
 - **Dead-letter outbox:** `cns_replay_domain_event` for operator recovery; MMD dedupe via stable `idempotency_key`.
 - **Orphan media:** `cns_janitor_orphan_media` daily `0 3 * * *`; client retry with same message `idempotency_key`.
-- **Stale leases:** `cns_release_stale_leases` each minute before domain event checkout.
+- **Stale leases:** `domain_events_release_stale_leases` each minute before domain event checkout.
 
 ### Observability and security gates (release blockers)
 
@@ -717,7 +717,7 @@ Runtime Guarantees:
 - Lease 30s on checkout (R27-AC01) — satisfied via `domain_events` consumer (task 45/47), not this table
 
 Failure Handling:
-- Janitor requeues expired leases — `cns_release_stale_leases` on `domain_events` (task 47)
+- Janitor requeues expired leases — `domain_events_release_stale_leases` on `domain_events` (task 47)
 
 Observability:
 - Queue depth gauge if enabled — N/A without queue
@@ -2008,7 +2008,7 @@ R9-AC07, R12-AC03
 
 # Phase 6: Distributed Workers & Janitors
 
-## 47. [ ] Implement cns_release_stale_leases RPC
+## 47. [x] Implement domain_events_release_stale_leases RPC
 
 Description:
 Clear locked_until on domain_events (and optional maintenance queue) where lease expired; run before each checkout §6.4.
@@ -2018,7 +2018,7 @@ Responsibilities:
 - Invoked at start of cns_process_domain_events
 
 Implementation Details:
-- Normative reference: design.md — task 47: `Implement cns_release_stale_leases RPC`.
+- Normative reference: design.md — task 47: `Implement domain_events_release_stale_leases RPC`.
 - Scope: Clear locked_until on domain_events where lease expired; run before each checkout §6.4.
 - Execute: Also reset orphaned locked_by
 - Execute: Invoked at start of cns_process_domain_events
@@ -2051,7 +2051,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R27-AC02, OAC-07
 
-## 48. [ ] Register pg_cron domain events processor job
+## 48. [x] Register pg_cron domain events processor job
 
 Description:
 Schedule * * * * * invoking cns_process_domain_events with job_runs telemetry §6.1.
@@ -2095,7 +2095,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R28-AC02, OAC-06
 
-## 49. [ ] Implement cns_janitor_orphan_media RPC
+## 49. [x] Implement cns_janitor_orphan_media RPC
 
 Description:
 Delete Storage objects for chat_media_upload_sessions pending with expires_at<now()-24h; mark expired §5.2.
@@ -2140,7 +2140,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R26-AC02, R3-AC06
 
-## 50. [ ] Register pg_cron orphan media janitor
+## 50. [x] Register pg_cron orphan media janitor
 
 Description:
 Cron 0 3 * * * calling cns_janitor_orphan_media.
@@ -2182,7 +2182,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R26-AC02
 
-## 51. [ ] Implement cns_reconcile_pending_deliveries RPC
+## 51. [x] Implement cns_reconcile_pending_deliveries RPC
 
 Description:
 Optional batch 200: mark stale delivery_status pending messages failed after 5min §8.1.
@@ -2226,19 +2226,18 @@ Requirements covered:
 Acceptance Criteria covered:
 R26-AC01, R13-AC03
 
-## 52. [ ] Register pg_cron delivery reconcile job
+## 52. [x] Register pg_cron delivery reconcile job
 
 Description:
 Optional */5 cron for cns_reconcile_pending_deliveries.
 
 Responsibilities:
-- Feature flag ENABLE_DELIVERY_RECONCILE
+- Register */5 pg_cron for cns_reconcile_pending_deliveries
 
 Implementation Details:
 - Normative reference: design.md — task 52: `Register pg_cron delivery reconcile job`.
-- Scope: Optional */5 cron for cns_reconcile_pending_deliveries.
+- Scope: */5 cron for cns_reconcile_pending_deliveries (always on).
 - Execute: Implement per design.md; see Description for normative section reference
-- Execute: Feature flag ENABLE_DELIVERY_RECONCILE
 - Gate: automated tests in Phase 14 (pgTAP/Vitest/E2E) green before merge.
 
 Deliverables:
@@ -2251,7 +2250,7 @@ Runtime Guarantees:
 - Periodic reconciliation
 
 Failure Handling:
-- Skip if disabled
+- Per-row reconcile errors surface in cns_reconcile_pending_deliveries metrics
 
 Observability:
 - job_runs
@@ -2270,7 +2269,7 @@ R26-AC01
 
 # Phase 7: Edge Functions & Media APIs
 
-## 53. [ ] Implement cns_validate_upload_session RPC
+## 53. [x] Implement cns_validate_upload_session RPC
 
 Description:
 Validate upload session belongs to auth.uid participant; session pending and not expired §5.2.
@@ -2311,7 +2310,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R3-AC06, R31-AC01
 
-## 54. [ ] Implement chat-upload-media Edge Function
+## 54. [x] Implement chat-upload-media Edge Function
 
 Description:
 Multipart upload: JWT, validate session RPC, magic-byte check, Storage put, return paths §5.2.
@@ -2358,7 +2357,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R3-AC06, R26-AC06, R30-AC04, OAC-17
 
-## 55. [ ] Implement cns_attach_message_media RPC (if used)
+## 55. [x] Implement cns_attach_message_media RPC (if used)
 
 Description:
 Optional RPC to bind uploaded paths to pending message — design references attach path; MAY be folded into cns_send_message payload only.
@@ -2401,7 +2400,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R3-AC06, R26-AC02
 
-## 56. [ ] Implement cns_refresh_media_signed_urls RPC
+## 56. [x] Implement cns_refresh_media_signed_urls RPC
 
 Description:
 Re-sign expired Storage URLs for participant message payloads §5.1.
@@ -2445,7 +2444,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R31-AC06
 
-## 57. [ ] Delegate legacy create_provider_proposal to submit_proposal
+## 57. [x] Delegate legacy create_provider_proposal to submit_proposal
 
 Description:
 Wave D cutover: legacy RPC wraps submit_proposal internally per design §Schema evolution.

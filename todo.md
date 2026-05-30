@@ -76,7 +76,8 @@ Coisas para fazer next
 -verificar se precisaria usar cns_idempotency_records em outros lugares (talvez vou precisar criar antes)
   - adicionar nas regras que temos esse mecanismo para ser usado para que no futuro outras features possam usar quando necessário
 -verificar se no sistema atual tenho coisas para usar job_runs (talvez vou precisar criar antes)
-
+-depois que migrar todo o sistema e tiver tudo funcionando, podemos excluir /home/higor/Área de Trabalho/Renovi/orbit/supabase/migrations/20260701105400_delegate_create_provider_proposal_to_submit.sql e as rpcs relacionadas ao modelo antigo
+-talvez não precisamos da tabela exclusiva de rate limit do chat e podemos usar a genérica
 
 
 

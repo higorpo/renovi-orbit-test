@@ -1263,7 +1263,7 @@ O **matching progressivo** descrito em [`matching-algorithm/requirements.md`](..
 
 - **GIVEN** worker morre com lease ativo em `domain_events` ou `message_dispatches`
 - **WHEN** `locked_until &lt; now()`
-- **THEN** janitor (`cns_release_stale_leases`) MUST tornar a linha elegível para novo checkout.
+- **THEN** janitor (`domain_events_release_stale_leases`) MUST tornar a linha elegível para novo checkout.
 
 - **GIVEN** RPC de longa duração (aceite)
 - **WHEN** excede timeout PostgREST

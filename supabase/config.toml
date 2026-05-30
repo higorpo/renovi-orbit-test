@@ -404,6 +404,10 @@ verify_jwt = false
 [functions.message-dispatcher-ingest]
 verify_jwt = true
 
+# Chat media multipart upload; JWT + cns_validate_upload_session before Storage put (design §5.2, task 54).
+[functions.chat-upload-media]
+verify_jwt = true
+
 [analytics]
 enabled = true
 port = 54327

@@ -38,6 +38,16 @@ create index domain_events_stale_lease_idx
   on public.domain_events (locked_until)
   where processed_at is null and locked_until is not null;
 
+create index domain_events_orphan_locked_by_idx
+  on public.domain_events (created_at)
+  where processed_at is null
+    and dead_letter = false
+    and locked_by is not null
+    and locked_until is null;
+
+comment on index public.domain_events_orphan_locked_by_idx is
+  'Supports domain_events_release_stale_leases: orphaned locked_by without locked_until.';
+
 /*
  * Normative event_type registry (design §3.8). Do not emit ad-hoc aliases.
  *

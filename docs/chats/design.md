@@ -1058,7 +1058,7 @@ returning e.*;
 ## 6.4 Orphan recovery (Req. 26, 27)
 
 - **Worker death:** `locked_until < now()` → row eligible again.
-- **Janitor RPC:** `cns_release_stale_leases` runs each minute before checkout.
+- **Janitor RPC:** `domain_events_release_stale_leases` runs each minute before checkout.
 
 ---
 
@@ -1530,7 +1530,7 @@ Idempotency keys + MMD `UNIQUE(idempotency_key)` + signed pricing on proposals.
 | R26-AC06 | 26 | crash de Edge durante upload | cliente retenta com mesma key | servidor MUST retornar mensagem existente ou completar insert pendente. | §4–§13 | See §12.1; recovery |
 | R26-AC07 | 26 | `platform-flow.mmd` caminhos de retomada pós-`INACTIVE` | nova mensagem chega | estado MUST ser `ACTIVE` independentemente de falhas anteriores de job. | §4–§13 | See §12.1; recovery |
 | R27-AC01 | 27 | consumidor faz checkout de `domain_events` (ou MMD dispatch) | worker adquire lease | MUST definir `locked_until = now() + interval '30 seconds'` na mesma transação que marca o row como em processamento (`locked_by`). | §4–§13 | See §12.1; leases |
-| R27-AC02 | 27 | worker morre com lease ativo em `domain_events` / MMD | `locked_until &lt; now()` | janitor (`cns_release_stale_leases`) MUST tornar o row elegível de novo para checkout. | §4–§13 | See §12.1; leases |
+| R27-AC02 | 27 | worker morre com lease ativo em `domain_events` / MMD | `locked_until &lt; now()` | janitor (`domain_events_release_stale_leases`) MUST tornar o row elegível de novo para checkout. | §4–§13 | See §12.1; leases |
 | R27-AC03 | 27 | RPC de longa duração (aceite) | excede timeout PostgREST | cliente MUST poder consultar status por `idempotency_key` (resposta idempotente do resultado commitado). | §4–§13 | See §12.1; leases |
 | R27-AC04 | 27 | typing presence | TTL expira (10s) | indicador MUST desaparecer sem job adicional (expiração client-side + server TTL). | §4–§13 | See §12.1; leases |
 | R27-AC05 | 27 | sessão de composição de proposta abandonada | &gt; 7 dias sem submit | rascunho local MAY ser expurgado pelo cliente; servidor MUST NOT depender de rascunho. | §4–§13 | See §12.1; leases |
