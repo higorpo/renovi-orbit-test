@@ -81,6 +81,8 @@ Coisas para fazer next
 -verificar se usos anteriores a /home/higor/Área de Trabalho/Renovi/orbit/supabase/migrations/20260701106100_create_job_run_helpers.sql não poderiam se beneficiar desses helpers
 - /home/higor/Área de Trabalho/Renovi/orbit/src/lib/analytics/pushChatAnalyticsEvent.ts provavelmente é desnecessário
 - /home/higor/Área de Trabalho/Renovi/orbit/src/lib/analytics/events.ts é exclusivo do chat, talvez faça mais sentido mover o arquivo depois
+-rever regras, hoje parece que para uma provider_proposal existir é obrigatório ter um chat envolvido ... as políticas RLS também foram alteradas.
+-novas políticas RLS estão fora do padrão adotado que era ter descrição clara
 
 
 

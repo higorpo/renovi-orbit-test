@@ -37,5 +37,24 @@ $$;
 comment on function public.is_chat_participant(uuid) is
   'True when JWT subject is client or provider on the conversation (RLS helper, R35-AC13).';
 
+create or replace function public.is_provider()
+returns boolean
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles p
+    where p.id = (select auth.uid())
+      and p.role = 'provider'
+  );
+$$;
+
+comment on function public.is_provider() is
+  'True when JWT subject has profiles.role = provider (RLS and RPC guards).';
+
 grant execute on function public.is_platform_admin() to authenticated;
 grant execute on function public.is_chat_participant(uuid) to authenticated;
+grant execute on function public.is_provider() to authenticated;

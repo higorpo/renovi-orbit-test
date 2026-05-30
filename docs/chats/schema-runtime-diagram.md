@@ -313,7 +313,7 @@ flowchart TB
   FN_RECIP --> T_JOB
   FN_EXP --> T_JOB
 
-  T_EVT -.->|"cns_replay_domain_event"| FN_EVT
+  T_EVT -.->|"replay_domain_event"| FN_EVT
 
   style T_EVT fill:#e8f4fd,stroke:#2196F3
   style async fill:#fff8e1,stroke:#FFC107

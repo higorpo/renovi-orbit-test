@@ -914,7 +914,7 @@ If `cns_mmd_ingest` fails, domain event consumer logs `NOTIFICATION_SKIPPED` in 
 | `get_proposal_for_timeline` | participant | n/a | none | full proposal for card hydration |
 | `list_proposal_versions` | participant | n/a | none | revision history (Req. 10) |
 | `cns_refresh_media_signed_urls` | participant | n/a | none | refresh expired Storage URLs (Req. 31) |
-| `cns_replay_domain_event` | service_role / admin | n/a | event row | replay dead-letter outbox row (§8.4) |
+| `replay_domain_event` | service_role / admin | n/a | event row | replay dead-letter outbox row (§8.4) |
 
 **Error contract (JSON in `RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = '...', DETAIL = jsonb`):**
 
@@ -1017,7 +1017,7 @@ stateDiagram-v2
   Processing --> Processed: consumer success
   Processing --> Unprocessed: lease expired (janitor)
   Processing --> DeadLetter: max retries exceeded
-  DeadLetter --> Unprocessed: cns_replay_domain_event
+  DeadLetter --> Unprocessed: replay_domain_event
   note right of DeadLetter: dead_letter=true<br/>processed_at still null
 ```
 
@@ -1138,7 +1138,7 @@ When `retry_count` exceeds `max_retries` (default 5) after consumer failures:
 2. **MUST NOT** set `processed_at` — the row stays in the unprocessed set for operators.
 3. Increment metric `cns_domain_events_dead_letter_total` and log structured `event_id`, `event_type`, `service_request_id`.
 
-**Replay:** `cns_replay_domain_event(p_event_id uuid)` (service_role or admin-audited RPC) resets `retry_count = 0`, `dead_letter = false`, `dead_letter_at = null`, `locked_until = null`, `last_error = null` — row becomes eligible for `cns_process_domain_events` again. Replay MUST NOT duplicate MMD deliveries if consumer uses stable `idempotency_key` from payload.
+**Replay:** `replay_domain_event(p_event_id uuid)` (service_role or admin-audited RPC) resets `retry_count = 0`, `dead_letter = false`, `dead_letter_at = null`, `locked_until = null`, `last_error = null` — row becomes eligible for `cns_process_domain_events` again. Replay MUST NOT duplicate MMD deliveries if consumer uses stable `idempotency_key` from payload.
 
 Checkout query MUST use `WHERE processed_at IS NULL AND dead_letter = false` (§6.2).
 

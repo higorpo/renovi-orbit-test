@@ -48,7 +48,7 @@ Squads MAY parallelize after Wave A: **DB** (Phases 1–3, 11), **Async** (Phase
 
 - **Rollback Wave F:** Revert UI deploy or route registration if needed; legacy proposal path remains if Wave D not cutover.
 - **Rollback Wave E:** MUST NOT rollback SR `COMPLETED` with existing `services` FK — forward-fix only pre-production.
-- **Dead-letter outbox:** `cns_replay_domain_event` for operator recovery; MMD dedupe via stable `idempotency_key`.
+- **Dead-letter outbox:** `replay_domain_event` for operator recovery; MMD dedupe via stable `idempotency_key`.
 - **Orphan media:** `cns_janitor_orphan_media` daily `0 3 * * *`; client retry with same message `idempotency_key`.
 - **Stale leases:** `domain_events_release_stale_leases` each minute before domain event checkout.
 
@@ -2971,7 +2971,7 @@ R21-AC05
 
 # Phase 10: Recovery & Reliability
 
-## 69. [ ] Implement cns_replay_domain_event RPC
+## 69. [x] Implement replay_domain_event RPC
 
 Description:
 Admin/service_role reset dead_letter row for reprocessing §8.4.
@@ -2981,7 +2981,7 @@ Responsibilities:
 - Audit replay actor
 
 Implementation Details:
-- Normative reference: design.md — task 69: `Implement cns_replay_domain_event RPC`.
+- Normative reference: design.md — task 69: `Implement replay_domain_event RPC`.
 - Scope: Admin/service_role reset dead_letter row for reprocessing §8.4.
 - Execute: Reset retry_count, dead_letter flags
 - Execute: Audit replay actor
@@ -3014,7 +3014,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R26-AC05, R28-AC06
 
-## 70. [ ] Implement dead-letter escalation in cns_process_domain_events
+## 70. [x] Implement dead-letter escalation in cns_process_domain_events
 
 Description:
 After max retries set dead_letter=true, dead_letter_at, last_error sanitized §8.4.
@@ -3058,7 +3058,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R28-AC02, R26-AC05
 
-## 71. [ ] Document client idempotency retry and PostgREST timeout recovery
+## 71. [x] Document client idempotency retry and PostgREST timeout recovery
 
 Description:
 Engineering guide: same idempotency_key on send/accept; poll cached response after timeout §8.1.
@@ -3104,7 +3104,7 @@ R14-AC01, R27-AC03, R26-AC06, R30-AC05, OAC-08
 
 # Phase 11: Security & Isolation (RLS per table group)
 
-## 72. [ ] Implement RLS policies for chats table
+## 72. [x] Implement RLS policies for chats table
 
 Description:
 SELECT admin OR participant; deny INSERT/UPDATE/DELETE for authenticated §11.2.
@@ -3147,7 +3147,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R15-AC06, R31-AC01, R35-AC01, R35-AC05, R35-AC06, R35-AC08, R35-AC09, R35-AC11
 
-## 73. [ ] Implement RLS policies for chat_messages table
+## 73. [x] Implement RLS policies for chat_messages table
 
 Description:
 SELECT admin OR participant; deny direct mutations §11.2.
@@ -3189,7 +3189,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R31-AC01, R35-AC01, R35-AC11, R35-AC12
 
-## 74. [ ] Implement RLS policies for provider_proposals (CNS)
+## 74. [x] Implement RLS policies for provider_proposals (CNS)
 
 Description:
 Client+provider of conversation+admin SELECT; RPC-only writes.
@@ -3231,7 +3231,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R35-AC02, R31-AC04, R35-AC10
 
-## 75. [ ] Implement RLS policies for services table
+## 75. [x] Implement RLS policies for services table
 
 Description:
 Client, provider, admin SELECT; insert denied except via RPC.
@@ -3273,7 +3273,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R23-AC02, R35-AC01
 
-## 76. [ ] Implement RLS policies for domain_events and operational tables
+## 76. [x] Implement RLS policies for domain_events and operational tables
 
 Description:
 domain_events, rpc_idempotency_records, job_runs: admin/service_role only; deny authenticated broad access.
@@ -3317,7 +3317,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R35-AC03, R35-AC11
 
-## 77. [ ] Implement Storage RLS for chat-media bucket
+## 77. [x] Implement Storage RLS for chat-media bucket
 
 Description:
 Participant read; admin read; write via Edge service role only §3.13.
@@ -3359,7 +3359,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R35-AC04, R31-AC06
 
-## 78. [ ] Revoke direct INSERT/UPDATE on CNS mutable tables from authenticated
+## 78. [x] Revoke direct INSERT/UPDATE on CNS mutable tables from authenticated
 
 Description:
 Defense in depth: GRANT SELECT only; mutations via RPC SECURITY DEFINER §11.2.
@@ -3401,7 +3401,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R35-AC03, R35-AC15, OAC-01
 
-## 79. [ ] Implement pgTAP RLS suite for Requirement 35 matrix
+## 79. [x] Implement pgTAP RLS suite for Requirement 35 matrix
 
 Description:
 Tests: admin reads all; provider C denied; participant read/write own; initplan policies §13.11.
@@ -3447,7 +3447,7 @@ R35-AC01 through R35-AC16, R31-AC01, R31-AC02, R31-AC07
 
 # Phase 12: Scalability & Performance
 
-## 80. [ ] Verify and harden CNS index coverage migration
+## 80. [x] Verify and harden CNS index coverage migration
 
 Description:
 Audit all §3 indexes exist; add missing partial indexes for cron if query plan requires.
@@ -3488,7 +3488,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R22-AC03, R25-AC06
 
-## 81. [ ] Enforce 1MB JSON payload cap in list RPCs
+## 81. [x] Enforce 1MB JSON payload cap in list RPCs
 
 Description:
 Truncate or reject list responses exceeding 1MB with projection §9.5.
@@ -3532,7 +3532,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R22-AC04
 
-## 82. [ ] Add statement_timeout guard to accept and batch RPCs
+## 82. [x] Add statement_timeout guard to accept and batch RPCs
 
 Description:
 SET LOCAL statement_timeout on accept_proposal and batch jobs to prevent runaway locks.
@@ -3574,7 +3574,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R27-AC03, R22-AC01
 
-## 83. [ ] Document hot partition and SKIP LOCKED cron scaling notes
+## 83. [x] Document hot partition and SKIP LOCKED cron scaling notes
 
 Description:
 Engineering note §9.4: UUID spread, multiple cron workers safe, future audit partition.

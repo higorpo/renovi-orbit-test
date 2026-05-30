@@ -41,6 +41,11 @@ begin
       using errcode = '42501';
   end if;
 
+  if not (select public.is_provider()) then
+    raise exception 'Only a provider profile may submit a proposal'
+      using errcode = '42501';
+  end if;
+
   if p_chat_id is null then
     raise exception 'p_chat_id is required'
       using errcode = '22023';
