@@ -12,7 +12,10 @@ export interface ChatComposerBarProps {
   composer: ChatComposerState;
   isSending: boolean;
   onSend: (text: string) => void | Promise<void>;
-  onDraftChange?: (hasDraftText: boolean) => void;
+  /** Fired on every draft change (keystroke, paste, delete, etc.). */
+  onComposerChange?: () => void;
+  /** Fired when the message is sent — stops typing immediately. */
+  onTypingStopNow?: () => void;
   className?: string;
 }
 
@@ -20,7 +23,8 @@ export function ChatComposerBar({
   composer,
   isSending,
   onSend,
-  onDraftChange,
+  onComposerChange,
+  onTypingStopNow,
   className,
 }: ChatComposerBarProps) {
   const [draft, setDraft] = useState("");
@@ -39,7 +43,7 @@ export function ChatComposerBar({
     const text = draft.trim();
     if (!text || !composer.isSendEnabled) return;
     setDraft("");
-    onDraftChange?.(false);
+    onTypingStopNow?.();
     void onSend(text);
     focusComposer();
   };
@@ -75,9 +79,8 @@ export function ChatComposerBar({
           ref={textareaRef}
           value={draft}
           onChange={(event) => {
-            const value = event.target.value;
-            setDraft(value);
-            onDraftChange?.(value.trim().length > 0);
+            setDraft(event.target.value);
+            onComposerChange?.();
           }}
           placeholder={composer.placeholder}
           disabled={!composer.isInputEnabled}

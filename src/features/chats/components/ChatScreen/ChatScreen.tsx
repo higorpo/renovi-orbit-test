@@ -98,12 +98,12 @@ export function ChatScreen({
     onPoll: () => void refetchGapFill(),
   });
 
-  const { isCounterpartyTyping, notifyComposerDraftChange } = useConversationTypingPresence({
-    conversationId: chatId,
-    currentUserId: user?.id ?? null,
-    enabled: Boolean(detail),
-    realtimeHealthy: isRealtimeConnectionHealthy(realtimeStatus),
-  });
+  const { isCounterpartyTyping, notifyComposerChange, notifyTypingStopNow } =
+    useConversationTypingPresence({
+      conversationId: chatId,
+      currentUserId: user?.id ?? null,
+      enabled: Boolean(detail),
+    });
 
   const handleBack = useCallback(() => {
     if (onBack) {
@@ -226,7 +226,8 @@ export function ChatScreen({
         }}
         isSending={isSending}
         onSend={handleSend}
-        onDraftChange={notifyComposerDraftChange}
+        onComposerChange={notifyComposerChange}
+        onTypingStopNow={notifyTypingStopNow}
       />
     </div>
   );

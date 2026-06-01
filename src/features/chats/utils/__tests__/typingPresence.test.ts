@@ -15,6 +15,12 @@ describe("typingPresence", () => {
     expect(canPublishTypingPresence(t0 + TYPING_PRESENCE_PUBLISH_INTERVAL_MS, t0)).toBe(true);
   });
 
+  it("allows stop events to bypass the publish interval", () => {
+    const t0 = 1_000_000;
+    expect(canPublishTypingPresence(t0 + 500, t0, { bypassInterval: true })).toBe(true);
+    expect(canPublishTypingPresence(t0 + 500, t0)).toBe(false);
+  });
+
   it("expires remote typing indicator after TTL without heartbeat", () => {
     vi.useFakeTimers();
     const seenAt = Date.now();
@@ -33,10 +39,20 @@ describe("typingPresence", () => {
 
   it("parses other participant typing from presence state", () => {
     const state = {
-      "user-a": [{ user_id: "user-a", typing: false }],
-      "user-b": [{ user_id: "user-b", typing: true }],
+      "user-a": [{ user_id: "user-a", typing: false, at: 1 }],
+      "user-b": [{ user_id: "user-b", typing: true, at: 2 }],
     };
     expect(parseTypingPresenceState(state, "user-a")).toBe(true);
     expect(parseTypingPresenceState(state, "user-b")).toBe(false);
+  });
+
+  it("uses the remote entry with the latest at timestamp", () => {
+    const state = {
+      "user-b": [
+        { user_id: "user-b", typing: true, at: 100 },
+        { user_id: "user-b", typing: false, at: 200 },
+      ],
+    };
+    expect(parseTypingPresenceState(state, "user-a")).toBe(false);
   });
 });
