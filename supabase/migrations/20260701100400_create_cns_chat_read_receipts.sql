@@ -14,3 +14,36 @@ comment on table public.chat_read_receipts is
 
 comment on column public.chat_read_receipts.last_read_message_id is
   'Optional anchor message; may be null until first explicit mark_read.';
+
+alter table public.chat_read_receipts enable row level security;
+
+create policy chat_read_receipts_select
+  on public.chat_read_receipts
+  for select
+  to authenticated
+  using (
+    (select public.is_platform_admin())
+    or (select public.is_chat_participant(chat_id))
+  );
+
+create policy chat_read_receipts_insert_denied
+  on public.chat_read_receipts
+  for insert
+  to authenticated
+  with check (false);
+
+create policy chat_read_receipts_update_denied
+  on public.chat_read_receipts
+  for update
+  to authenticated
+  using (false)
+  with check (false);
+
+create policy chat_read_receipts_delete_denied
+  on public.chat_read_receipts
+  for delete
+  to authenticated
+  using (false);
+
+comment on policy chat_read_receipts_select on public.chat_read_receipts is
+  'Participants (and admins) may read all receipts in a chat for read indicators and Realtime.';

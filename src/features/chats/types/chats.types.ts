@@ -132,6 +132,12 @@ export interface ConversationMaskedAddress {
   state: string | null;
 }
 
+/** Counterparty read cursor — used for "Visualizado" on outgoing messages. */
+export interface CounterpartyReadReceipt {
+  last_read_at: string;
+  last_read_message_id: string | null;
+}
+
 export interface ConversationDetailResponse {
   conversation: ConversationDetailSnapshot;
   counterparty: ConversationCounterparty;
@@ -139,6 +145,7 @@ export interface ConversationDetailResponse {
   service: ConversationServiceSummary;
   category: ConversationCategorySummary | null;
   address: ConversationMaskedAddress;
+  counterparty_read_receipt: CounterpartyReadReceipt | null;
 }
 
 export interface SendMessageResultMessage {

@@ -19,11 +19,12 @@ describe("conversationRealtimeChannel", () => {
     subscribeConversationChannel(client as never, "chat-1", {
       onMessageInsert: vi.fn(),
       onProposalUpdate: vi.fn(),
+      onReadReceiptChange: vi.fn(),
       onStatusChange: vi.fn(),
     });
 
     expect(client.channel).toHaveBeenCalledWith("conversation:chat-1");
-    expect(channel.on).toHaveBeenCalledTimes(2);
+    expect(channel.on).toHaveBeenCalledTimes(4);
     expect(channel.subscribe).toHaveBeenCalledTimes(1);
   });
 });

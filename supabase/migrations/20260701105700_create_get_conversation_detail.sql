@@ -77,7 +77,14 @@ begin
       'neighborhood', ca.neighborhood,
       'city', pc.name,
       'state', pst.abbreviation
-    )
+    ),
+    'counterparty_read_receipt', case
+      when crr.chat_id is not null then jsonb_build_object(
+        'last_read_at', crr.last_read_at,
+        'last_read_message_id', crr.last_read_message_id
+      )
+      else null
+    end
   )
   into v_detail
   from public.chats c
@@ -91,6 +98,9 @@ begin
     when v_actor = c.client_id then c.provider_id
     else c.client_id
   end
+  left join public.chat_read_receipts crr
+    on crr.chat_id = c.id
+    and crr.user_id = cp.id
   where c.id = p_chat_id
     and v_actor in (c.client_id, c.provider_id);
 

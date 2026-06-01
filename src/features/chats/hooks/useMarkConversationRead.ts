@@ -43,10 +43,13 @@ export function useMarkConversationRead(
 
   useEffect(() => {
     scheduleMarkRead(readableTailId);
+  }, [readableTailId, scheduleMarkRead]);
+
+  useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [readableTailId, scheduleMarkRead]);
+  }, [chatId]);
 
   useEffect(() => {
     lastMarkedIdRef.current = null;

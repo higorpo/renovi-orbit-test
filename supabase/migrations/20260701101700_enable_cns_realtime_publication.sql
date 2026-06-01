@@ -2,6 +2,7 @@
 -- RLS on chat_messages (task 73) and provider_proposals (existing) filters Realtime delivery.
 
 alter table public.provider_proposals replica identity full;
+alter table public.chat_read_receipts replica identity full;
 
 do $pub$
 begin
@@ -23,6 +24,16 @@ begin
       and pt.tablename = 'provider_proposals'
   ) then
     alter publication supabase_realtime add table public.provider_proposals;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_publication_tables pt
+    where pt.pubname = 'supabase_realtime'
+      and pt.schemaname = 'public'
+      and pt.tablename = 'chat_read_receipts'
+  ) then
+    alter publication supabase_realtime add table public.chat_read_receipts;
   end if;
 end;
 $pub$;

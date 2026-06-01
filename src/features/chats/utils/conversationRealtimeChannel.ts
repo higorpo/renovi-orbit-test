@@ -4,6 +4,11 @@ import type { Database } from "@/lib/supabase/database.types";
 export type ConversationRealtimeHandlers = {
   onMessageInsert: (payload: { id: string }) => void;
   onProposalUpdate: (payload: { id: string }) => void;
+  onReadReceiptChange: (payload: {
+    userId: string;
+    lastReadMessageId: string | null;
+    lastReadAt: string;
+  }) => void;
   onStatusChange: (status: string) => void;
 };
 
@@ -43,6 +48,52 @@ export function subscribeConversationChannel(
       (payload) => {
         const id = (payload.new as { id?: string } | null)?.id;
         if (id) handlers.onProposalUpdate({ id });
+      },
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "chat_read_receipts",
+        filter: `chat_id=eq.${chatId}`,
+      },
+      (payload) => {
+        const row = payload.new as {
+          user_id?: string;
+          last_read_message_id?: string | null;
+          last_read_at?: string;
+        } | null;
+        if (row?.user_id && row.last_read_at) {
+          handlers.onReadReceiptChange({
+            userId: row.user_id,
+            lastReadMessageId: row.last_read_message_id ?? null,
+            lastReadAt: row.last_read_at,
+          });
+        }
+      },
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "chat_read_receipts",
+        filter: `chat_id=eq.${chatId}`,
+      },
+      (payload) => {
+        const row = payload.new as {
+          user_id?: string;
+          last_read_message_id?: string | null;
+          last_read_at?: string;
+        } | null;
+        if (row?.user_id && row.last_read_at) {
+          handlers.onReadReceiptChange({
+            userId: row.user_id,
+            lastReadMessageId: row.last_read_message_id ?? null,
+            lastReadAt: row.last_read_at,
+          });
+        }
       },
     )
     .subscribe((status) => {

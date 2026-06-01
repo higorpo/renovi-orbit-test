@@ -3,6 +3,7 @@
  * Intercepts PostgREST rpc/* calls used by the chats feature.
  */
 import type { Page } from "@playwright/test";
+import type { ChatMessageListItem } from "../../src/features/chats/types/chats.types";
 
 export const E2E_CHAT_ID = "chat-e2e-1";
 export const E2E_SR_ID = "sr-e2e-1";
@@ -76,8 +77,8 @@ function listItem(viewerRole: "client" | "provider") {
   };
 }
 
-function initialMessages(withProposal: boolean) {
-  const messages = [
+function initialMessages(withProposal: boolean): ChatMessageListItem[] {
+  const messages: ChatMessageListItem[] = [
     {
       id: "msg-1",
       chat_id: E2E_CHAT_ID,
@@ -167,6 +168,7 @@ export async function installChatsMocks(page: Page, options: ChatsMockOptions) {
             },
             category: null,
             address: { neighborhood: "Centro", city: "São Paulo", state: "SP" },
+            counterparty_read_receipt: null,
           }),
         });
         return;

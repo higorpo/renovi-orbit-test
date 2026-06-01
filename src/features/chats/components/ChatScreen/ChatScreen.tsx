@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/features/auth";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
@@ -22,6 +22,7 @@ import { usePushNotificationSuppression } from "../../hooks/usePushNotificationS
 import { useChatActionBannerInset } from "../../hooks/useChatActionBannerInset";
 import type { ChatActionBannerCtaPayload } from "../../hooks/useChatActionBannerState";
 import type { ProposalCardAction } from "../DynamicMessageRenderer/DynamicProposalCard";
+import { resolveCounterpartyViewedMessageId } from "../../utils/resolveCounterpartyViewedMessageId";
 import { ChatComposerBar } from "./ChatComposerBar";
 import { ChatScreenHeader } from "./ChatScreenHeader";
 import { ChatTimeline } from "./ChatTimeline";
@@ -48,7 +49,7 @@ export function ChatScreen({
   const [realtimeStatus, setRealtimeStatus] = useState<string | null>(null);
 
   const { detail, isLoading: isDetailLoading, isError: isDetailError, error: detailError, refetch: refetchDetail } =
-    useConversationDetail(chatId);
+    useConversationDetail(chatId, { activeChat: true });
 
   const {
     messages,
@@ -88,6 +89,7 @@ export function ChatScreen({
   usePushNotificationSuppression(chatId);
 
   useConversationRealtime(chatId, {
+    currentUserId: user?.id ?? null,
     onReconcile: () => void refetchGapFill(),
     onRealtimeStatusChange: setRealtimeStatus,
   });
@@ -122,6 +124,16 @@ export function ChatScreen({
       });
     },
     [sendChatMessage],
+  );
+
+  const viewedReceiptMessageId = useMemo(
+    () =>
+      resolveCounterpartyViewedMessageId(
+        messages,
+        user?.id ?? null,
+        detail?.counterparty_read_receipt,
+      ),
+    [detail?.counterparty_read_receipt, messages, user?.id],
   );
 
   const counterpartyName =
@@ -189,6 +201,7 @@ export function ChatScreen({
           onLoadOlder={() => void fetchNextPage()}
           onRetry={() => void refetchMessages()}
           actionBannerTopInset={actionBannerTopInset}
+          viewedReceiptMessageId={viewedReceiptMessageId}
         />
 
         <ChatActionBannerOverlayHost

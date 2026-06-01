@@ -16,6 +16,7 @@ import {
 } from "../../utils/groupChatTimeline";
 import { ChatDiscoveryWelcome } from "./ChatDiscoveryWelcome";
 import { ChatMessageRow } from "./ChatMessageRow";
+import { ChatReadReceiptLabel } from "./ChatReadReceiptLabel";
 import { ChatTimelineScrollContext } from "./ChatTimelineScrollContext";
 
 export interface ChatTimelineProps {
@@ -37,6 +38,8 @@ export interface ChatTimelineProps {
   onRetry?: () => void;
   /** Space reserved at the top when the action banner overlays the timeline. */
   actionBannerTopInset?: number;
+  /** Outgoing message id below which to show the "Visualizado" label. */
+  viewedReceiptMessageId?: string | null;
   className?: string;
 }
 
@@ -57,6 +60,7 @@ export function ChatTimeline({
   onLoadOlder,
   onRetry,
   actionBannerTopInset = 0,
+  viewedReceiptMessageId = null,
   className,
 }: ChatTimelineProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -256,6 +260,9 @@ export function ChatTimeline({
               viewerRole={viewerRole}
               onProposalAction={onProposalAction}
             />
+            {item.isOutgoing && item.message.id === viewedReceiptMessageId ? (
+              <ChatReadReceiptLabel />
+            ) : null}
           </div>
         );
       })}

@@ -3,8 +3,13 @@ import { getConversationDetail } from "../api/chats.api";
 import { CONVERSATION_DETAIL_QUERY_KEY } from "../constants/queryKeys";
 
 const STALE_TIME_MS = 30_000;
+/** Active chat screen — read receipt must track counterparty cursor quickly. */
+const ACTIVE_CHAT_STALE_TIME_MS = 0;
 
-export function useConversationDetail(chatId: string | null, options?: { enabled?: boolean }) {
+export function useConversationDetail(
+  chatId: string | null,
+  options?: { enabled?: boolean; activeChat?: boolean },
+) {
   const query = useQuery({
     queryKey: [CONVERSATION_DETAIL_QUERY_KEY, chatId],
     queryFn: async () => {
@@ -15,7 +20,7 @@ export function useConversationDetail(chatId: string | null, options?: { enabled
       return result.data;
     },
     enabled: Boolean(chatId) && (options?.enabled ?? true),
-    staleTime: STALE_TIME_MS,
+    staleTime: options?.activeChat ? ACTIVE_CHAT_STALE_TIME_MS : STALE_TIME_MS,
     refetchOnWindowFocus: false,
   });
 

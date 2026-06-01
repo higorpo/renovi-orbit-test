@@ -14,6 +14,11 @@ const {
   const onHandlers: {
     messageInsert?: (payload: { id: string }) => void;
     proposalUpdate?: (payload: { id: string }) => void;
+    readReceiptChange?: (payload: {
+      userId: string;
+      lastReadMessageId: string | null;
+      lastReadAt: string;
+    }) => void;
     statusChange?: (status: string) => void;
   } = {};
 
@@ -26,6 +31,13 @@ const {
         }
         if (table === "provider_proposals") {
           onHandlers.proposalUpdate = handler as (payload: { id: string }) => void;
+        }
+        if (table === "chat_read_receipts") {
+          onHandlers.readReceiptChange = handler as (payload: {
+            userId: string;
+            lastReadMessageId: string | null;
+            lastReadAt: string;
+          }) => void;
         }
       }
       return channelMock;
@@ -71,6 +83,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   onHandlers.messageInsert = undefined;
   onHandlers.proposalUpdate = undefined;
+  onHandlers.readReceiptChange = undefined;
   onHandlers.statusChange = undefined;
   supabaseChannelMock.mockImplementation(() => channelMock);
 });
@@ -83,7 +96,7 @@ describe("useConversationRealtime", () => {
     });
 
     expect(supabaseChannelMock).toHaveBeenCalledWith("conversation:chat-1");
-    expect(channelMock.on).toHaveBeenCalledTimes(2);
+    expect(channelMock.on).toHaveBeenCalledTimes(4);
     await waitFor(() => expect(onReconcile).toHaveBeenCalled());
   });
 
@@ -130,6 +143,39 @@ describe("useConversationRealtime", () => {
         (call) => call[0]?.queryKey?.[0] === "chat-messages",
       );
       expect(messageInvalidations).toHaveLength(1);
+    });
+  });
+
+  it("invalidates conversation detail on each counterparty read cursor advance", async () => {
+    const queryClient = new QueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    function Wrapper({ children }: { children: ReactNode }) {
+      return createElement(QueryClientProvider, { client: queryClient }, children);
+    }
+
+    renderHook(
+      () => useConversationRealtime("chat-1", { currentUserId: "user-a" }),
+      { wrapper: Wrapper },
+    );
+
+    const readPayload = (messageId: string, readAt: string) =>
+      ({
+        new: {
+          user_id: "user-b",
+          last_read_message_id: messageId,
+          last_read_at: readAt,
+        },
+      }) as never;
+
+    onHandlers.readReceiptChange?.(readPayload("msg-1", "2026-01-01T10:00:00Z"));
+    onHandlers.readReceiptChange?.(readPayload("msg-2", "2026-01-01T10:01:00Z"));
+
+    await waitFor(() => {
+      const detailInvalidations = invalidateSpy.mock.calls.filter(
+        (call) => call[0]?.queryKey?.[0] === "conversation-detail",
+      );
+      expect(detailInvalidations).toHaveLength(2);
     });
   });
 

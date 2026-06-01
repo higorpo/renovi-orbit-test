@@ -8,6 +8,7 @@ import {
   CHAT_FREE_MESSAGING_QUERY_KEY,
   CHAT_MESSAGES_QUERY_KEY,
   CHAT_PROPOSAL_TIMELINE_QUERY_KEY,
+  CONVERSATION_DETAIL_QUERY_KEY,
 } from "../constants/queryKeys";
 import { wasRecentlySentChatMessageId } from "../utils/chatMessageSendSync";
 import { subscribeConversationChannel } from "../utils/conversationRealtimeChannel";
@@ -38,7 +39,7 @@ export function isRealtimeConnectionHealthy(status: string | null): boolean {
 
 export function useConversationRealtime(
   chatId: string | null,
-  options?: UseConversationRealtimeOptions,
+  options?: UseConversationRealtimeOptions & { currentUserId?: string | null },
 ) {
   const queryClient = useQueryClient();
   const seenEventsRef = useRef(new Set<string>());
@@ -48,11 +49,16 @@ export function useConversationRealtime(
   onReconcileRef.current = options?.onReconcile;
   onRealtimeStatusChangeRef.current = options?.onRealtimeStatusChange;
   const enabled = Boolean(chatId) && (options?.enabled ?? true);
+  const currentUserId = options?.currentUserId ?? null;
 
   useEffect(() => {
     if (!enabled || !chatId) return;
 
     seenEventsRef.current.clear();
+
+    const invalidateDetail = () => {
+      void queryClient.invalidateQueries({ queryKey: [CONVERSATION_DETAIL_QUERY_KEY, chatId] });
+    };
 
     const invalidateMessages = () => {
       void queryClient.invalidateQueries({ queryKey: [CHAT_MESSAGES_QUERY_KEY, chatId] });
@@ -84,6 +90,13 @@ export function useConversationRealtime(
         invalidateProposal();
         invalidateMessages();
       },
+      onReadReceiptChange: ({ userId, lastReadMessageId, lastReadAt }) => {
+        if (currentUserId && userId === currentUserId) return;
+
+        const key = `chat_read_receipts:${userId}:${lastReadMessageId ?? "none"}:${lastReadAt}`;
+        if (!rememberEvent(seenEventsRef.current, key)) return;
+        invalidateDetail();
+      },
       onStatusChange: (status) => {
         metrics.count("chats.realtime_subscription_status", 1, { status });
         logger.debug("chats_realtime_status", { chatId, status });
@@ -107,5 +120,5 @@ export function useConversationRealtime(
       lastStatusRef.current = null;
       void supabase.removeChannel(channel);
     };
-  }, [chatId, enabled, queryClient]);
+  }, [chatId, currentUserId, enabled, queryClient]);
 }
