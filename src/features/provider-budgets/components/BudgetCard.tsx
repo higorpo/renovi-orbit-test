@@ -14,19 +14,13 @@ import {
   useServiceRequestPhotoUrls,
 } from "@/features/request-quote";
 import { ImagePreviewStrip } from "@/components/ImagePreviewStrip";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
 import { jobDetailPathFromBudgets } from "@/features/provider-jobs/constants/jobDetailReturnNavigation";
 import type { JobDetailLocationState } from "@/features/provider-jobs/types/provider-jobs.types";
 import type { ProviderSentBudget } from "../types/provider-budgets.types";
 import { initialProviderJobItemFromSentBudget } from "../utils/initialProviderJobItem";
 import { getBudgetStatusConfig } from "../constants/budgetStatus";
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
 
 export interface BudgetCardProps {
   budget: ProviderSentBudget;

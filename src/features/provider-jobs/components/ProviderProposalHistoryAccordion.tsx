@@ -8,10 +8,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ProviderProposalHistoryItem } from "../api/providerProposals.api";
-import {
-  formatProposalCurrency,
-  translateProposalStatus,
-} from "./providerProposalFormatters";
+import { formatCurrency } from "@/lib/formatCurrency";
+import { translateProposalStatus } from "./providerProposalFormatters";
 
 interface ProviderProposalHistoryAccordionProps {
   historyOpen: boolean;
@@ -66,7 +64,7 @@ export function ProviderProposalHistoryAccordion({
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-foreground">
-                        {formatProposalCurrency(proposal.proposed_amount)}
+                        {formatCurrency(proposal.proposed_amount)}
                       </p>
                       <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
                         {proposal.proposal_description}

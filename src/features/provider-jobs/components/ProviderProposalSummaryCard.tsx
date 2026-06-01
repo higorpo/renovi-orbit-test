@@ -34,10 +34,8 @@ import { useProviderProposalPhotoUrls } from "../hooks/useProviderProposalPhotoU
 import { ProviderProposalPhotosGrid } from "./ProviderProposalPhotosGrid";
 import { ProviderProposalHistoryAccordion } from "./ProviderProposalHistoryAccordion";
 import { ProviderProposalDetailsDialog } from "./ProviderProposalDetailsDialog";
-import {
-  formatProposalCurrency,
-  translateProposalStatus,
-} from "./providerProposalFormatters";
+import { formatCurrency } from "@/lib/formatCurrency";
+import { translateProposalStatus } from "./providerProposalFormatters";
 
 interface ProviderProposalSummaryCardProps {
   job: ProviderJobItem;
@@ -133,7 +131,7 @@ export function ProviderProposalSummaryCard({
                 Valor informado
               </p>
               <p className="mt-1 text-sm font-semibold text-foreground">
-                {formatProposalCurrency(job.provider_proposed_amount)}
+                {formatCurrency(job.provider_proposed_amount)}
               </p>
             </div>
           )}
@@ -145,7 +143,7 @@ export function ProviderProposalSummaryCard({
                 Taxa da plataforma
               </p>
               <p className="mt-1 text-sm font-semibold text-foreground">
-                {formatProposalCurrency(job.provider_tax_amount)}
+                {formatCurrency(job.provider_tax_amount)}
                 {typeof job.provider_tax_rate === "number"
                   ? ` (${(job.provider_tax_rate * 100).toFixed(0)}%)`
                   : ""}

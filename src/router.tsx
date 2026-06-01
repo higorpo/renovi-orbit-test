@@ -81,6 +81,16 @@ const ClientBudgetsRouteSlot = lazy(() =>
     default: m.ClientBudgetsRouteSlot,
   })),
 )
+const ChatsLayout = lazy(() =>
+  import('@/features/chats/components/ChatsLayout/ChatsLayout').then((m) => ({
+    default: m.ChatsLayout,
+  })),
+)
+const ChatsConversationRoute = lazy(() =>
+  import('@/features/chats/components/ChatsLayout/ChatsConversationRoute').then((m) => ({
+    default: m.ChatsConversationRoute,
+  })),
+)
 
 export const router = createBrowserRouter([
   {
@@ -207,6 +217,20 @@ export const router = createBrowserRouter([
                 <DashboardFakePage title="Ganhos" />
               </ProtectedRoute>
             ),
+          },
+          {
+            path: 'chats',
+            element: (
+              <ProtectedRoute allowedRoles={['client', 'provider']}>
+                <ChatsLayout />
+              </ProtectedRoute>
+            ),
+            children: [
+              {
+                path: ':chatId',
+                element: <ChatsConversationRoute />,
+              },
+            ],
           },
         ],
       },

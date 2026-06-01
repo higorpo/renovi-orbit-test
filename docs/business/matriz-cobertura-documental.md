@@ -1,6 +1,6 @@
 # Matriz de cobertura documental
 
-Última auditoria completa: **2026-05-26** (revisão: adição do módulo Message Dispatcher com feature de horário silencioso).
+Última auditoria completa: **2026-05-30** (revisão: módulo **chats** / CNS — conversas e negociação).
 
 Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de inferência ou RPC/RLS não detalhados linha a linha; **N/A** = não aplicável como feature de produto.
 
@@ -18,6 +18,7 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 | provider-jobs | Match; detalhe; perguntas; proposta | OK (`trabalhos-e-propostas.md`) | Algoritmo de sort/geo completo no SQL | — |
 | provider-profile | Página pública; SEO; URL | OK (`pagina-publica.md`) | — | — |
 | request-quote | Wizard 4/5 passos; IA automática passo 3; rascunho local; multipart Edge; reCAPTCHA; nsfwjs | OK (`pedir-orcamento.md`) | Validação server-side fina do form na Edge | P-01 redirect `/dashboard/client`; mismatch 10 MB front / 5 MB Edge fotos |
+| chats + negotiation-proposals | Lista/thread; propostas FSM; slots; mensagem livre vs PENDING; aceite/cancelamento | OK (`conversas-e-negociacao.md`) | Coexistência com sheets legados `client-budgets` até desativação Wave F | Menu dashboard → `/chats` pode faltar |
 
 ## Módulos fora de `src/features` (documentados em `modulos/`)
 
@@ -31,13 +32,13 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 
 | Métrica | Valor |
 |---------|-------|
-| Pastas em `src/features` (módulos de topo) | 10 |
+| Pastas em `src/features` (módulos de topo) | 12 |
 | Módulos adicionais documentados (shell + home + backend) | 3 |
-| **Total módulos no índice** `modulos/README.md` | **13** |
-| READMEs de módulo em `docs/business/modulos/` | 13 |
-| Arquivos de feature em `modulos/*/features/` | 13+ |
+| **Total módulos no índice** `modulos/README.md` | **14** |
+| READMEs de módulo em `docs/business/modulos/` | 14 |
+| Arquivos de feature em `modulos/*/features/` | 14+ |
 | Rotas placeholder identificadas | ≥6 |
-| Cobertura documental (critério do índice) | **100%** dos 13 módulos |
+| Cobertura documental (critério do índice) | **100%** dos 14 módulos |
 
 ## Features globais fora de `src/features`
 

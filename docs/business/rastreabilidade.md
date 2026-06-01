@@ -39,6 +39,8 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `provider-jobs/` | `api/providerJobs.api.ts`, `providerProposals.api.ts`, `providerJobQuestions.api.ts` | `ProviderJobsShell`, `JobDetailPage` |
 | `provider-profile/` | hooks + componentes públicos | `ProviderProfilePage` |
 | `request-quote/` | `api/createRequestQuoteOrder.api.ts`, `smartDescription.api.ts`, `services.api.ts`, `forms.api.ts`; hooks submit/navigation/draft/IA | `RequestQuote.tsx`, passos 1–5, `ConfirmEmailScreen`, `TrustSidebar`; rascunho `requestQuoteDraft.persistence.ts` |
+| `chats/` | `api/chats.api.ts`, `chats.rpc.ts`; hooks lista, thread, mensagens, Realtime | `ChatListPage`, `ChatScreen`, `ChatsLayout` |
+| `negotiation-proposals/` | `api/proposals.rpc.ts`; hooks mutações cliente/prestador | `ProposalCard`, `AcceptProposalDialog`, composer em jobs |
 | `auth/` | (já listado) | — |
 
 ## Supabase — dados e regras
@@ -61,6 +63,20 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `supabase/functions/_shared/*` | CORS, rate limit, tipos |
 | `supabase/functions/message-dispatcher-worker/*` | Worker de entrega multicanal (Resend/FCM) |
 | `supabase/functions/message-dispatcher-webhook-resend/*` | Webhook Resend (delivered, bounce, opened) |
+| `supabase/functions/chat-upload-media/*` | Upload de mídia em conversa CNS |
+| `supabase/functions/cns_process_domain_events/*` | Processamento de `domain_events` → MMD |
+
+## CNS — conversas e negociação
+
+| Artefato | Uso na documentação |
+|----------|---------------------|
+| `docs/chats/design.md`, `requirements.md` | Especificação normativa; slots §3.3.1 |
+| `docs/business/modulos/chats/` | README + [conversas-e-negociacao](./modulos/chats/features/conversas-e-negociacao.md) |
+| `supabase/migrations/20260701100000`–`20260701103900` (e correlatas) | Schema CNS, RPCs, RLS, crons, templates MMD |
+| `supabase/tests/chats/*.sql` | pgTAP FSM, mensagem livre, concorrência |
+| `src/router.tsx` | Rotas `/chats`, `/chats/:chatId` |
+| `e2e/tests/chats.spec.ts` | E2E com mocks (`e2e/mocks/chats.mock.ts`) |
+| `docs/chats/wave-a-rollout-checklist.md`, `wave-bf-rollout-runbook.md` | Cutover operacional |
 
 ## Message Dispatcher (backend)
 

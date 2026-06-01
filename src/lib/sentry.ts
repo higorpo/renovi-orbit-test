@@ -10,7 +10,7 @@ import {
   isChatSentryFeature,
   scrubChatBreadcrumbData,
   scrubChatSentryEvent,
-} from "@/features/chats/utils/sentryChatScrubbing";
+} from "@/features/chats";
 
 const DSN = import.meta.env.VITE_SENTRY_DSN as string | undefined;
 const ENV = import.meta.env.MODE;

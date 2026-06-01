@@ -13,6 +13,7 @@ import { getFirebaseApp } from './firebase/app'
 import { getFirebaseVapidKey, isFirebaseConfigured } from './firebase/config'
 import { getFirebaseMessaging } from './firebase/messaging'
 import { logger } from './logger'
+import { resetPushSuppressionForTests, shouldSuppressPushNotification } from './pushSuppression'
 
 export type PushPlatform = 'android' | 'ios' | 'web'
 
@@ -146,6 +147,11 @@ export async function showWebForegroundSystemNotification(
 }
 
 function handleForegroundPushNotification(payload: PushNotificationPayload): void {
+  if (shouldSuppressPushNotification(payload)) {
+    logger.debug('[PUSH] suppressed for active conversation')
+    return
+  }
+
   if (!Capacitor.isNativePlatform()) {
     void showWebForegroundSystemNotification(payload)
   }
@@ -408,4 +414,5 @@ export function resetPushModuleStateForTests(): void {
   webForegroundListenerAttached = false
   activePushCallbacks = undefined
   pushStateListeners.clear()
+  resetPushSuppressionForTests()
 }

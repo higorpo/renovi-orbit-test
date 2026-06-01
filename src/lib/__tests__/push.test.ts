@@ -40,7 +40,7 @@ vi.mock('@capacitor/push-notifications', () => ({
 }))
 
 vi.mock('@/lib/logger', () => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
 
 vi.mock('../firebase/config', () => firebaseConfigMocks)
@@ -383,6 +383,30 @@ describe('push helpers', () => {
         'Hi',
         expect.objectContaining({ body: 'There', tag: 'msg-1' }),
       )
+    })
+
+    it('skips foreground notification when suppression checker is active', async () => {
+      const { setPushSuppressionChecker } = await import('../pushSuppression')
+      setPushSuppressionChecker(() => true)
+
+      Object.defineProperty(globalThis, 'Notification', {
+        value: { permission: 'granted' },
+        configurable: true,
+      })
+      const registration = mockServiceWorkerRegistration()
+      const onForeground = vi.fn()
+      fcmMocks.onMessage.mockImplementation((_messaging, cb) => {
+        cb({
+          notification: { title: 'Hi', body: 'There' },
+          data: { chat_id: 'chat-1' },
+        })
+      })
+
+      await setupPushNotifications({ onForegroundNotification: onForeground })
+
+      expect(registration.showNotification).not.toHaveBeenCalled()
+      expect(onForeground).not.toHaveBeenCalled()
+      setPushSuppressionChecker(null)
     })
 
     it('uses service worker.ready when registration has no active worker yet', async () => {

@@ -1,13 +1,10 @@
 import { CalendarClock } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
 import { usePublicProfileImageUrl } from "@/features/provider-profile/hooks/usePublicProfileImageUrl";
 import type { BudgetPreviewItem } from "../types/client-budgets.types";
 import { BudgetStatusBadge } from "./BudgetStatusBadge";
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-}
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);

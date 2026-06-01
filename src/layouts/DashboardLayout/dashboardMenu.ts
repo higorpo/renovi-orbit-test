@@ -5,6 +5,7 @@ import {
   HelpCircle,
   LayoutDashboard,
   MapPin,
+  MessageSquare,
   Settings,
   Wallet,
 } from "lucide-react";
@@ -18,7 +19,7 @@ export interface DashboardMenuItem {
 }
 
 /** Main items shown in mobile bottom nav (first N from allItems). */
-const CLIENT_MAIN_COUNT = 4;
+const CLIENT_MAIN_COUNT = 5;
 const PROVIDER_MAIN_COUNT = 5;
 
 function clientMenuItems(): DashboardMenuItem[] {
@@ -26,6 +27,7 @@ function clientMenuItems(): DashboardMenuItem[] {
     { path: "/dashboard", label: "Visão geral", icon: LayoutDashboard },
     { path: "/dashboard/requests", label: "Meus Serviços", icon: FileText },
     { path: "/dashboard/orcamentos", label: "Orçamentos", icon: ClipboardList },
+    { path: "/dashboard/chats", label: "Conversas", icon: MessageSquare },
     { path: "/dashboard/addresses", label: "Endereços", icon: MapPin },
     { path: "/dashboard/conta", label: "Minha conta", icon: Settings },
     { path: "/dashboard/help", label: "Ajuda", icon: HelpCircle },
@@ -38,6 +40,7 @@ function providerMenuItems(): DashboardMenuItem[] {
     { path: "/dashboard/requests", label: "Solicitações", icon: FileText },
     { path: "/dashboard/jobs", label: "Trabalhos", icon: Briefcase },
     { path: "/dashboard/budgets", label: "Orçamentos", icon: ClipboardList },
+    { path: "/dashboard/chats", label: "Conversas", icon: MessageSquare },
     { path: "/dashboard/earnings", label: "Ganhos", icon: Wallet },
     { path: "/dashboard/conta", label: "Minha conta", icon: Settings },
     { path: "/dashboard/help", label: "Ajuda", icon: HelpCircle },

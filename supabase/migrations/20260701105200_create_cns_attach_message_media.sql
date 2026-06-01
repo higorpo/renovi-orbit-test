@@ -23,8 +23,14 @@ begin
 
   v_parts := storage.foldername(p_path);
 
-  if coalesce(array_length(v_parts, 1), 0) <> 3 then
+  -- storage.foldername returns directory segments only ({chat_id}/{session_id}), not the filename.
+  if coalesce(array_length(v_parts, 1), 0) <> 2 then
     raise exception 'UPLOAD_PATH_INVALID_DEPTH'
+      using errcode = '42501';
+  end if;
+
+  if storage.filename(p_path) is null or btrim(storage.filename(p_path)) = '' then
+    raise exception 'UPLOAD_PATH_INVALID'
       using errcode = '42501';
   end if;
 

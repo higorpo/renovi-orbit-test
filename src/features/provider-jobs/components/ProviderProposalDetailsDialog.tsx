@@ -3,8 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import type { ProviderProposalHistoryItem } from "../api/providerProposals.api";
 import { useProviderProposalPhotoUrls } from "../hooks/useProviderProposalPhotoUrls";
 import { ProviderProposalPhotosGrid } from "./ProviderProposalPhotosGrid";
+import { formatCurrency } from "@/lib/formatCurrency";
 import {
-  formatProposalCurrency,
   formatProposalDateOnly,
   formatProposalDateTime,
   translateProposalShift,
@@ -35,7 +35,7 @@ export function ProviderProposalDetailsDialog({
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">Valor cobrado</p>
                 <p className="mt-1 text-sm font-semibold text-foreground">
-                  {formatProposalCurrency(proposal.proposed_amount)}
+                  {formatCurrency(proposal.proposed_amount)}
                 </p>
               </div>
               <div className="rounded-lg border p-3">
@@ -47,14 +47,14 @@ export function ProviderProposalDetailsDialog({
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">Taxa da plataforma</p>
                 <p className="mt-1 text-sm font-semibold text-foreground">
-                  {formatProposalCurrency(proposal.tax_amount)} ({(proposal.tax_rate * 100).toFixed(0)}
+                  {formatCurrency(proposal.tax_amount)} ({(proposal.tax_rate * 100).toFixed(0)}
                   %)
                 </p>
               </div>
               <div className="rounded-lg border p-3">
                 <p className="text-xs text-muted-foreground">Valor a receber</p>
                 <p className="mt-1 text-sm font-semibold text-foreground">
-                  {formatProposalCurrency(proposal.final_amount)}
+                  {formatCurrency(proposal.final_amount)}
                 </p>
               </div>
             </div>

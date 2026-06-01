@@ -25,6 +25,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | **provider-jobs** | [trabalhos-e-propostas](./modulos/provider-jobs/features/trabalhos-e-propostas.md) | `/dashboard/jobs`, `/dashboard/jobs/:jobId` | Edge `match-provider-jobs`, propostas, perguntas |
 | **provider-profile** | [pagina-publica](./modulos/provider-profile/features/pagina-publica.md) | `/perfil/:slug` | RPC `get_public_provider_by_slug`, storage |
 | **request-quote** | [pedir-orcamento](./modulos/request-quote/features/pedir-orcamento.md) | `/pedir-orcamento` | `dynamic-form`, `addresses`, `auth`, Edge Functions |
+| **chats** + **negotiation-proposals** | [conversas-e-negociacao](./modulos/chats/features/conversas-e-negociacao.md) | `/chats`, `/chats/:chatId` | `auth`, `provider-jobs`, `message-dispatcher`, RPCs CNS em `supabase/migrations/202607*` |
 | **message-dispatcher** *(backend)* | [horario-silencioso](./modulos/message-dispatcher/features/horario-silencioso.md) | *Sem rota de UI* | Supabase schema `message_dispatcher`, Edge Functions `message-dispatcher-worker` / `message-dispatcher-webhook-resend` |
 
 ## Telas placeholder (evidência)
@@ -47,12 +48,14 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | `match-provider-jobs` | `provider-jobs` |
 | `message-dispatcher-worker` | `message-dispatcher` — consome fila, renderiza templates, envia via Resend/FCM |
 | `message-dispatcher-webhook-resend` | `message-dispatcher` — recebe webhooks Resend (delivered, bounce, opened) |
+| `chat-upload-media` | `chats` — upload de mídia na conversa (sessão + storage) |
+| `cns_process_domain_events` | `chats` — processa `domain_events` e enfileira notificações MMD |
 
 ## Status da documentação
 
 | Área | Status |
 |------|--------|
-| Módulos em `src/features` | Documentados (README + ≥1 feature) |
+| Módulos em `src/features` | Documentados (README + ≥1 feature); CNS em `chats/` + `negotiation-proposals/` |
 | Admin UI | **Não localizada** no router — evidência parcial |
 | Pagamentos | Planejamento em `docs/` apenas — fora do escopo comportamental |
 | PWA / Sentry / analytics | Mencionados na rastreabilidade; não detalhados por feature |
@@ -73,6 +76,8 @@ flowchart TB
   PB[provider-budgets]
   PP[provider-profile]
   MA[my-account]
+  CH[chats + negotiation-proposals]
+  MD[message-dispatcher]
   RQ --> DF
   RQ --> AD
   RQ --> AU
@@ -80,4 +85,7 @@ flowchart TB
   PJ --> PB
   MA --> AD
   PP --> MA
+  PJ --> CH
+  CH --> MD
+  CM --> CH
 ```

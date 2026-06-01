@@ -1,14 +1,11 @@
 import { Clock, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { ProviderProposalPhotosGrid } from "@/features/provider-jobs/components/ProviderProposalPhotosGrid";
 import { useProviderProposalPhotoUrls } from "@/features/provider-jobs/hooks/useProviderProposalPhotoUrls";
 import type { ClientBudgetDetailProposal } from "../types/client-budgets.types";
 import { BudgetStatusBadge } from "./BudgetStatusBadge";
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-}
 
 function formatDeadline(iso: string | null): string | null {
   if (!iso) return null;

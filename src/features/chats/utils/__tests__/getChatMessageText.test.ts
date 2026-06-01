@@ -1,0 +1,27 @@
+import { describe, expect, it } from "vitest";
+import type { ChatMessageListItem } from "../../types/chats.types";
+import { getChatMessageText } from "../getChatMessageText";
+
+const base: ChatMessageListItem = {
+  id: "m1",
+  chat_id: "c1",
+  sender_user_id: "u1",
+  message_type: "TEXT",
+  payload: {},
+  linked_entity_type: null,
+  linked_entity_id: null,
+  idempotency_key: "k1",
+  delivery_status: "SENT",
+  created_at: "2026-01-01T00:00:00.000Z",
+  updated_at: "2026-01-01T00:00:00.000Z",
+};
+
+describe("getChatMessageText", () => {
+  it("returns trimmed text payload for TEXT messages", () => {
+    expect(getChatMessageText({ ...base, payload: { text: "  Olá  " } })).toBe("Olá");
+  });
+
+  it("falls back when payload is empty", () => {
+    expect(getChatMessageText(base)).toBe("Mensagem");
+  });
+});

@@ -4,6 +4,7 @@ import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/comp
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency } from "@/lib/formatCurrency";
 import { ProviderProfileInlinePreview } from "@/features/provider-profile";
 import { useClientBudgetDetail } from "../hooks/useClientBudgetDetail";
 import { BudgetStatusBadge } from "./BudgetStatusBadge";
@@ -11,10 +12,6 @@ import { BudgetRejectReasonDialog } from "./BudgetRejectReasonDialog";
 import { CurrentProposalVersionBlock } from "./CurrentProposalVersionBlock";
 import type { ClientBudgetDetailProposal } from "../types/client-budgets.types";
 import { getReceivedBudgetSheetTitle, type ReceivedBudgetSheetMode } from "../constants/status";
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-}
 
 interface ReceivedBudgetDetailsSheetProps {
   open: boolean;

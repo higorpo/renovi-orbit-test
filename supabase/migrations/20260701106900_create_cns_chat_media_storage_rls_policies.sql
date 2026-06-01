@@ -12,7 +12,9 @@ create policy chat_media_select
     and (
       (select public.is_platform_admin())
       or (
-        coalesce(array_length(storage.foldername(name), 1), 0) = 3
+        coalesce(array_length(storage.foldername(name), 1), 0) = 2
+        and storage.filename(name) is not null
+        and btrim(storage.filename(name)) <> ''
         and (storage.foldername(name))[1] ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
         and (select public.is_chat_participant(((storage.foldername(name))[1])::uuid))
       )
@@ -38,6 +40,3 @@ create policy chat_media_delete_denied
   for delete
   to authenticated
   using (bucket_id is distinct from 'chat-media');
-
-comment on policy chat_media_select on storage.objects is
-  'Participant or admin read on paths {chat_id}/{upload_session_id}/{filename} (task 77).';

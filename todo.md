@@ -83,7 +83,9 @@ Coisas para fazer next
 - /home/higor/Área de Trabalho/Renovi/orbit/src/lib/analytics/events.ts é exclusivo do chat, talvez faça mais sentido mover o arquivo depois
 -rever regras, hoje parece que para uma provider_proposal existir é obrigatório ter um chat envolvido ... as políticas RLS também foram alteradas.
 -novas políticas RLS estão fora do padrão adotado que era ter descrição clara
-
+-remover código /home/higor/Área de Trabalho/Renovi/orbit/src/features/provider-jobs/components/ProviderProposalComposerDialog.tsx e converter /home/higor/Área de Trabalho/Renovi/orbit/src/features/negotiation-proposals/components/ProposalComposer.tsx na dialog full
+-remover código /home/higor/Área de Trabalho/Renovi/orbit/src/features/provider-jobs/hooks/useProviderProposalComposer.ts
+-cobertura de testes em todos os códigos novos
 
 
 

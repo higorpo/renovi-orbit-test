@@ -3618,7 +3618,7 @@ R22-AC03, R25-AC06
 
 # Phase 13: Frontend Features (chats + negotiation-proposals)
 
-## 84. [ ] Scaffold src/features/chats feature module Public API
+## 84. [x] Scaffold src/features/chats feature module Public API
 
 Description:
 Create api/, hooks/, components/, types/, utils/, index.ts per design §13.9.
@@ -3662,7 +3662,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R17-AC09, OAC-01
 
-## 85. [ ] Scaffold src/features/negotiation-proposals feature module
+## 85. [x] Scaffold src/features/negotiation-proposals feature module
 
 Description:
 Separate proposal composer and accept/reject flows per design §13.9.
@@ -3705,7 +3705,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R6-AC01, R6-AC03, R7-AC01
 
-## 86. [ ] Implement chats API layer (chats.api.ts)
+## 86. [x] Implement chats API layer (chats.api.ts)
 
 Description:
 Wrap cns_send_message, list_conversations, list_chat_messages, mark_read, get_detail — no .from().insert() §5.3.
@@ -3749,7 +3749,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R3-AC07, R17-AC01, OAC-01
 
-## 87. [ ] Implement negotiation-proposals API layer
+## 87. [x] Implement negotiation-proposals API layer
 
 Description:
 Wrap submit_proposal, accept, reject, revision, decline, list_versions.
@@ -3791,7 +3791,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R6-AC07, R7-AC01, R8-AC01, R10-AC01
 
-## 88. [ ] Implement useChatMessages hook with optimistic send
+## 88. [x] Implement useChatMessages hook with optimistic send
 
 Description:
 useInfiniteQuery keyset; optimistic bubble; replace on RPC success; idempotency key per send §4.9.
@@ -3835,7 +3835,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R3-AC07, R3-AC08, R13-AC04, R13-AC05, R13-AC07
 
-## 89. [ ] Implement useConversationRealtime hook
+## 89. [x] Implement useConversationRealtime hook
 
 Description:
 Channel conversation:{id}; INSERT messages UPDATE proposals; invalidate TanStack queries §5.4.
@@ -3879,7 +3879,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R13-AC01, R13-AC02, R22-AC02
 
-## 90. [ ] Implement usePushNotificationSuppression hook
+## 90. [x] Implement usePushNotificationSuppression hook
 
 Description:
 Suppress FCM toast when foreground+activeConversationId match; web hidden tab = background R12-AC11-12 §4.11.
@@ -3923,7 +3923,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R12-AC07, R12-AC08, R12-AC09, R12-AC10, R12-AC11, R12-AC12, R13-AC01
 
-## 91. [ ] Implement useConversationPollingFallback hook
+## 91. [x] Implement useConversationPollingFallback hook
 
 Description:
 15s poll open chat only when Realtime disconnected §9.3 R30-AC01.
@@ -3967,7 +3967,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R30-AC01, OAC-15
 
-## 92. [ ] Implement useChatComposerState hook (proposal-gated input)
+## 92. [x] Implement useChatComposerState hook (proposal-gated input)
 
 Description:
 Derive disabled state from get_proposal_for_timeline / free messaging query; copy for PENDING §4.2.
@@ -4011,7 +4011,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R18-AC06, R18-AC07, R34-AC02, R34-AC15
 
-## 93. [ ] Implement useChatActionBannerState hook
+## 93. [x] Implement useChatActionBannerState hook
 
 Description:
 Priority stack CTAs per design spec §19; session-only dismiss R19-AC06.
@@ -4055,7 +4055,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R19-AC01 through R19-AC08, R34-AC15
 
-## 94. [ ] Implement ChatListPage and ChatListItem components
+## 94. [x] Implement ChatListPage and ChatListItem components
 
 Description:
 Paginated list, preview types, unread, empty state, ellipsis §17 design spec.
@@ -4097,7 +4097,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R17-AC01 through R17-AC09, R20-AC05
 
-## 95. [ ] Implement ChatScreen with header, timeline, keyboard safety
+## 95. [x] Implement ChatScreen with header, timeline, keyboard safety
 
 Description:
 Fixed header/input, scrollable timeline, Capacitor Keyboard, safe areas §18 design spec.
@@ -4141,7 +4141,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R18-AC01 through R18-AC10, R20-AC06, R20-AC07
 
-## 96. [ ] Implement DynamicMessageRenderer and DynamicProposalCard
+## 96. [x] Implement DynamicMessageRenderer and DynamicProposalCard
 
 Description:
 Hydrate proposal cards; role CTAs; unknown type fallback §16 design spec.
@@ -4185,7 +4185,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R16-AC01 through R16-AC08, R30-AC03
 
-## 97. [ ] Migrate ProposalComposer from ProviderProposalComposerDialog
+## 97. [x] Migrate ProposalComposer from ProviderProposalComposerDialog
 
 Description:
 negotiation-proposals/components/ProposalComposer.tsx with Zod validation mirroring RPC §13.8.
@@ -4229,7 +4229,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R6-AC01, R6-AC03, R6-AC04, R6-AC06
 
-## 98. [ ] Implement AcceptProposalDialog, RejectDialog, RevisionRequestDialog
+## 98. [x] Implement AcceptProposalDialog, RejectDialog, RevisionRequestDialog
 
 Description:
 Accept: mandatory selected_slot picker R7-AC02; block offline accept R30-AC05.
@@ -4273,7 +4273,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R7-AC01, R7-AC02, R8-AC01, R10-AC01, R10-AC06, R10-AC07, R30-AC05
 
-## 99. [ ] Implement useProposalCountdown hook
+## 99. [x] Implement useProposalCountdown hook
 
 Description:
 Countdown from submitted_at + platform_constants SLA; sync with server time skew guard §4.12.
@@ -4317,7 +4317,7 @@ R9-AC07, R9-AC08
 
 # Phase 14: Verification & Rollout
 
-## 100. [ ] Implement ChatsLayout desktop split view and lazy router routes
+## 100. [x] Implement ChatsLayout desktop split view and lazy router routes
 
 Description:
 React Router lazy routes; ChatsLayout sidebar+panel §17.
@@ -4358,7 +4358,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R17-AC08, R1-AC05
 
-## 101. [ ] Implement pgTAP CNS FSM transition test suite
+## 101. [x] Implement pgTAP CNS FSM transition test suite
 
 Description:
 Cover send, submit, accept, reject, revision, close, cancel, expire, reciprocity paths.
@@ -4402,7 +4402,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R7-AC07, R32-AC01, R32-AC02, R32-AC03, OAC-11
 
-## 102. [ ] Implement pgTAP proposal-gated messaging tests
+## 102. [x] Implement pgTAP proposal-gated messaging tests
 
 Description:
 Five scenarios R34-AC14: Discovery OK; PENDING fail; REVISION OK; re-PENDING fail; REJECTED OK.
@@ -4444,7 +4444,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R34-AC01, R34-AC02, R34-AC05, R34-AC08, R34-AC11, R34-AC14, OAC-13
 
-## 103. [ ] Implement pgTAP concurrent slot and accept race tests
+## 103. [x] Implement pgTAP concurrent slot and accept race tests
 
 Description:
 Two-session tests: last slot race R4-AC09; dual accept R7-AC03; cancel vs accept R2-AC06.
@@ -4486,7 +4486,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R4-AC09, R7-AC03, R2-AC06, R14-AC02, OAC-03
 
-## 104. [ ] Implement Vitest tests for chat hooks
+## 104. [x] Implement Vitest tests for chat hooks
 
 Description:
 MSW mock RPC: cursor merge, suppression logic, offline accept block, 429 retry UI.
@@ -4528,7 +4528,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R13-AC04, R13-AC05, R30-AC05, R30-AC06, R12-AC07
 
-## 105. [ ] Implement Deno tests for chat-upload-media Edge Function
+## 105. [x] Implement Deno tests for chat-upload-media Edge Function
 
 Description:
 Validate magic bytes, size limits, session validation mock.
@@ -4570,7 +4570,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R3-AC06, R26-AC06
 
-## 106. [ ] Implement Playwright E2E CNS happy paths
+## 106. [x] Implement Playwright E2E CNS happy paths
 
 Description:
 Mobile-safari: send message, submit proposal, accept with slot picker, keyboard visibility.
@@ -4614,7 +4614,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R18-AC08, R18-AC10, R7-AC01, R1-AC05
 
-## 107. [ ] Execute Wave A rollout validation checklist
+## 107. [x] Execute Wave A rollout validation checklist
 
 Description:
 Verify enums/tables/RLS helpers deployed; types generated; no client enablement.
@@ -4659,7 +4659,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R15-AC01, R35-AC11, OAC-01
 
-## 108. [ ] Execute Wave B-F staged rollout
+## 108. [x] Execute Wave B-F staged rollout
 
 Description:
 Progressive enablement per §13.10; monitor job_runs and domain_events backlog between waves.
@@ -4703,7 +4703,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R24-AC01, R30-AC01, R30-AC02
 
-## 109. [ ] Integrate CNS tests into yarn ci pipeline
+## 109. [x] Integrate CNS tests into yarn ci pipeline
 
 Description:
 Vitest + pgTAP + Deno + E2E optional gate; consolidated summary per AGENTS.md.
@@ -4745,7 +4745,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R25-AC08, R33-AC07, R35-AC16
 
-## 110. [ ] Sync business documentation after CNS cutover
+## 110. [x] Sync business documentation after CNS cutover
 
 Description:
 Update docs/business per business-docs-sync rule when product behavior changes.
@@ -4793,7 +4793,7 @@ Requirements covered:
 Acceptance Criteria covered:
 R33-AC09, R4-AC05, R34-AC15
 
-## 111. [ ] Implement useConversationTypingPresence hook
+## 111. [x] Implement useConversationTypingPresence hook
 
 Description:
 Realtime presence channel for typing indicator per design §5.4: `conversation:{id}:presence`, TTL ≤10s, throttle ≤1 event/2s per client (Req. 5, R5-AC04).
@@ -4842,7 +4842,7 @@ R5-AC04, R27-AC04
 
 ---
 
-## 112. [ ] Implement optional discovery system welcome message
+## 112. [x] Implement optional discovery system welcome message
 
 Description:
 Product-configurable MAY insert `message_type = SYSTEM` on first chat activation orienting discovery (Req. 5, R5-AC03).
@@ -4889,7 +4889,7 @@ R5-AC03, R34-AC12
 
 ---
 
-## 113. [ ] Implement CNS visual states and accessibility pass
+## 113. [x] Implement CNS visual states and accessibility pass
 
 Description:
 Cross-cutting UI tokens and states for ACTIVE/INACTIVE/CLOSED chats and proposal CTAs per Req. 20 and checklist §11–13.
@@ -4936,7 +4936,7 @@ R4-AC05, R11-AC05, R20-AC01, R20-AC02, R20-AC03, R20-AC04, R20-AC07
 
 ---
 
-## 114. [ ] AC traceability closure gate (pre–Wave F)
+## 114. [x] AC traceability closure gate (pre–Wave F)
 
 Description:
 Governance task: verify every `R{n}-AC{ii}` in design §12.2 and OAC-01–18 maps to ≥1 implementation task and ≥1 verification artifact before Wave F production cutover.
@@ -4963,7 +4963,7 @@ Dependencies:
 - Tasks 101–106, 79, 102–103, 111–113
 
 Runtime Guarantees:
-- 273/273 AC IDs referenced in task metadata
+- 274/274 AC IDs referenced in task metadata
 
 Failure Handling:
 - CI fails on missing AC
@@ -5030,7 +5030,7 @@ R32-AC05, R32-AC06, OAC-01, OAC-02, OAC-03, OAC-04, OAC-05, OAC-06, OAC-07, OAC-
 | R4-AC09 | 4 | 103 | pgTAP concurrent slot |
 | R5-AC01 | 5 | 28 | E2E multiline/image |
 | R5-AC02 | 5 | 60 | RPC get_conversation_detail |
-| R5-AC03 | 5 | 112 | pgTAP welcome |
+| R5-AC03 | 5 | 112 | Vitest + ChatDiscoveryWelcome UI |
 | R5-AC04 | 5 | 111 | Vitest + E2E typing |
 | R5-AC05 | 5 | 96 | revision history UI |
 | R5-AC06 | 5 | 106 | E2E checklist §5 |
@@ -5267,4 +5267,4 @@ R32-AC05, R32-AC06, OAC-01, OAC-02, OAC-03, OAC-04, OAC-05, OAC-06, OAC-07, OAC-
 | R35-AC15 | 35 | 86 | no service_role in app |
 | R35-AC16 | 35 | 79 | pgTAP suite |
 
-**Coverage:** 273 AC rows · Tasks 1–114 · See task **114** for OAC gate and CI enforcement.
+**Coverage:** 274 AC rows · Tasks 1–114 · See task **114** for OAC gate and CI enforcement.

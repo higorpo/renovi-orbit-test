@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  formatProposalCurrency,
   formatProposalDateOnly,
   formatProposalDateTime,
   translateProposalShift,
@@ -8,10 +7,6 @@ import {
 } from "../providerProposalFormatters";
 
 describe("providerProposalFormatters", () => {
-  it("formats currency in BRL", () => {
-    expect(formatProposalCurrency(1234.56)).toMatch(/1\.234,56/);
-  });
-
   it("formats date-time and handles invalid input", () => {
     expect(formatProposalDateTime("2026-03-20T15:30:00.000Z")).not.toBe(
       "Data indisponível",

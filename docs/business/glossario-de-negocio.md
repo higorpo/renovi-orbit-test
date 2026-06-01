@@ -35,6 +35,13 @@ Termos extraídos ou inferidos a partir de nomes de entidades, rotas e interface
 | **Dispatch** | Registro individual de intenção de envio no Message Dispatcher. Cada dispatch possui canal, template, perfil destinatário e status na FSM. | Tabela `message_dispatcher.message_dispatches`. |
 | **Horário silencioso (Quiet Hours)** | Janela das 22:00 às 06:00 (America/Sao_Paulo) na qual o Message Dispatcher não envia mensagens. Dispatches nessa janela são reagendados para 06:00 BRT. | Funções `message_dispatcher_is_quiet_hours`, `message_dispatcher_next_send_window`. |
 | **bypass_limits** | Flag no dispatch que indica que verificações de quota/cooldown devem ser puladas. Ativada automaticamente quando uma mensagem é reagendada por horário silencioso. | Campo `message_dispatches.bypass_limits`. |
+| **CNS (Conversas e Negociação)** | Subsistema de conversas in-app por pedido, com propostas versionadas, slots de conversa ativa e integração ao Message Dispatcher. | `src/features/chats/`, `negotiation-proposals/`, migrations `202607*`, rotas `/chats`. |
+| **Conversa / chat** | Thread bilateral cliente–prestador ligada a um `service_request`; status `ACTIVE`, `INACTIVE` ou `CLOSED`. | Tabela `chats`, RPCs `list_conversations`, `cns_send_message`. |
+| **Slot de conversa ativa** | Vaga de negociação simultânea por pedido (padrão **4**); contador em `service_request_negotiation_stats`. INACTIVE libera slot; reativação não consome de novo. | Constante `chats.max_active_slots_per_service_request`; design §3.3.1. |
+| **Mensagem livre** | Texto ou mídia fora do card de proposta; **bloqueada** enquanto há proposta `PENDING`. | RPC `cns_send_message`, regra Req. 34. |
+| **Proposta (CNS)** | Oferta na timeline com FSM: `PENDING`, `REVISION_REQUESTED`, `ACCEPTED`, `REJECTED`, `EXPIRED`, etc. | `provider_proposals` evoluído, RPCs `submit_proposal`, `accept_proposal`. |
+| **Reciprocidade** | Regra que inativa conversa sem resposta bilateral no prazo; pode reativar com nova mensagem válida. | Cron `cron_chat_evaluate_reciprocity`, status `INACTIVE`. |
+| **domain_events** | Fila de eventos de domínio processada assincronamente para notificações e efeitos colaterais. | Tabela `domain_events`, Edge `cns_process_domain_events`. |
 
 ## Siglas
 

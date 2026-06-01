@@ -80,25 +80,43 @@ select
   jsonb_build_object('size', 1024)
 from _attach_media_fixture f;
 
+select set_config(
+  'test.attach_chat_id',
+  (select chat_id::text from _attach_media_fixture),
+  true
+);
+select set_config(
+  'test.attach_session_id',
+  (select session_id::text from _attach_media_fixture),
+  true
+);
+select set_config(
+  'test.attach_path',
+  current_setting('test.attach_chat_id')
+    || '/'
+    || current_setting('test.attach_session_id')
+    || '/photo.jpg',
+  true
+);
+
 select pg_temp.cns_set_auth('5d09e025-20a2-4842-aeef-324d42a431e1'::uuid);
+
+set local role authenticated;
 
 select throws_ok(
   $sql$
     select public.cns_attach_message_media(
-      (select chat_id from _attach_media_fixture),
-      (select session_id from _attach_media_fixture),
-      array[
-        (select chat_id::text from _attach_media_fixture)
-          || '/'
-          || (select session_id::text from _attach_media_fixture)
-          || '/photo.jpg'
-      ]
+      current_setting('test.attach_chat_id')::uuid,
+      current_setting('test.attach_session_id')::uuid,
+      array[current_setting('test.attach_path')]
     );
   $sql$,
   '42501',
   'permission denied for function cns_attach_message_media',
   'authenticated cannot call cns_attach_message_media directly'
 );
+
+reset role;
 
 select ok(
   (
@@ -137,7 +155,10 @@ select throws_ok(
       'c3333333-3333-4333-8333-333333333333'::uuid,
       jsonb_build_object(
         'upload_session_id', (select bad_path_session_id from _attach_media_fixture),
-        'paths', jsonb_build_array('wrong/chat/session/photo.jpg')
+        'paths', jsonb_build_array(
+          (select chat_id::text from _attach_media_fixture)
+            || '/00000000-0000-4000-8000-000000000099/photo.jpg'
+        )
       ),
       (select chat_id from _attach_media_fixture)
     );

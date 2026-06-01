@@ -6,16 +6,19 @@ import {
   createProviderProposal,
   uploadProviderProposalPhotos,
   type ProviderProposalSuggestedSlot,
-  type ProviderProposalPricing,
 } from "../api/providerProposals.api";
+import {
+  MAX_PROPOSAL_DESCRIPTION_LENGTH,
+  MAX_PROPOSAL_PHOTOS,
+  PROPOSAL_PRICING_DEBOUNCE_MS,
+  type ProposalComposerPricing,
+} from "@/features/negotiation-proposals";
 import {
   PROVIDER_JOBS_LIST_QUERY_KEY,
   PROVIDER_PROPOSAL_JOB_DETAIL_QUERY_KEY,
 } from "../constants/queryKeys";
 
-const MAX_PROPOSAL_DESCRIPTION = 1200;
-const MAX_PROPOSAL_PHOTOS = 5;
-const PRICING_DEBOUNCE_MS = 1500;
+const MAX_PROPOSAL_DESCRIPTION = MAX_PROPOSAL_DESCRIPTION_LENGTH;
 
 function maskBudgetInput(value: string): string {
   const sanitized = value.replace(/[^\d,]/g, "");
@@ -116,7 +119,7 @@ export function useProviderProposalComposer(
   ), [availabilitySlots, durationUnit]);
 
   const [existingPhotoPaths, setExistingPhotoPaths] = useState<string[]>([]);
-  const [pricing, setPricing] = useState<ProviderProposalPricing | null>(null);
+  const [pricing, setPricing] = useState<ProposalComposerPricing | null>(null);
   const [composerMode, setComposerMode] = useState<"create" | "edit">("create");
   const [editSnapshot, setEditSnapshot] = useState<EditSnapshot | null>(null);
   const pricingRequestRef = useRef(0);
@@ -144,7 +147,7 @@ export function useProviderProposalComposer(
         return;
       }
       setPricing(data);
-    }, PRICING_DEBOUNCE_MS);
+    }, PROPOSAL_PRICING_DEBOUNCE_MS);
 
     return () => {
       window.clearTimeout(timeoutId);

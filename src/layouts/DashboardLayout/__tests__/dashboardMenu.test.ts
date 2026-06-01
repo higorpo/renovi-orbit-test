@@ -3,11 +3,11 @@ import { getDashboardMenu } from "../dashboardMenu";
 import type { ProfileRole } from "@/features/auth";
 
 describe("getDashboardMenu", () => {
-  it("returns client menu with 4 main items and 6 all items", () => {
+  it("returns client menu with 5 main items and 7 all items", () => {
     const result = getDashboardMenu("client" as ProfileRole);
-    expect(result.mainItems).toHaveLength(4);
-    expect(result.allItems).toHaveLength(6);
-    expect(result.mainItems).toEqual(result.allItems.slice(0, 4));
+    expect(result.mainItems).toHaveLength(5);
+    expect(result.allItems).toHaveLength(7);
+    expect(result.mainItems).toEqual(result.allItems.slice(0, 5));
   });
 
   it("returns client allItems with expected paths and labels", () => {
@@ -18,6 +18,7 @@ describe("getDashboardMenu", () => {
       "/dashboard",
       "/dashboard/requests",
       "/dashboard/orcamentos",
+      "/dashboard/chats",
       "/dashboard/addresses",
       "/dashboard/conta",
       "/dashboard/help",
@@ -25,6 +26,7 @@ describe("getDashboardMenu", () => {
     expect(labels).toContain("Visão geral");
     expect(labels).toContain("Meus Serviços");
     expect(labels).toContain("Orçamentos");
+    expect(labels).toContain("Conversas");
     expect(labels).toContain("Endereços");
     expect(labels).toContain("Minha conta");
     expect(labels).toContain("Ajuda");
@@ -39,10 +41,10 @@ describe("getDashboardMenu", () => {
     });
   });
 
-  it("returns provider menu with 5 main items and 7 all items", () => {
+  it("returns provider menu with 5 main items and 8 all items", () => {
     const result = getDashboardMenu("provider" as ProfileRole);
     expect(result.mainItems).toHaveLength(5);
-    expect(result.allItems).toHaveLength(7);
+    expect(result.allItems).toHaveLength(8);
     expect(result.mainItems).toEqual(result.allItems.slice(0, 5));
   });
 
@@ -55,6 +57,7 @@ describe("getDashboardMenu", () => {
       "/dashboard/requests",
       "/dashboard/jobs",
       "/dashboard/budgets",
+      "/dashboard/chats",
       "/dashboard/earnings",
       "/dashboard/conta",
       "/dashboard/help",
@@ -62,6 +65,7 @@ describe("getDashboardMenu", () => {
     expect(labels).toContain("Visão geral");
     expect(labels).toContain("Solicitações");
     expect(labels).toContain("Trabalhos");
+    expect(labels).toContain("Conversas");
     expect(labels).toContain("Ganhos");
     expect(labels).toContain("Minha conta");
     expect(labels).toContain("Ajuda");
