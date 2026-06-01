@@ -7,7 +7,8 @@
  */
 
 // Provider & hook — wrap the app; consume auth state anywhere
-export { AuthProvider, useAuth } from "./hooks/useAuth";
+export { AuthProvider } from "./AuthProvider";
+export { useAuth } from "./hooks/useAuth";
 
 // Route guards — used in router.tsx to protect/restrict routes
 export { ProtectedRoute, GuestOnlyRoute } from "./components/routeGuards";

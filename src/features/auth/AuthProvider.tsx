@@ -8,14 +8,8 @@ import { unregisterDeviceBeaconOnLogout } from "@/features/device-beacon";
 import { logger } from "@/lib/logger";
 import { validatePasswordStrength } from "@/features/auth/utils/passwordPolicy";
 import type { AuthChangeEvent, Session, User } from "@supabase/supabase-js";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AuthContext } from "@/features/auth/authContext";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import type { AuthContextType, Profile, SignUpResult } from "@/features/auth/types/auth.types";
@@ -23,8 +17,6 @@ import { processAuthEvent } from "@/features/auth/utils/authStateHandlers";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useProfileFetcher } from "@/features/auth/hooks/useProfileFetcher";
 import { metrics, addBreadcrumb, setSentryUser } from "@/lib/sentry";
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AUTH_DEBOUNCE_MS = 300;
 
@@ -308,10 +300,3 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function useAuth(): AuthContextType {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-}
