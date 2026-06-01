@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ProfileRole } from "@/features/auth";
 import { Button } from "@/components/ui/button";
+import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { cn } from "@/lib/utils";
+import { useSnapChatTimelineOnKeyboardOpen } from "../../hooks/useSnapChatTimelineOnKeyboardOpen";
 import type { ProposalCardAction } from "../DynamicMessageRenderer/DynamicProposalCard";
 import type { ChatMessageListItem } from "../../types/chats.types";
 import { buildChatTimelineItems } from "../../utils/groupChatTimeline";
@@ -50,6 +52,7 @@ export function ChatTimeline({
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const didInitialScrollRef = useRef(false);
+  const isMobile = !useBreakpointMd();
 
   const timelineItems = useMemo(
     () => buildChatTimelineItems(messages, currentUserId),
@@ -97,6 +100,12 @@ export function ChatTimeline({
     });
   }, []);
 
+  const { anchorBeforeKeyboard, syncNearBottomFromScroll } = useSnapChatTimelineOnKeyboardOpen({
+    scrollRef,
+    scrollToLatest: () => scrollToLatest("auto"),
+    enabled: isMobile,
+  });
+
   useEffect(() => {
     didInitialScrollRef.current = false;
   }, [resetKey]);
@@ -125,7 +134,11 @@ export function ChatTimeline({
 
   const handleScroll = () => {
     const element = scrollRef.current;
-    if (!element || !hasNextPage || isFetchingNextPage) return;
+    if (!element) return;
+
+    syncNearBottomFromScroll();
+
+    if (!hasNextPage || isFetchingNextPage) return;
     if (element.scrollTop <= 48) onLoadOlder();
   };
 
@@ -172,7 +185,9 @@ export function ChatTimeline({
       : undefined;
 
   return (
-    <ChatTimelineScrollContext.Provider value={{ preserveScrollOnLayoutShift }}>
+    <ChatTimelineScrollContext.Provider
+      value={{ preserveScrollOnLayoutShift, onComposerFocus: anchorBeforeKeyboard }}
+    >
       <div
         ref={scrollRef}
         className={cn(

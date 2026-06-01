@@ -6,6 +6,7 @@ import { useVirtualKeyboardVisible } from "@/hooks/useVirtualKeyboardVisible";
 import { cn } from "@/lib/utils";
 import type { ChatComposerState } from "../../utils/composerState";
 import { useChatMobileViewportSchedule } from "./ChatMobileViewportContext";
+import { useChatTimelineScrollContext } from "./ChatTimelineScrollContext";
 
 export interface ChatComposerBarProps {
   composer: ChatComposerState;
@@ -25,6 +26,7 @@ export function ChatComposerBar({
   const [draft, setDraft] = useState("");
   const isKeyboardVisible = useVirtualKeyboardVisible();
   const scheduleViewportSync = useChatMobileViewportSchedule();
+  const timelineScroll = useChatTimelineScrollContext();
 
   const handleSend = async () => {
     const text = draft.trim();
@@ -70,7 +72,10 @@ export function ChatComposerBar({
           disabled={!composer.isInputEnabled || isSending}
           rows={1}
           className="min-h-11 max-h-32 flex-1 resize-none rounded-full border-0 bg-muted px-4 py-3 text-[15px] leading-snug shadow-none focus-visible:ring-1 max-sm:resize-none"
-          onFocus={() => scheduleViewportSync()}
+          onFocus={() => {
+            timelineScroll?.onComposerFocus();
+            scheduleViewportSync();
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
