@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { DashboardLayout } from "../DashboardLayout";
 
 vi.mock("@/features/auth", () => ({
@@ -125,5 +125,23 @@ describe("DashboardLayout", () => {
     );
     const main = screen.getByRole("main");
     expect(main).toHaveClass("pb-20");
+  });
+
+  it("hides mobile nav on a specific chat conversation route", () => {
+    useBreakpointMd.mockReturnValue(false);
+    render(
+      <MemoryRouter initialEntries={["/dashboard/chats/chat-1"]}>
+        <Routes>
+          <Route path="/dashboard/chats/:chatId" element={<DashboardLayout />}>
+            <Route index element={null} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole("button", { name: "Abrir menu" })).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Navegação principal" })).toBeNull();
+    expect(screen.getByRole("main")).not.toHaveClass("pb-20");
+    expect(screen.getByRole("main")).toHaveClass("overflow-hidden");
   });
 });

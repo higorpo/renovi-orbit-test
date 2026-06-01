@@ -1,4 +1,4 @@
-import { Link, Outlet } from "react-router";
+import { Link, Outlet, useMatch } from "react-router";
 import { useAuth } from "@/features/auth";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -7,15 +7,20 @@ import { DesktopNav } from "./DesktopNav";
 import { MobileNav } from "./MobileNav";
 import { cn } from "@/lib/utils";
 
+/** Mobile conversation view uses the chat chrome instead of dashboard nav. */
+const MOBILE_CHAT_CONVERSATION_MATCH = { path: "/dashboard/chats/:chatId", end: true } as const;
+
 export function DashboardLayout() {
   const { profile } = useAuth();
   const isDesktop = useBreakpointMd();
   const isOnline = useOnlineStatus();
+  const mobileChatConversationMatch = useMatch(MOBILE_CHAT_CONVERSATION_MATCH);
+  const isMobileChatConversation = !isDesktop && mobileChatConversationMatch != null;
   const role = profile?.role ?? "client";
   const menu = getDashboardMenu(role);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="flex h-dvh min-h-0 flex-col bg-background">
       {/* Desktop: top bar with logo + nav */}
       {isDesktop && (
         <header
@@ -37,14 +42,16 @@ export function DashboardLayout() {
         </header>
       )}
 
-      {/* Mobile: top bar with hamburger + bottom nav */}
-      {!isDesktop && <MobileNav menu={menu} isOffline={!isOnline} />}
+      {/* Mobile: top bar with hamburger + bottom nav (hidden during fullscreen chat) */}
+      {!isDesktop && !isMobileChatConversation ? (
+        <MobileNav menu={menu} isOffline={!isOnline} />
+      ) : null}
 
-      {/* Main content: padding bottom on mobile so content is not under the bottom nav */}
       <main
         className={cn(
-          "flex-1 flex flex-col",
-          !isDesktop && "pb-20"
+          "flex min-h-0 flex-1 flex-col",
+          isMobileChatConversation ? "overflow-hidden" : "overflow-y-auto",
+          !isDesktop && !isMobileChatConversation && "pb-20",
         )}
       >
         <Outlet />

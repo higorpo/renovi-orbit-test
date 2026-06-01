@@ -9,6 +9,10 @@ vi.mock("@/hooks/useBreakpoint", () => ({
   useBreakpointMd: () => true,
 }));
 
+vi.mock("@/hooks/useOnlineStatus", () => ({
+  useOnlineStatus: () => true,
+}));
+
 vi.mock("../../ChatListPage/ChatListPage", () => ({
   ChatListPage: () => <div data-testid="chat-list">Lista</div>,
 }));
@@ -34,5 +38,12 @@ describe("ChatsLayout", () => {
     renderAt("/chats");
     expect(screen.getByTestId("chat-list")).toBeTruthy();
     expect(screen.getByText("Selecione uma conversa")).toBeTruthy();
+  });
+
+  it("uses fullscreen shell on mobile conversation route", () => {
+    renderAt("/chats/chat-1");
+    const shell = screen.getByTestId("chat-conversation-fullscreen");
+    expect(shell.className).toContain("max-md:fixed");
+    expect(shell.className).toContain("max-md:h-dvh");
   });
 });
