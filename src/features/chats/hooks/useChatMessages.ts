@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/features/auth";
 import { generateIdempotencyKeyV7 } from "@/features/notifications";
 import { logger } from "@/lib/logger";
@@ -57,10 +57,17 @@ export function useChatMessages(
   const idempotencyByClientSendId = useRef<Map<string, string>>(new Map());
   const pendingInputByClientSendId = useRef<Map<string, SendChatMessageInput>>(new Map());
   const messagesRef = useRef<ChatMessageListItem[]>([]);
+  const sendChainRef = useRef<Promise<void>>(Promise.resolve());
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessageListItem[]>([]);
+  const [pendingSendCount, setPendingSendCount] = useState(0);
   const [lastSendError, setLastSendError] = useState<ChatsApiError | null>(null);
 
   const enabled = Boolean(chatId) && Boolean(user?.id) && (options?.enabled ?? true);
+
+  useEffect(() => {
+    sendChainRef.current = Promise.resolve();
+    setPendingSendCount(0);
+  }, [chatId]);
 
   const query = useInfiniteQuery({
     queryKey: [CHAT_MESSAGES_QUERY_KEY, chatId],
@@ -133,6 +140,23 @@ export function useChatMessages(
     [chatId, queryClient],
   );
 
+  const applyOptimisticSend = useCallback(
+    (input: SendChatMessageInput) => {
+      if (!chatId || !user?.id) return;
+
+      const idempotencyKey =
+        idempotencyByClientSendId.current.get(input.clientSendId) ??
+        generateIdempotencyKeyV7();
+      idempotencyByClientSendId.current.set(input.clientSendId, idempotencyKey);
+      pendingInputByClientSendId.current.set(input.clientSendId, input);
+
+      const optimistic = buildOptimisticMessage(chatId, user.id, input, idempotencyKey);
+      setOptimisticMessages((prev) => [...prev, optimistic]);
+      setLastSendError(null);
+    },
+    [chatId, user?.id],
+  );
+
   const refetchGapFill = useCallback(async () => {
     const currentMessages = messagesRef.current;
     if (!chatId || currentMessages.length === 0) return;
@@ -194,19 +218,6 @@ export function useChatMessages(
 
       return { result: result.data, idempotencyKey, input };
     },
-    onMutate: (input) => {
-      if (!chatId || !user?.id) return;
-
-      const idempotencyKey =
-        idempotencyByClientSendId.current.get(input.clientSendId) ??
-        generateIdempotencyKeyV7();
-      idempotencyByClientSendId.current.set(input.clientSendId, idempotencyKey);
-      pendingInputByClientSendId.current.set(input.clientSendId, input);
-
-      const optimistic = buildOptimisticMessage(chatId, user.id, input, idempotencyKey);
-      setOptimisticMessages((prev) => [...prev, optimistic]);
-      setLastSendError(null);
-    },
     onSuccess: ({ result, idempotencyKey, input }) => {
       setOptimisticMessages((prev) =>
         prev.filter((message) => message.idempotency_key !== idempotencyKey),
@@ -237,19 +248,50 @@ export function useChatMessages(
     },
   });
 
+  const enqueueSend = useCallback(
+    (input: SendChatMessageInput) => {
+      if (!chatId || !user?.id) {
+        return Promise.reject(new Error("Autenticação necessária para enviar mensagem"));
+      }
+
+      applyOptimisticSend(input);
+      setPendingSendCount((count) => count + 1);
+
+      const sendPromise = sendChainRef.current.then(() => sendMutation.mutateAsync(input));
+      sendChainRef.current = sendPromise.then(
+        () => undefined,
+        () => undefined,
+      );
+
+      return sendPromise.finally(() => {
+        setPendingSendCount((count) => Math.max(0, count - 1));
+      });
+    },
+    [applyOptimisticSend, chatId, sendMutation, user?.id],
+  );
+
   const sendChatMessage = useCallback(
-    (input: SendChatMessageInput) => sendMutation.mutateAsync(input),
-    [sendMutation],
+    (input: SendChatMessageInput) => enqueueSend(input),
+    [enqueueSend],
   );
 
   const retrySend = useCallback(
     (clientSendId: string) => {
       const pendingInput = pendingInputByClientSendId.current.get(clientSendId);
-      if (!pendingInput) return;
+      if (!pendingInput || !chatId || !user?.id) return;
 
-      return sendMutation.mutateAsync(pendingInput);
+      setPendingSendCount((count) => count + 1);
+      const sendPromise = sendChainRef.current.then(() => sendMutation.mutateAsync(pendingInput));
+      sendChainRef.current = sendPromise.then(
+        () => undefined,
+        () => undefined,
+      );
+
+      return sendPromise.finally(() => {
+        setPendingSendCount((count) => Math.max(0, count - 1));
+      });
     },
-    [sendMutation],
+    [chatId, sendMutation, user?.id],
   );
 
   const dismissFailedSend = useCallback((idempotencyKey: string) => {
@@ -276,7 +318,8 @@ export function useChatMessages(
     sendChatMessage,
     retrySend,
     dismissFailedSend,
-    isSending: sendMutation.isPending,
+    isSending: pendingSendCount > 0,
+    pendingSendCount,
     sendError: lastSendError,
     optimisticCount: optimisticMessages.length,
   };

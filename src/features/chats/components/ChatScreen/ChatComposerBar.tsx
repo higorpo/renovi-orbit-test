@@ -1,5 +1,5 @@
 import { ImageIcon, SendHorizontal } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useVirtualKeyboardVisible } from "@/hooks/useVirtualKeyboardVisible";
@@ -24,19 +24,29 @@ export function ChatComposerBar({
   className,
 }: ChatComposerBarProps) {
   const [draft, setDraft] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isKeyboardVisible = useVirtualKeyboardVisible();
   const scheduleViewportSync = useChatMobileViewportSchedule();
   const timelineScroll = useChatTimelineScrollContext();
 
-  const handleSend = async () => {
+  const focusComposer = useCallback(() => {
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+  }, []);
+
+  const handleSend = () => {
     const text = draft.trim();
-    if (!text || !composer.isSendEnabled || isSending) return;
+    if (!text || !composer.isSendEnabled) return;
     setDraft("");
-    await onSend(text);
+    onDraftChange?.(false);
+    void onSend(text);
+    focusComposer();
   };
 
   return (
     <footer
+      aria-busy={isSending}
       className={cn(
         "shrink-0 border-t border-border/60 bg-background/95 px-3 pt-3 backdrop-blur-md",
         isKeyboardVisible
@@ -62,6 +72,7 @@ export function ChatComposerBar({
         </Button>
 
         <Textarea
+          ref={textareaRef}
           value={draft}
           onChange={(event) => {
             const value = event.target.value;
@@ -69,7 +80,7 @@ export function ChatComposerBar({
             onDraftChange?.(value.trim().length > 0);
           }}
           placeholder={composer.placeholder}
-          disabled={!composer.isInputEnabled || isSending}
+          disabled={!composer.isInputEnabled}
           rows={1}
           className="min-h-11 max-h-32 flex-1 resize-none rounded-full border-0 bg-muted px-4 py-3 text-[15px] leading-snug shadow-none focus-visible:ring-1 max-sm:resize-none"
           onFocus={() => {
@@ -88,7 +99,7 @@ export function ChatComposerBar({
           type="button"
           size="icon"
           className="h-11 w-11 shrink-0 rounded-full"
-          disabled={!composer.isSendEnabled || !draft.trim() || isSending}
+          disabled={!composer.isSendEnabled || !draft.trim()}
           onClick={() => void handleSend()}
           aria-label="Enviar mensagem"
         >

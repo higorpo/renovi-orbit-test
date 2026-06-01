@@ -9,8 +9,12 @@ vi.mock("@/features/auth", () => ({
   useAuth: () => ({ user: { id: "user-1" } }),
 }));
 
+let idempotencySeq = 0;
 vi.mock("@/features/notifications", () => ({
-  generateIdempotencyKeyV7: () => "00000000-0000-7000-8000-000000000003",
+  generateIdempotencyKeyV7: () => {
+    idempotencySeq += 1;
+    return `00000000-0000-7000-8000-00000000000${idempotencySeq}`;
+  },
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -40,6 +44,7 @@ function createWrapper() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  idempotencySeq = 0;
   listChatMessagesMock.mockResolvedValue({
     data: {
       items: [
@@ -84,7 +89,7 @@ describe("useChatMessages", () => {
           sender_user_id: "user-1",
           message_type: "TEXT",
           payload: { text: "Olá" },
-          idempotency_key: "00000000-0000-7000-8000-000000000003",
+          idempotency_key: "00000000-0000-7000-8000-000000000001",
           created_at: "2026-01-02T00:00:00.000Z",
         },
         conversation: { id: "chat-1", last_interaction_at: "2026-01-02T00:00:00.000Z" },
@@ -107,7 +112,7 @@ describe("useChatMessages", () => {
     await waitFor(() => expect(result.current.optimisticCount).toBe(0));
     expect(sendMessageMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        idempotencyKey: "00000000-0000-7000-8000-000000000003",
+        idempotencyKey: "00000000-0000-7000-8000-000000000001",
       }),
     );
   });
@@ -123,7 +128,7 @@ describe("useChatMessages", () => {
             sender_user_id: "user-1",
             message_type: "TEXT",
             payload: { text: "Olá" },
-            idempotency_key: "00000000-0000-7000-8000-000000000003",
+            idempotency_key: "00000000-0000-7000-8000-000000000002",
             created_at: "2026-01-02T00:00:00.000Z",
           },
           conversation: { id: "chat-1" },
@@ -149,7 +154,10 @@ describe("useChatMessages", () => {
 
     expect(sendMessageMock).toHaveBeenCalledTimes(2);
     expect(sendMessageMock.mock.calls[0]?.[0]?.idempotencyKey).toBe(
-      sendMessageMock.mock.calls[1]?.[0]?.idempotencyKey,
+      "00000000-0000-7000-8000-000000000001",
+    );
+    expect(sendMessageMock.mock.calls[1]?.[0]?.idempotencyKey).toBe(
+      "00000000-0000-7000-8000-000000000001",
     );
   });
 
@@ -258,6 +266,60 @@ describe("useChatMessages", () => {
     await waitFor(() =>
       expect(result.current.messages.map((m) => m.id)).toEqual(["msg-1", "msg-2"]),
     );
+  });
+
+  it("sends queued messages to the API in enqueue order", async () => {
+    const sendOrder: string[] = [];
+    let resolveFirst: (() => void) | undefined;
+    const firstGate = new Promise<void>((resolve) => {
+      resolveFirst = resolve;
+    });
+
+    sendMessageMock.mockImplementation(
+      async (params: { idempotencyKey: string; payload: { text: string } }) => {
+        sendOrder.push(params.payload.text);
+        if (params.payload.text === "primeira") await firstGate;
+        return {
+          data: {
+            message: {
+              id: `msg-${params.payload.text}`,
+              chat_id: "chat-1",
+              sender_user_id: "user-1",
+              message_type: "TEXT",
+              payload: params.payload,
+              idempotency_key: params.idempotencyKey,
+              created_at: "2026-01-02T00:00:00.000Z",
+            },
+            conversation: { id: "chat-1", last_interaction_at: "2026-01-02T00:00:00.000Z" },
+          },
+          error: null,
+        };
+      },
+    );
+
+    const { result } = renderHook(() => useChatMessages("chat-1"), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const first = result.current.sendChatMessage({
+      clientSendId: "client-1",
+      messageType: "TEXT",
+      payload: { text: "primeira" },
+    });
+    const second = result.current.sendChatMessage({
+      clientSendId: "client-2",
+      messageType: "TEXT",
+      payload: { text: "segunda" },
+    });
+
+    await waitFor(() => expect(sendOrder).toEqual(["primeira"]));
+    resolveFirst?.();
+    await Promise.all([first, second]);
+
+    expect(sendOrder).toEqual(["primeira", "segunda"]);
+    await waitFor(() => expect(result.current.optimisticCount).toBe(0));
   });
 
   it("merges gap-fill messages into the first page", async () => {
