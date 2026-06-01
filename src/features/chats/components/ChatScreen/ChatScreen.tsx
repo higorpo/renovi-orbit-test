@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/features/auth";
+import { useBreakpointMd } from "@/hooks/useBreakpoint";
+import { useVirtualKeyboardVisible } from "@/hooks/useVirtualKeyboardVisible";
 import { cn } from "@/lib/utils";
 import { markConversationRead } from "../../api/chats.api";
-import { ChatActionBannerSlot } from "../ChatActionBanner/ChatActionBanner";
+import { ChatActionBanner } from "../ChatActionBanner/ChatActionBanner";
+import { ChatActionBannerOverlayHost } from "../ChatActionBanner/ChatActionBannerOverlay";
 import { useChatActionBannerState } from "../../hooks/useChatActionBannerState";
 import { useChatComposerState } from "../../hooks/useChatComposerState";
 import { useChatMessages } from "../../hooks/useChatMessages";
@@ -133,9 +136,13 @@ export function ChatScreen({
     detail?.counterparty.full_name?.trim() || "Participante";
   const serviceTitle =
     detail?.service_request.title || detail?.service.title || "Serviço";
+  const isDesktop = useBreakpointMd();
+  const isKeyboardVisible = useVirtualKeyboardVisible();
   const showActionBanner = Boolean(banner && isBannerVisible && detail);
+  const hideActionBannerForKeyboard = !isDesktop && isKeyboardVisible;
+  const showActionBannerOverlay = showActionBanner && !hideActionBannerForKeyboard;
   const bannerOverlayRef = useRef<HTMLDivElement>(null);
-  const actionBannerTopInset = useChatActionBannerInset(bannerOverlayRef, showActionBanner);
+  const actionBannerTopInset = useChatActionBannerInset(bannerOverlayRef, showActionBannerOverlay);
 
   if (isDetailLoading) {
     return (
@@ -191,23 +198,22 @@ export function ChatScreen({
           actionBannerTopInset={actionBannerTopInset}
         />
 
-        {banner ? (
-          <div
-            ref={bannerOverlayRef}
-            className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-transparent px-4 pt-2"
-          >
-            <ChatActionBannerSlot
+        <ChatActionBannerOverlayHost
+          ref={bannerOverlayRef}
+          show={showActionBanner}
+          isDisplayed={showActionBannerOverlay}
+        >
+          {banner ? (
+            <ChatActionBanner
               banner={banner}
-              isVisible={isBannerVisible}
               onDismiss={dismiss}
               onPrimaryAction={() => {
                 const payload = getCtaPayload();
                 if (payload && onBannerCta) onBannerCta(payload);
               }}
-              className="pointer-events-auto"
             />
-          </div>
-        ) : null}
+          ) : null}
+        </ChatActionBannerOverlayHost>
       </div>
 
       {isCounterpartyTyping ? (

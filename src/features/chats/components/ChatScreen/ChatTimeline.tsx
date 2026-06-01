@@ -181,8 +181,11 @@ export function ChatTimeline({
       ? {
           paddingTop: actionBannerTopInset,
           scrollPaddingTop: actionBannerTopInset,
+          transition: "padding-top 220ms cubic-bezier(0.4, 0, 0.2, 1)",
         }
-      : undefined;
+      : {
+          transition: "padding-top 220ms cubic-bezier(0.4, 0, 0.2, 1)",
+        };
 
   return (
     <ChatTimelineScrollContext.Provider
