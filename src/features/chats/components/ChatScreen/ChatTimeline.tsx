@@ -24,6 +24,8 @@ export interface ChatTimelineProps {
   isFetchingNextPage: boolean;
   onLoadOlder: () => void;
   onRetry?: () => void;
+  /** Space reserved at the top when the action banner overlays the timeline. */
+  actionBannerTopInset?: number;
   className?: string;
 }
 
@@ -42,6 +44,7 @@ export function ChatTimeline({
   isFetchingNextPage,
   onLoadOlder,
   onRetry,
+  actionBannerTopInset = 0,
   className,
 }: ChatTimelineProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -53,9 +56,35 @@ export function ChatTimeline({
     [currentUserId, messages],
   );
 
-  const scrollToLatest = useCallback((behavior: ScrollBehavior = "auto") => {
-    bottomRef.current?.scrollIntoView({ block: "end", behavior });
-  }, []);
+  const lastTimelineMessageKey = useMemo(() => {
+    for (let i = timelineItems.length - 1; i >= 0; i -= 1) {
+      const item = timelineItems[i];
+      if (item?.type === "message") return item.key;
+    }
+    return null;
+  }, [timelineItems]);
+
+  const scrollToLatest = useCallback(
+    (behavior: ScrollBehavior = "auto") => {
+      bottomRef.current?.scrollIntoView({ block: "end", behavior });
+
+      if (actionBannerTopInset <= 0) return;
+
+      requestAnimationFrame(() => {
+        const scrollEl = scrollRef.current;
+        if (!scrollEl) return;
+
+        const lastMessage = scrollEl.querySelector<HTMLElement>('[data-chat-timeline-last="true"]');
+        if (!lastMessage) return;
+
+        const clearanceScrollTop = lastMessage.offsetTop - actionBannerTopInset;
+        if (scrollEl.scrollTop < clearanceScrollTop) {
+          scrollEl.scrollTop = Math.max(0, clearanceScrollTop);
+        }
+      });
+    },
+    [actionBannerTopInset],
+  );
 
   const preserveScrollOnLayoutShift = useCallback(() => {
     const element = scrollRef.current;
@@ -84,6 +113,15 @@ export function ChatTimeline({
     if (!didInitialScrollRef.current || !lastMessageId) return;
     scrollToLatest("smooth");
   }, [lastMessageId, scrollToLatest]);
+
+  useEffect(() => {
+    if (!didInitialScrollRef.current || actionBannerTopInset <= 0) return;
+
+    preserveScrollOnLayoutShift();
+    requestAnimationFrame(() => {
+      scrollToLatest("auto");
+    });
+  }, [actionBannerTopInset, preserveScrollOnLayoutShift, scrollToLatest]);
 
   const handleScroll = () => {
     const element = scrollRef.current;
@@ -125,6 +163,14 @@ export function ChatTimeline({
     );
   }
 
+  const timelineScrollStyle =
+    actionBannerTopInset > 0
+      ? {
+          paddingTop: actionBannerTopInset,
+          scrollPaddingTop: actionBannerTopInset,
+        }
+      : undefined;
+
   return (
     <ChatTimelineScrollContext.Provider value={{ preserveScrollOnLayoutShift }}>
       <div
@@ -133,6 +179,7 @@ export function ChatTimeline({
           "min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-2 touch-pan-y",
           className,
         )}
+        style={timelineScrollStyle}
         onScroll={handleScroll}
         aria-label="Mensagens da conversa"
       >
@@ -162,17 +209,21 @@ export function ChatTimeline({
         }
 
         return (
-          <ChatMessageRow
+          <div
             key={item.key}
-            chatId={chatId}
-            message={item.message}
-            groupPosition={item.groupPosition}
-            showIncomingAvatar={item.showIncomingAvatar}
-            isOutgoing={item.isOutgoing}
-            counterpartyName={counterpartyName}
-            viewerRole={viewerRole}
-            onProposalAction={onProposalAction}
-          />
+            data-chat-timeline-last={item.key === lastTimelineMessageKey ? "true" : undefined}
+          >
+            <ChatMessageRow
+              chatId={chatId}
+              message={item.message}
+              groupPosition={item.groupPosition}
+              showIncomingAvatar={item.showIncomingAvatar}
+              isOutgoing={item.isOutgoing}
+              counterpartyName={counterpartyName}
+              viewerRole={viewerRole}
+              onProposalAction={onProposalAction}
+            />
+          </div>
         );
       })}
 

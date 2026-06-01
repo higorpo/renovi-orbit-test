@@ -22,7 +22,7 @@ export function ChatActionBanner({
   return (
     <section
       className={cn(
-        "rounded-2xl border border-border/60 bg-muted/40 px-4 py-4 shadow-sm",
+        "rounded-2xl border border-border/60 bg-muted px-4 py-4 shadow-sm",
         className,
       )}
       aria-live="polite"

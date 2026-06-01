@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/features/auth";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ import {
 import { useConversationPollingFallback } from "../../hooks/useConversationPollingFallback";
 import { useConversationTypingPresence } from "../../hooks/useConversationTypingPresence";
 import { usePushNotificationSuppression } from "../../hooks/usePushNotificationSuppression";
+import { useChatActionBannerInset } from "../../hooks/useChatActionBannerInset";
 import type { ChatActionBannerCtaPayload } from "../../hooks/useChatActionBannerState";
 import type { ProposalCardAction } from "../DynamicMessageRenderer/DynamicProposalCard";
 import { ChatComposerBar } from "./ChatComposerBar";
@@ -132,6 +133,9 @@ export function ChatScreen({
     detail?.counterparty.full_name?.trim() || "Participante";
   const serviceTitle =
     detail?.service_request.title || detail?.service.title || "Serviço";
+  const showActionBanner = Boolean(banner && isBannerVisible && detail);
+  const bannerOverlayRef = useRef<HTMLDivElement>(null);
+  const actionBannerTopInset = useChatActionBannerInset(bannerOverlayRef, showActionBanner);
 
   if (isDetailLoading) {
     return (
@@ -168,36 +172,43 @@ export function ChatScreen({
         onDetails={onDetails}
       />
 
-      {banner ? (
-        <div className="shrink-0 px-4 py-3">
-          <ChatActionBannerSlot
-            banner={banner}
-            isVisible={isBannerVisible}
-            onDismiss={dismiss}
-            onPrimaryAction={() => {
-              const payload = getCtaPayload();
-              if (payload && onBannerCta) onBannerCta(payload);
-            }}
-          />
-        </div>
-      ) : null}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <ChatTimeline
+          resetKey={chatId}
+          chatId={chatId}
+          messages={messages}
+          currentUserId={user?.id ?? null}
+          counterpartyName={counterpartyName}
+          viewerRole={viewerRole}
+          onProposalAction={onProposalAction}
+          isLoading={isMessagesLoading}
+          isError={isMessagesError}
+          errorMessage={messagesError instanceof Error ? messagesError.message : undefined}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          onLoadOlder={() => void fetchNextPage()}
+          onRetry={() => void refetchMessages()}
+          actionBannerTopInset={actionBannerTopInset}
+        />
 
-      <ChatTimeline
-        resetKey={chatId}
-        chatId={chatId}
-        messages={messages}
-        currentUserId={user?.id ?? null}
-        counterpartyName={counterpartyName}
-        viewerRole={viewerRole}
-        onProposalAction={onProposalAction}
-        isLoading={isMessagesLoading}
-        isError={isMessagesError}
-        errorMessage={messagesError instanceof Error ? messagesError.message : undefined}
-        hasNextPage={hasNextPage}
-        isFetchingNextPage={isFetchingNextPage}
-        onLoadOlder={() => void fetchNextPage()}
-        onRetry={() => void refetchMessages()}
-      />
+        {banner ? (
+          <div
+            ref={bannerOverlayRef}
+            className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-transparent px-4 pt-2"
+          >
+            <ChatActionBannerSlot
+              banner={banner}
+              isVisible={isBannerVisible}
+              onDismiss={dismiss}
+              onPrimaryAction={() => {
+                const payload = getCtaPayload();
+                if (payload && onBannerCta) onBannerCta(payload);
+              }}
+              className="pointer-events-auto"
+            />
+          </div>
+        ) : null}
+      </div>
 
       {isCounterpartyTyping ? (
         <p className="shrink-0 px-4 py-1 text-xs text-muted-foreground" aria-live="polite">
