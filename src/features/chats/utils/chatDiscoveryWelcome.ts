@@ -22,13 +22,13 @@ export function getChatDiscoveryWelcomeContent(
     return {
       title: "Comece a negociação",
       body:
-        "Apresente-se, tire dúvidas sobre o pedido e envie sua proposta quando estiver pronto. Mensagens claras e fotos do serviço ajudam o cliente a decidir com confiança.",
+        "Apresente-se, tire dúvidas sobre o pedido e envie sua proposta quando estiver pronto. Mensagens claras e fotos do serviço ajudam o cliente a decidir com confiança. As mensagens são monitoradas pela nossa equipe.",
     };
   }
 
   return {
     title: "Negocie com o prestador",
     body:
-      "Use esta conversa para tirar dúvidas, combinar detalhes do serviço e analisar propostas. Quando receber uma proposta, você pode aceitar, pedir revisão ou recusar pelo card na conversa.",
+      "Use esta conversa para tirar dúvidas, combinar detalhes do serviço e analisar propostas. Quando receber uma proposta, você pode aceitar, pedir revisão ou recusar pelo card na conversa. As mensagens são monitoradas pela nossa equipe.",
   };
 }
