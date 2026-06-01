@@ -132,4 +132,24 @@ describe("useConversationRealtime", () => {
       expect(messageInvalidations).toHaveLength(1);
     });
   });
+
+  it("skips all invalidations for recently sent own message", async () => {
+    const { rememberSentChatMessageId } = await import("../../utils/chatMessageSendSync");
+    rememberSentChatMessageId("msg-own");
+
+    const queryClient = new QueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    function Wrapper({ children }: { children: ReactNode }) {
+      return createElement(QueryClientProvider, { client: queryClient }, children);
+    }
+
+    renderHook(() => useConversationRealtime("chat-1"), { wrapper: Wrapper });
+
+    onHandlers.messageInsert?.({ new: { id: "msg-own" } } as never);
+
+    await waitFor(() => {
+      expect(invalidateSpy).not.toHaveBeenCalled();
+    });
+  });
 });

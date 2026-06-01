@@ -5,7 +5,9 @@ import { generateIdempotencyKeyV7 } from "@/features/notifications";
 import { logger } from "@/lib/logger";
 import { metrics } from "@/lib/sentry";
 import { listChatMessages, sendMessage } from "../api/chats.api";
-import { CHAT_MESSAGES_QUERY_KEY } from "../constants/queryKeys";
+import { CHAT_CONVERSATIONS_LIST_QUERY_KEY, CHAT_MESSAGES_QUERY_KEY } from "../constants/queryKeys";
+import { rememberSentChatMessageId } from "../utils/chatMessageSendSync";
+import { sendMessageResultToListItem } from "../utils/sendMessageToListItem";
 import type {
   ChatMessageCursor,
   ChatMessageListItem,
@@ -205,14 +207,18 @@ export function useChatMessages(
       setOptimisticMessages((prev) => [...prev, optimistic]);
       setLastSendError(null);
     },
-    onSuccess: ({ idempotencyKey, input }) => {
+    onSuccess: ({ result, idempotencyKey, input }) => {
       setOptimisticMessages((prev) =>
         prev.filter((message) => message.idempotency_key !== idempotencyKey),
       );
       idempotencyByClientSendId.current.delete(input.clientSendId);
       pendingInputByClientSendId.current.delete(input.clientSendId);
       setLastSendError(null);
+
+      rememberSentChatMessageId(result.message.id);
+      mergeGapFillIntoCache([sendMessageResultToListItem(result.message)]);
       void queryClient.invalidateQueries({ queryKey: [CHAT_MESSAGES_QUERY_KEY, chatId] });
+      void queryClient.invalidateQueries({ queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY] });
     },
     onError: (error, input) => {
       const apiError =

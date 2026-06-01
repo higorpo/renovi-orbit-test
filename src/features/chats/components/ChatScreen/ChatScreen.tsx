@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/features/auth";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { useVirtualKeyboardVisible } from "@/hooks/useVirtualKeyboardVisible";
 import { cn } from "@/lib/utils";
-import { markConversationRead } from "../../api/chats.api";
 import { ChatActionBanner } from "../ChatActionBanner/ChatActionBanner";
 import { ChatActionBannerOverlayHost } from "../ChatActionBanner/ChatActionBannerOverlay";
 import { useChatActionBannerState } from "../../hooks/useChatActionBannerState";
 import { useChatComposerState } from "../../hooks/useChatComposerState";
 import { useChatMessages } from "../../hooks/useChatMessages";
+import { useMarkConversationRead } from "../../hooks/useMarkConversationRead";
 import { useChatSentryContext } from "../../hooks/useChatSentryContext";
 import { useConversationDetail } from "../../hooks/useConversationDetail";
 import {
@@ -64,6 +64,8 @@ export function ChatScreen({
     isSending,
   } = useChatMessages(chatId);
 
+  useMarkConversationRead(chatId, messages);
+
   const composerState = useChatComposerState({
     chatId,
     conversationStatus: detail?.conversation.status ?? null,
@@ -102,16 +104,6 @@ export function ChatScreen({
     enabled: Boolean(detail),
     realtimeHealthy: isRealtimeConnectionHealthy(realtimeStatus),
   });
-
-  useEffect(() => {
-    if (!chatId || messages.length === 0) return;
-
-    const lastMessage = messages[messages.length - 1];
-    void markConversationRead({
-      chatId,
-      lastReadMessageId: lastMessage?.id.startsWith("optimistic:") ? null : lastMessage?.id,
-    });
-  }, [chatId, messages]);
 
   const handleBack = useCallback(() => {
     if (onBack) {

@@ -8,8 +8,8 @@ import {
   CHAT_FREE_MESSAGING_QUERY_KEY,
   CHAT_MESSAGES_QUERY_KEY,
   CHAT_PROPOSAL_TIMELINE_QUERY_KEY,
-  CONVERSATION_DETAIL_QUERY_KEY,
 } from "../constants/queryKeys";
+import { wasRecentlySentChatMessageId } from "../utils/chatMessageSendSync";
 import { subscribeConversationChannel } from "../utils/conversationRealtimeChannel";
 
 const DEDUPE_CACHE_LIMIT = 512;
@@ -65,13 +65,16 @@ export function useConversationRealtime(
 
     const invalidateInbox = () => {
       void queryClient.invalidateQueries({ queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY] });
-      void queryClient.invalidateQueries({ queryKey: [CONVERSATION_DETAIL_QUERY_KEY, chatId] });
     };
 
     const channel = subscribeConversationChannel(supabase, chatId, {
       onMessageInsert: ({ id }) => {
         const key = `chat_messages:INSERT:${id}`;
         if (!rememberEvent(seenEventsRef.current, key)) return;
+
+        // Own send: onSuccess already invalidated messages + inbox.
+        if (wasRecentlySentChatMessageId(id)) return;
+
         invalidateMessages();
         invalidateInbox();
       },
