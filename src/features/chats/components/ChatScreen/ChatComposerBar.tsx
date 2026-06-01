@@ -2,8 +2,10 @@ import { ImageIcon, SendHorizontal } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { useVirtualKeyboardVisible } from "@/hooks/useVirtualKeyboardVisible";
 import { cn } from "@/lib/utils";
 import type { ChatComposerState } from "../../utils/composerState";
+import { useChatMobileViewportSchedule } from "./ChatMobileViewportContext";
 
 export interface ChatComposerBarProps {
   composer: ChatComposerState;
@@ -21,6 +23,8 @@ export function ChatComposerBar({
   className,
 }: ChatComposerBarProps) {
   const [draft, setDraft] = useState("");
+  const isKeyboardVisible = useVirtualKeyboardVisible();
+  const scheduleViewportSync = useChatMobileViewportSchedule();
 
   const handleSend = async () => {
     const text = draft.trim();
@@ -32,8 +36,10 @@ export function ChatComposerBar({
   return (
     <footer
       className={cn(
-        "shrink-0 border-t border-border/60 bg-background/95 px-3 py-3 backdrop-blur-md",
-        "pb-[max(0.75rem,env(safe-area-inset-bottom))]",
+        "shrink-0 border-t border-border/60 bg-background/95 px-3 pt-3 backdrop-blur-md",
+        isKeyboardVisible
+          ? "pb-3"
+          : "pb-[max(0.75rem,env(safe-area-inset-bottom))]",
         className,
       )}
     >
@@ -64,6 +70,7 @@ export function ChatComposerBar({
           disabled={!composer.isInputEnabled || isSending}
           rows={1}
           className="min-h-11 max-h-32 flex-1 resize-none rounded-full border-0 bg-muted px-4 py-3 text-[15px] leading-snug shadow-none focus-visible:ring-1 max-sm:resize-none"
+          onFocus={() => scheduleViewportSync()}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();

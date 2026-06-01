@@ -13,6 +13,13 @@ vi.mock("@/hooks/useOnlineStatus", () => ({
   useOnlineStatus: () => true,
 }));
 
+vi.mock("@/hooks/useMobileDialogViewport", () => ({
+  useMobileDialogViewport: () => ({
+    contentRef: { current: null },
+    scheduleSync: vi.fn(),
+  }),
+}));
+
 vi.mock("../../ChatListPage/ChatListPage", () => ({
   ChatListPage: () => <div data-testid="chat-list">Lista</div>,
 }));

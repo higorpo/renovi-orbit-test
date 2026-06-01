@@ -1,7 +1,9 @@
 import { MessageSquare } from "lucide-react";
 import { Outlet, useNavigate, useParams } from "react-router";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useMobileDialogViewport } from "@/hooks/useMobileDialogViewport";
 import { cn } from "@/lib/utils";
+import { ChatMobileViewportProvider } from "../ChatScreen/ChatMobileViewportContext";
 import { ChatListPage } from "../ChatListPage/ChatListPage";
 
 export function ChatsLayout() {
@@ -12,6 +14,7 @@ export function ChatsLayout() {
   const showListOnMobile = !chatId;
   const showConversationOnMobile = Boolean(chatId);
   const isMobileFullscreenConversation = showConversationOnMobile;
+  const { contentRef, scheduleSync } = useMobileDialogViewport(isMobileFullscreenConversation);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">
@@ -31,6 +34,7 @@ export function ChatsLayout() {
         </div>
 
         <div
+          ref={contentRef}
           className={cn(
             "min-h-0 flex-1 flex-col",
             showConversationOnMobile ? "flex" : "hidden",
@@ -44,9 +48,11 @@ export function ChatsLayout() {
           data-testid={isMobileFullscreenConversation ? "chat-conversation-fullscreen" : undefined}
         >
           {chatId ? (
-            <div className="flex min-h-0 flex-1 flex-col">
-              <Outlet />
-            </div>
+            <ChatMobileViewportProvider scheduleSync={scheduleSync}>
+              <div className="flex min-h-0 flex-1 flex-col">
+                <Outlet />
+              </div>
+            </ChatMobileViewportProvider>
           ) : (
             <div className="hidden flex-1 flex-col items-center justify-center gap-3 px-6 text-center md:flex">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">

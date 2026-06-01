@@ -159,13 +159,7 @@ export function ChatScreen({
   }
 
   return (
-    <div
-      className={cn(
-        "flex h-full min-h-0 flex-col bg-background",
-        "pb-[var(--keyboard-height,0px)]",
-        className,
-      )}
-    >
+    <div className={cn("flex h-full min-h-0 flex-col bg-background", className)}>
       <ChatScreenHeader
         counterpartyName={counterpartyName}
         serviceTitle={serviceTitle}
