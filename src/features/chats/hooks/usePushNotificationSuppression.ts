@@ -40,7 +40,7 @@ export function usePushNotificationSuppression(activeConversationId: string | nu
         activeConversationId,
         payload,
         appInForeground: appInForegroundRef.current,
-        webTabVisible: isWebTabVisible(),
+        webTabVisible: Capacitor.isNativePlatform() ? true : isWebTabVisible(),
       });
 
       if (suppress) {

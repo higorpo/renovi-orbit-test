@@ -21,6 +21,7 @@ Deno.test("buildFcmV1MessageBody sets collapse id and uses token snapshot", () =
     correlationId: "550e8400-e29b-41d4-a716-446655440000",
     deliveryId: "delivery-1",
     dispatchId: "dispatch-abc-123",
+    chatId: "chat-uuid-1",
   });
 
   assertEquals(body.message.token, "fcm-snapshot-token");
@@ -31,6 +32,20 @@ Deno.test("buildFcmV1MessageBody sets collapse id and uses token snapshot", () =
   );
   assertEquals(body.message.data.dispatch_id, "dispatch-abc-123");
   assertEquals(body.message.data.correlation_id, "550e8400-e29b-41d4-a716-446655440000");
+  assertEquals(body.message.data.chat_id, "chat-uuid-1");
+});
+
+Deno.test("buildFcmV1MessageBody omits chat_id when not provided", () => {
+  const body = buildFcmV1MessageBody({
+    fcmTokenSnapshot: "token",
+    title: "T",
+    body: "B",
+    correlationId: "corr",
+    deliveryId: "del",
+    dispatchId: "dispatch",
+  });
+
+  assertEquals("chat_id" in body.message.data, false);
 });
 
 Deno.test("fcmSendUrl targets FCM v1 messages endpoint", () => {

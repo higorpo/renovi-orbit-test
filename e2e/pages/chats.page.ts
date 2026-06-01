@@ -5,11 +5,11 @@ export class ChatsPage {
   constructor(readonly page: Page) {}
 
   async gotoList() {
-    await this.page.goto("/chats");
+    await this.page.goto("/dashboard/chats");
   }
 
   async gotoConversation(chatId = E2E_CHAT_ID) {
-    await this.page.goto(`/chats/${chatId}`);
+    await this.page.goto(`/dashboard/chats/${chatId}`);
   }
 
   get listHeading() {

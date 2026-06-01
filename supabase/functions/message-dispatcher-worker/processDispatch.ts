@@ -39,6 +39,13 @@ function failureCodeFromError(err: unknown): string {
   return "template_render_error";
 }
 
+function chatIdFromTemplateVariables(variables: Record<string, unknown>): string | undefined {
+  const raw = variables.chat_id;
+  if (typeof raw !== "string") return undefined;
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 export interface DispatchProcessCounts {
   renderFailed: number;
   sendSucceeded: number;
@@ -265,6 +272,9 @@ async function processPushDispatch(
       },
     );
 
+    const pushVariables = item.template_variables as Record<string, unknown>;
+    const chatId = chatIdFromTemplateVariables(pushVariables);
+
     if (!item.deliveries.length) {
       counts.sendFailed += 1;
       log.warn("worker.push.send_skipped", {
@@ -299,6 +309,7 @@ async function processPushDispatch(
             correlationId: item.correlation_id,
             deliveryId: delivery.delivery_id,
             dispatchId: item.id,
+            chatId,
           }),
       );
 

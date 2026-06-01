@@ -86,7 +86,7 @@ Coisas para fazer next
 -remover código /home/higor/Área de Trabalho/Renovi/orbit/src/features/provider-jobs/components/ProviderProposalComposerDialog.tsx e converter /home/higor/Área de Trabalho/Renovi/orbit/src/features/negotiation-proposals/components/ProposalComposer.tsx na dialog full
 -remover código /home/higor/Área de Trabalho/Renovi/orbit/src/features/provider-jobs/hooks/useProviderProposalComposer.ts
 -cobertura de testes em todos os códigos novos
-
+-existe uma certa lentidão para disparar push de novas mensagens (ele cai numa fila de processamento para enviar pro message dispatcher e  depois ainda espera o job do message dispatcher...)
 
 
 

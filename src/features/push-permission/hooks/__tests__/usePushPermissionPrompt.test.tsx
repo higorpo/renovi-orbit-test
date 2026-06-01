@@ -45,7 +45,11 @@ describe('usePushPermissionPrompt', () => {
     authMocks.user = { id: 'user-1' }
     authMocks.loadingSession = false
     pushMocks.getPushPermissionStatus.mockResolvedValue('default')
-    pushMocks.setupPushNotifications.mockResolvedValue(undefined)
+    pushMocks.setupPushNotifications.mockResolvedValue({
+      platform: 'web',
+      token: 'token',
+      permission: 'granted',
+    })
     vi.mocked(isPushPermissionPromptDismissed).mockResolvedValue(false)
   })
 
@@ -115,8 +119,12 @@ describe('usePushPermissionPrompt', () => {
     expect(pushMocks.getPushPermissionStatus).not.toHaveBeenCalled()
   })
 
-  it('re-evaluates after permission request failure', async () => {
-    pushMocks.setupPushNotifications.mockRejectedValueOnce(new Error('denied'))
+  it('dismisses softly when user refuses OS permission', async () => {
+    pushMocks.setupPushNotifications.mockResolvedValueOnce({
+      platform: 'android',
+      token: null,
+      permission: 'denied',
+    })
     const { result } = renderHook(() => usePushPermissionPrompt())
 
     await waitFor(() => expect(result.current.open).toBe(true), { timeout: 2000 })
@@ -125,7 +133,8 @@ describe('usePushPermissionPrompt', () => {
       await result.current.acceptAndRequestPermission()
     })
 
-    expect(pushMocks.getPushPermissionStatus.mock.calls.length).toBeGreaterThanOrEqual(2)
+    expect(markPushPermissionPromptDismissed).toHaveBeenCalled()
+    expect(result.current.open).toBe(false)
   })
 
   it('closes after failed request when user is no longer present', async () => {
@@ -144,18 +153,26 @@ describe('usePushPermissionPrompt', () => {
     expect(result.current.open).toBe(false)
   })
 
-  it('accept requests permission and closes dialog', async () => {
+  it('accept requests permission after dismissing the in-app dialog', async () => {
     const { result } = renderHook(() => usePushPermissionPrompt())
 
     await waitFor(() => expect(result.current.open).toBe(true), { timeout: 2000 })
 
-    await act(async () => {
-      await result.current.acceptAndRequestPermission()
+    act(() => {
+      void result.current.acceptAndRequestPermission()
     })
 
-    expect(pushMocks.setupPushNotifications).toHaveBeenCalledWith(undefined, {
-      requestPermission: true,
-    })
+    expect(result.current.open).toBe(false)
+
+    await waitFor(
+      () => {
+        expect(pushMocks.setupPushNotifications).toHaveBeenCalledWith(undefined, {
+          requestPermission: true,
+        })
+      },
+      { timeout: 2000 },
+    )
+
     expect(clearPushPermissionPromptDismissed).toHaveBeenCalled()
     expect(result.current.open).toBe(false)
   })

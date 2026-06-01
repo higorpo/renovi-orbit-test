@@ -13,6 +13,13 @@ const pushNotificationsMocks = vi.hoisted(() => ({
   addListener: vi.fn(),
 }))
 
+const localNotificationsMocks = vi.hoisted(() => ({
+  checkPermissions: vi.fn().mockResolvedValue({ display: 'granted' }),
+  requestPermissions: vi.fn().mockResolvedValue({ display: 'granted' }),
+  createChannel: vi.fn().mockResolvedValue(undefined),
+  schedule: vi.fn().mockResolvedValue(undefined),
+}))
+
 const firebaseConfigMocks = vi.hoisted(() => ({
   isFirebaseConfigured: vi.fn(() => true),
   getFirebaseVapidKey: vi.fn(() => 'vapid-key'),
@@ -37,6 +44,10 @@ vi.mock('@capacitor/core', () => ({
 
 vi.mock('@capacitor/push-notifications', () => ({
   PushNotifications: pushNotificationsMocks,
+}))
+
+vi.mock('@capacitor/local-notifications', () => ({
+  LocalNotifications: localNotificationsMocks,
 }))
 
 vi.mock('@/lib/logger', () => ({
@@ -240,7 +251,8 @@ describe('push helpers', () => {
 
     it('returns native permission status', async () => {
       capacitorMocks.isNativePlatform.mockReturnValue(true)
-      pushNotificationsMocks.checkPermissions.mockResolvedValue({ receive: 'prompt' })
+      capacitorMocks.getPlatform.mockReturnValue('android')
+      localNotificationsMocks.checkPermissions.mockResolvedValue({ display: 'prompt' })
       await expect(getPushPermissionStatus()).resolves.toBe('prompt')
     })
   })
@@ -293,7 +305,7 @@ describe('push helpers', () => {
       expect(onToken).toHaveBeenCalledWith('web-fcm-token', 'web')
     })
 
-    it('throws when permission denied after request', async () => {
+    it('returns denied without throwing when user refuses permission', async () => {
       Object.defineProperty(globalThis, 'Notification', {
         value: {
           permission: 'default',
@@ -301,9 +313,8 @@ describe('push helpers', () => {
         },
         configurable: true,
       })
-      await expect(
-        setupPushNotifications(undefined, { requestPermission: true }),
-      ).rejects.toThrow(/bloqueadas/)
+      const result = await setupPushNotifications(undefined, { requestPermission: true })
+      expect(result).toMatchObject({ token: null, permission: 'denied' })
     })
 
     it('returns early when firebase app or messaging is missing', async () => {
@@ -472,20 +483,51 @@ describe('push helpers', () => {
     beforeEach(() => {
       capacitorMocks.isNativePlatform.mockReturnValue(true)
       capacitorMocks.getPlatform.mockReturnValue('android')
+      localNotificationsMocks.checkPermissions.mockResolvedValue({ display: 'granted' })
+      localNotificationsMocks.requestPermissions.mockResolvedValue({ display: 'granted' })
       pushNotificationsMocks.addListener.mockImplementation((event: string, cb: (arg: unknown) => void) => {
         if (event === 'registration') {
           queueMicrotask(() => cb({ value: 'native-token' }))
         }
         return Promise.resolve({ remove: vi.fn() })
       })
-      pushNotificationsMocks.register.mockResolvedValue(undefined)
+      pushNotificationsMocks.register.mockImplementation(() => {
+        queueMicrotask(() => {
+          const registrationCalls = pushNotificationsMocks.addListener.mock.calls.filter(
+            (call) => call[0] === 'registration',
+          )
+          const handler = registrationCalls.at(-1)?.[1] as ((token: { value: string }) => void) | undefined
+          handler?.({ value: 'native-token' })
+        })
+        return Promise.resolve()
+      })
     })
 
     it('returns prompt without requesting when not granted and requestPermission false', async () => {
-      pushNotificationsMocks.checkPermissions.mockResolvedValue({ receive: 'prompt' })
+      localNotificationsMocks.checkPermissions.mockResolvedValue({ display: 'prompt' })
       const result = await setupPushNotifications(undefined, { requestPermission: false })
       expect(result).toMatchObject({ token: null, permission: 'prompt' })
       expect(pushNotificationsMocks.requestPermissions).not.toHaveBeenCalled()
+      expect(localNotificationsMocks.requestPermissions).not.toHaveBeenCalled()
+    })
+
+    it('requests local notification permission on Android when user opts in', async () => {
+      localNotificationsMocks.checkPermissions.mockResolvedValue({ display: 'prompt' })
+      localNotificationsMocks.requestPermissions.mockResolvedValue({ display: 'granted' })
+
+      await setupPushNotifications(undefined, { requestPermission: true })
+
+      expect(localNotificationsMocks.requestPermissions).toHaveBeenCalled()
+      expect(pushNotificationsMocks.requestPermissions).not.toHaveBeenCalled()
+    })
+
+    it('does not request local notification permission during passive native setup', async () => {
+      pushNotificationsMocks.checkPermissions.mockResolvedValue({ receive: 'granted' })
+      localNotificationsMocks.checkPermissions.mockResolvedValue({ display: 'prompt' })
+
+      await setupPushNotifications(undefined, { requestPermission: false })
+
+      expect(localNotificationsMocks.requestPermissions).not.toHaveBeenCalled()
     })
 
     it('registers and resolves token when granted', async () => {
@@ -500,12 +542,11 @@ describe('push helpers', () => {
       expect(onToken).toHaveBeenCalledWith('native-token', 'android')
     })
 
-    it('throws when permission not granted after explicit request', async () => {
-      pushNotificationsMocks.checkPermissions.mockResolvedValue({ receive: 'prompt' })
-      pushNotificationsMocks.requestPermissions.mockResolvedValue({ receive: 'denied' })
-      await expect(
-        setupPushNotifications(undefined, { requestPermission: true }),
-      ).rejects.toThrow(/Push permission not granted/)
+    it('returns denied without throwing when user refuses permission', async () => {
+      localNotificationsMocks.checkPermissions.mockResolvedValue({ display: 'prompt' })
+      localNotificationsMocks.requestPermissions.mockResolvedValue({ display: 'denied' })
+      const result = await setupPushNotifications(undefined, { requestPermission: true })
+      expect(result).toMatchObject({ token: null, permission: 'denied' })
     })
 
     it('maps non-string values in capacitor notification data', async () => {
@@ -557,6 +598,67 @@ describe('push helpers', () => {
       )
     })
 
+    it('shows local notification on native foreground when not suppressed', async () => {
+      pushNotificationsMocks.checkPermissions.mockResolvedValue({ receive: 'granted' })
+      localNotificationsMocks.checkPermissions.mockResolvedValue({ display: 'granted' })
+      await setupPushNotifications()
+
+      const receivedCalls = pushNotificationsMocks.addListener.mock.calls.filter(
+        (c) => c[0] === 'pushNotificationReceived',
+      )
+      const handler = receivedCalls[0]![1] as (n: {
+        title: string
+        body: string
+        data: Record<string, string>
+      }) => void
+
+      handler({
+        title: 'Orçamento',
+        body: 'Nova mensagem',
+        data: { dispatch_id: 'dispatch-1', chat_id: 'other-chat' },
+      })
+
+      await vi.waitFor(() => {
+        expect(localNotificationsMocks.schedule).toHaveBeenCalledWith(
+          expect.objectContaining({
+            notifications: [
+              expect.objectContaining({
+                title: 'Orçamento',
+                body: 'Nova mensagem',
+              }),
+            ],
+          }),
+        )
+      })
+    })
+
+    it('skips local notification on native foreground when suppressed', async () => {
+      const { setPushSuppressionChecker } = await import('../pushSuppression')
+      setPushSuppressionChecker(() => true)
+
+      pushNotificationsMocks.checkPermissions.mockResolvedValue({ receive: 'granted' })
+      await setupPushNotifications()
+
+      const receivedCalls = pushNotificationsMocks.addListener.mock.calls.filter(
+        (c) => c[0] === 'pushNotificationReceived',
+      )
+      const handler = receivedCalls[0]![1] as (n: {
+        title: string
+        body: string
+        data: Record<string, string>
+      }) => void
+
+      handler({
+        title: 'Chat',
+        body: 'Oi',
+        data: { chat_id: 'chat-1' },
+      })
+
+      await new Promise((r) => setTimeout(r, 0))
+      expect(localNotificationsMocks.schedule).not.toHaveBeenCalled()
+      setPushSuppressionChecker(null)
+    })
+
     it('notifies on pushNotificationActionPerformed', async () => {
       pushNotificationsMocks.checkPermissions.mockResolvedValue({ receive: 'granted' })
       await setupPushNotifications()
@@ -573,11 +675,18 @@ describe('push helpers', () => {
 
     it('rejects on registration error', async () => {
       pushNotificationsMocks.checkPermissions.mockResolvedValue({ receive: 'granted' })
-      pushNotificationsMocks.addListener.mockImplementation((event: string, cb: (arg: unknown) => void) => {
-        if (event === 'registrationError') {
-          queueMicrotask(() => cb(new Error('reg fail')))
-        }
-        return Promise.resolve({ remove: vi.fn() })
+      pushNotificationsMocks.addListener.mockImplementation(() => Promise.resolve({ remove: vi.fn() }))
+      pushNotificationsMocks.register.mockImplementation(() => {
+        queueMicrotask(() => {
+          queueMicrotask(() => {
+            const errorCalls = pushNotificationsMocks.addListener.mock.calls.filter(
+              (call) => call[0] === 'registrationError',
+            )
+            const handler = errorCalls.at(-1)?.[1] as ((error: Error) => void) | undefined
+            handler?.(new Error('reg fail'))
+          })
+        })
+        return Promise.resolve()
       })
       await expect(setupPushNotifications()).rejects.toThrow('reg fail')
     })

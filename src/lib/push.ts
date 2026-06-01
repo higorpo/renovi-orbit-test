@@ -4,7 +4,6 @@ import {
   type Token,
   type PushNotificationSchema,
   type ActionPerformed,
-  type PermissionStatus,
 } from '@capacitor/push-notifications'
 import { getToken, onMessage, type MessagePayload } from 'firebase/messaging'
 
@@ -13,6 +12,16 @@ import { getFirebaseApp } from './firebase/app'
 import { getFirebaseVapidKey, isFirebaseConfigured } from './firebase/config'
 import { getFirebaseMessaging } from './firebase/messaging'
 import { logger } from './logger'
+import {
+  ensureNativeForegroundNotificationChannel,
+  resetNativeForegroundNotificationForTests,
+  showNativeForegroundLocalNotification,
+  syncNativeLocalNotificationPermission,
+} from './nativeForegroundNotification'
+import {
+  checkNativeNotificationPermission,
+  requestNativeNotificationPermission,
+} from './nativeNotificationPermission'
 import { resetPushSuppressionForTests, shouldSuppressPushNotification } from './pushSuppression'
 
 export type PushPlatform = 'android' | 'ios' | 'web'
@@ -46,6 +55,17 @@ export interface PushSetupResult {
 
 let nativeListenersAttached = false
 let webForegroundListenerAttached = false
+let cachedNativeFcmToken: string | null = null
+let nativeFcmRegisterStarted = false
+
+const NATIVE_FCM_REGISTER_TIMEOUT_MS = 20_000
+
+type NativeFcmTokenWaiter = {
+  resolve: (token: string) => void
+  reject: (error: Error) => void
+}
+
+let nativeFcmTokenWaiters: NativeFcmTokenWaiter[] = []
 
 const PUSH_NOTIFICATION_ICON = '/icon-192.svg'
 const DEFAULT_PUSH_NOTIFICATION_TITLE = 'Renovi'
@@ -98,8 +118,7 @@ export function isPushPermissionPending(status: PushPermissionStatus): boolean {
 /** Reads current permission without requesting or registering for push. */
 export async function getPushPermissionStatus(): Promise<PushPermissionStatus> {
   if (Capacitor.isNativePlatform()) {
-    const permission = await PushNotifications.checkPermissions()
-    return mapNativePermission(permission.receive)
+    return checkNativeNotificationPermission()
   }
 
   if (!('Notification' in window)) return 'unsupported'
@@ -152,7 +171,15 @@ function handleForegroundPushNotification(payload: PushNotificationPayload): voi
     return
   }
 
-  if (!Capacitor.isNativePlatform()) {
+  const content = resolveForegroundNotificationContent(payload)
+
+  if (Capacitor.isNativePlatform()) {
+    void showNativeForegroundLocalNotification(payload, content).catch((error) => {
+      logger.warn('[PUSH] foreground local notification failed (native)', {
+        message: error instanceof Error ? error.message : String(error),
+      })
+    })
+  } else {
     void showWebForegroundSystemNotification(payload)
   }
 
@@ -214,9 +241,35 @@ async function trackPushClick(dispatchId: string): Promise<void> {
   }
 }
 
+function rejectNativeFcmTokenWaiters(error: Error): void {
+  for (const waiter of nativeFcmTokenWaiters) {
+    waiter.reject(error)
+  }
+  nativeFcmTokenWaiters = []
+}
+
+function resolveNativeFcmTokenWaiters(token: string): void {
+  for (const waiter of nativeFcmTokenWaiters) {
+    waiter.resolve(token)
+  }
+  nativeFcmTokenWaiters = []
+}
+
 function attachNativeListeners(): void {
   if (nativeListenersAttached) return
   nativeListenersAttached = true
+
+  void PushNotifications.addListener('registration', (token: Token) => {
+    cachedNativeFcmToken = token.value
+    resolveNativeFcmTokenWaiters(token.value)
+  })
+
+  void PushNotifications.addListener('registrationError', (error) => {
+    const normalized =
+      error instanceof Error ? error : new Error(typeof error === 'string' ? error : 'FCM registration failed')
+    logger.error('[PUSH] registration error (native)', { error: normalized.message })
+    rejectNativeFcmTokenWaiters(normalized)
+  })
 
   PushNotifications.addListener('pushNotificationReceived', (notification) => {
     const payload = mapCapacitorNotification(notification)
@@ -237,10 +290,37 @@ function attachNativeListeners(): void {
   })
 }
 
-function mapNativePermission(receive: PermissionStatus['receive']): WebPushPermission | 'prompt' {
-  if (receive === 'granted') return 'granted'
-  if (receive === 'denied') return 'denied'
-  return 'prompt'
+async function awaitNativeFcmToken(): Promise<string> {
+  if (cachedNativeFcmToken) return cachedNativeFcmToken
+
+  if (!nativeFcmRegisterStarted) {
+    nativeFcmRegisterStarted = true
+    await PushNotifications.register()
+  }
+
+  return new Promise<string>((resolve, reject) => {
+    const waiter: NativeFcmTokenWaiter = {
+      resolve: (token) => {
+        window.clearTimeout(timeout)
+        nativeFcmTokenWaiters = nativeFcmTokenWaiters.filter((w) => w !== waiter)
+        resolve(token)
+      },
+      reject: (error) => {
+        window.clearTimeout(timeout)
+        nativeFcmTokenWaiters = nativeFcmTokenWaiters.filter((w) => w !== waiter)
+        reject(error)
+      },
+    }
+
+    const timeout = window.setTimeout(() => {
+      nativeFcmTokenWaiters = nativeFcmTokenWaiters.filter((w) => w !== waiter)
+      waiter.reject(
+        new Error('Não foi possível concluir o registro de push. Verifique a conexão e tente novamente.'),
+      )
+    }, NATIVE_FCM_REGISTER_TIMEOUT_MS)
+
+    nativeFcmTokenWaiters.push(waiter)
+  })
 }
 
 async function setupNativePush(
@@ -250,42 +330,38 @@ async function setupNativePush(
   const platform = Capacitor.getPlatform() as 'android' | 'ios'
   const shouldRequestPermission = options?.requestPermission === true
 
-  let permission: PermissionStatus = await PushNotifications.checkPermissions()
+  let permission = await checkNativeNotificationPermission()
 
-  if (permission.receive === 'prompt' && shouldRequestPermission) {
-    permission = await PushNotifications.requestPermissions()
+  if (shouldRequestPermission && permission !== 'granted') {
+    permission = await requestNativeNotificationPermission()
   }
 
-  const mappedPermission = mapNativePermission(permission.receive)
-
-  if (permission.receive !== 'granted') {
-    const result: PushSetupResult = { platform, token: null, permission: mappedPermission }
+  if (permission !== 'granted') {
+    const result: PushSetupResult = { platform, token: null, permission }
     notifyPushStateListeners(toPushRegistrationState(result))
-    if (shouldRequestPermission) {
-      throw new Error('Push permission not granted')
-    }
     return result
   }
 
   attachNativeListeners()
 
-  return new Promise((resolve, reject) => {
-    const onRegistered = (token: Token) => {
-      logger.info('[PUSH] token (native)', { platform })
-      callbacks?.onToken?.(token.value, platform)
-      const result: PushSetupResult = { platform, token: token.value, permission: 'granted' }
-      notifyPushStateListeners(toPushRegistrationState(result))
-      resolve(result)
-    }
+  await ensureNativeForegroundNotificationChannel()
 
-    void PushNotifications.addListener('registration', onRegistered)
-    void PushNotifications.addListener('registrationError', (error) => {
-      logger.error('[PUSH] registration error (native)', { error })
-      reject(error)
+  if (platform === 'ios') {
+    const localNotificationGranted = await syncNativeLocalNotificationPermission({
+      requestIfNeeded: shouldRequestPermission,
     })
+    if (shouldRequestPermission && !localNotificationGranted) {
+      logger.warn('[PUSH] local notification permission not granted after user prompt')
+    }
+  }
 
-    PushNotifications.register().catch(reject)
-  })
+  const token = await awaitNativeFcmToken()
+  logger.info('[PUSH] token (native)', { platform })
+  callbacks?.onToken?.(token, platform)
+
+  const result: PushSetupResult = { platform, token, permission: 'granted' }
+  notifyPushStateListeners(toPushRegistrationState(result))
+  return result
 }
 
 async function waitForServiceWorkerRegistration(timeoutMs = 15_000): Promise<ServiceWorkerRegistration> {
@@ -364,11 +440,6 @@ async function setupWebPush(
   if (permission === 'denied') {
     const result = { platform, token: null, permission: 'denied' as const }
     notifyPushStateListeners(toPushRegistrationState(result))
-    if (shouldRequestPermission) {
-      throw new Error(
-        'Notificações bloqueadas neste site. Clique no ícone de cadeado (ou configurações) na barra de endereço, permita notificações e recarregue a página.',
-      )
-    }
     return result
   }
 
@@ -412,7 +483,11 @@ export async function setupPushNotifications(
 export function resetPushModuleStateForTests(): void {
   nativeListenersAttached = false
   webForegroundListenerAttached = false
+  cachedNativeFcmToken = null
+  nativeFcmRegisterStarted = false
+  nativeFcmTokenWaiters = []
   activePushCallbacks = undefined
   pushStateListeners.clear()
   resetPushSuppressionForTests()
+  resetNativeForegroundNotificationForTests()
 }

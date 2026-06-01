@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Colored large icon for expanded notifications (Orbit ring + dot). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#1a5f7a"
+        android:pathData="M12,4c-4.42,0 -8,3.58 -8,8s3.58,8 8,8 8,-3.58 8,-8 -3.58,-8 -8,-8z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,6.5c3.03,0 5.5,2.47 5.5,5.5s-2.47,5.5 -5.5,5.5 -5.5,-2.47 -5.5,-5.5 2.47,-5.5 5.5,-5.5z" />
+    <path
+        android:fillColor="#1a5f7a"
+        android:pathData="M12,10.25c0.97,0 1.75,0.78 1.75,1.75s-0.78,1.75 -1.75,1.75 -1.75,-0.78 -1.75,-1.75 0.78,-1.75 1.75,-1.75z" />
+</vector>

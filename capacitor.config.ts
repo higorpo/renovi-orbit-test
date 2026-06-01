@@ -28,7 +28,13 @@ const config: CapacitorConfig = {
       resizeOnFullScreen: true,
     },
     PushNotifications: {
-      presentationOptions: ['badge', 'sound', 'alert', 'banner', 'list'],
+      // Capacitor auto-banners run before JS can suppress the active chat (R12-AC07).
+      // Foreground alerts use Local Notifications when not suppressed (other screens / non-chat).
+      presentationOptions: ['badge', 'sound'],
+    },
+    LocalNotifications: {
+      smallIcon: 'ic_notification',
+      iconColor: '#1a5f7a',
     },
   },
 }

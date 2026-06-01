@@ -14,6 +14,8 @@ import {
 } from '../utils/pushPermissionPrompt.storage'
 
 const PROMPT_OPEN_DELAY_MS = 600
+/** Lets the in-app dialog dismiss before the Android system permission sheet opens. */
+const DISMISS_BEFORE_SYSTEM_PROMPT_MS = 320
 
 export function usePushPermissionPrompt() {
   const { user, profile, loadingSession } = useAuth()
@@ -63,19 +65,29 @@ export function usePushPermissionPrompt() {
 
   const acceptAndRequestPermission = useCallback(async () => {
     setRequesting(true)
+    setOpen(false)
+
+    await new Promise((resolve) => {
+      window.setTimeout(resolve, DISMISS_BEFORE_SYSTEM_PROMPT_MS)
+    })
+
     try {
-      await setupPushNotifications(undefined, { requestPermission: true })
-      await clearPushPermissionPromptDismissed()
-      setOpen(false)
+      const result = await setupPushNotifications(undefined, { requestPermission: true })
+
+      if (result.permission === 'granted') {
+        await clearPushPermissionPromptDismissed()
+      } else {
+        await markPushPermissionPromptDismissed()
+      }
     } catch (error) {
       logger.warn('push_permission_request_failed', {
         message: error instanceof Error ? error.message : String(error),
       })
-      await evaluatePrompt()
+      await markPushPermissionPromptDismissed()
     } finally {
       setRequesting(false)
     }
-  }, [evaluatePrompt])
+  }, [])
 
   return {
     open,

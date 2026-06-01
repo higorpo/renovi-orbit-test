@@ -16,6 +16,11 @@ describe("pushNotificationSuppression", () => {
         data: { conversation_id: "chat-2" },
       }),
     ).toBe("chat-2");
+    expect(
+      extractChatIdFromPushPayload({
+        data: { deep_link_path: "/chats/chat-3" },
+      }),
+    ).toBe("chat-3");
   });
 
   it("suppresses when foreground and same active conversation", () => {

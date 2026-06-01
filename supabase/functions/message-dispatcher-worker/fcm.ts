@@ -35,6 +35,8 @@ export interface SendFcmPushInput {
   correlationId: string;
   deliveryId: string;
   dispatchId: string;
+  /** Conversation id for foreground suppression (R12-AC07). */
+  chatId?: string;
 }
 
 export type FcmSendSuccess = {
@@ -56,7 +58,7 @@ export interface FcmV1MessageBody {
   message: {
     token: string;
     notification: { title: string; body: string };
-    data: { dispatch_id: string; correlation_id: string };
+    data: { dispatch_id: string; correlation_id: string; chat_id?: string };
     android: { notification: { tag: string } };
     apns: { headers: { "apns-collapse-id": string } };
   };
@@ -92,6 +94,7 @@ export function buildFcmV1MessageBody(input: SendFcmPushInput): FcmV1MessageBody
       data: {
         dispatch_id: input.dispatchId,
         correlation_id: input.correlationId,
+        ...(input.chatId ? { chat_id: input.chatId } : {}),
       },
       android: {
         notification: {

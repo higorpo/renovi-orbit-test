@@ -4,7 +4,14 @@ export function extractChatIdFromPushPayload(payload: PushNotificationPayload): 
   const data = payload.data;
   if (!data) return null;
 
-  return data.chat_id ?? data.conversation_id ?? data.chatId ?? null;
+  const direct = data.chat_id ?? data.conversation_id ?? data.chatId;
+  if (direct) return direct;
+
+  const deepLink = data.deep_link_path?.trim();
+  if (!deepLink) return null;
+
+  const match = deepLink.match(/(?:^|\/)chats\/([^/?#]+)/);
+  return match?.[1] ?? null;
 }
 
 export function isWebTabVisible(): boolean {
