@@ -1,5 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { getChatDiscoveryWelcomeContent } from "../chatDiscoveryWelcome";
+import {
+  getChatDiscoveryWelcomeContent,
+  resolveChatDiscoveryWelcomeAnchorIso,
+} from "../chatDiscoveryWelcome";
+
+describe("resolveChatDiscoveryWelcomeAnchorIso", () => {
+  it("uses the oldest message timestamp when messages exist", () => {
+    expect(
+      resolveChatDiscoveryWelcomeAnchorIso(
+        [{ created_at: "2026-06-01T10:00:00.000Z" }],
+        "2026-05-01T10:00:00.000Z",
+      ),
+    ).toBe("2026-06-01T10:00:00.000Z");
+  });
+
+  it("falls back to conversation created_at when there are no messages", () => {
+    expect(resolveChatDiscoveryWelcomeAnchorIso([], "2026-05-01T10:00:00.000Z")).toBe(
+      "2026-05-01T10:00:00.000Z",
+    );
+  });
+});
 
 describe("getChatDiscoveryWelcomeContent", () => {
   it("returns provider-oriented copy", () => {

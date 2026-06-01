@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ChatMessageListItem } from "../../types/chats.types";
-import { buildChatTimelineItems } from "../groupChatTimeline";
+import {
+  buildChatTimelineItems,
+  CHAT_DISCOVERY_WELCOME_KEY,
+  prependDiscoveryWelcomeToTimeline,
+} from "../groupChatTimeline";
 
 function makeMessage(
   id: string,
@@ -24,10 +28,11 @@ function makeMessage(
 
 describe("buildChatTimelineItems", () => {
   it("inserts date separators and groups consecutive messages by sender", () => {
+    const todayIso = new Date().toISOString();
     const messages = [
-      makeMessage("1", "other", "2026-05-30T10:00:00.000Z"),
-      makeMessage("2", "other", "2026-05-30T10:01:00.000Z"),
-      makeMessage("3", "me", "2026-05-30T10:02:00.000Z"),
+      makeMessage("1", "other", todayIso),
+      makeMessage("2", "other", todayIso),
+      makeMessage("3", "me", todayIso),
     ];
 
     const items = buildChatTimelineItems(messages, "me");
@@ -38,5 +43,36 @@ describe("buildChatTimelineItems", () => {
     expect(messageItems[0]?.type === "message" && messageItems[0].showIncomingAvatar).toBe(true);
     expect(messageItems[1]?.type === "message" && messageItems[1].showIncomingAvatar).toBe(false);
     expect(messageItems[2]?.type === "message" && messageItems[2].isOutgoing).toBe(true);
+  });
+
+  it("prepends date and discovery welcome when history is empty", () => {
+    const items = prependDiscoveryWelcomeToTimeline([], "2026-06-01T12:00:00.000Z");
+
+    expect(items).toHaveLength(2);
+    expect(items[0]?.type).toBe("date");
+    expect(items[1]?.type).toBe("discovery_welcome");
+    expect(items[1]?.key).toBe(CHAT_DISCOVERY_WELCOME_KEY);
+  });
+
+  it("inserts discovery welcome after the first date separator when it matches the anchor day", () => {
+    const messages = [makeMessage("1", "other", "2026-05-30T10:00:00.000Z")];
+    const base = buildChatTimelineItems(messages, "me");
+    const items = prependDiscoveryWelcomeToTimeline(base, "2026-05-30T09:00:00.000Z");
+
+    expect(items[0]?.type).toBe("date");
+    expect(items[1]?.type).toBe("discovery_welcome");
+    expect(items[2]?.type).toBe("message");
+    expect(items.filter((item) => item.type === "date")).toHaveLength(1);
+  });
+
+  it("prepends date and discovery welcome when anchor day differs from first message day", () => {
+    const messages = [makeMessage("1", "other", "2026-06-01T10:00:00.000Z")];
+    const base = buildChatTimelineItems(messages, "me");
+    const items = prependDiscoveryWelcomeToTimeline(base, "2026-05-30T09:00:00.000Z");
+
+    expect(items[0]?.type).toBe("date");
+    expect(items[1]?.type).toBe("discovery_welcome");
+    expect(items[2]?.type).toBe("date");
+    expect(items[3]?.type).toBe("message");
   });
 });

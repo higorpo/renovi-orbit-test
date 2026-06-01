@@ -5,6 +5,16 @@ export interface ChatDiscoveryWelcomeContent {
   body: string;
 }
 
+/** ISO timestamp used for the welcome date separator at the start of history. */
+export function resolveChatDiscoveryWelcomeAnchorIso(
+  messages: ReadonlyArray<{ created_at: string }>,
+  conversationCreatedAt: string | null | undefined,
+): string {
+  if (messages.length > 0) return messages[0]!.created_at;
+  if (conversationCreatedAt) return conversationCreatedAt;
+  return new Date().toISOString();
+}
+
 export function getChatDiscoveryWelcomeContent(
   viewerRole: ProfileRole,
 ): ChatDiscoveryWelcomeContent {

@@ -19,7 +19,17 @@ export interface ChatTimelineMessageItem {
   isOutgoing: boolean;
 }
 
-export type ChatTimelineItem = ChatTimelineDateSeparator | ChatTimelineMessageItem;
+export interface ChatTimelineDiscoveryWelcome {
+  type: "discovery_welcome";
+  key: typeof CHAT_DISCOVERY_WELCOME_KEY;
+}
+
+export const CHAT_DISCOVERY_WELCOME_KEY = "discovery-welcome" as const;
+
+export type ChatTimelineItem =
+  | ChatTimelineDateSeparator
+  | ChatTimelineMessageItem
+  | ChatTimelineDiscoveryWelcome;
 
 function startOfLocalDay(iso: string): string {
   const date = new Date(iso);
@@ -113,4 +123,39 @@ export function buildChatTimelineItems(
 
   flushGroup(messages.length - 1);
   return items;
+}
+
+function buildDateSeparatorItem(iso: string): ChatTimelineDateSeparator {
+  const dayKey = startOfLocalDay(iso);
+  return {
+    type: "date",
+    key: `date:${dayKey}`,
+    label: formatDateSeparatorLabel(iso),
+  };
+}
+
+/**
+ * Inserts the discovery welcome card at the oldest loaded history edge, with a date pill above it.
+ */
+export function prependDiscoveryWelcomeToTimeline(
+  items: ChatTimelineItem[],
+  anchorIso: string,
+): ChatTimelineItem[] {
+  const welcomeItem: ChatTimelineDiscoveryWelcome = {
+    type: "discovery_welcome",
+    key: CHAT_DISCOVERY_WELCOME_KEY,
+  };
+
+  const anchorSeparator = buildDateSeparatorItem(anchorIso);
+
+  if (items.length === 0) {
+    return [anchorSeparator, welcomeItem];
+  }
+
+  const first = items[0];
+  if (first?.type === "date" && first.key === anchorSeparator.key) {
+    return [first, welcomeItem, ...items.slice(1)];
+  }
+
+  return [anchorSeparator, welcomeItem, ...items];
 }

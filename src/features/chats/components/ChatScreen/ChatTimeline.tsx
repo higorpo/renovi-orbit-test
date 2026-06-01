@@ -6,7 +6,11 @@ import { cn } from "@/lib/utils";
 import { useSnapChatTimelineOnKeyboardOpen } from "../../hooks/useSnapChatTimelineOnKeyboardOpen";
 import type { ProposalCardAction } from "../DynamicMessageRenderer/DynamicProposalCard";
 import type { ChatMessageListItem } from "../../types/chats.types";
-import { buildChatTimelineItems } from "../../utils/groupChatTimeline";
+import { resolveChatDiscoveryWelcomeAnchorIso } from "../../utils/chatDiscoveryWelcome";
+import {
+  buildChatTimelineItems,
+  prependDiscoveryWelcomeToTimeline,
+} from "../../utils/groupChatTimeline";
 import { ChatDiscoveryWelcome } from "./ChatDiscoveryWelcome";
 import { ChatMessageRow } from "./ChatMessageRow";
 import { ChatTimelineScrollContext } from "./ChatTimelineScrollContext";
@@ -24,6 +28,8 @@ export interface ChatTimelineProps {
   errorMessage?: string;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
+  /** Conversation `created_at` — used for welcome date when there are no messages yet. */
+  conversationCreatedAt?: string | null;
   onLoadOlder: () => void;
   onRetry?: () => void;
   /** Space reserved at the top when the action banner overlays the timeline. */
@@ -44,6 +50,7 @@ export function ChatTimeline({
   errorMessage,
   hasNextPage,
   isFetchingNextPage,
+  conversationCreatedAt,
   onLoadOlder,
   onRetry,
   actionBannerTopInset = 0,
@@ -54,10 +61,15 @@ export function ChatTimeline({
   const didInitialScrollRef = useRef(false);
   const isMobile = !useBreakpointMd();
 
-  const timelineItems = useMemo(
-    () => buildChatTimelineItems(messages, currentUserId),
-    [currentUserId, messages],
-  );
+  const showDiscoveryWelcome = !hasNextPage && !isFetchingNextPage;
+
+  const timelineItems = useMemo(() => {
+    const base = buildChatTimelineItems(messages, currentUserId);
+    if (!showDiscoveryWelcome) return base;
+
+    const anchorIso = resolveChatDiscoveryWelcomeAnchorIso(messages, conversationCreatedAt);
+    return prependDiscoveryWelcomeToTimeline(base, anchorIso);
+  }, [conversationCreatedAt, currentUserId, messages, showDiscoveryWelcome]);
 
   const lastTimelineMessageKey = useMemo(() => {
     for (let i = timelineItems.length - 1; i >= 0; i -= 1) {
@@ -111,10 +123,10 @@ export function ChatTimeline({
   }, [resetKey]);
 
   useEffect(() => {
-    if (isLoading || messages.length === 0 || didInitialScrollRef.current) return;
+    if (isLoading || timelineItems.length === 0 || didInitialScrollRef.current) return;
     didInitialScrollRef.current = true;
     scrollToLatest("auto");
-  }, [isLoading, messages.length, scrollToLatest]);
+  }, [isLoading, scrollToLatest, timelineItems.length]);
 
   const lastMessageId = messages[messages.length - 1]?.id;
 
@@ -165,17 +177,6 @@ export function ChatTimeline({
     );
   }
 
-  if (messages.length === 0) {
-    return (
-      <div
-        className={cn("flex flex-1 items-center justify-center px-4 py-6", className)}
-        role="status"
-      >
-        <ChatDiscoveryWelcome viewerRole={viewerRole} />
-      </div>
-    );
-  }
-
   const timelineScrollStyle =
     actionBannerTopInset > 0
       ? {
@@ -222,6 +223,14 @@ export function ChatTimeline({
               <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
                 {item.label}
               </span>
+            </div>
+          );
+        }
+
+        if (item.type === "discovery_welcome") {
+          return (
+            <div key={item.key} className="my-3">
+              <ChatDiscoveryWelcome viewerRole={viewerRole} />
             </div>
           );
         }

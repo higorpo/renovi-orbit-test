@@ -193,6 +193,7 @@ export function ChatScreen({
           errorMessage={messagesError instanceof Error ? messagesError.message : undefined}
           hasNextPage={hasNextPage}
           isFetchingNextPage={isFetchingNextPage}
+          conversationCreatedAt={detail?.conversation.created_at}
           onLoadOlder={() => void fetchNextPage()}
           onRetry={() => void refetchMessages()}
           actionBannerTopInset={actionBannerTopInset}
