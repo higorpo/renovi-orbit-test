@@ -12,5 +12,15 @@ export function isNearChatBottom(
   return getChatDistanceFromBottom(element) <= thresholdPx;
 }
 
+/** Keeps the viewport anchored after older messages are inserted above the fold. */
+export function getScrollTopAfterPrepend(
+  previousScrollHeight: number,
+  previousScrollTop: number,
+  newScrollHeight: number,
+): number {
+  const heightDelta = newScrollHeight - previousScrollHeight;
+  return previousScrollTop + Math.max(0, heightDelta);
+}
+
 /** Delays (ms) to re-run scroll after the virtual keyboard finishes opening. */
 export const CHAT_KEYBOARD_SCROLL_SNAP_DELAYS_MS = [50, 150, 320, 450] as const;

@@ -19,6 +19,9 @@ import { mergeKeysetMessagePages } from "../utils/cursorMerge";
 const PAGE_SIZE = 20;
 const STALE_TIME_MS = 30_000;
 
+/** Temporary — set to 0 to disable artificial delay when loading older pages. */
+const LOAD_OLDER_MESSAGES_DELAY_MS = 2_000;
+
 export interface SendChatMessageInput {
   messageType: CnsMessageType;
   payload: Record<string, unknown>;
@@ -60,6 +63,7 @@ export function useChatMessages(
   const sendChainRef = useRef<Promise<void>>(Promise.resolve());
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessageListItem[]>([]);
   const [pendingSendCount, setPendingSendCount] = useState(0);
+  const [isDelayingOlderFetch, setIsDelayingOlderFetch] = useState(false);
   const [lastSendError, setLastSendError] = useState<ChatsApiError | null>(null);
 
   const enabled = Boolean(chatId) && Boolean(user?.id) && (options?.enabled ?? true);
@@ -294,6 +298,18 @@ export function useChatMessages(
     [chatId, sendMutation, user?.id],
   );
 
+  const fetchOlderMessages = useCallback(async () => {
+    setIsDelayingOlderFetch(true);
+    try {
+      if (LOAD_OLDER_MESSAGES_DELAY_MS > 0) {
+        await new Promise((resolve) => setTimeout(resolve, LOAD_OLDER_MESSAGES_DELAY_MS));
+      }
+      return await query.fetchNextPage();
+    } finally {
+      setIsDelayingOlderFetch(false);
+    }
+  }, [query]);
+
   const dismissFailedSend = useCallback((idempotencyKey: string) => {
     setOptimisticMessages((prev) => prev.filter((m) => m.idempotency_key !== idempotencyKey));
     for (const [clientSendId, key] of idempotencyByClientSendId.current.entries()) {
@@ -311,8 +327,8 @@ export function useChatMessages(
     isError: query.isError,
     error: query.error,
     hasNextPage: query.hasNextPage ?? false,
-    isFetchingNextPage: query.isFetchingNextPage,
-    fetchNextPage: query.fetchNextPage,
+    isFetchingNextPage: query.isFetchingNextPage || isDelayingOlderFetch,
+    fetchNextPage: fetchOlderMessages,
     refetch: query.refetch,
     refetchGapFill,
     sendChatMessage,

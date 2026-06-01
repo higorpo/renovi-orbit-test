@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CHAT_NEAR_BOTTOM_THRESHOLD_PX,
   getChatDistanceFromBottom,
+  getScrollTopAfterPrepend,
   isNearChatBottom,
 } from "../chatTimelineScroll";
 
@@ -27,6 +28,11 @@ describe("chatTimelineScroll", () => {
     expect(
       isNearChatBottom(nearBottom, CHAT_NEAR_BOTTOM_THRESHOLD_PX),
     ).toBe(true);
+  });
+
+  it("adjusts scrollTop by prepended content height", () => {
+    expect(getScrollTopAfterPrepend(1000, 120, 1600)).toBe(720);
+    expect(getScrollTopAfterPrepend(1000, 120, 900)).toBe(120);
   });
 
   it("treats scroll position above threshold as not near bottom", () => {

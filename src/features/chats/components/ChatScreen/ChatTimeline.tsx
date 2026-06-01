@@ -1,9 +1,12 @@
+import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { ProfileRole } from "@/features/auth";
 import { Button } from "@/components/ui/button";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { cn } from "@/lib/utils";
+import { useChatTimelinePrependScroll } from "../../hooks/useChatTimelinePrependScroll";
 import { useSnapChatTimelineOnKeyboardOpen } from "../../hooks/useSnapChatTimelineOnKeyboardOpen";
+import { isNearChatBottom } from "../../utils/chatTimelineScroll";
 import type { ProposalCardAction } from "../DynamicMessageRenderer/DynamicProposalCard";
 import type { ChatMessageListItem } from "../../types/chats.types";
 import { resolveChatDiscoveryWelcomeAnchorIso } from "../../utils/chatDiscoveryWelcome";
@@ -118,6 +121,8 @@ export function ChatTimeline({
     enabled: isMobile,
   });
 
+  useChatTimelinePrependScroll(scrollRef, isFetchingNextPage, timelineItems.length);
+
   useEffect(() => {
     didInitialScrollRef.current = false;
   }, [resetKey]);
@@ -132,6 +137,8 @@ export function ChatTimeline({
 
   useEffect(() => {
     if (!didInitialScrollRef.current || !lastMessageId) return;
+    const scrollEl = scrollRef.current;
+    if (scrollEl && !isNearChatBottom(scrollEl)) return;
     scrollToLatest("smooth");
   }, [lastMessageId, scrollToLatest]);
 
@@ -202,17 +209,16 @@ export function ChatTimeline({
         onScroll={handleScroll}
         aria-label="Mensagens da conversa"
       >
-      {hasNextPage ? (
-        <div className="flex justify-center py-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={isFetchingNextPage}
-            onClick={onLoadOlder}
-          >
-            {isFetchingNextPage ? "Carregando mensagens anteriores…" : "Carregar mensagens anteriores"}
-          </Button>
+      {isFetchingNextPage ? (
+        <div
+          className="flex justify-center py-3"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+            Carregando mensagens anteriores…
+          </span>
         </div>
       ) : null}
 
