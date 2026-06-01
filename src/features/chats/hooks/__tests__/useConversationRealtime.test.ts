@@ -87,6 +87,30 @@ describe("useConversationRealtime", () => {
     await waitFor(() => expect(onReconcile).toHaveBeenCalled());
   });
 
+  it("does not resubscribe when onReconcile callback identity changes", async () => {
+    const onReconcile = vi.fn();
+
+    const { rerender } = renderHook(
+      ({ tick }: { tick: number }) => {
+        void tick;
+        return useConversationRealtime("chat-1", {
+          onReconcile: () => onReconcile(),
+        });
+      },
+      { wrapper: createWrapper(), initialProps: { tick: 0 } },
+    );
+
+    await waitFor(() => expect(onReconcile).toHaveBeenCalledTimes(1));
+    expect(supabaseChannelMock).toHaveBeenCalledTimes(1);
+
+    rerender({ tick: 1 });
+    rerender({ tick: 2 });
+
+    await waitFor(() => expect(removeChannelMock).not.toHaveBeenCalled());
+    expect(onReconcile).toHaveBeenCalledTimes(1);
+    expect(supabaseChannelMock).toHaveBeenCalledTimes(1);
+  });
+
   it("dedupes duplicate INSERT events", async () => {
     const queryClient = new QueryClient();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");

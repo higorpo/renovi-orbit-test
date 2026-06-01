@@ -43,6 +43,10 @@ export function useConversationRealtime(
   const queryClient = useQueryClient();
   const seenEventsRef = useRef(new Set<string>());
   const lastStatusRef = useRef<string | null>(null);
+  const onReconcileRef = useRef(options?.onReconcile);
+  const onRealtimeStatusChangeRef = useRef(options?.onRealtimeStatusChange);
+  onReconcileRef.current = options?.onReconcile;
+  onRealtimeStatusChangeRef.current = options?.onRealtimeStatusChange;
   const enabled = Boolean(chatId) && (options?.enabled ?? true);
 
   useEffect(() => {
@@ -80,7 +84,7 @@ export function useConversationRealtime(
       onStatusChange: (status) => {
         metrics.count("chats.realtime_subscription_status", 1, { status });
         logger.debug("chats_realtime_status", { chatId, status });
-        options?.onRealtimeStatusChange?.(status);
+        onRealtimeStatusChangeRef.current?.(status);
 
         const wasDisconnected =
           lastStatusRef.current === "CHANNEL_ERROR" ||
@@ -89,7 +93,7 @@ export function useConversationRealtime(
         const isSubscribed = status === "SUBSCRIBED";
 
         if (isSubscribed && (wasDisconnected || lastStatusRef.current === null)) {
-          options?.onReconcile?.();
+          onReconcileRef.current?.();
         }
 
         lastStatusRef.current = status;
@@ -100,5 +104,5 @@ export function useConversationRealtime(
       lastStatusRef.current = null;
       void supabase.removeChannel(channel);
     };
-  }, [chatId, enabled, options?.onReconcile, queryClient]);
+  }, [chatId, enabled, queryClient]);
 }

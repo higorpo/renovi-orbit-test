@@ -54,6 +54,7 @@ export function useChatMessages(
   const queryClient = useQueryClient();
   const idempotencyByClientSendId = useRef<Map<string, string>>(new Map());
   const pendingInputByClientSendId = useRef<Map<string, SendChatMessageInput>>(new Map());
+  const messagesRef = useRef<ChatMessageListItem[]>([]);
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessageListItem[]>([]);
   const [lastSendError, setLastSendError] = useState<ChatsApiError | null>(null);
 
@@ -91,6 +92,7 @@ export function useChatMessages(
     () => mergeKeysetMessagePages(serverMessages, optimisticMessages),
     [serverMessages, optimisticMessages],
   );
+  messagesRef.current = messages;
 
   const mergeGapFillIntoCache = useCallback(
     (incoming: ChatMessageListItem[]) => {
@@ -130,9 +132,10 @@ export function useChatMessages(
   );
 
   const refetchGapFill = useCallback(async () => {
-    if (!chatId || messages.length === 0) return;
+    const currentMessages = messagesRef.current;
+    if (!chatId || currentMessages.length === 0) return;
 
-    const lastSeen = messages[messages.length - 1]!;
+    const lastSeen = currentMessages[currentMessages.length - 1]!;
     const result = await listChatMessages({
       chatId,
       limit: PAGE_SIZE,
@@ -149,7 +152,7 @@ export function useChatMessages(
     }
 
     mergeGapFillIntoCache(result.data.items);
-  }, [chatId, mergeGapFillIntoCache, messages]);
+  }, [chatId, mergeGapFillIntoCache]);
 
   const sendMutation = useMutation({
     mutationFn: async (input: SendChatMessageInput) => {
