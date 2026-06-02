@@ -2,6 +2,7 @@ import { MessageSquare } from "lucide-react";
 import { useCallback } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/features/auth";
 import { cn } from "@/lib/utils";
 import { useChatConversations } from "../../hooks/useChatConversations";
 import { ChatListItem } from "../ChatListItem/ChatListItem";
@@ -19,6 +20,11 @@ export function ChatListPage({
   className,
 }: ChatListPageProps) {
   const navigate = useNavigate();
+  const { profile } = useAuth();
+  const subtitle =
+    profile?.role === "provider"
+      ? "Suas negociações com clientes"
+      : "Suas negociações com prestadores";
   const {
     conversations,
     isLoading,
@@ -52,7 +58,7 @@ export function ChatListPage({
     >
       <header className="shrink-0 border-b border-border/60 px-4 py-3">
         <h1 className="text-lg font-semibold text-foreground">Conversas</h1>
-        <p className="text-sm text-muted-foreground">Suas negociações com clientes e prestadores</p>
+        <p className="text-sm text-muted-foreground">{subtitle}</p>
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 py-3">
