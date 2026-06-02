@@ -9,6 +9,7 @@ import {
   CHAT_PROPOSAL_TIMELINE_QUERY_KEY,
   CONVERSATION_DETAIL_QUERY_KEY,
 } from "../constants/queryKeys";
+import type { ConversationDetailResponse } from "../types/chats.types";
 import { wasRecentlySentChatMessageId } from "../utils/chatMessageSendSync";
 import { subscribeConversationChannel } from "../utils/conversationRealtimeChannel";
 
@@ -55,8 +56,23 @@ export function useConversationRealtime(
 
     seenEventsRef.current.clear();
 
-    const invalidateDetail = () => {
-      void queryClient.invalidateQueries({ queryKey: [CONVERSATION_DETAIL_QUERY_KEY, chatId] });
+    const patchDetailReadReceipt = (
+      lastReadAt: string,
+      lastReadMessageId: string | null,
+    ) => {
+      queryClient.setQueryData<ConversationDetailResponse>(
+        [CONVERSATION_DETAIL_QUERY_KEY, chatId],
+        (current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            counterparty_read_receipt: {
+              last_read_at: lastReadAt,
+              last_read_message_id: lastReadMessageId,
+            },
+          };
+        },
+      );
     };
 
     const invalidateProposal = () => {
@@ -86,11 +102,11 @@ export function useConversationRealtime(
         onReconcileRef.current?.();
       },
       onReadReceiptChange: ({ userId, lastReadMessageId, lastReadAt }) => {
-        if (currentUserId && userId === currentUserId) return;
+        if (!currentUserId || userId === currentUserId) return;
 
         const key = `chat_read_receipts:${userId}:${lastReadMessageId ?? "none"}:${lastReadAt}`;
         if (!rememberEvent(seenEventsRef.current, key)) return;
-        invalidateDetail();
+        patchDetailReadReceipt(lastReadAt, lastReadMessageId);
       },
       onStatusChange: (status) => {
         metrics.count("chats.realtime_subscription_status", 1, { status });

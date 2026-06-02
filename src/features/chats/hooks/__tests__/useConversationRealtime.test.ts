@@ -151,9 +151,9 @@ describe("useConversationRealtime", () => {
     });
   });
 
-  it("invalidates conversation detail on each counterparty read cursor advance", async () => {
+  it("patches conversation detail read receipt on each counterparty cursor advance", async () => {
     const queryClient = new QueryClient();
-    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
 
     function Wrapper({ children }: { children: ReactNode }) {
       return createElement(QueryClientProvider, { client: queryClient }, children);
@@ -177,10 +177,10 @@ describe("useConversationRealtime", () => {
     onHandlers.readReceiptChange?.(readPayload("msg-2", "2026-01-01T10:01:00Z"));
 
     await waitFor(() => {
-      const detailInvalidations = invalidateSpy.mock.calls.filter(
-        (call) => call[0]?.queryKey?.[0] === "conversation-detail",
+      const detailReadReceiptPatches = setQueryDataSpy.mock.calls.filter(
+        (call) => call[0]?.[0] === "conversation-detail",
       );
-      expect(detailInvalidations).toHaveLength(2);
+      expect(detailReadReceiptPatches).toHaveLength(2);
     });
   });
 
