@@ -24,6 +24,10 @@ vi.mock("../../ChatListPage/ChatListPage", () => ({
   ChatListPage: () => <div data-testid="chat-list">Lista</div>,
 }));
 
+vi.mock("../../../hooks/useInboxRealtime", () => ({
+  useInboxRealtime: vi.fn(),
+}));
+
 vi.mock("../ChatScreen/ChatScreen", () => ({
   ChatScreen: () => <div data-testid="chat-screen" />,
 }));

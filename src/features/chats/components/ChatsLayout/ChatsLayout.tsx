@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useParams } from "react-router";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useMobileDialogViewport } from "@/hooks/useMobileDialogViewport";
 import { cn } from "@/lib/utils";
+import { useInboxRealtime } from "../../hooks/useInboxRealtime";
 import { ChatMobileViewportProvider } from "../ChatScreen/ChatMobileViewportContext";
 import { ChatListPage } from "../ChatListPage/ChatListPage";
 
@@ -15,6 +16,8 @@ export function ChatsLayout() {
   const showConversationOnMobile = Boolean(chatId);
   const isMobileFullscreenConversation = showConversationOnMobile;
   const { contentRef, scheduleSync } = useMobileDialogViewport(isMobileFullscreenConversation);
+
+  useInboxRealtime();
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-background">

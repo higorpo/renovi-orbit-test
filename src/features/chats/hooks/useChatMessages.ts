@@ -13,6 +13,7 @@ import {
 } from "../utils/chatImageValidation";
 import { CHAT_CONVERSATIONS_LIST_QUERY_KEY, CHAT_MESSAGES_QUERY_KEY } from "../constants/queryKeys";
 import { rememberSentChatMessageId } from "../utils/chatMessageSendSync";
+import { patchConversationListCache } from "../utils/patchConversationListCache";
 import { sendMessageResultToListItem } from "../utils/sendMessageToListItem";
 import type {
   ChatMessageCursor,
@@ -160,8 +161,20 @@ export function useChatMessages(
       const optimistic = buildOptimisticMessage(chatId, user.id, input, idempotencyKey);
       setOptimisticMessages((prev) => [...prev, optimistic]);
       setLastSendError(null);
+
+      patchConversationListCache(queryClient, {
+        chatId,
+        lastInteractionAt: optimistic.created_at,
+        lastMessage: {
+          id: optimistic.id,
+          messageType: input.messageType,
+          createdAt: optimistic.created_at,
+          payload: input.payload,
+        },
+        markAsRead: true,
+      });
     },
-    [chatId, user?.id],
+    [chatId, queryClient, user?.id],
   );
 
   const refetchGapFill = useCallback(async () => {
@@ -235,7 +248,22 @@ export function useChatMessages(
 
       rememberSentChatMessageId(result.message.id);
       mergeGapFillIntoCache([sendMessageResultToListItem(result.message)]);
-      void queryClient.invalidateQueries({ queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY] });
+
+      const patched = patchConversationListCache(queryClient, {
+        chatId: result.message.chat_id,
+        lastInteractionAt: result.conversation.last_interaction_at,
+        lastMessage: {
+          id: result.message.id,
+          messageType: result.message.message_type,
+          createdAt: result.message.created_at,
+          payload: result.message.payload,
+        },
+        markAsRead: true,
+      });
+
+      if (!patched) {
+        void queryClient.invalidateQueries({ queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY] });
+      }
     },
     onError: (error, input) => {
       const apiError =
