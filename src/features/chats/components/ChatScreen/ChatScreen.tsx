@@ -78,6 +78,10 @@ export function ChatScreen({
     chatId,
     viewerRole,
     conversationStatus: detail?.conversation.status ?? "INACTIVE",
+    messages,
+    clientId: detail?.conversation.client_id ?? null,
+    providerId: detail?.conversation.provider_id ?? null,
+    lastInteractionAt: detail?.conversation.last_interaction_at ?? null,
     enabled: Boolean(detail),
   });
 

@@ -36,6 +36,9 @@ describe("useChatActionBannerState", () => {
   it("tracks impression once per banner variant", () => {
     trackEventMock.mockClear();
 
+    const clientId = "client-1";
+    const providerId = "provider-1";
+
     renderHook(() =>
       useChatActionBannerState({
         chatId: "chat-1",
@@ -43,6 +46,36 @@ describe("useChatActionBannerState", () => {
         conversationStatus: "ACTIVE",
         pendingProposalId: null,
         revisionRequestedProposalId: null,
+        clientId,
+        providerId,
+        messages: [
+          {
+            id: "m1",
+            chat_id: "chat-1",
+            sender_user_id: providerId,
+            message_type: "TEXT",
+            payload: { text: "Olá" },
+            linked_entity_type: null,
+            linked_entity_id: null,
+            idempotency_key: "m1",
+            delivery_status: "SENT",
+            created_at: "2026-01-01T10:00:00.000Z",
+            updated_at: "2026-01-01T10:00:00.000Z",
+          },
+          {
+            id: "m2",
+            chat_id: "chat-1",
+            sender_user_id: clientId,
+            message_type: "TEXT",
+            payload: { text: "Oi" },
+            linked_entity_type: null,
+            linked_entity_id: null,
+            idempotency_key: "m2",
+            delivery_status: "SENT",
+            created_at: "2026-01-01T10:01:00.000Z",
+            updated_at: "2026-01-01T10:01:00.000Z",
+          },
+        ],
       }),
     );
 

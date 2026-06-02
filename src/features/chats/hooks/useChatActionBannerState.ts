@@ -2,7 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ProfileRole } from "@/features/auth";
 import type { ProposalStatus } from "@/features/negotiation-proposals";
 import { useAnalytics } from "@/hooks/useAnalytics";
-import type { CnsConversationStatus } from "../types/chats.types";
+import type { ChatMessageListItem, CnsConversationStatus } from "../types/chats.types";
+import {
+  hasMinimumProviderClientExchange,
+  isChatInactiveForCloseBanner,
+} from "../utils/chatActionBannerEligibility";
 import {
   type ChatActionBannerAction,
   type ChatActionBannerModel,
@@ -16,6 +20,10 @@ export interface UseChatActionBannerStateParams {
   pendingProposalId?: string | null;
   revisionRequestedProposalId?: string | null;
   primaryProposalStatus?: ProposalStatus | null;
+  messages?: readonly ChatMessageListItem[];
+  clientId?: string | null;
+  providerId?: string | null;
+  lastInteractionAt?: string | null;
   enabled?: boolean;
 }
 
@@ -31,6 +39,10 @@ export function useChatActionBannerState({
   pendingProposalId = null,
   revisionRequestedProposalId = null,
   primaryProposalStatus = null,
+  messages = [],
+  clientId = null,
+  providerId = null,
+  lastInteractionAt = null,
   enabled = true,
 }: UseChatActionBannerStateParams) {
   const { trackEvent } = useAnalytics();
@@ -42,6 +54,16 @@ export function useChatActionBannerState({
     lastImpressionKeyRef.current = null;
   }, [chatId]);
 
+  const canShowSendProposalBanner = useMemo(() => {
+    if (!clientId || !providerId) return false;
+    return hasMinimumProviderClientExchange(messages, clientId, providerId);
+  }, [clientId, messages, providerId]);
+
+  const canShowCloseConversationBanner = useMemo(
+    () => isChatInactiveForCloseBanner(lastInteractionAt),
+    [lastInteractionAt],
+  );
+
   const banner = useMemo(() => {
     if (!enabled || !chatId) return null;
 
@@ -51,8 +73,12 @@ export function useChatActionBannerState({
       pendingProposalId,
       revisionRequestedProposalId,
       primaryProposalStatus,
+      canShowSendProposalBanner,
+      canShowCloseConversationBanner,
     });
   }, [
+    canShowCloseConversationBanner,
+    canShowSendProposalBanner,
     chatId,
     conversationStatus,
     enabled,

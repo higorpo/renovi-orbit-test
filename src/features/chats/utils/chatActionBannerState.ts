@@ -27,6 +27,10 @@ export interface ChatActionBannerContext {
   revisionRequestedProposalId: string | null;
   /** Optional status of the primary proposal row driving the banner. */
   primaryProposalStatus?: ProposalStatus | null;
+  /** Provider sent at least one message and the client replied once (R19 send-proposal gate). */
+  canShowSendProposalBanner?: boolean;
+  /** No chat interaction for 12+ hours (close-conversation gate for both roles). */
+  canShowCloseConversationBanner?: boolean;
 }
 
 const PRIORITY = {
@@ -52,7 +56,7 @@ function buildProviderSendBanner(): ChatActionBannerModel {
   return {
     action: "send_proposal",
     priority: PRIORITY.sendProposal,
-    body: "Você já tem informações suficientes para enviar uma proposta. Inclua valor, escopo e prazos para continuar a negociação.",
+    body: "Já tem informações suficientes? Inclua valor, escopo e prazos para continuar a negociação.",
     ctaLabel: "Enviar proposta",
     ctaAriaLabel: "Enviar proposta para este pedido",
     dismissAriaLabel: "Dispensar aviso para enviar proposta",
@@ -83,7 +87,7 @@ function buildClientViewBanner(proposalId: string): ChatActionBannerModel {
   };
 }
 
-function buildClientCloseBanner(): ChatActionBannerModel {
+function buildCloseConversationBanner(): ChatActionBannerModel {
   return {
     action: "close_conversation",
     priority: PRIORITY.closeConversation,
@@ -109,12 +113,20 @@ export function resolveChatActionBanner(
       return buildProviderRevisionBanner(context.revisionRequestedProposalId);
     }
 
-    if (!context.pendingProposalId && context.conversationStatus === "ACTIVE") {
+    if (
+      !context.pendingProposalId &&
+      context.conversationStatus === "ACTIVE" &&
+      context.canShowSendProposalBanner
+    ) {
       return buildProviderSendBanner();
     }
 
     if (context.pendingProposalId && context.primaryProposalStatus === "PENDING") {
       return buildProviderViewBanner(context.pendingProposalId);
+    }
+
+    if (context.canShowCloseConversationBanner && context.conversationStatus === "ACTIVE") {
+      return buildCloseConversationBanner();
     }
 
     return null;
@@ -125,8 +137,8 @@ export function resolveChatActionBanner(
       return buildClientViewBanner(context.pendingProposalId);
     }
 
-    if (context.conversationStatus === "ACTIVE") {
-      return buildClientCloseBanner();
+    if (context.canShowCloseConversationBanner && context.conversationStatus === "ACTIVE") {
+      return buildCloseConversationBanner();
     }
 
     return null;
