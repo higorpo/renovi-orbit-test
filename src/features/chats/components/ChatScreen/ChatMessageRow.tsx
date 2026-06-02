@@ -63,7 +63,7 @@ export function ChatMessageRow({
         <div className="w-9 shrink-0">
           {showIncomingAvatar ? (
             <div
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow-sm"
               aria-hidden
             >
               {getCounterpartyInitials(counterpartyName)}
