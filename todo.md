@@ -156,3 +156,4 @@ A policy de storage `"Clients providers and admins can read question response im
 - layout da tela do chats é diferente no mobile
 - layout do card de chat está esquisito
 - loading do chat não está tão bom
+- se os dois enviam mensagem ao mesmo tempo, chat buga
