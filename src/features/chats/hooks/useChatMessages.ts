@@ -7,6 +7,8 @@ import { logger } from "@/lib/logger";
 import { metrics } from "@/lib/sentry";
 import { createMediaUploadSession, uploadChatMedia } from "../api/chatMedia.api";
 import { listChatMessages, sendMessage } from "../api/chats.api";
+import { Capacitor } from "@capacitor/core";
+import { prepareChatImageFiles } from "../utils/chatImagePrepare";
 import {
   normalizeChatImageFiles,
   validateChatImageFiles,
@@ -318,7 +320,10 @@ export function useChatMessages(
       }
 
       const normalizedFiles = normalizeChatImageFiles(files);
-      const validationError = validateChatImageFiles(normalizedFiles);
+      const preparedFiles = Capacitor.isNativePlatform()
+        ? normalizedFiles
+        : await prepareChatImageFiles(normalizedFiles);
+      const validationError = validateChatImageFiles(preparedFiles);
       if (validationError) {
         toast.error(validationError);
         return;
@@ -341,7 +346,7 @@ export function useChatMessages(
         const uploadResult = await uploadChatMedia({
           chatId,
           uploadSessionId,
-          files: normalizedFiles,
+          files: preparedFiles,
           idempotencyKey,
         });
         if (uploadResult.error) {
@@ -352,7 +357,7 @@ export function useChatMessages(
         const trimmedCaption = caption?.trim() ?? "";
         const preview =
           trimmedCaption ||
-          (normalizedFiles.length === 1 ? "Foto" : `${normalizedFiles.length} fotos`);
+          (preparedFiles.length === 1 ? "Foto" : `${preparedFiles.length} fotos`);
 
         try {
           await enqueueSend({

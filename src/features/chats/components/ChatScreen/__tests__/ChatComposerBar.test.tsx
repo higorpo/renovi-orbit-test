@@ -1,8 +1,24 @@
 // @vitest-environment happy-dom
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChatComposerBar } from "../ChatComposerBar";
 import type { ChatComposerState } from "../../../utils/composerState";
+
+vi.mock("../../../utils/chatImagePrepare", () => ({
+  prepareWebChatImageFile: vi.fn(async (file: File) => file),
+  createBlobPreviewAttachment: vi.fn((file: File) => ({
+    file,
+    previewUrl: "blob:preview",
+    revokePreviewOnCleanup: true,
+  })),
+}));
+
+vi.mock("../../../utils/chatNativeImagePicker", () => ({
+  isNativeChatImagePickerAvailable: () => false,
+  isNativeCameraUserCancellation: () => false,
+  pickChatImageFromNativeCamera: vi.fn(),
+  pickChatImagesFromNativeGallery: vi.fn(),
+}));
 
 const enabledComposer: ChatComposerState = {
   isInputEnabled: true,
@@ -29,7 +45,7 @@ describe("ChatComposerBar", () => {
     expect(onSend).not.toHaveBeenCalled();
   });
 
-  it("enables send when only images are attached", () => {
+  it("enables send when only images are attached", async () => {
     const onSend = vi.fn();
     const { container } = render(
       <ChatComposerBar composer={enabledComposer} onSend={onSend} />,
@@ -41,7 +57,9 @@ describe("ChatComposerBar", () => {
     });
 
     const sendButton = screen.getByRole("button", { name: "Enviar mensagem" });
-    expect(sendButton).not.toBeDisabled();
+    await waitFor(() => {
+      expect(sendButton).not.toBeDisabled();
+    });
   });
 
   it("sends text and files together on submit", async () => {
@@ -58,7 +76,12 @@ describe("ChatComposerBar", () => {
     fireEvent.change(screen.getByPlaceholderText("Escreva uma mensagem…"), {
       target: { value: "Olá com foto" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Enviar mensagem" }));
+
+    const sendButton = screen.getByRole("button", { name: "Enviar mensagem" });
+    await waitFor(() => {
+      expect(sendButton).not.toBeDisabled();
+    });
+    fireEvent.click(sendButton);
 
     expect(onSend).toHaveBeenCalledWith({
       text: "Olá com foto",

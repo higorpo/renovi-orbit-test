@@ -7,6 +7,22 @@ vi.mock("sonner", () => ({
   toast: { error: vi.fn() },
 }));
 
+vi.mock("../../utils/chatImagePrepare", () => ({
+  prepareWebChatImageFile: vi.fn(async (file: File) => file),
+  createBlobPreviewAttachment: vi.fn((file: File) => ({
+    file,
+    previewUrl: "blob:preview",
+    revokePreviewOnCleanup: true,
+  })),
+}));
+
+vi.mock("../../utils/chatNativeImagePicker", () => ({
+  isNativeChatImagePickerAvailable: () => false,
+  isNativeCameraUserCancellation: () => false,
+  pickChatImageFromNativeCamera: vi.fn(),
+  pickChatImagesFromNativeGallery: vi.fn(),
+}));
+
 describe("useChatComposerAttachments", () => {
   it("adds selected images and exposes preview URLs", async () => {
     const { result } = renderHook(() => useChatComposerAttachments());
@@ -22,12 +38,12 @@ describe("useChatComposerAttachments", () => {
     } as FileList;
 
     await act(async () => {
-      result.current.onSelectImages(list);
+      await result.current.onSelectImages(list);
     });
 
     expect(result.current.pendingImages).toHaveLength(1);
     expect(result.current.previewUrls).toHaveLength(1);
-    expect(result.current.previewUrls[0]).toMatch(/^blob:/);
+    expect(result.current.previewUrls[0]).toBe("blob:preview");
   });
 
   it("removes image by index", async () => {
@@ -35,7 +51,7 @@ describe("useChatComposerAttachments", () => {
     const file = new File(["x"], "a.jpg", { type: "image/jpeg" });
 
     await act(async () => {
-      result.current.onSelectImages({
+      await result.current.onSelectImages({
         0: file,
         length: 1,
         item: () => file,

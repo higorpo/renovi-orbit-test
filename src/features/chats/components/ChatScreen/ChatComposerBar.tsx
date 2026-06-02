@@ -8,6 +8,7 @@ import { useChatComposerAttachments } from "../../hooks/useChatComposerAttachmen
 import { CHAT_IMAGE_ACCEPT } from "../../utils/chatImageValidation";
 import type { ChatComposerState } from "../../utils/composerState";
 import { ChatComposerAttachmentPreview } from "./ChatComposerAttachmentPreview";
+import { ChatComposerAttachmentSourceSheet } from "./ChatComposerAttachmentSourceSheet";
 import { useChatMobileViewportSchedule } from "./ChatMobileViewportContext";
 import { useChatTimelineScrollContext } from "./ChatTimelineScrollContext";
 
@@ -36,6 +37,7 @@ export function ChatComposerBar({
   className,
 }: ChatComposerBarProps) {
   const [draft, setDraft] = useState("");
+  const [attachmentSourceOpen, setAttachmentSourceOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachments = useChatComposerAttachments();
@@ -43,7 +45,7 @@ export function ChatComposerBar({
   const scheduleViewportSync = useChatMobileViewportSchedule();
   const timelineScroll = useChatTimelineScrollContext();
 
-  const isUploadBusy = isUploadingMedia;
+  const isUploadBusy = isUploadingMedia || attachments.isPreparingImages;
   const canAttach = composer.isAttachmentEnabled && !isUploadBusy;
   const hasDraftText = draft.trim().length > 0;
   const canSend =
@@ -69,6 +71,10 @@ export function ChatComposerBar({
 
   const openFilePicker = () => {
     if (!canAttach) return;
+    if (attachments.isNativePickerAvailable) {
+      setAttachmentSourceOpen(true);
+      return;
+    }
     fileInputRef.current?.click();
   };
 
@@ -85,6 +91,12 @@ export function ChatComposerBar({
     >
       {composer.helperText ? (
         <p className="mb-2 px-1 text-xs text-muted-foreground">{composer.helperText}</p>
+      ) : null}
+
+      {attachments.isPreparingImages ? (
+        <p className="mb-2 px-1 text-xs text-muted-foreground" aria-live="polite">
+          Preparando imagens…
+        </p>
       ) : null}
 
       {isUploadingMedia ? (
@@ -107,10 +119,23 @@ export function ChatComposerBar({
         tabIndex={-1}
         aria-hidden
         onChange={(event) => {
-          attachments.onSelectImages(event.target.files);
+          void attachments.onSelectImages(event.target.files);
           event.currentTarget.value = "";
         }}
       />
+
+      {attachments.isNativePickerAvailable ? (
+        <ChatComposerAttachmentSourceSheet
+          open={attachmentSourceOpen}
+          onOpenChange={setAttachmentSourceOpen}
+          onPickCamera={() => {
+            void attachments.pickFromNativeCamera();
+          }}
+          onPickGallery={() => {
+            void attachments.pickFromNativeGallery();
+          }}
+        />
+      ) : null}
 
       <div className="flex items-end gap-2">
         <Button
