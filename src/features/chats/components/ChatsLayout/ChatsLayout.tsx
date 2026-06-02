@@ -20,16 +20,17 @@ export function ChatsLayout() {
     <div className="flex min-h-0 flex-1 flex-col bg-background">
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <div
+          data-testid="chat-list-panel"
           className={cn(
             "min-h-0 shrink-0",
-            showListOnMobile ? "flex flex-1 flex-col" : "hidden",
-            "md:flex md:flex-col",
+            showListOnMobile ? "flex max-md:flex-1 flex-col" : "hidden",
+            "md:flex md:w-[360px] md:flex-none md:flex-col",
           )}
         >
           <ChatListPage
             selectedChatId={chatId ?? null}
             onSelectConversation={(id) => void navigate(`/dashboard/chats/${id}`)}
-            className="h-full min-h-0 md:max-w-[420px] md:min-w-[320px]"
+            className="h-full min-h-0"
           />
         </div>
 

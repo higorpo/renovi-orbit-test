@@ -45,7 +45,7 @@ export function ChatListPage({
     <section
       className={cn(
         "flex h-full min-h-0 w-full flex-col",
-        "sm:max-w-[420px] sm:min-w-[320px] sm:border-r sm:border-border/60",
+        "md:border-r md:border-border/60",
         className,
       )}
       aria-label="Lista de conversas"

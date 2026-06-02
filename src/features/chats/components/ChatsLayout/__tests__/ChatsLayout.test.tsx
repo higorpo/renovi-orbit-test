@@ -53,4 +53,20 @@ describe("ChatsLayout", () => {
     expect(shell.className).toContain("max-md:fixed");
     expect(shell.className).toContain("max-md:h-dvh");
   });
+
+  it("uses fixed desktop sidebar width on index route", () => {
+    renderAt("/chats");
+    const listPanel = screen.getByTestId("chat-list-panel");
+    expect(listPanel.className).toContain("md:w-[360px]");
+    expect(listPanel.className).toContain("md:flex-none");
+    expect(listPanel.className).toContain("max-md:flex-1");
+  });
+
+  it("uses the same fixed desktop sidebar width when a chat is selected", () => {
+    renderAt("/chats/chat-1");
+    const listPanel = screen.getByTestId("chat-list-panel");
+    expect(listPanel.className).toContain("md:w-[360px]");
+    expect(listPanel.className).toContain("md:flex-none");
+    expect(listPanel.className).not.toContain("max-md:flex-1");
+  });
 });
