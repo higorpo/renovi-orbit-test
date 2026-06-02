@@ -38,8 +38,8 @@ export function ChatListItem({ item, isActive = false, onSelect, className }: Ch
       }}
       className={cn(
         "flex min-h-[84px] w-full cursor-pointer items-center gap-3 rounded-2xl border px-3 py-3 transition-colors",
-        "hover:bg-accent/40 active:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        isActive ? "border-primary/30 bg-accent/50" : "border-transparent bg-card",
+        "hover:bg-muted/50 active:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        isActive ? "border-border bg-muted/80" : "border-transparent bg-card",
         item.is_unread && !isActive && "bg-muted/60",
         statusPresentation.listItemClassName,
         className,
