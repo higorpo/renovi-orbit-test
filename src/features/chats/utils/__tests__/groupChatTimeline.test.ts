@@ -41,8 +41,42 @@ describe("buildChatTimelineItems", () => {
     expect(items.some((item) => item.type === "date" && item.label === "Hoje")).toBe(true);
     expect(messageItems).toHaveLength(3);
     expect(messageItems[0]?.type === "message" && messageItems[0].showIncomingAvatar).toBe(true);
+    expect(messageItems[0]?.type === "message" && messageItems[0].groupPosition).toBe("first");
     expect(messageItems[1]?.type === "message" && messageItems[1].showIncomingAvatar).toBe(false);
+    expect(messageItems[1]?.type === "message" && messageItems[1].groupPosition).toBe("last");
     expect(messageItems[2]?.type === "message" && messageItems[2].isOutgoing).toBe(true);
+    expect(messageItems[2]?.type === "message" && messageItems[2].groupPosition).toBe("single");
+  });
+
+  it("does not crash when a day boundary coincides with a sender change", () => {
+    const messages = [
+      makeMessage("1", "other", "2026-05-30T10:00:00.000Z"),
+      makeMessage("2", "me", "2026-06-01T10:00:00.000Z"),
+    ];
+
+    const items = buildChatTimelineItems(messages, "me");
+    const messageItems = items.filter((item) => item.type === "message");
+
+    expect(messageItems).toHaveLength(2);
+    expect(items.filter((item) => item.type === "date")).toHaveLength(2);
+  });
+
+  it("assigns middle position to messages between first and last in a group", () => {
+    const baseTime = new Date("2026-05-30T12:00:00.000Z").getTime();
+    const messages = [
+      makeMessage("1", "other", new Date(baseTime).toISOString()),
+      makeMessage("2", "other", new Date(baseTime + 1_000).toISOString()),
+      makeMessage("3", "other", new Date(baseTime + 2_000).toISOString()),
+    ];
+
+    const items = buildChatTimelineItems(messages, "me");
+    const messageItems = items.filter((item) => item.type === "message");
+
+    expect(messageItems.map((item) => item.type === "message" && item.groupPosition)).toEqual([
+      "first",
+      "middle",
+      "last",
+    ]);
   });
 
   it("prepends date and discovery welcome when history is empty", () => {

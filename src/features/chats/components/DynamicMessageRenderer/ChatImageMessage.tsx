@@ -9,12 +9,14 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { ChatMessageListItem } from "../../types/chats.types";
+import type { ChatMessageGroupPosition } from "../../utils/groupChatTimeline";
 import { useChatImageDisplay } from "../../hooks/useChatImageDisplay";
 import { getChatMessageBubbleClassName } from "../../utils/chatMessageBubbleStyles";
 
 export interface ChatImageMessageProps {
   message: ChatMessageListItem;
   isOutgoing: boolean;
+  groupPosition?: ChatMessageGroupPosition;
   className?: string;
 }
 
@@ -24,6 +26,7 @@ function chatImageMessagePropsAreEqual(
 ): boolean {
   return (
     prev.isOutgoing === next.isOutgoing &&
+    prev.groupPosition === next.groupPosition &&
     prev.className === next.className &&
     areChatMessageListItemsEqual(prev.message, next.message)
   );
@@ -32,13 +35,18 @@ function chatImageMessagePropsAreEqual(
 export const ChatImageMessage = memo(function ChatImageMessage({
   message,
   isOutgoing,
+  groupPosition = "single",
   className,
 }: ChatImageMessageProps) {
   const { urls, caption, isLoading, hasError, pathCount } = useChatImageDisplay(message);
   const [expandedUrl, setExpandedUrl] = useState<string | null>(null);
   const isPending = message.delivery_status === "PENDING";
 
-  const bubbleClass = getChatMessageBubbleClassName({ isOutgoing, isPending });
+  const bubbleClass = getChatMessageBubbleClassName({
+    isOutgoing,
+    isPending,
+    groupPosition,
+  });
 
   if (pathCount === 0) {
     return (

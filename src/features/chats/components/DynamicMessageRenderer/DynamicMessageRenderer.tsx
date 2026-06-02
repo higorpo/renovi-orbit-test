@@ -3,6 +3,7 @@ import { metrics } from "@/lib/sentry";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
 import type { ChatMessageListItem, CnsMessageType } from "../../types/chats.types";
+import type { ChatMessageGroupPosition } from "../../utils/groupChatTimeline";
 import { getChatMessageText } from "../../utils/getChatMessageText";
 import {
   DynamicProposalCard,
@@ -18,6 +19,7 @@ export interface DynamicMessageRendererProps {
   message: ChatMessageListItem;
   viewerRole: ProfileRole;
   isOutgoing: boolean;
+  groupPosition?: ChatMessageGroupPosition;
   onProposalAction?: (action: ProposalCardAction, proposalId: string) => void;
   className?: string;
 }
@@ -36,6 +38,7 @@ export function DynamicMessageRenderer({
   message,
   viewerRole,
   isOutgoing,
+  groupPosition = "single",
   onProposalAction,
   className,
 }: DynamicMessageRendererProps) {
@@ -80,6 +83,7 @@ export function DynamicMessageRenderer({
       <ChatImageMessage
         message={message}
         isOutgoing={isOutgoing}
+        groupPosition={groupPosition}
         className={className}
       />
     );

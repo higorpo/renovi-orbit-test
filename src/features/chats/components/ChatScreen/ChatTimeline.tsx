@@ -16,7 +16,6 @@ import {
 } from "../../utils/groupChatTimeline";
 import { ChatDiscoveryWelcome } from "./ChatDiscoveryWelcome";
 import { ChatMessageRow } from "./ChatMessageRow";
-import { ChatReadReceiptLabel } from "./ChatReadReceiptLabel";
 import { ChatTimelineScrollContext } from "./ChatTimelineScrollContext";
 
 export interface ChatTimelineProps {
@@ -255,14 +254,17 @@ export function ChatTimeline({
               message={item.message}
               groupPosition={item.groupPosition}
               showIncomingAvatar={item.showIncomingAvatar}
+              showGroupTimestamp={
+                item.groupPosition === "single" || item.groupPosition === "last"
+              }
+              showReadReceipt={
+                item.isOutgoing && item.message.id === viewedReceiptMessageId
+              }
               isOutgoing={item.isOutgoing}
               counterpartyName={counterpartyName}
               viewerRole={viewerRole}
               onProposalAction={onProposalAction}
             />
-            {item.isOutgoing && item.message.id === viewedReceiptMessageId ? (
-              <ChatReadReceiptLabel />
-            ) : null}
           </div>
         );
       })}

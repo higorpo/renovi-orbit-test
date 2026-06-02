@@ -80,8 +80,11 @@ export function buildChatTimelineItems(
   let groupStart = 0;
 
   const flushGroup = (endIndex: number) => {
+    if (groupStart > endIndex) return;
+
     const groupMessages = messages.slice(groupStart, endIndex + 1);
-    const firstMessage = groupMessages[0]!;
+    const firstMessage = groupMessages[0];
+    if (!firstMessage) return;
     const isOutgoing = Boolean(currentUserId && firstMessage.sender_user_id === currentUserId);
 
     groupMessages.forEach((message, index) => {

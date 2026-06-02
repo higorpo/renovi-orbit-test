@@ -9,12 +9,15 @@ import type { ChatMessageGroupPosition } from "../../utils/groupChatTimeline";
 import { getChatMessageText } from "../../utils/getChatMessageText";
 import { getChatMessageBubbleClassName } from "../../utils/chatMessageBubbleStyles";
 import { getCounterpartyInitials } from "../../utils/getCounterpartyInitials";
+import { ChatMessageMeta } from "./ChatMessageMeta";
 
 export interface ChatMessageRowProps {
   chatId: string;
   message: ChatMessageListItem;
   groupPosition: ChatMessageGroupPosition;
   showIncomingAvatar: boolean;
+  showGroupTimestamp: boolean;
+  showReadReceipt: boolean;
   isOutgoing: boolean;
   counterpartyName: string;
   viewerRole: ProfileRole;
@@ -30,6 +33,8 @@ function chatMessageRowPropsAreEqual(
     prev.isOutgoing === next.isOutgoing &&
     prev.groupPosition === next.groupPosition &&
     prev.showIncomingAvatar === next.showIncomingAvatar &&
+    prev.showGroupTimestamp === next.showGroupTimestamp &&
+    prev.showReadReceipt === next.showReadReceipt &&
     prev.counterpartyName === next.counterpartyName &&
     prev.viewerRole === next.viewerRole &&
     prev.onProposalAction === next.onProposalAction &&
@@ -42,6 +47,8 @@ export const ChatMessageRow = memo(function ChatMessageRow({
   message,
   groupPosition,
   showIncomingAvatar,
+  showGroupTimestamp,
+  showReadReceipt,
   isOutgoing,
   counterpartyName,
   viewerRole,
@@ -50,7 +57,8 @@ export const ChatMessageRow = memo(function ChatMessageRow({
   const text = getChatMessageText(message);
   const isPending = message.delivery_status === "PENDING";
   const rowMargin =
-    groupPosition === "first" || groupPosition === "single" ? "mt-3" : "mt-1";
+    groupPosition === "first" || groupPosition === "single" ? "mt-3" : "mt-0.5";
+  const showMeta = showGroupTimestamp || showReadReceipt;
   const usesBubbleRowLayout =
     message.message_type === "TEXT" || message.message_type === "IMAGE";
 
@@ -75,44 +83,55 @@ export const ChatMessageRow = memo(function ChatMessageRow({
   }
 
   return (
-    <div
-      className={cn(
-        "flex w-full gap-2",
-        isOutgoing ? "justify-end" : "justify-start",
-        rowMargin,
-      )}
-    >
-      {!isOutgoing ? (
-        <div className="w-9 shrink-0">
-          {showIncomingAvatar ? (
-            <div
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow-sm"
-              aria-hidden
-            >
-              {getCounterpartyInitials(counterpartyName)}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+    <div className={cn("w-full", rowMargin)}>
+      <div
+        className={cn(
+          "flex w-full gap-2",
+          isOutgoing ? "justify-end" : "justify-start",
+        )}
+      >
+        {!isOutgoing ? (
+          <div className="w-9 shrink-0">
+            {showIncomingAvatar ? (
+              <div
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow-sm"
+                aria-hidden
+              >
+                {getCounterpartyInitials(counterpartyName)}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
-      {message.message_type === "TEXT" ? (
-        <div
-          className={cn(
-            getChatMessageBubbleClassName({ isOutgoing, isPending }),
-            "px-4 py-2.5 text-[15px] leading-relaxed",
-          )}
-        >
-          <p className="whitespace-pre-wrap break-words">{text}</p>
-        </div>
-      ) : (
-        <DynamicMessageRenderer
-          chatId={chatId}
-          message={message}
-          viewerRole={viewerRole}
+        {message.message_type === "TEXT" ? (
+          <div
+            className={cn(
+              getChatMessageBubbleClassName({ isOutgoing, isPending, groupPosition }),
+              "px-4 py-2.5 text-[15px] leading-relaxed",
+            )}
+          >
+            <p className="whitespace-pre-wrap break-words">{text}</p>
+          </div>
+        ) : (
+          <DynamicMessageRenderer
+            chatId={chatId}
+            message={message}
+            viewerRole={viewerRole}
+            isOutgoing={isOutgoing}
+            groupPosition={groupPosition}
+            onProposalAction={onProposalAction}
+          />
+        )}
+      </div>
+
+      {showMeta ? (
+        <ChatMessageMeta
+          createdAt={message.created_at}
           isOutgoing={isOutgoing}
-          onProposalAction={onProposalAction}
+          showTimestamp={showGroupTimestamp}
+          showReadReceipt={showReadReceipt}
         />
-      )}
+      ) : null}
     </div>
   );
 }, chatMessageRowPropsAreEqual);
