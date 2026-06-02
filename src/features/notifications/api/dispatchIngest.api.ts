@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
-import { generateIdempotencyKeyV7 } from "../utils/idempotencyKey";
+import { generateIdempotencyKeyV7 } from "@/lib/utils/idempotencyKey";
 import type {
   IngestDispatchParams,
   IngestDispatchResult,

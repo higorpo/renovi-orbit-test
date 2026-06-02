@@ -2,7 +2,7 @@ import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-q
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth";
-import { generateIdempotencyKeyV7 } from "@/features/notifications";
+import { generateIdempotencyKeyV7 } from "@/lib/utils/idempotencyKey";
 import { logger } from "@/lib/logger";
 import { metrics } from "@/lib/sentry";
 import { createMediaUploadSession, uploadChatMedia } from "../api/chatMedia.api";
@@ -12,6 +12,7 @@ import {
   validateChatImageFiles,
 } from "../utils/chatImageValidation";
 import { CHAT_CONVERSATIONS_LIST_QUERY_KEY, CHAT_MESSAGES_QUERY_KEY } from "../constants/queryKeys";
+import { createClientSendId } from "../utils/clientSendId";
 import { rememberSentChatMessageId } from "../utils/chatMessageSendSync";
 import { patchConversationListCache } from "../utils/patchConversationListCache";
 import { sendMessageResultToListItem } from "../utils/sendMessageToListItem";
@@ -337,7 +338,7 @@ export function useChatMessages(
         }
 
         const uploadSessionId = sessionResult.data.upload_session_id;
-        const clientSendId = crypto.randomUUID();
+        const clientSendId = createClientSendId();
         const idempotencyKey = generateIdempotencyKeyV7();
 
         const uploadResult = await uploadChatMedia({

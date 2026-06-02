@@ -1,4 +1,4 @@
-import { generateIdempotencyKeyV7 } from "@/features/notifications";
+import { generateIdempotencyKeyV7 } from "@/lib/utils/idempotencyKey";
 import { logger } from "@/lib/logger";
 import { metrics } from "@/lib/sentry";
 import { supabase } from "@/lib/supabase/client";

@@ -1,5 +1,6 @@
 /**
- * UUID v7 for MMD idempotency keys (Req. 5, design §5.1).
+ * UUID v7 for idempotency keys and other client-generated correlation ids.
+ * Uses getRandomValues (works without a secure context; crypto.randomUUID does not).
  */
 export function generateIdempotencyKeyV7(): string {
   const unixMs = BigInt(Date.now());

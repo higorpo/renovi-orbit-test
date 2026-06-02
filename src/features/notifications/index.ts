@@ -10,7 +10,7 @@ export type {
 export { fetchAuditTimeline } from "./api/auditTimeline.api";
 export { useCancelDispatch } from "./hooks/useCancelDispatch";
 export { useAuditTimeline } from "./hooks/useAuditTimeline";
-export { generateIdempotencyKeyV7 } from "./utils/idempotencyKey";
+export { generateIdempotencyKeyV7 } from "@/lib/utils/idempotencyKey";
 export type {
   AuditTimelineEntry,
   CancelDispatchParams,

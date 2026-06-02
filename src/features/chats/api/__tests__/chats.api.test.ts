@@ -23,7 +23,7 @@ vi.mock("@/lib/sentry", () => ({
   metrics: { count: vi.fn() },
 }));
 
-vi.mock("@/features/notifications", () => ({
+vi.mock("@/lib/utils/idempotencyKey", () => ({
   generateIdempotencyKeyV7: () => "00000000-0000-7000-8000-000000000001",
 }));
 

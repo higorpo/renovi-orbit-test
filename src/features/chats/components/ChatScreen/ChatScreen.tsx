@@ -22,6 +22,7 @@ import { usePushNotificationSuppression } from "../../hooks/usePushNotificationS
 import { useChatActionBannerInset } from "../../hooks/useChatActionBannerInset";
 import type { ChatActionBannerCtaPayload } from "../../hooks/useChatActionBannerState";
 import type { ProposalCardAction } from "../DynamicMessageRenderer/DynamicProposalCard";
+import { createClientSendId } from "../../utils/clientSendId";
 import { resolveCounterpartyViewedMessageId } from "../../utils/resolveCounterpartyViewedMessageId";
 import { ChatComposerBar } from "./ChatComposerBar";
 import { ChatScreenHeader } from "./ChatScreenHeader";
@@ -131,7 +132,7 @@ export function ChatScreen({
         void sendChatMessage({
           messageType: "TEXT",
           payload: { text },
-          clientSendId: crypto.randomUUID(),
+          clientSendId: createClientSendId(),
         });
       }
     },

@@ -10,7 +10,7 @@ vi.mock("@/features/auth", () => ({
 }));
 
 let idempotencySeq = 0;
-vi.mock("@/features/notifications", () => ({
+vi.mock("@/lib/utils/idempotencyKey", () => ({
   generateIdempotencyKeyV7: () => {
     idempotencySeq += 1;
     return `00000000-0000-7000-8000-00000000000${idempotencySeq}`;
