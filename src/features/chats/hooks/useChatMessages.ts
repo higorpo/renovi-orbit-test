@@ -324,16 +324,13 @@ export function useChatMessages(
         return;
       }
 
-      const toastId = toast.loading(
-        normalizedFiles.length === 1 ? "Enviando imagem…" : "Enviando imagens…",
-      );
       setIsUploadingMedia(true);
 
       try {
         const sessionResult = await createMediaUploadSession(chatId);
         if (sessionResult.error || !sessionResult.data) {
           const message = sessionResult.error?.message ?? "Não foi possível preparar o envio.";
-          toast.error(message, { id: toastId });
+          toast.error(message);
           return;
         }
 
@@ -348,7 +345,7 @@ export function useChatMessages(
           idempotencyKey,
         });
         if (uploadResult.error) {
-          toast.error(uploadResult.error, { id: toastId });
+          toast.error(uploadResult.error);
           return;
         }
 
@@ -367,7 +364,6 @@ export function useChatMessages(
             },
             clientSendId,
           });
-          toast.success("Mensagem enviada", { id: toastId });
         } catch (sendError) {
           const message =
             sendError &&
@@ -378,7 +374,7 @@ export function useChatMessages(
               : sendError instanceof Error
                 ? sendError.message
                 : "Não foi possível enviar a mensagem com a imagem.";
-          toast.error(message, { id: toastId });
+          toast.error(message);
         }
       } catch (error) {
         logger.error("chat_image_send_failed", {
@@ -387,7 +383,6 @@ export function useChatMessages(
         });
         toast.error(
           error instanceof Error ? error.message : "Não foi possível enviar a imagem.",
-          { id: toastId },
         );
       } finally {
         setIsUploadingMedia(false);
