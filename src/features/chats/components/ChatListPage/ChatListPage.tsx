@@ -50,7 +50,7 @@ export function ChatListPage({
       )}
       aria-label="Lista de conversas"
     >
-      <header className="shrink-0 border-b border-border/60 px-4 py-4">
+      <header className="shrink-0 border-b border-border/60 px-4 py-3">
         <h1 className="text-lg font-semibold text-foreground">Conversas</h1>
         <p className="text-sm text-muted-foreground">Suas negociações com clientes e prestadores</p>
       </header>
