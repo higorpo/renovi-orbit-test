@@ -3,6 +3,7 @@
  * All mutations and reads go through supabase.rpc; no direct table writes from the client.
  */
 export const CNS_CHAT_RPC = {
+  createMediaUploadSession: "cns_create_media_upload_session",
   sendMessage: "cns_send_message",
   initiateConversation: "cns_initiate_conversation",
   closeConversation: "cns_close_conversation",
@@ -12,6 +13,7 @@ export const CNS_CHAT_RPC = {
   getConversationDetail: "get_conversation_detail",
   chatFreeMessagingAllowed: "cns_chat_free_messaging_allowed",
   getProposalForTimeline: "get_proposal_for_timeline",
+  refreshMediaSignedUrls: "cns_refresh_media_signed_urls",
 } as const;
 
 export type CnsChatRpcName = (typeof CNS_CHAT_RPC)[keyof typeof CNS_CHAT_RPC];

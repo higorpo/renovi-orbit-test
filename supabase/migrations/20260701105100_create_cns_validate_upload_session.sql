@@ -83,3 +83,68 @@ revoke all on function public.cns_validate_upload_session(uuid, uuid) from anon;
 
 grant execute on function public.cns_validate_upload_session(uuid, uuid) to authenticated;
 grant execute on function public.cns_validate_upload_session(uuid, uuid) to service_role;
+
+create or replace function public.cns_create_media_upload_session(p_chat_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+  v_actor uuid := auth.uid();
+  v_session public.chat_media_upload_sessions%rowtype;
+begin
+  if v_actor is null then
+    raise exception 'Authentication required for cns_create_media_upload_session'
+      using errcode = '42501';
+  end if;
+
+  if p_chat_id is null then
+    raise exception 'p_chat_id is required'
+      using errcode = '22023';
+  end if;
+
+  if not public.is_chat_participant(p_chat_id) then
+    raise exception 'NOT_A_PARTICIPANT'
+      using errcode = '42501';
+  end if;
+
+  if not public.cns_chat_free_messaging_allowed(p_chat_id) then
+    raise exception 'FREE_MESSAGING_DISABLED_PROPOSAL_PENDING'
+      using
+        errcode = 'P0001',
+        detail = jsonb_build_object(
+          'code', 'FREE_MESSAGING_DISABLED_PROPOSAL_PENDING'
+        )::text;
+  end if;
+
+  insert into public.chat_media_upload_sessions (
+    chat_id,
+    uploader_id,
+    status,
+    expires_at
+  )
+  values (
+    p_chat_id,
+    v_actor,
+    'pending',
+    now() + interval '24 hours'
+  )
+  returning * into v_session;
+
+  return jsonb_build_object(
+    'upload_session_id', v_session.id,
+    'chat_id', v_session.chat_id,
+    'expires_at', v_session.expires_at
+  );
+end;
+$$;
+
+comment on function public.cns_create_media_upload_session(uuid) is
+  'Creates a pending chat-media upload session for the authenticated participant (design §5.2).';
+
+revoke all on function public.cns_create_media_upload_session(uuid) from public;
+revoke all on function public.cns_create_media_upload_session(uuid) from anon;
+
+grant execute on function public.cns_create_media_upload_session(uuid) to authenticated;
+grant execute on function public.cns_create_media_upload_session(uuid) to service_role;

@@ -32,6 +32,8 @@ as $$
       jsonb_strip_nulls(
         jsonb_build_object(
           'paths', p_payload->'paths',
+          'preview',
+            left(coalesce(nullif(trim(p_payload->>'preview'), ''), ''), 4000),
           'client_message_id', p_payload->'client_message_id'
         )
       )

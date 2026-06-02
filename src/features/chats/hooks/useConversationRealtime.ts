@@ -6,7 +6,6 @@ import { supabase } from "@/lib/supabase/client";
 import {
   CHAT_CONVERSATIONS_LIST_QUERY_KEY,
   CHAT_FREE_MESSAGING_QUERY_KEY,
-  CHAT_MESSAGES_QUERY_KEY,
   CHAT_PROPOSAL_TIMELINE_QUERY_KEY,
   CONVERSATION_DETAIL_QUERY_KEY,
 } from "../constants/queryKeys";
@@ -60,10 +59,6 @@ export function useConversationRealtime(
       void queryClient.invalidateQueries({ queryKey: [CONVERSATION_DETAIL_QUERY_KEY, chatId] });
     };
 
-    const invalidateMessages = () => {
-      void queryClient.invalidateQueries({ queryKey: [CHAT_MESSAGES_QUERY_KEY, chatId] });
-    };
-
     const invalidateProposal = () => {
       void queryClient.invalidateQueries({ queryKey: [CHAT_PROPOSAL_TIMELINE_QUERY_KEY, chatId] });
       void queryClient.invalidateQueries({ queryKey: [CHAT_FREE_MESSAGING_QUERY_KEY, chatId] });
@@ -78,17 +73,17 @@ export function useConversationRealtime(
         const key = `chat_messages:INSERT:${id}`;
         if (!rememberEvent(seenEventsRef.current, key)) return;
 
-        // Own send: onSuccess already invalidated messages + inbox.
+        // Own send: onSuccess already merged the message + refreshed inbox.
         if (wasRecentlySentChatMessageId(id)) return;
 
-        invalidateMessages();
+        onReconcileRef.current?.();
         invalidateInbox();
       },
       onProposalUpdate: ({ id }) => {
         const key = `provider_proposals:UPDATE:${id}`;
         if (!rememberEvent(seenEventsRef.current, key)) return;
         invalidateProposal();
-        invalidateMessages();
+        onReconcileRef.current?.();
       },
       onReadReceiptChange: ({ userId, lastReadMessageId, lastReadAt }) => {
         if (currentUserId && userId === currentUserId) return;

@@ -2241,6 +2241,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _legacy_bridge_idempotency_uuid: {
+        Args: { p_seed: string }
+        Returns: string
+      }
+      accept_proposal: {
+        Args: {
+          p_idempotency_key: string
+          p_proposal_id: string
+          p_selected_slot: Json
+        }
+        Returns: Json
+      }
       calculate_provider_service_pricing: {
         Args: { p_original_amount: number; p_tax_key?: string }
         Returns: {
@@ -2255,6 +2267,27 @@ export type Database = {
         Args: { p_provider_id: string; p_service_request_id: string }
         Returns: boolean
       }
+      cancel_service_request: {
+        Args: { p_idempotency_key: string; p_service_request_id: string }
+        Returns: Json
+      }
+      cns_assert_chat_media_path_shape: {
+        Args: { p_path: string }
+        Returns: undefined
+      }
+      cns_assert_chat_media_storage_path: {
+        Args: { p_chat_id: string; p_path: string; p_upload_session_id: string }
+        Returns: undefined
+      }
+      cns_assert_list_response_size: { Args: { p_body: Json }; Returns: Json }
+      cns_attach_message_media: {
+        Args: {
+          p_chat_id: string
+          p_paths: string[]
+          p_upload_session_id: string
+        }
+        Returns: undefined
+      }
       cns_chat_free_messaging_allowed: {
         Args: { p_chat_id: string }
         Returns: boolean
@@ -2263,88 +2296,102 @@ export type Database = {
         Args: { p_chat_id: string }
         Returns: undefined
       }
+      cns_close_conversation: {
+        Args: {
+          p_chat_id: string
+          p_closure_reason?: string
+          p_confirm: boolean
+          p_idempotency_key: string
+        }
+        Returns: Json
+      }
+      cns_create_media_upload_session: {
+        Args: { p_chat_id: string }
+        Returns: Json
+      }
+      cns_emit_analytics: { Args: { p_event_id: string }; Returns: Json }
+      cns_enqueue_notifications: { Args: { p_event_id: string }; Returns: Json }
+      cns_evaluate_reciprocity_batch: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
       cns_has_bilateral_reciprocity: {
         Args: { p_chat_id: string; p_window_hours?: number }
         Returns: boolean
       }
       cns_initiate_conversation: {
-        Args: { p_service_request_id: string; p_idempotency_key: string }
+        Args: { p_idempotency_key: string; p_service_request_id: string }
         Returns: Json
       }
+      cns_janitor_orphan_media: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      cns_list_response_max_bytes: { Args: never; Returns: number }
       cns_mark_conversation_read: {
+        Args: { p_chat_id: string; p_last_read_message_id?: string }
+        Returns: Json
+      }
+      cns_message_preview_text: {
         Args: {
-          p_chat_id: string
-          p_last_read_message_id?: string
+          p_message_type: Database["public"]["Enums"]["cns_message_type"]
+          p_payload: Json
+        }
+        Returns: string
+      }
+      cns_mmd_ingest: {
+        Args: {
+          p_event_type: string
+          p_idempotency_key: string
+          p_metadata?: Json
+          p_recipient_profile_id: string
+          p_template_variables: Json
         }
         Returns: Json
       }
-      cancel_service_request: {
-        Args: { p_service_request_id: string; p_idempotency_key: string }
-        Returns: Json
-      }
-      cns_close_conversation: {
+      cns_process_domain_events: {
         Args: {
-          p_chat_id: string
-          p_idempotency_key: string
-          p_confirm: boolean
-          p_closure_reason?: string
+          p_batch_size?: number
+          p_record_job_run?: boolean
+          p_worker_id?: string
         }
         Returns: Json
       }
-      decline_revision_request: {
-        Args: { p_proposal_id: string; p_idempotency_key: string }
-        Returns: Json
-      }
-      request_proposal_revision: {
+      cns_project_message_payload_for_list: {
         Args: {
-          p_proposal_id: string
-          p_idempotency_key: string
-          p_revision_reason: Database["public"]["Enums"]["proposal_revision_reason"]
-          p_revision_notes?: string
+          p_message_type: Database["public"]["Enums"]["cns_message_type"]
+          p_payload: Json
         }
         Returns: Json
       }
-      reject_proposal: {
-        Args: {
-          p_proposal_id: string
-          p_idempotency_key: string
-          p_rejection_reason: string
-        }
+      cns_reconcile_pending_deliveries: {
+        Args: { p_batch_size?: number }
         Returns: Json
       }
-      accept_proposal: {
+      cns_refresh_media_signed_urls: {
         Args: {
-          p_proposal_id: string
-          p_selected_slot: Json
-          p_idempotency_key: string
-        }
-        Returns: Json
-      }
-      submit_proposal: {
-        Args: {
-          p_chat_id: string
-          p_idempotency_key: string
-          p_proposed_amount: number
-          p_proposal_description: string
-          p_proposal_duration_value: number
-          p_proposal_duration_unit: string
-          p_proposal_suggested_slots: Json
-          p_pricing_signature: string
-          p_tax_rate: number
-          p_tax_amount: number
-          p_final_amount: number
-          p_photos?: string[]
+          p_expires_in?: number
+          p_message_ids?: string[]
+          p_paths?: string[]
         }
         Returns: Json
       }
       cns_send_message: {
         Args: {
-          p_message_type: Database["public"]["Enums"]["cns_message_type"]
-          p_idempotency_key: string
-          p_payload?: Json
           p_chat_id?: string
+          p_idempotency_key: string
+          p_message_type: Database["public"]["Enums"]["cns_message_type"]
+          p_payload?: Json
           p_service_request_id?: string
         }
+        Returns: Json
+      }
+      cns_set_local_statement_timeout: {
+        Args: { p_interval: string }
+        Returns: undefined
+      }
+      cns_validate_upload_session: {
+        Args: { p_chat_id?: string; p_upload_session_id: string }
         Returns: Json
       }
       create_provider_proposal: {
@@ -2367,6 +2414,24 @@ export type Database = {
         Args: { p_question: string; p_service_request_id: string }
         Returns: Json
       }
+      cron_chat_evaluate_reciprocity: { Args: never; Returns: Json }
+      cron_cns_janitor_orphan_media: { Args: never; Returns: Json }
+      cron_cns_process_domain_events: { Args: never; Returns: Json }
+      cron_cns_reconcile_pending_deliveries: { Args: never; Returns: Json }
+      cron_proposal_expire_pending: { Args: never; Returns: Json }
+      decline_revision_request: {
+        Args: { p_idempotency_key: string; p_proposal_id: string }
+        Returns: Json
+      }
+      domain_events_release_stale_leases: { Args: never; Returns: number }
+      enqueue_proposal_expiring_soon_reminders: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      expire_pending_proposals: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
       generate_provider_pricing_signature: {
         Args: {
           p_final_amount: number
@@ -2384,7 +2449,16 @@ export type Database = {
         Args: { p_service_request_id: string }
         Returns: Json
       }
+      get_conversation_detail: { Args: { p_chat_id: string }; Returns: Json }
+      get_negotiation_audit_timeline: {
+        Args: { p_service_request_id: string }
+        Returns: Json
+      }
       get_prompt_by_key: { Args: { p_prompt_key: string }; Returns: Json }
+      get_proposal_for_timeline: {
+        Args: { p_chat_id: string; p_proposal_id: string }
+        Returns: Json
+      }
       get_provider_proposal_job_detail: {
         Args: {
           p_lat?: number
@@ -2419,6 +2493,37 @@ export type Database = {
       }
       is_chat_participant: { Args: { p_chat_id: string }; Returns: boolean }
       is_platform_admin: { Args: never; Returns: boolean }
+      is_provider: { Args: never; Returns: boolean }
+      job_run_abort_latest: {
+        Args: { p_fatal_error: string; p_job_name: string }
+        Returns: undefined
+      }
+      job_run_begin: {
+        Args: { p_job_name: string; p_job_version?: string }
+        Returns: number
+      }
+      job_run_finish: {
+        Args: {
+          p_error_count?: number
+          p_fatal_error?: string
+          p_job_run_id: number
+          p_metadata?: Json
+          p_processed_count?: number
+          p_started_at: string
+          p_transitioned_count?: number
+        }
+        Returns: undefined
+      }
+      list_chat_messages: {
+        Args: {
+          p_after?: boolean
+          p_chat_id: string
+          p_cursor_created_at?: string
+          p_cursor_id?: string
+          p_limit?: number
+        }
+        Returns: Json
+      }
       list_client_budget_questions: {
         Args: {
           p_page?: number
@@ -2437,6 +2542,15 @@ export type Database = {
         }
         Returns: Json
       }
+      list_conversations: {
+        Args: {
+          p_cursor_id?: string
+          p_cursor_last_interaction_at?: string
+          p_page_size?: number
+        }
+        Returns: Json
+      }
+      list_proposal_versions: { Args: { p_chat_id: string }; Returns: Json }
       list_provider_own_questions: {
         Args: {
           p_page?: number
@@ -2472,6 +2586,11 @@ export type Database = {
         }
         Returns: Json
       }
+      mmd_idempotency_uuid: { Args: { p_key: string }; Returns: string }
+      platform_constant_bool: {
+        Args: { p_default: boolean; p_key: string }
+        Returns: boolean
+      }
       platform_constant_int: {
         Args: { p_default: number; p_key: string }
         Returns: number
@@ -2492,6 +2611,24 @@ export type Database = {
         Args: { p_proposal_id: string; p_reason: string }
         Returns: Json
       }
+      reject_proposal: {
+        Args: {
+          p_idempotency_key: string
+          p_proposal_id: string
+          p_rejection_reason: string
+        }
+        Returns: Json
+      }
+      replay_domain_event: { Args: { p_event_id: string }; Returns: Json }
+      request_proposal_revision: {
+        Args: {
+          p_idempotency_key: string
+          p_proposal_id: string
+          p_revision_notes?: string
+          p_revision_reason: Database["public"]["Enums"]["proposal_revision_reason"]
+        }
+        Returns: Json
+      }
       respond_client_budget_question: {
         Args: {
           p_question_id: string
@@ -2500,7 +2637,25 @@ export type Database = {
         }
         Returns: Json
       }
+      sanitize_job_error: { Args: { p_message: string }; Returns: string }
       slugify_for_provider: { Args: { name_input: string }; Returns: string }
+      submit_proposal: {
+        Args: {
+          p_chat_id: string
+          p_final_amount: number
+          p_idempotency_key: string
+          p_photos?: string[]
+          p_pricing_signature: string
+          p_proposal_description: string
+          p_proposal_duration_unit: string
+          p_proposal_duration_value: number
+          p_proposal_suggested_slots: Json
+          p_proposed_amount: number
+          p_tax_amount: number
+          p_tax_rate: number
+        }
+        Returns: Json
+      }
     }
     Enums: {
       cns_closure_type:

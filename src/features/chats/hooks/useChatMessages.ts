@@ -1,10 +1,16 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { useAuth } from "@/features/auth";
 import { generateIdempotencyKeyV7 } from "@/features/notifications";
 import { logger } from "@/lib/logger";
 import { metrics } from "@/lib/sentry";
+import { createMediaUploadSession, uploadChatMedia } from "../api/chatMedia.api";
 import { listChatMessages, sendMessage } from "../api/chats.api";
+import {
+  normalizeChatImageFiles,
+  validateChatImageFiles,
+} from "../utils/chatImageValidation";
 import { CHAT_CONVERSATIONS_LIST_QUERY_KEY, CHAT_MESSAGES_QUERY_KEY } from "../constants/queryKeys";
 import { rememberSentChatMessageId } from "../utils/chatMessageSendSync";
 import { sendMessageResultToListItem } from "../utils/sendMessageToListItem";
@@ -60,6 +66,7 @@ export function useChatMessages(
   const sendChainRef = useRef<Promise<void>>(Promise.resolve());
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessageListItem[]>([]);
   const [pendingSendCount, setPendingSendCount] = useState(0);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [lastSendError, setLastSendError] = useState<ChatsApiError | null>(null);
 
   const enabled = Boolean(chatId) && Boolean(user?.id) && (options?.enabled ?? true);
@@ -228,7 +235,6 @@ export function useChatMessages(
 
       rememberSentChatMessageId(result.message.id);
       mergeGapFillIntoCache([sendMessageResultToListItem(result.message)]);
-      void queryClient.invalidateQueries({ queryKey: [CHAT_MESSAGES_QUERY_KEY, chatId] });
       void queryClient.invalidateQueries({ queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY] });
     },
     onError: (error, input) => {
@@ -275,6 +281,92 @@ export function useChatMessages(
     [enqueueSend],
   );
 
+  const sendChatImages = useCallback(
+    async (files: File[], caption?: string) => {
+      if (!chatId || !user?.id) {
+        toast.error("Faça login para enviar imagens.");
+        return;
+      }
+
+      const normalizedFiles = normalizeChatImageFiles(files);
+      const validationError = validateChatImageFiles(normalizedFiles);
+      if (validationError) {
+        toast.error(validationError);
+        return;
+      }
+
+      const toastId = toast.loading(
+        normalizedFiles.length === 1 ? "Enviando imagem…" : "Enviando imagens…",
+      );
+      setIsUploadingMedia(true);
+
+      try {
+        const sessionResult = await createMediaUploadSession(chatId);
+        if (sessionResult.error || !sessionResult.data) {
+          const message = sessionResult.error?.message ?? "Não foi possível preparar o envio.";
+          toast.error(message, { id: toastId });
+          return;
+        }
+
+        const uploadSessionId = sessionResult.data.upload_session_id;
+        const clientSendId = crypto.randomUUID();
+        const idempotencyKey = generateIdempotencyKeyV7();
+
+        const uploadResult = await uploadChatMedia({
+          chatId,
+          uploadSessionId,
+          files: normalizedFiles,
+          idempotencyKey,
+        });
+        if (uploadResult.error) {
+          toast.error(uploadResult.error, { id: toastId });
+          return;
+        }
+
+        const trimmedCaption = caption?.trim() ?? "";
+        const preview =
+          trimmedCaption ||
+          (normalizedFiles.length === 1 ? "Foto" : `${normalizedFiles.length} fotos`);
+
+        try {
+          await enqueueSend({
+            messageType: "IMAGE",
+            payload: {
+              upload_session_id: uploadSessionId,
+              paths: uploadResult.paths,
+              preview,
+            },
+            clientSendId,
+          });
+          toast.success("Mensagem enviada", { id: toastId });
+        } catch (sendError) {
+          const message =
+            sendError &&
+            typeof sendError === "object" &&
+            "message" in sendError &&
+            typeof (sendError as ChatsApiError).message === "string"
+              ? (sendError as ChatsApiError).message
+              : sendError instanceof Error
+                ? sendError.message
+                : "Não foi possível enviar a mensagem com a imagem.";
+          toast.error(message, { id: toastId });
+        }
+      } catch (error) {
+        logger.error("chat_image_send_failed", {
+          chatId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        toast.error(
+          error instanceof Error ? error.message : "Não foi possível enviar a imagem.",
+          { id: toastId },
+        );
+      } finally {
+        setIsUploadingMedia(false);
+      }
+    },
+    [chatId, enqueueSend, user?.id],
+  );
+
   const retrySend = useCallback(
     (clientSendId: string) => {
       const pendingInput = pendingInputByClientSendId.current.get(clientSendId);
@@ -316,9 +408,11 @@ export function useChatMessages(
     refetch: query.refetch,
     refetchGapFill,
     sendChatMessage,
+    sendChatImages,
     retrySend,
     dismissFailedSend,
     isSending: pendingSendCount > 0,
+    isUploadingMedia,
     pendingSendCount,
     sendError: lastSendError,
     optimisticCount: optimisticMessages.length,

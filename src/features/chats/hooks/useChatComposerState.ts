@@ -32,7 +32,7 @@ export function useChatComposerState({
       return result.data;
     },
     enabled: Boolean(chatId) && enabled,
-    staleTime: 0,
+    staleTime: 30_000,
   });
 
   const composerState = useMemo(
@@ -40,9 +40,9 @@ export function useChatComposerState({
       deriveChatComposerState({
         freeMessagingAllowed: query.data,
         conversationStatus,
-        isLoading: query.isLoading || query.isFetching,
+        isLoading: query.isLoading && query.data === undefined,
       }),
-    [conversationStatus, query.data, query.isFetching, query.isLoading],
+    [conversationStatus, query.data, query.isLoading],
   );
 
   return {

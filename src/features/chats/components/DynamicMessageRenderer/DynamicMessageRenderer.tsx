@@ -9,6 +9,7 @@ import {
   type DynamicProposalCardProps,
   type ProposalCardAction,
 } from "./DynamicProposalCard";
+import { ChatImageMessage } from "./ChatImageMessage";
 import { UnknownDynamicMessage } from "./UnknownDynamicMessage";
 import { WorkflowActionMessage } from "./WorkflowActionMessage";
 
@@ -76,15 +77,11 @@ export function DynamicMessageRenderer({
 
   if (message.message_type === "IMAGE") {
     return (
-      <div
-        className={cn(
-          "mx-auto w-full max-w-[72%] rounded-2xl bg-muted px-4 py-3 text-sm text-muted-foreground",
-          className,
-        )}
-        role="status"
-      >
-        {getChatMessageText(message)}
-      </div>
+      <ChatImageMessage
+        message={message}
+        isOutgoing={isOutgoing}
+        className={className}
+      />
     );
   }
 

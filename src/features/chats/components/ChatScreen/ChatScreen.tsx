@@ -62,7 +62,8 @@ export function ChatScreen({
     refetch: refetchMessages,
     refetchGapFill,
     sendChatMessage,
-    isSending,
+    sendChatImages,
+    isUploadingMedia,
   } = useChatMessages(chatId);
 
   useMarkConversationRead(chatId, messages);
@@ -119,15 +120,22 @@ export function ChatScreen({
     void navigate(-1);
   }, [navigate, onBack]);
 
-  const handleSend = useCallback(
-    async (text: string) => {
-      await sendChatMessage({
-        messageType: "TEXT",
-        payload: { text },
-        clientSendId: crypto.randomUUID(),
-      });
+  const handleComposerSend = useCallback(
+    ({ text, files }: { text: string; files: File[] }) => {
+      if (files.length > 0) {
+        void sendChatImages(files, text);
+        return;
+      }
+
+      if (text) {
+        void sendChatMessage({
+          messageType: "TEXT",
+          payload: { text },
+          clientSendId: crypto.randomUUID(),
+        });
+      }
     },
-    [sendChatMessage],
+    [sendChatImages, sendChatMessage],
   );
 
   const viewedReceiptMessageId = useMemo(
@@ -241,8 +249,8 @@ export function ChatScreen({
           helperText: composerState.helperText,
           placeholder: composerState.placeholder,
         }}
-        isSending={isSending}
-        onSend={handleSend}
+        isUploadingMedia={isUploadingMedia}
+        onSend={handleComposerSend}
         onComposerChange={notifyComposerChange}
         onTypingStopNow={notifyTypingStopNow}
       />

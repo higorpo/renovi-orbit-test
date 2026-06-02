@@ -10,13 +10,14 @@ set search_path = public, storage
 as $$
 declare
   v_parts text[];
+  v_filename text;
 begin
   if p_path is null or btrim(p_path) = '' then
     raise exception 'Invalid empty path in p_paths'
       using errcode = '22023';
   end if;
 
-  if p_path ~ '[%_]' or position('..' in p_path) > 0 then
+  if position('..' in p_path) > 0 then
     raise exception 'UPLOAD_PATH_INVALID'
       using errcode = '42501';
   end if;
@@ -29,7 +30,20 @@ begin
       using errcode = '42501';
   end if;
 
-  if storage.filename(p_path) is null or btrim(storage.filename(p_path)) = '' then
+  -- LIKE wildcards only forbidden in UUID directory segments, not in filenames (Edge uses {ts}_{i}.ext).
+  if v_parts[1] ~ '[%_]' or v_parts[2] ~ '[%_]' then
+    raise exception 'UPLOAD_PATH_INVALID'
+      using errcode = '42501';
+  end if;
+
+  v_filename := storage.filename(p_path);
+
+  if v_filename is null or btrim(v_filename) = '' then
+    raise exception 'UPLOAD_PATH_INVALID'
+      using errcode = '42501';
+  end if;
+
+  if v_filename ~ '[%/\\]' or position('..' in v_filename) > 0 then
     raise exception 'UPLOAD_PATH_INVALID'
       using errcode = '42501';
   end if;
@@ -46,7 +60,7 @@ end;
 $$;
 
 comment on function public.cns_assert_chat_media_path_shape(text) is
-  'Validates chat-media object path shape: {chat_id}/{session_id}/{filename} without LIKE wildcards.';
+  'Validates chat-media path shape {chat_id}/{session_id}/{filename}; wildcards banned in folder segments only.';
 
 create or replace function public.cns_assert_chat_media_storage_path(
   p_path text,

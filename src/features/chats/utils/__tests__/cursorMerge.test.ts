@@ -38,4 +38,27 @@ describe("mergeKeysetMessagePages", () => {
     expect(merged).toEqual(existing);
     expect(merged).not.toBe(existing);
   });
+
+  it("preserves existing row reference when incoming row is unchanged", () => {
+    const existingRow = {
+      id: "img-1",
+      chat_id: "chat-1",
+      sender_user_id: "user-a",
+      message_type: "IMAGE" as const,
+      payload: { paths: ["chat/s/a.png"], preview: "Foto" },
+      linked_entity_type: null,
+      linked_entity_id: null,
+      idempotency_key: "key-1",
+      delivery_status: "SENT" as const,
+      created_at: "2026-01-02T00:00:00.000Z",
+      updated_at: "2026-01-02T00:00:00.000Z",
+    };
+    const existing = [existingRow];
+    const incoming = [{ ...existingRow }];
+
+    const merged = mergeKeysetMessagePages(existing, incoming);
+
+    expect(merged).toHaveLength(1);
+    expect(merged[0]).toBe(existingRow);
+  });
 });

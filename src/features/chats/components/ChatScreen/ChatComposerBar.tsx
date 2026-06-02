@@ -4,14 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useVirtualKeyboardVisible } from "@/hooks/useVirtualKeyboardVisible";
 import { cn } from "@/lib/utils";
+import { useChatComposerAttachments } from "../../hooks/useChatComposerAttachments";
+import { CHAT_IMAGE_ACCEPT } from "../../utils/chatImageValidation";
 import type { ChatComposerState } from "../../utils/composerState";
+import { ChatComposerAttachmentPreview } from "./ChatComposerAttachmentPreview";
 import { useChatMobileViewportSchedule } from "./ChatMobileViewportContext";
 import { useChatTimelineScrollContext } from "./ChatTimelineScrollContext";
 
+export interface ChatComposerSendPayload {
+  text: string;
+  files: File[];
+}
+
 export interface ChatComposerBarProps {
   composer: ChatComposerState;
-  isSending: boolean;
-  onSend: (text: string) => void | Promise<void>;
+  isUploadingMedia?: boolean;
+  onSend: (payload: ChatComposerSendPayload) => void | Promise<void>;
   /** Fired on every draft change (keystroke, paste, delete, etc.). */
   onComposerChange?: () => void;
   /** Fired when the message is sent — stops typing immediately. */
@@ -21,7 +29,7 @@ export interface ChatComposerBarProps {
 
 export function ChatComposerBar({
   composer,
-  isSending,
+  isUploadingMedia = false,
   onSend,
   onComposerChange,
   onTypingStopNow,
@@ -29,9 +37,17 @@ export function ChatComposerBar({
 }: ChatComposerBarProps) {
   const [draft, setDraft] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachments = useChatComposerAttachments();
   const isKeyboardVisible = useVirtualKeyboardVisible();
   const scheduleViewportSync = useChatMobileViewportSchedule();
   const timelineScroll = useChatTimelineScrollContext();
+
+  const isUploadBusy = isUploadingMedia;
+  const canAttach = composer.isAttachmentEnabled && !isUploadBusy;
+  const hasDraftText = draft.trim().length > 0;
+  const canSend =
+    composer.isSendEnabled && !isUploadBusy && (hasDraftText || attachments.hasImages);
 
   const focusComposer = useCallback(() => {
     requestAnimationFrame(() => {
@@ -40,17 +56,25 @@ export function ChatComposerBar({
   }, []);
 
   const handleSend = () => {
+    if (!canSend) return;
+
     const text = draft.trim();
-    if (!text || !composer.isSendEnabled) return;
+    const files = [...attachments.pendingImages];
     setDraft("");
+    attachments.clearImages();
     onTypingStopNow?.();
-    void onSend(text);
+    void onSend({ text, files });
     focusComposer();
+  };
+
+  const openFilePicker = () => {
+    if (!canAttach) return;
+    fileInputRef.current?.click();
   };
 
   return (
     <footer
-      aria-busy={isSending}
+      aria-busy={isUploadBusy}
       className={cn(
         "shrink-0 border-t border-border/60 bg-background/95 px-3 pt-3 backdrop-blur-md",
         isKeyboardVisible
@@ -63,14 +87,40 @@ export function ChatComposerBar({
         <p className="mb-2 px-1 text-xs text-muted-foreground">{composer.helperText}</p>
       ) : null}
 
+      {isUploadingMedia ? (
+        <p className="mb-2 px-1 text-xs text-muted-foreground" aria-live="polite">
+          Enviando…
+        </p>
+      ) : null}
+
+      <ChatComposerAttachmentPreview
+        previewUrls={attachments.previewUrls}
+        onRemove={attachments.removeImage}
+      />
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={CHAT_IMAGE_ACCEPT}
+        multiple
+        className="hidden"
+        tabIndex={-1}
+        aria-hidden
+        onChange={(event) => {
+          attachments.onSelectImages(event.target.files);
+          event.currentTarget.value = "";
+        }}
+      />
+
       <div className="flex items-end gap-2">
         <Button
           type="button"
           variant="secondary"
           size="icon"
           className="h-11 w-11 shrink-0 rounded-full"
-          disabled={!composer.isAttachmentEnabled}
+          disabled={!canAttach}
           aria-label="Anexar foto"
+          onClick={openFilePicker}
         >
           <ImageIcon className="h-5 w-5" aria-hidden />
         </Button>
@@ -83,7 +133,7 @@ export function ChatComposerBar({
             onComposerChange?.();
           }}
           placeholder={composer.placeholder}
-          disabled={!composer.isInputEnabled}
+          disabled={!composer.isInputEnabled || isUploadBusy}
           rows={1}
           className="min-h-11 max-h-32 flex-1 resize-none rounded-full border-0 bg-muted px-4 py-3 text-[15px] leading-snug shadow-none focus-visible:ring-1 max-sm:resize-none"
           onFocus={() => {
@@ -102,8 +152,9 @@ export function ChatComposerBar({
           type="button"
           size="icon"
           className="h-11 w-11 shrink-0 rounded-full"
-          disabled={!composer.isSendEnabled || !draft.trim()}
-          onClick={() => void handleSend()}
+          disabled={!canSend}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={handleSend}
           aria-label="Enviar mensagem"
         >
           <SendHorizontal className="h-5 w-5" aria-hidden />

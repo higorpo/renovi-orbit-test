@@ -3,6 +3,7 @@
 
 revoke insert, update, delete on table public.chats from authenticated;
 revoke insert, update, delete on table public.chat_messages from authenticated;
+revoke insert, update, delete on table public.chat_media_upload_sessions from authenticated;
 revoke insert, update, delete on table public.provider_proposals from authenticated;
 revoke insert, update, delete on table public.services from authenticated;
 

@@ -124,25 +124,30 @@ describe("useConversationRealtime", () => {
     expect(supabaseChannelMock).toHaveBeenCalledTimes(1);
   });
 
-  it("dedupes duplicate INSERT events", async () => {
+  it("dedupes duplicate INSERT events and gap-fills instead of invalidating messages", async () => {
     const queryClient = new QueryClient();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const onReconcile = vi.fn();
 
     function Wrapper({ children }: { children: ReactNode }) {
       return createElement(QueryClientProvider, { client: queryClient }, children);
     }
 
-    renderHook(() => useConversationRealtime("chat-1"), { wrapper: Wrapper });
+    renderHook(() => useConversationRealtime("chat-1", { onReconcile }), { wrapper: Wrapper });
+
+    await waitFor(() => expect(onReconcile).toHaveBeenCalled());
+    onReconcile.mockClear();
 
     const payload = { new: { id: "msg-dup" } };
     onHandlers.messageInsert?.(payload as never);
     onHandlers.messageInsert?.(payload as never);
 
     await waitFor(() => {
+      expect(onReconcile).toHaveBeenCalledTimes(1);
       const messageInvalidations = invalidateSpy.mock.calls.filter(
         (call) => call[0]?.queryKey?.[0] === "chat-messages",
       );
-      expect(messageInvalidations).toHaveLength(1);
+      expect(messageInvalidations).toHaveLength(0);
     });
   });
 

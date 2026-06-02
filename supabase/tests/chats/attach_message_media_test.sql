@@ -4,7 +4,7 @@ begin;
 
 \ir fixtures/seed_chat.inc
 
-select plan(6);
+select plan(7);
 
 create or replace function pg_temp.cns_set_auth(p_user_id uuid)
 returns void
@@ -146,6 +146,52 @@ select is(
   ),
   'completed',
   'session marked completed after send_message IMAGE'
+);
+
+insert into public.chat_media_upload_sessions (
+  id,
+  chat_id,
+  uploader_id,
+  status,
+  expires_at
+)
+select
+  'e5555555-5555-4555-8555-555555555555'::uuid,
+  f.chat_id,
+  '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid,
+  'pending',
+  now() + interval '12 hours'
+from _attach_media_fixture f;
+
+insert into storage.objects (
+  bucket_id,
+  name,
+  owner,
+  metadata
+)
+select
+  'chat-media',
+  f.chat_id::text || '/e5555555-5555-4555-8555-555555555555/1780407835094_0.png',
+  '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid,
+  jsonb_build_object('size', 1024)
+from _attach_media_fixture f;
+
+select ok(
+  (
+    select public.cns_send_message(
+      'IMAGE'::public.cns_message_type,
+      'f6666666-6666-4666-8666-666666666666'::uuid,
+      jsonb_build_object(
+        'upload_session_id', 'e5555555-5555-4555-8555-555555555555'::uuid,
+        'paths', jsonb_build_array(
+          (select chat_id::text from _attach_media_fixture)
+            || '/e5555555-5555-4555-8555-555555555555/1780407835094_0.png'
+        )
+      ),
+      (select chat_id from _attach_media_fixture)
+    )->'message'->>'message_type'
+  ) = 'IMAGE',
+  'send_message accepts Edge-style filename with underscore'
 );
 
 select throws_ok(
