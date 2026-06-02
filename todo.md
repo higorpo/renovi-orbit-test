@@ -145,3 +145,14 @@ Estas **não quebram** por comparação, mas o JSON passa a expor enum (`OPEN`, 
 | aceite de proposta | `'COMPLETED'` |
 
 A policy de storage `"Clients providers and admins can read question response images"` já foi corrigida na migration `20260701101200`. A definição original em `20260323090000_create_client_budgets_rpcs.sql` ainda tem `'open'`, mas é sobrescrita na migration CNS.
+
+
+
+
+---
+
+- dot de mensagem naõ visualizada naõ atualiza quando entro no chat
+- botão de detalhes não aparece
+- layout da tela do chats é diferente no mobile
+- layout do card de chat está esquisito
+- loading do chat não está tão bom
