@@ -102,7 +102,7 @@ vi.mock("@/features/negotiation-proposals", async (importOriginal) => {
       isError: false,
       errorMessage: null,
     }),
-    ServiceRequestProposalComposerDialog: ({
+    ProposalComposerShellDialog: ({
       open,
       onOpenChange,
       onSubmit,

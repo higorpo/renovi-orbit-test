@@ -4,7 +4,7 @@ import type { ProviderProposalHistoryItem } from "../../types/proposals.types";
 import { ProposalDetailsDialog } from "../ProposalDetailsDialog";
 import { ProposalHistoryAccordion } from "../ProposalHistoryAccordion";
 import { ProposalPhotosGrid } from "../ProposalPhotosGrid";
-import { ServiceRequestProposalComposerDialog } from "../ServiceRequestProposalComposerDialog";
+import { ProposalComposerShellDialog } from "../ProposalComposerShellDialog";
 
 vi.mock("../ProposalComposer", () => ({
   ProposalComposer: () => <div data-testid="proposal-composer-stub" />,
@@ -170,20 +170,27 @@ describe("ProposalDetailsDialog summary mode", () => {
   });
 });
 
-describe("ServiceRequestProposalComposerDialog", () => {
+describe("ProposalComposerShellDialog (service request)", () => {
+  const serviceRequestShellProps = {
+    ...shellProps,
+    title: "Enviar orçamento",
+    submitLabel: "Enviar orçamento",
+    submittingLabel: "Enviando...",
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("renders budget composer shell", () => {
-    render(<ServiceRequestProposalComposerDialog {...shellProps} />);
+    render(<ProposalComposerShellDialog {...serviceRequestShellProps} />);
     expect(screen.getByRole("heading", { name: /enviar orçamento/i })).toBeInTheDocument();
     expect(screen.getByTestId("proposal-composer-stub")).toBeInTheDocument();
   });
 
   it("calls onSubmit when submit is clicked", async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
-    render(<ServiceRequestProposalComposerDialog {...shellProps} onSubmit={onSubmit} />);
+    render(<ProposalComposerShellDialog {...serviceRequestShellProps} onSubmit={onSubmit} />);
     fireEvent.click(screen.getByRole("button", { name: /^enviar orçamento$/i }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
   });

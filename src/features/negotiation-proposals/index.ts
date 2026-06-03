@@ -59,10 +59,6 @@ export {
   type ProposalComposerShellDialogProps,
 } from "./components/ProposalComposerShellDialog";
 export {
-  ServiceRequestProposalComposerDialog,
-  type ServiceRequestProposalComposerDialogProps,
-} from "./components/ServiceRequestProposalComposerDialog";
-export {
   ProposalDetailsDialog,
   type ProposalDetailsDialogProps,
   type ProposalDetailsContent,

@@ -13,7 +13,7 @@ import {
   canEditServiceRequestProposal,
   hasActiveServiceRequestProposal,
   isRejectedProposalStatus,
-  ServiceRequestProposalComposerDialog,
+  ProposalComposerShellDialog,
   ServiceRequestProposalSummaryCard,
   useProposalPhotoUrls,
   useServiceRequestProposalComposer,
@@ -186,7 +186,10 @@ export function JobDetailContent({
             suggestedMaterialsPt={suggestedMaterialsPt}
           />
 
-          <ServiceRequestProposalComposerDialog
+          <ProposalComposerShellDialog
+            title="Enviar orçamento"
+            submitLabel="Enviar orçamento"
+            submittingLabel="Enviando..."
             open={proposalComposer.isOpen}
             isSubmitting={proposalComposer.isSubmitting}
             canSubmit={proposalComposer.canSubmitProposal}

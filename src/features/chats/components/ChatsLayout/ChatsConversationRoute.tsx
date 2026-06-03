@@ -73,6 +73,7 @@ export function ChatsConversationRoute() {
   const revisionProposalDetailQuery = useProposalDetail({
     proposalId: revisionProposalId,
     enabled: revisionOpen,
+    audience: isProviderViewer ? "provider" : "client",
   });
 
   useEffect(() => {
