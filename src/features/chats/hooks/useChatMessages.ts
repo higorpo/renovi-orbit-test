@@ -180,20 +180,18 @@ export function useChatMessages(
     [chatId, queryClient, user?.id],
   );
 
-  const refetchGapFill = useCallback(async () => {
-    const currentMessages = messagesRef.current;
-    if (!chatId || currentMessages.length === 0) return;
+  const refetchLatestTailIntoCache = useCallback(async () => {
+    if (!chatId) return;
 
-    const lastSeen = currentMessages[currentMessages.length - 1]!;
     const result = await listChatMessages({
       chatId,
       limit: PAGE_SIZE,
-      cursor: { created_at: lastSeen.created_at, id: lastSeen.id },
-      after: true,
+      cursor: null,
+      after: false,
     });
 
     if (result.error || !result.data) {
-      logger.warn("chat_messages_gap_fill_failed", {
+      logger.warn("chat_messages_tail_refresh_failed", {
         chatId,
         error: result.error?.code,
       });
@@ -202,6 +200,41 @@ export function useChatMessages(
 
     mergeGapFillIntoCache(result.data.items);
   }, [chatId, mergeGapFillIntoCache]);
+
+  const refetchGapFill = useCallback(async () => {
+    const currentMessages = messagesRef.current;
+    if (!chatId) return;
+
+    let forwardCount = 0;
+
+    if (currentMessages.length > 0) {
+      const lastSeen = currentMessages[currentMessages.length - 1]!;
+      const result = await listChatMessages({
+        chatId,
+        limit: PAGE_SIZE,
+        cursor: { created_at: lastSeen.created_at, id: lastSeen.id },
+        after: true,
+      });
+
+      if (result.error || !result.data) {
+        logger.warn("chat_messages_gap_fill_failed", {
+          chatId,
+          error: result.error?.code,
+        });
+      } else {
+        forwardCount = result.data.items.length;
+        if (forwardCount > 0) {
+          mergeGapFillIntoCache(result.data.items);
+        }
+      }
+    }
+
+    // When our newest local row is newer than a counterparty message we have not
+    // merged yet (near-simultaneous sends), forward-only gap fill returns nothing.
+    if (forwardCount === 0) {
+      await refetchLatestTailIntoCache();
+    }
+  }, [chatId, mergeGapFillIntoCache, refetchLatestTailIntoCache]);
 
   const sendMutation = useMutation({
     mutationFn: async (input: SendChatMessageInput) => {

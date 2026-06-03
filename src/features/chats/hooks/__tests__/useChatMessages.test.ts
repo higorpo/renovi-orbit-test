@@ -385,4 +385,109 @@ describe("useChatMessages", () => {
       }),
     );
   });
+
+  it("tail-refreshes when forward gap fill misses an older counterparty message", async () => {
+    listChatMessagesMock
+      .mockResolvedValueOnce({
+        data: { items: [], has_more: false, next_cursor: null },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { items: [], has_more: false, next_cursor: null },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          items: [
+            {
+              id: "msg-a",
+              chat_id: "chat-1",
+              sender_user_id: "user-2",
+              message_type: "TEXT",
+              payload: { text: "from A" },
+              linked_entity_type: null,
+              linked_entity_id: null,
+              idempotency_key: "k-a",
+              delivery_status: "SENT",
+              created_at: "2026-01-01T00:00:00.100Z",
+              updated_at: "2026-01-01T00:00:00.100Z",
+            },
+            {
+              id: "msg-b",
+              chat_id: "chat-1",
+              sender_user_id: "user-1",
+              message_type: "TEXT",
+              payload: { text: "from B" },
+              linked_entity_type: null,
+              linked_entity_id: null,
+              idempotency_key: "k-b",
+              delivery_status: "SENT",
+              created_at: "2026-01-01T00:00:00.200Z",
+              updated_at: "2026-01-01T00:00:00.200Z",
+            },
+          ],
+          has_more: false,
+          next_cursor: null,
+        },
+        error: null,
+      });
+
+    sendMessageMock.mockResolvedValue({
+      data: {
+        message: {
+          id: "msg-b",
+          chat_id: "chat-1",
+          sender_user_id: "user-1",
+          message_type: "TEXT",
+          payload: { text: "from B" },
+          linked_entity_type: null,
+          linked_entity_id: null,
+          idempotency_key: "k-b",
+          delivery_status: "SENT",
+          created_at: "2026-01-01T00:00:00.200Z",
+          updated_at: "2026-01-01T00:00:00.200Z",
+        },
+        conversation: { last_interaction_at: "2026-01-01T00:00:00.200Z" },
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useChatMessages("chat-1"), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await result.current.sendChatMessage({
+      clientSendId: "client-b",
+      messageType: "TEXT",
+      payload: { text: "from B" },
+    });
+
+    await waitFor(() =>
+      expect(result.current.messages.map((m) => m.id)).toEqual(["msg-b"]),
+    );
+
+    listChatMessagesMock.mockClear();
+    await result.current.refetchGapFill();
+
+    await waitFor(() =>
+      expect(result.current.messages.map((m) => m.id)).toEqual(["msg-a", "msg-b"]),
+    );
+
+    expect(listChatMessagesMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        after: true,
+        cursor: { created_at: "2026-01-01T00:00:00.200Z", id: "msg-b" },
+      }),
+    );
+    expect(listChatMessagesMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        after: false,
+        cursor: null,
+      }),
+    );
+  });
 });
