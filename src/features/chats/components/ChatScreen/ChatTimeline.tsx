@@ -17,6 +17,7 @@ import {
 import { ChatDiscoveryWelcome } from "./ChatDiscoveryWelcome";
 import { ChatMessageRow } from "./ChatMessageRow";
 import { ChatTimelineScrollContext } from "./ChatTimelineScrollContext";
+import { ChatTimelineSkeleton } from "./ChatTimelineSkeleton";
 
 export interface ChatTimelineProps {
   resetKey?: string;
@@ -165,11 +166,7 @@ export function ChatTimeline({
   };
 
   if (isLoading) {
-    return (
-      <div className={cn("flex flex-1 items-center justify-center px-4", className)} aria-busy="true">
-        <p className="text-sm text-muted-foreground">Carregando mensagens…</p>
-      </div>
-    );
+    return <ChatTimelineSkeleton className={className} />;
   }
 
   if (isError) {
