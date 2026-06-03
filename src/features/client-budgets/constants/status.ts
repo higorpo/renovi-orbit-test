@@ -6,7 +6,6 @@ import {
   History,
   MessageCircleQuestion,
   MessageSquareReply,
-  Undo2,
   XCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -43,12 +42,6 @@ export const RECEIVED_FILTERS: Array<{
     icon: XCircle,
     iconColor: "text-rose-500",
   },
-  {
-    id: "withdrawn",
-    label: "Retirados",
-    icon: Undo2,
-    iconColor: "text-slate-500",
-  },
 ];
 
 export const QUESTION_FILTERS: Array<{
@@ -76,8 +69,8 @@ const BUDGET_STATUS_MAP: Record<string, { label: string; variant: BadgeProps["va
   pending: { label: "Aguardando avaliação", variant: "warning" },
   accepted: { label: "Aceito", variant: "success" },
   rejected: { label: "Recusado", variant: "destructive" },
-  withdrawn: { label: "Retirado pelo prestador", variant: "secondary" },
-  revised: { label: "Retirado pelo prestador", variant: "secondary" },
+  rejected_automatically: { label: "Recusado", variant: "destructive" },
+  revised: { label: "Orçamento revisado", variant: "secondary" },
   expired: { label: "Expirado", variant: "secondary" },
   cancelled: { label: "Cancelado", variant: "secondary" },
   closed: { label: "Encerrado", variant: "secondary" },
@@ -155,7 +148,6 @@ export function getReceivedExtraBudgetCount(
     submitted_count: number;
     accepted_count: number;
     rejected_count: number;
-    withdrawn_count: number;
   },
   filter: ReceivedStatusFilter,
 ): number {
@@ -166,8 +158,6 @@ export function getReceivedExtraBudgetCount(
       return Math.max(item.accepted_count - 2, 0);
     case "rejected":
       return Math.max(item.rejected_count - 2, 0);
-    case "withdrawn":
-      return Math.max(item.withdrawn_count - 2, 0);
     default:
       return 0;
   }
@@ -183,7 +173,6 @@ export function getReceivedBudgetSummaryLine(item: {
   submitted_count: number;
   accepted_count: number;
   rejected_count: number;
-  withdrawn_count: number;
 }, filter: ReceivedStatusFilter): string {
   if (filter === "awaiting_decision") {
     const n = item.submitted_count;
@@ -196,10 +185,6 @@ export function getReceivedBudgetSummaryLine(item: {
   if (filter === "rejected") {
     const n = item.rejected_count;
     return `${n} orçamento${n !== 1 ? "s" : ""} recusado${n !== 1 ? "s" : ""}`;
-  }
-  if (filter === "withdrawn") {
-    const n = item.withdrawn_count;
-    return `${n} retirado${n !== 1 ? "s" : ""} pelo prestador`;
   }
   return "";
 }

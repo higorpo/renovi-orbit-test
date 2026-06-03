@@ -13,6 +13,7 @@ describe("budgetStatus", () => {
     it("returns config for known statuses", () => {
       expect(getBudgetStatusConfig("accepted")).toEqual(BUDGET_STATUS_CONFIG.accepted);
       expect(getBudgetStatusConfig("REJECTED")).toEqual(BUDGET_STATUS_CONFIG.rejected);
+      expect(getBudgetStatusConfig("REVISED")).toEqual(BUDGET_STATUS_CONFIG.revised);
     });
 
     it("returns unknown label when status is null, empty, or not in config", () => {

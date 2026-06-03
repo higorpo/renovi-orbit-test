@@ -4,7 +4,6 @@ import {
   Clock,
   MessageCircleQuestion,
   MessageSquareReply,
-  Undo2,
   XCircle,
   type LucideIcon,
 } from "lucide-react";
@@ -18,8 +17,8 @@ export const BUDGET_STATUS_CONFIG: Record<
   pending: { label: "Aguardando avaliação", variant: "warning" },
   accepted: { label: "Aceito", variant: "success" },
   rejected: { label: "Recusado", variant: "destructive" },
-  withdrawn: { label: "Retirado", variant: "secondary" },
-  revised: { label: "Retirado", variant: "secondary" },
+  rejected_automatically: { label: "Recusado", variant: "destructive" },
+  revised: { label: "Orçamento revisado", variant: "secondary" },
 };
 
 export function getBudgetStatusConfig(
@@ -60,12 +59,6 @@ export const BUDGET_STATUS_FILTERS: Array<{
     label: "Recusados",
     icon: XCircle,
     iconColor: "text-rose-500",
-  },
-  {
-    id: "withdrawn",
-    label: "Retirados",
-    icon: Undo2,
-    iconColor: "text-slate-500",
   },
 ];
 

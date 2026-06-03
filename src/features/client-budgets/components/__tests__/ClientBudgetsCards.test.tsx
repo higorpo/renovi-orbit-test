@@ -48,7 +48,6 @@ const receivedItem: ClientReceivedServiceGroup = {
   submitted_count: 3,
   accepted_count: 0,
   rejected_count: 0,
-  withdrawn_count: 0,
   budgets_preview: [
     budgetPreview,
     { ...budgetPreview, id: "b2", proposed_amount: 900 },

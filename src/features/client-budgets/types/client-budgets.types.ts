@@ -10,8 +10,7 @@ export type ClientBudgetsTab = "recebidos" | "perguntas";
 export type ReceivedStatusFilter =
   | "awaiting_decision"
   | "accepted"
-  | "rejected"
-  | "withdrawn";
+  | "rejected";
 
 export type QuestionStatusFilter = "pending" | "answered";
 
@@ -44,7 +43,6 @@ export interface ClientReceivedServiceGroup {
   submitted_count: number;
   accepted_count: number;
   rejected_count: number;
-  withdrawn_count: number;
   budgets_preview: BudgetPreviewItem[];
 }
 

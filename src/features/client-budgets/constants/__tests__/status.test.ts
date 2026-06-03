@@ -25,7 +25,6 @@ describe("client-budgets status constants", () => {
       "awaiting_decision",
       "accepted",
       "rejected",
-      "withdrawn",
     ]);
     expect(QUESTION_FILTERS.map((f) => f.id)).toEqual(["pending", "answered"]);
   });
@@ -40,6 +39,13 @@ describe("client-budgets status constants", () => {
       expect(getBudgetStatusConfig("ACCEPTED")).toMatchObject({
         label: "Aceito",
         variant: "success",
+      });
+    });
+
+    it("maps revised status label", () => {
+      expect(getBudgetStatusConfig("REVISED")).toMatchObject({
+        label: "Orçamento revisado",
+        variant: "secondary",
       });
     });
 
@@ -151,15 +157,13 @@ describe("client-budgets status constants", () => {
       total_budgets: 5,
       submitted_count: 4,
       accepted_count: 3,
-      rejected_count: 2,
-      withdrawn_count: 1,
+      rejected_count: 4,
     };
 
     it("getReceivedExtraBudgetCount subtracts preview cap per filter", () => {
       expect(getReceivedExtraBudgetCount(item, "awaiting_decision")).toBe(2);
       expect(getReceivedExtraBudgetCount(item, "accepted")).toBe(1);
-      expect(getReceivedExtraBudgetCount(item, "rejected")).toBe(0);
-      expect(getReceivedExtraBudgetCount(item, "withdrawn")).toBe(0);
+      expect(getReceivedExtraBudgetCount(item, "rejected")).toBe(2);
     });
 
     it("formatReceivedExtraBudgetsLabel is empty when no extras", () => {
@@ -180,12 +184,6 @@ describe("client-budgets status constants", () => {
       );
       expect(getReceivedBudgetSummaryLine({ ...item, rejected_count: 2 }, "rejected")).toContain(
         "recusados",
-      );
-      expect(getReceivedBudgetSummaryLine({ ...item, withdrawn_count: 1 }, "withdrawn")).toContain(
-        "retirado",
-      );
-      expect(getReceivedBudgetSummaryLine({ ...item, withdrawn_count: 3 }, "withdrawn")).toContain(
-        "retirados",
       );
     });
 

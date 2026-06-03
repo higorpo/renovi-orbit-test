@@ -60,7 +60,7 @@ export interface PaginatedResponse<T> {
 
 export type BudgetsTab = "enviados" | "perguntas";
 
-export type BudgetStatusFilter = "submitted" | "accepted" | "rejected" | "withdrawn";
+export type BudgetStatusFilter = "submitted" | "accepted" | "rejected";
 
 export type QuestionStatusFilter = "pending" | "answered";
 

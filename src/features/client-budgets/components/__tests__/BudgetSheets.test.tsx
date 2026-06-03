@@ -155,7 +155,7 @@ describe("ReceivedBudgetDetailsSheet", () => {
         ...detailBase,
         budgets: [
           proposal,
-          { ...proposal, id: "bp2", proposed_amount: 300, status: "withdrawn" as const },
+          { ...proposal, id: "bp2", proposed_amount: 300, status: "REVISED" as const },
         ],
       },
       isLoading: false,
