@@ -176,6 +176,20 @@ export interface MarkConversationReadResult {
   last_read_at: string;
 }
 
+export interface CloseConversationResult {
+  conversation: {
+    id: string;
+    service_request_id: string;
+    client_id: string;
+    provider_id: string;
+    status: CnsConversationStatus;
+    closure_type: CnsClosureType;
+    closure_reason: string | null;
+    closed_at: string;
+    closed_by_user_id: string;
+  };
+}
+
 export const CNS_BUSINESS_ERROR_CODES = [
   "FREE_MESSAGING_DISABLED_PROPOSAL_PENDING",
   "NO_ACTIVE_SLOT",

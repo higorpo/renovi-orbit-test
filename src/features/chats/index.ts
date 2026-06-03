@@ -10,6 +10,7 @@ export { CNS_CHAT_RPC, type CnsChatRpcName } from "./api/chats.rpc";
 export {
   chatsApi,
   checkChatFreeMessagingAllowed,
+  closeConversation,
   getConversationDetail,
   getProposalForTimeline,
   listChatMessages,
@@ -74,6 +75,7 @@ export { ChatScreen, type ChatScreenProps } from "./components/ChatScreen/ChatSc
 export { ChatScreenHeader, type ChatScreenHeaderProps } from "./components/ChatScreen/ChatScreenHeader";
 export { ChatTimeline, type ChatTimelineProps } from "./components/ChatScreen/ChatTimeline";
 export { useConversationDetail } from "./hooks/useConversationDetail";
+export { useCloseConversationMutation } from "./hooks/useCloseConversationMutation";
 export { buildChatTimelineItems, type ChatTimelineItem } from "./utils/groupChatTimeline";
 export {
   DynamicMessageRenderer,
@@ -114,6 +116,7 @@ export type {
   ChatMessageListResponse,
   ConversationDetailSnapshot,
   ConversationDetailResponse,
+  CloseConversationResult,
   ConversationServiceRequestSummary,
   ConversationCategorySummary,
   ConversationMaskedAddress,

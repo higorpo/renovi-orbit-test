@@ -24,7 +24,9 @@ describe("ChatScreenHeader", () => {
     expect(within(mobile).getByText("Inativa")).toBeTruthy();
 
     fireEvent.click(within(mobile).getByLabelText("Voltar"));
-    fireEvent.click(within(mobile).getByRole("button", { name: "Detalhes" }));
+    const detailsButton = within(mobile).getByRole("button", { name: "Detalhes" });
+    expect(detailsButton.className).toContain("absolute");
+    fireEvent.click(detailsButton);
 
     expect(onBack).toHaveBeenCalledTimes(1);
     expect(onDetails).toHaveBeenCalledTimes(1);

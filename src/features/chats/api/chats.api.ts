@@ -8,6 +8,7 @@ import type {
   ConversationDetailResponse,
   ConversationListResponse,
   CnsMessageType,
+  CloseConversationResult,
   MarkConversationReadResult,
   SendMessageResult,
 } from "../types/chats.types";
@@ -94,6 +95,12 @@ function isMarkConversationReadResult(value: unknown): value is MarkConversation
   return typeof (value as MarkConversationReadResult).last_read_at === "string";
 }
 
+function isCloseConversationResult(value: unknown): value is CloseConversationResult {
+  if (!value || typeof value !== "object") return false;
+  const conversation = (value as CloseConversationResult).conversation;
+  return conversation != null && typeof conversation.id === "string";
+}
+
 export async function listConversations(params: {
   pageSize?: number;
   cursor?: { last_interaction_at: string; id: string } | null;
@@ -138,6 +145,24 @@ export async function getConversationDetail(
     { p_chat_id: chatId },
     isConversationDetailResponse,
     "chats_get_conversation_detail_invalid_response",
+  );
+}
+
+export async function closeConversation(params: {
+  chatId: string;
+  idempotencyKey?: string;
+  closureReason?: string | null;
+}): Promise<ChatsApiResult<CloseConversationResult>> {
+  return invokeRpc(
+    CNS_CHAT_RPC.closeConversation,
+    {
+      p_chat_id: params.chatId,
+      p_idempotency_key: params.idempotencyKey ?? generateIdempotencyKeyV7(),
+      p_confirm: true,
+      p_closure_reason: params.closureReason ?? null,
+    },
+    isCloseConversationResult,
+    "chats_close_conversation_invalid_response",
   );
 }
 
@@ -241,6 +266,7 @@ export const chatsApi = {
   listConversations,
   listChatMessages,
   getConversationDetail,
+  closeConversation,
   markConversationRead,
   checkChatFreeMessagingAllowed,
   getProposalForTimeline,

@@ -66,10 +66,9 @@ function DetailsButton({
   return (
     <Button
       type="button"
-      variant="secondary"
-      size="sm"
+      variant="ghost"
       className={cn(
-        "min-h-11 shrink-0 rounded-full px-4 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "h-8 min-h-8 shrink-0 rounded-full border border-border/50 bg-muted/70 px-3 text-xs font-medium text-foreground shadow-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         className,
       )}
       onClick={onClick}
@@ -101,49 +100,45 @@ export function ChatScreenHeader({
     >
       {/* Mobile: centered identity + back row */}
       <div
-        className="px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:hidden"
+        className="relative px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:hidden"
         data-testid="chat-header-mobile"
       >
-        <div className="flex items-start justify-between gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 -mt-[10px] shrink-0 rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:bg-transparent hover:text-primary"
-            onClick={onBack}
-            aria-label="Voltar"
-          >
-            <ArrowLeft className="!h-6 !w-6" aria-hidden />
-          </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="absolute left-0 top-[max(0.75rem,env(safe-area-inset-top))] z-10 h-10 w-10 -translate-y-2 rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:bg-transparent hover:text-primary"
+          onClick={onBack}
+          aria-label="Voltar"
+        >
+          <ArrowLeft className="!h-6 !w-6" aria-hidden />
+        </Button>
 
-          <div className="flex min-w-0 flex-1 flex-col items-center text-center">
-            <CounterpartyAvatar
+        {onDetails ? (
+          <DetailsButton
+            onClick={onDetails}
+            className="absolute right-4 top-[max(0.75rem,env(safe-area-inset-top))] z-10"
+          />
+        ) : null}
+
+        <div className="flex flex-col items-center px-11 text-center">
+          <CounterpartyAvatar
+            counterpartyName={counterpartyName}
+            className="h-10 w-10 text-[11px]"
+          />
+          <div className="mt-1">
+            <IdentityCopy
               counterpartyName={counterpartyName}
-              className="h-10 w-10 text-[11px]"
+              serviceTitle={serviceTitle}
+              nameClassName="text-sm"
+              serviceClassName="mt-0 text-[13px] leading-snug"
             />
-            <div className="mt-1">
-              <IdentityCopy
-                counterpartyName={counterpartyName}
-                serviceTitle={serviceTitle}
-                nameClassName="text-sm"
-                serviceClassName="mt-0 text-[13px] leading-snug"
-              />
-            </div>
-            {conversationStatus ? (
-              <div className="mt-1">
-                <ConversationStatusBadge status={conversationStatus} />
-              </div>
-            ) : null}
           </div>
-
-          {onDetails ? (
-            <DetailsButton
-              onClick={onDetails}
-              className="min-h-11 px-3 text-[11px]"
-            />
-          ) : (
-            <span className="w-11 shrink-0" aria-hidden />
-          )}
+          {conversationStatus ? (
+            <div className="mt-1">
+              <ConversationStatusBadge status={conversationStatus} />
+            </div>
+          ) : null}
         </div>
       </div>
 

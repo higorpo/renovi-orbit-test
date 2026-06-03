@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  closeConversation,
   getConversationDetail,
   listChatMessages,
   listConversations,
@@ -79,6 +80,34 @@ describe("listChatMessages", () => {
       p_cursor_created_at: "2026-01-01T00:00:00Z",
       p_cursor_id: "msg-1",
       p_after: true,
+    });
+  });
+});
+
+describe("closeConversation", () => {
+  it("requires confirmation and idempotency key", async () => {
+    const payload = {
+      conversation: {
+        id: "chat-1",
+        service_request_id: "sr-1",
+        client_id: "client-1",
+        provider_id: "provider-1",
+        status: "CLOSED",
+        closure_type: "MANUAL",
+        closure_reason: null,
+        closed_at: "2026-06-01T12:00:00Z",
+        closed_by_user_id: "client-1",
+      },
+    };
+    rpcMock.mockResolvedValue({ data: payload, error: null });
+
+    const result = await closeConversation({ chatId: "chat-1" });
+    expect(result.data).toEqual(payload);
+    expect(rpcMock).toHaveBeenCalledWith("cns_close_conversation", {
+      p_chat_id: "chat-1",
+      p_idempotency_key: "00000000-0000-7000-8000-000000000001",
+      p_confirm: true,
+      p_closure_reason: null,
     });
   });
 });
