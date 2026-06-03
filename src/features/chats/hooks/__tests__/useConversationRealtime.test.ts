@@ -97,7 +97,8 @@ describe("useConversationRealtime", () => {
 
     expect(supabaseChannelMock).toHaveBeenCalledWith("conversation:chat-1");
     expect(channelMock.on).toHaveBeenCalledTimes(3);
-    await waitFor(() => expect(onReconcile).toHaveBeenCalled());
+    await waitFor(() => expect(onHandlers.statusChange).toBeDefined());
+    expect(onReconcile).not.toHaveBeenCalled();
   });
 
   it("subscribes to proposal updates when serviceRequestId is provided", async () => {
@@ -113,7 +114,79 @@ describe("useConversationRealtime", () => {
     );
 
     expect(channelMock.on).toHaveBeenCalledTimes(4);
-    await waitFor(() => expect(onReconcile).toHaveBeenCalled());
+    await waitFor(() => expect(onHandlers.statusChange).toBeDefined());
+    expect(onReconcile).not.toHaveBeenCalled();
+  });
+
+  it("reconciles only after reconnect, not on initial subscribe", async () => {
+    const onReconcile = vi.fn();
+    renderHook(() => useConversationRealtime("chat-1", { onReconcile }), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(onHandlers.statusChange).toBeDefined());
+    expect(onReconcile).not.toHaveBeenCalled();
+
+    onHandlers.statusChange?.("CHANNEL_ERROR");
+    onHandlers.statusChange?.("SUBSCRIBED");
+
+    await waitFor(() => expect(onReconcile).toHaveBeenCalledTimes(1));
+  });
+
+  it("does not resubscribe when serviceRequestId or providerId change", async () => {
+    const onReconcile = vi.fn();
+
+    const { rerender } = renderHook(
+      ({
+        serviceRequestId,
+        providerId,
+      }: {
+        serviceRequestId: string | null;
+        providerId: string | null;
+      }) =>
+        useConversationRealtime("chat-1", {
+          onReconcile,
+          serviceRequestId,
+          providerId,
+        }),
+      {
+        wrapper: createWrapper(),
+        initialProps: { serviceRequestId: null, providerId: null },
+      },
+    );
+
+    await waitFor(() => expect(onHandlers.statusChange).toBeDefined());
+    expect(supabaseChannelMock).toHaveBeenCalledTimes(1);
+
+    rerender({ serviceRequestId: "sr-1", providerId: "provider-1" });
+
+    await waitFor(() => expect(removeChannelMock).not.toHaveBeenCalled());
+    expect(supabaseChannelMock).toHaveBeenCalledTimes(1);
+    expect(onReconcile).not.toHaveBeenCalled();
+  });
+
+  it("subscribes once when enabled after detail is available", async () => {
+    const onReconcile = vi.fn();
+
+    const { rerender } = renderHook(
+      ({ enabled }: { enabled: boolean }) =>
+        useConversationRealtime("chat-1", {
+          enabled,
+          onReconcile,
+          serviceRequestId: "sr-1",
+          providerId: "provider-1",
+        }),
+      { wrapper: createWrapper(), initialProps: { enabled: false } },
+    );
+
+    expect(supabaseChannelMock).not.toHaveBeenCalled();
+
+    rerender({ enabled: true });
+
+    await waitFor(() => expect(onHandlers.statusChange).toBeDefined());
+    expect(supabaseChannelMock).toHaveBeenCalledTimes(1);
+    expect(channelMock.on).toHaveBeenCalledTimes(4);
+    expect(onReconcile).not.toHaveBeenCalled();
   });
 
   it("does not resubscribe when onReconcile callback identity changes", async () => {
@@ -129,14 +202,14 @@ describe("useConversationRealtime", () => {
       { wrapper: createWrapper(), initialProps: { tick: 0 } },
     );
 
-    await waitFor(() => expect(onReconcile).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(onHandlers.statusChange).toBeDefined());
     expect(supabaseChannelMock).toHaveBeenCalledTimes(1);
 
     rerender({ tick: 1 });
     rerender({ tick: 2 });
 
     await waitFor(() => expect(removeChannelMock).not.toHaveBeenCalled());
-    expect(onReconcile).toHaveBeenCalledTimes(1);
+    expect(onReconcile).not.toHaveBeenCalled();
     expect(supabaseChannelMock).toHaveBeenCalledTimes(1);
   });
 
@@ -151,7 +224,7 @@ describe("useConversationRealtime", () => {
 
     renderHook(() => useConversationRealtime("chat-1", { onReconcile }), { wrapper: Wrapper });
 
-    await waitFor(() => expect(onReconcile).toHaveBeenCalled());
+    await waitFor(() => expect(onHandlers.statusChange).toBeDefined());
     onReconcile.mockClear();
 
     const payload = { new: { id: "msg-dup" } };

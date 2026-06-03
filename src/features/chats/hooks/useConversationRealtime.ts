@@ -49,12 +49,14 @@ export function useConversationRealtime(
   const lastStatusRef = useRef<string | null>(null);
   const onReconcileRef = useRef(options?.onReconcile);
   const onRealtimeStatusChangeRef = useRef(options?.onRealtimeStatusChange);
+  const serviceRequestIdRef = useRef(options?.serviceRequestId ?? null);
+  const providerIdRef = useRef(options?.providerId ?? null);
   onReconcileRef.current = options?.onReconcile;
   onRealtimeStatusChangeRef.current = options?.onRealtimeStatusChange;
+  serviceRequestIdRef.current = options?.serviceRequestId ?? null;
+  providerIdRef.current = options?.providerId ?? null;
   const enabled = Boolean(chatId) && (options?.enabled ?? true);
   const currentUserId = options?.currentUserId ?? null;
-  const serviceRequestId = options?.serviceRequestId ?? null;
-  const providerId = options?.providerId ?? null;
 
   useEffect(() => {
     if (!enabled || !chatId) return;
@@ -127,19 +129,22 @@ export function useConversationRealtime(
             lastStatusRef.current === "CLOSED";
           const isSubscribed = status === "SUBSCRIBED";
 
-          if (isSubscribed && (wasDisconnected || lastStatusRef.current === null)) {
+          if (isSubscribed && wasDisconnected) {
             onReconcileRef.current?.();
           }
 
           lastStatusRef.current = status;
         },
       },
-      { serviceRequestId, providerId },
+      {
+        serviceRequestId: serviceRequestIdRef.current,
+        providerId: providerIdRef.current,
+      },
     );
 
     return () => {
       lastStatusRef.current = null;
       void supabase.removeChannel(channel);
     };
-  }, [chatId, currentUserId, enabled, providerId, queryClient, serviceRequestId]);
+  }, [chatId, currentUserId, enabled, queryClient]);
 }

@@ -105,6 +105,7 @@ export function ChatScreen({
   usePushNotificationSuppression(chatId);
 
   useConversationRealtime(chatId, {
+    enabled: Boolean(detail),
     currentUserId: user?.id ?? null,
     serviceRequestId: detail?.service_request.id ?? null,
     providerId: detail?.conversation.provider_id ?? null,
@@ -114,7 +115,9 @@ export function ChatScreen({
 
   useConversationPollingFallback({
     chatId,
-    realtimeHealthy: isRealtimeConnectionHealthy(realtimeStatus),
+    enabled: Boolean(detail),
+    realtimeHealthy:
+      realtimeStatus === null ? true : isRealtimeConnectionHealthy(realtimeStatus),
     onPoll: () => void refetchGapFill(),
   });
 
