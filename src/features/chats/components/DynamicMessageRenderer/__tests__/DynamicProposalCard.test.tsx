@@ -84,6 +84,33 @@ describe("DynamicProposalCard", () => {
     expect(onProposalAction).toHaveBeenCalledWith("reject", "p1");
   });
 
+  it("disables request revision when client reached revision limit", () => {
+    hydrateMock.mockReturnValue({
+      proposal: { status: "PENDING", proposed_amount: 500, revision_count: 2 },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    const onProposalAction = vi.fn();
+
+    render(
+      <DynamicProposalCard
+        chatId="chat-1"
+        message={message}
+        viewerRole="client"
+        isOutgoing={false}
+        onProposalAction={onProposalAction}
+      />,
+    );
+
+    const revisionButton = screen.getByRole("button", { name: /^Pedir revisão$/i });
+    expect(revisionButton).toBeDisabled();
+
+    fireEvent.click(revisionButton);
+    expect(onProposalAction).not.toHaveBeenCalled();
+  });
+
   it("shows shimmer skeleton while proposal data is loading", () => {
     hydrateMock.mockReturnValue({
       proposal: null,

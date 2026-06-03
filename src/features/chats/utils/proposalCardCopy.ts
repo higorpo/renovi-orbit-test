@@ -1,5 +1,6 @@
 import type { ProfileRole } from "@/features/auth";
 import type { ProposalStatus } from "@/features/negotiation-proposals";
+import { MAX_PROPOSAL_REVISIONS } from "@/features/negotiation-proposals/constants/proposalRevisions";
 
 export function resolveProposalCardHeadline(status: ProposalStatus | string): string {
   switch (status) {
@@ -56,17 +57,26 @@ export interface ProposalCardCta {
   id: "accept" | "reject" | "request_revision" | "edit_proposal";
   label: string;
   variant: "default" | "outline" | "destructive";
+  disabled?: boolean;
 }
 
 export function resolveProposalCardCtas(
   status: ProposalStatus | string,
   viewerRole: ProfileRole,
+  revisionCount = 0,
 ): ProposalCardCta[] {
   if (viewerRole === "client" && status === "PENDING") {
+    const revisionLimitReached = revisionCount >= MAX_PROPOSAL_REVISIONS;
+
     return [
       { id: "accept", label: "Aceitar", variant: "default" },
       { id: "reject", label: "Recusar", variant: "outline" },
-      { id: "request_revision", label: "Pedir revisão", variant: "outline" },
+      {
+        id: "request_revision",
+        label: "Pedir revisão",
+        variant: "outline",
+        disabled: revisionLimitReached,
+      },
     ];
   }
 

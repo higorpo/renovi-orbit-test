@@ -15,6 +15,12 @@ describe("proposalCardCopy", () => {
   it("shows client CTAs only for pending proposals", () => {
     const ctas = resolveProposalCardCtas("PENDING", "client");
     expect(ctas.map((cta) => cta.id)).toEqual(["accept", "reject", "request_revision"]);
+    expect(ctas.find((cta) => cta.id === "request_revision")?.disabled).toBe(false);
+  });
+
+  it("disables request revision CTA when revision limit is reached", () => {
+    const ctas = resolveProposalCardCtas("PENDING", "client", 2);
+    expect(ctas.find((cta) => cta.id === "request_revision")?.disabled).toBe(true);
   });
 
   it("shows provider edit CTA when revision was requested", () => {

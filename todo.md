@@ -94,6 +94,7 @@ Coisas para fazer next
 - para que serve CHAT_PROPOSAL_TIMELINE_QUERY_KEY? podemos remover?
 -remover referencia de chat e novas colunas do provider_proposals, renomear tabela.
 -remover tela de orçamentos para clientes, não vai ser necessário.
+-quando eu tenho uma proposta para revisão, o action banner exibe o botão enviar proposta e se eu aperto ele naõ recupera as infos da proposta anterior.
 
 
 ATUALIZAR:

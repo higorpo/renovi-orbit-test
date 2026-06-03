@@ -53,7 +53,7 @@ export function DynamicProposalCard({
   const headline = resolveProposalCardHeadline(status);
   const description = resolveProposalCardDescription(status, viewerRole);
   const detailsLabel = resolveProposalCardDetailsLabel(status, viewerRole);
-  const ctas = resolveProposalCardCtas(status, viewerRole);
+  const ctas = resolveProposalCardCtas(status, viewerRole, proposal?.revision_count ?? 0);
   const StatusIcon = getProposalStatusIcon(status);
 
   useEffect(() => {
@@ -107,6 +107,7 @@ export function DynamicProposalCard({
                   type="button"
                   size="sm"
                   variant={cta.variant}
+                  disabled={cta.disabled}
                   className={cn(
                     "rounded-full px-4",
                     CHAT_MIN_TOUCH_TARGET,
