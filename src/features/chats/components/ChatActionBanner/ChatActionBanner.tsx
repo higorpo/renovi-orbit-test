@@ -34,7 +34,11 @@ export function ChatActionBanner({
           type="button"
           variant="ghost"
           size="sm"
-          className={cn(CHAT_MIN_TOUCH_TARGET, "px-3", CHAT_INTERACTIVE_FOCUS)}
+          className={cn(
+            CHAT_MIN_TOUCH_TARGET,
+            "px-3 text-foreground hover:bg-transparent hover:text-foreground",
+            CHAT_INTERACTIVE_FOCUS,
+          )}
           onClick={onDismiss}
           aria-label={banner.dismissAriaLabel}
         >

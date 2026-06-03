@@ -68,7 +68,7 @@ function DetailsButton({
       type="button"
       variant="ghost"
       className={cn(
-        "h-8 min-h-8 shrink-0 rounded-full border border-border/50 bg-muted/70 px-3 text-xs font-medium text-foreground shadow-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        "h-8 min-h-8 shrink-0 rounded-full border border-border/50 bg-muted/70 px-3 text-xs font-medium text-foreground shadow-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         className,
       )}
       onClick={onClick}
