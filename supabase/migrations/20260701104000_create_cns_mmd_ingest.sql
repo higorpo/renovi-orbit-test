@@ -116,14 +116,6 @@ begin
 
   v_variables := p_template_variables;
 
-  if nullif(v_variables->>'chat_id', '') is not null
-    and nullif(v_variables->>'deep_link_path', '') is null then
-    v_variables := v_variables || jsonb_build_object(
-      'deep_link_path',
-      format('/chats/%s', v_variables->>'chat_id')
-    );
-  end if;
-
   foreach v_channel in array v_channels loop
     v_channel_suffix := ':' || v_channel::text;
 

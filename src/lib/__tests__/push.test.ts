@@ -18,6 +18,7 @@ const localNotificationsMocks = vi.hoisted(() => ({
   requestPermissions: vi.fn().mockResolvedValue({ display: 'granted' }),
   createChannel: vi.fn().mockResolvedValue(undefined),
   schedule: vi.fn().mockResolvedValue(undefined),
+  addListener: vi.fn().mockResolvedValue({ remove: vi.fn() }),
 }))
 
 const firebaseConfigMocks = vi.hoisted(() => ({
@@ -660,7 +661,13 @@ describe('push helpers', () => {
       setPushSuppressionChecker(null)
     })
 
-    it('notifies on pushNotificationActionPerformed', async () => {
+    it('navigates on pushNotificationActionPerformed when deep_link_path is present', async () => {
+      const { registerPushNavigationHandler, resetPushNavigationForTests } = await import(
+        '../pushNavigation'
+      )
+      const paths: string[] = []
+      const unregister = registerPushNavigationHandler((path) => paths.push(path))
+
       pushNotificationsMocks.checkPermissions.mockResolvedValue({ receive: 'granted' })
       await setupPushNotifications()
 
@@ -669,9 +676,25 @@ describe('push helpers', () => {
       )
       const handler = actionCalls[0]![1] as (action: {
         actionId: string
-        notification: { title: string }
+        notification: { title?: string; body?: string; data?: Record<string, string> }
       }) => void
-      handler({ actionId: 'tap', notification: { title: 'Opened' } })
+      handler({
+        actionId: 'tap',
+        notification: {
+          title: 'Nova mensagem',
+          body: 'Oi',
+          data: {
+            chat_id: 'chat-1',
+            dispatch_id: 'dispatch-1',
+            deep_link_path: '/dashboard/chats/chat-1',
+          },
+        },
+      })
+
+      expect(paths).toEqual(['/dashboard/chats/chat-1'])
+
+      unregister()
+      resetPushNavigationForTests()
     })
 
     it('rejects on registration error', async () => {

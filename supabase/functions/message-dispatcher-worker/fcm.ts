@@ -37,6 +37,8 @@ export interface SendFcmPushInput {
   dispatchId: string;
   /** Conversation id for foreground suppression (R12-AC07). */
   chatId?: string;
+  /** In-app route from template variables (e.g. /dashboard/chats/{id}). */
+  deepLinkPath?: string;
 }
 
 export type FcmSendSuccess = {
@@ -103,6 +105,7 @@ export function buildFcmV1MessageBody(input: SendFcmPushInput): FcmV1MessageBody
         dispatch_id: input.dispatchId,
         correlation_id: input.correlationId,
         ...(input.chatId ? { chat_id: input.chatId } : {}),
+        ...(input.deepLinkPath ? { deep_link_path: input.deepLinkPath } : {}),
       },
       android: {
         notification: {

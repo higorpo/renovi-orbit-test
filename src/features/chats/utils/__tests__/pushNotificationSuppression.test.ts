@@ -18,7 +18,7 @@ describe("pushNotificationSuppression", () => {
     ).toBe("chat-2");
     expect(
       extractChatIdFromPushPayload({
-        data: { deep_link_path: "/chats/chat-3" },
+        data: { deep_link_path: "/dashboard/chats/chat-3" },
       }),
     ).toBe("chat-3");
   });

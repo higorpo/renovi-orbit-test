@@ -11,6 +11,10 @@ import { NavigationRoute, registerRoute } from 'workbox-routing'
 
 import { getFirebaseClientConfig } from './lib/firebase/config'
 import { pushNotificationCollapseKey } from './lib/pushCollapseKey'
+import {
+  buildPushNavigateMessage,
+  resolvePushNotificationPath,
+} from './lib/pushNavigation'
 
 declare let self: ServiceWorkerGlobalScope
 
@@ -58,3 +62,32 @@ if (firebaseConfig) {
     })
   })
 }
+
+self.addEventListener('notificationclick', (event) => {
+  const notification = event.notification
+  notification.close()
+
+  const data = notification.data as Record<string, string> | undefined
+  const path = resolvePushNotificationPath({
+    title: notification.title,
+    body: notification.body,
+    data,
+  })
+
+  if (!path) return
+
+  const absoluteUrl = new URL(path, self.location.origin).href
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if (!('focus' in client)) continue
+          client.postMessage(buildPushNavigateMessage(path))
+          return client.focus()
+        }
+        return self.clients.openWindow(absoluteUrl)
+      }),
+  )
+})

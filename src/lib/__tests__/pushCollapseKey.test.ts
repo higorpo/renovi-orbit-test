@@ -14,7 +14,7 @@ describe("pushNotificationCollapseKey", () => {
 
   it("extracts chat id from deep_link_path", () => {
     const payload = {
-      data: { deep_link_path: "/chats/abc-123" },
+      data: { deep_link_path: "/dashboard/chats/abc-123" },
     };
     expect(extractChatIdFromPushPayload(payload)).toBe("abc-123");
     expect(pushNotificationCollapseKey(payload, "fallback")).toBe("abc-123");

@@ -2,7 +2,7 @@
 -- Templates MUST exist before Wave F domain_events consumer calls cns_mmd_ingest.
 
 -- Shared variable schema (design §5.5 normative minimum + proposal_id for lifecycle events).
--- deep_link_path example: /chats/{chat_id}
+-- deep_link_path example: /dashboard/chats/{chat_id}
 
 insert into message_dispatcher.message_templates (
   template_key,

@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core'
+import { LocalNotifications } from '@capacitor/local-notifications'
 import {
   PushNotifications,
   type Token,
@@ -23,6 +24,7 @@ import {
   requestNativeNotificationPermission,
 } from './nativeNotificationPermission'
 import { pushNotificationCollapseKey } from './pushCollapseKey'
+import { handlePushNotificationOpen, resetPushNavigationForTests } from './pushNavigation'
 import { resetPushSuppressionForTests, shouldSuppressPushNotification } from './pushSuppression'
 
 export type PushPlatform = 'android' | 'ios' | 'web'
@@ -279,12 +281,45 @@ function attachNativeListeners(): void {
   })
 
   PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
-    const dispatchId = action.notification.data?.dispatch_id as string | undefined
+    const payload = mapCapacitorNotification(action.notification)
+    const dispatchId = payload.data?.dispatch_id
+
+    const path = handlePushNotificationOpen(payload);
+
     logger.info('[PUSH] notification action (native)', {
       actionId: action.actionId,
-      notification: action.notification,
+      path,
     })
 
+    if (dispatchId) {
+      void trackPushClick(dispatchId)
+    }
+  })
+
+  void LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
+    const extra = action.notification.extra
+    const data: Record<string, string> = {}
+    if (extra && typeof extra === 'object') {
+      for (const [key, value] of Object.entries(extra)) {
+        if (value == null) continue
+        data[key] = typeof value === 'string' ? value : String(value)
+      }
+    }
+
+    const payload: PushNotificationPayload = {
+      title: action.notification.title ?? undefined,
+      body: action.notification.body ?? undefined,
+      data: Object.keys(data).length > 0 ? data : undefined,
+    }
+
+    const path = handlePushNotificationOpen(payload);
+
+    logger.info('[PUSH] local notification action (native)', {
+      actionId: action.actionId,
+      path,
+    })
+
+    const dispatchId = data.dispatch_id
     if (dispatchId) {
       void trackPushClick(dispatchId)
     }
@@ -490,5 +525,6 @@ export function resetPushModuleStateForTests(): void {
   activePushCallbacks = undefined
   pushStateListeners.clear()
   resetPushSuppressionForTests()
+  resetPushNavigationForTests()
   resetNativeForegroundNotificationForTests()
 }

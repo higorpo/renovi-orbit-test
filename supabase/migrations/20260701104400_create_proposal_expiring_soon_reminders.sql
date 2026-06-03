@@ -73,7 +73,7 @@ begin
         'service_request_title', coalesce(v_sr.title, 'Service request'),
         'sender_display_name', 'Renovi',
         'message_preview', 'Proposal expiring soon',
-        'deep_link_path', format('/chats/%s', v_chat.id),
+        'deep_link_path', format('/dashboard/chats/%s', v_chat.id),
         'proposal_id', v_proposal.id
       );
 

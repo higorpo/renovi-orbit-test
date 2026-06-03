@@ -46,6 +46,15 @@ function chatIdFromTemplateVariables(variables: Record<string, unknown>): string
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function deepLinkPathFromTemplateVariables(
+  variables: Record<string, unknown>,
+): string | undefined {
+  const raw = variables.deep_link_path;
+  if (typeof raw !== "string") return undefined;
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 export interface DispatchProcessCounts {
   renderFailed: number;
   sendSucceeded: number;
@@ -274,6 +283,7 @@ async function processPushDispatch(
 
     const pushVariables = item.template_variables as Record<string, unknown>;
     const chatId = chatIdFromTemplateVariables(pushVariables);
+    const deepLinkPath = deepLinkPathFromTemplateVariables(pushVariables);
 
     if (!item.deliveries.length) {
       counts.sendFailed += 1;
@@ -310,6 +320,7 @@ async function processPushDispatch(
             deliveryId: delivery.delivery_id,
             dispatchId: item.id,
             chatId,
+            deepLinkPath,
           }),
       );
 

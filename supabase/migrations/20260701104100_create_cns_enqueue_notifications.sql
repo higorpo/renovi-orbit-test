@@ -255,7 +255,7 @@ begin
     'service_request_title', coalesce(v_sr.title, 'Service request'),
     'sender_display_name', v_sender_name,
     'message_preview', v_message_preview,
-    'deep_link_path', format('/chats/%s', v_chat.id)
+    'deep_link_path', format('/dashboard/chats/%s', v_chat.id)
   );
 
   if v_proposal_id is not null then

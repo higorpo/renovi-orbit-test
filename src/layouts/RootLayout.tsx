@@ -4,6 +4,7 @@ import { CapacitorSplashHider } from '@/lib/capacitor'
 import { AuthProvider } from '@/features/auth'
 import { DeviceBeaconProvider } from '@/features/device-beacon'
 import { PushPermissionPromptHost } from '@/features/push-permission'
+import { PushNotificationNavigationHost } from '@/components/PushNotificationNavigationHost'
 import { OfflineBanner } from '@/components/OfflineBanner'
 import PWABadge from '@/PWABadge'
 
@@ -13,6 +14,7 @@ export function RootLayout() {
       <CapacitorSplashHider />
       <DeviceBeaconProvider>
         <PushPermissionPromptHost />
+        <PushNotificationNavigationHost />
         <OfflineBanner />
         <Outlet />
         {/* Registers the service worker on every route (injectRegister: false). */}
