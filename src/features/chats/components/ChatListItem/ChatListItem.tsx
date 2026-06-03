@@ -84,7 +84,7 @@ export function ChatListItem({ item, isActive = false, onSelect, className }: Ch
           </div>
         </div>
 
-        <div className="mt-0.5 flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <p className="min-w-0 flex-1 truncate text-xs font-medium text-muted-foreground">
             {item.service_request_title}
           </p>
@@ -93,7 +93,7 @@ export function ChatListItem({ item, isActive = false, onSelect, className }: Ch
           ) : null}
         </div>
 
-        <p className="mt-1 truncate text-sm text-muted-foreground">{preview}</p>
+        <p className="truncate text-sm text-muted-foreground">{preview}</p>
       </div>
     </article>
   );
