@@ -68,7 +68,7 @@ export function ChatsConversationRoute() {
 
   return (
     <>
-      <div className="flex h-full min-h-0 flex-1">
+      <div className="flex h-full min-h-0 min-w-0 flex-1">
         <ChatScreen
           chatId={chatId}
           onBack={() => void navigate("/dashboard/chats")}

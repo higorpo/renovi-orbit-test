@@ -29,12 +29,12 @@ function ChatScreenHeaderSkeleton() {
         </div>
       </div>
 
-      <div className="hidden items-center justify-between gap-4 px-4 py-3 md:flex" aria-hidden>
-        <div className="flex min-w-0 items-center gap-3">
+      <div className="hidden min-w-0 w-full items-center justify-between gap-3 px-4 py-3 md:flex" aria-hidden>
+        <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden pr-2">
           <Skeleton className="h-12 w-12 shrink-0 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-36 shrink-0" />
-            <Skeleton className="h-3 w-52 shrink-0" />
+          <div className="min-w-0 flex-1 space-y-2 overflow-hidden">
+            <Skeleton className="h-4 w-full max-w-[9rem]" />
+            <Skeleton className="h-3 w-full max-w-[13rem]" />
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">

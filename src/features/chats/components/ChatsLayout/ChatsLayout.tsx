@@ -20,8 +20,8 @@ export function ChatsLayout() {
   useInboxRealtime();
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-background">
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col md:flex-row">
         <div
           data-testid="chat-list-panel"
           className={cn(
@@ -40,7 +40,7 @@ export function ChatsLayout() {
         <div
           ref={contentRef}
           className={cn(
-            "min-h-0 flex-1 flex-col",
+            "min-h-0 min-w-0 flex-1 flex-col",
             showConversationOnMobile ? "flex" : "hidden",
             "md:flex",
             isMobileFullscreenConversation &&
@@ -53,7 +53,7 @@ export function ChatsLayout() {
         >
           {chatId ? (
             <ChatMobileViewportProvider scheduleSync={scheduleSync}>
-              <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
                 <Outlet />
               </div>
             </ChatMobileViewportProvider>

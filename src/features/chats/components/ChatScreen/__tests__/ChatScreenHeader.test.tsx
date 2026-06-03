@@ -55,4 +55,28 @@ describe("ChatScreenHeader", () => {
     fireEvent.click(within(desktop).getByRole("button", { name: "Detalhes" }));
     expect(onDetails).toHaveBeenCalledTimes(1);
   });
+
+  it("truncates long counterparty and service titles in desktop layout", () => {
+    const longName = "Maria Santos da Silva Oliveira Carvalho Mendes";
+    const longTitle =
+      "Pintura completa da sala de estar, corredor e área gourmet com preparação de superfície";
+
+    render(
+      <ChatScreenHeader
+        counterpartyName={longName}
+        serviceTitle={longTitle}
+        conversationStatus="ACTIVE"
+        onBack={vi.fn()}
+        onDetails={vi.fn()}
+      />,
+    );
+
+    const desktop = screen.getByTestId("chat-header-desktop");
+    const name = within(desktop).getByRole("heading", { level: 1 });
+    const service = within(desktop).getByText(longTitle);
+
+    expect(name).toHaveClass("truncate");
+    expect(service).toHaveClass("truncate");
+    expect(desktop.querySelector(".flex-1.overflow-hidden")).toBeTruthy();
+  });
 });

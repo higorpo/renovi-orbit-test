@@ -51,7 +51,7 @@ function IdentityCopy({
       <h1 className={cn("font-semibold leading-tight text-foreground", nameClassName)}>
         {counterpartyName}
       </h1>
-      <p className={cn("line-clamp-2 text-muted-foreground", serviceClassName)}>{serviceTitle}</p>
+      <p className={cn("text-muted-foreground", serviceClassName)}>{serviceTitle}</p>
     </>
   );
 }
@@ -93,7 +93,7 @@ export function ChatScreenHeader({
   return (
     <header
       className={cn(
-        "relative shrink-0 border-b border-border/60 bg-background",
+        "relative w-full min-w-0 shrink-0 overflow-hidden border-b border-border/60 bg-background",
         statusPresentation?.listItemClassName,
         className,
       )}
@@ -131,7 +131,7 @@ export function ChatScreenHeader({
               counterpartyName={counterpartyName}
               serviceTitle={serviceTitle}
               nameClassName="text-sm"
-              serviceClassName="mt-0 text-[13px] leading-snug"
+              serviceClassName="mt-0 line-clamp-2 text-[13px] leading-snug"
             />
           </div>
           {conversationStatus ? (
@@ -144,12 +144,12 @@ export function ChatScreenHeader({
 
       {/* Desktop: horizontal identity + actions on the right */}
       <div
-        className="hidden items-center justify-between gap-4 px-4 py-3 md:flex"
+        className="hidden min-w-0 w-full items-center justify-between gap-3 px-4 py-3 md:flex"
         data-testid="chat-header-desktop"
       >
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden pr-2">
           <CounterpartyAvatar counterpartyName={counterpartyName} className="h-12 w-12 text-base" />
-          <div className="min-w-0 text-left">
+          <div className="min-w-0 flex-1 overflow-hidden text-left">
             <IdentityCopy
               counterpartyName={counterpartyName}
               serviceTitle={serviceTitle}

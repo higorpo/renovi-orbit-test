@@ -137,7 +137,7 @@ export function ChatComposerBar({
         />
       ) : null}
 
-      <div className="flex items-end gap-2">
+      <div className="flex min-w-0 items-end gap-2">
         <Button
           type="button"
           variant="secondary"
@@ -160,7 +160,7 @@ export function ChatComposerBar({
           placeholder={composer.placeholder}
           disabled={!composer.isInputEnabled || isUploadBusy}
           rows={1}
-          className="min-h-11 max-h-32 flex-1 resize-none rounded-full border-0 bg-muted px-4 py-3 text-[15px] leading-snug shadow-none focus-visible:ring-1 max-sm:resize-none"
+          className="min-h-11 max-h-32 min-w-0 flex-1 resize-none rounded-full border-0 bg-muted px-4 py-3 text-[15px] leading-snug shadow-none focus-visible:ring-1 max-sm:resize-none"
           onFocus={() => {
             timelineScroll?.onComposerFocus();
             scheduleViewportSync();
