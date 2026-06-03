@@ -9,13 +9,12 @@ export function resolveProposalCardHeadline(status: ProposalStatus | string): st
       return "Proposta aceita";
     case "REJECTED":
     case "REJECTED_AUTOMATICALLY":
+    case "REVISED":
       return "Proposta recusada";
     case "EXPIRED":
       return "Proposta expirada";
     case "REVISION_REQUESTED":
       return "Revisão solicitada";
-    case "REVISED":
-      return "Proposta atualizada";
     default:
       return "Proposta";
   }

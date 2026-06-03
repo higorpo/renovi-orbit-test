@@ -21,5 +21,7 @@ describe("conversationVisualState", () => {
     expect(getProposalCardSurfaceClass("PENDING")).toContain("primary");
     expect(getProposalCardSurfaceClass("ACCEPTED")).toContain("emerald");
     expect(getProposalCardSurfaceClass("EXPIRED")).toContain("muted");
+    expect(getProposalCardSurfaceClass("REVISED")).toContain("destructive");
+    expect(getProposalCardSurfaceClass("REJECTED")).toContain("destructive");
   });
 });

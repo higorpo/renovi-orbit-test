@@ -26,6 +26,16 @@ describe("proposalCardCopy", () => {
     expect(resolveProposalCardDescription("PENDING", "provider")).toContain("cliente");
   });
 
+  it("treats REVISED as rejected in headline with new-version description", () => {
+    expect(resolveProposalCardHeadline("REVISED")).toBe("Proposta recusada");
+    expect(resolveProposalCardDescription("REVISED", "client")).toBe(
+      "Uma nova versão da proposta está disponível.",
+    );
+    expect(resolveProposalCardDescription("REVISED", "provider")).toBe(
+      "Uma nova versão da proposta está disponível.",
+    );
+  });
+
   it("describes rejected state from the viewer perspective", () => {
     expect(resolveProposalCardDescription("REJECTED", "client")).toBe(
       "Você optou por não seguir com esta proposta.",

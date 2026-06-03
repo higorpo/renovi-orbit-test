@@ -88,7 +88,7 @@ export const PROPOSAL_STATUS_SURFACE: Record<string, string> = {
   REJECTED_AUTOMATICALLY: "border-destructive/35 bg-destructive/5",
   EXPIRED: "border-muted-foreground/25 bg-muted/40",
   REVISION_REQUESTED: "border-amber-600/35 bg-amber-500/5",
-  REVISED: "border-primary/25 bg-card",
+  REVISED: "border-destructive/35 bg-destructive/5",
 };
 
 export function getProposalCardSurfaceClass(status: string): string {
@@ -103,6 +103,7 @@ export function getProposalStatusIcon(status: string): LucideIcon {
       return Clock;
     case "REJECTED":
     case "REJECTED_AUTOMATICALLY":
+    case "REVISED":
       return XCircle;
     case "PENDING":
       return Clock;
