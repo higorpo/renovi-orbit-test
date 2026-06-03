@@ -165,7 +165,7 @@ describe("ProposalDetailsDialog summary mode", () => {
     );
 
     expect(screen.getByText(/detalhes do orçamento/i)).toBeInTheDocument();
-    expect(screen.getByText(/seu orçamento mais recente/i)).toBeInTheDocument();
+    expect(screen.queryByText(/seu orçamento mais recente/i)).not.toBeInTheDocument();
     expect(screen.getByText(/taxa da plataforma/i)).toBeInTheDocument();
   });
 });

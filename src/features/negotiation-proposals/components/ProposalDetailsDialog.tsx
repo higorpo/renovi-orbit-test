@@ -1,7 +1,8 @@
-import { Loader2, MessageSquareQuote } from "lucide-react";
+import { Loader2, MessageSquareQuote, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -82,12 +83,33 @@ export function ProposalDetailsDialog({
       <DialogContent
         ref={contentRef}
         className={cn(
-          "flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl sm:p-6",
+          "flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 [&>button]:hidden",
           "max-sm:inset-x-0 max-sm:bottom-auto max-sm:left-0 max-sm:right-0 max-sm:top-0 max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:border-0",
+          "sm:max-w-2xl sm:p-6",
         )}
       >
-        <DialogHeader className="shrink-0 border-b px-4 py-3 text-left sm:border-b-0 sm:px-0 sm:py-0">
-          <DialogTitle>{copy.detailsTitle}</DialogTitle>
+        <DialogHeader className="shrink-0 space-y-0 border-b px-4 py-3 text-left sm:border-b-0 sm:px-0 sm:pt-0">
+          <div className="flex items-center justify-between gap-3">
+            <DialogTitle className="min-w-0 flex-1 text-base sm:text-lg">
+              {copy.detailsTitle}
+            </DialogTitle>
+            <div className="flex shrink-0 items-center gap-2">
+              {showSummary && canEdit && onEdit ? (
+                <Button type="button" size="sm" variant="outline" onClick={onEdit}>
+                  {copy.editAction}
+                </Button>
+              ) : null}
+              <DialogClose asChild>
+                <button
+                  type="button"
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="Fechar"
+                >
+                  <X className="h-4 w-4" aria-hidden />
+                </button>
+              </DialogClose>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-4 py-4 sm:px-0 sm:py-0">
@@ -112,9 +134,10 @@ export function ProposalDetailsDialog({
           {showSummary && summary && !isLoading && !isError ? (
             <ServiceRequestProposalSummaryCard
               summary={summary}
-              canEdit={canEdit}
+              canEdit={false}
               onEdit={onEdit ?? (() => {})}
               copyVariant={copyVariant}
+              variant="embedded"
             />
           ) : null}
 
