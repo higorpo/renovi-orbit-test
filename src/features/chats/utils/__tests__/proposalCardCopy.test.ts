@@ -25,4 +25,19 @@ describe("proposalCardCopy", () => {
     expect(resolveProposalCardDescription("PENDING", "client")).toContain("sua análise");
     expect(resolveProposalCardDescription("PENDING", "provider")).toContain("cliente");
   });
+
+  it("describes rejected state from the viewer perspective", () => {
+    expect(resolveProposalCardDescription("REJECTED", "client")).toBe(
+      "Você optou por não seguir com esta proposta.",
+    );
+    expect(resolveProposalCardDescription("REJECTED", "provider")).toBe(
+      "O cliente optou por não seguir com esta proposta.",
+    );
+    expect(resolveProposalCardDescription("REJECTED_AUTOMATICALLY", "client")).toBe(
+      "Esta proposta foi encerrada automaticamente.",
+    );
+    expect(resolveProposalCardDescription("REJECTED_AUTOMATICALLY", "provider")).toBe(
+      "O cliente seguiu com outra proposta ou encerrou o pedido.",
+    );
+  });
 });

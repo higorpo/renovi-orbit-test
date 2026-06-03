@@ -33,8 +33,13 @@ export function resolveProposalCardDescription(
     case "ACCEPTED":
       return "Esta proposta foi aprovada.";
     case "REJECTED":
+      return viewerRole === "client"
+        ? "Você optou por não seguir com esta proposta."
+        : "O cliente optou por não seguir com esta proposta.";
     case "REJECTED_AUTOMATICALLY":
-      return "O cliente optou por não seguir com esta proposta.";
+      return viewerRole === "client"
+        ? "Esta proposta foi encerrada automaticamente."
+        : "O cliente seguiu com outra proposta ou encerrou o pedido.";
     case "EXPIRED":
       return "O prazo para resposta desta proposta encerrou.";
     case "REVISION_REQUESTED":
