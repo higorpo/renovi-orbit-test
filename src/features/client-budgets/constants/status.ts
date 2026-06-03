@@ -4,13 +4,11 @@ import {
   FileText,
   GitCompare,
   History,
-  MessageCircleQuestion,
-  MessageSquareReply,
   XCircle,
   type LucideIcon,
 } from "lucide-react";
 import type { BadgeProps } from "@/components/ui/badge";
-import type { QuestionPreviewItem, ReceivedStatusFilter, QuestionStatusFilter } from "../types/client-budgets.types";
+import type { ReceivedStatusFilter } from "../types/client-budgets.types";
 
 const RECEIVED_CARD_CTA_ICONS = {
   details: FileText,
@@ -44,26 +42,6 @@ export const RECEIVED_FILTERS: Array<{
   },
 ];
 
-export const QUESTION_FILTERS: Array<{
-  id: QuestionStatusFilter;
-  label: string;
-  icon: LucideIcon;
-  iconColor: string;
-}> = [
-  {
-    id: "pending",
-    label: "Não respondidas",
-    icon: MessageCircleQuestion,
-    iconColor: "text-amber-500",
-  },
-  {
-    id: "answered",
-    label: "Respondidas",
-    icon: MessageSquareReply,
-    iconColor: "text-emerald-500",
-  },
-];
-
 const BUDGET_STATUS_MAP: Record<string, { label: string; variant: BadgeProps["variant"] }> = {
   submitted: { label: "Aguardando avaliação", variant: "warning" },
   pending: { label: "Aguardando avaliação", variant: "warning" },
@@ -80,11 +58,6 @@ const BUDGET_STATUS_MAP: Record<string, { label: string; variant: BadgeProps["va
 function isBudgetFlowClosedServiceRequest(status: string | null | undefined): boolean {
   const normalized = (status ?? "").trim().toLowerCase();
   return ["closed", "cancelled", "completed"].includes(normalized);
-}
-
-function isQuestionFlowClosedServiceRequest(status: string | null | undefined): boolean {
-  const normalized = (status ?? "").trim().toLowerCase();
-  return ["in_progress", "closed", "cancelled", "completed"].includes(normalized);
 }
 
 export function getBudgetStatusConfig(status: string | null | undefined) {
@@ -187,59 +160,4 @@ export function getReceivedBudgetSummaryLine(item: {
     return `${n} orçamento${n !== 1 ? "s" : ""} recusado${n !== 1 ? "s" : ""}`;
   }
   return "";
-}
-
-export function getQuestionExtraCount(
-  item: {
-    total_questions: number;
-    pending_questions_count: number;
-    answered_questions_count: number;
-    questions_preview: unknown[];
-  },
-  filter: QuestionStatusFilter,
-): number {
-  const shown = Math.min(2, item.questions_preview.length);
-  switch (filter) {
-    case "pending":
-      return Math.max(item.pending_questions_count - shown, 0);
-    case "answered":
-      return Math.max(item.answered_questions_count - shown, 0);
-    default:
-      return 0;
-  }
-}
-
-export function formatQuestionExtraLabel(extraCount: number): string {
-  if (extraCount <= 0) return "";
-  return "... e outras perguntas";
-}
-
-export function getQuestionCardSummaryLine(item: {
-  total_questions: number;
-  pending_questions_count: number;
-  answered_questions_count: number;
-}, filter: QuestionStatusFilter): string {
-  if (filter === "pending") {
-    const n = item.pending_questions_count;
-    return `${n} perguntas pendente${n !== 1 ? "s" : ""}`;
-  }
-  if (filter === "answered") {
-    const n = item.answered_questions_count;
-    return `${n} perguntas respondida${n !== 1 ? "s" : ""}`;
-  }
-  return "";
-}
-
-export function getQuestionCardCtaLabel(): string {
-  return "Ver perguntas";
-}
-
-export function getQuestionStatusConfig(question: Pick<QuestionPreviewItem, "client_response" | "client_responded_at"> & { service_request_status?: string | null }) {
-  if (isQuestionFlowClosedServiceRequest(question.service_request_status)) {
-    return { label: "Encerrada", variant: "secondary" as const };
-  }
-  if (question.client_response && question.client_responded_at) {
-    return { label: "Respondida", variant: "success" as const };
-  }
-  return { label: "Não respondida", variant: "warning" as const };
 }

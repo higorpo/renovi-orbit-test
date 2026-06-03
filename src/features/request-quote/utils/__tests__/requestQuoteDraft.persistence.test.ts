@@ -173,7 +173,6 @@ describe("requestQuoteDraft.persistence", () => {
       const structured: ServiceRequestStructuredData = {
         urgency: "high",
         scope_complexity: "medium",
-        suggested_questions: [],
         tags: [],
         missing_info_warnings: [],
         suggested_equipment: [],

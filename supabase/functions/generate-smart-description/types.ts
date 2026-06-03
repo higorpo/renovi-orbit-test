@@ -32,7 +32,6 @@ export interface StructuredAIResponse {
   suggested_title: string;
   tags: string[];
   missing_info_warnings: string[];
-  suggested_questions: string[];
   urgency: "low" | "medium" | "high";
   scope_complexity: "simple" | "medium" | "complex";
   confidence: number;

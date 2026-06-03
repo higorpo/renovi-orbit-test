@@ -109,7 +109,6 @@ describe("useGenerateSmartDescription", () => {
           recommended_next_step: "send_estimate_range",
           urgency: "high",
           scope_complexity: "medium",
-          suggested_questions: [],
           tags: [],
           missing_info_warnings: [],
           suggested_equipment: [],
@@ -130,7 +129,6 @@ describe("useGenerateSmartDescription", () => {
     expect(next.structured).toEqual({
       urgency: "high",
       scope_complexity: "medium",
-      suggested_questions: [],
       tags: [],
       missing_info_warnings: [],
       suggested_equipment: [],
@@ -350,7 +348,6 @@ describe("useGenerateSmartDescription", () => {
           recommended_next_step: "ask_questions",
           urgency: "medium",
           scope_complexity: "medium",
-          suggested_questions: [],
           tags: [],
           missing_info_warnings: [],
           suggested_equipment: [],

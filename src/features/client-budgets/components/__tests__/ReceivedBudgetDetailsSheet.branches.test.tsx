@@ -75,7 +75,6 @@ const detailBase: ClientBudgetDetail = {
     state_abbr: null,
   },
   budgets: [proposal],
-  questions: [],
 };
 
 describe("ReceivedBudgetDetailsSheet (reject dialog wiring)", () => {

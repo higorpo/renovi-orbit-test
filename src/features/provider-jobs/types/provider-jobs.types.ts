@@ -22,7 +22,6 @@ export interface ProviderJobItem {
   scope_complexity: string | null;
   estimated_duration_hint: string | null;
   tags: string[] | null;
-  suggested_questions: string[] | null;
   suggested_equipment: string[] | null;
   suggested_materials: string[] | null;
   masked_client_name: string;

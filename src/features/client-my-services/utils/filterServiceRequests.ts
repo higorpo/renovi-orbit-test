@@ -89,7 +89,7 @@ function matchesHasImages(
 }
 
 export interface FilterServiceRequestsOptions {
-  /** When set, only this request is shown (deep link from orçamentos / perguntas). */
+  /** When set, only this request is shown (deep link from orçamentos). */
   focusServiceRequestId?: string | null;
 }
 

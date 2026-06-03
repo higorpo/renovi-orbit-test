@@ -185,7 +185,7 @@ describe("useClientMyServicesPage", () => {
     expect(result.current.neighborhoodOptions).toContain("Centro");
   });
 
-  it("handleOpenBudgets and handleOpenQuestions set sheet mode", () => {
+  it("handleOpenBudgets opens budget details sheet", () => {
     const { result } = renderHook(() => useClientMyServicesPage(), {
       wrapper: wrapper(["/dashboard/requests"]),
     });
@@ -193,13 +193,7 @@ describe("useClientMyServicesPage", () => {
     act(() => {
       result.current.handleOpenBudgets("sr-b");
     });
-    expect(result.current.detailsMode).toBe("budgets");
+    expect(result.current.detailsOpen).toBe(true);
     expect(result.current.selectedServiceRequestId).toBe("sr-b");
-
-    act(() => {
-      result.current.handleOpenQuestions("sr-q");
-    });
-    expect(result.current.detailsMode).toBe("questions");
-    expect(result.current.selectedServiceRequestId).toBe("sr-q");
   });
 });

@@ -36,7 +36,6 @@ describe("useClientBudgetDetail", () => {
     const detail = {
       service_request: { title: "T", status: "open" },
       budgets: [],
-      questions: [],
     } as never;
     fetchClientBudgetDetail.mockResolvedValue({ data: detail, error: null });
 

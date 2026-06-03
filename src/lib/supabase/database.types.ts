@@ -1835,57 +1835,6 @@ export type Database = {
           },
         ]
       }
-      provider_service_request_questions: {
-        Row: {
-          client_responded_at: string | null
-          client_response: string | null
-          client_response_images: string[]
-          created_at: string
-          id: string
-          provider_id: string
-          question: string
-          service_request_id: string
-          updated_at: string
-        }
-        Insert: {
-          client_responded_at?: string | null
-          client_response?: string | null
-          client_response_images?: string[]
-          created_at?: string
-          id?: string
-          provider_id: string
-          question: string
-          service_request_id: string
-          updated_at?: string
-        }
-        Update: {
-          client_responded_at?: string | null
-          client_response?: string | null
-          client_response_images?: string[]
-          created_at?: string
-          id?: string
-          provider_id?: string
-          question?: string
-          service_request_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "provider_service_request_questions_provider_id_fkey"
-            columns: ["provider_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "provider_service_request_questions_service_request_id_fkey"
-            columns: ["service_request_id"]
-            isOneToOne: false
-            referencedRelation: "service_requests"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       rpc_idempotency_records: {
         Row: {
           actor_user_id: string
@@ -1982,7 +1931,6 @@ export type Database = {
           status: Database["public"]["Enums"]["service_request_status"]
           suggested_equipment: string[] | null
           suggested_materials: string[] | null
-          suggested_questions: string[] | null
           tags: string[] | null
           title: string
           updated_at: string
@@ -2013,7 +1961,6 @@ export type Database = {
           status?: Database["public"]["Enums"]["service_request_status"]
           suggested_equipment?: string[] | null
           suggested_materials?: string[] | null
-          suggested_questions?: string[] | null
           tags?: string[] | null
           title: string
           updated_at?: string
@@ -2044,7 +1991,6 @@ export type Database = {
           status?: Database["public"]["Enums"]["service_request_status"]
           suggested_equipment?: string[] | null
           suggested_materials?: string[] | null
-          suggested_questions?: string[] | null
           tags?: string[] | null
           title?: string
           updated_at?: string
@@ -2253,10 +2199,6 @@ export type Database = {
           tax_rate: number
         }[]
       }
-      can_provider_ask_question: {
-        Args: { p_provider_id: string; p_service_request_id: string }
-        Returns: boolean
-      }
       cancel_service_request: {
         Args: { p_idempotency_key: string; p_service_request_id: string }
         Returns: Json
@@ -2400,10 +2342,6 @@ export type Database = {
         }
         Returns: Json
       }
-      create_provider_service_request_question: {
-        Args: { p_question: string; p_service_request_id: string }
-        Returns: Json
-      }
       cron_chat_evaluate_reciprocity: { Args: never; Returns: Json }
       cron_cns_janitor_orphan_media: { Args: never; Returns: Json }
       cron_cns_process_domain_events: { Args: never; Returns: Json }
@@ -2510,15 +2448,6 @@ export type Database = {
         }
         Returns: Json
       }
-      list_client_budget_questions: {
-        Args: {
-          p_page?: number
-          p_page_size?: number
-          p_question_status?: string
-          p_search?: string
-        }
-        Returns: Json
-      }
       list_client_received_budgets: {
         Args: {
           p_page?: number
@@ -2537,15 +2466,6 @@ export type Database = {
         Returns: Json
       }
       list_proposal_versions: { Args: { p_chat_id: string }; Returns: Json }
-      list_provider_own_questions: {
-        Args: {
-          p_page?: number
-          p_page_size?: number
-          p_question_status?: string
-          p_search?: string
-        }
-        Returns: Json
-      }
       list_provider_sent_budgets: {
         Args: {
           p_page?: number
@@ -2553,10 +2473,6 @@ export type Database = {
           p_search?: string
           p_status?: string
         }
-        Returns: Json
-      }
-      list_provider_service_request_questions: {
-        Args: { p_service_request_id: string }
         Returns: Json
       }
       match_provider_jobs: {
@@ -2618,14 +2534,6 @@ export type Database = {
       resolve_proposal_chat_id: {
         Args: { p_provider_id: string; p_service_request_id: string }
         Returns: string
-      }
-      respond_client_budget_question: {
-        Args: {
-          p_question_id: string
-          p_response: string
-          p_response_images?: string[]
-        }
-        Returns: Json
       }
       sanitize_job_error: { Args: { p_message: string }; Returns: string }
       slugify_for_provider: { Args: { name_input: string }; Returns: string }

@@ -27,30 +27,6 @@ export interface ProviderSentBudget {
   masked_client_name: string;
 }
 
-export interface ProviderOwnQuestion {
-  id: string;
-  question: string;
-  client_response: string | null;
-  created_at: string;
-  client_responded_at: string | null;
-  service_request_id: string;
-  service_request_title: string;
-  service_request_description: string | null;
-  service_request_photos: string[] | null;
-  service_request_urgency: string | null;
-  service_request_status: string | null;
-  service_request_created_at: string;
-  service_title: string;
-  service_slug: string;
-  service_icon_key: string | null;
-  service_color_key: string | null;
-  neighborhood: string | null;
-  city: string | null;
-  state_abbr: string | null;
-  masked_client_name: string;
-  has_proposal: boolean;
-}
-
 export interface PaginatedResponse<T> {
   items: T[];
   total_count: number;
@@ -58,17 +34,7 @@ export interface PaginatedResponse<T> {
   page_size: number;
 }
 
-export type BudgetsTab = "enviados" | "perguntas";
-
 export type BudgetStatusFilter = "submitted" | "accepted" | "rejected";
 
-export type QuestionStatusFilter = "pending" | "answered";
-
-/** Filtro inicial na aba Enviados (sem opção “Todos”). */
+/** Default filter on the sent budgets list (no "All" option). */
 export const DEFAULT_BUDGET_STATUS_FILTER: BudgetStatusFilter = "submitted";
-
-/** Filtro inicial na aba Perguntas (sem opções “Todas” / “Encerradas”). */
-export const DEFAULT_QUESTION_STATUS_FILTER: QuestionStatusFilter = "pending";
-
-/** Default tab used when opening the budgets screen (runtime value for consumers/tests). */
-export const DEFAULT_BUDGETS_TAB: BudgetsTab = "enviados";

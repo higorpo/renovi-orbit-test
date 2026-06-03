@@ -46,7 +46,6 @@ export const ESTIMATED_DURATION_HINT_VALUES = ESTIMATED_DURATION_HINT_KEYS;
 export interface StructuredDataPayload {
   urgency?: "low" | "medium" | "high" | null;
   scope_complexity?: "simple" | "medium" | "complex" | null;
-  suggested_questions?: string[] | null;
   tags?: string[] | null;
   missing_info_warnings?: string[] | null;
   suggested_equipment?: string[] | null;

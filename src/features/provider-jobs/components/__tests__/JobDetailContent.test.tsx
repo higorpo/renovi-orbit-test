@@ -1,5 +1,4 @@
 import {
-  act,
   fireEvent,
   render,
   screen,
@@ -8,17 +7,9 @@ import {
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactElement, type ReactNode } from "react";
-import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { JobDetailContent } from "../JobDetailContent";
 import { createMinimalJob } from "../../__tests__/fixtures/jobFixtures";
-
-vi.mock("../../api/providerJobQuestions.api", () => ({
-  createProviderJobQuestion: vi.fn().mockResolvedValue({
-    data: { id: "q", created_at: "t" },
-    error: null,
-  }),
-}));
 
 type Slot = {
   startDate: string;
@@ -139,14 +130,6 @@ vi.mock("@/features/negotiation-proposals", async (importOriginal) => {
   };
 });
 
-vi.mock("../JobQuestionsFeed", () => ({
-  JobQuestionsFeed: () => <div data-testid="questions-feed-stub" />,
-}));
-
-vi.mock("sonner", () => ({
-  toast: { success: vi.fn(), error: vi.fn() },
-}));
-
 function renderWithQuery(ui: ReactElement) {
   const client = new QueryClient();
   return render(
@@ -200,22 +183,22 @@ describe("JobDetailContent", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders job without active proposal sections", () => {
+  it("renders job detail for browse state", () => {
     const job = createMinimalJob();
     renderWithQuery(<JobDetailContent job={job} isInsideSheet />);
     expect(screen.getByText(job.title)).toBeInTheDocument();
-    expect(screen.getByText(/você tem alguma dúvida/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /estou pronto para enviar um orçamento/i, hidden: true }),
+    ).toBeInTheDocument();
   });
 
-  it("hides question prompt and floating CTAs when viewing a non-latest proposal", () => {
+  it("hides floating proposal CTA when viewing a non-latest proposal", () => {
     const job = createMinimalJob({
       provider_proposal_id: "old-prop",
       provider_proposal_status: "REVISED",
       is_latest_provider_proposal: false,
     });
     renderWithQuery(<JobDetailContent job={job} />);
-    expect(screen.queryByText(/você tem alguma dúvida/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /fazer pergunta/i })).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /estou pronto para enviar um orçamento/i }),
     ).not.toBeInTheDocument();
@@ -238,46 +221,6 @@ describe("JobDetailContent", () => {
     const closeButtons = within(dialog).getAllByRole("button", { name: /^fechar$/i });
     fireEvent.click(closeButtons[0]);
     expect(proposalUi.closeProposalComposer).toHaveBeenCalled();
-  });
-
-  it("opens question composer and submits via dialog", async () => {
-    const job = createMinimalJob();
-    renderWithQuery(<JobDetailContent job={job} />);
-    fireEvent.click(screen.getByRole("button", { name: /fazer pergunta/i }));
-    await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
-    });
-    const textarea = screen.getByPlaceholderText(/local possui/i);
-    fireEvent.change(textarea, { target: { value: "Pergunta de teste" } });
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /^enviar pergunta$/i }));
-    });
-    await waitFor(() => {
-      expect(toast.success).toHaveBeenCalled();
-    });
-  });
-
-  it("prefills question composer from suggested question", async () => {
-    renderWithQuery(<JobDetailContent job={createMinimalJob()} />);
-    fireEvent.click(screen.getByRole("button", { name: /ver perguntas sugeridas/i }));
-    fireEvent.click(screen.getByRole("button", { name: /usar pergunta sugerida/i }));
-    await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
-    });
-    const textarea = screen.getByPlaceholderText(/local possui/i) as HTMLTextAreaElement;
-    expect(textarea.value).toContain("disjuntor");
-  });
-
-  it("closes question composer when cancel is pressed", async () => {
-    renderWithQuery(<JobDetailContent job={createMinimalJob()} />);
-    fireEvent.click(screen.getByRole("button", { name: /fazer pergunta/i }));
-    await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByRole("button", { name: /^cancelar$/i }));
-    await waitFor(() => {
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    });
   });
 
   it("calls submitProposal when proposal dialog submits valid payload", async () => {
@@ -317,17 +260,5 @@ describe("JobDetailContent", () => {
     });
     fireEvent.click(ready);
     expect(proposalUi.openComposer).toHaveBeenCalled();
-  });
-
-  it("opens question composer from desktop floating actions", async () => {
-    renderWithQuery(<JobDetailContent job={createMinimalJob()} />);
-    const ask = screen.getByRole("button", {
-      name: /quero fazer uma pergunta/i,
-      hidden: true,
-    });
-    fireEvent.click(ask);
-    await waitFor(() => {
-      expect(screen.getByRole("dialog")).toBeInTheDocument();
-    });
   });
 });

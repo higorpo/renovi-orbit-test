@@ -1,21 +1,16 @@
-import { FileText, MessageCircleQuestion } from "lucide-react";
+import { FileText } from "lucide-react";
 
 export interface BudgetsHeaderProps {
   /** Proposals with status submitted (awaiting client approval), not affected by list filters. */
   pendingApprovalBudgetCount: number;
-  pendingQuestionsCount: number;
-  /** Enquanto as duas listas (orçamentos + perguntas) carregam na entrada da tela. */
   isLoading: boolean;
   pendingApprovalCountError?: boolean;
-  pendingQuestionsCountError?: boolean;
 }
 
 export function BudgetsHeader({
   pendingApprovalBudgetCount,
-  pendingQuestionsCount,
   isLoading,
   pendingApprovalCountError,
-  pendingQuestionsCountError,
 }: BudgetsHeaderProps) {
   return (
     <div className="space-y-2">
@@ -24,8 +19,7 @@ export function BudgetsHeader({
           Orçamentos
         </h1>
         <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-          Acompanhe os orçamentos que você enviou e as perguntas feitas aos
-          clientes
+          Acompanhe os orçamentos que você enviou
         </p>
       </div>
 
@@ -44,22 +38,6 @@ export function BudgetsHeader({
               </>
             )}
           </span>
-          {(pendingQuestionsCount > 0 || pendingQuestionsCountError) && (
-            <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
-              <MessageCircleQuestion
-                className="h-3.5 w-3.5 shrink-0"
-                aria-hidden
-              />
-              {pendingQuestionsCountError ? (
-                <>— perguntas (indisponível)</>
-              ) : (
-                <>
-                  {pendingQuestionsCount} pergunta{pendingQuestionsCount !== 1 ? "s" : ""}{" "}
-                  aguardando resposta
-                </>
-              )}
-            </span>
-          )}
         </div>
       )}
     </div>

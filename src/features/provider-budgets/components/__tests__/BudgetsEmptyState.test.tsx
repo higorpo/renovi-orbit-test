@@ -7,7 +7,6 @@ describe("BudgetsEmptyState", () => {
     const onClear = vi.fn();
     render(
       <BudgetsEmptyState
-        tab="enviados"
         hasFilters
         onClearFilters={onClear}
       />,
@@ -17,21 +16,12 @@ describe("BudgetsEmptyState", () => {
     expect(onClear).toHaveBeenCalled();
   });
 
-  it("shows default empty copy for enviados without filters", () => {
+  it("shows default empty copy without filters", () => {
     render(
-      <BudgetsEmptyState tab="enviados" hasFilters={false} />,
+      <BudgetsEmptyState hasFilters={false} />,
     );
     expect(
       screen.getByText(/você ainda não enviou nenhum orçamento/i),
-    ).toBeInTheDocument();
-  });
-
-  it("shows default empty copy for perguntas without filters", () => {
-    render(
-      <BudgetsEmptyState tab="perguntas" hasFilters={false} />,
-    );
-    expect(
-      screen.getByText(/você ainda não enviou nenhuma pergunta/i),
     ).toBeInTheDocument();
   });
 });

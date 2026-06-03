@@ -2,32 +2,24 @@ import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { FilterChip } from "@/components/ui/filter-chip";
 import { cn } from "@/lib/utils";
-import { QUESTION_FILTERS, RECEIVED_FILTERS } from "../constants/status";
-import type { ClientBudgetsTab, QuestionStatusFilter, ReceivedStatusFilter } from "../types/client-budgets.types";
+import { RECEIVED_FILTERS } from "../constants/status";
+import type { ReceivedStatusFilter } from "../types/client-budgets.types";
 
 interface ClientBudgetsFiltersBarProps {
-  activeTab: ClientBudgetsTab;
   receivedStatusFilter: ReceivedStatusFilter;
-  questionStatusFilter: QuestionStatusFilter;
   searchQuery: string;
   onReceivedStatusChange: (filter: ReceivedStatusFilter) => void;
-  onQuestionStatusChange: (filter: QuestionStatusFilter) => void;
   onSearchChange: (value: string) => void;
   disabled?: boolean;
 }
 
 export function ClientBudgetsFiltersBar({
-  activeTab,
   receivedStatusFilter,
-  questionStatusFilter,
   searchQuery,
   onReceivedStatusChange,
-  onQuestionStatusChange,
   onSearchChange,
   disabled,
 }: ClientBudgetsFiltersBarProps) {
-  const filters = activeTab === "recebidos" ? RECEIVED_FILTERS : QUESTION_FILTERS;
-
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div
@@ -37,22 +29,14 @@ export function ClientBudgetsFiltersBar({
           "snap-x snap-mandatory scroll-smooth",
         )}
       >
-        {filters.map((filter) => (
+        {RECEIVED_FILTERS.map((filter) => (
           <FilterChip
             key={filter.id}
             label={filter.label}
             icon={filter.icon}
             iconColor={filter.iconColor}
-            isActive={
-              activeTab === "recebidos"
-                ? receivedStatusFilter === filter.id
-                : questionStatusFilter === filter.id
-            }
-            onClick={() =>
-              activeTab === "recebidos"
-                ? onReceivedStatusChange(filter.id as ReceivedStatusFilter)
-                : onQuestionStatusChange(filter.id as QuestionStatusFilter)
-            }
+            isActive={receivedStatusFilter === filter.id}
+            onClick={() => onReceivedStatusChange(filter.id)}
             disabled={disabled}
           />
         ))}

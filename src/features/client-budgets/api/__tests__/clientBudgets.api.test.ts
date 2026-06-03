@@ -1,12 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   fetchClientReceivedBudgets,
-  fetchClientBudgetQuestions,
   fetchClientBudgetDetail,
-  respondClientBudgetQuestion,
   rejectClientBudgetProposal,
-  uploadQuestionResponseImages,
-  getQuestionResponseImageUrl,
 } from "../clientBudgets.api";
 
 vi.mock("@/lib/supabase/client", () => ({
@@ -24,19 +20,14 @@ vi.mock("@/lib/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn() },
 }));
 
-// RPC mock — supabase is cast to RpcClient in the API
 const rpcMock = vi.fn();
 const { supabase } = await import("@/lib/supabase/client");
 (supabase as unknown as { rpc: ReturnType<typeof vi.fn> }).rpc = rpcMock;
-
-const authGetUserMock = vi.mocked(supabase.auth.getUser);
-const storageFromMock = vi.mocked(supabase.storage.from);
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
-// Helper to build a valid paginated response
 function paginatedResponse<T>(items: T[] = []) {
   return { items, total_count: items.length, page: 1, page_size: 10 };
 }
@@ -68,47 +59,6 @@ describe("fetchClientReceivedBudgets", () => {
   });
 });
 
-describe("fetchClientBudgetQuestions", () => {
-  it("returns paginated data on success", async () => {
-    const payload = paginatedResponse([{ id: "question-1" }]);
-    rpcMock.mockResolvedValue({ data: payload, error: null });
-
-    const result = await fetchClientBudgetQuestions({
-      page: 1,
-      pageSize: 10,
-      questionStatus: null,
-      search: null,
-    });
-    expect(result.data).toEqual(payload);
-    expect(result.error).toBeNull();
-  });
-
-  it("returns error on failure", async () => {
-    rpcMock.mockResolvedValue({ data: null, error: { message: "Failed" } });
-
-    const result = await fetchClientBudgetQuestions({
-      page: 1,
-      pageSize: 10,
-      questionStatus: null,
-      search: null,
-    });
-    expect(result.data).toBeNull();
-    expect(result.error).toBe("Failed");
-  });
-
-  it("returns error for invalid response shape", async () => {
-    rpcMock.mockResolvedValue({ data: "string-response", error: null });
-
-    const result = await fetchClientBudgetQuestions({
-      page: 1,
-      pageSize: 10,
-      questionStatus: null,
-      search: null,
-    });
-    expect(result.error).toBe("Unexpected response from server");
-  });
-});
-
 describe("fetchClientBudgetDetail", () => {
   it("returns detail data on success", async () => {
     const detail = { id: "req-1", services: [] };
@@ -136,32 +86,6 @@ describe("fetchClientBudgetDetail", () => {
   });
 });
 
-describe("respondClientBudgetQuestion", () => {
-  it("returns data on success", async () => {
-    rpcMock.mockResolvedValue({ data: { success: true }, error: null });
-
-    const result = await respondClientBudgetQuestion({
-      questionId: "q-1",
-      response: "My answer",
-      imagePaths: [],
-    });
-    expect(result.error).toBeNull();
-    expect(result.data).toEqual({ success: true });
-  });
-
-  it("returns error on RPC failure", async () => {
-    rpcMock.mockResolvedValue({ data: null, error: { message: "Cannot respond" } });
-
-    const result = await respondClientBudgetQuestion({
-      questionId: "q-1",
-      response: "My answer",
-      imagePaths: [],
-    });
-    expect(result.error).toBe("Cannot respond");
-  });
-});
-
-
 describe("rejectClientBudgetProposal", () => {
   it("returns data on success", async () => {
     rpcMock.mockResolvedValue({ data: { status: "rejected" }, error: null });
@@ -186,244 +110,5 @@ describe("rejectClientBudgetProposal", () => {
       reason: "No",
     });
     expect(result.error).toBe("Cannot reject");
-  });
-});
-
-describe("uploadQuestionResponseImages", () => {
-  it("returns empty paths for empty files array", async () => {
-    const result = await uploadQuestionResponseImages({
-      serviceRequestId: "sr-1",
-      questionId: "q-1",
-      files: [],
-    });
-    expect(result.paths).toEqual([]);
-    expect(result.error).toBeNull();
-  });
-
-  it("returns error when file count exceeds MAX_IMAGES (5)", async () => {
-    const files = Array.from({ length: 6 }, (_, i) =>
-      new File(["content"], `file${i}.jpg`, { type: "image/jpeg" })
-    );
-
-    const result = await uploadQuestionResponseImages({
-      serviceRequestId: "sr-1",
-      questionId: "q-1",
-      files,
-    });
-    expect(result.error).toContain("5");
-    expect(result.paths).toEqual([]);
-  });
-
-  it("returns error when user is not authenticated", async () => {
-    authGetUserMock.mockResolvedValue({
-      data: { user: null },
-      error: null,
-    } as never);
-
-    const files = [new File(["content"], "file.jpg", { type: "image/jpeg" })];
-    const result = await uploadQuestionResponseImages({
-      serviceRequestId: "sr-1",
-      questionId: "q-1",
-      files,
-    });
-    expect(result.error).toBe("Usuário não autenticado");
-  });
-
-  it("returns auth error message from getUser when present", async () => {
-    authGetUserMock.mockResolvedValue({
-      data: { user: null },
-      error: { message: "Sessão expirada" },
-    } as never);
-
-    const files = [new File(["content"], "file.jpg", { type: "image/jpeg" })];
-    const result = await uploadQuestionResponseImages({
-      serviceRequestId: "sr-1",
-      questionId: "q-1",
-      files,
-    });
-    expect(result.error).toBe("Sessão expirada");
-  });
-
-  it("returns error for disallowed file type", async () => {
-    authGetUserMock.mockResolvedValue({
-      data: { user: { id: "user-1" } },
-      error: null,
-    } as never);
-
-    const files = [new File(["content"], "file.pdf", { type: "application/pdf" })];
-    const result = await uploadQuestionResponseImages({
-      serviceRequestId: "sr-1",
-      questionId: "q-1",
-      files,
-    });
-    expect(result.error).toContain("Formato não permitido");
-  });
-
-  it("returns error when file exceeds 5MB", async () => {
-    authGetUserMock.mockResolvedValue({
-      data: { user: { id: "user-1" } },
-      error: null,
-    } as never);
-
-    // Create a fake file with size > 5MB
-    const bigContent = new Uint8Array(6 * 1024 * 1024);
-    const files = [new File([bigContent], "big.jpg", { type: "image/jpeg" })];
-    const result = await uploadQuestionResponseImages({
-      serviceRequestId: "sr-1",
-      questionId: "q-1",
-      files,
-    });
-    expect(result.error).toContain("5 MB");
-  });
-
-  it("uploads valid file and returns path on success", async () => {
-    authGetUserMock.mockResolvedValue({
-      data: { user: { id: "user-1" } },
-      error: null,
-    } as never);
-
-    const uploadMock = vi.fn().mockResolvedValue({ error: null });
-    storageFromMock.mockReturnValue({ upload: uploadMock } as never);
-
-    const files = [new File(["content"], "image.jpg", { type: "image/jpeg" })];
-    const result = await uploadQuestionResponseImages({
-      serviceRequestId: "sr-1",
-      questionId: "q-1",
-      files,
-    });
-    expect(result.error).toBeNull();
-    expect(result.paths).toHaveLength(1);
-    expect(result.paths[0]).toContain("user-1");
-  });
-
-  it("returns error when upload fails", async () => {
-    authGetUserMock.mockResolvedValue({
-      data: { user: { id: "user-1" } },
-      error: null,
-    } as never);
-
-    const uploadMock = vi.fn().mockResolvedValue({ error: { message: "Upload failed" } });
-    storageFromMock.mockReturnValue({ upload: uploadMock } as never);
-
-    const files = [new File(["content"], "image.jpg", { type: "image/jpeg" })];
-    const result = await uploadQuestionResponseImages({
-      serviceRequestId: "sr-1",
-      questionId: "q-1",
-      files,
-    });
-    expect(result.error).toBe("Upload failed");
-  });
-
-  it("returns validation error on second file after first uploaded", async () => {
-    authGetUserMock.mockResolvedValue({
-      data: { user: { id: "user-1" } },
-      error: null,
-    } as never);
-
-    const uploadMock = vi.fn().mockResolvedValue({ error: null });
-    storageFromMock.mockReturnValue({ upload: uploadMock } as never);
-
-    const files = [
-      new File(["ok"], "a.jpg", { type: "image/jpeg" }),
-      new File(["bad"], "b.pdf", { type: "application/pdf" }),
-    ];
-    const result = await uploadQuestionResponseImages({
-      serviceRequestId: "sr-1",
-      questionId: "q-1",
-      files,
-    });
-    expect(result.paths).toHaveLength(1);
-    expect(result.error).toContain("Formato não permitido");
-  });
-
-  it("uses jpg extension when filename has no extension", async () => {
-    authGetUserMock.mockResolvedValue({
-      data: { user: { id: "user-1" } },
-      error: null,
-    } as never);
-
-    const uploadMock = vi.fn().mockResolvedValue({ error: null });
-    storageFromMock.mockReturnValue({ upload: uploadMock } as never);
-
-    const files = [new File(["x"], "noextension", { type: "image/jpeg" })];
-    const result = await uploadQuestionResponseImages({
-      serviceRequestId: "sr-1",
-      questionId: "q-1",
-      files,
-    });
-    expect(result.error).toBeNull();
-    expect(uploadMock).toHaveBeenCalledWith(
-      expect.stringMatching(/\.jpg$/),
-      expect.any(File),
-      expect.any(Object),
-    );
-  });
-
-  it("normalizes unknown extension to jpg in storage path", async () => {
-    authGetUserMock.mockResolvedValue({
-      data: { user: { id: "user-1" } },
-      error: null,
-    } as never);
-
-    const uploadMock = vi.fn().mockResolvedValue({ error: null });
-    storageFromMock.mockReturnValue({ upload: uploadMock } as never);
-
-    const files = [new File(["x"], "raw.bmp", { type: "image/jpeg" })];
-    const result = await uploadQuestionResponseImages({
-      serviceRequestId: "sr-1",
-      questionId: "q-1",
-      files,
-    });
-    expect(result.error).toBeNull();
-    expect(uploadMock).toHaveBeenCalledWith(
-      expect.stringMatching(/\.jpg$/),
-      expect.any(File),
-      expect.any(Object),
-    );
-  });
-});
-
-describe("getQuestionResponseImageUrl", () => {
-  it("returns empty string for empty path", async () => {
-    const url = await getQuestionResponseImageUrl("");
-    expect(url).toBe("");
-  });
-
-  it("returns path as-is for http URLs", async () => {
-    const url = await getQuestionResponseImageUrl("https://example.com/image.jpg");
-    expect(url).toBe("https://example.com/image.jpg");
-  });
-
-  it("returns path as-is for http (non-https) URLs", async () => {
-    const url = await getQuestionResponseImageUrl("http://example.com/image.jpg");
-    expect(url).toBe("http://example.com/image.jpg");
-  });
-
-  it("returns signed URL for storage path", async () => {
-    const createSignedUrlMock = vi
-      .fn()
-      .mockResolvedValue({ data: { signedUrl: "https://signed.url/image.jpg" }, error: null });
-    storageFromMock.mockReturnValue({ createSignedUrl: createSignedUrlMock } as never);
-
-    const url = await getQuestionResponseImageUrl("clients/user-1/image.jpg");
-    expect(url).toBe("https://signed.url/image.jpg");
-  });
-
-  it("returns empty string when signed URL creation fails", async () => {
-    const createSignedUrlMock = vi
-      .fn()
-      .mockResolvedValue({ data: null, error: { message: "Error" } });
-    storageFromMock.mockReturnValue({ createSignedUrl: createSignedUrlMock } as never);
-
-    const url = await getQuestionResponseImageUrl("clients/user-1/image.jpg");
-    expect(url).toBe("");
-  });
-
-  it("returns empty string when signed URL payload has no signedUrl", async () => {
-    const createSignedUrlMock = vi.fn().mockResolvedValue({ data: {}, error: null });
-    storageFromMock.mockReturnValue({ createSignedUrl: createSignedUrlMock } as never);
-
-    const url = await getQuestionResponseImageUrl("clients/user-1/image.jpg");
-    expect(url).toBe("");
   });
 });

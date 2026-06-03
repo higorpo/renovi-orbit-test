@@ -18,7 +18,6 @@ interface Params {
   form_version: string | null;
   urgency?: "low" | "medium" | "high" | null;
   scope_complexity?: "simple" | "medium" | "complex" | null;
-  suggested_questions?: string[] | null;
   tags?: string[] | null;
   missing_info_warnings?: string[] | null;
   suggested_equipment?: string[] | null;
@@ -44,7 +43,6 @@ export async function createServiceRequest(
     status: "open",
     urgency: params.urgency ?? null,
     scope_complexity: params.scope_complexity ?? null,
-    suggested_questions: params.suggested_questions?.length ? params.suggested_questions : null,
     tags: params.tags?.length ? params.tags : null,
     missing_info_warnings: params.missing_info_warnings?.length ? params.missing_info_warnings : null,
     suggested_equipment: params.suggested_equipment?.length ? params.suggested_equipment : null,

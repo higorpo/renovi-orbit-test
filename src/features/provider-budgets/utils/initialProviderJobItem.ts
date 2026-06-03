@@ -1,8 +1,5 @@
 import type { ProviderJobItem } from "@/features/provider-jobs/types/provider-jobs.types";
-import type {
-  ProviderOwnQuestion,
-  ProviderSentBudget,
-} from "../types/provider-budgets.types";
+import type { ProviderSentBudget } from "../types/provider-budgets.types";
 
 /**
  * Preenche `ProviderJobItem` a partir do card de orçamento para usar como `initialData`
@@ -28,7 +25,6 @@ export function initialProviderJobItemFromSentBudget(
     scope_complexity: null,
     estimated_duration_hint: null,
     tags: null,
-    suggested_questions: null,
     suggested_equipment: null,
     suggested_materials: null,
     masked_client_name: budget.masked_client_name,
@@ -52,55 +48,5 @@ export function initialProviderJobItemFromSentBudget(
     is_latest_provider_proposal: true,
     exact_area_match: false,
     created_at: budget.service_request_created_at,
-  };
-}
-
-/**
- * Versão para card de pergunta (sem dados do orçamento no payload).
- */
-export function initialProviderJobItemFromOwnQuestion(
-  question: ProviderOwnQuestion,
-): ProviderJobItem {
-  return {
-    id: question.service_request_id,
-    title: question.service_request_title,
-    description: question.service_request_description,
-    service_id: "",
-    service_title: question.service_title,
-    service_slug: question.service_slug,
-    service_icon_key: question.service_icon_key,
-    service_color_key: question.service_color_key,
-    service_parent_id: null,
-    photos: question.service_request_photos,
-    form_data: null,
-    form_schema: null,
-    urgency: question.service_request_urgency,
-    scope_complexity: null,
-    estimated_duration_hint: null,
-    tags: null,
-    suggested_questions: null,
-    suggested_equipment: null,
-    suggested_materials: null,
-    masked_client_name: question.masked_client_name,
-    neighborhood: question.neighborhood ?? "",
-    city: question.city ?? "",
-    state: question.state_abbr ?? "",
-    distance_km: 0,
-    proposal_count: 1,
-    provider_proposal_id: null,
-    provider_proposed_amount: null,
-    provider_tax_rate: null,
-    provider_tax_amount: null,
-    provider_final_amount: null,
-    provider_proposal_description: null,
-    provider_proposal_duration_value: null,
-    provider_proposal_duration_unit: null,
-    provider_proposal_suggested_slots: null,
-    provider_proposal_photos: null,
-    provider_proposal_status: null,
-    provider_proposal_client_rejection_response: null,
-    is_latest_provider_proposal: null,
-    exact_area_match: false,
-    created_at: question.service_request_created_at,
   };
 }

@@ -2,33 +2,24 @@ import { cn } from "@/lib/utils";
 import { FilterChip } from "@/components/ui/filter-chip";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
-import type { BudgetsTab, BudgetStatusFilter, QuestionStatusFilter } from "../types/provider-budgets.types";
-import { BUDGET_STATUS_FILTERS, QUESTION_STATUS_FILTERS } from "../constants/budgetStatus";
+import type { BudgetStatusFilter } from "../types/provider-budgets.types";
+import { BUDGET_STATUS_FILTERS } from "../constants/budgetStatus";
 
 export interface BudgetsFilterChipsProps {
-  activeTab: BudgetsTab;
   budgetStatusFilter: BudgetStatusFilter;
-  questionStatusFilter: QuestionStatusFilter;
   searchQuery: string;
   onBudgetStatusChange: (filter: BudgetStatusFilter) => void;
-  onQuestionStatusChange: (filter: QuestionStatusFilter) => void;
   onSearchChange: (query: string) => void;
   disabled?: boolean;
 }
 
 export function BudgetsFilterChips({
-  activeTab,
   budgetStatusFilter,
-  questionStatusFilter,
   searchQuery,
   onBudgetStatusChange,
-  onQuestionStatusChange,
   onSearchChange,
   disabled,
 }: BudgetsFilterChipsProps) {
-  const filters =
-    activeTab === "enviados" ? BUDGET_STATUS_FILTERS : QUESTION_STATUS_FILTERS;
-
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div
@@ -40,24 +31,14 @@ export function BudgetsFilterChips({
         role="tablist"
         aria-label="Filtros de status"
       >
-        {filters.map((f) => (
+        {BUDGET_STATUS_FILTERS.map((f) => (
           <FilterChip
             key={f.id}
             label={f.label}
             icon={f.icon}
             iconColor={f.iconColor}
-            isActive={
-              activeTab === "enviados"
-                ? budgetStatusFilter === f.id
-                : questionStatusFilter === f.id
-            }
-            onClick={() => {
-              if (activeTab === "enviados") {
-                onBudgetStatusChange(f.id as BudgetStatusFilter);
-              } else {
-                onQuestionStatusChange(f.id as QuestionStatusFilter);
-              }
-            }}
+            isActive={budgetStatusFilter === f.id}
+            onClick={() => onBudgetStatusChange(f.id)}
             disabled={disabled}
           />
         ))}

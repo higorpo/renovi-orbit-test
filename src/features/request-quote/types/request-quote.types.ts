@@ -32,7 +32,6 @@ export type ServiceRequestStructuredData = Pick<
   StructuredAIResponse,
   | "urgency"
   | "scope_complexity"
-  | "suggested_questions"
   | "tags"
   | "missing_info_warnings"
   | "suggested_equipment"

@@ -103,7 +103,6 @@ IMPORTANTE: Você DEVE retornar APENAS um JSON válido no seguinte formato (sem 
   "suggested_title": "Título curto e específico para o pedido (sem prefixo 'Pedido de').",
   "tags": ["tag1", "tag2", "tag3"],
   "missing_info_warnings": ["Aviso 1", "Aviso 2"],
-  "suggested_questions": ["Pergunta 1", "Pergunta 2"],
   "urgency": "low|medium|high",
   "scope_complexity": "simple|medium|complex",
   "confidence": 0.0-1.0,
@@ -129,7 +128,6 @@ REGRAS DE PREENCHIMENTO (RESTRITIVAS):
   
 - tags: Array de tags baseadas APENAS no que foi informado (ex: "urgente", "residencial")
 - missing_info_warnings: Array de avisos sobre informações faltantes
-- suggested_questions: Array de perguntas relevantes para o prestador fazer ao cliente
 - urgency: "high" se urgência foi marcada como urgente, "medium" se média, "low" se baixa
 - scope_complexity: "simple" se quantidade pequena (1-2), "medium" se média (3-5), "complex" se grande (6+)
 - confidence: 0.0-1.0 baseado na completude das informações fornecidas
@@ -150,7 +148,6 @@ EXEMPLO CORRETO (um único texto em primeira pessoa, sem seções):
   "suggested_title": "Instalação de 2 chuveiros 220V com revisão elétrica",
   "tags": ["urgente", "residencial", "instalação", "emergência"],
   "missing_info_warnings": [],
-  "suggested_questions": ["Os chuveiros anteriores eram 220V?", "Há fiação elétrica no local?"],
   "urgency": "high",
   "scope_complexity": "simple",
   "confidence": 0.9,

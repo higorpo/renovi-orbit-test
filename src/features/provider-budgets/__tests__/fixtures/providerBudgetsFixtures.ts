@@ -1,7 +1,4 @@
-import type {
-  ProviderOwnQuestion,
-  ProviderSentBudget,
-} from "../../types/provider-budgets.types";
+import type { ProviderSentBudget } from "../../types/provider-budgets.types";
 
 export function createProviderSentBudget(
   overrides: Partial<ProviderSentBudget> = {},
@@ -33,35 +30,6 @@ export function createProviderSentBudget(
     city: "Florianópolis",
     state_abbr: "SC",
     masked_client_name: "João S.",
-    ...overrides,
-  };
-}
-
-export function createProviderOwnQuestion(
-  overrides: Partial<ProviderOwnQuestion> = {},
-): ProviderOwnQuestion {
-  return {
-    id: "q-1",
-    question: "Qual o prazo?",
-    client_response: null,
-    created_at: "2024-01-14T11:00:00.000Z",
-    client_responded_at: null,
-    service_request_id: "sr-2",
-    service_request_title: "Pintura",
-    service_request_description: null,
-    service_request_photos: null,
-    service_request_urgency: null,
-    service_request_status: "open",
-    service_request_created_at: "2024-01-12T09:00:00.000Z",
-    service_title: "Pintura",
-    service_slug: "pintura",
-    service_icon_key: null,
-    service_color_key: null,
-    neighborhood: null,
-    city: null,
-    state_abbr: null,
-    masked_client_name: "Maria L.",
-    has_proposal: false,
     ...overrides,
   };
 }

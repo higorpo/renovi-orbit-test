@@ -20,7 +20,6 @@ import {
   Eye,
   Trash2,
   GitCompare,
-  MessageCircleQuestion,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getServiceCardStyle } from "@/features/request-quote";
@@ -47,7 +46,6 @@ export interface ServiceCardProps {
   model: ServiceRequestCardModel;
   onCancel?: (id: string) => void;
   onOpenBudgets?: (serviceRequestId: string) => void;
-  onOpenQuestions?: (serviceRequestId: string) => void;
   onOpenDetails?: (model: ServiceRequestCardModel) => void;
   isCancelling?: boolean;
   className?: string;
@@ -57,14 +55,12 @@ function CardActions({
   model,
   onCancel,
   onOpenBudgets,
-  onOpenQuestions,
   onOpenDetails,
   isCancelling,
 }: {
   model: ServiceRequestCardModel;
   onCancel?: (id: string) => void;
   onOpenBudgets?: (serviceRequestId: string) => void;
-  onOpenQuestions?: (serviceRequestId: string) => void;
   onOpenDetails?: (model: ServiceRequestCardModel) => void;
   isCancelling?: boolean;
 }) {
@@ -72,10 +68,9 @@ function CardActions({
 
   const actions: Array<{
     label: string;
-    action?: "cancel" | "openBudgets" | "openQuestions" | "openDetails";
+    action?: "cancel" | "openBudgets" | "openDetails";
     icon: React.ComponentType<{ className?: string }>;
   }> = [];
-  const canOpenQuestions = model.status === "open" && (model.proposalCount ?? 0) !== 1;
   const canOpenBudgets =
     model.status === "open" &&
     (model.proposalCount ?? 0) > 0 &&
@@ -86,13 +81,6 @@ function CardActions({
       actions.push({ label: "Ver detalhes", action: "openDetails", icon: Eye });
       if (canOpenBudgets) {
         actions.push({ label: "Ver orçamentos", action: "openBudgets", icon: GitCompare });
-      }
-      if (canOpenQuestions) {
-        actions.push({
-          label: "Ver perguntas",
-          action: "openQuestions",
-          icon: MessageCircleQuestion,
-        });
       }
       if (canCancelService(model)) {
         actions.push({ label: "Cancelar pedido", action: "cancel", icon: Trash2 });
@@ -170,18 +158,6 @@ function CardActions({
             <action.icon className="h-3.5 w-3.5" aria-hidden />
             {action.label}
           </Button>
-        ) : action.action === "openQuestions" ? (
-          <Button
-            key={action.label}
-            variant="outline"
-            size="sm"
-            className="h-9 min-h-9 shrink-0"
-            onClick={() => onOpenQuestions?.(model.id)}
-            aria-label="Ver perguntas"
-          >
-            <action.icon className="h-3.5 w-3.5" aria-hidden />
-            {action.label}
-          </Button>
         ) : action.action === "openDetails" ? (
           <Button
             key={action.label}
@@ -209,7 +185,6 @@ export function ClientMyServicesCard({
   model,
   onCancel,
   onOpenBudgets,
-  onOpenQuestions,
   onOpenDetails,
   isCancelling,
   className,
@@ -318,7 +293,6 @@ export function ClientMyServicesCard({
           model={model}
           onCancel={onCancel}
           onOpenBudgets={onOpenBudgets}
-          onOpenQuestions={onOpenQuestions}
           onOpenDetails={onOpenDetails}
           isCancelling={isCancelling}
         />

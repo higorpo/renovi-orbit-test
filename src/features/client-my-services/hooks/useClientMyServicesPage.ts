@@ -18,7 +18,7 @@ export function useClientMyServicesPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const searchQueryDebounced = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
-  const [detailsMode, setDetailsMode] = useState<"budgets" | "questions" | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<string | null>(null);
   const [selectedOpenService, setSelectedOpenService] = useState<ServiceRequestCardModel | null>(
     null
@@ -150,12 +150,7 @@ export function useClientMyServicesPage() {
 
   const handleOpenBudgets = useCallback((serviceRequestId: string) => {
     setSelectedServiceRequestId(serviceRequestId);
-    setDetailsMode("budgets");
-  }, []);
-
-  const handleOpenQuestions = useCallback((serviceRequestId: string) => {
-    setSelectedServiceRequestId(serviceRequestId);
-    setDetailsMode("questions");
+    setDetailsOpen(true);
   }, []);
 
   const handleOpenDetails = useCallback((model: ServiceRequestCardModel) => {
@@ -167,7 +162,7 @@ export function useClientMyServicesPage() {
   }, []);
 
   useEffect(() => {
-    if (!detailsMode && !selectedOpenService) return;
+    if (!detailsOpen && !selectedOpenService) return;
 
     const previousBodyOverflow = document.body.style.overflow;
     const previousHtmlOverflow = document.documentElement.style.overflow;
@@ -179,7 +174,7 @@ export function useClientMyServicesPage() {
       document.body.style.overflow = previousBodyOverflow;
       document.documentElement.style.overflow = previousHtmlOverflow;
     };
-  }, [detailsMode, selectedOpenService]);
+  }, [detailsOpen, selectedOpenService]);
 
   return {
     // search
@@ -210,8 +205,8 @@ export function useClientMyServicesPage() {
     cityOptions,
     neighborhoodOptions,
     // details sheets
-    detailsMode,
-    setDetailsMode,
+    detailsOpen,
+    setDetailsOpen,
     selectedServiceRequestId,
     selectedOpenService,
     setSelectedOpenService,
@@ -221,7 +216,6 @@ export function useClientMyServicesPage() {
     handleClearFocusFilter,
     handleClearFilters,
     handleOpenBudgets,
-    handleOpenQuestions,
     handleOpenDetails,
   };
 }

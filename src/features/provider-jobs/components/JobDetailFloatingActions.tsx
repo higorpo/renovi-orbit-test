@@ -1,16 +1,14 @@
-import { CircleDollarSign, HelpCircle, Send } from "lucide-react";
+import { CircleDollarSign, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface JobDetailFloatingActionsProps {
   isInsideSheet: boolean;
-  onAskQuestion: () => void;
   onOpenProposalComposer: () => void;
 }
 
 export function JobDetailFloatingActions({
   isInsideSheet,
-  onAskQuestion,
   onOpenProposalComposer,
 }: JobDetailFloatingActionsProps) {
   return (
@@ -39,16 +37,12 @@ export function JobDetailFloatingActions({
 
       <div
         className={cn(
-          "fixed bottom-5 z-40 hidden rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/85 md:grid md:grid-cols-2 md:gap-3",
+          "fixed bottom-5 z-40 hidden rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/85 md:block",
           isInsideSheet
             ? "right-4 w-[calc(100%-2rem)] sm:w-[calc(36rem-2rem)] md:w-[calc(42rem-2rem)] lg:w-[calc(48rem-2rem)]"
             : "left-1/2 w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2",
         )}
       >
-        <Button type="button" variant="outline" className="w-full gap-2" onClick={onAskQuestion}>
-          <HelpCircle className="h-4 w-4" aria-hidden />
-          Quero fazer uma pergunta
-        </Button>
         <Button
           type="button"
           variant="secondary"

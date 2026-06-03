@@ -11,7 +11,7 @@ const CLIENT_COPY: PushPermissionCopy = {
 
 const PROVIDER_COPY: PushPermissionCopy = {
   benefits:
-    'Queremos avisar você na hora quando surgir uma oportunidade no Renovi — por exemplo, um novo pedido na sua área, uma pergunta do cliente, uma resposta à sua proposta ou uma atualização em um serviço em andamento.',
+    'Queremos avisar você na hora quando surgir uma oportunidade no Renovi — por exemplo, um novo pedido na sua área, uma resposta à sua proposta ou uma atualização em um serviço em andamento.',
 }
 
 const DEFAULT_COPY: PushPermissionCopy = {

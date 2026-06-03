@@ -281,7 +281,6 @@ describe("createRequestQuoteOrder", () => {
           structured: {
             urgency: "low",
             scope_complexity: null,
-            suggested_questions: null,
             tags: null,
             missing_info_warnings: null,
             suggested_equipment: null,

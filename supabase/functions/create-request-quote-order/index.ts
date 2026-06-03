@@ -130,7 +130,6 @@ serve(async (req) => {
       form_version: data.formVersion,
       urgency: data.structuredData?.urgency ?? null,
       scope_complexity: data.structuredData?.scope_complexity ?? null,
-      suggested_questions: data.structuredData?.suggested_questions ?? null,
       tags: data.structuredData?.tags ?? null,
       missing_info_warnings: data.structuredData?.missing_info_warnings ?? null,
       suggested_equipment: data.structuredData?.suggested_equipment ?? null,

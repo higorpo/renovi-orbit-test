@@ -21,7 +21,7 @@ export function getJobDetailReturnNavigation(
       backLabel: "Voltar para Orçamentos",
       notFoundCtaLabel: "Ver orçamentos",
       notFoundDescription:
-        "Este trabalho pode não estar mais disponível. Volte para Orçamentos para ver seus orçamentos e perguntas.",
+        "Este trabalho pode não estar mais disponível. Volte para Orçamentos para ver seus orçamentos.",
     };
   }
   return {

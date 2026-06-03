@@ -7,21 +7,18 @@ describe("BudgetsHeader", () => {
     render(
       <BudgetsHeader
         pendingApprovalBudgetCount={3}
-        pendingQuestionsCount={2}
         isLoading
       />,
     );
     expect(
       screen.queryByText(/3 orçamentos aguardando aprovação/),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText(/2 perguntas aguardando resposta/)).not.toBeInTheDocument();
   });
 
   it("shows pending-approval budget line with singular wording", () => {
     render(
       <BudgetsHeader
         pendingApprovalBudgetCount={1}
-        pendingQuestionsCount={0}
         isLoading={false}
       />,
     );
@@ -30,28 +27,13 @@ describe("BudgetsHeader", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows singular pending question line", () => {
-    render(
-      <BudgetsHeader
-        pendingApprovalBudgetCount={0}
-        pendingQuestionsCount={1}
-        isLoading={false}
-      />,
-    );
-    expect(
-      screen.getByText(/1 pergunta aguardando resposta/),
-    ).toBeInTheDocument();
-  });
-
-  it("shows plural orçamentos aguardando aprovação and pending questions banner", () => {
+  it("shows plural orçamentos aguardando aprovação", () => {
     render(
       <BudgetsHeader
         pendingApprovalBudgetCount={4}
-        pendingQuestionsCount={2}
         isLoading={false}
       />,
     );
     expect(screen.getByText(/4 orçamentos aguardando aprovação/)).toBeInTheDocument();
-    expect(screen.getByText(/2 perguntas aguardando resposta/)).toBeInTheDocument();
   });
 });

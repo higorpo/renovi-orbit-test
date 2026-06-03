@@ -1,12 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  formatQuestionExtraLabel,
   formatReceivedExtraBudgetsLabel,
   getBudgetStatusConfig,
-  getQuestionCardCtaLabel,
-  getQuestionCardSummaryLine,
-  getQuestionExtraCount,
-  getQuestionStatusConfig,
   getReceivedBudgetSheetMode,
   getReceivedBudgetSheetTitle,
   getReceivedBudgetSummaryLine,
@@ -14,19 +9,17 @@ import {
   getReceivedCardCtaLabel,
   getReceivedExtraBudgetCount,
   getServiceBudgetFlowStatus,
-  QUESTION_FILTERS,
   RECEIVED_FILTERS,
 } from "../status";
-import type { QuestionStatusFilter, ReceivedStatusFilter } from "../../types/client-budgets.types";
+import type { ReceivedStatusFilter } from "../../types/client-budgets.types";
 
 describe("client-budgets status constants", () => {
-  it("RECEIVED_FILTERS and QUESTION_FILTERS have ids and labels", () => {
+  it("RECEIVED_FILTERS have ids and labels", () => {
     expect(RECEIVED_FILTERS.map((f) => f.id)).toEqual([
       "awaiting_decision",
       "accepted",
       "rejected",
     ]);
-    expect(QUESTION_FILTERS.map((f) => f.id)).toEqual(["pending", "answered"]);
   });
 
   describe("getBudgetStatusConfig", () => {
@@ -189,95 +182,6 @@ describe("client-budgets status constants", () => {
 
     it("getReceivedBudgetSummaryLine returns empty for invalid filter", () => {
       expect(getReceivedBudgetSummaryLine(item, "bad" as ReceivedStatusFilter)).toBe("");
-    });
-  });
-
-  describe("question helpers", () => {
-    const qItem = {
-      total_questions: 5,
-      pending_questions_count: 3,
-      answered_questions_count: 2,
-      questions_preview: [{}, {}],
-    };
-
-    it("getQuestionExtraCount respects shown preview length", () => {
-      expect(getQuestionExtraCount(qItem, "pending")).toBe(1);
-      expect(getQuestionExtraCount(qItem, "answered")).toBe(0);
-    });
-
-    it("formatQuestionExtraLabel", () => {
-      expect(formatQuestionExtraLabel(0)).toBe("");
-      expect(formatQuestionExtraLabel(2)).toContain("perguntas");
-    });
-
-    it("getQuestionCardSummaryLine and CTA", () => {
-      expect(getQuestionCardSummaryLine(qItem, "pending")).toContain("perguntas pendente");
-      expect(
-        getQuestionCardSummaryLine(
-          { ...qItem, pending_questions_count: 1 },
-          "pending",
-        ),
-      ).toBe("1 perguntas pendente");
-      expect(getQuestionCardSummaryLine(qItem, "answered")).toContain("respondidas");
-      expect(
-        getQuestionCardSummaryLine(
-          { ...qItem, answered_questions_count: 1 },
-          "answered",
-        ),
-      ).toContain("respondida");
-      expect(getQuestionCardCtaLabel()).toBe("Ver perguntas");
-    });
-
-    it("getQuestionExtraCount default branch returns 0", () => {
-      expect(
-        getQuestionExtraCount(qItem, "other" as QuestionStatusFilter),
-      ).toBe(0);
-    });
-
-    it("getQuestionCardSummaryLine returns empty for invalid filter", () => {
-      expect(getQuestionCardSummaryLine(qItem, "x" as QuestionStatusFilter)).toBe("");
-    });
-
-    it("getQuestionStatusConfig branches", () => {
-      expect(
-        getQuestionStatusConfig({
-          client_response: null,
-          client_responded_at: null,
-          service_request_status: "closed",
-        }).label,
-      ).toBe("Encerrada");
-
-      expect(
-        getQuestionStatusConfig({
-          client_response: null,
-          client_responded_at: null,
-          service_request_status: "in_progress",
-        }).label,
-      ).toBe("Encerrada");
-
-      expect(
-        getQuestionStatusConfig({
-          client_response: null,
-          client_responded_at: null,
-          service_request_status: "cancelled",
-        }).label,
-      ).toBe("Encerrada");
-
-      expect(
-        getQuestionStatusConfig({
-          client_response: "ok",
-          client_responded_at: "2024-01-01",
-          service_request_status: null,
-        }).label,
-      ).toBe("Respondida");
-
-      expect(
-        getQuestionStatusConfig({
-          client_response: null,
-          client_responded_at: null,
-          service_request_status: null,
-        }).label,
-      ).toBe("Não respondida");
     });
   });
 });

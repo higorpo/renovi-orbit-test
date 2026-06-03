@@ -80,9 +80,6 @@ export function validateStructuredResponse(
       missing_info_warnings: Array.isArray(d.missing_info_warnings)
         ? (d.missing_info_warnings as string[])
         : [],
-      suggested_questions: Array.isArray(d.suggested_questions)
-        ? (d.suggested_questions as string[])
-        : [],
       urgency: (d.urgency as "low" | "medium" | "high") || "medium",
       scope_complexity:
         (d.scope_complexity as "simple" | "medium" | "complex") || "medium",
@@ -117,7 +114,6 @@ export function generateFallbackResponse(
     suggested_title: "Pedido de Serviço",
     tags: [],
     missing_info_warnings: [],
-    suggested_questions: [],
     urgency: "medium",
     scope_complexity: "medium",
     confidence: 0.5,

@@ -109,9 +109,6 @@ export async function parseFormData(formData: FormData): Promise<ParseFormDataRe
           )
             ? (parsed.scope_complexity as "simple" | "medium" | "complex")
             : null,
-          suggested_questions: Array.isArray(parsed.suggested_questions)
-            ? (parsed.suggested_questions as string[])
-            : null,
           tags: Array.isArray(parsed.tags) ? (parsed.tags as string[]) : null,
           missing_info_warnings: Array.isArray(parsed.missing_info_warnings)
             ? (parsed.missing_info_warnings as string[])

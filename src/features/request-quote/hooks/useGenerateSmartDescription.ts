@@ -68,7 +68,6 @@ export function useGenerateSmartDescription({
             ? {
                 urgency: data.structured.urgency,
                 scope_complexity: data.structured.scope_complexity,
-                suggested_questions: data.structured.suggested_questions,
                 tags: data.structured.tags,
                 missing_info_warnings: data.structured.missing_info_warnings,
                 suggested_equipment: data.structured.suggested_equipment,

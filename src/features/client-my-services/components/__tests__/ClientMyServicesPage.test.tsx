@@ -58,35 +58,6 @@ vi.mock("@/features/client-budgets", async (importOriginal) => {
           </button>
         </div>
       ) : null,
-    QuestionThreadSheet: ({
-      open,
-      onOpenChange,
-    }: {
-      open: boolean;
-      onOpenChange: (v: boolean) => void;
-    }) =>
-      open ? (
-        <div>
-          <button
-            type="button"
-            data-testid="stub-close-questions"
-            onClick={() => {
-              onOpenChange(false);
-            }}
-          >
-            close questions
-          </button>
-          <button
-            type="button"
-            data-testid="stub-keep-open-questions"
-            onClick={() => {
-              onOpenChange(true);
-            }}
-          >
-            keep questions open
-          </button>
-        </div>
-      ) : null,
   };
 });
 
@@ -336,7 +307,7 @@ describe("ClientMyServicesPage", () => {
     expect(refetch).toHaveBeenCalled();
   });
 
-  it("closes budget and question sheets via onOpenChange", () => {
+  it("closes budget sheet via onOpenChange", () => {
     const item: ServiceRequestCardModel = {
       id: "sr-1",
       title: "Serviço",
@@ -366,12 +337,9 @@ describe("ClientMyServicesPage", () => {
     render(<ClientMyServicesPage />, { wrapper: createWrapper() });
     fireEvent.click(screen.getByRole("button", { name: /Ver or\u00e7amentos/i }));
     fireEvent.click(screen.getByTestId("stub-close-budgets"));
-
-    fireEvent.click(screen.getByRole("button", { name: /Ver perguntas/i }));
-    fireEvent.click(screen.getByTestId("stub-close-questions"));
   });
 
-  it("does not clear details mode when sheet reports stay open (onOpenChange true)", () => {
+  it("does not clear budget sheet when onOpenChange reports stay open", () => {
     const item: ServiceRequestCardModel = {
       id: "sr-2",
       title: "Aberto",
@@ -401,8 +369,6 @@ describe("ClientMyServicesPage", () => {
     render(<ClientMyServicesPage />, { wrapper: createWrapper() });
     fireEvent.click(screen.getByRole("button", { name: /Ver or\u00e7amentos/i }));
     fireEvent.click(screen.getByTestId("stub-keep-open-budgets"));
-    fireEvent.click(screen.getByRole("button", { name: /Ver perguntas/i }));
-    fireEvent.click(screen.getByTestId("stub-keep-open-questions"));
     fireEvent.click(screen.getByRole("button", { name: /Ver detalhes/i }));
     fireEvent.click(screen.getByTestId("stub-keep-open-details"));
   });

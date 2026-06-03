@@ -80,7 +80,6 @@ describe("ClientMyServicesCard", () => {
     render(<ClientMyServicesCard model={model} />);
     expect(screen.getByRole("button", { name: /Ver detalhes/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Ver or\u00e7amentos/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Ver perguntas/i })).toBeInTheDocument();
   });
 
   it("does not render budgets action when open has no proposals", () => {
@@ -92,10 +91,9 @@ describe("ClientMyServicesCard", () => {
     render(<ClientMyServicesCard model={model} />);
 
     expect(screen.queryByRole("button", { name: /Ver or\u00e7amentos/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Ver perguntas/i })).toBeInTheDocument();
   });
 
-  it("does not render budgets/questions actions when open has exactly one proposal", () => {
+  it("does not render budgets action when open has exactly one proposal", () => {
     const model = makeModel({
       status: "open",
       statusTabId: "negotiation",
@@ -104,26 +102,21 @@ describe("ClientMyServicesCard", () => {
     render(<ClientMyServicesCard model={model} />);
 
     expect(screen.queryByRole("button", { name: /Ver or\u00e7amentos/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Ver perguntas/i })).not.toBeInTheDocument();
   });
 
-  it("calls callbacks when budgets/questions actions are clicked", () => {
+  it("calls onOpenBudgets when budgets action is clicked", () => {
     const onOpenBudgets = vi.fn();
-    const onOpenQuestions = vi.fn();
     const model = makeModel({ status: "open", proposalCount: 2 });
     render(
       <ClientMyServicesCard
         model={model}
         onOpenBudgets={onOpenBudgets}
-        onOpenQuestions={onOpenQuestions}
       />
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Ver or\u00e7amentos/i }));
-    fireEvent.click(screen.getByRole("button", { name: /Ver perguntas/i }));
 
     expect(onOpenBudgets).toHaveBeenCalledWith(model.id);
-    expect(onOpenQuestions).toHaveBeenCalledWith(model.id);
   });
 
   it("renders Cancelar servi\u00e7o button when onCancel is passed and status is open", () => {

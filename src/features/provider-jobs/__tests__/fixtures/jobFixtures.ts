@@ -20,7 +20,6 @@ export function createMinimalJob(
     scope_complexity: "simple",
     estimated_duration_hint: "1_to_2h",
     tags: ["urgente"],
-    suggested_questions: ["Tem disjuntor dedicado?"],
     suggested_equipment: ["drill"],
     suggested_materials: ["silicone_sealant"],
     masked_client_name: "Maria S.",

@@ -1,15 +1,12 @@
 import { EmptyState } from "@/components/ui/empty-state";
-import { MessageCircleQuestion, ReceiptText, Search } from "lucide-react";
-import type { ClientBudgetsTab } from "../types/client-budgets.types";
+import { ReceiptText, Search } from "lucide-react";
 
 interface ClientBudgetsEmptyStateProps {
-  tab: ClientBudgetsTab;
   hasFilters: boolean;
   onClearFilters?: () => void;
 }
 
 export function ClientBudgetsEmptyState({
-  tab,
   hasFilters,
   onClearFilters,
 }: ClientBudgetsEmptyStateProps) {
@@ -25,23 +22,12 @@ export function ClientBudgetsEmptyState({
     );
   }
 
-  if (tab === "recebidos") {
-    return (
-      <EmptyState
-        icon={ReceiptText}
-        title="Nenhum orçamento recebido ainda"
-        description="Quando prestadores enviarem orçamentos para seus pedidos, eles aparecerão aqui."
-        ariaLabel="Nenhum orçamento recebido"
-      />
-    );
-  }
-
   return (
     <EmptyState
-      icon={MessageCircleQuestion}
-      title="Nenhuma pergunta recebida ainda"
-      description="Perguntas enviadas por prestadores sobre seus pedidos aparecerão aqui para resposta."
-      ariaLabel="Nenhuma pergunta recebida"
+      icon={ReceiptText}
+      title="Nenhum orçamento recebido ainda"
+      description="Quando prestadores enviarem orçamentos para seus pedidos, eles aparecerão aqui."
+      ariaLabel="Nenhum orçamento recebido"
     />
   );
 }

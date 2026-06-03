@@ -12,11 +12,9 @@ describe("useClientBudgetsFilters", () => {
     vi.useRealTimers();
   });
 
-  it("starts with default tab and filters", () => {
+  it("starts with default filters", () => {
     const { result } = renderHook(() => useClientBudgetsFilters());
-    expect(result.current.activeTab).toBe("recebidos");
     expect(result.current.receivedStatusFilter).toBe("awaiting_decision");
-    expect(result.current.questionStatusFilter).toBe("pending");
     expect(result.current.searchQuery).toBe("");
     expect(result.current.searchParam).toBe(null);
     expect(result.current.hasActiveFilters).toBe(false);
@@ -38,7 +36,6 @@ describe("useClientBudgetsFilters", () => {
     const { result } = renderHook(() => useClientBudgetsFilters());
     act(() => {
       result.current.setReceivedStatusFilter("accepted");
-      result.current.setQuestionStatusFilter("answered");
       result.current.setSearchQuery("x");
     });
     expect(result.current.hasActiveFilters).toBe(true);
@@ -46,14 +43,13 @@ describe("useClientBudgetsFilters", () => {
       result.current.resetFilters();
     });
     expect(result.current.receivedStatusFilter).toBe("awaiting_decision");
-    expect(result.current.questionStatusFilter).toBe("pending");
     expect(result.current.searchQuery).toBe("");
   });
 
-  it("hasActiveFilters is true when only question filter deviates", () => {
+  it("hasActiveFilters is true when status filter deviates", () => {
     const { result } = renderHook(() => useClientBudgetsFilters());
     act(() => {
-      result.current.setQuestionStatusFilter("answered");
+      result.current.setReceivedStatusFilter("accepted");
     });
     expect(result.current.hasActiveFilters).toBe(true);
   });

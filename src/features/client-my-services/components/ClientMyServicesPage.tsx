@@ -10,7 +10,7 @@ import { ClientMyServicesEmptyState } from "./ClientMyServicesEmptyState";
 import { ClientMyServicesErrorState } from "./ClientMyServicesErrorState";
 import { ClientMyServicesNoFilterResultsState } from "./ClientMyServicesNoFilterResultsState";
 import { ClientMyServicesFocusBanner } from "./ClientMyServicesFocusBanner";
-import { QuestionThreadSheet, ReceivedBudgetDetailsSheet } from "@/features/client-budgets";
+import { ReceivedBudgetDetailsSheet } from "@/features/client-budgets";
 import { OpenServiceDetailsSheet } from "./OpenServiceDetailsSheet";
 import { useClientMyServicesPage } from "../hooks/useClientMyServicesPage";
 const SKELETON_COUNT = 4;
@@ -39,8 +39,8 @@ export function ClientMyServicesPage() {
     categoryOptions,
     cityOptions,
     neighborhoodOptions,
-    detailsMode,
-    setDetailsMode,
+    detailsOpen,
+    setDetailsOpen,
     selectedServiceRequestId,
     selectedOpenService,
     setSelectedOpenService,
@@ -49,7 +49,6 @@ export function ClientMyServicesPage() {
     handleClearFocusFilter,
     handleClearFilters,
     handleOpenBudgets,
-    handleOpenQuestions,
     handleOpenDetails,
   } = useClientMyServicesPage();
   return (
@@ -122,7 +121,6 @@ export function ClientMyServicesPage() {
                     model={model}
                     onCancel={cancelServiceRequest}
                     onOpenBudgets={handleOpenBudgets}
-                    onOpenQuestions={handleOpenQuestions}
                     onOpenDetails={handleOpenDetails}
                     isCancelling={isCancelling}
                   />
@@ -141,18 +139,11 @@ export function ClientMyServicesPage() {
         </section>
       </div>
       <ReceivedBudgetDetailsSheet
-        open={detailsMode === "budgets"}
+        open={detailsOpen}
         serviceRequestId={selectedServiceRequestId}
         sheetMode="compare"
         onOpenChange={(next) => {
-          if (!next) setDetailsMode(null);
-        }}
-      />
-      <QuestionThreadSheet
-        open={detailsMode === "questions"}
-        serviceRequestId={selectedServiceRequestId}
-        onOpenChange={(next) => {
-          if (!next) setDetailsMode(null);
+          if (!next) setDetailsOpen(false);
         }}
       />
       <OpenServiceDetailsSheet

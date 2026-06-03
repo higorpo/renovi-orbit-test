@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  createProviderOwnQuestion,
-  createProviderSentBudget,
-} from "../../__tests__/fixtures/providerBudgetsFixtures";
-import {
-  initialProviderJobItemFromOwnQuestion,
-  initialProviderJobItemFromSentBudget,
-} from "../initialProviderJobItem";
+import { createProviderSentBudget } from "../../__tests__/fixtures/providerBudgetsFixtures";
+import { initialProviderJobItemFromSentBudget } from "../initialProviderJobItem";
 
 describe("initialProviderJobItem", () => {
   describe("initialProviderJobItemFromSentBudget", () => {
@@ -34,26 +28,6 @@ describe("initialProviderJobItem", () => {
       const budget = createProviderSentBudget({ photos: [] });
       const item = initialProviderJobItemFromSentBudget(budget);
       expect(item.provider_proposal_photos).toBeNull();
-    });
-  });
-
-  describe("initialProviderJobItemFromOwnQuestion", () => {
-    it("maps question fields and clears proposal-related fields", () => {
-      const question = createProviderOwnQuestion({
-        neighborhood: "Bairro",
-        city: "City",
-        state_abbr: "SP",
-      });
-
-      const item = initialProviderJobItemFromOwnQuestion(question);
-
-      expect(item.id).toBe(question.service_request_id);
-      expect(item.provider_proposal_id).toBeNull();
-      expect(item.provider_proposed_amount).toBeNull();
-      expect(item.provider_proposal_photos).toBeNull();
-      expect(item.neighborhood).toBe("Bairro");
-      expect(item.city).toBe("City");
-      expect(item.state).toBe("SP");
     });
   });
 });

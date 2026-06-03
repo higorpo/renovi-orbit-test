@@ -26,7 +26,6 @@ import {
   PROVIDER_JOBS_LIST_QUERY_KEY,
   PROVIDER_PROPOSAL_JOB_DETAIL_QUERY_KEY,
 } from "../constants/queryKeys";
-import { useProviderJobQuestionComposer } from "../hooks/useProviderJobQuestionComposer";
 import type { ProviderJobItem } from "../types/provider-jobs.types";
 import { mapProviderJobToProposalSummary } from "../utils/mapProviderJobToProposalSummary";
 import {
@@ -34,9 +33,6 @@ import {
   mapSuggestedMaterialsToPt,
 } from "../utils/suggestedItemsMapper";
 import { JobDetailMetadataBadges } from "./JobDetailMetadataBadges";
-import { JobQuestionComposerDialog } from "./JobQuestionComposerDialog";
-import { JobQuestionPromptCard } from "./JobQuestionPromptCard";
-import { JobQuestionsFeed } from "./JobQuestionsFeed";
 import { JobDetailRequestSections } from "./JobDetailRequestSections";
 import { JobDetailFloatingActions } from "./JobDetailFloatingActions";
 import { getUrgencyConfig } from "./JobDetail.constants";
@@ -58,17 +54,6 @@ export function JobDetailContent({
   });
   const suggestedEquipmentPt = mapSuggestedEquipmentToPt(job.suggested_equipment);
   const suggestedMaterialsPt = mapSuggestedMaterialsToPt(job.suggested_materials);
-  const suggestedQuestions = job.suggested_questions ?? [];
-  const {
-    isOpen,
-    isSubmitting,
-    questionDraft,
-    maxQuestionLength,
-    setQuestionDraft,
-    openComposer,
-    closeComposer,
-    submitQuestion,
-  } = useProviderJobQuestionComposer(job.id);
   const hasLatestProposal = Boolean(job.provider_proposal_id);
   const hasActiveProposal = hasActiveServiceRequestProposal(
     job.provider_proposal_id,
@@ -201,32 +186,6 @@ export function JobDetailContent({
             suggestedMaterialsPt={suggestedMaterialsPt}
           />
 
-          {showBrowseCtas && (
-            <JobQuestionPromptCard
-              suggestedQuestions={suggestedQuestions}
-              onAskQuestion={() => openComposer()}
-              onUseSuggestedQuestion={(question) =>
-                openComposer({ prefilledQuestion: question })
-              }
-            />
-          )}
-
-          {showBrowseCtas && (
-            <JobQuestionComposerDialog
-              open={isOpen}
-              questionDraft={questionDraft}
-              isSubmitting={isSubmitting}
-              maxQuestionLength={maxQuestionLength}
-              onOpenChange={(open) => {
-                if (!open) closeComposer();
-              }}
-              onQuestionDraftChange={setQuestionDraft}
-              onSubmit={async () => {
-                await submitQuestion();
-              }}
-            />
-          )}
-
           <ServiceRequestProposalComposerDialog
             open={proposalComposer.isOpen}
             isSubmitting={proposalComposer.isSubmitting}
@@ -255,7 +214,6 @@ export function JobDetailContent({
         </CardContent>
       </Card>
 
-      <JobQuestionsFeed serviceRequestId={job.id} />
       {proposalSummary && (
         <ServiceRequestProposalSummaryCard
           summary={proposalSummary}
@@ -267,7 +225,6 @@ export function JobDetailContent({
       {showBrowseCtas && (
         <JobDetailFloatingActions
           isInsideSheet={isInsideSheet}
-          onAskQuestion={() => openComposer()}
           onOpenProposalComposer={() => proposalComposer.openComposer()}
         />
       )}
