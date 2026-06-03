@@ -150,6 +150,7 @@ export {
   hasActiveServiceRequestProposal,
   canEditServiceRequestProposal,
   isRejectedProposalStatus,
+  isPendingProposalStatus,
 } from "./utils/proposalStatus";
 export { PROPOSAL_COPY_VARIANTS, type ProposalCopyVariant } from "./constants/proposalCopyVariants";
 export {

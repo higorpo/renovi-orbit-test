@@ -73,13 +73,26 @@ export const QUESTION_FILTERS: Array<{
 
 const BUDGET_STATUS_MAP: Record<string, { label: string; variant: BadgeProps["variant"] }> = {
   submitted: { label: "Aguardando avaliação", variant: "warning" },
+  pending: { label: "Aguardando avaliação", variant: "warning" },
   accepted: { label: "Aceito", variant: "success" },
   rejected: { label: "Recusado", variant: "destructive" },
   withdrawn: { label: "Retirado pelo prestador", variant: "secondary" },
+  revised: { label: "Retirado pelo prestador", variant: "secondary" },
   expired: { label: "Expirado", variant: "secondary" },
   cancelled: { label: "Cancelado", variant: "secondary" },
   closed: { label: "Encerrado", variant: "secondary" },
+  completed: { label: "Encerrado", variant: "secondary" },
 };
+
+function isBudgetFlowClosedServiceRequest(status: string | null | undefined): boolean {
+  const normalized = (status ?? "").trim().toLowerCase();
+  return ["closed", "cancelled", "completed"].includes(normalized);
+}
+
+function isQuestionFlowClosedServiceRequest(status: string | null | undefined): boolean {
+  const normalized = (status ?? "").trim().toLowerCase();
+  return ["in_progress", "closed", "cancelled", "completed"].includes(normalized);
+}
 
 export function getBudgetStatusConfig(status: string | null | undefined) {
   if (!status) return { label: "Aguardando avaliação", variant: "warning" as const };
@@ -93,7 +106,7 @@ export function getServiceBudgetFlowStatus(summary: {
   total_budgets: number;
 }): { label: string; variant: BadgeProps["variant"] } {
   if (summary.accepted_count > 0) return { label: "Orçamento aceito", variant: "success" };
-  if (summary.service_request_status === "closed" || summary.service_request_status === "cancelled") {
+  if (isBudgetFlowClosedServiceRequest(summary.service_request_status)) {
     return { label: "Encerrado", variant: "secondary" };
   }
   if (summary.submitted_count > 1) return { label: "Pronto para comparar", variant: "default" };
@@ -237,7 +250,7 @@ export function getQuestionCardCtaLabel(): string {
 }
 
 export function getQuestionStatusConfig(question: Pick<QuestionPreviewItem, "client_response" | "client_responded_at"> & { service_request_status?: string | null }) {
-  if (question.service_request_status && ["in_progress", "closed", "cancelled"].includes(question.service_request_status)) {
+  if (isQuestionFlowClosedServiceRequest(question.service_request_status)) {
     return { label: "Encerrada", variant: "secondary" as const };
   }
   if (question.client_response && question.client_responded_at) {

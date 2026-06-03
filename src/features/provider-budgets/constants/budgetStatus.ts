@@ -15,9 +15,11 @@ export const BUDGET_STATUS_CONFIG: Record<
   { label: string; variant: BadgeProps["variant"] }
 > = {
   submitted: { label: "Aguardando avaliação", variant: "warning" },
+  pending: { label: "Aguardando avaliação", variant: "warning" },
   accepted: { label: "Aceito", variant: "success" },
   rejected: { label: "Recusado", variant: "destructive" },
   withdrawn: { label: "Retirado", variant: "secondary" },
+  revised: { label: "Retirado", variant: "secondary" },
 };
 
 export function getBudgetStatusConfig(
@@ -67,28 +69,29 @@ export const BUDGET_STATUS_FILTERS: Array<{
   },
 ];
 
-/** Pedidos que não estão mais em `open`: fluxo de perguntas/pré-orçamento considerado encerrado no produto. */
+/** Service requests no longer accepting question flow (CNS + legacy statuses). */
 const SERVICE_REQUEST_CLOSED_LIKE_STATUSES = new Set([
   "in_progress",
   "closed",
   "cancelled",
+  "completed",
 ]);
 
 function isServiceRequestClosedLike(status: string | null | undefined): boolean {
   if (!status) return false;
-  return SERVICE_REQUEST_CLOSED_LIKE_STATUSES.has(status);
+  return SERVICE_REQUEST_CLOSED_LIKE_STATUSES.has(status.toLowerCase());
 }
 
 export function getQuestionStatusLabel(question: {
   client_response: string | null;
   service_request_status: string | null;
 }): { label: string; variant: BadgeProps["variant"] } {
-  const sr = question.service_request_status;
+  const sr = question.service_request_status?.toLowerCase() ?? "";
 
   if (sr === "cancelled") {
     return { label: "Pedido cancelado", variant: "secondary" };
   }
-  if (sr === "closed") {
+  if (sr === "closed" || sr === "completed") {
     return { label: "Pedido encerrado", variant: "secondary" };
   }
   if (sr === "in_progress") {

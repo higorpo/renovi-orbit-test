@@ -19,3 +19,8 @@ export function isRejectedProposalStatus(status: string | null | undefined): boo
   const normalized = normalizeProposalStatus(status);
   return normalized === "REJECTED" || normalized === "REJECTED_AUTOMATICALLY";
 }
+
+export function isPendingProposalStatus(status: string | null | undefined): boolean {
+  const normalized = normalizeProposalStatus(status);
+  return normalized === "PENDING" || normalized === "SUBMITTED";
+}

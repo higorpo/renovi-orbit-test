@@ -1,8 +1,9 @@
 import { Clock, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { formatCurrency } from "@/lib/formatCurrency";
+import { isPendingProposalStatus } from "@/features/negotiation-proposals";
 import { ProposalPhotosGrid, useProposalPhotoUrls } from "@/features/negotiation-proposals";
+import { formatCurrency } from "@/lib/formatCurrency";
 import type { ClientBudgetDetailProposal } from "../types/client-budgets.types";
 import { BudgetStatusBadge } from "./BudgetStatusBadge";
 
@@ -25,7 +26,7 @@ export function CurrentProposalVersionBlock({ proposal }: CurrentProposalVersion
   );
   const deadlineLabel = formatDeadline(proposal.client_response_deadline_at);
   const showDeadline =
-    proposal.status === "submitted" && Boolean(deadlineLabel);
+    isPendingProposalStatus(proposal.status) && Boolean(deadlineLabel);
 
   return (
     <div className="space-y-2">

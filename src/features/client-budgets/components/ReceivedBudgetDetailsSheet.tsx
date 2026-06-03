@@ -5,6 +5,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { isPendingProposalStatus } from "@/features/negotiation-proposals";
 import { ProviderProfileInlinePreview } from "@/features/provider-profile";
 import { useClientBudgetDetail } from "../hooks/useClientBudgetDetail";
 import { BudgetStatusBadge } from "./BudgetStatusBadge";
@@ -122,7 +123,7 @@ export function ReceivedBudgetDetailsSheet({
               ) : (
                 groupedByProvider.map(([providerId, providerBudgets]) => {
                   const latest = providerBudgets[0];
-                  const canReject = sheetMode === "compare" && latest.status === "submitted";
+                  const canReject = sheetMode === "compare" && isPendingProposalStatus(latest.status);
                   return (
                     <div key={providerId} className="space-y-3 rounded-lg border p-3">
                       <ProviderProfileInlinePreview
