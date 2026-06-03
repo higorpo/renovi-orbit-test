@@ -50,17 +50,5 @@ export function getComplexityLabel(
   return COMPLEXITY_LABELS[complexity] ?? complexity;
 }
 
-export const PROPOSAL_STATUS_LABELS: Record<string, string> = {
-  submitted: "Aguardando avaliação do cliente",
-  accepted: "Aceito pelo cliente",
-  rejected: "Rejeitado pelo cliente",
-  withdrawn: "Orçamento retirado",
-};
-
-export function getProposalStatusLabel(status: string | null | undefined): string {
-  const normalized = (status ?? "submitted").toLowerCase();
-  return PROPOSAL_STATUS_LABELS[normalized] ?? PROPOSAL_STATUS_LABELS.submitted;
-}
-
 export const SUGGESTED_ITEMS_TOOLTIP_TEXT =
   "Itens sugeridos com base no pedido de orçamento do cliente. Eles podem ser utilizados, mas podem estar imprecisos.";

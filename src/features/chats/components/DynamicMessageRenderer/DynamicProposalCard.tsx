@@ -1,5 +1,5 @@
-import { ChevronDown, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ChevronRight } from "lucide-react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import type { ProfileRole } from "@/features/auth";
 import { cn } from "@/lib/utils";
@@ -19,9 +19,8 @@ import {
   resolveProposalCardHeadline,
   type ProposalCardCta,
 } from "../../utils/proposalCardCopy";
-import { useChatTimelineScrollContext } from "../ChatScreen/ChatTimelineScrollContext";
 
-export type ProposalCardAction = ProposalCardCta["id"];
+export type ProposalCardAction = ProposalCardCta["id"] | "view_details";
 
 export interface DynamicProposalCardProps {
   chatId: string;
@@ -40,15 +39,9 @@ export function DynamicProposalCard({
   onProposalAction,
   className,
 }: DynamicProposalCardProps) {
-  const scrollContext = useChatTimelineScrollContext();
   const proposalId = message.linked_entity_id;
-  const [isExpanded, setIsExpanded] = useState(false);
 
-  const { proposal, isLoading, isError, refetch } = useProposalTimelineHydration(
-    chatId,
-    proposalId,
-    isExpanded,
-  );
+  const { proposal } = useProposalTimelineHydration(chatId, proposalId, Boolean(proposalId));
 
   const status = proposal?.status ?? "PENDING";
   const headline = resolveProposalCardHeadline(status);
@@ -59,14 +52,8 @@ export function DynamicProposalCard({
   useEffect(() => {
     metrics.count("chats.dynamic_proposal_card_render", 1, {
       status: String(status),
-      expanded: isExpanded ? "true" : "false",
     });
-  }, [isExpanded, status]);
-
-  const handleToggleExpand = () => {
-    scrollContext?.preserveScrollOnLayoutShift();
-    setIsExpanded((current) => !current);
-  };
+  }, [status]);
 
   if (!proposalId) {
     return (
@@ -91,41 +78,13 @@ export function DynamicProposalCard({
         <div className="min-w-0 space-y-1">
           <p className="text-sm font-semibold text-foreground">{headline}</p>
           <p className="text-sm text-muted-foreground">{description}</p>
+          {proposal?.proposed_amount ? (
+            <p className="text-base font-semibold text-foreground">
+              {formatCurrency(proposal.proposed_amount)}
+            </p>
+          ) : null}
         </div>
       </div>
-
-      {isExpanded && isLoading ? (
-        <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          Carregando detalhes da proposta…
-        </div>
-      ) : null}
-
-      {isExpanded && proposal ? (
-        <div className="mt-3 space-y-2 rounded-xl bg-muted/40 p-3">
-          <p className="text-lg font-semibold text-foreground">
-            {formatCurrency(proposal.proposed_amount)}
-          </p>
-          <p className="text-xs text-muted-foreground">Versão {proposal.version}</p>
-        </div>
-      ) : null}
-
-      {isExpanded && isError ? (
-        <div className="mt-3 space-y-2">
-          <p className="text-sm text-muted-foreground">
-            Não foi possível carregar as informações da proposta.
-          </p>
-          <Button type="button" variant="outline" size="sm" onClick={() => void refetch()}>
-            Tentar novamente
-          </Button>
-        </div>
-      ) : null}
-
-      {isExpanded && proposal?.proposal_description ? (
-        <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-          {proposal.proposal_description}
-        </p>
-      ) : null}
 
       {ctas.length > 0 ? (
         <div className="mt-4 flex flex-wrap gap-2">
@@ -158,14 +117,10 @@ export function DynamicProposalCard({
           CHAT_MIN_TOUCH_TARGET,
           CHAT_INTERACTIVE_FOCUS,
         )}
-        onClick={handleToggleExpand}
-        aria-expanded={isExpanded}
+        onClick={() => onProposalAction?.("view_details", proposalId)}
       >
-        {isExpanded ? "Ocultar detalhes" : "Ver detalhes"}
-        <ChevronDown
-          className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")}
-          aria-hidden
-        />
+        Ver detalhes
+        <ChevronRight className="h-4 w-4" aria-hidden />
       </Button>
     </article>
   );

@@ -1,4 +1,4 @@
--- pgTAP: create_provider_proposal delegates to submit_proposal (CNS task 57, Wave D).
+-- pgTAP: create_provider_proposal unified RPC (service_request scoped, optional chat mirror).
 
 begin;
 
@@ -44,7 +44,7 @@ begin
     sr.client_id,
     sr.service_id,
     sr.address_id,
-    'create_provider_proposal delegate pgTAP fixture',
+    'create_provider_proposal pgTAP fixture',
     sr.description,
     sr.form_data,
     sr.form_version,
@@ -66,7 +66,7 @@ select ok(
     where n.nspname = 'public'
       and p.proname = 'create_provider_proposal'
   ),
-  'create_provider_proposal remains SECURITY DEFINER'
+  'create_provider_proposal is SECURITY DEFINER'
 );
 
 create temp table _delegate_sr as
@@ -89,7 +89,7 @@ with pricing as (
 select public.create_provider_proposal(
   (select service_request_id from _delegate_sr),
   pricing.original_amount,
-  'Legacy delegate scope includes wiring',
+  'Unified create scope includes wiring',
   2,
   'hours',
   jsonb_build_array(
@@ -109,12 +109,12 @@ from pricing;
 select is(
   jsonb_typeof((select response from _delegate_result)),
   'object',
-  'delegate returns json object'
+  'create returns json object'
 );
 
 select ok(
   (select response ? 'id' from _delegate_result),
-  'delegate preserves legacy { id } response shape'
+  'create preserves legacy { id } response shape'
 );
 
 select is(
@@ -124,7 +124,7 @@ select is(
     where pp.id = ((select response->>'id' from _delegate_result))::uuid
   ),
   'PENDING',
-  'delegate creates PENDING proposal via submit_proposal'
+  'create inserts PENDING proposal by service_request_id'
 );
 
 select ok(
@@ -139,52 +139,54 @@ select ok(
         )::uuid
     )
   ),
-  'delegate inserts PROPOSAL timeline message'
+  'create mirrors PROPOSAL timeline message when chat exists'
 );
 
-create temp table _delegate_retry as
-with pricing as (
-  select *
-  from public.calculate_provider_service_pricing(250.00::numeric)
-)
-select public.create_provider_proposal(
-  (select service_request_id from _delegate_sr),
-  pricing.original_amount,
-  'Legacy delegate scope includes wiring',
-  2,
-  'hours',
-  jsonb_build_array(
-    jsonb_build_object(
-      'start_date', (current_date + 2)::text,
-      'shift', 'morning'
+select throws_ok(
+  $sql$
+    with pricing as (
+      select *
+      from public.calculate_provider_service_pricing(250.00::numeric)
     )
-  ),
-  '{}'::text[],
-  pricing.tax_rate,
-  pricing.tax_amount,
-  pricing.final_amount,
-  pricing.pricing_signature
-) as response
-from pricing;
-
-select is(
-  (select response->>'id' from _delegate_retry),
-  (select response->>'id' from _delegate_result),
-  'idempotent retry returns same proposal id'
+    select public.create_provider_proposal(
+      (select service_request_id from _delegate_sr),
+      pricing.original_amount,
+      'Duplicate pending attempt',
+      2,
+      'hours',
+      jsonb_build_array(
+        jsonb_build_object(
+          'start_date', (current_date + 3)::text,
+          'shift', 'afternoon'
+        )
+      ),
+      '{}'::text[],
+      pricing.tax_rate,
+      pricing.tax_amount,
+      pricing.final_amount,
+      pricing.pricing_signature
+    )
+    from pricing;
+  $sql$,
+  'P0001',
+  'PROPOSAL_ALREADY_PENDING',
+  'second PENDING create is rejected'
 );
 
-create temp table _delegate_auto_init_sr as
+create temp table _delegate_no_chat_sr as
 select pg_temp.cns_seed_delegate_sr() as service_request_id;
 
-create temp table _delegate_auto_init_result as
+select pg_temp.cns_set_auth('5d09e025-20a2-4842-aeef-324d42a431e1'::uuid);
+
+create temp table _delegate_no_chat_result as
 with pricing as (
   select *
   from public.calculate_provider_service_pricing(180.00::numeric)
 )
 select public.create_provider_proposal(
-  (select service_request_id from _delegate_auto_init_sr),
+  (select service_request_id from _delegate_no_chat_sr),
   pricing.original_amount,
-  'Auto-initiate chat on legacy submit',
+  'Proposal without pre-existing chat',
   1,
   'hours',
   jsonb_build_array(
@@ -202,15 +204,21 @@ select public.create_provider_proposal(
 from pricing;
 
 select ok(
-  (
-    select exists (
-      select 1
-      from public.chats c
-      where c.service_request_id = (select service_request_id from _delegate_auto_init_sr)
-        and c.provider_id = '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid
-    )
+  not exists (
+    select 1
+    from public.chats c
+    where c.service_request_id = (select service_request_id from _delegate_no_chat_sr)
+      and c.provider_id = '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid
   ),
-  'delegate auto-initiates chat when missing'
+  'create does not auto-initiate chat when missing'
+);
+
+select ok(
+  (
+    select jsonb_typeof(response->'timeline_message') = 'null'
+    from _delegate_no_chat_result
+  ),
+  'create skips timeline mirror when chat is absent'
 );
 
 select * from finish();

@@ -1,29 +1,20 @@
 import type { Database } from "@/lib/supabase/database.types";
+import type { ProposalDurationUnit } from "./proposalComposer.types";
 
 export type ProposalStatus = Database["public"]["Enums"]["proposal_status"];
 export type ProposalRevisionReason = Database["public"]["Enums"]["proposal_revision_reason"];
 
-export type ProviderProposalRow = Database["public"]["Tables"]["provider_proposals"]["Row"];
-
 export type ProposalSuggestedSlotShift = "morning" | "afternoon" | "full_day";
 
-/** RPC wire format (submit_proposal / accept_proposal). */
+/** Wire format for suggested slots in RPC args/responses. */
 export interface ProposalSuggestedSlotRpc {
   start_date: string;
   end_date?: string | null;
   shift: ProposalSuggestedSlotShift;
 }
 
-export interface ProposalPricingInput {
-  pricing_signature: string;
-  tax_rate: number;
-  tax_amount: number;
-  final_amount: number;
-}
-
 export interface ProposalVersionListItem {
   id: string;
-  chat_id: string;
   version: number;
   status: ProposalStatus;
   proposed_amount: number;
@@ -40,62 +31,55 @@ export interface ProposalVersionListResponse {
   items: ProposalVersionListItem[];
 }
 
-export interface SubmitProposalResultProposal {
+/** `create_provider_proposal` RPC response. */
+export interface CreateProviderProposalResult {
   id: string;
-  chat_id: string;
-  service_request_id: string;
-  provider_id: string;
-  status: ProposalStatus;
-  version: number;
-  revision_count: number;
-  submitted_at: string | null;
-  proposed_amount: number;
-  final_amount: number;
-  proposal_suggested_slots: unknown;
+  proposal: {
+    id: string;
+    service_request_id: string;
+    provider_id: string;
+    status: ProposalStatus;
+    version: number;
+    revision_count: number;
+    submitted_at: string | null;
+    proposed_amount: number;
+    final_amount: number;
+    proposal_suggested_slots: unknown;
+  };
+  timeline_message: {
+    id: string;
+    chat_id: string;
+    message_type: string;
+    linked_entity_type: string | null;
+    linked_entity_id: string | null;
+    created_at: string;
+  } | null;
 }
 
-export interface SubmitProposalResultTimelineMessage {
-  id: string;
-  chat_id: string;
-  message_type: string;
-  linked_entity_type: string | null;
-  linked_entity_id: string | null;
-  created_at: string;
-}
-
-export interface SubmitProposalResult {
-  proposal: SubmitProposalResultProposal;
-  timeline_message: SubmitProposalResultTimelineMessage;
-}
-
-export interface AcceptProposalResultService {
-  id: string;
-  service_request_id: string;
-  accepted_proposal_id: string;
-  status: string;
-  scheduled_start_date: string;
-  scheduled_shift: string | null;
-  agreed_slot: ProposalSuggestedSlotRpc;
-}
-
-export interface AcceptProposalResultProposal {
-  id: string;
-  status: ProposalStatus;
-  selected_slot: ProposalSuggestedSlotRpc;
-  provider_id: string;
-  chat_id: string;
-}
-
+/** `accept_proposal` RPC response. */
 export interface AcceptProposalResult {
-  service: AcceptProposalResultService;
-  proposal: AcceptProposalResultProposal;
+  service: {
+    id: string;
+    service_request_id: string;
+    accepted_proposal_id: string;
+    status: string;
+    scheduled_start_date: string;
+    scheduled_shift: string | null;
+    agreed_slot: ProposalSuggestedSlotRpc;
+  };
+  proposal: {
+    id: string;
+    status: ProposalStatus;
+    selected_slot: ProposalSuggestedSlotRpc;
+    provider_id: string;
+  };
 }
 
+/** `reject_proposal`, `request_proposal_revision`, `decline_revision_request` responses. */
 export interface ProposalMutationResult {
   proposal: {
     id: string;
     status: ProposalStatus;
-    chat_id: string;
     service_request_id?: string;
     client_rejection_response?: string | null;
     revision_reason?: ProposalRevisionReason | null;
@@ -130,4 +114,39 @@ export interface ProposalsApiError {
 export interface ProposalsApiResult<T> {
   data: T | null;
   error: ProposalsApiError | null;
+}
+
+/** Subset of `provider_proposals` returned by history selects in provider-jobs. */
+export interface ProviderProposalHistoryItem {
+  id: string;
+  proposed_amount: number;
+  proposal_description: string;
+  proposal_duration_value: number;
+  proposal_duration_unit: ProposalDurationUnit;
+  proposal_suggested_slots: ProposalSuggestedSlotRpc[];
+  status: ProposalStatus;
+  tax_rate: number;
+  tax_amount: number;
+  final_amount: number;
+  photos: string[];
+  created_at: string;
+  updated_at: string;
+  client_rejection_response: string | null;
+}
+
+export interface CreateProviderProposalParams {
+  serviceRequestId: string;
+  proposedAmount: number;
+  proposalDescription: string;
+  proposalDurationValue: number;
+  proposalDurationUnit: ProposalDurationUnit;
+  proposalSuggestedSlots: ProposalSuggestedSlotRpc[];
+  photos: string[];
+  pricing: {
+    original_amount: number;
+    tax_rate: number;
+    tax_amount: number;
+    final_amount: number;
+    pricing_signature: string;
+  };
 }

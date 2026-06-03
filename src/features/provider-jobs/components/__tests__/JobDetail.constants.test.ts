@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   getComplexityLabel,
   getDurationLabel,
-  getProposalStatusLabel,
   getUrgencyConfig,
   SUGGESTED_ITEMS_TOOLTIP_TEXT,
 } from "../JobDetail.constants";
@@ -27,16 +26,6 @@ describe("JobDetail.constants", () => {
     expect(getComplexityLabel("simple")).toBe("Simples");
     expect(getComplexityLabel("custom")).toBe("custom");
     expect(getComplexityLabel(null)).toBeNull();
-  });
-
-  it("normalizes proposal status labels", () => {
-    expect(getProposalStatusLabel("ACCEPTED")).toBe("Aceito pelo cliente");
-    expect(getProposalStatusLabel(null)).toBe(
-      "Aguardando avaliação do cliente",
-    );
-    expect(getProposalStatusLabel("unknown")).toBe(
-      "Aguardando avaliação do cliente",
-    );
   });
 
   it("exposes tooltip copy", () => {

@@ -1702,7 +1702,6 @@ export type Database = {
       }
       provider_proposals: {
         Row: {
-          chat_id: string | null
           client_rejection_response: string | null
           client_response_deadline_at: string | null
           created_at: string
@@ -1732,7 +1731,6 @@ export type Database = {
           version: number
         }
         Insert: {
-          chat_id?: string | null
           client_rejection_response?: string | null
           client_response_deadline_at?: string | null
           created_at?: string
@@ -1762,7 +1760,6 @@ export type Database = {
           version?: number
         }
         Update: {
-          chat_id?: string | null
           client_rejection_response?: string | null
           client_response_deadline_at?: string | null
           created_at?: string
@@ -1792,13 +1789,6 @@ export type Database = {
           version?: number
         }
         Relationships: [
-          {
-            foreignKeyName: "provider_proposals_chat_id_fkey"
-            columns: ["chat_id"]
-            isOneToOne: false
-            referencedRelation: "chats"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "provider_proposals_provider_id_fkey"
             columns: ["provider_id"]
@@ -2455,10 +2445,6 @@ export type Database = {
         Returns: Json
       }
       get_prompt_by_key: { Args: { p_prompt_key: string }; Returns: Json }
-      get_proposal_for_timeline: {
-        Args: { p_chat_id: string; p_proposal_id: string }
-        Returns: Json
-      }
       get_provider_proposal_job_detail: {
         Args: {
           p_lat?: number
@@ -2629,6 +2615,10 @@ export type Database = {
         }
         Returns: Json
       }
+      resolve_proposal_chat_id: {
+        Args: { p_provider_id: string; p_service_request_id: string }
+        Returns: string
+      }
       respond_client_budget_question: {
         Args: {
           p_question_id: string
@@ -2639,23 +2629,6 @@ export type Database = {
       }
       sanitize_job_error: { Args: { p_message: string }; Returns: string }
       slugify_for_provider: { Args: { name_input: string }; Returns: string }
-      submit_proposal: {
-        Args: {
-          p_chat_id: string
-          p_final_amount: number
-          p_idempotency_key: string
-          p_photos?: string[]
-          p_pricing_signature: string
-          p_proposal_description: string
-          p_proposal_duration_unit: string
-          p_proposal_duration_value: number
-          p_proposal_suggested_slots: Json
-          p_proposed_amount: number
-          p_tax_amount: number
-          p_tax_rate: number
-        }
-        Returns: Json
-      }
     }
     Enums: {
       cns_closure_type:

@@ -1,8 +1,7 @@
-import type { ProposalRevisionReason, ProposalStatus } from "@/features/negotiation-proposals";
+import type { ProposalRevisionReason, ProposalStatus, ProposalSuggestedSlotRpc } from "./proposals.types";
 
-export interface TimelineHydratedProposal {
+export interface ProposalDetailView {
   id: string;
-  chat_id: string;
   service_request_id: string;
   provider_id: string;
   status: ProposalStatus;
@@ -19,6 +18,9 @@ export interface TimelineHydratedProposal {
   proposal_description: string | null;
   proposal_duration_unit: string | null;
   proposal_duration_value: number | null;
+  proposal_suggested_slots: ProposalSuggestedSlotRpc[];
+  photos: string[];
+  client_rejection_response: string | null;
   client_response_deadline_at: string | null;
   created_at: string;
   updated_at: string;

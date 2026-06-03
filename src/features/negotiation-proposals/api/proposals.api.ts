@@ -2,14 +2,17 @@ import { generateIdempotencyKeyV7 } from "@/lib/utils/idempotencyKey";
 import { logger } from "@/lib/logger";
 import { metrics } from "@/lib/sentry";
 import { supabase } from "@/lib/supabase/client";
+import type { ProposalDetailView } from "../types/proposalDetails.types";
 import type {
   AcceptProposalResult,
+  CreateProviderProposalParams,
+  CreateProviderProposalResult,
   ProposalMutationResult,
   ProposalRevisionReason,
   ProposalsApiResult,
+  ProviderProposalHistoryItem,
   ProposalSuggestedSlotRpc,
   ProposalVersionListResponse,
-  SubmitProposalResult,
 } from "../types/proposals.types";
 import { mapProposalRpcError } from "../utils/proposalApiErrors";
 import { CNS_PROPOSAL_RPC } from "./proposals.rpc";
@@ -60,10 +63,14 @@ async function invokeRpc<T>(
   return { data, error: null };
 }
 
-function isSubmitProposalResult(value: unknown): value is SubmitProposalResult {
+function isCreateProviderProposalResult(value: unknown): value is CreateProviderProposalResult {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
-  return v.proposal != null && typeof v.proposal === "object" && v.timeline_message != null;
+  return (
+    typeof v.id === "string" &&
+    v.proposal != null &&
+    typeof v.proposal === "object"
+  );
 }
 
 function isAcceptProposalResult(value: unknown): value is AcceptProposalResult {
@@ -83,42 +90,35 @@ function isProposalVersionListResponse(value: unknown): value is ProposalVersion
   return Array.isArray((value as ProposalVersionListResponse).items);
 }
 
-export async function submitProposal(params: {
-  chatId: string;
-  idempotencyKey?: string;
-  proposedAmount: number;
-  proposalDescription: string;
-  proposalDurationValue: number;
-  proposalDurationUnit: string;
-  proposalSuggestedSlots: ProposalSuggestedSlotRpc[];
-  pricing: {
-    pricingSignature: string;
-    taxRate: number;
-    taxAmount: number;
-    finalAmount: number;
-  };
-  photos?: string[];
-}): Promise<ProposalsApiResult<SubmitProposalResult>> {
-  const idempotencyKey = params.idempotencyKey ?? generateIdempotencyKeyV7();
+const PROPOSAL_DETAIL_SELECT =
+  "id, service_request_id, provider_id, status, version, revision_count, revision_reason, revision_notes, submitted_at, expired_at, proposed_amount, tax_rate, tax_amount, final_amount, proposal_description, proposal_duration_unit, proposal_duration_value, proposal_suggested_slots, photos, client_rejection_response, client_response_deadline_at, created_at, updated_at" as const;
 
+function isProposalDetailRow(value: unknown): value is ProposalDetailView {
+  if (!value || typeof value !== "object") return false;
+  const row = value as ProposalDetailView;
+  return typeof row.id === "string" && typeof row.service_request_id === "string";
+}
+
+export async function createProviderProposal(
+  params: CreateProviderProposalParams,
+): Promise<ProposalsApiResult<CreateProviderProposalResult>> {
   return invokeRpc(
-    CNS_PROPOSAL_RPC.submitProposal,
+    CNS_PROPOSAL_RPC.createProviderProposal,
     {
-      p_chat_id: params.chatId,
-      p_idempotency_key: idempotencyKey,
+      p_service_request_id: params.serviceRequestId,
       p_proposed_amount: params.proposedAmount,
       p_proposal_description: params.proposalDescription,
       p_proposal_duration_value: params.proposalDurationValue,
       p_proposal_duration_unit: params.proposalDurationUnit,
       p_proposal_suggested_slots: params.proposalSuggestedSlots,
-      p_pricing_signature: params.pricing.pricingSignature,
-      p_tax_rate: params.pricing.taxRate,
-      p_tax_amount: params.pricing.taxAmount,
-      p_final_amount: params.pricing.finalAmount,
-      p_photos: params.photos ?? [],
+      p_photos: params.photos,
+      p_tax_rate: params.pricing.tax_rate,
+      p_tax_amount: params.pricing.tax_amount,
+      p_final_amount: params.pricing.final_amount,
+      p_pricing_signature: params.pricing.pricing_signature,
     },
-    isSubmitProposalResult,
-    "proposals_submit_invalid_response",
+    isCreateProviderProposalResult,
+    "create_provider_proposal_invalid_response",
   );
 }
 
@@ -209,11 +209,71 @@ export async function listProposalVersions(
   );
 }
 
+export async function getProposalDetail(
+  proposalId: string,
+): Promise<ProposalsApiResult<ProposalDetailView>> {
+  const { data, error } = await supabase
+    .from("provider_proposals")
+    .select(PROPOSAL_DETAIL_SELECT)
+    .eq("id", proposalId)
+    .maybeSingle();
+
+  if (error) {
+    logger.error("get_proposal_detail_error", {
+      proposalId,
+      error: error.message,
+    });
+    return {
+      data: null,
+      error: {
+        code: "UNKNOWN",
+        message: error.message,
+      },
+    };
+  }
+
+  if (!data || !isProposalDetailRow(data)) {
+    return {
+      data: null,
+      error: {
+        code: "UNKNOWN",
+        message: "Proposta não encontrada.",
+      },
+    };
+  }
+
+  return { data, error: null };
+}
+
+export async function fetchProviderProposalHistory(
+  serviceRequestId: string,
+): Promise<{ data: ProviderProposalHistoryItem[]; error: string | null }> {
+  const { data, error } = await supabase
+    .from("provider_proposals")
+    .select(
+      "id, proposed_amount, proposal_description, proposal_duration_value, proposal_duration_unit, proposal_suggested_slots, status, tax_rate, tax_amount, final_amount, photos, created_at, updated_at, client_rejection_response",
+    )
+    .eq("service_request_id", serviceRequestId)
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    logger.error("fetch_provider_proposal_history_error", {
+      serviceRequestId,
+      error: error.message,
+    });
+    return { data: [], error: error.message };
+  }
+
+  return { data: (data ?? []) as unknown as ProviderProposalHistoryItem[], error: null };
+}
+
 export const proposalsApi = {
-  submitProposal,
+  createProviderProposal,
   acceptProposal,
   rejectProposal,
   requestProposalRevision,
   declineRevisionRequest,
   listProposalVersions,
+  getProposalDetail,
+  fetchProviderProposalHistory,
 };

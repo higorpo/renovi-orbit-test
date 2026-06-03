@@ -1,6 +1,6 @@
 import type { MatchProviderJobsBody } from "../../../../supabase/functions/match-provider-jobs/types";
 import type { FormSchema } from "@/features/dynamic-form";
-import type { ProviderProposalSuggestedSlot } from "../api/providerProposals.api";
+import type { ProposalSuggestedSlotRpc } from "@/features/negotiation-proposals";
 
 /** Request params for match-provider-jobs edge function. Re-exported from edge function types. */
 export type FetchProviderJobsParams = MatchProviderJobsBody;
@@ -39,7 +39,7 @@ export interface ProviderJobItem {
   provider_proposal_description: string | null;
   provider_proposal_duration_value: number | null;
   provider_proposal_duration_unit: "hours" | "days" | null;
-  provider_proposal_suggested_slots: ProviderProposalSuggestedSlot[] | null;
+  provider_proposal_suggested_slots: ProposalSuggestedSlotRpc[] | null;
   provider_proposal_photos: string[] | null;
   provider_proposal_status: string | null;
   provider_proposal_client_rejection_response: string | null;
@@ -78,8 +78,6 @@ export interface ProviderJobsFilterState {
   radiusKm: number;
   serviceId: string | null;
 }
-
-export const MAX_PROPOSALS_PER_REQUEST = 3;
 
 /** Navigation state when opening a job from the list (sheet + URL). */
 export interface JobDetailLocationState {

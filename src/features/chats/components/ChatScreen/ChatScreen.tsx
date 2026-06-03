@@ -23,6 +23,7 @@ import { useChatActionBannerInset } from "../../hooks/useChatActionBannerInset";
 import type { ChatActionBannerCtaPayload } from "../../hooks/useChatActionBannerState";
 import type { ProposalCardAction } from "../DynamicMessageRenderer/DynamicProposalCard";
 import { createClientSendId } from "../../utils/clientSendId";
+import { deriveLatestProposalIdFromMessages } from "../../utils/deriveLatestProposalIdFromMessages";
 import { resolveCounterpartyViewedMessageId } from "../../utils/resolveCounterpartyViewedMessageId";
 import { ChatComposerBar } from "./ChatComposerBar";
 import { ChatScreenHeader } from "./ChatScreenHeader";
@@ -70,17 +71,25 @@ export function ChatScreen({
 
   useMarkConversationRead(chatId, messages);
 
+  const viewerRole = profile?.role === "provider" ? "provider" : "client";
+
   const composerState = useChatComposerState({
     chatId,
     conversationStatus: detail?.conversation.status ?? null,
+    viewerRole,
   });
-
-  const viewerRole = profile?.role === "provider" ? "provider" : "client";
+  const pendingProposalId = useMemo(
+    () => deriveLatestProposalIdFromMessages(messages),
+    [messages],
+  );
+  const hasPendingProposal = composerState.disabledReason === "pending_proposal";
 
   const { banner, isVisible: isBannerVisible, dismiss, getCtaPayload } = useChatActionBannerState({
     chatId,
     viewerRole,
     conversationStatus: detail?.conversation.status ?? "INACTIVE",
+    pendingProposalId: hasPendingProposal ? pendingProposalId : null,
+    primaryProposalStatus: hasPendingProposal ? "PENDING" : null,
     messages,
     clientId: detail?.conversation.client_id ?? null,
     providerId: detail?.conversation.provider_id ?? null,

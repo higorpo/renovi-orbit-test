@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { getProviderProposalPhotoDisplayUrl } from "../api/providerProposals.api";
+import { getProposalPhotoDisplayUrl } from "../api/proposalComposerSupport.api";
 
-export function useProviderProposalPhotoUrls(
-  photos: string[] | null,
+export function useProposalPhotoUrls(
+  photos: string[] | null | undefined,
 ): { urls: string[]; isLoading: boolean } {
   const [urls, setUrls] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -17,10 +17,8 @@ export function useProviderProposalPhotoUrls(
     let cancelled = false;
     setIsLoading(true);
 
-    (async () => {
-      const resolved = await Promise.all(
-        photos.map((item) => getProviderProposalPhotoDisplayUrl(item)),
-      );
+    void (async () => {
+      const resolved = await Promise.all(photos.map((item) => getProposalPhotoDisplayUrl(item)));
 
       if (!cancelled) {
         setUrls(resolved.filter(Boolean));

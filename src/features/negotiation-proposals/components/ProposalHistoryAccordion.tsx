@@ -7,11 +7,13 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { ProviderProposalHistoryItem } from "../api/providerProposals.api";
 import { formatCurrency } from "@/lib/formatCurrency";
-import { translateProposalStatus } from "./providerProposalFormatters";
+import { PROPOSAL_COPY_VARIANTS, type ProposalCopyVariant } from "../constants/proposalCopyVariants";
+import type { ProviderProposalHistoryItem } from "../types/proposals.types";
+import { getProposalStatusLabel } from "../utils/proposalDetailsFormatters";
 
-interface ProviderProposalHistoryAccordionProps {
+interface ProposalHistoryAccordionProps {
+  copyVariant?: ProposalCopyVariant;
   historyOpen: boolean;
   proposalHistory: ProviderProposalHistoryItem[];
   isHistoryLoading: boolean;
@@ -20,14 +22,17 @@ interface ProviderProposalHistoryAccordionProps {
   onProposalSelect: (proposal: ProviderProposalHistoryItem) => void;
 }
 
-export function ProviderProposalHistoryAccordion({
+export function ProposalHistoryAccordion({
+  copyVariant = "budget",
   historyOpen,
   proposalHistory,
   isHistoryLoading,
   isHistoryError,
   onHistoryOpenChange,
   onProposalSelect,
-}: ProviderProposalHistoryAccordionProps) {
+}: ProposalHistoryAccordionProps) {
+  const copy = PROPOSAL_COPY_VARIANTS[copyVariant];
+
   return (
     <Accordion
       type="single"
@@ -36,7 +41,7 @@ export function ProviderProposalHistoryAccordion({
       onValueChange={(value) => onHistoryOpenChange(value === "proposal-history")}
     >
       <AccordionItem value="proposal-history">
-        <AccordionTrigger>Ver histórico de orçamentos</AccordionTrigger>
+        <AccordionTrigger>{copy.historyTrigger}</AccordionTrigger>
         <AccordionContent>
           {isHistoryLoading && (
             <div className="space-y-2">
@@ -46,15 +51,11 @@ export function ProviderProposalHistoryAccordion({
           )}
 
           {!isHistoryLoading && isHistoryError && (
-            <p className="text-sm text-muted-foreground">
-              Não foi possível carregar o histórico de orçamentos.
-            </p>
+            <p className="text-sm text-muted-foreground">{copy.loadingHistory}</p>
           )}
 
           {!isHistoryLoading && !isHistoryError && proposalHistory.length === 0 && (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Nenhum orçamento encontrado para este trabalho.
-            </p>
+            <p className="py-8 text-center text-sm text-muted-foreground">{copy.emptyHistory}</p>
           )}
 
           {!isHistoryLoading && !isHistoryError && proposalHistory.length > 0 && (
@@ -70,14 +71,14 @@ export function ProviderProposalHistoryAccordion({
                         {proposal.proposal_description}
                       </p>
                       <p className="mt-2 text-xs font-medium text-foreground">
-                        Status: {translateProposalStatus(proposal.status)}
+                        Status: {getProposalStatusLabel(proposal.status)}
                       </p>
                     </div>
                     <Button
                       type="button"
                       size="icon"
                       variant="ghost"
-                      aria-label="Ver detalhes do orçamento"
+                      aria-label={copy.historyDetailsAria}
                       onClick={() => onProposalSelect(proposal)}
                     >
                       <Eye className="h-4 w-4" aria-hidden />

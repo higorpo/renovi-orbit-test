@@ -301,9 +301,8 @@ with pricing as (
   select *
   from public.calculate_provider_service_pricing(350.00::numeric)
 )
-select public.submit_proposal(
-  (select chat_id from _accept_reset_chat),
-  'c4000001-0001-4001-8001-000000000001'::uuid,
+select public.create_provider_proposal(
+  (select service_request_id from _accept_reset_case),
   pricing.original_amount,
   'Accept slot reset fixture',
   2,
@@ -314,10 +313,11 @@ select public.submit_proposal(
       'shift', 'morning'
     )
   ),
-  pricing.pricing_signature,
+  '{}'::text[],
   pricing.tax_rate,
   pricing.tax_amount,
-  pricing.final_amount
+  pricing.final_amount,
+  pricing.pricing_signature
 ) as submit_response
 from pricing;
 

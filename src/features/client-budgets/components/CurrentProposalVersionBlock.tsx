@@ -2,8 +2,7 @@ import { Clock, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatCurrency } from "@/lib/formatCurrency";
-import { ProviderProposalPhotosGrid } from "@/features/provider-jobs/components/ProviderProposalPhotosGrid";
-import { useProviderProposalPhotoUrls } from "@/features/provider-jobs/hooks/useProviderProposalPhotoUrls";
+import { ProposalPhotosGrid, useProposalPhotoUrls } from "@/features/negotiation-proposals";
 import type { ClientBudgetDetailProposal } from "../types/client-budgets.types";
 import { BudgetStatusBadge } from "./BudgetStatusBadge";
 
@@ -21,7 +20,7 @@ interface CurrentProposalVersionBlockProps {
 }
 
 export function CurrentProposalVersionBlock({ proposal }: CurrentProposalVersionBlockProps) {
-  const { urls, isLoading } = useProviderProposalPhotoUrls(
+  const { urls, isLoading } = useProposalPhotoUrls(
     proposal.photos?.length ? proposal.photos : null,
   );
   const deadlineLabel = formatDeadline(proposal.client_response_deadline_at);
@@ -62,10 +61,12 @@ export function CurrentProposalVersionBlock({ proposal }: CurrentProposalVersion
           </p>
         </div>
 
-        <ProviderProposalPhotosGrid
+        <ProposalPhotosGrid
           isLoading={isLoading}
           urls={urls}
           fallbackPhotos={proposal.photos}
+          heading="Fotos do orçamento"
+          photoAltPrefix="Foto do orçamento"
         />
       </div>
     </div>

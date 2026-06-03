@@ -207,38 +207,6 @@ export async function checkChatFreeMessagingAllowed(
   return { data, error: null };
 }
 
-export interface TimelineProposalSnapshot {
-  id: string;
-  status: string;
-  version: number;
-  revision_count: number;
-  revision_reason: string | null;
-  submitted_at: string | null;
-  final_amount: number;
-}
-
-export interface GetProposalForTimelineResult {
-  proposal: TimelineProposalSnapshot;
-}
-
-function isGetProposalForTimelineResult(value: unknown): value is GetProposalForTimelineResult {
-  if (!value || typeof value !== "object") return false;
-  const proposal = (value as GetProposalForTimelineResult).proposal;
-  return proposal != null && typeof proposal.id === "string";
-}
-
-export async function getProposalForTimeline(params: {
-  chatId: string;
-  proposalId: string;
-}): Promise<ChatsApiResult<GetProposalForTimelineResult>> {
-  return invokeRpc(
-    CNS_CHAT_RPC.getProposalForTimeline,
-    { p_chat_id: params.chatId, p_proposal_id: params.proposalId },
-    isGetProposalForTimelineResult,
-    "chats_get_proposal_for_timeline_invalid_response",
-  );
-}
-
 export async function sendMessage(params: {
   idempotencyKey?: string;
   messageType: CnsMessageType;
@@ -269,6 +237,5 @@ export const chatsApi = {
   closeConversation,
   markConversationRead,
   checkChatFreeMessagingAllowed,
-  getProposalForTimeline,
   sendMessage,
 };

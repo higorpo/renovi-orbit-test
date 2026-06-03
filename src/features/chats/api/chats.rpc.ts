@@ -12,7 +12,6 @@ export const CNS_CHAT_RPC = {
   listChatMessages: "list_chat_messages",
   getConversationDetail: "get_conversation_detail",
   chatFreeMessagingAllowed: "cns_chat_free_messaging_allowed",
-  getProposalForTimeline: "get_proposal_for_timeline",
   refreshMediaSignedUrls: "cns_refresh_media_signed_urls",
 } as const;
 

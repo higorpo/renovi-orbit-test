@@ -1,5 +1,4 @@
 import type { ProviderJobItem } from "@/features/provider-jobs/types/provider-jobs.types";
-import { MAX_PROPOSALS_PER_REQUEST } from "@/features/provider-jobs/types/provider-jobs.types";
 import type {
   ProviderOwnQuestion,
   ProviderSentBudget,
@@ -37,7 +36,7 @@ export function initialProviderJobItemFromSentBudget(
     city: budget.city ?? "",
     state: budget.state_abbr ?? "",
     distance_km: 0,
-    proposal_count: MAX_PROPOSALS_PER_REQUEST,
+    proposal_count: 1,
     provider_proposal_id: budget.id,
     provider_proposed_amount: budget.proposed_amount,
     provider_tax_rate: budget.tax_rate,
@@ -87,7 +86,7 @@ export function initialProviderJobItemFromOwnQuestion(
     city: question.city ?? "",
     state: question.state_abbr ?? "",
     distance_km: 0,
-    proposal_count: MAX_PROPOSALS_PER_REQUEST,
+    proposal_count: 1,
     provider_proposal_id: null,
     provider_proposed_amount: null,
     provider_tax_rate: null,

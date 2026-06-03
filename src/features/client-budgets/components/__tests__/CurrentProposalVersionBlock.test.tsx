@@ -3,18 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CurrentProposalVersionBlock } from "../CurrentProposalVersionBlock";
 import type { ClientBudgetDetailProposal } from "../../types/client-budgets.types";
 
-const useProviderProposalPhotoUrlsMock = vi.hoisted(() =>
+const useProposalPhotoUrlsMock = vi.hoisted(() =>
   vi.fn((_photos: string[] | null) => ({ urls: ["https://photo/1"], isLoading: false })),
 );
 
-vi.mock("@/features/provider-jobs/hooks/useProviderProposalPhotoUrls", () => ({
-  useProviderProposalPhotoUrls: (paths: string[] | null) =>
-    useProviderProposalPhotoUrlsMock(paths),
-}));
-
-vi.mock("@/features/provider-jobs/components/ProviderProposalPhotosGrid", () => ({
-  ProviderProposalPhotosGrid: () => <div data-testid="photos-grid" />,
-}));
+vi.mock("@/features/negotiation-proposals", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/negotiation-proposals")>();
+  return {
+    ...actual,
+    useProposalPhotoUrls: (paths: string[] | null) => useProposalPhotoUrlsMock(paths),
+    ProposalPhotosGrid: () => <div data-testid="photos-grid" />,
+  };
+});
 
 const baseProposal: ClientBudgetDetailProposal = {
   id: "p1",
@@ -32,11 +32,11 @@ const baseProposal: ClientBudgetDetailProposal = {
 
 describe("CurrentProposalVersionBlock", () => {
   beforeEach(() => {
-    useProviderProposalPhotoUrlsMock.mockImplementation(() => ({
+    useProposalPhotoUrlsMock.mockImplementation(() => ({
       urls: ["https://photo/1"],
       isLoading: false,
     }));
-    useProviderProposalPhotoUrlsMock.mockClear();
+    useProposalPhotoUrlsMock.mockClear();
   });
 
   it("shows deadline banner when submitted and deadline parses", () => {
@@ -67,6 +67,6 @@ describe("CurrentProposalVersionBlock", () => {
 
   it("passes null photo paths to hook when photos array is empty", () => {
     render(<CurrentProposalVersionBlock proposal={{ ...baseProposal, photos: [] }} />);
-    expect(useProviderProposalPhotoUrlsMock).toHaveBeenCalledWith(null);
+    expect(useProposalPhotoUrlsMock).toHaveBeenCalledWith(null);
   });
 });

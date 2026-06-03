@@ -23,7 +23,7 @@ Termos extraídos ou inferidos a partir de nomes de entidades, rotas e interface
 | **Complexidade do escopo** | Campo opcional `simple` / `medium` / `complex`. | `service_requests.scope_complexity`. |
 | **Duração estimada (hint)** | Chaves como `under_1h`, `1_to_2h`, … definidas em CHECK. | `service_requests.estimated_duration_hint`. |
 | **Status do pedido** | `open`, `in_progress`, `closed`, `cancelled`. | `service_requests.status`. |
-| **Status da proposta** | `submitted`, `accepted`, `rejected`, `withdrawn`. | `provider_proposals.status`. |
+| **Status da proposta** | `PENDING`, `ACCEPTED`, `REJECTED`, `REVISION_REQUESTED`, `REVISED`, `EXPIRED`, `REJECTED_AUTOMATICALLY`. | `provider_proposals.status` (enum CNS). |
 | **Unidade de duração da proposta** | `hours` ou `days`. | `provider_proposals.proposal_duration_unit`. |
 | **Taxa Renovi** | Constante de plataforma (ex.: chave `renovi_tax_provider` seed 0,15 nas migrations). | `platform_constants`. |
 | **Assinatura de precificação** | Mecanismo HMAC para integridade dos valores calculados no servidor ao criar proposta. | RPCs `generate_provider_pricing_signature`, `create_provider_proposal`. |
@@ -39,7 +39,7 @@ Termos extraídos ou inferidos a partir de nomes de entidades, rotas e interface
 | **Conversa / chat** | Thread bilateral cliente–prestador ligada a um `service_request`; status `ACTIVE`, `INACTIVE` ou `CLOSED`. | Tabela `chats`, RPCs `list_conversations`, `cns_send_message`. |
 | **Slot de conversa ativa** | Vaga de negociação simultânea por pedido (padrão **4**); contador em `service_request_negotiation_stats`. INACTIVE libera slot; reativação não consome de novo. | Constante `chats.max_active_slots_per_service_request`; design §3.3.1. |
 | **Mensagem livre** | Texto ou mídia fora do card de proposta; **bloqueada** enquanto há proposta `PENDING`. | RPC `cns_send_message`, regra Req. 34. |
-| **Proposta (CNS)** | Oferta na timeline com FSM: `PENDING`, `REVISION_REQUESTED`, `ACCEPTED`, `REJECTED`, `EXPIRED`, etc. | `provider_proposals` evoluído, RPCs `submit_proposal`, `accept_proposal`. |
+| **Proposta (CNS)** | Oferta com FSM: `PENDING`, `REVISION_REQUESTED`, `ACCEPTED`, `REJECTED`, `EXPIRED`, etc. Criação canônica por `create_provider_proposal(service_request_id)`; espelho opcional na timeline. | `provider_proposals`, RPCs `create_provider_proposal`, `accept_proposal`. |
 | **Reciprocidade** | Regra que inativa conversa sem resposta bilateral no prazo; pode reativar com nova mensagem válida. | Cron `cron_chat_evaluate_reciprocity`, status `INACTIVE`. |
 | **domain_events** | Fila de eventos de domínio processada assincronamente para notificações e efeitos colaterais. | Tabela `domain_events`, Edge `cns_process_domain_events`. |
 

@@ -23,8 +23,8 @@
  *  • Geographic proximity – PostGIS ST_DWithin(request, provider, radius).
  *    radius_km clamped to [1, 100].
  *  • No existing active proposal from this provider on the request.
- *  • Fewer than 3 active (non-withdrawn, non-rejected) proposals total.
  *  • Optional service_id filter for single-service views.
+ *    (Chat slot limits apply via cns_send_message / initiate — not proposal count.)
  *
  * ── Computed fields per item ──────────────────────────────────────────
  *  • distance_km        – ST_Distance / 1000, rounded to 1 decimal.

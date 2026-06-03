@@ -153,7 +153,7 @@ Definição completa: `types/provider-budgets.types.ts`.
 ### Mapeamento para o detalhe (`initialProviderJobItem.ts`)
 
 - Preenche `ProviderJobItem` com placeholders para campos que a RPC de orçamentos/perguntas não traz (`form_data`/`form_schema` nulos, `distance_km: 0`, etc.).
-- Orçamento: `proposal_count` fixo `MAX_PROPOSALS_PER_REQUEST` (3), `is_latest_provider_proposal: true`.
+- Orçamento: `proposal_count` informativo (sem teto por pedido), `is_latest_provider_proposal: true`.
 - Pergunta sem proposta: `provider_proposal_id` e campos de proposta nulos.
 
 ---

@@ -55,44 +55,89 @@ const proposalUi = vi.hoisted(() => ({
   removeNewPhoto: vi.fn(),
   addPhotos: vi.fn(),
   removeAvailabilitySlot: vi.fn(),
+  form: {
+    trigger: vi.fn().mockResolvedValue(true),
+    watch: vi.fn(),
+    setValue: vi.fn(),
+    getValues: vi.fn().mockReturnValue({}),
+  },
+  availabilityFieldArray: {
+    fields: [],
+    append: vi.fn(),
+    remove: vi.fn(),
+  },
 }));
 
-vi.mock("../../hooks/useProviderProposalComposer", () => ({
-  useProviderProposalComposer: () => ({
-    isOpen: proposalUi.isProposalOpen,
-    isSubmitting: proposalUi.isSubmitting,
-    isPricingLoading: proposalUi.isPricingLoading,
-    priceInput: proposalUi.priceInput,
-    descriptionDraft: proposalUi.descriptionDraft,
-    durationValueInput: proposalUi.durationValueInput,
-    durationUnit: proposalUi.durationUnit,
-    availabilitySlots: proposalUi.availabilitySlots,
-    existingPhotoPaths: proposalUi.existingPhotoPaths,
-    newPhotos: proposalUi.newPhotos,
-    photosCount: proposalUi.photosCount,
-    pricing: proposalUi.pricing,
-    maxDescriptionLength: proposalUi.maxDescriptionLength,
-    maxPhotos: proposalUi.maxPhotos,
-    canSubmitProposal: proposalUi.canSubmitProposal,
-    openComposer: proposalUi.openComposer,
-    closeComposer: proposalUi.closeProposalComposer,
-    setPriceInput: proposalUi.setPriceInput,
-    setDescriptionDraft: proposalUi.setDescriptionDraft,
-    setDurationValueInput: proposalUi.setDurationValueInput,
-    setDurationUnit: proposalUi.setDurationUnit,
-    updateAvailabilitySlot: proposalUi.updateAvailabilitySlot,
-    addAvailabilitySlot: proposalUi.addAvailabilitySlot,
-    removeAvailabilitySlot: proposalUi.removeAvailabilitySlot,
-    addPhotos: proposalUi.addPhotos,
-    removeExistingPhoto: proposalUi.removeExistingPhoto,
-    removeNewPhoto: proposalUi.removeNewPhoto,
-    submitProposal: proposalUi.submitProposal,
-  }),
-}));
-
-vi.mock("../../hooks/useProviderProposalPhotoUrls", () => ({
-  useProviderProposalPhotoUrls: () => ({ urls: [], isLoading: false }),
-}));
+vi.mock("@/features/negotiation-proposals", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/negotiation-proposals")>();
+  return {
+    ...actual,
+    useProposalPhotoUrls: () => ({ urls: [], isLoading: false }),
+    useServiceRequestProposalComposer: () => ({
+      isOpen: proposalUi.isProposalOpen,
+      isSubmitting: proposalUi.isSubmitting,
+      isPricingLoading: proposalUi.isPricingLoading,
+      priceInput: proposalUi.priceInput,
+      descriptionDraft: proposalUi.descriptionDraft,
+      durationValueInput: proposalUi.durationValueInput,
+      durationUnit: proposalUi.durationUnit,
+      availabilitySlots: proposalUi.availabilitySlots,
+      existingPhotoPaths: proposalUi.existingPhotoPaths,
+      newPhotos: proposalUi.newPhotos,
+      photosCount: proposalUi.photosCount,
+      pricing: proposalUi.pricing,
+      maxDescriptionLength: proposalUi.maxDescriptionLength,
+      maxPhotos: proposalUi.maxPhotos,
+      canSubmitProposal: proposalUi.canSubmitProposal,
+      openComposer: proposalUi.openComposer,
+      closeComposer: proposalUi.closeProposalComposer,
+      setPriceInput: proposalUi.setPriceInput,
+      setDescriptionDraft: proposalUi.setDescriptionDraft,
+      setDurationValueInput: proposalUi.setDurationValueInput,
+      setDurationUnit: proposalUi.setDurationUnit,
+      updateAvailabilitySlot: proposalUi.updateAvailabilitySlot,
+      addAvailabilitySlot: proposalUi.addAvailabilitySlot,
+      removeAvailabilitySlot: proposalUi.removeAvailabilitySlot,
+      addPhotos: proposalUi.addPhotos,
+      removeExistingPhoto: proposalUi.removeExistingPhoto,
+      removeNewPhoto: proposalUi.removeNewPhoto,
+      submitProposal: proposalUi.submitProposal,
+      form: proposalUi.form,
+      availabilityFieldArray: proposalUi.availabilityFieldArray,
+    }),
+    useProposalHistory: () => ({
+      items: [],
+      isLoading: false,
+      isError: false,
+      errorMessage: null,
+    }),
+    ServiceRequestProposalComposerDialog: ({
+      open,
+      onOpenChange,
+      onSubmit,
+    }: {
+      open: boolean;
+      onOpenChange: (open: boolean) => void;
+      onSubmit: () => Promise<void>;
+    }) =>
+      open
+        ? createElement(
+            "div",
+            { role: "dialog", "aria-label": "composer" },
+            createElement(
+              "button",
+              { type: "button", onClick: () => onOpenChange(false) },
+              "Fechar",
+            ),
+            createElement(
+              "button",
+              { type: "button", onClick: () => void onSubmit() },
+              "Enviar orçamento",
+            ),
+          )
+        : null,
+  };
+});
 
 vi.mock("../JobQuestionsFeed", () => ({
   JobQuestionsFeed: () => <div data-testid="questions-feed-stub" />,
@@ -136,7 +181,7 @@ describe("JobDetailContent", () => {
 
   it("renders rejection alert when proposal rejected", () => {
     const job = createMinimalJob({
-      provider_proposal_status: "rejected",
+      provider_proposal_status: "REJECTED",
       provider_proposal_client_rejection_response: "Preço alto",
     });
     renderWithQuery(<JobDetailContent job={job} />);
@@ -146,7 +191,7 @@ describe("JobDetailContent", () => {
 
   it("renders fallback rejection copy when client left no comment", () => {
     const job = createMinimalJob({
-      provider_proposal_status: "rejected",
+      provider_proposal_status: "REJECTED",
       provider_proposal_client_rejection_response: "   ",
     });
     renderWithQuery(<JobDetailContent job={job} />);
@@ -165,7 +210,7 @@ describe("JobDetailContent", () => {
   it("hides question prompt and floating CTAs when viewing a non-latest proposal", () => {
     const job = createMinimalJob({
       provider_proposal_id: "old-prop",
-      provider_proposal_status: "withdrawn",
+      provider_proposal_status: "REVISED",
       is_latest_provider_proposal: false,
     });
     renderWithQuery(<JobDetailContent job={job} />);
@@ -179,7 +224,7 @@ describe("JobDetailContent", () => {
   it("renders summary when provider proposal exists", () => {
     const job = createMinimalJob({
       provider_proposal_id: "prop-1",
-      provider_proposal_status: "submitted",
+      provider_proposal_status: "PENDING",
       provider_proposed_amount: 500,
     });
     renderWithQuery(<JobDetailContent job={job} />);
@@ -256,7 +301,7 @@ describe("JobDetailContent", () => {
   it("opens proposal composer in edit mode from summary card", () => {
     const job = createMinimalJob({
       provider_proposal_id: "prop-1",
-      provider_proposal_status: "submitted",
+      provider_proposal_status: "PENDING",
       provider_proposed_amount: 400,
     });
     renderWithQuery(<JobDetailContent job={job} />);

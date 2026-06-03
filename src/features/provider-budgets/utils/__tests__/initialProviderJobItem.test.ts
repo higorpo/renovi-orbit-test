@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { MAX_PROPOSALS_PER_REQUEST } from "@/features/provider-jobs/types/provider-jobs.types";
 import {
   createProviderOwnQuestion,
   createProviderSentBudget,
@@ -25,7 +24,7 @@ describe("initialProviderJobItem", () => {
       expect(item.provider_proposal_id).toBe(budget.id);
       expect(item.provider_proposed_amount).toBe(budget.proposed_amount);
       expect(item.provider_proposal_photos).toEqual(["a.jpg", "b.jpg"]);
-      expect(item.proposal_count).toBe(MAX_PROPOSALS_PER_REQUEST);
+      expect(item.proposal_count).toBe(1);
       expect(item.neighborhood).toBe("");
       expect(item.city).toBe("");
       expect(item.state).toBe("");

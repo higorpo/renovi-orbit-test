@@ -30,21 +30,33 @@ const message: ChatMessageListItem = {
 };
 
 describe("DynamicProposalCard", () => {
-  it("lazy-loads proposal details only after expand", () => {
+  it("hydrates proposal summary and opens details via callback", () => {
     hydrateMock.mockReturnValue({
-      proposal: null,
+      proposal: {
+        status: "PENDING",
+        proposed_amount: 500,
+      },
       isLoading: false,
       isError: false,
       refetch: vi.fn(),
     });
 
+    const onProposalAction = vi.fn();
+
     render(
-      <DynamicProposalCard chatId="chat-1" message={message} viewerRole="client" isOutgoing={false} />,
+      <DynamicProposalCard
+        chatId="chat-1"
+        message={message}
+        viewerRole="client"
+        isOutgoing={false}
+        onProposalAction={onProposalAction}
+      />,
     );
 
-    expect(hydrateMock).toHaveBeenCalledWith("chat-1", "p1", false);
+    expect(hydrateMock).toHaveBeenCalledWith("chat-1", "p1", true);
+    expect(screen.getByText("R$ 500,00")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /Ver detalhes/i }));
-    expect(hydrateMock).toHaveBeenLastCalledWith("chat-1", "p1", true);
+    expect(onProposalAction).toHaveBeenCalledWith("view_details", "p1");
   });
 });

@@ -45,14 +45,14 @@
 
 ### 5.2 Enviar proposta
 
-1. Prestador envia **`submit_proposal`** (valores, slots sugeridos, assinatura de preço).
-2. Status **`PENDING`**; mensagem tipo **PROPOSAL** na timeline; mensagens livres bloqueadas.
+1. Prestador envia **`create_provider_proposal`** por `service_request_id` (valores, slots sugeridos, assinatura de preço). Conversa **não** é pré-requisito; se existir, espelha **PROPOSAL** na timeline.
+2. Status **`PENDING`**; mensagens livres bloqueadas quando há proposta pendente na conversa.
 
 ### 5.3 Cliente responde à proposta
 
 - **Aceitar:** escolhe slot sugerido → **`accept_proposal`** → proposta `ACCEPTED`, pedido `COMPLETED`, serviço em `services`, demais propostas `REJECTED_AUTOMATICALLY`, **todas** conversas do pedido **CLOSED**.
 - **Recusar:** **`reject_proposal`** → `REJECTED`; mensagens livres voltam.
-- **Pedir revisão:** **`request_proposal_revision`** → `REVISION_REQUESTED` (limite de revisões no servidor); depois prestador pode **`submit_proposal`** nova versão.
+- **Pedir revisão:** **`request_proposal_revision`** → `REVISION_REQUESTED` (limite de revisões no servidor); depois prestador pode **`create_provider_proposal`** nova versão.
 
 ### 5.4 Cancelar pedido
 

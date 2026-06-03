@@ -1,4 +1,4 @@
--- pgTAP: submit_proposal (CNS task 30, design §4.3).
+-- pgTAP: create_provider_proposal (unified proposal creation RPC).
 
 begin;
 
@@ -64,9 +64,9 @@ select ok(
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and p.proname = 'submit_proposal'
+      and p.proname = 'create_provider_proposal'
   ),
-  'submit_proposal is SECURITY DEFINER'
+  'create_provider_proposal is SECURITY DEFINER'
 );
 
 create temp table _submit_sr as
@@ -86,9 +86,8 @@ with pricing as (
   select *
   from public.calculate_provider_service_pricing(250.00::numeric)
 )
-select public.submit_proposal(
-  (select chat_id from _submit_chat),
-  'e1111111-1111-4111-8111-111111111111'::uuid,
+select public.create_provider_proposal(
+  (select service_request_id from _submit_sr),
   pricing.original_amount,
   'Scope includes wiring and fixtures',
   2,
@@ -99,10 +98,11 @@ select public.submit_proposal(
       'shift', 'morning'
     )
   ),
-  pricing.pricing_signature,
+  '{}'::text[],
   pricing.tax_rate,
   pricing.tax_amount,
-  pricing.final_amount
+  pricing.final_amount,
+  pricing.pricing_signature
 ) as response
 from pricing;
 
@@ -153,9 +153,8 @@ select throws_ok(
       select *
       from public.calculate_provider_service_pricing(300.00::numeric)
     )
-    select public.submit_proposal(
-      (select chat_id from _submit_chat),
-      'e2222222-2222-4222-8222-222222222222'::uuid,
+    select public.create_provider_proposal(
+      (select service_request_id from _submit_sr),
       pricing.original_amount,
       'Second proposal attempt',
       2,
@@ -166,10 +165,11 @@ select throws_ok(
           'shift', 'afternoon'
         )
       ),
-      pricing.pricing_signature,
+      '{}'::text[],
       pricing.tax_rate,
       pricing.tax_amount,
-      pricing.final_amount
+      pricing.final_amount,
+      pricing.pricing_signature
     )
     from pricing;
   $sql$,

@@ -18,6 +18,8 @@ Itens interessantes de ter na plataforma (futuro)
 - Quando enviar proposta ou entrar para ver detalhes de um pedido fora da área, perguntar ao prestador se ele quer adicionar aquela área
 - Prestador de serviços ter um calendário de serviços que ele pode gerenciar na plataforma, integrado com as datas que ele passa na hora de fazer o orçamento
 - Sistema de badges dos cards das telas de meus serviços e orçamentos para o cliente e prestador deveria ser unificado para manter consistência. Podemos unificar também o card de serviço para manter melhor consistência.
+- Na tela de detalhes do chat, incluir botão para redirecionar usuário para tela de detalhes do pedido/serviço
+- Criar tela exclusiva de detalhes do pedido/serviço que pode ser acessível via link. Tela de detalhes do pedido deve ser acessível para qualquer usuário logado e poderia permitir enviar propostas diretamente pelo link
 
 Urgentes:
 
@@ -50,6 +52,7 @@ Coisas para verificar:
 - Quando proposta aceita e entrar na tela de um trabalho específico, redirecionar para tela do serviço em si.
 - Prestadores marcados como "Pioneiros" tem taxa de serviço menor
 - Direcionar prestador para que ele cadastre serviços que ele atenda para exibir trabalhos
+
 
 Coisas para terminar do fluxo atual de trabalho:
 
@@ -88,7 +91,8 @@ Coisas para fazer next
 -cobertura de testes em todos os códigos novos
 -existe uma certa lentidão para disparar push de novas mensagens (ele cai numa fila de processamento para enviar pro message dispatcher e  depois ainda espera o job do message dispatcher...)
 - usar trigger ao invés de criar essa tabela central...
-
+- para que serve CHAT_PROPOSAL_TIMELINE_QUERY_KEY? podemos remover?
+-remover referencia de chat e novas colunas do provider_proposals, renomear tabela.
 
 
 ATUALIZAR:
@@ -151,9 +155,4 @@ A policy de storage `"Clients providers and admins can read question response im
 
 ---
 
-- dot de mensagem naõ visualizada naõ atualiza quando entro no chat
-- botão de detalhes não aparece
-- layout da tela do chats é diferente no mobile
-- layout do card de chat está esquisito
-- loading do chat não está tão bom
-- se os dois enviam mensagem ao mesmo tempo, chat buga
+-ajustar o online

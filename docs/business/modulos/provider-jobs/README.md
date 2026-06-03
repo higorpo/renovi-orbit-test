@@ -16,13 +16,12 @@
 | Detalhe | RPC **`get_provider_proposal_job_detail`** |
 | Proposta | RPCs **`calculate_provider_service_pricing`**, **`create_provider_proposal`**; storage **`provider-proposals`** |
 | Perguntas | RPCs **`create_provider_service_request_question`**, **`list_provider_service_request_questions`** |
-| Retirada | `update` em **`provider_proposals`** → status `withdrawn` |
 
 ## 3. Documentação da feature
 
 | Documento | Conteúdo |
 |-----------|----------|
-| [features/trabalhos-e-propostas.md](./features/trabalhos-e-propostas.md) | Telas, geo, critérios de matching (Edge), sort modes, filtros, perguntas, composer de proposta, retirada, mensagens, APIs, lacunas |
+| [features/trabalhos-e-propostas.md](./features/trabalhos-e-propostas.md) | Telas, geo, critérios de matching (Edge), sort modes, filtros, perguntas, composer de proposta, mensagens, APIs, lacunas |
 
 ## 4. Arquivos-chave (mapa rápido)
 
@@ -32,7 +31,7 @@
 | Lista | `ProviderJobsPage.tsx`, `JobCard.tsx`, `JobsHeader.tsx`, `JobsSortTabs.tsx`, `JobsFiltersBar.tsx` |
 | Estados lista | `JobsEmptyState.tsx`, `JobsErrorState.tsx`, `LocationPermissionBanner.tsx` |
 | Detalhe | `JobDetailPage.tsx`, `JobDetailSheet.tsx`, `JobDetailContent.tsx`, `JobDetailFloatingActions.tsx` |
-| Proposta | `ProviderProposalComposerDialog.tsx`, `useProviderProposalComposer.ts`, `ProviderProposalSummaryCard.tsx`, `providerProposals.api.ts` |
+| Proposta | `ProviderProposalComposerDialog.tsx`, `useProviderProposalComposer.ts`, `ProviderProposalSummaryCard.tsx` |
 | Perguntas | `JobQuestionComposerDialog.tsx`, `JobQuestionPromptCard.tsx`, `JobQuestionsFeed.tsx`, `useProviderJobQuestionComposer.ts` |
 | Tipos / constantes | `types/provider-jobs.types.ts`, `constants/sortModes.ts`, `constants/queryKeys.ts` |
 | Geo | `hooks/useProviderLocation.ts` |

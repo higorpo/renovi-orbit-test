@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
   CheckCircle,
@@ -8,15 +9,26 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import {
+  canEditServiceRequestProposal,
+  hasActiveServiceRequestProposal,
+  isRejectedProposalStatus,
+  ServiceRequestProposalComposerDialog,
+  ServiceRequestProposalSummaryCard,
+  useProposalPhotoUrls,
+  useServiceRequestProposalComposer,
+} from "@/features/negotiation-proposals";
 import { getServiceCardStyle } from "@/features/request-quote";
 import { formatDistance } from "@/lib/formatDistance";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
 import { cn } from "@/lib/utils";
+import {
+  PROVIDER_JOBS_LIST_QUERY_KEY,
+  PROVIDER_PROPOSAL_JOB_DETAIL_QUERY_KEY,
+} from "../constants/queryKeys";
 import { useProviderJobQuestionComposer } from "../hooks/useProviderJobQuestionComposer";
-import { useProviderProposalPhotoUrls } from "../hooks/useProviderProposalPhotoUrls";
-import { useProviderProposalComposer } from "../hooks/useProviderProposalComposer";
-import { MAX_PROPOSALS_PER_REQUEST } from "../types/provider-jobs.types";
 import type { ProviderJobItem } from "../types/provider-jobs.types";
+import { mapProviderJobToProposalSummary } from "../utils/mapProviderJobToProposalSummary";
 import {
   mapSuggestedEquipmentToPt,
   mapSuggestedMaterialsToPt,
@@ -25,8 +37,6 @@ import { JobDetailMetadataBadges } from "./JobDetailMetadataBadges";
 import { JobQuestionComposerDialog } from "./JobQuestionComposerDialog";
 import { JobQuestionPromptCard } from "./JobQuestionPromptCard";
 import { JobQuestionsFeed } from "./JobQuestionsFeed";
-import { ProviderProposalComposerDialog } from "./ProviderProposalComposerDialog";
-import { ProviderProposalSummaryCard } from "./ProviderProposalSummaryCard";
 import { JobDetailRequestSections } from "./JobDetailRequestSections";
 import { JobDetailFloatingActions } from "./JobDetailFloatingActions";
 import { getUrgencyConfig } from "./JobDetail.constants";
@@ -41,6 +51,7 @@ export function JobDetailContent({
   job,
   isInsideSheet = false,
 }: JobDetailContentProps) {
+  const queryClient = useQueryClient();
   const serviceStyle = getServiceCardStyle({
     icon_key: job.service_icon_key,
     color_key: job.service_color_key,
@@ -59,61 +70,48 @@ export function JobDetailContent({
     submitQuestion,
   } = useProviderJobQuestionComposer(job.id);
   const hasLatestProposal = Boolean(job.provider_proposal_id);
-  const hasActiveProposal =
-    hasLatestProposal && job.provider_proposal_status !== "withdrawn";
+  const hasActiveProposal = hasActiveServiceRequestProposal(
+    job.provider_proposal_id,
+    job.provider_proposal_status,
+  );
   const isViewingLatestProposalRow = job.is_latest_provider_proposal !== false;
   const showBrowseCtas = !hasActiveProposal && isViewingLatestProposalRow;
   const canEditProposal =
     hasLatestProposal &&
     isViewingLatestProposalRow &&
-    job.provider_proposal_status !== "accepted" &&
-    job.provider_proposal_status !== "withdrawn";
-  const {
-    isOpen: isProposalOpen,
-    isSubmitting: isProposalSubmitting,
-    isPricingLoading,
-    priceInput,
-    descriptionDraft,
-    durationValueInput,
-    durationUnit,
-    availabilitySlots,
-    existingPhotoPaths,
-    newPhotos,
-    photosCount,
-    pricing,
-    maxDescriptionLength,
-    maxPhotos,
-    canSubmitProposal,
-    openComposer: openProposalComposer,
-    closeComposer: closeProposalComposer,
-    setPriceInput,
-    setDescriptionDraft,
-    setDurationValueInput,
-    setDurationUnit,
-    updateAvailabilitySlot,
-    addAvailabilitySlot,
-    removeAvailabilitySlot,
-    addPhotos,
-    removeExistingPhoto,
-    removeNewPhoto,
-    submitProposal,
-  } = useProviderProposalComposer(job.id, {
-    proposedAmount: job.provider_proposed_amount,
-    description: job.provider_proposal_description,
-    durationValue: job.provider_proposal_duration_value,
-    durationUnit: job.provider_proposal_duration_unit,
-    suggestedSlots: job.provider_proposal_suggested_slots,
-    photos: job.provider_proposal_photos,
+    canEditServiceRequestProposal(job.provider_proposal_status);
+  const proposalComposer = useServiceRequestProposalComposer({
+    serviceRequestId: job.id,
+    existingProposal: {
+      proposedAmount: job.provider_proposed_amount,
+      description: job.provider_proposal_description,
+      durationValue: job.provider_proposal_duration_value,
+      durationUnit: job.provider_proposal_duration_unit,
+      suggestedSlots: job.provider_proposal_suggested_slots,
+      photos: job.provider_proposal_photos,
+    },
+    onSubmitSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: [PROVIDER_PROPOSAL_JOB_DETAIL_QUERY_KEY, job.id],
+          refetchType: "active",
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [PROVIDER_JOBS_LIST_QUERY_KEY],
+        }),
+      ]);
+    },
   });
-  const { urls: existingProposalPhotoUrls } = useProviderProposalPhotoUrls(
-    existingPhotoPaths,
+  const { urls: existingProposalPhotoUrls } = useProposalPhotoUrls(
+    proposalComposer.existingPhotoPaths,
   );
+  const proposalSummary = mapProviderJobToProposalSummary(job);
 
   const urgencyConfig = getUrgencyConfig(job.urgency);
 
   return (
     <div className="space-y-4 pb-24 md:pb-28">
-      {job.provider_proposal_status === "rejected" && (
+      {isRejectedProposalStatus(job.provider_proposal_status) && (
         <Alert variant="destructive" className="border-destructive/30 bg-destructive/5">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle className="text-sm font-semibold">Orçamento rejeitado pelo cliente</AlertTitle>
@@ -168,7 +166,8 @@ export function JobDetailContent({
               className="gap-1 border-border/80 font-normal text-muted-foreground"
             >
               <MessageSquare className="h-3 w-3 opacity-80" aria-hidden />
-              {job.proposal_count} de {MAX_PROPOSALS_PER_REQUEST} orçamentos
+              {job.proposal_count}{" "}
+              {job.proposal_count === 1 ? "orçamento" : "orçamentos"}
             </Badge>
           </div>
 
@@ -228,48 +227,40 @@ export function JobDetailContent({
             />
           )}
 
-          <ProviderProposalComposerDialog
-            open={isProposalOpen}
-            isSubmitting={isProposalSubmitting}
-            isPricingLoading={isPricingLoading}
-            priceInput={priceInput}
-            descriptionDraft={descriptionDraft}
-            durationValueInput={durationValueInput}
-            durationUnit={durationUnit}
-            availabilitySlots={availabilitySlots}
+          <ServiceRequestProposalComposerDialog
+            open={proposalComposer.isOpen}
+            isSubmitting={proposalComposer.isSubmitting}
+            canSubmit={proposalComposer.canSubmitProposal}
+            form={proposalComposer.form}
+            availabilityFieldArray={proposalComposer.availabilityFieldArray}
             existingPhotoUrls={existingProposalPhotoUrls}
-            newPhotos={newPhotos}
-            photosCount={photosCount}
-            pricing={pricing}
-            maxDescriptionLength={maxDescriptionLength}
-            maxPhotos={maxPhotos}
-            canSubmit={canSubmitProposal}
+            newPhotos={proposalComposer.newPhotos}
+            photosCount={proposalComposer.photosCount}
+            pricing={proposalComposer.pricing}
+            isPricingLoading={proposalComposer.isPricingLoading}
+            maxDescriptionLength={proposalComposer.maxDescriptionLength}
+            maxPhotos={proposalComposer.maxPhotos}
             onOpenChange={(open) => {
-              if (!open) closeProposalComposer();
+              if (!open) proposalComposer.closeComposer();
             }}
-            onPriceInputChange={setPriceInput}
-            onDescriptionDraftChange={setDescriptionDraft}
-            onDurationValueInputChange={setDurationValueInput}
-            onDurationUnitChange={setDurationUnit}
-            onAvailabilitySlotChange={updateAvailabilitySlot}
-            onAvailabilitySlotAdd={addAvailabilitySlot}
-            onAvailabilitySlotRemove={removeAvailabilitySlot}
-            onPhotoAdd={addPhotos}
-            onExistingPhotoRemove={removeExistingPhoto}
-            onNewPhotoRemove={removeNewPhoto}
+            onPhotoAdd={proposalComposer.addPhotos}
+            onExistingPhotoRemove={proposalComposer.removeExistingPhoto}
+            onNewPhotoRemove={proposalComposer.removeNewPhoto}
+            onAvailabilitySlotAdd={proposalComposer.addAvailabilitySlot}
+            onAvailabilitySlotRemove={proposalComposer.removeAvailabilitySlot}
             onSubmit={async () => {
-              await submitProposal();
+              await proposalComposer.submitProposal();
             }}
           />
         </CardContent>
       </Card>
 
       <JobQuestionsFeed serviceRequestId={job.id} />
-      {hasLatestProposal && (
-        <ProviderProposalSummaryCard
-          job={job}
+      {proposalSummary && (
+        <ServiceRequestProposalSummaryCard
+          summary={proposalSummary}
           canEdit={canEditProposal}
-          onEdit={() => openProposalComposer({ mode: "edit" })}
+          onEdit={() => proposalComposer.openComposer({ mode: "edit" })}
         />
       )}
 
@@ -277,7 +268,7 @@ export function JobDetailContent({
         <JobDetailFloatingActions
           isInsideSheet={isInsideSheet}
           onAskQuestion={() => openComposer()}
-          onOpenProposalComposer={() => openProposalComposer()}
+          onOpenProposalComposer={() => proposalComposer.openComposer()}
         />
       )}
     </div>

@@ -113,9 +113,61 @@ function initialMessages(withProposal: boolean): ChatMessageListItem[] {
   return messages;
 }
 
+function proposalDetailRow() {
+  return {
+    id: E2E_PROPOSAL_ID,
+    service_request_id: E2E_SR_ID,
+    provider_id: E2E_PROVIDER_ID,
+    status: "PENDING",
+    version: 1,
+    revision_count: 0,
+    revision_reason: null,
+    revision_notes: null,
+    submitted_at: "2026-05-30T11:00:00.000Z",
+    expired_at: null,
+    proposed_amount: 450,
+    tax_rate: 0,
+    tax_amount: 0,
+    final_amount: 450,
+    proposal_description: "Pintura completa com material incluso.",
+    proposal_duration_unit: "hours",
+    proposal_duration_value: 4,
+    proposal_suggested_slots: [],
+    photos: [],
+    client_rejection_response: null,
+    client_response_deadline_at: "2026-06-01T11:00:00.000Z",
+    created_at: "2026-05-30T11:00:00.000Z",
+    updated_at: "2026-05-30T11:00:00.000Z",
+  };
+}
+
 export async function installChatsMocks(page: Page, options: ChatsMockOptions) {
   const messages = initialMessages(options.withPendingProposal ?? false);
   const capturedRpc: Record<string, unknown[]> = { sendMessage: [] };
+
+  await page.route(/\/rest\/v1\/provider_proposals/, async (route) => {
+    if (route.request().method() !== "GET") {
+      await route.fallback();
+      return;
+    }
+
+    const url = new URL(route.request().url());
+    const idFilter = url.searchParams.get("id");
+    if (idFilter !== `eq.${E2E_PROPOSAL_ID}`) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([]),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(proposalDetailRow()),
+    });
+  });
 
   await page.route(/\/rest\/v1\/rpc\//, async (route) => {
     if (route.request().method() !== "POST") {
@@ -238,38 +290,6 @@ export async function installChatsMocks(page: Page, options: ChatsMockOptions) {
         });
         return;
 
-      case "get_proposal_for_timeline":
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            proposal: {
-              id: E2E_PROPOSAL_ID,
-              chat_id: E2E_CHAT_ID,
-              service_request_id: E2E_SR_ID,
-              provider_id: E2E_PROVIDER_ID,
-              status: "PENDING",
-              version: 1,
-              revision_count: 0,
-              revision_reason: null,
-              revision_notes: null,
-              submitted_at: "2026-05-30T11:00:00.000Z",
-              expired_at: null,
-              proposed_amount: 450,
-              tax_rate: 0,
-              tax_amount: 0,
-              final_amount: 450,
-              proposal_description: "Pintura completa com material incluso.",
-              proposal_duration_unit: "hours",
-              proposal_duration_value: 4,
-              client_response_deadline_at: "2026-06-01T11:00:00.000Z",
-              created_at: "2026-05-30T11:00:00.000Z",
-              updated_at: "2026-05-30T11:00:00.000Z",
-            },
-          }),
-        });
-        return;
-
       case "accept_proposal":
         await route.fulfill({
           status: 200,
@@ -281,13 +301,23 @@ export async function installChatsMocks(page: Page, options: ChatsMockOptions) {
         });
         return;
 
-      case "submit_proposal":
+      case "create_provider_proposal":
         await route.fulfill({
           status: 200,
           contentType: "application/json",
           body: JSON.stringify({
+            id: E2E_PROPOSAL_ID,
             proposal: { id: E2E_PROPOSAL_ID, status: "PENDING", version: 1 },
+            timeline_message: null,
           }),
+        });
+        return;
+
+      case "submit_proposal":
+        await route.fulfill({
+          status: 410,
+          contentType: "application/json",
+          body: JSON.stringify({ message: "submit_proposal removed" }),
         });
         return;
 

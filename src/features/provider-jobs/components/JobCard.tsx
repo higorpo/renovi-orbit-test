@@ -16,7 +16,6 @@ import { formatDistance } from "@/lib/formatDistance";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
 import type { JobDetailLocationState } from "../types/provider-jobs.types";
 import type { ProviderJobItem } from "../types/provider-jobs.types";
-import { MAX_PROPOSALS_PER_REQUEST } from "../types/provider-jobs.types";
 import { getUrgencyConfig } from "./JobDetail.constants";
 
 const DESCRIPTION_CLAMP = "line-clamp-2 sm:line-clamp-3";
@@ -123,7 +122,8 @@ export function JobCard({ job, className }: JobCardProps) {
             </span>
             <span className="flex items-center gap-1">
               <MessageSquare className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              {job.proposal_count} de {MAX_PROPOSALS_PER_REQUEST} orçamentos
+              {job.proposal_count}{" "}
+              {job.proposal_count === 1 ? "orçamento" : "orçamentos"}
             </span>
             <span className="text-xs">
               {job.masked_client_name}

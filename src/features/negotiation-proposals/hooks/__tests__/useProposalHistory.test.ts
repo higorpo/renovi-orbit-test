@@ -3,16 +3,20 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useProviderProposalHistory } from "../useProviderProposalHistory";
-import * as providerProposalsApi from "../../api/providerProposals.api";
+import { useProposalHistory } from "../useProposalHistory";
+import * as proposalsApi from "@/features/negotiation-proposals/api/proposals.api";
 
-vi.mock("../../api/providerProposals.api", () => ({
-  fetchProviderProposalHistory: vi.fn(),
-}));
+vi.mock("@/features/negotiation-proposals/api/proposals.api", async (importOriginal) => {
+  const actual = await importOriginal<
+    typeof import("@/features/negotiation-proposals/api/proposals.api")
+  >();
+  return {
+    ...actual,
+    fetchProviderProposalHistory: vi.fn(),
+  };
+});
 
-const fetchProviderProposalHistory = vi.mocked(
-  providerProposalsApi.fetchProviderProposalHistory,
-);
+const fetchProviderProposalHistory = vi.mocked(proposalsApi.fetchProviderProposalHistory);
 
 function wrapper() {
   const client = new QueryClient({
@@ -22,14 +26,14 @@ function wrapper() {
     createElement(QueryClientProvider, { client }, children);
 }
 
-describe("useProviderProposalHistory", () => {
+describe("useProposalHistory", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("does not fetch when disabled", () => {
     const { result } = renderHook(
-      () => useProviderProposalHistory("sr-1", false),
+      () => useProposalHistory("sr-1", false),
       { wrapper: wrapper() },
     );
     expect(fetchProviderProposalHistory).not.toHaveBeenCalled();
@@ -41,7 +45,7 @@ describe("useProviderProposalHistory", () => {
     fetchProviderProposalHistory.mockResolvedValue({ data: items, error: null });
 
     const { result } = renderHook(
-      () => useProviderProposalHistory("sr-1", true),
+      () => useProposalHistory("sr-1", true),
       { wrapper: wrapper() },
     );
 
@@ -53,7 +57,7 @@ describe("useProviderProposalHistory", () => {
     fetchProviderProposalHistory.mockResolvedValue({ data: [], error: "fail" });
 
     const { result } = renderHook(
-      () => useProviderProposalHistory("sr-1", true),
+      () => useProposalHistory("sr-1", true),
       { wrapper: wrapper() },
     );
 

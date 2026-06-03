@@ -5,11 +5,15 @@ import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useProposalTimelineHydration } from "../useProposalTimelineHydration";
 
-const getProposalForTimelineMock = vi.fn();
+const getProposalDetailMock = vi.fn();
 
-vi.mock("../../api/chats.api", () => ({
-  getProposalForTimeline: (...args: unknown[]) => getProposalForTimelineMock(...args),
-}));
+vi.mock("@/features/negotiation-proposals", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/negotiation-proposals")>();
+  return {
+    ...actual,
+    getProposalDetail: (...args: unknown[]) => getProposalDetailMock(...args),
+  };
+});
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -22,21 +26,31 @@ function createWrapper() {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  getProposalForTimelineMock.mockResolvedValue({
+  getProposalDetailMock.mockResolvedValue({
     data: {
-      proposal: {
-        id: "prop-1",
-        status: "PENDING",
-        version: 1,
-        original_amount: 100,
-        final_amount: 110,
-        description: "Escopo",
-        proposal_duration_value: 2,
-        proposal_duration_unit: "hours",
-        proposal_suggested_slots: [],
-        submitted_at: "2026-05-30T10:00:00.000Z",
-        client_response_deadline_at: "2026-05-31T10:00:00.000Z",
-      },
+      id: "prop-1",
+      service_request_id: "sr-1",
+      provider_id: "provider-1",
+      status: "PENDING",
+      version: 1,
+      revision_count: 0,
+      revision_reason: null,
+      revision_notes: null,
+      submitted_at: "2026-05-30T10:00:00.000Z",
+      expired_at: null,
+      proposed_amount: 100,
+      tax_rate: 0,
+      tax_amount: 0,
+      final_amount: 110,
+      proposal_description: "Escopo",
+      proposal_duration_value: 2,
+      proposal_duration_unit: "hours",
+      proposal_suggested_slots: [],
+      photos: [],
+      client_rejection_response: null,
+      client_response_deadline_at: "2026-05-31T10:00:00.000Z",
+      created_at: "2026-05-30T10:00:00.000Z",
+      updated_at: "2026-05-30T10:00:00.000Z",
     },
     error: null,
   });
@@ -50,10 +64,7 @@ describe("useProposalTimelineHydration", () => {
     );
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(getProposalForTimelineMock).toHaveBeenCalledWith({
-      chatId: "chat-1",
-      proposalId: "prop-1",
-    });
+    expect(getProposalDetailMock).toHaveBeenCalledWith("prop-1");
     expect(result.current.proposal?.id).toBe("prop-1");
     expect(result.current.proposal?.status).toBe("PENDING");
   });
@@ -66,6 +77,6 @@ describe("useProposalTimelineHydration", () => {
       wrapper: createWrapper(),
     });
 
-    expect(getProposalForTimelineMock).not.toHaveBeenCalled();
+    expect(getProposalDetailMock).not.toHaveBeenCalled();
   });
 });

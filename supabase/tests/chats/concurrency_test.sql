@@ -166,9 +166,8 @@ begin
     select *
     from public.calculate_provider_service_pricing(300.00::numeric)
   )
-  select public.submit_proposal(
-    p_chat_id,
-    p_idempotency_key,
+  select public.create_provider_proposal(
+    (select c.service_request_id from public.chats c where c.id = p_chat_id),
     pricing.original_amount,
     'Concurrency race proposal',
     2,
@@ -179,10 +178,11 @@ begin
         'shift', 'morning'
       )
     ),
-    pricing.pricing_signature,
+    '{}'::text[],
     pricing.tax_rate,
     pricing.tax_amount,
-    pricing.final_amount
+    pricing.final_amount,
+    pricing.pricing_signature
   )
   into v_response
   from pricing;

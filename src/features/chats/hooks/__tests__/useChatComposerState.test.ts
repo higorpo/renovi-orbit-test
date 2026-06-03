@@ -41,7 +41,7 @@ describe("useChatComposerState", () => {
     expect(checkFreeMessagingMock).toHaveBeenCalledWith("chat-1");
   });
 
-  it("disables composer when PENDING blocks free messaging", async () => {
+  it("disables composer when PENDING blocks free messaging (client copy by default)", async () => {
     checkFreeMessagingMock.mockResolvedValue({ data: false, error: null });
 
     const { result } = renderHook(
@@ -55,5 +55,23 @@ describe("useChatComposerState", () => {
 
     await waitFor(() => expect(result.current.disabledReason).toBe("pending_proposal"));
     expect(result.current.isInputEnabled).toBe(false);
+    expect(result.current.helperText).toContain("aceitar, pedir revisão ou recusar");
+  });
+
+  it("shows provider copy when PENDING blocks free messaging", async () => {
+    checkFreeMessagingMock.mockResolvedValue({ data: false, error: null });
+
+    const { result } = renderHook(
+      () =>
+        useChatComposerState({
+          chatId: "chat-1",
+          conversationStatus: "ACTIVE",
+          viewerRole: "provider",
+        }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.disabledReason).toBe("pending_proposal"));
+    expect(result.current.helperText).toContain("Aguarde a resposta do cliente");
   });
 });

@@ -5,12 +5,14 @@ import {
   CHAT_FREE_MESSAGING_QUERY_KEY,
   CHAT_PROPOSAL_TIMELINE_QUERY_KEY,
 } from "../constants/queryKeys";
+import type { ProfileRole } from "@/features/auth";
 import type { CnsConversationStatus } from "../types/chats.types";
 import { deriveChatComposerState } from "../utils/composerState";
 
 export interface UseChatComposerStateParams {
   chatId: string | null;
   conversationStatus: CnsConversationStatus | null;
+  viewerRole?: ProfileRole;
   enabled?: boolean;
 }
 
@@ -20,6 +22,7 @@ export interface UseChatComposerStateParams {
 export function useChatComposerState({
   chatId,
   conversationStatus,
+  viewerRole = "client",
   enabled = true,
 }: UseChatComposerStateParams) {
   const query = useQuery({
@@ -41,8 +44,9 @@ export function useChatComposerState({
         freeMessagingAllowed: query.data,
         conversationStatus,
         isLoading: query.isLoading && query.data === undefined,
+        viewerRole,
       }),
-    [conversationStatus, query.data, query.isLoading],
+    [conversationStatus, query.data, query.isLoading, viewerRole],
   );
 
   return {

@@ -113,9 +113,8 @@ begin
     select *
     from public.calculate_provider_service_pricing(250.00::numeric)
   )
-  select public.submit_proposal(
-    v_chat_id,
-    gen_random_uuid(),
+  select public.create_provider_proposal(
+    p_service_request_id,
     pricing.original_amount,
     'Stale proposal fixture',
     2,
@@ -126,10 +125,11 @@ begin
         'shift', 'morning'
       )
     ),
-    pricing.pricing_signature,
+    '{}'::text[],
     pricing.tax_rate,
     pricing.tax_amount,
-    pricing.final_amount
+    pricing.final_amount,
+    pricing.pricing_signature
   )
   into v_response
   from pricing;

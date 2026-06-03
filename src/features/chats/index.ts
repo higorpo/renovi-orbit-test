@@ -12,13 +12,11 @@ export {
   checkChatFreeMessagingAllowed,
   closeConversation,
   getConversationDetail,
-  getProposalForTimeline,
   listChatMessages,
   listConversations,
   markConversationRead,
   sendMessage,
 } from "./api/chats.api";
-export type { GetProposalForTimelineResult, TimelineProposalSnapshot } from "./api/chats.api";
 
 // Hooks — observability and analytics (Phase 13)
 export {
@@ -87,7 +85,6 @@ export {
   type ProposalCardAction,
 } from "./components/DynamicMessageRenderer/DynamicProposalCard";
 export { useProposalTimelineHydration } from "./hooks/useProposalTimelineHydration";
-export type { TimelineHydratedProposal } from "./types/timelineProposal.types";
 export {
   CHAT_MESSAGES_QUERY_KEY,
   CONVERSATION_DETAIL_QUERY_KEY,

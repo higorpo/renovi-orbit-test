@@ -1,0 +1,45 @@
+---
+description: Consultar o banco Supabase local em execução para inspecionar schema, funções e triggers
+alwaysApply: false
+globs: supabase/**/*
+---
+
+# Inspecionar schema no banco local
+
+Ao trabalhar com banco de dados (migrations, RPCs, triggers, RLS, pgTAP), **sempre consulte o Postgres local em execução** para saber o estado **real** do schema. Não confie só em arquivos de migration, memória de conversa ou `database.types.ts` — podem estar desatualizados ou não refletir o que já foi aplicado com `db push --local`.
+
+## Pré-requisito
+
+Supabase local rodando (`npx supabase start`). Conferir com `npx supabase status`.
+
+## Como consultar
+
+Preferir **`npx supabase db query --local`** (ou `./node_modules/.bin/supabase db query --local`):
+
+```bash
+# Migrations aplicadas
+npx supabase db query --local "select version from supabase_migrations.schema_migrations order by version"
+
+# Colunas de uma tabela
+npx supabase db query --local "select column_name, data_type, is_nullable from information_schema.columns where table_schema = 'public' and table_name = 'provider_proposals' order by ordinal_position"
+
+# Função existe e assinatura
+npx supabase db query --local "select p.proname, pg_get_function_identity_arguments(p.oid) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'create_provider_proposal'"
+
+# Triggers em uma tabela
+npx supabase db query --local "select tgname, pg_get_triggerdef(oid) from pg_trigger where tgrelid = 'public.provider_proposals'::regclass and not tgisinternal"
+```
+
+Alternativa: `psql` com a URL do `npx supabase status --output json`.
+
+## O que não substitui o banco local
+
+| Fonte | Limite |
+|-------|--------|
+| Arquivos em `supabase/migrations/` | Histórico; migration antiga pode ter sido superseded por outra |
+| `src/lib/supabase/database.types.ts` | Snapshot gerado; pode estar desatualizado |
+| Suposições do agente | Sempre validar no DB antes de alterar SQL ou concluir diagnóstico |
+
+## Quando aplicar migrations
+
+Depois de inspecionar o local, aplicar mudanças com `./node_modules/.bin/supabase db push --local` (não assumir que arquivos novos já estão no banco). Re-inspecionar após o push.

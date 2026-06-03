@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   acceptProposal,
+  createProviderProposal,
   declineRevisionRequest,
   listProposalVersions,
   rejectProposal,
   requestProposalRevision,
-  submitProposal,
 } from "../proposals.api";
 
 const { rpcMock } = vi.hoisted(() => ({
@@ -32,34 +32,38 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("submitProposal", () => {
-  it("sends idempotency key and pricing fields", async () => {
+describe("createProviderProposal", () => {
+  it("sends service request scoped pricing fields", async () => {
     rpcMock.mockResolvedValue({
-      data: { proposal: { id: "p1" }, timeline_message: { id: "m1" } },
+      data: {
+        id: "p1",
+        proposal: { id: "p1", status: "PENDING" },
+        timeline_message: null,
+      },
       error: null,
     });
 
-    await submitProposal({
-      chatId: "chat-1",
-      idempotencyKey: "idem-1",
+    await createProviderProposal({
+      serviceRequestId: "sr-1",
       proposedAmount: 100,
       proposalDescription: "Desc",
       proposalDurationValue: 1,
       proposalDurationUnit: "days",
       proposalSuggestedSlots: [{ start_date: "2026-06-01", shift: "morning" }],
+      photos: [],
       pricing: {
-        pricingSignature: "sig",
-        taxRate: 0.1,
-        taxAmount: 10,
-        finalAmount: 110,
+        original_amount: 100,
+        pricing_signature: "sig",
+        tax_rate: 0.1,
+        tax_amount: 10,
+        final_amount: 110,
       },
     });
 
     expect(rpcMock).toHaveBeenCalledWith(
-      "submit_proposal",
+      "create_provider_proposal",
       expect.objectContaining({
-        p_chat_id: "chat-1",
-        p_idempotency_key: "idem-1",
+        p_service_request_id: "sr-1",
         p_final_amount: 110,
       }),
     );
@@ -86,7 +90,7 @@ describe("acceptProposal", () => {
 describe("rejectProposal", () => {
   it("returns proposal payload", async () => {
     rpcMock.mockResolvedValue({
-      data: { proposal: { id: "p1", status: "REJECTED", chat_id: "c1" } },
+      data: { proposal: { id: "p1", status: "REJECTED" } },
       error: null,
     });
 
@@ -102,7 +106,7 @@ describe("rejectProposal", () => {
 describe("requestProposalRevision", () => {
   it("passes revision reason", async () => {
     rpcMock.mockResolvedValue({
-      data: { proposal: { id: "p1", status: "REVISION_REQUESTED", chat_id: "c1" } },
+      data: { proposal: { id: "p1", status: "REVISION_REQUESTED" } },
       error: null,
     });
 
@@ -125,7 +129,7 @@ describe("requestProposalRevision", () => {
 describe("declineRevisionRequest", () => {
   it("generates idempotency key when omitted", async () => {
     rpcMock.mockResolvedValue({
-      data: { proposal: { id: "p1", status: "PENDING", chat_id: "c1" } },
+      data: { proposal: { id: "p1", status: "PENDING" } },
       error: null,
     });
 

@@ -59,8 +59,8 @@ Resumo do que o comentário oficial da function descreve para o RPC `match_provi
 - Serviço: prestador oferece o serviço exato **ou** categoria pai (`parent_id`).
 - Cidade do pedido ∈ cidades derivadas de `provider_service_area_neighborhoods`.
 - Proximidade PostGIS `ST_DWithin` (raio em km).
-- Sem proposta **ativa** deste prestador no pedido.
-- Menos de **3** propostas ativas (não `withdrawn`, não `rejected`) no pedido no total.
+- Sem proposta **ativa** deste prestador no pedido (status ≠ `REVISED`).
+- Contagem informativa de propostas ativas (`PENDING` + `REVISION_REQUESTED`); sem teto por pedido.
 - Filtro opcional `service_id`.
 
 Campos computados citados: `distance_km`, `proposal_count`, `exact_area_match`, `masked_client_name`.
@@ -108,14 +108,14 @@ Desempates documentados na function: `created_at DESC` → `distance_km ASC`.
 
 Definições no código:
 
-- `hasActiveProposal` = existe `provider_proposal_id` **e** status ≠ `withdrawn`.
+- `hasActiveProposal` = existe `provider_proposal_id` **e** status ≠ `REVISED`.
 - `isViewingLatestProposalRow` = `job.is_latest_provider_proposal !== false`.
 - **`showBrowseCtas`** = **não** tem proposta ativa **e** está vendo linha mais recente → mostra perguntas, composer, `JobDetailFloatingActions`.
-- **`canEditProposal`** = tem proposta, é latest, status ≠ `accepted` e ≠ `withdrawn`.
+- **`canEditProposal`** = tem proposta, é latest, status ≠ `ACCEPTED` e ≠ `REVISED`.
 
-**Alerta de rejeição:** se `provider_proposal_status === "rejected"`, `Alert` com título *"Orçamento rejeitado pelo cliente"* e texto de `provider_proposal_client_rejection_response` ou fallback sem comentário.
+**Alerta de rejeição:** se status ∈ `{REJECTED, REJECTED_AUTOMATICALLY}`, `Alert` com título *"Orçamento rejeitado pelo cliente"* e texto de `provider_proposal_client_rejection_response` ou fallback sem comentário.
 
-**Badge de concorrência:** `{proposal_count} de {MAX_PROPOSALS_PER_REQUEST} orçamentos` com `MAX_PROPOSALS_PER_REQUEST = 3` (`provider-jobs.types.ts`).
+**Badge de concorrência:** `{proposal_count} orçamento(s)` — contagem informativa de propostas ativas (`PENDING` + `REVISION_REQUESTED`); não há teto por pedido.
 
 ---
 
@@ -168,8 +168,11 @@ Definições no código:
 
 ### 7.3 Envio
 
-- RPC **`create_provider_proposal`** com `p_proposed_amount`, descrição, duração, slots (JSON), `p_photos`, taxas e **`p_pricing_signature`**.
-- O hook chama **`createProviderProposal`** tanto no fluxo que a UI chama “criar” quanto “editar” — **não** há outro método no cliente; comportamento de versão/UPDATE é responsabilidade do SQL (não duplicado aqui).
+- RPC canônica **`create_provider_proposal`** por **`service_request_id`** (sem `chat_id` na linha de proposta).
+- **Sem** limite de quantidade de propostas por pedido; a restrição de capacidade fica nos **slots de chats ativos** (`chats.max_active_slots_per_service_request`).
+- Se já existir conversa `(service_request_id, provider_id)`, o servidor espelha mensagem **`PROPOSAL`** na timeline; sem conversa, a proposta é criada normalmente.
+- Payload: `p_proposed_amount`, descrição, duração, slots (JSON), `p_photos`, taxas e **`p_pricing_signature`**.
+- Cliente unificado: **`createProviderProposal`** no fluxo de trabalhos e no composer de chat (`negotiation-proposals`); **`submit_proposal`** foi removido.
 
 ### 7.4 Toasts principais (proposta)
 
@@ -180,25 +183,18 @@ Definições no código:
 | Duração / slots / datas | Várias mensagens específicas (ver hook) |
 | Cálculo de preço | `toast.error(error)` da RPC ou *"Não foi possível calcular a taxa agora."* |
 | Upload | Mensagem retornada pela API de storage |
-| RPC erro | `toast.error(error)` com texto do Supabase |
+| RPC erro | Mensagem mapeada (`PROPOSAL_ALREADY_PENDING`, etc.) ou texto do Supabase |
 | Sucesso | *"Orçamento enviado com sucesso."* |
 
-### 7.5 Resumo do orçamento + retirada (`ProviderProposalSummaryCard`)
+### 7.5 Resumo do orçamento (`ProviderProposalSummaryCard`)
 
 - Exibido se `provider_proposal_id` existe.
 - **Editar orçamento:** botão chama `openProposalComposer({ mode: "edit" })` quando `canEdit`.
-- **Retirar orçamento:** visível se `canEdit && status !== "rejected"`; confirmação *"Retirar orçamento?"*; mutação `withdrawProviderProposal` → `update` status `withdrawn` com filtros `neq withdrawn/accepted`, `limit(1)`.
-- Toasts: sucesso *"Orçamento retirado com sucesso."*; erro *"Nao foi possivel retirar o orçamento."* (grafia do código).
 - Histórico: acordeão + `fetchProviderProposalHistory` em `provider_proposals`; dialog de detalhe por item.
 
-### 7.6 Labels de status (`JobDetail.constants.ts`)
+### 7.6 Labels de status
 
-| Status | Label PT |
-|--------|----------|
-| `submitted` | Aguardando avaliação do cliente |
-| `accepted` | Aceito pelo cliente |
-| `rejected` | Rejeitado pelo cliente |
-| `withdrawn` | Orçamento retirado |
+Labels reutilizam `getProposalStatusLabel` de `negotiation-proposals` (`PENDING`, `ACCEPTED`, `REJECTED`, `REVISION_REQUESTED`, `REVISED`, `EXPIRED`, `REJECTED_AUTOMATICALLY`).
 
 ---
 
@@ -229,10 +225,10 @@ Offset de `bottom` considera `safe-area-inset-bottom` e se está dentro de sheet
 |--------|---------|---------|
 | Lista | `api/providerJobs.api.ts` | `functions.invoke("match-provider-jobs")` |
 | Detalhe | idem | `rpc("get_provider_proposal_job_detail")` |
-| Preço | `api/providerProposals.api.ts` | `rpc("calculate_provider_service_pricing")` |
-| Criar proposta | idem | `rpc("create_provider_proposal")` |
-| Histórico / retirada | idem | `from("provider_proposals")` select / update |
-| Fotos proposta | idem | Storage `provider-proposals` |
+| Preço | `negotiation-proposals` | `rpc("calculate_provider_service_pricing")` |
+| Criar proposta | `negotiation-proposals` | `rpc("create_provider_proposal")` |
+| Histórico | `negotiation-proposals` | `from("provider_proposals")` select |
+| Fotos proposta | `negotiation-proposals` | Storage `provider-proposals` |
 | Perguntas | `api/providerJobQuestions.api.ts` | `create_provider_service_request_question`, `list_provider_service_request_questions` |
 
 ---
@@ -293,4 +289,4 @@ flowchart LR
   - **Fallbacks geográficos distintos por contexto:** lista usa Florianópolis quando geo falha; detalhe usa centróide do Brasil quando necessário.
   - **Composer de proposta recalcula taxa com debounce:** preço é validado e enviado para cálculo após 1500 ms sem edição.
   - **Uploads de proposta:** limite de 5 fotos por envio, até 5 MB por arquivo, com tipos de imagem explicitamente permitidos.
-  - **Edição de proposta é restrita por status:** UI permite editar apenas proposta latest e não `accepted`/`withdrawn`.
+  - **Edição de proposta é restrita por status:** UI permite editar apenas proposta latest e não `ACCEPTED`/`REVISED`.

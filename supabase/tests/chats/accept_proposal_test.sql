@@ -92,18 +92,18 @@ with pricing as (
   select *
   from public.calculate_provider_service_pricing(400.00::numeric)
 )
-select public.submit_proposal(
-  (select chat_id from _accept_chat),
-  'f1111111-1111-4111-8111-111111111111'::uuid,
+select public.create_provider_proposal(
+  (select service_request_id from _accept_sr),
   pricing.original_amount,
   'Accept cascade test proposal',
   2,
   'hours',
   jsonb_build_array((select selected_slot from _accept_slot)),
-  pricing.pricing_signature,
+  '{}'::text[],
   pricing.tax_rate,
   pricing.tax_amount,
-  pricing.final_amount
+  pricing.final_amount,
+  pricing.pricing_signature
 ) as submit_response
 from pricing;
 

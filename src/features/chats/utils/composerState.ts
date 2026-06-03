@@ -1,13 +1,23 @@
+import type { ProfileRole } from "@/features/auth";
 import type { CnsConversationStatus } from "../types/chats.types";
 
 export const CHAT_COMPOSER_PLACEHOLDER_ENABLED = "Escreva uma mensagem…";
+export const CHAT_COMPOSER_PLACEHOLDER_BLOCKED = "Bloqueado";
 
 export const CHAT_COMPOSER_DISABLED_COPY = {
-  pendingProposal:
+  pendingProposalClient:
     "Há uma proposta pendente. Use o card da proposta acima para aceitar, pedir revisão ou recusar.",
+  pendingProposalProvider:
+    "Há uma proposta pendente. Aguarde a resposta do cliente para continuar a conversa.",
   conversationClosed: "Esta conversa foi encerrada.",
   conversationInactive: "A conversa está inativa. Envie uma proposta para retomar.",
 } as const;
+
+export function resolvePendingProposalComposerCopy(viewerRole: ProfileRole): string {
+  return viewerRole === "provider"
+    ? CHAT_COMPOSER_DISABLED_COPY.pendingProposalProvider
+    : CHAT_COMPOSER_DISABLED_COPY.pendingProposalClient;
+}
 
 export type ChatComposerDisabledReason =
   | "loading"
@@ -29,6 +39,7 @@ export function deriveChatComposerState(params: {
   freeMessagingAllowed: boolean | undefined;
   conversationStatus: CnsConversationStatus | null;
   isLoading: boolean;
+  viewerRole?: ProfileRole;
 }): ChatComposerState {
   if (params.isLoading || params.freeMessagingAllowed === undefined) {
     return {
@@ -64,13 +75,17 @@ export function deriveChatComposerState(params: {
   }
 
   if (!params.freeMessagingAllowed) {
+    const pendingProposalHelperText = resolvePendingProposalComposerCopy(
+      params.viewerRole ?? "client",
+    );
+
     return {
       isInputEnabled: false,
       isAttachmentEnabled: false,
       isSendEnabled: false,
       disabledReason: "pending_proposal",
-      helperText: CHAT_COMPOSER_DISABLED_COPY.pendingProposal,
-      placeholder: CHAT_COMPOSER_DISABLED_COPY.pendingProposal,
+      helperText: pendingProposalHelperText,
+      placeholder: CHAT_COMPOSER_PLACEHOLDER_BLOCKED,
     };
   }
 

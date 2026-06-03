@@ -1,10 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  fetchProviderProposalHistory,
-  type ProviderProposalHistoryItem,
-} from "../api/providerProposals.api";
+import { fetchProviderProposalHistory } from "../api/proposals.api";
+import { PROPOSAL_HISTORY_QUERY_KEY } from "../constants/queryKeys";
+import type { ProviderProposalHistoryItem } from "../types/proposals.types";
 
-export function useProviderProposalHistory(
+export function useProposalHistory(
   serviceRequestId: string,
   enabled: boolean,
 ): {
@@ -14,7 +13,7 @@ export function useProviderProposalHistory(
   errorMessage: string | null;
 } {
   const query = useQuery({
-    queryKey: ["provider-proposals-history", serviceRequestId],
+    queryKey: [PROPOSAL_HISTORY_QUERY_KEY, serviceRequestId],
     queryFn: async () => {
       const { data, error } = await fetchProviderProposalHistory(serviceRequestId);
       if (error) throw new Error(error);
