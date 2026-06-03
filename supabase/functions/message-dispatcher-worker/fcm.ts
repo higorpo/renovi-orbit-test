@@ -78,11 +78,19 @@ export function parseFcmServiceAccount(raw?: string): FcmServiceAccount {
   return parsed;
 }
 
+/** One tray entry per chat when chatId is set; otherwise per correlation (non-chat pushes). */
+export function fcmNotificationCollapseKey(input: SendFcmPushInput): string {
+  const chatId = input.chatId?.trim();
+  return chatId || input.correlationId;
+}
+
 export function buildFcmV1MessageBody(input: SendFcmPushInput): FcmV1MessageBody {
   const token = input.fcmTokenSnapshot.trim();
   if (!token) {
     throw new Error("fcm_token_snapshot is required");
   }
+
+  const collapseKey = fcmNotificationCollapseKey(input);
 
   return {
     message: {
@@ -98,12 +106,12 @@ export function buildFcmV1MessageBody(input: SendFcmPushInput): FcmV1MessageBody
       },
       android: {
         notification: {
-          tag: input.correlationId,
+          tag: collapseKey,
         },
       },
       apns: {
         headers: {
-          "apns-collapse-id": input.correlationId,
+          "apns-collapse-id": collapseKey,
         },
       },
     },

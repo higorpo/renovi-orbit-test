@@ -22,6 +22,7 @@ import {
   checkNativeNotificationPermission,
   requestNativeNotificationPermission,
 } from './nativeNotificationPermission'
+import { pushNotificationCollapseKey } from './pushCollapseKey'
 import { resetPushSuppressionForTests, shouldSuppressPushNotification } from './pushSuppression'
 
 export type PushPlatform = 'android' | 'ios' | 'web'
@@ -134,7 +135,7 @@ function resolveForegroundNotificationContent(payload: PushNotificationPayload):
 } {
   const title = payload.title?.trim() || DEFAULT_PUSH_NOTIFICATION_TITLE
   const body = payload.body?.trim() ?? ''
-  const tag = payload.data?.tag?.trim() || DEFAULT_PUSH_NOTIFICATION_TAG
+  const tag = pushNotificationCollapseKey(payload, DEFAULT_PUSH_NOTIFICATION_TAG)
 
   return { title, body, tag }
 }

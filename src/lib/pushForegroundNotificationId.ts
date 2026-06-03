@@ -1,12 +1,11 @@
-export function notificationIdForForegroundPayload(payload: {
-  title?: string
-  body?: string
-  data?: Record<string, string>
-}): number {
-  const key =
-    payload.data?.dispatch_id?.trim() ||
-    payload.data?.tag?.trim() ||
-    `${payload.title ?? ''}:${payload.body ?? ''}`
+import { pushNotificationCollapseKey } from './pushCollapseKey'
+import type { PushNotificationPayload } from './push'
+
+export function notificationIdForForegroundPayload(payload: PushNotificationPayload): number {
+  const key = pushNotificationCollapseKey(
+    payload,
+    `${payload.title ?? ''}:${payload.body ?? ''}`,
+  )
 
   let hash = 0
   for (let i = 0; i < key.length; i += 1) {

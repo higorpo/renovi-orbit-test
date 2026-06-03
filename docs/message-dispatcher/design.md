@@ -717,7 +717,7 @@ The worker MUST NOT query `auth.users` or `user_device_beacons` directly; it onl
 | Channel | Edge steps | Provider idempotency |
 |---------|------------|----------------------|
 | `email` | Use `recipient_email` from checkout payload → validate vars → render HTML → Resend `to: recipient_email` | Header `Idempotency-Key: {correlation_id}` |
-| `push` | For each `deliveries[]` entry, use `fcm_token_snapshot` → validate title/body → FCM HTTP v1 | `android.notification.tag` / `apns-collapse-id` = `correlation_id` |
+| `push` | For each `deliveries[]` entry, use `fcm_token_snapshot` → validate title/body → FCM HTTP v1 | `android.notification.tag` / `apns-collapse-id` = `chat_id` when present, else `correlation_id` |
 
 **Timeout:** HTTP client timeout **25s** (below 30s lease; if exceeded, worker may die → janitor requeues).
 

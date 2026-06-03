@@ -10,6 +10,7 @@ import { clientsClaim } from 'workbox-core'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
 
 import { getFirebaseClientConfig } from './lib/firebase/config'
+import { pushNotificationCollapseKey } from './lib/pushCollapseKey'
 
 declare let self: ServiceWorkerGlobalScope
 
@@ -39,7 +40,14 @@ if (firebaseConfig) {
   onBackgroundMessage(messaging, (payload) => {
     const title = payload.notification?.title ?? payload.data?.title ?? 'Renovi'
     const body = payload.notification?.body ?? payload.data?.body ?? ''
-    const tag = payload.data?.tag ?? payload.messageId ?? 'renovi-push'
+    const tag = pushNotificationCollapseKey(
+      {
+        title,
+        body,
+        data: payload.data as Record<string, string> | undefined,
+      },
+      payload.messageId ?? 'renovi-push',
+    )
 
     return self.registration.showNotification(title, {
       body,

@@ -1,6 +1,7 @@
 import { assertEquals } from "std/testing/asserts";
 import {
   buildFcmV1MessageBody,
+  fcmNotificationCollapseKey,
   fcmSendUrl,
   resetFcmAccessTokenCache,
   sendFcmPush,
@@ -12,6 +13,32 @@ const testServiceAccount: FcmServiceAccount = {
   client_email: "firebase-adminsdk@test.iam.gserviceaccount.com",
   private_key: "-----BEGIN PRIVATE KEY-----\nMIIE\n-----END PRIVATE KEY-----\n",
 };
+
+Deno.test("fcmNotificationCollapseKey prefers chat id over correlation id", () => {
+  assertEquals(
+    fcmNotificationCollapseKey({
+      fcmTokenSnapshot: "t",
+      title: "T",
+      body: "B",
+      correlationId: "corr-1",
+      deliveryId: "del",
+      dispatchId: "dispatch",
+      chatId: "chat-uuid-1",
+    }),
+    "chat-uuid-1",
+  );
+  assertEquals(
+    fcmNotificationCollapseKey({
+      fcmTokenSnapshot: "t",
+      title: "T",
+      body: "B",
+      correlationId: "corr-only",
+      deliveryId: "del",
+      dispatchId: "dispatch",
+    }),
+    "corr-only",
+  );
+});
 
 Deno.test("buildFcmV1MessageBody sets collapse id and uses token snapshot", () => {
   const body = buildFcmV1MessageBody({
@@ -25,10 +52,10 @@ Deno.test("buildFcmV1MessageBody sets collapse id and uses token snapshot", () =
   });
 
   assertEquals(body.message.token, "fcm-snapshot-token");
-  assertEquals(body.message.android.notification.tag, "550e8400-e29b-41d4-a716-446655440000");
+  assertEquals(body.message.android.notification.tag, "chat-uuid-1");
   assertEquals(
     body.message.apns.headers["apns-collapse-id"],
-    "550e8400-e29b-41d4-a716-446655440000",
+    "chat-uuid-1",
   );
   assertEquals(body.message.data.dispatch_id, "dispatch-abc-123");
   assertEquals(body.message.data.correlation_id, "550e8400-e29b-41d4-a716-446655440000");

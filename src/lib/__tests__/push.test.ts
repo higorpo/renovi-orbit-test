@@ -625,6 +625,7 @@ describe('push helpers', () => {
               expect.objectContaining({
                 title: 'Orçamento',
                 body: 'Nova mensagem',
+                group: 'other-chat',
               }),
             ],
           }),

@@ -1,18 +1,7 @@
+import { extractChatIdFromPushPayload } from "@/lib/pushCollapseKey";
 import type { PushNotificationPayload } from "@/lib/push";
 
-export function extractChatIdFromPushPayload(payload: PushNotificationPayload): string | null {
-  const data = payload.data;
-  if (!data) return null;
-
-  const direct = data.chat_id ?? data.conversation_id ?? data.chatId;
-  if (direct) return direct;
-
-  const deepLink = data.deep_link_path?.trim();
-  if (!deepLink) return null;
-
-  const match = deepLink.match(/(?:^|\/)chats\/([^/?#]+)/);
-  return match?.[1] ?? null;
-}
+export { extractChatIdFromPushPayload };
 
 export function isWebTabVisible(): boolean {
   if (typeof document === "undefined") return true;
