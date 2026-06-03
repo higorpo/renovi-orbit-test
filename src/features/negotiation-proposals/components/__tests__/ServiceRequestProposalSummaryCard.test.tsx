@@ -19,6 +19,8 @@ const historyItem: ProviderProposalHistoryItem = {
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
   client_rejection_response: null,
+  revision_reason: null,
+  revision_notes: null,
 };
 
 const historyState = vi.hoisted(() => ({
@@ -51,6 +53,8 @@ const baseSummary: ServiceRequestProposalSummary = {
   description: "Descrição do serviço",
   photos: null,
   clientRejectionResponse: null,
+  revisionReason: null,
+  revisionNotes: null,
 };
 
 describe("ServiceRequestProposalSummaryCard", () => {
@@ -82,6 +86,24 @@ describe("ServiceRequestProposalSummaryCard", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: /editar orçamento/i }));
     expect(onEdit).toHaveBeenCalled();
+  });
+
+  it("shows revision request details when client requested revision", () => {
+    render(
+      <ServiceRequestProposalSummaryCard
+        summary={{
+          ...baseSummary,
+          status: "REVISION_REQUESTED",
+          revisionReason: "PRICE_TOO_HIGH",
+          revisionNotes: "Valor acima do orçamento previsto",
+        }}
+        canEdit={false}
+        onEdit={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/revisão solicitada pelo cliente/i)).toBeInTheDocument();
+    expect(screen.getByText(/preço alto/i)).toBeInTheDocument();
+    expect(screen.getByText(/valor acima do orçamento previsto/i)).toBeInTheDocument();
   });
 
   it("shows rejection response when rejected", () => {

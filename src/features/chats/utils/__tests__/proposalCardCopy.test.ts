@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   resolveProposalCardCtas,
   resolveProposalCardDescription,
+  resolveProposalCardDetailsLabel,
   resolveProposalCardHeadline,
 } from "../proposalCardCopy";
 
@@ -19,6 +20,14 @@ describe("proposalCardCopy", () => {
   it("shows provider edit CTA when revision was requested", () => {
     const ctas = resolveProposalCardCtas("REVISION_REQUESTED", "provider");
     expect(ctas).toEqual([{ id: "edit_proposal", label: "Editar proposta", variant: "default" }]);
+  });
+
+  it("shows revision-specific details label for provider when revision was requested", () => {
+    expect(resolveProposalCardDetailsLabel("REVISION_REQUESTED", "provider")).toBe(
+      "Ver detalhes da revisão solicitada",
+    );
+    expect(resolveProposalCardDetailsLabel("REVISION_REQUESTED", "client")).toBe("Ver detalhes");
+    expect(resolveProposalCardDetailsLabel("PENDING", "provider")).toBe("Ver detalhes");
   });
 
   it("describes pending state differently per role", () => {

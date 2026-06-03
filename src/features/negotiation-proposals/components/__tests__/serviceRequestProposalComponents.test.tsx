@@ -157,6 +157,8 @@ describe("ProposalDetailsDialog summary mode", () => {
           description: "Desc",
           photos: null,
           clientRejectionResponse: null,
+          revisionReason: null,
+          revisionNotes: null,
         }}
         canEdit={false}
         onEdit={vi.fn()}

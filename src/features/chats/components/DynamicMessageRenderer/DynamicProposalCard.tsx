@@ -16,6 +16,7 @@ import {
 import {
   resolveProposalCardCtas,
   resolveProposalCardDescription,
+  resolveProposalCardDetailsLabel,
   resolveProposalCardHeadline,
   type ProposalCardCta,
 } from "../../utils/proposalCardCopy";
@@ -46,6 +47,7 @@ export function DynamicProposalCard({
   const status = proposal?.status ?? "PENDING";
   const headline = resolveProposalCardHeadline(status);
   const description = resolveProposalCardDescription(status, viewerRole);
+  const detailsLabel = resolveProposalCardDetailsLabel(status, viewerRole);
   const ctas = resolveProposalCardCtas(status, viewerRole);
   const StatusIcon = getProposalStatusIcon(status);
 
@@ -119,7 +121,7 @@ export function DynamicProposalCard({
         )}
         onClick={() => onProposalAction?.("view_details", proposalId)}
       >
-        Ver detalhes
+        {detailsLabel}
         <ChevronRight className="h-4 w-4" aria-hidden />
       </Button>
     </article>

@@ -18,6 +18,7 @@ import { isRejectedProposalStatus } from "../utils/proposalStatus";
 import { ProposalDetailsDialog } from "./ProposalDetailsDialog";
 import { ProposalHistoryAccordion } from "./ProposalHistoryAccordion";
 import { ProposalPhotosGrid } from "./ProposalPhotosGrid";
+import { ProposalRevisionRequestNotice } from "./ProposalRevisionRequestNotice";
 
 export interface ServiceRequestProposalSummaryCardProps {
   summary: ServiceRequestProposalSummary;
@@ -105,6 +106,11 @@ function ServiceRequestProposalSummaryContent({
             </p>
           </div>
         )}
+      
+      <ProposalRevisionRequestNotice
+        revisionReason={summary.revisionReason}
+        revisionNotes={summary.revisionNotes}
+      />
 
       <ProposalPhotosGrid
         isLoading={isLoading}

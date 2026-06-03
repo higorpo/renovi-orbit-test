@@ -41,6 +41,8 @@ describe("mapProposalDetailToSummary", () => {
       description: "Descrição",
       photos: ["photo.jpg"],
       clientRejectionResponse: null,
+      revisionReason: null,
+      revisionNotes: null,
     });
   });
 
@@ -51,5 +53,19 @@ describe("mapProposalDetailToSummary", () => {
         status: "REVISED",
       }).isLatestProposal,
     ).toBe(false);
+  });
+
+  it("maps revision request fields", () => {
+    expect(
+      mapProposalDetailToSummary({
+        ...baseProposal,
+        status: "REVISION_REQUESTED",
+        revision_reason: "REDUCE_SCOPE",
+        revision_notes: "  Menos itens  ",
+      }),
+    ).toMatchObject({
+      revisionReason: "REDUCE_SCOPE",
+      revisionNotes: "  Menos itens  ",
+    });
   });
 });

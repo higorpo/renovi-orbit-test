@@ -23,6 +23,7 @@ import {
 } from "../utils/proposalDetailsFormatters";
 import { isRejectedProposalStatus } from "../utils/proposalStatus";
 import { ProposalPhotosGrid } from "./ProposalPhotosGrid";
+import { ProposalRevisionRequestNotice } from "./ProposalRevisionRequestNotice";
 import { ServiceRequestProposalSummaryCard } from "./ServiceRequestProposalSummaryCard";
 
 export type ProposalDetailsContent =
@@ -174,6 +175,11 @@ export function ProposalDetailsDialog({
                   </>
                 ) : null}
               </div>
+
+              <ProposalRevisionRequestNotice
+                revisionReason={proposal.revision_reason}
+                revisionNotes={proposal.revision_notes}
+              />
 
               {proposal.proposal_description ? (
                 <div className="rounded-lg border p-3">

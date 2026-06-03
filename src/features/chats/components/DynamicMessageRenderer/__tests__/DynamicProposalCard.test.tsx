@@ -83,4 +83,27 @@ describe("DynamicProposalCard", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Recusar$/i }));
     expect(onProposalAction).toHaveBeenCalledWith("reject", "p1");
   });
+
+  it("shows revision details label for provider when revision was requested", () => {
+    hydrateMock.mockReturnValue({
+      proposal: { status: "REVISION_REQUESTED", proposed_amount: 500 },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <DynamicProposalCard
+        chatId="chat-1"
+        message={message}
+        viewerRole="provider"
+        isOutgoing
+        onProposalAction={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /Ver detalhes da revisão solicitada/i }),
+    ).toBeInTheDocument();
+  });
 });

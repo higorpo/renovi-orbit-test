@@ -1,6 +1,9 @@
 import type { MatchProviderJobsBody } from "../../../../supabase/functions/match-provider-jobs/types";
 import type { FormSchema } from "@/features/dynamic-form";
-import type { ProposalSuggestedSlotRpc } from "@/features/negotiation-proposals";
+import type {
+  ProposalRevisionReason,
+  ProposalSuggestedSlotRpc,
+} from "@/features/negotiation-proposals";
 
 /** Request params for match-provider-jobs edge function. Re-exported from edge function types. */
 export type FetchProviderJobsParams = MatchProviderJobsBody;
@@ -42,6 +45,8 @@ export interface ProviderJobItem {
   provider_proposal_photos: string[] | null;
   provider_proposal_status: string | null;
   provider_proposal_client_rejection_response: string | null;
+  provider_proposal_revision_reason: ProposalRevisionReason | null;
+  provider_proposal_revision_notes: string | null;
   /** false when RPC returned a non-latest proposal row for this provider on the request. */
   is_latest_provider_proposal?: boolean | null;
   exact_area_match: boolean;

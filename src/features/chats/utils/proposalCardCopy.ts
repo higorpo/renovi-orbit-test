@@ -76,3 +76,14 @@ export function resolveProposalCardCtas(
 
   return [];
 }
+
+export function resolveProposalCardDetailsLabel(
+  status: ProposalStatus | string,
+  viewerRole: ProfileRole,
+): string {
+  if (viewerRole === "provider" && status === "REVISION_REQUESTED") {
+    return "Ver detalhes da revisão solicitada";
+  }
+
+  return "Ver detalhes";
+}

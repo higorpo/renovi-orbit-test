@@ -1,4 +1,4 @@
-import type { ProposalSuggestedSlotRpc } from "./proposals.types";
+import type { ProposalRevisionReason, ProposalSuggestedSlotRpc } from "./proposals.types";
 import type { ProposalDurationUnit } from "./proposalComposer.types";
 
 export interface ServiceRequestProposalDraft {
@@ -21,4 +21,6 @@ export interface ServiceRequestProposalSummary {
   description: string | null;
   photos: string[] | null;
   clientRejectionResponse: string | null;
+  revisionReason: ProposalRevisionReason | null;
+  revisionNotes: string | null;
 }

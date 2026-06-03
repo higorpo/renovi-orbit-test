@@ -132,6 +132,8 @@ export interface ProviderProposalHistoryItem {
   created_at: string;
   updated_at: string;
   client_rejection_response: string | null;
+  revision_reason: ProposalRevisionReason | null;
+  revision_notes: string | null;
 }
 
 export interface CreateProviderProposalParams {

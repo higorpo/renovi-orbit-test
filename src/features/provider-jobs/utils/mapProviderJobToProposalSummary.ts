@@ -17,5 +17,7 @@ export function mapProviderJobToProposalSummary(
     description: job.provider_proposal_description,
     photos: job.provider_proposal_photos,
     clientRejectionResponse: job.provider_proposal_client_rejection_response,
+    revisionReason: job.provider_proposal_revision_reason,
+    revisionNotes: job.provider_proposal_revision_notes,
   };
 }

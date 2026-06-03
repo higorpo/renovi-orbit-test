@@ -18,5 +18,7 @@ export function mapProposalDetailToSummary(
     description: proposal.proposal_description,
     photos: proposal.photos,
     clientRejectionResponse: proposal.client_rejection_response,
+    revisionReason: proposal.revision_reason,
+    revisionNotes: proposal.revision_notes,
   };
 }
