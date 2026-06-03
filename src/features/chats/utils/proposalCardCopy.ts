@@ -2,10 +2,13 @@ import type { ProfileRole } from "@/features/auth";
 import type { ProposalStatus } from "@/features/negotiation-proposals";
 import { MAX_PROPOSAL_REVISIONS } from "@/features/negotiation-proposals/constants/proposalRevisions";
 
-export function resolveProposalCardHeadline(status: ProposalStatus | string): string {
+export function resolveProposalCardHeadline(
+  status: ProposalStatus | string,
+  viewerRole: ProfileRole,
+): string {
   switch (status) {
     case "PENDING":
-      return "Proposta enviada";
+      return viewerRole === "client" ? "Proposta recebida" : "Proposta enviada";
     case "ACCEPTED":
       return "Proposta aceita";
     case "REJECTED":

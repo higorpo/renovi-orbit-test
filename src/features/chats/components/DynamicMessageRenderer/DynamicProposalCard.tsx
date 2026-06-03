@@ -50,7 +50,7 @@ export function DynamicProposalCard({
   );
 
   const status = proposal?.status ?? "PENDING";
-  const headline = resolveProposalCardHeadline(status);
+  const headline = resolveProposalCardHeadline(status, viewerRole);
   const description = resolveProposalCardDescription(status, viewerRole);
   const detailsLabel = resolveProposalCardDetailsLabel(status, viewerRole);
   const ctas = resolveProposalCardCtas(status, viewerRole, proposal?.revision_count ?? 0);

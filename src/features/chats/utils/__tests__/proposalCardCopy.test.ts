@@ -8,8 +8,9 @@ import {
 
 describe("proposalCardCopy", () => {
   it("maps proposal statuses to PT-BR headlines", () => {
-    expect(resolveProposalCardHeadline("PENDING")).toBe("Proposta enviada");
-    expect(resolveProposalCardHeadline("ACCEPTED")).toBe("Proposta aceita");
+    expect(resolveProposalCardHeadline("PENDING", "client")).toBe("Proposta recebida");
+    expect(resolveProposalCardHeadline("PENDING", "provider")).toBe("Proposta enviada");
+    expect(resolveProposalCardHeadline("ACCEPTED", "client")).toBe("Proposta aceita");
   });
 
   it("shows client CTAs only for pending proposals", () => {
@@ -44,7 +45,7 @@ describe("proposalCardCopy", () => {
   });
 
   it("treats REVISED as rejected in headline with new-version description", () => {
-    expect(resolveProposalCardHeadline("REVISED")).toBe("Proposta recusada");
+    expect(resolveProposalCardHeadline("REVISED", "client")).toBe("Proposta recusada");
     expect(resolveProposalCardDescription("REVISED", "client")).toBe(
       "Uma nova versão da proposta está disponível.",
     );
