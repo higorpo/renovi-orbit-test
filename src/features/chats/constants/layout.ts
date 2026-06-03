@@ -1,0 +1,4 @@
+export const CHAT_DETAILS_COLUMN_MIN_WIDTH_PX = 1200;
+
+export const CHAT_DETAILS_COLUMN_MEDIA_QUERY =
+  `(min-width: ${CHAT_DETAILS_COLUMN_MIN_WIDTH_PX}px)` as const;

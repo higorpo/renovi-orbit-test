@@ -3,7 +3,8 @@ import { useNavigate, useParams } from "react-router";
 import { useAuth } from "@/features/auth";
 import { AcceptProposalDialog } from "@/features/negotiation-proposals";
 import type { ProposalSuggestedSlotRpc } from "@/features/negotiation-proposals";
-import { useBreakpointMd } from "@/hooks/useBreakpoint";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { CHAT_DETAILS_COLUMN_MEDIA_QUERY } from "../../constants/layout";
 import type { ChatActionBannerCtaPayload } from "../../hooks/useChatActionBannerState";
 import { useCloseConversationMutation } from "../../hooks/useCloseConversationMutation";
 import { useConversationDetail } from "../../hooks/useConversationDetail";
@@ -23,7 +24,7 @@ export function ChatsConversationRoute() {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const isDesktop = useBreakpointMd();
+  const showDetailsColumn = useMediaQuery(CHAT_DETAILS_COLUMN_MEDIA_QUERY);
   const { detail } = useConversationDetail(chatId ?? null);
   const closeConversationMutation = useCloseConversationMutation(chatId ?? null);
 
@@ -77,7 +78,7 @@ export function ChatsConversationRoute() {
           className="min-h-0 min-w-0 flex-1"
         />
 
-        {isDesktop && detailsOpen && detail && profile ? (
+        {showDetailsColumn && detailsOpen && detail && profile ? (
           <ChatDetailsDesktopPanel
             detail={detail}
             currentUser={profile}
@@ -88,7 +89,7 @@ export function ChatsConversationRoute() {
         ) : null}
       </div>
 
-      {!isDesktop ? (
+      {!showDetailsColumn ? (
         <ChatDetailsMobileSheet
           open={detailsOpen}
           onOpenChange={setDetailsOpen}
