@@ -56,9 +56,15 @@ export function ChatListPage({
       )}
       aria-label="Lista de conversas"
     >
-      <header className="shrink-0 border-b border-border/60 px-4 py-3">
-        <h1 className="text-lg font-semibold text-foreground">Conversas</h1>
-        <p className="text-sm text-muted-foreground">{subtitle}</p>
+      <header className="shrink-0 border-b border-border/60 px-4 py-6 md:py-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl md:text-lg md:font-semibold md:tracking-normal">
+            Conversas
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground sm:text-base md:mt-0 md:text-sm">
+            {subtitle}
+          </p>
+        </div>
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 py-3">
