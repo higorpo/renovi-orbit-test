@@ -26,6 +26,7 @@ import { createClientSendId } from "../../utils/clientSendId";
 import { resolveCounterpartyViewedMessageId } from "../../utils/resolveCounterpartyViewedMessageId";
 import { ChatComposerBar } from "./ChatComposerBar";
 import { ChatScreenHeader } from "./ChatScreenHeader";
+import { ChatScreenSkeleton } from "./ChatScreenSkeleton";
 import { ChatTimeline } from "./ChatTimeline";
 
 export interface ChatScreenProps {
@@ -162,11 +163,7 @@ export function ChatScreen({
   const actionBannerTopInset = useChatActionBannerInset(bannerOverlayRef, showActionBannerOverlay);
 
   if (isDetailLoading) {
-    return (
-      <div className={cn("flex h-full min-h-0 flex-col items-center justify-center", className)}>
-        <p className="text-sm text-muted-foreground">Carregando conversa…</p>
-      </div>
-    );
+    return <ChatScreenSkeleton className={className} />;
   }
 
   if (isDetailError || !detail) {
