@@ -5,7 +5,6 @@ import { ProposalDetailsDialog } from "../ProposalDetailsDialog";
 import { ProposalHistoryAccordion } from "../ProposalHistoryAccordion";
 import { ProposalPhotosGrid } from "../ProposalPhotosGrid";
 import { ServiceRequestProposalComposerDialog } from "../ServiceRequestProposalComposerDialog";
-import { ServiceRequestProposalSummaryDialog } from "../ServiceRequestProposalSummaryDialog";
 
 vi.mock("../ProposalComposer", () => ({
   ProposalComposer: () => <div data-testid="proposal-composer-stub" />,
@@ -141,10 +140,10 @@ describe("ProposalHistoryAccordion", () => {
   });
 });
 
-describe("ServiceRequestProposalSummaryDialog", () => {
+describe("ProposalDetailsDialog summary mode", () => {
   it("renders summary card content for provider budget view", () => {
     render(
-      <ServiceRequestProposalSummaryDialog
+      <ProposalDetailsDialog
         open
         onOpenChange={vi.fn()}
         summary={{
@@ -161,6 +160,7 @@ describe("ServiceRequestProposalSummaryDialog", () => {
         }}
         canEdit={false}
         onEdit={vi.fn()}
+        copyVariant="budget"
       />,
     );
 

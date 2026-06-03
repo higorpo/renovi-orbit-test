@@ -10,7 +10,6 @@ import {
   ProposalDetailsDialog,
   RejectProposalDialog,
   RevisionRequestDialog,
-  ServiceRequestProposalSummaryDialog,
   useProposalDetail,
   type ProposalComposerMode,
   type ProposalDetailView,
@@ -263,32 +262,22 @@ export function ChatsConversationRoute() {
         onSubmitted={() => invalidateChatProposalQueries()}
       />
 
-      {isProviderViewer ? (
-        <ServiceRequestProposalSummaryDialog
-          open={detailsDialogOpen}
-          onOpenChange={handleDetailsDialogOpenChange}
-          summary={providerProposalSummary}
-          canEdit={canEditServiceRequestProposal(providerProposalSummary?.status)}
-          onEdit={() => {
-            if (!detailsProposalId) return;
-            setDetailsDialogOpen(false);
-            void openProposalComposerEdit(detailsProposalId);
-          }}
-          isLoading={proposalDetailQuery.isLoading}
-          isError={proposalDetailQuery.isError}
-          onRetry={() => void proposalDetailQuery.refetch()}
-        />
-      ) : (
-        <ProposalDetailsDialog
-          open={detailsDialogOpen}
-          onOpenChange={handleDetailsDialogOpenChange}
-          proposal={proposalDetailQuery.data}
-          isLoading={proposalDetailQuery.isLoading}
-          isError={proposalDetailQuery.isError}
-          onRetry={() => void proposalDetailQuery.refetch()}
-          copyVariant="proposal"
-        />
-      )}
+      <ProposalDetailsDialog
+        open={detailsDialogOpen}
+        onOpenChange={handleDetailsDialogOpenChange}
+        summary={isProviderViewer ? providerProposalSummary : null}
+        canEdit={canEditServiceRequestProposal(providerProposalSummary?.status)}
+        onEdit={() => {
+          if (!detailsProposalId) return;
+          setDetailsDialogOpen(false);
+          void openProposalComposerEdit(detailsProposalId);
+        }}
+        proposal={isProviderViewer ? null : proposalDetailQuery.data}
+        isLoading={proposalDetailQuery.isLoading}
+        isError={proposalDetailQuery.isError}
+        onRetry={() => void proposalDetailQuery.refetch()}
+        copyVariant={isProviderViewer ? "budget" : "proposal"}
+      />
     </>
   );
 }

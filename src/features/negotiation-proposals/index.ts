@@ -72,10 +72,6 @@ export {
   type ServiceRequestProposalSummaryCardProps,
 } from "./components/ServiceRequestProposalSummaryCard";
 export {
-  ServiceRequestProposalSummaryDialog,
-  type ServiceRequestProposalSummaryDialogProps,
-} from "./components/ServiceRequestProposalSummaryDialog";
-export {
   ProposalHistoryAccordion,
 } from "./components/ProposalHistoryAccordion";
 export { ProposalPhotosGrid } from "./components/ProposalPhotosGrid";

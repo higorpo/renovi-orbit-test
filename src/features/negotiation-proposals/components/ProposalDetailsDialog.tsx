@@ -13,6 +13,7 @@ import { PROPOSAL_COPY_VARIANTS, type ProposalCopyVariant } from "../constants/p
 import { useProposalPhotoUrls } from "../hooks/useProposalPhotoUrls";
 import type { ProposalDetailView } from "../types/proposalDetails.types";
 import type { ProviderProposalHistoryItem } from "../types/proposals.types";
+import type { ServiceRequestProposalSummary } from "../types/serviceRequestProposal.types";
 import {
   formatProposalDateOnly,
   formatProposalDateTime,
@@ -21,6 +22,7 @@ import {
 } from "../utils/proposalDetailsFormatters";
 import { isRejectedProposalStatus } from "../utils/proposalStatus";
 import { ProposalPhotosGrid } from "./ProposalPhotosGrid";
+import { ServiceRequestProposalSummaryCard } from "./ServiceRequestProposalSummaryCard";
 
 export type ProposalDetailsContent =
   | ProposalDetailView
@@ -29,7 +31,10 @@ export type ProposalDetailsContent =
 export interface ProposalDetailsDialogProps {
   open?: boolean;
   onOpenChange: (open: boolean) => void;
-  proposal: ProposalDetailsContent | null | undefined;
+  proposal?: ProposalDetailsContent | null;
+  summary?: ServiceRequestProposalSummary | null;
+  canEdit?: boolean;
+  onEdit?: () => void;
   isLoading?: boolean;
   isError?: boolean;
   onRetry?: () => void;
@@ -54,13 +59,17 @@ export function ProposalDetailsDialog({
   open,
   onOpenChange,
   proposal,
+  summary,
+  canEdit = false,
+  onEdit,
   isLoading = false,
   isError = false,
   onRetry,
   copyVariant = "proposal",
 }: ProposalDetailsDialogProps) {
   const copy = PROPOSAL_COPY_VARIANTS[copyVariant];
-  const isOpen = open ?? Boolean(proposal);
+  const isOpen = open ?? Boolean(proposal ?? summary);
+  const showSummary = Boolean(summary);
   const providerPricingProposal =
     proposal != null && proposalHasProviderPricing(proposal) ? proposal : null;
   const { contentRef } = useMobileDialogViewport(isOpen);
@@ -100,7 +109,16 @@ export function ProposalDetailsDialog({
             </div>
           ) : null}
 
-          {proposal ? (
+          {showSummary && summary && !isLoading && !isError ? (
+            <ServiceRequestProposalSummaryCard
+              summary={summary}
+              canEdit={canEdit}
+              onEdit={onEdit ?? (() => {})}
+              copyVariant={copyVariant}
+            />
+          ) : null}
+
+          {proposal && !showSummary ? (
             <div className="space-y-4 pr-1">
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="rounded-lg border p-3">
