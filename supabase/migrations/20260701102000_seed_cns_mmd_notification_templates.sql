@@ -16,7 +16,7 @@ values
   (
     'chat.new_message',
     'push',
-    'Nova mensagem de {{sender_display_name}}',
+    '{{sender_display_name}} enviou uma mensagem',
     '{{message_preview}}',
     '{
       "type": "object",
