@@ -56,7 +56,7 @@ describe("DynamicProposalCard", () => {
     expect(hydrateMock).toHaveBeenCalledWith("chat-1", "p1", true);
     expect(screen.getByText("R$ 500,00")).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: /Ver detalhes/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Ver detalhes da proposta/i }));
     expect(onProposalAction).toHaveBeenCalledWith("view_details", "p1");
   });
 

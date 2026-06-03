@@ -32,8 +32,10 @@ describe("proposalCardCopy", () => {
     expect(resolveProposalCardDetailsLabel("REVISION_REQUESTED", "provider")).toBe(
       "Ver detalhes da revisão solicitada",
     );
-    expect(resolveProposalCardDetailsLabel("REVISION_REQUESTED", "client")).toBe("Ver detalhes");
-    expect(resolveProposalCardDetailsLabel("PENDING", "provider")).toBe("Ver detalhes");
+    expect(resolveProposalCardDetailsLabel("REVISION_REQUESTED", "client")).toBe(
+      "Ver detalhes da proposta",
+    );
+    expect(resolveProposalCardDetailsLabel("PENDING", "provider")).toBe("Ver detalhes da proposta");
   });
 
   it("describes pending state differently per role", () => {

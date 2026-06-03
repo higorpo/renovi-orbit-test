@@ -95,5 +95,5 @@ export function resolveProposalCardDetailsLabel(
     return "Ver detalhes da revisão solicitada";
   }
 
-  return "Ver detalhes";
+  return "Ver detalhes da proposta";
 }
