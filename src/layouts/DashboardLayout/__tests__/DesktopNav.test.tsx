@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { DesktopNav } from "../DesktopNav";
 import { getDashboardMenu } from "../dashboardMenu";
@@ -73,17 +73,12 @@ describe("DesktopNav", () => {
     expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
 
-  it("responds to mouse enter and leave on nav items", () => {
+  it("uses group-hover for inactive nav link text", () => {
     const menu = getDashboardMenu("client" as ProfileRole);
     renderDesktopNav(menu.allItems);
-    const link = screen.getByRole("link", { name: /Visão geral/ });
-    const wrapper = link.closest("div.flex.items-center");
-    expect(wrapper).toBeInTheDocument();
-    if (wrapper) {
-      fireEvent.mouseEnter(wrapper);
-      fireEvent.mouseLeave(wrapper);
-    }
-    expect(link).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /Meus Serviços/ });
+    expect(link).toHaveClass("group-hover:text-foreground");
+    expect(link.closest(".group")).toBeInTheDocument();
   });
 
   it("renders when current location does not match any item (resolvedActiveIndex fallback)", () => {

@@ -37,7 +37,7 @@ export function DashboardLayout() {
                 className="h-7 md:h-8 w-auto"
               />
             </Link>
-            <DesktopNav items={menu.allItems} />
+            <DesktopNav items={menu.allItems} className="min-w-0 flex-1 justify-end" />
           </div>
         </header>
       )}
