@@ -61,8 +61,43 @@ export const ChatMessageRow = memo(function ChatMessageRow({
   const showMeta = showGroupTimestamp || showReadReceipt;
   const usesBubbleRowLayout =
     message.message_type === "TEXT" || message.message_type === "IMAGE";
+  const usesProposalRowLayout = message.message_type === "PROPOSAL";
 
   if (!usesBubbleRowLayout) {
+    if (usesProposalRowLayout) {
+      return (
+        <div className={cn("w-full", rowMargin)}>
+          <div
+            className={cn(
+              "flex w-full gap-2",
+              isOutgoing ? "justify-end" : "justify-start",
+            )}
+          >
+            {!isOutgoing ? (
+              <div className="w-9 shrink-0">
+                {showIncomingAvatar ? (
+                  <div
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow-sm"
+                    aria-hidden
+                  >
+                    {getCounterpartyInitials(counterpartyName)}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            <DynamicMessageRenderer
+              chatId={chatId}
+              message={message}
+              viewerRole={viewerRole}
+              isOutgoing={isOutgoing}
+              onProposalAction={onProposalAction}
+            />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div
         className={cn(
