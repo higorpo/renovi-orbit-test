@@ -55,10 +55,7 @@ export function ProviderBudgetsPage() {
     activeTab === "enviados" ? budgets.isError : questions.isError;
 
   const headerLoading =
-    budgets.isLoading ||
-    questions.isLoading ||
-    pendingQuestionsCount.isLoading ||
-    pendingApprovalBudgetsCount.isLoading;
+    pendingQuestionsCount.isLoading || pendingApprovalBudgetsCount.isLoading;
 
   return (
     <div className="container max-w-5xl px-4 py-6">

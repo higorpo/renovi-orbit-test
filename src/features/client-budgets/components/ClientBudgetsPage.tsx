@@ -56,10 +56,7 @@ export function ClientBudgetsPage() {
   const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<string | null>(null);
 
   const headerLoading =
-    received.isLoading ||
-    questions.isLoading ||
-    pendingApprovalServicesCount.isLoading ||
-    pendingQuestionsTotal.isLoading;
+    pendingApprovalServicesCount.isLoading || pendingQuestionsTotal.isLoading;
 
   const openReceivedDetails = (serviceRequestId: string) => {
     setSelectedServiceRequestId(serviceRequestId);

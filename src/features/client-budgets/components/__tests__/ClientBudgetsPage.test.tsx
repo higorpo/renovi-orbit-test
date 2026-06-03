@@ -296,6 +296,17 @@ describe("ClientBudgetsPage", () => {
     expect(screen.queryByText(/serviço com orçamento aguardando aprovação/)).not.toBeInTheDocument();
   });
 
+  it("keeps header summary visible while filtered list reloads", () => {
+    pendingState.count = 1;
+    pendingQuestionsTotalState.count = 2;
+    receivedState.isLoading = true;
+    renderPage();
+    expect(
+      screen.getByText(/1 serviço com orçamento aguardando aprovação/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/2 perguntas pendente/)).toBeInTheDocument();
+  });
+
   it("opens and closes received details sheet from card click", () => {
     renderPage();
     const cards = screen.getAllByRole("button", { name: /Pedido A/i });
