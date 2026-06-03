@@ -84,6 +84,28 @@ describe("DynamicProposalCard", () => {
     expect(onProposalAction).toHaveBeenCalledWith("reject", "p1");
   });
 
+  it("shows shimmer skeleton while proposal data is loading", () => {
+    hydrateMock.mockReturnValue({
+      proposal: null,
+      isLoading: true,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <DynamicProposalCard
+        chatId="chat-1"
+        message={message}
+        viewerRole="client"
+        isOutgoing={false}
+        onProposalAction={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("Carregando proposta")).toBeInTheDocument();
+    expect(screen.queryByText("Proposta enviada")).not.toBeInTheDocument();
+  });
+
   it("shows revision details label for provider when revision was requested", () => {
     hydrateMock.mockReturnValue({
       proposal: { status: "REVISION_REQUESTED", proposed_amount: 500 },

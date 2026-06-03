@@ -20,6 +20,7 @@ import {
   resolveProposalCardHeadline,
   type ProposalCardCta,
 } from "../../utils/proposalCardCopy";
+import { DynamicProposalCardSkeleton } from "./DynamicProposalCardSkeleton";
 
 export type ProposalCardAction = ProposalCardCta["id"] | "view_details";
 
@@ -42,7 +43,11 @@ export function DynamicProposalCard({
 }: DynamicProposalCardProps) {
   const proposalId = message.linked_entity_id;
 
-  const { proposal } = useProposalTimelineHydration(chatId, proposalId, Boolean(proposalId));
+  const { proposal, isLoading } = useProposalTimelineHydration(
+    chatId,
+    proposalId,
+    Boolean(proposalId),
+  );
 
   const status = proposal?.status ?? "PENDING";
   const headline = resolveProposalCardHeadline(status);
@@ -52,10 +57,12 @@ export function DynamicProposalCard({
   const StatusIcon = getProposalStatusIcon(status);
 
   useEffect(() => {
+    if (isLoading || !proposal) return;
+
     metrics.count("chats.dynamic_proposal_card_render", 1, {
-      status: String(status),
+      status: String(proposal.status),
     });
-  }, [status]);
+  }, [isLoading, proposal]);
 
   if (!proposalId) {
     return (
@@ -63,6 +70,10 @@ export function DynamicProposalCard({
         Não foi possível vincular esta proposta à conversa.
       </div>
     );
+  }
+
+  if (isLoading) {
+    return <DynamicProposalCardSkeleton isOutgoing={isOutgoing} className={className} />;
   }
 
   return (
