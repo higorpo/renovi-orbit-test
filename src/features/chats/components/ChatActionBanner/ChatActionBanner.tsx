@@ -22,7 +22,7 @@ export function ChatActionBanner({
   return (
     <section
       className={cn(
-        "rounded-2xl border border-border/60 bg-muted px-4 py-4 shadow-sm",
+        "rounded-2xl border border-border/60 bg-background/90 px-4 py-4 shadow-md backdrop-blur-md",
         className,
       )}
       aria-live="polite"
@@ -36,7 +36,7 @@ export function ChatActionBanner({
           size="sm"
           className={cn(
             CHAT_MIN_TOUCH_TARGET,
-            "px-3 text-foreground hover:bg-transparent hover:text-foreground",
+            "px-3 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
             CHAT_INTERACTIVE_FOCUS,
           )}
           onClick={onDismiss}

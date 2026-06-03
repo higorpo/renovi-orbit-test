@@ -24,7 +24,7 @@ export const ChatActionBannerOverlay = forwardRef<HTMLDivElement, ChatActionBann
       <motion.div
         ref={ref}
         className={cn(
-          "pointer-events-none absolute inset-x-0 top-0 z-10 overflow-hidden bg-transparent px-4",
+          "pointer-events-none absolute inset-x-0 top-0 z-10 overflow-visible bg-transparent px-4 pb-2",
           className,
         )}
         initial={{ opacity: 0, height: 0, paddingTop: 0 }}
