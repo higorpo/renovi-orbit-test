@@ -1,7 +1,10 @@
 // @vitest-environment happy-dom
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ChatMessageListItem } from "../../types/chats.types";
+import { CHAT_CONVERSATIONS_LIST_QUERY_KEY } from "../../constants/queryKeys";
+import type { ChatMessageListItem, ConversationListItem, ConversationListResponse } from "../../types/chats.types";
 import { useMarkConversationRead } from "../useMarkConversationRead";
 
 const markConversationReadMock = vi.fn();
@@ -9,6 +12,51 @@ const markConversationReadMock = vi.fn();
 vi.mock("../../api/chats.api", () => ({
   markConversationRead: (...args: unknown[]) => markConversationReadMock(...args),
 }));
+
+const unreadListItem: ConversationListItem = {
+  id: "chat-1",
+  service_request_id: "sr-1",
+  client_id: "client-1",
+  provider_id: "provider-1",
+  status: "ACTIVE",
+  last_interaction_at: "2026-01-01T10:00:00.000Z",
+  activated_at: "2026-01-01T09:00:00.000Z",
+  inactivated_at: null,
+  closed_at: null,
+  created_at: "2026-01-01T09:00:00.000Z",
+  updated_at: "2026-01-01T10:00:00.000Z",
+  counterparty: {
+    id: "provider-1",
+    full_name: "Prestador",
+    profile_image_path: null,
+    role: "provider",
+  },
+  service_request_title: "Pintura",
+  service: {
+    id: "svc-1",
+    title: "Pintura",
+    slug: "pintura",
+    icon_key: null,
+    color_key: null,
+    image_url: null,
+  },
+  last_message: {
+    id: "msg-1",
+    message_type: "TEXT",
+    created_at: "2026-01-01T00:00:00.000Z",
+    preview_text: "hi",
+    linked_entity_type: null,
+    linked_entity_id: null,
+  },
+  is_unread: true,
+  last_read_at: null,
+};
+
+function createWrapper(queryClient: QueryClient) {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+}
 
 function message(id: string): ChatMessageListItem {
   return {
@@ -27,8 +75,15 @@ function message(id: string): ChatMessageListItem {
 }
 
 describe("useMarkConversationRead", () => {
+  let queryClient: QueryClient;
+
   beforeEach(() => {
     vi.useFakeTimers();
+    queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData([CHAT_CONVERSATIONS_LIST_QUERY_KEY, 20], {
+      pages: [{ items: [unreadListItem], has_more: false, next_cursor: null } satisfies ConversationListResponse],
+      pageParams: [null],
+    });
     markConversationReadMock.mockResolvedValue({ data: { last_read_at: "2026-01-01" }, error: null });
   });
 
@@ -41,7 +96,10 @@ describe("useMarkConversationRead", () => {
     const { rerender } = renderHook(
       ({ messages }: { messages: ChatMessageListItem[] }) =>
         useMarkConversationRead("chat-1", messages),
-      { initialProps: { messages: [message("msg-1")] } },
+      {
+        initialProps: { messages: [message("msg-1")] },
+        wrapper: createWrapper(queryClient),
+      },
     );
 
     await vi.advanceTimersByTimeAsync(500);
@@ -67,7 +125,10 @@ describe("useMarkConversationRead", () => {
     const { rerender } = renderHook(
       ({ messages }: { messages: ChatMessageListItem[] }) =>
         useMarkConversationRead("chat-1", messages),
-      { initialProps: { messages: [message("msg-1")] } },
+      {
+        initialProps: { messages: [message("msg-1")] },
+        wrapper: createWrapper(queryClient),
+      },
     );
 
     rerender({ messages: [message("msg-1"), message("msg-2")] });
@@ -79,5 +140,21 @@ describe("useMarkConversationRead", () => {
       chatId: "chat-1",
       lastReadMessageId: "msg-2",
     });
+  });
+
+  it("clears unread dot in the inbox cache when the conversation is marked read", async () => {
+    renderHook(() => useMarkConversationRead("chat-1", [message("msg-1")]), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await vi.advanceTimersByTimeAsync(500);
+
+    const data = queryClient.getQueryData<{ pages: ConversationListResponse[] }>([
+      CHAT_CONVERSATIONS_LIST_QUERY_KEY,
+      20,
+    ]);
+
+    expect(data?.pages[0]?.items[0]?.is_unread).toBe(false);
+    expect(data?.pages[0]?.items[0]?.last_read_at).toBe("2026-01-01T00:00:00.000Z");
   });
 });

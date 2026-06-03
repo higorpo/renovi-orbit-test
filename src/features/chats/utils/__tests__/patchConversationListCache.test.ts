@@ -2,7 +2,10 @@ import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import { CHAT_CONVERSATIONS_LIST_QUERY_KEY } from "../../constants/queryKeys";
 import type { ConversationListItem, ConversationListResponse } from "../../types/chats.types";
-import { patchConversationListCache } from "../patchConversationListCache";
+import {
+  clearConversationUnreadInListCache,
+  patchConversationListCache,
+} from "../patchConversationListCache";
 
 const baseItem: ConversationListItem = {
   id: "chat-1",
@@ -129,5 +132,31 @@ describe("patchConversationListCache", () => {
     });
 
     expect(patched).toBe(false);
+  });
+});
+
+describe("clearConversationUnreadInListCache", () => {
+  it("clears unread state without reordering or changing preview", () => {
+    const queryClient = new QueryClient();
+    seedList(queryClient, [otherItem, baseItem]);
+
+    const patched = clearConversationUnreadInListCache(queryClient, {
+      chatId: "chat-1",
+      lastReadAt: "2026-01-01T10:30:00.000Z",
+    });
+
+    expect(patched).toBe(true);
+
+    const data = queryClient.getQueryData<{ pages: ConversationListResponse[] }>([
+      CHAT_CONVERSATIONS_LIST_QUERY_KEY,
+      20,
+    ]);
+    const items = data?.pages[0]?.items ?? [];
+
+    expect(items[0]?.id).toBe("chat-2");
+    expect(items[1]?.id).toBe("chat-1");
+    expect(items[1]?.is_unread).toBe(false);
+    expect(items[1]?.last_read_at).toBe("2026-01-01T10:30:00.000Z");
+    expect(items[1]?.last_message?.preview_text).toBe("Mensagem antiga");
   });
 });

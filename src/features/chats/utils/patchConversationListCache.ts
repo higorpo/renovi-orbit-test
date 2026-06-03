@@ -120,3 +120,39 @@ export function patchConversationListCache(
 
   return patched;
 }
+
+/** Clears unread state without reordering the list or changing preview/timestamps. */
+export function clearConversationUnreadInListCache(
+  queryClient: QueryClient,
+  params: { chatId: string; lastReadAt: string },
+): boolean {
+  let patched = false;
+
+  queryClient.setQueriesData<InfiniteData<ConversationListResponse>>(
+    { queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY] },
+    (current) => {
+      if (!current?.pages?.length) return current;
+
+      let found = false;
+      const pages = current.pages.map((page) => ({
+        ...page,
+        items: page.items.map((item) => {
+          if (item.id !== params.chatId) return item;
+          found = true;
+          if (!item.is_unread && item.last_read_at === params.lastReadAt) return item;
+          patched = true;
+          return {
+            ...item,
+            is_unread: false,
+            last_read_at: params.lastReadAt,
+          };
+        }),
+      }));
+
+      if (!found) return current;
+      return { ...current, pages };
+    },
+  );
+
+  return patched;
+}

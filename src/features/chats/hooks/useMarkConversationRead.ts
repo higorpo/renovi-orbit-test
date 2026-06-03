@@ -1,13 +1,20 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { markConversationRead } from "../api/chats.api";
+import { CHAT_CONVERSATIONS_LIST_QUERY_KEY } from "../constants/queryKeys";
 import type { ChatMessageListItem } from "../types/chats.types";
+import { clearConversationUnreadInListCache } from "../utils/patchConversationListCache";
 
 const MARK_READ_DEBOUNCE_MS = 400;
 
-function lastReadableMessageId(messages: readonly ChatMessageListItem[]): string | null {
+function lastReadableMessage(
+  messages: readonly ChatMessageListItem[],
+): { id: string; createdAt: string } | null {
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const message = messages[i];
-    if (message && !message.id.startsWith("optimistic:")) return message.id;
+    if (message && !message.id.startsWith("optimistic:")) {
+      return { id: message.id, createdAt: message.created_at };
+    }
   }
   return null;
 }
@@ -20,30 +27,41 @@ export function useMarkConversationRead(
   chatId: string | null,
   messages: readonly ChatMessageListItem[],
 ) {
+  const queryClient = useQueryClient();
   const lastMarkedIdRef = useRef<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const readableTailId = useMemo(() => lastReadableMessageId(messages), [messages]);
+  const readableTail = useMemo(() => lastReadableMessage(messages), [messages]);
 
   const scheduleMarkRead = useCallback(
-    (messageId: string | null) => {
-      if (!chatId || !messageId) return;
-      if (lastMarkedIdRef.current === messageId) return;
+    (tail: { id: string; createdAt: string } | null) => {
+      if (!chatId || !tail) return;
+      if (lastMarkedIdRef.current === tail.id) return;
 
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
         debounceRef.current = null;
-        if (lastMarkedIdRef.current === messageId) return;
-        lastMarkedIdRef.current = messageId;
-        void markConversationRead({ chatId, lastReadMessageId: messageId });
+        if (lastMarkedIdRef.current === tail.id) return;
+        lastMarkedIdRef.current = tail.id;
+
+        clearConversationUnreadInListCache(queryClient, {
+          chatId,
+          lastReadAt: tail.createdAt,
+        });
+
+        void markConversationRead({ chatId, lastReadMessageId: tail.id }).then((result) => {
+          if (result.error) {
+            void queryClient.invalidateQueries({ queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY] });
+          }
+        });
       }, MARK_READ_DEBOUNCE_MS);
     },
-    [chatId],
+    [chatId, queryClient],
   );
 
   useEffect(() => {
-    scheduleMarkRead(readableTailId);
-  }, [readableTailId, scheduleMarkRead]);
+    scheduleMarkRead(readableTail);
+  }, [readableTail, scheduleMarkRead]);
 
   useEffect(() => {
     return () => {
