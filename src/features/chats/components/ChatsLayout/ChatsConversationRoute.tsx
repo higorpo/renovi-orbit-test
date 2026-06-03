@@ -3,11 +3,14 @@ import { useNavigate, useParams } from "react-router";
 import { useAuth } from "@/features/auth";
 import {
   AcceptProposalDialog,
+  canEditServiceRequestProposal,
   getProposalDetail,
+  mapProposalDetailToSummary,
   ProposalComposerDialog,
   ProposalDetailsDialog,
   RejectProposalDialog,
   RevisionRequestDialog,
+  ServiceRequestProposalSummaryDialog,
   useProposalDetail,
   type ProposalComposerMode,
   type ProposalDetailView,
@@ -40,6 +43,7 @@ export function ChatsConversationRoute() {
   const closeConversationMutation = useCloseConversationMutation(chatId ?? null);
   const invalidateChatProposalQueries = useInvalidateChatProposalQueries(chatId ?? null);
   const serviceRequestId = detail?.service_request.id ?? null;
+  const isProviderViewer = profile?.role === "provider";
 
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [acceptOpen, setAcceptOpen] = useState(false);
@@ -59,7 +63,13 @@ export function ChatsConversationRoute() {
   const proposalDetailQuery = useProposalDetail({
     proposalId: detailsProposalId,
     enabled: detailsDialogOpen,
+    audience: isProviderViewer ? "provider" : "client",
   });
+
+  const providerProposalSummary =
+    isProviderViewer && proposalDetailQuery.data
+      ? mapProposalDetailToSummary(proposalDetailQuery.data)
+      : null;
 
   const revisionProposalDetailQuery = useProposalDetail({
     proposalId: revisionProposalId,
@@ -83,6 +93,11 @@ export function ChatsConversationRoute() {
   const openProposalDetails = useCallback((proposalId: string) => {
     setDetailsProposalId(proposalId);
     setDetailsDialogOpen(true);
+  }, []);
+
+  const handleDetailsDialogOpenChange = useCallback((open: boolean) => {
+    setDetailsDialogOpen(open);
+    if (!open) setDetailsProposalId(null);
   }, []);
 
   const openProposalComposerCreate = useCallback(() => {
@@ -248,17 +263,32 @@ export function ChatsConversationRoute() {
         onSubmitted={() => invalidateChatProposalQueries()}
       />
 
-      <ProposalDetailsDialog
-        open={detailsDialogOpen}
-        onOpenChange={(open) => {
-          setDetailsDialogOpen(open);
-          if (!open) setDetailsProposalId(null);
-        }}
-        proposal={proposalDetailQuery.data}
-        isLoading={proposalDetailQuery.isLoading}
-        isError={proposalDetailQuery.isError}
-        onRetry={() => void proposalDetailQuery.refetch()}
-      />
+      {isProviderViewer ? (
+        <ServiceRequestProposalSummaryDialog
+          open={detailsDialogOpen}
+          onOpenChange={handleDetailsDialogOpenChange}
+          summary={providerProposalSummary}
+          canEdit={canEditServiceRequestProposal(providerProposalSummary?.status)}
+          onEdit={() => {
+            if (!detailsProposalId) return;
+            setDetailsDialogOpen(false);
+            void openProposalComposerEdit(detailsProposalId);
+          }}
+          isLoading={proposalDetailQuery.isLoading}
+          isError={proposalDetailQuery.isError}
+          onRetry={() => void proposalDetailQuery.refetch()}
+        />
+      ) : (
+        <ProposalDetailsDialog
+          open={detailsDialogOpen}
+          onOpenChange={handleDetailsDialogOpenChange}
+          proposal={proposalDetailQuery.data}
+          isLoading={proposalDetailQuery.isLoading}
+          isError={proposalDetailQuery.isError}
+          onRetry={() => void proposalDetailQuery.refetch()}
+          copyVariant="proposal"
+        />
+      )}
     </>
   );
 }

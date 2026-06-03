@@ -8,6 +8,8 @@ export const CNS_PROPOSAL_RPC = {
   requestRevision: "request_proposal_revision",
   declineRevision: "decline_revision_request",
   listProposalVersions: "list_proposal_versions",
+  getProposalDetailForProvider: "get_proposal_detail_for_provider",
+  listProviderProposalHistory: "list_provider_proposal_history",
   createProviderProposal: "create_provider_proposal",
 } as const;
 

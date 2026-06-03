@@ -12,7 +12,7 @@ export function useProposalTimelineHydration(
   const query = useQuery({
     queryKey: [CHAT_PROPOSAL_TIMELINE_QUERY_KEY, chatId, proposalId],
     queryFn: async () => {
-      const result = await getProposalDetail(proposalId!);
+      const result = await getProposalDetail(proposalId!, "client");
 
       if (result.error || !result.data) {
         throw new Error(result.error?.message ?? "Erro ao carregar proposta");

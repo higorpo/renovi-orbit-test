@@ -5,9 +5,23 @@ import { ProposalDetailsDialog } from "../ProposalDetailsDialog";
 import { ProposalHistoryAccordion } from "../ProposalHistoryAccordion";
 import { ProposalPhotosGrid } from "../ProposalPhotosGrid";
 import { ServiceRequestProposalComposerDialog } from "../ServiceRequestProposalComposerDialog";
+import { ServiceRequestProposalSummaryDialog } from "../ServiceRequestProposalSummaryDialog";
 
 vi.mock("../ProposalComposer", () => ({
   ProposalComposer: () => <div data-testid="proposal-composer-stub" />,
+}));
+
+vi.mock("../../hooks/useProposalHistory", () => ({
+  useProposalHistory: () => ({
+    items: [],
+    isLoading: false,
+    isError: false,
+    errorMessage: null,
+  }),
+}));
+
+vi.mock("../../hooks/useProposalPhotoUrls", () => ({
+  useProposalPhotoUrls: () => ({ urls: [], isLoading: false }),
 }));
 
 const baseProposal: ProviderProposalHistoryItem = {
@@ -91,6 +105,22 @@ describe("ProposalDetailsDialog", () => {
     );
     expect(screen.getByText(/detalhes do orçamento/i)).toBeInTheDocument();
     expect(screen.getByText(/muito caro/i)).toBeInTheDocument();
+    expect(screen.getByText(/taxa da plataforma/i)).toBeInTheDocument();
+    expect(screen.getByText(/valor a receber/i)).toBeInTheDocument();
+  });
+
+  it("hides provider pricing when pricing fields are absent", () => {
+    render(
+      <ProposalDetailsDialog
+        proposal={{ ...baseProposal, tax_rate: undefined, tax_amount: undefined, final_amount: undefined }}
+        onOpenChange={vi.fn()}
+        copyVariant="proposal"
+      />,
+    );
+    expect(screen.getByText(/detalhes da proposta/i)).toBeInTheDocument();
+    expect(screen.queryByText(/taxa da plataforma/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/valor a receber/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/muito caro/i)).not.toBeInTheDocument();
   });
 });
 
@@ -108,6 +138,35 @@ describe("ProposalHistoryAccordion", () => {
       />,
     );
     expect(screen.getByText(/ver histórico de orçamentos/i)).toBeInTheDocument();
+  });
+});
+
+describe("ServiceRequestProposalSummaryDialog", () => {
+  it("renders summary card content for provider budget view", () => {
+    render(
+      <ServiceRequestProposalSummaryDialog
+        open
+        onOpenChange={vi.fn()}
+        summary={{
+          serviceRequestId: "sr-1",
+          proposalId: "p1",
+          isLatestProposal: true,
+          status: "PENDING",
+          proposedAmount: 100,
+          taxRate: 0.1,
+          taxAmount: 10,
+          description: "Desc",
+          photos: null,
+          clientRejectionResponse: null,
+        }}
+        canEdit={false}
+        onEdit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/detalhes do orçamento/i)).toBeInTheDocument();
+    expect(screen.getByText(/seu orçamento mais recente/i)).toBeInTheDocument();
+    expect(screen.getByText(/taxa da plataforma/i)).toBeInTheDocument();
   });
 });
 

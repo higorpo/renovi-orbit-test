@@ -64,7 +64,7 @@ describe("useProposalTimelineHydration", () => {
     );
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(getProposalDetailMock).toHaveBeenCalledWith("prop-1");
+    expect(getProposalDetailMock).toHaveBeenCalledWith("prop-1", "client");
     expect(result.current.proposal?.id).toBe("prop-1");
     expect(result.current.proposal?.status).toBe("PENDING");
   });

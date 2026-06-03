@@ -36,6 +36,20 @@ export interface ProposalDetailsDialogProps {
   copyVariant?: ProposalCopyVariant;
 }
 
+function proposalHasProviderPricing(
+  proposal: ProposalDetailsContent,
+): proposal is ProposalDetailsContent & {
+  tax_rate: number;
+  tax_amount: number;
+  final_amount: number;
+} {
+  return (
+    typeof (proposal as ProposalDetailView).tax_rate === "number" &&
+    typeof (proposal as ProposalDetailView).tax_amount === "number" &&
+    typeof (proposal as ProposalDetailView).final_amount === "number"
+  );
+}
+
 export function ProposalDetailsDialog({
   open,
   onOpenChange,
@@ -47,6 +61,8 @@ export function ProposalDetailsDialog({
 }: ProposalDetailsDialogProps) {
   const copy = PROPOSAL_COPY_VARIANTS[copyVariant];
   const isOpen = open ?? Boolean(proposal);
+  const providerPricingProposal =
+    proposal != null && proposalHasProviderPricing(proposal) ? proposal : null;
   const { contentRef } = useMobileDialogViewport(isOpen);
   const { urls: photoUrls, isLoading: isPhotosLoading } = useProposalPhotoUrls(
     proposal?.photos ?? null,
@@ -99,18 +115,23 @@ export function ProposalDetailsDialog({
                     {getProposalStatusLabel(proposal.status)}
                   </p>
                 </div>
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">Taxa da plataforma</p>
-                  <p className="mt-1 text-sm font-semibold text-foreground">
-                    {formatCurrency(proposal.tax_amount)} ({(proposal.tax_rate * 100).toFixed(0)}%)
-                  </p>
-                </div>
-                <div className="rounded-lg border p-3">
-                  <p className="text-xs text-muted-foreground">Valor a receber</p>
-                  <p className="mt-1 text-sm font-semibold text-foreground">
-                    {formatCurrency(proposal.final_amount)}
-                  </p>
-                </div>
+                {providerPricingProposal ? (
+                  <>
+                    <div className="rounded-lg border p-3">
+                      <p className="text-xs text-muted-foreground">Taxa da plataforma</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">
+                        {formatCurrency(providerPricingProposal.tax_amount)} (
+                        {(providerPricingProposal.tax_rate * 100).toFixed(0)}%)
+                      </p>
+                    </div>
+                    <div className="rounded-lg border p-3">
+                      <p className="text-xs text-muted-foreground">Valor a receber</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">
+                        {formatCurrency(providerPricingProposal.final_amount)}
+                      </p>
+                    </div>
+                  </>
+                ) : null}
               </div>
 
               {proposal.proposal_description ? (
@@ -162,7 +183,8 @@ export function ProposalDetailsDialog({
                 </div>
               ) : null}
 
-              {isRejectedProposalStatus(proposal.status) &&
+              {providerPricingProposal &&
+              isRejectedProposalStatus(proposal.status) &&
               proposal.client_rejection_response?.trim() ? (
                 <div className="rounded-lg border border-destructive/25 bg-destructive/5 p-3">
                   <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">

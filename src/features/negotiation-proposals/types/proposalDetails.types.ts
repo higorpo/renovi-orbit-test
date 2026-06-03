@@ -1,5 +1,7 @@
 import type { ProposalRevisionReason, ProposalStatus, ProposalSuggestedSlotRpc } from "./proposals.types";
 
+export type ProposalDetailAudience = "client" | "provider";
+
 export interface ProposalDetailView {
   id: string;
   service_request_id: string;
@@ -12,9 +14,9 @@ export interface ProposalDetailView {
   submitted_at: string | null;
   expired_at: string | null;
   proposed_amount: number;
-  tax_rate: number;
-  tax_amount: number;
-  final_amount: number;
+  tax_rate?: number;
+  tax_amount?: number;
+  final_amount?: number;
   proposal_description: string | null;
   proposal_duration_unit: string | null;
   proposal_duration_value: number | null;

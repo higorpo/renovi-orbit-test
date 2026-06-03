@@ -2,7 +2,7 @@ import { generateIdempotencyKeyV7 } from "@/lib/utils/idempotencyKey";
 import { logger } from "@/lib/logger";
 import { metrics } from "@/lib/sentry";
 import { supabase } from "@/lib/supabase/client";
-import type { ProposalDetailView } from "../types/proposalDetails.types";
+import type { ProposalDetailAudience, ProposalDetailView } from "../types/proposalDetails.types";
 import type {
   AcceptProposalResult,
   CreateProviderProposalParams,
@@ -90,13 +90,17 @@ function isProposalVersionListResponse(value: unknown): value is ProposalVersion
   return Array.isArray((value as ProposalVersionListResponse).items);
 }
 
-const PROPOSAL_DETAIL_SELECT =
-  "id, service_request_id, provider_id, status, version, revision_count, revision_reason, revision_notes, submitted_at, expired_at, proposed_amount, tax_rate, tax_amount, final_amount, proposal_description, proposal_duration_unit, proposal_duration_value, proposal_suggested_slots, photos, client_rejection_response, client_response_deadline_at, created_at, updated_at" as const;
+const PROPOSAL_CLIENT_DETAIL_SELECT =
+  "id, service_request_id, provider_id, status, version, revision_count, revision_reason, revision_notes, submitted_at, expired_at, proposed_amount, proposal_description, proposal_duration_unit, proposal_duration_value, proposal_suggested_slots, photos, client_rejection_response, client_response_deadline_at, created_at, updated_at" as const;
 
 function isProposalDetailRow(value: unknown): value is ProposalDetailView {
   if (!value || typeof value !== "object") return false;
   const row = value as ProposalDetailView;
   return typeof row.id === "string" && typeof row.service_request_id === "string";
+}
+
+function isProposalDetailRowOrNull(value: unknown): value is ProposalDetailView | null {
+  return value === null || isProposalDetailRow(value);
 }
 
 export async function createProviderProposal(
@@ -211,16 +215,43 @@ export async function listProposalVersions(
 
 export async function getProposalDetail(
   proposalId: string,
+  audience: ProposalDetailAudience = "provider",
 ): Promise<ProposalsApiResult<ProposalDetailView>> {
+  if (audience === "provider") {
+    const result = await invokeRpc<ProposalDetailView | null>(
+      CNS_PROPOSAL_RPC.getProposalDetailForProvider,
+      { p_proposal_id: proposalId },
+      isProposalDetailRowOrNull,
+      "get_proposal_detail_for_provider_invalid_response",
+    );
+
+    if (result.error) {
+      return { data: null, error: result.error };
+    }
+
+    if (!result.data) {
+      return {
+        data: null,
+        error: {
+          code: "UNKNOWN",
+          message: "Proposta não encontrada.",
+        },
+      };
+    }
+
+    return { data: result.data, error: null };
+  }
+
   const { data, error } = await supabase
     .from("provider_proposals")
-    .select(PROPOSAL_DETAIL_SELECT)
+    .select(PROPOSAL_CLIENT_DETAIL_SELECT)
     .eq("id", proposalId)
     .maybeSingle();
 
   if (error) {
     logger.error("get_proposal_detail_error", {
       proposalId,
+      audience,
       error: error.message,
     });
     return {
@@ -248,23 +279,21 @@ export async function getProposalDetail(
 export async function fetchProviderProposalHistory(
   serviceRequestId: string,
 ): Promise<{ data: ProviderProposalHistoryItem[]; error: string | null }> {
-  const { data, error } = await supabase
-    .from("provider_proposals")
-    .select(
-      "id, proposed_amount, proposal_description, proposal_duration_value, proposal_duration_unit, proposal_suggested_slots, status, tax_rate, tax_amount, final_amount, photos, created_at, updated_at, client_rejection_response",
-    )
-    .eq("service_request_id", serviceRequestId)
-    .order("updated_at", { ascending: false });
+  const result = await invokeRpc(
+    CNS_PROPOSAL_RPC.listProviderProposalHistory,
+    { p_service_request_id: serviceRequestId },
+    (value): value is { items: ProviderProposalHistoryItem[] } => {
+      if (!value || typeof value !== "object") return false;
+      return Array.isArray((value as { items: unknown }).items);
+    },
+    "list_provider_proposal_history_invalid_response",
+  );
 
-  if (error) {
-    logger.error("fetch_provider_proposal_history_error", {
-      serviceRequestId,
-      error: error.message,
-    });
-    return { data: [], error: error.message };
+  if (result.error) {
+    return { data: [], error: result.error.message };
   }
 
-  return { data: (data ?? []) as unknown as ProviderProposalHistoryItem[], error: null };
+  return { data: result.data?.items ?? [], error: null };
 }
 
 export const proposalsApi = {

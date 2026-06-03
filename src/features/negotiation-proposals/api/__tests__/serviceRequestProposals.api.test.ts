@@ -25,18 +25,6 @@ vi.mock("@/lib/sentry", () => ({
   metrics: { count: vi.fn() },
 }));
 
-function createHistoryChain(result: { data: unknown; error: { message: string } | null }) {
-  const chain = {
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    order: vi.fn().mockReturnThis(),
-    then(resolve: (v: typeof result) => void) {
-      queueMicrotask(() => resolve(result));
-    },
-  };
-  return chain;
-}
-
 describe("createProviderProposal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -163,16 +151,25 @@ describe("fetchProviderProposalHistory", () => {
       updated_at: "t",
       client_rejection_response: null,
     };
-    mocks.from.mockReturnValue(createHistoryChain({ data: [row], error: null }));
+    mocks.rpc.mockResolvedValue({
+      data: { items: [row] },
+      error: null,
+    });
 
     const result = await fetchProviderProposalHistory("sr-1");
 
+    expect(mocks.rpc).toHaveBeenCalledWith("list_provider_proposal_history", {
+      p_service_request_id: "sr-1",
+    });
     expect(result.error).toBeNull();
     expect(result.data).toEqual([row]);
   });
 
   it("returns empty list with error when query fails", async () => {
-    mocks.from.mockReturnValue(createHistoryChain({ data: null, error: { message: "boom" } }));
+    mocks.rpc.mockResolvedValue({
+      data: null,
+      error: { message: "boom" },
+    });
 
     const result = await fetchProviderProposalHistory("sr-1");
 
@@ -186,7 +183,7 @@ describe("getProposalDetail", () => {
     vi.clearAllMocks();
   });
 
-  it("returns proposal row on success", async () => {
+  it("returns provider proposal row via rpc on success", async () => {
     const row = {
       id: "p1",
       service_request_id: "sr-1",
@@ -212,26 +209,69 @@ describe("getProposalDetail", () => {
       created_at: "t",
       updated_at: "t",
     };
+    mocks.rpc.mockResolvedValue({ data: row, error: null });
+
+    const result = await getProposalDetail("p1", "provider");
+
+    expect(mocks.rpc).toHaveBeenCalledWith("get_proposal_detail_for_provider", {
+      p_proposal_id: "p1",
+    });
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual(row);
+  });
+
+  it("returns client-safe proposal row on success", async () => {
+    const row = {
+      id: "p1",
+      service_request_id: "sr-1",
+      provider_id: "provider-1",
+      status: "PENDING",
+      version: 1,
+      revision_count: 0,
+      revision_reason: null,
+      revision_notes: null,
+      submitted_at: "t",
+      expired_at: null,
+      proposed_amount: 100,
+      proposal_description: "desc",
+      proposal_duration_unit: "hours",
+      proposal_duration_value: 1,
+      proposal_suggested_slots: [],
+      photos: [],
+      client_rejection_response: null,
+      client_response_deadline_at: null,
+      created_at: "t",
+      updated_at: "t",
+    };
     mocks.from.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({ data: row, error: null }),
     });
 
-    const result = await getProposalDetail("p1");
+    const result = await getProposalDetail("p1", "client");
 
     expect(result.error).toBeNull();
     expect(result.data).toEqual(row);
   });
 
-  it("returns not found when row is missing", async () => {
+  it("returns not found when provider rpc row is missing", async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: null });
+
+    const result = await getProposalDetail("missing", "provider");
+
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toBe("Proposta não encontrada.");
+  });
+
+  it("returns not found when client row is missing", async () => {
     mocks.from.mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
     });
 
-    const result = await getProposalDetail("missing");
+    const result = await getProposalDetail("missing", "client");
 
     expect(result.data).toBeNull();
     expect(result.error?.message).toBe("Proposta não encontrada.");

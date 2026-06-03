@@ -72,6 +72,10 @@ export {
   type ServiceRequestProposalSummaryCardProps,
 } from "./components/ServiceRequestProposalSummaryCard";
 export {
+  ServiceRequestProposalSummaryDialog,
+  type ServiceRequestProposalSummaryDialogProps,
+} from "./components/ServiceRequestProposalSummaryDialog";
+export {
   ProposalHistoryAccordion,
 } from "./components/ProposalHistoryAccordion";
 export { ProposalPhotosGrid } from "./components/ProposalPhotosGrid";
@@ -134,7 +138,7 @@ export {
   DEFAULT_PROPOSAL_RESPONSE_SLA_HOURS,
 } from "./api/platformConstants.api";
 export { useProposalCountdown, type UseProposalCountdownParams } from "./hooks/useProposalCountdown";
-export type { ProposalDetailView } from "./types/proposalDetails.types";
+export type { ProposalDetailAudience, ProposalDetailView } from "./types/proposalDetails.types";
 export type {
   ServiceRequestProposalDraft,
   ServiceRequestProposalSummary,
@@ -145,6 +149,7 @@ export {
   formatProposalDateOnly,
   translateProposalShift,
 } from "./utils/proposalDetailsFormatters";
+export { mapProposalDetailToSummary } from "./utils/mapProposalDetailToSummary";
 export {
   normalizeProposalStatus,
   hasActiveServiceRequestProposal,
