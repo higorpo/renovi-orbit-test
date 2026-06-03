@@ -27,6 +27,9 @@ function rememberEvent(seen: Set<string>, key: string): boolean {
 
 export interface UseConversationRealtimeOptions {
   enabled?: boolean;
+  /** Required for proposal UPDATE events after provider_proposals.chat_id was removed. */
+  serviceRequestId?: string | null;
+  providerId?: string | null;
   /** Called after SUBSCRIBED or reconnected — wire to useChatMessages.refetchGapFill. */
   onReconcile?: () => void;
   /** Subscription status updates — wire to useConversationPollingFallback. */
@@ -50,6 +53,8 @@ export function useConversationRealtime(
   onRealtimeStatusChangeRef.current = options?.onRealtimeStatusChange;
   const enabled = Boolean(chatId) && (options?.enabled ?? true);
   const currentUserId = options?.currentUserId ?? null;
+  const serviceRequestId = options?.serviceRequestId ?? null;
+  const providerId = options?.providerId ?? null;
 
   useEffect(() => {
     if (!enabled || !chatId) return;
@@ -84,52 +89,57 @@ export function useConversationRealtime(
       void queryClient.invalidateQueries({ queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY] });
     };
 
-    const channel = subscribeConversationChannel(supabase, chatId, {
-      onMessageInsert: ({ id }) => {
-        const key = `chat_messages:INSERT:${id}`;
-        if (!rememberEvent(seenEventsRef.current, key)) return;
+    const channel = subscribeConversationChannel(
+      supabase,
+      chatId,
+      {
+        onMessageInsert: ({ id }) => {
+          const key = `chat_messages:INSERT:${id}`;
+          if (!rememberEvent(seenEventsRef.current, key)) return;
 
-        // Own send: onSuccess already merged the message + refreshed inbox.
-        if (wasRecentlySentChatMessageId(id)) return;
+          // Own send: onSuccess already merged the message + refreshed inbox.
+          if (wasRecentlySentChatMessageId(id)) return;
 
-        onReconcileRef.current?.();
-        invalidateInbox();
-      },
-      onProposalUpdate: ({ id }) => {
-        const key = `provider_proposals:UPDATE:${id}`;
-        if (!rememberEvent(seenEventsRef.current, key)) return;
-        invalidateProposal();
-        onReconcileRef.current?.();
-      },
-      onReadReceiptChange: ({ userId, lastReadMessageId, lastReadAt }) => {
-        if (!currentUserId || userId === currentUserId) return;
-
-        const key = `chat_read_receipts:${userId}:${lastReadMessageId ?? "none"}:${lastReadAt}`;
-        if (!rememberEvent(seenEventsRef.current, key)) return;
-        patchDetailReadReceipt(lastReadAt, lastReadMessageId);
-      },
-      onStatusChange: (status) => {
-        metrics.count("chats.realtime_subscription_status", 1, { status });
-        logger.debug("chats_realtime_status", { chatId, status });
-        onRealtimeStatusChangeRef.current?.(status);
-
-        const wasDisconnected =
-          lastStatusRef.current === "CHANNEL_ERROR" ||
-          lastStatusRef.current === "TIMED_OUT" ||
-          lastStatusRef.current === "CLOSED";
-        const isSubscribed = status === "SUBSCRIBED";
-
-        if (isSubscribed && (wasDisconnected || lastStatusRef.current === null)) {
           onReconcileRef.current?.();
-        }
+          invalidateInbox();
+        },
+        onProposalUpdate: ({ id }) => {
+          const key = `provider_proposals:UPDATE:${id}`;
+          if (!rememberEvent(seenEventsRef.current, key)) return;
+          invalidateProposal();
+          onReconcileRef.current?.();
+        },
+        onReadReceiptChange: ({ userId, lastReadMessageId, lastReadAt }) => {
+          if (!currentUserId || userId === currentUserId) return;
 
-        lastStatusRef.current = status;
+          const key = `chat_read_receipts:${userId}:${lastReadMessageId ?? "none"}:${lastReadAt}`;
+          if (!rememberEvent(seenEventsRef.current, key)) return;
+          patchDetailReadReceipt(lastReadAt, lastReadMessageId);
+        },
+        onStatusChange: (status) => {
+          metrics.count("chats.realtime_subscription_status", 1, { status });
+          logger.debug("chats_realtime_status", { chatId, status });
+          onRealtimeStatusChangeRef.current?.(status);
+
+          const wasDisconnected =
+            lastStatusRef.current === "CHANNEL_ERROR" ||
+            lastStatusRef.current === "TIMED_OUT" ||
+            lastStatusRef.current === "CLOSED";
+          const isSubscribed = status === "SUBSCRIBED";
+
+          if (isSubscribed && (wasDisconnected || lastStatusRef.current === null)) {
+            onReconcileRef.current?.();
+          }
+
+          lastStatusRef.current = status;
+        },
       },
-    });
+      { serviceRequestId, providerId },
+    );
 
     return () => {
       lastStatusRef.current = null;
       void supabase.removeChannel(channel);
     };
-  }, [chatId, currentUserId, enabled, queryClient]);
+  }, [chatId, currentUserId, enabled, providerId, queryClient, serviceRequestId]);
 }

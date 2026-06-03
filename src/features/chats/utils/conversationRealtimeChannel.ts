@@ -1,6 +1,13 @@
 import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 
+export type ConversationRealtimeScope = {
+  /** Required to subscribe to provider_proposals UPDATE (chat_id was removed from that table). */
+  serviceRequestId?: string | null;
+  /** Narrows proposal updates to this chat's provider when set. */
+  providerId?: string | null;
+};
+
 export type ConversationRealtimeHandlers = {
   onMessageInsert: (payload: { id: string }) => void;
   onProposalUpdate: (payload: { id: string }) => void;
@@ -20,36 +27,46 @@ export function subscribeConversationChannel(
   client: SupabaseClient<Database>,
   chatId: string,
   handlers: ConversationRealtimeHandlers,
+  scope?: ConversationRealtimeScope,
 ): RealtimeChannel {
   const channel = client.channel(conversationChannelName(chatId));
+  const serviceRequestId = scope?.serviceRequestId ?? null;
+  const providerId = scope?.providerId ?? null;
 
-  channel
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "chat_messages",
-        filter: `chat_id=eq.${chatId}`,
-      },
-      (payload) => {
-        const id = (payload.new as { id?: string } | null)?.id;
-        if (id) handlers.onMessageInsert({ id });
-      },
-    )
-    .on(
+  channel.on(
+    "postgres_changes",
+    {
+      event: "INSERT",
+      schema: "public",
+      table: "chat_messages",
+      filter: `chat_id=eq.${chatId}`,
+    },
+    (payload) => {
+      const id = (payload.new as { id?: string } | null)?.id;
+      if (id) handlers.onMessageInsert({ id });
+    },
+  );
+
+  if (serviceRequestId) {
+    channel.on(
       "postgres_changes",
       {
         event: "UPDATE",
         schema: "public",
         table: "provider_proposals",
-        filter: `chat_id=eq.${chatId}`,
+        filter: `service_request_id=eq.${serviceRequestId}`,
       },
       (payload) => {
-        const id = (payload.new as { id?: string } | null)?.id;
-        if (id) handlers.onProposalUpdate({ id });
+        const row = payload.new as { id?: string; provider_id?: string } | null;
+        const id = row?.id;
+        if (!id) return;
+        if (providerId && row.provider_id !== providerId) return;
+        handlers.onProposalUpdate({ id });
       },
-    )
+    );
+  }
+
+  channel
     .on(
       "postgres_changes",
       {

@@ -96,6 +96,22 @@ describe("useConversationRealtime", () => {
     });
 
     expect(supabaseChannelMock).toHaveBeenCalledWith("conversation:chat-1");
+    expect(channelMock.on).toHaveBeenCalledTimes(3);
+    await waitFor(() => expect(onReconcile).toHaveBeenCalled());
+  });
+
+  it("subscribes to proposal updates when serviceRequestId is provided", async () => {
+    const onReconcile = vi.fn();
+    renderHook(
+      () =>
+        useConversationRealtime("chat-1", {
+          onReconcile,
+          serviceRequestId: "sr-1",
+          providerId: "provider-1",
+        }),
+      { wrapper: createWrapper() },
+    );
+
     expect(channelMock.on).toHaveBeenCalledTimes(4);
     await waitFor(() => expect(onReconcile).toHaveBeenCalled());
   });

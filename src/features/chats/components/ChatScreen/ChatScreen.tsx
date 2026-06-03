@@ -106,6 +106,8 @@ export function ChatScreen({
 
   useConversationRealtime(chatId, {
     currentUserId: user?.id ?? null,
+    serviceRequestId: detail?.service_request.id ?? null,
+    providerId: detail?.conversation.provider_id ?? null,
     onReconcile: () => void refetchGapFill(),
     onRealtimeStatusChange: setRealtimeStatus,
   });
