@@ -1,35 +1,6 @@
 -- CNS Wave C — task 58: paginated inbox RPC (design §5.1, §9.2; Req. 17, 22).
 -- Depends on chats (task 2), chat_read_receipts (task 5). Index: chats_last_interaction_idx (task 2).
-
-create or replace function public.cns_message_preview_text(
-  p_message_type public.cns_message_type,
-  p_payload jsonb
-)
-returns text
-language sql
-immutable
-set search_path = public
-as $$
-  select case p_message_type
-    when 'IMAGE'::public.cns_message_type then 'Foto'
-    when 'PROPOSAL'::public.cns_message_type then 'Proposta enviada'
-    when 'SYSTEM'::public.cns_message_type then coalesce(
-      nullif(trim(p_payload->>'text'), ''),
-      'Mensagem do sistema'
-    )
-    when 'WORKFLOW_ACTION'::public.cns_message_type then coalesce(
-      nullif(trim(p_payload->>'text'), ''),
-      'Atualização'
-    )
-    else left(
-      coalesce(nullif(trim(p_payload->>'text'), ''), 'Nova mensagem'),
-      120
-    )
-  end;
-$$;
-
-comment on function public.cns_message_preview_text(public.cns_message_type, jsonb) is
-  'Inbox preview label for list_conversations (R17-AC03).';
+-- cns_message_preview_text: defined in 20260701104100_create_cns_enqueue_notifications.sql.
 
 create or replace function public.list_conversations(
   p_page_size integer default 20,

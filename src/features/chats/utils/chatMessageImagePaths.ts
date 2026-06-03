@@ -1,4 +1,4 @@
-const DEFAULT_IMAGE_PREVIEWS = new Set(["foto", "mensagem"]);
+const DEFAULT_IMAGE_PREVIEWS = new Set(["foto", "📷 foto", "mensagem"]);
 
 export function getChatImagePathsFromPayload(payload: Record<string, unknown>): string[] {
   const raw = payload.paths;

@@ -1,6 +1,36 @@
 -- CNS Phase 5 — task 43: domain event → MMD notification consumer (design §4.10, §1.5, Req. 12, 28).
 -- Migration order: runs AFTER task 42 (cns_mmd_ingest).
 
+create or replace function public.cns_message_preview_text(
+  p_message_type public.cns_message_type,
+  p_payload jsonb
+)
+returns text
+language sql
+immutable
+set search_path = public
+as $$
+  select case p_message_type
+    when 'IMAGE'::public.cns_message_type then '📷 Foto'
+    when 'PROPOSAL'::public.cns_message_type then '📋 Proposta enviada'
+    when 'SYSTEM'::public.cns_message_type then coalesce(
+      nullif(trim(p_payload->>'text'), ''),
+      'Mensagem do sistema'
+    )
+    when 'WORKFLOW_ACTION'::public.cns_message_type then coalesce(
+      nullif(trim(p_payload->>'text'), ''),
+      'Atualização'
+    )
+    else left(
+      coalesce(nullif(trim(p_payload->>'text'), ''), 'Nova mensagem'),
+      120
+    )
+  end;
+$$;
+
+comment on function public.cns_message_preview_text(public.cns_message_type, jsonb) is
+  'Inbox and push preview label for chat messages (R17-AC03).';
+
 create or replace function public.cns_enqueue_notifications(p_event_id uuid)
 returns jsonb
 language plpgsql
@@ -124,15 +154,10 @@ begin
       from public.chat_messages m
       where m.id = v_event.aggregate_id;
 
-      v_message_preview := case
-        when v_message.message_type = 'IMAGE'::public.cns_message_type then 'Photo'
-        else left(
-          nullif(trim(v_message.payload->>'text'), ''),
-          120
-        )
-      end;
-
-      v_message_preview := coalesce(v_message_preview, 'New message');
+      v_message_preview := public.cns_message_preview_text(
+        v_message.message_type,
+        v_message.payload
+      );
       v_idempotency_key := format('chat_message:%s:push', v_event.aggregate_id);
 
     when 'PROPOSAL_SUBMITTED' then

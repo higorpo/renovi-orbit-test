@@ -24,6 +24,7 @@ describe("getChatImageCaption", () => {
 
   it("hides default photo labels", () => {
     expect(getChatImageCaption({ preview: "Foto" })).toBeNull();
+    expect(getChatImageCaption({ preview: "📷 Foto" })).toBeNull();
     expect(getChatImageCaption({ preview: "3 fotos" })).toBeNull();
   });
 

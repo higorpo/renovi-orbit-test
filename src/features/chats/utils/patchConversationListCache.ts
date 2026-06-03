@@ -30,9 +30,9 @@ function buildInboxMessagePreviewText(
 ): string {
   switch (messageType) {
     case "IMAGE":
-      return "Foto";
+      return "📷 Foto";
     case "PROPOSAL":
-      return "Proposta enviada";
+      return "📋 Proposta enviada";
     case "SYSTEM": {
       const text = payload.text;
       if (typeof text === "string" && text.trim()) return text.trim();
