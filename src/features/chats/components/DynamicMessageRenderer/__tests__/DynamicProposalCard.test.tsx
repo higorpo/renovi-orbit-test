@@ -59,4 +59,28 @@ describe("DynamicProposalCard", () => {
     fireEvent.click(screen.getByRole("button", { name: /Ver detalhes/i }));
     expect(onProposalAction).toHaveBeenCalledWith("view_details", "p1");
   });
+
+  it("emits reject action when client taps Recusar", () => {
+    hydrateMock.mockReturnValue({
+      proposal: { status: "PENDING", proposed_amount: 500 },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    const onProposalAction = vi.fn();
+
+    render(
+      <DynamicProposalCard
+        chatId="chat-1"
+        message={message}
+        viewerRole="client"
+        isOutgoing={false}
+        onProposalAction={onProposalAction}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^Recusar$/i }));
+    expect(onProposalAction).toHaveBeenCalledWith("reject", "p1");
+  });
 });

@@ -6,6 +6,8 @@ import {
   getProposalDetail,
   ProposalComposerDialog,
   ProposalDetailsDialog,
+  RejectProposalDialog,
+  RevisionRequestDialog,
   useProposalDetail,
   type ProposalComposerMode,
   type ProposalDetailView,
@@ -42,6 +44,10 @@ export function ChatsConversationRoute() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [acceptOpen, setAcceptOpen] = useState(false);
   const [acceptProposalId, setAcceptProposalId] = useState<string | null>(null);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectProposalId, setRejectProposalId] = useState<string | null>(null);
+  const [revisionOpen, setRevisionOpen] = useState(false);
+  const [revisionProposalId, setRevisionProposalId] = useState<string | null>(null);
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const [proposalComposerOpen, setProposalComposerOpen] = useState(false);
   const [proposalComposerMode, setProposalComposerMode] = useState<ProposalComposerMode>("create");
@@ -55,6 +61,11 @@ export function ChatsConversationRoute() {
     enabled: detailsDialogOpen,
   });
 
+  const revisionProposalDetailQuery = useProposalDetail({
+    proposalId: revisionProposalId,
+    enabled: revisionOpen,
+  });
+
   useEffect(() => {
     setDetailsOpen(false);
     setConfirmCloseOpen(false);
@@ -63,6 +74,10 @@ export function ChatsConversationRoute() {
     setProposalComposerInitialProposal(null);
     setDetailsDialogOpen(false);
     setDetailsProposalId(null);
+    setRejectOpen(false);
+    setRejectProposalId(null);
+    setRevisionOpen(false);
+    setRevisionProposalId(null);
   }, [chatId]);
 
   const openProposalDetails = useCallback((proposalId: string) => {
@@ -90,6 +105,18 @@ export function ChatsConversationRoute() {
       if (action === "accept") {
         setAcceptProposalId(proposalId);
         setAcceptOpen(true);
+        return;
+      }
+
+      if (action === "reject") {
+        setRejectProposalId(proposalId);
+        setRejectOpen(true);
+        return;
+      }
+
+      if (action === "request_revision") {
+        setRevisionProposalId(proposalId);
+        setRevisionOpen(true);
         return;
       }
 
@@ -192,6 +219,23 @@ export function ChatsConversationRoute() {
         serviceRequestId={serviceRequestId}
         proposalId={acceptProposalId}
         suggestedSlots={FALLBACK_SUGGESTED_SLOTS}
+      />
+
+      <RejectProposalDialog
+        open={rejectOpen}
+        onOpenChange={setRejectOpen}
+        chatId={chatId}
+        serviceRequestId={serviceRequestId}
+        proposalId={rejectProposalId}
+      />
+
+      <RevisionRequestDialog
+        open={revisionOpen}
+        onOpenChange={setRevisionOpen}
+        chatId={chatId}
+        serviceRequestId={serviceRequestId}
+        proposalId={revisionProposalId}
+        revisionCount={revisionProposalDetailQuery.data?.revision_count ?? 0}
       />
 
       <ProposalComposerDialog
