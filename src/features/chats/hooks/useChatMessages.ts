@@ -26,7 +26,12 @@ import type {
 } from "../types/chats.types";
 import { mergeKeysetMessagePages } from "../utils/cursorMerge";
 import {
+  registerImagePreviewHoldover,
+  clearImagePreviewHoldover,
+} from "../utils/chatImagePreviewHoldover";
+import {
   buildImageMessageSendPayload,
+  getLocalPreviewUrlsFromPayload,
   stripClientOnlyImagePayloadFields,
 } from "../utils/chatMessageImagePaths";
 
@@ -170,6 +175,10 @@ export function useChatMessages(
       pendingInputByClientSendId.current.set(input.clientSendId, input);
 
       const optimistic = buildOptimisticMessage(chatId, user.id, input, idempotencyKey);
+      if (input.messageType === "IMAGE") {
+        const previewUrls = getLocalPreviewUrlsFromPayload(input.payload);
+        registerImagePreviewHoldover(idempotencyKey, previewUrls);
+      }
       setOptimisticMessages((prev) => [...prev, optimistic]);
       setLastSendError(null);
 
@@ -218,14 +227,7 @@ export function useChatMessages(
     [],
   );
 
-  const revokeLocalPreviewsForClientSendId = useCallback((clientSendId: string) => {
-    const urls = localPreviewsByClientSendId.current.get(clientSendId);
-    if (!urls) return;
-    for (const url of urls) {
-      if (url.startsWith("blob:")) {
-        URL.revokeObjectURL(url);
-      }
-    }
+  const detachLocalPreviewsForClientSendId = useCallback((clientSendId: string) => {
     localPreviewsByClientSendId.current.delete(clientSendId);
   }, []);
 
@@ -236,22 +238,31 @@ export function useChatMessages(
       setOptimisticMessages((prev) => prev.filter((m) => m.idempotency_key !== idempotencyKey));
       idempotencyByClientSendId.current.delete(clientSendId);
       pendingInputByClientSendId.current.delete(clientSendId);
-      revokeLocalPreviewsForClientSendId(clientSendId);
+      clearImagePreviewHoldover(idempotencyKey);
+      detachLocalPreviewsForClientSendId(clientSendId);
     },
-    [revokeLocalPreviewsForClientSendId],
+    [detachLocalPreviewsForClientSendId],
   );
 
   const resetOutboundSendState = useCallback(() => {
-    for (const clientSendId of localPreviewsByClientSendId.current.keys()) {
-      revokeLocalPreviewsForClientSendId(clientSendId);
+    for (const [, idempotencyKey] of idempotencyByClientSendId.current.entries()) {
+      clearImagePreviewHoldover(idempotencyKey);
     }
+    for (const urls of localPreviewsByClientSendId.current.values()) {
+      for (const url of urls) {
+        if (url.startsWith("blob:")) {
+          URL.revokeObjectURL(url);
+        }
+      }
+    }
+    localPreviewsByClientSendId.current.clear();
     idempotencyByClientSendId.current.clear();
     pendingInputByClientSendId.current.clear();
     setOptimisticMessages([]);
     setLastSendError(null);
     sendChainRef.current = Promise.resolve();
     setPendingSendCount(0);
-  }, [revokeLocalPreviewsForClientSendId]);
+  }, []);
 
   useEffect(() => {
     resetOutboundSendState();
@@ -358,7 +369,7 @@ export function useChatMessages(
       );
       idempotencyByClientSendId.current.delete(input.clientSendId);
       pendingInputByClientSendId.current.delete(input.clientSendId);
-      revokeLocalPreviewsForClientSendId(input.clientSendId);
+      detachLocalPreviewsForClientSendId(input.clientSendId);
       setLastSendError(null);
 
       rememberSentChatMessageId(result.message.id);
@@ -578,12 +589,13 @@ export function useChatMessages(
         if (key === idempotencyKey) {
           idempotencyByClientSendId.current.delete(clientSendId);
           pendingInputByClientSendId.current.delete(clientSendId);
-          revokeLocalPreviewsForClientSendId(clientSendId);
+          clearImagePreviewHoldover(idempotencyKey);
+          detachLocalPreviewsForClientSendId(clientSendId);
         }
       }
       setLastSendError(null);
     },
-    [revokeLocalPreviewsForClientSendId],
+    [detachLocalPreviewsForClientSendId],
   );
 
   return {

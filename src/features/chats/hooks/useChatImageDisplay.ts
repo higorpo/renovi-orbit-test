@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { resolveChatImageDisplayUrls } from "../api/chatMedia.api";
 import type { ChatMessageListItem } from "../types/chats.types";
 import {
+  clearImagePreviewHoldover,
+  getImagePreviewHoldover,
+} from "../utils/chatImagePreviewHoldover";
+import {
   buildChatImageDisplayCacheKey,
   getCachedChatImageDisplayUrls,
   setCachedChatImageDisplayUrls,
@@ -11,6 +15,7 @@ import {
   getChatImagePathsFromPayload,
   getLocalPreviewUrlsFromPayload,
 } from "../utils/chatMessageImagePaths";
+import { preloadImageUrls } from "../utils/preloadImageUrls";
 
 export function useChatImageDisplay(message: ChatMessageListItem) {
   const localPreviewUrls = useMemo(
@@ -27,12 +32,21 @@ export function useChatImageDisplay(message: ChatMessageListItem) {
     () => buildChatImageDisplayCacheKey(message.id, paths),
     [message.id, pathsKey],
   );
+  const previewHoldover = useMemo(
+    () => getImagePreviewHoldover(message.idempotency_key),
+    [message.idempotency_key],
+  );
 
   const cachedUrls = useMemo(() => getCachedChatImageDisplayUrls(cacheKey), [cacheKey]);
 
-  const [urls, setUrls] = useState<string[]>(() => localPreviewUrls);
+  const initialDisplayUrls =
+    localPreviewUrls.length > 0
+      ? localPreviewUrls
+      : cachedUrls ?? previewHoldover ?? [];
+
+  const [urls, setUrls] = useState<string[]>(() => initialDisplayUrls);
   const [isLoading, setIsLoading] = useState(
-    () => localPreviewUrls.length === 0 && paths.length > 0 && !cachedUrls,
+    () => initialDisplayUrls.length === 0 && paths.length > 0,
   );
   const [hasError, setHasError] = useState(false);
 
@@ -56,35 +70,59 @@ export function useChatImageDisplay(message: ChatMessageListItem) {
       setUrls(cached);
       setIsLoading(false);
       setHasError(false);
+      clearImagePreviewHoldover(message.idempotency_key);
       return;
     }
 
+    const holdover = getImagePreviewHoldover(message.idempotency_key);
+    if (holdover) {
+      setUrls(holdover);
+      setIsLoading(false);
+      setHasError(false);
+    } else {
+      setUrls([]);
+      setIsLoading(true);
+      setHasError(false);
+    }
+
     let cancelled = false;
-    setUrls([]);
-    setIsLoading(true);
-    setHasError(false);
 
     void resolveChatImageDisplayUrls({
       messageId: message.id,
       paths,
-    }).then((result) => {
+    }).then(async (result) => {
       if (cancelled) return;
+
       if (result.error || result.urls.length === 0) {
-        setHasError(true);
-        setUrls([]);
-      } else {
-        setCachedChatImageDisplayUrls(cacheKey, result.urls);
-        setUrls(result.urls);
+        if (!holdover) {
+          setHasError(true);
+          setUrls([]);
+        }
+        setIsLoading(false);
+        return;
       }
+
+      await preloadImageUrls(result.urls);
+      if (cancelled) return;
+
+      setCachedChatImageDisplayUrls(cacheKey, result.urls);
+      setUrls(result.urls);
+      setHasError(false);
       setIsLoading(false);
+      clearImagePreviewHoldover(message.idempotency_key);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [cacheKey, localPreviewUrls, message.id, paths, pathsKey]);
+  }, [cacheKey, localPreviewUrls, message.id, message.idempotency_key, paths, pathsKey]);
 
-  const pathCount = localPreviewUrls.length > 0 ? localPreviewUrls.length : paths.length;
+  const pathCount =
+    localPreviewUrls.length > 0
+      ? localPreviewUrls.length
+      : paths.length > 0
+        ? paths.length
+        : urls.length;
 
   return { urls, caption, isLoading, hasError, pathCount };
 }

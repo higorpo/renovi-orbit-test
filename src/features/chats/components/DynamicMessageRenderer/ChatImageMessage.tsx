@@ -99,7 +99,7 @@ export const ChatImageMessage = memo(function ChatImageMessage({
         >
           {urls.map((url, index) => (
             <button
-              key={url}
+              key={`${message.id}-${index}`}
               type="button"
               onClick={() => setExpandedUrl(url)}
               className="block overflow-hidden rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-zoom-in"
