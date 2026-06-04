@@ -102,6 +102,9 @@ export function useConversationRealtime(
           // Own send: onSuccess already merged the message + refreshed inbox.
           if (wasRecentlySentChatMessageId(id)) return;
 
+          void queryClient.invalidateQueries({
+            queryKey: [CONVERSATION_DETAIL_QUERY_KEY, chatId],
+          });
           onReconcileRef.current?.();
           invalidateInbox();
         },

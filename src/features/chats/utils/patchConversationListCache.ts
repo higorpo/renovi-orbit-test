@@ -3,6 +3,7 @@ import { CHAT_CONVERSATIONS_LIST_QUERY_KEY } from "../constants/queryKeys";
 import type {
   ConversationListItem,
   ConversationListResponse,
+  CnsConversationStatus,
   CnsMessageType,
 } from "../types/chats.types";
 
@@ -19,6 +20,7 @@ export interface PatchConversationListCacheParams {
   chatId: string;
   lastInteractionAt: string;
   lastMessage: ConversationListMessagePatch;
+  status?: CnsConversationStatus;
   markAsRead?: boolean;
   markAsUnread?: boolean;
 }
@@ -56,10 +58,18 @@ function applyPatchToItem(
   item: ConversationListItem,
   params: PatchConversationListCacheParams,
 ): ConversationListItem {
-  const { lastMessage, lastInteractionAt, markAsRead, markAsUnread } = params;
+  const { lastMessage, lastInteractionAt, markAsRead, markAsUnread, status } = params;
 
   return {
     ...item,
+    ...(status !== undefined
+      ? {
+          status,
+          ...(status === "ACTIVE"
+            ? { inactivated_at: null as ConversationListItem["inactivated_at"] }
+            : {}),
+        }
+      : {}),
     last_interaction_at: lastInteractionAt,
     updated_at: lastInteractionAt,
     last_message: {

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { markConversationRead } from "../api/chats.api";
 import { CHAT_CONVERSATIONS_LIST_QUERY_KEY } from "../constants/queryKeys";
 import type { ChatMessageListItem } from "../types/chats.types";
+import { lastConfirmedChatMessage } from "../utils/lastConfirmedChatMessage";
 import { clearConversationUnreadInListCache } from "../utils/patchConversationListCache";
 
 const MARK_READ_DEBOUNCE_MS = 400;
@@ -10,13 +11,9 @@ const MARK_READ_DEBOUNCE_MS = 400;
 function lastReadableMessage(
   messages: readonly ChatMessageListItem[],
 ): { id: string; createdAt: string } | null {
-  for (let i = messages.length - 1; i >= 0; i -= 1) {
-    const message = messages[i];
-    if (message && !message.id.startsWith("optimistic:")) {
-      return { id: message.id, createdAt: message.created_at };
-    }
-  }
-  return null;
+  const message = lastConfirmedChatMessage(messages);
+  if (!message) return null;
+  return { id: message.id, createdAt: message.created_at };
 }
 
 /**

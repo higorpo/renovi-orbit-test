@@ -237,6 +237,10 @@ describe("useConversationRealtime", () => {
         (call) => call[0]?.queryKey?.[0] === "chat-messages",
       );
       expect(messageInvalidations).toHaveLength(0);
+      const detailInvalidations = invalidateSpy.mock.calls.filter(
+        (call) => call[0]?.queryKey?.[0] === "conversation-detail",
+      );
+      expect(detailInvalidations.length).toBeGreaterThan(0);
     });
   });
 

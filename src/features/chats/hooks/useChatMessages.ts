@@ -16,6 +16,8 @@ import {
 import { CHAT_CONVERSATIONS_LIST_QUERY_KEY, CHAT_MESSAGES_QUERY_KEY } from "../constants/queryKeys";
 import { createClientSendId } from "../utils/clientSendId";
 import { rememberSentChatMessageId } from "../utils/chatMessageSendSync";
+import { lastConfirmedChatMessage } from "../utils/lastConfirmedChatMessage";
+import { patchConversationDetailCache } from "../utils/patchConversationDetailCache";
 import { patchConversationListCache } from "../utils/patchConversationListCache";
 import { sendMessageResultToListItem } from "../utils/sendMessageToListItem";
 import type {
@@ -129,7 +131,9 @@ export function useChatMessages(
 
   const mergeGapFillIntoCache = useCallback(
     (incoming: ChatMessageListItem[]) => {
-      if (!chatId || incoming.length === 0) return;
+      if (!chatId || incoming.length === 0) return false;
+
+      let merged = false;
 
       queryClient.setQueryData(
         [CHAT_MESSAGES_QUERY_KEY, chatId],
@@ -142,6 +146,8 @@ export function useChatMessages(
             | undefined,
         ) => {
           if (!current?.pages?.length) return current;
+
+          merged = true;
 
           const mergedItems = mergeKeysetMessagePages(
             current.pages[0]?.items ?? [],
@@ -160,6 +166,8 @@ export function useChatMessages(
           };
         },
       );
+
+      return merged;
     },
     [chatId, queryClient],
   );
@@ -289,14 +297,30 @@ export function useChatMessages(
     mergeGapFillIntoCache(result.data.items);
   }, [chatId, mergeGapFillIntoCache]);
 
+  const ensureMessagesCacheReady = useCallback(async () => {
+    if (!chatId) return false;
+
+    const current = queryClient.getQueryData<{
+      pages: Array<{ items: ChatMessageListItem[] }>;
+    }>([CHAT_MESSAGES_QUERY_KEY, chatId]);
+
+    if (current?.pages?.length) return true;
+
+    await queryClient.invalidateQueries({ queryKey: [CHAT_MESSAGES_QUERY_KEY, chatId] });
+    return false;
+  }, [chatId, queryClient]);
+
   const refetchGapFill = useCallback(async () => {
     const currentMessages = messagesRef.current;
     if (!chatId) return;
 
-    let forwardCount = 0;
+    const cacheReady = await ensureMessagesCacheReady();
+    if (!cacheReady) return;
 
-    if (currentMessages.length > 0) {
-      const lastSeen = currentMessages[currentMessages.length - 1]!;
+    let forwardCount = 0;
+    const lastSeen = lastConfirmedChatMessage(currentMessages);
+
+    if (lastSeen) {
       const result = await listChatMessages({
         chatId,
         limit: PAGE_SIZE,
@@ -322,7 +346,7 @@ export function useChatMessages(
     if (forwardCount === 0) {
       await refetchLatestTailIntoCache();
     }
-  }, [chatId, mergeGapFillIntoCache, refetchLatestTailIntoCache]);
+  }, [chatId, ensureMessagesCacheReady, mergeGapFillIntoCache, refetchLatestTailIntoCache]);
 
   const sendMutation = useMutation({
     mutationFn: async (input: SendChatMessageInput) => {
@@ -375,8 +399,14 @@ export function useChatMessages(
       rememberSentChatMessageId(result.message.id);
       mergeGapFillIntoCache([sendMessageResultToListItem(result.message)]);
 
+      patchConversationDetailCache(queryClient, result.message.chat_id, {
+        status: result.conversation.status,
+        lastInteractionAt: result.conversation.last_interaction_at,
+      });
+
       const patched = patchConversationListCache(queryClient, {
         chatId: result.message.chat_id,
+        status: result.conversation.status,
         lastInteractionAt: result.conversation.last_interaction_at,
         lastMessage: {
           id: result.message.id,
