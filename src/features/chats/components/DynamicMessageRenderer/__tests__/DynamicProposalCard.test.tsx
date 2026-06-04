@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
-import React from "react";
+import React, { createElement, type ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChatMessageListItem } from "../../../types/chats.types";
 import { DynamicProposalCard } from "../DynamicProposalCard";
 
@@ -9,11 +10,29 @@ vi.mock("@/lib/sentry", () => ({
   metrics: { count: vi.fn(), distribution: vi.fn() },
 }));
 
+vi.mock("@/features/negotiation-proposals/api/platformConstants.api", () => ({
+  getProposalResponseSlaHours: vi.fn().mockResolvedValue(24),
+}));
+
 const hydrateMock = vi.fn();
 
 vi.mock("../../../hooks/useProposalTimelineHydration", () => ({
   useProposalTimelineHydration: (...args: unknown[]) => hydrateMock(...args),
 }));
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+}
+
+function renderCard(ui: React.ReactElement) {
+  return render(ui, { wrapper: createWrapper() });
+}
 
 const message: ChatMessageListItem = {
   id: "m1",
@@ -30,6 +49,11 @@ const message: ChatMessageListItem = {
 };
 
 describe("DynamicProposalCard", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+  });
+
   it("hydrates proposal summary and opens details via callback", () => {
     hydrateMock.mockReturnValue({
       proposal: {
@@ -43,7 +67,7 @@ describe("DynamicProposalCard", () => {
 
     const onProposalAction = vi.fn();
 
-    render(
+    renderCard(
       <DynamicProposalCard
         chatId="chat-1"
         message={message}
@@ -60,6 +84,33 @@ describe("DynamicProposalCard", () => {
     expect(onProposalAction).toHaveBeenCalledWith("view_details", "p1");
   });
 
+  it("shows countdown for pending proposals with a client deadline", () => {
+    hydrateMock.mockReturnValue({
+      proposal: {
+        status: "PENDING",
+        proposed_amount: 500,
+        submitted_at: "2026-01-01T00:00:00.000Z",
+        client_response_deadline_at: "2026-01-01T03:00:00.000Z",
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    renderCard(
+      <DynamicProposalCard
+        chatId="chat-1"
+        message={message}
+        viewerRole="client"
+        isOutgoing={false}
+        onProposalAction={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.getByText(/Restam 3 h/i)).toBeInTheDocument();
+  });
+
   it("emits reject action when client taps Recusar", () => {
     hydrateMock.mockReturnValue({
       proposal: { status: "PENDING", proposed_amount: 500 },
@@ -70,7 +121,7 @@ describe("DynamicProposalCard", () => {
 
     const onProposalAction = vi.fn();
 
-    render(
+    renderCard(
       <DynamicProposalCard
         chatId="chat-1"
         message={message}
@@ -94,7 +145,7 @@ describe("DynamicProposalCard", () => {
 
     const onProposalAction = vi.fn();
 
-    render(
+    renderCard(
       <DynamicProposalCard
         chatId="chat-1"
         message={message}
@@ -119,7 +170,7 @@ describe("DynamicProposalCard", () => {
       refetch: vi.fn(),
     });
 
-    render(
+    renderCard(
       <DynamicProposalCard
         chatId="chat-1"
         message={message}
@@ -145,7 +196,7 @@ describe("DynamicProposalCard", () => {
       refetch: vi.fn(),
     });
 
-    render(
+    renderCard(
       <DynamicProposalCard
         chatId="chat-1"
         message={message}
@@ -172,7 +223,7 @@ describe("DynamicProposalCard", () => {
       refetch: vi.fn(),
     });
 
-    render(
+    renderCard(
       <DynamicProposalCard
         chatId="chat-1"
         message={message}
@@ -199,7 +250,7 @@ describe("DynamicProposalCard", () => {
       refetch: vi.fn(),
     });
 
-    render(
+    renderCard(
       <DynamicProposalCard
         chatId="chat-1"
         message={message}
@@ -225,7 +276,7 @@ describe("DynamicProposalCard", () => {
       refetch: vi.fn(),
     });
 
-    render(
+    renderCard(
       <DynamicProposalCard
         chatId="chat-1"
         message={message}
@@ -256,7 +307,7 @@ describe("DynamicProposalCard", () => {
       refetch: vi.fn(),
     });
 
-    render(
+    renderCard(
       <DynamicProposalCard
         chatId="chat-1"
         message={message}

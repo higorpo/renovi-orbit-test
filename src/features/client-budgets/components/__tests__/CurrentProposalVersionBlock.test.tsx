@@ -1,7 +1,14 @@
+// @vitest-environment happy-dom
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CurrentProposalVersionBlock } from "../CurrentProposalVersionBlock";
 import type { ClientBudgetDetailProposal } from "../../types/client-budgets.types";
+
+vi.mock("@/features/negotiation-proposals/api/platformConstants.api", () => ({
+  getProposalResponseSlaHours: vi.fn().mockResolvedValue(24),
+}));
 
 const useProposalPhotoUrlsMock = vi.hoisted(() =>
   vi.fn((_photos: string[] | null) => ({ urls: ["https://photo/1"], isLoading: false })),
@@ -15,6 +22,16 @@ vi.mock("@/features/negotiation-proposals", async (importOriginal) => {
     ProposalPhotosGrid: () => <div data-testid="photos-grid" />,
   };
 });
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+}
 
 const baseProposal: ClientBudgetDetailProposal = {
   id: "p1",
@@ -32,6 +49,8 @@ const baseProposal: ClientBudgetDetailProposal = {
 
 describe("CurrentProposalVersionBlock", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
     useProposalPhotoUrlsMock.mockImplementation(() => ({
       urls: ["https://photo/1"],
       isLoading: false,
@@ -40,7 +59,9 @@ describe("CurrentProposalVersionBlock", () => {
   });
 
   it("shows deadline banner when submitted and deadline parses", () => {
-    render(<CurrentProposalVersionBlock proposal={baseProposal} />);
+    render(<CurrentProposalVersionBlock proposal={baseProposal} />, {
+      wrapper: createWrapper(),
+    });
     expect(screen.getByText(/Versão atual/i)).toBeInTheDocument();
     expect(screen.getByText(/Prazo para responder/i)).toBeInTheDocument();
     expect(screen.getByText(/Texto do orçamento/)).toBeInTheDocument();
@@ -52,6 +73,7 @@ describe("CurrentProposalVersionBlock", () => {
       <CurrentProposalVersionBlock
         proposal={{ ...baseProposal, status: "accepted", client_response_deadline_at: null }}
       />,
+      { wrapper: createWrapper() },
     );
     expect(screen.queryByText(/Prazo para responder/i)).not.toBeInTheDocument();
   });
@@ -61,12 +83,15 @@ describe("CurrentProposalVersionBlock", () => {
       <CurrentProposalVersionBlock
         proposal={{ ...baseProposal, client_response_deadline_at: "invalid-date" }}
       />,
+      { wrapper: createWrapper() },
     );
     expect(screen.queryByText(/Prazo para responder/i)).not.toBeInTheDocument();
   });
 
   it("passes null photo paths to hook when photos array is empty", () => {
-    render(<CurrentProposalVersionBlock proposal={{ ...baseProposal, photos: [] }} />);
+    render(<CurrentProposalVersionBlock proposal={{ ...baseProposal, photos: [] }} />, {
+      wrapper: createWrapper(),
+    });
     expect(useProposalPhotoUrlsMock).toHaveBeenCalledWith(null);
   });
 });

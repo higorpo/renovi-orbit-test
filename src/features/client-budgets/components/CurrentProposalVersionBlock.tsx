@@ -1,20 +1,13 @@
-import { Clock, FileText } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { isPendingProposalStatus } from "@/features/negotiation-proposals";
-import { ProposalPhotosGrid, useProposalPhotoUrls } from "@/features/negotiation-proposals";
+import { FileText } from "lucide-react";
+import {
+  isPendingProposalStatus,
+  ProposalCountdownBanner,
+  ProposalPhotosGrid,
+  useProposalPhotoUrls,
+} from "@/features/negotiation-proposals";
 import { formatCurrency } from "@/lib/formatCurrency";
 import type { ClientBudgetDetailProposal } from "../types/client-budgets.types";
 import { BudgetStatusBadge } from "./BudgetStatusBadge";
-
-function formatDeadline(iso: string | null): string | null {
-  if (!iso) return null;
-  try {
-    return format(new Date(iso), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
-  } catch {
-    return null;
-  }
-}
 
 interface CurrentProposalVersionBlockProps {
   proposal: ClientBudgetDetailProposal;
@@ -24,9 +17,6 @@ export function CurrentProposalVersionBlock({ proposal }: CurrentProposalVersion
   const { urls, isLoading } = useProposalPhotoUrls(
     proposal.photos?.length ? proposal.photos : null,
   );
-  const deadlineLabel = formatDeadline(proposal.client_response_deadline_at);
-  const showDeadline =
-    isPendingProposalStatus(proposal.status) && Boolean(deadlineLabel);
 
   return (
     <div className="space-y-2">
@@ -39,17 +29,14 @@ export function CurrentProposalVersionBlock({ proposal }: CurrentProposalVersion
           <BudgetStatusBadge status={proposal.status} />
         </div>
 
-        {showDeadline ? (
-          <div className="flex gap-2 rounded-md border border-amber-200/80 bg-amber-50/60 px-3 py-2 text-sm dark:border-amber-900/50 dark:bg-amber-950/30">
-            <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-400" aria-hidden />
-            <div>
-              <p className="font-medium text-amber-900 dark:text-amber-100">Prazo para responder</p>
-              <p className="text-muted-foreground">
-                Aprove ou recuse este orçamento até{" "}
-                <span className="font-medium text-foreground">{deadlineLabel}</span>.
-              </p>
-            </div>
-          </div>
+        {isPendingProposalStatus(proposal.status) ? (
+          <ProposalCountdownBanner
+            status={proposal.status}
+            submittedAt={proposal.created_at}
+            clientResponseDeadlineAt={proposal.client_response_deadline_at}
+            audience="client"
+            copyVariant="budget"
+          />
         ) : null}
 
         <div className="space-y-1.5">

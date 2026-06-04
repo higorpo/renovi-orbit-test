@@ -139,6 +139,10 @@ export {
   DEFAULT_PROPOSAL_RESPONSE_SLA_HOURS,
 } from "./api/platformConstants.api";
 export { useProposalCountdown, type UseProposalCountdownParams } from "./hooks/useProposalCountdown";
+export {
+  ProposalCountdownBanner,
+  type ProposalCountdownBannerProps,
+} from "./components/ProposalCountdownBanner";
 export type { ProposalDetailAudience, ProposalDetailView } from "./types/proposalDetails.types";
 export type {
   ServiceRequestProposalDraft,
@@ -167,3 +171,8 @@ export {
   type ProposalCountdownPhase,
   type ProposalCountdownSnapshot,
 } from "./utils/proposalCountdown";
+export {
+  resolveProposalCountdownCopy,
+  type ProposalCountdownAudience,
+  type ProposalCountdownCopy,
+} from "./utils/proposalCountdownCopy";

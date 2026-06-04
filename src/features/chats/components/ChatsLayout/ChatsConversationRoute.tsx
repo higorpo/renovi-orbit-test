@@ -320,6 +320,7 @@ export function ChatsConversationRoute() {
           isError={proposalDetailQuery.isError}
           onRetry={() => void proposalDetailQuery.refetch()}
           copyVariant="proposal"
+          detailAudience={isProviderViewer ? "provider" : "client"}
         />
       ) : null}
     </>

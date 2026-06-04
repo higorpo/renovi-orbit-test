@@ -5,6 +5,7 @@ import { ShellDialogContent } from "@/components/ui/shell-dialog";
 import { useMobileDialogViewport } from "@/hooks/useMobileDialogViewport";
 import { PROPOSAL_COPY_VARIANTS, type ProposalCopyVariant } from "../constants/proposalCopyVariants";
 import { useProposalPhotoUrls } from "../hooks/useProposalPhotoUrls";
+import type { ProposalDetailAudience } from "../types/proposalDetails.types";
 import type { ProposalDetailView } from "../types/proposalDetails.types";
 import type { ProviderProposalHistoryItem } from "../types/proposals.types";
 import type { ServiceRequestProposalSummary } from "../types/serviceRequestProposal.types";
@@ -27,6 +28,7 @@ export interface ProposalDetailsDialogProps {
   isError?: boolean;
   onRetry?: () => void;
   copyVariant?: ProposalCopyVariant;
+  detailAudience?: ProposalDetailAudience;
 }
 
 export function ProposalDetailsDialog({
@@ -40,6 +42,7 @@ export function ProposalDetailsDialog({
   isError = false,
   onRetry,
   copyVariant = "proposal",
+  detailAudience,
 }: ProposalDetailsDialogProps) {
   const copy = PROPOSAL_COPY_VARIANTS[copyVariant];
   const isOpen = open ?? Boolean(proposal ?? summary);
@@ -110,6 +113,7 @@ export function ProposalDetailsDialog({
               copyVariant={copyVariant}
               photoUrls={photoUrls}
               isPhotosLoading={isPhotosLoading}
+              detailAudience={detailAudience}
             />
           ) : null}
         </div>

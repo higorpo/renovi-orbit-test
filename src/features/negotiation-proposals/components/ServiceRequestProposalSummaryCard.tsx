@@ -127,6 +127,7 @@ function ServiceRequestProposalSummaryContent({
           if (!open) setSelectedProposal(null);
         }}
         copyVariant={copyVariant}
+        detailAudience="provider"
       />
     </>
   );

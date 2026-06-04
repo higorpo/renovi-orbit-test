@@ -58,6 +58,17 @@ describe("computeProposalCountdown", () => {
     expect(snapshot.phase).toBe("expired");
     expect(snapshot.isExpired).toBe(true);
   });
+
+  it("counts down for submitted budgets mapped as pending", () => {
+    const expiresAt = new Date("2026-01-01T23:00:00.000Z");
+    const snapshot = computeProposalCountdown({
+      status: "SUBMITTED",
+      expiresAt,
+    });
+
+    expect(snapshot.phase).toBe("warning");
+    expect(snapshot.remainingLabel).toContain("3 h");
+  });
 });
 
 describe("formatProposalRemainingMs", () => {

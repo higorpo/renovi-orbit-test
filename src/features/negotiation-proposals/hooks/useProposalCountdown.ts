@@ -7,6 +7,7 @@ import {
   resolveProposalExpiresAt,
   type ProposalCountdownSnapshot,
 } from "../utils/proposalCountdown";
+import { isPendingProposalStatus } from "../utils/proposalStatus";
 
 const SLA_QUERY_KEY = "proposal-response-sla-hours";
 const DEFAULT_TICK_MS = 30_000;
@@ -52,7 +53,7 @@ export function useProposalCountdown({
   }, [clientResponseDeadlineAt, enabled, slaHours, submittedAt]);
 
   useEffect(() => {
-    if (!enabled || status !== "PENDING" || !expiresAt) return;
+    if (!enabled || !isPendingProposalStatus(status) || !expiresAt) return;
 
     setNowMs(Date.now());
     const timerId = window.setInterval(() => setNowMs(Date.now()), tickIntervalMs);

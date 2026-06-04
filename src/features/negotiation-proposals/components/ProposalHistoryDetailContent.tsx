@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { PROPOSAL_COPY_VARIANTS, type ProposalCopyVariant } from "../constants/proposalCopyVariants";
+import type { ProposalDetailAudience } from "../types/proposalDetails.types";
 import type { ProposalDetailView } from "../types/proposalDetails.types";
 import type { ProviderProposalHistoryItem } from "../types/proposals.types";
 import {
@@ -17,6 +18,7 @@ import {
 } from "../utils/proposalDetailsFormatters";
 import { isRejectedProposalStatus } from "../utils/proposalStatus";
 import { ProposalClientRejectionNotice } from "./ProposalClientRejectionNotice";
+import { ProposalCountdownBanner } from "./ProposalCountdownBanner";
 import { ProposalPhotosGrid } from "./ProposalPhotosGrid";
 import { ProposalRevisionRequestNotice } from "./ProposalRevisionRequestNotice";
 import {
@@ -26,6 +28,20 @@ import {
 } from "./proposalDetailLayout";
 
 type ProposalDetailsContent = ProposalDetailView | ProviderProposalHistoryItem;
+
+function getProposalCountdownFields(proposal: ProposalDetailsContent) {
+  if ("submitted_at" in proposal) {
+    return {
+      submittedAt: proposal.submitted_at,
+      clientResponseDeadlineAt: proposal.client_response_deadline_at,
+    };
+  }
+
+  return {
+    submittedAt: null,
+    clientResponseDeadlineAt: null,
+  };
+}
 
 function proposalHasProviderPricing(
   proposal: ProposalDetailsContent,
@@ -56,6 +72,7 @@ export interface ProposalHistoryDetailContentProps {
   copyVariant: ProposalCopyVariant;
   photoUrls: string[];
   isPhotosLoading: boolean;
+  detailAudience?: ProposalDetailAudience;
 }
 
 export function ProposalHistoryDetailContent({
@@ -63,11 +80,13 @@ export function ProposalHistoryDetailContent({
   copyVariant,
   photoUrls,
   isPhotosLoading,
+  detailAudience,
 }: ProposalHistoryDetailContentProps) {
   const copy = PROPOSAL_COPY_VARIANTS[copyVariant];
   const providerPricing = proposalHasProviderPricing(proposal) ? proposal : null;
   const amountLabel = providerPricing ? copy.amountInformedLabel : copy.amountLabel;
   const proposalStatus = getProposalStatusLabel(proposal.status);
+  const countdownFields = getProposalCountdownFields(proposal);
 
   const statusSection = (
     <ProposalDetailSection variant="muted">
@@ -109,6 +128,16 @@ export function ProposalHistoryDetailContent({
           </ProposalDetailSection>
           {statusSection}
         </div>
+      ) : null}
+
+      {detailAudience ? (
+        <ProposalCountdownBanner
+          status={proposal.status}
+          submittedAt={countdownFields.submittedAt}
+          clientResponseDeadlineAt={countdownFields.clientResponseDeadlineAt}
+          audience={detailAudience}
+          copyVariant={copyVariant}
+        />
       ) : null}
 
       {proposal.proposal_description ? (

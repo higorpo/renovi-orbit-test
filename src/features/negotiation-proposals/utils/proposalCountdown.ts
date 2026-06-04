@@ -1,4 +1,5 @@
 import type { ProposalStatus } from "../types/proposals.types";
+import { isPendingProposalStatus } from "./proposalStatus";
 
 export const PROPOSAL_COUNTDOWN_WARNING_MS = 4 * 60 * 60 * 1000;
 
@@ -57,7 +58,7 @@ export function computeProposalCountdown(params: {
 }): ProposalCountdownSnapshot {
   const nowMs = params.nowMs ?? Date.now();
 
-  if (params.status !== "PENDING") {
+  if (!isPendingProposalStatus(params.status)) {
     const isExpiredStatus = params.status === "EXPIRED";
     return {
       phase: isExpiredStatus ? "expired" : "inactive",
