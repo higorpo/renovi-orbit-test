@@ -3,8 +3,18 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import { useOverlayRootProps } from '@/components/ui/overlay-root'
 
-const Dialog = DialogPrimitive.Root
+// Orbit (vs stock shadcn): `Root` is a thin wrapper around `DialogPrimitive.Root` that
+// pipes `open` / `onOpenChange` through `useOverlayRootProps` so hardware and browser
+// back close the dialog before React Router navigates (see `overlayHistory.ts`,
+// `OverlayNavigationBlocker`, Android back in `initCapacitorPlugins.ts`). All other
+// primitives match the default shadcn dialog component.
+
+const Dialog = (props: React.ComponentProps<typeof DialogPrimitive.Root>) => {
+  const overlayProps = useOverlayRootProps(props)
+  return <DialogPrimitive.Root {...overlayProps} />
+}
 
 const DialogTrigger = DialogPrimitive.Trigger
 

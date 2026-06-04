@@ -6,11 +6,13 @@ import { DeviceBeaconProvider } from '@/features/device-beacon'
 import { PushPermissionPromptHost } from '@/features/push-permission'
 import { PushNotificationNavigationHost } from '@/components/PushNotificationNavigationHost'
 import { OfflineBanner } from '@/components/OfflineBanner'
+import { OverlayNavigationBlocker } from '@/components/OverlayNavigationBlocker'
 import PWABadge from '@/PWABadge'
 
 export function RootLayout() {
   return (
     <AuthProvider>
+      <OverlayNavigationBlocker />
       <CapacitorSplashHider />
       <DeviceBeaconProvider>
         <PushPermissionPromptHost />

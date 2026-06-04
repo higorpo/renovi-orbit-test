@@ -2,6 +2,7 @@ import { App } from '@capacitor/app'
 import { Capacitor, SystemBars, SystemBarsStyle } from '@capacitor/core'
 import { Keyboard } from '@capacitor/keyboard'
 import { logger } from '@/lib/logger'
+import { closeTopOverlay } from '@/lib/overlayHistory'
 
 /** Light status/navigation bar content (dark icons) for the light app chrome. */
 export async function applyNativeSystemBarsStyle(): Promise<void> {
@@ -20,6 +21,8 @@ function registerAndroidBackButton(): void {
   if (Capacitor.getPlatform() !== 'android') return
 
   void App.addListener('backButton', ({ canGoBack }) => {
+    if (closeTopOverlay()) return
+
     if (canGoBack) {
       window.history.back()
       return

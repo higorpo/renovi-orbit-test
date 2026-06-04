@@ -41,6 +41,12 @@ vi.mock('@/lib/logger', () => ({
   logger: loggerMocks,
 }))
 
+const overlayMocks = vi.hoisted(() => ({
+  closeTopOverlay: vi.fn(() => false),
+}))
+
+vi.mock('@/lib/overlayHistory', () => overlayMocks)
+
 import {
   applyNativeSystemBarsStyle,
   initCapacitorPlugins,
@@ -167,8 +173,14 @@ describe('initCapacitorPlugins', () => {
     expect(appMocks.addListener).toHaveBeenCalledWith('backButton', expect.any(Function))
 
     listeners.backButton?.({ canGoBack: true })
+    expect(overlayMocks.closeTopOverlay).toHaveBeenCalledTimes(1)
     expect(historyBack).toHaveBeenCalledTimes(1)
     expect(appMocks.exitApp).not.toHaveBeenCalled()
+
+    overlayMocks.closeTopOverlay.mockReturnValueOnce(true)
+    listeners.backButton?.({ canGoBack: true })
+    expect(overlayMocks.closeTopOverlay).toHaveBeenCalledTimes(2)
+    expect(historyBack).toHaveBeenCalledTimes(1)
 
     listeners.backButton?.({ canGoBack: false })
     expect(appMocks.exitApp).toHaveBeenCalledTimes(1)

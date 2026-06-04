@@ -4,8 +4,18 @@ import { X } from 'lucide-react'
 import * as React from 'react'
 
 import { cn } from '@/lib/utils'
+import { useOverlayRootProps } from '@/components/ui/overlay-root'
 
-const Sheet = SheetPrimitive.Root
+// Orbit (vs stock shadcn): `Root` is a thin wrapper around `SheetPrimitive.Root` that
+// pipes `open` / `onOpenChange` through `useOverlayRootProps` so hardware and browser
+// back close the sheet before React Router navigates (see `overlayHistory.ts`,
+// `OverlayNavigationBlocker`, Android back in `initCapacitorPlugins.ts`). Sheet still
+// uses `@radix-ui/react-dialog` under the hood; other exports are unchanged shadcn.
+
+const Sheet = (props: React.ComponentProps<typeof SheetPrimitive.Root>) => {
+  const overlayProps = useOverlayRootProps(props)
+  return <SheetPrimitive.Root {...overlayProps} />
+}
 
 const SheetTrigger = SheetPrimitive.Trigger
 

@@ -3,8 +3,20 @@ import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog'
 
 import { cn } from '@/lib/utils'
 import { buttonVariants } from '@/components/ui/button'
+import { useOverlayRootProps } from '@/components/ui/overlay-root'
 
-const AlertDialog = AlertDialogPrimitive.Root
+// Orbit (vs stock shadcn): `Root` is a thin wrapper around `AlertDialogPrimitive.Root`
+// that pipes `open` / `onOpenChange` through `useOverlayRootProps` so hardware and
+// browser back close the alert before React Router navigates (see `overlayHistory.ts`,
+// `OverlayNavigationBlocker`, Android back in `initCapacitorPlugins.ts`). All other
+// primitives match the default shadcn alert-dialog component.
+
+const AlertDialog = (
+  props: React.ComponentProps<typeof AlertDialogPrimitive.Root>
+) => {
+  const overlayProps = useOverlayRootProps(props)
+  return <AlertDialogPrimitive.Root {...overlayProps} />
+}
 
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger
 

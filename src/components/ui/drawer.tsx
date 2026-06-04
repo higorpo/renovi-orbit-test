@@ -2,16 +2,26 @@ import * as React from 'react'
 import { Drawer as DrawerPrimitive } from 'vaul'
 
 import { cn } from '@/lib/utils'
+import { useOverlayRootProps } from '@/components/ui/overlay-root'
+
+// Orbit (vs stock shadcn/vaul): `Root` wraps `DrawerPrimitive.Root` and pipes
+// `open` / `onOpenChange` through `useOverlayRootProps` so hardware and browser back
+// close the drawer before React Router navigates (see `overlayHistory.ts`,
+// `OverlayNavigationBlocker`, Android back in `initCapacitorPlugins.ts`). Default
+// `shouldScaleBackground` and all other drawer primitives are unchanged shadcn.
 
 const Drawer = ({
   shouldScaleBackground = true,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
-  <DrawerPrimitive.Root
-    shouldScaleBackground={shouldScaleBackground}
-    {...props}
-  />
-)
+}: React.ComponentProps<typeof DrawerPrimitive.Root>) => {
+  const overlayProps = useOverlayRootProps(props)
+  return (
+    <DrawerPrimitive.Root
+      shouldScaleBackground={shouldScaleBackground}
+      {...overlayProps}
+    />
+  )
+}
 Drawer.displayName = 'Drawer'
 
 const DrawerTrigger = DrawerPrimitive.Trigger
