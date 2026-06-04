@@ -1,6 +1,37 @@
 -- CNS Wave B — task 30: provider proposal submission RPC (design §4.3, Req. 6, 10, 34).
 -- Migration order: runs AFTER tasks 14, 23–24, 26 helpers.
 
+create or replace function public.count_inclusive_working_days(
+  p_start_date date,
+  p_end_date date
+)
+returns integer
+language plpgsql
+immutable
+as $$
+declare
+  v_cursor date;
+  v_count integer := 0;
+begin
+  if p_end_date < p_start_date then
+    return 0;
+  end if;
+
+  v_cursor := p_start_date;
+  while v_cursor <= p_end_date loop
+    if extract(isodow from v_cursor) < 6 then
+      v_count := v_count + 1;
+    end if;
+    v_cursor := v_cursor + 1;
+  end loop;
+
+  return v_count;
+end;
+$$;
+
+comment on function public.count_inclusive_working_days(date, date) is
+  'Counts Mon–Fri days inclusive between two dates; weekends are excluded.';
+
 create or replace function public.submit_proposal(
   p_chat_id uuid,
   p_idempotency_key uuid,
@@ -216,7 +247,9 @@ begin
           using errcode = '22023';
       end if;
 
-      if (v_end_date - v_start_date + 1) <> p_proposal_duration_value then
+      if (v_end_date - v_start_date + 1) <> p_proposal_duration_value
+        and public.count_inclusive_working_days(v_start_date, v_end_date)
+          <> p_proposal_duration_value then
         raise exception 'Each day-based slot must match the informed duration value'
           using errcode = '22023';
       end if;

@@ -5,6 +5,11 @@ import {
   MAX_PROPOSAL_DURATION_DAYS,
   MAX_PROPOSAL_DURATION_HOURS,
 } from "../constants/proposalComposer";
+import {
+  countInclusiveCalendarDaysISO,
+  countInclusiveWorkingDaysISO,
+  matchesProposalDayDurationISO,
+} from "../utils/proposalWorkingDays";
 import type { ProposalComposerFormValues } from "./proposalComposer.types";
 
 export const proposalAvailabilitySlotSchema = z.object({
@@ -133,15 +138,15 @@ export function createProposalComposerSchema(
             return;
           }
 
-          const inclusiveDays =
-            Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-          if (inclusiveDays !== durationValue) {
+          if (!matchesProposalDayDurationISO(slot.startDate, slot.endDate, durationValue)) {
             context.addIssue({
               code: z.ZodIssueCode.custom,
               path: ["availabilitySlots", index, "endDate"],
               message: `O intervalo deve ter exatamente ${durationValue} ${
                 durationValue === 1 ? "dia" : "dias"
-              }.`,
+              } corridos ou ${durationValue} ${
+                durationValue === 1 ? "dia útil" : "dias úteis"
+              } (seg–sex).`,
             });
           }
         }
@@ -175,11 +180,13 @@ export function getInclusiveDayRangeHint(
   if (end < start) {
     return { message: "A data final não pode ser anterior à inicial.", isError: true };
   }
-  const inclusiveDays =
-    Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-  const daysLabel = inclusiveDays === 1 ? "1 dia" : `${inclusiveDays} dias`;
+  const calendarDays = countInclusiveCalendarDaysISO(startDate, endDate);
+  const workingDays = countInclusiveWorkingDaysISO(startDate, endDate);
+  const calendarLabel =
+    calendarDays === 1 ? "1 dia corrido" : `${calendarDays} dias corridos`;
+  const workingLabel = workingDays === 1 ? "1 dia útil" : `${workingDays} dias úteis`;
   return {
-    message: `Intervalo: ${daysLabel} (início e fim inclusos)`,
+    message: `Intervalo: ${calendarLabel}, ${workingLabel} (início e fim inclusos)`,
     isError: false,
   };
 }

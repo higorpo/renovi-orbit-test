@@ -172,7 +172,9 @@ begin
           using errcode = '22023';
       end if;
 
-      if (v_end_date - v_start_date + 1) <> p_proposal_duration_value then
+      if (v_end_date - v_start_date + 1) <> p_proposal_duration_value
+        and public.count_inclusive_working_days(v_start_date, v_end_date)
+          <> p_proposal_duration_value then
         raise exception 'Each day-based slot must match the informed duration value'
           using errcode = '22023';
       end if;

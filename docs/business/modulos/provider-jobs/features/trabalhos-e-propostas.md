@@ -155,7 +155,7 @@ Definições no código:
 | Unidade | `hours` \| `days` |
 | Slots de disponibilidade | Entre **1 e 3**; adicionar além de 3 → toast *"Você pode sugerir no máximo 3 opções de data."*; remover último → *"Informe pelo menos 1 opção de data."* |
 | Data início | Obrigatória por slot; não pode ser **anterior a hoje** (meia-noite local) |
-| Modo **dias** | Data final obrigatória; intervalo inclusivo deve ter exatamente `durationValue` dias (mensagem dinâmica dia/dias) |
+| Modo **dias** | Data final obrigatória; intervalo válido se tiver exatamente `durationValue` **dias corridos** (inclui fim de semana) **ou** `durationValue` **dias úteis** (seg–sex) |
 | Fotos novas | Máx. **5** no total (existentes + novas); exceder → toast com limite |
 | Submit | Exige `pricing` retornado e, em modo edição, `hasEditedProposal` (compara snapshot) |
 

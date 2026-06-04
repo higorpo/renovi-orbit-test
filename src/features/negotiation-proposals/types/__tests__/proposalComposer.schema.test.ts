@@ -43,6 +43,48 @@ describe("validateProposalComposerForm", () => {
     }
   });
 
+  it("accepts day range spanning a weekend when working-day count matches", () => {
+    const result = validateProposalComposerForm({
+      priceInput: "500,00",
+      descriptionDraft: "Serviço em 3 dias úteis.",
+      durationValueInput: "3",
+      durationUnit: "days",
+      availabilitySlots: [
+        { startDate: "2026-06-05", endDate: "2026-06-09", shift: "full_day" },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts calendar span Fri–Sun for 3-day duration", () => {
+    const result = validateProposalComposerForm({
+      priceInput: "500,00",
+      descriptionDraft: "Serviço em 3 dias corridos.",
+      durationValueInput: "3",
+      durationUnit: "days",
+      availabilitySlots: [
+        { startDate: "2026-06-05", endDate: "2026-06-07", shift: "full_day" },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects when neither calendar nor working-day count matches", () => {
+    const result = validateProposalComposerForm({
+      priceInput: "500,00",
+      descriptionDraft: "Serviço em 3 dias.",
+      durationValueInput: "3",
+      durationUnit: "days",
+      availabilitySlots: [
+        { startDate: "2026-06-05", endDate: "2026-06-08", shift: "full_day" },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it("rejects duration greater than 7 days", () => {
     const result = validateProposalComposerForm({
       priceInput: "500,00",

@@ -21,15 +21,16 @@ Itens interessantes de ter na plataforma (futuro)
 - Na tela de detalhes do chat, incluir botão para redirecionar usuário para tela de detalhes do pedido/serviço
 - Criar tela exclusiva de detalhes do pedido/serviço que pode ser acessível via link. Tela de detalhes do pedido deve ser acessível para qualquer usuário logado e poderia permitir enviar propostas diretamente pelo link
 -mostrar contador de quantidade de chats não lidos no bottom navigator
+- Adicionar integração com IA que avalia a melhor proposta e faz um resumo
+
 
 
 Urgentes:
 
-- Está dando erro para enviar imagens mesmo elas não tendo conteúdo errado
+- Está dando erro para enviar imagens mesmo elas não tendo conteúdo errado na tela de criação  de pedido
 - Renomear todas as rotas para português para manter consistência
 - Tela de onboarding do prestador, onde ele selecione as áreas de atuação e os serviços que ele faz, além de outras opções (verificação do perfil)
 - Há um problema com a captura de localização no formato atual. Ele está trazendo localização errada no PC, tem que checar se no Windows está assim também.
-- Componente de sem internet ainda fica em cima de cards atrapalhando, principalmente no mobile.
 - Adicionar google analytics em todos os fluxos
 - Sistema de verificação de perfil do prestador, onde ele anexa os documentos e a equipe interna avalia
 - remoteconfig para não permitir cadastrar profissionais etc
@@ -43,10 +44,15 @@ Telas/fluxos restantes:
 - Visualização de detalhes de um serviço em execução
 - Visualizar checklist de conclusão do serviço
 - Avaliação do serviço após sua conclusão
+- Tela do prestador
+- Calendário do prestador
+- Prestador poder vender para clientes de fora da plataforma
 - Sistema de disputas
 - Sistema de notificação/tela de notificação
 - Mesmo com cadastro manual precisa fazer aceite dos termos de uso
 - Todo o painel administrativo
+- Tela de onboarding para prestador
+- Tela de onboarding para cliente
 
 Coisas para verificar:
 
@@ -67,9 +73,6 @@ Coisas para terminar do fluxo atual de trabalho:
 - ao gerar a descrição do pedido, também gerar o checklist de conclusão do serviço
   - mostrar o checklist de conclusão do serviço pro prestador na hora que ele vai fazer o orçamento e permitir que ele altere alguma coisa
   - apresentar o checklist de conclusão do serviço para o cliente quando ele vai fechar o serviço
-- Permitir que o prestador veja perguntas feitas por outros prestadores (não precisa estar respondida)
-- Permitir que um cliente receba até 5 propostas ao invés de 3
-- Adicionar integração com IA que avalia a melhor proposta e faz um resumo
 
 
 Coisas para fazer next
@@ -90,9 +93,9 @@ Coisas para fazer next
 -existe uma certa lentidão para disparar push de novas mensagens (ele cai numa fila de processamento para enviar pro message dispatcher e  depois ainda espera o job do message dispatcher...)
 - usar trigger ao invés de criar essa tabela central...
 -remover referencia de chat e novas colunas do provider_proposals, renomear tabela.
--remover tela de orçamentos para clientes, não vai ser necessário.
 -ao recusar a proposta, o chat tem que ser encerrado também
 -coluna client_response_deadline_at acho que não é usado
--na hora de montar a proposta, verificar se eu colocar um valor fixo de 3 dias por exemplo o que acontece se cair no final de semana.
 -alterar tela de trabalhos para que tenha o botão de iniciar conversa e não o botão de enviar proposta.
 -permitir enviar áudio
+-refazer card de orçamentos do prestador
+-refazer card da tela de meus serviços do cliente

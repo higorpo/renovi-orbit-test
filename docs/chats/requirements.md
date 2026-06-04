@@ -453,7 +453,7 @@ Fluxo completo: [`platform-flow.mmd`](../platform-flow.mmd).
   - `start_date` (obrigatório; não no passado).
   - `shift`: `morning` | `afternoon` | `full_day`.
   - **Horas:** sem `end_date` — “posso neste dia/turno”.
-  - **Dias:** `end_date` obrigatório; intervalo inclusivo `(end_date - start_date + 1)` MUST igualar `proposal_duration_value`.
+  - **Dias:** `end_date` obrigatório; intervalo MUST igualar `proposal_duration_value` em **dias corridos** (inclusivo, com fim de semana) **ou** em **dias úteis** (seg–sex, fim de semana excluído).
 - No aceite, o cliente escolhe **uma** opção (`selected_slot`, mesmo shape); `services` congela essa escolha (Requirement 7, 23).
 
 ### Acceptance Criteria
