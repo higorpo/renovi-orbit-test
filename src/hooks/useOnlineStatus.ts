@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { setOfflineBannerInsetOnDocument } from '@/lib/offlineBannerInset'
 
-const CHECK_INTERVAL_MS = 30_000
+const CHECK_INTERVAL_MS = 60_000
 const REQUEST_TIMEOUT_MS = 8_000
 
 export { OFFLINE_BANNER_HEIGHT_REM } from '@/lib/offlineBannerInset'
@@ -19,11 +19,7 @@ const OnlineStatusContext = createContext<boolean>(true)
 const getConnectivityCheckUrls = (): string[] => {
   const urls: string[] = []
   if (typeof window !== 'undefined' && window.location?.origin) {
-    urls.push(window.location.origin)
-  }
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-  if (supabaseUrl) {
-    urls.push(supabaseUrl)
+    urls.push(`${window.location.origin}/online-check.txt`)
   }
   return urls
 }
