@@ -12,7 +12,7 @@ set search_path = public
 as $$
   select case p_message_type
     when 'IMAGE'::public.cns_message_type then '📷 Foto'
-    when 'PROPOSAL'::public.cns_message_type then '📋 Proposta enviada'
+    when 'PROPOSAL'::public.cns_message_type then '📋 Proposta'
     when 'SYSTEM'::public.cns_message_type then coalesce(
       nullif(trim(p_payload->>'text'), ''),
       'Mensagem do sistema'

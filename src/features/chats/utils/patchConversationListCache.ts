@@ -32,7 +32,7 @@ function buildInboxMessagePreviewText(
     case "IMAGE":
       return "📷 Foto";
     case "PROPOSAL":
-      return "📋 Proposta enviada";
+      return "📋 Proposta";
     case "SYSTEM": {
       const text = payload.text;
       if (typeof text === "string" && text.trim()) return text.trim();
