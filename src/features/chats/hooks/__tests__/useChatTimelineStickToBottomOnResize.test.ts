@@ -155,4 +155,100 @@ describe("useChatTimelineStickToBottomOnResize", () => {
 
     expect(scrollToLatest).toHaveBeenCalledWith("auto");
   });
+
+  it("scrolls when a new tail message arrives while near the bottom without stick-to-bottom flag", () => {
+    const scrollEl = document.createElement("div");
+    Object.defineProperty(scrollEl, "scrollHeight", { value: 500, configurable: true });
+    Object.defineProperty(scrollEl, "scrollTop", { value: 400, configurable: true });
+    Object.defineProperty(scrollEl, "clientHeight", { value: 100, configurable: true });
+
+    const lastRow = document.createElement("div");
+    lastRow.setAttribute("data-chat-timeline-last", "true");
+    scrollEl.appendChild(lastRow);
+
+    const scrollRef = { current: scrollEl };
+    const scrollToLatest = vi.fn();
+
+    const { rerender } = renderHook(
+      (props: { lastMessageId: string }) =>
+        useChatTimelineStickToBottomOnResize({
+          scrollRef,
+          ...baseParams,
+          lastMessageId: props.lastMessageId,
+          scrollToLatest,
+        }),
+      { initialProps: { lastMessageId: "msg-1" } },
+    );
+
+    rerender({ lastMessageId: "msg-2" });
+
+    expect(scrollToLatest).toHaveBeenCalledWith("auto");
+  });
+
+  it("does not scroll when a new tail message arrives while scrolled far from the bottom", () => {
+    const scrollEl = document.createElement("div");
+    Object.defineProperty(scrollEl, "scrollHeight", { value: 500, configurable: true });
+    Object.defineProperty(scrollEl, "scrollTop", { value: 200, configurable: true });
+    Object.defineProperty(scrollEl, "clientHeight", { value: 100, configurable: true });
+
+    const lastRow = document.createElement("div");
+    lastRow.setAttribute("data-chat-timeline-last", "true");
+    scrollEl.appendChild(lastRow);
+
+    const scrollRef = { current: scrollEl };
+    const scrollToLatest = vi.fn();
+
+    const { rerender } = renderHook(
+      (props: { lastMessageId: string }) =>
+        useChatTimelineStickToBottomOnResize({
+          scrollRef,
+          ...baseParams,
+          lastMessageId: props.lastMessageId,
+          scrollToLatest,
+        }),
+      { initialProps: { lastMessageId: "msg-1" } },
+    );
+
+    rerender({ lastMessageId: "msg-2" });
+
+    expect(scrollToLatest).not.toHaveBeenCalled();
+  });
+
+  it("re-enables stick-to-bottom when the user scrolls back near the bottom", () => {
+    const scrollEl = document.createElement("div");
+    Object.defineProperty(scrollEl, "scrollHeight", { value: 1000, configurable: true });
+    Object.defineProperty(scrollEl, "scrollTop", { value: 900, configurable: true });
+    Object.defineProperty(scrollEl, "clientHeight", { value: 100, configurable: true });
+
+    const lastRow = document.createElement("div");
+    lastRow.setAttribute("data-chat-timeline-last", "true");
+    scrollEl.appendChild(lastRow);
+
+    const scrollRef = { current: scrollEl };
+    const scrollToLatest = vi.fn();
+
+    const { result } = renderHook(() =>
+      useChatTimelineStickToBottomOnResize({
+        scrollRef,
+        ...baseParams,
+        scrollToLatest,
+      }),
+    );
+
+    act(() => {
+      result.current.markStickToBottom();
+      Object.defineProperty(scrollEl, "scrollTop", { value: 0, configurable: true });
+      result.current.clearStickToBottomIfScrolledUp();
+    });
+
+    scrollToLatest.mockClear();
+
+    act(() => {
+      Object.defineProperty(scrollEl, "scrollTop", { value: 900, configurable: true });
+      result.current.clearStickToBottomIfScrolledUp();
+      resizeCallback?.();
+    });
+
+    expect(scrollToLatest).toHaveBeenCalledWith("auto");
+  });
 });

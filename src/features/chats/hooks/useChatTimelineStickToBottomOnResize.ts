@@ -1,4 +1,5 @@
 import { type RefObject, useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { isNearChatBottom } from "../utils/chatTimelineScroll";
 
 const LAST_TIMELINE_MESSAGE_SELECTOR = '[data-chat-timeline-last="true"]';
 const SCROLL_UP_CLEAR_THRESHOLD_PX = 8;
@@ -45,8 +46,16 @@ export function useChatTimelineStickToBottomOnResize({
     const { scrollTop } = element;
     if (scrollTop < lastScrollTopRef.current - SCROLL_UP_CLEAR_THRESHOLD_PX) {
       stickToBottomRef.current = false;
+    } else if (isNearChatBottom(element)) {
+      stickToBottomRef.current = true;
     }
     lastScrollTopRef.current = scrollTop;
+  }, [scrollRef]);
+
+  const shouldFollowLatestMessages = useCallback(() => {
+    if (stickToBottomRef.current) return true;
+    const element = scrollRef.current;
+    return element ? isNearChatBottom(element) : false;
   }, [scrollRef]);
 
   const runScrollToLatestBurst = useCallback(() => {
@@ -60,12 +69,13 @@ export function useChatTimelineStickToBottomOnResize({
   useLayoutEffect(() => {
     if (!initialScrollDone || !lastMessageId) return;
 
-    const hadMessageChange = prevLastMessageIdRef.current !== lastMessageId;
+    const prevId = prevLastMessageIdRef.current;
+    const hadMessageChange = prevId !== undefined && prevId !== lastMessageId;
     prevLastMessageIdRef.current = lastMessageId;
-    if (!hadMessageChange || !stickToBottomRef.current) return;
+    if (!hadMessageChange || !shouldFollowLatestMessages()) return;
 
     runScrollToLatestBurst();
-  }, [initialScrollDone, lastMessageId, runScrollToLatestBurst]);
+  }, [initialScrollDone, lastMessageId, runScrollToLatestBurst, shouldFollowLatestMessages]);
 
   useEffect(() => {
     if (!enabled || !lastTimelineMessageKey) return;
