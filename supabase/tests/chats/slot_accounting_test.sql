@@ -338,8 +338,8 @@ select is(
     from public.service_request_negotiation_stats
     where service_request_id = (select service_request_id from _accept_reset_case)
   ),
-  0,
-  'accept cascade resets active_chat_count to zero'
+  1,
+  'accept cascade leaves active_chat_count at one for the winning provider chat'
 );
 
 -- R33-AC07 / R4-AC06: override limit to 2; third new chat MUST fail.

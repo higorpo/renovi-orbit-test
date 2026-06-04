@@ -4,7 +4,7 @@ begin;
 
 \ir fixtures/seed_chat.inc
 
-select plan(6);
+select plan(7);
 
 create or replace function pg_temp.cns_set_auth(p_user_id uuid)
 returns void
@@ -79,6 +79,91 @@ select pg_temp.cns_seed_chat(
   p_provider_id := '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid
 ) as chat_id;
 
+create or replace function pg_temp.cns_seed_provider_user(
+  p_user_id uuid,
+  p_name text default 'Accept test provider'
+)
+returns void
+language plpgsql
+as $$
+begin
+  insert into auth.users (
+    instance_id,
+    id,
+    aud,
+    role,
+    email,
+    encrypted_password,
+    email_confirmed_at,
+    raw_app_meta_data,
+    raw_user_meta_data,
+    created_at,
+    updated_at,
+    confirmation_token,
+    email_change,
+    email_change_token_new,
+    recovery_token
+  )
+  values (
+    '00000000-0000-0000-0000-000000000000',
+    p_user_id,
+    'authenticated',
+    'authenticated',
+    p_user_id::text || '@accept-test.local',
+    crypt('Abc123', gen_salt('bf')),
+    now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    json_build_object('full_name', p_name, 'role', 'provider')::jsonb,
+    now(),
+    now(),
+    '',
+    '',
+    '',
+    ''
+  )
+  on conflict (id) do nothing;
+
+  insert into auth.identities (
+    id,
+    user_id,
+    identity_data,
+    provider,
+    provider_id,
+    last_sign_in_at,
+    created_at,
+    updated_at
+  )
+  values (
+    p_user_id,
+    p_user_id,
+    json_build_object(
+      'sub',
+      p_user_id::text,
+      'email',
+      p_user_id::text || '@accept-test.local'
+    )::jsonb,
+    'email',
+    p_user_id::text,
+    now(),
+    now(),
+    now()
+  )
+  on conflict (provider_id, provider) do nothing;
+end;
+$$;
+
+select pg_temp.cns_seed_provider_user(
+  'b1111111-1111-4111-8111-111111111111'::uuid,
+  'Accept competitor provider'
+);
+
+create temp table _accept_chat_competitor as
+select pg_temp.cns_seed_chat(
+  p_service_request_id := (select service_request_id from _accept_sr),
+  p_client_id := '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
+  p_provider_id := 'b1111111-1111-4111-8111-111111111111'::uuid
+) as chat_id;
+
 select pg_temp.cns_set_auth('5d09e025-20a2-4842-aeef-324d42a431e1'::uuid);
 
 create temp table _accept_slot as
@@ -146,13 +231,22 @@ select ok(
 
 select is(
   (
-    select count(*)::int
+    select c.status::text
     from public.chats c
-    where c.service_request_id = (select service_request_id from _accept_sr)
-      and c.status = 'CLOSED'::public.cns_conversation_status
+    where c.id = (select chat_id from _accept_chat)
   ),
-  1,
-  'accept closes all chats on the service request'
+  'ACTIVE',
+  'accept keeps the accepted provider chat open'
+);
+
+select is(
+  (
+    select c.status::text
+    from public.chats c
+    where c.id = (select chat_id from _accept_chat_competitor)
+  ),
+  'CLOSED',
+  'accept closes competing provider chats only'
 );
 
 select ok(
