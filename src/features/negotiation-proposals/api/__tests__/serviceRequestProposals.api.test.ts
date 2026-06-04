@@ -205,7 +205,6 @@ describe("getProposalDetail", () => {
       proposal_suggested_slots: [],
       photos: [],
       client_rejection_response: null,
-      client_response_deadline_at: null,
       created_at: "t",
       updated_at: "t",
     };
@@ -239,7 +238,6 @@ describe("getProposalDetail", () => {
       proposal_suggested_slots: [],
       photos: [],
       client_rejection_response: null,
-      client_response_deadline_at: null,
       created_at: "t",
       updated_at: "t",
     };

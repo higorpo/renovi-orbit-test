@@ -7,23 +7,22 @@ import {
 } from "../proposalCountdown";
 
 describe("resolveProposalExpiresAt", () => {
-  it("prefers server deadline over submitted_at + SLA", () => {
-    const expiresAt = resolveProposalExpiresAt({
-      submittedAt: "2026-01-01T00:00:00.000Z",
-      clientResponseDeadlineAt: "2026-01-02T12:00:00.000Z",
-      slaHours: 24,
-    });
-
-    expect(expiresAt?.toISOString()).toBe("2026-01-02T12:00:00.000Z");
-  });
-
-  it("falls back to submitted_at plus SLA hours", () => {
+  it("computes submitted_at plus SLA hours", () => {
     const expiresAt = resolveProposalExpiresAt({
       submittedAt: "2026-01-01T00:00:00.000Z",
       slaHours: 24,
     });
 
     expect(expiresAt?.toISOString()).toBe("2026-01-02T00:00:00.000Z");
+  });
+
+  it("returns null when submitted_at is missing", () => {
+    expect(
+      resolveProposalExpiresAt({
+        submittedAt: null,
+        slaHours: 24,
+      }),
+    ).toBeNull();
   });
 });
 

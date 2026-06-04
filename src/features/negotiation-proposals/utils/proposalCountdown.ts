@@ -16,14 +16,8 @@ export interface ProposalCountdownSnapshot {
 
 export function resolveProposalExpiresAt(params: {
   submittedAt: string | null;
-  clientResponseDeadlineAt?: string | null;
   slaHours: number;
 }): Date | null {
-  if (params.clientResponseDeadlineAt) {
-    const deadline = new Date(params.clientResponseDeadlineAt);
-    return Number.isNaN(deadline.getTime()) ? null : deadline;
-  }
-
   if (!params.submittedAt) return null;
 
   const submitted = new Date(params.submittedAt);

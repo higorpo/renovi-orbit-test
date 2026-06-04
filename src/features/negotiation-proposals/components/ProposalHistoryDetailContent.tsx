@@ -29,18 +29,11 @@ import {
 
 type ProposalDetailsContent = ProposalDetailView | ProviderProposalHistoryItem;
 
-function getProposalCountdownFields(proposal: ProposalDetailsContent) {
+function getProposalSubmittedAt(proposal: ProposalDetailsContent): string | null {
   if ("submitted_at" in proposal) {
-    return {
-      submittedAt: proposal.submitted_at,
-      clientResponseDeadlineAt: proposal.client_response_deadline_at,
-    };
+    return proposal.submitted_at;
   }
-
-  return {
-    submittedAt: null,
-    clientResponseDeadlineAt: null,
-  };
+  return null;
 }
 
 function proposalHasProviderPricing(
@@ -86,7 +79,7 @@ export function ProposalHistoryDetailContent({
   const providerPricing = proposalHasProviderPricing(proposal) ? proposal : null;
   const amountLabel = providerPricing ? copy.amountInformedLabel : copy.amountLabel;
   const proposalStatus = getProposalStatusLabel(proposal.status);
-  const countdownFields = getProposalCountdownFields(proposal);
+  const submittedAt = getProposalSubmittedAt(proposal);
 
   const statusSection = (
     <ProposalDetailSection variant="muted">
@@ -133,8 +126,7 @@ export function ProposalHistoryDetailContent({
       {detailAudience ? (
         <ProposalCountdownBanner
           status={proposal.status}
-          submittedAt={countdownFields.submittedAt}
-          clientResponseDeadlineAt={countdownFields.clientResponseDeadlineAt}
+          submittedAt={submittedAt}
           audience={detailAudience}
           copyVariant={copyVariant}
         />

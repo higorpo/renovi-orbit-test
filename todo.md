@@ -94,8 +94,11 @@ Coisas para fazer next
 - usar trigger ao invés de criar essa tabela central...
 -remover referencia de chat e novas colunas do provider_proposals, renomear tabela.
 -ao recusar a proposta, o chat tem que ser encerrado também
--coluna client_response_deadline_at acho que não é usado
 -permitir enviar áudio
 -refazer card de orçamentos do prestador
 -refazer card da tela de meus serviços do cliente
 -exibir sugestões de perguntas para o prestador na hora que ele abre o chat pela primeira vez
+-garantir que todas as tabelas estão ok e são necessárias
+-garantir que todas as policies estão certas
+-garantir que todos os triggers são ok e são necessários
+-garantir que todas as crons estão ok e são necessárias

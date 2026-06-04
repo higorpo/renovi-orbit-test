@@ -208,7 +208,6 @@ flowchart TB
   subgraph triggers ["Triggers (same TX as mutating RPC/cron)"]
     TR_CHAT_AUD["chats_audit_status_change<br/>AFTER UPDATE OF status"]
     TR_PP_AUD["provider_proposals_audit_status_change<br/>AFTER UPDATE OF status"]
-    TR_PP_SLA["provider_proposals_sync/enforce<br/>client_response_deadline"]
     TR_SR_CANCEL["service_requests_reject_submitted<br/>_proposals_on_cancel"]
     TR_UPD["*_updated_at<br/>(chats, messages, services, stats)"]
   end

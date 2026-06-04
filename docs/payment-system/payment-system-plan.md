@@ -68,7 +68,7 @@ O fluxo de aprovação de orçamento deve ser **bloqueado por pagamento**:
 | `final_amount` | `proposed_amount - tax_amount` | Reutilizar — **é o líquido do prestador** |
 | `pricing_signature` | HMAC dos 4 campos acima | Manter cobrindo exatamente estes 4 campos |
 | `status` | 4 valores | **Expandir para 7 valores** |
-| `client_response_deadline_at` | created_at + 48h | Manter; trigger atualizado |
+| ~~`client_response_deadline_at`~~ | — | **Removido**; SLA via `submitted_at` + `chats.proposal_response_sla_hours` (24h) |
 
 **Colunas ausentes (apenas colunas operacionais de lock):**
 - `checkout_locked_until` — timestamp de expiração do lock de concorrência durante checkout ativo
@@ -137,15 +137,9 @@ ALTER TABLE public.provider_proposals
   ));
 ```
 
-**Trigger `enforce_provider_proposal_client_response_deadline`:**
-Atualizar para bloquear `submitted → payment_pending` após 48h (além de `submitted → accepted`).
-
-**Trigger `sync_provider_proposal_client_response_deadline`:**
-Limpar `client_response_deadline_at` também quando status = `payment_pending`.
-
-**Trigger `expire_stale_provider_proposals`:**
-- Mudar status de `rejected` para `expired` para propostas auto-expiradas
-- **Pular propostas com `status = 'payment_pending'`** — essas têm expiração própria via `checkout_expires_at`
+**SLA de resposta do cliente (propostas `PENDING`):**
+- `expire_pending_proposals` (cron) e `accept_proposal` / `reject_client_budget_proposal` usam `coalesce(submitted_at, created_at) + chats.proposal_response_sla_hours` (padrão 24h).
+- Coluna legada `client_response_deadline_at` e triggers de 48h foram removidos (CNS Wave A/E).
 
 **`pricing_signature`:**
 O HMAC cobre **exatamente os mesmos 4 campos atuais** — sem alteração:

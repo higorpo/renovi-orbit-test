@@ -135,7 +135,6 @@ function proposalDetailRow() {
     proposal_suggested_slots: [],
     photos: [],
     client_rejection_response: null,
-    client_response_deadline_at: "2026-06-01T11:00:00.000Z",
     created_at: "2026-05-30T11:00:00.000Z",
     updated_at: "2026-05-30T11:00:00.000Z",
   };

@@ -15,8 +15,6 @@ const DEFAULT_TICK_MS = 30_000;
 export interface UseProposalCountdownParams {
   status: ProposalStatus | null;
   submittedAt: string | null;
-  /** Server-authoritative deadline — preferred over client-side SLA math (clock skew guard). */
-  clientResponseDeadlineAt?: string | null;
   enabled?: boolean;
   tickIntervalMs?: number;
 }
@@ -24,33 +22,29 @@ export interface UseProposalCountdownParams {
 export function useProposalCountdown({
   status,
   submittedAt,
-  clientResponseDeadlineAt = null,
   enabled = true,
   tickIntervalMs = DEFAULT_TICK_MS,
 }: UseProposalCountdownParams): ProposalCountdownSnapshot & { slaHours: number | null } {
   const [nowMs, setNowMs] = useState(() => Date.now());
 
-  const needsSlaFallback = enabled && !clientResponseDeadlineAt && Boolean(submittedAt);
-
   const slaQuery = useQuery({
     queryKey: [SLA_QUERY_KEY],
     queryFn: getProposalResponseSlaHours,
-    enabled: needsSlaFallback,
+    enabled: enabled && Boolean(submittedAt),
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
   });
 
-  const slaHours = clientResponseDeadlineAt ? null : slaQuery.data ?? null;
+  const slaHours = slaQuery.data ?? null;
 
   const expiresAt = useMemo(() => {
     if (!enabled) return null;
 
     return resolveProposalExpiresAt({
       submittedAt,
-      clientResponseDeadlineAt,
       slaHours: slaHours ?? 24,
     });
-  }, [clientResponseDeadlineAt, enabled, slaHours, submittedAt]);
+  }, [enabled, slaHours, submittedAt]);
 
   useEffect(() => {
     if (!enabled || !isPendingProposalStatus(status) || !expiresAt) return;

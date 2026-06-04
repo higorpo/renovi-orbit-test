@@ -32,8 +32,7 @@ export function ServiceRequestBudgetCompareVersionBlock({
         {isPendingProposalStatus(proposal.status) ? (
           <ProposalCountdownBanner
             status={proposal.status}
-            submittedAt={proposal.created_at}
-            clientResponseDeadlineAt={proposal.client_response_deadline_at}
+            submittedAt={proposal.submitted_at ?? proposal.created_at}
             audience="client"
             copyVariant="budget"
           />

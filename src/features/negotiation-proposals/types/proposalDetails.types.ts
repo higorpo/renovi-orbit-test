@@ -24,7 +24,6 @@ export interface ProposalDetailView {
   selected_slot: ProposalSuggestedSlotRpc | null;
   photos: string[];
   client_rejection_response: string | null;
-  client_response_deadline_at: string | null;
   created_at: string;
   updated_at: string;
 }

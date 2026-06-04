@@ -39,7 +39,6 @@ const proposal: ServiceRequestBudgetCompareProposal = {
   created_at: "2024-01-01T00:00:00Z",
   proposal_description: "Desc",
   photos: [],
-  client_response_deadline_at: null,
 };
 
 const detailBase: ServiceRequestBudgetCompareDetail = {

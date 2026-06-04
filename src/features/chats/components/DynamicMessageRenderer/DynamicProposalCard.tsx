@@ -129,7 +129,6 @@ export function DynamicProposalCard({
             <ProposalCountdownBanner
               status={status}
               submittedAt={proposal.submitted_at}
-              clientResponseDeadlineAt={proposal.client_response_deadline_at}
               audience={viewerRole === "provider" ? "provider" : "client"}
               density="compact"
             />

@@ -84,13 +84,12 @@ describe("DynamicProposalCard", () => {
     expect(onProposalAction).toHaveBeenCalledWith("view_details", "p1");
   });
 
-  it("shows countdown for pending proposals with a client deadline", () => {
+  it("shows countdown for pending proposals using submitted_at SLA", () => {
     hydrateMock.mockReturnValue({
       proposal: {
         status: "PENDING",
         proposed_amount: 500,
-        submitted_at: "2026-01-01T00:00:00.000Z",
-        client_response_deadline_at: "2026-01-01T03:00:00.000Z",
+        submitted_at: "2025-12-31T03:00:00.000Z",
       },
       isLoading: false,
       isError: false,

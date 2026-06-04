@@ -29,8 +29,7 @@ describe("ProposalCountdownBanner", () => {
     render(
       <ProposalCountdownBanner
         status="PENDING"
-        submittedAt="2026-01-01T00:00:00.000Z"
-        clientResponseDeadlineAt="2026-01-01T03:00:00.000Z"
+        submittedAt="2025-12-31T03:00:00.000Z"
         audience="client"
         density="compact"
       />,
@@ -47,7 +46,6 @@ describe("ProposalCountdownBanner", () => {
       <ProposalCountdownBanner
         status="PENDING"
         submittedAt="2026-01-01T00:00:00.000Z"
-        clientResponseDeadlineAt="2026-01-02T00:00:00.000Z"
         audience="provider"
       />,
       { wrapper: createWrapper() },
@@ -62,7 +60,6 @@ describe("ProposalCountdownBanner", () => {
       <ProposalCountdownBanner
         status="ACCEPTED"
         submittedAt="2026-01-01T00:00:00.000Z"
-        clientResponseDeadlineAt="2026-01-01T03:00:00.000Z"
         audience="client"
       />,
       { wrapper: createWrapper() },

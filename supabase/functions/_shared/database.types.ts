@@ -1703,7 +1703,6 @@ export type Database = {
       provider_proposals: {
         Row: {
           client_rejection_response: string | null
-          client_response_deadline_at: string | null
           created_at: string
           expired_at: string | null
           final_amount: number
@@ -1732,7 +1731,6 @@ export type Database = {
         }
         Insert: {
           client_rejection_response?: string | null
-          client_response_deadline_at?: string | null
           created_at?: string
           expired_at?: string | null
           final_amount: number
@@ -1761,7 +1759,6 @@ export type Database = {
         }
         Update: {
           client_rejection_response?: string | null
-          client_response_deadline_at?: string | null
           created_at?: string
           expired_at?: string | null
           final_amount?: number
@@ -2318,6 +2315,10 @@ export type Database = {
         }
         Returns: Json
       }
+      cns_service_request_allows_chat_messaging: {
+        Args: { p_chat_id: string; p_service_request_id: string }
+        Returns: boolean
+      }
       cns_set_local_statement_timeout: {
         Args: { p_interval: string }
         Returns: undefined
@@ -2383,6 +2384,10 @@ export type Database = {
         Returns: Json
       }
       get_prompt_by_key: { Args: { p_prompt_key: string }; Returns: Json }
+      get_proposal_detail_for_provider: {
+        Args: { p_proposal_id: string }
+        Returns: Json
+      }
       get_provider_proposal_job_detail: {
         Args: {
           p_lat?: number
@@ -2466,6 +2471,10 @@ export type Database = {
         Returns: Json
       }
       list_proposal_versions: { Args: { p_chat_id: string }; Returns: Json }
+      list_provider_proposal_history: {
+        Args: { p_service_request_id: string }
+        Returns: Json
+      }
       list_provider_sent_budgets: {
         Args: {
           p_page?: number

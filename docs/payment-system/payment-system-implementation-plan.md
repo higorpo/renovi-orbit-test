@@ -256,9 +256,11 @@ WHERE conrelid = 'public.provider_proposals'::regclass AND contype = 'c';
 
 ### Tarefa 1.3 — Atualizar triggers de `provider_proposals`
 
+> **Obsoleto (CNS):** `client_response_deadline_at` e os triggers `sync`/`enforce` de 48h foram removidos (`20260701101900`). SLA atual: `submitted_at` + `chats.proposal_response_sla_hours` via `expire_pending_proposals`, `accept_proposal` e `reject_client_budget_proposal`. Coluna dropada em `20260705190000_drop_client_response_deadline_at`.
+
 **Arquivo:** `supabase/migrations/20260325100200_update_provider_proposals_triggers.sql`
 
-**O que fazer:**
+**O que fazer (histórico — não implementar):**
 Atualizar 3 funções/triggers existentes para contemplar o novo status `payment_pending`:
 
 **3a. Trigger `enforce_provider_proposal_client_response_deadline`**

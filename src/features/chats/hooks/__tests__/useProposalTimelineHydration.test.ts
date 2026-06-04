@@ -44,7 +44,6 @@ beforeEach(() => {
       proposal_suggested_slots: [],
       photos: [],
       client_rejection_response: null,
-      client_response_deadline_at: "2026-05-31T10:00:00.000Z",
       created_at: "2026-05-30T10:00:00.000Z",
       updated_at: "2026-05-30T10:00:00.000Z",
     },

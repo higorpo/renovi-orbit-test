@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { renderHook } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { useProposalCountdown } from "../useProposalCountdown";
 
 vi.mock("../../api/platformConstants.api", () => ({
@@ -19,23 +19,28 @@ function createWrapper() {
 }
 
 describe("useProposalCountdown", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
-  it("uses client_response_deadline_at without fetching SLA", () => {
+  it("computes expiry from submitted_at plus platform SLA hours", async () => {
+    const submittedAt = new Date(Date.now() - 60_000).toISOString();
+
     const { result } = renderHook(
       () =>
         useProposalCountdown({
           status: "PENDING",
-          submittedAt: "2026-01-01T00:00:00.000Z",
-          clientResponseDeadlineAt: "2026-01-01T03:00:00.000Z",
+          submittedAt,
         }),
       { wrapper: createWrapper() },
     );
 
-    expect(result.current.phase).toBe("warning");
-    expect(result.current.slaHours).toBeNull();
+    await waitFor(() => {
+      expect(result.current.slaHours).toBe(24);
+    });
+
+    expect(result.current.phase).toBe("active");
+    expect(result.current.expiresAt).not.toBeNull();
+    expect(result.current.expiresAt!.getTime()).toBeGreaterThan(Date.now());
   });
 });

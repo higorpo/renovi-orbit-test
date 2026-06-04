@@ -1,4 +1,4 @@
-/** Full budget in service request compare sheet (description, photos, client deadline). */
+/** Full budget in service request compare sheet (description, photos). */
 export interface ServiceRequestBudgetCompareProposal {
   id: string;
   provider_id: string;
@@ -7,11 +7,10 @@ export interface ServiceRequestBudgetCompareProposal {
   provider_profile_image_path: string | null;
   proposed_amount: number;
   status: string;
+  submitted_at: string | null;
   created_at: string;
   proposal_description: string;
   photos: string[];
-  /** Deadline for client to approve/reject while status = submitted. */
-  client_response_deadline_at: string | null;
 }
 
 export interface ServiceRequestBudgetCompareDetail {

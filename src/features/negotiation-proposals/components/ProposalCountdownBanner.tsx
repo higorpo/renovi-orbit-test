@@ -11,7 +11,6 @@ import {
 export interface ProposalCountdownBannerProps {
   status: ProposalStatus | string | null;
   submittedAt: string | null;
-  clientResponseDeadlineAt?: string | null;
   audience: ProposalCountdownAudience;
   copyVariant?: ProposalCopyVariant;
   enabled?: boolean;
@@ -22,7 +21,6 @@ export interface ProposalCountdownBannerProps {
 export function ProposalCountdownBanner({
   status,
   submittedAt,
-  clientResponseDeadlineAt = null,
   audience,
   copyVariant = "proposal",
   enabled = true,
@@ -32,7 +30,6 @@ export function ProposalCountdownBanner({
   const countdown = useProposalCountdown({
     status: status as ProposalStatus | null,
     submittedAt,
-    clientResponseDeadlineAt,
     enabled,
   });
 

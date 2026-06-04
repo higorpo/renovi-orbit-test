@@ -70,7 +70,6 @@ const clientProposalDetail: ProposalDetailView = {
   proposal_suggested_slots: baseProposal.proposal_suggested_slots,
   photos: baseProposal.photos,
   client_rejection_response: null,
-  client_response_deadline_at: null,
   created_at: baseProposal.created_at,
   updated_at: baseProposal.updated_at,
 };
