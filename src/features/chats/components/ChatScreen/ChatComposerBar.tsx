@@ -24,6 +24,8 @@ export interface ChatComposerBarProps {
   onComposerChange?: () => void;
   /** Fired when the message is sent — stops typing immediately. */
   onTypingStopNow?: () => void;
+  /** Shown when send is blocked by content moderation. */
+  sendBlockMessage?: string | null;
   className?: string;
 }
 
@@ -32,6 +34,7 @@ export function ChatComposerBar({
   onSend,
   onComposerChange,
   onTypingStopNow,
+  sendBlockMessage = null,
   className,
 }: ChatComposerBarProps) {
   const [draft, setDraft] = useState("");
@@ -89,6 +92,12 @@ export function ChatComposerBar({
     >
       {composer.helperText ? (
         <p className="mb-2 px-1 text-xs text-muted-foreground">{composer.helperText}</p>
+      ) : null}
+
+      {sendBlockMessage ? (
+        <p className="mb-2 px-1 text-xs text-destructive" role="alert" aria-live="polite">
+          {sendBlockMessage}
+        </p>
       ) : null}
 
       {attachments.isPreparingImages ? (

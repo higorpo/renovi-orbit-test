@@ -7084,6 +7084,11 @@ tough-cookie@^6.0.0:
   dependencies:
     tldts "^7.0.5"
 
+toxibr@^1.3.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/toxibr/-/toxibr-1.3.0.tgz#6e757d833456a833ed0460e970bd0227862de571"
+  integrity sha512-lzQAjmkSTQrMK1vqMiL6H6Gf/W6oZPCGrkD/k8FbSc32niRsQXrtPwDZq9/IIn0J1FIWwrBDreFrtzd2qKhWFA==
+
 tr46@^1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/tr46/-/tr46-1.0.1.tgz#a8b13fd6bfd2489519674ccde55ba3693b706d09"

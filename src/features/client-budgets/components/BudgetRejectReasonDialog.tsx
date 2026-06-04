@@ -23,17 +23,22 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useMobileDialogViewport } from "@/hooks/useMobileDialogViewport";
+import { applyContentModerationZodIssue } from "@/lib/contentModeration";
 import { useClientRejectBudgetProposal } from "../hooks/useClientRejectBudgetProposal";
 
 const MAX_REASON_LENGTH = 2000;
 
-const rejectReasonSchema = z.object({
-  reason: z
-    .string()
-    .trim()
-    .min(1, "Descreva o motivo da recusa.")
-    .max(MAX_REASON_LENGTH, `O motivo deve ter no máximo ${MAX_REASON_LENGTH} caracteres.`),
-});
+const rejectReasonSchema = z
+  .object({
+    reason: z
+      .string()
+      .trim()
+      .min(1, "Descreva o motivo da recusa.")
+      .max(MAX_REASON_LENGTH, `O motivo deve ter no máximo ${MAX_REASON_LENGTH} caracteres.`),
+  })
+  .superRefine((data, context) => {
+    applyContentModerationZodIssue(context, data.reason, ["reason"]);
+  });
 
 type RejectReasonFormValues = z.infer<typeof rejectReasonSchema>;
 

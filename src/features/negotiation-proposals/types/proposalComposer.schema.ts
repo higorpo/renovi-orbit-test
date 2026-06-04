@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { applyContentModerationZodIssue } from "@/lib/contentModeration";
 import { MAX_PROPOSAL_DESCRIPTION_LENGTH } from "../constants/proposalComposer";
 import type { ProposalComposerFormValues } from "./proposalComposer.types";
 
@@ -45,6 +46,8 @@ export function createProposalComposerSchema(
       availabilitySlots: z.array(proposalAvailabilitySlotSchema),
     })
     .superRefine((data, context) => {
+      applyContentModerationZodIssue(context, data.descriptionDraft, ["descriptionDraft"]);
+
       if (data.availabilitySlots.length < 1 || data.availabilitySlots.length > 3) {
         context.addIssue({
           code: z.ZodIssueCode.custom,

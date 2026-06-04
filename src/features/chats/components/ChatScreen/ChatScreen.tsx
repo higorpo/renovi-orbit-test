@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
+import { moderateChatComposerSend } from "../../utils/moderateChatComposerSend";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/features/auth";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
@@ -50,6 +51,7 @@ export function ChatScreen({
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const [realtimeStatus, setRealtimeStatus] = useState<string | null>(null);
+  const [sendBlockMessage, setSendBlockMessage] = useState<string | null>(null);
 
   const { detail, isLoading: isDetailLoading, isError: isDetailError, error: detailError, refetch: refetchDetail } =
     useConversationDetail(chatId, { activeChat: true });
@@ -137,21 +139,42 @@ export function ChatScreen({
 
   const handleComposerSend = useCallback(
     ({ text, files }: { text: string; files: File[] }) => {
+      const trimmedText = text.trim();
+
+      if (trimmedText) {
+        const moderation = moderateChatComposerSend({
+          text: trimmedText,
+          messages,
+          userId: user?.id ?? null,
+        });
+        if (!moderation.allowed) {
+          setSendBlockMessage(moderation.message);
+          return;
+        }
+      }
+
+      setSendBlockMessage(null);
+
       if (files.length > 0) {
-        void sendChatImages(files, text);
+        void sendChatImages(files, trimmedText);
         return;
       }
 
-      if (text) {
+      if (trimmedText) {
         void sendChatMessage({
           messageType: "TEXT",
-          payload: { text },
+          payload: { text: trimmedText },
           clientSendId: createClientSendId(),
         });
       }
     },
-    [sendChatImages, sendChatMessage],
+    [messages, sendChatImages, sendChatMessage, user?.id],
   );
+
+  const handleComposerChange = useCallback(() => {
+    setSendBlockMessage(null);
+    notifyComposerChange();
+  }, [notifyComposerChange]);
 
   const viewedReceiptMessageId = useMemo(
     () =>
@@ -261,8 +284,9 @@ export function ChatScreen({
           placeholder: composerState.placeholder,
         }}
         onSend={handleComposerSend}
-        onComposerChange={notifyComposerChange}
+        onComposerChange={handleComposerChange}
         onTypingStopNow={notifyTypingStopNow}
+        sendBlockMessage={sendBlockMessage}
       />
     </div>
   );
