@@ -6,7 +6,7 @@ export const CHAT_COMPOSER_PLACEHOLDER_BLOCKED = "Bloqueado";
 
 export const CHAT_COMPOSER_DISABLED_COPY = {
   pendingProposalClient:
-    "Há uma proposta pendente. Use o card da proposta acima para aceitar, pedir revisão ou recusar.",
+    "Há uma proposta pendente. Responda na proposta acima: aceite, peça revisão ou recuse.",
   pendingProposalProvider:
     "Há uma proposta pendente. Aguarde a resposta do cliente para continuar a conversa.",
   conversationClosed: "Esta conversa foi encerrada.",
