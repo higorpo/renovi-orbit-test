@@ -1,8 +1,9 @@
-import { ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronRight } from "lucide-react";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import type { ProfileRole } from "@/features/auth";
 import {
+  formatProposalSuggestedSlot,
   isPendingProposalStatus,
   isRejectedProposalStatus,
   ProposalClientRejectionNotice,
@@ -25,6 +26,7 @@ import {
   resolveProposalCardDescription,
   resolveProposalCardDetailsLabel,
   resolveProposalCardHeadline,
+  PROPOSAL_CARD_ACCEPTED_SLOT_LABEL,
   type ProposalCardCta,
 } from "../../utils/proposalCardCopy";
 import { DynamicProposalCardSkeleton } from "./DynamicProposalCardSkeleton";
@@ -66,6 +68,7 @@ export function DynamicProposalCard({
     viewerRole === "provider" && isRejectedProposalStatus(status);
   const showRevisionRequest =
     viewerRole === "provider" && (status === "REVISION_REQUESTED" || status === "REVISED") && proposal?.revision_reason;
+  const showAcceptedSlot = status === "ACCEPTED" && Boolean(proposal?.selected_slot);
 
   useEffect(() => {
     if (isLoading || !proposal) return;
@@ -109,6 +112,18 @@ export function DynamicProposalCard({
               </p>
             ) : null}
           </div>
+
+          {showAcceptedSlot && proposal?.selected_slot ? (
+            <div className="rounded-lg border border-emerald-600/25 bg-background/60 px-3 py-2.5">
+              <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                {PROPOSAL_CARD_ACCEPTED_SLOT_LABEL}
+              </p>
+              <p className="mt-0.5 text-sm font-semibold leading-snug text-foreground">
+                {formatProposalSuggestedSlot(proposal.selected_slot)}
+              </p>
+            </div>
+          ) : null}
 
           {isPendingProposalStatus(status) && proposal ? (
             <ProposalCountdownBanner

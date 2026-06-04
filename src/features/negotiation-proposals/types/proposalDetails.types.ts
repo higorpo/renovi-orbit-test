@@ -21,6 +21,7 @@ export interface ProposalDetailView {
   proposal_duration_unit: string | null;
   proposal_duration_value: number | null;
   proposal_suggested_slots: ProposalSuggestedSlotRpc[];
+  selected_slot: ProposalSuggestedSlotRpc | null;
   photos: string[];
   client_rejection_response: string | null;
   client_response_deadline_at: string | null;

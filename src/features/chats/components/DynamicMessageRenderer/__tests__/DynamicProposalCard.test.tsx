@@ -289,9 +289,34 @@ describe("DynamicProposalCard", () => {
     expect(screen.getByText(/revisão solicitada pelo cliente/i)).toBeInTheDocument();
     expect(screen.getByText(/preço alto/i)).toBeInTheDocument();
     expect(screen.getByText(/valor acima do orçamento previsto/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Ver detalhes da revisão solicitada/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ver detalhes da proposta/i })).toBeInTheDocument();
+  });
+
+  it("shows selected slot for accepted proposals", () => {
+    hydrateMock.mockReturnValue({
+      proposal: {
+        status: "ACCEPTED",
+        proposed_amount: 500,
+        selected_slot: { start_date: "2026-06-15", shift: "morning" },
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    renderCard(
+      <DynamicProposalCard
+        chatId="chat-1"
+        message={message}
+        viewerRole="provider"
+        isOutgoing
+        onProposalAction={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Data e turno escolhidos")).toBeInTheDocument();
+    expect(screen.getByText(/15\/06\/2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Manhã/)).toBeInTheDocument();
   });
 
   it("hides revision request notice for client when revision was requested", () => {

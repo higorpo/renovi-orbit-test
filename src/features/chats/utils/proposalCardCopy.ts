@@ -99,3 +99,5 @@ export function resolveProposalCardDetailsLabel(
 ): string {
   return "Ver detalhes da proposta";
 }
+
+export const PROPOSAL_CARD_ACCEPTED_SLOT_LABEL = "Data e turno escolhidos";

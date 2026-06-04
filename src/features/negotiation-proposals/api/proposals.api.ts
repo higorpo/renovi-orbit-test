@@ -91,7 +91,7 @@ function isProposalVersionListResponse(value: unknown): value is ProposalVersion
 }
 
 const PROPOSAL_CLIENT_DETAIL_SELECT =
-  "id, service_request_id, provider_id, status, version, revision_count, revision_reason, revision_notes, submitted_at, expired_at, proposed_amount, proposal_description, proposal_duration_unit, proposal_duration_value, proposal_suggested_slots, photos, client_rejection_response, client_response_deadline_at, created_at, updated_at" as const;
+  "id, service_request_id, provider_id, status, version, revision_count, revision_reason, revision_notes, submitted_at, expired_at, proposed_amount, proposal_description, proposal_duration_unit, proposal_duration_value, proposal_suggested_slots, selected_slot, photos, client_rejection_response, client_response_deadline_at, created_at, updated_at" as const;
 
 function isProposalDetailRow(value: unknown): value is ProposalDetailView {
   if (!value || typeof value !== "object") return false;
