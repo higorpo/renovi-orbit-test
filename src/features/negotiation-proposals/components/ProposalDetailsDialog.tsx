@@ -1,4 +1,4 @@
-import { Loader2, MessageSquareQuote, X } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,6 +22,7 @@ import {
   translateProposalShift,
 } from "../utils/proposalDetailsFormatters";
 import { isRejectedProposalStatus } from "../utils/proposalStatus";
+import { ProposalClientRejectionNotice } from "./ProposalClientRejectionNotice";
 import { ProposalPhotosGrid } from "./ProposalPhotosGrid";
 import { ProposalRevisionRequestNotice } from "./ProposalRevisionRequestNotice";
 import { ServiceRequestProposalSummaryCard } from "./ServiceRequestProposalSummaryCard";
@@ -181,6 +182,10 @@ export function ProposalDetailsDialog({
                 revisionNotes={proposal.revision_notes}
               />
 
+              <ProposalClientRejectionNotice
+                clientRejectionResponse={proposal.client_rejection_response}
+              />
+
               {proposal.proposal_description ? (
                 <div className="rounded-lg border p-3">
                   <p className="text-xs text-muted-foreground">Descrição</p>
@@ -227,20 +232,6 @@ export function ProposalDetailsDialog({
                       </div>
                     ))}
                   </div>
-                </div>
-              ) : null}
-
-              {providerPricingProposal &&
-              isRejectedProposalStatus(proposal.status) &&
-              proposal.client_rejection_response?.trim() ? (
-                <div className="rounded-lg border border-destructive/25 bg-destructive/5 p-3">
-                  <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                    <MessageSquareQuote className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                    Resposta do cliente sobre a rejeição
-                  </p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
-                    {proposal.client_rejection_response.trim()}
-                  </p>
                 </div>
               ) : null}
 

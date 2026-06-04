@@ -1,10 +1,5 @@
 import { useState } from "react";
-import {
-  CircleDollarSign,
-  FileText,
-  MessageSquareQuote,
-  Percent,
-} from "lucide-react";
+import { CircleDollarSign, FileText, Percent } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formatCurrency";
@@ -18,6 +13,7 @@ import { isRejectedProposalStatus } from "../utils/proposalStatus";
 import { ProposalDetailsDialog } from "./ProposalDetailsDialog";
 import { ProposalHistoryAccordion } from "./ProposalHistoryAccordion";
 import { ProposalPhotosGrid } from "./ProposalPhotosGrid";
+import { ProposalClientRejectionNotice } from "./ProposalClientRejectionNotice";
 import { ProposalRevisionRequestNotice } from "./ProposalRevisionRequestNotice";
 
 export interface ServiceRequestProposalSummaryCardProps {
@@ -94,18 +90,11 @@ function ServiceRequestProposalSummaryContent({
         </div>
       )}
 
-      {isRejectedProposalStatus(summary.status) &&
-        summary.clientRejectionResponse?.trim() && (
-          <div className="rounded-lg border border-destructive/25 bg-destructive/5 p-3">
-            <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <MessageSquareQuote className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              Resposta do cliente sobre a rejeição
-            </p>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
-              {summary.clientRejectionResponse.trim()}
-            </p>
-          </div>
-        )}
+      {isRejectedProposalStatus(summary.status) ? (
+        <ProposalClientRejectionNotice
+          clientRejectionResponse={summary.clientRejectionResponse}
+        />
+      ) : null}
       
       <ProposalRevisionRequestNotice
         revisionReason={summary.revisionReason}

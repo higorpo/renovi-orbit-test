@@ -1,9 +1,10 @@
-import { ChevronRight, MessageSquareQuote } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import type { ProfileRole } from "@/features/auth";
 import {
   isRejectedProposalStatus,
+  ProposalClientRejectionNotice,
   ProposalRevisionRequestNotice,
 } from "@/features/negotiation-proposals";
 import { cn } from "@/lib/utils";
@@ -59,11 +60,8 @@ export function DynamicProposalCard({
   const detailsLabel = resolveProposalCardDetailsLabel(status, viewerRole);
   const ctas = resolveProposalCardCtas(status, viewerRole, proposal?.revision_count ?? 0);
   const StatusIcon = getProposalStatusIcon(status);
-  const rejectionResponse = proposal?.client_rejection_response?.trim();
   const showRejectionResponse =
-    viewerRole === "provider" &&
-    isRejectedProposalStatus(status) &&
-    Boolean(rejectionResponse);
+    viewerRole === "provider" && isRejectedProposalStatus(status);
   const showRevisionRequest =
     viewerRole === "provider" && (status === "REVISION_REQUESTED" || status === "REVISED") && proposal?.revision_reason;
 
@@ -111,15 +109,9 @@ export function DynamicProposalCard({
           </div>
 
           {showRejectionResponse ? (
-            <div className="rounded-lg border border-destructive/25 bg-destructive/5 p-3">
-              <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                <MessageSquareQuote className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                Resposta do cliente sobre a rejeição
-              </p>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">
-                {rejectionResponse}
-              </p>
-            </div>
+            <ProposalClientRejectionNotice
+              clientRejectionResponse={proposal?.client_rejection_response}
+            />
           ) : null}
 
           {showRevisionRequest ? (

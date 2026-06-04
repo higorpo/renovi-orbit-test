@@ -76,6 +76,10 @@ export {
   type ProposalRevisionRequestNoticeProps,
 } from "./components/ProposalRevisionRequestNotice";
 export {
+  ProposalClientRejectionNotice,
+  type ProposalClientRejectionNoticeProps,
+} from "./components/ProposalClientRejectionNotice";
+export {
   createProposalComposerSchema,
   validateProposalComposerForm,
   getProposalComposerFieldError,
