@@ -11,6 +11,11 @@ describe("ProposalRevisionCounter", () => {
     expect(screen.getByText(/ainda pode solicitar 1 revisão/i)).toBeTruthy();
   });
 
+  it("pluralizes remaining revisions", () => {
+    render(<ProposalRevisionCounter revisionCount={0} />);
+    expect(screen.getByText(/ainda pode solicitar 2 revisões/i)).toBeTruthy();
+  });
+
   it("shows limit reached message", () => {
     render(<ProposalRevisionCounter revisionCount={2} />);
     expect(screen.getByText(/Limite de revisões atingido/i)).toBeTruthy();

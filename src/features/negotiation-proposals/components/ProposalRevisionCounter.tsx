@@ -21,7 +21,9 @@ export function ProposalRevisionCounter({
       {remaining === 0 ? (
         <span className="block text-destructive">Limite de revisões atingido.</span>
       ) : (
-        <span className="block">Você ainda pode solicitar {remaining} revisão{remaining > 1 ? "ões" : ""}.</span>
+        <span className="block">
+          Você ainda pode solicitar {remaining} {remaining === 1 ? "revisão" : "revisões"}.
+        </span>
       )}
     </p>
   );
