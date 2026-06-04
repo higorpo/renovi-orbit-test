@@ -4,7 +4,7 @@ begin;
 
 \ir fixtures/seed_chat.inc
 
-select plan(6);
+select plan(9);
 
 create or replace function pg_temp.cns_set_auth(p_user_id uuid)
 returns void
@@ -147,35 +147,64 @@ select ok(
   'submit inserts PROPOSAL_SUBMITTED domain event'
 );
 
-select throws_ok(
-  $sql$
-    with pricing as (
-      select *
-      from public.calculate_provider_service_pricing(300.00::numeric)
+create temp table _submit_edit_result as
+with pricing as (
+  select *
+  from public.calculate_provider_service_pricing(300.00::numeric)
+)
+select public.create_provider_proposal(
+  (select service_request_id from _submit_sr),
+  pricing.original_amount,
+  'Edited proposal attempt',
+  2,
+  'hours',
+  jsonb_build_array(
+    jsonb_build_object(
+      'start_date', (current_date + 3)::text,
+      'shift', 'afternoon'
     )
-    select public.create_provider_proposal(
-      (select service_request_id from _submit_sr),
-      pricing.original_amount,
-      'Second proposal attempt',
-      2,
-      'hours',
-      jsonb_build_array(
-        jsonb_build_object(
-          'start_date', (current_date + 3)::text,
-          'shift', 'afternoon'
-        )
-      ),
-      '{}'::text[],
-      pricing.tax_rate,
-      pricing.tax_amount,
-      pricing.final_amount,
-      pricing.pricing_signature
+  ),
+  '{}'::text[],
+  pricing.tax_rate,
+  pricing.tax_amount,
+  pricing.final_amount,
+  pricing.pricing_signature
+) as response
+from pricing;
+
+select is(
+  (select response->'proposal'->>'status' from _submit_edit_result),
+  'PENDING',
+  'PENDING edit creates a new PENDING proposal'
+);
+
+select is(
+  (select response->'proposal'->>'version' from _submit_edit_result),
+  '2',
+  'PENDING edit increments version'
+);
+
+select is(
+  (
+    select pp.status::text
+    from public.provider_proposals pp
+    where pp.id = (
+      select (response->'proposal'->>'id')::uuid from _submit_result
     )
-    from pricing;
-  $sql$,
-  'P0001',
-  'PROPOSAL_ALREADY_PENDING',
-  'second PENDING submit is rejected'
+  ),
+  'REJECTED_AUTOMATICALLY',
+  'superseded PENDING proposal becomes REJECTED_AUTOMATICALLY'
+);
+
+select ok(
+  (
+    select nullif(trim(pp.client_rejection_response), '') is not null
+    from public.provider_proposals pp
+    where pp.id = (
+      select (response->'proposal'->>'id')::uuid from _submit_result
+    )
+  ),
+  'superseded PENDING proposal stores client_rejection_response'
 );
 
 select finish();

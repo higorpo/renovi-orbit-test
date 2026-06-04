@@ -4,7 +4,7 @@ begin;
 
 \ir fixtures/seed_chat.inc
 
-select plan(7);
+select plan(9);
 
 create or replace function pg_temp.cns_set_auth(p_user_id uuid)
 returns void
@@ -142,35 +142,45 @@ select ok(
   'create mirrors PROPOSAL timeline message when chat exists'
 );
 
-select throws_ok(
-  $sql$
-    with pricing as (
-      select *
-      from public.calculate_provider_service_pricing(250.00::numeric)
+create temp table _delegate_edit_result as
+with pricing as (
+  select *
+  from public.calculate_provider_service_pricing(250.00::numeric)
+)
+select public.create_provider_proposal(
+  (select service_request_id from _delegate_sr),
+  pricing.original_amount,
+  'Edited pending proposal',
+  2,
+  'hours',
+  jsonb_build_array(
+    jsonb_build_object(
+      'start_date', (current_date + 3)::text,
+      'shift', 'afternoon'
     )
-    select public.create_provider_proposal(
-      (select service_request_id from _delegate_sr),
-      pricing.original_amount,
-      'Duplicate pending attempt',
-      2,
-      'hours',
-      jsonb_build_array(
-        jsonb_build_object(
-          'start_date', (current_date + 3)::text,
-          'shift', 'afternoon'
-        )
-      ),
-      '{}'::text[],
-      pricing.tax_rate,
-      pricing.tax_amount,
-      pricing.final_amount,
-      pricing.pricing_signature
-    )
-    from pricing;
-  $sql$,
-  'P0001',
-  'PROPOSAL_ALREADY_PENDING',
-  'second PENDING create is rejected'
+  ),
+  '{}'::text[],
+  pricing.tax_rate,
+  pricing.tax_amount,
+  pricing.final_amount,
+  pricing.pricing_signature
+) as response
+from pricing;
+
+select is(
+  (select response->'proposal'->>'version' from _delegate_edit_result),
+  '2',
+  'PENDING edit increments version'
+);
+
+select is(
+  (
+    select pp.status::text
+    from public.provider_proposals pp
+    where pp.id = ((select response->>'id' from _delegate_result))::uuid
+  ),
+  'REJECTED_AUTOMATICALLY',
+  'superseded PENDING proposal becomes REJECTED_AUTOMATICALLY'
 );
 
 create temp table _delegate_no_chat_sr as

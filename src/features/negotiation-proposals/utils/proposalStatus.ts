@@ -12,7 +12,7 @@ export function hasActiveServiceRequestProposal(
 
 export function canEditServiceRequestProposal(status: string | null | undefined): boolean {
   const normalized = normalizeProposalStatus(status);
-  return normalized !== "ACCEPTED" && normalized !== "REVISED";
+  return normalized === "PENDING" || normalized === "REVISION_REQUESTED";
 }
 
 export function isRejectedProposalStatus(status: string | null | undefined): boolean {
