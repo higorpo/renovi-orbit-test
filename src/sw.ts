@@ -8,6 +8,7 @@ import {
 } from 'workbox-precaching'
 import { clientsClaim } from 'workbox-core'
 import { NavigationRoute, registerRoute } from 'workbox-routing'
+import { NetworkOnly } from 'workbox-strategies'
 
 import { getFirebaseClientConfig } from './lib/firebase/config'
 import { pushNotificationCollapseKey } from './lib/pushCollapseKey'
@@ -23,6 +24,12 @@ precacheAndRoute(self.__WB_MANIFEST)
 
 // clean old assets
 cleanupOutdatedCaches()
+
+// Connectivity probe must always hit the network (never precache or cache-first).
+registerRoute(
+  ({ url }) => url.pathname === '/online-check.txt',
+  new NetworkOnly(),
+)
 
 let allowlist: RegExp[] | undefined
 // in dev mode, we disable precaching to avoid caching issues

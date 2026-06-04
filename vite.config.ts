@@ -174,6 +174,7 @@ export default defineConfig(({ mode }) => {
     injectManifest: {
       // Static build output; webp (public assets), woff/woff2 (self-hosted fonts via @fontsource)
       globPatterns: ['**/*.{js,css,html,svg,png,ico,webp,woff2,woff}'],
+      globIgnores: ['**/online-check.txt'],
       // nsfwjs / TensorFlow shards exceed Workbox default (2 MiB)
       maximumFileSizeToCacheInBytes: 7 * 1024 * 1024,
     },
