@@ -96,6 +96,7 @@ Coisas para fazer next
 -remover tela de orçamentos para clientes, não vai ser necessário.
 -quando eu tenho uma proposta para revisão, o action banner exibe o botão enviar proposta e se eu aperto ele naõ recupera as infos da proposta anterior.
 -ao recusar a proposta, o chat tem que ser encerrado também
+-coluna client_response_deadline_at acho que não é usado
 
 ATUALIZAR:
 Essas são as **funções/RPCs** que ainda comparam `service_requests.status` com os valores legados em texto (`'open'`, `'in_progress'`, `'closed'`, `'cancelled'`). Com o enum novo (`OPEN`, `COMPLETED`, `CANCELLED`), essas comparações **param de bater** — em geral retornam vazio ou lançam erro.

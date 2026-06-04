@@ -1,11 +1,8 @@
 import { useState } from "react";
 import { X } from "lucide-react";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogTitle } from "@/components/ui/dialog";
+import { ShellDialogContent } from "@/components/ui/shell-dialog";
+import { mediaLightboxShellDialogClassName } from "@/components/ui/shell-dialog-classes";
 import { useServiceRequestPhotoUrls } from "@/features/request-quote";
 
 interface ServiceRequestPhotoGalleryProps {
@@ -73,7 +70,7 @@ export function ClientMyServicesPhotoGallery({
           if (!open) setExpandedPhotoUrl(null);
         }}
       >
-        <DialogContent className="h-screen w-screen max-w-none rounded-none border-0 bg-black p-2 text-white sm:h-auto sm:w-auto sm:max-w-5xl sm:rounded-lg sm:border sm:p-3 [&>button]:hidden">
+        <ShellDialogContent size="xl" className={mediaLightboxShellDialogClassName}>
           <DialogTitle className="sr-only">Imagem ampliada</DialogTitle>
           <div className="relative flex h-full items-center justify-center">
             <DialogClose asChild>
@@ -93,7 +90,7 @@ export function ClientMyServicesPhotoGallery({
               />
             ) : null}
           </div>
-        </DialogContent>
+        </ShellDialogContent>
       </Dialog>
     </>
   );

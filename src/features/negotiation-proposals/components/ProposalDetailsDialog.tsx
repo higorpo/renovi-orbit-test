@@ -1,15 +1,9 @@
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ShellDialogContent } from "@/components/ui/shell-dialog";
 import { useMobileDialogViewport } from "@/hooks/useMobileDialogViewport";
 import { formatCurrency } from "@/lib/formatCurrency";
-import { cn } from "@/lib/utils";
 import { PROPOSAL_COPY_VARIANTS, type ProposalCopyVariant } from "../constants/proposalCopyVariants";
 import { useProposalPhotoUrls } from "../hooks/useProposalPhotoUrls";
 import type { ProposalDetailView } from "../types/proposalDetails.types";
@@ -21,7 +15,6 @@ import {
   getProposalStatusLabel,
   translateProposalShift,
 } from "../utils/proposalDetailsFormatters";
-import { isRejectedProposalStatus } from "../utils/proposalStatus";
 import { ProposalClientRejectionNotice } from "./ProposalClientRejectionNotice";
 import { ProposalPhotosGrid } from "./ProposalPhotosGrid";
 import { ProposalRevisionRequestNotice } from "./ProposalRevisionRequestNotice";
@@ -82,15 +75,8 @@ export function ProposalDetailsDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent
-        ref={contentRef}
-        className={cn(
-          "flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 [&>button]:hidden",
-          "max-sm:inset-x-0 max-sm:bottom-auto max-sm:left-0 max-sm:right-0 max-sm:top-0 max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:border-0",
-          "sm:max-w-2xl sm:p-6",
-        )}
-      >
-        <DialogHeader className="shrink-0 space-y-0 border-b px-4 py-3 text-left sm:border-b-0 sm:px-0 sm:pt-0">
+      <ShellDialogContent ref={contentRef}>
+        <DialogHeader className="shrink-0 space-y-0 border-b px-4 py-3 pr-0 text-left sm:border-b-0 sm:px-0 sm:pt-0">
           <div className="flex items-center justify-between gap-3">
             <DialogTitle className="min-w-0 flex-1 text-base sm:text-lg">
               {copy.detailsTitle}
@@ -260,7 +246,7 @@ export function ProposalDetailsDialog({
             </div>
           ) : null}
         </div>
-      </DialogContent>
+      </ShellDialogContent>
     </Dialog>
   );
 }

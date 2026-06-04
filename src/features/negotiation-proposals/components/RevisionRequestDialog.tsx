@@ -7,16 +7,15 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ShellDialogContent } from "@/components/ui/shell-dialog";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import { useMobileDialogViewport } from "@/hooks/useMobileDialogViewport";
 import { MAX_PROPOSAL_REVISIONS } from "../constants/proposalRevisions";
 import { useRequestProposalRevisionMutation } from "../hooks/useProposalClientMutations";
@@ -95,32 +94,24 @@ export function RevisionRequestDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        ref={contentRef}
-        className={cn(
-          "flex flex-col gap-0 overflow-hidden p-0 [&>button]:hidden",
-          "max-sm:inset-x-0 max-sm:bottom-auto max-sm:left-0 max-sm:right-0 max-sm:top-0 max-sm:h-[100dvh] max-sm:max-h-[100dvh] max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:border-0",
-          "sm:max-h-[90vh] sm:w-full sm:max-w-xl sm:rounded-lg sm:border sm:p-6",
-        )}
-      >
-        <div className="flex min-h-0 flex-1 flex-col">
-          <DialogHeader className="shrink-0 border-b px-4 py-3 text-left sm:border-b-0 sm:px-0 sm:py-0">
-            <div className="flex items-center justify-between gap-3">
-              <DialogTitle className="text-base sm:text-lg">Pedir revisão</DialogTitle>
-              <DialogClose asChild>
-                <button type="button" aria-label="Fechar" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted">
-                  <X className="h-4 w-4" aria-hidden />
-                </button>
-              </DialogClose>
-            </div>
-            <DialogDescription className="text-sm text-muted-foreground">
-              Informe o que precisa mudar na proposta. O prestador poderá enviar uma nova versão.
-            </DialogDescription>
-          </DialogHeader>
+      <ShellDialogContent ref={contentRef}>
+        <DialogHeader className="shrink-0 space-y-0 border-b px-4 py-3 pr-0 text-left sm:border-b-0 sm:px-0 sm:py-0">
+          <div className="flex items-center justify-between gap-3">
+            <DialogTitle className="text-base sm:text-lg">Pedir revisão</DialogTitle>
+            <DialogClose asChild>
+              <button type="button" aria-label="Fechar" className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted">
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            </DialogClose>
+          </div>
+          <DialogDescription className="text-sm text-muted-foreground">
+            Informe o que precisa mudar na proposta. O prestador poderá enviar uma nova versão.
+          </DialogDescription>
+        </DialogHeader>
 
-          <Form {...form}>
-            <form id="revision-request-form" onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 touch-pan-y overscroll-y-contain sm:px-0">
+        <Form {...form}>
+          <form id="revision-request-form" onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 touch-pan-y overscroll-y-contain sm:px-0">
                 <ProposalRevisionCounter revisionCount={revisionCount} />
 
                 <FormField
@@ -172,31 +163,30 @@ export function RevisionRequestDialog({
                     </FormItem>
                   )}
                 />
-              </div>
+            </div>
 
-              <DialogFooter className="relative z-10 shrink-0 flex-row gap-2 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pb-0 sm:shadow-none sm:backdrop-blur-none sm:supports-[backdrop-filter]:bg-transparent [&>button]:flex-1 sm:[&>button]:flex-none">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={revisionMutation.isPending}>
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  form="revision-request-form"
-                  disabled={!proposalId || revisionMutation.isPending || revisionLimitReached}
-                >
-                  {revisionMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                      Enviando…
-                    </>
-                  ) : (
-                    "Solicitar revisão"
-                  )}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </div>
-      </DialogContent>
+            <DialogFooter className="relative z-10 shrink-0 flex-row gap-2 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pb-0 sm:shadow-none sm:backdrop-blur-none sm:supports-[backdrop-filter]:bg-transparent [&>button]:flex-1 sm:[&>button]:flex-none">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={revisionMutation.isPending}>
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                form="revision-request-form"
+                disabled={!proposalId || revisionMutation.isPending || revisionLimitReached}
+              >
+                {revisionMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                    Enviando…
+                  </>
+                ) : (
+                  "Solicitar revisão"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </ShellDialogContent>
     </Dialog>
   );
 }

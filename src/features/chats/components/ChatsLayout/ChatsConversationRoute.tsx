@@ -227,31 +227,37 @@ export function ChatsConversationRoute() {
         isPending={closeConversationMutation.isPending}
       />
 
-      <AcceptProposalDialog
-        open={acceptOpen}
-        onOpenChange={setAcceptOpen}
-        chatId={chatId}
-        serviceRequestId={serviceRequestId}
-        proposalId={acceptProposalId}
-        suggestedSlots={FALLBACK_SUGGESTED_SLOTS}
-      />
+      {acceptOpen ? (
+        <AcceptProposalDialog
+          open
+          onOpenChange={setAcceptOpen}
+          chatId={chatId}
+          serviceRequestId={serviceRequestId}
+          proposalId={acceptProposalId}
+          suggestedSlots={FALLBACK_SUGGESTED_SLOTS}
+        />
+      ) : null}
 
-      <RejectProposalDialog
-        open={rejectOpen}
-        onOpenChange={setRejectOpen}
-        chatId={chatId}
-        serviceRequestId={serviceRequestId}
-        proposalId={rejectProposalId}
-      />
+      {rejectOpen ? (
+        <RejectProposalDialog
+          open
+          onOpenChange={setRejectOpen}
+          chatId={chatId}
+          serviceRequestId={serviceRequestId}
+          proposalId={rejectProposalId}
+        />
+      ) : null}
 
-      <RevisionRequestDialog
-        open={revisionOpen}
-        onOpenChange={setRevisionOpen}
-        chatId={chatId}
-        serviceRequestId={serviceRequestId}
-        proposalId={revisionProposalId}
-        revisionCount={revisionProposalDetailQuery.data?.revision_count ?? 0}
-      />
+      {revisionOpen ? (
+        <RevisionRequestDialog
+          open
+          onOpenChange={setRevisionOpen}
+          chatId={chatId}
+          serviceRequestId={serviceRequestId}
+          proposalId={revisionProposalId}
+          revisionCount={revisionProposalDetailQuery.data?.revision_count ?? 0}
+        />
+      ) : null}
 
       <ProposalComposerDialog
         open={proposalComposerOpen}
@@ -263,22 +269,24 @@ export function ChatsConversationRoute() {
         onSubmitted={invalidateChatProposalQueries}
       />
 
-      <ProposalDetailsDialog
-        open={detailsDialogOpen}
-        onOpenChange={handleDetailsDialogOpenChange}
-        summary={isProviderViewer ? providerProposalSummary : null}
-        canEdit={canEditServiceRequestProposal(providerProposalSummary?.status)}
-        onEdit={() => {
-          if (!detailsProposalId) return;
-          setDetailsDialogOpen(false);
-          void openProposalComposerEdit(detailsProposalId);
-        }}
-        proposal={isProviderViewer ? null : proposalDetailQuery.data}
-        isLoading={proposalDetailQuery.isLoading}
-        isError={proposalDetailQuery.isError}
-        onRetry={() => void proposalDetailQuery.refetch()}
-        copyVariant="proposal"
-      />
+      {detailsDialogOpen ? (
+        <ProposalDetailsDialog
+          open
+          onOpenChange={handleDetailsDialogOpenChange}
+          summary={isProviderViewer ? providerProposalSummary : null}
+          canEdit={canEditServiceRequestProposal(providerProposalSummary?.status)}
+          onEdit={() => {
+            if (!detailsProposalId) return;
+            setDetailsDialogOpen(false);
+            void openProposalComposerEdit(detailsProposalId);
+          }}
+          proposal={isProviderViewer ? null : proposalDetailQuery.data}
+          isLoading={proposalDetailQuery.isLoading}
+          isError={proposalDetailQuery.isError}
+          onRetry={() => void proposalDetailQuery.refetch()}
+          copyVariant="proposal"
+        />
+      ) : null}
     </>
   );
 }

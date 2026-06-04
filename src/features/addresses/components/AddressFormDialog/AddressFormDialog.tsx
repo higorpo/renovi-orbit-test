@@ -2,11 +2,11 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import { Loader2 } from "lucide-react";
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { ShellDialogContent } from "@/components/ui/shell-dialog";
 import {
   Sheet,
   SheetContent,
@@ -300,13 +300,13 @@ export function AddressFormDialog({
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <ShellDialogContent size="sm" className="gap-4 overflow-y-auto sm:p-6">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
           </DialogHeader>
           {formContent}
           <DialogFooter>{footerContent}</DialogFooter>
-        </DialogContent>
+        </ShellDialogContent>
       </Dialog>
     );
   }

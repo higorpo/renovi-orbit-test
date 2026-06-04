@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { ShellDialogContent } from "@/components/ui/shell-dialog";
 import { HelpCircle, User, Building2 } from "lucide-react";
 
 export type EntityType = "pf" | "pj";
@@ -54,11 +54,11 @@ export function EntityTypeSection({
                 <span className="hidden sm:inline">Preciso de ajuda para escolher</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
+            <ShellDialogContent size="sm" className="gap-4 sm:max-w-md sm:p-6">
+              <DialogHeader className="px-4 pt-4 sm:px-0 sm:pt-0">
                 <DialogTitle>Tipo de entidade</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 text-sm text-muted-foreground">
+              <div className="space-y-4 px-4 pb-4 text-sm text-muted-foreground sm:px-0 sm:pb-0">
                 <div>
                   <p className="font-medium text-foreground">Pessoa física (PF)</p>
                   <p>{PF_DESCRIPTION}</p>
@@ -72,7 +72,7 @@ export function EntityTypeSection({
                   consulte um contador ou advogado.
                 </p>
               </div>
-            </DialogContent>
+            </ShellDialogContent>
           </Dialog>
         </div>
       </CardHeader>
