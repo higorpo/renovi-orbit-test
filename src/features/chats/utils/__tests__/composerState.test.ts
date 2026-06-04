@@ -55,4 +55,44 @@ describe("deriveChatComposerState", () => {
     expect(state.isInputEnabled).toBe(false);
     expect(state.disabledReason).toBe("conversation_closed");
   });
+
+  it("keeps composer enabled with client helper when conversation is inactive", () => {
+    const state = deriveChatComposerState({
+      freeMessagingAllowed: true,
+      conversationStatus: "INACTIVE",
+      isLoading: false,
+      viewerRole: "client",
+    });
+
+    expect(state.isInputEnabled).toBe(true);
+    expect(state.disabledReason).toBeNull();
+    expect(state.helperText).toBe(CHAT_COMPOSER_DISABLED_COPY.conversationInactiveClient);
+    expect(state.placeholder).toBe("Escreva uma mensagem…");
+  });
+
+  it("keeps composer enabled with provider helper when conversation is inactive", () => {
+    const state = deriveChatComposerState({
+      freeMessagingAllowed: true,
+      conversationStatus: "INACTIVE",
+      isLoading: false,
+      viewerRole: "provider",
+    });
+
+    expect(state.isInputEnabled).toBe(true);
+    expect(state.disabledReason).toBeNull();
+    expect(state.helperText).toBe(CHAT_COMPOSER_DISABLED_COPY.conversationInactiveProvider);
+  });
+
+  it("disables composer for inactive chat when a proposal is pending", () => {
+    const state = deriveChatComposerState({
+      freeMessagingAllowed: false,
+      conversationStatus: "INACTIVE",
+      isLoading: false,
+      viewerRole: "client",
+    });
+
+    expect(state.isInputEnabled).toBe(false);
+    expect(state.disabledReason).toBe("pending_proposal");
+    expect(state.helperText).toBe(CHAT_COMPOSER_DISABLED_COPY.pendingProposalClient);
+  });
 });

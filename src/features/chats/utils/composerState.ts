@@ -10,7 +10,10 @@ export const CHAT_COMPOSER_DISABLED_COPY = {
   pendingProposalProvider:
     "Há uma proposta pendente. Aguarde a resposta do cliente para continuar a conversa.",
   conversationClosed: "Esta conversa foi encerrada.",
-  conversationInactive: "A conversa está inativa. Envie uma proposta para retomar.",
+  conversationInactiveClient:
+    "A conversa está inativa. Envie uma mensagem para retomar a negociação.",
+  conversationInactiveProvider:
+    "A conversa está inativa. Envie uma mensagem para retomar a negociação.",
 } as const;
 
 export function resolvePendingProposalComposerCopy(viewerRole: ProfileRole): string {
@@ -19,11 +22,16 @@ export function resolvePendingProposalComposerCopy(viewerRole: ProfileRole): str
     : CHAT_COMPOSER_DISABLED_COPY.pendingProposalClient;
 }
 
+export function resolveInactiveConversationComposerCopy(viewerRole: ProfileRole): string {
+  return viewerRole === "provider"
+    ? CHAT_COMPOSER_DISABLED_COPY.conversationInactiveProvider
+    : CHAT_COMPOSER_DISABLED_COPY.conversationInactiveClient;
+}
+
 export type ChatComposerDisabledReason =
   | "loading"
   | "pending_proposal"
   | "conversation_closed"
-  | "conversation_inactive"
   | null;
 
 export interface ChatComposerState {
@@ -63,17 +71,6 @@ export function deriveChatComposerState(params: {
     };
   }
 
-  if (params.conversationStatus === "INACTIVE") {
-    return {
-      isInputEnabled: false,
-      isAttachmentEnabled: false,
-      isSendEnabled: false,
-      disabledReason: "conversation_inactive",
-      helperText: CHAT_COMPOSER_DISABLED_COPY.conversationInactive,
-      placeholder: CHAT_COMPOSER_DISABLED_COPY.conversationInactive,
-    };
-  }
-
   if (!params.freeMessagingAllowed) {
     const pendingProposalHelperText = resolvePendingProposalComposerCopy(
       params.viewerRole ?? "client",
@@ -89,12 +86,17 @@ export function deriveChatComposerState(params: {
     };
   }
 
+  const inactiveHelperText =
+    params.conversationStatus === "INACTIVE"
+      ? resolveInactiveConversationComposerCopy(params.viewerRole ?? "client")
+      : null;
+
   return {
     isInputEnabled: true,
     isAttachmentEnabled: true,
     isSendEnabled: true,
     disabledReason: null,
-    helperText: null,
+    helperText: inactiveHelperText,
     placeholder: CHAT_COMPOSER_PLACEHOLDER_ENABLED,
   };
 }
