@@ -4,7 +4,7 @@ begin;
 
 \ir fixtures/seed_chat.inc
 
-select plan(7);
+select plan(9);
 
 create or replace function pg_temp.cns_set_auth(p_user_id uuid)
 returns void
@@ -213,8 +213,18 @@ select is(
     from public.service_requests
     where id = (select service_request_id from _accept_sr)
   ),
-  'COMPLETED',
-  'accept sets service request to COMPLETED'
+  'OPEN',
+  'accept keeps service request OPEN until contracted service is fulfilled'
+);
+
+select ok(
+  (
+    select contracted_service_id is not null
+      and completed_at is null
+    from public.service_requests
+    where id = (select service_request_id from _accept_sr)
+  ),
+  'accept links contracted_service_id without setting completed_at'
 );
 
 select ok(
@@ -249,6 +259,18 @@ select is(
   'accept closes competing provider chats only'
 );
 
+select lives_ok(
+  $sql$
+    select public.cns_send_message(
+      'TEXT'::public.cns_message_type,
+      'f2222222-2222-4222-8222-222222222223'::uuid,
+      jsonb_build_object('text', 'Post-accept coordination'),
+      (select chat_id from _accept_chat)
+    );
+  $sql$,
+  'accepted provider chat allows cns_send_message after SR completed'
+);
+
 select ok(
   (
     select exists (
@@ -259,7 +281,7 @@ select ok(
           select (submit_response->'proposal'->>'id')::uuid from _accept_submit
         )
     )
-    and exists (
+    and not exists (
       select 1
       from public.domain_events de
       where de.event_type = 'SERVICE_REQUEST_COMPLETED'
@@ -272,7 +294,7 @@ select ok(
         and de.service_request_id = (select service_request_id from _accept_sr)
     )
   ),
-  'accept emits PROPOSAL_ACCEPTED, SERVICE_REQUEST_COMPLETED, and CHATS_CLOSED_BULK events'
+  'accept emits PROPOSAL_ACCEPTED and CHATS_CLOSED_BULK without SERVICE_REQUEST_COMPLETED'
 );
 
 select finish();
