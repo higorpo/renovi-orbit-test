@@ -1,10 +1,18 @@
+import "@testing-library/jest-dom/vitest";
+import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { UseFieldArrayReturn, UseFormReturn } from "react-hook-form";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ProposalComposerFormValues } from "../../types/proposalComposer.types";
+import type { ProposalDetailView } from "../../types/proposalDetails.types";
 import type { ProviderProposalHistoryItem } from "../../types/proposals.types";
+import {
+  ProposalComposerShellDialog,
+  type ProposalComposerShellDialogProps,
+} from "../ProposalComposerShellDialog";
 import { ProposalDetailsDialog } from "../ProposalDetailsDialog";
 import { ProposalHistoryAccordion } from "../ProposalHistoryAccordion";
 import { ProposalPhotosGrid } from "../ProposalPhotosGrid";
-import { ProposalComposerShellDialog } from "../ProposalComposerShellDialog";
 
 vi.mock("../ProposalComposer", () => ({
   ProposalComposer: () => <div data-testid="proposal-composer-stub" />,
@@ -40,18 +48,50 @@ const baseProposal: ProviderProposalHistoryItem = {
   created_at: "2026-03-20T10:00:00.000Z",
   updated_at: "2026-03-20T10:00:00.000Z",
   client_rejection_response: "Muito caro",
+  revision_reason: null,
+  revision_notes: null,
 };
 
-const shellProps = {
+const clientProposalDetail: ProposalDetailView = {
+  id: baseProposal.id,
+  service_request_id: "sr-1",
+  provider_id: "provider-1",
+  status: "PENDING",
+  version: 1,
+  revision_count: 0,
+  revision_reason: null,
+  revision_notes: null,
+  submitted_at: null,
+  expired_at: null,
+  proposed_amount: baseProposal.proposed_amount,
+  proposal_description: baseProposal.proposal_description,
+  proposal_duration_value: baseProposal.proposal_duration_value,
+  proposal_duration_unit: baseProposal.proposal_duration_unit,
+  proposal_suggested_slots: baseProposal.proposal_suggested_slots,
+  photos: baseProposal.photos,
+  client_rejection_response: null,
+  client_response_deadline_at: null,
+  created_at: baseProposal.created_at,
+  updated_at: baseProposal.updated_at,
+};
+
+const shellProps: Omit<
+  ProposalComposerShellDialogProps,
+  "title" | "submitLabel" | "submittingLabel"
+> = {
   open: true,
   isSubmitting: false,
   canSubmit: true,
   onOpenChange: vi.fn(),
   onSubmit: vi.fn().mockResolvedValue(undefined),
-  form: { trigger: vi.fn().mockResolvedValue(true) },
-  availabilityFieldArray: { fields: [], append: vi.fn(), remove: vi.fn() },
-  existingPhotoUrls: [] as string[],
-  newPhotos: [] as File[],
+  form: { trigger: vi.fn().mockResolvedValue(true) } as unknown as UseFormReturn<ProposalComposerFormValues>,
+  availabilityFieldArray: {
+    fields: [],
+    append: vi.fn(),
+    remove: vi.fn(),
+  } as unknown as UseFieldArrayReturn<ProposalComposerFormValues, "availabilitySlots">,
+  existingPhotoUrls: [],
+  newPhotos: [],
   photosCount: 0,
   pricing: null,
   isPricingLoading: false,
@@ -78,6 +118,20 @@ describe("ProposalPhotosGrid", () => {
     expect(container.firstChild).toBeNull();
   });
 
+  it("shows shimmer tiles while photos load", () => {
+    render(
+      <ProposalPhotosGrid
+        isLoading
+        urls={[]}
+        fallbackPhotos={["path/a.jpg", "path/b.jpg"]}
+        heading="Fotos do orçamento"
+        photoAltPrefix="Foto do orçamento"
+      />,
+    );
+    expect(screen.getByLabelText(/carregando fotos/i)).toBeInTheDocument();
+    expect(screen.getByText(/fotos do orçamento/i)).toBeInTheDocument();
+  });
+
   it("renders budget photo labels", () => {
     render(
       <ProposalPhotosGrid
@@ -94,6 +148,20 @@ describe("ProposalPhotosGrid", () => {
 });
 
 describe("ProposalDetailsDialog", () => {
+  it("shows shimmer skeleton while proposal details load", () => {
+    render(
+      <ProposalDetailsDialog
+        open
+        onOpenChange={vi.fn()}
+        isLoading
+        copyVariant="proposal"
+      />,
+    );
+
+    expect(screen.getByLabelText(/carregando detalhes da proposta/i)).toBeInTheDocument();
+    expect(screen.queryByText(/detalhes da proposta/i)).toBeInTheDocument();
+  });
+
   it("renders budget details when proposal is set", () => {
     render(
       <ProposalDetailsDialog
@@ -111,7 +179,7 @@ describe("ProposalDetailsDialog", () => {
   it("hides provider pricing when pricing fields are absent", () => {
     render(
       <ProposalDetailsDialog
-        proposal={{ ...baseProposal, tax_rate: undefined, tax_amount: undefined, final_amount: undefined }}
+        proposal={clientProposalDetail}
         onOpenChange={vi.fn()}
         copyVariant="proposal"
       />,
@@ -173,7 +241,7 @@ describe("ProposalDetailsDialog summary mode", () => {
 });
 
 describe("ProposalComposerShellDialog (service request)", () => {
-  const serviceRequestShellProps = {
+  const serviceRequestShellProps: ProposalComposerShellDialogProps = {
     ...shellProps,
     title: "Enviar orçamento",
     submitLabel: "Enviar orçamento",

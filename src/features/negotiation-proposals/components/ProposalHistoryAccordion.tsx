@@ -44,9 +44,9 @@ export function ProposalHistoryAccordion({
         <AccordionTrigger>{copy.historyTrigger}</AccordionTrigger>
         <AccordionContent>
           {isHistoryLoading && (
-            <div className="space-y-2">
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-20 w-full" />
+            <div className="space-y-2" aria-busy="true" aria-label="Carregando histórico">
+              <Skeleton className="h-20 w-full rounded-lg" />
+              <Skeleton className="h-20 w-full rounded-lg" />
             </div>
           )}
 

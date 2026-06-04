@@ -1,4 +1,5 @@
 import { Image as ImageIcon } from "lucide-react";
+import { ProposalPhotoTilesSkeleton } from "./proposalDialogSkeletons";
 
 interface ProposalPhotosGridProps {
   isLoading: boolean;
@@ -24,11 +25,9 @@ export function ProposalPhotosGrid({
         {heading}
       </p>
       {isLoading ? (
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {(fallbackPhotos ?? []).slice(0, 4).map((_, index) => (
-            <div key={index} className="aspect-square animate-pulse rounded-lg bg-muted" />
-          ))}
-        </div>
+        <ProposalPhotoTilesSkeleton
+          count={Math.min(Math.max((fallbackPhotos ?? []).length, 4), 4)}
+        />
       ) : (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
           {urls.map((url, index) => (

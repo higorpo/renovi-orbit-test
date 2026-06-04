@@ -21,6 +21,7 @@ import { MAX_PROPOSAL_REVISIONS } from "../constants/proposalRevisions";
 import { useRequestProposalRevisionMutation } from "../hooks/useProposalClientMutations";
 import type { ProposalRevisionReason, RevisionRequestInitialValues } from "../types/proposals.types";
 import { ProposalRevisionCounter } from "./ProposalRevisionCounter";
+import { RevisionRequestDialogSkeleton } from "./proposalDialogSkeletons";
 import { PROPOSAL_REVISION_REASON_OPTIONS } from "../utils/proposalRevisionReasonLabels";
 
 const MAX_NOTES_LENGTH = 2000;
@@ -49,6 +50,7 @@ export interface RevisionRequestDialogProps {
   proposalId: string | null;
   revisionCount: number;
   initialValues?: RevisionRequestInitialValues | null;
+  isLoading?: boolean;
 }
 
 export function RevisionRequestDialog({
@@ -59,6 +61,7 @@ export function RevisionRequestDialog({
   proposalId,
   revisionCount,
   initialValues = null,
+  isLoading = false,
 }: RevisionRequestDialogProps) {
   const revisionMutation = useRequestProposalRevisionMutation(chatId, serviceRequestId);
   const { contentRef, scheduleSync } = useMobileDialogViewport(open);
@@ -116,6 +119,10 @@ export function RevisionRequestDialog({
         <Form {...form}>
           <form id="revision-request-form" onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 touch-pan-y overscroll-y-contain sm:px-0">
+                {isLoading ? (
+                  <RevisionRequestDialogSkeleton />
+                ) : (
+                  <>
                 <ProposalRevisionCounter revisionCount={revisionCount} />
 
                 <FormField
@@ -167,6 +174,8 @@ export function RevisionRequestDialog({
                     </FormItem>
                   )}
                 />
+                  </>
+                )}
             </div>
 
             <DialogFooter className="relative z-10 shrink-0 flex-row gap-2 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pb-0 sm:shadow-none sm:backdrop-blur-none sm:supports-[backdrop-filter]:bg-transparent [&>button]:flex-1 sm:[&>button]:flex-none">
@@ -176,7 +185,9 @@ export function RevisionRequestDialog({
               <Button
                 type="submit"
                 form="revision-request-form"
-                disabled={!proposalId || revisionMutation.isPending || revisionLimitReached}
+                disabled={
+                  !proposalId || revisionMutation.isPending || revisionLimitReached || isLoading
+                }
               >
                 {revisionMutation.isPending ? (
                   <>

@@ -290,6 +290,7 @@ export function ChatsConversationRoute() {
           proposalId={revisionProposalId}
           revisionCount={revisionProposalDetailQuery.data?.revision_count ?? 0}
           initialValues={revisionInitialValues}
+          isLoading={revisionProposalDetailQuery.isLoading}
         />
       ) : null}
 

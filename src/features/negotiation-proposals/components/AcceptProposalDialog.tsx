@@ -16,6 +16,7 @@ import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import type { ProposalSuggestedSlotRpc } from "../types/proposals.types";
 import { MAX_PROPOSAL_REVISIONS } from "../constants/proposalRevisions";
 import { useAcceptProposalMutation } from "../hooks/useProposalClientMutations";
+import { AcceptProposalDialogSkeleton } from "./proposalDialogSkeletons";
 import { formatProposalSuggestedSlot } from "../utils/formatProposalSuggestedSlot";
 
 export interface AcceptProposalDialogProps {
@@ -106,12 +107,7 @@ export function AcceptProposalDialog({
               </div>
             ) : null}
 
-            {isLoading ? (
-              <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                Carregando datas disponíveis…
-              </div>
-            ) : null}
+            {isLoading ? <AcceptProposalDialogSkeleton /> : null}
 
             {isError ? (
               <div className="space-y-3 py-8 text-center">

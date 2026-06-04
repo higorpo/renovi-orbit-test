@@ -1,4 +1,4 @@
-import { Loader2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ShellDialogContent } from "@/components/ui/shell-dialog";
@@ -9,6 +9,7 @@ import type { ProposalDetailView } from "../types/proposalDetails.types";
 import type { ProviderProposalHistoryItem } from "../types/proposals.types";
 import type { ServiceRequestProposalSummary } from "../types/serviceRequestProposal.types";
 import { ProposalHistoryDetailContent } from "./ProposalHistoryDetailContent";
+import { ProposalDetailsDialogSkeleton } from "./proposalDialogSkeletons";
 import { ServiceRequestProposalSummaryCard } from "./ServiceRequestProposalSummaryCard";
 
 export type ProposalDetailsContent =
@@ -77,10 +78,9 @@ export function ProposalDetailsDialog({
 
         <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-4 py-4 sm:px-0 sm:py-0">
           {isLoading ? (
-            <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              {copy.loadingDetails}
-            </div>
+            <ProposalDetailsDialogSkeleton
+              showProviderPricing={showSummary || copyVariant === "budget"}
+            />
           ) : null}
 
           {isError ? (
