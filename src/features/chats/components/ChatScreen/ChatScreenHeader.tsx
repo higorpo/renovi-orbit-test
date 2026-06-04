@@ -1,5 +1,6 @@
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { cn } from "@/lib/utils";
 import type { CnsConversationStatus } from "../../types/chats.types";
 import { ConversationStatusBadge } from "../ConversationStatusBadge/ConversationStatusBadge";
@@ -86,9 +87,16 @@ export function ChatScreenHeader({
   onDetails,
   className,
 }: ChatScreenHeaderProps) {
+  const isOnline = useOnlineStatus();
   const statusPresentation = conversationStatus
     ? getConversationStatusPresentation(conversationStatus)
     : null;
+  const mobileTopInsetClass = isOnline
+    ? "pt-[max(0.75rem,env(safe-area-inset-top))]"
+    : "pt-3";
+  const mobileActionTopClass = isOnline
+    ? "top-[max(0.75rem,env(safe-area-inset-top))]"
+    : "top-3";
 
   return (
     <header
@@ -100,14 +108,17 @@ export function ChatScreenHeader({
     >
       {/* Mobile: centered identity + back row */}
       <div
-        className="relative px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] md:hidden"
+        className={cn("relative px-4 pb-3 md:hidden", mobileTopInsetClass)}
         data-testid="chat-header-mobile"
       >
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="absolute left-0 top-[max(0.75rem,env(safe-area-inset-top))] z-10 h-10 w-10 -translate-y-2 rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:bg-transparent hover:text-primary"
+          className={cn(
+            "absolute left-0 z-10 h-10 w-10 -translate-y-2 rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 hover:bg-transparent hover:text-primary",
+            mobileActionTopClass,
+          )}
           onClick={onBack}
           aria-label="Voltar"
         >
@@ -117,7 +128,7 @@ export function ChatScreenHeader({
         {onDetails ? (
           <DetailsButton
             onClick={onDetails}
-            className="absolute right-4 top-[max(0.75rem,env(safe-area-inset-top))] z-10"
+            className={cn("absolute right-4 z-10", mobileActionTopClass)}
           />
         ) : null}
 

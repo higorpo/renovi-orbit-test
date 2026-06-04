@@ -1,4 +1,6 @@
 import { useCallback, useLayoutEffect, useRef } from "react";
+import { getOfflineBannerInsetPx } from "@/lib/offlineBannerInset";
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 
 const SM_BREAKPOINT = "(max-width: 639px)";
 
@@ -13,6 +15,7 @@ const SM_BREAKPOINT = "(max-width: 639px)";
  */
 export function useMobileDialogViewport(open: boolean) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const isOnline = useOnlineStatus();
 
   const sync = useCallback(() => {
     const el = contentRef.current;
@@ -28,9 +31,13 @@ export function useMobileDialogViewport(open: boolean) {
     }
 
     const vv = window.visualViewport;
-    el.style.height = `${vv.height}px`;
-    el.style.maxHeight = `${vv.height}px`;
-    el.style.top = `${vv.offsetTop}px`;
+    const bannerInset = getOfflineBannerInsetPx();
+    const top = vv.offsetTop + bannerInset;
+    const height = Math.max(0, vv.height - bannerInset);
+
+    el.style.height = `${height}px`;
+    el.style.maxHeight = `${height}px`;
+    el.style.top = `${top}px`;
     el.style.bottom = "auto";
   }, []);
 
@@ -67,7 +74,7 @@ export function useMobileDialogViewport(open: boolean) {
         el.style.removeProperty("bottom");
       }
     };
-  }, [open, sync]);
+  }, [open, sync, isOnline]);
 
   return { contentRef, scheduleSync } as const;
 }

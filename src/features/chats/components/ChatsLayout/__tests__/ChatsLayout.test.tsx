@@ -9,8 +9,12 @@ vi.mock("@/hooks/useBreakpoint", () => ({
   useBreakpointMd: () => true,
 }));
 
+const { useOnlineStatusMock } = vi.hoisted(() => ({
+  useOnlineStatusMock: vi.fn(() => true),
+}));
+
 vi.mock("@/hooks/useOnlineStatus", () => ({
-  useOnlineStatus: () => true,
+  useOnlineStatus: useOnlineStatusMock,
 }));
 
 vi.mock("@/hooks/useMobileDialogViewport", () => ({
@@ -52,10 +56,20 @@ describe("ChatsLayout", () => {
   });
 
   it("uses fullscreen shell on mobile conversation route", () => {
+    useOnlineStatusMock.mockReturnValue(true);
     renderAt("/chats/chat-1");
     const shell = screen.getByTestId("chat-conversation-fullscreen");
     expect(shell.className).toContain("max-md:fixed");
+    expect(shell.className).toContain("max-md:top-0");
     expect(shell.className).toContain("max-md:h-dvh");
+  });
+
+  it("offsets fullscreen shell below offline banner on mobile conversation route", () => {
+    useOnlineStatusMock.mockReturnValue(false);
+    renderAt("/chats/chat-1");
+    const shell = screen.getByTestId("chat-conversation-fullscreen");
+    expect(shell.className).toContain("max-md:top-11");
+    expect(shell.className).toContain("max-md:h-[calc(100dvh-2.75rem)]");
   });
 
   it("uses fixed desktop sidebar width on index route", () => {

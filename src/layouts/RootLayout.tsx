@@ -7,22 +7,25 @@ import { PushPermissionPromptHost } from '@/features/push-permission'
 import { PushNotificationNavigationHost } from '@/components/PushNotificationNavigationHost'
 import { OfflineBanner } from '@/components/OfflineBanner'
 import { OverlayNavigationBlocker } from '@/components/OverlayNavigationBlocker'
+import { OnlineStatusProvider } from '@/hooks/useOnlineStatus'
 import PWABadge from '@/PWABadge'
 
 export function RootLayout() {
   return (
-    <AuthProvider>
-      <OverlayNavigationBlocker />
-      <CapacitorSplashHider />
-      <DeviceBeaconProvider>
-        <PushPermissionPromptHost />
-        <PushNotificationNavigationHost />
-        <OfflineBanner />
-        <Outlet />
-        {/* Registers the service worker on every route (injectRegister: false). */}
-        <PWABadge />
-        <Toaster richColors position="top-center" />
-      </DeviceBeaconProvider>
-    </AuthProvider>
+    <OnlineStatusProvider>
+      <AuthProvider>
+        <OverlayNavigationBlocker />
+        <CapacitorSplashHider />
+        <DeviceBeaconProvider>
+          <PushPermissionPromptHost />
+          <PushNotificationNavigationHost />
+          <OfflineBanner />
+          <Outlet />
+          {/* Registers the service worker on every route (injectRegister: false). */}
+          <PWABadge />
+          <Toaster richColors position="top-center" />
+        </DeviceBeaconProvider>
+      </AuthProvider>
+    </OnlineStatusProvider>
   )
 }

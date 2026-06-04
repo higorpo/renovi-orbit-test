@@ -3,8 +3,32 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChatScreenHeader } from "../ChatScreenHeader";
 
+const { useOnlineStatusMock } = vi.hoisted(() => ({
+  useOnlineStatusMock: vi.fn(() => true),
+}));
+
+vi.mock("@/hooks/useOnlineStatus", () => ({
+  useOnlineStatus: useOnlineStatusMock,
+}));
+
 describe("ChatScreenHeader", () => {
+  it("uses compact top inset on mobile when offline", () => {
+    useOnlineStatusMock.mockReturnValue(false);
+    render(
+      <ChatScreenHeader
+        counterpartyName="Maria Santos"
+        serviceTitle="Pintura da sala"
+        onBack={vi.fn()}
+      />,
+    );
+
+    const mobile = screen.getByTestId("chat-header-mobile");
+    expect(mobile.className).toContain("pt-3");
+    expect(mobile.className).not.toContain("safe-area-inset-top");
+  });
+
   it("renders mobile layout and triggers back/details actions", () => {
+    useOnlineStatusMock.mockReturnValue(true);
     const onBack = vi.fn();
     const onDetails = vi.fn();
 
