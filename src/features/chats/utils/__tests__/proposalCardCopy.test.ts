@@ -45,7 +45,7 @@ describe("proposalCardCopy", () => {
   });
 
   it("describes REVISED from the viewer perspective", () => {
-    expect(resolveProposalCardHeadline("REVISED", "client")).toBe("Proposta recusada");
+    expect(resolveProposalCardHeadline("REVISED", "client")).toBe("Proposta revisada");
     expect(resolveProposalCardHeadline("REVISED", "provider")).toBe("Proposta revisada");
     expect(resolveProposalCardDescription("REVISED", "client")).toBe(
       "Uma nova versão da proposta está disponível.",

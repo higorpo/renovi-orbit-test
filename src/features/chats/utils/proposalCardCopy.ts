@@ -15,7 +15,7 @@ export function resolveProposalCardHeadline(
     case "REJECTED_AUTOMATICALLY":
       return "Proposta recusada";
     case "REVISED":
-      return viewerRole === "provider" ? "Proposta revisada" : "Proposta recusada";
+      return "Proposta revisada";
     case "EXPIRED":
       return "Proposta expirada";
     case "REVISION_REQUESTED":
