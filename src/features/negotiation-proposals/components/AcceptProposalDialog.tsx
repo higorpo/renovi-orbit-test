@@ -24,6 +24,9 @@ export interface AcceptProposalDialogProps {
   serviceRequestId: string | null;
   proposalId: string | null;
   suggestedSlots: ProposalSuggestedSlotRpc[];
+  isLoading?: boolean;
+  isError?: boolean;
+  onRetry?: () => void;
 }
 
 export function AcceptProposalDialog({
@@ -33,6 +36,9 @@ export function AcceptProposalDialog({
   serviceRequestId,
   proposalId,
   suggestedSlots,
+  isLoading = false,
+  isError = false,
+  onRetry,
 }: AcceptProposalDialogProps) {
   const isOnline = useOnlineStatus();
   const acceptMutation = useAcceptProposalMutation(chatId, serviceRequestId);
@@ -45,7 +51,8 @@ export function AcceptProposalDialog({
   }, [open, proposalId]);
 
   const selectedSlot = suggestedSlots[selectedIndex] ?? null;
-  const canSubmit = Boolean(proposalId) && Boolean(selectedSlot) && isOnline;
+  const canSubmit =
+    Boolean(proposalId) && Boolean(selectedSlot) && isOnline && !isLoading && !isError;
 
   const handleAccept = () => {
     if (!proposalId || !selectedSlot || !isOnline) return;
@@ -87,11 +94,33 @@ export function AcceptProposalDialog({
               </div>
             ) : null}
 
-            {suggestedSlots.length === 0 ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                Carregando datas disponíveis…
+              </div>
+            ) : null}
+
+            {isError ? (
+              <div className="space-y-3 py-8 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Não foi possível carregar as datas da proposta.
+                </p>
+                {onRetry ? (
+                  <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+                    Tentar novamente
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+
+            {!isLoading && !isError && suggestedSlots.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 Não há datas disponíveis nesta proposta. Atualize a conversa e tente novamente.
               </p>
-            ) : (
+            ) : null}
+
+            {!isLoading && !isError && suggestedSlots.length > 0 ? (
               <fieldset className="space-y-3">
                 <legend className="text-sm font-medium text-foreground">Data de execução</legend>
                 {suggestedSlots.map((slot, index) => (
@@ -116,7 +145,7 @@ export function AcceptProposalDialog({
                   </label>
                 ))}
               </fieldset>
-            )}
+            ) : null}
         </div>
 
         <DialogFooter className="relative z-10 shrink-0 flex-row gap-2 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pb-0 sm:shadow-none sm:backdrop-blur-none sm:supports-[backdrop-filter]:bg-transparent [&>button]:flex-1 sm:[&>button]:flex-none">
@@ -125,7 +154,9 @@ export function AcceptProposalDialog({
           </Button>
           <Button
             type="button"
-            disabled={!canSubmit || acceptMutation.isPending || suggestedSlots.length === 0}
+            disabled={
+              !canSubmit || acceptMutation.isPending || isLoading || isError || suggestedSlots.length === 0
+            }
             onClick={handleAccept}
           >
             {acceptMutation.isPending ? (

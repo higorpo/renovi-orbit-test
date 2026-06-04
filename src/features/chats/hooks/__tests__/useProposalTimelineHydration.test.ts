@@ -7,13 +7,9 @@ import { useProposalTimelineHydration } from "../useProposalTimelineHydration";
 
 const getProposalDetailMock = vi.fn();
 
-vi.mock("@/features/negotiation-proposals", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/features/negotiation-proposals")>();
-  return {
-    ...actual,
-    getProposalDetail: (...args: unknown[]) => getProposalDetailMock(...args),
-  };
-});
+vi.mock("@/features/negotiation-proposals/api/proposals.api", () => ({
+  getProposalDetail: (...args: unknown[]) => getProposalDetailMock(...args),
+}));
 
 function createWrapper() {
   const queryClient = new QueryClient({

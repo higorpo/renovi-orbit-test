@@ -1,19 +1,15 @@
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import type { ProposalSuggestedSlotRpc } from "../types/proposals.types";
-
-const SHIFT_LABELS: Record<ProposalSuggestedSlotRpc["shift"], string> = {
-  morning: "Manhã",
-  afternoon: "Tarde",
-  full_day: "Dia inteiro",
-};
+import {
+  formatProposalDateOnly,
+  translateProposalShift,
+} from "./proposalDetailsFormatters";
 
 export function formatProposalSuggestedSlot(slot: ProposalSuggestedSlotRpc): string {
-  const startLabel = format(parseISO(slot.start_date), "dd/MM/yyyy", { locale: ptBR });
-  const shiftLabel = SHIFT_LABELS[slot.shift] ?? slot.shift;
+  const startLabel = formatProposalDateOnly(slot.start_date);
+  const shiftLabel = translateProposalShift(slot.shift);
 
   if (slot.end_date && slot.end_date !== slot.start_date) {
-    const endLabel = format(parseISO(slot.end_date), "dd/MM/yyyy", { locale: ptBR });
+    const endLabel = formatProposalDateOnly(slot.end_date);
     return `${startLabel} – ${endLabel} · ${shiftLabel}`;
   }
 

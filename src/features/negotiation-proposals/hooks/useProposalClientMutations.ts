@@ -6,8 +6,8 @@ import {
   CHAT_MESSAGES_QUERY_KEY,
   CHAT_PROPOSAL_TIMELINE_QUERY_KEY,
   CONVERSATION_DETAIL_QUERY_KEY,
-  useChatAnalytics,
-} from "@/features/chats";
+} from "@/features/chats/constants/queryKeys";
+import { useChatAnalytics } from "@/features/chats/hooks/useChatAnalytics";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import {
   acceptProposal,

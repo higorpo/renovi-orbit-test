@@ -1,20 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useAuth } from "@/features/auth";
-import {
-  AcceptProposalDialog,
-  canEditServiceRequestProposal,
-  getProposalDetail,
-  mapProposalDetailToSummary,
-  ProposalComposerDialog,
-  ProposalDetailsDialog,
-  RejectProposalDialog,
-  RevisionRequestDialog,
-  useProposalDetail,
-  type ProposalComposerMode,
-  type ProposalDetailView,
-  type ProposalSuggestedSlotRpc,
-} from "@/features/negotiation-proposals";
+import { getProposalDetail } from "@/features/negotiation-proposals/api/proposals.api";
+import { AcceptProposalDialog } from "@/features/negotiation-proposals/components/AcceptProposalDialog";
+import { ProposalComposerDialog } from "@/features/negotiation-proposals/components/ProposalComposerDialog";
+import { ProposalDetailsDialog } from "@/features/negotiation-proposals/components/ProposalDetailsDialog";
+import { RejectProposalDialog } from "@/features/negotiation-proposals/components/RejectProposalDialog";
+import { RevisionRequestDialog } from "@/features/negotiation-proposals/components/RevisionRequestDialog";
+import { useProposalDetail } from "@/features/negotiation-proposals/hooks/useProposalDetail";
+import type { ProposalComposerMode } from "@/features/negotiation-proposals/types/proposalComposerMode.types";
+import type { ProposalDetailView } from "@/features/negotiation-proposals/types/proposalDetails.types";
+import { mapProposalDetailToSummary } from "@/features/negotiation-proposals/utils/mapProposalDetailToSummary";
+import { canEditServiceRequestProposal } from "@/features/negotiation-proposals/utils/proposalStatus";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { CHAT_DETAILS_COLUMN_MEDIA_QUERY } from "../../constants/layout";
 import type { ChatActionBannerCtaPayload } from "../../hooks/useChatActionBannerState";
@@ -28,10 +25,6 @@ import { ChatDetailsDesktopPanel } from "../ChatDetails/ChatDetailsDesktopPanel"
 import { ChatDetailsMobileSheet } from "../ChatDetails/ChatDetailsMobileSheet";
 import type { ProposalCardAction } from "../DynamicMessageRenderer/DynamicProposalCard";
 import { ChatScreen } from "../ChatScreen/ChatScreen";
-
-const FALLBACK_SUGGESTED_SLOTS: ProposalSuggestedSlotRpc[] = [
-  { start_date: "2026-06-15", shift: "morning" },
-];
 
 export function ChatsConversationRoute() {
   const { chatId } = useParams<{ chatId: string }>();
@@ -76,6 +69,12 @@ export function ChatsConversationRoute() {
     audience: isProviderViewer ? "provider" : "client",
   });
 
+  const acceptProposalDetailQuery = useProposalDetail({
+    proposalId: acceptProposalId,
+    enabled: acceptOpen,
+    audience: "client",
+  });
+
   useEffect(() => {
     setDetailsOpen(false);
     setConfirmCloseOpen(false);
@@ -88,6 +87,8 @@ export function ChatsConversationRoute() {
     setRejectProposalId(null);
     setRevisionOpen(false);
     setRevisionProposalId(null);
+    setAcceptOpen(false);
+    setAcceptProposalId(null);
   }, [chatId]);
 
   const openProposalDetails = useCallback((proposalId: string) => {
@@ -230,11 +231,17 @@ export function ChatsConversationRoute() {
       {acceptOpen ? (
         <AcceptProposalDialog
           open
-          onOpenChange={setAcceptOpen}
+          onOpenChange={(open) => {
+            setAcceptOpen(open);
+            if (!open) setAcceptProposalId(null);
+          }}
           chatId={chatId}
           serviceRequestId={serviceRequestId}
           proposalId={acceptProposalId}
-          suggestedSlots={FALLBACK_SUGGESTED_SLOTS}
+          suggestedSlots={acceptProposalDetailQuery.data?.proposal_suggested_slots ?? []}
+          isLoading={acceptProposalDetailQuery.isLoading}
+          isError={acceptProposalDetailQuery.isError}
+          onRetry={() => void acceptProposalDetailQuery.refetch()}
         />
       ) : null}
 
