@@ -277,7 +277,7 @@ export function ChatsConversationRoute() {
         isLoading={proposalDetailQuery.isLoading}
         isError={proposalDetailQuery.isError}
         onRetry={() => void proposalDetailQuery.refetch()}
-        copyVariant={isProviderViewer ? "budget" : "proposal"}
+        copyVariant="proposal"
       />
     </>
   );
