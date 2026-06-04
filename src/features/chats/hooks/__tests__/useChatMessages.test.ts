@@ -25,12 +25,36 @@ vi.mock("@/lib/sentry", () => ({
   metrics: { count: vi.fn(), distribution: vi.fn() },
 }));
 
+vi.mock("../../utils/clientSendId", () => ({
+  createClientSendId: () => "client-image-1",
+}));
+
 const listChatMessagesMock = vi.fn();
 const sendMessageMock = vi.fn();
 
 vi.mock("../../api/chats.api", () => ({
   listChatMessages: (...args: unknown[]) => listChatMessagesMock(...args),
   sendMessage: (...args: unknown[]) => sendMessageMock(...args),
+}));
+
+const createMediaUploadSessionMock = vi.fn();
+const uploadChatMediaMock = vi.fn();
+
+vi.mock("../../api/chatMedia.api", () => ({
+  createMediaUploadSession: (...args: unknown[]) => createMediaUploadSessionMock(...args),
+  uploadChatMedia: (...args: unknown[]) => uploadChatMediaMock(...args),
+}));
+
+vi.mock("../../utils/chatImagePrepare", () => ({
+  prepareChatImageFiles: vi.fn(async (files: File[]) => files),
+}));
+
+vi.mock("@capacitor/core", () => ({
+  Capacitor: { isNativePlatform: () => false },
+}));
+
+vi.mock("sonner", () => ({
+  toast: { error: vi.fn() },
 }));
 
 function createWrapper() {
@@ -115,6 +139,144 @@ describe("useChatMessages", () => {
         idempotencyKey: "00000000-0000-7000-8000-000000000001",
       }),
     );
+  });
+
+  it("shows optimistic image in timeline immediately while upload runs", async () => {
+    let resolveUpload!: (value: { paths: string[]; error: null }) => void;
+    const uploadDeferred = new Promise<{ paths: string[]; error: null }>((resolve) => {
+      resolveUpload = resolve;
+    });
+
+    createMediaUploadSessionMock.mockResolvedValue({
+      data: { upload_session_id: "session-1" },
+      error: null,
+    });
+    uploadChatMediaMock.mockReturnValue(uploadDeferred);
+
+    sendMessageMock.mockResolvedValue({
+      data: {
+        message: {
+          id: "msg-img",
+          chat_id: "chat-1",
+          sender_user_id: "user-1",
+          message_type: "IMAGE",
+          payload: {
+            paths: ["chat/s/a.png"],
+            preview: "Foto",
+          },
+          idempotency_key: "00000000-0000-7000-8000-000000000001",
+          created_at: "2026-01-02T00:00:00.000Z",
+        },
+        conversation: { id: "chat-1", last_interaction_at: "2026-01-02T00:00:00.000Z" },
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useChatMessages("chat-1"), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const file = new File(["x"], "shot.png", { type: "image/png" });
+    result.current.sendChatImages([file]);
+
+    await waitFor(() => {
+      const optimistic = result.current.messages.find((m) => m.id.startsWith("optimistic:"));
+      expect(optimistic?.message_type).toBe("IMAGE");
+      expect(optimistic?.delivery_status).toBe("PENDING");
+      expect(optimistic?.payload.local_preview_urls).toHaveLength(1);
+    });
+
+    resolveUpload({ paths: ["chat/s/a.png"], error: null });
+    await waitFor(() => expect(result.current.optimisticCount).toBe(0));
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageType: "IMAGE",
+        payload: expect.objectContaining({
+          upload_session_id: "session-1",
+          paths: ["chat/s/a.png"],
+        }),
+      }),
+    );
+  });
+
+  it("retry after image send failure does not send local_preview_urls to the server", async () => {
+    createMediaUploadSessionMock.mockResolvedValue({
+      data: { upload_session_id: "session-1" },
+      error: null,
+    });
+    uploadChatMediaMock.mockResolvedValue({
+      paths: ["chat/s/a.png"],
+      error: null,
+    });
+
+    sendMessageMock
+      .mockResolvedValueOnce({ data: null, error: { code: "RATE_LIMITED", message: "Aguarde" } })
+      .mockResolvedValueOnce({
+        data: {
+          message: {
+            id: "msg-img",
+            chat_id: "chat-1",
+            sender_user_id: "user-1",
+            message_type: "IMAGE",
+            payload: {
+              paths: ["chat/s/a.png"],
+              preview: "Foto",
+            },
+            idempotency_key: "00000000-0000-7000-8000-000000000001",
+            created_at: "2026-01-02T00:00:00.000Z",
+          },
+          conversation: { id: "chat-1", last_interaction_at: "2026-01-02T00:00:00.000Z" },
+        },
+        error: null,
+      });
+
+    const { result } = renderHook(() => useChatMessages("chat-1"), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    result.current.sendChatImages([new File(["x"], "shot.png", { type: "image/png" })]);
+
+    await waitFor(() => expect(sendMessageMock).toHaveBeenCalledTimes(1));
+    expect(sendMessageMock.mock.calls[0]?.[0]?.payload).not.toHaveProperty("local_preview_urls");
+
+    await result.current.retrySend("client-image-1");
+
+    expect(sendMessageMock).toHaveBeenCalledTimes(2);
+    expect(sendMessageMock.mock.calls[1]?.[0]?.payload).not.toHaveProperty("local_preview_urls");
+    expect(sendMessageMock.mock.calls[1]?.[0]?.payload).toMatchObject({
+      upload_session_id: "session-1",
+      paths: ["chat/s/a.png"],
+    });
+  });
+
+  it("clears optimistic rows when chatId changes", async () => {
+    sendMessageMock.mockImplementation(() => new Promise(() => {}));
+
+    const { result, rerender } = renderHook(
+      ({ activeChatId }: { activeChatId: string }) => useChatMessages(activeChatId),
+      {
+        wrapper: createWrapper(),
+        initialProps: { activeChatId: "chat-1" },
+      },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    void result.current.sendChatMessage({
+      clientSendId: "client-1",
+      messageType: "TEXT",
+      payload: { text: "pendente" },
+    });
+
+    await waitFor(() => expect(result.current.optimisticCount).toBe(1));
+
+    rerender({ activeChatId: "chat-2" });
+
+    await waitFor(() => expect(result.current.optimisticCount).toBe(0));
   });
 
   it("reuses idempotency key on retry after failure", async () => {

@@ -25,6 +25,10 @@ import type {
   CnsMessageType,
 } from "../types/chats.types";
 import { mergeKeysetMessagePages } from "../utils/cursorMerge";
+import {
+  buildImageMessageSendPayload,
+  stripClientOnlyImagePayloadFields,
+} from "../utils/chatMessageImagePaths";
 
 const PAGE_SIZE = 20;
 const STALE_TIME_MS = 30_000;
@@ -58,6 +62,15 @@ function buildOptimisticMessage(
   };
 }
 
+function sanitizeSendMessageInput(input: SendChatMessageInput): SendChatMessageInput {
+  if (input.messageType !== "IMAGE") return input;
+
+  return {
+    ...input,
+    payload: stripClientOnlyImagePayloadFields(input.payload),
+  };
+}
+
 export function useChatMessages(
   chatId: string | null,
   options?: { enabled?: boolean },
@@ -66,19 +79,14 @@ export function useChatMessages(
   const queryClient = useQueryClient();
   const idempotencyByClientSendId = useRef<Map<string, string>>(new Map());
   const pendingInputByClientSendId = useRef<Map<string, SendChatMessageInput>>(new Map());
+  const localPreviewsByClientSendId = useRef<Map<string, string[]>>(new Map());
   const messagesRef = useRef<ChatMessageListItem[]>([]);
   const sendChainRef = useRef<Promise<void>>(Promise.resolve());
   const [optimisticMessages, setOptimisticMessages] = useState<ChatMessageListItem[]>([]);
   const [pendingSendCount, setPendingSendCount] = useState(0);
-  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
   const [lastSendError, setLastSendError] = useState<ChatsApiError | null>(null);
 
   const enabled = Boolean(chatId) && Boolean(user?.id) && (options?.enabled ?? true);
-
-  useEffect(() => {
-    sendChainRef.current = Promise.resolve();
-    setPendingSendCount(0);
-  }, [chatId]);
 
   const query = useInfiniteQuery({
     queryKey: [CHAT_MESSAGES_QUERY_KEY, chatId],
@@ -180,6 +188,75 @@ export function useChatMessages(
     [chatId, queryClient, user?.id],
   );
 
+  const syncOptimisticPayload = useCallback((clientSendId: string, payloadPatch: Record<string, unknown>) => {
+    const idempotencyKey = idempotencyByClientSendId.current.get(clientSendId);
+    if (!idempotencyKey) return;
+
+    const mergePayload = (payload: Record<string, unknown>) => ({ ...payload, ...payloadPatch });
+
+    setOptimisticMessages((prev) =>
+      prev.map((message) =>
+        message.idempotency_key === idempotencyKey
+          ? { ...message, payload: mergePayload(message.payload) }
+          : message,
+      ),
+    );
+
+  }, []);
+
+  const setImagePendingSendInput = useCallback(
+    (
+      clientSendId: string,
+      params: { uploadSessionId: string; paths: string[]; preview: string },
+    ) => {
+      pendingInputByClientSendId.current.set(clientSendId, {
+        messageType: "IMAGE",
+        clientSendId,
+        payload: buildImageMessageSendPayload(params),
+      });
+    },
+    [],
+  );
+
+  const revokeLocalPreviewsForClientSendId = useCallback((clientSendId: string) => {
+    const urls = localPreviewsByClientSendId.current.get(clientSendId);
+    if (!urls) return;
+    for (const url of urls) {
+      if (url.startsWith("blob:")) {
+        URL.revokeObjectURL(url);
+      }
+    }
+    localPreviewsByClientSendId.current.delete(clientSendId);
+  }, []);
+
+  const dismissOptimisticByClientSendId = useCallback(
+    (clientSendId: string) => {
+      const idempotencyKey = idempotencyByClientSendId.current.get(clientSendId);
+      if (!idempotencyKey) return;
+      setOptimisticMessages((prev) => prev.filter((m) => m.idempotency_key !== idempotencyKey));
+      idempotencyByClientSendId.current.delete(clientSendId);
+      pendingInputByClientSendId.current.delete(clientSendId);
+      revokeLocalPreviewsForClientSendId(clientSendId);
+    },
+    [revokeLocalPreviewsForClientSendId],
+  );
+
+  const resetOutboundSendState = useCallback(() => {
+    for (const clientSendId of localPreviewsByClientSendId.current.keys()) {
+      revokeLocalPreviewsForClientSendId(clientSendId);
+    }
+    idempotencyByClientSendId.current.clear();
+    pendingInputByClientSendId.current.clear();
+    setOptimisticMessages([]);
+    setLastSendError(null);
+    sendChainRef.current = Promise.resolve();
+    setPendingSendCount(0);
+  }, [revokeLocalPreviewsForClientSendId]);
+
+  useEffect(() => {
+    resetOutboundSendState();
+  }, [chatId, resetOutboundSendState]);
+
   const refetchLatestTailIntoCache = useCallback(async () => {
     if (!chatId) return;
 
@@ -248,10 +325,11 @@ export function useChatMessages(
       idempotencyByClientSendId.current.set(input.clientSendId, idempotencyKey);
 
       const startedAt = performance.now();
+      const sanitizedInput = sanitizeSendMessageInput(input);
       const result = await sendMessage({
         chatId,
-        messageType: input.messageType,
-        payload: input.payload,
+        messageType: sanitizedInput.messageType,
+        payload: sanitizedInput.payload,
         idempotencyKey,
       });
       const durationMs = Math.round(performance.now() - startedAt);
@@ -280,6 +358,7 @@ export function useChatMessages(
       );
       idempotencyByClientSendId.current.delete(input.clientSendId);
       pendingInputByClientSendId.current.delete(input.clientSendId);
+      revokeLocalPreviewsForClientSendId(input.clientSendId);
       setLastSendError(null);
 
       rememberSentChatMessageId(result.message.id);
@@ -319,12 +398,14 @@ export function useChatMessages(
   });
 
   const enqueueSend = useCallback(
-    (input: SendChatMessageInput) => {
+    (input: SendChatMessageInput, options?: { skipOptimistic?: boolean }) => {
       if (!chatId || !user?.id) {
         return Promise.reject(new Error("Autenticação necessária para enviar mensagem"));
       }
 
-      applyOptimisticSend(input);
+      if (!options?.skipOptimistic) {
+        applyOptimisticSend(input);
+      }
       setPendingSendCount((count) => count + 1);
 
       const sendPromise = sendChainRef.current.then(() => sendMutation.mutateAsync(input));
@@ -346,87 +427,127 @@ export function useChatMessages(
   );
 
   const sendChatImages = useCallback(
-    async (files: File[], caption?: string) => {
+    (files: File[], caption?: string) => {
       if (!chatId || !user?.id) {
         toast.error("Faça login para enviar imagens.");
         return;
       }
 
       const normalizedFiles = normalizeChatImageFiles(files);
-      const preparedFiles = Capacitor.isNativePlatform()
-        ? normalizedFiles
-        : await prepareChatImageFiles(normalizedFiles);
-      const validationError = validateChatImageFiles(preparedFiles);
+      const validationError = validateChatImageFiles(normalizedFiles);
       if (validationError) {
         toast.error(validationError);
         return;
       }
 
-      setIsUploadingMedia(true);
+      const clientSendId = createClientSendId();
+      const localPreviewUrls = normalizedFiles.map((file) => URL.createObjectURL(file));
+      localPreviewsByClientSendId.current.set(clientSendId, localPreviewUrls);
+      const trimmedCaption = caption?.trim() ?? "";
+      const preview =
+        trimmedCaption ||
+        (normalizedFiles.length === 1 ? "Foto" : `${normalizedFiles.length} fotos`);
 
-      try {
-        const sessionResult = await createMediaUploadSession(chatId);
-        if (sessionResult.error || !sessionResult.data) {
-          const message = sessionResult.error?.message ?? "Não foi possível preparar o envio.";
-          toast.error(message);
-          return;
-        }
+      applyOptimisticSend({
+        messageType: "IMAGE",
+        payload: {
+          local_preview_urls: localPreviewUrls,
+          preview,
+          paths: [],
+        },
+        clientSendId,
+      });
 
-        const uploadSessionId = sessionResult.data.upload_session_id;
-        const clientSendId = createClientSendId();
-        const idempotencyKey = generateIdempotencyKeyV7();
-
-        const uploadResult = await uploadChatMedia({
-          chatId,
-          uploadSessionId,
-          files: preparedFiles,
-          idempotencyKey,
-        });
-        if (uploadResult.error) {
-          toast.error(uploadResult.error);
-          return;
-        }
-
-        const trimmedCaption = caption?.trim() ?? "";
-        const preview =
-          trimmedCaption ||
-          (preparedFiles.length === 1 ? "Foto" : `${preparedFiles.length} fotos`);
-
+      void (async () => {
         try {
-          await enqueueSend({
+          const preparedFiles = Capacitor.isNativePlatform()
+            ? normalizedFiles
+            : await prepareChatImageFiles(normalizedFiles);
+          const preparedValidationError = validateChatImageFiles(preparedFiles);
+          if (preparedValidationError) {
+            toast.error(preparedValidationError);
+            dismissOptimisticByClientSendId(clientSendId);
+            return;
+          }
+
+          const sessionResult = await createMediaUploadSession(chatId);
+          if (sessionResult.error || !sessionResult.data) {
+            const message = sessionResult.error?.message ?? "Não foi possível preparar o envio.";
+            toast.error(message);
+            dismissOptimisticByClientSendId(clientSendId);
+            return;
+          }
+
+          const uploadSessionId = sessionResult.data.upload_session_id;
+          const idempotencyKey =
+            idempotencyByClientSendId.current.get(clientSendId) ?? generateIdempotencyKeyV7();
+
+          const uploadResult = await uploadChatMedia({
+            chatId,
+            uploadSessionId,
+            files: preparedFiles,
+            idempotencyKey,
+          });
+          if (uploadResult.error) {
+            toast.error(uploadResult.error);
+            dismissOptimisticByClientSendId(clientSendId);
+            return;
+          }
+
+          syncOptimisticPayload(clientSendId, {
+            upload_session_id: uploadSessionId,
+            paths: uploadResult.paths,
+            preview,
+            local_preview_urls: localPreviewUrls,
+          });
+
+          const imageSendInput: SendChatMessageInput = {
             messageType: "IMAGE",
-            payload: {
-              upload_session_id: uploadSessionId,
+            clientSendId,
+            payload: buildImageMessageSendPayload({
+              uploadSessionId,
               paths: uploadResult.paths,
               preview,
-            },
-            clientSendId,
+            }),
+          };
+          setImagePendingSendInput(clientSendId, {
+            uploadSessionId,
+            paths: uploadResult.paths,
+            preview,
           });
-        } catch (sendError) {
-          const message =
-            sendError &&
-            typeof sendError === "object" &&
-            "message" in sendError &&
-            typeof (sendError as ChatsApiError).message === "string"
-              ? (sendError as ChatsApiError).message
-              : sendError instanceof Error
-                ? sendError.message
-                : "Não foi possível enviar a mensagem com a imagem.";
-          toast.error(message);
+
+          await enqueueSend(imageSendInput, { skipOptimistic: true });
+        } catch (error) {
+          const apiError =
+            error && typeof error === "object" && "code" in error
+              ? (error as ChatsApiError)
+              : null;
+          if (apiError) {
+            const message = apiError.message ?? "Não foi possível enviar a mensagem com a imagem.";
+            toast.error(message);
+            return;
+          }
+
+          logger.error("chat_image_send_failed", {
+            chatId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          dismissOptimisticByClientSendId(clientSendId);
+          toast.error(
+            error instanceof Error ? error.message : "Não foi possível enviar a imagem.",
+          );
         }
-      } catch (error) {
-        logger.error("chat_image_send_failed", {
-          chatId,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        toast.error(
-          error instanceof Error ? error.message : "Não foi possível enviar a imagem.",
-        );
-      } finally {
-        setIsUploadingMedia(false);
-      }
+      })();
     },
-    [chatId, enqueueSend, user?.id],
+    [
+      applyOptimisticSend,
+      chatId,
+      dismissOptimisticByClientSendId,
+      enqueueSend,
+      setImagePendingSendInput,
+      syncOptimisticPayload,
+      user?.id,
+    ],
   );
 
   const retrySend = useCallback(
@@ -435,7 +556,9 @@ export function useChatMessages(
       if (!pendingInput || !chatId || !user?.id) return;
 
       setPendingSendCount((count) => count + 1);
-      const sendPromise = sendChainRef.current.then(() => sendMutation.mutateAsync(pendingInput));
+      const sendPromise = sendChainRef.current.then(() =>
+        sendMutation.mutateAsync(sanitizeSendMessageInput(pendingInput)),
+      );
       sendChainRef.current = sendPromise.then(
         () => undefined,
         () => undefined,
@@ -448,16 +571,20 @@ export function useChatMessages(
     [chatId, sendMutation, user?.id],
   );
 
-  const dismissFailedSend = useCallback((idempotencyKey: string) => {
-    setOptimisticMessages((prev) => prev.filter((m) => m.idempotency_key !== idempotencyKey));
-    for (const [clientSendId, key] of idempotencyByClientSendId.current.entries()) {
-      if (key === idempotencyKey) {
-        idempotencyByClientSendId.current.delete(clientSendId);
-        pendingInputByClientSendId.current.delete(clientSendId);
+  const dismissFailedSend = useCallback(
+    (idempotencyKey: string) => {
+      setOptimisticMessages((prev) => prev.filter((m) => m.idempotency_key !== idempotencyKey));
+      for (const [clientSendId, key] of idempotencyByClientSendId.current.entries()) {
+        if (key === idempotencyKey) {
+          idempotencyByClientSendId.current.delete(clientSendId);
+          pendingInputByClientSendId.current.delete(clientSendId);
+          revokeLocalPreviewsForClientSendId(clientSendId);
+        }
       }
-    }
-    setLastSendError(null);
-  }, []);
+      setLastSendError(null);
+    },
+    [revokeLocalPreviewsForClientSendId],
+  );
 
   return {
     messages,
@@ -474,7 +601,6 @@ export function useChatMessages(
     retrySend,
     dismissFailedSend,
     isSending: pendingSendCount > 0,
-    isUploadingMedia,
     pendingSendCount,
     sendError: lastSendError,
     optimisticCount: optimisticMessages.length,

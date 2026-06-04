@@ -1,4 +1,6 @@
 // @vitest-environment happy-dom
+import "@testing-library/jest-dom/vitest";
+import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ChatComposerBar } from "../ChatComposerBar";
@@ -86,6 +88,26 @@ describe("ChatComposerBar", () => {
     expect(onSend).toHaveBeenCalledWith({
       text: "Olá com foto",
       files: [expect.any(File)],
+    });
+  });
+
+  it("keeps the composer enabled while images are uploading", () => {
+    const onSend = vi.fn().mockImplementation(() => new Promise(() => {}));
+    const { container } = render(
+      <ChatComposerBar composer={enabledComposer} onSend={onSend} />,
+    );
+
+    fireEvent.change(container.querySelector('input[type="file"]')!, {
+      target: { files: [new File(["x"], "a.jpg", { type: "image/jpeg" })] },
+    });
+
+    const sendButton = screen.getByRole("button", { name: "Enviar mensagem" });
+    return waitFor(() => {
+      expect(sendButton).not.toBeDisabled();
+    }).then(() => {
+      fireEvent.click(sendButton);
+      expect(screen.getByPlaceholderText("Escreva uma mensagem…")).not.toBeDisabled();
+      expect(screen.queryByText(/Enviando/i)).toBeNull();
     });
   });
 

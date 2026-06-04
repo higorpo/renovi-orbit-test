@@ -66,7 +66,6 @@ export function ChatScreen({
     refetchGapFill,
     sendChatMessage,
     sendChatImages,
-    isUploadingMedia,
   } = useChatMessages(chatId);
 
   useMarkConversationRead(chatId, messages);
@@ -261,7 +260,6 @@ export function ChatScreen({
           helperText: composerState.helperText,
           placeholder: composerState.placeholder,
         }}
-        isUploadingMedia={isUploadingMedia}
         onSend={handleComposerSend}
         onComposerChange={notifyComposerChange}
         onTypingStopNow={notifyTypingStopNow}

@@ -19,7 +19,6 @@ export interface ChatComposerSendPayload {
 
 export interface ChatComposerBarProps {
   composer: ChatComposerState;
-  isUploadingMedia?: boolean;
   onSend: (payload: ChatComposerSendPayload) => void | Promise<void>;
   /** Fired on every draft change (keystroke, paste, delete, etc.). */
   onComposerChange?: () => void;
@@ -30,7 +29,6 @@ export interface ChatComposerBarProps {
 
 export function ChatComposerBar({
   composer,
-  isUploadingMedia = false,
   onSend,
   onComposerChange,
   onTypingStopNow,
@@ -45,7 +43,7 @@ export function ChatComposerBar({
   const scheduleViewportSync = useChatMobileViewportSchedule();
   const timelineScroll = useChatTimelineScrollContext();
 
-  const isUploadBusy = isUploadingMedia || attachments.isPreparingImages;
+  const isUploadBusy = attachments.isPreparingImages;
   const canAttach = composer.isAttachmentEnabled && !isUploadBusy;
   const hasDraftText = draft.trim().length > 0;
   const canSend =
@@ -96,12 +94,6 @@ export function ChatComposerBar({
       {attachments.isPreparingImages ? (
         <p className="mb-2 px-1 text-xs text-muted-foreground" aria-live="polite">
           Preparando imagens…
-        </p>
-      ) : null}
-
-      {isUploadingMedia ? (
-        <p className="mb-2 px-1 text-xs text-muted-foreground" aria-live="polite">
-          Enviando…
         </p>
       ) : null}
 

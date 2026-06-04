@@ -9,9 +9,14 @@ import {
 import {
   getChatImageCaption,
   getChatImagePathsFromPayload,
+  getLocalPreviewUrlsFromPayload,
 } from "../utils/chatMessageImagePaths";
 
 export function useChatImageDisplay(message: ChatMessageListItem) {
+  const localPreviewUrls = useMemo(
+    () => getLocalPreviewUrlsFromPayload(message.payload),
+    [message.payload],
+  );
   const paths = useMemo(
     () => getChatImagePathsFromPayload(message.payload),
     [message.payload],
@@ -25,11 +30,20 @@ export function useChatImageDisplay(message: ChatMessageListItem) {
 
   const cachedUrls = useMemo(() => getCachedChatImageDisplayUrls(cacheKey), [cacheKey]);
 
-  const [urls, setUrls] = useState<string[]>(() => cachedUrls ?? []);
-  const [isLoading, setIsLoading] = useState(() => paths.length > 0 && !cachedUrls);
+  const [urls, setUrls] = useState<string[]>(() => localPreviewUrls);
+  const [isLoading, setIsLoading] = useState(
+    () => localPreviewUrls.length === 0 && paths.length > 0 && !cachedUrls,
+  );
   const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
+    if (localPreviewUrls.length > 0) {
+      setUrls(localPreviewUrls);
+      setIsLoading(false);
+      setHasError(false);
+      return;
+    }
+
     if (paths.length === 0) {
       setUrls([]);
       setIsLoading(false);
@@ -68,7 +82,9 @@ export function useChatImageDisplay(message: ChatMessageListItem) {
     return () => {
       cancelled = true;
     };
-  }, [cacheKey, message.id, paths, pathsKey]);
+  }, [cacheKey, localPreviewUrls, message.id, paths, pathsKey]);
 
-  return { urls, caption, isLoading, hasError, pathCount: paths.length };
+  const pathCount = localPreviewUrls.length > 0 ? localPreviewUrls.length : paths.length;
+
+  return { urls, caption, isLoading, hasError, pathCount };
 }
