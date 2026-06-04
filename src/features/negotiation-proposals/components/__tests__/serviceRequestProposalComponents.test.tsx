@@ -200,6 +200,38 @@ describe("ProposalDetailsDialog", () => {
     );
     expect(screen.getByText(/muito caro/i)).toBeInTheDocument();
   });
+
+  it("shows suggested slots in proposal mode for provider audience", () => {
+    render(
+      <ProposalDetailsDialog
+        proposal={baseProposal}
+        onOpenChange={vi.fn()}
+        copyVariant="proposal"
+      />,
+    );
+
+    expect(screen.getByText(/datas sugeridas para execução/i)).toBeInTheDocument();
+    expect(screen.getByText(/opção 1:/i)).toBeInTheDocument();
+    expect(screen.getByText(/turno:/i)).toBeInTheDocument();
+  });
+
+  it("shows edit action in proposal mode when canEdit is true", () => {
+    const onEdit = vi.fn();
+
+    render(
+      <ProposalDetailsDialog
+        open
+        proposal={baseProposal}
+        onOpenChange={vi.fn()}
+        canEdit
+        onEdit={onEdit}
+        copyVariant="proposal"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /editar proposta/i }));
+    expect(onEdit).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("ProposalHistoryAccordion", () => {

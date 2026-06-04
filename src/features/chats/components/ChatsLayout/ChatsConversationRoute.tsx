@@ -11,7 +11,6 @@ import { useProposalDetail } from "@/features/negotiation-proposals/hooks/usePro
 import type { ProposalComposerMode } from "@/features/negotiation-proposals/types/proposalComposerMode.types";
 import type { ProposalDetailView } from "@/features/negotiation-proposals/types/proposalDetails.types";
 import { buildDateUnavailableRevisionInitialValues } from "@/features/negotiation-proposals/utils/buildDateUnavailableRevisionInitialValues";
-import { mapProposalDetailToSummary } from "@/features/negotiation-proposals/utils/mapProposalDetailToSummary";
 import type { RevisionRequestInitialValues } from "@/features/negotiation-proposals/types/proposals.types";
 import { canEditServiceRequestProposal } from "@/features/negotiation-proposals/utils/proposalStatus";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -61,11 +60,6 @@ export function ChatsConversationRoute() {
     enabled: detailsDialogOpen,
     audience: isProviderViewer ? "provider" : "client",
   });
-
-  const providerProposalSummary =
-    isProviderViewer && proposalDetailQuery.data
-      ? mapProposalDetailToSummary(proposalDetailQuery.data)
-      : null;
 
   const revisionProposalDetailQuery = useProposalDetail({
     proposalId: revisionProposalId,
@@ -310,14 +304,16 @@ export function ChatsConversationRoute() {
         <ProposalDetailsDialog
           open
           onOpenChange={handleDetailsDialogOpenChange}
-          summary={isProviderViewer ? providerProposalSummary : null}
-          canEdit={canEditServiceRequestProposal(providerProposalSummary?.status)}
+          proposal={proposalDetailQuery.data}
+          canEdit={
+            isProviderViewer &&
+            canEditServiceRequestProposal(proposalDetailQuery.data?.status)
+          }
           onEdit={() => {
             if (!detailsProposalId) return;
             setDetailsDialogOpen(false);
             void openProposalComposerEdit(detailsProposalId);
           }}
-          proposal={isProviderViewer ? null : proposalDetailQuery.data}
           isLoading={proposalDetailQuery.isLoading}
           isError={proposalDetailQuery.isError}
           onRetry={() => void proposalDetailQuery.refetch()}

@@ -61,7 +61,7 @@ export function ProposalDetailsDialog({
               {copy.detailsTitle}
             </DialogTitle>
             <div className="flex shrink-0 items-center gap-2">
-              {showSummary && canEdit && onEdit ? (
+              {canEdit && onEdit ? (
                 <Button type="button" size="sm" variant="outline" onClick={onEdit}>
                   {copy.editAction}
                 </Button>
