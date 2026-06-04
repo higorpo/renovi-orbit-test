@@ -13,8 +13,9 @@ export function resolveProposalCardHeadline(
       return "Proposta aceita";
     case "REJECTED":
     case "REJECTED_AUTOMATICALLY":
-    case "REVISED":
       return "Proposta recusada";
+    case "REVISED":
+      return viewerRole === "provider" ? "Proposta revisada" : "Proposta recusada";
     case "EXPIRED":
       return "Proposta expirada";
     case "REVISION_REQUESTED":
@@ -50,7 +51,9 @@ export function resolveProposalCardDescription(
         ? "O cliente pediu ajustes nesta proposta."
         : "Você solicitou alterações nesta proposta.";
     case "REVISED":
-      return "Uma nova versão da proposta está disponível.";
+      return viewerRole === "provider"
+        ? "Esta versão foi substituída por uma nova proposta que você enviou."
+        : "Uma nova versão da proposta está disponível.";
     default:
       return "Atualização da negociação.";
   }
@@ -94,9 +97,5 @@ export function resolveProposalCardDetailsLabel(
   status: ProposalStatus | string,
   viewerRole: ProfileRole,
 ): string {
-  if (viewerRole === "provider" && status === "REVISION_REQUESTED") {
-    return "Ver detalhes da revisão solicitada";
-  }
-
   return "Ver detalhes da proposta";
 }

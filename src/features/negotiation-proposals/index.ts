@@ -72,6 +72,10 @@ export {
 } from "./components/ProposalHistoryAccordion";
 export { ProposalPhotosGrid } from "./components/ProposalPhotosGrid";
 export {
+  ProposalRevisionRequestNotice,
+  type ProposalRevisionRequestNoticeProps,
+} from "./components/ProposalRevisionRequestNotice";
+export {
   createProposalComposerSchema,
   validateProposalComposerForm,
   getProposalComposerFieldError,

@@ -31,7 +31,7 @@ describe("proposalCardCopy", () => {
 
   it("shows revision-specific details label for provider when revision was requested", () => {
     expect(resolveProposalCardDetailsLabel("REVISION_REQUESTED", "provider")).toBe(
-      "Ver detalhes da revisão solicitada",
+      "Ver detalhes da proposta",
     );
     expect(resolveProposalCardDetailsLabel("REVISION_REQUESTED", "client")).toBe(
       "Ver detalhes da proposta",
@@ -44,13 +44,14 @@ describe("proposalCardCopy", () => {
     expect(resolveProposalCardDescription("PENDING", "provider")).toContain("cliente");
   });
 
-  it("treats REVISED as rejected in headline with new-version description", () => {
+  it("describes REVISED from the viewer perspective", () => {
     expect(resolveProposalCardHeadline("REVISED", "client")).toBe("Proposta recusada");
+    expect(resolveProposalCardHeadline("REVISED", "provider")).toBe("Proposta revisada");
     expect(resolveProposalCardDescription("REVISED", "client")).toBe(
       "Uma nova versão da proposta está disponível.",
     );
     expect(resolveProposalCardDescription("REVISED", "provider")).toBe(
-      "Uma nova versão da proposta está disponível.",
+      "Esta versão foi substituída por uma nova proposta que você enviou.",
     );
   });
 

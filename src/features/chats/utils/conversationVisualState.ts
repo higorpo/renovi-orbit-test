@@ -5,6 +5,7 @@ import {
   Clock,
   Lock,
   type LucideIcon,
+  CircleDot,
   XCircle,
 } from "lucide-react";
 import type { CnsConversationStatus } from "../types/chats.types";
@@ -88,7 +89,7 @@ export const PROPOSAL_STATUS_SURFACE: Record<string, string> = {
   REJECTED_AUTOMATICALLY: "border-destructive/35 bg-destructive/5",
   EXPIRED: "border-muted-foreground/25 bg-muted/40",
   REVISION_REQUESTED: "border-amber-600/35 bg-amber-500/5",
-  REVISED: "border-destructive/35 bg-destructive/5",
+  REVISED: "border-amber-600/35 bg-amber-500/5",
 };
 
 export function getProposalCardSurfaceClass(status: string): string {
@@ -100,11 +101,12 @@ export function getProposalStatusIcon(status: string): LucideIcon {
     case "ACCEPTED":
       return CheckCircle2;
     case "EXPIRED":
-      return Clock;
+      return CircleOff;
     case "REJECTED":
     case "REJECTED_AUTOMATICALLY":
-    case "REVISED":
       return XCircle;
+    case "REVISED":
+      return CircleDot;
     case "PENDING":
       return Clock;
     default:

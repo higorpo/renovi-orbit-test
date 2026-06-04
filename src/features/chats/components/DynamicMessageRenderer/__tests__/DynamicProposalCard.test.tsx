@@ -133,9 +133,40 @@ describe("DynamicProposalCard", () => {
     expect(screen.queryByText("Proposta enviada")).not.toBeInTheDocument();
   });
 
-  it("shows revision details label for provider when revision was requested", () => {
+  it("shows client rejection response for provider on rejected proposal", () => {
     hydrateMock.mockReturnValue({
-      proposal: { status: "REVISION_REQUESTED", proposed_amount: 500 },
+      proposal: {
+        status: "REJECTED",
+        proposed_amount: 500,
+        client_rejection_response: "Preço acima do orçamento",
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <DynamicProposalCard
+        chatId="chat-1"
+        message={message}
+        viewerRole="provider"
+        isOutgoing
+        onProposalAction={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Resposta do cliente sobre a rejeição")).toBeInTheDocument();
+    expect(screen.getByText("Preço acima do orçamento")).toBeInTheDocument();
+  });
+
+  it("shows automatic rejection message for provider on REJECTED_AUTOMATICALLY", () => {
+    hydrateMock.mockReturnValue({
+      proposal: {
+        status: "REJECTED_AUTOMATICALLY",
+        proposed_amount: 500,
+        client_rejection_response:
+          "Proposta recusada automaticamente: prazo de 48 horas para resposta expirado.",
+      },
       isLoading: false,
       isError: false,
       refetch: vi.fn(),
@@ -152,7 +183,89 @@ describe("DynamicProposalCard", () => {
     );
 
     expect(
+      screen.getByText(/prazo de 48 horas para resposta expirado/i),
+    ).toBeInTheDocument();
+  });
+
+  it("hides rejection response for client on rejected proposal", () => {
+    hydrateMock.mockReturnValue({
+      proposal: {
+        status: "REJECTED",
+        proposed_amount: 500,
+        client_rejection_response: "Preço acima do orçamento",
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <DynamicProposalCard
+        chatId="chat-1"
+        message={message}
+        viewerRole="client"
+        isOutgoing={false}
+        onProposalAction={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("Resposta do cliente sobre a rejeição")).not.toBeInTheDocument();
+  });
+
+  it("shows revision category and notes for provider when revision was requested", () => {
+    hydrateMock.mockReturnValue({
+      proposal: {
+        status: "REVISION_REQUESTED",
+        proposed_amount: 500,
+        revision_reason: "PRICE_TOO_HIGH",
+        revision_notes: "Valor acima do orçamento previsto",
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <DynamicProposalCard
+        chatId="chat-1"
+        message={message}
+        viewerRole="provider"
+        isOutgoing
+        onProposalAction={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/revisão solicitada pelo cliente/i)).toBeInTheDocument();
+    expect(screen.getByText(/preço alto/i)).toBeInTheDocument();
+    expect(screen.getByText(/valor acima do orçamento previsto/i)).toBeInTheDocument();
+    expect(
       screen.getByRole("button", { name: /Ver detalhes da revisão solicitada/i }),
     ).toBeInTheDocument();
+  });
+
+  it("hides revision request notice for client when revision was requested", () => {
+    hydrateMock.mockReturnValue({
+      proposal: {
+        status: "REVISION_REQUESTED",
+        proposed_amount: 500,
+        revision_reason: "PRICE_TOO_HIGH",
+        revision_notes: "Valor acima do orçamento previsto",
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <DynamicProposalCard
+        chatId="chat-1"
+        message={message}
+        viewerRole="client"
+        isOutgoing={false}
+        onProposalAction={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(/revisão solicitada pelo cliente/i)).not.toBeInTheDocument();
   });
 });
