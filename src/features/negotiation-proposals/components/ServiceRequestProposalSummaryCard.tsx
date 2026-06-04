@@ -15,6 +15,11 @@ import { ProposalHistoryAccordion } from "./ProposalHistoryAccordion";
 import { ProposalPhotosGrid } from "./ProposalPhotosGrid";
 import { ProposalClientRejectionNotice } from "./ProposalClientRejectionNotice";
 import { ProposalRevisionRequestNotice } from "./ProposalRevisionRequestNotice";
+import {
+  ProposalDetailLabel,
+  ProposalDetailSection,
+  ProposalDetailValue,
+} from "./proposalDetailLayout";
 
 export interface ServiceRequestProposalSummaryCardProps {
   summary: ServiceRequestProposalSummary;
@@ -48,47 +53,44 @@ function ServiceRequestProposalSummaryContent({
     <>
       <div className="grid gap-2 sm:grid-cols-2">
         {typeof summary.proposedAmount === "number" && (
-          <div className="rounded-lg border bg-muted/20 p-3">
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <CircleDollarSign className="h-3.5 w-3.5" aria-hidden />
+          <ProposalDetailSection variant="muted">
+            <ProposalDetailLabel icon={CircleDollarSign}>
               {copy.amountInformedLabel}
-            </p>
-            <p className="mt-1 text-sm font-semibold text-foreground">
+            </ProposalDetailLabel>
+            <ProposalDetailValue semibold>
               {formatCurrency(summary.proposedAmount)}
-            </p>
-          </div>
+            </ProposalDetailValue>
+          </ProposalDetailSection>
         )}
 
         {typeof summary.taxAmount === "number" && (
-          <div className="rounded-lg border bg-muted/20 p-3">
-            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Percent className="h-3.5 w-3.5" aria-hidden />
-              Taxa da plataforma
-            </p>
-            <p className="mt-1 text-sm font-semibold text-foreground">
+          <ProposalDetailSection variant="muted">
+            <ProposalDetailLabel icon={Percent}>Taxa da plataforma</ProposalDetailLabel>
+            <ProposalDetailValue semibold>
               {formatCurrency(summary.taxAmount)}
               {typeof summary.taxRate === "number"
                 ? ` (${(summary.taxRate * 100).toFixed(0)}%)`
                 : ""}
-            </p>
-          </div>
+            </ProposalDetailValue>
+          </ProposalDetailSection>
         )}
       </div>
 
-      <div className="rounded-lg border bg-muted/20 p-3">
-        <p className="text-xs text-muted-foreground">{copy.statusLabel}</p>
-        <p className="mt-1 text-sm font-semibold text-foreground">{proposalStatus}</p>
-      </div>
+      <ProposalDetailSection variant="muted">
+        <ProposalDetailLabel>{copy.statusLabel}</ProposalDetailLabel>
+        <ProposalDetailValue semibold>{proposalStatus}</ProposalDetailValue>
+      </ProposalDetailSection>
 
-      {summary.description && (
-        <div className="rounded-lg border p-3">
-          <p className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-muted-foreground">
-            <FileText className="h-3.5 w-3.5" aria-hidden />
+      {summary.description ? (
+        <ProposalDetailSection>
+          <ProposalDetailLabel icon={FileText} emphasized>
             {copy.descriptionLabel}
-          </p>
-          <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{summary.description}</p>
-        </div>
-      )}
+          </ProposalDetailLabel>
+          <ProposalDetailValue spacing="relaxed" className="whitespace-pre-wrap">
+            {summary.description}
+          </ProposalDetailValue>
+        </ProposalDetailSection>
+      ) : null}
 
       {isRejectedProposalStatus(summary.status) ? (
         <ProposalClientRejectionNotice
