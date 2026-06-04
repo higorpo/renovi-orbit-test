@@ -101,7 +101,6 @@ Coisas para fazer next
 -coluna client_response_deadline_at acho que não é usado
 -na hora de montar a proposta, verificar se eu colocar um valor fixo de 3 dias por exemplo o que acontece se cair no final de semana.
 -verificar quando o action banner aparece
-- tempo estimado para executar não pode ser maior que 24hrs
 
 ATUALIZAR:
 Essas são as **funções/RPCs** que ainda comparam `service_requests.status` com os valores legados em texto (`'open'`, `'in_progress'`, `'closed'`, `'cancelled'`). Com o enum novo (`OPEN`, `COMPLETED`, `CANCELLED`), essas comparações **param de bater** — em geral retornam vazio ou lançam erro.

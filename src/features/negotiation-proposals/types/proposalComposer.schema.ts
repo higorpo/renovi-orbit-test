@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { applyContentModerationZodIssue } from "@/lib/contentModeration";
-import { MAX_PROPOSAL_DESCRIPTION_LENGTH } from "../constants/proposalComposer";
+import {
+  MAX_PROPOSAL_DESCRIPTION_LENGTH,
+  MAX_PROPOSAL_DURATION_DAYS,
+  MAX_PROPOSAL_DURATION_HOURS,
+} from "../constants/proposalComposer";
 import type { ProposalComposerFormValues } from "./proposalComposer.types";
 
 export const proposalAvailabilitySlotSchema = z.object({
@@ -57,6 +61,23 @@ export function createProposalComposerSchema(
       }
 
       const durationValue = Number.parseInt(data.durationValueInput, 10);
+
+      if (data.durationUnit === "hours" && durationValue > MAX_PROPOSAL_DURATION_HOURS) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["durationValueInput"],
+          message: "O tempo estimado não pode ser maior que 24 horas.",
+        });
+      }
+
+      if (data.durationUnit === "days" && durationValue > MAX_PROPOSAL_DURATION_DAYS) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["durationValueInput"],
+          message: "O tempo estimado não pode ser maior que 1 semana (7 dias).",
+        });
+      }
+
       data.availabilitySlots.forEach((slot, index) => {
         if (!slot.startDate.trim()) {
           context.addIssue({

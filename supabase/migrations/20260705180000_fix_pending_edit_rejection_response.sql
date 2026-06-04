@@ -93,6 +93,16 @@ begin
       using errcode = '22023';
   end if;
 
+  if p_proposal_duration_unit = 'hours' and p_proposal_duration_value > 24 then
+    raise exception 'Proposal duration in hours cannot exceed 24'
+      using errcode = '22023';
+  end if;
+
+  if p_proposal_duration_unit = 'days' and p_proposal_duration_value > 7 then
+    raise exception 'Proposal duration in days cannot exceed 7'
+      using errcode = '22023';
+  end if;
+
   if p_proposal_suggested_slots is null
     or jsonb_typeof(p_proposal_suggested_slots) <> 'array' then
     raise exception 'Suggested slots must be a JSON array'

@@ -151,7 +151,7 @@ Definições no código:
 |---------------|-----------------|
 | Valor (`priceInput`) | Máscara BRL `maskBudgetInput`; parse > 0; debounce **1500 ms** antes de chamar `calculate_provider_service_pricing` |
 | Descrição | Obrigatória; máx. **1200** caracteres |
-| Duração | Inteiro > 0 (`durationValueInput` só dígitos) |
+| Duração | Inteiro > 0 (`durationValueInput` só dígitos); máx. **24** em `hours`, máx. **7** em `days` (1 semana) |
 | Unidade | `hours` \| `days` |
 | Slots de disponibilidade | Entre **1 e 3**; adicionar além de 3 → toast *"Você pode sugerir no máximo 3 opções de data."*; remover último → *"Informe pelo menos 1 opção de data."* |
 | Data início | Obrigatória por slot; não pode ser **anterior a hoje** (meia-noite local) |
