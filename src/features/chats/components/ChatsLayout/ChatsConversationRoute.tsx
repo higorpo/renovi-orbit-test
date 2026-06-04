@@ -10,7 +10,9 @@ import { RevisionRequestDialog } from "@/features/negotiation-proposals/componen
 import { useProposalDetail } from "@/features/negotiation-proposals/hooks/useProposalDetail";
 import type { ProposalComposerMode } from "@/features/negotiation-proposals/types/proposalComposerMode.types";
 import type { ProposalDetailView } from "@/features/negotiation-proposals/types/proposalDetails.types";
+import { buildDateUnavailableRevisionInitialValues } from "@/features/negotiation-proposals/utils/buildDateUnavailableRevisionInitialValues";
 import { mapProposalDetailToSummary } from "@/features/negotiation-proposals/utils/mapProposalDetailToSummary";
+import type { RevisionRequestInitialValues } from "@/features/negotiation-proposals/types/proposals.types";
 import { canEditServiceRequestProposal } from "@/features/negotiation-proposals/utils/proposalStatus";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { CHAT_DETAILS_COLUMN_MEDIA_QUERY } from "../../constants/layout";
@@ -44,6 +46,8 @@ export function ChatsConversationRoute() {
   const [rejectProposalId, setRejectProposalId] = useState<string | null>(null);
   const [revisionOpen, setRevisionOpen] = useState(false);
   const [revisionProposalId, setRevisionProposalId] = useState<string | null>(null);
+  const [revisionInitialValues, setRevisionInitialValues] =
+    useState<RevisionRequestInitialValues | null>(null);
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
   const [proposalComposerOpen, setProposalComposerOpen] = useState(false);
   const [proposalComposerMode, setProposalComposerMode] = useState<ProposalComposerMode>("create");
@@ -87,6 +91,7 @@ export function ChatsConversationRoute() {
     setRejectProposalId(null);
     setRevisionOpen(false);
     setRevisionProposalId(null);
+    setRevisionInitialValues(null);
     setAcceptOpen(false);
     setAcceptProposalId(null);
   }, [chatId]);
@@ -131,6 +136,7 @@ export function ChatsConversationRoute() {
       }
 
       if (action === "request_revision") {
+        setRevisionInitialValues(null);
         setRevisionProposalId(proposalId);
         setRevisionOpen(true);
         return;
@@ -175,6 +181,18 @@ export function ChatsConversationRoute() {
   const handleArchiveRequest = useCallback(() => {
     setConfirmCloseOpen(true);
   }, []);
+
+  const handleAcceptRequestRevision = useCallback(() => {
+    const proposalId = acceptProposalId;
+    if (!proposalId) return;
+
+    const suggestedSlots = acceptProposalDetailQuery.data?.proposal_suggested_slots ?? [];
+    setRevisionInitialValues(buildDateUnavailableRevisionInitialValues(suggestedSlots));
+    setRevisionProposalId(proposalId);
+    setAcceptOpen(false);
+    setAcceptProposalId(null);
+    setRevisionOpen(true);
+  }, [acceptProposalId, acceptProposalDetailQuery.data?.proposal_suggested_slots]);
 
   const handleConfirmClose = useCallback(() => {
     closeConversationMutation.mutate(undefined, {
@@ -242,6 +260,8 @@ export function ChatsConversationRoute() {
           isLoading={acceptProposalDetailQuery.isLoading}
           isError={acceptProposalDetailQuery.isError}
           onRetry={() => void acceptProposalDetailQuery.refetch()}
+          revisionCount={acceptProposalDetailQuery.data?.revision_count ?? 0}
+          onRequestRevision={handleAcceptRequestRevision}
         />
       ) : null}
 
@@ -258,11 +278,18 @@ export function ChatsConversationRoute() {
       {revisionOpen ? (
         <RevisionRequestDialog
           open
-          onOpenChange={setRevisionOpen}
+          onOpenChange={(open) => {
+            setRevisionOpen(open);
+            if (!open) {
+              setRevisionProposalId(null);
+              setRevisionInitialValues(null);
+            }
+          }}
           chatId={chatId}
           serviceRequestId={serviceRequestId}
           proposalId={revisionProposalId}
           revisionCount={revisionProposalDetailQuery.data?.revision_count ?? 0}
+          initialValues={revisionInitialValues}
         />
       ) : null}
 

@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useMobileDialogViewport } from "@/hooks/useMobileDialogViewport";
 import { MAX_PROPOSAL_REVISIONS } from "../constants/proposalRevisions";
 import { useRequestProposalRevisionMutation } from "../hooks/useProposalClientMutations";
-import type { ProposalRevisionReason } from "../types/proposals.types";
+import type { ProposalRevisionReason, RevisionRequestInitialValues } from "../types/proposals.types";
 import { ProposalRevisionCounter } from "./ProposalRevisionCounter";
 import { PROPOSAL_REVISION_REASON_OPTIONS } from "../utils/proposalRevisionReasonLabels";
 
@@ -48,6 +48,7 @@ export interface RevisionRequestDialogProps {
   serviceRequestId: string | null;
   proposalId: string | null;
   revisionCount: number;
+  initialValues?: RevisionRequestInitialValues | null;
 }
 
 export function RevisionRequestDialog({
@@ -57,6 +58,7 @@ export function RevisionRequestDialog({
   serviceRequestId,
   proposalId,
   revisionCount,
+  initialValues = null,
 }: RevisionRequestDialogProps) {
   const revisionMutation = useRequestProposalRevisionMutation(chatId, serviceRequestId);
   const { contentRef, scheduleSync } = useMobileDialogViewport(open);
@@ -72,10 +74,12 @@ export function RevisionRequestDialog({
   });
 
   useEffect(() => {
-    if (open) {
-      form.reset({ revisionReason: "CLARIFY_DETAILS", revisionNotes: "" });
-    }
-  }, [open, form]);
+    if (!open) return;
+    form.reset({
+      revisionReason: initialValues?.revisionReason ?? "CLARIFY_DETAILS",
+      revisionNotes: initialValues?.revisionNotes ?? "",
+    });
+  }, [open, form, initialValues?.revisionReason, initialValues?.revisionNotes]);
 
   const onSubmit = form.handleSubmit((values) => {
     if (!proposalId || revisionLimitReached) return;

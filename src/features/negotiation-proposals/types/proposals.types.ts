@@ -4,6 +4,11 @@ import type { ProposalDurationUnit } from "./proposalComposer.types";
 export type ProposalStatus = Database["public"]["Enums"]["proposal_status"];
 export type ProposalRevisionReason = Database["public"]["Enums"]["proposal_revision_reason"];
 
+export interface RevisionRequestInitialValues {
+  revisionReason: ProposalRevisionReason;
+  revisionNotes?: string;
+}
+
 export type ProposalSuggestedSlotShift = "morning" | "afternoon" | "full_day";
 
 /** Wire format for suggested slots in RPC args/responses. */

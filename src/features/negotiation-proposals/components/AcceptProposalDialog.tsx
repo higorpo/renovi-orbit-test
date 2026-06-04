@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, WifiOff, X } from "lucide-react";
+import { CalendarDays, ChevronRight, Loader2, WifiOff, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { useMobileDialogViewport } from "@/hooks/useMobileDialogViewport";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import type { ProposalSuggestedSlotRpc } from "../types/proposals.types";
+import { MAX_PROPOSAL_REVISIONS } from "../constants/proposalRevisions";
 import { useAcceptProposalMutation } from "../hooks/useProposalClientMutations";
 import { formatProposalSuggestedSlot } from "../utils/formatProposalSuggestedSlot";
 
@@ -27,6 +28,8 @@ export interface AcceptProposalDialogProps {
   isLoading?: boolean;
   isError?: boolean;
   onRetry?: () => void;
+  revisionCount?: number;
+  onRequestRevision?: () => void;
 }
 
 export function AcceptProposalDialog({
@@ -39,6 +42,8 @@ export function AcceptProposalDialog({
   isLoading = false,
   isError = false,
   onRetry,
+  revisionCount = 0,
+  onRequestRevision,
 }: AcceptProposalDialogProps) {
   const isOnline = useOnlineStatus();
   const acceptMutation = useAcceptProposalMutation(chatId, serviceRequestId);
@@ -53,6 +58,13 @@ export function AcceptProposalDialog({
   const selectedSlot = suggestedSlots[selectedIndex] ?? null;
   const canSubmit =
     Boolean(proposalId) && Boolean(selectedSlot) && isOnline && !isLoading && !isError;
+  const revisionLimitReached = revisionCount >= MAX_PROPOSAL_REVISIONS;
+  const showRevisionCard =
+    Boolean(onRequestRevision) &&
+    !revisionLimitReached &&
+    !isLoading &&
+    !isError &&
+    suggestedSlots.length > 0;
 
   const handleAccept = () => {
     if (!proposalId || !selectedSlot || !isOnline) return;
@@ -145,6 +157,25 @@ export function AcceptProposalDialog({
                   </label>
                 ))}
               </fieldset>
+            ) : null}
+
+            {showRevisionCard ? (
+              <button
+                type="button"
+                onClick={onRequestRevision}
+                className="flex w-full items-start gap-3 rounded-xl border border-border bg-muted/30 px-3 py-3 text-left transition-colors hover:bg-muted/50"
+              >
+                <CalendarDays className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+                <span className="min-w-0 flex-1 space-y-1">
+                  <span className="block text-sm font-medium text-foreground">
+                    Nenhuma data funciona?
+                  </span>
+                  <span className="block text-sm text-muted-foreground">
+                    Você pode solicitar uma revisão da proposta para o prestador sugerir outras datas.
+                  </span>
+                </span>
+                <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+              </button>
             ) : null}
         </div>
 

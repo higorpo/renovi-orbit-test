@@ -97,6 +97,9 @@ Coisas para fazer next
 -quando eu tenho uma proposta para revisão, o action banner exibe o botão enviar proposta e se eu aperto ele naõ recupera as infos da proposta anterior.
 -ao recusar a proposta, o chat tem que ser encerrado também
 -coluna client_response_deadline_at acho que não é usado
+-ele da opção de editar proposta mas quando eu tento editar ele da erro falando que já existe uma proposta. corrigir esse problema e também garantir que só é possível aceitar/recusar/pedir revisão da proposta mais recente enviada
+-na hora de montar a proposta, verificar se eu colocar um valor fixo de 3 dias por exemplo o que acontece se cair no final de semana.
+-mostrar contador de quantidade de chats não lidos no bottom navigator
 
 ATUALIZAR:
 Essas são as **funções/RPCs** que ainda comparam `service_requests.status` com os valores legados em texto (`'open'`, `'in_progress'`, `'closed'`, `'cancelled'`). Com o enum novo (`OPEN`, `COMPLETED`, `CANCELLED`), essas comparações **param de bater** — em geral retornam vazio ou lançam erro.
