@@ -31,6 +31,8 @@ export interface ChatActionBannerContext {
   canShowSendProposalBanner?: boolean;
   /** No chat interaction for 12+ hours (close-conversation gate for both roles). */
   canShowCloseConversationBanner?: boolean;
+  /** Latest linked proposal status is still loading (avoid send-proposal flash). */
+  isLatestProposalStatusPending?: boolean;
 }
 
 const PRIORITY = {
@@ -116,7 +118,8 @@ export function resolveChatActionBanner(
     if (
       !context.pendingProposalId &&
       context.conversationStatus === "ACTIVE" &&
-      context.canShowSendProposalBanner
+      context.canShowSendProposalBanner &&
+      !context.isLatestProposalStatusPending
     ) {
       return buildProviderSendBanner();
     }

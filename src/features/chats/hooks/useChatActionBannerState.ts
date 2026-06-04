@@ -25,6 +25,7 @@ export interface UseChatActionBannerStateParams {
   providerId?: string | null;
   lastInteractionAt?: string | null;
   enabled?: boolean;
+  isLatestProposalStatusPending?: boolean;
 }
 
 export interface ChatActionBannerCtaPayload {
@@ -44,6 +45,7 @@ export function useChatActionBannerState({
   providerId = null,
   lastInteractionAt = null,
   enabled = true,
+  isLatestProposalStatusPending = false,
 }: UseChatActionBannerStateParams) {
   const { trackEvent } = useAnalytics();
   const [dismissedForVisit, setDismissedForVisit] = useState(false);
@@ -75,6 +77,7 @@ export function useChatActionBannerState({
       primaryProposalStatus,
       canShowSendProposalBanner,
       canShowCloseConversationBanner,
+      isLatestProposalStatusPending,
     });
   }, [
     canShowCloseConversationBanner,
@@ -82,6 +85,7 @@ export function useChatActionBannerState({
     chatId,
     conversationStatus,
     enabled,
+    isLatestProposalStatusPending,
     pendingProposalId,
     primaryProposalStatus,
     revisionRequestedProposalId,

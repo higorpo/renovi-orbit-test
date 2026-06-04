@@ -25,6 +25,8 @@ import type { ChatActionBannerCtaPayload } from "../../hooks/useChatActionBanner
 import type { ProposalCardAction } from "../DynamicMessageRenderer/DynamicProposalCard";
 import { createClientSendId } from "../../utils/clientSendId";
 import { deriveLatestProposalIdFromMessages } from "../../utils/deriveLatestProposalIdFromMessages";
+import { deriveRevisionRequestedProposalId } from "../../utils/deriveRevisionRequestedProposalId";
+import { useProposalTimelineHydration } from "../../hooks/useProposalTimelineHydration";
 import { resolveCounterpartyViewedMessageId } from "../../utils/resolveCounterpartyViewedMessageId";
 import { ChatComposerBar } from "./ChatComposerBar";
 import { ChatScreenHeader } from "./ChatScreenHeader";
@@ -83,23 +85,40 @@ export function ChatScreen({
     conversationStatus: detail?.conversation.status ?? null,
     viewerRole,
   });
-  const pendingProposalId = useMemo(
+  const latestProposalId = useMemo(
     () => deriveLatestProposalIdFromMessages(messages),
     [messages],
   );
   const hasPendingProposal = composerState.disabledReason === "pending_proposal";
 
+  const { proposal: latestProposal, isLoading: isLatestProposalLoading } = useProposalTimelineHydration(
+    chatId,
+    latestProposalId,
+    Boolean(detail && latestProposalId),
+  );
+
+  const revisionRequestedProposalId = useMemo(
+    () => deriveRevisionRequestedProposalId(latestProposalId, latestProposal?.status),
+    [latestProposal?.status, latestProposalId],
+  );
+
+  const isLatestProposalStatusPending = Boolean(
+    latestProposalId && isLatestProposalLoading && !latestProposal,
+  );
+
   const { banner, isVisible: isBannerVisible, dismiss, getCtaPayload } = useChatActionBannerState({
     chatId,
     viewerRole,
     conversationStatus: detail?.conversation.status ?? "INACTIVE",
-    pendingProposalId: hasPendingProposal ? pendingProposalId : null,
+    pendingProposalId: hasPendingProposal ? latestProposalId : null,
+    revisionRequestedProposalId,
     primaryProposalStatus: hasPendingProposal ? "PENDING" : null,
     messages,
     clientId: detail?.conversation.client_id ?? null,
     providerId: detail?.conversation.provider_id ?? null,
     lastInteractionAt: detail?.conversation.last_interaction_at ?? null,
     enabled: Boolean(detail),
+    isLatestProposalStatusPending,
   });
 
   useChatSentryContext({

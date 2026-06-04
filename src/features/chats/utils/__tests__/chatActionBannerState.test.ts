@@ -34,6 +34,18 @@ describe("resolveChatActionBanner", () => {
     expect(banner).toBeNull();
   });
 
+  it("does not show send proposal while latest proposal status is pending", () => {
+    const banner = resolveChatActionBanner({
+      viewerRole: "provider",
+      ...activeContext,
+      canShowSendProposalBanner: true,
+      canShowCloseConversationBanner: false,
+      isLatestProposalStatusPending: true,
+    });
+
+    expect(banner).toBeNull();
+  });
+
   it("shows send proposal for provider when exchange criteria are met", () => {
     const banner = resolveChatActionBanner({
       viewerRole: "provider",
