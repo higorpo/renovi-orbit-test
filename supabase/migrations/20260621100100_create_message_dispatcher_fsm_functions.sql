@@ -207,7 +207,8 @@ begin
     where d.profile_id = p_profile_id
       and d.channel = 'email'
       and d.status in ('DELIVERED', 'QUEUED', 'PROCESSING', 'SCHEDULED')
-      and d.created_at > now() - interval '24 hours';
+      and d.created_at > now() - interval '24 hours'
+      and coalesce(d.bypass_limits, false) = false;
 
     if v_email_count >= v_email_limit then
       v_rate_limit_meta := jsonb_build_object(
@@ -273,7 +274,8 @@ begin
     where d.profile_id = p_profile_id
       and d.channel = 'push'
       and d.status in ('DELIVERED', 'QUEUED', 'PROCESSING', 'SCHEDULED')
-      and d.created_at > now() - interval '24 hours';
+      and d.created_at > now() - interval '24 hours'
+      and coalesce(d.bypass_limits, false) = false;
 
     if v_push_count >= v_push_limit then
       v_rate_limit_meta := jsonb_build_object(
@@ -648,6 +650,7 @@ begin
           and dx.channel = 'email'
           and dx.status in ('DELIVERED', 'QUEUED', 'PROCESSING', 'SCHEDULED')
           and dx.created_at > now() - interval '24 hours'
+          and coalesce(dx.bypass_limits, false) = false
           and dx.id <> pe.id
       ) + (
         -- Count earlier pending siblings to preserve sequential quota semantics
@@ -705,6 +708,7 @@ begin
           and dx.channel = 'push'
           and dx.status in ('DELIVERED', 'QUEUED', 'PROCESSING', 'SCHEDULED')
           and dx.created_at > now() - interval '24 hours'
+          and coalesce(dx.bypass_limits, false) = false
           and dx.id <> pp.id
       ) + (
         -- Count earlier pending siblings to preserve sequential quota semantics

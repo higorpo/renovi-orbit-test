@@ -500,7 +500,7 @@ create table message_dispatcher.message_dispatcher_user_limits (
 
 **Counter refresh:** On ingest, if `now() - window_start > 24h`, reset counter and window atomically in same txn.
 
-**Quota counting (Req. 1 AC1):** For email evaluation, count rows in `message_dispatcher.message_dispatches` where `channel = 'email'` and `status in ('DELIVERED','QUEUED','PROCESSING','SCHEDULED')` and `created_at > now() - interval '24 hours'` **OR** use maintained counters incremented at ingest when entering those states — design uses **live COUNT** inside ingest txn after lock for correctness (counters are optimization cache only).
+**Quota counting (Req. 1 AC1):** For email evaluation, count rows in `message_dispatcher.message_dispatches` where `channel = 'email'` and `status in ('DELIVERED','QUEUED','PROCESSING','SCHEDULED')` and `created_at > now() - interval '24 hours'` and `coalesce(bypass_limits, false) = false` (same filter for push). **OR** use maintained counters incremented at ingest when entering those states — design uses **live COUNT** inside ingest txn after lock for correctness (counters are optimization cache only).
 
 ## 3.5 `message_dispatch_deliveries`
 
