@@ -260,7 +260,7 @@ export function ChatsConversationRoute() {
         serviceRequestId={serviceRequestId}
         mode={proposalComposerMode}
         initialProposal={proposalComposerInitialProposal}
-        onSubmitted={() => invalidateChatProposalQueries()}
+        onSubmitted={invalidateChatProposalQueries}
       />
 
       <ProposalDetailsDialog

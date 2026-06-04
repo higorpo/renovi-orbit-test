@@ -1,12 +1,11 @@
 import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import type { ProfileRole } from "@/features/auth";
 import { Button } from "@/components/ui/button";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { cn } from "@/lib/utils";
 import { useChatTimelinePrependScroll } from "../../hooks/useChatTimelinePrependScroll";
-import { useSnapChatTimelineOnKeyboardOpen } from "../../hooks/useSnapChatTimelineOnKeyboardOpen";
-import { isNearChatBottom } from "../../utils/chatTimelineScroll";
+import { useChatTimelineScroll } from "../../hooks/useChatTimelineScroll";
 import type { ProposalCardAction } from "../DynamicMessageRenderer/DynamicProposalCard";
 import type { ChatMessageListItem } from "../../types/chats.types";
 import { resolveChatDiscoveryWelcomeAnchorIso } from "../../utils/chatDiscoveryWelcome";
@@ -63,9 +62,6 @@ export function ChatTimeline({
   viewedReceiptMessageId = null,
   className,
 }: ChatTimelineProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const didInitialScrollRef = useRef(false);
   const isMobile = !useBreakpointMd();
 
   const showDiscoveryWelcome = !hasNextPage && !isFetchingNextPage;
@@ -86,81 +82,31 @@ export function ChatTimeline({
     return null;
   }, [timelineItems]);
 
-  const scrollToLatest = useCallback(
-    (behavior: ScrollBehavior = "auto") => {
-      bottomRef.current?.scrollIntoView({ block: "end", behavior });
+  const lastMessageId = messages[messages.length - 1]?.id;
 
-      if (actionBannerTopInset <= 0) return;
-
-      requestAnimationFrame(() => {
-        const scrollEl = scrollRef.current;
-        if (!scrollEl) return;
-
-        const lastMessage = scrollEl.querySelector<HTMLElement>('[data-chat-timeline-last="true"]');
-        if (!lastMessage) return;
-
-        const clearanceScrollTop = lastMessage.offsetTop - actionBannerTopInset;
-        if (scrollEl.scrollTop < clearanceScrollTop) {
-          scrollEl.scrollTop = Math.max(0, clearanceScrollTop);
-        }
-      });
-    },
-    [actionBannerTopInset],
-  );
-
-  const preserveScrollOnLayoutShift = useCallback(() => {
-    const element = scrollRef.current;
-    if (!element) return;
-    const distanceFromBottom = element.scrollHeight - element.scrollTop - element.clientHeight;
-    requestAnimationFrame(() => {
-      if (!scrollRef.current) return;
-      scrollRef.current.scrollTop =
-        scrollRef.current.scrollHeight - scrollRef.current.clientHeight - distanceFromBottom;
-    });
-  }, []);
-
-  const { anchorBeforeKeyboard, syncNearBottomFromScroll } = useSnapChatTimelineOnKeyboardOpen({
+  const {
     scrollRef,
-    scrollToLatest: () => scrollToLatest("auto"),
-    enabled: isMobile,
+    bottomRef,
+    preserveScrollOnLayoutShift,
+    onComposerFocus,
+    onTimelineScroll,
+  } = useChatTimelineScroll({
+    resetKey,
+    isLoading,
+    timelineItemCount: timelineItems.length,
+    lastTimelineMessageKey,
+    lastMessageId,
+    actionBannerTopInset,
+    snapOnKeyboardOpen: isMobile,
   });
 
   useChatTimelinePrependScroll(scrollRef, isFetchingNextPage, timelineItems.length);
 
-  useEffect(() => {
-    didInitialScrollRef.current = false;
-  }, [resetKey]);
-
-  useEffect(() => {
-    if (isLoading || timelineItems.length === 0 || didInitialScrollRef.current) return;
-    didInitialScrollRef.current = true;
-    scrollToLatest("auto");
-  }, [isLoading, scrollToLatest, timelineItems.length]);
-
-  const lastMessageId = messages[messages.length - 1]?.id;
-
-  useEffect(() => {
-    if (!didInitialScrollRef.current || !lastMessageId) return;
-    const scrollEl = scrollRef.current;
-    if (scrollEl && !isNearChatBottom(scrollEl)) return;
-    scrollToLatest("smooth");
-  }, [lastMessageId, scrollToLatest]);
-
-  useEffect(() => {
-    if (!didInitialScrollRef.current || actionBannerTopInset <= 0) return;
-
-    preserveScrollOnLayoutShift();
-    requestAnimationFrame(() => {
-      scrollToLatest("auto");
-    });
-  }, [actionBannerTopInset, preserveScrollOnLayoutShift, scrollToLatest]);
-
   const handleScroll = () => {
+    onTimelineScroll();
+
     const element = scrollRef.current;
     if (!element) return;
-
-    syncNearBottomFromScroll();
-
     if (!hasNextPage || isFetchingNextPage) return;
     if (element.scrollTop <= 48) onLoadOlder();
   };
@@ -197,7 +143,7 @@ export function ChatTimeline({
 
   return (
     <ChatTimelineScrollContext.Provider
-      value={{ preserveScrollOnLayoutShift, onComposerFocus: anchorBeforeKeyboard }}
+      value={{ preserveScrollOnLayoutShift, onComposerFocus }}
     >
       <div
         ref={scrollRef}
