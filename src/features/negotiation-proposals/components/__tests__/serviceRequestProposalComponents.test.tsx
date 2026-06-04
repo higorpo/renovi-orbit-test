@@ -189,6 +189,17 @@ describe("ProposalDetailsDialog", () => {
     expect(screen.queryByText(/valor a receber/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/muito caro/i)).not.toBeInTheDocument();
   });
+
+  it("shows client rejection reason in proposal copy variant when rejected", () => {
+    render(
+      <ProposalDetailsDialog
+        proposal={{ ...clientProposalDetail, status: "REJECTED", client_rejection_response: "Muito caro" }}
+        onOpenChange={vi.fn()}
+        copyVariant="proposal"
+      />,
+    );
+    expect(screen.getByText(/muito caro/i)).toBeInTheDocument();
+  });
 });
 
 describe("ProposalHistoryAccordion", () => {

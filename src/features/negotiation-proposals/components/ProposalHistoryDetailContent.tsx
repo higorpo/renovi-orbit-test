@@ -15,6 +15,7 @@ import {
   getProposalStatusLabel,
   translateProposalShift,
 } from "../utils/proposalDetailsFormatters";
+import { isRejectedProposalStatus } from "../utils/proposalStatus";
 import { ProposalClientRejectionNotice } from "./ProposalClientRejectionNotice";
 import { ProposalPhotosGrid } from "./ProposalPhotosGrid";
 import { ProposalRevisionRequestNotice } from "./ProposalRevisionRequestNotice";
@@ -164,7 +165,7 @@ export function ProposalHistoryDetailContent({
         revisionNotes={proposal.revision_notes}
       />
 
-      {copyVariant === "budget" ? (
+      {isRejectedProposalStatus(proposal.status) ? (
         <ProposalClientRejectionNotice
           clientRejectionResponse={proposal.client_rejection_response}
         />
