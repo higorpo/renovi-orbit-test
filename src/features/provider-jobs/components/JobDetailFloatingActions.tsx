@@ -4,12 +4,14 @@ import { cn } from "@/lib/utils";
 
 interface JobDetailFloatingActionsProps {
   isInsideSheet: boolean;
-  onOpenProposalComposer: () => void;
+  isOpeningChat?: boolean;
+  onOpenChat: () => void;
 }
 
 export function JobDetailFloatingActions({
   isInsideSheet,
-  onOpenProposalComposer,
+  isOpeningChat = false,
+  onOpenChat,
 }: JobDetailFloatingActionsProps) {
   return (
     <>
@@ -29,7 +31,8 @@ export function JobDetailFloatingActions({
           size="icon"
           className="h-14 w-14 rounded-full shadow-lg"
           aria-label="Fazer orçamento"
-          onClick={onOpenProposalComposer}
+          disabled={isOpeningChat}
+          onClick={onOpenChat}
         >
           <CircleDollarSign className="h-6 w-6" aria-hidden />
         </Button>
@@ -47,7 +50,8 @@ export function JobDetailFloatingActions({
           type="button"
           variant="secondary"
           className="w-full gap-2"
-          onClick={onOpenProposalComposer}
+          disabled={isOpeningChat}
+          onClick={onOpenChat}
         >
           <Send className="h-4 w-4" aria-hidden />
           Estou pronto para enviar um orçamento

@@ -9,6 +9,7 @@ import type {
   ConversationListResponse,
   CnsMessageType,
   CloseConversationResult,
+  InitiateConversationResult,
   MarkConversationReadResult,
   SendMessageResult,
 } from "../types/chats.types";
@@ -88,6 +89,17 @@ function isSendMessageResult(value: unknown): value is SendMessageResult {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
   return v.message != null && typeof v.message === "object" && v.conversation != null;
+}
+
+function isInitiateConversationResult(value: unknown): value is InitiateConversationResult {
+  if (!value || typeof value !== "object") return false;
+  const conversation = (value as InitiateConversationResult).conversation;
+  return (
+    conversation != null &&
+    typeof conversation === "object" &&
+    typeof conversation.id === "string" &&
+    typeof conversation.service_request_id === "string"
+  );
 }
 
 function isMarkConversationReadResult(value: unknown): value is MarkConversationReadResult {
@@ -207,6 +219,23 @@ export async function checkChatFreeMessagingAllowed(
   return { data, error: null };
 }
 
+export async function initiateConversation(params: {
+  serviceRequestId: string;
+  idempotencyKey?: string;
+}): Promise<ChatsApiResult<InitiateConversationResult>> {
+  const idempotencyKey = params.idempotencyKey ?? generateIdempotencyKeyV7();
+
+  return invokeRpc(
+    CNS_CHAT_RPC.initiateConversation,
+    {
+      p_service_request_id: params.serviceRequestId,
+      p_idempotency_key: idempotencyKey,
+    },
+    isInitiateConversationResult,
+    "chats_initiate_conversation_invalid_response",
+  );
+}
+
 export async function sendMessage(params: {
   idempotencyKey?: string;
   messageType: CnsMessageType;
@@ -237,5 +266,6 @@ export const chatsApi = {
   closeConversation,
   markConversationRead,
   checkChatFreeMessagingAllowed,
+  initiateConversation,
   sendMessage,
 };

@@ -37,6 +37,7 @@ import { JobDetailRequestSections } from "./JobDetailRequestSections";
 import { JobDetailFloatingActions } from "./JobDetailFloatingActions";
 import { getUrgencyConfig } from "./JobDetail.constants";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useProviderJobChatNavigation } from "../hooks/useProviderJobChatNavigation";
 
 interface JobDetailContentProps {
   job: ProviderJobItem;
@@ -91,6 +92,7 @@ export function JobDetailContent({
     proposalComposer.existingPhotoPaths,
   );
   const proposalSummary = mapProviderJobToProposalSummary(job);
+  const { openChat, isOpeningChat } = useProviderJobChatNavigation(job.id);
 
   const urgencyConfig = getUrgencyConfig(job.urgency);
 
@@ -228,7 +230,8 @@ export function JobDetailContent({
       {showBrowseCtas && (
         <JobDetailFloatingActions
           isInsideSheet={isInsideSheet}
-          onOpenProposalComposer={() => proposalComposer.openComposer()}
+          isOpeningChat={isOpeningChat}
+          onOpenChat={openChat}
         />
       )}
     </div>

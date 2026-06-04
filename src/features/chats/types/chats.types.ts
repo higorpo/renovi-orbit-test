@@ -184,6 +184,10 @@ export interface SendMessageResult {
   conversation: SendMessageResultConversation;
 }
 
+export interface InitiateConversationResult {
+  conversation: SendMessageResultConversation;
+}
+
 export interface MarkConversationReadResult {
   last_read_at: string;
 }

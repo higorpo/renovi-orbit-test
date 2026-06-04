@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   closeConversation,
   getConversationDetail,
+  initiateConversation,
   listChatMessages,
   listConversations,
   markConversationRead,
@@ -137,6 +138,32 @@ describe("markConversationRead", () => {
       lastReadMessageId: "msg-9",
     });
     expect(result.data?.last_read_at).toBe("2026-01-02T00:00:00Z");
+  });
+});
+
+describe("initiateConversation", () => {
+  it("calls cns_initiate_conversation with service request id", async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        conversation: {
+          id: "chat-9",
+          service_request_id: "sr-1",
+          client_id: "client-1",
+          provider_id: "provider-1",
+          status: "ACTIVE",
+          last_interaction_at: "2026-01-01T00:00:00Z",
+        },
+      },
+      error: null,
+    });
+
+    const result = await initiateConversation({ serviceRequestId: "sr-1" });
+
+    expect(result.data?.conversation.id).toBe("chat-9");
+    expect(rpcMock).toHaveBeenCalledWith("cns_initiate_conversation", {
+      p_service_request_id: "sr-1",
+      p_idempotency_key: "00000000-0000-7000-8000-000000000001",
+    });
   });
 });
 

@@ -61,15 +61,15 @@ describe("JobDetail sections", () => {
     expect(screen.getByText("tag1")).toBeInTheDocument();
   });
 
-  it("renders JobDetailFloatingActions and fires proposal callback", () => {
-    const onProposal = vi.fn();
+  it("renders JobDetailFloatingActions and fires open chat callback", () => {
+    const onOpenChat = vi.fn();
     render(
       <JobDetailFloatingActions
         isInsideSheet
-        onOpenProposalComposer={onProposal}
+        onOpenChat={onOpenChat}
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: /fazer orçamento/i }));
-    expect(onProposal).toHaveBeenCalled();
+    expect(onOpenChat).toHaveBeenCalled();
   });
 });

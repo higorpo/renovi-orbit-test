@@ -95,7 +95,7 @@ Coisas para fazer next
 -remover referencia de chat e novas colunas do provider_proposals, renomear tabela.
 -ao recusar a proposta, o chat tem que ser encerrado também
 -coluna client_response_deadline_at acho que não é usado
--alterar tela de trabalhos para que tenha o botão de iniciar conversa e não o botão de enviar proposta.
 -permitir enviar áudio
 -refazer card de orçamentos do prestador
 -refazer card da tela de meus serviços do cliente
+-exibir sugestões de perguntas para o prestador na hora que ele abre o chat pela primeira vez

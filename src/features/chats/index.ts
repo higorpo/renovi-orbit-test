@@ -15,6 +15,7 @@ export {
   listChatMessages,
   listConversations,
   markConversationRead,
+  initiateConversation,
   sendMessage,
 } from "./api/chats.api";
 
@@ -120,6 +121,7 @@ export type {
   SendMessageResult,
   SendMessageResultMessage,
   SendMessageResultConversation,
+  InitiateConversationResult,
   MarkConversationReadResult,
   CnsBusinessErrorCode,
   ChatsApiError,
