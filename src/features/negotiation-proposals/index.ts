@@ -120,7 +120,28 @@ export {
 export { useProposalComposerForm } from "./hooks/useProposalComposerForm";
 export { useProposalDetail, type UseProposalDetailParams } from "./hooks/useProposalDetail";
 export { useProposalHistory } from "./hooks/useProposalHistory";
-export { PROPOSAL_DETAIL_QUERY_KEY, PROPOSAL_HISTORY_QUERY_KEY } from "./constants/queryKeys";
+export {
+  PROPOSAL_DETAIL_QUERY_KEY,
+  PROPOSAL_HISTORY_QUERY_KEY,
+  SERVICE_REQUEST_BUDGET_COMPARE_DETAIL_QUERY_KEY,
+} from "./constants/queryKeys";
+export {
+  getBudgetStatusConfig,
+  getServiceRequestBudgetSheetMode,
+  getServiceRequestBudgetSheetTitle,
+  getServiceRequestBudgetActionLabel,
+  type ServiceRequestBudgetSheetMode,
+} from "./constants/serviceRequestBudgetSheet";
+export {
+  fetchServiceRequestBudgetCompareDetail,
+  rejectServiceRequestBudgetProposal,
+} from "./api/serviceRequestBudgetCompare.api";
+export type {
+  ServiceRequestBudgetCompareDetail,
+  ServiceRequestBudgetCompareProposal,
+} from "./types/serviceRequestBudgetCompare.types";
+export { ReceivedBudgetDetailsSheet } from "./components/ReceivedBudgetDetailsSheet";
+export { useServiceRequestBudgetCompareDetail } from "./hooks/useServiceRequestBudgetCompareDetail";
 export { useProposalPhotoUrls } from "./hooks/useProposalPhotoUrls";
 export {
   mapFormValuesToSuggestedSlots,

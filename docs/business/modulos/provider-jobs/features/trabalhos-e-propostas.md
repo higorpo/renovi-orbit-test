@@ -9,7 +9,7 @@ Documentação baseada em `src/features/provider-jobs/`, Edge Function `match-pr
 | Item | Descrição |
 |------|-----------|
 | **Objetivo** | Permitir que o **prestador** descubra pedidos compatíveis (geo + serviço + área), abra o **detalhe**, **pergunte** ao cliente e **envie ou edite** orçamento com precificação calculada e assinada no servidor. |
-| **Contexto de negócio** | Lado *supply* do marketplace; integra com `my-account` (serviços ofertados e bairros), `client-budgets` / `client-my-services` (lado cliente) e `provider-budgets` (reuso de UI de detalhe). |
+| **Contexto de negócio** | Lado *supply* do marketplace; integra com `my-account` (serviços ofertados e bairros), `client-my-services` / `negotiation-proposals` (lado cliente) e `provider-budgets` (reuso de UI de detalhe). |
 | **Perfis** | Apenas **prestador** na UI (`router.tsx`: `allowedRoles={['provider']}`). |
 | **Dependências** | `@/features/request-quote` (`getServiceCardStyle`, `useServiceRequestPhotoUrls` nas listagens), `@/features/dynamic-form` (tipo `FormSchema` no item do job). |
 

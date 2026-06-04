@@ -1,7 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
   LayoutGrid,
-  Clock,
   MessageCircle,
   Loader2,
   CheckCircle2,
@@ -23,11 +22,6 @@ export const STATUS_TAB_DISPLAY: Record<StatusTabId, StatusTabDisplayConfig> = {
     Icon: LayoutGrid,
     iconColor: "text-muted-foreground",
     activeBg: "bg-muted",
-  },
-  waiting_proposals: {
-    Icon: Clock,
-    iconColor: "text-amber-600",
-    activeBg: "bg-amber-500/10",
   },
   negotiation: {
     Icon: MessageCircle,

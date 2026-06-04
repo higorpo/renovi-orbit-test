@@ -24,7 +24,7 @@ let terminalReturns: Array<{ data: unknown; error: { message: string } | null; c
 function makeQueryChain() {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
   const methods = [
-    "select", "eq", "order", "range", "in", "not", "or", "gte", "lte", "returns", "update",
+    "select", "eq", "order", "range", "in", "not", "or", "gte", "lte", "is", "returns", "update",
   ];
   for (const m of methods) {
     chain[m] = vi.fn().mockReturnThis();
@@ -98,33 +98,15 @@ describe("listServiceRequests", () => {
     expect(result.data?.page_size).toBe(100);
   });
 
-  it("handles waiting_proposals tab: fetches proposals first", async () => {
-    // First query returns proposals; second query returns service requests
-    terminalReturns = [
-      { data: [{ service_request_id: "sr-1", status: "submitted" }], error: null },
-      { data: [], error: null, count: 0 },
-    ];
-
-    const result = await listServiceRequests({
-      ...baseParams,
-      statusTabId: "waiting_proposals",
-    });
-    // waiting_proposals with submitted proposals → excludes those IDs
-    expect(result.error).toBeNull();
-  });
-
-  it("returns empty result for negotiation tab with no proposals", async () => {
-    // Returns proposals but none are submitted
-    terminalReturns = [
-      { data: [], error: null },
-    ];
+  it("negotiation tab queries open SRs without contracted service", async () => {
+    terminalReturns = [{ data: [{ id: "sr-neg", status: "OPEN" }], error: null, count: 1 }];
 
     const result = await listServiceRequests({
       ...baseParams,
       statusTabId: "negotiation",
     });
-    expect(result.data?.items).toEqual([]);
-    expect(result.data?.total_count).toBe(0);
+    expect(result.error).toBeNull();
+    expect(result.data?.items).toEqual([{ id: "sr-neg", status: "OPEN" }]);
   });
 
   it("returns error when proposals fetch fails (hasProposals filter)", async () => {
@@ -191,18 +173,6 @@ describe("listServiceRequests", () => {
     expect(result.error).toBeNull();
   });
 
-  it("negotiation tab: filters to submitted proposal ids when data exists", async () => {
-    terminalReturns = [
-      { data: [{ service_request_id: "sr-neg", status: "submitted" }], error: null },
-      { data: [{ id: "sr-neg" }], error: null, count: 1 },
-    ];
-    const result = await listServiceRequests({
-      ...baseParams,
-      statusTabId: "negotiation",
-    });
-    expect(result.error).toBeNull();
-    expect(result.data?.items).toEqual([{ id: "sr-neg" }]);
-  });
 
   it("hasProposals false excludes ids that have proposals", async () => {
     terminalReturns = [
@@ -250,10 +220,9 @@ describe("listServiceRequests", () => {
     terminalReturns = [
       {
         data: [
-          { service_request_id: null, status: "submitted" },
-          { status: "submitted" },
-          { service_request_id: "sr-ok", status: "draft" },
-          { service_request_id: "sr-sub", status: "submitted" },
+          { service_request_id: null },
+          { service_request_id: "sr-ok" },
+          { service_request_id: "sr-sub" },
         ],
         error: null,
       },
@@ -261,7 +230,7 @@ describe("listServiceRequests", () => {
     ];
     const result = await listServiceRequests({
       ...baseParams,
-      statusTabId: "negotiation",
+      hasProposals: true,
     });
     expect(result.error).toBeNull();
     expect(result.data?.items).toEqual([{ id: "sr-sub" }]);

@@ -6,7 +6,7 @@ describe("getDashboardMenu", () => {
   it("returns client menu with 5 main items and 7 all items", () => {
     const result = getDashboardMenu("client" as ProfileRole);
     expect(result.mainItems).toHaveLength(5);
-    expect(result.allItems).toHaveLength(7);
+    expect(result.allItems).toHaveLength(6);
     expect(result.mainItems).toEqual(result.allItems.slice(0, 5));
   });
 
@@ -17,7 +17,6 @@ describe("getDashboardMenu", () => {
     expect(paths).toEqual([
       "/dashboard",
       "/dashboard/requests",
-      "/dashboard/orcamentos",
       "/dashboard/chats",
       "/dashboard/addresses",
       "/dashboard/conta",
@@ -25,7 +24,6 @@ describe("getDashboardMenu", () => {
     ]);
     expect(labels).toContain("Visão geral");
     expect(labels).toContain("Meus Serviços");
-    expect(labels).toContain("Orçamentos");
     expect(labels).toContain("Conversas");
     expect(labels).toContain("Endereços");
     expect(labels).toContain("Minha conta");

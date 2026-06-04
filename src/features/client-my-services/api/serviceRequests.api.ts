@@ -2,8 +2,9 @@ import { supabase } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
 import type { ServiceRequestRow } from "@/features/request-quote/types/request-quote.types";
 import type { StatusTabId } from "../constants/statusTabs";
+import { statusTabIdToListPhase } from "../utils/serviceRequestListPhase";
 
-/** Joined row: service_requests + client_addresses (with city/state) + platform_services. */
+/** Joined row: service_requests + address + platform_services + proposals + contracted service. */
 export interface ServiceRequestWithRelationsRow extends ServiceRequestRow {
   client_addresses?: {
     neighborhood: string;
@@ -14,8 +15,21 @@ export interface ServiceRequestWithRelationsRow extends ServiceRequestRow {
     platform_cities?: { name: string } | null;
     platform_states?: { abbreviation: string } | null;
   } | null;
-  platform_services?: { title: string; slug: string; icon_key: string | null; color_key: string | null } | null;
+  platform_services?: {
+    title: string;
+    slug: string;
+    icon_key: string | null;
+    color_key: string | null;
+  } | null;
   provider_proposals?: { status: string }[] | null;
+  services?: {
+    id: string;
+    status: string;
+    provider?: {
+      full_name: string | null;
+      provider_profiles_public?: { display_name: string | null } | null;
+    } | null;
+  } | null;
 }
 
 export interface ListServiceRequestsParams {
@@ -50,34 +64,12 @@ function sanitizeSearchForOrIlike(raw: string): string {
   return noComma.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
 
-function getStatusFilterFromTab(tabId: StatusTabId): string | null | "__NO_STATUS__" {
-  switch (tabId) {
-    case "all":
-      return null;
-    case "waiting_proposals":
-      return "open";
-    case "in_progress":
-      return "in_progress";
-    case "completed":
-      return "closed";
-    case "cancelled":
-      return "cancelled";
-    case "dispute":
-      return "__NO_STATUS__";
-    case "negotiation":
-      return "open";
-    default:
-      return null;
-  }
-}
-
 /**
  * List service requests for the given client.
  * RLS ensures only own rows are returned.
- * Joins address (neighborhood, city, state) and service (title, slug) for list/card display.
  */
 export async function listServiceRequests(
-  params: ListServiceRequestsParams
+  params: ListServiceRequestsParams,
 ): Promise<ListServiceRequestsResult> {
   const page = Math.max(1, params.page);
   const pageSize = Math.max(1, Math.min(params.pageSize, 100));
@@ -85,32 +77,24 @@ export async function listServiceRequests(
   const to = from + pageSize - 1;
   const focusedServiceRequestId = params.serviceRequestId?.trim() ?? "";
 
-  if (
-    !focusedServiceRequestId &&
-    getStatusFilterFromTab(params.statusTabId) === "__NO_STATUS__"
-  ) {
+  if (!focusedServiceRequestId && params.statusTabId === "dispute") {
     return {
       data: { items: [], total_count: 0, page, page_size: pageSize },
       error: null,
     };
   }
 
-  const needsSubmittedProposalsFilter =
-    !focusedServiceRequestId &&
-    (params.statusTabId === "waiting_proposals" ||
-      params.statusTabId === "negotiation");
-
-  let serviceRequestIdsWithProposals: string[] | null = null;
-  let submittedServiceRequestIdsWithProposals: string[] | null = null;
-  const needsAnyProposalsFilter =
+  const needsProposalIdFilter =
     !focusedServiceRequestId &&
     params.hasProposals !== null &&
     params.hasProposals !== undefined;
 
-  if (needsAnyProposalsFilter || needsSubmittedProposalsFilter) {
+  let serviceRequestIdsWithProposals: string[] | null = null;
+
+  if (needsProposalIdFilter) {
     const { data: proposalRows, error: proposalsError } = await supabase
       .from("provider_proposals")
-      .select("service_request_id, status, service_requests!inner(client_id)")
+      .select("service_request_id, service_requests!inner(client_id)")
       .eq("service_requests.client_id", params.clientId);
 
     if (proposalsError) {
@@ -122,18 +106,11 @@ export async function listServiceRequests(
     }
 
     const ids = new Set<string>();
-    const submittedIds = new Set<string>();
     (proposalRows ?? []).forEach((row) => {
-      const proposal = row as {
-        service_request_id?: string | null;
-        status?: string | null;
-      };
-      const id = proposal.service_request_id;
-      if (id) ids.add(id);
-      if (id && proposal.status === "submitted") submittedIds.add(id);
+      const proposal = row as { service_request_id?: string | null };
+      if (proposal.service_request_id) ids.add(proposal.service_request_id);
     });
     serviceRequestIdsWithProposals = Array.from(ids);
-    submittedServiceRequestIdsWithProposals = Array.from(submittedIds);
   }
 
   let query = supabase
@@ -151,9 +128,17 @@ export async function listServiceRequests(
         platform_states ( abbreviation )
       ),
       platform_services ( title, slug, icon_key, color_key ),
-      provider_proposals ( status )
+      provider_proposals ( status ),
+      services!service_requests_contracted_service_id_fkey (
+        id,
+        status,
+        provider:profiles!services_provider_id_fkey (
+          full_name,
+          provider_profiles_public ( display_name )
+        )
+      )
     `,
-      { count: "exact" }
+      { count: "exact" },
     )
     .eq("client_id", params.clientId)
     .order("updated_at", { ascending: false })
@@ -162,17 +147,21 @@ export async function listServiceRequests(
   if (focusedServiceRequestId) {
     query = query.eq("id", focusedServiceRequestId);
   } else {
-    const statusFilter = getStatusFilterFromTab(params.statusTabId);
-    if (statusFilter) {
-      query = query.eq("status", statusFilter);
+    const phase = statusTabIdToListPhase(params.statusTabId);
+    if (phase === "negotiation") {
+      query = query.eq("status", "OPEN").is("contracted_service_id", null);
+    } else if (phase === "in_progress") {
+      query = query.eq("status", "OPEN").not("contracted_service_id", "is", null);
+    } else if (phase === "completed") {
+      query = query.eq("status", "COMPLETED");
+    } else if (phase === "cancelled") {
+      query = query.eq("status", "CANCELLED");
     }
 
     const search = params.search?.trim();
     if (search) {
       const esc = sanitizeSearchForOrIlike(search);
-      query = query.or(
-        `title.ilike.%${esc}%,description.ilike.%${esc}%`
-      );
+      query = query.or(`title.ilike.%${esc}%,description.ilike.%${esc}%`);
     }
 
     if (params.categoryId?.trim()) {
@@ -184,10 +173,7 @@ export async function listServiceRequests(
     }
 
     if (params.neighborhoodName?.trim()) {
-      query = query.eq(
-        "client_addresses.neighborhood",
-        params.neighborhoodName.trim()
-      );
+      query = query.eq("client_addresses.neighborhood", params.neighborhoodName.trim());
     }
 
     if (params.dateFrom) {
@@ -218,29 +204,6 @@ export async function listServiceRequests(
 
     if (params.hasProposals === false && serviceRequestIdsWithProposals?.length) {
       const excludedIds = serviceRequestIdsWithProposals
-        .map((id) => `"${id}"`)
-        .join(",");
-      query = query.not("id", "in", `(${excludedIds})`);
-    }
-
-    if (params.statusTabId === "negotiation") {
-      if (
-        !submittedServiceRequestIdsWithProposals ||
-        submittedServiceRequestIdsWithProposals.length === 0
-      ) {
-        return {
-          data: { items: [], total_count: 0, page, page_size: pageSize },
-          error: null,
-        };
-      }
-      query = query.in("id", submittedServiceRequestIdsWithProposals);
-    }
-
-    if (
-      params.statusTabId === "waiting_proposals" &&
-      submittedServiceRequestIdsWithProposals?.length
-    ) {
-      const excludedIds = submittedServiceRequestIdsWithProposals
         .map((id) => `"${id}"`)
         .join(",");
       query = query.not("id", "in", `(${excludedIds})`);
@@ -278,11 +241,11 @@ export interface CancelServiceRequestResult {
 }
 
 /**
- * Cancel a service request (set status to 'cancelled').
+ * Cancel a service request (set status to CANCELLED).
  * Only allowed for the owning client. RLS enforces client_id match on update.
  */
 export async function cancelServiceRequest(
-  params: CancelServiceRequestParams
+  params: CancelServiceRequestParams,
 ): Promise<CancelServiceRequestResult> {
   const { data } = await supabase.auth.getUser();
   const uid = data?.user?.id;
@@ -296,7 +259,7 @@ export async function cancelServiceRequest(
 
   const { error } = await supabase
     .from("service_requests")
-    .update({ status: "cancelled" })
+    .update({ status: "CANCELLED" })
     .eq("id", params.id)
     .eq("client_id", params.clientId);
 

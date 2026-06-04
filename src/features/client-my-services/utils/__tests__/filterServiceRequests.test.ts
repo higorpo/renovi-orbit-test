@@ -11,8 +11,8 @@ function makeModel(overrides: Partial<ServiceRequestCardModel>): ServiceRequestC
     descriptionPreview: "Troca de tomadas",
     formData: null,
     formSchema: null,
-    status: "open",
-    statusTabId: "waiting_proposals",
+    listPhase: "negotiation",
+    statusTabId: "negotiation",
     createdAt: "2025-03-01T00:00:00Z",
     updatedAt: "2025-03-01T00:00:00Z",
     address: { neighborhood: "Centro", cityName: "Florianópolis" },
@@ -23,10 +23,10 @@ function makeModel(overrides: Partial<ServiceRequestCardModel>): ServiceRequestC
 }
 
 describe("filterServiceRequests", () => {
-  const openItem = makeModel({ id: "1", status: "open", statusTabId: "waiting_proposals" });
+  const openItem = makeModel({ id: "1", listPhase: "negotiation", statusTabId: "negotiation" });
   const inProgressItem = makeModel({
     id: "2",
-    status: "in_progress",
+    listPhase: "in_progress",
     statusTabId: "in_progress",
   });
 
@@ -48,7 +48,7 @@ describe("filterServiceRequests", () => {
 
   it("filters by status tab", () => {
     const filters: ServiceRequestsFilterState = {
-      statusTabId: "waiting_proposals",
+      statusTabId: "negotiation",
       searchQuery: "",
       categoryId: null,
       cityName: null,
@@ -171,7 +171,7 @@ describe("filterServiceRequests", () => {
 
   it("focus mode returns only the matching service request when focusServiceRequestId is set", () => {
     const filters: ServiceRequestsFilterState = {
-      statusTabId: "waiting_proposals",
+      statusTabId: "negotiation",
       searchQuery: "",
       categoryId: null,
       cityName: null,

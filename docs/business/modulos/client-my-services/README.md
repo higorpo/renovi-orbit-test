@@ -2,9 +2,9 @@
 
 ## 1. Leitura para negócio
 
-- **Para que serve:** o cliente **vê e organiza os pedidos** que fez na plataforma (`service_requests`): busca, filtros, abas (aguardando orçamentos, em negociação, em andamento, concluídos, cancelados), abre **orçamentos** e **perguntas** em sheets e pode **cancelar** pedidos ainda abertos.
+- **Para que serve:** o cliente **vê e organiza os pedidos** que fez na plataforma (`service_requests`): busca, filtros, abas (aguardando orçamentos, em negociação, em andamento, concluídos, cancelados), abre **comparar/histórico de orçamentos** em sheet (quando há propostas) e pode **cancelar** pedidos ainda abertos.
 - **Quem usa:** principalmente **cliente**; a rota do dashboard também aparece no menu do **prestador** como “Solicitações” com o mesmo path — a tela é construída para o cliente.
-- **Valor:** reduz “cadê meu pedido?” e concentra follow-up antes/paralelo ao módulo de orçamentos recebidos.
+- **Valor:** reduz “cadê meu pedido?” e concentra follow-up de propostas recebidas (sheet) e negociação ativa (Conversas).
 - **Riscos:** nome **“Meus serviços”** vs entidade **pedido**; **detalhe em página** (`/dashboard/services/:id`) ainda placeholder; **detalhe em sheet** só para status **`open`**; opções de filtro limitadas ao que já foi carregado na lista.
 
 ## 2. Visão geral técnica
@@ -15,7 +15,7 @@
 | Detalhe rota | `/dashboard/services/:id` — `ClientMyServicesDetailPlaceholder` |
 | Dados | Supabase client: `listServiceRequests` com joins, paginação **20**, `useInfiniteQuery` |
 | Deep link | `?serviceRequestId=` — `getServiceRequestsPageUrlWithFocus` exportado no `index.ts` |
-| Orçamentos / perguntas | `client-budgets`: `ReceivedBudgetDetailsSheet` (compare), `QuestionThreadSheet` |
+| Orçamentos recebidos | `negotiation-proposals`: `ReceivedBudgetDetailsSheet` (modos compare/history via Public API) |
 | Cancelamento | `update` em `service_requests` → `cancelled` + checagem de usuário na API |
 
 ## 3. Documentação da feature
@@ -23,6 +23,7 @@
 | Documento | Conteúdo |
 |-----------|----------|
 | [features/solicitacoes-do-cliente.md](./features/solicitacoes-do-cliente.md) | Abas, filtros, busca, foco URL, card, ações, sheets, lacunas (detalhe só open, dropdowns, código cancelamento), evidências |
+| [Comparar orçamentos / histórico](../chats/features/comparar-orcamentos-meus-servicos.md) | Sheet `ReceivedBudgetDetailsSheet`, modos compare/history, API e Public API |
 
 ## 4. Mapa de arquivos
 
@@ -39,7 +40,8 @@
 
 ## 5. Integrações
 
-- **`client-budgets`** — sheets de orçamentos e perguntas sem sair da lista.
+- **`negotiation-proposals`** — sheet `ReceivedBudgetDetailsSheet` (comparar orçamentos / histórico) sem sair da lista.
+- **`chats`** — negociação in-app (Conversas); caminho preferencial para aceite e mensagens.
 - **`request-quote`** — URLs assinadas de fotos e estilo visual do serviço nos cards.
 - **`dynamic-form`** — resumo legível das respostas do pedido no sheet de detalhe.
 - **`request-quote` (origem)** — criação dos registros listados aqui.

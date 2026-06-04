@@ -10,16 +10,17 @@ Este diretório concentra a **documentação funcional e técnica por módulo**,
 | 2 | [request-quote](./request-quote/README.md) | Wizard pedir orçamento | `/pedir-orcamento` | `src/features/request-quote/` | Concluída |
 | 3 | [addresses](./addresses/README.md) | Seleção/CRUD endereços (embutido em fluxos) | *Sem rota dedicada funcional*; menu aponta para placeholder | `src/features/addresses/` | Concluída |
 | 4 | [my-account](./my-account/README.md) | Minha conta cliente/prestador | `/dashboard/conta` | `src/features/my-account/` | Concluída |
-| 5 | [client-my-services](./client-my-services/README.md) | Lista de pedidos, placeholder detalhe | `/dashboard/requests`, `/dashboard/services/:id` | `src/features/client-my-services/` | Concluída (detalhe por id: placeholder) |
-| 6 | [client-budgets](./client-budgets/README.md) | Orçamentos recebidos / perguntas | `/dashboard/orcamentos` | `src/features/client-budgets/` | Concluída |
-| 7 | [provider-jobs](./provider-jobs/README.md) | Trabalhos, detalhe, propostas, perguntas | `/dashboard/jobs`, `/dashboard/jobs/:jobId` | `src/features/provider-jobs/` | Concluída |
-| 8 | [provider-budgets](./provider-budgets/README.md) | Orçamentos enviados / minhas perguntas | `/dashboard/budgets`, `/dashboard/budgets/pedido/:serviceRequestId` | `src/features/provider-budgets/` | Concluída |
-| 9 | [provider-profile](./provider-profile/README.md) | Perfil público do prestador | `/perfil/:slug` | `src/features/provider-profile/` | Concluída |
-| 10 | [dynamic-form](./dynamic-form/README.md) | Motor de formulários + demo DEV | `/demo/form` (somente `import.meta.env.DEV`) | `src/features/dynamic-form/` | Concluída |
-| 11 | [dashboard-shell](./dashboard-shell/README.md) | Placeholders do dashboard (visão geral, endereços, config, ajuda, ganhos) | `/dashboard`, `/dashboard/addresses`, `/dashboard/settings`, `/dashboard/help`, `/dashboard/earnings` | `src/layouts/DashboardLayout/` | Concluída |
-| 12 | [app-home](./app-home/README.md) | Página inicial mínima | `/` (index) | `src/App.tsx` | Concluída |
-| 13 | [message-dispatcher](./message-dispatcher/README.md) | Notificações multicanal (e-mail, push); horário silencioso, quotas, FSM | *Sem rota de UI; backend-only* | `supabase/migrations/`, `supabase/functions/message-dispatcher-*` | Parcial (quiet hours) |
-| 14 | [chats](./chats/README.md) | Conversas e negociação (CNS): lista, thread, propostas | `/chats`, `/chats/:chatId` | `src/features/chats/`, `src/features/negotiation-proposals/` | Concluída |
+| 5 | [client-my-services](./client-my-services/README.md) | Lista de pedidos; sheet compare/histórico de orçamentos | `/dashboard/requests`, `/dashboard/services/:id` | `src/features/client-my-services/` | Concluída (detalhe por id: placeholder) |
+| 6 | [provider-jobs](./provider-jobs/README.md) | Trabalhos, detalhe, propostas, perguntas | `/dashboard/jobs`, `/dashboard/jobs/:jobId` | `src/features/provider-jobs/` | Concluída |
+| 7 | [provider-budgets](./provider-budgets/README.md) | Orçamentos enviados / minhas perguntas | `/dashboard/budgets`, `/dashboard/budgets/pedido/:serviceRequestId` | `src/features/provider-budgets/` | Concluída |
+| 8 | [provider-profile](./provider-profile/README.md) | Perfil público do prestador | `/perfil/:slug` | `src/features/provider-profile/` | Concluída |
+| 9 | [dynamic-form](./dynamic-form/README.md) | Motor de formulários + demo DEV | `/demo/form` (somente `import.meta.env.DEV`) | `src/features/dynamic-form/` | Concluída |
+| 10 | [dashboard-shell](./dashboard-shell/README.md) | Placeholders do dashboard (visão geral, endereços, config, ajuda, ganhos) | `/dashboard`, `/dashboard/addresses`, `/dashboard/settings`, `/dashboard/help`, `/dashboard/earnings` | `src/layouts/DashboardLayout/` | Concluída |
+| 11 | [app-home](./app-home/README.md) | Página inicial mínima | `/` (index) | `src/App.tsx` | Concluída |
+| 12 | [message-dispatcher](./message-dispatcher/README.md) | Notificações multicanal (e-mail, push); horário silencioso, quotas, FSM | *Sem rota de UI; backend-only* | `supabase/migrations/`, `supabase/functions/message-dispatcher-*` | Parcial (quiet hours) |
+| 13 | [chats](./chats/README.md) | Conversas e negociação (CNS): lista, thread, propostas; sheet compare/history | `/dashboard/chats`, `/dashboard/chats/:chatId` | `src/features/chats/`, `src/features/negotiation-proposals/` | Concluída |
+
+> **Descontinuado:** [client-budgets](./client-budgets/README.md) — rota `/dashboard/orcamentos` removida; ver `client-my-services` + `negotiation-proposals`.
 
 ### Rotas adicionais fora da tabela (evidência direta)
 
@@ -49,11 +50,11 @@ Um módulo conta como documentado quando o conjunto **README do módulo + arquiv
 
 | Métrica | Valor |
 |---------|------:|
-| Módulos identificados no escopo do produto (features + shell + home + backend + CNS) | **14** |
-| Módulos documentados (critério acima) | **14** |
+| Módulos identificados no escopo do produto (features + shell + home + backend + CNS) | **13** |
+| Módulos documentados (critério acima) | **13** |
 | **Percentual** | **100%** |
 
-Os **12** diretórios em `src/features/` (incl. `chats` e `negotiation-proposals`) estão espelhados em subpastas deste índice — **CNS** agrupa as duas features em [chats](./chats/README.md). Acrescentam-se **dashboard-shell** e **app-home** (superfícies do roteador/menu) e **message-dispatcher** (subsistema backend de notificações em `supabase/`).
+Os diretórios em `src/features/` com produto documentado neste índice incluem **`chats`** e **`negotiation-proposals`** (agrupados em [chats](./chats/README.md)); **`client-budgets` foi removido**. Outras pastas (`device-beacon`, `push-permission`, `notifications`, etc.) aparecem na [rastreabilidade](../rastreabilidade.md) sem README em `modulos/`. Acrescentam-se **dashboard-shell**, **app-home** e **message-dispatcher**.
 
 ---
 
@@ -63,9 +64,9 @@ Os **12** diretórios em `src/features/` (incl. `chats` e `negotiation-proposals
 - **dynamic-form** → usado por **request-quote** (passo 2).
 - **addresses** → usado por **request-quote** (passo 4) e **my-account** (`AddressesSection`).
 - **provider-jobs** → **provider-budgets** reutiliza `JobDetailSheet` / `JobDetailPage`.
-- **client-budgets** → componentes de orçamento/perguntas reutilizados em **client-my-services**.
-- **provider-jobs** → URLs assinadas de fotos de proposta consumidas em **client-budgets** (`useProviderProposalPhotoUrls`).
-- **chats** + **negotiation-proposals** → negociação in-app por pedido; integra **message-dispatcher** (notificações), **provider-jobs** (origem do pedido), **client-my-services** (status do pedido pós-aceite/cancelamento).
+- **negotiation-proposals** → sheet `ReceivedBudgetDetailsSheet` consumido por **client-my-services**; composer/propostas também em **provider-jobs** e **chats**.
+- **provider-jobs** → URLs assinadas de fotos de proposta via **`negotiation-proposals`** (`useProposalPhotoUrls`).
+- **chats** + **negotiation-proposals** → negociação in-app por pedido; integra **message-dispatcher** (notificações), **provider-jobs** (origem do pedido), **client-my-services** (lista + sheet compare/history).
 
 ---
 
@@ -76,7 +77,7 @@ Os **12** diretórios em `src/features/` (incl. `chats` e `negotiation-proposals
 3. **Pós-sucesso do pedido de orçamento (logado):** há menção em documentação de rota de navegação possivelmente inconsistente com o router; validar em `useRequestQuoteSubmit` / `RequestQuote` (pendência de QA).
 4. **Papel `admin`:** existe no tipo de perfil; **sem** área administrativa mapeada no `router.tsx` para este repositório.
 5. **`/example`:** rota de exemplo, não documentada como módulo de negócio.
-6. **`/chats`:** rotas CNS ativas no router; item de menu do dashboard pode ainda não apontar para `/chats` — ver [chats](./chats/README.md).
+6. **`/dashboard/chats`:** rota CNS ativa no router e item **Conversas** no menu cliente e prestador (`dashboardMenu.ts`).
 
 ---
 
@@ -87,7 +88,7 @@ Análise em paralelo (exploração baseada em código):
 1. **Auth + guards** — rotas guest, `ProtectedRoute` / `GuestOnlyRoute`, telas, APIs `auth.api` / `profile.api`, schemas Zod.
 2. **request-quote + addresses** — passos do wizard, Edge `create-request-quote-order`, `generate-smart-description`, rascunho local, analytics.
 3. **provider-jobs + provider-budgets** — RPCs, edge `match-provider-jobs`, filtros, composição de proposta/pergunta.
-4. **client-my-services, client-budgets, my-account, provider-profile** — shells, sheets, RPCs cliente, storage buckets.
+4. **client-my-services, my-account, provider-profile** — shells, sheets, RPCs cliente, storage buckets.
 5. **dynamic-form + DashboardFakePage + App** — demo DEV, placeholders, home.
 
 Consolidação e arquivos novos/atualizados: índice (este README), [dashboard-shell](./dashboard-shell/README.md), [app-home](./app-home/README.md), atualização da [matriz de cobertura documental](../matriz-cobertura-documental.md).

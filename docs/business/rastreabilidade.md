@@ -31,8 +31,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | Pasta | APIs / hooks representativos | UI principal |
 |-------|------------------------------|--------------|
 | `addresses/` | `api/addresses.api.ts`, `api/statesAndCities.api.ts` | `AddressSelectionStep`, `AddressesSection`, `AddressFormDialog` |
-| `client-budgets/` | `api/clientBudgets.api.ts` | `ClientBudgetsPage`, sheets |
-| `client-my-services/` | `api/serviceRequests.api.ts` (list + cancel); hooks page/list/filters/cancel | `ClientMyServicesPage`, cards, sheets (`OpenServiceDetailsSheet`), `client-budgets` sheets, placeholder detalhe |
+| `client-my-services/` | `api/serviceRequests.api.ts` (list + cancel); hooks page/list/filters/cancel | `ClientMyServicesPage`, cards, sheets (`OpenServiceDetailsSheet`, `ReceivedBudgetDetailsSheet` via `negotiation-proposals`), placeholder detalhe |
 | `dynamic-form/` | — | `DynamicForm`, `FormDemoPage` |
 | `my-account/` | `api/*Profile*.api.ts`, `portfolio.api.ts`, `offeredServices.api.ts` | `MyAccountPage`, `MyAccountClientPage`, `MyAccountProviderPage`, `ServiceAreaField` |
 | `provider-budgets/` | `api/providerBudgets.api.ts`, hooks `useProviderSentBudgets` / `useProviderOwnQuestions`, contadores pendentes | `ProviderBudgetsShell`, `ProviderBudgetsPage`, cards; RPCs em `20260322000000_create_provider_budgets_rpcs.sql` |
@@ -40,7 +39,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `provider-profile/` | hooks + componentes públicos | `ProviderProfilePage` |
 | `request-quote/` | `api/createRequestQuoteOrder.api.ts`, `smartDescription.api.ts`, `services.api.ts`, `forms.api.ts`; hooks submit/navigation/draft/IA | `RequestQuote.tsx`, passos 1–5, `ConfirmEmailScreen`, `TrustSidebar`; rascunho `requestQuoteDraft.persistence.ts` |
 | `chats/` | `api/chats.api.ts`, `chats.rpc.ts`; hooks lista, thread, mensagens, Realtime | `ChatListPage`, `ChatScreen`, `ChatsLayout` |
-| `negotiation-proposals/` | `api/proposals.api.ts`, `proposals.rpc.ts`; RPC canônica `create_provider_proposal` (sem `chat_id` em `provider_proposals`) | `ProposalComposerDialog`, `AcceptProposalDialog`, composer em jobs |
+| `negotiation-proposals/` | `api/proposals.api.ts`, `api/serviceRequestBudgetCompare.api.ts`, `proposals.rpc.ts`; RPC canônica `create_provider_proposal` | `ProposalComposerDialog`, `AcceptProposalDialog`, `ReceivedBudgetDetailsSheet`, composer em jobs |
 | `auth/` | (já listado) | — |
 
 ## Supabase — dados e regras

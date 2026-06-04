@@ -22,8 +22,8 @@ const baseModel: ServiceRequestCardModel = {
   descriptionPreview: "",
   formData: null,
   formSchema: null,
-  status: "open",
-  statusTabId: "waiting_proposals",
+  listPhase: "negotiation",
+  statusTabId: "negotiation",
   createdAt: "2025-03-01T12:00:00Z",
   updatedAt: "2025-03-01T12:00:00Z",
   address: {

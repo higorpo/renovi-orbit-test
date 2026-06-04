@@ -7,6 +7,7 @@ import { useClientMyServicesFilters } from "./useClientMyServicesFilters";
 import { useClientMyServicesCancel } from "./useClientMyServicesCancel";
 import { SERVICE_REQUEST_FOCUS_QUERY } from "../constants/routes";
 import { statusToTabId } from "../constants/statusTabs";
+import type { ServiceRequestBudgetSheetMode } from "@/features/negotiation-proposals";
 import type { ServiceRequestCardModel } from "../types/client-my-services.types";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -18,8 +19,10 @@ export function useClientMyServicesPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const searchQueryDebounced = useDebouncedValue(searchQuery, SEARCH_DEBOUNCE_MS);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [budgetSheetOpen, setBudgetSheetOpen] = useState(false);
   const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<string | null>(null);
+  const [selectedBudgetSheetMode, setSelectedBudgetSheetMode] =
+    useState<ServiceRequestBudgetSheetMode>("compare");
   const [selectedOpenService, setSelectedOpenService] = useState<ServiceRequestCardModel | null>(
     null
   );
@@ -75,7 +78,7 @@ export function useClientMyServicesPage() {
 
   useEffect(() => {
     if (!focusServiceRequestId || !focusedRequest) return;
-    setStatusTabId(statusToTabId(focusedRequest.status));
+    setStatusTabId(statusToTabId(focusedRequest.listPhase));
   }, [focusServiceRequestId, focusedRequest, setStatusTabId]);
 
   const scrolledToFocusIdRef = useRef<string | null>(null);
@@ -148,13 +151,16 @@ export function useClientMyServicesPage() {
     setSearchParams,
   ]);
 
-  const handleOpenBudgets = useCallback((serviceRequestId: string) => {
-    setSelectedServiceRequestId(serviceRequestId);
-    setDetailsOpen(true);
+  const handleOpenBudgets = useCallback((model: ServiceRequestCardModel) => {
+    setSelectedServiceRequestId(model.id);
+    setSelectedBudgetSheetMode(
+      model.listPhase === "negotiation" ? "compare" : "history",
+    );
+    setBudgetSheetOpen(true);
   }, []);
 
   const handleOpenDetails = useCallback((model: ServiceRequestCardModel) => {
-    if (model.status !== "open") {
+    if (model.listPhase !== "negotiation") {
       toast.info("Visualização detalhada para este status ainda está em construção.");
       return;
     }
@@ -162,7 +168,7 @@ export function useClientMyServicesPage() {
   }, []);
 
   useEffect(() => {
-    if (!detailsOpen && !selectedOpenService) return;
+    if (!budgetSheetOpen && !selectedOpenService) return;
 
     const previousBodyOverflow = document.body.style.overflow;
     const previousHtmlOverflow = document.documentElement.style.overflow;
@@ -174,7 +180,7 @@ export function useClientMyServicesPage() {
       document.body.style.overflow = previousBodyOverflow;
       document.documentElement.style.overflow = previousHtmlOverflow;
     };
-  }, [detailsOpen, selectedOpenService]);
+  }, [budgetSheetOpen, selectedOpenService]);
 
   return {
     // search
@@ -205,9 +211,10 @@ export function useClientMyServicesPage() {
     cityOptions,
     neighborhoodOptions,
     // details sheets
-    detailsOpen,
-    setDetailsOpen,
+    budgetSheetOpen,
+    setBudgetSheetOpen,
     selectedServiceRequestId,
+    selectedBudgetSheetMode,
     selectedOpenService,
     setSelectedOpenService,
     // actions

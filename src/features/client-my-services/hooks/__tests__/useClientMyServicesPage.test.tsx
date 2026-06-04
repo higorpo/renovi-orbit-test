@@ -34,8 +34,8 @@ const openModel: ServiceRequestCardModel = {
   descriptionPreview: "",
   formData: null,
   formSchema: null,
-  status: "open",
-  statusTabId: "waiting_proposals",
+  listPhase: "negotiation",
+  statusTabId: "negotiation",
   createdAt: "2025-03-01T00:00:00Z",
   updatedAt: "2025-03-01T00:00:00Z",
   address: null,
@@ -95,7 +95,7 @@ describe("useClientMyServicesPage", () => {
     });
 
     act(() => {
-      result.current.handleOpenDetails({ ...openModel, status: "closed" });
+      result.current.handleOpenDetails({ ...openModel, listPhase: "completed" });
     });
     expect(toast.info).toHaveBeenCalledWith(
       "Visualização detalhada para este status ainda está em construção."
@@ -105,7 +105,7 @@ describe("useClientMyServicesPage", () => {
   it("syncs status tab from focused request status", async () => {
     mockUseList.mockReturnValue({
       ...defaultListReturn,
-      items: [{ ...openModel, id: "sr-x", status: "in_progress", statusTabId: "in_progress" }],
+      items: [{ ...openModel, id: "sr-x", listPhase: "in_progress", statusTabId: "in_progress" }],
     });
 
     const { result } = renderHook(() => useClientMyServicesPage(), {
@@ -185,15 +185,33 @@ describe("useClientMyServicesPage", () => {
     expect(result.current.neighborhoodOptions).toContain("Centro");
   });
 
+  it("handleOpenBudgets uses history mode for closed service requests", () => {
+    const { result } = renderHook(() => useClientMyServicesPage(), {
+      wrapper: wrapper(["/dashboard/requests"]),
+    });
+
+    act(() => {
+      result.current.handleOpenBudgets({
+        ...openModel,
+        id: "sr-closed",
+        listPhase: "completed",
+        statusTabId: "completed",
+        proposalCount: 1,
+      });
+    });
+    expect(result.current.selectedBudgetSheetMode).toBe("history");
+  });
+
   it("handleOpenBudgets opens budget details sheet", () => {
     const { result } = renderHook(() => useClientMyServicesPage(), {
       wrapper: wrapper(["/dashboard/requests"]),
     });
 
     act(() => {
-      result.current.handleOpenBudgets("sr-b");
+      result.current.handleOpenBudgets({ ...openModel, id: "sr-b", proposalCount: 2 });
     });
-    expect(result.current.detailsOpen).toBe(true);
+    expect(result.current.budgetSheetOpen).toBe(true);
     expect(result.current.selectedServiceRequestId).toBe("sr-b");
+    expect(result.current.selectedBudgetSheetMode).toBe("compare");
   });
 });

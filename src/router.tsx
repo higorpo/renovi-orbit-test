@@ -71,16 +71,6 @@ const ProviderBudgetsRouteSlot = lazy(() =>
     default: m.ProviderBudgetsRouteSlot,
   })),
 )
-const ClientBudgetsShell = lazy(() =>
-  import('@/features/client-budgets/components/ClientBudgetsShell').then((m) => ({
-    default: m.ClientBudgetsShell,
-  })),
-)
-const ClientBudgetsRouteSlot = lazy(() =>
-  import('@/features/client-budgets/components/ClientBudgetsShell').then((m) => ({
-    default: m.ClientBudgetsRouteSlot,
-  })),
-)
 const ChatsLayout = lazy(() =>
   import('@/features/chats/components/ChatsLayout/ChatsLayout').then((m) => ({
     default: m.ChatsLayout,
@@ -200,15 +190,6 @@ export const router = createBrowserRouter([
               { index: true, element: <ProviderBudgetsRouteSlot /> },
               { path: 'pedido/:serviceRequestId', element: <ProviderBudgetsRouteSlot /> },
             ],
-          },
-          {
-            path: 'orcamentos',
-            element: (
-              <ProtectedRoute allowedRoles={['client']}>
-                <ClientBudgetsShell />
-              </ProtectedRoute>
-            ),
-            children: [{ index: true, element: <ClientBudgetsRouteSlot /> }],
           },
           {
             path: 'earnings',

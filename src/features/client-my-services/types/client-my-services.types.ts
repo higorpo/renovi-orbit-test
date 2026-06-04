@@ -1,5 +1,5 @@
 import type { StatusTabId } from "../constants/statusTabs";
-import type { ServiceRequestDbStatus } from "../constants/statusTabs";
+import type { ServiceRequestListPhase } from "../utils/serviceRequestListPhase";
 
 /** Address summary for list/card display (from client_addresses + platform_cities). */
 export interface AddressSummary {
@@ -30,33 +30,31 @@ export interface ServiceRequestCardModel {
   descriptionPreview: string;
   formData: Record<string, unknown> | null;
   formSchema: Record<string, unknown> | null;
-  status: ServiceRequestDbStatus;
+  listPhase: ServiceRequestListPhase;
   statusTabId: StatusTabId;
+  contractedServiceId?: string | null;
   createdAt: string;
   updatedAt: string;
   address: AddressSummary | null;
   service: ServiceSummary | null;
   photoPaths: string[];
-  /** When backend supports it. */
   proposalCount?: number;
-  /** True when there is at least one proposal in submitted status. */
-  hasSubmittedProposal?: boolean;
-  /** When backend supports it. */
+  hasPendingClientProposal?: boolean;
   selectedProfessionalName?: string | null;
-  /** Optional progress 0–100 when in_progress. */
   progressPercent?: number | null;
   tags?: string[] | null;
+  urgency?: string | null;
+  scopeComplexity?: string | null;
+  estimatedDurationHint?: string | null;
+  missingInfoWarnings?: string[] | null;
 }
 
 /** Filter state for the page. */
 export interface ServiceRequestsFilterState {
   statusTabId: StatusTabId;
   searchQuery: string;
-  /** Service slug or title for category filter. */
   categoryId: string | null;
-  /** City name for location filter. */
   cityName: string | null;
-  /** Neighborhood name for location filter. */
   neighborhoodName: string | null;
   dateFrom: string | null;
   dateTo: string | null;

@@ -1,56 +1,42 @@
 import { describe, it, expect } from "vitest";
-import {
-  statusToTabId,
-  tabIncludesStatus,
-  STATUS_TABS,
-} from "../statusTabs";
+import { statusToTabId, tabIncludesStatus, STATUS_TABS } from "../statusTabs";
 
 describe("statusToTabId", () => {
-  it("maps open to waiting_proposals", () => {
-    expect(statusToTabId("open")).toBe("waiting_proposals");
-  });
-  it("maps in_progress to in_progress", () => {
+  it("maps list phase to same tab id", () => {
+    expect(statusToTabId("negotiation")).toBe("negotiation");
     expect(statusToTabId("in_progress")).toBe("in_progress");
-  });
-  it("maps closed to completed", () => {
-    expect(statusToTabId("closed")).toBe("completed");
-  });
-  it("maps cancelled to cancelled", () => {
+    expect(statusToTabId("completed")).toBe("completed");
     expect(statusToTabId("cancelled")).toBe("cancelled");
-  });
-
-  it("maps unknown status to all tab", () => {
-    expect(statusToTabId("not_a_db_status" as never)).toBe("all");
   });
 });
 
 describe("tabIncludesStatus", () => {
-  it("all tab includes any status", () => {
-    expect(tabIncludesStatus("all", "open")).toBe(true);
+  it("all tab includes any phase", () => {
+    expect(tabIncludesStatus("all", "negotiation")).toBe(true);
     expect(tabIncludesStatus("all", "cancelled")).toBe(true);
   });
-  it("waiting_proposals includes only open", () => {
-    expect(tabIncludesStatus("waiting_proposals", "open")).toBe(true);
-    expect(tabIncludesStatus("waiting_proposals", "in_progress")).toBe(false);
-  });
-  it("in_progress includes only in_progress", () => {
+
+  it("phase tabs match only their phase", () => {
+    expect(tabIncludesStatus("negotiation", "negotiation")).toBe(true);
+    expect(tabIncludesStatus("negotiation", "in_progress")).toBe(false);
     expect(tabIncludesStatus("in_progress", "in_progress")).toBe(true);
-    expect(tabIncludesStatus("in_progress", "open")).toBe(false);
   });
 
-  it("negotiation and dispute tabs do not include DB statuses", () => {
-    expect(tabIncludesStatus("negotiation", "open")).toBe(false);
-    expect(tabIncludesStatus("dispute", "open")).toBe(false);
+  it("dispute tab does not include any phase", () => {
+    expect(tabIncludesStatus("dispute", "negotiation")).toBe(false);
   });
 });
 
 describe("STATUS_TABS", () => {
-  it("has expected tab ids", () => {
+  it("has expected tab ids without waiting_proposals", () => {
     const ids = STATUS_TABS.map((t) => t.id);
-    expect(ids).toContain("all");
-    expect(ids).toContain("waiting_proposals");
-    expect(ids).toContain("in_progress");
-    expect(ids).toContain("completed");
-    expect(ids).toContain("cancelled");
+    expect(ids).toEqual([
+      "all",
+      "negotiation",
+      "in_progress",
+      "completed",
+      "cancelled",
+      "dispute",
+    ]);
   });
 });

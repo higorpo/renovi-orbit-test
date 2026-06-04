@@ -16,6 +16,24 @@ select message_dispatcher.message_dispatcher_ingest(
 ) as ingest_result;
 
 
+-- Send one PUSH
+select message_dispatcher.message_dispatcher_ingest(
+  gen_random_uuid(),  -- idempotency_key (nova a cada teste)
+  '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
+  'push'::message_dispatcher.message_channel,
+  'engagement_push',
+  jsonb_build_object(
+    'name', 'X',
+    'headline', 'Teste Orbit',
+    'body', 'MMD push local'
+  ),
+  now(),              -- scheduled_for (agora → tende a QUEUED)
+  'orbit',
+  '{}'::jsonb,
+  true
+) as ingest_result;
+
+
 -- Send one email
 select message_dispatcher.message_dispatcher_ingest(
   gen_random_uuid(),
@@ -85,3 +103,4 @@ limit 3;
 
 select message_dispatcher.message_dispatcher_activate_scheduled() as ativados;
 
+select message_dispatcher.message_dispatcher_invoke_worker();

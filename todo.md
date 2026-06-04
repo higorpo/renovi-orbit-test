@@ -94,3 +94,5 @@ Coisas para fazer next
 -ao recusar a proposta, o chat tem que ser encerrado também
 -coluna client_response_deadline_at acho que não é usado
 -na hora de montar a proposta, verificar se eu colocar um valor fixo de 3 dias por exemplo o que acontece se cair no final de semana.
+-alterar tela de trabalhos para que tenha o botão de iniciar conversa e não o botão de enviar proposta.
+-permitir enviar áudio

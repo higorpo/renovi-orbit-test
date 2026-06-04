@@ -1,12 +1,17 @@
+import { isPendingProposalStatus } from "@/features/negotiation-proposals/utils/proposalStatus";
 import type { ServiceRequestWithRelationsRow } from "../api/serviceRequests.api";
-import type { ServiceRequestCardModel, AddressSummary, ServiceSummary } from "../types/client-my-services.types";
-import { statusToTabId } from "../constants/statusTabs";
-import type { ServiceRequestDbStatus } from "../constants/statusTabs";
+import type {
+  ServiceRequestCardModel,
+  AddressSummary,
+  ServiceSummary,
+} from "../types/client-my-services.types";
+import {
+  deriveServiceRequestListPhase,
+  listPhaseToStatusTabId,
+} from "./serviceRequestListPhase";
 import { toDescriptionPreview } from "../utils/descriptionPreview";
 
-function mapAddress(
-  row: ServiceRequestWithRelationsRow
-): AddressSummary | null {
+function mapAddress(row: ServiceRequestWithRelationsRow): AddressSummary | null {
   const addr = row.client_addresses;
   if (!addr) return null;
   const cityName = addr.platform_cities?.name ?? "";
@@ -30,9 +35,7 @@ function mapAddress(
   };
 }
 
-function mapService(
-  row: ServiceRequestWithRelationsRow
-): ServiceSummary | null {
+function mapService(row: ServiceRequestWithRelationsRow): ServiceSummary | null {
   const svc = row.platform_services;
   if (!svc) return null;
   return {
@@ -43,19 +46,27 @@ function mapService(
   };
 }
 
-/**
- * Map API row to card view model.
- */
+function mapContractedProviderName(row: ServiceRequestWithRelationsRow): string | null {
+  const contracted = row.services;
+  if (!contracted?.provider) return null;
+  const { provider } = contracted;
+  const displayName = provider.provider_profiles_public?.display_name?.trim();
+  if (displayName) return displayName;
+  return provider.full_name?.trim() || null;
+}
+
 export function mapToServiceRequestCardModel(
-  row: ServiceRequestWithRelationsRow
+  row: ServiceRequestWithRelationsRow,
 ): ServiceRequestCardModel {
-  const status = (row.status ?? "open") as ServiceRequestDbStatus;
   const address = mapAddress(row);
   const service = mapService(row);
+  const contractedServiceId = row.contracted_service_id ?? null;
+  const listPhase = deriveServiceRequestListPhase({
+    status: row.status,
+    contractedServiceId,
+  });
 
-  const proposals = Array.isArray(row.provider_proposals)
-    ? row.provider_proposals
-    : [];
+  const proposals = Array.isArray(row.provider_proposals) ? row.provider_proposals : [];
 
   return {
     id: row.id,
@@ -72,15 +83,25 @@ export function mapToServiceRequestCardModel(
       !Array.isArray(row.form_schema)
         ? (row.form_schema as Record<string, unknown>)
         : null,
-    status,
-    statusTabId: statusToTabId(status),
+    listPhase,
+    statusTabId: listPhaseToStatusTabId(listPhase),
+    contractedServiceId,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     address,
     service,
     photoPaths: Array.isArray(row.photos) ? row.photos : [],
     proposalCount: proposals.length,
-    hasSubmittedProposal: proposals.some((proposal) => proposal.status === "submitted"),
+    hasPendingClientProposal: proposals.some((proposal) =>
+      isPendingProposalStatus(proposal.status),
+    ),
+    selectedProfessionalName: mapContractedProviderName(row),
     tags: Array.isArray(row.tags) ? row.tags : null,
+    urgency: row.urgency ?? null,
+    scopeComplexity: row.scope_complexity ?? null,
+    estimatedDurationHint: row.estimated_duration_hint ?? null,
+    missingInfoWarnings: Array.isArray(row.missing_info_warnings)
+      ? row.missing_info_warnings
+      : null,
   };
 }

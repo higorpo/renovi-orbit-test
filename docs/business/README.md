@@ -34,7 +34,6 @@ Documentação derivada do código da aplicação (front-end React/Vite, Supabas
 |--------|--------|
 | Endereços | [modulos/addresses](./modulos/addresses/README.md) |
 | Autenticação e sessão | [modulos/auth](./modulos/auth/README.md) |
-| Orçamentos (cliente) | [modulos/client-budgets](./modulos/client-budgets/README.md) |
 | Meus serviços / pedidos (cliente) | [modulos/client-my-services](./modulos/client-my-services/README.md) |
 | Formulários dinâmicos | [modulos/dynamic-form](./modulos/dynamic-form/README.md) |
 | Minha conta | [modulos/my-account](./modulos/my-account/README.md) |

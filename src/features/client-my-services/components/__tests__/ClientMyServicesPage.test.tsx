@@ -25,8 +25,8 @@ vi.mock("@/features/request-quote", async (importOriginal) => {
   };
 });
 
-vi.mock("@/features/client-budgets", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("@/features/client-budgets")>();
+vi.mock("@/features/negotiation-proposals", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/features/negotiation-proposals")>();
   return {
     ...mod,
     ReceivedBudgetDetailsSheet: ({
@@ -197,8 +197,8 @@ describe("ClientMyServicesPage", () => {
       descriptionPreview: "",
       formData: null,
       formSchema: null,
-      status: "open",
-      statusTabId: "waiting_proposals",
+      listPhase: "negotiation",
+      statusTabId: "negotiation",
       createdAt: "2025-03-01T00:00:00Z",
       updatedAt: "2025-03-01T00:00:00Z",
       address: null,
@@ -257,8 +257,8 @@ describe("ClientMyServicesPage", () => {
       descriptionPreview: "",
       formData: null,
       formSchema: null,
-      status: "open",
-      statusTabId: "waiting_proposals",
+      listPhase: "negotiation",
+      statusTabId: "negotiation",
       createdAt: "2025-03-01T00:00:00Z",
       updatedAt: "2025-03-01T00:00:00Z",
       address: null,
@@ -315,8 +315,8 @@ describe("ClientMyServicesPage", () => {
       descriptionPreview: "",
       formData: null,
       formSchema: null,
-      status: "open",
-      statusTabId: "waiting_proposals",
+      listPhase: "negotiation",
+      statusTabId: "negotiation",
       createdAt: "2025-03-01T00:00:00Z",
       updatedAt: "2025-03-01T00:00:00Z",
       address: null,
@@ -335,7 +335,7 @@ describe("ClientMyServicesPage", () => {
       refetch: vi.fn(),
     });
     render(<ClientMyServicesPage />, { wrapper: createWrapper() });
-    fireEvent.click(screen.getByRole("button", { name: /Ver or\u00e7amentos/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Comparar or\u00e7amentos/i }));
     fireEvent.click(screen.getByTestId("stub-close-budgets"));
   });
 
@@ -347,8 +347,8 @@ describe("ClientMyServicesPage", () => {
       descriptionPreview: "",
       formData: null,
       formSchema: null,
-      status: "open",
-      statusTabId: "waiting_proposals",
+      listPhase: "negotiation",
+      statusTabId: "negotiation",
       createdAt: "2025-03-01T00:00:00Z",
       updatedAt: "2025-03-01T00:00:00Z",
       address: null,
@@ -367,7 +367,7 @@ describe("ClientMyServicesPage", () => {
       refetch: vi.fn(),
     });
     render(<ClientMyServicesPage />, { wrapper: createWrapper() });
-    fireEvent.click(screen.getByRole("button", { name: /Ver or\u00e7amentos/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Comparar or\u00e7amentos/i }));
     fireEvent.click(screen.getByTestId("stub-keep-open-budgets"));
     fireEvent.click(screen.getByRole("button", { name: /Ver detalhes/i }));
     fireEvent.click(screen.getByTestId("stub-keep-open-details"));
@@ -381,8 +381,8 @@ describe("ClientMyServicesPage", () => {
       descriptionPreview: "",
       formData: null,
       formSchema: null,
-      status: "open",
-      statusTabId: "waiting_proposals",
+      listPhase: "negotiation",
+      statusTabId: "negotiation",
       createdAt: "2025-03-01T00:00:00Z",
       updatedAt: "2025-03-01T00:00:00Z",
       address: null,

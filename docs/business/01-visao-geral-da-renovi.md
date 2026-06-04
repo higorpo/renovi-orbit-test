@@ -16,7 +16,7 @@ flowchart LR
   end
   subgraph Cliente["Cliente autenticado"]
     C[Meus serviços / pedidos]
-    D[Orçamentos recebidos]
+    D[Conversas / negociação]
     E[Minha conta]
   end
   subgraph Prestador["Prestador autenticado"]
@@ -38,8 +38,8 @@ Os módulos de produto mapeiam diretamente às pastas em `src/features/`:
 - **dynamic-form** — Motor de formulários por schema (etapas, visibilidade, validação).
 - **addresses** — Endereços do cliente, geografia da plataforma (estados, cidades, bairros), CEP.
 - **auth** — Login, cadastro, recuperação de senha, sessão, guards de rota.
-- **client-my-services** — Lista e detalhe de **pedidos** (`service_requests`) do cliente.
-- **client-budgets** — Orçamentos recebidos, perguntas e respostas no contexto de propostas.
+- **client-my-services** — Lista de **pedidos** (`service_requests`) do cliente; sheet comparar/histórico de orçamentos quando há propostas.
+- **negotiation-proposals** — Propostas, composer, aceite/recusa e sheet de orçamentos recebidos (Public API usada por jobs, chats e Meus Serviços).
 - **provider-jobs** — Descoberta de pedidos compatíveis, detalhe, perguntas e envio de proposta.
 - **provider-budgets** — Orçamentos já enviados e fila de perguntas do prestador.
 - **provider-profile** — Página pública do prestador por slug (`/perfil/:slug`).
@@ -73,7 +73,7 @@ Os módulos de produto mapeiam diretamente às pastas em `src/features/`:
 
 1. **Cliente pede orçamento** — `/pedir-orcamento` → escolha de serviço → formulário dinâmico → descrição/fotos (opcional IA) → endereço → identidade (logado ou cadastro convidado) → criação via Edge Function `create-request-quote-order`.
 2. **Prestador encontra trabalho** — `/dashboard/jobs` → filtros/geo → detalhe → perguntas/proposta.
-3. **Cliente acompanha** — `/dashboard/requests` (lista) e `/dashboard/orcamentos` (propostas e threads).
+3. **Cliente acompanha** — `/dashboard/requests` (lista e sheet de orçamentos no card) e `/dashboard/chats` (negociação in-app).
 4. **Prestador acompanha envios** — `/dashboard/budgets`.
 5. **Perfil público** — `/perfil/:slug` para captação/link compartilhável.
 

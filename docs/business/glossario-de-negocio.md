@@ -6,7 +6,7 @@ Termos extraídos ou inferidos a partir de nomes de entidades, rotas e interface
 |-------|------------------------|-------------------------|
 | **Pedido / solicitação de serviço** | Registro de pedido de orçamento do cliente, com serviço, dados do formulário, fotos e localização. | Tabela `service_requests`; rota “Meus Serviços” no menu cliente (`dashboardMenu.ts`). |
 | **Service request** | Nome técnico em inglês do mesmo conceito. | Código, APIs, migrations. |
-| **Orçamento (UI cliente)** | Conjunto de propostas recebidas e interações (perguntas) ligadas aos pedidos. | `/dashboard/orcamentos`, módulo `client-budgets`. |
+| **Orçamento (UI cliente)** | Propostas recebidas por pedido: sheet **Comparar orçamentos** / **Histórico de orçamentos** em Meus Serviços; negociação ativa em Conversas. | `client-my-services` + `negotiation-proposals`; `/dashboard/requests`; `/dashboard/chats`. |
 | **Orçamento (UI prestador)** | Propostas que o prestador enviou e suas perguntas. | `/dashboard/budgets`, módulo `provider-budgets`. |
 | **Proposta** | Oferta formal do prestador para um pedido: valores, impostos/taxa da plataforma, prazo, janelas sugeridas, status. | `provider_proposals`, RPCs `create_provider_proposal`, etc. |
 | **Trabalho / Job** | Na UI do prestador, oportunidade derivada de um pedido compatível com perfil e área. | `provider-jobs`, RPC `match_provider_jobs`, função Edge `match-provider-jobs`. |
@@ -62,4 +62,4 @@ Termos extraídos ou inferidos a partir de nomes de entidades, rotas e interface
 |-----------|-------------------|
 | “Meus Serviços” (cliente) | Lista de **pedidos** (`service_requests`), não serviços ofertados. |
 | “Solicitações” (prestador) | Também pedidos, vistos como oportunidades de trabalho. |
-| “Orçamentos” | Contexto distinto: cliente vê **recebidos**; prestador vê **enviados**. |
+| “Orçamentos” | **Prestador:** propostas enviadas (`/dashboard/budgets`). **Cliente:** não há item de menu homônimo; comparar/histórico de propostas no card em **Meus Serviços**; negociação em **Conversas**. |

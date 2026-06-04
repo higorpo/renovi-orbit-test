@@ -10,7 +10,7 @@ import { ClientMyServicesEmptyState } from "./ClientMyServicesEmptyState";
 import { ClientMyServicesErrorState } from "./ClientMyServicesErrorState";
 import { ClientMyServicesNoFilterResultsState } from "./ClientMyServicesNoFilterResultsState";
 import { ClientMyServicesFocusBanner } from "./ClientMyServicesFocusBanner";
-import { ReceivedBudgetDetailsSheet } from "@/features/client-budgets";
+import { ReceivedBudgetDetailsSheet } from "@/features/negotiation-proposals";
 import { OpenServiceDetailsSheet } from "./OpenServiceDetailsSheet";
 import { useClientMyServicesPage } from "../hooks/useClientMyServicesPage";
 const SKELETON_COUNT = 4;
@@ -39,9 +39,10 @@ export function ClientMyServicesPage() {
     categoryOptions,
     cityOptions,
     neighborhoodOptions,
-    detailsOpen,
-    setDetailsOpen,
+    budgetSheetOpen,
+    setBudgetSheetOpen,
     selectedServiceRequestId,
+    selectedBudgetSheetMode,
     selectedOpenService,
     setSelectedOpenService,
     cancelServiceRequest,
@@ -139,11 +140,11 @@ export function ClientMyServicesPage() {
         </section>
       </div>
       <ReceivedBudgetDetailsSheet
-        open={detailsOpen}
+        open={budgetSheetOpen}
         serviceRequestId={selectedServiceRequestId}
-        sheetMode="compare"
+        sheetMode={selectedBudgetSheetMode}
         onOpenChange={(next) => {
-          if (!next) setDetailsOpen(false);
+          if (!next) setBudgetSheetOpen(false);
         }}
       />
       <OpenServiceDetailsSheet

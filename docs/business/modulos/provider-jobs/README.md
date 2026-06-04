@@ -50,4 +50,4 @@
 - **`my-account`:** serviços ofertados e bairros alimentam o matching (ver comentários na Edge).
 - **`provider-budgets`:** reutiliza `JobDetailSheet` / `JobDetailPage` e navegação de retorno (`constants/jobDetailReturnNavigation.ts`).
 - **`request-quote`:** fotos do pedido na lista; estilos de card de serviço.
-- **`client-budgets` / `client-my-services`:** lado cliente para respostas e orçamentos recebidos.
+- **`client-my-services` / `negotiation-proposals`:** lado cliente para acompanhar pedidos, comparar/histórico de orçamentos e negociar em Conversas.

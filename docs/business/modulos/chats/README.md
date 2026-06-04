@@ -11,7 +11,7 @@
 
 | Aspecto | Detalhe |
 |---------|---------|
-| Rotas | `/chats`, `/chats/:chatId` (`ProtectedRoute` client + provider) |
+| Rotas | `/dashboard/chats`, `/dashboard/chats/:chatId` (`ProtectedRoute` client + provider) |
 | Lista / thread | Feature `chats`: `ChatListPage`, `ChatScreen`, RPCs `list_conversations`, `list_chat_messages`, `cns_send_message` |
 | Propostas | Feature `negotiation-proposals`: `submit_proposal`, `accept_proposal`, `reject_proposal`, `request_proposal_revision` |
 | Mídia | Edge `chat-upload-media` + sessão `chat_media_upload_sessions` |
@@ -23,6 +23,7 @@
 | Documento | Conteúdo |
 |-----------|----------|
 | [features/conversas-e-negociacao.md](./features/conversas-e-negociacao.md) | Slots §3.3.1, FSM conversa/proposta, mensagens livres vs PENDING, aceite, cancelamento, notificações |
+| [features/comparar-orcamentos-meus-servicos.md](./features/comparar-orcamentos-meus-servicos.md) | Sheet `ReceivedBudgetDetailsSheet` (modos compare/history) consumido por Meus Serviços |
 
 ## 4. Arquivos-chave (mapa rápido)
 
@@ -37,12 +38,12 @@
 
 ## 5. Relação com outros módulos
 
-- **`client-budgets` / `provider-budgets`:** fluxos legados de orçamento; CNS é o caminho preferencial após cutover Wave F.
-- **`provider-jobs`:** origem do pedido e envio de proposta (composer migra para `negotiation-proposals`).
+- **`provider-budgets`:** fluxo legado de orçamentos enviados pelo prestador (lista separada de Trabalhos).
+- **`provider-jobs`:** origem do pedido e envio de proposta (composer em `negotiation-proposals`).
 - **`message-dispatcher`:** entrega e-mail/push de eventos CNS.
-- **`client-my-services`:** status do pedido passa a `COMPLETED` / `CANCELLED` via RPCs CNS.
+- **`client-my-services`:** lista de pedidos; sheet compare/history de orçamentos via Public API de `negotiation-proposals`.
 
 ## 6. Lacunas conhecidas (produto)
 
-- Item de menu do dashboard para `/chats` pode ainda não estar exposto — rota existe no router.
+- Item **Conversas** no menu do dashboard aponta para `/dashboard/chats` (`dashboardMenu.ts`).
 - Indicador de digitação (typing) e algumas integrações de banner → proposta: ver `docs/chats/tasks.md` pós-106.

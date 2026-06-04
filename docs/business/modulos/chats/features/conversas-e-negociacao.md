@@ -4,7 +4,7 @@
 
 - **O que é:** sistema de **conversas** (`chats`) ligadas a um **pedido** e a um par cliente–prestador, com mensagens tipadas (texto, proposta, sistema), **propostas** com máquina de estados, e regras de **slot** e **mensagem livre**.
 - **Quem usa:** cliente e prestador participantes.
-- **Onde na UI:** `/chats` (lista) e `/chats/:chatId` (tela de conversa).
+- **Onde na UI:** `/dashboard/chats` (lista) e `/dashboard/chats/:chatId` (tela de conversa).
 - **Cutover:** documentação de rollout em `docs/chats/wave-bf-rollout-runbook.md`; habilitação progressiva por ondas A–F.
 
 ## 2. Slots de conversa ativa (§3.3.1)
@@ -83,6 +83,4 @@
 
 ## 9. Lacunas / evolução
 
-- Link no menu do dashboard para `/chats` pode pendente de produto.
-- Fluxos legados em `client-budgets` / sheets ainda coexistem até desativação explícita.
 - Detalhes de typing indicator: ver tarefas 111+ em `docs/chats/tasks.md`.

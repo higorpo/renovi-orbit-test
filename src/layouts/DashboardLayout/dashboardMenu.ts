@@ -1,6 +1,5 @@
 import {
   Briefcase,
-  ClipboardList,
   FileText,
   HelpCircle,
   LayoutDashboard,
@@ -8,6 +7,7 @@ import {
   MessageSquare,
   Settings,
   Wallet,
+  ClipboardList,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ProfileRole } from "@/features/auth";
@@ -26,7 +26,6 @@ function clientMenuItems(): DashboardMenuItem[] {
   return [
     { path: "/dashboard", label: "Visão geral", icon: LayoutDashboard },
     { path: "/dashboard/requests", label: "Meus Serviços", icon: FileText },
-    { path: "/dashboard/orcamentos", label: "Orçamentos", icon: ClipboardList },
     { path: "/dashboard/chats", label: "Conversas", icon: MessageSquare },
     { path: "/dashboard/addresses", label: "Endereços", icon: MapPin },
     { path: "/dashboard/conta", label: "Minha conta", icon: Settings },

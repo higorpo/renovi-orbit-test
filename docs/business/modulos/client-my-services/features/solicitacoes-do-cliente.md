@@ -1,6 +1,6 @@
 # Solicitações do cliente (Meus Serviços)
 
-Documentação baseada em `src/features/client-my-services/`, `api/serviceRequests.api.ts` e integrações com `client-budgets` e `request-quote`.
+Documentação baseada em `src/features/client-my-services/`, `api/serviceRequests.api.ts` e integrações com `negotiation-proposals` e `request-quote`.
 
 ---
 
@@ -8,7 +8,7 @@ Documentação baseada em `src/features/client-my-services/`, `api/serviceReques
 
 | Item | Descrição |
 |------|-----------|
-| **Objetivo** | Listar e gerenciar **pedidos** (`service_requests`) do cliente autenticado: filtros, busca, abas por visão de status, deep link para um pedido, sheets de orçamentos/perguntas e cancelamento quando aplicável. |
+| **Objetivo** | Listar e gerenciar **pedidos** (`service_requests`) do cliente autenticado: filtros, busca, abas por visão de status, deep link para um pedido, sheet de comparar/histórico de orçamentos e cancelamento quando aplicável. |
 | **Rotas** | **`/dashboard/requests`** — `ClientMyServicesPage`. **`/dashboard/services/:id`** — `ClientMyServicesDetailPlaceholder` (página **placeholder**, não é o fluxo principal de detalhe). |
 | **Menu** | Cliente: **“Meus Serviços”** (`dashboardMenu.ts`). Prestador vê **“Solicitações”** apontando para o **mesmo path** — a UI da página é pensada para o cliente; prestador compartilha rota no layout. |
 | **Guard** | `ProtectedRoute` com `allowedRoles={['client', 'provider']}` no segmento `dashboard`; não há guard exclusivo de cliente nesta rota. |
@@ -126,11 +126,15 @@ Mapeamento em `utils/serviceRequestCardMapper.ts`:
 - **Só** `model.status === 'open'` abre o sheet (`ClientMyServicesSections`: descrição, `buildSummaryEntries` do `dynamic-form`, fotos).
 - Outros status: toast *"Visualização detalhada para este status ainda está em construção."* — botão “Ver detalhes” ainda aparece.
 
-### Orçamentos e perguntas (`client-budgets`)
+### Comparar orçamentos / Histórico de orçamentos (`negotiation-proposals`)
 
-- `ReceivedBudgetDetailsSheet` com `sheetMode="compare"`, `QuestionThreadSheet`.
-- **Ver orçamentos:** `open`, `proposalCount > 0` e `proposalCount !== 1`.
-- **Ver perguntas:** `open` e `proposalCount !== 1` (exatamente **uma** proposta oculta ambos os botões de orçamentos e perguntas nesta lógica).
+- Sheet `ReceivedBudgetDetailsSheet` importado da Public API de **`negotiation-proposals`** (`ClientMyServicesPage`).
+- Botão no card quando **`proposalCount > 0`**, ao lado de **Ver detalhes**:
+  - Pedido **`open`:** label **Comparar orçamentos** (modo `compare`; ícone `GitCompare`).
+  - Demais status (`in_progress`, `closed`, `cancelled`, …): **Histórico de orçamentos** (modo `history`; ícone `History`).
+- Modo e label derivados de `getServiceRequestBudgetSheetMode(status)` e `getServiceRequestBudgetActionLabel(status)`.
+- Dados via `useServiceRequestBudgetCompareDetail` → RPC `get_client_budget_service_request_detail`.
+- Em modo **compare**, proposta pendente pode ser **recusada** (`rejectServiceRequestBudgetProposal` / RPC `reject_client_budget_proposal`). Botão **Aprovar orçamento** existe no sheet mas permanece **desabilitado** — aceite canônico via **Conversas** (CNS).
 
 ### Cancelar
 
@@ -171,8 +175,8 @@ Utilitário em `utils/filterServiceRequests.ts` usado **apenas em testes** — a
 flowchart LR
   P[ClientMyServicesPage] --> L[listServiceRequests]
   P --> B[ReceivedBudgetDetailsSheet]
-  P --> Q[QuestionThreadSheet]
   P --> D[OpenServiceDetailsSheet]
+  B --> NP[negotiation-proposals API]
   L --> SR[(service_requests)]
   L --> PP[(provider_proposals)]
 ```

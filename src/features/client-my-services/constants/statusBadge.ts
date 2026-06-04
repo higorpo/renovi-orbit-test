@@ -1,24 +1,22 @@
-import type { ServiceRequestDbStatus } from "./statusTabs";
+import type { ServiceRequestListPhase } from "../utils/serviceRequestListPhase";
 
-export const STATUS_LABELS: Record<ServiceRequestDbStatus, string> = {
-  open: "Aguardando orçamentos",
+export const LIST_PHASE_LABELS: Record<ServiceRequestListPhase, string> = {
+  negotiation: "Em negociação",
   in_progress: "Em andamento",
-  closed: "Concluído",
+  completed: "Concluído",
   cancelled: "Cancelado",
 };
 
 export function getStatusLabel(
-  status: ServiceRequestDbStatus,
-  hasSubmittedProposal?: boolean
+  listPhase: ServiceRequestListPhase,
+  hasPendingClientProposal?: boolean,
 ): string {
-  if (status === "open" && hasSubmittedProposal) {
+  if (listPhase === "negotiation" && hasPendingClientProposal) {
     return "Aguardando decisão";
   }
-
-  return STATUS_LABELS[status];
+  return LIST_PHASE_LABELS[listPhase];
 }
 
-/** Badge variant for shadcn Badge component. */
 export type StatusBadgeVariant =
   | "default"
   | "secondary"
@@ -27,23 +25,19 @@ export type StatusBadgeVariant =
   | "success"
   | "warning";
 
-export const STATUS_BADGE_VARIANT: Record<
-  ServiceRequestDbStatus,
-  StatusBadgeVariant
-> = {
-  open: "warning",
+export const LIST_PHASE_BADGE_VARIANT: Record<ServiceRequestListPhase, StatusBadgeVariant> = {
+  negotiation: "warning",
   in_progress: "default",
-  closed: "success",
+  completed: "success",
   cancelled: "secondary",
 };
 
 export function getStatusBadgeVariant(
-  status: ServiceRequestDbStatus,
-  proposalCount?: number
+  listPhase: ServiceRequestListPhase,
+  proposalCount?: number,
 ): StatusBadgeVariant {
-  if (status === "open" && (proposalCount ?? 0) === 0) {
+  if (listPhase === "negotiation" && (proposalCount ?? 0) === 0) {
     return "secondary";
   }
-
-  return STATUS_BADGE_VARIANT[status];
+  return LIST_PHASE_BADGE_VARIANT[listPhase];
 }

@@ -20,11 +20,11 @@ function matchesSearch(model: ServiceRequestCardModel, query: string): boolean {
 
 function matchesStatusTab(
   model: ServiceRequestCardModel,
-  statusTabId: string
+  statusTabId: string,
 ): boolean {
   return tabIncludesStatus(
     statusTabId as import("../constants/statusTabs").StatusTabId,
-    model.status
+    model.listPhase,
   );
 }
 
