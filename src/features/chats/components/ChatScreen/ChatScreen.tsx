@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { moderateChatComposerSend } from "../../utils/moderateChatComposerSend";
 import { useNavigate } from "react-router";
 import { useAuth } from "@/features/auth";
@@ -52,6 +52,10 @@ export function ChatScreen({
   const { user, profile } = useAuth();
   const [realtimeStatus, setRealtimeStatus] = useState<string | null>(null);
   const [sendBlockMessage, setSendBlockMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSendBlockMessage(null);
+  }, [chatId]);
 
   const { detail, isLoading: isDetailLoading, isError: isDetailError, error: detailError, refetch: refetchDetail } =
     useConversationDetail(chatId, { activeChat: true });
