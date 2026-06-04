@@ -221,6 +221,7 @@ export async function installChatsMocks(page: Page, options: ChatsMockOptions) {
             category: null,
             address: { neighborhood: "Centro", city: "São Paulo", state: "SP" },
             counterparty_read_receipt: null,
+            accepted_proposal: null,
           }),
         });
         return;

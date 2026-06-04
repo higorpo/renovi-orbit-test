@@ -48,6 +48,7 @@ const baseDetail: ConversationDetailResponse = {
   category: null,
   address: { neighborhood: null, city: null, state: null },
   counterparty_read_receipt: null,
+  accepted_proposal: null,
 };
 
 describe("patchConversationDetailCache", () => {

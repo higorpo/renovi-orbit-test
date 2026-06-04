@@ -102,6 +102,7 @@ Coisas para fazer next
 -mostrar contador de quantidade de chats não lidos no bottom navigator
 -não deixar escrever preços nos campos de texto do chat/proposta
 -não deixar escrever palavrões nos campos de texto do chat/proposta
+-verificar quando o action banner aparece
 
 ATUALIZAR:
 Essas são as **funções/RPCs** que ainda comparam `service_requests.status` com os valores legados em texto (`'open'`, `'in_progress'`, `'closed'`, `'cancelled'`). Com o enum novo (`OPEN`, `COMPLETED`, `CANCELLED`), essas comparações **param de bater** — em geral retornam vazio ou lançam erro.

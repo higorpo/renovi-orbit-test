@@ -66,6 +66,7 @@ const detail: ConversationDetailResponse = {
     state: "PR",
   },
   counterparty_read_receipt: null,
+  accepted_proposal: null,
 };
 
 const currentUser: Profile = {
@@ -76,6 +77,32 @@ const currentUser: Profile = {
 };
 
 describe("ChatDetailsPanel", () => {
+  it("renders accepted proposal section when available", () => {
+    const onViewProposalDetails = vi.fn();
+
+    render(
+      <ChatDetailsPanel
+        detail={{
+          ...detail,
+          accepted_proposal: {
+            id: "prop-accepted",
+            proposed_amount: 420,
+            selected_slot: { start_date: "2026-07-01", shift: "full_day" },
+          },
+        }}
+        currentUser={currentUser}
+        onArchive={vi.fn()}
+        onViewProposalDetails={onViewProposalDetails}
+      />,
+    );
+
+    expect(screen.getByText("Proposta aceita")).toBeTruthy();
+    expect(screen.getByText("R$ 420,00")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Ver detalhes da proposta" }));
+    expect(onViewProposalDetails).toHaveBeenCalledWith("prop-accepted");
+  });
+
   it("renders service, participants, actions and disclaimer sections", () => {
     const onArchive = vi.fn();
 

@@ -10,6 +10,7 @@ export interface ChatDetailsDesktopPanelProps {
   currentUser: Profile;
   onClose: () => void;
   onArchive: () => void;
+  onViewProposalDetails?: (proposalId: string) => void;
   isArchiving?: boolean;
   className?: string;
 }
@@ -19,6 +20,7 @@ export function ChatDetailsDesktopPanel({
   currentUser,
   onClose,
   onArchive,
+  onViewProposalDetails,
   isArchiving = false,
   className,
 }: ChatDetailsDesktopPanelProps) {
@@ -49,6 +51,7 @@ export function ChatDetailsDesktopPanel({
           detail={detail}
           currentUser={currentUser}
           onArchive={onArchive}
+          onViewProposalDetails={onViewProposalDetails}
           isArchiving={isArchiving}
         />
       </div>

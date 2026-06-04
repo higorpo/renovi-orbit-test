@@ -223,6 +223,7 @@ export function ChatsConversationRoute() {
             currentUser={profile}
             onClose={() => setDetailsOpen(false)}
             onArchive={handleArchiveRequest}
+            onViewProposalDetails={openProposalDetails}
             isArchiving={closeConversationMutation.isPending}
           />
         ) : null}
@@ -235,6 +236,7 @@ export function ChatsConversationRoute() {
           detail={detail}
           currentUser={profile}
           onArchive={handleArchiveRequest}
+          onViewProposalDetails={openProposalDetails}
           isArchiving={closeConversationMutation.isPending}
         />
       ) : null}

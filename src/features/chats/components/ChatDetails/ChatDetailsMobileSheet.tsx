@@ -15,6 +15,7 @@ export interface ChatDetailsMobileSheetProps {
   detail: ConversationDetailResponse | null;
   currentUser: Profile | null;
   onArchive: () => void;
+  onViewProposalDetails?: (proposalId: string) => void;
   isArchiving?: boolean;
 }
 
@@ -24,6 +25,7 @@ export function ChatDetailsMobileSheet({
   detail,
   currentUser,
   onArchive,
+  onViewProposalDetails,
   isArchiving = false,
 }: ChatDetailsMobileSheetProps) {
   return (
@@ -52,6 +54,7 @@ export function ChatDetailsMobileSheet({
               detail={detail}
               currentUser={currentUser}
               onArchive={onArchive}
+              onViewProposalDetails={onViewProposalDetails}
               isArchiving={isArchiving}
             />
           ) : null}

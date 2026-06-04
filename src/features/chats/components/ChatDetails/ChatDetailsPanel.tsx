@@ -5,6 +5,7 @@ import {
   buildChatDetailsParticipants,
   CHAT_DETAILS_DISCLAIMER,
 } from "../../utils/chatDetailsCopy";
+import { ChatDetailsAcceptedProposalSection } from "./ChatDetailsAcceptedProposalSection";
 import { ChatDetailsActions } from "./ChatDetailsActions";
 import { ChatDetailsParticipantRow } from "./ChatDetailsParticipantRow";
 import { ChatDetailsServiceCard } from "./ChatDetailsServiceCard";
@@ -13,6 +14,7 @@ export interface ChatDetailsPanelProps {
   detail: ConversationDetailResponse;
   currentUser: Profile;
   onArchive: () => void;
+  onViewProposalDetails?: (proposalId: string) => void;
   isArchiving?: boolean;
   className?: string;
 }
@@ -21,14 +23,24 @@ export function ChatDetailsPanel({
   detail,
   currentUser,
   onArchive,
+  onViewProposalDetails,
   isArchiving = false,
   className,
 }: ChatDetailsPanelProps) {
   const participants = buildChatDetailsParticipants(detail, currentUser);
   const canArchive = detail.conversation.status !== "CLOSED";
+  const acceptedProposal = detail.accepted_proposal;
 
   return (
     <div className={cn("space-y-6", className)}>
+      {acceptedProposal && onViewProposalDetails ? (
+        <ChatDetailsAcceptedProposalSection
+          acceptedProposal={acceptedProposal}
+          viewerRole={currentUser.role}
+          onViewDetails={onViewProposalDetails}
+        />
+      ) : null}
+
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-foreground">Detalhes do serviço</h2>
         <ChatDetailsServiceCard detail={detail} />

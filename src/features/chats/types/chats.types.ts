@@ -138,6 +138,17 @@ export interface CounterpartyReadReceipt {
   last_read_message_id: string | null;
 }
 
+export interface ConversationAcceptedProposalSummary {
+  id: string;
+  proposed_amount: number;
+  final_amount?: number;
+  selected_slot: {
+    start_date: string;
+    end_date?: string | null;
+    shift: string;
+  } | null;
+}
+
 export interface ConversationDetailResponse {
   conversation: ConversationDetailSnapshot;
   counterparty: ConversationCounterparty;
@@ -146,6 +157,7 @@ export interface ConversationDetailResponse {
   category: ConversationCategorySummary | null;
   address: ConversationMaskedAddress;
   counterparty_read_receipt: CounterpartyReadReceipt | null;
+  accepted_proposal: ConversationAcceptedProposalSummary | null;
 }
 
 export interface SendMessageResultMessage {

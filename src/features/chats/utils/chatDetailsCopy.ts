@@ -68,3 +68,13 @@ export const CHAT_DETAILS_DISCLAIMER = {
     "Esta conversa existe para facilitar a negociação entre cliente e prestador sobre o pedido de serviço. " +
     "Podemos analisar as mensagens por motivos de segurança, suporte e para aprimorar nossos serviços.",
 } as const;
+
+export const CHAT_ACCEPTED_PROPOSAL_COPY = {
+  sectionTitle: "Proposta aceita",
+  headline: "Esta proposta foi aceita e segue como referência do serviço.",
+  amountLabel: "Valor acordado",
+  providerAmountLabel: "Valor a receber",
+  slotLabel: "Data e turno escolhidos",
+  slotUnavailable: "Data e turno indisponíveis",
+  viewDetailsAction: "Ver detalhes da proposta",
+} as const;

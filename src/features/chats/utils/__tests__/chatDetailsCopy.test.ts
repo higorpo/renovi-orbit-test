@@ -55,6 +55,7 @@ const baseDetail: ConversationDetailResponse = {
     state: "PR",
   },
   counterparty_read_receipt: null,
+  accepted_proposal: null,
 };
 
 const clientProfile: Profile = {

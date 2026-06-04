@@ -58,6 +58,7 @@ const detail: ConversationDetailResponse = {
     state: "PR",
   },
   counterparty_read_receipt: null,
+  accepted_proposal: null,
 };
 
 const currentUser: Profile = {
