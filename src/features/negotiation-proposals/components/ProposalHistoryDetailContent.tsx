@@ -77,7 +77,7 @@ export function ProposalHistoryDetailContent({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 sm:gap-2">
         <ProposalDetailSection variant="muted">
           <ProposalDetailLabel icon={CircleDollarSign}>{amountLabel}</ProposalDetailLabel>
           <ProposalDetailValue semibold>
@@ -99,7 +99,7 @@ export function ProposalHistoryDetailContent({
       </div>
 
       {providerPricing ? (
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 sm:gap-2">
           <ProposalDetailSection variant="muted">
             <ProposalDetailLabel icon={Wallet}>Valor a receber</ProposalDetailLabel>
             <ProposalDetailValue semibold>
