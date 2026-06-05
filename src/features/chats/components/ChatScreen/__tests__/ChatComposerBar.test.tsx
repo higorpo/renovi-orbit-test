@@ -141,4 +141,71 @@ describe("ChatComposerBar", () => {
     fireEvent.change(textarea, { target: { value: "Segunda" } });
     expect(screen.getByRole("button", { name: "Enviar mensagem" })).not.toBeDisabled();
   });
+
+  it("shows the audio primary action when the draft is empty and audio is available", () => {
+    render(
+      <ChatComposerBar
+        composer={enabledComposer}
+        onSend={vi.fn()}
+        onSendAudio={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Gravar áudio" })).not.toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Enviar mensagem" })).toBeNull();
+  });
+
+  it("switches to send when the user types in the composer", () => {
+    render(
+      <ChatComposerBar
+        composer={enabledComposer}
+        onSend={vi.fn()}
+        onSendAudio={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText("Escreva uma mensagem…"), {
+      target: { value: "Oi" },
+    });
+
+    expect(screen.getByRole("button", { name: "Enviar mensagem" })).not.toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Gravar áudio" })).toBeNull();
+  });
+
+  it("switches back to audio when the draft is cleared", () => {
+    render(
+      <ChatComposerBar
+        composer={enabledComposer}
+        onSend={vi.fn()}
+        onSendAudio={vi.fn()}
+      />,
+    );
+
+    const textarea = screen.getByPlaceholderText("Escreva uma mensagem…");
+    fireEvent.change(textarea, { target: { value: "Oi" } });
+    fireEvent.change(textarea, { target: { value: "" } });
+
+    expect(screen.getByRole("button", { name: "Gravar áudio" })).not.toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Enviar mensagem" })).toBeNull();
+  });
+
+  it("keeps send as the primary action when only images are attached", async () => {
+    const onSend = vi.fn();
+    const { container } = render(
+      <ChatComposerBar
+        composer={enabledComposer}
+        onSend={onSend}
+        onSendAudio={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(container.querySelector('input[type="file"]')!, {
+      target: { files: [new File(["x"], "a.jpg", { type: "image/jpeg" })] },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Enviar mensagem" })).not.toBeDisabled();
+    });
+    expect(screen.queryByRole("button", { name: "Gravar áudio" })).toBeNull();
+  });
 });

@@ -1,4 +1,4 @@
-import { ImageIcon, Mic, SendHorizontal } from "lucide-react";
+import { ImageIcon } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import {
 import { ChatAudioRecordingSheet } from "./ChatAudioRecordingSheet";
 import { ChatComposerAttachmentPreview } from "./ChatComposerAttachmentPreview";
 import { ChatComposerAttachmentSourceSheet } from "./ChatComposerAttachmentSourceSheet";
+import { ChatComposerPrimaryActionButton } from "./ChatComposerPrimaryActionButton";
 import { useChatMobileViewportSchedule } from "./ChatMobileViewportContext";
 import { useChatTimelineScrollContext } from "./ChatTimelineScrollContext";
 
@@ -65,6 +66,10 @@ export function ChatComposerBar({
   const hasDraftText = draft.trim().length > 0;
   const canSend =
     composer.isSendEnabled && !isUploadBusy && (hasDraftText || attachments.hasImages);
+  const primaryActionMode =
+    hasDraftText || attachments.hasImages || !canRecordAudio ? "send" : "audio";
+  const isPrimaryActionDisabled =
+    primaryActionMode === "send" ? !canSend : !canRecordAudio;
 
   const focusComposer = useCallback(() => {
     requestAnimationFrame(() => {
@@ -219,29 +224,12 @@ export function ChatComposerBar({
             }}
           />
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-11 w-11 shrink-0 rounded-full text-muted-foreground hover:!bg-transparent hover:!text-foreground active:!bg-transparent"
-            disabled={!canRecordAudio}
-            aria-label="Gravar áudio"
-            onClick={() => void audioPermission.onMicButtonPress()}
-          >
-            <Mic className="h-5 w-5" aria-hidden />
-          </Button>
-
-          <Button
-            type="button"
-            size="icon"
-            className="h-11 w-11 shrink-0 rounded-full"
-            disabled={!canSend}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={handleSend}
-            aria-label="Enviar mensagem"
-          >
-            <SendHorizontal className="h-5 w-5" aria-hidden />
-          </Button>
+          <ChatComposerPrimaryActionButton
+            mode={primaryActionMode}
+            disabled={isPrimaryActionDisabled}
+            onSend={handleSend}
+            onRecordAudio={() => void audioPermission.onMicButtonPress()}
+          />
         </div>
       </footer>
     </>
