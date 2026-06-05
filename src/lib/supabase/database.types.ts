@@ -2174,10 +2174,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      _legacy_bridge_idempotency_uuid: {
-        Args: { p_seed: string }
-        Returns: string
-      }
       accept_proposal: {
         Args: {
           p_idempotency_key: string

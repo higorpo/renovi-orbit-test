@@ -87,7 +87,7 @@ Coisas para fazer next
 -cobertura de testes em todos os códigos novos
 -existe uma certa lentidão para disparar push de novas mensagens (ele cai numa fila de processamento para enviar pro message dispatcher e  depois ainda espera o job do message dispatcher...)
 - usar trigger ao invés de criar essa tabela central...
--remover referencia de chat e novas colunas do provider_proposals, renomear tabela.
+-renomear tabela de provider_proposals
 -ao recusar a proposta, o chat tem que ser encerrado também
 -refazer card de orçamentos do prestador
 -refazer card da tela de meus serviços do cliente
