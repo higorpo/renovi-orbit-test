@@ -51,7 +51,7 @@ select is(
   (
     select count(*)::int
     from message_dispatcher.message_dispatches d
-    join _cooldown_fixture f on d.profile_id = f.profile_id and d.channel = 'push'
+    join _cooldown_fixture f on d.idempotency_key = f.ingest_key
   ),
   1,
   'single deferred dispatch inserted'

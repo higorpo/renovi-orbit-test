@@ -290,7 +290,6 @@ inserted as (
 insert into public.provider_proposals (
   provider_id,
   service_request_id,
-  chat_id,
   proposed_amount,
   proposal_description,
   proposal_duration_value,
@@ -306,7 +305,6 @@ insert into public.provider_proposals (
 select
   f.provider_a_id,
   f.service_request_id,
-  f.chat_ab_id,
   pricing.original_amount,
   'RLS fixture proposal',
   2,
@@ -558,7 +556,6 @@ select throws_ok(
       insert into public.provider_proposals (
         provider_id,
         service_request_id,
-        chat_id,
         proposed_amount,
         proposal_description,
         proposal_duration_value,
@@ -571,7 +568,6 @@ select throws_ok(
         status
       )
       values (
-        '%s',
         '%s',
         '%s',
         100,
@@ -587,8 +583,7 @@ select throws_ok(
       )
     $q$,
     current_setting('rls.client_id')::uuid,
-    current_setting('rls.service_request_id')::uuid,
-    current_setting('rls.chat_ab_id')::uuid
+    current_setting('rls.service_request_id')::uuid
   ),
   '42501',
   null,

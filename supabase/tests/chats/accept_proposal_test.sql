@@ -179,6 +179,7 @@ with pricing as (
 )
 select public.create_provider_proposal(
   (select service_request_id from _accept_sr),
+    gen_random_uuid(),
   pricing.original_amount,
   'Accept cascade test proposal',
   2,

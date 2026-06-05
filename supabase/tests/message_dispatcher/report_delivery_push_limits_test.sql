@@ -2,12 +2,15 @@
 
 begin;
 
+\ir ../rls/fixtures/seed_rls_actors.inc
+\ir fixtures/seed_mmd_isolated_profile.inc
+
 select plan(3);
 
 create temp table _push_limits_fixture as
-select p.id as profile_id, gen_random_uuid() as dispatch_id
-from public.profiles p
-limit 1;
+select
+  pg_temp.mmd_isolated_profile('c1111111-1111-4111-8111-111111111001'::uuid) as profile_id,
+  gen_random_uuid() as dispatch_id;
 
 insert into message_dispatcher.message_dispatches (
   id,

@@ -4,7 +4,7 @@ begin;
 
 \ir fixtures/seed_chat.inc
 
-select plan(6);
+select plan(5);
 
 create or replace function pg_temp.cns_set_auth(p_user_id uuid)
 returns void
@@ -123,7 +123,7 @@ select public.cns_send_message(
 ) as result;
 
 select is(
-  (_audio_send.result->'message'->>'message_type'),
+  (select result->'message'->>'message_type' from _audio_send),
   'AUDIO',
   'successful AUDIO send returns message_type AUDIO'
 );

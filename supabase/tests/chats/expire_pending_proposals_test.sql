@@ -115,6 +115,7 @@ begin
   )
   select public.create_provider_proposal(
     p_service_request_id,
+    gen_random_uuid(),
     pricing.original_amount,
     'Stale proposal fixture',
     2,

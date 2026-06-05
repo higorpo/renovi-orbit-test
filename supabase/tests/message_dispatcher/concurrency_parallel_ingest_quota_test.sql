@@ -2,15 +2,16 @@
 
 begin;
 
+\ir ../rls/fixtures/seed_rls_actors.inc
+\ir fixtures/seed_mmd_isolated_profile.inc
+
 select plan(5);
 
 create temp table _quota_race_fixture as
 select
-  p.id as profile_id,
+  pg_temp.mmd_isolated_profile('c1111111-1111-4111-8111-111111111004'::uuid) as profile_id,
   gen_random_uuid() as ingest_key_a,
-  gen_random_uuid() as ingest_key_b
-from public.profiles p
-limit 1;
+  gen_random_uuid() as ingest_key_b;
 
 insert into message_dispatcher.message_dispatcher_user_limits (profile_id)
 select profile_id from _quota_race_fixture

@@ -2,12 +2,15 @@
 
 begin;
 
+\ir ../rls/fixtures/seed_rls_actors.inc
+\ir fixtures/seed_mmd_isolated_profile.inc
+
 select plan(7);
 
 create temp table _fcm_bad_fixture as
-select p.id as profile_id, gen_random_uuid() as dispatch_id
-from public.profiles p
-limit 1;
+select
+  pg_temp.mmd_isolated_profile('c1111111-1111-4111-8111-111111111005'::uuid) as profile_id,
+  gen_random_uuid() as dispatch_id;
 
 insert into public.user_device_beacons (
   profile_id,
@@ -44,12 +47,16 @@ select
   'push'::message_dispatcher.message_channel,
   'engagement_push',
   'QUEUED'::message_dispatcher.message_dispatch_status,
-  now()
+  '-infinity'::timestamptz
 from _fcm_bad_fixture f;
 
 select is(
-  jsonb_array_length(
-    message_dispatcher.message_dispatcher_checkout_batch(1, 'worker-fcm-bad')
+  (
+    select count(*)::int
+    from jsonb_array_elements(
+      message_dispatcher.message_dispatcher_checkout_batch(1, 'worker-fcm-bad')
+    ) elem
+    join _fcm_bad_fixture f on (elem->>'id')::uuid = f.dispatch_id
   ),
   1,
   'checkout claims push dispatch with delivery fan-out'

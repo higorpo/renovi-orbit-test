@@ -158,6 +158,7 @@ with pricing as (
 )
 select public.create_provider_proposal(
   (select service_request_id from _vs_sr),
+    gen_random_uuid(),
   pricing.original_amount,
   'view_services pgTAP scope',
   2,

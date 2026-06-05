@@ -2,12 +2,15 @@
 
 begin;
 
+\ir ../rls/fixtures/seed_rls_actors.inc
+\ir fixtures/seed_mmd_isolated_profile.inc
+
 select plan(3);
 
 create temp table _push_fanout_fixture as
-select p.id as profile_id, gen_random_uuid() as dispatch_id
-from public.profiles p
-limit 1;
+select
+  pg_temp.mmd_isolated_profile('c1111111-1111-4111-8111-111111111003'::uuid) as profile_id,
+  gen_random_uuid() as dispatch_id;
 
 insert into public.user_device_beacons (
   profile_id,
@@ -44,20 +47,26 @@ select
   'push'::message_dispatcher.message_channel,
   'engagement_push',
   'QUEUED'::message_dispatcher.message_dispatch_status,
-  now()
+  '-infinity'::timestamptz
 from _push_fanout_fixture f;
 
 create temp table _checkout_payload as
 select message_dispatcher.message_dispatcher_checkout_batch(1, 'worker-push') as payload;
 
+create temp table _our_checkout_item as
+select elem as item
+from _checkout_payload cp,
+  lateral jsonb_array_elements(cp.payload) elem
+join _push_fanout_fixture f on (elem->>'id')::uuid = f.dispatch_id;
+
 select is(
-  jsonb_array_length((select payload -> 0 -> 'deliveries' from _checkout_payload)),
+  (select jsonb_array_length(item -> 'deliveries') from _our_checkout_item),
   1,
   'checkout payload includes one delivery'
 );
 
 select is(
-  (select payload -> 0 -> 'deliveries' -> 0 ->> 'fcm_token_snapshot' from _checkout_payload),
+  (select item -> 'deliveries' -> 0 ->> 'fcm_token_snapshot' from _our_checkout_item),
   'fcm-token-snapshot-abc',
   'fcm_token_snapshot copied at checkout'
 );

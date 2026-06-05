@@ -88,6 +88,7 @@ with pricing as (
 )
 select public.create_provider_proposal(
   (select service_request_id from _submit_sr),
+    gen_random_uuid(),
   pricing.original_amount,
   'Scope includes wiring and fixtures',
   2,
@@ -154,6 +155,7 @@ with pricing as (
 )
 select public.create_provider_proposal(
   (select service_request_id from _submit_sr),
+    gen_random_uuid(),
   pricing.original_amount,
   'Edited proposal attempt',
   2,

@@ -303,6 +303,7 @@ with pricing as (
 )
 select public.create_provider_proposal(
   (select service_request_id from _accept_reset_case),
+    gen_random_uuid(),
   pricing.original_amount,
   'Accept slot reset fixture',
   2,

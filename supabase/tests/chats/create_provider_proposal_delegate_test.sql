@@ -88,6 +88,7 @@ with pricing as (
 )
 select public.create_provider_proposal(
   (select service_request_id from _delegate_sr),
+    gen_random_uuid(),
   pricing.original_amount,
   'Unified create scope includes wiring',
   2,
@@ -149,6 +150,7 @@ with pricing as (
 )
 select public.create_provider_proposal(
   (select service_request_id from _delegate_sr),
+    gen_random_uuid(),
   pricing.original_amount,
   'Edited pending proposal',
   2,
@@ -195,6 +197,7 @@ with pricing as (
 )
 select public.create_provider_proposal(
   (select service_request_id from _delegate_no_chat_sr),
+    gen_random_uuid(),
   pricing.original_amount,
   'Proposal without pre-existing chat',
   1,

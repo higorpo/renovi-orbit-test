@@ -75,6 +75,7 @@ begin
   )
   select public.create_provider_proposal(
     (select c.service_request_id from public.chats c where c.id = p_chat_id),
+    gen_random_uuid(),
     pricing.original_amount,
     'Gate test proposal',
     1,

@@ -77,6 +77,7 @@ with pricing as (
 )
 select public.create_provider_proposal(
   (select service_request_id from _resubmit_sr),
+    gen_random_uuid(),
   pricing.original_amount,
   'First proposal before rejection',
   2,
@@ -116,6 +117,7 @@ with pricing as (
 )
 select public.create_provider_proposal(
   (select service_request_id from _resubmit_sr),
+    gen_random_uuid(),
   pricing.original_amount,
   'Second proposal after rejection',
   2,
