@@ -1,7 +1,8 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth";
+import { generateIdempotencyKeyV7 } from "@/lib/utils/idempotencyKey";
 import {
   validatePasswordStrength,
   clientSignupIdentitySchema,
@@ -32,6 +33,17 @@ export function useRequestQuoteSubmit({
   const navigate = useNavigate();
   const { trackEvent } = useAnalytics();
   const { user, session, signUp } = useAuth();
+  const submitIdempotencyKeyRef = useRef<string | null>(null);
+
+  const getSubmitIdempotencyKey = useCallback(() => {
+    const key = submitIdempotencyKeyRef.current ?? generateIdempotencyKeyV7();
+    submitIdempotencyKeyRef.current = key;
+    return key;
+  }, []);
+
+  const clearSubmitIdempotencyKey = useCallback(() => {
+    submitIdempotencyKeyRef.current = null;
+  }, []);
 
   const getRequestQuoteRecaptchaToken = useCallback(async () => {
     const token = await executeRecaptcha("request_quote_submit");
@@ -72,6 +84,7 @@ export function useRequestQuoteSubmit({
           const result = await createRequestQuoteOrder({
             userId: user.id,
             email: user.email ?? "",
+            idempotencyKey: getSubmitIdempotencyKey(),
             step4Data: state.step4Data,
             step3Data: state.step3Data,
             selectedService,
@@ -95,6 +108,7 @@ export function useRequestQuoteSubmit({
               had_photos: state.step3Data.photos.length > 0,
             });
             clearDraft();
+            clearSubmitIdempotencyKey();
             toast.success("Pedido enviado com sucesso!");
             await new Promise((r) => setTimeout(r, 800));
             navigate("/dashboard/client", { replace: true });
@@ -132,7 +146,7 @@ export function useRequestQuoteSubmit({
     } finally {
       state.setLoading(false);
     }
-  }, [user, session, state, navigate, trackEvent, getRequestQuoteRecaptchaToken]);
+  }, [user, session, state, navigate, trackEvent, getRequestQuoteRecaptchaToken, getSubmitIdempotencyKey, clearSubmitIdempotencyKey]);
 
   const handleSubmit = useCallback(async () => {
     if (user) {
@@ -211,6 +225,7 @@ export function useRequestQuoteSubmit({
           const result = await createRequestQuoteOrder({
             userId,
             email,
+            idempotencyKey: getSubmitIdempotencyKey(),
             step4Data: state.step4Data!,
             step3Data: state.step3Data,
             selectedService: state.selectedService!,
@@ -235,6 +250,7 @@ export function useRequestQuoteSubmit({
               had_photos: state.step3Data.photos.length > 0,
             });
             clearDraft();
+            clearSubmitIdempotencyKey();
             state.setOrderCreatedEmail(email);
           } else {
             logger.warn("request_quote_submit_failed", {
@@ -269,7 +285,7 @@ export function useRequestQuoteSubmit({
     } finally {
       state.setLoading(false);
     }
-  }, [user, state, signUp, navigate, handleSubmitLoggedIn, trackEvent, getRequestQuoteRecaptchaToken]);
+  }, [user, state, signUp, navigate, handleSubmitLoggedIn, trackEvent, getRequestQuoteRecaptchaToken, getSubmitIdempotencyKey, clearSubmitIdempotencyKey]);
 
   return { handleSubmit, handleSubmitLoggedIn };
 }

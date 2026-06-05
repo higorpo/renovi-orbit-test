@@ -143,6 +143,7 @@ export interface ProviderProposalHistoryItem {
 
 export interface CreateProviderProposalParams {
   serviceRequestId: string;
+  idempotencyKey?: string;
   proposedAmount: number;
   proposalDescription: string;
   proposalDurationValue: number;

@@ -25,6 +25,10 @@ vi.mock("@/lib/sentry", () => ({
   metrics: { count: vi.fn() },
 }));
 
+vi.mock("@/lib/utils/idempotencyKey", () => ({
+  generateIdempotencyKeyV7: () => "00000000-0000-7000-8000-000000000004",
+}));
+
 describe("createProviderProposal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -59,6 +63,7 @@ describe("createProviderProposal", () => {
 
     expect(mocks.rpc).toHaveBeenCalledWith("create_provider_proposal", {
       p_service_request_id: "sr-1",
+      p_idempotency_key: "00000000-0000-7000-8000-000000000004",
       p_proposed_amount: 500,
       p_proposal_description: "Consigo iniciar amanhã cedo.",
       p_proposal_duration_value: 5,

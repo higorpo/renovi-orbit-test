@@ -2293,6 +2293,14 @@ export type Database = {
         }
         Returns: Json
       }
+      cns_prune_chat_rate_limit_buckets: {
+        Args: { p_batch_limit?: number; p_retention_hours?: number }
+        Returns: Json
+      }
+      cns_prune_job_runs: {
+        Args: { p_batch_limit?: number; p_retention_days?: number }
+        Returns: Json
+      }
       cns_reconcile_pending_deliveries: {
         Args: { p_batch_size?: number }
         Returns: Json
@@ -2334,6 +2342,7 @@ export type Database = {
       create_provider_proposal: {
         Args: {
           p_final_amount: number
+          p_idempotency_key: string
           p_photos: string[]
           p_pricing_signature: string
           p_proposal_description: string
@@ -2347,11 +2356,37 @@ export type Database = {
         }
         Returns: Json
       }
+      create_request_quote_service_request: {
+        Args: {
+          p_actor_user_id: string
+          p_address_id: string
+          p_description: string
+          p_estimated_duration_hint: string
+          p_form_data: Json
+          p_form_schema: Json
+          p_form_version: string
+          p_idempotency_key: string
+          p_missing_info_warnings: string[]
+          p_photo_urls: string[]
+          p_request_hash: string
+          p_request_title: string
+          p_scope_complexity: string
+          p_service_id: string
+          p_suggested_equipment: string[]
+          p_suggested_materials: string[]
+          p_tags: string[]
+          p_urgency: string
+        }
+        Returns: Json
+      }
       cron_chat_evaluate_reciprocity: { Args: never; Returns: Json }
       cron_cns_janitor_orphan_media: { Args: never; Returns: Json }
       cron_cns_process_domain_events: { Args: never; Returns: Json }
+      cron_cns_prune_chat_rate_limit_buckets: { Args: never; Returns: Json }
+      cron_cns_prune_job_runs: { Args: never; Returns: Json }
       cron_cns_reconcile_pending_deliveries: { Args: never; Returns: Json }
       cron_proposal_expire_pending: { Args: never; Returns: Json }
+      cron_purge_stale_user_device_beacons: { Args: never; Returns: Json }
       decline_revision_request: {
         Args: { p_idempotency_key: string; p_proposal_id: string }
         Returns: Json
@@ -2425,8 +2460,28 @@ export type Database = {
         }
         Returns: Json
       }
+      idempotency_begin_for_actor: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_operation: string
+          p_request_hash?: string
+        }
+        Returns: Json
+      }
       idempotency_commit: {
         Args: {
+          p_idempotency_key: string
+          p_operation: string
+          p_request_hash: string
+          p_response_body: Json
+          p_response_status: number
+        }
+        Returns: undefined
+      }
+      idempotency_commit_for_actor: {
+        Args: {
+          p_actor_user_id: string
           p_idempotency_key: string
           p_operation: string
           p_request_hash: string
@@ -2574,6 +2629,21 @@ export type Database = {
           p_revision_reason: Database["public"]["Enums"]["proposal_revision_reason"]
         }
         Returns: Json
+      }
+      request_quote_order_request_hash: {
+        Args: {
+          p_address: Json
+          p_description: string
+          p_form_data: Json
+          p_form_version: string
+          p_photo_count: number
+          p_photo_total_bytes: number
+          p_request_title: string
+          p_service_id: string
+          p_structured_data: Json
+          p_user_id: string
+        }
+        Returns: string
       }
       resolve_proposal_chat_id: {
         Args: { p_provider_id: string; p_service_request_id: string }

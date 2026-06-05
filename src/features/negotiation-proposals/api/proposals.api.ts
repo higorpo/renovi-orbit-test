@@ -111,10 +111,13 @@ function isProposalDetailRowOrNull(value: unknown): value is ProposalDetailView 
 export async function createProviderProposal(
   params: CreateProviderProposalParams,
 ): Promise<ProposalsApiResult<CreateProviderProposalResult>> {
+  const idempotencyKey = params.idempotencyKey ?? generateIdempotencyKeyV7();
+
   return invokeRpc(
     CNS_PROPOSAL_RPC.createProviderProposal,
     {
       p_service_request_id: params.serviceRequestId,
+      p_idempotency_key: idempotencyKey,
       p_proposed_amount: params.proposedAmount,
       p_proposal_description: params.proposalDescription,
       p_proposal_duration_value: params.proposalDurationValue,

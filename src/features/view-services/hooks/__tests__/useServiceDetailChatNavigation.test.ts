@@ -28,6 +28,10 @@ vi.mock("@/features/chats", () => ({
   PROVIDER_SERVICE_CHAT_QUERY_KEY: "provider-service-chat",
 }));
 
+vi.mock("@/lib/utils/idempotencyKey", () => ({
+  generateIdempotencyKeyV7: () => "00000000-0000-7000-8000-000000000005",
+}));
+
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -79,7 +83,10 @@ describe("useServiceDetailChatNavigation", () => {
     result.current.openChat();
 
     await waitFor(() => {
-      expect(initiateConversationMock).toHaveBeenCalledWith({ serviceRequestId: "sr-1" });
+      expect(initiateConversationMock).toHaveBeenCalledWith({
+        serviceRequestId: "sr-1",
+        idempotencyKey: "00000000-0000-7000-8000-000000000005",
+      });
       expect(navigateMock).toHaveBeenCalledWith("/dashboard/chats/chat-new");
     });
   });

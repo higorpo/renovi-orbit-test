@@ -1,5 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
+import { generateIdempotencyKeyV7 } from "@/lib/utils/idempotencyKey";
 import {
   calculateProposalPricing,
   uploadProposalPhotos,
@@ -20,6 +21,7 @@ export function useProposalComposer({
 }: UseProposalComposerOptions) {
   const composerForm = useProposalComposerForm();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitIdempotencyKeyRef = useRef<string | null>(null);
 
   const submit = useCallback(async (): Promise<boolean> => {
     if (!serviceRequestId) {
@@ -45,6 +47,10 @@ export function useProposalComposer({
     }
 
     setIsSubmitting(true);
+    const idempotencyKey =
+      submitIdempotencyKeyRef.current ?? generateIdempotencyKeyV7();
+    submitIdempotencyKeyRef.current = idempotencyKey;
+
     try {
       const values = composerForm.form.getValues();
       const uploadResult = await uploadProposalPhotos(serviceRequestId, composerForm.newPhotos);
@@ -55,6 +61,7 @@ export function useProposalComposer({
 
       const result = await createProviderProposal({
         serviceRequestId,
+        idempotencyKey,
         proposedAmount: effectivePricing.original_amount,
         proposalDescription: values.descriptionDraft.trim(),
         proposalDurationValue: Number.parseInt(values.durationValueInput, 10),
@@ -70,6 +77,7 @@ export function useProposalComposer({
       }
 
       onSubmitted?.(result.data);
+      submitIdempotencyKeyRef.current = null;
       toast.success("Proposta enviada com sucesso.");
       composerForm.resetComposer();
       return true;

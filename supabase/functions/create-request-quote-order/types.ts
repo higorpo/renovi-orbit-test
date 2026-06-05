@@ -57,6 +57,7 @@ export interface ParsedFormData {
   userId: string;
   email: string;
   recaptchaToken: string;
+  idempotencyKey: string;
   address: AddressPayload;
   serviceId: string;
   serviceTitle: string;

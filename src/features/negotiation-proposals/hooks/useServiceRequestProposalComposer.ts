@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { generateIdempotencyKeyV7 } from "@/lib/utils/idempotencyKey";
 import { createProviderProposal } from "../api/proposals.api";
 import { calculateProposalPricing, uploadProposalPhotos } from "../api/proposalComposerSupport.api";
 import { mapFormValuesToSuggestedSlots, maskBudgetInput, parseCurrencyInputToNumber } from "../utils/proposalComposerInput";
@@ -60,6 +61,7 @@ export function useServiceRequestProposalComposer({
   const composerForm = useProposalComposerForm();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitIdempotencyKeyRef = useRef<string | null>(null);
   const [composerMode, setComposerMode] = useState<"create" | "edit">("create");
   const [editSnapshot, setEditSnapshot] = useState<EditSnapshot | null>(null);
 
@@ -141,6 +143,10 @@ export function useServiceRequestProposalComposer({
     }
 
     setIsSubmitting(true);
+    const idempotencyKey =
+      submitIdempotencyKeyRef.current ?? generateIdempotencyKeyV7();
+    submitIdempotencyKeyRef.current = idempotencyKey;
+
     try {
       const values = composerForm.form.getValues();
       const uploadResult = await uploadProposalPhotos(
@@ -154,6 +160,7 @@ export function useServiceRequestProposalComposer({
 
       const result = await createProviderProposal({
         serviceRequestId,
+        idempotencyKey,
         proposedAmount: effectivePricing.original_amount,
         proposalDescription: values.descriptionDraft.trim(),
         proposalDurationValue: Number.parseInt(values.durationValueInput, 10),
@@ -169,6 +176,7 @@ export function useServiceRequestProposalComposer({
       }
 
       await onSubmitSuccess?.();
+      submitIdempotencyKeyRef.current = null;
       toast.success(successMessage);
       closeComposer();
       return true;

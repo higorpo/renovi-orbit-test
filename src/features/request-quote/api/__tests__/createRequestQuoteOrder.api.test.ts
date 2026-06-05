@@ -29,6 +29,7 @@ function makeParams(overrides: Partial<CreateRequestQuoteOrderParams> = {}): Cre
     userId: "user-1",
     email: "user@example.com",
     recaptchaToken: "recaptcha-token",
+    idempotencyKey: "00000000-0000-7000-8000-000000000003",
     step4Data: { kind: "existing", addressId: "addr-1" },
     step3Data: {
       description: "I need help",
@@ -61,6 +62,8 @@ describe("createRequestQuoteOrder", () => {
       expect(result.requestId).toBe("req-123");
       expect(result.addressId).toBe("addr-1");
     }
+    const body = fetchMock.mock.calls[0][1].body as FormData;
+    expect(body.get("idempotency_key")).toBe("00000000-0000-7000-8000-000000000003");
   });
 
   it("returns error when step4Data is null", async () => {

@@ -8,6 +8,8 @@ export interface CreateRequestQuoteOrderParams {
   userId: string;
   email: string;
   recaptchaToken: string;
+  /** Stable per submit attempt; reuse on retry after timeout. */
+  idempotencyKey: string;
   step4Data: AddressSelection;
   step3Data: {
     description: string;
@@ -83,6 +85,7 @@ export async function createRequestQuoteOrder(
   formData.set("userId", userId);
   formData.set("email", email);
   formData.set("recaptchaToken", recaptchaToken);
+  formData.set("idempotency_key", params.idempotencyKey);
   formData.set("address", JSON.stringify(addressPayload));
   formData.set("serviceId", selectedService.id);
   formData.set("serviceTitle", selectedService.title ?? "Serviço");

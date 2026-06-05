@@ -16,7 +16,11 @@ import { parseFormData } from "./parseFormData.ts";
 import { validateRequestUser } from "./validateRequestUser.ts";
 import { createAddress } from "./createAddress.ts";
 import { uploadPhotos } from "./uploadPhotos.ts";
-import { createServiceRequest } from "./createServiceRequest.ts";
+import {
+  createRequestQuoteServiceRequest,
+  lookupRequestQuoteOrderCache,
+  requestQuoteOrderRequestHash,
+} from "./orderIdempotency.ts";
 import { validateRecaptchaToken } from "../_shared/recaptcha.ts";
 
 const RATE_LIMIT_CONFIG = { perMinute: RATE_LIMIT_PER_MINUTE };
@@ -90,6 +94,21 @@ serve(async (req) => {
     return jsonResponse({ error: validation.message }, validation.status);
   }
 
+  const requestHash = await requestQuoteOrderRequestHash(supabase, data);
+  if (!requestHash) {
+    return jsonResponse({ error: "Erro ao preparar o pedido. Tente novamente." }, 500);
+  }
+
+  const cachedOrder = await lookupRequestQuoteOrderCache(
+    supabase,
+    data,
+    data.idempotencyKey,
+    requestHash,
+  );
+  if (cachedOrder) {
+    return jsonResponse(cachedOrder satisfies CreateOrderSuccess, 200);
+  }
+
   let addressId: string | null = null;
 
   if (data.address.kind === "existing") {
@@ -115,28 +134,12 @@ serve(async (req) => {
     return jsonResponse({ error: photoResult.error }, 400);
   }
 
-  const reqResult = await createServiceRequest(
-    supabase,
-    {
-      client_id: data.userId,
-      service_id: data.serviceId,
-      address_id: addressId,
-      service_title: data.serviceTitle,
-      request_title: data.serviceRequestTitle,
-      description: data.description,
-      photoUrls: photoResult.paths,
-      form_data: data.formData,
-      form_schema: data.formSchema,
-      form_version: data.formVersion,
-      urgency: data.structuredData?.urgency ?? null,
-      scope_complexity: data.structuredData?.scope_complexity ?? null,
-      tags: data.structuredData?.tags ?? null,
-      missing_info_warnings: data.structuredData?.missing_info_warnings ?? null,
-      suggested_equipment: data.structuredData?.suggested_equipment ?? null,
-      suggested_materials: data.structuredData?.suggested_materials ?? null,
-      estimated_duration_hint: data.structuredData?.estimated_duration_hint ?? null,
-    }
-  );
+  const reqResult = await createRequestQuoteServiceRequest(supabase, data, {
+    idempotencyKey: data.idempotencyKey,
+    requestHash,
+    addressId,
+    photoUrls: photoResult.paths,
+  });
 
   if (!reqResult.ok) {
     console.error("[create-request-quote-order]", reqResult.error);

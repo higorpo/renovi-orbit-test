@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { generateIdempotencyKeyV7 } from "@/lib/utils/idempotencyKey";
 import {
   CHAT_CONVERSATIONS_LIST_QUERY_KEY,
   initiateConversation,
@@ -34,6 +35,7 @@ export function useServiceDetailChatNavigation({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isOnline = useOnlineStatus();
+  const initiateIdempotencyKeyRef = useRef<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -45,7 +47,11 @@ export function useServiceDetailChatNavigation({
         return { id: existingChatId };
       }
 
-      const result = await initiateConversation({ serviceRequestId });
+      const idempotencyKey =
+        initiateIdempotencyKeyRef.current ?? generateIdempotencyKeyV7();
+      initiateIdempotencyKeyRef.current = idempotencyKey;
+
+      const result = await initiateConversation({ serviceRequestId, idempotencyKey });
       if (result.error || !result.data) {
         throw result.error ?? new Error("Não foi possível iniciar a conversa.");
       }
@@ -53,6 +59,7 @@ export function useServiceDetailChatNavigation({
       return result.data.conversation;
     },
     onSuccess: (conversation) => {
+      initiateIdempotencyKeyRef.current = null;
       void queryClient.invalidateQueries({ queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY] });
       void queryClient.invalidateQueries({
         queryKey: [PROVIDER_SERVICE_CHAT_QUERY_KEY, serviceRequestId],

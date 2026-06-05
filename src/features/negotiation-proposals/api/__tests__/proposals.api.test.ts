@@ -64,6 +64,7 @@ describe("createProviderProposal", () => {
       "create_provider_proposal",
       expect.objectContaining({
         p_service_request_id: "sr-1",
+        p_idempotency_key: "00000000-0000-7000-8000-000000000002",
         p_final_amount: 110,
       }),
     );

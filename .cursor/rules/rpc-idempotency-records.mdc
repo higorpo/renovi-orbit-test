@@ -1,0 +1,109 @@
+---
+description: RPC response idempotency via rpc_idempotency_records and idempotency_begin/commit helpers
+alwaysApply: false
+globs: supabase/migrations/**,supabase/functions/**,src/features/**/api/**
+---
+
+# RPC idempotency — `rpc_idempotency_records`
+
+Cross-feature **RPC response cache** for multi-step mutations. Distinct from entity-scoped keys (e.g. `chat_messages` UNIQUE, MMD `message_dispatches`).
+
+Design reference: `docs/chats/design.md` §3.10, Req. 14 / R27-AC03.
+
+## When to use
+
+Use `idempotency_begin` + `idempotency_commit` when **all** apply:
+
+1. **SECURITY DEFINER RPC** (or service_role RPC) mutates multiple rows or emits side effects.
+2. Client may **retry with the same UUID** after timeout or network failure.
+3. Replay must return the **same JSON** without duplicating business effects.
+4. Entity-level UNIQUE is **not** enough (e.g. accept proposal, create order, submit proposal).
+
+Do **not** use for:
+
+- `cns_send_message` → `UNIQUE (chat_id, sender_user_id, idempotency_key)` on `chat_messages`.
+- MMD ingest → `message_dispatches.idempotency_key`.
+- Read-only RPCs, idempotent upserts (`cns_mark_conversation_read`), cron/batch jobs.
+
+## Server pattern (authenticated RPC)
+
+```sql
+v_request_hash := md5(concat_ws('|', /* stable payload fields */));
+
+v_cached := public.idempotency_begin(
+  'feature.operation_name',  -- namespaced, stable string
+  p_idempotency_key,
+  v_request_hash
+);
+if v_cached is not null then
+  return v_cached->'response_body';
+end if;
+
+-- ... mutation logic ...
+
+v_response := jsonb_build_object(/* ... */);
+
+perform public.idempotency_commit(
+  'feature.operation_name',
+  p_idempotency_key,
+  v_request_hash,
+  200,
+  v_response
+);
+return v_response;
+```
+
+- **`p_idempotency_key`**: required UUID param on the RPC.
+- **`operation`**: stable namespace, e.g. `chats.accept_proposal`, `chats.submit_proposal`, `chats.initiate_conversation`, `request_quote.create_order`.
+- **`request_hash`**: md5 of canonical request fields; mismatched replay → `IDEMPOTENCY_CONFLICT`.
+- Helpers are **service_role only**; RPCs call them internally (clients never call `idempotency_begin` directly).
+
+## Edge Functions (service_role on behalf of user)
+
+When `auth.uid()` is unavailable, use:
+
+- `idempotency_begin_for_actor(p_actor_user_id, operation, key, hash)`
+- `idempotency_commit_for_actor(...)` — typically inside a dedicated insert RPC in the **same transaction** as the commit.
+
+Example: `create-request-quote-order` → lookup at Edge start, `create_request_quote_service_request` inserts + commits.
+
+Shared hash helper: `request_quote_order_request_hash(...)` (keep Edge and DB in sync).
+
+## Client pattern
+
+1. Generate **one UUID v7 per user action** (`generateIdempotencyKeyV7`).
+2. **Reuse the same key** on retry (ref keyed by submit attempt, like `useChatMessages` / `clientSendId`).
+3. Pass `p_idempotency_key` / `idempotency_key` on every attempt until success.
+
+```typescript
+const keyRef = useRef<string | null>(null);
+const idempotencyKey = keyRef.current ?? generateIdempotencyKeyV7();
+keyRef.current = idempotencyKey;
+// on success: keyRef.current = null
+```
+
+## Current operations
+
+| Operation | RPC / entry point |
+|-----------|-------------------|
+| `chats.accept_proposal` | `accept_proposal` |
+| `chats.reject_proposal` | `reject_proposal` |
+| `chats.request_proposal_revision` | `request_proposal_revision` |
+| `chats.decline_revision_request` | `decline_revision_request` |
+| `chats.close_conversation` | `cns_close_conversation` |
+| `chats.cancel_service_request` | `cancel_service_request` |
+| `chats.submit_proposal` | `create_provider_proposal` |
+| `chats.initiate_conversation` | `cns_initiate_conversation` |
+| `request_quote.create_order` | Edge `create-request-quote-order` + `create_request_quote_service_request` |
+
+## New mutations checklist
+
+1. Add `p_idempotency_key uuid` (NOT NULL) to RPC signature.
+2. Pick namespaced `operation` string; document in this table.
+3. Implement begin/commit (or `_for_actor` variant for Edge).
+4. Client API: accept optional `idempotencyKey`, default generate, **stable ref on retry**.
+5. pgTAP: duplicate key returns cached body; hash mismatch raises conflict.
+
+## Retention
+
+No automatic prune yet. Plan TTL cron when volume grows (similar to `cns_prune_job_runs`).

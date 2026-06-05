@@ -79,8 +79,7 @@ Coisas para fazer next
 
 -verificar se devo manter colunas de status como text ou transformar em enum
 -verificar necessidade de usar outbound  (domain_events) em outros eventos assíncronos
--verificar se precisaria usar cns_idempotency_records em outros lugares (talvez vou precisar criar antes)
-  - adicionar nas regras que temos esse mecanismo para ser usado para que no futuro outras features possam usar quando necessário
+
 -depois que migrar todo o sistema e tiver tudo funcionando, podemos excluir /home/higor/Área de Trabalho/Renovi/orbit/supabase/migrations/20260701105400_delegate_create_provider_proposal_to_submit.sql e as rpcs relacionadas ao modelo antigo
 
 

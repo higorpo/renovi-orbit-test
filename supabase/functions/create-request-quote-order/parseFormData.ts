@@ -34,6 +34,18 @@ export async function parseFormData(formData: FormData): Promise<ParseFormDataRe
   if (typeof recaptchaToken !== "string" || !recaptchaToken.trim()) {
     return { ok: false, error: "recaptchaToken é obrigatório.", status: 400 };
   }
+  const idempotencyKeyRaw = formData.get("idempotency_key");
+  if (typeof idempotencyKeyRaw !== "string" || !idempotencyKeyRaw.trim()) {
+    return { ok: false, error: "idempotency_key é obrigatório.", status: 400 };
+  }
+  const idempotencyKey = idempotencyKeyRaw.trim();
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      idempotencyKey,
+    )
+  ) {
+    return { ok: false, error: "idempotency_key deve ser um UUID válido.", status: 400 };
+  }
   if (typeof description !== "string") {
     return { ok: false, error: "description é obrigatório.", status: 400 };
   }
@@ -140,6 +152,7 @@ export async function parseFormData(formData: FormData): Promise<ParseFormDataRe
     userId: userId.trim(),
     email: email.trim(),
     recaptchaToken: recaptchaToken.trim(),
+    idempotencyKey,
     address,
     serviceId: serviceId.trim(),
     serviceTitle: typeof serviceTitle === "string" ? serviceTitle.trim() : "Serviço",
