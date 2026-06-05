@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useVirtualKeyboardVisible } from "@/hooks/useVirtualKeyboardVisible";
 import { cn } from "@/lib/utils";
 import { useChatComposerAttachments } from "../../hooks/useChatComposerAttachments";
+import { useChatComposerTextareaAutoResize } from "../../hooks/useChatComposerTextareaAutoResize";
 import { useChatAudioPermission } from "../../hooks/useChatAudioPermission";
 import type { ChatAudioRecordingResult } from "../../hooks/useChatAudioRecorder";
 import { CHAT_IMAGE_ACCEPT } from "../../utils/chatImageValidation";
@@ -56,6 +57,7 @@ export function ChatComposerBar({
   const isKeyboardVisible = useVirtualKeyboardVisible();
   const scheduleViewportSync = useChatMobileViewportSchedule();
   const timelineScroll = useChatTimelineScrollContext();
+  useChatComposerTextareaAutoResize(textareaRef, draft);
 
   const isUploadBusy = attachments.isPreparingImages;
   const canAttach = composer.isAttachmentEnabled && !isUploadBusy;
@@ -204,7 +206,7 @@ export function ChatComposerBar({
             placeholder={composer.placeholder}
             disabled={!composer.isInputEnabled || isUploadBusy}
             rows={1}
-            className="min-h-11 max-h-32 min-w-0 flex-1 resize-none rounded-full border-0 bg-muted px-4 py-3 text-[15px] leading-snug shadow-none focus-visible:ring-1 max-sm:resize-none"
+            className="min-h-11 min-w-0 flex-1 resize-none overflow-x-hidden rounded-[1.375rem] border-0 bg-muted px-4 py-3 text-[15px] leading-snug shadow-none placeholder:truncate focus-visible:ring-1 max-sm:resize-none"
             onFocus={() => {
               timelineScroll?.onComposerFocus();
               scheduleViewportSync();
