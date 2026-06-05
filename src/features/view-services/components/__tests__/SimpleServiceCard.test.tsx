@@ -56,6 +56,31 @@ describe("SimpleServiceCard", () => {
     expect(screen.getByText("Instalação elétrica")).toBeTruthy();
     expect(screen.getByText("Instalação elétrica - 5 pontos novos")).toBeTruthy();
     expect(screen.getByText(/Centro, Florianópolis/)).toBeTruthy();
-    expect(screen.getByText(/Criado em/)).toBeTruthy();
+    expect(screen.getByText(/Solicitado em/)).toBeTruthy();
+  });
+
+  it("renders compact layout without status badge", () => {
+    render(<SimpleServiceCard model={model} compact />);
+
+    expect(screen.queryByText("Em negociação")).toBeNull();
+    expect(screen.getByText(/Centro, Florianópolis \(SC\)/)).toBeTruthy();
+    expect(screen.getByText(/Solicitado em/)).toBeTruthy();
+    expect(screen.getByText("Resumo do pedido")).toBeTruthy();
+    expect(screen.getByText("Média prioridade")).toBeTruthy();
+  });
+
+  it("hides service tags by default and shows them when enabled", () => {
+    const taggedModel: ServiceModel = {
+      ...model,
+      tags: ["Residencial"],
+    };
+
+    const { rerender } = render(<SimpleServiceCard model={taggedModel} compact />);
+    expect(screen.queryByText("Tags do serviço")).toBeNull();
+    expect(screen.queryByText("Residencial")).toBeNull();
+
+    rerender(<SimpleServiceCard model={taggedModel} compact showServiceTags />);
+    expect(screen.getByText("Tags do serviço")).toBeTruthy();
+    expect(screen.getByText("Residencial")).toBeTruthy();
   });
 });

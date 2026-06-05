@@ -1,70 +1,117 @@
 import { MapPin } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { getServiceCardStyle } from "@/features/request-quote";
 import { cn } from "@/lib/utils";
-import { getStatusBadgeVariant, getStatusLabel } from "../constants/statusBadge";
-import { formatLocationDisplay } from "../utils/locationDisplay";
 import { formatServiceDate } from "../utils/formatDate";
-import { ServiceInsightTags } from "./ServiceInsightTags";
+import { formatLocationDisplay } from "../utils/locationDisplay";
+import { formatServiceLocationLine } from "../utils/formatServiceLocationLine";
+import { SimpleServiceInsightPanel } from "./SimpleServiceInsightPanel";
 import type { ServiceModel } from "../types/service.types";
-
-const DESCRIPTION_CLAMP = "line-clamp-2";
 
 export interface SimpleServiceCardProps {
   model: ServiceModel;
   className?: string;
+  /** Tighter layout for narrow containers (e.g. chat details sidebar). */
+  compact?: boolean;
+  /** Shows the "Tags do serviço" section in the insight panel. */
+  showServiceTags?: boolean;
 }
 
-export function SimpleServiceCard({ model, className }: SimpleServiceCardProps) {
-  const locationText = formatLocationDisplay(model.address);
+export function SimpleServiceCard({
+  model,
+  className,
+  compact = false,
+  showServiceTags = false,
+}: SimpleServiceCardProps) {
+  const locationText = compact
+    ? formatServiceLocationLine(model.address)
+    : formatLocationDisplay(model.address);
   const serviceStyle = getServiceCardStyle(model.service ?? undefined);
-  const statusVariant = getStatusBadgeVariant(model.listPhase, model.proposalCount);
+  const createdLabel = formatServiceDate(model.createdAt);
 
   return (
     <Card className={cn("shadow-none", className)}>
-      <CardHeader className="space-y-3 !pb-3">
-        <div className="flex min-w-0 items-start gap-3">
+      <CardHeader
+        className={cn(
+          compact ? "space-y-2 !p-3 !pb-3" : "space-y-3 !pb-3",
+        )}
+      >
+        <div className={cn("flex min-w-0 items-start", compact ? "gap-2.5" : "gap-3")}>
           {model.service ? (
             <div
               className={cn(
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-sm",
+                "flex shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-sm",
+                compact ? "h-8 w-8" : "h-10 w-10",
                 serviceStyle.color,
               )}
               aria-hidden
             >
-              <serviceStyle.Icon className="h-5 w-5" />
+              <serviceStyle.Icon className={compact ? "h-4 w-4" : "h-5 w-5"} />
             </div>
           ) : null}
           <div className="min-w-0 flex-1">
             {model.service ? (
-              <p className="text-xs font-medium text-muted-foreground">{model.service.title}</p>
+              <p
+                className={cn(
+                  "truncate font-medium text-muted-foreground",
+                  compact ? "text-[11px]" : "text-xs",
+                )}
+              >
+                {model.service.title}
+              </p>
             ) : null}
-            <h3 className="text-base font-semibold leading-tight sm:text-lg">{model.title}</h3>
+            <h3
+              className={cn(
+                "font-semibold leading-snug text-foreground",
+                compact ? "line-clamp-2 text-sm" : "text-base leading-tight sm:text-lg",
+              )}
+            >
+              {model.title}
+            </h3>
           </div>
-          <Badge variant={statusVariant} className="shrink-0">
-            {getStatusLabel(model.listPhase, model.hasPendingProposal)}
-          </Badge>
         </div>
 
         {model.descriptionPreview ? (
-          <p className={cn("text-sm text-muted-foreground", DESCRIPTION_CLAMP)}>
+          <p
+            className={cn(
+              "line-clamp-3 text-muted-foreground",
+              compact ? "text-xs leading-relaxed" : "text-sm",
+            )}
+          >
             {model.descriptionPreview}
           </p>
         ) : null}
 
-        <ServiceInsightTags model={model} />
+        <SimpleServiceInsightPanel
+          model={model}
+          compact={compact}
+          showServiceTags={showServiceTags}
+        />
 
-        {locationText ? (
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            <span>{locationText}</span>
-          </p>
-        ) : null}
-
-        <p className="text-xs text-muted-foreground">
-          Criado em {formatServiceDate(model.createdAt)}
-        </p>
+        {compact ? (
+          <div className="flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground">
+            {locationText ? (
+              <>
+                <MapPin className="h-3 w-3 shrink-0" aria-hidden />
+                <span className="min-w-0 truncate">{locationText}</span>
+                <span aria-hidden className="shrink-0">
+                  ·
+                </span>
+              </>
+            ) : null}
+            <span className="shrink-0">Solicitado em {createdLabel}</span>
+          </div>
+        ) : (
+          <>
+            {locationText ? (
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span>{locationText}</span>
+              </p>
+            ) : null}
+            <p className="text-xs text-muted-foreground">Solicitado em {createdLabel}</p>
+          </>
+        )}
       </CardHeader>
     </Card>
   );

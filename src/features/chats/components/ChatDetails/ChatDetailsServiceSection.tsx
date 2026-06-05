@@ -15,7 +15,7 @@ export function ChatDetailsServiceSection({ serviceRequestId }: ChatDetailsServi
   const { data: service, isLoading, isError, refetch } = useService(serviceRequestId);
 
   if (isLoading) {
-    return <SimpleServiceCardSkeleton />;
+    return <SimpleServiceCardSkeleton compact />;
   }
 
   if (isError || !service) {
@@ -33,7 +33,7 @@ export function ChatDetailsServiceSection({ serviceRequestId }: ChatDetailsServi
 
   return (
     <div className="space-y-3">
-      <SimpleServiceCard model={service} />
+      <SimpleServiceCard model={service} compact />
       <Button variant="outline" className="w-full" asChild>
         <Link to={getServiceDetailPath(serviceRequestId)}>Ver mais detalhes do serviço</Link>
       </Button>
