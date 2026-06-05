@@ -5,6 +5,7 @@ import type {
   AddressSummary,
   ServiceSummary,
 } from "../types/client-my-services.types";
+import { extractContractedServiceStatus } from "../constants/contractedServiceStatus";
 import {
   deriveServiceRequestListPhase,
   listPhaseToStatusTabId,
@@ -63,7 +64,7 @@ export function mapToServiceRequestCardModel(
   const contractedServiceId = row.contracted_service_id ?? null;
   const listPhase = deriveServiceRequestListPhase({
     status: row.status,
-    contractedServiceId,
+    contractedServiceStatus: extractContractedServiceStatus(row.services),
   });
 
   const proposals = Array.isArray(row.provider_proposals) ? row.provider_proposals : [];

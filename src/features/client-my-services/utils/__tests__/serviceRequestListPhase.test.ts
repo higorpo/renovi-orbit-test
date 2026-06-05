@@ -10,27 +10,39 @@ describe("serviceRequestListPhase", () => {
     expect(normalizeServiceRequestStatus(" COMPLETED ")).toBe("COMPLETED");
   });
 
-  it("derives negotiation for open SR without contracted service", () => {
+  it("derives negotiation for OPEN service requests", () => {
     expect(
-      deriveServiceRequestListPhase({ status: "OPEN", contractedServiceId: null }),
+      deriveServiceRequestListPhase({ status: "OPEN", contractedServiceStatus: null }),
     ).toBe("negotiation");
   });
 
-  it("derives in_progress when contracted service exists", () => {
+  it("derives in_progress for COMPLETED SR with non-terminal contracted service", () => {
     expect(
       deriveServiceRequestListPhase({
-        status: "OPEN",
-        contractedServiceId: "svc-1",
+        status: "COMPLETED",
+        contractedServiceStatus: "PENDING_PAYMENT",
       }),
     ).toBe("in_progress");
   });
 
-  it("derives completed and cancelled from SR status", () => {
+  it("derives completed when both SR and contracted service are COMPLETED", () => {
     expect(
-      deriveServiceRequestListPhase({ status: "COMPLETED", contractedServiceId: "svc-1" }),
+      deriveServiceRequestListPhase({
+        status: "COMPLETED",
+        contractedServiceStatus: "COMPLETED",
+      }),
     ).toBe("completed");
+  });
+
+  it("derives cancelled from SR status or cancelled contracted service", () => {
     expect(
-      deriveServiceRequestListPhase({ status: "CANCELLED", contractedServiceId: null }),
+      deriveServiceRequestListPhase({ status: "CANCELLED", contractedServiceStatus: null }),
+    ).toBe("cancelled");
+    expect(
+      deriveServiceRequestListPhase({
+        status: "COMPLETED",
+        contractedServiceStatus: "CANCELLED",
+      }),
     ).toBe("cancelled");
   });
 });

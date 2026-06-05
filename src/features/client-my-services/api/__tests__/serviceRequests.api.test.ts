@@ -5,6 +5,7 @@ import type { StatusTabId } from "../../constants/statusTabs";
 vi.mock("@/lib/supabase/client", () => ({
   supabase: {
     from: vi.fn(),
+    rpc: vi.fn(),
     auth: {
       getUser: vi.fn(),
     },
@@ -17,6 +18,7 @@ vi.mock("@/lib/logger", () => ({
 
 const { supabase } = await import("@/lib/supabase/client");
 const fromMock = vi.mocked(supabase.from);
+const rpcMock = vi.mocked(supabase.rpc);
 const getUserMock = vi.mocked(supabase.auth.getUser);
 
 let terminalReturns: Array<{ data: unknown; error: { message: string } | null; count?: number | null }> = [];
@@ -24,7 +26,7 @@ let terminalReturns: Array<{ data: unknown; error: { message: string } | null; c
 function makeQueryChain() {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
   const methods = [
-    "select", "eq", "order", "range", "in", "not", "or", "gte", "lte", "is", "returns", "update",
+    "select", "eq", "neq", "order", "range", "in", "not", "or", "gte", "lte", "is", "returns", "update",
   ];
   for (const m of methods) {
     chain[m] = vi.fn().mockReturnThis();
@@ -43,6 +45,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   terminalReturns = [];
   fromMock.mockReturnValue(makeQueryChain() as never);
+  rpcMock.mockResolvedValue({ data: [], error: null } as never);
 });
 
 const baseParams = {
@@ -98,7 +101,9 @@ describe("listServiceRequests", () => {
     expect(result.data?.page_size).toBe(100);
   });
 
-  it("negotiation tab queries open SRs without contracted service", async () => {
+  it("negotiation tab queries OPEN service requests", async () => {
+    const chain = makeQueryChain();
+    fromMock.mockReturnValue(chain as never);
     terminalReturns = [{ data: [{ id: "sr-neg", status: "OPEN" }], error: null, count: 1 }];
 
     const result = await listServiceRequests({
@@ -107,6 +112,7 @@ describe("listServiceRequests", () => {
     });
     expect(result.error).toBeNull();
     expect(result.data?.items).toEqual([{ id: "sr-neg", status: "OPEN" }]);
+    expect(chain.eq).toHaveBeenCalledWith("status", "OPEN");
   });
 
   it("returns error when proposals fetch fails (hasProposals filter)", async () => {
@@ -186,12 +192,51 @@ describe("listServiceRequests", () => {
     expect(result.error).toBeNull();
   });
 
-  it("applies status filter for in_progress, completed, and cancelled tabs", async () => {
-    for (const statusTabId of ["in_progress", "completed", "cancelled"] as const) {
-      terminalReturns = [{ data: [], error: null, count: 0 }];
-      const result = await listServiceRequests({ ...baseParams, statusTabId });
-      expect(result.error).toBeNull();
-    }
+  it("applies in_progress filter by COMPLETED SR and non-terminal service", async () => {
+    const chain = makeQueryChain();
+    fromMock.mockReturnValue(chain as never);
+    terminalReturns = [{ data: [], error: null, count: 0 }];
+
+    const result = await listServiceRequests({ ...baseParams, statusTabId: "in_progress" });
+    expect(result.error).toBeNull();
+    expect(chain.eq).toHaveBeenCalledWith("status", "COMPLETED");
+    expect(chain.neq).toHaveBeenCalledWith("services.status", "COMPLETED");
+    expect(chain.neq).toHaveBeenCalledWith("services.status", "CANCELLED");
+  });
+
+  it("applies completed filter by COMPLETED SR and COMPLETED service", async () => {
+    const chain = makeQueryChain();
+    fromMock.mockReturnValue(chain as never);
+    terminalReturns = [{ data: [], error: null, count: 0 }];
+
+    const result = await listServiceRequests({ ...baseParams, statusTabId: "completed" });
+    expect(result.error).toBeNull();
+    expect(chain.eq).toHaveBeenCalledWith("status", "COMPLETED");
+    expect(chain.eq).toHaveBeenCalledWith("services.status", "COMPLETED");
+  });
+
+  it("resolves cancelled tab ids via RPC and filters with in()", async () => {
+    const chain = makeQueryChain();
+    fromMock.mockReturnValue(chain as never);
+    rpcMock.mockResolvedValue({ data: ["sr-cancelled-1"], error: null } as never);
+    terminalReturns = [{ data: [{ id: "sr-cancelled-1" }], error: null, count: 1 }];
+
+    const result = await listServiceRequests({ ...baseParams, statusTabId: "cancelled" });
+    expect(result.error).toBeNull();
+    expect(rpcMock).toHaveBeenCalledWith("client_my_services_cancelled_ids", {
+      p_client_id: "client-1",
+    });
+    expect(chain.in).toHaveBeenCalledWith("id", ["sr-cancelled-1"]);
+  });
+
+  it("returns empty cancelled tab when RPC yields no ids", async () => {
+    rpcMock.mockResolvedValue({ data: [], error: null } as never);
+
+    const result = await listServiceRequests({ ...baseParams, statusTabId: "cancelled" });
+    expect(result.error).toBeNull();
+    expect(result.data?.items).toEqual([]);
+    expect(result.data?.total_count).toBe(0);
+    expect(fromMock).not.toHaveBeenCalled();
   });
 
   it("applies in filter when hasProposals true and proposal ids exist", async () => {

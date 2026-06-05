@@ -3,6 +3,10 @@ import { logger } from "@/lib/logger";
 import type { ServiceRequestRow } from "@/features/request-quote/types/request-quote.types";
 import type { StatusTabId } from "../constants/statusTabs";
 import { statusTabIdToListPhase } from "../utils/serviceRequestListPhase";
+import {
+  applyStatusTabServerFilter,
+  buildServiceRequestsSelect,
+} from "../utils/statusTabServerFilters";
 
 /** Joined row: service_requests + address + platform_services + proposals + contracted service. */
 export interface ServiceRequestWithRelationsRow extends ServiceRequestRow {
@@ -113,33 +117,39 @@ export async function listServiceRequests(
     serviceRequestIdsWithProposals = Array.from(ids);
   }
 
+  const listPhase = focusedServiceRequestId
+    ? null
+    : statusTabIdToListPhase(params.statusTabId);
+
+  let cancelledTabIds: string[] | null = null;
+
+  if (!focusedServiceRequestId && listPhase === "cancelled") {
+    const { data: cancelledIds, error: cancelledIdsError } = await supabase.rpc(
+      "client_my_services_cancelled_ids",
+      { p_client_id: params.clientId },
+    );
+
+    if (cancelledIdsError) {
+      logger.error("view_service_requests_list_cancelled_ids_error", {
+        clientId: params.clientId,
+        error: cancelledIdsError.message,
+      });
+      return { data: null, error: cancelledIdsError.message };
+    }
+
+    cancelledTabIds = (cancelledIds ?? []) as string[];
+
+    if (cancelledTabIds.length === 0) {
+      return {
+        data: { items: [], total_count: 0, page, page_size: pageSize },
+        error: null,
+      };
+    }
+  }
+
   let query = supabase
     .from("service_requests")
-    .select(
-      `
-      *,
-      client_addresses (
-        neighborhood,
-        street,
-        number,
-        complement,
-        zip_code,
-        platform_cities ( name ),
-        platform_states ( abbreviation )
-      ),
-      platform_services ( title, slug, icon_key, color_key ),
-      provider_proposals ( status ),
-      services!service_requests_contracted_service_id_fkey (
-        id,
-        status,
-        provider:profiles!services_provider_id_fkey (
-          full_name,
-          provider_profiles_public ( display_name )
-        )
-      )
-    `,
-      { count: "exact" },
-    )
+    .select(buildServiceRequestsSelect(listPhase), { count: "exact" })
     .eq("client_id", params.clientId)
     .order("updated_at", { ascending: false })
     .range(from, to);
@@ -147,15 +157,10 @@ export async function listServiceRequests(
   if (focusedServiceRequestId) {
     query = query.eq("id", focusedServiceRequestId);
   } else {
-    const phase = statusTabIdToListPhase(params.statusTabId);
-    if (phase === "negotiation") {
-      query = query.eq("status", "OPEN").is("contracted_service_id", null);
-    } else if (phase === "in_progress") {
-      query = query.eq("status", "OPEN").not("contracted_service_id", "is", null);
-    } else if (phase === "completed") {
-      query = query.eq("status", "COMPLETED");
-    } else if (phase === "cancelled") {
-      query = query.eq("status", "CANCELLED");
+    query = applyStatusTabServerFilter(query, listPhase);
+
+    if (cancelledTabIds) {
+      query = query.in("id", cancelledTabIds);
     }
 
     const search = params.search?.trim();

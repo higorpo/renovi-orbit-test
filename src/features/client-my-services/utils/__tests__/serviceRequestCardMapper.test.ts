@@ -52,9 +52,10 @@ describe("mapToServiceRequestCardModel", () => {
     expect(model.contractedServiceId).toBeNull();
   });
 
-  it("maps contracted service to in_progress phase", () => {
+  it("maps COMPLETED SR with active contracted service to in_progress phase", () => {
     const model = mapToServiceRequestCardModel(
       makeRow({
+        status: "COMPLETED",
         contracted_service_id: "cs-1",
         services: {
           id: "cs-1",
@@ -70,8 +71,14 @@ describe("mapToServiceRequestCardModel", () => {
     expect(model.selectedProfessionalName).toBe("João Eletricista");
   });
 
-  it("maps COMPLETED SR to completed phase", () => {
-    const model = mapToServiceRequestCardModel(makeRow({ status: "COMPLETED" }));
+  it("maps COMPLETED SR and COMPLETED contracted service to completed phase", () => {
+    const model = mapToServiceRequestCardModel(
+      makeRow({
+        status: "COMPLETED",
+        contracted_service_id: "cs-1",
+        services: { id: "cs-1", status: "COMPLETED", provider: null },
+      }),
+    );
     expect(model.listPhase).toBe("completed");
   });
 

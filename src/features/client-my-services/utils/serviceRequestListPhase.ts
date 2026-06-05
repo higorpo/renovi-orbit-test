@@ -1,3 +1,7 @@
+import {
+  isContractedServiceCancelled,
+  isContractedServiceCompleted,
+} from "../constants/contractedServiceStatus";
 import type { StatusTabId } from "../constants/statusTabs";
 
 export type ServiceRequestListPhase =
@@ -12,12 +16,18 @@ export function normalizeServiceRequestStatus(status: string | null | undefined)
 
 export function deriveServiceRequestListPhase(input: {
   status: string | null | undefined;
-  contractedServiceId: string | null | undefined;
+  contractedServiceStatus?: string | null | undefined;
 }): ServiceRequestListPhase {
   const normalized = normalizeServiceRequestStatus(input.status);
+
   if (normalized === "CANCELLED") return "cancelled";
-  if (normalized === "COMPLETED") return "completed";
-  if (input.contractedServiceId) return "in_progress";
+
+  if (normalized === "COMPLETED") {
+    if (isContractedServiceCancelled(input.contractedServiceStatus)) return "cancelled";
+    if (isContractedServiceCompleted(input.contractedServiceStatus)) return "completed";
+    return "in_progress";
+  }
+
   return "negotiation";
 }
 

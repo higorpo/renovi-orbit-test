@@ -2200,6 +2200,10 @@ export type Database = {
         Args: { p_idempotency_key: string; p_service_request_id: string }
         Returns: Json
       }
+      client_my_services_cancelled_ids: {
+        Args: { p_client_id: string }
+        Returns: string[]
+      }
       cns_assert_chat_media_path_shape: {
         Args: { p_path: string }
         Returns: undefined
@@ -2326,6 +2330,10 @@ export type Database = {
       cns_validate_upload_session: {
         Args: { p_chat_id?: string; p_upload_session_id: string }
         Returns: Json
+      }
+      count_inclusive_working_days: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: number
       }
       create_provider_proposal: {
         Args: {
@@ -2562,7 +2570,7 @@ export type Database = {
         | "PROPOSAL"
         | "WORKFLOW_ACTION"
         | "AUDIO"
-      contracted_service_status: "PENDING_PAYMENT"
+      contracted_service_status: "PENDING_PAYMENT" | "COMPLETED" | "CANCELLED"
       proposal_revision_reason:
         | "PRICE_TOO_HIGH"
         | "REDUCE_SCOPE"
@@ -2747,7 +2755,7 @@ export const Constants = {
         "WORKFLOW_ACTION",
         "AUDIO",
       ],
-      contracted_service_status: ["PENDING_PAYMENT"],
+      contracted_service_status: ["PENDING_PAYMENT", "COMPLETED", "CANCELLED"],
       proposal_revision_reason: [
         "PRICE_TOO_HIGH",
         "REDUCE_SCOPE",
