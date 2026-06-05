@@ -48,11 +48,13 @@ Telas/fluxos restantes:
 - Calendário do prestador
 - Prestador poder vender para clientes de fora da plataforma
 - Sistema de disputas
-- Sistema de notificação/tela de notificação
+- Tela de notificação
 - Mesmo com cadastro manual precisa fazer aceite dos termos de uso
 - Todo o painel administrativo
 - Tela de onboarding para prestador
 - Tela de onboarding para cliente
+- Fluxo do prestador/cliente remarcar um serviço
+- Fluxo do prestador/cliente cancelar um serviço
 
 Coisas para verificar:
 
