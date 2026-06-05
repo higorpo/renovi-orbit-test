@@ -56,12 +56,6 @@ export function buildChatDetailsParticipants(
   return [client, provider];
 }
 
-export function formatChatDetailsLocation(
-  address: ConversationDetailResponse["address"],
-): string {
-  return [address.neighborhood, address.city, address.state].filter(Boolean).join(", ");
-}
-
 export const CHAT_DETAILS_DISCLAIMER = {
   title: "Coisas para ter em mente",
   body:

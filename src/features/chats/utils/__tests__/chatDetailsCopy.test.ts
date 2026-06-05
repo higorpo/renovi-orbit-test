@@ -3,7 +3,6 @@ import type { Profile } from "@/features/auth";
 import type { ConversationDetailResponse } from "../../types/chats.types";
 import {
   buildChatDetailsParticipants,
-  formatChatDetailsLocation,
   getChatParticipantRoleLabel,
 } from "../chatDetailsCopy";
 
@@ -32,13 +31,6 @@ const baseDetail: ConversationDetailResponse = {
   service_request: {
     id: "sr-1",
     title: "Trocar tomada",
-    description: "Tomada queimada",
-    photos: [],
-    urgency: null,
-    status: "open",
-    scope_complexity: null,
-    estimated_duration_hint: null,
-    created_at: "2026-06-01T08:00:00Z",
   },
   service: {
     id: "service-1",
@@ -49,11 +41,6 @@ const baseDetail: ConversationDetailResponse = {
     image_url: null,
   },
   category: null,
-  address: {
-    neighborhood: "Centro",
-    city: "Curitiba",
-    state: "PR",
-  },
   counterparty_read_receipt: null,
   accepted_proposal: null,
 };
@@ -85,12 +72,5 @@ describe("chatDetailsCopy", () => {
       role: "provider",
       isCurrentUser: false,
     });
-  });
-
-  it("formats masked address parts", () => {
-    expect(formatChatDetailsLocation(baseDetail.address)).toBe("Centro, Curitiba, PR");
-    expect(formatChatDetailsLocation({ neighborhood: null, city: "Curitiba", state: null })).toBe(
-      "Curitiba",
-    );
   });
 });

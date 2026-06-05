@@ -3,6 +3,10 @@ export { ServiceDetailShell } from "./components/ServiceDetailShell";
 export { ServiceDetailSheet } from "./components/ServiceDetailSheet";
 export { ServiceListCard } from "./components/ServiceListCard";
 export type { ServiceListCardProps } from "./components/ServiceListCard";
+export { SimpleServiceCard } from "./components/SimpleServiceCard";
+export type { SimpleServiceCardProps } from "./components/SimpleServiceCard";
+export { SimpleServiceCardSkeleton } from "./components/SimpleServiceCardSkeleton";
+export type { SimpleServiceCardSkeletonProps } from "./components/SimpleServiceCardSkeleton";
 
 export { getServiceById, listServices, cancelService } from "./api/services.api";
 export { useServicesList } from "./hooks/useServicesList";

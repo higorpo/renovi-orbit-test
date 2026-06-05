@@ -109,13 +109,6 @@ export interface ConversationDetailSnapshot {
 export interface ConversationServiceRequestSummary {
   id: string;
   title: string;
-  description: string | null;
-  photos: string[];
-  urgency: string | null;
-  status: Database["public"]["Enums"]["service_request_status"];
-  scope_complexity: string | null;
-  estimated_duration_hint: string | null;
-  created_at: string;
 }
 
 export interface ConversationCategorySummary {
@@ -124,12 +117,6 @@ export interface ConversationCategorySummary {
   slug: string;
   icon_key: string | null;
   color_key: string | null;
-}
-
-export interface ConversationMaskedAddress {
-  neighborhood: string | null;
-  city: string | null;
-  state: string | null;
 }
 
 /** Counterparty read cursor — used for "Visualizado" on outgoing messages. */
@@ -155,7 +142,6 @@ export interface ConversationDetailResponse {
   service_request: ConversationServiceRequestSummary;
   service: ConversationServiceSummary;
   category: ConversationCategorySummary | null;
-  address: ConversationMaskedAddress;
   counterparty_read_receipt: CounterpartyReadReceipt | null;
   accepted_proposal: ConversationAcceptedProposalSummary | null;
 }

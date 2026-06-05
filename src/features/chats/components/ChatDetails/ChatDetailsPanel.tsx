@@ -8,7 +8,7 @@ import {
 import { ChatDetailsAcceptedProposalSection } from "./ChatDetailsAcceptedProposalSection";
 import { ChatDetailsActions } from "./ChatDetailsActions";
 import { ChatDetailsParticipantRow } from "./ChatDetailsParticipantRow";
-import { ChatDetailsServiceCard } from "./ChatDetailsServiceCard";
+import { ChatDetailsServiceSection } from "./ChatDetailsServiceSection";
 
 export interface ChatDetailsPanelProps {
   detail: ConversationDetailResponse;
@@ -43,7 +43,7 @@ export function ChatDetailsPanel({
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-foreground">Detalhes do serviço</h2>
-        <ChatDetailsServiceCard detail={detail} />
+        <ChatDetailsServiceSection serviceRequestId={detail.service_request.id} />
       </section>
 
       <section className="space-y-3">

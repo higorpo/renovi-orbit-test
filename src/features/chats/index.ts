@@ -119,7 +119,6 @@ export type {
   CloseConversationResult,
   ConversationServiceRequestSummary,
   ConversationCategorySummary,
-  ConversationMaskedAddress,
   SendMessageResult,
   SendMessageResultMessage,
   SendMessageResultConversation,

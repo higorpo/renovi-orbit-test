@@ -201,13 +201,6 @@ export async function installChatsMocks(page: Page, options: ChatsMockOptions) {
             service_request: {
               id: E2E_SR_ID,
               title: "Pintura sala",
-              description: null,
-              photos: [],
-              urgency: null,
-              status: "OPEN",
-              scope_complexity: null,
-              estimated_duration_hint: null,
-              created_at: new Date().toISOString(),
             },
             service: {
               id: "svc-1",
@@ -218,7 +211,6 @@ export async function installChatsMocks(page: Page, options: ChatsMockOptions) {
               image_url: null,
             },
             category: null,
-            address: { neighborhood: "Centro", city: "São Paulo", state: "SP" },
             counterparty_read_receipt: null,
             accepted_proposal: null,
           }),

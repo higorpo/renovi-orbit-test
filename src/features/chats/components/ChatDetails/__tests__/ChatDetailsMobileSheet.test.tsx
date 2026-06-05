@@ -35,13 +35,6 @@ const detail: ConversationDetailResponse = {
   service_request: {
     id: "sr-1",
     title: "Trocar tomada",
-    description: null,
-    photos: [],
-    urgency: null,
-    status: "open",
-    scope_complexity: null,
-    estimated_duration_hint: null,
-    created_at: "2026-06-01T08:00:00Z",
   },
   service: {
     id: "service-1",
@@ -52,11 +45,6 @@ const detail: ConversationDetailResponse = {
     image_url: null,
   },
   category: null,
-  address: {
-    neighborhood: "Centro",
-    city: "Curitiba",
-    state: "PR",
-  },
   counterparty_read_receipt: null,
   accepted_proposal: null,
 };
@@ -84,7 +72,7 @@ describe("ChatDetailsMobileSheet", () => {
     expect(sheet.className).toContain("max-h-[90vh]");
     expect(sheet.className).toContain("rounded-t-2xl");
     expect(sheet.className).toContain("slide-in-from-bottom");
-    expect(screen.getByText("Detalhes")).toBeTruthy();
+    expect(screen.getByText("Mais informações")).toBeTruthy();
     expect(screen.getByTestId("chat-details-panel")).toBeTruthy();
   });
 });

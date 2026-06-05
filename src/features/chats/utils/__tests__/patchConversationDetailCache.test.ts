@@ -29,13 +29,6 @@ const baseDetail: ConversationDetailResponse = {
   service_request: {
     id: "sr-1",
     title: "Pintura",
-    description: null,
-    photos: [],
-    urgency: null,
-    status: "OPEN",
-    scope_complexity: null,
-    estimated_duration_hint: null,
-    created_at: "2026-01-01T08:00:00.000Z",
   },
   service: {
     id: "svc-1",
@@ -46,7 +39,6 @@ const baseDetail: ConversationDetailResponse = {
     image_url: null,
   },
   category: null,
-  address: { neighborhood: null, city: null, state: null },
   counterparty_read_receipt: null,
   accepted_proposal: null,
 };
