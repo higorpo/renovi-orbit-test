@@ -8,7 +8,7 @@ import type { IngestDispatchBody } from "../types.ts";
  *
  * The handler is a thin HTTP adapter (same pattern as webhook-resend/worker):
  * validate request → auth → call RPC. Core RPC logic is covered by 10 pgTAP
- * SQL tests; client-side behavior by dispatchIngest.api.test.ts.
+ * SQL tests; ingest from the app is async via domain_events (no client ingest API).
  *
  * These tests cover:
  * - config.toml registration
