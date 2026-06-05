@@ -13,6 +13,10 @@ vi.mock("../DynamicProposalCard", () => ({
   DynamicProposalCard: () => <div data-testid="proposal-card" />,
 }));
 
+vi.mock("../ChatAudioMessage", () => ({
+  ChatAudioMessage: () => <div data-testid="audio-message" />,
+}));
+
 const baseMessage: ChatMessageListItem = {
   id: "m1",
   chat_id: "c1",
@@ -44,6 +48,23 @@ describe("DynamicMessageRenderer", () => {
     );
 
     expect(screen.getByTestId("proposal-card")).toBeTruthy();
+  });
+
+  it("renders audio card for AUDIO messages", () => {
+    render(
+      <DynamicMessageRenderer
+        chatId="chat-1"
+        message={{
+          ...baseMessage,
+          message_type: "AUDIO",
+          payload: { duration_ms: 30_000, path: "chat/session/voice.webm" },
+        }}
+        viewerRole="client"
+        isOutgoing={true}
+      />,
+    );
+
+    expect(screen.getByTestId("audio-message")).toBeTruthy();
   });
 
   it("renders fallback for unknown message types without crashing", () => {

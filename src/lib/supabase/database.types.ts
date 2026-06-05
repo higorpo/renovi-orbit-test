@@ -2561,6 +2561,7 @@ export type Database = {
         | "SYSTEM"
         | "PROPOSAL"
         | "WORKFLOW_ACTION"
+        | "AUDIO"
       contracted_service_status: "PENDING_PAYMENT"
       proposal_revision_reason:
         | "PRICE_TOO_HIGH"
@@ -2744,6 +2745,7 @@ export const Constants = {
         "SYSTEM",
         "PROPOSAL",
         "WORKFLOW_ACTION",
+        "AUDIO",
       ],
       contracted_service_status: ["PENDING_PAYMENT"],
       proposal_revision_reason: [

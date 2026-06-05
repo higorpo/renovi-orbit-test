@@ -17,6 +17,7 @@ dependencies {
     implementation project(':capacitor-local-notifications')
     implementation project(':capacitor-preferences')
     implementation project(':capacitor-splash-screen')
+    implementation project(':capgo-capacitor-audio-recorder')
     implementation project(':capacitor-push-notifications')
 
 }

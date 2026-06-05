@@ -150,6 +150,7 @@ serve(async (req) => {
         session.storage_path_prefix,
         parsed.files,
         baseLogContext,
+        parsed.mediaKind,
       );
 
       if (!uploadResult.ok) {

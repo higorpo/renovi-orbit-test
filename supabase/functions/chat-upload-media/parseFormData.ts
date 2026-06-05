@@ -1,4 +1,10 @@
+import type { ChatMediaKind } from "./constants.ts";
 import type { ParseFormDataResult } from "./types.ts";
+
+function parseMediaKind(value: FormDataEntryValue | null): ChatMediaKind {
+  const raw = value?.toString().trim().toLowerCase() ?? "";
+  return raw === "audio" ? "audio" : "image";
+}
 
 const FILE_FIELD_NAMES = new Set(["file", "file[]", "files"]);
 
@@ -28,10 +34,25 @@ export function parseFormData(formData: FormData): ParseFormDataResult {
     return { ok: false, error: "upload_session_id is required.", status: 400 };
   }
 
+  const mediaKind = parseMediaKind(formData.get("media_kind"));
   const files = extractFiles(formData);
   if (files.length === 0) {
-    return { ok: false, error: "At least one image file is required.", status: 400 };
+    return {
+      ok: false,
+      error:
+        mediaKind === "audio"
+          ? "An audio file is required."
+          : "At least one image file is required.",
+      status: 400,
+    };
   }
 
-  return { ok: true, chatId, uploadSessionId, idempotencyKey: idempotencyKey || undefined, files };
+  return {
+    ok: true,
+    chatId,
+    uploadSessionId,
+    idempotencyKey: idempotencyKey || undefined,
+    mediaKind,
+    files,
+  };
 }

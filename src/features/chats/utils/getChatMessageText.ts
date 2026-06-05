@@ -7,6 +7,12 @@ export function getChatMessageText(message: ChatMessageListItem): string {
     return "Mensagem";
   }
 
+  if (message.message_type === "AUDIO") {
+    const preview = message.payload.preview;
+    if (typeof preview === "string" && preview.trim()) return preview.trim();
+    return "Áudio";
+  }
+
   const preview = message.payload.preview;
   if (typeof preview === "string" && preview.trim()) return preview.trim();
 

@@ -74,6 +74,7 @@ export function ChatScreen({
     refetchGapFill,
     sendChatMessage,
     sendChatImages,
+    sendChatAudio,
   } = useChatMessages(chatId);
 
   useMarkConversationRead(chatId, messages);
@@ -159,6 +160,13 @@ export function ChatScreen({
     }
     void navigate(-1);
   }, [navigate, onBack]);
+
+  const handleComposerSendAudio = useCallback(
+    ({ file, durationMs }: { file: File; durationMs: number }) => {
+      sendChatAudio(file, durationMs);
+    },
+    [sendChatAudio],
+  );
 
   const handleComposerSend = useCallback(
     ({ text, files }: { text: string; files: File[] }) => {
@@ -307,6 +315,7 @@ export function ChatScreen({
           placeholder: composerState.placeholder,
         }}
         onSend={handleComposerSend}
+        onSendAudio={handleComposerSendAudio}
         onComposerChange={handleComposerChange}
         onTypingStopNow={notifyTypingStopNow}
         sendBlockMessage={sendBlockMessage}

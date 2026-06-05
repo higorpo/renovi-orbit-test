@@ -33,6 +33,8 @@ function buildInboxMessagePreviewText(
   switch (messageType) {
     case "IMAGE":
       return "📷 Foto";
+    case "AUDIO":
+      return "🎤 Áudio";
     case "PROPOSAL":
       return "📋 Proposta";
     case "SYSTEM": {

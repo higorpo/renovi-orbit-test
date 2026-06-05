@@ -11,12 +11,15 @@ export type UploadChatMediaSuccess = {
   paths: string[];
 };
 
+import type { ChatMediaKind } from "./constants.ts";
+
 export type ParseFormDataResult =
   | {
       ok: true;
       chatId: string;
       uploadSessionId: string;
       idempotencyKey?: string;
+      mediaKind: ChatMediaKind;
       files: File[];
     }
   | { ok: false; error: string; status: number };

@@ -11,6 +11,7 @@ import {
   type ProposalCardAction,
 } from "./DynamicProposalCard";
 import { ChatImageMessage } from "./ChatImageMessage";
+import { ChatAudioMessage } from "./ChatAudioMessage";
 import { UnknownDynamicMessage } from "./UnknownDynamicMessage";
 import { WorkflowActionMessage } from "./WorkflowActionMessage";
 
@@ -29,7 +30,8 @@ function isKnownMessageType(type: CnsMessageType): boolean {
     type === "PROPOSAL" ||
     type === "WORKFLOW_ACTION" ||
     type === "SYSTEM" ||
-    type === "IMAGE"
+    type === "IMAGE" ||
+    type === "AUDIO"
   );
 }
 
@@ -81,6 +83,17 @@ export function DynamicMessageRenderer({
   if (message.message_type === "IMAGE") {
     return (
       <ChatImageMessage
+        message={message}
+        isOutgoing={isOutgoing}
+        groupPosition={groupPosition}
+        className={className}
+      />
+    );
+  }
+
+  if (message.message_type === "AUDIO") {
+    return (
+      <ChatAudioMessage
         message={message}
         isOutgoing={isOutgoing}
         groupPosition={groupPosition}

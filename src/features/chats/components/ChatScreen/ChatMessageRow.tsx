@@ -60,7 +60,9 @@ export const ChatMessageRow = memo(function ChatMessageRow({
     groupPosition === "first" || groupPosition === "single" ? "mt-3" : "mt-0.5";
   const showMeta = showGroupTimestamp || showReadReceipt;
   const usesBubbleRowLayout =
-    message.message_type === "TEXT" || message.message_type === "IMAGE";
+    message.message_type === "TEXT" ||
+    message.message_type === "IMAGE" ||
+    message.message_type === "AUDIO";
   const usesProposalRowLayout = message.message_type === "PROPOSAL";
 
   if (!usesBubbleRowLayout) {

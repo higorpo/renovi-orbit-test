@@ -82,6 +82,7 @@ export async function uploadChatMedia(params: {
   uploadSessionId: string;
   files: File[];
   idempotencyKey?: string;
+  mediaKind?: "image" | "audio";
 }): Promise<{ paths: string[]; error: string | null }> {
   const {
     data: { session },
@@ -92,14 +93,18 @@ export async function uploadChatMedia(params: {
     return { paths: [], error: sessionError?.message ?? "Usuário não autenticado" };
   }
 
+  const mediaKind = params.mediaKind ?? "image";
   const formData = new FormData();
   formData.set("chat_id", params.chatId);
   formData.set("upload_session_id", params.uploadSessionId);
+  formData.set("media_kind", mediaKind);
   if (params.idempotencyKey) {
     formData.set("idempotency_key", params.idempotencyKey);
   }
   params.files.forEach((file, index) => {
-    formData.append("file", file, file.name || `image-${index}.jpg`);
+    const fallbackName =
+      mediaKind === "audio" ? `audio-${index}.webm` : `image-${index}.jpg`;
+    formData.append("file", file, file.name || fallbackName);
   });
 
   try {
@@ -115,7 +120,9 @@ export async function uploadChatMedia(params: {
 
       const userMessage =
         message === "unauthorized"
-          ? "Sessão expirada ou inválida. Faça login novamente e tente enviar a imagem."
+          ? mediaKind === "audio"
+            ? "Sessão expirada ou inválida. Faça login novamente e tente enviar o áudio."
+            : "Sessão expirada ou inválida. Faça login novamente e tente enviar a imagem."
           : message;
 
       logger.error("chats_upload_media_invoke_error", {
@@ -147,8 +154,57 @@ export async function uploadChatMedia(params: {
       chatId: params.chatId,
       error: message,
     });
-    return { paths: [], error: "Não foi possível enviar as imagens. Verifique sua conexão." };
+    return { paths: [], error: mediaKind === "audio"
+      ? "Não foi possível enviar o áudio. Verifique sua conexão."
+      : "Não foi possível enviar as imagens. Verifique sua conexão." };
   }
+}
+
+export async function uploadChatAudio(params: {
+  chatId: string;
+  uploadSessionId: string;
+  file: File;
+  idempotencyKey?: string;
+}): Promise<{ path: string | null; error: string | null }> {
+  const result = await uploadChatMedia({
+    chatId: params.chatId,
+    uploadSessionId: params.uploadSessionId,
+    files: [params.file],
+    idempotencyKey: params.idempotencyKey,
+    mediaKind: "audio",
+  });
+
+  if (result.error) {
+    return { path: null, error: result.error };
+  }
+
+  const path = result.paths[0] ?? null;
+  if (!path) {
+    return { path: null, error: "Resposta inválida do servidor." };
+  }
+
+  return { path, error: null };
+}
+
+export async function resolveChatAudioSignedUrl(params: {
+  messageId?: string;
+  path: string;
+}): Promise<{ url: string | null; error: string | null }> {
+  const result = await resolveChatImageDisplayUrls({
+    messageId: params.messageId,
+    paths: [params.path],
+  });
+
+  if (result.error) {
+    return { url: null, error: result.error };
+  }
+
+  const url = result.urls[0] ?? null;
+  if (!url) {
+    return { url: null, error: "Não foi possível carregar o áudio." };
+  }
+
+  return { url, error: null };
 }
 
 export async function resolveChatImageDisplayUrls(params: {

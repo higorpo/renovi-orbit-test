@@ -5,7 +5,7 @@ import { useAuth } from "@/features/auth";
 import { generateIdempotencyKeyV7 } from "@/lib/utils/idempotencyKey";
 import { logger } from "@/lib/logger";
 import { metrics } from "@/lib/sentry";
-import { createMediaUploadSession, uploadChatMedia } from "../api/chatMedia.api";
+import { createMediaUploadSession, uploadChatAudio, uploadChatMedia } from "../api/chatMedia.api";
 import { listChatMessages, sendMessage } from "../api/chats.api";
 import { Capacitor } from "@capacitor/core";
 import { prepareChatImageFiles } from "../utils/chatImagePrepare";
@@ -36,6 +36,9 @@ import {
   getLocalPreviewUrlsFromPayload,
   stripClientOnlyImagePayloadFields,
 } from "../utils/chatMessageImagePaths";
+import { buildAudioMessageSendPayload } from "../utils/chatMessageAudioPaths";
+import { CHAT_AUDIO_PREVIEW_LABEL } from "../utils/chatAudioConstants";
+import { validateChatAudioFile } from "../utils/chatAudioValidation";
 
 const PAGE_SIZE = 20;
 const STALE_TIME_MS = 30_000;
@@ -591,6 +594,101 @@ export function useChatMessages(
     ],
   );
 
+  const sendChatAudio = useCallback(
+    (file: File, durationMs: number) => {
+      if (!chatId || !user?.id) {
+        toast.error("Faça login para enviar áudio.");
+        return;
+      }
+
+      const validationError = validateChatAudioFile(file, durationMs);
+      if (validationError) {
+        toast.error(validationError);
+        return;
+      }
+
+      const clientSendId = createClientSendId();
+      const preview = CHAT_AUDIO_PREVIEW_LABEL;
+
+      applyOptimisticSend({
+        messageType: "AUDIO",
+        payload: {
+          preview,
+          duration_ms: durationMs,
+          mime_type: file.type,
+          path: "",
+        },
+        clientSendId,
+      });
+
+      void (async () => {
+        try {
+          const sessionResult = await createMediaUploadSession(chatId);
+          if (sessionResult.error || !sessionResult.data) {
+            toast.error(sessionResult.error?.message ?? "Não foi possível preparar o envio.");
+            dismissOptimisticByClientSendId(clientSendId);
+            return;
+          }
+
+          const uploadSessionId = sessionResult.data.upload_session_id;
+          const idempotencyKey =
+            idempotencyByClientSendId.current.get(clientSendId) ?? generateIdempotencyKeyV7();
+
+          const uploadResult = await uploadChatAudio({
+            chatId,
+            uploadSessionId,
+            file,
+            idempotencyKey,
+          });
+
+          if (uploadResult.error || !uploadResult.path) {
+            toast.error(uploadResult.error ?? "Não foi possível enviar o áudio.");
+            dismissOptimisticByClientSendId(clientSendId);
+            return;
+          }
+
+          syncOptimisticPayload(clientSendId, {
+            upload_session_id: uploadSessionId,
+            path: uploadResult.path,
+            duration_ms: durationMs,
+            mime_type: file.type,
+            preview,
+          });
+
+          const audioSendInput: SendChatMessageInput = {
+            messageType: "AUDIO",
+            clientSendId,
+            payload: buildAudioMessageSendPayload({
+              uploadSessionId,
+              path: uploadResult.path,
+              durationMs,
+              mimeType: file.type,
+            }) as unknown as Record<string, unknown>,
+          };
+
+          await enqueueSend(audioSendInput, { skipOptimistic: true });
+        } catch (error) {
+          logger.error("chat_audio_send_failed", {
+            chatId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          dismissOptimisticByClientSendId(clientSendId);
+          toast.error(
+            error instanceof Error ? error.message : "Não foi possível enviar o áudio.",
+          );
+        }
+      })();
+    },
+    [
+      applyOptimisticSend,
+      chatId,
+      dismissOptimisticByClientSendId,
+      enqueueSend,
+      syncOptimisticPayload,
+      user?.id,
+    ],
+  );
+
   const retrySend = useCallback(
     (clientSendId: string) => {
       const pendingInput = pendingInputByClientSendId.current.get(clientSendId);
@@ -640,6 +738,7 @@ export function useChatMessages(
     refetchGapFill,
     sendChatMessage,
     sendChatImages,
+    sendChatAudio,
     retrySend,
     dismissFailedSend,
     isSending: pendingSendCount > 0,

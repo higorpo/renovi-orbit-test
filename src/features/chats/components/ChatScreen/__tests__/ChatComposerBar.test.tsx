@@ -22,6 +22,24 @@ vi.mock("../../../utils/chatNativeImagePicker", () => ({
   pickChatImagesFromNativeGallery: vi.fn(),
 }));
 
+vi.mock("@/lib/capacitor/audioPermission", () => ({
+  getAudioRecordingPermissionStatus: vi.fn(async () => "granted"),
+  canRequestAudioRecordingPermission: vi.fn(() => false),
+  isAudioRecordingPermissionBlocked: vi.fn(() => false),
+  requestAudioRecordingPermission: vi.fn(async () => "granted"),
+  waitBeforeSystemPermissionPrompt: vi.fn(async () => undefined),
+}));
+
+vi.mock("@/lib/capacitor/audioRecorder", () => ({
+  startChatAudioRecording: vi.fn(async () => undefined),
+  stopChatAudioRecordingAsFile: vi.fn(async () => ({
+    file: new File(["audio"], "voice.webm", { type: "audio/webm" }),
+    durationMs: 2000,
+  })),
+  cancelChatAudioRecording: vi.fn(async () => undefined),
+  getChatAudioAmplitude: vi.fn(async () => 0.2),
+}));
+
 const enabledComposer: ChatComposerState = {
   isInputEnabled: true,
   isAttachmentEnabled: true,
