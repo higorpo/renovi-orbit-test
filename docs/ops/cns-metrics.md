@@ -144,7 +144,7 @@ where pp.status = 'PENDING'
 |------|---------------------|
 | Edge upload logs | `chat-upload-media` structured fields: `correlation_id`, `chat_id`, `service_request_id`, `idempotency_key` |
 | Sentry (client) | `feature=chats`, tags `chat_id`, `service_request_id`; message text scrubbed |
-| Product analytics (client) | [`src/lib/analytics/events.ts`](../../src/lib/analytics/events.ts) schema `v1` — post-RPC confirm only |
+| Product analytics (client) | [`src/features/chats/utils/chatAnalyticsEvents.ts`](../../src/features/chats/utils/chatAnalyticsEvents.ts) schema `v1` — post-RPC confirm only |
 
 ---
 

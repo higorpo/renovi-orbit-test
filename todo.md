@@ -85,16 +85,12 @@ Coisas para fazer next
 -depois que migrar todo o sistema e tiver tudo funcionando, podemos excluir /home/higor/Área de Trabalho/Renovi/orbit/supabase/migrations/20260701105400_delegate_create_provider_proposal_to_submit.sql e as rpcs relacionadas ao modelo antigo
 -talvez não precisamos da tabela exclusiva de rate limit do chat e podemos usar a genérica
 -verificar se usos anteriores a /home/higor/Área de Trabalho/Renovi/orbit/supabase/migrations/20260701106100_create_job_run_helpers.sql não poderiam se beneficiar desses helpers
-- /home/higor/Área de Trabalho/Renovi/orbit/src/lib/analytics/pushChatAnalyticsEvent.ts provavelmente é desnecessário
-- /home/higor/Área de Trabalho/Renovi/orbit/src/lib/analytics/events.ts é exclusivo do chat, talvez faça mais sentido mover o arquivo depois
--rever regras, hoje parece que para uma provider_proposal existir é obrigatório ter um chat envolvido ... as políticas RLS também foram alteradas.
 -novas políticas RLS estão fora do padrão adotado que era ter descrição clara
 -cobertura de testes em todos os códigos novos
 -existe uma certa lentidão para disparar push de novas mensagens (ele cai numa fila de processamento para enviar pro message dispatcher e  depois ainda espera o job do message dispatcher...)
 - usar trigger ao invés de criar essa tabela central...
 -remover referencia de chat e novas colunas do provider_proposals, renomear tabela.
 -ao recusar a proposta, o chat tem que ser encerrado também
--permitir enviar áudio
 -refazer card de orçamentos do prestador
 -refazer card da tela de meus serviços do cliente
 -exibir sugestões de perguntas para o prestador na hora que ele abre o chat pela primeira vez
@@ -103,4 +99,5 @@ Coisas para fazer next
 -garantir que todos os triggers são ok e são necessários
 -garantir que todas as crons estão ok e são necessárias
 -quando edita uma proposta que tem imagem anexada, as  imagens não carregam
--simplificar query de get_service_list  (hoje ele tá trazendo um monte de dados que nem vai ser exibido no card)
+-[avaliar]simplificar query de get_service_list  (hoje ele tá trazendo um monte de dados que nem vai ser exibido no card)
+-tornar módulo  de meus serviços compartilhado entre prestador e cliente

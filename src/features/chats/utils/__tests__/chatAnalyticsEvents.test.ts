@@ -5,7 +5,7 @@ import {
   CHAT_ANALYTICS_SCHEMA_VERSION,
   isChatAnalyticsEventName,
   sanitizeChatAnalyticsProperties,
-} from "../events";
+} from "../chatAnalyticsEvents";
 
 describe("chatAnalyticsEvents", () => {
   it("registers the v1 chat analytics event names", () => {

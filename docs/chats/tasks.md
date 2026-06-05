@@ -2891,13 +2891,13 @@ Description:
 Post-confirm events: negotiation_message_sent, proposal_submitted, proposal_accepted, etc. §10.5.
 
 Responsibilities:
-- src/lib/analytics/events.ts schema v1
+- src/features/chats/utils/chatAnalyticsEvents.ts schema v1
 - Fire only after RPC success
 
 Implementation Details:
 - Normative reference: design.md — task 67: `Register client analytics events schema v1`.
 - Scope: Post-confirm events: negotiation_message_sent, proposal_submitted, proposal_accepted, etc. §10.5.
-- Execute: src/lib/analytics/events.ts schema v1
+- Execute: src/features/chats/utils/chatAnalyticsEvents.ts schema v1
 - Execute: Fire only after RPC success
 - Gate: automated tests in Phase 14 (pgTAP/Vitest/E2E) green before merge.
 

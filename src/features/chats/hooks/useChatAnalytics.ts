@@ -4,7 +4,7 @@ import {
   buildChatAnalyticsPayload,
   type ChatAnalyticsEventName,
   type ChatAnalyticsEventProperties,
-} from "@/lib/analytics/events";
+} from "../utils/chatAnalyticsEvents";
 
 export type ChatAnalyticsTrackers = {
   [TEvent in ChatAnalyticsEventName]: (

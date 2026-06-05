@@ -675,7 +675,7 @@ alter table public.service_requests
 
 ## 3.18 Product analytics events (Req. 21)
 
-Server-side: domain event types feed analytics consumer. Client-side (post-confirm only): `negotiation_first_response_ms`, `time_to_proposal_ms`, `proposal_accepted`, `proposal_expired`, `revision_requested`, `closure_reason` — schema `v1` in `src/lib/analytics/events.ts`.
+Server-side: domain event types feed analytics consumer. Client-side (post-confirm only): `negotiation_first_response_ms`, `time_to_proposal_ms`, `proposal_accepted`, `proposal_expired`, `revision_requested`, `closure_reason` — schema `v1` in `src/features/chats/utils/chatAnalyticsEvents.ts`.
 
 ---
 
@@ -1211,7 +1211,7 @@ Tags: `feature=chats`, `chat_id`, `service_request_id`. **Scrub** message `paylo
 
 ## 10.5 Analytics events (client, post-server-confirm)
 
-`negotiation_message_sent`, `proposal_submitted`, `proposal_accepted`, `proposal_rejected`, `revision_requested`, `conversation_closed` — schema version `v1` in `src/lib/analytics/events.ts`.
+`negotiation_message_sent`, `proposal_submitted`, `proposal_accepted`, `proposal_rejected`, `revision_requested`, `conversation_closed` — schema version `v1` in `src/features/chats/utils/chatAnalyticsEvents.ts`.
 
 ---
 
