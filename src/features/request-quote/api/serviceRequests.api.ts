@@ -37,7 +37,7 @@ export async function createServiceRequest(
       form_data: (params.form_data ?? null) as import("@/lib/supabase/database.types").Json,
       form_schema: (params.form_schema ?? null) as import("@/lib/supabase/database.types").Json,
       form_version: params.form_version ?? null,
-      status: params.status ?? "open",
+      status: params.status ?? "OPEN",
     })
     .select()
     .single();

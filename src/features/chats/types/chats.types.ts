@@ -188,6 +188,10 @@ export interface InitiateConversationResult {
   conversation: SendMessageResultConversation;
 }
 
+export interface ProviderServiceChatLookup {
+  chatId: string;
+}
+
 export interface MarkConversationReadResult {
   last_read_at: string;
 }

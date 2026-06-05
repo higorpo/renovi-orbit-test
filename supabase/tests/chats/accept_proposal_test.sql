@@ -231,7 +231,7 @@ select ok(
   (
     select exists (
       select 1
-      from public.services s
+      from public.contracted_services s
       where s.id = (select (response->'service'->>'id')::uuid from _accept_result)
         and s.status = 'PENDING_PAYMENT'::public.contracted_service_status
     )

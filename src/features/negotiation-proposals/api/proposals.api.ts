@@ -14,6 +14,11 @@ import type {
   ProposalSuggestedSlotRpc,
   ProposalVersionListResponse,
 } from "../types/proposals.types";
+import type {
+  ProviderLatestProposal,
+  ProviderLatestProposalRow,
+} from "../types/serviceRequestProposal.types";
+import { mapLatestProviderProposalRow } from "../utils/mapLatestProviderProposalRow";
 import { mapProposalRpcError } from "../utils/proposalApiErrors";
 import { CNS_PROPOSAL_RPC } from "./proposals.rpc";
 
@@ -276,6 +281,51 @@ export async function getProposalDetail(
   return { data, error: null };
 }
 
+const LATEST_PROVIDER_PROPOSAL_SELECT =
+  "id, service_request_id, status, proposed_amount, tax_rate, tax_amount, proposal_description, photos, client_rejection_response, revision_reason, revision_notes, proposal_duration_value, proposal_duration_unit, proposal_suggested_slots, version";
+
+function isProviderLatestProposalRow(value: unknown): value is ProviderLatestProposalRow {
+  if (!value || typeof value !== "object") return false;
+  const row = value as Record<string, unknown>;
+  return (
+    typeof row.id === "string" &&
+    typeof row.service_request_id === "string" &&
+    typeof row.status === "string" &&
+    typeof row.proposed_amount === "number" &&
+    typeof row.proposal_description === "string"
+  );
+}
+
+export async function getLatestProviderProposalForServiceRequest(params: {
+  serviceRequestId: string;
+  providerId: string;
+}): Promise<{ data: ProviderLatestProposal | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from("provider_proposals")
+    .select(LATEST_PROVIDER_PROPOSAL_SELECT)
+    .eq("service_request_id", params.serviceRequestId)
+    .eq("provider_id", params.providerId)
+    .order("version", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    logger.error("get_latest_provider_proposal_error", {
+      serviceRequestId: params.serviceRequestId,
+      providerId: params.providerId,
+      error: error.message,
+    });
+    return { data: null, error: error.message };
+  }
+
+  if (!data || !isProviderLatestProposalRow(data)) {
+    return { data: null, error: null };
+  }
+
+  return { data: mapLatestProviderProposalRow(data), error: null };
+}
+
 export async function fetchProviderProposalHistory(
   serviceRequestId: string,
 ): Promise<{ data: ProviderProposalHistoryItem[]; error: string | null }> {
@@ -304,5 +354,6 @@ export const proposalsApi = {
   declineRevisionRequest,
   listProposalVersions,
   getProposalDetail,
+  getLatestProviderProposalForServiceRequest,
   fetchProviderProposalHistory,
 };

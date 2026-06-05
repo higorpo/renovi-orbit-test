@@ -36,9 +36,9 @@ const ClientMyServicesPage = lazy(() =>
     default: m.ClientMyServicesPage,
   })),
 )
-const ClientMyServicesDetailPlaceholder = lazy(() =>
-  import('@/features/client-my-services/components/ClientMyServicesDetailPlaceholder').then((m) => ({
-    default: m.ClientMyServicesDetailPlaceholder,
+const ServiceDetailShell = lazy(() =>
+  import('@/features/view-services/components/ServiceDetailShell').then((m) => ({
+    default: m.ServiceDetailShell,
   })),
 )
 const MyAccountPage = lazy(() =>
@@ -51,23 +51,13 @@ const ProviderProfilePage = lazy(() =>
     default: m.ProviderProfilePage,
   })),
 )
-const ProviderJobsShell = lazy(() =>
-  import('@/features/provider-jobs/components/ProviderJobsShell').then((m) => ({
-    default: m.ProviderJobsShell,
-  })),
-)
 const ProviderJobsRouteSlot = lazy(() =>
-  import('@/features/provider-jobs/components/ProviderJobsShell').then((m) => ({
+  import('@/features/provider-jobs/components/ProviderJobsRouteSlot').then((m) => ({
     default: m.ProviderJobsRouteSlot,
   })),
 )
-const ProviderBudgetsShell = lazy(() =>
-  import('@/features/provider-budgets/components/ProviderBudgetsShell').then((m) => ({
-    default: m.ProviderBudgetsShell,
-  })),
-)
 const ProviderBudgetsRouteSlot = lazy(() =>
-  import('@/features/provider-budgets/components/ProviderBudgetsShell').then((m) => ({
+  import('@/features/provider-budgets/components/ProviderBudgetsRouteSlot').then((m) => ({
     default: m.ProviderBudgetsRouteSlot,
   })),
 )
@@ -147,7 +137,7 @@ export const router = createBrowserRouter([
           },
           {
             path: 'services/:id',
-            element: <ClientMyServicesDetailPlaceholder />,
+            element: <ServiceDetailShell />,
           },
           {
             path: 'addresses',
@@ -171,25 +161,17 @@ export const router = createBrowserRouter([
             path: 'jobs',
             element: (
               <ProtectedRoute allowedRoles={['provider']}>
-                <ProviderJobsShell />
+                <ProviderJobsRouteSlot />
               </ProtectedRoute>
             ),
-            children: [
-              { index: true, element: <ProviderJobsRouteSlot /> },
-              { path: ':jobId', element: <ProviderJobsRouteSlot /> },
-            ],
           },
           {
             path: 'budgets',
             element: (
               <ProtectedRoute allowedRoles={['provider']}>
-                <ProviderBudgetsShell />
+                <ProviderBudgetsRouteSlot />
               </ProtectedRoute>
             ),
-            children: [
-              { index: true, element: <ProviderBudgetsRouteSlot /> },
-              { path: 'pedido/:serviceRequestId', element: <ProviderBudgetsRouteSlot /> },
-            ],
           },
           {
             path: 'earnings',

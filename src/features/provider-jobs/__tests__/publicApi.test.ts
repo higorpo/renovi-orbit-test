@@ -1,15 +1,15 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
 import {
-  JobDetailPage,
   ProviderJobsPage,
-  ProviderJobsShell,
+  ProviderJobsPersistentSlot,
+  ProviderJobsRouteSlot,
 } from "../index";
 
 describe("provider-jobs public API", () => {
-  it("exports page shell components", () => {
+  it("exports list and routing components", () => {
     expect(ProviderJobsPage).toBeTypeOf("function");
-    expect(JobDetailPage).toBeTypeOf("function");
-    expect(ProviderJobsShell).toBeTypeOf("function");
+    expect(ProviderJobsPersistentSlot).toBeTypeOf("function");
+    expect(ProviderJobsRouteSlot).toBeTypeOf("function");
   });
 });

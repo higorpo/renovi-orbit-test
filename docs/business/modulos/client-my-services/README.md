@@ -2,59 +2,55 @@
 
 ## 1. Leitura para negócio
 
-- **Para que serve:** o cliente **vê e organiza os pedidos** que fez na plataforma (`service_requests`): busca, filtros, abas (aguardando orçamentos, em negociação, em andamento, concluídos, cancelados), abre **comparar/histórico de orçamentos** em sheet (quando há propostas) e pode **cancelar** pedidos ainda abertos.
+- **Para que serve:** o cliente **vê e organiza os pedidos** que fez na plataforma: busca, filtros, abas por fase (`negotiation`, `in_progress`, `completed`, `cancelled`), deep link `?serviceRequestId=`, sheet de **comparar/histórico de orçamentos** e navegação para **detalhe em página**.
 - **Quem usa:** principalmente **cliente**; a rota do dashboard também aparece no menu do **prestador** como “Solicitações” com o mesmo path — a tela é construída para o cliente.
-- **Valor:** reduz “cadê meu pedido?” e concentra follow-up de propostas recebidas (sheet) e negociação ativa (Conversas).
-- **Riscos:** nome **“Meus serviços”** vs entidade **pedido**; **detalhe em página** (`/dashboard/services/:id`) ainda placeholder; **detalhe em sheet** só para status **`open`**; opções de filtro limitadas ao que já foi carregado na lista.
+- **Valor:** reduz “cadê meu pedido?” e concentra follow-up de propostas (sheet + Conversas).
+- **Dados:** lista e cancelamento delegam para **`view-services`** (RPCs `list_services`, `cancel_service_request`); detalhe em `/dashboard/services/:id` via `ServiceDetailPage` do mesmo módulo base.
 
 ## 2. Visão geral técnica
 
 | Aspecto | Detalhe |
 |---------|---------|
 | Lista | `/dashboard/requests` — `ClientMyServicesPage` |
-| Detalhe rota | `/dashboard/services/:id` — `ClientMyServicesDetailPlaceholder` |
-| Dados | Supabase client: `listServiceRequests` com joins, paginação **20**, `useInfiniteQuery` |
-| Deep link | `?serviceRequestId=` — `getServiceRequestsPageUrlWithFocus` exportado no `index.ts` |
-| Orçamentos recebidos | `negotiation-proposals`: `ReceivedBudgetDetailsSheet` (modos compare/history via Public API) |
-| Cancelamento | `update` em `service_requests` → `cancelled` + checagem de usuário na API |
+| Detalhe | `/dashboard/services/:id` — `ServiceDetailPage` (`view-services`) |
+| Dados lista | `useClientMyServicesList` → `useServicesList` → RPC `list_services` |
+| Deep link | `?serviceRequestId=` — `getServiceRequestsPageUrlWithFocus` |
+| Orçamentos | `negotiation-proposals`: `ReceivedBudgetDetailsSheet` |
+| Cancelamento | `useClientMyServicesCancel` → `useCancelService` → RPC `cancel_service_request` |
 
 ## 3. Documentação da feature
 
 | Documento | Conteúdo |
 |-----------|----------|
-| [features/solicitacoes-do-cliente.md](./features/solicitacoes-do-cliente.md) | Abas, filtros, busca, foco URL, card, ações, sheets, lacunas (detalhe só open, dropdowns, código cancelamento), evidências |
-| [Comparar orçamentos / histórico](../chats/features/comparar-orcamentos-meus-servicos.md) | Sheet `ReceivedBudgetDetailsSheet`, modos compare/history, API e Public API |
+| [features/solicitacoes-do-cliente.md](./features/solicitacoes-do-cliente.md) | Abas, filtros, busca, foco URL, card, ações, integração view-services |
+| [Comparar orçamentos / histórico](../chats/features/comparar-orcamentos-meus-servicos.md) | Sheet `ReceivedBudgetDetailsSheet` |
+| [Visualização de serviços (RPC)](../view-services/features/visualizacao-de-servicos.md) | Contrato `ServiceModel`, RPCs, fases |
 
 ## 4. Mapa de arquivos
 
 | Área | Caminhos |
 |------|----------|
 | Página | `components/ClientMyServicesPage.tsx` |
-| Lista / cartões | `ClientMyServicesCard.tsx`, `ClientMyServicesCardSkeleton.tsx`, `ClientMyServicesHeader.tsx`, `ClientMyServicesSearchBar.tsx`, `ClientMyServicesFiltersBar.tsx`, `ClientMyServicesStatusTabs.tsx`, `ClientMyServicesFocusBanner.tsx` |
-| Estados vazios/erro | `ClientMyServicesEmptyState.tsx`, `ClientMyServicesNoFilterResultsState.tsx`, `ClientMyServicesErrorState.tsx` |
-| Detalhe | `OpenServiceDetailsSheet.tsx`, `ClientMyServicesSections.tsx`, `ClientMyServicesPhotoGallery.tsx`, `ClientMyServicesDetailPlaceholder.tsx` |
-| Hooks | `hooks/useClientMyServicesPage.ts`, `useClientMyServicesList.ts`, `useClientMyServicesFilters.ts`, `useClientMyServicesCancel.ts` |
-| API | `api/serviceRequests.api.ts` |
-| Tipos / constantes | `types/client-my-services.types.ts`, `constants/statusTabs.ts`, `statusTabDisplay.ts`, `statusBadge.ts`, `constants/routes.ts` |
-| Mappers / utils | `utils/serviceRequestCardMapper.ts`, `descriptionPreview.ts`, `formatDate.ts`, `locationDisplay.ts`, `normalizeForSearch.ts`, `filterServiceRequests.ts` (só testes no fluxo atual) |
+| Lista UX | `ClientMyServicesHeader.tsx`, `ClientMyServicesSearchBar.tsx`, `ClientMyServicesFiltersBar.tsx`, `ClientMyServicesStatusTabs.tsx`, `ClientMyServicesFocusBanner.tsx`, `ClientMyServicesCardSkeleton.tsx` |
+| Estados | `ClientMyServicesEmptyState.tsx`, `ClientMyServicesNoFilterResultsState.tsx`, `ClientMyServicesErrorState.tsx` |
+| Hooks | `useClientMyServicesPage.ts`, `useClientMyServicesList.ts`, `useClientMyServicesFilters.ts`, `useClientMyServicesCancel.ts` |
+| Tipos / rotas lista | `types/client-my-services.types.ts`, `constants/routes.ts`, `constants/statusTabs.ts` (re-export de `view-services`) |
+| Card | `ServiceListCard` importado de `@/features/view-services` |
+
+**Removidos nesta refatoração:** `api/serviceRequests.api.ts`, sheets/placeholder de detalhe local, mappers PostgREST, `ClientMyServicesCard`.
 
 ## 5. Integrações
 
-- **`negotiation-proposals`** — sheet `ReceivedBudgetDetailsSheet` (comparar orçamentos / histórico) sem sair da lista.
-- **`chats`** — negociação in-app (Conversas); caminho preferencial para aceite e mensagens.
-- **`request-quote`** — URLs assinadas de fotos e estilo visual do serviço nos cards.
-- **`dynamic-form`** — resumo legível das respostas do pedido no sheet de detalhe.
-- **`request-quote` (origem)** — criação dos registros listados aqui.
+- **`view-services`** — lista, detalhe, cancelamento, card, abas/fases.
+- **`negotiation-proposals`** — sheet compare/history; invalida query keys de `view-services`.
+- **`chats`** — negociação in-app.
+- **`request-quote`** — origem dos pedidos listados.
 
 ## 6. API pública do pacote (`index.ts`)
 
-Exporta: `ClientMyServicesPage`, `ClientMyServicesDetailPlaceholder`, `getServiceRequestsPageUrlWithFocus`, `SERVICE_REQUEST_FOCUS_QUERY`, `ROUTE_SERVICE_REQUESTS_LIST`.
+Exporta: `ClientMyServicesPage`, `getServiceRequestsPageUrlWithFocus`, `SERVICE_REQUEST_FOCUS_QUERY`, `ROUTE_SERVICE_REQUESTS_LIST`.
 
 ## 7. Migração / schema
 
-- Referência típica: criação de `service_requests` e políticas — ver migrações em `supabase/migrations/` (ex.: arquivo que define a tabela e RLS para `client_id`).
-
-## 8. Nomenclatura no produto
-
-- Menu cliente: **Meus Serviços** → rota `requests`.
-- Cópias da página falam em “serviços” no sentido de **solicitações**; a entidade de dados é **pedido / service_request**.
+- `service_requests` + `contracted_services` (rename de `services`).
+- RPCs `get_service`, `list_services` — ver `view-services`.

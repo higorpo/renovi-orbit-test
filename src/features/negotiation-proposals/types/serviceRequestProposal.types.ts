@@ -24,3 +24,27 @@ export interface ServiceRequestProposalSummary {
   revisionReason: ProposalRevisionReason | null;
   revisionNotes: string | null;
 }
+
+/** PostgREST row for the provider's latest proposal on a service request. */
+export interface ProviderLatestProposalRow {
+  id: string;
+  service_request_id: string;
+  status: string;
+  proposed_amount: number;
+  tax_rate: number;
+  tax_amount: number;
+  proposal_description: string;
+  photos: string[];
+  client_rejection_response: string | null;
+  revision_reason: ProposalRevisionReason | null;
+  revision_notes: string | null;
+  proposal_duration_value: number;
+  proposal_duration_unit: ProposalDurationUnit;
+  proposal_suggested_slots: ProposalSuggestedSlotRpc[] | unknown;
+  version: number;
+}
+
+export interface ProviderLatestProposal {
+  summary: ServiceRequestProposalSummary;
+  draft: ServiceRequestProposalDraft;
+}

@@ -40,7 +40,7 @@ export async function createServiceRequest(
     form_data: Object.keys(params.form_data).length > 0 ? (params.form_data as Json) : null,
     form_schema: params.form_schema as Json | null,
     form_version: params.form_version ?? null,
-    status: "open",
+    status: "OPEN",
     urgency: params.urgency ?? null,
     scope_complexity: params.scope_complexity ?? null,
     tags: params.tags?.length ? params.tags : null,

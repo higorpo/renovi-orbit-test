@@ -80,5 +80,5 @@ Helpers em `constants/serviceRequestBudgetSheet.ts`:
 - `src/features/negotiation-proposals/components/ReceivedBudgetDetailsSheet.tsx`
 - `src/features/negotiation-proposals/api/serviceRequestBudgetCompare.api.ts`
 - `src/features/negotiation-proposals/constants/serviceRequestBudgetSheet.ts`
-- `src/features/client-my-services/components/ClientMyServicesCard.tsx`
+- `src/features/view-services/components/ServiceListCard.tsx`
 - `src/features/client-my-services/components/ClientMyServicesPage.tsx`

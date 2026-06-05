@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,12 @@ import { getServiceCardStyle, useServiceRequestPhotoUrls } from "@/features/requ
 import { ImagePreviewStrip } from "@/components/ImagePreviewStrip";
 import { formatDistance } from "@/lib/formatDistance";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
-import type { JobDetailLocationState } from "../types/provider-jobs.types";
+import {
+  createProviderJobsServiceDetailState,
+  getServiceDetailPath,
+} from "@/features/view-services";
+import { getUrgencyConfig } from "@/features/view-services";
 import type { ProviderJobItem } from "../types/provider-jobs.types";
-import { getUrgencyConfig } from "./JobDetail.constants";
 
 const DESCRIPTION_CLAMP = "line-clamp-2 sm:line-clamp-3";
 
@@ -26,11 +29,9 @@ export interface JobCardProps {
 }
 
 export function JobCard({ job, className }: JobCardProps) {
-  const detailPath = `/dashboard/jobs/${job.id}`;
-  const linkState: JobDetailLocationState = {
-    job,
-    jobDetailPresentation: "sheet",
-  };
+  const location = useLocation();
+  const detailPath = getServiceDetailPath(job.id);
+  const linkState = createProviderJobsServiceDetailState(location);
   const { urls: photoUrls, isLoading: photoUrlsLoading } =
     useServiceRequestPhotoUrls(job.photos ?? null);
 

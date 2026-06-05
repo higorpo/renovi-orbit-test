@@ -1,5 +1,8 @@
 import { Link, Outlet, useMatch } from "react-router";
 import { useAuth } from "@/features/auth";
+import { ProviderJobsPersistentSlot } from "@/features/provider-jobs";
+import { ProviderBudgetsPersistentSlot } from "@/features/provider-budgets";
+import { ServiceDetailSheet, useServiceDetailModal } from "@/features/view-services";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { getDashboardMenu } from "./dashboardMenu";
@@ -14,6 +17,7 @@ export function DashboardLayout() {
   const { profile } = useAuth();
   const isDesktop = useBreakpointMd();
   const isOnline = useOnlineStatus();
+  const serviceDetailModal = useServiceDetailModal();
   const mobileChatConversationMatch = useMatch(MOBILE_CHAT_CONVERSATION_MATCH);
   const isMobileChatConversation = !isDesktop && mobileChatConversationMatch != null;
   const role = profile?.role ?? "client";
@@ -54,7 +58,12 @@ export function DashboardLayout() {
           !isDesktop && !isMobileChatConversation && "pb-20",
         )}
       >
+        <ProviderJobsPersistentSlot />
+        <ProviderBudgetsPersistentSlot />
         <Outlet />
+        {serviceDetailModal.isOpen && serviceDetailModal.serviceRequestId ? (
+          <ServiceDetailSheet serviceRequestId={serviceDetailModal.serviceRequestId} />
+        ) : null}
       </main>
     </div>
   );

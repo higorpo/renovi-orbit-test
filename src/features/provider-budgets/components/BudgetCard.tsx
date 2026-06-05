@@ -1,4 +1,4 @@
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import {
   Card,
   CardContent,
@@ -16,10 +16,11 @@ import {
 import { ImagePreviewStrip } from "@/components/ImagePreviewStrip";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
-import { jobDetailPathFromBudgets } from "@/features/provider-jobs/constants/jobDetailReturnNavigation";
-import type { JobDetailLocationState } from "@/features/provider-jobs/types/provider-jobs.types";
+import {
+  createProviderBudgetsServiceDetailState,
+  getServiceDetailPath,
+} from "@/features/view-services";
 import type { ProviderSentBudget } from "../types/provider-budgets.types";
-import { initialProviderJobItemFromSentBudget } from "../utils/initialProviderJobItem";
 import { getBudgetStatusConfig } from "../constants/budgetStatus";
 
 export interface BudgetCardProps {
@@ -28,11 +29,9 @@ export interface BudgetCardProps {
 }
 
 export function BudgetCard({ budget, className }: BudgetCardProps) {
-  const detailPath = jobDetailPathFromBudgets(budget.service_request_id);
-  const linkState: JobDetailLocationState = {
-    job: initialProviderJobItemFromSentBudget(budget),
-    jobDetailPresentation: "sheet",
-  };
+  const location = useLocation();
+  const detailPath = getServiceDetailPath(budget.service_request_id);
+  const linkState = createProviderBudgetsServiceDetailState(location);
 
   const { urls: photoUrls, isLoading: photoUrlsLoading } =
     useServiceRequestPhotoUrls(budget.service_request_photos);
@@ -43,7 +42,7 @@ export function BudgetCard({ budget, className }: BudgetCardProps) {
   });
 
   const statusConfig = getBudgetStatusConfig(budget.status);
-  const location = [budget.neighborhood, budget.city]
+  const locationLine = [budget.neighborhood, budget.city]
     .filter(Boolean)
     .join(", ");
 
@@ -94,10 +93,10 @@ export function BudgetCard({ budget, className }: BudgetCardProps) {
           )}
 
           <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            {location && (
+            {locationLine && (
               <span className="flex items-center gap-1">
                 <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                {location}
+                {locationLine}
               </span>
             )}
             <span className="text-xs">{budget.masked_client_name}</span>

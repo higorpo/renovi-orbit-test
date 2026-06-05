@@ -14,20 +14,17 @@ vi.mock("@/lib/formatRelativeDate", () => ({
   formatRelativeDate: () => "Há 1 dia",
 }));
 
-vi.mock("@/features/provider-jobs/constants/jobDetailReturnNavigation", () => ({
-  jobDetailPathFromBudgets: (id: string) => `/dashboard/budgets/pedido/${id}`,
-}));
-
 describe("BudgetCard", () => {
   it("renders title, amount, status and detail links", () => {
     const budget = createProviderSentBudget({
+      service_request_id: "sr-42",
       service_request_title: "Troca de disjuntor",
       proposed_amount: 320.5,
       status: "accepted",
     });
 
     render(
-      <MemoryRouter>
+      <MemoryRouter initialEntries={["/dashboard/budgets"]}>
         <BudgetCard budget={budget} />
       </MemoryRouter>,
     );
@@ -35,8 +32,9 @@ describe("BudgetCard", () => {
     expect(screen.getByText("Troca de disjuntor")).toBeInTheDocument();
     expect(screen.getByText(/R\$\s*320,50/)).toBeInTheDocument();
     expect(screen.getByText("Aceito")).toBeInTheDocument();
-    expect(
-      screen.getAllByRole("link", { name: /ver detalhes/i })).toHaveLength(2);
+    const detailLinks = screen.getAllByRole("link", { name: /ver detalhes/i });
+    expect(detailLinks).toHaveLength(2);
+    expect(detailLinks[0]).toHaveAttribute("href", "/dashboard/services/sr-42");
   });
 
   it("omits description block when description is null", () => {

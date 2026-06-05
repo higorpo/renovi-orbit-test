@@ -41,6 +41,6 @@ export function buildServiceRequestParams(params: {
     form_data: Object.keys(params.form_data).length > 0 ? params.form_data : null,
     form_schema: params.form_schema ?? null,
     form_version: params.form_version ?? null,
-    status: "open" as const,
+    status: "OPEN" as const,
   };
 }

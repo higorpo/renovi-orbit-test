@@ -1,18 +1,21 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router";
-import { toast } from "sonner";
+import { useNavigate, useSearchParams } from "react-router";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import {
+  getServiceDetailPath,
+  statusToTabId,
+  type ServiceModel,
+} from "@/features/view-services";
+import type { ServiceRequestBudgetSheetMode } from "@/features/negotiation-proposals";
 import { useClientMyServicesList } from "./useClientMyServicesList";
 import { useClientMyServicesFilters } from "./useClientMyServicesFilters";
 import { useClientMyServicesCancel } from "./useClientMyServicesCancel";
 import { SERVICE_REQUEST_FOCUS_QUERY } from "../constants/routes";
-import { statusToTabId } from "../constants/statusTabs";
-import type { ServiceRequestBudgetSheetMode } from "@/features/negotiation-proposals";
-import type { ServiceRequestCardModel } from "../types/client-my-services.types";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
 export function useClientMyServicesPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const focusServiceRequestId = searchParams.get(SERVICE_REQUEST_FOCUS_QUERY);
   const { cancelServiceRequest, isCancelling } = useClientMyServicesCancel();
@@ -23,9 +26,6 @@ export function useClientMyServicesPage() {
   const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<string | null>(null);
   const [selectedBudgetSheetMode, setSelectedBudgetSheetMode] =
     useState<ServiceRequestBudgetSheetMode>("compare");
-  const [selectedOpenService, setSelectedOpenService] = useState<ServiceRequestCardModel | null>(
-    null
-  );
 
   const {
     filters,
@@ -151,24 +151,21 @@ export function useClientMyServicesPage() {
     setSearchParams,
   ]);
 
-  const handleOpenBudgets = useCallback((model: ServiceRequestCardModel) => {
+  const handleOpenBudgets = useCallback((model: ServiceModel) => {
     setSelectedServiceRequestId(model.id);
-    setSelectedBudgetSheetMode(
-      model.listPhase === "negotiation" ? "compare" : "history",
-    );
+    setSelectedBudgetSheetMode(model.listPhase === "negotiation" ? "compare" : "history");
     setBudgetSheetOpen(true);
   }, []);
 
-  const handleOpenDetails = useCallback((model: ServiceRequestCardModel) => {
-    if (model.listPhase !== "negotiation") {
-      toast.info("Visualização detalhada para este status ainda está em construção.");
-      return;
-    }
-    setSelectedOpenService(model);
-  }, []);
+  const handleOpenDetails = useCallback(
+    (model: ServiceModel) => {
+      navigate(getServiceDetailPath(model.id));
+    },
+    [navigate],
+  );
 
   useEffect(() => {
-    if (!budgetSheetOpen && !selectedOpenService) return;
+    if (!budgetSheetOpen) return;
 
     const previousBodyOverflow = document.body.style.overflow;
     const previousHtmlOverflow = document.documentElement.style.overflow;
@@ -180,13 +177,11 @@ export function useClientMyServicesPage() {
       document.body.style.overflow = previousBodyOverflow;
       document.documentElement.style.overflow = previousHtmlOverflow;
     };
-  }, [budgetSheetOpen, selectedOpenService]);
+  }, [budgetSheetOpen]);
 
   return {
-    // search
     searchQuery,
     setSearchQuery,
-    // filters
     filters,
     setStatusTabId,
     setCategoryId,
@@ -195,7 +190,6 @@ export function useClientMyServicesPage() {
     setDateRange,
     setHasProposals,
     setHasImages,
-    // list
     items,
     isLoading,
     isFetchingNextPage,
@@ -203,21 +197,16 @@ export function useClientMyServicesPage() {
     refetch,
     hasNextPage,
     fetchNextPage,
-    // derived
     hasActiveFilters,
     focusServiceRequestId,
     focusedRequest,
     categoryOptions,
     cityOptions,
     neighborhoodOptions,
-    // details sheets
     budgetSheetOpen,
     setBudgetSheetOpen,
     selectedServiceRequestId,
     selectedBudgetSheetMode,
-    selectedOpenService,
-    setSelectedOpenService,
-    // actions
     cancelServiceRequest,
     isCancelling,
     handleClearFocusFilter,

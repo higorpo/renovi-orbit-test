@@ -7,3 +7,5 @@ export const CHAT_CONVERSATIONS_LIST_QUERY_KEY = "chat-conversations" as const;
 export const CHAT_PROPOSAL_TIMELINE_QUERY_KEY = "chat-proposal-timeline" as const;
 
 export const CHAT_FREE_MESSAGING_QUERY_KEY = "chat-free-messaging" as const;
+
+export const PROVIDER_SERVICE_CHAT_QUERY_KEY = "provider-service-chat" as const;

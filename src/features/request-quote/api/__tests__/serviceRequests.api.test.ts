@@ -62,13 +62,13 @@ describe("createServiceRequest", () => {
     expect(result.error).toBe("Insert failed");
   });
 
-  it("uses open as default status", async () => {
-    const request = { id: "req-1", status: "open" };
+  it("uses OPEN as default status", async () => {
+    const request = { id: "req-1", status: "OPEN" };
     terminalResult = { data: request, error: null };
 
     await createServiceRequest(params);
     const chainCall = fromMock.mock.results[0]?.value;
-    expect(chainCall.insert.mock.calls[0][0].status).toBe("open");
+    expect(chainCall.insert.mock.calls[0][0].status).toBe("OPEN");
   });
 
   it("includes optional fields when provided", async () => {

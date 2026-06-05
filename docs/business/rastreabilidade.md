@@ -31,7 +31,8 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | Pasta | APIs / hooks representativos | UI principal |
 |-------|------------------------------|--------------|
 | `addresses/` | `api/addresses.api.ts`, `api/statesAndCities.api.ts` | `AddressSelectionStep`, `AddressesSection`, `AddressFormDialog` |
-| `client-my-services/` | `api/serviceRequests.api.ts` (list + cancel); hooks page/list/filters/cancel | `ClientMyServicesPage`, cards, sheets (`OpenServiceDetailsSheet`, `ReceivedBudgetDetailsSheet` via `negotiation-proposals`), placeholder detalhe |
+| `client-my-services/` | hooks page/list/filters/cancel (delegam a `view-services`) | `ClientMyServicesPage`, `ServiceListCard` via `view-services`, `ReceivedBudgetDetailsSheet` via `negotiation-proposals` |
+| `view-services/` | `api/services.api.ts` (RPC `get_service`, `list_services`, `cancel_service_request`); hooks list/detail/cancel | `ServiceDetailPage`, `ServiceListCard`, `ServiceSections` |
 | `dynamic-form/` | — | `DynamicForm`, `FormDemoPage` |
 | `my-account/` | `api/*Profile*.api.ts`, `portfolio.api.ts`, `offeredServices.api.ts` | `MyAccountPage`, `MyAccountClientPage`, `MyAccountProviderPage`, `ServiceAreaField` |
 | `provider-budgets/` | `api/providerBudgets.api.ts`, hooks `useProviderSentBudgets` / `useProviderOwnQuestions`, contadores pendentes | `ProviderBudgetsShell`, `ProviderBudgetsPage`, cards; RPCs em `20260322000000_create_provider_budgets_rpcs.sql` |
@@ -73,6 +74,8 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `docs/business/modulos/chats/` | README + [conversas-e-negociacao](./modulos/chats/features/conversas-e-negociacao.md) |
 | `supabase/migrations/20260701100000`–`20260701103900` (e correlatas) | Schema CNS, RPCs, RLS, crons, templates MMD |
 | `supabase/tests/chats/*.sql` | pgTAP FSM, mensagem livre, concorrência |
+| `supabase/migrations/20260705207000`–`20260705209000` | Rename `contracted_services`; RPCs `get_service`, `list_services` |
+| `supabase/tests/view-services/view_services_rpcs_test.sql` | pgTAP acesso cliente/prestador, filtros e paginação |
 | `src/router.tsx` | Rotas `/chats`, `/chats/:chatId` |
 | `e2e/tests/chats.spec.ts` | E2E com mocks (`e2e/mocks/chats.mock.ts`) |
 | `docs/chats/wave-a-rollout-checklist.md`, `wave-bf-rollout-runbook.md` | Cutover operacional |

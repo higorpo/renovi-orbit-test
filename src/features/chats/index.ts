@@ -15,6 +15,7 @@ export {
   listChatMessages,
   listConversations,
   markConversationRead,
+  findProviderChatForServiceRequest,
   initiateConversation,
   sendMessage,
 } from "./api/chats.api";
@@ -92,6 +93,7 @@ export {
   CHAT_CONVERSATIONS_LIST_QUERY_KEY,
   CHAT_PROPOSAL_TIMELINE_QUERY_KEY,
   CHAT_FREE_MESSAGING_QUERY_KEY,
+  PROVIDER_SERVICE_CHAT_QUERY_KEY,
 } from "./constants/queryKeys";
 
 // Types — RPC JSON shapes and generated enum aliases
@@ -122,6 +124,7 @@ export type {
   SendMessageResultMessage,
   SendMessageResultConversation,
   InitiateConversationResult,
+  ProviderServiceChatLookup,
   MarkConversationReadResult,
   CnsBusinessErrorCode,
   ChatsApiError,

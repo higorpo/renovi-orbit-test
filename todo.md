@@ -103,3 +103,4 @@ Coisas para fazer next
 -garantir que todos os triggers são ok e são necessários
 -garantir que todas as crons estão ok e são necessárias
 -quando edita uma proposta que tem imagem anexada, as  imagens não carregam
+-simplificar query de get_service_list  (hoje ele tá trazendo um monte de dados que nem vai ser exibido no card)

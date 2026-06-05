@@ -11,6 +11,7 @@ import type {
   CloseConversationResult,
   InitiateConversationResult,
   MarkConversationReadResult,
+  ProviderServiceChatLookup,
   SendMessageResult,
 } from "../types/chats.types";
 import { mapCnsRpcError } from "../utils/chatApiErrors";
@@ -219,6 +220,37 @@ export async function checkChatFreeMessagingAllowed(
   return { data, error: null };
 }
 
+export async function findProviderChatForServiceRequest(
+  serviceRequestId: string,
+): Promise<ChatsApiResult<ProviderServiceChatLookup | null>> {
+  const { data, error } = await supabase
+    .from("chats")
+    .select("id")
+    .eq("service_request_id", serviceRequestId)
+    .maybeSingle();
+
+  if (error) {
+    logger.error("chats_find_provider_chat_error", {
+      serviceRequestId,
+      message: error.message,
+    });
+    trackApiError("chats_find_provider_chat", "QUERY_ERROR");
+    return {
+      data: null,
+      error: {
+        code: "UNKNOWN",
+        message: "Não foi possível verificar a conversa.",
+      },
+    };
+  }
+
+  if (!data) {
+    return { data: null, error: null };
+  }
+
+  return { data: { chatId: data.id }, error: null };
+}
+
 export async function initiateConversation(params: {
   serviceRequestId: string;
   idempotencyKey?: string;
@@ -266,6 +298,7 @@ export const chatsApi = {
   closeConversation,
   markConversationRead,
   checkChatFreeMessagingAllowed,
+  findProviderChatForServiceRequest,
   initiateConversation,
   sendMessage,
 };

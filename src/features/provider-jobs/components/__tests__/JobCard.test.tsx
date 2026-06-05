@@ -28,7 +28,7 @@ describe("JobCard", () => {
     expect(screen.getByText(/urgente/i)).toBeInTheDocument();
     expect(screen.getByText(/sua área/i)).toBeInTheDocument();
     const mainLink = screen.getByRole("link", { name: /ver detalhes: troca de chuveiro/i });
-    expect(mainLink).toHaveAttribute("href", "/dashboard/jobs/job-1");
+    expect(mainLink).toHaveAttribute("href", "/dashboard/services/job-1");
   });
 
   it("renders footer link to job detail", () => {
@@ -39,6 +39,6 @@ describe("JobCard", () => {
       </MemoryRouter>,
     );
     const footerLink = screen.getByRole("link", { name: /^ver detalhes$/i });
-    expect(footerLink).toHaveAttribute("href", "/dashboard/jobs/job-1");
+    expect(footerLink).toHaveAttribute("href", "/dashboard/services/job-1");
   });
 });

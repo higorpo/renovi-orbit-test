@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   closeConversation,
+  findProviderChatForServiceRequest,
   getConversationDetail,
   initiateConversation,
   listChatMessages,
@@ -9,12 +10,16 @@ import {
   sendMessage,
 } from "../chats.api";
 
-const { rpcMock } = vi.hoisted(() => ({
+const { rpcMock, fromMock } = vi.hoisted(() => ({
   rpcMock: vi.fn(),
+  fromMock: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/client", () => ({
-  supabase: { rpc: rpcMock },
+  supabase: {
+    rpc: rpcMock,
+    from: fromMock,
+  },
 }));
 
 vi.mock("@/lib/logger", () => ({
@@ -204,5 +209,52 @@ describe("sendMessage", () => {
 
     expect(result.error?.code).toBe("RATE_LIMITED");
     expect(result.error?.retryAfterSeconds).toBe(42);
+  });
+});
+
+describe("findProviderChatForServiceRequest", () => {
+  it("returns chat id when provider conversation exists", async () => {
+    const maybeSingleMock = vi.fn().mockResolvedValue({
+      data: { id: "chat-42" },
+      error: null,
+    });
+    const eqMock = vi.fn().mockReturnValue({ maybeSingle: maybeSingleMock });
+    const selectMock = vi.fn().mockReturnValue({ eq: eqMock });
+    fromMock.mockReturnValue({ select: selectMock });
+
+    const result = await findProviderChatForServiceRequest("sr-1");
+
+    expect(fromMock).toHaveBeenCalledWith("chats");
+    expect(selectMock).toHaveBeenCalledWith("id");
+    expect(eqMock).toHaveBeenCalledWith("service_request_id", "sr-1");
+    expect(result.data).toEqual({ chatId: "chat-42" });
+    expect(result.error).toBeNull();
+  });
+
+  it("returns null when no conversation exists", async () => {
+    const maybeSingleMock = vi.fn().mockResolvedValue({ data: null, error: null });
+    const eqMock = vi.fn().mockReturnValue({ maybeSingle: maybeSingleMock });
+    const selectMock = vi.fn().mockReturnValue({ eq: eqMock });
+    fromMock.mockReturnValue({ select: selectMock });
+
+    const result = await findProviderChatForServiceRequest("sr-1");
+
+    expect(result.data).toBeNull();
+    expect(result.error).toBeNull();
+  });
+
+  it("maps query errors for UI", async () => {
+    const maybeSingleMock = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "permission denied" },
+    });
+    const eqMock = vi.fn().mockReturnValue({ maybeSingle: maybeSingleMock });
+    const selectMock = vi.fn().mockReturnValue({ eq: eqMock });
+    fromMock.mockReturnValue({ select: selectMock });
+
+    const result = await findProviderChatForServiceRequest("sr-1");
+
+    expect(result.data).toBeNull();
+    expect(result.error?.message).toContain("verificar a conversa");
   });
 });

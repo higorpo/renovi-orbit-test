@@ -989,6 +989,86 @@ export type Database = {
           },
         ]
       }
+      contracted_services: {
+        Row: {
+          accepted_proposal_id: string
+          agreed_slot: Json
+          client_id: string
+          created_at: string
+          duration_unit: string
+          duration_value: number
+          id: string
+          provider_id: string
+          scheduled_end_date: string | null
+          scheduled_shift: string
+          scheduled_start_date: string
+          service_request_id: string
+          status: Database["public"]["Enums"]["contracted_service_status"]
+          updated_at: string
+        }
+        Insert: {
+          accepted_proposal_id: string
+          agreed_slot: Json
+          client_id: string
+          created_at?: string
+          duration_unit: string
+          duration_value: number
+          id?: string
+          provider_id: string
+          scheduled_end_date?: string | null
+          scheduled_shift: string
+          scheduled_start_date: string
+          service_request_id: string
+          status?: Database["public"]["Enums"]["contracted_service_status"]
+          updated_at?: string
+        }
+        Update: {
+          accepted_proposal_id?: string
+          agreed_slot?: Json
+          client_id?: string
+          created_at?: string
+          duration_unit?: string
+          duration_value?: number
+          id?: string
+          provider_id?: string
+          scheduled_end_date?: string | null
+          scheduled_shift?: string
+          scheduled_start_date?: string
+          service_request_id?: string
+          status?: Database["public"]["Enums"]["contracted_service_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracted_services_accepted_proposal_id_fkey"
+            columns: ["accepted_proposal_id"]
+            isOneToOne: true
+            referencedRelation: "provider_proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracted_services_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracted_services_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracted_services_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: true
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       domain_events: {
         Row: {
           aggregate_id: string
@@ -2012,7 +2092,7 @@ export type Database = {
             foreignKeyName: "service_requests_contracted_service_id_fkey"
             columns: ["contracted_service_id"]
             isOneToOne: false
-            referencedRelation: "services"
+            referencedRelation: "contracted_services"
             referencedColumns: ["id"]
           },
           {
@@ -2020,86 +2100,6 @@ export type Database = {
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "platform_services"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      services: {
-        Row: {
-          accepted_proposal_id: string
-          agreed_slot: Json
-          client_id: string
-          created_at: string
-          duration_unit: string
-          duration_value: number
-          id: string
-          provider_id: string
-          scheduled_end_date: string | null
-          scheduled_shift: string
-          scheduled_start_date: string
-          service_request_id: string
-          status: Database["public"]["Enums"]["contracted_service_status"]
-          updated_at: string
-        }
-        Insert: {
-          accepted_proposal_id: string
-          agreed_slot: Json
-          client_id: string
-          created_at?: string
-          duration_unit: string
-          duration_value: number
-          id?: string
-          provider_id: string
-          scheduled_end_date?: string | null
-          scheduled_shift: string
-          scheduled_start_date: string
-          service_request_id: string
-          status?: Database["public"]["Enums"]["contracted_service_status"]
-          updated_at?: string
-        }
-        Update: {
-          accepted_proposal_id?: string
-          agreed_slot?: Json
-          client_id?: string
-          created_at?: string
-          duration_unit?: string
-          duration_value?: number
-          id?: string
-          provider_id?: string
-          scheduled_end_date?: string | null
-          scheduled_shift?: string
-          scheduled_start_date?: string
-          service_request_id?: string
-          status?: Database["public"]["Enums"]["contracted_service_status"]
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "services_accepted_proposal_id_fkey"
-            columns: ["accepted_proposal_id"]
-            isOneToOne: true
-            referencedRelation: "provider_proposals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "services_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "services_provider_id_fkey"
-            columns: ["provider_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "services_service_request_id_fkey"
-            columns: ["service_request_id"]
-            isOneToOne: true
-            referencedRelation: "service_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -2199,10 +2199,6 @@ export type Database = {
       cancel_service_request: {
         Args: { p_idempotency_key: string; p_service_request_id: string }
         Returns: Json
-      }
-      client_my_services_cancelled_ids: {
-        Args: { p_client_id: string }
-        Returns: string[]
       }
       cns_assert_chat_media_path_shape: {
         Args: { p_path: string }
@@ -2360,6 +2356,16 @@ export type Database = {
         Args: { p_idempotency_key: string; p_proposal_id: string }
         Returns: Json
       }
+      derive_service_list_phase: {
+        Args: {
+          p_cs_provider_id: string
+          p_cs_status: Database["public"]["Enums"]["contracted_service_status"]
+          p_sr_status: Database["public"]["Enums"]["service_request_status"]
+          p_viewer_id: string
+          p_viewer_role: string
+        }
+        Returns: string
+      }
       domain_events_release_stale_leases: { Args: never; Returns: number }
       enqueue_proposal_expiring_soon_reminders: {
         Args: { p_batch_size?: number }
@@ -2410,6 +2416,7 @@ export type Database = {
         Args: { slug_param: string }
         Returns: Json
       }
+      get_service: { Args: { p_service_request_id: string }; Returns: Json }
       idempotency_begin: {
         Args: {
           p_idempotency_key: string
@@ -2492,6 +2499,22 @@ export type Database = {
         }
         Returns: Json
       }
+      list_services: {
+        Args: {
+          p_category_title?: string
+          p_city_name?: string
+          p_date_from?: string
+          p_date_to?: string
+          p_has_images?: boolean
+          p_has_proposals?: boolean
+          p_list_phase?: string
+          p_neighborhood?: string
+          p_page?: number
+          p_page_size?: number
+          p_search?: string
+        }
+        Returns: Json
+      }
       match_provider_jobs: {
         Args: {
           p_lat: number
@@ -2513,6 +2536,10 @@ export type Database = {
       platform_constant_int: {
         Args: { p_default: number; p_key: string }
         Returns: number
+      }
+      project_service_row: {
+        Args: { p_service_request_id: string; p_viewer_id: string }
+        Returns: Json
       }
       purge_stale_user_device_beacons: { Args: never; Returns: number }
       record_domain_event: {
@@ -2553,7 +2580,15 @@ export type Database = {
         Returns: string
       }
       sanitize_job_error: { Args: { p_message: string }; Returns: string }
+      service_viewer_has_access: {
+        Args: { p_service_request_id: string; p_viewer_id: string }
+        Returns: boolean
+      }
       slugify_for_provider: { Args: { name_input: string }; Returns: string }
+      view_services_mask_client_name: {
+        Args: { p_full_name: string }
+        Returns: string
+      }
     }
     Enums: {
       cns_closure_type:

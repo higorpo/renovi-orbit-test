@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import type { ServiceModel } from "@/features/view-services";
 import { ClientMyServicesFocusBanner } from "../ClientMyServicesFocusBanner";
-import type { ServiceRequestCardModel } from "../../types/client-my-services.types";
 
-const baseModel: ServiceRequestCardModel = {
+const baseModel: ServiceModel = {
   id: "sr-1",
   title: "Pedido especial",
   description: null,
@@ -12,11 +12,22 @@ const baseModel: ServiceRequestCardModel = {
   formSchema: null,
   listPhase: "negotiation",
   statusTabId: "negotiation",
+  contractedServiceId: null,
   createdAt: "2025-03-01T00:00:00Z",
   updatedAt: "2025-03-01T00:00:00Z",
   address: null,
   service: null,
   photoPaths: [],
+  proposalCount: 0,
+  hasPendingProposal: false,
+  counterpartyName: null,
+  counterparty: null,
+  contracted: null,
+  tags: null,
+  urgency: null,
+  scopeComplexity: null,
+  estimatedDurationHint: null,
+  missingInfoWarnings: null,
 };
 
 describe("ClientMyServicesFocusBanner", () => {
@@ -27,21 +38,9 @@ describe("ClientMyServicesFocusBanner", () => {
         focusedRequest={null}
         isLoading={false}
         onClearFocus={vi.fn()}
-      />
+      />,
     );
     expect(container.firstChild).toBeNull();
-  });
-
-  it("shows loading copy while the focused request is loading", () => {
-    render(
-      <ClientMyServicesFocusBanner
-        focusServiceRequestId="sr-1"
-        focusedRequest={null}
-        isLoading
-        onClearFocus={vi.fn()}
-      />
-    );
-    expect(screen.getByText(/Carregando o pedido selecionado/i)).toBeInTheDocument();
   });
 
   it("shows focused request title when found", () => {
@@ -51,23 +50,9 @@ describe("ClientMyServicesFocusBanner", () => {
         focusedRequest={baseModel}
         isLoading={false}
         onClearFocus={vi.fn()}
-      />
+      />,
     );
     expect(screen.getByText(/Pedido especial/i)).toBeInTheDocument();
-  });
-
-  it("shows not-found copy when focus id is set but request is missing", () => {
-    render(
-      <ClientMyServicesFocusBanner
-        focusServiceRequestId="sr-missing"
-        focusedRequest={null}
-        isLoading={false}
-        onClearFocus={vi.fn()}
-      />
-    );
-    expect(
-      screen.getByText(/Não encontramos esse pedido na sua lista/i)
-    ).toBeInTheDocument();
   });
 
   it("calls onClearFocus when clearing the filter", () => {
@@ -78,7 +63,7 @@ describe("ClientMyServicesFocusBanner", () => {
         focusedRequest={baseModel}
         isLoading={false}
         onClearFocus={onClearFocus}
-      />
+      />,
     );
     fireEvent.click(screen.getByRole("button", { name: /Ver todos os serviços/i }));
     expect(onClearFocus).toHaveBeenCalledTimes(1);

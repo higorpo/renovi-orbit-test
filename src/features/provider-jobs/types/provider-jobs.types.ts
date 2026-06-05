@@ -82,9 +82,3 @@ export interface ProviderJobsFilterState {
   radiusKm: number;
   serviceId: string | null;
 }
-
-/** Navigation state when opening a job from the list (sheet + URL). */
-export interface JobDetailLocationState {
-  job?: ProviderJobItem;
-  jobDetailPresentation?: "sheet";
-}

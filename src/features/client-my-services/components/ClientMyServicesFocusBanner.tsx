@@ -1,10 +1,10 @@
 import { Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { ServiceRequestCardModel } from "../types/client-my-services.types";
+import type { ServiceModel } from "@/features/view-services";
 
 export interface ClientMyServicesFocusBannerProps {
   focusServiceRequestId: string | null;
-  focusedRequest: ServiceRequestCardModel | null;
+  focusedRequest: ServiceModel | null;
   isLoading: boolean;
   onClearFocus: () => void;
 }

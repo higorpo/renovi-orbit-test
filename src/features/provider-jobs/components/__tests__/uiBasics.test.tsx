@@ -1,21 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
-import { FormResponsesSummary } from "../FormResponsesSummary";
 import { JobsEmptyState } from "../JobsEmptyState";
 import { JobsErrorState } from "../JobsErrorState";
 import { JobsHeader } from "../JobsHeader";
 import { JobsSortTabs } from "../JobsSortTabs";
 import { JobCardSkeleton } from "../JobCardSkeleton";
-import { JobDetailBackLink, JobDetailNotFound } from "../JobDetailStates";
 import { LocationPermissionBanner } from "../LocationPermissionBanner";
-import { SuggestedItemsInfo } from "../SuggestedItemsInfo";
-
-vi.mock("@/features/dynamic-form", () => ({
-  buildSummaryEntries: vi.fn(() => [
-    { id: "a", label: "Campo", displayValue: "Valor" },
-  ]),
-}));
 
 describe("presentational components", () => {
   it("renders JobsErrorState and calls onRetry", () => {
@@ -87,30 +77,5 @@ describe("presentational components", () => {
   it("renders JobCardSkeleton", () => {
     const { container } = render(<JobCardSkeleton />);
     expect(container.querySelector(".animate-pulse")).toBeTruthy();
-  });
-
-  it("renders SuggestedItemsInfo trigger", () => {
-    render(<SuggestedItemsInfo ariaLabel="Ajuda sugeridos" />);
-    fireEvent.click(screen.getByRole("button", { name: "Ajuda sugeridos" }));
-    expect(screen.getByText(/itens sugeridos com base/i)).toBeInTheDocument();
-  });
-
-  it("renders FormResponsesSummary when entries exist", () => {
-    render(<FormResponsesSummary formData={{}} formSchema={null} />);
-    expect(screen.getByText("Informações do pedido")).toBeInTheDocument();
-    expect(screen.getByText("Valor")).toBeInTheDocument();
-  });
-
-  it("renders job detail navigation states", () => {
-    render(
-      <MemoryRouter>
-        <JobDetailBackLink />
-        <JobDetailNotFound />
-      </MemoryRouter>,
-    );
-    expect(
-      screen.getByRole("link", { name: /voltar para trabalhos/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/trabalho não encontrado/i)).toBeInTheDocument();
   });
 });

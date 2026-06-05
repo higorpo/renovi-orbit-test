@@ -15,6 +15,7 @@ export {
   declineRevisionRequest,
   listProposalVersions,
   getProposalDetail,
+  getLatestProviderProposalForServiceRequest,
   fetchProviderProposalHistory,
 } from "./api/proposals.api";
 export {
@@ -68,6 +69,7 @@ export {
   ServiceRequestProposalSummaryCard,
   type ServiceRequestProposalSummaryCardProps,
 } from "./components/ServiceRequestProposalSummaryCard";
+export { ServiceRequestProposalSummaryCardSkeleton } from "./components/ServiceRequestProposalSummaryCardSkeleton";
 export {
   ProposalHistoryAccordion,
 } from "./components/ProposalHistoryAccordion";
@@ -120,10 +122,12 @@ export {
 export { useProposalComposerForm } from "./hooks/useProposalComposerForm";
 export { useProposalDetail, type UseProposalDetailParams } from "./hooks/useProposalDetail";
 export { useProposalHistory } from "./hooks/useProposalHistory";
+export { useLatestProviderProposal } from "./hooks/useLatestProviderProposal";
 export {
   PROPOSAL_DETAIL_QUERY_KEY,
   PROPOSAL_HISTORY_QUERY_KEY,
   SERVICE_REQUEST_BUDGET_COMPARE_DETAIL_QUERY_KEY,
+  LATEST_PROVIDER_PROPOSAL_QUERY_KEY,
 } from "./constants/queryKeys";
 export {
   getBudgetStatusConfig,
@@ -168,7 +172,10 @@ export type { ProposalDetailAudience, ProposalDetailView } from "./types/proposa
 export type {
   ServiceRequestProposalDraft,
   ServiceRequestProposalSummary,
+  ProviderLatestProposal,
+  ProviderLatestProposalRow,
 } from "./types/serviceRequestProposal.types";
+export { mapLatestProviderProposalRow } from "./utils/mapLatestProviderProposalRow";
 export {
   getProposalStatusLabel,
   formatProposalDateTime,

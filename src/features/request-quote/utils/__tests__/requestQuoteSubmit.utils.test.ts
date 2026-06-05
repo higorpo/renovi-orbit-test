@@ -31,7 +31,7 @@ describe("requestQuoteSubmit.utils", () => {
       expect(result.form_data).toEqual({ size: "large" });
       expect(result.form_schema).toEqual({ type: "object" });
       expect(result.form_version).toBe("v1");
-      expect(result.status).toBe("open");
+      expect(result.status).toBe("OPEN");
     });
 
     it("uses AI suggested title when provided", () => {

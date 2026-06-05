@@ -10,7 +10,8 @@ Este diretório concentra a **documentação funcional e técnica por módulo**,
 | 2 | [request-quote](./request-quote/README.md) | Wizard pedir orçamento | `/pedir-orcamento` | `src/features/request-quote/` | Concluída |
 | 3 | [addresses](./addresses/README.md) | Seleção/CRUD endereços (embutido em fluxos) | *Sem rota dedicada funcional*; menu aponta para placeholder | `src/features/addresses/` | Concluída |
 | 4 | [my-account](./my-account/README.md) | Minha conta cliente/prestador | `/dashboard/conta` | `src/features/my-account/` | Concluída |
-| 5 | [client-my-services](./client-my-services/README.md) | Lista de pedidos; sheet compare/histórico de orçamentos | `/dashboard/requests`, `/dashboard/services/:id` | `src/features/client-my-services/` | Concluída (detalhe por id: placeholder) |
+| 5 | [client-my-services](./client-my-services/README.md) | Lista de pedidos (shell); sheet compare/histórico | `/dashboard/requests` | `src/features/client-my-services/` | Concluída |
+| 5b | [view-services](./view-services/README.md) | Lista/detalhe unificados (RPC); agnóstico de papel | `/dashboard/services/:id` (+ consumo por client-my-services) | `src/features/view-services/` | Concluída |
 | 6 | [provider-jobs](./provider-jobs/README.md) | Trabalhos, detalhe, propostas, perguntas | `/dashboard/jobs`, `/dashboard/jobs/:jobId` | `src/features/provider-jobs/` | Concluída |
 | 7 | [provider-budgets](./provider-budgets/README.md) | Orçamentos enviados / minhas perguntas | `/dashboard/budgets`, `/dashboard/budgets/pedido/:serviceRequestId` | `src/features/provider-budgets/` | Concluída |
 | 8 | [provider-profile](./provider-profile/README.md) | Perfil público do prestador | `/perfil/:slug` | `src/features/provider-profile/` | Concluída |
