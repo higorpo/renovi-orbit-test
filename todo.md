@@ -83,7 +83,6 @@ Coisas para fazer next
   - adicionar nas regras que temos esse mecanismo para ser usado para que no futuro outras features possam usar quando necessário
 -verificar se no sistema atual tenho coisas para usar job_runs (talvez vou precisar criar antes)
 -depois que migrar todo o sistema e tiver tudo funcionando, podemos excluir /home/higor/Área de Trabalho/Renovi/orbit/supabase/migrations/20260701105400_delegate_create_provider_proposal_to_submit.sql e as rpcs relacionadas ao modelo antigo
--talvez não precisamos da tabela exclusiva de rate limit do chat e podemos usar a genérica
 -verificar se usos anteriores a /home/higor/Área de Trabalho/Renovi/orbit/supabase/migrations/20260701106100_create_job_run_helpers.sql não poderiam se beneficiar desses helpers
 -novas políticas RLS estão fora do padrão adotado que era ter descrição clara
 -cobertura de testes em todos os códigos novos
