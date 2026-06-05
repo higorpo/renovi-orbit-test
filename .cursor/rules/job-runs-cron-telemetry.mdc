@@ -1,5 +1,5 @@
 ---
-description: Product pg_cron jobs must record telemetry in public.job_runs (MMD excluded)
+description: Product pg_cron jobs must record telemetry in public.job_runs; infra subsystems may opt out
 alwaysApply: false
 globs: supabase/migrations/**,supabase/tests/**
 ---
@@ -28,15 +28,21 @@ Reference implementations: `cron_cns_process_domain_events`, `cron_purge_stale_u
 
 `job_runs` rows are pruned daily by `cns_prune_job_runs` (default **90 days**). Do not rely on unbounded growth.
 
-## Message Dispatcher (MMD) — exception
+## When NOT to use `job_runs`
 
-Crons in schema `message_dispatcher` (`mmd_*`) **do NOT** use `job_runs`. MMD is infrastructure that serves the product but owns its observability:
+**Default:** product/platform crons in `public` (or touching product tables) → use `job_runs`.
 
-- Gauges: `message_dispatcher.message_dispatcher_stats` (refreshed by `mmd_refresh_stats`)
-- Domain audit: `message_dispatcher_audit`, `message_dispatches`
-- Edge worker logs / Sentry
+**Exception:** crons belonging to a **self-contained infrastructure subsystem** that already owns run/state observability elsewhere. These subsystems serve the product but are not “product crons” for this rule — do **not** add `job_runs` unless explicitly redesigning that subsystem’s telemetry.
 
-Do not add `job_runs` to MMD crons unless explicitly redesigning MMD observability.
+Criteria for opting out (all should apply):
+
+1. Dedicated schema or module boundary (not ad-hoc scripts in `public`).
+2. Existing telemetry: gauges/stats tables, domain audit, queue state, or external APM — sufficient for ops without per-run rows in `job_runs`.
+3. Documented in design/docs why `job_runs` was skipped.
+
+**Example — Message Dispatcher (MMD):** crons `mmd_*` in schema `message_dispatcher` use `message_dispatcher_stats`, `message_dispatcher_audit`, `message_dispatches`, and Edge/Sentry — not `job_runs`.
+
+Other future subsystems (e.g. payment webhooks pipeline, search indexer) may follow the same pattern if they meet the criteria above. When in doubt, prefer `job_runs` for new product-facing batch jobs.
 
 ## Transaction note
 
