@@ -213,18 +213,18 @@ select is(
     from public.service_requests
     where id = (select service_request_id from _accept_sr)
   ),
-  'OPEN',
-  'accept keeps service request OPEN until contracted service is fulfilled'
+  'COMPLETED',
+  'accept sets service request status to COMPLETED'
 );
 
 select ok(
   (
     select contracted_service_id is not null
-      and completed_at is null
+      and completed_at is not null
     from public.service_requests
     where id = (select service_request_id from _accept_sr)
   ),
-  'accept links contracted_service_id without setting completed_at'
+  'accept links contracted_service_id and sets completed_at'
 );
 
 select ok(
@@ -281,7 +281,7 @@ select ok(
           select (submit_response->'proposal'->>'id')::uuid from _accept_submit
         )
     )
-    and not exists (
+    and exists (
       select 1
       from public.domain_events de
       where de.event_type = 'SERVICE_REQUEST_COMPLETED'
@@ -294,7 +294,7 @@ select ok(
         and de.service_request_id = (select service_request_id from _accept_sr)
     )
   ),
-  'accept emits PROPOSAL_ACCEPTED and CHATS_CLOSED_BULK without SERVICE_REQUEST_COMPLETED'
+  'accept emits PROPOSAL_ACCEPTED, SERVICE_REQUEST_COMPLETED, and CHATS_CLOSED_BULK'
 );
 
 select finish();

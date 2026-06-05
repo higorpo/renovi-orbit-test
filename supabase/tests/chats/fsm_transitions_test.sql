@@ -255,7 +255,7 @@ select is(
   'revision resubmit increments proposal version'
 );
 
--- accept → ACCEPTED / COMPLETED / service / CLOSED (no partial accept)
+-- accept → ACCEPTED / COMPLETED / service; winning chat stays ACTIVE (no partial accept)
 create temp table _accept_sr as
 select pg_temp.cns_fsm_seed_sr() as service_request_id;
 
@@ -304,10 +304,15 @@ select ok(
         from public.chats c
         where c.service_request_id = (select service_request_id from _accept_sr)
           and c.status <> 'CLOSED'::public.cns_conversation_status
-      ) = 0
+      ) = 1
+      and (
+        select c.status::text
+        from public.chats c
+        where c.id = (select chat_id from _accept_chat)
+      ) = 'ACTIVE'
     from _accept_result
   ),
-  'accept path atomically reaches ACCEPTED, COMPLETED SR, service row, and all chats CLOSED'
+  'accept path atomically reaches ACCEPTED, COMPLETED SR, service row, and keeps winning chat ACTIVE'
 );
 
 select throws_ok(

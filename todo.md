@@ -102,4 +102,4 @@ Coisas para fazer next
 -garantir que todas as policies estão certas
 -garantir que todos os triggers são ok e são necessários
 -garantir que todas as crons estão ok e são necessárias
--Eu quero fazer alteração pra que no service, request, a gente tenha o status de complíted no momento em que ele realmente de fato aceitar uma proposta. Então a gente precisa fazer todas as alterações necessárias na plataforma para ajustar isso porque teve aquele problema que a gente já teve que ajustar e arrumar os status né e além disso na tabela de services eu quero que o id do service seja o mesmo dos service request
+-quando edita uma proposta que tem imagem anexada, as  imagens não carregam

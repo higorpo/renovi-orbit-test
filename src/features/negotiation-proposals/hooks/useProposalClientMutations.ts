@@ -20,6 +20,8 @@ import type { ProposalsApiError } from "../types/proposals.types";
 const OFFLINE_MESSAGE =
   "Você está offline. Conecte-se à internet para aceitar a proposta.";
 
+const CLIENT_MY_SERVICES_LIST_QUERY_KEY = ["client-my-services", "list"] as const;
+
 function invalidateChatQueries(
   queryClient: ReturnType<typeof useQueryClient>,
   chatId: string | null,
@@ -76,6 +78,7 @@ export function useAcceptProposalMutation(
         });
       }
       invalidateChatQueries(queryClient, chatId);
+      void queryClient.invalidateQueries({ queryKey: CLIENT_MY_SERVICES_LIST_QUERY_KEY });
       toast.success("Proposta aceita com sucesso.");
     },
     onError: (error) => handleMutationError(error, "Não foi possível aceitar a proposta."),
