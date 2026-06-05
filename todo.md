@@ -83,7 +83,7 @@ Coisas para fazer next
 -depois que migrar todo o sistema e tiver tudo funcionando, podemos excluir /home/higor/Área de Trabalho/Renovi/orbit/supabase/migrations/20260701105400_delegate_create_provider_proposal_to_submit.sql e as rpcs relacionadas ao modelo antigo
 
 
--novas políticas RLS estão fora do padrão adotado que era ter descrição clara
+
 -cobertura de testes em todos os códigos novos
 -existe uma certa lentidão para disparar push de novas mensagens (ele cai numa fila de processamento para enviar pro message dispatcher e  depois ainda espera o job do message dispatcher...)
 - usar trigger ao invés de criar essa tabela central...
