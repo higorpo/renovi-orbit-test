@@ -79,11 +79,6 @@ Coisas para fazer next
 
 -verificar se devo manter colunas de status como text ou transformar em enum
 -verificar necessidade de usar outbound  (domain_events) em outros eventos assíncronos
-
--depois que migrar todo o sistema e tiver tudo funcionando, podemos excluir /home/higor/Área de Trabalho/Renovi/orbit/supabase/migrations/20260701105400_delegate_create_provider_proposal_to_submit.sql e as rpcs relacionadas ao modelo antigo
-
-
-
 -cobertura de testes em todos os códigos novos
 -existe uma certa lentidão para disparar push de novas mensagens (ele cai numa fila de processamento para enviar pro message dispatcher e  depois ainda espera o job do message dispatcher...)
 - usar trigger ao invés de criar essa tabela central...
@@ -92,10 +87,6 @@ Coisas para fazer next
 -refazer card de orçamentos do prestador
 -refazer card da tela de meus serviços do cliente
 -exibir sugestões de perguntas para o prestador na hora que ele abre o chat pela primeira vez
--garantir que todas as tabelas estão ok e são necessárias
--garantir que todas as policies estão certas
--garantir que todos os triggers são ok e são necessários
--garantir que todas as crons estão ok e são necessárias
 -quando edita uma proposta que tem imagem anexada, as  imagens não carregam
 -[avaliar]simplificar query de get_service_list  (hoje ele tá trazendo um monte de dados que nem vai ser exibido no card)
 -tornar módulo  de meus serviços compartilhado entre prestador e cliente
