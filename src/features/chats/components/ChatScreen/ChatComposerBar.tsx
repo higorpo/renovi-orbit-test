@@ -189,40 +189,42 @@ export function ChatComposerBar({
         ) : null}
 
         <div className="flex min-w-0 items-end gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon"
-            className="h-11 w-11 shrink-0 rounded-full"
-            disabled={!canAttach}
-            aria-label="Anexar foto"
-            onClick={openFilePicker}
-          >
-            <ImageIcon className="h-5 w-5" aria-hidden />
-          </Button>
+          <div className="flex min-h-11 min-w-0 flex-1 items-center overflow-hidden rounded-[1.375rem] bg-muted">
+            <Textarea
+              ref={textareaRef}
+              value={draft}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                onComposerChange?.();
+              }}
+              placeholder={composer.placeholder}
+              disabled={!composer.isInputEnabled || isUploadBusy}
+              rows={1}
+              className="min-h-11 min-w-0 flex-1 resize-none overflow-x-hidden border-0 bg-transparent py-3 pl-4 pr-1 text-[15px] leading-snug shadow-none placeholder:truncate outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 max-sm:resize-none"
+              onFocus={() => {
+                timelineScroll?.onComposerFocus();
+                scheduleViewportSync();
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  void handleSend();
+                }
+              }}
+            />
 
-          <Textarea
-            ref={textareaRef}
-            value={draft}
-            onChange={(event) => {
-              setDraft(event.target.value);
-              onComposerChange?.();
-            }}
-            placeholder={composer.placeholder}
-            disabled={!composer.isInputEnabled || isUploadBusy}
-            rows={1}
-            className="min-h-11 min-w-0 flex-1 resize-none overflow-x-hidden rounded-[1.375rem] border-0 bg-muted px-4 py-3 text-[15px] leading-snug shadow-none placeholder:truncate focus-visible:ring-1 max-sm:resize-none"
-            onFocus={() => {
-              timelineScroll?.onComposerFocus();
-              scheduleViewportSync();
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                void handleSend();
-              }
-            }}
-          />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="mr-1.5 h-8 w-8 shrink-0 text-muted-foreground hover:!bg-transparent hover:!text-foreground active:!bg-transparent [&_svg]:!size-5"
+              disabled={!canAttach}
+              aria-label="Anexar foto"
+              onClick={openFilePicker}
+            >
+              <ImageIcon aria-hidden />
+            </Button>
+          </div>
 
           <ChatComposerPrimaryActionButton
             mode={primaryActionMode}
