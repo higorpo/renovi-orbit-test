@@ -1,0 +1,43 @@
+---
+description: Product pg_cron jobs must record telemetry in public.job_runs (MMD excluded)
+alwaysApply: false
+globs: supabase/migrations/**,supabase/tests/**
+---
+
+# pg_cron telemetry — `job_runs`
+
+## Product crons MUST use `job_runs`
+
+Any **new pg_cron job for product/platform features** (CNS, auth, device beacons, maintenance of `public.*` tables, etc.) MUST record run telemetry in `public.job_runs` via the shared helpers:
+
+- `public.job_run_begin(job_name, job_version)`
+- `public.job_run_finish(job_run_id, started_at, processed_count, transitioned_count, error_count, metadata, fatal_error)`
+- `public.job_run_abort_latest(job_name, error)` in the wrapper `EXCEPTION` block
+
+### Standard wrapper pattern
+
+1. Create `public.cron_<job_name>()` — `SECURITY DEFINER`, `GRANT EXECUTE TO postgres` only.
+2. Call `job_run_begin` before batch work; call `job_run_finish` after success.
+3. Delegate business logic to a batch RPC; pass `p_record_job_run := false` when the wrapper owns telemetry (avoid duplicate rows).
+4. Schedule pg_cron with `select public.cron_<job_name>();`, not the batch RPC directly.
+5. Use a stable `job_name` string matching the cron job name.
+
+Reference implementations: `cron_cns_process_domain_events`, `cron_purge_stale_user_device_beacons`, `cron_cns_prune_job_runs`.
+
+### Retention
+
+`job_runs` rows are pruned daily by `cns_prune_job_runs` (default **90 days**). Do not rely on unbounded growth.
+
+## Message Dispatcher (MMD) — exception
+
+Crons in schema `message_dispatcher` (`mmd_*`) **do NOT** use `job_runs`. MMD is infrastructure that serves the product but owns its observability:
+
+- Gauges: `message_dispatcher.message_dispatcher_stats` (refreshed by `mmd_refresh_stats`)
+- Domain audit: `message_dispatcher_audit`, `message_dispatches`
+- Edge worker logs / Sentry
+
+Do not add `job_runs` to MMD crons unless explicitly redesigning MMD observability.
+
+## Transaction note
+
+Telemetry and batch work share the same pg_cron transaction. Per-row `EXCEPTION` handlers in batch loops prevent a single bad row from aborting the whole run; wrapper-level `job_run_abort_latest` only closes stale rows from prior crashes.
