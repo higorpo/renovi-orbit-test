@@ -99,3 +99,4 @@ Coisas para fazer next
 -quando edita uma proposta que tem imagem anexada, as  imagens não carregam
 -[avaliar]simplificar query de get_service_list  (hoje ele tá trazendo um monte de dados que nem vai ser exibido no card)
 -tornar módulo  de meus serviços compartilhado entre prestador e cliente
+-fluxo de prestador recusar revisão de proposta

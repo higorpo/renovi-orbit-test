@@ -2423,10 +2423,6 @@ export type Database = {
         Args: { full_name: string; in_provider_id: string }
         Returns: string
       }
-      get_client_budget_service_request_detail: {
-        Args: { p_service_request_id: string }
-        Returns: Json
-      }
       get_conversation_detail: { Args: { p_chat_id: string }; Returns: Json }
       get_negotiation_audit_timeline: {
         Args: { p_service_request_id: string }
@@ -2435,16 +2431,6 @@ export type Database = {
       get_prompt_by_key: { Args: { p_prompt_key: string }; Returns: Json }
       get_proposal_detail_for_provider: {
         Args: { p_proposal_id: string }
-        Returns: Json
-      }
-      get_provider_proposal_job_detail: {
-        Args: {
-          p_lat?: number
-          p_lng?: number
-          p_proposal_id?: string
-          p_radius_km?: number
-          p_service_request_id?: string
-        }
         Returns: Json
       }
       get_public_provider_by_slug: {
@@ -2523,15 +2509,6 @@ export type Database = {
         }
         Returns: Json
       }
-      list_client_received_budgets: {
-        Args: {
-          p_page?: number
-          p_page_size?: number
-          p_search?: string
-          p_status?: string
-        }
-        Returns: Json
-      }
       list_conversations: {
         Args: {
           p_cursor_id?: string
@@ -2607,10 +2584,6 @@ export type Database = {
           p_service_request_id?: string
         }
         Returns: string
-      }
-      reject_client_budget_proposal: {
-        Args: { p_proposal_id: string; p_reason: string }
-        Returns: Json
       }
       reject_proposal: {
         Args: {
