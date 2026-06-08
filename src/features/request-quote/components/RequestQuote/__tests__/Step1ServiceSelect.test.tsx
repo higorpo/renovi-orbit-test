@@ -92,7 +92,7 @@ describe("Step1ServiceSelect", () => {
     expect(onServiceSelect).toHaveBeenCalledWith(mockServiceWithChildren);
   });
 
-  it("shows selected state (ring-accent) and check for selectedService", () => {
+  it("shows selected state (ring-primary) and check for selectedService", () => {
     render(
       <Step1ServiceSelect
         urlServiceSlug={null}
@@ -102,10 +102,10 @@ describe("Step1ServiceSelect", () => {
       />
     );
     const selectedButton = screen.getAllByRole("button").find(
-      (b) => b.className.includes("ring-2") && b.className.includes("ring-accent") && b.className.includes("scale-[1.02]")
+      (b) => b.className.includes("ring-2") && b.className.includes("ring-primary") && b.className.includes("scale-[1.02]")
     );
     expect(selectedButton).toBeDefined();
-    expect(selectedButton).toHaveClass("ring-accent");
+    expect(selectedButton).toHaveClass("ring-primary");
   });
 
   it("shows Carregando serviços when isLoading is true", () => {

@@ -144,7 +144,7 @@ export function Step3DescriptionPhotos({ state, step2DataSnapshotRef }: Step3Des
 
       {generatingDescription ? (
         <div className="flex flex-col items-center justify-center py-8 sm:py-12">
-          <Loader2 className="h-10 w-10 sm:h-12 sm:w-12 text-accent animate-spin mb-3 sm:mb-4" />
+          <Loader2 className="h-10 w-10 sm:h-12 sm:w-12 text-primary animate-spin mb-3 sm:mb-4" />
           <p className="text-muted-foreground text-sm sm:text-base">✨ Gerando descrição profissional...</p>
         </div>
       ) : (
@@ -180,7 +180,7 @@ export function Step3DescriptionPhotos({ state, step2DataSnapshotRef }: Step3Des
               onClick={() => fileInputRef.current?.click()}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
-              className="border-2 border-dashed border-border rounded-lg sm:rounded-xl p-4 sm:p-6 md:p-8 text-center hover:border-accent/50 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 sm:gap-3"
+              className="border-2 border-dashed border-border rounded-lg sm:rounded-xl p-4 sm:p-6 md:p-8 text-center hover:border-primary/50 transition-colors cursor-pointer flex flex-col items-center justify-center gap-2 sm:gap-3"
             >
               <Upload className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground shrink-0" />
               <p className="text-muted-foreground text-sm sm:text-base">Clique ou arraste e solte fotos aqui</p>

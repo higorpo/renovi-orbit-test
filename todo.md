@@ -22,6 +22,7 @@ Itens interessantes de ter na plataforma (futuro)
 - Criar tela exclusiva de detalhes do pedido/serviço que pode ser acessível via link. Tela de detalhes do pedido deve ser acessível para qualquer usuário logado e poderia permitir enviar propostas diretamente pelo link
 -mostrar contador de quantidade de chats não lidos no bottom navigator
 - Adicionar integração com IA que avalia a melhor proposta e faz um resumo
+- Exibir sugestões de perguntas para o prestador na hora que ele abre o chat pela primeira vez
 
 
 
@@ -83,7 +84,6 @@ Coisas para fazer next
 -ao recusar a proposta, o chat tem que ser encerrado também
 -refazer card de orçamentos do prestador
 -refazer card da tela de meus serviços do cliente
--exibir sugestões de perguntas para o prestador na hora que ele abre o chat pela primeira vez
 -[avaliar]simplificar query de get_service_list  (hoje ele tá trazendo um monte de dados que nem vai ser exibido no card)
 -tornar módulo  de meus serviços compartilhado entre prestador e cliente
 -fluxo de prestador recusar revisão de proposta

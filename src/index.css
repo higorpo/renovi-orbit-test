@@ -2,9 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Renovi Design System v2 — see DESIGN.md. All semantic colors MUST be HSL. */
 
 @layer base {
   * {
@@ -19,12 +17,20 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
     font-feature-settings:
       'rlig' 1,
       'calt' 1;
-    font-display: swap;
     min-height: 100vh;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display;
   }
 
   /* Minimum touch target size for mobile (44x44px) */
@@ -37,60 +43,100 @@ All colors MUST be HSL.
   }
 
   :root {
-    /* Renovi Brand Colors - Azul Petróleo e Cobre */
-    --background: 0 0% 100%;
-    --foreground: 240 5% 11%;
+    /* Surfaces */
+    --canvas: 0 0% 100%;
+    --canvas-soft: 210 20% 98%;
+    --background: var(--canvas);
+    --foreground: var(--ink);
 
-    --card: 0 0% 100%;
-    --card-foreground: 240 5% 11%;
+    --card: var(--canvas);
+    --card-foreground: var(--ink);
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 5% 11%;
+    --popover: var(--canvas);
+    --popover-foreground: var(--ink);
 
-    /* Primary: Azul Petróleo #0F2F3A */
+    /* Primary — Azul Petróleo #0F2F3A */
     --primary: 196 60% 15%;
+    --primary-hover: 196 57% 21%;
+    --primary-soft: 196 33% 95%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Cobre #C57A3A */
-    --secondary: 26 54% 50%;
-    --secondary-foreground: 0 0% 100%;
+    /* Secondary — neutral surface (canvas-soft) */
+    --secondary: var(--canvas-soft);
+    --secondary-foreground: var(--ink);
 
-    /* Muted: Cinza Claro */
-    --muted: 180 5% 91%;
-    --muted-foreground: 240 4% 46%;
+    /* Muted */
+    --muted: var(--canvas-soft);
+    --muted-foreground: 215 16% 65%;
 
-    /* Accent: Cobre para destaques */
-    --accent: 26 54% 50%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent — hover/selection surface (warm soft tint) */
+    --accent: 30 50% 94%;
+    --accent-foreground: 26 54% 50%;
 
-    --destructive: 0 84.2% 60.2%;
+    /* Reward — Cobre #C57A3A (badges, progress, highlights; prefer copper-* utilities) */
+    --copper: 26 54% 50%;
+    --copper-hover: 26 61% 43%;
+    --copper-soft: 30 50% 94%;
+    --copper-foreground: 0 0% 100%;
+    --copper-dark: 26 54% 40%;
+
+    /* Text scale */
+    --ink: 222 47% 11%;
+    --body-text: 215 16% 35%;
+
+    /* Semantic */
+    --success: 123 46% 34%;
+    --success-foreground: 0 0% 100%;
+    --warning: 32 95% 44%;
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 180 5% 91%;
-    --input: 180 5% 91%;
-    --ring: 196 60% 15%;
+    /* Borders & focus */
+    --border: 200 14% 92%;
+    --input: 200 14% 92%;
+    --ring: var(--primary);
 
-    --radius: 0.75rem;
+    /* Shape language — buttons pill, cards 16px, inputs 12px */
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
+    --radius-pill: 9999px;
+    /* shadcn default alias → input radius (12px) */
+    --radius: var(--radius-md);
+
+    /* Motion */
+    --motion-fast: 100ms;
+    --motion-base: 150ms;
+    --motion-slow: 200ms;
+    --motion-easing: cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Elevation */
+    --shadow-1: 0 2px 8px rgba(0, 0, 0, 0.04);
+    --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.08);
+    --shadow-3: 0 16px 40px rgba(0, 0, 0, 0.12);
+
+    /* Brand aliases */
+    --teal: var(--primary);
+    --teal-hover: var(--primary-hover);
+    --teal-light: 196 50% 25%;
 
     /* Sidebar */
-    --sidebar-background: 196 60% 15%;
+    --sidebar-background: var(--primary);
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 26 54% 50%;
+    --sidebar-primary: var(--copper);
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 196 50% 20%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 196 50% 20%;
-    --sidebar-ring: 26 54% 50%;
-
-    /* Custom Renovi tokens */
-    --copper: 26 54% 50%;
-    --copper-dark: 26 54% 40%;
-    --teal: 196 60% 15%;
-    --teal-light: 196 50% 25%;
+    --sidebar-ring: var(--copper);
   }
 
   .dark {
-    --background: 240 5% 11%;
+    --canvas: 222 47% 11%;
+    --canvas-soft: 196 50% 14%;
+    --background: var(--canvas);
     --foreground: 0 0% 100%;
 
     --card: 196 60% 15%;
@@ -100,52 +146,42 @@ All colors MUST be HSL.
     --popover-foreground: 0 0% 100%;
 
     --primary: 0 0% 100%;
+    --primary-hover: 196 33% 95%;
+    --primary-soft: 196 50% 20%;
     --primary-foreground: 196 60% 15%;
 
-    --secondary: 26 54% 50%;
+    --secondary: 196 50% 20%;
     --secondary-foreground: 0 0% 100%;
 
     --muted: 196 50% 20%;
-    --muted-foreground: 180 5% 63%;
+    --muted-foreground: 215 16% 65%;
 
-    --accent: 26 54% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 26 40% 18%;
+    --accent-foreground: 26 54% 62%;
+
+    --copper: 26 54% 50%;
+    --copper-hover: 26 61% 43%;
+    --copper-soft: 26 40% 18%;
+    --copper-foreground: 0 0% 100%;
+
+    --ink: 0 0% 100%;
+    --body-text: 215 16% 75%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 196 50% 20%;
     --input: 196 50% 20%;
-    --ring: 26 54% 50%;
+    --ring: var(--primary);
 
     --sidebar-background: 196 70% 10%;
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 26 54% 50%;
+    --sidebar-primary: var(--copper);
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 196 50% 20%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 196 50% 20%;
-    --sidebar-ring: 26 54% 50%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-    font-family: 'Inter', sans-serif;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    font-family: 'Inter', sans-serif;
+    --sidebar-ring: var(--copper);
   }
 }
 
@@ -416,14 +452,14 @@ All colors MUST be HSL.
   a:focus-visible,
   button:focus-visible,
   [role='button']:focus-visible {
-    @apply outline-none ring-2 ring-accent ring-offset-2 ring-offset-background;
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
     outline-offset: 2px;
   }
 
   /* Focus dentro de cards escuros (ProviderHUD) */
   [style*='background: linear-gradient(135deg, #0F2F3A'] a:focus-visible,
   [style*='background: linear-gradient(135deg, #0F2F3A'] button:focus-visible {
-    @apply ring-accent ring-offset-primary;
+    @apply ring-copper ring-offset-primary;
   }
 
   /* Garantir que elementos interativos sejam tabuláveis */
@@ -435,7 +471,7 @@ All colors MUST be HSL.
 
   /* Indicador de skip para usuários de teclado */
   .skip-to-content:focus {
-    @apply fixed top-4 left-4 z-50 bg-accent text-accent-foreground px-4 py-2 rounded-lg;
+    @apply fixed top-4 left-4 z-50 bg-primary text-primary-foreground px-4 py-2 rounded-lg;
     transform: translateY(0);
   }
 

@@ -46,11 +46,11 @@ export function PreviewSummaryBlock({
 
   return (
     <div className={cn("space-y-6", className)}>
-      <Card className="border-accent bg-accent/5">
+      <Card className="border-copper bg-copper-soft/40">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <CheckCircle2 className="h-8 w-8 text-accent" />
+              <CheckCircle2 className="h-8 w-8 text-copper" />
               <div>
                 <h3 className="text-lg font-semibold">
                   {totalFields === 0

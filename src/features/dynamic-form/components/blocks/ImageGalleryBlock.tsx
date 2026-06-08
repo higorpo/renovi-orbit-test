@@ -94,7 +94,7 @@ export function ImageGalleryBlock({
               key={option.value}
               className={cn(
                 "relative overflow-hidden cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg",
-                isSelected && "ring-2 ring-accent ring-offset-2"
+                isSelected && "ring-2 ring-primary ring-offset-2"
               )}
               onClick={() => handleSelect(option.value)}
             >
@@ -117,9 +117,9 @@ export function ImageGalleryBlock({
                   </div>
                 )}
                 {isSelected && (
-                  <div className="absolute inset-0 bg-accent/20 flex items-center justify-center">
-                    <div className="bg-accent rounded-full p-2">
-                      <CheckCircle2 className="h-6 w-6 text-accent-foreground" />
+                  <div className="absolute inset-0 bg-copper/20 flex items-center justify-center">
+                    <div className="bg-copper rounded-full p-2">
+                      <CheckCircle2 className="h-6 w-6 text-copper-foreground" />
                     </div>
                   </div>
                 )}

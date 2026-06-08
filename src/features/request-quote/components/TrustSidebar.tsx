@@ -83,7 +83,7 @@ export function TrustSidebar({ variant = "desktop" }: TrustSidebarProps) {
         </div>
         <div className="mt-3 pt-3 border-t border-border/50 text-center">
           <p className="text-[10px] xl:text-xs text-muted-foreground">
-            <span className="font-semibold text-accent">98% de satisfação</span>
+            <span className="font-semibold text-copper">98% de satisfação</span>
           </p>
         </div>
       </div>

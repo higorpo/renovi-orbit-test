@@ -195,7 +195,7 @@ export function RequestQuote() {
                 <div
                   className={`flex items-center gap-1.5 px-2 py-1 rounded-full transition-all ${
                     effectiveStep >= item.step
-                      ? "bg-accent text-white shadow-lg"
+                      ? "bg-copper text-white shadow-lg"
                       : "bg-white/10 text-white/50"
                   }`}
                 >
@@ -216,7 +216,7 @@ export function RequestQuote() {
                 {index < stepLabels.length - 1 && (
                   <div
                     className={`w-4 lg:w-8 h-0.5 mx-0.5 transition-all ${
-                      effectiveStep > item.step ? "bg-accent" : "bg-white/20"
+                      effectiveStep > item.step ? "bg-copper" : "bg-white/20"
                     }`}
                   />
                 )}
@@ -236,7 +236,7 @@ export function RequestQuote() {
               </div>
               <div className="h-2 bg-white/20 rounded-full overflow-hidden">
                 <motion.div
-                  className="h-full bg-accent"
+                  className="h-full bg-copper"
                   initial={{ width: "20%" }}
                   animate={{ width: `${(effectiveStep / totalSteps) * 100}%` }}
                   transition={{ duration: 0.3 }}
@@ -282,7 +282,7 @@ export function RequestQuote() {
                       </h1>
                       <p className="text-muted-foreground text-sm md:text-base max-w-lg mx-auto">
                         Receba até 3 orçamentos de especialistas qualificados.{" "}
-                        <span className="font-medium text-accent">Você só paga quando o trabalho for aprovado.</span>
+                        <span className="font-medium text-copper">Você só paga quando o trabalho for aprovado.</span>
                       </p>
                     </div>
                   </>
@@ -301,7 +301,7 @@ export function RequestQuote() {
                     <Button
                       type="button"
                       variant="outline"
-                      className="border-border text-foreground hover:bg-accent w-full sm:w-auto min-w-0"
+                      className="border-border text-foreground w-full sm:w-auto min-w-0"
                       onClick={handleBack}
                       disabled={effectiveStep === 1}
                     >
@@ -311,7 +311,7 @@ export function RequestQuote() {
                     {effectiveStep < totalSteps ? (
                       <Button
                         type="button"
-                        className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto min-w-0"
+                        className="w-full sm:w-auto min-w-0"
                         onClick={handleNext}
                         disabled={state.generatingDescription || (effectiveStep === 3 && !isDescriptionStepValid) || (effectiveStep === 4 && !isAddressStepValid)}
                       >
@@ -321,7 +321,7 @@ export function RequestQuote() {
                     ) : (
                       <Button
                         type="button"
-                        className="bg-primary text-primary-foreground hover:bg-primary/90 w-full sm:w-auto min-w-0"
+                        className="w-full sm:w-auto min-w-0"
                         onClick={handleSubmit}
                         disabled={state.loading || !isFinalStepValid}
                       >

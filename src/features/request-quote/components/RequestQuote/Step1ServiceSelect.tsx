@@ -48,9 +48,9 @@ export function Step1ServiceSelect({
               key={srv.id}
               type="button"
               onClick={() => onServiceSelect(srv)}
-              className={`group relative aspect-[4/3] rounded-lg sm:rounded-xl overflow-hidden transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 ${
+              className={`group relative aspect-[4/3] rounded-lg sm:rounded-xl overflow-hidden transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
                 isSelected
-                  ? "ring-2 ring-accent shadow-xl scale-[1.02]"
+                  ? "ring-2 ring-primary shadow-xl scale-[1.02]"
                   : "shadow-md hover:shadow-lg hover:scale-[1.01]"
               }`}
             >
@@ -66,7 +66,7 @@ export function Step1ServiceSelect({
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-black/20 pointer-events-none" />
               {isSelected && (
-                <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 w-5 h-5 sm:w-6 sm:h-6 bg-accent rounded-full flex items-center justify-center shadow-lg pointer-events-none">
+                <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 w-5 h-5 sm:w-6 sm:h-6 bg-copper rounded-full flex items-center justify-center shadow-lg pointer-events-none">
                   <Check className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                 </div>
               )}

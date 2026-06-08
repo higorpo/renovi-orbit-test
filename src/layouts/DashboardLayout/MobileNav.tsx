@@ -96,7 +96,7 @@ export function MobileNav({ menu, title = "Dashboard", isOffline = false }: Mobi
               className={({ isActive }) =>
                 cn(
                   "flex flex-col items-center gap-0.5 px-3 py-1.5 min-w-0 flex-1 rounded-lg transition-colors",
-                  isActive ? "text-accent" : "text-muted-foreground"
+                  isActive ? "text-primary" : "text-muted-foreground"
                 )
               }
             >

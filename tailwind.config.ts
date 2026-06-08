@@ -14,7 +14,24 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Inter Variable', 'Inter', 'sans-serif'],
+        sans: ["Inter", "-apple-system", "system-ui", "sans-serif"],
+        display: [
+          "Manrope",
+          "Plus Jakarta Sans",
+          "Inter",
+          "-apple-system",
+          "system-ui",
+          "sans-serif",
+        ],
+      },
+      fontSize: {
+        "display-xl": ["48px", { lineHeight: "1.15", fontWeight: "700", letterSpacing: "-0.01em" }],
+        "display-lg": ["36px", { lineHeight: "1.2", fontWeight: "700", letterSpacing: "-0.01em" }],
+        "display-md": ["28px", { lineHeight: "1.25", fontWeight: "700", letterSpacing: "-0.01em" }],
+        title: ["20px", { lineHeight: "1.3", fontWeight: "600" }],
+        body: ["16px", { lineHeight: "1.5", fontWeight: "400" }],
+        caption: ["14px", { lineHeight: "1.43", fontWeight: "400" }],
+        "rating-display": ["48px", { lineHeight: "1.1", fontWeight: "700", letterSpacing: "-0.01em" }],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -25,6 +42,8 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          hover: "hsl(var(--primary-hover))",
+          soft: "hsl(var(--primary-soft))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -33,6 +52,14 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -50,6 +77,12 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        canvas: {
+          DEFAULT: "hsl(var(--canvas))",
+          soft: "hsl(var(--canvas-soft))",
+        },
+        ink: "hsl(var(--ink))",
+        body: "hsl(var(--body-text))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -62,24 +95,42 @@ export default {
         },
         copper: {
           DEFAULT: "hsl(var(--copper))",
+          hover: "hsl(var(--copper-hover))",
+          soft: "hsl(var(--copper-soft))",
+          foreground: "hsl(var(--copper-foreground))",
           dark: "hsl(var(--copper-dark))",
         },
         teal: {
           DEFAULT: "hsl(var(--teal))",
+          hover: "hsl(var(--teal-hover))",
           light: "hsl(var(--teal-light))",
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        sm: "var(--radius-sm)",
+        md: "var(--radius-md)",
+        lg: "var(--radius-lg)",
+        xl: "var(--radius-xl)",
+        pill: "var(--radius-pill)",
+      },
+      boxShadow: {
+        "elevation-1": "var(--shadow-1)",
+        "elevation-2": "var(--shadow-2)",
+        "elevation-3": "var(--shadow-3)",
+      },
+      transitionDuration: {
+        fast: "var(--motion-fast)",
+        base: "var(--motion-base)",
+        slow: "var(--motion-slow)",
+      },
+      transitionTimingFunction: {
+        renovi: "var(--motion-easing)",
       },
       backgroundImage: {
-        // Gradient mesh for modern cards
-        "gradient-mesh": "radial-gradient(at 40% 20%, hsla(28,100%,74%,0.3) 0px, transparent 50%), radial-gradient(at 80% 0%, hsla(189,100%,56%,0.2) 0px, transparent 50%), radial-gradient(at 0% 50%, hsla(355,100%,93%,0.3) 0px, transparent 50%)",
+        "gradient-mesh":
+          "radial-gradient(at 40% 20%, hsla(28,100%,74%,0.3) 0px, transparent 50%), radial-gradient(at 80% 0%, hsla(189,100%,56%,0.2) 0px, transparent 50%), radial-gradient(at 0% 50%, hsla(355,100%,93%,0.3) 0px, transparent 50%)",
       },
       keyframes: {
-        // Accordion (Shadcn default)
         "accordion-down": {
           from: { height: "0" },
           to: { height: "var(--radix-accordion-content-height)" },
@@ -88,33 +139,27 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        // Shimmer/Shiny effect for buttons
         shimmer: {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(100%)" },
         },
-        // Border Beam - rotating luminous border
         "border-beam": {
           "0%": { offsetDistance: "0%" },
           "100%": { offsetDistance: "100%" },
         },
-        // Meteor effect for backgrounds
         meteor: {
           "0%": { transform: "rotate(215deg) translateX(0)", opacity: "1" },
           "70%": { opacity: "1" },
           "100%": { transform: "rotate(215deg) translateX(-500px)", opacity: "0" },
         },
-        // Spotlight - follows mouse
         spotlight: {
           "0%": { opacity: "0", transform: "translate(-72%, -62%) scale(0.5)" },
           "100%": { opacity: "1", transform: "translate(-50%,-40%) scale(1)" },
         },
-        // Pulse glow effect
         "pulse-glow": {
           "0%, 100%": { opacity: "1", boxShadow: "0 0 0 0 rgba(197, 122, 58, 0.4)" },
           "50%": { opacity: "0.8", boxShadow: "0 0 20px 10px rgba(197, 122, 58, 0.2)" },
         },
-        // Fade in/out
         "fade-in": {
           "0%": { opacity: "0" },
           "100%": { opacity: "1" },
@@ -123,7 +168,6 @@ export default {
           "0%": { opacity: "1" },
           "100%": { opacity: "0" },
         },
-        // Slide animations
         "slide-up": {
           "0%": { transform: "translateY(10px)", opacity: "0" },
           "100%": { transform: "translateY(0)", opacity: "1" },
@@ -140,27 +184,22 @@ export default {
           "0%": { transform: "translateX(-10px)", opacity: "0" },
           "100%": { transform: "translateX(0)", opacity: "1" },
         },
-        // Scale bounce for interactions
         "scale-in": {
           "0%": { transform: "scale(0.95)", opacity: "0" },
           "100%": { transform: "scale(1)", opacity: "1" },
         },
-        // Gradient shift for backgrounds
         "gradient-shift": {
           "0%, 100%": { backgroundPosition: "0% 50%" },
           "50%": { backgroundPosition: "100% 50%" },
         },
-        // Spin slow for loading states
         "spin-slow": {
           "0%": { transform: "rotate(0deg)" },
           "100%": { transform: "rotate(360deg)" },
         },
-        // Float animation for elements
         float: {
           "0%, 100%": { transform: "translateY(0px)" },
           "50%": { transform: "translateY(-10px)" },
         },
-        // Bento grid reveal
         "bento-reveal": {
           "0%": { transform: "scale(0.9)", opacity: "0" },
           "100%": { transform: "scale(1)", opacity: "1" },
@@ -188,7 +227,5 @@ export default {
       },
     },
   },
-  plugins: [
-    require("tailwindcss-animate"),
-  ],
+  plugins: [require("tailwindcss-animate")],
 } satisfies Config;

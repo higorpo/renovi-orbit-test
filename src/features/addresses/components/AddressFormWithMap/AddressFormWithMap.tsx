@@ -258,7 +258,7 @@ export function AddressFormWithMap({
               href="https://www.instagram.com/renovi.com.br/"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium text-accent hover:underline"
+              className="font-medium text-primary hover:underline"
             >
               @renovi.com.br
             </a>{" "}

@@ -8,7 +8,6 @@ import { hydratePersistSessionPreference } from '@/lib/persistSession'
 import { initSentry, captureException } from '@/lib/sentry'
 import { createIDBPersister, PERSISTED_CACHE_MAX_AGE_MS } from '@/lib/queryClient'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import '@fontsource-variable/inter/index.css'
 import './index.css'
 import { router } from './router'
 
