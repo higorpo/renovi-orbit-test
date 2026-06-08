@@ -103,7 +103,7 @@ const query = useInfiniteQuery<PaginatedResponse<T>>({
 
 ## Feature de referência
 
-- `provider-budgets`: RPCs `list_provider_sent_budgets` e `list_provider_own_questions` com paginação, filtro de status e busca.
+- `view-services`: RPC `list_services` com paginação, filtro de fase e busca.
 - `provider-jobs`: Edge function `match-provider-jobs` com `useInfiniteQuery`.
 
 ## Anti-padrões a evitar

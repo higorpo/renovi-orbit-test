@@ -39,10 +39,10 @@ describe("getDashboardMenu", () => {
     });
   });
 
-  it("returns provider menu with 5 main items and 8 all items", () => {
+  it("returns provider menu with 5 main items and 7 all items", () => {
     const result = getDashboardMenu("provider" as ProfileRole);
     expect(result.mainItems).toHaveLength(5);
-    expect(result.allItems).toHaveLength(8);
+    expect(result.allItems).toHaveLength(7);
     expect(result.mainItems).toEqual(result.allItems.slice(0, 5));
   });
 
@@ -54,7 +54,6 @@ describe("getDashboardMenu", () => {
       "/dashboard",
       "/dashboard/requests",
       "/dashboard/jobs",
-      "/dashboard/budgets",
       "/dashboard/chats",
       "/dashboard/earnings",
       "/dashboard/conta",

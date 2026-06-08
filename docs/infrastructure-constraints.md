@@ -61,7 +61,7 @@ Valores abaixo refletem a [documentação oficial de limites](https://supabase.c
 ### Por que priorizar RPC
 
 1. **Proximidade dos dados** — joins, PostGIS (`ST_DWithin`, distâncias), contagens e filtros sem serializar grandes volumes para Deno.
-2. **RLS e `auth.uid()`** — funções `SECURITY DEFINER` com escopo explícito ao chamador autenticado (padrão em `list_provider_sent_budgets`, `get_provider_proposal_job_detail`, etc.).
+2. **RLS e `auth.uid()`** — funções `SECURITY DEFINER` com escopo explícito ao chamador autenticado (padrão em `get_provider_proposal_job_detail`, `list_services`, etc.).
 3. **Transações ACID** — invariantes, idempotência (`UNIQUE` em `idempotency_key`), `FOR UPDATE SKIP LOCKED` em filas.
 4. **Menos latência** — o app chama `supabase.rpc()` direto, sem hop extra de Edge Function.
 5. **Limites de CPU** — Postgres é o lugar certo para trabalho CPU-bound de consulta; Edge Functions têm teto baixo de CPU por request.
@@ -83,7 +83,7 @@ Exemplos no repositório:
 |-----|-----|
 | `match_provider_jobs` | Elegibilidade + ranking + paginação (PostGIS) |
 | `get_provider_proposal_job_detail` | Detalhe de job/proposta |
-| `list_provider_sent_budgets` / `list_provider_own_questions` | Listagens paginadas do prestador |
+| `list_services` / `get_service` | Listagem e detalhe unificados (cliente e prestador) |
 | `list_client_received_budgets` / `respond_client_budget_question` / … | Fluxo do cliente |
 
 ### RPC restrita a `service_role`
@@ -174,7 +174,7 @@ Rate limit “soft” na Edge pode **fail open** em erro de DB (`_shared/rateLim
 - Busca textual: debounce no client (~400 ms); `queryKey` do TanStack Query inclui todos os filtros.
 - PostGIS e índices: manter lógica espacial nas migrações; extensões em schema `extensions` com `search_path` adequado.
 
-Features de referência: `provider-budgets` (RPC direto), `provider-jobs` (EF + RPC).
+Features de referência: `view-services` (RPC direto), `provider-jobs` (EF + RPC).
 
 ---
 

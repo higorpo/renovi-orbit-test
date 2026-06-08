@@ -35,8 +35,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `view-services/` | `api/services.api.ts` (RPC `get_service`, `list_services`, `cancel_service_request`); hooks list/detail/cancel | `ServiceDetailPage`, `ServiceListCard`, `ServiceSections` |
 | `dynamic-form/` | — | `DynamicForm`, `FormDemoPage` |
 | `my-account/` | `api/*Profile*.api.ts`, `portfolio.api.ts`, `offeredServices.api.ts` | `MyAccountPage`, `MyAccountClientPage`, `MyAccountProviderPage`, `ServiceAreaField` |
-| `provider-budgets/` | `api/providerBudgets.api.ts`, hooks `useProviderSentBudgets` / `useProviderOwnQuestions`, contadores pendentes | `ProviderBudgetsShell`, `ProviderBudgetsPage`, cards; RPCs em `20260322000000_create_provider_budgets_rpcs.sql` |
-| `provider-jobs/` | `api/providerJobs.api.ts`, `providerJobQuestions.api.ts`; propostas via `negotiation-proposals` | `ProviderJobsShell`, `JobDetailPage` |
+| `provider-jobs/` | `api/providerJobs.api.ts`; propostas via `negotiation-proposals` | `ProviderJobsShell`, `JobDetailPage` |
 | `provider-profile/` | hooks + componentes públicos | `ProviderProfilePage` |
 | `request-quote/` | `api/createRequestQuoteOrder.api.ts`, `smartDescription.api.ts`, `services.api.ts`, `forms.api.ts`; hooks submit/navigation/draft/IA | `RequestQuote.tsx`, passos 1–5, `ConfirmEmailScreen`, `TrustSidebar`; rascunho `requestQuoteDraft.persistence.ts` |
 | `chats/` | `api/chats.api.ts`, `chats.rpc.ts`; hooks lista, thread, mensagens, Realtime | `ChatListPage`, `ChatScreen`, `ChatsLayout` |

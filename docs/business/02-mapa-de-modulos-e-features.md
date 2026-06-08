@@ -21,8 +21,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | **view-services** | [visualizacao-de-servicos](./modulos/view-services/features/visualizacao-de-servicos.md) | `/dashboard/services/:id` | RPCs `get_service`, `list_services`; `contracted_services`; consumido por `client-my-services` |
 | **dynamic-form** | [motor-de-formularios](./modulos/dynamic-form/features/motor-de-formularios.md) | `/demo/form` (somente DEV) | Consumido por `request-quote` |
 | **my-account** | [minha-conta](./modulos/my-account/features/minha-conta.md) | `/dashboard/conta` | `addresses`, storage, perfis público/privado |
-| **provider-budgets** | [orcamentos-enviados](./modulos/provider-budgets/features/orcamentos-enviados.md) | `/dashboard/budgets`, `/dashboard/budgets/pedido/:serviceRequestId` | RPCs prestador |
-| **provider-jobs** | [trabalhos-e-propostas](./modulos/provider-jobs/features/trabalhos-e-propostas.md) | `/dashboard/jobs`, `/dashboard/jobs/:jobId` | Edge `match-provider-jobs`, propostas, perguntas |
+| **provider-jobs** | [trabalhos-e-propostas](./modulos/provider-jobs/features/trabalhos-e-propostas.md) | `/dashboard/jobs`, `/dashboard/jobs/:jobId` | Edge `match-provider-jobs`, propostas, negociação CNS |
 | **provider-profile** | [pagina-publica](./modulos/provider-profile/features/pagina-publica.md) | `/perfil/:slug` | RPC `get_public_provider_by_slug`, storage |
 | **request-quote** | [pedir-orcamento](./modulos/request-quote/features/pedir-orcamento.md) | `/pedir-orcamento` | `dynamic-form`, `addresses`, `auth`, Edge Functions |
 | **chats** + **negotiation-proposals** | [conversas-e-negociacao](./modulos/chats/features/conversas-e-negociacao.md), [comparar-orcamentos-meus-servicos](./modulos/chats/features/comparar-orcamentos-meus-servicos.md) | `/dashboard/chats`, `/dashboard/chats/:chatId` | `auth`, `provider-jobs`, `message-dispatcher`, `client-my-services` (sheet compare/history), RPCs CNS em `supabase/migrations/202607*` |
@@ -72,7 +71,6 @@ flowchart TB
   AU[auth]
   CM[client-my-services]
   PJ[provider-jobs]
-  PB[provider-budgets]
   PP[provider-profile]
   MA[my-account]
   CH[chats + negotiation-proposals]
@@ -81,7 +79,6 @@ flowchart TB
   RQ --> AD
   RQ --> AU
   CM --> CH
-  PJ --> PB
   MA --> AD
   PP --> MA
   PJ --> CH

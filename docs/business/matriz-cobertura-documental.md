@@ -14,8 +14,7 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 | view-services | RPCs unificados; `ServiceModel`; detalhe por fase; escopo cliente/prestador no SQL | OK (`visualizacao-de-servicos.md`) | pgTAP `view_services_rpcs_test.sql` | UI de lista prestador futura |
 | dynamic-form | Schema; steps; validação; demo DEV | OK (`motor-de-formularios.md`) | — | — |
 | my-account | Conta cliente/prestador; portfólio; área; exclusão | OK (`minha-conta.md`) | Impacto legal de exclusão de conta | — |
-| provider-budgets | Enviados; perguntas; filtros; paginação; busca; integração detalhe `provider-jobs` | OK (`orcamentos-enviados.md`) | Filtro `closed` em perguntas existe só na RPC (sem chip na UI) | — |
-| provider-jobs | Match; detalhe; perguntas; proposta | OK (`trabalhos-e-propostas.md`) | Algoritmo de sort/geo completo no SQL | — |
+| provider-jobs | Match; detalhe; proposta; negociação CNS | OK (`trabalhos-e-propostas.md`) | Algoritmo de sort/geo completo no SQL | — |
 | provider-profile | Página pública; SEO; URL | OK (`pagina-publica.md`) | — | — |
 | request-quote | Wizard 4/5 passos; IA automática passo 3; rascunho local; multipart Edge; reCAPTCHA; nsfwjs | OK (`pedir-orcamento.md`) | Validação server-side fina do form na Edge | P-01 redirect `/dashboard/client`; mismatch 10 MB front / 5 MB Edge fotos |
 | chats + negotiation-proposals | Lista/thread; propostas FSM; slots; mensagem livre vs PENDING; aceite/cancelamento; sheet compare/history em Meus Serviços | OK (`conversas-e-negociacao.md`, `comparar-orcamentos-meus-servicos.md`) | Mapa exaustivo de mensagens SQL por código/errcode nas RPCs de compare | — |

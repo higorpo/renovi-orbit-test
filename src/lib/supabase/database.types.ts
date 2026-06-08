@@ -2516,15 +2516,6 @@ export type Database = {
         Args: { p_service_request_id: string }
         Returns: Json
       }
-      list_provider_sent_budgets: {
-        Args: {
-          p_page?: number
-          p_page_size?: number
-          p_search?: string
-          p_status?: string
-        }
-        Returns: Json
-      }
       list_services: {
         Args: {
           p_category_title?: string

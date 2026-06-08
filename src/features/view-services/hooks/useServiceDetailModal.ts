@@ -14,7 +14,6 @@ export function useServiceDetailModal() {
   return {
     isOpen,
     isFromProviderJobs: isOpen && state?.returnTo === "/dashboard/jobs",
-    isFromProviderBudgets: isOpen && state?.returnTo === "/dashboard/budgets",
     serviceRequestId: match?.params.id,
     background: state?.background ?? null,
   };

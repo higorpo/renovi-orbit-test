@@ -37,7 +37,6 @@ Documentação derivada do código da aplicação (front-end React/Vite, Supabas
 | Meus serviços / pedidos (cliente) | [modulos/client-my-services](./modulos/client-my-services/README.md) |
 | Formulários dinâmicos | [modulos/dynamic-form](./modulos/dynamic-form/README.md) |
 | Minha conta | [modulos/my-account](./modulos/my-account/README.md) |
-| Orçamentos (prestador) | [modulos/provider-budgets](./modulos/provider-budgets/README.md) |
 | Trabalhos e propostas (prestador) | [modulos/provider-jobs](./modulos/provider-jobs/README.md) |
 | Perfil público do prestador | [modulos/provider-profile](./modulos/provider-profile/README.md) |
 | Pedir orçamento | [modulos/request-quote](./modulos/request-quote/README.md) |

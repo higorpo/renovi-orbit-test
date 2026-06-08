@@ -50,4 +50,4 @@ Exporta: `ServiceDetailPage`, `ServiceListCard`, `getServiceById`, `listServices
 
 - UI de listagem para prestador (RPC já suporta).
 - Pool geográfico `match_provider_jobs` na listagem.
-- Unificação com `provider-budgets` / `provider-jobs`.
+- Unificação futura da listagem prestador em `view-services` (RPC `list_services` já suporta).

@@ -57,9 +57,9 @@ describe("MobileNav", () => {
     renderMobileNav("client");
     expect(screen.getByRole("link", { name: /Visão geral/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Meus Serviços/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Orçamentos/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Conversas/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Endereços/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Minha conta/ })).toBeInTheDocument();
   });
 
   it("opens sheet when hamburger is clicked and shows all menu items", async () => {
@@ -76,8 +76,8 @@ describe("MobileNav", () => {
     expect(screen.getByRole("link", { name: /Visão geral/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Solicitações/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Trabalhos/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Orçamentos/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Conversas/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Ganhos/ })).toBeInTheDocument();
   });
 
   it("sheet shows SheetTitle with passed title when open", async () => {

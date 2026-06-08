@@ -1,7 +1,6 @@
 import { Link, Outlet, useMatch } from "react-router";
 import { useAuth } from "@/features/auth";
 import { ProviderJobsPersistentSlot } from "@/features/provider-jobs";
-import { ProviderBudgetsPersistentSlot } from "@/features/provider-budgets";
 import { ServiceDetailSheet, useServiceDetailModal } from "@/features/view-services";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -59,7 +58,6 @@ export function DashboardLayout() {
         )}
       >
         <ProviderJobsPersistentSlot />
-        <ProviderBudgetsPersistentSlot />
         <Outlet />
         {serviceDetailModal.isOpen && serviceDetailModal.serviceRequestId ? (
           <ServiceDetailSheet serviceRequestId={serviceDetailModal.serviceRequestId} />

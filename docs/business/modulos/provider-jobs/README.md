@@ -48,6 +48,6 @@
 ## 7. Relação com outros módulos
 
 - **`my-account`:** serviços ofertados e bairros alimentam o matching (ver comentários na Edge).
-- **`provider-budgets`:** reutiliza `JobDetailSheet` / `JobDetailPage` e navegação de retorno (`constants/jobDetailReturnNavigation.ts`).
+- **`view-services`:** detalhe unificado do pedido (`ServiceDetailPage` / sheet); lista prestador via RPC `list_services` (UI futura em `/dashboard/requests`).
 - **`request-quote`:** fotos do pedido na lista; estilos de card de serviço.
 - **`client-my-services` / `negotiation-proposals`:** lado cliente para acompanhar pedidos, comparar/histórico de orçamentos e negociar em Conversas.

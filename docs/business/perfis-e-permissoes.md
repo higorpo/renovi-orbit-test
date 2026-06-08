@@ -26,7 +26,6 @@ Restrições de **atribuição de papel** (triggers / políticas):
 | `/dashboard/addresses` | `ProtectedRoute` aninhado | **`client` apenas** |
 | `/dashboard/conta` | Aninhado | `client`, `provider` |
 | `/dashboard/jobs`, `/dashboard/jobs/:jobId` | Aninhado | **`provider` apenas** |
-| `/dashboard/budgets`, `/dashboard/budgets/pedido/:id` | Aninhado | **`provider` apenas** |
 | `/dashboard/chats`, `/dashboard/chats/:chatId` | Aninhado | `client`, `provider` |
 | `/dashboard/earnings` | Aninhado | **`provider` apenas** |
 | `/example` | `ProtectedRoute` | **`client` apenas** |
@@ -44,7 +43,7 @@ Restrições de **atribuição de papel** (triggers / políticas):
 ## Menu do dashboard (`getDashboardMenu`)
 
 - Se `role === "client"` → itens de cliente (Visão geral, Meus Serviços, Conversas, Endereços, Minha conta, Ajuda).
-- Caso contrário → menu de prestador (Visão geral, Solicitações, Trabalhos, Orçamentos, Ganhos, Minha conta, Ajuda).
+- Caso contrário → menu de prestador (Visão geral, Solicitações, Trabalhos, Conversas, Ganhos, Minha conta, Ajuda).
 
 **Comportamento inferido:** um usuário `admin` que de alguma forma renderizasse o layout com esse helper veria o **menu de prestador**, pois só há ramificação explícita para `client`. Na prática, `admin` não passa pelo `ProtectedRoute` do dashboard com as roles atuais.
 

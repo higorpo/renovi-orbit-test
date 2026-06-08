@@ -13,13 +13,12 @@ Este diretório concentra a **documentação funcional e técnica por módulo**,
 | 5 | [client-my-services](./client-my-services/README.md) | Lista de pedidos (shell); sheet compare/histórico | `/dashboard/requests` | `src/features/client-my-services/` | Concluída |
 | 5b | [view-services](./view-services/README.md) | Lista/detalhe unificados (RPC); agnóstico de papel | `/dashboard/services/:id` (+ consumo por client-my-services) | `src/features/view-services/` | Concluída |
 | 6 | [provider-jobs](./provider-jobs/README.md) | Trabalhos, detalhe, propostas, perguntas | `/dashboard/jobs`, `/dashboard/jobs/:jobId` | `src/features/provider-jobs/` | Concluída |
-| 7 | [provider-budgets](./provider-budgets/README.md) | Orçamentos enviados / minhas perguntas | `/dashboard/budgets`, `/dashboard/budgets/pedido/:serviceRequestId` | `src/features/provider-budgets/` | Concluída |
-| 8 | [provider-profile](./provider-profile/README.md) | Perfil público do prestador | `/perfil/:slug` | `src/features/provider-profile/` | Concluída |
-| 9 | [dynamic-form](./dynamic-form/README.md) | Motor de formulários + demo DEV | `/demo/form` (somente `import.meta.env.DEV`) | `src/features/dynamic-form/` | Concluída |
-| 10 | [dashboard-shell](./dashboard-shell/README.md) | Placeholders do dashboard (visão geral, endereços, config, ajuda, ganhos) | `/dashboard`, `/dashboard/addresses`, `/dashboard/settings`, `/dashboard/help`, `/dashboard/earnings` | `src/layouts/DashboardLayout/` | Concluída |
-| 11 | [app-home](./app-home/README.md) | Página inicial mínima | `/` (index) | `src/App.tsx` | Concluída |
-| 12 | [message-dispatcher](./message-dispatcher/README.md) | Notificações multicanal (e-mail, push); horário silencioso, quotas, FSM | *Sem rota de UI; backend-only* | `supabase/migrations/`, `supabase/functions/message-dispatcher-*` | Parcial (quiet hours) |
-| 13 | [chats](./chats/README.md) | Conversas e negociação (CNS): lista, thread, propostas; sheet compare/history | `/dashboard/chats`, `/dashboard/chats/:chatId` | `src/features/chats/`, `src/features/negotiation-proposals/` | Concluída |
+| 7 | [provider-profile](./provider-profile/README.md) | Perfil público do prestador | `/perfil/:slug` | `src/features/provider-profile/` | Concluída |
+| 8 | [dynamic-form](./dynamic-form/README.md) | Motor de formulários + demo DEV | `/demo/form` (somente `import.meta.env.DEV`) | `src/features/dynamic-form/` | Concluída |
+| 9 | [dashboard-shell](./dashboard-shell/README.md) | Placeholders do dashboard (visão geral, endereços, config, ajuda, ganhos) | `/dashboard`, `/dashboard/addresses`, `/dashboard/settings`, `/dashboard/help`, `/dashboard/earnings` | `src/layouts/DashboardLayout/` | Concluída |
+| 10 | [app-home](./app-home/README.md) | Página inicial mínima | `/` (index) | `src/App.tsx` | Concluída |
+| 11 | [message-dispatcher](./message-dispatcher/README.md) | Notificações multicanal (e-mail, push); horário silencioso, quotas, FSM | *Sem rota de UI; backend-only* | `supabase/migrations/`, `supabase/functions/message-dispatcher-*` | Parcial (quiet hours) |
+| 12 | [chats](./chats/README.md) | Conversas e negociação (CNS): lista, thread, propostas; sheet compare/history | `/dashboard/chats`, `/dashboard/chats/:chatId` | `src/features/chats/`, `src/features/negotiation-proposals/` | Concluída |
 
 > **Descontinuado:** [client-budgets](./client-budgets/README.md) — rota `/dashboard/orcamentos` removida; ver `client-my-services` + `negotiation-proposals`.
 
@@ -51,8 +50,8 @@ Um módulo conta como documentado quando o conjunto **README do módulo + arquiv
 
 | Métrica | Valor |
 |---------|------:|
-| Módulos identificados no escopo do produto (features + shell + home + backend + CNS) | **13** |
-| Módulos documentados (critério acima) | **13** |
+| Módulos identificados no escopo do produto (features + shell + home + backend + CNS) | **12** |
+| Módulos documentados (critério acima) | **12** |
 | **Percentual** | **100%** |
 
 Os diretórios em `src/features/` com produto documentado neste índice incluem **`chats`** e **`negotiation-proposals`** (agrupados em [chats](./chats/README.md)); **`client-budgets` foi removido**. Outras pastas (`device-beacon`, `push-permission`, `notifications`, etc.) aparecem na [rastreabilidade](../rastreabilidade.md) sem README em `modulos/`. Acrescentam-se **dashboard-shell**, **app-home** e **message-dispatcher**.
@@ -64,9 +63,8 @@ Os diretórios em `src/features/` com produto documentado neste índice incluem 
 - **auth** → base de sessão e guards para todo o dashboard.
 - **dynamic-form** → usado por **request-quote** (passo 2).
 - **addresses** → usado por **request-quote** (passo 4) e **my-account** (`AddressesSection`).
-- **provider-jobs** → **provider-budgets** reutiliza `JobDetailSheet` / `JobDetailPage`.
+- **provider-jobs** → propostas e negociação via **chats** / **negotiation-proposals**; detalhe unificado em **view-services**.
 - **negotiation-proposals** → sheet `ReceivedBudgetDetailsSheet` consumido por **client-my-services**; composer/propostas também em **provider-jobs** e **chats**.
-- **provider-jobs** → URLs assinadas de fotos de proposta via **`negotiation-proposals`** (`useProposalPhotoUrls`).
 - **chats** + **negotiation-proposals** → negociação in-app por pedido; integra **message-dispatcher** (notificações), **provider-jobs** (origem do pedido), **client-my-services** (lista + sheet compare/history).
 
 ---
@@ -88,7 +86,7 @@ Análise em paralelo (exploração baseada em código):
 
 1. **Auth + guards** — rotas guest, `ProtectedRoute` / `GuestOnlyRoute`, telas, APIs `auth.api` / `profile.api`, schemas Zod.
 2. **request-quote + addresses** — passos do wizard, Edge `create-request-quote-order`, `generate-smart-description`, rascunho local, analytics.
-3. **provider-jobs + provider-budgets** — RPCs, edge `match-provider-jobs`, filtros, composição de proposta/pergunta.
+3. **provider-jobs** — RPCs, edge `match-provider-jobs`, filtros, composição de proposta.
 4. **client-my-services, my-account, provider-profile** — shells, sheets, RPCs cliente, storage buckets.
 5. **dynamic-form + DashboardFakePage + App** — demo DEV, placeholders, home.
 

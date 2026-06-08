@@ -56,11 +56,6 @@ const ProviderJobsRouteSlot = lazy(() =>
     default: m.ProviderJobsRouteSlot,
   })),
 )
-const ProviderBudgetsRouteSlot = lazy(() =>
-  import('@/features/provider-budgets/components/ProviderBudgetsRouteSlot').then((m) => ({
-    default: m.ProviderBudgetsRouteSlot,
-  })),
-)
 const ChatsLayout = lazy(() =>
   import('@/features/chats/components/ChatsLayout/ChatsLayout').then((m) => ({
     default: m.ChatsLayout,
@@ -162,14 +157,6 @@ export const router = createBrowserRouter([
             element: (
               <ProtectedRoute allowedRoles={['provider']}>
                 <ProviderJobsRouteSlot />
-              </ProtectedRoute>
-            ),
-          },
-          {
-            path: 'budgets',
-            element: (
-              <ProtectedRoute allowedRoles={['provider']}>
-                <ProviderBudgetsRouteSlot />
               </ProtectedRoute>
             ),
           },

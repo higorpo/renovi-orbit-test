@@ -30,7 +30,6 @@ export {
 export { ROUTE_SERVICE_DETAIL, getServiceDetailPath } from "./constants/routes";
 export {
   createProviderJobsServiceDetailState,
-  createProviderBudgetsServiceDetailState,
   type ServiceDetailLocationState,
   type ServiceDetailReturnTo,
 } from "./types/serviceDetailNavigation.types";

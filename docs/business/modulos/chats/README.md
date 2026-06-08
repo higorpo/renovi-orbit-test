@@ -38,7 +38,7 @@
 
 ## 5. Relação com outros módulos
 
-- **`provider-budgets`:** fluxo legado de orçamentos enviados pelo prestador (lista separada de Trabalhos).
+- **`view-services`:** detalhe unificado do pedido; escopo prestador na listagem via RPC `list_services`.
 - **`provider-jobs`:** origem do pedido e envio de proposta (composer em `negotiation-proposals`).
 - **`message-dispatcher`:** entrega e-mail/push de eventos CNS.
 - **`client-my-services`:** lista de pedidos; sheet compare/history de orçamentos via Public API de `negotiation-proposals`.

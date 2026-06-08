@@ -7,7 +7,6 @@ import {
   MessageSquare,
   Settings,
   Wallet,
-  ClipboardList,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ProfileRole } from "@/features/auth";
@@ -38,7 +37,6 @@ function providerMenuItems(): DashboardMenuItem[] {
     { path: "/dashboard", label: "Visão geral", icon: LayoutDashboard },
     { path: "/dashboard/requests", label: "Solicitações", icon: FileText },
     { path: "/dashboard/jobs", label: "Trabalhos", icon: Briefcase },
-    { path: "/dashboard/budgets", label: "Orçamentos", icon: ClipboardList },
     { path: "/dashboard/chats", label: "Conversas", icon: MessageSquare },
     { path: "/dashboard/earnings", label: "Ganhos", icon: Wallet },
     { path: "/dashboard/conta", label: "Minha conta", icon: Settings },
