@@ -149,21 +149,13 @@ select is(
 );
 
 select ok(
-  (
-    select exists (
-      select 1
-      from public.domain_events de
-      where de.chat_id = (select chat_id from _unilateral_case)
-        and de.event_type = 'CONVERSATION_INACTIVATED'
-    )
-    and exists (
-      select 1
-      from public.domain_events de
-      where de.chat_id = (select chat_id from _unilateral_case)
-        and de.event_type = 'SLOT_RELEASED'
-    )
+  not exists (
+    select 1
+    from public.domain_events de
+    where de.chat_id = (select chat_id from _unilateral_case)
+      and de.event_type in ('CONVERSATION_INACTIVATED', 'SLOT_RELEASED')
   ),
-  'emits CONVERSATION_INACTIVATED and SLOT_RELEASED'
+  'does not emit CONVERSATION_INACTIVATED or SLOT_RELEASED domain_events'
 );
 
 -- Bilateral stale chat stays ACTIVE (R4-AC03).

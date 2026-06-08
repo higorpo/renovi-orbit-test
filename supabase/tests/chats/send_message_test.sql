@@ -103,12 +103,20 @@ select ok(
   (
     select exists (
       select 1
+      from message_dispatcher.message_dispatches d
+      where d.template_key = 'chat.new_message'
+        and d.profile_id = '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid
+        and d.bypass_limits = true
+        and d.channel = 'push'::message_dispatcher.message_channel
+    )
+    and not exists (
+      select 1
       from public.domain_events de
       where de.event_type = 'CHAT_MESSAGE_SENT'
         and de.chat_id = (select (response->'conversation'->>'id')::uuid from _first_send)
     )
   ),
-  'first provider message inserts CHAT_MESSAGE_SENT domain event'
+  'first provider message enqueues chat.new_message push without domain_events'
 );
 
 select is(

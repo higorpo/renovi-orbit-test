@@ -2234,8 +2234,6 @@ export type Database = {
         Args: { p_chat_id: string }
         Returns: Json
       }
-      cns_emit_analytics: { Args: { p_event_id: string }; Returns: Json }
-      cns_enqueue_notifications: { Args: { p_event_id: string }; Returns: Json }
       cns_evaluate_reciprocity_batch: {
         Args: { p_batch_size?: number }
         Returns: Json
@@ -2274,12 +2272,9 @@ export type Database = {
         }
         Returns: Json
       }
-      cns_process_domain_events: {
-        Args: {
-          p_batch_size?: number
-          p_record_job_run?: boolean
-          p_worker_id?: string
-        }
+      cns_notify_chat_message: { Args: { p_message_id: string }; Returns: Json }
+      cns_notify_conversation_closed: {
+        Args: { p_chat_id: string }
         Returns: Json
       }
       cns_project_message_payload_for_list: {
@@ -2377,10 +2372,13 @@ export type Database = {
       }
       cron_chat_evaluate_reciprocity: { Args: never; Returns: Json }
       cron_cns_janitor_orphan_media: { Args: never; Returns: Json }
-      cron_cns_process_domain_events: { Args: never; Returns: Json }
       cron_cns_prune_chat_rate_limit_buckets: { Args: never; Returns: Json }
       cron_cns_prune_job_runs: { Args: never; Returns: Json }
       cron_cns_reconcile_pending_deliveries: { Args: never; Returns: Json }
+      cron_enqueue_proposal_expiring_soon_reminders: {
+        Args: never
+        Returns: Json
+      }
       cron_proposal_expire_pending: { Args: never; Returns: Json }
       cron_purge_stale_user_device_beacons: { Args: never; Returns: Json }
       decline_revision_request: {
@@ -2557,6 +2555,48 @@ export type Database = {
         Returns: Json
       }
       mmd_idempotency_uuid: { Args: { p_key: string }; Returns: string }
+      mmd_ingest_event: {
+        Args: {
+          p_event_type: string
+          p_idempotency_key: string
+          p_metadata?: Json
+          p_recipient_profile_id: string
+          p_template_variables: Json
+        }
+        Returns: Json
+      }
+      notify_proposal_accepted: {
+        Args: { p_proposal_id: string }
+        Returns: Json
+      }
+      notify_proposal_expired: {
+        Args: { p_proposal_id: string }
+        Returns: Json
+      }
+      notify_proposal_mmd: {
+        Args: {
+          p_actor_id: string
+          p_event_type: string
+          p_idempotency_key: string
+          p_message_preview: string
+          p_metadata?: Json
+          p_proposal_id: string
+          p_recipient_id: string
+        }
+        Returns: Json
+      }
+      notify_proposal_rejected: {
+        Args: { p_proposal_id: string }
+        Returns: Json
+      }
+      notify_proposal_revision_requested: {
+        Args: { p_proposal_id: string }
+        Returns: Json
+      }
+      notify_proposal_submitted: {
+        Args: { p_proposal_id: string }
+        Returns: Json
+      }
       platform_constant_bool: {
         Args: { p_default: boolean; p_key: string }
         Returns: boolean
@@ -2580,6 +2620,13 @@ export type Database = {
           p_service_request_id?: string
         }
         Returns: string
+      }
+      reject_non_terminal_proposals_on_sr_cancel: {
+        Args: {
+          p_client_rejection_response?: string
+          p_service_request_id: string
+        }
+        Returns: number
       }
       reject_proposal: {
         Args: {

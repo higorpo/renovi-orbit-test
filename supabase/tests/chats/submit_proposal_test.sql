@@ -138,6 +138,12 @@ select ok(
   (
     select exists (
       select 1
+      from message_dispatcher.message_dispatches d
+      where d.template_key = 'proposal.submitted'
+        and d.profile_id = '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid
+    )
+    and not exists (
+      select 1
       from public.domain_events de
       where de.event_type = 'PROPOSAL_SUBMITTED'
         and de.aggregate_id = (
@@ -145,7 +151,7 @@ select ok(
         )
     )
   ),
-  'submit inserts PROPOSAL_SUBMITTED domain event'
+  'submit enqueues proposal.submitted without domain_events'
 );
 
 create temp table _submit_edit_result as

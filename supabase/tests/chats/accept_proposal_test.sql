@@ -276,26 +276,22 @@ select ok(
   (
     select exists (
       select 1
+      from message_dispatcher.message_dispatches d
+      where d.template_key = 'proposal.accepted'
+        and d.profile_id = '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid
+    )
+    and not exists (
+      select 1
       from public.domain_events de
-      where de.event_type = 'PROPOSAL_ACCEPTED'
-        and de.aggregate_id = (
-          select (submit_response->'proposal'->>'id')::uuid from _accept_submit
+      where de.service_request_id = (select service_request_id from _accept_sr)
+        and de.event_type in (
+          'PROPOSAL_ACCEPTED',
+          'SERVICE_REQUEST_COMPLETED',
+          'CHATS_CLOSED_BULK'
         )
     )
-    and exists (
-      select 1
-      from public.domain_events de
-      where de.event_type = 'SERVICE_REQUEST_COMPLETED'
-        and de.service_request_id = (select service_request_id from _accept_sr)
-    )
-    and exists (
-      select 1
-      from public.domain_events de
-      where de.event_type = 'CHATS_CLOSED_BULK'
-        and de.service_request_id = (select service_request_id from _accept_sr)
-    )
   ),
-  'accept emits PROPOSAL_ACCEPTED, SERVICE_REQUEST_COMPLETED, and CHATS_CLOSED_BULK'
+  'accept enqueues proposal.accepted via trigger without migrated domain_events'
 );
 
 select finish();

@@ -2,19 +2,7 @@
 
 begin;
 
-select plan(12);
-
-select ok(
-  exists (
-    select 1
-    from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'public'
-      and p.proname = 'cns_process_domain_events'
-      and 'statement_timeout=120s' = any (p.proconfig)
-  ),
-  'cns_process_domain_events has 120s statement_timeout proconfig'
-);
+select plan(11);
 
 select ok(
   exists (

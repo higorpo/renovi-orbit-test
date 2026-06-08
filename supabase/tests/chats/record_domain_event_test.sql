@@ -39,7 +39,7 @@ select throws_ok(
   'rejects unknown event_type'
 );
 
-select throws_ok(
+select lives_ok(
   $sql$
     select public.record_domain_event(
       'CHAT_MESSAGE_SENT',
@@ -50,9 +50,7 @@ select throws_ok(
       '{}'::jsonb
     );
   $sql$,
-  '22023',
-  'payload.idempotency_key required for notification event CHAT_MESSAGE_SENT',
-  'requires idempotency_key for notification events'
+  'allows admin/replay insert without idempotency_key (live notifications use triggers)'
 );
 
 create temp table _slot_released_fixture as

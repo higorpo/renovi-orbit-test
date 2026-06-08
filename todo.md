@@ -58,7 +58,7 @@ Telas/fluxos restantes:
 
 Coisas para verificar:
 
-- Não deve mostrar trabalhos que eu enviei proposta na tela de trabalhos
+- Não deve mostrar trabalho que eu enviei proposta na tela de trabalhos
 - Quando proposta aceita e entrar na tela de um trabalho específico, redirecionar para tela do serviço em si.
 - Prestadores marcados como "Pioneiros" tem taxa de serviço menor
 - Direcionar prestador para que ele cadastre serviços que ele atenda para exibir trabalhos
@@ -80,10 +80,7 @@ Coisas para terminar do fluxo atual de trabalho:
 Coisas para fazer next
 
 -verificar se devo manter colunas de status como text ou transformar em enum
--verificar necessidade de usar outbound  (domain_events) em outros eventos assíncronos
 -cobertura de testes em todos os códigos novos
--existe uma certa lentidão para disparar push de novas mensagens (ele cai numa fila de processamento para enviar pro message dispatcher e  depois ainda espera o job do message dispatcher...)
-- usar trigger ao invés de criar essa tabela central...
 -renomear tabela de provider_proposals
 -ao recusar a proposta, o chat tem que ser encerrado também
 -refazer card de orçamentos do prestador

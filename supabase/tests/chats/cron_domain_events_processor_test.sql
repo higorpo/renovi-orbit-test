@@ -1,4 +1,4 @@
--- pgTAP: cns_process_domain_events pg_cron job (design §6.1, task 48, R28-AC02, OAC-06).
+-- pgTAP: proposal_expiring_soon_reminders pg_cron job (replaces cns_process_domain_events schedule).
 
 begin;
 
@@ -10,55 +10,53 @@ select ok(
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and p.proname = 'cron_cns_process_domain_events'
+      and p.proname = 'cron_enqueue_proposal_expiring_soon_reminders'
   ),
-  'cron_cns_process_domain_events is SECURITY DEFINER'
+  'cron_enqueue_proposal_expiring_soon_reminders is SECURITY DEFINER'
 );
 
 select ok(
   has_function_privilege(
     'postgres',
-    'public.cron_cns_process_domain_events()',
+    'public.cron_enqueue_proposal_expiring_soon_reminders()',
     'EXECUTE'
   )
   and not has_function_privilege(
     'authenticated',
-    'public.cron_cns_process_domain_events()',
+    'public.cron_enqueue_proposal_expiring_soon_reminders()',
     'EXECUTE'
   ),
-  'postgres only may execute domain events cron wrapper'
+  'postgres only may execute proposal expiring soon cron wrapper'
 );
 
 select ok(
-  exists (
+  not exists (
     select 1
     from cron.job j
     where j.jobname = 'cns_process_domain_events'
-      and j.schedule = '* * * * *'
-      and j.command like '%cron_cns_process_domain_events%'
   ),
-  'cns_process_domain_events cron job exists (R28-AC02, OAC-06)'
+  'cns_process_domain_events cron job is unscheduled'
 );
 
 select ok(
   exists (
     select 1
     from cron.job j
-    where j.jobname = 'cns_process_domain_events'
+    where j.jobname = 'proposal_expiring_soon_reminders'
+      and j.schedule = '* * * * *'
+      and j.command like '%cron_enqueue_proposal_expiring_soon_reminders%'
+  ),
+  'proposal_expiring_soon_reminders cron job exists'
+);
+
+select ok(
+  exists (
+    select 1
+    from cron.job j
+    where j.jobname = 'proposal_expiring_soon_reminders'
       and j.active = true
   ),
-  'cns_process_domain_events cron job is active'
-);
-
-select ok(
-  (
-    select pg_get_functiondef(p.oid) like '%domain_events_release_stale_leases%'
-    from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'public'
-      and p.proname = 'cron_cns_process_domain_events'
-  ),
-  'cron wrapper calls domain_events_release_stale_leases before processor'
+  'proposal_expiring_soon_reminders cron job is active'
 );
 
 select finish();

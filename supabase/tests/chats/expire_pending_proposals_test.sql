@@ -192,12 +192,22 @@ select ok(
   (
     select exists (
       select 1
+      from message_dispatcher.message_dispatches d
+      where d.template_key = 'proposal.expired'
+        and d.profile_id = '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid
+        and d.metadata->>'proposal_id' = (select result_proposal_id::text from _expiry_case)
+    )
+    and not exists (
+      select 1
       from public.domain_events de
-      where de.event_type = 'PROPOSAL_EXPIRED'
-        and de.aggregate_id = (select result_proposal_id from _expiry_case)
+      where de.event_type in ('PROPOSAL_EXPIRED', 'CONVERSATION_INACTIVATED', 'SLOT_RELEASED')
+        and (
+          de.aggregate_id = (select result_proposal_id from _expiry_case)
+          or de.chat_id = (select result_chat_id from _expiry_case)
+        )
     )
   ),
-  'PROPOSAL_EXPIRED domain event is emitted'
+  'expiry enqueues proposal.expired via trigger without migrated domain_events'
 );
 
 -- R9-AC03: free messaging restored after expiry when chat is not CLOSED.
