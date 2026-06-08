@@ -4,7 +4,7 @@ begin;
 
 \ir fixtures/seed_chat.inc
 
-select plan(10);
+select plan(11);
 
 create or replace function pg_temp.cns_set_auth(p_user_id uuid)
 returns void
@@ -186,6 +186,28 @@ select ok(
     )
   ),
   'create_provider_proposal enqueues proposal.submitted without domain_events'
+);
+
+select ok(
+  (
+    select exists (
+      select 1
+      from message_dispatcher.message_dispatches d
+      where d.template_key = 'proposal.submitted'
+        and d.profile_id = '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid
+        and d.channel = 'push'::message_dispatcher.message_channel
+        and d.bypass_limits = true
+    )
+    and exists (
+      select 1
+      from message_dispatcher.message_dispatches d
+      where d.template_key = 'proposal.submitted'
+        and d.profile_id = '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid
+        and d.channel = 'email'::message_dispatcher.message_channel
+        and d.bypass_limits = false
+    )
+  ),
+  'proposal.submitted push bypasses limits; email keeps default limits'
 );
 
 -- 4. reject_proposal manual → proposal.rejected for provider.
