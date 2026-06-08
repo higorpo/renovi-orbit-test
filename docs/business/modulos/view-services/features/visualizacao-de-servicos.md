@@ -9,7 +9,7 @@ Documentação baseada em `src/features/view-services/` e migrations `2026070520
 | Item | Descrição |
 |------|-----------|
 | **Objetivo** | Lista e detalhe unificados de pedidos (`service_requests`) com contrato JSON estável para cliente e prestador. |
-| **Rotas** | **`/dashboard/services/:id`** — `ServiceDetailPage` (lazy no router). Lista do cliente permanece em `client-my-services` (`/dashboard/requests`). |
+| **Rotas** | **`/dashboard/services/:id`** — `ServiceDetailPage` (lazy no router). Lista do cliente permanece em `my-services` (`/dashboard/services`). |
 | **Backend** | RPCs `get_service`, `list_services`; helper SQL `project_service_row`; tabela `contracted_services`. |
 | **Sem PostgREST** | A API TS não usa `.from()` nem embeds para listagem/detalhe. |
 
@@ -21,12 +21,12 @@ Calculadas em SQL (`derive_service_list_phase`):
 
 | Fase | Cliente (dono do SR) | Prestador (com envolvimento) |
 |------|----------------------|------------------------------|
-| `negotiation` | `sr.status = OPEN` | `sr.status = OPEN` e tem proposta ou contrato com ele |
+| `negotiation` | `sr.status = OPEN` | `sr.status = OPEN` e tem proposta, contrato ou chat com ele |
 | `in_progress` | `sr COMPLETED` + `contracted_services` ativo | `cs.provider_id = viewer` + status ativo |
 | `completed` | `sr COMPLETED` + `cs.status = COMPLETED` | idem |
 | `cancelled` | `sr CANCELLED` ou contrato cancelado | cancelamento do SR onde participou ou `cs CANCELLED` dele |
 
-**Escopo do prestador na listagem:** pedidos em que já tem `provider_proposals` ou é `contracted_services.provider_id`. Não inclui pool de `match_provider_jobs`.
+**Escopo do prestador na listagem:** pedidos em que já tem `provider_proposals`, `chats` (conversa iniciada) ou é `contracted_services.provider_id`. Não inclui pool de `match_provider_jobs`.
 
 ---
 

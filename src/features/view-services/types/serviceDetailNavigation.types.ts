@@ -2,7 +2,7 @@ import type { Location } from "react-router";
 
 export type ServiceDetailReturnTo =
   | "/dashboard/jobs"
-  | "/dashboard/requests";
+  | "/dashboard/services";
 
 export interface ServiceDetailLocationState {
   serviceDetailPresentation?: "sheet";
@@ -17,6 +17,16 @@ export function createProviderJobsServiceDetailState(
   return {
     serviceDetailPresentation: "sheet",
     returnTo: "/dashboard/jobs",
+    background,
+  };
+}
+
+export function createProviderMyServicesServiceDetailState(
+  background: Location,
+): ServiceDetailLocationState {
+  return {
+    serviceDetailPresentation: "sheet",
+    returnTo: "/dashboard/services",
     background,
   };
 }

@@ -1,6 +1,21 @@
 import type { StatusTabId } from "../constants/statusTabs";
+import type { ProposalStatus } from "@/features/negotiation-proposals";
 
 export type ServiceListPhase = "negotiation" | "in_progress" | "completed" | "cancelled";
+
+export interface MyProposalSummary {
+  id: string;
+  status: ProposalStatus;
+  finalAmount: number;
+  updatedAt: string;
+  expiredAt: string | null;
+}
+
+export interface ServiceChatSummary {
+  id: string;
+  isUnread: boolean;
+  lastInteractionAt: string;
+}
 
 export interface AddressSummary {
   neighborhood: string;
@@ -65,6 +80,9 @@ export interface ServiceModel {
   missingInfoWarnings: string[] | null;
   suggestedEquipment: string[] | null;
   suggestedMaterials: string[] | null;
+  lastActivityAt: string | null;
+  myProposal: MyProposalSummary | null;
+  chatSummary: ServiceChatSummary | null;
 }
 
 export interface ListServicesParams {

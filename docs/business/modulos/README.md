@@ -10,8 +10,8 @@ Este diretório concentra a **documentação funcional e técnica por módulo**,
 | 2 | [request-quote](./request-quote/README.md) | Wizard pedir orçamento | `/pedir-orcamento` | `src/features/request-quote/` | Concluída |
 | 3 | [addresses](./addresses/README.md) | Seleção/CRUD endereços (embutido em fluxos) | *Sem rota dedicada funcional*; menu aponta para placeholder | `src/features/addresses/` | Concluída |
 | 4 | [my-account](./my-account/README.md) | Minha conta cliente/prestador | `/dashboard/conta` | `src/features/my-account/` | Concluída |
-| 5 | [client-my-services](./client-my-services/README.md) | Lista de pedidos (shell); sheet compare/histórico | `/dashboard/requests` | `src/features/client-my-services/` | Concluída |
-| 5b | [view-services](./view-services/README.md) | Lista/detalhe unificados (RPC); agnóstico de papel | `/dashboard/services/:id` (+ consumo por client-my-services) | `src/features/view-services/` | Concluída |
+| 5 | [my-services](./my-services/README.md) | Lista de pedidos (shell); sheet compare/histórico | `/dashboard/services` | `src/features/my-services/` | Concluída |
+| 5b | [view-services](./view-services/README.md) | Lista/detalhe unificados (RPC); agnóstico de papel | `/dashboard/services/:id` (+ consumo por my-services) | `src/features/view-services/` | Concluída |
 | 6 | [provider-jobs](./provider-jobs/README.md) | Trabalhos, detalhe, propostas, perguntas | `/dashboard/jobs`, `/dashboard/jobs/:jobId` | `src/features/provider-jobs/` | Concluída |
 | 7 | [provider-profile](./provider-profile/README.md) | Perfil público do prestador | `/perfil/:slug` | `src/features/provider-profile/` | Concluída |
 | 8 | [dynamic-form](./dynamic-form/README.md) | Motor de formulários + demo DEV | `/demo/form` (somente `import.meta.env.DEV`) | `src/features/dynamic-form/` | Concluída |
@@ -20,7 +20,7 @@ Este diretório concentra a **documentação funcional e técnica por módulo**,
 | 11 | [message-dispatcher](./message-dispatcher/README.md) | Notificações multicanal (e-mail, push); horário silencioso, quotas, FSM | *Sem rota de UI; backend-only* | `supabase/migrations/`, `supabase/functions/message-dispatcher-*` | Parcial (quiet hours) |
 | 12 | [chats](./chats/README.md) | Conversas e negociação (CNS): lista, thread, propostas; sheet compare/history | `/dashboard/chats`, `/dashboard/chats/:chatId` | `src/features/chats/`, `src/features/negotiation-proposals/` | Concluída |
 
-> **Descontinuado:** [client-budgets](./client-budgets/README.md) — rota `/dashboard/orcamentos` removida; ver `client-my-services` + `negotiation-proposals`.
+> **Descontinuado:** [client-budgets](./client-budgets/README.md) — rota `/dashboard/orcamentos` removida; ver `my-services` + `negotiation-proposals`.
 
 ### Rotas adicionais fora da tabela (evidência direta)
 
@@ -64,8 +64,8 @@ Os diretórios em `src/features/` com produto documentado neste índice incluem 
 - **dynamic-form** → usado por **request-quote** (passo 2).
 - **addresses** → usado por **request-quote** (passo 4) e **my-account** (`AddressesSection`).
 - **provider-jobs** → propostas e negociação via **chats** / **negotiation-proposals**; detalhe unificado em **view-services**.
-- **negotiation-proposals** → sheet `ReceivedBudgetDetailsSheet` consumido por **client-my-services**; composer/propostas também em **provider-jobs** e **chats**.
-- **chats** + **negotiation-proposals** → negociação in-app por pedido; integra **message-dispatcher** (notificações), **provider-jobs** (origem do pedido), **client-my-services** (lista + sheet compare/history).
+- **negotiation-proposals** → sheet `ReceivedBudgetDetailsSheet` consumido por **my-services**; composer/propostas também em **provider-jobs** e **chats**.
+- **chats** + **negotiation-proposals** → negociação in-app por pedido; integra **message-dispatcher** (notificações), **provider-jobs** (origem do pedido), **my-services** (lista + sheet compare/history).
 
 ---
 
@@ -87,7 +87,7 @@ Análise em paralelo (exploração baseada em código):
 1. **Auth + guards** — rotas guest, `ProtectedRoute` / `GuestOnlyRoute`, telas, APIs `auth.api` / `profile.api`, schemas Zod.
 2. **request-quote + addresses** — passos do wizard, Edge `create-request-quote-order`, `generate-smart-description`, rascunho local, analytics.
 3. **provider-jobs** — RPCs, edge `match-provider-jobs`, filtros, composição de proposta.
-4. **client-my-services, my-account, provider-profile** — shells, sheets, RPCs cliente, storage buckets.
+4. **my-services, my-account, provider-profile** — shells, sheets, RPCs cliente, storage buckets.
 5. **dynamic-form + DashboardFakePage + App** — demo DEV, placeholders, home.
 
 Consolidação e arquivos novos/atualizados: índice (este README), [dashboard-shell](./dashboard-shell/README.md), [app-home](./app-home/README.md), atualização da [matriz de cobertura documental](../matriz-cobertura-documental.md).

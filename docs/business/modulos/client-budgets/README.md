@@ -6,12 +6,12 @@
 
 | Antes | Agora |
 |-------|-------|
-| Página `/dashboard/orcamentos` | **Meus Serviços** (`/dashboard/requests`) — ações no card de cada pedido |
+| Página `/dashboard/orcamentos` | **Meus Serviços** (`/dashboard/services`) — ações no card de cada pedido |
 | Sheet de orçamentos recebidos | [`negotiation-proposals`](../chats/features/comparar-orcamentos-meus-servicos.md) — `ReceivedBudgetDetailsSheet` via Public API |
 | Menu **Orçamentos** (cliente) | Removido; negociação ativa em **Conversas** (`/dashboard/chats`) |
 
 ## Documentação atual
 
-- [Meus serviços / pedidos do cliente](../client-my-services/README.md)
+- [Meus serviços / pedidos do cliente](../my-services/README.md)
 - [Comparar orçamentos / histórico (sheet)](../chats/features/comparar-orcamentos-meus-servicos.md)
 - [Conversas e negociação (CNS)](../chats/README.md)

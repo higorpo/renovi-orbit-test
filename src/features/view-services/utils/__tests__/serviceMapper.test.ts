@@ -29,6 +29,19 @@ describe("serviceMapper", () => {
       negotiation: {
         proposal_count: 2,
         has_pending_proposal: true,
+        last_activity_at: "2025-01-03T00:00:00Z",
+        my_proposal: {
+          id: "prop-1",
+          status: "PENDING",
+          final_amount: 150,
+          updated_at: "2025-01-03T00:00:00Z",
+          expired_at: null,
+        },
+        chat: {
+          id: "chat-1",
+          is_unread: true,
+          last_interaction_at: "2025-01-03T01:00:00Z",
+        },
       },
       contracted: {
         id: "cs-1",
@@ -48,5 +61,8 @@ describe("serviceMapper", () => {
     expect(model.tags).toEqual(["tag-a"]);
     expect(model.suggestedEquipment).toEqual(["ladder"]);
     expect(model.suggestedMaterials).toEqual(["screws"]);
+    expect(model.lastActivityAt).toBe("2025-01-03T00:00:00Z");
+    expect(model.myProposal?.status).toBe("PENDING");
+    expect(model.chatSummary?.isUnread).toBe(true);
   });
 });

@@ -239,7 +239,7 @@ flowchart TD
 
 | ID / tema | Descrição |
 |-----------|-----------|
-| **P-01** | Redirect pós-sucesso logado para `/dashboard/client` — rota ausente; alinhar a `/dashboard`, `/dashboard/requests` ou `getRedirectPath(profile)`. |
+| **P-01** | Redirect pós-sucesso logado para `/dashboard/client` — rota ausente; alinhar a `/dashboard`, `/dashboard/services` ou `getRedirectPath(profile)`. |
 | **Fotos** | Limite **10 MB** no front vs **5 MB** na Edge; possível frustração no envio. |
 | **JWT** | `create-request-quote-order` sem `verify_jwt`; mitigado por rate limit, reCAPTCHA e `validateRequestUser` — monitorar abuso. |
 

@@ -74,7 +74,7 @@ describe("MobileNav", () => {
   it("renders provider main items in bottom nav", () => {
     renderMobileNav("provider");
     expect(screen.getByRole("link", { name: /Visão geral/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Solicitações/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Meus Serviços/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Trabalhos/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Conversas/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Ganhos/ })).toBeInTheDocument();

@@ -16,7 +16,7 @@ describe("getDashboardMenu", () => {
     const labels = result.allItems.map((i) => i.label);
     expect(paths).toEqual([
       "/dashboard",
-      "/dashboard/requests",
+      "/dashboard/services",
       "/dashboard/chats",
       "/dashboard/addresses",
       "/dashboard/conta",
@@ -52,7 +52,7 @@ describe("getDashboardMenu", () => {
     const labels = result.allItems.map((i) => i.label);
     expect(paths).toEqual([
       "/dashboard",
-      "/dashboard/requests",
+      "/dashboard/services",
       "/dashboard/jobs",
       "/dashboard/chats",
       "/dashboard/earnings",
@@ -60,7 +60,7 @@ describe("getDashboardMenu", () => {
       "/dashboard/help",
     ]);
     expect(labels).toContain("Visão geral");
-    expect(labels).toContain("Solicitações");
+    expect(labels).toContain("Meus Serviços");
     expect(labels).toContain("Trabalhos");
     expect(labels).toContain("Conversas");
     expect(labels).toContain("Ganhos");

@@ -31,9 +31,9 @@ const DashboardFakePage = lazy(() =>
     default: m.DashboardFakePage,
   })),
 )
-const ClientMyServicesPage = lazy(() =>
-  import('@/features/client-my-services/components/ClientMyServicesPage').then((m) => ({
-    default: m.ClientMyServicesPage,
+const MyServicesRouteSlot = lazy(() =>
+  import('@/features/my-services/components/MyServicesRouteSlot').then((m) => ({
+    default: m.MyServicesRouteSlot,
   })),
 )
 const ServiceDetailShell = lazy(() =>
@@ -127,8 +127,8 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <DashboardFakePage title="Visão geral" /> },
           {
-            path: 'requests',
-            element: <ClientMyServicesPage />,
+            path: 'services',
+            element: <MyServicesRouteSlot />,
           },
           {
             path: 'services/:id',

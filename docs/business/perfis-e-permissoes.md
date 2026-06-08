@@ -22,7 +22,7 @@ Restrições de **atribuição de papel** (triggers / políticas):
 | `/recuperar-senha` | Pública (sem GuestOnly no router) | — |
 | `/demo/form` | DEV apenas | — |
 | `/dashboard` (layout) | `ProtectedRoute` | `client`, `provider` (**admin excluído**) |
-| `/dashboard/requests`, `/dashboard/services/:id` | Herdado | `client`, `provider` no layout — **comportamento de negócio**: tela é de cliente; prestador pode ser redirecionido em fluxos específicos conforme implementação da página |
+| `/dashboard/services`, `/dashboard/services/:id` | Herdado | `client`, `provider` no layout — **comportamento de negócio**: tela é de cliente; prestador pode ser redirecionido em fluxos específicos conforme implementação da página |
 | `/dashboard/addresses` | `ProtectedRoute` aninhado | **`client` apenas** |
 | `/dashboard/conta` | Aninhado | `client`, `provider` |
 | `/dashboard/jobs`, `/dashboard/jobs/:jobId` | Aninhado | **`provider` apenas** |
@@ -43,7 +43,7 @@ Restrições de **atribuição de papel** (triggers / políticas):
 ## Menu do dashboard (`getDashboardMenu`)
 
 - Se `role === "client"` → itens de cliente (Visão geral, Meus Serviços, Conversas, Endereços, Minha conta, Ajuda).
-- Caso contrário → menu de prestador (Visão geral, Solicitações, Trabalhos, Conversas, Ganhos, Minha conta, Ajuda).
+- Caso contrário → menu de prestador (Visão geral, Meus Serviços, Trabalhos, Conversas, Ganhos, Minha conta, Ajuda).
 
 **Comportamento inferido:** um usuário `admin` que de alguma forma renderizasse o layout com esse helper veria o **menu de prestador**, pois só há ramificação explícita para `client`. Na prática, `admin` não passa pelo `ProtectedRoute` do dashboard com as roles atuais.
 

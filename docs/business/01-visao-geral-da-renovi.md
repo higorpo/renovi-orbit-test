@@ -37,7 +37,7 @@ Os módulos de produto mapeiam diretamente às pastas em `src/features/`:
 - **dynamic-form** — Motor de formulários por schema (etapas, visibilidade, validação).
 - **addresses** — Endereços do cliente, geografia da plataforma (estados, cidades, bairros), CEP.
 - **auth** — Login, cadastro, recuperação de senha, sessão, guards de rota.
-- **client-my-services** — Lista de **pedidos** (`service_requests`) do cliente; sheet comparar/histórico de orçamentos quando há propostas.
+- **my-services** — Lista de **pedidos** (`service_requests`) do cliente; sheet comparar/histórico de orçamentos quando há propostas.
 - **negotiation-proposals** — Propostas, composer, aceite/recusa e sheet de orçamentos recebidos (Public API usada por jobs, chats e Meus Serviços).
 - **provider-jobs** — Descoberta de pedidos compatíveis, detalhe e envio de proposta (negociação em **chats**).
 - **provider-profile** — Página pública do prestador por slug (`/perfil/:slug`).
@@ -71,8 +71,8 @@ Os módulos de produto mapeiam diretamente às pastas em `src/features/`:
 
 1. **Cliente pede orçamento** — `/pedir-orcamento` → escolha de serviço → formulário dinâmico → descrição/fotos (opcional IA) → endereço → identidade (logado ou cadastro convidado) → criação via Edge Function `create-request-quote-order`.
 2. **Prestador encontra trabalho** — `/dashboard/jobs` → filtros/geo → detalhe → perguntas/proposta.
-3. **Cliente acompanha** — `/dashboard/requests` (lista e sheet de orçamentos no card) e `/dashboard/chats` (negociação in-app).
-4. **Prestador acompanha envios** — `/dashboard/chats` (negociação) e `/dashboard/requests` (lista unificada via `view-services`, escopo prestador).
+3. **Cliente acompanha** — `/dashboard/services` (lista e sheet de orçamentos no card) e `/dashboard/chats` (negociação in-app).
+4. **Prestador acompanha envios** — `/dashboard/chats` (negociação) e `/dashboard/services` (lista unificada via `view-services`, escopo prestador).
 5. **Perfil público** — `/perfil/:slug` para captação/link compartilhável.
 
 ## Evidências principais

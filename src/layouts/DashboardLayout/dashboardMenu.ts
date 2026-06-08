@@ -24,7 +24,7 @@ const PROVIDER_MAIN_COUNT = 5;
 function clientMenuItems(): DashboardMenuItem[] {
   return [
     { path: "/dashboard", label: "Visão geral", icon: LayoutDashboard },
-    { path: "/dashboard/requests", label: "Meus Serviços", icon: FileText },
+    { path: "/dashboard/services", label: "Meus Serviços", icon: FileText },
     { path: "/dashboard/chats", label: "Conversas", icon: MessageSquare },
     { path: "/dashboard/addresses", label: "Endereços", icon: MapPin },
     { path: "/dashboard/conta", label: "Minha conta", icon: Settings },
@@ -35,7 +35,7 @@ function clientMenuItems(): DashboardMenuItem[] {
 function providerMenuItems(): DashboardMenuItem[] {
   return [
     { path: "/dashboard", label: "Visão geral", icon: LayoutDashboard },
-    { path: "/dashboard/requests", label: "Solicitações", icon: FileText },
+    { path: "/dashboard/services", label: "Meus Serviços", icon: FileText },
     { path: "/dashboard/jobs", label: "Trabalhos", icon: Briefcase },
     { path: "/dashboard/chats", label: "Conversas", icon: MessageSquare },
     { path: "/dashboard/earnings", label: "Ganhos", icon: Wallet },

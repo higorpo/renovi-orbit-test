@@ -1,4 +1,5 @@
 import { statusToTabId } from "../constants/statusTabs";
+import type { ProposalStatus } from "@/features/negotiation-proposals";
 import type {
   AddressSummary,
   ContractedServiceSummary,
@@ -49,6 +50,19 @@ export interface RpcServiceRequest {
 export interface RpcServiceNegotiation {
   proposal_count?: number;
   has_pending_proposal?: boolean;
+  last_activity_at?: string;
+  my_proposal?: {
+    id?: string;
+    status?: string;
+    final_amount?: number;
+    updated_at?: string;
+    expired_at?: string | null;
+  } | null;
+  chat?: {
+    id?: string;
+    is_unread?: boolean;
+    last_interaction_at?: string;
+  } | null;
 }
 
 export interface RpcContractedProvider {
@@ -155,6 +169,30 @@ function normalizeListPhase(value: string | undefined): ServiceListPhase {
   return "negotiation";
 }
 
+function mapMyProposal(
+  raw: RpcServiceNegotiation["my_proposal"],
+): ServiceModel["myProposal"] {
+  if (!raw?.id || !raw.status) return null;
+  return {
+    id: raw.id,
+    status: raw.status as ProposalStatus,
+    finalAmount: raw.final_amount ?? 0,
+    updatedAt: raw.updated_at ?? "",
+    expiredAt: raw.expired_at ?? null,
+  };
+}
+
+function mapChatSummary(
+  raw: RpcServiceNegotiation["chat"],
+): ServiceModel["chatSummary"] {
+  if (!raw?.id) return null;
+  return {
+    id: raw.id,
+    isUnread: raw.is_unread ?? false,
+    lastInteractionAt: raw.last_interaction_at ?? "",
+  };
+}
+
 export function mapRpcServiceRow(row: RpcServiceRow): ServiceModel {
   const request = row.request ?? {};
   const negotiation = row.negotiation ?? {};
@@ -197,5 +235,8 @@ export function mapRpcServiceRow(row: RpcServiceRow): ServiceModel {
     suggestedMaterials: Array.isArray(request.suggested_materials)
       ? request.suggested_materials
       : null,
+    lastActivityAt: negotiation.last_activity_at ?? null,
+    myProposal: mapMyProposal(negotiation.my_proposal),
+    chatSummary: mapChatSummary(negotiation.chat),
   };
 }

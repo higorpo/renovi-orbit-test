@@ -10,8 +10,8 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 |--------|------------------------|--------------|-------------------|-----------------------------|
 | addresses | CRUD endereços; seleção no wizard; CEP; geografia | OK (`gestao-de-enderecos.md`) | — | Página `/dashboard/addresses` (placeholder) |
 | auth | Sessão; guards; login/cadastro/recuperação; política de senha | OK (`autenticacao-e-sessao.md`) | Fluxos edge de e-mail Auth em produção | Painel admin no front |
-| client-my-services | Shell de lista; abas por `list_phase`; busca/filtros via RPC; deep link; sheet compare/history | OK (`solicitacoes-do-cliente.md`) | — | Dropdowns só da página carregada |
-| view-services | RPCs unificados; `ServiceModel`; detalhe por fase; escopo cliente/prestador no SQL | OK (`visualizacao-de-servicos.md`) | pgTAP `view_services_rpcs_test.sql` | UI de lista prestador futura |
+| my-services | Shell compartilhado; slot por role; abas/filtros RPC; deep link (cliente); sheet compare/history; card pipeline prestador | OK (`solicitacoes-do-cliente.md`, README) | — | Dropdowns só da página carregada; aba Disputas vazia |
+| view-services | RPCs unificados; `ServiceModel`; detalhe por fase; escopo cliente/prestador no SQL; `my_proposal`/`chat` na lista prestador | OK (`visualizacao-de-servicos.md`) | pgTAP `view_services_rpcs_test.sql` | — |
 | dynamic-form | Schema; steps; validação; demo DEV | OK (`motor-de-formularios.md`) | — | — |
 | my-account | Conta cliente/prestador; portfólio; área; exclusão | OK (`minha-conta.md`) | Impacto legal de exclusão de conta | — |
 | provider-jobs | Match; detalhe; proposta; negociação CNS | OK (`trabalhos-e-propostas.md`) | Algoritmo de sort/geo completo no SQL | — |

@@ -5,7 +5,7 @@
 - **Objetivo do módulo:** fornecer o **shell** do painel (`DashboardLayout`) com header (desktop), navegação inferior (mobile) e conteúdo via `<Outlet />`.
 - **Contexto de negócio:** após autenticação, cliente e prestador acessam funções de pedidos, orçamentos e conta; parte das rotas ainda não tem implementação além do título.
 - **Perfis envolvidos:** `client` e `provider` (derivado de `useAuth().profile.role`); itens de menu diferem por papel.
-- **Dependências com outros módulos:** renderiza **páginas reais** importadas no router (`my-account`, `client-my-services`, `provider-jobs`, etc.); placeholders **não** importam features de negócio.
+- **Dependências com outros módulos:** renderiza **páginas reais** importadas no router (`my-account`, `my-services`, `provider-jobs`, etc.); placeholders **não** importam features de negócio.
 
 ---
 
@@ -22,7 +22,7 @@
 
 **Evidência:** `src/router.tsx` (rotas filhas de `dashboard` com `DashboardFakePage`); `DashboardFakePage.tsx`.
 
-**Menu lateral / bottom nav:** `src/layouts/DashboardLayout/dashboardMenu.ts` — `getDashboardMenu(role)` retorna labels e paths; cliente inclui `Visão geral`, `Meus Serviços`, `Conversas`, `Endereços`, `Minha conta`, `Ajuda`; prestador inclui `Visão geral`, `Solicitações`, `Trabalhos`, `Orçamentos`, `Conversas`, `Ganhos`, `Minha conta`, `Ajuda`.
+**Menu lateral / bottom nav:** `src/layouts/DashboardLayout/dashboardMenu.ts` — `getDashboardMenu(role)` retorna labels e paths; cliente inclui `Visão geral`, `Meus Serviços`, `Conversas`, `Endereços`, `Minha conta`, `Ajuda`; prestador inclui `Visão geral`, `Meus Serviços`, `Trabalhos`, `Orçamentos`, `Conversas`, `Ganhos`, `Minha conta`, `Ajuda`.
 
 ---
 

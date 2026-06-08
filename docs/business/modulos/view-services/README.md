@@ -3,7 +3,7 @@
 ## 1. Leitura para negócio
 
 - **Para que serve:** módulo **agnóstico de papel** que expõe lista e detalhe unificados de um **pedido** (`service_request_id`) para cliente e prestador. O escopo (quais pedidos aparecem e o que cada um vê) é resolvido no servidor via `auth.uid()` + `profiles.role`.
-- **Quem usa:** hoje o **cliente** consome via `client-my-services` (lista) e rota de detalhe; o **prestador** pode consumir os mesmos hooks/RPCs em telas futuras sem mudar contrato.
+- **Quem usa:** hoje o **cliente** consome via `my-services` (lista) e rota de detalhe; o **prestador** pode consumir os mesmos hooks/RPCs em telas futuras sem mudar contrato.
 - **Valor:** um único shape (`ServiceModel`) para lista e detalhe, evitando drift entre telas; fase de produto (`list_phase`) calculada no SQL.
 - **ID canônico:** `service_request_id` — rota `/dashboard/services/:id`.
 
@@ -38,7 +38,7 @@
 
 ## 5. Integrações
 
-- **`client-my-services`** — shell de listagem do cliente; delega para `useServicesList` / navega para detalhe.
+- **`my-services`** — shell de listagem do cliente; delega para `useServicesList` / navega para detalhe.
 - **`negotiation-proposals`** — invalida `SERVICES_LIST_QUERY_KEY` e `SERVICE_DETAIL_QUERY_KEY` após mutações de proposta.
 - **`chats`** — negociação in-app; prestador com proposta ou contrato enxerga o pedido nas RPCs.
 

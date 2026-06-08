@@ -8,5 +8,5 @@ export function getServiceDetailBackNavigation(params: {
     return { href: "/dashboard/jobs", label: "Voltar para Trabalhos" };
   }
 
-  return { href: "/dashboard/requests", label: "Voltar para Meus Serviços" };
+  return { href: "/dashboard/services", label: "Voltar para Meus Serviços" };
 }

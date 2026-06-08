@@ -10,9 +10,8 @@ Itens que exigem validação humana, evidência parcial ou conflito entre trecho
 | P-02 | Destino do admin | `getRedirectPathForProfile` envia `admin` para `/admin/dashboard`; **rotas `/admin` não constam** do `router.tsx`. | Alta — se existirem usuários admin reais |
 | P-03 | Onboarding | Papéis desconhecidos redirecionam para `/onboarding`; rota **não listada** no router analisado. | Média |
 | P-04 | Menu vs rota “Endereços” | Menu do cliente aponta `/dashboard/addresses`, mas a rota renderiza `DashboardFakePage` (“Endereços” placeholder). Gestão real em `MyAccountClientPage` (`AddressesSection`). | Média — UX/ops |
-| P-05 | `/dashboard/services/:id` | Rota existe com `ClientMyServicesDetailPlaceholder`; nome sugere detalhe de pedido — **confirmar** se é placeholder permanente ou feature incompleta. | Média |
+| P-05 | `/dashboard/services/:id` | Rota renderiza `ServiceDetailShell` (`view-services`); detalhe unificado por fase. Evoluções pendentes são de produto (ex.: disputas), não placeholder de lista. | Baixa |
 | P-06 | Default do provedor de IA | Comentários em tipos vs `handlerHelpers` do Edge Function: default efetivo do campo `provider` pode ser **Gemini**; documentação interna pode divergir. | Baixa — transparência operacional |
-| P-07 | `/dashboard/requests` sem guard só de cliente | O layout de `/dashboard` permite `client` e `provider`, mas **não há** `ProtectedRoute` aninhado com `allowedRoles={['client']}` em `/dashboard/requests` (diferente de `addresses`). **Comportamento:** um prestador autenticado pode acessar a URL; a página pode falhar em RPCs ou mostrar estado vazio — precisa validação. | Média — segurança de UX/permissão |
 
 ## Evidência parcial
 

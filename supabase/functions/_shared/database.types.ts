@@ -2657,6 +2657,14 @@ export type Database = {
         Returns: string
       }
       sanitize_job_error: { Args: { p_message: string }; Returns: string }
+      service_row_last_activity_at: {
+        Args: {
+          p_service_request_id: string
+          p_viewer_id: string
+          p_viewer_role: string
+        }
+        Returns: string
+      }
       service_viewer_has_access: {
         Args: { p_service_request_id: string; p_viewer_id: string }
         Returns: boolean

@@ -54,14 +54,14 @@ describe("DesktopNav", () => {
     );
     expect(screen.getByRole("link", { name: /Meus Serviços/ })).toHaveAttribute(
       "href",
-      "/dashboard/requests"
+      "/dashboard/services"
     );
   });
 
   it("renders with provider menu items when given provider items", () => {
     const menu = getDashboardMenu("provider" as ProfileRole);
     renderDesktopNav(menu.allItems);
-    expect(screen.getByRole("link", { name: /Solicitações/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Meus Serviços/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Trabalhos/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Ganhos/ })).toBeInTheDocument();
   });

@@ -1,6 +1,6 @@
 # Comparar orçamentos / histórico (sheet em Meus Serviços)
 
-Documentação baseada em `src/features/negotiation-proposals/` — componentes e API consumidos por **`client-my-services`** via Public API (`index.ts`).
+Documentação baseada em `src/features/negotiation-proposals/` — componentes e API consumidos por **`my-services`** via Public API (`index.ts`).
 
 ---
 
@@ -55,7 +55,7 @@ Helpers em `constants/serviceRequestBudgetSheet.ts`:
 
 ---
 
-## 4. Integração com `client-my-services`
+## 4. Integração com `my-services`
 
 | Artefato | Papel |
 |----------|-------|
@@ -81,4 +81,4 @@ Helpers em `constants/serviceRequestBudgetSheet.ts`:
 - `src/features/negotiation-proposals/api/serviceRequestBudgetCompare.api.ts`
 - `src/features/negotiation-proposals/constants/serviceRequestBudgetSheet.ts`
 - `src/features/view-services/components/ServiceListCard.tsx`
-- `src/features/client-my-services/components/ClientMyServicesPage.tsx`
+- `src/features/my-services/components/ClientMyServicesPage.tsx`

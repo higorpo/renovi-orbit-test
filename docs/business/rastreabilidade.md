@@ -31,7 +31,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | Pasta | APIs / hooks representativos | UI principal |
 |-------|------------------------------|--------------|
 | `addresses/` | `api/addresses.api.ts`, `api/statesAndCities.api.ts` | `AddressSelectionStep`, `AddressesSection`, `AddressFormDialog` |
-| `client-my-services/` | hooks page/list/filters/cancel (delegam a `view-services`) | `ClientMyServicesPage`, `ServiceListCard` via `view-services`, `ReceivedBudgetDetailsSheet` via `negotiation-proposals` |
+| `my-services/` | hooks page/list/filters/cancel (delegam a `view-services`) | `ClientMyServicesPage`, `ServiceListCard` via `view-services`, `ReceivedBudgetDetailsSheet` via `negotiation-proposals` |
 | `view-services/` | `api/services.api.ts` (RPC `get_service`, `list_services`, `cancel_service_request`); hooks list/detail/cancel | `ServiceDetailPage`, `ServiceListCard`, `ServiceSections` |
 | `dynamic-form/` | — | `DynamicForm`, `FormDemoPage` |
 | `my-account/` | `api/*Profile*.api.ts`, `portfolio.api.ts`, `offeredServices.api.ts` | `MyAccountPage`, `MyAccountClientPage`, `MyAccountProviderPage`, `ServiceAreaField` |

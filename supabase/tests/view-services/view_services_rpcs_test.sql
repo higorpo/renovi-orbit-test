@@ -4,7 +4,7 @@ begin;
 
 \ir ../chats/fixtures/seed_chat.inc
 
-select plan(17);
+select plan(23);
 
 create or replace function pg_temp.cns_set_auth(p_user_id uuid)
 returns void
@@ -151,6 +151,34 @@ select pg_temp.cns_seed_chat(
   p_provider_id := '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid
 ) as chat_id;
 
+select ok(
+  exists (
+    select 1
+    from jsonb_array_elements(
+      public.list_services(
+        p_page := 1,
+        p_page_size := 50,
+        p_list_phase := 'negotiation'
+      )->'items'
+    ) elem
+    where elem->>'id' = (select service_request_id::text from _vs_sr)
+  ),
+  'provider list_services includes SR with chat before proposal'
+);
+
+select is(
+  (
+    select elem->>'list_phase'
+    from jsonb_array_elements(
+      public.list_services(p_page := 1, p_page_size := 50)->'items'
+    ) elem
+    where elem->>'id' = (select service_request_id::text from _vs_sr)
+    limit 1
+  ),
+  'negotiation',
+  'provider chat-only SR has negotiation list_phase'
+);
+
 create temp table _vs_proposal as
 with pricing as (
   select *
@@ -188,6 +216,22 @@ select cmp_ok(
   '>=',
   1,
   'provider sees own proposal count'
+);
+
+select is(
+  (select public.get_service((select service_request_id from _vs_sr))->'negotiation'->'my_proposal'->>'status'),
+  'PENDING',
+  'provider get_service includes my_proposal status'
+);
+
+select ok(
+  (select public.get_service((select service_request_id from _vs_sr))->'negotiation'->'chat' ? 'id'),
+  'provider get_service includes chat id when chat exists'
+);
+
+select ok(
+  (select public.get_service((select service_request_id from _vs_sr))->'negotiation' ? 'last_activity_at'),
+  'get_service negotiation includes last_activity_at'
 );
 
 select ok(
@@ -252,6 +296,18 @@ select ok(
     where elem->>'id' = (select service_request_id::text from _vs_sr)
   ),
   'provider list_services includes SR with proposal'
+);
+
+select ok(
+  (
+    select (elem->'negotiation'->'chat'->>'is_unread')::boolean
+    from jsonb_array_elements(
+      public.list_services(p_page := 1, p_page_size := 50)->'items'
+    ) elem
+    where elem->>'id' = (select service_request_id::text from _vs_sr)
+    limit 1
+  ) is not null,
+  'provider list_services item includes chat is_unread'
 );
 
 select * from finish();

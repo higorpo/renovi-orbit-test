@@ -45,9 +45,9 @@ describe("ProviderJobsPersistentSlot", () => {
 
   it("renders nothing on unrelated routes", () => {
     const { container } = render(
-      <MemoryRouter initialEntries={["/dashboard/requests"]}>
+      <MemoryRouter initialEntries={["/dashboard/services"]}>
         <Routes>
-          <Route path="/dashboard/requests" element={<ProviderJobsPersistentSlot />} />
+          <Route path="/dashboard/services" element={<ProviderJobsPersistentSlot />} />
         </Routes>
       </MemoryRouter>,
     );
