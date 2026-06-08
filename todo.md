@@ -78,15 +78,12 @@ Coisas para terminar do fluxo atual de trabalho:
 
 
 Coisas para fazer next
-
--verificar se devo manter colunas de status como text ou transformar em enum
 -cobertura de testes em todos os códigos novos
 -renomear tabela de provider_proposals
 -ao recusar a proposta, o chat tem que ser encerrado também
 -refazer card de orçamentos do prestador
 -refazer card da tela de meus serviços do cliente
 -exibir sugestões de perguntas para o prestador na hora que ele abre o chat pela primeira vez
--quando edita uma proposta que tem imagem anexada, as  imagens não carregam
 -[avaliar]simplificar query de get_service_list  (hoje ele tá trazendo um monte de dados que nem vai ser exibido no card)
 -tornar módulo  de meus serviços compartilhado entre prestador e cliente
 -fluxo de prestador recusar revisão de proposta

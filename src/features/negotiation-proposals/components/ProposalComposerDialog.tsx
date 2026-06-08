@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useProposalComposer } from "../hooks/useProposalComposer";
+import { useProposalPhotoUrls } from "../hooks/useProposalPhotoUrls";
 import type { ProposalComposerMode } from "../types/proposalComposerMode.types";
 import type { ProposalDetailView } from "../types/proposalDetails.types";
 import type { CreateProviderProposalResult } from "../types/proposals.types";
@@ -46,6 +47,8 @@ export function ProposalComposerDialog({
     submit,
   } = useProposalComposer({ serviceRequestId, onSubmitted });
 
+  const { urls: existingPhotoUrls } = useProposalPhotoUrls(existingPhotoPaths);
+
   useEffect(() => {
     if (!open) {
       resetComposer();
@@ -79,7 +82,7 @@ export function ProposalComposerDialog({
       onSubmit={handleSubmit}
       form={form}
       availabilityFieldArray={availabilityFieldArray}
-      existingPhotoUrls={existingPhotoPaths}
+      existingPhotoUrls={existingPhotoUrls}
       newPhotos={newPhotos}
       photosCount={photosCount}
       pricing={pricing}
