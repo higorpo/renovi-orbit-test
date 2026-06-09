@@ -2680,6 +2680,7 @@ export type Database = {
         | "MANUAL"
         | "PROPOSAL_ACCEPTED_ELSEWHERE"
         | "SERVICE_REQUEST_CANCELLED"
+        | "PROPOSAL_REJECTED"
       cns_conversation_status: "ACTIVE" | "INACTIVE" | "CLOSED"
       cns_delivery_status: "PENDING" | "SENT" | "DELIVERED" | "READ" | "FAILED"
       cns_inactivation_reason: "NO_RECIPROCITY"
@@ -2863,6 +2864,7 @@ export const Constants = {
         "MANUAL",
         "PROPOSAL_ACCEPTED_ELSEWHERE",
         "SERVICE_REQUEST_CANCELLED",
+        "PROPOSAL_REJECTED",
       ],
       cns_conversation_status: ["ACTIVE", "INACTIVE", "CLOSED"],
       cns_delivery_status: ["PENDING", "SENT", "DELIVERED", "READ", "FAILED"],

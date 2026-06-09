@@ -51,7 +51,7 @@
 ### 5.3 Cliente responde à proposta
 
 - **Aceitar:** escolhe slot sugerido → **`accept_proposal`** → proposta `ACCEPTED`, linha em `services` (`contracted_service_id` no pedido), pedido permanece **`OPEN`** (só vai a `COMPLETED` quando o serviço contratado for concluído), demais propostas `REJECTED_AUTOMATICALLY`, conversas de **outros** prestadores **CLOSED**; a conversa com o prestador aceito permanece aberta para coordenação/pagamento.
-- **Recusar:** **`reject_proposal`** → `REJECTED`; mensagens livres voltam.
+- **Recusar:** **`reject_proposal`** → `REJECTED`; se existir conversa aberta entre cliente e prestador, ela é encerrada (`CLOSED`, `PROPOSAL_REJECTED`).
 - **Pedir revisão:** **`request_proposal_revision`** → `REVISION_REQUESTED` (limite de revisões no servidor); depois prestador pode **`create_provider_proposal`** nova versão.
 
 ### 5.4 Cancelar pedido

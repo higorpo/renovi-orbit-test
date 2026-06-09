@@ -1,11 +1,11 @@
 -- pgTAP: proposal-gated free messaging (task 102, Req. 34, R34-AC14).
--- Scenarios: Discovery OK; PENDING fail; REVISION OK; re-PENDING fail; REJECTED OK.
+-- Scenarios: Discovery OK; PENDING fail; REVISION OK; re-PENDING fail; REJECTED closes chat.
 
 begin;
 
 \ir fixtures/seed_chat.inc
 
-select plan(10);
+select plan(11);
 
 create or replace function pg_temp.cns_set_auth(p_user_id uuid)
 returns void
@@ -216,7 +216,7 @@ select throws_ok(
   're-pending: cns_send_message rejects free TEXT again'
 );
 
--- (5) REJECTED: gate true; cns_send_message succeeds.
+-- (5) REJECTED: chat closes; cns_send_message is blocked.
 select pg_temp.cns_set_auth('28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid);
 
 select public.reject_proposal(
@@ -225,12 +225,27 @@ select public.reject_proposal(
   'Client declined revised offer'
 );
 
-select ok(
-  public.cns_chat_free_messaging_allowed((select chat_id from _gate_chat)),
-  'rejected: cns_chat_free_messaging_allowed is true'
+select is(
+  (
+    select c.status::text
+    from public.chats c
+    where c.id = (select chat_id from _gate_chat)
+  ),
+  'CLOSED',
+  'rejected: chat status becomes CLOSED'
 );
 
-select lives_ok(
+select is(
+  (
+    select c.closure_type::text
+    from public.chats c
+    where c.id = (select chat_id from _gate_chat)
+  ),
+  'PROPOSAL_REJECTED',
+  'rejected: closure_type is PROPOSAL_REJECTED'
+);
+
+select throws_ok(
   $sql$
     select public.cns_send_message(
       'TEXT'::public.cns_message_type,
@@ -240,7 +255,9 @@ select lives_ok(
       null
     );
   $sql$,
-  'rejected: cns_send_message succeeds after REJECTED'
+  'P0001',
+  'CONVERSATION_CLOSED',
+  'rejected: cns_send_message is blocked after REJECTED'
 );
 
 select finish();
