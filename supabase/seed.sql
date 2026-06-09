@@ -3,8 +3,12 @@
 -- and two test users (client + provider) with all related table data populated.
 --
 -- Test accounts (password: Abc123):
---   client:   cliente@renovi.com.br
+--   clients:  cliente@renovi.com.br, cliente1@renovi.com.br … cliente4@renovi.com.br
 --   provider: prestador@renovi.com.br
+--
+-- After db reset, upload service-request photos to Storage:
+--   yarn seed:dev-images        (offline gradient placeholders)
+--   yarn seed:dev-images-real   (picsum.photos, needs internet)
 
 -- ---------------------------------------------------------------------------
 -- platform_states
@@ -213,7 +217,7 @@ on conflict (slug) do nothing;
 
 -- ---------------------------------------------------------------------------
 -- Seed users for local development
--- client:   cliente@renovi.com.br  / Abc123
+-- clients:  cliente@renovi.com.br, cliente1@ … cliente4@renovi.com.br / Abc123
 -- provider: prestador@renovi.com.br / Abc123
 --
 -- Triggers chain:
@@ -239,6 +243,50 @@ values
     now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
     '{"full_name":"Maria da Silva","role":"client"}'::jsonb,
+    now(), now(), '', '', '', ''
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    '38e30f1d-3c47-441f-94c6-76b6ea0db471',
+    'authenticated', 'authenticated',
+    'cliente1@renovi.com.br',
+    crypt('Abc123', gen_salt('bf')),
+    now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"full_name":"Ana Souza","role":"client"}'::jsonb,
+    now(), now(), '', '', '', ''
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    '48e30f1d-3c47-441f-94c6-76b6ea0db472',
+    'authenticated', 'authenticated',
+    'cliente2@renovi.com.br',
+    crypt('Abc123', gen_salt('bf')),
+    now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"full_name":"Bruno Costa","role":"client"}'::jsonb,
+    now(), now(), '', '', '', ''
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    '58e30f1d-3c47-441f-94c6-76b6ea0db473',
+    'authenticated', 'authenticated',
+    'cliente3@renovi.com.br',
+    crypt('Abc123', gen_salt('bf')),
+    now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"full_name":"Carla Mendes","role":"client"}'::jsonb,
+    now(), now(), '', '', '', ''
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    '68e30f1d-3c47-441f-94c6-76b6ea0db474',
+    'authenticated', 'authenticated',
+    'cliente4@renovi.com.br',
+    crypt('Abc123', gen_salt('bf')),
+    now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"full_name":"Diego Ramos","role":"client"}'::jsonb,
     now(), now(), '', '', '', ''
   ),
   (
@@ -269,6 +317,38 @@ values
     now(), now(), now()
   ),
   (
+    '38e30f1d-3c47-441f-94c6-76b6ea0db471',
+    '38e30f1d-3c47-441f-94c6-76b6ea0db471',
+    '{"sub":"38e30f1d-3c47-441f-94c6-76b6ea0db471","email":"cliente1@renovi.com.br"}'::jsonb,
+    'email',
+    '38e30f1d-3c47-441f-94c6-76b6ea0db471',
+    now(), now(), now()
+  ),
+  (
+    '48e30f1d-3c47-441f-94c6-76b6ea0db472',
+    '48e30f1d-3c47-441f-94c6-76b6ea0db472',
+    '{"sub":"48e30f1d-3c47-441f-94c6-76b6ea0db472","email":"cliente2@renovi.com.br"}'::jsonb,
+    'email',
+    '48e30f1d-3c47-441f-94c6-76b6ea0db472',
+    now(), now(), now()
+  ),
+  (
+    '58e30f1d-3c47-441f-94c6-76b6ea0db473',
+    '58e30f1d-3c47-441f-94c6-76b6ea0db473',
+    '{"sub":"58e30f1d-3c47-441f-94c6-76b6ea0db473","email":"cliente3@renovi.com.br"}'::jsonb,
+    'email',
+    '58e30f1d-3c47-441f-94c6-76b6ea0db473',
+    now(), now(), now()
+  ),
+  (
+    '68e30f1d-3c47-441f-94c6-76b6ea0db474',
+    '68e30f1d-3c47-441f-94c6-76b6ea0db474',
+    '{"sub":"68e30f1d-3c47-441f-94c6-76b6ea0db474","email":"cliente4@renovi.com.br"}'::jsonb,
+    'email',
+    '68e30f1d-3c47-441f-94c6-76b6ea0db474',
+    now(), now(), now()
+  ),
+  (
     '5d09e025-20a2-4842-aeef-324d42a431e1',
     '5d09e025-20a2-4842-aeef-324d42a431e1',
     '{"sub":"5d09e025-20a2-4842-aeef-324d42a431e1","email":"prestador@renovi.com.br"}'::jsonb,
@@ -279,18 +359,39 @@ values
 on conflict (provider_id, provider) do nothing;
 
 -- 3) Enrich profiles with phone
-update public.profiles
-set phone = '(48) 99123-4567'
+update public.profiles set phone = '(48) 99123-4567'
 where id = '28e30f1d-3c47-441f-94c6-76b6ea0db470' and phone is null;
 
-update public.profiles
-set phone = '(48) 98765-4321'
+update public.profiles set phone = '(48) 99234-5678'
+where id = '38e30f1d-3c47-441f-94c6-76b6ea0db471' and phone is null;
+
+update public.profiles set phone = '(48) 99345-6789'
+where id = '48e30f1d-3c47-441f-94c6-76b6ea0db472' and phone is null;
+
+update public.profiles set phone = '(48) 99456-7890'
+where id = '58e30f1d-3c47-441f-94c6-76b6ea0db473' and phone is null;
+
+update public.profiles set phone = '(48) 99567-8901'
+where id = '68e30f1d-3c47-441f-94c6-76b6ea0db474' and phone is null;
+
+update public.profiles set phone = '(48) 98765-4321'
 where id = '5d09e025-20a2-4842-aeef-324d42a431e1' and phone is null;
 
 -- 4) client_profiles_private (CPF)
-update public.client_profiles_private
-set cpf = '123.456.789-00'
+update public.client_profiles_private set cpf = '123.456.789-00'
 where client_id = '28e30f1d-3c47-441f-94c6-76b6ea0db470' and cpf is null;
+
+update public.client_profiles_private set cpf = '111.222.333-44'
+where client_id = '38e30f1d-3c47-441f-94c6-76b6ea0db471' and cpf is null;
+
+update public.client_profiles_private set cpf = '222.333.444-55'
+where client_id = '48e30f1d-3c47-441f-94c6-76b6ea0db472' and cpf is null;
+
+update public.client_profiles_private set cpf = '333.444.555-66'
+where client_id = '58e30f1d-3c47-441f-94c6-76b6ea0db473' and cpf is null;
+
+update public.client_profiles_private set cpf = '444.555.666-77'
+where client_id = '68e30f1d-3c47-441f-94c6-76b6ea0db474' and cpf is null;
 
 -- 5) provider_profiles_private (entity + CPF)
 update public.provider_profiles_private
@@ -306,27 +407,88 @@ set slug = 'joao-eletricista',
     profile_visibility = 'public'
 where provider_id = '5d09e025-20a2-4842-aeef-324d42a431e1';
 
--- 7) client_addresses (one address in Florianópolis - Centro)
+-- 7) client_addresses (Florianópolis)
 insert into public.client_addresses (
   id, client_id, label, street, number, complement,
   neighborhood, zip_code, state_id, city_id,
   is_default, is_active, location
 )
-values (
-  'acd13138-0d54-431f-a672-55903f31301e',
-  '28e30f1d-3c47-441f-94c6-76b6ea0db470',
-  'Casa',
-  'Rua Felipe Schmidt',
-  '515',
-  'Apto 301',
-  'Centro',
-  '88010-000',
-  'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::uuid,
-  'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a21'::uuid,
-  true,
-  true,
-  ST_SetSRID(ST_MakePoint(-48.5482, -27.5954), 4326)::geography
-)
+values
+  (
+    'acd13138-0d54-431f-a672-55903f31301e',
+    '28e30f1d-3c47-441f-94c6-76b6ea0db470',
+    'Casa',
+    'Rua Felipe Schmidt',
+    '515',
+    'Apto 301',
+    'Centro',
+    '88010-000',
+    'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::uuid,
+    'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a21'::uuid,
+    true,
+    true,
+    ST_SetSRID(ST_MakePoint(-48.5482, -27.5954), 4326)::geography
+  ),
+  (
+    'bcd13138-0d54-431f-a672-55903f31301f',
+    '38e30f1d-3c47-441f-94c6-76b6ea0db471',
+    'Apartamento',
+    'Rua Deodoro',
+    '220',
+    'Bloco B',
+    'Trindade',
+    '88036-002',
+    'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::uuid,
+    'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a21'::uuid,
+    true,
+    true,
+    ST_SetSRID(ST_MakePoint(-48.5012, -27.5978), 4326)::geography
+  ),
+  (
+    'ccd13138-0d54-431f-a672-55903f313020',
+    '48e30f1d-3c47-441f-94c6-76b6ea0db472',
+    'Casa',
+    'Rua João Pinto',
+    '88',
+    null,
+    'Agronômica',
+    '88025-200',
+    'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::uuid,
+    'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a21'::uuid,
+    true,
+    true,
+    ST_SetSRID(ST_MakePoint(-48.5123, -27.5821), 4326)::geography
+  ),
+  (
+    'dcd13138-0d54-431f-a672-55903f313021',
+    '58e30f1d-3c47-441f-94c6-76b6ea0db473',
+    'Escritório',
+    'Rua Lauro Linhares',
+    '1024',
+    'Sala 12',
+    'Trindade',
+    '88036-001',
+    'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::uuid,
+    'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a21'::uuid,
+    true,
+    true,
+    ST_SetSRID(ST_MakePoint(-48.4988, -27.5995), 4326)::geography
+  ),
+  (
+    'ecd13138-0d54-431f-a672-55903f313022',
+    '68e30f1d-3c47-441f-94c6-76b6ea0db474',
+    'Casa',
+    'Rua Artista Bitencourt',
+    '45',
+    null,
+    'Centro',
+    '88020-060',
+    'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::uuid,
+    'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a21'::uuid,
+    true,
+    true,
+    ST_SetSRID(ST_MakePoint(-48.5456, -27.5932), 4326)::geography
+  )
 on conflict (id) do nothing;
 
 -- 8) provider_offered_services
@@ -379,32 +541,723 @@ values
   ('5d09e025-20a2-4842-aeef-324d42a431e1', 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a34')
 on conflict (provider_id, neighborhood_id) do nothing;
 
--- 11) service_request from client (for testing flows)
+-- 11) service_requests (20 total: eletrica or ar condicionado)
+--     form_schema snapshot from platform_forms via platform_services.form_id.
+--     10 negotiated (seeded via RPCs below), 9 open, 1 cancelled via RPC.
 insert into public.service_requests (
   id, client_id, service_id, address_id,
-  title, description, form_data, form_version,
-  status, urgency
+  title, description, form_data, form_schema, form_version,
+  status, urgency, scope_complexity, tags,
+  missing_info_warnings, suggested_equipment, suggested_materials,
+  estimated_duration_hint
 )
-values (
-  '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid,
-  '28e30f1d-3c47-441f-94c6-76b6ea0db470',
-  'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a62'::uuid,
-  'acd13138-0d54-431f-a672-55903f31301e'::uuid,
-  'Instalação elétrica - 5 pontos novos',
-  'Preciso instalar 5 pontos de tomada novos na sala e cozinha. A casa é antiga e não tem aterramento.',
-  '{
-    "tipo_servico": "nova",
-    "tipo_imovel": "residencial",
-    "urgency": "medium",
-    "qtd_pontos": 5,
-    "aterramento": true,
-    "descricao": "Preciso instalar 5 pontos de tomada novos na sala e cozinha. A casa é antiga e não tem aterramento."
-  }'::jsonb,
-  '2.0',
-  'OPEN',
-  'medium'
+select
+  d.id,
+  d.client_id,
+  d.service_id,
+  d.address_id,
+  d.title,
+  d.description,
+  d.form_data,
+  pf.form_schema,
+  pf.form_version,
+  d.status::public.service_request_status,
+  d.urgency,
+  d.scope_complexity,
+  d.tags,
+  d.missing_info_warnings,
+  d.suggested_equipment,
+  d.suggested_materials,
+  d.estimated_duration_hint
+from (
+  values
+    (
+      '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid,
+      '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a62'::uuid,
+      'acd13138-0d54-431f-a672-55903f31301e'::uuid,
+      'Instalação elétrica - 5 pontos novos',
+      'Preciso instalar cinco pontos de tomada novos na sala de estar e na cozinha. O imóvel foi construído nos anos 1970, a fiação interna é antiga e não há aterramento no quadro principal. Gostaria de aproveitar o serviço para revisar o disjuntor geral e garantir que os novos pontos fiquem em circuito dedicado, evitando quedas quando uso micro-ondas e forno ao mesmo tempo.',
+      '{"tipo_servico":"nova","tipo_imovel":"residencial","urgency":"medium","qtd_pontos":5,"aterramento":true,"descricao":"Cinco tomadas novas na sala e cozinha, com revisão do disjuntor geral.","observacoes":"Preferência por tomadas padrão NBR e canaletas discretas na parede da cozinha.","data_preferida":"2026-06-18"}'::jsonb,
+      'OPEN', 'medium', 'medium',
+      array['residencial', 'instalação elétrica', 'tomadas', 'aterramento'],
+      array['Não informado se o quadro comporta novo disjuntor dedicado', 'Distância exata entre sala e cozinha para estimativa de cabo'],
+      array['voltage_tester', 'wire_strippers', 'drill', 'insulated_screwdrivers', 'multimeter']::text[],
+      array['cable_wire', 'outlets', 'breakers', 'junction_boxes', 'electrical_tape', 'ground_wire']::text[],
+      '4_to_8h'
+    ),
+    (
+      '8017e001-5a32-44e7-b8da-1727a14f4d01'::uuid,
+      '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a62'::uuid,
+      'acd13138-0d54-431f-a672-55903f31301e'::uuid,
+      'Instalação elétrica - quadro e aterramento',
+      'Reforma completa do quadro de distribuição do apartamento no Centro, incluindo troca de disjuntores antigos, organização dos circuitos e implementação de aterramento conforme norma. O quadro atual está superlotado, sem identificação clara dos circuitos e com sinais de aquecimento em um disjuntor de 20A. Preciso de laudo visual e execução com materiais certificados.',
+      '{"tipo_servico":"reforma","tipo_imovel":"residencial","urgency":"high","qtd_pontos":8,"aterramento":true,"descricao":"Substituição do quadro, reorganização de circuitos e aterramento completo.","observacoes":"Condomínio exige serviço em horário comercial e proteção de área comum no corredor.","data_preferida":"2026-06-12"}'::jsonb,
+      'OPEN', 'high', 'complex',
+      array['urgente', 'quadro elétrico', 'aterramento', 'reforma elétrica'],
+      array['Não foi informada potência contratada com a concessionária'],
+      array['multimeter', 'non_contact_voltage_tester', 'insulated_screwdrivers', 'wire_strippers', 'drill']::text[],
+      array['breakers', 'panel_board', 'cable_wire', 'junction_boxes', 'ground_wire', 'conduit']::text[],
+      '1_day'
+    ),
+    (
+      '8017e002-5a32-44e7-b8da-1727a14f4d02'::uuid,
+      '38e30f1d-3c47-441f-94c6-76b6ea0db471'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a63'::uuid,
+      'bcd13138-0d54-431f-a672-55903f31301f'::uuid,
+      'Instalação de ar condicionado - 2 splits',
+      'Instalação de dois aparelhos split inverter de 12.000 BTU, um no quarto principal e outro no quarto de hóspedes, ambos no segundo andar. Não há ponto elétrico dedicado próximo às paredes escolhidas e o dreno precisa ser conduzido até a área de serviço. Busco profissional que faça a passagem de tubulação com acabamento limpo e teste de vazamento.',
+      '{"tipo_servico":"instalacao_nova","tipo_imovel":"residencial","urgency":"medium","qtd_aparelhos":2,"capacidade_btu":"12000","ja_tem_ponto":false,"descricao":"Dois splits de 12 mil BTU no segundo andar com dreno até área de serviço.","observacoes":"Paredes externas em alvenaria; evitar furação visível na fachada frontal.","data_preferida":"2026-06-20","horario_preferido":"manha"}'::jsonb,
+      'OPEN', 'medium', 'medium',
+      array['ar condicionado', 'split', 'instalação nova', 'residencial'],
+      array['Marca/modelo dos aparelhos ainda não definidos'],
+      array['vacuum_pump', 'manifold_gauges', 'drill', 'level', 'leak_detector']::text[],
+      array['line_set', 'refrigerant', 'duct_tape', 'screws', 'cable_wire']::text[],
+      '1_day'
+    ),
+    (
+      '8017e003-5a32-44e7-b8da-1727a14f4d03'::uuid,
+      '48e30f1d-3c47-441f-94c6-76b6ea0db472'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a62'::uuid,
+      'ccd13138-0d54-431f-a672-55903f313020'::uuid,
+      'Instalação elétrica - iluminação externa',
+      'Instalação de quatro pontos de iluminação na área gourmet e no jardim lateral, com aterramento e proteção adequada para área externa (IP65). Hoje só existe uma tomada externa antiga sem aterramento. Desejo interruptores duplos na cozinha para controlar os circuitos separadamente e pontos preparados para futura instalação de string LED.',
+      '{"tipo_servico":"nova","tipo_imovel":"residencial","urgency":"low","qtd_pontos":4,"aterramento":true,"descricao":"Quatro pontos de luz externos com aterramento e interruptores na cozinha.","observacoes":"Área gourmet coberta; jardim exposto à chuva.","data_preferida":"2026-07-05"}'::jsonb,
+      'OPEN', 'low', 'medium',
+      array['iluminação externa', 'área gourmet', 'aterramento', 'residencial'],
+      array['Não informado se há eletroduto existente até o jardim'],
+      array['drill', 'voltage_tester', 'wire_strippers', 'ladder', 'level']::text[],
+      array['cable_wire', 'switches', 'outlets', 'junction_boxes', 'ground_wire', 'conduit']::text[],
+      '4_to_8h'
+    ),
+    (
+      '8017e004-5a32-44e7-b8da-1727a14f4d04'::uuid,
+      '58e30f1d-3c47-441f-94c6-76b6ea0db473'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a63'::uuid,
+      'dcd13138-0d54-431f-a672-55903f313021'::uuid,
+      'Instalação de ar condicionado - sala comercial',
+      'Instalação de um split de 24.000 BTU na sala de reuniões de escritório comercial em Trindade. Já existe ponto elétrico 220V dedicado e dreno próximo, mas a tubulação antiga foi removida na última reforma. Pé direito de 3,2 m exige escada alta e fixação reforçada. Preciso do serviço concluído antes de reunião com cliente na outra semana.',
+      '{"tipo_servico":"instalacao_nova","tipo_imovel":"comercial","urgency":"high","qtd_aparelhos":1,"capacidade_btu":"24000","ja_tem_ponto":true,"descricao":"Split 24 mil BTU em sala comercial com pé direito alto.","observacoes":"Horário preferencial após 18h para não interromper atendimento.","data_preferida":"2026-06-14","horario_preferido":"noite"}'::jsonb,
+      'OPEN', 'high', 'medium',
+      array['comercial', 'ar condicionado', 'urgente', 'sala de reuniões'],
+      array['Não confirmado se o dreno existente ainda está funcional'],
+      array['vacuum_pump', 'manifold_gauges', 'extension_ladder', 'drill', 'level']::text[],
+      array['line_set', 'refrigerant', 'screws', 'cable_wire', 'condensate_pump']::text[],
+      '4_to_8h'
+    ),
+    (
+      '8017e005-5a32-44e7-b8da-1727a14f4d05'::uuid,
+      '68e30f1d-3c47-441f-94c6-76b6ea0db474'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a62'::uuid,
+      'ecd13138-0d54-431f-a672-55903f313022'::uuid,
+      'Instalação elétrica - tomadas home office',
+      'Instalação de seis pontos elétricos dedicados para home office: computador, monitor duplo, impressora, roteador, estabilizador e ponto reserva. Solicito circuito separado no quadro, aterramento individual testado e tomadas com filtro de linha embutido onde possível. A parede é drywall com estrutura metálica — preciso saber se usa busway ou eletroduto aparente.',
+      '{"tipo_servico":"nova","tipo_imovel":"residencial","urgency":"medium","qtd_pontos":6,"aterramento":true,"descricao":"Seis pontos dedicados para home office com circuito separado.","observacoes":"Parede drywall; preferência por eletroduto discreto.","data_preferida":"2026-06-22"}'::jsonb,
+      'OPEN', 'medium', 'medium',
+      array['home office', 'tomadas dedicadas', 'drywall', 'residencial'],
+      array['Capacidade do quadro para novo circuito 20A não confirmada'],
+      array['stud_finder', 'multimeter', 'drill', 'wire_fish_tape', 'insulated_screwdrivers']::text[],
+      array['cable_wire', 'outlets', 'breakers', 'conduit', 'junction_boxes', 'gfci_outlet']::text[],
+      '4_to_8h'
+    ),
+    (
+      '8017e006-5a32-44e7-b8da-1727a14f4d06'::uuid,
+      '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a63'::uuid,
+      'acd13138-0d54-431f-a672-55903f31301e'::uuid,
+      'Instalação de ar condicionado - sala',
+      'Instalação de split inverter 18.000 BTU na sala de estar de apartamento no Centro. A parede da fachada é compartilhada com o vizinho e o condomínio restringe unidade condensadora na varanda. Será necessário passar tubulação pela fachada lateral e criar ponto elétrico 220V. Ambiente de 22 m² com insolação oeste forte no final da tarde.',
+      '{"tipo_servico":"instalacao_nova","tipo_imovel":"residencial","urgency":"medium","qtd_aparelhos":1,"capacidade_btu":"18000","ja_tem_ponto":false,"descricao":"Split 18 mil BTU na sala com tubulação pela fachada lateral.","observacoes":"Consultar regras do condomínio sobre fixação externa.","data_preferida":"2026-06-25","horario_preferido":"tarde"}'::jsonb,
+      'OPEN', 'medium', 'complex',
+      array['ar condicionado', 'sala', 'fachada', 'condomínio'],
+      array['Autorização do condomínio para fixação externa pendente'],
+      array['vacuum_pump', 'manifold_gauges', 'drill', 'level', 'extension_ladder']::text[],
+      array['line_set', 'refrigerant', 'cable_wire', 'breakers', 'screws']::text[],
+      '1_day'
+    ),
+    (
+      '8017e007-5a32-44e7-b8da-1727a14f4d07'::uuid,
+      '38e30f1d-3c47-441f-94c6-76b6ea0db471'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a62'::uuid,
+      'bcd13138-0d54-431f-a672-55903f31301f'::uuid,
+      'Instalação elétrica - cozinha',
+      'Instalação de dez pontos elétricos na cozinha planejada recém-montada: geladeira, fogão elétrico, micro-ondas, forno, cafeteira, liquidificador, iluminação sob armário, duas tomadas na ilha e ponto para purificador. Cozinha em reforma finalizada, eletrodutos ainda não fechados. Necessário aterramento em todos os pontos e circuito dedicado para fogão.',
+      '{"tipo_servico":"nova","tipo_imovel":"residencial","urgency":"medium","qtd_pontos":10,"aterramento":true,"descricao":"Dez pontos na cozinha planejada com circuito dedicado para fogão.","observacoes":"Projeto da marcenaria já indica posição das tomadas.","data_preferida":"2026-06-19"}'::jsonb,
+      'OPEN', 'medium', 'complex',
+      array['cozinha planejada', 'instalação elétrica', 'reforma', 'residencial'],
+      array['Potência do fogão elétrico (220V ou 380V) não especificada'],
+      array['multimeter', 'wire_strippers', 'drill', 'level', 'insulated_screwdrivers']::text[],
+      array['cable_wire', 'outlets', 'breakers', 'junction_boxes', 'conduit', 'ground_wire']::text[],
+      '1_to_2_days'
+    ),
+    (
+      '8017e008-5a32-44e7-b8da-1727a14f4d08'::uuid,
+      '48e30f1d-3c47-441f-94c6-76b6ea0db472'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a63'::uuid,
+      'ccd13138-0d54-431f-a672-55903f313020'::uuid,
+      'Instalação de ar condicionado - 3 quartos',
+      'Instalação de três splits de 9.000 BTU nos quartos de solteiro, casal e escritório. Condomínio exige dreno coletivo na área de serviço e proíbe gotejamento na fachada. Não há pontos elétricos próximos em dois dos quartos. Busco execução em etapas se necessário, começando pelo quarto principal.',
+      '{"tipo_servico":"instalacao_nova","tipo_imovel":"residencial","urgency":"low","qtd_aparelhos":3,"capacidade_btu":"9000","ja_tem_ponto":false,"descricao":"Três splits 9 mil BTU com dreno coletivo conforme regras do condomínio.","observacoes":"Preferência por instalação sequencial em três dias.","data_preferida":"2026-07-10","horario_preferido":"flexivel"}'::jsonb,
+      'OPEN', 'low', 'complex',
+      array['ar condicionado', 'multi ambiente', 'condomínio', 'dreno coletivo'],
+      array['Trajeto completo do dreno coletivo até área de serviço não mapeado'],
+      array['vacuum_pump', 'manifold_gauges', 'drill', 'level', 'leak_detector']::text[],
+      array['line_set', 'refrigerant', 'cable_wire', 'breakers', 'condensate_pump']::text[],
+      '2_to_5_days'
+    ),
+    (
+      '8017e009-5a32-44e7-b8da-1727a14f4d09'::uuid,
+      '58e30f1d-3c47-441f-94c6-76b6ea0db473'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a62'::uuid,
+      'dcd13138-0d54-431f-a672-55903f313021'::uuid,
+      'Instalação elétrica - loja comercial',
+      'Adequação elétrica completa de loja de 45 m² em shopping: quinze pontos entre vitrine, caixa, estoque e provador, iluminação trifásica de destaque e aterramento. Instalação atual é provisória da construtora e não suporta carga dos equipamentos de climatização previstos. Prazo apertado para inauguração em 10 dias.',
+      '{"tipo_servico":"reforma","tipo_imovel":"comercial","urgency":"high","qtd_pontos":15,"aterramento":true,"descricao":"Adequação elétrica de loja comercial com 15 pontos e iluminação de vitrine.","observacoes":"Trabalho deve respeitar horário do shopping (após 22h).","data_preferida":"2026-06-11"}'::jsonb,
+      'OPEN', 'high', 'complex',
+      array['comercial', 'loja', 'shopping', 'urgente', 'iluminação'],
+      array['Projeto elétrico aprovado pelo shopping não anexado'],
+      array['multimeter', 'drill', 'wire_strippers', 'ladder', 'non_contact_voltage_tester']::text[],
+      array['cable_wire', 'breakers', 'panel_board', 'outlets', 'led_bulbs', 'conduit']::text[],
+      '2_to_5_days'
+    ),
+    (
+      '8017e00a-5a32-44e7-b8da-1727a14f4d0a'::uuid,
+      '68e30f1d-3c47-441f-94c6-76b6ea0db474'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a63'::uuid,
+      'ecd13138-0d54-431f-a672-55903f313022'::uuid,
+      'Instalação de ar condicionado - consultório',
+      'Instalação de dois splits de 12.000 BTU em consultório médico no Centro: sala de atendimento e sala de espera. Já existem pontos elétricos e infraestrutura parcial de tubulação de instalação anterior. Necessário higienizar linhas, testar vazamento e garantir nível sonoro baixo. Atendimento ocorre de segunda a sexta, 8h–18h.',
+      '{"tipo_servico":"instalacao_nova","tipo_imovel":"comercial","urgency":"medium","qtd_aparelhos":2,"capacidade_btu":"12000","ja_tem_ponto":true,"descricao":"Dois splits em consultório reutilizando infraestrutura parcial existente.","observacoes":"Evitar poeira excessiva durante expediente; preferir sábado.","data_preferida":"2026-06-21","horario_preferido":"manha"}'::jsonb,
+      'OPEN', 'medium', 'medium',
+      array['consultório', 'comercial', 'ar condicionado', 'clínica'],
+      array['Estado das linhas frigorígenas existentes desconhecido'],
+      array['vacuum_pump', 'manifold_gauges', 'leak_detector', 'drill', 'level']::text[],
+      array['line_set', 'refrigerant', 'filter', 'screws']::text[],
+      '1_day'
+    ),
+    (
+      '8017e010-5a32-44e7-b8da-1727a14f4d10'::uuid,
+      '38e30f1d-3c47-441f-94c6-76b6ea0db471'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a63'::uuid,
+      'bcd13138-0d54-431f-a672-55903f31301f'::uuid,
+      'Instalação de ar condicionado - manutenção e limpeza',
+      'Manutenção preventiva e limpeza completa de dois aparelhos split de 12.000 BTU instalados há três anos. Ambos apresentam queda de desempenho, mau cheiro ao ligar e gotejamento interno ocasional. Unidades estão em quartos separados, com acesso fácil. Desejo verificação de carga de gás e limpeza de bandeja e filtros.',
+      '{"tipo_servico":"manutencao","tipo_imovel":"residencial","urgency":"low","qtd_aparelhos":2,"ja_tem_ponto":true,"descricao":"Limpeza e manutenção de dois splits com queda de desempenho.","observacoes":"Aparelhos da marca Fujitsu, modelos de 2023.","data_preferida":"2026-07-08","horario_preferido":"tarde"}'::jsonb,
+      'OPEN', 'low', 'simple',
+      array['manutenção', 'limpeza', 'ar condicionado', 'preventiva'],
+      array['Histórico de última manutenção não informado'],
+      array['manifold_gauges', 'vacuum_pump', 'leak_detector', 'ladder']::text[],
+      array['filter', 'cleaning_solution', 'refrigerant']::text[],
+      '2_to_4h'
+    ),
+    (
+      '8017e011-5a32-44e7-b8da-1727a14f4d11'::uuid,
+      '48e30f1d-3c47-441f-94c6-76b6ea0db472'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a62'::uuid,
+      'ccd13138-0d54-431f-a672-55903f313020'::uuid,
+      'Instalação elétrica - chuveiro e tomadas banheiro',
+      'Substituição do circuito do chuveiro elétrico e instalação de três tomadas no banheiro social com proteção DR. Chuveiro atual de 5500W desarma o disjuntor geral com frequência. Fiação aparente precisa ser substituída por eletroduto e cabo dimensionado corretamente. Urgente pois banheiro é o único do andar.',
+      '{"tipo_servico":"manutencao","tipo_imovel":"residencial","urgency":"high","qtd_pontos":4,"aterramento":true,"descricao":"Circuito dedicado para chuveiro 5500W e três tomadas com DR no banheiro.","observacoes":"Disjuntor atual é de 40A geral compartilhado.","data_preferida":"2026-06-10"}'::jsonb,
+      'OPEN', 'high', 'medium',
+      array['urgente', 'chuveiro', 'banheiro', 'disjuntor', 'residencial'],
+      array['Bitola exata do cabo existente não verificada'],
+      array['multimeter', 'wire_strippers', 'drill', 'insulated_screwdrivers']::text[],
+      array['cable_wire', 'breakers', 'outlets', 'conduit', 'gfci_outlet']::text[],
+      '4_to_8h'
+    ),
+    (
+      '8017e012-5a32-44e7-b8da-1727a14f4d12'::uuid,
+      '58e30f1d-3c47-441f-94c6-76b6ea0db473'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a63'::uuid,
+      'dcd13138-0d54-431f-a672-55903f313021'::uuid,
+      'Instalação de ar condicionado - troca de aparelho',
+      'Troca de aparelho split antigo (provavelmente 9.000 BTU) por novo de 12.000 BTU na sala comercial. Manter tubulação e suportes existentes se estiverem em bom estado. Ponto elétrico 220V já disponível. Aparelho antigo funciona mas consome muito e não resfria adequadamente em dias quentes.',
+      '{"tipo_servico":"troca","tipo_imovel":"comercial","urgency":"medium","qtd_aparelhos":1,"capacidade_btu":"12000","ja_tem_ponto":true,"descricao":"Troca de split antigo por 12 mil BTU reutilizando infraestrutura.","observacoes":"Descarte do aparelho antigo incluído no orçamento se possível.","data_preferida":"2026-06-17","horario_preferido":"tarde"}'::jsonb,
+      'OPEN', 'medium', 'simple',
+      array['troca', 'ar condicionado', 'comercial', 'split'],
+      array['Compatibilidade das linhas existentes com novo BTU não confirmada'],
+      array['vacuum_pump', 'manifold_gauges', 'wrench_set', 'level']::text[],
+      array['line_set', 'refrigerant', 'screws']::text[],
+      '2_to_4h'
+    ),
+    (
+      '8017e013-5a32-44e7-b8da-1727a14f4d13'::uuid,
+      '68e30f1d-3c47-441f-94c6-76b6ea0db474'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a62'::uuid,
+      'ecd13138-0d54-431f-a672-55903f313022'::uuid,
+      'Instalação elétrica - garagem',
+      'Instalação de três pontos na garagem coberta: luminária LED central, tomada para aspirador/wallbox futuro e interruptor duplo na entrada. Imóvel não possui aterramento na área externa coberta. Garagem tem 18 m², teto em laje com conduíte parcialmente disponível.',
+      '{"tipo_servico":"nova","tipo_imovel":"residencial","urgency":"low","qtd_pontos":3,"aterramento":false,"descricao":"Três pontos na garagem coberta com luminária LED e tomada reserva.","observacoes":"Wallbox não será instalado agora; apenas preparar ponto.","data_preferida":"2026-07-15"}'::jsonb,
+      'OPEN', 'low', 'simple',
+      array['garagem', 'iluminação', 'tomada', 'residencial'],
+      array['Necessidade futura de wallbox pode exigir circuito dedicado maior'],
+      array['drill', 'wire_strippers', 'voltage_tester', 'ladder']::text[],
+      array['cable_wire', 'outlets', 'switches', 'led_bulbs', 'conduit']::text[],
+      '2_to_4h'
+    ),
+    (
+      '8017e014-5a32-44e7-b8da-1727a14f4d14'::uuid,
+      '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a63'::uuid,
+      'acd13138-0d54-431f-a672-55903f31301e'::uuid,
+      'Instalação de ar condicionado - quarto casal',
+      'Instalação de split inverter 12.000 BTU no quarto de casal com alta insolação no período da tarde. Parede externa disponível para unidade condensadora na varanda envidraçada. Não há ponto 220V — apenas tomada 127V existente que alimenta mesa de cabeceira. Preferência por aparelho silencioso (sleep mode).',
+      '{"tipo_servico":"instalacao_nova","tipo_imovel":"residencial","urgency":"medium","qtd_aparelhos":1,"capacidade_btu":"12000","ja_tem_ponto":false,"descricao":"Split 12 mil BTU no quarto casal com ponto 220V novo.","observacoes":"Varanda envidraçada; verificar ventilação da condensadora.","data_preferida":"2026-06-28","horario_preferido":"manha"}'::jsonb,
+      'OPEN', 'medium', 'medium',
+      array['quarto', 'ar condicionado', 'inverter', 'residencial'],
+      array['Marca preferida do aparelho ainda em definição'],
+      array['vacuum_pump', 'manifold_gauges', 'drill', 'level']::text[],
+      array['line_set', 'refrigerant', 'cable_wire', 'breakers']::text[],
+      '4_to_8h'
+    ),
+    (
+      '8017e015-5a32-44e7-b8da-1727a14f4d15'::uuid,
+      '38e30f1d-3c47-441f-94c6-76b6ea0db471'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a62'::uuid,
+      'bcd13138-0d54-431f-a672-55903f31301f'::uuid,
+      'Instalação elétrica - varanda gourmet',
+      'Instalação de cinco pontos na varanda gourmet coberta: churrasqueira elétrica, geladeira compacta, iluminação, tomada para som ambiente e ponto reserva. Ambiente semiaberto exige tomadas e interruptores com grau de proteção IP. Aterramento obrigatório. Churrasqueira elétrica de 3.000W já comprada.',
+      '{"tipo_servico":"nova","tipo_imovel":"residencial","urgency":"medium","qtd_pontos":5,"aterramento":true,"descricao":"Cinco pontos na varanda gourmet com proteção IP e circuito para churrasqueira.","observacoes":"Piso porcelanato; cuidado com furação.","data_preferida":"2026-06-24"}'::jsonb,
+      'OPEN', 'medium', 'medium',
+      array['varanda gourmet', 'exterior', 'churrasqueira elétrica', 'residencial'],
+      array['Modelo exato da churrasqueira elétrica não informado no pedido original'],
+      array['drill', 'voltage_tester', 'wire_strippers', 'level', 'insulated_screwdrivers']::text[],
+      array['cable_wire', 'outlets', 'breakers', 'ground_wire', 'junction_boxes']::text[],
+      '4_to_8h'
+    ),
+    (
+      '8017e016-5a32-44e7-b8da-1727a14f4d16'::uuid,
+      '48e30f1d-3c47-441f-94c6-76b6ea0db472'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a63'::uuid,
+      'ccd13138-0d54-431f-a672-55903f313020'::uuid,
+      'Instalação de ar condicionado - sala e quarto',
+      'Instalação de dois aparelhos em apartamento recém-reformado: split 18.000 BTU na sala (28 m²) e 9.000 BTU no quarto. Obra de gesso já executada — necessário planejamento cuidadoso da passagem de tubulação. Sem pontos elétricos dedicados. Preferência por condensadoras agrupadas na varanda técnica.',
+      '{"tipo_servico":"instalacao_nova","tipo_imovel":"residencial","urgency":"medium","qtd_aparelhos":2,"capacidade_btu":"18000","ja_tem_ponto":false,"descricao":"Dois splits (sala 18k + quarto 9k) com condensadoras na varanda técnica.","observacoes":"Gesso novo; minimizar quebras.","data_preferida":"2026-07-01","horario_preferido":"flexivel"}'::jsonb,
+      'OPEN', 'medium', 'complex',
+      array['multi split', 'reforma', 'sala e quarto', 'residencial'],
+      array['Capacidade da varanda técnica para duas condensadoras não medida'],
+      array['vacuum_pump', 'manifold_gauges', 'drill', 'level', 'leak_detector']::text[],
+      array['line_set', 'refrigerant', 'cable_wire', 'breakers', 'condensate_pump']::text[],
+      '1_to_2_days'
+    ),
+    (
+      '8017e017-5a32-44e7-b8da-1727a14f4d17'::uuid,
+      '58e30f1d-3c47-441f-94c6-76b6ea0db473'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a62'::uuid,
+      'dcd13138-0d54-431f-a672-55903f313021'::uuid,
+      'Instalação elétrica - sala de servidores',
+      'Instalação de oito pontos dedicados com aterramento em sala climatizada para rack de servidores: dois circuitos independentes, tomadas duplas por baia e ponto para PDU. Ambiente comercial com piso elevado. Exige bitola adequada e identificação de circuitos. Projeto deve considerar UPS de 3 kVA já instalado.',
+      '{"tipo_servico":"nova","tipo_imovel":"comercial","urgency":"high","qtd_pontos":8,"aterramento":true,"descricao":"Oito pontos dedicados para rack com dois circuitos independentes e aterramento.","observacoes":"Acesso ao rack apenas com autorização; agendar com TI.","data_preferida":"2026-06-13"}'::jsonb,
+      'OPEN', 'high', 'complex',
+      array['servidor', 'rack', 'comercial', 'TI', 'urgente'],
+      array['Diagrama unifilar da sala não disponível'],
+      array['multimeter', 'cable_tester', 'insulated_screwdrivers', 'label_maker', 'drill']::text[],
+      array['cable_wire', 'outlets', 'breakers', 'panel_board', 'ground_wire', 'surge_protector']::text[],
+      '1_day'
+    ),
+    (
+      '8017e018-5a32-44e7-b8da-1727a14f4d18'::uuid,
+      '68e30f1d-3c47-441f-94c6-76b6ea0db474'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a63'::uuid,
+      'ecd13138-0d54-431f-a672-55903f313022'::uuid,
+      'Instalação de ar condicionado - cancelado',
+      'Instalação de split 9.000 BTU no quarto de solteiro. Cliente desistiu após receber estimativa de necessidade de obra elétrica adicional. Pedido mantido no seed apenas para testar status cancelado. Imóvel térreo, parede externa disponível, sem ponto elétrico dedicado.',
+      '{"tipo_servico":"instalacao_nova","tipo_imovel":"residencial","urgency":"low","qtd_aparelhos":1,"capacidade_btu":"9000","ja_tem_ponto":false,"descricao":"Split 9 mil BTU em quarto de solteiro — pedido cancelado pelo cliente.","observacoes":"Cancelado por custo adicional de ponto elétrico.","data_preferida":"2026-07-20","horario_preferido":"flexivel"}'::jsonb,
+      'OPEN', 'low', 'simple',
+      array['cancelado', 'ar condicionado', 'residencial'],
+      array['Cliente não confirmou se retomará o serviço no futuro'],
+      array['vacuum_pump', 'manifold_gauges', 'drill']::text[],
+      array['line_set', 'refrigerant', 'cable_wire']::text[],
+      '4_to_8h'
+    )
+) as d(
+  id, client_id, service_id, address_id, title, description, form_data,
+  status, urgency, scope_complexity, tags, missing_info_warnings,
+  suggested_equipment, suggested_materials, estimated_duration_hint
 )
+join public.platform_services ps on ps.id = d.service_id
+join public.platform_forms pf on pf.id = ps.form_id
 on conflict (id) do nothing;
+
+-- 11b) service_request photos (storage paths in bucket service-requests)
+--      Files are uploaded by: yarn seed:dev-images (see supabase/scripts/seed-dev-images.manifest.mjs)
+update public.service_requests
+set photos = array[
+  '28e30f1d-3c47-441f-94c6-76b6ea0db470/1719000001_0.jpg',
+  '28e30f1d-3c47-441f-94c6-76b6ea0db470/1719000001_1.jpg'
+]::text[]
+where id = '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid;
+
+update public.service_requests
+set photos = array[
+  '28e30f1d-3c47-441f-94c6-76b6ea0db470/1719000101_0.jpg',
+  '28e30f1d-3c47-441f-94c6-76b6ea0db470/1719000101_1.jpg'
+]::text[]
+where id = '8017e001-5a32-44e7-b8da-1727a14f4d01'::uuid;
+
+update public.service_requests
+set photos = array[
+  '38e30f1d-3c47-441f-94c6-76b6ea0db471/1719000201_0.jpg',
+  '38e30f1d-3c47-441f-94c6-76b6ea0db471/1719000201_1.jpg',
+  '38e30f1d-3c47-441f-94c6-76b6ea0db471/1719000201_2.jpg'
+]::text[]
+where id = '8017e002-5a32-44e7-b8da-1727a14f4d02'::uuid;
+
+update public.service_requests
+set photos = array['48e30f1d-3c47-441f-94c6-76b6ea0db472/1719000301_0.jpg']::text[]
+where id = '8017e003-5a32-44e7-b8da-1727a14f4d03'::uuid;
+
+update public.service_requests
+set photos = array[
+  '58e30f1d-3c47-441f-94c6-76b6ea0db473/1719000401_0.jpg',
+  '58e30f1d-3c47-441f-94c6-76b6ea0db473/1719000401_1.jpg'
+]::text[]
+where id = '8017e004-5a32-44e7-b8da-1727a14f4d04'::uuid;
+
+update public.service_requests
+set photos = array[
+  '68e30f1d-3c47-441f-94c6-76b6ea0db474/1719000501_0.jpg',
+  '68e30f1d-3c47-441f-94c6-76b6ea0db474/1719000501_1.jpg'
+]::text[]
+where id = '8017e005-5a32-44e7-b8da-1727a14f4d05'::uuid;
+
+update public.service_requests
+set photos = array['28e30f1d-3c47-441f-94c6-76b6ea0db470/1719000601_0.jpg']::text[]
+where id = '8017e006-5a32-44e7-b8da-1727a14f4d06'::uuid;
+
+update public.service_requests
+set photos = array[
+  '38e30f1d-3c47-441f-94c6-76b6ea0db471/1719000701_0.jpg',
+  '38e30f1d-3c47-441f-94c6-76b6ea0db471/1719000701_1.jpg'
+]::text[]
+where id = '8017e007-5a32-44e7-b8da-1727a14f4d07'::uuid;
+
+update public.service_requests
+set photos = array[
+  '58e30f1d-3c47-441f-94c6-76b6ea0db473/1719000901_0.jpg',
+  '58e30f1d-3c47-441f-94c6-76b6ea0db473/1719000901_1.jpg'
+]::text[]
+where id = '8017e009-5a32-44e7-b8da-1727a14f4d09'::uuid;
+
+update public.service_requests
+set photos = array[
+  '28e30f1d-3c47-441f-94c6-76b6ea0db470/1719001401_0.jpg',
+  '28e30f1d-3c47-441f-94c6-76b6ea0db470/1719001401_1.jpg'
+]::text[]
+where id = '8017e014-5a32-44e7-b8da-1727a14f4d14'::uuid;
+
+-- 12) Negotiation flows via RPCs (chats, messages, proposals)
+create or replace function pg_temp.seed_set_auth(p_user_id uuid)
+returns void
+language plpgsql
+as $$
+begin
+  perform set_config('request.jwt.claim.sub', p_user_id::text, true);
+  perform set_config(
+    'request.jwt.claims',
+    json_build_object('role', 'authenticated', 'sub', p_user_id::text)::text,
+    true
+  );
+end;
+$$;
+
+create or replace function pg_temp.seed_msg_key(p_scenario int, p_index int)
+returns uuid
+language sql
+immutable
+as $$
+  select (
+    lpad((90000000 + p_scenario)::text, 8, '0') || '-0001-4001-8001-' ||
+    lpad((p_scenario * 100 + p_index)::text, 12, '0')
+  )::uuid;
+$$;
+
+create or replace function pg_temp.seed_flow_key(p_scenario int, p_suffix int)
+returns uuid
+language sql
+immutable
+as $$
+  select (
+    lpad((91000000 + p_scenario)::text, 8, '0') || '-0001-4001-8001-' ||
+    lpad((p_scenario * 100 + p_suffix)::text, 12, '0')
+  )::uuid;
+$$;
+
+create or replace function pg_temp.seed_chat_prelude(
+  p_sr_id uuid,
+  p_client_id uuid,
+  p_provider_id uuid,
+  p_scenario int
+)
+returns uuid
+language plpgsql
+as $$
+declare
+  v_chat_id uuid;
+  v_response jsonb;
+  v_provider_msgs text[] := array[
+    'Olá! Vi seu pedido e posso ajudar.',
+    'Qual o melhor horário para uma visita técnica?',
+    'Preciso confirmar se há espaço no quadro elétrico.',
+    'Consigo levar material básico no dia do serviço.',
+    'Posso enviar o orçamento detalhado em seguida.'
+  ];
+  v_client_msgs text[] := array[
+    'Oi! Obrigado pelo retorno.',
+    'Prefiro horário de manhã, se possível.',
+    'Sim, o quadro foi reformado há 2 anos.',
+    'Pode incluir material no orçamento.',
+    'Aguardo a proposta formal, por favor.'
+  ];
+  i int;
+begin
+  perform pg_temp.seed_set_auth(p_provider_id);
+  v_response := public.cns_send_message(
+    'TEXT'::public.cns_message_type,
+    pg_temp.seed_msg_key(p_scenario, 1),
+    jsonb_build_object('text', v_provider_msgs[1]),
+    null,
+    p_sr_id
+  );
+  v_chat_id := (v_response->'conversation'->>'id')::uuid;
+
+  for i in 1..4 loop
+    perform pg_temp.seed_set_auth(p_client_id);
+    perform public.cns_send_message(
+      'TEXT'::public.cns_message_type,
+      pg_temp.seed_msg_key(p_scenario, i * 2),
+      jsonb_build_object('text', v_client_msgs[i]),
+      v_chat_id,
+      null
+    );
+
+    perform pg_temp.seed_set_auth(p_provider_id);
+    perform public.cns_send_message(
+      'TEXT'::public.cns_message_type,
+      pg_temp.seed_msg_key(p_scenario, i * 2 + 1),
+      jsonb_build_object('text', v_provider_msgs[i + 1]),
+      v_chat_id,
+      null
+    );
+  end loop;
+
+  perform pg_temp.seed_set_auth(p_client_id);
+  perform public.cns_send_message(
+    'TEXT'::public.cns_message_type,
+    pg_temp.seed_msg_key(p_scenario, 10),
+    jsonb_build_object('text', v_client_msgs[5]),
+    v_chat_id,
+    null
+  );
+
+  return v_chat_id;
+end;
+$$;
+
+create or replace function pg_temp.seed_create_proposal(
+  p_sr_id uuid,
+  p_provider_id uuid,
+  p_amount numeric,
+  p_idempotency_key uuid,
+  p_description text default 'Proposta conforme alinhado no chat.'
+)
+returns jsonb
+language plpgsql
+as $$
+declare
+  v_response jsonb;
+begin
+  perform pg_temp.seed_set_auth(p_provider_id);
+
+  with pricing as (
+    select *
+    from public.calculate_provider_service_pricing(p_amount)
+  )
+  select public.create_provider_proposal(
+    p_sr_id,
+    p_idempotency_key,
+    pricing.original_amount,
+    p_description,
+    2,
+    'hours',
+    jsonb_build_array(
+      jsonb_build_object(
+        'start_date', (current_date + 2)::text,
+        'shift', 'morning'
+      )
+    ),
+    '{}'::text[],
+    pricing.tax_rate,
+    pricing.tax_amount,
+    pricing.final_amount,
+    pricing.pricing_signature
+  )
+  into v_response
+  from pricing;
+
+  return v_response;
+end;
+$$;
+
+do $seed_negotiations$
+declare
+  v_provider_id uuid := '5d09e025-20a2-4842-aeef-324d42a431e1';
+  v_client_id uuid := '28e30f1d-3c47-441f-94c6-76b6ea0db470';
+  v_chat_id uuid;
+  v_proposal jsonb;
+  v_proposal_id uuid;
+begin
+  -- 1) Proposal rejected by client (8017e001)
+  v_chat_id := pg_temp.seed_chat_prelude(
+    '8017e001-5a32-44e7-b8da-1727a14f4d01'::uuid,
+    v_client_id,
+    v_provider_id,
+    1
+  );
+  v_proposal := pg_temp.seed_create_proposal(
+    '8017e001-5a32-44e7-b8da-1727a14f4d01'::uuid,
+    v_provider_id,
+    450.00,
+    pg_temp.seed_flow_key(1, 1)
+  );
+  perform pg_temp.seed_set_auth(v_client_id);
+  perform public.reject_proposal(
+    (v_proposal->'proposal'->>'id')::uuid,
+    pg_temp.seed_flow_key(1, 2),
+    'Valor acima do orçamento disponível.'
+  );
+
+  -- 2) Proposal accepted by client (8017e002)
+  v_client_id := '38e30f1d-3c47-441f-94c6-76b6ea0db471';
+  v_chat_id := pg_temp.seed_chat_prelude(
+    '8017e002-5a32-44e7-b8da-1727a14f4d02'::uuid,
+    v_client_id,
+    v_provider_id,
+    2
+  );
+  v_proposal := pg_temp.seed_create_proposal(
+    '8017e002-5a32-44e7-b8da-1727a14f4d02'::uuid,
+    v_provider_id,
+    890.00,
+    pg_temp.seed_flow_key(2, 1)
+  );
+  perform pg_temp.seed_set_auth(v_client_id);
+  perform public.accept_proposal(
+    (v_proposal->'proposal'->>'id')::uuid,
+    jsonb_build_object(
+      'start_date', (current_date + 2)::text,
+      'shift', 'morning'
+    ),
+    pg_temp.seed_flow_key(2, 2)
+  );
+
+  -- 3) Proposal pending client response (8017e003)
+  v_client_id := '48e30f1d-3c47-441f-94c6-76b6ea0db472';
+  v_chat_id := pg_temp.seed_chat_prelude(
+    '8017e003-5a32-44e7-b8da-1727a14f4d03'::uuid,
+    v_client_id,
+    v_provider_id,
+    3
+  );
+  perform pg_temp.seed_create_proposal(
+    '8017e003-5a32-44e7-b8da-1727a14f4d03'::uuid,
+    v_provider_id,
+    620.00,
+    pg_temp.seed_flow_key(3, 1)
+  );
+
+  -- 4) Revision requested by client (8017e004)
+  v_client_id := '58e30f1d-3c47-441f-94c6-76b6ea0db473';
+  v_chat_id := pg_temp.seed_chat_prelude(
+    '8017e004-5a32-44e7-b8da-1727a14f4d04'::uuid,
+    v_client_id,
+    v_provider_id,
+    4
+  );
+  v_proposal := pg_temp.seed_create_proposal(
+    '8017e004-5a32-44e7-b8da-1727a14f4d04'::uuid,
+    v_provider_id,
+    1250.00,
+    pg_temp.seed_flow_key(4, 1)
+  );
+  perform pg_temp.seed_set_auth(v_client_id);
+  perform public.request_proposal_revision(
+    (v_proposal->'proposal'->>'id')::uuid,
+    pg_temp.seed_flow_key(4, 2),
+    'REDUCE_SCOPE'::public.proposal_revision_reason,
+    'Por favor, remover instalação do rack e manter apenas o split.'
+  );
+
+  -- 5) Revised proposal after client revision request (8017e005)
+  v_client_id := '68e30f1d-3c47-441f-94c6-76b6ea0db474';
+  v_chat_id := pg_temp.seed_chat_prelude(
+    '8017e005-5a32-44e7-b8da-1727a14f4d05'::uuid,
+    v_client_id,
+    v_provider_id,
+    5
+  );
+  v_proposal := pg_temp.seed_create_proposal(
+    '8017e005-5a32-44e7-b8da-1727a14f4d05'::uuid,
+    v_provider_id,
+    780.00,
+    pg_temp.seed_flow_key(5, 1)
+  );
+  perform pg_temp.seed_set_auth(v_client_id);
+  perform public.request_proposal_revision(
+    (v_proposal->'proposal'->>'id')::uuid,
+    pg_temp.seed_flow_key(5, 2),
+    'PRICE_TOO_HIGH'::public.proposal_revision_reason,
+    'Consegue reduzir o valor incluindo apenas material básico?'
+  );
+  perform pg_temp.seed_create_proposal(
+    '8017e005-5a32-44e7-b8da-1727a14f4d05'::uuid,
+    v_provider_id,
+    690.00,
+    pg_temp.seed_flow_key(5, 3),
+    'Proposta revisada com escopo reduzido e material básico.'
+  );
+
+  -- 6-10) Discovery chats without proposals yet
+  perform pg_temp.seed_chat_prelude(
+    '8017e006-5a32-44e7-b8da-1727a14f4d06'::uuid,
+    '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
+    v_provider_id,
+    6
+  );
+  perform pg_temp.seed_chat_prelude(
+    '8017e007-5a32-44e7-b8da-1727a14f4d07'::uuid,
+    '38e30f1d-3c47-441f-94c6-76b6ea0db471'::uuid,
+    v_provider_id,
+    7
+  );
+  perform pg_temp.seed_chat_prelude(
+    '8017e008-5a32-44e7-b8da-1727a14f4d08'::uuid,
+    '48e30f1d-3c47-441f-94c6-76b6ea0db472'::uuid,
+    v_provider_id,
+    8
+  );
+  perform pg_temp.seed_chat_prelude(
+    '8017e009-5a32-44e7-b8da-1727a14f4d09'::uuid,
+    '58e30f1d-3c47-441f-94c6-76b6ea0db473'::uuid,
+    v_provider_id,
+    9
+  );
+  perform pg_temp.seed_chat_prelude(
+    '8017e00a-5a32-44e7-b8da-1727a14f4d0a'::uuid,
+    '68e30f1d-3c47-441f-94c6-76b6ea0db474'::uuid,
+    v_provider_id,
+    10
+  );
+
+  -- Cancel one service request by the client (8017e018)
+  perform pg_temp.seed_set_auth('68e30f1d-3c47-441f-94c6-76b6ea0db474'::uuid);
+  perform public.cancel_service_request(
+    '8017e018-5a32-44e7-b8da-1727a14f4d18'::uuid,
+    pg_temp.seed_flow_key(18, 1)
+  );
+end;
+$seed_negotiations$;
 
 -- Message Dispatcher templates
 insert into message_dispatcher.message_templates (
