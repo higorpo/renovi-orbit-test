@@ -80,7 +80,6 @@ Coisas para terminar do fluxo atual de trabalho:
 
 Coisas para fazer next
 -renomear tabela de provider_proposals
--ao recusar a proposta, o chat tem que ser encerrado também
 -refazer card da tela de meus serviços do cliente
 -[avaliar]simplificar query de get_service_list  (hoje ele tá trazendo um monte de dados que nem vai ser exibido no card)
 -fluxo de prestador recusar revisão de proposta
