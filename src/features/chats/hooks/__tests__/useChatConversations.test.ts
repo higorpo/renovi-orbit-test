@@ -76,6 +76,21 @@ describe("useChatConversations", () => {
     expect(listConversationsMock).toHaveBeenCalledWith({
       pageSize: 20,
       cursor: null,
+      serviceRequestId: null,
+    });
+  });
+
+  it("forwards service request filter to listConversations", async () => {
+    const { result } = renderHook(
+      () => useChatConversations({ serviceRequestId: "sr-1" }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(listConversationsMock).toHaveBeenCalledWith({
+      pageSize: 20,
+      cursor: null,
+      serviceRequestId: "sr-1",
     });
   });
 });

@@ -20,6 +20,8 @@ export interface ServiceChatSummary {
   isUnread: boolean;
   lastInteractionAt: string;
   lastMessagePreview: string | null;
+  /** Latest active chat provider name (client list; not the only chat on the SR). */
+  providerDisplayName?: string | null;
 }
 
 export interface AddressSummary {
@@ -80,6 +82,12 @@ export interface ServiceModel {
   photoPaths: string[];
   proposalCount: number;
   hasPendingProposal: boolean;
+  /** PENDING proposals awaiting client decision (client list). */
+  pendingProposalCount: number;
+  /** Active chats on this service request (client list). */
+  activeChatCount: number;
+  /** Chats with unread inbound messages (client list). */
+  unreadChatCount: number;
   counterpartyName: string | null;
   counterparty: CounterpartySummary | null;
   contracted: ContractedServiceSummary | null;

@@ -4,9 +4,12 @@ export type ServiceDetailReturnTo =
   | "/dashboard/jobs"
   | "/dashboard/services";
 
+export type MyServicesViewerRole = "client" | "provider";
+
 export interface ServiceDetailLocationState {
   serviceDetailPresentation?: "sheet";
   returnTo?: ServiceDetailReturnTo;
+  myServicesRole?: MyServicesViewerRole;
   /** Route to keep rendered behind the sheet (modal routing). */
   background?: Location;
 }
@@ -27,6 +30,18 @@ export function createProviderMyServicesServiceDetailState(
   return {
     serviceDetailPresentation: "sheet",
     returnTo: "/dashboard/services",
+    myServicesRole: "provider",
+    background,
+  };
+}
+
+export function createClientMyServicesServiceDetailState(
+  background: Location,
+): ServiceDetailLocationState {
+  return {
+    serviceDetailPresentation: "sheet",
+    returnTo: "/dashboard/services",
+    myServicesRole: "client",
     background,
   };
 }

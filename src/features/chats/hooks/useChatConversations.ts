@@ -7,16 +7,22 @@ import type { ConversationListCursor, ConversationListItem } from "../types/chat
 const PAGE_SIZE = 20;
 const STALE_TIME_MS = 30_000;
 
-export function useChatConversations(options?: { enabled?: boolean; pageSize?: number }) {
+export function useChatConversations(options?: {
+  enabled?: boolean;
+  pageSize?: number;
+  serviceRequestId?: string | null;
+}) {
   const pageSize = options?.pageSize ?? PAGE_SIZE;
+  const serviceRequestId = options?.serviceRequestId ?? null;
 
   const query = useInfiniteQuery({
-    queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY, pageSize],
+    queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY, pageSize, serviceRequestId],
     queryFn: async ({ pageParam }) => {
       const cursor = pageParam as ConversationListCursor | null;
       const result = await listConversations({
         pageSize,
         cursor,
+        serviceRequestId,
       });
 
       if (result.error || !result.data) {

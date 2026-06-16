@@ -73,7 +73,11 @@ export interface RpcServiceNegotiation {
     is_unread?: boolean;
     last_interaction_at?: string;
     last_message_preview?: string | null;
+    provider_display_name?: string | null;
   } | null;
+  pending_proposal_count?: number;
+  chat_count?: number;
+  unread_chat_count?: number;
 }
 
 export interface RpcContractedProvider {
@@ -210,6 +214,7 @@ function mapChatSummary(
     isUnread: raw.is_unread ?? false,
     lastInteractionAt: raw.last_interaction_at ?? "",
     lastMessagePreview: raw.last_message_preview?.trim() || null,
+    providerDisplayName: raw.provider_display_name?.trim() || null,
   };
 }
 
@@ -242,6 +247,9 @@ export function mapRpcServiceRow(row: RpcServiceRow): ServiceModel {
     photoPaths: Array.isArray(request.photos) ? request.photos : [],
     proposalCount: negotiation.proposal_count ?? 0,
     hasPendingProposal: negotiation.has_pending_proposal ?? false,
+    pendingProposalCount: negotiation.pending_proposal_count ?? 0,
+    activeChatCount: negotiation.chat_count ?? 0,
+    unreadChatCount: negotiation.unread_chat_count ?? 0,
     counterpartyName: counterparty?.displayName ?? contracted?.provider?.displayName ?? null,
     counterparty,
     contracted,

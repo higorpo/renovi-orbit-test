@@ -69,6 +69,12 @@ export { ChatListItem, type ChatListItemProps } from "./components/ChatListItem/
 export { ChatListItemSkeleton } from "./components/ChatListItem/ChatListItemSkeleton";
 export { ChatListPage, type ChatListPageProps } from "./components/ChatListPage/ChatListPage";
 export { useChatConversations } from "./hooks/useChatConversations";
+export { useChatListServiceRequestFilter } from "./hooks/useChatListServiceRequestFilter";
+export {
+  ROUTE_CHATS_LIST,
+  CHAT_SERVICE_REQUEST_FILTER_QUERY,
+  getChatsPageUrlWithServiceRequestFilter,
+} from "./constants/routes";
 export { ChatsLayout } from "./components/ChatsLayout/ChatsLayout";
 export { ChatsConversationRoute } from "./components/ChatsLayout/ChatsConversationRoute";
 export { ChatScreen, type ChatScreenProps } from "./components/ChatScreen/ChatScreen";

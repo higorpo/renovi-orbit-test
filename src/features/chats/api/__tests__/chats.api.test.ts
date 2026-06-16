@@ -50,6 +50,20 @@ describe("listConversations", () => {
       p_page_size: 10,
       p_cursor_last_interaction_at: null,
       p_cursor_id: null,
+      p_service_request_id: null,
+    });
+  });
+
+  it("passes service request filter when provided", async () => {
+    const payload = { items: [], has_more: false, next_cursor: null };
+    rpcMock.mockResolvedValue({ data: payload, error: null });
+
+    await listConversations({ pageSize: 10, serviceRequestId: "sr-1" });
+    expect(rpcMock).toHaveBeenCalledWith("list_conversations", {
+      p_page_size: 10,
+      p_cursor_last_interaction_at: null,
+      p_cursor_id: null,
+      p_service_request_id: "sr-1",
     });
   });
 

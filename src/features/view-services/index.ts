@@ -31,8 +31,10 @@ export { ROUTE_SERVICE_DETAIL, getServiceDetailPath } from "./constants/routes";
 export {
   createProviderJobsServiceDetailState,
   createProviderMyServicesServiceDetailState,
+  createClientMyServicesServiceDetailState,
   type ServiceDetailLocationState,
   type ServiceDetailReturnTo,
+  type MyServicesViewerRole,
 } from "./types/serviceDetailNavigation.types";
 export { getUrgencyConfig } from "./constants/serviceDetail.constants";
 export {

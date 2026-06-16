@@ -1,12 +1,14 @@
 import { MessageSquare } from "lucide-react";
 import { useCallback } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth";
 import { cn } from "@/lib/utils";
 import { useChatConversations } from "../../hooks/useChatConversations";
+import { useChatListServiceRequestFilter } from "../../hooks/useChatListServiceRequestFilter";
 import { ChatListItem } from "../ChatListItem/ChatListItem";
 import { ChatListItemSkeleton } from "../ChatListItem/ChatListItemSkeleton";
+import { ChatListServiceRequestFilterBanner } from "./ChatListServiceRequestFilterBanner";
 
 export interface ChatListPageProps {
   selectedChatId?: string | null;
@@ -20,7 +22,9 @@ export function ChatListPage({
   className,
 }: ChatListPageProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { profile } = useAuth();
+  const { serviceRequestId, clearFilter } = useChatListServiceRequestFilter();
   const subtitle =
     profile?.role === "provider"
       ? "Suas negociações com clientes"
@@ -34,7 +38,7 @@ export function ChatListPage({
     isFetchingNextPage,
     fetchNextPage,
     refetch,
-  } = useChatConversations();
+  } = useChatConversations({ serviceRequestId });
 
   const handleSelect = useCallback(
     (chatId: string) => {
@@ -42,9 +46,9 @@ export function ChatListPage({
         onSelectConversation(chatId);
         return;
       }
-      void navigate(`/dashboard/chats/${chatId}`);
+      void navigate(`/dashboard/chats/${chatId}${location.search}`);
     },
-    [navigate, onSelectConversation],
+    [location.search, navigate, onSelectConversation],
   );
 
   return (
@@ -66,6 +70,13 @@ export function ChatListPage({
           </p>
         </div>
       </header>
+
+      {serviceRequestId ? (
+        <ChatListServiceRequestFilterBanner
+          serviceRequestId={serviceRequestId}
+          onClearFilter={clearFilter}
+        />
+      ) : null}
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-3 py-3">
         {isLoading ? (
@@ -95,9 +106,13 @@ export function ChatListPage({
               <MessageSquare className="h-6 w-6 text-muted-foreground" aria-hidden />
             </div>
             <div className="space-y-1">
-              <p className="text-sm font-medium text-foreground">Nenhuma conversa ainda</p>
+              <p className="text-sm font-medium text-foreground">
+                {serviceRequestId ? "Nenhuma conversa para este pedido" : "Nenhuma conversa ainda"}
+              </p>
               <p className="text-sm text-muted-foreground">
-                Quando você iniciar uma negociação, ela aparecerá aqui.
+                {serviceRequestId
+                  ? "Quando prestadores iniciarem uma negociação neste pedido, as conversas aparecerão aqui."
+                  : "Quando você iniciar uma negociação, ela aparecerá aqui."}
               </p>
             </div>
           </div>

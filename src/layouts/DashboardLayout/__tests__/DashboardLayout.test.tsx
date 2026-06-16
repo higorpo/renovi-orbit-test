@@ -17,6 +17,7 @@ vi.mock("@/features/provider-jobs", () => ({
 
 vi.mock("@/features/my-services", () => ({
   ProviderMyServicesPersistentSlot: () => null,
+  ClientMyServicesPersistentSlot: () => null,
 }));
 
 vi.mock("@/features/view-services", () => ({
@@ -25,6 +26,7 @@ vi.mock("@/features/view-services", () => ({
     isOpen: false,
     isFromProviderJobs: false,
     isFromProviderMyServices: false,
+    isFromClientMyServices: false,
     serviceRequestId: undefined,
     background: null,
   }),

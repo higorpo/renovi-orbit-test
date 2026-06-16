@@ -109,12 +109,22 @@ describe("useClientMyServicesPage", () => {
     act(() => {
       result.current.handleOpenDetails(openModel);
     });
-    expect(mockNavigate).toHaveBeenCalledWith("/dashboard/services/sr-open");
+    expect(mockNavigate).toHaveBeenCalledWith("/dashboard/services/sr-open", {
+      state: expect.objectContaining({
+        serviceDetailPresentation: "sheet",
+        returnTo: "/dashboard/services",
+        myServicesRole: "client",
+      }),
+    });
 
     act(() => {
       result.current.handleOpenDetails({ ...openModel, id: "sr-done", listPhase: "completed" });
     });
-    expect(mockNavigate).toHaveBeenCalledWith("/dashboard/services/sr-done");
+    expect(mockNavigate).toHaveBeenCalledWith("/dashboard/services/sr-done", {
+      state: expect.objectContaining({
+        myServicesRole: "client",
+      }),
+    });
   });
 
   it("syncs status tab from focused request status", async () => {

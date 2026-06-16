@@ -1,7 +1,7 @@
 import { ReceivedBudgetDetailsSheet } from "@/features/negotiation-proposals";
-import { ServiceListCard } from "@/features/view-services";
 import { ClientMyServicesHeader } from "./ClientMyServicesHeader";
 import { ClientMyServicesEmptyState } from "./ClientMyServicesEmptyState";
+import { ClientServiceListCard } from "./ClientServiceListCard";
 import { MyServicesFocusBanner } from "../shared/MyServicesFocusBanner";
 import { MyServicesPageShell } from "../MyServicesPageShell";
 import { useClientMyServicesPage } from "../../hooks/useClientMyServicesPage";
@@ -41,6 +41,8 @@ export function ClientMyServicesPage() {
     handleClearFilters,
     handleOpenBudgets,
     handleOpenDetails,
+    handleOpenMessages,
+    handleOpenChat,
   } = useClientMyServicesPage();
 
   return (
@@ -80,13 +82,14 @@ export function ClientMyServicesPage() {
         onClearFilters={handleClearFilters}
         onLoadMore={() => void fetchNextPage()}
         renderCard={(model) => (
-          <ServiceListCard
+          <ClientServiceListCard
             model={model}
             onCancel={cancelServiceRequest}
             onOpenBudgets={handleOpenBudgets}
             onOpenDetails={handleOpenDetails}
+            onOpenMessages={handleOpenMessages}
+            onOpenChat={handleOpenChat}
             isCancelling={isCancelling}
-            showCancelAction
           />
         )}
         footer={

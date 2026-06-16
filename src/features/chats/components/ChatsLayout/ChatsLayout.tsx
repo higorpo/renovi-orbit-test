@@ -1,5 +1,5 @@
 import { MessageSquare } from "lucide-react";
-import { Outlet, useNavigate, useParams } from "react-router";
+import { Outlet, useLocation, useNavigate, useParams } from "react-router";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useMobileDialogViewport } from "@/hooks/useMobileDialogViewport";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,7 @@ import { ChatListPage } from "../ChatListPage/ChatListPage";
 export function ChatsLayout() {
   const { chatId } = useParams<{ chatId?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const isOnline = useOnlineStatus();
 
   const showListOnMobile = !chatId;
@@ -32,7 +33,9 @@ export function ChatsLayout() {
         >
           <ChatListPage
             selectedChatId={chatId ?? null}
-            onSelectConversation={(id) => void navigate(`/dashboard/chats/${id}`)}
+            onSelectConversation={(id) =>
+              void navigate(`/dashboard/chats/${id}${location.search}`)
+            }
             className="h-full min-h-0"
           />
         </div>

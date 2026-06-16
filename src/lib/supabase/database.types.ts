@@ -2508,6 +2508,7 @@ export type Database = {
           p_cursor_id?: string
           p_cursor_last_interaction_at?: string
           p_page_size?: number
+          p_service_request_id?: string
         }
         Returns: Json
       }

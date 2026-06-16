@@ -14,6 +14,14 @@ const FormDemoPage =
   import.meta.env.DEV
     ? lazy(() => import('@/features/dynamic-form').then(m => ({ default: m.FormDemoPage })))
     : null
+const ClientServiceCardShowcasePage =
+  import.meta.env.DEV
+    ? lazy(() =>
+        import('@/features/my-services/components/client/ClientServiceCardShowcasePage').then(
+          (m) => ({ default: m.ClientServiceCardShowcasePage }),
+        ),
+      )
+    : null
 const ProviderServiceCardShowcasePage =
   import.meta.env.DEV
     ? lazy(() =>
@@ -119,6 +127,9 @@ export const router = createBrowserRouter([
         : []),
       ...(import.meta.env.DEV && ProviderServiceCardShowcasePage
         ? [{ path: 'dev/demo/provider-service-card-showcase', element: <ProviderServiceCardShowcasePage /> }]
+        : []),
+      ...(import.meta.env.DEV && ClientServiceCardShowcasePage
+        ? [{ path: 'dev/demo/client-service-card-showcase', element: <ClientServiceCardShowcasePage /> }]
         : []),
       {
         path: 'pedir-orcamento',

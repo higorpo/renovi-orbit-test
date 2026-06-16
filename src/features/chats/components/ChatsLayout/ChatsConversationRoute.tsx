@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
 import { useAuth } from "@/features/auth";
 import { getProposalDetail } from "@/features/negotiation-proposals/api/proposals.api";
 import { AcceptProposalDialog } from "@/features/negotiation-proposals/components/AcceptProposalDialog";
@@ -15,6 +15,7 @@ import type { RevisionRequestInitialValues } from "@/features/negotiation-propos
 import { canEditServiceRequestProposal } from "@/features/negotiation-proposals/utils/proposalStatus";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { CHAT_DETAILS_COLUMN_MEDIA_QUERY } from "../../constants/layout";
+import { ROUTE_CHATS_LIST } from "../../constants/routes";
 import type { ChatActionBannerCtaPayload } from "../../hooks/useChatActionBannerState";
 import { useCloseConversationMutation } from "../../hooks/useCloseConversationMutation";
 import { useConversationDetail } from "../../hooks/useConversationDetail";
@@ -30,6 +31,7 @@ import { ChatScreen } from "../ChatScreen/ChatScreen";
 export function ChatsConversationRoute() {
   const { chatId } = useParams<{ chatId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { profile } = useAuth();
   const showDetailsColumn = useMediaQuery(CHAT_DETAILS_COLUMN_MEDIA_QUERY);
   const { detail } = useConversationDetail(chatId ?? null);
@@ -204,7 +206,7 @@ export function ChatsConversationRoute() {
       <div className="flex h-full min-h-0 min-w-0 flex-1">
         <ChatScreen
           chatId={chatId}
-          onBack={() => void navigate("/dashboard/chats")}
+          onBack={() => void navigate(`${ROUTE_CHATS_LIST}${location.search}`)}
           onDetails={() => setDetailsOpen(true)}
           onBannerCta={handleBannerCta}
           onProposalAction={handleProposalAction}

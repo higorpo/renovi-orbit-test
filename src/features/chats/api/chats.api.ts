@@ -117,6 +117,7 @@ function isCloseConversationResult(value: unknown): value is CloseConversationRe
 export async function listConversations(params: {
   pageSize?: number;
   cursor?: { last_interaction_at: string; id: string } | null;
+  serviceRequestId?: string | null;
 }): Promise<ChatsApiResult<ConversationListResponse>> {
   return invokeRpc(
     CNS_CHAT_RPC.listConversations,
@@ -124,6 +125,7 @@ export async function listConversations(params: {
       p_page_size: params.pageSize ?? 20,
       p_cursor_last_interaction_at: params.cursor?.last_interaction_at ?? null,
       p_cursor_id: params.cursor?.id ?? null,
+      p_service_request_id: params.serviceRequestId ?? null,
     },
     isConversationListResponse,
     "chats_list_conversations_invalid_response",
