@@ -77,7 +77,8 @@ Coisas para fazer next
 -[avaliar]simplificar query de get_service_list  (hoje ele tá trazendo um monte de dados que nem vai ser exibido no card)
 -fluxo de prestador recusar revisão de proposta
 -fazer skeleton na tela de detalhes de um serviço/sheet
--adicionar outros botões na tela de detalhes do serviço/sheet
--adicionar card com chats ativos relacionados ao serviço na tela de detalhes do serviço
--adicionar card para ver comparativo de preços na tela de detalhes do serviço
 -no mobile estilizar menu do topo para ter botão de voltar e etc e abrir como se fosse uma nova activity
+
+
+
+-ver imagens que o chat gpt gerou da tela de detalhes do serviço e o que podemos incorporar de fato.
