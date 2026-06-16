@@ -1,8 +1,6 @@
 export { ServiceDetailPage } from "./components/ServiceDetailPage";
 export { ServiceDetailShell } from "./components/ServiceDetailShell";
 export { ServiceDetailSheet } from "./components/ServiceDetailSheet";
-export { ServiceListCard } from "./components/ServiceListCard";
-export type { ServiceListCardProps } from "./components/ServiceListCard";
 export { SimpleServiceCard } from "./components/SimpleServiceCard";
 export type { SimpleServiceCardProps } from "./components/SimpleServiceCard";
 export { SimpleServiceCardSkeleton } from "./components/SimpleServiceCardSkeleton";
