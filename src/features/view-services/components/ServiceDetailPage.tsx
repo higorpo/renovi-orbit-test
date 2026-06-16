@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Link, useLocation, useParams } from "react-router";
-import { AlertTriangle, ArrowLeft, Clock, MapPin, MessageSquare } from "lucide-react";
+import { useParams } from "react-router";
+import { AlertTriangle, Clock, MapPin, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -36,9 +36,6 @@ import { ServiceDetailMetadataBadges } from "./ServiceDetailMetadataBadges";
 import { ServiceDetailRequestSections } from "./ServiceDetailRequestSections";
 import { ServiceProviderProposalRejectionAlert } from "./ServiceProviderProposalRejectionAlert";
 import { ServiceProviderProposalSection } from "./ServiceProviderProposalSection";
-import type { ServiceDetailLocationState } from "../types/serviceDetailNavigation.types";
-import { getServiceDetailBackNavigation } from "../utils/serviceDetailBackNavigation";
-
 interface ServiceDetailPageProps {
   serviceRequestId?: string;
   isInsideSheet?: boolean;
@@ -49,8 +46,6 @@ export function ServiceDetailPage({
   isInsideSheet = false,
 }: ServiceDetailPageProps = {}) {
   const { id: routeId } = useParams<{ id: string }>();
-  const location = useLocation();
-  const navState = location.state as ServiceDetailLocationState | null;
   const id = serviceRequestIdProp ?? routeId;
   const { profile } = useAuth();
   const { data: model, isLoading, isError, refetch } = useService(id);
@@ -59,10 +54,6 @@ export function ServiceDetailPage({
 
   const isClient = profile?.role === "client";
   const isProvider = profile?.role === "provider";
-  const { href: backHref, label: backLabel } = getServiceDetailBackNavigation({
-    isClient,
-    returnTo: navState?.returnTo,
-  });
   const serviceStyle = getServiceCardStyle(model?.service ?? undefined);
 
   const { data: providerChat } = useProviderServiceRequestChat(isProvider ? id : undefined);
@@ -91,14 +82,6 @@ export function ServiceDetailPage({
   if (isError) {
     return (
       <div className="container max-w-4xl px-4 py-6 space-y-4">
-        {!isInsideSheet ? (
-          <Button variant="ghost" size="sm" asChild>
-            <Link to={backHref}>
-              <ArrowLeft className="h-4 w-4" aria-hidden />
-              {backLabel}
-            </Link>
-          </Button>
-        ) : null}
         <Card>
           <CardContent className="py-8 text-center">
             <p className="text-muted-foreground">Não foi possível carregar este serviço.</p>
@@ -114,14 +97,6 @@ export function ServiceDetailPage({
   if (!model) {
     return (
       <div className="container max-w-4xl px-4 py-6 space-y-4">
-        {!isInsideSheet ? (
-          <Button variant="ghost" size="sm" asChild>
-            <Link to={backHref}>
-              <ArrowLeft className="h-4 w-4" aria-hidden />
-              {backLabel}
-            </Link>
-          </Button>
-        ) : null}
         <Card>
           <CardContent className="py-8 text-center text-muted-foreground">
             Serviço não encontrado ou você não tem permissão para visualizá-lo.
@@ -141,15 +116,6 @@ export function ServiceDetailPage({
         isInsideSheet ? "px-0 py-0 pb-24 md:pb-28" : "pb-24 md:pb-28",
       )}
     >
-      {!isInsideSheet ? (
-        <Button variant="ghost" size="sm" asChild>
-          <Link to={backHref}>
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            {backLabel}
-          </Link>
-        </Button>
-      ) : null}
-
       {isProvider ? <ServiceProviderProposalRejectionAlert serviceRequestId={model.id} /> : null}
 
       <Card>

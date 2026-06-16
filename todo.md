@@ -80,3 +80,4 @@ Coisas para fazer next
 -adicionar outros botões na tela de detalhes do serviço/sheet
 -adicionar card com chats ativos relacionados ao serviço na tela de detalhes do serviço
 -adicionar card para ver comparativo de preços na tela de detalhes do serviço
+-no mobile estilizar menu do topo para ter botão de voltar e etc e abrir como se fosse uma nova activity
