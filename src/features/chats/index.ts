@@ -67,6 +67,14 @@ export {
 } from "./components/ChatActionBanner/ChatActionBanner";
 export { ChatListItem, type ChatListItemProps } from "./components/ChatListItem/ChatListItem";
 export { ChatListItemSkeleton } from "./components/ChatListItem/ChatListItemSkeleton";
+export {
+  ServiceRequestConversationList,
+  type ServiceRequestConversationListProps,
+} from "./components/ServiceRequestConversationList/ServiceRequestConversationList";
+export {
+  ServiceRequestContractedChatButton,
+  type ServiceRequestContractedChatButtonProps,
+} from "./components/ServiceRequestContractedChatButton/ServiceRequestContractedChatButton";
 export { ChatListPage, type ChatListPageProps } from "./components/ChatListPage/ChatListPage";
 export { useChatConversations } from "./hooks/useChatConversations";
 export { useChatListServiceRequestFilter } from "./hooks/useChatListServiceRequestFilter";

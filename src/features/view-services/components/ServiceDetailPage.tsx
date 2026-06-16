@@ -28,6 +28,10 @@ import {
   mapSuggestedMaterialsToPt,
 } from "../utils/suggestedItemsMapper";
 import { formatLocationDisplay } from "../utils/locationDisplay";
+import {
+  ServiceRequestContractedChatButton,
+  ServiceRequestConversationList,
+} from "@/features/chats";
 import { useProviderServiceRequestChat } from "../hooks/useProviderServiceRequestChat";
 import { useServiceDetailChatNavigation } from "../hooks/useServiceDetailChatNavigation";
 import { ServiceContractedSection } from "./ServiceContractedSection";
@@ -108,6 +112,9 @@ export function ServiceDetailPage({
 
   const urgencyConfig = getUrgencyConfig(model.urgency);
   const locationLine = formatLocationDisplay(model.address);
+  const showClientNegotiationChats =
+    isClient && model.listPhase === "negotiation" && !model.contracted;
+  const contractedChatId = model.contracted?.chatId ?? null;
 
   return (
     <div
@@ -204,7 +211,7 @@ export function ServiceDetailPage({
             suggestedMaterialsPt={suggestedMaterialsPt}
           />
 
-          {isClient && model.listPhase === "negotiation" ? (
+          {showClientNegotiationChats ? (
             <div className="flex flex-wrap gap-2 border-t pt-4">
               <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
                 <Button
@@ -240,8 +247,25 @@ export function ServiceDetailPage({
               </AlertDialog>
             </div>
           ) : null}
+
+          {isClient && model.contracted ? (
+            <div className="flex flex-wrap gap-2 border-t pt-4">
+              <ServiceRequestContractedChatButton
+                chatId={contractedChatId}
+                providerDisplayName={model.contracted.provider?.displayName}
+              />
+            </div>
+          ) : null}
         </CardContent>
       </Card>
+
+      {showClientNegotiationChats ? (
+        <Card>
+          <CardContent className="pt-6">
+            <ServiceRequestConversationList serviceRequestId={model.id} />
+          </CardContent>
+        </Card>
+      ) : null}
 
       {isProvider ? <ServiceProviderProposalSection serviceRequestId={model.id} /> : null}
 

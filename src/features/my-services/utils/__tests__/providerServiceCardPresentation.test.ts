@@ -206,6 +206,7 @@ describe("getProviderServiceCardPresentation", () => {
           scheduledEndDate: null,
           scheduledShift: "morning",
           provider: null,
+          chatId: null,
           updatedAt: null,
         },
         address: {
@@ -256,6 +257,7 @@ describe("getProviderServiceCardPresentation", () => {
           scheduledEndDate: null,
           scheduledShift: "afternoon",
           provider: null,
+          chatId: null,
           updatedAt: null,
         },
         chatSummary: {
@@ -313,6 +315,7 @@ describe("getProviderServiceCardPresentation", () => {
           scheduledEndDate: null,
           scheduledShift: "full_day",
           provider: null,
+          chatId: null,
           updatedAt: "2025-06-10T00:00:00Z",
         },
       });

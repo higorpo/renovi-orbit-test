@@ -95,6 +95,7 @@ export interface RpcContractedService {
   scheduled_end_date?: string | null;
   scheduled_shift?: string;
   updated_at?: string | null;
+  chat_id?: string | null;
   provider?: RpcContractedProvider | null;
 }
 
@@ -171,6 +172,7 @@ function mapContracted(contracted: RpcContractedService | null | undefined): Con
     scheduledEndDate: contracted.scheduled_end_date ?? null,
     scheduledShift: contracted.scheduled_shift ?? "",
     provider: mapCounterparty(contracted.provider),
+    chatId: contracted.chat_id ?? null,
     updatedAt: contracted.updated_at ?? null,
   };
 }

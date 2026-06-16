@@ -50,6 +50,7 @@ describe("serviceMapper", () => {
       contracted: {
         id: "cs-1",
         status: "PENDING_PAYMENT",
+        chat_id: "chat-contracted-1",
         provider: { id: "p-1", display_name: "João" },
       },
       counterparty: { id: "p-1", display_name: "João Silva", profile_image_path: "avatars/joao.jpg" },
@@ -62,6 +63,7 @@ describe("serviceMapper", () => {
     expect(model.hasPendingProposal).toBe(true);
     expect(model.service?.slug).toBe("eletricista");
     expect(model.contracted?.status).toBe("PENDING_PAYMENT");
+    expect(model.contracted?.chatId).toBe("chat-contracted-1");
     expect(model.tags).toBeNull();
     expect(model.suggestedEquipment).toEqual(["ladder"]);
     expect(model.suggestedMaterials).toEqual(["screws"]);

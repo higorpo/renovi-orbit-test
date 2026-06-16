@@ -125,6 +125,7 @@ describe("ProviderServiceListCard", () => {
         scheduledEndDate: null,
         scheduledShift: "morning",
         provider: null,
+        chatId: null,
         updatedAt: null,
       },
     };

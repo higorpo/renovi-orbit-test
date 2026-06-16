@@ -58,6 +58,7 @@ export interface ContractedServiceSummary {
   scheduledEndDate: string | null;
   scheduledShift: string;
   provider: CounterpartySummary | null;
+  chatId: string | null;
   updatedAt: string | null;
 }
 

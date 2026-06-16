@@ -169,6 +169,7 @@ describe("getClientServiceCardPresentation", () => {
           scheduledEndDate: null,
           scheduledShift: "morning",
           provider: { id: "p-1", displayName: "Maria", profileImagePath: null },
+          chatId: null,
           updatedAt: null,
         },
       }),

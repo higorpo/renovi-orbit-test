@@ -47,6 +47,9 @@ function baseModel(overrides: Partial<ServiceModel> & { id: string }): ServiceMo
     photoPaths: [],
     proposalCount: 0,
     hasPendingProposal: false,
+    pendingProposalCount: 0,
+    activeChatCount: 0,
+    unreadChatCount: 0,
     counterpartyName: "Maria Silva",
     counterparty: {
       id: "client-maria",
@@ -235,6 +238,7 @@ export function buildProviderServiceCardShowcaseVariants(
           scheduledEndDate: null,
           scheduledShift: "morning",
           provider: null,
+          chatId: null,
           updatedAt: now.toISOString(),
         },
         chatSummary: {
@@ -266,6 +270,7 @@ export function buildProviderServiceCardShowcaseVariants(
           scheduledEndDate: null,
           scheduledShift: "full_day",
           provider: null,
+          chatId: null,
           updatedAt: now.toISOString(),
         },
         chatSummary: {
@@ -297,6 +302,7 @@ export function buildProviderServiceCardShowcaseVariants(
           scheduledEndDate: null,
           scheduledShift: "afternoon",
           provider: null,
+          chatId: null,
           updatedAt: now.toISOString(),
         },
         chatSummary: {
@@ -329,6 +335,7 @@ export function buildProviderServiceCardShowcaseVariants(
           scheduledEndDate: null,
           scheduledShift: "afternoon",
           provider: null,
+          chatId: null,
           updatedAt: now.toISOString(),
         },
         chatSummary: {
@@ -360,6 +367,7 @@ export function buildProviderServiceCardShowcaseVariants(
           scheduledEndDate: null,
           scheduledShift: "morning",
           provider: null,
+          chatId: null,
           updatedAt: now.toISOString(),
         },
         chatSummary: {
@@ -391,6 +399,7 @@ export function buildProviderServiceCardShowcaseVariants(
           scheduledEndDate: null,
           scheduledShift: "full_day",
           provider: null,
+          chatId: null,
           updatedAt: addDays(now, -3).toISOString(),
         },
         chatSummary: {
@@ -452,6 +461,7 @@ export function buildProviderServiceCardShowcaseVariants(
           scheduledEndDate: null,
           scheduledShift: "morning",
           provider: null,
+          chatId: null,
           updatedAt: addDays(now, -4).toISOString(),
         },
       }),
