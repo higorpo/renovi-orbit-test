@@ -40,12 +40,11 @@ Urgentes:
 
 Telas/fluxos restantes:
 
-- Aceitar orçamento
 - Pagamento de um serviço
 - Visualização de detalhes de um serviço em execução
 - Visualizar checklist de conclusão do serviço
 - Avaliação do serviço após sua conclusão
-- Tela do prestador
+- Tela de perfil do prestador
 - Calendário do prestador
 - Prestador poder vender para clientes de fora da plataforma
 - Sistema de disputas
@@ -68,8 +67,6 @@ Coisas para verificar:
 
 Coisas para terminar do fluxo atual de trabalho:
 
-- Adicionar testes unitários no módulo de client-budget
-- Testar a tela de orçamentos do cliente no fluxo do mobile
 - ao gerar a descrição do pedido, também gerar o checklist de conclusão do serviço
   - mostrar o checklist de conclusão do serviço pro prestador na hora que ele vai fazer o orçamento e permitir que ele altere alguma coisa
   - apresentar o checklist de conclusão do serviço para o cliente quando ele vai fechar o serviço
@@ -83,7 +80,3 @@ Coisas para fazer next
 -adicionar outros botões na tela de detalhes do serviço/sheet
 -adicionar card com chats ativos relacionados ao serviço na tela de detalhes do serviço
 -adicionar card para ver comparativo de preços na tela de detalhes do serviço
--refatorar tela de comparativo de orçamentos do serviço para o cliente
-  -permitir aceitar um orçamento diretamente dessa tela
-  -permitir recusar um orçamento diretamente dessa tela
-  -permitir pedir uma revisão diretamente dessa tela
