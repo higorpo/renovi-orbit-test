@@ -9,11 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { PROPOSAL_COPY_VARIANTS, type ProposalCopyVariant } from "../constants/proposalCopyVariants";
+import {
+  getProposalHistoryTriggerClassName,
+  type ProposalSummaryHeadingSize,
+} from "../constants/proposalSummaryHeading";
 import type { ProviderProposalHistoryItem } from "../types/proposals.types";
 import { getProposalStatusLabel } from "../utils/proposalDetailsFormatters";
 
 interface ProposalHistoryAccordionProps {
   copyVariant?: ProposalCopyVariant;
+  headingSize?: ProposalSummaryHeadingSize;
   historyOpen: boolean;
   proposalHistory: ProviderProposalHistoryItem[];
   isHistoryLoading: boolean;
@@ -24,6 +29,7 @@ interface ProposalHistoryAccordionProps {
 
 export function ProposalHistoryAccordion({
   copyVariant = "budget",
+  headingSize = "card",
   historyOpen,
   proposalHistory,
   isHistoryLoading,
@@ -41,7 +47,9 @@ export function ProposalHistoryAccordion({
       onValueChange={(value) => onHistoryOpenChange(value === "proposal-history")}
     >
       <AccordionItem value="proposal-history">
-        <AccordionTrigger>{copy.historyTrigger}</AccordionTrigger>
+        <AccordionTrigger className={getProposalHistoryTriggerClassName(headingSize)}>
+          {copy.historyTrigger}
+        </AccordionTrigger>
         <AccordionContent>
           {isHistoryLoading && (
             <div className="space-y-2" aria-busy="true" aria-label="Carregando histórico">

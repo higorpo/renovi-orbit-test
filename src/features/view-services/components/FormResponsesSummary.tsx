@@ -1,5 +1,6 @@
 import { buildSummaryEntries } from "@/features/dynamic-form";
 import type { FormSchema } from "@/features/dynamic-form";
+import { ServiceDetailSection } from "./ServiceDetailSection";
 
 export interface FormResponsesSummaryProps {
   formData: Record<string, unknown> | null;
@@ -14,24 +15,18 @@ export function FormResponsesSummary({
   if (entries.length === 0) return null;
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-foreground">
-        Informações do pedido
-      </h3>
-      <dl className="grid gap-2 sm:grid-cols-2">
+    <ServiceDetailSection title="Informações do pedido">
+      <dl className="grid gap-3 sm:grid-cols-2">
         {entries.map((entry) => (
-          <div key={entry.id}>
-            <div className="rounded-lg border bg-muted/30 px-3 py-2">
-              <dt className="text-xs font-medium text-muted-foreground">
-                {entry.label}
-              </dt>
-              <dd className="mt-0.5 text-sm text-foreground">
-                {entry.displayValue}
-              </dd>
-            </div>
+          <div
+            key={entry.id}
+            className="rounded-md border border-border/80 bg-canvas-soft px-3 py-2.5"
+          >
+            <dt className="text-xs font-medium text-muted-foreground">{entry.label}</dt>
+            <dd className="mt-0.5 text-caption text-ink">{entry.displayValue}</dd>
           </div>
         ))}
       </dl>
-    </div>
+    </ServiceDetailSection>
   );
 }

@@ -57,6 +57,7 @@ export function ServiceProviderProposalSection({
       <ServiceRequestProposalSummaryCard
         summary={proposal.summary}
         canEdit={canEdit}
+        headingSize="section"
         onEdit={() => proposalComposer.openComposer({ mode: "edit" })}
       />
 

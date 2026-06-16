@@ -2,8 +2,12 @@ import { Package, Wrench } from "lucide-react";
 import type { FormSchema } from "@/features/dynamic-form";
 import type { ServiceModel } from "../types/service.types";
 import { FormResponsesSummary } from "./FormResponsesSummary";
+import { ServiceDetailSection } from "./ServiceDetailSection";
 import { ServicePhotoGallery } from "./ServicePhotoGallery";
 import { SuggestedItemsInfo } from "./SuggestedItemsInfo";
+
+const suggestedItemClassName =
+  "inline-flex items-center gap-1.5 rounded-sm border border-border bg-canvas-soft px-2.5 py-1 text-xs text-body";
 
 interface ServiceDetailRequestSectionsProps {
   model: ServiceModel;
@@ -17,75 +21,64 @@ export function ServiceDetailRequestSections({
   suggestedMaterialsPt,
 }: ServiceDetailRequestSectionsProps) {
   return (
-    <>
-      {model.description && (
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">Descrição</h3>
-          <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
+    <div className="space-y-4">
+      {model.description ? (
+        <ServiceDetailSection title="Descrição">
+          <p className="whitespace-pre-wrap text-caption leading-relaxed text-body">
             {model.description}
           </p>
-        </div>
-      )}
+        </ServiceDetailSection>
+      ) : null}
 
       <FormResponsesSummary
         formData={model.formData}
         formSchema={model.formSchema as FormSchema | null}
       />
 
-      {model.photoPaths.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">
-            Fotos ({model.photoPaths.length})
-          </h3>
-          <div className="mt-2">
-            <ServicePhotoGallery photos={model.photoPaths} />
-          </div>
-        </div>
-      )}
+      {model.photoPaths.length > 0 ? (
+        <ServiceDetailSection
+          title={`Fotos (${model.photoPaths.length})`}
+          description="Toque para ampliar"
+        >
+          <ServicePhotoGallery photos={model.photoPaths} />
+        </ServiceDetailSection>
+      ) : null}
 
-      {suggestedEquipmentPt.length > 0 && (
-        <div>
-          <div className="flex items-center">
-            <h3 className="text-sm font-semibold text-foreground">
-              Equipamentos que podem ser úteis
-            </h3>
+      {suggestedEquipmentPt.length > 0 ? (
+        <ServiceDetailSection
+          title="Equipamentos que podem ser úteis"
+          titleAccessory={
             <SuggestedItemsInfo ariaLabel="Mais informações sobre equipamentos sugeridos" />
-          </div>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
+          }
+        >
+          <div className="flex flex-wrap gap-2">
             {suggestedEquipmentPt.map((eq) => (
-              <span
-                key={eq}
-                className="inline-flex items-center gap-1 rounded-full border bg-blue-50 px-2.5 py-0.5 text-xs text-blue-700 dark:bg-blue-950/30 dark:text-blue-300"
-              >
-                <Wrench className="h-3 w-3" aria-hidden />
+              <span key={eq} className={suggestedItemClassName}>
+                <Wrench className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
                 {eq}
               </span>
             ))}
           </div>
-        </div>
-      )}
+        </ServiceDetailSection>
+      ) : null}
 
-      {suggestedMaterialsPt.length > 0 && (
-        <div>
-          <div className="flex items-center">
-            <h3 className="text-sm font-semibold text-foreground">
-              Materiais que podem ser úteis
-            </h3>
+      {suggestedMaterialsPt.length > 0 ? (
+        <ServiceDetailSection
+          title="Materiais que podem ser úteis"
+          titleAccessory={
             <SuggestedItemsInfo ariaLabel="Mais informações sobre materiais sugeridos" />
-          </div>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
+          }
+        >
+          <div className="flex flex-wrap gap-2">
             {suggestedMaterialsPt.map((mat) => (
-              <span
-                key={mat}
-                className="inline-flex items-center gap-1 rounded-full border bg-amber-50 px-2.5 py-0.5 text-xs text-amber-700 dark:bg-amber-950/30 dark:text-amber-300"
-              >
-                <Package className="h-3 w-3" aria-hidden />
+              <span key={mat} className={suggestedItemClassName}>
+                <Package className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
                 {mat}
               </span>
             ))}
           </div>
-        </div>
-      )}
-    </>
+        </ServiceDetailSection>
+      ) : null}
+    </div>
   );
 }

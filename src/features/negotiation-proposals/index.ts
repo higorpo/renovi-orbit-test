@@ -69,6 +69,7 @@ export {
   ServiceRequestProposalSummaryCard,
   type ServiceRequestProposalSummaryCardProps,
 } from "./components/ServiceRequestProposalSummaryCard";
+export type { ProposalSummaryHeadingSize } from "./constants/proposalSummaryHeading";
 export { ServiceRequestProposalSummaryCardSkeleton } from "./components/ServiceRequestProposalSummaryCardSkeleton";
 export {
   ProposalHistoryAccordion,

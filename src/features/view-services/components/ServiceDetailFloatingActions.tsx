@@ -1,6 +1,7 @@
 import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { SERVICE_DETAIL_PAGE_MAX_WIDTH_CLASS } from "../constants/serviceDetail.constants";
 
 interface ServiceDetailFloatingActionsProps {
   hasExistingChat: boolean;
@@ -23,6 +24,9 @@ export function ServiceDetailFloatingActions({
     ? "Visualizar negociação com o cliente"
     : "Iniciar negociação com o cliente";
 
+  const floatingActionButtonClassName =
+    "bg-primary text-primary-foreground shadow-lg hover:bg-primary-hover";
+
   return (
     <>
       <div
@@ -33,13 +37,22 @@ export function ServiceDetailFloatingActions({
             : "bottom-[calc(env(safe-area-inset-bottom)+5.5rem)]",
         )}
       >
-        <span className="rounded-full border bg-background/95 px-3 py-1.5 text-xs font-medium text-foreground shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/85">
+        <span
+          className={cn(
+            "rounded-full px-3 py-1.5 text-xs font-semibold shadow-sm",
+            floatingActionButtonClassName,
+          )}
+        >
           {mobileLabel}
         </span>
         <Button
           type="button"
+          variant="default"
           size="icon"
-          className="h-14 w-14 rounded-full shadow-lg"
+          className={cn(
+            "h-14 w-14 rounded-full transition-transform duration-fast ease-renovi active:scale-[0.97]",
+            floatingActionButtonClassName,
+          )}
           aria-label={ariaLabel}
           disabled={isOpeningChat}
           onClick={onOpenChat}
@@ -53,13 +66,16 @@ export function ServiceDetailFloatingActions({
           "fixed bottom-5 z-40 hidden rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/85 md:block",
           isInsideSheet
             ? "right-4 w-[calc(100%-2rem)] sm:w-[calc(36rem-2rem)] md:w-[calc(42rem-2rem)] lg:w-[calc(48rem-2rem)]"
-            : "left-1/2 w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2",
+            : cn("left-1/2 w-[calc(100%-2rem)] -translate-x-1/2", SERVICE_DETAIL_PAGE_MAX_WIDTH_CLASS),
         )}
       >
         <Button
           type="button"
-          variant="secondary"
-          className="w-full gap-2"
+          variant="default"
+          className={cn(
+            "w-full gap-2 rounded-pill transition-transform duration-fast ease-renovi active:scale-[0.97]",
+            floatingActionButtonClassName,
+          )}
           disabled={isOpeningChat}
           onClick={onOpenChat}
         >

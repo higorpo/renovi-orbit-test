@@ -129,4 +129,23 @@ describe("ServiceRequestProposalSummaryCard", () => {
     fireEvent.click(screen.getByText(/ver histórico de orçamentos/i));
     expect(screen.getByText("Histórico")).toBeInTheDocument();
   });
+
+  it("uses section heading size when requested", () => {
+    render(
+      <ServiceRequestProposalSummaryCard
+        summary={baseSummary}
+        canEdit={false}
+        headingSize="section"
+        onEdit={vi.fn()}
+      />,
+    );
+
+    const title = screen.getByText(/seu orçamento mais recente/i);
+    expect(title).toHaveClass("text-sm");
+    expect(title).toHaveClass("font-display");
+
+    const historyTrigger = screen.getByRole("button", { name: /ver histórico de orçamentos/i });
+    expect(historyTrigger).toHaveClass("text-sm");
+    expect(historyTrigger).toHaveClass("font-display");
+  });
 });

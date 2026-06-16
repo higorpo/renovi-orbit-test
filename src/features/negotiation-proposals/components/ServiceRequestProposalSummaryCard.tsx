@@ -4,6 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { PROPOSAL_COPY_VARIANTS, type ProposalCopyVariant } from "../constants/proposalCopyVariants";
+import {
+  getProposalSummaryHeadingClassName,
+  type ProposalSummaryHeadingSize,
+} from "../constants/proposalSummaryHeading";
 import { useProposalHistory } from "../hooks/useProposalHistory";
 import { useProposalPhotoUrls } from "../hooks/useProposalPhotoUrls";
 import type { ProviderProposalHistoryItem } from "../types/proposals.types";
@@ -27,14 +31,17 @@ export interface ServiceRequestProposalSummaryCardProps {
   onEdit: () => void;
   copyVariant?: ProposalCopyVariant;
   variant?: "card" | "embedded";
+  headingSize?: ProposalSummaryHeadingSize;
 }
 
 function ServiceRequestProposalSummaryContent({
   summary,
   copyVariant = "budget",
+  headingSize = "card",
 }: {
   summary: ServiceRequestProposalSummary;
   copyVariant?: ProposalCopyVariant;
+  headingSize?: ProposalSummaryHeadingSize;
 }) {
   const copy = PROPOSAL_COPY_VARIANTS[copyVariant];
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -113,6 +120,7 @@ function ServiceRequestProposalSummaryContent({
 
       <ProposalHistoryAccordion
         copyVariant={copyVariant}
+        headingSize={headingSize}
         historyOpen={historyOpen}
         proposalHistory={proposalHistory}
         isHistoryLoading={isHistoryLoading}
@@ -139,6 +147,7 @@ export function ServiceRequestProposalSummaryCard({
   onEdit,
   copyVariant = "budget",
   variant = "card",
+  headingSize = "card",
 }: ServiceRequestProposalSummaryCardProps) {
   const copy = PROPOSAL_COPY_VARIANTS[copyVariant];
   const summaryTitle = summary.isLatestProposal
@@ -148,7 +157,11 @@ export function ServiceRequestProposalSummaryCard({
   if (variant === "embedded") {
     return (
       <div className="space-y-4">
-        <ServiceRequestProposalSummaryContent summary={summary} copyVariant={copyVariant} />
+        <ServiceRequestProposalSummaryContent
+          summary={summary}
+          copyVariant={copyVariant}
+          headingSize={headingSize}
+        />
       </div>
     );
   }
@@ -157,7 +170,7 @@ export function ServiceRequestProposalSummaryCard({
     <Card>
       <CardHeader className="pb-3">
         <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="w-full text-base font-semibold leading-tight text-foreground sm:w-auto">
+          <h3 className={getProposalSummaryHeadingClassName(headingSize, "w-full sm:w-auto")}>
             {summaryTitle}
           </h3>
           {canEdit && (
@@ -168,7 +181,11 @@ export function ServiceRequestProposalSummaryCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4 !pt-0">
-        <ServiceRequestProposalSummaryContent summary={summary} copyVariant={copyVariant} />
+        <ServiceRequestProposalSummaryContent
+          summary={summary}
+          copyVariant={copyVariant}
+          headingSize={headingSize}
+        />
       </CardContent>
     </Card>
   );

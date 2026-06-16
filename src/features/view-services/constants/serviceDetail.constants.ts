@@ -52,3 +52,9 @@ export function getComplexityLabel(
 
 export const SUGGESTED_ITEMS_TOOLTIP_TEXT =
   "Itens sugeridos com base no pedido de orçamento do cliente. Eles podem ser utilizados, mas podem estar imprecisos.";
+
+/** Matches dashboard list pages (e.g. MyServicesPageShell). */
+export const SERVICE_DETAIL_PAGE_MAX_WIDTH_CLASS = "max-w-5xl";
+
+export const SERVICE_DETAIL_PAGE_SHELL_CLASS =
+  "mx-auto w-full min-w-0 max-w-5xl px-4 py-6";

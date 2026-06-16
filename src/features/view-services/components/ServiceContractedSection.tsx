@@ -1,6 +1,7 @@
-import { Calendar, User } from "lucide-react";
+import { Calendar, CircleCheck, User } from "lucide-react";
 import type { ContractedServiceSummary } from "../types/service.types";
 import { formatShift } from "../utils/formatShift";
+import { ServiceDetailSection } from "./ServiceDetailSection";
 
 interface ServiceContractedSectionProps {
   contracted: ContractedServiceSummary;
@@ -10,25 +11,36 @@ export function ServiceContractedSection({ contracted }: ServiceContractedSectio
   const providerName = contracted.provider?.displayName;
 
   return (
-    <section className="space-y-3 rounded-lg border bg-muted/20 p-4">
-      <h3 className="text-sm font-semibold text-foreground">Serviço contratado</h3>
-      {providerName ? (
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <User className="h-4 w-4 shrink-0" aria-hidden />
-          <span>Profissional: {providerName}</span>
-        </p>
-      ) : null}
-      <p className="text-sm text-muted-foreground">Status: {contracted.status}</p>
-      {contracted.scheduledStartDate ? (
-        <p className="flex items-start gap-2 text-sm text-muted-foreground">
-          <Calendar className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+    <ServiceDetailSection
+      title="Serviço contratado"
+      className="border-primary/15 bg-primary-soft/50 shadow-none"
+    >
+      <div className="space-y-2.5 text-caption text-body">
+        {providerName ? (
+          <p className="flex items-center gap-2">
+            <User className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <span>
+              Profissional: <span className="font-medium text-ink">{providerName}</span>
+            </span>
+          </p>
+        ) : null}
+        <p className="flex items-center gap-2">
+          <CircleCheck className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
           <span>
-            Agendado para {contracted.scheduledStartDate}
-            {contracted.scheduledEndDate ? ` até ${contracted.scheduledEndDate}` : ""}
-            {contracted.scheduledShift ? ` (${formatShift(contracted.scheduledShift)})` : ""}
+            Status: <span className="font-medium text-ink">{contracted.status}</span>
           </span>
         </p>
-      ) : null}
-    </section>
+        {contracted.scheduledStartDate ? (
+          <p className="flex items-start gap-2">
+            <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <span>
+              Agendado para {contracted.scheduledStartDate}
+              {contracted.scheduledEndDate ? ` até ${contracted.scheduledEndDate}` : ""}
+              {contracted.scheduledShift ? ` (${formatShift(contracted.scheduledShift)})` : ""}
+            </span>
+          </p>
+        ) : null}
+      </div>
+    </ServiceDetailSection>
   );
 }
