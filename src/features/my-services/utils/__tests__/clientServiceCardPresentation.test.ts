@@ -176,4 +176,45 @@ describe("getClientServiceCardPresentation", () => {
 
     expect(pres.showProviderHeader).toBe(true);
   });
+
+  it("shows provider chat as primary action when in progress", () => {
+    const pres = getClientServiceCardPresentation(
+      baseModel({
+        listPhase: "in_progress",
+        statusTabId: "in_progress",
+        chatSummary: {
+          id: "chat-1",
+          isUnread: false,
+          lastInteractionAt: "2025-06-10T12:00:00Z",
+          lastMessagePreview: "Combinado!",
+          providerDisplayName: "Maria",
+        },
+      }),
+    );
+
+    expect(pres.primaryAction).toMatchObject({
+      label: "Ver conversa com prestador",
+      intent: "chat",
+    });
+    expect(pres.secondaryAction).toMatchObject({ label: "Ver detalhes", intent: "details" });
+  });
+
+  it("shows responder as primary action when in progress with unread chat", () => {
+    const pres = getClientServiceCardPresentation(
+      baseModel({
+        listPhase: "in_progress",
+        statusTabId: "in_progress",
+        unreadChatCount: 1,
+        chatSummary: {
+          id: "chat-1",
+          isUnread: true,
+          lastInteractionAt: "2025-06-10T12:00:00Z",
+          lastMessagePreview: "Olá!",
+          providerDisplayName: "Maria",
+        },
+      }),
+    );
+
+    expect(pres.primaryAction).toMatchObject({ label: "Responder", intent: "chat" });
+  });
 });

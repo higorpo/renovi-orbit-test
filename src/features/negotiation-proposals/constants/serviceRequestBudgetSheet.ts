@@ -1,23 +1,30 @@
 import type { BadgeProps } from "@/components/ui/badge";
+import {
+  coerceProposalStatus,
+  defineProposalStatusMap,
+} from "./proposalStatus";
 
-const BUDGET_STATUS_MAP: Record<string, { label: string; variant: BadgeProps["variant"] }> = {
-  submitted: { label: "Aguardando avaliação", variant: "warning" },
-  pending: { label: "Aguardando avaliação", variant: "warning" },
-  accepted: { label: "Aceito", variant: "success" },
-  rejected: { label: "Recusado", variant: "destructive" },
-  rejected_automatically: { label: "Recusado", variant: "destructive" },
-  revised: { label: "Orçamento revisado", variant: "secondary" },
-  expired: { label: "Expirado", variant: "secondary" },
-  cancelled: { label: "Cancelado", variant: "secondary" },
-  closed: { label: "Encerrado", variant: "secondary" },
-  completed: { label: "Encerrado", variant: "secondary" },
-};
+type BudgetStatusConfig = { label: string; variant: BadgeProps["variant"] };
+
+const BUDGET_STATUS_CONFIG = defineProposalStatusMap<BudgetStatusConfig>({
+  PENDING: { label: "Aguardando avaliação", variant: "warning" },
+  ACCEPTED: { label: "Aceito", variant: "success" },
+  REJECTED: { label: "Recusado", variant: "destructive" },
+  REJECTED_AUTOMATICALLY: { label: "Recusado", variant: "destructive" },
+  REVISION_REQUESTED: { label: "Revisão solicitada", variant: "warning" },
+  REVISED: { label: "Orçamento revisado", variant: "secondary" },
+  EXPIRED: { label: "Expirado", variant: "secondary" },
+});
 
 export type ServiceRequestBudgetSheetMode = "compare" | "history";
 
-export function getBudgetStatusConfig(status: string | null | undefined) {
-  if (!status) return { label: "Aguardando avaliação", variant: "warning" as const };
-  return BUDGET_STATUS_MAP[status.toLowerCase()] ?? { label: status, variant: "secondary" as const };
+export function getBudgetStatusConfig(status: string | null | undefined): BudgetStatusConfig {
+  if (!status) return BUDGET_STATUS_CONFIG.PENDING;
+
+  const resolved = coerceProposalStatus(status);
+  if (resolved) return BUDGET_STATUS_CONFIG[resolved];
+
+  return { label: status, variant: "secondary" };
 }
 
 export function getServiceRequestBudgetSheetTitle(mode: ServiceRequestBudgetSheetMode): string {

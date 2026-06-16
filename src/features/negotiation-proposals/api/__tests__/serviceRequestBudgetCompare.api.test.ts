@@ -71,10 +71,15 @@ describe("fetchServiceRequestBudgetCompareDetail", () => {
           id: "prop-1",
           provider_id: "prov-1",
           proposed_amount: 100,
+          revision_count: 0,
           status: "PENDING",
           created_at: "2026-01-02T00:00:00Z",
           submitted_at: "2026-01-02T00:00:00Z",
           proposal_description: "Orçamento",
+          proposal_suggested_slots: [
+            { start_date: "2026-06-12", shift: "afternoon" },
+            { start_date: "2026-06-14", shift: "morning" },
+          ],
           photos: ["a.jpg"],
           profiles: { full_name: "João", profile_image_path: "avatars/joao.jpg" },
         },
@@ -93,6 +98,10 @@ describe("fetchServiceRequestBudgetCompareDetail", () => {
       provider_name: "João Eletricista",
       provider_slug: "joao",
       proposed_amount: 100,
+      proposal_suggested_slots: [
+        { start_date: "2026-06-12", shift: "afternoon" },
+        { start_date: "2026-06-14", shift: "morning" },
+      ],
     });
   });
 

@@ -1,3 +1,5 @@
+import type { ProposalSuggestedSlotRpc } from "./proposals.types";
+
 /** Full budget in service request compare sheet (description, photos). */
 export interface ServiceRequestBudgetCompareProposal {
   id: string;
@@ -6,10 +8,12 @@ export interface ServiceRequestBudgetCompareProposal {
   provider_slug: string | null;
   provider_profile_image_path: string | null;
   proposed_amount: number;
+  revision_count: number;
   status: string;
   submitted_at: string | null;
   created_at: string;
   proposal_description: string;
+  proposal_suggested_slots: ProposalSuggestedSlotRpc[];
   photos: string[];
 }
 

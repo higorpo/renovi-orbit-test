@@ -110,9 +110,9 @@ export function MyServicesPageShell({
             />
           </Tabs>
         </div>
-        <section className="mt-4" aria-label="Lista de serviços" id="services-list">
+        <section className="mt-4 min-w-0" aria-label="Lista de serviços" id="services-list">
           {isLoading ? (
-            <ul className="grid gap-4 sm:grid-cols-1" aria-busy="true">
+            <ul className="grid min-w-0 gap-4 sm:grid-cols-1" aria-busy="true">
               {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
                 <li key={i}>
                   <MyServicesCardSkeleton />
@@ -126,9 +126,9 @@ export function MyServicesPageShell({
           ) : null}
           {!isLoading && !isError && items.length === 0 && !hasActiveFilters ? emptyState : null}
           {!isLoading && !isError && items.length > 0 ? (
-            <ul className="grid gap-4 sm:grid-cols-1">
+            <ul className="grid min-w-0 gap-4 sm:grid-cols-1">
               {items.map((model) => (
-                <li key={model.id} id={`service-request-${model.id}`}>
+                <li key={model.id} id={`service-request-${model.id}`} className="min-w-0">
                   {renderCard(model)}
                 </li>
               ))}

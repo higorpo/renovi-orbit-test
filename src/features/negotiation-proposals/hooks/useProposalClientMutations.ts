@@ -13,6 +13,7 @@ import {
   SERVICE_DETAIL_QUERY_KEY,
   SERVICES_LIST_QUERY_KEY,
 } from "@/features/view-services";
+import { SERVICE_REQUEST_BUDGET_COMPARE_DETAIL_QUERY_KEY } from "../constants/queryKeys";
 import {
   acceptProposal,
   rejectProposal,
@@ -85,6 +86,9 @@ export function useAcceptProposalMutation(
         void queryClient.invalidateQueries({
           queryKey: [...SERVICE_DETAIL_QUERY_KEY, serviceRequestId],
         });
+        void queryClient.invalidateQueries({
+          queryKey: [SERVICE_REQUEST_BUDGET_COMPARE_DETAIL_QUERY_KEY, serviceRequestId],
+        });
       }
       toast.success("Proposta aceita com sucesso.");
     },
@@ -122,6 +126,11 @@ export function useRejectProposalMutation(
         });
       }
       invalidateChatQueries(queryClient, chatId);
+      if (serviceRequestId) {
+        void queryClient.invalidateQueries({
+          queryKey: [SERVICE_REQUEST_BUDGET_COMPARE_DETAIL_QUERY_KEY, serviceRequestId],
+        });
+      }
       toast.success("Proposta recusada.");
     },
     onError: (error) => handleMutationError(error, "Não foi possível recusar a proposta."),
@@ -163,6 +172,11 @@ export function useRequestProposalRevisionMutation(
         });
       }
       invalidateChatQueries(queryClient, chatId);
+      if (serviceRequestId) {
+        void queryClient.invalidateQueries({
+          queryKey: [SERVICE_REQUEST_BUDGET_COMPARE_DETAIL_QUERY_KEY, serviceRequestId],
+        });
+      }
       toast.success("Pedido de revisão enviado ao prestador.");
     },
     onError: (error) => handleMutationError(error, "Não foi possível solicitar revisão."),

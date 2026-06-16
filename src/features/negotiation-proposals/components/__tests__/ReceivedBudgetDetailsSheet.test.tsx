@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactElement } from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
@@ -13,12 +13,44 @@ vi.mock("../../hooks/useServiceRequestBudgetCompareDetail", () => ({
   useServiceRequestBudgetCompareDetail: vi.fn(),
 }));
 
-vi.mock("@/features/provider-profile", () => ({
-  ProviderProfileInlinePreview: () => <div data-testid="profile-preview" />,
+vi.mock("../BudgetCompareProviderCard", () => ({
+  BudgetCompareProviderCard: () => <div data-testid="provider-budget-card" />,
 }));
 
-vi.mock("../ServiceRequestBudgetCompareVersionBlock", () => ({
-  ServiceRequestBudgetCompareVersionBlock: () => <div data-testid="current-proposal" />,
+vi.mock("../AcceptProposalDialog", () => ({
+  AcceptProposalDialog: () => null,
+}));
+
+vi.mock("../RejectProposalDialog", () => ({
+  RejectProposalDialog: ({ open }: { open: boolean }) =>
+    open ? <div role="heading" aria-level={2}>Recusar proposta</div> : null,
+}));
+
+vi.mock("../RevisionRequestDialog", () => ({
+  RevisionRequestDialog: () => null,
+}));
+
+vi.mock("../../hooks/useServiceRequestBudgetProposalDialogs", () => ({
+  useServiceRequestBudgetProposalDialogs: () => ({
+    acceptOpen: false,
+    acceptProposalId: null,
+    acceptProposalDetailQuery: { data: null, isLoading: false, isError: false, refetch: vi.fn() },
+    handleAcceptDialogOpenChange: vi.fn(),
+    handleAcceptRequestRevision: vi.fn(),
+    rejectOpen: false,
+    rejectProposalId: null,
+    handleRejectDialogOpenChange: vi.fn(),
+    revisionOpen: false,
+    revisionProposalId: null,
+    revisionInitialValues: null,
+    revisionProposalDetailQuery: { data: null, isLoading: false },
+    handleRevisionDialogOpenChange: vi.fn(),
+    handleProposalAction: vi.fn((action: string) => {
+      if (action === "reject") {
+        return { rejectOpen: true };
+      }
+    }),
+  }),
 }));
 
 function renderReceivedSheet(ui: ReactElement) {
@@ -35,9 +67,14 @@ const proposal: ServiceRequestBudgetCompareProposal = {
   provider_slug: "prest",
   provider_profile_image_path: null,
   proposed_amount: 500,
-  status: "submitted",
+  revision_count: 0,
+  status: "PENDING",
+  submitted_at: null,
   created_at: "2024-01-01T00:00:00Z",
   proposal_description: "Desc",
+  proposal_suggested_slots: [
+    { start_date: "2026-06-10", shift: "morning" },
+  ],
   photos: [],
 };
 
@@ -99,7 +136,8 @@ describe("ReceivedBudgetDetailsSheet", () => {
     );
     expect(screen.getByRole("heading", { name: /Comparar orçamentos/i })).toBeInTheDocument();
     expect(screen.getByText("Meu pedido")).toBeInTheDocument();
-    expect(screen.getByTestId("current-proposal")).toBeInTheDocument();
+    expect(screen.getByTestId("provider-budget-card")).toBeInTheDocument();
+    expect(screen.getByText(/Como escolher o melhor orçamento/i)).toBeInTheDocument();
   });
 
   it("shows history title in history mode", () => {
@@ -138,7 +176,7 @@ describe("ReceivedBudgetDetailsSheet", () => {
     expect(screen.getByText(/Nenhum orçamento encontrado/i)).toBeInTheDocument();
   });
 
-  it("enables reject button in compare mode for submitted proposal", () => {
+  it("shows guidance and trust panels in compare mode", () => {
     vi.mocked(detailHook.useServiceRequestBudgetCompareDetail).mockReturnValue({
       detail: detailBase,
       isLoading: false,
@@ -153,9 +191,6 @@ describe("ReceivedBudgetDetailsSheet", () => {
         onOpenChange={vi.fn()}
       />,
     );
-    const rejectBtn = screen.getByRole("button", { name: /Recusar orçamento/i });
-    expect(rejectBtn).not.toBeDisabled();
-    fireEvent.click(rejectBtn);
-    expect(screen.getByRole("heading", { name: /Recusar orçamento/i })).toBeInTheDocument();
+    expect(screen.getByText(/Sua segurança na Renovi/i)).toBeInTheDocument();
   });
 });

@@ -12,6 +12,10 @@ describe("serviceRequestBudgetSheet constants", () => {
       label: "Aceito",
       variant: "success",
     });
+    expect(getBudgetStatusConfig("REVISION_REQUESTED")).toMatchObject({
+      label: "Revisão solicitada",
+      variant: "warning",
+    });
   });
 
   it("uses compare mode for open service requests", () => {

@@ -349,6 +349,20 @@ function buildCancelledPresentation(
   };
 }
 
+function chatDisabled(model: ServiceModel): boolean {
+  return !model.chatSummary?.id;
+}
+
+function chatAction(model: ServiceModel, label = "Ver conversa com prestador"): ClientCardAction {
+  const disabled = chatDisabled(model);
+  return {
+    label,
+    intent: "chat",
+    disabled,
+    disabledReason: disabled ? "Conversa ainda não disponível para este pedido" : undefined,
+  };
+}
+
 function unreadMessagesAction(model: ServiceModel): ClientCardAction {
   const latestChat = model.chatSummary;
   const providerLabel = latestChat?.providerDisplayName?.trim();
@@ -418,13 +432,19 @@ function buildNegotiationActions(
   };
 }
 
-function buildInProgressActions(): Pick<
-  ClientServiceCardPresentation,
-  "primaryAction" | "secondaryAction"
-> {
+function buildInProgressActions(
+  model: ServiceModel,
+): Pick<ClientServiceCardPresentation, "primaryAction" | "secondaryAction"> {
+  if (model.chatSummary?.isUnread || model.unreadChatCount > 0) {
+    return {
+      primaryAction: chatAction(model, "Responder"),
+      secondaryAction: { label: "Ver detalhes", intent: "details" },
+    };
+  }
+
   return {
-    primaryAction: { label: "Ver detalhes", intent: "details" },
-    secondaryAction: null,
+    primaryAction: chatAction(model),
+    secondaryAction: { label: "Ver detalhes", intent: "details" },
   };
 }
 
@@ -463,7 +483,7 @@ export function getClientServiceCardPresentation(
   switch (model.listPhase) {
     case "in_progress":
       content = buildInProgressPresentation(model);
-      actions = buildInProgressActions();
+      actions = buildInProgressActions(model);
       break;
     case "completed":
       content = buildCompletedPresentation(model);

@@ -153,7 +153,7 @@ function ClientCardActions({
         variant={variant}
         size="sm"
         className={cn(
-          "h-9 min-h-9 rounded-full px-4 font-medium gap-1.5 transition-transform duration-150 ease-out active:scale-[0.97]",
+          "h-10 min-h-10 w-full rounded-full px-4 font-medium gap-1.5 transition-transform duration-150 ease-out active:scale-[0.97] sm:h-9 sm:min-h-9 sm:w-auto",
           variant === "default"
             ? "bg-primary text-primary-foreground hover:bg-primary/90"
             : "border-border/80 bg-background text-foreground hover:bg-muted/60",
@@ -162,7 +162,7 @@ function ClientCardActions({
         onClick={() => handleAction(action)}
       >
         {renderIcon(action.intent)}
-        <span>{action.label}</span>
+        <span className="truncate">{action.label}</span>
       </Button>
     );
 
@@ -211,7 +211,7 @@ function ClientCardActions({
   };
 
   return (
-    <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2">
+    <div className="flex w-full min-w-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
       {secondaryAction ? renderButton(secondaryAction, "outline") : null}
       {renderButton(primaryAction, "default")}
     </div>
@@ -259,7 +259,7 @@ function HighlightBlock({
           iconBoxClassName={cn(theme.highlight.iconBox, iconRowSpanClass, "self-center")}
           iconClassName={theme.highlight.icon}
         />
-        <p className={cn("text-sm font-semibold leading-snug", theme.highlight.title)}>
+        <p className={cn("min-w-0 text-sm font-semibold leading-snug", theme.highlight.title)}>
           {highlight.title}
         </p>
         {highlight.messagePreview ? (
@@ -327,7 +327,7 @@ export function ClientServiceListCard({
         onClick={canOpenDetails ? () => onOpenDetails?.(model) : undefined}
         aria-label={canOpenDetails ? `Ver detalhes de ${model.title}` : undefined}
       >
-        <div className="flex min-w-0 items-center justify-between gap-3">
+        <div className="flex min-w-0 items-start justify-between gap-3">
           {presentation.showProviderHeader ? (
             <div className="flex min-w-0 flex-1 items-center gap-2.5">
               <ProviderAvatar
@@ -387,7 +387,7 @@ export function ClientServiceListCard({
         ) : null}
       </CardBody>
 
-      <div className="mt-auto border-t border-border/60 px-4 pb-4 pt-3">
+      <div className="mt-auto min-w-0 border-t border-border/60 px-4 pb-4 pt-3">
         <ClientCardActions
           model={model}
           primaryAction={presentation.primaryAction}

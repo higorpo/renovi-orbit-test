@@ -1,6 +1,10 @@
+import {
+  coerceProposalStatus,
+  defineProposalStatusMap,
+} from "../constants/proposalStatus";
 import type { ProposalStatus } from "../types/proposals.types";
 
-const STATUS_LABELS: Record<ProposalStatus, string> = {
+const PROPOSAL_STATUS_LABELS = defineProposalStatusMap({
   PENDING: "Aguardando resposta",
   ACCEPTED: "Aceita",
   REJECTED: "Recusada",
@@ -8,11 +12,15 @@ const STATUS_LABELS: Record<ProposalStatus, string> = {
   EXPIRED: "Expirada",
   REVISION_REQUESTED: "Revisão solicitada",
   REVISED: "Atualizada",
-};
+});
 
 export function getProposalStatusLabel(status: ProposalStatus | string | null): string {
   if (!status) return "Desconhecido";
-  return STATUS_LABELS[status as ProposalStatus] ?? status;
+
+  const resolved = coerceProposalStatus(status);
+  if (resolved) return PROPOSAL_STATUS_LABELS[resolved];
+
+  return status;
 }
 
 export function formatProposalDateTime(value: string | null | undefined): string {

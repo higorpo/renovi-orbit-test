@@ -58,10 +58,10 @@ describe("computeProposalCountdown", () => {
     expect(snapshot.isExpired).toBe(true);
   });
 
-  it("counts down for submitted budgets mapped as pending", () => {
+  it("counts down for pending proposals", () => {
     const expiresAt = new Date("2026-01-01T23:00:00.000Z");
     const snapshot = computeProposalCountdown({
-      status: "SUBMITTED",
+      status: "PENDING",
       expiresAt,
     });
 

@@ -99,6 +99,13 @@ export type {
 export type { ProposalComposerMode } from "./types/proposalComposerMode.types";
 
 export { MAX_PROPOSAL_REVISIONS } from "./constants/proposalRevisions";
+export {
+  PROPOSAL_STATUSES,
+  defineProposalStatusMap,
+  coerceProposalStatus,
+  isProposalStatus,
+  assertProposalStatusExhaustive,
+} from "./constants/proposalStatus";
 export { AcceptProposalDialog, type AcceptProposalDialogProps } from "./components/AcceptProposalDialog";
 export { RejectProposalDialog, type RejectProposalDialogProps } from "./components/RejectProposalDialog";
 export {
@@ -185,12 +192,21 @@ export {
 export { mapProposalDetailToSummary } from "./utils/mapProposalDetailToSummary";
 export {
   normalizeProposalStatus,
+  resolveProposalStatus,
   hasActiveServiceRequestProposal,
   canEditServiceRequestProposal,
   isRejectedProposalStatus,
   isPendingProposalStatus,
 } from "./utils/proposalStatus";
 export { PROPOSAL_COPY_VARIANTS, type ProposalCopyVariant } from "./constants/proposalCopyVariants";
+export {
+  resolveClientProposalCtas,
+  type ClientProposalCta,
+} from "./utils/clientProposalCtas";
+export {
+  mockProviderCompletedServices,
+  mockProviderRating,
+} from "./utils/mockProviderRating";
 export {
   computeProposalCountdown,
   formatProposalRemainingMs,

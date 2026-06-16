@@ -43,7 +43,7 @@ describe("isRejectedProposalStatus", () => {
 describe("isPendingProposalStatus", () => {
   it("matches pending statuses", () => {
     expect(isPendingProposalStatus("PENDING")).toBe(true);
-    expect(isPendingProposalStatus("SUBMITTED")).toBe(true);
+    expect(isPendingProposalStatus("submitted")).toBe(false);
     expect(isPendingProposalStatus("REVISION_REQUESTED")).toBe(false);
   });
 });

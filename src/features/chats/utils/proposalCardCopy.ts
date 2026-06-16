@@ -1,12 +1,23 @@
 import type { ProfileRole } from "@/features/auth";
 import type { ProposalStatus } from "@/features/negotiation-proposals";
+import {
+  assertProposalStatusExhaustive,
+  coerceProposalStatus,
+} from "@/features/negotiation-proposals/constants/proposalStatus";
 import { MAX_PROPOSAL_REVISIONS } from "@/features/negotiation-proposals/constants/proposalRevisions";
+
+function resolveStatus(status: ProposalStatus | string): ProposalStatus | null {
+  return coerceProposalStatus(status);
+}
 
 export function resolveProposalCardHeadline(
   status: ProposalStatus | string,
   viewerRole: ProfileRole,
 ): string {
-  switch (status) {
+  const resolved = resolveStatus(status);
+  if (!resolved) return "Proposta";
+
+  switch (resolved) {
     case "PENDING":
       return viewerRole === "client" ? "Proposta recebida" : "Proposta enviada";
     case "ACCEPTED":
@@ -21,7 +32,7 @@ export function resolveProposalCardHeadline(
     case "REVISION_REQUESTED":
       return "Revisão solicitada";
     default:
-      return "Proposta";
+      return assertProposalStatusExhaustive(resolved);
   }
 }
 
@@ -29,7 +40,10 @@ export function resolveProposalCardDescription(
   status: ProposalStatus | string,
   viewerRole: ProfileRole,
 ): string {
-  switch (status) {
+  const resolved = resolveStatus(status);
+  if (!resolved) return "Atualização da negociação.";
+
+  switch (resolved) {
     case "PENDING":
       return viewerRole === "client"
         ? "Aguardando sua análise."
@@ -55,7 +69,7 @@ export function resolveProposalCardDescription(
         ? "Esta versão foi substituída por uma nova proposta que você enviou."
         : "Uma nova versão da proposta está disponível.";
     default:
-      return "Atualização da negociação.";
+      return assertProposalStatusExhaustive(resolved);
   }
 }
 
@@ -71,7 +85,9 @@ export function resolveProposalCardCtas(
   viewerRole: ProfileRole,
   revisionCount = 0,
 ): ProposalCardCta[] {
-  if (viewerRole === "client" && status === "PENDING") {
+  const resolved = resolveStatus(status);
+
+  if (viewerRole === "client" && coerceProposalStatus(status) === "PENDING") {
     const revisionLimitReached = revisionCount >= MAX_PROPOSAL_REVISIONS;
 
     return [
@@ -86,7 +102,7 @@ export function resolveProposalCardCtas(
     ];
   }
 
-  if (viewerRole === "provider" && status === "REVISION_REQUESTED") {
+  if (viewerRole === "provider" && resolved === "REVISION_REQUESTED") {
     return [{ id: "edit_proposal", label: "Editar proposta", variant: "default" }];
   }
 
@@ -94,8 +110,8 @@ export function resolveProposalCardCtas(
 }
 
 export function resolveProposalCardDetailsLabel(
-  status: ProposalStatus | string,
-  viewerRole: ProfileRole,
+  _status: ProposalStatus | string,
+  _viewerRole: ProfileRole,
 ): string {
   return "Ver detalhes da proposta";
 }

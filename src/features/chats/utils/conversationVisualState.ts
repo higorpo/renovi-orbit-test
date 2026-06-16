@@ -1,4 +1,10 @@
 import {
+  assertProposalStatusExhaustive,
+  coerceProposalStatus,
+  defineProposalStatusMap,
+} from "@/features/negotiation-proposals/constants/proposalStatus";
+import type { ProposalStatus } from "@/features/negotiation-proposals";
+import {
   CheckCircle2,
   Circle,
   CircleOff,
@@ -82,7 +88,7 @@ export function getConversationStatusPresentation(
 }
 
 /** Proposal card surface tokens (R20-AC02) — status must not rely on color alone (icon + text in card). */
-export const PROPOSAL_STATUS_SURFACE: Record<string, string> = {
+const PROPOSAL_STATUS_SURFACE = defineProposalStatusMap({
   PENDING: "border-primary/35 bg-card shadow-sm",
   ACCEPTED: "border-emerald-600/40 bg-emerald-500/5",
   REJECTED: "border-destructive/35 bg-destructive/5",
@@ -90,13 +96,22 @@ export const PROPOSAL_STATUS_SURFACE: Record<string, string> = {
   EXPIRED: "border-muted-foreground/25 bg-muted/40",
   REVISION_REQUESTED: "border-amber-600/35 bg-amber-500/5",
   REVISED: "border-amber-600/35 bg-amber-500/5",
-};
+});
 
 export function getProposalCardSurfaceClass(status: string): string {
-  return PROPOSAL_STATUS_SURFACE[status] ?? "border-border/70 bg-card";
+  const resolved = coerceProposalStatus(status);
+  if (!resolved) return "border-border/70 bg-card";
+  return PROPOSAL_STATUS_SURFACE[resolved];
 }
 
 export function getProposalStatusIcon(status: string): LucideIcon {
+  const resolved = coerceProposalStatus(status);
+  if (!resolved) return Circle;
+
+  return getProposalStatusIconForStatus(resolved);
+}
+
+function getProposalStatusIconForStatus(status: ProposalStatus): LucideIcon {
   switch (status) {
     case "ACCEPTED":
       return CheckCircle2;
@@ -106,11 +121,12 @@ export function getProposalStatusIcon(status: string): LucideIcon {
     case "REJECTED_AUTOMATICALLY":
       return XCircle;
     case "REVISED":
+    case "REVISION_REQUESTED":
       return CircleDot;
     case "PENDING":
       return Clock;
     default:
-      return Circle;
+      return assertProposalStatusExhaustive(status);
   }
 }
 

@@ -3,22 +3,25 @@ import type { ServiceModel } from "@/features/view-services";
 import { logger } from "@/lib/logger";
 import { supabase } from "@/lib/supabase/client";
 import { rejectProposal } from "./proposals.api";
+import { parseProposalSuggestedSlots } from "../utils/parseProposalSuggestedSlots";
 import type {
   ServiceRequestBudgetCompareDetail,
   ServiceRequestBudgetCompareProposal,
 } from "../types/serviceRequestBudgetCompare.types";
 
 const BUDGET_COMPARE_PROPOSAL_SELECT =
-  "id, provider_id, proposed_amount, status, created_at, submitted_at, proposal_description, photos, profiles!provider_proposals_provider_id_fkey(full_name, profile_image_path)" as const;
+  "id, provider_id, proposed_amount, revision_count, status, created_at, submitted_at, proposal_description, proposal_suggested_slots, photos, profiles!provider_proposals_provider_id_fkey(full_name, profile_image_path)" as const;
 
 interface BudgetCompareProposalRow {
   id: string;
   provider_id: string;
   proposed_amount: number;
+  revision_count: number;
   status: string;
   created_at: string;
   submitted_at: string | null;
   proposal_description: string;
+  proposal_suggested_slots: unknown;
   photos: string[] | null;
   profiles:
     | {
@@ -79,10 +82,12 @@ function mapProposalRow(
     provider_slug: publicProfile?.slug ?? null,
     provider_profile_image_path: profile?.profile_image_path ?? null,
     proposed_amount: row.proposed_amount,
+    revision_count: row.revision_count ?? 0,
     status: row.status,
     submitted_at: row.submitted_at,
     created_at: row.created_at,
     proposal_description: row.proposal_description,
+    proposal_suggested_slots: parseProposalSuggestedSlots(row.proposal_suggested_slots),
     photos: Array.isArray(row.photos) ? row.photos : [],
   };
 }

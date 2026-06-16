@@ -1,3 +1,6 @@
+import {
+  defineProposalStatusMap,
+} from "@/features/negotiation-proposals/constants/proposalStatus";
 import type { ProposalStatus } from "@/features/negotiation-proposals";
 import type { ServiceListPhase } from "@/features/view-services";
 
@@ -6,7 +9,7 @@ export interface ProviderProposalStatusPresentation {
   variant: "default" | "secondary" | "destructive" | "outline" | "warning" | "success";
 }
 
-const PROPOSAL_STATUS_LABELS: Partial<Record<ProposalStatus, string>> = {
+const PROPOSAL_STATUS_LABELS = defineProposalStatusMap({
   PENDING: "Aguardando cliente",
   REVISION_REQUESTED: "Revisão solicitada",
   REVISED: "Proposta revisada",
@@ -14,15 +17,15 @@ const PROPOSAL_STATUS_LABELS: Partial<Record<ProposalStatus, string>> = {
   REJECTED: "Proposta recusada",
   REJECTED_AUTOMATICALLY: "Recusada automaticamente",
   EXPIRED: "Proposta expirada",
-};
+});
 
 export function getProviderProposalContextLabel(
   status: ProposalStatus | undefined,
   listPhase: ServiceListPhase,
   hasChat?: boolean,
 ): string | null {
-  if (status && PROPOSAL_STATUS_LABELS[status]) {
-    return PROPOSAL_STATUS_LABELS[status] ?? null;
+  if (status) {
+    return PROPOSAL_STATUS_LABELS[status];
   }
   if (listPhase === "negotiation" && !status) {
     return hasChat ? "Conversa iniciada" : "Em negociação";
