@@ -13,6 +13,11 @@ export function getChatMessageText(message: ChatMessageListItem): string {
     return "Áudio";
   }
 
+  if (message.message_type === "SYSTEM" || message.message_type === "WORKFLOW_ACTION") {
+    const text = message.payload.text;
+    if (typeof text === "string" && text.trim()) return text.trim();
+  }
+
   const preview = message.payload.preview;
   if (typeof preview === "string" && preview.trim()) return preview.trim();
 

@@ -4,7 +4,7 @@ begin;
 
 \ir fixtures/seed_chat.inc
 
-select plan(9);
+select plan(10);
 
 create or replace function pg_temp.cns_set_auth(p_user_id uuid)
 returns void
@@ -258,6 +258,20 @@ select is(
   ),
   'CLOSED',
   'accept closes competing provider chats only'
+);
+
+select ok(
+  (
+    select exists (
+      select 1
+      from public.chat_messages m
+      where m.chat_id = (select chat_id from _accept_chat_competitor)
+        and m.message_type = 'SYSTEM'::public.cns_message_type
+        and m.payload->>'text' = 'Outra proposta foi aceita neste pedido.'
+        and m.sender_user_id is null
+    )
+  ),
+  'accept inserts system message in competing provider chats'
 );
 
 select lives_ok(

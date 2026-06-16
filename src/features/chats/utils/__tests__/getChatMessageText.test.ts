@@ -24,4 +24,14 @@ describe("getChatMessageText", () => {
   it("falls back when payload is empty", () => {
     expect(getChatMessageText(base)).toBe("Mensagem");
   });
+
+  it("returns trimmed text payload for SYSTEM messages", () => {
+    expect(
+      getChatMessageText({
+        ...base,
+        message_type: "SYSTEM",
+        payload: { text: "  Outra proposta foi aceita neste pedido.  " },
+      }),
+    ).toBe("Outra proposta foi aceita neste pedido.");
+  });
 });
