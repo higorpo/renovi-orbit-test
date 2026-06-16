@@ -36,6 +36,7 @@ Urgentes:
 - Sistema de verificação de perfil do prestador, onde ele anexa os documentos e a equipe interna avalia
 - remoteconfig para não permitir cadastrar profissionais etc
 - remoteconfig para redirecionar para grupo de whatsapp
+-cadastro e criação de service requests não estão funcionando por conta da proteção 
 
 Telas/fluxos restantes:
 
@@ -60,7 +61,6 @@ Telas/fluxos restantes:
 Coisas para verificar:
 
 - Não deve mostrar trabalho que eu enviei proposta na tela de trabalhos
-- Quando proposta aceita e entrar na tela de um trabalho específico, redirecionar para tela do serviço em si.
 - Prestadores marcados como "Pioneiros" tem taxa de serviço menor
 - Direcionar prestador para que ele cadastre serviços que ele atenda para exibir trabalhos
 - Estrelas de avaliação dos cards devem estar usando dados reais
@@ -70,10 +70,6 @@ Coisas para terminar do fluxo atual de trabalho:
 
 - Adicionar testes unitários no módulo de client-budget
 - Testar a tela de orçamentos do cliente no fluxo do mobile
-- Testar a tela de meus serviços do cliente no fluxo do mobile
-- Adicionar ações para os botões de Aceitar orçamento e recusar orçamento
-- api.github.com precisa ser removida.
-- adicionar na tela de orçamento a escolha do cliente de uma data para realização do serviço, se o prestador tiver na plataforma um conflito de horário/data não mostrar aquela opção.
 - ao gerar a descrição do pedido, também gerar o checklist de conclusão do serviço
   - mostrar o checklist de conclusão do serviço pro prestador na hora que ele vai fazer o orçamento e permitir que ele altere alguma coisa
   - apresentar o checklist de conclusão do serviço para o cliente quando ele vai fechar o serviço
@@ -81,6 +77,13 @@ Coisas para terminar do fluxo atual de trabalho:
 
 Coisas para fazer next
 -renomear tabela de provider_proposals
--refazer card da tela de meus serviços do cliente
 -[avaliar]simplificar query de get_service_list  (hoje ele tá trazendo um monte de dados que nem vai ser exibido no card)
 -fluxo de prestador recusar revisão de proposta
+-fazer skeleton na tela de detalhes de um serviço/sheet
+-adicionar outros botões na tela de detalhes do serviço/sheet
+-adicionar card com chats ativos relacionados ao serviço na tela de detalhes do serviço
+-adicionar card para ver comparativo de preços na tela de detalhes do serviço
+-refatorar tela de comparativo de orçamentos do serviço para o cliente
+  -permitir aceitar um orçamento diretamente dessa tela
+  -permitir recusar um orçamento diretamente dessa tela
+  -permitir pedir uma revisão diretamente dessa tela
