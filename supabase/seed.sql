@@ -543,7 +543,7 @@ on conflict (provider_id, neighborhood_id) do nothing;
 
 -- 11) service_requests (20 total: eletrica or ar condicionado)
 --     form_schema snapshot from platform_forms via platform_services.form_id.
---     10 negotiated (seeded via RPCs below), 9 open, 1 cancelled via RPC.
+--     10 negotiated (seeded via RPCs below), 9 open, 1 cancelled by client after chat.
 insert into public.service_requests (
   id, client_id, service_id, address_id,
   title, description, form_data, form_schema, form_version,
@@ -861,11 +861,11 @@ from (
       '68e30f1d-3c47-441f-94c6-76b6ea0db474'::uuid,
       'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a63'::uuid,
       'ecd13138-0d54-431f-a672-55903f313022'::uuid,
-      'Instalação de ar condicionado - cancelado',
-      'Instalação de split 9.000 BTU no quarto de solteiro. Cliente desistiu após receber estimativa de necessidade de obra elétrica adicional. Pedido mantido no seed apenas para testar status cancelado. Imóvel térreo, parede externa disponível, sem ponto elétrico dedicado.',
-      '{"tipo_servico":"instalacao_nova","tipo_imovel":"residencial","urgency":"low","qtd_aparelhos":1,"capacidade_btu":"9000","ja_tem_ponto":false,"descricao":"Split 9 mil BTU em quarto de solteiro — pedido cancelado pelo cliente.","observacoes":"Cancelado por custo adicional de ponto elétrico.","data_preferida":"2026-07-20","horario_preferido":"flexivel"}'::jsonb,
+      'Instalação de ar condicionado - cancelado após negociação',
+      'Instalação de split 9.000 BTU no quarto de solteiro. O prestador iniciou conversa, tirou dúvidas sobre passagem de tubulação e visita técnica, mas o cliente decidiu cancelar o pedido antes de receber proposta formal — encontrou outro profissional mais barato. Imóvel térreo, parede externa disponível, sem ponto elétrico dedicado.',
+      '{"tipo_servico":"instalacao_nova","tipo_imovel":"residencial","urgency":"low","qtd_aparelhos":1,"capacidade_btu":"9000","ja_tem_ponto":false,"descricao":"Split 9 mil BTU no quarto; negociação iniciada e pedido cancelado pelo cliente.","observacoes":"Cancelado durante fase de descoberta no chat, sem proposta enviada.","data_preferida":"2026-07-20","horario_preferido":"flexivel"}'::jsonb,
       'OPEN', 'low', 'simple',
-      array['cancelado', 'ar condicionado', 'residencial'],
+      array['cancelado', 'ar condicionado', 'negociação', 'residencial'],
       array['Cliente não confirmou se retomará o serviço no futuro'],
       array['vacuum_pump', 'manifold_gauges', 'drill']::text[],
       array['line_set', 'refrigerant', 'cable_wire']::text[],
@@ -982,6 +982,72 @@ as $$
     lpad((91000000 + p_scenario)::text, 8, '0') || '-0001-4001-8001-' ||
     lpad((p_scenario * 100 + p_suffix)::text, 12, '0')
   )::uuid;
+$$;
+
+-- Seed RPCs run in one transaction; now() is frozen so message order ties on UUID.
+-- Re-stamp created_at in logical order (TEXT prelude, then PROPOSAL by version).
+create or replace function pg_temp.seed_timeline_epoch()
+returns timestamptz
+language sql
+immutable
+as $$
+  select timestamptz '2026-06-09 20:00:00+00';
+$$;
+
+create or replace function pg_temp.seed_finalize_chat_timeline(
+  p_chat_id uuid,
+  p_scenario int
+)
+returns void
+language plpgsql
+as $$
+declare
+  v_epoch timestamptz := pg_temp.seed_timeline_epoch();
+begin
+  with ranked as (
+    select
+      m.id,
+      row_number() over (
+        order by
+          case m.message_type
+            when 'TEXT'::public.cns_message_type then 1
+            when 'PROPOSAL'::public.cns_message_type then 2
+            else 3
+          end,
+          coalesce(pp.version, 0),
+          coalesce(m.idempotency_key::text, m.id::text)
+      ) as rn
+    from public.chat_messages m
+    left join public.provider_proposals pp
+      on pp.id = m.linked_entity_id
+      and m.message_type = 'PROPOSAL'::public.cns_message_type
+    where m.chat_id = p_chat_id
+  )
+  update public.chat_messages m
+  set created_at = v_epoch + make_interval(secs => p_scenario * 100 + ranked.rn)
+  from ranked
+  where m.id = ranked.id;
+
+  update public.provider_proposals pp
+  set
+    created_at = m.created_at,
+    submitted_at = m.created_at
+  from public.chat_messages m
+  where m.chat_id = p_chat_id
+    and m.message_type = 'PROPOSAL'::public.cns_message_type
+    and m.linked_entity_id = pp.id;
+
+  update public.chats c
+  set
+    last_interaction_at = sub.max_created_at,
+    updated_at = sub.max_created_at
+  from (
+    select max(cm.created_at) as max_created_at
+    from public.chat_messages cm
+    where cm.chat_id = p_chat_id
+  ) sub
+  where c.id = p_chat_id;
+end;
 $$;
 
 create or replace function pg_temp.seed_chat_prelude(
@@ -1127,6 +1193,7 @@ begin
     pg_temp.seed_flow_key(1, 2),
     'Valor acima do orçamento disponível.'
   );
+  perform pg_temp.seed_finalize_chat_timeline(v_chat_id, 1);
 
   -- 2) Proposal accepted by client (8017e002)
   v_client_id := '38e30f1d-3c47-441f-94c6-76b6ea0db471';
@@ -1151,6 +1218,7 @@ begin
     ),
     pg_temp.seed_flow_key(2, 2)
   );
+  perform pg_temp.seed_finalize_chat_timeline(v_chat_id, 2);
 
   -- 3) Proposal pending client response (8017e003)
   v_client_id := '48e30f1d-3c47-441f-94c6-76b6ea0db472';
@@ -1166,6 +1234,7 @@ begin
     620.00,
     pg_temp.seed_flow_key(3, 1)
   );
+  perform pg_temp.seed_finalize_chat_timeline(v_chat_id, 3);
 
   -- 4) Revision requested by client (8017e004)
   v_client_id := '58e30f1d-3c47-441f-94c6-76b6ea0db473';
@@ -1188,6 +1257,7 @@ begin
     'REDUCE_SCOPE'::public.proposal_revision_reason,
     'Por favor, remover instalação do rack e manter apenas o split.'
   );
+  perform pg_temp.seed_finalize_chat_timeline(v_chat_id, 4);
 
   -- 5) Revised proposal after client revision request (8017e005)
   v_client_id := '68e30f1d-3c47-441f-94c6-76b6ea0db474';
@@ -1217,6 +1287,7 @@ begin
     pg_temp.seed_flow_key(5, 3),
     'Proposta revisada com escopo reduzido e material básico.'
   );
+  perform pg_temp.seed_finalize_chat_timeline(v_chat_id, 5);
 
   -- 6-10) Discovery chats without proposals yet
   perform pg_temp.seed_chat_prelude(
@@ -1225,10 +1296,18 @@ begin
     v_provider_id,
     6
   );
+  perform pg_temp.seed_finalize_chat_timeline(
+    (select id from public.chats where service_request_id = '8017e006-5a32-44e7-b8da-1727a14f4d06'::uuid limit 1),
+    6
+  );
   perform pg_temp.seed_chat_prelude(
     '8017e007-5a32-44e7-b8da-1727a14f4d07'::uuid,
     '38e30f1d-3c47-441f-94c6-76b6ea0db471'::uuid,
     v_provider_id,
+    7
+  );
+  perform pg_temp.seed_finalize_chat_timeline(
+    (select id from public.chats where service_request_id = '8017e007-5a32-44e7-b8da-1727a14f4d07'::uuid limit 1),
     7
   );
   perform pg_temp.seed_chat_prelude(
@@ -1237,25 +1316,42 @@ begin
     v_provider_id,
     8
   );
+  perform pg_temp.seed_finalize_chat_timeline(
+    (select id from public.chats where service_request_id = '8017e008-5a32-44e7-b8da-1727a14f4d08'::uuid limit 1),
+    8
+  );
   perform pg_temp.seed_chat_prelude(
     '8017e009-5a32-44e7-b8da-1727a14f4d09'::uuid,
     '58e30f1d-3c47-441f-94c6-76b6ea0db473'::uuid,
     v_provider_id,
     9
   );
-  perform pg_temp.seed_chat_prelude(
+  perform pg_temp.seed_finalize_chat_timeline(
+    (select id from public.chats where service_request_id = '8017e009-5a32-44e7-b8da-1727a14f4d09'::uuid limit 1),
+    9
+  );
+  v_chat_id := pg_temp.seed_chat_prelude(
     '8017e00a-5a32-44e7-b8da-1727a14f4d0a'::uuid,
     '68e30f1d-3c47-441f-94c6-76b6ea0db474'::uuid,
     v_provider_id,
     10
   );
+  perform pg_temp.seed_finalize_chat_timeline(v_chat_id, 10);
 
-  -- Cancel one service request by the client (8017e018)
-  perform pg_temp.seed_set_auth('68e30f1d-3c47-441f-94c6-76b6ea0db474'::uuid);
+  -- Cancel after provider-led discovery chat, before any proposal (8017e018)
+  v_client_id := '68e30f1d-3c47-441f-94c6-76b6ea0db474';
+  perform pg_temp.seed_chat_prelude(
+    '8017e018-5a32-44e7-b8da-1727a14f4d18'::uuid,
+    v_client_id,
+    v_provider_id,
+    18
+  );
+  perform pg_temp.seed_set_auth(v_client_id);
   perform public.cancel_service_request(
     '8017e018-5a32-44e7-b8da-1727a14f4d18'::uuid,
     pg_temp.seed_flow_key(18, 1)
   );
+  perform pg_temp.seed_finalize_chat_timeline(v_chat_id, 18);
 end;
 $seed_negotiations$;
 

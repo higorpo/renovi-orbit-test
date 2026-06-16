@@ -41,7 +41,6 @@ Telas/fluxos restantes:
 
 - Aceitar orçamento
 - Pagamento de um serviço
-- Chat realtime do serviço
 - Visualização de detalhes de um serviço em execução
 - Visualizar checklist de conclusão do serviço
 - Avaliação do serviço após sua conclusão
@@ -56,6 +55,7 @@ Telas/fluxos restantes:
 - Tela de onboarding para cliente
 - Fluxo do prestador/cliente remarcar um serviço
 - Fluxo do prestador/cliente cancelar um serviço
+- Matching algorithm
 
 Coisas para verificar:
 
@@ -63,6 +63,7 @@ Coisas para verificar:
 - Quando proposta aceita e entrar na tela de um trabalho específico, redirecionar para tela do serviço em si.
 - Prestadores marcados como "Pioneiros" tem taxa de serviço menor
 - Direcionar prestador para que ele cadastre serviços que ele atenda para exibir trabalhos
+- Estrelas de avaliação dos cards devem estar usando dados reais
 
 
 Coisas para terminar do fluxo atual de trabalho:

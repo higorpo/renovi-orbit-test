@@ -1,11 +1,11 @@
 import { useAuth } from "@/features/auth";
 import { ClientMyServicesPage } from "./client/ClientMyServicesPage";
-import { ProviderMyServicesPage } from "./provider/ProviderMyServicesPage";
 
+/** Renders client list only; provider list lives in ProviderMyServicesPersistentSlot. */
 export function MyServicesRouteSlot() {
   const { profile } = useAuth();
   if (profile?.role === "provider") {
-    return <ProviderMyServicesPage />;
+    return null;
   }
   return <ClientMyServicesPage />;
 }

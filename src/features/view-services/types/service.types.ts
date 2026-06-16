@@ -1,5 +1,5 @@
 import type { StatusTabId } from "../constants/statusTabs";
-import type { ProposalStatus } from "@/features/negotiation-proposals";
+import type { ProposalRevisionReason, ProposalStatus } from "@/features/negotiation-proposals";
 
 export type ServiceListPhase = "negotiation" | "in_progress" | "completed" | "cancelled";
 
@@ -9,12 +9,17 @@ export interface MyProposalSummary {
   finalAmount: number;
   updatedAt: string;
   expiredAt: string | null;
+  submittedAt: string | null;
+  revisionReason: ProposalRevisionReason | null;
+  revisionNotes: string | null;
+  clientRejectionResponse: string | null;
 }
 
 export interface ServiceChatSummary {
   id: string;
   isUnread: boolean;
   lastInteractionAt: string;
+  lastMessagePreview: string | null;
 }
 
 export interface AddressSummary {
@@ -38,6 +43,7 @@ export interface PlatformServiceSummary {
 export interface CounterpartySummary {
   id: string;
   displayName: string;
+  profileImagePath: string | null;
 }
 
 export interface ContractedServiceSummary {
@@ -50,6 +56,7 @@ export interface ContractedServiceSummary {
   scheduledEndDate: string | null;
   scheduledShift: string;
   provider: CounterpartySummary | null;
+  updatedAt: string | null;
 }
 
 /** Unified service model for list and detail (from get_service / list_services RPCs). */
@@ -65,6 +72,9 @@ export interface ServiceModel {
   contractedServiceId: string | null;
   createdAt: string;
   updatedAt: string;
+  requestStatus: string | null;
+  cancelledAt: string | null;
+  completedAt: string | null;
   address: AddressSummary | null;
   service: PlatformServiceSummary | null;
   photoPaths: string[];

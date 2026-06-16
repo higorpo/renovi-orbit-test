@@ -17,6 +17,10 @@ vi.mock("@/hooks/useDebouncedValue", () => ({
   useDebouncedValue: vi.fn((value: string) => value),
 }));
 
+vi.mock("@/features/provider-profile/hooks/usePublicProfileImageUrl", () => ({
+  usePublicProfileImageUrl: vi.fn(() => ({ url: "", isLoading: false })),
+}));
+
 vi.mock("@/features/request-quote", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/request-quote")>();
   return {
@@ -64,8 +68,20 @@ function baseModel(overrides: Partial<ServiceModel> = {}): ServiceModel {
       finalAmount: 150,
       updatedAt: "2025-03-02T00:00:00Z",
       expiredAt: null,
+      submittedAt: null,
+      revisionReason: null,
+      revisionNotes: null,
+      clientRejectionResponse: null,
     },
-    chatSummary: { id: "chat-1", isUnread: false, lastInteractionAt: null },
+    chatSummary: {
+      id: "chat-1",
+      isUnread: false,
+      lastInteractionAt: "2025-03-02T00:00:00Z",
+      lastMessagePreview: null,
+    },
+    requestStatus: "OPEN",
+    cancelledAt: null,
+    completedAt: null,
     ...overrides,
   };
 }
@@ -126,7 +142,7 @@ describe("ProviderMyServicesPage", () => {
 
     render(<ProviderMyServicesPage />, { wrapper: createWrapper() });
     expect(screen.getByText("Serviço")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Ver conversa/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ver negociação/i })).toBeInTheDocument();
   });
 
   it("shows load more when there are items and a next page", () => {

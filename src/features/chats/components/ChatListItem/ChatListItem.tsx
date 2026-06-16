@@ -4,7 +4,7 @@ import type { ConversationListItem } from "../../types/chats.types";
 import { ConversationStatusBadge } from "../ConversationStatusBadge/ConversationStatusBadge";
 import { formatChatListTimestamp } from "../../utils/formatChatListTimestamp";
 import { getConversationStatusPresentation } from "../../utils/conversationVisualState";
-import { getCounterpartyInitials } from "../../utils/getCounterpartyInitials";
+import { initialsFromName } from "@/lib/utils/initialsFromName";
 
 export interface ChatListItemProps {
   item: ConversationListItem;
@@ -61,7 +61,7 @@ export function ChatListItem({ item, isActive = false, onSelect, className }: Ch
           className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-background bg-primary text-xs font-semibold text-primary-foreground shadow-sm"
           aria-hidden
         >
-          {getCounterpartyInitials(item.counterparty.full_name)}
+          {initialsFromName(item.counterparty.full_name)}
         </div>
       </div>
 

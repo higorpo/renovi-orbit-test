@@ -18,7 +18,7 @@ export function MyServicesStatusTabs({
   return (
     <TabsList
       className={cn(
-        "w-full justify-start gap-2 overflow-x-auto p-0",
+        "flex w-full min-w-0 max-w-full justify-start gap-2 overflow-x-auto p-0",
         "bg-transparent min-h-0 rounded-none",
         "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]",
         "snap-x snap-mandatory scroll-smooth"

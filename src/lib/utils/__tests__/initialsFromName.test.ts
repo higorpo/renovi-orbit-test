@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { initialsFromName } from "../initials";
+import { initialsFromName } from "../initialsFromName";
 
 describe("initialsFromName", () => {
   it("returns first and last initial for full name", () => {
     expect(initialsFromName("João Silva")).toBe("JS");
   });
 
-  it("returns single initial for one word", () => {
+  it("returns first two letters for one word", () => {
     expect(initialsFromName("Maria")).toBe("MA");
   });
 

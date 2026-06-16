@@ -8,7 +8,7 @@ import type { ChatMessageListItem } from "../../types/chats.types";
 import type { ChatMessageGroupPosition } from "../../utils/groupChatTimeline";
 import { getChatMessageText } from "../../utils/getChatMessageText";
 import { getChatMessageBubbleClassName } from "../../utils/chatMessageBubbleStyles";
-import { getCounterpartyInitials } from "../../utils/getCounterpartyInitials";
+import { initialsFromName } from "@/lib/utils/initialsFromName";
 import { ChatMessageMeta } from "./ChatMessageMeta";
 
 export interface ChatMessageRowProps {
@@ -82,7 +82,7 @@ export const ChatMessageRow = memo(function ChatMessageRow({
                     className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow-sm"
                     aria-hidden
                   >
-                    {getCounterpartyInitials(counterpartyName)}
+                    {initialsFromName(counterpartyName)}
                   </div>
                 ) : null}
               </div>
@@ -134,7 +134,7 @@ export const ChatMessageRow = memo(function ChatMessageRow({
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow-sm"
                 aria-hidden
               >
-                {getCounterpartyInitials(counterpartyName)}
+                {initialsFromName(counterpartyName)}
               </div>
             ) : null}
           </div>

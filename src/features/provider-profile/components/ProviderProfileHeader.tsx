@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Share2, CalendarDays, MapPin } from "lucide-react";
 import { usePublicProfileImageUrl } from "../hooks/usePublicProfileImageUrl";
 import { useShareProfile } from "../hooks/useShareProfile";
-import { initialsFromName } from "../utils/initials";
+import { initialsFromName } from "@/lib/utils/initialsFromName";
 import { formatProviderSince } from "../utils/formatProviderSince";
 import type { ProviderPublicProfile } from "../types/providerProfilePublic.types";
 

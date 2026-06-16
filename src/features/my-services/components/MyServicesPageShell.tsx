@@ -74,12 +74,12 @@ export function MyServicesPageShell({
   renderCard,
 }: MyServicesPageShellProps) {
   return (
-    <div className="container max-w-5xl px-4 py-6">
+    <div className="mx-auto w-full min-w-0 max-w-5xl px-4 py-6">
       {header}
       <div className="mt-6 space-y-4">
         {focusBanner}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <div className="flex-1">
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1">
             <MyServicesSearchBar
               value={searchQuery}
               onChange={onSearchQueryChange}
@@ -101,13 +101,15 @@ export function MyServicesPageShell({
             disabled={isLoading}
           />
         </div>
-        <Tabs value={filters.statusTabId}>
-          <MyServicesStatusTabs
-            activeTabId={filters.statusTabId}
-            onTabChange={onStatusTabChange}
-            disabled={isLoading}
-          />
-        </Tabs>
+        <div className="min-w-0 max-w-full">
+          <Tabs value={filters.statusTabId}>
+            <MyServicesStatusTabs
+              activeTabId={filters.statusTabId}
+              onTabChange={onStatusTabChange}
+              disabled={isLoading}
+            />
+          </Tabs>
+        </div>
         <section className="mt-4" aria-label="Lista de serviços" id="services-list">
           {isLoading ? (
             <ul className="grid gap-4 sm:grid-cols-1" aria-busy="true">

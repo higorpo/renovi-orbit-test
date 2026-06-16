@@ -32,13 +32,13 @@ describe("MyServicesRouteSlot", () => {
     expect(screen.getByTestId("client-page")).toBeInTheDocument();
   });
 
-  it("renders provider page for provider role", () => {
+  it("renders nothing for provider role", () => {
     useAuth.mockReturnValue({ profile: { role: "provider" } } as never);
-    render(
+    const { container } = render(
       <MemoryRouter>
         <MyServicesRouteSlot />
       </MemoryRouter>,
     );
-    expect(screen.getByTestId("provider-page")).toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
   });
 });

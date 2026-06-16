@@ -19,11 +19,14 @@ const PROPOSAL_STATUS_LABELS: Partial<Record<ProposalStatus, string>> = {
 export function getProviderProposalContextLabel(
   status: ProposalStatus | undefined,
   listPhase: ServiceListPhase,
+  hasChat?: boolean,
 ): string | null {
   if (status && PROPOSAL_STATUS_LABELS[status]) {
     return PROPOSAL_STATUS_LABELS[status] ?? null;
   }
-  if (listPhase === "negotiation") return "Em negociação";
+  if (listPhase === "negotiation" && !status) {
+    return hasChat ? "Conversa iniciada" : "Em negociação";
+  }
   return null;
 }
 

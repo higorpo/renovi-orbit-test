@@ -220,6 +220,7 @@ begin
       'scheduled_start_date', cs.scheduled_start_date,
       'scheduled_end_date', cs.scheduled_end_date,
       'scheduled_shift', cs.scheduled_shift,
+      'updated_at', cs.updated_at,
       'provider', jsonb_build_object(
         'id', cs.provider_id,
         'display_name', coalesce(
@@ -263,6 +264,8 @@ begin
       'photos', coalesce(v_sr.photos, '{}'::text[]),
       'created_at', v_sr.created_at,
       'updated_at', v_sr.updated_at,
+      'cancelled_at', v_sr.cancelled_at,
+      'completed_at', v_sr.completed_at,
       'urgency', v_sr.urgency,
       'tags', v_sr.tags,
       'scope_complexity', v_sr.scope_complexity,

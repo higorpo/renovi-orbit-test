@@ -1,6 +1,7 @@
 export { MyServicesRouteSlot } from "./components/MyServicesRouteSlot";
 export { ClientMyServicesPage } from "./components/client/ClientMyServicesPage";
 export { ProviderMyServicesPage } from "./components/provider/ProviderMyServicesPage";
+export { ProviderMyServicesPersistentSlot } from "./components/provider/ProviderMyServicesPersistentSlot";
 export {
   getMyServicesPageUrlWithFocus,
   getServiceRequestsPageUrlWithFocus,

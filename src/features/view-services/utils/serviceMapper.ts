@@ -1,5 +1,8 @@
 import { statusToTabId } from "../constants/statusTabs";
-import type { ProposalStatus } from "@/features/negotiation-proposals";
+import type {
+  ProposalRevisionReason,
+  ProposalStatus,
+} from "@/features/negotiation-proposals";
 import type {
   AddressSummary,
   ContractedServiceSummary,
@@ -35,6 +38,9 @@ export interface RpcServiceRequest {
   photos?: string[] | null;
   created_at?: string;
   updated_at?: string;
+  status?: string | null;
+  cancelled_at?: string | null;
+  completed_at?: string | null;
   urgency?: string | null;
   tags?: string[] | null;
   scope_complexity?: string | null;
@@ -57,11 +63,16 @@ export interface RpcServiceNegotiation {
     final_amount?: number;
     updated_at?: string;
     expired_at?: string | null;
+    submitted_at?: string | null;
+    revision_reason?: string | null;
+    revision_notes?: string | null;
+    client_rejection_response?: string | null;
   } | null;
   chat?: {
     id?: string;
     is_unread?: boolean;
     last_interaction_at?: string;
+    last_message_preview?: string | null;
   } | null;
 }
 
@@ -79,12 +90,14 @@ export interface RpcContractedService {
   scheduled_start_date?: string;
   scheduled_end_date?: string | null;
   scheduled_shift?: string;
+  updated_at?: string | null;
   provider?: RpcContractedProvider | null;
 }
 
 export interface RpcCounterparty {
   id?: string;
   display_name?: string | null;
+  profile_image_path?: string | null;
 }
 
 export interface RpcServiceRow {
@@ -138,6 +151,7 @@ function mapCounterparty(counterparty: RpcCounterparty | null | undefined): Coun
   return {
     id: counterparty.id,
     displayName: counterparty.display_name?.trim() || "—",
+    profileImagePath: counterparty.profile_image_path?.trim() || null,
   };
 }
 
@@ -153,6 +167,7 @@ function mapContracted(contracted: RpcContractedService | null | undefined): Con
     scheduledEndDate: contracted.scheduled_end_date ?? null,
     scheduledShift: contracted.scheduled_shift ?? "",
     provider: mapCounterparty(contracted.provider),
+    updatedAt: contracted.updated_at ?? null,
   };
 }
 
@@ -179,6 +194,10 @@ function mapMyProposal(
     finalAmount: raw.final_amount ?? 0,
     updatedAt: raw.updated_at ?? "",
     expiredAt: raw.expired_at ?? null,
+    submittedAt: raw.submitted_at ?? null,
+    revisionReason: (raw.revision_reason as ProposalRevisionReason | null) ?? null,
+    revisionNotes: raw.revision_notes?.trim() || null,
+    clientRejectionResponse: raw.client_rejection_response?.trim() || null,
   };
 }
 
@@ -190,6 +209,7 @@ function mapChatSummary(
     id: raw.id,
     isUnread: raw.is_unread ?? false,
     lastInteractionAt: raw.last_interaction_at ?? "",
+    lastMessagePreview: raw.last_message_preview?.trim() || null,
   };
 }
 
@@ -214,6 +234,9 @@ export function mapRpcServiceRow(row: RpcServiceRow): ServiceModel {
     contractedServiceId: request.contracted_service_id ?? contracted?.id ?? null,
     createdAt: request.created_at ?? "",
     updatedAt: request.updated_at ?? "",
+    requestStatus: request.status ?? null,
+    cancelledAt: request.cancelled_at ?? null,
+    completedAt: request.completed_at ?? null,
     address,
     service,
     photoPaths: Array.isArray(request.photos) ? request.photos : [],

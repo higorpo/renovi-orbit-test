@@ -15,11 +15,16 @@ vi.mock("@/features/provider-jobs", () => ({
   ProviderJobsPersistentSlot: () => null,
 }));
 
+vi.mock("@/features/my-services", () => ({
+  ProviderMyServicesPersistentSlot: () => null,
+}));
+
 vi.mock("@/features/view-services", () => ({
   ServiceDetailSheet: () => null,
   useServiceDetailModal: () => ({
     isOpen: false,
     isFromProviderJobs: false,
+    isFromProviderMyServices: false,
     serviceRequestId: undefined,
     background: null,
   }),

@@ -1,0 +1,464 @@
+import { getProposalRevisionReasonLabel } from "@/features/negotiation-proposals/utils/proposalRevisionReasonLabels";
+import {
+  getStatusBadgeVariant,
+  getStatusLabel,
+  type StatusBadgeVariant,
+} from "@/features/view-services/constants/statusBadge";
+import type { ServiceModel } from "@/features/view-services/types/service.types";
+import { formatServiceDate } from "@/features/view-services/utils/formatDate";
+import {
+  getScheduleHighlightContent,
+  getScheduledTiming
+} from "@/features/view-services/utils/formatScheduledSummary";
+import { formatLocationDisplay } from "@/features/view-services/utils/locationDisplay";
+import { formatCurrency } from "@/lib/formatCurrency";
+import { formatRelativeDate } from "@/lib/formatRelativeDate";
+import { isProposalExpiringSoon } from "./providerProposalStatus";
+
+export type ProviderCardActionIntent =
+  | "chat"
+  | "details"
+  | "revise_proposal"
+  | "view_proposal";
+
+export type ProviderCardHighlightEmphasis =
+  | "default"
+  | "attention"
+  | "urgent"
+  | "cancelled";
+
+export type ProviderCardHighlightIcon =
+  | "new_message"
+  | "revision"
+  | "waiting"
+  | "conversation"
+  | "scheduled"
+  | "today"
+  | "completed"
+  | "cancelled";
+
+export type ProviderCardInfoIcon =
+  | "location"
+  | "amount"
+  | "date"
+  | "rating"
+  | "quote"
+  | "tag";
+
+export interface ProviderCardHighlight {
+  icon: ProviderCardHighlightIcon;
+  title: string;
+  detail?: string;
+  subdetail?: string;
+  messagePreview?: string;
+  emphasis: ProviderCardHighlightEmphasis;
+}
+
+export interface ProviderCardSecondaryInfo {
+  icon?: ProviderCardInfoIcon;
+  text: string;
+}
+
+export interface ProviderCardAction {
+  label: string;
+  intent: ProviderCardActionIntent | "details" | "chat";
+  disabled?: boolean;
+  disabledReason?: string;
+}
+
+export interface ProviderServiceCardPresentation {
+  phaseLabel: string;
+  phaseBadgeVariant: StatusBadgeVariant;
+  highlight: ProviderCardHighlight;
+  secondaryInfo: ProviderCardSecondaryInfo[];
+  showUrgency: boolean;
+  isTodayService: boolean;
+  primaryAction: ProviderCardAction;
+  secondaryAction: ProviderCardAction | null;
+}
+
+function proposalAmount(model: ServiceModel): string | null {
+  if (model.myProposal?.finalAmount == null) return null;
+  return `Você recebe ${formatCurrency(model.myProposal.finalAmount)}`;
+}
+
+function neighborhoodCity(model: ServiceModel): string | null {
+  const address = model.address;
+  if (!address) return null;
+  const value = [address.neighborhood, address.cityName].filter(Boolean).join(", ");
+  return value ? `Serviço em ${value}` : null;
+}
+
+function fullAddress(model: ServiceModel): string | null {
+  const value = formatLocationDisplay(model.address);
+  return value ? `Serviço em ${value}` : null;
+}
+
+function formatClosedDate(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  return formatServiceDate(iso);
+}
+
+function mockClientRating(serviceId: string): string {
+  let hash = 0;
+  for (const char of serviceId) {
+    hash = (hash * 31 + char.charCodeAt(0)) | 0;
+  }
+  const rating = 4.0 + (Math.abs(hash) % 10) / 10;
+  return rating.toFixed(1);
+}
+
+function cancelReason(model: ServiceModel): string | null {
+  const response = model.myProposal?.clientRejectionResponse;
+  if (response) return response;
+  if (model.requestStatus === "CANCELLED") return "Cliente desistiu da execução";
+  if (model.contracted?.status === "CANCELLED") return "Serviço cancelado";
+  if (model.myProposal?.status === "REJECTED") return "Cliente optou por outro profissional";
+  return null;
+}
+
+function pushSecondaryInfo(
+  items: ProviderCardSecondaryInfo[],
+  entry: { icon?: ProviderCardInfoIcon; text: string | null | undefined },
+): void {
+  if (!entry.text?.trim()) return;
+  items.push({ icon: entry.icon, text: entry.text.trim() });
+}
+
+function buildUnreadMessageHighlight(
+  lastPreview: string | null | undefined,
+): ProviderCardHighlight {
+  return {
+    icon: "new_message",
+    title: "Nova mensagem recebida",
+    messagePreview: lastPreview ?? undefined,
+    emphasis: "attention",
+  };
+}
+
+function buildNegotiationPresentation(
+  model: ServiceModel,
+): Pick<ProviderServiceCardPresentation, "highlight" | "secondaryInfo"> {
+  const secondaryInfo: ProviderCardSecondaryInfo[] = [];
+  const amount = proposalAmount(model);
+  const location = neighborhoodCity(model);
+  const isUnread = model.chatSummary?.isUnread ?? false;
+  const proposalStatus = model.myProposal?.status;
+  const lastPreview = model.chatSummary?.lastMessagePreview;
+  const lastInteraction = model.chatSummary?.lastInteractionAt;
+
+  if (isUnread) {
+    pushSecondaryInfo(secondaryInfo, { icon: "location", text: location });
+
+    return {
+      highlight: buildUnreadMessageHighlight(lastPreview),
+      secondaryInfo,
+    };
+  }
+
+  if (proposalStatus === "REVISION_REQUESTED") {
+    const reasonLabel = model.myProposal?.revisionReason
+      ? getProposalRevisionReasonLabel(model.myProposal.revisionReason)
+      : null;
+
+    pushSecondaryInfo(secondaryInfo, { icon: "tag", text: reasonLabel });
+    pushSecondaryInfo(secondaryInfo, { icon: "location", text: location });
+
+    return {
+      highlight: {
+        icon: "revision",
+        title: "Cliente solicitou revisão",
+        emphasis: "attention",
+      },
+      secondaryInfo,
+    };
+  }
+
+  if (
+    proposalStatus === "PENDING" ||
+    proposalStatus === "REVISED" ||
+    model.hasPendingProposal
+  ) {
+    const submittedAt = formatClosedDate(
+      model.myProposal?.submittedAt ?? model.myProposal?.updatedAt,
+    );
+
+    const expiring = isProposalExpiringSoon(model.myProposal?.expiredAt ?? null);
+    const submittedLine = submittedAt
+      ? `Proposta enviada em ${submittedAt}${expiring ? " · Expira em breve" : ""}`
+      : expiring
+        ? "Sua proposta expira em breve"
+        : null;
+
+    pushSecondaryInfo(secondaryInfo, { icon: "location", text: location });
+    pushSecondaryInfo(secondaryInfo, { icon: "amount", text: amount });
+
+    return {
+      highlight: {
+        icon: "waiting",
+        title: "Aguardando decisão do cliente sobre sua proposta",
+        detail: submittedLine ?? undefined,
+        emphasis: expiring ? "attention" : "default",
+      },
+      secondaryInfo,
+    };
+  }
+
+  if (proposalStatus === 'EXPIRED') {
+    return {
+      highlight: {
+        icon: "waiting",
+        title: "Proposta expirada",
+        detail: `Proposta expirada em ${formatClosedDate(model.myProposal?.expiredAt)}. Envie uma nova proposta caso ainda queira realizar o serviço.`,
+        emphasis: "attention",
+      },
+      secondaryInfo,
+    };
+  }
+
+  if (model.chatSummary) {
+    const relative = lastInteraction ? formatRelativeDate(lastInteraction) : null;
+
+    return {
+      highlight: {
+        icon: "conversation",
+        title: "Negociação em andamento",
+        detail: relative ? `Última interação ${relative.toLowerCase()}` : undefined,
+        emphasis: "default",
+      },
+      secondaryInfo,
+    };
+  }
+
+  pushSecondaryInfo(secondaryInfo, { icon: "location", text: location });
+
+  return {
+    highlight: {
+      icon: "conversation",
+      title: "Inicie a conversa com o cliente",
+      emphasis: "default",
+    },
+    secondaryInfo,
+  };
+}
+
+function buildInProgressPresentation(
+  model: ServiceModel,
+): Pick<ProviderServiceCardPresentation, "highlight" | "secondaryInfo" | "isTodayService"> {
+  const secondaryInfo: ProviderCardSecondaryInfo[] = [];
+  const contracted = model.contracted;
+  const amount = proposalAmount(model);
+  const address = fullAddress(model);
+  const scheduleHighlight = contracted ? getScheduleHighlightContent(contracted) : null;
+  const timing = contracted?.scheduledStartDate
+    ? getScheduledTiming(contracted.scheduledStartDate)
+    : "future";
+  const paymentPending = contracted?.status === "PENDING_PAYMENT";
+  const isUnread = model.chatSummary?.isUnread ?? false;
+  const lastPreview = model.chatSummary?.lastMessagePreview;
+  const isTodayService = timing === "today";
+
+  pushSecondaryInfo(secondaryInfo, {
+    icon: "location",
+    text: address ?? neighborhoodCity(model),
+  });
+  pushSecondaryInfo(secondaryInfo, { icon: "amount", text: amount });
+
+  if (isUnread) {
+    pushSecondaryInfo(secondaryInfo, {
+      icon: "date",
+      text: scheduleHighlight?.title,
+    });
+
+    return {
+      isTodayService,
+      highlight: buildUnreadMessageHighlight(lastPreview),
+      secondaryInfo,
+    };
+  }
+
+  const highlightIcon: ProviderCardHighlightIcon =
+    timing === "today" ? "today" : "scheduled";
+
+  return {
+    isTodayService,
+    highlight: {
+      icon: highlightIcon,
+      title: scheduleHighlight?.title ?? "Serviço agendado",
+      detail: paymentPending ? "Aguardando pagamento do cliente" : undefined,
+      emphasis: timing === "today" ? "urgent" : "default",
+    },
+    secondaryInfo,
+  };
+}
+
+function buildCompletedPresentation(
+  model: ServiceModel,
+): Pick<ProviderServiceCardPresentation, "highlight" | "secondaryInfo" | "isTodayService"> {
+  const secondaryInfo: ProviderCardSecondaryInfo[] = [];
+  const amount = proposalAmount(model);
+  const executedAt =
+    formatClosedDate(model.completedAt) ??
+    formatClosedDate(model.contracted?.updatedAt);
+
+  pushSecondaryInfo(secondaryInfo, { icon: "amount", text: amount });
+  pushSecondaryInfo(secondaryInfo, { icon: "date", text: `Concluído em ${executedAt}` });
+  pushSecondaryInfo(secondaryInfo, { icon: "rating", text: mockClientRating(model.id) });
+
+  return {
+    isTodayService: false,
+    highlight: {
+      icon: "completed",
+      title: "Serviço concluído",
+      emphasis: "default",
+    },
+    secondaryInfo,
+  };
+}
+
+function buildCancelledPresentation(
+  model: ServiceModel,
+): Pick<ProviderServiceCardPresentation, "highlight" | "secondaryInfo" | "isTodayService"> {
+  const cancelledAt =
+    formatClosedDate(model.cancelledAt) ??
+    formatClosedDate(model.contracted?.updatedAt);
+  const reason = cancelReason(model);
+
+  return {
+    isTodayService: false,
+    highlight: {
+      icon: "cancelled",
+      title: "Serviço cancelado",
+      detail: reason ?? undefined,
+      subdetail: cancelledAt ? `Cancelado em ${cancelledAt}` : undefined,
+      emphasis: "cancelled",
+    },
+    secondaryInfo: [],
+  };
+}
+
+function chatDisabled(model: ServiceModel): boolean {
+  return !model.chatSummary?.id;
+}
+
+function chatAction(model: ServiceModel, label = "Ver conversa"): ProviderCardAction {
+  const disabled = chatDisabled(model);
+  return {
+    label,
+    intent: "chat",
+    disabled,
+    disabledReason: disabled ? "Conversa ainda não disponível para este pedido" : undefined,
+  };
+}
+
+function buildNegotiationActions(
+  model: ServiceModel,
+): Pick<ProviderServiceCardPresentation, "primaryAction" | "secondaryAction"> {
+  const isUnread = model.chatSummary?.isUnread ?? false;
+  const proposalStatus = model.myProposal?.status;
+
+  if (isUnread) {
+    return {
+      primaryAction: { label: "Responder", intent: "chat", disabled: chatDisabled(model) },
+      secondaryAction: { label: "Ver detalhes", intent: "details" },
+    };
+  }
+
+  if (proposalStatus === "REVISION_REQUESTED") {
+    return {
+      primaryAction: { label: "Revisar proposta", intent: "revise_proposal" },
+      secondaryAction: chatAction(model, "Ver negociação"),
+    };
+  }
+
+  if (
+    proposalStatus === "PENDING" ||
+    proposalStatus === "REVISED" ||
+    model.hasPendingProposal
+  ) {
+    return {
+      primaryAction: { label: "Ver proposta", intent: "view_proposal" },
+      secondaryAction: chatAction(model, "Ver negociação"),
+    };
+  }
+
+  return {
+    primaryAction: chatAction(model, "Ver negociação"),
+    secondaryAction: { label: "Ver detalhes", intent: "details" },
+  };
+}
+
+function buildInProgressActions(
+  model: ServiceModel,
+): Pick<ProviderServiceCardPresentation, "primaryAction" | "secondaryAction"> {
+  if (model.chatSummary?.isUnread) {
+    return {
+      primaryAction: { label: "Responder", intent: "chat", disabled: chatDisabled(model) },
+      secondaryAction: { label: "Ver detalhes", intent: "details" },
+    };
+  }
+
+  return {
+    primaryAction: chatAction(model),
+    secondaryAction: { label: "Ver detalhes", intent: "details" },
+  };
+}
+
+function buildCompletedActions(): Pick<
+  ProviderServiceCardPresentation,
+  "primaryAction" | "secondaryAction"
+> {
+  return {
+    primaryAction: { label: "Ver detalhes", intent: "details" },
+    secondaryAction: null,
+  };
+}
+
+function buildCancelledActions(): Pick<
+  ProviderServiceCardPresentation,
+  "primaryAction" | "secondaryAction"
+> {
+  return {
+    primaryAction: { label: "Ver detalhes", intent: "details" },
+    secondaryAction: null,
+  };
+}
+
+export function getProviderServiceCardPresentation(
+  model: ServiceModel,
+): ProviderServiceCardPresentation {
+  const phaseLabel = getStatusLabel(model.listPhase, model.hasPendingProposal);
+  const phaseBadgeVariant = getStatusBadgeVariant(model.listPhase, model.proposalCount);
+
+  let content: Pick<
+    ProviderServiceCardPresentation,
+    "highlight" | "secondaryInfo" | "isTodayService"
+  >;
+  let actions: Pick<ProviderServiceCardPresentation, "primaryAction" | "secondaryAction">;
+
+  switch (model.listPhase) {
+    case "in_progress":
+      content = buildInProgressPresentation(model);
+      actions = buildInProgressActions(model);
+      break;
+    case "completed":
+      content = buildCompletedPresentation(model);
+      actions = buildCompletedActions();
+      break;
+    case "cancelled":
+      content = buildCancelledPresentation(model);
+      actions = buildCancelledActions();
+      break;
+    default:
+      content = { ...buildNegotiationPresentation(model), isTodayService: false };
+      actions = buildNegotiationActions(model);
+  }
+
+  return {
+    phaseLabel,
+    phaseBadgeVariant,
+    showUrgency: model.urgency === "high",
+    ...content,
+    ...actions,
+  };
+}

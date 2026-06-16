@@ -1,5 +1,6 @@
 import { Link, Outlet, useMatch } from "react-router";
 import { useAuth } from "@/features/auth";
+import { ProviderMyServicesPersistentSlot } from "@/features/my-services";
 import { ProviderJobsPersistentSlot } from "@/features/provider-jobs";
 import { ServiceDetailSheet, useServiceDetailModal } from "@/features/view-services";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
@@ -52,12 +53,13 @@ export function DashboardLayout() {
 
       <main
         className={cn(
-          "flex min-h-0 flex-1 flex-col",
+          "flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden",
           isMobileChatConversation ? "overflow-hidden" : "overflow-y-auto",
           !isDesktop && !isMobileChatConversation && "pb-20",
         )}
       >
         <ProviderJobsPersistentSlot />
+        <ProviderMyServicesPersistentSlot />
         <Outlet />
         {serviceDetailModal.isOpen && serviceDetailModal.serviceRequestId ? (
           <ServiceDetailSheet serviceRequestId={serviceDetailModal.serviceRequestId} />

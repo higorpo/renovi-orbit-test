@@ -36,11 +36,16 @@ describe("serviceMapper", () => {
           final_amount: 150,
           updated_at: "2025-01-03T00:00:00Z",
           expired_at: null,
+          submitted_at: "2025-01-02T00:00:00Z",
+          revision_reason: "PRICE_TOO_HIGH",
+          revision_notes: "Muito caro",
+          client_rejection_response: null,
         },
         chat: {
           id: "chat-1",
           is_unread: true,
           last_interaction_at: "2025-01-03T01:00:00Z",
+          last_message_preview: "Olá!",
         },
       },
       contracted: {
@@ -48,7 +53,7 @@ describe("serviceMapper", () => {
         status: "PENDING_PAYMENT",
         provider: { id: "p-1", display_name: "João" },
       },
-      counterparty: { id: "p-1", display_name: "João" },
+      counterparty: { id: "p-1", display_name: "João Silva", profile_image_path: "avatars/joao.jpg" },
     });
 
     expect(model.id).toBe("sr-1");
@@ -63,6 +68,10 @@ describe("serviceMapper", () => {
     expect(model.suggestedMaterials).toEqual(["screws"]);
     expect(model.lastActivityAt).toBe("2025-01-03T00:00:00Z");
     expect(model.myProposal?.status).toBe("PENDING");
+    expect(model.myProposal?.revisionReason).toBe("PRICE_TOO_HIGH");
+    expect(model.myProposal?.revisionNotes).toBe("Muito caro");
     expect(model.chatSummary?.isUnread).toBe(true);
+    expect(model.chatSummary?.lastMessagePreview).toBe("Olá!");
+    expect(model.counterparty?.profileImagePath).toBe("avatars/joao.jpg");
   });
 });

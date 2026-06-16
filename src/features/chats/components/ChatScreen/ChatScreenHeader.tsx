@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import type { CnsConversationStatus } from "../../types/chats.types";
 import { ConversationStatusBadge } from "../ConversationStatusBadge/ConversationStatusBadge";
 import { getConversationStatusPresentation } from "../../utils/conversationVisualState";
-import { getCounterpartyInitials } from "../../utils/getCounterpartyInitials";
+import { initialsFromName } from "@/lib/utils/initialsFromName";
 
 export interface ChatScreenHeaderProps {
   counterpartyName: string;
@@ -31,7 +31,7 @@ function CounterpartyAvatar({
       )}
       aria-hidden
     >
-      {getCounterpartyInitials(counterpartyName)}
+      {initialsFromName(counterpartyName)}
     </div>
   );
 }

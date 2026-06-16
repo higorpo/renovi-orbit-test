@@ -14,6 +14,14 @@ const FormDemoPage =
   import.meta.env.DEV
     ? lazy(() => import('@/features/dynamic-form').then(m => ({ default: m.FormDemoPage })))
     : null
+const ProviderServiceCardShowcasePage =
+  import.meta.env.DEV
+    ? lazy(() =>
+        import('@/features/my-services/components/provider/ProviderServiceCardShowcasePage').then(
+          (m) => ({ default: m.ProviderServiceCardShowcasePage }),
+        ),
+      )
+    : null
 
 /** Lazy routes use direct file paths (not feature barrels) so Rollup splits chunks per screen. */
 const RequestQuote = lazy(() =>
@@ -107,7 +115,10 @@ export const router = createBrowserRouter([
         element: <ResetPassword />,
       },
       ...(import.meta.env.DEV && FormDemoPage
-        ? [{ path: 'demo/form', element: <FormDemoPage /> }]
+        ? [{ path: 'dev/demo/form', element: <FormDemoPage /> }]
+        : []),
+      ...(import.meta.env.DEV && ProviderServiceCardShowcasePage
+        ? [{ path: 'dev/demo/provider-service-card-showcase', element: <ProviderServiceCardShowcasePage /> }]
         : []),
       {
         path: 'pedir-orcamento',

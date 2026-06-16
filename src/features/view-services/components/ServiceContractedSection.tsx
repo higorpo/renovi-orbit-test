@@ -1,21 +1,9 @@
 import { Calendar, User } from "lucide-react";
 import type { ContractedServiceSummary } from "../types/service.types";
+import { formatShift } from "../utils/formatShift";
 
 interface ServiceContractedSectionProps {
   contracted: ContractedServiceSummary;
-}
-
-function formatShift(shift: string): string {
-  switch (shift) {
-    case "morning":
-      return "Manhã";
-    case "afternoon":
-      return "Tarde";
-    case "full_day":
-      return "Dia inteiro";
-    default:
-      return shift;
-  }
 }
 
 export function ServiceContractedSection({ contracted }: ServiceContractedSectionProps) {

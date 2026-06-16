@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProfileImageUrl } from "../hooks/useProfileImageUrl";
 import { formatClientSince } from "../utils/formatClientSince";
-import { initialsFromName } from "../utils/initialsFromName";
+import { initialsFromName } from "@/lib/utils/initialsFromName";
 import { validateProfileImageFile } from "../api/profileImageStorage.api";
 
 export interface AccountSummaryCardProps {

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { usePublicProfileImageUrl } from "@/features/provider-profile/hooks/usePublicProfileImageUrl";
-import { getCounterpartyInitials } from "../../utils/getCounterpartyInitials";
+import { initialsFromName } from "@/lib/utils/initialsFromName";
 import {
   getChatParticipantRoleLabel,
   type ChatDetailsParticipant,
@@ -28,7 +28,7 @@ export function ChatDetailsParticipantRow({
         {url ? (
           <img src={url} alt="" className="h-full w-full object-cover" />
         ) : (
-          getCounterpartyInitials(participant.fullName)
+          initialsFromName(participant.fullName)
         )}
         {isLoading ? (
           <span className="absolute inset-0 animate-pulse bg-muted/40" aria-hidden />
