@@ -32,6 +32,9 @@ import {
   ServiceRequestContractedChatButton,
   ServiceRequestConversationList,
 } from "@/features/chats";
+import { ReceivedBudgetDetailsSheet } from "@/features/negotiation-proposals";
+import { getServiceRequestBudgetActionIcon, getServiceRequestBudgetActionState } from "../utils/serviceRequestBudgetAction";
+import { useServiceRequestBudgetSheet } from "../hooks/useServiceRequestBudgetSheet";
 import { useProviderServiceRequestChat } from "../hooks/useProviderServiceRequestChat";
 import { useServiceDetailChatNavigation } from "../hooks/useServiceDetailChatNavigation";
 import { ServiceContractedSection } from "./ServiceContractedSection";
@@ -55,6 +58,13 @@ export function ServiceDetailPage({
   const { data: model, isLoading, isError, refetch } = useService(id);
   const { cancelService, isCancelling } = useCancelService();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const {
+    budgetSheetOpen,
+    setBudgetSheetOpen,
+    selectedServiceRequestId,
+    selectedBudgetSheetMode,
+    openBudgetSheet,
+  } = useServiceRequestBudgetSheet();
 
   const isClient = profile?.role === "client";
   const isProvider = profile?.role === "provider";
@@ -115,6 +125,13 @@ export function ServiceDetailPage({
   const showClientNegotiationChats =
     isClient && model.listPhase === "negotiation" && !model.contracted;
   const contractedChatId = model.contracted?.chatId ?? null;
+  const budgetAction = isClient ? getServiceRequestBudgetActionState(model) : null;
+  const BudgetActionIcon = budgetAction
+    ? getServiceRequestBudgetActionIcon(model.listPhase)
+    : null;
+  const showClientBudgetAction = Boolean(budgetAction && !budgetAction.disabled);
+  const showClientActions =
+    showClientBudgetAction || showClientNegotiationChats || (isClient && model.contracted);
 
   return (
     <div
@@ -211,49 +228,62 @@ export function ServiceDetailPage({
             suggestedMaterialsPt={suggestedMaterialsPt}
           />
 
-          {showClientNegotiationChats ? (
+          {showClientActions ? (
             <div className="flex flex-wrap gap-2 border-t pt-4">
-              <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+              {showClientBudgetAction && budgetAction && BudgetActionIcon ? (
                 <Button
                   type="button"
-                  variant="destructive"
+                  variant="outline"
                   size="sm"
-                  onClick={() => setCancelDialogOpen(true)}
-                  disabled={isCancelling}
+                  className="gap-1.5"
+                  onClick={() => openBudgetSheet(model)}
                 >
-                  Cancelar pedido
+                  <BudgetActionIcon className="h-4 w-4 shrink-0" aria-hidden />
+                  {budgetAction.label}
                 </Button>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Cancelar serviço?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Ao cancelar, o serviço não receberá mais orçamentos. Esta ação não pode ser
-                      desfeita.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Fechar</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => {
-                        cancelService(model.id);
-                        setCancelDialogOpen(false);
-                      }}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      {isCancelling ? "Cancelando…" : "Cancelar"}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          ) : null}
+              ) : null}
 
-          {isClient && model.contracted ? (
-            <div className="flex flex-wrap gap-2 border-t pt-4">
-              <ServiceRequestContractedChatButton
-                chatId={contractedChatId}
-                providerDisplayName={model.contracted.provider?.displayName}
-              />
+              {showClientNegotiationChats ? (
+                <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setCancelDialogOpen(true)}
+                    disabled={isCancelling}
+                  >
+                    Cancelar pedido
+                  </Button>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancelar serviço?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Ao cancelar, o serviço não receberá mais orçamentos. Esta ação não pode ser
+                        desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Fechar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => {
+                          cancelService(model.id);
+                          setCancelDialogOpen(false);
+                        }}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {isCancelling ? "Cancelando…" : "Cancelar"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              ) : null}
+
+              {isClient && model.contracted ? (
+                <ServiceRequestContractedChatButton
+                  chatId={contractedChatId}
+                  providerDisplayName={model.contracted.provider?.displayName}
+                />
+              ) : null}
             </div>
           ) : null}
         </CardContent>
@@ -275,6 +305,17 @@ export function ServiceDetailPage({
           isInsideSheet={isInsideSheet}
           isOpeningChat={isOpeningChat}
           onOpenChat={openChat}
+        />
+      ) : null}
+
+      {isClient ? (
+        <ReceivedBudgetDetailsSheet
+          open={budgetSheetOpen}
+          serviceRequestId={selectedServiceRequestId}
+          sheetMode={selectedBudgetSheetMode}
+          onOpenChange={(next) => {
+            if (!next) setBudgetSheetOpen(false);
+          }}
         />
       ) : null}
     </div>

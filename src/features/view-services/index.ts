@@ -11,6 +11,7 @@ export { useServicesList } from "./hooks/useServicesList";
 export { useService } from "./hooks/useService";
 export { useCancelService } from "./hooks/useCancelService";
 export { useServiceDetailModal } from "./hooks/useServiceDetailModal";
+export { useServiceRequestBudgetSheet } from "./hooks/useServiceRequestBudgetSheet";
 
 export type {
   ServiceModel,
@@ -47,3 +48,11 @@ export { getStatusLabel, getStatusBadgeVariant } from "./constants/statusBadge";
 export { mapRpcServiceRow } from "./utils/serviceMapper";
 export { formatLocationDisplay } from "./utils/locationDisplay";
 export { formatServiceDate } from "./utils/formatDate";
+export {
+  getServiceRequestBudgetActionIcon,
+  getServiceRequestBudgetActionLabel,
+  getServiceRequestBudgetActionState,
+  getServiceRequestBudgetSheetMode,
+  type ServiceRequestBudgetActionParams,
+  type ServiceRequestBudgetSheetMode,
+} from "./utils/serviceRequestBudgetAction";

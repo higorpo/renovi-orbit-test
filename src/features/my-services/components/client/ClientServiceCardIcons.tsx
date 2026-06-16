@@ -5,8 +5,6 @@ import {
   Clock,
   FileText,
   Flame,
-  GitCompare,
-  History,
   Mail,
   MapPin,
   MessageSquare,
@@ -15,6 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getServiceRequestBudgetActionIcon } from "@/features/view-services";
 import type {
   ClientCardHighlightIcon,
   ClientCardInfoIcon,
@@ -77,5 +76,5 @@ export function ClientCardInfoIcon({
 }
 
 export function clientBudgetActionIcon(isNegotiation: boolean) {
-  return isNegotiation ? GitCompare : History;
+  return getServiceRequestBudgetActionIcon(isNegotiation ? "negotiation" : "completed");
 }

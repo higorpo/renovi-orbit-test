@@ -3,6 +3,7 @@ import {
   getStatusLabel,
   type StatusBadgeVariant,
 } from "@/features/view-services/constants/statusBadge";
+import { getServiceRequestBudgetActionState } from "@/features/view-services/utils/serviceRequestBudgetAction";
 import type { ServiceModel } from "@/features/view-services/types/service.types";
 import { formatServiceDate } from "@/features/view-services/utils/formatDate";
 import {
@@ -377,22 +378,13 @@ function unreadMessagesAction(model: ServiceModel): ClientCardAction {
 }
 
 function budgetsAction(model: ServiceModel): ClientCardAction {
-  const count = model.proposalCount;
-  const isNegotiation = model.listPhase === "negotiation";
-  const label =
-    count > 1
-      ? isNegotiation
-        ? "Comparar orçamentos"
-        : "Histórico de orçamentos"
-      : isNegotiation
-        ? "Ver orçamento"
-        : "Ver histórico";
+  const action = getServiceRequestBudgetActionState(model);
 
   return {
-    label,
+    label: action.label,
     intent: "budgets",
-    disabled: count <= 0,
-    disabledReason: count <= 0 ? "Nenhum orçamento recebido ainda" : undefined,
+    disabled: action.disabled,
+    disabledReason: action.disabledReason,
   };
 }
 

@@ -1,13 +1,13 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useMemo, useCallback, useEffect, useRef } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import {
   createClientMyServicesServiceDetailState,
   getServiceDetailPath,
   statusToTabId,
+  useServiceRequestBudgetSheet,
   type ServiceModel,
 } from "@/features/view-services";
 import { getChatsPageUrlWithServiceRequestFilter } from "@/features/chats";
-import type { ServiceRequestBudgetSheetMode } from "@/features/negotiation-proposals";
 import { useMyServicesPageCore } from "./useMyServicesPageCore";
 import { useClientMyServicesCancel } from "./useClientMyServicesCancel";
 import { SERVICE_REQUEST_FOCUS_QUERY } from "../constants/routes";
@@ -21,10 +21,13 @@ export function useClientMyServicesPage() {
 
   const core = useMyServicesPageCore({ serviceRequestId: focusServiceRequestId });
 
-  const [budgetSheetOpen, setBudgetSheetOpen] = useState(false);
-  const [selectedServiceRequestId, setSelectedServiceRequestId] = useState<string | null>(null);
-  const [selectedBudgetSheetMode, setSelectedBudgetSheetMode] =
-    useState<ServiceRequestBudgetSheetMode>("compare");
+  const {
+    budgetSheetOpen,
+    setBudgetSheetOpen,
+    selectedServiceRequestId,
+    selectedBudgetSheetMode,
+    openBudgetSheet,
+  } = useServiceRequestBudgetSheet();
 
   const hasActiveFilters =
     core.hasActiveFilters || Boolean(focusServiceRequestId);
@@ -72,11 +75,12 @@ export function useClientMyServicesPage() {
     });
   }, [core.handleClearFilters, setSearchParams]);
 
-  const handleOpenBudgets = useCallback((model: ServiceModel) => {
-    setSelectedServiceRequestId(model.id);
-    setSelectedBudgetSheetMode(model.listPhase === "negotiation" ? "compare" : "history");
-    setBudgetSheetOpen(true);
-  }, []);
+  const handleOpenBudgets = useCallback(
+    (model: ServiceModel) => {
+      openBudgetSheet(model);
+    },
+    [openBudgetSheet],
+  );
 
   const handleOpenDetails = useCallback(
     (model: ServiceModel) => {
