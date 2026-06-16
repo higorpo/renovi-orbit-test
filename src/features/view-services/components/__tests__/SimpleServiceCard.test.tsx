@@ -69,18 +69,24 @@ describe("SimpleServiceCard", () => {
     expect(screen.getByText("Média prioridade")).toBeTruthy();
   });
 
-  it("hides service tags by default and shows them when enabled", () => {
-    const taggedModel: ServiceModel = {
+  it("shows full street line when address includes street summary", () => {
+    const fullAddressModel: ServiceModel = {
       ...model,
-      tags: ["Residencial"],
+      address: {
+        neighborhood: "Centro",
+        cityName: "Florianópolis",
+        stateAbbreviation: "SC",
+        streetSummary: "Rua Felipe Schmidt, 515",
+        street: "Rua Felipe Schmidt",
+        number: "515",
+      },
     };
 
-    const { rerender } = render(<SimpleServiceCard model={taggedModel} compact />);
-    expect(screen.queryByText("Tags do serviço")).toBeNull();
-    expect(screen.queryByText("Residencial")).toBeNull();
+    render(<SimpleServiceCard model={fullAddressModel} compact />);
 
-    rerender(<SimpleServiceCard model={taggedModel} compact showServiceTags />);
-    expect(screen.getByText("Tags do serviço")).toBeTruthy();
-    expect(screen.getByText("Residencial")).toBeTruthy();
+    expect(
+      screen.getByText("Rua Felipe Schmidt, 515 - Centro, Florianópolis (SC)"),
+    ).toBeTruthy();
   });
+
 });

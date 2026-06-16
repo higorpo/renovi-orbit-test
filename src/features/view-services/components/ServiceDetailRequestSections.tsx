@@ -1,4 +1,4 @@
-import { Package, Tag, Wrench } from "lucide-react";
+import { Package, Wrench } from "lucide-react";
 import type { FormSchema } from "@/features/dynamic-form";
 import type { ServiceModel } from "../types/service.types";
 import { FormResponsesSummary } from "./FormResponsesSummary";
@@ -39,23 +39,6 @@ export function ServiceDetailRequestSections({
           </h3>
           <div className="mt-2">
             <ServicePhotoGallery photos={model.photoPaths} />
-          </div>
-        </div>
-      )}
-
-      {model.tags && model.tags.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">Tags</h3>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {model.tags.map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs text-muted-foreground"
-              >
-                <Tag className="h-3 w-3" aria-hidden />
-                {tag}
-              </span>
-            ))}
           </div>
         </div>
       )}

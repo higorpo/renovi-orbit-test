@@ -27,7 +27,7 @@ import {
   mapSuggestedEquipmentToPt,
   mapSuggestedMaterialsToPt,
 } from "../utils/suggestedItemsMapper";
-import { formatServiceLocationLine } from "../utils/formatServiceLocationLine";
+import { formatLocationDisplay } from "../utils/locationDisplay";
 import { useProviderServiceRequestChat } from "../hooks/useProviderServiceRequestChat";
 import { useServiceDetailChatNavigation } from "../hooks/useServiceDetailChatNavigation";
 import { ServiceContractedSection } from "./ServiceContractedSection";
@@ -107,7 +107,7 @@ export function ServiceDetailPage({
   }
 
   const urgencyConfig = getUrgencyConfig(model.urgency);
-  const locationLine = formatServiceLocationLine(model.address);
+  const locationLine = formatLocationDisplay(model.address);
 
   return (
     <div
@@ -157,14 +157,16 @@ export function ServiceDetailPage({
                 {urgencyConfig.label}
               </Badge>
             ) : null}
-            <Badge
-              variant="outline"
-              className="gap-1 border-border/80 font-normal text-muted-foreground"
-            >
-              <MessageSquare className="h-3 w-3 opacity-80" aria-hidden />
-              {model.proposalCount}{" "}
-              {model.proposalCount === 1 ? "orçamento" : "orçamentos"}
-            </Badge>
+            {isClient ? (
+              <Badge
+                variant="outline"
+                className="gap-1 border-border/80 font-normal text-muted-foreground"
+              >
+                <MessageSquare className="h-3 w-3 opacity-80" aria-hidden />
+                {model.proposalCount}{" "}
+                {model.proposalCount === 1 ? "orçamento" : "orçamentos"}
+              </Badge>
+            ) : null}
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">

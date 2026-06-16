@@ -211,11 +211,9 @@ select is(
   'provider with proposal get_service returns negotiation'
 );
 
-select cmp_ok(
-  (select (public.get_service((select service_request_id from _vs_sr))->'negotiation'->>'proposal_count')::int),
-  '>=',
-  1,
-  'provider sees own proposal count'
+select ok(
+  not (select public.get_service((select service_request_id from _vs_sr))->'negotiation' ? 'proposal_count'),
+  'provider get_service omits proposal_count'
 );
 
 select is(

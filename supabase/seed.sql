@@ -1,10 +1,10 @@
 -- Seed data for local development and db reset.
 -- Covers platform geography (states, cities, neighborhoods), platform_forms, platform_services, platform_ai_prompts,
--- and two test users (client + provider) with all related table data populated.
+-- and test users (clients + providers) with all related table data populated.
 --
 -- Test accounts (password: Abc123):
 --   clients:  cliente@renovi.com.br, cliente1@renovi.com.br … cliente4@renovi.com.br
---   provider: prestador@renovi.com.br
+--   provider: prestador@renovi.com.br, prestador2@renovi.com.br
 --
 -- After db reset, upload service-request photos to Storage:
 --   yarn seed:dev-images        (offline gradient placeholders)
@@ -218,7 +218,7 @@ on conflict (slug) do nothing;
 -- ---------------------------------------------------------------------------
 -- Seed users for local development
 -- clients:  cliente@renovi.com.br, cliente1@ … cliente4@renovi.com.br / Abc123
--- provider: prestador@renovi.com.br / Abc123
+-- provider: prestador@renovi.com.br, prestador2@renovi.com.br / Abc123
 --
 -- Triggers chain:
 --   auth.users INSERT -> handle_new_user -> profiles INSERT
@@ -299,6 +299,17 @@ values
     '{"provider":"email","providers":["email"]}'::jsonb,
     '{"full_name":"João Eletricista","role":"provider"}'::jsonb,
     now(), now(), '', '', '', ''
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    '4cf92e3a-64cd-4491-998e-9163138f8e96',
+    'authenticated', 'authenticated',
+    'prestador2@renovi.com.br',
+    crypt('Abc123', gen_salt('bf')),
+    now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"full_name":"Pedro Eletricista","role":"provider"}'::jsonb,
+    now(), now(), '', '', '', ''
   )
 on conflict (id) do nothing;
 
@@ -355,6 +366,14 @@ values
     'email',
     '5d09e025-20a2-4842-aeef-324d42a431e1',
     now(), now(), now()
+  ),
+  (
+    '4cf92e3a-64cd-4491-998e-9163138f8e96',
+    '4cf92e3a-64cd-4491-998e-9163138f8e96',
+    '{"sub":"4cf92e3a-64cd-4491-998e-9163138f8e96","email":"prestador2@renovi.com.br"}'::jsonb,
+    'email',
+    '4cf92e3a-64cd-4491-998e-9163138f8e96',
+    now(), now(), now()
   )
 on conflict (provider_id, provider) do nothing;
 
@@ -376,6 +395,9 @@ where id = '68e30f1d-3c47-441f-94c6-76b6ea0db474' and phone is null;
 
 update public.profiles set phone = '(48) 98765-4321'
 where id = '5d09e025-20a2-4842-aeef-324d42a431e1' and phone is null;
+
+update public.profiles set phone = '(48) 98654-3210'
+where id = '4cf92e3a-64cd-4491-998e-9163138f8e96' and phone is null;
 
 -- 4) client_profiles_private (CPF)
 update public.client_profiles_private set cpf = '123.456.789-00'
@@ -399,6 +421,11 @@ set entity_type = 'pf',
     cpf = '987.654.321-00'
 where provider_id = '5d09e025-20a2-4842-aeef-324d42a431e1' and cpf is null;
 
+update public.provider_profiles_private
+set entity_type = 'pf',
+    cpf = '111.222.333-88'
+where provider_id = '4cf92e3a-64cd-4491-998e-9163138f8e96' and cpf is null;
+
 -- 6) provider_profiles_public (slug, display_name, bio, visibility)
 update public.provider_profiles_public
 set slug = 'joao-eletricista',
@@ -406,6 +433,13 @@ set slug = 'joao-eletricista',
     bio = 'Eletricista profissional com mais de 10 anos de experiência em instalações residenciais e comerciais. Especialista em instalação elétrica, manutenção preventiva e instalação de ar condicionado. Atendo toda a região de Florianópolis.',
     profile_visibility = 'public'
 where provider_id = '5d09e025-20a2-4842-aeef-324d42a431e1';
+
+update public.provider_profiles_public
+set slug = 'pedro-eletricista',
+    display_name = 'Pedro Eletricista',
+    bio = 'Eletricista e instalador de ar condicionado em Florianópolis. Atendo instalações residenciais e comerciais, com foco em segurança e acabamento.',
+    profile_visibility = 'public'
+where provider_id = '4cf92e3a-64cd-4491-998e-9163138f8e96';
 
 -- 7) client_addresses (Florianópolis)
 insert into public.client_addresses (
@@ -495,7 +529,9 @@ on conflict (id) do nothing;
 insert into public.provider_offered_services (provider_id, service_id, sort_order)
 values
   ('5d09e025-20a2-4842-aeef-324d42a431e1', 'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a62', 0),
-  ('5d09e025-20a2-4842-aeef-324d42a431e1', 'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a63', 1)
+  ('5d09e025-20a2-4842-aeef-324d42a431e1', 'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a63', 1),
+  ('4cf92e3a-64cd-4491-998e-9163138f8e96', 'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a62', 0),
+  ('4cf92e3a-64cd-4491-998e-9163138f8e96', 'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a63', 1)
 on conflict (provider_id, service_id) do nothing;
 
 -- 9) provider_portfolio_items
@@ -530,6 +566,32 @@ values
     'public',
     true,
     1
+  ),
+  (
+    'b97b4cba-0813-410e-ae15-2749568bd89a'::uuid,
+    '4cf92e3a-64cd-4491-998e-9163138f8e96',
+    'Instalação elétrica - apartamento',
+    'Instalação de 12 pontos elétricos e troca de quadro em apartamento no Centro.',
+    'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a62'::uuid,
+    '2026-03-10',
+    '{}',
+    'Florianópolis - Centro',
+    'public',
+    true,
+    0
+  ),
+  (
+    'f2731794-6ce9-4f84-b775-df887caef6e9'::uuid,
+    '4cf92e3a-64cd-4491-998e-9163138f8e96',
+    'Split 12.000 BTU - residência',
+    'Instalação de split com infraestrutura elétrica dedicada e dreno.',
+    'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a63'::uuid,
+    '2026-04-05',
+    '{}',
+    'Florianópolis - Agronômica',
+    'public',
+    true,
+    1
   )
 on conflict (id) do nothing;
 
@@ -538,7 +600,10 @@ insert into public.provider_service_area_neighborhoods (provider_id, neighborhoo
 values
   ('5d09e025-20a2-4842-aeef-324d42a431e1', 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a31'),
   ('5d09e025-20a2-4842-aeef-324d42a431e1', 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a32'),
-  ('5d09e025-20a2-4842-aeef-324d42a431e1', 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a34')
+  ('5d09e025-20a2-4842-aeef-324d42a431e1', 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a34'),
+  ('4cf92e3a-64cd-4491-998e-9163138f8e96', 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a31'),
+  ('4cf92e3a-64cd-4491-998e-9163138f8e96', 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a32'),
+  ('4cf92e3a-64cd-4491-998e-9163138f8e96', 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a34')
 on conflict (provider_id, neighborhood_id) do nothing;
 
 -- 11) service_requests (20 total: eletrica or ar condicionado)

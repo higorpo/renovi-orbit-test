@@ -22,7 +22,6 @@ describe("serviceMapper", () => {
           title: "Eletricista",
           slug: "eletricista",
         },
-        tags: ["tag-a"],
         suggested_equipment: ["ladder"],
         suggested_materials: ["screws"],
       },
@@ -63,7 +62,7 @@ describe("serviceMapper", () => {
     expect(model.hasPendingProposal).toBe(true);
     expect(model.service?.slug).toBe("eletricista");
     expect(model.contracted?.status).toBe("PENDING_PAYMENT");
-    expect(model.tags).toEqual(["tag-a"]);
+    expect(model.tags).toBeNull();
     expect(model.suggestedEquipment).toEqual(["ladder"]);
     expect(model.suggestedMaterials).toEqual(["screws"]);
     expect(model.lastActivityAt).toBe("2025-01-03T00:00:00Z");

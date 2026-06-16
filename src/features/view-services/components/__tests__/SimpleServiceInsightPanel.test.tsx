@@ -34,8 +34,8 @@ const baseModel: ServiceModel = {
 };
 
 describe("SimpleServiceInsightPanel", () => {
-  it("groups scheduling, tags and warnings into labeled sections", () => {
-    render(<SimpleServiceInsightPanel model={baseModel} compact showServiceTags />);
+  it("groups scheduling and warnings into labeled sections", () => {
+    render(<SimpleServiceInsightPanel model={baseModel} compact />);
 
     expect(screen.getByText("Resumo do pedido")).toBeTruthy();
     expect(screen.getByText("Prioridade")).toBeTruthy();
@@ -44,18 +44,10 @@ describe("SimpleServiceInsightPanel", () => {
     expect(screen.getByText("Média")).toBeTruthy();
     expect(screen.getByText("Duração estimada")).toBeTruthy();
     expect(screen.getByText("2 a 4 horas")).toBeTruthy();
-    expect(screen.getByText("Tags do serviço")).toBeTruthy();
-    expect(screen.getByText("Residencial")).toBeTruthy();
-    expect(screen.getByText("Informações pendentes")).toBeTruthy();
-    expect(screen.getByText("Fotos do local")).toBeTruthy();
-  });
-
-  it("hides service tags unless showServiceTags is enabled", () => {
-    render(<SimpleServiceInsightPanel model={baseModel} compact />);
-
     expect(screen.queryByText("Tags do serviço")).toBeNull();
     expect(screen.queryByText("Residencial")).toBeNull();
-    expect(screen.getByText("Resumo do pedido")).toBeTruthy();
+    expect(screen.getByText("Informações pendentes")).toBeTruthy();
+    expect(screen.getByText("Fotos do local")).toBeTruthy();
   });
 
   it("renders nothing when there are no insights", () => {

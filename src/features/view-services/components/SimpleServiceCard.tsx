@@ -4,7 +4,6 @@ import { getServiceCardStyle } from "@/features/request-quote";
 import { cn } from "@/lib/utils";
 import { formatServiceDate } from "../utils/formatDate";
 import { formatLocationDisplay } from "../utils/locationDisplay";
-import { formatServiceLocationLine } from "../utils/formatServiceLocationLine";
 import { SimpleServiceInsightPanel } from "./SimpleServiceInsightPanel";
 import type { ServiceModel } from "../types/service.types";
 
@@ -13,19 +12,14 @@ export interface SimpleServiceCardProps {
   className?: string;
   /** Tighter layout for narrow containers (e.g. chat details sidebar). */
   compact?: boolean;
-  /** Shows the "Tags do serviço" section in the insight panel. */
-  showServiceTags?: boolean;
 }
 
 export function SimpleServiceCard({
   model,
   className,
   compact = false,
-  showServiceTags = false,
 }: SimpleServiceCardProps) {
-  const locationText = compact
-    ? formatServiceLocationLine(model.address)
-    : formatLocationDisplay(model.address);
+  const locationText = formatLocationDisplay(model.address);
   const serviceStyle = getServiceCardStyle(model.service ?? undefined);
   const createdLabel = formatServiceDate(model.createdAt);
 
@@ -82,11 +76,7 @@ export function SimpleServiceCard({
           </p>
         ) : null}
 
-        <SimpleServiceInsightPanel
-          model={model}
-          compact={compact}
-          showServiceTags={showServiceTags}
-        />
+        <SimpleServiceInsightPanel model={model} compact={compact} />
 
         {compact ? (
           <div className="flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground">

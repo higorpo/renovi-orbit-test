@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AlertTriangle, Clock, Tag } from "lucide-react";
+import { AlertTriangle, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
@@ -12,7 +12,6 @@ import type { ServiceModel } from "../types/service.types";
 interface SimpleServiceInsightPanelProps {
   model: ServiceModel;
   compact?: boolean;
-  showServiceTags?: boolean;
   className?: string;
 }
 
@@ -91,20 +90,17 @@ function insightBadgeClass(compact?: boolean) {
 export function SimpleServiceInsightPanel({
   model,
   compact,
-  showServiceTags = false,
   className,
 }: SimpleServiceInsightPanelProps) {
   const urgency = getUrgencyConfig(model.urgency);
   const scopeLabel = model.scopeComplexity ? getComplexityLabel(model.scopeComplexity) : null;
   const durationLabel = getDurationLabel(model.estimatedDurationHint);
-  const tags = (model.tags ?? []).map((tag) => tag.trim()).filter(Boolean);
   const warnings = (model.missingInfoWarnings ?? []).map((w) => w.trim()).filter(Boolean);
 
   const hasScheduling = Boolean(urgency || scopeLabel || durationLabel);
-  const hasTags = showServiceTags && tags.length > 0;
   const hasWarnings = warnings.length > 0;
 
-  if (!hasScheduling && !hasTags && !hasWarnings) return null;
+  if (!hasScheduling && !hasWarnings) return null;
 
   const sections: ReactNode[] = [];
 
@@ -133,20 +129,6 @@ export function SimpleServiceInsightPanel({
               </Badge>
             </LabeledInsightRow>
           ) : null}
-        </div>
-      </InsightSection>,
-    );
-  }
-
-  if (hasTags) {
-    sections.push(
-      <InsightSection key="tags" title="Tags do serviço" icon={Tag} compact={compact}>
-        <div className="flex flex-wrap gap-1">
-          {tags.map((tag) => (
-            <Badge key={tag} variant="outline" className={insightBadgeClass(compact)}>
-              {tag}
-            </Badge>
-          ))}
         </div>
       </InsightSection>,
     );
