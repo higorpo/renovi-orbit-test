@@ -16,7 +16,7 @@ O objetivo do sistema é distribuir pedidos de serviço de forma inteligente, es
 
 O sistema opera primeiramente via dispatch fechado, utilizando um mural aberto apenas como último recurso de fallback.
 
-Decisões de arquitetura (grill 2026-06-17): [`adr/0001`](./adr/0001-replace-open-feed-with-progressive-matching.md) feed progressivo; [`0002`](./adr/0002-dual-location-model-batch-vs-feed.md) localização dual; [`0003`](./adr/0003-list-provider-opportunities-rpc.md) RPC do feed; [`0004`](./adr/0004-dispatch-gates-cron-and-scheduling.md) gates/cron; [`0005`](./adr/0005-service-ratings-and-provider-stats.md) avaliações e stats. Glossário e log completo: [`CONTEXT.md`](./CONTEXT.md).
+Decisões de arquitetura (grill 2026-06-17): [`adr/0001`](./adr/0001-replace-open-feed-with-progressive-matching.md) feed progressivo; [`0002`](./adr/0002-dual-location-model-batch-vs-feed.md) localização dual; [`0003`](./adr/0003-list-provider-opportunities-rpc.md) RPC do feed; [`0004`](./adr/0004-dispatch-gates-cron-and-scheduling.md) gates/cron; [`0005`](./adr/0005-service-ratings-and-provider-stats.md) avaliações e stats. Glossário e log completo: [`CONTEXT.md`](./CONTEXT.md). **Design técnico (HL + LL):** [`design.md`](./design.md).
 
 O sistema deve operar através de:
 

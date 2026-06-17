@@ -2,7 +2,7 @@
 
 Termos canônicos do domínio de **distribuição progressiva de pedidos** (matching/dispatch de Service Requests). Sem detalhes de implementação.
 
-**ADRs:** [0001](./adr/0001-replace-open-feed-with-progressive-matching.md) feed progressivo · [0002](./adr/0002-dual-location-model-batch-vs-feed.md) localização · [0003](./adr/0003-list-provider-opportunities-rpc.md) RPC feed · [0004](./adr/0004-dispatch-gates-cron-and-scheduling.md) gates/cron · [0005](./adr/0005-service-ratings-and-provider-stats.md) ratings. Requisitos: [`requirements.md`](./requirements.md).
+**ADRs:** [0001](./adr/0001-replace-open-feed-with-progressive-matching.md) feed progressivo · [0002](./adr/0002-dual-location-model-batch-vs-feed.md) localização · [0003](./adr/0003-list-provider-opportunities-rpc.md) RPC feed · [0004](./adr/0004-dispatch-gates-cron-and-scheduling.md) gates/cron · [0005](./adr/0005-service-ratings-and-provider-stats.md) ratings. Requisitos: [`requirements.md`](./requirements.md) · Design: [`design.md`](./design.md).
 
 | Termo | Significado |
 |-------|-------------|
