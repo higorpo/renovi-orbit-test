@@ -5,6 +5,8 @@ export { SimpleServiceCard } from "./components/SimpleServiceCard";
 export type { SimpleServiceCardProps } from "./components/SimpleServiceCard";
 export { SimpleServiceCardSkeleton } from "./components/SimpleServiceCardSkeleton";
 export type { SimpleServiceCardSkeletonProps } from "./components/SimpleServiceCardSkeleton";
+export { ServiceDetailSkeleton } from "./components/ServiceDetailSkeleton";
+export type { ServiceDetailSkeletonProps } from "./components/ServiceDetailSkeleton";
 
 export { getServiceById, listServices, cancelService } from "./api/services.api";
 export { useServicesList } from "./hooks/useServicesList";

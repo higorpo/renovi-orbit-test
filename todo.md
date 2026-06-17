@@ -76,7 +76,6 @@ Coisas para fazer next
 -renomear tabela de provider_proposals
 -[avaliar]simplificar query de get_service_list  (hoje ele tá trazendo um monte de dados que nem vai ser exibido no card)
 -fluxo de prestador recusar revisão de proposta
--fazer skeleton na tela de detalhes de um serviço/sheet
 -no mobile estilizar menu do topo para ter botão de voltar e etc e abrir como se fosse uma nova activity
 
 

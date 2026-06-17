@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
+import { FileQuestion } from "lucide-react";
 import { useParams } from "react-router";
-import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/auth";
 import { ReceivedBudgetDetailsSheet } from "@/features/negotiation-proposals";
@@ -25,50 +27,12 @@ import { ServiceDetailHeader } from "./ServiceDetailHeader";
 import { ServiceDetailRequestSections } from "./ServiceDetailRequestSections";
 import { ServiceProviderProposalRejectionAlert } from "./ServiceProviderProposalRejectionAlert";
 import { ServiceProviderProposalSection } from "./ServiceProviderProposalSection";
+import { ServiceDetailSkeleton } from "./ServiceDetailSkeleton";
 import { ServiceRequestConversationList } from "@/features/chats";
 
 interface ServiceDetailPageProps {
   serviceRequestId?: string;
   isInsideSheet?: boolean;
-}
-
-function ServiceDetailEmptyState({
-  message,
-  onRetry,
-}: {
-  message: string;
-  onRetry?: () => void;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-3 py-12 text-center">
-      <p className="text-caption text-muted-foreground">{message}</p>
-      {onRetry ? (
-        <Button variant="outline" size="sm" onClick={onRetry}>
-          Tentar novamente
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
-function ServiceDetailLoadingSkeleton() {
-  return (
-    <div className="space-y-4">
-      <div className="rounded-lg border bg-card p-4 shadow-elevation-1 sm:p-6">
-        <div className="flex gap-3">
-          <div className="h-10 w-10 shrink-0 animate-pulse rounded-lg bg-muted" />
-          <div className="min-w-0 flex-1 space-y-2">
-            <div className="h-3 w-24 animate-pulse rounded bg-muted" />
-            <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
-            <div className="h-3 w-1/2 animate-pulse rounded bg-muted" />
-          </div>
-        </div>
-        <div className="mt-4 h-20 animate-pulse rounded-lg bg-muted/60" />
-      </div>
-      <div className="h-32 animate-pulse rounded-lg border bg-card shadow-elevation-1" />
-      <div className="h-24 animate-pulse rounded-lg border bg-card shadow-elevation-1" />
-    </div>
-  );
 }
 
 export function ServiceDetailPage({
@@ -116,7 +80,7 @@ export function ServiceDetailPage({
   if (isLoading) {
     return (
       <div className={pageClassName}>
-        <ServiceDetailLoadingSkeleton />
+        <ServiceDetailSkeleton />
       </div>
     );
   }
@@ -124,8 +88,9 @@ export function ServiceDetailPage({
   if (isError) {
     return (
       <div className={pageClassName}>
-        <ServiceDetailEmptyState
-          message="Não foi possível carregar este serviço."
+        <ErrorState
+          title="Não foi possível carregar este serviço"
+          description="Verifique sua conexão e tente novamente. Se o problema persistir, entre em contato com o suporte."
           onRetry={() => void refetch()}
         />
       </div>
@@ -135,7 +100,12 @@ export function ServiceDetailPage({
   if (!model) {
     return (
       <div className={pageClassName}>
-        <ServiceDetailEmptyState message="Serviço não encontrado ou você não tem permissão para visualizá-lo." />
+        <EmptyState
+          icon={FileQuestion}
+          title="Serviço não encontrado"
+          description="Este serviço não existe ou você não tem permissão para visualizá-lo."
+          ariaLabel="Serviço não encontrado"
+        />
       </div>
     );
   }
