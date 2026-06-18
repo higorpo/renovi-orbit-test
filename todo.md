@@ -55,8 +55,8 @@ Telas/fluxos restantes:
 - Tela de onboarding para cliente
 - Fluxo do prestador/cliente remarcar um serviço
 - Fluxo do prestador/cliente cancelar um serviço
-- Matching algorithm
 - Weblab
+- Emails
 
 Coisas para verificar:
 
