@@ -55,7 +55,7 @@ describe("useChatComposerState", () => {
 
     await waitFor(() => expect(result.current.disabledReason).toBe("pending_proposal"));
     expect(result.current.isInputEnabled).toBe(false);
-    expect(result.current.helperText).toContain("aceitar, pedir revisão ou recusar");
+    expect(result.current.helperText).toContain("aceite, peça revisão ou recuse");
   });
 
   it("shows provider copy when PENDING blocks free messaging", async () => {

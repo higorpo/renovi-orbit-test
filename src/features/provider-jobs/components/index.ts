@@ -2,7 +2,6 @@ export { JobCard } from "./JobCard";
 export { JobCardSkeleton } from "./JobCardSkeleton";
 export { JobsEmptyState } from "./JobsEmptyState";
 export { JobsErrorState } from "./JobsErrorState";
-export { JobsFiltersBar } from "./JobsFiltersBar";
 export { JobsHeader } from "./JobsHeader";
 export { JobsSortTabs } from "./JobsSortTabs";
 export { LocationPermissionBanner } from "./LocationPermissionBanner";

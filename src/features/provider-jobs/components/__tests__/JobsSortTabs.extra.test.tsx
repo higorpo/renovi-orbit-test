@@ -31,6 +31,17 @@ describe("JobsSortTabs disabled", () => {
     expect(onModeChange).toHaveBeenCalledWith("least_competitive");
   });
 
+  it("hides nearest tab when feed GPS is unavailable", () => {
+    render(<JobsSortTabs activeMode="newest" onModeChange={vi.fn()} hasFeedGps={false} />);
+    expect(screen.queryByRole("tab", { name: /mais próximos/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /mais recentes/i })).toBeInTheDocument();
+  });
+
+  it("shows nearest tab when feed GPS is available", () => {
+    render(<JobsSortTabs activeMode="nearest" onModeChange={vi.fn()} hasFeedGps />);
+    expect(screen.getByRole("tab", { name: /mais próximos/i })).toBeInTheDocument();
+  });
+
   it("disables triggers when disabled prop is set", () => {
     render(
       <JobsSortTabs

@@ -21,7 +21,8 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | **view-services** | [visualizacao-de-servicos](./modulos/view-services/features/visualizacao-de-servicos.md) | `/dashboard/services/:id` | RPCs `get_service`, `list_services`; `contracted_services`; consumido por `my-services` |
 | **dynamic-form** | [motor-de-formularios](./modulos/dynamic-form/features/motor-de-formularios.md) | `/demo/form` (somente DEV) | Consumido por `request-quote` |
 | **my-account** | [minha-conta](./modulos/my-account/features/minha-conta.md) | `/dashboard/conta` | `addresses`, storage, perfis público/privado |
-| **provider-jobs** | [trabalhos-e-propostas](./modulos/provider-jobs/features/trabalhos-e-propostas.md) | `/dashboard/jobs`, `/dashboard/jobs/:jobId` | Edge `match-provider-jobs`, propostas, negociação CNS |
+| **provider-jobs** | [trabalhos-e-propostas](./modulos/provider-jobs/features/trabalhos-e-propostas.md) | `/dashboard/jobs`, `/dashboard/jobs/:jobId` | Edge `list-provider-opportunities`, propostas, negociação CNS; backend [matching-dispatch](./modulos/matching-dispatch/README.md) |
+| **matching-dispatch** *(backend)* | [dispatch-e-visibilidade](./modulos/matching-dispatch/features/dispatch-e-visibilidade.md) | *Sem rota de UI* | Migrations `202607110*`, cron `matching_open_batch`, visibilidade; consumido por **provider-jobs** |
 | **provider-profile** | [pagina-publica](./modulos/provider-profile/features/pagina-publica.md) | `/perfil/:slug` | RPC `get_public_provider_by_slug`, storage |
 | **request-quote** | [pedir-orcamento](./modulos/request-quote/features/pedir-orcamento.md) | `/pedir-orcamento` | `dynamic-form`, `addresses`, `auth`, Edge Functions |
 | **chats** + **negotiation-proposals** | [conversas-e-negociacao](./modulos/chats/features/conversas-e-negociacao.md), [comparar-orcamentos-meus-servicos](./modulos/chats/features/comparar-orcamentos-meus-servicos.md) | `/dashboard/chats`, `/dashboard/chats/:chatId` | `auth`, `provider-jobs`, `message-dispatcher`, `my-services` (sheet compare/history), RPCs CNS em `supabase/migrations/202607*` |
@@ -44,7 +45,8 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | `create-request-quote-order` | `request-quote` |
 | `generate-smart-description` | `request-quote` |
 | `verify-recaptcha` | `auth`, `request-quote` |
-| `match-provider-jobs` | `provider-jobs` |
+| `list-provider-opportunities` | `provider-jobs` — feed progressivo (cursor, sort, visibilidade batch/fallback) |
+| `match-provider-jobs` | **Removido** — substituído por `list-provider-opportunities` + RPC `list_provider_opportunities` |
 | `message-dispatcher-worker` | `message-dispatcher` — consome fila, renderiza templates, envia via Resend/FCM |
 | `message-dispatcher-webhook-resend` | `message-dispatcher` — recebe webhooks Resend (delivered, bounce, opened) |
 | `chat-upload-media` | `chats` — upload de mídia na conversa (sessão + storage) |

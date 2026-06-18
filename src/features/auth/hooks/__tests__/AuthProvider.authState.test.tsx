@@ -3,7 +3,8 @@ import { render, act } from "@testing-library/react";
 import React from "react";
 import { MemoryRouter } from "react-router";
 import type { AuthChangeEvent } from "@supabase/supabase-js";
-import { AuthProvider, useAuth } from "../useAuth";
+import { AuthProvider } from "../../AuthProvider";
+import { useAuth } from "../useAuth";
 
 const authHarness = vi.hoisted(() => ({
   onAuthCallback: null as
@@ -44,6 +45,10 @@ vi.mock("../useProfileFetcher", () => ({
 
 vi.mock("@/hooks/useAnalytics", () => ({
   useAnalytics: () => ({ trackEvent: vi.fn() }),
+}));
+
+vi.mock("@/features/device-beacon", () => ({
+  unregisterDeviceBeaconOnLogout: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/lib/sentry", () => ({

@@ -951,6 +951,11 @@
   resolved "https://registry.yarnpkg.com/@capacitor/splash-screen/-/splash-screen-8.0.1.tgz#17d2cf051ec2e2b884cfa5abb5e337f9077df167"
   integrity sha512-c/ew/Z3eA7z8l06WoRAtzVF16VwYYrExmHmfGq1Cg675pVzaC/yuucB8/1xG1vhEfnW4fZ1KhSf/kzR1RiVYgg==
 
+"@capgo/background-geolocation@^8.0.42":
+  version "8.0.42"
+  resolved "https://registry.yarnpkg.com/@capgo/background-geolocation/-/background-geolocation-8.0.42.tgz#faade374934f53b9885e84f38685afe3caefb043"
+  integrity sha512-G/1/Vpa4Fr1yA9HOmDVrWNoJxT6cq048o59VBRRMsTt6ZyhSCFM2IdP9X1ADgSyG9TliJ0zRLh0f83pHUmZyCA==
+
 "@capgo/capacitor-audio-recorder@^8.2.1":
   version "8.2.1"
   resolved "https://registry.yarnpkg.com/@capgo/capacitor-audio-recorder/-/capacitor-audio-recorder-8.2.1.tgz#b29cfdbaa2aa87238fb0a31b8012cbcaef8eac74"

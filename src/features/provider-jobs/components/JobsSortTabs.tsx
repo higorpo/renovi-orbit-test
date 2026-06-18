@@ -1,19 +1,24 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { SORT_MODES } from "../constants/sortModes";
+import { getVisibleSortModes } from "../constants/sortModes";
 import type { SortMode } from "../types/provider-jobs.types";
 
 export interface JobsSortTabsProps {
   activeMode: SortMode;
   onModeChange: (mode: SortMode) => void;
   disabled?: boolean;
+  /** When false, nearest sort is hidden (ADR 0002, Req 13.4). */
+  hasFeedGps?: boolean;
 }
 
 export function JobsSortTabs({
   activeMode,
   onModeChange,
   disabled,
+  hasFeedGps = false,
 }: JobsSortTabsProps) {
+  const visibleModes = getVisibleSortModes(hasFeedGps);
+
   return (
     <Tabs
       value={activeMode}
@@ -29,7 +34,7 @@ export function JobsSortTabs({
         role="tablist"
         aria-label="Ordenação dos trabalhos"
       >
-        {SORT_MODES.map((mode) => {
+        {visibleModes.map((mode) => {
           const isActive = activeMode === mode.id;
           return (
             <TabsTrigger

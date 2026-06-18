@@ -1,29 +1,37 @@
 import { LoadMoreButton } from "@/components/ui/load-more-button";
+import { useEffect } from "react";
 import { useProviderLocation } from "../hooks/useProviderLocation";
 import { useProviderJobs } from "../hooks/useProviderJobs";
 import { useProviderJobsFilters } from "../hooks/useProviderJobsFilters";
+import { useDismissOpportunity } from "../hooks/useDismissOpportunity";
 import { JobsHeader } from "./JobsHeader";
 import { JobsSortTabs } from "./JobsSortTabs";
-import { JobsFiltersBar } from "./JobsFiltersBar";
 import { JobCard } from "./JobCard";
 import { JobCardSkeleton } from "./JobCardSkeleton";
 import { JobsEmptyState } from "./JobsEmptyState";
 import { JobsErrorState } from "./JobsErrorState";
 import { LocationPermissionBanner } from "./LocationPermissionBanner";
-import { DEFAULT_RADIUS_KM, DEFAULT_SORT_MODE } from "../constants/sortModes";
+import { getDefaultSortMode } from "../constants/sortModes";
 
 const SKELETON_COUNT = 4;
 
 export function ProviderJobsPage() {
   const location = useProviderLocation();
-  const { filters, setSortMode, setRadiusKm, setServiceId, resetFilters } =
-    useProviderJobsFilters();
+  const { filters, setSortMode, resetFilters } = useProviderJobsFilters();
+  const { dismissOpportunity, dismissingId } = useDismissOpportunity();
+  const hasFeedGps = location.hasFeedLocation;
+
+  useEffect(() => {
+    if (!hasFeedGps && filters.sortMode === "nearest") {
+      setSortMode("newest");
+    }
+  }, [hasFeedGps, filters.sortMode, setSortMode]);
+
+  const effectiveSortMode =
+    !hasFeedGps && filters.sortMode === "nearest" ? "newest" : filters.sortMode;
 
   const {
     items,
-    totalCount,
-    providerServices,
-    providerAreaSummary,
     isLoading,
     isFetchingNextPage,
     isError,
@@ -31,53 +39,35 @@ export function ProviderJobsPage() {
     fetchNextPage,
     refetch,
   } = useProviderJobs({
-    latitude: location.location?.latitude ?? null,
-    longitude: location.location?.longitude ?? null,
-    radiusKm: filters.radiusKm,
-    serviceId: filters.serviceId,
-    sortMode: filters.sortMode,
+    latitude: location.hasFeedLocation ? (location.location?.latitude ?? null) : null,
+    longitude: location.hasFeedLocation ? (location.location?.longitude ?? null) : null,
+    sortMode: effectiveSortMode,
   });
 
-  const hasActiveFilters =
-    filters.radiusKm !== DEFAULT_RADIUS_KM ||
-    filters.serviceId != null ||
-    filters.sortMode !== DEFAULT_SORT_MODE;
+  const hasActiveFilters = filters.sortMode !== getDefaultSortMode(hasFeedGps);
 
   return (
     <div className="container max-w-5xl px-4 py-6">
-      <JobsHeader
-        totalCount={totalCount}
-        isLoading={isLoading}
-        isUsingDefaultLocation={location.isUsingDefault}
-        providerAreaSummary={providerAreaSummary}
-      />
+      <JobsHeader isUsingDefaultLocation={location.isUsingDefault} />
 
       {location.isUsingDefault && (
         <div className="mt-4">
           <LocationPermissionBanner
             permissionDenied={location.permissionDenied}
             insecureContext={location.insecureContext}
+            isNativeApp={location.isNativeApp}
             onRetry={location.retry}
           />
         </div>
       )}
 
       <div className="mt-6 space-y-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <JobsSortTabs
-            activeMode={filters.sortMode}
-            onModeChange={setSortMode}
-            disabled={isLoading}
-          />
-          <JobsFiltersBar
-            filters={filters}
-            onRadiusChange={setRadiusKm}
-            onServiceChange={setServiceId}
-            onReset={resetFilters}
-            providerServices={providerServices}
-            disabled={isLoading}
-          />
-        </div>
+        <JobsSortTabs
+          activeMode={effectiveSortMode}
+          onModeChange={setSortMode}
+          disabled={isLoading}
+          hasFeedGps={hasFeedGps}
+        />
 
         <section aria-label="Lista de trabalhos" id="jobs-list">
           {isLoading && (
@@ -105,8 +95,12 @@ export function ProviderJobsPage() {
             <>
               <ul className="grid gap-4">
                 {items.map((job) => (
-                  <li key={job.id}>
-                    <JobCard job={job} />
+                  <li key={job.service_request_id}>
+                    <JobCard
+                      job={job}
+                      onDismiss={dismissOpportunity}
+                      isDismissing={dismissingId === job.service_request_id}
+                    />
                   </li>
                 ))}
               </ul>

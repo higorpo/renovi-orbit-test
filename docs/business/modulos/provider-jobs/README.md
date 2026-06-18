@@ -2,52 +2,53 @@
 
 ## 1. Leitura para negócio
 
-- **Para que serve:** o prestador **encontra pedidos abertos** compatíveis (serviço ofertado, área de atuação, distância), abre o **detalhe**, pode **perguntar** ao cliente (até **3** perguntas por pedido, conforme tratamento de erro no front) e **envia ou edita** **orçamento** com cálculo de taxa e assinatura no banco.
+- **Para que serve:** o prestador vê **oportunidades liberadas pelo matching progressivo** (lote ou mercado aberto), abre o **detalhe** em `/dashboard/services/:id`, pode **descartar** cards no feed, **perguntar** ao cliente e **enviar ou editar** **orçamento** (CNS).
 - **Quem usa:** apenas **prestador** autenticado.
-- **Valor:** liquidez do marketplace no lado da oferta.
-- **Riscos:** matching depende de **geolocalização** (ou fallback Florianópolis / centróide BR no detalhe), configuração em **Minha conta** (serviços e bairros) e regras SQL; suporte deve saber onde o prestador ajusta raio e filtros na própria lista.
+- **Valor:** liquidez controlada — só aparecem pedidos para os quais o dispatch concedeu **visibilidade**.
+- **Riscos:** **dois papéis da localização** — beacon em background (Android) alimenta **elegibilidade em lote**; GPS em **primeiro plano** só afeta ordenação *Mais próximos* no feed. Web/PWA não atualiza beacon em background.
 
 ## 2. Visão geral técnica
 
 | Aspecto | Detalhe |
 |---------|---------|
-| Rotas | `/dashboard/jobs`, `/dashboard/jobs/:jobId` (sheet ou página conforme `location.state`) |
-| Lista | Edge **`match-provider-jobs`** → RPC `match_provider_jobs`; página **20** itens; infinite query |
-| Detalhe | RPC **`get_provider_proposal_job_detail`** |
-| Proposta | RPCs **`calculate_provider_service_pricing`**, **`create_provider_proposal`**; storage **`provider-proposals`** |
-| Perguntas | RPCs **`create_provider_service_request_question`**, **`list_provider_service_request_questions`** |
+| Rotas | `/dashboard/jobs` (lista); detalhe via **`view-services`** → `/dashboard/services/:serviceRequestId` |
+| Lista | Edge **`list-provider-opportunities`** → RPC `list_provider_opportunities`; cursor; **20** itens/página |
+| Sort | `nearest` (exige GPS feed), `newest`, `least_competitive` — **sem** filtro de raio/serviço na UI |
+| Descartar | RPC **`dismiss_provider_opportunity`** |
+| Detalhe / proposta | **`view-services`** + **`negotiation-proposals`** (`get_service`, `create_provider_proposal`, …) |
+| Beacon / lote | **`device-beacon`** — `useProviderLocationTracking`, sync em `user_device_beacons` |
 
 ## 3. Documentação da feature
 
 | Documento | Conteúdo |
 |-----------|----------|
-| [features/trabalhos-e-propostas.md](./features/trabalhos-e-propostas.md) | Telas, geo, critérios de matching (Edge), sort modes, filtros, perguntas, composer de proposta, mensagens, APIs, lacunas |
+| [features/trabalhos-e-propostas.md](./features/trabalhos-e-propostas.md) | Feed progressivo, geo dupla, sort, dismiss, gates, proposta |
+| [matching-dispatch](../matching-dispatch/README.md) | Backend: lotes, cron, gates, MMD |
 
 ## 4. Arquivos-chave (mapa rápido)
 
 | Área | Caminhos |
 |------|----------|
-| Shell / rotas internas | `components/ProviderJobsShell.tsx`, `ProviderJobsRouteSlot.tsx` |
-| Lista | `ProviderJobsPage.tsx`, `JobCard.tsx`, `JobsHeader.tsx`, `JobsSortTabs.tsx`, `JobsFiltersBar.tsx` |
-| Estados lista | `JobsEmptyState.tsx`, `JobsErrorState.tsx`, `LocationPermissionBanner.tsx` |
-| Detalhe | `JobDetailPage.tsx`, `JobDetailSheet.tsx`, `JobDetailContent.tsx`, `JobDetailFloatingActions.tsx` |
-| Proposta | `ProviderProposalComposerDialog.tsx`, `useProviderProposalComposer.ts`, `ProviderProposalSummaryCard.tsx` |
-| Perguntas | `JobQuestionComposerDialog.tsx`, `JobQuestionPromptCard.tsx`, `JobQuestionsFeed.tsx`, `useProviderJobQuestionComposer.ts` |
-| Tipos / constantes | `types/provider-jobs.types.ts`, `constants/sortModes.ts`, `constants/queryKeys.ts` |
-| Geo | `hooks/useProviderLocation.ts` |
-| Lista remota | `hooks/useProviderJobs.ts`, `api/providerJobs.api.ts` |
+| Lista | `ProviderJobsPage.tsx`, `JobCard.tsx`, `JobsHeader.tsx`, `JobsSortTabs.tsx` |
+| Feed hooks | `useProviderJobs.ts`, `useProviderJobsFilters.ts`, `useDismissOpportunity.ts` |
+| Geo feed | `useProviderLocation.ts` (foreground only) |
+| API lista | `api/providerJobs.api.ts`, `api/dismissOpportunity.api.ts` |
+| Detalhe | `@/features/view-services` (`ServiceDetailPage`) |
 
 ## 5. Edge Function (referência)
 
-- Código e comentários de negócio: `supabase/functions/match-provider-jobs/index.ts` (auth `profile.role = provider`, validação de coords, elegibilidade, `sort_mode`, paginação).
+- **`list-provider-opportunities`:** auth prestador, sort/cursor/limit, coords opcionais para distância.
+- **Legado removido:** `match-provider-jobs` / RPC `match_provider_jobs` (migration `20260711230000_matching_drop_legacy_feed.sql`).
 
 ## 6. Migrações e SQL (referência)
 
-- Matching / propostas: ex. `supabase/migrations/20260318200001_match_provider_jobs_rpc.sql`, `20260318200000_create_provider_proposals.sql`, hardening de assinatura em migrações posteriores (ver grep por `create_provider_proposal` / `pricing_signature`).
+- Matching: `supabase/migrations/202607110*`–`20260711230000_*`.
+- Visibilidade: `service_request_provider_visibility`, dispatch em `service_request_dispatches`.
 
 ## 7. Relação com outros módulos
 
-- **`my-account`:** serviços ofertados e bairros alimentam o matching (ver comentários na Edge).
-- **`view-services`:** detalhe unificado do pedido (`ServiceDetailPage` / sheet); lista prestador via RPC `list_services` (UI futura em `/dashboard/services`).
-- **`request-quote`:** fotos do pedido na lista; estilos de card de serviço.
-- **`my-services` / `negotiation-proposals`:** lado cliente para acompanhar pedidos, comparar/histórico de orçamentos e negociar em Conversas.
+- **`matching-dispatch`:** quem concede visibilidade e abre lotes.
+- **`device-beacon`:** localização operacional para discovery.
+- **`view-services`:** detalhe unificado do pedido.
+- **`my-account`:** serviços ofertados e bairros (elegibilidade fallback e discovery).
+- **`message-dispatcher`:** template `matching.new_opportunity` após lote.

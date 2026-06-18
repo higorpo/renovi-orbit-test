@@ -1,0 +1,2 @@
+-- Consolidated into 20260711080000 (numeric cast) and 20260711090000 (lease CAS fix).
+-- Intentionally empty: keeps migration ordering stable for environments that already applied this version.

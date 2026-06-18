@@ -1,4 +1,6 @@
+// @vitest-environment happy-dom
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import "@/lib/capacitor/__tests__/preferencesStorage.harness";
 import {
   CameraErrorCode,
   MediaType,

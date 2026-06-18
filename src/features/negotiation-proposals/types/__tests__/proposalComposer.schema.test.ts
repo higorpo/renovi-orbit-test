@@ -50,7 +50,7 @@ describe("validateProposalComposerForm", () => {
       durationValueInput: "3",
       durationUnit: "days",
       availabilitySlots: [
-        { startDate: "2026-06-05", endDate: "2026-06-09", shift: "full_day" },
+        { startDate: "2030-06-14", endDate: "2030-06-18", shift: "full_day" },
       ],
     });
 
@@ -64,7 +64,7 @@ describe("validateProposalComposerForm", () => {
       durationValueInput: "3",
       durationUnit: "days",
       availabilitySlots: [
-        { startDate: "2026-06-05", endDate: "2026-06-07", shift: "full_day" },
+        { startDate: "2030-06-14", endDate: "2030-06-16", shift: "full_day" },
       ],
     });
 

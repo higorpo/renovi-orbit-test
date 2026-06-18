@@ -4,7 +4,7 @@ import { ProviderJobsPage } from "./ProviderJobsPage";
 
 /**
  * Keeps the jobs list mounted when opening service detail as a sheet from Trabalhos.
- * Avoids remounting ProviderJobsPage (and re-fetching match-provider-jobs) on route change.
+ * Avoids remounting ProviderJobsPage (and re-fetching the provider jobs feed) on route change.
  */
 export function ProviderJobsPersistentSlot() {
   const location = useLocation();

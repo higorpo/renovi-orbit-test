@@ -27,7 +27,7 @@ Itens que exigem validação humana, evidência parcial ou conflito entre trecho
 
 ## Necessita validação com negócio/produto
 
-- Regras exatas de **matching** geográfico (raio, ordenação) e pesos de negócio além do que está em SQL/RPC.
+- Regras exatas de **matching** geográfico (raio, ordenação) e pesos de negócio além do que está em SQL/RPC. → **Parcialmente resolvido (2026-06):** ver [matching-dispatch](./modulos/matching-dispatch/README.md) e [trabalhos-e-propostas](./modulos/provider-jobs/features/trabalhos-e-propostas.md).
 - Política de **expiração** de propostas (`expire_stale_provider_proposals`) — frequência de execução (cron) não verificada neste escopo.
 - **Pagamentos e contratos** — apenas planos em `docs/payment-system-*.md`, sem implementação mapeada nas Edge Functions deste tree.
 

@@ -9,7 +9,6 @@ vi.mock("@/features/request-quote", () => ({
     color: "from-slate-600 to-slate-800",
     Icon: () => <span data-testid="svc-icon" />,
   }),
-  useServiceRequestPhotoUrls: () => ({ urls: ["https://img.test/a.jpg"], isLoading: false }),
 }));
 
 describe("JobCard", () => {
@@ -17,7 +16,7 @@ describe("JobCard", () => {
     const job = createMinimalJob({
       title: "Troca de chuveiro",
       urgency: "high",
-      photos: ["p1.jpg"],
+      service_name: "Hidráulica",
     });
     render(
       <MemoryRouter>
@@ -26,13 +25,13 @@ describe("JobCard", () => {
     );
     expect(screen.getAllByText("Troca de chuveiro").length).toBeGreaterThan(0);
     expect(screen.getByText(/urgente/i)).toBeInTheDocument();
-    expect(screen.getByText(/sua área/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/hidráulica/i).length).toBeGreaterThan(0);
     const mainLink = screen.getByRole("link", { name: /ver detalhes: troca de chuveiro/i });
     expect(mainLink).toHaveAttribute("href", "/dashboard/services/job-1");
   });
 
   it("renders footer link to job detail", () => {
-    const job = createMinimalJob({ photos: null });
+    const job = createMinimalJob();
     render(
       <MemoryRouter>
         <JobCard job={job} />
@@ -40,5 +39,19 @@ describe("JobCard", () => {
     );
     const footerLink = screen.getByRole("link", { name: /^ver detalhes$/i });
     expect(footerLink).toHaveAttribute("href", "/dashboard/services/job-1");
+  });
+
+  it("renders dismiss action when onDismiss is provided", () => {
+    const onDismiss = vi.fn();
+    const job = createMinimalJob();
+    render(
+      <MemoryRouter>
+        <JobCard job={job} onDismiss={onDismiss} />
+      </MemoryRouter>,
+    );
+    const dismissButton = screen.getByRole("button", { name: /não tenho interesse/i });
+    expect(dismissButton).toBeInTheDocument();
+    dismissButton.click();
+    expect(onDismiss).toHaveBeenCalledWith("job-1");
   });
 });

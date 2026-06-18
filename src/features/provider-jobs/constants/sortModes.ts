@@ -11,16 +11,16 @@ export interface SortModeConfig {
 
 export const SORT_MODES: SortModeConfig[] = [
   {
-    id: "nearest",
-    label: "Mais próximos",
-    icon: MapPin,
-    iconColor: "text-blue-500",
-  },
-  {
     id: "newest",
     label: "Mais recentes",
     icon: Clock,
     iconColor: "text-amber-500",
+  },
+  {
+    id: "nearest",
+    label: "Mais próximos",
+    icon: MapPin,
+    iconColor: "text-blue-500",
   },
   {
     id: "least_competitive",
@@ -30,9 +30,29 @@ export const SORT_MODES: SortModeConfig[] = [
   },
 ];
 
-export const RADIUS_OPTIONS = [2, 5, 10, 20, 50] as const;
+/** Default when feed GPS is unavailable (Req 13.4). */
+export const DEFAULT_SORT_MODE_WITHOUT_GPS: SortMode = "newest";
 
-export type RadiusOption = (typeof RADIUS_OPTIONS)[number];
+/** Default when feed GPS is available (Req 13.5). */
+export const DEFAULT_SORT_MODE_WITH_GPS: SortMode = "nearest";
 
-export const DEFAULT_RADIUS_KM = 10;
-export const DEFAULT_SORT_MODE: SortMode = "nearest";
+/** Initial filter state before GPS resolves. */
+export const DEFAULT_SORT_MODE: SortMode = DEFAULT_SORT_MODE_WITHOUT_GPS;
+
+export function getDefaultSortMode(hasFeedGps: boolean): SortMode {
+  return hasFeedGps ? DEFAULT_SORT_MODE_WITH_GPS : DEFAULT_SORT_MODE_WITHOUT_GPS;
+}
+
+export function getVisibleSortModes(hasFeedGps: boolean): SortModeConfig[] {
+  if (hasFeedGps) {
+    return SORT_MODES;
+  }
+  return SORT_MODES.filter((mode) => mode.id !== "nearest");
+}
+
+export function isSortModeAllowed(mode: SortMode, hasFeedGps: boolean): boolean {
+  if (mode === "nearest") {
+    return hasFeedGps;
+  }
+  return true;
+}

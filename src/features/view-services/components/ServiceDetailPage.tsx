@@ -19,6 +19,7 @@ import {
 import { useServiceRequestBudgetSheet } from "../hooks/useServiceRequestBudgetSheet";
 import { useProviderServiceRequestChat } from "../hooks/useProviderServiceRequestChat";
 import { useServiceDetailChatNavigation } from "../hooks/useServiceDetailChatNavigation";
+import { useRecordProviderOpportunityView } from "../hooks/useRecordProviderOpportunityView";
 import { SERVICE_DETAIL_PAGE_SHELL_CLASS } from "../constants/serviceDetail.constants";
 import { ServiceContractedSection } from "./ServiceContractedSection";
 import { ServiceDetailClientActions } from "./ServiceDetailClientActions";
@@ -42,6 +43,7 @@ export function ServiceDetailPage({
   const { id: routeId } = useParams<{ id: string }>();
   const id = serviceRequestIdProp ?? routeId;
   const { profile } = useAuth();
+  useRecordProviderOpportunityView(id);
   const { data: model, isLoading, isError, refetch } = useService(id);
   const { cancelService, isCancelling } = useCancelService();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);

@@ -9,11 +9,16 @@ export { ServiceDetailSkeleton } from "./components/ServiceDetailSkeleton";
 export type { ServiceDetailSkeletonProps } from "./components/ServiceDetailSkeleton";
 
 export { getServiceById, listServices, cancelService } from "./api/services.api";
+export {
+  recordProviderOpportunityView,
+} from "./api/opportunityView.api";
+export type { RecordProviderOpportunityViewResult } from "./api/opportunityView.api";
 export { useServicesList } from "./hooks/useServicesList";
 export { useService } from "./hooks/useService";
 export { useCancelService } from "./hooks/useCancelService";
 export { useServiceDetailModal } from "./hooks/useServiceDetailModal";
 export { useServiceRequestBudgetSheet } from "./hooks/useServiceRequestBudgetSheet";
+export { useRecordProviderOpportunityView } from "./hooks/useRecordProviderOpportunityView";
 
 export type {
   ServiceModel,

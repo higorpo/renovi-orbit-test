@@ -188,7 +188,6 @@ export function useServiceRequestProposalComposer({
   return {
     isOpen,
     isSubmitting,
-    isPricingLoading: composerForm.isPricingLoading,
     composerMode,
     canSubmitProposal,
     priceInput,
@@ -196,9 +195,6 @@ export function useServiceRequestProposalComposer({
     durationValueInput,
     durationUnit,
     availabilitySlots,
-    photosCount: composerForm.photosCount,
-    maxDescriptionLength: composerForm.maxDescriptionLength,
-    maxPhotos: composerForm.maxPhotos,
     openComposer,
     closeComposer,
     submitProposal,

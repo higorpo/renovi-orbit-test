@@ -445,7 +445,7 @@ where provider_id = '4cf92e3a-64cd-4491-998e-9163138f8e96';
 insert into public.client_addresses (
   id, client_id, label, street, number, complement,
   neighborhood, zip_code, state_id, city_id,
-  is_default, is_active, location
+  is_default, is_active, location, h3_index
 )
 values
   (
@@ -461,7 +461,8 @@ values
     'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a21'::uuid,
     true,
     true,
-    ST_SetSRID(ST_MakePoint(-48.5482, -27.5954), 4326)::geography
+    ST_SetSRID(ST_MakePoint(-48.5482, -27.5954), 4326)::geography,
+    '89a91b46253ffff'
   ),
   (
     'bcd13138-0d54-431f-a672-55903f31301f',
@@ -476,7 +477,8 @@ values
     'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a21'::uuid,
     true,
     true,
-    ST_SetSRID(ST_MakePoint(-48.5012, -27.5978), 4326)::geography
+    ST_SetSRID(ST_MakePoint(-48.5012, -27.5978), 4326)::geography,
+    '89a91b4762fffff'
   ),
   (
     'ccd13138-0d54-431f-a672-55903f313020',
@@ -491,7 +493,8 @@ values
     'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a21'::uuid,
     true,
     true,
-    ST_SetSRID(ST_MakePoint(-48.5123, -27.5821), 4326)::geography
+    ST_SetSRID(ST_MakePoint(-48.5123, -27.5821), 4326)::geography,
+    '89a91b473c7ffff'
   ),
   (
     'dcd13138-0d54-431f-a672-55903f313021',
@@ -506,7 +509,8 @@ values
     'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a21'::uuid,
     true,
     true,
-    ST_SetSRID(ST_MakePoint(-48.4988, -27.5995), 4326)::geography
+    ST_SetSRID(ST_MakePoint(-48.4988, -27.5995), 4326)::geography,
+    '89a91b4762bffff'
   ),
   (
     'ecd13138-0d54-431f-a672-55903f313022',
@@ -521,7 +525,8 @@ values
     'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a21'::uuid,
     true,
     true,
-    ST_SetSRID(ST_MakePoint(-48.5456, -27.5932), 4326)::geography
+    ST_SetSRID(ST_MakePoint(-48.5456, -27.5932), 4326)::geography,
+    '89a91b4624bffff'
   )
 on conflict (id) do nothing;
 

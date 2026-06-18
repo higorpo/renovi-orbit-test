@@ -4,6 +4,9 @@ const config: CapacitorConfig = {
   appId: 'br.com.renovi.orbit',
   appName: 'Orbit',
   webDir: 'dist',
+  android: {
+    useLegacyBridge: true,
+  },
   // Remove this when production is ready
   server: {
     url: 'http://192.168.0.248:5854',
@@ -35,6 +38,9 @@ const config: CapacitorConfig = {
     LocalNotifications: {
       smallIcon: 'ic_notification',
       iconColor: '#1a5f7a',
+    },
+    CapacitorHttp: {
+      enabled: true,
     },
   },
 }

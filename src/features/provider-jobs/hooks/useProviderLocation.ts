@@ -1,15 +1,17 @@
-import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/features/auth";
+import {
+  captureOperationalLocationFix,
+  getLatestProviderLocationSample,
+  getOperationalLocationPermissionStatus,
+  subscribeProviderLocationSamples,
+} from "@/features/device-beacon";
+import { Capacitor } from "@capacitor/core";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 export interface ProviderLocation {
   latitude: number;
   longitude: number;
 }
-
-// Default: Florianópolis center (same fallback used by the addresses feature)
-const DEFAULT_LOCATION: ProviderLocation = {
-  latitude: -27.5969,
-  longitude: -48.5495,
-};
 
 /** GeolocationPositionError codes (use numeric values for older WebViews). */
 const GEO_ERR_PERMISSION_DENIED = 1;
@@ -42,29 +44,84 @@ function isGeolocationInsecureContext(): boolean {
   return !isLocalDevHostname(window.location.hostname);
 }
 
+/**
+ * Foreground feed GPS only (ADR 0002). Never fabricates coordinates for API calls.
+ * Native Capacitor uses the geolocation plugin (not WebView); web/PWA uses browser APIs.
+ */
 export function useProviderLocation() {
+  const { user } = useAuth();
+  const profileId = user?.id ?? null;
+  const isNativeApp = Capacitor.isNativePlatform();
+
   const [location, setLocation] = useState<ProviderLocation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [insecureContext, setInsecureContext] = useState(false);
+  const hasRequestedRef = useRef(false);
 
-  const requestLocation = useCallback(() => {
+  const applyFeedLocation = useCallback((latitude: number, longitude: number) => {
+    setLocation({ latitude, longitude });
+    setError(null);
+    setPermissionDenied(false);
+    setInsecureContext(false);
+    setIsLoading(false);
+  }, []);
+
+  const clearFeedLocation = useCallback((message: string, denied: boolean) => {
+    setLocation(null);
+    setPermissionDenied(denied);
+    setError(message);
+    setIsLoading(false);
+  }, []);
+
+  const requestNativeLocation = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    setInsecureContext(false);
+
+    const status = await getOperationalLocationPermissionStatus();
+
+    if (status === "denied") {
+      clearFeedLocation("Permissão de localização negada", true);
+      return;
+    }
+
+    if (status === "unsupported") {
+      clearFeedLocation("Geolocalização não disponível neste dispositivo", false);
+      return;
+    }
+
+    const cached = profileId ? getLatestProviderLocationSample(profileId) : null;
+    if (cached) {
+      applyFeedLocation(cached.latitude, cached.longitude);
+      return;
+    }
+
+    const fix = await captureOperationalLocationFix();
+    if (fix?.granted && fix.latitude != null && fix.longitude != null) {
+      applyFeedLocation(fix.latitude, fix.longitude);
+      return;
+    }
+
+    if (fix?.status === "denied") {
+      clearFeedLocation("Permissão de localização negada", true);
+      return;
+    }
+
+    clearFeedLocation("Não foi possível obter sua localização", false);
+  }, [applyFeedLocation, clearFeedLocation, profileId]);
+
+  const requestWebLocation = useCallback(() => {
     if (!navigator.geolocation) {
-      setLocation(DEFAULT_LOCATION);
-      setError("Geolocalização não disponível neste navegador");
-      setPermissionDenied(false);
       setInsecureContext(false);
-      setIsLoading(false);
+      clearFeedLocation("Geolocalização não disponível neste navegador", false);
       return;
     }
 
     if (isGeolocationInsecureContext()) {
-      setLocation(DEFAULT_LOCATION);
-      setError("Geolocalização requer HTTPS (exceto localhost)");
-      setPermissionDenied(false);
       setInsecureContext(true);
-      setIsLoading(false);
+      clearFeedLocation("Geolocalização requer HTTPS (exceto localhost)", false);
       return;
     }
 
@@ -78,64 +135,80 @@ export function useProviderLocation() {
       if (err.code === GEO_ERR_TIMEOUT || err.code === GEO_ERR_POSITION_UNAVAILABLE) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
-            setLocation({
-              latitude: pos.coords.latitude,
-              longitude: pos.coords.longitude,
-            });
-            setError(null);
-            setPermissionDenied(false);
-            setInsecureContext(false);
-            setIsLoading(false);
+            applyFeedLocation(pos.coords.latitude, pos.coords.longitude);
           },
           (retryErr) => {
             const retryDenied = retryErr.code === GEO_ERR_PERMISSION_DENIED;
-            setLocation(DEFAULT_LOCATION);
-            setPermissionDenied(retryDenied);
-            setError(
+            clearFeedLocation(
               retryDenied
                 ? "Permissão de localização negada"
                 : "Não foi possível obter sua localização",
+              retryDenied,
             );
-            setIsLoading(false);
           },
           GEO_OPTIONS_HIGH_ACCURACY,
         );
         return;
       }
 
-      setLocation(DEFAULT_LOCATION);
-      setPermissionDenied(denied);
-      setError(
+      clearFeedLocation(
         denied
           ? "Permissão de localização negada"
           : "Não foi possível obter sua localização",
+        denied,
       );
-      setIsLoading(false);
     };
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLocation({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-        });
-        setError(null);
-        setPermissionDenied(false);
-        setInsecureContext(false);
-        setIsLoading(false);
+        applyFeedLocation(pos.coords.latitude, pos.coords.longitude);
       },
       finishWithError,
       GEO_OPTIONS,
     );
-  }, []);
+  }, [applyFeedLocation, clearFeedLocation]);
+
+  const requestLocation = useCallback(() => {
+    if (isNativeApp) {
+      void requestNativeLocation();
+      return;
+    }
+    requestWebLocation();
+  }, [isNativeApp, requestNativeLocation, requestWebLocation]);
 
   useEffect(() => {
+    if (hasRequestedRef.current) {
+      return;
+    }
+    hasRequestedRef.current = true;
     requestLocation();
   }, [requestLocation]);
 
-  // When the user fixes permission in the browser (not only OS), retry automatically.
   useEffect(() => {
-    if (typeof navigator === "undefined" || !navigator.permissions?.query) {
+    if (!isNativeApp || !profileId || location) {
+      return;
+    }
+
+    const cached = getLatestProviderLocationSample(profileId);
+    if (cached) {
+      applyFeedLocation(cached.latitude, cached.longitude);
+    }
+  }, [applyFeedLocation, isNativeApp, location, profileId]);
+
+  useEffect(() => {
+    if (!isNativeApp || !profileId) {
+      return;
+    }
+
+    return subscribeProviderLocationSamples((id, sample) => {
+      if (id === profileId) {
+        applyFeedLocation(sample.latitude, sample.longitude);
+      }
+    });
+  }, [applyFeedLocation, isNativeApp, profileId]);
+
+  useEffect(() => {
+    if (isNativeApp || typeof navigator === "undefined" || !navigator.permissions?.query) {
       return;
     }
 
@@ -150,7 +223,7 @@ export function useProviderLocation() {
         statusObj = status;
         onGranted = () => {
           if (status.state === "granted") {
-            requestLocation();
+            requestWebLocation();
           }
         };
         status.addEventListener("change", onGranted);
@@ -163,7 +236,9 @@ export function useProviderLocation() {
         statusObj.removeEventListener("change", onGranted);
       }
     };
-  }, [requestLocation]);
+  }, [isNativeApp, requestWebLocation]);
+
+  const hasFeedLocation = location != null;
 
   return {
     location,
@@ -171,7 +246,9 @@ export function useProviderLocation() {
     isLoading,
     permissionDenied,
     insecureContext,
-    isUsingDefault: error != null && location != null,
+    hasFeedLocation,
+    isUsingDefault: !hasFeedLocation,
+    isNativeApp,
     retry: requestLocation,
   };
 }

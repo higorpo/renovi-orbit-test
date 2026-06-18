@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const authMocks = vi.hoisted(() => ({
   user: { id: 'user-1' } as { id: string } | null,
+  profile: { role: 'client' as 'client' | 'provider' | 'admin' },
   loadingSession: false,
 }))
 
@@ -50,13 +51,26 @@ collectPayloadMock.mockResolvedValue(defaultPayload)
 
 vi.mock('../../utils/collectDeviceBeaconPayload', () => ({
   collectDeviceBeaconPayload: collectPayloadMock,
-  buildPayloadFromPushState: vi.fn((profileId: string, deviceId: string) => ({
+  buildPayloadFromPushState: vi.fn(async (profileId: string, deviceId: string) => ({
     ...defaultPayload,
     profile_id: profileId,
     device_id: deviceId,
     fcm_token: 'from-listener',
     push_enabled: true,
   })),
+}))
+
+vi.mock('../../utils/locationSync', () => ({
+  getLatestProviderLocationSample: vi.fn(() => null),
+  subscribeProviderLocationSamples: vi.fn(() => vi.fn()),
+}))
+
+vi.mock('../../hooks/useProviderLocationTracking', () => ({
+  useProviderLocationTracking: vi.fn(),
+}))
+
+vi.mock('../ProviderLocationProvider', () => ({
+  ProviderLocationProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
 
 vi.mock('@/lib/push', () => ({
@@ -77,6 +91,7 @@ describe('DeviceBeaconProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     authMocks.user = { id: 'user-1' }
+    authMocks.profile = { role: 'client' }
     authMocks.loadingSession = false
     clearPreferencesTestStore()
     collectPayloadMock.mockResolvedValue(defaultPayload)

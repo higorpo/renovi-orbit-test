@@ -1,6 +1,9 @@
 import { useAuth } from '@/features/auth'
 import { logger } from '@/lib/logger'
 import {
+  waitForProviderLocationPermissionFlow,
+} from '@/lib/providerPermissionSequence'
+import {
   getPushPermissionStatus,
   isPushPermissionPending,
   setupPushNotifications,
@@ -22,10 +25,16 @@ export function usePushPermissionPrompt() {
   const [open, setOpen] = useState(false)
   const [requesting, setRequesting] = useState(false)
 
+  const isProvider = profile?.role === 'provider'
+
   const evaluatePrompt = useCallback(async () => {
     if (!user?.id) {
       setOpen(false)
       return
+    }
+
+    if (isProvider) {
+      await waitForProviderLocationPermissionFlow()
     }
 
     const status = await getPushPermissionStatus()
@@ -43,7 +52,7 @@ export function usePushPermissionPrompt() {
     }
 
     setOpen(true)
-  }, [user?.id])
+  }, [isProvider, user?.id])
 
   useEffect(() => {
     if (loadingSession || !user?.id) {

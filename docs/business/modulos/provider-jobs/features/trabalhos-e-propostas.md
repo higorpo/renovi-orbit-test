@@ -1,6 +1,6 @@
 # Trabalhos, perguntas e propostas do prestador
 
-Documentação baseada em `src/features/provider-jobs/`, Edge Function `match-provider-jobs` e comentários de orquestração em `supabase/functions/match-provider-jobs/index.ts`.
+Documentação baseada em `src/features/provider-jobs/`, Edge **`list-provider-opportunities`** e backend [matching-dispatch](../matching-dispatch/README.md).
 
 ---
 
@@ -29,72 +29,83 @@ Documentação baseada em `src/features/provider-jobs/`, Edge Function `match-pr
 
 ---
 
-## 3. Geolocalização e listagem
+## 3. Geolocalização e listagem (matching progressivo)
 
-### 3.1 `useProviderLocation`
+> **Cutover 2026-06:** o feed deixou de usar `match-provider-jobs` (raio + página). Ver [matching-dispatch](../matching-dispatch/README.md).
 
-- Usa `navigator.geolocation.getCurrentPosition` com timeout 20s; em falha de timeout/indisponível, **retry** com alta precisão (25s, `maximumAge: 0`).
-- **Fallback de coordenadas:** centro de Florianópolis `(-27.5969, -48.5495)` quando geo indisponível, permissão negada ou contexto inseguro — `useProviderLocation.ts`.
-- **HTTP não seguro:** mensagem específica; exceto `localhost` / `127.0.0.1` / `[::1]`.
-- **Permissões:** escuta `navigator.permissions` para `geolocation` e chama `retry` quando passa a `granted`.
-- Estados expostos: `location`, `error`, `isLoading`, `permissionDenied`, `insecureContext`, `isUsingDefault` (= erro mas com coordenadas fallback), `retry`.
+### 3.1 Modelo duplo de localização
 
-### 3.2 Banner (`LocationPermissionBanner.tsx`)
+| Papel | Hook / componente | Uso de negócio |
+|-------|-------------------|----------------|
+| **Beacon (lote)** | `useProviderLocationTracking`, `DeviceBeaconProvider`, `locationSync` | Atualiza `user_device_beacons` → `provider_latest_locations`; define se o prestador entra em **lotes** e discovery. Android: background com notificação persistente. Web: **apenas foreground**. |
+| **GPS feed** | `useProviderLocation` | Só para sort **Mais próximos** e exibição de distância no card; **nunca** inventa coordenadas (`hasFeedLocation`). |
 
-Textos conforme `insecureContext` / `permissionDenied` / caso genérico (“localização aproximada”) + botão **Tentar novamente**.
+### 3.2 `useProviderLocation` (feed)
+
+- Foreground `watchPosition` / leitura pontual; timeout 20s; retry alta precisão se necessário.
+- **Sem fallback** Florianópolis/Brasil para chamadas de API — se não houver GPS, `hasFeedLocation = false`.
+- Banner (`LocationPermissionBanner`) orienta permissão ou contexto inseguro (HTTP).
 
 ### 3.3 `useProviderJobs`
 
-- **Habilitação:** `enabled: latitude != null && longitude != null` — sem coords a query **não roda**.
-- **Chamada:** `fetchProviderJobs` → `supabase.functions.invoke("match-provider-jobs", { body })`.
-- **Tamanho de página:** **20** fixo; `staleTime` 60s; `refetchOnWindowFocus: false`.
-- **Parâmetros do body** (tipo `MatchProviderJobsBody` em `supabase/functions/match-provider-jobs/types.ts`): `latitude`, `longitude` (obrigatórios), `radius_km` opcional, `service_id`, `sort_mode`, `page`, `page_size` (no app: page size 20).
-- **Clamps documentados na Edge:** `radius_km` [1, 100]; `page_size` [1, 50] (comentário no `index.ts` da function).
+- **Chamada:** `fetchProviderJobs` → Edge **`list-provider-opportunities`**.
+- **Paginação:** cursor opaco (`next_cursor` / `has_more`); **20** itens (`FEED_DEFAULT_LIMIT`).
+- **Habilitação:** query roda sempre exceto quando sort `nearest` sem GPS feed (`enabled: sortMode !== "nearest" || coords presentes`).
+- **Body:** `sort_mode`, `cursor`, `limit`, `lat`, `lng` (opcionais).
 
-### 3.4 Critérios de elegibilidade (matching) — evidência Edge `index.ts`
+### 3.4 Elegibilidade no feed (visibilidade)
 
-Resumo do que o comentário oficial da function descreve para o RPC `match_provider_jobs`:
+O prestador **só** vê pedidos com linha ativa em `service_request_provider_visibility`:
 
-- Pedido `open` com localização não nula.
-- Serviço: prestador oferece o serviço exato **ou** categoria pai (`parent_id`).
-- Cidade do pedido ∈ cidades derivadas de `provider_service_area_neighborhoods`.
-- Proximidade PostGIS `ST_DWithin` (raio em km).
-- Sem proposta **ativa** deste prestador no pedido (status ≠ `REVISED`).
-- Contagem informativa de propostas ativas (`PENDING` + `REVISION_REQUESTED`); sem teto por pedido.
-- Filtro opcional `service_id`.
+- **`source = batch`** — entrou em um lote do cron.
+- **`source = fallback`** — mercado aberto após esgotamento de lotes; badge **Mercado aberto** no `JobCard`.
 
-Campos computados citados: `distance_km`, `proposal_count`, `exact_area_match`, `masked_client_name`.
+Não há filtro de raio nem de tipo de serviço na barra de filtros (removidos no cutover).
 
-### 3.5 Ordenação (`sort_mode`) — linguagem de negócio
+### 3.5 Ordenação (`sort_mode`)
 
-| Valor (`SortMode`) | Label na UI (`sortModes.ts`) | Comportamento (Edge `index.ts`) |
-|--------------------|-------------------------------|--------------------------------|
-| `nearest` | Mais próximos | `distance_km` ASC (+ desempates) |
-| `least_competitive` | Menos concorridos | `proposal_count` ASC |
-| `newest` | Mais recentes | `created_at` DESC |
+| Valor | Label UI | Requisito |
+|-------|----------|-----------|
+| `nearest` | Mais próximos | GPS feed disponível; senão UI usa `newest` |
+| `newest` | Mais recentes | Padrão sem GPS feed |
+| `least_competitive` | Menos concorridos | Sempre disponível |
 
-Desempates documentados na function: `created_at DESC` → `distance_km ASC`.
+### 3.6 Descartar oportunidade
 
-### 3.6 Filtros de UI (`useProviderJobsFilters` + `JobsFiltersBar`)
-
-| Controle | Opções | Persistência |
-|----------|--------|--------------|
-| Raio | 2, 5, 10, 20, 50 km (`RADIUS_OPTIONS`); padrão **10** | Estado React apenas (sem localStorage) |
-| Tipo de serviço | “Todos” ou um ID de `provider_services` retornado na resposta | Idem |
-| Ordenação | Abas `JobsSortTabs` | Idem |
-| Reset | Volta sort `nearest`, raio 10, serviço null | `resetFilters` |
+- Botão **Não tenho interesse** → RPC `dismiss_provider_opportunity`.
+- Idempotente; remove card do feed; **não** impede abrir detalhe por link direto nem chat/proposta se já elegível por outro caminho.
 
 ### 3.7 Estados de lista
 
-- **Loading:** skeletons (`JobCardSkeleton`).
-- **Erro:** `JobsErrorState` — *"Erro ao carregar trabalhos"* + descrição de conexão.
-- **Vazio com filtros:** *"Nenhum trabalho encontrado"* + sugestão de ajustar filtros.
-- **Vazio sem filtros:** *"Nenhuma oportunidade na sua região"* + texto sobre serviços/área.
-- **Mais páginas:** `LoadMoreButton` chama `fetchNextPage`.
+- **Loading:** skeletons.
+- **Erro:** `JobsErrorState`.
+- **Vazio:** *"Nenhuma oportunidade na sua região"* — sem visibilidade ativa (aguardar lote/notificação ou revisar área/serviços em Minha conta).
+- **Mais páginas:** `LoadMoreButton` (cursor).
+
+### 3.8 Gates de dispatch (impacto no prestador)
+
+| Situação | Feed | Nova proposta | Chat |
+|----------|------|---------------|------|
+| Normal / PAUSED | Visibilidade mantida | Permitida se elegível | CNS normal |
+| **STOPPED** | Pode manter cards já visíveis | **Bloqueada** (`DISPATCH_STOPPED`) | **Iniciar negociação** permitido |
+| **EXPIRED** | Lote pode persistir; mercado aberto lazy some | Conforme status do pedido | Conforme CNS |
+
+Detalhe: [dispatch-e-visibilidade.md](../matching-dispatch/features/dispatch-e-visibilidade.md).
 
 ---
 
-## 4. Detalhe do pedido (`useProviderJobDetail`)
+## 3 LEGADO (pré-2026-06) — referência histórica
+
+<details>
+<summary>Feed aberto via match-provider-jobs (removido)</summary>
+
+Antes do matching progressivo, a lista usava Edge `match-provider-jobs`, raio 2–50 km, filtro por serviço e paginação por número de página. Evidência histórica: migrations até `20260711230000_matching_drop_legacy_feed.sql`.
+
+</details>
+
+---
+
+## 4. Detalhe do pedido
 
 - RPC `get_provider_proposal_job_detail` via `fetchProviderProposalJobDetail` (`providerJobs.api.ts`).
 - **Coords:** usa `useProviderLocation()`; se ausente, fallback **centróide Brasil** `(-14.235, -51.9253)` — comentário no hook.
@@ -223,8 +234,9 @@ Offset de `bottom` considera `safe-area-inset-bottom` e se está dentro de sheet
 
 | Camada | Arquivo | Destino |
 |--------|---------|---------|
-| Lista | `api/providerJobs.api.ts` | `functions.invoke("match-provider-jobs")` |
-| Detalhe | idem | `rpc("get_provider_proposal_job_detail")` |
+| Lista | `api/providerJobs.api.ts` | Edge `list-provider-opportunities` |
+| Descartar | `api/dismissOpportunity.api.ts` | `rpc("dismiss_provider_opportunity")` |
+| Detalhe | `@/features/view-services` | `rpc("get_service")` |
 | Preço | `negotiation-proposals` | `rpc("calculate_provider_service_pricing")` |
 | Criar proposta | `negotiation-proposals` | `rpc("create_provider_proposal")` |
 | Histórico | `negotiation-proposals` | `from("provider_proposals")` select |
@@ -250,11 +262,10 @@ Offset de `bottom` considera `safe-area-inset-bottom` e se está dentro de sheet
 
 ## 13. Evidências no código
 
-- Rotas: `src/router.tsx` (`dashboard/jobs`, filhos).
-- Shell / páginas: `ProviderJobsShell.tsx`, `ProviderJobsPage.tsx`, `JobDetailPage.tsx`, `JobDetailSheet.tsx`.
-- Conteúdo: `JobDetailContent.tsx`, `JobCard.tsx`, `JobsFiltersBar.tsx`, `JobsSortTabs.tsx`.
-- Hooks: `useProviderLocation.ts`, `useProviderJobs.ts`, `useProviderJobsFilters.ts`, `useProviderJobDetail.ts`, `useProviderJobQuestionComposer.ts`, `useProviderProposalComposer.ts`, `useProviderProposalHistory.ts`, `useProviderProposalPhotoUrls.ts`.
-- Edge: `supabase/functions/match-provider-jobs/index.ts`, `types.ts`.
+- Lista / dismiss: `ProviderJobsPage.tsx`, `JobCard.tsx`, `DismissOpportunityButton.tsx`, `useProviderJobs.ts`, `useDismissOpportunity.ts`.
+- Geo: `useProviderLocation.ts`, `device-beacon` (`useProviderLocationTracking`).
+- Edge: `supabase/functions/list-provider-opportunities/`.
+- Matching backend: `docs/business/modulos/matching-dispatch/`.
 
 ---
 
@@ -272,21 +283,20 @@ Offset de `bottom` considera `safe-area-inset-bottom` e se está dentro de sheet
 
 ```mermaid
 flowchart LR
-  subgraph list [Lista]
-    L[Geo + filtros] --> E[match-provider-jobs]
-    E --> C[Cards]
+  subgraph feed [Feed Trabalhos]
+    B[Beacon GPS] --> D[Discovery / lote]
+    D --> V[Visibilidade]
+    V --> E[list-provider-opportunities]
+    E --> C[JobCard]
   end
   subgraph detail [Detalhe]
-    C --> D[get_provider_proposal_job_detail]
-    D --> Q[Perguntas RPC]
-    D --> P[calculate + create_provider_proposal]
+    C --> G[get_service / view-services]
+    G --> P[create_provider_proposal / CNS]
   end
 ```
 
   ## 16. Atualização de auditoria (2026-04-27)
 
-  - **Query de trabalhos depende de coordenadas válidas:** `useProviderJobs` só habilita busca quando latitude/longitude estão preenchidos.
-  - **Fallbacks geográficos distintos por contexto:** lista usa Florianópolis quando geo falha; detalhe usa centróide do Brasil quando necessário.
-  - **Composer de proposta recalcula taxa com debounce:** preço é validado e enviado para cálculo após 1500 ms sem edição.
-  - **Uploads de proposta:** limite de 5 fotos por envio, até 5 MB por arquivo, com tipos de imagem explicitamente permitidos.
-  - **Edição de proposta é restrita por status:** UI permite editar apenas proposta latest e não `ACCEPTED`/`REVISED`.
+- **Query de trabalhos usa feed progressivo:** visibilidade concedida pelo dispatch; cursor pagination.
+- **GPS feed vs beacon:** sort *Mais próximos* usa foreground GPS; elegibilidade em lote usa beacon/`provider_latest_locations`.
+- **Descartar oportunidade:** RPC dedicada; otimistic update no TanStack Query.

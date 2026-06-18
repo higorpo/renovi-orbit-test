@@ -1,7 +1,7 @@
 # Implementation Tasks — Renovi Progressive Dispatch & Matching
 
 **Sources:** [`requirements.md`](./requirements.md) · [`design.md`](./design.md) · [`CONTEXT.md`](./CONTEXT.md)  
-**Scope:** Requirements 1–13, 4A, 10A, 10B (200 acceptance criteria) · **79 tasks** (1–79)  
+**Scope:** Requirements 1–13, 4A, 10A, 10B (200 acceptance criteria) · **80 tasks** (1–80)  
 **Migration policy:** Net-new timestamped files under `supabase/migrations/` only — SHALL NOT edit shipped migrations.
 
 ---
@@ -80,7 +80,7 @@ Implementation SHALL follow a **database-first, dark-deploy, client-cutover** se
 
 ## Phase 1: Database Foundation
 
-### 1. [ ] Migration M1 — `platform_constant_numeric` + `matching.*` seeds
+### 1. [x] Migration M1 — `platform_constant_numeric` + `matching.*` seeds
 
 Description:
 Ship migration `*_matching_platform_constants_seeds.sql` introducing `platform_constant_numeric(p_key text, p_default numeric)` with `GRANT EXECUTE` to `service_role` and `authenticated` (#129). Seed all 22 `matching.*` keys via `INSERT … ON CONFLICT (key) DO UPDATE` — **no DDL** beyond helper (#98, #131). Integer keys continue using `platform_constant_int`.
@@ -127,7 +127,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 2. [ ] Migration M2 — `profiles.operational_status` enum + column
+### 2. [x] Migration M2 — `profiles.operational_status` enum + column
 
 Description:
 Add PostgreSQL enum `provider_operational_status` (`active`, `suspended`) and column `profiles.operational_status NOT NULL DEFAULT 'active'`. Suspended providers SHALL be excluded from discovery, fallback, and feed (#25).
@@ -173,7 +173,7 @@ Acceptance Criteria covered:
 
 ## Phase 2: Persistence Layer — Location & Geo Aggregate
 
-### 3. [ ] Migration M3 — Extend `user_device_beacons` with location columns
+### 3. [x] Migration M3 — Extend `user_device_beacons` with location columns
 
 Description:
 ALTER `public.user_device_beacons` adding `location_permission_granted boolean NOT NULL DEFAULT false`, `location geography(Point,4326)`, `location_accuracy_meters numeric`, `location_recorded_at timestamptz`.
@@ -216,7 +216,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 4. [ ] Migration M4 — `provider_latest_locations` table + beacon upsert trigger
+### 4. [x] Migration M4 — `provider_latest_locations` table + beacon upsert trigger
 
 Description:
 Create `provider_latest_locations` (1:1 per provider) with GIST + H3 indexes. Implement `AFTER INSERT OR UPDATE` trigger on `user_device_beacons` to upsert aggregate row using **most recent** `location_recorded_at` among devices with `location_permission_granted = true` and valid freshness (#18).
@@ -268,7 +268,7 @@ Acceptance Criteria covered:
 
 ## Phase 3: Persistence Layer — Dispatch Schema
 
-### 5. [ ] Migration M5 — Dispatch enums, tables, indexes, RLS deny
+### 5. [x] Migration M5 — Dispatch enums, tables, indexes, RLS deny
 
 Description:
 Create `service_request_dispatch_status` enum (8 values — no `DISPATCH_EXHAUSTED`, #54), `service_request_dispatch_event_type` enum, and tables: `service_request_dispatches`, `service_request_dispatch_batches`, `service_request_dispatch_batch_providers`, `service_request_provider_visibility`, `service_request_dispatch_events` per design §3.2–3.4b.
@@ -320,7 +320,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 6. [ ] Migration M6 — Service Request dispatch bootstrap trigger
+### 6. [x] Migration M6 — Service Request dispatch bootstrap trigger
 
 Description:
 Implement `trg_service_request_dispatch_bootstrap` on `service_requests` `AFTER INSERT OR UPDATE` when status becomes `OPEN` for the first time — INSERT `service_request_dispatches` (`DISPATCH_PENDING`, `next_batch_at = now() + matching.dispatch_start_delay_minutes`) if no row exists (#60, #99).
@@ -368,7 +368,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 7. [ ] Migration M7 — Ratings schema, stats tables, bootstrap + refresh triggers
+### 7. [x] Migration M7 — Ratings schema, stats tables, bootstrap + refresh triggers
 
 Description:
 Create `service_ratings`, `provider_rating_stats`, `provider_proposal_stats` per design §3.6. Implement bootstrap triggers on `profiles` when `role = provider` (#122, #130). Implement `AFTER INSERT/UPDATE/DELETE` on `service_ratings` → refresh rating stats (#127). Implement `AFTER UPDATE` on `provider_proposals` terminal transitions → refresh proposal stats (#132).
@@ -420,7 +420,7 @@ Acceptance Criteria covered:
 
 ## Phase 4: Core Transactional Logic — Gate Evaluation
 
-### 8. [ ] Migration M8 — `evaluate_service_request_dispatch_gates` RPC
+### 8. [x] Migration M8 — `evaluate_service_request_dispatch_gates` RPC
 
 Description:
 Implement `evaluate_service_request_dispatch_gates(p_service_request_id uuid)` as `SECURITY DEFINER` plpgsql per design §13.7. Function SHALL implement gate ladder: `STOPPED` > `PAUSED` > `FALLBACK` > `ACTIVE` (#82). MUST no-op on terminal states (#86). MUST NOT open batches (#107).
@@ -473,7 +473,7 @@ Acceptance Criteria covered:
 
 ## Phase 5: Discovery & Ranking Engine
 
-### 9. [ ] Migration M9a — `matching_discover_candidates` function
+### 9. [x] Migration M9a — `matching_discover_candidates` function
 
 Description:
 Implement `matching_discover_candidates(p_service_request_id, p_limit default 200)` per design §15.1. Hardcode **20 km** `ST_DWithin` and pool cap **200** (#126). UNION beacon-eligible (GPS path) and neighborhood-exact-match path (#4 CONTEXT).
@@ -527,7 +527,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 10. [ ] Migration M9b — `matching_rank_candidates` function
+### 10. [x] Migration M9b — `matching_rank_candidates` function
 
 Description:
 Implement `matching_rank_candidates(p_service_request_id, p_candidates uuid[])` per design §15.2. Compose primary score from proximity (40%), quality (35%), conversion (25%). Apply secondary modifiers (Req 7) and no-beacon penalty (#9 CONTEXT). Deterministic tie-break: exposure count ASC, `provider_id` ASC (#113).
@@ -579,7 +579,7 @@ Acceptance Criteria covered:
 
 ## Phase 6: Scheduling Engine & Lease Coordination
 
-### 11. [ ] Migration M10a — `matching_acquire_dispatch_lease` / `matching_release_dispatch_lease`
+### 11. [x] Migration M10a — `matching_acquire_dispatch_lease` / `matching_release_dispatch_lease`
 
 Description:
 Implement lease CAS functions on `service_request_dispatches`. Acquire when `lease_expires_at IS NULL OR lease_expires_at < now()`. Set `lease_owner = 'matching_cron:' || job_run_id`, `lease_expires_at = now() + matching.dispatch_lease_seconds` (default 300).
@@ -627,7 +627,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 12. [ ] Migration M10b — `matching_open_batch` orchestration RPC
+### 12. [x] Migration M10b — `matching_open_batch` orchestration RPC
 
 Description:
 Implement `matching_open_batch(p_dispatch_id uuid)` — single transaction: acquire lease → `evaluate_service_request_dispatch_gates` → discovery → rank → if zero candidates pool exhaustion → else insert batch, visibility, batch_providers, schedule `next_batch_at`, transition PENDING→ACTIVE on batch #1 (#61).
@@ -684,7 +684,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 13. [ ] Migration M10c — `cron_process_service_request_dispatches` + pg_cron job
+### 13. [x] Migration M10c — `cron_process_service_request_dispatches` + pg_cron job
 
 Description:
 Implement two-phase cron worker per design §6.2, §13.9. Register `pg_cron` job `matching_process_service_request_dispatches` every `*/2 * * * *`. Wrap with `job_run_begin` / `job_run_finish`.
@@ -739,7 +739,7 @@ Acceptance Criteria covered:
 
 ## Phase 7: Async Orchestration — Message Dispatcher
 
-### 14. [ ] Migration M11a — MMD template seed `matching.new_opportunity`
+### 14. [x] Migration M11a — MMD template seed `matching.new_opportunity`
 
 Description:
 Seed `message_dispatcher.message_templates` for key `matching.new_opportunity` on channels `push` and `email` with variables: `service_request_id`, `title`, `service_name`, `neighborhood`, `urgency`, `deep_link_path` — NO `distance_km` (#44, #45).
@@ -783,7 +783,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 15. [ ] Migration M11b — `trg_matching_batch_provider_notify` AFTER INSERT trigger
+### 15. [x] Migration M11b — `trg_matching_batch_provider_notify` AFTER INSERT trigger
 
 Description:
 Implement `AFTER INSERT ON service_request_dispatch_batch_providers FOR EACH ROW` trigger calling `message_dispatcher.message_dispatcher_ingest` for **both** `push` and `email` with `bypass_limits := false` (#6.2).
@@ -832,7 +832,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 16. [ ] Helper `matching_cancel_pending_mmd_for_service_request`
+### 16. [x] Helper `matching_cancel_pending_mmd_for_service_request`
 
 Description:
 Implement helper to cancel QUEUED/PROCESSING MMD dispatches for a service_request matching template prefix `matching.` — used by `accept_proposal` and `cancel_service_request` (#15.7).
@@ -877,7 +877,7 @@ Acceptance Criteria covered:
 
 ## Phase 8: APIs & RPCs — Feed, Audit, Ratings
 
-### 17. [ ] Migration M12a — `list_provider_opportunities` RPC (batch arm + exclusions)
+### 17. [x] Migration M12a — `list_provider_opportunities` RPC (batch arm + exclusions)
 
 Description:
 Implement feed RPC batch visibility arm: JOIN `service_request_provider_visibility` WHERE `provider_id = p_provider_id`, `source='batch'`, `revoked_at IS NULL`, `dismissed_at IS NULL`. Apply proposal/chat/prior-proposal exclusions (#95, #96). Handle EXPIRED dispatch — batch visibility persists (#66).
@@ -924,7 +924,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 18. [ ] Migration M12b — `list_provider_opportunities` fallback arm + UNION
+### 18. [x] Migration M12b — `list_provider_opportunities` fallback arm + UNION
 
 Description:
 Add lazy fallback arm: JOIN `service_request_dispatches` WHERE `fallback_opened_at IS NOT NULL` AND status != `EXPIRED`; neighborhood + service match; NOT EXISTS batch visibility; NOT EXISTS fallback dismiss row (#75). UNION with batch arm.
@@ -969,7 +969,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 19. [ ] Migration M12c — `list_provider_opportunities` sort modes + cursor pagination
+### 19. [x] Migration M12c — `list_provider_opportunities` sort modes + cursor pagination
 
 Description:
 Implement sort modes `newest`, `nearest`, `least_competitive` with opaque base64url cursor per mode (#59). Default `newest`; `nearest` requires lat/lng; keyset pagination `limit` default 20 max 50 (#58).
@@ -1017,7 +1017,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 20. [ ] Migration M12d — `record_provider_opportunity_view` RPC
+### 20. [x] Migration M12d — `record_provider_opportunity_view` RPC
 
 Description:
 Implement idempotent audit RPC. Provider-only. INSERT `dispatch_events` `provider_viewed` ON CONFLICT DO NOTHING via partial UNIQUE (#93). Always return `{success: true}`.
@@ -1061,7 +1061,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 21. [ ] Migration M12e — `dismiss_provider_opportunity` RPC
+### 21. [x] Migration M12e — `dismiss_provider_opportunity` RPC
 
 Description:
 Implement feed-only dismiss RPC (#100). Batch visibility → UPDATE `dismissed_at`. Fallback-only → INSERT visibility `source='fallback_dismiss'`, `dismissed_at=now()` (#75). INSERT `provider_declined` event ON CONFLICT DO NOTHING (#101).
@@ -1106,7 +1106,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 22. [ ] Migration M13a — `submit_service_rating` RPC
+### 22. [x] Migration M13a — `submit_service_rating` RPC
 
 Description:
 RPC-only write path for client ratings. Verify `contracted_services.status = COMPLETED` AND `client_id = auth.uid()` (#133). Reject duplicate per `contracted_service_id` (#128). Compute `overall_score` from dimension weights in `platform_constants` (#121).
@@ -1153,7 +1153,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 23. [ ] Migration M13b — `update_service_rating` RPC
+### 23. [x] Migration M13b — `update_service_rating` RPC
 
 Description:
 Allow edit within **48 hours hardcoded** after `submitted_at` (#123, #134). Reject after window — immutable, no admin override. Recompute `overall_score`.
@@ -1198,7 +1198,7 @@ Acceptance Criteria covered:
 
 ## Phase 9: Edge Functions
 
-### 24. [ ] Edge Function `list-provider-opportunities`
+### 24. [x] Edge Function `list-provider-opportunities`
 
 Description:
 Create `supabase/functions/list-provider-opportunities/index.ts` mirroring `match-provider-jobs` pattern per design §5.3, §13.11.
@@ -1247,7 +1247,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 25. [ ] Verify MMD worker handles `matching.new_opportunity` template
+### 25. [x] Verify MMD worker handles `matching.new_opportunity` template
 
 Description:
 Confirm existing `message-dispatcher-worker` renders `matching.new_opportunity` for push (FCM) and email (Resend). Add integration test or staging checklist if template variables missing.
@@ -1293,7 +1293,7 @@ Acceptance Criteria covered:
 
 ## Phase 10: CNS Integration
 
-### 26. [ ] Migration M14a — Patch `create_provider_proposal` for STOPPED gate
+### 26. [x] Migration M14a — Patch `create_provider_proposal` for STOPPED gate
 
 Description:
 At end of `create_provider_proposal` txn: call `evaluate_service_request_dispatch_gates(sr_id)`. Reject new proposal when dispatch `status = DISPATCH_STOPPED` (#78, #88). Count `PENDING + REVISION_REQUESTED` vs `chats.max_active_slots_per_service_request`.
@@ -1336,7 +1336,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 27. [ ] Migration M14b — Patch proposal revision/accept/reject RPCs for inline gates
+### 27. [x] Migration M14b — Patch proposal revision/accept/reject RPCs for inline gates
 
 Description:
 Append `evaluate_service_request_dispatch_gates(service_request_id)` to: `request_proposal_revision`, revision response/decline flows, `accept_proposal` (before match terminal), `reject_proposal`, `reject_proposal_automatically` — same txn (#83).
@@ -1379,7 +1379,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 28. [ ] Migration M14c — Patch `accept_proposal` for `DISPATCH_MATCHED` terminal
+### 28. [x] Migration M14c — Patch `accept_proposal` for `DISPATCH_MATCHED` terminal
 
 Description:
 Extend `accept_proposal` inline: `status = DISPATCH_MATCHED`, revoke `service_request_provider_visibility` for non-winning providers (`revoked_at = now()`), call `matching_cancel_pending_mmd_for_service_request` (#64, #32).
@@ -1422,7 +1422,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 29. [ ] Migration M14d — Patch `cancel_service_request` for `DISPATCH_CANCELLED`
+### 29. [x] Migration M14d — Patch `cancel_service_request` for `DISPATCH_CANCELLED`
 
 Description:
 Inline: `DISPATCH_CANCELLED`, revoke feed visibility (batch rows), cancel pending MMD, preserve CNS access for active proposal/chat providers (#65, #31).
@@ -1464,7 +1464,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 30. [ ] Migration M14e — Patch `expire_pending_proposals` for inline gate eval
+### 30. [x] Migration M14e — Patch `expire_pending_proposals` for inline gate eval
 
 Description:
 After transitioning proposals to EXPIRED, invoke `evaluate_service_request_dispatch_gates(service_request_id)` **once per distinct affected SR** in same job txn (#105, #81).
@@ -1508,7 +1508,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 31. [ ] Verify `initiate_conversation` has NO `DISPATCH_STOPPED` gate
+### 31. [x] Verify `initiate_conversation` has NO `DISPATCH_STOPPED` gate
 
 Description:
 Code review + pgTAP: `initiate_conversation` SHALL NOT check dispatch STOPPED — only CNS slot rules (#88, #79). Document explicitly in migration comment if no code change needed.
@@ -1552,7 +1552,7 @@ Acceptance Criteria covered:
 
 ## Phase 11: Client — Device Beacon & Location
 
-### 32. [ ] Extend `deviceBeacon.api.ts` with location fields
+### 32. [x] Extend `deviceBeacon.api.ts` with location fields
 
 Description:
 Extend `src/features/device-beacon/api/deviceBeacon.api.ts` to upsert `location`, `location_accuracy_meters`, `location_recorded_at`, `location_permission_granted` alongside existing FCM fields.
@@ -1595,7 +1595,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 33. [ ] Refactor location permission UX — `useLocationPermissionDialog` + explainer
+### 33. [x] Refactor location permission UX — `useLocationPermissionDialog` + explainer
 
 Description:
 Implement or **refactor** permission explainer before OS prompt for providers (#12.6–#12.10). May extend `useLocationPermissionDialog` and coordinate with existing `LocationPermissionBanner` (feed, Task 37) vs operational beacon permission (device-beacon, Task 34). Persist `orbit.location_prompt_seen` in Capacitor Preferences.
@@ -1641,7 +1641,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 34. [ ] Implement `useProviderLocationTracking` + install `@capgo/background-geolocation`
+### 34. [x] Implement `useProviderLocationTracking` + install `@capgo/background-geolocation`
 
 Description:
 Add dependency `@capgo/background-geolocation` (`yarn add @capgo/background-geolocation`; `yarn cap:sync`). Implement `useProviderLocationTracking` gated `profile.role === 'provider'`. Start/stop background geo on native; browser foreground-only (#12.11–#12.14). Debounce `LOCATION_SYNC_DEBOUNCE_MS = 30000` (#12.13). Distinct from feed `useProviderLocation` (Task 37).
@@ -1694,7 +1694,7 @@ Acceptance Criteria covered:
 
 ## Phase 12: Client — Provider Jobs Feed
 
-### 35. [ ] Refactor `providerJobs.api.ts` — `list-provider-opportunities` Edge (cursor contract)
+### 35. [x] Refactor `providerJobs.api.ts` — `list-provider-opportunities` Edge (cursor contract)
 
 Description:
 **Refactor** existing `src/features/provider-jobs/api/providerJobs.api.ts` (today calls `match-provider-jobs` with offset + `radius_km` + `service_id`) to invoke Edge `list-provider-opportunities` with cursor contract per design §5.2. **Remove** `page`, `page_size`, `radius_km`, `service_id` from request — progressive feed is visibility-gated; lat/lng affect sort only (#48, Req 13.3).
@@ -1741,7 +1741,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 36. [ ] Implement `dismissOpportunity.api.ts` + dismiss on `JobCard` (feed only)
+### 36. [x] Implement `dismissOpportunity.api.ts` + dismiss on `JobCard` (feed only)
 
 Description:
 `dismiss_provider_opportunity` RPC via `provider-jobs/api/`. Dismiss action on **`JobCard`** / feed list only — NOT on `ServiceDetailPage` (#117, #118). Do **not** create parallel `OpportunityFeedCard` — extend existing `JobCard`.
@@ -1786,7 +1786,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 37. [ ] Refactor `useProviderLocation` — feed navigation GPS only (ADR 0002)
+### 37. [x] Refactor `useProviderLocation` — feed navigation GPS only (ADR 0002)
 
 Description:
 **Refactor** existing `src/features/provider-jobs/hooks/useProviderLocation.ts` (do not add parallel `useProviderFeedLocation`). Foreground GPS for feed sort only. When denied: force/default sort `newest`; hide/disable `nearest` in UI (#13.4–#13.5). Reuse/refactor existing `LocationPermissionBanner` for non-blocking prompt (#87).
@@ -1831,7 +1831,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 38. [ ] Refactor `useProviderJobs` — cursor infinite query (remove offset)
+### 38. [x] Refactor `useProviderJobs` — cursor infinite query (remove offset)
 
 Description:
 **Refactor** existing `src/features/provider-jobs/hooks/useProviderJobs.ts` from offset `page`/`page_size` to cursor-based `useInfiniteQuery` per design §5.2. `initialPageParam: null` (or undefined cursor); `getNextPageParam` from `next_cursor` when `has_more`. **Remove** `totalCount` / `providerServices` / `providerAreaSummary` if not returned by new RPC — adjust `JobsHeader` accordingly.
@@ -1880,7 +1880,7 @@ Acceptance Criteria covered:
 
 ## Phase 13: Client — View Services Audit
 
-### 39. [ ] Implement `opportunityView.api.ts` + `useRecordProviderOpportunityView`
+### 39. [x] Implement `opportunityView.api.ts` + `useRecordProviderOpportunityView`
 
 Description:
 `record_provider_opportunity_view` via `view-services/api/`. Hook on `ServiceDetailPage` and `ServiceDetailSheet` mount when `serviceRequestId` defined and `role=provider` — without awaiting `get_service` (#115–#116).
@@ -1926,7 +1926,7 @@ Acceptance Criteria covered:
 
 ## Phase 14: Observability & Auditability
 
-### 40. [ ] pgTAP suite — dispatch gate ladder
+### 40. [x] pgTAP suite — dispatch gate ladder
 
 Description:
 Comprehensive pgTAP tests for `evaluate_service_request_dispatch_gates` covering STOPPED/PAUSED/FALLBACK/ACTIVE transitions, `next_batch_at` rules, terminal no-op, resume `now()` (#106).
@@ -1964,7 +1964,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 41. [ ] pgTAP suite — cron worker phases
+### 41. [x] pgTAP suite — cron worker phases
 
 Description:
 Tests for phase 1 lifecycle expiration, phase 2a batch open, phase 2b gate-only, SKIP LOCKED concurrency simulation, lease recovery.
@@ -1998,7 +1998,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 42. [ ] pgTAP suite — discovery, ranking, idempotency
+### 42. [x] pgTAP suite — discovery, ranking, idempotency
 
 Description:
 Tests for discover exclusions, 20km, neighborhood path, tie-break, dismiss/view idempotency, visibility UNIQUE.
@@ -2033,7 +2033,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 43. [ ] Deno tests — `list-provider-opportunities` Edge
+### 43. [x] Deno tests — `list-provider-opportunities` Edge
 
 Description:
 Auth rejection, suspended provider empty response, query param clamping, RPC error mapping.
@@ -2067,7 +2067,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 44. [ ] Vitest — client hooks unit tests
+### 44. [x] Vitest — client hooks unit tests
 
 Description:
 `useRecordProviderOpportunityView` fires once per serviceRequestId; `useProviderLocationTracking` does not start for client role.
@@ -2102,7 +2102,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 45. [ ] Operational dashboards & alerts (document + implement)
+### 45. [x] Operational dashboards & alerts (document + implement)
 
 Description:
 Document recommended dashboards per design §10.3–§10.4. Implement minimum: `job_runs` error rate alert for `matching_process_service_request_dispatches`; stuck lease alert (`lease_expires_at < now() - 10min AND lease_owner IS NOT NULL`).
@@ -2146,7 +2146,7 @@ Acceptance Criteria covered:
 
 ## Phase 15: Recovery & Reliability
 
-### 46. [ ] Stuck lease reconciliation SQL + runbook
+### 46. [x] Stuck lease reconciliation SQL + runbook
 
 Description:
 Document and optionally schedule weekly query for dispatches with stale `lease_owner` not NULL and `lease_expires_at` > 10 min past due. Manual `matching_release_dispatch_lease` procedure.
@@ -2188,7 +2188,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 47. [ ] Cron failure escalation — consecutive `job_runs` errors
+### 47. [x] Cron failure escalation — consecutive `job_runs` errors
 
 Description:
 SHOULD alert when >10 consecutive `job_runs` errors for matching cron on same SR metadata (#8.3). Implement via `job_runs` metadata JSON or external monitor.
@@ -2223,7 +2223,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 48. [ ] MMD delivery failure runbook — visibility without push
+### 48. [x] MMD delivery failure runbook — visibility without push
 
 Description:
 Document Req #12 option A: push quota exhausted → visibility granted; email if quota; feed discovery. Ops SHALL NOT manually re-enqueue batch notifications for same idempotency key.
@@ -2259,7 +2259,7 @@ Acceptance Criteria covered:
 
 ## Phase 16: Security & Isolation
 
-### 49. [ ] RLS audit — matching tables deny direct access
+### 49. [x] RLS audit — matching tables deny direct access
 
 Description:
 pgTAP verify `authenticated` cannot INSERT/UPDATE/DELETE on dispatch tables, `provider_latest_locations`; SELECT denied except where explicitly allowed (`provider_rating_stats`, `service_ratings` scoped).
@@ -2293,7 +2293,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 50. [ ] REVOKE audit — dangerous functions not granted to `anon`
+### 50. [x] REVOKE audit — dangerous functions not granted to `anon`
 
 Description:
 Verify `cron_process_service_request_dispatches`, `evaluate_service_request_dispatch_gates`, `matching_open_batch` not executable by `anon`/`authenticated` — pattern from existing `job_run_begin` tests.
@@ -2327,7 +2327,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 51. [ ] Edge rate limiting for feed (optional)
+### 51. [x] Edge rate limiting for feed (optional)
 
 Description:
 Implement optional 60 req/min/user on `list-provider-opportunities` — fail-open on rate limit DB error per infra constraints (#9.5).
@@ -2364,7 +2364,7 @@ Acceptance Criteria covered:
 
 ## Phase 17: Performance & Optimization
 
-### 52. [ ] EXPLAIN baseline — `matching_discover_candidates`
+### 52. [x] EXPLAIN baseline — `matching_discover_candidates`
 
 Description:
 Capture EXPLAIN (ANALYZE, BUFFERS) on seeded dataset representative of production provider count. Verify GIST/H3 usage; no seq scan on `provider_latest_locations`.
@@ -2399,7 +2399,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 53. [ ] EXPLAIN baseline — `list_provider_opportunities`
+### 53. [x] EXPLAIN baseline — `list_provider_opportunities`
 
 Description:
 p95 target < 500ms (#1.5). Optimize proposal/chat exclusion semi-joins; verify `srv_visibility_feed_idx` usage.
@@ -2434,7 +2434,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 54. [ ] Load test — concurrent cron workers
+### 54. [x] Load test — concurrent cron workers
 
 Description:
 Simulate 2+ overlapping cron invocations processing due dispatches. Verify SKIP LOCKED + lease prevent double batch open. Tool: pgTAP with parallel sessions or scripted integration test.
@@ -2470,7 +2470,7 @@ Acceptance Criteria covered:
 
 ## Phase 18: Verification & E2E
 
-### 55. [ ] E2E — progressive feed visibility
+### 55. [x] E2E — progressive feed visibility
 
 Description:
 Playwright: provider sees SR after batch open; not before; dismiss hides card; detail via link still works.
@@ -2504,7 +2504,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 56. [ ] E2E — cursor pagination stability
+### 56. [x] E2E — cursor pagination stability
 
 Description:
 Fetch page 1 and 2 with cursor; verify no duplicates; change sort invalidates cursor.
@@ -2538,7 +2538,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 57. [ ] E2E — DISPATCH_STOPPED proposal block + chat allow
+### 57. [x] E2E — DISPATCH_STOPPED proposal block + chat allow
 
 Description:
 4 in-flight proposals → STOPPED → create_provider_proposal fails; initiate_conversation succeeds if slot available.
@@ -2572,7 +2572,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 58. [ ] Integration test — full batch → MMD → push path (staging)
+### 58. [x] Integration test — full batch → MMD → push path (staging)
 
 Description:
 Staging checklist: OPEN SR → wait cron → batch_providers row → MMD ingest rows → worker delivery → provider feed shows opportunity.
@@ -2609,7 +2609,7 @@ Acceptance Criteria covered:
 
 ## Phase 19: Rollout & Legacy Removal
 
-### 59. [ ] Feature flag `matching.enabled` rollout procedure
+### 59. [x] Feature flag `matching.enabled` rollout procedure
 
 Description:
 If seeded in M1: document toggle procedure. Enable after M12+M14 deployed and validated. Monitor `job_runs` and dispatch table growth.
@@ -2644,7 +2644,7 @@ N/A (operational)
 
 ---
 
-### 60. [ ] Client cutover — swap feed API behind flag
+### 60. [x] Client cutover — swap feed API behind flag
 
 Description:
 Wire `provider-jobs` to use new API when `matching.enabled` OR always after validation. Remove references to `match-provider-jobs` Edge in client code.
@@ -2679,7 +2679,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 61. [ ] Migration M15 — Drop legacy `match_provider_jobs` + remove Edge
+### 61. [x] Migration M15 — Drop legacy `match_provider_jobs` + remove Edge
 
 Description:
 `DROP FUNCTION match_provider_jobs`; remove `supabase/functions/match-provider-jobs/`; update `supabase/config.toml`; regenerate types. Deploy **only after** client cutover validated (#59, #60).
@@ -2723,42 +2723,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 62. [ ] Post-rollout validation — 200 AC traceability audit
-
-Description:
-Engineering sign-off: trace each of 200 acceptance criteria to deployed artifact (migration, RPC, test). Update design §12 mapping if gaps found.
-
-Deliverables:
-- Completed traceability matrix spreadsheet or markdown appendix
-- Sign-off checklist
-
-Dependencies:
-- All prior tasks (minimum: backend 1–31, client 32–38, 66–71, verification 40–44, 72–76, rollout 78)
-
-Runtime Guarantees:
-- N/A
-
-Failure Handling:
-- Gap → new task before GA
-
-Observability:
-- N/A
-
-Security Considerations:
-- N/A
-
-Performance Considerations:
-- N/A
-
-Requirements covered:
-1–13, 4A, 10A, 10B
-
-Acceptance Criteria covered:
-All 200
-
----
-
-### 63. [ ] Regenerate Supabase types + update feature exports
+### 63. [x] Regenerate Supabase types + update feature exports
 
 Description:
 Run `yarn generate-supabase-types` after all migrations. Update `provider-jobs/index.ts`, `view-services/index.ts`, `device-beacon/index.ts` Public API exports.
@@ -2795,7 +2760,7 @@ N/A
 
 ## Phase 20: Discovery Geo Helpers & RPC Grants
 
-### 64. [ ] `matching_h3_ring_cells` + `matching_compute_explored_h3_cells` helpers
+### 64. [x] `matching_h3_ring_cells` + `matching_compute_explored_h3_cells` helpers
 
 Description:
 Implement internal SQL helpers supporting discovery pre-filter and batch audit per design §9.1 and Req 2 AC5. `matching_h3_ring_cells(p_center_h3 bigint, p_resolution int)` returns H3 cell set (k-ring expansion until reasonable cardinality). `matching_compute_explored_h3_cells(p_sr_id uuid)` returns jsonb array persisted to `service_request_dispatch_batches.explored_h3_cells` — **audit only**, SHALL NOT affect future eligibility.
@@ -2841,7 +2806,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 65. [ ] GRANT EXECUTE on client-facing matching RPCs
+### 65. [x] GRANT EXECUTE on client-facing matching RPCs
 
 Description:
 Explicit migration step (may ship in M12/M13 migrations) granting `EXECUTE` on public RPCs called directly by authenticated clients. Edge-proxied `list_provider_opportunities` remains `service_role` only at DB level.
@@ -2890,7 +2855,7 @@ Acceptance Criteria covered:
 
 ## Phase 21: Device Beacon — Operational Location Pipeline
 
-### 66. [ ] Extend `collectDeviceBeaconPayload` + `DeviceBeaconProvider` for location fields
+### 66. [x] Extend `collectDeviceBeaconPayload` + `DeviceBeaconProvider` for location fields
 
 Description:
 Extend existing `device-beacon` pipeline (today FCM-only) to include operational location fields per Req 12 AC16–18. Update `collectDeviceBeaconPayload.ts`, `deviceBeacon.types.ts`, and `DeviceBeaconProvider.tsx` sync paths to pass `location`, `location_accuracy_meters`, `location_recorded_at`, `location_permission_granted` to `upsertDeviceBeacon` (Task 32).
@@ -2937,7 +2902,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 67. [ ] Mount provider location tracking in app shell
+### 67. [x] Mount provider location tracking in app shell
 
 Description:
 Wire `useProviderLocationTracking` + `useLocationPermissionDialog` into provider session lifecycle — e.g. `DeviceBeaconProvider`, authenticated provider layout, or `main.tsx` provider-only branch. SHALL start after auth resolves `role === 'provider'`; SHALL stop on logout (Task 34, Req 12 AC14).
@@ -2983,7 +2948,7 @@ Acceptance Criteria covered:
 
 ## Phase 22: Client — Provider Jobs Feed Cutover (legacy removal)
 
-### 68. [ ] Remove open-feed filters — `JobsFiltersBar` radius + service_id
+### 68. [x] Remove open-feed filters — `JobsFiltersBar` radius + service_id
 
 Description:
 Remove **open-radius feed** UX from `provider-jobs`: delete or gut `radius_km` filter (`RADIUS_OPTIONS`, `DEFAULT_RADIUS_KM` usage in feed query), remove `service_id` server filter from feed path. Progressive feed lists only visibility-gated opportunities — no client-side radius filtering (#48, Req 13.3). Refactor `useProviderJobsFilters.ts` accordingly.
@@ -3028,7 +2993,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 69. [ ] Refactor `JobsSortTabs` + `sortModes.ts` — GPS-gated `nearest`
+### 69. [x] Refactor `JobsSortTabs` + `sortModes.ts` — GPS-gated `nearest`
 
 Description:
 Update sort UI so **`nearest`** is hidden/disabled when feed GPS unavailable; default **`newest`** without GPS, **`nearest`** when GPS available (#73, Req 13.4–5). Refactor `SORT_MODES` / `DEFAULT_SORT_MODE` in `constants/sortModes.ts` (today defaults `nearest` unconditionally — **incorrect** for new contract).
@@ -3071,7 +3036,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 70. [ ] Update provider-jobs test suite for progressive feed contract
+### 70. [x] Update provider-jobs test suite for progressive feed contract
 
 Description:
 Systematically update all existing `provider-jobs` tests that assume open-feed contract (`match-provider-jobs`, offset pages, `total_count`, radius, `service_id`). Files include at minimum: `providerJobs.api.test.ts`, `useProviderJobs.test.ts`, `useProviderJobsFilters.test.ts`, `useProviderLocation.test.ts`, `ProviderJobsPage.test.tsx`, `JobCard.test.tsx`, `JobsSortTabs.extra.test.tsx`, `publicApi.test.ts`.
@@ -3116,7 +3081,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 71. [ ] Edge shared types — `list-provider-opportunities/types.ts`
+### 71. [x] Edge shared types — `list-provider-opportunities/types.ts`
 
 Description:
 Create `supabase/functions/list-provider-opportunities/types.ts` mirroring pattern from `match-provider-jobs/types.ts`. Export request/response types for Edge handler and optional client import. Replace `provider-jobs` re-export from legacy Edge types.
@@ -3162,7 +3127,7 @@ Acceptance Criteria covered:
 
 ## Phase 23: Extended Verification
 
-### 72. [ ] pgTAP suite — CNS M14 dispatch integration
+### 72. [x] pgTAP suite — CNS M14 dispatch integration
 
 Description:
 Dedicated pgTAP file exercising patched CNS RPCs: `create_provider_proposal` STOPPED reject, `accept_proposal` → `DISPATCH_MATCHED` + visibility revoke + MMD cancel, `cancel_service_request` → `DISPATCH_CANCELLED`, `expire_pending_proposals` inline gate per SR, `initiate_conversation` allowed under STOPPED when slot available.
@@ -3204,7 +3169,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 73. [ ] pgTAP suite — rating RPCs (`submit` / `update`)
+### 73. [x] pgTAP suite — rating RPCs (`submit` / `update`)
 
 Description:
 Dedicated pgTAP beyond inline deliverables of Tasks 22–23: duplicate submit reject, 48h edit boundary, wrong client reject, `overall_score` weight verification, stats trigger side effects on `provider_rating_stats`.
@@ -3238,7 +3203,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 74. [ ] Regression test — `get_service` has no dispatch audit side effects
+### 74. [x] Regression test — `get_service` has no dispatch audit side effects
 
 Description:
 pgTAP or Vitest integration asserting `get_service` invocation does **not** insert into `service_request_dispatch_events` (Req 11.3, #92). Complements Task 20 (`record_provider_opportunity_view` is separate client path).
@@ -3277,7 +3242,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 75. [ ] Failure injection tests — lease recovery + cron concurrency
+### 75. [x] Failure injection tests — lease recovery + cron concurrency
 
 Description:
 Extend Task 54 with explicit failure scenarios from design §8.1: simulated worker crash (lease not released), expired lease re-acquire, concurrent `cron_process_service_request_dispatches` invocations, discovery `statement_timeout` → `job_run_abort` path.
@@ -3319,7 +3284,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 76. [ ] E2E — fallback marketplace, `DISPATCH_EXPIRED`, dispatch gates
+### 76. [x] E2E — fallback marketplace, `DISPATCH_EXPIRED`, dispatch gates
 
 Description:
 Playwright scenarios beyond Tasks 55–57: (1) pool exhaustion → fallback-eligible provider sees lazy opportunity; (2) post-`DISPATCH_EXPIRED` batch visibility persists, lazy fallback hidden; (3) `DISPATCH_PAUSED` stops new batches; (4) `DISPATCH_STOPPED` blocks proposal but allows chat with slot.
@@ -3357,7 +3322,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 77. [ ] Staging validation — provider geo → beacon → batch discovery path
+### 77. [x] Staging validation — provider geo → beacon → batch discovery path
 
 Description:
 Manual or semi-automated staging checklist: provider grants location → `user_device_beacons` row updated → `provider_latest_locations` trigger fires → OPEN SR → cron opens batch → provider in batch receives visibility + MMD row. Complements Task 58.
@@ -3395,7 +3360,7 @@ Acceptance Criteria covered:
 
 ---
 
-### 78. [ ] Sync `docs/business/` after matching rollout
+### 78. [x] Sync `docs/business/` after matching rollout
 
 Description:
 Per workspace rule `business-docs-sync-after-code-changes`: after implementation PRs touch `src/` or `supabase/`, update business documentation — `docs/business/modulos/` (provider-jobs, dispatch, ratings), `rastreabilidade.md`, `matriz-cobertura-documental.md`, glossário as needed.
@@ -3414,7 +3379,7 @@ Deliverables:
 - Clear `.cursor/hooks/.business-docs-sync-pending.json` if present
 
 Dependencies:
-- Tasks 60–61 (minimum); ideally Task 62 sign-off
+- Tasks 60–61 (minimum)
 
 Runtime Guarantees:
 - N/A
@@ -3439,7 +3404,9 @@ N/A (process)
 
 ---
 
-### 79. [ ] Conditional — advisory lock in `matching_open_batch` if load test fails
+### 79. [x] Conditional — advisory lock in `matching_open_batch` if load test fails
+
+**Status: Skipped** — Tasks 54 (`concurrency_cron_test.sql`) and 75 (`failure_injection_test.sql`) pass with no duplicate `batch_number` under back-to-back / concurrent cron ticks. Lease CAS + `SKIP LOCKED` sufficient; advisory lock not added per design §7.4 escape hatch.
 
 Description:
 **Only if** Task 54 or 75 detects duplicate batch open under concurrent cron: add `pg_advisory_xact_lock(hashtext(p_service_request_id::text))` inside `matching_open_batch` per design §7.4. Skip if lease + SKIP LOCKED already sufficient.
@@ -3478,6 +3445,41 @@ Acceptance Criteria covered:
 
 ---
 
+### 80. [x] Post-rollout validation — 200 AC traceability audit
+
+Description:
+Engineering sign-off: trace each of 200 acceptance criteria to deployed artifact (migration, RPC, test). Update design §12 mapping if gaps found. **Runs last** — after client cutover, verification suites, and business docs sync.
+
+Deliverables:
+- Completed traceability matrix spreadsheet or markdown appendix
+- Sign-off checklist
+
+Dependencies:
+- All prior tasks (minimum: backend 1–31, client 32–38, 66–71, verification 40–44, 72–76, rollout 78)
+
+Runtime Guarantees:
+- N/A
+
+Failure Handling:
+- Gap → new task before GA
+
+Observability:
+- N/A
+
+Security Considerations:
+- N/A
+
+Performance Considerations:
+- N/A
+
+Requirements covered:
+1–13, 4A, 10A, 10B
+
+Acceptance Criteria covered:
+All 200
+
+---
+
 ## Parallelization Guide
 
 | Can parallelize after | Stream |
@@ -3490,9 +3492,9 @@ Acceptance Criteria covered:
 | Tasks 26–31 | Task 72 — CNS pgTAP |
 | Tasks 13, 15 | Task 58, 77 — staging batch path |
 
-**Critical path:** 1 → 5 → 6 → 8 → 9 → 64 → 10 → 11 → 12 → 13 → 14–15 → 17–21 → 65 → 24 → 71 → 35 → 68–70 → 26–30 → 66–67 → 34 → 60 → 61 → 62
+**Critical path:** 1 → 5 → 6 → 8 → 9 → 64 → 10 → 11 → 12 → 13 → 14–15 → 17–21 → 65 → 24 → 71 → 35 → 68–70 → 26–30 → 66–67 → 34 → 60 → 61 → 63 → 72–76 → 78 → **80**
 
-**Total tasks:** 79 (63 original + 16 gap-fill tasks 64–79)
+**Total tasks:** 80 (63 original + 16 gap-fill tasks 64–79 + post-rollout audit 80)
 
 ---
 
@@ -3519,7 +3521,7 @@ Acceptance Criteria covered:
 
 ## Gap-fill changelog (2026-06-17)
 
-Tasks **64–79** added after coverage audit: H3/explored cells, RPC GRANTs, device-beacon pipeline integration, provider-jobs legacy cutover (radius/service filters, sort defaults, test suite), extended pgTAP/E2E, business docs sync, conditional advisory lock. Tasks **1–63** updated: fixed Task 12 MMD dependency (15 not 35), critical path table, client tasks refactored to match existing codebase (`useProviderJobs`, `JobCard`, `useProviderLocation`).
+Tasks **64–79** added after coverage audit: H3/explored cells, RPC GRANTs, device-beacon pipeline integration, provider-jobs legacy cutover (radius/service filters, sort defaults, test suite), extended pgTAP/E2E, business docs sync, conditional advisory lock. Task **80** (post-rollout 200 AC traceability audit) moved to end of numeric order so the loop does not block on sign-off before tasks 63–79. Tasks **1–63** updated: fixed Task 12 MMD dependency (15 not 35), critical path table, client tasks refactored to match existing codebase (`useProviderJobs`, `JobCard`, `useProviderLocation`).
 
 ---
 

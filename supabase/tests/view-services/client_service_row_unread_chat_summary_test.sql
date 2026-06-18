@@ -2,6 +2,7 @@
 
 begin;
 
+\ir ../rls/fixtures/seed_rls_actors.inc
 \ir ../chats/fixtures/seed_chat.inc
 
 select plan(2);
@@ -33,39 +34,28 @@ select
     'ACTIVE'::public.cns_conversation_status,
     now()
   ) as read_chat_id,
-  pg_temp.cns_seed_chat(
-    '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid,
-    '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
-    'a1b2c3d4-e5f6-4789-a012-3456789abcde'::uuid,
-    'ACTIVE'::public.cns_conversation_status,
-    now() - interval '2 hours'
-  ) as unread_chat_id;
+  null::uuid as unread_chat_id;
 
-insert into auth.users (id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)
-select
-  f.unread_chat_provider_id,
-  'authenticated',
-  'authenticated',
-  'provider2-unread-summary@renovi.test',
-  crypt('Abc123', gen_salt('bf')),
-  now(),
-  now(),
-  now()
-from _fixture f
-on conflict (id) do nothing;
+select pg_temp.rls_seed_user(
+  'a1b2c3d4-e5f6-4789-a012-3456789abcde'::uuid,
+  'provider',
+  'Maria Pintora'
+);
 
-insert into public.profiles (id, role, full_name)
-select f.unread_chat_provider_id, 'provider', 'Maria Pintora'
-from _fixture f
-on conflict (id) do update
-  set role = excluded.role,
-      full_name = excluded.full_name;
-
-insert into public.provider_profiles_public (provider_id, display_name, slug, is_visible)
-select f.unread_chat_provider_id, 'Maria Pintora', 'maria-pintora-unread-summary', true
+insert into public.provider_profiles_public (provider_id, display_name, slug, profile_visibility)
+select f.unread_chat_provider_id, 'Maria Pintora', 'maria-pintora-unread-summary', 'public'
 from _fixture f
 on conflict (provider_id) do update
   set display_name = excluded.display_name;
+
+update _fixture f
+set unread_chat_id = pg_temp.cns_seed_chat(
+  f.service_request_id,
+  f.client_id,
+  f.unread_chat_provider_id,
+  'ACTIVE'::public.cns_conversation_status,
+  now() - interval '2 hours'
+);
 
 insert into public.chat_messages (
   chat_id,
@@ -111,6 +101,8 @@ update public.chats c
 set last_interaction_at = now() - interval '1 hour'
 from _fixture f
 where c.id = f.unread_chat_id;
+
+select pg_temp.cns_set_auth('28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid);
 
 select public.cns_mark_conversation_read(
   f.read_chat_id,

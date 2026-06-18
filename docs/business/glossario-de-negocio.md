@@ -9,7 +9,14 @@ Termos extraídos ou inferidos a partir de nomes de entidades, rotas e interface
 | **Orçamento (UI cliente)** | Propostas recebidas por pedido: sheet **Comparar orçamentos** / **Histórico de orçamentos** em Meus Serviços; negociação ativa em Conversas. | `my-services` + `negotiation-proposals`; `/dashboard/services`; `/dashboard/chats`. |
 | **Orçamento (UI prestador)** | Propostas enviadas e negociação ativa. | `/dashboard/chats`; acompanhamento por pedido via `/dashboard/services` + `view-services` (`list_services`, fase `negotiation`). |
 | **Proposta** | Oferta formal do prestador para um pedido: valores, impostos/taxa da plataforma, prazo, janelas sugeridas, status. | `provider_proposals`, RPCs `create_provider_proposal`, etc. |
-| **Trabalho / Job** | Na UI do prestador, oportunidade derivada de um pedido compatível com perfil e área. | `provider-jobs`, RPC `match_provider_jobs`, função Edge `match-provider-jobs`. |
+| **Trabalho / Job** | Na UI do prestador, oportunidade com **visibilidade** concedida pelo matching (lote ou mercado aberto). | `provider-jobs`, RPC `list_provider_opportunities`, Edge `list-provider-opportunities`. |
+| **Matching progressivo** | Distribuição de pedidos OPEN em **lotes** ao longo do tempo, com notificações e gates (pausa, parada, expiração). | `service_request_dispatches`, cron `matching_process_service_request_dispatches`. |
+| **Visibilidade (batch)** | Registro que autoriza um prestador a ver um pedido no feed com origem **lote**. | `service_request_provider_visibility` (`source = batch`). |
+| **Mercado aberto (fallback)** | Após esgotar lotes, pedido visível a prestadores elegíveis por bairro/serviço sem ter estado em lote. | `source = fallback`, badge *Mercado aberto*. |
+| **Dispatch de pedido** | Ciclo de vida da distribuição de um pedido (≠ Message Dispatcher). | `service_request_dispatches`, doc [matching-dispatch](./modulos/matching-dispatch/README.md). |
+| **Beacon de dispositivo** | Registro de push + localização operacional do prestador. | `user_device_beacons`, `DeviceBeaconProvider`. |
+| **Localização latest (prestador)** | Agregado usado na discovery de lotes. | `provider_latest_locations`. |
+| **Avaliação de serviço** | Nota pós-conclusão; alimenta estatísticas do prestador no ranking. | RPCs `submit_service_rating`, `update_service_rating`. |
 | **Cliente** | Papel `client` em `profiles.role`. | Auth, RLS, rotas. |
 | **Prestador / Profissional** | Papel `provider`. Cadastro em `/cadastro/profissional`. | Auth, perfil público, jobs, budgets. |
 | **Administrador** | Papel `admin` no banco; políticas e RPCs podem tratar admin de forma diferente. | Migrations, `database.types.ts`. **Painel admin não roteado no front analisado.** |
@@ -33,7 +40,7 @@ Termos extraídos ou inferidos a partir de nomes de entidades, rotas e interface
 | **Manter conectado** | Preferência do usuário no login: quando ativa, a sessão Supabase persiste em **Capacitor Preferences**; quando inativa, fica só em memória até o app encerrar. | `orbit_persist_session`, `LoginForm`, `createSupabaseAuthStorage`. |
 | **Capacitor Preferences** | API de armazenamento chave-valor do app (nativo ou fallback web); substitui o uso direto de `localStorage` do browser nos fluxos mapeados. | `@capacitor/preferences`, `preferencesStorage.ts`. |
 | **Message Dispatcher** | Subsistema backend de envio de notificações multicanal (e-mail via Resend, push via FCM). Opera no schema `message_dispatcher` com máquina de estados (FSM), controle de quota e horário silencioso. | Schema `message_dispatcher`, Edge Functions `message-dispatcher-worker`, `message-dispatcher-webhook-resend`. |
-| **Dispatch** | Registro individual de intenção de envio no Message Dispatcher. Cada dispatch possui canal, template, perfil destinatário e status na FSM. | Tabela `message_dispatcher.message_dispatches`. |
+| **Dispatch** | Registro individual de intenção de envio no **Message Dispatcher**. Cada dispatch possui canal, template, perfil destinatário e status na FSM. *Não confundir* com **dispatch de pedido** (matching). | Tabela `message_dispatcher.message_dispatches`. |
 | **Horário silencioso (Quiet Hours)** | Janela das 22:00 às 06:00 (America/Sao_Paulo) na qual o Message Dispatcher não envia mensagens. Dispatches nessa janela são reagendados para 06:00 BRT. | Funções `message_dispatcher_is_quiet_hours`, `message_dispatcher_next_send_window`. |
 | **bypass_limits** | Flag no dispatch que indica que verificações de quota/cooldown devem ser puladas e que o envio **não conta** no total diário (5 e-mail / 20 push em 24h). Ativada automaticamente quando uma mensagem é reagendada por horário silencioso; mensagens de chat usam `true` na ingestão. | Campo `message_dispatches.bypass_limits`. |
 | **CNS (Conversas e Negociação)** | Subsistema de conversas in-app por pedido, com propostas versionadas, slots de conversa ativa e integração ao Message Dispatcher. | `src/features/chats/`, `negotiation-proposals/`, migrations `202607*`, rotas `/chats`. |
@@ -64,3 +71,4 @@ Termos extraídos ou inferidos a partir de nomes de entidades, rotas e interface
 | “Meus Serviços” (cliente) | Lista de **pedidos** (`service_requests`), não serviços ofertados. |
 | “Meus Serviços” (prestador) | Também pedidos, vistos como oportunidades de trabalho. |
 | “Orçamentos” | **Prestador:** negociação em **Conversas**; pedidos em que participa via **Meus Serviços** (`view-services`). **Cliente:** comparar/histórico no card em **Meus Serviços**; negociação em **Conversas**. |
+| “Dispatch” (duas acepções) | **Message Dispatcher:** fila de e-mail/push. **Matching:** `service_request_dispatches` — lotes e gates do pedido. |

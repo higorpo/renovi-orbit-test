@@ -5,12 +5,15 @@ export interface LocationPermissionBannerProps {
   permissionDenied: boolean;
   /** True when the page is not a secure context (e.g. http://LAN-IP) — geolocation is blocked by the browser. */
   insecureContext?: boolean;
+  /** Capacitor native app — copy targets OS app settings, not browser site permissions. */
+  isNativeApp?: boolean;
   onRetry: () => void;
 }
 
 export function LocationPermissionBanner({
   permissionDenied,
   insecureContext = false,
+  isNativeApp = false,
   onRetry,
 }: LocationPermissionBannerProps) {
   return (
@@ -32,13 +35,23 @@ export function LocationPermissionBanner({
         ) : permissionDenied ? (
           <>
             <p className="font-medium text-amber-800 dark:text-amber-200">
-              Localização bloqueada no navegador
+              {isNativeApp ? "Localização bloqueada no app" : "Localização bloqueada no navegador"}
             </p>
             <p className="mt-0.5 text-amber-700 dark:text-amber-300">
-              O sistema pode estar liberado, mas este site precisa de permissão no{" "}
-              <strong className="font-medium">próprio navegador</strong>. No Chrome/Android: toque no cadeado ou
-              em “Configurações do site” e permita localização para este endereço. No Safari (iOS): Ajustes →
-              Safari → Localização, ou limpe dados do site e abra de novo para ver o aviso de permissão.
+              {isNativeApp ? (
+                <>
+                  Permita localização para a Renovi em{" "}
+                  <strong className="font-medium">Configurações do dispositivo</strong> (Apps → Renovi →
+                  Localização → “Permitir o tempo todo” ou “Permitir apenas enquanto estiver em uso”).
+                </>
+              ) : (
+                <>
+                  O sistema pode estar liberado, mas este site precisa de permissão no{" "}
+                  <strong className="font-medium">próprio navegador</strong>. No Chrome/Android: toque no cadeado ou
+                  em “Configurações do site” e permita localização para este endereço. No Safari (iOS): Ajustes →
+                  Safari → Localização, ou limpe dados do site e abra de novo para ver o aviso de permissão.
+                </>
+              )}
             </p>
           </>
         ) : (
@@ -47,8 +60,8 @@ export function LocationPermissionBanner({
               Usando localização aproximada
             </p>
             <p className="mt-0.5 text-amber-700 dark:text-amber-300">
-              Não foi possível obter sua localização exata. As distâncias
-              mostradas são aproximadas.
+              Não foi possível obter sua localização exata. A lista usa ordenação
+              por recência; permitir localização habilita a opção &quot;Mais próximos&quot;.
             </p>
           </>
         )}

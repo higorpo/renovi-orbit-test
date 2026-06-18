@@ -1,6 +1,9 @@
 import { supabase } from "@/lib/supabase/client";
+import type { Database } from "@/lib/supabase/database.types";
 import { logger } from "@/lib/logger";
 import type { ServiceRequestRow } from "../types/request-quote.types";
+
+type ServiceRequestStatus = Database["public"]["Enums"]["service_request_status"];
 
 const SERVICE_REQUESTS_BUCKET = "service-requests";
 
@@ -14,7 +17,7 @@ export interface CreateServiceRequestParams {
   form_data?: Record<string, unknown> | null;
   form_schema?: Record<string, unknown> | null;
   form_version?: string | null;
-  status?: string;
+  status?: ServiceRequestStatus;
 }
 
 export interface CreateServiceRequestResult {

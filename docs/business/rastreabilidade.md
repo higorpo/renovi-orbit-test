@@ -35,7 +35,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `view-services/` | `api/services.api.ts` (RPC `get_service`, `list_services`, `cancel_service_request`); hooks list/detail/cancel | `ServiceDetailPage`, `ServiceListCard`, `ServiceSections` |
 | `dynamic-form/` | — | `DynamicForm`, `FormDemoPage` |
 | `my-account/` | `api/*Profile*.api.ts`, `portfolio.api.ts`, `offeredServices.api.ts` | `MyAccountPage`, `MyAccountClientPage`, `MyAccountProviderPage`, `ServiceAreaField` |
-| `provider-jobs/` | `api/providerJobs.api.ts`; propostas via `negotiation-proposals` | `ProviderJobsShell`, `JobDetailPage` |
+| `provider-jobs/` | `api/providerJobs.api.ts`, `dismissOpportunity.api.ts`; propostas via `negotiation-proposals` | `ProviderJobsPage`, `JobCard`; detalhe via `view-services` |
 | `provider-profile/` | hooks + componentes públicos | `ProviderProfilePage` |
 | `request-quote/` | `api/createRequestQuoteOrder.api.ts`, `smartDescription.api.ts`, `services.api.ts`, `forms.api.ts`; hooks submit/navigation/draft/IA | `RequestQuote.tsx`, passos 1–5, `ConfirmEmailScreen`, `TrustSidebar`; rascunho `requestQuoteDraft.persistence.ts` |
 | `chats/` | `api/chats.api.ts`, `chats.rpc.ts`; hooks lista, thread, mensagens, Realtime | `ChatListPage`, `ChatScreen`, `ChatsLayout` |
@@ -57,7 +57,8 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 |----------|---------------------|
 | `supabase/functions/create-request-quote-order/index.ts` (+ módulos) | Criação atômica de pedido, fotos, rate limit |
 | `supabase/functions/generate-smart-description/*` | IA, prompts, uso |
-| `supabase/functions/match-provider-jobs/index.ts` | Lista de jobs |
+| `supabase/functions/match-provider-jobs/index.ts` | *(Legado — removido)* Lista aberta de jobs |
+| `supabase/functions/list-provider-opportunities/*` | Feed progressivo do prestador (visibilidade + cursor) |
 | `supabase/functions/verify-recaptcha/index.ts` | Validação Google |
 | `supabase/functions/_shared/*` | CORS, rate limit, tipos |
 | `supabase/functions/message-dispatcher-worker/*` | Worker de entrega multicanal (Resend/FCM) |
@@ -108,12 +109,26 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `src/lib/persistSession.ts` | Chave `orbit_persist_session`; hydrate no boot |
 | `src/lib/capacitor/constants.ts` | Cor de marca `#0F2F3A` (splash / tema) |
 | `capacitor.config.ts` | `appId` `br.com.renovi.orbit`, plugins `SystemBars`, `SplashScreen`, `Keyboard`; `server.url` aponta para dev local (evidência de ambiente de desenvolvimento) |
+| `src/features/device-beacon/hooks/useProviderLocationTracking.ts` | Beacon + background geo (Android) → `user_device_beacons` |
+| `src/features/device-beacon/utils/locationSync.ts` | Debounce sync de localização operacional |
 | `src/features/device-beacon/utils/syncSchedule.ts` | Snapshots de sync em Preferences (`orbit_device_beacon_last_sync_v1`) |
 | `src/features/push-permission/utils/pushPermissionPrompt.storage.ts` | Cooldown do prompt de push (`orbit_push_permission_prompt_dismissed_at`) |
 | `e2e/fixtures/auth.fixture.ts`, `e2e/helpers/preferencesStorage.ts` | `seedSession` grava em `localStorage` com prefixo `CapacitorStorage.` (espelho do fallback web do plugin) |
 | `src/index.css` | `padding-top` com `--safe-area-inset-top` injetado pelo SystemBars no Android WebView |
 | `android/app/src/main/res/values/colors.xml`, `drawable/splash.xml` | Splash nativo Android alinhado à cor de marca |
 | `package.json` | Dependências `@capacitor/app`, `keyboard`, `splash-screen`, `preferences`, `haptics` — **haptics** instalado, **sem import** em `src/` |
+
+## Matching progressivo (backend + feed)
+
+| Artefato | Uso na documentação |
+|----------|---------------------|
+| `docs/business/modulos/matching-dispatch/` | README + feature dispatch/visibilidade |
+| `docs/matching-algorithm/` | Design técnico e tasks de implementação |
+| `docs/matching-algorithm/qa/staging-*-checklist.md` | QA staging geo/batch/MMD |
+| `supabase/migrations/202607110*`–`20260711230000_*` | Schema dispatch, discovery, cron, visibilidade, ratings |
+| `supabase/functions/list-provider-opportunities/` | Edge feed prestador |
+| `supabase/tests/matching/*.sql` | pgTAP matching |
+| `e2e/matching/*.spec.ts` | E2E feed + lifecycle |
 
 ## Documentação pré-existente (não como fonte de comportamento)
 

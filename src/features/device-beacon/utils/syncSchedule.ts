@@ -38,6 +38,10 @@ export async function saveDeviceBeaconSyncSnapshot(
     lastSyncedAt: new Date().toISOString(),
     pushEnabled: payload.push_enabled,
     fcmToken: payload.fcm_token,
+    locationPermissionGranted: payload.location_permission_granted ?? false,
+    locationRecordedAt: payload.location_recorded_at ?? null,
+    latitude: payload.latitude ?? null,
+    longitude: payload.longitude ?? null,
   }
 
   const snapshots = await readAllSnapshots()
@@ -69,6 +73,18 @@ export function shouldSyncDeviceBeacon(
 
   if (snapshot.pushEnabled !== payload.push_enabled) return true
   if (snapshot.fcmToken !== payload.fcm_token) return true
+
+  const payloadPermission = payload.location_permission_granted ?? false
+  const snapshotPermission = snapshot.locationPermissionGranted ?? false
+  if (snapshotPermission !== payloadPermission) return true
+
+  if (payloadPermission) {
+    if ((snapshot.locationRecordedAt ?? null) !== (payload.location_recorded_at ?? null)) {
+      return true
+    }
+    if ((snapshot.latitude ?? null) !== (payload.latitude ?? null)) return true
+    if ((snapshot.longitude ?? null) !== (payload.longitude ?? null)) return true
+  }
 
   const elapsed = Date.now() - new Date(snapshot.lastSyncedAt).getTime()
   return elapsed >= DEVICE_BEACON_SYNC_INTERVAL_MS

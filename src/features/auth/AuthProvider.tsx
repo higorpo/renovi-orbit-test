@@ -12,7 +12,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AuthContext } from "@/features/auth/authContext";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import type { AuthContextType, Profile, SignUpResult } from "@/features/auth/types/auth.types";
+import type { Profile, SignUpResult } from "@/features/auth/types/auth.types";
 import { processAuthEvent } from "@/features/auth/utils/authStateHandlers";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useProfileFetcher } from "@/features/auth/hooks/useProfileFetcher";

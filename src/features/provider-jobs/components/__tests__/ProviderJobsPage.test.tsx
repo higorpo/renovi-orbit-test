@@ -11,14 +11,12 @@ const mocks = vi.hoisted(() => ({
     isLoading: false,
     permissionDenied: false,
     insecureContext: false,
+    hasFeedLocation: false,
     isUsingDefault: false,
     retry: vi.fn(),
   },
   jobs: {
     items: [] as ReturnType<typeof createMinimalJob>[],
-    totalCount: 0,
-    providerServices: [] as { id: string; title: string; slug: string; icon_key: null; color_key: null }[],
-    providerAreaSummary: { cities: [], neighborhoods: [] },
     isLoading: false,
     isFetchingNextPage: false,
     isError: false,
@@ -29,13 +27,9 @@ const mocks = vi.hoisted(() => ({
   },
   filters: {
     filters: {
-      sortMode: "nearest" as const,
-      radiusKm: 10,
-      serviceId: null as string | null,
+      sortMode: "newest" as const,
     },
     setSortMode: vi.fn(),
-    setRadiusKm: vi.fn(),
-    setServiceId: vi.fn(),
     resetFilters: vi.fn(),
   },
 }));
@@ -50,6 +44,14 @@ vi.mock("../../hooks/useProviderJobs", () => ({
 
 vi.mock("../../hooks/useProviderJobsFilters", () => ({
   useProviderJobsFilters: () => mocks.filters,
+}));
+
+vi.mock("../../hooks/useDismissOpportunity", () => ({
+  useDismissOpportunity: () => ({
+    dismissOpportunity: vi.fn(),
+    dismissingId: null,
+    isDismissing: false,
+  }),
 }));
 
 describe("ProviderJobsPage", () => {
@@ -93,8 +95,7 @@ describe("ProviderJobsPage", () => {
   });
 
   it("shows list and load more", () => {
-    mocks.jobs.items = [createMinimalJob({ id: "j1" })];
-    mocks.jobs.totalCount = 1;
+    mocks.jobs.items = [createMinimalJob({ service_request_id: "j1" })];
     mocks.jobs.hasNextPage = true;
     render(
       <MemoryRouter>

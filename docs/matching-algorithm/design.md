@@ -914,6 +914,8 @@ if v_caller is null then raise exception 'not authenticated'; end if;
 
 This section maps **all 200 acceptance criteria** (Req 1–13, 4A, 10A, 10B) to implementation sections and concrete mechanisms. Req 13 has no AC #13 in `requirements.md` (numbering skips 12 → 14).
 
+**Post-rollout artifact traceability (Task 80):** [qa/ac-traceability-audit.md](./qa/ac-traceability-audit.md) — requirement-level mapping to migrations, RPCs, Edge Functions, client code, and verification suites; engineering sign-off checklist.
+
 ### Dispatch phases (requirements overview → runtime)
 
 | Phase | Requirements | Runtime owner |
@@ -1270,7 +1272,7 @@ Weights read via `platform_constant_numeric`. Quality from `provider_rating_stat
 5. Ship M14 (CNS integration).
 6. Ship M15 (drop `match_provider_jobs` + remove legacy Edge).
 
-**Feature flag:** optional `platform_constants` key `matching.enabled` default false until step 3 — **MAY** add in M1 if gradual rollout desired.
+Progressive matching is **always enabled** after client cutover (M12+) and legacy feed removal (M15); there is no `matching.enabled` feature flag.
 
 ## 13.10 Testing strategy
 

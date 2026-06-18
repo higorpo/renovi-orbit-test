@@ -41,6 +41,7 @@ Documentação derivada do código da aplicação (front-end React/Vite, Supabas
 | Perfil público do prestador | [modulos/provider-profile](./modulos/provider-profile/README.md) |
 | Pedir orçamento | [modulos/request-quote](./modulos/request-quote/README.md) |
 | Message Dispatcher (notificações) | [modulos/message-dispatcher](./modulos/message-dispatcher/README.md) |
+| Matching progressivo / dispatch | [modulos/matching-dispatch](./modulos/matching-dispatch/README.md) |
 
 ## Atualização
 

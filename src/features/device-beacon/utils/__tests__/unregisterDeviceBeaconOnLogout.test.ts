@@ -12,6 +12,10 @@ vi.mock('@capacitor/device', () => ({
   },
 }))
 
+vi.mock('../../utils/providerLocationTracking.runtime', () => ({
+  stopProviderLocationTracking: vi.fn().mockResolvedValue(undefined),
+}))
+
 vi.mock('../../api/deviceBeacon.api', () => ({
   deleteDeviceBeacon: vi.fn().mockResolvedValue({ error: null }),
 }))

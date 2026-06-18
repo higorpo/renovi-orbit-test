@@ -83,7 +83,7 @@ function useOnlineStatusProbe(): boolean {
     }
   }, [])
 
-  return true
+  return isOnline
 }
 
 export function OnlineStatusProvider({ children }: { children: ReactNode }) {

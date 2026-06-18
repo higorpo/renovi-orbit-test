@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router'
+import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/lib/capacitor', () => ({
@@ -34,15 +34,15 @@ import { RootLayout } from '../RootLayout'
 
 describe('RootLayout', () => {
   it('renders CapacitorSplashHider and child route outlet', () => {
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <Routes>
-          <Route path="/" element={<RootLayout />}>
-            <Route index element={<div data-testid="child-route">child</div>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>,
-    )
+    const router = createMemoryRouter([
+      {
+        path: '/',
+        element: <RootLayout />,
+        children: [{ index: true, element: <div data-testid="child-route">child</div> }],
+      },
+    ])
+
+    render(<RouterProvider router={router} />)
 
     expect(screen.getByTestId('capacitor-splash-hider')).toBeInTheDocument()
     expect(screen.getByTestId('child-route')).toBeInTheDocument()

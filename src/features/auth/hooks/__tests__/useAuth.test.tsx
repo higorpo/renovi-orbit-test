@@ -3,7 +3,8 @@ import { renderHook, act } from "@testing-library/react";
 import React from "react";
 import { MemoryRouter } from "react-router";
 import type { User } from "@supabase/supabase-js";
-import { AuthProvider, useAuth } from "../useAuth";
+import { AuthProvider } from "../../AuthProvider";
+import { useAuth } from "../useAuth";
 
 const profileMocks = vi.hoisted(() => ({
   fetchProfile: vi.fn().mockResolvedValue(null),

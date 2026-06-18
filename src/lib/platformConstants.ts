@@ -22,3 +22,25 @@ export async function getPlatformConstantInt(
 
   return data;
 }
+
+export async function getPlatformConstantBool(
+  key: string,
+  defaultValue: boolean,
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc("platform_constant_bool", {
+    p_key: key,
+    p_default: defaultValue,
+  });
+
+  if (error) {
+    logger.warn("platform_constant_bool_failed", { key, message: error.message });
+    return defaultValue;
+  }
+
+  if (typeof data !== "boolean") {
+    logger.warn("platform_constant_bool_invalid", { key, data });
+    return defaultValue;
+  }
+
+  return data;
+}

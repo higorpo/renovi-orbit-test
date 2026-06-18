@@ -40,11 +40,11 @@ export async function getServiceById(
     return { data: null, error: error.message };
   }
 
-  if (!data || typeof data !== "object") {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
     return { data: null, error: null };
   }
 
-  return { data: mapRpcServiceRow(data as RpcServiceRow), error: null };
+  return { data: mapRpcServiceRow(data as unknown as RpcServiceRow), error: null };
 }
 
 export async function listServices(
@@ -82,7 +82,7 @@ export async function listServices(
   const { data, error } = await supabase.rpc("list_services", {
     p_page: page,
     p_page_size: pageSize,
-    p_list_phase: listPhase,
+    p_list_phase: listPhase ?? undefined,
     p_search: params.search?.trim() || undefined,
     p_category_title: params.categoryId?.trim() || undefined,
     p_city_name: params.cityName?.trim() || undefined,

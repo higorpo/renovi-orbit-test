@@ -68,6 +68,30 @@ describe('syncSchedule', () => {
     ).toBe(true)
   })
 
+  it('shouldSyncDeviceBeacon returns true when location fields change for providers', async () => {
+    const snapshot = await saveDeviceBeaconSyncSnapshot({
+      ...basePayload,
+      location_permission_granted: true,
+      latitude: -27.5,
+      longitude: -48.5,
+      location_recorded_at: '2026-06-18T12:00:00.000Z',
+    })
+
+    expect(
+      shouldSyncDeviceBeacon(
+        snapshot,
+        {
+          ...basePayload,
+          location_permission_granted: true,
+          latitude: -27.6,
+          longitude: -48.5,
+          location_recorded_at: '2026-06-18T12:00:00.000Z',
+        },
+        false,
+      ),
+    ).toBe(true)
+  })
+
   it('shouldSyncDeviceBeacon returns false inside sync interval', async () => {
     await saveDeviceBeaconSyncSnapshot(basePayload)
     const snapshot = await getDeviceBeaconSyncSnapshot('profile-1', 'device-1')

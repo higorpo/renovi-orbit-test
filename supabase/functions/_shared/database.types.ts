@@ -1547,6 +1547,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          operational_status: Database["public"]["Enums"]["provider_operational_status"]
           phone: string | null
           profile_image_path: string | null
           role: string
@@ -1556,6 +1557,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id: string
+          operational_status?: Database["public"]["Enums"]["provider_operational_status"]
           phone?: string | null
           profile_image_path?: string | null
           role?: string
@@ -1565,6 +1567,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          operational_status?: Database["public"]["Enums"]["provider_operational_status"]
           phone?: string | null
           profile_image_path?: string | null
           role?: string
@@ -1601,6 +1604,44 @@ export type Database = {
           to_status?: Database["public"]["Enums"]["proposal_status"]
         }
         Relationships: []
+      }
+      provider_latest_locations: {
+        Row: {
+          device_id: string | null
+          h3_index: number | null
+          location: unknown
+          location_accuracy_meters: number | null
+          location_recorded_at: string | null
+          provider_id: string
+          updated_at: string
+        }
+        Insert: {
+          device_id?: string | null
+          h3_index?: number | null
+          location?: unknown
+          location_accuracy_meters?: number | null
+          location_recorded_at?: string | null
+          provider_id: string
+          updated_at?: string
+        }
+        Update: {
+          device_id?: string | null
+          h3_index?: number | null
+          location?: unknown
+          location_accuracy_meters?: number | null
+          location_recorded_at?: string | null
+          provider_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_latest_locations_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       provider_offered_services: {
         Row: {
@@ -1780,6 +1821,38 @@ export type Database = {
           },
         ]
       }
+      provider_proposal_stats: {
+        Row: {
+          accepted_count: number
+          provider_id: string
+          ranking_conversion_score: number
+          resolved_count: number
+          updated_at: string
+        }
+        Insert: {
+          accepted_count?: number
+          provider_id: string
+          ranking_conversion_score?: number
+          resolved_count?: number
+          updated_at?: string
+        }
+        Update: {
+          accepted_count?: number
+          provider_id?: string
+          ranking_conversion_score?: number
+          resolved_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_proposal_stats_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provider_proposals: {
         Row: {
           client_rejection_response: string | null
@@ -1882,6 +1955,38 @@ export type Database = {
           },
         ]
       }
+      provider_rating_stats: {
+        Row: {
+          overall_avg: number | null
+          provider_id: string
+          ranking_quality_score: number
+          rating_count: number
+          updated_at: string
+        }
+        Insert: {
+          overall_avg?: number | null
+          provider_id: string
+          ranking_quality_score?: number
+          rating_count?: number
+          updated_at?: string
+        }
+        Update: {
+          overall_avg?: number | null
+          provider_id?: string
+          ranking_quality_score?: number
+          rating_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_rating_stats_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provider_service_area_neighborhoods: {
         Row: {
           neighborhood_id: string
@@ -1953,6 +2058,262 @@ export type Database = {
           },
         ]
       }
+      service_ratings: {
+        Row: {
+          client_id: string
+          comment: string | null
+          contracted_service_id: string
+          id: string
+          overall_score: number
+          provider_id: string
+          score_communication: number
+          score_punctuality: number
+          score_quality: number
+          score_value: number
+          service_request_id: string
+          submitted_at: string
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          comment?: string | null
+          contracted_service_id: string
+          id?: string
+          overall_score: number
+          provider_id: string
+          score_communication: number
+          score_punctuality: number
+          score_quality: number
+          score_value: number
+          service_request_id: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          comment?: string | null
+          contracted_service_id?: string
+          id?: string
+          overall_score?: number
+          provider_id?: string
+          score_communication?: number
+          score_punctuality?: number
+          score_quality?: number
+          score_value?: number
+          service_request_id?: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_ratings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_ratings_contracted_service_id_fkey"
+            columns: ["contracted_service_id"]
+            isOneToOne: true
+            referencedRelation: "contracted_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_ratings_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_ratings_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_request_dispatch_batch_providers: {
+        Row: {
+          batch_id: string
+          created_at: string
+          device_id: string | null
+          id: string
+          provider_id: string
+          ranking_score: number
+          score_components: Json
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          provider_id: string
+          ranking_score: number
+          score_components?: Json
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          device_id?: string | null
+          id?: string
+          provider_id?: string
+          ranking_score?: number
+          score_components?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_request_dispatch_batch_providers_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "service_request_dispatch_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_request_dispatch_batch_providers_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_request_dispatch_batches: {
+        Row: {
+          batch_number: number
+          created_at: string
+          dispatch_id: string
+          explored_h3_cells: Json | null
+          id: string
+          opened_at: string
+        }
+        Insert: {
+          batch_number: number
+          created_at?: string
+          dispatch_id: string
+          explored_h3_cells?: Json | null
+          id?: string
+          opened_at?: string
+        }
+        Update: {
+          batch_number?: number
+          created_at?: string
+          dispatch_id?: string
+          explored_h3_cells?: Json | null
+          id?: string
+          opened_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_request_dispatch_batches_dispatch_id_fkey"
+            columns: ["dispatch_id"]
+            isOneToOne: false
+            referencedRelation: "service_request_dispatches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_request_dispatch_events: {
+        Row: {
+          created_at: string
+          dispatch_id: string
+          event_type: Database["public"]["Enums"]["service_request_dispatch_event_type"]
+          id: string
+          payload: Json
+          provider_id: string | null
+          service_request_id: string
+        }
+        Insert: {
+          created_at?: string
+          dispatch_id: string
+          event_type: Database["public"]["Enums"]["service_request_dispatch_event_type"]
+          id?: string
+          payload?: Json
+          provider_id?: string | null
+          service_request_id: string
+        }
+        Update: {
+          created_at?: string
+          dispatch_id?: string
+          event_type?: Database["public"]["Enums"]["service_request_dispatch_event_type"]
+          id?: string
+          payload?: Json
+          provider_id?: string | null
+          service_request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_request_dispatch_events_dispatch_id_fkey"
+            columns: ["dispatch_id"]
+            isOneToOne: false
+            referencedRelation: "service_request_dispatches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_request_dispatch_events_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_request_dispatch_events_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_request_dispatches: {
+        Row: {
+          batch_sequence: number
+          created_at: string
+          fallback_opened_at: string | null
+          id: string
+          lease_expires_at: string | null
+          lease_owner: string | null
+          next_batch_at: string | null
+          service_request_id: string
+          status: Database["public"]["Enums"]["service_request_dispatch_status"]
+          updated_at: string
+        }
+        Insert: {
+          batch_sequence?: number
+          created_at?: string
+          fallback_opened_at?: string | null
+          id?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_batch_at?: string | null
+          service_request_id: string
+          status?: Database["public"]["Enums"]["service_request_dispatch_status"]
+          updated_at?: string
+        }
+        Update: {
+          batch_sequence?: number
+          created_at?: string
+          fallback_opened_at?: string | null
+          id?: string
+          lease_expires_at?: string | null
+          lease_owner?: string | null
+          next_batch_at?: string | null
+          service_request_id?: string
+          status?: Database["public"]["Enums"]["service_request_dispatch_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_request_dispatches_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: true
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_request_negotiation_stats: {
         Row: {
           active_chat_count: number
@@ -1977,6 +2338,54 @@ export type Database = {
             foreignKeyName: "service_request_negotiation_stats_service_request_id_fkey"
             columns: ["service_request_id"]
             isOneToOne: true
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_request_provider_visibility: {
+        Row: {
+          created_at: string
+          dismissed_at: string | null
+          granted_at: string | null
+          id: string
+          provider_id: string
+          revoked_at: string | null
+          service_request_id: string
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          dismissed_at?: string | null
+          granted_at?: string | null
+          id?: string
+          provider_id: string
+          revoked_at?: string | null
+          service_request_id: string
+          source: string
+        }
+        Update: {
+          created_at?: string
+          dismissed_at?: string | null
+          granted_at?: string | null
+          id?: string
+          provider_id?: string
+          revoked_at?: string | null
+          service_request_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_request_provider_visibility_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_request_provider_visibility_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: false
             referencedRelation: "service_requests"
             referencedColumns: ["id"]
           },
@@ -2113,6 +2522,10 @@ export type Database = {
           fcm_token: string | null
           ios_version: number | null
           is_virtual: boolean
+          location: unknown
+          location_accuracy_meters: number | null
+          location_permission_granted: boolean
+          location_recorded_at: string | null
           manufacturer: string | null
           model: string | null
           operating_system: string | null
@@ -2131,6 +2544,10 @@ export type Database = {
           fcm_token?: string | null
           ios_version?: number | null
           is_virtual?: boolean
+          location?: unknown
+          location_accuracy_meters?: number | null
+          location_permission_granted?: boolean
+          location_recorded_at?: string | null
           manufacturer?: string | null
           model?: string | null
           operating_system?: string | null
@@ -2149,6 +2566,10 @@ export type Database = {
           fcm_token?: string | null
           ios_version?: number | null
           is_virtual?: boolean
+          location?: unknown
+          location_accuracy_meters?: number | null
+          location_permission_granted?: boolean
+          location_recorded_at?: string | null
           manufacturer?: string | null
           model?: string | null
           operating_system?: string | null
@@ -2215,6 +2636,10 @@ export type Database = {
       }
       cns_chat_free_messaging_allowed: {
         Args: { p_chat_id: string }
+        Returns: boolean
+      }
+      cns_chat_is_unread_for_user: {
+        Args: { p_chat_id: string; p_user_id: string }
         Returns: boolean
       }
       cns_check_message_rate_limit: {
@@ -2379,6 +2804,7 @@ export type Database = {
         Args: never
         Returns: Json
       }
+      cron_process_service_request_dispatches: { Args: never; Returns: Json }
       cron_proposal_expire_pending: { Args: never; Returns: Json }
       cron_purge_stale_user_device_beacons: { Args: never; Returns: Json }
       decline_revision_request: {
@@ -2395,10 +2821,18 @@ export type Database = {
         }
         Returns: string
       }
+      dismiss_provider_opportunity: {
+        Args: { p_service_request_id: string }
+        Returns: Json
+      }
       domain_events_release_stale_leases: { Args: never; Returns: number }
       enqueue_proposal_expiring_soon_reminders: {
         Args: { p_batch_size?: number }
         Returns: Json
+      }
+      evaluate_service_request_dispatch_gates: {
+        Args: { p_service_request_id: string }
+        Returns: undefined
       }
       expire_pending_proposals: {
         Args: { p_batch_size?: number }
@@ -2513,6 +2947,17 @@ export type Database = {
         Returns: Json
       }
       list_proposal_versions: { Args: { p_chat_id: string }; Returns: Json }
+      list_provider_opportunities: {
+        Args: {
+          p_cursor?: string
+          p_lat?: number
+          p_limit?: number
+          p_lng?: number
+          p_provider_id: string
+          p_sort_mode?: string
+        }
+        Returns: Json
+      }
       list_provider_proposal_history: {
         Args: { p_service_request_id: string }
         Returns: Json
@@ -2545,6 +2990,81 @@ export type Database = {
           p_sort_mode?: string
         }
         Returns: Json
+      }
+      matching_acquire_dispatch_lease: {
+        Args: { p_dispatch_id: string; p_owner: string; p_ttl_seconds?: number }
+        Returns: boolean
+      }
+      matching_cancel_pending_mmd_for_service_request: {
+        Args: { p_service_request_id: string; p_template_prefix?: string }
+        Returns: number
+      }
+      matching_compute_explored_h3_cells: {
+        Args: { p_service_request_id: string }
+        Returns: Json
+      }
+      matching_decode_feed_cursor: { Args: { p_cursor: string }; Returns: Json }
+      matching_discover_candidates: {
+        Args: { p_limit?: number; p_service_request_id: string }
+        Returns: {
+          device_id: string
+          distance_meters: number
+          has_valid_beacon: boolean
+          provider_id: string
+        }[]
+      }
+      matching_encode_feed_cursor: {
+        Args: { p_payload: Json }
+        Returns: string
+      }
+      matching_force_release_stale_leases: {
+        Args: { p_batch_limit?: number; p_stale_after?: string }
+        Returns: Json
+      }
+      matching_h3_ring_cells: {
+        Args: { p_center_h3: number; p_resolution: number }
+        Returns: number[]
+      }
+      matching_latlng_to_h3_cell: {
+        Args: { p_location: unknown; p_resolution: number }
+        Returns: number
+      }
+      matching_open_batch: {
+        Args: { p_dispatch_id: string }
+        Returns: undefined
+      }
+      matching_ops_consecutive_cron_errors: {
+        Args: { p_lookback?: number; p_threshold?: number }
+        Returns: Json
+      }
+      matching_process_dispatch_row: {
+        Args: { p_dispatch_id: string; p_job_run_id?: number }
+        Returns: undefined
+      }
+      matching_rank_candidates: {
+        Args: { p_candidates: string[]; p_service_request_id: string }
+        Returns: {
+          device_id: string
+          provider_id: string
+          ranking_score: number
+          score_components: Json
+        }[]
+      }
+      matching_refresh_provider_latest_location: {
+        Args: { p_profile_id: string }
+        Returns: undefined
+      }
+      matching_refresh_provider_proposal_stats: {
+        Args: { p_provider_id: string }
+        Returns: undefined
+      }
+      matching_refresh_provider_rating_stats: {
+        Args: { p_provider_id: string }
+        Returns: undefined
+      }
+      matching_release_dispatch_lease: {
+        Args: { p_dispatch_id: string }
+        Returns: undefined
       }
       mmd_idempotency_uuid: { Args: { p_key: string }; Returns: string }
       mmd_ingest_event: {
@@ -2597,9 +3117,17 @@ export type Database = {
         Args: { p_default: number; p_key: string }
         Returns: number
       }
+      platform_constant_numeric: {
+        Args: { p_default: number; p_key: string }
+        Returns: number
+      }
       project_service_row: {
         Args: { p_service_request_id: string; p_viewer_id: string }
         Returns: Json
+      }
+      provider_sees_full_service_address: {
+        Args: { p_provider_id: string; p_service_request_id: string }
+        Returns: boolean
       }
       purge_stale_user_device_beacons: { Args: never; Returns: number }
       record_domain_event: {
@@ -2612,6 +3140,10 @@ export type Database = {
           p_service_request_id?: string
         }
         Returns: string
+      }
+      record_provider_opportunity_view: {
+        Args: { p_service_request_id: string }
+        Returns: Json
       }
       reject_non_terminal_proposals_on_sr_cancel: {
         Args: {
@@ -2671,6 +3203,28 @@ export type Database = {
         Returns: boolean
       }
       slugify_for_provider: { Args: { name_input: string }; Returns: string }
+      submit_service_rating: {
+        Args: {
+          p_comment?: string
+          p_contracted_service_id: string
+          p_score_communication: number
+          p_score_punctuality: number
+          p_score_quality: number
+          p_score_value: number
+        }
+        Returns: Json
+      }
+      update_service_rating: {
+        Args: {
+          p_comment?: string
+          p_contracted_service_id: string
+          p_score_communication: number
+          p_score_punctuality: number
+          p_score_quality: number
+          p_score_value: number
+        }
+        Returns: Json
+      }
       view_services_mask_client_name: {
         Args: { p_full_name: string }
         Returns: string
@@ -2708,6 +3262,25 @@ export type Database = {
         | "REVISION_REQUESTED"
         | "REVISED"
         | "REJECTED_AUTOMATICALLY"
+      provider_operational_status: "active" | "suspended"
+      service_request_dispatch_event_type:
+        | "state_transition"
+        | "batch_opened"
+        | "pool_exhausted"
+        | "provider_viewed"
+        | "provider_declined"
+        | "dispatch_expired"
+        | "dispatch_paused"
+        | "dispatch_resumed"
+      service_request_dispatch_status:
+        | "DISPATCH_PENDING"
+        | "DISPATCH_ACTIVE"
+        | "DISPATCH_PAUSED"
+        | "DISPATCH_STOPPED"
+        | "DISPATCH_MATCHED"
+        | "DISPATCH_FALLBACK_OPEN_MARKET"
+        | "DISPATCH_CANCELLED"
+        | "DISPATCH_EXPIRED"
       service_request_status: "OPEN" | "COMPLETED" | "CANCELLED"
     }
     CompositeTypes: {
@@ -2895,6 +3468,27 @@ export const Constants = {
         "REVISION_REQUESTED",
         "REVISED",
         "REJECTED_AUTOMATICALLY",
+      ],
+      provider_operational_status: ["active", "suspended"],
+      service_request_dispatch_event_type: [
+        "state_transition",
+        "batch_opened",
+        "pool_exhausted",
+        "provider_viewed",
+        "provider_declined",
+        "dispatch_expired",
+        "dispatch_paused",
+        "dispatch_resumed",
+      ],
+      service_request_dispatch_status: [
+        "DISPATCH_PENDING",
+        "DISPATCH_ACTIVE",
+        "DISPATCH_PAUSED",
+        "DISPATCH_STOPPED",
+        "DISPATCH_MATCHED",
+        "DISPATCH_FALLBACK_OPEN_MARKET",
+        "DISPATCH_CANCELLED",
+        "DISPATCH_EXPIRED",
       ],
       service_request_status: ["OPEN", "COMPLETED", "CANCELLED"],
     },

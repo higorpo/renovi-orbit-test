@@ -408,6 +408,10 @@ verify_jwt = true
 [functions.chat-upload-media]
 verify_jwt = true
 
+# Provider opportunities feed; JWT validated in handler then list_provider_opportunities RPC (design §5.3).
+[functions.list-provider-opportunities]
+verify_jwt = true
+
 [analytics]
 enabled = true
 port = 54327

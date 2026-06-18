@@ -6,7 +6,7 @@ begin;
 
 \ir fixtures/seed_rls_actors.inc
 
-select plan(32);
+select plan(29);
 
 -- Shared actors: seed client/provider exist (seed.sql); admin is escalated here.
 select set_config('rls.client_id', '28e30f1d-3c47-441f-94c6-76b6ea0db470', true);
@@ -177,35 +177,8 @@ select ok(
 );
 
 -- ---------------------------------------------------------------------------
--- Fix 6: match_provider_jobs (service_role only) + get_public_provider_by_slug (anon+auth)
+-- Fix 6: get_public_provider_by_slug (anon+auth)
 -- ---------------------------------------------------------------------------
-
-select ok(
-  not has_function_privilege(
-    'authenticated',
-    'public.match_provider_jobs(uuid, double precision, double precision, integer, uuid, text, integer, integer)'::regprocedure,
-    'EXECUTE'
-  ),
-  'authenticated cannot execute match_provider_jobs'
-);
-
-select ok(
-  not has_function_privilege(
-    'anon',
-    'public.match_provider_jobs(uuid, double precision, double precision, integer, uuid, text, integer, integer)'::regprocedure,
-    'EXECUTE'
-  ),
-  'anon cannot execute match_provider_jobs'
-);
-
-select ok(
-  has_function_privilege(
-    'service_role',
-    'public.match_provider_jobs(uuid, double precision, double precision, integer, uuid, text, integer, integer)'::regprocedure,
-    'EXECUTE'
-  ),
-  'service_role can execute match_provider_jobs'
-);
 
 select ok(
   has_function_privilege('anon', 'public.get_public_provider_by_slug(text)'::regprocedure, 'EXECUTE'),

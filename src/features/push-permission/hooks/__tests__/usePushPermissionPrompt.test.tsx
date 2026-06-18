@@ -26,6 +26,12 @@ vi.mock('@/lib/logger', () => ({
   logger: { warn: vi.fn() },
 }))
 
+const sequenceMocks = vi.hoisted(() => ({
+  waitForProviderLocationPermissionFlow: vi.fn(async () => undefined),
+}))
+
+vi.mock('@/lib/providerPermissionSequence', () => sequenceMocks)
+
 vi.mock('../../utils/pushPermissionPrompt.storage', () => ({
   isPushPermissionPromptDismissed: vi.fn(async () => false),
   markPushPermissionPromptDismissed: vi.fn(),
@@ -43,7 +49,9 @@ describe('usePushPermissionPrompt', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     authMocks.user = { id: 'user-1' }
+    authMocks.profile = { role: 'client' }
     authMocks.loadingSession = false
+    sequenceMocks.waitForProviderLocationPermissionFlow.mockResolvedValue(undefined)
     pushMocks.getPushPermissionStatus.mockResolvedValue('default')
     pushMocks.setupPushNotifications.mockResolvedValue({
       platform: 'web',
@@ -58,6 +66,26 @@ describe('usePushPermissionPrompt', () => {
 
     await waitFor(() => expect(result.current.open).toBe(true), { timeout: 2000 })
     expect(result.current.userRole).toBe('client')
+    expect(sequenceMocks.waitForProviderLocationPermissionFlow).not.toHaveBeenCalled()
+  })
+
+  it('waits for provider location flow before evaluating push prompt', async () => {
+    authMocks.profile = { role: 'provider' }
+    let releaseLocationFlow: (() => void) | undefined
+    sequenceMocks.waitForProviderLocationPermissionFlow.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseLocationFlow = resolve
+        }),
+    )
+
+    const { result } = renderHook(() => usePushPermissionPrompt())
+
+    await waitFor(() => expect(sequenceMocks.waitForProviderLocationPermissionFlow).toHaveBeenCalled())
+    expect(result.current.open).toBe(false)
+
+    releaseLocationFlow?.()
+    await waitFor(() => expect(result.current.open).toBe(true), { timeout: 2000 })
   })
 
   it('does not open when permission is denied', async () => {

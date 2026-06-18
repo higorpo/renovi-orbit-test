@@ -1,25 +1,5 @@
 import { useNavigate } from 'react-router'
-import { Capacitor } from '@capacitor/core'
-import { Device } from '@capacitor/device'
 import './App.css'
-import { useCallback, useEffect, useState } from 'react'
-import {
-  getWebPushPermission,
-  setupPushNotifications,
-  type PushPlatform,
-  type WebPushPermission,
-  type PushSetupResult,
-} from './lib/push'
-
-function mapPermissionForUi(
-  permission: PushSetupResult['permission'],
-): WebPushPermission | null {
-  if (!permission) return null
-  if (permission === 'prompt') return 'default'
-  return permission
-}
-import { isFirebaseConfigured } from './lib/firebase/config'
-import { logger } from './lib/logger'
 
 function App() {
   const navigate = useNavigate()

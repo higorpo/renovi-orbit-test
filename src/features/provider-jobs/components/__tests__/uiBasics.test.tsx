@@ -24,32 +24,33 @@ describe("presentational components", () => {
     expect(screen.getByText(/nenhuma oportunidade na sua região/i)).toBeInTheDocument();
   });
 
-  it("renders JobsHeader with area summary and count pluralization", () => {
-    render(
-      <JobsHeader
-        totalCount={1}
-        isLoading={false}
-        isUsingDefaultLocation
-        providerAreaSummary={{
-          cities: ["A", "B"],
-          neighborhoods: ["N1", "N2", "N3", "N4"],
-        }}
-      />,
-    );
-    expect(screen.getByText(/1 trabalho encontrado/i)).toBeInTheDocument();
-    expect(screen.getByText(/localização aproximada/i)).toBeInTheDocument();
+  it("renders JobsHeader with feed GPS warning when using default location", () => {
+    render(<JobsHeader isUsingDefaultLocation />);
+    expect(screen.getByText(/sem gps do feed/i)).toBeInTheDocument();
   });
 
   it("renders JobsSortTabs and notifies mode change", () => {
     const onModeChange = vi.fn();
     render(
-      <JobsSortTabs activeMode="nearest" onModeChange={onModeChange} />,
+      <JobsSortTabs
+        activeMode="newest"
+        onModeChange={onModeChange}
+        hasFeedGps
+      />,
     );
-    fireEvent.click(screen.getByRole("tab", { name: /mais recentes/i }));
-    expect(onModeChange).toHaveBeenCalledWith("newest");
-    onModeChange.mockClear();
     fireEvent.click(screen.getByRole("tab", { name: /mais próximos/i }));
     expect(onModeChange).toHaveBeenCalledWith("nearest");
+    onModeChange.mockClear();
+    fireEvent.click(screen.getByRole("tab", { name: /menos concorridos/i }));
+    expect(onModeChange).toHaveBeenCalledWith("least_competitive");
+  });
+
+  it("hides nearest sort tab without feed GPS", () => {
+    render(
+      <JobsSortTabs activeMode="newest" onModeChange={vi.fn()} hasFeedGps={false} />,
+    );
+    expect(screen.queryByRole("tab", { name: /mais próximos/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /mais recentes/i })).toBeInTheDocument();
   });
 
   it("renders LocationPermissionBanner variants", () => {
@@ -66,6 +67,15 @@ describe("presentational components", () => {
       />,
     );
     expect(screen.getByText(/localização bloqueada no navegador/i)).toBeInTheDocument();
+    rerender(
+      <LocationPermissionBanner
+        permissionDenied
+        isNativeApp
+        insecureContext={false}
+        onRetry={onRetry}
+      />,
+    );
+    expect(screen.getByText(/localização bloqueada no app/i)).toBeInTheDocument();
     rerender(
       <LocationPermissionBanner permissionDenied={false} onRetry={onRetry} />,
     );

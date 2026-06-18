@@ -14,7 +14,7 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 | view-services | RPCs unificados; `ServiceModel`; detalhe por fase; escopo cliente/prestador no SQL; `my_proposal`/`chat` na lista prestador | OK (`visualizacao-de-servicos.md`) | pgTAP `view_services_rpcs_test.sql` | — |
 | dynamic-form | Schema; steps; validação; demo DEV | OK (`motor-de-formularios.md`) | — | — |
 | my-account | Conta cliente/prestador; portfólio; área; exclusão | OK (`minha-conta.md`) | Impacto legal de exclusão de conta | — |
-| provider-jobs | Match; detalhe; proposta; negociação CNS | OK (`trabalhos-e-propostas.md`) | Algoritmo de sort/geo completo no SQL | — |
+| provider-jobs | Feed progressivo; dismiss; sort; geo feed; proposta via view-services/CNS | OK (`trabalhos-e-propostas.md`) | Gates dispatch (STOPPED/PAUSED) detalhados em matching-dispatch | — |
 | provider-profile | Página pública; SEO; URL | OK (`pagina-publica.md`) | — | — |
 | request-quote | Wizard 4/5 passos; IA automática passo 3; rascunho local; multipart Edge; reCAPTCHA; nsfwjs | OK (`pedir-orcamento.md`) | Validação server-side fina do form na Edge | P-01 redirect `/dashboard/client`; mismatch 10 MB front / 5 MB Edge fotos |
 | chats + negotiation-proposals | Lista/thread; propostas FSM; slots; mensagem livre vs PENDING; aceite/cancelamento; sheet compare/history em Meus Serviços | OK (`conversas-e-negociacao.md`, `comparar-orcamentos-meus-servicos.md`) | Mapa exaustivo de mensagens SQL por código/errcode nas RPCs de compare | — |
@@ -26,6 +26,7 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 | dashboard-shell | `DashboardLayout`, menu, `DashboardFakePage`, rotas placeholder do dashboard | `modulos/dashboard-shell/` |
 | app-home | Rota index `/`, componente `App` | `modulos/app-home/` |
 | message-dispatcher | Notificações multicanal (backend); FSM, quotas, horário silencioso, checkout, reconciliação | `modulos/message-dispatcher/` |
+| matching-dispatch | Matching progressivo: lotes, cron, visibilidade, gates, ratings (backend) | `modulos/matching-dispatch/` |
 
 ## Contagens
 
@@ -33,11 +34,11 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 |---------|-------|
 | Pastas em `src/features` (módulos de topo) | 15 |
 | Módulos adicionais documentados (shell + home + backend) | 3 |
-| **Total módulos no índice** `modulos/README.md` | **13** |
-| READMEs de módulo em `docs/business/modulos/` | 13 (+ nota em `client-budgets/`) |
+| **Total módulos no índice** `modulos/README.md` | **14** |
+| READMEs de módulo em `docs/business/modulos/` | 14 (+ nota em `client-budgets/`) |
 | Arquivos de feature em `modulos/*/features/` | 14+ |
 | Rotas placeholder identificadas | ≥6 |
-| Cobertura documental (critério do índice) | **100%** dos 13 módulos |
+| Cobertura documental (critério do índice) | **100%** dos 14 módulos |
 
 ## Features globais fora de `src/features`
 

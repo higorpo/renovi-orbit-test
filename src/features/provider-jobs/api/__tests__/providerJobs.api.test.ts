@@ -1,20 +1,27 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchProviderJobs } from "../providerJobs.api";
+import {
+  fetchProviderJobs,
+  isInvalidProviderJobsCursorError,
+} from "../providerJobs.api";
 
 const mocks = vi.hoisted(() => ({
   invoke: vi.fn(),
-  rpc: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/client", () => ({
   supabase: {
     functions: { invoke: mocks.invoke },
-    rpc: mocks.rpc,
   },
 }));
 
 vi.mock("@/lib/logger", () => ({
   logger: { error: vi.fn() },
+}));
+
+vi.mock("@/lib/sentry", () => ({
+  Sentry: {
+    startSpan: (_ctx: unknown, fn: () => unknown) => fn(),
+  },
 }));
 
 const logger = await import("@/lib/logger").then((m) => m.logger);
@@ -24,34 +31,48 @@ describe("fetchProviderJobs", () => {
     vi.clearAllMocks();
   });
 
-  it("returns data when invoke succeeds", async () => {
+  it("invokes list-provider-opportunities", async () => {
     const payload = {
-      items: [],
-      total_count: 0,
-      page: 1,
-      page_size: 20,
-      provider_services: [],
-      provider_area_summary: { cities: [], neighborhoods: [] },
+      items: [{ service_request_id: "job-1" }],
+      next_cursor: "cursor-abc",
+      has_more: true,
     };
     mocks.invoke.mockResolvedValue({ data: payload, error: null } as never);
 
     const result = await fetchProviderJobs({
-      latitude: -27.5,
-      longitude: -48.5,
-      radius_km: 10,
-      service_id: null,
       sort_mode: "nearest",
-      page: 1,
-      page_size: 20,
+      cursor: null,
+      limit: 20,
+      lat: -27.5,
+      lng: -48.5,
     });
 
-    expect(mocks.invoke).toHaveBeenCalledWith("match-provider-jobs", {
-      body: expect.objectContaining({
-        latitude: -27.5,
-        longitude: -48.5,
-      }),
+    expect(mocks.invoke).toHaveBeenCalledWith("list-provider-opportunities", {
+      body: {
+        sort_mode: "nearest",
+        cursor: null,
+        limit: 20,
+        lat: -27.5,
+        lng: -48.5,
+      },
     });
     expect(result).toEqual({ data: payload, error: null });
+  });
+
+  it("clamps limit to FEED_MAX_LIMIT", async () => {
+    mocks.invoke.mockResolvedValue({
+      data: { items: [], next_cursor: null, has_more: false },
+      error: null,
+    } as never);
+
+    await fetchProviderJobs({
+      sort_mode: "newest",
+      limit: 999,
+    });
+
+    expect(mocks.invoke).toHaveBeenCalledWith("list-provider-opportunities", {
+      body: expect.objectContaining({ limit: 50 }),
+    });
   });
 
   it("returns error when invoke reports transport error", async () => {
@@ -61,13 +82,7 @@ describe("fetchProviderJobs", () => {
     } as never);
 
     const result = await fetchProviderJobs({
-      latitude: -27.5,
-      longitude: -48.5,
-      radius_km: 10,
-      service_id: null,
-      sort_mode: "nearest",
-      page: 1,
-      page_size: 20,
+      sort_mode: "newest",
     });
 
     expect(result.data).toBeNull();
@@ -80,25 +95,17 @@ describe("fetchProviderJobs", () => {
 
   it("returns error when response body contains error field", async () => {
     mocks.invoke.mockResolvedValue({
-      data: { error: "Invalid sort mode" },
+      data: { error: "Invalid feed cursor" },
       error: null,
     } as never);
 
     const result = await fetchProviderJobs({
-      latitude: -27.5,
-      longitude: -48.5,
-      radius_km: 10,
-      service_id: null,
-      sort_mode: "nearest",
-      page: 1,
-      page_size: 20,
+      sort_mode: "newest",
+      cursor: "bad-cursor",
     });
 
     expect(result.data).toBeNull();
-    expect(result.error).toBe("Invalid sort mode");
-    expect(logger.error).toHaveBeenCalledWith(
-      "fetch_provider_jobs_api_error",
-      expect.objectContaining({ error: "Invalid sort mode" }),
-    );
+    expect(result.error).toBe("Invalid feed cursor");
+    expect(isInvalidProviderJobsCursorError(result.error)).toBe(true);
   });
 });

@@ -3,12 +3,48 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useProviderLocation } from "../useProviderLocation";
 
+const nativeMocks = vi.hoisted(() => ({
+  isNativePlatform: vi.fn(() => false),
+  captureOperationalLocationFix: vi.fn(),
+  getOperationalLocationPermissionStatus: vi.fn(),
+  getLatestProviderLocationSample: vi.fn(() => null),
+  subscribeProviderLocationSamples: vi.fn(() => () => {}),
+}));
+
+vi.mock("@capacitor/core", () => ({
+  Capacitor: {
+    isNativePlatform: () => nativeMocks.isNativePlatform(),
+  },
+}));
+
+vi.mock("@/features/auth", () => ({
+  useAuth: () => ({ user: { id: "provider-1" } }),
+}));
+
+vi.mock("@/features/device-beacon", () => ({
+  captureOperationalLocationFix: (...args: unknown[]) =>
+    nativeMocks.captureOperationalLocationFix(...args),
+  getOperationalLocationPermissionStatus: (...args: unknown[]) =>
+    nativeMocks.getOperationalLocationPermissionStatus(...args),
+  getLatestProviderLocationSample: (...args: unknown[]) =>
+    nativeMocks.getLatestProviderLocationSample(...args),
+  subscribeProviderLocationSamples: (...args: unknown[]) =>
+    nativeMocks.subscribeProviderLocationSamples(...args),
+}));
+
 describe("useProviderLocation", () => {
   const geo = {
     getCurrentPosition: vi.fn(),
   };
 
   beforeEach(() => {
+    nativeMocks.isNativePlatform.mockReturnValue(false);
+    nativeMocks.captureOperationalLocationFix.mockReset();
+    nativeMocks.getOperationalLocationPermissionStatus.mockReset();
+    nativeMocks.getLatestProviderLocationSample.mockReset();
+    nativeMocks.getLatestProviderLocationSample.mockReturnValue(null);
+    nativeMocks.subscribeProviderLocationSamples.mockReset();
+    nativeMocks.subscribeProviderLocationSamples.mockReturnValue(() => {});
     vi.spyOn(globalThis.navigator, "geolocation", "get").mockReturnValue(
       geo as unknown as Geolocation,
     );
@@ -27,7 +63,7 @@ describe("useProviderLocation", () => {
     vi.restoreAllMocks();
   });
 
-  it("uses default location when geolocation API is null", async () => {
+  it("does not fabricate coordinates when geolocation API is null", async () => {
     vi.spyOn(globalThis.navigator, "geolocation", "get").mockReturnValue(
       null as unknown as Geolocation,
     );
@@ -35,10 +71,9 @@ describe("useProviderLocation", () => {
     const { result } = renderHook(() => useProviderLocation());
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.location).toEqual({
-      latitude: -27.5969,
-      longitude: -48.5495,
-    });
+    expect(result.current.location).toBeNull();
+    expect(result.current.hasFeedLocation).toBe(false);
+    expect(result.current.isUsingDefault).toBe(true);
     expect(result.current.error).toContain("não disponível");
   });
 
@@ -60,6 +95,8 @@ describe("useProviderLocation", () => {
       }),
     );
     expect(result.current.error).toBeNull();
+    expect(result.current.hasFeedLocation).toBe(true);
+    expect(result.current.isUsingDefault).toBe(false);
   });
 
   it("uses generic copy when first geolocation error is not timeout, unavailable, or denial", async () => {
@@ -135,7 +172,7 @@ describe("useProviderLocation", () => {
     );
   });
 
-  it("uses default when context is insecure and host is not local", async () => {
+  it("clears feed coordinates on insecure non-local context", async () => {
     Object.defineProperty(window, "isSecureContext", {
       configurable: true,
       value: false,
@@ -149,10 +186,8 @@ describe("useProviderLocation", () => {
 
     await waitFor(() => expect(result.current.insecureContext).toBe(true));
     expect(result.current.error).toContain("HTTPS");
-    expect(result.current.location).toEqual({
-      latitude: -27.5969,
-      longitude: -48.5495,
-    });
+    expect(result.current.location).toBeNull();
+    expect(result.current.hasFeedLocation).toBe(false);
   });
 
   it("retries with high accuracy after timeout error (code 3)", async () => {
@@ -177,7 +212,7 @@ describe("useProviderLocation", () => {
     );
   });
 
-  it("falls back to default when high-accuracy retry still fails without denial", async () => {
+  it("does not fabricate coordinates when high-accuracy retry still fails", async () => {
     let calls = 0;
     geo.getCurrentPosition.mockImplementation((_success, fail) => {
       calls += 1;
@@ -191,10 +226,8 @@ describe("useProviderLocation", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.permissionDenied).toBe(false);
     expect(result.current.error).toContain("Não foi possível obter");
-    expect(result.current.location).toEqual({
-      latitude: -27.5969,
-      longitude: -48.5495,
-    });
+    expect(result.current.location).toBeNull();
+    expect(result.current.isUsingDefault).toBe(true);
   });
 
   it("allows geolocation on insecure context when hostname is IPv6 localhost", async () => {
@@ -385,5 +418,61 @@ describe("useProviderLocation", () => {
     await waitFor(() =>
       expect(result.current.location).toEqual({ latitude: 20, longitude: 21 }),
     );
+  });
+
+  it("uses native geolocation on Capacitor and ignores WebView insecure context", async () => {
+    nativeMocks.isNativePlatform.mockReturnValue(true);
+    Object.defineProperty(window, "isSecureContext", {
+      configurable: true,
+      value: false,
+    });
+    vi.spyOn(window, "location", "get").mockReturnValue({
+      ...window.location,
+      hostname: "192.168.0.248",
+    } as Location);
+
+    nativeMocks.getOperationalLocationPermissionStatus.mockResolvedValue("granted");
+    nativeMocks.getLatestProviderLocationSample.mockReturnValue({
+      latitude: -27.1,
+      longitude: -48.2,
+      accuracyMeters: 15,
+      recordedAt: new Date().toISOString(),
+    });
+
+    const { result } = renderHook(() => useProviderLocation());
+
+    await waitFor(() =>
+      expect(result.current.location).toEqual({
+        latitude: -27.1,
+        longitude: -48.2,
+      }),
+    );
+    expect(result.current.insecureContext).toBe(false);
+    expect(result.current.hasFeedLocation).toBe(true);
+    expect(geo.getCurrentPosition).not.toHaveBeenCalled();
+    expect(nativeMocks.subscribeProviderLocationSamples).toHaveBeenCalled();
+  });
+
+  it("captures native fix when no cached beacon sample exists", async () => {
+    nativeMocks.isNativePlatform.mockReturnValue(true);
+    nativeMocks.getOperationalLocationPermissionStatus.mockResolvedValue("granted");
+    nativeMocks.getLatestProviderLocationSample.mockReturnValue(null);
+    nativeMocks.captureOperationalLocationFix.mockResolvedValue({
+      granted: true,
+      status: "granted",
+      latitude: -27.9,
+      longitude: -48.4,
+      accuracyMeters: 20,
+    });
+
+    const { result } = renderHook(() => useProviderLocation());
+
+    await waitFor(() =>
+      expect(result.current.location).toEqual({
+        latitude: -27.9,
+        longitude: -48.4,
+      }),
+    );
+    expect(nativeMocks.captureOperationalLocationFix).toHaveBeenCalled();
   });
 });

@@ -5,29 +5,22 @@ import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useProviderJobs } from "../useProviderJobs";
 import * as providerJobsApi from "../../api/providerJobs.api";
+import { providerJobsListQueryKey } from "../../constants/queryKeys";
 
 vi.mock("../../api/providerJobs.api", () => ({
   fetchProviderJobs: vi.fn(),
-}));
-
-vi.mock("@/lib/sentry", () => ({
-  Sentry: {
-    startSpan: vi.fn((_opts: unknown, fn: (span: { setAttribute: () => void } | null) => unknown) =>
-      fn({ setAttribute: vi.fn() }),
-    ),
-  },
+  isInvalidProviderJobsCursorError: vi.fn((error: string | null) =>
+    Boolean(error?.includes("Invalid feed cursor")),
+  ),
 }));
 
 const fetchProviderJobs = vi.mocked(providerJobsApi.fetchProviderJobs);
 
-function makePage(overrides: Partial<{ page: number; total_count: number }> = {}) {
+function makePage(overrides: Partial<{ next_cursor: string | null; has_more: boolean }> = {}) {
   return {
-    items: [{ id: "j1" } as never],
-    total_count: overrides.total_count ?? 25,
-    page: overrides.page ?? 1,
-    page_size: 20,
-    provider_services: [],
-    provider_area_summary: { cities: ["Florianópolis"], neighborhoods: ["Centro"] },
+    items: [{ service_request_id: "j1" } as never],
+    next_cursor: overrides.next_cursor ?? null,
+    has_more: overrides.has_more ?? false,
   };
 }
 
@@ -48,14 +41,12 @@ describe("useProviderJobs", () => {
     });
   });
 
-  it("does not fetch when coordinates are missing", () => {
+  it("does not fetch nearest sort when coordinates are missing", () => {
     const { result } = renderHook(
       () =>
         useProviderJobs({
           latitude: null,
           longitude: null,
-          radiusKm: 10,
-          serviceId: null,
           sortMode: "nearest",
         }),
       { wrapper: wrapper() },
@@ -66,15 +57,13 @@ describe("useProviderJobs", () => {
     expect(result.current.items).toEqual([]);
   });
 
-  it("fetches first page and flattens items", async () => {
+  it("fetches newest feed without coordinates", async () => {
     const { result } = renderHook(
       () =>
         useProviderJobs({
-          latitude: -27.5,
-          longitude: -48.5,
-          radiusKm: 10,
-          serviceId: null,
-          sortMode: "nearest",
+          latitude: null,
+          longitude: null,
+          sortMode: "newest",
         }),
       { wrapper: wrapper() },
     );
@@ -83,24 +72,54 @@ describe("useProviderJobs", () => {
 
     expect(fetchProviderJobs).toHaveBeenCalledWith(
       expect.objectContaining({
-        latitude: -27.5,
-        longitude: -48.5,
-        page: 1,
+        sort_mode: "newest",
+        cursor: null,
+        lat: null,
+        lng: null,
       }),
     );
     expect(result.current.items).toHaveLength(1);
-    expect(result.current.totalCount).toBe(25);
-    expect(result.current.providerAreaSummary.cities).toContain("Florianópolis");
+    expect(result.current.loadedCount).toBe(1);
   });
 
-  it("exposes hasNextPage and fetchNextPage when more pages exist", async () => {
+  it("uses cursor query key with sort and optional coordinates", async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const wrapperWithClient = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client }, children);
+
+    renderHook(
+      () =>
+        useProviderJobs({
+          latitude: -27.5,
+          longitude: -48.5,
+          sortMode: "nearest",
+        }),
+      { wrapper: wrapperWithClient },
+    );
+
+    await waitFor(() => expect(fetchProviderJobs).toHaveBeenCalled());
+
+    expect(
+      client.getQueryCache().find({
+        queryKey: providerJobsListQueryKey({
+          sortMode: "nearest",
+          lat: -27.5,
+          lng: -48.5,
+        }),
+      }),
+    ).toBeTruthy();
+  });
+
+  it("exposes hasNextPage and fetchNextPage when cursor has more", async () => {
     fetchProviderJobs
       .mockResolvedValueOnce({
-        data: makePage({ page: 1, total_count: 45 }),
+        data: makePage({ next_cursor: "cursor-2", has_more: true }),
         error: null,
       })
       .mockResolvedValueOnce({
-        data: { ...makePage({ page: 2, total_count: 45 }), items: [{ id: "j2" } as never] },
+        data: { items: [{ service_request_id: "j2" } as never], next_cursor: null, has_more: false },
         error: null,
       });
 
@@ -109,8 +128,6 @@ describe("useProviderJobs", () => {
         useProviderJobs({
           latitude: -1,
           longitude: -1,
-          radiusKm: 5,
-          serviceId: "svc",
           sortMode: "newest",
         }),
       { wrapper: wrapper() },
@@ -123,7 +140,10 @@ describe("useProviderJobs", () => {
       await result.current.fetchNextPage();
     });
 
-    await waitFor(() => expect(result.current.items.length).toBeGreaterThan(1));
+    await waitFor(() => expect(result.current.items.length).toBe(2));
+    expect(fetchProviderJobs).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cursor: "cursor-2" }),
+    );
   });
 
   it("sets isError when API returns error", async () => {
@@ -134,8 +154,6 @@ describe("useProviderJobs", () => {
         useProviderJobs({
           latitude: -1,
           longitude: -1,
-          radiusKm: 10,
-          serviceId: null,
           sortMode: "nearest",
         }),
       { wrapper: wrapper() },
@@ -144,27 +162,9 @@ describe("useProviderJobs", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
 
-  it("throws when API returns neither data nor error", async () => {
-    fetchProviderJobs.mockResolvedValue({ data: null, error: null });
-
-    const { result } = renderHook(
-      () =>
-        useProviderJobs({
-          latitude: -1,
-          longitude: -1,
-          radiusKm: 10,
-          serviceId: null,
-          sortMode: "nearest",
-        }),
-      { wrapper: wrapper() },
-    );
-
-    await waitFor(() => expect(result.current.isError).toBe(true));
-  });
-
-  it("does not paginate when total_count is not finite", async () => {
+  it("does not offer another page when has_more is false", async () => {
     fetchProviderJobs.mockResolvedValue({
-      data: { ...makePage({ page: 1 }), total_count: Number.NaN } as never,
+      data: makePage({ has_more: false }),
       error: null,
     });
 
@@ -173,31 +173,7 @@ describe("useProviderJobs", () => {
         useProviderJobs({
           latitude: -1,
           longitude: -1,
-          radiusKm: 10,
-          serviceId: null,
-          sortMode: "nearest",
-        }),
-      { wrapper: wrapper() },
-    );
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.hasNextPage).toBe(false);
-  });
-
-  it("does not offer another page when total fits in one page", async () => {
-    fetchProviderJobs.mockResolvedValue({
-      data: makePage({ total_count: 15, page: 1 }),
-      error: null,
-    });
-
-    const { result } = renderHook(
-      () =>
-        useProviderJobs({
-          latitude: -1,
-          longitude: -1,
-          radiusKm: 10,
-          serviceId: null,
-          sortMode: "nearest",
+          sortMode: "newest",
         }),
       { wrapper: wrapper() },
     );

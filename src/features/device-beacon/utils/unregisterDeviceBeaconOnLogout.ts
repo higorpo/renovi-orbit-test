@@ -3,10 +3,13 @@ import { Device } from '@capacitor/device'
 import { logger } from '@/lib/logger'
 
 import { deleteDeviceBeacon } from '../api/deviceBeacon.api'
+import { stopProviderLocationTracking } from './providerLocationTracking.runtime'
 import { removeDeviceBeaconSyncSnapshot } from './syncSchedule'
 
 /** Removes this installation's beacon row and local sync cache while still authenticated. */
 export async function unregisterDeviceBeaconOnLogout(profileId: string): Promise<void> {
+  await stopProviderLocationTracking()
+
   try {
     const { identifier } = await Device.getId()
     const { error } = await deleteDeviceBeacon(profileId, identifier)
