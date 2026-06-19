@@ -431,3 +431,292 @@ Permitir que a plataforma:
 ## Histórico de Confiabilidade
 
 * A Renovi poderá utilizar o histórico de reagendamentos, cancelamentos e ausências para aprimorar mecanismos de segurança, confiança e qualidade da plataforma.
+
+---
+
+# Sistema de Reagendamento pelo Prestador
+
+## Objetivo
+
+Permitir que o prestador solicite a alteração da data de execução de um serviço já confirmado quando houver necessidade operacional ou algum imprevisto.
+
+---
+
+## Regra Principal
+
+O prestador poderá solicitar o reagendamento do serviço a qualquer momento.
+
+---
+
+## Motivo da Regra
+
+Imprevistos podem ocorrer mesmo próximos da data de execução, incluindo:
+
+* Problemas de saúde.
+* Emergências pessoais.
+* Condições climáticas.
+* Falta de materiais.
+* Problemas logísticos.
+
+Impedir o reagendamento não elimina o problema operacional e pode gerar ausências e experiências negativas para o cliente.
+
+---
+
+## Fluxo de Reagendamento
+
+### Etapa 1 — Prestador solicita reagendamento
+
+O prestador acessa o serviço e clica em:
+
+"Solicitar Reagendamento"
+
+---
+
+### Etapa 2 — Sistema cria registro formal
+
+O sistema:
+
+* Altera o status para "Reagendamento Solicitado pelo Prestador".
+* Insere uma mensagem automática no chat.
+
+Exemplo:
+
+"Carlos solicitou o reagendamento deste serviço. Converse pelo chat para definir uma nova data."
+
+---
+
+### Etapa 3 — Negociação pelo chat
+
+Cliente e prestador negociam livremente uma nova data.
+
+---
+
+### Etapa 4 — Formalização da nova data
+
+Após chegarem a um acordo:
+
+O prestador envia uma atualização de agendamento contendo:
+
+* Nova data.
+* Novo turno.
+
+---
+
+### Etapa 5 — Cliente recebe solicitação
+
+O cliente recebe um card para aprovar a alteração.
+
+---
+
+### Etapa 6 — Cliente aceita
+
+Após a aceitação:
+
+* A nova data passa a valer oficialmente.
+* O status volta para "Agendado".
+
+---
+
+## Regra de Segurança
+
+Enquanto uma nova data não for formalmente aceita:
+
+* A data original continua válida.
+
+---
+
+## Reagendamentos Próximos da Data
+
+Reagendamentos solicitados pelo prestador com menos de 24 horas de antecedência deverão ser registrados no histórico de confiabilidade como:
+
+"Reagendamento de Última Hora"
+
+---
+
+# Sistema de Cancelamento pelo Prestador
+
+## Objetivo
+
+Permitir que o prestador encerre sua participação em um serviço quando não puder executá-lo.
+
+---
+
+## Regra Principal
+
+O prestador poderá cancelar um serviço a qualquer momento.
+
+---
+
+## Fluxo de Cancelamento
+
+### Etapa 1 — Prestador solicita cancelamento
+
+O prestador acessa o serviço e clica em:
+
+"Cancelar Serviço"
+
+---
+
+### Etapa 2 — Sistema solicita motivo
+
+Exemplos:
+
+* Problema de saúde.
+* Emergência pessoal.
+* Conflito de agenda.
+* Impossibilidade técnica.
+* Outro.
+
+---
+
+### Etapa 3 — Cancelamento é registrado
+
+O sistema:
+
+* Registra o cancelamento no histórico do prestador.
+* Registra a antecedência do cancelamento.
+* Notifica o cliente.
+
+---
+
+### Etapa 4 — Serviço retorna ao marketplace
+
+Após o cancelamento do prestador:
+
+* O vínculo entre cliente e prestador é encerrado.
+* O serviço volta automaticamente para o status "Aberto".
+* O pedido volta a ser exibido para outros prestadores.
+* Novas propostas podem ser enviadas.
+* O cliente não precisa criar um novo pedido.
+
+---
+
+## Objetivo da Reabertura Automática
+
+Garantir que o cliente não precise reiniciar todo o processo caso um prestador desista da execução do serviço.
+
+A plataforma assume a responsabilidade de recolocar o serviço no marketplace para que outros prestadores possam se candidatar.
+
+---
+
+## Tratamento Financeiro
+
+Caso a cobrança já tenha sido realizada:
+
+* O valor é estornado integralmente ao cliente.
+* Nenhuma cobrança permanece vinculada ao prestador que cancelou.
+
+Quando um novo prestador for contratado:
+
+* Uma nova cobrança será realizada conforme as regras vigentes da plataforma.
+
+---
+
+## Cancelamentos Próximos da Data
+
+Cancelamentos realizados pelo prestador com menos de 24 horas de antecedência deverão ser registrados como:
+
+"Cancelamento pelo Prestador (Última Hora)"
+
+---
+
+# Histórico de Confiabilidade
+
+A Renovi manterá um histórico interno de comportamento tanto para clientes quanto para prestadores.
+
+## Indicadores dos Clientes
+
+* Serviços concluídos.
+* Reagendamentos solicitados.
+* Cancelamentos.
+* Cancelamentos de última hora.
+* Ausências.
+
+---
+
+## Indicadores dos Prestadores
+
+* Serviços concluídos.
+* Reagendamentos solicitados.
+* Reagendamentos de última hora.
+* Cancelamentos.
+* Cancelamentos de última hora.
+* Taxa de conclusão dos serviços.
+* Ausências registradas.
+
+---
+
+## Objetivo
+
+Permitir que a plataforma:
+
+* Identifique comportamentos abusivos.
+* Crie regras futuras de proteção.
+* Aumente a confiança entre clientes e prestadores.
+* Avalie a confiabilidade operacional dos prestadores.
+
+---
+
+# Atualização dos Status do Serviço
+
+## Fluxo Principal
+
+* Aberto
+* Em Negociação
+* Proposta Enviada
+* Agendado
+* Pagamento Pendente
+* Pago
+* Em Execução
+* Concluído
+
+---
+
+## Fluxo de Reagendamento
+
+* Reagendamento Solicitado pelo Cliente
+* Reagendamento Solicitado pelo Prestador
+* Nova Data Proposta
+* Agendado
+
+---
+
+## Fluxo de Cancelamento
+
+* Cancelado pelo Cliente
+* Cancelado pelo Cliente (Última Hora)
+* Cancelado pelo Prestador
+* Cancelado pelo Prestador (Última Hora)
+* Cancelado por Falta de Pagamento
+
+---
+
+## Fluxo de Reabertura
+
+* Aberto (Reaberto após Cancelamento do Prestador)
+
+---
+
+# Atualizações Necessárias nos Termos de Uso
+
+## Reagendamento pelo Prestador
+
+* O prestador poderá solicitar o reagendamento do serviço a qualquer momento.
+* O reagendamento depende de acordo entre cliente e prestador.
+* A nova data somente será considerada válida após formalização e aceitação pela plataforma.
+* Enquanto a alteração não for aceita, a data originalmente agendada permanecerá válida.
+
+---
+
+## Cancelamento pelo Prestador
+
+* O prestador poderá cancelar um serviço a qualquer momento.
+* Cancelamentos realizados pelo prestador serão registrados em seu histórico de confiabilidade.
+* Cancelamentos realizados com menos de 24 horas de antecedência poderão ser classificados como cancelamentos de última hora.
+* Quando um prestador cancelar um serviço, a Renovi poderá reabrir automaticamente o pedido para permitir que outros prestadores enviem propostas ao cliente.
+
+---
+
+## Histórico de Confiabilidade
+
+* A Renovi poderá utilizar o histórico de cancelamentos, reagendamentos, ausências e taxa de conclusão dos serviços para aprimorar mecanismos de segurança, confiança e qualidade da plataforma.
