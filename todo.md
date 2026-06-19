@@ -88,3 +88,5 @@ Coisas para fazer next
 - não exibir quantidade de conversas ativas no card
 - reformular card
 - na tela de trabalhos está mostrando trabalhos dos quais eu já tenho chat ativo
+- se o prestador tirar um serviço que ele presta ele continua vendo aquele serviço no feed?
+-se eu tenho várias push scheduled,qnd elas viram queued elas são enviadas tudo ao mesmo tempo e não respeitam os limites
