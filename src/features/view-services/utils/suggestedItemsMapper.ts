@@ -1,7 +1,7 @@
-import {
-  type SuggestedEquipmentKey,
-  type SuggestedMaterialsKey,
-} from "../../../../supabase/functions/generate-smart-description/allowedValues.ts";
+import type {
+  SuggestedEquipmentKey,
+  SuggestedMaterialsKey,
+} from "@/lib/contracts/generate-smart-description/allowedValues";
 
 export const EQUIPMENT_LABEL_MAP: Record<SuggestedEquipmentKey, string> = {
   insulated_screwdrivers: "Chaves de fenda isoladas",

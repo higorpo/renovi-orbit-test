@@ -1,20 +1,20 @@
+import type {
+  ListProviderOpportunitiesFeedResponse,
+  ListProviderOpportunitiesSortMode,
+} from "@/lib/contracts/list-provider-opportunities/types";
+
 export type {
   ListProviderOpportunitiesBody,
   ListProviderOpportunitiesFeedResponse,
   ListProviderOpportunitiesSortMode,
   ListProviderOpportunityItem,
   ListProviderOpportunitySource,
-} from "../../../../supabase/functions/list-provider-opportunities/types";
+} from "@/lib/contracts/list-provider-opportunities/types";
 
 export {
   FEED_DEFAULT_LIMIT,
   FEED_MAX_LIMIT,
-} from "../../../../supabase/functions/list-provider-opportunities/types";
-
-import type {
-  ListProviderOpportunitiesSortMode,
-  ListProviderOpportunitiesFeedResponse,
-} from "../../../../supabase/functions/list-provider-opportunities/types";
+} from "@/lib/contracts/list-provider-opportunities/types";
 
 /** Client sort mode — mirrors Edge/RPC contract. */
 export type SortMode = ListProviderOpportunitiesSortMode;

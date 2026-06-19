@@ -1,4 +1,4 @@
-import type { EstimatedDurationHintKey } from "supabase/functions/generate-smart-description/allowedValues";
+import type { EstimatedDurationHintKey } from "@/lib/contracts/generate-smart-description/allowedValues";
 
 export const DURATION_LABELS: Record<EstimatedDurationHintKey, string> = {
   under_1h: "Menos de 1 hora",

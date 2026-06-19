@@ -1,4 +1,4 @@
-import { ESTIMATED_DURATION_HINT_KEYS } from "../generate-smart-description/allowedValues.ts";
+import { ESTIMATED_DURATION_HINT_KEYS } from "@orbit/contracts/generate-smart-description/allowedValues.ts";
 
 export interface AddressFormDataLike {
   address_zip?: string;

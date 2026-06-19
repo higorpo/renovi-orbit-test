@@ -1,0 +1,47 @@
+---
+description: Shared API contracts between frontend (Vite) and Edge Functions (Deno)
+globs: src/**,supabase/functions/**
+alwaysApply: false
+---
+
+# Shared contracts (`src/lib/contracts/`)
+
+Types and constants shared by **frontend** and **Edge Functions** live in `src/lib/contracts/<domain>/`, not under `supabase/functions/`.
+
+## Rules
+
+1. **`src/**` must not import from `supabase/functions/**`.** Use `@/lib/contracts/...` instead.
+2. **Edge Functions** import the same modules via the Deno import map alias `@orbit/contracts/` (see `supabase/functions/deno.json`).
+3. **Single source of truth** — define shared shapes once in `src/lib/contracts/`; edge-local modules may re-export for backward compatibility within `supabase/functions/`.
+4. **Edge-only types** (handler internals, parsed params) stay in `supabase/functions/<function>/` and must not be imported by the app.
+5. **Contracts are isomorphic** — no Node-only APIs, no React, no Deno-only globals. Plain TypeScript types, constants, and pure helpers only.
+
+## Layout
+
+```
+src/lib/contracts/
+  generate-smart-description/
+    allowedValues.ts   # AI field keys + validators
+    types.ts           # GenerateSmartDescriptionBody, StructuredAIResponse, …
+  list-provider-opportunities/
+    types.ts           # Feed request/response types + FEED_* limits
+```
+
+## When adding a new shared contract
+
+1. Add or extend a file under `src/lib/contracts/<domain>/`.
+2. Import in the app: `@/lib/contracts/<domain>/...`
+3. Import in Edge: `@orbit/contracts/<domain>/...`
+4. Optionally keep a thin re-export in `supabase/functions/<function>/` if sibling modules already use local paths.
+
+## Examples
+
+```typescript
+// Frontend
+import type { StructuredAIResponse } from "@/lib/contracts/generate-smart-description/types";
+import { FEED_MAX_LIMIT } from "@/lib/contracts/list-provider-opportunities/types";
+
+// Edge Function (Deno)
+import type { GenerateSmartDescriptionBody } from "@orbit/contracts/generate-smart-description/types.ts";
+import { filterAllowedEquipment } from "@orbit/contracts/generate-smart-description/allowedValues.ts";
+```

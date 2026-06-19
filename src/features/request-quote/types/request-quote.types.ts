@@ -1,6 +1,9 @@
 import type { FormSchema } from "@/features/dynamic-form";
 import type { Tables } from "@/lib/supabase/database.types";
-import type { GenerateSmartDescriptionBody, StructuredAIResponse } from "../../../../supabase/functions/generate-smart-description/types";
+import type {
+  GenerateSmartDescriptionBody,
+  StructuredAIResponse,
+} from "@/lib/contracts/generate-smart-description/types";
 
 export type Service = Tables<"platform_services">;
 export type ServiceRow = Service;
