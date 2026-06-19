@@ -23,7 +23,7 @@ import {
 } from "./orderIdempotency.ts";
 import { validateRecaptchaToken } from "../_shared/recaptcha.ts";
 
-const RATE_LIMIT_CONFIG = { perMinute: RATE_LIMIT_PER_MINUTE };
+const RATE_LIMIT_CONFIG = { perMinute: RATE_LIMIT_PER_MINUTE, failClosed: true };
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);

@@ -26,7 +26,7 @@ import {
   jsonResponse,
 } from "./handlerHelpers.ts";
 
-const RATE_LIMIT_CONFIG = { perMinute: 60, burst: 10 };
+const RATE_LIMIT_CONFIG = { perMinute: 60, burst: 10, failClosed: true };
 
 serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);

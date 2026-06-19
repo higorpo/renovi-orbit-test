@@ -1,16 +1,8 @@
 /**
- * Rate Limiter Module for Supabase Edge Functions (soft version)
+ * Rate Limiter Module for Supabase Edge Functions
  *
- * - Limit by IP/user
- * - 60s window
- * - No long blocks (fail open on DB error)
- *
- * NOTE: The SELECT-then-UPDATE pattern has a TOCTOU race under concurrent
- * requests — two callers can read the same count and both increment to the
- * same value, effectively allowing one extra request through the window.
- * For this soft limiter (fail-open) the risk is acceptable. If strict
- * enforcement is needed, migrate to an atomic RPC (e.g. SELECT ... FOR UPDATE
- * or a single INSERT ... ON CONFLICT UPDATE count = count + 1 RETURNING).
+ * Uses atomic RPC public.platform_check_rate_limit (SELECT FOR UPDATE).
+ * Cost-sensitive functions should set failClosed: true to deny on DB/client errors.
  */
 
 import { createServiceRoleClient } from "./serviceRoleClient.ts";
@@ -20,6 +12,8 @@ export interface RateLimitConfig {
   burst?: number;
   blockDuration?: number;
   attackBlockDuration?: number;
+  /** When true, deny requests if rate-limit storage is unavailable (AI, upload, order). */
+  failClosed?: boolean;
 }
 
 export interface RateLimitResult {
@@ -28,91 +22,91 @@ export interface RateLimitResult {
   retryAfter: number;
 }
 
+export interface RateLimitRpcPayload {
+  allowed?: boolean;
+  remaining?: number;
+  retry_after?: number;
+}
+
+export interface RateLimitDeps {
+  rpc: (
+    params: { p_key: string; p_per_minute: number; p_window_ms: number },
+  ) => Promise<{ data: RateLimitRpcPayload | null; error: { message: string } | null }>;
+}
+
 const WINDOW_MS = 60_000;
+const FAIL_CLOSED_RETRY_AFTER_SEC = 60;
+
+function failOpenResult(perMinute: number): RateLimitResult {
+  return { allowed: true, remaining: perMinute, retryAfter: 0 };
+}
+
+function failClosedResult(): RateLimitResult {
+  return { allowed: false, remaining: 0, retryAfter: FAIL_CLOSED_RETRY_AFTER_SEC };
+}
+
+function parseRpcPayload(
+  data: RateLimitRpcPayload | null,
+  perMinute: number,
+  failClosed: boolean,
+): RateLimitResult {
+  if (!data || typeof data.allowed !== "boolean") {
+    return failClosed ? failClosedResult() : failOpenResult(perMinute);
+  }
+
+  return {
+    allowed: data.allowed,
+    remaining: typeof data.remaining === "number" ? data.remaining : 0,
+    retryAfter: typeof data.retry_after === "number" ? data.retry_after : 0,
+  };
+}
+
+export async function checkRateLimitWithDeps(
+  ip: string | null,
+  userId: string | null,
+  functionName: string,
+  config: RateLimitConfig,
+  deps: RateLimitDeps,
+): Promise<RateLimitResult> {
+  const perMinute = config.perMinute || 60;
+  const failClosed = config.failClosed === true;
+  const uniqueKey = `${functionName}:${userId ?? ip ?? "anonymous"}`;
+
+  try {
+    const { data, error } = await deps.rpc({
+      p_key: uniqueKey,
+      p_per_minute: perMinute,
+      p_window_ms: WINDOW_MS,
+    });
+
+    if (error) {
+      return failClosed ? failClosedResult() : failOpenResult(perMinute);
+    }
+
+    return parseRpcPayload(data, perMinute, failClosed);
+  } catch {
+    return failClosed ? failClosedResult() : failOpenResult(perMinute);
+  }
+}
 
 export async function checkRateLimit(
   ip: string | null,
   userId: string | null,
   functionName: string,
-  config: RateLimitConfig
+  config: RateLimitConfig,
 ): Promise<RateLimitResult> {
   let supabase;
   try {
     supabase = createServiceRoleClient();
   } catch {
-    return { allowed: true, remaining: config.perMinute ?? 60, retryAfter: 0 };
+    return config.failClosed === true
+      ? failClosedResult()
+      : failOpenResult(config.perMinute || 60);
   }
 
-  const now = Date.now();
-  const uniqueKey = `${functionName}:${userId ?? ip ?? "anonymous"}`;
-  const perMinute = config.perMinute || 60;
-
-  try {
-    const { data, error } = await supabase
-      .from("platform_rate_limits")
-      .select("*")
-      .eq("key", uniqueKey)
-      .maybeSingle();
-
-    if (error) {
-      return { allowed: true, remaining: perMinute, retryAfter: 0 };
-    }
-
-    if (!data) {
-      await supabase.from("platform_rate_limits").insert({
-        key: uniqueKey,
-        count: 1,
-        reset_at: now + WINDOW_MS,
-        burst_count: 1,
-        blocked_until: null,
-      });
-      return { allowed: true, remaining: perMinute - 1, retryAfter: 0 };
-    }
-
-    if (now > data.reset_at) {
-      await supabase
-        .from("platform_rate_limits")
-        .update({
-          count: 1,
-          reset_at: now + WINDOW_MS,
-          burst_count: 1,
-          blocked_until: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("key", uniqueKey);
-      return { allowed: true, remaining: perMinute - 1, retryAfter: 0 };
-    }
-
-    const currentCount = data.count ?? 0;
-    const newCount = currentCount + 1;
-
-    if (newCount > perMinute) {
-      const msLeft = Math.max(0, data.reset_at - now);
-      const retryAfter = Math.ceil(msLeft / 1000);
-      await supabase
-        .from("platform_rate_limits")
-        .update({
-          count: newCount,
-          burst_count: (data.burst_count ?? 0) + 1,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("key", uniqueKey);
-      return { allowed: false, remaining: 0, retryAfter };
-    }
-
-    await supabase
-      .from("platform_rate_limits")
-      .update({
-        count: newCount,
-        burst_count: (data.burst_count ?? 0) + 1,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("key", uniqueKey);
-
-    return { allowed: true, remaining: Math.max(0, perMinute - newCount), retryAfter: 0 };
-  } catch {
-    return { allowed: true, remaining: perMinute, retryAfter: 0 };
-  }
+  return checkRateLimitWithDeps(ip, userId, functionName, config, {
+    rpc: (params) => supabase.rpc("platform_check_rate_limit", params),
+  });
 }
 
 export function getClientIP(req: Request): string {

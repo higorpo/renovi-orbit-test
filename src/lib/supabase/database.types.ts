@@ -2345,6 +2345,7 @@ export type Database = {
       }
       service_request_provider_visibility: {
         Row: {
+          batch_id: string | null
           created_at: string
           dismissed_at: string | null
           granted_at: string | null
@@ -2355,6 +2356,7 @@ export type Database = {
           source: string
         }
         Insert: {
+          batch_id?: string | null
           created_at?: string
           dismissed_at?: string | null
           granted_at?: string | null
@@ -2365,6 +2367,7 @@ export type Database = {
           source: string
         }
         Update: {
+          batch_id?: string | null
           created_at?: string
           dismissed_at?: string | null
           granted_at?: string | null
@@ -2375,6 +2378,13 @@ export type Database = {
           source?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "service_request_provider_visibility_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "service_request_dispatch_batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "service_request_provider_visibility_provider_id_fkey"
             columns: ["provider_id"]
@@ -2520,6 +2530,7 @@ export type Database = {
           device_id: string
           device_name: string | null
           fcm_token: string | null
+          h3_index: number | null
           ios_version: number | null
           is_virtual: boolean
           location: unknown
@@ -2542,6 +2553,7 @@ export type Database = {
           device_id: string
           device_name?: string | null
           fcm_token?: string | null
+          h3_index?: number | null
           ios_version?: number | null
           is_virtual?: boolean
           location?: unknown
@@ -2564,6 +2576,7 @@ export type Database = {
           device_id?: string
           device_name?: string | null
           fcm_token?: string | null
+          h3_index?: number | null
           ios_version?: number | null
           is_virtual?: boolean
           location?: unknown
@@ -3021,6 +3034,17 @@ export type Database = {
         Args: { p_batch_limit?: number; p_stale_after?: string }
         Returns: Json
       }
+      matching_h3_bigint_to_hex: { Args: { p_cell: number }; Returns: string }
+      matching_h3_cell_at_matching_resolution: {
+        Args: { p_address_h3: string; p_location: unknown }
+        Returns: number
+      }
+      matching_h3_cell_to_parent: {
+        Args: { p_cell: number; p_parent_res: number }
+        Returns: number
+      }
+      matching_h3_hex_to_bigint: { Args: { p_hex: string }; Returns: number }
+      matching_h3_parse_index: { Args: { p_index: string }; Returns: number }
       matching_h3_ring_cells: {
         Args: { p_center_h3: number; p_resolution: number }
         Returns: number[]
@@ -3041,8 +3065,21 @@ export type Database = {
         Args: { p_dispatch_id: string; p_job_run_id?: number }
         Returns: undefined
       }
+      matching_provider_has_opportunity_access: {
+        Args: { p_provider_id: string; p_service_request_id: string }
+        Returns: boolean
+      }
       matching_rank_candidates: {
         Args: { p_candidates: string[]; p_service_request_id: string }
+        Returns: {
+          device_id: string
+          provider_id: string
+          ranking_score: number
+          score_components: Json
+        }[]
+      }
+      matching_rank_candidates_with_discover: {
+        Args: { p_discovered: Json; p_service_request_id: string }
         Returns: {
           device_id: string
           provider_id: string
@@ -3065,6 +3102,10 @@ export type Database = {
       matching_release_dispatch_lease: {
         Args: { p_dispatch_id: string }
         Returns: undefined
+      }
+      matching_renew_dispatch_lease: {
+        Args: { p_dispatch_id: string; p_owner: string; p_ttl_seconds?: number }
+        Returns: boolean
       }
       mmd_idempotency_uuid: { Args: { p_key: string }; Returns: string }
       mmd_ingest_event: {
@@ -3107,6 +3148,10 @@ export type Database = {
       }
       notify_proposal_submitted: {
         Args: { p_proposal_id: string }
+        Returns: Json
+      }
+      platform_check_rate_limit: {
+        Args: { p_key: string; p_per_minute: number; p_window_ms?: number }
         Returns: Json
       }
       platform_constant_bool: {

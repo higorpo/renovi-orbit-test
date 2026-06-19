@@ -19,7 +19,7 @@ import type { UploadChatMediaSuccess, ValidateUploadSessionResult } from "./type
 import { uploadChatMedia } from "./uploadChatMedia.ts";
 
 const logger = createLogger("chat-upload-media");
-const RATE_LIMIT_CONFIG = { perMinute: RATE_LIMIT_PER_MINUTE };
+const RATE_LIMIT_CONFIG = { perMinute: RATE_LIMIT_PER_MINUTE, failClosed: true };
 
 function resolveCorrelationId(req: Request): string {
   const header = req.headers.get("x-correlation-id")?.trim();
