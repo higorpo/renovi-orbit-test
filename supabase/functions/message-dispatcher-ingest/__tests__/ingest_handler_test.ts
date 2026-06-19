@@ -91,6 +91,7 @@ function buildIngestRpcParams(body: IngestDispatchBody) {
     p_scheduled_for: body.scheduledFor,
     p_source_system: body.sourceSystem ?? "orbit",
     p_metadata: body.metadata ?? {},
+    p_bypass_limits: false,
   };
 }
 
@@ -141,6 +142,16 @@ Deno.test("RPC params: preserves explicit optional values", () => {
   assertEquals(params.p_scheduled_for, "2026-07-01T10:00:00Z");
   assertEquals(params.p_source_system, "admin-panel");
   assertEquals(params.p_metadata, { campaign_id: "c-42" });
+});
+
+Deno.test("RPC params: always sets p_bypass_limits to false (public ingest cannot bypass quotas)", () => {
+  const params = buildIngestRpcParams({
+    idempotencyKey: "k",
+    profileId: "p",
+    channel: "push",
+    templateKey: "t",
+  });
+  assertEquals(params.p_bypass_limits, false);
 });
 
 Deno.test("RPC params: scheduledFor is undefined when not provided", () => {

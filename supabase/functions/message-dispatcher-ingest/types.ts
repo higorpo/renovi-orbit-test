@@ -11,7 +11,6 @@ export interface IngestDispatchBody {
   scheduledFor?: string;
   sourceSystem?: string;
   metadata?: Record<string, Json | undefined>;
-  bypassLimits?: boolean;
 }
 
 export interface IngestDispatchRpcResult {
