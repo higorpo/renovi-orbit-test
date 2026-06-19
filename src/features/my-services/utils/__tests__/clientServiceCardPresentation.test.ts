@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { describe, it, expect } from "vitest";
 import type { ServiceModel } from "@/features/view-services";
 import { getClientServiceCardPresentation } from "../clientServiceCardPresentation";

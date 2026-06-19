@@ -52,6 +52,7 @@ export {
 } from "./constants/statusTabs";
 export type { StatusTabId } from "./constants/statusTabs";
 export { getStatusLabel, getStatusBadgeVariant } from "./constants/statusBadge";
+export type { StatusBadgeVariant } from "./constants/statusBadge";
 export { mapRpcServiceRow } from "./utils/serviceMapper";
 export { formatLocationDisplay } from "./utils/locationDisplay";
 export { formatServiceDate } from "./utils/formatDate";
@@ -63,3 +64,7 @@ export {
   type ServiceRequestBudgetActionParams,
   type ServiceRequestBudgetSheetMode,
 } from "./utils/serviceRequestBudgetAction";
+export {
+  getScheduleHighlightContent,
+  getScheduledTiming,
+} from "./utils/formatScheduledSummary";

@@ -1,4 +1,4 @@
-import type { ServiceModel } from "@/features/view-services/types/service.types";
+import type { ServiceModel } from "@/features/view-services";
 
 export interface ProviderServiceCardShowcaseVariant {
   id: string;

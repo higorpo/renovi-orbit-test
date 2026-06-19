@@ -1,16 +1,14 @@
-import { getProposalRevisionReasonLabel } from "@/features/negotiation-proposals/utils/proposalRevisionReasonLabels";
+import { getProposalRevisionReasonLabel } from "@/features/negotiation-proposals";
 import {
+  formatLocationDisplay,
+  formatServiceDate,
+  getScheduleHighlightContent,
+  getScheduledTiming,
   getStatusBadgeVariant,
   getStatusLabel,
+  type ServiceModel,
   type StatusBadgeVariant,
-} from "@/features/view-services/constants/statusBadge";
-import type { ServiceModel } from "@/features/view-services/types/service.types";
-import { formatServiceDate } from "@/features/view-services/utils/formatDate";
-import {
-  getScheduleHighlightContent,
-  getScheduledTiming
-} from "@/features/view-services/utils/formatScheduledSummary";
-import { formatLocationDisplay } from "@/features/view-services/utils/locationDisplay";
+} from "@/features/view-services";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
 import { isProposalExpiringSoon } from "./providerProposalStatus";

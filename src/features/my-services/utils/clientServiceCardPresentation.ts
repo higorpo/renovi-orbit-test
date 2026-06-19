@@ -1,16 +1,14 @@
 import {
-  getStatusBadgeVariant,
-  getStatusLabel,
-  type StatusBadgeVariant,
-} from "@/features/view-services/constants/statusBadge";
-import { getServiceRequestBudgetActionState } from "@/features/view-services/utils/serviceRequestBudgetAction";
-import type { ServiceModel } from "@/features/view-services/types/service.types";
-import { formatServiceDate } from "@/features/view-services/utils/formatDate";
-import {
+  formatLocationDisplay,
+  formatServiceDate,
   getScheduleHighlightContent,
   getScheduledTiming,
-} from "@/features/view-services/utils/formatScheduledSummary";
-import { formatLocationDisplay } from "@/features/view-services/utils/locationDisplay";
+  getServiceRequestBudgetActionState,
+  getStatusBadgeVariant,
+  getStatusLabel,
+  type ServiceModel,
+  type StatusBadgeVariant,
+} from "@/features/view-services";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
 
 export type ClientCardActionIntent = "details" | "budgets" | "cancel" | "messages" | "chat";

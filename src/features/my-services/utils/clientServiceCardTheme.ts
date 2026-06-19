@@ -1,4 +1,4 @@
-import type { ServiceListPhase } from "@/features/view-services/types/service.types";
+import type { ServiceListPhase } from "@/features/view-services";
 import type { ClientCardHighlightEmphasis } from "./clientServiceCardPresentation";
 
 export interface ClientCardTheme {

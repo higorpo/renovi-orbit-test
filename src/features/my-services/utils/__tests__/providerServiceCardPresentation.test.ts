@@ -1,5 +1,6 @@
+// @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import type { ServiceModel } from "@/features/view-services/types/service.types";
+import type { ServiceModel } from "@/features/view-services";
 import { getProviderServiceCardPresentation } from "../providerServiceCardPresentation";
 
 function baseModel(overrides: Partial<ServiceModel> = {}): ServiceModel {
