@@ -192,6 +192,9 @@ export {
 } from "./utils/proposalDetailsFormatters";
 export { mapProposalDetailToSummary } from "./utils/mapProposalDetailToSummary";
 export {
+  buildDateUnavailableRevisionInitialValues,
+} from "./utils/buildDateUnavailableRevisionInitialValues";
+export {
   normalizeProposalStatus,
   resolveProposalStatus,
   hasActiveServiceRequestProposal,

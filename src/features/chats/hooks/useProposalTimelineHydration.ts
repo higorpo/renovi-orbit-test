@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getProposalDetail } from "@/features/negotiation-proposals/api/proposals.api";
-import type { ProposalDetailView } from "@/features/negotiation-proposals/types/proposalDetails.types";
+import { getProposalDetail, type ProposalDetailView } from "@/features/negotiation-proposals";
 import { CHAT_PROPOSAL_TIMELINE_QUERY_KEY } from "../constants/queryKeys";
 
 const STALE_TIME_MS = 30_000;

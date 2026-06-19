@@ -1,22 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { useAuth } from "@/features/auth";
-import { getProposalDetail } from "@/features/negotiation-proposals/api/proposals.api";
-import { AcceptProposalDialog } from "@/features/negotiation-proposals/components/AcceptProposalDialog";
-import { ProposalComposerDialog } from "@/features/negotiation-proposals/components/ProposalComposerDialog";
-import { ProposalDetailsDialog } from "@/features/negotiation-proposals/components/ProposalDetailsDialog";
-import { RejectProposalDialog } from "@/features/negotiation-proposals/components/RejectProposalDialog";
-import { RevisionRequestDialog } from "@/features/negotiation-proposals/components/RevisionRequestDialog";
-import { useProposalDetail } from "@/features/negotiation-proposals/hooks/useProposalDetail";
-import type { ProposalComposerMode } from "@/features/negotiation-proposals/types/proposalComposerMode.types";
-import type { ProposalDetailView } from "@/features/negotiation-proposals/types/proposalDetails.types";
-import { buildDateUnavailableRevisionInitialValues } from "@/features/negotiation-proposals/utils/buildDateUnavailableRevisionInitialValues";
-import type { RevisionRequestInitialValues } from "@/features/negotiation-proposals/types/proposals.types";
-import { canEditServiceRequestProposal } from "@/features/negotiation-proposals/utils/proposalStatus";
+import {
+  AcceptProposalDialog,
+  canEditServiceRequestProposal,
+  ProposalComposerDialog,
+  ProposalDetailsDialog,
+  RejectProposalDialog,
+  RevisionRequestDialog,
+} from "@/features/negotiation-proposals";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { CHAT_DETAILS_COLUMN_MEDIA_QUERY } from "../../constants/layout";
 import { ROUTE_CHATS_LIST } from "../../constants/routes";
 import type { ChatActionBannerCtaPayload } from "../../hooks/useChatActionBannerState";
+import { useChatProposalDialogs } from "../../hooks/useChatProposalDialogs";
 import { useCloseConversationMutation } from "../../hooks/useCloseConversationMutation";
 import { useConversationDetail } from "../../hooks/useConversationDetail";
 import { useInvalidateChatProposalQueries } from "../../hooks/useInvalidateChatProposalQueries";
@@ -25,7 +22,6 @@ import {
 } from "../ChatDetails/ChatDetailsActions";
 import { ChatDetailsDesktopPanel } from "../ChatDetails/ChatDetailsDesktopPanel";
 import { ChatDetailsMobileSheet } from "../ChatDetails/ChatDetailsMobileSheet";
-import type { ProposalCardAction } from "../DynamicMessageRenderer/DynamicProposalCard";
 import { ChatScreen } from "../ChatScreen/ChatScreen";
 
 export function ChatsConversationRoute() {
@@ -41,114 +37,43 @@ export function ChatsConversationRoute() {
   const isProviderViewer = profile?.role === "provider";
 
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [acceptOpen, setAcceptOpen] = useState(false);
-  const [acceptProposalId, setAcceptProposalId] = useState<string | null>(null);
-  const [rejectOpen, setRejectOpen] = useState(false);
-  const [rejectProposalId, setRejectProposalId] = useState<string | null>(null);
-  const [revisionOpen, setRevisionOpen] = useState(false);
-  const [revisionProposalId, setRevisionProposalId] = useState<string | null>(null);
-  const [revisionInitialValues, setRevisionInitialValues] =
-    useState<RevisionRequestInitialValues | null>(null);
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
-  const [proposalComposerOpen, setProposalComposerOpen] = useState(false);
-  const [proposalComposerMode, setProposalComposerMode] = useState<ProposalComposerMode>("create");
-  const [proposalComposerInitialProposal, setProposalComposerInitialProposal] =
-    useState<ProposalDetailView | null>(null);
-  const [detailsProposalId, setDetailsProposalId] = useState<string | null>(null);
-  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
-  const proposalDetailQuery = useProposalDetail({
-    proposalId: detailsProposalId,
-    enabled: detailsDialogOpen,
-    audience: isProviderViewer ? "provider" : "client",
-  });
-
-  const revisionProposalDetailQuery = useProposalDetail({
-    proposalId: revisionProposalId,
-    enabled: revisionOpen,
-    audience: isProviderViewer ? "provider" : "client",
-  });
-
-  const acceptProposalDetailQuery = useProposalDetail({
-    proposalId: acceptProposalId,
-    enabled: acceptOpen,
-    audience: "client",
+  const {
+    acceptOpen,
+    acceptProposalId,
+    acceptProposalDetailQuery,
+    handleAcceptDialogOpenChange,
+    handleAcceptRequestRevision,
+    rejectOpen,
+    rejectProposalId,
+    setRejectOpen,
+    revisionOpen,
+    revisionProposalId,
+    revisionInitialValues,
+    revisionProposalDetailQuery,
+    handleRevisionDialogOpenChange,
+    proposalComposerOpen,
+    setProposalComposerOpen,
+    proposalComposerMode,
+    proposalComposerInitialProposal,
+    openProposalComposerCreate,
+    openProposalComposerEdit,
+    detailsDialogOpen,
+    detailsProposalId,
+    proposalDetailQuery,
+    openProposalDetails,
+    handleDetailsDialogOpenChange,
+    handleProposalAction,
+  } = useChatProposalDialogs({
+    chatId: chatId ?? null,
+    isProviderViewer,
   });
 
   useEffect(() => {
     setDetailsOpen(false);
     setConfirmCloseOpen(false);
-    setProposalComposerOpen(false);
-    setProposalComposerMode("create");
-    setProposalComposerInitialProposal(null);
-    setDetailsDialogOpen(false);
-    setDetailsProposalId(null);
-    setRejectOpen(false);
-    setRejectProposalId(null);
-    setRevisionOpen(false);
-    setRevisionProposalId(null);
-    setRevisionInitialValues(null);
-    setAcceptOpen(false);
-    setAcceptProposalId(null);
   }, [chatId]);
-
-  const openProposalDetails = useCallback((proposalId: string) => {
-    setDetailsProposalId(proposalId);
-    setDetailsDialogOpen(true);
-  }, []);
-
-  const handleDetailsDialogOpenChange = useCallback((open: boolean) => {
-    setDetailsDialogOpen(open);
-    if (!open) setDetailsProposalId(null);
-  }, []);
-
-  const openProposalComposerCreate = useCallback(() => {
-    setProposalComposerMode("create");
-    setProposalComposerInitialProposal(null);
-    setProposalComposerOpen(true);
-  }, []);
-
-  const openProposalComposerEdit = useCallback(async (proposalId: string) => {
-    const result = await getProposalDetail(proposalId);
-    if (result.error || !result.data) return;
-
-    setProposalComposerMode("edit");
-    setProposalComposerInitialProposal(result.data);
-    setProposalComposerOpen(true);
-  }, []);
-
-  const handleProposalAction = useCallback(
-    (action: ProposalCardAction, proposalId: string) => {
-      if (action === "accept") {
-        setAcceptProposalId(proposalId);
-        setAcceptOpen(true);
-        return;
-      }
-
-      if (action === "reject") {
-        setRejectProposalId(proposalId);
-        setRejectOpen(true);
-        return;
-      }
-
-      if (action === "request_revision") {
-        setRevisionInitialValues(null);
-        setRevisionProposalId(proposalId);
-        setRevisionOpen(true);
-        return;
-      }
-
-      if (action === "view_details") {
-        openProposalDetails(proposalId);
-        return;
-      }
-
-      if (action === "edit_proposal") {
-        void openProposalComposerEdit(proposalId);
-      }
-    },
-    [openProposalComposerEdit, openProposalDetails],
-  );
 
   const handleBannerCta = useCallback(
     (payload: ChatActionBannerCtaPayload) => {
@@ -177,18 +102,6 @@ export function ChatsConversationRoute() {
   const handleArchiveRequest = useCallback(() => {
     setConfirmCloseOpen(true);
   }, []);
-
-  const handleAcceptRequestRevision = useCallback(() => {
-    const proposalId = acceptProposalId;
-    if (!proposalId) return;
-
-    const suggestedSlots = acceptProposalDetailQuery.data?.proposal_suggested_slots ?? [];
-    setRevisionInitialValues(buildDateUnavailableRevisionInitialValues(suggestedSlots));
-    setRevisionProposalId(proposalId);
-    setAcceptOpen(false);
-    setAcceptProposalId(null);
-    setRevisionOpen(true);
-  }, [acceptProposalId, acceptProposalDetailQuery.data?.proposal_suggested_slots]);
 
   const handleConfirmClose = useCallback(() => {
     closeConversationMutation.mutate(undefined, {
@@ -247,10 +160,7 @@ export function ChatsConversationRoute() {
       {acceptOpen ? (
         <AcceptProposalDialog
           open
-          onOpenChange={(open) => {
-            setAcceptOpen(open);
-            if (!open) setAcceptProposalId(null);
-          }}
+          onOpenChange={handleAcceptDialogOpenChange}
           chatId={chatId}
           serviceRequestId={serviceRequestId}
           proposalId={acceptProposalId}
@@ -276,13 +186,7 @@ export function ChatsConversationRoute() {
       {revisionOpen ? (
         <RevisionRequestDialog
           open
-          onOpenChange={(open) => {
-            setRevisionOpen(open);
-            if (!open) {
-              setRevisionProposalId(null);
-              setRevisionInitialValues(null);
-            }
-          }}
+          onOpenChange={handleRevisionDialogOpenChange}
           chatId={chatId}
           serviceRequestId={serviceRequestId}
           proposalId={revisionProposalId}
@@ -313,7 +217,7 @@ export function ChatsConversationRoute() {
           }
           onEdit={() => {
             if (!detailsProposalId) return;
-            setDetailsDialogOpen(false);
+            handleDetailsDialogOpenChange(false);
             void openProposalComposerEdit(detailsProposalId);
           }}
           isLoading={proposalDetailQuery.isLoading}
