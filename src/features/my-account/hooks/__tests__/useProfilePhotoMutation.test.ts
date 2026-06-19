@@ -14,10 +14,6 @@ vi.mock("@/features/auth", () => ({
   profileApi: { updateProfile: vi.fn() },
 }));
 
-vi.mock("@/lib/supabase/client", () => ({
-  supabase: {},
-}));
-
 vi.mock("../../api/profileImageStorage.api", () => ({
   uploadProfileImage: vi.fn(),
   removeProfileImageFromStorage: vi.fn(),
@@ -77,11 +73,7 @@ describe("useUploadProfilePhoto", () => {
       await result.current.uploadPhotoAsync(file);
     });
 
-    expect(uploadProfileImage).toHaveBeenCalledWith(
-      expect.anything(),
-      "user-1",
-      file
-    );
+    expect(uploadProfileImage).toHaveBeenCalledWith("user-1", file);
     expect(profileApi.updateProfile).toHaveBeenCalledWith("user-1", {
       profile_image_path: "users/user-1/profile/avatar.jpg",
     });
@@ -165,7 +157,6 @@ describe("useRemoveProfilePhoto", () => {
     });
 
     expect(removeProfileImageFromStorage).toHaveBeenCalledWith(
-      expect.anything(),
       "users/user-1/profile/avatar.jpg"
     );
     expect(profileApi.updateProfile).toHaveBeenCalledWith("user-1", {

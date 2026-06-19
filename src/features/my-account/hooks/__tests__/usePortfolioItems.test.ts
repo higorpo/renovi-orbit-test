@@ -46,10 +46,6 @@ vi.mock("../../api/portfolioImageStorage.api", () => ({
   removePortfolioImageFromStorage: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/client", () => ({
-  supabase: { from: vi.fn() },
-}));
-
 const useAuth = vi.mocked(await import("@/features/auth").then((m) => m.useAuth));
 const listPortfolioItems = vi.mocked(
   await import("../../api/providerProfile.api").then((m) => m.listPortfolioItems)
@@ -312,7 +308,6 @@ describe("usePortfolioItems", () => {
       expect(res.data).toBeNull();
       expect(res.error).toBe("DB error");
       expect(removePortfolioImageFromStorage).toHaveBeenCalledWith(
-        expect.anything(),
         "providers/prov-1/portfolio/gen-1/image-1.jpg"
       );
     });
@@ -432,10 +427,7 @@ describe("usePortfolioItems", () => {
         visibility: "public",
         image_paths: ["keep.jpg", "new/path.jpg"],
       });
-      expect(removePortfolioImageFromStorage).toHaveBeenCalledWith(
-        expect.anything(),
-        "old.jpg"
-      );
+      expect(removePortfolioImageFromStorage).toHaveBeenCalledWith("old.jpg");
     });
 
     it("returns error and rolls back uploads when update fails", async () => {
@@ -461,10 +453,7 @@ describe("usePortfolioItems", () => {
       });
 
       expect(res.error).toBe("Update failed");
-      expect(removePortfolioImageFromStorage).toHaveBeenCalledWith(
-        expect.anything(),
-        "uploaded/tmp.jpg"
-      );
+      expect(removePortfolioImageFromStorage).toHaveBeenCalledWith("uploaded/tmp.jpg");
     });
 
     it("throws when providerId is null", async () => {

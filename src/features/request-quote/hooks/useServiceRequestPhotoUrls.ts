@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
-import {
-  getServiceRequestPhotoDisplayUrl,
-  isStoragePath,
-} from "../utils/serviceRequestPhotos";
+import { getServiceRequestPhotoDisplayUrl } from "../api/serviceRequestPhotoStorage.api";
+import { isStoragePath } from "../utils/serviceRequestPhotos";
 
 /**
  * Resolves service_requests.photos (paths or legacy URLs) to display URLs.
@@ -30,7 +27,7 @@ export function useServiceRequestPhotoUrls(
         photos.map(async (item) => {
           if (cancelled) return "";
           if (!isStoragePath(item)) return item;
-          return getServiceRequestPhotoDisplayUrl(supabase, item);
+          return getServiceRequestPhotoDisplayUrl(item);
         })
       );
       if (!cancelled) {

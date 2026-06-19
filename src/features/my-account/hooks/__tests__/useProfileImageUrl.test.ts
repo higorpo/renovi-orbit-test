@@ -43,10 +43,7 @@ describe("useProfileImageUrl", () => {
     });
 
     expect(result.current.url).toBe("https://signed.url/avatar.jpg");
-    expect(getProfileImageSignedUrl).toHaveBeenCalledWith(
-      expect.anything(),
-      "users/u1/profile/avatar.jpg"
-    );
+    expect(getProfileImageSignedUrl).toHaveBeenCalledWith("users/u1/profile/avatar.jpg");
   });
 
   it("sets url to empty when getProfileImageSignedUrl returns empty", async () => {

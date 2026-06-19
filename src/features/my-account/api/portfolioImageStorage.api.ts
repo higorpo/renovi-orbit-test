@@ -3,8 +3,8 @@
  * Only the storage path is persisted in DB; signed URLs are resolved elsewhere.
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
+import { supabase } from "@/lib/supabase/client";
 import {
   PROVIDER_PORTFOLIO_IMAGES_BUCKET,
   providerPortfolioImagePath,
@@ -36,7 +36,6 @@ export function validatePortfolioImageFile(file: File): string | null {
 }
 
 export async function uploadPortfolioImage(
-  supabase: SupabaseClient,
   providerId: string,
   itemId: string,
   file: File,
@@ -66,7 +65,6 @@ export async function uploadPortfolioImage(
 }
 
 export async function removePortfolioImageFromStorage(
-  supabase: SupabaseClient,
   path: string
 ): Promise<RemovePortfolioImageResult> {
   const { error } = await supabase.storage

@@ -1,9 +1,12 @@
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { logger } from "@/lib/logger";
-import { supabase } from "@/lib/supabase/client";
+import {
+  createConversationPresenceChannel,
+  teardownPresenceChannel,
+} from "../api/realtime.api";
 import {
   canPublishTypingPresence,
-  conversationPresenceChannelName,
   isRemoteTypingVisible,
   parseTypingPresenceState,
   TYPING_ACTIVITY_IDLE_MS,
@@ -44,7 +47,7 @@ export function useConversationTypingPresence({
   const [lastRemoteTypingAt, setLastRemoteTypingAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
   const readyRef = useRef(false);
   const isTypingRef = useRef(false);
   const stopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -190,7 +193,7 @@ export function useConversationTypingPresence({
     }, REMOTE_TYPING_CLEAR_DEBOUNCE_MS);
   };
 
-  const syncRemoteTypingRef = useRef<(channel: ReturnType<typeof supabase.channel>) => void>(() => {});
+  const syncRemoteTypingRef = useRef<(channel: RealtimeChannel) => void>(() => {});
 
   syncRemoteTypingRef.current = (channel) => {
     const userId = currentUserIdRef.current;
@@ -228,9 +231,8 @@ export function useConversationTypingPresence({
 
     effectActiveRef.current = true;
 
-    const teardownChannel = (channel: ReturnType<typeof supabase.channel>) => {
-      void channel.untrack().catch(() => undefined);
-      void supabase.removeChannel(channel);
+    const teardownChannel = (channel: RealtimeChannel) => {
+      void teardownPresenceChannel(channel);
       if (channelRef.current === channel) {
         channelRef.current = null;
       }
@@ -239,10 +241,7 @@ export function useConversationTypingPresence({
     const connect = () => {
       if (!effectActiveRef.current) return;
 
-      const channelName = conversationPresenceChannelName(conversationId);
-      const channel = supabase.channel(channelName, {
-        config: { presence: { key: currentUserId } },
-      });
+      const channel = createConversationPresenceChannel(conversationId, currentUserId);
 
       const onPresenceChange = () => syncRemoteTypingRef.current(channel);
 

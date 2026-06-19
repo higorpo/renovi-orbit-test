@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth";
-import { supabase } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
 import {
   listPortfolioItems,
@@ -91,7 +90,7 @@ export function usePortfolioItems() {
     await deleteMutation.mutateAsync(itemId);
     if (paths.length > 0) {
       await Promise.all(
-        paths.map((path) => removePortfolioImageFromStorage(supabase, path))
+        paths.map((path) => removePortfolioImageFromStorage(path))
       );
     }
   };
@@ -117,7 +116,7 @@ export function usePortfolioItems() {
     try {
       for (let i = 0; i < imageFiles.length; i += 1) {
         const file = imageFiles[i];
-        const uploadResult = await uploadPortfolioImage(supabase, providerId, itemId, file, i);
+        const uploadResult = await uploadPortfolioImage(providerId, itemId, file, i);
         if (uploadResult.error || !uploadResult.path) {
           throw new Error(uploadResult.error ?? "Não foi possível enviar uma imagem do portfólio.");
         }
@@ -139,7 +138,7 @@ export function usePortfolioItems() {
     } catch (err) {
       if (uploadedPaths.length > 0) {
         await Promise.all(
-          uploadedPaths.map((path) => removePortfolioImageFromStorage(supabase, path))
+          uploadedPaths.map((path) => removePortfolioImageFromStorage(path))
         );
       }
       const message = err instanceof Error ? err.message : "Não foi possível criar o item do portfólio.";
@@ -171,7 +170,7 @@ export function usePortfolioItems() {
     try {
       for (let i = 0; i < imageFiles.length; i += 1) {
         const file = imageFiles[i];
-        const uploadResult = await uploadPortfolioImage(supabase, providerId, itemId, file, i);
+        const uploadResult = await uploadPortfolioImage(providerId, itemId, file, i);
         if (uploadResult.error || !uploadResult.path) {
           throw new Error(uploadResult.error ?? "Não foi possível enviar uma imagem do portfólio.");
         }
@@ -189,7 +188,7 @@ export function usePortfolioItems() {
       if (updateError.error) throw new Error(updateError.error);
 
       await Promise.all(
-        pathsToRemove.map((path) => removePortfolioImageFromStorage(supabase, path))
+        pathsToRemove.map((path) => removePortfolioImageFromStorage(path))
       );
 
       invalidate();
@@ -197,7 +196,7 @@ export function usePortfolioItems() {
     } catch (err) {
       if (uploadedPaths.length > 0) {
         await Promise.all(
-          uploadedPaths.map((path) => removePortfolioImageFromStorage(supabase, path))
+          uploadedPaths.map((path) => removePortfolioImageFromStorage(path))
         );
       }
       const message =

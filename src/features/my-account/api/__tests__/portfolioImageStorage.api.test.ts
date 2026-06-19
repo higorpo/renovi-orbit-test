@@ -5,16 +5,24 @@ import {
   uploadPortfolioImage,
   removePortfolioImageFromStorage,
 } from "../portfolioImageStorage.api";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
-function createMockSupabase() {
-  return {
+const mockStorageFrom = vi.fn();
+
+vi.mock("@/lib/supabase/client", () => ({
+  supabase: {
     storage: {
-      from: vi.fn().mockReturnThis(),
-      upload: vi.fn(),
-      remove: vi.fn(),
+      from: (...args: unknown[]) => mockStorageFrom(...args),
     },
-  } as unknown as SupabaseClient;
+  },
+}));
+
+function mockPortfolioImagesChain() {
+  const chain = {
+    upload: vi.fn(),
+    remove: vi.fn(),
+  };
+  mockStorageFrom.mockReturnValue(chain);
+  return chain;
 }
 
 describe("validatePortfolioImageFile", () => {
@@ -48,11 +56,9 @@ describe("validatePortfolioImageFile", () => {
 });
 
 describe("uploadPortfolioImage", () => {
-  let supabase: SupabaseClient;
-
   beforeEach(() => {
-    supabase = createMockSupabase();
-    const chain = supabase.storage.from("provider-portfolio-images");
+    vi.clearAllMocks();
+    const chain = mockPortfolioImagesChain();
     vi.mocked(chain.upload).mockResolvedValue({
       data: { id: "id", path: "path", fullPath: "path" },
       error: null,
@@ -62,64 +68,62 @@ describe("uploadPortfolioImage", () => {
   it("returns validation error for invalid file type", async () => {
     const file = new File(["x"], "a.gif", { type: "image/gif" });
     Object.defineProperty(file, "size", { value: 1024 });
-    const result = await uploadPortfolioImage(supabase, "prov-1", "item-1", file, 0);
+    const result = await uploadPortfolioImage("prov-1", "item-1", file, 0);
     expect(result).toEqual({ path: null, error: expect.stringContaining("Formato") });
-    expect(supabase.storage.from("provider-portfolio-images").upload).not.toHaveBeenCalled();
+    expect(mockStorageFrom).not.toHaveBeenCalled();
   });
 
   it("returns path and null error on successful upload", async () => {
     const file = new File(["x"], "a.jpg", { type: "image/jpeg" });
     Object.defineProperty(file, "size", { value: 1024 });
-    const result = await uploadPortfolioImage(supabase, "prov-1", "item-1", file, 0);
+    const result = await uploadPortfolioImage("prov-1", "item-1", file, 0);
     expect(result.path).toContain("providers/prov-1/portfolio/item-1/");
     expect(result.path).toMatch(/image-1\.(jpg|jpeg|png|webp|heic|heif)$/);
     expect(result.error).toBeNull();
-    expect(supabase.storage.from("provider-portfolio-images").upload).toHaveBeenCalled();
+    expect(mockStorageFrom).toHaveBeenCalledWith("provider-portfolio-images");
   });
 
   it("uses index for filename (image-1, image-2)", async () => {
     const file = new File(["x"], "photo.png", { type: "image/png" });
     Object.defineProperty(file, "size", { value: 1024 });
-    const result = await uploadPortfolioImage(supabase, "p", "i", file, 2);
+    const result = await uploadPortfolioImage("p", "i", file, 2);
     expect(result.path).toMatch(/image-3\./);
   });
 
   it("returns error when storage upload fails", async () => {
-    vi.mocked(supabase.storage.from("provider-portfolio-images").upload).mockResolvedValue({
+    const chain = mockPortfolioImagesChain();
+    vi.mocked(chain.upload).mockResolvedValue({
       data: null,
       error: { message: "Storage full" } as never,
     });
     const file = new File(["x"], "a.jpg", { type: "image/jpeg" });
     Object.defineProperty(file, "size", { value: 1024 });
-    const result = await uploadPortfolioImage(supabase, "prov-1", "item-1", file, 0);
+    const result = await uploadPortfolioImage("prov-1", "item-1", file, 0);
     expect(result).toEqual({ path: null, error: "Storage full" });
   });
 });
 
 describe("removePortfolioImageFromStorage", () => {
   it("returns null error on success", async () => {
-    const supabase = createMockSupabase();
-    vi.mocked(supabase.storage.from("provider-portfolio-images").remove).mockResolvedValue({
+    const chain = mockPortfolioImagesChain();
+    vi.mocked(chain.remove).mockResolvedValue({
       data: [],
       error: null,
     });
     const result = await removePortfolioImageFromStorage(
-      supabase,
       "providers/p1/portfolio/item1/image-1.jpg"
     );
     expect(result).toEqual({ error: null });
-    expect(supabase.storage.from("provider-portfolio-images").remove).toHaveBeenCalledWith([
-      "providers/p1/portfolio/item1/image-1.jpg",
-    ]);
+    expect(chain.remove).toHaveBeenCalledWith(["providers/p1/portfolio/item1/image-1.jpg"]);
   });
 
   it("returns error when storage remove fails", async () => {
-    const supabase = createMockSupabase();
-    vi.mocked(supabase.storage.from("provider-portfolio-images").remove).mockResolvedValue({
+    const chain = mockPortfolioImagesChain();
+    vi.mocked(chain.remove).mockResolvedValue({
       data: null,
       error: { message: "Not found" } as never,
     });
-    const result = await removePortfolioImageFromStorage(supabase, "path");
+    const result = await removePortfolioImageFromStorage("path");
     expect(result).toEqual({ error: "Not found" });
   });
 });

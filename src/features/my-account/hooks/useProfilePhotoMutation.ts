@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth, profileApi } from "@/features/auth";
-import { supabase } from "@/lib/supabase/client";
 import {
   uploadProfileImage,
   removeProfileImageFromStorage,
@@ -15,7 +14,7 @@ export function useUploadProfilePhoto() {
   const mutation = useMutation({
     mutationFn: async (file: File) => {
       if (!user?.id) throw new Error("Not authenticated");
-      const { path, error } = await uploadProfileImage(supabase, user.id, file);
+      const { path, error } = await uploadProfileImage(user.id, file);
       if (error) throw new Error(error);
       if (!path) throw new Error("Upload failed");
       const updateResult = await profileApi.updateProfile(user.id, {
@@ -47,7 +46,7 @@ export function useRemoveProfilePhoto() {
   const mutation = useMutation({
     mutationFn: async (currentPath: string) => {
       if (!user?.id) throw new Error("Not authenticated");
-      const removeResult = await removeProfileImageFromStorage(supabase, currentPath);
+      const removeResult = await removeProfileImageFromStorage(currentPath);
       if (removeResult.error) throw new Error(removeResult.error);
       const updateResult = await profileApi.updateProfile(user.id, {
         profile_image_path: null,

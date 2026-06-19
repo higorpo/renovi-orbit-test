@@ -18,9 +18,13 @@ vi.mock('../collectDeviceBeaconPayload', () => ({
   collectDeviceBeaconPayload: (...args: unknown[]) => collectMock(...args),
 }))
 
+vi.mock('../../api/deviceBeaconHttp.api', () => ({
+  getDeviceBeaconAccessToken: vi.fn(async () => null),
+  upsertDeviceBeaconViaCapacitorHttp: vi.fn(),
+}))
+
 vi.mock('@/lib/supabase/client', () => ({
   supabase: { auth: { getSession: vi.fn(async () => ({ data: { session: null } })) } },
-  getSupabaseAnonKey: () => 'anon-key',
 }))
 
 vi.mock('@capacitor/core', () => ({

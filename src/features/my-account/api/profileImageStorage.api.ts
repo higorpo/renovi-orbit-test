@@ -3,8 +3,8 @@
  * Only storage path is stored in DB; never store full URL.
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
+import { supabase } from "@/lib/supabase/client";
 import {
   PROFILE_IMAGES_BUCKET,
   profileImagePath,
@@ -37,7 +37,6 @@ export function validateProfileImageFile(file: File): string | null {
  * Caller must then update the profile row with this path.
  */
 export async function uploadProfileImage(
-  supabase: SupabaseClient,
   userId: string,
   file: File
 ): Promise<UploadProfileImageResult> {
@@ -64,7 +63,6 @@ export async function uploadProfileImage(
  * Remove profile image from storage. Caller must clear profile_image_path in DB.
  */
 export async function removeProfileImageFromStorage(
-  supabase: SupabaseClient,
   path: string
 ): Promise<RemoveProfileImageResult> {
   const { error } = await supabase.storage
@@ -81,10 +79,7 @@ export async function removeProfileImageFromStorage(
 /**
  * Get a signed URL for displaying a profile image from its storage path.
  */
-export async function getProfileImageSignedUrl(
-  supabase: SupabaseClient,
-  path: string
-): Promise<string> {
+export async function getProfileImageSignedUrl(path: string): Promise<string> {
   const { data, error } = await supabase.storage
     .from(PROFILE_IMAGES_BUCKET)
     .createSignedUrl(path, PROFILE_IMAGE_SIGNED_URL_EXPIRY_SEC);

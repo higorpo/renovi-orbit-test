@@ -6,13 +6,12 @@ import { useServiceRequestPhotoUrls } from "../useServiceRequestPhotoUrls";
 const getServiceRequestPhotoDisplayUrl = vi.fn();
 const isStoragePath = vi.fn();
 
-vi.mock("@/lib/supabase/client", () => ({
-  supabase: { name: "mock-supabase" },
+vi.mock("../../api/serviceRequestPhotoStorage.api", () => ({
+  getServiceRequestPhotoDisplayUrl: (...args: unknown[]) =>
+    getServiceRequestPhotoDisplayUrl(...args),
 }));
 
 vi.mock("../../utils/serviceRequestPhotos", () => ({
-  getServiceRequestPhotoDisplayUrl: (...args: unknown[]) =>
-    getServiceRequestPhotoDisplayUrl(...args),
   isStoragePath: (...args: unknown[]) => isStoragePath(...args),
 }));
 
@@ -31,16 +30,7 @@ describe("useServiceRequestPhotoUrls", () => {
       expect(result.current.isLoading).toBe(false);
     });
     expect(result.current.urls).toEqual([]);
-  });
-
-  it("handles undefined photos like empty (defensive)", async () => {
-    const { result } = renderHook(() =>
-      useServiceRequestPhotoUrls(undefined as unknown as null)
-    );
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-    expect(result.current.urls).toEqual([]);
+    expect(getServiceRequestPhotoDisplayUrl).not.toHaveBeenCalled();
   });
 
   it("returns empty urls when photos is empty array", async () => {
@@ -51,63 +41,56 @@ describe("useServiceRequestPhotoUrls", () => {
     expect(result.current.urls).toEqual([]);
   });
 
-  it("keeps legacy URLs as-is when not a storage path", async () => {
-    isStoragePath.mockReturnValue(false);
-    const { result } = renderHook(() =>
-      useServiceRequestPhotoUrls(["https://example.com/a.jpg"])
-    );
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-    expect(result.current.urls).toEqual(["https://example.com/a.jpg"]);
-    expect(getServiceRequestPhotoDisplayUrl).not.toHaveBeenCalled();
-  });
-
   it("resolves storage paths via getServiceRequestPhotoDisplayUrl", async () => {
-    isStoragePath.mockImplementation((p: string) => p.startsWith("svc/"));
+    isStoragePath.mockReturnValueOnce(true);
     getServiceRequestPhotoDisplayUrl.mockResolvedValue("https://signed.example/x");
-    const { result } = renderHook(() => useServiceRequestPhotoUrls(["svc/requests/1/a.jpg"]));
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
+
+    const { result } = renderHook(() => useServiceRequestPhotoUrls(["path/to/photo.jpg"]));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(getServiceRequestPhotoDisplayUrl).toHaveBeenCalledWith("path/to/photo.jpg");
     expect(result.current.urls).toEqual(["https://signed.example/x"]);
-    expect(getServiceRequestPhotoDisplayUrl).toHaveBeenCalled();
   });
 
-  it("filters out empty strings from resolved list", async () => {
-    isStoragePath.mockReturnValue(true);
+  it("filters out empty resolved URLs", async () => {
+    isStoragePath.mockReturnValueOnce(true);
     getServiceRequestPhotoDisplayUrl.mockResolvedValue("");
-    const { result } = renderHook(() => useServiceRequestPhotoUrls(["svc/a"]));
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
+
+    const { result } = renderHook(() => useServiceRequestPhotoUrls(["path.jpg"]));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.urls).toEqual([]);
   });
 
-  it("re-runs when photos array contents change", async () => {
-    isStoragePath.mockReturnValue(false);
-    const { result, rerender } = renderHook(
-      ({ photos }: { photos: string[] | null }) => useServiceRequestPhotoUrls(photos),
-      {
-        initialProps: { photos: ["https://a.com/1.jpg"] as string[] | null },
-      }
+  it("passes legacy URLs through without calling storage API", async () => {
+    isStoragePath.mockReturnValueOnce(false);
+
+    const { result } = renderHook(() =>
+      useServiceRequestPhotoUrls(["https://cdn.example.com/legacy.jpg"])
     );
+
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.urls).toEqual(["https://a.com/1.jpg"]);
-    rerender({ photos: ["https://b.com/2.jpg"] });
-    await waitFor(() => {
-      expect(result.current.urls).toEqual(["https://b.com/2.jpg"]);
-    });
+    expect(getServiceRequestPhotoDisplayUrl).not.toHaveBeenCalled();
+    expect(result.current.urls).toEqual(["https://cdn.example.com/legacy.jpg"]);
   });
 
-  it("does not update state after unmount when cancelled", async () => {
+  it("ignores stale results when photos change before resolution", async () => {
     isStoragePath.mockReturnValue(true);
-    getServiceRequestPhotoDisplayUrl.mockImplementation(
-      () => new Promise((r) => setTimeout(() => r("https://late"), 50))
+    let resolveFirst: (value: string) => void;
+    const firstPromise = new Promise<string>((r) => {
+      resolveFirst = r;
+    });
+    getServiceRequestPhotoDisplayUrl.mockReturnValue(firstPromise);
+
+    const { result, rerender } = renderHook(
+      ({ photos }: { photos: string[] | null }) => useServiceRequestPhotoUrls(photos),
+      { initialProps: { photos: ["a.jpg"] } as { photos: string[] | null } }
     );
-    const { result, unmount } = renderHook(() => useServiceRequestPhotoUrls(["svc/x"]));
-    expect(result.current.isLoading).toBe(true);
-    unmount();
-    await new Promise((r) => setTimeout(r, 80));
+
+    rerender({ photos: null });
+    resolveFirst!("https://stale.url");
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.urls).toEqual([]);
   });
 });

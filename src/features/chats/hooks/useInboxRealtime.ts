@@ -3,11 +3,10 @@ import { useEffect, useRef } from "react";
 import { useAuth } from "@/features/auth";
 import { logger } from "@/lib/logger";
 import { metrics } from "@/lib/sentry";
-import { supabase } from "@/lib/supabase/client";
+import { subscribeInboxRealtime, removeRealtimeChannel, type InboxMessageInsertPayload } from "../api/realtime.api";
 import { CHAT_CONVERSATIONS_LIST_QUERY_KEY } from "../constants/queryKeys";
 import { wasRecentlySentChatMessageId } from "../utils/chatMessageSendSync";
 import { patchConversationListCache } from "../utils/patchConversationListCache";
-import { subscribeInboxChannel, type InboxMessageInsertPayload } from "../utils/inboxRealtimeChannel";
 
 const DEDUPE_CACHE_LIMIT = 512;
 
@@ -72,7 +71,7 @@ export function useInboxRealtime(options?: UseInboxRealtimeOptions) {
       }
     };
 
-    const channel = subscribeInboxChannel(supabase, userId, {
+    const channel = subscribeInboxRealtime(userId, {
       onMessageInsert: handleMessageInsert,
       onStatusChange: (status) => {
         metrics.count("chats.inbox_realtime_subscription_status", 1, { status });
@@ -94,7 +93,7 @@ export function useInboxRealtime(options?: UseInboxRealtimeOptions) {
 
     return () => {
       lastStatusRef.current = null;
-      void supabase.removeChannel(channel);
+      removeRealtimeChannel(channel);
     };
   }, [enabled, queryClient, userId]);
 }

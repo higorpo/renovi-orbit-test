@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase/client";
 import { getProfileImageSignedUrl } from "../api/profileImageStorage.api";
 
 /**
@@ -23,7 +22,7 @@ export function useProfileImageUrl(path: string | null | undefined): {
     let cancelled = false;
     setIsLoading(true);
 
-    getProfileImageSignedUrl(supabase, path).then((signedUrl) => {
+    getProfileImageSignedUrl(path).then((signedUrl) => {
       if (!cancelled) {
         setUrl(signedUrl);
         setIsLoading(false);

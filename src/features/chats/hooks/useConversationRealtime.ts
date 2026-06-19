@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { logger } from "@/lib/logger";
 import { metrics } from "@/lib/sentry";
-import { supabase } from "@/lib/supabase/client";
+import { subscribeConversationRealtime, removeRealtimeChannel } from "../api/realtime.api";
 import {
   CHAT_CONVERSATIONS_LIST_QUERY_KEY,
   CHAT_FREE_MESSAGING_QUERY_KEY,
@@ -11,7 +11,6 @@ import {
 } from "../constants/queryKeys";
 import type { ConversationDetailResponse } from "../types/chats.types";
 import { wasRecentlySentChatMessageId } from "../utils/chatMessageSendSync";
-import { subscribeConversationChannel } from "../utils/conversationRealtimeChannel";
 
 const DEDUPE_CACHE_LIMIT = 512;
 
@@ -91,8 +90,7 @@ export function useConversationRealtime(
       void queryClient.invalidateQueries({ queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY] });
     };
 
-    const channel = subscribeConversationChannel(
-      supabase,
+    const channel = subscribeConversationRealtime(
       chatId,
       {
         onMessageInsert: ({ id }) => {
@@ -147,7 +145,7 @@ export function useConversationRealtime(
 
     return () => {
       lastStatusRef.current = null;
-      void supabase.removeChannel(channel);
+      removeRealtimeChannel(channel);
     };
   }, [chatId, currentUserId, enabled, queryClient]);
 }
