@@ -2,7 +2,7 @@
 
 Documento derivado da coleção Postman **API Netcred** ([coleção](https://go.postman.co/collection/55609940-a4b17641-251f-4c8e-a147-c3a5facc5715)) e da documentação oficial em [docs.netcredbrasil.com.br](https://docs.netcredbrasil.com.br/).
 
-Foco: **cartão com tokenização** → **cobrança agendada (T-2)** → **retenção até confirmação do cliente** → **liberação ao prestador (split/PayoutRule)** → **Pix** → **webhooks**.
+Foco: **cartão com tokenização** → **cobrança agendada (T-2)** → **retenção até confirmação do cliente** → **liberação ao prestador (split/PayoutRule)** → **Pix** → **cancelamentos/estornos e disputas** → **webhooks**.
 
 ---
 
@@ -445,6 +445,7 @@ Usar `FIXED_AMOUNT` em vez de `PERCENTAGE` porque as taxas da Netcred incidem so
 | Cliente confirma serviço | `PAID` | `TRANSACTION_CAPTURE`, `TRANSACTION_UPDATE` | Marcar serviço `in_progress` → concluído; iniciar contagem liquidação |
 | Autorização expirou | `VOIDED` / `EXPIRED` | `TRANSACTION_VOID` / `TRANSACTION_EXPIRED` | Reagendar cobrança ou cancelar |
 | Chargeback | `is_disputed: true` | `TRANSACTION_DISPUTE` | Fluxo de disputa Renovi |
+| Disputa a favor do cliente (pós-e-mail) | `VOIDED` / `REFUNDED` / `PARTIALLY_REFUNDED` | `TRANSACTION_VOID` / `TRANSACTION_REFUND` | Confirmar estorno; informar cliente (30–60 dias na fatura) — ver **§4.14** |
 
 ---
 
@@ -517,6 +518,9 @@ stateDiagram-v2
 | **Prazo de pré-autorização** | ⏳ Confirmar | Máximo entre `BILLED` (T-2) e `transactionCapture` |
 | **SLA de liquidação** | ⏳ Confirmar | Com `automaticAdvance: false`, quantos dias até o prestador receber após `PAID`? |
 | **Taxa de escrow** | ⏳ Confirmar | Equivalente aos R$ 9,90/mês do modelo Asaas no plano Renovi |
+| **Cancelamento/estorno em disputa** | ✅ Alinhado | Solicitação por e-mail à Netcred; SLA 24 h; estorno na fatura 30–60 dias (ver **§4.14**) |
+| **Webhook `TRANSACTION_VOID` / `TRANSACTION_REFUND`** | ✅ Confirmado (Netcred Dev) | Automatizar confirmação pós-cancelamento/estorno; homologar com fluxo por e-mail |
+| **Parametrização de taxas (prestadores)** | ⏳ Pendente interno | Definir % da comissão Renovi e repassar à Netcred para configurar a operação |
 
 Suporte Netcred: [WhatsApp +55 47 3227-0080](https://wa.me/+554732270080).
 
@@ -626,6 +630,85 @@ query GetProviderBankAccount($companyId: String!, $holderDocument: String!) {
 #### Pré-requisito para cobrança com split
 
 O prestador precisa estar com `netcred_onboarding_status = active` e ter `netcred_company_id` + `netcred_bank_account_id` **antes** de aceitar serviços com pagamento via cartão/PIX com split. Caso contrário, a cobrança não pode referenciar o `bankAccountId` do prestador.
+
+---
+
+### 4.14 Cancelamentos, estornos e disputas (alinhamento Renovi × Netcred)
+
+**Decisão (2026-06):** reunião com a Netcred para alinhar o fluxo de cancelamentos e estornos da plataforma, em especial quando há **disputa aberta pelo cliente** e a Renovi decide a favor dele.
+
+#### Dois caminhos de cancelamento/estorno
+
+| Cenário | Canal Renovi → Netcred | Mutations API (quando aplicável) |
+|---------|------------------------|----------------------------------|
+| Cancelamento operacional (antes de capturar, timeout, serviço cancelado) | API GraphQL | `transactionVoid`, `chargeVoid` |
+| Estorno pós-captura (cancelamento de serviço após cobrança) | API GraphQL | `transactionRefund` |
+| **Disputa decidida a favor do cliente** | **E-mail** para a Netcred | Não usar mutation diretamente neste fluxo |
+
+#### Fluxo de disputa — cancelamento por e-mail
+
+Quando houver disputa aberta pelo cliente e a Renovi decidir a favor dele, o cancelamento da transação deve ser **solicitado à Netcred por e-mail**, informando:
+
+| Campo | Descrição |
+|-------|-----------|
+| Código da transação | ID/código da `Transaction` na Netcred |
+| Nome do cliente | Nome do pagador |
+| Valor a cancelar | Pode ser **total ou parcial**; na maioria dos casos Renovi a tendência é estorno **integral** |
+
+```mermaid
+sequenceDiagram
+  participant C as Cliente
+  participant R as Orbit
+  participant N as Netcred
+
+  C->>R: Abre disputa no app
+  R->>R: Análise interna
+  R->>N: E-mail com código da transação, nome do cliente e valor
+  Note over N: SLA até 24 h para processar
+  N-->>R: Confirmação por e-mail (hoje)
+  N-->>R: Webhook TRANSACTION_VOID ou TRANSACTION_REFUND (futuro)
+  R->>C: Comunica prazo de 30–60 dias na fatura
+```
+
+#### SLAs e prazos
+
+| Etapa | Prazo | Observação |
+|-------|-------|------------|
+| Processamento Netcred após recebimento do e-mail | **Até 24 horas** | SLA informado pela Netcred |
+| Estorno visível na fatura do cliente | **30 a 60 dias** | Depende da operadora/bandeira; **comunicar ao cliente durante o fluxo de disputa** |
+
+#### Confirmação do cancelamento
+
+| Canal | Status | Uso Renovi |
+|-------|--------|------------|
+| E-mail da Netcred | ✅ Hoje | Confirmação manual; operador ou processo interno atualiza o status |
+| Webhook | ✅ Confirmado pela Netcred | Automatizar confirmação na plataforma (ver abaixo) |
+
+A Netcred confirmou com a equipe de Dev que, para cancelamento/estorno de transação, **dois eventos de webhook** serão disparados (conforme o tipo da operação):
+
+| Evento webhook (`X-NETCRED-Event`) | Significado |
+|------------------------------------|-------------|
+| `TRANSACTION_VOID` | Cancelamento da transação |
+| `TRANSACTION_REFUND` | Estorno da transação |
+
+> Incluir `TRANSACTION_VOID` e `TRANSACTION_REFUND` no cadastro do webhook (`webhookCreate`) e tratar idempotentemente no handler — ver **§10**.
+
+**Próximo passo:** validar em homologação se esses eventos cobrem o retorno do fluxo iniciado por e-mail (disputa) com a mesma confiabilidade da confirmação por e-mail; em caso positivo, priorizar o webhook e manter o e-mail apenas como reconciliação.
+
+#### Parametrização de taxas da operação
+
+Pendência **interna Renovi** antes de repassar à Netcred:
+
+1. Definir o **percentual de taxa** aplicado aos prestadores (comissão da plataforma).
+2. Enviar os parâmetros acordados à Netcred para **configuração na operação** (split, MDR, `isLiable`, etc.).
+
+Relacionado ao split em **§8** e à pendência **Taxa de escrow / comissão** em **§4.12**.
+
+#### Implicações para o produto (disputas)
+
+- Exibir ao cliente, ao encerrar disputa a favor dele, que o estorno pode levar **30–60 dias** para aparecer na fatura.
+- Persistir estado intermediário (ex.: `refund_requested_at`, `refund_confirmed_at`) entre o envio do e-mail e a confirmação (webhook ou reconciliação).
+- Não marcar o pagamento como estornado na Renovi até receber `TRANSACTION_VOID` / `TRANSACTION_REFUND` ou confirmação explícita da Netcred.
 
 ---
 
@@ -1078,7 +1161,7 @@ mutation webhookCreate($input: WebhookCreateInput!) {
     "isActive": true,
     "secretKey": "chave-secreta-forte",
     "maskUserAgent": true,
-    "events": ["TRANSACTION_UPDATE", "TRANSACTION_CAPTURE", "PAYMENT_PROFILE_TOKENIZE", "CHARGE_CREATE"]
+    "events": ["TRANSACTION_UPDATE", "TRANSACTION_CAPTURE", "TRANSACTION_VOID", "TRANSACTION_REFUND", "PAYMENT_PROFILE_TOKENIZE", "CHARGE_CREATE"]
   }
 }
 ```
@@ -1126,6 +1209,8 @@ mutation webhookCreate($input: WebhookCreateInput!) {
 | `TRANSACTION_VOID` | Transação cancelada | `TransactionPayload` |
 | `TRANSACTION_REFUND` | Estorno | `TransactionPayload` |
 | `TRANSACTION_DISPUTE` | Chargeback iniciado | `TransactionPayload` |
+
+> **Cancelamento/estorno (disputas):** a Netcred confirmou (2026-06) que `TRANSACTION_VOID` indica cancelamento e `TRANSACTION_REFUND` indica estorno — usar para automatizar a confirmação hoje feita por e-mail após solicitação de cancelamento em disputas (ver **§4.14**). Em disputas decididas a favor do cliente, a solicitação à Netcred é por **e-mail** (código da transação, nome do cliente, valor); o webhook deve refletir o processamento efetivo.
 | `PAYMENT_PROFILE_TOKENIZE` | Tokenização concluída (sucesso ou falha) | `PaymentProfilePayload` |
 | `PAYMENT_PROFILE_UPDATE` | Perfil atualizado | `PaymentProfilePayload` |
 | `PAYMENT_PROFILE_DELETE` | Perfil desativado | `PaymentProfilePayload` |
@@ -1326,6 +1411,19 @@ Ver **seção 4** para o fluxo escrow completo (tokenização → T-2 → confir
 - **`BILLED`** → marcar `charge_authorized` (T-2 OK).
 - **`PAID`** → após `transactionCapture`; atualizar `payment_phase` → `captured`.
 - **`REJECTED` / `VOIDED` / `EXPIRED`** → fluxo de falha / reagendamento.
+- **`TRANSACTION_VOID`** → cancelamento confirmado; atualizar `payment_phase` e status do serviço.
+- **`TRANSACTION_REFUND`** → estorno confirmado; registrar `refund_confirmed_at`; comunicar ao cliente prazo de 30–60 dias na fatura se ainda não exibido.
+
+### Disputas — cancelamento e estorno
+
+Ver **§4.14**. Resumo de implementação:
+
+| Componente | Responsabilidade |
+|------------|------------------|
+| Fluxo de disputa (feature) | Ao decidir a favor do cliente, disparar e-mail à Netcred com código da transação, nome e valor (total ou parcial) |
+| Edge Function / serviço de e-mail | Template formatado para solicitação de cancelamento/estorno à Netcred |
+| Handler `netcred-webhook` | Tratar `TRANSACTION_VOID` e `TRANSACTION_REFUND` para fechar o ciclo sem depender só do e-mail de confirmação |
+| UI de disputa | Informar SLA Netcred (até 24 h) e prazo na fatura do cartão (30–60 dias) |
 
 ### Hook de confirmação do cliente
 
@@ -1374,4 +1472,4 @@ Ver **§4.13**. Resumo de implementação:
 
 ---
 
-*Gerado em 2026-06-09. Atualizado com modelo escrow Renovi, credenciamento de prestadores (alinhamento Renovi × Netcred, 2026-06) e mapeamento da coleção Postman API Netcred.*
+*Gerado em 2026-06-09. Atualizado com modelo escrow Renovi, credenciamento de prestadores (alinhamento Renovi × Netcred, 2026-06), cancelamentos/estornos e disputas (alinhamento Renovi × Netcred, 2026-06) e mapeamento da coleção Postman API Netcred.*
