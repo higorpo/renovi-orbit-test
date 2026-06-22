@@ -76,6 +76,8 @@ const DEFAULT_PUSH_NOTIFICATION_TAG = 'renovi-push'
 
 const pushStateListeners = new Set<(state: PushRegistrationState) => void>()
 let activePushCallbacks: PushSetupCallbacks | undefined
+let cachedPushRegistrationState: PushRegistrationState | null = null
+let pushSetupInFlight: Promise<PushSetupResult> | null = null
 
 export interface PushRegistrationState {
   platform: PushPlatform | 'web'
@@ -92,6 +94,7 @@ export function subscribePushRegistrationState(
 }
 
 function notifyPushStateListeners(state: PushRegistrationState): void {
+  cachedPushRegistrationState = state
   for (const listener of pushStateListeners) {
     listener(state)
   }
@@ -498,21 +501,42 @@ async function setupWebPush(
 export async function getPushRegistrationState(
   options?: PushSetupOptions,
 ): Promise<PushRegistrationState> {
-  const result = await setupPushNotifications(undefined, options)
-  return toPushRegistrationState(result)
+  if (cachedPushRegistrationState) {
+    return cachedPushRegistrationState
+  }
+
+  await setupPushNotifications(undefined, options)
+  return (
+    cachedPushRegistrationState ??
+    toPushRegistrationState({ platform: 'web', token: null, permission: 'unsupported' })
+  )
 }
 
 export async function setupPushNotifications(
   callbacks?: PushSetupCallbacks,
   options?: PushSetupOptions,
 ): Promise<PushSetupResult> {
-  activePushCallbacks = callbacks
-
-  if (Capacitor.isNativePlatform()) {
-    return setupNativePush(callbacks, options)
+  if (callbacks !== undefined) {
+    activePushCallbacks = callbacks
   }
 
-  return setupWebPush(callbacks, options)
+  if (pushSetupInFlight) {
+    return pushSetupInFlight
+  }
+
+  pushSetupInFlight = (async () => {
+    if (Capacitor.isNativePlatform()) {
+      return setupNativePush(activePushCallbacks, options)
+    }
+
+    return setupWebPush(activePushCallbacks, options)
+  })()
+
+  try {
+    return await pushSetupInFlight
+  } finally {
+    pushSetupInFlight = null
+  }
 }
 
 /** Resets module singletons between unit tests. */
@@ -523,6 +547,8 @@ export function resetPushModuleStateForTests(): void {
   nativeFcmRegisterStarted = false
   nativeFcmTokenWaiters = []
   activePushCallbacks = undefined
+  cachedPushRegistrationState = null
+  pushSetupInFlight = null
   pushStateListeners.clear()
   resetPushSuppressionForTests()
   resetPushNavigationForTests()

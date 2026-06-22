@@ -726,5 +726,19 @@ describe('push helpers', () => {
       expect(state.pushEnabled).toBe(true)
       expect(state.fcmToken).toBe('web-fcm-token')
     })
+
+    it('returns cached state without re-running setup', async () => {
+      Object.defineProperty(globalThis, 'Notification', {
+        value: { permission: 'granted' },
+        configurable: true,
+      })
+
+      await getPushRegistrationState()
+      const tokenCallsAfterFirst = fcmMocks.getToken.mock.calls.length
+
+      const cached = await getPushRegistrationState()
+      expect(cached.fcmToken).toBe('web-fcm-token')
+      expect(fcmMocks.getToken.mock.calls.length).toBe(tokenCallsAfterFirst)
+    })
   })
 })

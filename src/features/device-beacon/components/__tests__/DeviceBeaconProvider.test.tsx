@@ -8,12 +8,7 @@ const authMocks = vi.hoisted(() => ({
 }))
 
 const upsertMock = vi.hoisted(() => vi.fn().mockResolvedValue({ error: null }))
-const setupPushMock = vi.hoisted(() =>
-  vi.fn((_callbacks?: { onToken?: () => void }) => {
-    _callbacks?.onToken?.()
-    return Promise.resolve(undefined)
-  }),
-)
+const setupPushMock = vi.hoisted(() => vi.fn(() => Promise.resolve(undefined)))
 const subscribePushMock = vi.hoisted(() =>
   vi.fn((listener: (state: { pushEnabled: boolean; fcmToken: string | null }) => void) => {
     listener({ pushEnabled: true, fcmToken: 'from-listener' })
@@ -51,18 +46,10 @@ collectPayloadMock.mockResolvedValue(defaultPayload)
 
 vi.mock('../../utils/collectDeviceBeaconPayload', () => ({
   collectDeviceBeaconPayload: collectPayloadMock,
-  buildPayloadFromPushState: vi.fn(async (profileId: string, deviceId: string) => ({
-    ...defaultPayload,
-    profile_id: profileId,
-    device_id: deviceId,
-    fcm_token: 'from-listener',
-    push_enabled: true,
-  })),
 }))
 
 vi.mock('../../utils/locationSync', () => ({
   getLatestProviderLocationSample: vi.fn(() => null),
-  subscribeProviderLocationSamples: vi.fn(() => vi.fn()),
 }))
 
 vi.mock('../../hooks/useProviderLocationTracking', () => ({
@@ -100,10 +87,7 @@ describe('DeviceBeaconProvider', () => {
       listener({ pushEnabled: true, fcmToken: 'from-listener' })
       return vi.fn()
     })
-    setupPushMock.mockImplementation((_callbacks) => {
-      _callbacks?.onToken?.()
-      return Promise.resolve(undefined)
-    })
+    setupPushMock.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -120,7 +104,7 @@ describe('DeviceBeaconProvider', () => {
     await waitFor(() => {
       expect(upsertMock).toHaveBeenCalled()
     })
-    expect(setupPushMock).toHaveBeenCalled()
+    expect(setupPushMock).toHaveBeenCalledTimes(1)
     expect(subscribePushMock).toHaveBeenCalled()
   })
 
@@ -163,7 +147,6 @@ describe('DeviceBeaconProvider', () => {
 
   it('skips upsert when API returns error', async () => {
     subscribePushMock.mockImplementation(() => vi.fn())
-    setupPushMock.mockImplementation(() => Promise.resolve(undefined))
     upsertMock.mockResolvedValue({ error: 'fail' })
 
     render(
@@ -176,17 +159,12 @@ describe('DeviceBeaconProvider', () => {
     expect(getPreferencesTestStore()['orbit_device_beacon_last_sync_v1']).toBeUndefined()
   })
 
-  it('syncs again when push token callback fires', async () => {
-    render(
-      <DeviceBeaconProvider>
-        <span>child</span>
-      </DeviceBeaconProvider>,
-    )
+  it('does not force duplicate sync when push state listener fires on subscribe', async () => {
+    subscribePushMock.mockImplementation((listener) => {
+      listener({ pushEnabled: true, fcmToken: 'from-listener' })
+      return vi.fn()
+    })
 
-    await waitFor(() => expect(upsertMock.mock.calls.length).toBeGreaterThanOrEqual(2))
-  })
-
-  it('syncs from push state subscription with force', async () => {
     render(
       <DeviceBeaconProvider>
         <span>child</span>
@@ -194,7 +172,16 @@ describe('DeviceBeaconProvider', () => {
     )
 
     await waitFor(() => expect(upsertMock).toHaveBeenCalled())
-    expect(subscribePushMock).toHaveBeenCalled()
+    await saveDeviceBeaconSyncSnapshot({
+      ...defaultPayload,
+      fcm_token: 'from-listener',
+      push_enabled: true,
+    })
+
+    const callsAfterInitialSync = upsertMock.mock.calls.length
+    subscribePushMock.mock.calls[0]?.[0]?.({ pushEnabled: true, fcmToken: 'from-listener' })
+
+    await waitFor(() => expect(upsertMock.mock.calls.length).toBe(callsAfterInitialSync))
   })
 
   it('logs sync failure without throwing', async () => {
@@ -223,7 +210,6 @@ describe('DeviceBeaconProvider', () => {
 
   it('skips sync when shouldSyncDeviceBeacon returns false', async () => {
     subscribePushMock.mockImplementation(() => vi.fn())
-    setupPushMock.mockImplementation(() => Promise.resolve(undefined))
     await saveDeviceBeaconSyncSnapshot(defaultPayload)
 
     render(

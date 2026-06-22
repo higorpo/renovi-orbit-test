@@ -3,26 +3,20 @@ import { logger } from '@/lib/logger'
 import {
   setupPushNotifications,
   subscribePushRegistrationState,
-  type PushRegistrationState,
 } from '@/lib/push'
 import { useCallback, useEffect, useRef } from 'react'
 
 import { upsertDeviceBeacon } from '../api/deviceBeacon.api'
 import {
   collectDeviceBeaconPayload,
-  buildPayloadFromPushState,
   type CollectDeviceBeaconContext,
 } from '../utils/collectDeviceBeaconPayload'
-import {
-  getLatestProviderLocationSample,
-  subscribeProviderLocationSamples,
-} from '../utils/locationSync'
+import { getLatestProviderLocationSample } from '../utils/locationSync'
 import {
   getDeviceBeaconSyncSnapshot,
   saveDeviceBeaconSyncSnapshot,
   shouldSyncDeviceBeacon,
 } from '../utils/syncSchedule'
-import { Device } from '@capacitor/device'
 import { ProviderLocationProvider } from './ProviderLocationProvider'
 
 function hasBeaconLocation(payload: Awaited<ReturnType<typeof collectDeviceBeaconPayload>>): boolean {
@@ -54,43 +48,6 @@ async function syncDeviceBeaconForUser(
     pushEnabled: payload.push_enabled,
     has_location: hasBeaconLocation(payload),
     forced: force,
-  })
-}
-
-async function syncFromPushState(
-  profileId: string,
-  pushState: PushRegistrationState,
-  force: boolean,
-  context: CollectDeviceBeaconContext,
-): Promise<void> {
-  const [{ identifier }, info] = await Promise.all([Device.getId(), Device.getInfo()])
-  const payload = await buildPayloadFromPushState(
-    profileId,
-    identifier,
-    info,
-    pushState,
-    context,
-  )
-  const snapshot = await getDeviceBeaconSyncSnapshot(profileId, payload.device_id)
-
-  if (!shouldSyncDeviceBeacon(snapshot, payload, force)) {
-    return
-  }
-
-  const { error } = await upsertDeviceBeacon(payload)
-  if (error) {
-    logger.warn('device_beacon_sync_skipped', { profileId, reason: error })
-    return
-  }
-
-  await saveDeviceBeaconSyncSnapshot(payload)
-  logger.info('device_beacon_synced', {
-    profileId,
-    deviceId: payload.device_id,
-    pushEnabled: payload.push_enabled,
-    has_location: hasBeaconLocation(payload),
-    forced: force,
-    source: 'push_state',
   })
 }
 
@@ -132,27 +89,11 @@ export function DeviceBeaconProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (!profileId || loadingSession) return
 
-    void runSync(false)
-
-    void setupPushNotifications(
-      {
-        onToken: () => {
-          logger.info('fcm_token_updated', { profileId })
-          void runSync(true)
-        },
-      },
-      { requestPermission: false },
-    )
-
-    const unsubscribePush = subscribePushRegistrationState((pushState) => {
-      void syncFromPushState(profileId, pushState, true, buildContext())
+    const unsubscribePush = subscribePushRegistrationState(() => {
+      void runSync(false)
     })
 
-    const unsubscribeLocation = subscribeProviderLocationSamples((id) => {
-      if (id === profileId) {
-        void runSync(true)
-      }
-    })
+    void setupPushNotifications(undefined, { requestPermission: false })
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -161,13 +102,13 @@ export function DeviceBeaconProvider({ children }: { children: React.ReactNode }
     }
 
     document.addEventListener('visibilitychange', onVisibilityChange)
+    void runSync(false)
 
     return () => {
       unsubscribePush()
-      unsubscribeLocation()
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
-  }, [profileId, loadingSession, runSync, buildContext])
+  }, [profileId, role, loadingSession, runSync])
 
   return <ProviderLocationProvider>{children}</ProviderLocationProvider>
 }

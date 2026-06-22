@@ -10,6 +10,7 @@ import {
 import type { DeviceBeaconUpsertPayload } from '../types/deviceBeacon.types'
 import { LOCATION_SYNC_DEBOUNCE_MS } from '../types/deviceBeacon.types'
 import { collectDeviceBeaconPayload } from './collectDeviceBeaconPayload'
+import { saveDeviceBeaconSyncSnapshot } from './syncSchedule'
 
 export interface ProviderLocationSample {
   latitude: number
@@ -105,6 +106,7 @@ async function flushPendingLocationSync(): Promise<void> {
       return
     }
 
+    await saveDeviceBeaconSyncSnapshot(payload)
     debounceState.lastSyncedAt = Date.now()
   } finally {
     debounceState.inFlight = false

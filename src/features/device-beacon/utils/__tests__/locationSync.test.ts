@@ -6,6 +6,7 @@ import {
   resetLocationBeaconSyncState,
   scheduleLocationBeaconSync,
 } from '../locationSync'
+import { saveDeviceBeaconSyncSnapshot } from '../syncSchedule'
 
 const upsertMock = vi.fn()
 const collectMock = vi.fn()
@@ -16,6 +17,10 @@ vi.mock('../../api/deviceBeacon.api', () => ({
 
 vi.mock('../collectDeviceBeaconPayload', () => ({
   collectDeviceBeaconPayload: (...args: unknown[]) => collectMock(...args),
+}))
+
+vi.mock('../syncSchedule', () => ({
+  saveDeviceBeaconSyncSnapshot: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock('../../api/deviceBeaconHttp.api', () => ({
@@ -104,5 +109,11 @@ describe('locationSync', () => {
       }),
     )
     expect(__getLocationSyncDebounceStateForTests().lastSyncedAt).toBeGreaterThan(0)
+    expect(saveDeviceBeaconSyncSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profile_id: 'p1',
+        location_permission_granted: true,
+      }),
+    )
   })
 })

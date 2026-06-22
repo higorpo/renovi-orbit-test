@@ -40,5 +40,5 @@ export function useProviderLocationTracking(): void {
       logger.info('provider_location_tracking_stopped', { profileId })
       void stopProviderLocationTracking()
     }
-  }, [user?.id, profile?.role, loadingSession, profile])
+  }, [user?.id, profile?.role, profile?.operational_status, loadingSession])
 }
