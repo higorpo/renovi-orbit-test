@@ -38,6 +38,7 @@ Urgentes:
 - remoteconfig para redirecionar para grupo de whatsapp
 -cadastro e criação de service requests não estão funcionando por conta da proteção 
 - Adicionar no chat botão para envio de proposta que fica visível a todo momento
+- Ver vídeo no Youtube sobre a questão que eu estou usando para precificação exibida para o prestador/cliente, pois parece que há um problema de segurança: https://www.youtube.com/watch?v=rTXy2p9aAVw&list=WL&index=75&t=601s&pp=iAQBsAgC.
 
 Telas/fluxos restantes:
 
