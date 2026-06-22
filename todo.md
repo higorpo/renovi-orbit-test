@@ -56,7 +56,8 @@ Telas/fluxos restantes:
 - Fluxo do prestador/cliente remarcar um serviço
 - Fluxo do prestador/cliente cancelar um serviço
 - Weblab
-- Emails
+- Template dos emails
+- Serviços para hoje para o prestador mostram botão de "Ver no mapa" para instruir a localização do serviço de forma mais fácil para o prestador.
 
 Coisas para verificar:
 
@@ -83,10 +84,6 @@ Coisas para fazer next
 
 -ver imagens que o chat gpt gerou da tela de detalhes do serviço e o que podemos incorporar de fato.
 -está aparecendo action banner de enviar proposta quando não deveria.
--problema no message dispatcher  que quando ele recebe uma notificação que precisa ser enviada naquele momento, ele tenta agendar para outro momento se já esta cheio
 -nas notificações de nova oportunidade, qunado clicar quero que abra a página de detalhes do serviço direto
 - não exibir quantidade de conversas ativas no card
 - reformular card
-- na tela de trabalhos está mostrando trabalhos dos quais eu já tenho chat ativo
-- se o prestador tirar um serviço que ele presta ele continua vendo aquele serviço no feed?
--se eu tenho várias push scheduled,qnd elas viram queued elas são enviadas tudo ao mesmo tempo e não respeitam os limites
