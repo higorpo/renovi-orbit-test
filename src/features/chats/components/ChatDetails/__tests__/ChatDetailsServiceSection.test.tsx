@@ -74,7 +74,7 @@ describe("ChatDetailsServiceSection", () => {
     expect(container.querySelector(".animate-pulse")).toBeTruthy();
   });
 
-  it("renders card and detail link when service loads", () => {
+  it("renders card and detail action when service loads", () => {
     useServiceMock.mockReturnValue({
       data: serviceModel,
       isLoading: false,
@@ -85,10 +85,9 @@ describe("ChatDetailsServiceSection", () => {
     renderSection();
 
     expect(screen.getByText("Trocar tomada")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Ver mais detalhes do serviço" })).toHaveAttribute(
-      "href",
-      "/dashboard/services/sr-1",
-    );
+    expect(
+      screen.getByRole("button", { name: "Ver mais detalhes do serviço" }),
+    ).toBeInTheDocument();
   });
 
   it("shows retry when service fails to load", () => {

@@ -1,4 +1,5 @@
-import { Link } from "react-router";
+import { useCallback } from "react";
+import { useLocation, useNavigate, useParams } from "react-router";
 import { Button } from "@/components/ui/button";
 import {
   getServiceDetailPath,
@@ -6,13 +7,27 @@ import {
   SimpleServiceCardSkeleton,
   useService,
 } from "@/features/view-services";
+import type { MobileStackLocationState } from "@/lib/navigation/mobileStack.types";
 
 export interface ChatDetailsServiceSectionProps {
   serviceRequestId: string;
 }
 
 export function ChatDetailsServiceSection({ serviceRequestId }: ChatDetailsServiceSectionProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { chatId } = useParams<{ chatId?: string }>();
   const { data: service, isLoading, isError, refetch } = useService(serviceRequestId);
+
+  const handleOpenServiceDetails = useCallback(() => {
+    const stackBackPath = chatId
+      ? `/dashboard/chats/${chatId}${location.search}`
+      : "/dashboard/chats";
+
+    void navigate(getServiceDetailPath(serviceRequestId), {
+      state: { stackBackPath } satisfies MobileStackLocationState,
+    });
+  }, [chatId, location.search, navigate, serviceRequestId]);
 
   if (isLoading) {
     return <SimpleServiceCardSkeleton compact />;
@@ -34,8 +49,13 @@ export function ChatDetailsServiceSection({ serviceRequestId }: ChatDetailsServi
   return (
     <div className="space-y-3">
       <SimpleServiceCard model={service} compact />
-      <Button variant="outline" className="w-full" asChild>
-        <Link to={getServiceDetailPath(serviceRequestId)}>Ver mais detalhes do serviço</Link>
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        onClick={handleOpenServiceDetails}
+      >
+        Ver mais detalhes do serviço
       </Button>
     </div>
   );

@@ -165,4 +165,23 @@ describe("DashboardLayout", () => {
     expect(screen.getByRole("main")).not.toHaveClass("pb-20");
     expect(screen.getByRole("main")).toHaveClass("overflow-hidden");
   });
+
+  it("renders stack header on mobile help route", () => {
+    useBreakpointMd.mockReturnValue(false);
+    render(
+      <MemoryRouter initialEntries={["/dashboard/help"]}>
+        <Routes>
+          <Route path="/dashboard/*" element={<DashboardLayout />}>
+            <Route path="help" element={null} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole("button", { name: "Abrir menu" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Voltar" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Ajuda" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Navegação principal" })).toBeNull();
+    expect(screen.getByRole("main")).not.toHaveClass("pb-20");
+  });
 });

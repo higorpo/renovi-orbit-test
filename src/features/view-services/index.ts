@@ -53,6 +53,7 @@ export {
 export type { StatusTabId } from "./constants/statusTabs";
 export { getStatusLabel, getStatusBadgeVariant } from "./constants/statusBadge";
 export type { StatusBadgeVariant } from "./constants/statusBadge";
+export { isServiceDetailSheetLocation } from "./utils/isServiceDetailSheetLocation";
 export { mapRpcServiceRow } from "./utils/serviceMapper";
 export { formatLocationDisplay } from "./utils/locationDisplay";
 export { formatServiceDate } from "./utils/formatDate";

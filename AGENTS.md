@@ -35,6 +35,7 @@ Features em `src/features/<nome>/` (`api`, `components`, `hooks`, `types`, `util
 | | `edge-function-tests` → `supabase/functions/**` |
 | | `pgtap-tests` → `supabase/**` |
 | | `server-side-pagination-and-filtering` → `src/features/**` |
+| | `routing-and-mobile-navigation` → `src/router.tsx`, `src/layouts/**` |
 | | `sentry`, `logger`, `analytics-tracking` → `src/**` |
 | | `unit-tests` → `src/**`, `e2e/**`, testes |
 | | `business-docs-sync-after-code-changes` → `src/**`, `supabase/**`, `docs/business/**` |

@@ -1,0 +1,100 @@
+---
+description: Criação de rotas React Router + chrome mobile (tab/stack/sheet)
+globs: src/router.tsx,src/layouts/**,src/lib/navigation/**
+alwaysApply: false
+---
+
+# Rotas e navegação mobile
+
+**Desktop não muda** ao adicionar rotas — chrome mobile é resolvido só em `< md`.
+
+## Checklist — nova rota
+
+1. **Componente** em `src/features/<feature>/components/` (página ou `*RouteSlot`).
+2. **`router.tsx`** — `lazy()` importando **caminho direto do arquivo** (não barrel da feature).
+3. **Guard** — `ProtectedRoute` / `GuestOnlyRoute` com `allowedRoles` quando couber.
+4. **Menu** (rotas `/dashboard/*`) — `dashboardMenu.ts`: item em `allItems`; nos primeiros N vira bottom nav mobile.
+5. **Chrome mobile** — classificar em `mobileNavigation.config.ts` (ver tabela abaixo).
+6. **Testes** — caso em `mobileNavigation.config.test.ts`; layout se afetar header/nav.
+
+## Onde registrar
+
+| Arquivo | Responsabilidade |
+|---------|------------------|
+| `src/router.tsx` | Árvore de rotas, lazy, guards |
+| `src/layouts/DashboardLayout/dashboardMenu.ts` | Itens do menu desktop + mobile |
+| `src/layouts/DashboardLayout/mobileNavigation.config.ts` | Tab / stack / custom / sheet |
+| `src/layouts/DashboardLayout/DashboardLayout.tsx` | Aplica chrome (não editar lógica ad hoc por rota) |
+
+## Modos mobile (`resolveMobileChrome`)
+
+| Modo | Quando usar | Mobile header | Bottom nav | Transição |
+|------|-------------|---------------|------------|-----------|
+| **tab-root** | Abas principais (`/dashboard`, `/services`, `/chats`…) | ☰ + logo Renovi | Sim | Nenhuma |
+| **stack** | Filho empilhado (hamburger, deep link, detalhe full-page) | ← + título opcional | Não | Slide lateral |
+| **custom** | Header próprio da feature (ex.: conversa chat) | Feature (`ChatScreenHeader`) | Não | Slide na feature |
+| **sheet** | Detalhe sobre lista (modal routing) | Tab-root atrás | Sim (atrás) | Sheet Radix |
+
+**Tab-root:** título da seção fica **no conteúdo da página**, não no header global (evita duplicar com logo).
+
+### Stack — registrar rota
+
+Adicionar em `MOBILE_STACK_ROUTES`:
+
+```ts
+{ pattern: /^\/dashboard\/minha-rota$/, stackTitle: "Título", backFallback: "/dashboard" },
+```
+
+Rotas especiais já tratadas no resolver: `chats/:chatId` (custom), `services/:id` (sheet vs stack).
+
+### Stack — voltar contextual
+
+Deep link ou origem não trivial: passar `stackBackPath` via `location.state`:
+
+```ts
+import type { MobileStackLocationState } from "@/lib/navigation/mobileStack.types";
+
+navigate("/dashboard/minha-rota", {
+  state: { stackBackPath: "/dashboard/origem" } satisfies MobileStackLocationState,
+});
+```
+
+`MobileStackHeader` usa `stackBackPath` → `backFallback` → `navigate(-1)`.
+
+### Sheet — modal routing (listas → detalhe)
+
+Padrão: Meus Serviços / Trabalhos. Navegar com state + **persistent slot** mantendo a lista montada.
+
+```ts
+navigate(getServiceDetailPath(id), {
+  state: createClientMyServicesServiceDetailState(location),
+});
+```
+
+Helpers em `view-services/types/serviceDetailNavigation.types.ts`. Sheet renderizado em `DashboardLayout`; rota full-page retorna `null` no shell quando `presentation === "sheet"`.
+
+### Custom — layout aninhado
+
+Ex.: `ChatsLayout` com filho `:chatId`. Registrar padrão em `resolveMobileChrome`; animação/header ficam no layout da feature.
+
+## Árvore típica
+
+```
+/ → RootLayout
+  /dashboard → ProtectedRoute + DashboardLayout
+    index, services, services/:id, chats, chats/:chatId, …
+  /pedir-orcamento, /login, /perfil/:slug → standalone (sem DashboardLayout)
+```
+
+## Anti-padrões
+
+- `useMatch` / `if (pathname…)` no `DashboardLayout` para esconder nav — usar `mobileNavigation.config.ts`.
+- `lazy()` via barrel `@/features/foo` — quebra code-splitting.
+- Link `<Link to={detalhe}>` sem state quando a UX é sheet ou stack com back explícito.
+- Duplicar título no `MobileStackHeader` se a página já tem `<h1>` visível no topo.
+
+## Referências
+
+- Chat custom: `ChatsLayout.tsx`, `ChatScreenHeader.tsx`
+- Sheet: `ServiceDetailSheet.tsx`, `useServiceDetailModal.ts`, `*PersistentSlot.tsx`
+- Stack header: `MobileStackHeader.tsx` (botão ← alinhado ao chat: `absolute left-0`, ícone `!h-6 !w-6`)

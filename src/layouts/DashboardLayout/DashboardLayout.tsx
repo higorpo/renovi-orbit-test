@@ -1,4 +1,4 @@
-import { Link, Outlet, useMatch } from "react-router";
+import { Link, Outlet } from "react-router";
 import { useAuth } from "@/features/auth";
 import { ClientMyServicesPersistentSlot, ProviderMyServicesPersistentSlot } from "@/features/my-services";
 import { ProviderJobsPersistentSlot } from "@/features/provider-jobs";
@@ -7,65 +7,80 @@ import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { getDashboardMenu } from "./dashboardMenu";
 import { DesktopNav } from "./DesktopNav";
-import { MobileNav } from "./MobileNav";
+import { MobileBottomNav } from "./MobileBottomNav";
+import { MobileStackHeader } from "./MobileStackHeader";
+import { MobileStackTransition } from "./MobileStackTransition";
+import { MobileTabHeader } from "./MobileTabHeader";
+import { useMobileNavigationChrome } from "./useMobileNavigationChrome";
 import { cn } from "@/lib/utils";
-
-/** Mobile conversation view uses the chat chrome instead of dashboard nav. */
-const MOBILE_CHAT_CONVERSATION_MATCH = { path: "/dashboard/chats/:chatId", end: true } as const;
 
 export function DashboardLayout() {
   const { profile } = useAuth();
   const isDesktop = useBreakpointMd();
   const isOnline = useOnlineStatus();
   const serviceDetailModal = useServiceDetailModal();
-  const mobileChatConversationMatch = useMatch(MOBILE_CHAT_CONVERSATION_MATCH);
-  const isMobileChatConversation = !isDesktop && mobileChatConversationMatch != null;
+  const mobileChrome = useMobileNavigationChrome();
   const role = profile?.role ?? "client";
   const menu = getDashboardMenu(role);
 
+  const outlet = mobileChrome.enableStackTransition ? (
+    <MobileStackTransition>
+      <Outlet />
+    </MobileStackTransition>
+  ) : (
+    <Outlet />
+  );
+
   return (
     <div className="flex h-dvh min-h-0 flex-col bg-background">
-      {/* Desktop: top bar with logo + nav */}
       {isDesktop && (
         <header
           className={cn(
             "sticky z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
-            isOnline ? "top-0" : "top-11"
+            isOnline ? "top-0" : "top-11",
           )}
         >
           <div className="container flex h-14 items-center justify-between px-4">
-            <Link to="/dashboard" className="flex items-center shrink-0">
-              <img
-                src="/logo-renovi.webp"
-                alt="Renovi"
-                className="h-7 md:h-8 w-auto"
-              />
+            <Link to="/dashboard" className="flex shrink-0 items-center">
+              <img src="/logo-renovi.webp" alt="Renovi" className="h-7 w-auto md:h-8" />
             </Link>
             <DesktopNav items={menu.allItems} className="min-w-0 flex-1 justify-end" />
           </div>
         </header>
       )}
 
-      {/* Mobile: top bar with hamburger + bottom nav (hidden during fullscreen chat) */}
-      {!isDesktop && !isMobileChatConversation ? (
-        <MobileNav menu={menu} isOffline={!isOnline} />
+      {!isDesktop && mobileChrome.showTabHeader ? (
+        <MobileTabHeader menu={menu} isOffline={!isOnline} />
+      ) : null}
+
+      {!isDesktop && mobileChrome.showStackHeader ? (
+        <MobileStackHeader
+          title={mobileChrome.stackTitle}
+          backFallback={mobileChrome.backFallback}
+          isOffline={!isOnline}
+        />
       ) : null}
 
       <main
         className={cn(
           "flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden",
-          isMobileChatConversation ? "overflow-hidden" : "overflow-y-auto",
-          !isDesktop && !isMobileChatConversation && "pb-20",
+          mobileChrome.mainOverflowHidden ? "overflow-hidden" : "overflow-y-auto",
+          mobileChrome.mainPaddingBottom && "pb-20",
+          mobileChrome.enableStackTransition && "relative overflow-hidden",
         )}
       >
         <ProviderJobsPersistentSlot />
         <ProviderMyServicesPersistentSlot />
         <ClientMyServicesPersistentSlot />
-        <Outlet />
+        {outlet}
         {serviceDetailModal.isOpen && serviceDetailModal.serviceRequestId ? (
           <ServiceDetailSheet serviceRequestId={serviceDetailModal.serviceRequestId} />
         ) : null}
       </main>
+
+      {!isDesktop && mobileChrome.showBottomNav ? (
+        <MobileBottomNav items={menu.mainItems} />
+      ) : null}
     </div>
   );
 }

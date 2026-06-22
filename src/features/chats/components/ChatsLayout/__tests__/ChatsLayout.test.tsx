@@ -6,11 +6,12 @@ import { describe, expect, it, vi } from "vitest";
 import { ChatsLayout } from "../ChatsLayout";
 
 vi.mock("@/hooks/useBreakpoint", () => ({
-  useBreakpointMd: () => true,
+  useBreakpointMd: () => useBreakpointMdMock(),
 }));
 
-const { useOnlineStatusMock } = vi.hoisted(() => ({
+const { useOnlineStatusMock, useBreakpointMdMock } = vi.hoisted(() => ({
   useOnlineStatusMock: vi.fn(() => true),
+  useBreakpointMdMock: vi.fn(() => true),
 }));
 
 vi.mock("@/hooks/useOnlineStatus", () => ({
@@ -56,6 +57,7 @@ describe("ChatsLayout", () => {
   });
 
   it("uses fullscreen shell on mobile conversation route", () => {
+    useBreakpointMdMock.mockReturnValue(false);
     useOnlineStatusMock.mockReturnValue(true);
     renderAt("/chats/chat-1");
     const shell = screen.getByTestId("chat-conversation-fullscreen");
@@ -65,6 +67,7 @@ describe("ChatsLayout", () => {
   });
 
   it("offsets fullscreen shell below offline banner on mobile conversation route", () => {
+    useBreakpointMdMock.mockReturnValue(false);
     useOnlineStatusMock.mockReturnValue(false);
     renderAt("/chats/chat-1");
     const shell = screen.getByTestId("chat-conversation-fullscreen");
