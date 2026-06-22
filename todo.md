@@ -84,6 +84,5 @@ Coisas para fazer next
 
 -ver imagens que o chat gpt gerou da tela de detalhes do serviço e o que podemos incorporar de fato.
 -está aparecendo action banner de enviar proposta quando não deveria.
--nas notificações de nova oportunidade, qunado clicar quero que abra a página de detalhes do serviço direto
 - não exibir quantidade de conversas ativas no card
 - reformular card

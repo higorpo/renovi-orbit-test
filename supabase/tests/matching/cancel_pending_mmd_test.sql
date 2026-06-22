@@ -39,7 +39,7 @@ select
     'service_name', 'Eletricista',
     'neighborhood', 'Centro',
     'urgency', 'medium',
-    'deep_link_path', '/dashboard/jobs'
+    'deep_link_path', format('/dashboard/services/%s', (select service_request_id from _cancel_mmd_sr))
   ),
   'QUEUED'::message_dispatcher.message_dispatch_status
 from _cancel_mmd_rows r
@@ -56,7 +56,7 @@ select
     'service_name', 'Eletricista',
     'neighborhood', 'Centro',
     'urgency', 'medium',
-    'deep_link_path', '/dashboard/jobs'
+    'deep_link_path', format('/dashboard/services/%s', (select service_request_id from _cancel_mmd_sr))
   ),
   'DELIVERED'::message_dispatcher.message_dispatch_status
 from _cancel_mmd_rows r;

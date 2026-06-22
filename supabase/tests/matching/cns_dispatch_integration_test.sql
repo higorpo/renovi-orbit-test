@@ -191,7 +191,7 @@ begin
       'service_name', 'Eletricista',
       'neighborhood', 'Centro',
       'urgency', 'medium',
-      'deep_link_path', '/dashboard/jobs'
+      'deep_link_path', format('/dashboard/services/%s', p_service_request_id)
     ),
     'QUEUED'::message_dispatcher.message_dispatch_status
   );

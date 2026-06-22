@@ -29,7 +29,7 @@ export const MATCHING_NEW_OPPORTUNITY_TEMPLATE_VARIABLES = {
   service_name: "Plumbing",
   neighborhood: "Pinheiros",
   urgency: "normal",
-  deep_link_path: "/dashboard/jobs",
+  deep_link_path: "/dashboard/services/7017e457-5a32-44e7-b8da-1727a14f4d33",
 } as const;
 
 export const MATCHING_NEW_OPPORTUNITY_PUSH_TEMPLATE = {

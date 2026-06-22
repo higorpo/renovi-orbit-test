@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(3);
+select plan(4);
 
 create or replace function pg_temp.matching_seed_open_service_request()
 returns uuid
@@ -90,6 +90,8 @@ select is(
     from message_dispatcher.message_dispatches md
     where md.profile_id = '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid
       and md.template_key = 'matching.new_opportunity'
+      and md.template_variables->>'service_request_id'
+        = (select service_request_id::text from _notify_sr)
   ),
   2,
   'batch_provider insert enqueues push and email dispatches'
@@ -101,9 +103,29 @@ select is(
     from message_dispatcher.message_dispatches md
     where md.profile_id = '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid
       and md.template_key = 'matching.new_opportunity'
+      and md.template_variables->>'service_request_id'
+        = (select service_request_id::text from _notify_sr)
   ),
   array['email', 'push'],
   'MMD rows use push and email channels'
+);
+
+select is(
+  (
+    select md.template_variables->>'deep_link_path'
+    from message_dispatcher.message_dispatches md
+    where md.profile_id = '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid
+      and md.template_key = 'matching.new_opportunity'
+      and md.channel = 'push'
+      and md.template_variables->>'service_request_id'
+        = (select service_request_id::text from _notify_sr)
+    limit 1
+  ),
+  format(
+    '/dashboard/services/%s',
+    (select service_request_id from _notify_sr)
+  ),
+  'push deep_link_path opens service detail route'
 );
 
 select ok(

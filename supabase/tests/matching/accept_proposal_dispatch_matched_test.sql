@@ -92,7 +92,7 @@ values (
     'service_name', 'Eletricista',
     'neighborhood', 'Centro',
     'urgency', 'medium',
-    'deep_link_path', '/dashboard/jobs'
+    'deep_link_path', format('/dashboard/services/%s', (select service_request_id from _accept_match_sr))
   ),
   'QUEUED'::message_dispatcher.message_dispatch_status
 );
