@@ -7,11 +7,17 @@ import {
 } from "../utils/conversationRealtimeChannel";
 import {
   subscribeInboxChannel,
+  type InboxMessageInsertPayload,
   type InboxRealtimeHandlers,
 } from "../utils/inboxRealtimeChannel";
 import { conversationPresenceChannelName } from "../utils/typingPresence";
 
-export type { InboxRealtimeHandlers, ConversationRealtimeHandlers, ConversationRealtimeScope };
+export type {
+  InboxMessageInsertPayload,
+  InboxRealtimeHandlers,
+  ConversationRealtimeHandlers,
+  ConversationRealtimeScope,
+};
 
 export function subscribeInboxRealtime(
   userId: string,

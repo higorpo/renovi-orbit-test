@@ -2,6 +2,8 @@ import type { User, Session } from "@supabase/supabase-js";
 
 export type ProfileRole = "client" | "provider" | "admin";
 
+export type ProviderOperationalStatus = "active" | "suspended";
+
 export const ALLOWED_ROLES: readonly ProfileRole[] = [
   "client",
   "provider",
@@ -16,6 +18,7 @@ export interface Profile {
   id: string;
   role: ProfileRole;
   full_name: string;
+  operational_status?: ProviderOperationalStatus;
   phone?: string | null;
   profile_image_path?: string | null;
   created_at?: string | null;

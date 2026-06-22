@@ -8,7 +8,7 @@ import {
 } from '../utils/providerLocationTracking.runtime'
 
 function isProviderTrackingPaused(
-  profile: { operational_status?: string | null } | null | undefined,
+  profile: { operational_status?: string } | null | undefined,
 ): boolean {
   return profile?.operational_status === 'suspended'
 }
@@ -26,7 +26,7 @@ export function useProviderLocationTracking(): void {
     const shouldTrack =
       Boolean(profileId) &&
       isProvider &&
-      !isProviderTrackingPaused(profile as { operational_status?: string | null })
+      !isProviderTrackingPaused(profile)
 
     if (!shouldTrack || !profileId) {
       void stopProviderLocationTracking()

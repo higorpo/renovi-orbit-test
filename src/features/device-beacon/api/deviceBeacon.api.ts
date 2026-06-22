@@ -42,7 +42,7 @@ function buildLocationFields(payload: DeviceBeaconUpsertPayload) {
     location: buildLocationEwkt(payload.latitude!, payload.longitude!),
     location_accuracy_meters: payload.location_accuracy_meters ?? null,
     location_recorded_at: payload.location_recorded_at ?? null,
-    h3_index: h3Index != null ? h3Index.toString() : null,
+    h3_index: h3Index != null ? Number(h3Index) : null,
   }
 }
 
