@@ -258,36 +258,38 @@ Duas estratégias equivalentes (escolher uma):
 
 Ao aceitar a proposta / agendar o serviço, criar a cobrança com data futura:
 
-```json
+> **Atenção (split):** o exemplo abaixo usa apenas `FIXED_AMOUNT` para ilustrar os valores de negócio Renovi. A documentação Netcred exige ao menos um `ruleItem` `PERCENTAGE` com soma 100.0 em toda `PayoutRule` (§8). Validar em homologação antes de usar este formato em produção.
+
+```jsonc
 {
-  "input": {
-    "companyId": 1014,
-    "paymentProfileId": 12345,
-    "amount": "1500.00",
-    "referenceCode": "renovi-service-{service_id}",
-    "manualCapture": true,
-    "billDaysInAdvance": 0,
-    "rrule": "DTSTART:20260608T000000Z RRULE:FREQ=DAILY;COUNT=1",
-    "payoutRuleInput": {
-      "name": "Renovi escrow {service_id}",
-      "persist": false,
-      "ruleItems": [
+  "input": { // Variável GraphQL ChargeCreateInput
+    "companyId": 1014, // ID da Company MERCHANT
+    "paymentProfileId": 12345, // ID do PaymentProfile tokenizado (etapa 1)
+    "amount": "1500.00", // Valor da cobrança (string decimal, até 2 casas)
+    "referenceCode": "renovi-service-{service_id}", // Idempotência — repetir na mesma empresa gera erro
+    "manualCapture": true, // Autoriza em T-2 mas não captura até transactionCapture
+    "billDaysInAdvance": 0, // Dias antes de dueAt para autorizar (0 = no próprio dueAt)
+    "rrule": "DTSTART:20260608T000000Z RRULE:FREQ=DAILY;COUNT=1", // Agenda cobrança única; dueAt = DTSTART; mutuamente exclusivo com installmentNumber
+    "payoutRuleInput": { // Split inline na cobrança (alternativa: payoutRuleId)
+      "name": "Renovi escrow {service_id}", // Nome identificador da regra de split
+      "persist": false, // Não persiste a regra para reuso futuro
+      "ruleItems": [ // Destinos do valor líquido após PAID; toda PayoutRule exige ≥1 PERCENTAGE somando 100.0 (§8)
         {
-          "splitType": "FIXED_AMOUNT",
-          "amount": "225.00",
-          "isLiable": true,
-          "bankAccountId": 10,
-          "scheduleInput": {
-            "scheduleType": "DAILY",
-            "scheduleAnchor": 1,
-            "automaticAdvance": false
+          "splitType": "FIXED_AMOUNT", // Repasse por valor fixo (pode coexistir com PERCENTAGE na mesma regra)
+          "amount": "225.00", // Valor fixo repassado para esta conta, se for possível
+          "isLiable": true, // Arca com débitos de estorno/chargeback nesta parcela
+          "bankAccountId": 10, // Conta bancária de destino (cadastrada previamente na Netcred)
+          "scheduleInput": { // Calendário de liquidação (cartão)
+            "scheduleType": "DAILY", // Tipo de agenda: DAILY, WEEKLY ou MONTHLY
+            "scheduleAnchor": 1, // Dia relativo ao scheduleType (DAILY: dias após processamento)
+            "automaticAdvance": false // Usa datas padrão de liquidação, sem antecipação com taxa
           }
         },
         {
           "splitType": "FIXED_AMOUNT",
-          "amount": "1275.00",
+          "amount": "1275.00", // Líquido do prestador (exemplo §4.7)
           "isLiable": false,
-          "bankAccountId": 20,
+          "bankAccountId": 20, // Conta bancária do prestador
           "scheduleInput": {
             "scheduleType": "DAILY",
             "scheduleAnchor": 1,
@@ -296,12 +298,12 @@ Ao aceitar a proposta / agendar o serviço, criar a cobrança com data futura:
         }
       ]
     },
-    "orderInput": {
+    "orderInput": { // Obrigatório quando análise de risco (ClearSale) está habilitada
       "orderItems": [{
         "productInput": {
-          "name": "Serviço de reforma",
-          "amount": "1500.00",
-          "category": "Serviços"
+          "name": "Serviço de reforma", // Nome do item para antifraude
+          "amount": "1500.00", // Valor do item (deve refletir o serviço)
+          "category": "Serviços" // Categoria do produto/serviço
         }
       }]
     }
@@ -426,12 +428,12 @@ platform_fee_amount  = client_charge_amount - provider_net_amount
 
 Exemplo com `proposed_amount = 1500`, taxa prestador 15%, taxa cliente 5%:
 
-| Parte | Valor | `ruleItem` |
-|-------|-------|------------|
+| Parte | Valor | `ruleItem` desejado |
+|-------|-------|---------------------|
 | Líquido prestador | R$ 1.275,00 | `FIXED_AMOUNT: "1275.00"` → `bankAccountId` prestador |
 | Comissão Renovi | R$ 225,00 | `FIXED_AMOUNT: "225.00"` → `bankAccountId` Renovi, `isLiable: true` |
 
-Usar `FIXED_AMOUNT` em vez de `PERCENTAGE` porque as taxas da Netcred incidem sobre valores líquidos imprevisíveis no percentual (mesma decisão do plano Asaas).
+A preferência por `FIXED_AMOUNT` espelha o plano Asaas (comissão fixa independente das taxas do gateway). Porém, a documentação Netcred do objeto `PayoutRule` exige **pelo menos um** `ruleItem` com `splitType: PERCENTAGE` e soma dos `proportion` igual a `"100.0"` — ver **§8**. Uma regra composta **somente** por `FIXED_AMOUNT` **não está documentada como válida**. Validar em homologação se a API aceita `FIXED_AMOUNT` + `PERCENTAGE` na mesma regra ou se o split Renovi precisa usar percentuais (ex.: 15% + 85%).
 
 ---
 
@@ -741,25 +743,25 @@ mutation paymentProfileCreateCard($input: PaymentProfileCreateInput!) {
 
 ### Input de exemplo
 
-```json
+```jsonc
 {
-  "input": {
-    "method": "CARD",
-    "customerInput": {
-      "companyId": 1014,
+  "input": { // Variável GraphQL PaymentProfileCreateInput
+    "method": "CARD", // Método do perfil de pagamento
+    "customerInput": { // Dados do pagador (Customer)
+      "companyId": 1014, // ID da Company MERCHANT
       "name": "Nome do Cliente",
       "email": "cliente@email.com",
-      "documentType": "CPF",
+      "documentType": "CPF", // CPF ou CNPJ
       "document": "12235241913",
       "phone": "47999999999",
       "persist": true
     },
-    "ccInput": {
-      "cardNumber": "4970100000000048",
-      "expiryMonth": 10,
-      "expiryYear": 2027,
-      "securityCode": "123",
-      "cardHolderName": "NOME NO CARTAO"
+    "ccInput": { // Dados do cartão (enviar apenas nesta mutation; não reutilizar em chargeCreate)
+      "cardNumber": "4970100000000048", // Número do cartão
+      "expiryMonth": 10, // Mês de validade (1–12)
+      "expiryYear": 2027, // Ano de validade
+      "securityCode": "123", // CVV
+      "cardHolderName": "NOME NO CARTAO" // Nome impresso no cartão
     }
   }
 }
@@ -851,37 +853,37 @@ mutation chargeCreateCard($input: ChargeCreateInput!) {
 
 ### Input — cobrança com token + split
 
-```json
+```jsonc
 {
-  "input": {
-    "companyId": 1013,
-    "paymentProfileId": 99,
-    "amount": "1500.00",
-    "installmentNumber": 1,
-    "referenceCode": "renovi-proposal-uuid-aqui",
-    "billDaysInAdvance": 0,
+  "input": { // Variável GraphQL ChargeCreateInput
+    "companyId": 1013, // ID da Company MERCHANT
+    "paymentProfileId": 99, // ID do PaymentProfile tokenizado (não reenviar ccInput)
+    "amount": "1500.00", // Valor da cobrança (string decimal, até 2 casas)
+    "installmentNumber": 1, // Parcelas no cartão (default: 1); mutuamente exclusivo com rrule
+    "referenceCode": "renovi-proposal-uuid-aqui", // Idempotência — repetir na mesma empresa gera erro
+    "billDaysInAdvance": 0, // Dias antes de dueAt para autorizar (0 = no próprio dueAt)
     "extraInfo": "Serviço Renovi - proposta XYZ",
-    "payoutRuleInput": {
-      "name": "Split Renovi + Prestador",
-      "isPrimary": false,
-      "persist": true,
-      "ruleItems": [
+    "payoutRuleInput": { // Split inline (mutuamente exclusivo com payoutRuleId e contractId)
+      "name": "Split Renovi + Prestador", // Nome identificador da regra de split
+      "isPrimary": false, // Não marca como regra primária da empresa
+      "persist": true, // Persiste a regra para reuso via payoutRuleId
+      "ruleItems": [ // Itens PERCENTAGE obrigatórios (≥1) e devem somar 100.0 (§8)
         {
-          "splitType": "PERCENTAGE",
-          "proportion": "15.0",
-          "isLiable": true,
-          "bankAccountId": 10,
-          "scheduleInput": {
-            "scheduleType": "DAILY",
-            "scheduleAnchor": 1,
-            "automaticAdvance": false
+          "splitType": "PERCENTAGE", // Repasse por percentual do valor líquido
+          "proportion": "15.0", // Percentual repassado (comissão Renovi)
+          "isLiable": true, // Arca com débitos de estorno/chargeback nesta parcela
+          "bankAccountId": 10, // Conta bancária da plataforma
+          "scheduleInput": { // Calendário de liquidação (cartão)
+            "scheduleType": "DAILY", // Tipo de agenda: DAILY, WEEKLY ou MONTHLY
+            "scheduleAnchor": 1, // Dia relativo ao scheduleType (DAILY: dias após processamento)
+            "automaticAdvance": false // Usa datas padrão de liquidação, sem antecipação com taxa
           }
         },
         {
           "splitType": "PERCENTAGE",
-          "proportion": "85.0",
+          "proportion": "85.0", // Percentual repassado (líquido do prestador)
           "isLiable": false,
-          "bankAccountId": 20,
+          "bankAccountId": 20, // Conta bancária do prestador
           "scheduleInput": {
             "scheduleType": "DAILY",
             "scheduleAnchor": 1,
@@ -890,14 +892,14 @@ mutation chargeCreateCard($input: ChargeCreateInput!) {
         }
       ]
     },
-    "orderInput": {
-      "sessionId": "clearsale-session-id",
+    "orderInput": { // Obrigatório quando análise de risco (ClearSale) está habilitada
+      "sessionId": "clearsale-session-id", // ID de sessão ClearSale Behavior Analytics
       "orderItems": [{
         "productInput": {
-          "name": "Serviço de reforma",
-          "amount": "1500.00",
-          "description": "Descrição do serviço",
-          "category": "Serviços"
+          "name": "Serviço de reforma", // Nome do item para antifraude
+          "amount": "1500.00", // Valor do item (deve refletir o serviço)
+          "description": "Descrição do serviço", // Descrição detalhada para antifraude
+          "category": "Serviços" // Categoria do produto/serviço
         }
       }]
     }
@@ -958,15 +960,15 @@ Quando habilitada na empresa:
 
 Mesma mutation `chargeCreate`, com `paymentProfileInput.method: "PIX"`.
 
-```json
+```jsonc
 {
-  "input": {
-    "companyId": 1014,
-    "amount": "125.37",
-    "referenceCode": "renovi-pix-uuid",
-    "paymentProfileInput": {
+  "input": { // Variável GraphQL ChargeCreateInput
+    "companyId": 1014, // ID da Company MERCHANT
+    "amount": "125.37", // Valor da cobrança (string decimal, até 2 casas)
+    "referenceCode": "renovi-pix-uuid", // Idempotência — repetir na mesma empresa gera erro
+    "paymentProfileInput": { // Cria perfil PIX inline (alternativa: paymentProfileId de perfil prévio)
       "method": "PIX",
-      "billingAddressInput": {
+      "billingAddressInput": { // Endereço de cobrança do pagador
         "street": "Rua Exemplo",
         "number": "100",
         "district": "Centro",
@@ -974,10 +976,10 @@ Mesma mutation `chargeCreate`, com `paymentProfileInput.method: "PIX"`.
         "state": "SC",
         "zipCode": "89201420"
       },
-      "customerInput": {
+      "customerInput": { // Dados do pagador (Customer)
         "name": "Cliente",
         "email": "cliente@email.com",
-        "documentType": "CPF",
+        "documentType": "CPF", // CPF ou CNPJ
         "document": "12235241913",
         "phone": "47999999999",
         "persist": true
@@ -991,7 +993,7 @@ Mesma mutation `chargeCreate`, com `paymentProfileInput.method: "PIX"`.
       "fineValue": "10",
       "persist": false
     },
-    "payoutRuleId": 99,
+    "payoutRuleId": 99, // ID de PayoutRule persistida (alternativa: payoutRuleInput inline)
     "extraInfo": "Pagamento serviço Renovi"
   }
 }
@@ -1026,17 +1028,20 @@ O split define **para quais contas bancárias** o valor líquido é direcionado 
 |-------|---------|
 | Habilitação | Empresa precisa ter **seleção de split habilitada** pela Netcred |
 | Contas | `bankAccountId` deve existir previamente (solicitar cadastro à Netcred) |
-| Soma percentual | Itens `PERCENTAGE` devem somar **100.0** |
+| **Obrigatoriedade de `PERCENTAGE`** | Toda `PayoutRule` deve ter **pelo menos um** `ruleItem` com `splitType: PERCENTAGE` (fonte: objeto `PayoutRule` na coleção Postman, pasta **Objetos → Payout (Liquidação)**) |
+| Soma percentual | A soma dos `proportion` de **todos** os itens `PERCENTAGE` deve ser **100.0** |
 | `isLiable` | Define quem arca com débitos (taxas de aluguel, estornos) — MDR/antecipação são descontados independentemente |
 | Cartão + terceiros | Para split de cartão para conta de terceiro, `cardPayoutAllowed` na regra deve ser `true` (titular da conta = documento do EC) |
 | Reutilização | `payoutRuleId` para regra persistida; `payoutRuleInput` para regra ad-hoc (`persist: true` salva para reuso) |
+
+> **Restrição documentada pela Netcred:** regra com **apenas** itens `FIXED_AMOUNT` (sem nenhum `PERCENTAGE`) não atende ao requisito acima. O exemplo em **§4.4** (dois `FIXED_AMOUNT`) ilustra valores de negócio desejados, mas precisa ser validado em homologação — o exemplo operacional em **§6** usa `PERCENTAGE` 15% + 85%.
 
 ### Tipos de split (`ruleItems`)
 
 | `splitType` | Campo valor | Descrição |
 |-------------|-------------|-----------|
-| `PERCENTAGE` | `proportion` | Percentual repassado (ex.: `"85.0"`) |
-| `FIXED_AMOUNT` | `amount` | Valor fixo repassado (ex.: `"50.00"`) |
+| `PERCENTAGE` | `proportion` | Percentual repassado (ex.: `"85.0"`). **Obrigatório** em toda regra; ver regra acima |
+| `FIXED_AMOUNT` | `amount` | Valor fixo repassado **se for possível** (ex.: `"50.00"`) — pode coexistir com itens `PERCENTAGE` na mesma regra |
 
 ### Schedule (antecipação — cartão)
 
@@ -1152,16 +1157,23 @@ mutation webhookCreate($input: WebhookCreateInput!) {
 }
 ```
 
-```json
+```jsonc
 {
-  "input": {
-    "name": "renovi-payments",
-    "targetUrl": "https://<projeto>.supabase.co/functions/v1/netcred-webhook",
-    "companyId": 1014,
-    "isActive": true,
-    "secretKey": "chave-secreta-forte",
-    "maskUserAgent": true,
-    "events": ["TRANSACTION_UPDATE", "TRANSACTION_CAPTURE", "TRANSACTION_VOID", "TRANSACTION_REFUND", "PAYMENT_PROFILE_TOKENIZE", "CHARGE_CREATE"]
+  "input": { // Variável GraphQL WebhookCreateInput
+    "name": "renovi-payments", // Nome identificador do webhook
+    "targetUrl": "https://<projeto>.supabase.co/functions/v1/netcred-webhook", // Endpoint HTTPS de destino (SSL obrigatório)
+    "companyId": 1014, // ID da Company MERCHANT
+    "isActive": true, // Webhook ativo para receber eventos
+    "secretKey": "chave-secreta-forte", // Chave para validar assinatura X-NETCRED-Signature
+    "maskUserAgent": true, // Simula user-agent de navegador se firewall bloquear
+    "events": [ // Eventos inscritos (ver catálogo §10)
+      "TRANSACTION_UPDATE", // Atualização geral de transação (inclui PIX/boleto pagos)
+      "TRANSACTION_CAPTURE", // Captura de cartão
+      "TRANSACTION_VOID", // Cancelamento de transação
+      "TRANSACTION_REFUND", // Estorno
+      "PAYMENT_PROFILE_TOKENIZE", // Tokenização concluída
+      "CHARGE_CREATE" // Cobrança criada
+    ]
   }
 }
 ```
@@ -1221,37 +1233,41 @@ mutation webhookCreate($input: WebhookCreateInput!) {
 
 ### Payload `TransactionPayload` (campos principais)
 
-```json
+```jsonc
 {
-  "id": 123456,
-  "uuid": "f6412196-35fb-4716-b308-0e2cfea7c970",
-  "transaction_state": "PAID",
-  "amount": "10.00",
-  "refunded_amount": "0.00",
-  "paid_amount": "10.00",
-  "installment_number": 1,
-  "company": 99,
-  "method": "CARD",
+  "id": 123456, // ID da Transaction
+  "uuid": "f6412196-35fb-4716-b308-0e2cfea7c970", // UUID da Transaction
+  "transaction_state": "PAID", // Estado atual (ver máquina de estados §9)
+  "amount": "10.00", // Valor da transação
+  "refunded_amount": "0.00", // Valor já estornado
+  "paid_amount": "10.00", // Valor efetivamente pago
+  "installment_number": 1, // Número da parcela
+  "company": 99, // ID da Company
+  "method": "CARD", // Método de pagamento (CARD, PIX, BILLET, etc.)
   "capture_medium": "ONLINE",
-  "billing_at": "2023-05-26",
-  "billed_at": "2023-05-26T03:47:20.628345Z",
-  "due_at": "2023-05-28",
-  "paid_at": "2023-05-26T04:00:00Z",
+  "billing_at": "2023-05-26", // Data prevista de autorização/emissão
+  "billed_at": "2023-05-26T03:47:20.628345Z", // Data/hora da autorização ou emissão
+  "due_at": "2023-05-28", // Data de vencimento ou captura prevista
+  "paid_at": "2023-05-26T04:00:00Z", // Data/hora do pagamento ou captura
   "attempts": 1,
-  "is_disputed": false,
-  "charge": {
-    "id": 44892,
-    "reference_code": "renovi-proposal-uuid",
+  "is_disputed": false, // Indica chargeback/disputa em andamento
+  "charge": { // Cobrança pai
+    "id": 44892, // ID da Charge
+    "reference_code": "renovi-proposal-uuid", // Código de referência (idempotência Renovi)
     "charge_link_id": null
   },
-  "pix_info": null,
-  "billet_info": null,
-  "operations": [{
-    "operation_type": "CAPTURE",
-    "operation_status": "SUCCESS",
-    "operation_date": "2023-05-26T04:00:00Z"
+  "pix_info": null, // Preenchido quando method = PIX (ver tabela abaixo)
+  "billet_info": null, // Preenchido quando method = boleto
+  "operations": [{ // Histórico de operações na transação
+    "operation_type": "CAPTURE", // Tipo: AUTHORIZE, CAPTURE, VOID, REFUND, etc. (§10)
+    "operation_status": "SUCCESS", // SUCCESS, REJECTED ou FAILURE
+    "operation_date": "2023-05-26T04:00:00Z" // Data/hora da operação
   }],
-  "payment_profile": { "id": 161258, "method": "CARD", "is_active": true }
+  "payment_profile": { // Perfil de pagamento usado na cobrança
+    "id": 161258,
+    "method": "CARD",
+    "is_active": true // false indica perfil inválido ou tokenização falha
+  }
 }
 ```
 
@@ -1266,19 +1282,19 @@ mutation webhookCreate($input: WebhookCreateInput!) {
 
 ### Payload `PaymentProfilePayload` (tokenização)
 
-```json
+```jsonc
 {
-  "id": 12125,
+  "id": 12125, // ID do PaymentProfile (usar como paymentProfileId em chargeCreate)
   "method": "CARD",
-  "is_active": true,
-  "card_number": "497010XXXXXX0048",
+  "is_active": true, // false + rejected_reason preenchido = tokenização falhou
+  "card_number": "497010XXXXXX0048", // PAN truncado
   "expiry_month": "8",
   "expiry_year": "2027",
-  "brand": "VCC",
+  "brand": "VCC", // Bandeira do cartão
   "card_holder_name": "Titular",
-  "rejected_reason": "",
-  "company": 99,
-  "customer": 22125
+  "rejected_reason": "", // Motivo da rejeição quando is_active = false
+  "company": 99, // ID da Company
+  "customer": 22125 // ID do Customer (pagador)
 }
 ```
 
