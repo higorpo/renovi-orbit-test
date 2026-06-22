@@ -37,6 +37,7 @@ Urgentes:
 - remoteconfig para não permitir cadastrar profissionais etc
 - remoteconfig para redirecionar para grupo de whatsapp
 -cadastro e criação de service requests não estão funcionando por conta da proteção 
+- Adicionar no chat botão para envio de proposta que fica visível a todo momento
 
 Telas/fluxos restantes:
 
@@ -83,6 +84,5 @@ Coisas para fazer next
 
 
 -ver imagens que o chat gpt gerou da tela de detalhes do serviço e o que podemos incorporar de fato.
--está aparecendo action banner de enviar proposta quando não deveria.
 - não exibir quantidade de conversas ativas no card
 - reformular card
