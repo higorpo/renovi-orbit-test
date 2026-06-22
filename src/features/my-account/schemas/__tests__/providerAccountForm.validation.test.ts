@@ -39,6 +39,22 @@ describe("providerAccountFormSchema", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts valid PJ with alphanumeric CNPJ", () => {
+    const result = providerAccountFormSchema.safeParse({
+      ...validPjBase,
+      cnpj: "12.ABC.345/01DE-35",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid alphanumeric CNPJ", () => {
+    const result = providerAccountFormSchema.safeParse({
+      ...validPjBase,
+      cnpj: "12.ABC.345/01DE-34",
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects single name (full_name refinement)", () => {
     const result = providerAccountFormSchema.safeParse({
       ...validPfBase,

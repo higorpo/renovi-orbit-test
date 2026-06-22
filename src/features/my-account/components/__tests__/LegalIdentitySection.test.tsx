@@ -91,6 +91,9 @@ describe("LegalIdentitySection", () => {
     fireEvent.change(cnpj, { target: { value: "11222333000181" } });
     expect(cnpj).toHaveValue("11.222.333/0001-81");
 
+    fireEvent.change(cnpj, { target: { value: "12abc34501de35" } });
+    expect(cnpj).toHaveValue("12.ABC.345/01DE-35");
+
     const repCpf = screen.getByLabelText(/CPF do representante legal/);
     fireEvent.change(repCpf, { target: { value: "52998224725" } });
     expect(repCpf).toHaveValue("529.982.247-25");

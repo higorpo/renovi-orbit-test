@@ -3,6 +3,8 @@
  * Used by auth and request-quote flows.
  */
 
+import { normalizeCNPJ } from "@/lib/cnpj";
+
 export function maskCPF(value: string): string {
   const numbers = value.replace(/\D/g, "");
   if (numbers.length <= 3) return numbers;
@@ -12,12 +14,12 @@ export function maskCPF(value: string): string {
 }
 
 export function maskCNPJ(value: string): string {
-  const numbers = value.replace(/\D/g, "");
-  if (numbers.length <= 2) return numbers;
-  if (numbers.length <= 5) return `${numbers.slice(0, 2)}.${numbers.slice(2)}`;
-  if (numbers.length <= 8) return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5)}`;
-  if (numbers.length <= 12) return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8)}`;
-  return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8, 12)}-${numbers.slice(12, 14)}`;
+  const chars = normalizeCNPJ(value);
+  if (chars.length <= 2) return chars;
+  if (chars.length <= 5) return `${chars.slice(0, 2)}.${chars.slice(2)}`;
+  if (chars.length <= 8) return `${chars.slice(0, 2)}.${chars.slice(2, 5)}.${chars.slice(5)}`;
+  if (chars.length <= 12) return `${chars.slice(0, 2)}.${chars.slice(2, 5)}.${chars.slice(5, 8)}/${chars.slice(8)}`;
+  return `${chars.slice(0, 2)}.${chars.slice(2, 5)}.${chars.slice(5, 8)}/${chars.slice(8, 12)}-${chars.slice(12, 14)}`;
 }
 
 export function maskPhone(value: string): string {

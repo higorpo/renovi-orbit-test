@@ -71,7 +71,7 @@ Documentação alinhada ao código em `src/features/my-account/`, guards em `src
 | `phone` | Telefone / WhatsApp (card **Contato** separado) | Não | `validateBrazilPhone` se não vazio | `profiles` |
 | `entity_type` | Pessoa física / Pessoa jurídica (botões) | Sim | `enum ["pf","pj"]` | `provider_profiles_private.entity_type` |
 | `cpf` | CPF | Condicional | Obrigatório só no sentido “se preenchido deve validar”; visível se PF | `provider_profiles_private` |
-| `cnpj`, `razao_social` | CNPJ, Razão social | **PJ:** implícito | `.refine`: se `pj`, CNPJ e razão social não podem ser vazios — *"Preencha CNPJ e Razão social para PJ"* | `provider_profiles_private` |
+| `cnpj`, `razao_social` | CNPJ, Razão social | **PJ:** implícito | `validateCNPJ` (numérico ou alfanumérico RFB, 14 posições, DV módulo 11); máscara `XX.XXX.XXX/XXXX-XX`; `.refine`: se `pj`, CNPJ e razão social não podem ser vazios — *"Preencha CNPJ e Razão social para PJ"* | `provider_profiles_private` |
 | `nome_fantasia` | Nome fantasia | Não | — | privado |
 | `legal_representative_name` | Representante legal | Não | — | privado |
 | `legal_representative_cpf` | CPF do representante legal | Não | `validateCPF` se não vazio | privado |

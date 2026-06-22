@@ -61,7 +61,7 @@ export function LegalIdentitySection({
                   <FormControl>
                     <Input
                       {...field}
-                      placeholder="00.000.000/0000-00"
+                      placeholder="XX.XXX.XXX/XXXX-XX"
                       disabled={disabled}
                       onChange={(e) => field.onChange(maskCNPJ(e.target.value))}
                     />
