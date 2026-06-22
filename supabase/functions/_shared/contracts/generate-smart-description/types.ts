@@ -2,7 +2,7 @@ import type {
   EstimatedDurationHintKey,
   SuggestedEquipmentKey,
   SuggestedMaterialsKey,
-} from "./allowedValues";
+} from "./allowedValues.ts";
 
 /** Mode for AI output: full description (structured or plain) or short suggestion only. */
 export type SmartDescriptionMode = "full_description" | "suggestion";

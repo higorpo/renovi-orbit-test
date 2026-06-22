@@ -27,6 +27,7 @@ export default defineConfig(({ mode }) => {
   },
   resolve: {
     alias: {
+      '@/lib/contracts': path.resolve(__dirname, './supabase/functions/_shared/contracts'),
       '@': path.resolve(__dirname, './src'),
       // nsfwjs imports "buffer/"; resolve to buffer package for browser
       'buffer/': path.resolve(__dirname, 'node_modules/buffer/'),

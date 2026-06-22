@@ -4,32 +4,32 @@ globs: src/**,supabase/functions/**
 alwaysApply: false
 ---
 
-# Shared contracts (`src/lib/contracts/`)
+# Shared contracts
 
-Types and constants shared by **frontend** and **Edge Functions** live in `src/lib/contracts/<domain>/`, not under `supabase/functions/`.
+Types and constants shared by **frontend** and **Edge Functions** live under `supabase/functions/_shared/contracts/<domain>/`. The app imports them via `@/lib/contracts/...`, resolved by explicit path aliases in `tsconfig*.json` and `vite.config.ts` (not a symlink — TypeScript and the Edge Docker mount need different resolution).
 
 ## Rules
 
-1. **`src/**` must not import from `supabase/functions/**`.** Use `@/lib/contracts/...` instead.
-2. **Edge Functions** import the same modules via the Deno import map alias `@orbit/contracts/` (see `supabase/functions/deno.json`).
-3. **Single source of truth** — define shared shapes once in `src/lib/contracts/`; edge-local modules may re-export for backward compatibility within `supabase/functions/`.
+1. **`src/**` must not import from `supabase/functions/**` directly.** Use `@/lib/contracts/...` instead.
+2. **Edge Functions** import the same modules via the Deno import map alias `@orbit/contracts/` → `./_shared/contracts/` (see `supabase/functions/deno.json`).
+3. **Single source of truth** — edit files under `supabase/functions/_shared/contracts/`; edge-local modules may re-export for backward compatibility within `supabase/functions/`.
 4. **Edge-only types** (handler internals, parsed params) stay in `supabase/functions/<function>/` and must not be imported by the app.
 5. **Contracts are isomorphic** — no Node-only APIs, no React, no Deno-only globals. Plain TypeScript types, constants, and pure helpers only.
 
 ## Layout
 
 ```
-src/lib/contracts/
+supabase/functions/_shared/contracts/   # canonical files (Edge mount + TS/Vite alias target)
   generate-smart-description/
-    allowedValues.ts   # AI field keys + validators
-    types.ts           # GenerateSmartDescriptionBody, StructuredAIResponse, …
+    allowedValues.ts
+    types.ts
   list-provider-opportunities/
-    types.ts           # Feed request/response types + FEED_* limits
+    types.ts
 ```
 
 ## When adding a new shared contract
 
-1. Add or extend a file under `src/lib/contracts/<domain>/`.
+1. Add or extend a file under `supabase/functions/_shared/contracts/<domain>/`.
 2. Import in the app: `@/lib/contracts/<domain>/...`
 3. Import in Edge: `@orbit/contracts/<domain>/...`
 4. Optionally keep a thin re-export in `supabase/functions/<function>/` if sibling modules already use local paths.

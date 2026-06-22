@@ -8,7 +8,7 @@
     "noUnusedParameters": true
   },
   "imports": {
-    "@orbit/contracts/": "../../src/lib/contracts/",
+    "@orbit/contracts/": "./_shared/contracts/",
     "std/testing/asserts": "https://deno.land/std@0.168.0/testing/asserts.ts",
     "std/path/mod": "https://deno.land/std@0.168.0/path/mod.ts",
     "std/http/server": "https://deno.land/std@0.168.0/http/server.ts",

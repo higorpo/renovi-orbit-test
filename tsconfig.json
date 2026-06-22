@@ -7,6 +7,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
+      "@/lib/contracts/*": ["./supabase/functions/_shared/contracts/*"],
       "@/*": ["./src/*"]
     }
   }
