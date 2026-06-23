@@ -21,9 +21,10 @@ Referência completa da API: [`docs/payments-api.md`](./payments-api.md) · Cole
 ```
 1. Prestador → KYC no app Renovi → e-mail à Netcred → cron detecta credenciamento
 2. Cliente → tokenização do cartão (checkout / aceite do orçamento)
-3. T-2 → chargeCreate (cobrança + split) → PAID
-4. Cancelamento pós-cobrança → transactionRefund
-   (Cancelamento antes de T-2 com cobrança agendada → chargeVoid / transactionVoid)
+3. Aceite → tokenização + persistir `charge_scheduled_at` (T-2) — **sem** `chargeCreate` no aceite
+4. Cron T-2 → `chargeCreate` (cobrança + split + parcelas) → `PAID`
+5. Cancelamento pós-cobrança → `transactionRefund`
+   (Cancelamento antes de T-2 → só domínio Renovi; cron não dispara cobrança)
 ```
 
 ```mermaid
@@ -40,12 +41,13 @@ sequenceDiagram
     N-->>R: companyId + bankAccountId
   end
 
-  C->>R: Cartão no checkout
+  C->>R: Aceite + cartão (tokenização)
   R->>N: paymentProfileCreate
   N-->>R: paymentProfileId
+  R->>R: Persiste charge_scheduled_at = serviço − 2d
 
-  Note over R,N: T-2 (2 dias antes do serviço)
-  R->>N: chargeCreate (split + orderInput)
+  Note over R,N: Cron diário — dia charge_scheduled_at (T-2)
+  R->>N: chargeCreate (split + orderInput + installmentNumber)
   N-->>R: charge PAID
 
   opt Cancelamento pós-T-2
@@ -60,9 +62,9 @@ sequenceDiagram
 | `tokenAuth` | mutation | Obter JWT (a cada 24 h ou antes de expirar) |
 | `companies` | query | Cron de credenciamento (batch por CPF/CNPJ) |
 | `paymentProfileCreate` | mutation | Tokenizar cartão do cliente |
-| `chargeCreate` | mutation | Cobrar em T-2 (com split) |
+| `chargeCreate` | mutation | Cron T-2 — cobrar no dia `charge_scheduled_at` (com split e parcelas) |
 | `transactionRefund` | mutation | Estorno após cobrança (`PAID`) |
-| `chargeVoid` / `transactionVoid` | mutation | Só se cancelar **antes** de T-2 (cobrança `SCHEDULED`) |
+| `chargeVoid` / `transactionVoid` | mutation | Edge case: cobrança criada mas ainda não `PAID` (ex.: falha/retry) |
 
 ---
 
@@ -506,11 +508,77 @@ Opcional para UI (não enviar à Netcred de novo): `expiryMonth`, `expiryYear`, 
 
 ## 4. Cobrança T-2 (`chargeCreate`)
 
-**Quando:** 2 dias antes de `service_scheduled_at` (estratégia A: `rrule` no aceite; estratégia B: cron no dia T-2).  
-**Efeito:** autorização + captura automática → `transactionState: PAID`.  
-**Não usar** `manualCapture: true`.
+**Decisão Renovi:** **não usar `rrule`** na API Netcred. O campo existe na documentação da parceira, porém é **mutuamente exclusivo com `installmentNumber`** (parcelamento no cartão) — como a Renovi precisa de parcelas, o agendamento da cobrança fica **100% no domínio Renovi**, via **cron job**.
 
-### IDs importantes
+**Quando cobrar:** no dia **`charge_scheduled_at` = `service_scheduled_at − 2 dias`** (T-2).  
+**Quem dispara:** worker/cron Renovi — **não** chamar `chargeCreate` no aceite do orçamento.  
+**Efeito da mutation:** autorização + captura automática (`manualCapture: false`) → `transactionState: PAID` na mesma execução (ou `REJECTED` / `IN_ANALYSIS` se antifraude recusar).
+
+### 4.1 No aceite do orçamento (antes do T-2)
+
+| Ação | Fazer | Não fazer |
+|------|-------|-----------|
+| Tokenizar cartão | `paymentProfileCreate` | — |
+| Persistir agendamento | `charge_scheduled_at`, `netcred_payment_profile_id`, `installment_number`, `reference_code` | — |
+| Cobrar | — | **`chargeCreate`** (esperar o cron) |
+| Agendar na Netcred | — | **`rrule`** (fora do escopo Renovi) |
+
+### 4.2 Cron `schedule-netcred-charges`
+
+Job diário (Edge Function + pg_cron ou equivalente) que dispara **`chargeCreate`** para serviços cuja cobrança vence **hoje**.
+
+#### Seleção (query local)
+
+Buscar serviços/propostas aceitas onde **todas** as condições forem verdadeiras:
+
+| Critério | Campo / regra |
+|----------|---------------|
+| Data de cobrança | `charge_scheduled_at::date = CURRENT_DATE` (timezone do serviço — alinhar com `service_scheduled_at`) |
+| Pagamento pendente | `payment_phase = 'pending_charge'` (ou equivalente) |
+| Serviço ativo | Status não cancelado (ex.: `accepted`, `scheduled`) |
+| Cartão | `netcred_payment_profile_id` preenchido |
+| Prestador credenciado | `netcred_onboarding_status = active` + `netcred_company_id` + `netcred_bank_account_id` |
+| Idempotência | `netcred_charge_id IS NULL` (ainda não cobrado) |
+
+Calcular no aceite:
+
+```
+charge_scheduled_at = service_scheduled_at - interval '2 days'
+```
+
+Ex.: serviço **05/07/2026** → cron roda em **03/07/2026** e chama `chargeCreate`.
+
+#### Execução por serviço
+
+1. Montar payload `chargeCreate` (§4.5) com `installmentNumber` escolhido no aceite.
+2. Chamar mutation com `referenceCode` = UUID do serviço (idempotência).
+3. **Sucesso (`PAID`):** persistir `netcred_charge_id`, `netcred_transaction_id`, `payment_phase = 'paid'`, timestamps.
+4. **`REJECTED`:** `payment_phase = 'charge_failed'`; notificar cliente; permitir novo cartão ou cancelamento.
+5. **`IN_ANALYSIS` / `MANUAL_ANALYSIS`:** manter `payment_phase = 'in_analysis'`; webhook `TRANSACTION_UPDATE` fecha o ciclo.
+6. **Erro de rede / 5xx:** retry com backoff; **não** duplicar cobrança — `referenceCode` impede segunda charge na Netcred se a primeira já criou.
+
+#### Idempotência e retries
+
+| Situação | Comportamento |
+|----------|---------------|
+| Cron reexecuta no mesmo dia | Se `netcred_charge_id` já existe → skip |
+| `referenceCode` duplicado na API | Consultar cobrança existente; sincronizar IDs locais |
+| Falha parcial (timeout após criar charge) | Reconciliar via webhook ou polling `transactions(referenceCode: …)` |
+
+#### Cancelamento antes do T-2
+
+Enquanto o cron **não** rodou, **não há cobrança na Netcred**. Cancelar o serviço na Renovi (`payment_phase = 'cancelled'`, status cancelado) — o cron **ignora** o registro. **Não** é necessário `chargeVoid`/`transactionVoid` neste cenário.
+
+#### Frequência recomendada
+
+| Opção | Detalhe |
+|-------|---------|
+| **1× ao dia** (madrugada) | Suficiente se `charge_scheduled_at` for sempre date-only |
+| **2× ao dia** (opcional) | Retry de falhas transientes no mesmo T-2 |
+
+Documentar timezone: usar o fuso do endereço do serviço ou UTC consistente em todo o pipeline.
+
+### 4.3 IDs importantes
 
 | ID | Origem | Uso |
 |----|--------|-----|
@@ -521,7 +589,7 @@ Opcional para UI (não enviar à Netcred de novo): `expiryMonth`, `expiryYear`, 
 
 > A cobrança roda na **company do prestador**, não na company marketplace da Renovi.
 
-### Split (modelo Renovi)
+### 4.4 Split (modelo Renovi)
 
 Comissão Renovi = **`FIXED_AMOUNT`** (valor acordado por serviço).  
 Restante = **`PERCENTAGE` 100%** para a conta do prestador.
@@ -569,7 +637,7 @@ A Netcred exige **ao menos um** `ruleItem` `PERCENTAGE` somando **100.0** na reg
 | Renovi | `bankAccountId` | Conta bancária da **Renovi** na Netcred |
 | Renovi | `isLiable: true` | Renovi arca com chargeback/estorno sobre a comissão |
 
-### Mutation
+### 4.5 Mutation e payload
 
 ```graphql
 mutation chargeCreateCardWithSplit($input: ChargeCreateInput!) {
@@ -596,7 +664,9 @@ mutation chargeCreateCardWithSplit($input: ChargeCreateInput!) {
 }
 ```
 
-### Input completo (referência)
+### Input completo (referência — chamado pelo cron T-2)
+
+> **Não incluir `rrule`.** Agendamento é responsabilidade do cron Renovi (§4.2).
 
 ```jsonc
 {
@@ -604,12 +674,12 @@ mutation chargeCreateCardWithSplit($input: ChargeCreateInput!) {
     "companyId": 1048,
     "paymentProfileId": 403137,
     "amount": "1000.00",
-    "installmentNumber": 1,
+    "installmentNumber": 10,
     "referenceCode": "uuid-do-servico",
     "billDaysInAdvance": 0,
+    "manualCapture": false,
     "extraInfo": "Renovi · Pintura · …",
     "customerIpAddress": "189.0.0.1",
-    "rrule": "DTSTART:20260703T000000Z RRULE:FREQ=DAILY;COUNT=1",
     "orderInput": {
       "sessionId": "uuid-clearsale-sessao",
       "referenceCode": "uuid-do-servico",
@@ -634,11 +704,12 @@ mutation chargeCreateCardWithSplit($input: ChargeCreateInput!) {
 | `companyId` | Sim | **`netcred_company_id` do prestador** |
 | `paymentProfileId` | Sim | ID da tokenização (não reenviar cartão) |
 | `amount` | Sim | Total cobrado do cliente (`"1000.00"`) |
-| `installmentNumber` | Não | Default `1` (à vista). Mutuamente exclusivo com `rrule` |
+| `installmentNumber` | Não | Parcelas no cartão do cliente (ex.: `10`); default `1`. **Não combinar com `rrule`** — Renovi não usa `rrule` |
 | `referenceCode` | Sim | UUID do serviço — **idempotência** (repetir → erro) |
 | `extraInfo` | Não | Resumo operacional — **máx. 150 caracteres** |
-| `rrule` | Não* | *Estratégia A:* agendar T-2; `DTSTART` = data serviço − 2 dias |
-| `billDaysInAdvance` | Não | Default `0` — autoriza/cobra no `dueAt` |
+| `billDaysInAdvance` | Não | Default `0` |
+| `manualCapture` | Não | **`false`** (default) — captura automática |
+| `rrule` | **Não usar** | Exclusivo com parcelamento; agendamento via cron §4.2 |
 | `customerIpAddress` | Recomendado | IP do cliente (ClearSale) |
 | `orderInput` | Condicional | **Obrigatório** com ClearSale |
 | `orderInput.sessionId` | Condicional | UUID da sessão ClearSale Behavior Analytics |
@@ -654,23 +725,13 @@ mutation chargeCreateCardWithSplit($input: ChargeCreateInput!) {
 | `charge.id` | `netcred_charge_id` | ID da **cobrança** |
 | `charge.referenceCode` | `reference_code` | UUID do serviço |
 | `transactions.edges[0].node.id` | `netcred_transaction_id` | ID da **transaction** — usar em refund |
-| `transactions.edges[0].node.transactionState` | `payment_phase` | Esperado: `PAID` (ou `SCHEDULED` até T-2 se `rrule` futuro) |
-| `charge.chargeStatus` | — | `ENDED` quando `PAID`; `ONGOING` se ainda `SCHEDULED` |
+| `transactions.edges[0].node.transactionState` | `payment_phase` | Esperado: **`PAID`** na resposta do cron (ou `IN_ANALYSIS` → webhook) |
+| `charge.chargeStatus` | — | `ENDED` quando `PAID` |
+| `charge.chargeType` | — | `SINGLE` (cobrança imediata na chamada do cron) |
 
 > **`charge.id` ≠ `transaction.id`.** Estorno usa sempre `transaction.id`.
 
-### Agendamento T-2 (`rrule`)
-
-| Item | Valor |
-|------|-------|
-| Formato | `DTSTART:YYYYMMDDTHHMMSSZ RRULE:FREQ=DAILY;COUNT=1` |
-| `DTSTART` | `service_scheduled_at - 2 dias` (UTC) |
-| Resultado imediato | `chargeType: RECURRING`, transaction `SCHEDULED` |
-| No T-2 | Netcred processa → `PAID` |
-
-Omitir `rrule` se usar cron no dia T-2 (cobrança imediata na chamada).
-
-### Erros conhecidos (`chargeCreate`)
+### 4.6 Erros conhecidos (`chargeCreate`)
 
 | Código / mensagem | Causa | Ação |
 |-------------------|-------|------|
@@ -690,14 +751,9 @@ Omitir `rrule` se usar cron no dia T-2 (cobrança imediata na chamada).
 
 Disputas formalizadas podem exigir **e-mail à Netcred** além da API — ver [`payments-api.md` §4.14](./payments-api.md).
 
-### Cancelamento antes de T-2
+### Cancelamento antes do T-2
 
-Se a cobrança foi agendada com `rrule` e ainda está `SCHEDULED`:
-
-- `chargeVoid` (cancela toda a charge), ou  
-- `transactionVoid` (cancela uma transaction)
-
-Após `PAID`, **somente** `transactionRefund`.
+Enquanto o cron **não executou** `chargeCreate`, não existe cobrança na Netcred. Basta cancelar o serviço na Renovi — o cron não incluirá o registro (§4.2). `chargeVoid` / `transactionVoid` só se aplicam se a cobrança já foi criada e ainda não está `PAID` (caso raro de retry/reconciliação).
 
 ### Mutation
 
@@ -839,7 +895,7 @@ Rejeitar request se assinatura inválida. Logar `X-NETCRED-Event` + IDs do paylo
 | `PAYMENT_PROFILE_UPDATE` | Perfil alterado na Netcred | `PaymentProfilePayload` | Sincronizar `card_brand`, validade, `is_active`; desativar cartão local se `is_active: false` |
 | `PAYMENT_PROFILE_DELETE` | Perfil desativado/removido | `PaymentProfilePayload` | Soft-delete ou `is_active = false` no cartão local; impedir uso em novas cobranças |
 | `PAYMENT_PROFILE_EXPIRING` | Cartão expira em ~1 mês | `PaymentProfilePayload` | Notificar cliente para atualizar cartão antes do T-2 |
-| `CHARGE_CREATE` | Cobrança criada (`chargeCreate` ou agendamento) | `ChargePayload` | Persistir/atualizar `netcred_charge_id`, `reference_code` ↔ serviço; `payment_phase` → `scheduled` |
+| `CHARGE_CREATE` | Cobrança criada pelo cron (`chargeCreate`) | `ChargePayload` | Persistir `netcred_charge_id`, `reference_code` ↔ serviço |
 | `CHARGE_UPDATE` | Cobrança alterada (valor, datas, estado) | `ChargePayload` | Conciliar `charge_state`, datas de billing; alertar se divergir do agendamento Renovi |
 | `CHARGE_VOID` | Cobrança cancelada antes da execução | `ChargePayload` | `payment_phase` → `voided`; serviço cancelado sem débito |
 | `TRANSACTION_CREATE` | Transação filha criada na charge | `TransactionPayload` | Persistir `netcred_transaction_id`; ligar `charge.reference_code` ao serviço |
@@ -866,7 +922,7 @@ Rejeitar request se assinatura inválida. Logar `X-NETCRED-Event` + IDs do paylo
 
 | `transaction_state` (payload) | Ação Renovi |
 |-------------------------------|-------------|
-| `SCHEDULED` | Cobrança agendada (pré-T-2) |
+| `SCHEDULED` | Não esperado no fluxo Renovi (sem `rrule`); tratar como estado transitório se aparecer |
 | `IN_ANALYSIS` / `MANUAL_ANALYSIS` | Aguardar antifraude; UI “em análise” |
 | `PAID` | Pagamento confirmado; liberar fluxo pós-pagamento |
 | `REJECTED` | Falha na cobrança; notificar cliente |
@@ -922,7 +978,7 @@ Inscrever no mínimo:
 | 3 | E-mail service | `credenciamento@netcred.com.br` |
 | 4 | Cron diário | `companies(document)` — **1 request** com até 50 aliases GraphQL |
 | 5 | Checkout | `paymentProfileCreate` + billing address; perfil condicional |
-| 6 | Worker T-2 | `chargeCreate` + split + `orderInput` |
+| 6 | Cron T-2 `schedule-netcred-charges` | Diário: `charge_scheduled_at = hoje` → `chargeCreate` + split + parcelas |
 | 7 | Cancelamento | `transactionRefund` (pós-`PAID`) |
 | 8 | Webhook handler | Todos os eventos §6.3 + reconciliação idempotente |
 | 9 | Gate prestador | Bloquear oportunidades até `netcred_onboarding_status = active` |
