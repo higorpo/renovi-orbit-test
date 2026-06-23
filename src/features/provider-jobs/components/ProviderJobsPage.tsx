@@ -47,7 +47,7 @@ export function ProviderJobsPage() {
   const hasActiveFilters = filters.sortMode !== getDefaultSortMode(hasFeedGps);
 
   return (
-    <div className="container max-w-5xl px-4 py-6">
+    <div className="container w-full min-w-0 max-w-5xl px-4 py-6">
       <JobsHeader isUsingDefaultLocation={location.isUsingDefault} />
 
       {location.isUsingDefault && (
@@ -71,9 +71,9 @@ export function ProviderJobsPage() {
 
         <section aria-label="Lista de trabalhos" id="jobs-list">
           {isLoading && (
-            <ul className="grid gap-4" aria-busy="true">
+            <ul className="grid min-w-0 gap-4" aria-busy="true">
               {Array.from({ length: SKELETON_COUNT }).map((_, i) => (
-                <li key={i}>
+                <li key={i} className="min-w-0">
                   <JobCardSkeleton />
                 </li>
               ))}
@@ -93,9 +93,9 @@ export function ProviderJobsPage() {
 
           {!isLoading && !isError && items.length > 0 && (
             <>
-              <ul className="grid gap-4">
+              <ul className="grid min-w-0 gap-4">
                 {items.map((job) => (
-                  <li key={job.service_request_id}>
+                  <li key={job.service_request_id} className="min-w-0">
                     <JobCard
                       job={job}
                       onDismiss={dismissOpportunity}
