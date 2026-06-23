@@ -225,15 +225,22 @@ mutation paymentProfileCreateCard($input: PaymentProfileCreateInput!) {
     errors { field message code }
     paymentProfile {
       id
-      token
+      method
       isActive
       cardNumber
+      expiryMonth
+      expiryYear
       brand
+      cardHolderName
+      token
       rejectedReason
+      customer { id name documentType document }
     }
   }
 }
 ```
+
+Payload e regras validadas em sandbox: **§5**.
 
 **Persistir na Renovi (`service_payments` ou tabela dedicada):**
 
@@ -433,7 +440,7 @@ Exemplo com `proposed_amount = 1500`, taxa prestador 15%, taxa cliente 5%:
 | Líquido prestador | R$ 1.275,00 | `FIXED_AMOUNT: "1275.00"` → `bankAccountId` prestador |
 | Comissão Renovi | R$ 225,00 | `FIXED_AMOUNT: "225.00"` → `bankAccountId` Renovi, `isLiable: true` |
 
-A preferência por `FIXED_AMOUNT` espelha o plano Asaas (comissão fixa independente das taxas do gateway). Porém, a documentação Netcred do objeto `PayoutRule` exige **pelo menos um** `ruleItem` com `splitType: PERCENTAGE` e soma dos `proportion` igual a `"100.0"` — ver **§8**. Uma regra composta **somente** por `FIXED_AMOUNT` **não está documentada como válida**. Validar em homologação se a API aceita `FIXED_AMOUNT` + `PERCENTAGE` na mesma regra ou se o split Renovi precisa usar percentuais (ex.: 15% + 85%).
+A preferência por comissão fixa espelha o plano Asaas. O modelo **`FIXED_AMOUNT` (Renovi) + `PERCENTAGE` 100% (prestador)** foi validado em homologação (2026-06) — ver **§6** (payload) e **§8**. Regra com **somente** itens `FIXED_AMOUNT` (sem `PERCENTAGE`) continua inválida.
 
 ---
 
@@ -741,31 +748,84 @@ mutation paymentProfileCreateCard($input: PaymentProfileCreateInput!) {
 }
 ```
 
-### Input de exemplo
+### Input de exemplo (validado em sandbox, 2026-06)
 
 ```jsonc
 {
   "input": { // Variável GraphQL PaymentProfileCreateInput
     "method": "CARD", // Método do perfil de pagamento
-    "customerInput": { // Dados do pagador (Customer)
-      "companyId": 1014, // ID da Company MERCHANT
-      "name": "Nome do Cliente",
-      "email": "cliente@email.com",
+    "customerInput": { // Dados do pagador (Customer) — enviar em toda tokenização (ver §5)
+      "companyId": 1047, // ID da Company MERCHANT (obter via getCompanies)
+      "name": "Maria da Silva",
+      "email": "cliente@renovi.com.br",
       "documentType": "CPF", // CPF ou CNPJ
-      "document": "12235241913",
-      "phone": "47999999999",
-      "persist": true
+      "document": "03019758092", // Apenas dígitos; deve ser CPF válido (ver §5)
+      "phone": "48991234567",
+      "persist": false // Obrigatório na Renovi — não reutilizar Customer persistido na Netcred
     },
     "ccInput": { // Dados do cartão (enviar apenas nesta mutation; não reutilizar em chargeCreate)
-      "cardNumber": "4970100000000048", // Número do cartão
+      "cardNumber": "4970100000000048", // Cartão aprovado no sandbox
       "expiryMonth": 10, // Mês de validade (1–12)
       "expiryYear": 2027, // Ano de validade
       "securityCode": "123", // CVV
-      "cardHolderName": "NOME NO CARTAO" // Nome impresso no cartão
+      "cardHolderName": "Maria da Silva" // Deve coincidir com o nome do titular na Renovi (ver §5)
     }
   }
 }
 ```
+
+### Regras Renovi (validado em sandbox)
+
+| Regra | Detalhe |
+|-------|---------|
+| **`customerInput.persist: false`** | Sempre enviar `customerInput` completo em cada `paymentProfileCreate`. Não depender de `customerId` de chamadas anteriores na Netcred. |
+| **CPF válido** | O `document` deve ser um CPF/CNPJ válido (dígitos verificadores corretos). CPFs fictícios do `supabase/seed.sql` (ex.: `123.456.789-00`) **falham** na Netcred — usar CPFs válidos nos seeds de clientes usados em testes de pagamento (ex.: `03019758092` para Maria da Silva). |
+| **`cardHolderName` = nome do titular** | `ccInput.cardHolderName` deve ser o mesmo nome do titular da conta Renovi (`profiles.full_name` / nome exibido no checkout), não um alias arbitrário. |
+| **`companyId`** | ID da Company `MERCHANT` retornado por `getCompanies` no ambiente correto (sandbox vs produção). |
+
+### Resposta de sucesso (exemplo sandbox)
+
+```json
+{
+  "data": {
+    "paymentProfileCreate": {
+      "errors": [],
+      "paymentProfile": {
+        "id": "403137",
+        "method": "CARD",
+        "isActive": true,
+        "cardNumber": "497010XXXXXX0048",
+        "expiryMonth": "10",
+        "expiryYear": "2027",
+        "brand": "VCC",
+        "cardHolderName": "Maria da Silva",
+        "token": "f084400e0d9e4a3788bb44aaa8d980dd",
+        "rejectedReason": "",
+        "customer": {
+          "id": "401298",
+          "name": "Maria da Silva",
+          "documentType": "CPF",
+          "document": "03019758092"
+        }
+      }
+    }
+  }
+}
+```
+
+Confirmar `isActive: true` e `errors: []` antes de prosseguir. IDs (`paymentProfile.id`, `customer.id`) variam por ambiente e chamada.
+
+### Parâmetros `customerInput`
+
+| Campo | Obrigatório | Descrição |
+|-------|-------------|-----------|
+| `companyId` | Sim | ID da Company `MERCHANT` |
+| `name` | Sim | Nome do pagador (deve alinhar com `cardHolderName`) |
+| `email` | Não* | E-mail do pagador (*recomendado) |
+| `documentType` | Sim | `CPF` ou `CNPJ` |
+| `document` | Sim | CPF/CNPJ apenas dígitos; deve ser válido |
+| `phone` | Não* | Telefone (*recomendado) |
+| `persist` | Sim | **`false`** na Renovi — reenviar dados do cliente a cada tokenização |
 
 ### Parâmetros `ccInput`
 
@@ -789,7 +849,7 @@ Se já existir, a API **retorna o perfil existente** em vez de criar outro.
 
 ### Endereço de cobrança
 
-Obrigatório (`billingAddressInput` ou `billingAddressId`) **somente se a empresa tiver análise de risco (ClearSale) habilitada**.
+Obrigatório (`billingAddressInput` ou `billingAddressId`) **somente se a empresa tiver análise de risco (ClearSale) habilitada**. Sem endereço, `chargeCreate` com o `paymentProfileId` falha — ver **§6.4**.
 
 ### Desativar perfil
 
@@ -814,7 +874,7 @@ Parâmetro: `paymentProfileId`.
 
 Após tokenizar, use **`paymentProfileId`** na cobrança — **não** reenvie `ccInput`.
 
-> **Fluxo escrow Renovi:** usar `manualCapture: true` + `rrule` (T-2) conforme **§4**. A captura efetiva (`transactionCapture`) ocorre apenas na confirmação do cliente.
+> **Fluxo Renovi:** etapa 1 = tokenização no fechamento do orçamento (**§5**); etapa 2 = `chargeCreate` em T-2 (**§6.1**). Escrow com `manualCapture: true` + `transactionCapture` na confirmação do cliente conforme **§4**.
 
 ### Mutation
 
@@ -851,7 +911,88 @@ mutation chargeCreateCard($input: ChargeCreateInput!) {
 }
 ```
 
-### Input — cobrança com token + split
+### Payload validado em sandbox (2026-06)
+
+Exemplo usado em homologação com company `1047`, cartão tokenizado `403137` e split Renovi + prestador (R$ 1.000 — comissão fixa R$ 100 + restante ao prestador via `PERCENTAGE` 100%):
+
+```jsonc
+{
+  "input": {
+    "companyId": 1047, // Company MERCHANT (getCompanies)
+    "paymentProfileId": 403137, // Etapa 1 — paymentProfileCreate (§5); precisa billingAddress se ClearSale ativo
+    "amount": "1000.00", // Valor total cobrado do cliente
+    "installmentNumber": 1, // Parcelas no cartão (1 = à vista); mutuamente exclusivo com rrule
+    "referenceCode": "renovi-service-2", // Idempotência da Charge — único por empresa (§6.2)
+    "billDaysInAdvance": 0, // Dias antes de dueAt para autorizar (0 = no dueAt)
+    "extraInfo": "Serviço Renovi - R$ 1.000", // Texto livre para operação
+    "manualCapture": false, // false = autoriza+captura juntos; true = pré-auth até transactionCapture (§4)
+    "customerIpAddress": "189.0.0.1", // IP do pagador (antifraude; recomendado com ClearSale)
+    "orderInput": { // Obrigatório com análise de risco (ClearSale) — ver §6.3
+      "sessionId": "sandbox-test-session-001", // ClearSale Behavior Analytics (produção: SDK no checkout)
+      "referenceCode": "carrinho-renovi-service-3", // ID externo do carrinho/pedido (≠ referenceCode da Charge)
+      "orderItems": [{
+        "productInput": {
+          "name": "Serviço de reforma",
+          "amount": "1000.00", // Deve refletir o valor do serviço
+          "description": "Serviço agendado via Renovi",
+          "category": "Serviços"
+        }
+      }]
+    },
+    "payoutRuleInput": { // Requer Select Payout Rule habilitado na company (§6.4, §8)
+      "name": "Split servico R$1000",
+      "isPrimary": false,
+      "persist": false, // Regra ad-hoc só para esta cobrança
+      "ruleItems": [
+        {
+          "splitType": "PERCENTAGE",
+          "proportion": "100.0", // 100% do líquido (após FIXED) para conta do prestador
+          "isLiable": false,
+          "bankAccountId": 2053, // Conta bancária do prestador
+          "scheduleInput": {
+            "scheduleType": "DAILY",
+            "scheduleAnchor": 1,
+            "automaticAdvance": false
+          }
+        },
+        {
+          "splitType": "FIXED_AMOUNT",
+          "amount": "100.0", // Comissão fixa Renovi (R$ 100)
+          "isLiable": true, // Arca com estornos/chargeback nesta parcela
+          "bankAccountId": 2052, // Conta bancária da plataforma
+          "scheduleInput": {
+            "scheduleType": "DAILY",
+            "scheduleAnchor": 1,
+            "automaticAdvance": false
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+> **Teste sem split customizado:** omitir `payoutRuleInput` inteiro se a company não tiver **Select Payout Rule** habilitado — a Netcred usa a `PayoutRule` primária da empresa.
+
+### Campos do payload (`chargeCreate`)
+
+| Campo | Obrigatório | Significado Renovi |
+|-------|-------------|-------------------|
+| `companyId` | Sim | EC `MERCHANT` do prestador/marketplace (`getCompanies`) |
+| `paymentProfileId` | Sim* | Cartão tokenizado na etapa 1; não reenviar PAN/CVV |
+| `amount` | Sim | Valor que o cliente paga (string `"1000.00"`) |
+| `installmentNumber` | Não | Default `1`; parcelas no cartão |
+| `referenceCode` | Recomendado | `renovi-service-{service_id}` — idempotência e webhooks |
+| `billDaysInAdvance` | Não | Com `rrule` (T-2), dias antes de `dueAt` para autorizar |
+| `rrule` | Não | Agenda cobrança única em T-2 (estratégia A em **§4.4**); exclusivo com `installmentNumber` |
+| `manualCapture` | Não | `true` no fluxo escrow produção; `false` para teste imediato no Postman |
+| `customerIpAddress` | Não* | IP real do cliente no checkout/cobrança (*recomendado com ClearSale) |
+| `orderInput` | Condicional | Carrinho antifraude — obrigatório com ClearSale (**§6.3**) |
+| `payoutRuleInput` | Condicional | Split inline — exige serviço comercial Netcred (**§6.4**) |
+
+\* `paymentProfileId` ou `paymentProfileInput` (este último reenvia cartão — evitar após tokenização).
+
+### Input — cobrança com token + split (referência genérica)
 
 ```jsonc
 {
@@ -943,14 +1084,93 @@ mutation transactionCapture($input: TransactionCaptureInput!) {
 
 Default (`manualCapture: false`): autorização + captura automáticas na criação.
 
-### Análise de risco (ClearSale)
+### 6.1 Fluxo Renovi em duas etapas (orçamento → cobrança T-2)
 
-Quando habilitada na empresa:
+| Etapa | Quando | Mutation | O que acontece |
+|-------|--------|----------|----------------|
+| **1. Salvar cartão** | Cliente fecha/aceita orçamento no checkout | `paymentProfileCreate` (**§5**) | Tokeniza cartão; **não cobra**; persiste `netcred_payment_profile_id` |
+| **2. Cobrar** | 2 dias antes da data agendada do serviço (`service_scheduled_at - 2d`) | `chargeCreate` (esta seção) | Autoriza/captura no cartão tokenizado (`paymentProfileId`) |
 
-- Integrar script ClearSale Behavior Analytics no checkout.
-- Enviar `orderInput.sessionId` (obter `app_id` com suporte Netcred).
-- Enviar `orderInput.orderItems` com descrições precisas do serviço.
-- Estados intermediários: `IN_ANALYSIS`, `MANUAL_ANALYSIS`.
+```
+Cliente fecha orçamento          T-2 (2 dias antes)              Dia do serviço
+        │                                │                            │
+        ▼                                ▼                            ▼
+ paymentProfileCreate              chargeCreate                  prestador executa
+ (token + billingAddress)     (paymentProfileId + orderInput)   cliente confirma
+        │                                │                            │
+   payment_profile_saved          charge_authorized/captured    transactionCapture*
+        │                         (manualCapture define)       (se manualCapture=true)
+```
+
+\* `transactionCapture` só no fluxo escrow com `manualCapture: true` (**§4**).
+
+**Estratégias para etapa 2 (T-2):**
+
+| Estratégia | Como | Quando chamar |
+|------------|------|----------------|
+| **A — `rrule`** (recomendada) | `chargeCreate` com `rrule` ao agendar o serviço; `DTSTART` = T-2 | No aceite da proposta |
+| **B — cron** | `chargeCreate` sem `rrule` no dia T-2 | Worker diário Renovi |
+
+**Dados a persistir entre etapas:**
+
+| Após etapa 1 | Após etapa 2 |
+|--------------|--------------|
+| `netcred_payment_profile_id` | `netcred_charge_id` |
+| `netcred_customer_id` | `netcred_transaction_id` |
+| `card_brand`, `card_last_four` | `referenceCode`, `payment_phase` |
+
+### 6.2 `referenceCode` — dois níveis distintos
+
+| Campo | Nível | Significado | Exemplo Renovi |
+|-------|-------|-------------|----------------|
+| `input.referenceCode` | **Charge** | Idempotência da cobrança na Netcred; repetir na mesma empresa → erro | `renovi-service-{service_id}` |
+| `orderInput.referenceCode` | **Carrinho** (ClearSale) | ID externo do pedido/carrinho para antifraude | `renovi-checkout-{proposal_id}` |
+
+Não confundir os dois. O da Charge é o usado em polling/webhooks (`transactions(referenceCode: …)`).
+
+### 6.3 ClearSale (análise de risco)
+
+Habilitada na company → exige dados em **duas** camadas:
+
+| Momento | Onde | Campos |
+|---------|------|--------|
+| **Etapa 1 — tokenização** | `paymentProfileCreate` | `billingAddressInput` (ou `billingAddressId`) |
+| **Etapa 2 — cobrança** | `chargeCreate` → `orderInput` | `sessionId` (**obrigatório** `String!`), `orderItems` (≥1 item) |
+
+#### `orderInput.sessionId`
+
+- Identificador da **sessão do usuário** no checkout, gerado pelo [ClearSale Behavior Analytics](https://api.clearsale.com.br/docs/behavior-analytics).
+- O **mesmo** `sessionId` coletado pelo SDK deve ser enviado na API.
+- Formato: preferir o gerado pelo SDK; se custom, usar **GUID/UUID** único.
+- Se o usuário **sair e voltar** ao checkout, gerar **novo** `sessionId`.
+
+**Implementação Renovi (produção):**
+
+1. Solicitar `app_id` ClearSale à Netcred.
+2. No checkout (etapa 1), carregar o script/SDK Behavior Analytics.
+3. Ao tokenizar, já enviar `billingAddressInput` no `paymentProfileCreate`.
+4. Persistir `sessionId` (e opcionalmente `orderInput.referenceCode`) vinculados ao serviço/proposta.
+5. Na cobrança T-2 (etapa 2), enviar `orderInput` com `sessionId` e `orderItems` do serviço.
+
+> **Pendência T-2 + ClearSale:** entre o fechamento do orçamento e T-2 podem passar dias/semanas. Validar com a Netcred se é necessário **nova coleta** Behavior Analytics na etapa 2 (novo `sessionId`) ou se o da etapa 1 permanece válido. Até confirmação, no Postman sandbox usar placeholder em `sessionId`.
+
+**Sandbox (Postman):** `sessionId` arbitrário (ex.: `"sandbox-test-session-001"`) passa na validação GraphQL; antifraude real exige SDK integrado.
+
+Estados intermediários da transação: `IN_ANALYSIS`, `MANUAL_ANALYSIS` (**§9**).
+
+### 6.4 Erros conhecidos em homologação
+
+Registro inicial dos erros encontrados em sandbox (company `1047`, 2026-06). Expandir conforme novos casos.
+
+| Mensagem / código | Tipo | Causa | Ação |
+|-----------------|------|-------|------|
+| `PaymentProfile requires BillingAddress when Risk Analysis is enabled for Company` | Negócio | ClearSale ativo e `PaymentProfile` sem endereço de cobrança | Incluir `billingAddressInput` no `paymentProfileCreate` (**§5**) e re-tokenizar; perfis antigos sem endereço não servem para `chargeCreate` |
+| `Field 'sessionId' of required type 'String!' was not provided` (`VALIDATION_ERROR`) | GraphQL | `orderInput` sem `sessionId` com ClearSale habilitado | Enviar `orderInput.sessionId` (**§6.3**) |
+| `This company does not have Select Payout Rule Service enabled` (`PAYOUT_RULE_SELECT_NOT_ENABLED`) | Comercial | Company sem serviço **Select Payout Rule** | Pedir habilitação à Netcred; **ou** omitir `payoutRuleInput`/`payoutRuleId` (usa split primário da empresa) |
+| `referenceCode` repetido (idempotência) | Negócio | Mesmo `input.referenceCode` na mesma empresa | Usar novo código (`renovi-service-{id}` único) ou consultar cobrança existente |
+| Autorização expirada ao capturar | Negócio | `manualCapture: true` e `transactionCapture` após prazo da bandeira | `transactionVoid` e reautorizar; ver janela de pré-auth **§4.2** |
+
+**Respostas com `errors[]` e `charge: null`:** a mutation retornou HTTP 200, mas a operação falhou — inspecionar `errors[].code` e `errors[].message`; não assumir sucesso.
 
 ---
 
@@ -1033,8 +1253,9 @@ O split define **para quais contas bancárias** o valor líquido é direcionado 
 | `isLiable` | Define quem arca com débitos (taxas de aluguel, estornos) — MDR/antecipação são descontados independentemente |
 | Cartão + terceiros | Para split de cartão para conta de terceiro, `cardPayoutAllowed` na regra deve ser `true` (titular da conta = documento do EC) |
 | Reutilização | `payoutRuleId` para regra persistida; `payoutRuleInput` para regra ad-hoc (`persist: true` salva para reuso) |
+| **Select Payout Rule** | Enviar `payoutRuleInput` ou `payoutRuleId` exige serviço comercial habilitado na company; senão → `PAYOUT_RULE_SELECT_NOT_ENABLED` (**§6.4**) |
 
-> **Restrição documentada pela Netcred:** regra com **apenas** itens `FIXED_AMOUNT` (sem nenhum `PERCENTAGE`) não atende ao requisito acima. O exemplo em **§4.4** (dois `FIXED_AMOUNT`) ilustra valores de negócio desejados, mas precisa ser validado em homologação — o exemplo operacional em **§6** usa `PERCENTAGE` 15% + 85%.
+> **Composição `PERCENTAGE` + `FIXED_AMOUNT` (validado 2026-06):** confirmado em homologação que uma regra pode ter **um** item `PERCENTAGE` (ex.: `"100.0"` → prestador recebe o percentual do líquido após o fixo) **e** **um** item `FIXED_AMOUNT` (ex.: `"100.00"` → comissão fixa Renovi). Regra com **apenas** `FIXED_AMOUNT` (sem nenhum `PERCENTAGE`) continua inválida pela documentação do objeto `PayoutRule`.
 
 ### Tipos de split (`ruleItems`)
 
@@ -1077,10 +1298,21 @@ query {
 
 ### Modelo sugerido para Renovi (marketplace)
 
+**Opção A — comissão fixa + restante percentual** (validado sandbox, §6 payload):
+
+| Destino | `splitType` | Valor | `isLiable` | Conta |
+|---------|-------------|-------|------------|-------|
+| Prestador | `PERCENTAGE` | `"100.0"` | `false` | `bankAccountId` do prestador |
+| Renovi | `FIXED_AMOUNT` | `"100.00"` (ex.) | `true` | `bankAccountId` da plataforma |
+
+Sobre R$ 1.000 com comissão R$ 100: `FIXED_AMOUNT` R$ 100 para Renovi + `PERCENTAGE` 100% do restante para o prestador.
+
+**Opção B — tudo percentual** (alternativa documentada):
+
 | Destino | `proportion` | `isLiable` | Observação |
 |---------|--------------|------------|------------|
-| Conta Renovi (comissão) | Taxa da plataforma | `true` | Arca com chargeback/estorno proporcional |
-| Conta prestador | Restante | `false` | Líquido do prestador |
+| Conta Renovi (comissão) | ex. `"10.0"` | `true` | Arca com chargeback/estorno proporcional |
+| Conta prestador | ex. `"90.0"` | `false` | Líquido do prestador |
 
 Valores exatos devem refletir a regra de negócio em `docs/payment-system/` (comissão fixa vs percentual).
 
@@ -1417,6 +1649,8 @@ Ver **seção 4** para o fluxo escrow completo (tokenização → T-2 → confir
 | `voidCharge()` | `chargeVoid` | Cancelar cobrança `SCHEDULED` |
 | `refundTransaction()` | `transactionRefund` | Pós-captura |
 | `getTransaction()` | `transactions` query | Reconciliação |
+
+**Tokenização (`createCardPaymentProfile`):** `customerInput.persist: false` em toda chamada; `document` com CPF válido do perfil local; `cardHolderName` igual ao `full_name` do cliente. Payload e resposta de sandbox em **§5**.
 
 ### Edge Function webhook
 
