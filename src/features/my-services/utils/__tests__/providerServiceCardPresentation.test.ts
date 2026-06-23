@@ -230,7 +230,52 @@ describe("getProviderServiceCardPresentation", () => {
           (item) => item.icon === "amount" && item.text.includes("Você recebe"),
         ),
       ).toBe(true);
-      expect(pres.primaryAction.label).toBe("Ver conversa");
+      expect(pres.primaryAction.label).toBe("Abrir no mapa");
+      expect(pres.primaryAction.intent).toBe("open_map");
+      expect(pres.primaryAction.disabled).toBe(true);
+    });
+
+    it("enables Abrir no mapa when today service has coordinates", () => {
+      const model = baseModel({
+        listPhase: "in_progress",
+        statusTabId: "in_progress",
+        myProposal: {
+          id: "p-1",
+          status: "ACCEPTED",
+          finalAmount: 425,
+          updatedAt: "2025-06-08T00:00:00Z",
+          expiredAt: null,
+          submittedAt: "2025-06-01T00:00:00Z",
+          revisionReason: null,
+          revisionNotes: null,
+          clientRejectionResponse: null,
+        },
+        contracted: {
+          id: "cs-1",
+          status: "CONFIRMED",
+          agreedSlot: null,
+          durationUnit: "hours",
+          durationValue: 5,
+          scheduledStartDate: "2025-06-08",
+          scheduledEndDate: null,
+          scheduledShift: "morning",
+          provider: null,
+          chatId: null,
+          updatedAt: null,
+        },
+        address: {
+          neighborhood: "Centro",
+          cityName: "Florianópolis",
+          street: "Rua das Flores",
+          number: "100",
+          streetSummary: "Rua das Flores, 100",
+          latitude: -27.5954,
+          longitude: -48.548,
+        },
+      });
+      const pres = getProviderServiceCardPresentation(model);
+      expect(pres.primaryAction.label).toBe("Abrir no mapa");
+      expect(pres.primaryAction.disabled).toBe(false);
     });
 
     it("prioritizes unread message with location, amount and schedule in secondary info", () => {

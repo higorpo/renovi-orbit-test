@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { cn } from "@/lib/utils";
 import type { AddressLocation } from "../../types/addresses.types";
 
 /** Default map center: Florianópolis. */
@@ -79,7 +80,7 @@ export function AddressMap({ location, onLocationChange, className }: AddressMap
   if (!mounted) {
     return (
       <div
-        className={className}
+        className={cn("relative isolate z-0", className)}
         style={{ height: 280, background: "var(--muted)", borderRadius: 8 }}
         aria-hidden
       />
@@ -87,7 +88,10 @@ export function AddressMap({ location, onLocationChange, className }: AddressMap
   }
 
   return (
-    <div className={className} style={{ height: 280, borderRadius: 8, overflow: "hidden" }}>
+    <div
+      className={cn("relative isolate z-0", className)}
+      style={{ height: 280, borderRadius: 8, overflow: "hidden" }}
+    >
       <MapContainer
         center={[center.latitude, center.longitude]}
         zoom={ZOOM}

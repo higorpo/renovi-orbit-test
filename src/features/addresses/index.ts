@@ -68,6 +68,8 @@ export {
   usePlatformNeighborhoods,
 } from "./hooks/usePlatformStatesAndCities";
 export { AddressSelectionStep } from "./components/AddressSelectionStep/AddressSelectionStep";
+export { LocationPreviewMap } from "./components/LocationPreviewMap/LocationPreviewMap";
+export type { LocationPreviewMapProps } from "./components/LocationPreviewMap/LocationPreviewMap";
 export { AddressCard } from "./components/AddressCard/AddressCard";
 export { AddressFormDialog } from "./components/AddressFormDialog/AddressFormDialog";
 export { DeleteAddressDialog } from "./components/DeleteAddressDialog/DeleteAddressDialog";

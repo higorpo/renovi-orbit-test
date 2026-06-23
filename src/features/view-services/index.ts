@@ -56,6 +56,7 @@ export { getStatusLabel, getStatusBadgeVariant } from "./constants/statusBadge";
 export type { StatusBadgeVariant } from "./constants/statusBadge";
 export { isServiceDetailSheetLocation } from "./utils/isServiceDetailSheetLocation";
 export { mapRpcServiceRow } from "./utils/serviceMapper";
+export { getServiceCoordinates } from "./utils/serviceLocation";
 export { formatLocationDisplay } from "./utils/locationDisplay";
 export { formatServiceDate } from "./utils/formatDate";
 export {

@@ -2,9 +2,11 @@ import { useCallback } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
   createProviderMyServicesServiceDetailState,
+  getServiceCoordinates,
   getServiceDetailPath,
   type ServiceModel,
 } from "@/features/view-services";
+import { openGoogleMaps } from "@/lib/maps/openGoogleMaps";
 import { useMyServicesPageCore } from "./useMyServicesPageCore";
 import { useProviderServiceProposalDialogs } from "./useProviderServiceProposalDialogs";
 
@@ -32,6 +34,12 @@ export function useProviderMyServicesPage() {
     [navigate],
   );
 
+  const handleOpenMap = useCallback((model: ServiceModel) => {
+    const coordinates = getServiceCoordinates(model.address);
+    if (!coordinates) return;
+    openGoogleMaps(coordinates);
+  }, []);
+
   const handleReviseProposal = useCallback(
     (model: ServiceModel) => {
       void proposalDialogs.openReviseProposal(model);
@@ -50,6 +58,7 @@ export function useProviderMyServicesPage() {
     ...core,
     handleOpenDetails,
     handleOpenChat,
+    handleOpenMap,
     handleReviseProposal,
     handleViewProposal,
     proposalDialogs,

@@ -32,6 +32,7 @@ export function ProviderMyServicesPage() {
     handleClearFilters,
     handleOpenDetails,
     handleOpenChat,
+    handleOpenMap,
     handleReviseProposal,
     handleViewProposal,
     proposalDialogs,
@@ -77,6 +78,7 @@ export function ProviderMyServicesPage() {
             model={model}
             onOpenDetails={handleOpenDetails}
             onOpenChat={handleOpenChat}
+            onOpenMap={handleOpenMap}
             onReviseProposal={handleReviseProposal}
             onViewProposal={handleViewProposal}
           />

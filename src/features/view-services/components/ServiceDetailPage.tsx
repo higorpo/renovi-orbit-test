@@ -22,6 +22,7 @@ import { useServiceDetailChatNavigation } from "../hooks/useServiceDetailChatNav
 import { useRecordProviderOpportunityView } from "../hooks/useRecordProviderOpportunityView";
 import { SERVICE_DETAIL_PAGE_SHELL_CLASS } from "../constants/serviceDetail.constants";
 import { ServiceContractedSection } from "./ServiceContractedSection";
+import { ServiceProviderLocationSection } from "./ServiceProviderLocationSection";
 import { ServiceDetailClientActions } from "./ServiceDetailClientActions";
 import { ServiceDetailFloatingActions } from "./ServiceDetailFloatingActions";
 import { ServiceDetailHeader } from "./ServiceDetailHeader";
@@ -155,6 +156,9 @@ export function ServiceDetailPage({
 
       <div className="space-y-4">
         {model.contracted ? <ServiceContractedSection contracted={model.contracted} /> : null}
+        {isProvider && model.contracted ? (
+          <ServiceProviderLocationSection address={model.address} />
+        ) : null}
         <ServiceDetailRequestSections
           model={model}
           suggestedEquipmentPt={suggestedEquipmentPt}

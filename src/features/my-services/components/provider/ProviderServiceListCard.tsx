@@ -8,7 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Eye, MessageSquare } from "lucide-react";
+import { Eye, MapPin, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getUrgencyConfig, type ServiceModel } from "@/features/view-services";
 import { usePublicProfileImageUrl } from "@/features/provider-profile/hooks/usePublicProfileImageUrl";
@@ -29,6 +29,7 @@ export interface ProviderServiceListCardProps {
   model: ServiceModel;
   onOpenDetails?: (model: ServiceModel) => void;
   onOpenChat?: (model: ServiceModel) => void;
+  onOpenMap?: (model: ServiceModel) => void;
   onReviseProposal?: (model: ServiceModel) => void;
   onViewProposal?: (model: ServiceModel) => void;
   className?: string;
@@ -59,6 +60,7 @@ interface ProviderCardActionsProps {
   secondaryAction: ProviderCardAction | null;
   onOpenDetails?: (model: ServiceModel) => void;
   onOpenChat?: (model: ServiceModel) => void;
+  onOpenMap?: (model: ServiceModel) => void;
   onReviseProposal?: (model: ServiceModel) => void;
   onViewProposal?: (model: ServiceModel) => void;
 }
@@ -69,6 +71,7 @@ function ProviderCardActions({
   secondaryAction,
   onOpenDetails,
   onOpenChat,
+  onOpenMap,
   onReviseProposal,
   onViewProposal,
 }: ProviderCardActionsProps) {
@@ -76,6 +79,10 @@ function ProviderCardActions({
     const intent: ProviderCardActionIntent | "details" | "chat" = action.intent;
     if (intent === "chat") {
       onOpenChat?.(model);
+      return;
+    }
+    if (intent === "open_map") {
+      onOpenMap?.(model);
       return;
     }
     if (intent === "revise_proposal") {
@@ -95,6 +102,8 @@ function ProviderCardActions({
     const buttonIcon =
       action.intent === "chat" ? (
         <MessageSquare className="h-4 w-4 shrink-0" aria-hidden />
+      ) : action.intent === "open_map" ? (
+        <MapPin className="h-4 w-4 shrink-0" aria-hidden />
       ) : (
         <Eye className="h-4 w-4 shrink-0" aria-hidden />
       );
@@ -222,6 +231,7 @@ export function ProviderServiceListCard({
   model,
   onOpenDetails,
   onOpenChat,
+  onOpenMap,
   onReviseProposal,
   onViewProposal,
   className,
@@ -318,6 +328,7 @@ export function ProviderServiceListCard({
           secondaryAction={presentation.secondaryAction}
           onOpenDetails={onOpenDetails}
           onOpenChat={onOpenChat}
+          onOpenMap={onOpenMap}
           onReviseProposal={onReviseProposal}
           onViewProposal={onViewProposal}
         />

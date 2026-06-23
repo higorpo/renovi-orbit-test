@@ -21,6 +21,8 @@ export interface RpcServiceAddress {
   zip_code?: string | null;
   city_name?: string | null;
   state_abbreviation?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface RpcServicePlatformService {
@@ -136,6 +138,8 @@ function mapAddress(address: RpcServiceAddress | null | undefined): AddressSumma
     number: address.number ?? undefined,
     complement: address.complement ?? undefined,
     zipCode: address.zip_code ?? undefined,
+    latitude: address.latitude ?? null,
+    longitude: address.longitude ?? null,
   };
 }
 

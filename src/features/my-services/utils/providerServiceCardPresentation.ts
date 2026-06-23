@@ -6,6 +6,7 @@ import {
   getScheduledTiming,
   getStatusBadgeVariant,
   getStatusLabel,
+  getServiceCoordinates,
   type ServiceModel,
   type StatusBadgeVariant,
 } from "@/features/view-services";
@@ -16,6 +17,7 @@ import { isProposalExpiringSoon } from "./providerProposalStatus";
 export type ProviderCardActionIntent =
   | "chat"
   | "details"
+  | "open_map"
   | "revise_proposal"
   | "view_proposal";
 
@@ -349,6 +351,13 @@ function chatAction(model: ServiceModel, label = "Ver conversa"): ProviderCardAc
   };
 }
 
+function openMapAction(): ProviderCardAction {
+  return {
+    label: "Abrir no mapa",
+    intent: "open_map",
+  };
+}
+
 function buildNegotiationActions(
   model: ServiceModel,
 ): Pick<ProviderServiceCardPresentation, "primaryAction" | "secondaryAction"> {
@@ -392,6 +401,25 @@ function buildInProgressActions(
   if (model.chatSummary?.isUnread) {
     return {
       primaryAction: { label: "Responder", intent: "chat", disabled: chatDisabled(model) },
+      secondaryAction: { label: "Ver detalhes", intent: "details" },
+    };
+  }
+
+  const timing = model.contracted?.scheduledStartDate
+    ? getScheduledTiming(model.contracted.scheduledStartDate)
+    : "future";
+  const isTodayService = timing === "today";
+  const hasCoordinates = getServiceCoordinates(model.address) !== null;
+
+  if (isTodayService) {
+    return {
+      primaryAction: {
+        ...openMapAction(),
+        disabled: !hasCoordinates,
+        disabledReason: hasCoordinates
+          ? undefined
+          : "Localização do serviço indisponível",
+      },
       secondaryAction: { label: "Ver detalhes", intent: "details" },
     };
   }

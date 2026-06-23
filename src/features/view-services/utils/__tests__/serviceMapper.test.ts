@@ -17,6 +17,8 @@ describe("serviceMapper", () => {
           neighborhood: "Centro",
           city_name: "SP",
           state_abbreviation: "SP",
+          latitude: -23.55,
+          longitude: -46.63,
         },
         platform_service: {
           title: "Eletricista",
@@ -74,5 +76,7 @@ describe("serviceMapper", () => {
     expect(model.chatSummary?.isUnread).toBe(true);
     expect(model.chatSummary?.lastMessagePreview).toBe("Olá!");
     expect(model.counterparty?.profileImagePath).toBe("avatars/joao.jpg");
+    expect(model.address?.latitude).toBe(-23.55);
+    expect(model.address?.longitude).toBe(-46.63);
   });
 });

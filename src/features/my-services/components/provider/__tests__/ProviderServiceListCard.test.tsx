@@ -104,6 +104,95 @@ describe("ProviderServiceListCard", () => {
     expect(onOpenChat).toHaveBeenCalledWith(baseModel);
   });
 
+  it("renders Abrir no mapa and Ver detalhes for in_progress service scheduled today", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-06-08T12:00:00Z"));
+
+    const inProgressTodayModel: ServiceModel = {
+      ...baseModel,
+      listPhase: "in_progress",
+      statusTabId: "in_progress",
+      chatSummary: {
+        id: "chat-1",
+        isUnread: false,
+        lastInteractionAt: "2025-03-02T00:00:00Z",
+        lastMessagePreview: null,
+      },
+      address: {
+        neighborhood: "Centro",
+        cityName: "Florianópolis",
+        latitude: -27.5954,
+        longitude: -48.548,
+      },
+      contracted: {
+        id: "cs-1",
+        status: "CONFIRMED",
+        agreedSlot: null,
+        durationUnit: "hours",
+        durationValue: 5,
+        scheduledStartDate: "2025-06-08",
+        scheduledEndDate: null,
+        scheduledShift: "morning",
+        provider: null,
+        chatId: null,
+        updatedAt: null,
+      },
+    };
+    render(
+      <MemoryRouter>
+        <ProviderServiceListCard model={inProgressTodayModel} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("button", { name: /Abrir no mapa/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ver detalhes/i })).toBeInTheDocument();
+
+    vi.useRealTimers();
+  });
+
+  it("calls onOpenMap when Abrir no mapa is clicked", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-06-08T12:00:00Z"));
+    const onOpenMap = vi.fn();
+    const inProgressTodayModel: ServiceModel = {
+      ...baseModel,
+      listPhase: "in_progress",
+      statusTabId: "in_progress",
+      chatSummary: {
+        id: "chat-1",
+        isUnread: false,
+        lastInteractionAt: "2025-03-02T00:00:00Z",
+        lastMessagePreview: null,
+      },
+      address: {
+        neighborhood: "Centro",
+        cityName: "Florianópolis",
+        latitude: -27.5954,
+        longitude: -48.548,
+      },
+      contracted: {
+        id: "cs-1",
+        status: "CONFIRMED",
+        agreedSlot: null,
+        durationUnit: "hours",
+        durationValue: 5,
+        scheduledStartDate: "2025-06-08",
+        scheduledEndDate: null,
+        scheduledShift: "morning",
+        provider: null,
+        chatId: null,
+        updatedAt: null,
+      },
+    };
+    render(
+      <MemoryRouter>
+        <ProviderServiceListCard model={inProgressTodayModel} onOpenMap={onOpenMap} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Abrir no mapa/i }));
+    expect(onOpenMap).toHaveBeenCalledWith(inProgressTodayModel);
+    vi.useRealTimers();
+  });
+
   it("renders Ver conversa and Ver detalhes for in_progress phase", () => {
     const inProgressModel: ServiceModel = {
       ...baseModel,
