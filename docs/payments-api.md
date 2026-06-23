@@ -1158,19 +1158,33 @@ Habilitada na company → exige dados em **duas** camadas:
 
 Estados intermediários da transação: `IN_ANALYSIS`, `MANUAL_ANALYSIS` (**§9**).
 
-### 6.4 Erros conhecidos em homologação
+### 6.4 Erros conhecidos em homologação (`chargeCreate`)
 
-Registro inicial dos erros encontrados em sandbox (company `1047`, 2026-06). Expandir conforme novos casos.
+Registro dos erros encontrados em sandbox (company `1047`, 2026-06) na mutation **`chargeCreate`**. Expandir conforme novos casos.
 
 | Mensagem / código | Tipo | Causa | Ação |
 |-----------------|------|-------|------|
 | `PaymentProfile requires BillingAddress when Risk Analysis is enabled for Company` | Negócio | ClearSale ativo e `PaymentProfile` sem endereço de cobrança | Incluir `billingAddressInput` no `paymentProfileCreate` (**§5**) e re-tokenizar; perfis antigos sem endereço não servem para `chargeCreate` |
 | `Field 'sessionId' of required type 'String!' was not provided` (`VALIDATION_ERROR`) | GraphQL | `orderInput` sem `sessionId` com ClearSale habilitado | Enviar `orderInput.sessionId` (**§6.3**) |
 | `This company does not have Select Payout Rule Service enabled` (`PAYOUT_RULE_SELECT_NOT_ENABLED`) | Comercial | Company sem serviço **Select Payout Rule** | Pedir habilitação à Netcred; **ou** omitir `payoutRuleInput`/`payoutRuleId` (usa split primário da empresa) |
+| `INTERNAL_SERVER_ERROR` | Infra / gateway | Falha não tratada no lado Netcred (sem mensagem de negócio específica); payload pode estar correto | Não assumir sucesso; **não** repetir em loop — registrar `referenceCode`, horário e payload; tentar de novo após alguns minutos; se persistir, abrir chamado à Netcred com companyId e `referenceCode` |
 | `referenceCode` repetido (idempotência) | Negócio | Mesmo `input.referenceCode` na mesma empresa | Usar novo código (`renovi-service-{id}` único) ou consultar cobrança existente |
 | Autorização expirada ao capturar | Negócio | `manualCapture: true` e `transactionCapture` após prazo da bandeira | `transactionVoid` e reautorizar; ver janela de pré-auth **§4.2** |
 
 **Respostas com `errors[]` e `charge: null`:** a mutation retornou HTTP 200, mas a operação falhou — inspecionar `errors[].code` e `errors[].message`; não assumir sucesso.
+
+**Exemplo — `INTERNAL_SERVER_ERROR`:**
+
+```json
+{
+  "data": {
+    "chargeCreate": {
+      "errors": [{ "field": null, "message": "Internal server error", "code": "INTERNAL_SERVER_ERROR" }],
+      "charge": null
+    }
+  }
+}
+```
 
 ---
 
