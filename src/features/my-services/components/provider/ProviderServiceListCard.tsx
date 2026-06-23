@@ -104,7 +104,7 @@ function ProviderCardActions({
         variant={variant}
         size="sm"
         className={cn(
-          "h-9 min-h-9 rounded-full px-4 font-medium gap-1.5 transition-transform duration-150 ease-out active:scale-[0.97]",
+          "h-10 min-h-10 w-full rounded-full px-4 font-medium gap-1.5 transition-transform duration-150 ease-out active:scale-[0.97] sm:h-9 sm:min-h-9 sm:w-auto",
           variant === "default"
             ? "bg-primary text-primary-foreground hover:bg-primary/90"
             : "border-border/80 bg-background text-foreground hover:bg-muted/60",
@@ -113,7 +113,7 @@ function ProviderCardActions({
         onClick={() => handleAction(action)}
       >
         {buttonIcon}
-        <span>{action.label}</span>
+        <span className="truncate">{action.label}</span>
       </Button>
     );
 
@@ -122,7 +122,7 @@ function ProviderCardActions({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="inline-flex">{buttonElement}</span>
+              <span className="flex w-full min-w-0">{buttonElement}</span>
             </TooltipTrigger>
             <TooltipContent>{action.disabledReason}</TooltipContent>
           </Tooltip>
@@ -133,10 +133,18 @@ function ProviderCardActions({
     return buttonElement;
   };
 
+  const hasTwoActions = Boolean(secondaryAction);
+  const actionSlotClass = (paired: boolean) =>
+    cn("min-w-0", paired ? "flex-1 sm:flex-none" : "w-full sm:w-auto");
+
   return (
-    <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2">
-      {secondaryAction ? renderButton(secondaryAction, "outline") : null}
-      {renderButton(primaryAction, "default")}
+    <div className="flex w-full min-w-0 flex-row items-stretch gap-2 sm:justify-end">
+      {secondaryAction ? (
+        <div className={actionSlotClass(true)}>{renderButton(secondaryAction, "outline")}</div>
+      ) : null}
+      <div className={actionSlotClass(hasTwoActions)}>
+        {renderButton(primaryAction, "default")}
+      </div>
     </div>
   );
 }

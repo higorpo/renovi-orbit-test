@@ -171,7 +171,7 @@ function ClientCardActions({
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="inline-flex">{buttonElement}</span>
+              <span className="flex w-full min-w-0">{buttonElement}</span>
             </TooltipTrigger>
             <TooltipContent>{action.disabledReason}</TooltipContent>
           </Tooltip>
@@ -210,10 +210,18 @@ function ClientCardActions({
     return buttonElement;
   };
 
+  const hasTwoActions = Boolean(secondaryAction);
+  const actionSlotClass = (paired: boolean) =>
+    cn("min-w-0", paired ? "flex-1 sm:flex-none" : "w-full sm:w-auto");
+
   return (
-    <div className="flex w-full min-w-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-      {secondaryAction ? renderButton(secondaryAction, "outline") : null}
-      {renderButton(primaryAction, "default")}
+    <div className="flex w-full min-w-0 flex-row items-stretch gap-2 sm:justify-end">
+      {secondaryAction ? (
+        <div className={actionSlotClass(true)}>{renderButton(secondaryAction, "outline")}</div>
+      ) : null}
+      <div className={actionSlotClass(hasTwoActions)}>
+        {renderButton(primaryAction, "default")}
+      </div>
     </div>
   );
 }
