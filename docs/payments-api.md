@@ -878,6 +878,8 @@ Após tokenizar, use **`paymentProfileId`** na cobrança — **não** reenvie `c
 
 ### Mutation (validada em sandbox, 2026-06)
 
+Campos de **resposta** adotados pela Renovi: **§6.5**.
+
 ```graphql
 mutation chargeCreateCardWithSplit($input: ChargeCreateInput!) {
   chargeCreate(input: $input) {
@@ -1274,7 +1276,7 @@ Habilitada na company → exige dados em **duas** camadas:
 
 **Sandbox (Postman):** `sessionId` arbitrário (ex.: `"sandbox-test-session-001"`) passa na validação GraphQL; antifraude real exige SDK integrado.
 
-Estados intermediários da transação: `IN_ANALYSIS`, `MANUAL_ANALYSIS` (**§9**).
+Estados intermediários da transação: `IN_ANALYSIS`, `MANUAL_ANALYSIS` — tabela completa em **§6.5** e **§9**.
 
 ### 6.4 Erros conhecidos em homologação (`chargeCreate`)
 
@@ -1303,6 +1305,169 @@ Registro dos erros encontrados em sandbox (companies `1047`/`1048`, 2026-06) na 
   }
 }
 ```
+
+---
+
+### 6.5 Retorno de `chargeCreate` (campos Renovi)
+
+Mutation e campos de resposta adotados pela Renovi para persistência, UI e reconciliação com webhooks. Fonte: objetos **Charge**, **Transaction** e **PaymentProfile** na collection Postman **API Netcred**.
+
+#### Mutation de resposta
+
+```graphql
+mutation chargeCreateCardWithSplit($input: ChargeCreateInput!) {
+  chargeCreate(input: $input) {
+    errors {
+      field
+      message
+      code
+    }
+    charge {
+      id
+      uuid
+      amount
+      referenceCode
+      chargeType
+      chargeStatus
+      manualCapture
+      installmentNumber
+      method
+      billingCyclesPaid
+      billingCyclesProcessed
+      billingCycleTotal
+      voidAt
+      voidReason
+      paymentProfile {
+        id
+        token
+        cardNumber
+      }
+      transactions {
+        edges {
+          node {
+            id
+            uuid
+            rejectedReason
+            installmentNumber
+            voidAt
+            voidReason
+            isDisputed
+            attempts
+            transactionState
+            amount
+            paidAmount
+            billedAt
+            billingAt
+            processedAt
+            dueAt
+            paidAt
+            cardInfo {
+              cardNumber
+              brand
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+`errors: []` e `charge` preenchido indicam sucesso. Caso contrário, `charge` vem `null` — ver **§6.4**.
+
+#### `errors[]`
+
+| Campo | Significado | Uso Renovi |
+|-------|-------------|------------|
+| `code` | Código machine-readable (`PAYOUT_RULE_SELECT_NOT_ENABLED`, `INTERNAL_SERVER_ERROR`, …) | Tratamento programático, logs, métricas |
+| `message` | Descrição legível do erro | Toast, suporte, debug |
+| `field` | Campo do input relacionado (pode ser `null`) | Destacar campo inválido no formulário/API |
+
+#### `charge`
+
+| Campo | Significado | Uso Renovi |
+|-------|-------------|------------|
+| `id` | ID único da cobrança na Netcred | `netcred_charge_id` |
+| `uuid` | Mesmo registro em formato UUID | Correlação alternativa / auditoria |
+| `amount` | Valor total da cobrança | Exibir e validar contra `service_payments.amount` |
+| `referenceCode` | Idempotência definida pela Renovi (UUID do serviço) | Polling, webhooks, deduplicação |
+| `chargeType` | `SINGLE` = cobrança imediata; `RECURRING` = tem transação agendada (`rrule` / T-2) | Saber se T-2 já disparou ou está agendado |
+| `chargeStatus` | `ONGOING` = transações pendentes; `ENDED` = todas finais; `VOIDED` = cancelada | Máquina de estados do serviço |
+| `manualCapture` | `true` = só pré-autoriza (escrow); `false` = autoriza+captura juntos | Confirmar modo escrow vs débito imediato |
+| `installmentNumber` | Parcelas no cartão (Renovi: `1`) | Exibir “à vista” |
+| `method` | Método de pagamento (`CARD` para cartão) | Filtro / validação |
+| `billingCycleTotal` | Total de transações desta charge | Cobranças recorrentes / múltiplas parcelas |
+| `billingCyclesPaid` | Transações em estado `PAID` | Progresso de pagamento |
+| `billingCyclesProcessed` | Transações já processadas (≠ `SCHEDULED`) | Acompanhar ciclo de cobrança |
+| `voidAt` | Data/hora do cancelamento da charge (se cancelada) | Histórico / disputa |
+| `voidReason` | Motivo do cancelamento da charge | Histórico / suporte |
+
+#### `charge.paymentProfile`
+
+| Campo | Significado | Uso Renovi |
+|-------|-------------|------------|
+| `id` | ID do perfil tokenizado usado na cobrança | Validar contra `netcred_payment_profile_id` da etapa 1 |
+| `token` | Token interno do cartão na Netcred | Auditoria (não reexpor ao cliente) |
+| `cardNumber` | PAN truncado (ex.: `497010XXXXXX0048`) | UI “cartão •••• 0048” |
+
+#### `charge.transactions.edges[].node`
+
+Cada `node` é um pagamento efetivo (autorização/captura de cartão). Na Renovi com cobrança única, usar `edges[0].node`.
+
+| Campo | Significado | Uso Renovi |
+|-------|-------------|------------|
+| `id` | ID único da transação | `netcred_transaction_id` — `transactionCapture`, `transactionVoid`, `transactionRefund` |
+| `uuid` | UUID da transação | Correlação alternativa |
+| `transactionState` | Estado atual do pagamento — ver tabela abaixo | `payment_phase`, webhooks, UI de status |
+| `amount` | Valor nominal da transação | Conferir com `charge.amount` |
+| `paidAmount` | Valor efetivamente pago/capturado | Pode diferir em boleto/PIX; cartão geralmente igual a `amount` |
+| `billingAt` | Data **prevista** de autorização/emissão | T-2: quando deve autorizar |
+| `billedAt` | Data/hora em que **ocorreu** a autorização | `authorized_at` (estado `BILLED`) |
+| `dueAt` | Data **prevista** de captura (cartão) | Alinhado ao agendamento / T-2 |
+| `paidAt` | Data/hora do pagamento/captura efetiva | `captured_at` (estado `PAID`) |
+| `processedAt` | Data/hora de processamento — base das **liquidações** (split) | Início do calendário de repasse ao prestador |
+| `rejectedReason` | Motivo da recusa (limite, antifraude, etc.) | Notificar cliente; fluxo de novo cartão |
+| `installmentNumber` | Parcela no cartão | Renovi: `1` |
+| `voidAt` / `voidReason` | Cancelamento da transação | Timeout de pré-auth, cancelamento de serviço |
+| `isDisputed` | Chargeback/disputa em andamento | Fluxo de disputa (**§4.14**) |
+| `attempts` | Tentativas de autorização | Debug de falhas intermitentes |
+
+#### `transaction.cardInfo`
+
+| Campo | Significado | Uso Renovi |
+|-------|-------------|------------|
+| `cardNumber` | PAN truncado no momento da transação | Confirmação na UI / recibo |
+| `brand` | Bandeira no arranjo Netcred (ex.: `VCC` = Visa crédito) | `card_brand` |
+
+#### `transactionState` (cartão — Renovi)
+
+Referência completa da máquina de estados: **§9**. Resumo com implicação no fluxo Renovi:
+
+| `transactionState` | Significado | Implicação Renovi |
+|--------------------|-------------|-------------------|
+| `SCHEDULED` | Agendada; autorização em `billingAt` | Cobrança T-2 com `rrule` ainda não executou |
+| `BILLED` | Autorizada, não capturada | Escrow com `manualCapture: true` — aguardar confirmação do cliente → `transactionCapture` |
+| `IN_ANALYSIS` | ClearSale analisando (até ~2h) | UI “pagamento em análise”; não liberar serviço ainda |
+| `MANUAL_ANALYSIS` | Análise manual Netcred | Aguardar; pode virar `PAID` ou `REJECTED` |
+| `REJECTED` | Recusada na autorização | Notificar cliente; `paymentProfileCreate` ou cancelar serviço |
+| `PAID` | Capturada/paga | Débito efetivo; split inicia após `processedAt` |
+| `VOIDED` | Cancelada | Pré-auth liberada ou serviço cancelado |
+| `EXPIRED` | Vencida (equivalente a cancelada) | Mais comum em boleto/PIX |
+| `PARTIALLY_REFUNDED` | Estorno parcial | Pós-disputa / cancelamento parcial |
+| `REFUNDED` | Estorno total | Pós-disputa / cancelamento |
+
+**Exemplo sandbox (cobrança imediata, `manualCapture: false`):** `transactionState: PAID`, `chargeStatus: ENDED`, `chargeType: SINGLE`.
+
+#### Persistência mínima após sucesso
+
+| Campo Netcred | Campo local sugerido |
+|---------------|----------------------|
+| `charge.id` | `netcred_charge_id` |
+| `charge.referenceCode` | `reference_code` |
+| `transactions.edges[0].node.id` | `netcred_transaction_id` |
+| `transactions.edges[0].node.transactionState` | derivar `payment_phase` |
+| `transactions.edges[0].node.paidAt` | `captured_at` |
+| `paymentProfile.id` | validar `netcred_payment_profile_id` |
 
 ---
 
