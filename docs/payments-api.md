@@ -876,19 +876,19 @@ Após tokenizar, use **`paymentProfileId`** na cobrança — **não** reenvie `c
 
 > **Fluxo Renovi:** etapa 1 = tokenização no fechamento do orçamento (**§5**); etapa 2 = `chargeCreate` em T-2 (**§6.1**). Escrow com `manualCapture: true` + `transactionCapture` na confirmação do cliente conforme **§4**.
 
-### Mutation
+### Mutation (validada em sandbox, 2026-06)
 
 ```graphql
-mutation chargeCreateCard($input: ChargeCreateInput!) {
+mutation chargeCreateCardWithSplit($input: ChargeCreateInput!) {
   chargeCreate(input: $input) {
     errors { field message code }
     charge {
       id
-      referenceCode
       amount
+      referenceCode
       chargeType
       chargeStatus
-      installmentNumber
+      manualCapture
       paymentProfile { id token cardNumber }
       transactions {
         edges {
@@ -897,11 +897,8 @@ mutation chargeCreateCard($input: ChargeCreateInput!) {
             transactionState
             amount
             billingAt
-            billedAt
             dueAt
             paidAt
-            paidAmount
-            rejectedReason
             cardInfo { cardNumber brand }
           }
         }
@@ -911,44 +908,46 @@ mutation chargeCreateCard($input: ChargeCreateInput!) {
 }
 ```
 
-### Payload validado em sandbox (2026-06)
+### Cobrança com sucesso em sandbox (2026-06-23)
 
-Exemplo usado em homologação com company `1047`, cartão tokenizado `403137` e split Renovi + prestador (R$ 1.000 — comissão fixa R$ 100 + restante ao prestador via `PERCENTAGE` 100%):
+Primeira `chargeCreate` bem-sucedida com split (`PERCENTAGE` + `FIXED_AMOUNT`), ClearSale e cartão tokenizado. Company **`1048`** (Select Payout Rule habilitado); `paymentProfileId` **`403137`**.
+
+**Request:**
 
 ```jsonc
 {
   "input": {
-    "companyId": 1047, // Company MERCHANT (getCompanies)
-    "paymentProfileId": 403137, // Etapa 1 — paymentProfileCreate (§5); precisa billingAddress se ClearSale ativo
-    "amount": "1000.00", // Valor total cobrado do cliente
-    "installmentNumber": 1, // Parcelas no cartão (1 = à vista); mutuamente exclusivo com rrule
-    "referenceCode": "renovi-service-2", // Idempotência da Charge — único por empresa (§6.2)
-    "billDaysInAdvance": 0, // Dias antes de dueAt para autorizar (0 = no dueAt)
-    "extraInfo": "Serviço Renovi - R$ 1.000", // Texto livre para operação
-    "manualCapture": false, // false = autoriza+captura juntos; true = pré-auth até transactionCapture (§4)
-    "customerIpAddress": "189.0.0.1", // IP do pagador (antifraude; recomendado com ClearSale)
-    "orderInput": { // Obrigatório com análise de risco (ClearSale) — ver §6.3
-      "sessionId": "sandbox-test-session-001", // ClearSale Behavior Analytics (produção: SDK no checkout)
-      "referenceCode": "carrinho-renovi-service-3", // ID externo do carrinho/pedido (≠ referenceCode da Charge)
+    "companyId": 1048,
+    "paymentProfileId": 403137,
+    "amount": "1000.00",
+    "installmentNumber": 1,
+    "referenceCode": "c4a81f63-2d9e-4b1c-8e7a-1f0d9c8b7a6e",
+    "billDaysInAdvance": 0,
+    "extraInfo": "Renovi · Pintura · Pintura de sala e corredor · R$ 1.850,00 · agendado 05/07/2026 (tarde) · prestador Maria Oliveira",
+    "manualCapture": false,
+    "customerIpAddress": "189.0.0.1",
+    "orderInput": {
+      "sessionId": "b03ac6b0-9824-40b3-acf5-c760b4e4c502",
+      "referenceCode": "c4a81f63-2d9e-4b1c-8e7a-1f0d9c8b7a6e",
       "orderItems": [{
         "productInput": {
-          "name": "Serviço de reforma",
-          "amount": "1000.00", // Deve refletir o valor do serviço
-          "description": "Serviço agendado via Renovi",
+          "name": "Pintura — Sala e corredor",
+          "amount": "1000.00",
+          "description": "Serviço de pintura contratado via Renovi: preparação e pintura de sala e corredor (aprox. 28 m²).",
           "category": "Serviços"
         }
       }]
     },
-    "payoutRuleInput": { // Requer Select Payout Rule habilitado na company (§6.4, §8)
+    "payoutRuleInput": {
       "name": "Split servico R$1000",
       "isPrimary": false,
-      "persist": false, // Regra ad-hoc só para esta cobrança
+      "persist": false,
       "ruleItems": [
         {
           "splitType": "PERCENTAGE",
-          "proportion": "100.0", // 100% do líquido (após FIXED) para conta do prestador
+          "proportion": "100.0",
           "isLiable": false,
-          "bankAccountId": 2053, // Conta bancária do prestador
+          "bankAccountId": 2053,
           "scheduleInput": {
             "scheduleType": "DAILY",
             "scheduleAnchor": 1,
@@ -957,9 +956,9 @@ Exemplo usado em homologação com company `1047`, cartão tokenizado `403137` e
         },
         {
           "splitType": "FIXED_AMOUNT",
-          "amount": "100.0", // Comissão fixa Renovi (R$ 100)
-          "isLiable": true, // Arca com estornos/chargeback nesta parcela
-          "bankAccountId": 2052, // Conta bancária da plataforma
+          "amount": "100.0",
+          "isLiable": true,
+          "bankAccountId": 2052,
           "scheduleInput": {
             "scheduleType": "DAILY",
             "scheduleAnchor": 1,
@@ -972,6 +971,122 @@ Exemplo usado em homologação com company `1047`, cartão tokenizado `403137` e
 }
 ```
 
+**Response:**
+
+```json
+{
+  "data": {
+    "chargeCreate": {
+      "errors": [],
+      "charge": {
+        "id": "417417",
+        "amount": "1000.00",
+        "referenceCode": "c4a81f63-2d9e-4b1c-8e7a-1f0d9c8b7a6e",
+        "chargeType": "SINGLE",
+        "chargeStatus": "ENDED",
+        "manualCapture": false,
+        "paymentProfile": {
+          "id": "403137",
+          "token": "f084400e0d9e4a3788bb44aaa8d980dd",
+          "cardNumber": "497010XXXXXX0048"
+        },
+        "transactions": {
+          "edges": [{
+            "node": {
+              "id": "444676",
+              "transactionState": "PAID",
+              "amount": "1000.00",
+              "billingAt": "2026-06-23",
+              "dueAt": "2026-06-23",
+              "paidAt": "2026-06-23T20:58:34.683685+00:00",
+              "cardInfo": {
+                "cardNumber": "497010XXXXXX0048",
+                "brand": "VCC"
+              }
+            }
+          }]
+        }
+      }
+    }
+  }
+}
+```
+
+**Persistir na Renovi após sucesso:**
+
+| Campo local | Origem |
+|-------------|--------|
+| `netcred_charge_id` | `charge.id` (`417417`) |
+| `netcred_transaction_id` | `transactions.edges[0].node.id` (`444676`) |
+| `reference_code` | `charge.referenceCode` |
+| `payment_phase` | `captured` (com `manualCapture: false` e `PAID` imediato) |
+
+Com `manualCapture: false`, autorização e captura ocorrem na mesma chamada → `transactionState: PAID` e `chargeStatus: ENDED`.
+
+### Limites de tamanho de texto
+
+> **`extraInfo` e `orderInput.orderItems[].productInput.description` não podem exceder 150 caracteres** cada um. Textos maiores podem causar `INTERNAL_SERVER_ERROR` sem mensagem de negócio clara.
+
+| Campo | Limite | Uso Renovi |
+|-------|--------|------------|
+| `extraInfo` | **≤ 150 caracteres** | Resumo operacional (serviço, valor, data, prestador) — truncar ou resumir na camada de API |
+| `productInput.description` | **≤ 150 caracteres** | Descrição do item para ClearSale — detalhes longos ficam no domínio Renovi, não na API |
+
+Na implementação, validar/truncar antes de chamar `chargeCreate` (ex.: util compartilhado com limite documentado).
+
+### Payload de referência (sandbox)
+
+```jsonc
+{
+  "input": {
+    "companyId": 1048, // Company com Select Payout Rule habilitado (getCompanies)
+    "paymentProfileId": 403137, // Etapa 1 — paymentProfileCreate (§5); precisa billingAddress se ClearSale ativo
+    "amount": "1000.00", // Valor total cobrado do cliente
+    "installmentNumber": 1, // Parcelas no cartão (1 = à vista); mutuamente exclusivo com rrule
+    "referenceCode": "c4a81f63-2d9e-4b1c-8e7a-1f0d9c8b7a6e", // UUID do serviço — idempotência (§6.2)
+    "billDaysInAdvance": 0,
+    "extraInfo": "Renovi · Pintura · …", // ≤ 150 caracteres (§6)
+    "manualCapture": false, // false = autoriza+captura juntos; true = pré-auth (§4)
+    "customerIpAddress": "189.0.0.1",
+    "orderInput": {
+      "sessionId": "b03ac6b0-9824-40b3-acf5-c760b4e4c502", // UUID ClearSale (§6.3)
+      "referenceCode": "c4a81f63-2d9e-4b1c-8e7a-1f0d9c8b7a6e", // mesmo UUID do serviço (carrinho)
+      "orderItems": [{
+        "productInput": {
+          "name": "Pintura — Sala e corredor",
+          "amount": "1000.00",
+          "description": "Serviço de pintura…", // ≤ 150 caracteres (§6)
+          "category": "Serviços"
+        }
+      }]
+    },
+    "payoutRuleInput": {
+      "name": "Split servico R$1000",
+      "isPrimary": false,
+      "persist": false,
+      "ruleItems": [
+        {
+          "splitType": "PERCENTAGE",
+          "proportion": "100.0",
+          "isLiable": false,
+          "bankAccountId": 2053,
+          "scheduleInput": { "scheduleType": "DAILY", "scheduleAnchor": 1, "automaticAdvance": false }
+        },
+        {
+          "splitType": "FIXED_AMOUNT",
+          "amount": "100.0",
+          "isLiable": true,
+          "bankAccountId": 2052,
+          "scheduleInput": { "scheduleType": "DAILY", "scheduleAnchor": 1, "automaticAdvance": false }
+        }
+      ]
+    }
+  }
+}
+```
+
+> Company `1047` retornou `PAYOUT_RULE_SELECT_NOT_ENABLED`; cobrança com split só funcionou após habilitação na company **`1048`**.
+
 > **Teste sem split customizado:** omitir `payoutRuleInput` inteiro se a company não tiver **Select Payout Rule** habilitado — a Netcred usa a `PayoutRule` primária da empresa.
 
 ### Campos do payload (`chargeCreate`)
@@ -982,7 +1097,8 @@ Exemplo usado em homologação com company `1047`, cartão tokenizado `403137` e
 | `paymentProfileId` | Sim* | Cartão tokenizado na etapa 1; não reenviar PAN/CVV |
 | `amount` | Sim | Valor que o cliente paga (string `"1000.00"`) |
 | `installmentNumber` | Não | Default `1`; parcelas no cartão |
-| `referenceCode` | Recomendado | `renovi-service-{service_id}` — idempotência e webhooks |
+| `referenceCode` | Recomendado | UUID do serviço — idempotência e webhooks (**§6.2**) |
+| `extraInfo` | Não | Texto operacional; **máx. 150 caracteres** |
 | `billDaysInAdvance` | Não | Com `rrule` (T-2), dias antes de `dueAt` para autorizar |
 | `rrule` | Não | Agenda cobrança única em T-2 (estratégia A em **§4.4**); exclusivo com `installmentNumber` |
 | `manualCapture` | Não | `true` no fluxo escrow produção; `false` para teste imediato no Postman |
@@ -1063,6 +1179,8 @@ Exemplo usado em homologação com company `1047`, cartão tokenizado `403137` e
 | `manualCapture` | Não | `true` = autoriza mas não captura automaticamente |
 | `orderInput` | Condicional | Obrigatório com análise de risco habilitada |
 | `customerIpAddress` | Não | IP do pagador (antifraude) |
+| `extraInfo` | Não | Máx. **150 caracteres** |
+| `orderInput.orderItems[].productInput.description` | Condicional* | Máx. **150 caracteres** (*quando `orderInput` enviado) |
 
 ** Mutuamente exclusivos: `payoutRuleId`, `payoutRuleInput`, `contractId`. Se nenhum for enviado, usa o split padrão da empresa.
 
@@ -1123,8 +1241,8 @@ Cliente fecha orçamento          T-2 (2 dias antes)              Dia do serviç
 
 | Campo | Nível | Significado | Exemplo Renovi |
 |-------|-------|-------------|----------------|
-| `input.referenceCode` | **Charge** | Idempotência da cobrança na Netcred; repetir na mesma empresa → erro | `renovi-service-{service_id}` |
-| `orderInput.referenceCode` | **Carrinho** (ClearSale) | ID externo do pedido/carrinho para antifraude | `renovi-checkout-{proposal_id}` |
+| `input.referenceCode` | **Charge** | Idempotência da cobrança na Netcred; repetir na mesma empresa → erro | UUID do serviço, ex.: `c4a81f63-2d9e-4b1c-8e7a-1f0d9c8b7a6e` |
+| `orderInput.referenceCode` | **Carrinho** (ClearSale) | ID externo do pedido/carrinho para antifraude | Pode ser o **mesmo UUID** do serviço na prática Renovi |
 
 Não confundir os dois. O da Charge é o usado em polling/webhooks (`transactions(referenceCode: …)`).
 
@@ -1160,14 +1278,14 @@ Estados intermediários da transação: `IN_ANALYSIS`, `MANUAL_ANALYSIS` (**§9*
 
 ### 6.4 Erros conhecidos em homologação (`chargeCreate`)
 
-Registro dos erros encontrados em sandbox (company `1047`, 2026-06) na mutation **`chargeCreate`**. Expandir conforme novos casos.
+Registro dos erros encontrados em sandbox (companies `1047`/`1048`, 2026-06) na mutation **`chargeCreate`**. Expandir conforme novos casos.
 
 | Mensagem / código | Tipo | Causa | Ação |
 |-----------------|------|-------|------|
 | `PaymentProfile requires BillingAddress when Risk Analysis is enabled for Company` | Negócio | ClearSale ativo e `PaymentProfile` sem endereço de cobrança | Incluir `billingAddressInput` no `paymentProfileCreate` (**§5**) e re-tokenizar; perfis antigos sem endereço não servem para `chargeCreate` |
 | `Field 'sessionId' of required type 'String!' was not provided` (`VALIDATION_ERROR`) | GraphQL | `orderInput` sem `sessionId` com ClearSale habilitado | Enviar `orderInput.sessionId` (**§6.3**) |
 | `This company does not have Select Payout Rule Service enabled` (`PAYOUT_RULE_SELECT_NOT_ENABLED`) | Comercial | Company sem serviço **Select Payout Rule** | Pedir habilitação à Netcred; **ou** omitir `payoutRuleInput`/`payoutRuleId` (usa split primário da empresa) |
-| `INTERNAL_SERVER_ERROR` | Infra / gateway | Falha não tratada no lado Netcred (sem mensagem de negócio específica); payload pode estar correto | Não assumir sucesso; **não** repetir em loop — registrar `referenceCode`, horário e payload; tentar de novo após alguns minutos; se persistir, abrir chamado à Netcred com companyId e `referenceCode` |
+| `INTERNAL_SERVER_ERROR` | Infra / gateway | Falha não tratada no lado Netcred; causas observadas: payload válido mas instável, ou **`extraInfo` / `productInput.description` > 150 caracteres** | Encurtar textos; não repetir em loop; registrar `referenceCode` e payload; retry após minutos; se persistir, chamado à Netcred |
 | `referenceCode` repetido (idempotência) | Negócio | Mesmo `input.referenceCode` na mesma empresa | Usar novo código (`renovi-service-{id}` único) ou consultar cobrança existente |
 | Autorização expirada ao capturar | Negócio | `manualCapture: true` e `transactionCapture` após prazo da bandeira | `transactionVoid` e reautorizar; ver janela de pré-auth **§4.2** |
 
