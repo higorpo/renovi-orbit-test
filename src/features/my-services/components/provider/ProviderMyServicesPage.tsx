@@ -1,4 +1,5 @@
 import { ProviderMyServicesHeader } from "./ProviderMyServicesHeader";
+import { ProviderCalendarEntryBanner } from "@/features/provider-calendar";
 import { ProviderMyServicesEmptyState } from "./ProviderMyServicesEmptyState";
 import { ProviderServiceListCard } from "./ProviderServiceListCard";
 import { ProviderServiceProposalDialogs } from "./ProviderServiceProposalDialogs";
@@ -39,7 +40,14 @@ export function ProviderMyServicesPage() {
   return (
     <>
       <MyServicesPageShell
-        header={<ProviderMyServicesHeader />}
+        header={
+          <>
+            <ProviderMyServicesHeader />
+            <div className="mt-4">
+              <ProviderCalendarEntryBanner />
+            </div>
+          </>
+        }
         emptyState={<ProviderMyServicesEmptyState />}
         filters={filters}
         searchQuery={searchQuery}

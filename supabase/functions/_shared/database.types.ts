@@ -461,6 +461,16 @@ export type Database = {
         Args: { p_retry_count: number }
         Returns: string
       }
+      message_dispatcher_compute_push_scheduled_slot: {
+        Args: {
+          p_cooldown_minutes: number
+          p_exclude_dispatch_id?: string
+          p_last_push_sent_at: string
+          p_profile_id: string
+          p_sibling_offset?: number
+        }
+        Returns: string
+      }
       message_dispatcher_disable_device_beacon: {
         Args: { p_device_id: string; p_profile_id: string }
         Returns: undefined
@@ -2973,6 +2983,10 @@ export type Database = {
       }
       list_provider_proposal_history: {
         Args: { p_service_request_id: string }
+        Returns: Json
+      }
+      list_provider_scheduled_services: {
+        Args: { p_from_date: string; p_to_date: string }
         Returns: Json
       }
       list_services: {

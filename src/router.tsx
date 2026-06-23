@@ -72,6 +72,11 @@ const ProviderJobsRouteSlot = lazy(() =>
     default: m.ProviderJobsRouteSlot,
   })),
 )
+const ProviderCalendarPage = lazy(() =>
+  import('@/features/provider-calendar/components/ProviderCalendarPage').then((m) => ({
+    default: m.ProviderCalendarPage,
+  })),
+)
 const ChatsLayout = lazy(() =>
   import('@/features/chats/components/ChatsLayout/ChatsLayout').then((m) => ({
     default: m.ChatsLayout,
@@ -151,6 +156,14 @@ export const router = createBrowserRouter([
           {
             path: 'services',
             element: <MyServicesRouteSlot />,
+          },
+          {
+            path: 'services/calendar',
+            element: (
+              <ProtectedRoute allowedRoles={['provider']}>
+                <ProviderCalendarPage />
+              </ProtectedRoute>
+            ),
           },
           {
             path: 'services/:id',

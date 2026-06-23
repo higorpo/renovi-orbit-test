@@ -20,6 +20,11 @@ interface StackRouteRule {
 }
 
 const MOBILE_STACK_ROUTES: StackRouteRule[] = [
+  {
+    pattern: /^\/dashboard\/services\/calendar$/,
+    stackTitle: "Calendário",
+    backFallback: "/dashboard/services",
+  },
   { pattern: /^\/dashboard\/help$/, stackTitle: "Ajuda", backFallback: "/dashboard" },
   {
     pattern: /^\/dashboard\/settings$/,
@@ -61,6 +66,10 @@ export function resolveMobileChrome(
 
   const serviceDetailMatch = pathname.match(/^\/dashboard\/services\/([^/]+)$/);
   if (serviceDetailMatch) {
+    if (serviceDetailMatch[1] === "calendar") {
+      return createStackConfig("Calendário", "/dashboard/services");
+    }
+
     if (isServiceDetailSheetLocation(location)) {
       return MOBILE_TAB_ROOT_DEFAULT;
     }
