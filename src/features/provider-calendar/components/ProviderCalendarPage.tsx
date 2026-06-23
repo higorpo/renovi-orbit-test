@@ -22,7 +22,7 @@ export function ProviderCalendarPage() {
     <div className={cn("mx-auto w-full min-w-0 px-4 py-6", SERVICE_DETAIL_PAGE_MAX_WIDTH_CLASS)}>
       <ProviderCalendarHeader />
 
-      <section className="mt-6" aria-label="Agenda de serviços">
+      <section className="mt-0 md:mt-6" aria-label="Agenda de serviços">
         {isLoading ? <ProviderCalendarSkeleton viewMode={viewMode} /> : null}
         {!isLoading && isError ? (
           <ProviderCalendarErrorState onRetry={() => void refetch()} />

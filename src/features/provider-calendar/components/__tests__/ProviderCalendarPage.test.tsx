@@ -62,9 +62,10 @@ describe("ProviderCalendarPage", () => {
     });
   });
 
-  it("renders calendar header without view mode toggle", () => {
+  it("hides page header on mobile and keeps agenda section", () => {
     renderPage();
-    expect(screen.getByRole("heading", { name: "Calendário" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Calendário" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Agenda de serviços")).toBeInTheDocument();
     expect(
       screen.queryByRole("group", { name: "Modo de visualização do calendário" }),
     ).not.toBeInTheDocument();
