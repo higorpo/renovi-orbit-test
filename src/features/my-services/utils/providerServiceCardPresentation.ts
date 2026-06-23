@@ -251,7 +251,7 @@ function buildInProgressPresentation(
   const address = fullAddress(model);
   const scheduleHighlight = contracted ? getScheduleHighlightContent(contracted) : null;
   const timing = contracted?.scheduledStartDate
-    ? getScheduledTiming(contracted.scheduledStartDate)
+    ? getScheduledTiming(contracted.scheduledStartDate, contracted.scheduledEndDate)
     : "future";
   const paymentPending = contracted?.status === "PENDING_PAYMENT";
   const isUnread = model.chatSummary?.isUnread ?? false;
@@ -406,7 +406,10 @@ function buildInProgressActions(
   }
 
   const timing = model.contracted?.scheduledStartDate
-    ? getScheduledTiming(model.contracted.scheduledStartDate)
+    ? getScheduledTiming(
+        model.contracted.scheduledStartDate,
+        model.contracted.scheduledEndDate,
+      )
     : "future";
   const isTodayService = timing === "today";
   const hasCoordinates = getServiceCoordinates(model.address) !== null;

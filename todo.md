@@ -54,11 +54,9 @@ Telas/fluxos restantes:
 - Fluxo do prestador/cliente cancelar um serviço
 - Weblab
 - Template dos emails
-- Serviços para hoje para o prestador mostram botão de "Ver no mapa" para instruir a localização do serviço de forma mais fácil para o prestador.
 
 Coisas para verificar:
 
-- Não deve mostrar trabalho que eu enviei proposta na tela de trabalhos
 - Prestadores marcados como "Pioneiros" tem taxa de serviço menor
 - Direcionar prestador para que ele cadastre serviços que ele atenda para exibir trabalhos
 - Estrelas de avaliação dos cards devem estar usando dados reais

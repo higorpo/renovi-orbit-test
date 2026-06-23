@@ -250,7 +250,7 @@ function buildInProgressPresentation(
   const professional = providerName(model);
   const scheduleHighlight = contracted ? getScheduleHighlightContent(contracted) : null;
   const timing = contracted?.scheduledStartDate
-    ? getScheduledTiming(contracted.scheduledStartDate)
+    ? getScheduledTiming(contracted.scheduledStartDate, contracted.scheduledEndDate)
     : "future";
   const paymentPending = contracted?.status === "PENDING_PAYMENT";
   const unreadCount = model.unreadChatCount;

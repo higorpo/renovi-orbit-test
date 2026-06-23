@@ -1,6 +1,11 @@
 import type { ContractedServiceSummary } from "../types/service.types";
-import { formatServiceDate } from "./formatDate";
 import { formatShift, formatShiftHighlightSuffix } from "./formatShift";
+import {
+  addCalendarDaysIso,
+  formatServiceCalendarDate,
+  normalizeServiceCalendarDateToIso,
+  todayCalendarIso,
+} from "./serviceCalendarDate";
 
 export interface ScheduledSummary {
   dateLabel: string;
@@ -12,7 +17,7 @@ export function formatScheduledSummary(
 ): ScheduledSummary | null {
   if (!contracted.scheduledStartDate) return null;
 
-  const dateLabel = formatServiceDate(contracted.scheduledStartDate);
+  const dateLabel = formatServiceCalendarDate(contracted.scheduledStartDate);
   const shiftLabel = contracted.scheduledShift
     ? formatShift(contracted.scheduledShift)
     : null;
@@ -22,18 +27,24 @@ export function formatScheduledSummary(
 
 export type ScheduledTiming = "today" | "tomorrow" | "future" | "past";
 
-export function getScheduledTiming(scheduledStartDate: string): ScheduledTiming {
-  const scheduled = parseLocalDate(scheduledStartDate);
-  if (!scheduled) return "future";
+export function getScheduledTiming(
+  scheduledStartDate: string,
+  scheduledEndDate?: string | null,
+): ScheduledTiming {
+  const startIso = normalizeServiceCalendarDateToIso(scheduledStartDate);
+  if (!startIso) return "future";
 
-  const today = startOfLocalDay(new Date());
-  const scheduledDay = startOfLocalDay(scheduled);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const endIso =
+    normalizeServiceCalendarDateToIso(scheduledEndDate ?? scheduledStartDate) ?? startIso;
+  const rangeStart = startIso <= endIso ? startIso : endIso;
+  const rangeEnd = startIso <= endIso ? endIso : startIso;
 
-  if (scheduledDay.getTime() === today.getTime()) return "today";
-  if (scheduledDay.getTime() === tomorrow.getTime()) return "tomorrow";
-  if (scheduledDay.getTime() < today.getTime()) return "past";
+  const todayIso = todayCalendarIso();
+  const tomorrowIso = addCalendarDaysIso(todayIso, 1);
+
+  if (todayIso >= rangeStart && todayIso <= rangeEnd) return "today";
+  if (tomorrowIso >= rangeStart && tomorrowIso <= rangeEnd) return "tomorrow";
+  if (rangeEnd < todayIso) return "past";
   return "future";
 }
 
@@ -48,7 +59,10 @@ export function getScheduleHighlightContent(
   const scheduled = formatScheduledSummary(contracted);
   if (!scheduled) return null;
 
-  const timing = getScheduledTiming(contracted.scheduledStartDate);
+  const timing = getScheduledTiming(
+    contracted.scheduledStartDate,
+    contracted.scheduledEndDate,
+  );
   const shiftPart = contracted.scheduledShift
     ? formatShiftHighlightSuffix(contracted.scheduledShift)
     : "";
@@ -63,18 +77,4 @@ export function formatScheduleHighlightTitle(
   contracted: ContractedServiceSummary,
 ): string | null {
   return getScheduleHighlightContent(contracted)?.title ?? null;
-}
-
-function parseLocalDate(isoDate: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(isoDate.trim());
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const day = Number(match[3]);
-  const parsed = new Date(year, month, day);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function startOfLocalDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
