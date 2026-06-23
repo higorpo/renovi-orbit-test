@@ -38,6 +38,8 @@ export type ListProviderOpportunitySource = "batch" | "fallback";
 export interface ListProviderOpportunityItem {
   service_request_id: string;
   title: string;
+  /** Client-provided service description; null or omitted when empty. */
+  description: string | null;
   service_name: string;
   /** platform_services.icon_key for card styling. */
   service_icon_key: string | null;

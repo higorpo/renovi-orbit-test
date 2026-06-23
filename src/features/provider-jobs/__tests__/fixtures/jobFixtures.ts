@@ -6,6 +6,7 @@ export function createMinimalJob(
   return {
     service_request_id: "job-1",
     title: "Instalar tomada",
+    description: "Preciso instalar uma tomada na cozinha, perto da bancada.",
     service_name: "Elétrica",
     service_icon_key: "Zap",
     service_color_key: "yellow_orange",

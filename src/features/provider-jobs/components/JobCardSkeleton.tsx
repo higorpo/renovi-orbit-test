@@ -1,37 +1,30 @@
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function JobCardSkeleton() {
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="!pb-2">
-        <div className="flex items-start gap-3">
-          <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-5 w-48 sm:w-64" />
+    <Card className="flex min-w-0 flex-col overflow-hidden rounded-xl border bg-card p-0 shadow-sm">
+      <div className="flex flex-col gap-3 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5">
+            <Skeleton className="h-9 w-9 shrink-0 rounded-lg" />
+            <Skeleton className="h-4 w-24" />
           </div>
+          <Skeleton className="h-5 w-14 rounded-full" />
         </div>
-        <Skeleton className="mt-2 h-4 w-full" />
-        <Skeleton className="mt-1 h-4 w-3/4" />
-        <div className="mt-2 flex gap-4">
+        <Skeleton className="h-5 w-full max-w-sm" />
+        <Skeleton className="h-4 w-full max-w-md" />
+        <Skeleton className="h-4 w-3/5 max-w-xs" />
+        <div className="flex flex-col gap-1">
+          <Skeleton className="h-4 w-48" />
           <Skeleton className="h-3.5 w-32" />
-          <Skeleton className="h-3.5 w-20" />
         </div>
-        <div className="mt-1.5 flex gap-4">
-          <Skeleton className="h-3.5 w-20" />
-          <Skeleton className="h-3.5 w-28" />
+      </div>
+      <div className="mt-auto border-t border-border/60 px-4 pb-4 pt-3">
+        <div className="flex justify-end">
+          <Skeleton className="h-10 w-full rounded-full sm:h-9 sm:w-32" />
         </div>
-      </CardHeader>
-      <CardContent className="!pt-0">
-        <div className="flex gap-1.5">
-          <Skeleton className="h-12 w-12 rounded-md sm:h-14 sm:w-14" />
-          <Skeleton className="h-12 w-12 rounded-md sm:h-14 sm:w-14" />
-        </div>
-      </CardContent>
-      <CardFooter className="mt-auto border-t pt-3">
-        <Skeleton className="h-9 w-28" />
-      </CardFooter>
+      </div>
     </Card>
   );
 }

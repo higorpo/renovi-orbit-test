@@ -144,6 +144,7 @@ begin
   create temp table if not exists _matching_feed_page (
     service_request_id uuid,
     title text,
+    description text,
     service_name text,
     service_icon_key text,
     service_color_key text,
@@ -176,6 +177,7 @@ begin
     select
       sr.id as service_request_id,
       sr.title,
+      nullif(btrim(sr.description), '') as description,
       ps.title as service_name,
       ps.icon_key as service_icon_key,
       ps.color_key as service_color_key,
@@ -241,6 +243,7 @@ begin
     select
       sr.id as service_request_id,
       sr.title,
+      nullif(btrim(sr.description), '') as description,
       ps.title as service_name,
       ps.icon_key as service_icon_key,
       ps.color_key as service_color_key,
@@ -369,6 +372,7 @@ begin
   select
     service_request_id,
     title,
+    description,
     service_name,
     service_icon_key,
     service_color_key,
@@ -388,6 +392,7 @@ begin
         jsonb_build_object(
           'service_request_id', p.service_request_id,
           'title', p.title,
+          'description', p.description,
           'service_name', p.service_name,
           'service_icon_key', p.service_icon_key,
           'service_color_key', p.service_color_key,
