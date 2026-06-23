@@ -2,7 +2,7 @@
 
 Documento derivado da coleção Postman **API Netcred** ([coleção](https://go.postman.co/collection/55609940-a4b17641-251f-4c8e-a147-c3a5facc5715)) e da documentação oficial em [docs.netcredbrasil.com.br](https://docs.netcredbrasil.com.br/).
 
-Foco: **cartão com tokenização** → **cobrança agendada (T-2)** → **retenção até confirmação do cliente** → **liberação ao prestador (split/PayoutRule)** → **Pix** → **cancelamentos/estornos e disputas** → **webhooks**.
+Foco: **cartão com tokenização** → **cobrança agendada (T-2)** → **split/PayoutRule** → **liberação ao prestador (negociada com Netcred)** → **Pix** → **cancelamentos/estornos e disputas** → **webhooks**.
 
 ---
 
@@ -94,7 +94,7 @@ Modelo desejado para serviços agendados com **escrow** — o prestador só rece
 | Etapa | Quando | O que acontece | Estado Renovi sugerido |
 |-------|--------|----------------|------------------------|
 | **1. Tokenização** | Checkout / aprovação do orçamento | Cliente informa cartão; Renovi chama `paymentProfileCreate` e persiste `payment_profile_id` | `payment_profile_saved` |
-| **2. Cobrança T-2** | 2 dias antes da data agendada do serviço | Renovi cobra o cartão tokenizado; valor **não** é repassado ao prestador | `charge_authorized` ou `charge_captured` |
+| **2. Cobrança T-2** | 2 dias antes da data agendada do serviço | Renovi cobra o cartão tokenizado (autorização + captura juntas); repasse ao prestador segue calendário Netcred | `charge_captured` |
 | **3. Execução** | Data do serviço | Prestador executa; cliente valida no app | `service_completed_pending_release` |
 | **4. Liberação** | Cliente confirma conclusão | Valor líquido do prestador é liquidado na conta bancária dele | `payout_released` |
 
@@ -111,14 +111,13 @@ sequenceDiagram
   R->>R: Salva payment_profile_id
 
   Note over R,N: T-2 dias antes do serviço agendado
-  R->>N: chargeCreate (paymentProfileId, manualCapture, payoutRule)
-  N-->>R: transaction BILLED (autorizado)
-  Note over R,P: Prestador ainda NÃO recebe
+  R->>N: chargeCreate (paymentProfileId, payoutRule)
+  N-->>R: transaction PAID (autorização + captura)
+  Note over R,P: Split inicia liquidação; timing ao prestador conforme Netcred
 
   C->>R: 3. Confirma serviço concluído
-  R->>N: transactionCapture
-  N-->>R: transaction PAID
-  N->>P: 4. Liquidação via PayoutRule (split)
+  R->>R: Atualiza status do serviço (domínio Renovi)
+  N->>P: 4. Liquidação bancária via PayoutRule (calendário Netcred)
 ```
 
 > A seção **4** detalha como implementar cada etapa com os recursos disponíveis na API Netcred, incluindo limitações e decisões arquiteturais.
@@ -137,7 +136,7 @@ Esta seção consolida tudo que a coleção Postman **API Netcred** oferece para
 | `chargeCreate` + `paymentProfileId` | **Sim** — Etapa 2 | Cobrança sem reenviar PAN/CVV |
 | `rrule` (data futura) | **Sim** — agendar T-2 | Permite criar cobrança com `dueAt` = data de cobrança |
 | `transactionBill` | **Sim** — antecipar cobrança | Força autorização antes de `billingAt` (casos excepcionais) |
-| `manualCapture` + `transactionCapture` | **Parcial** | Separa **autorização** (T-2) de **captura** (confirmação do cliente) |
+| `manualCapture` + `transactionCapture` | **Não usado pela Renovi** | API permite separar autorização de captura; Renovi usa captura automática (`manualCapture: false`, default) |
 | `PayoutRule` / split (`payoutRuleInput`) | **Parcial** | Define **para quem** vai o dinheiro após `PAID`, não **quando** liberar por evento |
 | `scheduleInput.automaticAdvance` | **Não** | Controla antecipação bancária por calendário, não por confirmação do cliente |
 | `contractId` (FINANCIER) | **Não** | Direciona recebíveis a financiador como garantia de crédito — caso de uso diferente |
@@ -147,7 +146,7 @@ Esta seção consolida tudo que a coleção Postman **API Netcred** oferece para
 
 **Conclusão:** a Netcred separa dois problemas distintos:
 
-1. **Cobrança do cliente** — bem suportada (tokenização, agendamento, captura manual).
+1. **Cobrança do cliente** — bem suportada (tokenização, agendamento T-2, captura automática).
 2. **Liquidação ao prestador** — controlada por `PayoutRule` + calendário de liquidação (`processedAt` → `schedule`), **sem gatilho por evento de confirmação do cliente** documentado na API.
 
 A Renovi precisa de **orquestração própria** para alinhar o passo 4 ao momento em que o cliente confirma o serviço.
@@ -164,8 +163,7 @@ Varredura completa da coleção Postman (pastas **Payout (Liquidação)**, **Pay
 | **`scheduleInput.automaticAdvance: true`** | Liquidar mais rápido | Antecipa a liquidação conforme `scheduleType` + `scheduleAnchor`, **com taxa de antecipação**. Não é um gatilho por evento externo. |
 | **Omitir `payoutRuleInput` / `payoutRuleId`** | Evitar split / repasse | **Não.** Usa a `PayoutRule` **primária** (`isPrimary: true`) da empresa. Liquidação automática igualmente. |
 | **`contractId`** (em vez de `payoutRule`) | Retenção / escrow | **Não.** Direciona recebíveis a um **FINANCIER** (garantia de operação de crédito). Mutuamente exclusivo com `payoutRule`. Não há doc de liberação posterior via API. |
-| **`manualCapture: true`** | Segurar repasse ao prestador | **Parcial — outra camada.** Segura apenas a **captura no cartão** (autorização ≠ débito). Não impede geração de liquidações após `PAID`. |
-| **`transactionCapture`** | Liberar pagamento | Captura valor no cartão (`BILLED` → `PAID`). É o gatilho de **cobrança**, não de **repasse bancário** ao prestador. |
+| **`manualCapture: true`** + **`transactionCapture`** | Pré-autorizar e capturar depois | Existe na API Postman; **Renovi não utiliza**. Segura apenas a captura no cartão, não o repasse ao prestador. |
 | **Boleto / PIX** | — | Doc explícita: *“liquidação é sempre em **D+1**”*; `automaticAdvance` **não tem efeito**. Sem controle documentado. |
 | **`processedAt`** (campo da Transaction) | — | Data base para **geração das liquidações** — processo automático pós-`PAID`. |
 | **`getPayoutRules` / `bankAccounts`** | — | Apenas **consulta** de regras e contas. Sem mutation de criar/liberar/suspender payout. |
@@ -188,30 +186,31 @@ A pasta **Payout (Liquidação)** contém somente a documentação do objeto `Pa
 
 | Camada | Controle disponível na API | Quem decide o timing |
 |--------|---------------------------|----------------------|
-| Débito no cartão do cliente | `manualCapture` + `transactionCapture` | **Renovi** (confirmação do cliente) |
+| Débito no cartão do cliente | `chargeCreate` em T-2 (captura automática, default) | **Renovi** (data T-2) |
 | Repasse bancário ao prestador | `PayoutRule` + calendário padrão ou antecipado | **Netcred** (automático após `PAID` + `processedAt`) |
 
 Para escrow real do **repasse ao prestador**, a pergunta precisa ir ao suporte Netcred: existe produto marketplace com retenção de recebíveis não publicado na coleção Postman?
 
 ---
 
-### 4.2 Arquitetura recomendada: `manualCapture` + split diferido
+### 4.2 Arquitetura adotada: cobrança T-2 com captura automática
 
-Combinação que melhor aproxima o modelo escrow com os endpoints documentados:
+Fluxo Renovi com os endpoints documentados (**sem** `manualCapture: true`):
 
 | Fase | Ação Netcred | Estado `transactionState` | Dinheiro |
 |------|--------------|---------------------------|----------|
 | Checkout | `paymentProfileCreate` | — | Nada cobrado |
-| T-2 (automático ou cron) | `chargeCreate` com `manualCapture: true` | `SCHEDULED` → `BILLED` | Valor **pré-autorizado** no cartão |
-| Cliente confirma serviço | `transactionCapture` | `BILLED` → `PAID` | Valor **capturado**; inicia geração de liquidações |
+| T-2 (automático ou cron) | `chargeCreate` (default: `manualCapture: false`) | `SCHEDULED` → `PAID`* | Cliente **debitado**; inicia geração de liquidações |
 | Pós-`PAID` | Liquidação automática Netcred | — | Split enviado às contas do `PayoutRule` conforme `scheduleInput` |
+| Cliente confirma serviço | *(domínio Renovi — sem mutation Netcred)* | — | Marca conclusão; disputa/estorno se necessário |
 
-**Por que `manualCapture`?**
+\* Com `rrule` futuro, a transaction nasce `SCHEDULED` + `chargeStatus: ONGOING` até o `billingAt`; na data T-2 passa direto a `PAID` (autorização + captura juntas). Sem `rrule` (cron no dia T-2), nasce e conclui `PAID` na mesma resposta.
 
-- Com `manualCapture: false` (padrão), autorização e captura ocorrem juntas em T-2 → o cliente já é debitado, mas o split ainda segue o calendário da Netcred (não o evento de confirmação).
-- Com `manualCapture: true`, a Renovi retém a captura até o passo 4, garantindo que o débito efetivo só aconteça quando o cliente confirmar (ou próximo disso).
+**Decisão Renovi:** não usar captura manual. O cliente é cobrado em T-2; a confirmação posterior do serviço é controle operacional/disputa na Renovi, não gatilho de débito no cartão.
 
-**Janela de pré-autorização:** autorizações de cartão expiram (tipicamente 5–30 dias, dependendo da bandeira/adquirente). O serviço deve ser confirmado dentro dessa janela após T-2. Validar com a Netcred o prazo exato em produção.
+**Escrow do repasse ao prestador** continua dependente de negociação com a Netcred (§4.6.3) — a API não expõe liberação de split por evento de confirmação do cliente.
+
+> A API também oferece `manualCapture: true` + `transactionCapture` (pré-autorização separada da captura). Documentado em **§6** apenas como referência da Netcred; **fora do escopo Renovi**.
 
 ---
 
@@ -274,7 +273,6 @@ Ao aceitar a proposta / agendar o serviço, criar a cobrança com data futura:
     "paymentProfileId": 12345, // ID do PaymentProfile tokenizado (etapa 1)
     "amount": "1500.00", // Valor da cobrança (string decimal, até 2 casas)
     "referenceCode": "renovi-service-{service_id}", // Idempotência — repetir na mesma empresa gera erro
-    "manualCapture": true, // Autoriza em T-2 mas não captura até transactionCapture
     "billDaysInAdvance": 0, // Dias antes de dueAt para autorizar (0 = no próprio dueAt)
     "rrule": "DTSTART:20260608T000000Z RRULE:FREQ=DAILY;COUNT=1", // Agenda cobrança única; dueAt = DTSTART; mutuamente exclusivo com installmentNumber
     "payoutRuleInput": { // Split inline na cobrança (alternativa: payoutRuleId)
@@ -321,8 +319,8 @@ Ao aceitar a proposta / agendar o serviço, criar a cobrança com data futura:
 Onde `DTSTART` = **`service_scheduled_at - 2 dias`** (ex.: serviço em 10/06 → cobrança em 08/06).
 
 - `chargeType` resultante: `RECURRING` (transação agendada).
-- Em T-2, a Netcred autoriza automaticamente → `transactionState: BILLED`.
-- Webhook esperado: `TRANSACTION_AUTHORIZE`.
+- Em T-2, a Netcred autoriza e captura → `transactionState: PAID`, `chargeStatus: ENDED`.
+- Webhook esperado: `TRANSACTION_CAPTURE` / `TRANSACTION_UPDATE`.
 
 > `rrule` e `installmentNumber` são **mutuamente exclusivos**. Para cobrança única agendada, usar `rrule` com `COUNT=1`.
 
@@ -330,8 +328,8 @@ Onde `DTSTART` = **`service_scheduled_at - 2 dias`** (ex.: serviço em 10/06 →
 
 Job diário busca serviços com `charge_scheduled_at = hoje` e chama `chargeCreate` **sem** `rrule` (cobrança imediata):
 
-- Mesmos parâmetros: `paymentProfileId`, `manualCapture: true`, `payoutRuleInput`.
-- Transação nasce `SCHEDULED` e é autorizada na hora (ou quase).
+- Mesmos parâmetros: `paymentProfileId`, `payoutRuleInput` (omitir `manualCapture` ou `false`).
+- Transação nasce `SCHEDULED` e conclui `PAID` na hora (ou quase).
 - Mais controle operacional; exige worker confiável e idempotência via `referenceCode`.
 
 **Campos de agendamento relevantes (cartão):**
@@ -341,7 +339,7 @@ Job diário busca serviços com `charge_scheduled_at = hoje` e chama `chargeCrea
 | `rrule` / `DTSTART` | Define `dueAt` = data da cobrança |
 | `billDaysInAdvance` | Dias antes de `dueAt` para autorizar (default `0` = no próprio `dueAt`) |
 | `billingAt` | Data em que ocorrerá a autorização (retornado na `transaction`) |
-| `dueAt` | Para cartão: data prevista de captura (com `manualCapture`, captura é manual) |
+| `dueAt` | Para cartão: data prevista de cobrança/captura (com captura automática, ocorre junto com a autorização) |
 
 **Se a autorização falhar em T-2** (`REJECTED`): notificar cliente, permitir novo cartão (`paymentProfileCreate`) ou cancelar serviço (`chargeVoid` / `transactionVoid`).
 
@@ -353,37 +351,21 @@ Nenhuma mutation Netcred obrigatória nesta fase. A Renovi:
 
 - Atualiza `services.status` conforme fluxo operacional.
 - Exibe ao cliente a ação “Confirmar conclusão do serviço”.
-- Monitora `transactionState` — deve permanecer `BILLED` (pré-autorizado, não capturado).
+- Monitora `transactionState` — deve estar `PAID` desde T-2 (ou `IN_ANALYSIS` / `MANUAL_ANALYSIS` se ClearSale ainda processando).
 
-**Timeout de segurança:** se o cliente não confirmar dentro da janela de pré-autorização, chamar `transactionVoid` para liberar o hold no cartão e tratar o serviço como disputa/cancelamento.
+**Cancelamento pós-cobrança:** se o serviço for cancelado após T-2 com transaction `PAID`, usar `transactionRefund` (**§11**). Se a cobrança ainda estiver `SCHEDULED` (T-2 futuro), usar `chargeVoid` ou `transactionVoid`.
 
 ---
 
-### 4.6 Etapa 4 — Liberação ao prestador
+### 4.6 Etapa 4 — Confirmação do cliente e repasse ao prestador
 
-#### 4.6.1 Captura (gatilho principal)
+#### 4.6.1 Confirmação do cliente (domínio Renovi)
 
-Quando o cliente confirma:
+Quando o cliente confirma a conclusão do serviço, a Renovi **não** chama mutation Netcred de captura — o pagamento já está `PAID` desde T-2. A confirmação:
 
-```graphql
-mutation captureOnServiceConfirmation($transactionId: Int!) {
-  transactionCapture(input: { transactionId: $transactionId }) {
-    errors { code message field }
-    transaction {
-      id
-      transactionState
-      paidAt
-      processedAt
-    }
-  }
-}
-```
-
-- Pré-requisito: `transactionState` = `BILLED` e `method` = `CARD`.
-- Resultado esperado: `transactionState` → `PAID`.
-- Webhooks: `TRANSACTION_CAPTURE`, depois `TRANSACTION_UPDATE`.
-
-`processedAt` é a data base para **geração das liquidações** (repasse bancário).
+- Atualiza status do serviço e fecha o fluxo operacional.
+- Abre janela de disputa conforme regras de produto.
+- Em cancelamento/estorno pós-pagamento, dispara `transactionRefund` ou solicitação por e-mail à Netcred (**§4.14**).
 
 #### 4.6.2 Split / PayoutRule — como repassar ao prestador
 
@@ -410,16 +392,16 @@ A coleção **não documenta** como reter **somente a parcela do prestador** enq
 
 | Opção | Mecanismo | Prós | Contras |
 |-------|-----------|------|---------|
-| **A. `manualCapture` (recomendada V1)** | Só captura no passo 4; split dispara após `PAID` | Alinha débito do cliente à confirmação; usa API documentada | Liquidação ao prestador segue calendário Netcred, não é instantânea |
+| **A. Split padrão na cobrança T-2 (V1 Renovi)** | `payoutRuleInput` no `chargeCreate`; liquidação automática após `PAID` | Simples; usa API documentada; alinhado ao fluxo sem captura manual | Repasse ao prestador **não** espera confirmação do cliente |
 | **B. Split 100% Renovi → repasse manual** | `payoutRule` com 100% na conta Renovi; prestador pago fora da API | Controle total do timing ao prestador | Sem endpoint na coleção para repasse automatizado ao prestador |
 | **C. Marketplace (`MARKETPLACE` + `MERCHANT`)** | Renovi como marketplace; prestador como EC | Modelo natural para marketplace | Coleção não documenta liberação sob demanda por EC |
 | **D. `contractId` (FINANCIER)** | Recebíveis direcionados a financiador | Garantia de crédito | Não é escrow de serviço; fluxo financeiro diferente |
 
-**Recomendação V1:** Opção **A** — `manualCapture` garante que o cliente só é debitado na confirmação (ou mantém pré-auth até lá), e o split com valores **fixos** (`FIXED_AMOUNT`) alinha com o plano Renovi de comissão fixa. Negociar com a Netcred:
+**Recomendação V1:** Opção **A** — cobrança em T-2 com split `FIXED_AMOUNT` + `PERCENTAGE` (**§6**, **§8**). Negociar com a Netcred:
 
-1. Prazo máximo entre pré-autorização (T-2) e captura (confirmação).
-2. Se existe produto marketplace com **retenção de repasse ao EC** não documentado na coleção pública.
-3. Prazo de liquidação com `automaticAdvance: false` para contas de terceiros (prestador).
+1. Se existe produto marketplace com **retenção de repasse ao EC** não documentado na coleção pública (escrow real do prestador).
+2. Prazo de liquidação com `automaticAdvance: false` para contas de terceiros (prestador).
+3. Política de estorno (`transactionRefund`) quando cliente disputa após T-2.
 
 ---
 
@@ -449,10 +431,11 @@ A preferência por comissão fixa espelha o plano Asaas. O modelo **`FIXED_AMOUN
 | Momento | `transactionState` | Webhook Netcred | Ação Renovi |
 |---------|-------------------|-----------------|-------------|
 | Cobrança criada (T-2 agendado) | `SCHEDULED` | `CHARGE_CREATE`, `TRANSACTION_CREATE` | Persistir `charge_id`, `transaction_id` |
-| Autorização em T-2 | `BILLED` | `TRANSACTION_AUTHORIZE` | Marcar `charge_authorized`; notificar se falha |
+| Cobrança em T-2 | `PAID` | `TRANSACTION_CAPTURE`, `TRANSACTION_UPDATE` | Marcar `charge_captured`; notificar se falha |
 | Análise antifraude | `IN_ANALYSIS` / `MANUAL_ANALYSIS` | `TRANSACTION_UPDATE` | Aguardar; SLA até ~2h / manual |
-| Cliente confirma serviço | `PAID` | `TRANSACTION_CAPTURE`, `TRANSACTION_UPDATE` | Marcar serviço `in_progress` → concluído; iniciar contagem liquidação |
-| Autorização expirou | `VOIDED` / `EXPIRED` | `TRANSACTION_VOID` / `TRANSACTION_EXPIRED` | Reagendar cobrança ou cancelar |
+| Cliente confirma serviço | *(sem mudança Netcred)* | — | Atualizar status do serviço (domínio Renovi) |
+| Cancelamento antes de T-2 | `VOIDED` | `TRANSACTION_VOID` / `CHARGE_VOID` | Serviço cancelado; cobrança não executada |
+| Estorno pós-T-2 | `REFUNDED` / `PARTIALLY_REFUNDED` | `TRANSACTION_REFUND` | `transactionRefund` ou e-mail Netcred (**§4.14**) |
 | Chargeback | `is_disputed: true` | `TRANSACTION_DISPUTE` | Fluxo de disputa Renovi |
 | Disputa a favor do cliente (pós-e-mail) | `VOIDED` / `REFUNDED` / `PARTIALLY_REFUNDED` | `TRANSACTION_VOID` / `TRANSACTION_REFUND` | Confirmar estorno; informar cliente (30–60 dias na fatura) — ver **§4.14** |
 
@@ -466,21 +449,19 @@ A preferência por comissão fixa espelha o plano Asaas. O modelo **`FIXED_AMOUN
 |-------|-----------|
 | `netcred_payment_profile_id` | Token do cartão (etapa 1) |
 | `netcred_charge_id` | Charge criada na etapa 2 |
-| `netcred_transaction_id` | Transaction para capture/refund |
+| `netcred_transaction_id` | Transaction para refund/void |
 | `netcred_payout_rule_snapshot` | JSON do split aplicado |
 | `service_scheduled_at` | Data do serviço |
 | `charge_scheduled_at` | T-2 |
-| `payment_phase` | `profile_saved \| charge_scheduled \| authorized \| captured \| payout_pending \| payout_done \| failed` |
-| `authorized_at` | Quando chegou `BILLED` |
-| `captured_at` | Quando chegou `PAID` |
-| `client_confirmed_at` | Timestamp da confirmação (gatilho do capture) |
+| `payment_phase` | `profile_saved \| charge_scheduled \| captured \| payout_pending \| payout_done \| failed \| refunded` |
+| `captured_at` | Quando chegou `PAID` (T-2 ou imediato) |
+| `client_confirmed_at` | Timestamp da confirmação do cliente (domínio Renovi; não dispara captura) |
 
 **Jobs:**
 
 | Job | Cron | Ação |
 |-----|------|------|
 | `schedule-netcred-charges` | Diário | Estratégia B: `chargeCreate` para `charge_scheduled_at = today` |
-| `expire-stale-authorizations` | Diário | `transactionVoid` se `BILLED` sem confirmação após N dias |
 | `reconcile-netcred-webhooks` | Horário | Polling de segurança em `transactions` |
 
 ---
@@ -491,12 +472,13 @@ A preferência por comissão fixa espelha o plano Asaas. O modelo **`FIXED_AMOUN
 |---------------|------------------|
 | Salvar cartão | `paymentProfileCreate` |
 | Agendar/cobrar T-2 | `chargeCreate` (+ `rrule` ou imediato) |
-| Antecipar autorização | `transactionBill` (se necessário) |
-| Cliente confirma serviço | `transactionCapture` |
-| Cancelar antes de capturar | `transactionVoid` |
-| Cancelar cobrança agendada | `chargeVoid` (só `SCHEDULED`) |
+| Antecipar cobrança agendada | `transactionBill` (se necessário) |
+| Cancelar cobrança agendada (antes de T-2) | `chargeVoid` (transações `SCHEDULED`) |
+| Cancelar transação agendada/autorizada | `transactionVoid` (`SCHEDULED` ou `BILLED`*) |
 | Estorno pós-captura | `transactionRefund` |
 | Remover cartão salvo | `paymentProfileVoid` |
+
+\* `BILLED` só ocorre com `manualCapture: true` — **fora do escopo Renovi**; mantido como referência da API.
 
 ---
 
@@ -506,13 +488,13 @@ A preferência por comissão fixa espelha o plano Asaas. O modelo **`FIXED_AMOUN
 stateDiagram-v2
   [*] --> ProfileSaved: paymentProfileCreate
   ProfileSaved --> ChargeScheduled: chargeCreate (rrule T-2)
-  ChargeScheduled --> Authorized: billingAt (manualCapture=true)
-  Authorized --> Paid: transactionCapture (cliente confirma)
-  Authorized --> Voided: transactionVoid (timeout/cancel)
-  ChargeScheduled --> Rejected: autorização falhou
+  ChargeScheduled --> Paid: billingAt (captura automática)
+  ChargeScheduled --> Rejected: cobrança falhou
+  ChargeScheduled --> Voided: chargeVoid / transactionVoid
   Paid --> PayoutProcessing: processedAt (split automático)
   PayoutProcessing --> [*]: liquidação bancária Netcred
   Paid --> Refunded: transactionRefund
+  Paid --> ClientConfirmed: confirmação cliente (Renovi)
 ```
 
 ---
@@ -524,7 +506,6 @@ stateDiagram-v2
 | **Credenciamento de prestadores** | ✅ Alinhado | Sem API de onboarding; fluxo Renovi via e-mail + polling (ver **§4.13**) |
 | **Liquidação/liberação sob evento manual** | ⏳ Pendente | Validar com Fernando: repasse ao prestador após confirmação de serviço concluído |
 | **Webhook de credenciamento concluído** | 🔜 Em desenvolvimento (Netcred) | Hoje: cron de polling; futuro: substituir ou complementar com webhook |
-| **Prazo de pré-autorização** | ⏳ Confirmar | Máximo entre `BILLED` (T-2) e `transactionCapture` |
 | **SLA de liquidação** | ⏳ Confirmar | Com `automaticAdvance: false`, quantos dias até o prestador receber após `PAID`? |
 | **Taxa de escrow** | ⏳ Confirmar | Equivalente aos R$ 9,90/mês do modelo Asaas no plano Renovi |
 | **Cancelamento/estorno em disputa** | ✅ Alinhado | Solicitação por e-mail à Netcred; SLA 24 h; estorno na fatura 30–60 dias (ver **§4.14**) |
@@ -650,8 +631,8 @@ O prestador precisa estar com `netcred_onboarding_status = active` e ter `netcre
 
 | Cenário | Canal Renovi → Netcred | Mutations API (quando aplicável) |
 |---------|------------------------|----------------------------------|
-| Cancelamento operacional (antes de capturar, timeout, serviço cancelado) | API GraphQL | `transactionVoid`, `chargeVoid` |
-| Estorno pós-captura (cancelamento de serviço após cobrança) | API GraphQL | `transactionRefund` |
+| Cancelamento antes de T-2 (cobrança ainda `SCHEDULED`) | API GraphQL | `chargeVoid`, `transactionVoid` |
+| Estorno pós-captura (cancelamento após T-2 / serviço `PAID`) | API GraphQL | `transactionRefund` (**§11.1**) |
 | **Disputa decidida a favor do cliente** | **E-mail** para a Netcred | Não usar mutation diretamente neste fluxo |
 
 #### Fluxo de disputa — cancelamento por e-mail
@@ -874,7 +855,7 @@ Parâmetro: `paymentProfileId`.
 
 Após tokenizar, use **`paymentProfileId`** na cobrança — **não** reenvie `ccInput`.
 
-> **Fluxo Renovi:** etapa 1 = tokenização no fechamento do orçamento (**§5**); etapa 2 = `chargeCreate` em T-2 (**§6.1**). Escrow com `manualCapture: true` + `transactionCapture` na confirmação do cliente conforme **§4**.
+> **Fluxo Renovi:** etapa 1 = tokenização no fechamento do orçamento (**§5**); etapa 2 = `chargeCreate` em T-2 (**§6.1**). Captura automática (default; **não** usar `manualCapture: true`) conforme **§4**.
 
 ### Mutation (validada em sandbox, 2026-06)
 
@@ -1019,11 +1000,11 @@ Primeira `chargeCreate` bem-sucedida com split (`PERCENTAGE` + `FIXED_AMOUNT`), 
 | Campo local | Origem |
 |-------------|--------|
 | `netcred_charge_id` | `charge.id` (`417417`) |
-| `netcred_transaction_id` | `transactions.edges[0].node.id` (`444676`) |
+| `netcred_transaction_id` | `transactions.edges[0].node.id` (`444676`) — usar em `transactionRefund` (**§11.1**), não confundir com `charge.id` |
 | `reference_code` | `charge.referenceCode` |
-| `payment_phase` | `captured` (com `manualCapture: false` e `PAID` imediato) |
+| `payment_phase` | `captured` (T-2 ou imediato, com `PAID`) |
 
-Com `manualCapture: false`, autorização e captura ocorrem na mesma chamada → `transactionState: PAID` e `chargeStatus: ENDED`.
+Com captura automática (default da API; omitir `manualCapture` ou `false`), autorização e captura ocorrem na mesma operação → `transactionState: PAID` e `chargeStatus: ENDED`.
 
 ### Limites de tamanho de texto
 
@@ -1048,7 +1029,6 @@ Na implementação, validar/truncar antes de chamar `chargeCreate` (ex.: util co
     "referenceCode": "c4a81f63-2d9e-4b1c-8e7a-1f0d9c8b7a6e", // UUID do serviço — idempotência (§6.2)
     "billDaysInAdvance": 0,
     "extraInfo": "Renovi · Pintura · …", // ≤ 150 caracteres (§6)
-    "manualCapture": false, // false = autoriza+captura juntos; true = pré-auth (§4)
     "customerIpAddress": "189.0.0.1",
     "orderInput": {
       "sessionId": "b03ac6b0-9824-40b3-acf5-c760b4e4c502", // UUID ClearSale (§6.3)
@@ -1103,7 +1083,6 @@ Na implementação, validar/truncar antes de chamar `chargeCreate` (ex.: util co
 | `extraInfo` | Não | Texto operacional; **máx. 150 caracteres** |
 | `billDaysInAdvance` | Não | Com `rrule` (T-2), dias antes de `dueAt` para autorizar |
 | `rrule` | Não | Agenda cobrança única em T-2 (estratégia A em **§4.4**); exclusivo com `installmentNumber` |
-| `manualCapture` | Não | `true` no fluxo escrow produção; `false` para teste imediato no Postman |
 | `customerIpAddress` | Não* | IP real do cliente no checkout/cobrança (*recomendado com ClearSale) |
 | `orderInput` | Condicional | Carrinho antifraude — obrigatório com ClearSale (**§6.3**) |
 | `payoutRuleInput` | Condicional | Split inline — exige serviço comercial Netcred (**§6.4**) |
@@ -1178,7 +1157,6 @@ Na implementação, validar/truncar antes de chamar `chargeCreate` (ex.: util co
 | `payoutRuleId` | Não** | ID de split pré-existente |
 | `payoutRuleInput` | Não** | Split inline na cobrança |
 | `contractId` | Não** | Alternativa a payout (financiador) |
-| `manualCapture` | Não | `true` = autoriza mas não captura automaticamente |
 | `orderInput` | Condicional | Obrigatório com análise de risco habilitada |
 | `customerIpAddress` | Não | IP do pagador (antifraude) |
 | `extraInfo` | Não | Máx. **150 caracteres** |
@@ -1186,12 +1164,11 @@ Na implementação, validar/truncar antes de chamar `chargeCreate` (ex.: util co
 
 ** Mutuamente exclusivos: `payoutRuleId`, `payoutRuleInput`, `contractId`. Se nenhum for enviado, usa o split padrão da empresa.
 
-### Captura manual
+### Captura manual (API Netcred — Renovi não utiliza)
 
-Se `manualCapture: true`:
+A coleção Postman documenta `manualCapture: true` + `transactionCapture` para separar autorização (`BILLED`) de captura (`PAID`). **A Renovi não adota esse fluxo** — usa captura automática em T-2 (§4.2).
 
-1. Transação vai para `BILLED` (autorizada).
-2. Chamar `transactionCapture` para capturar e ir para `PAID`.
+Referência da API, caso necessário em homologação futura:
 
 ```graphql
 mutation transactionCapture($input: TransactionCaptureInput!) {
@@ -1202,14 +1179,14 @@ mutation transactionCapture($input: TransactionCaptureInput!) {
 }
 ```
 
-Default (`manualCapture: false`): autorização + captura automáticas na criação.
+Com `manualCapture: true`: transação vai para `BILLED`; `transactionCapture` leva a `PAID`. Default (`manualCapture: false` ou omitido): autorização + captura automáticas na criação — **padrão Renovi**.
 
 ### 6.1 Fluxo Renovi em duas etapas (orçamento → cobrança T-2)
 
 | Etapa | Quando | Mutation | O que acontece |
 |-------|--------|----------|----------------|
 | **1. Salvar cartão** | Cliente fecha/aceita orçamento no checkout | `paymentProfileCreate` (**§5**) | Tokeniza cartão; **não cobra**; persiste `netcred_payment_profile_id` |
-| **2. Cobrar** | 2 dias antes da data agendada do serviço (`service_scheduled_at - 2d`) | `chargeCreate` (esta seção) | Autoriza/captura no cartão tokenizado (`paymentProfileId`) |
+| **2. Cobrar** | 2 dias antes da data agendada do serviço (`service_scheduled_at - 2d`) | `chargeCreate` (esta seção) | Autoriza **e captura** no cartão tokenizado → `PAID` |
 
 ```
 Cliente fecha orçamento          T-2 (2 dias antes)              Dia do serviço
@@ -1218,11 +1195,9 @@ Cliente fecha orçamento          T-2 (2 dias antes)              Dia do serviç
  paymentProfileCreate              chargeCreate                  prestador executa
  (token + billingAddress)     (paymentProfileId + orderInput)   cliente confirma
         │                                │                            │
-   payment_profile_saved          charge_authorized/captured    transactionCapture*
-        │                         (manualCapture define)       (se manualCapture=true)
+   payment_profile_saved              charge_captured           status Renovi
+        │                         (PAID — captura automática)   (sem mutation Netcred)
 ```
-
-\* `transactionCapture` só no fluxo escrow com `manualCapture: true` (**§4**).
 
 **Estratégias para etapa 2 (T-2):**
 
@@ -1289,7 +1264,6 @@ Registro dos erros encontrados em sandbox (companies `1047`/`1048`, 2026-06) na 
 | `This company does not have Select Payout Rule Service enabled` (`PAYOUT_RULE_SELECT_NOT_ENABLED`) | Comercial | Company sem serviço **Select Payout Rule** | Pedir habilitação à Netcred; **ou** omitir `payoutRuleInput`/`payoutRuleId` (usa split primário da empresa) |
 | `INTERNAL_SERVER_ERROR` | Infra / gateway | Falha não tratada no lado Netcred; causas observadas: payload válido mas instável, ou **`extraInfo` / `productInput.description` > 150 caracteres** | Encurtar textos; não repetir em loop; registrar `referenceCode` e payload; retry após minutos; se persistir, chamado à Netcred |
 | `referenceCode` repetido (idempotência) | Negócio | Mesmo `input.referenceCode` na mesma empresa | Usar novo código (`renovi-service-{id}` único) ou consultar cobrança existente |
-| Autorização expirada ao capturar | Negócio | `manualCapture: true` e `transactionCapture` após prazo da bandeira | `transactionVoid` e reautorizar; ver janela de pré-auth **§4.2** |
 
 **Respostas com `errors[]` e `charge: null`:** a mutation retornou HTTP 200, mas a operação falhou — inspecionar `errors[].code` e `errors[].message`; não assumir sucesso.
 
@@ -1393,7 +1367,7 @@ mutation chargeCreateCardWithSplit($input: ChargeCreateInput!) {
 | `referenceCode` | Idempotência definida pela Renovi (UUID do serviço) | Polling, webhooks, deduplicação |
 | `chargeType` | `SINGLE` = cobrança imediata; `RECURRING` = tem transação agendada (`rrule` / T-2) | Saber se T-2 já disparou ou está agendado |
 | `chargeStatus` | `ONGOING` = transações pendentes; `ENDED` = todas finais; `VOIDED` = cancelada | Máquina de estados do serviço |
-| `manualCapture` | `true` = só pré-autoriza (escrow); `false` = autoriza+captura juntos | Confirmar modo escrow vs débito imediato |
+| `manualCapture` | `false` ou omitido (Renovi) | Captura automática em T-2 |
 | `installmentNumber` | Parcelas no cartão (Renovi: `1`) | Exibir “à vista” |
 | `method` | Método de pagamento (`CARD` para cartão) | Filtro / validação |
 | `billingCycleTotal` | Total de transações desta charge | Cobranças recorrentes / múltiplas parcelas |
@@ -1416,7 +1390,7 @@ Cada `node` é um pagamento efetivo (autorização/captura de cartão). Na Renov
 
 | Campo | Significado | Uso Renovi |
 |-------|-------------|------------|
-| `id` | ID único da transação | `netcred_transaction_id` — `transactionCapture`, `transactionVoid`, `transactionRefund` |
+| `id` | ID único da **Transaction** (pagamento) | `netcred_transaction_id` — **`transactionRefund`**, `transactionVoid` (**não** confundir com `charge.id`) |
 | `uuid` | UUID da transação | Correlação alternativa |
 | `transactionState` | Estado atual do pagamento — ver tabela abaixo | `payment_phase`, webhooks, UI de status |
 | `amount` | Valor nominal da transação | Conferir com `charge.amount` |
@@ -1428,7 +1402,7 @@ Cada `node` é um pagamento efetivo (autorização/captura de cartão). Na Renov
 | `processedAt` | Data/hora de processamento — base das **liquidações** (split) | Início do calendário de repasse ao prestador |
 | `rejectedReason` | Motivo da recusa (limite, antifraude, etc.) | Notificar cliente; fluxo de novo cartão |
 | `installmentNumber` | Parcela no cartão | Renovi: `1` |
-| `voidAt` / `voidReason` | Cancelamento da transação | Timeout de pré-auth, cancelamento de serviço |
+| `voidAt` / `voidReason` | Cancelamento da transação | Cancelamento antes de T-2 ou estorno |
 | `isDisputed` | Chargeback/disputa em andamento | Fluxo de disputa (**§4.14**) |
 | `attempts` | Tentativas de autorização | Debug de falhas intermitentes |
 
@@ -1445,8 +1419,8 @@ Referência completa da máquina de estados: **§9**. Resumo com implicação no
 
 | `transactionState` | Significado | Implicação Renovi |
 |--------------------|-------------|-------------------|
-| `SCHEDULED` | Agendada; autorização em `billingAt` | Cobrança T-2 com `rrule` ainda não executou |
-| `BILLED` | Autorizada, não capturada | Escrow com `manualCapture: true` — aguardar confirmação do cliente → `transactionCapture` |
+| `SCHEDULED` | Agendada; cobrança em `billingAt` | Cobrança T-2 com `rrule` ainda não executou |
+| `BILLED` | Autorizada, não capturada | Só com `manualCapture: true` (API; **Renovi não usa**) |
 | `IN_ANALYSIS` | ClearSale analisando (até ~2h) | UI “pagamento em análise”; não liberar serviço ainda |
 | `MANUAL_ANALYSIS` | Análise manual Netcred | Aguardar; pode virar `PAID` ou `REJECTED` |
 | `REJECTED` | Recusada na autorização | Notificar cliente; `paymentProfileCreate` ou cancelar serviço |
@@ -1456,7 +1430,7 @@ Referência completa da máquina de estados: **§9**. Resumo com implicação no
 | `PARTIALLY_REFUNDED` | Estorno parcial | Pós-disputa / cancelamento parcial |
 | `REFUNDED` | Estorno total | Pós-disputa / cancelamento |
 
-**Exemplo sandbox (cobrança imediata, `manualCapture: false`):** `transactionState: PAID`, `chargeStatus: ENDED`, `chargeType: SINGLE`.
+**Exemplo sandbox (captura automática, fluxo Renovi):** `transactionState: PAID`, `chargeStatus: ENDED`, `chargeType: SINGLE` (imediato) ou `RECURRING` → `PAID` em T-2 (agendado).
 
 #### Persistência mínima após sucesso
 
@@ -1467,6 +1441,8 @@ Referência completa da máquina de estados: **§9**. Resumo com implicação no
 | `transactions.edges[0].node.id` | `netcred_transaction_id` |
 | `transactions.edges[0].node.transactionState` | derivar `payment_phase` |
 | `transactions.edges[0].node.paidAt` | `captured_at` |
+
+> **`charge.id` ≠ `transaction.id`:** após `chargeCreate`, `charge.id` identifica a cobrança (`chargeVoid`); `transactions.edges[0].node.id` identifica o pagamento (`transactionRefund`, `transactionVoid`). Usar o ID errado em `transactionRefund` retorna `TRANSACTION_DOES_NOT_EXIST` — ver **§11.1**.
 | `paymentProfile.id` | validar `netcred_payment_profile_id` |
 
 ---
@@ -1861,10 +1837,148 @@ Inclui `id`, `reference_code`, `charge_type` (`SINGLE` | `RECURRING`), `charge_s
 |----------|-----|
 | `chargeVoid` | Cancela charge `ONGOING` (transações `SCHEDULED`) |
 | `transactionVoid` | Cancela transação `SCHEDULED` ou `BILLED` |
-| `transactionRefund` | Estorno parcial/total (`PAID` ou `PARTIALLY_REFUNDED`) |
+| `transactionRefund` | Estorno parcial/total (`PAID` ou `PARTIALLY_REFUNDED`) — detalhes **§11.1** |
+| `transactionCapture` | Captura manual (`BILLED` → `PAID`) — **API only; Renovi não utiliza** |
 | `transactionBill` | Antecipa emissão/autorização |
 | `transactionUpdate` | Atualiza dados da transação |
 | `customerCreate` | Cria pagador isoladamente |
+
+### 11.1 `transactionRefund` — estorno pós-captura
+
+Estorna valor de uma **Transaction** com `PAID` ou `PARTIALLY_REFUNDED`. Cartão online e PIX online (não POS). Pode haver **vários estornos** na mesma transaction (parciais), até esgotar o saldo reembolsável.
+
+Fonte: request Postman `transactionRefund` (coleção **API Netcred**).
+
+#### Charge vs Transaction — qual ID usar?
+
+| ID | Origem no `chargeCreate` | Exemplo sandbox | Usar em |
+|----|--------------------------|-----------------|---------|
+| **Charge** | `charge.id` | `417418` | `chargeVoid` |
+| **Transaction** | `charge.transactions.edges[0].node.id` | **`444677`** | **`transactionRefund`**, `transactionVoid` |
+
+> Erro comum: passar `charge.id` em `transactionId` → `TRANSACTION_DOES_NOT_EXIST`.
+
+#### Mutation
+
+```graphql
+mutation transactionRefund($input: TransactionRefundInput!) {
+  transactionRefund(input: $input) {
+    errors { field message code }
+    transaction {
+      id
+      amount
+      paidAmount
+      refundedAmount
+      transactionState
+    }
+  }
+}
+```
+
+#### Input
+
+| Campo | Obrigatório | Descrição |
+|-------|-------------|-----------|
+| `transactionId` | Sim | ID da **Transaction** (`node.id`), **não** o `charge.id` |
+| `refundReason` | Sim | `DUPLICATE`, `FRAUDULENT`, `REQUESTED_BY_CUSTOMER`, `OTHER` (informativo) |
+| `amount` | Não | Default = saldo reembolsável; string decimal com 2 casas |
+
+#### Sucesso em sandbox (2026-06-23)
+
+Cobrança original: `charge.id` **417418**, `transactions.edges[0].node.id` **444677**, R$ 500,00, `PAID`.
+
+**Request:**
+
+```json
+{
+  "input": {
+    "transactionId": 444677,
+    "refundReason": "REQUESTED_BY_CUSTOMER",
+    "amount": "500.00"
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "data": {
+    "transactionRefund": {
+      "errors": [],
+      "transaction": {
+        "id": "444678",
+        "amount": "500.00",
+        "paidAmount": "500.00",
+        "refundedAmount": "500.00",
+        "transactionState": "REFUNDED"
+      }
+    }
+  }
+}
+```
+
+**Persistir na Renovi após sucesso:**
+
+| Campo local | Origem / valor |
+|-------------|----------------|
+| `payment_phase` | `refunded` |
+| `refunded_amount` | `transaction.refundedAmount` (`500.00`) |
+| `refund_confirmed_at` | timestamp local (complementar webhook `TRANSACTION_REFUND`) |
+
+#### Erros conhecidos (`transactionRefund`)
+
+| Código | Mensagem (exemplo) | Causa | Ação |
+|--------|-------------------|-------|------|
+| `TRANSACTION_DOES_NOT_EXIST` | `Transaction does not exist` | `transactionId` inválido ou **`charge.id` usado no lugar de `transaction.id`** | Usar `transactions.edges[0].node.id` do `chargeCreate`; conferir `netcred_transaction_id` |
+| `TRANSACTION_INVALID_REFUND_AMOUNT` | `Refunded amount (500.00) can't be higher than transaction refundable amount (0.00)` | Estorno total ou parcial **maior que o saldo reembolsável** — típico quando a transaction já está `REFUNDED` ou já houve estorno do valor integral | Consultar `transactionState` / `refundedAmount` antes de chamar; tratar idempotentemente se já estornado |
+| *(outros)* | Variam | Transaction não `PAID`/`PARTIALLY_REFUNDED`, company/JWT incorretos | Ver estado em query `transactions`; validar credenciais |
+
+**Exemplo — `TRANSACTION_DOES_NOT_EXIST` (ID da charge):**
+
+```json
+{
+  "input": {
+    "transactionId": 417418,
+    "refundReason": "REQUESTED_BY_CUSTOMER",
+    "amount": "500.00"
+  }
+}
+```
+
+```json
+{
+  "data": {
+    "transactionRefund": {
+      "errors": [{
+        "field": null,
+        "message": "Transaction does not exist",
+        "code": "TRANSACTION_DOES_NOT_EXIST"
+      }],
+      "transaction": null
+    }
+  }
+}
+```
+
+**Exemplo — `TRANSACTION_INVALID_REFUND_AMOUNT` (estorno repetido):**
+
+```json
+{
+  "data": {
+    "transactionRefund": {
+      "errors": [{
+        "field": null,
+        "message": "Refunded amount (500.00) can't be higher than transaction refundable amount (0.00)",
+        "code": "TRANSACTION_INVALID_REFUND_AMOUNT"
+      }],
+      "transaction": null
+    }
+  }
+}
+```
+
+> **Respostas com `errors[]` e `transaction: null`:** HTTP 200, operação falhou — não marcar como estornado na Renovi.
 
 ---
 
@@ -1927,7 +2041,7 @@ Paginação: `first` (máx. 200), `offset`, `orderBy` (ex.: `"-due_at"`).
 
 ## 14. Implicações para implementação na Renovi
 
-Ver **seção 4** para o fluxo escrow completo (tokenização → T-2 → confirmação → liberação).
+Ver **seção 4** para o fluxo completo (tokenização → cobrança T-2 → confirmação do serviço → repasse via split).
 
 ### Camada de API (`src/features/payments/api/`)
 
@@ -1938,10 +2052,9 @@ Ver **seção 4** para o fluxo escrow completo (tokenização → T-2 → confir
 | `getBankAccounts()` | `bankAccounts` | Credenciamento (polling) |
 | `createCardPaymentProfile()` | `paymentProfileCreate` | Etapa 1 |
 | `voidPaymentProfile()` | `paymentProfileVoid` | — |
-| `createScheduledCardCharge()` | `chargeCreate` + `rrule` + `manualCapture` + `payoutRuleInput` | Etapa 2 |
-| `captureTransaction()` | `transactionCapture` | Etapa 4 |
+| `createScheduledCardCharge()` | `chargeCreate` + `rrule` + `payoutRuleInput` | Etapa 2 |
 | `billTransaction()` | `transactionBill` | Opcional (antecipar T-2) |
-| `voidTransaction()` | `transactionVoid` | Cancelamento / timeout |
+| `voidTransaction()` | `transactionVoid` | Cancelar cobrança `SCHEDULED` (antes de T-2) |
 | `createPixCharge()` | `chargeCreate` + PIX | Fluxo alternativo |
 | `voidCharge()` | `chargeVoid` | Cancelar cobrança `SCHEDULED` |
 | `refundTransaction()` | `transactionRefund` | Pós-captura |
@@ -1955,8 +2068,7 @@ Ver **seção 4** para o fluxo escrow completo (tokenização → T-2 → confir
 - Validar `X-NETCRED-Signature`.
 - Tratar idempotentemente por `transaction.id` + `transaction_state`.
 - Mapear `reference_code` → `service_payments`.
-- **`BILLED`** → marcar `charge_authorized` (T-2 OK).
-- **`PAID`** → após `transactionCapture`; atualizar `payment_phase` → `captured`.
+- **`PAID`** → marcar `payment_phase` → `captured` (T-2 ou imediato).
 - **`REJECTED` / `VOIDED` / `EXPIRED`** → fluxo de falha / reagendamento.
 - **`TRANSACTION_VOID`** → cancelamento confirmado; atualizar `payment_phase` e status do serviço.
 - **`TRANSACTION_REFUND`** → estorno confirmado; registrar `refund_confirmed_at`; comunicar ao cliente prazo de 30–60 dias na fatura se ainda não exibido.
@@ -1972,9 +2084,9 @@ Ver **§4.14**. Resumo de implementação:
 | Handler `netcred-webhook` | Tratar `TRANSACTION_VOID` e `TRANSACTION_REFUND` para fechar o ciclo sem depender só do e-mail de confirmação |
 | UI de disputa | Informar SLA Netcred (até 24 h) e prazo na fatura do cartão (30–60 dias) |
 
-### Hook de confirmação do cliente
+### Confirmação do cliente
 
-`useConfirmServiceCompletion` (ou equivalente) deve chamar `captureTransaction()` quando o cliente confirmar — **não** criar nova cobrança.
+`useConfirmServiceCompletion` (ou equivalente) atualiza o status do serviço no domínio Renovi — **não** chama `transactionCapture` nem nova cobrança. Estorno pós-confirmação: `transactionRefund` ou fluxo por e-mail (**§4.14**).
 
 ### Dados a persistir localmente
 
@@ -1984,7 +2096,7 @@ Ver também tabela em **§4.9**.
 |---------------|------------|
 | `paymentProfile.id` | Cartão tokenizado (etapa 1) |
 | `charge.id` | Cobrança agendada (etapa 2) |
-| `transaction.id` | Capture, void, refund |
+| `transaction.id` | Refund, void (cancelamento antes de T-2) |
 | `referenceCode` | Idempotência (`renovi-service-{id}`) |
 | `payoutRule` snapshot | Split Renovi + prestador |
 | `service_scheduled_at` / `charge_scheduled_at` | Agendamento T-2 |
@@ -2019,4 +2131,4 @@ Ver **§4.13**. Resumo de implementação:
 
 ---
 
-*Gerado em 2026-06-09. Atualizado com modelo escrow Renovi, credenciamento de prestadores (alinhamento Renovi × Netcred, 2026-06), cancelamentos/estornos e disputas (alinhamento Renovi × Netcred, 2026-06) e mapeamento da coleção Postman API Netcred.*
+*Gerado em 2026-06-09. Atualizado com fluxo Renovi (cobrança T-2 com captura automática), credenciamento de prestadores (alinhamento Renovi × Netcred, 2026-06), cancelamentos/estornos e disputas (alinhamento Renovi × Netcred, 2026-06), `transactionRefund` validado em sandbox (2026-06-23) e mapeamento da coleção Postman API Netcred.*
