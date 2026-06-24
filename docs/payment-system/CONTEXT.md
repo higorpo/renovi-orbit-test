@@ -35,16 +35,16 @@ Cobrança capturada (`payment_schedules.state = PAID`); serviço aguardando exec
 _Avoid_: `SCHEDULED` (reservado para agendamento de cobrança no Payment Schedule); confundir com "aceite da proposta"
 
 **EXECUTED** (contracted service):
-Prestador marcou o serviço como executado; aguardando confirmação do cliente. `executed_at` registrado. Auto-promoção para `COMPLETED` após 24h sem ação do cliente.
-_Avoid_: Confundir com `COMPLETED`; pular etapa de confirmação do cliente
+Prestador marcou o serviço como executado; aguardando confirmação do cliente. `executed_at` registrado. Auto-promoção para `COMPLETED` após 24h sem ação do cliente. Só permitido quando **dia de `scheduled_at` ≤ hoje** (data sem horário — comparação por dia civil).
+_Avoid_: Confundir com `COMPLETED`; marcar `EXECUTED` antes do dia agendado; exigir horário específico na data
 
 **COMPLETED** (contracted service):
 Serviço encerrado. Transição via confirmação explícita do cliente **ou** auto-conclusão 24h após `executed_at`. Pagamento não revalida nesta transição.
 _Avoid_: Marcar `COMPLETED` direto pelo prestador sem passo `EXECUTED`
 
 **Service completion flow**:
-Conclusão em duas etapas: (1) prestador → `EXECUTED`; (2) cliente confirma → `COMPLETED`. Se cliente não confirmar em 24h → cron promove automaticamente para `COMPLETED`. Pré-condição para `EXECUTED`: `payment_schedules.state = PAID`.
-_Avoid_: Conclusão unilateral só pelo prestador; bloquear `COMPLETED` por chargeback em andamento
+Conclusão em duas etapas: (1) prestador → `EXECUTED` (somente no dia de `scheduled_at` ou depois — comparação por **dia**, sem horário); (2) cliente confirma → `COMPLETED`. Se cliente não confirmar em 24h → cron promove automaticamente para `COMPLETED`. Pré-condição para `EXECUTED`: `payment_schedules.state = PAID`. **Não** controla timing de repasse ao prestador (ver Provider payout timing).
+_Avoid_: Conclusão unilateral só pelo prestador; bloquear `COMPLETED` por chargeback em andamento; usar `COMPLETED` como gatilho de liquidação; permitir `EXECUTED` antes do dia agendado
 
 **Provider calendar visibility**:
 Prestador enxerga o serviço na agenda quando `contracted_services.status ∈ {CONFIRMED, EXECUTED, COMPLETED}`. Em `PENDING_PAYMENT`, prestador **não** vê na agenda.
@@ -75,8 +75,8 @@ _Avoid_: Reutilizar sessão do checkout em retry manual
 ### Aceite e orquestração
 
 **Proposal acceptance (accept_proposal)**:
-RPC atômica que firma o compromisso: cria `contracted_services` + `payment_schedules` na mesma transação. Tokenização do cartão ocorre **antes**, via Edge Function separada.
-_Avoid_: `create_payment_schedule` como passo desacoplado pós-aceite
+RPC atômica que firma o compromisso: cria `contracted_services` + `payment_schedules` na mesma transação. Tokenização do cartão ocorre **antes**, via Edge Function separada. Valida `pricing_signature` da proposta **e** `installment_selection_hmac` antes de prosseguir.
+_Avoid_: `create_payment_schedule` como passo desacoplado pós-aceite; aceitar sem revalidar preços da proposta
 
 **Charge retry interval**:
 Tempo mínimo entre tentativas automáticas de cobrança após falha retryable. Default de produção: **30 minutos**, configurável via `platform_constants.charge_retry_interval_minutes`.
@@ -91,16 +91,28 @@ Tentativa de cobrança disparada pelo cron. Contador `automatic_attempt_count`, 
 _Avoid_: Misturar com tentativas manuais do cliente
 
 **Manual charge attempt**:
-Tentativa iniciada pelo cliente via "Efetuar Pagamento". Orçamento **separado**, sem limite fixo até T-12h; rate limit na Edge Function. Não reativa retries automáticos.
-_Avoid_: Incrementar `automatic_attempt_count` em retry manual
+Tentativa iniciada pelo cliente via "Efetuar Pagamento". Orçamento **separado**, sem limite fixo até T-12h; rate limit na Edge Function. Não reativa retries automáticos. Botão visível em `FAILED` e `FAILED_PERMANENT`; retries automáticos em `FAILED` continuam em paralelo até esgotar.
+_Avoid_: Incrementar `automatic_attempt_count` em retry manual; restringir botão só a `FAILED_PERMANENT`; permitir pagamento manual em `SCHEDULED` pré-T-2
 
 **Installment selection HMAC**:
 Assinatura HMAC-SHA256 sobre opções de parcelas + taxas (`expires_at = computed_at + 10 min`). `accept_proposal` valida assinatura e expiração server-side.
 _Avoid_: Confiar em `installment_number` enviado pelo cliente sem verificação
 
+**Proposal pricing signature**:
+Assinatura criptográfica dos valores da proposta (`proposed_amount`, `tax_amount`, `final_amount`). `accept_proposal` **deve** revalidar `pricing_signature` server-side além do HMAC de parcelas; `base_amount` congelado só se ambas válidas.
+_Avoid_: Confiar apenas no `proposal_id` sem verificar integridade dos preços; omitir validação de pricing no aceite
+
 **Installment signature expiry (UX)**:
 Se HMAC expirar no submit → erro `INSTALLMENT_SIGNATURE_EXPIRED`; app reabre passo de parcelas com recálculo automático (novo HMAC). Token do cartão, endereço e demais dados do stepper **persistem**.
 _Avoid_: Heartbeat que renova HMAC silenciosamente; perder todo o checkout por expiração
+
+**Checkout charge disclosure**:
+Informação obrigatória no stepper de checkout (antes de confirmar aceite): quando a cobrança será realizada. Caso normal: data de `charge_scheduled_at` (= 48h antes do serviço). Emergência (<48h): "cobrança nas próximas horas" — sem prometer horário exato do cron; lembrete 24h **não** se aplica.
+_Avoid_: Omitir que a cobrança é diferida; sugerir débito imediato no aceite; prometer horário fixo do cron em emergência
+
+**Pre-charge notification**:
+Lembrete ao cliente **24h antes** de `charge_scheduled_at` quando `payment_schedules.state = SCHEDULED`. Push + Email com valor estimado, cartão mascarado, link para trocar cartão ou cancelar (livre pré-`PAID`). `upcoming_charge_notified_at` evita duplicata; reset em reagendamento.
+_Avoid_: Notificar prestador sobre cobrança do cartão do cliente; repetir lembrete sem reset após reagendamento
 
 **Payment method update (pre-charge)**:
 Cliente troca cartão em serviço `PENDING_PAYMENT` (`payment_schedules.state ∈ {SCHEDULED, FAILED}`) sem cancelar/reaceitar. Atualiza `payment_token_id`; se banda mudar → novo HMAC de parcelas; preços e `charge_scheduled_at` inalterados.
@@ -113,6 +125,10 @@ _Avoid_: Usar o mesmo enum em `contracted_services`
 **Cancellation reason**:
 Metadado que qualifica um `CANCELLED` — ex.: `NON_PAYMENT`, `CLIENT_INITIATED`, `PROVIDER_INITIATED`, `PROVIDER_SUSPENDED`. Não é um status separado.
 _Avoid_: `SERVICE_CANCELLED_NON_PAYMENT` como status de `contracted_services`; usar `NON_PAYMENT` quando a culpa é do cliente
+
+**Service cancellation matrix**:
+Regras de cancelamento por estado. Pré-`PAID` (`PENDING_PAYMENT`): cancelamento livre por cliente ou prestador, sem multa, sem `transactionRefund`. Pós-`PAID` (`CONFIRMED` ou `EXECUTED`): multa conforme ToS §2.2 (>48h = 0%; 48h–12h = 10%; <12h = 30% sobre `base_amount`). Prestador cancela pós-`PAID`: reembolso integral (`charge_amount`). `COMPLETED`: não cancelável via app — disputa/chargeback/ops.
+_Avoid_: Multa pré-cobrança; permitir cancelamento self-service após `COMPLETED`; tratar `EXECUTED` diferente de `CONFIRMED` para fins de multa
 
 **Service rescheduling**:
 Alteração de `scheduled_at` do Contracted Service. Pré-`PAID`: recalcula `charge_scheduled_at`; pós-`PAID` (`CONFIRMED`): só atualiza data do serviço, sem nova cobrança.
@@ -141,8 +157,8 @@ _Avoid_: Lista vazia sem explicar motivo; permitir chat antes do credenciamento
 _Avoid_: Aceitar compromisso e descobrir impossibilidade de cobrança depois
 
 **Provider suspension (pre-charge)**:
-Prestador `SUSPENDED` após aceite, antes de `PAID`: cron não cobra; serviço permanece `PENDING_PAYMENT`; cliente informado; ops alertados. Se ainda suspenso no T-12h → `CANCELLED` + `cancellation_reason = PROVIDER_SUSPENDED` (não `NON_PAYMENT`).
-_Avoid_: Auto-cancel imediato na suspensão; tratar como falha de pagamento do cliente
+Prestador `SUSPENDED` após aceite, antes de `PAID`: cron não cobra; serviço permanece `PENDING_PAYMENT`; cliente informado; ops alertados. Se ainda suspenso no T-12h → `CANCELLED` + `cancellation_reason = PROVIDER_SUSPENDED` (não `NON_PAYMENT`). Reativação `SUSPENDED → ACTIVE` **não** retoma cobrança automaticamente — ops resolve caso a caso.
+_Avoid_: Auto-cancel imediato na suspensão; tratar como falha de pagamento do cliente; retomar cron automaticamente ao reativar prestador
 
 **Provider suspension (post-charge)**:
 Prestador `SUSPENDED` com serviços já `CONFIRMED`: compromissos existentes são honrados — agenda, execução e chat **somente** desses serviços permanecem. Suspensão bloqueia novos pedidos, propostas e chats. Cancelamento manual por ops com reembolso integral em casos graves.
@@ -187,12 +203,20 @@ Webhook `TRANSACTION_DISPUTE`: flag `is_disputed = true` no registro de pagament
 _Avoid_: Auto-cancelar serviço no chargeback; criar status `DISPUTED` no Contracted Service
 
 **Cancellation penalty**:
-Multa por cancelamento tardio do cliente, calculada sobre `base_amount` (valor do serviço), não sobre `charge_amount`. Faixas ToS §2.2: >48h = 0%; 48h–12h = 10%; <12h = 30%.
-_Avoid_: Aplicar multa sobre taxas de cartão
+Multa por cancelamento tardio do **cliente** pós-`PAID`, calculada sobre `base_amount` (valor do serviço), não sobre `charge_amount`. Alinhado ao ToS §2.2: **>48h = 0%** (sem multa); 48h–12h = 10%; <12h = 30%. Cancelamento com mais de 48h de antecedência não gera retenção.
+_Avoid_: Aplicar multa sobre taxas de cartão; cobrar multa pré-`PAID`; aplicar multa em cancelamento pelo prestador
 
 **Refund amount**:
 Valor devolvido ao cliente em cancelamento pós-cobrança. `refund_amount = base_amount × (1 − penalty_rate)`; taxa de cartão **não reembolsável**. Cancelamento por prestador: `refund_amount = charge_amount` (integral). O gateway estorna proporcionalmente entre contas liable; a multa retida fica com a plataforma (não devolvida ao cliente).
 _Avoid_: `refund_amount = charge_amount × 0,90` (penaliza taxa de cartão além da multa do serviço); assumir clawback só da Renovi
+
+**Provider payout timing**:
+Repasse ao prestador definido no `chargeCreate` via split; liquidação bancária ocorre no calendário NetCred após `PAID` — **não** aguarda `EXECUTED` nem `COMPLETED`. `COMPLETED` é controle operacional, não gate financeiro.
+_Avoid_: Tratar confirmação do cliente como pré-requisito para repasse; escrow nativo na API NetCred
+
+**Card settlement cycle**:
+Prazo entre captura (`PAID`) e crédito na conta bancária do split. Cartão de crédito Renovi/NetCred: **D+30** (confirmado operacionalmente). Cada parte liable recebe seu líquido proporcionalmente nesse ciclo.
+_Avoid_: Assumir repasse imediato no `PAID`; confundir débito no cartão do cliente com crédito na conta do prestador
 
 ## Decisões registradas
 
@@ -228,3 +252,11 @@ _Avoid_: `refund_amount = charge_amount × 0,90` (penaliza taxa de cartão além
 | 28 | Prestador `SUSPENDED` pós-`PAID` (Opção A): serviços `CONFIRMED` honrados — agenda, execução e chat desses serviços ativos. Suspensão bloqueia apenas novas oportunidades. | 2026-06-24 |
 | 29 | Chargeback (`TRANSACTION_DISPUTE`, Opção A): `is_disputed = true` no pagamento; serviço `CONFIRMED` segue; ops resolve manualmente no MVP. Sem auto-cancel. | 2026-06-24 |
 | 30 | Conclusão em duas etapas: prestador marca `EXECUTED` → cliente confirma `COMPLETED`. Sem confirmação em 24h → auto-`COMPLETED` (cron). Pagamento desacoplado após `PAID`. | 2026-06-24 |
+| 31 | Repasse ao prestador (Opção A): split definido no `chargeCreate`; liquidação bancária no calendário NetCred após `PAID` (cartão: **D+30**). `EXECUTED`/`COMPLETED` são operacionais — não gateiam repasse. Escrow real = evolução futura com NetCred. | 2026-06-24 |
+| 32 | Matriz de cancelamento: pré-`PAID` = livre sem multa; pós-`PAID` (`CONFIRMED`/`EXECUTED`) = ToS §2.2 (>48h sem multa); prestador = reembolso integral; `COMPLETED` = não cancelável via app. `IN_ANALYSIS` cancelável; se `PAID` tardio → ops. | 2026-06-24 |
+| 33 | Botão "Efetuar Pagamento" (Opção B): visível em `FAILED` e `FAILED_PERMANENT`. Manual não incrementa `automatic_attempt_count`; cron continua retries automáticos em paralelo até esgotar. Antecipar pré-T-2 = fora MVP. | 2026-06-24 |
+| 34 | `EXECUTED` pelo prestador (Opção B): só a partir do **dia** de `scheduled_at` (`scheduled_date ≤ hoje`; sem horário). Antes disso: botão desabilitado. | 2026-06-24 |
+| 35 | Reativação prestador `SUSPENDED → ACTIVE` pré-`PAID` (Opção B): **não** retoma cobrança automaticamente. Ops decide caso a caso (reativar serviço, cancelar ou reassign). | 2026-06-24 |
+| 36 | `accept_proposal` valida `pricing_signature` da proposta **e** `installment_selection_hmac` (Opção A). Proposta inválida/expirada → `PROPOSAL_PRICING_INVALID`. | 2026-06-24 |
+| 37 | Notificação pré-cobrança (Opção B): Push + Email **24h antes** de `charge_scheduled_at` (`SCHEDULED`). Checkout exibe **quando** a cobrança ocorrerá antes de confirmar aceite. Cancelar/trocar cartão linkados no lembrete. | 2026-06-24 |
+| 38 | Checkout emergência (<48h, Opção A): texto "cobrança nas próximas horas" — sem horário fixo do cron. Lembrete 24h não se aplica; Push pós-aceite opcional. | 2026-06-24 |
