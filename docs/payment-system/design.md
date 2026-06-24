@@ -285,6 +285,7 @@ CREATE TABLE provider_accounts (
                             )),
   onboarding_submitted_at   TIMESTAMPTZ,
   onboarding_activated_at   TIMESTAMPTZ,
+  email_dispatched_at       TIMESTAMPTZ,  -- set when KYC email confirmed sent
   created_at                TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at                TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (provider_user_id, gateway_slug)
@@ -363,7 +364,7 @@ CREATE INDEX idx_payment_schedules_stale ON payment_schedules(state, updated_at)
 - `locked_until` + `SKIP LOCKED` prevents double-processing
 - `idempotency_key UNIQUE` prevents duplicate schedule on `accept_proposal` retry
 - `automatic_attempt_count` increments atomically within the same TX as `state = PROCESSING`
-- `max_attempts` is read from `platform_constants` at schedule creation and stored per row to survive constant updates
+- `max_attempts` is stored per row for informational reference; the **charge cron always evaluates eligibility against the CURRENT `platform_constants.max_charge_attempts`** value (not the stored row value), so existing `FAILED` schedules are reconsidered when the constant is updated (Req 11 AC7)
 
 ## 3.6 `payment_attempts`
 
@@ -465,7 +466,44 @@ CREATE INDEX idx_payment_events_service ON payment_events(service_id, created_at
 CREATE INDEX idx_payment_events_aggregate ON payment_events(aggregate_type, aggregate_id, created_at);
 ```
 
-## 3.10 `platform_constants`
+## 3.10 `provider_kyc_submissions`
+
+```sql
+CREATE TABLE provider_kyc_submissions (
+  id                          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider_user_id            UUID        NOT NULL REFERENCES profiles(id),
+  entity_type                 TEXT        NOT NULL CHECK (entity_type IN ('CPF','CNPJ')),
+  -- Common fields (CPF and CNPJ)
+  full_name                   TEXT        NOT NULL,
+  document                    TEXT        NOT NULL,  -- CPF or CNPJ, digits only
+  phone                       TEXT        NOT NULL,
+  email                       TEXT        NOT NULL,
+  bank_institution_code       TEXT        NOT NULL,
+  bank_branch                 TEXT        NOT NULL,  -- without check digit
+  bank_account                TEXT        NOT NULL,  -- with check digit
+  pix_key                     TEXT,
+  -- CNPJ-only fields
+  razao_social                TEXT,
+  nome_fantasia               TEXT,
+  legal_rep_full_name         TEXT,
+  legal_rep_cpf               TEXT,
+  legal_rep_phone             TEXT,
+  -- Document attachment URLs (Supabase Storage)
+  identity_doc_url            TEXT        NOT NULL,  -- CPF/CNH
+  address_proof_url           TEXT        NOT NULL,
+  corporate_charter_url       TEXT,                  -- CNPJ only
+  legal_rep_doc_url           TEXT,                  -- CNPJ only
+  -- Metadata
+  submitted_at                TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_at                  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_kyc_submissions_provider ON provider_kyc_submissions(provider_user_id);
+-- Contains PII; access restricted to service_role + provider owner via RLS
+```
+
+**Ownership:** Created atomically in the same TX as `provider_accounts.onboarding_status = 'DOCUMENTS_SUBMITTED'` (Req 3 AC4). This table is the local record of submitted KYC data used to populate the email to `credenciamento@renovi.com.br`. Contains PII and MUST be subject to LGPD data retention policies.
+
+## 3.11 `platform_constants`
 
 ```sql
 CREATE TABLE platform_constants (
@@ -739,6 +777,52 @@ else:  -- emergency scheduling
 
 **PENDING_PAYMENT state:** `contracted_services.status = 'PENDING_PAYMENT'` means the provider does NOT see this service in their calendar. The service is visible to the client only.
 
+### 4.4.2 update-payment-method Edge Function (Req 8 AC8)
+
+This EF allows a client to update their payment method for a service already in `PENDING_PAYMENT` state without re-executing the full `accept_proposal` flow.
+
+```mermaid
+sequenceDiagram
+    participant UI as React App
+    participant EF as update-payment-method EF
+    participant PG as PostgreSQL
+    participant CIF as calculate-installment-options EF
+
+    UI->>EF: POST /update-payment-method {service_id, new_payment_token_id, installment_selection_hmac?}
+    EF->>PG: SELECT ps.*, pt_new.card_brand AS new_brand, pt_old.card_brand AS old_brand
+    EF->>PG: SELECT payment_schedules WHERE contracted_service_id=service_id AND state IN ('SCHEDULED','FAILED') FOR UPDATE
+
+    alt schedule not found or state not eligible
+        EF-->>UI: HTTP 409 {error_code: 'INVALID_SCHEDULE_STATE'}
+    else new token state != ACTIVE
+        EF-->>UI: HTTP 422 {error_code: 'PAYMENT_TOKEN_INACTIVE'}
+    else card brand CHANGED (old_brand != new_brand)
+        Note over EF,UI: New HMAC required — different fee schedule applies
+        alt installment_selection_hmac missing or invalid
+            EF-->>UI: HTTP 400 {error_code: 'INSTALLMENT_HMAC_REQUIRED', reason: 'card_brand_changed'}
+            Note over UI: Frontend re-opens installment selection step via calculate-installment-options with new card_brand
+        else HMAC valid
+            EF->>PG: BEGIN TX
+            EF->>PG: UPDATE payment_schedules SET payment_token_id=new_payment_token_id, final_amount=new_final_amount
+            EF->>PG: INSERT payment_audit_log {event_type='PAYMENT_METHOD_UPDATED', metadata: {old_token_id, new_token_id, old_brand, new_brand}}
+            EF->>PG: COMMIT TX
+            EF-->>UI: HTTP 200
+        end
+    else same card brand
+        EF->>PG: BEGIN TX
+        EF->>PG: UPDATE payment_schedules SET payment_token_id=new_payment_token_id
+        EF->>PG: INSERT payment_audit_log {event_type='PAYMENT_METHOD_UPDATED', metadata: {old_token_id, new_token_id}}
+        EF->>PG: COMMIT TX
+        EF-->>UI: HTTP 200
+    end
+```
+
+**Invariants:**
+- `base_amount`, `final_amount` (if same brand), and `charge_scheduled_at` MUST NOT change.
+- If brand changes, the new HMAC-validated `final_amount` (from `calculate-installment-options`) replaces the old one; `installment_number` MUST remain the same.
+- `payment_audit_log` MUST record `PAYMENT_METHOD_UPDATED` in the same TX as the update.
+- `upcoming_charge_notified_at` is NOT reset — the client was already notified for the scheduled date.
+
 ## 4.5 Phase 6: T-2 Charge Execution Cron (Req 10, 11, 23)
 
 ### 4.5.1 Cron Eligibility Query
@@ -754,7 +838,7 @@ WITH eligible AS (
                             AND pa.gateway_slug = ps.gateway_slug
   JOIN platform_constants pc ON pc.key = 'max_charge_attempts'
   WHERE ps.state IN ('SCHEDULED', 'FAILED')
-    AND ps.automatic_attempt_count < ps.max_attempts
+    AND ps.automatic_attempt_count < pc.value::int  -- use CURRENT platform_constants (Req 11 AC7)
     AND ps.charge_scheduled_at::date <= CURRENT_DATE
     AND (ps.locked_until IS NULL OR ps.locked_until < now())
     AND (ps.next_retry_at IS NULL OR ps.next_retry_at <= now())
@@ -810,7 +894,8 @@ sequenceDiagram
         EF->>PG: Enqueue Push to client (in review)
     else transactionState = 'REJECTED' (terminal)
         EF->>PG: BEGIN TX
-        EF->>PG: UPDATE payment_schedules SET state='FAILED_PERMANENT', locked_until=NULL, failed_permanently_at=now(), failure_code
+        EF->>PG: UPDATE payment_schedules SET state='FAILED_PERMANENT', locked_until=NULL, failed_permanently_at=now(), failure_code, automatic_attempt_count=automatic_attempt_count-1
+        Note over EF,PG: Decrement undoes pre-emptive increment (Req 10 AC6: terminal errors MUST NOT consume retry budget)
         EF->>PG: INSERT payment_attempts {outcome='REJECTED', initiator='cron'}
         EF->>PG: INSERT payment_audit_log, INSERT payment_events
         EF->>PG: COMMIT TX
@@ -1274,6 +1359,7 @@ const result = await adapter.createCharge(chargeInput);
 | `tokenize-payment-card` | POST | JWT required | None (no side-effect if already tokenized; EF checks existing token) | Edge rate limit |
 | `calculate-installment-options` | GET | JWT required | N/A (read-only) | Edge rate limit |
 | `accept-proposal` | POST | JWT required | `idempotency_key = contracted_service_id` UNIQUE | Edge rate limit |
+| `update-payment-method` | POST | JWT required | `FOR UPDATE` + schedule state check; brand change requires fresh HMAC | Edge rate limit |
 | `manual-charge-payment` | POST | JWT required | `FOR UPDATE` + schedule state check | Edge rate limit + T-12h check |
 | `netcred-webhook` | POST | None (HMAC validation) | `(gateway_slug, event_type, provider_event_id)` UNIQUE | IP rate limit via `platform_rate_limits` |
 | `detect-netcred-onboarding` | pg_cron | service_role | Per-provider state transition | N/A (cron) |
@@ -1617,7 +1703,7 @@ The `payment_audit_log` provides a complete, immutable, chronologically ordered 
 | 5 | Client profile completion at checkout | §4.2.1, §4.2.2 | Conditional stepper steps; ClearSale SDK init; CPF/phone persistence |
 | 6 | PCI card tokenization | §4.2.3, §3.3, §11.1 | `tokenize-payment-card` EF; `payment_tokens` schema; no PAN/CVV at rest |
 | 7 | Installment calculation + HMAC | §4.3, §3.10 | `calculate-installment-options` EF; HMAC-SHA256; `expires_at = +10min`; `calculate_charge_amount()` RPC |
-| 8 | accept_proposal evolution | §4.4.1 | Single atomic TX: contracted_services + payment_schedules + audit_log; HMAC + pricing_signature validation |
+| 8 | accept_proposal evolution | §4.4.1, §4.4.2 | Single atomic TX: contracted_services + payment_schedules + audit_log; HMAC + pricing_signature validation; `update-payment-method` EF for post-acceptance card updates |
 | 9 | Charge scheduling persistence | §4.4.1, §3.5 | `payment_schedules` with all charge-time preconditions; `charge_scheduled_at` computation; rescheduling RPC |
 | 10 | T-2 charge execution cron | §4.5, §5.2 | `schedule-netcred-charges`; `SKIP LOCKED`; lease commit before gateway; per-schedule error boundary |
 | 11 | Retry semantics + error classification | §4.6, §8.1 | Error matrix; `automatic_attempt_count`; `next_retry_at`; `FAILED_PERMANENT` on terminal error |
