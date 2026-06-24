@@ -61,7 +61,8 @@ The Renovi Payment System is a payment orchestration subsystem embedded within t
 - **Queue Mechanism**: PostgreSQL table-based queue with `SELECT FOR UPDATE SKIP LOCKED` for concurrent-safe dequeueing; lease TTL enforced via `locked_until` (TIMESTAMPTZ) column.
 - **Locking Semantics**: Row-level pessimistic locking (`FOR UPDATE`) for payment schedule checkout; `SKIP LOCKED` for parallel worker safety; all transitions inside PL/pgSQL RPCs for atomicity.
 - **External Payment Gateway**: NetCred GraphQL API — sandbox: `https://api.sandbox.netcredbrasil.com.br/graphql`; production: `https://api.netcredbrasil.com.br/graphql`. Authenticated via JWT (`tokenAuth` mutation, 24h TTL).
-- **Payment Provider Abstraction**: `PaymentProvider` interface defined in `src/features/payments/types/`; `NetCredAdapter` in `src/features/payments/adapters/netcred/`.
+- **Payment Gateway Abstraction**: `PaymentProvider` interface (TypeScript name retained) defined in `src/features/payments/types/`; `NetCredAdapter` in `src/features/payments/adapters/netcred/`. In database columns and logs, **`gateway_slug`** identifies the payment gateway (e.g., `'netcred'`). **`provider_id`** / **`provider_user_id`** refer to the **service provider** (prestador) — never the gateway.
+- **Gateway JWT Cache**: Platform NetCred JWT cached in `payment_gateway_tokens` (one row per `gateway_slug`); login credentials remain in Vault.
 - **Notification Channels**: Push notifications via Firebase Cloud Messaging (FCM); transactional email via Resend. Both routed through the Orbit Multichannel Message Dispatcher with bypass-priority configuration for payment events.
 - **Observability**: Sentry for Edge Function error tracking and performance spans; structured logger (`supabase/functions/_shared/`) with correlation IDs; PostgreSQL audit tables for immutable event history.
 - **Webhook Reception**: Supabase Edge Function `netcred-webhook` receives NetCred webhook payloads. Validates `X-NETCRED-Signature = SHA256(secretKey + rawBody)`. `secretKey` stored in Supabase Vault.
@@ -271,7 +272,7 @@ Each invocation MUST:
 ### Persistence Strategy
 
 - **Source of truth for payment state**: PostgreSQL `payment_schedules` and `payment_attempts` tables.
-- **Provider-specific IDs**: Stored in dedicated columns prefixed with the `provider_slug` (e.g., `netcred_charge_id`, `netcred_transaction_id`) to enable future multi-provider routing.
+- **Gateway-specific IDs**: Stored in dedicated columns prefixed with the gateway name (e.g., `netcred_charge_id`, `netcred_transaction_id`) to enable future multi-gateway routing.
 - **Audit log**: Every state transition MUST produce an immutable INSERT into `payment_audit_log` within the same transaction as the state change. This table is INSERT-only; application roles MUST NOT have UPDATE or DELETE permissions.
 - **Webhook events**: ALL received webhook payloads MUST be persisted to `payment_webhook_events` before any validation or processing occurs.
 - **Fee configuration**: All rate values stored in `payment_providers` / `platform_constants`; NEVER hardcoded in Edge Function or application code.
@@ -288,7 +289,7 @@ Each invocation MUST:
 
 - `chargeCreate` MUST include `referenceCode = contracted_service_id` (UUID v4, `contracted_services.id`). The NetCred API enforces uniqueness; a duplicate `chargeCreate` with the same `referenceCode` returns a detectable error. The adapter MUST handle this by calling `getTransaction(referenceCode)` to reconcile the existing charge.
 - `paymentProfileCreate` (tokenization) is NOT idempotent at the gateway level. The adapter MUST check for an existing valid `payment_tokens` record (by `client_id` + `provider_id` + `state = 'ACTIVE'`) before re-tokenizing to avoid unnecessary gateway calls.
-- Webhook events MUST be deduplicated by a UNIQUE constraint on `(provider_slug, event_type, provider_event_id)` in `payment_webhook_events`. Duplicate delivery returns HTTP 200 without reprocessing.
+- Webhook events MUST be deduplicated by a UNIQUE constraint on `(gateway_slug, event_type, provider_event_id)` in `payment_webhook_events`. Duplicate delivery returns HTTP 200 without reprocessing.
 - Installment calculation responses MUST be HMAC-SHA256 signed using `INSTALLMENT_SIGNING_SECRET` stored in Vault. The signed payload MUST include an `expires_at` timestamp (10 minutes from computation). The `accept_proposal` server handler MUST verify the signature and reject expired payloads with `INSTALLMENT_SIGNATURE_EXPIRED`; the client app MUST re-open the installment selection step with a fresh calculation (card token and other stepper data are preserved).
 - All `payment_schedules` records MUST carry a `idempotency_key` column with a UNIQUE constraint, set to `contracted_service_id` (`contracted_services.id`). This prevents duplicate schedule creation on `accept_proposal` retries.
 
@@ -343,14 +344,14 @@ All Edge Function charge execution paths MUST invoke operations through this int
 ### Stateless Constraints for Edge Functions
 
 - Edge Functions MUST be stateless. No persistent in-memory caches between invocations.
-- The NetCred JWT MUST be cached in a `payment_provider_tokens` table row, not in Edge Function memory. The adapter MUST perform a `SELECT FOR UPDATE` on this row to serialize concurrent token refresh operations.
+- The NetCred JWT MUST be cached in a `payment_gateway_tokens` table row, not in Edge Function memory. The adapter MUST perform a `SELECT FOR UPDATE` on this row to serialize concurrent token refresh operations.
 - All configuration (fees, retry limits, timeouts, batch sizes) MUST be read from `platform_constants` at invocation time.
 
 ### Observability and Tracing
 
-- Every charge attempt MUST emit a Sentry span with tags: `service_id`, `schedule_id`, `attempt_number`, `provider_slug`, `charge_amount`, `gateway_latency_ms`.
+- Every charge attempt MUST emit a Sentry span with tags: `service_id`, `schedule_id`, `attempt_number`, `gateway_slug`, `charge_amount`, `gateway_latency_ms`.
 - Every gateway API call MUST emit a Sentry breadcrumb with: mutation name, HTTP status code, response latency, `transactionState` if applicable.
-- All state transitions MUST emit a structured log entry via the `logger` utility with: `event_type`, `service_id`, `schedule_id`, `from_state`, `to_state`, `provider_slug`, `error_code` (if applicable), `actor`.
+- All state transitions MUST emit a structured log entry via the `logger` utility with: `event_type`, `service_id`, `schedule_id`, `from_state`, `to_state`, `gateway_slug`, `error_code` (if applicable), `actor`.
 - Webhook events MUST be logged with: `event_type`, `provider_event_id`, `processing_duration_ms`, `outcome`.
 - Sentry MUST be initialized in all payment Edge Functions using the shared Sentry DSN from environment secrets.
 - All Sentry events MUST carry `service_id` as a tag for cross-system correlation.
@@ -377,9 +378,9 @@ All Edge Function charge execution paths MUST invoke operations through this int
 **WHEN** the error is classified as `ProviderAuthError`  
 **THEN** the adapter MUST attempt exactly one token refresh via `refreshAuthToken()` and retry the original operation once; if the retry also fails, the error MUST be propagated as-is to the caller without further retries.
 
-**GIVEN** a future provider (e.g., Pagar.me) is registered  
-**WHEN** a new `PagarMeAdapter` is created and registered under `provider_slug = 'pagarme'`  
-**THEN** the charge execution cron MUST route requests to the correct adapter based on `payment_schedules.provider_slug`, requiring zero changes to scheduling or state management logic.
+**GIVEN** a future payment gateway (e.g., Pagar.me) is registered  
+**WHEN** a new `PagarMeAdapter` is created and registered under `gateway_slug = 'pagarme'`  
+**THEN** the charge execution cron MUST route requests to the correct adapter based on `payment_schedules.gateway_slug`, requiring zero changes to scheduling or state management logic.
 
 **GIVEN** the `CreateChargeInput` type is defined  
 **WHEN** the type system is designed  
@@ -403,19 +404,19 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** the NetCred JWT has a 24-hour validity period  
 **WHEN** any NetCred API operation is initiated  
-**THEN** the adapter MUST read the cached token from `payment_provider_tokens` WHERE `provider_slug = 'netcred'`; if `expires_at - now() < 60 minutes`, it MUST refresh the token via `tokenAuth` before proceeding.
+**THEN** the adapter MUST read the cached token from `payment_gateway_tokens` WHERE `gateway_slug = 'netcred'`; if `expires_at - now() < 60 minutes`, it MUST refresh the token via `tokenAuth` before proceeding.
 
-**GIVEN** the `payment_provider_tokens` row is being refreshed  
+**GIVEN** the `payment_gateway_tokens` row is being refreshed  
 **WHEN** multiple concurrent Edge Function invocations attempt the refresh simultaneously  
-**THEN** the adapter MUST use `SELECT ... FOR UPDATE` on the `payment_provider_tokens` row to serialize the refresh; only one invocation MUST call `tokenAuth`; all others MUST wait and reuse the token obtained by the winner.
+**THEN** the adapter MUST use `SELECT ... FOR UPDATE` on the `payment_gateway_tokens` row to serialize the refresh; only one invocation MUST call `tokenAuth`; all others MUST wait and reuse the token obtained by the winner.
 
 **GIVEN** `tokenAuth` returns a valid `token`  
 **WHEN** the result is persisted  
-**THEN** `payment_provider_tokens` MUST be upserted with `token`, `expires_at = now() + interval '24 hours'`, and `refreshed_at = now()`; the token MUST be stored encrypted at rest (Supabase column encryption or Vault reference).
+**THEN** `payment_gateway_tokens` MUST be upserted with `token`, `expires_at = now() + interval '24 hours'`, and `refreshed_at = now()`; the token MUST be stored encrypted at rest (Supabase column encryption or Vault reference).
 
 **GIVEN** `tokenAuth` fails (invalid credentials, network error)  
 **WHEN** the error is caught  
-**THEN** the adapter MUST emit a `CRITICAL` Sentry alert with `{ provider_slug: 'netcred', error_type: 'AUTH_FAILURE' }`; the charge execution MUST be aborted; the schedule MUST be set to `FAILED` (retryable) without incrementing `automatic_attempt_count`.
+**THEN** the adapter MUST emit a `CRITICAL` Sentry alert with `{ gateway_slug: 'netcred', error_type: 'AUTH_FAILURE' }`; the charge execution MUST be aborted; the schedule MUST be set to `FAILED` (retryable) without incrementing `automatic_attempt_count`.
 
 **GIVEN** the system is in production mode  
 **WHEN** `tokenAuth` responds with `user.sandbox = true`  
@@ -443,7 +444,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** KYC form submission is complete and all validations pass  
 **WHEN** the provider taps "Submit"  
-**THEN** the system MUST atomically: (1) persist all data in `provider_kyc_submissions`, (2) set `provider_accounts.onboarding_status = 'DOCUMENTS_SUBMITTED'`, (3) record `onboarding_submitted_at = now()`, (4) enqueue a KYC email dispatch job containing all fields and document attachment URLs to `credenciamento@netcred.com.br`.
+**THEN** the system MUST atomically: (1) persist all data in `provider_kyc_submissions`, (2) set `provider_accounts.onboarding_status = 'DOCUMENTS_SUBMITTED'`, (3) record `onboarding_submitted_at = now()`, (4) enqueue a KYC email dispatch job containing all fields and document attachment URLs to `credenciamento@renovi.com.br`. (5) update provider_profiles_private accordingly.
 
 **GIVEN** the KYC email dispatch fails (Resend API error, network failure)  
 **WHEN** the failure is caught  
@@ -679,7 +680,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** `accept_proposal` succeeds  
 **WHEN** the `payment_schedules` record is created  
-**THEN** it MUST contain at minimum: `id` (UUID), `contracted_service_id` (UUID, FK → `contracted_services.id`), `client_id`, `provider_id` (service provider entity), `provider_slug` (`'netcred'`), `payment_token_id` (FK to `payment_tokens`), `installment_number`, `base_amount` (NUMERIC 12,2), `charge_scheduled_at` (TIMESTAMPTZ, UTC), `state` (`'SCHEDULED'`), `automatic_attempt_count` (SMALLINT, default 0), `manual_attempt_count` (SMALLINT, default 0), `max_attempts` (SMALLINT, from `platform_constants`), `locked_until` (TIMESTAMPTZ, NULL), `next_retry_at` (TIMESTAMPTZ, NULL), `idempotency_key` (TEXT, UNIQUE = `contracted_service_id`), `clearsale_session_id` (TEXT, the UUID from ClearSale SDK initialization **during card data entry**), `client_ip_address` (TEXT, IP captured at acceptance time), `upcoming_charge_notified_at` (TIMESTAMPTZ, NULL), `created_at`, `updated_at`.
+**THEN** it MUST contain at minimum: `id` (UUID), `contracted_service_id` (UUID, FK → `contracted_services.id`), `client_id`, `provider_id` (service provider entity), `gateway_slug` (`'netcred'`), `payment_token_id` (FK to `payment_tokens`), `installment_number`, `base_amount` (NUMERIC 12,2), `charge_scheduled_at` (TIMESTAMPTZ, UTC), `state` (`'SCHEDULED'`), `automatic_attempt_count` (SMALLINT, default 0), `manual_attempt_count` (SMALLINT, default 0), `max_attempts` (SMALLINT, from `platform_constants`), `locked_until` (TIMESTAMPTZ, NULL), `next_retry_at` (TIMESTAMPTZ, NULL), `idempotency_key` (TEXT, UNIQUE = `contracted_service_id`), `clearsale_session_id` (TEXT, the UUID from ClearSale SDK initialization **during card data entry**), `client_ip_address` (TEXT, IP captured at acceptance time), `upcoming_charge_notified_at` (TIMESTAMPTZ, NULL), `created_at`, `updated_at`.
 
 **GIVEN** a `payment_schedules` record exists with `state = 'SCHEDULED'`  
 **WHEN** the service is cancelled before `charge_scheduled_at`  
@@ -971,7 +972,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** a webhook event is inserted into `payment_webhook_events`  
 **WHEN** the insert is executed  
-**THEN** the UNIQUE constraint on `(provider_slug, event_type, provider_event_id)` MUST be evaluated; a duplicate insert MUST trigger a controlled conflict handling path (e.g., `ON CONFLICT DO NOTHING` followed by a state check).
+**THEN** the UNIQUE constraint on `(gateway_slug, event_type, provider_event_id)` MUST be evaluated; a duplicate insert MUST trigger a controlled conflict handling path (e.g., `ON CONFLICT DO NOTHING` followed by a state check).
 
 **GIVEN** a duplicate webhook is confirmed  
 **WHEN** the handler identifies the existing record  
@@ -1083,7 +1084,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** any payment Edge Function is invoked  
 **WHEN** the function initializes  
-**THEN** it MUST initialize a Sentry transaction with: operation name, `service_id` tag, `provider_slug` tag, `environment` tag.
+**THEN** it MUST initialize a Sentry transaction with: operation name, `service_id` tag, `gateway_slug` tag, `environment` tag.
 
 **GIVEN** a charge attempt executes  
 **WHEN** the gateway call completes (success or failure)  
@@ -1091,7 +1092,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** any unhandled exception occurs in a payment Edge Function  
 **WHEN** caught  
-**THEN** it MUST be captured via `Sentry.captureException` with extra context: `{ schedule_id, contracted_service_id, automatic_attempt_count, provider_slug, error_code, current_state }`.
+**THEN** it MUST be captured via `Sentry.captureException` with extra context: `{ schedule_id, contracted_service_id, automatic_attempt_count, gateway_slug, error_code, current_state }`.
 
 **GIVEN** a `FAILED_PERMANENT` transition is committed  
 **WHEN** logged to Sentry  
@@ -1127,7 +1128,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** a client accepts ToS at checkout  
 **WHEN** they advance past the card step  
-**THEN** `payment_audit_log` MUST record: `event_type = 'PAYMENT_TERMS_ACCEPTED'`, `actor = 'client'`, `metadata.provider_slug`, `metadata.accepted_at`.
+**THEN** `payment_audit_log` MUST record: `event_type = 'PAYMENT_TERMS_ACCEPTED'`, `actor = 'client'`, `metadata.gateway_slug`, `metadata.accepted_at`.
 
 **GIVEN** the `payment_audit_log` table is queried  
 **WHEN** queried for a specific `service_id` or `schedule_id`  
@@ -1239,7 +1240,11 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** `payment_providers` table is created  
 **WHEN** NetCred is registered  
-**THEN** it MUST contain: `id` (UUID, PK), `slug` (TEXT, UNIQUE), `display_name`, `is_active` (BOOLEAN), `supported_methods` (TEXT[], e.g., `['CREDIT_CARD']`), `api_base_url`, `webhook_handler_path`, `created_at`.
+**THEN** it MUST contain: `id` (UUID, PK), `slug` (TEXT, UNIQUE — this is the **`gateway_slug`**, e.g., `'netcred'`), `display_name`, `is_active` (BOOLEAN), `supported_methods` (TEXT[], e.g., `['CREDIT_CARD']`), `api_base_url`, `webhook_handler_path`, `created_at`.
+
+**GIVEN** `payment_gateway_tokens` table is created  
+**WHEN** the NetCred adapter caches a JWT  
+**THEN** it MUST contain: `gateway_slug` (TEXT, PK or UNIQUE FK → `payment_providers.slug`), `token` (TEXT, encrypted at rest or Vault reference), `expires_at` (TIMESTAMPTZ), `refreshed_at` (TIMESTAMPTZ), `created_at`, `updated_at`; one row per gateway; accessed only by Edge Functions via service role.
 
 **GIVEN** `payment_tokens` table is created  
 **WHEN** a card is tokenized  
@@ -1247,7 +1252,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** `payment_schedules` table is created  
 **WHEN** a charge is scheduled  
-**THEN** it MUST contain: `id` (UUID, PK), `contracted_service_id` (UUID, FK → `contracted_services.id`), `client_id` (UUID), `provider_id` (UUID, service provider), `provider_slug` (TEXT), `payment_token_id` (UUID, FK → `payment_tokens`), `installment_number` (SMALLINT, 1–12), `base_amount` (NUMERIC 12,2), `charge_scheduled_at` (TIMESTAMPTZ), `state` (TEXT, state machine), `automatic_attempt_count` (SMALLINT, default 0), `manual_attempt_count` (SMALLINT, default 0), `max_attempts` (SMALLINT), `locked_until` (TIMESTAMPTZ), `next_retry_at` (TIMESTAMPTZ), `idempotency_key` (TEXT, UNIQUE = `contracted_service_id`), `clearsale_session_id` (TEXT, nullable — the UUID collected during client card data entry at checkout; passed as `orderInput.sessionId` in `chargeCreate`), `client_ip_address` (TEXT, nullable — IP of the client at acceptance time; passed as `customerIpAddress` in `chargeCreate`), `upcoming_charge_notified_at` (TIMESTAMPTZ, nullable — set when 24h pre-charge Push+Email is sent), `is_disputed` (BOOLEAN, default FALSE), `provider_charge_id` (TEXT), `provider_transaction_id` (TEXT), `paid_at`, `failed_at`, `cancelled_at`, `refunded_at`, `paid_amount` (NUMERIC 12,2), `refunded_amount` (NUMERIC 12,2), `failure_code` (TEXT), `failure_reason` (TEXT), `cancellation_reason` (TEXT), `created_at`, `updated_at`.
+**THEN** it MUST contain: `id` (UUID, PK), `contracted_service_id` (UUID, FK → `contracted_services.id`), `client_id` (UUID), `provider_id` (UUID, service provider), `gateway_slug` (TEXT), `payment_token_id` (UUID, FK → `payment_tokens`), `installment_number` (SMALLINT, 1–12), `base_amount` (NUMERIC 12,2), `charge_scheduled_at` (TIMESTAMPTZ), `state` (TEXT, state machine), `automatic_attempt_count` (SMALLINT, default 0), `manual_attempt_count` (SMALLINT, default 0), `max_attempts` (SMALLINT), `locked_until` (TIMESTAMPTZ), `next_retry_at` (TIMESTAMPTZ), `idempotency_key` (TEXT, UNIQUE = `contracted_service_id`), `clearsale_session_id` (TEXT, nullable — the UUID collected during client card data entry at checkout; passed as `orderInput.sessionId` in `chargeCreate`), `client_ip_address` (TEXT, nullable — IP of the client at acceptance time; passed as `customerIpAddress` in `chargeCreate`), `upcoming_charge_notified_at` (TIMESTAMPTZ, nullable — set when 24h pre-charge Push+Email is sent), `is_disputed` (BOOLEAN, default FALSE), `provider_charge_id` (TEXT), `provider_transaction_id` (TEXT), `paid_at`, `failed_at`, `cancelled_at`, `refunded_at`, `paid_amount` (NUMERIC 12,2), `refunded_amount` (NUMERIC 12,2), `failure_code` (TEXT), `failure_reason` (TEXT), `cancellation_reason` (TEXT), `created_at`, `updated_at`.
 
 **GIVEN** `payment_attempts` table is created  
 **WHEN** a charge attempt is made  
@@ -1255,7 +1260,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** `payment_webhook_events` table is created  
 **WHEN** a webhook is received  
-**THEN** it MUST contain: `id` (UUID, PK), `provider_slug` (TEXT), `event_type` (TEXT), `provider_event_id` (TEXT), `raw_payload` (JSONB), `raw_headers` (JSONB), `state` (TEXT: webhook processing state enum), `retry_count` (SMALLINT, default 0), `next_retry_at` (TIMESTAMPTZ), `processed_at` (TIMESTAMPTZ), `failure_reason` (TEXT), `is_duplicate` (BOOLEAN, default FALSE), `created_at`, `updated_at`; UNIQUE on `(provider_slug, event_type, provider_event_id)`.
+**THEN** it MUST contain: `id` (UUID, PK), `gateway_slug` (TEXT), `event_type` (TEXT), `provider_event_id` (TEXT), `raw_payload` (JSONB), `raw_headers` (JSONB), `state` (TEXT: webhook processing state enum), `retry_count` (SMALLINT, default 0), `next_retry_at` (TIMESTAMPTZ), `processed_at` (TIMESTAMPTZ), `failure_reason` (TEXT), `is_duplicate` (BOOLEAN, default FALSE), `created_at`, `updated_at`; UNIQUE on `(gateway_slug, event_type, provider_event_id)`.
 
 **GIVEN** `payment_audit_log` table is created  
 **WHEN** an audit entry is inserted  
@@ -1263,11 +1268,11 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** `provider_accounts` table is created  
 **WHEN** a provider's credentialing data is stored  
-**THEN** it MUST contain: `id` (UUID, PK), `provider_user_id` (UUID, FK → `profiles`), `provider_slug` (TEXT), `document` (TEXT, CPF/CNPJ digits only), `netcred_company_id` (TEXT), `netcred_bank_account_id` (TEXT), `onboarding_status` (TEXT, enum), `onboarding_submitted_at` (TIMESTAMPTZ), `onboarding_activated_at` (TIMESTAMPTZ), `created_at`, `updated_at`; UNIQUE on `(provider_user_id, provider_slug)`.
+**THEN** it MUST contain: `id` (UUID, PK), `provider_user_id` (UUID, FK → `profiles`), `gateway_slug` (TEXT), `document` (TEXT, CPF/CNPJ digits only), `netcred_company_id` (TEXT), `netcred_bank_account_id` (TEXT), `onboarding_status` (TEXT, enum), `onboarding_submitted_at` (TIMESTAMPTZ), `onboarding_activated_at` (TIMESTAMPTZ), `created_at`, `updated_at`; UNIQUE on `(provider_user_id, gateway_slug)`.
 
 **GIVEN** all payment tables are created  
 **WHEN** indexes are defined  
-**THEN** required indexes MUST include: `payment_schedules(charge_scheduled_at, state, locked_until)`, `payment_schedules(contracted_service_id)`, `payment_schedules(idempotency_key)` (UNIQUE), `payment_attempts(schedule_id, attempt_number)`, `payment_webhook_events(provider_slug, event_type, provider_event_id)` (UNIQUE), `payment_audit_log(contracted_service_id, created_at)`, `payment_audit_log(schedule_id, created_at)`, `payment_tokens(client_id, state)`, `provider_accounts(provider_user_id, provider_slug)` (UNIQUE).
+**THEN** required indexes MUST include: `payment_gateway_tokens(gateway_slug)` (UNIQUE), `payment_schedules(charge_scheduled_at, state, locked_until)`, `payment_schedules(contracted_service_id)`, `payment_schedules(idempotency_key)` (UNIQUE), `payment_attempts(schedule_id, attempt_number)`, `payment_webhook_events(gateway_slug, event_type, provider_event_id)` (UNIQUE), `payment_audit_log(contracted_service_id, created_at)`, `payment_audit_log(schedule_id, created_at)`, `payment_tokens(client_id, state)`, `provider_accounts(provider_user_id, gateway_slug)` (UNIQUE).
 
 ---
 
@@ -1283,7 +1288,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** the client taps "Next" past the card step  
 **WHEN** the acceptance is processed server-side  
-**THEN** `payment_audit_log` MUST record `event_type = 'PAYMENT_TERMS_ACCEPTED'`, `actor = 'client'`, `actor_id = auth.uid()`, `metadata = { provider_slug: 'netcred', timestamp }`.
+**THEN** `payment_audit_log` MUST record `event_type = 'PAYMENT_TERMS_ACCEPTED'`, `actor = 'client'`, `actor_id = auth.uid()`, `metadata = { gateway_slug: 'netcred', timestamp }`.
 
 **GIVEN** the installment selection step is displayed  
 **WHEN** all installment options are rendered  
@@ -1532,7 +1537,7 @@ The payment system follows the Orbit platform's established layered architecture
 | Card token metadata (non-sensitive references) | Table `payment_tokens` |
 | Fee rate and limit configuration | Table `platform_constants` |
 | Domain event log | Table `payment_events` |
-| Gateway JWT token cache | Table `payment_provider_tokens` |
+| Gateway JWT token cache | Table `payment_gateway_tokens` |
 | Webhook processing queue | Table `payment_webhook_processing_queue` |
 | Fee and charge amount computation | RPC `calculate_charge_amount(payment_token_id, base_amount, installment_number)` |
 | State machine transition enforcement | CHECK constraints + AFTER UPDATE triggers |
@@ -1540,7 +1545,7 @@ The payment system follows the Orbit platform's established layered architecture
 | Orphaned lease recovery | RPC `recover_orphaned_payment_schedules()` invoked via `pg_cron` |
 | Cron scheduling | `pg_cron` extension + Supabase Scheduled Functions |
 | Idempotency constraint for schedule creation | UNIQUE constraint on `payment_schedules.idempotency_key` |
-| Webhook deduplication constraint | UNIQUE constraint on `(provider_slug, event_type, provider_event_id)` |
+| Webhook deduplication constraint | UNIQUE constraint on `(gateway_slug, event_type, provider_event_id)` |
 | RLS enforcement for client token access | RLS policies on `payment_tokens` |
 
 ---
