@@ -1,10 +1,11 @@
 # Renovi Payment System Requirements
 
 > **Document Type:** Architecture Requirements Specification (RFC-style)  
-> **Version:** 1.0  
-> **Date:** 2026-06-24  
+> **Version:** 1.2  
+> **Date:** 2026-06-25  
 > **Status:** Active  
 > **Audience:** Principal Engineers, Staff Engineers, Backend Engineers, Mobile Engineers  
+> **Domain glossary:** [`CONTEXT.md`](./CONTEXT.md) · **Split ADR:** [`ADR-0001`](../adr/0001-payment-split-commission-model.md) · **Design:** [`design.md`](./design.md) §1.7
 
 ---
 
@@ -37,7 +38,7 @@ The Renovi Payment System is a payment orchestration subsystem embedded within t
 
 - The charge cron MUST execute at minimum 4 times per day at configurable intervals.
 - Automatic charge attempts (cron-initiated) MUST NOT exceed 3 per payment schedule (configurable via `platform_constants.max_charge_attempts`). After exhausting automatic attempts, the schedule transitions to `FAILED_PERMANENT` and a manual recovery path is exposed to the client. Manual attempts (client-initiated) have a separate counter and are unlimited until T-12h.
-- Auto-cancellation of unpaid services MUST trigger when `service_scheduled_at - now() <= 12 hours` and payment remains in `FAILED_PERMANENT` or unresolved failure state.
+- Auto-cancellation of unpaid services MUST trigger when `payment_service_execution_at(contracted_services) - now() <= 12 hours` and payment remains in `FAILED_PERMANENT` or unresolved failure state.
 - The charge amount is NOT the `base_amount` from the proposal alone: it includes installment fees computed from `platform_constants` and recalculated at cron execution time, not cached from checkout.
 - All fee rates (credit card brand, installment range, fixed processing fee) MUST be configurable via `platform_constants` without code deployments.
 
@@ -49,6 +50,32 @@ The Renovi Payment System is a payment orchestration subsystem embedded within t
 4. **Fail-Safe by Default**: Pre-execution validations (provider not credentialed, card token invalid, service cancelled) MUST cause the cron to skip safely without side effects.
 5. **Observability First**: Every state transition, gateway API call, and error MUST be captured with Sentry context and structured logs containing correlation identifiers.
 6. **Separation of Concerns**: Edge Functions are I/O connectors. State ownership, locking, and transition logic reside in PostgreSQL RPCs. The React application layer renders state and dispatches actions.
+
+---
+
+## Validated domain decisions (2026-06-25)
+
+Full detail: [`design.md`](./design.md) §1.7 and [`CONTEXT.md`](./CONTEXT.md). Summary of product rules validated in domain review:
+
+| Area | Decision |
+|---|---|
+| **Aggregates** | `contracted_services` (product lifecycle) and `payment_schedules` (charge orchestration) are separate 1:1 aggregates |
+| **Provider calendar** | Visible only after `PAID` → `CONFIRMED`; never on `PENDING_PAYMENT` / `IN_ANALYSIS` |
+| **Scheduling** | `payment_payment_service_execution_at()` — shift-based timestamptz; `EXECUTED` gate is date-only |
+| **Split** | Client pays `base_amount` + card fees; provider `FIXED_AMOUNT = provider_payout` (frozen); Renovi `PERCENTAGE 100%` of remainder ([`ADR-0001`](../adr/0001-payment-split-commission-model.md)) |
+| **Commission** | Frozen at `accept_proposal`; card fees recalculated at T-2 |
+| **Refunds** | ToS §2.2 tiers on `base_amount`; clawback ∝ `provider_payout / paid_amount` |
+| **IN_ANALYSIS** | No auto-cancel / no client cancel **before** T-12h; **after** T-12h → auto-cancel + gateway reconcile |
+| **SUSPENDED** | Immediate client notify + voluntary pre-PAID cancel; auto-cancel T-12h; no auto-resume on reactivation |
+| **REJECTED** | Pre-`ACTIVE` only — never after credentialing activation |
+| **Pre-PAID cancel** | Client free anytime (no gateway), except `IN_ANALYSIS` before T-12h |
+| **Reschedule post-PAID** | While `CONFIRMED` only; no new charge; new refund windows |
+| **Notifications** | Provider FAILED_PERMANENT = "pagamento não concluído"; chargeback = badge + neutral push both parties |
+| **Settlement** | Bank ~D+30 from `paid_at`; UI shows estimate; not gated by `COMPLETED` |
+| **ClearSale** | Accept session on cron; fresh session on manual retry |
+| **History views** | Client: `paid_amount` + `base_amount`; Provider: `provider_payout` + net |
+
+If any requirement below contradicts this table, **this table wins**.
 
 ---
 
@@ -68,17 +95,20 @@ The Renovi Payment System is a payment orchestration subsystem embedded within t
 - **Webhook Reception**: Supabase Edge Function `netcred-webhook` receives NetCred webhook payloads. Validates `X-NETCRED-Signature = SHA256(secretKey + rawBody)`. `secretKey` stored in Supabase Vault.
 - **Retry Mechanism**: Automatic cron-initiated attempts tracked in `automatic_attempt_count`, up to `max_charge_attempts` (default: 3, from `platform_constants`); manual client-initiated attempts tracked in `manual_attempt_count` (unlimited until T-12h, rate-limited by Edge Function). Retry interval: `charge_retry_interval_minutes` (default: 30 minutes). All configurable without code changes.
 - **Installment Fees**: Configurable per card brand and installment range in `platform_constants`; Edge Function computes final charged amount; responses are HMAC-SHA256 signed to prevent client-side tampering of computed amounts.
-- **Split Model**: The service provider receives `FIXED_AMOUNT = final_amount` (the amount agreed in the accepted proposal); Renovi receives `PERCENTAGE = 100.0` of the remainder (`charge_amount − final_amount`), covering platform commission and card processing fees. Both parties are configured with `isLiable = true`, meaning card processing fees are deducted proportionally from each party's net payout, and refunds are distributed proportionally between all liable accounts.
+- **Split Model** ([`ADR-0001`](../adr/0001-payment-split-commission-model.md)): Client is charged `charge_amount = base_amount + card_fees`. Provider receives **`FIXED_AMOUNT = provider_payout`** where `provider_payout = base_amount × (1 − commission_rate_pct/100)`, **frozen at `accept_proposal`**. Renovi receives **`PERCENTAGE = 100.0`** of `(charge_amount − provider_payout)` (commission + gross card-fee pass-through). Both parties have `isLiable = true`; NetCred MDR is deducted proportionally; Renovi bank net ≈ commission. Example: base R$ 1.000, payout R$ 850, charge R$ 1.030 → provider R$ 850, Renovi gross R$ 180, Renovi net ~R$ 150 after MDR.
+- **Commission freeze**: `commission_rate_pct` and `provider_payout` are persisted on `payment_schedules` at accept and MUST NOT change. Only `charge_amount` (card fees) may drift at T-2.
 - **PCI DSS**: No raw card data (PAN, CVV) persisted in Renovi infrastructure. Only gateway-issued tokenized references: `provider_payment_profile_id`, `card_number_masked`, `card_brand`, `provider_card_token`.
 - **Cancellation Policy**: Per Terms of Service §2.2 — penalty is applied to `base_amount` only (card processing fees are non-refundable): >48h: `refund_amount = base_amount` (100%); 48h–12h: `refund_amount = base_amount × 0.90` (10% penalty); <12h: `refund_amount = base_amount × 0.70` (30% penalty). Provider-initiated cancellations: `refund_amount = charge_amount` (full amount including card fees). Gateway distributes the refund proportionally between all `isLiable` accounts.
 - **At-least-once Delivery**: Webhooks and cron executions operate under at-least-once semantics; idempotency keys prevent duplicate side effects.
 - **Secrets Management**: NetCred credentials, webhook `secretKey`, and HMAC signing secret stored exclusively in Supabase Vault. MUST NOT appear in application code, environment variable files committed to source control, or any client-accessible layer.
-- **Rescheduling Interaction**: When a service is rescheduled (as defined in `docs/cancelamento-reagendamento-servicos/details.md`), the existing `payment_schedules` record's `charge_scheduled_at` MUST be recalculated if `state ∈ {SCHEDULED, FAILED, IN_ANALYSIS}`: `charge_scheduled_at = MAX(now(), new_service_scheduled_at − interval '2 days')`. If `new_service_scheduled_at − now() < 48 hours`, `charge_scheduled_at = now()` (emergency scheduling). Auto-cancellation T-12h threshold uses the **updated** `service_scheduled_at`. If `state = PAID`, only the service date is updated; no new charge is created.
-- **Emergency Scheduling**: If `service_scheduled_at - now() < 48 hours` at acceptance time, `charge_scheduled_at` is set to `now()` so the next cron picks it up immediately.
+- **Service scheduling anchor (`payment_service_execution_at`)**: Payment timing MUST NOT duplicate scheduling in a new column. The canonical service instant is derived from existing `contracted_services` columns: `scheduled_start_date` (DATE), `scheduled_shift` (`morning` \| `afternoon` \| `full_day`), combined as `(scheduled_start_date + shift start time) AT TIME ZONE 'America/Sao_Paulo'` where shift starts are `morning/full_day = 08:00`, `afternoon = 13:00`. Implemented as Postgres function `payment_service_execution_at(contracted_services)`. Multi-day jobs anchor on `scheduled_start_date` only. `mark_service_executed` uses date-only comparison on `scheduled_start_date`.
+- **Rescheduling Interaction**: When a service is rescheduled, the rescheduling subsystem updates slot columns. Pre-`PAID` (`state ∈ {SCHEDULED, FAILED, IN_ANALYSIS}`): recalculate `charge_scheduled_at = MAX(now(), payment_service_execution_at(cs) − 2 days)` (emergency → `now()`). Post-`PAID`: allowed **only** while `contracted_services.status = 'CONFIRMED'` (not after `EXECUTED`); slot columns update only; **no new charge**; refund/T-12h windows use updated `payment_service_execution_at`.
+- **Emergency Scheduling**: If `payment_service_execution_at(contracted_services) - now() < 48 hours` at acceptance time, `charge_scheduled_at` is set to `now()` so the next cron picks it up immediately.
 - **chargeCreate timing**: The NetCred `chargeCreate` mutation is NEVER called at proposal acceptance. It is ONLY called by the cron (or manual retry flow) at T-2. No `rrule` scheduling is used at the gateway; scheduling is owned entirely by Renovi's cron subsystem.
 - **ClearSale Behavior Analytics**: ClearSale Device Fingerprint / Behavior Analytics is enabled by default on the NetCred production account. The `orderInput.sessionId` field in `chargeCreate` is **mandatory** in production. The ClearSale Browser/WebView SDK (`fp.js`) MUST be initialized on the card step of the checkout stepper; it collects public device data (IP, device characteristics, network info) and transmits it to ClearSale servers asynchronously. The `sessionId` (a UUID generated by the frontend for each checkout session) binds the SDK collection to the subsequent `chargeCreate` call. Because `chargeCreate` runs at T-2 (48h later, via cron with no user context), the `sessionId` MUST be persisted in `payment_schedules.clearsale_session_id` at acceptance time. The `CLEARSALE_APP_KEY` (provided by ClearSale, identifies the Renovi application) is a non-secret value stored as a Vite env variable (`VITE_CLEARSALE_APP_KEY`). Since Orbit runs as a Capacitor WebView on Android, the Browser/WebView SDK applies to both web/PWA and Android deployments. `billingAddressInput` is also **mandatory** in all production tokenization calls when ClearSale is active.
 - **ClearSale Session Persistence**: `payment_schedules.clearsale_session_id` stores the `sessionId` captured at checkout. `payment_schedules.client_ip_address` stores the client IP captured at acceptance time; both fields are passed to `chargeCreate` (`orderInput.sessionId` and `customerIpAddress`) by the cron at T-2.
-- **Provider Payout Timing**: Split is defined at `chargeCreate` (`payoutRuleInput`). Bank settlement to provider and Renovi occurs on NetCred's card liquidation calendar after `PAID` — **not** gated by `EXECUTED` or `COMPLETED`. Credit card settlement cycle: **D+30** (confirmed operationally). `EXECUTED`/`COMPLETED` are operational milestones only; real escrow with payout hold requires future NetCred product negotiation.
+- **Provider Payout Timing**: Split at `chargeCreate`. Bank settlement ~**D+30** from `paid_at` — **not** gated by `EXECUTED`/`COMPLETED`. Provider UI MUST display estimated bank receipt date derived from `paid_at`. `EXECUTED`/`COMPLETED` are operational only; escrow requires future NetCred negotiation.
+- **ClearSale Session at charge**: Cron T-2 reuses `clearsale_session_id` from accept (~48h). Manual payment retry MUST initialize ClearSale SDK with a **fresh** UUID and update `clearsale_session_id` before `chargeCreate`.
 - **Pre-Charge Client Notification**: Push + Email reminder sent **24 hours before** `charge_scheduled_at` when `state = SCHEDULED`. Checkout stepper MUST disclose when the charge will occur before acceptance is confirmed. Emergency scheduling (<48h): checkout shows "charge within the next few hours"; 24h reminder does not apply.
 
 ---
@@ -103,7 +133,7 @@ Responsible for computing the set of installment options (1–12 installments) w
 
 ### Phase 5: Charge Scheduling Phase
 
-Responsible for creating a durable `payment_schedules` record upon service acceptance, computing and persisting `charge_scheduled_at = service_scheduled_at − 48 hours` (or `now()` for emergency scheduling), and linking all charge-time preconditions (payment token ID, installment number, provider credentialing IDs). Establishes the authoritative queue record the cron will consume.
+Responsible for creating a durable `payment_schedules` record upon service acceptance, computing and persisting `charge_scheduled_at = payment_service_execution_at(contracted_services) − 2 days` (or `now()` for emergency scheduling), and linking all charge-time preconditions (client card token ID, installment number, provider gateway account IDs). Establishes the authoritative queue record the cron will consume. The agreed slot is persisted by the existing `accept_proposal` path into `scheduled_start_date`, `scheduled_end_date`, and `scheduled_shift` — no separate scheduling column.
 
 ### Phase 6: Charge Execution Phase
 
@@ -111,7 +141,7 @@ Responsible for the cron-driven execution of `chargeCreate` via the payment prov
 
 ### Phase 7: Retry and Recovery Phase
 
-Responsible for automatic re-queuing of `FAILED` schedules within the `max_charge_attempts` limit, respecting `charge_retry_interval_minutes` between attempts. Classifies errors as retryable (transient network/5xx) or terminal (card declined, invalid CPF). After all attempts are exhausted, transitions to `FAILED_PERMANENT`, notifies both client and provider, and exposes a manual recovery button in the service detail UI for both `FAILED` and `FAILED_PERMANENT` states. Executes auto-cancellation at T-12h for unresolved payments.
+Responsible for automatic re-queuing of `FAILED` schedules within the `max_charge_attempts` limit, respecting `charge_retry_interval_minutes` between attempts. Classifies errors as retryable (transient network/5xx) or terminal (card declined, invalid CPF). After all attempts are exhausted, transitions to `FAILED_PERMANENT`, notifies client (Push + Email) and provider (Push with non-confirmed copy per §Validated domain decisions), and exposes manual recovery to the **client** for `FAILED` and `FAILED_PERMANENT` until T-12h. Executes auto-cancellation at T-12h for unresolved payments.
 
 ### Phase 8: Webhook Processing Phase
 
@@ -213,10 +243,10 @@ DEAD_LETTER
 
 #### Contracted Service Status
 
-- **PENDING_PAYMENT** *(initial)*: Service accepted and commitment established, but charge not yet captured (`payment_schedules.state ≠ PAID`). Client can view; provider does NOT see in calendar. Notificações de trabalho confirmado ao prestador são permitidas neste estado.
-- **CONFIRMED**: Charge captured (`payment_schedules.state = PAID`). Service awaiting execution. Provider sees in calendar and may prepare for delivery. Transitioned from `PENDING_PAYMENT` via `PAID` webhook.
-- **EXECUTED**: Provider has marked the service as executed. `executed_at` is set. Awaiting client confirmation. Auto-promoted to `COMPLETED` 24 hours after `executed_at` if client does not confirm. Provider MAY mark `EXECUTED` only when `scheduled_date ≤ today` (date comparison only — no time component).
-- **COMPLETED** *(terminal — happy path)*: Service concluded. Reached via explicit client confirmation from `EXECUTED`, or automatic cron promotion 24h after `executed_at`. Does not gate provider bank settlement (see Provider Payout Timing assumption).
+- **PENDING_PAYMENT** *(initial)*: Service accepted and commitment established, but charge not yet captured (`payment_schedules.state ≠ PAID`). Client can view; provider does NOT see in calendar. Provider MAY receive *"cliente aceitou — aguardando confirmação do pagamento"* — MUST NOT receive "trabalho confirmado" until `PAID`.
+- **CONFIRMED**: Charge captured (`payment_schedules.state = PAID`). Service awaiting execution. Provider sees in calendar and receives "trabalho confirmado" notification. Transitioned from `PENDING_PAYMENT` via `PAID` commit (cron, manual, or webhook). If `payment_service_execution_at − now() < 24h`, provider urgent push (MMD bypass).
+- **EXECUTED**: Provider has marked the service as executed. `executed_at` is set. Awaiting client confirmation. Auto-promoted to `COMPLETED` 24 hours after `executed_at` if client does not confirm. Provider MAY mark `EXECUTED` only when `scheduled_start_date <= CURRENT_DATE` (date comparison only — no time component).
+- **COMPLETED** *(terminal — happy path)*: Service concluded. Reached via explicit client confirmation from `EXECUTED`, or automatic cron promotion 24h after `executed_at`. Does not gate provider bank settlement (~D+30 from `paid_at`; provider UI MUST show estimated receipt date).
 - **CANCELLED** *(terminal)*: Service cancelled. `cancellation_reason` qualifies the cause: `NON_PAYMENT` (auto-cancel at T-12h), `CLIENT_INITIATED`, `PROVIDER_INITIATED`, `PROVIDER_SUSPENDED` (provider suspended before charge). No separate `SERVICE_CANCELLED_NON_PAYMENT` status exists.
 
 #### Provider Credentialing States
@@ -225,17 +255,17 @@ DEAD_LETTER
 - **DOCUMENTS_SUBMITTED**: Provider submitted all KYC documents; formatted email dispatched to `credenciamento@netcred.com.br`. `onboarding_submitted_at` is set. Pending external gateway processing.
 - **UNDER_NETCRED_REVIEW**: Daily `companies` query returned a non-empty result for the provider's document but `companyState ≠ ACTIVE`. External review in progress.
 - **ACTIVE** *(terminal — happy path)*: Gateway confirmed credentialing (`companyState = ACTIVE`); `netcred_company_id` and `netcred_bank_account_id` populated. Provider may participate in paid services.
-- **REJECTED** *(terminal)*: Gateway or internal review rejected credentialing. Manual support intervention required. Provider cannot participate in paid services.
-- **SUSPENDED** *(quasi-terminal)*: Post-activation administrative suspension (compliance violation, dispute excess). Reversible by admin action only. Provider loses all new marketplace access (opportunities, proposals, chat initiation). Existing `CONFIRMED`/`EXECUTED` services are honoured; pre-charge services (`PENDING_PAYMENT`) are frozen until T-12h, then auto-cancelled with `cancellation_reason = PROVIDER_SUSPENDED`. Reactivation `SUSPENDED → ACTIVE` does **not** automatically resume charging on frozen services — ops resolves case by case.
+- **REJECTED** *(terminal, pre-activation only)*: Gateway or internal review rejected credentialing **before** `ACTIVE`. Manual support intervention required. Provider cannot participate in paid services. **An `ACTIVE` provider MUST NOT transition to `REJECTED`** — post-activation sanction is `SUSPENDED`.
+- **SUSPENDED** *(quasi-terminal)*: Post-activation administrative suspension. Reversible by admin only. Provider loses new marketplace access. Existing `CONFIRMED`/`EXECUTED` services honoured. Pre-charge (`PENDING_PAYMENT`): cron skips charge; **immediate** client notification + voluntary cancel (no penalty); auto-cancel at T-12h with `PROVIDER_SUSPENDED` if still pending. Reactivation `SUSPENDED → ACTIVE` does **not** auto-resume charging — ops unfreezes per case.
 
 #### Payment Schedule States
 
 - **SCHEDULED** *(initial)*: Service accepted, `charge_scheduled_at` set. Cron has not yet attempted this schedule. Safe to cancel without gateway interaction.
 - **PROCESSING** *(transitional)*: Cron has acquired a row-level lease (`locked_until` set) and a gateway `chargeCreate` call is in flight. Concurrent workers MUST skip this record via `SKIP LOCKED`.
 - **PAID** *(terminal — happy path)*: Gateway returned `transactionState = PAID` or webhook `TRANSACTION_CAPTURE` confirmed. Service proceeds to execution.
-- **IN_ANALYSIS** *(transitional)*: Gateway antifraude returned `IN_ANALYSIS` or `MANUAL_ANALYSIS`. Awaiting `TRANSACTION_CAPTURE` or `TRANSACTION_UPDATE` webhook to resolve. Auto-cancellation MUST NOT trigger for records in this state.
+- **IN_ANALYSIS** *(transitional)*: Gateway antifraude returned `IN_ANALYSIS` or `MANUAL_ANALYSIS`. Awaiting webhook resolution. **Before T-12h:** auto-cancel suspended; client cancel blocked (`PAYMENT_IN_ANALYSIS`). **After T-12h:** auto-cancel + gateway reconcile (`chargeVoid` or webhook). `contracted_services.status` remains `PENDING_PAYMENT` until `PAID`.
 - **FAILED** *(transitional)*: A charge attempt failed with a retryable error. `automatic_attempt_count < max_charge_attempts`. Eligible for automatic retry on next cron execution when `next_retry_at <= now()`. Manual client attempts remain available regardless of `automatic_attempt_count`.
-- **FAILED_PERMANENT** *(quasi-terminal)*: All `max_charge_attempts` automatic attempts exhausted OR a terminal gateway error occurred (card declined, invalid CPF). Manual client intervention required. Auto-cancellation triggers at T-12h if unresolved. Manual attempts via client UI remain permitted until T-12h.
+- **FAILED_PERMANENT** *(quasi-terminal)*: Automatic attempts exhausted OR terminal gateway error. Manual **client** retry until T-12h. Provider notification: *"cliente aceitou, pagamento não concluído, serviço não confirmado, sem ação necessária"* — no calendar entry. Auto-cancel at T-12h if unresolved.
 - **CANCELLED** *(terminal)*: Service was cancelled before charge executed (pre-T-2), or auto-cancellation fired at T-12h for non-payment, or manual cancellation after failed payment.
 - **VOIDED** *(terminal)*: Charge was created at gateway but voided via `chargeVoid`/`transactionVoid` before capture (reconciliation edge case during retry).
 - **REFUND_REQUESTED** *(transitional)*: `transactionRefund` submitted to gateway; awaiting `TRANSACTION_REFUND` webhook confirmation.
@@ -307,10 +337,10 @@ Each invocation MUST:
 
 ### Scheduling Semantics
 
-- `charge_scheduled_at` is computed at acceptance time as `service_scheduled_at - interval '2 days'` and persisted in UTC.
+- `charge_scheduled_at` is computed at acceptance time as `payment_service_execution_at(contracted_services) - interval '2 days'` and persisted in UTC. `payment_service_execution_at` is a STABLE SQL function over `scheduled_start_date` + `scheduled_shift` (see Assumptions).
 - The cron selects schedules where `charge_scheduled_at::date <= CURRENT_DATE` (not strictly `= CURRENT_DATE`) to catch any schedules missed during system downtime.
-- If `service_scheduled_at - now() < 48 hours` at acceptance, `charge_scheduled_at = now()`, ensuring the next cron run picks it up immediately.
-- If rescheduling changes `service_scheduled_at` and `payment_schedules.state ∈ {SCHEDULED, FAILED, IN_ANALYSIS}`: `charge_scheduled_at = MAX(now(), new_service_scheduled_at − interval '2 days')`. Auto-cancellation T-12h uses the **updated** `service_scheduled_at`. If `state = PAID`, only `service_scheduled_at` is updated for audit; no new charge is created.
+- If `payment_service_execution_at(contracted_services) - now() < 48 hours` at acceptance, `charge_scheduled_at = now()`, ensuring the next cron run picks it up immediately.
+- If rescheduling updates `scheduled_start_date` / `scheduled_shift` and `payment_schedules.state ∈ {SCHEDULED, FAILED, IN_ANALYSIS}`: `charge_scheduled_at = MAX(now(), payment_service_execution_at(cs) − interval '2 days')`. Auto-cancellation T-12h uses the **updated** `payment_service_execution_at`. If `state = PAID`, only slot columns are updated; no new charge is created.
 
 ### Provider Abstraction Semantics
 
@@ -636,17 +666,17 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** the client completes the checkout stepper  
 **WHEN** `accept_proposal` is submitted  
-**THEN** the request body MUST include: `proposal_id`, `scheduled_date`, `payment_method` (`'CREDIT_CARD'`), `payment_token_id` (Renovi UUID from `payment_tokens`), `installment_number` (integer 1–12), `installment_selection_hmac` (the signed payload from the calculation Edge Function), `clearsale_session_id` (the UUID generated at the card step), and `client_ip_address` (collected by the Edge Function from the request's `X-Forwarded-For` / `cf-connecting-ip` header, or passed explicitly by the client); all fields MUST be required for the `CREDIT_CARD` payment method.
+**THEN** the RPC parameters MUST include: `p_proposal_id`, `p_selected_slot` (JSON — existing CNS slot; persists `scheduled_start_date`, `scheduled_end_date`, `scheduled_shift`), `p_idempotency_key`, plus payment fields: `client_card_token_id`, `installment_number`, `installment_selection_hmac`, `clearsale_session_id`, `pricing_signature`, and `p_client_ip` (best-effort client IP for ClearSale); all payment fields MUST be required for credit-card acceptance.
 
 **GIVEN** `accept_proposal` validates the HMAC signature (per Requirement 7)  
 **WHEN** validation passes and all preconditions are satisfied  
-**THEN** the system MUST execute a single PostgreSQL transaction that: (1) creates `contracted_services` record with `status = 'PENDING_PAYMENT'`, (2) creates `payment_schedules` record with `state = 'SCHEDULED'`, `charge_scheduled_at = scheduled_date - interval '2 days'`, `payment_token_id`, `installment_number`, `base_amount`, `idempotency_key = contracted_service_id` (`contracted_services.id`), (3) inserts a `payment_audit_log` entry for `event_type = 'CHARGE_SCHEDULED'`.
+**THEN** the system MUST execute a single PostgreSQL transaction that: (1) creates or reuses `contracted_services` with `status = 'PENDING_PAYMENT'` and agreed slot columns populated from `p_selected_slot`, (2) creates `payment_schedules` with `state = 'SCHEDULED'`, `charge_scheduled_at = payment_service_execution_at(contracted_services) - interval '2 days'` (or `now()` if emergency), `client_card_token_id`, `installment_number`, `base_amount`, `commission_rate_pct` (from `platform_constants` at accept), `provider_payout = ROUND(base_amount * (1 - commission_rate_pct/100), 2)`, `idempotency_key = contracted_service_id`, (3) inserts `payment_audit_log` `CHARGE_SCHEDULED`.
 
 **GIVEN** `accept_proposal` receives a `proposal_id`  
 **WHEN** server-side validation runs  
 **THEN** it MUST load `provider_proposals` and revalidate `pricing_signature` over `proposed_amount`, `tax_amount`, and `final_amount`; invalid or expired signature MUST return HTTP 400 with `error_code: 'PROPOSAL_PRICING_INVALID'`; `base_amount` MUST be set to `proposed_amount` only when signature is valid; both `pricing_signature` and `installment_selection_hmac` MUST pass before acceptance proceeds.
 
-**GIVEN** `scheduled_date - now() < 48 hours` (emergency short-notice service)  
+**GIVEN** `payment_service_execution_at(contracted_services) - now() < 48 hours` (emergency short-notice service)  
 **WHEN** `charge_scheduled_at` is computed  
 **THEN** `charge_scheduled_at` MUST be set to `now()` so the next cron invocation picks it up immediately; the `payment_audit_log` entry MUST include `metadata.emergency_scheduling = true`.
 
@@ -664,7 +694,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** a client wants to update their payment method for a service in `PENDING_PAYMENT` state  
 **WHEN** `payment_schedules.state ∈ {SCHEDULED, FAILED}`  
-**THEN** the `update-payment-method` Edge Function MUST allow updating `payment_schedules.payment_token_id` without re-executing `accept_proposal`; if the new card brand differs from the original, a new HMAC-signed installment calculation MUST be obtained and confirmed by the client; `base_amount`, `final_amount`, and `charge_scheduled_at` MUST NOT change; `payment_audit_log` MUST record `event_type = 'PAYMENT_METHOD_UPDATED'`.
+**THEN** the `payment_update_method` RPC MUST allow updating `client_card_token_id` without re-executing `accept_proposal`; if the new card brand differs, a new HMAC-signed installment calculation MUST be obtained; `base_amount`, `provider_payout`, `commission_rate_pct`, and `charge_scheduled_at` MUST NOT change; `payment_audit_log` MUST record `PAYMENT_METHOD_UPDATED`.
 
 **GIVEN** future payment method `PIX` is supported  
 **WHEN** `payment_method = 'PIX'`  
@@ -680,19 +710,23 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** `accept_proposal` succeeds  
 **WHEN** the `payment_schedules` record is created  
-**THEN** it MUST contain at minimum: `id` (UUID), `contracted_service_id` (UUID, FK → `contracted_services.id`), `client_id`, `provider_id` (service provider entity), `gateway_slug` (`'netcred'`), `payment_token_id` (FK to `payment_tokens`), `installment_number`, `base_amount` (NUMERIC 12,2), `charge_scheduled_at` (TIMESTAMPTZ, UTC), `state` (`'SCHEDULED'`), `automatic_attempt_count` (SMALLINT, default 0), `manual_attempt_count` (SMALLINT, default 0), `max_attempts` (SMALLINT, from `platform_constants`), `locked_until` (TIMESTAMPTZ, NULL), `next_retry_at` (TIMESTAMPTZ, NULL), `idempotency_key` (TEXT, UNIQUE = `contracted_service_id`), `clearsale_session_id` (TEXT, the UUID from ClearSale SDK initialization **during card data entry**), `client_ip_address` (TEXT, IP captured at acceptance time), `upcoming_charge_notified_at` (TIMESTAMPTZ, NULL), `created_at`, `updated_at`.
+**THEN** it MUST contain at minimum: `id` (UUID), `contracted_service_id` (UUID, FK → `contracted_services.id`), `client_id`, `provider_id` (service provider entity), `gateway_slug` (`'netcred'`), `payment_token_id` (FK to `payment_tokens`), `installment_number`, `base_amount` (NUMERIC 12,2), `commission_rate_pct` (NUMERIC 5,2, frozen at accept), `provider_payout` (NUMERIC 12,2, frozen at accept), `charge_scheduled_at` (TIMESTAMPTZ, UTC), `state` (`'SCHEDULED'`), `automatic_attempt_count` (SMALLINT, default 0), `manual_attempt_count` (SMALLINT, default 0), `max_attempts` (SMALLINT, from `platform_constants`), `locked_until` (TIMESTAMPTZ, NULL), `next_retry_at` (TIMESTAMPTZ, NULL), `idempotency_key` (TEXT, UNIQUE = `contracted_service_id`), `clearsale_session_id` (TEXT), `client_ip_address` (TEXT), `upcoming_charge_notified_at` (TIMESTAMPTZ, NULL), `created_at`, `updated_at`.
 
 **GIVEN** a `payment_schedules` record exists with `state = 'SCHEDULED'`  
 **WHEN** the service is cancelled before `charge_scheduled_at`  
 **THEN** the schedule MUST be transitioned to `CANCELLED` within the same database transaction as the service cancellation; `cancelled_at` and `cancellation_reason` MUST be set; no gateway interaction occurs.
 
-**GIVEN** the service is rescheduled to a new `service_scheduled_at`  
+**GIVEN** the service slot is updated via the rescheduling subsystem (`scheduled_start_date`, `scheduled_end_date`, `scheduled_shift`)  
 **WHEN** rescheduling is confirmed and `payment_schedules.state ∈ {SCHEDULED, FAILED, IN_ANALYSIS}`  
-**THEN** `charge_scheduled_at` MUST be updated to `MAX(now(), new_service_scheduled_at - interval '2 days')`; if `new_service_scheduled_at - now() < 48 hours`, `charge_scheduled_at = now()` (emergency scheduling); `upcoming_charge_notified_at` MUST be reset to NULL; `updated_at` MUST be refreshed; a `payment_audit_log` entry for `event_type = 'CHARGE_RESCHEDULED'` MUST be inserted with `old_charge_scheduled_at` and `new_charge_scheduled_at` in `metadata`; T-12h auto-cancellation MUST use the updated `service_scheduled_at`.
+**THEN** `charge_scheduled_at` MUST be updated to `MAX(now(), payment_service_execution_at(contracted_services) - interval '2 days')`; if `payment_service_execution_at(contracted_services) - now() < 48 hours`, `charge_scheduled_at = now()` (emergency scheduling); `upcoming_charge_notified_at` MUST be reset to NULL; `updated_at` MUST be refreshed; a `payment_audit_log` entry for `event_type = 'CHARGE_RESCHEDULED'` MUST be inserted with `old_charge_scheduled_at` and `new_charge_scheduled_at` in `metadata`; T-12h auto-cancellation MUST use the updated `payment_service_execution_at`.
 
-**GIVEN** a `payment_schedules` record is in `PAID` state  
+**GIVEN** a `payment_schedules` record is in `PAID` state and `contracted_services.status = 'CONFIRMED'`  
 **WHEN** the service is rescheduled  
-**THEN** only `contracted_services.scheduled_at` is updated; `charge_scheduled_at` MUST be updated for audit purposes but has no operational effect; the schedule state MUST remain `PAID`; no new charge MUST be created; the provider receives a rescheduling notification from the rescheduling subsystem (not the payment system).
+**THEN** only `contracted_services` slot columns are updated; refund/T-12h windows recalculate from updated `payment_service_execution_at`; the schedule state MUST remain `PAID`; no new charge MUST be created; the provider receives a rescheduling notification from the rescheduling subsystem.
+
+**GIVEN** `contracted_services.status ∈ {'EXECUTED','COMPLETED'}`  
+**WHEN** a reschedule is requested  
+**THEN** reschedule MUST be rejected (out of MVP payment scope).
 
 ---
 
@@ -712,11 +746,11 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** the lease is acquired and the gateway call is about to be made  
 **WHEN** the final charge amount is computed and the `chargeCreate` payload is assembled  
-**THEN** the cron MUST: (1) invoke the Postgres RPC `calculate_charge_amount(payment_token_id, base_amount, installment_number)` to compute `charge_amount` using current `platform_constants`; (2) set `orderInput.sessionId = payment_schedules.clearsale_session_id` (the UUID collected during client card data entry at checkout); (3) set `customerIpAddress = payment_schedules.client_ip_address`; (4) set `orderInput.referenceCode = contracted_service_id` (`contracted_services.id`); (5) populate `orderInput.orderItems` with service name, amount, and category; previously computed or cached amounts MUST NOT be used.
+**THEN** the cron MUST: (1) invoke `payment_calculate_charge_amount(...)` for `charge_amount` (current card fees — fee drift); (2) set `payoutRuleInput` with provider `FIXED_AMOUNT = payment_schedules.provider_payout` (frozen) and Renovi `PERCENTAGE = 100.0` of `(charge_amount − provider_payout)` per [`ADR-0001`](../adr/0001-payment-split-commission-model.md); (3) set `orderInput.sessionId = clearsale_session_id`; (4) set `customerIpAddress = client_ip_address`; (5) set `referenceCode = contracted_service_id`; (6) populate `orderItems`; MUST NOT recalculate `provider_payout` or `commission_rate_pct` at charge time.
 
 **GIVEN** `chargeCreate` returns `transactionState = 'PAID'`  
 **WHEN** the success response is received  
-**THEN** the cron MUST, in a single transaction: set `payment_schedules.state = 'PAID'`, `locked_until = NULL`, `paid_at = now()`, `paid_amount = charge_amount`, `provider_charge_id`, `provider_transaction_id`; set `contracted_services.status = 'CONFIRMED'`; insert a `payment_attempts` record with `outcome = 'PAID'`, `initiator = 'cron'`; insert a `payment_audit_log` entry; enqueue a success notification to client and provider.
+**THEN** the cron MUST, in a single transaction: set `payment_schedules.state = 'PAID'`, `locked_until = NULL`, `paid_at = now()`, `paid_amount = charge_amount`, `provider_charge_id`, `provider_transaction_id`; set `contracted_services.status = 'CONFIRMED'`; insert `payment_attempts` + audit; enqueue success notification to client and provider ("trabalho confirmado" + calendar). If `payment_service_execution_at − now() < 24 hours`, provider notification MUST use MMD bypass priority (urgent).
 
 **GIVEN** `chargeCreate` returns `transactionState = 'IN_ANALYSIS'` or `MANUAL_ANALYSIS`  
 **WHEN** the antifraude response is received  
@@ -724,11 +758,11 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** `chargeCreate` returns `transactionState = 'REJECTED'` (terminal error)  
 **WHEN** the rejection is received  
-**THEN** the cron MUST: set `state = 'FAILED_PERMANENT'`, `locked_until = NULL`, `failed_at = now()`, `failure_code`, `failure_reason`; insert a `payment_attempts` record with `outcome = 'REJECTED'`, `initiator = 'cron'`; insert an audit log entry; enqueue `FAILED_PERMANENT` notifications to client (Push + Email, bypass priority) AND to provider (Push, bypass priority); `automatic_attempt_count` MUST NOT be incremented for terminal errors.
+**THEN** the cron MUST: set `state = 'FAILED_PERMANENT'`, `locked_until = NULL`, `failed_at = now()`, `failure_code`, `failure_reason`; insert a `payment_attempts` record with `outcome = 'REJECTED'`, `initiator = 'cron'`; insert an audit log entry; enqueue `FAILED_PERMANENT` notifications to client (Push + Email, bypass priority) AND to provider (Push, bypass priority) with copy: *cliente aceitou sua proposta, pagamento não concluído, serviço ainda não confirmado, sem ação necessária*; `automatic_attempt_count` MUST NOT be incremented for terminal errors.
 
 **GIVEN** a retryable gateway error (network timeout, 5xx) occurs  
 **WHEN** the error is received and `automatic_attempt_count < max_attempts`  
-**THEN** the cron MUST: set `state = 'FAILED'`, `locked_until = NULL`, `next_retry_at = now() + '<charge_retry_interval_minutes> minutes'::interval`, `failure_code`, `failure_reason`; insert a `payment_attempts` record with `outcome = 'ERROR'`, `initiator = 'cron'`; insert an audit log entry; if this is the first failure (`automatic_attempt_count = 1`), enqueue failure notification to **client AND provider**; subsequent failures notify **client only**.
+**THEN** the cron MUST: set `state = 'FAILED'`, `locked_until = NULL`, `next_retry_at = now() + '<charge_retry_interval_minutes> minutes'::interval`, `failure_code`, `failure_reason`; insert a `payment_attempts` record with `outcome = 'ERROR'`, `initiator = 'cron'`; insert an audit log entry; if this is the first failure (`automatic_attempt_count = 1`), enqueue failure notification to **client only**; subsequent failures notify **client only**. Provider MUST NOT receive retry failure notifications (only `FAILED_PERMANENT` and post-`PAID` events per §Validated domain decisions).
 
 **GIVEN** a retryable error occurs AND `automatic_attempt_count >= max_attempts` after the increment  
 **WHEN** the failure is processed  
@@ -842,7 +876,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 **WHEN** the gateway returns `REJECTED`  
 **THEN** the inline UI MUST display the error reason in plain Portuguese; the client MUST be offered: "Try with a different card" (re-tokenization flow inline) and "Contact support" option.
 
-**GIVEN** the T-12h auto-cancellation threshold has passed (`service_scheduled_at - now() <= 12 hours`)  
+**GIVEN** the T-12h auto-cancellation threshold has passed (`payment_service_execution_at(contracted_services) - now() <= 12 hours`)  
 **WHEN** the client attempts a manual payment  
 **THEN** the server MUST return HTTP 409 with `error_code: 'SERVICE_AUTO_CANCELLED'`; the UI MUST inform the client that the service was already cancelled due to payment non-resolution.
 
@@ -856,7 +890,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** the `auto-cancel-unpaid-services` cron fires (minimum 4x/day, same schedule as charge cron)  
 **WHEN** it selects records for auto-cancellation  
-**THEN** it MUST select `contracted_services` records WHERE `service_scheduled_at - now() <= interval '12 hours'` AND `payment_schedules.state IN ('FAILED_PERMANENT', 'FAILED', 'SCHEDULED')` AND `contracted_services.status NOT IN ('CANCELLED', 'COMPLETED')`.
+**THEN** it MUST select `contracted_services` records WHERE `payment_service_execution_at(contracted_services) - now() <= interval '12 hours'` AND `payment_schedules.state IN ('FAILED_PERMANENT', 'FAILED', 'SCHEDULED')` AND `contracted_services.status NOT IN ('CANCELLED', 'COMPLETED')`.
 
 **GIVEN** eligible records are selected  
 **WHEN** auto-cancellation is executed due to non-payment  
@@ -866,9 +900,13 @@ All Edge Function charge execution paths MUST invoke operations through this int
 **WHEN** notifications are dispatched  
 **THEN** the system MUST enqueue (bypass priority): (1) Push + Email to client explaining the service was cancelled due to unpaid payment, offering support contact; (2) Push to provider informing them the service was cancelled and they are freed from the commitment.
 
-**GIVEN** `payment_schedules.state = 'IN_ANALYSIS'` when T-12h is reached  
+**GIVEN** `payment_schedules.state = 'IN_ANALYSIS'` AND `payment_service_execution_at(contracted_services) - now() > interval '12 hours'` (before T-12h)  
 **WHEN** the auto-cancellation cron evaluates the record  
-**THEN** it MUST NOT cancel; `IN_ANALYSIS` represents an in-progress antifraude review, not a payment failure; the cron MUST skip this record.
+**THEN** it MUST NOT cancel; client-initiated cancel MUST return HTTP 409 `PAYMENT_IN_ANALYSIS`.
+
+**GIVEN** `payment_schedules.state = 'IN_ANALYSIS'` AND T-12h threshold reached  
+**WHEN** the auto-cancellation cron fires  
+**THEN** it MUST cancel the service, reconcile with gateway (`chargeVoid` if not captured), and notify client and provider.
 
 **GIVEN** `payment_schedules.state = 'PAID'` when T-12h is evaluated  
 **WHEN** the cron evaluates the record  
@@ -879,8 +917,12 @@ All Edge Function charge execution paths MUST invoke operations through this int
 **THEN** the operation MUST be idempotent; detecting `contracted_services.status = 'CANCELLED'` MUST cause a no-op without error or duplicate notifications.
 
 **GIVEN** a provider's `onboarding_status = 'SUSPENDED'` and a service is in `PENDING_PAYMENT` state  
-**WHEN** `service_scheduled_at - now() <= 12 hours` is reached  
-**THEN** the system MUST atomically cancel the service with `contracted_services.status = 'CANCELLED'`, `cancellation_reason = 'PROVIDER_SUSPENDED'`, and `payment_schedules.state = 'CANCELLED'`; no charge has occurred, so no refund is issued; client MUST be notified that the service was cancelled due to provider account status, and offered support contact.
+**WHEN** suspension is recorded  
+**THEN** the client MUST be notified immediately that the service payment is on hold; the client MAY cancel voluntarily without penalty; the cron MUST skip charging until ops unfreezes or T-12h auto-cancel fires.
+
+**GIVEN** a provider's `onboarding_status = 'SUSPENDED'` and a service is in `PENDING_PAYMENT` state  
+**WHEN** `payment_service_execution_at(contracted_services) - now() <= 12 hours` is reached  
+**THEN** the system MUST atomically cancel with `cancellation_reason = 'PROVIDER_SUSPENDED'`; no refund (no charge); client notified with support contact.
 
 ---
 
@@ -890,17 +932,21 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 ### Acceptance Criteria
 
-**GIVEN** a client cancels a service where `payment_schedules.state = 'PAID'` AND `service_scheduled_at - now() > 48 hours`  
+**GIVEN** a client cancels a service where `payment_schedules.state = 'PAID'` AND `payment_service_execution_at(contracted_services) - now() > 48 hours`  
 **WHEN** the cancellation is confirmed  
 **THEN** the system MUST compute `refund_amount = base_amount` (100% of service price; card processing fees are non-refundable); invoke `transactionRefund(transactionId, amount = refund_amount, reason = 'REQUESTED_BY_CUSTOMER')`; transition `payment_schedules.state = 'REFUND_REQUESTED'`; the gateway distributes the refund proportionally between all `isLiable` accounts (provider and Renovi).
 
-**GIVEN** a client cancels a service where `payment_schedules.state = 'PAID'` AND `12 hours <= service_scheduled_at - now() <= 48 hours`  
+**GIVEN** a client cancels a service where `payment_schedules.state = 'PAID'` AND `12 hours <= payment_service_execution_at(contracted_services) - now() <= 48 hours`  
 **WHEN** the cancellation is confirmed  
 **THEN** the system MUST compute `refund_amount = base_amount × 0.90` (90% of service price; 10% penalty retained; card processing fees non-refundable); invoke `transactionRefund` for `refund_amount`; transition `payment_schedules.state = 'REFUND_REQUESTED'`; the 10% penalty retention and the non-refundable card fee MUST be documented in the `payment_audit_log`; the gateway distributes the refund proportionally between all `isLiable` accounts.
 
-**GIVEN** a client cancels a service where `payment_schedules.state = 'PAID'` AND `service_scheduled_at - now() < 12 hours`  
+**GIVEN** a client cancels a service where `payment_schedules.state = 'PAID'` AND `payment_service_execution_at(contracted_services) - now() < 12 hours`  
 **WHEN** the cancellation is confirmed  
 **THEN** the system MUST compute `refund_amount = base_amount × 0.70` (70% of service price; 30% penalty retained; card processing fees non-refundable); invoke `transactionRefund` for `refund_amount`; transition `payment_schedules.state = 'REFUND_REQUESTED'`; the gateway distributes the refund proportionally between all `isLiable` accounts.
+
+**GIVEN** a cancellation occurs before `PAID` (`payment_schedules.state ∈ {'SCHEDULED','FAILED','FAILED_PERMANENT'}`)  
+**WHEN** the client initiates cancel (except blocked `IN_ANALYSIS` before T-12h)  
+**THEN** `payment_schedules.state` MUST transition to `CANCELLED` without gateway call; no penalty; provider receives informational push (*cliente cancelou — serviço não confirmado*).
 
 **GIVEN** a cancellation occurs before T-2 (`payment_schedules.state = 'SCHEDULED'`)  
 **WHEN** the service is cancelled (any `contracted_services.status` in `PENDING_PAYMENT`)  
@@ -916,7 +962,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** `payment_schedules.state = 'IN_ANALYSIS'`  
 **WHEN** a client or provider attempts cancellation  
-**THEN** cancellation MUST be blocked with HTTP 409 and `error_code: 'PAYMENT_IN_ANALYSIS'`; the service remains `PENDING_PAYMENT`; auto-cancellation at T-12h is suspended until antifraude resolves.
+**THEN** cancellation MUST be blocked with HTTP 409 and `error_code: 'PAYMENT_IN_ANALYSIS'` while `payment_service_execution_at − now() > 12 hours`; after T-12h, auto-cancel applies (see Requirement 14).
 
 **GIVEN** `payment_schedules.state ∈ {'FAILED', 'FAILED_PERMANENT'}` and `contracted_services.status = 'PENDING_PAYMENT'`  
 **WHEN** the client cancels before T-12h  
@@ -1012,7 +1058,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** a `TRANSACTION_DISPUTE` (chargeback) event is received  
 **WHEN** the handler processes it  
-**THEN** `payment_schedules.is_disputed = true` MUST be set; a `CRITICAL` Sentry alert MUST be emitted; the operations team MUST be notified via a structured alert including `contracted_service_id` and `provider_transaction_id`; `contracted_services.status` MUST NOT change automatically — the service MUST continue in its current status (`CONFIRMED`, `EXECUTED`, etc.) pending manual ops resolution. Automated dispute resolution (e.g., auto-cancel on chargeback) is out of MVP scope.
+**THEN** `payment_schedules.is_disputed = true` MUST be set; a `CRITICAL` Sentry alert MUST be emitted; ops MUST be notified; client and provider MUST receive neutral push and in-app badge *"Disputa em análise"*; `contracted_services.status` MUST NOT change automatically — service continues in current status pending manual ops resolution. Automated dispute resolution is out of MVP scope.
 
 **GIVEN** a `TRANSACTION_REFUND` event is received  
 **WHEN** the handler processes it and `transactionState = 'REFUNDED'`  
@@ -1252,7 +1298,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** `payment_schedules` table is created  
 **WHEN** a charge is scheduled  
-**THEN** it MUST contain: `id` (UUID, PK), `contracted_service_id` (UUID, FK → `contracted_services.id`), `client_id` (UUID), `provider_id` (UUID, service provider), `gateway_slug` (TEXT), `payment_token_id` (UUID, FK → `payment_tokens`), `installment_number` (SMALLINT, 1–12), `base_amount` (NUMERIC 12,2), `charge_scheduled_at` (TIMESTAMPTZ), `state` (TEXT, state machine), `automatic_attempt_count` (SMALLINT, default 0), `manual_attempt_count` (SMALLINT, default 0), `max_attempts` (SMALLINT), `locked_until` (TIMESTAMPTZ), `next_retry_at` (TIMESTAMPTZ), `idempotency_key` (TEXT, UNIQUE = `contracted_service_id`), `clearsale_session_id` (TEXT, nullable — the UUID collected during client card data entry at checkout; passed as `orderInput.sessionId` in `chargeCreate`), `client_ip_address` (TEXT, nullable — IP of the client at acceptance time; passed as `customerIpAddress` in `chargeCreate`), `upcoming_charge_notified_at` (TIMESTAMPTZ, nullable — set when 24h pre-charge Push+Email is sent), `is_disputed` (BOOLEAN, default FALSE), `provider_charge_id` (TEXT), `provider_transaction_id` (TEXT), `paid_at`, `failed_at`, `cancelled_at`, `refunded_at`, `paid_amount` (NUMERIC 12,2), `refunded_amount` (NUMERIC 12,2), `failure_code` (TEXT), `failure_reason` (TEXT), `cancellation_reason` (TEXT), `created_at`, `updated_at`.
+**THEN** it MUST contain: `id` (UUID, PK), `contracted_service_id` (UUID, FK → `contracted_services.id`), `client_id` (UUID), `provider_id` (UUID, service provider), `gateway_slug` (TEXT), `payment_token_id` (UUID, FK → `payment_tokens`), `installment_number` (SMALLINT, 1–12), `base_amount` (NUMERIC 12,2), `commission_rate_pct` (NUMERIC 5,2, frozen at accept), `provider_payout` (NUMERIC 12,2, frozen at accept), `charge_scheduled_at` (TIMESTAMPTZ), `state` (TEXT, state machine), `automatic_attempt_count` (SMALLINT, default 0), `manual_attempt_count` (SMALLINT, default 0), `max_attempts` (SMALLINT), `locked_until` (TIMESTAMPTZ), `next_retry_at` (TIMESTAMPTZ), `idempotency_key` (TEXT, UNIQUE = `contracted_service_id`), `clearsale_session_id` (TEXT, nullable — the UUID collected during client card data entry at checkout; passed as `orderInput.sessionId` in `chargeCreate`), `client_ip_address` (TEXT, nullable — IP of the client at acceptance time; passed as `customerIpAddress` in `chargeCreate`), `upcoming_charge_notified_at` (TIMESTAMPTZ, nullable — set when 24h pre-charge Push+Email is sent), `is_disputed` (BOOLEAN, default FALSE), `provider_charge_id` (TEXT), `provider_transaction_id` (TEXT), `paid_at`, `failed_at`, `cancelled_at`, `refunded_at`, `paid_amount` (NUMERIC 12,2), `refunded_amount` (NUMERIC 12,2), `failure_code` (TEXT), `failure_reason` (TEXT), `cancellation_reason` (TEXT), `created_at`, `updated_at`.
 
 **GIVEN** `payment_attempts` table is created  
 **WHEN** a charge attempt is made  
@@ -1296,7 +1342,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** the client reaches the final confirmation step before tapping "Confirm"  
 **WHEN** the confirmation summary is rendered  
-**THEN** the UI MUST disclose when the card will be charged: (a) if `service_scheduled_at - now() >= 48 hours`, display the `charge_scheduled_at` date (48 hours before service); (b) if `service_scheduled_at - now() < 48 hours` (emergency scheduling), display that the charge will occur within the next few hours (no fixed cron time); this disclosure MUST be visible before the client confirms acceptance.
+**THEN** the UI MUST disclose when the card will be charged: (a) if `payment_service_execution_at(contracted_services) - now() >= 48 hours`, display the `charge_scheduled_at` date (48 hours before service); (b) if `payment_service_execution_at(contracted_services) - now() < 48 hours` (emergency scheduling), display that the charge will occur within the next few hours (no fixed cron time); this disclosure MUST be visible before the client confirms acceptance.
 
 ---
 
@@ -1460,7 +1506,7 @@ The script MUST be loaded asynchronously to avoid blocking card form rendering; 
 
 **GIVEN** `contracted_services.status = 'CONFIRMED'` and `payment_schedules.state = 'PAID'`  
 **WHEN** the provider marks the service as executed  
-**THEN** the system MUST verify `scheduled_date::date <= CURRENT_DATE` (date-only comparison, no time component); if the scheduled date is in the future, the RPC MUST return HTTP 409 with `error_code: 'SERVICE_NOT_YET_DUE'`; if eligible, the system MUST atomically: (1) transition `contracted_services.status = 'EXECUTED'`, `executed_at = now()`; (2) insert a `payment_audit_log` entry for `event_type = 'SERVICE_EXECUTED'`, `actor = 'provider'`; (3) enqueue a Push notification to the client requesting confirmation ("Confirmar recebimento do serviço").
+**THEN** the system MUST verify `scheduled_start_date <= CURRENT_DATE` (date-only comparison, no time component); if the scheduled date is in the future, the RPC MUST return HTTP 409 with `error_code: 'SERVICE_NOT_YET_DUE'`; if eligible, the system MUST atomically: (1) transition `contracted_services.status = 'EXECUTED'`, `executed_at = now()`; (2) insert a `payment_audit_log` entry for `event_type = 'SERVICE_EXECUTED'`, `actor = 'provider'`; (3) enqueue a Push notification to the client requesting confirmation ("Confirmar recebimento do serviço").
 
 **GIVEN** `contracted_services.status = 'EXECUTED'`  
 **WHEN** the client explicitly confirms service delivery  
@@ -1473,6 +1519,10 @@ The script MUST be loaded asynchronously to avoid blocking card form rendering; 
 **GIVEN** `contracted_services.status = 'EXECUTED'`  
 **WHEN** `payment_schedules.is_disputed = true` (chargeback in progress)  
 **THEN** the service status MUST NOT be blocked by the dispute; transition to `COMPLETED` proceeds normally via client confirmation or auto-completion; dispute resolution is handled separately by ops.
+
+**GIVEN** `payment_schedules.state = 'PAID'` and provider views service detail or receivables  
+**WHEN** the UI renders payout information  
+**THEN** it MUST show estimated bank receipt ~D+30 from `paid_at` and MUST NOT imply that `COMPLETED` triggers bank transfer.
 
 **GIVEN** the provider tries to mark a service as executed  
 **WHEN** `contracted_services.status ≠ 'CONFIRMED'`  
@@ -1498,7 +1548,7 @@ The script MUST be loaded asynchronously to avoid blocking card form rendering; 
 **WHEN** the cron commits  
 **THEN** `payment_schedules.upcoming_charge_notified_at` MUST be set to `now()` atomically in the same transaction; duplicate notifications for the same schedule MUST be prevented by this field.
 
-**GIVEN** `service_scheduled_at - now() < 48 hours` at acceptance (emergency scheduling)  
+**GIVEN** `payment_service_execution_at(contracted_services) - now() < 48 hours` at acceptance (emergency scheduling)  
 **WHEN** the pre-charge notification cron evaluates the schedule  
 **THEN** the 24h-before-charge notification MUST NOT be sent (charge occurs within hours; checkout disclosure at acceptance is sufficient).
 
