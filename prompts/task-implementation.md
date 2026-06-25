@@ -5,6 +5,11 @@
 - docs/chats/design.md and docs/chats/requirements.md — only sections cited by that task
 - AGENTS.md and applicable .cursor/rules/ (api-layer, feature-architecture, supabase-migrations, etc.)
 
+## Project standards and code quality
+- **Always follow project patterns.** Before writing code, read surrounding files in the same feature/area and match naming, structure, imports, and abstractions. Respect AGENTS.md and every applicable rule in `.cursor/rules/` — they are mandatory, not optional.
+- **Code quality is paramount.** The deliverable must be production-ready: clear, consistent, minimal scope, no shortcuts or “good enough for now” hacks. Prefer extending existing code over reinventing; keep diffs focused on the task.
+- When in doubt, align with the current features and the rules cited in the task or Scope above.
+
 ## Task selection
 1. Pick the first task with `[ ]` (respect waves order and the task’s Dependencies).
 2. If Dependencies are not satisfied, STOP the loop and report which gate is missing — do not skip ahead.
