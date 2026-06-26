@@ -1892,7 +1892,7 @@ Acceptance Criteria covered:
 
 # Phase 5: Webhook & Async Orchestration
 
-## 33. [ ] Implement RPC `payment_ingest_webhook_event`
+## 33. [x] Implement RPC `payment_ingest_webhook_event`
 
 Description:
 INSERT RECEIVED before HMAC; raw payload immutable.
@@ -1946,7 +1946,7 @@ Requirements covered:
 Acceptance Criteria covered:
 16.1
 
-## 34. [ ] Implement RPC `payment_enqueue_webhook_processing`
+## 34. [x] Implement RPC `payment_enqueue_webhook_processing`
 
 Description:
 Queue PENDING; parent VALIDATING; UNIQUE webhook_event_id.
@@ -2001,7 +2001,7 @@ Requirements covered:
 Acceptance Criteria covered:
 16.5
 
-## 35. [ ] Implement RPC `payment_process_webhook_event`
+## 35. [x] Implement RPC `payment_process_webhook_event`
 
 Description:
 Full dispatch table §4.7.3; regression guard; idempotent duplicates.
@@ -2056,7 +2056,7 @@ Requirements covered:
 Acceptance Criteria covered:
 17.2; 18.1
 
-## 36. [ ] Implement RPC `payment_claim_webhook_processing_batch`
+## 36. [x] Implement RPC `payment_claim_webhook_processing_batch`
 
 Description:
 SKIP LOCKED on queue PENDING.
@@ -2110,7 +2110,7 @@ Requirements covered:
 Acceptance Criteria covered:
 19.1
 
-## 37. [ ] Implement RPC `payment_claim_webhook_retry_batch`
+## 37. [x] Implement RPC `payment_claim_webhook_retry_batch`
 
 Description:
 SKIP LOCKED on events FAILED.
@@ -2164,7 +2164,7 @@ Requirements covered:
 Acceptance Criteria covered:
 19.2
 
-## 38. [ ] Implement RPC `payment_begin_refund_request`
+## 38. [x] Implement RPC `payment_begin_refund_request`
 
 Description:
 computeRefundAmount in SQL; REFUND_REQUESTED + cancel service TX.
@@ -2218,7 +2218,7 @@ Requirements covered:
 Acceptance Criteria covered:
 15.1–15.3
 
-## 39. [ ] Implement RPC `payment_claim_stale_schedules_for_reconciliation`
+## 39. [x] Implement RPC `payment_claim_stale_schedules_for_reconciliation`
 
 Description:
 Stale IN_ANALYSIS/PROCESSING/REFUND_REQUESTED > 30min.
@@ -2272,7 +2272,7 @@ Requirements covered:
 Acceptance Criteria covered:
 20.1
 
-## 40. [ ] Implement RPC `payment_process_reconciliation_outcome`
+## 40. [x] Implement RPC `payment_process_reconciliation_outcome`
 
 Description:
 Commit getTransaction results.
@@ -2326,7 +2326,7 @@ Requirements covered:
 Acceptance Criteria covered:
 20.2
 
-## 41. [ ] Implement RPC `payment_list_gateway_accounts_for_onboarding`
+## 41. [x] Implement RPC `payment_list_gateway_accounts_for_onboarding`
 
 Description:
 Batch select DOCUMENTS_SUBMITTED/UNDER_NETCRED_REVIEW limit platform_constants batch size.
@@ -2376,7 +2376,7 @@ Requirements covered:
 Acceptance Criteria covered:
 4.1
 
-## 42. [ ] Implement RPC `payment_activate_provider_from_netcred`
+## 42. [x] Implement RPC `payment_activate_provider_from_netcred`
 
 Description:
 TX: ACTIVE + netcred ids + audit + MMD push.
@@ -2426,7 +2426,7 @@ Requirements covered:
 Acceptance Criteria covered:
 4.2
 
-## 43. [ ] Implement RPC `payment_update_provider_onboarding_status`
+## 43. [x] Implement RPC `payment_update_provider_onboarding_status`
 
 Description:
 Intermediate states; no netcred ids on UNDER_NETCRED_REVIEW.
@@ -2478,7 +2478,7 @@ Acceptance Criteria covered:
 
 # Phase 6: Batch Processors & Cron Targets
 
-## 44. [ ] Implement RPC `payment_auto_cancel_services`
+## 44. [x] Implement RPC `payment_auto_cancel_services`
 
 Description:
 T-12h batch with IN_ANALYSIS path; PROVIDER_SUSPENDED reason; per-row EXCEPTION.
@@ -2532,7 +2532,7 @@ Requirements covered:
 Acceptance Criteria covered:
 14.1–14.7
 
-## 45. [ ] Implement RPC `payment_notify_upcoming_charges_batch`
+## 45. [x] Implement RPC `payment_notify_upcoming_charges_batch`
 
 Description:
 Claim 24h pre-charge; set upcoming_charge_notified_at atomically.
@@ -2585,7 +2585,7 @@ Requirements covered:
 Acceptance Criteria covered:
 33.1–33.3
 
-## 46. [ ] Implement RPC `payment_claim_upcoming_charge_notifications`
+## 46. [x] Implement RPC `payment_claim_upcoming_charge_notifications`
 
 Description:
 SKIP LOCKED helper used by notify batch.
@@ -2638,7 +2638,7 @@ Requirements covered:
 Acceptance Criteria covered:
 33.1
 
-## 47. [ ] Implement RPC `payment_auto_complete_executed_services`
+## 47. [x] Implement RPC `payment_auto_complete_executed_services`
 
 Description:
 EXECUTED + 24h → COMPLETED system.
@@ -2691,7 +2691,7 @@ Requirements covered:
 Acceptance Criteria covered:
 32.3
 
-## 48. [ ] Implement RPC `payment_mark_service_executed`
+## 48. [x] Implement RPC `payment_mark_service_executed`
 
 Description:
 Provider RPC: CONFIRMED→EXECUTED date gate.
@@ -2745,7 +2745,7 @@ Requirements covered:
 Acceptance Criteria covered:
 32.1; 32.6
 
-## 49. [ ] Implement RPC `payment_reset_dead_letter_event`
+## 49. [x] Implement RPC `payment_reset_dead_letter_event`
 
 Description:
 Operator recovery tool.
@@ -2798,7 +2798,7 @@ Requirements covered:
 Acceptance Criteria covered:
 19.4
 
-## 50. [ ] Implement RPC `payment_reconstruct_audit_lifecycle`
+## 50. [x] Implement RPC `payment_reconstruct_audit_lifecycle`
 
 Description:
 Operator audit timeline RPC.
@@ -2853,7 +2853,7 @@ Acceptance Criteria covered:
 
 # Phase 7: pg_cron Wrappers & Distributed Coordination
 
-## 51. [ ] Implement pg_cron wrapper `payment_cron_schedule_netcred_charges` with job_runs telemetry
+## 51. [x] Implement pg_cron wrapper `payment_cron_schedule_netcred_charges` with job_runs telemetry
 
 Description:
 SECURITY DEFINER wrapper: job_run_begin → delegate payment_cron_invoke_edge_function('schedule-netcred-charges') → job_run_finish; GRANT EXECUTE TO postgres ONLY; register pg_cron schedule `0 9,15,21,3 * * *` (disabled until rollout phase).
@@ -2906,7 +2906,7 @@ Requirements covered:
 Acceptance Criteria covered:
 6.4 telemetry ACs
 
-## 52. [ ] Implement pg_cron wrapper `payment_cron_auto_cancel_unpaid_services` with job_runs telemetry
+## 52. [x] Implement pg_cron wrapper `payment_cron_auto_cancel_unpaid_services` with job_runs telemetry
 
 Description:
 SECURITY DEFINER wrapper: job_run_begin → delegate payment_auto_cancel_services() → job_run_finish; GRANT EXECUTE TO postgres ONLY; register pg_cron schedule `15 9,15,21,3 * * *` (disabled until rollout phase).
@@ -2959,7 +2959,7 @@ Requirements covered:
 Acceptance Criteria covered:
 6.4 telemetry ACs
 
-## 53. [ ] Implement pg_cron wrapper `payment_cron_notify_upcoming_charges` with job_runs telemetry
+## 53. [x] Implement pg_cron wrapper `payment_cron_notify_upcoming_charges` with job_runs telemetry
 
 Description:
 SECURITY DEFINER wrapper: job_run_begin → delegate payment_notify_upcoming_charges_batch() → job_run_finish; GRANT EXECUTE TO postgres ONLY; register pg_cron schedule `30 9,15,21,3 * * *` (disabled until rollout phase).
@@ -3012,7 +3012,7 @@ Requirements covered:
 Acceptance Criteria covered:
 6.4 telemetry ACs
 
-## 54. [ ] Implement pg_cron wrapper `payment_cron_auto_complete_executed_services` with job_runs telemetry
+## 54. [x] Implement pg_cron wrapper `payment_cron_auto_complete_executed_services` with job_runs telemetry
 
 Description:
 SECURITY DEFINER wrapper: job_run_begin → delegate payment_auto_complete_executed_services() → job_run_finish; GRANT EXECUTE TO postgres ONLY; register pg_cron schedule `45 9,15,21,3 * * *` (disabled until rollout phase).
@@ -3065,7 +3065,7 @@ Requirements covered:
 Acceptance Criteria covered:
 6.4 telemetry ACs
 
-## 55. [ ] Implement pg_cron wrapper `payment_cron_process_webhook_retry` with job_runs telemetry
+## 55. [x] Implement pg_cron wrapper `payment_cron_process_webhook_retry` with job_runs telemetry
 
 Description:
 SECURITY DEFINER wrapper: job_run_begin → delegate claim queue + claim failed events + process → job_run_finish; GRANT EXECUTE TO postgres ONLY; register pg_cron schedule `*/5 * * * *` (disabled until rollout phase).
@@ -3120,7 +3120,7 @@ Requirements covered:
 Acceptance Criteria covered:
 6.4 telemetry ACs
 
-## 56. [ ] Implement pg_cron wrapper `payment_cron_recover_orphaned_schedules` with job_runs telemetry
+## 56. [x] Implement pg_cron wrapper `payment_cron_recover_orphaned_schedules` with job_runs telemetry
 
 Description:
 SECURITY DEFINER wrapper: job_run_begin → delegate payment_recover_orphaned_schedules() → job_run_finish; GRANT EXECUTE TO postgres ONLY; register pg_cron schedule `*/30 * * * *` (disabled until rollout phase).
@@ -3173,7 +3173,7 @@ Requirements covered:
 Acceptance Criteria covered:
 6.4 telemetry ACs
 
-## 57. [ ] Implement pg_cron wrapper `payment_cron_detect_netcred_onboarding` with job_runs telemetry
+## 57. [x] Implement pg_cron wrapper `payment_cron_detect_netcred_onboarding` with job_runs telemetry
 
 Description:
 SECURITY DEFINER wrapper: job_run_begin → delegate invoke detect-netcred-onboarding EF → job_run_finish; GRANT EXECUTE TO postgres ONLY; register pg_cron schedule `0 10 * * *` (disabled until rollout phase).
@@ -3226,7 +3226,7 @@ Requirements covered:
 Acceptance Criteria covered:
 6.4 telemetry ACs
 
-## 58. [ ] Implement pg_cron wrapper `payment_cron_reconcile_netcred_payments` with job_runs telemetry
+## 58. [x] Implement pg_cron wrapper `payment_cron_reconcile_netcred_payments` with job_runs telemetry
 
 Description:
 SECURITY DEFINER wrapper: job_run_begin → delegate invoke reconcile-netcred-payments EF → job_run_finish; GRANT EXECUTE TO postgres ONLY; register pg_cron schedule `*/30 * * * *` (disabled until rollout phase).
@@ -3279,7 +3279,7 @@ Requirements covered:
 Acceptance Criteria covered:
 6.4 telemetry ACs
 
-## 59. [ ] Implement pg_cron wrapper `payment_cron_invoke_edge_function` with job_runs telemetry
+## 59. [x] Implement pg_cron wrapper `payment_cron_invoke_edge_function` with job_runs telemetry
 
 Description:
 SECURITY DEFINER wrapper: job_run_begin → delegate Internal pg_net helper with job_runs metadata. → job_run_finish; GRANT EXECUTE TO postgres ONLY; register pg_cron schedule `N/A` (disabled until rollout phase).

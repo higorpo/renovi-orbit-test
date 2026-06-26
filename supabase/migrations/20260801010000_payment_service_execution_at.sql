@@ -70,3 +70,29 @@ revoke all on function public.payment_compute_charge_scheduled_at(public.contrac
 revoke all on function public.payment_compute_charge_scheduled_at(public.contracted_services) from authenticated;
 
 grant execute on function public.payment_compute_charge_scheduled_at(public.contracted_services) to service_role;
+
+alter table public.contracted_services
+  add column if not exists service_execution_at timestamptz
+  generated always as (
+    (
+      scheduled_start_date::timestamp + case scheduled_shift
+        when 'morning' then time '08:00'
+        when 'afternoon' then time '13:00'
+        when 'full_day' then time '08:00'
+      end
+    ) at time zone 'America/Sao_Paulo'
+  ) stored;
+
+comment on column public.contracted_services.service_execution_at is
+  'Stored canonical execution instant (America/Sao_Paulo); index-friendly anchor for auto-cancel queries.';
+
+create index contracted_services_auto_cancel_idx
+  on public.contracted_services (service_execution_at)
+  where status not in (
+    'CANCELLED'::public.contracted_service_status,
+    'COMPLETED'::public.contracted_service_status
+  );
+
+create index contracted_services_executed_auto_complete_idx
+  on public.contracted_services (executed_at)
+  where status = 'EXECUTED'::public.contracted_service_status;

@@ -118,6 +118,7 @@ comment on type public.payment_webhook_queue_state is
 create type public.payment_audit_actor as enum (
   'cron',
   'client',
+  'provider',
   'webhook',
   'support',
   'system'

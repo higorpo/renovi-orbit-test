@@ -98,6 +98,23 @@ create index payment_schedules_orphan_recovery_idx
   where state = 'PROCESSING'::public.payment_schedule_state
     and locked_until is not null;
 
+create index payment_schedules_upcoming_notify_idx
+  on public.payment_schedules (charge_scheduled_at, id)
+  where state = 'SCHEDULED'::public.payment_schedule_state
+    and upcoming_charge_notified_at is null;
+
+alter table public.payment_schedules
+  add constraint payment_schedules_refunded_lte_paid_check
+  check (
+    refunded_amount is null
+    or paid_amount is null
+    or refunded_amount <= paid_amount
+  )
+  not valid;
+
+alter table public.payment_schedules
+  validate constraint payment_schedules_refunded_lte_paid_check;
+
 create index payment_schedules_client_state_idx
   on public.payment_schedules (client_id, state);
 
@@ -227,7 +244,8 @@ begin
         'PAID'::public.payment_schedule_state,
         'IN_ANALYSIS'::public.payment_schedule_state,
         'FAILED'::public.payment_schedule_state,
-        'FAILED_PERMANENT'::public.payment_schedule_state
+        'FAILED_PERMANENT'::public.payment_schedule_state,
+        'CANCELLED'::public.payment_schedule_state
       ))
     or (old.state = 'FAILED_PERMANENT'::public.payment_schedule_state
       and new.state in (

@@ -86,6 +86,41 @@ values
     'charge_batch_size',
     '10'::jsonb,
     'Max payment schedules claimed per payment_claim_charge_batch cron tick'
+  ),
+  (
+    'webhook_processing_batch_size',
+    '25'::jsonb,
+    'Max webhook queue rows claimed per payment_claim_webhook_processing_batch tick'
+  ),
+  (
+    'webhook_retry_batch_size',
+    '25'::jsonb,
+    'Max FAILED webhook events claimed per payment_claim_webhook_retry_batch tick'
+  ),
+  (
+    'max_webhook_retries',
+    '3'::jsonb,
+    'Max retry attempts before webhook event moves to DEAD_LETTER'
+  ),
+  (
+    'auto_cancel_batch_size',
+    '100'::jsonb,
+    'Max services processed per payment_auto_cancel_services cron tick'
+  ),
+  (
+    'upcoming_charge_notification_batch_size',
+    '100'::jsonb,
+    'Max schedules claimed per upcoming-charge notification batch'
+  ),
+  (
+    'auto_complete_grace_hours',
+    '24'::jsonb,
+    'Hours after executed_at before auto-complete promotes service to COMPLETED'
+  ),
+  (
+    'webhook_stuck_processing_minutes',
+    '15'::jsonb,
+    'Minutes before stuck webhook PROCESSING rows are reclaimed by janitor'
   )
 on conflict (key) do update set
   value = excluded.value,

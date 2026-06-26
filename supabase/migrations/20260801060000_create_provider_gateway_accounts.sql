@@ -93,3 +93,81 @@ create index provider_gateway_accounts_active_idx
   on public.provider_gateway_accounts (provider_id, gateway_slug)
   where onboarding_status = 'ACTIVE'::public.payment_provider_onboarding_status;
 
+create unique index provider_gateway_accounts_netcred_company_unique_idx
+  on public.provider_gateway_accounts (gateway_slug, netcred_company_id)
+  where netcred_company_id is not null;
+
+create index provider_gateway_accounts_onboarding_poll_idx
+  on public.provider_gateway_accounts (
+    coalesce(onboarding_submitted_at, created_at),
+    id
+  )
+  where onboarding_status in (
+    'DOCUMENTS_SUBMITTED'::public.payment_provider_onboarding_status,
+    'UNDER_NETCRED_REVIEW'::public.payment_provider_onboarding_status
+  )
+    and btrim(document) <> '';
+
+create or replace function public.provider_gateway_accounts_guard_onboarding_transition()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if tg_op <> 'UPDATE'
+    or old.onboarding_status is not distinct from new.onboarding_status then
+    return new;
+  end if;
+
+  if old.onboarding_status = 'ACTIVE'::public.payment_provider_onboarding_status
+    and new.onboarding_status <> old.onboarding_status then
+    raise exception 'PROVIDER_ONBOARDING_TERMINAL_ACTIVE'
+      using errcode = 'P0001';
+  end if;
+
+  if not (
+    (old.onboarding_status = 'PENDING_DOCUMENTS'::public.payment_provider_onboarding_status
+      and new.onboarding_status in (
+        'DOCUMENTS_SUBMITTED'::public.payment_provider_onboarding_status,
+        'PENDING_DOCUMENTS'::public.payment_provider_onboarding_status
+      ))
+    or (old.onboarding_status = 'DOCUMENTS_SUBMITTED'::public.payment_provider_onboarding_status
+      and new.onboarding_status in (
+        'UNDER_NETCRED_REVIEW'::public.payment_provider_onboarding_status,
+        'ACTIVE'::public.payment_provider_onboarding_status,
+        'REJECTED'::public.payment_provider_onboarding_status,
+        'DOCUMENTS_SUBMITTED'::public.payment_provider_onboarding_status
+      ))
+    or (old.onboarding_status = 'UNDER_NETCRED_REVIEW'::public.payment_provider_onboarding_status
+      and new.onboarding_status in (
+        'ACTIVE'::public.payment_provider_onboarding_status,
+        'REJECTED'::public.payment_provider_onboarding_status,
+        'UNDER_NETCRED_REVIEW'::public.payment_provider_onboarding_status
+      ))
+    or (old.onboarding_status = 'REJECTED'::public.payment_provider_onboarding_status
+      and new.onboarding_status = 'REJECTED'::public.payment_provider_onboarding_status)
+    or (old.onboarding_status = 'SUSPENDED'::public.payment_provider_onboarding_status
+      and new.onboarding_status in (
+        'SUSPENDED'::public.payment_provider_onboarding_status,
+        'ACTIVE'::public.payment_provider_onboarding_status
+      ))
+  ) then
+    raise exception 'PROVIDER_ONBOARDING_INVALID_TRANSITION'
+      using errcode = 'P0001';
+  end if;
+
+  if new.onboarding_status = 'ACTIVE'::public.payment_provider_onboarding_status
+    and new.netcred_company_id is null then
+    raise exception 'PROVIDER_NETCRED_COMPANY_ID_REQUIRED'
+      using errcode = 'P0001';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger provider_gateway_accounts_guard_onboarding_transition
+  before update on public.provider_gateway_accounts
+  for each row
+  execute procedure public.provider_gateway_accounts_guard_onboarding_transition();
+

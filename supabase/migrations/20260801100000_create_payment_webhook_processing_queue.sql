@@ -23,6 +23,10 @@ create index payment_webhook_processing_queue_pending_idx
   on public.payment_webhook_processing_queue (state, scheduled_at)
   where state = 'PENDING'::public.payment_webhook_queue_state;
 
+create index payment_webhook_processing_queue_stuck_processing_idx
+  on public.payment_webhook_processing_queue (attempted_at)
+  where state = 'PROCESSING'::public.payment_webhook_queue_state;
+
 alter table public.payment_webhook_processing_queue enable row level security;
 
 revoke all on table public.payment_webhook_processing_queue from public;

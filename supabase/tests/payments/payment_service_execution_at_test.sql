@@ -30,7 +30,8 @@ as $$
     null::text,
     null::timestamptz,
     null::timestamptz,
-    null::text
+    null::text,
+    null::timestamptz
   )::public.contracted_services;
 $$;
 

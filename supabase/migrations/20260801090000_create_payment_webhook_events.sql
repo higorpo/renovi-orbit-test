@@ -42,6 +42,19 @@ create index payment_webhook_events_dead_letter_idx
   on public.payment_webhook_events (state, created_at)
   where state = 'DEAD_LETTER'::public.payment_webhook_event_state;
 
+create index payment_webhook_events_failed_retry_claim_idx
+  on public.payment_webhook_events (coalesce(next_retry_at, created_at), created_at)
+  where state = 'FAILED'::public.payment_webhook_event_state;
+
+create index payment_webhook_events_stuck_processing_idx
+  on public.payment_webhook_events (updated_at)
+  where state = 'PROCESSING'::public.payment_webhook_event_state;
+
+alter table public.payment_webhook_events set (
+  autovacuum_vacuum_scale_factor = 0.02,
+  autovacuum_analyze_scale_factor = 0.01
+);
+
 create trigger payment_webhook_events_updated_at
   before update on public.payment_webhook_events
   for each row

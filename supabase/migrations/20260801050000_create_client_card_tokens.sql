@@ -56,6 +56,9 @@ comment on column public.client_card_tokens.billing_address is
 create index client_card_tokens_client_state_idx
   on public.client_card_tokens (client_id, state);
 
+create index client_card_tokens_gateway_profile_id_idx
+  on public.client_card_tokens (gateway_payment_profile_id);
+
 create trigger client_card_tokens_updated_at
   before update on public.client_card_tokens
   for each row
