@@ -18,6 +18,7 @@ declare
   v_sched int := 0;
   v_fail int := 0;
   v_retry_minutes int;
+  v_updated record;
 begin
   if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'service_role required for payment_recover_orphaned_schedules'
@@ -26,6 +27,7 @@ begin
 
   v_retry_minutes := public.platform_constant_int('charge_retry_interval_minutes', 30);
 
+  create temp table _payment_orphan_recovery_result on commit drop as
   with orphans as (
     select ps.*
     from public.payment_schedules ps
@@ -87,51 +89,50 @@ begin
       r.locked_until,
       ps.automatic_attempt_count,
       r.manual_attempt_count
-  ),
-  audit_insert as (
-    insert into public.payment_audit_log (
-      event_type,
-      entity_type,
-      entity_id,
-      service_id,
-      schedule_id,
-      from_state,
-      to_state,
-      actor,
-      metadata
-    )
-    select
-      'ORPHAN_RECOVERED',
-      'payment_schedule',
-      u.id,
-      u.contracted_service_id,
-      u.id,
-      'PROCESSING',
-      u.new_state::text,
-      'system'::public.payment_audit_actor,
-      jsonb_build_object(
-        'recovered_at', now(),
-        'locked_until_was', u.locked_until,
-        'automatic_attempt_count', u.automatic_attempt_count,
-        'manual_attempt_count', u.manual_attempt_count
-      )
-    from updated u
-    returning 1
-  ),
-  stats as (
-    select
-      count(*)::int as recovered_count,
-      count(*) filter (
-        where new_state = 'SCHEDULED'::public.payment_schedule_state
-      )::int as recovered_to_scheduled,
-      count(*) filter (
-        where new_state = 'FAILED'::public.payment_schedule_state
-      )::int as recovered_to_failed
-    from updated
   )
-  select s.recovered_count, s.recovered_to_scheduled, s.recovered_to_failed
+  select * from updated;
+
+  for v_updated in select * from _payment_orphan_recovery_result loop
+    perform public.payment_write_audit(
+      p_event_type := 'ORPHAN_RECOVERED',
+      p_entity_type := 'payment_schedule',
+      p_entity_id := v_updated.id,
+      p_service_id := v_updated.contracted_service_id,
+      p_schedule_id := v_updated.id,
+      p_from_state := 'PROCESSING',
+      p_to_state := v_updated.new_state::text,
+      p_actor := 'system'::public.payment_audit_actor,
+      p_metadata := jsonb_build_object(
+        'recovered_at', now(),
+        'locked_until_was', v_updated.locked_until,
+        'automatic_attempt_count', v_updated.automatic_attempt_count,
+        'manual_attempt_count', v_updated.manual_attempt_count
+      )
+    );
+
+    perform public.payment_write_event(
+      p_event_type := 'OrphanScheduleRecovered',
+      p_aggregate_type := 'payment_schedule',
+      p_aggregate_id := v_updated.id,
+      p_service_id := v_updated.contracted_service_id,
+      p_payload := jsonb_build_object(
+        'new_state', v_updated.new_state,
+        'automatic_attempt_count', v_updated.automatic_attempt_count,
+        'manual_attempt_count', v_updated.manual_attempt_count
+      )
+    );
+  end loop;
+
+  select
+    count(*)::int,
+    count(*) filter (
+      where new_state = 'SCHEDULED'::public.payment_schedule_state
+    )::int,
+    count(*) filter (
+      where new_state = 'FAILED'::public.payment_schedule_state
+    )::int
   into v_count, v_sched, v_fail
-  from stats s;
+  from _payment_orphan_recovery_result;
 
   return query
   select coalesce(v_count, 0), coalesce(v_sched, 0), coalesce(v_fail, 0);
@@ -139,10 +140,128 @@ end;
 $$;
 
 comment on function public.payment_recover_orphaned_schedules() is
-  'Janitor: expired PROCESSING leases → SCHEDULED, FAILED, or IN_ANALYSIS (uncertain gateway outcome). Run with reconcile cron before charge cron.';
+  'Janitor: expired PROCESSING leases → SCHEDULED, FAILED, or IN_ANALYSIS (uncertain gateway outcome). Prefer cron_payment_charge_batch which runs this before claim.';
 
 revoke all on function public.payment_recover_orphaned_schedules() from public;
 revoke all on function public.payment_recover_orphaned_schedules() from anon;
 revoke all on function public.payment_recover_orphaned_schedules() from authenticated;
 
 grant execute on function public.payment_recover_orphaned_schedules() to service_role;
+
+-- pg_cron entrypoints: charge batch MUST run orphan recovery first (design.md §4.6).
+create or replace function public.cron_payment_recover_orphaned_schedules()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_started_at timestamptz := clock_timestamp();
+  v_job_run_id bigint;
+  v_recovered_count int;
+  v_recovered_to_scheduled int;
+  v_recovered_to_failed int;
+begin
+  v_job_run_id := public.job_run_begin('payment_recover_orphaned_schedules', 'v1');
+
+  select r.recovered_count, r.recovered_to_scheduled, r.recovered_to_failed
+  into v_recovered_count, v_recovered_to_scheduled, v_recovered_to_failed
+  from public.payment_recover_orphaned_schedules() r;
+
+  perform public.job_run_finish(
+    v_job_run_id,
+    v_started_at,
+    coalesce(v_recovered_count, 0),
+    coalesce(v_recovered_to_scheduled, 0) + coalesce(v_recovered_to_failed, 0),
+    0,
+    jsonb_build_object(
+      'recovered_to_scheduled', coalesce(v_recovered_to_scheduled, 0),
+      'recovered_to_failed', coalesce(v_recovered_to_failed, 0)
+    )
+  );
+
+  return jsonb_build_object(
+    'recovered_count', coalesce(v_recovered_count, 0),
+    'recovered_to_scheduled', coalesce(v_recovered_to_scheduled, 0),
+    'recovered_to_failed', coalesce(v_recovered_to_failed, 0),
+    'job_run_id', v_job_run_id
+  );
+exception
+  when others then
+    perform public.job_run_abort_latest('payment_recover_orphaned_schedules', sqlerrm);
+    raise;
+end;
+$$;
+
+comment on function public.cron_payment_recover_orphaned_schedules() is
+  'pg_cron entrypoint: orphan PROCESSING lease janitor with job_runs telemetry.';
+
+create or replace function public.cron_payment_charge_batch(
+  p_batch_size int default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_started_at timestamptz := clock_timestamp();
+  v_job_run_id bigint;
+  v_recovered_count int;
+  v_recovered_to_scheduled int;
+  v_recovered_to_failed int;
+  v_claimed jsonb;
+  v_claimed_count int;
+begin
+  v_job_run_id := public.job_run_begin('payment_charge_batch', 'v1');
+
+  -- Orphan recovery MUST precede claim (expired leases block re-charge).
+  select r.recovered_count, r.recovered_to_scheduled, r.recovered_to_failed
+  into v_recovered_count, v_recovered_to_scheduled, v_recovered_to_failed
+  from public.payment_recover_orphaned_schedules() r;
+
+  v_claimed := public.payment_claim_charge_batch(p_batch_size);
+  v_claimed_count := coalesce(jsonb_array_length(v_claimed), 0);
+
+  perform public.job_run_finish(
+    v_job_run_id,
+    v_started_at,
+    v_claimed_count,
+    coalesce(v_recovered_count, 0),
+    0,
+    jsonb_build_object(
+      'recovered_to_scheduled', coalesce(v_recovered_to_scheduled, 0),
+      'recovered_to_failed', coalesce(v_recovered_to_failed, 0),
+      'claimed_count', v_claimed_count
+    )
+  );
+
+  return jsonb_build_object(
+    'orphan_recovery', jsonb_build_object(
+      'recovered_count', coalesce(v_recovered_count, 0),
+      'recovered_to_scheduled', coalesce(v_recovered_to_scheduled, 0),
+      'recovered_to_failed', coalesce(v_recovered_to_failed, 0)
+    ),
+    'claimed', v_claimed,
+    'claimed_count', v_claimed_count,
+    'job_run_id', v_job_run_id
+  );
+exception
+  when others then
+    perform public.job_run_abort_latest('payment_charge_batch', sqlerrm);
+    raise;
+end;
+$$;
+
+comment on function public.cron_payment_charge_batch(int) is
+  'pg_cron entrypoint: runs orphan recovery then payment_claim_charge_batch. Schedule this, not claim alone.';
+
+revoke all on function public.cron_payment_recover_orphaned_schedules() from public;
+revoke all on function public.cron_payment_recover_orphaned_schedules() from anon;
+revoke all on function public.cron_payment_recover_orphaned_schedules() from authenticated;
+revoke all on function public.cron_payment_charge_batch(int) from public;
+revoke all on function public.cron_payment_charge_batch(int) from anon;
+revoke all on function public.cron_payment_charge_batch(int) from authenticated;
+
+grant execute on function public.cron_payment_recover_orphaned_schedules() to postgres;
+grant execute on function public.cron_payment_charge_batch(int) to postgres;

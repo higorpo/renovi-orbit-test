@@ -13,6 +13,7 @@ declare
   v_lease_minutes int;
   v_max_attempts int;
   v_rows jsonb := '[]'::jsonb;
+  v_claimed record;
 begin
   if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'service_role required for payment_claim_charge_batch'
@@ -26,6 +27,7 @@ begin
   v_lease_minutes := public.platform_constant_int('payment_lease_duration_minutes', 10);
   v_max_attempts := public.platform_constant_int('max_charge_attempts', 3);
 
+  create temp table _payment_claim_batch_result on commit drop as
   with eligible as materialized (
     select
       ps.id,
@@ -91,45 +93,36 @@ begin
       e.client_ip_address,
       e.from_state,
       e.charge_amount
-  ),
-  audit_insert as (
-    insert into public.payment_audit_log (
-      event_type,
-      entity_type,
-      entity_id,
-      service_id,
-      schedule_id,
-      from_state,
-      to_state,
-      actor,
-      metadata
-    )
-    select
-      'CHARGE_ATTEMPT_STARTED',
-      'payment_schedule',
-      c.id,
-      c.contracted_service_id,
-      c.id,
-      c.from_state,
-      'PROCESSING',
-      'cron'::public.payment_audit_actor,
-      jsonb_build_object(
-        'automatic_attempt_count', c.automatic_attempt_count,
-        'charge_amount', c.charge_amount
-      )
-    from claimed c
-    returning 1
   )
-  select coalesce(jsonb_agg(to_jsonb(c)), '[]'::jsonb)
+  select * from claimed;
+
+  select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb)
   into v_rows
-  from claimed c;
+  from _payment_claim_batch_result t;
+
+  for v_claimed in select * from _payment_claim_batch_result loop
+    perform public.payment_write_audit(
+      p_event_type := 'CHARGE_ATTEMPT_STARTED',
+      p_entity_type := 'payment_schedule',
+      p_entity_id := v_claimed.id,
+      p_service_id := v_claimed.contracted_service_id,
+      p_schedule_id := v_claimed.id,
+      p_from_state := v_claimed.from_state::text,
+      p_to_state := 'PROCESSING',
+      p_actor := 'cron'::public.payment_audit_actor,
+      p_metadata := jsonb_build_object(
+        'automatic_attempt_count', v_claimed.automatic_attempt_count,
+        'charge_amount', v_claimed.charge_amount
+      )
+    );
+  end loop;
 
   return v_rows;
 end;
 $$;
 
 comment on function public.payment_claim_charge_batch(int) is
-  'Cron dequeue: SKIP LOCKED lease, increment automatic_attempt_count, return charge_amount per row.';
+  'Cron dequeue: SKIP LOCKED lease, increment automatic_attempt_count, return charge_amount per row. Schedule via cron_payment_charge_batch (runs orphan recovery first).';
 
 revoke all on function public.payment_claim_charge_batch(int) from public;
 revoke all on function public.payment_claim_charge_batch(int) from anon;

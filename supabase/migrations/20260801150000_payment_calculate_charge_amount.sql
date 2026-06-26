@@ -162,20 +162,14 @@ begin
   end if;
 
   if coalesce(auth.role(), '') <> 'service_role' then
-    if auth.uid() is null then
-      raise exception 'Authentication required for payment_calculate_charge_amount'
-        using errcode = '42501';
-    end if;
+    raise exception 'service_role required for payment_calculate_charge_amount'
+      using errcode = '42501';
   end if;
 
   select cct.card_brand
   into v_card_brand
   from public.client_card_tokens cct
-  where cct.id = p_client_card_token_id
-    and (
-      coalesce(auth.role(), '') = 'service_role'
-      or cct.client_id = auth.uid()
-    );
+  where cct.id = p_client_card_token_id;
 
   if v_card_brand is null then
     raise exception 'CLIENT_CARD_TOKEN_NOT_FOUND'
@@ -199,4 +193,3 @@ revoke all on function public.payment_calculate_charge_amount(uuid, numeric, sma
 revoke all on function public.payment_calculate_charge_amount(uuid, numeric, smallint) from anon;
 
 grant execute on function public.payment_calculate_charge_amount(uuid, numeric, smallint) to service_role;
-grant execute on function public.payment_calculate_charge_amount(uuid, numeric, smallint) to authenticated;

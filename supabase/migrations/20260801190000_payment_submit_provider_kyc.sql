@@ -171,7 +171,8 @@ begin
   if v_gateway.onboarding_status in (
     'ACTIVE'::public.payment_provider_onboarding_status,
     'SUSPENDED'::public.payment_provider_onboarding_status,
-    'UNDER_NETCRED_REVIEW'::public.payment_provider_onboarding_status
+    'UNDER_NETCRED_REVIEW'::public.payment_provider_onboarding_status,
+    'DOCUMENTS_SUBMITTED'::public.payment_provider_onboarding_status
   ) then
     raise exception 'INVALID_ONBOARDING_STATE'
       using

@@ -21,8 +21,8 @@ $$;
 select throws_ok(
   $$ select public.payment_calculate_charge_amount(gen_random_uuid(), 1000::numeric, 1::smallint) $$,
   '42501',
-  'Authentication required for payment_calculate_charge_amount',
-  'rejects unauthenticated callers'
+  'service_role required for payment_calculate_charge_amount',
+  'rejects non-service_role callers'
 );
 
 select pg_temp.payment_set_service_role();

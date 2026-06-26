@@ -1,6 +1,38 @@
 -- Payment Task 26: onboarding gate on match_provider_jobs (design.md §4.1.1, Req 29).
 -- Baseline: docs/payment-system/rpc-dumps/match_provider_jobs.sql @ 20260723120000
 
+-- Grandfather pre-payment providers so credentialing gate does not block existing operators.
+insert into public.provider_gateway_accounts (
+  provider_id,
+  gateway_slug,
+  document,
+  onboarding_status,
+  onboarding_activated_at
+)
+select
+  p.id,
+  'netcred'::public.payment_gateway_slug,
+  coalesce(
+    nullif(regexp_replace(coalesce(ppp.cpf, ''), '\D', '', 'g'), ''),
+    nullif(regexp_replace(coalesce(ppp.cnpj, ''), '\D', '', 'g'), '')
+  ),
+  'ACTIVE'::public.payment_provider_onboarding_status,
+  now()
+from public.profiles p
+join public.provider_profiles_private ppp on ppp.provider_id = p.id
+where p.role = 'provider'
+  and coalesce(
+    nullif(regexp_replace(coalesce(ppp.cpf, ''), '\D', '', 'g'), ''),
+    nullif(regexp_replace(coalesce(ppp.cnpj, ''), '\D', '', 'g'), '')
+  ) is not null
+  and not exists (
+    select 1
+    from public.provider_gateway_accounts pga
+    where pga.provider_id = p.id
+      and pga.gateway_slug = 'netcred'::public.payment_gateway_slug
+  )
+on conflict do nothing;
+
 create or replace function public.match_provider_jobs(
   p_provider_id uuid,
   p_lat double precision,

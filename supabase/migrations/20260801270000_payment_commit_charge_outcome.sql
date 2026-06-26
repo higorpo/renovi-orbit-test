@@ -154,6 +154,24 @@ begin
   end if;
 
   if v_effective_outcome = 'PAID' then
+    if not exists (
+      select 1
+      from public.contracted_services cs
+      where cs.id = v_schedule.contracted_service_id
+        and cs.status in (
+          'PENDING_PAYMENT'::public.contracted_service_status,
+          'CONFIRMED'::public.contracted_service_status
+        )
+    ) then
+      raise exception 'CONTRACTED_SERVICE_NOT_CHARGEABLE'
+        using
+          errcode = 'P0001',
+          detail = jsonb_build_object(
+            'code', 'CONTRACTED_SERVICE_NOT_CHARGEABLE',
+            'contracted_service_id', v_schedule.contracted_service_id
+          )::text;
+    end if;
+
     update public.payment_schedules ps
     set
       state = 'PAID',

@@ -26,6 +26,37 @@ $$;
 comment on function public.payment_provider_kyc_document_key_valid(text) is
   'Allowed KYC document_key segment under providers/{id}/kyc/{document_key}/.';
 
+create or replace function public.payment_provider_kyc_storage_mutations_allowed()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    not exists (
+      select 1
+      from public.provider_gateway_accounts pga
+      where pga.provider_id = (select auth.uid())
+    )
+    or exists (
+      select 1
+      from public.provider_gateway_accounts pga
+      where pga.provider_id = (select auth.uid())
+        and pga.onboarding_status in (
+          'PENDING_DOCUMENTS'::public.payment_provider_onboarding_status,
+          'REJECTED'::public.payment_provider_onboarding_status
+        )
+    );
+$$;
+
+comment on function public.payment_provider_kyc_storage_mutations_allowed() is
+  'True when provider may INSERT/UPDATE/DELETE KYC storage objects (PENDING_DOCUMENTS or REJECTED only).';
+
+revoke all on function public.payment_provider_kyc_storage_mutations_allowed() from public;
+grant execute on function public.payment_provider_kyc_storage_mutations_allowed() to authenticated;
+grant execute on function public.payment_provider_kyc_storage_mutations_allowed() to service_role;
+
 create or replace function public.payment_provider_kyc_storage_path_valid(
   p_provider_id uuid,
   p_storage_path text
@@ -163,6 +194,7 @@ create policy storage_objects_provider_kyc_documents_insert
     and (storage.foldername(name))[2] = (select auth.uid())::text
     and (storage.foldername(name))[3] = 'kyc'
     and public.payment_provider_kyc_document_key_valid((storage.foldername(name))[4])
+    and public.payment_provider_kyc_storage_mutations_allowed()
   );
 
 create policy storage_objects_provider_kyc_documents_update
@@ -176,6 +208,7 @@ create policy storage_objects_provider_kyc_documents_update
     and (storage.foldername(name))[2] = (select auth.uid())::text
     and (storage.foldername(name))[3] = 'kyc'
     and public.payment_provider_kyc_document_key_valid((storage.foldername(name))[4])
+    and public.payment_provider_kyc_storage_mutations_allowed()
   )
   with check (
     bucket_id = 'provider-kyc-documents'
@@ -184,6 +217,7 @@ create policy storage_objects_provider_kyc_documents_update
     and (storage.foldername(name))[2] = (select auth.uid())::text
     and (storage.foldername(name))[3] = 'kyc'
     and public.payment_provider_kyc_document_key_valid((storage.foldername(name))[4])
+    and public.payment_provider_kyc_storage_mutations_allowed()
   );
 
 create policy storage_objects_provider_kyc_documents_delete
@@ -195,22 +229,7 @@ create policy storage_objects_provider_kyc_documents_delete
     and (select public.is_provider())
     and (storage.foldername(name))[1] = 'providers'
     and (storage.foldername(name))[2] = (select auth.uid())::text
-    and (
-      not exists (
-        select 1
-        from public.provider_gateway_accounts pga
-        where pga.provider_id = (select auth.uid())
-      )
-      or exists (
-        select 1
-        from public.provider_gateway_accounts pga
-        where pga.provider_id = (select auth.uid())
-          and pga.onboarding_status in (
-            'PENDING_DOCUMENTS'::public.payment_provider_onboarding_status,
-            'REJECTED'::public.payment_provider_onboarding_status
-          )
-      )
-    )
+    and public.payment_provider_kyc_storage_mutations_allowed()
   );
 
 create policy storage_objects_provider_kyc_documents_service_role

@@ -22,7 +22,7 @@ comment on table public.provider_gateway_accounts is
   'Provider NetCred credentialing account; one row per provider at MVP.';
 
 comment on column public.provider_gateway_accounts.document is
-  'CPF or CNPJ digits only; synced from provider_profiles_private on KYC submit.';
+  'CPF or CNPJ digits only; synced from provider_profiles_private on KYC submit. Stored as plaintext — restrict admin/service_role access; document retention policy applies.';
 
 comment on column public.provider_gateway_accounts.netcred_company_id is
   'Populated when onboarding_status reaches ACTIVE via detect-netcred-onboarding.';

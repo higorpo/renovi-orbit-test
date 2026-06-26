@@ -16,16 +16,16 @@ comment on column public.provider_profiles_private.legal_representative_phone is
   'PJ legal representative phone; provider mobile remains on profiles.phone.';
 
 comment on column public.provider_profiles_private.bank_institution_code is
-  'Bank institution code (COMPE) for NetCred payout setup.';
+  'Bank institution code (COMPE) for NetCred payout setup. Plaintext PII — service_role/onboarding RPCs only; no field-level encryption at MVP.';
 
 comment on column public.provider_profiles_private.bank_branch is
-  'Bank branch (agency) for NetCred payout setup.';
+  'Bank branch (agency) for NetCred payout setup. Plaintext PII — service_role/onboarding RPCs only.';
 
 comment on column public.provider_profiles_private.bank_account is
-  'Bank account number for NetCred payout setup.';
+  'Bank account number for NetCred payout setup. Plaintext PII — service_role/onboarding RPCs only.';
 
 comment on column public.provider_profiles_private.pix_key is
-  'Optional PIX key submitted with KYC.';
+  'Optional PIX key submitted with KYC. Plaintext PII — service_role/onboarding RPCs only.';
 
 comment on column public.provider_profiles_private.identity_doc_storage_path is
   'Private storage path in provider-kyc-documents (providers/{id}/kyc/identity/…).';

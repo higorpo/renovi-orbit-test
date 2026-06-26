@@ -77,13 +77,13 @@ comment on column public.payment_schedules.clearsale_session_id is
 comment on column public.payment_schedules.client_ip_address is
   'Client IP at accept/manual charge; service_role and client participant reads only.';
 
+-- automatic_attempt_count filter uses platform_constants.max_charge_attempts at runtime (not in index).
 create index payment_schedules_queue_claim_idx
-  on public.payment_schedules (charge_scheduled_at)
+  on public.payment_schedules (charge_scheduled_at, next_retry_at nulls first)
   where state in (
     'SCHEDULED'::public.payment_schedule_state,
     'FAILED'::public.payment_schedule_state
-  )
-  and automatic_attempt_count < 3;
+  );
 
 create index payment_schedules_stale_idx
   on public.payment_schedules (state, updated_at)
@@ -195,18 +195,69 @@ begin
         )::text;
   end if;
 
-  if old.state = 'FAILED_PERMANENT'::public.payment_schedule_state
-    and new.state not in (
-      'PROCESSING'::public.payment_schedule_state,
-      'CANCELLED'::public.payment_schedule_state,
-      'PAID'::public.payment_schedule_state,
-      'IN_ANALYSIS'::public.payment_schedule_state
-    ) then
-    raise exception 'PAYMENT_SCHEDULE_FAILED_PERMANENT_TRANSITION'
+  if not (
+    (old.state = 'SCHEDULED'::public.payment_schedule_state
+      and new.state in (
+        'PROCESSING'::public.payment_schedule_state,
+        'PAID'::public.payment_schedule_state,
+        'IN_ANALYSIS'::public.payment_schedule_state,
+        'FAILED'::public.payment_schedule_state,
+        'EXPIRED'::public.payment_schedule_state,
+        'CANCELLED'::public.payment_schedule_state
+      ))
+    or (old.state = 'FAILED'::public.payment_schedule_state
+      and new.state in (
+        'PROCESSING'::public.payment_schedule_state,
+        'PAID'::public.payment_schedule_state,
+        'IN_ANALYSIS'::public.payment_schedule_state,
+        'FAILED'::public.payment_schedule_state,
+        'FAILED_PERMANENT'::public.payment_schedule_state,
+        'CANCELLED'::public.payment_schedule_state
+      ))
+    or (old.state = 'PROCESSING'::public.payment_schedule_state
+      and new.state in (
+        'PAID'::public.payment_schedule_state,
+        'IN_ANALYSIS'::public.payment_schedule_state,
+        'FAILED'::public.payment_schedule_state,
+        'FAILED_PERMANENT'::public.payment_schedule_state,
+        'SCHEDULED'::public.payment_schedule_state
+      ))
+    or (old.state = 'IN_ANALYSIS'::public.payment_schedule_state
+      and new.state in (
+        'PAID'::public.payment_schedule_state,
+        'IN_ANALYSIS'::public.payment_schedule_state,
+        'FAILED'::public.payment_schedule_state,
+        'FAILED_PERMANENT'::public.payment_schedule_state
+      ))
+    or (old.state = 'FAILED_PERMANENT'::public.payment_schedule_state
+      and new.state in (
+        'PROCESSING'::public.payment_schedule_state,
+        'PAID'::public.payment_schedule_state,
+        'IN_ANALYSIS'::public.payment_schedule_state,
+        'CANCELLED'::public.payment_schedule_state
+      ))
+    or (old.state = 'PAID'::public.payment_schedule_state
+      and new.state in (
+        'REFUND_REQUESTED'::public.payment_schedule_state,
+        'VOIDED'::public.payment_schedule_state
+      ))
+    or (old.state = 'REFUND_REQUESTED'::public.payment_schedule_state
+      and new.state in (
+        'REFUNDED'::public.payment_schedule_state,
+        'PARTIALLY_REFUNDED'::public.payment_schedule_state,
+        'PAID'::public.payment_schedule_state
+      ))
+    or (old.state = 'PARTIALLY_REFUNDED'::public.payment_schedule_state
+      and new.state in (
+        'REFUNDED'::public.payment_schedule_state,
+        'REFUND_REQUESTED'::public.payment_schedule_state
+      ))
+  ) then
+    raise exception 'PAYMENT_SCHEDULE_INVALID_TRANSITION'
       using
         errcode = 'P0001',
         detail = jsonb_build_object(
-          'code', 'PAYMENT_SCHEDULE_FAILED_PERMANENT_TRANSITION',
+          'code', 'PAYMENT_SCHEDULE_INVALID_TRANSITION',
           'from_state', old.state,
           'to_state', new.state
         )::text;
@@ -235,7 +286,7 @@ end;
 $$;
 
 comment on function public.payment_schedules_guard_state_transition() is
-  'Blocks illegal payment_schedules.state transitions; enforces terminal states, FAILED_PERMANENT allowlist (incl. reconcile to PAID/IN_ANALYSIS), and PAID invariants.';
+  'Enforces payment_schedules.state transition matrix, terminal-state exits, and PAID/FAILED_PERMANENT invariants.';
 
 create trigger payment_schedules_guard_state_transition
   before update on public.payment_schedules
