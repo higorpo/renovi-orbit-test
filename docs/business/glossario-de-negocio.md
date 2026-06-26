@@ -32,7 +32,7 @@ Termos extraídos ou inferidos a partir de nomes de entidades, rotas e interface
 | **Status do pedido** | `open`, `in_progress`, `closed`, `cancelled`. | `service_requests.status`. |
 | **Status da proposta** | `PENDING`, `ACCEPTED`, `REJECTED`, `REVISION_REQUESTED`, `REVISED`, `EXPIRED`, `REJECTED_AUTOMATICALLY`. | `provider_proposals.status` (enum CNS). |
 | **Unidade de duração da proposta** | `hours` ou `days`. | `provider_proposals.proposal_duration_unit`. |
-| **Taxa Renovi** | Constante de plataforma (ex.: chave `renovi_tax_provider` seed 0,15 nas migrations). | `platform_constants`. |
+| **Taxa Renovi** | Constante de plataforma (`renovi_tax_provider`, ex. seed 0,15). Congelada na proposta (`tax_rate`, `final_amount`) e reutilizada no pagamento (`commission_rate_pct`, `provider_payout` em `payment_schedules`). | `platform_constants`, `provider_proposals`, `payment_schedules`. |
 | **Assinatura de precificação** | Mecanismo HMAC para integridade dos valores calculados no servidor ao criar proposta. | RPCs `generate_provider_pricing_signature`, `create_provider_proposal`. |
 | **reCAPTCHA** | Validação anti-abuso em cadastro e envio de pedido. | `verify-recaptcha`, `src/lib/recaptcha.ts`. |
 | **Rate limit (Edge — soft)** | Proteção anti-abuso em **Edge Functions** por IP/usuário/função. Contador na tabela `platform_rate_limits`; janela rolling de 60 s; em erro de DB **fail-open** (permite a requisição). | `_shared/rateLimiter.ts`; `create-request-quote-order`, `chat-upload-media`, `generate-smart-description`. |

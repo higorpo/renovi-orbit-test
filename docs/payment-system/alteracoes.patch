@@ -210,7 +210,7 @@ index 0000000..c666dd4
 +| `CHARGE_FAILED_PERMANENT` | commit RPCs, `webhook_transaction_rejected_rpc()` | cron / manual / webhook | Yes | `cron` / `client` / `webhook` | `failure_code`, `webhook_event_id` |
 +| `CHARGE_IN_ANALYSIS` | commit RPCs (design: `IN_ANALYSIS_STARTED`) | cron / manual | Yes | `cron` / `client` | gateway response summary |
 +| `MANUAL_PAYMENT_INITIATED` | `manual_charge_acquire_lease_rpc()` | `manual-charge-payment` | Yes | `client` | lease metadata |
-+| `REFUND_SUBMITTED` | `process_refund_submit_rpc()` | `process-refund` | Yes | `client` / `provider` | `refund_amount`, `provider_transaction_id` |
++| `REFUND_SUBMITTED` | `process_refund_submit_rpc()` | `process-refund` | Yes | `client` / `provider` | `refund_amount`, `gateway_transaction_id` |
 +| `REFUND_FAILED` | `process_refund_record_failed_rpc()` | `process-refund` | Yes | `client` / `provider` | error message |
 +| `AUTO_CANCELLED` | `auto_cancel_services_rpc()` | `auto-cancel-unpaid-services` | Yes | `system` | cancellation reason |
 +| `ORPHAN_RECOVERED` | `recover_orphaned_payment_schedules()` | `recover-payment-leases` | Yes | `system` | `target_state`, attempt count |
@@ -348,7 +348,7 @@ index 0000000..f4c098a
 +| `idx_payment_schedules_service` | `payment_schedules` | Webhook/cancel lookup by `contracted_service_id` |
 +| `idx_audit_log_service` | `payment_audit_log` | Operator lifecycle timeline by service |
 +| `idx_provider_accounts_status` | `provider_accounts` | Onboarding detection cron |
-+| `payment_webhook_events_*_key` | `payment_webhook_events` | Dedup UNIQUE `(gateway_slug, event_type, provider_event_id)` |
++| `payment_webhook_events_*_key` | `payment_webhook_events` | Dedup UNIQUE `(gateway_slug, event_type, gateway_event_id)` |
 +
 +## Query patterns validated
 +
@@ -431,7 +431,7 @@ index 0000000..f4c098a
 +select id from payment_webhook_events
 +where gateway_slug = :slug
 +  and event_type = :type
-+  and provider_event_id = :provider_id;
++  and gateway_event_id = :provider_id;
 +```
 +
 +**Expected plan:** `Index Scan` on UNIQUE constraint index
@@ -463,7 +463,7 @@ index 0000000..be79928
 +| Field | When present | Description |
 +|---|---|---|
 +| `service_id` | Charge and service-scoped flows | Contracted service UUID (primary correlation key) |
-+| `correlation_id` | Always when `service_id` or webhook `provider_event_id` is set | Same as `service_id`, or webhook event id |
++| `correlation_id` | Always when `service_id` or webhook `gateway_event_id` is set | Same as `service_id`, or webhook event id |
 +| `schedule_id` | Schedule-scoped flows | `payment_schedules.id` |
 +| `gateway_slug` | Gateway interactions | e.g. `netcred` |
 +| `error_code` | Failures | Canonical or provider failure code |
@@ -517,7 +517,7 @@ index 0000000..be79928
 +| Field | Required |
 +|---|---|
 +| `event_type` | yes |
-+| `provider_event_id` | yes |
++| `gateway_event_id` | yes |
 +| `gateway_slug` | yes |
 +
 +### `webhook_processed`
@@ -527,7 +527,7 @@ index 0000000..be79928
 +| Field | Required |
 +|---|---|
 +| `event_type` | yes |
-+| `provider_event_id` | when known |
++| `gateway_event_id` | when known |
 +| `processing_duration_ms` | yes |
 +| `outcome` | yes (`processed`, `duplicate`, `queued`, `unknown_event_type`, `failed`) |
 +| `gateway_slug` | yes |
@@ -698,10 +698,10 @@ index 0000000..72073b8
 +| `id` | uuid | Internal reference |
 +| `client_id` | uuid | User reference |
 +| `provider_id` | uuid | Gateway reference |
-+| `provider_payment_profile_id` | text | Gateway-issued profile id |
++| `gateway_payment_profile_id` | text | Gateway-issued profile id |
 +| `card_number_masked` | text | Masked PAN (display only, e.g. `411111XXXXXX1111`) |
 +| `card_brand` | text | Network label (VCC, MASTER, …) |
-+| `provider_card_token` | text | Gateway-issued token reference |
++| `gateway_card_token` | text | Gateway-issued token reference |
 +| `expiry_month` / `expiry_year` | smallint | Expiry metadata (allowed with token reference) |
 +| `cardholder_name` | text | Cardholder PII (not PAN/CVV) |
 +| `billing_address` | jsonb | Billing PII (not PAN/CVV) |
@@ -751,7 +751,7 @@ index 0000000..72073b8
 +
 +### 2.2 All payment Edge Functions
 +
-+Broad static scan of payment EF source files confirms no `logger.*` calls reference `cardNumber`, `cardData`, `cvv`, `securityCode`, or `provider_card_token`.
++Broad static scan of payment EF source files confirms no `logger.*` calls reference `cardNumber`, `cardData`, `cvv`, `securityCode`, or `gateway_card_token`.
 +
 +**Test file:** `supabase/functions/_shared/payment/__tests__/pci_logging_audit_test.ts`
 +
@@ -806,7 +806,7 @@ index 0000000..72073b8
 +        │                         │
 +        │                         └── PAN/CVV stay at gateway
 +        ▼
-+payment_tokens row: provider_card_token + card_number_masked
++payment_tokens row: gateway_card_token + card_number_masked
 +        │
 +        ▼
 +Client receives: payment_token_id + masked display fields only
@@ -954,7 +954,7 @@ index 0000000..4e797f9
 +## Diagnosis
 +
 +```sql
-+select id, event_type, provider_event_id, state, retry_count, failure_reason, created_at, updated_at
++select id, event_type, gateway_event_id, state, retry_count, failure_reason, created_at, updated_at
 +from public.payment_webhook_events
 +where state = 'DEAD_LETTER'
 +order by updated_at desc
@@ -1315,7 +1315,7 @@ index b0cc093..79bf29d 100644
 +### 5. [x] Create `payment_tokens` Table + RLS Policies
  
  **Description:**
- Create the `payment_tokens` table for storing PCI-compliant card tokenization references. This table MUST NOT contain raw PAN or CVV at any point — schema design enforces this via column omission, not application-level validation alone. The UNIQUE constraint on `(client_id, provider_payment_profile_id)` prevents duplicate token records for the same card at the same gateway.
+ Create the `payment_tokens` table for storing PCI-compliant card tokenization references. This table MUST NOT contain raw PAN or CVV at any point — schema design enforces this via column omission, not application-level validation alone. The UNIQUE constraint on `(client_id, gateway_payment_profile_id)` prevents duplicate token records for the same card at the same gateway.
 @@ -418,7 +418,7 @@ REVOKE INSERT, UPDATE, DELETE ON payment_tokens FROM authenticated;
  
  ---
@@ -1360,7 +1360,7 @@ index b0cc093..79bf29d 100644
 +### 10. [x] Create `payment_webhook_events` Table + Dedup UNIQUE Constraint
  
  **Description:**
- Create the webhook event ingestion and deduplication table. Every webhook POST from NetCred MUST be persisted here BEFORE any validation or processing. The UNIQUE constraint on `(gateway_slug, event_type, provider_event_id)` is the primary deduplication mechanism — it prevents duplicate event processing even when the gateway retries delivery multiple times.
+ Create the webhook event ingestion and deduplication table. Every webhook POST from NetCred MUST be persisted here BEFORE any validation or processing. The UNIQUE constraint on `(gateway_slug, event_type, gateway_event_id)` is the primary deduplication mechanism — it prevents duplicate event processing even when the gateway retries delivery multiple times.
 @@ -852,7 +852,7 @@ CREATE INDEX idx_webhook_events_dead_letter
  
  ---
@@ -3244,7 +3244,7 @@ index 0000000..ae92deb
 +  const { data, error } = await supabase
 +    .from("provider_accounts" as never)
 +    .select("id, onboarding_status, email_dispatched_at, onboarding_submitted_at")
-+    .eq("provider_user_id", providerId)
++    .eq("provider_id", providerId)
 +    .eq("gateway_slug", "netcred")
 +    .maybeSingle();
 +
@@ -8835,17 +8835,17 @@ index 0000000..14af002
 +  assertEquals(ctx.error_code, "CARD_DECLINED");
 +});
 +
-+Deno.test("buildWebhookLogContext falls back to provider_event_id for correlation", () => {
++Deno.test("buildWebhookLogContext falls back to gateway_event_id for correlation", () => {
 +  const ctx = buildWebhookLogContext({
 +    event_type: "TRANSACTION_PAID",
-+    provider_event_id: "evt-99",
++    gateway_event_id: "evt-99",
 +    processing_duration_ms: 42,
 +    outcome: "processed",
 +  });
 +
 +  assertEquals(ctx.correlation_id, "evt-99");
 +  assertEquals(ctx.event_type, "TRANSACTION_PAID");
-+  assertEquals(ctx.provider_event_id, "evt-99");
++  assertEquals(ctx.gateway_event_id, "evt-99");
 +  assertEquals(ctx.gateway_slug, "netcred");
 +  assertEquals(ctx.processing_duration_ms, 42);
 +});
@@ -8962,7 +8962,7 @@ index 0000000..6c6e72c
 +export function captureWebhookDeadLetterCritical(extra: {
 +  event_id: string;
 +  event_type: string;
-+  provider_event_id?: string;
++  gateway_event_id?: string;
 +  schedule_id?: string | null;
 +  failure_reason?: string | null;
 +  retry_count?: number;
@@ -9168,7 +9168,7 @@ index 0000000..efb3649
 +export function buildWebhookLogContext(
 +  fields: {
 +    event_type: string;
-+    provider_event_id: string;
++    gateway_event_id: string;
 +    gateway_slug?: string;
 +    service_id?: string;
 +    processing_duration_ms?: number;
@@ -9177,7 +9177,7 @@ index 0000000..efb3649
 +): LogContext {
 +  const {
 +    event_type,
-+    provider_event_id,
++    gateway_event_id,
 +    gateway_slug = "netcred",
 +    service_id,
 +    processing_duration_ms,
@@ -9192,7 +9192,7 @@ index 0000000..efb3649
 +  });
 +
 +  context.event_type = event_type;
-+  context.provider_event_id = provider_event_id;
++  context.gateway_event_id = gateway_event_id;
 +
 +  if (processing_duration_ms !== undefined) {
 +    context.processing_duration_ms = processing_duration_ms;
@@ -9203,7 +9203,7 @@ index 0000000..efb3649
 +  }
 +
 +  if (!context.correlation_id) {
-+    context.correlation_id = provider_event_id;
++    context.correlation_id = gateway_event_id;
 +  }
 +
 +  return context;
@@ -10109,7 +10109,7 @@ index 0000000..219d335
 +  /logger\.(info|warn|error|debug)\([^)]*cardData/i,
 +  /logger\.(info|warn|error|debug)\([^)]*\.cvv/i,
 +  /logger\.(info|warn|error|debug)\([^)]*securityCode/i,
-+  /logger\.(info|warn|error|debug)\([^)]*provider_card_token/i,
++  /logger\.(info|warn|error|debug)\([^)]*gateway_card_token/i,
 +];
 +
 +async function readIfExists(path: string): Promise<string | null> {
@@ -12490,7 +12490,7 @@ index 0000000..9974a29
 +      state: "ACTIVE",
 +    }),
 +    loadProviderAccount: async () => ({
-+      provider_user_id: "provider-1",
++      provider_id: "provider-1",
 +      onboarding_status: "ACTIVE",
 +    }),
 +    acceptProposalRpc: async () => ({
@@ -12544,7 +12544,7 @@ index 0000000..9974a29
 +    authRequest(body),
 +    createDeps({
 +      loadProviderAccount: async () => ({
-+        provider_user_id: "provider-1",
++        provider_id: "provider-1",
 +        onboarding_status: "PENDING_DOCUMENTS",
 +      }),
 +    }),
@@ -12685,7 +12685,7 @@ index 0000000..698be9a
 +      state: "ACTIVE",
 +    }),
 +    loadProviderAccount: async () => ({
-+      provider_user_id: "provider-1",
++      provider_id: "provider-1",
 +      onboarding_status: "ACTIVE",
 +    }),
 +    acceptProposalRpc: async () => ({
@@ -12962,7 +12962,7 @@ index 0000000..be6d3d1
 +      state: "ACTIVE",
 +    }),
 +    loadProviderAccount: async () => ({
-+      provider_user_id: "provider-1",
++      provider_id: "provider-1",
 +      onboarding_status: "PENDING_DOCUMENTS",
 +    }),
 +    acceptProposalRpc: async () => ({
@@ -13331,8 +13331,8 @@ index 0000000..c76d7a5
 +    loadProviderAccount: async (providerId) => {
 +      const { data, error } = await supabase
 +        .from("provider_accounts")
-+        .select("provider_user_id, onboarding_status")
-+        .eq("provider_user_id", providerId)
++        .select("provider_id, onboarding_status")
++        .eq("provider_id", providerId)
 +        .eq("gateway_slug", "netcred")
 +        .maybeSingle();
 +
@@ -13563,7 +13563,7 @@ index 0000000..6ab4442
 +};
 +
 +export type ProviderAccountRecord = {
-+  provider_user_id: string;
++  provider_id: string;
 +  onboarding_status: string;
 +};
 diff --git a/supabase/functions/accept-proposal/validateInstallmentHmac.ts b/supabase/functions/accept-proposal/validateInstallmentHmac.ts
@@ -14993,7 +14993,7 @@ index 0000000..c7c2d8f
 +
 +const account: PendingProviderAccount = {
 +  id: "account-1",
-+  provider_user_id: "provider-1",
++  provider_id: "provider-1",
 +  document: "11222333000181",
 +  onboarding_status: "DOCUMENTS_SUBMITTED",
 +};
@@ -15002,7 +15002,7 @@ index 0000000..c7c2d8f
 +  let fetchCallCount = 0;
 +  const accounts = Array.from({ length: 50 }, (_, index) => ({
 +    id: `account-${index}`,
-+    provider_user_id: `provider-${index}`,
++    provider_id: `provider-${index}`,
 +    document: `${String(index).padStart(11, "0")}00181`,
 +    onboarding_status: "DOCUMENTS_SUBMITTED",
 +  }));
@@ -15254,7 +15254,7 @@ index 0000000..d7aaa06
 +            netcredBankAccountId: outcome.netcredBankAccountId,
 +          });
 +          await deps.enqueueActivationNotification(
-+            account.provider_user_id,
++            account.provider_id,
 +            account.id,
 +          );
 +          summary.activated += 1;
@@ -15357,7 +15357,7 @@ index 0000000..542473b
 +    loadPendingProviders: async (limit) => {
 +      const { data, error } = await supabase
 +        .from("provider_accounts")
-+        .select("id, provider_user_id, document, onboarding_status")
++        .select("id, provider_id, document, onboarding_status")
 +        .eq("gateway_slug", "netcred")
 +        .in("onboarding_status", ["DOCUMENTS_SUBMITTED", "UNDER_NETCRED_REVIEW"])
 +        .order("onboarding_submitted_at", { ascending: true })
@@ -15535,7 +15535,7 @@ index 0000000..59a11b9
 @@ -0,0 +1,44 @@
 +export type PendingProviderAccount = {
 +  id: string;
-+  provider_user_id: string;
++  provider_id: string;
 +  document: string;
 +  onboarding_status: string;
 +};
@@ -16353,12 +16353,12 @@ index 0000000..d7210b3
 +    calculateChargeAmount: async () => "1024.29",
 +    loadPaymentToken: async () => ({
 +      id: "token-1",
-+      provider_payment_profile_id: "403137",
-+      provider_card_token: "tok",
++      gateway_payment_profile_id: "403137",
++      gateway_card_token: "tok",
 +      state: "ACTIVE",
 +    }),
 +    loadProviderAccount: async () => ({
-+      provider_user_id: "provider-1",
++      provider_id: "provider-1",
 +      netcred_company_id: "1048",
 +      netcred_bank_account_id: "2053",
 +      onboarding_status: "ACTIVE",
@@ -16833,8 +16833,8 @@ index 0000000..f6acada
 +    paymentMethod: {
 +      type: "CREDIT_CARD",
 +      installmentNumber: schedule.installment_number,
-+      paymentProfileId: paymentToken.provider_payment_profile_id,
-+      paymentToken: paymentToken.provider_card_token,
++      paymentProfileId: paymentToken.gateway_payment_profile_id,
++      paymentToken: paymentToken.gateway_card_token,
 +    },
 +    payoutRule,
 +    sessionId: schedule.clearsale_session_id ?? undefined,
@@ -17003,7 +17003,7 @@ index 0000000..29b377f
 +    loadPaymentToken: async (tokenId) => {
 +      const { data, error } = await supabase
 +        .from("payment_tokens")
-+        .select("id, provider_payment_profile_id, provider_card_token, state")
++        .select("id, gateway_payment_profile_id, gateway_card_token, state")
 +        .eq("id", tokenId)
 +        .maybeSingle();
 +
@@ -17017,9 +17017,9 @@ index 0000000..29b377f
 +      const { data, error } = await supabase
 +        .from("provider_accounts")
 +        .select(
-+          "provider_user_id, netcred_company_id, netcred_bank_account_id, onboarding_status",
++          "provider_id, netcred_company_id, netcred_bank_account_id, onboarding_status",
 +        )
-+        .eq("provider_user_id", providerId)
++        .eq("provider_id", providerId)
 +        .eq("gateway_slug", "netcred")
 +        .maybeSingle();
 +
@@ -17036,8 +17036,8 @@ index 0000000..29b377f
 +        p_client_id: input.clientId,
 +        p_outcome: input.outcome,
 +        p_charge_amount: input.chargeAmount,
-+        p_provider_charge_id: input.providerChargeId ?? null,
-+        p_provider_transaction_id: input.providerTransactionId ?? null,
++        p_gateway_charge_id: input.providerChargeId ?? null,
++        p_gateway_transaction_id: input.providerTransactionId ?? null,
 +        p_failure_code: input.failureCode ?? null,
 +        p_failure_reason: input.failureReason ?? null,
 +        p_gateway_latency_ms: input.gatewayLatencyMs,
@@ -17132,13 +17132,13 @@ index 0000000..1c53336
 +
 +export type PaymentTokenRecord = {
 +  id: string;
-+  provider_payment_profile_id: string;
-+  provider_card_token: string;
++  gateway_payment_profile_id: string;
++  gateway_card_token: string;
 +  state: string;
 +};
 +
 +export type ProviderAccountRecord = {
-+  provider_user_id: string;
++  provider_id: string;
 +  netcred_company_id: string | null;
 +  netcred_bank_account_id: string | null;
 +  onboarding_status: string;
@@ -17637,7 +17637,7 @@ index 0000000..07ab246
 +      schedule_id: "schedule-1",
 +      service_id: "service-1",
 +      state: "PAID",
-+      provider_transaction_id: "txn-dispute-1",
++      gateway_transaction_id: "txn-dispute-1",
 +      is_disputed: true,
 +    }),
 +    emitCritical: (extra) => {
@@ -17660,7 +17660,7 @@ index 0000000..07ab246
 +  assertEquals(criticalEvents.length, 1);
 +  assertEquals(criticalEvents[0]?.contracted_service_id, "service-1");
 +  assertEquals(criticalEvents[0]?.schedule_state, "PAID");
-+  assertEquals(criticalEvents[0]?.provider_transaction_id, "txn-dispute-1");
++  assertEquals(criticalEvents[0]?.gateway_transaction_id, "txn-dispute-1");
 +});
 diff --git a/supabase/functions/netcred-webhook/__tests__/transaction_update_test.ts b/supabase/functions/netcred-webhook/__tests__/transaction_update_test.ts
 new file mode 100644
@@ -17866,8 +17866,8 @@ index 0000000..66dcacf
 +        p_reference_code: input.referenceCode,
 +        p_webhook_event_id: input.webhookEventId,
 +        p_paid_amount: input.paidAmount ?? null,
-+        p_provider_charge_id: input.providerChargeId ?? null,
-+        p_provider_transaction_id: input.providerTransactionId ?? null,
++        p_gateway_charge_id: input.providerChargeId ?? null,
++        p_gateway_transaction_id: input.providerTransactionId ?? null,
 +      });
 +
 +      if (error) {
@@ -17934,7 +17934,7 @@ index 0000000..66dcacf
 +      const { data, error } = await supabase.rpc("webhook_transaction_dispute_rpc", {
 +        p_reference_code: input.referenceCode,
 +        p_webhook_event_id: input.webhookEventId,
-+        p_provider_transaction_id: input.providerTransactionId ?? null,
++        p_gateway_transaction_id: input.providerTransactionId ?? null,
 +      });
 +
 +      if (error) {
@@ -17957,7 +17957,7 @@ index 0000000..66dcacf
 +    delete: {
 +      applyDelete: async (input) => {
 +        const { data, error } = await supabase.rpc("webhook_payment_profile_delete_rpc", {
-+          p_provider_payment_profile_id: input.providerPaymentProfileId,
++          p_gateway_payment_profile_id: input.providerPaymentProfileId,
 +          p_webhook_event_id: input.webhookEventId,
 +        });
 +
@@ -17972,7 +17972,7 @@ index 0000000..66dcacf
 +    tokenize: {
 +      applyTokenize: async (input) => {
 +        const { data, error } = await supabase.rpc("webhook_payment_profile_tokenize_rpc", {
-+          p_provider_payment_profile_id: input.providerPaymentProfileId,
++          p_gateway_payment_profile_id: input.providerPaymentProfileId,
 +          p_is_active: input.isActive,
 +          p_webhook_event_id: input.webhookEventId,
 +        });
@@ -17988,7 +17988,7 @@ index 0000000..66dcacf
 +    expiring: {
 +      applyExpiring: async (input) => {
 +        const { data, error } = await supabase.rpc("webhook_payment_profile_expiring_rpc", {
-+          p_provider_payment_profile_id: input.providerPaymentProfileId,
++          p_gateway_payment_profile_id: input.providerPaymentProfileId,
 +          p_webhook_event_id: input.webhookEventId,
 +        });
 +
@@ -18003,7 +18003,7 @@ index 0000000..66dcacf
 +    update: {
 +      applyUpdate: async (input) => {
 +        const { data, error } = await supabase.rpc("webhook_payment_profile_update_rpc", {
-+          p_provider_payment_profile_id: input.providerPaymentProfileId,
++          p_gateway_payment_profile_id: input.providerPaymentProfileId,
 +          p_webhook_event_id: input.webhookEventId,
 +          p_card_brand: input.cardBrand ?? null,
 +          p_expiry_month: input.expiryMonth ?? null,
@@ -18061,7 +18061,7 @@ index 0000000..0652608
 +  id: string;
 +  gateway_slug: string;
 +  event_type: string;
-+  provider_event_id: string;
++  gateway_event_id: string;
 +  state: string;
 +  is_duplicate: boolean;
 +  processed_at: string | null;
@@ -18078,7 +18078,7 @@ index 0000000..0652608
 +  persist(input: PersistWebhookInput): PersistWebhookResult {
 +    const existingKey = this.key(input);
 +    const existing = [...this.events.values()].find((event) =>
-+      `${event.gateway_slug}:${event.event_type}:${event.provider_event_id}` === existingKey
++      `${event.gateway_slug}:${event.event_type}:${event.gateway_event_id}` === existingKey
 +    );
 +
 +    if (existing) {
@@ -18090,7 +18090,7 @@ index 0000000..0652608
 +      id,
 +      gateway_slug: input.gatewaySlug,
 +      event_type: input.eventType,
-+      provider_event_id: input.providerEventId,
++      gateway_event_id: input.providerEventId,
 +      state: "RECEIVED",
 +      is_duplicate: false,
 +      processed_at: null,
@@ -18259,7 +18259,7 @@ index 0000000..0652608
 +  });
 +}
 +
-+Deno.test("duplicate provider_event_id returns HTTP 200, marks is_duplicate, skips handler", async () => {
++Deno.test("duplicate gateway_event_id returns HTTP 200, marks is_duplicate, skips handler", async () => {
 +  const store = new WebhookDedupStore();
 +  let handlerInvocations = 0;
 +  const rawBody = '{"id":"provider-evt-dup-1","transaction":{"referenceCode":"service-1"}}';
@@ -18636,7 +18636,7 @@ index 0000000..e37b379
 +  } catch (error) {
 +    logger.error("webhook_persist_failed", {
 +      event_type: eventType,
-+      provider_event_id: providerEventId,
++      gateway_event_id: providerEventId,
 +      gateway_slug: "netcred",
 +      error: error instanceof Error ? error.message : String(error),
 +    });
@@ -18645,7 +18645,7 @@ index 0000000..e37b379
 +
 +  logger.info(PAYMENT_LOG_EVENTS.WEBHOOK_RECEIVED, {
 +    event_type: eventType,
-+    provider_event_id: providerEventId,
++    gateway_event_id: providerEventId,
 +    gateway_slug: "netcred",
 +    correlation_id: providerEventId,
 +  });
@@ -18654,7 +18654,7 @@ index 0000000..e37b379
 +    await deps.markDuplicate(persistResult.eventId);
 +    logger.info(PAYMENT_LOG_EVENTS.WEBHOOK_PROCESSED, {
 +      event_type: eventType,
-+      provider_event_id: providerEventId,
++      gateway_event_id: providerEventId,
 +      gateway_slug: "netcred",
 +      processing_duration_ms: Math.round(performance.now() - startedAt),
 +      outcome: "duplicate",
@@ -18674,7 +18674,7 @@ index 0000000..e37b379
 +    await deps.markFailed(persistResult.eventId, "INVALID_SIGNATURE");
 +    deps.emitInvalidSignatureWarning({
 +      event_type: eventType,
-+      provider_event_id: providerEventId,
++      gateway_event_id: providerEventId,
 +      source_ip: clientIp,
 +      event_id: persistResult.eventId,
 +    });
@@ -18689,14 +18689,14 @@ index 0000000..e37b379
 +  if (!handler) {
 +    logger.warn("webhook_unknown_event_type", {
 +      event_type: eventType,
-+      provider_event_id: providerEventId,
++      gateway_event_id: providerEventId,
 +      gateway_slug: "netcred",
 +      event_id: persistResult.eventId,
 +    });
 +    await deps.markProcessed(persistResult.eventId);
 +    logger.info(PAYMENT_LOG_EVENTS.WEBHOOK_PROCESSED, {
 +      event_type: eventType,
-+      provider_event_id: providerEventId,
++      gateway_event_id: providerEventId,
 +      gateway_slug: "netcred",
 +      processing_duration_ms: Math.round(performance.now() - startedAt),
 +      outcome: "unknown_event_type",
@@ -18720,7 +18720,7 @@ index 0000000..e37b379
 +      await deps.markProcessing(persistResult.eventId);
 +      logger.info(PAYMENT_LOG_EVENTS.WEBHOOK_PROCESSED, {
 +        event_type: eventType,
-+        provider_event_id: providerEventId,
++        gateway_event_id: providerEventId,
 +        gateway_slug: "netcred",
 +        processing_duration_ms: Math.round(performance.now() - startedAt),
 +        outcome: "queued",
@@ -18733,7 +18733,7 @@ index 0000000..e37b379
 +    await deps.markProcessed(persistResult.eventId);
 +    logger.info(PAYMENT_LOG_EVENTS.WEBHOOK_PROCESSED, {
 +      event_type: eventType,
-+      provider_event_id: providerEventId,
++      gateway_event_id: providerEventId,
 +      gateway_slug: "netcred",
 +      processing_duration_ms: Math.round(performance.now() - startedAt),
 +      outcome: "processed",
@@ -18746,7 +18746,7 @@ index 0000000..e37b379
 +    await deps.markFailed(persistResult.eventId, failureReason);
 +    logger.warn(PAYMENT_LOG_EVENTS.WEBHOOK_PROCESSED, {
 +      event_type: eventType,
-+      provider_event_id: providerEventId,
++      gateway_event_id: providerEventId,
 +      gateway_slug: "netcred",
 +      processing_duration_ms: Math.round(performance.now() - startedAt),
 +      outcome: "failed",
@@ -19669,7 +19669,7 @@ index 0000000..8514730
 +  schedule_id?: string;
 +  service_id?: string;
 +  state?: string;
-+  provider_transaction_id?: string;
++  gateway_transaction_id?: string;
 +  is_disputed?: boolean;
 +};
 +
@@ -19702,7 +19702,7 @@ index 0000000..8514730
 +    deps.emitCritical({
 +      event: "transaction_dispute_received",
 +      contracted_service_id: result.service_id,
-+      provider_transaction_id: result.provider_transaction_id,
++      gateway_transaction_id: result.gateway_transaction_id,
 +      schedule_id: result.schedule_id,
 +      schedule_state: result.state,
 +      webhook_event_id: context.eventId,
@@ -19955,7 +19955,7 @@ index 0000000..6024d19
 +    .select("id")
 +    .eq("gateway_slug", input.gatewaySlug)
 +    .eq("event_type", input.eventType)
-+    .eq("provider_event_id", input.providerEventId)
++    .eq("gateway_event_id", input.providerEventId)
 +    .maybeSingle();
 +
 +  if (error || !data) {
@@ -19976,7 +19976,7 @@ index 0000000..6024d19
 +        .insert({
 +          gateway_slug: input.gatewaySlug,
 +          event_type: input.eventType,
-+          provider_event_id: input.providerEventId,
++          gateway_event_id: input.providerEventId,
 +          raw_payload: input.rawPayload as Json,
 +          raw_headers: input.rawHeaders as Json,
 +          state: "RECEIVED",
@@ -21159,7 +21159,7 @@ index 0000000..0314dcc
 +      const { data: schedule, error: scheduleError } = await supabase
 +        .from("payment_schedules")
 +        .select(
-+          "id, state, base_amount, paid_amount, provider_transaction_id",
++          "id, state, base_amount, paid_amount, gateway_transaction_id",
 +        )
 +        .eq("contracted_service_id", serviceId)
 +        .maybeSingle();
@@ -21178,7 +21178,7 @@ index 0000000..0314dcc
 +        scheduleState: schedule.state,
 +        baseAmount: schedule.base_amount,
 +        paidAmount: schedule.paid_amount,
-+        providerTransactionId: schedule.provider_transaction_id,
++        providerTransactionId: schedule.gateway_transaction_id,
 +      } satisfies RefundContext;
 +    },
 +    preChargeCancel: async (input) => {
@@ -21212,7 +21212,7 @@ index 0000000..0314dcc
 +      const payload = data as Record<string, unknown>;
 +      return {
 +        scheduleId: String(payload.schedule_id),
-+        providerTransactionId: String(payload.provider_transaction_id ?? ""),
++        providerTransactionId: String(payload.gateway_transaction_id ?? ""),
 +        paidAmount: String(payload.paid_amount ?? "0.00"),
 +        baseAmount: String(payload.base_amount ?? "0.00"),
 +        refundAmount: String(payload.refund_amount ?? input.refundAmount),
@@ -21360,7 +21360,7 @@ index 0000000..19820ee
 +  event_id: "event-1",
 +  gateway_slug: "netcred",
 +  event_type: "TRANSACTION_CAPTURE",
-+  provider_event_id: "provider-1",
++  gateway_event_id: "provider-1",
 +  raw_payload: {
 +    transaction: {
 +      referenceCode: "service-1",
@@ -21392,7 +21392,7 @@ index 0000000..19820ee
 +        outcome: "failed",
 +        event_id: "event-1",
 +        event_type: "TRANSACTION_CAPTURE",
-+        provider_event_id: "provider-1",
++        gateway_event_id: "provider-1",
 +        retry_count: 2,
 +        failure_reason: "should-not-happen",
 +      }),
@@ -21422,7 +21422,7 @@ index 0000000..19820ee
 +          outcome: "failed" as const,
 +          event_id: "event-1",
 +          event_type: "TRANSACTION_CAPTURE",
-+          provider_event_id: "provider-1",
++          gateway_event_id: "provider-1",
 +          retry_count: failureCount + 1,
 +          failure_reason: `handler_failed_${failureCount}`,
 +          next_retry_at: new Date(Date.now() + failureCount * 5 * 60_000).toISOString(),
@@ -21433,7 +21433,7 @@ index 0000000..19820ee
 +        outcome: "dead_letter" as const,
 +        event_id: "event-1",
 +        event_type: "TRANSACTION_CAPTURE",
-+        provider_event_id: "provider-1",
++        gateway_event_id: "provider-1",
 +        retry_count: 3,
 +        failure_reason: "handler_failed_3",
 +        schedule_id: "schedule-1",
@@ -21629,7 +21629,7 @@ index 0000000..c56583b
 +      queue_id: item.queue_id ? String(item.queue_id) : undefined,
 +      gateway_slug: String(item.gateway_slug),
 +      event_type: String(item.event_type),
-+      provider_event_id: String(item.provider_event_id),
++      gateway_event_id: String(item.gateway_event_id),
 +      raw_payload: (item.raw_payload ?? {}) as Record<string, unknown>,
 +      retry_count: Number(item.retry_count ?? 0),
 +      failure_reason: typeof item.failure_reason === "string"
@@ -21645,7 +21645,7 @@ index 0000000..c56583b
 +  captureWebhookDeadLetterCritical({
 +    event_id: input.event_id,
 +    event_type: input.event_type,
-+    provider_event_id: input.provider_event_id,
++    gateway_event_id: input.gateway_event_id,
 +    schedule_id: input.schedule_id ?? null,
 +    failure_reason: input.failure_reason,
 +    retry_count: input.retry_count,
@@ -21654,7 +21654,7 @@ index 0000000..c56583b
 +  logger.error("WEBHOOK_DEAD_LETTER", {
 +    event_id: input.event_id,
 +    event_type: input.event_type,
-+    provider_event_id: input.provider_event_id,
++    gateway_event_id: input.gateway_event_id,
 +    schedule_id: input.schedule_id ?? null,
 +    failure_reason: input.failure_reason,
 +    retry_count: input.retry_count,
@@ -21820,7 +21820,7 @@ index 0000000..ce663bc
 +  queue_id?: string;
 +  gateway_slug: string;
 +  event_type: string;
-+  provider_event_id: string;
++  gateway_event_id: string;
 +  raw_payload: Record<string, unknown>;
 +  retry_count: number;
 +  failure_reason?: string | null;
@@ -21830,7 +21830,7 @@ index 0000000..ce663bc
 +  outcome: "failed" | "dead_letter";
 +  event_id: string;
 +  event_type: string;
-+  provider_event_id: string;
++  gateway_event_id: string;
 +  retry_count: number;
 +  failure_reason: string;
 +  schedule_id?: string | null;
@@ -22219,8 +22219,8 @@ index 0000000..33d25e4
 +        p_gateway_state: input.gatewayState,
 +        p_paid_amount: input.paidAmount ?? null,
 +        p_refunded_amount: input.refundedAmount ?? null,
-+        p_provider_charge_id: input.providerChargeId ?? null,
-+        p_provider_transaction_id: input.providerTransactionId ?? null,
++        p_gateway_charge_id: input.providerChargeId ?? null,
++        p_gateway_transaction_id: input.providerTransactionId ?? null,
 +      });
 +
 +      if (error) {
@@ -23009,8 +23009,8 @@ index 0000000..aaeb191
 +  return {
 +    calculateChargeAmount: async () => "1024.29",
 +    loadPaymentToken: async () => ({
-+      provider_payment_profile_id: "403137",
-+      provider_card_token: "tok",
++      gateway_payment_profile_id: "403137",
++      gateway_card_token: "tok",
 +    }),
 +    loadProviderAccount: async () => ({
 +      netcred_company_id: "1048",
@@ -23763,7 +23763,7 @@ index 0000000..e9193b2
 +    loadPaymentToken: async (tokenId) => {
 +      const { data, error } = await supabase
 +        .from("payment_tokens")
-+        .select("provider_payment_profile_id, provider_card_token")
++        .select("gateway_payment_profile_id, gateway_card_token")
 +        .eq("id", tokenId)
 +        .maybeSingle();
 +
@@ -23777,7 +23777,7 @@ index 0000000..e9193b2
 +      const { data, error } = await supabase
 +        .from("provider_accounts")
 +        .select("netcred_company_id, netcred_bank_account_id, onboarding_status")
-+        .eq("provider_user_id", providerId)
++        .eq("provider_id", providerId)
 +        .eq("gateway_slug", "netcred")
 +        .maybeSingle();
 +
@@ -23794,8 +23794,8 @@ index 0000000..e9193b2
 +        p_schedule_id: input.scheduleId,
 +        p_outcome: input.outcome,
 +        p_charge_amount: input.chargeAmount,
-+        p_provider_charge_id: input.providerChargeId ?? null,
-+        p_provider_transaction_id: input.providerTransactionId ?? null,
++        p_gateway_charge_id: input.providerChargeId ?? null,
++        p_gateway_transaction_id: input.providerTransactionId ?? null,
 +        p_failure_code: input.failureCode ?? null,
 +        p_failure_reason: input.failureReason ?? null,
 +        p_gateway_latency_ms: input.gatewayLatencyMs,
@@ -23941,8 +23941,8 @@ index 0000000..8712aaf
 +  return {
 +    calculateChargeAmount: async () => "1024.29",
 +    loadPaymentToken: async () => ({
-+      provider_payment_profile_id: "403137",
-+      provider_card_token: "tok",
++      gateway_payment_profile_id: "403137",
++      gateway_card_token: "tok",
 +    }),
 +    loadProviderAccount: async () => ({
 +      netcred_company_id: "1048",
@@ -24642,8 +24642,8 @@ index 0000000..5dab2a7
 +    installmentNumber: number;
 +  }) => Promise<string | null>;
 +  loadPaymentToken: (tokenId: string) => Promise<{
-+    provider_payment_profile_id: string;
-+    provider_card_token: string;
++    gateway_payment_profile_id: string;
++    gateway_card_token: string;
 +  } | null>;
 +  loadProviderAccount: (providerId: string) => Promise<{
 +    netcred_company_id: string | null;
@@ -24802,7 +24802,7 @@ index 0000000..5dab2a7
 +
 +  const payoutRule = buildPayoutRule(
 +    {
-+      provider_user_id: schedule.provider_id,
++      provider_id: schedule.provider_id,
 +      netcred_company_id: providerAccount.netcred_company_id,
 +      netcred_bank_account_id: providerAccount.netcred_bank_account_id,
 +      onboarding_status: providerAccount.onboarding_status,
@@ -24817,8 +24817,8 @@ index 0000000..5dab2a7
 +    paymentMethod: {
 +      type: "CREDIT_CARD",
 +      installmentNumber: schedule.installment_number,
-+      paymentProfileId: paymentToken.provider_payment_profile_id,
-+      paymentToken: paymentToken.provider_card_token,
++      paymentProfileId: paymentToken.gateway_payment_profile_id,
++      paymentToken: paymentToken.gateway_card_token,
 +    },
 +    payoutRule,
 +    sessionId: schedule.clearsale_session_id ?? undefined,
@@ -25446,8 +25446,8 @@ index 0000000..db0d820
 +
 +      const { data: account, error: accountError } = await supabase
 +        .from("provider_accounts")
-+        .select("provider_user_id, netcred_company_id")
-+        .eq("provider_user_id", proposal.provider_id)
++        .select("provider_id, netcred_company_id")
++        .eq("provider_id", proposal.provider_id)
 +        .eq("gateway_slug", "netcred")
 +        .maybeSingle();
 +
@@ -25456,7 +25456,7 @@ index 0000000..db0d820
 +      }
 +
 +      return mapProviderAccountRow({
-+        provider_id: account?.provider_user_id ?? proposal.provider_id,
++        provider_id: account?.provider_id ?? proposal.provider_id,
 +        netcred_company_id: account?.netcred_company_id ?? null,
 +      });
 +    },
@@ -25491,10 +25491,10 @@ index 0000000..db0d820
 +        .insert({
 +          client_id: clientId,
 +          provider_id: paymentProviderId,
-+          provider_payment_profile_id: tokenizeResult.paymentProfileId ?? "",
++          gateway_payment_profile_id: tokenizeResult.paymentProfileId ?? "",
 +          card_number_masked: tokenizeResult.cardNumberMasked ?? "",
 +          card_brand: tokenizeResult.cardBrand ?? "",
-+          provider_card_token: tokenizeResult.token ?? "",
++          gateway_card_token: tokenizeResult.token ?? "",
 +          expiry_month: parsed.cardData.expiryMonth,
 +          expiry_year: parsed.cardData.expiryYear,
 +          cardholder_name: parsed.cardData.cardholderName,
@@ -26484,10 +26484,10 @@ index 0000000..49fedc7
 +  id uuid primary key default gen_random_uuid(),
 +  client_id uuid not null references public.profiles (id),
 +  provider_id uuid not null references public.payment_providers (id),
-+  provider_payment_profile_id text not null,
++  gateway_payment_profile_id text not null,
 +  card_number_masked text not null,
 +  card_brand text not null,
-+  provider_card_token text not null,
++  gateway_card_token text not null,
 +  expiry_month smallint not null check (expiry_month between 1 and 12),
 +  expiry_year smallint not null,
 +  cardholder_name text not null,
@@ -26496,13 +26496,13 @@ index 0000000..49fedc7
 +    check (state in ('ACTIVE', 'EXPIRED', 'REVOKED', 'TOKENIZATION_FAILED')),
 +  created_at timestamptz not null default now(),
 +  updated_at timestamptz not null default now(),
-+  unique (client_id, provider_payment_profile_id)
++  unique (client_id, gateway_payment_profile_id)
 +);
 +
 +comment on table public.payment_tokens is
 +  'PCI-scoped card token references; no raw PAN or CVV columns.';
 +
-+comment on column public.payment_tokens.provider_payment_profile_id is
++comment on column public.payment_tokens.gateway_payment_profile_id is
 +  'Gateway-issued payment profile id (e.g. NetCred paymentProfile.id).';
 +
 +comment on column public.payment_tokens.billing_address is
@@ -26546,7 +26546,7 @@ index 0000000..f0824e8
 +
 +create table public.provider_accounts (
 +  id uuid primary key default gen_random_uuid(),
-+  provider_user_id uuid not null references public.profiles (id),
++  provider_id uuid not null references public.profiles (id),
 +  gateway_slug text not null references public.payment_providers (slug),
 +  document text not null,
 +  netcred_company_id text,
@@ -26565,7 +26565,7 @@ index 0000000..f0824e8
 +  email_dispatched_at timestamptz,
 +  created_at timestamptz not null default now(),
 +  updated_at timestamptz not null default now(),
-+  unique (provider_user_id, gateway_slug)
++  unique (provider_id, gateway_slug)
 +);
 +
 +comment on table public.provider_accounts is
@@ -26582,7 +26582,7 @@ index 0000000..f0824e8
 +  where onboarding_status in ('DOCUMENTS_SUBMITTED', 'UNDER_NETCRED_REVIEW');
 +
 +create index idx_provider_accounts_user
-+  on public.provider_accounts (provider_user_id);
++  on public.provider_accounts (provider_id);
 +
 +create trigger provider_accounts_updated_at
 +  before update on public.provider_accounts
@@ -26599,7 +26599,7 @@ index 0000000..e34fedb
 +
 +create table public.provider_kyc_submissions (
 +  id uuid primary key default gen_random_uuid(),
-+  provider_user_id uuid not null references public.profiles (id),
++  provider_id uuid not null references public.profiles (id),
 +  entity_type text not null check (entity_type in ('CPF', 'CNPJ')),
 +  full_name text not null,
 +  document text not null,
@@ -26626,14 +26626,14 @@ index 0000000..e34fedb
 +  'Append-only KYC payload sent to credenciamento@renovi.com.br; contains PII.';
 +
 +create index idx_kyc_submissions_provider
-+  on public.provider_kyc_submissions (provider_user_id);
++  on public.provider_kyc_submissions (provider_id);
 +
 +alter table public.provider_kyc_submissions enable row level security;
 +
 +create policy kyc_submissions_provider_select
 +  on public.provider_kyc_submissions
 +  for select
-+  using ((select auth.uid()) = provider_user_id);
++  using ((select auth.uid()) = provider_id);
 +
 +revoke insert, update, delete on public.provider_kyc_submissions from authenticated;
 +grant select on public.provider_kyc_submissions to authenticated;
@@ -26747,8 +26747,8 @@ index 0000000..6d16d6d
 +  upcoming_charge_notified_at timestamptz,
 +  is_disputed boolean not null default false,
 +  needs_payment_method_update boolean not null default false,
-+  provider_charge_id text,
-+  provider_transaction_id text,
++  gateway_charge_id text,
++  gateway_transaction_id text,
 +  paid_at timestamptz,
 +  failed_at timestamptz,
 +  failed_permanently_at timestamptz,
@@ -26847,7 +26847,7 @@ index 0000000..da4c326
 +  id text primary key default gen_random_uuid()::text,
 +  gateway_slug text not null,
 +  event_type text not null,
-+  provider_event_id text not null,
++  gateway_event_id text not null,
 +  raw_payload jsonb not null,
 +  raw_headers jsonb not null,
 +  state text not null default 'RECEIVED'
@@ -26867,7 +26867,7 @@ index 0000000..da4c326
 +  is_duplicate boolean not null default false,
 +  created_at timestamptz not null default now(),
 +  updated_at timestamptz not null default now(),
-+  unique (gateway_slug, event_type, provider_event_id)
++  unique (gateway_slug, event_type, gateway_event_id)
 +);
 +
 +comment on table public.payment_webhook_events is
@@ -27094,7 +27094,7 @@ index 0000000..6d9eb2a
 +create policy provider_accounts_owner_select
 +  on public.provider_accounts
 +  for select
-+  using ((select auth.uid()) = provider_user_id);
++  using ((select auth.uid()) = provider_id);
 +
 +revoke insert, update, delete on public.provider_accounts from authenticated;
 +grant select on public.provider_accounts to authenticated;
@@ -27664,7 +27664,7 @@ index 0000000..2c884af
 +    from public.contracted_services cs
 +    join public.payment_schedules ps on ps.contracted_service_id = cs.id
 +    left join public.provider_accounts pa
-+      on pa.provider_user_id = ps.provider_id
++      on pa.provider_id = ps.provider_id
 +      and pa.gateway_slug = ps.gateway_slug
 +    where cs.service_scheduled_at is not null
 +      and cs.service_scheduled_at - now() <= make_interval(hours => v_cancel_hours)
@@ -27854,7 +27854,7 @@ index 0000000..d67acd1
 +-- Applies to list_provider_opportunities (successor to match_provider_jobs) and cns_initiate_conversation.
 +
 +create or replace function public.payment_is_provider_credentialed(
-+  p_provider_user_id uuid,
++  p_provider_id uuid,
 +  p_gateway_slug text default 'netcred'
 +)
 +returns boolean
@@ -27867,7 +27867,7 @@ index 0000000..d67acd1
 +    (
 +      select pa.onboarding_status = 'ACTIVE'
 +      from public.provider_accounts pa
-+      where pa.provider_user_id = p_provider_user_id
++      where pa.provider_id = p_provider_id
 +        and pa.gateway_slug = p_gateway_slug
 +    ),
 +    false
@@ -29155,8 +29155,8 @@ index 0000000..a897353
 +  p_client_id uuid,
 +  p_outcome text,
 +  p_charge_amount numeric(12, 2),
-+  p_provider_charge_id text,
-+  p_provider_transaction_id text,
++  p_gateway_charge_id text,
++  p_gateway_transaction_id text,
 +  p_failure_code text,
 +  p_failure_reason text,
 +  p_gateway_latency_ms int,
@@ -29198,8 +29198,8 @@ index 0000000..a897353
 +      state = 'PAID',
 +      paid_at = now(),
 +      paid_amount = p_charge_amount,
-+      provider_charge_id = p_provider_charge_id,
-+      provider_transaction_id = p_provider_transaction_id,
++      gateway_charge_id = p_gateway_charge_id,
++      gateway_transaction_id = p_gateway_transaction_id,
 +      locked_until = null,
 +      failure_code = null,
 +      failure_reason = null,
@@ -29217,8 +29217,8 @@ index 0000000..a897353
 +    update public.payment_schedules ps
 +    set
 +      state = 'IN_ANALYSIS',
-+      provider_charge_id = coalesce(p_provider_charge_id, ps.provider_charge_id),
-+      provider_transaction_id = coalesce(p_provider_transaction_id, ps.provider_transaction_id),
++      gateway_charge_id = coalesce(p_gateway_charge_id, ps.gateway_charge_id),
++      gateway_transaction_id = coalesce(p_gateway_transaction_id, ps.gateway_transaction_id),
 +      locked_until = null,
 +      updated_at = now()
 +    where ps.id = v_schedule.id;
@@ -29308,8 +29308,8 @@ index 0000000..a897353
 +    jsonb_build_object(
 +      'charge_amount', p_charge_amount,
 +      'manual_attempt_count', v_schedule.manual_attempt_count,
-+      'provider_charge_id', p_provider_charge_id,
-+      'provider_transaction_id', p_provider_transaction_id
++      'gateway_charge_id', p_gateway_charge_id,
++      'gateway_transaction_id', p_gateway_transaction_id
 +    )
 +  );
 +
@@ -29577,8 +29577,8 @@ index 0000000..563d76a
 +            and ps.state = 'REFUND_REQUESTED'
 +          limit 1
 +        ),
-+        'provider_transaction_id', (
-+          select ps.provider_transaction_id
++        'gateway_transaction_id', (
++          select ps.gateway_transaction_id
 +          from public.payment_schedules ps
 +          where ps.contracted_service_id = p_service_id
 +            and ps.state = 'REFUND_REQUESTED'
@@ -29592,7 +29592,7 @@ index 0000000..563d76a
 +    raise exception 'INVALID_SCHEDULE_STATE' using errcode = 'P0001';
 +  end if;
 +
-+  if v_schedule.provider_transaction_id is null then
++  if v_schedule.gateway_transaction_id is null then
 +    raise exception 'TRANSACTION_NOT_FOUND' using errcode = 'P0001';
 +  end if;
 +
@@ -29666,7 +29666,7 @@ index 0000000..563d76a
 +
 +  return jsonb_build_object(
 +    'schedule_id', v_schedule.id,
-+    'provider_transaction_id', v_schedule.provider_transaction_id,
++    'gateway_transaction_id', v_schedule.gateway_transaction_id,
 +    'paid_amount', v_schedule.paid_amount,
 +    'base_amount', v_schedule.base_amount,
 +    'refund_amount', p_refund_amount,
@@ -29787,7 +29787,7 @@ index 0000000..0699650
 +  select pa.*
 +  into v_account
 +  from public.provider_accounts pa
-+  where pa.provider_user_id = p_provider_id
++  where pa.provider_id = p_provider_id
 +    and pa.gateway_slug = 'netcred'
 +  for update;
 +
@@ -29800,7 +29800,7 @@ index 0000000..0699650
 +  end if;
 +
 +  insert into public.provider_kyc_submissions (
-+    provider_user_id,
++    provider_id,
 +    entity_type,
 +    full_name,
 +    document,
@@ -29896,7 +29896,7 @@ index 0000000..0699650
 +  set
 +    email_dispatched_at = now(),
 +    updated_at = now()
-+  where pa.provider_user_id = p_provider_id
++  where pa.provider_id = p_provider_id
 +    and pa.gateway_slug = 'netcred'
 +    and pa.onboarding_status = 'DOCUMENTS_SUBMITTED';
 +end;
@@ -29955,7 +29955,7 @@ index 0000000..36a6e85
 +      from public.payment_schedules ps
 +      join public.contracted_services cs on cs.id = ps.contracted_service_id
 +      join public.provider_accounts pa
-+        on pa.provider_user_id = ps.provider_id
++        on pa.provider_id = ps.provider_id
 +       and pa.gateway_slug = ps.gateway_slug
 +      where ps.state in ('SCHEDULED', 'FAILED')
 +        and ps.automatic_attempt_count < v_max_attempts
@@ -30027,8 +30027,8 @@ index 0000000..36a6e85
 +  p_schedule_id uuid,
 +  p_outcome text,
 +  p_charge_amount numeric(12, 2),
-+  p_provider_charge_id text,
-+  p_provider_transaction_id text,
++  p_gateway_charge_id text,
++  p_gateway_transaction_id text,
 +  p_failure_code text,
 +  p_failure_reason text,
 +  p_gateway_latency_ms int,
@@ -30077,8 +30077,8 @@ index 0000000..36a6e85
 +      state = 'PAID',
 +      paid_at = now(),
 +      paid_amount = p_charge_amount,
-+      provider_charge_id = p_provider_charge_id,
-+      provider_transaction_id = p_provider_transaction_id,
++      gateway_charge_id = p_gateway_charge_id,
++      gateway_transaction_id = p_gateway_transaction_id,
 +      locked_until = null,
 +      next_retry_at = null,
 +      failure_code = null,
@@ -30098,8 +30098,8 @@ index 0000000..36a6e85
 +    update public.payment_schedules ps
 +    set
 +      state = 'IN_ANALYSIS',
-+      provider_charge_id = coalesce(p_provider_charge_id, ps.provider_charge_id),
-+      provider_transaction_id = coalesce(p_provider_transaction_id, ps.provider_transaction_id),
++      gateway_charge_id = coalesce(p_gateway_charge_id, ps.gateway_charge_id),
++      gateway_transaction_id = coalesce(p_gateway_transaction_id, ps.gateway_transaction_id),
 +      locked_until = null,
 +      automatic_attempt_count = v_attempt_count,
 +      updated_at = now()
@@ -30294,7 +30294,7 @@ index 0000000..17807bb
 +    'provider_account',
 +    p_provider_account_id,
 +    'cron',
-+    v_account.provider_user_id,
++    v_account.provider_id,
 +    jsonb_build_object(
 +      'netcred_company_id', p_netcred_company_id,
 +      'netcred_bank_account_id', p_netcred_bank_account_id
@@ -30312,7 +30312,7 @@ index 0000000..17807bb
 +    'provider_account',
 +    p_provider_account_id,
 +    jsonb_build_object(
-+      'provider_user_id', v_account.provider_user_id,
++      'provider_id', v_account.provider_id,
 +      'netcred_company_id', p_netcred_company_id
 +    )
 +  );
@@ -30399,7 +30399,7 @@ index 0000000..3f5adb0
 +    from public.contracted_services cs
 +    join public.payment_schedules ps on ps.contracted_service_id = cs.id
 +    left join public.provider_accounts pa
-+      on pa.provider_user_id = ps.provider_id
++      on pa.provider_id = ps.provider_id
 +      and pa.gateway_slug = ps.gateway_slug
 +    where cs.service_scheduled_at is not null
 +      and cs.service_scheduled_at - now() <= make_interval(hours => v_cancel_hours)
@@ -30649,8 +30649,8 @@ index 0000000..bdfb58f
 +  p_gateway_state text,
 +  p_paid_amount numeric(12, 2) default null,
 +  p_refunded_amount numeric(12, 2) default null,
-+  p_provider_charge_id text default null,
-+  p_provider_transaction_id text default null
++  p_gateway_charge_id text default null,
++  p_gateway_transaction_id text default null
 +)
 +returns jsonb
 +language plpgsql
@@ -30712,8 +30712,8 @@ index 0000000..bdfb58f
 +      state = 'PAID',
 +      paid_at = coalesce(ps.paid_at, now()),
 +      paid_amount = v_charge_amount,
-+      provider_charge_id = coalesce(p_provider_charge_id, ps.provider_charge_id),
-+      provider_transaction_id = coalesce(p_provider_transaction_id, ps.provider_transaction_id),
++      gateway_charge_id = coalesce(p_gateway_charge_id, ps.gateway_charge_id),
++      gateway_transaction_id = coalesce(p_gateway_transaction_id, ps.gateway_transaction_id),
 +      locked_until = null,
 +      next_retry_at = null,
 +      failure_code = null,
@@ -30753,8 +30753,8 @@ index 0000000..bdfb58f
 +    update public.payment_schedules ps
 +    set
 +      state = 'IN_ANALYSIS',
-+      provider_charge_id = coalesce(p_provider_charge_id, ps.provider_charge_id),
-+      provider_transaction_id = coalesce(p_provider_transaction_id, ps.provider_transaction_id),
++      gateway_charge_id = coalesce(p_gateway_charge_id, ps.gateway_charge_id),
++      gateway_transaction_id = coalesce(p_gateway_transaction_id, ps.gateway_transaction_id),
 +      locked_until = null,
 +      reconciliation_failure_count = 0,
 +      updated_at = now()
@@ -30814,8 +30814,8 @@ index 0000000..bdfb58f
 +      'gateway_state', p_gateway_state,
 +      'paid_amount', p_paid_amount,
 +      'refunded_amount', p_refunded_amount,
-+      'provider_charge_id', p_provider_charge_id,
-+      'provider_transaction_id', p_provider_transaction_id,
++      'gateway_charge_id', p_gateway_charge_id,
++      'gateway_transaction_id', p_gateway_transaction_id,
 +      'source', 'reconcile-netcred-payments'
 +    )
 +  );
@@ -31022,8 +31022,8 @@ index 0000000..3a82d80
 +  p_reference_code uuid,
 +  p_webhook_event_id text,
 +  p_paid_amount numeric(12, 2) default null,
-+  p_provider_charge_id text default null,
-+  p_provider_transaction_id text default null
++  p_gateway_charge_id text default null,
++  p_gateway_transaction_id text default null
 +)
 +returns jsonb
 +language plpgsql
@@ -31087,8 +31087,8 @@ index 0000000..3a82d80
 +    state = 'PAID',
 +    paid_at = coalesce(ps.paid_at, now()),
 +    paid_amount = v_charge_amount,
-+    provider_charge_id = coalesce(p_provider_charge_id, ps.provider_charge_id),
-+    provider_transaction_id = coalesce(p_provider_transaction_id, ps.provider_transaction_id),
++    gateway_charge_id = coalesce(p_gateway_charge_id, ps.gateway_charge_id),
++    gateway_transaction_id = coalesce(p_gateway_transaction_id, ps.gateway_transaction_id),
 +    webhook_confirmed_at = now(),
 +    locked_until = null,
 +    next_retry_at = null,
@@ -31125,8 +31125,8 @@ index 0000000..3a82d80
 +    jsonb_build_object(
 +      'webhook_event_id', p_webhook_event_id,
 +      'charge_amount', v_charge_amount,
-+      'provider_charge_id', p_provider_charge_id,
-+      'provider_transaction_id', p_provider_transaction_id,
++      'gateway_charge_id', p_gateway_charge_id,
++      'gateway_transaction_id', p_gateway_transaction_id,
 +      'source', 'TRANSACTION_CAPTURE'
 +    )
 +  );
@@ -31539,7 +31539,7 @@ index 0000000..593a25a
 +create or replace function public.webhook_transaction_dispute_rpc(
 +  p_reference_code uuid,
 +  p_webhook_event_id text,
-+  p_provider_transaction_id text default null
++  p_gateway_transaction_id text default null
 +)
 +returns jsonb
 +language plpgsql
@@ -31587,7 +31587,7 @@ index 0000000..593a25a
 +    'webhook',
 +    jsonb_build_object(
 +      'webhook_event_id', p_webhook_event_id,
-+      'provider_transaction_id', p_provider_transaction_id,
++      'gateway_transaction_id', p_gateway_transaction_id,
 +      'source', 'TRANSACTION_DISPUTE'
 +    )
 +  );
@@ -31597,9 +31597,9 @@ index 0000000..593a25a
 +    'schedule_id', v_schedule.id,
 +    'service_id', v_schedule.contracted_service_id,
 +    'state', v_schedule.state,
-+    'provider_transaction_id', coalesce(
-+      p_provider_transaction_id,
-+      v_schedule.provider_transaction_id
++    'gateway_transaction_id', coalesce(
++      p_gateway_transaction_id,
++      v_schedule.gateway_transaction_id
 +    ),
 +    'is_disputed', true
 +  );
@@ -31628,7 +31628,7 @@ index 0000000..fbaa405
 +-- Payment System — task 48: PAYMENT_PROFILE_* webhook RPCs.
 +
 +create or replace function public.webhook_payment_profile_delete_rpc(
-+  p_provider_payment_profile_id text,
++  p_gateway_payment_profile_id text,
 +  p_webhook_event_id text
 +)
 +returns jsonb
@@ -31644,7 +31644,7 @@ index 0000000..fbaa405
 +  select pt.*
 +  into v_token
 +  from public.payment_tokens pt
-+  where pt.provider_payment_profile_id = p_provider_payment_profile_id
++  where pt.gateway_payment_profile_id = p_gateway_payment_profile_id
 +  for update;
 +
 +  if not found then
@@ -31683,7 +31683,7 @@ index 0000000..fbaa405
 +    'webhook',
 +    jsonb_build_object(
 +      'webhook_event_id', p_webhook_event_id,
-+      'provider_payment_profile_id', p_provider_payment_profile_id,
++      'gateway_payment_profile_id', p_gateway_payment_profile_id,
 +      'affected_schedules', v_schedules
 +    )
 +  );
@@ -31698,7 +31698,7 @@ index 0000000..fbaa405
 +$$;
 +
 +create or replace function public.webhook_payment_profile_tokenize_rpc(
-+  p_provider_payment_profile_id text,
++  p_gateway_payment_profile_id text,
 +  p_is_active boolean,
 +  p_webhook_event_id text
 +)
@@ -31714,7 +31714,7 @@ index 0000000..fbaa405
 +  select pt.*
 +  into v_token
 +  from public.payment_tokens pt
-+  where pt.provider_payment_profile_id = p_provider_payment_profile_id
++  where pt.gateway_payment_profile_id = p_gateway_payment_profile_id
 +  for update;
 +
 +  if not found then
@@ -31746,7 +31746,7 @@ index 0000000..fbaa405
 +$$;
 +
 +create or replace function public.webhook_payment_profile_expiring_rpc(
-+  p_provider_payment_profile_id text,
++  p_gateway_payment_profile_id text,
 +  p_webhook_event_id text
 +)
 +returns jsonb
@@ -31762,7 +31762,7 @@ index 0000000..fbaa405
 +  select pt.*
 +  into v_token
 +  from public.payment_tokens pt
-+  where pt.provider_payment_profile_id = p_provider_payment_profile_id;
++  where pt.gateway_payment_profile_id = p_gateway_payment_profile_id;
 +
 +  if not found then
 +    return jsonb_build_object('outcome', 'not_found');
@@ -31791,7 +31791,7 @@ index 0000000..fbaa405
 +$$;
 +
 +create or replace function public.webhook_payment_profile_update_rpc(
-+  p_provider_payment_profile_id text,
++  p_gateway_payment_profile_id text,
 +  p_card_brand text default null,
 +  p_expiry_month smallint default null,
 +  p_expiry_year smallint default null,
@@ -31809,7 +31809,7 @@ index 0000000..fbaa405
 +  select pt.*
 +  into v_token
 +  from public.payment_tokens pt
-+  where pt.provider_payment_profile_id = p_provider_payment_profile_id
++  where pt.gateway_payment_profile_id = p_gateway_payment_profile_id
 +  for update;
 +
 +  if not found then
@@ -31937,7 +31937,7 @@ index 0000000..707bedb
 +      e.id,
 +      e.gateway_slug,
 +      e.event_type,
-+      e.provider_event_id,
++      e.gateway_event_id,
 +      e.raw_payload,
 +      e.retry_count,
 +      e.failure_reason
@@ -31947,7 +31947,7 @@ index 0000000..707bedb
 +      'event_id', v_row.id,
 +      'gateway_slug', v_row.gateway_slug,
 +      'event_type', v_row.event_type,
-+      'provider_event_id', v_row.provider_event_id,
++      'gateway_event_id', v_row.gateway_event_id,
 +      'raw_payload', v_row.raw_payload,
 +      'retry_count', v_row.retry_count,
 +      'failure_reason', v_row.failure_reason
@@ -32002,8 +32002,8 @@ index 0000000..707bedb
 +      'event_id', v_row.webhook_event_id,
 +      'gateway_slug', v_row.gateway_slug,
 +      'event_type', v_row.event_type,
-+      'provider_event_id', (
-+        select e.provider_event_id
++      'gateway_event_id', (
++        select e.gateway_event_id
 +        from public.payment_webhook_events e
 +        where e.id = v_row.webhook_event_id
 +      ),
@@ -32128,7 +32128,7 @@ index 0000000..707bedb
 +      'outcome', 'dead_letter',
 +      'event_id', p_event_id,
 +      'event_type', v_event.event_type,
-+      'provider_event_id', v_event.provider_event_id,
++      'gateway_event_id', v_event.gateway_event_id,
 +      'retry_count', v_retry_count,
 +      'failure_reason', left(p_failure_reason, 4000),
 +      'schedule_id', v_schedule_id
@@ -32156,7 +32156,7 @@ index 0000000..707bedb
 +    'outcome', 'failed',
 +    'event_id', p_event_id,
 +    'event_type', v_event.event_type,
-+    'provider_event_id', v_event.provider_event_id,
++    'gateway_event_id', v_event.gateway_event_id,
 +    'retry_count', v_retry_count,
 +    'failure_reason', left(p_failure_reason, 4000),
 +    'next_retry_at', (
@@ -32385,8 +32385,8 @@ index 0000000..5f0e190
 +  p_schedule_id uuid,
 +  p_outcome text,
 +  p_charge_amount numeric(12, 2),
-+  p_provider_charge_id text,
-+  p_provider_transaction_id text,
++  p_gateway_charge_id text,
++  p_gateway_transaction_id text,
 +  p_failure_code text,
 +  p_failure_reason text,
 +  p_gateway_latency_ms int,
@@ -32435,8 +32435,8 @@ index 0000000..5f0e190
 +      state = 'PAID',
 +      paid_at = now(),
 +      paid_amount = p_charge_amount,
-+      provider_charge_id = p_provider_charge_id,
-+      provider_transaction_id = p_provider_transaction_id,
++      gateway_charge_id = p_gateway_charge_id,
++      gateway_transaction_id = p_gateway_transaction_id,
 +      locked_until = null,
 +      next_retry_at = null,
 +      failure_code = null,
@@ -32457,8 +32457,8 @@ index 0000000..5f0e190
 +    update public.payment_schedules ps
 +    set
 +      state = 'IN_ANALYSIS',
-+      provider_charge_id = coalesce(p_provider_charge_id, ps.provider_charge_id),
-+      provider_transaction_id = coalesce(p_provider_transaction_id, ps.provider_transaction_id),
++      gateway_charge_id = coalesce(p_gateway_charge_id, ps.gateway_charge_id),
++      gateway_transaction_id = coalesce(p_gateway_transaction_id, ps.gateway_transaction_id),
 +      locked_until = null,
 +      automatic_attempt_count = v_attempt_count,
 +      updated_at = now()
@@ -32587,8 +32587,8 @@ index 0000000..5f0e190
 +  p_client_id uuid,
 +  p_outcome text,
 +  p_charge_amount numeric(12, 2),
-+  p_provider_charge_id text,
-+  p_provider_transaction_id text,
++  p_gateway_charge_id text,
++  p_gateway_transaction_id text,
 +  p_failure_code text,
 +  p_failure_reason text,
 +  p_gateway_latency_ms int,
@@ -32630,8 +32630,8 @@ index 0000000..5f0e190
 +      state = 'PAID',
 +      paid_at = now(),
 +      paid_amount = p_charge_amount,
-+      provider_charge_id = p_provider_charge_id,
-+      provider_transaction_id = p_provider_transaction_id,
++      gateway_charge_id = p_gateway_charge_id,
++      gateway_transaction_id = p_gateway_transaction_id,
 +      locked_until = null,
 +      failure_code = null,
 +      failure_reason = null,
@@ -32650,8 +32650,8 @@ index 0000000..5f0e190
 +    update public.payment_schedules ps
 +    set
 +      state = 'IN_ANALYSIS',
-+      provider_charge_id = coalesce(p_provider_charge_id, ps.provider_charge_id),
-+      provider_transaction_id = coalesce(p_provider_transaction_id, ps.provider_transaction_id),
++      gateway_charge_id = coalesce(p_gateway_charge_id, ps.gateway_charge_id),
++      gateway_transaction_id = coalesce(p_gateway_transaction_id, ps.gateway_transaction_id),
 +      locked_until = null,
 +      updated_at = now()
 +    where ps.id = v_schedule.id
@@ -32744,8 +32744,8 @@ index 0000000..5f0e190
 +    jsonb_build_object(
 +      'charge_amount', p_charge_amount,
 +      'manual_attempt_count', v_schedule.manual_attempt_count,
-+      'provider_charge_id', p_provider_charge_id,
-+      'provider_transaction_id', p_provider_transaction_id
++      'gateway_charge_id', p_gateway_charge_id,
++      'gateway_transaction_id', p_gateway_transaction_id
 +    )
 +  );
 +
@@ -32944,7 +32944,7 @@ index 0000000..8fe88c4
 +    jsonb_build_object(
 +      'event_id', v_event.id,
 +      'event_type', v_event.event_type,
-+      'provider_event_id', v_event.provider_event_id,
++      'gateway_event_id', v_event.gateway_event_id,
 +      'gateway_slug', v_event.gateway_slug
 +    )
 +  );
@@ -32952,7 +32952,7 @@ index 0000000..8fe88c4
 +  return jsonb_build_object(
 +    'event_id', v_event.id,
 +    'event_type', v_event.event_type,
-+    'provider_event_id', v_event.provider_event_id,
++    'gateway_event_id', v_event.gateway_event_id,
 +    'state', v_event.state,
 +    'retry_count', v_event.retry_count,
 +    'next_retry_at', v_event.next_retry_at
@@ -33117,7 +33117,7 @@ index 0000000..a3186fe
 +      'outcome', 'dead_letter',
 +      'event_id', p_event_id,
 +      'event_type', v_event.event_type,
-+      'provider_event_id', v_event.provider_event_id,
++      'gateway_event_id', v_event.gateway_event_id,
 +      'retry_count', v_retry_count,
 +      'failure_reason', left(p_failure_reason, 4000),
 +      'schedule_id', v_schedule_id
@@ -33145,7 +33145,7 @@ index 0000000..a3186fe
 +    'outcome', 'failed',
 +    'event_id', p_event_id,
 +    'event_type', v_event.event_type,
-+    'provider_event_id', v_event.provider_event_id,
++    'gateway_event_id', v_event.gateway_event_id,
 +    'retry_count', v_retry_count,
 +    'failure_reason', left(p_failure_reason, 4000),
 +    'next_retry_at', (
@@ -33639,7 +33639,7 @@ index 0000000..c7f03ba
 +  const { data } = await supabase
 +    .from("payment_webhook_events")
 +    .select("id")
-+    .eq("provider_event_id", eventId)
++    .eq("gateway_event_id", eventId)
 +    .maybeSingle();
 +
 +  return {
@@ -33933,10 +33933,10 @@ index 0000000..c4929af
 +    id,
 +    client_id,
 +    provider_id,
-+    provider_payment_profile_id,
++    gateway_payment_profile_id,
 +    card_number_masked,
 +    card_brand,
-+    provider_card_token,
++    gateway_card_token,
 +    expiry_month,
 +    expiry_year,
 +    cardholder_name,
@@ -34305,7 +34305,7 @@ index 0000000..6d832aa
 +  limit 1;
 +
 +  insert into public.provider_accounts (
-+    provider_user_id, gateway_slug, document, onboarding_status
++    provider_id, gateway_slug, document, onboarding_status
 +  )
 +  values (
 +    '00000000-0000-0000-0000-000000000003'::uuid,
@@ -34463,10 +34463,10 @@ index 0000000..0975193
 +    id,
 +    client_id,
 +    provider_id,
-+    provider_payment_profile_id,
++    gateway_payment_profile_id,
 +    card_number_masked,
 +    card_brand,
-+    provider_card_token,
++    gateway_card_token,
 +    expiry_month,
 +    expiry_year,
 +    cardholder_name,
@@ -34690,10 +34690,10 @@ index 0000000..d5de3e8
 +insert into public.payment_tokens (
 +  client_id,
 +  provider_id,
-+  provider_payment_profile_id,
++  gateway_payment_profile_id,
 +  card_number_masked,
 +  card_brand,
-+  provider_card_token,
++  gateway_card_token,
 +  expiry_month,
 +  expiry_year,
 +  cardholder_name,
@@ -34812,9 +34812,9 @@ index 0000000..ef84a6a
 +    raise exception 'cron_charge_dequeue_concurrency_test requires contracted_services seed data';
 +  end if;
 +
-+  insert into public.provider_accounts (provider_user_id, gateway_slug, document, onboarding_status)
++  insert into public.provider_accounts (provider_id, gateway_slug, document, onboarding_status)
 +  values (v_provider_id, 'netcred', '99999999999', 'ACTIVE')
-+  on conflict (provider_user_id, gateway_slug) do update
++  on conflict (provider_id, gateway_slug) do update
 +    set onboarding_status = 'ACTIVE';
 +
 +  select pt.id
@@ -34826,8 +34826,8 @@ index 0000000..ef84a6a
 +
 +  if v_token_id is null then
 +    insert into public.payment_tokens (
-+      id, client_id, provider_id, provider_payment_profile_id,
-+      card_number_masked, card_brand, provider_card_token,
++      id, client_id, provider_id, gateway_payment_profile_id,
++      card_number_masked, card_brand, gateway_card_token,
 +      expiry_month, expiry_year, cardholder_name, billing_address
 +    )
 +    select
@@ -34995,16 +34995,16 @@ index 0000000..6410603
 +  values (v_review_provider, 'provider', 'Index review provider')
 +  on conflict (id) do nothing;
 +
-+  insert into public.provider_accounts (provider_user_id, gateway_slug, document, onboarding_status)
++  insert into public.provider_accounts (provider_id, gateway_slug, document, onboarding_status)
 +  values
 +    (v_provider_id, 'netcred', '77777777777', 'DOCUMENTS_SUBMITTED'),
 +    (v_review_provider, 'netcred', '88888888888', 'UNDER_NETCRED_REVIEW')
-+  on conflict (provider_user_id, gateway_slug) do update
++  on conflict (provider_id, gateway_slug) do update
 +    set onboarding_status = excluded.onboarding_status;
 +
 +  insert into public.payment_tokens (
-+    id, client_id, provider_id, provider_payment_profile_id,
-+    card_number_masked, card_brand, provider_card_token,
++    id, client_id, provider_id, gateway_payment_profile_id,
++    card_number_masked, card_brand, gateway_card_token,
 +    expiry_month, expiry_year, cardholder_name, billing_address
 +  )
 +  select
@@ -35074,7 +35074,7 @@ index 0000000..6410603
 +  );
 +
 +  insert into public.payment_webhook_events (
-+    gateway_slug, event_type, provider_event_id, raw_payload, raw_headers
++    gateway_slug, event_type, gateway_event_id, raw_payload, raw_headers
 +  )
 +  values (
 +    'netcred',
@@ -35131,7 +35131,7 @@ index 0000000..6410603
 +    where n.nspname = 'public'
 +      and t.relname = 'payment_webhook_events'
 +      and c.contype = 'u'
-+      and c.conname = 'payment_webhook_events_gateway_slug_event_type_provider_event_id_key'
++      and c.conname = 'payment_webhook_events_gateway_slug_event_type_gateway_event_id_key'
 +  ),
 +  'webhook dedup UNIQUE constraint index exists'
 +);
@@ -35237,9 +35237,9 @@ index 0000000..6410603
 +      from public.payment_webhook_events pwe
 +      where pwe.gateway_slug = 'netcred'
 +        and pwe.event_type = 'TRANSACTION_CAPTURE'
-+        and pwe.provider_event_id = 'evt-index-plan-1'
++        and pwe.gateway_event_id = 'evt-index-plan-1'
 +    $sql$,
-+    'payment_webhook_events_gateway_slug_event_type_provider_event_id_key'
++    'payment_webhook_events_gateway_slug_event_type_gateway_event_id_key'
 +  ),
 +  'webhook dedup lookup uses UNIQUE constraint index'
 +);
@@ -35443,7 +35443,7 @@ index 0000000..1cbc9cd
 +    (v_pending, 'provider', 'Gate pending provider'),
 +    (v_suspended, 'provider', 'Gate suspended provider');
 +
-+  insert into public.provider_accounts (provider_user_id, gateway_slug, document, onboarding_status)
++  insert into public.provider_accounts (provider_id, gateway_slug, document, onboarding_status)
 +  values
 +    (v_active, 'netcred', '44444444444', 'ACTIVE'),
 +    (v_pending, 'netcred', '55555555555', 'PENDING_DOCUMENTS'),
@@ -35770,9 +35770,9 @@ index 0000000..a8f2b90
 +    from information_schema.columns
 +    where table_schema = 'public'
 +      and table_name = 'payment_tokens'
-+      and column_name = 'provider_card_token'
++      and column_name = 'gateway_card_token'
 +  ),
-+  'payment_tokens stores gateway-issued provider_card_token reference'
++  'payment_tokens stores gateway-issued gateway_card_token reference'
 +);
 +
 +select ok(
@@ -35894,7 +35894,7 @@ index 0000000..bee0faa
 +  v_pending uuid := gen_random_uuid();
 +  v_suspended uuid := gen_random_uuid();
 +begin
-+  insert into public.provider_accounts (provider_user_id, gateway_slug, document, onboarding_status)
++  insert into public.provider_accounts (provider_id, gateway_slug, document, onboarding_status)
 +  values
 +    (v_active, 'netcred', '11111111111', 'ACTIVE'),
 +    (v_pending, 'netcred', '22222222222', 'PENDING_DOCUMENTS'),
@@ -36015,7 +36015,7 @@ index 0000000..f93ed2b
 +    (v_cnpj_provider_id, 'pj');
 +
 +  insert into public.provider_accounts (
-+    provider_user_id,
++    provider_id,
 +    gateway_slug,
 +    document,
 +    onboarding_status
@@ -36469,7 +36469,7 @@ index 0000000..a27eede
 +    id,
 +    gateway_slug,
 +    event_type,
-+    provider_event_id,
++    gateway_event_id,
 +    raw_payload,
 +    raw_headers,
 +    state,

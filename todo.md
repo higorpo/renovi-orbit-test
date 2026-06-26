@@ -75,3 +75,6 @@ Coisas para fazer next
 -fluxo de prestador recusar revisão de proposta
 
 - Verificar se todos os locais onde tenho carregando de mais páginas no sistema estão usando cursor de forma performática.
+
+
+- fazer um checkup geral do banco de dados para RLS e CLS

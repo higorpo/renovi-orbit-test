@@ -91,7 +91,7 @@ graph LR
 
 # Phase 1: Database Foundation
 
-## 1. [ ] Establish payment implementation baseline and migration sequencing policy
+## 1. [x] Establish payment implementation baseline and migration sequencing policy
 
 Description:
 Create the engineering baseline document section in repo workflow: verify current DB state (`yarn db:reset`), list existing payment-adjacent objects (`contracted_services`, `platform_constants`, `provider_profiles_private`, `accept_proposal`), and define migration naming convention `20260801000000_payment_*` sequential blocks. This task SHALL NOT ship product code — it unblocks all subsequent migrations.
@@ -145,7 +145,7 @@ Requirements covered:
 Acceptance Criteria covered:
 Pre-implementation gate
 
-## 2. [ ] Migration: extend `contracted_service_status` enum and payment lifecycle columns on `contracted_services`
+## 2. [x] Migration: extend `contracted_service_status` enum and payment lifecycle columns on `contracted_services`
 
 Description:
 Ship ALTER migration adding `CONFIRMED`, `EXECUTED` enum values (if not present) and columns `cancellation_reason`, `executed_at`, `completed_at`, `completed_by` per design.md §3.0. MUST NOT add `service_scheduled_at`.
@@ -199,7 +199,7 @@ Requirements covered:
 Acceptance Criteria covered:
 9.3; 32.1; 26.1
 
-## 3. [ ] Migration: implement `payment_service_execution_at(contracted_services)` helper function
+## 3. [x] Migration: implement `payment_service_execution_at(contracted_services)` helper function
 
 Description:
 Create STABLE SQL function computing canonical service instant from `scheduled_start_date` + `scheduled_shift` in `America/Sao_Paulo` per design.md §3.0. This function SHALL be the sole scheduling anchor for T-2, T-12h, refund tiers, and manual-payment gates.
@@ -253,7 +253,7 @@ Requirements covered:
 Acceptance Criteria covered:
 9.3; 14.1; 15.1; 33.5
 
-## 4. [ ] Migration: seed payment keys in `platform_constants`
+## 4. [x] Migration: seed payment keys in `platform_constants`
 
 Description:
 Insert all payment-related `platform_constants` rows per design.md §3.12 / Req 25 including fee rates, retry limits, lease duration, onboarding batch size, HMAC TTL, reconciliation interval, webhook retry base, and `platform_commission_rate_pct`.
@@ -306,10 +306,10 @@ Requirements covered:
 Acceptance Criteria covered:
 25.1; 25.2; 25.3; 25.4
 
-## 5. [ ] Migration: create shared payment enums and `payment_*` schema foundation
+## 5. [x] Migration: create shared payment enums and `payment_*` schema foundation
 
 Description:
-Create any required ENUM types or CHECK-backed state literals documentation migration: payment schedule states, webhook states, card token states, onboarding statuses (as CHECK constraints on tables, not orphaned enums unless needed). Establish `_shared` comment block in migration header referencing design.md §3.
+Create PostgreSQL **ENUM types** for payment FSM vocabulary (gateway slug, schedule state, card token state, onboarding status, attempt initiator/outcome, webhook states, audit actor) in `20260801030000_payment_schema_foundation.sql` — same pattern as CNS `create_cns_enums`. Table CREATE migrations use these types on state/status columns.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -323,7 +323,7 @@ Create any required ENUM types or CHECK-backed state literals documentation migr
 
 Responsibilities:
 - Align state literals with design.md §2.3 state machines
-- Avoid duplicate enum types if TEXT+CHECK suffices per design
+- Nine `payment_*` enum types in foundation migration; no IMMUTABLE validator functions
 
 Implementation Details:
 - Foundation migration precedes table CREATE migrations
@@ -359,7 +359,7 @@ Acceptance Criteria covered:
 
 # Phase 2: Persistence Layer
 
-## 6. [ ] Migration: CREATE `payment_gateway_tokens` with constraints, indexes, and RLS policies
+## 6. [x] Migration: CREATE `payment_gateway_tokens` with constraints, indexes, and RLS policies
 
 Description:
 Implement table `payment_gateway_tokens` exactly per design.md §3.2 including all columns, CHECK constraints, partial indexes, UNIQUE constraints, and mandatory deny-by-default RLS in the same migration. Direct client mutations to payment state MUST be blocked.
@@ -418,7 +418,7 @@ Requirements covered:
 Acceptance Criteria covered:
 26.2
 
-## 7. [ ] Migration: CREATE `client_card_tokens` with constraints, indexes, and RLS policies
+## 7. [x] Migration: CREATE `client_card_tokens` with constraints, indexes, and RLS policies
 
 Description:
 Implement table `client_card_tokens` exactly per design.md §3.3 including all columns, CHECK constraints, partial indexes, UNIQUE constraints, and mandatory deny-by-default RLS in the same migration. Direct client mutations to payment state MUST be blocked.
@@ -435,6 +435,7 @@ Implement table `client_card_tokens` exactly per design.md §3.3 including all c
 
 Responsibilities:
 - CREATE TABLE `client_card_tokens` with gateway_slug CHECK (= 'netcred') where applicable
+- CREATE VIEW `client_card_tokens_safe_v` (§3.3) — client app reads this view only; excludes `gateway_card_token` and `billing_address`
 - CREATE indexes listed in design
 - ENABLE RLS; policies per §11.2 matrix
 - REVOKE direct INSERT/UPDATE from authenticated where mutations are RPC-only
@@ -447,6 +448,7 @@ Implementation Details:
 
 Deliverables:
 - Migration `*_create_client_card_tokens.sql`
+- View `client_card_tokens_safe_v` + `card-tokens.api.ts` client read path
 - RLS policies
 - pgTAP RLS tests
 - Indexes
@@ -477,7 +479,7 @@ Requirements covered:
 Acceptance Criteria covered:
 26.3; 24.2
 
-## 8. [ ] Migration: CREATE `provider_gateway_accounts` with constraints, indexes, and RLS policies
+## 8. [x] Migration: CREATE `provider_gateway_accounts` with constraints, indexes, and RLS policies
 
 Description:
 Implement table `provider_gateway_accounts` exactly per design.md §3.4 including all columns, CHECK constraints, partial indexes, UNIQUE constraints, and mandatory deny-by-default RLS in the same migration. Direct client mutations to payment state MUST be blocked.
@@ -536,7 +538,7 @@ Requirements covered:
 Acceptance Criteria covered:
 26.8; 3.1; 29.1
 
-## 9. [ ] Migration: CREATE `payment_schedules` with constraints, indexes, and RLS policies
+## 9. [x] Migration: CREATE `payment_schedules` with constraints, indexes, and RLS policies
 
 Description:
 Implement table `payment_schedules` exactly per design.md §3.5 including all columns, CHECK constraints, partial indexes, UNIQUE constraints, and mandatory deny-by-default RLS in the same migration. Direct client mutations to payment state MUST be blocked.
@@ -597,7 +599,7 @@ Requirements covered:
 Acceptance Criteria covered:
 26.4; 9.1; 10.1
 
-## 10. [ ] Migration: CREATE `payment_attempts` with constraints, indexes, and RLS policies
+## 10. [x] Migration: CREATE `payment_attempts` with constraints, indexes, and RLS policies
 
 Description:
 Implement table `payment_attempts` exactly per design.md §3.6 including all columns, CHECK constraints, partial indexes, UNIQUE constraints, and mandatory deny-by-default RLS in the same migration. Direct client mutations to payment state MUST be blocked.
@@ -656,7 +658,7 @@ Requirements covered:
 Acceptance Criteria covered:
 26.5; 10.2
 
-## 11. [ ] Migration: CREATE `payment_webhook_events` with constraints, indexes, and RLS policies
+## 11. [x] Migration: CREATE `payment_webhook_events` with constraints, indexes, and RLS policies
 
 Description:
 Implement table `payment_webhook_events` exactly per design.md §3.7 including all columns, CHECK constraints, partial indexes, UNIQUE constraints, and mandatory deny-by-default RLS in the same migration. Direct client mutations to payment state MUST be blocked.
@@ -715,7 +717,7 @@ Requirements covered:
 Acceptance Criteria covered:
 26.6; 16.1; 17.1
 
-## 12. [ ] Migration: CREATE `payment_webhook_processing_queue` with constraints, indexes, and RLS policies
+## 12. [x] Migration: CREATE `payment_webhook_processing_queue` with constraints, indexes, and RLS policies
 
 Description:
 Implement table `payment_webhook_processing_queue` exactly per design.md §3.8 including all columns, CHECK constraints, partial indexes, UNIQUE constraints, and mandatory deny-by-default RLS in the same migration. Direct client mutations to payment state MUST be blocked.
@@ -774,7 +776,7 @@ Requirements covered:
 Acceptance Criteria covered:
 19.1
 
-## 13. [ ] Migration: CREATE `payment_audit_log` with constraints, indexes, and RLS policies
+## 13. [x] Migration: CREATE `payment_audit_log` with constraints, indexes, and RLS policies
 
 Description:
 Implement table `payment_audit_log` exactly per design.md §3.9 including all columns, CHECK constraints, partial indexes, UNIQUE constraints, and mandatory deny-by-default RLS in the same migration. Direct client mutations to payment state MUST be blocked.
@@ -833,7 +835,7 @@ Requirements covered:
 Acceptance Criteria covered:
 26.7; 22.1
 
-## 14. [ ] Migration: CREATE `payment_events` with constraints, indexes, and RLS policies
+## 14. [x] Migration: CREATE `payment_events` with constraints, indexes, and RLS policies
 
 Description:
 Implement table `payment_events` exactly per design.md §3.10 including all columns, CHECK constraints, partial indexes, UNIQUE constraints, and mandatory deny-by-default RLS in the same migration. Direct client mutations to payment state MUST be blocked.
@@ -892,7 +894,7 @@ Requirements covered:
 Acceptance Criteria covered:
 30.1
 
-## 15. [ ] Migration: extend `provider_profiles_private` with KYC/banking/document columns
+## 15. [x] Migration: extend `provider_profiles_private` with KYC/banking/document columns
 
 Description:
 ALTER existing `provider_profiles_private` adding payment KYC columns per design.md §3.11. MUST NOT create `provider_kyc_submissions` table. Phone for KYC reuses `profiles.phone`.
@@ -944,7 +946,7 @@ Requirements covered:
 Acceptance Criteria covered:
 3.2; 3.3; 26.8
 
-## 16. [ ] Migration: create payment history views `client_payment_transactions_v` and `provider_payment_receivables_v`
+## 16. [x] Migration: create payment history views `client_payment_transactions_v` and `provider_payment_receivables_v`
 
 Description:
 Implement read models per design.md §3.13 with `security_invoker = true`, column visibility rules (client sees paid_amount/base_amount; provider sees provider_payout net), and supporting indexes.
@@ -1001,7 +1003,7 @@ See mapped requirements above
 
 # Phase 3: Core Transactional Logic
 
-## 17. [ ] Implement RPC `payment_calculate_charge_amount`
+## 17. [x] Implement RPC `payment_calculate_charge_amount`
 
 Description:
 Pure fee computation RPC mirroring installment formula; ROUND_HALF_UP; reads platform_constants; used at claim and charge time. SECURITY DEFINER with explicit REVOKE/GRANT EXECUTE per design.md §5.2. SET search_path includes vault/extensions when secrets needed.
@@ -1058,7 +1060,7 @@ Requirements covered:
 Acceptance Criteria covered:
 7.6; 25.5
 
-## 18. [ ] Implement RPC `payment_calculate_installment_options`
+## 18. [x] Implement RPC `payment_calculate_installment_options`
 
 Description:
 Client RPC: fee table 1-12, HMAC via Vault INSTALLMENT_SIGNING_SECRET, expires_at TTL from platform_constants. SECURITY DEFINER with explicit REVOKE/GRANT EXECUTE per design.md §5.2. SET search_path includes vault/extensions when secrets needed.
@@ -1116,7 +1118,7 @@ Requirements covered:
 Acceptance Criteria covered:
 7.1; 7.4; 7.5; 8.1
 
-## 19. [ ] Implement RPC `payment_get_checkout_step_requirements`
+## 19. [x] Implement RPC `payment_get_checkout_step_requirements`
 
 Description:
 Returns needs_cpf, needs_phone, needs_card for stepper. SECURITY DEFINER with explicit REVOKE/GRANT EXECUTE per design.md §5.2. SET search_path includes vault/extensions when secrets needed.
@@ -1172,7 +1174,7 @@ Requirements covered:
 Acceptance Criteria covered:
 5.1
 
-## 20. [ ] Implement RPC `payment_persist_client_card_token`
+## 20. [x] Implement RPC `payment_persist_client_card_token`
 
 Description:
 service_role RPC called by tokenize EF; INSERT client_card_tokens ACTIVE only. SECURITY DEFINER with explicit REVOKE/GRANT EXECUTE per design.md §5.2. SET search_path includes vault/extensions when secrets needed.
@@ -1228,10 +1230,10 @@ Requirements covered:
 Acceptance Criteria covered:
 6.3
 
-## 21. [ ] Implement RPC `payment_submit_provider_kyc`
+## 21. [x] Implement RPC `payment_submit_provider_kyc`
 
 Description:
-Atomic KYC persist: provider_profiles_private, provider_gateway_accounts DOCUMENTS_SUBMITTED, audit KYC_SUBMITTED, MMD enqueue. SECURITY DEFINER with explicit REVOKE/GRANT EXECUTE per design.md §5.2. SET search_path includes vault/extensions when secrets needed.
+Atomic KYC persist: provider_profiles_private **storage paths**, provider_gateway_accounts DOCUMENTS_SUBMITTED, audit KYC_SUBMITTED. Credenciamento email via **`dispatch-kyc-email` EF** (attachments, not public URLs). SECURITY DEFINER with explicit REVOKE/GRANT EXECUTE per design.md §5.2.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -1284,7 +1286,7 @@ Requirements covered:
 Acceptance Criteria covered:
 3.4; 3.5
 
-## 22. [ ] Implement RPC `payment_revoke_client_card_token`
+## 22. [x] Implement RPC `payment_revoke_client_card_token`
 
 Description:
 Client RPC: REVOKED state; block if linked SCHEDULED/FAILED without replacement. SECURITY DEFINER with explicit REVOKE/GRANT EXECUTE per design.md §5.2. SET search_path includes vault/extensions when secrets needed.
@@ -1340,7 +1342,7 @@ Requirements covered:
 Acceptance Criteria covered:
 28.3; 28.4
 
-## 23. [ ] Implement RPC `payment_update_method`
+## 23. [x] Implement RPC `payment_update_method`
 
 Description:
 FOR UPDATE schedule; HMAC revalidation on brand change; audit PAYMENT_METHOD_UPDATED. SECURITY DEFINER with explicit REVOKE/GRANT EXECUTE per design.md §5.2. SET search_path includes vault/extensions when secrets needed.
@@ -1396,7 +1398,7 @@ Requirements covered:
 Acceptance Criteria covered:
 8.7; 8.8
 
-## 24. [ ] Implement RPC `payment_reschedule_charge_date`
+## 24. [x] Implement RPC `payment_reschedule_charge_date`
 
 Description:
 service_role: recompute charge_scheduled_at on service reschedule; reset upcoming_charge_notified_at; audit CHARGE_RESCHEDULED. SECURITY DEFINER with explicit REVOKE/GRANT EXECUTE per design.md §5.2. SET search_path includes vault/extensions when secrets needed.
@@ -1452,7 +1454,7 @@ Requirements covered:
 Acceptance Criteria covered:
 9.3; 9.4
 
-## 25. [ ] Extend RPC `accept_proposal` with payment schedule creation (dump-first migration)
+## 25. [x] Extend RPC `accept_proposal` with payment schedule creation (dump-first migration)
 
 Description:
 Evolve existing CNS `accept_proposal` to validate pricing_signature + installment_selection_hmac (Vault), verify provider ACTIVE + token ACTIVE, create contracted_services PENDING_PAYMENT + payment_schedules SCHEDULED in single TX, compute charge_scheduled_at via payment_service_execution_at, idempotency via UNIQUE idempotency_key / rpc_idempotency_records.
@@ -1512,7 +1514,7 @@ Requirements covered:
 Acceptance Criteria covered:
 8.1–8.6; 9.1; 29.3; 31.6
 
-## 26. [ ] Extend RPC `match_provider_jobs` with onboarding gate (dump-first migration)
+## 26. [x] Extend RPC `match_provider_jobs` with onboarding gate (dump-first migration)
 
 Description:
 Add guard: if provider_gateway_accounts.onboarding_status != ACTIVE (including SUSPENDED), return empty feed. Enforcement MUST be in SECURITY DEFINER RPC, not UI-only.
@@ -1553,7 +1555,7 @@ Observability:
 - N/A
 
 Security Considerations:
-- No extra join without index — use provider_user_id
+- No extra join without index — use provider_id
 
 Performance Considerations:
 - 3
@@ -1565,7 +1567,7 @@ Requirements covered:
 Acceptance Criteria covered:
 See mapped requirements above
 
-## 27. [ ] Extend RPC `cns_initiate_conversation` with credentialing gate (dump-first migration)
+## 27. [x] Extend RPC `cns_initiate_conversation` with credentialing gate (dump-first migration)
 
 Description:
 Deny chat initiation unless provider onboarding_status = ACTIVE; raise PROVIDER_NOT_CREDENTIALED; no thread created.
@@ -1620,7 +1622,7 @@ See mapped requirements above
 
 # Phase 4: Scheduling Engine
 
-## 28. [ ] Implement RPC `payment_claim_charge_batch`
+## 28. [x] Implement RPC `payment_claim_charge_batch`
 
 Description:
 SKIP LOCKED lease; increment automatic_attempt_count atomically; return charge_amount via payment_calculate_charge_amount; eligibility filters per Req 10. service_role-only unless noted. Follow error classification matrix design.md §4.6.
@@ -1674,7 +1676,7 @@ Requirements covered:
 Acceptance Criteria covered:
 10.1; 10.2; 23.1
 
-## 29. [ ] Implement RPC `payment_commit_charge_outcome`
+## 29. [x] Implement RPC `payment_commit_charge_outcome`
 
 Description:
 Classify outcomes PAID/IN_ANALYSIS/FAILED/FAILED_PERMANENT; update contracted_services on PAID; insert payment_attempts + audit + payment_events; terminal errors skip attempt increment rules per matrix. service_role-only unless noted. Follow error classification matrix design.md §4.6.
@@ -1728,7 +1730,7 @@ Requirements covered:
 Acceptance Criteria covered:
 10.3–10.7; 11.3
 
-## 30. [ ] Implement RPC `payment_begin_manual_attempt`
+## 30. [x] Implement RPC `payment_begin_manual_attempt`
 
 Description:
 Manual lease + T-12h gate + clearsale_session_id/client_ip update; manual_attempt_count++; concurrency 409 PAYMENT_ALREADY_IN_PROGRESS. service_role-only unless noted. Follow error classification matrix design.md §4.6.
@@ -1782,7 +1784,7 @@ Requirements covered:
 Acceptance Criteria covered:
 13.3; 23.4; 31.8
 
-## 31. [ ] Implement RPC `payment_enqueue_notifications`
+## 31. [x] Implement RPC `payment_enqueue_notifications`
 
 Description:
 Post-commit MMD ingest for payment notification matrix §1.7.9; decoupled from state TX. service_role-only unless noted. Follow error classification matrix design.md §4.6.
@@ -1835,7 +1837,7 @@ Requirements covered:
 Acceptance Criteria covered:
 12.1; 12.3
 
-## 32. [ ] Implement RPC `payment_recover_orphaned_schedules`
+## 32. [x] Implement RPC `payment_recover_orphaned_schedules`
 
 Description:
 Janitor: PROCESSING + expired locked_until → SCHEDULED or FAILED; audit ORPHAN_RECOVERED. service_role-only unless noted. Follow error classification matrix design.md §4.6.
@@ -5914,10 +5916,10 @@ Acceptance Criteria covered:
 
 # Phase 15: Supplementary Integration & Extended Verification
 
-## 106. [ ] Migration: KYC document Storage bucket and RLS policies
+## 106. [x] Migration: KYC document Storage bucket and RLS policies
 
 Description:
-Private bucket for identity/address/corporate docs; owner-prefix paths aligned with provider_profiles_private URLs per design.md §3.11.
+Private bucket `provider-kyc-documents` for identity/address/corporate docs; owner-prefix paths `providers/{provider_id}/kyc/{document_key}/…`; provider + admin SELECT; service_role for credenciamento email attachments. See `20260801185000_create_provider_kyc_documents_storage.sql`.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -6513,7 +6515,7 @@ Acceptance Criteria covered:
 ## 118. [ ] pgTAP: webhook UNIQUE dedup and is_duplicate flag
 
 Description:
-Second insert same provider_event_id → controlled duplicate path.
+Second insert same gateway_event_id → controlled duplicate path.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.

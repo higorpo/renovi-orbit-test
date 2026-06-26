@@ -19,7 +19,7 @@ The Renovi Payment System is a **database-centric, event-driven orchestration la
 
 Edge Functions are **thin, stateless I/O connectors** — they MUST NOT own business logic, queues, leases, or state transitions. No Edge Function memory is authoritative between invocations.
 
-**Single-gateway (Option A):** MVP uses **NetCred only**. There is **no `payment_providers` registry table**. Non-secret gateway metadata (slug, API base URL, supported methods) lives in **`supabase/functions/_shared/payment/constants.ts`** and Edge env; **credentials and signing secrets** live in **Supabase Vault**. Rows store `gateway_slug TEXT NOT NULL DEFAULT 'netcred'` with a `CHECK (gateway_slug = 'netcred')` constraint — enough for webhook dedup and a future multi-gateway migration without redesigning charge semantics.
+**Single-gateway (Option A):** MVP uses **NetCred only**. There is **no `payment_providers` registry table**. Non-secret gateway metadata (slug, API base URL, supported methods) lives in **`supabase/functions/_shared/payment/constants.ts`** and Edge env; **credentials and signing secrets** live in **Supabase Vault**. Rows store `gateway_slug payment_gateway_slug NOT NULL DEFAULT 'netcred'` — enough for webhook dedup and a future multi-gateway migration without redesigning charge semantics.
 
 The system enforces **exactly-once charge semantics** through a combination of:
 - Row-level pessimistic locking (`SELECT … FOR UPDATE SKIP LOCKED`) for queue dequeueing
@@ -68,7 +68,7 @@ graph TB
     pg -->|enqueue notifications| MMD
 ```
 
-**Seven Edge Functions** (down from fourteen in v1.0). Everything else is RPC + `pg_cron`.
+**Eight Edge Functions** (charge/webhook/onboarding I/O plus KYC credenciamento email). Everything else is RPC + `pg_cron`.
 
 ## 1.3 Component Responsibilities
 
@@ -97,7 +97,7 @@ graph TB
 | Installment options + HMAC signing | **RPC** `payment_calculate_installment_options` | Fee formula + Vault HMAC (same pattern as `generate_provider_pricing_signature`) |
 | Accept proposal + schedule creation | **RPC** `accept_proposal` (payment evolution) | Atomic TX; `auth.uid()`; idempotency via `UNIQUE(idempotency_key)` |
 | Update payment method | **RPC** `payment_update_method` | `FOR UPDATE` + audit; HMAC revalidation in SQL |
-| KYC submission | **RPC** `payment_submit_provider_kyc` + MMD | Persist KYC; enqueue email via `mmd_ingest_event` — no Resend in payment layer |
+| KYC submission | **RPC** `payment_submit_provider_kyc` + **`dispatch-kyc-email` EF** | Persist KYC + private Storage paths in TX; EF downloads docs and emails attachments to NetCred |
 | Auto-cancel T-12h | **RPC** `payment_cron_auto_cancel_unpaid_services` | Batch + per-row `EXCEPTION`; MMD enqueue after commit |
 | Pre-charge notification | **RPC** `payment_cron_notify_upcoming_charges` | Claim + `upcoming_charge_notified_at` + MMD |
 | Auto-complete executed | **RPC** `payment_cron_auto_complete_executed_services` | Batch transition + MMD |
@@ -118,7 +118,7 @@ graph TB
 | Webhook raw persistence | **Synchronous, before validation** | Events logged even if processing fails |
 | Webhook state reconciliation | **Synchronous, single DB TX** | State + audit commit atomically |
 | `transactionRefund` submission | **Synchronous, sets REFUND_REQUESTED** | Confirmation via webhook is async |
-| KYC email dispatch | **Async** (MMD via `mmd_ingest_event` after RPC commit) | Email failure MUST NOT block KYC state commit |
+| KYC email dispatch | **Async** (`dispatch-kyc-email` EF after RPC commit) | Email failure MUST NOT block `DOCUMENTS_SUBMITTED`; EF retries; `email_dispatched_at` set on success |
 | Installment recalculation at charge time | **Synchronous, within cron TX** | Fee MUST be accurate at charge time using current rates |
 | Service completion (EXECUTED→COMPLETED) | **Synchronous, single DB TX** | Status + audit atomic |
 | Auto-completion (24h after EXECUTED) | **Async** (cron) | Client inaction must not block finalization |
@@ -194,8 +194,8 @@ Two aggregates, 1:1, coupled only at atomic boundaries (`PAID`→`CONFIRMED`, ca
 | Field | Meaning | Frozen at accept? |
 |---|---|---|
 | `base_amount` | Proposal price to client (ex.: R$ 1.000) | Yes |
-| `commission_rate_pct` | From `platform_constants` at accept | Yes |
-| `provider_payout` | Net to provider in split (ex.: R$ 850) | Yes |
+| `commission_rate_pct` | From accepted proposal `tax_rate` (`× 100`, frozen at proposal) | Yes |
+| `provider_payout` | From accepted proposal `final_amount` (ex.: R$ 850) | Yes |
 | `charge_amount` | `base_amount` + card fees (ex.: R$ 1.030) | **No** — recalculated at T-2 (fee drift) |
 | `paid_amount` | Captured total when `PAID` | Set at capture |
 
@@ -272,7 +272,7 @@ both:               isLiable = true
 ```mermaid
 erDiagram
     profiles ||--o{ client_card_tokens : "client_id"
-    profiles ||--o{ provider_gateway_accounts : "provider_user_id"
+    profiles ||--o{ provider_gateway_accounts : "provider_id"
     contracted_services ||--|| payment_schedules : "contracted_service_id"
     payment_schedules ||--o{ payment_attempts : "schedule_id"
     payment_schedules }o--|| client_card_tokens : "client_card_token_id"
@@ -355,6 +355,22 @@ stateDiagram-v2
 
 **Existing tables extended (ALTER):** `contracted_services` (payment lifecycle columns + enum values — **no** `service_scheduled_at`; scheduling anchor via `payment_service_execution_at()`, see §3.0), `provider_profiles_private` (KYC/banking/document columns — see §3.11), `platform_constants` (payment seed keys only). Provider mobile phone for KYC/email reuses **`profiles.phone`** (not duplicated in `provider_profiles_private`).
 
+**Payment enum types** (migration `20260801030000_payment_schema_foundation.sql`, same pattern as CNS `create_cns_enums`):
+
+| Type | Used on |
+|---|---|
+| `payment_gateway_slug` | `gateway_slug` columns (`netcred` at MVP) |
+| `payment_schedule_state` | `payment_schedules.state` |
+| `payment_client_card_token_state` | `client_card_tokens.state` |
+| `payment_provider_onboarding_status` | `provider_gateway_accounts.onboarding_status` |
+| `payment_attempt_initiator` | `payment_attempts.initiator` |
+| `payment_attempt_outcome` | `payment_attempts.outcome` (nullable) |
+| `payment_webhook_event_state` | `payment_webhook_events.state` |
+| `payment_webhook_queue_state` | `payment_webhook_processing_queue.state` |
+| `payment_audit_actor` | `payment_audit_log.actor` |
+
+`payment_audit_log.from_state` / `to_state` remain **TEXT** (transition labels may differ by entity). Extend enums with `ALTER TYPE … ADD VALUE` when new states are added.
+
 ## 3.0 `contracted_services` — payment extensions (existing table)
 
 **Do not add `service_scheduled_at`.** The CNS schema already persists the agreed slot at accept time:
@@ -421,20 +437,15 @@ ALTER TABLE public.contracted_services
 | JWT cache (mutable) | `payment_gateway_tokens` | One row: `gateway_slug = 'netcred'` |
 | Supported methods (MVP) | Constant `['CREDIT_CARD']` in TypeScript | Pix/Boleto = code change + migration when added |
 
-**DB enforcement:** every table that carries `gateway_slug` uses:
+**DB enforcement:** every table that carries `gateway_slug` uses type **`payment_gateway_slug`** (MVP value: `'netcred'`). FSM state columns use the enum types listed in §3 introduction — not `TEXT` + `CHECK` validators.
 
-```sql
-gateway_slug TEXT NOT NULL DEFAULT 'netcred' CHECK (gateway_slug = 'netcred')
-```
-
-**Future second gateway:** requires an explicit migration (introduce `payment_providers` or expand CHECK) + new adapter — not in MVP scope.
+**Future second gateway:** requires `ALTER TYPE payment_gateway_slug ADD VALUE …` (or a registry table) + new adapter — not in MVP scope.
 
 ## 3.2 `payment_gateway_tokens`
 
 ```sql
 CREATE TABLE payment_gateway_tokens (
-  gateway_slug   TEXT        PRIMARY KEY DEFAULT 'netcred'
-                 CHECK (gateway_slug = 'netcred'),
+  gateway_slug   payment_gateway_slug PRIMARY KEY DEFAULT 'netcred',
   token          TEXT        NOT NULL,  -- JWT from NetCred tokenAuth; not the Vault password
   expires_at     TIMESTAMPTZ NOT NULL,
   refreshed_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -454,51 +465,79 @@ CREATE TABLE payment_gateway_tokens (
 CREATE TABLE client_card_tokens (
   id                          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id                   UUID        NOT NULL REFERENCES profiles(id),
-  gateway_slug                TEXT        NOT NULL DEFAULT 'netcred'
-                              CHECK (gateway_slug = 'netcred'),
-  provider_payment_profile_id TEXT        NOT NULL,  -- NetCred paymentProfile.id
+  gateway_slug                payment_gateway_slug NOT NULL DEFAULT 'netcred',
+  gateway_payment_profile_id TEXT        NOT NULL,  -- NetCred paymentProfile.id
   card_number_masked          TEXT        NOT NULL,  -- '497010XXXXXX0048'
   card_brand                  TEXT        NOT NULL,  -- 'VCC','MASTER','ELO',...
-  provider_card_token         TEXT        NOT NULL,  -- NetCred paymentProfile.token
+  gateway_card_token         TEXT        NOT NULL,  -- NetCred paymentProfile.token
   expiry_month                SMALLINT    NOT NULL CHECK (expiry_month BETWEEN 1 AND 12),
-  expiry_year                 SMALLINT    NOT NULL,
+  expiry_year                 SMALLINT    NOT NULL CHECK (expiry_year >= extract(year FROM now())::smallint),
   cardholder_name             TEXT        NOT NULL,
   billing_address             JSONB       NOT NULL,  -- {street,number,district,city,state,zipCode,additionalDetails}
-  state                       TEXT        NOT NULL DEFAULT 'ACTIVE'
-                              CHECK (state IN ('ACTIVE','EXPIRED','REVOKED','TOKENIZATION_FAILED')),
+  state                       payment_client_card_token_state NOT NULL DEFAULT 'ACTIVE',
   created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (client_id, provider_payment_profile_id)
+  UNIQUE (client_id, gateway_payment_profile_id)
 );
 -- PCI constraint: NO columns for raw PAN or CVV.
 CREATE INDEX idx_client_card_tokens_client_state ON client_card_tokens(client_id, state);
--- RLS: only client (auth.uid() = client_id) can SELECT their own tokens.
+-- RLS on base table: (select auth.uid()) = client_id for SELECT; mutations via service_role only.
 ```
 
-**PCI Invariant:** The schema CHECK constraints plus RLS policies enforce PCI DSS data-at-rest scope limitation. `provider_payment_profile_id` and `provider_card_token` are gateway-issued opaque references.
+### `client_card_tokens_safe_v` (client read model)
+
+**Product intent:** the authenticated client app MUST read saved cards from this view, **not** from `client_card_tokens` directly. The base table still holds `gateway_card_token` and `billing_address` for charge RPCs and Edge Functions (`service_role`).
+
+| Surface | Columns exposed | Must not expose |
+|---|---|---|
+| `client_card_tokens_safe_v` | id, client_id, gateway_slug, gateway_payment_profile_id, card_number_masked, card_brand, expiry_month, expiry_year, cardholder_name, state, created_at, updated_at | `gateway_card_token`, `billing_address` |
+| `client_card_tokens` (base) | Full row | Client browser — `service_role` / tokenize EF / charge pipeline only |
+
+```sql
+CREATE VIEW public.client_card_tokens_safe_v
+WITH (security_invoker = true) AS
+SELECT
+  cct.id,
+  cct.client_id,
+  cct.gateway_slug,
+  cct.gateway_payment_profile_id,
+  cct.card_number_masked,
+  cct.card_brand,
+  cct.expiry_month,
+  cct.expiry_year,
+  cct.cardholder_name,
+  cct.state,
+  cct.created_at,
+  cct.updated_at
+FROM public.client_card_tokens cct;
+
+COMMENT ON VIEW public.client_card_tokens_safe_v IS
+  'Client-facing card token read model; excludes gateway_card_token and billing_address (PCI).';
+```
+
+**Frontend contract:** `src/features/payments/api/card-tokens.api.ts` queries `client_card_tokens_safe_v` only. Checkout stepper saved-card selection, card picker UI, and any client-side listing MUST use this API — never `.from('client_card_tokens')` in the browser.
+
+**RLS:** `security_invoker = true` — the view inherits `client_card_tokens_select_own` on the base table (`auth.uid() = client_id`).
+
+**PCI Invariant:** The schema CHECK constraints plus RLS policies enforce PCI DSS data-at-rest scope limitation. `gateway_payment_profile_id` and `gateway_card_token` are gateway-issued opaque references stored on the base table; they MUST NOT be returned to the client UI.
 
 ## 3.4 `provider_gateway_accounts`
 
 ```sql
 CREATE TABLE provider_gateway_accounts (
   id                        UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  provider_user_id          UUID        NOT NULL REFERENCES profiles(id),
-  gateway_slug              TEXT        NOT NULL DEFAULT 'netcred'
-                            CHECK (gateway_slug = 'netcred'),
+  provider_id          UUID        NOT NULL REFERENCES profiles(id),
+  gateway_slug              payment_gateway_slug NOT NULL DEFAULT 'netcred',
   document                  TEXT        NOT NULL,   -- CPF or CNPJ, digits only
   netcred_company_id        TEXT,                   -- populated on ACTIVE
   netcred_bank_account_id   TEXT,                   -- populated on ACTIVE
-  onboarding_status         TEXT        NOT NULL DEFAULT 'PENDING_DOCUMENTS'
-                            CHECK (onboarding_status IN (
-                              'PENDING_DOCUMENTS','DOCUMENTS_SUBMITTED',
-                              'UNDER_NETCRED_REVIEW','ACTIVE','REJECTED','SUSPENDED'
-                            )),
+  onboarding_status         payment_provider_onboarding_status NOT NULL DEFAULT 'PENDING_DOCUMENTS',
   onboarding_submitted_at   TIMESTAMPTZ,
   onboarding_activated_at   TIMESTAMPTZ,
   email_dispatched_at       TIMESTAMPTZ,  -- set when KYC email confirmed sent
   created_at                TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at                TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (provider_user_id, gateway_slug)  -- one NetCred account per provider at MVP
+  UNIQUE (provider_id, gateway_slug)  -- one NetCred account per provider at MVP
 );
 CREATE INDEX idx_provider_gateway_accounts_status ON provider_gateway_accounts(onboarding_status)
   WHERE onboarding_status IN ('DOCUMENTS_SUBMITTED','UNDER_NETCRED_REVIEW');
@@ -515,20 +554,14 @@ CREATE TABLE payment_schedules (
   contracted_service_id       UUID        NOT NULL REFERENCES contracted_services(id),
   client_id                   UUID        NOT NULL,
   provider_id                 UUID        NOT NULL,  -- service provider entity
-  gateway_slug                TEXT        NOT NULL DEFAULT 'netcred'
-                              CHECK (gateway_slug = 'netcred'),
+  gateway_slug                payment_gateway_slug NOT NULL DEFAULT 'netcred',
   client_card_token_id            UUID        REFERENCES client_card_tokens(id),
   installment_number          SMALLINT    NOT NULL CHECK (installment_number BETWEEN 1 AND 12),
   base_amount                 NUMERIC(12,2) NOT NULL CHECK (base_amount > 0),
   commission_rate_pct         NUMERIC(5,2)  NOT NULL CHECK (commission_rate_pct >= 0),
   provider_payout             NUMERIC(12,2) NOT NULL CHECK (provider_payout > 0),
   charge_scheduled_at         TIMESTAMPTZ NOT NULL,
-  state                       TEXT        NOT NULL DEFAULT 'SCHEDULED'
-                              CHECK (state IN (
-                                'SCHEDULED','PROCESSING','PAID','IN_ANALYSIS',
-                                'FAILED','FAILED_PERMANENT','CANCELLED','VOIDED',
-                                'REFUND_REQUESTED','REFUNDED','PARTIALLY_REFUNDED','EXPIRED'
-                              )),
+  state                       payment_schedule_state NOT NULL DEFAULT 'SCHEDULED',
   automatic_attempt_count     SMALLINT    NOT NULL DEFAULT 0,
   manual_attempt_count        SMALLINT    NOT NULL DEFAULT 0,
   max_attempts                SMALLINT    NOT NULL DEFAULT 3,
@@ -540,8 +573,8 @@ CREATE TABLE payment_schedules (
   upcoming_charge_notified_at TIMESTAMPTZ,                  -- 24h pre-charge notification sent
   is_disputed                 BOOLEAN     NOT NULL DEFAULT FALSE,
   needs_payment_method_update BOOLEAN     NOT NULL DEFAULT FALSE,
-  provider_charge_id          TEXT,                         -- netcred_charge_id
-  provider_transaction_id     TEXT,                         -- netcred_transaction_id
+  gateway_charge_id          TEXT,                         -- netcred_charge_id
+  gateway_transaction_id     TEXT,                         -- netcred_transaction_id
   paid_at                     TIMESTAMPTZ,
   failed_at                   TIMESTAMPTZ,
   failed_permanently_at       TIMESTAMPTZ,
@@ -586,12 +619,10 @@ CREATE TABLE payment_attempts (
   id                      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   schedule_id             UUID        NOT NULL REFERENCES payment_schedules(id),
   attempt_number          SMALLINT    NOT NULL,
-  initiator               TEXT        NOT NULL CHECK (initiator IN ('cron','client')),
+  initiator               payment_attempt_initiator NOT NULL,
   initiated_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
   completed_at            TIMESTAMPTZ,
-  outcome                 TEXT        CHECK (outcome IN (
-                            'PAID','REJECTED','TIMEOUT','ERROR','IN_ANALYSIS','VOIDED'
-                          )),
+  outcome                 payment_attempt_outcome,
   provider_response_summary JSONB,
   failure_code            TEXT,
   failure_reason          TEXT,
@@ -608,16 +639,12 @@ CREATE INDEX idx_payment_attempts_schedule ON payment_attempts(schedule_id, atte
 ```sql
 CREATE TABLE payment_webhook_events (
   id                TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::text,
-  gateway_slug      TEXT        NOT NULL,
+  gateway_slug      payment_gateway_slug NOT NULL,
   event_type        TEXT        NOT NULL,
-  provider_event_id TEXT        NOT NULL,
+  gateway_event_id TEXT        NOT NULL,
   raw_payload       JSONB       NOT NULL,
   raw_headers       JSONB       NOT NULL,
-  state             TEXT        NOT NULL DEFAULT 'RECEIVED'
-                    CHECK (state IN (
-                      'RECEIVED','VALIDATING','PROCESSING','PROCESSED',
-                      'DUPLICATE','FAILED','DEAD_LETTER'
-                    )),
+  state             payment_webhook_event_state NOT NULL DEFAULT 'RECEIVED',
   retry_count       SMALLINT    NOT NULL DEFAULT 0,
   next_retry_at     TIMESTAMPTZ,
   processed_at      TIMESTAMPTZ,
@@ -625,7 +652,7 @@ CREATE TABLE payment_webhook_events (
   is_duplicate      BOOLEAN     NOT NULL DEFAULT FALSE,
   created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (gateway_slug, event_type, provider_event_id)  -- deduplication constraint
+  UNIQUE (gateway_slug, event_type, gateway_event_id)  -- deduplication constraint
 );
 CREATE INDEX idx_webhook_events_retry ON payment_webhook_events(state, next_retry_at)
   WHERE state = 'FAILED';
@@ -633,7 +660,7 @@ CREATE INDEX idx_webhook_events_dead_letter ON payment_webhook_events(state, cre
   WHERE state = 'DEAD_LETTER';
 ```
 
-**Dedup semantics:** The UNIQUE constraint on `(gateway_slug, event_type, provider_event_id)` is the primary deduplication mechanism. On conflict, the handler sets `is_duplicate = true` and returns HTTP 200 without reprocessing.
+**Dedup semantics:** The UNIQUE constraint on `(gateway_slug, event_type, gateway_event_id)` is the primary deduplication mechanism. On conflict, the handler sets `is_duplicate = true` and returns HTTP 200 without reprocessing.
 
 ## 3.8 `payment_webhook_processing_queue`
 
@@ -643,13 +670,11 @@ Heavy webhook reconciliation runs **outside** the Edge Function response window.
 CREATE TABLE payment_webhook_processing_queue (
   id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   webhook_event_id TEXT        NOT NULL REFERENCES payment_webhook_events(id),
-  gateway_slug     TEXT        NOT NULL DEFAULT 'netcred'
-                   CHECK (gateway_slug = 'netcred'),
+  gateway_slug     payment_gateway_slug NOT NULL DEFAULT 'netcred',
   event_type       TEXT        NOT NULL,
   scheduled_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
   attempted_at     TIMESTAMPTZ,
-  state            TEXT        NOT NULL DEFAULT 'PENDING'
-                   CHECK (state IN ('PENDING','PROCESSING','PROCESSED','FAILED')),
+  state            payment_webhook_queue_state NOT NULL DEFAULT 'PENDING',
   attempt_count    SMALLINT    NOT NULL DEFAULT 0,
   failure_reason   TEXT,
   created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -686,8 +711,7 @@ CREATE TABLE payment_audit_log (
   schedule_id  UUID,                   -- payment_schedules.id
   from_state   TEXT,
   to_state     TEXT,
-  actor        TEXT        NOT NULL    -- 'cron','client','webhook','support','system'
-               CHECK (actor IN ('cron','client','webhook','support','system')),
+  actor        payment_audit_actor NOT NULL,
   actor_id     UUID,                   -- auth.uid() when applicable
   metadata     JSONB       NOT NULL DEFAULT '{}',
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -741,13 +765,25 @@ ALTER TABLE public.provider_profiles_private
   ADD COLUMN IF NOT EXISTS bank_branch               TEXT,
   ADD COLUMN IF NOT EXISTS bank_account              TEXT,
   ADD COLUMN IF NOT EXISTS pix_key                   TEXT,
-  ADD COLUMN IF NOT EXISTS identity_doc_url          TEXT,
-  ADD COLUMN IF NOT EXISTS address_proof_url         TEXT,
-  ADD COLUMN IF NOT EXISTS corporate_charter_url     TEXT,  -- PJ only
-  ADD COLUMN IF NOT EXISTS legal_rep_doc_url         TEXT;  -- PJ only
+  ADD COLUMN IF NOT EXISTS identity_doc_storage_path     TEXT,
+  ADD COLUMN IF NOT EXISTS address_proof_storage_path    TEXT,
+  ADD COLUMN IF NOT EXISTS corporate_charter_storage_path TEXT,  -- PJ only
+  ADD COLUMN IF NOT EXISTS legal_rep_doc_storage_path    TEXT;  -- PJ only
 ```
 
-**RLS (unchanged pattern, already in production):** provider SELECT/UPDATE own row; platform admin SELECT all; no client/anon access; **`payment_submit_provider_kyc()`** (`SECURITY DEFINER`) is the write path for KYC submit — updates `provider_profiles_private`, syncs `provider_gateway_accounts.document` from `cpf`/`cnpj`, sets `onboarding_status`, inserts audit. Document Storage paths MUST use a private bucket with owner-prefix policies aligned to this table.
+**Private Storage bucket `provider-kyc-documents`** (migration `20260801185000_create_provider_kyc_documents_storage.sql`):
+
+| Concern | Rule |
+|---|---|
+| Visibility | `public = false` — no anonymous or signed public URLs in credenciamento email |
+| Object path | `providers/{provider_id}/kyc/{document_key}/{filename}` |
+| `document_key` | `identity`, `address-proof`, `corporate-charter`, `legal-rep-id` |
+| Upload | Provider `authenticated` INSERT under own `providers/{auth.uid()}/kyc/…` prefix |
+| Read | Provider own prefix **or** `is_platform_admin()` |
+| Credenciamento email | **`dispatch-kyc-email` EF** (`service_role`) downloads objects and attaches bytes to Resend — **never** public links |
+| RPC validation | `payment_submit_provider_kyc` stores paths only after `payment_assert_provider_kyc_storage_path` confirms object exists |
+
+**RLS (unchanged pattern on `provider_profiles_private`, already in production):** provider SELECT/UPDATE own row; platform admin SELECT all; no client/anon access; **`payment_submit_provider_kyc()`** (`SECURITY DEFINER`) is the write path for KYC submit — updates `provider_profiles_private`, syncs `provider_gateway_accounts.document` from `cpf`/`cnpj`, sets `onboarding_status`, inserts audit. Document columns store **storage paths**, not HTTP URLs.
 
 **Sync on submit:** `provider_gateway_accounts.document` = digits-only `cpf` (PF) or `cnpj` (PJ) from the same TX, used by `detect-netcred-onboarding` batch matching.
 
@@ -778,9 +814,10 @@ INSERT INTO platform_constants (key, value, description) VALUES
   ('scheduled_charge_hours_before_service', '48','T-2 charge scheduling offset hours'),
   ('installment_hmac_expires_minutes',  '10',    'HMAC payload TTL minutes'),
   ('reconciliation_poll_interval_minutes','30',  'Stale record reconciliation interval'),
-  ('webhook_base_retry_interval_minutes','5',    'Exponential backoff base for webhook retry'),
-  ('platform_commission_rate_pct',      '15.00', 'Renovi commission % applied to base_amount at accept (frozen per schedule)');
+  ('webhook_base_retry_interval_minutes','5',    'Exponential backoff base for webhook retry');
 ```
+
+Provider commission at accept comes from the accepted proposal (`tax_rate`, `final_amount`), not a separate payment constant — see `renovi_tax_provider` at proposal creation (§1.7.4).
 
 ## 3.13 Payment history read models (client + provider views)
 
@@ -938,30 +975,35 @@ ALTER VIEW public.provider_payment_receivables_v ENABLE ROW LEVEL SECURITY;
 ```mermaid
 sequenceDiagram
     participant P as Provider App
+    participant ST as Storage (private bucket)
     participant PG as PostgreSQL RPC
-    participant MMD as Message Dispatcher
+    participant EF as dispatch-kyc-email EF
+    participant RS as Resend
 
-    P->>PG: payment_submit_provider_kyc(kyc_data, document_urls[]) — authenticated RPC
-    PG->>PG: BEGIN TX
-    PG->>PG: UPDATE provider_profiles_private (legal/bank/docs; legal_representative_phone if PJ)
-    PG->>PG: UPDATE profiles.phone IF supplied and missing
-    PG->>PG: UPDATE provider_gateway_accounts SET document, onboarding_status='DOCUMENTS_SUBMITTED', onboarding_submitted_at=now()
-    PG->>PG: INSERT payment_audit_log (event_type='KYC_SUBMITTED', entity_type='provider_gateway_account', actor='client')
+    P->>ST: upload KYC files (providers/{id}/kyc/{document_key}/…)
+    P->>PG: payment_submit_provider_kyc(bank fields, storage_paths[])
+    PG->>PG: BEGIN TX — assert paths exist; UPDATE provider_profiles_private
+    PG->>PG: UPDATE provider_gateway_accounts DOCUMENTS_SUBMITTED
+    PG->>PG: INSERT payment_audit_log KYC_SUBMITTED
     PG->>PG: COMMIT TX
-    PG->>MMD: mmd_ingest_event(PROVIDER_KYC_SUBMITTED, …) — payload from provider_profiles_private + profiles
-    alt MMD ingest success
-        PG->>PG: UPDATE provider_gateway_accounts SET email_dispatched_at=now()
-    else MMD ingest failure
-        Note over PG: State DOCUMENTS_SUBMITTED preserved; MMD retries delivery
+    PG-->>P: { provider_gateway_account_id, dispatch_kyc_email_required: true }
+    P->>EF: POST dispatch-kyc-email (JWT)
+    EF->>PG: SELECT provider_profiles_private + profiles (service_role)
+    EF->>ST: download objects (service_role)
+    EF->>RS: email credenciamento@… with attachments (no public URLs)
+    alt send success
+        EF->>PG: payment_mark_kyc_credenciamento_email_dispatched(id)
+    else send failure
+        Note over EF: Retry; DOCUMENTS_SUBMITTED preserved
     end
     P-->>P: Show "Aguardando análise" state
 ```
 
-**No Edge Function.** KYC persistence and state transition are fully transactional in `payment_submit_provider_kyc`. Email to `credenciamento@renovi.com.br` is enqueued via **MMD** (`mmd_ingest_event`), matching the platform notification pattern used by CNS triggers. **`KYC_SUBMITTED`** in `payment_audit_log` is the immutable record of each NetCred-bound submission (no separate submissions table).
+**Split responsibility:** KYC persistence and `DOCUMENTS_SUBMITTED` transition are **fully transactional** in `payment_submit_provider_kyc`. Credenciamento email requires **Storage download + Resend attachment I/O**, so it runs in **`dispatch-kyc-email` Edge Function** after commit (Req 3 AC5). **`KYC_SUBMITTED`** in `payment_audit_log` is the immutable record of each NetCred-bound submission.
 
 **Blocking enforcement (Req 3 AC1):** The `match_provider_jobs` RPC contains a guard:
 ```sql
-IF (SELECT onboarding_status FROM provider_gateway_accounts WHERE provider_user_id = auth.uid())
+IF (SELECT onboarding_status FROM provider_gateway_accounts WHERE provider_id = auth.uid())
    != 'ACTIVE' THEN
   RETURN QUERY SELECT * FROM ... WHERE FALSE; -- empty result
 END IF;
@@ -970,7 +1012,7 @@ This enforcement is in the RPC (`SECURITY DEFINER`), not only client-side render
 
 > **Migration:** see §5.2 *Extended RPCs — migration source of truth* — dump `match_provider_jobs` and `cns_initiate_conversation` from local Postgres before writing migrations that touch them.
 
-**Email retry semantics (Req 3 AC5):** If MMD ingest fails, `DOCUMENTS_SUBMITTED` is preserved because it was committed before the enqueue call. MMD handles exponential retry. The provider's app shows "submitting..." until `email_dispatched_at` is populated.
+**Email retry semantics (Req 3 AC5):** If `dispatch-kyc-email` fails, `DOCUMENTS_SUBMITTED` is preserved because it was committed before the EF call. The app MAY retry the EF until `email_dispatched_at` is populated (`payment_mark_kyc_credenciamento_email_dispatched`).
 
 ### 4.1.2 Onboarding Detection Cron (Req 4)
 
@@ -1024,6 +1066,8 @@ SELECT
 
 Steps rendered in order: CPF (if needed) → Phone (if needed) → Card / Saved Card Selection → Installments → Confirmation.
 
+**Saved card listing:** load ACTIVE tokens via `client_card_tokens_safe_v` (see §3.3) through `listActiveClientCardTokens()` in the payments feature API — never `SELECT` from `client_card_tokens` in the browser.
+
 ### 4.2.2 ClearSale SDK Initialization (Req 31)
 
 At card step component mount:
@@ -1072,7 +1116,7 @@ sequenceDiagram
 **PCI compliance enforcement:**
 - Raw card data (PAN, CVV) MUST NOT be logged, cached in React Query, stored in IndexedDB, or transmitted to any endpoint other than `tokenize-payment-card`
 - The EF never logs card fields from the request body
-- Only `provider_payment_profile_id`, `card_number_masked`, `card_brand`, `provider_card_token` are persisted
+- Only `gateway_payment_profile_id`, `card_number_masked`, `card_brand`, `gateway_card_token` are persisted
 - `billingAddressInput` is ALWAYS included in production (ClearSale requirement); omission causes `PaymentProfile requires BillingAddress` gateway error
 
 ## 4.3 Phase 4: Installment Calculation and HMAC Signing (Req 7, 25, 27)
@@ -1096,7 +1140,7 @@ if brand IN ('ELO', other)  AND n = 1  → cc_elo_other_1x_rate
 ... (analogous for other ranges)
 ```
 
-**Same formula in `payment_calculate_installment_options()` RPC and `payment_calculate_charge_amount()` RPC.** At T-2, the cron uses `payment_calculate_charge_amount()` (current `platform_constants`), NOT the HMAC payload, to compute the actual charged amount. Fee drift between checkout and charge time is expected and intentional.
+**Same formula via shared SQL helpers `payment_cc_fee_rate_key()` and `payment_total_with_card_fees()`** — used by `payment_calculate_installment_options()` and `payment_calculate_charge_amount()`. At T-2, the cron uses `payment_calculate_charge_amount()` (current `platform_constants`), NOT the HMAC payload, to compute the actual charged amount. Fee drift between checkout and charge time is expected and intentional.
 
 ### 4.3.2 HMAC Signing and Validation
 
@@ -1173,8 +1217,8 @@ else:  -- emergency scheduling
 **Commission and payout at accept** (same TX as schedule creation):
 
 ```
-commission_rate_pct := platform_constants.platform_commission_rate_pct  -- snapshot at accept
-provider_payout     := ROUND(base_amount * (1 - commission_rate_pct / 100), 2)
+commission_rate_pct := ROUND(provider_proposals.tax_rate * 100, 2)  -- frozen on proposal
+provider_payout     := provider_proposals.final_amount
 ```
 
 Both `commission_rate_pct` and `provider_payout` are **immutable** until terminal schedule state. Card fees (`charge_amount`) are recalculated at T-2 only (§1.7.4).
@@ -1229,7 +1273,7 @@ WITH eligible AS (
   SELECT ps.id
   FROM payment_schedules ps
   JOIN contracted_services cs ON cs.id = ps.contracted_service_id
-  JOIN provider_gateway_accounts pa ON pa.provider_user_id = ps.provider_id
+  JOIN provider_gateway_accounts pa ON pa.provider_id = ps.provider_id
                             AND pa.gateway_slug = ps.gateway_slug
   JOIN platform_constants pc ON pc.key = 'max_charge_attempts'
   WHERE ps.state IN ('SCHEDULED', 'FAILED')
@@ -1639,7 +1683,7 @@ BEGIN
            pa.onboarding_status
     FROM contracted_services cs
     JOIN payment_schedules ps ON ps.contracted_service_id = cs.id
-    LEFT JOIN provider_gateway_accounts pa ON pa.provider_user_id = ps.provider_id
+    LEFT JOIN provider_gateway_accounts pa ON pa.provider_id = ps.provider_id
     WHERE payment_service_execution_at(cs) - now() <= interval '12 hours'
       AND cs.status NOT IN ('CANCELLED','COMPLETED')
       AND (
@@ -1827,7 +1871,7 @@ Every new `payment_*` RPC MUST ship with explicit **`REVOKE` / `GRANT EXECUTE`**
 | Charge / webhook | `payment_persist_client_card_token`, `payment_claim_charge_batch`, `payment_begin_manual_attempt`, `payment_commit_charge_outcome`, `payment_enqueue_notifications`, `payment_ingest_webhook_event`, `payment_enqueue_webhook_processing`, `payment_process_webhook_event`, `payment_claim_webhook_processing_batch`, `payment_claim_webhook_retry_batch`, `payment_begin_refund_request`, `payment_claim_stale_schedules_for_reconciliation`, `payment_process_reconciliation_outcome` |
 | Onboarding | `payment_list_gateway_accounts_for_onboarding`, `payment_activate_provider_from_netcred`, `payment_update_provider_onboarding_status` |
 | Batch / cron targets | `payment_auto_cancel_services`, `payment_notify_upcoming_charges_batch`, `payment_auto_complete_executed_services`, `payment_recover_orphaned_schedules`, `payment_claim_upcoming_charge_notifications` |
-| Helpers | `payment_calculate_charge_amount`, `payment_service_execution_at`, `payment_reschedule_charge_date` |
+| Helpers | `payment_cc_fee_rate_key`, `payment_total_with_card_fees`, `payment_calculate_charge_amount`, `payment_service_execution_at`, `payment_reschedule_charge_date` |
 | Operator | `payment_reset_dead_letter_event`, `payment_reconstruct_audit_lifecycle` |
 | pg_cron wrappers | `payment_cron_schedule_netcred_charges`, `payment_cron_auto_cancel_unpaid_services`, `payment_cron_notify_upcoming_charges`, `payment_cron_auto_complete_executed_services`, `payment_cron_process_webhook_retry`, `payment_cron_recover_orphaned_schedules`, `payment_cron_detect_netcred_onboarding`, `payment_cron_reconcile_netcred_payments` |
 | Internal | `payment_cron_invoke_edge_function` |
@@ -1896,11 +1940,12 @@ Batch RPCs accept `p_record_job_run boolean DEFAULT true` where applicable; **cr
 
 **HMAC secrets** (`INSTALLMENT_SIGNING_SECRET`, pricing signature) are read via `vault.decrypted_secrets` inside `SECURITY DEFINER` RPCs (`SET search_path = public, vault, extensions`), matching `generate_provider_pricing_signature`.
 
-## 5.3 Edge Function Contracts (strictly necessary — seven total)
+## 5.3 Edge Function Contracts (strictly necessary — eight total)
 
 | Function | Trigger | Auth | Role |
 |---|---|---|---|
 | `tokenize-payment-card` | Client POST | JWT | PCI → NetCred `paymentProfileCreate` → `payment_persist_client_card_token` RPC |
+| `dispatch-kyc-email` | Client POST after KYC RPC | JWT (provider) | Load KYC row + **download private Storage objects** → Resend email with **attachments** to credenciamento@… → `payment_mark_kyc_credenciamento_email_dispatched` RPC |
 | `schedule-netcred-charges` | pg_cron 4×/day via `payment_cron_schedule_netcred_charges()` | cron secret | `payment_claim_charge_batch` → NetCred loop → `payment_commit_charge_outcome` RPC |
 | `manual-charge-payment` | Client POST | JWT + rate limit | `payment_begin_manual_attempt` → NetCred → `payment_commit_charge_outcome` RPC |
 | `netcred-webhook` | NetCred POST | HMAC (no JWT) | Ingest + HMAC → inline `payment_process_webhook_event` OR `payment_enqueue_webhook_processing` RPC |
@@ -1908,7 +1953,7 @@ Batch RPCs accept `p_record_job_run boolean DEFAULT true` where applicable; **cr
 | `detect-netcred-onboarding` | pg_cron 1×/day via `payment_cron_detect_netcred_onboarding()` | cron secret | NetCred batch query → activation RPCs |
 | `reconcile-netcred-payments` | pg_cron 30 min via `payment_cron_reconcile_netcred_payments()` | cron secret | `claim_stale_*` → NetCred `getTransaction` → commit RPC |
 
-**Removed from v1.0 (now RPC):** `calculate-installment-options`, `accept-proposal` (payment path), `update-payment-method`, `process-webhook-retry`, `auto-cancel-unpaid-services`, `notify-upcoming-charges`, `dispatch-kyc-email`, `auto-complete-executed-services`, `recover-payment-leases`.
+**Removed from v1.0 (now RPC):** `calculate-installment-options`, `accept-proposal` (payment path), `update-payment-method`, `process-webhook-retry`, `auto-cancel-unpaid-services`, `notify-upcoming-charges`, `auto-complete-executed-services`, `recover-payment-leases`.
 
 ## 5.4 NetCred GraphQL Operations Used
 
@@ -2132,7 +2177,7 @@ sequenceDiagram
 | Auto-cancel during IN_ANALYSIS (before T-12h) | Cron cancels mid-review | Excluded until T-12h; client cancel blocked (409) |
 | Auto-cancel IN_ANALYSIS (after T-12h) | Stuck antifraude | Path 2 in §4.12 + gateway reconcile |
 | Orphan recovery during delayed commit | Janitor recovers; EF commits late | Janitor only recovers after `locked_until < now()`; EF must commit within TTL |
-| Duplicate webhook event | Gateway retries delivery | UNIQUE `(gateway_slug, event_type, provider_event_id)` |
+| Duplicate webhook event | Gateway retries delivery | UNIQUE `(gateway_slug, event_type, gateway_event_id)` |
 | `referenceCode` conflict at gateway | Retry after timeout | Adapter calls `getTransaction` on conflict; no blind re-charge |
 
 ## 7.4 Atomicity Guarantees
@@ -2214,7 +2259,7 @@ The table-based queue with `SKIP LOCKED` scales horizontally with the number of 
 | Provider receivables history list | `(provider_id, paid_at DESC)` partial WHERE `state IN ('PAID','REFUNDED','PARTIALLY_REFUNDED')` (§3.13) |
 | Token management by client | `(client_id, state)` |
 | Onboarding cron | `(onboarding_status)` partial WHERE IN ('DOCUMENTS_SUBMITTED','UNDER_NETCRED_REVIEW') |
-| Webhook dedup | UNIQUE `(gateway_slug, event_type, provider_event_id)` |
+| Webhook dedup | UNIQUE `(gateway_slug, event_type, gateway_event_id)` |
 
 ## 9.3 `platform_constants` Read Strategy
 
@@ -2245,7 +2290,7 @@ The `payment_schedules` queue index is a partial index on `state IN ('SCHEDULED'
 | Charge attempt complete | Span | `service_id`, `schedule_id`, `attempt_number`, `gateway_latency_ms`, `transaction_state`, `charge_amount`, `gateway_slug` |
 | Unhandled exception in payment EF | ERROR | `schedule_id`, `contracted_service_id`, `automatic_attempt_count`, `gateway_slug`, `error_code`, `current_state` |
 | `FAILED_PERMANENT` transition | WARNING | All previous `failure_code` values in `extra` |
-| Webhook `DEAD_LETTER` | CRITICAL | `event_type`, `provider_event_id`, `failure_reason` |
+| Webhook `DEAD_LETTER` | CRITICAL | `event_type`, `gateway_event_id`, `failure_reason` |
 | `tokenAuth` failure | CRITICAL | `gateway_slug: 'netcred'`, `error_type: 'AUTH_FAILURE'` |
 | Sandbox credentials in production | CRITICAL | Full context; halt execution |
 | Auto-cancellation committed | WARNING | `service_id`, `schedule_id`, `last_failure_reason` |
@@ -2350,14 +2395,15 @@ Payment data is financial and PCI-adjacent. **Maximum security is the default.**
 
 | Table / view | Policy |
 |---|---|
-| `client_card_tokens` | `SELECT` where `(select auth.uid()) = client_id`; no direct `INSERT`/`UPDATE` from client (tokenize EF + RPC); `service_role` bypass for EFs |
+| `client_card_tokens` | Base table: `SELECT` where `(select auth.uid()) = client_id`; no direct `INSERT`/`UPDATE` from client (tokenize EF + RPC); `service_role` bypass for EFs. **Browser app MUST NOT query this table** — use `client_card_tokens_safe_v`. |
+| `client_card_tokens_safe_v` | Client read model (`security_invoker`); same RLS as base table; exposes masked card metadata only — no `gateway_card_token` or `billing_address` (§3.3) |
 | `payment_schedules` | `SELECT` where `(select auth.uid()) IN (client_id, provider_id)` or `is_platform_admin()`; **no** `UPDATE`/`INSERT` for `authenticated` — RPC only |
 | `payment_attempts` | No `authenticated` access (ops/support via `service_role` or admin RPCs only) |
 | `payment_webhook_events` | `service_role` only; no `authenticated` / `anon` |
 | `payment_webhook_processing_queue` | `service_role` only; no `authenticated` / `anon` |
 | `payment_audit_log` | Scoped `SELECT` (participant on related service or `is_platform_admin()`); `INSERT` via `SECURITY DEFINER` RPC only; `REVOKE UPDATE, DELETE` |
 | `payment_events` | Same append-only pattern as audit log; domain analytics — no client write |
-| `provider_gateway_accounts` | `SELECT` where `(select auth.uid()) = provider_user_id` or admin; no direct `UPDATE` — onboarding RPCs / EFs only |
+| `provider_gateway_accounts` | `SELECT` where `(select auth.uid()) = provider_id` or admin; no direct `UPDATE` — onboarding RPCs / EFs only |
 | `provider_profiles_private` | Existing pattern unchanged; KYC writes via `payment_submit_provider_kyc` only |
 | `payment_gateway_tokens` | `service_role` only; no `authenticated` access |
 | `client_payment_transactions_v` | `SELECT` where client owns row or `is_platform_admin()`; `security_invoker` (§3.13) |
@@ -2369,7 +2415,7 @@ Payment data is financial and PCI-adjacent. **Maximum security is the default.**
 
 | Operation | Enforced At |
 |---|---|
-| Client can only see own payment tokens | RLS on `client_card_tokens` |
+| Client can only see own payment tokens | RLS on `client_card_tokens`; **client UI reads `client_card_tokens_safe_v` only** (§3.3) |
 | Client payment history | `client_payment_transactions_v` — `paid_amount` + `base_amount` (service value); no `provider_payout` (§3.13) |
 | Provider receivables history | `provider_payment_receivables_v` — `provider_payout` / `net_amount_received`; no `paid_amount` (§3.13) |
 | Provider opportunity access gate | `match_provider_jobs` RPC (`SECURITY DEFINER`) |
@@ -2411,7 +2457,7 @@ Payment data is financial and PCI-adjacent. **Maximum security is the default.**
 | 14 | Auto-cancellation at T-12h | §4.12, §5.2 | `payment_cron_auto_cancel_unpaid_services()` RPC |
 | 15 | Cancellation and refund rules | §4.8 | `computeRefundAmount()`; ToS §2.2 tiers; `transactionRefund`; `REFUND_REQUESTED` → webhook confirmation |
 | 16 | Webhook ingestion + signature validation | §4.7.1, §3.8 | EF ingress + HMAC; inline `payment_process_webhook_event` or `payment_enqueue_webhook_processing` RPC |
-| 17 | Webhook idempotent processing | §4.7.3, §3.7 | UNIQUE `(gateway_slug, event_type, provider_event_id)`; `is_duplicate` flag; regression guard |
+| 17 | Webhook idempotent processing | §4.7.3, §3.7 | UNIQUE `(gateway_slug, event_type, gateway_event_id)`; `is_duplicate` flag; regression guard |
 | 18 | Webhook event catalog + reconciliation | §4.7.3, §4.7.2 | Per-event dispatch table; `TRANSACTION_UPDATE` queued; DISPUTE → `is_disputed` |
 | 19 | Webhook dead letter queue | §4.7.4, §3.8 | `payment_webhook_processing_queue` + `payment_cron_process_webhook_retry()` RPC |
 | 20 | Reconciliation polling | §4.9 | EF `getTransaction`; commit via RPC |
@@ -2456,7 +2502,7 @@ Per [`infrastructure-constraints.md`](../infrastructure-constraints.md): **start
 | Notification enqueue (post-commit) | `payment_enqueue_notifications()` → MMD |
 | Rate limits (product-critical) | `platform_rate_limits` inside RPCs |
 | Idempotency | `UNIQUE` constraints + `rpc_idempotency_records` |
-| Gateway slug (Option A) | `CHECK (gateway_slug = 'netcred')` on payment tables; no registry table |
+| Gateway slug (Option A) | `payment_gateway_slug` enum on payment tables; no registry table |
 | Client / provider payment history | `client_payment_transactions_v`, `provider_payment_receivables_v` (§3.13); `security_invoker` + RLS |
 | **RLS on all payment tables** | **Mandatory least-privilege policies in same migration as `CREATE TABLE`** (§11.2) |
 | **RPC execute grants** | **Explicit `REVOKE`/`GRANT EXECUTE` per role; no `PUBLIC` grants** (§5.2, §11.2) |
@@ -2520,7 +2566,7 @@ RPC claim/begin → EF external I/O → RPC commit → RPC enqueue notifications
 | Webhook state reconciliation (fast path) | **Synchronous TX** (RPC in EF) | Simple handlers; state + audit commit atomically |
 | Webhook state reconciliation (heavy path) | **Async** (`payment_webhook_processing_queue` + `payment_cron_process_webhook_retry`) | NetCred timeout budget; `TRANSACTION_UPDATE` and unresolved schedules |
 | `transactionRefund` submission | **RPC sets REFUND_REQUESTED** then EF calls NetCred | Confirmation async via webhook |
-| KYC email | **Async** (MMD after `payment_submit_provider_kyc` commit) | Email failure MUST NOT block KYC state |
+| KYC email | **Async** (`dispatch-kyc-email` EF after RPC commit) | Email failure MUST NOT block KYC state |
 | Provider onboarding detection | **Async** (EF cron 1×/day) | External API; activation commit in RPC |
 | Installment recalculation at charge time | **Synchronous** (`payment_calculate_charge_amount` in claim RPC) | Current rates at charge time |
 | Service completion | **Synchronous TX** (RPC) | Status + audit atomic |

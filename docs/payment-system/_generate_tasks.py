@@ -299,7 +299,7 @@ TASKS.append(t(
     ["Empty result set — no error leak"],
     ["N/A"],
     ["N/A"],
-    ["No extra join without index — use provider_user_id"],
+    ["No extra join without index — use provider_id"],
     ["3", "29"],
     ["3.5", "29.1", "29.5"],
 ))
@@ -555,7 +555,7 @@ EXTRA_TASKS = [
     (115, "pgTAP: RLS deny-all matrix for all nine `payment_*` tables", "Automated tests per table: anon/authenticated/provider cross-access denied appropriately.", ["24", "26"], ["6", "14"], ["24.6", "26.9"]),
     (116, "pgTAP: `payment_claim_charge_batch` parallel session concurrency test", "Two sessions SKIP LOCKED — no duplicate lease on same schedule_id.", ["23"], ["28", "92"], ["23.1"]),
     (117, "pgTAP: installment HMAC tamper and expiry rejection", "Invalid signature and expired payload rejected by accept_proposal.", ["7", "8"], ["18", "25"], ["7.5", "8.1"]),
-    (118, "pgTAP: webhook UNIQUE dedup and is_duplicate flag", "Second insert same provider_event_id → controlled duplicate path.", ["17"], ["33", "98"], ["17.1", "17.2"]),
+    (118, "pgTAP: webhook UNIQUE dedup and is_duplicate flag", "Second insert same gateway_event_id → controlled duplicate path.", ["17"], ["33", "98"], ["17.1", "17.2"]),
     (119, "pgTAP: auto-cancel idempotency on already CANCELLED service", "Second cron pass no-op without duplicate audit/notifications.", ["14"], ["44", "52"], ["14.7"]),
     (120, "pgTAP: payment_auto_cancel IN_ANALYSIS before T-12h exclusion", "Record not cancelled when execution_at - now() > 12h and state IN_ANALYSIS.", ["14"], ["44"], ["14.4"]),
     (121, "Deno test: `netcred-webhook` HMAC timingSafeEqual and 401 path", "Invalid signature → FAILED INVALID_SIGNATURE; no state mutation beyond ingest.", ["16", "24"], ["67"], ["16.2", "16.3", "24.3"]),

@@ -973,6 +973,65 @@ export type Database = {
           },
         ]
       }
+      client_card_tokens: {
+        Row: {
+          billing_address: Json
+          card_brand: string
+          card_number_masked: string
+          cardholder_name: string
+          client_id: string
+          created_at: string
+          expiry_month: number
+          expiry_year: number
+          gateway_card_token: string
+          gateway_payment_profile_id: string
+          gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
+          id: string
+          state: Database["public"]["Enums"]["payment_client_card_token_state"]
+          updated_at: string
+        }
+        Insert: {
+          billing_address: Json
+          card_brand: string
+          card_number_masked: string
+          cardholder_name: string
+          client_id: string
+          created_at?: string
+          expiry_month: number
+          expiry_year: number
+          gateway_card_token: string
+          gateway_payment_profile_id: string
+          gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          id?: string
+          state?: Database["public"]["Enums"]["payment_client_card_token_state"]
+          updated_at?: string
+        }
+        Update: {
+          billing_address?: Json
+          card_brand?: string
+          card_number_masked?: string
+          cardholder_name?: string
+          client_id?: string
+          created_at?: string
+          expiry_month?: number
+          expiry_year?: number
+          gateway_card_token?: string
+          gateway_payment_profile_id?: string
+          gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          id?: string
+          state?: Database["public"]["Enums"]["payment_client_card_token_state"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_card_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_profiles_private: {
         Row: {
           client_id: string
@@ -1003,10 +1062,14 @@ export type Database = {
         Row: {
           accepted_proposal_id: string
           agreed_slot: Json
+          cancellation_reason: string | null
           client_id: string
+          completed_at: string | null
+          completed_by: string | null
           created_at: string
           duration_unit: string
           duration_value: number
+          executed_at: string | null
           id: string
           provider_id: string
           scheduled_end_date: string | null
@@ -1019,10 +1082,14 @@ export type Database = {
         Insert: {
           accepted_proposal_id: string
           agreed_slot: Json
+          cancellation_reason?: string | null
           client_id: string
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           duration_unit: string
           duration_value: number
+          executed_at?: string | null
           id?: string
           provider_id: string
           scheduled_end_date?: string | null
@@ -1035,10 +1102,14 @@ export type Database = {
         Update: {
           accepted_proposal_id?: string
           agreed_slot?: Json
+          cancellation_reason?: string | null
           client_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
           created_at?: string
           duration_unit?: string
           duration_value?: number
+          executed_at?: string | null
           id?: string
           provider_id?: string
           scheduled_end_date?: string | null
@@ -1183,6 +1254,476 @@ export type Database = {
           transitioned_count?: number
         }
         Relationships: []
+      }
+      payment_attempts: {
+        Row: {
+          attempt_number: number
+          charge_amount: number | null
+          completed_at: string | null
+          created_at: string
+          failure_code: string | null
+          failure_reason: string | null
+          gateway_latency_ms: number | null
+          id: string
+          initiated_at: string
+          initiator: Database["public"]["Enums"]["payment_attempt_initiator"]
+          outcome: Database["public"]["Enums"]["payment_attempt_outcome"] | null
+          provider_response_summary: Json | null
+          schedule_id: string
+        }
+        Insert: {
+          attempt_number: number
+          charge_amount?: number | null
+          completed_at?: string | null
+          created_at?: string
+          failure_code?: string | null
+          failure_reason?: string | null
+          gateway_latency_ms?: number | null
+          id?: string
+          initiated_at?: string
+          initiator: Database["public"]["Enums"]["payment_attempt_initiator"]
+          outcome?:
+            | Database["public"]["Enums"]["payment_attempt_outcome"]
+            | null
+          provider_response_summary?: Json | null
+          schedule_id: string
+        }
+        Update: {
+          attempt_number?: number
+          charge_amount?: number | null
+          completed_at?: string | null
+          created_at?: string
+          failure_code?: string | null
+          failure_reason?: string | null
+          gateway_latency_ms?: number | null
+          id?: string
+          initiated_at?: string
+          initiator?: Database["public"]["Enums"]["payment_attempt_initiator"]
+          outcome?:
+            | Database["public"]["Enums"]["payment_attempt_outcome"]
+            | null
+          provider_response_summary?: Json | null
+          schedule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_attempts_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "client_payment_transactions_v"
+            referencedColumns: ["schedule_id"]
+          },
+          {
+            foreignKeyName: "payment_attempts_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "payment_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_attempts_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "provider_payment_receivables_v"
+            referencedColumns: ["schedule_id"]
+          },
+        ]
+      }
+      payment_audit_log: {
+        Row: {
+          actor: Database["public"]["Enums"]["payment_audit_actor"]
+          actor_id: string | null
+          created_at: string
+          entity_id: string
+          entity_type: string
+          event_type: string
+          from_state: string | null
+          id: string
+          metadata: Json
+          schedule_id: string | null
+          service_id: string | null
+          to_state: string | null
+        }
+        Insert: {
+          actor: Database["public"]["Enums"]["payment_audit_actor"]
+          actor_id?: string | null
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          event_type: string
+          from_state?: string | null
+          id?: string
+          metadata?: Json
+          schedule_id?: string | null
+          service_id?: string | null
+          to_state?: string | null
+        }
+        Update: {
+          actor?: Database["public"]["Enums"]["payment_audit_actor"]
+          actor_id?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          event_type?: string
+          from_state?: string | null
+          id?: string
+          metadata?: Json
+          schedule_id?: string | null
+          service_id?: string | null
+          to_state?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_audit_log_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "client_payment_transactions_v"
+            referencedColumns: ["schedule_id"]
+          },
+          {
+            foreignKeyName: "payment_audit_log_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "payment_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_audit_log_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "provider_payment_receivables_v"
+            referencedColumns: ["schedule_id"]
+          },
+          {
+            foreignKeyName: "payment_audit_log_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "contracted_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_events: {
+        Row: {
+          aggregate_id: string
+          aggregate_type: string
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+          service_id: string | null
+        }
+        Insert: {
+          aggregate_id: string
+          aggregate_type: string
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+          service_id?: string | null
+        }
+        Update: {
+          aggregate_id?: string
+          aggregate_type?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          service_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_events_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "contracted_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_gateway_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
+          refreshed_at: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          refreshed_at?: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          refreshed_at?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payment_schedules: {
+        Row: {
+          automatic_attempt_count: number
+          base_amount: number
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          charge_scheduled_at: string
+          clearsale_session_id: string | null
+          client_card_token_id: string | null
+          client_id: string
+          client_ip_address: string | null
+          commission_rate_pct: number
+          contracted_service_id: string
+          created_at: string
+          failed_at: string | null
+          failed_permanently_at: string | null
+          failure_code: string | null
+          failure_reason: string | null
+          gateway_charge_id: string | null
+          gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
+          gateway_transaction_id: string | null
+          id: string
+          idempotency_key: string
+          installment_number: number
+          is_disputed: boolean
+          locked_until: string | null
+          manual_attempt_count: number
+          max_attempts: number
+          needs_payment_method_update: boolean
+          next_retry_at: string | null
+          paid_amount: number | null
+          paid_at: string | null
+          provider_id: string
+          provider_payout: number
+          reconciliation_failure_count: number
+          refunded_amount: number | null
+          refunded_at: string | null
+          state: Database["public"]["Enums"]["payment_schedule_state"]
+          upcoming_charge_notified_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          automatic_attempt_count?: number
+          base_amount: number
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          charge_scheduled_at: string
+          clearsale_session_id?: string | null
+          client_card_token_id?: string | null
+          client_id: string
+          client_ip_address?: string | null
+          commission_rate_pct: number
+          contracted_service_id: string
+          created_at?: string
+          failed_at?: string | null
+          failed_permanently_at?: string | null
+          failure_code?: string | null
+          failure_reason?: string | null
+          gateway_charge_id?: string | null
+          gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          gateway_transaction_id?: string | null
+          id?: string
+          idempotency_key: string
+          installment_number: number
+          is_disputed?: boolean
+          locked_until?: string | null
+          manual_attempt_count?: number
+          max_attempts?: number
+          needs_payment_method_update?: boolean
+          next_retry_at?: string | null
+          paid_amount?: number | null
+          paid_at?: string | null
+          provider_id: string
+          provider_payout: number
+          reconciliation_failure_count?: number
+          refunded_amount?: number | null
+          refunded_at?: string | null
+          state?: Database["public"]["Enums"]["payment_schedule_state"]
+          upcoming_charge_notified_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          automatic_attempt_count?: number
+          base_amount?: number
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          charge_scheduled_at?: string
+          clearsale_session_id?: string | null
+          client_card_token_id?: string | null
+          client_id?: string
+          client_ip_address?: string | null
+          commission_rate_pct?: number
+          contracted_service_id?: string
+          created_at?: string
+          failed_at?: string | null
+          failed_permanently_at?: string | null
+          failure_code?: string | null
+          failure_reason?: string | null
+          gateway_charge_id?: string | null
+          gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          gateway_transaction_id?: string | null
+          id?: string
+          idempotency_key?: string
+          installment_number?: number
+          is_disputed?: boolean
+          locked_until?: string | null
+          manual_attempt_count?: number
+          max_attempts?: number
+          needs_payment_method_update?: boolean
+          next_retry_at?: string | null
+          paid_amount?: number | null
+          paid_at?: string | null
+          provider_id?: string
+          provider_payout?: number
+          reconciliation_failure_count?: number
+          refunded_amount?: number | null
+          refunded_at?: string | null
+          state?: Database["public"]["Enums"]["payment_schedule_state"]
+          upcoming_charge_notified_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_schedules_client_card_token_id_fkey"
+            columns: ["client_card_token_id"]
+            isOneToOne: false
+            referencedRelation: "client_card_tokens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_schedules_client_card_token_id_fkey"
+            columns: ["client_card_token_id"]
+            isOneToOne: false
+            referencedRelation: "client_card_tokens_safe_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_schedules_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_schedules_contracted_service_id_fkey"
+            columns: ["contracted_service_id"]
+            isOneToOne: true
+            referencedRelation: "contracted_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_schedules_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_webhook_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          failure_reason: string | null
+          gateway_event_id: string
+          gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
+          id: string
+          is_duplicate: boolean
+          next_retry_at: string | null
+          processed_at: string | null
+          raw_headers: Json
+          raw_payload: Json
+          retry_count: number
+          state: Database["public"]["Enums"]["payment_webhook_event_state"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          failure_reason?: string | null
+          gateway_event_id: string
+          gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
+          id?: string
+          is_duplicate?: boolean
+          next_retry_at?: string | null
+          processed_at?: string | null
+          raw_headers: Json
+          raw_payload: Json
+          retry_count?: number
+          state?: Database["public"]["Enums"]["payment_webhook_event_state"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          failure_reason?: string | null
+          gateway_event_id?: string
+          gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          id?: string
+          is_duplicate?: boolean
+          next_retry_at?: string | null
+          processed_at?: string | null
+          raw_headers?: Json
+          raw_payload?: Json
+          retry_count?: number
+          state?: Database["public"]["Enums"]["payment_webhook_event_state"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payment_webhook_processing_queue: {
+        Row: {
+          attempt_count: number
+          attempted_at: string | null
+          created_at: string
+          event_type: string
+          failure_reason: string | null
+          gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
+          id: string
+          scheduled_at: string
+          state: Database["public"]["Enums"]["payment_webhook_queue_state"]
+          webhook_event_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          attempted_at?: string | null
+          created_at?: string
+          event_type: string
+          failure_reason?: string | null
+          gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          id?: string
+          scheduled_at?: string
+          state?: Database["public"]["Enums"]["payment_webhook_queue_state"]
+          webhook_event_id: string
+        }
+        Update: {
+          attempt_count?: number
+          attempted_at?: string | null
+          created_at?: string
+          event_type?: string
+          failure_reason?: string | null
+          gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          id?: string
+          scheduled_at?: string
+          state?: Database["public"]["Enums"]["payment_webhook_queue_state"]
+          webhook_event_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_webhook_processing_queue_webhook_event_id_fkey"
+            columns: ["webhook_event_id"]
+            isOneToOne: true
+            referencedRelation: "payment_webhook_events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       platform_ai_prompt_usage: {
         Row: {
@@ -1615,6 +2156,59 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_gateway_accounts: {
+        Row: {
+          created_at: string
+          document: string
+          email_dispatched_at: string | null
+          gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
+          id: string
+          netcred_bank_account_id: string | null
+          netcred_company_id: string | null
+          onboarding_activated_at: string | null
+          onboarding_status: Database["public"]["Enums"]["payment_provider_onboarding_status"]
+          onboarding_submitted_at: string | null
+          provider_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document: string
+          email_dispatched_at?: string | null
+          gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          id?: string
+          netcred_bank_account_id?: string | null
+          netcred_company_id?: string | null
+          onboarding_activated_at?: string | null
+          onboarding_status?: Database["public"]["Enums"]["payment_provider_onboarding_status"]
+          onboarding_submitted_at?: string | null
+          provider_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document?: string
+          email_dispatched_at?: string | null
+          gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          id?: string
+          netcred_bank_account_id?: string | null
+          netcred_company_id?: string | null
+          onboarding_activated_at?: string | null
+          onboarding_status?: Database["public"]["Enums"]["payment_provider_onboarding_status"]
+          onboarding_submitted_at?: string | null
+          provider_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_gateway_accounts_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provider_latest_locations: {
         Row: {
           device_id: string | null
@@ -1751,37 +2345,64 @@ export type Database = {
       }
       provider_profiles_private: {
         Row: {
+          address_proof_storage_path: string | null
+          bank_account: string | null
+          bank_branch: string | null
+          bank_institution_code: string | null
           cnpj: string | null
           commercial_contact: string | null
+          corporate_charter_storage_path: string | null
           cpf: string | null
           entity_type: string
+          identity_doc_storage_path: string | null
+          legal_rep_doc_storage_path: string | null
           legal_representative_cpf: string | null
           legal_representative_name: string | null
+          legal_representative_phone: string | null
           nome_fantasia: string | null
+          pix_key: string | null
           provider_id: string
           razao_social: string | null
           updated_at: string
         }
         Insert: {
+          address_proof_storage_path?: string | null
+          bank_account?: string | null
+          bank_branch?: string | null
+          bank_institution_code?: string | null
           cnpj?: string | null
           commercial_contact?: string | null
+          corporate_charter_storage_path?: string | null
           cpf?: string | null
           entity_type?: string
+          identity_doc_storage_path?: string | null
+          legal_rep_doc_storage_path?: string | null
           legal_representative_cpf?: string | null
           legal_representative_name?: string | null
+          legal_representative_phone?: string | null
           nome_fantasia?: string | null
+          pix_key?: string | null
           provider_id: string
           razao_social?: string | null
           updated_at?: string
         }
         Update: {
+          address_proof_storage_path?: string | null
+          bank_account?: string | null
+          bank_branch?: string | null
+          bank_institution_code?: string | null
           cnpj?: string | null
           commercial_contact?: string | null
+          corporate_charter_storage_path?: string | null
           cpf?: string | null
           entity_type?: string
+          identity_doc_storage_path?: string | null
+          legal_rep_doc_storage_path?: string | null
           legal_representative_cpf?: string | null
           legal_representative_name?: string | null
+          legal_representative_phone?: string | null
           nome_fantasia?: string | null
+          pix_key?: string | null
           provider_id?: string
           razao_social?: string | null
           updated_at?: string
@@ -2615,17 +3236,214 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      client_card_tokens_safe_v: {
+        Row: {
+          card_brand: string | null
+          card_number_masked: string | null
+          cardholder_name: string | null
+          client_id: string | null
+          created_at: string | null
+          expiry_month: number | null
+          expiry_year: number | null
+          gateway_payment_profile_id: string | null
+          gateway_slug:
+            | Database["public"]["Enums"]["payment_gateway_slug"]
+            | null
+          id: string | null
+          state:
+            | Database["public"]["Enums"]["payment_client_card_token_state"]
+            | null
+          updated_at: string | null
+        }
+        Insert: {
+          card_brand?: string | null
+          card_number_masked?: string | null
+          cardholder_name?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          expiry_month?: number | null
+          expiry_year?: number | null
+          gateway_payment_profile_id?: string | null
+          gateway_slug?:
+            | Database["public"]["Enums"]["payment_gateway_slug"]
+            | null
+          id?: string | null
+          state?:
+            | Database["public"]["Enums"]["payment_client_card_token_state"]
+            | null
+          updated_at?: string | null
+        }
+        Update: {
+          card_brand?: string | null
+          card_number_masked?: string | null
+          cardholder_name?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          expiry_month?: number | null
+          expiry_year?: number | null
+          gateway_payment_profile_id?: string | null
+          gateway_slug?:
+            | Database["public"]["Enums"]["payment_gateway_slug"]
+            | null
+          id?: string | null
+          state?:
+            | Database["public"]["Enums"]["payment_client_card_token_state"]
+            | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_card_tokens_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_payment_transactions_v: {
+        Row: {
+          amount_paid: number | null
+          client_id: string | null
+          contracted_service_id: string | null
+          created_at: string | null
+          installment_number: number | null
+          is_disputed: boolean | null
+          paid_at: string | null
+          refunded_amount: number | null
+          refunded_at: string | null
+          schedule_id: string | null
+          service_amount: number | null
+          state: Database["public"]["Enums"]["payment_schedule_state"] | null
+        }
+        Insert: {
+          amount_paid?: number | null
+          client_id?: string | null
+          contracted_service_id?: string | null
+          created_at?: string | null
+          installment_number?: number | null
+          is_disputed?: boolean | null
+          paid_at?: string | null
+          refunded_amount?: number | null
+          refunded_at?: string | null
+          schedule_id?: string | null
+          service_amount?: number | null
+          state?: Database["public"]["Enums"]["payment_schedule_state"] | null
+        }
+        Update: {
+          amount_paid?: number | null
+          client_id?: string | null
+          contracted_service_id?: string | null
+          created_at?: string | null
+          installment_number?: number | null
+          is_disputed?: boolean | null
+          paid_at?: string | null
+          refunded_amount?: number | null
+          refunded_at?: string | null
+          schedule_id?: string | null
+          service_amount?: number | null
+          state?: Database["public"]["Enums"]["payment_schedule_state"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_schedules_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_schedules_contracted_service_id_fkey"
+            columns: ["contracted_service_id"]
+            isOneToOne: true
+            referencedRelation: "contracted_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_payment_receivables_v: {
+        Row: {
+          amount_received_at_capture: number | null
+          contracted_service_id: string | null
+          created_at: string | null
+          is_disputed: boolean | null
+          net_amount_received: number | null
+          provider_id: string | null
+          received_at: string | null
+          refunded_amount: number | null
+          refunded_at: string | null
+          schedule_id: string | null
+          state: Database["public"]["Enums"]["payment_schedule_state"] | null
+        }
+        Insert: {
+          amount_received_at_capture?: number | null
+          contracted_service_id?: string | null
+          created_at?: string | null
+          is_disputed?: boolean | null
+          net_amount_received?: never
+          provider_id?: string | null
+          received_at?: string | null
+          refunded_amount?: number | null
+          refunded_at?: string | null
+          schedule_id?: string | null
+          state?: Database["public"]["Enums"]["payment_schedule_state"] | null
+        }
+        Update: {
+          amount_received_at_capture?: number | null
+          contracted_service_id?: string | null
+          created_at?: string | null
+          is_disputed?: boolean | null
+          net_amount_received?: never
+          provider_id?: string | null
+          received_at?: string | null
+          refunded_amount?: number | null
+          refunded_at?: string | null
+          schedule_id?: string | null
+          state?: Database["public"]["Enums"]["payment_schedule_state"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_schedules_contracted_service_id_fkey"
+            columns: ["contracted_service_id"]
+            isOneToOne: true
+            referencedRelation: "contracted_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_schedules_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
-      accept_proposal: {
-        Args: {
-          p_idempotency_key: string
-          p_proposal_id: string
-          p_selected_slot: Json
-        }
-        Returns: Json
-      }
+      accept_proposal:
+        | {
+            Args: {
+              p_idempotency_key: string
+              p_proposal_id: string
+              p_selected_slot: Json
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_clearsale_session_id: string
+              p_client_card_token_id: string
+              p_client_ip: string
+              p_idempotency_key: string
+              p_installment_hmac_payload: Json
+              p_installment_number: number
+              p_installment_selection_hmac: string
+              p_pricing_signature: string
+              p_proposal_id: string
+              p_selected_slot: Json
+            }
+            Returns: Json
+          }
       calculate_provider_service_pricing: {
         Args: { p_original_amount: number; p_tax_key?: string }
         Returns: {
@@ -3164,6 +3982,221 @@ export type Database = {
         Args: { p_proposal_id: string }
         Returns: Json
       }
+      payment_assert_installment_hmac_context: {
+        Args: {
+          p_base_amount: number
+          p_card_brand: string
+          p_installment_number: number
+          p_payload: Json
+          p_proposal_id: string
+          p_service_id: string
+          p_submitted_hmac: string
+        }
+        Returns: undefined
+      }
+      payment_assert_provider_kyc_storage_path: {
+        Args: {
+          p_document_key: string
+          p_provider_id: string
+          p_storage_path: string
+        }
+        Returns: undefined
+      }
+      payment_begin_manual_attempt: {
+        Args: {
+          p_actor_id?: string
+          p_clearsale_session_id: string
+          p_client_id: string
+          p_client_ip_address?: string
+          p_schedule_id: string
+        }
+        Returns: Json
+      }
+      payment_calculate_charge_amount: {
+        Args: {
+          p_base_amount: number
+          p_client_card_token_id: string
+          p_installment_number: number
+        }
+        Returns: number
+      }
+      payment_calculate_installment_options: {
+        Args: {
+          p_card_brand: string
+          p_proposal_id: string
+          p_service_id: string
+        }
+        Returns: Json
+      }
+      payment_cc_fee_rate_key: {
+        Args: { p_card_brand: string; p_installment_number: number }
+        Returns: string
+      }
+      payment_claim_charge_batch: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      payment_client_card_token_is_expired: {
+        Args: { p_expiry_month: number; p_expiry_year: number }
+        Returns: boolean
+      }
+      payment_commit_charge_outcome: {
+        Args: {
+          p_actor_id?: string
+          p_charge_amount: number
+          p_failure_code?: string
+          p_failure_reason?: string
+          p_gateway_charge_id?: string
+          p_gateway_latency_ms?: number
+          p_gateway_transaction_id?: string
+          p_initiator?: string
+          p_outcome: string
+          p_provider_response_summary?: Json
+          p_schedule_id: string
+          p_undo_attempt_increment?: boolean
+        }
+        Returns: string
+      }
+      payment_compute_charge_scheduled_at: {
+        Args: {
+          p_cs: Database["public"]["Tables"]["contracted_services"]["Row"]
+        }
+        Returns: string
+      }
+      payment_enqueue_notifications: {
+        Args: {
+          p_metadata?: Json
+          p_notification_event: string
+          p_schedule_id: string
+        }
+        Returns: Json
+      }
+      payment_get_checkout_step_requirements: { Args: never; Returns: Json }
+      payment_installment_hmac_canonical_text: {
+        Args: { p_payload: Json }
+        Returns: string
+      }
+      payment_mark_kyc_credenciamento_email_dispatched: {
+        Args: { p_provider_gateway_account_id: string }
+        Returns: undefined
+      }
+      payment_persist_client_card_token: {
+        Args: {
+          p_billing_address: Json
+          p_card_brand: string
+          p_card_number_masked: string
+          p_cardholder_name: string
+          p_client_id: string
+          p_expiry_month: number
+          p_expiry_year: number
+          p_gateway_card_token: string
+          p_gateway_payment_profile_id: string
+          p_gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+        }
+        Returns: Json
+      }
+      payment_provider_is_credentialed: {
+        Args: {
+          p_gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          p_provider_id: string
+        }
+        Returns: boolean
+      }
+      payment_provider_kyc_document_key_valid: {
+        Args: { p_document_key: string }
+        Returns: boolean
+      }
+      payment_provider_kyc_storage_path_valid: {
+        Args: { p_provider_id: string; p_storage_path: string }
+        Returns: boolean
+      }
+      payment_recover_orphaned_schedules: {
+        Args: never
+        Returns: {
+          recovered_count: number
+          recovered_to_failed: number
+          recovered_to_scheduled: number
+        }[]
+      }
+      payment_reschedule_charge_date: {
+        Args: { p_contracted_service_id: string }
+        Returns: Json
+      }
+      payment_revoke_client_card_token: {
+        Args: { p_client_card_token_id: string }
+        Returns: Json
+      }
+      payment_round_half_even: {
+        Args: { p_scale?: number; p_value: number }
+        Returns: number
+      }
+      payment_service_execution_at: {
+        Args: {
+          p_cs: Database["public"]["Tables"]["contracted_services"]["Row"]
+        }
+        Returns: string
+      }
+      payment_submit_provider_kyc: {
+        Args: {
+          p_address_proof_storage_path: string
+          p_bank_account: string
+          p_bank_branch: string
+          p_bank_institution_code: string
+          p_corporate_charter_storage_path?: string
+          p_identity_doc_storage_path: string
+          p_legal_rep_doc_storage_path?: string
+          p_legal_representative_phone?: string
+          p_phone?: string
+          p_pix_key?: string
+        }
+        Returns: Json
+      }
+      payment_total_with_card_fees: {
+        Args: {
+          p_base_amount: number
+          p_card_brand: string
+          p_installment_number: number
+        }
+        Returns: number
+      }
+      payment_update_method: {
+        Args: {
+          p_installment_hmac_payload?: Json
+          p_installment_selection_hmac?: string
+          p_new_client_card_token_id: string
+          p_service_id: string
+        }
+        Returns: Json
+      }
+      payment_verify_installment_selection_hmac: {
+        Args: { p_payload: Json; p_submitted_hmac: string }
+        Returns: undefined
+      }
+      payment_write_audit: {
+        Args: {
+          p_actor?: Database["public"]["Enums"]["payment_audit_actor"]
+          p_actor_id?: string
+          p_entity_id: string
+          p_entity_type: string
+          p_event_type: string
+          p_from_state?: string
+          p_metadata?: Json
+          p_schedule_id?: string
+          p_service_id?: string
+          p_to_state?: string
+        }
+        Returns: string
+      }
+      payment_write_event: {
+        Args: {
+          p_aggregate_id: string
+          p_aggregate_type: string
+          p_event_type: string
+          p_payload?: Json
+          p_service_id?: string
+        }
+        Returns: string
+      }
       platform_check_rate_limit: {
         Args: { p_key: string; p_per_minute: number; p_window_ms?: number }
         Returns: Json
@@ -3305,7 +4338,60 @@ export type Database = {
         | "PROPOSAL"
         | "WORKFLOW_ACTION"
         | "AUDIO"
-      contracted_service_status: "PENDING_PAYMENT" | "COMPLETED" | "CANCELLED"
+      contracted_service_status:
+        | "PENDING_PAYMENT"
+        | "COMPLETED"
+        | "CANCELLED"
+        | "CONFIRMED"
+        | "EXECUTED"
+      payment_attempt_initiator: "cron" | "client"
+      payment_attempt_outcome:
+        | "PAID"
+        | "REJECTED"
+        | "TIMEOUT"
+        | "ERROR"
+        | "IN_ANALYSIS"
+        | "VOIDED"
+      payment_audit_actor: "cron" | "client" | "webhook" | "support" | "system"
+      payment_client_card_token_state:
+        | "ACTIVE"
+        | "EXPIRED"
+        | "REVOKED"
+        | "TOKENIZATION_FAILED"
+      payment_gateway_slug: "netcred"
+      payment_provider_onboarding_status:
+        | "PENDING_DOCUMENTS"
+        | "DOCUMENTS_SUBMITTED"
+        | "UNDER_NETCRED_REVIEW"
+        | "ACTIVE"
+        | "REJECTED"
+        | "SUSPENDED"
+      payment_schedule_state:
+        | "SCHEDULED"
+        | "PROCESSING"
+        | "PAID"
+        | "IN_ANALYSIS"
+        | "FAILED"
+        | "FAILED_PERMANENT"
+        | "CANCELLED"
+        | "VOIDED"
+        | "REFUND_REQUESTED"
+        | "REFUNDED"
+        | "PARTIALLY_REFUNDED"
+        | "EXPIRED"
+      payment_webhook_event_state:
+        | "RECEIVED"
+        | "VALIDATING"
+        | "PROCESSING"
+        | "PROCESSED"
+        | "DUPLICATE"
+        | "FAILED"
+        | "DEAD_LETTER"
+      payment_webhook_queue_state:
+        | "PENDING"
+        | "PROCESSING"
+        | "PROCESSED"
+        | "FAILED"
       proposal_revision_reason:
         | "PRICE_TOO_HIGH"
         | "REDUCE_SCOPE"
@@ -3510,7 +4596,67 @@ export const Constants = {
         "WORKFLOW_ACTION",
         "AUDIO",
       ],
-      contracted_service_status: ["PENDING_PAYMENT", "COMPLETED", "CANCELLED"],
+      contracted_service_status: [
+        "PENDING_PAYMENT",
+        "COMPLETED",
+        "CANCELLED",
+        "CONFIRMED",
+        "EXECUTED",
+      ],
+      payment_attempt_initiator: ["cron", "client"],
+      payment_attempt_outcome: [
+        "PAID",
+        "REJECTED",
+        "TIMEOUT",
+        "ERROR",
+        "IN_ANALYSIS",
+        "VOIDED",
+      ],
+      payment_audit_actor: ["cron", "client", "webhook", "support", "system"],
+      payment_client_card_token_state: [
+        "ACTIVE",
+        "EXPIRED",
+        "REVOKED",
+        "TOKENIZATION_FAILED",
+      ],
+      payment_gateway_slug: ["netcred"],
+      payment_provider_onboarding_status: [
+        "PENDING_DOCUMENTS",
+        "DOCUMENTS_SUBMITTED",
+        "UNDER_NETCRED_REVIEW",
+        "ACTIVE",
+        "REJECTED",
+        "SUSPENDED",
+      ],
+      payment_schedule_state: [
+        "SCHEDULED",
+        "PROCESSING",
+        "PAID",
+        "IN_ANALYSIS",
+        "FAILED",
+        "FAILED_PERMANENT",
+        "CANCELLED",
+        "VOIDED",
+        "REFUND_REQUESTED",
+        "REFUNDED",
+        "PARTIALLY_REFUNDED",
+        "EXPIRED",
+      ],
+      payment_webhook_event_state: [
+        "RECEIVED",
+        "VALIDATING",
+        "PROCESSING",
+        "PROCESSED",
+        "DUPLICATE",
+        "FAILED",
+        "DEAD_LETTER",
+      ],
+      payment_webhook_queue_state: [
+        "PENDING",
+        "PROCESSING",
+        "PROCESSED",
+        "FAILED",
+      ],
       proposal_revision_reason: [
         "PRICE_TOO_HIGH",
         "REDUCE_SCOPE",
