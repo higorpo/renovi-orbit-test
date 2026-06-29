@@ -1,4 +1,9 @@
 export { ServiceDetailPage } from "./components/ServiceDetailPage";
+export { ServiceCompletionActions } from "./components/ServiceCompletionActions";
+export type {
+  ServiceCompletionActionsProps,
+  ServiceCompletionViewerRole,
+} from "./components/ServiceCompletionActions";
 export { ServiceDetailShell } from "./components/ServiceDetailShell";
 export { ServiceDetailSheet } from "./components/ServiceDetailSheet";
 export { SimpleServiceCard } from "./components/SimpleServiceCard";
@@ -10,12 +15,22 @@ export type { ServiceDetailSkeletonProps } from "./components/ServiceDetailSkele
 
 export { getServiceById, listServices, cancelService } from "./api/services.api";
 export {
+  markServiceExecuted,
+} from "./api/markServiceExecuted.api";
+export type { MarkServiceExecutedSuccess } from "./api/markServiceExecuted.api";
+export {
+  confirmServiceCompleted,
+} from "./api/confirmServiceCompleted.api";
+export type { ConfirmServiceCompletedSuccess } from "./api/confirmServiceCompleted.api";
+export {
   recordProviderOpportunityView,
 } from "./api/opportunityView.api";
 export type { RecordProviderOpportunityViewResult } from "./api/opportunityView.api";
 export { useServicesList } from "./hooks/useServicesList";
 export { useService } from "./hooks/useService";
 export { useCancelService } from "./hooks/useCancelService";
+export { useMarkServiceExecuted } from "./hooks/useMarkServiceExecuted";
+export { useConfirmServiceCompleted } from "./hooks/useConfirmServiceCompleted";
 export { useServiceDetailModal } from "./hooks/useServiceDetailModal";
 export { useServiceRequestBudgetSheet } from "./hooks/useServiceRequestBudgetSheet";
 export { useRecordProviderOpportunityView } from "./hooks/useRecordProviderOpportunityView";

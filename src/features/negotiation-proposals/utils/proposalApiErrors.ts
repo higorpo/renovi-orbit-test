@@ -15,6 +15,13 @@ const UI_MESSAGES: Record<ProposalBusinessErrorCode, string> = {
   PROPOSAL_EXPIRED: "Esta proposta expirou.",
   PROPOSAL_NOT_ACCEPTABLE: "Esta proposta não pode ser alterada no estado atual.",
   PROPOSAL_ALREADY_PENDING: "Já existe uma proposta pendente nesta conversa.",
+  PAYMENT_REQUIRED: "Este prestador exige pagamento para confirmar a contratação.",
+  PAYMENT_FIELDS_REQUIRED: "Complete os dados de pagamento antes de confirmar.",
+  PROVIDER_NOT_CREDENTIALED: "O prestador ainda não está habilitado para receber pagamentos.",
+  PROPOSAL_PRICING_INVALID: "Os valores da proposta foram alterados. Atualize a página e tente novamente.",
+  PAYMENT_TOKEN_INACTIVE: "O cartão selecionado não está mais disponível. Escolha outro cartão.",
+  INSTALLMENT_SIGNATURE_EXPIRED: "A simulação de parcelas expirou. Selecione novamente.",
+  INVALID_INSTALLMENT_SIGNATURE: "Não foi possível validar o parcelamento. Tente novamente.",
 };
 
 function isBusinessErrorCode(value: string): value is ProposalBusinessErrorCode {

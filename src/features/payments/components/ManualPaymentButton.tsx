@@ -1,0 +1,72 @@
+import { useState } from "react";
+import { CreditCard } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { isManualPaymentEligible } from "../types/paymentSchedule.types";
+import { usePaymentSchedule } from "../hooks/usePaymentSchedule";
+import { ManualPaymentModal } from "./ManualPaymentModal";
+
+export type ManualPaymentButtonProps = {
+  scheduleState: string | null | undefined;
+  onClick: () => void;
+  disabled?: boolean;
+  className?: string;
+};
+
+export function ManualPaymentButton({
+  scheduleState,
+  onClick,
+  disabled = false,
+  className,
+}: ManualPaymentButtonProps) {
+  if (!scheduleState || !isManualPaymentEligible(scheduleState)) {
+    return null;
+  }
+
+  return (
+    <Button
+      type="button"
+      className={className}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      <CreditCard className="mr-2 h-4 w-4" aria-hidden />
+      Efetuar Pagamento
+    </Button>
+  );
+}
+
+export type ManualPaymentRecoveryProps = {
+  contractedServiceId: string;
+  serviceRequestId: string;
+};
+
+export function ManualPaymentRecovery({
+  contractedServiceId,
+  serviceRequestId,
+}: ManualPaymentRecoveryProps) {
+  const [open, setOpen] = useState(false);
+  const scheduleQuery = usePaymentSchedule(contractedServiceId);
+  const schedule = scheduleQuery.data?.schedule;
+  const context = scheduleQuery.data?.context;
+
+  return (
+    <>
+      <ManualPaymentButton
+        scheduleState={schedule?.state}
+        onClick={() => setOpen(true)}
+        disabled={scheduleQuery.isLoading}
+        className="w-full sm:w-auto"
+      />
+      {schedule && context ? (
+        <ManualPaymentModal
+          open={open}
+          onOpenChange={setOpen}
+          schedule={schedule}
+          acceptedProposalId={context.acceptedProposalId}
+          serviceRequestId={serviceRequestId}
+          onCompleted={() => void scheduleQuery.refetch()}
+        />
+      ) : null}
+    </>
+  );
+}

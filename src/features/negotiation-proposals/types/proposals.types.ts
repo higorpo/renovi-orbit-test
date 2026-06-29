@@ -78,7 +78,44 @@ export interface AcceptProposalResult {
     selected_slot: ProposalSuggestedSlotRpc;
     provider_id: string;
   };
+  payment_schedule?: {
+    id: string;
+    state: string;
+    charge_scheduled_at: string;
+  };
 }
+
+export type AcceptProposalWithPaymentParams = {
+  proposalId: string;
+  selectedSlot: ProposalSuggestedSlotRpc;
+  idempotencyKey?: string;
+  clientCardTokenId: string;
+  installmentNumber: number;
+  installmentSelectionHmac: string;
+  installmentHmacPayload: Record<string, unknown>;
+  clearsaleSessionId: string;
+  pricingSignature: string;
+  clientIp: string | null;
+};
+
+/** Checkout/UI params for `useAcceptProposalWithPayment` (maps paymentTokenId → RPC). */
+export type AcceptProposalWithPaymentMutationParams = {
+  proposalId: string;
+  selectedSlot: ProposalSuggestedSlotRpc;
+  paymentTokenId: string;
+  installmentNumber: number;
+  installmentSelectionHmac: string;
+  installmentHmacPayload: Record<string, unknown>;
+  clearsaleSessionId: string;
+  pricingSignature: string;
+  idempotencyKey: string;
+  clientIp?: string | null;
+};
+
+export type AcceptProposalWithPaymentMutationResult = {
+  contractedServiceId: string;
+  scheduleId?: string;
+};
 
 /** `reject_proposal`, `request_proposal_revision`, `decline_revision_request` responses. */
 export interface ProposalMutationResult {
@@ -106,6 +143,13 @@ export const PROPOSAL_BUSINESS_ERROR_CODES = [
   "PROPOSAL_EXPIRED",
   "PROPOSAL_NOT_ACCEPTABLE",
   "PROPOSAL_ALREADY_PENDING",
+  "PAYMENT_REQUIRED",
+  "PAYMENT_FIELDS_REQUIRED",
+  "PROVIDER_NOT_CREDENTIALED",
+  "PROPOSAL_PRICING_INVALID",
+  "PAYMENT_TOKEN_INACTIVE",
+  "INSTALLMENT_SIGNATURE_EXPIRED",
+  "INVALID_INSTALLMENT_SIGNATURE",
 ] as const;
 
 export type ProposalBusinessErrorCode = (typeof PROPOSAL_BUSINESS_ERROR_CODES)[number];

@@ -16,11 +16,18 @@ import {
 import { SERVICE_REQUEST_BUDGET_COMPARE_DETAIL_QUERY_KEY } from "../constants/queryKeys";
 import {
   acceptProposal,
+  acceptProposalWithPayment,
   rejectProposal,
   requestProposalRevision,
 } from "../api/proposals.api";
-import type { ProposalRevisionReason, ProposalSuggestedSlotRpc } from "../types/proposals.types";
+import type {
+  AcceptProposalWithPaymentMutationParams,
+  AcceptProposalWithPaymentMutationResult,
+  ProposalRevisionReason,
+  ProposalSuggestedSlotRpc,
+} from "../types/proposals.types";
 import type { ProposalsApiError } from "../types/proposals.types";
+import { getClientIpBestEffort } from "@/lib/getClientIp";
 
 const OFFLINE_MESSAGE =
   "Você está offline. Conecte-se à internet para aceitar a proposta.";
@@ -93,6 +100,48 @@ export function useAcceptProposalMutation(
       toast.success("Proposta aceita com sucesso.");
     },
     onError: (error) => handleMutationError(error, "Não foi possível aceitar a proposta."),
+  });
+}
+
+export function useAcceptProposalWithPayment() {
+  return useMutation<
+    AcceptProposalWithPaymentMutationResult,
+    Error,
+    AcceptProposalWithPaymentMutationParams
+  >({
+    mutationFn: async (request) => {
+      const clientIp = request.clientIp !== undefined
+        ? request.clientIp
+        : await getClientIpBestEffort();
+
+      const result = await acceptProposalWithPayment({
+        proposalId: request.proposalId,
+        selectedSlot: request.selectedSlot,
+        idempotencyKey: request.idempotencyKey,
+        clientCardTokenId: request.paymentTokenId,
+        installmentNumber: request.installmentNumber,
+        installmentSelectionHmac: request.installmentSelectionHmac,
+        installmentHmacPayload: request.installmentHmacPayload,
+        clearsaleSessionId: request.clearsaleSessionId,
+        pricingSignature: request.pricingSignature,
+        clientIp,
+      });
+
+      if (result.error || !result.data) {
+        const error = new Error(result.error?.message ?? "accept_proposal_failed");
+        if (result.error?.code && result.error.code !== "UNKNOWN") {
+          (error as Error & { code?: string }).code = result.error.code;
+        }
+        throw error;
+      }
+
+      return {
+        contractedServiceId: result.data.service.id,
+        scheduleId: result.data.payment_schedule?.id,
+      };
+    },
+    gcTime: 0,
+    staleTime: 0,
   });
 }
 

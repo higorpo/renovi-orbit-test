@@ -78,3 +78,6 @@ Coisas para fazer next
 
 
 - fazer um checkup geral do banco de dados para RLS e CLS
+
+
+- na tela de minha conta do cliente, precisa colocar skeleton para as informações relacionadas a pagamentos

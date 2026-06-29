@@ -170,6 +170,7 @@ export function ReceivedBudgetDetailsSheet({
           serviceRequestId={serviceRequestId}
           proposalId={dialogs.acceptProposalId}
           suggestedSlots={dialogs.acceptProposalDetailQuery.data?.proposal_suggested_slots ?? []}
+          serviceTitle={detail?.service_request.title}
           isLoading={dialogs.acceptProposalDetailQuery.isLoading}
           isError={dialogs.acceptProposalDetailQuery.isError}
           onRetry={() => void dialogs.acceptProposalDetailQuery.refetch()}

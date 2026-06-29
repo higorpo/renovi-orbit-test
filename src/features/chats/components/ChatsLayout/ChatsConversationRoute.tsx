@@ -165,6 +165,7 @@ export function ChatsConversationRoute() {
           serviceRequestId={serviceRequestId}
           proposalId={acceptProposalId}
           suggestedSlots={acceptProposalDetailQuery.data?.proposal_suggested_slots ?? []}
+          serviceTitle={detail?.service_request.title}
           isLoading={acceptProposalDetailQuery.isLoading}
           isError={acceptProposalDetailQuery.isError}
           onRetry={() => void acceptProposalDetailQuery.refetch()}

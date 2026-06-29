@@ -10,6 +10,7 @@ export {
   proposalsApi,
   createProviderProposal,
   acceptProposal,
+  acceptProposalWithPayment,
   rejectProposal,
   requestProposalRevision,
   declineRevisionRequest,
@@ -32,6 +33,9 @@ export type {
   ProposalSuggestedSlotRpc,
   ProposalVersionListResponse,
   AcceptProposalResult,
+  AcceptProposalWithPaymentParams,
+  AcceptProposalWithPaymentMutationParams,
+  AcceptProposalWithPaymentMutationResult,
   ProposalMutationResult,
   ProposalBusinessErrorCode,
   ProposalsApiError,
@@ -119,6 +123,7 @@ export {
 } from "./components/ProposalRevisionCounter";
 export {
   useAcceptProposalMutation,
+  useAcceptProposalWithPayment,
   useRejectProposalMutation,
   useRequestProposalRevisionMutation,
 } from "./hooks/useProposalClientMutations";

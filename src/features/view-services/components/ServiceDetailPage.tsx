@@ -155,7 +155,18 @@ export function ServiceDetailPage({
       </article>
 
       <div className="space-y-4">
-        {model.contracted ? <ServiceContractedSection contracted={model.contracted} /> : null}
+        {model.contracted ? (
+          <ServiceContractedSection
+            contracted={model.contracted}
+            serviceRequestId={model.id}
+            showManualPayment={Boolean(isClient)}
+            showServiceCompletion={Boolean(isClient || isProvider)}
+            completionViewerRole={
+              isClient ? "client" : isProvider ? "provider" : undefined
+            }
+            onCompletionSuccess={() => void refetch()}
+          />
+        ) : null}
         {isProvider && model.contracted ? (
           <ServiceProviderLocationSection address={model.address} />
         ) : null}

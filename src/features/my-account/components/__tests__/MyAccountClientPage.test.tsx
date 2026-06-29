@@ -26,6 +26,10 @@ vi.mock("../../hooks/useProfilePhotoMutation", () => ({
 vi.mock("@/features/addresses", () => ({
   AddressesSection: () => <div data-testid="addresses-section">Endereços</div>,
 }));
+vi.mock("@/features/payments", () => ({
+  SavedCardsList: () => <div data-testid="saved-cards-section">Cartões</div>,
+  PaymentHistorySection: () => <div data-testid="payment-history-section">Pagamentos</div>,
+}));
 
 const useAuth = vi.mocked(await import("@/features/auth").then((m) => m.useAuth));
 const useAccountProfile = vi.mocked(

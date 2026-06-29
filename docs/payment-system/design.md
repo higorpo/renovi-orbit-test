@@ -515,7 +515,7 @@ COMMENT ON VIEW public.client_card_tokens_safe_v IS
   'Client-facing card token read model; excludes gateway_card_token and billing_address (PCI).';
 ```
 
-**Frontend contract:** `src/features/payments/api/card-tokens.api.ts` queries `client_card_tokens_safe_v` only. Checkout stepper saved-card selection, card picker UI, and any client-side listing MUST use this API — never `.from('client_card_tokens')` in the browser.
+**Frontend contract:** `src/features/payments/api/cards.api.ts` (`listActivePaymentTokens`, `fetchPaymentTokenById`) queries `client_card_tokens` today; target read path is `client_card_tokens_safe_v` (see migration task deliverables). Checkout stepper saved-card selection, card picker UI, and any client-side listing MUST use this API module — never `.from('client_card_tokens')` in hooks/components.
 
 **RLS:** `security_invoker = true` — the view inherits `client_card_tokens_select_own` on the base table (`auth.uid() = client_id`).
 
@@ -1195,7 +1195,7 @@ sequenceDiagram
     end
 ```
 
-**No Edge Function.** Payment acceptance extends the existing `accept_proposal` RPC (chats domain) with payment schedule creation. The app calls `supabase.rpc('accept_proposal', …)` via `src/features/payments/api/`.
+**No Edge Function.** Payment acceptance extends the existing `accept_proposal` RPC (chats domain) with payment schedule creation. The app calls via `acceptProposalWithPayment` in `src/features/negotiation-proposals/api/proposals.api.ts` (10-param overload); checkout uses `useAcceptProposalWithPayment` in the same feature (`useProposalClientMutations.ts`). Checkout reads `pricing_signature` via `payment_get_proposal_checkout_context` RPC. Task **131** tracks unifying with `useAcceptProposalMutation`.
 
 > **Migration:** see §5.2 *Extended RPCs — migration source of truth* — dump `accept_proposal` from local Postgres before writing the migration.
 
@@ -2536,15 +2536,52 @@ RPC claim/begin → EF external I/O → RPC commit → RPC enqueue notifications
 
 ## What belongs in the Application Layer (`src/features/payments/`)
 
+**File naming (Orbit convention):** React components use PascalCase files and folders matching the exported component (`CheckoutStepper/CardStep.tsx`). Feature API modules use camelCase domain files (`checkout.api.ts`, `cards.api.ts`). Shared infra: `payments.rpc.ts`, `payments.edge.ts`, `paymentApiClient.ts`. Non-component helpers may use camelCase (`checkoutStepLabels.ts`).
+
+**Feature boundary (app layer):** `payments` owns money movement (checkout, tokens, charges, KYC gateway, payment history). Contracted-service lifecycle UI on the service detail page (mark executed, confirm completion, cancel) lives in `view-services` — even when RPCs use the `payment_*` prefix in Postgres.
+
+### API layer layout (aligned with `negotiation-proposals/api/`)
+
+| Module | Responsibility | Transport |
+|---|---|---|
+| `payments.rpc.ts` | Registry of `payment_*` RPC names | — |
+| `payments.edge.ts` | Registry of payment Edge Function slugs | — |
+| `paymentApiClient.ts` | `invokePaymentRpc`, `invokePaymentEdgeFunction` (`supabase.functions.invoke`), error tracking | RPC + EF |
+| `checkout.api.ts` | Step requirements, CPF/phone capture | RPC + table upsert / `profileApi` |
+| `cards.api.ts` | Token list/read, tokenize, installments, revoke, update method on schedule | EF (`invoke`) + RPC (`payment_calculate_installment_options`, `payment_update_method`, revoke) + table read |
+| `charges.api.ts` | Manual charge, schedule/context reads | EF + table read |
+| `kyc.api.ts` | KYC storage, dispatch email, provider account | Storage + EF + table read |
+| `history.api.ts` | Client/provider payment history views | View read |
+| `api/index.ts` | Re-exports + `paymentsApi` aggregate | — |
+
+**Types:** `types/paymentApi.types.ts` (`PaymentsApiResult`, `PaymentsApiError`). **Errors:** `utils/paymentApiErrors.ts` (`mapPaymentRpcError`, `parsePaymentRpcDetailObject`).
+
+**Hooks MUST import from `api/` domain modules (or `@/features/payments` public API) — never call Supabase directly.**
+
 | Responsibility | Location |
 |---|---|
-| Checkout stepper | `components/checkout-stepper/` |
-| ClearSale SDK injection | `components/checkout-stepper/card-step.tsx` |
-| Saved card management UI | `components/saved-cards/` |
-| Manual payment recovery UI | `components/manual-payment-button.tsx` |
+| Checkout stepper | `components/CheckoutStepper/` |
+| ClearSale SDK injection | `components/CheckoutStepper/CardStep.tsx` |
+| Saved card management UI | `components/SavedCards/` |
+| Manual payment recovery UI | `components/ManualPaymentButton.tsx`, `ManualPaymentModal.tsx` |
+| Provider KYC blocking UI | `components/ProviderKycGate.tsx`, `ProviderKycForm.tsx` |
+| Payment history UI | `components/PaymentHistory/` |
+| Card tokenization (PCI invoke) | `api/cards.api.ts` → `invokePaymentEdgeFunction('tokenize-payment-card')` |
+| Installment options + HMAC | `api/cards.api.ts` → `invokePaymentRpc(PAYMENT_RPC.calculateInstallmentOptions)` |
+| Saved token read path | `api/cards.api.ts` → `client_card_tokens` (migrate to `client_card_tokens_safe_v`) |
 | Payment hooks | `hooks/` — call `api/` only |
-| Feature API layer | `api/` — `supabase.rpc()` for all non-PCI flows; `invoke` only for `tokenize-payment-card`, `manual-charge-payment`, `process-refund` |
-| Public API | `index.ts` |
+| Feature API layer | `api/` — `invokePaymentRpc` / `invokePaymentEdgeFunction`; no raw `fetch` to `/functions/v1/` in domain modules |
+| Public API | `index.ts` — exports `paymentsApi` aggregate |
+
+## What belongs in `src/features/view-services/` (service detail integration)
+
+| Responsibility | Location |
+|---|---|
+| Service completion actions (provider EXECUTED / client COMPLETED) | `components/ServiceCompletionActions.tsx` |
+| Mark executed / confirm completion RPC wrappers | `api/markServiceExecuted.api.ts`, `api/confirmServiceCompleted.api.ts` → `payment_mark_service_executed`, `payment_confirm_service_completed` |
+| Service cancellation | `api/services.api.ts` → `cancel_service_request` |
+| Service detail hooks | `hooks/useMarkServiceExecuted.ts`, `useConfirmServiceCompleted.ts`, `useCancelService.ts` |
+| Manual payment recovery slot | `ServiceContractedSection` consumes `ManualPaymentRecovery` from `@/features/payments` |
 
 ## What belongs in the Frontend Only (Client-Side)
 

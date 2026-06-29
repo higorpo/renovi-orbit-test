@@ -1,13 +1,30 @@
 import { Calendar, CircleCheck, User } from "lucide-react";
+import { ManualPaymentRecovery } from "@/features/payments";
+import {
+  ServiceCompletionActions,
+  type ServiceCompletionViewerRole,
+} from "./ServiceCompletionActions";
 import type { ContractedServiceSummary } from "../types/service.types";
 import { formatShift } from "../utils/formatShift";
 import { ServiceDetailSection } from "./ServiceDetailSection";
 
 interface ServiceContractedSectionProps {
   contracted: ContractedServiceSummary;
+  serviceRequestId?: string;
+  showManualPayment?: boolean;
+  showServiceCompletion?: boolean;
+  completionViewerRole?: ServiceCompletionViewerRole;
+  onCompletionSuccess?: () => void;
 }
 
-export function ServiceContractedSection({ contracted }: ServiceContractedSectionProps) {
+export function ServiceContractedSection({
+  contracted,
+  serviceRequestId,
+  showManualPayment = false,
+  showServiceCompletion = false,
+  completionViewerRole,
+  onCompletionSuccess,
+}: ServiceContractedSectionProps) {
   const providerName = contracted.provider?.displayName;
 
   return (
@@ -41,6 +58,24 @@ export function ServiceContractedSection({ contracted }: ServiceContractedSectio
           </p>
         ) : null}
       </div>
+      {showManualPayment && serviceRequestId ? (
+        <div className="pt-3">
+          <ManualPaymentRecovery
+            contractedServiceId={contracted.id}
+            serviceRequestId={serviceRequestId}
+          />
+        </div>
+      ) : null}
+      {showServiceCompletion && completionViewerRole ? (
+        <div className="pt-3">
+          <ServiceCompletionActions
+            contractedServiceId={contracted.id}
+            status={contracted.status}
+            viewerRole={completionViewerRole}
+            onSuccess={onCompletionSuccess}
+          />
+        </div>
+      ) : null}
     </ServiceDetailSection>
   );
 }

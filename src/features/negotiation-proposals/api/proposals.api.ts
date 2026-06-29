@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { ProposalDetailAudience, ProposalDetailView } from "../types/proposalDetails.types";
 import type {
   AcceptProposalResult,
+  AcceptProposalWithPaymentParams,
   CreateProviderProposalParams,
   CreateProviderProposalResult,
   ProposalMutationResult,
@@ -134,6 +135,7 @@ export async function createProviderProposal(
   );
 }
 
+// @deprecated - Use `acceptProposalWithPayment` instead. Remove this function in a future release.
 export async function acceptProposal(params: {
   proposalId: string;
   selectedSlot: ProposalSuggestedSlotRpc;
@@ -150,6 +152,30 @@ export async function acceptProposal(params: {
     },
     isAcceptProposalResult,
     "proposals_accept_invalid_response",
+  );
+}
+
+export async function acceptProposalWithPayment(
+  params: AcceptProposalWithPaymentParams,
+): Promise<ProposalsApiResult<AcceptProposalResult>> {
+  const idempotencyKey = params.idempotencyKey ?? generateIdempotencyKeyV7();
+
+  return invokeRpc(
+    CNS_PROPOSAL_RPC.acceptProposal,
+    {
+      p_proposal_id: params.proposalId,
+      p_selected_slot: params.selectedSlot,
+      p_idempotency_key: idempotencyKey,
+      p_client_card_token_id: params.clientCardTokenId,
+      p_installment_number: params.installmentNumber,
+      p_installment_selection_hmac: params.installmentSelectionHmac,
+      p_installment_hmac_payload: params.installmentHmacPayload,
+      p_clearsale_session_id: params.clearsaleSessionId,
+      p_pricing_signature: params.pricingSignature,
+      p_client_ip: params.clientIp,
+    },
+    isAcceptProposalResult,
+    "proposals_accept_with_payment_invalid_response",
   );
 }
 
@@ -352,6 +378,7 @@ export async function fetchProviderProposalHistory(
 export const proposalsApi = {
   createProviderProposal,
   acceptProposal,
+  acceptProposalWithPayment,
   rejectProposal,
   requestProposalRevision,
   declineRevisionRequest,

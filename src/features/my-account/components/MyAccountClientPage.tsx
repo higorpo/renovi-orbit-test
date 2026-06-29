@@ -8,6 +8,7 @@ import { useUpdateAccountProfile } from "../hooks/useUpdateAccountProfile";
 import { useClientPrivateProfile } from "../hooks/useClientPrivateProfile";
 import { useUploadProfilePhoto, useRemoveProfilePhoto } from "../hooks/useProfilePhotoMutation";
 import { AddressesSection } from "@/features/addresses";
+import { SavedCardsList, PaymentHistorySection } from "@/features/payments";
 import {
   accountFormSchema,
   defaultAccountFormData,
@@ -199,6 +200,16 @@ export function MyAccountClientPage() {
           )}
 
           <AddressesSection />
+
+          {!profileLoading ? (
+            <SavedCardsList
+              cpf={clientPrivateCpf ?? undefined}
+              phone={profile?.phone ?? undefined}
+              tokenizeContext="profile"
+            />
+          ) : null}
+
+          <PaymentHistorySection role="client" />
 
           <PrivacySection
             privacyPolicyUrl={PRIVACY_POLICY_URL}

@@ -25,6 +25,7 @@ import { LegalIdentitySection } from "./LegalIdentitySection";
 import { OfferedServicesSection } from "./OfferedServicesSection";
 import { PublicProfileSettingsSection } from "./PublicProfileSettingsSection";
 import { PortfolioManagementSection } from "./PortfolioManagementSection";
+import { PaymentHistorySection } from "@/features/payments";
 import { PrivacySection } from "./PrivacySection";
 import { DangerZoneSection } from "./DangerZoneSection";
 import { LogoutSection } from "./LogoutSection";
@@ -356,6 +357,8 @@ function MyAccountProviderPage() {
             isUpdating={isUpdatingPortfolio}
             isDeleting={isDeletingPortfolio}
           />
+
+          <PaymentHistorySection role="provider" />
 
           <PrivacySection
             privacyPolicyUrl={PRIVACY_POLICY_URL}

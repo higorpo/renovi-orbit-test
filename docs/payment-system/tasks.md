@@ -448,7 +448,7 @@ Implementation Details:
 
 Deliverables:
 - Migration `*_create_client_card_tokens.sql`
-- View `client_card_tokens_safe_v` + `card-tokens.api.ts` client read path
+- View `client_card_tokens_safe_v` + `cards.api.ts` client read path (currently reads `client_card_tokens`; switch view in a follow-up task)
 - RLS policies
 - pgTAP RLS tests
 - Indexes
@@ -3334,7 +3334,7 @@ Acceptance Criteria covered:
 
 # Phase 8: Edge Functions & Gateway Adapter
 
-## 60. [ ] Scaffold `src/features/payments` and `_shared/payment` module layout
+## 60. [x] Scaffold `src/features/payments` and `_shared/payment` module layout
 
 Description:
 Create feature public API, types, constants.ts Option A gateway config, folder structure per design §13.
@@ -3391,7 +3391,7 @@ Requirements covered:
 Acceptance Criteria covered:
 1.1
 
-## 61. [ ] Implement `PaymentProvider` interface and `NetCredAdapter` core
+## 61. [x] Implement `PaymentProvider` interface and `NetCredAdapter` core
 
 Description:
 tokenizeCard, createCharge, getTransaction, refund, void, refreshAuthToken with ProviderAuthError single retry.
@@ -3448,7 +3448,7 @@ Requirements covered:
 Acceptance Criteria covered:
 1.1–1.6
 
-## 62. [ ] Implement NetCred JWT cache with SELECT FOR UPDATE in adapter
+## 62. [x] Implement NetCred JWT cache with SELECT FOR UPDATE in adapter
 
 Description:
 payment_gateway_tokens read/refresh; 60min threshold; sandbox assertion CRITICAL.
@@ -3506,7 +3506,7 @@ Requirements covered:
 Acceptance Criteria covered:
 2.1–2.5
 
-## 63. [ ] Implement `buildPayoutRule` split helper (ADR-0001)
+## 63. [x] Implement `buildPayoutRule` split helper (ADR-0001)
 
 Description:
 FIXED provider + PERCENTAGE renovi remainder.
@@ -3563,7 +3563,7 @@ Requirements covered:
 Acceptance Criteria covered:
 10.2; 1.7.4
 
-## 64. [ ] Edge Function `tokenize-payment-card`
+## 64. [x] Edge Function `tokenize-payment-card`
 
 Description:
 PCI path → paymentProfileCreate → payment_persist_client_card_token RPC.
@@ -3621,7 +3621,7 @@ Requirements covered:
 Acceptance Criteria covered:
 6.1–6.4
 
-## 65. [ ] Edge Function `schedule-netcred-charges`
+## 65. [x] Edge Function `schedule-netcred-charges`
 
 Description:
 claim → loop chargeCreate → commit → enqueue notifications; timeout getTransaction first.
@@ -3682,7 +3682,7 @@ Requirements covered:
 Acceptance Criteria covered:
 10.1–10.8
 
-## 66. [ ] Edge Function `manual-charge-payment`
+## 66. [x] Edge Function `manual-charge-payment`
 
 Description:
 begin_manual_attempt → chargeCreate → commit; fresh ClearSale session.
@@ -3740,7 +3740,7 @@ Requirements covered:
 Acceptance Criteria covered:
 13.2–13.5
 
-## 67. [ ] Edge Function `netcred-webhook`
+## 67. [x] Edge Function `netcred-webhook`
 
 Description:
 Raw ingest RPC → HMAC timingSafeEqual → inline or enqueue.
@@ -3799,7 +3799,7 @@ Requirements covered:
 Acceptance Criteria covered:
 16.1–16.5
 
-## 68. [ ] Edge Function `process-refund`
+## 68. [x] Edge Function `process-refund`
 
 Description:
 begin_refund_request → transactionRefund.
@@ -3857,7 +3857,7 @@ Requirements covered:
 Acceptance Criteria covered:
 15.1; 15.9
 
-## 69. [ ] Edge Function `detect-netcred-onboarding`
+## 69. [x] Edge Function `detect-netcred-onboarding`
 
 Description:
 Batch GraphQL 50 aliases; activation RPCs.
@@ -3917,7 +3917,7 @@ Requirements covered:
 Acceptance Criteria covered:
 4.1–4.7
 
-## 70. [ ] Edge Function `reconcile-netcred-payments`
+## 70. [x] Edge Function `reconcile-netcred-payments`
 
 Description:
 claim stale → getTransaction → commit.
@@ -3978,7 +3978,7 @@ Acceptance Criteria covered:
 
 # Phase 9: Application Layer & Checkout UX
 
-## 71. [ ] Checkout stepper: step resolution RPC integration
+## 71. [x] Checkout stepper: step resolution RPC integration
 
 Description:
 payment_get_checkout_step_requirements; ordered steps CPF→phone→card→installments→confirm.
@@ -4030,7 +4030,7 @@ Requirements covered:
 Acceptance Criteria covered:
 5.1–5.3
 
-## 72. [ ] Checkout stepper: CPF and phone collection steps
+## 72. [x] Checkout stepper: CPF and phone collection steps
 
 Description:
 Client/server validation; persist via RPC/edge as designed.
@@ -4082,7 +4082,7 @@ Requirements covered:
 Acceptance Criteria covered:
 5.2; 5.3
 
-## 73. [ ] Checkout stepper: ClearSale fp.js integration
+## 73. [x] Checkout stepper: ClearSale fp.js integration
 
 Description:
 UUID stable per session; async loader; Capacitor WebView.
@@ -4134,7 +4134,7 @@ Requirements covered:
 Acceptance Criteria covered:
 31.1–31.4
 
-## 74. [ ] Checkout stepper: card form and saved card selection
+## 74. [x] Checkout stepper: card form and saved card selection
 
 Description:
 Reuse components; tokenize EF invoke; billing address required.
@@ -4156,6 +4156,7 @@ Responsibilities:
 Implementation Details:
 - Feature index.ts exports
 - Vitest component/hook tests
+- `components/CheckoutStepper/CardForm.tsx`, `SavedCardSelector.tsx`; `api/cards.api.ts` (`tokenizePaymentCard` → `tokenize-payment-card` EF)
 
 Deliverables:
 - React components
@@ -4187,7 +4188,7 @@ Requirements covered:
 Acceptance Criteria covered:
 5.4–5.7; 6.1
 
-## 75. [ ] Checkout stepper: installment selection UI
+## 75. [x] Checkout stepper: installment selection UI
 
 Description:
 payment_calculate_installment_options RPC; disclosure totals Req 27.
@@ -4240,10 +4241,12 @@ Requirements covered:
 Acceptance Criteria covered:
 7.1; 27.3
 
-## 76. [ ] Checkout stepper: confirmation disclosures and accept_proposal submit
+## 76. [x] Checkout stepper: confirmation disclosures and accept_proposal submit
 
 Description:
 Charge timing disclosure; ToS block; PAYMENT_TERMS_ACCEPTED audit via server.
+
+**Implementation note (2026-06-26):** `ConfirmationStep` submits via `useAcceptProposalWithPayment` (`negotiation-proposals`) → `accept_proposal` RPC (10 params). `AcceptProposalDialog` routes credentialed providers through `CheckoutStepper` in chat and budget flows. **Follow-up:** task **131** — consolidate with `useAcceptProposalMutation` (invalidations, analytics, single public hook).
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -4293,7 +4296,7 @@ Requirements covered:
 Acceptance Criteria covered:
 8.1; 27.1; 27.4; 31.6
 
-## 77. [ ] Provider KYC onboarding blocking UI
+## 77. [x] Provider KYC onboarding blocking UI
 
 Description:
 Blocking screen; payment_submit_provider_kyc.
@@ -4345,7 +4348,7 @@ Requirements covered:
 Acceptance Criteria covered:
 3.1; 3.2
 
-## 78. [ ] Saved cards profile management UI
+## 78. [x] Saved cards profile management UI
 
 Description:
 List/revoke/add via shared card component.
@@ -4398,7 +4401,7 @@ Requirements covered:
 Acceptance Criteria covered:
 28.1–28.4
 
-## 79. [ ] Manual payment recovery UI (`Efetuar Pagamento`)
+## 79. [x] Manual payment recovery UI (`Efetuar Pagamento`)
 
 Description:
 Gate on FAILED/FAILED_PERMANENT; ClearSale refresh; manual-charge EF.
@@ -4451,7 +4454,7 @@ Requirements covered:
 Acceptance Criteria covered:
 13.1–13.5
 
-## 80. [ ] Service completion UI (provider execute + client confirm)
+## 80. [x] Service completion UI (provider execute + client confirm)
 
 Description:
 payment_mark_service_executed RPC hooks.
@@ -4471,8 +4474,9 @@ Responsibilities:
 - Mobile-first UX per platform-ux rule
 
 Implementation Details:
-- Feature index.ts exports
+- Feature index.ts exports (`view-services/index.ts` for UI; RPC wrappers in `view-services/api/`)
 - Vitest component/hook tests
+- `view-services/components/ServiceCompletionActions.tsx`; `view-services/api/markServiceExecuted.api.ts`, `confirmServiceCompleted.api.ts` (RPCs `payment_mark_service_executed`, `payment_confirm_service_completed`)
 
 Deliverables:
 - React components
@@ -4503,7 +4507,7 @@ Requirements covered:
 Acceptance Criteria covered:
 32.1–32.2
 
-## 81. [ ] Payment history views consumption in client/provider apps
+## 81. [x] Payment history views consumption in client/provider apps
 
 Description:
 Query views with role-appropriate columns.
@@ -6762,7 +6766,18 @@ Acceptance Criteria covered:
 ## 123. [ ] Feature API: `payments/api/checkout.api.ts` RPC wrappers
 
 Description:
-Thin wrappers for payment_get_checkout_step_requirements, payment_calculate_installment_options, accept_proposal payment params.
+Thin wrappers for `payment_get_checkout_step_requirements`, `payment_calculate_installment_options`, `accept_proposal` payment params.
+
+**Progress (2026-06-26 — partial):**
+- Created `checkout.api.ts` with `getCheckoutStepRequirements` (`invokePaymentRpc` + `PAYMENT_RPC`), `saveCheckoutCpf`, `saveCheckoutPhone`
+- Shared infra: `payments.rpc.ts`, `payments.edge.ts`, `paymentApiClient.ts` (`invokePaymentRpc`, `invokePaymentEdgeFunction` via `supabase.functions.invoke`)
+- **`fetchInstallmentOptions`** wired to `payment_calculate_installment_options` RPC (`PAYMENT_RPC.calculateInstallmentOptions`) — no longer uses `calculate-installment-options` EF
+- **`getProposalCheckoutContext`** via `payment_get_proposal_checkout_context` RPC (migration `20260801590000_*`) — exposes `pricing_signature` + `payment_required` to client checkout
+- **`AcceptProposalDialog`** mounts `CheckoutStepper` when `payment_required`; CNS-only accept still uses 3-param `acceptProposal` via `useAcceptProposalMutation`
+- Removed interim `useAcceptProposalPayment` from `payments/`; checkout uses `useAcceptProposalWithPayment` from `negotiation-proposals` (task **131** tracks unification)
+
+**Still required to close this task:**
+- Task deliverables below (migrations, pgTAP, `yarn test:deno`, observability) as originally scoped
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -6813,7 +6828,21 @@ Acceptance Criteria covered:
 ## 124. [ ] Feature API: `payments/api/cards.api.ts` and `charges.api.ts`
 
 Description:
-tokenize invoke, manual-charge invoke, payment_update_method, payment_revoke_client_card_token.
+tokenize invoke, manual-charge invoke, `payment_update_method`, `payment_revoke_client_card_token`.
+
+**Progress (2026-06-26 — partial):**
+- Created `cards.api.ts`, `charges.api.ts`, plus `acceptance.api.ts`, `kyc.api.ts`, `history.api.ts`
+- PCI/charge/KYC EFs use `invokePaymentEdgeFunction` → `supabase.functions.invoke` (Orbit standard; error body parsed via `FunctionsHttpError`, same pattern as `chats/api/chatMedia.api.ts`)
+- `revokePaymentToken` via `PAYMENT_RPC.revokeClientCardToken` (blocked-schedule parsing preserved)
+- **`updatePaymentMethod`** wired to `payment_update_method` RPC with `installment_hmac_payload` when card brand changes
+- **`acceptProposalPayment`** no longer uses removed `accept-proposal` / `update-payment-method` EFs
+- `paymentsApi` aggregate exported from `api/index.ts` and `@/features/payments`
+
+**Still required to close this task:**
+- Register/deploy EF not in `supabase/config.toml`: `dispatch-kyc-email` (`tokenize-payment-card`, `manual-charge-payment` already registered)
+- Migrate token reads to `client_card_tokens_safe_v`
+- Wire `payment_submit_provider_kyc` in KYC flow when applicable
+- Task deliverables below (migrations, pgTAP, `yarn test:deno`, observability) as originally scoped
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -7155,7 +7184,6 @@ Observability:
 
 Security Considerations:
 - RLS and rate limits verified
-
 Performance Considerations:
 - Index and batch tuning
 
@@ -7165,6 +7193,37 @@ Requirements covered:
 Acceptance Criteria covered:
 21.1
 
+
+## 131. [ ] negotiation-proposals: unify accept proposal hooks (CNS-only + payment checkout)
+
+Description:
+Today accept flows split across two hooks in `negotiation-proposals/hooks/useProposalClientMutations.ts`:
+- **`useAcceptProposalMutation`** — 3-param `accept_proposal` (slot only); used by `AcceptProposalDialog` when provider is not credentialed; includes chat/budget query invalidation, `proposal_accepted` analytics, offline guard, toasts.
+- **`useAcceptProposalWithPayment`** — 10-param `accept_proposal` via `acceptProposalWithPayment` API; used by `ConfirmationStep` (payments checkout); resolves `clientIp` via `getClientIpBestEffort` (`src/lib/getClientIp.ts`); maps `paymentTokenId` → `clientCardTokenId`; returns `{ contractedServiceId, scheduleId? }`; **no** invalidations/analytics/toast on success (checkout caller handles that today).
+
+**Goal:** one cohesive client accept API in `negotiation-proposals` so payments UI never owns proposal-accept mutations.
+
+**Recommended approach (pick one in PR):**
+1. **Extend `useAcceptProposalMutation`** with optional payment payload + `paymentRequired` flag; branch internally to `acceptProposal` vs `acceptProposalWithPayment`; share invalidation/analytics for both paths when `chatId` / `serviceRequestId` provided.
+2. **Keep two hooks** but extract shared `useAcceptProposalMutationCore` (mutationFn + error mapping) and add **`onSuccess` invalidations to payment path** mirroring CNS path; document when to use each.
+
+**Files to touch:**
+- `src/features/negotiation-proposals/hooks/useProposalClientMutations.ts` — merge or share core; export unified types from `proposals.types.ts`
+- `src/features/negotiation-proposals/hooks/__tests__/useProposalClientMutations.test.ts` — payment path, `INSTALLMENT_SIGNATURE_EXPIRED` error code, offline
+- `src/features/payments/components/CheckoutStepper/ConfirmationStep.tsx` — consume unified hook; pass `chatId`/`serviceRequestId` if available from checkout context (future)
+- `src/features/negotiation-proposals/components/AcceptProposalDialog.tsx` — optional: use same hook for checkout success invalidations instead of duplicating `invalidateAfterAccept`
+- `docs/payment-system/design.md` §8 — document single hook surface
+
+**Remove after unification:**
+- Any duplicate invalidation in `AcceptProposalDialog.handleCheckoutSuccess` if moved into hook
+- Redundant `useAcceptProposalWithPayment` export if folded into `useAcceptProposalMutation`
+
+**Dependencies:** Task 25, 76, 123 (checkout RPC wiring)
+
+**Deliverables:**
+- Unified hook(s) + tests
+- `negotiation-proposals/index.ts` public API updated
+- No `accept_proposal` mutation hooks under `src/features/payments/hooks/`
 
 ---
 

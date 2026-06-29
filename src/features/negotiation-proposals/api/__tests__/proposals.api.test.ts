@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   acceptProposal,
+  acceptProposalWithPayment,
   createProviderProposal,
   declineRevisionRequest,
   listProposalVersions,
@@ -85,6 +86,40 @@ describe("acceptProposal", () => {
 
     expect(result.error?.code).toBe("PROPOSAL_EXPIRED");
     expect(result.error?.message).toContain("expirou");
+  });
+});
+
+describe("acceptProposalWithPayment", () => {
+  it("passes payment fields to accept_proposal RPC", async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        service: { id: "cs-1" },
+        proposal: { id: "p1", status: "ACCEPTED" },
+        payment_schedule: { id: "sched-1", state: "SCHEDULED" },
+      },
+      error: null,
+    });
+
+    await acceptProposalWithPayment({
+      proposalId: "p1",
+      selectedSlot: { start_date: "2026-06-01", shift: "morning" },
+      clientCardTokenId: "tok-1",
+      installmentNumber: 1,
+      installmentSelectionHmac: "hmac",
+      installmentHmacPayload: { proposal_id: "p1" },
+      clearsaleSessionId: "cs-session",
+      pricingSignature: "pricing-sig",
+      clientIp: "127.0.0.1",
+    });
+
+    expect(rpcMock).toHaveBeenCalledWith(
+      "accept_proposal",
+      expect.objectContaining({
+        p_client_card_token_id: "tok-1",
+        p_pricing_signature: "pricing-sig",
+        p_installment_selection_hmac: "hmac",
+      }),
+    );
   });
 });
 

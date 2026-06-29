@@ -1,5 +1,6 @@
 import { Link, Outlet } from "react-router";
 import { useAuth } from "@/features/auth";
+import { ProviderKycGate } from "@/features/payments";
 import { ClientMyServicesPersistentSlot, ProviderMyServicesPersistentSlot } from "@/features/my-services";
 import { ProviderJobsPersistentSlot } from "@/features/provider-jobs";
 import { ServiceDetailSheet, useServiceDetailModal } from "@/features/view-services";
@@ -72,7 +73,9 @@ export function DashboardLayout() {
         <ProviderJobsPersistentSlot />
         <ProviderMyServicesPersistentSlot />
         <ClientMyServicesPersistentSlot />
-        {outlet}
+        <ProviderKycGate>
+          {outlet}
+        </ProviderKycGate>
         {serviceDetailModal.isOpen && serviceDetailModal.serviceRequestId ? (
           <ServiceDetailSheet serviceRequestId={serviceDetailModal.serviceRequestId} />
         ) : null}
