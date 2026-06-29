@@ -412,6 +412,34 @@ verify_jwt = true
 [functions.list-provider-opportunities]
 verify_jwt = true
 
+# PCI-safe card tokenization; JWT validated in handler (design §4.2.3).
+[functions.tokenize-payment-card]
+verify_jwt = true
+
+# T-2 charge execution cron worker (design §4.5).
+[functions.schedule-netcred-charges]
+verify_jwt = false
+
+# Provider NetCred onboarding batch poller (design §4.1.2).
+[functions.detect-netcred-onboarding]
+verify_jwt = false
+
+# Stale IN_ANALYSIS/PROCESSING schedule reconciler (design §4.9).
+[functions.reconcile-netcred-payments]
+verify_jwt = false
+
+# Client-initiated manual payment recovery with T-12h gate (design §4.11).
+[functions.manual-charge-payment]
+verify_jwt = true
+
+# NetCred webhook ingress; HMAC validated in handler after raw ingest RPC (design §4.7.1).
+[functions.netcred-webhook]
+verify_jwt = false
+
+# Client/provider refund initiation via payment_begin_refund_request + NetCred transactionRefund (design §4.8).
+[functions.process-refund]
+verify_jwt = true
+
 [analytics]
 enabled = true
 port = 54327

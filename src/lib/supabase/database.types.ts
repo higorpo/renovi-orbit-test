@@ -1075,6 +1075,7 @@ export type Database = {
           scheduled_end_date: string | null
           scheduled_shift: string
           scheduled_start_date: string
+          service_execution_at: string | null
           service_request_id: string
           status: Database["public"]["Enums"]["contracted_service_status"]
           updated_at: string
@@ -1095,6 +1096,7 @@ export type Database = {
           scheduled_end_date?: string | null
           scheduled_shift: string
           scheduled_start_date: string
+          service_execution_at?: string | null
           service_request_id: string
           status?: Database["public"]["Enums"]["contracted_service_status"]
           updated_at?: string
@@ -1115,6 +1117,7 @@ export type Database = {
           scheduled_end_date?: string | null
           scheduled_shift?: string
           scheduled_start_date?: string
+          service_execution_at?: string | null
           service_request_id?: string
           status?: Database["public"]["Enums"]["contracted_service_status"]
           updated_at?: string
@@ -1446,6 +1449,7 @@ export type Database = {
           created_at: string
           expires_at: string
           gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
+          is_sandbox: boolean
           refreshed_at: string
           token: string
           updated_at: string
@@ -1454,6 +1458,7 @@ export type Database = {
           created_at?: string
           expires_at: string
           gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          is_sandbox?: boolean
           refreshed_at?: string
           token: string
           updated_at?: string
@@ -1462,6 +1467,7 @@ export type Database = {
           created_at?: string
           expires_at?: string
           gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          is_sandbox?: boolean
           refreshed_at?: string
           token?: string
           updated_at?: string
@@ -3444,6 +3450,14 @@ export type Database = {
             }
             Returns: Json
           }
+      acquire_or_refresh_netcred_token: {
+        Args: {
+          p_expires_at?: string
+          p_is_sandbox?: boolean
+          p_new_token?: string
+        }
+        Returns: Json
+      }
       calculate_provider_service_pricing: {
         Args: { p_original_amount: number; p_tax_key?: string }
         Returns: {
@@ -3645,6 +3659,11 @@ export type Database = {
         Args: never
         Returns: Json
       }
+      cron_payment_charge_batch: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      cron_payment_recover_orphaned_schedules: { Args: never; Returns: Json }
       cron_process_service_request_dispatches: { Args: never; Returns: Json }
       cron_proposal_expire_pending: { Args: never; Returns: Json }
       cron_purge_stale_user_device_beacons: { Args: never; Returns: Json }
@@ -3982,6 +4001,14 @@ export type Database = {
         Args: { p_proposal_id: string }
         Returns: Json
       }
+      payment_activate_provider_from_netcred: {
+        Args: {
+          p_netcred_bank_account_id: string
+          p_netcred_company_id: string
+          p_provider_gateway_account_id: string
+        }
+        Returns: Json
+      }
       payment_assert_installment_hmac_context: {
         Args: {
           p_base_amount: number
@@ -4002,6 +4029,11 @@ export type Database = {
         }
         Returns: undefined
       }
+      payment_auto_cancel_services: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      payment_auto_complete_executed_services: { Args: never; Returns: Json }
       payment_begin_manual_attempt: {
         Args: {
           p_actor_id?: string
@@ -4009,6 +4041,15 @@ export type Database = {
           p_client_id: string
           p_client_ip_address?: string
           p_schedule_id: string
+        }
+        Returns: Json
+      }
+      payment_begin_refund_request: {
+        Args: {
+          p_actor_id: string
+          p_cancellation_reason?: string
+          p_initiator?: string
+          p_service_id: string
         }
         Returns: Json
       }
@@ -4028,11 +4069,37 @@ export type Database = {
         }
         Returns: Json
       }
+      payment_calculate_refund_amount: {
+        Args: {
+          p_base_amount: number
+          p_charge_amount: number
+          p_initiator: string
+          p_now?: string
+          p_service_scheduled_at: string
+        }
+        Returns: Json
+      }
       payment_cc_fee_rate_key: {
         Args: { p_card_brand: string; p_installment_number: number }
         Returns: string
       }
       payment_claim_charge_batch: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      payment_claim_stale_schedules_for_reconciliation: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      payment_claim_upcoming_charge_notifications: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      payment_claim_webhook_processing_batch: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      payment_claim_webhook_retry_batch: {
         Args: { p_batch_size?: number }
         Returns: Json
       }
@@ -4063,6 +4130,37 @@ export type Database = {
         }
         Returns: string
       }
+      payment_confirm_upcoming_charge_notified: {
+        Args: { p_schedule_id: string }
+        Returns: boolean
+      }
+      payment_cron_auto_cancel_unpaid_services: {
+        Args: never
+        Returns: undefined
+      }
+      payment_cron_auto_complete_executed_services: {
+        Args: never
+        Returns: undefined
+      }
+      payment_cron_detect_netcred_onboarding: {
+        Args: never
+        Returns: undefined
+      }
+      payment_cron_invoke_edge_function: {
+        Args: { p_function_name: string }
+        Returns: number
+      }
+      payment_cron_notify_upcoming_charges: { Args: never; Returns: undefined }
+      payment_cron_process_webhook_retry: { Args: never; Returns: undefined }
+      payment_cron_reconcile_netcred_payments: {
+        Args: never
+        Returns: undefined
+      }
+      payment_cron_recover_orphaned_schedules: {
+        Args: never
+        Returns: undefined
+      }
+      payment_cron_schedule_netcred_charges: { Args: never; Returns: undefined }
       payment_enqueue_notifications: {
         Args: {
           p_metadata?: Json
@@ -4071,14 +4169,56 @@ export type Database = {
         }
         Returns: Json
       }
+      payment_enqueue_webhook_processing: {
+        Args: { p_scheduled_at?: string; p_webhook_event_id: string }
+        Returns: Json
+      }
+      payment_finish_webhook_retry_failure: {
+        Args: {
+          p_event_id: string
+          p_failure_reason: string
+          p_queue_id?: string
+        }
+        Returns: Json
+      }
       payment_get_checkout_step_requirements: { Args: never; Returns: Json }
+      payment_get_proposal_checkout_context: {
+        Args: { p_proposal_id: string }
+        Returns: Json
+      }
+      payment_increment_reconciliation_failure: {
+        Args: { p_schedule_id: string }
+        Returns: number
+      }
+      payment_ingest_webhook_event: {
+        Args: {
+          p_event_type: string
+          p_gateway_event_id: string
+          p_gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
+          p_raw_headers: Json
+          p_raw_payload: Json
+        }
+        Returns: Json
+      }
       payment_installment_hmac_canonical_text: {
         Args: { p_payload: Json }
         Returns: string
       }
+      payment_list_gateway_accounts_for_onboarding: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
       payment_mark_kyc_credenciamento_email_dispatched: {
         Args: { p_provider_gateway_account_id: string }
         Returns: undefined
+      }
+      payment_mark_service_executed: {
+        Args: { p_service_id: string }
+        Returns: Json
+      }
+      payment_notify_upcoming_charges_batch: {
+        Args: { p_batch_size?: number }
+        Returns: Json
       }
       payment_persist_client_card_token: {
         Args: {
@@ -4095,6 +4235,30 @@ export type Database = {
         }
         Returns: Json
       }
+      payment_pre_charge_cancel: {
+        Args: {
+          p_actor_id: string
+          p_cancellation_reason?: string
+          p_initiator?: string
+          p_service_id: string
+        }
+        Returns: string
+      }
+      payment_process_reconciliation_outcome: {
+        Args: {
+          p_gateway_charge_id?: string
+          p_gateway_state: string
+          p_gateway_transaction_id?: string
+          p_paid_amount?: number
+          p_refunded_amount?: number
+          p_schedule_id: string
+        }
+        Returns: Json
+      }
+      payment_process_webhook_event: {
+        Args: { p_webhook_event_id: string }
+        Returns: Json
+      }
       payment_provider_is_credentialed: {
         Args: {
           p_gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
@@ -4106,9 +4270,17 @@ export type Database = {
         Args: { p_document_key: string }
         Returns: boolean
       }
+      payment_provider_kyc_storage_mutations_allowed: {
+        Args: never
+        Returns: boolean
+      }
       payment_provider_kyc_storage_path_valid: {
         Args: { p_provider_id: string; p_storage_path: string }
         Returns: boolean
+      }
+      payment_reconstruct_audit_lifecycle: {
+        Args: { p_service_id: string }
+        Returns: Json
       }
       payment_recover_orphaned_schedules: {
         Args: never
@@ -4118,9 +4290,21 @@ export type Database = {
           recovered_to_scheduled: number
         }[]
       }
+      payment_recover_stuck_webhook_processing: {
+        Args: { p_stale_minutes?: number }
+        Returns: Json
+      }
       payment_reschedule_charge_date: {
         Args: { p_contracted_service_id: string }
         Returns: Json
+      }
+      payment_reset_dead_letter_event: {
+        Args: { p_event_id: string }
+        Returns: Json
+      }
+      payment_revert_dry_run_lease: {
+        Args: { p_attempt_count: number; p_schedule_id: string }
+        Returns: undefined
       }
       payment_revoke_client_card_token: {
         Args: { p_client_card_token_id: string }
@@ -4129,6 +4313,10 @@ export type Database = {
       payment_round_half_even: {
         Args: { p_scale?: number; p_value: number }
         Returns: number
+      }
+      payment_sanitize_webhook_headers: {
+        Args: { p_headers: Json }
+        Returns: Json
       }
       payment_service_execution_at: {
         Args: {
@@ -4168,9 +4356,84 @@ export type Database = {
         }
         Returns: Json
       }
+      payment_update_provider_onboarding_status: {
+        Args: {
+          p_onboarding_status: Database["public"]["Enums"]["payment_provider_onboarding_status"]
+          p_provider_gateway_account_id: string
+        }
+        Returns: Json
+      }
+      payment_update_webhook_event_state: {
+        Args: {
+          p_failure_reason?: string
+          p_target_state: Database["public"]["Enums"]["payment_webhook_event_state"]
+          p_webhook_event_id: string
+        }
+        Returns: Json
+      }
+      payment_validate_tokenize_checkout_access: {
+        Args: { p_client_id: string; p_proposal_id: string }
+        Returns: Json
+      }
       payment_verify_installment_selection_hmac: {
         Args: { p_payload: Json; p_submitted_hmac: string }
         Returns: undefined
+      }
+      payment_webhook_handle_capture: {
+        Args: { p_payload: Json; p_webhook_event_id: string }
+        Returns: Json
+      }
+      payment_webhook_handle_dispute: {
+        Args: { p_payload: Json; p_webhook_event_id: string }
+        Returns: Json
+      }
+      payment_webhook_handle_expired: {
+        Args: { p_payload: Json; p_webhook_event_id: string }
+        Returns: Json
+      }
+      payment_webhook_handle_profile_delete: {
+        Args: { p_payload: Json; p_webhook_event_id: string }
+        Returns: Json
+      }
+      payment_webhook_handle_profile_expiring: {
+        Args: { p_payload: Json; p_webhook_event_id: string }
+        Returns: Json
+      }
+      payment_webhook_handle_profile_tokenize: {
+        Args: { p_payload: Json; p_webhook_event_id: string }
+        Returns: Json
+      }
+      payment_webhook_handle_profile_update: {
+        Args: { p_payload: Json; p_webhook_event_id: string }
+        Returns: Json
+      }
+      payment_webhook_handle_refund: {
+        Args: { p_payload: Json; p_webhook_event_id: string }
+        Returns: Json
+      }
+      payment_webhook_handle_rejected: {
+        Args: { p_payload: Json; p_webhook_event_id: string }
+        Returns: Json
+      }
+      payment_webhook_handle_transaction_update: {
+        Args: { p_payload: Json; p_webhook_event_id: string }
+        Returns: Json
+      }
+      payment_webhook_handle_void: {
+        Args: { p_payload: Json; p_webhook_event_id: string }
+        Returns: Json
+      }
+      payment_webhook_payload_reference_code: {
+        Args: { p_payload: Json }
+        Returns: string
+      }
+      payment_webhook_payload_text: {
+        Args: { p_paths: string[]; p_payload: Json }
+        Returns: string
+      }
+      payment_webhook_payload_transaction_state: {
+        Args: { p_payload: Json }
+        Returns: string
       }
       payment_write_audit: {
         Args: {
@@ -4252,6 +4515,7 @@ export type Database = {
         }
         Returns: Json
       }
+      release_netcred_token_refresh_lock: { Args: never; Returns: undefined }
       replay_domain_event: { Args: { p_event_id: string }; Returns: Json }
       request_proposal_revision: {
         Args: {
@@ -4352,7 +4616,13 @@ export type Database = {
         | "ERROR"
         | "IN_ANALYSIS"
         | "VOIDED"
-      payment_audit_actor: "cron" | "client" | "webhook" | "support" | "system"
+      payment_audit_actor:
+        | "cron"
+        | "client"
+        | "provider"
+        | "webhook"
+        | "support"
+        | "system"
       payment_client_card_token_state:
         | "ACTIVE"
         | "EXPIRED"
@@ -4612,7 +4882,14 @@ export const Constants = {
         "IN_ANALYSIS",
         "VOIDED",
       ],
-      payment_audit_actor: ["cron", "client", "webhook", "support", "system"],
+      payment_audit_actor: [
+        "cron",
+        "client",
+        "provider",
+        "webhook",
+        "support",
+        "system",
+      ],
       payment_client_card_token_state: [
         "ACTIVE",
         "EXPIRED",

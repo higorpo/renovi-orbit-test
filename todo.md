@@ -81,3 +81,7 @@ Coisas para fazer next
 
 
 - na tela de minha conta do cliente, precisa colocar skeleton para as informações relacionadas a pagamentos
+
+- garantir que reference code seja do proposal id e que a descrição etc do pagamento tenha os detalhes do serviço.
+
+- process-refund EF também ser a que faz o cancelamento do serviço. renomear ela.
