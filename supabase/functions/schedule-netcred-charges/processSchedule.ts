@@ -2,6 +2,7 @@ import {
   createPaymentLogger,
   PAYMENT_LOG_EVENTS,
 } from "../_shared/observability/payment-logger.ts";
+import { emitMissingClearSaleSessionWarning } from "../_shared/observability/payment-sentry-matrix.ts";
 import type {
   CreateChargeInput,
   CreateChargeResult,
@@ -195,6 +196,10 @@ export async function processSchedule(
 
   if (!schedule.clearsale_session_id) {
     logger.warn("missing_clearsale_session_id", { schedule_id: schedule.id });
+    void emitMissingClearSaleSessionWarning({
+      schedule_id: schedule.id,
+      service_id: schedule.contracted_service_id,
+    });
   }
 
   const payoutRule = buildPayoutRule(

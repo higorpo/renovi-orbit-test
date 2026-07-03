@@ -1,5 +1,6 @@
 import "xhr";
 import { servePaymentFunction } from "../_shared/observability/sentry.ts";
+import { emitProviderMultipleEdgesWarning } from "../_shared/observability/payment-sentry-matrix.ts";
 import { createPaymentLogger } from "../_shared/observability/payment-logger.ts";
 import { fetchWithTimeout } from "../_shared/providerHttp.ts";
 import { getNetCredToken, resolveIsProduction } from "../_shared/payment/netcred-auth.ts";
@@ -95,6 +96,16 @@ function createDeps(): DetectNetcredOnboardingDeps {
     },
     emitWarning: (message, extra) => {
       logger.warn(message, extra);
+      if (
+        message === "multiple_company_edges" &&
+        typeof extra.document === "string" &&
+        typeof extra.edges_count === "number"
+      ) {
+        void emitProviderMultipleEdgesWarning({
+          document: extra.document,
+          edges_count: extra.edges_count,
+        });
+      }
     },
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   };

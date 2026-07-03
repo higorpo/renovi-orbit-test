@@ -49,8 +49,8 @@ default_pool_size = 20
 max_client_conn = 100
 
 [db.vault]
-dispatcher_worker_url = "env(DISPATCHER_WORKER_URL)"
-dispatcher_cron_secret = "env(DISPATCHER_CRON_SECRET)"
+orbit_supabase_url = "env(ORBIT_SUPABASE_URL)"
+orbit_cron_secret = "env(ORBIT_CRON_SECRET)"
 pricing_signature_secret = "env(PRICING_SIGNATURE_SECRET)"
 
 [db.migrations]
@@ -392,7 +392,7 @@ verify_jwt = false
 [functions.verify-recaptcha]
 verify_jwt = false
 
-# Internal cron/pg_net worker; auth via X-Dispatcher-Secret or service_role bearer (design §5.5).
+# Internal pg_net/cron worker; auth via X-Orbit-Cron-Secret or service_role bearer.
 [functions.message-dispatcher-worker]
 verify_jwt = false
 
@@ -416,15 +416,15 @@ verify_jwt = true
 [functions.tokenize-payment-card]
 verify_jwt = true
 
-# T-2 charge execution cron worker (design §4.5).
+# Internal pg_net/cron worker; auth via X-Orbit-Cron-Secret or service_role bearer.
 [functions.schedule-netcred-charges]
 verify_jwt = false
 
-# Provider NetCred onboarding batch poller (design §4.1.2).
+# Internal pg_net/cron worker; auth via X-Orbit-Cron-Secret or service_role bearer.
 [functions.detect-netcred-onboarding]
 verify_jwt = false
 
-# Stale IN_ANALYSIS/PROCESSING schedule reconciler (design §4.9).
+# Internal pg_net/cron worker; auth via X-Orbit-Cron-Secret or service_role bearer.
 [functions.reconcile-netcred-payments]
 verify_jwt = false
 
@@ -439,6 +439,10 @@ verify_jwt = false
 # Client/provider refund initiation via payment_begin_refund_request + NetCred transactionRefund (design §4.8).
 [functions.process-refund]
 verify_jwt = true
+
+# Internal pg_net bridge for Sentry alerts from SQL cron wrappers.
+[functions.payment-emit-sentry-alerts]
+verify_jwt = false
 
 [analytics]
 enabled = true

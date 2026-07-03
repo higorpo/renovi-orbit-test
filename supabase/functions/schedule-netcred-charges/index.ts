@@ -1,6 +1,9 @@
 import "xhr";
 import { servePaymentFunction } from "../_shared/observability/sentry.ts";
-import { emitFailedPermanentTransitionWarning } from "../_shared/observability/gateway-spans.ts";
+import {
+  capturePaymentExceptionSync,
+  emitFailedPermanentTransitionWarning,
+} from "../_shared/observability/payment-sentry-matrix.ts";
 import type { Json } from "../_shared/database.types.ts";
 import {
   AdapterRegistry,
@@ -196,13 +199,20 @@ function createDeps(): ScheduleNetcredChargesDeps {
     },
     processSchedule: (schedule) => processSchedule(processDeps, schedule),
     captureException: (error, extra) => {
-      console.error(JSON.stringify({
-        level: "error",
-        scope: "schedule-netcred-charges",
-        event: "charge_processing_failed",
-        error: error instanceof Error ? error.message : String(error),
-        ...extra,
-      }));
+      capturePaymentExceptionSync(error, {
+        schedule_id: typeof extra.schedule_id === "string" ? extra.schedule_id : undefined,
+        contracted_service_id:
+          typeof extra.contracted_service_id === "string"
+            ? extra.contracted_service_id
+            : undefined,
+        automatic_attempt_count:
+          typeof extra.automatic_attempt_count === "number"
+            ? extra.automatic_attempt_count
+            : undefined,
+        gateway_slug: typeof extra.gateway_slug === "string" ? extra.gateway_slug : "netcred",
+        error_code: typeof extra.error_code === "string" ? extra.error_code : undefined,
+        current_state: typeof extra.current_state === "string" ? extra.current_state : undefined,
+      });
     },
     maxAttempts,
     isDryRun: async () => {

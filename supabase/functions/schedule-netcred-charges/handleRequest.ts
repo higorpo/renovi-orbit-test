@@ -4,7 +4,7 @@ import {
   createPaymentLogger,
   PAYMENT_LOG_EVENTS,
 } from "../_shared/observability/payment-logger.ts";
-import { validateCronAuth } from "../_shared/security/cron-auth.ts";
+import { validateOrbitCronAuth } from "../_shared/security/orbit-cron-auth.ts";
 import { logAndReleaseDryRunSchedule } from "./dryRunProcessSchedule.ts";
 import { processSchedule, type ProcessScheduleDeps } from "./processSchedule.ts";
 import type { CronChargeSchedule, CronRunSummary } from "./types.ts";
@@ -52,7 +52,7 @@ export async function handleScheduleNetcredChargesRequest(
     return jsonResponse({ error: "method_not_allowed" }, 405, cors);
   }
 
-  const auth = validateCronAuth(req);
+  const auth = validateOrbitCronAuth(req);
   if (!auth.ok) {
     return jsonResponse({ error: auth.code }, auth.status, cors);
   }
@@ -70,7 +70,14 @@ export async function handleScheduleNetcredChargesRequest(
         summary.dry_run = (summary.dry_run ?? 0) + 1;
       } catch (error) {
         summary.errors += 1;
-        deps.captureException(error, { schedule_id: schedule.id, dry_run: true });
+        deps.captureException(error, {
+          schedule_id: schedule.id,
+          contracted_service_id: schedule.contracted_service_id,
+          automatic_attempt_count: schedule.automatic_attempt_count,
+          gateway_slug: schedule.gateway_slug,
+          current_state: "PROCESSING",
+          dry_run: true,
+        });
       }
       continue;
     }
@@ -98,7 +105,13 @@ export async function handleScheduleNetcredChargesRequest(
       }
     } catch (error) {
       summary.errors += 1;
-      deps.captureException(error, { schedule_id: schedule.id });
+      deps.captureException(error, {
+        schedule_id: schedule.id,
+        contracted_service_id: schedule.contracted_service_id,
+        automatic_attempt_count: schedule.automatic_attempt_count,
+        gateway_slug: schedule.gateway_slug,
+        current_state: "PROCESSING",
+      });
       logger.error(PAYMENT_LOG_EVENTS.CHARGE_ATTEMPT_FAILED, {
         service_id: schedule.contracted_service_id,
         schedule_id: schedule.id,

@@ -1,8 +1,8 @@
--- pgTAP: payment Task 59 — payment_cron_invoke_edge_function helper grants and shape.
+-- pgTAP: payment Task 59 — payment_cron_invoke_edge_function wrapper delegates to orbit helper.
 
 begin;
 
-select plan(6);
+select plan(5);
 
 select ok(
   exists (
@@ -17,24 +17,13 @@ select ok(
 
 select ok(
   (
-    select pg_get_functiondef(p.oid) ~* 'net\.http_post'
+    select pg_get_functiondef(p.oid) ~* 'orbit_invoke_edge_function'
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
       and p.proname = 'payment_cron_invoke_edge_function'
   ),
-  'uses pg_net http_post to invoke Edge Functions'
-);
-
-select ok(
-  (
-    select pg_get_functiondef(p.oid) ~* 'p_function_name is required'
-    from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'public'
-      and p.proname = 'payment_cron_invoke_edge_function'
-  ),
-  'rejects empty function slug'
+  'delegates to orbit_invoke_edge_function'
 );
 
 select ok(

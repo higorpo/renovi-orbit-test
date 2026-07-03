@@ -45,14 +45,14 @@ select ok(
   exists (
     select 1
     from vault.decrypted_secrets
-    where name = 'dispatcher_worker_url'
+    where name = 'orbit_supabase_url'
   )
   and exists (
     select 1
     from vault.decrypted_secrets
-    where name = 'dispatcher_cron_secret'
+    where name = 'orbit_cron_secret'
   ),
-  'worker_url and cron_secret vault secrets exist'
+  'orbit_supabase_url and orbit_cron_secret vault secrets exist'
 );
 
 select ok(

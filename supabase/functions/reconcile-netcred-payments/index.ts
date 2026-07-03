@@ -6,6 +6,7 @@ import {
   configureAdapterRegistry,
 } from "../_shared/payment/registry.ts";
 import { resolveIsProduction } from "../_shared/payment/netcred-auth.ts";
+import { emitReconciliationFailureWarning } from "../_shared/observability/payment-sentry-matrix.ts";
 import { createPaymentLogger } from "../_shared/observability/payment-logger.ts";
 import { enrichSchedulesWithServiceRequestIds } from "../_shared/payment/serviceDeepLink.ts";
 import { createServiceRoleClient } from "../_shared/serviceRoleClient.ts";
@@ -118,6 +119,17 @@ function createProcessScheduleDeps(
     },
     emitWarning: (extra) => {
       logger.warn("reconcile_warning", extra);
+      if (
+        typeof extra.schedule_id === "string" &&
+        typeof extra.service_id === "string" &&
+        typeof extra.reconciliation_failure_count === "number"
+      ) {
+        void emitReconciliationFailureWarning({
+          schedule_id: extra.schedule_id,
+          service_id: extra.service_id,
+          reconciliation_failure_count: extra.reconciliation_failure_count,
+        });
+      }
     },
   };
 }

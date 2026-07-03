@@ -29,13 +29,13 @@ select
 from _queued_fixture f;
 
 -- Simulate cron firing pg_net against an unreachable worker (worker down).
--- worker_url and cron_secret live in vault; override via vault API for test scope.
+-- orbit_supabase_url + orbit_cron_secret live in vault; override for test scope.
 select vault.update_secret(
-  (select id from vault.secrets where name = 'dispatcher_worker_url'),
-  'http://127.0.0.1:9/message-dispatcher-worker'
+  (select id from vault.secrets where name = 'orbit_supabase_url'),
+  'http://127.0.0.1:9'
 );
 select vault.update_secret(
-  (select id from vault.secrets where name = 'dispatcher_cron_secret'),
+  (select id from vault.secrets where name = 'orbit_cron_secret'),
   'cron-secret-pgnet-test'
 );
 

@@ -4561,7 +4561,7 @@ Acceptance Criteria covered:
 
 # Phase 10: Observability & Auditability
 
-## 82. [ ] Sentry instrumentation matrix for payment EFs and CRITICAL alerts
+## 82. [x] Sentry instrumentation matrix for payment EFs and CRITICAL alerts
 
 Description:
 Implement §10.1 severity matrix: AUTH_FAILURE, DEAD_LETTER, FAILED_PERMANENT WARNING, auto-cancel WARNING.
@@ -4617,7 +4617,7 @@ Requirements covered:
 Acceptance Criteria covered:
 21.1–21.7
 
-## 83. [ ] Structured logging conventions for payment RPCs
+## 83. [x] Structured logging conventions for payment RPCs
 
 Description:
 RAISE LOG json context; correlation via schedule_id/service_id.
@@ -4666,7 +4666,7 @@ Requirements covered:
 Acceptance Criteria covered:
 22.1
 
-## 84. [ ] payment_audit_log INSERT triggers enforcement
+## 84. [x] payment_audit_log INSERT triggers enforcement
 
 Description:
 Deny UPDATE/DELETE; optional trigger prevent mutation.
@@ -4715,7 +4715,7 @@ Requirements covered:
 Acceptance Criteria covered:
 22.5
 
-## 85. [ ] payment_events emission on all domain transitions
+## 85. [x] payment_events emission on all domain transitions
 
 Description:
 ChargeScheduled, ChargeSucceeded, etc. per Req 30 catalog.
@@ -4767,7 +4767,7 @@ Acceptance Criteria covered:
 
 # Phase 11: Recovery, Reliability & Cross-Feature Integration
 
-## 86. [ ] Integrate rescheduling subsystem with payment_reschedule_charge_date
+## 86. [x] Integrate rescheduling subsystem with payment_reschedule_charge_date
 
 Description:
 Hook CNS reschedule confirm to RPC; post-PAID rules.
@@ -4816,7 +4816,7 @@ Requirements covered:
 Acceptance Criteria covered:
 9.3; 9.4
 
-## 87. [ ] Integrate service cancellation flows with payment cancel/refund paths
+## 87. [x] Integrate service cancellation flows with payment cancel/refund paths
 
 Description:
 Pre-PAID cancel RPC; post-PAID process-refund EF; IN_ANALYSIS blocks.
@@ -4866,7 +4866,7 @@ Requirements covered:
 Acceptance Criteria covered:
 15.4–15.8; 14.4
 
-## 88. [ ] Provider suspension immediate client notification + cron skip
+## 88. [x] Provider suspension immediate client notification + cron skip
 
 Description:
 MMD on SUSPENDED; skip charge until ops.
@@ -4886,6 +4886,8 @@ Responsibilities:
 - Coordinate with SRE for alert routing
 
 Implementation Details:
+- `suspend_provider` (service_role): ACTIVE → SUSPENDED, sets `charge_frozen_at` on pre-PAID schedules, MMD `PROVIDER_SUSPENDED` to clients
+- `payment_unfreeze_schedule` (service_role): ops clears `charge_frozen_at`; cron skip via `payment_claim_charge_batch`
 - Tests/docs/migrations as listed in deliverables
 
 Deliverables:

@@ -1,7 +1,7 @@
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { jsonResponse } from "../_shared/jsonResponse.ts";
 import { createPaymentLogger } from "../_shared/observability/payment-logger.ts";
-import { validateCronAuth } from "../_shared/security/cron-auth.ts";
+import { validateOrbitCronAuth } from "../_shared/security/orbit-cron-auth.ts";
 import {
   processReconcileSchedule,
   type ProcessReconcileScheduleDeps,
@@ -41,7 +41,7 @@ export async function handleReconcileNetcredPaymentsRequest(
     return jsonResponse({ error: "method_not_allowed" }, 405, cors);
   }
 
-  const auth = validateCronAuth(req);
+  const auth = validateOrbitCronAuth(req);
   if (!auth.ok) {
     return jsonResponse({ error: auth.code }, auth.status, cors);
   }

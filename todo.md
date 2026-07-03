@@ -87,3 +87,8 @@ Coisas para fazer next
 - process-refund EF também ser a que faz o cancelamento do serviço. renomear ela.
 
 - verificar para o endereço: definir o tipo de endereço, se é casa ou apto ou algum outro tipo e permitir adicionar detalhes de interfone por exemplo. precisamos garantir que o prestador saiba como entrar em contato com o cliente.
+
+
+- payment_cron_post_sentry_alerts e payment-emite-sentry-alerts talvez poderiam ser algo compartilhado e não exclusivo de payments
+
+- cada um está fazendo de um jeito, preciso alinhar tudo - como é feita a autenticação na EF quando ela só pode ser chamada via banco

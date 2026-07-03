@@ -11,7 +11,7 @@ import { getCorsHeaders } from "../_shared/cors.ts";
 import { jsonResponse } from "../_shared/jsonResponse.ts";
 import { createLogger } from "../_shared/logger.ts";
 import { initSentryEdge, withSpan } from "../_shared/sentrySpans.ts";
-import { validateWorkerAuth } from "./auth.ts";
+import { validateOrbitCronAuth } from "../_shared/security/orbit-cron-auth.ts";
 import { checkoutBatch } from "./checkout.ts";
 import { createServiceRoleClient } from "../_shared/serviceRoleClient.ts";
 import { processCheckoutItemsSequential } from "./processDispatch.ts";
@@ -36,7 +36,7 @@ serve(async (req) => {
     return jsonResponse({ error: "method_not_allowed" }, 405, corsHeaders);
   }
 
-  const auth = validateWorkerAuth(req);
+  const auth = validateOrbitCronAuth(req);
   if (!auth.ok) {
     log.warn("worker.unauthorized", { code: auth.code });
     return jsonResponse({ error: auth.code }, auth.status, corsHeaders);

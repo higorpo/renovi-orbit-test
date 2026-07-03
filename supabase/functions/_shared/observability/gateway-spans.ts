@@ -1,4 +1,7 @@
+import { emitFailedPermanentTransitionWarning } from "./payment-sentry-matrix.ts";
 import { withSpan } from "../sentrySpans.ts";
+
+export { emitFailedPermanentTransitionWarning };
 
 export type GatewaySpanAttributes = Record<
   string,
@@ -86,32 +89,5 @@ export async function withGatewaySpan<T>(
     );
 
     throw error;
-  }
-}
-
-export async function emitFailedPermanentTransitionWarning(input: {
-  service_id: string;
-  schedule_id: string;
-  gateway_slug?: string;
-  failure_codes: string[];
-}): Promise<void> {
-  const dsn = Deno.env.get("SENTRY_DSN")?.trim();
-  if (!dsn) return;
-
-  try {
-    const Sentry = await import("@sentry/deno");
-    Sentry.captureMessage("payment_schedule_failed_permanent", {
-      level: "warning",
-      tags: {
-        service_id: input.service_id,
-        schedule_id: input.schedule_id,
-        gateway_slug: input.gateway_slug ?? "netcred",
-      },
-      extra: {
-        failure_codes: input.failure_codes,
-      },
-    });
-  } catch {
-    // Sentry unavailable — non-blocking.
   }
 }

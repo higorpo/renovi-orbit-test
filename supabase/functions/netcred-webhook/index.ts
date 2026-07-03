@@ -1,6 +1,7 @@
 import "xhr";
 import { servePaymentFunction } from "../_shared/observability/sentry.ts";
 import type { Json } from "../_shared/database.types.ts";
+import { emitInvalidWebhookSignatureWarning } from "../_shared/observability/payment-sentry-matrix.ts";
 import { createLogger } from "../_shared/logger.ts";
 import {
   checkIPRateLimit,
@@ -113,6 +114,14 @@ function createDeps(): NetcredWebhookDeps {
     },
     emitInvalidSignatureWarning: (extra) => {
       logger.warn("webhook_signature_invalid", extra);
+      void emitInvalidWebhookSignatureWarning({
+        event_type: String(extra.event_type ?? "UNKNOWN"),
+        gateway_event_id: extra.gateway_event_id != null
+          ? String(extra.gateway_event_id)
+          : undefined,
+        source_ip: extra.source_ip != null ? String(extra.source_ip) : undefined,
+        event_id: extra.event_id != null ? String(extra.event_id) : undefined,
+      });
     },
     checkIPRateLimit,
     emitIPRateLimitWarning,

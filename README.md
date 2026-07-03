@@ -48,6 +48,50 @@ Para testar o WebView no dispositivo em desenvolvimento, use `yarn dev:host` e c
 
 ## Configuração do projeto
 
+Documentação completa de secrets: **[docs/internal-edge-functions-auth.md](docs/internal-edge-functions-auth.md)** (pg_net, Vault, Edge Functions internas).
+
+### Variáveis de ambiente — resumo
+
+#### Frontend (`.env` na raiz do repo)
+
+| Variável | Onde | Obrigatório |
+|----------|------|-------------|
+| `VITE_SUPABASE_URL` | App | Sim |
+| `VITE_SUPABASE_PUBLISHABLE_OR_ANON_KEY` | App | Sim |
+| Outras `VITE_*` | App | Conforme feature |
+
+Ver `.env.example` na raiz.
+
+#### Postgres Vault — pg_cron invoca Edge Functions (`supabase start`)
+
+Definidas em `supabase/config.toml` → `[db.vault]`, lidas do **`.env` na raiz** antes de `supabase start`:
+
+| Variável (.env raiz) | Vault name | Obrigatório para |
+|----------------------|------------|------------------|
+| **`ORBIT_SUPABASE_URL`** | `orbit_supabase_url` | pg_net → qualquer EF interna |
+| **`ORBIT_CRON_SECRET`** | `orbit_cron_secret` | Auth pg_net ↔ EF interna |
+
+Exemplo local:
+
+```bash
+ORBIT_SUPABASE_URL=http://127.0.0.1:54321
+ORBIT_CRON_SECRET=local-dev-orbit-cron-secret-min-32-chars
+```
+
+#### Edge Functions — secrets (`supabase/functions/.env` local / Dashboard em prod)
+
+| Secret | Obrigatório | EFs |
+|--------|-------------|-----|
+| **`ORBIT_CRON_SECRET`** | Sim (internas) | `message-dispatcher-worker`, `schedule-netcred-charges`, `detect-netcred-onboarding`, `reconcile-netcred-payments`, `payment-emit-sentry-alerts` |
+| `OPENAI_API_KEY` | `generate-smart-description` | IA |
+| `RESEND_*`, `FCM_*` | MMD worker | Notificações |
+| `NETCRED_*` | Payment EFs | Pagamentos |
+| `SENTRY_DSN` | Opcional | Observabilidade |
+
+**Importante:** `ORBIT_CRON_SECRET` deve ser **o mesmo valor** no Vault (Postgres) e nos secrets das Edge Functions.
+
+Ver `supabase/functions/.env.example` e `docs/message-dispatcher/docs/edge-secrets.md`.
+
 ### Supabase — Edge Function "generate-smart-description"
 
 A edge function de descrição inteligente (IA) usa a API da OpenAI. Configure a chave no projeto Supabase:
@@ -59,6 +103,8 @@ A edge function de descrição inteligente (IA) usa a API da OpenAI. Configure a
 Sem essa chave, a função retorna erro ao ser invocada. Em desenvolvimento local com Supabase CLI: `supabase secrets set OPENAI_API_KEY=sk-...`.
 
 Outros comandos úteis: `yarn db:migrate`, `yarn db:reset`, `yarn generate-supabase-types`.
+
+Internal Edge Functions (pg_net auth): `docs/internal-edge-functions-auth.md`.
 
 ## Documentação e agentes
 

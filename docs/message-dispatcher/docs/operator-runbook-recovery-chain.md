@@ -61,17 +61,19 @@ select message_dispatcher.message_dispatcher_promote_retries();
 
 ## 3. Worker drain (`QUEUED` → delivery)
 
-**Automatic:** `message_dispatcher_invoke_worker()` via `mmd_invoke_worker` when `platform_constants` has non-empty `message_dispatcher.worker_url` and `message_dispatcher.cron_secret`.
+**Automatic:** `message_dispatcher_invoke_worker()` via `mmd_invoke_worker` when Vault has `orbit_supabase_url` + `orbit_cron_secret` (see [internal-edge-functions-auth.md](../../internal-edge-functions-auth.md)).
 
 **Manual invoke (curl):**
 
 ```bash
-curl -X POST "$WORKER_URL" \
-  -H "Authorization: Bearer $DISPATCHER_CRON_SECRET" \
-  -H "X-Dispatcher-Secret: $DISPATCHER_CRON_SECRET" \
+curl -X POST "$ORBIT_SUPABASE_URL/functions/v1/message-dispatcher-worker" \
+  -H "Authorization: Bearer $ORBIT_CRON_SECRET" \
+  -H "X-Orbit-Cron-Secret: $ORBIT_CRON_SECRET" \
   -H "Content-Type: application/json" \
   -d '{}'
 ```
+
+See [internal-edge-functions-auth.md](../../internal-edge-functions-auth.md).
 
 **Manual checkout only (no provider I/O):**
 
