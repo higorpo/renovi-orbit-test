@@ -12,7 +12,6 @@ import type {
   ProposalRevisionReason,
   ProposalsApiResult,
   ProviderProposalHistoryItem,
-  ProposalSuggestedSlotRpc,
   ProposalVersionListResponse,
 } from "../types/proposals.types";
 import type {

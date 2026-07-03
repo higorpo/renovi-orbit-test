@@ -61,7 +61,7 @@ function ProviderCalendarListSkeleton() {
     <div className="space-y-2" aria-busy="true" aria-label="Carregando agenda em lista">
       <CalendarListDaySectionSkeleton chipCount={1} />
       <CalendarListDaySectionSkeleton chipCount={2} withBadge />
-      <CalendarListDaySectionSkeleton empty />
+      <CalendarListDaySectionSkeleton empty chipCount={0} />
     </div>
   );
 }

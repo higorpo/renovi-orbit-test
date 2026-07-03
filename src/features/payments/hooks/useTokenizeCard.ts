@@ -21,6 +21,5 @@ export function useTokenizeCard() {
       void queryClient.invalidateQueries({ queryKey: SAVED_PAYMENT_TOKENS_QUERY_KEY });
     },
     gcTime: 0,
-    staleTime: 0,
   });
 }
