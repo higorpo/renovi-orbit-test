@@ -1,15 +1,10 @@
-import { createPaymentLogger } from "../_shared/observability/payment-logger.ts";
 import type { GetTransactionResult, PaymentProvider } from "../_shared/payment/types.ts";
-import { enqueueReconcileNotifications } from "./enqueueNotifications.ts";
 import { resolveReconcileGatewayState } from "./mapGatewayState.ts";
 import type {
   ProcessedReconcileResult,
   ReconcileApplyResult,
   ReconcileSchedule,
 } from "./types.ts";
-import type { NotificationIngestInput } from "../manual-charge-payment/enqueueNotifications.ts";
-
-const logger = createPaymentLogger("reconcile-netcred-payments");
 
 export type ProcessReconcileScheduleDeps = {
   getTransaction: PaymentProvider["getTransaction"];
@@ -22,7 +17,6 @@ export type ProcessReconcileScheduleDeps = {
     providerTransactionId?: string;
   }) => Promise<ReconcileApplyResult>;
   incrementFailureCount: (scheduleId: string) => Promise<number>;
-  ingestNotification: (input: NotificationIngestInput) => Promise<void>;
   emitWarning: (extra: Record<string, unknown>) => void;
 };
 
@@ -129,15 +123,6 @@ export async function processReconcileSchedule(
       outcome: "SKIPPED",
       failureCount: applyResult.reconciliation_failure_count,
     };
-  }
-
-  try {
-    await enqueueReconcileNotifications(deps.ingestNotification, schedule, applyResult);
-  } catch (error) {
-    logger.error("reconcile_notification_enqueue_failed", {
-      schedule_id: schedule.id,
-      error: error instanceof Error ? error.message : String(error),
-    });
   }
 
   return {

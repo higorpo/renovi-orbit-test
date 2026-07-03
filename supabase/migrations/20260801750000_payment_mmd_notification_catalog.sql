@@ -104,7 +104,7 @@ values
     'payment.service_auto_cancelled',
     'push',
     'Serviço cancelado — {{service_request_title}}',
-    '{{service_request_title}} foi cancelado automaticamente por falta de pagamento.',
+    '{{service_request_title}} foi cancelado automaticamente por falta de pagamento. Entre em contato com o suporte se precisar de ajuda.',
     '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"service_request_title":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title"],"additionalProperties":true}'::jsonb,
     true
   ),
@@ -112,7 +112,7 @@ values
     'payment.service_auto_cancelled',
     'email',
     'Serviço cancelado — {{service_request_title}}',
-    '<p><strong>{{service_request_title}}</strong> foi cancelado automaticamente por falta de pagamento.</p><p><a href="{{deep_link_path}}">Ver detalhes</a></p>',
+    '<p><strong>{{service_request_title}}</strong> foi cancelado automaticamente por falta de pagamento.</p><p>Entre em contato com o suporte se precisar de ajuda.</p><p><a href="{{deep_link_path}}">Ver detalhes</a></p>',
     '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"service_request_title":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title","deep_link_path"],"additionalProperties":true}'::jsonb,
     true
   ),
@@ -122,6 +122,30 @@ values
     'Serviço não confirmado — {{service_request_title}}',
     '{{service_request_title}} foi cancelado porque o pagamento do cliente não foi concluído.',
     '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"service_request_title":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title"],"additionalProperties":true}'::jsonb,
+    true
+  ),
+  (
+    'payment.service_auto_cancelled_suspended',
+    'push',
+    'Serviço cancelado — {{service_request_title}}',
+    '{{service_request_title}} foi cancelado porque o prestador foi suspenso. Entre em contato com o suporte se precisar de ajuda.',
+    '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"service_request_title":{"type":"string"},"cancellation_reason":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title"],"additionalProperties":true}'::jsonb,
+    true
+  ),
+  (
+    'payment.service_auto_cancelled_suspended',
+    'email',
+    'Serviço cancelado — {{service_request_title}}',
+    '<p><strong>{{service_request_title}}</strong> foi cancelado porque o prestador foi suspenso.</p><p>Entre em contato com o suporte se precisar de ajuda.</p><p><a href="{{deep_link_path}}">Ver detalhes</a></p>',
+    '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"service_request_title":{"type":"string"},"cancellation_reason":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title","deep_link_path"],"additionalProperties":true}'::jsonb,
+    true
+  ),
+  (
+    'payment.service_auto_cancelled_suspended_provider',
+    'push',
+    'Serviço cancelado — {{service_request_title}}',
+    '{{service_request_title}} foi cancelado porque sua conta está suspensa e o pagamento do cliente não foi concluído.',
+    '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"service_request_title":{"type":"string"},"cancellation_reason":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title"],"additionalProperties":true}'::jsonb,
     true
   ),
   (
@@ -223,6 +247,7 @@ declare
   v_skipped_count int := 0;
   v_ingested_count int := 0;
   v_audience text := lower(coalesce(p_metadata->>'recipient', 'client'));
+  v_cancellation_reason text := upper(btrim(coalesce(p_metadata->>'cancellation_reason', '')));
 begin
   if nullif(btrim(p_event_type), '') is null then
     raise exception 'p_event_type is required'
@@ -325,7 +350,19 @@ begin
       v_push_bypass_limits := true;
       v_email_bypass_limits := false;
     when 'SERVICE_AUTO_CANCELLED' then
-      if v_audience = 'provider' then
+      if v_cancellation_reason = 'PROVIDER_SUSPENDED' then
+        if v_audience = 'provider' then
+          v_template_key := 'payment.service_auto_cancelled_suspended_provider';
+          v_channels := array['push']::message_dispatcher.message_channel[];
+          v_push_bypass_limits := true;
+          v_email_bypass_limits := false;
+        else
+          v_template_key := 'payment.service_auto_cancelled_suspended';
+          v_channels := array['push', 'email']::message_dispatcher.message_channel[];
+          v_push_bypass_limits := true;
+          v_email_bypass_limits := true;
+        end if;
+      elsif v_audience = 'provider' then
         v_template_key := 'payment.service_auto_cancelled_provider';
         v_channels := array['push']::message_dispatcher.message_channel[];
         v_push_bypass_limits := true;

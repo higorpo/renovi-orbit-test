@@ -1,6 +1,5 @@
 import "xhr";
 import { servePaymentFunction } from "../_shared/observability/sentry.ts";
-import type { Json } from "../_shared/database.types.ts";
 import {
   AdapterRegistry,
   configureAdapterRegistry,
@@ -19,12 +18,6 @@ import { processReconcileSchedule } from "./processSchedule.ts";
 import type { ReconcileApplyResult, ReconcileSchedule } from "./types.ts";
 
 const logger = createPaymentLogger("reconcile-netcred-payments");
-
-function toMessageDispatcherChannel(
-  channel: "PUSH" | "EMAIL",
-): "push" | "email" {
-  return channel === "PUSH" ? "push" : "email";
-}
 
 function parseOptionalAmount(value: string | undefined): number | undefined {
   if (value == null || value.trim() === "") {
@@ -97,25 +90,6 @@ function createProcessScheduleDeps(
       }
 
       return Number(data);
-    },
-    ingestNotification: async (input) => {
-      const { error } = await supabase.schema("message_dispatcher").rpc(
-        "message_dispatcher_ingest",
-        {
-          p_idempotency_key: input.idempotencyKey,
-          p_profile_id: input.profileId,
-          p_channel: toMessageDispatcherChannel(input.channel),
-          p_template_key: input.templateKey,
-          p_template_variables: input.templateVariables as Json,
-          p_source_system: "payments",
-          p_metadata: {} as Json,
-          p_bypass_limits: input.bypassLimits,
-        },
-      );
-
-      if (error) {
-        throw new Error(error.message);
-      }
     },
     emitWarning: (extra) => {
       logger.warn("reconcile_warning", extra);

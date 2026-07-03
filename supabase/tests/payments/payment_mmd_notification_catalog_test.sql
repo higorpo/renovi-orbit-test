@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(12);
+select plan(14);
 
 select ok(
   exists (
@@ -148,6 +148,51 @@ select ok(
       and mt.active
   ),
   'payment.provider_suspended_client push template registered'
+);
+
+select is(
+  public.mmd_ingest_event(
+    'SERVICE_AUTO_CANCELLED',
+    current_setting('test.mmd.profile_id')::uuid,
+    'pgtap-auto-cancel-non-payment',
+    jsonb_build_object(
+      'contracted_service_id', gen_random_uuid()::text,
+      'service_request_title', 'Teste'
+    ),
+    '{"recipient":"client","cancellation_reason":"NON_PAYMENT"}'::jsonb
+  )->>'template_key',
+  'payment.service_auto_cancelled',
+  'SERVICE_AUTO_CANCELLED NON_PAYMENT client uses payment.service_auto_cancelled'
+);
+
+select is(
+  public.mmd_ingest_event(
+    'SERVICE_AUTO_CANCELLED',
+    current_setting('test.mmd.profile_id')::uuid,
+    'pgtap-auto-cancel-provider-suspended',
+    jsonb_build_object(
+      'contracted_service_id', gen_random_uuid()::text,
+      'service_request_title', 'Teste'
+    ),
+    '{"recipient":"client","cancellation_reason":"PROVIDER_SUSPENDED"}'::jsonb
+  )->>'template_key',
+  'payment.service_auto_cancelled_suspended',
+  'SERVICE_AUTO_CANCELLED PROVIDER_SUSPENDED client uses suspended template'
+);
+
+select is(
+  public.mmd_ingest_event(
+    'SERVICE_AUTO_CANCELLED',
+    current_setting('test.mmd.profile_id')::uuid,
+    'pgtap-auto-cancel-provider-suspended-provider',
+    jsonb_build_object(
+      'contracted_service_id', gen_random_uuid()::text,
+      'service_request_title', 'Teste'
+    ),
+    '{"recipient":"provider","cancellation_reason":"PROVIDER_SUSPENDED"}'::jsonb
+  )->>'template_key',
+  'payment.service_auto_cancelled_suspended_provider',
+  'SERVICE_AUTO_CANCELLED PROVIDER_SUSPENDED provider uses suspended provider template'
 );
 
 select * from finish();

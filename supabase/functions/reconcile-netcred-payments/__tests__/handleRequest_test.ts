@@ -46,9 +46,7 @@ const inAnalysisSchedule: ReconcileSchedule = {
   reconciliation_failure_count: 0,
 };
 
-Deno.test("IN_ANALYSIS schedule reconciles to PAID with client notifications", async () => {
-  const ingested: string[] = [];
-
+Deno.test("IN_ANALYSIS schedule reconciles to PAID without EF-side notification enqueue", async () => {
   Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "test-service-role");
   Deno.env.set("ENVIRONMENT", "development");
   try {
@@ -76,9 +74,6 @@ Deno.test("IN_ANALYSIS schedule reconciles to PAID with client notifications", a
               charge_amount: "310.39",
             }),
             incrementFailureCount: async () => 0,
-            ingestNotification: async (input) => {
-              ingested.push(`${input.profileId}:${input.templateKey}`);
-            },
             emitWarning: () => {},
           };
 
@@ -91,8 +86,6 @@ Deno.test("IN_ANALYSIS schedule reconciles to PAID with client notifications", a
     const body = await response.json();
     assertEquals(body.processed, 1);
     assertEquals(body.applied, 1);
-    assertEquals(ingested.includes("client-1:payment_success"), true);
-    assertEquals(ingested.includes("provider-1:provider_payment_confirmed"), true);
   } finally {
     Deno.env.delete("SUPABASE_SERVICE_ROLE_KEY");
     Deno.env.delete("ENVIRONMENT");
@@ -111,7 +104,6 @@ Deno.test("network error increments failure count and emits warning", async () =
       },
       applyGatewayState: async () => ({ applied: false }),
       incrementFailureCount: async () => 4,
-      ingestNotification: async () => {},
       emitWarning: (extra) => {
         warnings.push(extra);
       },
@@ -140,7 +132,6 @@ Deno.test("gateway null response increments failure count and warns after thresh
       getTransaction: async () => null,
       applyGatewayState: async () => ({ applied: false }),
       incrementFailureCount: async () => 4,
-      ingestNotification: async () => {},
       emitWarning: (extra) => {
         warnings.push(extra);
       },
