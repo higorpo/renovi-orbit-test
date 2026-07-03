@@ -16,6 +16,8 @@ export interface ChatsMockOptions {
   viewerRole: "client" | "provider";
   /** When true, timeline includes a PENDING proposal message. */
   withPendingProposal?: boolean;
+  /** When true, accept flow requires payment checkout (Task 95). */
+  withPaymentCheckout?: boolean;
 }
 
 function baseConversation() {
@@ -113,7 +115,7 @@ function initialMessages(withProposal: boolean): ChatMessageListItem[] {
   return messages;
 }
 
-function proposalDetailRow() {
+function proposalDetailRow(withPaymentCheckout = false) {
   return {
     id: E2E_PROPOSAL_ID,
     service_request_id: E2E_SR_ID,
@@ -123,16 +125,24 @@ function proposalDetailRow() {
     revision_count: 0,
     revision_reason: null,
     revision_notes: null,
-    submitted_at: "2026-05-30T11:00:00.000Z",
+    submitted_at: "2026-07-03T10:00:00.000Z",
     expired_at: null,
     proposed_amount: 450,
     tax_rate: 0,
     tax_amount: 0,
     final_amount: 450,
+    pricing_signature: withPaymentCheckout ? "pricing-sig-e2e" : null,
     proposal_description: "Pintura completa com material incluso.",
     proposal_duration_unit: "hours",
     proposal_duration_value: 4,
-    proposal_suggested_slots: [],
+    proposal_suggested_slots: withPaymentCheckout
+      ? [{
+        start_date: "2026-07-10",
+        end_date: "2026-07-10",
+        shift: "morning",
+      }]
+      : [],
+    selected_slot: null,
     photos: [],
     client_rejection_response: null,
     created_at: "2026-05-30T11:00:00.000Z",
@@ -142,7 +152,11 @@ function proposalDetailRow() {
 
 export async function installChatsMocks(page: Page, options: ChatsMockOptions) {
   const messages = initialMessages(options.withPendingProposal ?? false);
-  const capturedRpc: Record<string, unknown[]> = { sendMessage: [] };
+  const capturedRpc: Record<string, unknown[]> = {
+    sendMessage: [],
+    acceptProposal: [],
+  };
+  const withPaymentCheckout = options.withPaymentCheckout ?? false;
 
   await page.route(/\/rest\/v1\/provider_proposals/, async (route) => {
     if (route.request().method() !== "GET") {
@@ -164,7 +178,7 @@ export async function installChatsMocks(page: Page, options: ChatsMockOptions) {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(proposalDetailRow()),
+      body: JSON.stringify([proposalDetailRow(withPaymentCheckout)]),
     });
   });
 
@@ -283,12 +297,66 @@ export async function installChatsMocks(page: Page, options: ChatsMockOptions) {
         return;
 
       case "accept_proposal":
+        capturedRpc.acceptProposal.push(body);
         await route.fulfill({
           status: 200,
           contentType: "application/json",
           body: JSON.stringify({
             proposal: { id: E2E_PROPOSAL_ID, status: "ACCEPTED" },
-            service: { id: "service-e2e-1", status: "PENDING_PAYMENT" },
+            service: {
+              id: withPaymentCheckout ? "service-e2e-paid-1" : "service-e2e-1",
+              status: "PENDING_PAYMENT",
+            },
+          }),
+        });
+        return;
+
+      case "payment_get_checkout_step_requirements":
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            needs_cpf: true,
+            needs_phone: false,
+            needs_card: true,
+          }),
+        });
+        return;
+
+      case "payment_get_proposal_checkout_context":
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            proposal_id: E2E_PROPOSAL_ID,
+            service_request_id: E2E_SR_ID,
+            provider_id: E2E_PROVIDER_ID,
+            proposed_amount: 450,
+            pricing_signature: "pricing-sig-e2e",
+            payment_required: withPaymentCheckout,
+          }),
+        });
+        return;
+
+      case "payment_calculate_installment_options":
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            installment_options: [{
+              installment_number: 1,
+              installment_amount: 450,
+              total_with_fees: 459,
+            }],
+            installment_selection_hmac: "installment-hmac-e2e",
+            installment_hmac_payload: {
+              proposal_id: E2E_PROPOSAL_ID,
+              service_id: E2E_SR_ID,
+              card_brand: "VISA",
+              installment_number: 1,
+            },
+            expires_at: new Date(Date.now() + 3600_000).toISOString(),
+            computed_at: new Date().toISOString(),
           }),
         });
         return;

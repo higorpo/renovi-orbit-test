@@ -4920,7 +4920,7 @@ Acceptance Criteria covered:
 
 # Phase 12: Security Hardening & Performance
 
-## 89. [ ] Platform rate limiting on webhook and manual charge endpoints
+## 89. [x] Platform rate limiting on webhook and manual charge endpoints
 
 Description:
 platform_rate_limits in EF/RPC.
@@ -4970,7 +4970,7 @@ Requirements covered:
 Acceptance Criteria covered:
 24.4
 
-## 90. [ ] Vault secrets provisioning runbook and .env.example sync
+## 90. [x] Vault secrets provisioning runbook and .env.example sync
 
 Description:
 INSTALLMENT_SIGNING_SECRET, NETCRED_*, webhook secret documented.
@@ -5019,10 +5019,12 @@ Requirements covered:
 Acceptance Criteria covered:
 2.3; 24.5
 
-## 91. [ ] payment_audit_log monthly partitioning strategy (optional phase)
+## 91. [x] payment_audit_log monthly partitioning strategy (optional phase)
 
 Description:
 If volume warrants §9.4.
+
+**Completion note:** Deliberately **not executed** for MVP — `payment_audit_log` remains an unpartitioned heap; monthly RANGE partitioning (design §9.4) deferred until volume thresholds are met. Growth stub migration, runbook, script, and pgTAP were removed; `20260801720000_drop_payment_audit_log_partitioning_growth_stub.sql` drops the stub function if present.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -5070,7 +5072,7 @@ Acceptance Criteria covered:
 
 # Phase 13: Verification & Quality Gates
 
-## 92. [ ] pgTAP comprehensive payment concurrency suite
+## 92. [x] pgTAP comprehensive payment concurrency suite
 
 Description:
 SKIP LOCKED double-worker simulation; accept_proposal idempotency.
@@ -5120,7 +5122,7 @@ Requirements covered:
 Acceptance Criteria covered:
 23.1; 23.4
 
-## 93. [ ] Deno integration tests for NetCredAdapter (mock GraphQL)
+## 93. [x] Deno integration tests for NetCredAdapter (mock GraphQL)
 
 Description:
 Auth refresh, referenceCode conflict, null getTransaction.
@@ -5170,7 +5172,7 @@ Requirements covered:
 Acceptance Criteria covered:
 1.3; 1.6; 10.8
 
-## 94. [ ] Vitest tests for payments feature hooks and api layer
+## 94. [x] Vitest tests for payments feature hooks and api layer
 
 Description:
 Mock supabase.rpc and functions.invoke.
@@ -5220,7 +5222,7 @@ Requirements covered:
 Acceptance Criteria covered:
 5.1; 8.6
 
-## 95. [ ] E2E Playwright: checkout happy path (sandbox)
+## 95. [x] E2E Playwright: checkout happy path (sandbox)
 
 Description:
 Stepper through accept_proposal mock/sandbox.
@@ -5269,7 +5271,7 @@ Requirements covered:
 Acceptance Criteria covered:
 8.1
 
-## 96. [ ] E2E Playwright: manual payment and FAILED_PERMANENT UX
+## 96. [x] E2E Playwright: manual payment and FAILED_PERMANENT UX
 
 Description:
 Button visibility and error states.
@@ -5318,7 +5320,7 @@ Requirements covered:
 Acceptance Criteria covered:
 13.1
 
-## 97. [ ] Failure injection tests: orphan lease recovery
+## 97. [x] Failure injection tests: orphan lease recovery
 
 Description:
 Simulate EF crash after claim; janitor recovery.
@@ -5368,7 +5370,7 @@ Requirements covered:
 Acceptance Criteria covered:
 23.2
 
-## 98. [ ] Failure injection tests: webhook duplicate and out-of-order delivery
+## 98. [x] Failure injection tests: webhook duplicate and out-of-order delivery
 
 Description:
 UNIQUE dedup; regression guard.
@@ -5418,7 +5420,7 @@ Requirements covered:
 Acceptance Criteria covered:
 17.2; 17.3; 18.2
 
-## 99. [ ] Load test: payment_claim_charge_batch at batch_size 10
+## 99. [x] Load test: payment_claim_charge_batch at batch_size 10
 
 Description:
 Measure lock contention under parallel cron (staging).

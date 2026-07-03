@@ -4,6 +4,7 @@ import { emitProviderMultipleEdgesWarning } from "../_shared/observability/payme
 import { createPaymentLogger } from "../_shared/observability/payment-logger.ts";
 import { fetchWithTimeout } from "../_shared/providerHttp.ts";
 import { getNetCredToken, resolveIsProduction } from "../_shared/payment/netcred-auth.ts";
+import { resolveNetCredApiBaseUrl } from "../_shared/payment/constants.ts";
 import { createServiceRoleClient } from "../_shared/serviceRoleClient.ts";
 import {
   handleDetectNetcredOnboardingRequest,
@@ -12,7 +13,6 @@ import {
 import type { CompanyQueryResult, PendingProviderAccount } from "./types.ts";
 
 const logger = createPaymentLogger("detect-netcred-onboarding");
-const DEFAULT_GRAPHQL_URL = "https://api.netcredbrasil.com.br/graphql";
 
 function parsePendingAccounts(data: unknown): PendingProviderAccount[] {
   if (!Array.isArray(data)) {
@@ -32,7 +32,7 @@ function parsePendingAccounts(data: unknown): PendingProviderAccount[] {
 
 function createDeps(): DetectNetcredOnboardingDeps {
   const supabase = createServiceRoleClient();
-  const graphqlUrl = Deno.env.get("NETCRED_GRAPHQL_URL")?.trim() ?? DEFAULT_GRAPHQL_URL;
+  const graphqlUrl = `${resolveNetCredApiBaseUrl((key) => Deno.env.get(key))}/graphql`;
 
   return {
     loadPendingProviders: async (limit) => {
@@ -52,6 +52,7 @@ function createDeps(): DetectNetcredOnboardingDeps {
       const token = await getNetCredToken({
         supabase,
         isProduction: resolveIsProduction(),
+        graphqlUrl,
       });
 
       const response = await fetchWithTimeout(graphqlUrl, {

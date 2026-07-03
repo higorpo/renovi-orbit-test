@@ -43,7 +43,8 @@ export type ManualChargeAcquireErrorCode =
   | "SCHEDULE_NOT_FOUND"
   | "SERVICE_CANCELLED"
   | "CLEARSALE_SESSION_REQUIRED"
-  | "PAYMENT_TOKEN_INACTIVE";
+  | "PAYMENT_TOKEN_INACTIVE"
+  | "RATE_LIMIT_EXCEEDED";
 
 export type ManualChargeOutcome =
   | "PAID"

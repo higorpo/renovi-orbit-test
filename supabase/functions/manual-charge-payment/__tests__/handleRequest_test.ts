@@ -72,6 +72,43 @@ function authRequest(body: Record<string, unknown>): Request {
   });
 }
 
+Deno.test("EF rate limit exceeded returns HTTP 429 with Retry-After", async () => {
+  const response = await handleManualChargePaymentRequest(
+    authRequest({
+      schedule_id: "schedule-1",
+      clearsale_session_id: "fresh-clearsale-uuid",
+    }),
+    createDeps({
+      checkRateLimit: async () => ({
+        allowed: false,
+        remaining: 0,
+        retryAfter: 45,
+      }),
+    }),
+  );
+
+  assertEquals(response.status, 429);
+  assertEquals(response.headers.get("Retry-After"), "45");
+  const body = await response.json();
+  assertEquals(body.error, "rate_limited");
+});
+
+Deno.test("RPC rate limit exceeded returns HTTP 429 RATE_LIMIT_EXCEEDED", async () => {
+  const response = await handleManualChargePaymentRequest(
+    authRequest({
+      schedule_id: "schedule-1",
+      clearsale_session_id: "fresh-clearsale-uuid",
+    }),
+    createDeps({
+      acquireLease: async () => ({ error: "RATE_LIMIT_EXCEEDED" }),
+    }),
+  );
+
+  assertEquals(response.status, 429);
+  const body = await response.json();
+  assertEquals(body.error_code, "RATE_LIMIT_EXCEEDED");
+});
+
 Deno.test("T-12h gate returns HTTP 409 SERVICE_AUTO_CANCELLED", async () => {
   const response = await handleManualChargePaymentRequest(
     authRequest({

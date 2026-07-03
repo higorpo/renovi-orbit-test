@@ -52,6 +52,7 @@ max_client_conn = 100
 orbit_supabase_url = "env(ORBIT_SUPABASE_URL)"
 orbit_cron_secret = "env(ORBIT_CRON_SECRET)"
 pricing_signature_secret = "env(PRICING_SIGNATURE_SECRET)"
+installment_signing_secret = "env(INSTALLMENT_SIGNING_SECRET)"
 
 [db.migrations]
 # If disabled, migrations will be skipped during a db push or reset.

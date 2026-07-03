@@ -37,6 +37,7 @@ function mapRpcError(message: string): ManualChargeAcquireErrorCode | null {
     "SERVICE_CANCELLED",
     "CLEARSALE_SESSION_REQUIRED",
     "PAYMENT_TOKEN_INACTIVE",
+    "RATE_LIMIT_EXCEEDED",
   ];
 
   return known.find((code) => message.includes(code)) ?? null;

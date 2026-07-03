@@ -70,6 +70,8 @@ function mapAcquireErrorStatus(error: ManualChargeAcquireErrorCode): number {
       return 404;
     case "CLEARSALE_SESSION_REQUIRED":
       return 400;
+    case "RATE_LIMIT_EXCEEDED":
+      return 429;
     default:
       return 409;
   }
