@@ -85,3 +85,5 @@ Coisas para fazer next
 - garantir que reference code seja do proposal id e que a descrição etc do pagamento tenha os detalhes do serviço.
 
 - process-refund EF também ser a que faz o cancelamento do serviço. renomear ela.
+
+- verificar para o endereço: definir o tipo de endereço, se é casa ou apto ou algum outro tipo e permitir adicionar detalhes de interfone por exemplo. precisamos garantir que o prestador saiba como entrar em contato com o cliente.
