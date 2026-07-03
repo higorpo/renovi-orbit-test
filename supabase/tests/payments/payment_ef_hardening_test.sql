@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(16);
+select plan(13);
 
 create or replace function pg_temp.payment_set_service_role()
 returns void
@@ -53,32 +53,6 @@ select is(
   )::boolean,
   true,
   'acquire_or_refresh_netcred_token cached payload includes is_sandbox'
-);
-
--- payment_revert_dry_run_lease
-select throws_ok(
-  $$ select public.payment_revert_dry_run_lease(gen_random_uuid(), 1) $$,
-  '42501',
-  'service_role required for payment_revert_dry_run_lease',
-  'payment_revert_dry_run_lease rejects non-service_role callers'
-);
-
-select pg_temp.payment_set_service_role();
-
-select lives_ok(
-  $$ select public.payment_revert_dry_run_lease(gen_random_uuid(), 2) $$,
-  'payment_revert_dry_run_lease is a no-op when schedule is not PROCESSING'
-);
-
-select ok(
-  (
-    select p.prosecdef
-    from pg_proc p
-    join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'public'
-      and p.proname = 'payment_revert_dry_run_lease'
-  ),
-  'payment_revert_dry_run_lease is SECURITY DEFINER'
 );
 
 -- payment_increment_reconciliation_failure

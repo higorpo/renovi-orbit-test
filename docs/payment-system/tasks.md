@@ -5471,10 +5471,12 @@ Acceptance Criteria covered:
 
 # Phase 14: Rollout & Operational Readiness
 
-## 100. [ ] Feature flags and phased pg_cron enablement plan
+## 100. [x] Feature flags and phased pg_cron enablement plan
 
 Description:
 Crons registered inactive; enable payment_cron_schedule after shadow validation.
+
+**Completion note (2026-07-03):** No feature flags (product decision). Migration `20260801710000_payment_register_cron_jobs.sql` registers all eight payment crons **active on deploy**. Deploy guide: [`phased-cron-enablement-plan.md`](./phased-cron-enablement-plan.md). *Updated:* shadow/phased rollout removed — direct production launch.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -5527,10 +5529,12 @@ All
 Acceptance Criteria covered:
 Rollout ACs
 
-## 101. [ ] Shadow execution: claim batch without NetCred (dry-run mode)
+## 101. [x] Shadow execution: claim batch without NetCred (dry-run mode)
 
 Description:
 Optional RPC flag logs would-charge rows.
+
+**Completion note (2026-07-03):** Shadow/dry-run **removed** (direct prod launch). Originally added `p_dry_run` — reverted in `20260801730000`. Charge cron runs live on deploy.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -5577,10 +5581,12 @@ Requirements covered:
 Acceptance Criteria covered:
 10.1
 
-## 102. [ ] Production rollout checklist: enable crons sequentially
+## 102. [x] Production rollout checklist: enable crons sequentially
 
 Description:
 Order: janitor → webhook retry → reconcile → notify → auto-cancel → charge → onboarding.
+
+**Completion note (2026-07-03):** Checklist [`production-rollout-checklist.md`](./production-rollout-checklist.md) — 8 steps with SQL, soak criteria, Phase E gate.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -5626,10 +5632,12 @@ All
 Acceptance Criteria covered:
 Operational validation
 
-## 103. [ ] Rollback runbook: disable pg_cron jobs and drain queues
+## 103. [x] Rollback runbook: disable pg_cron jobs and drain queues
 
 Description:
 Document payment_cron unschedule steps.
+
+**Completion note (2026-07-03):** Runbook [`payment-rollback-runbook.md`](./payment-rollback-runbook.md) — disable crons, drain leases/queues, EF redeploy, re-enable path.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -5675,10 +5683,12 @@ All
 Acceptance Criteria covered:
 Rollback validation
 
-## 104. [ ] Business docs sync: update docs/business/ for payment flows
+## 104. [x] Business docs sync: update docs/business/ for payment flows
 
 Description:
 Per business-docs-sync-after-code-changes rule.
+
+**Completion note (2026-07-03):** Added `docs/business/modulos/payments/` (README + checkout-e-cobranca feature doc); updated `02-mapa-de-modulos-e-features.md` (payments module, Edge Functions, status).
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -5724,10 +5734,12 @@ All
 Acceptance Criteria covered:
 Product documentation
 
-## 105. [ ] Operator runbook: dead letter reset and audit reconstruction
+## 105. [x] Operator runbook: dead letter reset and audit reconstruction
 
 Description:
 Wire admin tools to RPCs 49–50.
+
+**Completion note (2026-07-03):** Operator runbook [`operator-dead-letter-runbook.md`](./operator-dead-letter-runbook.md) — curl/SQL for `payment_reset_dead_letter_event` and `payment_reconstruct_audit_lifecycle` (service_role; no admin UI at MVP).
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.

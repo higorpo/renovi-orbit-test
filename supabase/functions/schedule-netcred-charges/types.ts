@@ -38,5 +38,4 @@ export type CronRunSummary = {
   in_analysis: number;
   reconciled: number;
   errors: number;
-  dry_run?: number;
 };

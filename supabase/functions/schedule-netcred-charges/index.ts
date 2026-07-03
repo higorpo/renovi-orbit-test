@@ -12,7 +12,6 @@ import {
 import { resolveIsProduction } from "../_shared/payment/netcred-auth.ts";
 import {
   loadPaymentPlatformConstants,
-  parseChargeCronDryRun,
 } from "../_shared/payment/constants.ts";
 import { enrichSchedulesWithServiceRequestIds } from "../_shared/payment/serviceDeepLink.ts";
 import { createServiceRoleClient } from "../_shared/serviceRoleClient.ts";
@@ -215,29 +214,6 @@ function createDeps(): ScheduleNetcredChargesDeps {
       });
     },
     maxAttempts,
-    isDryRun: async () => {
-      const { data, error } = await supabase
-        .from("platform_constants")
-        .select("value")
-        .eq("key", "charge_cron_dry_run")
-        .maybeSingle();
-
-      if (error || !data) {
-        return parseChargeCronDryRun(1);
-      }
-
-      return parseChargeCronDryRun(data.value);
-    },
-    revertDryRunLease: async (scheduleId, attemptCount) => {
-      const { error } = await supabase.rpc("payment_revert_dry_run_lease", {
-        p_schedule_id: scheduleId,
-        p_attempt_count: attemptCount,
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-    },
   };
 }
 

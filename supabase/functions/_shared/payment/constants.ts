@@ -62,7 +62,6 @@ export const PAYMENT_PLATFORM_CONSTANT_KEYS = [
   "reconciliation_poll_interval_minutes",
   "webhook_base_retry_interval_minutes",
   "payment_system_rollout_percentage",
-  "charge_cron_dry_run",
 ] as const;
 
 export type PaymentPlatformConstantKey =
@@ -88,7 +87,6 @@ export const PAYMENT_PLATFORM_CONSTANT_DEFAULTS: PlatformConstants = {
   reconciliation_poll_interval_minutes: 30,
   webhook_base_retry_interval_minutes: 5,
   payment_system_rollout_percentage: 0,
-  charge_cron_dry_run: 1,
 };
 
 type PlatformConstantRow = {
@@ -162,17 +160,4 @@ export async function loadPaymentPlatformConstants(
   }
 
   return resolvePaymentPlatformConstants(data ?? [], warn);
-}
-
-export function parseChargeCronDryRun(value: unknown): boolean {
-  if (value === true || value === "true") {
-    return true;
-  }
-  if (typeof value === "number") {
-    return value !== 0;
-  }
-  if (typeof value === "string") {
-    return value.trim().toLowerCase() === "true";
-  }
-  return false;
 }

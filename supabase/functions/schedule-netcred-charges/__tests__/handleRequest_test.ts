@@ -184,60 +184,6 @@ Deno.test("getTransaction reconciliation skips createCharge on retry", async () 
   assertEquals(createChargeCalled, false);
 });
 
-Deno.test("dry run mode logs and reverts lease without charging", async () => {
-  let processCalled = false;
-  let revertedScheduleId: string | undefined;
-
-  const previousServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const previousEnvironment = Deno.env.get("ENVIRONMENT");
-  Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "test-service-role");
-  Deno.env.set("ENVIRONMENT", "development");
-
-  try {
-    const deps: ScheduleNetcredChargesDeps = {
-      dequeueSchedules: async () => [{ ...baseSchedule }],
-      processSchedule: async () => {
-        processCalled = true;
-        return {
-          scheduleId: "schedule-1",
-          outcome: "PAID",
-          chargeAmount: "1024.29",
-        };
-      },
-      captureException: () => {},
-      maxAttempts: 3,
-      isDryRun: async () => true,
-      revertDryRunLease: async (scheduleId) => {
-        revertedScheduleId = scheduleId;
-      },
-    };
-
-    const req = new Request("https://example.com/schedule-netcred-charges", {
-      method: "POST",
-      headers: { Authorization: "Bearer test-service-role" },
-    });
-
-    const response = await handleScheduleNetcredChargesRequest(req, deps);
-    const summary = await response.json();
-
-    assertEquals(summary.dry_run, 1);
-    assertEquals(summary.paid, 0);
-    assertEquals(processCalled, false);
-    assertEquals(revertedScheduleId, "schedule-1");
-  } finally {
-    if (previousServiceRoleKey === undefined) {
-      Deno.env.delete("SUPABASE_SERVICE_ROLE_KEY");
-    } else {
-      Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", previousServiceRoleKey);
-    }
-    if (previousEnvironment === undefined) {
-      Deno.env.delete("ENVIRONMENT");
-    } else {
-      Deno.env.set("ENVIRONMENT", previousEnvironment);
-    }
-  }
-});
-
 Deno.test("concurrent invocations dequeue disjoint schedule sets", async () => {
   const dequeuedIds = new Set<string>();
   const previousServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");

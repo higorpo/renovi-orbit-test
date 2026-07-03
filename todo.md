@@ -90,5 +90,3 @@ Coisas para fazer next
 
 
 - payment_cron_post_sentry_alerts e payment-emite-sentry-alerts talvez poderiam ser algo compartilhado e não exclusivo de payments
-
-- cada um está fazendo de um jeito, preciso alinhar tudo - como é feita a autenticação na EF quando ela só pode ser chamada via banco

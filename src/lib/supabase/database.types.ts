@@ -4302,10 +4302,6 @@ export type Database = {
         Args: { p_event_id: string }
         Returns: Json
       }
-      payment_revert_dry_run_lease: {
-        Args: { p_attempt_count: number; p_schedule_id: string }
-        Returns: undefined
-      }
       payment_revoke_client_card_token: {
         Args: { p_client_card_token_id: string }
         Returns: Json

@@ -27,6 +27,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | **request-quote** | [pedir-orcamento](./modulos/request-quote/features/pedir-orcamento.md) | `/pedir-orcamento` | `dynamic-form`, `addresses`, `auth`, Edge Functions |
 | **chats** + **negotiation-proposals** | [conversas-e-negociacao](./modulos/chats/features/conversas-e-negociacao.md), [comparar-orcamentos-meus-servicos](./modulos/chats/features/comparar-orcamentos-meus-servicos.md) | `/dashboard/chats`, `/dashboard/chats/:chatId` | `auth`, `provider-jobs`, `message-dispatcher`, `my-services` (sheet compare/history), RPCs CNS em `supabase/migrations/202607*` |
 | **message-dispatcher** *(backend)* | [horario-silencioso](./modulos/message-dispatcher/features/horario-silencioso.md) | *Sem rota de UI* | Supabase schema `message_dispatcher`, Edge Functions `message-dispatcher-worker` / `message-dispatcher-webhook-resend` |
+| **payments** | [checkout-e-cobranca](./modulos/payments/features/checkout-e-cobranca.md) | Checkout embutido no fluxo pós-aceite; histórico em conta/serviços | `negotiation-proposals`, NetCred EFs, RPCs `payment_*`, MMD |
 
 ## Telas placeholder (evidência)
 
@@ -50,7 +51,13 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | `message-dispatcher-worker` | `message-dispatcher` — consome fila, renderiza templates, envia via Resend/FCM |
 | `message-dispatcher-webhook-resend` | `message-dispatcher` — recebe webhooks Resend (delivered, bounce, opened) |
 | `chat-upload-media` | `chats` — upload de mídia na conversa (sessão + storage) |
-| `cns_process_domain_events` | `chats` — processa `domain_events` e enfileira notificações MMD |
+| `schedule-netcred-charges` | `payments` — cobrança automática T-2 (cron) |
+| `tokenize-payment-card` | `payments` — tokenização checkout |
+| `manual-charge-payment` | `payments` — cobrança manual cliente |
+| `netcred-webhook` | `payments` — webhooks gateway |
+| `process-refund` | `payments` — estornos |
+| `detect-netcred-onboarding` | `payments` — KYC prestador |
+| `reconcile-netcred-payments` | `payments` — reconciliação |
 
 ## Status da documentação
 
@@ -58,7 +65,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 |------|--------|
 | Módulos em `src/features` | Documentados (README + ≥1 feature); CNS em `chats/` + `negotiation-proposals/` |
 | Admin UI | **Não localizada** no router — evidência parcial |
-| Pagamentos | Planejamento em `docs/` apenas — fora do escopo comportamental |
+| Pagamentos | **Implementado** — módulo `src/features/payments/` + backend `docs/payment-system/`; runbooks operacionais para rollout |
 | PWA / Sentry / analytics | Mencionados na rastreabilidade; não detalhados por feature |
 | App nativo (Capacitor / Android) | Shell + **persistência cliente** (Preferences) em [rastreabilidade](./rastreabilidade.md) e [matriz](./matriz-cobertura-documental.md); `device-beacon` e `push-permission` em `src/features/` sem pasta em `modulos/` |
 | Message Dispatcher (backend) | **Parcial** — módulo em `modulos/message-dispatcher/`; feature documentada: horário silencioso. Demais features (quotas, FSM, checkout, reconciliação) cobrem visão geral no README mas sem feature doc dedicada |
