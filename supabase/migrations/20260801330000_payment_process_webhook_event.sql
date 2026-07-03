@@ -600,23 +600,26 @@ begin
     'transaction,uuid'
   ]), '');
 
-  select
-    ps.*,
-    cs.service_request_id,
-    coalesce(nullif(trim(sr.title), ''), 'Serviço')
-  into
-    v_schedule,
-    v_service_request_id,
-    v_service_request_title
+  select ps.*
+  into v_schedule
   from public.payment_schedules ps
   inner join public.contracted_services cs on cs.id = ps.contracted_service_id
-  inner join public.service_requests sr on sr.id = cs.service_request_id
   where ps.contracted_service_id = v_reference_code
   for update of cs, ps;
 
   if not found then
     return jsonb_build_object('outcome', 'not_found', 'reference_code', v_reference_code);
   end if;
+
+  select
+    cs.service_request_id,
+    coalesce(nullif(trim(sr.title), ''), 'Serviço')
+  into
+    v_service_request_id,
+    v_service_request_title
+  from public.contracted_services cs
+  inner join public.service_requests sr on sr.id = cs.service_request_id
+  where cs.id = v_schedule.contracted_service_id;
 
   update public.payment_schedules ps
   set
