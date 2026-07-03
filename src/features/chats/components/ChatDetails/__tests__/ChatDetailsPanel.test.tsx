@@ -135,7 +135,7 @@ describe("ChatDetailsPanel", () => {
 
     expect(screen.getByText("Detalhes do serviço")).toBeTruthy();
     expect(screen.getByText("Trocar tomada")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Ver mais detalhes do serviço" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Ver mais detalhes do serviço" })).toBeTruthy();
     expect(screen.getByText("Participantes")).toBeTruthy();
     expect(screen.getByText("Maria Cliente (você)")).toBeTruthy();
     expect(screen.getByText("João Prestador")).toBeTruthy();

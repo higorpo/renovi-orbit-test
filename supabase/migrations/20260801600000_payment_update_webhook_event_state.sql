@@ -43,6 +43,21 @@ begin
       'DEAD_LETTER'::public.payment_webhook_event_state,
       'FAILED'::public.payment_webhook_event_state
     ) then
+    if p_target_state = 'DUPLICATE'::public.payment_webhook_event_state
+       and v_event.processed_at is null then
+      update public.payment_webhook_events e
+      set
+        processed_at = now(),
+        updated_at = now()
+      where e.id = p_webhook_event_id;
+
+      return jsonb_build_object(
+        'event_id', v_event.id,
+        'state', v_event.state,
+        'updated', true
+      );
+    end if;
+
     return jsonb_build_object(
       'event_id', v_event.id,
       'state', v_event.state,

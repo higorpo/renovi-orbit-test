@@ -1474,3 +1474,20 @@ on conflict (template_key, channel) do update set
   body_template = excluded.body_template,
   variable_schema = excluded.variable_schema,
   active = excluded.active;
+
+-- Seed chat/proposal flows enqueue MMD notifications; cancel pending rows so pgTAP
+-- dispatcher tests start with an empty checkout poll queue.
+update message_dispatcher.message_dispatches d
+set
+  status = 'CANCELED'::message_dispatcher.message_dispatch_status,
+  cancel_reason = 'seed_cleanup',
+  locked_until = null,
+  locked_by = null,
+  updated_at = now()
+where d.status in (
+  'PENDING_EVALUATION'::message_dispatcher.message_dispatch_status,
+  'SCHEDULED'::message_dispatcher.message_dispatch_status,
+  'QUEUED'::message_dispatcher.message_dispatch_status,
+  'PROCESSING'::message_dispatcher.message_dispatch_status,
+  'FAILED_RETRYABLE'::message_dispatcher.message_dispatch_status
+);

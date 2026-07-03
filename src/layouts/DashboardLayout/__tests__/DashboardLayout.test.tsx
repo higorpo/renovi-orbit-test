@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { ReactNode } from "react";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { DashboardLayout } from "../DashboardLayout";
@@ -30,6 +31,10 @@ vi.mock("@/features/view-services", () => ({
     serviceRequestId: undefined,
     background: null,
   }),
+}));
+
+vi.mock("@/features/payments", () => ({
+  ProviderKycGate: ({ children }: { children: ReactNode }) => children,
 }));
 
 const useAuth = vi.mocked(await import("@/features/auth").then((m) => m.useAuth));

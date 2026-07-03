@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(10);
+select plan(9);
 
 create or replace function pg_temp.payment_set_service_role()
 returns void
@@ -130,6 +130,7 @@ select isnt(
     select processed_at
     from public.payment_webhook_events
     where gateway_event_id = 'evt-state-dup'
+      and state = 'DUPLICATE'::public.payment_webhook_event_state
   ),
   null,
   'duplicate finalize sets processed_at'

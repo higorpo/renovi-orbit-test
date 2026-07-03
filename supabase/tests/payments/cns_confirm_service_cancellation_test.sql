@@ -75,12 +75,12 @@ begin
 
   insert into public.contracted_services (
     id, service_request_id, accepted_proposal_id, client_id, provider_id,
-    duration_unit, duration_value, scheduled_start_date, scheduled_shift,
+    duration_unit, duration_value, scheduled_start_date, scheduled_end_date, scheduled_shift,
     agreed_slot, status
   )
   values (
     p_contracted_service_id, v_service_request_id, v_proposal_id, v_client_id,
-    p_provider_id, 'days', 1, current_date + 10, 'morning', v_slot,
+    p_provider_id, 'days', 1, current_date + 10, current_date + 10, 'morning', v_slot,
     p_service_status
   );
 

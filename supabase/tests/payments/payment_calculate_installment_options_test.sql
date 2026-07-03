@@ -121,6 +121,9 @@ from pricing;
 
 select pg_temp.payment_set_client_auth('28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid);
 
+delete from vault.secrets
+where name = 'installment_signing_secret';
+
 select throws_ok(
   format(
     $$ select public.payment_calculate_installment_options(

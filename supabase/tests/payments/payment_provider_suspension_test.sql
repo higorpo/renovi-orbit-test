@@ -51,6 +51,14 @@ begin
   from public.service_requests sr
   where sr.id = '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid;
 
+  perform set_config('request.jwt.claim.sub', p_provider_id::text, true);
+  perform set_config(
+    'request.jwt.claims',
+    json_build_object('role', 'authenticated', 'sub', p_provider_id::text)::text,
+    true
+  );
+  perform set_config('request.jwt.claim.role', 'authenticated', true);
+
   select * into v_pricing
   from public.calculate_provider_service_pricing(100.00::numeric);
 
@@ -73,12 +81,12 @@ begin
 
   insert into public.contracted_services (
     id, service_request_id, accepted_proposal_id, client_id, provider_id,
-    duration_unit, duration_value, scheduled_start_date, scheduled_shift,
+    duration_unit, duration_value, scheduled_start_date, scheduled_end_date, scheduled_shift,
     agreed_slot, status
   )
   values (
     p_contracted_service_id, v_service_request_id, v_proposal_id, v_client_id,
-    p_provider_id, 'days', 1, current_date + 5, 'morning', v_slot,
+    p_provider_id, 'days', 1, current_date + 5, current_date + 5, 'morning', v_slot,
     'PENDING_PAYMENT'::public.contracted_service_status
   );
 
@@ -92,6 +100,24 @@ begin
     '497010XXXXXX0048', 'VCC', 'token-suspension-pgtap', 12, 2030,
     'Suspension Test', '{}'::jsonb, 'ACTIVE'::public.payment_client_card_token_state
   );
+
+  insert into public.provider_gateway_accounts (
+    provider_id, gateway_slug, document, onboarding_status, onboarding_activated_at,
+    netcred_company_id
+  )
+  values (
+    p_provider_id,
+    'netcred'::public.payment_gateway_slug,
+    right(replace(p_provider_id::text, '-', ''), 11),
+    'ACTIVE'::public.payment_provider_onboarding_status,
+    now(),
+    substr(replace(p_provider_id::text, '-', ''), 1, 8)
+  )
+  on conflict (provider_id, gateway_slug) do update
+  set
+    onboarding_status = 'ACTIVE'::public.payment_provider_onboarding_status,
+    onboarding_activated_at = excluded.onboarding_activated_at,
+    netcred_company_id = excluded.netcred_company_id;
 
   client_id := v_client_id;
   card_token_id := v_card_token_id;

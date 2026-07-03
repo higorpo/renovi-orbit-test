@@ -132,10 +132,11 @@ select throws_ok(
 
 select pg_temp.rls_set_auth(current_setting('rls.provider_id')::uuid);
 
-select is(
-  (select count(*)::int from public.chat_rate_limit_buckets),
-  0,
-  'provider cannot read chat_rate_limit_buckets'
+select throws_ok(
+  $$ select count(*) from public.chat_rate_limit_buckets $$,
+  '42501',
+  null,
+  'provider cannot read chat_rate_limit_buckets (permission denied)'
 );
 
 select throws_ok(

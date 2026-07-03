@@ -23,6 +23,8 @@ declare
   v_chat_id uuid;
   v_response jsonb;
   v_dispatch public.service_request_dispatches%rowtype;
+  v_competitor_system_message constant text :=
+    'Outra proposta foi aceita neste pedido.';
 begin
   if v_actor is null then
     raise exception 'Authentication required for accept_proposal'
@@ -214,6 +216,27 @@ begin
       and c.status <> 'CLOSED'::public.cns_conversation_status
       and c.provider_id <> v_proposal.provider_id
     returning c.id
+  ),
+  inserted_system_messages as (
+    insert into public.chat_messages (
+      chat_id,
+      sender_user_id,
+      message_type,
+      payload,
+      linked_entity_type,
+      linked_entity_id,
+      idempotency_key
+    )
+    select
+      closed.id,
+      null,
+      'SYSTEM'::public.cns_message_type,
+      jsonb_build_object('text', v_competitor_system_message),
+      'service_request',
+      v_sr.id,
+      gen_random_uuid()
+    from closed
+    returning id
   )
   select coalesce(jsonb_agg(to_jsonb(closed.id)), '[]'::jsonb)
   into v_chat_ids

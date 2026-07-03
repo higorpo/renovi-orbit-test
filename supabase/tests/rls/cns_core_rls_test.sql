@@ -59,36 +59,42 @@ select
   'e2222222-2222-4222-8222-222222222222'::uuid
 from _fixture f;
 
+select set_config('rls.chat_id', (select chat_id::text from _fixture), true);
+
 reset role;
 
-insert into public.provider_proposals (
-  provider_id,
-  service_request_id,
-  proposed_amount,
-  proposal_description,
-  proposal_duration_value,
-  proposal_duration_unit,
-  status,
-  submitted_at
+select pg_temp.rls_set_auth(current_setting('rls.provider_a_id')::uuid);
+
+create temp table _core_rls_proposal as
+with pricing as (
+  select * from public.calculate_provider_service_pricing(100.00::numeric)
 )
-select
-  f.provider_a_id,
-  f.service_request_id,
-  100.00,
+select public.create_provider_proposal(
+  current_setting('rls.service_request_id')::uuid,
+  gen_random_uuid(),
+  pricing.original_amount,
   'RLS core proposal',
   1,
   'hours',
-  'PENDING'::public.proposal_status,
-  now()
-from _fixture f
+  jsonb_build_array(
+    jsonb_build_object(
+      'start_date', current_date::text,
+      'shift', 'morning'
+    )
+  ),
+  '{}'::text[],
+  pricing.tax_rate,
+  pricing.tax_amount,
+  pricing.final_amount,
+  pricing.pricing_signature
+) as submit_response
+from pricing
 where not exists (
   select 1
   from public.provider_proposals pp
-  where pp.service_request_id = f.service_request_id
-    and pp.provider_id = f.provider_a_id
+  where pp.service_request_id = current_setting('rls.service_request_id')::uuid
+    and pp.provider_id = current_setting('rls.provider_a_id')::uuid
 );
-
-select set_config('rls.chat_id', (select chat_id::text from _fixture), true);
 
 -- Structural: deny policies + SELECT-only grants ------------------------------
 

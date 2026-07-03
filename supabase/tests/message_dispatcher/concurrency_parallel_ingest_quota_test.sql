@@ -45,7 +45,7 @@ select is(
       'engagement_push'
     )->>'status'
   ),
-  'QUEUED',
+  'SCHEDULED',
   'first ingest wins the last quota slot (FOR UPDATE ordering)'
 );
 

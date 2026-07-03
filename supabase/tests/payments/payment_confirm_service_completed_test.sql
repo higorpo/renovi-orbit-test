@@ -29,42 +29,79 @@ returns void
 language plpgsql
 as $$
 declare
+  v_service_request_id uuid := gen_random_uuid();
+  v_proposal_id uuid := gen_random_uuid();
   v_pricing record;
   v_slot jsonb;
 begin
-  select p.*
-  into v_pricing
-  from public.provider_proposals p
-  limit 1;
+  insert into public.service_requests (
+    id, client_id, service_id, address_id, title, description, form_data, form_version, status, urgency
+  )
+  select
+    v_service_request_id, sr.client_id, sr.service_id, sr.address_id,
+    format('confirm completed pgTAP %s', p_contracted_service_id),
+    sr.description, sr.form_data, sr.form_version, 'OPEN', sr.urgency
+  from public.service_requests sr
+  where sr.id = '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid;
 
-  v_slot := coalesce(
-    v_pricing.proposed_slots->0,
-    jsonb_build_object('date', current_date::text, 'start_time', '09:00', 'end_time', '10:00')
+  perform set_config('request.jwt.claim.sub', p_provider_id::text, true);
+  perform set_config(
+    'request.jwt.claims',
+    json_build_object('role', 'authenticated', 'sub', p_provider_id::text)::text,
+    true
+  );
+  perform set_config('request.jwt.claim.role', 'authenticated', true);
+
+  select * into v_pricing
+  from public.calculate_provider_service_pricing(100.00::numeric);
+
+  v_slot := jsonb_build_object(
+    'start_date', to_char(current_date, 'YYYY-MM-DD'),
+    'shift', 'morning'
+  );
+
+  insert into public.provider_proposals (
+    id, provider_id, service_request_id, proposed_amount, proposal_description,
+    proposal_duration_value, proposal_duration_unit, proposal_suggested_slots,
+    photos, tax_rate, tax_amount, final_amount, pricing_signature, status
+  )
+  values (
+    v_proposal_id, p_provider_id, v_service_request_id, v_pricing.original_amount,
+    'confirm completed pgTAP proposal', 1, 'days', jsonb_build_array(v_slot),
+    '{}'::text[], v_pricing.tax_rate, v_pricing.tax_amount, v_pricing.final_amount,
+    v_pricing.pricing_signature, 'ACCEPTED'::public.proposal_status
   );
 
   insert into public.contracted_services (
     id,
     service_request_id,
-    proposal_id,
+    accepted_proposal_id,
     client_id,
     provider_id,
-    status,
+    duration_unit,
+    duration_value,
     scheduled_start_date,
-    scheduled_slot,
+    scheduled_end_date,
+    scheduled_shift,
+    agreed_slot,
+    status,
     executed_at
   )
-  select
+  values (
     p_contracted_service_id,
-    v_pricing.service_request_id,
-    v_pricing.id,
+    v_service_request_id,
+    v_proposal_id,
     p_client_id,
     p_provider_id,
-    'EXECUTED'::public.contracted_service_status,
+    'days',
+    1,
     current_date,
+    current_date,
+    'morning',
     v_slot,
+    'EXECUTED'::public.contracted_service_status,
     now() - interval '2 hours'
-  from public.provider_proposals p
-  where p.id = v_pricing.id;
+  );
 
   insert into public.payment_schedules (
     contracted_service_id,

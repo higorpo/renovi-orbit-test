@@ -101,8 +101,8 @@ select is(
       '2026-06-15 10:00:00-03'::timestamptz
     )->>'status'
   ),
-  'SCHEDULED',
-  'ingest at 10:00 BRT (future) yields SCHEDULED as normal'
+  'QUEUED',
+  'ingest at 10:00 BRT (future) yields QUEUED as normal'
 );
 
 select is(

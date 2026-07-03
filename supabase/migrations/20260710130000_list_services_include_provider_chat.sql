@@ -17,6 +17,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public, auth
+set statement_timeout = '30s'
 as $$
 declare
   v_viewer_id uuid := auth.uid();

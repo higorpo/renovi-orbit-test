@@ -65,6 +65,7 @@ select ok(
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
       and p.proname = 'accept_proposal'
+      and pg_get_function_identity_arguments(p.oid) = 'p_proposal_id uuid, p_selected_slot jsonb, p_idempotency_key uuid'
   ),
   'accept_proposal is SECURITY DEFINER'
 );

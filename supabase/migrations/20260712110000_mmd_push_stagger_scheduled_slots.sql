@@ -11,7 +11,7 @@ returns timestamptz
 language sql
 stable
 security definer
-set search_path = message_dispatcher, public
+set search_path = message_dispatcher, public, auth
 as $$
   select greatest(
     now(),

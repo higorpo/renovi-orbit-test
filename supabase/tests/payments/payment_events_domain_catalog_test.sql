@@ -6,7 +6,7 @@ select plan(6);
 
 select ok(
   (
-    select conbin::text ~ 'payment_webhook_event'
+    select pg_get_constraintdef(oid) like '%payment_webhook_event%'
     from pg_constraint
     where conname = 'payment_events_aggregate_type_check'
   ),

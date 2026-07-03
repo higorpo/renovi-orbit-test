@@ -162,8 +162,8 @@ select is(
     where schemaname = 'storage'
       and tablename = 'objects'
   ),
-  17,
-  'storage.objects has 17 RLS policies'
+  22,
+  'storage.objects has 22 RLS policies'
 );
 
 select ok(

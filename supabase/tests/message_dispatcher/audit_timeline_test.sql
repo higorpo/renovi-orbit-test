@@ -32,19 +32,23 @@ from _audit_timeline_fixture f;
 
 update message_dispatcher.message_dispatches d
 set
-  status = 'PROCESSING',
+  status = 'PROCESSING'::message_dispatcher.message_dispatch_status,
   locked_by = 'worker-audit',
   locked_until = now() + interval '30 seconds'
 from _audit_timeline_fixture f
 where d.id = f.dispatch_id;
 
-update message_dispatcher.message_dispatches d
-set
-  status = 'DELIVERED',
-  locked_by = null,
-  locked_until = null
-from _audit_timeline_fixture f
-where d.id = f.dispatch_id;
+select message_dispatcher.message_dispatcher_report_delivery_outcome(
+  (select dispatch_id from _audit_timeline_fixture),
+  'worker-audit',
+  'email'::message_dispatcher.message_channel,
+  true,
+  're_audit_timeline',
+  200,
+  null,
+  null,
+  '[]'::jsonb
+);
 
 select ok(
   jsonb_array_length(
@@ -57,24 +61,28 @@ select ok(
 
 select is(
   (
-    select
-      message_dispatcher.message_dispatcher_audit_timeline(
-        (select dispatch_id from _audit_timeline_fixture)
-      )->0->>'old_status'
+    select a.old_status::text
+    from message_dispatcher.message_dispatcher_audit a
+    where a.dispatch_id = (select dispatch_id from _audit_timeline_fixture)
+      and a.old_status is distinct from a.new_status
+    order by a.created_at, a.id
+    limit 1
   ),
   'QUEUED',
-  'first transition starts from QUEUED'
+  'first status transition starts from QUEUED'
 );
 
 select is(
   (
-    select
-      message_dispatcher.message_dispatcher_audit_timeline(
-        (select dispatch_id from _audit_timeline_fixture)
-      )->-1->>'new_status'
+    select a.new_status::text
+    from message_dispatcher.message_dispatcher_audit a
+    where a.dispatch_id = (select dispatch_id from _audit_timeline_fixture)
+      and a.old_status is distinct from a.new_status
+    order by a.created_at desc, a.id desc
+    limit 1
   ),
   'DELIVERED',
-  'last transition ends at DELIVERED'
+  'last status transition ends at DELIVERED'
 );
 
 select finish();

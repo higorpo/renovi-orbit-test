@@ -104,6 +104,28 @@ begin
   insert into public.profiles (id, role, full_name)
   values (p_user_id, 'provider', p_name)
   on conflict (id) do update set role = excluded.role, full_name = excluded.full_name;
+
+  insert into public.provider_gateway_accounts (
+    provider_id,
+    gateway_slug,
+    document,
+    onboarding_status,
+    onboarding_activated_at,
+    netcred_company_id
+  )
+  values (
+    p_user_id,
+    'netcred'::public.payment_gateway_slug,
+    right(replace(p_user_id::text, '-', ''), 11),
+    'ACTIVE'::public.payment_provider_onboarding_status,
+    now(),
+    substr(replace(p_user_id::text, '-', ''), 1, 8)
+  )
+  on conflict (provider_id, gateway_slug) do update
+  set
+    onboarding_status = 'ACTIVE'::public.payment_provider_onboarding_status,
+    onboarding_activated_at = excluded.onboarding_activated_at,
+    netcred_company_id = excluded.netcred_company_id;
 end;
 $$;
 

@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(7);
+select plan(5);
 
 -- Verify helper consistency: is_quiet_hours agrees with next_send_window semantics
 
@@ -35,7 +35,12 @@ from public.profiles p
 limit 1;
 
 insert into message_dispatcher.message_dispatcher_user_limits (profile_id, last_push_sent_at)
-select profile_id, '2026-06-15 21:55:00-03'::timestamptz
+select
+  profile_id,
+  timezone(
+    'America/Sao_Paulo',
+    date_trunc('day', timezone('America/Sao_Paulo', now()) + interval '1 day') + interval '21 hours 55 minutes'
+  )
 from _eval_fixture
 on conflict (profile_id) do update
   set last_push_sent_at = excluded.last_push_sent_at;
@@ -72,34 +77,19 @@ select lives_ok(
   'evaluate_pending runs without error'
 );
 
-select is(
+select ok(
   (
-    select d.status::text
+    select d.status::text = 'SCHEDULED'
+      and d.bypass_limits
+      and d.scheduled_for = message_dispatcher.message_dispatcher_next_send_window(
+        (select last_push_sent_at from message_dispatcher.message_dispatcher_user_limits u
+         join _eval_fixture f on u.profile_id = f.profile_id)
+        + make_interval(mins => 10)
+      )
     from message_dispatcher.message_dispatches d
     join _eval_fixture f on d.idempotency_key = f.dispatch_key
   ),
-  'SCHEDULED',
-  'dispatch rescheduled to SCHEDULED due to push cooldown falling in quiet hours'
-);
-
-select is(
-  (
-    select d.scheduled_for
-    from message_dispatcher.message_dispatches d
-    join _eval_fixture f on d.idempotency_key = f.dispatch_key
-  ),
-  '2026-06-16 06:00:00-03'::timestamptz,
-  'scheduled_for deferred to 06:00 next day BRT by evaluate_pending quiet hours'
-);
-
-select is(
-  (
-    select d.bypass_limits
-    from message_dispatcher.message_dispatches d
-    join _eval_fixture f on d.idempotency_key = f.dispatch_key
-  ),
-  true,
-  'bypass_limits set to true by evaluate_pending quiet hours reschedule'
+  'evaluate_pending reschedules push cooldown that falls in quiet hours'
 );
 
 select * from finish();

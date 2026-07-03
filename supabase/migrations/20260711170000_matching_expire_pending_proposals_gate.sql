@@ -8,6 +8,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public
+set statement_timeout = '120s'
 as $$
 declare
   v_started_at timestamptz := clock_timestamp();

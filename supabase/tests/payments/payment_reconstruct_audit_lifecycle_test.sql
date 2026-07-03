@@ -26,17 +26,56 @@ declare
   v_schedule_id uuid := gen_random_uuid();
   v_audit_first uuid := gen_random_uuid();
   v_audit_second uuid := gen_random_uuid();
-  v_proposal record;
+  v_service_request_id uuid := gen_random_uuid();
+  v_proposal_id uuid := gen_random_uuid();
+  v_client_id uuid;
+  v_pricing record;
+  v_slot jsonb;
 begin
+  select sr.client_id
+  into v_client_id
+  from public.service_requests sr
+  where sr.id = '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid;
+
+  insert into public.service_requests (
+    id, client_id, service_id, address_id, title, description, form_data, form_version, status, urgency
+  )
   select
-    pp.id as proposal_id,
-    sr.id as service_request_id,
-    sr.client_id
-  into v_proposal
-  from public.provider_proposals pp
-  join public.service_requests sr on sr.id = pp.service_request_id
-  order by pp.id
-  limit 1;
+    v_service_request_id, sr.client_id, sr.service_id, sr.address_id,
+    format('audit lifecycle pgTAP %s', v_service_id),
+    sr.description, sr.form_data, sr.form_version, 'OPEN', sr.urgency
+  from public.service_requests sr
+  where sr.id = '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid;
+
+  perform set_config('request.jwt.claim.sub', '5d09e025-20a2-4842-aeef-324d42a431e1'::text, true);
+  perform set_config(
+    'request.jwt.claims',
+    json_build_object(
+      'role', 'authenticated',
+      'sub', '5d09e025-20a2-4842-aeef-324d42a431e1'::text
+    )::text,
+    true
+  );
+
+  select * into v_pricing
+  from public.calculate_provider_service_pricing(100.00::numeric);
+
+  v_slot := jsonb_build_object(
+    'start_date', to_char(current_date, 'YYYY-MM-DD'),
+    'shift', 'morning'
+  );
+
+  insert into public.provider_proposals (
+    id, provider_id, service_request_id, proposed_amount, proposal_description,
+    proposal_duration_value, proposal_duration_unit, proposal_suggested_slots,
+    photos, tax_rate, tax_amount, final_amount, pricing_signature, status
+  )
+  values (
+    v_proposal_id, '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid, v_service_request_id,
+    v_pricing.original_amount, 'audit lifecycle pgTAP proposal', 2, 'hours',
+    jsonb_build_array(v_slot), '{}'::text[], v_pricing.tax_rate, v_pricing.tax_amount,
+    v_pricing.final_amount, v_pricing.pricing_signature, 'ACCEPTED'::public.proposal_status
+  );
 
   insert into public.contracted_services (
     id, service_request_id, accepted_proposal_id, client_id, provider_id,
@@ -45,12 +84,12 @@ begin
   )
   values (
     v_service_id,
-    v_proposal.service_request_id,
-    v_proposal.proposal_id,
-    v_proposal.client_id,
+    v_service_request_id,
+    v_proposal_id,
+    v_client_id,
     '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid,
     'hours', 2, current_date, 'morning',
-    '{"start_date":"today","shift":"morning"}'::jsonb,
+    v_slot,
     'PENDING_PAYMENT'::public.contracted_service_status
   );
 
@@ -71,7 +110,7 @@ begin
   values (
     v_schedule_id,
     v_service_id,
-    v_proposal.client_id,
+    v_client_id,
     '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid,
     'netcred',
     1,

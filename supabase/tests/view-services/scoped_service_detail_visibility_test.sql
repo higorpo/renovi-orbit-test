@@ -4,7 +4,7 @@ begin;
 
 \ir ../chats/fixtures/seed_chat.inc
 
-select plan(10);
+select plan(9);
 
 create or replace function pg_temp.cns_set_auth(p_user_id uuid)
 returns void
