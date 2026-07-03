@@ -10,6 +10,7 @@ export {
 } from "./useSavedPaymentTokens";
 export { useInstallmentOptions, useInstallmentSignatureRecovery, INSTALLMENT_OPTIONS_QUERY_KEY } from "./useInstallmentOptions";
 export { useDispatchKyc } from "./useDispatchKyc";
+export { useRetryKycEmailDispatch } from "./useRetryKycEmailDispatch";
 export {
   useProviderPaymentAccount,
   PROVIDER_PAYMENT_ACCOUNT_QUERY_KEY,

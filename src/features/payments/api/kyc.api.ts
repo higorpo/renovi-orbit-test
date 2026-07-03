@@ -212,6 +212,37 @@ export async function submitProviderKyc(
   return { data: parsed, error: null };
 }
 
+export async function retryProviderKycEmailDispatch(): Promise<DispatchKycResult> {
+  const { ok, status, payload } = await invokePaymentEdgeFunction(
+    PAYMENT_EDGE.dispatchKycEmail,
+    { retry_only: true },
+  );
+
+  if (!ok) {
+    const { message, errorCode, field } = mapEdgeErrorPayload(
+      payload,
+      "Falha ao enviar credenciamento",
+    );
+
+    logger.warn("retry_dispatch_kyc_email_failed", {
+      status,
+      errorCode,
+      field,
+    });
+
+    return { data: null, error: message, errorCode, field };
+  }
+
+  return {
+    data: {
+      submissionId: String(payload.submission_id),
+      emailDispatched: Boolean(payload.email_dispatched),
+      emailPending: Boolean(payload.email_pending),
+    },
+    error: null,
+  };
+}
+
 export async function dispatchKycEmail(
   request: DispatchKycRequest,
 ): Promise<DispatchKycResult> {

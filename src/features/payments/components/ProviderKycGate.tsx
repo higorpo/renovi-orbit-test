@@ -7,10 +7,15 @@ import {
 } from "../api/kyc.api";
 import { ProviderKycForm } from "./ProviderKycForm";
 import { useProviderPaymentAccount } from "../hooks/useProviderPaymentAccount";
+import { useRetryKycEmailDispatch } from "../hooks/useRetryKycEmailDispatch";
 
 export function ProviderKycGate({ children }: { children: React.ReactNode }) {
   const { user, profile } = useAuth();
   const accountQuery = useProviderPaymentAccount(profile?.role === "provider");
+  const account = accountQuery.data ?? null;
+  const isSubmitting = isProviderKycSubmitting(account);
+
+  useRetryKycEmailDispatch(isSubmitting && !accountQuery.isLoading);
 
   if (profile?.role !== "provider") {
     return children;
@@ -25,13 +30,11 @@ export function ProviderKycGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const account = accountQuery.data ?? null;
-
   if (!shouldBlockProviderForKyc(account)) {
     return children;
   }
 
-  if (isProviderKycSubmitting(account)) {
+  if (isSubmitting) {
     return (
       <div className="container max-w-lg px-4 py-10 space-y-4 text-center">
         <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" aria-hidden />

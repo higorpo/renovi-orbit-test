@@ -90,3 +90,5 @@ Coisas para fazer next
 
 
 - payment_cron_post_sentry_alerts e payment-emite-sentry-alerts talvez poderiam ser algo compartilhado e não exclusivo de payments
+
+- verificar se o e-mail de onboarding está sendo enviado para netcred 

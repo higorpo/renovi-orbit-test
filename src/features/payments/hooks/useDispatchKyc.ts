@@ -25,7 +25,9 @@ export function useDispatchKyc() {
       });
 
       if (submitResult.error || !submitResult.data) {
-        throw new Error(submitResult.error ?? "Falha ao salvar credenciamento");
+        if (submitResult.errorCode !== "INVALID_ONBOARDING_STATE") {
+          throw new Error(submitResult.error ?? "Falha ao salvar credenciamento");
+        }
       }
 
       const result = await dispatchKycEmail(request);

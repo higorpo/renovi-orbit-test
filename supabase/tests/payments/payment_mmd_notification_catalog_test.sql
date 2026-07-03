@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(14);
+select plan(15);
 
 select ok(
   exists (
@@ -178,6 +178,21 @@ select is(
   )->>'template_key',
   'payment.service_auto_cancelled_suspended',
   'SERVICE_AUTO_CANCELLED PROVIDER_SUSPENDED client uses suspended template'
+);
+
+select is(
+  public.mmd_ingest_event(
+    'PROVIDER_KYC_SUBMITTED',
+    current_setting('test.mmd.profile_id')::uuid,
+    'pgtap-provider-kyc-submitted',
+    jsonb_build_object(
+      'provider_id', current_setting('test.mmd.profile_id'),
+      'deep_link_path', '/dashboard'
+    ),
+    '{"source":"dispatch-kyc-email"}'::jsonb
+  )->>'template_key',
+  'account.provider_kyc_submitted',
+  'PROVIDER_KYC_SUBMITTED routes to account.provider_kyc_submitted'
 );
 
 select is(
