@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(5);
+select plan(4);
 
 create or replace function pg_temp.payment_set_service_role()
 returns void
@@ -57,6 +57,7 @@ select throws_ok(
     current_setting('test.audit_log.fixture_id')
   ),
   'P0001',
+  'PAYMENT_APPEND_ONLY_TABLE',
   'UPDATE on payment_audit_log is blocked by append-only trigger'
 );
 
@@ -67,6 +68,7 @@ select throws_ok(
     current_setting('test.audit_log.fixture_id')
   ),
   'P0001',
+  'PAYMENT_APPEND_ONLY_TABLE',
   'DELETE on payment_audit_log is blocked by append-only trigger'
 );
 

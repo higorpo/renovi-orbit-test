@@ -9,17 +9,22 @@ import {
   useRejectProposalMutation,
 } from "../useProposalClientMutations";
 
-const acceptProposalMock = vi.fn();
+const acceptProposalWithPaymentMock = vi.fn();
 const rejectProposalMock = vi.fn();
+const getClientIpBestEffortMock = vi.fn();
 
 const { useOnlineStatusMock } = vi.hoisted(() => ({
   useOnlineStatusMock: vi.fn(() => true),
 }));
 
 vi.mock("../../api/proposals.api", () => ({
-  acceptProposal: (...args: unknown[]) => acceptProposalMock(...args),
+  acceptProposalWithPayment: (...args: unknown[]) => acceptProposalWithPaymentMock(...args),
   rejectProposal: (...args: unknown[]) => rejectProposalMock(...args),
   requestProposalRevision: vi.fn(),
+}));
+
+vi.mock("@/lib/getClientIp", () => ({
+  getClientIpBestEffort: (...args: unknown[]) => getClientIpBestEffortMock(...args),
 }));
 
 vi.mock("@/hooks/useOnlineStatus", () => ({
@@ -52,9 +57,20 @@ function createWrapper() {
   };
 }
 
+const paymentParams = {
+  paymentTokenId: "token-1",
+  installmentNumber: 1,
+  installmentSelectionHmac: "deadbeef",
+  installmentHmacPayload: { proposal_id: "prop-1" },
+  clearsaleSessionId: "clearsale-session",
+  pricingSignature: "pricing-sig",
+  idempotencyKey: "idem-1",
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
   useOnlineStatusMock.mockReturnValue(true);
+  getClientIpBestEffortMock.mockResolvedValue("203.0.113.1");
 });
 
 describe("useProposalClientMutations", () => {
@@ -70,10 +86,11 @@ describe("useProposalClientMutations", () => {
       result.current.mutateAsync({
         proposalId: "prop-1",
         selectedSlot: { start_date: "2026-06-01", shift: "morning" },
+        ...paymentParams,
       }),
     ).rejects.toThrow("OFFLINE");
 
-    expect(acceptProposalMock).not.toHaveBeenCalled();
+    expect(acceptProposalWithPaymentMock).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(
         "Você está offline. Conecte-se à internet para aceitar a proposta.",
@@ -84,7 +101,7 @@ describe("useProposalClientMutations", () => {
   it("surfaces 429 retry metadata from accept API errors", async () => {
     useOnlineStatusMock.mockReturnValue(true);
 
-    acceptProposalMock.mockResolvedValue({
+    acceptProposalWithPaymentMock.mockResolvedValue({
       data: null,
       error: {
         code: "RATE_LIMITED",
@@ -102,10 +119,70 @@ describe("useProposalClientMutations", () => {
       result.current.mutateAsync({
         proposalId: "prop-1",
         selectedSlot: { start_date: "2026-06-01", shift: "morning" },
+        ...paymentParams,
       }),
     ).rejects.toMatchObject({ code: "RATE_LIMITED", retryAfterSeconds: 30 });
 
     expect(toast.error).toHaveBeenCalledWith("Aguarde antes de tentar novamente.");
+  });
+
+  it("accepts with payment and maps contractedServiceId", async () => {
+    acceptProposalWithPaymentMock.mockResolvedValue({
+      data: {
+        service: { id: "cs-1" },
+        payment_schedule: { id: "sched-1" },
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(
+      () => useAcceptProposalMutation("chat-1", "sr-1"),
+      { wrapper: createWrapper() },
+    );
+
+    const response = await result.current.mutateAsync({
+      proposalId: "prop-1",
+      selectedSlot: { start_date: "2026-06-01", shift: "morning" },
+      ...paymentParams,
+    });
+
+    expect(response).toEqual({
+      contractedServiceId: "cs-1",
+      scheduleId: "sched-1",
+    });
+    expect(acceptProposalWithPaymentMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        proposalId: "prop-1",
+        clientCardTokenId: "token-1",
+        clientIp: "203.0.113.1",
+      }),
+    );
+  });
+
+  it("propagates INSTALLMENT_SIGNATURE_EXPIRED from payment accept", async () => {
+    acceptProposalWithPaymentMock.mockResolvedValue({
+      data: null,
+      error: {
+        code: "INSTALLMENT_SIGNATURE_EXPIRED",
+        message: "Assinatura expirada",
+      },
+    });
+
+    const { result } = renderHook(
+      () => useAcceptProposalMutation(null, null),
+      { wrapper: createWrapper() },
+    );
+
+    await expect(
+      result.current.mutateAsync({
+        proposalId: "prop-1",
+        selectedSlot: { start_date: "2026-06-01", shift: "morning" },
+        ...paymentParams,
+      }),
+    ).rejects.toMatchObject({
+      message: "Assinatura expirada",
+      code: "INSTALLMENT_SIGNATURE_EXPIRED",
+    });
   });
 
   it("blocks reject when offline", async () => {

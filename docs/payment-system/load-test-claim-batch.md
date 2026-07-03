@@ -66,4 +66,4 @@ npx supabase test db --local supabase/tests/payments/payment_claim_charge_batch_
 - Script: `supabase/scripts/payment-load-test-claim-batch.mjs`
 - Seed: `supabase/scripts/payment-load-test-claim-batch.seed.sql`
 - pgTAP: `supabase/tests/payments/payment_claim_charge_batch_load_test.sql`
-- Parallel session pgTAP (Task 116): future two-session SKIP LOCKED test
+- pgTAP: `supabase/tests/payments/payment_claim_charge_batch_parallel_session_test.sql`

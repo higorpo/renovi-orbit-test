@@ -4087,6 +4087,10 @@ export type Database = {
         Args: { p_batch_size?: number }
         Returns: Json
       }
+      payment_claim_inanalysis_auto_cancel_void_batch: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
       payment_claim_stale_schedules_for_reconciliation: {
         Args: { p_batch_size?: number }
         Returns: Json
@@ -4106,6 +4110,15 @@ export type Database = {
       payment_client_card_token_is_expired: {
         Args: { p_expiry_month: number; p_expiry_year: number }
         Returns: boolean
+      }
+      payment_commit_inanalysis_auto_cancel_void_outcome: {
+        Args: {
+          p_schedule_id: string
+          p_outcome: string
+          p_gateway_state?: string
+          p_error_message?: string
+        }
+        Returns: Json
       }
       payment_commit_charge_outcome: {
         Args: {
@@ -4134,6 +4147,10 @@ export type Database = {
         Args: { p_schedule_id: string }
         Returns: boolean
       }
+      payment_confirm_service_completed: {
+        Args: { p_service_id: string }
+        Returns: Json
+      }
       payment_cron_auto_cancel_unpaid_services: {
         Args: never
         Returns: undefined
@@ -4152,6 +4169,10 @@ export type Database = {
       }
       payment_cron_notify_upcoming_charges: { Args: never; Returns: undefined }
       payment_cron_process_webhook_retry: { Args: never; Returns: undefined }
+      payment_cron_reconcile_inanalysis_auto_cancel_voids: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       payment_cron_reconcile_netcred_payments: {
         Args: never
         Returns: undefined

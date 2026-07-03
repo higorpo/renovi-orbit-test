@@ -199,6 +199,12 @@ begin
     v_to_state := 'IN_ANALYSIS';
     v_audit_event := 'RECONCILIATION_IN_ANALYSIS';
     v_event_type := 'ChargeInAnalysis';
+
+    perform public.payment_enqueue_notifications(
+      v_schedule.id,
+      'CHARGE_IN_ANALYSIS',
+      jsonb_build_object('source', 'reconciliation')
+    );
   elsif v_gateway_state in ('REFUNDED', 'PARTIALLY_REFUNDED')
     and v_from_state = 'REFUND_REQUESTED' then
     v_to_state := v_gateway_state;

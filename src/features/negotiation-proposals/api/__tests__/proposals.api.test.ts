@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  acceptProposal,
   acceptProposalWithPayment,
   createProviderProposal,
   declineRevisionRequest,
@@ -72,24 +71,29 @@ describe("createProviderProposal", () => {
   });
 });
 
-describe("acceptProposal", () => {
+describe("acceptProposalWithPayment", () => {
   it("maps PROPOSAL_EXPIRED to UI message", async () => {
     rpcMock.mockResolvedValue({
       data: null,
       error: { message: "PROPOSAL_EXPIRED", details: '{"code":"PROPOSAL_EXPIRED"}' },
     });
 
-    const result = await acceptProposal({
+    const result = await acceptProposalWithPayment({
       proposalId: "p1",
       selectedSlot: { start_date: "2026-06-01", shift: "morning" },
+      clientCardTokenId: "tok-1",
+      installmentNumber: 1,
+      installmentSelectionHmac: "hmac",
+      installmentHmacPayload: { proposal_id: "p1" },
+      clearsaleSessionId: "cs-session",
+      pricingSignature: "pricing-sig",
+      clientIp: "127.0.0.1",
     });
 
     expect(result.error?.code).toBe("PROPOSAL_EXPIRED");
     expect(result.error?.message).toContain("expirou");
   });
-});
 
-describe("acceptProposalWithPayment", () => {
   it("passes payment fields to accept_proposal RPC", async () => {
     rpcMock.mockResolvedValue({
       data: {

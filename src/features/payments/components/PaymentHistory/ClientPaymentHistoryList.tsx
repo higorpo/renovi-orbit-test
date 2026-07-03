@@ -5,6 +5,7 @@ import {
   formatPaymentHistoryDate,
   formatPaymentHistoryState,
 } from "../../utils/formatPaymentHistoryState";
+import { PaymentDisputeBadge } from "../PaymentDisputeBadge";
 
 export function ClientPaymentHistoryList() {
   const historyQuery = useClientPaymentHistory();
@@ -60,11 +61,13 @@ export function ClientPaymentHistoryList() {
                 <p className="text-muted-foreground">
                   Serviço: {formatCurrency(transaction.serviceAmount)}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {formatPaymentHistoryDate(transaction.paidAt)} ·{" "}
-                  {formatPaymentHistoryState(transaction.state)}
-                  {transaction.isDisputed ? " · Em disputa" : ""}
-                </p>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span>
+                    {formatPaymentHistoryDate(transaction.paidAt)} ·{" "}
+                    {formatPaymentHistoryState(transaction.state)}
+                  </span>
+                  {transaction.isDisputed ? <PaymentDisputeBadge /> : null}
+                </div>
               </div>
             </li>
           ))}

@@ -32,6 +32,8 @@ Expected: eight rows, all **`active = true`**.
 
 ## Post-deploy monitoring
 
+**RPC snapshot:** [`payment-job-runs-monitoring.md`](./payment-job-runs-monitoring.md) — `payment_ops_job_health(24, 30)` (Task 130).
+
 ```sql
 select job_name, finished_at, error_count, metadata->>'fatal_error' as fatal_error
 from public.job_runs
@@ -51,3 +53,4 @@ limit 20;
 
 - Design §6.4: pg_cron → `payment_cron_*()` wrappers only
 - Load test (optional pre-launch): [`load-test-claim-batch.md`](./load-test-claim-batch.md)
+- Staging soak (required before Phase E): [`staging-soak-test-runbook.md`](./staging-soak-test-runbook.md)

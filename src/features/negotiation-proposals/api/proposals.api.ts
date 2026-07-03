@@ -135,26 +135,6 @@ export async function createProviderProposal(
   );
 }
 
-// @deprecated - Use `acceptProposalWithPayment` instead. Remove this function in a future release.
-export async function acceptProposal(params: {
-  proposalId: string;
-  selectedSlot: ProposalSuggestedSlotRpc;
-  idempotencyKey?: string;
-}): Promise<ProposalsApiResult<AcceptProposalResult>> {
-  const idempotencyKey = params.idempotencyKey ?? generateIdempotencyKeyV7();
-
-  return invokeRpc(
-    CNS_PROPOSAL_RPC.acceptProposal,
-    {
-      p_proposal_id: params.proposalId,
-      p_selected_slot: params.selectedSlot,
-      p_idempotency_key: idempotencyKey,
-    },
-    isAcceptProposalResult,
-    "proposals_accept_invalid_response",
-  );
-}
-
 export async function acceptProposalWithPayment(
   params: AcceptProposalWithPaymentParams,
 ): Promise<ProposalsApiResult<AcceptProposalResult>> {
@@ -377,7 +357,6 @@ export async function fetchProviderProposalHistory(
 
 export const proposalsApi = {
   createProviderProposal,
-  acceptProposal,
   acceptProposalWithPayment,
   rejectProposal,
   requestProposalRevision,

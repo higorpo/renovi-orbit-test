@@ -5,6 +5,9 @@ import {
   formatPaymentHistoryDate,
   formatPaymentHistoryState,
 } from "../../utils/formatPaymentHistoryState";
+import { PaymentDisputeBadge } from "../PaymentDisputeBadge";
+import { ProviderSettlementDisclosure } from "../ProviderSettlementDisclosure";
+import { PROVIDER_SETTLEMENT_COMPLETION_NOTE } from "../../utils/providerSettlementDisclosure";
 
 export function ProviderPaymentHistoryList() {
   const historyQuery = useProviderPaymentHistory();
@@ -36,7 +39,8 @@ export function ProviderPaymentHistoryList() {
       <div className="space-y-1">
         <h2 className="text-lg font-semibold">Recebimentos</h2>
         <p className="text-sm text-muted-foreground">
-          Valores capturados na plataforma. A liquidação bancária pode levar cerca de 30 dias.
+          Valores pagos pelo cliente na plataforma. O depósito na sua conta costuma levar cerca de 30 dias após a
+          confirmação do pagamento. {PROVIDER_SETTLEMENT_COMPLETION_NOTE}
         </p>
       </div>
 
@@ -59,11 +63,14 @@ export function ProviderPaymentHistoryList() {
                     Valor original: {formatCurrency(receivable.amountReceivedAtCapture)}
                   </p>
                 ) : null}
-                <p className="text-xs text-muted-foreground">
-                  {formatPaymentHistoryDate(receivable.receivedAt)} ·{" "}
-                  {formatPaymentHistoryState(receivable.state)}
-                  {receivable.isDisputed ? " · Em disputa" : ""}
-                </p>
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span>
+                    {formatPaymentHistoryDate(receivable.receivedAt)} ·{" "}
+                    {formatPaymentHistoryState(receivable.state)}
+                  </span>
+                  {receivable.isDisputed ? <PaymentDisputeBadge /> : null}
+                </div>
+                <ProviderSettlementDisclosure capturePaidAt={receivable.receivedAt} />
               </div>
             </li>
           ))}

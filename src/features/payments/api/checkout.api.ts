@@ -1,9 +1,15 @@
 import { supabase } from "@/lib/supabase/client";
 import { profileApi } from "@/features/auth";
+import type {
+  AcceptProposalResult,
+  AcceptProposalWithPaymentParams,
+} from "@/features/negotiation-proposals";
 import { logger } from "@/lib/logger";
 import { maskCPF, maskPhone, unmask } from "@/lib/masks";
+import { generateIdempotencyKeyV7 } from "@/lib/utils/idempotencyKey";
 import { validateBrazilPhone, validateCPF } from "@/lib/validators";
 import type { CheckoutStepRequirements, ProposalCheckoutContext } from "../types/checkoutStepper.types";
+import type { InstallmentOption, InstallmentOptionsResponse } from "../types/paymentToken.types";
 import { invokePaymentRpc, paymentsApiErrorToMessage } from "./paymentApiClient";
 import { PAYMENT_RPC } from "./payments.rpc";
 
@@ -26,6 +32,24 @@ export type GetProposalCheckoutContextResult = {
   data: ProposalCheckoutContext | null;
   error: string | null;
 };
+
+export type FetchInstallmentOptionsParams = {
+  proposalId: string;
+  serviceId: string;
+  cardBrand: string;
+};
+
+export type FetchInstallmentOptionsResult = {
+  data: InstallmentOptionsResponse | null;
+  error: string | null;
+};
+
+export type AcceptProposalWithPaymentResult = {
+  data: AcceptProposalResult | null;
+  error: string | null;
+};
+
+export type AcceptProposalCheckoutParams = AcceptProposalWithPaymentParams;
 
 function parseCheckoutStepRequirements(
   data: unknown,
@@ -83,7 +107,6 @@ function parseProposalCheckoutContext(data: unknown): ProposalCheckoutContext | 
   const providerId = data.provider_id;
   const proposedAmount = data.proposed_amount;
   const pricingSignature = data.pricing_signature;
-  const paymentRequired = data.payment_required;
 
   if (
     typeof proposalId !== "string"
@@ -91,7 +114,6 @@ function parseProposalCheckoutContext(data: unknown): ProposalCheckoutContext | 
     || typeof providerId !== "string"
     || typeof proposedAmount !== "number"
     || typeof pricingSignature !== "string"
-    || typeof paymentRequired !== "boolean"
   ) {
     return null;
   }
@@ -102,7 +124,6 @@ function parseProposalCheckoutContext(data: unknown): ProposalCheckoutContext | 
     providerId,
     proposedAmount,
     pricingSignature,
-    paymentRequired,
   };
 }
 
@@ -126,6 +147,110 @@ export async function getProposalCheckoutContext(
   }
 
   return { data: context, error: null };
+}
+
+function isInstallmentOptionsRpcPayload(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
+function parseInstallmentOptionsResponse(data: unknown): InstallmentOptionsResponse | null {
+  if (!isInstallmentOptionsRpcPayload(data)) {
+    return null;
+  }
+
+  if (!Array.isArray(data.installment_options)) {
+    return null;
+  }
+
+  if (typeof data.installment_selection_hmac !== "string") {
+    return null;
+  }
+
+  if (!data.installment_hmac_payload || typeof data.installment_hmac_payload !== "object") {
+    return null;
+  }
+
+  const expiresAt = data.expires_at;
+  const computedAt = data.computed_at;
+
+  return {
+    installment_options: data.installment_options as InstallmentOption[],
+    installment_selection_hmac: data.installment_selection_hmac,
+    installment_hmac_payload: data.installment_hmac_payload as InstallmentOptionsResponse["installment_hmac_payload"],
+    expires_at: typeof expiresAt === "string" ? expiresAt : String(expiresAt),
+    ...(computedAt !== undefined
+      ? { computed_at: typeof computedAt === "string" ? computedAt : String(computedAt) }
+      : {}),
+  };
+}
+
+export async function fetchInstallmentOptions(
+  params: FetchInstallmentOptionsParams,
+): Promise<FetchInstallmentOptionsResult> {
+  const result = await invokePaymentRpc(
+    PAYMENT_RPC.calculateInstallmentOptions,
+    {
+      p_proposal_id: params.proposalId,
+      p_service_id: params.serviceId,
+      p_card_brand: params.cardBrand,
+    },
+    isInstallmentOptionsRpcPayload,
+    "payment_calculate_installment_options_invalid_response",
+  );
+
+  if (result.error) {
+    logger.warn("installment_options_fetch_failed", {
+      error: result.error.message,
+      code: result.error.code,
+    });
+    return { data: null, error: paymentsApiErrorToMessage(result.error) };
+  }
+
+  const parsed = parseInstallmentOptionsResponse(result.data);
+  if (!parsed) {
+    return { data: null, error: "invalid_installment_options_response" };
+  }
+
+  return { data: parsed, error: null };
+}
+
+function isAcceptProposalResult(value: unknown): value is AcceptProposalResult {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Record<string, unknown>;
+  return payload.service != null && payload.proposal != null;
+}
+
+export async function acceptProposalWithPayment(
+  params: AcceptProposalCheckoutParams,
+): Promise<AcceptProposalWithPaymentResult> {
+  const idempotencyKey = params.idempotencyKey ?? generateIdempotencyKeyV7();
+
+  const result = await invokePaymentRpc(
+    PAYMENT_RPC.acceptProposal,
+    {
+      p_proposal_id: params.proposalId,
+      p_selected_slot: params.selectedSlot,
+      p_idempotency_key: idempotencyKey,
+      p_client_card_token_id: params.clientCardTokenId,
+      p_installment_number: params.installmentNumber,
+      p_installment_selection_hmac: params.installmentSelectionHmac,
+      p_installment_hmac_payload: params.installmentHmacPayload,
+      p_clearsale_session_id: params.clearsaleSessionId,
+      p_pricing_signature: params.pricingSignature,
+      p_client_ip: params.clientIp,
+    },
+    isAcceptProposalResult,
+    "checkout_accept_proposal_invalid_response",
+  );
+
+  if (result.error) {
+    return { data: null, error: paymentsApiErrorToMessage(result.error) };
+  }
+
+  return { data: result.data, error: null };
 }
 
 export async function saveCheckoutCpf(

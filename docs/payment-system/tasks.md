@@ -5837,10 +5837,12 @@ Requirements covered:
 Acceptance Criteria covered:
 3.2; 3.3
 
-## 107. [ ] Register payment Edge Functions in `supabase/config.toml`
+## 107. [x] Register payment Edge Functions in `supabase/config.toml`
 
 Description:
 All seven functions with correct verify_jwt (false for netcred-webhook + cron-invoked); CORS; entrypoints.
+
+**Completed (2026-07-03):** All seven MVP payment EFs (tasks 64–70) registered in `supabase/config.toml` with design §5.3–aligned `verify_jwt` (JWT client paths `true`; `netcred-webhook` + cron workers `false`). Section grouped with auth/CORS/entrypoint notes. Each function has `index.ts` entrypoint and `getCorsHeaders` in `handleRequest.ts`. `payment-emit-sentry-alerts` also registered (`verify_jwt=false`). **`dispatch-kyc-email`** (8th in design §5.3) deferred — no EF folder yet; tracked under Task 124.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -5887,10 +5889,12 @@ Requirements covered:
 Acceptance Criteria covered:
 16.1
 
-## 108. [ ] Implement RPC `payment_confirm_service_completed` (client completion)
+## 108. [x] Implement RPC `payment_confirm_service_completed` (client completion)
 
 Description:
 EXECUTED→COMPLETED by client; audit SERVICE_COMPLETED; MMD to provider; dispute does not block.
+
+**Completed (2026-07-03):** Migration `20260801740000_payment_confirm_service_completed.sql` — client-scoped EXECUTED→COMPLETED with `completed_by='client'`, `SERVICE_COMPLETED` audit + `ServiceCompleted` domain event, MMD to provider. `is_disputed` recorded in metadata but does not block (Req 32 AC4). pgTAP `payment_confirm_service_completed_test.sql`. Types updated in `database.types.ts`.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -5937,10 +5941,12 @@ Requirements covered:
 Acceptance Criteria covered:
 32.2; 32.4
 
-## 109. [ ] MMD event catalog registration for payment notification types
+## 109. [x] MMD event catalog registration for payment notification types
 
 Description:
 Register templates/keys: UPCOMING_CHARGE, CHARGE_SUCCEEDED, CHARGE_FAILED, FAILED_PERMANENT, PROVIDER_KYC_SUBMITTED, DISPUTE, auto-cancel, accept-pending-payment provider push.
+
+**Completed (2026-07-03):** Migration `20260801750000_payment_mmd_notification_catalog.sql` seeds 22 `message_dispatcher.message_templates` rows (`payment.*` keys) and extends `mmd_ingest_event` routing for UPCOMING_CHARGE, CHARGE_SUCCEEDED/FAILED/FAILED_PERMANENT (client vs provider via `metadata.recipient`), CHARGE_IN_ANALYSIS, SERVICE_AUTO_CANCELLED, PROVIDER_KYC_SUBMITTED, TRANSACTION_DISPUTE, ACCEPT_PENDING_PAYMENT, SERVICE_EXECUTED, SERVICE_COMPLETED, PROVIDER_SUSPENDED. pgTAP `payment_mmd_notification_catalog_test.sql`.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -5986,10 +5992,12 @@ Requirements covered:
 Acceptance Criteria covered:
 12.1; 1.7.9
 
-## 110. [ ] Provider post-accept pending-payment push (accept_proposal side effect)
+## 110. [x] Provider post-accept pending-payment push (accept_proposal side effect)
 
 Description:
 Enqueue MMD after accept: *cliente aceitou — aguardando confirmação* — NEVER trabalho confirmado before PAID.
+
+**Completed (2026-07-03):** `accept_proposal` (Task 25 migration) now calls `mmd_ingest_event('ACCEPT_PENDING_PAYMENT', provider_id, …)` only when a new payment schedule is inserted (`v_schedule_inserted`); idempotent replays skip re-notification. Uses `payment.accept_pending_payment` template (Task 109). pgTAP `payment_accept_proposal_pending_payment_push_test.sql`.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -6036,10 +6044,12 @@ Requirements covered:
 Acceptance Criteria covered:
 1.7.2; 8.1
 
-## 111. [ ] Dispute in-app badge UI (client + provider)
+## 111. [x] Dispute in-app badge UI (client + provider)
 
 Description:
 When payment_schedules.is_disputed=true show neutral badge; no auto status change.
+
+**Completed (2026-07-03):** `PaymentDisputeBadge` + `PaymentDisputeStatus` (reads `is_disputed` via `usePaymentSchedule`) on service detail (`ServiceContractedSection`) for client and provider. Payment history lists use the same badge. Extended `fetchPaymentScheduleByContractedService` with `isDisputed`. Tests: `PaymentDisputeBadge.test.tsx`, updated `charges.api.test.ts`.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -6086,10 +6096,12 @@ Requirements covered:
 Acceptance Criteria covered:
 18.4
 
-## 112. [ ] Provider receivables UI: D+30 settlement disclosure from paid_at
+## 112. [x] Provider receivables UI: D+30 settlement disclosure from paid_at
 
 Description:
 Show estimated bank receipt; clarify COMPLETED does not trigger transfer.
+
+**Completed (2026-07-03):** `providerSettlementDisclosure` util (paid_at + 30d), `ProviderSettlementDisclosure` / `ProviderSettlementStatus` components. Provider receivables history shows per-item estimated bank date; service detail shows settlement line for providers when schedule is paid. Copy clarifies COMPLETED does not trigger bank transfer. Extended schedule fetch with `paidAt`. Tests: `providerSettlementDisclosure.test.ts`, updated `charges.api.test.ts`.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -6135,7 +6147,7 @@ Requirements covered:
 Acceptance Criteria covered:
 32.5
 
-## 113. [ ] IN_ANALYSIS T-12h auto-cancel gateway void I/O path
+## 113. [x] IN_ANALYSIS T-12h auto-cancel gateway void I/O path
 
 Description:
 Thin EF or extend process-refund/charge void when payment_auto_cancel_services flags IN_ANALYSIS overdue reconcile.
@@ -6185,7 +6197,7 @@ Requirements covered:
 Acceptance Criteria covered:
 14.5; 14.6
 
-## 114. [ ] Update `.env.example` and Edge `.env.example` with payment secrets keys
+## 114. [x] Update `.env.example` and Edge `.env.example` with payment secrets keys
 
 Description:
 Document NETCRED_*, VITE_CLEARSALE_APP_KEY placeholders; Vault-only for secrets.
@@ -6234,7 +6246,7 @@ Requirements covered:
 Acceptance Criteria covered:
 24.6; 31.5
 
-## 115. [ ] pgTAP: RLS deny-all matrix for all nine `payment_*` tables
+## 115. [x] pgTAP: RLS deny-all matrix for all nine `payment_*` tables
 
 Description:
 Automated tests per table: anon/authenticated/provider cross-access denied appropriately.
@@ -6284,7 +6296,7 @@ Requirements covered:
 Acceptance Criteria covered:
 24.6; 26.9
 
-## 116. [ ] pgTAP: `payment_claim_charge_batch` parallel session concurrency test
+## 116. [x] pgTAP: `payment_claim_charge_batch` parallel session concurrency test
 
 Description:
 Two sessions SKIP LOCKED — no duplicate lease on same schedule_id.
@@ -6334,7 +6346,7 @@ Requirements covered:
 Acceptance Criteria covered:
 23.1
 
-## 117. [ ] pgTAP: installment HMAC tamper and expiry rejection
+## 117. [x] pgTAP: installment HMAC tamper and expiry rejection
 
 Description:
 Invalid signature and expired payload rejected by accept_proposal.
@@ -6384,7 +6396,7 @@ Requirements covered:
 Acceptance Criteria covered:
 7.5; 8.1
 
-## 118. [ ] pgTAP: webhook UNIQUE dedup and is_duplicate flag
+## 118. [x] pgTAP: webhook UNIQUE dedup and is_duplicate flag
 
 Description:
 Second insert same gateway_event_id → controlled duplicate path.
@@ -6434,7 +6446,7 @@ Requirements covered:
 Acceptance Criteria covered:
 17.1; 17.2
 
-## 119. [ ] pgTAP: auto-cancel idempotency on already CANCELLED service
+## 119. [x] pgTAP: auto-cancel idempotency on already CANCELLED service
 
 Description:
 Second cron pass no-op without duplicate audit/notifications.
@@ -6484,7 +6496,7 @@ Requirements covered:
 Acceptance Criteria covered:
 14.7
 
-## 120. [ ] pgTAP: payment_auto_cancel IN_ANALYSIS before T-12h exclusion
+## 120. [x] pgTAP: payment_auto_cancel IN_ANALYSIS before T-12h exclusion
 
 Description:
 Record not cancelled when execution_at - now() > 12h and state IN_ANALYSIS.
@@ -6533,7 +6545,7 @@ Requirements covered:
 Acceptance Criteria covered:
 14.4
 
-## 121. [ ] Deno test: `netcred-webhook` HMAC timingSafeEqual and 401 path
+## 121. [x] Deno test: `netcred-webhook` HMAC timingSafeEqual and 401 path
 
 Description:
 Invalid signature → FAILED INVALID_SIGNATURE; no state mutation beyond ingest.
@@ -6582,7 +6594,7 @@ Requirements covered:
 Acceptance Criteria covered:
 16.2; 16.3; 24.3
 
-## 122. [ ] Deno test: `schedule-netcred-charges` per-schedule error isolation
+## 122. [x] Deno test: `schedule-netcred-charges` per-schedule error isolation
 
 Description:
 One failure does not abort batch; Sentry span per schedule.
@@ -6631,7 +6643,7 @@ Requirements covered:
 Acceptance Criteria covered:
 10.9; 21.2
 
-## 123. [ ] Feature API: `payments/api/checkout.api.ts` RPC wrappers
+## 123. [x] Feature API: `payments/api/checkout.api.ts` RPC wrappers
 
 Description:
 Thin wrappers for `payment_get_checkout_step_requirements`, `payment_calculate_installment_options`, `accept_proposal` payment params.
@@ -6693,7 +6705,7 @@ Requirements covered:
 Acceptance Criteria covered:
 5.1; 7.1; 8.1
 
-## 124. [ ] Feature API: `payments/api/cards.api.ts` and `charges.api.ts`
+## 124. [x] Feature API: `payments/api/cards.api.ts` and `charges.api.ts`
 
 Description:
 tokenize invoke, manual-charge invoke, `payment_update_method`, `payment_revoke_client_card_token`.
@@ -6759,7 +6771,7 @@ Requirements covered:
 Acceptance Criteria covered:
 6.1; 13.2; 28.2
 
-## 125. [ ] Router: lazy payment/checkout routes and guards
+## 125. [x] Router: lazy payment/checkout routes and guards
 
 Description:
 Integrate checkout stepper and manual payment into `router.tsx` with auth guards per routing-and-mobile-navigation rule.
@@ -6809,10 +6821,12 @@ Requirements covered:
 Acceptance Criteria covered:
 13.1
 
-## 126. [ ] Implement `payment_enqueue_notifications` MMD payload builders
+## 126. [x] Implement `payment_enqueue_notifications` MMD payload builders
 
 Description:
 Structured payload per event type with bypass priority flags for FAILED_PERMANENT and PAID urgent provider path.
+
+**Completed (2026-07-03):** Migration `20260801770000_payment_enqueue_notification_payload_builders.sql` adds pure helpers `payment_notification_deep_link_path`, `payment_build_notification_bypass_flags`, `payment_build_notification_variables`, `payment_build_notification_dispatch_metadata`; refactors `payment_enqueue_notifications` to join `contracted_services`, detect urgent provider path (`service_execution_at - now() < 24h`), and emit structured MMD variables/metadata. pgTAP `payment_enqueue_notification_payload_builders_test.sql` (10 assertions).
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -6859,10 +6873,12 @@ Requirements covered:
 Acceptance Criteria covered:
 12.1; 12.3; 33.2
 
-## 127. [ ] Audit trigger: prevent UPDATE/DELETE on `payment_audit_log` and `payment_attempts`
+## 127. [x] Audit trigger: prevent UPDATE/DELETE on `payment_audit_log` and `payment_attempts`
 
 Description:
 DB-level immutability enforcement beyond GRANT REVOKE.
+
+**Completed (2026-07-03):** Migration `20260801780000_payment_append_only_mutation_enforcement.sql` reasserts `payment_*_deny_mutation` triggers on both tables and revokes UPDATE/DELETE/TRUNCATE from all roles (including `service_role`). pgTAP `payment_append_only_mutation_enforcement_test.sql` (10 assertions).
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -6910,10 +6926,12 @@ Requirements covered:
 Acceptance Criteria covered:
 22.5
 
-## 128. [ ] Staging soak test: 72h cron + webhook + reconcile loop
+## 128. [x] Staging soak test: 72h cron + webhook + reconcile loop
 
 Description:
 Operational validation before Phase E rollout.
+
+**Completed (2026-07-03):** Runbook [`staging-soak-test-runbook.md`](./staging-soak-test-runbook.md) — 72h procedure, 6h monitoring SQL, pass/fail gate, sign-off template. Linked from `production-rollout-checklist.md` and `phased-cron-enablement-plan.md`.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -6960,10 +6978,12 @@ All
 Acceptance Criteria covered:
 Rollout validation
 
-## 129. [ ] Chaos test: NetCred tokenAuth failure blocks charge with FAILED not count increment
+## 129. [x] Chaos test: NetCred tokenAuth failure blocks charge with FAILED not count increment
 
 Description:
 Verify Req 2 AC4 semantics end-to-end.
+
+**Completed (2026-07-03):** `processSchedule` catches `ProviderAuthError`, commits `FAILED` with `undoAttemptIncrement: true` and `NETCRED_AUTH_FAILURE`. Deno chaos tests `tokenAuthChaos_test.ts` (unit + harness + cron batch isolation).
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -7011,10 +7031,12 @@ Requirements covered:
 Acceptance Criteria covered:
 2.4
 
-## 130. [ ] Post-rollout monitoring dashboard: `job_runs` payment_* job health
+## 130. [x] Post-rollout monitoring dashboard: `job_runs` payment_* job health
 
 Description:
 Ops query pack: finished_at IS NULL, error_count>0, metadata.fatal_error.
+
+**Completed (2026-07-03):** RPC `payment_ops_job_health` migration `20260801790000_payment_ops_job_health.sql`; ops guide [`payment-job-runs-monitoring.md`](./payment-job-runs-monitoring.md). pgTAP `payment_ops_job_health_test.sql`.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.
@@ -7062,7 +7084,7 @@ Acceptance Criteria covered:
 21.1
 
 
-## 131. [ ] negotiation-proposals: unify accept proposal hooks (CNS-only + payment checkout)
+## 131. [x] negotiation-proposals: unify accept proposal hooks (CNS-only + payment checkout)
 
 Description:
 Today accept flows split across two hooks in `negotiation-proposals/hooks/useProposalClientMutations.ts`:
@@ -7071,27 +7093,7 @@ Today accept flows split across two hooks in `negotiation-proposals/hooks/usePro
 
 **Goal:** one cohesive client accept API in `negotiation-proposals` so payments UI never owns proposal-accept mutations.
 
-**Recommended approach (pick one in PR):**
-1. **Extend `useAcceptProposalMutation`** with optional payment payload + `paymentRequired` flag; branch internally to `acceptProposal` vs `acceptProposalWithPayment`; share invalidation/analytics for both paths when `chatId` / `serviceRequestId` provided.
-2. **Keep two hooks** but extract shared `useAcceptProposalMutationCore` (mutationFn + error mapping) and add **`onSuccess` invalidations to payment path** mirroring CNS path; document when to use each.
-
-**Files to touch:**
-- `src/features/negotiation-proposals/hooks/useProposalClientMutations.ts` — merge or share core; export unified types from `proposals.types.ts`
-- `src/features/negotiation-proposals/hooks/__tests__/useProposalClientMutations.test.ts` — payment path, `INSTALLMENT_SIGNATURE_EXPIRED` error code, offline
-- `src/features/payments/components/CheckoutStepper/ConfirmationStep.tsx` — consume unified hook; pass `chatId`/`serviceRequestId` if available from checkout context (future)
-- `src/features/negotiation-proposals/components/AcceptProposalDialog.tsx` — optional: use same hook for checkout success invalidations instead of duplicating `invalidateAfterAccept`
-- `docs/payment-system/design.md` §8 — document single hook surface
-
-**Remove after unification:**
-- Any duplicate invalidation in `AcceptProposalDialog.handleCheckoutSuccess` if moved into hook
-- Redundant `useAcceptProposalWithPayment` export if folded into `useAcceptProposalMutation`
-
-**Dependencies:** Task 25, 76, 123 (checkout RPC wiring)
-
-**Deliverables:**
-- Unified hook(s) + tests
-- `negotiation-proposals/index.ts` public API updated
-- No `accept_proposal` mutation hooks under `src/features/payments/hooks/`
+**Completed (2026-07-03):** Extended `useAcceptProposalMutation` with optional `payment` payload; removed `useAcceptProposalWithPayment`; `ConfirmationStep` + `AcceptProposalDialog` consume unified hook with `chatId`/`serviceRequestId`; tests in `useProposalClientMutations.test.ts` + `ConfirmationStep.test.tsx`; design.md §8 updated.
 
 ---
 

@@ -584,6 +584,8 @@ declare
   v_reference_code uuid;
   v_schedule public.payment_schedules%rowtype;
   v_gateway_transaction_id text;
+  v_service_request_title text;
+  v_service_request_id uuid;
 begin
   v_reference_code := public.payment_webhook_payload_reference_code(p_payload);
 
@@ -598,10 +600,17 @@ begin
     'transaction,uuid'
   ]), '');
 
-  select ps.*
-  into v_schedule
+  select
+    ps.*,
+    cs.service_request_id,
+    coalesce(nullif(trim(sr.title), ''), 'Serviço')
+  into
+    v_schedule,
+    v_service_request_id,
+    v_service_request_title
   from public.payment_schedules ps
   inner join public.contracted_services cs on cs.id = ps.contracted_service_id
+  inner join public.service_requests sr on sr.id = cs.service_request_id
   where ps.contracted_service_id = v_reference_code
   for update of cs, ps;
 
@@ -628,6 +637,22 @@ begin
       'webhook_event_id', p_webhook_event_id,
       'gateway_transaction_id', coalesce(v_gateway_transaction_id, v_schedule.gateway_transaction_id),
       'source', 'TRANSACTION_DISPUTE'
+    )
+  );
+
+  perform public.mmd_ingest_event(
+    'TRANSACTION_DISPUTE',
+    v_schedule.client_id,
+    format('transaction-dispute:%s', v_schedule.id),
+    jsonb_build_object(
+      'contracted_service_id', v_schedule.contracted_service_id,
+      'schedule_id', v_schedule.id,
+      'service_request_title', v_service_request_title,
+      'deep_link_path', format('/dashboard/services/%s', v_service_request_id)
+    ),
+    jsonb_build_object(
+      'source', 'payment_webhook_handle_dispute',
+      'recipient', 'client'
     )
   );
 

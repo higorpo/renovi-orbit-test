@@ -121,7 +121,7 @@ values
     'proposal.accepted',
     'push',
     'Proposta aceita',
-    'Sua proposta para {{service_request_title}} foi aceita!',
+    'Sua proposta para {{service_request_title}} foi aceita! Vamos cobrar o cliente e te avisamos quando o serviço estiver pago.',
     '{
       "type": "object",
       "properties": {
@@ -142,7 +142,7 @@ values
     'proposal.accepted',
     'email',
     'Proposta aceita — {{service_request_title}}',
-    '<p>Sua proposta para <strong>{{service_request_title}}</strong> foi aceita.</p><p><a href="{{deep_link_path}}">Ver detalhes</a></p>',
+    '<p>Sua proposta para <strong>{{service_request_title}}</strong> foi aceita.</p><p>Vamos processar a cobrança do pagamento do cliente. Te avisamos assim que o serviço estiver confirmado.</p><p><a href="{{deep_link_path}}">Ver detalhes</a></p>',
     '{
       "type": "object",
       "properties": {

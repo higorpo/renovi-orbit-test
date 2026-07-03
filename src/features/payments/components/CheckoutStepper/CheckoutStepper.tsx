@@ -13,6 +13,7 @@ export type CheckoutStepperProps = {
   enabled?: boolean;
   proposalId?: string;
   serviceId?: string;
+  chatId?: string | null;
   /** @deprecated Use proposalId */
   providerServiceId?: string;
   checkoutContext?: CheckoutContext;
@@ -35,6 +36,7 @@ export function CheckoutStepper({
   enabled = true,
   proposalId,
   serviceId,
+  chatId = null,
   providerServiceId,
   checkoutContext,
   onCheckoutSuccess,
@@ -74,6 +76,7 @@ export function CheckoutStepper({
         stepper={stepper}
         proposalId={resolvedProposalId}
         serviceId={serviceId}
+        chatId={chatId}
         checkoutContext={checkoutContext}
         onCheckoutSuccess={onCheckoutSuccess}
       />

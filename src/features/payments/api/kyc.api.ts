@@ -10,8 +10,9 @@ import {
 import { normalizeCNPJ } from "@/lib/cnpj";
 import { unmask } from "@/lib/masks";
 import type { KycEntityType } from "../types/providerKyc.validation";
-import { invokePaymentEdgeFunction, mapEdgeErrorPayload } from "./paymentApiClient";
+import { invokePaymentEdgeFunction, invokePaymentRpc, mapEdgeErrorPayload, paymentsApiErrorToMessage } from "./paymentApiClient";
 import { PAYMENT_EDGE } from "./payments.edge";
+import { PAYMENT_RPC } from "./payments.rpc";
 
 export type DispatchKycRequest = {
   entityType: KycEntityType;
@@ -28,10 +29,37 @@ export type DispatchKycRequest = {
   legalRepFullName?: string;
   legalRepCpf?: string;
   legalRepPhone?: string;
+  identityDocStoragePath: string;
+  addressProofStoragePath: string;
+  corporateCharterStoragePath?: string;
+  legalRepDocStoragePath?: string;
   identityDocUrl: string;
   addressProofUrl: string;
   corporateCharterUrl?: string;
   legalRepDocUrl?: string;
+};
+
+export type SubmitProviderKycRequest = {
+  bankInstitutionCode: string;
+  bankBranch: string;
+  bankAccount: string;
+  identityDocStoragePath: string;
+  addressProofStoragePath: string;
+  pixKey?: string;
+  phone?: string;
+  legalRepresentativePhone?: string;
+  corporateCharterStoragePath?: string;
+  legalRepDocStoragePath?: string;
+};
+
+export type SubmitProviderKycResult = {
+  data: {
+    providerGatewayAccountId: string;
+    onboardingStatus: string;
+    dispatchKycEmailRequired: boolean;
+  } | null;
+  error: string | null;
+  errorCode?: string;
 };
 
 export type DispatchKycResult = {
@@ -116,6 +144,72 @@ export async function uploadKycDocument(
   }
 
   return { path, signedUrl: signedData.signedUrl, error: null };
+}
+
+function isSubmitProviderKycPayload(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
+function parseSubmitProviderKycResponse(
+  data: unknown,
+): SubmitProviderKycResult["data"] {
+  if (!isSubmitProviderKycPayload(data)) {
+    return null;
+  }
+
+  const accountId = data.provider_gateway_account_id;
+  const onboardingStatus = data.onboarding_status;
+  if (typeof accountId !== "string" || typeof onboardingStatus !== "string") {
+    return null;
+  }
+
+  return {
+    providerGatewayAccountId: accountId,
+    onboardingStatus,
+    dispatchKycEmailRequired: Boolean(data.dispatch_kyc_email_required),
+  };
+}
+
+export async function submitProviderKyc(
+  request: SubmitProviderKycRequest,
+): Promise<SubmitProviderKycResult> {
+  const result = await invokePaymentRpc(
+    PAYMENT_RPC.submitProviderKyc,
+    {
+      p_bank_institution_code: request.bankInstitutionCode,
+      p_bank_branch: request.bankBranch,
+      p_bank_account: request.bankAccount,
+      p_identity_doc_storage_path: request.identityDocStoragePath,
+      p_address_proof_storage_path: request.addressProofStoragePath,
+      p_pix_key: request.pixKey,
+      p_phone: request.phone,
+      p_legal_representative_phone: request.legalRepresentativePhone,
+      p_corporate_charter_storage_path: request.corporateCharterStoragePath,
+      p_legal_rep_doc_storage_path: request.legalRepDocStoragePath,
+    },
+    isSubmitProviderKycPayload,
+    "payment_submit_provider_kyc_invalid_response",
+  );
+
+  if (result.error) {
+    logger.warn("submit_provider_kyc_failed", {
+      errorCode: result.error.code,
+      error: result.error.message,
+    });
+
+    return {
+      data: null,
+      error: paymentsApiErrorToMessage(result.error),
+      errorCode: result.error.code,
+    };
+  }
+
+  const parsed = parseSubmitProviderKycResponse(result.data);
+  if (!parsed) {
+    return { data: null, error: "invalid_submit_provider_kyc_response" };
+  }
+
+  return { data: parsed, error: null };
 }
 
 export async function dispatchKycEmail(

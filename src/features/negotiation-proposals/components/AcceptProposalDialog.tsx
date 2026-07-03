@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, ChevronLeft, ChevronRight, Loader2, WifiOff, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,22 +15,9 @@ import { useMobileDialogViewport } from "@/hooks/useMobileDialogViewport";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { CheckoutStepper } from "@/features/payments/components/CheckoutStepper/CheckoutStepper";
 import { useProposalCheckoutContext } from "@/features/payments/hooks/useProposalCheckoutContext";
-import {
-  CHAT_CONVERSATIONS_LIST_QUERY_KEY,
-  CHAT_FREE_MESSAGING_QUERY_KEY,
-  CHAT_MESSAGES_QUERY_KEY,
-  CHAT_PROPOSAL_TIMELINE_QUERY_KEY,
-  CONVERSATION_DETAIL_QUERY_KEY,
-} from "@/features/chats/constants/queryKeys";
-import {
-  SERVICE_DETAIL_QUERY_KEY,
-  SERVICES_LIST_QUERY_KEY,
-} from "@/features/view-services";
 import { toast } from "sonner";
 import type { ProposalSuggestedSlotRpc } from "../types/proposals.types";
 import { MAX_PROPOSAL_REVISIONS } from "../constants/proposalRevisions";
-import { SERVICE_REQUEST_BUDGET_COMPARE_DETAIL_QUERY_KEY } from "../constants/queryKeys";
-import { useAcceptProposalMutation } from "../hooks/useProposalClientMutations";
 import { AcceptProposalDialogSkeleton } from "./proposalDialogSkeletons";
 import { formatProposalSuggestedSlot } from "../utils/formatProposalSuggestedSlot";
 
@@ -52,31 +38,6 @@ export interface AcceptProposalDialogProps {
   onRequestRevision?: () => void;
 }
 
-function invalidateAfterAccept(
-  queryClient: ReturnType<typeof useQueryClient>,
-  chatId: string | null,
-  serviceRequestId: string | null,
-) {
-  if (chatId) {
-    void queryClient.invalidateQueries({ queryKey: [CHAT_MESSAGES_QUERY_KEY, chatId] });
-    void queryClient.invalidateQueries({ queryKey: [CONVERSATION_DETAIL_QUERY_KEY, chatId] });
-    void queryClient.invalidateQueries({ queryKey: [CHAT_PROPOSAL_TIMELINE_QUERY_KEY, chatId] });
-    void queryClient.invalidateQueries({ queryKey: [CHAT_FREE_MESSAGING_QUERY_KEY, chatId] });
-    void queryClient.invalidateQueries({ queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY] });
-  }
-
-  void queryClient.invalidateQueries({ queryKey: SERVICES_LIST_QUERY_KEY });
-
-  if (serviceRequestId) {
-    void queryClient.invalidateQueries({
-      queryKey: [...SERVICE_DETAIL_QUERY_KEY, serviceRequestId],
-    });
-    void queryClient.invalidateQueries({
-      queryKey: [SERVICE_REQUEST_BUDGET_COMPARE_DETAIL_QUERY_KEY, serviceRequestId],
-    });
-  }
-}
-
 export function AcceptProposalDialog({
   open,
   onOpenChange,
@@ -92,8 +53,6 @@ export function AcceptProposalDialog({
   onRequestRevision,
 }: AcceptProposalDialogProps) {
   const isOnline = useOnlineStatus();
-  const queryClient = useQueryClient();
-  const acceptMutation = useAcceptProposalMutation(chatId, serviceRequestId);
   const checkoutContextQuery = useProposalCheckoutContext(proposalId, open);
   const { contentRef, scheduleSync } = useMobileDialogViewport(open);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -106,7 +65,6 @@ export function AcceptProposalDialog({
   }, [open, proposalId]);
 
   const selectedSlot = suggestedSlots[selectedIndex] ?? null;
-  const paymentRequired = checkoutContextQuery.data?.paymentRequired ?? false;
   const checkoutContext = useMemo(() => {
     if (!selectedSlot || !checkoutContextQuery.data) {
       return undefined;
@@ -136,32 +94,19 @@ export function AcceptProposalDialog({
   const handleSlotContinue = () => {
     if (!proposalId || !selectedSlot || !isOnline) return;
 
-    if (paymentRequired) {
-      if (!checkoutContextQuery.data) {
-        toast.error("Não foi possível carregar os dados de pagamento. Tente novamente.");
-        return;
-      }
-      setPhase("checkout");
+    if (!checkoutContextQuery.data) {
+      toast.error("Não foi possível carregar os dados de pagamento. Tente novamente.");
       return;
     }
 
-    acceptMutation.mutate(
-      { proposalId, selectedSlot },
-      {
-        onSuccess: () => onOpenChange(false),
-      },
-    );
+    setPhase("checkout");
   };
 
   const handleCheckoutSuccess = () => {
-    invalidateAfterAccept(queryClient, chatId, serviceRequestId);
-    toast.success("Proposta aceita com sucesso.");
     onOpenChange(false);
   };
 
-  const primaryButtonLabel = paymentRequired ? "Continuar para pagamento" : "Confirmar aceite";
-  const isPrimaryPending = acceptMutation.isPending
-    || (paymentRequired && checkoutContextQuery.isLoading);
+  const isPrimaryPending = checkoutContextQuery.isLoading;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -200,6 +145,7 @@ export function AcceptProposalDialog({
             <CheckoutStepper
               proposalId={proposalId}
               serviceId={serviceRequestId}
+              chatId={chatId}
               checkoutContext={checkoutContext}
               onCheckoutSuccess={handleCheckoutSuccess}
             />
@@ -279,7 +225,7 @@ export function AcceptProposalDialog({
 
         {phase === "slot" ? (
           <DialogFooter className="relative z-10 shrink-0 flex-row gap-2 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pb-0 sm:shadow-none sm:backdrop-blur-none sm:supports-[backdrop-filter]:bg-transparent [&>button]:flex-1 sm:[&>button]:flex-none">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={acceptMutation.isPending}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
             <Button
@@ -295,7 +241,7 @@ export function AcceptProposalDialog({
                   Carregando…
                 </>
               ) : (
-                primaryButtonLabel
+                "Continuar para pagamento"
               )}
             </Button>
           </DialogFooter>

@@ -6,7 +6,7 @@ import { ConfirmationStep } from "../ConfirmationStep";
 const mutateAsync = vi.fn();
 
 vi.mock("@/features/negotiation-proposals", () => ({
-  useAcceptProposalWithPayment: () => ({
+  useAcceptProposalMutation: () => ({
     mutateAsync,
     isPending: false,
   }),
@@ -84,9 +84,10 @@ describe("ConfirmationStep", () => {
     expect(onSuccess).not.toHaveBeenCalled();
     expect(mutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({
+        proposalId: "proposal-1",
+        selectedSlot: defaultProps.selectedSlot,
         paymentTokenId: "token-1",
         pricingSignature: "pricing-sig",
-        selectedSlot: defaultProps.selectedSlot,
         installmentHmacPayload: defaultProps.installmentHmacPayload,
       }),
     );

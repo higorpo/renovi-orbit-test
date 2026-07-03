@@ -7,6 +7,8 @@ export type PaymentScheduleSummary = {
   baseAmount: number;
   failureReason: string | null;
   failureCode: string | null;
+  isDisputed: boolean;
+  paidAt: string | null;
 };
 
 export type ContractedServicePaymentContext = {

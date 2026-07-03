@@ -14,12 +14,6 @@ import {
 } from "./handleRequest.ts";
 import type { ManualChargeAcquireErrorCode, ManualChargeSchedule } from "./types.ts";
 
-function toMessageDispatcherChannel(
-  channel: "PUSH" | "EMAIL",
-): "push" | "email" {
-  return channel === "PUSH" ? "push" : "email";
-}
-
 function resolvePlatformBankAccountId(): string {
   const value = Deno.env.get("NETCRED_PLATFORM_BANK_ACCOUNT_ID")?.trim();
   if (!value) {
@@ -192,20 +186,12 @@ function createDeps(): ManualChargePaymentDeps {
 
       return String(data);
     },
-    ingestNotification: async (input) => {
-      const { error } = await supabase.schema("message_dispatcher").rpc(
-        "message_dispatcher_ingest",
-        {
-          p_idempotency_key: input.idempotencyKey,
-          p_profile_id: input.profileId,
-          p_channel: toMessageDispatcherChannel(input.channel),
-          p_template_key: input.templateKey,
-          p_template_variables: input.templateVariables as Json,
-          p_source_system: "payments",
-          p_metadata: {} as Json,
-          p_bypass_limits: input.bypassLimits,
-        },
-      );
+    enqueueNotification: async (scheduleId, notificationEvent, metadata) => {
+      const { error } = await supabase.rpc("payment_enqueue_notifications", {
+        p_schedule_id: scheduleId,
+        p_notification_event: notificationEvent,
+        p_metadata: metadata as Json,
+      });
 
       if (error) {
         throw new Error(error.message);

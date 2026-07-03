@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(4);
+select plan(5);
 
 create or replace function pg_temp.payment_set_service_role()
 returns void
@@ -59,6 +59,18 @@ select ok(
       and p.proname = 'payment_process_reconciliation_outcome'
   ),
   'payment_process_reconciliation_outcome is SECURITY DEFINER'
+);
+
+select ok(
+  (
+    select pg_get_functiondef(p.oid) ~* 'CHARGE_IN_ANALYSIS'
+      and pg_get_functiondef(p.oid) ~* 'payment_enqueue_notifications'
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'payment_process_reconciliation_outcome'
+  ),
+  'IN_ANALYSIS reconciliation path enqueues CHARGE_IN_ANALYSIS notification'
 );
 
 select finish();

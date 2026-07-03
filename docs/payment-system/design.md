@@ -1195,7 +1195,7 @@ sequenceDiagram
     end
 ```
 
-**No Edge Function.** Payment acceptance extends the existing `accept_proposal` RPC (chats domain) with payment schedule creation. The app calls via `acceptProposalWithPayment` in `src/features/negotiation-proposals/api/proposals.api.ts` (10-param overload); checkout uses `useAcceptProposalWithPayment` in the same feature (`useProposalClientMutations.ts`). Checkout reads `pricing_signature` via `payment_get_proposal_checkout_context` RPC. Task **131** tracks unifying with `useAcceptProposalMutation`.
+**No Edge Function.** Payment acceptance extends the existing `accept_proposal` RPC (chats domain) with payment schedule creation. The app calls via `acceptProposalWithPayment` in `src/features/negotiation-proposals/api/proposals.api.ts` (10-param overload); checkout uses unified `useAcceptProposalMutation` with optional `payment` payload in the same feature (`useProposalClientMutations.ts`). Checkout reads `pricing_signature` via `payment_get_proposal_checkout_context` RPC.
 
 > **Migration:** see §5.2 *Extended RPCs — migration source of truth* — dump `accept_proposal` from local Postgres before writing the migration.
 

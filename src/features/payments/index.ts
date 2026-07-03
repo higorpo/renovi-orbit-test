@@ -6,7 +6,6 @@
  */
 
 export type {
-  ContractedServicePaymentStatus,
   PaymentGatewaySlug,
   PaymentMethodType,
   PaymentProviderMethod,
@@ -34,12 +33,13 @@ export type { UseCheckoutStepperOptions } from "./hooks";
 export {
   getCheckoutStepRequirements,
   getProposalCheckoutContext,
+  fetchInstallmentOptions,
+  acceptProposalWithPayment,
   saveCheckoutCpf,
   saveCheckoutPhone,
   tokenizePaymentCard,
   mapCardFormToTokenizeRequest,
   listActivePaymentTokens,
-  fetchInstallmentOptions,
   revokePaymentToken,
   manualChargePayment,
   fetchPaymentScheduleByContractedService,
@@ -73,6 +73,10 @@ export {
   ManualPaymentRecovery,
   ManualPaymentModal,
   PaymentHistorySection,
+  PaymentDisputeBadge,
+  PaymentDisputeStatus,
+  ProviderSettlementDisclosure,
+  ProviderSettlementStatus,
 } from "./components";
 export type { PaymentHistoryRole } from "./components";
 export {

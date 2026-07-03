@@ -46,6 +46,8 @@ type PaymentScheduleRow = {
   base_amount: number;
   failure_reason: string | null;
   failure_code: string | null;
+  is_disputed: boolean;
+  paid_at: string | null;
 };
 
 type ContractedServiceRow = {
@@ -63,6 +65,8 @@ function mapPaymentSchedule(row: PaymentScheduleRow): PaymentScheduleSummary {
     baseAmount: row.base_amount,
     failureReason: row.failure_reason,
     failureCode: row.failure_code,
+    isDisputed: row.is_disputed,
+    paidAt: row.paid_at,
   };
 }
 
@@ -110,7 +114,7 @@ export async function fetchPaymentScheduleByContractedService(
   const { data, error } = await supabase
     .from("payment_schedules")
     .select(
-      "id, contracted_service_id, state, client_card_token_id, installment_number, base_amount, failure_reason, failure_code",
+      "id, contracted_service_id, state, client_card_token_id, installment_number, base_amount, failure_reason, failure_code, is_disputed, paid_at",
     )
     .eq("contracted_service_id", contractedServiceId)
     .maybeSingle();

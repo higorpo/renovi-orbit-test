@@ -1,7 +1,12 @@
 import { supabase } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
 import type { CardFormData } from "../types/cardForm.validation";
-import type { InstallmentHmacPayload, InstallmentOption, InstallmentOptionsResponse, SavedPaymentToken } from "../types/paymentToken.types";
+import type { InstallmentHmacPayload, SavedPaymentToken } from "../types/paymentToken.types";
+import {
+  fetchInstallmentOptions,
+  type FetchInstallmentOptionsParams,
+  type FetchInstallmentOptionsResult,
+} from "./checkout.api";
 import {
   normalizeCardDigits,
   normalizeExpiryYear,
@@ -63,16 +68,8 @@ export type FetchPaymentTokenResult = {
   error: string | null;
 };
 
-export type FetchInstallmentOptionsParams = {
-  proposalId: string;
-  serviceId: string;
-  cardBrand: string;
-};
-
-export type FetchInstallmentOptionsResult = {
-  data: InstallmentOptionsResponse | null;
-  error: string | null;
-};
+export type { FetchInstallmentOptionsParams, FetchInstallmentOptionsResult };
+export { fetchInstallmentOptions };
 
 export type BlockedPaymentSchedule = {
   scheduleId: string;
@@ -89,6 +86,8 @@ export type RevokePaymentTokenResult = {
   data: RevokePaymentTokenOutcome | null;
   error: string | null;
 };
+
+const CLIENT_CARD_TOKENS_READ_MODEL = "client_card_tokens_safe_v" as const;
 
 const TOKEN_SELECT =
   "id, card_number_masked, card_brand, expiry_month, expiry_year, state";
@@ -162,7 +161,7 @@ export async function fetchPaymentTokenById(
   paymentTokenId: string,
 ): Promise<FetchPaymentTokenResult> {
   const { data, error } = await supabase
-    .from("client_card_tokens")
+    .from(CLIENT_CARD_TOKENS_READ_MODEL)
     .select(TOKEN_SELECT)
     .eq("id", paymentTokenId)
     .maybeSingle();
@@ -185,7 +184,7 @@ export async function listActivePaymentTokens(
   clientId: string,
 ): Promise<ListActivePaymentTokensResult> {
   const { data, error } = await supabase
-    .from("client_card_tokens")
+    .from(CLIENT_CARD_TOKENS_READ_MODEL)
     .select(TOKEN_SELECT)
     .eq("client_id", clientId)
     .eq("state", "ACTIVE")
@@ -248,71 +247,6 @@ export async function tokenizePaymentCard(
     },
     error: null,
   };
-}
-
-function isInstallmentOptionsRpcPayload(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object";
-}
-
-function parseInstallmentOptionsResponse(data: unknown): InstallmentOptionsResponse | null {
-  if (!isInstallmentOptionsRpcPayload(data)) {
-    return null;
-  }
-
-  if (!Array.isArray(data.installment_options)) {
-    return null;
-  }
-
-  if (typeof data.installment_selection_hmac !== "string") {
-    return null;
-  }
-
-  if (!data.installment_hmac_payload || typeof data.installment_hmac_payload !== "object") {
-    return null;
-  }
-
-  const expiresAt = data.expires_at;
-  const computedAt = data.computed_at;
-
-  return {
-    installment_options: data.installment_options as InstallmentOption[],
-    installment_selection_hmac: data.installment_selection_hmac,
-    installment_hmac_payload: data.installment_hmac_payload as InstallmentOptionsResponse["installment_hmac_payload"],
-    expires_at: typeof expiresAt === "string" ? expiresAt : String(expiresAt),
-    ...(computedAt !== undefined
-      ? { computed_at: typeof computedAt === "string" ? computedAt : String(computedAt) }
-      : {}),
-  };
-}
-
-export async function fetchInstallmentOptions(
-  params: FetchInstallmentOptionsParams,
-): Promise<FetchInstallmentOptionsResult> {
-  const result = await invokePaymentRpc(
-    PAYMENT_RPC.calculateInstallmentOptions,
-    {
-      p_proposal_id: params.proposalId,
-      p_service_id: params.serviceId,
-      p_card_brand: params.cardBrand,
-    },
-    isInstallmentOptionsRpcPayload,
-    "payment_calculate_installment_options_invalid_response",
-  );
-
-  if (result.error) {
-    logger.warn("installment_options_fetch_failed", {
-      error: result.error.message,
-      code: result.error.code,
-    });
-    return { data: null, error: paymentsApiErrorToMessage(result.error) };
-  }
-
-  const parsed = parseInstallmentOptionsResponse(result.data);
-  if (!parsed) {
-    return { data: null, error: "invalid_installment_options_response" };
-  }
-
-  return { data: parsed, error: null };
 }
 
 export async function revokePaymentToken(

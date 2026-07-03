@@ -44,5 +44,4 @@ export type ProposalCheckoutContext = {
   providerId: string;
   proposedAmount: number;
   pricingSignature: string;
-  paymentRequired: boolean;
 };

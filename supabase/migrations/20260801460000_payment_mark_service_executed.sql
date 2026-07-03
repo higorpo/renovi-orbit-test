@@ -12,6 +12,7 @@ declare
   v_cs public.contracted_services%rowtype;
   v_schedule_id uuid;
   v_mmd jsonb;
+  v_service_request_title text;
 begin
   if p_service_id is null then
     raise exception 'p_service_id is required'
@@ -86,13 +87,20 @@ begin
     );
   end if;
 
+  select coalesce(nullif(trim(sr.title), ''), 'Serviço')
+  into v_service_request_title
+  from public.service_requests sr
+  where sr.id = v_cs.service_request_id;
+
   v_mmd := public.mmd_ingest_event(
     'SERVICE_EXECUTED',
     v_cs.client_id,
     format('service-executed:%s', p_service_id),
     jsonb_build_object(
       'service_id', p_service_id,
-      'provider_id', v_cs.provider_id
+      'provider_id', v_cs.provider_id,
+      'service_request_title', v_service_request_title,
+      'deep_link_path', format('/dashboard/services/%s', v_cs.service_request_id)
     ),
     jsonb_build_object(
       'source', 'payment_mark_service_executed'

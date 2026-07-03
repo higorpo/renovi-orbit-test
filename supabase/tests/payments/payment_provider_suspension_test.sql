@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(5);
+select plan(6);
 
 create or replace function pg_temp.payment_set_service_role()
 returns void
@@ -178,6 +178,18 @@ select is(
   )->>'outcome',
   'unfrozen',
   'payment_unfreeze_schedule clears charge_frozen_at for ops'
+);
+
+select ok(
+  (
+    select pg_get_functiondef(p.oid) ~* 'provider-suspended:.*:provider'
+      and pg_get_functiondef(p.oid) ~* 'service_request_title'
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'suspend_provider'
+  ),
+  'suspend_provider notifies provider once and enriches client notification payload'
 );
 
 select finish();

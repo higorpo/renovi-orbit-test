@@ -26,6 +26,7 @@ export type CheckoutStepContentProps = {
   stepper: CheckoutStepperRenderProps;
   proposalId?: string;
   serviceId?: string;
+  chatId?: string | null;
   checkoutContext?: CheckoutContext;
   onCheckoutSuccess?: (contractedServiceId: string) => void;
 };
@@ -34,6 +35,7 @@ export function CheckoutStepContent({
   stepper,
   proposalId,
   serviceId,
+  chatId = null,
   checkoutContext,
   onCheckoutSuccess,
 }: CheckoutStepContentProps) {
@@ -136,6 +138,8 @@ export function CheckoutStepContent({
           installmentHmacPayload={stepData.installmentHmacPayload}
           installmentOptions={stepData.installmentOptions ?? []}
           idempotencyKey={idempotencyKey}
+          chatId={chatId}
+          serviceRequestId={serviceId ?? null}
           onSuccess={(contractedServiceId) => onCheckoutSuccess?.(contractedServiceId)}
           onInstallmentSignatureExpired={() => goToStep("installments")}
           onBack={canGoBack ? goBack : undefined}

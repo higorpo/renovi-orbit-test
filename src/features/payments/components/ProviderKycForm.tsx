@@ -180,6 +180,8 @@ export function ProviderKycForm({
         bankBranch: data.bankBranch,
         bankAccount: data.bankAccount,
         pixKey: data.pixKey,
+        identityDocStoragePath: identity.path!,
+        addressProofStoragePath: addressProof.path!,
         identityDocUrl: identity.signedUrl!,
         addressProofUrl: addressProof.signedUrl!,
         ...(data.entityType === "CNPJ"
@@ -189,6 +191,8 @@ export function ProviderKycForm({
               legalRepFullName: data.legalRepFullName,
               legalRepCpf: data.legalRepCpf,
               legalRepPhone: data.legalRepPhone,
+              corporateCharterStoragePath: corporateCharter?.path ?? undefined,
+              legalRepDocStoragePath: legalRepDoc?.path ?? undefined,
               corporateCharterUrl: corporateCharter?.signedUrl ?? undefined,
               legalRepDocUrl: legalRepDoc?.signedUrl ?? undefined,
             }

@@ -137,13 +137,32 @@ begin
     )
   );
 
+  v_notify := public.mmd_ingest_event(
+    'PROVIDER_SUSPENDED',
+    p_provider_id,
+    format('provider-suspended:%s:provider', v_account.id),
+    jsonb_build_object(
+      'provider_id', p_provider_id,
+      'deep_link_path', '/dashboard/profile'
+    ),
+    jsonb_build_object(
+      'source', 'suspend_provider',
+      'recipient', 'provider'
+    )
+  );
+
+  v_notifications := v_notifications || jsonb_build_array(v_notify);
+
   for v_schedule in
     select
       ps.id as schedule_id,
       ps.contracted_service_id,
-      ps.client_id
+      ps.client_id,
+      cs.service_request_id,
+      coalesce(nullif(trim(sr.title), ''), 'Serviço') as service_request_title
     from public.payment_schedules ps
     join public.contracted_services cs on cs.id = ps.contracted_service_id
+    join public.service_requests sr on sr.id = cs.service_request_id
     where ps.provider_id = p_provider_id
       and cs.status = 'PENDING_PAYMENT'::public.contracted_service_status
       and ps.state in (
@@ -183,6 +202,8 @@ begin
         'schedule_id', v_schedule.schedule_id,
         'contracted_service_id', v_schedule.contracted_service_id,
         'provider_id', p_provider_id,
+        'service_request_title', v_schedule.service_request_title,
+        'deep_link_path', format('/dashboard/services/%s', v_schedule.service_request_id),
         'reason', v_reason
       ),
       jsonb_build_object(
@@ -209,7 +230,7 @@ end;
 $$;
 
 comment on function public.suspend_provider(uuid, text) is
-  'Suspends ACTIVE provider, freezes pre-PAID schedules, and notifies affected clients (service_role).';
+  'Suspends ACTIVE provider, freezes pre-PAID schedules, notifies provider and affected clients (service_role).';
 
 revoke all on function public.suspend_provider(uuid, text) from public;
 revoke all on function public.suspend_provider(uuid, text) from anon;
@@ -383,7 +404,7 @@ begin
       v_push_bypass_limits := false;
       v_email_bypass_limits := false;
     when 'PROVIDER_SUSPENDED' then
-      v_template_key := 'payment.provider_suspended';
+      v_template_key := 'account.provider_suspended';
       v_channels := array['push', 'email']::message_dispatcher.message_channel[];
       v_push_bypass_limits := true;
       v_email_bypass_limits := false;

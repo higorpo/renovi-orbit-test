@@ -2,9 +2,11 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { PaymentTrustDisclosure } from "../PaymentTrustDisclosure";
-import { useAcceptProposalWithPayment } from "@/features/negotiation-proposals";
+import {
+  useAcceptProposalMutation,
+  type ProposalSuggestedSlotRpc,
+} from "@/features/negotiation-proposals";
 import type { InstallmentHmacPayload, InstallmentOption } from "../../types/paymentToken.types";
-import type { ProposalSuggestedSlotRpc } from "@/features/negotiation-proposals";
 import { getChargeTimingDisclosure } from "../../utils/chargeTimingDisclosure";
 
 export type ConfirmationStepProps = {
@@ -22,6 +24,8 @@ export type ConfirmationStepProps = {
   installmentHmacPayload: InstallmentHmacPayload;
   installmentOptions: InstallmentOption[];
   idempotencyKey: string;
+  chatId?: string | null;
+  serviceRequestId?: string | null;
   onSuccess: (contractedServiceId: string) => void;
   onInstallmentSignatureExpired: () => void;
   onBack?: () => void;
@@ -41,12 +45,14 @@ export function ConfirmationStep({
   installmentSelectionHmac,
   installmentHmacPayload,
   idempotencyKey,
+  chatId = null,
+  serviceRequestId = null,
   onSuccess,
   onInstallmentSignatureExpired,
   onBack,
 }: ConfirmationStepProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const acceptProposal = useAcceptProposalWithPayment();
+  const acceptProposal = useAcceptProposalMutation(chatId, serviceRequestId);
 
   const chargeDisclosure = useMemo(
     () => getChargeTimingDisclosure(new Date(scheduledDate)),

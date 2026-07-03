@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { dispatchKycEmail, shouldBlockProviderForKyc } from "../kyc.api";
+import { dispatchKycEmail, submitProviderKyc, shouldBlockProviderForKyc } from "../kyc.api";
 import { PAYMENT_EDGE } from "../payments.edge";
+import { PAYMENT_RPC } from "../payments.rpc";
 
 const mockInvoke = vi.fn();
+const mockRpc = vi.fn();
 
 vi.mock("@/lib/supabase/client", () => ({
   supabase: {
+    rpc: (...args: unknown[]) => mockRpc(...args),
     functions: {
       invoke: (...args: unknown[]) => mockInvoke(...args),
     },
@@ -29,9 +32,56 @@ const baseRequest = {
   bankInstitutionCode: "001",
   bankBranch: "1234",
   bankAccount: "56789-0",
+  identityDocStoragePath: "provider-1/identity/document.pdf",
+  addressProofStoragePath: "provider-1/address-proof/document.pdf",
   identityDocUrl: "https://example.com/id.pdf",
   addressProofUrl: "https://example.com/address.pdf",
 };
+
+describe("submitProviderKyc", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("persists KYC via payment_submit_provider_kyc RPC", async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        provider_gateway_account_id: "acc-1",
+        onboarding_status: "DOCUMENTS_SUBMITTED",
+        dispatch_kyc_email_required: true,
+      },
+      error: null,
+    });
+
+    const result = await submitProviderKyc({
+      bankInstitutionCode: "001",
+      bankBranch: "1234",
+      bankAccount: "56789-0",
+      identityDocStoragePath: "provider-1/identity/document.pdf",
+      addressProofStoragePath: "provider-1/address-proof/document.pdf",
+      phone: "48999999999",
+    });
+
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({
+      providerGatewayAccountId: "acc-1",
+      onboardingStatus: "DOCUMENTS_SUBMITTED",
+      dispatchKycEmailRequired: true,
+    });
+    expect(mockRpc).toHaveBeenCalledWith(PAYMENT_RPC.submitProviderKyc, {
+      p_bank_institution_code: "001",
+      p_bank_branch: "1234",
+      p_bank_account: "56789-0",
+      p_identity_doc_storage_path: "provider-1/identity/document.pdf",
+      p_address_proof_storage_path: "provider-1/address-proof/document.pdf",
+      p_pix_key: undefined,
+      p_phone: "48999999999",
+      p_legal_representative_phone: undefined,
+      p_corporate_charter_storage_path: undefined,
+      p_legal_rep_doc_storage_path: undefined,
+    });
+  });
+});
 
 describe("dispatchKycEmail", () => {
   beforeEach(() => {

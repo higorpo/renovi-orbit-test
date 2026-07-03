@@ -164,6 +164,7 @@ export function ServiceDetailPage({
             completionViewerRole={
               isClient ? "client" : isProvider ? "provider" : undefined
             }
+            showProviderSettlement={isProvider}
             onCompletionSuccess={() => void refetch()}
           />
         ) : null}

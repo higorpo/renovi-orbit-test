@@ -14,12 +14,18 @@ export type { PaymentEdgeInvokeResult } from "./paymentApiClient";
 export {
   getCheckoutStepRequirements,
   getProposalCheckoutContext,
+  fetchInstallmentOptions,
+  acceptProposalWithPayment,
   saveCheckoutCpf,
   saveCheckoutPhone,
 } from "./checkout.api";
 export type {
   GetCheckoutStepRequirementsResult,
   GetProposalCheckoutContextResult,
+  FetchInstallmentOptionsParams,
+  FetchInstallmentOptionsResult,
+  AcceptProposalWithPaymentResult,
+  AcceptProposalCheckoutParams,
   SaveCheckoutCpfResult,
   SaveCheckoutPhoneResult,
 } from "./checkout.api";
@@ -29,7 +35,6 @@ export {
   fetchPaymentTokenById,
   tokenizePaymentCard,
   mapCardFormToTokenizeRequest,
-  fetchInstallmentOptions,
   revokePaymentToken,
   updatePaymentMethod,
 } from "./cards.api";
@@ -40,8 +45,6 @@ export type {
   TokenizeCardResult,
   ListActivePaymentTokensResult,
   FetchPaymentTokenResult,
-  FetchInstallmentOptionsParams,
-  FetchInstallmentOptionsResult,
   BlockedPaymentSchedule,
   RevokePaymentTokenOutcome,
   RevokePaymentTokenResult,
@@ -66,6 +69,7 @@ export type {
 export {
   uploadKycDocument,
   validateKycDocumentFile,
+  submitProviderKyc,
   dispatchKycEmail,
   fetchProviderPaymentAccount,
   shouldBlockProviderForKyc,
@@ -74,6 +78,8 @@ export {
 } from "./kyc.api";
 export type {
   DispatchKycRequest,
+  SubmitProviderKycRequest,
+  SubmitProviderKycResult,
   DispatchKycResult,
   UploadKycDocumentResult,
   ProviderPaymentAccount,
@@ -92,6 +98,8 @@ export type {
 import {
   getCheckoutStepRequirements,
   getProposalCheckoutContext,
+  fetchInstallmentOptions,
+  acceptProposalWithPayment,
   saveCheckoutCpf,
   saveCheckoutPhone,
 } from "./checkout.api";
@@ -100,7 +108,6 @@ import {
   fetchPaymentTokenById,
   tokenizePaymentCard,
   mapCardFormToTokenizeRequest,
-  fetchInstallmentOptions,
   revokePaymentToken,
   updatePaymentMethod,
 } from "./cards.api";
@@ -123,6 +130,8 @@ export const paymentsApi = {
   checkout: {
     getStepRequirements: getCheckoutStepRequirements,
     getProposalCheckoutContext,
+    fetchInstallmentOptions,
+    acceptProposalWithPayment,
     saveCpf: saveCheckoutCpf,
     savePhone: saveCheckoutPhone,
   },

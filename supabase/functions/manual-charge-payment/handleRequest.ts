@@ -21,7 +21,6 @@ import type {
   PaymentTokenRecord,
   ProviderAccountRecord,
 } from "./types.ts";
-import type { NotificationIngestInput } from "./enqueueNotifications.ts";
 
 const logger = createPaymentLogger("manual-charge-payment");
 const RATE_LIMIT_CONFIG = { perMinute: 10, failClosed: true };
@@ -59,7 +58,11 @@ export type ManualChargePaymentDeps = {
     providerResponseSummary: Record<string, unknown>;
     actorId: string;
   }) => Promise<string | null>;
-  ingestNotification: (input: NotificationIngestInput) => Promise<void>;
+  enqueueNotification: (
+    scheduleId: string,
+    notificationEvent: string,
+    metadata: Record<string, unknown>,
+  ) => Promise<void>;
   checkRateLimit: typeof checkRateLimit;
   now?: () => number;
 };
@@ -287,7 +290,7 @@ export async function handleManualChargePaymentRequest(
 
   try {
     await enqueueManualChargeNotifications(
-      deps.ingestNotification,
+      deps.enqueueNotification,
       schedule,
       outcome,
       chargeAmount,

@@ -15,16 +15,14 @@ import {
 } from "@/features/view-services";
 import { SERVICE_REQUEST_BUDGET_COMPARE_DETAIL_QUERY_KEY } from "../constants/queryKeys";
 import {
-  acceptProposal,
   acceptProposalWithPayment,
   rejectProposal,
   requestProposalRevision,
 } from "../api/proposals.api";
 import type {
-  AcceptProposalWithPaymentMutationParams,
-  AcceptProposalWithPaymentMutationResult,
+  AcceptProposalMutationParams,
+  AcceptProposalMutationResult,
   ProposalRevisionReason,
-  ProposalSuggestedSlotRpc,
 } from "../types/proposals.types";
 import type { ProposalsApiError } from "../types/proposals.types";
 import { getClientIpBestEffort } from "@/lib/getClientIp";
@@ -43,6 +41,23 @@ function invalidateChatQueries(
   void queryClient.invalidateQueries({ queryKey: [CHAT_PROPOSAL_TIMELINE_QUERY_KEY, chatId] });
   void queryClient.invalidateQueries({ queryKey: [CHAT_FREE_MESSAGING_QUERY_KEY, chatId] });
   void queryClient.invalidateQueries({ queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY] });
+}
+
+function invalidateAfterAccept(
+  queryClient: ReturnType<typeof useQueryClient>,
+  chatId: string | null,
+  serviceRequestId: string | null,
+) {
+  invalidateChatQueries(queryClient, chatId);
+  void queryClient.invalidateQueries({ queryKey: SERVICES_LIST_QUERY_KEY });
+  if (serviceRequestId) {
+    void queryClient.invalidateQueries({
+      queryKey: [...SERVICE_DETAIL_QUERY_KEY, serviceRequestId],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: [SERVICE_REQUEST_BUDGET_COMPARE_DETAIL_QUERY_KEY, serviceRequestId],
+    });
+  }
 }
 
 function handleMutationError(error: unknown, fallback: string) {
@@ -66,64 +81,26 @@ export function useAcceptProposalMutation(
   const analytics = useChatAnalytics();
   const isOnline = useOnlineStatus();
 
-  return useMutation({
-    mutationFn: async (params: { proposalId: string; selectedSlot: ProposalSuggestedSlotRpc }) => {
+  return useMutation<AcceptProposalMutationResult, Error, AcceptProposalMutationParams>({
+    mutationFn: async (params) => {
       if (!isOnline) {
         throw new Error("OFFLINE");
       }
 
-      const result = await acceptProposal(params);
-      if (result.error || !result.data) {
-        throw result.error ?? new Error("Não foi possível aceitar a proposta.");
-      }
-
-      return result.data;
-    },
-    onSuccess: (_data, variables) => {
-      if (chatId && serviceRequestId) {
-        analytics.proposal_accepted({
-          proposal_id: variables.proposalId,
-          chat_id: chatId,
-          service_request_id: serviceRequestId,
-        });
-      }
-      invalidateChatQueries(queryClient, chatId);
-      void queryClient.invalidateQueries({ queryKey: SERVICES_LIST_QUERY_KEY });
-      if (serviceRequestId) {
-        void queryClient.invalidateQueries({
-          queryKey: [...SERVICE_DETAIL_QUERY_KEY, serviceRequestId],
-        });
-        void queryClient.invalidateQueries({
-          queryKey: [SERVICE_REQUEST_BUDGET_COMPARE_DETAIL_QUERY_KEY, serviceRequestId],
-        });
-      }
-      toast.success("Proposta aceita com sucesso.");
-    },
-    onError: (error) => handleMutationError(error, "Não foi possível aceitar a proposta."),
-  });
-}
-
-export function useAcceptProposalWithPayment() {
-  return useMutation<
-    AcceptProposalWithPaymentMutationResult,
-    Error,
-    AcceptProposalWithPaymentMutationParams
-  >({
-    mutationFn: async (request) => {
-      const clientIp = request.clientIp !== undefined
-        ? request.clientIp
+      const clientIp = params.clientIp !== undefined
+        ? params.clientIp
         : await getClientIpBestEffort();
 
       const result = await acceptProposalWithPayment({
-        proposalId: request.proposalId,
-        selectedSlot: request.selectedSlot,
-        idempotencyKey: request.idempotencyKey,
-        clientCardTokenId: request.paymentTokenId,
-        installmentNumber: request.installmentNumber,
-        installmentSelectionHmac: request.installmentSelectionHmac,
-        installmentHmacPayload: request.installmentHmacPayload,
-        clearsaleSessionId: request.clearsaleSessionId,
-        pricingSignature: request.pricingSignature,
+        proposalId: params.proposalId,
+        selectedSlot: params.selectedSlot,
+        idempotencyKey: params.idempotencyKey,
+        clientCardTokenId: params.paymentTokenId,
+        installmentNumber: params.installmentNumber,
+        installmentSelectionHmac: params.installmentSelectionHmac,
+        installmentHmacPayload: params.installmentHmacPayload,
+        clearsaleSessionId: params.clearsaleSessionId,
+        pricingSignature: params.pricingSignature,
         clientIp,
       });
 
@@ -131,6 +108,10 @@ export function useAcceptProposalWithPayment() {
         const error = new Error(result.error?.message ?? "accept_proposal_failed");
         if (result.error?.code && result.error.code !== "UNKNOWN") {
           (error as Error & { code?: string }).code = result.error.code;
+        }
+        if (result.error?.retryAfterSeconds != null) {
+          (error as Error & { retryAfterSeconds?: number }).retryAfterSeconds =
+            result.error.retryAfterSeconds;
         }
         throw error;
       }
@@ -140,8 +121,21 @@ export function useAcceptProposalWithPayment() {
         scheduleId: result.data.payment_schedule?.id,
       };
     },
-    gcTime: 0,
-    staleTime: 0,
+    onSuccess: (_data, variables) => {
+      if (chatId && serviceRequestId) {
+        analytics.proposal_accepted({
+          proposal_id: variables.proposalId,
+          chat_id: chatId,
+          service_request_id: serviceRequestId,
+        });
+      }
+      invalidateAfterAccept(queryClient, chatId, serviceRequestId);
+
+      if (chatId) {
+        toast.success("Proposta aceita com sucesso.");
+      }
+    },
+    onError: (error) => handleMutationError(error, "Não foi possível aceitar a proposta."),
   });
 }
 

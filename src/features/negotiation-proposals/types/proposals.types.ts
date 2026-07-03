@@ -85,21 +85,8 @@ export interface AcceptProposalResult {
   };
 }
 
-export type AcceptProposalWithPaymentParams = {
-  proposalId: string;
-  selectedSlot: ProposalSuggestedSlotRpc;
-  idempotencyKey?: string;
-  clientCardTokenId: string;
-  installmentNumber: number;
-  installmentSelectionHmac: string;
-  installmentHmacPayload: Record<string, unknown>;
-  clearsaleSessionId: string;
-  pricingSignature: string;
-  clientIp: string | null;
-};
-
-/** Checkout/UI params for `useAcceptProposalWithPayment` (maps paymentTokenId → RPC). */
-export type AcceptProposalWithPaymentMutationParams = {
+/** Params for `useAcceptProposalMutation` — payment fields are required. */
+export type AcceptProposalMutationParams = {
   proposalId: string;
   selectedSlot: ProposalSuggestedSlotRpc;
   paymentTokenId: string;
@@ -112,9 +99,22 @@ export type AcceptProposalWithPaymentMutationParams = {
   clientIp?: string | null;
 };
 
-export type AcceptProposalWithPaymentMutationResult = {
+export type AcceptProposalMutationResult = {
   contractedServiceId: string;
   scheduleId?: string;
+};
+
+export type AcceptProposalWithPaymentParams = {
+  proposalId: string;
+  selectedSlot: ProposalSuggestedSlotRpc;
+  idempotencyKey?: string;
+  clientCardTokenId: string;
+  installmentNumber: number;
+  installmentSelectionHmac: string;
+  installmentHmacPayload: Record<string, unknown>;
+  clearsaleSessionId: string;
+  pricingSignature: string;
+  clientIp: string | null;
 };
 
 /** `reject_proposal`, `request_proposal_revision`, `decline_revision_request` responses. */

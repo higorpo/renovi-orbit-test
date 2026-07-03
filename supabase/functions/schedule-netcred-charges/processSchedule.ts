@@ -3,6 +3,7 @@ import {
   PAYMENT_LOG_EVENTS,
 } from "../_shared/observability/payment-logger.ts";
 import { emitMissingClearSaleSessionWarning } from "../_shared/observability/payment-sentry-matrix.ts";
+import { ProviderAuthError } from "../_shared/payment/errors.ts";
 import type {
   CreateChargeInput,
   CreateChargeResult,
@@ -162,6 +163,42 @@ async function commitFromExistingTransaction(
   return commitFromChargeResult(deps, schedule, chargeResult, chargeAmount, 0, true);
 }
 
+async function commitAuthFailure(
+  deps: ProcessScheduleDeps,
+  schedule: CronChargeSchedule,
+  chargeAmount: string,
+  error: ProviderAuthError,
+): Promise<ProcessedScheduleResult> {
+  await deps.commitResult({
+    scheduleId: schedule.id,
+    outcome: "FAILED",
+    chargeAmount,
+    failureCode: "NETCRED_AUTH_FAILURE",
+    failureReason: error.message,
+    gatewayLatencyMs: 0,
+    providerResponseSummary: {
+      auth_failure: true,
+      error_code: "NETCRED_AUTH_FAILURE",
+    },
+    undoAttemptIncrement: true,
+  });
+
+  logger.info(PAYMENT_LOG_EVENTS.CHARGE_ATTEMPT_COMPLETED, {
+    ...scheduleContext(schedule),
+    outcome: "FAILED",
+    auth_failure: true,
+    attempt_number: schedule.automatic_attempt_count,
+    initiator: "cron",
+  });
+
+  return {
+    scheduleId: schedule.id,
+    outcome: "FAILED",
+    chargeAmount,
+    reconciled: false,
+  };
+}
+
 export async function processSchedule(
   deps: ProcessScheduleDeps,
   schedule: CronChargeSchedule,
@@ -225,7 +262,15 @@ export async function processSchedule(
     customerIpAddress: schedule.client_ip_address ?? undefined,
   };
 
-  const execution = await executeCharge(deps, schedule, chargeInput);
+  let execution: Awaited<ReturnType<typeof executeCharge>>;
+  try {
+    execution = await executeCharge(deps, schedule, chargeInput);
+  } catch (error) {
+    if (error instanceof ProviderAuthError) {
+      return commitAuthFailure(deps, schedule, chargeAmount, error);
+    }
+    throw error;
+  }
 
   if (execution.kind === "reconciled") {
     if (execution.existing.transactionState === "PAID") {

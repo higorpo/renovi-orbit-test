@@ -2,6 +2,10 @@
 
 Use after migrations + Edge Functions are deployed. See [`phased-cron-enablement-plan.md`](./phased-cron-enablement-plan.md) (production deploy guide).
 
+**Pre-production gate:** complete 72h staging soak per [`staging-soak-test-runbook.md`](./staging-soak-test-runbook.md) (Task 128) before Phase E money movement.
+
+**Post-rollout monitoring:** [`payment-job-runs-monitoring.md`](./payment-job-runs-monitoring.md) — `payment_ops_job_health()` + SQL query pack (Task 130).
+
 ## Deploy verification
 
 - [ ] All eight payment pg_cron jobs exist and are **active**

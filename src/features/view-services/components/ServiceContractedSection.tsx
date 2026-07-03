@@ -1,5 +1,5 @@
 import { Calendar, CircleCheck, User } from "lucide-react";
-import { ManualPaymentRecovery } from "@/features/payments";
+import { ManualPaymentRecovery, PaymentDisputeStatus, ProviderSettlementStatus } from "@/features/payments";
 import {
   ServiceCompletionActions,
   type ServiceCompletionViewerRole,
@@ -14,6 +14,7 @@ interface ServiceContractedSectionProps {
   showManualPayment?: boolean;
   showServiceCompletion?: boolean;
   completionViewerRole?: ServiceCompletionViewerRole;
+  showProviderSettlement?: boolean;
   onCompletionSuccess?: () => void;
 }
 
@@ -23,6 +24,7 @@ export function ServiceContractedSection({
   showManualPayment = false,
   showServiceCompletion = false,
   completionViewerRole,
+  showProviderSettlement = false,
   onCompletionSuccess,
 }: ServiceContractedSectionProps) {
   const providerName = contracted.provider?.displayName;
@@ -32,6 +34,9 @@ export function ServiceContractedSection({
       title="Serviço contratado"
       className="border-primary/15 bg-primary-soft/50 shadow-none"
     >
+      <div className="mb-2.5">
+        <PaymentDisputeStatus contractedServiceId={contracted.id} />
+      </div>
       <div className="space-y-2.5 text-caption text-body">
         {providerName ? (
           <p className="flex items-center gap-2">
@@ -58,6 +63,11 @@ export function ServiceContractedSection({
           </p>
         ) : null}
       </div>
+      {showProviderSettlement ? (
+        <div className="pt-2">
+          <ProviderSettlementStatus contractedServiceId={contracted.id} />
+        </div>
+      ) : null}
       {showManualPayment && serviceRequestId ? (
         <div className="pt-3">
           <ManualPaymentRecovery

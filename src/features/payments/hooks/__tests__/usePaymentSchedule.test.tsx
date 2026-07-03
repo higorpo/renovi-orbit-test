@@ -35,6 +35,8 @@ describe("usePaymentSchedule", () => {
         baseAmount: 1000,
         failureReason: null,
         failureCode: null,
+        isDisputed: false,
+        paidAt: null,
       },
       error: null,
     });

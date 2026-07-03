@@ -103,6 +103,8 @@ describe("fetchPaymentScheduleByContractedService", () => {
           base_amount: 1000,
           failure_reason: "Card declined",
           failure_code: "REJECTED",
+          is_disputed: true,
+          paid_at: "2026-07-01T12:00:00.000Z",
         },
         error: null,
       }),
@@ -120,6 +122,8 @@ describe("fetchPaymentScheduleByContractedService", () => {
       baseAmount: 1000,
       failureReason: "Card declined",
       failureCode: "REJECTED",
+      isDisputed: true,
+      paidAt: "2026-07-01T12:00:00.000Z",
     });
   });
 });

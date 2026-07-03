@@ -116,6 +116,57 @@ Deno.test("invalid signature returns 401 and marks event failed", async () => {
   assertEquals(failedReason, "INVALID_SIGNATURE");
 });
 
+Deno.test("invalid signature does not mutate state beyond ingest", async () => {
+  let persisted = false;
+  let failedReason = "";
+  let warningEmitted = false;
+  let duplicateMarked = false;
+  let validatingMarked = false;
+  let processed = false;
+  let queued = false;
+
+  const response = await handleNetcredWebhookRequest(
+    webhookRequest('{"id":"evt-invalid"}', {
+      eventType: "TRANSACTION_CAPTURE",
+      signature: "deadbeef",
+    }),
+    createDeps({
+      persistWebhookEvent: async () => {
+        persisted = true;
+        return { status: "inserted", eventId: "event-invalid" };
+      },
+      markFailed: async (_eventId, reason) => {
+        failedReason = reason;
+      },
+      markDuplicate: async () => {
+        duplicateMarked = true;
+      },
+      markValidating: async () => {
+        validatingMarked = true;
+      },
+      processWebhookEvent: async () => {
+        processed = true;
+        return { outcome: "processed" };
+      },
+      enqueueHeavyProcessing: async () => {
+        queued = true;
+      },
+      emitInvalidSignatureWarning: () => {
+        warningEmitted = true;
+      },
+    }),
+  );
+
+  assertEquals(response.status, 401);
+  assertEquals(persisted, true);
+  assertEquals(failedReason, "INVALID_SIGNATURE");
+  assertEquals(warningEmitted, true);
+  assertEquals(duplicateMarked, false);
+  assertEquals(validatingMarked, false);
+  assertEquals(processed, false);
+  assertEquals(queued, false);
+});
+
 Deno.test("duplicate webhook returns 200 and marks duplicate", async () => {
   let duplicateMarked = false;
 

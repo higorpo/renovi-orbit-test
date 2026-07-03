@@ -9,7 +9,6 @@ export { CNS_PROPOSAL_RPC, type CnsProposalRpcName } from "./api/proposals.rpc";
 export {
   proposalsApi,
   createProviderProposal,
-  acceptProposal,
   acceptProposalWithPayment,
   rejectProposal,
   requestProposalRevision,
@@ -33,9 +32,9 @@ export type {
   ProposalSuggestedSlotRpc,
   ProposalVersionListResponse,
   AcceptProposalResult,
+  AcceptProposalMutationParams,
+  AcceptProposalMutationResult,
   AcceptProposalWithPaymentParams,
-  AcceptProposalWithPaymentMutationParams,
-  AcceptProposalWithPaymentMutationResult,
   ProposalMutationResult,
   ProposalBusinessErrorCode,
   ProposalsApiError,
@@ -123,7 +122,6 @@ export {
 } from "./components/ProposalRevisionCounter";
 export {
   useAcceptProposalMutation,
-  useAcceptProposalWithPayment,
   useRejectProposalMutation,
   useRequestProposalRevisionMutation,
 } from "./hooks/useProposalClientMutations";

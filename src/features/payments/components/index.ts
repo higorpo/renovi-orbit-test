@@ -26,10 +26,7 @@ export type { SavedCardsListProps } from "./SavedCards/SavedCardsList";
 export { ProviderKycForm } from "./ProviderKycForm";
 export type { ProviderKycFormProps } from "./ProviderKycForm";
 export { ProviderKycGate } from "./ProviderKycGate";
-export {
-  ManualPaymentButton,
-  ManualPaymentRecovery,
-} from "./ManualPaymentButton";
+export { ManualPaymentButton, ManualPaymentRecovery } from "./ManualPaymentButton";
 export type {
   ManualPaymentButtonProps,
   ManualPaymentRecoveryProps,
@@ -43,3 +40,11 @@ export type {
 } from "./PaymentHistory/PaymentHistorySection";
 export { ClientPaymentHistoryList } from "./PaymentHistory/ClientPaymentHistoryList";
 export { ProviderPaymentHistoryList } from "./PaymentHistory/ProviderPaymentHistoryList";
+export { PaymentDisputeBadge } from "./PaymentDisputeBadge";
+export type { PaymentDisputeBadgeProps } from "./PaymentDisputeBadge";
+export { PaymentDisputeStatus } from "./PaymentDisputeStatus";
+export type { PaymentDisputeStatusProps } from "./PaymentDisputeStatus";
+export { ProviderSettlementDisclosure } from "./ProviderSettlementDisclosure";
+export type { ProviderSettlementDisclosureProps } from "./ProviderSettlementDisclosure";
+export { ProviderSettlementStatus } from "./ProviderSettlementStatus";
+export type { ProviderSettlementStatusProps } from "./ProviderSettlementStatus";

@@ -54,7 +54,7 @@ function createDeps(overrides: Partial<ManualChargePaymentDeps> = {}): ManualCha
       transactionId: "tx-1",
     }),
     commitResult: async () => "schedule-1",
-    ingestNotification: async () => {},
+    enqueueNotification: async () => {},
     checkRateLimit: async () => ({ allowed: true, retryAfter: 0 }),
     ...overrides,
   };
