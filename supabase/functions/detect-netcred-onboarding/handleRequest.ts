@@ -26,7 +26,7 @@ export type DetectNetcredOnboardingDeps = {
   loadPendingProviders: (limit: number) => Promise<PendingProviderAccount[]>;
   fetchCompaniesBatch: (
     query: string,
-  ) => Promise<Record<string, CompanyQueryResult | undefined>>;
+  ) => Promise<Record<string, CompanyQueryResult | null | undefined>>;
   activateProvider: (input: {
     providerAccountId: string;
     netcredCompanyId: string;

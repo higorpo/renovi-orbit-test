@@ -4,7 +4,7 @@ import { emitProviderMultipleEdgesWarning } from "../_shared/observability/payme
 import { createPaymentLogger } from "../_shared/observability/payment-logger.ts";
 import { fetchWithTimeout } from "../_shared/providerHttp.ts";
 import { getNetCredToken, resolveIsProduction } from "../_shared/payment/netcred-auth.ts";
-import { resolveNetCredApiBaseUrl } from "../_shared/payment/constants.ts";
+import { resolveNetCredApiBaseUrl, buildNetCredAuthorizationHeader } from "../_shared/payment/constants.ts";
 import { createServiceRoleClient } from "../_shared/serviceRoleClient.ts";
 import {
   handleDetectNetcredOnboardingRequest,
@@ -58,7 +58,7 @@ function createDeps(): DetectNetcredOnboardingDeps {
       const response = await fetchWithTimeout(graphqlUrl, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: buildNetCredAuthorizationHeader(token),
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ query }),
@@ -69,8 +69,18 @@ function createDeps(): DetectNetcredOnboardingDeps {
       }
 
       const payload = await response.json() as {
-        data?: Record<string, CompanyQueryResult>;
+        data?: Record<string, CompanyQueryResult | null>;
+        errors?: Array<{ message?: string }>;
       };
+
+      const authError = payload.errors?.find((entry) =>
+        /not logged in|unauthorized|unauthenticated|invalid token/i.test(
+          entry.message ?? "",
+        )
+      );
+      if (authError) {
+        throw new Error(`NETCRED_GRAPHQL_AUTH: ${authError.message}`);
+      }
 
       return payload.data ?? {};
     },

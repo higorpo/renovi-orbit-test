@@ -25,7 +25,7 @@ import {
   isReferenceCodeConflict,
   isTerminalGatewayError,
 } from "./netcred-charge-errors.ts";
-import { resolveNetCredApiBaseUrl } from "./constants.ts";
+import { buildNetCredAuthorizationHeader, resolveNetCredApiBaseUrl } from "./constants.ts";
 import { BillingAddressRequiredError } from "./errors.ts";
 import type {
   BillingAddress,
@@ -815,7 +815,7 @@ export class NetCredAdapter {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `JWT ${token}`,
+          Authorization: buildNetCredAuthorizationHeader(token),
         },
         body: JSON.stringify({ query, variables }),
       },

@@ -78,8 +78,8 @@ export function resolveCompanyOutcome(
 }
 
 export function pickAliasResult(
-  data: Record<string, CompanyQueryResult | undefined>,
+  data: Record<string, CompanyQueryResult | null | undefined>,
   account: PendingProviderAccount,
-): CompanyQueryResult | undefined {
+): CompanyQueryResult | null | undefined {
   return data[providerAliasKey(account.document)];
 }

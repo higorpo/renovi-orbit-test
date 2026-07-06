@@ -44,6 +44,11 @@ export function resolveNetCredApiBaseUrl(
   return url.replace(/\/+$/, "");
 }
 
+/** NetCred GraphQL expects `Authorization: JWT <token>`, not Bearer. */
+export function buildNetCredAuthorizationHeader(token: string): string {
+  return `JWT ${token}`;
+}
+
 export const PAYMENT_PLATFORM_CONSTANT_KEYS = [
   "cc_visa_master_1x_rate",
   "cc_visa_master_2_6x_rate",

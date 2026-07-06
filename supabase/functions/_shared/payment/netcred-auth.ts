@@ -184,9 +184,11 @@ async function callTokenAuth(
 }
 
 async function releaseRefreshLock(deps: NetCredAuthDeps): Promise<void> {
-  await deps.supabase.rpc("release_netcred_token_refresh_lock").catch(() => {
+  try {
+    await deps.supabase.rpc("release_netcred_token_refresh_lock");
+  } catch {
     // Best-effort unlock after tokenAuth failure.
-  });
+  }
 }
 
 function truncateAuthMessage(message: string): string {
