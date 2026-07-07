@@ -8,7 +8,7 @@ Deno.test("isValidCpf accepts valid CPF", () => {
 });
 
 Deno.test("isValidCpf rejects invalid CPF", () => {
-  assertEquals(isValidCpf("123.456.789-00"), false);
+  assertEquals(isValidCpf("504.432.630-51"), false);
 });
 
 const validCustomer = {

@@ -100,10 +100,10 @@ describe("useClientPrivateProfile", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    await result.current.updateCpfAsync({ cpf: "123.456.789-00" });
+    await result.current.updateCpfAsync({ cpf: "504.432.630-51" });
 
     expect(updateClientPrivateProfile).toHaveBeenCalledWith("client-1", {
-      cpf: "123.456.789-00",
+      cpf: "504.432.630-51",
     });
   });
 

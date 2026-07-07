@@ -760,7 +760,7 @@ mutation paymentProfileCreateCard($input: PaymentProfileCreateInput!) {
 | Regra | Detalhe |
 |-------|---------|
 | **`customerInput.persist: false`** | Sempre enviar `customerInput` completo em cada `paymentProfileCreate`. Não depender de `customerId` de chamadas anteriores na Netcred. |
-| **CPF válido** | O `document` deve ser um CPF/CNPJ válido (dígitos verificadores corretos). CPFs fictícios do `supabase/seed.sql` (ex.: `123.456.789-00`) **falham** na Netcred — usar CPFs válidos nos seeds de clientes usados em testes de pagamento (ex.: `03019758092` para Maria da Silva). |
+| **CPF válido** | O `document` deve ser um CPF/CNPJ válido (dígitos verificadores corretos). CPFs fictícios do `supabase/seed.sql` (ex.: `504.432.630-51`) **falham** na Netcred — usar CPFs válidos nos seeds de clientes usados em testes de pagamento (ex.: `03019758092` para Maria da Silva). |
 | **`cardHolderName` = nome do titular** | `ccInput.cardHolderName` deve ser o mesmo nome do titular da conta Renovi (`profiles.full_name` / nome exibido no checkout), não um alias arbitrário. |
 | **`companyId`** | ID da Company `MERCHANT` retornado por `getCompanies` no ambiente correto (sandbox vs produção). |
 

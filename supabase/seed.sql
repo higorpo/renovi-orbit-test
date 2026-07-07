@@ -400,7 +400,7 @@ update public.profiles set phone = '(48) 98654-3210'
 where id = '4cf92e3a-64cd-4491-998e-9163138f8e96' and phone is null;
 
 -- 4) client_profiles_private (CPF)
-update public.client_profiles_private set cpf = '123.456.789-00'
+update public.client_profiles_private set cpf = '504.432.630-51'
 where client_id = '28e30f1d-3c47-441f-94c6-76b6ea0db470' and cpf is null;
 
 update public.client_profiles_private set cpf = '111.222.333-44'
