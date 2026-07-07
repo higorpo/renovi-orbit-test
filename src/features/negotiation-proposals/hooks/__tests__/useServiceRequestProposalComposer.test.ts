@@ -619,6 +619,35 @@ describe("useServiceRequestProposalComposer", () => {
     await expectSubmitRejected(() => result.current.submitProposal());
   });
 
+  it("rejects submit when start date is today", async () => {
+    mockPricingResult({
+      data: {
+        original_amount: 100,
+        tax_rate: 0,
+        tax_amount: 0,
+        final_amount: 100,
+        pricing_signature: "s",
+      },
+      error: null,
+    });
+    const { result } = renderHook(() => useServiceRequestProposalComposer({ serviceRequestId: "sr-1" }), {
+      wrapper: createWrapper(),
+    });
+    const today = new Date();
+    const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    act(() => {
+      result.current.openComposer();
+      result.current.setPriceInput("100");
+      result.current.setDescriptionDraft("Ok");
+      result.current.setDurationValueInput("1");
+      result.current.updateAvailabilitySlot(0, "startDate", todayIso);
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(1500);
+    });
+    await expectSubmitRejected(() => result.current.submitProposal());
+  });
+
   it("rejects days mode when end date is missing", async () => {
     mockPricingResult({
       data: {

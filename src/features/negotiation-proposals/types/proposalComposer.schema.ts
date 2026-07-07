@@ -99,11 +99,11 @@ export function createProposalComposerSchema(
         } else {
           const start = new Date(`${slot.startDate}T00:00:00`);
           const today = getTodayDateAtLocalMidnight();
-          if (start < today) {
+          if (start <= today) {
             context.addIssue({
               code: z.ZodIssueCode.custom,
               path: ["availabilitySlots", index, "startDate"],
-              message: "A data de início não pode ser anterior à data atual.",
+              message: "A data de início deve ser a partir de amanhã.",
             });
           }
         }

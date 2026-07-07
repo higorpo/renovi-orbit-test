@@ -89,12 +89,20 @@ select ok(
 -- ---------------------------------------------------------------------------
 
 select ok(
-  not has_function_privilege('anon', 'public.accept_proposal(uuid, jsonb, uuid)'::regprocedure, 'EXECUTE'),
+  not has_function_privilege(
+    'anon',
+    'public.accept_proposal(uuid, jsonb, uuid, uuid, smallint, text, jsonb, text, text, text)'::regprocedure,
+    'EXECUTE'
+  ),
   'anon cannot execute accept_proposal'
 );
 
 select ok(
-  has_function_privilege('authenticated', 'public.accept_proposal(uuid, jsonb, uuid)'::regprocedure, 'EXECUTE'),
+  has_function_privilege(
+    'authenticated',
+    'public.accept_proposal(uuid, jsonb, uuid, uuid, smallint, text, jsonb, text, text, text)'::regprocedure,
+    'EXECUTE'
+  ),
   'authenticated can execute accept_proposal'
 );
 

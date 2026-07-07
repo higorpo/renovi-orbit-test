@@ -3,6 +3,7 @@
 begin;
 
 \ir ../chats/fixtures/seed_chat.inc
+\ir ../fixtures/accept_proposal_payment_helpers.inc
 
 select plan(9);
 
@@ -105,7 +106,7 @@ from pricing;
 
 select pg_temp.cns_set_auth((select client_id from _scoped_providers));
 
-select public.accept_proposal(
+select pg_temp.cns_accept_proposal_with_payment(
   (select (submit_response->'proposal'->>'id')::uuid from _scoped_submit),
   (select selected_slot from _scoped_slot),
   'f3333333-3333-4333-8333-333333333333'::uuid

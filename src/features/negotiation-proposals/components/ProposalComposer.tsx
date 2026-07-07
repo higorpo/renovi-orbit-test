@@ -20,6 +20,10 @@ import type {
 import { getInclusiveDayRangeHint } from "../types/proposalComposer.schema";
 import { maskBudgetInput } from "../utils/proposalComposerInput";
 import { formatCurrency } from "@/lib/formatCurrency";
+import {
+  addCalendarDaysIso,
+  todayCalendarIso,
+} from "@/features/view-services/utils/serviceCalendarDate";
 
 export interface ProposalComposerProps {
   form: UseFormReturn<ProposalComposerFormValues>;
@@ -245,6 +249,7 @@ export function ProposalComposer({
                               <Input
                                 id={`slot-start-${index}`}
                                 type="date"
+                                min={addCalendarDaysIso(todayCalendarIso(), 1)}
                                 value={startField.value}
                                 onChange={startField.onChange}
                               />
@@ -265,6 +270,7 @@ export function ProposalComposer({
                                 <Input
                                   id={`slot-end-${index}`}
                                   type="date"
+                                  min={addCalendarDaysIso(todayCalendarIso(), 1)}
                                   value={endField.value}
                                   onChange={endField.onChange}
                                 />

@@ -4,6 +4,7 @@
 begin;
 
 \ir fixtures/seed_chat.inc
+\ir ../fixtures/accept_proposal_payment_helpers.inc
 
 select plan(10);
 
@@ -296,7 +297,7 @@ select jsonb_build_object(
 
 select lives_ok(
   $sql$
-    select public.accept_proposal(
+    select pg_temp.cns_accept_proposal_with_payment(
       (select (response->'proposal'->>'id')::uuid from _dual_accept_submit_a),
       (select selected_slot from _dual_accept_slot),
       'f1030014-0014-4014-8014-000000000014'::uuid
@@ -307,7 +308,7 @@ select lives_ok(
 
 select throws_ok(
   $sql$
-    select public.accept_proposal(
+    select pg_temp.cns_accept_proposal(
       (select (response->'proposal'->>'id')::uuid from _dual_accept_submit_b),
       (select selected_slot from _dual_accept_slot),
       'f1030015-0015-4015-8015-000000000015'::uuid
@@ -362,7 +363,7 @@ select lives_ok(
 
 select throws_ok(
   $sql$
-    select public.accept_proposal(
+    select pg_temp.cns_accept_proposal(
       (select (response->'proposal'->>'id')::uuid from _cancel_race_submit),
       jsonb_build_object(
         'start_date', (current_date + 2)::text,
@@ -398,7 +399,7 @@ select pg_temp.cns_set_auth('28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid);
 
 select lives_ok(
   $sql$
-    select public.accept_proposal(
+    select pg_temp.cns_accept_proposal_with_payment(
       (select (response->'proposal'->>'id')::uuid from _accept_race_submit),
       jsonb_build_object(
         'start_date', (current_date + 2)::text,

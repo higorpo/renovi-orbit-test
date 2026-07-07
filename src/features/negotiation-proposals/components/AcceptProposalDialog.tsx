@@ -20,6 +20,7 @@ import type { ProposalSuggestedSlotRpc } from "../types/proposals.types";
 import { MAX_PROPOSAL_REVISIONS } from "../constants/proposalRevisions";
 import { AcceptProposalDialogSkeleton } from "./proposalDialogSkeletons";
 import { formatProposalSuggestedSlot } from "../utils/formatProposalSuggestedSlot";
+import { todayCalendarIso } from "@/features/view-services/utils/serviceCalendarDate";
 
 type AcceptDialogPhase = "slot" | "checkout";
 
@@ -64,7 +65,12 @@ export function AcceptProposalDialog({
     setPhase("slot");
   }, [open, proposalId]);
 
-  const selectedSlot = suggestedSlots[selectedIndex] ?? null;
+  const bookableSlots = useMemo(
+    () => suggestedSlots.filter((slot) => slot.start_date > todayCalendarIso()),
+    [suggestedSlots],
+  );
+
+  const selectedSlot = bookableSlots[selectedIndex] ?? null;
   const checkoutContext = useMemo(() => {
     if (!selectedSlot || !checkoutContextQuery.data) {
       return undefined;
@@ -88,7 +94,7 @@ export function AcceptProposalDialog({
     !revisionLimitReached &&
     !isLoading &&
     !isError &&
-    suggestedSlots.length > 0 &&
+    bookableSlots.length > 0 &&
     phase === "slot";
 
   const handleSlotContinue = () => {
@@ -168,16 +174,18 @@ export function AcceptProposalDialog({
                 </div>
               ) : null}
 
-              {!isLoading && !isError && suggestedSlots.length === 0 ? (
+              {!isLoading && !isError && bookableSlots.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Não há datas disponíveis nesta proposta. Atualize a conversa e tente novamente.
+                  {suggestedSlots.length > 0
+                    ? "As datas sugeridas nesta proposta não estão mais disponíveis para agendamento. Solicite uma revisão ao prestador."
+                    : "Não há datas disponíveis nesta proposta. Atualize a conversa e tente novamente."}
                 </p>
               ) : null}
 
-              {!isLoading && !isError && suggestedSlots.length > 0 ? (
+              {!isLoading && !isError && bookableSlots.length > 0 ? (
                 <fieldset className="space-y-3">
                   <legend className="text-sm font-medium text-foreground">Data de execução</legend>
-                  {suggestedSlots.map((slot, index) => (
+                  {bookableSlots.map((slot, index) => (
                     <label
                       key={`${slot.start_date}-${slot.shift}-${index}`}
                       className={cn(
@@ -231,7 +239,7 @@ export function AcceptProposalDialog({
             <Button
               type="button"
               disabled={
-                !canSubmitSlot || isPrimaryPending || isLoading || isError || suggestedSlots.length === 0
+                !canSubmitSlot || isPrimaryPending || isLoading || isError || bookableSlots.length === 0
               }
               onClick={handleSlotContinue}
             >

@@ -219,7 +219,11 @@ select ok(
 );
 
 select ok(
-  has_function_privilege('authenticated', 'public.accept_proposal(uuid, jsonb, uuid)'::regprocedure, 'EXECUTE'),
+  has_function_privilege(
+    'authenticated',
+    'public.accept_proposal(uuid, jsonb, uuid, uuid, smallint, text, jsonb, text, text, text)'::regprocedure,
+    'EXECUTE'
+  ),
   'authenticated can execute accept_proposal'
 );
 

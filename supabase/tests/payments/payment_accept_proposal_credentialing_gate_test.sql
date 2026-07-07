@@ -2,6 +2,8 @@
 
 begin;
 
+\ir ../fixtures/accept_proposal_payment_helpers.inc
+
 select plan(1);
 
 create or replace function pg_temp.cns_set_auth(p_user_id uuid)
@@ -125,7 +127,7 @@ select pg_temp.cns_set_auth('28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid);
 
 select throws_ok(
   format(
-    $$ select public.accept_proposal(
+    $$ select pg_temp.cns_accept_proposal(
       %L::uuid,
       %L::jsonb,
       %L::uuid

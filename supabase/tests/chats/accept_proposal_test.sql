@@ -3,6 +3,7 @@
 begin;
 
 \ir fixtures/seed_chat.inc
+\ir ../fixtures/accept_proposal_payment_helpers.inc
 
 select plan(10);
 
@@ -65,9 +66,10 @@ select ok(
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
       and p.proname = 'accept_proposal'
-      and pg_get_function_identity_arguments(p.oid) = 'p_proposal_id uuid, p_selected_slot jsonb, p_idempotency_key uuid'
+      and pg_get_function_identity_arguments(p.oid) =
+        'p_proposal_id uuid, p_selected_slot jsonb, p_idempotency_key uuid, p_client_card_token_id uuid, p_installment_number smallint, p_installment_selection_hmac text, p_installment_hmac_payload jsonb, p_clearsale_session_id text, p_pricing_signature text, p_client_ip text'
   ),
-  'accept_proposal is SECURITY DEFINER'
+  'accept_proposal payment overload is SECURITY DEFINER'
 );
 
 create temp table _accept_sr as
@@ -197,7 +199,7 @@ from pricing;
 select pg_temp.cns_set_auth('28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid);
 
 create temp table _accept_result as
-select public.accept_proposal(
+select pg_temp.cns_accept_proposal_with_payment(
   (select (submit_response->'proposal'->>'id')::uuid from _accept_submit),
   (select selected_slot from _accept_slot),
   'f2222222-2222-4222-8222-222222222222'::uuid

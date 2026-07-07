@@ -3,6 +3,7 @@
 begin;
 
 \ir fixtures/seed_chat.inc
+\ir ../fixtures/accept_proposal_payment_helpers.inc
 
 select plan(11);
 
@@ -426,7 +427,7 @@ from pricing;
 
 select pg_temp.cns_set_auth('28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid);
 
-select public.accept_proposal(
+select pg_temp.cns_accept_proposal_with_payment(
   (select (response->'proposal'->>'id')::uuid from _sr_flow_submit),
   jsonb_build_object(
     'start_date', (current_date + 2)::text,

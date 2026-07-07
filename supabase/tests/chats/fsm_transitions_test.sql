@@ -5,6 +5,7 @@ begin;
 
 \ir fixtures/seed_chat.inc
 \ir fixtures/seed_reciprocity_messages.inc
+\ir ../fixtures/accept_proposal_payment_helpers.inc
 
 select plan(15);
 
@@ -280,7 +281,7 @@ select pg_temp.cns_fsm_submit(
 select pg_temp.cns_set_auth('28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid);
 
 create temp table _accept_result as
-select public.accept_proposal(
+select pg_temp.cns_accept_proposal_with_payment(
   (select (response->'proposal'->>'id')::uuid from _accept_submit),
   (select selected_slot from _accept_slot),
   'f1010009-0009-4009-8009-000000000009'::uuid
@@ -318,7 +319,7 @@ select ok(
 
 select throws_ok(
   $sql$
-    select public.accept_proposal(
+    select pg_temp.cns_accept_proposal(
       (select (response->'proposal'->>'id')::uuid from _accept_submit),
       (select selected_slot from _accept_slot),
       'f101000a-000a-400a-800a-00000000000a'::uuid

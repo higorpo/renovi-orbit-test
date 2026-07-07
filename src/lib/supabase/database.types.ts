@@ -1480,6 +1480,7 @@ export type Database = {
           base_amount: number
           cancellation_reason: string | null
           cancelled_at: string | null
+          charge_frozen_at: string | null
           charge_scheduled_at: string
           clearsale_session_id: string | null
           client_card_token_id: string | null
@@ -1520,6 +1521,7 @@ export type Database = {
           base_amount: number
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          charge_frozen_at?: string | null
           charge_scheduled_at: string
           clearsale_session_id?: string | null
           client_card_token_id?: string | null
@@ -1560,6 +1562,7 @@ export type Database = {
           base_amount?: number
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          charge_frozen_at?: string | null
           charge_scheduled_at?: string
           clearsale_session_id?: string | null
           client_card_token_id?: string | null
@@ -3426,30 +3429,21 @@ export type Database = {
       }
     }
     Functions: {
-      accept_proposal:
-        | {
-            Args: {
-              p_idempotency_key: string
-              p_proposal_id: string
-              p_selected_slot: Json
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_clearsale_session_id: string
-              p_client_card_token_id: string
-              p_client_ip: string
-              p_idempotency_key: string
-              p_installment_hmac_payload: Json
-              p_installment_number: number
-              p_installment_selection_hmac: string
-              p_pricing_signature: string
-              p_proposal_id: string
-              p_selected_slot: Json
-            }
-            Returns: Json
-          }
+      accept_proposal: {
+        Args: {
+          p_clearsale_session_id: string
+          p_client_card_token_id: string
+          p_client_ip: string
+          p_idempotency_key: string
+          p_installment_hmac_payload: Json
+          p_installment_number: number
+          p_installment_selection_hmac: string
+          p_pricing_signature: string
+          p_proposal_id: string
+          p_selected_slot: Json
+        }
+        Returns: Json
+      }
       acquire_or_refresh_netcred_token: {
         Args: {
           p_expires_at?: string
@@ -3481,6 +3475,10 @@ export type Database = {
         Returns: undefined
       }
       cns_assert_list_response_size: { Args: { p_body: Json }; Returns: Json }
+      cns_assert_slot_start_date_allowed: {
+        Args: { p_start_date: string }
+        Returns: undefined
+      }
       cns_attach_message_media: {
         Args: {
           p_chat_id: string
@@ -3489,6 +3487,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      cns_build_contracted_service_cancel_system_message: {
+        Args: {
+          p_cancellation_reason?: string
+          p_initiator: string
+          p_pre_charge?: boolean
+          p_refund_tier?: string
+        }
+        Returns: string
+      }
+      cns_business_today: { Args: never; Returns: string }
       cns_chat_free_messaging_allowed: {
         Args: { p_chat_id: string }
         Returns: boolean
@@ -3501,6 +3509,17 @@ export type Database = {
         Args: { p_chat_id: string }
         Returns: undefined
       }
+      cns_close_contracted_service_chat: {
+        Args: {
+          p_cancellation_reason?: string
+          p_closed_by_user_id?: string
+          p_contracted_service_id: string
+          p_initiator?: string
+          p_pre_charge?: boolean
+          p_refund_tier?: string
+        }
+        Returns: string
+      }
       cns_close_conversation: {
         Args: {
           p_chat_id: string
@@ -3508,6 +3527,17 @@ export type Database = {
           p_confirm: boolean
           p_idempotency_key: string
         }
+        Returns: Json
+      }
+      cns_confirm_service_cancellation: {
+        Args: {
+          p_cancellation_reason?: string
+          p_contracted_service_id: string
+        }
+        Returns: Json
+      }
+      cns_confirm_service_reschedule: {
+        Args: { p_contracted_service_id: string; p_new_slot: Json }
         Returns: Json
       }
       cns_create_media_upload_session: {
@@ -4001,6 +4031,18 @@ export type Database = {
         Args: { p_proposal_id: string }
         Returns: Json
       }
+      orbit_internal_edge_invoke_is_configured: {
+        Args: never
+        Returns: boolean
+      }
+      orbit_invoke_edge_function: {
+        Args: {
+          p_body?: Json
+          p_function_slug: string
+          p_timeout_milliseconds?: number
+        }
+        Returns: number
+      }
       payment_activate_provider_from_netcred: {
         Args: {
           p_netcred_bank_account_id: string
@@ -4050,6 +4092,46 @@ export type Database = {
           p_cancellation_reason?: string
           p_initiator?: string
           p_service_id: string
+        }
+        Returns: Json
+      }
+      payment_build_log_payload: {
+        Args: {
+          p_context?: Json
+          p_event: string
+          p_schedule_id?: string
+          p_service_id?: string
+        }
+        Returns: Json
+      }
+      payment_build_notification_bypass_flags: {
+        Args: {
+          p_notification_event: string
+          p_recipient: string
+          p_urgent_provider?: boolean
+        }
+        Returns: Json
+      }
+      payment_build_notification_dispatch_metadata: {
+        Args: {
+          p_extra_metadata?: Json
+          p_notification_event: string
+          p_recipient: string
+          p_urgent_provider?: boolean
+        }
+        Returns: Json
+      }
+      payment_build_notification_variables: {
+        Args: {
+          p_metadata?: Json
+          p_notification_event: string
+          p_recipient: string
+          p_schedule: Database["public"]["Tables"]["payment_schedules"]["Row"]
+          p_scheduled_shift?: string
+          p_scheduled_start_date?: string
+          p_service_execution_at?: string
+          p_service_request_id?: string
+          p_service_request_title?: string
         }
         Returns: Json
       }
@@ -4111,15 +4193,6 @@ export type Database = {
         Args: { p_expiry_month: number; p_expiry_year: number }
         Returns: boolean
       }
-      payment_commit_inanalysis_auto_cancel_void_outcome: {
-        Args: {
-          p_schedule_id: string
-          p_outcome: string
-          p_gateway_state?: string
-          p_error_message?: string
-        }
-        Returns: Json
-      }
       payment_commit_charge_outcome: {
         Args: {
           p_actor_id?: string
@@ -4137,19 +4210,28 @@ export type Database = {
         }
         Returns: string
       }
+      payment_commit_inanalysis_auto_cancel_void_outcome: {
+        Args: {
+          p_error_message?: string
+          p_gateway_state?: string
+          p_outcome: string
+          p_schedule_id: string
+        }
+        Returns: Json
+      }
       payment_compute_charge_scheduled_at: {
         Args: {
           p_cs: Database["public"]["Tables"]["contracted_services"]["Row"]
         }
         Returns: string
       }
-      payment_confirm_upcoming_charge_notified: {
-        Args: { p_schedule_id: string }
-        Returns: boolean
-      }
       payment_confirm_service_completed: {
         Args: { p_service_id: string }
         Returns: Json
+      }
+      payment_confirm_upcoming_charge_notified: {
+        Args: { p_schedule_id: string }
+        Returns: boolean
       }
       payment_cron_auto_cancel_unpaid_services: {
         Args: never
@@ -4168,9 +4250,13 @@ export type Database = {
         Returns: number
       }
       payment_cron_notify_upcoming_charges: { Args: never; Returns: undefined }
+      payment_cron_post_sentry_alerts: {
+        Args: { p_alerts: Json }
+        Returns: number
+      }
       payment_cron_process_webhook_retry: { Args: never; Returns: undefined }
       payment_cron_reconcile_inanalysis_auto_cancel_voids: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: undefined
       }
       payment_cron_reconcile_netcred_payments: {
@@ -4201,6 +4287,14 @@ export type Database = {
           p_queue_id?: string
         }
         Returns: Json
+      }
+      payment_format_service_execution_summary: {
+        Args: {
+          p_scheduled_shift: string
+          p_scheduled_start_date: string
+          p_service_execution_at?: string
+        }
+        Returns: string
       }
       payment_get_checkout_step_requirements: { Args: never; Returns: Json }
       payment_get_proposal_checkout_context: {
@@ -4237,8 +4331,16 @@ export type Database = {
         Args: { p_service_id: string }
         Returns: Json
       }
+      payment_notification_deep_link_path: {
+        Args: { p_service_request_id?: string }
+        Returns: string
+      }
       payment_notify_upcoming_charges_batch: {
         Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      payment_ops_job_health: {
+        Args: { p_lookback_hours?: number; p_stale_minutes?: number }
         Returns: Json
       }
       payment_persist_client_card_token: {
@@ -4298,6 +4400,15 @@ export type Database = {
       payment_provider_kyc_storage_path_valid: {
         Args: { p_provider_id: string; p_storage_path: string }
         Returns: boolean
+      }
+      payment_raise_log: {
+        Args: {
+          p_context?: Json
+          p_event: string
+          p_schedule_id?: string
+          p_service_id?: string
+        }
+        Returns: undefined
       }
       payment_reconstruct_audit_lifecycle: {
         Args: { p_service_id: string }
@@ -4363,6 +4474,10 @@ export type Database = {
           p_installment_number: number
         }
         Returns: number
+      }
+      payment_unfreeze_schedule: {
+        Args: { p_schedule_id: string }
+        Returns: Json
       }
       payment_update_method: {
         Args: {
@@ -4587,6 +4702,10 @@ export type Database = {
         }
         Returns: Json
       }
+      suspend_provider: {
+        Args: { p_provider_id: string; p_reason?: string }
+        Returns: Json
+      }
       update_service_rating: {
         Args: {
           p_comment?: string
@@ -4609,6 +4728,7 @@ export type Database = {
         | "PROPOSAL_ACCEPTED_ELSEWHERE"
         | "SERVICE_REQUEST_CANCELLED"
         | "PROPOSAL_REJECTED"
+        | "CONTRACTED_SERVICE_CANCELLED"
       cns_conversation_status: "ACTIVE" | "INACTIVE" | "CLOSED"
       cns_delivery_status: "PENDING" | "SENT" | "DELIVERED" | "READ" | "FAILED"
       cns_inactivation_reason: "NO_RECIPROCITY"
@@ -4871,6 +4991,7 @@ export const Constants = {
         "PROPOSAL_ACCEPTED_ELSEWHERE",
         "SERVICE_REQUEST_CANCELLED",
         "PROPOSAL_REJECTED",
+        "CONTRACTED_SERVICE_CANCELLED",
       ],
       cns_conversation_status: ["ACTIVE", "INACTIVE", "CLOSED"],
       cns_delivery_status: ["PENDING", "SENT", "DELIVERED", "READ", "FAILED"],
