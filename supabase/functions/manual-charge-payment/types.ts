@@ -7,6 +7,7 @@ export type ManualChargeSchedule = {
   id: string;
   contracted_service_id: string;
   service_request_id: string | null;
+  service_request_title: string | null;
   client_id: string;
   provider_id: string;
   gateway_slug: string;

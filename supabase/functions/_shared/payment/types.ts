@@ -84,6 +84,8 @@ export type PayoutRuleInput = {
 export type CreateChargeInput = {
   referenceCode: string;
   amount: Decimal;
+  /** Human-readable service title for NetCred charge metadata. */
+  serviceTitle?: string;
   paymentMethod: PaymentMethodCharge;
   payoutRule: PayoutRuleInput;
   sessionId?: string;

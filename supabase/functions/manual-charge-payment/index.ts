@@ -45,6 +45,9 @@ function mapBeginManualAttemptResult(data: unknown): ManualChargeSchedule {
     service_request_id: row.service_request_id
       ? String(row.service_request_id)
       : null,
+    service_request_title: row.service_request_title
+      ? String(row.service_request_title)
+      : null,
     client_id: String(row.client_id),
     provider_id: String(row.provider_id),
     gateway_slug: String(row.gateway_slug ?? "netcred"),
@@ -99,16 +102,6 @@ function createDeps(): ManualChargePaymentDeps {
       }
 
       const schedule = mapBeginManualAttemptResult(data);
-
-      const { data: serviceRow } = await supabase
-        .from("contracted_services")
-        .select("service_request_id")
-        .eq("id", schedule.contracted_service_id)
-        .maybeSingle();
-
-      if (serviceRow?.service_request_id) {
-        schedule.service_request_id = String(serviceRow.service_request_id);
-      }
 
       const { data: payoutRow } = await supabase
         .from("payment_schedules")

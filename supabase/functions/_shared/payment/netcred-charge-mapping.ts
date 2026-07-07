@@ -1,4 +1,9 @@
 import type { CreateChargeInput, CreditCardCharge } from "./types.ts";
+import {
+  buildNetCredChargeExtraInfo,
+  resolveNetCredServiceTitle,
+  truncateNetCredChargeText,
+} from "./netcredChargeText.ts";
 
 export type NetCredScheduleInput = {
   scheduleType: "DAILY";
@@ -32,9 +37,11 @@ export type NetCredChargeCreateInput = {
         name: string;
         amount: string;
         category: string;
+        description?: string;
       };
     }>;
   };
+  extraInfo?: string;
   payoutRuleInput: {
     name: string;
     persist: false;
@@ -79,6 +86,8 @@ export function mapToNetCredChargeInput(
   platformBankAccountId: string,
 ): NetCredChargeCreateInput {
   const paymentMethod = assertCreditCardCharge(input);
+  const serviceTitle = resolveNetCredServiceTitle(input.serviceTitle);
+  const chargeExtraInfo = buildNetCredChargeExtraInfo(input.serviceTitle);
   const companyId = Number.parseInt(
     input.payoutRule.providerAccount.netcredCompanyId,
     10,
@@ -126,6 +135,7 @@ export function mapToNetCredChargeInput(
     installmentNumber: paymentMethod.installmentNumber,
     billDaysInAdvance: 0,
     manualCapture: false,
+    extraInfo: chargeExtraInfo,
     payoutRuleInput: {
       name: `Renovi split ${input.referenceCode}`,
       persist: false,
@@ -144,9 +154,10 @@ export function mapToNetCredChargeInput(
       referenceCode: input.referenceCode,
       orderItems: [{
         productInput: {
-          name: "Renovi contracted service",
+          name: truncateNetCredChargeText(serviceTitle),
           amount: input.amount,
           category: "Serviços",
+          description: chargeExtraInfo,
         },
       }],
     };

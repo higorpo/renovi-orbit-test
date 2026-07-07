@@ -62,7 +62,12 @@ function parseClaimedSchedules(data: unknown): CronChargeSchedule[] {
       client_ip_address: schedule.client_ip_address
         ? String(schedule.client_ip_address)
         : null,
-      service_request_id: null,
+      service_request_id: schedule.service_request_id
+        ? String(schedule.service_request_id)
+        : null,
+      service_request_title: schedule.service_request_title
+        ? String(schedule.service_request_title)
+        : null,
     };
   });
 }

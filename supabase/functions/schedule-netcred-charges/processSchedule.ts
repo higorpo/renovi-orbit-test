@@ -271,6 +271,7 @@ export async function processSchedule(
 
   const chargeInput: CreateChargeInput = {
     referenceCode: schedule.contracted_service_id,
+    serviceTitle: schedule.service_request_title ?? undefined,
     amount: chargeAmount,
     paymentMethod: {
       type: "CREDIT_CARD",
