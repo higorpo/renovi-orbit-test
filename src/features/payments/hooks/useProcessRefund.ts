@@ -1,5 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  CHAT_CONVERSATIONS_LIST_QUERY_KEY,
+  CONVERSATION_DETAIL_QUERY_KEY,
+} from "@/features/chats";
+import {
   processContractedServiceRefund,
   type ProcessRefundSuccess,
 } from "../api/refund.api";
@@ -34,6 +38,8 @@ export function useProcessRefund() {
         queryKey: [...PAYMENT_SCHEDULE_LIFECYCLE_QUERY_KEY, variables.contractedServiceId],
       });
       void queryClient.invalidateQueries({ queryKey: PAYMENT_SCHEDULE_LIFECYCLE_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY] });
+      void queryClient.invalidateQueries({ queryKey: [CONVERSATION_DETAIL_QUERY_KEY] });
     },
   });
 }
