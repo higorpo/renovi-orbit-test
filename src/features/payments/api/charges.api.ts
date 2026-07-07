@@ -2,10 +2,20 @@ import { supabase } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
 import type {
   ContractedServicePaymentContext,
+  PaymentScheduleLifecycle,
   PaymentScheduleSummary,
 } from "../types/paymentSchedule.types";
 import { invokePaymentEdgeFunction, mapEdgeErrorPayload } from "./paymentApiClient";
 import { PAYMENT_EDGE } from "./payments.edge";
+
+const PAYMENT_SCHEDULE_TABLE = "payment_schedules" as const;
+
+// Column-level SELECT allowlist for authenticated participants (§3.5).
+const PAYMENT_SCHEDULE_PARTICIPANT_COLUMNS =
+  "id, contracted_service_id, state, installment_number, failure_reason, failure_code, is_disputed, paid_at" as const;
+
+const PAYMENT_SCHEDULE_LIFECYCLE_COLUMNS =
+  "contracted_service_id, state, charge_scheduled_at" as const;
 
 export type ManualChargePaymentRequest = {
   scheduleId: string;
@@ -41,13 +51,17 @@ type PaymentScheduleRow = {
   id: string;
   contracted_service_id: string;
   state: string;
-  client_card_token_id: string | null;
   installment_number: number;
-  base_amount: number;
   failure_reason: string | null;
   failure_code: string | null;
   is_disputed: boolean;
   paid_at: string | null;
+};
+
+type PaymentScheduleLifecycleRow = {
+  contracted_service_id: string;
+  state: string;
+  charge_scheduled_at: string | null;
 };
 
 type ContractedServiceRow = {
@@ -60,15 +74,28 @@ function mapPaymentSchedule(row: PaymentScheduleRow): PaymentScheduleSummary {
     id: row.id,
     contractedServiceId: row.contracted_service_id,
     state: row.state,
-    paymentTokenId: row.client_card_token_id,
+    paymentTokenId: null,
     installmentNumber: row.installment_number,
-    baseAmount: row.base_amount,
+    baseAmount: null,
     failureReason: row.failure_reason,
     failureCode: row.failure_code,
     isDisputed: row.is_disputed,
     paidAt: row.paid_at,
   };
 }
+
+function mapPaymentScheduleLifecycle(row: PaymentScheduleLifecycleRow): PaymentScheduleLifecycle {
+  return {
+    contractedServiceId: row.contracted_service_id,
+    state: row.state,
+    chargeScheduledAt: row.charge_scheduled_at,
+  };
+}
+
+export type FetchPaymentScheduleLifecycleResult = {
+  data: PaymentScheduleLifecycle | null;
+  error: string | null;
+};
 
 export async function manualChargePayment(
   request: ManualChargePaymentRequest,
@@ -108,14 +135,39 @@ export async function manualChargePayment(
   };
 }
 
+export async function fetchPaymentScheduleLifecycleByContractedService(
+  contractedServiceId: string,
+): Promise<FetchPaymentScheduleLifecycleResult> {
+  const { data, error } = await supabase
+    .from(PAYMENT_SCHEDULE_TABLE)
+    .select(PAYMENT_SCHEDULE_LIFECYCLE_COLUMNS)
+    .eq("contracted_service_id", contractedServiceId)
+    .maybeSingle();
+
+  if (error) {
+    logger.error("payment_schedule_lifecycle_fetch_error", {
+      contractedServiceId,
+      error: error.message,
+    });
+    return { data: null, error: error.message };
+  }
+
+  if (!data) {
+    return { data: null, error: null };
+  }
+
+  return {
+    data: mapPaymentScheduleLifecycle(data as PaymentScheduleLifecycleRow),
+    error: null,
+  };
+}
+
 export async function fetchPaymentScheduleByContractedService(
   contractedServiceId: string,
 ): Promise<FetchPaymentScheduleResult> {
   const { data, error } = await supabase
-    .from("payment_schedules")
-    .select(
-      "id, contracted_service_id, state, client_card_token_id, installment_number, base_amount, failure_reason, failure_code, is_disputed, paid_at",
-    )
+    .from(PAYMENT_SCHEDULE_TABLE)
+    .select(PAYMENT_SCHEDULE_PARTICIPANT_COLUMNS)
     .eq("contracted_service_id", contractedServiceId)
     .maybeSingle();
 

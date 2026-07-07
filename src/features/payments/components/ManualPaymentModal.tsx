@@ -299,9 +299,13 @@ export function ManualPaymentModal({
                       {formatCurrency(selectedInstallment.installment_amount)} por parcela
                     </p>
                   </>
-                ) : (
+                ) : schedule.baseAmount != null ? (
                   <p className="text-muted-foreground">
                     Valor base: {formatCurrency(schedule.baseAmount)}
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground">
+                    Confirme o cartão para calcular o valor com taxas.
                   </p>
                 )}
               </div>

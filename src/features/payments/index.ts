@@ -43,6 +43,7 @@ export {
   revokePaymentToken,
   manualChargePayment,
   fetchPaymentScheduleByContractedService,
+  fetchPaymentScheduleLifecycleByContractedService,
   listClientPaymentTransactions,
   listProviderPaymentReceivables,
   paymentsApi,
@@ -72,6 +73,7 @@ export {
   ManualPaymentButton,
   ManualPaymentRecovery,
   ManualPaymentModal,
+  ContractedServiceCancelAction,
   PaymentHistorySection,
   PaymentDisputeBadge,
   PaymentDisputeStatus,
@@ -90,7 +92,10 @@ export {
   useSavedCards,
   usePaymentSchedule,
   PAYMENT_SCHEDULE_QUERY_KEY,
+  usePaymentScheduleLifecycle,
+  PAYMENT_SCHEDULE_LIFECYCLE_QUERY_KEY,
   useManualChargePayment,
+  useProcessRefund,
   useClientPaymentHistory,
   CLIENT_PAYMENT_HISTORY_QUERY_KEY,
   useProviderPaymentHistory,
@@ -99,7 +104,8 @@ export {
   PROPOSAL_CHECKOUT_CONTEXT_QUERY_KEY,
 } from "./hooks";
 export { isManualPaymentEligible } from "./types/paymentSchedule.types";
-export type { PaymentScheduleSummary } from "./types/paymentSchedule.types";
+export type { PaymentScheduleSummary, PaymentScheduleLifecycle } from "./types/paymentSchedule.types";
+export type { CancellationViewerRole } from "./utils/contractedServiceCancellation";
 export type {
   ClientPaymentTransaction,
   ProviderPaymentReceivable,

@@ -165,6 +165,11 @@ export function ServiceDetailPage({
               isClient ? "client" : isProvider ? "provider" : undefined
             }
             showProviderSettlement={isProvider}
+            showServiceCancellation={Boolean(isClient || isProvider)}
+            cancellationViewerRole={
+              isClient ? "client" : isProvider ? "provider" : undefined
+            }
+            onCancellationSuccess={() => void refetch()}
             onCompletionSuccess={() => void refetch()}
           />
         ) : null}

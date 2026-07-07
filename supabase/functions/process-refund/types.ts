@@ -35,7 +35,9 @@ export type ProcessRefundErrorCode =
   | "SERVICE_NOT_CANCELLABLE"
   | "PAYMENT_IN_ANALYSIS"
   | "INVALID_SCHEDULE_STATE"
-  | "TRANSACTION_NOT_FOUND";
+  | "TRANSACTION_NOT_FOUND"
+  | "PAYMENT_SCHEDULE_TERMINAL_STATE"
+  | "PAYMENT_SCHEDULE_INVALID_TRANSITION";
 
 export function resolveInitiator(
   userId: string,

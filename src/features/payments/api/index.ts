@@ -55,6 +55,7 @@ export type {
 export {
   manualChargePayment,
   fetchPaymentScheduleByContractedService,
+  fetchPaymentScheduleLifecycleByContractedService,
   fetchContractedServicePaymentContext,
 } from "./charges.api";
 export type {
@@ -63,6 +64,7 @@ export type {
   ManualChargePaymentSuccess,
   ManualChargePaymentResult,
   FetchPaymentScheduleResult,
+  FetchPaymentScheduleLifecycleResult,
   FetchContractedServicePaymentContextResult,
 } from "./charges.api";
 
@@ -95,6 +97,13 @@ export type {
   ListProviderPaymentReceivablesResult,
 } from "./history.api";
 
+export { processContractedServiceRefund } from "./refund.api";
+export type {
+  ProcessRefundOutcome,
+  ProcessRefundSuccess,
+  ProcessRefundResult,
+} from "./refund.api";
+
 import {
   getCheckoutStepRequirements,
   getProposalCheckoutContext,
@@ -114,6 +123,7 @@ import {
 import {
   manualChargePayment,
   fetchPaymentScheduleByContractedService,
+  fetchPaymentScheduleLifecycleByContractedService,
   fetchContractedServicePaymentContext,
 } from "./charges.api";
 import {
@@ -125,6 +135,7 @@ import {
   listClientPaymentTransactions,
   listProviderPaymentReceivables,
 } from "./history.api";
+import { processContractedServiceRefund } from "./refund.api";
 
 export const paymentsApi = {
   checkout: {
@@ -147,6 +158,7 @@ export const paymentsApi = {
   charges: {
     manualCharge: manualChargePayment,
     fetchScheduleByContractedService: fetchPaymentScheduleByContractedService,
+    fetchScheduleLifecycleByContractedService: fetchPaymentScheduleLifecycleByContractedService,
     fetchContractedServiceContext: fetchContractedServicePaymentContext,
   },
   kyc: {
@@ -157,5 +169,8 @@ export const paymentsApi = {
   history: {
     listClientTransactions: listClientPaymentTransactions,
     listProviderReceivables: listProviderPaymentReceivables,
+  },
+  refunds: {
+    processContractedService: processContractedServiceRefund,
   },
 };

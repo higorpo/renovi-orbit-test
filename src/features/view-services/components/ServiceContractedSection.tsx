@@ -1,5 +1,11 @@
 import { Calendar, CircleCheck, User } from "lucide-react";
-import { ManualPaymentRecovery, PaymentDisputeStatus, ProviderSettlementStatus } from "@/features/payments";
+import {
+  ContractedServiceCancelAction,
+  ManualPaymentRecovery,
+  PaymentDisputeStatus,
+  ProviderSettlementStatus,
+  type CancellationViewerRole,
+} from "@/features/payments";
 import {
   ServiceCompletionActions,
   type ServiceCompletionViewerRole,
@@ -15,6 +21,9 @@ interface ServiceContractedSectionProps {
   showServiceCompletion?: boolean;
   completionViewerRole?: ServiceCompletionViewerRole;
   showProviderSettlement?: boolean;
+  showServiceCancellation?: boolean;
+  cancellationViewerRole?: CancellationViewerRole;
+  onCancellationSuccess?: () => void;
   onCompletionSuccess?: () => void;
 }
 
@@ -25,6 +34,9 @@ export function ServiceContractedSection({
   showServiceCompletion = false,
   completionViewerRole,
   showProviderSettlement = false,
+  showServiceCancellation = false,
+  cancellationViewerRole,
+  onCancellationSuccess,
   onCompletionSuccess,
 }: ServiceContractedSectionProps) {
   const providerName = contracted.provider?.displayName;
@@ -83,6 +95,18 @@ export function ServiceContractedSection({
             status={contracted.status}
             viewerRole={completionViewerRole}
             onSuccess={onCompletionSuccess}
+          />
+        </div>
+      ) : null}
+      {showServiceCancellation && cancellationViewerRole ? (
+        <div className="pt-3">
+          <ContractedServiceCancelAction
+            contractedServiceId={contracted.id}
+            serviceStatus={contracted.status}
+            scheduledStartDate={contracted.scheduledStartDate ?? ""}
+            scheduledShift={contracted.scheduledShift ?? "morning"}
+            viewerRole={cancellationViewerRole}
+            onSuccess={onCancellationSuccess}
           />
         </div>
       ) : null}

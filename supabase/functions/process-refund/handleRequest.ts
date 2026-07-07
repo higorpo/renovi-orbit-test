@@ -65,6 +65,8 @@ function mapRpcError(message: string): ProcessRefundErrorCode | null {
     "PAYMENT_IN_ANALYSIS",
     "INVALID_SCHEDULE_STATE",
     "TRANSACTION_NOT_FOUND",
+    "PAYMENT_SCHEDULE_TERMINAL_STATE",
+    "PAYMENT_SCHEDULE_INVALID_TRANSITION",
   ];
 
   return known.find((code) => message.includes(code)) ?? null;

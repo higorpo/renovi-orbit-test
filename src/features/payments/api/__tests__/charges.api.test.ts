@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   fetchContractedServicePaymentContext,
   fetchPaymentScheduleByContractedService,
+  fetchPaymentScheduleLifecycleByContractedService,
   manualChargePayment,
 } from "../charges.api";
 import { PAYMENT_EDGE } from "../payments.edge";
@@ -91,16 +92,14 @@ describe("fetchPaymentScheduleByContractedService", () => {
     vi.clearAllMocks();
   });
 
-  it("maps schedule row to summary", async () => {
+  it("maps allowlisted schedule columns to summary", async () => {
     mockFrom.mockReturnValue(
       createSelectChain({
         data: {
           id: "sched-1",
           contracted_service_id: "service-1",
           state: "FAILED",
-          client_card_token_id: "tok-1",
           installment_number: 1,
-          base_amount: 1000,
           failure_reason: "Card declined",
           failure_code: "REJECTED",
           is_disputed: true,
@@ -112,18 +111,48 @@ describe("fetchPaymentScheduleByContractedService", () => {
 
     const result = await fetchPaymentScheduleByContractedService("service-1");
 
+    expect(mockFrom).toHaveBeenCalledWith("payment_schedules");
     expect(result.error).toBeNull();
     expect(result.data).toEqual({
       id: "sched-1",
       contractedServiceId: "service-1",
       state: "FAILED",
-      paymentTokenId: "tok-1",
+      paymentTokenId: null,
       installmentNumber: 1,
-      baseAmount: 1000,
+      baseAmount: null,
       failureReason: "Card declined",
       failureCode: "REJECTED",
       isDisputed: true,
       paidAt: "2026-07-01T12:00:00.000Z",
+    });
+  });
+});
+
+describe("fetchPaymentScheduleLifecycleByContractedService", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("maps lifecycle columns from participant allowlist", async () => {
+    mockFrom.mockReturnValue(
+      createSelectChain({
+        data: {
+          contracted_service_id: "service-1",
+          state: "PAID",
+          charge_scheduled_at: "2026-07-28T12:00:00.000Z",
+        },
+        error: null,
+      }),
+    );
+
+    const result = await fetchPaymentScheduleLifecycleByContractedService("service-1");
+
+    expect(mockFrom).toHaveBeenCalledWith("payment_schedules");
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({
+      contractedServiceId: "service-1",
+      state: "PAID",
+      chargeScheduledAt: "2026-07-28T12:00:00.000Z",
     });
   });
 });

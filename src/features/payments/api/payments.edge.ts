@@ -5,6 +5,7 @@
 export const PAYMENT_EDGE = {
   tokenizePaymentCard: "tokenize-payment-card",
   manualChargePayment: "manual-charge-payment",
+  processRefund: "process-refund",
   dispatchKycEmail: "dispatch-kyc-email",
 } as const;
 

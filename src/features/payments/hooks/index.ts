@@ -21,7 +21,13 @@ export {
 } from "./useProviderPaymentAccount";
 export { useSavedCards } from "./useSavedCards";
 export { usePaymentSchedule, PAYMENT_SCHEDULE_QUERY_KEY } from "./usePaymentSchedule";
+export {
+  usePaymentScheduleLifecycle,
+  PAYMENT_SCHEDULE_LIFECYCLE_QUERY_KEY,
+} from "./usePaymentScheduleLifecycle";
 export { useManualChargePayment } from "./useManualChargePayment";
+export { useProcessRefund } from "./useProcessRefund";
+export type { ProcessRefundRequest } from "./useProcessRefund";
 export {
   useClientPaymentHistory,
   CLIENT_PAYMENT_HISTORY_QUERY_KEY,

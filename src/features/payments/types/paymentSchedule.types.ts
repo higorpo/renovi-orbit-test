@@ -4,11 +4,17 @@ export type PaymentScheduleSummary = {
   state: string;
   paymentTokenId: string | null;
   installmentNumber: number;
-  baseAmount: number;
+  baseAmount: number | null;
   failureReason: string | null;
   failureCode: string | null;
   isDisputed: boolean;
   paidAt: string | null;
+};
+
+export type PaymentScheduleLifecycle = {
+  contractedServiceId: string;
+  state: string;
+  chargeScheduledAt: string | null;
 };
 
 export type ContractedServicePaymentContext = {
