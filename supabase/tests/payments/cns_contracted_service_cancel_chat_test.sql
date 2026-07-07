@@ -203,25 +203,25 @@ select throws_ok(
 
 select is(
   public.cns_build_contracted_service_cancel_system_message('client', 'FULL_REFUND', false, null),
-  'O serviço foi cancelado pelo cliente. O valor do serviço será reembolsado integralmente (taxas de cartão não são reembolsadas).',
+  'O serviço foi cancelado pelo cliente. O valor do serviço será reembolsado integralmente.',
   'message builder: client FULL_REFUND'
 );
 
 select is(
   public.cns_build_contracted_service_cancel_system_message('client', 'PENALTY_10', false, null),
-  'O serviço foi cancelado pelo cliente. Será reembolsado 90% do valor do serviço por cancelamento com menos de 48 h de antecedência (taxas de cartão não são reembolsadas).',
+  'O serviço foi cancelado pelo cliente. Será reembolsado 90% do valor do serviço por cancelamento com menos de 48 h de antecedência.',
   'message builder: client PENALTY_10'
 );
 
 select is(
   public.cns_build_contracted_service_cancel_system_message('client', 'PENALTY_30', false, null),
-  'O serviço foi cancelado pelo cliente. Será reembolsado 70% do valor do serviço por cancelamento de última hora (taxas de cartão não são reembolsadas).',
+  'O serviço foi cancelado pelo cliente. Será reembolsado 70% do valor do serviço por cancelamento de última hora.',
   'message builder: client PENALTY_30'
 );
 
 select is(
   public.cns_build_contracted_service_cancel_system_message('client', 'UNKNOWN', false, null),
-  'O serviço foi cancelado pelo cliente. O estorno seguirá as regras dos Termos de Uso (taxas de cartão não são reembolsadas).',
+  'O serviço foi cancelado pelo cliente. O estorno seguirá as regras dos Termos de Uso.',
   'message builder: client unknown tier fallback'
 );
 
@@ -239,7 +239,7 @@ select is(
 
 select is(
   public.cns_build_contracted_service_cancel_system_message('provider', 'PROVIDER_FULL_REFUND', false, null),
-  'O serviço foi cancelado pelo prestador. O valor pago será estornado integralmente (o processamento pode levar de 30 a 60 dias; taxas de cartão não são reembolsadas).',
+  'O serviço foi cancelado pelo prestador. O valor pago será estornado integralmente (o processamento pode levar de 30 a 60 dias).',
   'message builder: provider post-charge full refund'
 );
 
