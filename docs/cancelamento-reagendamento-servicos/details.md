@@ -94,9 +94,9 @@ Ao alinhar o prazo de reagendamento com o momento da cobrança:
 
 ## Fluxo de Reagendamento
 
-### Etapa 1 — Cliente solicita reagendamento
+### Etapa 1 — Cliente ou prestador solicitam reagendamento
 
-O cliente acessa o serviço e clica em:
+O cliente ou o prestador acessa o serviço e clica em:
 
 "Solicitar Reagendamento"
 
@@ -136,7 +136,7 @@ Cliente:
 
 Após chegarem a um acordo:
 
-O prestador clica em:
+O prestador clica no action banner em:
 
 "Atualizar Agendamento"
 
