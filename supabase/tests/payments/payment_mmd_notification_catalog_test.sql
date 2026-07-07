@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(15);
+select plan(17);
 
 select ok(
   exists (
@@ -208,6 +208,33 @@ select is(
   )->>'template_key',
   'payment.service_auto_cancelled_suspended_provider',
   'SERVICE_AUTO_CANCELLED PROVIDER_SUSPENDED provider uses suspended provider template'
+);
+
+select is(
+  public.mmd_ingest_event(
+    'PROVIDER_ACTIVATED',
+    current_setting('test.mmd.profile_id')::uuid,
+    'pgtap-provider-activated',
+    jsonb_build_object(
+      'provider_id', current_setting('test.mmd.profile_id'),
+      'provider_gateway_account_id', gen_random_uuid()::text,
+      'deep_link_path', '/dashboard'
+    ),
+    '{"source":"payment_activate_provider_from_netcred"}'::jsonb
+  )->>'template_key',
+  'account.provider_activated',
+  'PROVIDER_ACTIVATED routes to account.provider_activated'
+);
+
+select ok(
+  exists (
+    select 1
+    from message_dispatcher.message_templates mt
+    where mt.template_key = 'account.provider_activated'
+      and mt.channel = 'email'
+      and mt.active
+  ),
+  'account.provider_activated email template registered'
 );
 
 select * from finish();
