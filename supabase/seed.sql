@@ -416,10 +416,27 @@ update public.client_profiles_private set cpf = '444.555.666-77'
 where client_id = '68e30f1d-3c47-441f-94c6-76b6ea0db474' and cpf is null;
 
 -- 5) provider_profiles_private (entity + CPF)
-update public.provider_profiles_private
-set entity_type = 'pf',
-    cpf = '987.654.321-00'
-where provider_id = '5d09e025-20a2-4842-aeef-324d42a431e1' and cpf is null;
+UPDATE public.provider_profiles_private
+SET
+  entity_type = 'pj',
+  cpf = null,
+  cnpj = '49.769.985/0001-03',
+  razao_social = 'João LTDA',
+  nome_fantasia = 'João Eletricista',
+  legal_representative_name = 'João Pedro Eletricista',
+  legal_representative_cpf = '987.654.321-00',
+  legal_representative_phone = '(48) 98765-4321',
+  commercial_contact = 'joao@prestway.com',
+  bank_institution_code = '84',
+  bank_branch = '1410',
+  bank_account = '303939',
+  pix_key = 'joao@prestway.com',
+  identity_doc_storage_path = 'providers/5d09e025-20a2-4842-aeef-324d42a431e1/kyc/identity/doc.pdf',
+  address_proof_storage_path = 'providers/5d09e025-20a2-4842-aeef-324d42a431e1/kyc/address-proof/doc.pdf',
+  corporate_charter_storage_path = 'providers/5d09e025-20a2-4842-aeef-324d42a431e1/kyc/corporate-charter/doc.pdf',
+  legal_rep_doc_storage_path = 'providers/5d09e025-20a2-4842-aeef-324d42a431e1/kyc/legal-rep-id/doc.pdf',
+  updated_at = now()
+WHERE provider_id = '5d09e025-20a2-4842-aeef-324d42a431e1';
 
 update public.provider_profiles_private
 set entity_type = 'pf',
@@ -1054,6 +1071,9 @@ as $$
   )::uuid;
 $$;
 
+-- 13) Provider gateway account (NetCred)
+INSERT INTO "public"."provider_gateway_accounts" ("id", "provider_id", "gateway_slug", "document", "netcred_company_id", "netcred_bank_account_id", "onboarding_status", "onboarding_submitted_at", "onboarding_activated_at", "email_dispatched_at", "created_at", "updated_at") VALUES ('24e5c730-6728-4eb9-a2e4-7cfc2c52355b', '5d09e025-20a2-4842-aeef-324d42a431e1', 'netcred', '49769985000103', '1048', '2053', 'ACTIVE', '2026-07-07 17:57:17+00', '2026-07-07 17:57:19+00', '2026-07-07 17:57:21+00', '2026-07-07 17:57:24.393658+00', '2026-07-07 17:57:24.393658+00');
+
 -- Seed RPCs run in one transaction; now() is frozen so message order ties on UUID.
 -- Re-stamp created_at in logical order (TEXT prelude, then PROPOSAL by version).
 create or replace function pg_temp.seed_timeline_epoch()
@@ -1265,7 +1285,7 @@ begin
   );
   perform pg_temp.seed_finalize_chat_timeline(v_chat_id, 1);
 
-  -- 2) Proposal accepted by client (8017e002)
+  -- 2) Proposal pending client response (8017e002)
   v_client_id := '38e30f1d-3c47-441f-94c6-76b6ea0db471';
   v_chat_id := pg_temp.seed_chat_prelude(
     '8017e002-5a32-44e7-b8da-1727a14f4d02'::uuid,
@@ -1273,20 +1293,11 @@ begin
     v_provider_id,
     2
   );
-  v_proposal := pg_temp.seed_create_proposal(
+  perform pg_temp.seed_create_proposal(
     '8017e002-5a32-44e7-b8da-1727a14f4d02'::uuid,
     v_provider_id,
     890.00,
     pg_temp.seed_flow_key(2, 1)
-  );
-  perform pg_temp.seed_set_auth(v_client_id);
-  perform public.accept_proposal(
-    (v_proposal->'proposal'->>'id')::uuid,
-    jsonb_build_object(
-      'start_date', (current_date + 2)::text,
-      'shift', 'morning'
-    ),
-    pg_temp.seed_flow_key(2, 2)
   );
   perform pg_temp.seed_finalize_chat_timeline(v_chat_id, 2);
 
@@ -1491,3 +1502,12 @@ where d.status in (
   'PROCESSING'::message_dispatcher.message_dispatch_status,
   'FAILED_RETRYABLE'::message_dispatcher.message_dispatch_status
 );
+
+-- Atualizar taxas de cartão de crédito
+UPDATE public.platform_constants SET value = '3.10'::jsonb WHERE key = 'cc_visa_master_1x_rate';
+UPDATE public.platform_constants SET value = '3.80'::jsonb WHERE key = 'cc_visa_master_2_6x_rate';
+UPDATE public.platform_constants SET value = '4.80'::jsonb WHERE key = 'cc_visa_master_7_12x_rate';
+UPDATE public.platform_constants SET value = '3.80'::jsonb WHERE key = 'cc_elo_other_1x_rate';
+UPDATE public.platform_constants SET value = '4.20'::jsonb WHERE key = 'cc_elo_other_2_6x_rate';
+UPDATE public.platform_constants SET value = '5.20'::jsonb WHERE key = 'cc_elo_other_7_12x_rate';
+UPDATE public.platform_constants SET value = '4.90'::jsonb WHERE key = 'cc_fixed_processing_fee_brl';
