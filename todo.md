@@ -19,6 +19,7 @@ Itens interessantes de ter na plataforma (futuro)
 - Adicionar integração com IA que avalia a melhor proposta e faz um resumo
 - Exibir sugestões de perguntas para o prestador na hora que ele abre o chat pela primeira vez
 -ver imagens que o chat gpt gerou da tela de detalhes do serviço e o que podemos incorporar de fato.
+- Permitir se inscrever em um tópico no FCM
 
 
 
@@ -54,6 +55,7 @@ Telas/fluxos restantes:
 - Fluxo do prestador/cliente cancelar um serviço
 - Weblab
 - Template dos emails
+- Refazer tela de erros
 
 Coisas para verificar:
 
@@ -92,3 +94,48 @@ Coisas para fazer next
 - payment_cron_post_sentry_alerts e payment-emite-sentry-alerts talvez poderiam ser algo compartilhado e não exclusivo de payments
 
 - verificar se o e-mail de onboarding está sendo enviado para netcred 
+
+- no chat ele faz um platform_constant_int para obter o SLA do chat, faz sentido isso? é seguro? verificar em outros lugares que estamos chamando platform constants. porque talvez não faça sentido em termos de segurança
+
+
+Fluxo de pagamentos, itens com problemas:
+- A tela de "credenciamento de pagamentos" do prestador não está com um design bom
+- A tela de "credenciamento de pagamentos" não aparece quando eu navego para meus servoços ou trabalhos como algo obrigatório
+- Verificar se depois que eu preenchi os detalhes do credencimento do prestador se aparece as telas com os status correspondentes.
+- Não está funcionamento o credenciamento de pagamentos, os dados não são enviados. Além disso há um problema que ele faz o upload dos documentos a  cada envio, deveria enviar tudo junto e fazer na própria edge function. Tela também naõ é amigável em relação ao número do banco.
+
+
+- Forma que ele abre a dialog de pagamento naõ está boa
+- Precisamos coletar o CPF do títular do cartão de crédito e garantir que ele é o mesmo do dono da conta.
+- O frontend está mostrando erros que vem do backend sem muito tratamento na dialog de pagamento.
+
+
+
+
+- Na tela de detalhes de um serviço, com serviço contratado aparece uma box "servico contratado" com informações como status CONFIRMED sem tratamento e data de agendamento também sem tratamento correto.
+
+- Na tela de meus serviços melhorar a visualização de que um pedido ainda está aguardando pagamento.
+
+- Na tela de histórico de pagamento do cliente mostrar reembolso parcial (valor)
+
+
+Detalhes dos testes:
+4970100000000048
+10/2027
+123
+Maria da Silva
+
+
+
+
+
+----
+Com base em tudo o que foi definido em @docs/cancelamento-reagendamento-servicos/details.md , no design do que já foi implementado em relação ao sistema de pagamentos em @docs/payment-system/design.md e nos seus requisitos @docs/payment-system/payment-system-requirements.md , e levando em consideração as tarefas já desenvolvidas do sistema de pagamentos @docs/payment-system/tasks.md , crie um plano para desenvolver agora o sistema de Reagendamento de serviços baseado nas regras e fluxos definidos em @docs/cancelamento-reagendamento-servicos/details.md , levando em consideração as questões envolvendo o sistema de pagamento como por exemplo alterar a data de cobrança do serviço caso ele ainda não tenha sido cobrado etc. 
+
+Para desenvolver o seu plano, deixe claro que antes de propor qualquer alteração para migrações existentes envolvendo RPCs, é OBRIGATÓRIO que  primeiro se veriifque o estado do banco de dados local do Supabase que está rodando, para obter o corpo mais atualizado de cada RPC e evitar regressões. É extremamente necessário que mantenhamos o corpo das RPCs que vamos modificar atualizado com base nas modificações mais recentes feitas. 
+
+O plano deve também deixar claro que precisamos  criar um código limpo e organizado, seguindo os padrões de código definidos no projeto e também seguindo os requirements definidos abaixo:
+
+@docs/infrastructure-constraints.md @docs/concurrency-requirements.md @docs/scalability-requirements.md @docs/technical-stack.md 
+
+Crie um plano que contemple o fluxo completo, desde o botão na tela de detalhes do serviço para solicitação do reagendamento, a navegação para o chat, as dialogs e cards que  aparecem durante o fluxo de reagendamento no chat, notificações push e e-mails que são disparados ao prestador e ao usuário em cada  parte do fluxo
