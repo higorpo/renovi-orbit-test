@@ -46,6 +46,18 @@ describe("resolveChatActionBanner", () => {
     expect(banner).toBeNull();
   });
 
+  it("does not show send proposal for provider when latest proposal is accepted", () => {
+    const banner = resolveChatActionBanner({
+      viewerRole: "provider",
+      ...activeContext,
+      primaryProposalStatus: "ACCEPTED",
+      canShowSendProposalBanner: true,
+      canShowCloseConversationBanner: false,
+    });
+
+    expect(banner).toBeNull();
+  });
+
   it("shows send proposal for provider when exchange criteria are met", () => {
     const banner = resolveChatActionBanner({
       viewerRole: "provider",

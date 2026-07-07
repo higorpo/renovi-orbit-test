@@ -26,6 +26,7 @@ import type { ProposalCardAction } from "../DynamicMessageRenderer/DynamicPropos
 import { createClientSendId } from "../../utils/clientSendId";
 import { deriveLatestProposalIdFromMessages } from "../../utils/deriveLatestProposalIdFromMessages";
 import { deriveRevisionRequestedProposalId } from "../../utils/deriveRevisionRequestedProposalId";
+import { isPendingProposalStatus } from "@/features/negotiation-proposals";
 import { useProposalTimelineHydration } from "../../hooks/useProposalTimelineHydration";
 import { resolveCounterpartyViewedMessageId } from "../../utils/resolveCounterpartyViewedMessageId";
 import { ChatComposerBar } from "./ChatComposerBar";
@@ -90,8 +91,6 @@ export function ChatScreen({
     () => deriveLatestProposalIdFromMessages(messages),
     [messages],
   );
-  const hasPendingProposal = composerState.disabledReason === "pending_proposal";
-
   const { proposal: latestProposal, isLoading: isLatestProposalLoading } = useProposalTimelineHydration(
     chatId,
     latestProposalId,
@@ -103,6 +102,12 @@ export function ChatScreen({
     [latestProposal?.status, latestProposalId],
   );
 
+  const latestProposalStatus = latestProposal?.status ?? null;
+  const pendingProposalId =
+    latestProposalId && isPendingProposalStatus(latestProposalStatus)
+      ? latestProposalId
+      : null;
+
   const isLatestProposalStatusPending = Boolean(
     latestProposalId && isLatestProposalLoading && !latestProposal,
   );
@@ -111,9 +116,9 @@ export function ChatScreen({
     chatId,
     viewerRole,
     conversationStatus: detail?.conversation.status ?? "INACTIVE",
-    pendingProposalId: hasPendingProposal ? latestProposalId : null,
+    pendingProposalId,
     revisionRequestedProposalId,
-    primaryProposalStatus: hasPendingProposal ? "PENDING" : null,
+    primaryProposalStatus: latestProposalStatus,
     messages,
     clientId: detail?.conversation.client_id ?? null,
     providerId: detail?.conversation.provider_id ?? null,

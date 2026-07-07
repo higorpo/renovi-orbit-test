@@ -89,6 +89,12 @@ function buildClientViewBanner(proposalId: string): ChatActionBannerModel {
   };
 }
 
+function shouldBlockProviderSendProposalBanner(
+  status: ProposalStatus | null | undefined,
+): boolean {
+  return status === "ACCEPTED" || status === "PENDING" || status === "REVISION_REQUESTED";
+}
+
 function buildCloseConversationBanner(): ChatActionBannerModel {
   return {
     action: "close_conversation",
@@ -117,6 +123,7 @@ export function resolveChatActionBanner(
 
     if (
       !context.pendingProposalId &&
+      !shouldBlockProviderSendProposalBanner(context.primaryProposalStatus) &&
       context.conversationStatus === "ACTIVE" &&
       context.canShowSendProposalBanner &&
       !context.isLatestProposalStatusPending
