@@ -113,6 +113,7 @@ type PaymentProfileCreateGraphQLResponse = {
         cardNumber?: string | null;
         brand?: string | null;
         token?: string | null;
+        rejectedReason?: string | null;
       } | null;
     } | null;
   };
@@ -266,6 +267,8 @@ export class NetCredAdapter {
         transaction_state: result.transactionState,
         outcome: result.success ? "success" : "gateway_error",
         error_code: result.error?.code,
+        gateway_error_code: result.error?.originalCode,
+        error_message: result.error?.message,
       }),
     );
   }
@@ -420,6 +423,9 @@ export class NetCredAdapter {
     if (input.phone) {
       customerInput.phone = input.phone.replace(/\D/g, "");
     }
+    if (input.email?.trim()) {
+      customerInput.email = input.email.trim();
+    }
 
     const billingAddressInput: Record<string, string> = {
       street: input.billingAddress.street,
@@ -466,8 +472,20 @@ export class NetCredAdapter {
         };
       }
 
+      const isActive = Boolean(paymentProfile?.isActive);
+      if (!isActive) {
+        const rejectedReason = paymentProfile?.rejectedReason?.trim();
+        return {
+          isActive: false,
+          errors: [{
+            message: rejectedReason || "Tokenization failed",
+            code: rejectedReason ? "PAYMENT_PROFILE_REJECTED" : "PAYMENT_PROFILE_INACTIVE",
+          }],
+        };
+      }
+
       return {
-        isActive: Boolean(paymentProfile?.isActive),
+        isActive: true,
         paymentProfileId: paymentProfile?.id ?? undefined,
         cardNumberMasked: paymentProfile?.cardNumber ?? undefined,
         cardBrand: paymentProfile?.brand ?? undefined,

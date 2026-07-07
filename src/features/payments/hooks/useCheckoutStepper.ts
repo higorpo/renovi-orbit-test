@@ -26,6 +26,7 @@ export function useCheckoutStepper(options: UseCheckoutStepperOptions = {}) {
   const [stepData, setStepData] = useState<CheckoutStepData>({});
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [clearsaleSessionId, setClearsaleSessionIdState] = useState<string | null>(null);
+  const [sessionSteps, setSessionSteps] = useState<CheckoutStepId[] | null>(null);
 
   const requirementsQuery = useQuery({
     queryKey: CHECKOUT_STEP_REQUIREMENTS_QUERY_KEY,
@@ -43,10 +44,34 @@ export function useCheckoutStepper(options: UseCheckoutStepperOptions = {}) {
 
   const requirements = requirementsQuery.data ?? DEFAULT_REQUIREMENTS;
 
-  const steps = useMemo(
+  const resolvedSteps = useMemo(
     () => resolveCheckoutSteps(requirements),
     [requirements],
   );
+
+  useEffect(() => {
+    if (
+      sessionSteps === null
+      && !requirementsQuery.isLoading
+      && !requirementsQuery.isError
+      && requirementsQuery.data
+    ) {
+      setSessionSteps(resolveCheckoutSteps(requirementsQuery.data));
+    }
+  }, [
+    sessionSteps,
+    requirementsQuery.isLoading,
+    requirementsQuery.isError,
+    requirementsQuery.data,
+  ]);
+
+  useEffect(() => {
+    if (options.enabled === false) {
+      setSessionSteps(null);
+    }
+  }, [options.enabled]);
+
+  const steps = sessionSteps ?? resolvedSteps;
 
   const currentStep: CheckoutStepId = steps[currentStepIndex] ?? steps[0] ?? "card";
 
@@ -96,6 +121,7 @@ export function useCheckoutStepper(options: UseCheckoutStepperOptions = {}) {
     setStepData({});
     setCurrentStepIndex(0);
     setClearsaleSessionIdState(null);
+    setSessionSteps(null);
   }, []);
 
   const goToStep = useCallback(

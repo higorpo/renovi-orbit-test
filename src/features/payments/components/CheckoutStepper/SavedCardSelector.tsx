@@ -15,7 +15,7 @@ import {
 
 export type SavedCardSelectorProps = {
   providerServiceId: string;
-  cpf?: string;
+  savedCpf?: string | null;
   phone?: string;
   onSelect: (selection: SavedCardSelection) => void;
   onBack?: () => void;
@@ -23,7 +23,7 @@ export type SavedCardSelectorProps = {
 
 export function SavedCardSelector({
   providerServiceId,
-  cpf,
+  savedCpf,
   phone,
   onSelect,
   onBack,
@@ -46,7 +46,8 @@ export function SavedCardSelector({
     return (
       <CardForm
         providerServiceId={providerServiceId}
-        cpf={cpf}
+        tokenizeContext="checkout"
+        savedCpf={savedCpf}
         phone={phone}
         onSuccess={handleNewCardSuccess}
         onBack={

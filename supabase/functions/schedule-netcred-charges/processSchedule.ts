@@ -11,6 +11,11 @@ import type {
   PaymentProvider,
 } from "../_shared/payment/types.ts";
 import { buildPayoutRule } from "../_shared/payment/buildPayoutRule.ts";
+import {
+  buildChargeAttemptCompletedFields,
+  buildProviderResponseSummary,
+  chargeResultLogFields,
+} from "./chargeAttemptLogging.ts";
 import { executeCharge } from "./executeCharge.ts";
 import { enqueueCronChargeNotifications } from "./enqueueNotifications.ts";
 import { resolveCronChargeOutcome } from "./resolveCronChargeOutcome.ts";
@@ -57,7 +62,7 @@ export type ProcessScheduleDeps = {
     gatewayLatencyMs: number;
     providerResponseSummary: Record<string, unknown>;
     undoAttemptIncrement: boolean;
-  }) => Promise<string | null>;
+  }) => Promise<string>;
   loadHistoricalFailureCodes: (scheduleId: string) => Promise<string[]>;
   emitFailedPermanentWarning: (input: {
     service_id: string;
@@ -74,17 +79,35 @@ export type ProcessScheduleDeps = {
   now?: () => number;
 };
 
-function buildProviderResponseSummary(
-  result: CreateChargeResult,
-): Record<string, unknown> {
-  return {
-    success: result.success,
-    transactionState: result.transactionState ?? null,
-    chargeId: result.chargeId ?? null,
-    transactionId: result.transactionId ?? null,
-    errorCode: result.error?.code ?? null,
-    originalCode: result.error?.originalCode ?? null,
-  };
+function logChargeAttemptCompleted(
+  schedule: CronChargeSchedule,
+  extra: Record<string, unknown>,
+  chargeResult?: CreateChargeResult,
+): void {
+  const fields = buildChargeAttemptCompletedFields(schedule, extra, chargeResult);
+
+  if (chargeResult && !chargeResult.success) {
+    logger.warn(PAYMENT_LOG_EVENTS.CHARGE_ATTEMPT_COMPLETED, fields);
+    return;
+  }
+
+  logger.info(PAYMENT_LOG_EVENTS.CHARGE_ATTEMPT_COMPLETED, fields);
+}
+
+function logGatewayChargeRejected(
+  schedule: CronChargeSchedule,
+  chargeAmount: string,
+  paymentProfileId: string,
+  chargeResult: CreateChargeResult,
+): void {
+  logger.warn("gateway_charge_create_rejected", {
+    ...scheduleContext(schedule),
+    attempt_number: schedule.automatic_attempt_count,
+    netcred_company_id: schedule.netcred_company_id,
+    payment_profile_id: paymentProfileId,
+    charge_amount: chargeAmount,
+    ...chargeResultLogFields(chargeResult),
+  });
 }
 
 async function commitFromChargeResult(
@@ -179,16 +202,14 @@ async function commitAuthFailure(
     providerResponseSummary: {
       auth_failure: true,
       error_code: "NETCRED_AUTH_FAILURE",
+      errorMessage: error.message,
     },
     undoAttemptIncrement: true,
   });
 
-  logger.info(PAYMENT_LOG_EVENTS.CHARGE_ATTEMPT_COMPLETED, {
-    ...scheduleContext(schedule),
+  logChargeAttemptCompleted(schedule, {
     outcome: "FAILED",
     auth_failure: true,
-    attempt_number: schedule.automatic_attempt_count,
-    initiator: "cron",
   });
 
   return {
@@ -262,9 +283,16 @@ export async function processSchedule(
     customerIpAddress: schedule.client_ip_address ?? undefined,
   };
 
+  const scheduleForCharge: CronChargeSchedule = {
+    ...schedule,
+    netcred_company_id:
+      schedule.netcred_company_id?.trim() || providerAccount.netcred_company_id?.trim() || null,
+    provider_payout: schedule.provider_payout ?? schedule.base_amount,
+  };
+
   let execution: Awaited<ReturnType<typeof executeCharge>>;
   try {
-    execution = await executeCharge(deps, schedule, chargeInput);
+    execution = await executeCharge(deps, scheduleForCharge, chargeInput);
   } catch (error) {
     if (error instanceof ProviderAuthError) {
       return commitAuthFailure(deps, schedule, chargeAmount, error);
@@ -279,42 +307,48 @@ export async function processSchedule(
         schedule,
         execution.existing,
       );
-      logger.info(PAYMENT_LOG_EVENTS.CHARGE_ATTEMPT_COMPLETED, {
-        ...scheduleContext(schedule),
+      logChargeAttemptCompleted(schedule, {
         outcome: result.outcome,
         reconciled: true,
-        attempt_number: schedule.automatic_attempt_count,
-        initiator: "cron",
       });
       return result;
     }
 
+    const rejectedResult: CreateChargeResult = {
+      success: false,
+      transactionState: "REJECTED",
+      chargeId: execution.existing.chargeId,
+      transactionId: execution.existing.transactionId,
+      error: {
+        code: "TERMINAL",
+        message: "Existing transaction is REJECTED",
+        originalCode: "REJECTED",
+      },
+    };
+
     const result = await commitFromChargeResult(
       deps,
       schedule,
-      {
-        success: false,
-        transactionState: "REJECTED",
-        chargeId: execution.existing.chargeId,
-        transactionId: execution.existing.transactionId,
-        error: {
-          code: "TERMINAL",
-          message: "Existing transaction is REJECTED",
-          originalCode: "REJECTED",
-        },
-      },
+      rejectedResult,
       chargeAmount,
       0,
       true,
     );
-    logger.info(PAYMENT_LOG_EVENTS.CHARGE_ATTEMPT_COMPLETED, {
-      ...scheduleContext(schedule),
-      outcome: result.outcome,
-      reconciled: true,
-      attempt_number: schedule.automatic_attempt_count,
-      initiator: "cron",
-    });
+    logChargeAttemptCompleted(
+      schedule,
+      { outcome: result.outcome, reconciled: true },
+      rejectedResult,
+    );
     return result;
+  }
+
+  if (!execution.chargeResult.success) {
+    logGatewayChargeRejected(
+      scheduleForCharge,
+      chargeAmount,
+      paymentToken.gateway_payment_profile_id,
+      execution.chargeResult,
+    );
   }
 
   const result = await commitFromChargeResult(
@@ -326,14 +360,16 @@ export async function processSchedule(
     false,
   );
 
-  logger.info(PAYMENT_LOG_EVENTS.CHARGE_ATTEMPT_COMPLETED, {
-    ...scheduleContext(schedule),
-    outcome: result.outcome,
-    gateway_latency_ms: execution.gatewayLatencyMs,
-    charge_amount: chargeAmount,
-    attempt_number: schedule.automatic_attempt_count,
-    initiator: "cron",
-  });
+  logChargeAttemptCompleted(
+    schedule,
+    {
+      outcome: result.outcome,
+      gateway_latency_ms: execution.gatewayLatencyMs,
+      charge_amount: chargeAmount,
+      reconciled: false,
+    },
+    execution.chargeResult,
+  );
 
   return result;
 }

@@ -34,7 +34,7 @@
     "android": "yarn build && npx cap sync android && npx cap open android",
     "ios": "yarn build && npx cap sync ios && npx cap open ios",
     "dev:host": "portless run --name orbit --app-port 5854 vite --host --port 5854",
-    "enable-resend-webhook": "lt -p 54321 -s pj-orbit-sb",
+    "enable-webhook": "lt -p 54321 -s pj-orbit-sb",
     "test:deno": "deno test --config supabase/functions/deno.json supabase/functions/ -A --no-check",
     "ci": "bash scripts/ci-tests.sh"
   },

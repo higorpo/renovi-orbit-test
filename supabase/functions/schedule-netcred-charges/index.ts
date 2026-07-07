@@ -128,8 +128,15 @@ function createProcessScheduleDeps(
         p_undo_attempt_increment: input.undoAttemptIncrement,
       });
 
-      if (error || !data) {
-        return null;
+      if (error) {
+        const detail = error.details ? ` details=${error.details}` : "";
+        throw new Error(
+          `payment_commit_charge_outcome failed: ${error.message} (code=${error.code}${detail})`,
+        );
+      }
+
+      if (!data) {
+        throw new Error("payment_commit_charge_outcome returned no schedule id");
       }
 
       return String(data);

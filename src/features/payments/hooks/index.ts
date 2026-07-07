@@ -5,6 +5,10 @@ export {
 export type { UseCheckoutStepperOptions } from "./useCheckoutStepper";
 export { useTokenizeCard } from "./useTokenizeCard";
 export {
+  useClientCpfForPayment,
+  PAYMENT_CLIENT_CPF_QUERY_KEY,
+} from "./useClientCpfForPayment";
+export {
   useSavedPaymentTokens,
   SAVED_PAYMENT_TOKENS_QUERY_KEY,
 } from "./useSavedPaymentTokens";

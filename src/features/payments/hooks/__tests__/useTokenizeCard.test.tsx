@@ -21,6 +21,8 @@ function createWrapper() {
 
 const tokenizeRequest = {
   tokenizeContext: "profile" as const,
+  cpf: "03019758092",
+  phone: "48999999999",
   cardData: {
     cardNumber: "4970100000000048",
     cvv: "123",

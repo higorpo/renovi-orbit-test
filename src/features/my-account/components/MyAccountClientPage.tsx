@@ -203,7 +203,6 @@ export function MyAccountClientPage() {
 
           {!profileLoading ? (
             <SavedCardsList
-              cpf={clientPrivateCpf ?? undefined}
               phone={profile?.phone ?? undefined}
               tokenizeContext="profile"
             />

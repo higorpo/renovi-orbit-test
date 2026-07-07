@@ -91,7 +91,12 @@ describe("CardForm", () => {
     const onSuccess = vi.fn();
 
     render(
-      <CardForm providerServiceId="provider-service-1" onSuccess={onSuccess} />,
+      <CardForm
+        providerServiceId="provider-service-1"
+        savedCpf="390.533.447-05"
+        phone="(48) 99999-9999"
+        onSuccess={onSuccess}
+      />,
       { wrapper: createWrapper() },
     );
 
@@ -105,5 +110,27 @@ describe("CardForm", () => {
     expect(screen.getByLabelText("Número do cartão")).toHaveValue("");
     expect(screen.getByLabelText("CVV")).toHaveValue("");
     expect(screen.getByLabelText("Nome no cartão")).toHaveValue("");
+  });
+
+  it("shows CPF field when savedCpf is missing outside checkout", () => {
+    render(
+      <CardForm providerServiceId="provider-service-1" onSuccess={vi.fn()} />,
+      { wrapper: createWrapper() },
+    );
+
+    expect(screen.getByLabelText("CPF do titular")).toBeInTheDocument();
+  });
+
+  it("does not show CPF field in checkout when savedCpf is missing", () => {
+    render(
+      <CardForm
+        providerServiceId="provider-service-1"
+        tokenizeContext="checkout"
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: createWrapper() },
+    );
+
+    expect(screen.queryByLabelText("CPF do titular")).not.toBeInTheDocument();
   });
 });

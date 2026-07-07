@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useAuth } from "@/features/auth";
 import { ConfirmationStep } from "./ConfirmationStep";
 import { InstallmentSelector } from "../InstallmentSelector";
 import { generateIdempotencyKeyV7 } from "@/lib/utils/idempotencyKey";
@@ -10,6 +11,7 @@ import { CHECKOUT_STEP_LABELS } from "./checkoutStepLabels";
 import { CpfStep } from "./CpfStep";
 import { PhoneStep } from "./PhoneStep";
 import { SavedCardSelector } from "./SavedCardSelector";
+import { useClientCpfForPayment } from "../../hooks/useClientCpfForPayment";
 
 function DefaultStepPlaceholder({ step }: { step: CheckoutStepId }) {
   return (
@@ -51,6 +53,10 @@ export function CheckoutStepContent({
   } = stepper;
 
   const idempotencyKey = useMemo(() => generateIdempotencyKeyV7(), []);
+  const { profile } = useAuth();
+  const { cpf: profileCpf } = useClientCpfForPayment();
+  const resolvedCpf = stepData.cpf ?? profileCpf;
+  const resolvedPhone = stepData.phone ?? profile?.phone ?? undefined;
 
   switch (currentStep) {
     case "cpf":
@@ -75,8 +81,8 @@ export function CheckoutStepContent({
           {proposalId ? (
             <SavedCardSelector
               providerServiceId={proposalId}
-              cpf={stepData.cpf}
-              phone={stepData.phone}
+              savedCpf={resolvedCpf}
+              phone={resolvedPhone}
               onSelect={(selection) =>
                 completeStep({
                   cardTokenId: selection.paymentTokenId,

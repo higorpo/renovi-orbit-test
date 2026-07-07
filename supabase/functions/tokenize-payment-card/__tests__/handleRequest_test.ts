@@ -20,9 +20,17 @@ const cardData: TokenizeCardData = {
   cardholderName: "Maria da Silva",
 };
 
+const customerFields = {
+  cpf: "03019758092",
+  phone: "48999999999",
+};
+
 function createDeps(overrides: Partial<TokenizePaymentCardDeps> = {}): TokenizePaymentCardDeps {
   return {
-    getUser: async () => ({ user: { id: "client-1" }, error: null }),
+    getUser: async () => ({
+      user: { id: "client-1", email: "cliente@renovi.com.br" },
+      error: null,
+    }),
     validateCheckoutAccess: async () => {},
     resolveProviderAccount: async () => ({
       providerUserId: "provider-1",
@@ -61,6 +69,162 @@ function authRequest(body: unknown): Request {
   });
 }
 
+Deno.test("missing user email returns HTTP 422", async () => {
+  let tokenizeCalled = false;
+
+  const response = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      providerServiceId: "proposal-1",
+      ...customerFields,
+    }),
+    createDeps({
+      getUser: async () => ({ user: { id: "client-1", email: null }, error: null }),
+      tokenizeCard: async () => {
+        tokenizeCalled = true;
+        return { isActive: true };
+      },
+    }),
+  );
+
+  assertEquals(response.status, 422);
+  assertEquals(tokenizeCalled, false);
+  const body = await response.json();
+  assertEquals(body.errors?.[0]?.code, "EMAIL_REQUIRED");
+});
+
+Deno.test("user email is forwarded to tokenization", async () => {
+  let tokenizeEmail: string | undefined;
+
+  await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      providerServiceId: "proposal-1",
+      ...customerFields,
+    }),
+    createDeps({
+      tokenizeCard: async (input) => {
+        tokenizeEmail = input.email;
+        return {
+          isActive: true,
+          paymentProfileId: "403137",
+          cardNumberMasked: "497010XXXXXX0048",
+          cardBrand: "VCC",
+          token: "gateway-token",
+        };
+      },
+    }),
+  );
+
+  assertEquals(tokenizeEmail, "cliente@renovi.com.br");
+});
+
+Deno.test("missing cpf returns HTTP 422", async () => {
+  let tokenizeCalled = false;
+
+  const response = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      providerServiceId: "proposal-1",
+      phone: customerFields.phone,
+    }),
+    createDeps({
+      tokenizeCard: async () => {
+        tokenizeCalled = true;
+        return { isActive: true };
+      },
+    }),
+  );
+
+  assertEquals(response.status, 422);
+  assertEquals(tokenizeCalled, false);
+  const body = await response.json();
+  assertEquals(body.errors?.[0]?.code, "CPF_REQUIRED");
+});
+
+Deno.test("missing phone returns HTTP 422", async () => {
+  let tokenizeCalled = false;
+
+  const response = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      providerServiceId: "proposal-1",
+      cpf: customerFields.cpf,
+    }),
+    createDeps({
+      tokenizeCard: async () => {
+        tokenizeCalled = true;
+        return { isActive: true };
+      },
+    }),
+  );
+
+  assertEquals(response.status, 422);
+  assertEquals(tokenizeCalled, false);
+  const body = await response.json();
+  assertEquals(body.errors?.[0]?.code, "PHONE_REQUIRED");
+});
+
+Deno.test("cpf and phone from body are forwarded to tokenization", async () => {
+  let tokenizeCpf: string | undefined;
+  let tokenizePhone: string | undefined;
+
+  const response = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      providerServiceId: "proposal-1",
+      ...customerFields,
+    }),
+    createDeps({
+      tokenizeCard: async (input) => {
+        tokenizeCpf = input.cpf;
+        tokenizePhone = input.phone;
+        return {
+          isActive: true,
+          paymentProfileId: "403137",
+          cardNumberMasked: "497010XXXXXX0048",
+          cardBrand: "VCC",
+          token: "gateway-token",
+        };
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(tokenizeCpf, "03019758092");
+  assertEquals(tokenizePhone, "48999999999");
+});
+
+Deno.test("inactive profile rejectedReason is returned to the client", async () => {
+  const response = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      providerServiceId: "proposal-1",
+      ...customerFields,
+    }),
+    createDeps({
+      tokenizeCard: async () => ({
+        isActive: false,
+        errors: [{
+          message: "Antifraud rejected the transaction",
+          code: "PAYMENT_PROFILE_REJECTED",
+        }],
+      }),
+    }),
+  );
+
+  assertEquals(response.status, 422);
+  const body = await response.json();
+  assertEquals(body.errors?.[0]?.message, "Antifraud rejected the transaction");
+  assertEquals(body.errors?.[0]?.code, "PAYMENT_PROFILE_REJECTED");
+});
+
 Deno.test("missing billingAddress returns HTTP 422 before gateway call", async () => {
   let tokenizeCalled = false;
 
@@ -68,6 +232,7 @@ Deno.test("missing billingAddress returns HTTP 422 before gateway call", async (
     authRequest({
       cardData,
       providerServiceId: "proposal-1",
+      ...customerFields,
       billingAddress: {
         street: "",
         number: "",
@@ -99,6 +264,7 @@ Deno.test("isActive=false returns HTTP 422 and does not persist token", async ()
       cardData,
       billingAddress,
       providerServiceId: "proposal-1",
+      ...customerFields,
     }),
     createDeps({
       tokenizeCard: async () => ({
@@ -122,7 +288,7 @@ Deno.test("successful tokenization persists token and returns masked metadata", 
       cardData,
       billingAddress,
       providerServiceId: "proposal-1",
-      cpf: "03019758092",
+      ...customerFields,
     }),
     createDeps(),
   );
@@ -143,6 +309,7 @@ Deno.test("profile context uses platform company without providerServiceId", asy
       cardData,
       billingAddress,
       tokenizeContext: "profile",
+      ...customerFields,
     }),
     createDeps({
       resolveProviderAccount: async () => {
@@ -173,6 +340,7 @@ Deno.test("checkout context validates proposal ownership before gateway call", a
       cardData,
       billingAddress,
       providerServiceId: "proposal-1",
+      ...customerFields,
     }),
     createDeps({
       validateCheckoutAccess: async (clientId, proposalId) => {
@@ -206,6 +374,7 @@ Deno.test("forbidden checkout access returns HTTP 403", async () => {
       cardData,
       billingAddress,
       providerServiceId: "proposal-foreign",
+      ...customerFields,
     }),
     createDeps({
       validateCheckoutAccess: async () => {

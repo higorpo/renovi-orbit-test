@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { CardForm } from "../CheckoutStepper/CardForm";
 import { useSavedCards } from "../../hooks/useSavedCards";
+import { useClientCpfForPayment } from "../../hooks/useClientCpfForPayment";
+import { useAuth } from "@/features/auth";
 import type { TokenizeCardSuccess } from "../../api/cards.api";
 import {
   formatCardExpiry,
@@ -22,19 +24,20 @@ import {
 } from "../../utils/cardPresentation";
 
 export type SavedCardsListProps = {
-  cpf?: string;
   phone?: string;
   providerServiceId?: string;
   tokenizeContext?: "checkout" | "profile";
 };
 
 export function SavedCardsList({
-  cpf,
   phone,
   providerServiceId,
   tokenizeContext = providerServiceId ? "checkout" : "profile",
 }: SavedCardsListProps) {
   const { cards, isLoading, revokeCard, isRevoking, revokingTokenId, refetch } = useSavedCards();
+  const { profile } = useAuth();
+  const { cpf: savedCpf } = useClientCpfForPayment();
+  const resolvedPhone = phone ?? profile?.phone ?? undefined;
   const [showAddForm, setShowAddForm] = useState(false);
   const [tokenToRemove, setTokenToRemove] = useState<string | null>(null);
   const [blockedWarning, setBlockedWarning] = useState<{
@@ -96,8 +99,8 @@ export function SavedCardsList({
         <CardForm
           providerServiceId={providerServiceId}
           tokenizeContext={tokenizeContext}
-          cpf={cpf}
-          phone={phone}
+          savedCpf={savedCpf}
+          phone={resolvedPhone}
           submitLabel="Salvar cartão"
           onSuccess={handleAddSuccess}
           onBack={cards.length > 0 ? () => setShowAddForm(false) : undefined}

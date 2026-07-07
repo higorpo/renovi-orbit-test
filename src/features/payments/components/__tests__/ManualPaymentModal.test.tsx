@@ -4,6 +4,14 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { ManualPaymentModal } from "../ManualPaymentModal";
 import type { PaymentScheduleSummary } from "../../types/paymentSchedule.types";
 
+vi.mock("../../hooks/useClientCpfForPayment", () => ({
+  useClientCpfForPayment: () => ({ cpf: "390.533.447-05", isLoading: false, error: null }),
+}));
+
+vi.mock("@/features/auth", () => ({
+  useAuth: () => ({ profile: { phone: "(48) 99999-9999" } }),
+}));
+
 vi.mock("../CheckoutStepper/CardStep", () => ({
   CardStep: ({
     onSessionIdGenerated,

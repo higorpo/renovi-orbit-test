@@ -19,6 +19,10 @@ export function PaymentTrustDisclosure() {
             A Renovi não armazena número completo do cartão nem CVV.
           </p>
           <p className="text-muted-foreground">
+            Por exigência regulatória, o titular do cartão de crédito deve ser o mesmo da conta Renovi
+            (mesmo CPF).
+          </p>
+          <p className="text-muted-foreground">
             Ao confirmar, você declara que leu e aceita os{" "}
             <a
               href={termsUrl}

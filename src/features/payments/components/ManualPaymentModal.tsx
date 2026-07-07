@@ -28,6 +28,8 @@ import {
   formatManualPaymentFailureMessage,
   isTerminalManualChargeOutcome,
 } from "../utils/manualPaymentErrors";
+import { useClientCpfForPayment } from "../hooks/useClientCpfForPayment";
+import { useAuth } from "@/features/auth";
 
 export type ManualPaymentModalProps = {
   open: boolean;
@@ -55,6 +57,9 @@ export function ManualPaymentModal({
   const [terminalErrorMessage, setTerminalErrorMessage] = useState<string | null>(null);
   const [isUpdatingCard, setIsUpdatingCard] = useState(false);
   const manualCharge = useManualChargePayment();
+  const { profile } = useAuth();
+  const { cpf: savedCpf } = useClientCpfForPayment();
+  const savedPhone = profile?.phone ?? undefined;
 
   const installmentQuery = useInstallmentOptions({
     proposalId: acceptedProposalId,
@@ -226,6 +231,8 @@ export function ManualPaymentModal({
             ) : (
               <SavedCardSelector
                 providerServiceId={acceptedProposalId}
+                savedCpf={savedCpf}
+                phone={savedPhone}
                 onSelect={(selection) => {
                   void handleCardChanged(selection.paymentTokenId, selection.cardBrand);
                 }}

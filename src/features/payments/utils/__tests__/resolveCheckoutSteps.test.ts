@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { resolveCheckoutSteps } from "../resolveCheckoutSteps";
 
 describe("resolveCheckoutSteps", () => {
-  it("includes CPF step when profile is missing CPF", () => {
+  it("starts at CPF step when profile is missing CPF", () => {
     const steps = resolveCheckoutSteps({
       needs_cpf: true,
       needs_phone: false,

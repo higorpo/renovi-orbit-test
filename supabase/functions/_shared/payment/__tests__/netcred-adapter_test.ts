@@ -219,7 +219,8 @@ function sampleTokenizeInput(): TokenizeCardInput {
       persist: false,
     },
     cpf: "03019758092",
-    phone: "48991234567",
+    phone: "48999999999",
+    email: "cliente@renovi.com.br",
   };
 }
 
@@ -249,6 +250,69 @@ Deno.test("refundTransaction maps ALREADY_REFUNDED to idempotent success", async
 
   assertEquals(result.success, true);
   assertEquals(result.error?.code, "ALREADY_REFUNDED");
+});
+
+Deno.test("tokenizeCard includes email in customerInput", async () => {
+  let requestBody: { variables?: { input?: { customerInput?: { email?: string } } } } | undefined;
+
+  const adapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async (_url, init) => {
+      requestBody = JSON.parse(String(init?.body ?? "{}"));
+      return new Response(
+        JSON.stringify({
+          data: {
+            paymentProfileCreate: {
+              errors: [],
+              paymentProfile: {
+                id: "403137",
+                isActive: true,
+                cardNumber: "497010XXXXXX0048",
+                brand: "VCC",
+                token: "gateway-token",
+              },
+            },
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    },
+  });
+
+  await adapter.tokenizeCard(sampleTokenizeInput());
+
+  assertEquals(requestBody?.variables?.input?.customerInput?.email, "cliente@renovi.com.br");
+});
+
+Deno.test("tokenizeCard surfaces rejectedReason when profile is inactive", async () => {
+  const adapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () => new Response(
+      JSON.stringify({
+        data: {
+          paymentProfileCreate: {
+            errors: [],
+            paymentProfile: {
+              id: "403138",
+              isActive: false,
+              rejectedReason: "Antifraud rejected the transaction",
+            },
+          },
+        },
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    ),
+  });
+
+  const result = await adapter.tokenizeCard(sampleTokenizeInput());
+
+  assertEquals(result.isActive, false);
+  assertEquals(result.errors?.[0]?.message, "Antifraud rejected the transaction");
+  assertEquals(result.errors?.[0]?.code, "PAYMENT_PROFILE_REJECTED");
 });
 
 Deno.test("tokenizeCard throws BILLING_ADDRESS_REQUIRED before gateway call in production", async () => {

@@ -8,6 +8,14 @@ vi.mock("@/features/payments/hooks/useSavedCards", () => ({
   useSavedCards: () => mockUseSavedCards(),
 }));
 
+vi.mock("@/features/payments/hooks/useClientCpfForPayment", () => ({
+  useClientCpfForPayment: () => ({ cpf: null, isLoading: false, error: null }),
+}));
+
+vi.mock("@/features/auth", () => ({
+  useAuth: () => ({ profile: { phone: "(48) 99999-9999" } }),
+}));
+
 vi.mock("@/features/payments/components/CheckoutStepper/CardForm", () => ({
   CardForm: () => <div data-testid="card-form">Card form</div>,
 }));

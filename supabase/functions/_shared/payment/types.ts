@@ -130,6 +130,7 @@ export type TokenizeCardInput = {
   customerInput: TokenizeCustomerInput;
   cpf?: string;
   phone?: string;
+  email?: string;
 };
 
 export type TokenizeCardGatewayError = {

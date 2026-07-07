@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,23 +11,24 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { maskCEP } from "@/lib/masks";
+import { maskCEP, maskCPF, unmask } from "@/lib/masks";
 import {
   mapCardFormToTokenizeRequest,
   type TokenizeCardSuccess,
 } from "../../api/cards.api";
 import { useTokenizeCard } from "../../hooks/useTokenizeCard";
 import {
-  cardFormSchema,
+  createCardFormSchema,
   defaultCardFormValues,
   type CardFormData,
 } from "../../types/cardForm.validation";
 import { maskCardNumber } from "../../utils/card-validator";
+import { PaymentTrustDisclosure } from "../PaymentTrustDisclosure";
 
 export type CardFormProps = {
   providerServiceId?: string;
   tokenizeContext?: "checkout" | "profile";
-  cpf?: string;
+  savedCpf?: string | null;
   phone?: string;
   onSuccess: (result: TokenizeCardSuccess) => void;
   onBack?: () => void;
@@ -37,7 +38,7 @@ export type CardFormProps = {
 export function CardForm({
   providerServiceId,
   tokenizeContext,
-  cpf,
+  savedCpf,
   phone,
   onSuccess,
   onBack,
@@ -45,27 +46,51 @@ export function CardForm({
 }: CardFormProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const tokenizeCard = useTokenizeCard();
+  const collectCpf = tokenizeContext !== "checkout" && !savedCpf?.trim();
+  const cardFormSchema = useMemo(
+    () => createCardFormSchema(collectCpf),
+    [collectCpf],
+  );
 
   const form = useForm<CardFormData>({
     resolver: zodResolver(cardFormSchema),
-    defaultValues: defaultCardFormValues(),
+    defaultValues: defaultCardFormValues(collectCpf),
     mode: "onSubmit",
   });
 
   const handleSubmit = form.handleSubmit(async (values) => {
     setSubmitError(null);
 
+    const cpf = collectCpf ? values.cpf : savedCpf;
+    if (!cpf?.trim()) {
+      setSubmitError(
+        tokenizeContext === "checkout"
+          ? "Complete a etapa de CPF antes de continuar."
+          : "Informe seu CPF para continuar.",
+      );
+      return;
+    }
+
+    if (!phone?.replace(/\D/g, "").trim()) {
+      setSubmitError(
+        tokenizeContext === "checkout"
+          ? "Complete a etapa de telefone antes de continuar."
+          : "Informe seu telefone para continuar.",
+      );
+      return;
+    }
+
     try {
       const result = await tokenizeCard.mutateAsync(
         mapCardFormToTokenizeRequest(values, {
           providerServiceId,
           tokenizeContext,
-          cpf,
-          phone,
+          cpf: unmask(cpf),
+          phone: unmask(phone),
         }),
       );
 
-      form.reset(defaultCardFormValues());
+      form.reset(defaultCardFormValues(collectCpf));
       onSuccess(result);
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : "Falha ao tokenizar cartão");
@@ -81,6 +106,33 @@ export function CardForm({
             Seus dados de cartão são enviados de forma segura e não ficam salvos neste dispositivo.
           </p>
         </div>
+
+        <PaymentTrustDisclosure />
+
+        {collectCpf ? (
+          <FormField
+            control={form.control}
+            name="cpf"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel htmlFor="checkout-card-cpf">CPF do titular</FormLabel>
+                <FormControl>
+                  <Input
+                    id="checkout-card-cpf"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="000.000.000-00"
+                    value={field.value ?? ""}
+                    onChange={(event) => field.onChange(maskCPF(event.target.value))}
+                    onBlur={field.onBlur}
+                    disabled={tokenizeCard.isPending}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ) : null}
 
         <div className="space-y-4">
           <FormField

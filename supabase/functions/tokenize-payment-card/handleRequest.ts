@@ -26,7 +26,10 @@ export type PaymentTokenInsertResult = {
 };
 
 export type TokenizePaymentCardDeps = {
-  getUser: (token: string) => Promise<{ user: { id: string } | null; error: Error | null }>;
+  getUser: (token: string) => Promise<{
+    user: { id: string; email?: string | null } | null;
+    error: Error | null;
+  }>;
   validateCheckoutAccess: (
     clientId: string,
     proposalId: string,
@@ -129,6 +132,18 @@ export async function handleTokenizePaymentCardRequest(
     return jsonResponse({ error: "provider_not_credentialed" }, 409, cors);
   }
 
+  const email = user.email?.trim();
+  if (!email) {
+    return jsonResponse(
+      {
+        error: "email_required",
+        errors: [{ message: "EMAIL_REQUIRED", code: "EMAIL_REQUIRED" }],
+      },
+      422,
+      cors,
+    );
+  }
+
   const tokenizeResult = await deps.tokenizeCard({
     cardData: validated.cardData,
     billingAddress: validated.billingAddress,
@@ -138,6 +153,7 @@ export async function handleTokenizePaymentCardRequest(
     },
     cpf: validated.cpf,
     phone: validated.phone,
+    email,
   });
 
   if (!tokenizeResult.isActive) {
@@ -146,6 +162,7 @@ export async function handleTokenizePaymentCardRequest(
       tokenize_context: validated.tokenizeContext,
       provider_service_id: validated.providerServiceId ?? null,
       error_count: tokenizeResult.errors?.length ?? 0,
+      error_code: tokenizeResult.errors?.[0]?.code ?? null,
     });
     return jsonResponse(
       { errors: tokenizeResult.errors ?? [{ message: "Tokenization failed" }] },

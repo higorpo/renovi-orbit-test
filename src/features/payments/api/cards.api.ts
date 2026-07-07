@@ -42,8 +42,8 @@ export type TokenizeCardRequest = {
     cardholderName: string;
   };
   billingAddress: TokenizeCardBillingAddress;
-  cpf?: string;
-  phone?: string;
+  cpf: string;
+  phone: string;
 };
 
 export type TokenizeCardSuccess = {
@@ -128,9 +128,9 @@ export function mapCardFormToTokenizeRequest(
   options: {
     providerServiceId?: string;
     tokenizeContext?: "checkout" | "profile";
-    cpf?: string;
-    phone?: string;
-  } = {},
+    cpf: string;
+    phone: string;
+  },
 ): TokenizeCardRequest {
   return {
     providerServiceId: options.providerServiceId,
@@ -152,8 +152,8 @@ export function mapCardFormToTokenizeRequest(
       zipCode: normalizeCardDigits(form.zipCode),
       additionalDetails: form.additionalDetails?.trim() || undefined,
     },
-    cpf: options.cpf,
-    phone: options.phone,
+    cpf: options.cpf.replace(/\D/g, ""),
+    phone: options.phone.replace(/\D/g, ""),
   };
 }
 

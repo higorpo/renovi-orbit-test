@@ -1,5 +1,6 @@
 import type { BillingAddress, TokenizeCardData } from "../_shared/payment/types.ts";
 import { isValidCpf, normalizeCpf } from "./validateCpf.ts";
+import { isValidBrazilPhone, normalizePhone } from "./validatePhone.ts";
 import type { TokenizePaymentCardBody } from "./types.ts";
 
 export type ParsedTokenizeRequest = {
@@ -7,8 +8,8 @@ export type ParsedTokenizeRequest = {
   billingAddress: BillingAddress;
   providerServiceId?: string;
   tokenizeContext: "checkout" | "profile";
-  cpf?: string;
-  phone?: string;
+  cpf: string;
+  phone: string;
 };
 
 export type TokenizeValidationError = {
@@ -68,11 +69,35 @@ export function validateTokenizePaymentCardBody(
     };
   }
 
-  if (body.cpf && !isValidCpf(body.cpf)) {
+  if (!body.cpf?.trim()) {
+    return {
+      status: 422,
+      error: "cpf_required",
+      errors: [{ message: "CPF_REQUIRED", code: "CPF_REQUIRED" }],
+    };
+  }
+
+  if (!isValidCpf(body.cpf)) {
     return {
       status: 422,
       error: "invalid_cpf",
       errors: [{ message: "CPF_INVALID", code: "CPF_INVALID" }],
+    };
+  }
+
+  if (!body.phone?.trim()) {
+    return {
+      status: 422,
+      error: "phone_required",
+      errors: [{ message: "PHONE_REQUIRED", code: "PHONE_REQUIRED" }],
+    };
+  }
+
+  if (!isValidBrazilPhone(body.phone)) {
+    return {
+      status: 422,
+      error: "invalid_phone",
+      errors: [{ message: "PHONE_INVALID", code: "PHONE_INVALID" }],
     };
   }
 
@@ -81,7 +106,7 @@ export function validateTokenizePaymentCardBody(
     billingAddress: body.billingAddress,
     providerServiceId: body.providerServiceId?.trim(),
     tokenizeContext,
-    cpf: body.cpf ? normalizeCpf(body.cpf) : undefined,
-    phone: body.phone?.replace(/\D/g, ""),
+    cpf: normalizeCpf(body.cpf),
+    phone: normalizePhone(body.phone),
   };
 }
