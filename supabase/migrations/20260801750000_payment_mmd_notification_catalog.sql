@@ -16,7 +16,7 @@ values
     'payment.upcoming_charge',
     'push',
     'Cobrança em 24 horas — {{service_request_title}}',
-    'Seu cartão será cobrado amanhã ({{charge_amount_formatted}}) pelo serviço {{service_request_title}}. Confira os detalhes e atualize o cartão se necessário.',
+    'Será cobrado amanhã o valor de {{charge_amount_formatted}} no cartão cadastrado. Confira os detalhes e atualize o cartão se necessário.',
     '{"type":"object","properties":{"schedule_id":{"type":"string"},"contracted_service_id":{"type":"string"},"service_request_title":{"type":"string"},"charge_scheduled_at":{"type":"string"},"charge_amount":{"type":"number"},"charge_amount_formatted":{"type":"string"},"paid_amount":{"type":"number"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title","charge_amount_formatted"],"additionalProperties":true}'::jsonb,
     true
   ),
@@ -32,7 +32,7 @@ values
     'payment.charge_succeeded',
     'push',
     'Pagamento confirmado — {{service_request_title}}',
-    'Pagamento aprovado para {{service_request_title}}, agendado para {{service_execution_formatted}}.',
+    'Pagamento aprovado, serviço agendado para {{service_execution_formatted}}.',
     '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"service_request_title":{"type":"string"},"service_execution_formatted":{"type":"string"},"charge_amount_formatted":{"type":"string"},"paid_amount":{"type":"number"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title","service_execution_formatted"],"additionalProperties":true}'::jsonb,
     true
   ),
@@ -48,7 +48,7 @@ values
     'payment.charge_succeeded_provider',
     'push',
     'Trabalho confirmado — {{service_request_title}}',
-    'Pagamento confirmado para {{service_request_title}}, agendado para {{service_execution_formatted}}.',
+    'Pagamento confirmado, serviço agendado para {{service_execution_formatted}}.',
     '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"service_request_title":{"type":"string"},"service_execution_formatted":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title","service_execution_formatted"],"additionalProperties":true}'::jsonb,
     true
   ),
@@ -56,7 +56,7 @@ values
     'payment.charge_failed',
     'push',
     'Pagamento não processado — {{service_request_title}}',
-    'Não foi possível processar o pagamento de {{service_request_title}}. Tentaremos novamente automaticamente.',
+    'Não foi possível processar o pagamento. Tentaremos novamente automaticamente.',
     '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"service_request_title":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title"],"additionalProperties":true}'::jsonb,
     true
   ),
@@ -72,7 +72,7 @@ values
     'payment.charge_failed_permanent',
     'push',
     'Pagamento falhou — {{service_request_title}}',
-    'O pagamento de {{service_request_title}} falhou definitivamente. Efetue o pagamento manualmente para evitar o cancelamento.',
+    'O pagamento falhou definitivamente. Efetue o pagamento manualmente para evitar o cancelamento.',
     '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"service_request_title":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title"],"additionalProperties":true}'::jsonb,
     true
   ),
@@ -88,7 +88,7 @@ values
     'payment.charge_failed_permanent_provider',
     'push',
     'Pagamento do cliente pendente — {{service_request_title}}',
-    'O cliente ainda não confirmou o pagamento de {{service_request_title}}. Manteremos você informado. Se não for resolvido até 12 horas antes do serviço, cancelaremos o serviço automaticamente.',
+    'O cliente ainda não confirmou o pagamento. Manteremos você informado. Se não for resolvido até 12 horas antes do serviço, cancelaremos o serviço automaticamente.',
     '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"service_request_title":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title"],"additionalProperties":true}'::jsonb,
     true
   ),
@@ -96,7 +96,7 @@ values
     'payment.charge_in_analysis',
     'push',
     'Pagamento em análise — {{service_request_title}}',
-    'O pagamento de {{service_request_title}} está em análise antifraude. Você será notificado assim que houver uma atualização.',
+    'O pagamento está em análise antifraude. Você será notificado assim que houver uma atualização.',
     '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"service_request_title":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title"],"additionalProperties":true}'::jsonb,
     true
   ),
@@ -104,7 +104,7 @@ values
     'payment.service_auto_cancelled',
     'push',
     'Serviço cancelado — {{service_request_title}}',
-    '{{service_request_title}} foi cancelado automaticamente por falta de pagamento. Entre em contato com o suporte se precisar de ajuda.',
+    'Cancelamos o serviço automaticamente por falta de pagamento. Entre em contato com o suporte se precisar de ajuda.',
     '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"service_request_title":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title"],"additionalProperties":true}'::jsonb,
     true
   ),
@@ -120,7 +120,7 @@ values
     'payment.service_auto_cancelled_provider',
     'push',
     'Serviço não confirmado — {{service_request_title}}',
-    '{{service_request_title}} foi cancelado porque o pagamento do cliente não foi concluído.',
+    'Cancelamos o serviço porque o pagamento do cliente não foi concluído.',
     '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"service_request_title":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title"],"additionalProperties":true}'::jsonb,
     true
   ),
@@ -128,7 +128,7 @@ values
     'payment.service_auto_cancelled_suspended',
     'push',
     'Serviço cancelado — {{service_request_title}}',
-    '{{service_request_title}} foi cancelado porque o prestador foi suspenso. Entre em contato com o suporte se precisar de ajuda.',
+    'Cancelamos o serviço porque o prestador foi suspenso. Entre em contato com o suporte se precisar de ajuda.',
     '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"service_request_title":{"type":"string"},"cancellation_reason":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title"],"additionalProperties":true}'::jsonb,
     true
   ),
@@ -144,7 +144,7 @@ values
     'payment.service_auto_cancelled_suspended_provider',
     'push',
     'Serviço cancelado — {{service_request_title}}',
-    '{{service_request_title}} foi cancelado porque sua conta está suspensa e o pagamento do cliente não foi concluído.',
+    'Cancelamos o serviço porque sua conta está suspensa e o pagamento do cliente não foi concluído.',
     '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"service_request_title":{"type":"string"},"cancellation_reason":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title"],"additionalProperties":true}'::jsonb,
     true
   ),
@@ -160,7 +160,7 @@ values
     'payment.transaction_dispute',
     'push',
     'Disputa em análise — {{service_request_title}}',
-    'Há uma disputa de pagamento em análise para {{service_request_title}}. A plataforma entrará em contato se necessário.',
+    'Há uma disputa de pagamento em análise. A plataforma entrará em contato se necessário.',
     '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"schedule_id":{"type":"string"},"service_request_title":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title"],"additionalProperties":true}'::jsonb,
     true
   ),
@@ -168,7 +168,7 @@ values
     'service.service_executed',
     'push',
     'Confirme o recebimento — {{service_request_title}}',
-    'O prestador marcou {{service_request_title}} como executado. Confirme se recebeu o serviço.',
+    'O prestador marcou o serviço como executado. Confirme se recebeu o serviço.',
     '{"type":"object","properties":{"service_id":{"type":"string"},"provider_id":{"type":"string"},"service_request_title":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["service_id","service_request_title"],"additionalProperties":true}'::jsonb,
     true
   ),
@@ -176,7 +176,7 @@ values
     'service.service_completed',
     'push',
     'Serviço concluído — {{service_request_title}}',
-    'O cliente confirmou a conclusão de {{service_request_title}}.',
+    'O cliente confirmou a conclusão do serviço.',
     '{"type":"object","properties":{"service_id":{"type":"string"},"client_id":{"type":"string"},"completed_by":{"type":"string"},"service_request_title":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["service_id","service_request_title"],"additionalProperties":true}'::jsonb,
     true
   ),
@@ -184,7 +184,7 @@ values
     'payment.provider_suspended_client',
     'push',
     'Pagamento em espera — {{service_request_title}}',
-    'O pagamento de {{service_request_title}} está em espera. Você pode cancelar o serviço sem penalidade enquanto resolvemos a situação com o prestador.',
+    'O pagamento está em espera. Você pode cancelar o serviço sem penalidade enquanto resolvemos a situação com o prestador.',
     '{"type":"object","properties":{"contracted_service_id":{"type":"string"},"schedule_id":{"type":"string"},"service_request_title":{"type":"string"},"provider_id":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["contracted_service_id","service_request_title"],"additionalProperties":true}'::jsonb,
     true
   ),
