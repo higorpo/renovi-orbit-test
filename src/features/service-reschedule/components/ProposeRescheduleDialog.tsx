@@ -19,7 +19,7 @@ import { getInclusiveDayRangeHint } from "@/features/negotiation-proposals";
 import {
   addCalendarDaysIso,
   todayCalendarIso,
-} from "@/features/view-services/utils/serviceCalendarDate";
+} from "@/lib/utils/calendarDate";
 import { useRescheduleRequestDetail } from "../hooks/useRescheduleRequestDetail";
 import { useServiceRescheduleMutations } from "../hooks/useServiceRescheduleMutations";
 import {

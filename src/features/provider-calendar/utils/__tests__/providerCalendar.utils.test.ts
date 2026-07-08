@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ScheduledServiceItem } from "../types/provider-calendar.types";
-import { addDaysIso, enumerateIsoDates } from "../calendarDateUtils";
+import { addCalendarDaysIso, enumerateIsoDates } from "@/lib/utils/calendarDate";
 import { getInitialListRange, groupServicesByDay, serviceOverlapsDay } from "../groupServicesByDay";
 import { layoutWeekBars } from "../layoutWeekBars";
 
@@ -56,8 +56,8 @@ describe("layoutWeekBars", () => {
 describe("calendar range helpers", () => {
   it("builds an initial list range centered around today", () => {
     const range = getInitialListRange("2026-06-15");
-    expect(range.from).toBe(addDaysIso("2026-06-15", -7));
-    expect(range.to).toBe(addDaysIso("2026-06-15", 13));
+    expect(range.from).toBe(addCalendarDaysIso("2026-06-15", -7));
+    expect(range.to).toBe(addCalendarDaysIso("2026-06-15", 13));
   });
 
   it("detects overlap for inclusive date ranges", () => {

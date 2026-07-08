@@ -4,12 +4,12 @@ import type {
   ScheduledServiceItem,
 } from "../types/provider-calendar.types";
 import {
-  addDaysIso,
+  addCalendarDaysIso,
   compareIsoDates,
   enumerateIsoDates,
   isSameIsoDate,
-  todayIso,
-} from "./calendarDateUtils";
+  todayCalendarIso,
+} from "@/lib/utils/calendarDate";
 
 function getSpanPosition(
   day: string,
@@ -61,9 +61,9 @@ export function mergeScheduledItems(
   );
 }
 
-export function getInitialListRange(today = todayIso()): { from: string; to: string } {
+export function getInitialListRange(today = todayCalendarIso()): { from: string; to: string } {
   return {
-    from: addDaysIso(today, -7),
-    to: addDaysIso(today, 13),
+    from: addCalendarDaysIso(today, -7),
+    to: addCalendarDaysIso(today, 13),
   };
 }

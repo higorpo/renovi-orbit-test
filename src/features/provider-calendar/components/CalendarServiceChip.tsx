@@ -1,4 +1,4 @@
-import { formatShift } from "@/features/view-services/utils/formatShift";
+import { formatShift } from "@/lib/utils/formatShift";
 import type { ScheduledServiceDayItem } from "../types/provider-calendar.types";
 import { cn } from "@/lib/utils";
 

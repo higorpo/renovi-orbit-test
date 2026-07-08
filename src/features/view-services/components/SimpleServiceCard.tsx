@@ -2,7 +2,7 @@ import { MapPin } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getServiceCardStyle } from "@/features/request-quote";
 import { cn } from "@/lib/utils";
-import { formatServiceDate } from "../utils/formatDate";
+import { formatDatePtBr } from "@/lib/utils/formatDate";
 import { formatLocationDisplay } from "../utils/locationDisplay";
 import { SimpleServiceInsightPanel } from "./SimpleServiceInsightPanel";
 import type { ServiceModel } from "../types/service.types";
@@ -21,7 +21,7 @@ export function SimpleServiceCard({
 }: SimpleServiceCardProps) {
   const locationText = formatLocationDisplay(model.address);
   const serviceStyle = getServiceCardStyle(model.service ?? undefined);
-  const createdLabel = formatServiceDate(model.createdAt);
+  const createdLabel = formatDatePtBr(model.createdAt);
 
   return (
     <Card className={cn("shadow-none", className)}>

@@ -1,7 +1,6 @@
 import { getProposalRevisionReasonLabel } from "@/features/negotiation-proposals";
 import {
   formatLocationDisplay,
-  formatServiceDate,
   getScheduleHighlightContent,
   getScheduledTiming,
   getStatusBadgeVariant,
@@ -11,6 +10,7 @@ import {
   type StatusBadgeVariant,
 } from "@/features/view-services";
 import { formatCurrency } from "@/lib/formatCurrency";
+import { formatDatePtBr } from "@/lib/utils/formatDate";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
 import { isProposalExpiringSoon } from "./providerProposalStatus";
 
@@ -96,7 +96,7 @@ function fullAddress(model: ServiceModel): string | null {
 
 function formatClosedDate(iso: string | null | undefined): string | null {
   if (!iso) return null;
-  return formatServiceDate(iso);
+  return formatDatePtBr(iso);
 }
 
 function mockClientRating(serviceId: string): string {

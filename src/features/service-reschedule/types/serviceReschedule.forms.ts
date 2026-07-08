@@ -7,7 +7,7 @@ import { matchesProposalDayDurationISO } from "@/features/negotiation-proposals/
 import {
   addCalendarDaysIso,
   todayCalendarIso,
-} from "@/features/view-services/utils/serviceCalendarDate";
+} from "@/lib/utils/calendarDate";
 import { deriveRescheduleDateMode } from "../utils/deriveRescheduleDateMode";
 
 export const requestRescheduleFormSchema = z.object({

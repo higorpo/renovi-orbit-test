@@ -1,9 +1,9 @@
 import type { CalendarDayEntry } from "../types/provider-calendar.types";
+import { parseIsoDate } from "@/lib/utils/calendarDate";
 import {
   getDayNumberLabel,
   getMonthYearLabel,
   getWeekdayLabel,
-  parseIsoDate,
 } from "../utils/calendarDateUtils";
 import { CalendarServiceChip } from "./CalendarServiceChip";
 

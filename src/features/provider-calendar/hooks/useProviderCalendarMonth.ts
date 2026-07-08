@@ -5,14 +5,13 @@ import { PROVIDER_CALENDAR_MONTH_QUERY_KEY } from "../constants/queryKeys";
 import type { ScheduledServiceItem } from "../types/provider-calendar.types";
 import {
   getMonthEndIso,
-  getMonthGridWeeks,
   getMonthStartIso,
-  getMonthYearLabel,
-  todayIso,
-} from "../utils/calendarDateUtils";
+  todayCalendarIso,
+} from "@/lib/utils/calendarDate";
+import { getMonthGridWeeks, getMonthYearLabel } from "../utils/calendarDateUtils";
 
 function getInitialMonth(): { year: number; monthIndex: number } {
-  const today = todayIso();
+  const today = todayCalendarIso();
   const year = Number(today.slice(0, 4));
   const monthIndex = Number(today.slice(5, 7)) - 1;
   return { year, monthIndex };
