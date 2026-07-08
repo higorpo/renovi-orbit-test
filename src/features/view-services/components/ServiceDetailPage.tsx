@@ -171,6 +171,7 @@ export function ServiceDetailPage({
             }
             onCancellationSuccess={() => void refetch()}
             onCompletionSuccess={() => void refetch()}
+            onRescheduleSuccess={() => void refetch()}
           />
         ) : null}
         {isProvider && model.contracted ? (

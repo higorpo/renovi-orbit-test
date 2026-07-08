@@ -10,6 +10,11 @@ import {
   type DynamicProposalCardProps,
   type ProposalCardAction,
 } from "./DynamicProposalCard";
+import {
+  DynamicRescheduleProposalCard,
+  type DynamicRescheduleProposalCardProps,
+  type RescheduleCardAction,
+} from "./DynamicRescheduleProposalCard";
 import { ChatImageMessage } from "./ChatImageMessage";
 import { ChatAudioMessage } from "./ChatAudioMessage";
 import { UnknownDynamicMessage } from "./UnknownDynamicMessage";
@@ -22,6 +27,7 @@ export interface DynamicMessageRendererProps {
   isOutgoing: boolean;
   groupPosition?: ChatMessageGroupPosition;
   onProposalAction?: (action: ProposalCardAction, proposalId: string) => void;
+  onRescheduleAction?: (action: RescheduleCardAction, requestId: string) => void;
   className?: string;
 }
 
@@ -42,6 +48,7 @@ export function DynamicMessageRenderer({
   isOutgoing,
   groupPosition = "single",
   onProposalAction,
+  onRescheduleAction,
   className,
 }: DynamicMessageRendererProps) {
   useEffect(() => {
@@ -63,6 +70,19 @@ export function DynamicMessageRenderer({
   }
 
   if (message.message_type === "WORKFLOW_ACTION") {
+    const actionKey = message.payload?.action_key;
+    if (actionKey === "service_reschedule_proposed") {
+      const rescheduleProps: DynamicRescheduleProposalCardProps = {
+        chatId,
+        message,
+        viewerRole,
+        isOutgoing,
+        onRescheduleAction,
+        className,
+      };
+      return <DynamicRescheduleProposalCard {...rescheduleProps} />;
+    }
+
     return <WorkflowActionMessage message={message} className={className} />;
   }
 

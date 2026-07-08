@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useChatTimelinePrependScroll } from "../../hooks/useChatTimelinePrependScroll";
 import { useChatTimelineScroll } from "../../hooks/useChatTimelineScroll";
 import type { ProposalCardAction } from "../DynamicMessageRenderer/DynamicProposalCard";
+import type { RescheduleCardAction } from "../DynamicMessageRenderer/DynamicRescheduleProposalCard";
 import type { ChatMessageListItem } from "../../types/chats.types";
 import { resolveChatDiscoveryWelcomeAnchorIso } from "../../utils/chatDiscoveryWelcome";
 import {
@@ -26,6 +27,7 @@ export interface ChatTimelineProps {
   counterpartyName: string;
   viewerRole: ProfileRole;
   onProposalAction?: (action: ProposalCardAction, proposalId: string) => void;
+  onRescheduleAction?: (action: RescheduleCardAction, requestId: string) => void;
   isLoading: boolean;
   isError: boolean;
   errorMessage?: string;
@@ -50,6 +52,7 @@ export function ChatTimeline({
   counterpartyName,
   viewerRole,
   onProposalAction,
+  onRescheduleAction,
   isLoading,
   isError,
   errorMessage,
@@ -207,6 +210,7 @@ export function ChatTimeline({
               counterpartyName={counterpartyName}
               viewerRole={viewerRole}
               onProposalAction={onProposalAction}
+              onRescheduleAction={onRescheduleAction}
             />
           </div>
         );

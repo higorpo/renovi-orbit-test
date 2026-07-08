@@ -23,6 +23,11 @@ import { usePushNotificationSuppression } from "../../hooks/usePushNotificationS
 import { useChatActionBannerInset } from "../../hooks/useChatActionBannerInset";
 import type { ChatActionBannerCtaPayload } from "../../hooks/useChatActionBannerState";
 import type { ProposalCardAction } from "../DynamicMessageRenderer/DynamicProposalCard";
+import type { RescheduleCardAction } from "../DynamicMessageRenderer/DynamicRescheduleProposalCard";
+import {
+  deriveLatestRescheduleRequestIdFromMessages,
+  useRescheduleTimelineHydration,
+} from "@/features/service-reschedule";
 import { createClientSendId } from "../../utils/clientSendId";
 import { deriveLatestProposalIdFromMessages } from "../../utils/deriveLatestProposalIdFromMessages";
 import { deriveRevisionRequestedProposalId } from "../../utils/deriveRevisionRequestedProposalId";
@@ -40,6 +45,7 @@ export interface ChatScreenProps {
   onDetails?: () => void;
   onBannerCta?: (payload: ChatActionBannerCtaPayload) => void;
   onProposalAction?: (action: ProposalCardAction, proposalId: string) => void;
+  onRescheduleAction?: (action: RescheduleCardAction, requestId: string) => void;
   className?: string;
 }
 
@@ -49,6 +55,7 @@ export function ChatScreen({
   onDetails,
   onBannerCta,
   onProposalAction,
+  onRescheduleAction,
   className,
 }: ChatScreenProps) {
   const navigate = useNavigate();
@@ -112,6 +119,16 @@ export function ChatScreen({
     latestProposalId && isLatestProposalLoading && !latestProposal,
   );
 
+  const latestRescheduleRequestId = useMemo(
+    () => deriveLatestRescheduleRequestIdFromMessages(messages),
+    [messages],
+  );
+  const { snapshot: rescheduleSnapshot } = useRescheduleTimelineHydration(
+    chatId,
+    latestRescheduleRequestId,
+    Boolean(detail && latestRescheduleRequestId),
+  );
+
   const { banner, isVisible: isBannerVisible, dismiss, getCtaPayload } = useChatActionBannerState({
     chatId,
     viewerRole,
@@ -125,6 +142,9 @@ export function ChatScreen({
     lastInteractionAt: detail?.conversation.last_interaction_at ?? null,
     enabled: Boolean(detail),
     isLatestProposalStatusPending,
+    rescheduleRequestId: rescheduleSnapshot?.activeRequest?.id ?? latestRescheduleRequestId,
+    canProposeReschedule: Boolean(rescheduleSnapshot?.canProposeReschedule),
+    canAcceptReschedule: Boolean(rescheduleSnapshot?.canAcceptReschedule),
   });
 
   useChatSentryContext({
@@ -274,6 +294,7 @@ export function ChatScreen({
           counterpartyName={counterpartyName}
           viewerRole={viewerRole}
           onProposalAction={onProposalAction}
+          onRescheduleAction={onRescheduleAction}
           isLoading={isMessagesLoading}
           isError={isMessagesError}
           errorMessage={messagesError instanceof Error ? messagesError.message : undefined}

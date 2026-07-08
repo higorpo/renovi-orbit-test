@@ -6,6 +6,8 @@ import {
   ProviderSettlementStatus,
   type CancellationViewerRole,
 } from "@/features/payments";
+import { ContractedServiceRescheduleAction } from "@/features/service-reschedule";
+import { useAuth } from "@/features/auth";
 import {
   ServiceCompletionActions,
   type ServiceCompletionViewerRole,
@@ -25,6 +27,7 @@ interface ServiceContractedSectionProps {
   cancellationViewerRole?: CancellationViewerRole;
   onCancellationSuccess?: () => void;
   onCompletionSuccess?: () => void;
+  onRescheduleSuccess?: () => void;
 }
 
 export function ServiceContractedSection({
@@ -38,7 +41,9 @@ export function ServiceContractedSection({
   cancellationViewerRole,
   onCancellationSuccess,
   onCompletionSuccess,
+  onRescheduleSuccess,
 }: ServiceContractedSectionProps) {
+  const { profile } = useAuth();
   const providerName = contracted.provider?.displayName;
 
   return (
@@ -107,6 +112,17 @@ export function ServiceContractedSection({
             scheduledShift={contracted.scheduledShift ?? "morning"}
             viewerRole={cancellationViewerRole}
             onSuccess={onCancellationSuccess}
+          />
+        </div>
+      ) : null}
+      {profile?.role === "client" || profile?.role === "provider" ? (
+        <div className="flex flex-col gap-2 pt-3 sm:flex-row sm:flex-wrap">
+          <ContractedServiceRescheduleAction
+            contractedServiceId={contracted.id}
+            chatId={contracted.chatId}
+            viewerRole={profile.role}
+            reschedule={contracted.reschedule}
+            onSuccess={onRescheduleSuccess}
           />
         </div>
       ) : null}

@@ -26,11 +26,15 @@ export interface UseChatActionBannerStateParams {
   lastInteractionAt?: string | null;
   enabled?: boolean;
   isLatestProposalStatusPending?: boolean;
+  rescheduleRequestId?: string | null;
+  canProposeReschedule?: boolean;
+  canAcceptReschedule?: boolean;
 }
 
 export interface ChatActionBannerCtaPayload {
   action: ChatActionBannerAction;
   proposalId?: string;
+  rescheduleRequestId?: string;
 }
 
 export function useChatActionBannerState({
@@ -46,6 +50,9 @@ export function useChatActionBannerState({
   lastInteractionAt = null,
   enabled = true,
   isLatestProposalStatusPending = false,
+  rescheduleRequestId = null,
+  canProposeReschedule = false,
+  canAcceptReschedule = false,
 }: UseChatActionBannerStateParams) {
   const { trackEvent } = useAnalytics();
   const [dismissedForVisit, setDismissedForVisit] = useState(false);
@@ -78,16 +85,22 @@ export function useChatActionBannerState({
       canShowSendProposalBanner,
       canShowCloseConversationBanner,
       isLatestProposalStatusPending,
+      rescheduleRequestId,
+      canProposeReschedule,
+      canAcceptReschedule,
     });
   }, [
     canShowCloseConversationBanner,
     canShowSendProposalBanner,
+    canAcceptReschedule,
+    canProposeReschedule,
     chatId,
     conversationStatus,
     enabled,
     isLatestProposalStatusPending,
     pendingProposalId,
     primaryProposalStatus,
+    rescheduleRequestId,
     revisionRequestedProposalId,
     viewerRole,
   ]);
@@ -97,7 +110,7 @@ export function useChatActionBannerState({
   useEffect(() => {
     if (!isVisible || !banner || !chatId) return;
 
-    const impressionKey = `${chatId}:${banner.action}:${banner.proposalId ?? ""}`;
+    const impressionKey = `${chatId}:${banner.action}:${banner.proposalId ?? ""}:${banner.rescheduleRequestId ?? ""}`;
     if (lastImpressionKeyRef.current === impressionKey) return;
     lastImpressionKeyRef.current = impressionKey;
 
@@ -117,6 +130,7 @@ export function useChatActionBannerState({
     return {
       action: banner.action,
       proposalId: banner.proposalId,
+      rescheduleRequestId: banner.rescheduleRequestId,
     };
   }, [banner]);
 

@@ -2,8 +2,6 @@
 
 begin;
 
-\ir ../fixtures/accept_proposal_payment_helpers.inc
-
 -- Inline chat seed helper (avoids \ir path issues in isolated test runs).
 create or replace function pg_temp.cns_seed_chat(
   p_service_request_id uuid,
@@ -43,7 +41,7 @@ begin
 end;
 $$;
 
-select plan(14);
+select plan(15);
 
 create or replace function pg_temp.cns_set_auth(p_user_id uuid)
 returns void
@@ -58,6 +56,28 @@ begin
   );
   perform set_config('request.jwt.claim.role', 'authenticated', true);
 end;
+$$;
+
+create or replace function pg_temp.cns_accept_proposal(
+  p_proposal_id uuid,
+  p_selected_slot jsonb,
+  p_idempotency_key uuid
+)
+returns jsonb
+language sql
+as $$
+  select public.accept_proposal(
+    p_proposal_id,
+    p_selected_slot,
+    p_idempotency_key,
+    null::uuid,
+    null::smallint,
+    null::text,
+    null::jsonb,
+    null::text,
+    null::text,
+    null::text
+  );
 $$;
 
 create or replace function pg_temp.cns_seed_slot_sr(p_title text default 'slot minimum start date pgTAP')
@@ -482,54 +502,84 @@ select throws_ok(
   'accept_proposal rejects legacy proposal slot starting today'
 );
 
--- cns_confirm_service_reschedule
+-- service reschedule propose/accept slot minimum
 do $reschedule$
 declare
   v_service_id uuid := gen_random_uuid();
+  v_sr_id uuid;
   v_client_id uuid;
+  v_provider_id uuid := '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid;
 begin
-  select client_id
-  into v_client_id
-  from pg_temp.cns_seed_reschedule_service(v_service_id);
+  select service_request_id, client_id
+  into v_sr_id, v_client_id
+  from pg_temp.cns_seed_reschedule_service(v_service_id, v_provider_id);
+
+  perform pg_temp.cns_seed_chat(v_sr_id, v_client_id, v_provider_id);
 
   perform set_config('test.reschedule_service_id', v_service_id::text, true);
   perform set_config('test.reschedule_client_id', v_client_id::text, true);
+  perform set_config('test.reschedule_provider_id', v_provider_id::text, true);
 end;
 $reschedule$;
 
 select pg_temp.cns_set_auth(current_setting('test.reschedule_client_id')::uuid);
 
+create temp table _reschedule_request as
+select public.cns_request_service_reschedule(
+  current_setting('test.reschedule_service_id')::uuid,
+  gen_random_uuid(),
+  'preciso mudar a data'
+) as response;
+
+select ok(
+  (select (response->>'reschedule_request_id') is not null from _reschedule_request),
+  'cns_request_service_reschedule creates active request'
+);
+
+select pg_temp.cns_set_auth(current_setting('test.reschedule_provider_id')::uuid);
+
 select throws_ok(
   format(
-    $$ select public.cns_confirm_service_reschedule(
+    $$ select public.cns_propose_service_reschedule(
       %L::uuid,
-      jsonb_build_object(
-        'start_date', %L,
-        'shift', 'morning'
-      )
+      jsonb_build_object('start_date', %L, 'shift', 'morning'),
+      gen_random_uuid()
     ) $$,
-    current_setting('test.reschedule_service_id'),
+    (select response->>'reschedule_request_id' from _reschedule_request),
     to_char(public.cns_business_today(), 'YYYY-MM-DD')
   ),
   '22023',
   'SLOT_START_DATE_TOO_SOON',
-  'cns_confirm_service_reschedule rejects rescheduling to today'
+  'cns_propose_service_reschedule rejects slot starting today'
 );
 
-create temp table _reschedule_ok as
-select public.cns_confirm_service_reschedule(
-  current_setting('test.reschedule_service_id')::uuid,
+create temp table _reschedule_propose as
+select public.cns_propose_service_reschedule(
+  (select (response->>'reschedule_request_id')::uuid from _reschedule_request),
   jsonb_build_object(
     'start_date', to_char(public.cns_business_today() + 1, 'YYYY-MM-DD'),
     'end_date', to_char(public.cns_business_today() + 1, 'YYYY-MM-DD'),
     'shift', 'afternoon'
-  )
+  ),
+  gen_random_uuid()
+) as response;
+
+select pg_temp.cns_set_auth(current_setting('test.reschedule_client_id')::uuid);
+
+create temp table _reschedule_accept as
+select public.cns_accept_service_reschedule(
+  (select (response->>'reschedule_request_id')::uuid from _reschedule_request),
+  gen_random_uuid()
 ) as response;
 
 select is(
-  (select response->>'scheduled_start_date' from _reschedule_ok),
+  (
+    select cs.scheduled_start_date::text
+    from public.contracted_services cs
+    where cs.id = current_setting('test.reschedule_service_id')::uuid
+  ),
   to_char(public.cns_business_today() + 1, 'YYYY-MM-DD'),
-  'cns_confirm_service_reschedule accepts rescheduling to tomorrow'
+  'cns_accept_service_reschedule applies tomorrow slot'
 );
 
 select finish();

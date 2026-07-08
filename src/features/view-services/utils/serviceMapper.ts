@@ -11,6 +11,7 @@ import type {
   ServiceListPhase,
   ServiceModel,
 } from "../types/service.types";
+import { mapRescheduleSnapshot } from "@/features/service-reschedule";
 import { toDescriptionPreview } from "./descriptionPreview";
 
 export interface RpcServiceAddress {
@@ -99,6 +100,7 @@ export interface RpcContractedService {
   updated_at?: string | null;
   chat_id?: string | null;
   provider?: RpcContractedProvider | null;
+  reschedule?: unknown;
 }
 
 export interface RpcCounterparty {
@@ -178,6 +180,7 @@ function mapContracted(contracted: RpcContractedService | null | undefined): Con
     provider: mapCounterparty(contracted.provider),
     chatId: contracted.chat_id ?? null,
     updatedAt: contracted.updated_at ?? null,
+    reschedule: mapRescheduleSnapshot(contracted.reschedule),
   };
 }
 

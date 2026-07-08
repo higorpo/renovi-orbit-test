@@ -3163,6 +3163,97 @@ export type Database = {
           },
         ]
       }
+      service_reschedule_requests: {
+        Row: {
+          accepted_at: string | null
+          adjustment_count: number
+          chat_id: string
+          contracted_service_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          is_last_minute: boolean
+          last_reminder_at: string | null
+          original_service_execution_at: string
+          original_slot: Json
+          proposed_at: string | null
+          proposed_slot: Json | null
+          reminder_count: number
+          request_note: string | null
+          requested_by_profile_id: string
+          requested_by_role: Database["public"]["Enums"]["service_reschedule_requested_by_role"]
+          status: Database["public"]["Enums"]["service_reschedule_request_status"]
+          updated_at: string
+          urgent_reminder_sent_at: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          adjustment_count?: number
+          chat_id: string
+          contracted_service_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          is_last_minute?: boolean
+          last_reminder_at?: string | null
+          original_service_execution_at: string
+          original_slot: Json
+          proposed_at?: string | null
+          proposed_slot?: Json | null
+          reminder_count?: number
+          request_note?: string | null
+          requested_by_profile_id: string
+          requested_by_role: Database["public"]["Enums"]["service_reschedule_requested_by_role"]
+          status?: Database["public"]["Enums"]["service_reschedule_request_status"]
+          updated_at?: string
+          urgent_reminder_sent_at?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          adjustment_count?: number
+          chat_id?: string
+          contracted_service_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          is_last_minute?: boolean
+          last_reminder_at?: string | null
+          original_service_execution_at?: string
+          original_slot?: Json
+          proposed_at?: string | null
+          proposed_slot?: Json | null
+          reminder_count?: number
+          request_note?: string | null
+          requested_by_profile_id?: string
+          requested_by_role?: Database["public"]["Enums"]["service_reschedule_requested_by_role"]
+          status?: Database["public"]["Enums"]["service_reschedule_request_status"]
+          updated_at?: string
+          urgent_reminder_sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_reschedule_requests_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_reschedule_requests_contracted_service_id_fkey"
+            columns: ["contracted_service_id"]
+            isOneToOne: false
+            referencedRelation: "contracted_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_reschedule_requests_requested_by_profile_id_fkey"
+            columns: ["requested_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_device_beacons: {
         Row: {
           android_sdk_version: number | null
@@ -3429,6 +3520,10 @@ export type Database = {
       }
     }
     Functions: {
+      _cns_apply_service_reschedule_slot: {
+        Args: { p_contracted_service_id: string; p_new_slot: Json }
+        Returns: Json
+      }
       accept_proposal: {
         Args: {
           p_clearsale_session_id: string
@@ -3466,6 +3561,10 @@ export type Database = {
         Args: { p_idempotency_key: string; p_service_request_id: string }
         Returns: Json
       }
+      cns_accept_service_reschedule: {
+        Args: { p_idempotency_key: string; p_reschedule_request_id: string }
+        Returns: Json
+      }
       cns_assert_chat_media_path_shape: {
         Args: { p_path: string }
         Returns: undefined
@@ -3496,7 +3595,21 @@ export type Database = {
         }
         Returns: string
       }
+      cns_build_contracted_service_slot_jsonb: {
+        Args: {
+          p_cs: Database["public"]["Tables"]["contracted_services"]["Row"]
+        }
+        Returns: Json
+      }
       cns_business_today: { Args: never; Returns: string }
+      cns_cancel_active_service_reschedule_requests: {
+        Args: { p_contracted_service_id: string }
+        Returns: number
+      }
+      cns_cancel_service_reschedule_request: {
+        Args: { p_idempotency_key: string; p_reschedule_request_id: string }
+        Returns: Json
+      }
       cns_chat_free_messaging_allowed: {
         Args: { p_chat_id: string }
         Returns: boolean
@@ -3536,16 +3649,21 @@ export type Database = {
         }
         Returns: Json
       }
-      cns_confirm_service_reschedule: {
-        Args: { p_contracted_service_id: string; p_new_slot: Json }
-        Returns: Json
-      }
       cns_create_media_upload_session: {
         Args: { p_chat_id: string }
         Returns: Json
       }
       cns_evaluate_reciprocity_batch: {
         Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      cns_format_reschedule_shift_pt: {
+        Args: { p_shift: string }
+        Returns: string
+      }
+      cns_format_reschedule_slot_pt: { Args: { p_slot: Json }; Returns: string }
+      cns_get_service_reschedule_request: {
+        Args: { p_reschedule_request_id: string }
         Returns: Json
       }
       cns_has_bilateral_reciprocity: {
@@ -3594,6 +3712,14 @@ export type Database = {
         }
         Returns: Json
       }
+      cns_propose_service_reschedule: {
+        Args: {
+          p_idempotency_key: string
+          p_new_slot: Json
+          p_reschedule_request_id: string
+        }
+        Returns: Json
+      }
       cns_prune_chat_rate_limit_buckets: {
         Args: { p_batch_limit?: number; p_retention_hours?: number }
         Returns: Json
@@ -3614,6 +3740,22 @@ export type Database = {
         }
         Returns: Json
       }
+      cns_request_reschedule_adjustment: {
+        Args: { p_idempotency_key: string; p_reschedule_request_id: string }
+        Returns: Json
+      }
+      cns_request_service_reschedule: {
+        Args: {
+          p_contracted_service_id: string
+          p_idempotency_key: string
+          p_request_note?: string
+        }
+        Returns: Json
+      }
+      cns_resolve_contracted_service_chat_id: {
+        Args: { p_contracted_service_id: string }
+        Returns: string
+      }
       cns_send_message: {
         Args: {
           p_chat_id?: string
@@ -3627,6 +3769,10 @@ export type Database = {
       cns_service_request_allows_chat_messaging: {
         Args: { p_chat_id: string; p_service_request_id: string }
         Returns: boolean
+      }
+      cns_service_reschedule_snapshot_for_viewer: {
+        Args: { p_contracted_service_id: string; p_viewer_id: string }
+        Returns: Json
       }
       cns_set_local_statement_timeout: {
         Args: { p_interval: string }
@@ -3689,6 +3835,11 @@ export type Database = {
         Args: never
         Returns: Json
       }
+      cron_enqueue_service_reschedule_reminders: { Args: never; Returns: Json }
+      cron_expire_stale_service_reschedule_requests: {
+        Args: never
+        Returns: Json
+      }
       cron_payment_charge_batch: {
         Args: { p_batch_size?: number }
         Returns: Json
@@ -3720,11 +3871,19 @@ export type Database = {
         Args: { p_batch_size?: number }
         Returns: Json
       }
+      enqueue_service_reschedule_reminders: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
       evaluate_service_request_dispatch_gates: {
         Args: { p_service_request_id: string }
         Returns: undefined
       }
       expire_pending_proposals: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      expire_stale_service_reschedule_requests: {
         Args: { p_batch_size?: number }
         Returns: Json
       }
@@ -4834,6 +4993,14 @@ export type Database = {
         | "DISPATCH_CANCELLED"
         | "DISPATCH_EXPIRED"
       service_request_status: "OPEN" | "COMPLETED" | "CANCELLED"
+      service_reschedule_request_status:
+        | "REQUESTED"
+        | "PROPOSED"
+        | "ADJUSTMENT_REQUESTED"
+        | "ACCEPTED"
+        | "CANCELLED"
+        | "EXPIRED"
+      service_reschedule_requested_by_role: "client" | "provider"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -5111,6 +5278,15 @@ export const Constants = {
         "DISPATCH_EXPIRED",
       ],
       service_request_status: ["OPEN", "COMPLETED", "CANCELLED"],
+      service_reschedule_request_status: [
+        "REQUESTED",
+        "PROPOSED",
+        "ADJUSTMENT_REQUESTED",
+        "ACCEPTED",
+        "CANCELLED",
+        "EXPIRED",
+      ],
+      service_reschedule_requested_by_role: ["client", "provider"],
     },
   },
 } as const

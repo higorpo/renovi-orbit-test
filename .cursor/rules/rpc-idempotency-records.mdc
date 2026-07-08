@@ -94,6 +94,11 @@ keyRef.current = idempotencyKey;
 | `chats.cancel_service_request` | `cancel_service_request` |
 | `chats.submit_proposal` | `create_provider_proposal` |
 | `chats.initiate_conversation` | `cns_initiate_conversation` |
+| `service_reschedule.request` | `cns_request_service_reschedule` |
+| `service_reschedule.propose` | `cns_propose_service_reschedule` |
+| `service_reschedule.accept` | `cns_accept_service_reschedule` |
+| `service_reschedule.adjustment` | `cns_request_reschedule_adjustment` |
+| `service_reschedule.cancel` | `cns_cancel_service_reschedule_request` |
 | `request_quote.create_order` | Edge `create-request-quote-order` + `create_request_quote_service_request` |
 
 ## New mutations checklist

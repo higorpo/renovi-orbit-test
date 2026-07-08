@@ -6,6 +6,8 @@ export type ChatActionBannerAction =
   | "review_proposal"
   | "send_proposal"
   | "view_proposal"
+  | "propose_reschedule"
+  | "accept_reschedule"
   | "close_conversation";
 
 export interface ChatActionBannerModel {
@@ -15,6 +17,7 @@ export interface ChatActionBannerModel {
   ctaAriaLabel: string;
   dismissAriaLabel: string;
   proposalId?: string;
+  rescheduleRequestId?: string;
   priority: number;
 }
 
@@ -33,10 +36,16 @@ export interface ChatActionBannerContext {
   canShowCloseConversationBanner?: boolean;
   /** Latest linked proposal status is still loading (avoid send-proposal flash). */
   isLatestProposalStatusPending?: boolean;
+  /** Active reschedule request awaiting provider proposal. */
+  rescheduleRequestId?: string | null;
+  canProposeReschedule?: boolean;
+  canAcceptReschedule?: boolean;
 }
 
 const PRIORITY = {
   revision: 300,
+  acceptReschedule: 275,
+  proposeReschedule: 250,
   sendProposal: 200,
   viewProposal: 100,
   closeConversation: 50,
@@ -95,6 +104,30 @@ function shouldBlockProviderSendProposalBanner(
   return status === "ACCEPTED" || status === "PENDING" || status === "REVISION_REQUESTED";
 }
 
+function buildProviderProposeRescheduleBanner(requestId: string): ChatActionBannerModel {
+  return {
+    action: "propose_reschedule",
+    priority: PRIORITY.proposeReschedule,
+    rescheduleRequestId: requestId,
+    body: "Há uma solicitação de reagendamento aguardando sua proposta de nova data.",
+    ctaLabel: "Propor nova data",
+    ctaAriaLabel: "Propor nova data de reagendamento",
+    dismissAriaLabel: "Dispensar aviso de reagendamento",
+  };
+}
+
+function buildClientAcceptRescheduleBanner(requestId: string): ChatActionBannerModel {
+  return {
+    action: "accept_reschedule",
+    priority: PRIORITY.acceptReschedule,
+    rescheduleRequestId: requestId,
+    body: "O prestador enviou uma nova data. Confira na conversa e confirme ou peça ajuste.",
+    ctaLabel: "Revisar reagendamento",
+    ctaAriaLabel: "Revisar proposta de reagendamento",
+    dismissAriaLabel: "Dispensar aviso de reagendamento",
+  };
+}
+
 function buildCloseConversationBanner(): ChatActionBannerModel {
   return {
     action: "close_conversation",
@@ -121,6 +154,10 @@ export function resolveChatActionBanner(
       return buildProviderRevisionBanner(context.revisionRequestedProposalId);
     }
 
+    if (context.rescheduleRequestId && context.canProposeReschedule) {
+      return buildProviderProposeRescheduleBanner(context.rescheduleRequestId);
+    }
+
     if (
       !context.pendingProposalId &&
       !shouldBlockProviderSendProposalBanner(context.primaryProposalStatus) &&
@@ -143,6 +180,10 @@ export function resolveChatActionBanner(
   }
 
   if (context.viewerRole === "client") {
+    if (context.rescheduleRequestId && context.canAcceptReschedule) {
+      return buildClientAcceptRescheduleBanner(context.rescheduleRequestId);
+    }
+
     if (context.pendingProposalId) {
       return buildClientViewBanner(context.pendingProposalId);
     }

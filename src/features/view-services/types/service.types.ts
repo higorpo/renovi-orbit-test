@@ -50,6 +50,8 @@ export interface CounterpartySummary {
   profileImagePath: string | null;
 }
 
+import type { ServiceRescheduleSnapshot } from "@/features/service-reschedule";
+
 export interface ContractedServiceSummary {
   id: string;
   status: string;
@@ -62,6 +64,7 @@ export interface ContractedServiceSummary {
   provider: CounterpartySummary | null;
   chatId: string | null;
   updatedAt: string | null;
+  reschedule?: ServiceRescheduleSnapshot | null;
 }
 
 /** Unified service model for list and detail (from get_service / list_services RPCs). */

@@ -9,6 +9,13 @@ import {
   RejectProposalDialog,
   RevisionRequestDialog,
 } from "@/features/negotiation-proposals";
+import {
+  AcceptRescheduleDialog,
+  CancelRescheduleDialog,
+  ProposeRescheduleDialog,
+  RequestAdjustmentRescheduleDialog,
+  useChatRescheduleDialogs,
+} from "@/features/service-reschedule";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { CHAT_DETAILS_COLUMN_MEDIA_QUERY } from "../../constants/layout";
 import { ROUTE_CHATS_LIST } from "../../constants/routes";
@@ -17,6 +24,7 @@ import { useChatProposalDialogs } from "../../hooks/useChatProposalDialogs";
 import { useCloseConversationMutation } from "../../hooks/useCloseConversationMutation";
 import { useConversationDetail } from "../../hooks/useConversationDetail";
 import { useInvalidateChatProposalQueries } from "../../hooks/useInvalidateChatProposalQueries";
+import { useInvalidateChatRescheduleQueries } from "../../hooks/useInvalidateChatRescheduleQueries";
 import {
   CloseConversationConfirmDialog,
 } from "../ChatDetails/ChatDetailsActions";
@@ -33,6 +41,7 @@ export function ChatsConversationRoute() {
   const { detail } = useConversationDetail(chatId ?? null);
   const closeConversationMutation = useCloseConversationMutation(chatId ?? null);
   const invalidateChatProposalQueries = useInvalidateChatProposalQueries(chatId ?? null);
+  const invalidateChatRescheduleQueries = useInvalidateChatRescheduleQueries(chatId ?? null);
   const serviceRequestId = detail?.service_request.id ?? null;
   const isProviderViewer = profile?.role === "provider";
 
@@ -70,6 +79,25 @@ export function ChatsConversationRoute() {
     isProviderViewer,
   });
 
+  const {
+    proposeOpen,
+    setProposeOpen,
+    acceptOpen: acceptRescheduleOpen,
+    setAcceptOpen: setAcceptRescheduleOpen,
+    adjustmentOpen,
+    setAdjustmentOpen,
+    cancelOpen,
+    setCancelOpen,
+    activeRequestId,
+    handleRescheduleAction,
+    openProposeDialog,
+    openAcceptDialog,
+  } = useChatRescheduleDialogs(chatId ?? null);
+
+  const handleRescheduleSuccess = useCallback(() => {
+    invalidateChatRescheduleQueries();
+  }, [invalidateChatRescheduleQueries]);
+
   useEffect(() => {
     setDetailsOpen(false);
     setConfirmCloseOpen(false);
@@ -94,9 +122,25 @@ export function ChatsConversationRoute() {
 
       if (payload.action === "view_proposal" && payload.proposalId) {
         openProposalDetails(payload.proposalId);
+        return;
+      }
+
+      if (payload.action === "propose_reschedule" && payload.rescheduleRequestId) {
+        openProposeDialog(payload.rescheduleRequestId);
+        return;
+      }
+
+      if (payload.action === "accept_reschedule" && payload.rescheduleRequestId) {
+        openAcceptDialog(payload.rescheduleRequestId);
       }
     },
-    [openProposalComposerCreate, openProposalComposerEdit, openProposalDetails],
+    [
+      openProposalComposerCreate,
+      openProposalComposerEdit,
+      openProposalDetails,
+      openProposeDialog,
+      openAcceptDialog,
+    ],
   );
 
   const handleArchiveRequest = useCallback(() => {
@@ -123,6 +167,7 @@ export function ChatsConversationRoute() {
           onDetails={() => setDetailsOpen(true)}
           onBannerCta={handleBannerCta}
           onProposalAction={handleProposalAction}
+          onRescheduleAction={handleRescheduleAction}
           className="min-h-0 min-w-0 flex-1"
         />
 
@@ -228,6 +273,34 @@ export function ChatsConversationRoute() {
           detailAudience={isProviderViewer ? "provider" : "client"}
         />
       ) : null}
+
+      <ProposeRescheduleDialog
+        open={proposeOpen}
+        onOpenChange={setProposeOpen}
+        rescheduleRequestId={activeRequestId}
+        onSuccess={handleRescheduleSuccess}
+      />
+
+      <AcceptRescheduleDialog
+        open={acceptRescheduleOpen}
+        onOpenChange={setAcceptRescheduleOpen}
+        rescheduleRequestId={activeRequestId}
+        onSuccess={handleRescheduleSuccess}
+      />
+
+      <RequestAdjustmentRescheduleDialog
+        open={adjustmentOpen}
+        onOpenChange={setAdjustmentOpen}
+        rescheduleRequestId={activeRequestId}
+        onSuccess={handleRescheduleSuccess}
+      />
+
+      <CancelRescheduleDialog
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        rescheduleRequestId={activeRequestId}
+        onSuccess={handleRescheduleSuccess}
+      />
     </>
   );
 }

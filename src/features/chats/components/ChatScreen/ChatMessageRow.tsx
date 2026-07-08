@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { areChatMessageListItemsEqual } from "../../utils/chatMessageEquality";
 import { DynamicMessageRenderer } from "../DynamicMessageRenderer/DynamicMessageRenderer";
 import type { ProposalCardAction } from "../DynamicMessageRenderer/DynamicProposalCard";
+import type { RescheduleCardAction } from "../DynamicMessageRenderer/DynamicRescheduleProposalCard";
 import type { ChatMessageListItem } from "../../types/chats.types";
 import type { ChatMessageGroupPosition } from "../../utils/groupChatTimeline";
 import { getChatMessageText } from "../../utils/getChatMessageText";
@@ -22,6 +23,7 @@ export interface ChatMessageRowProps {
   counterpartyName: string;
   viewerRole: ProfileRole;
   onProposalAction?: (action: ProposalCardAction, proposalId: string) => void;
+  onRescheduleAction?: (action: RescheduleCardAction, requestId: string) => void;
 }
 
 function chatMessageRowPropsAreEqual(
@@ -38,6 +40,7 @@ function chatMessageRowPropsAreEqual(
     prev.counterpartyName === next.counterpartyName &&
     prev.viewerRole === next.viewerRole &&
     prev.onProposalAction === next.onProposalAction &&
+    prev.onRescheduleAction === next.onRescheduleAction &&
     areChatMessageListItemsEqual(prev.message, next.message)
   );
 }
@@ -53,6 +56,7 @@ export const ChatMessageRow = memo(function ChatMessageRow({
   counterpartyName,
   viewerRole,
   onProposalAction,
+  onRescheduleAction,
 }: ChatMessageRowProps) {
   const text = getChatMessageText(message);
   const isPending = message.delivery_status === "PENDING";
@@ -94,6 +98,7 @@ export const ChatMessageRow = memo(function ChatMessageRow({
               viewerRole={viewerRole}
               isOutgoing={isOutgoing}
               onProposalAction={onProposalAction}
+              onRescheduleAction={onRescheduleAction}
             />
           </div>
         </div>
@@ -114,6 +119,7 @@ export const ChatMessageRow = memo(function ChatMessageRow({
           viewerRole={viewerRole}
           isOutgoing={isOutgoing}
           onProposalAction={onProposalAction}
+          onRescheduleAction={onRescheduleAction}
         />
       </div>
     );
@@ -157,6 +163,7 @@ export const ChatMessageRow = memo(function ChatMessageRow({
             isOutgoing={isOutgoing}
             groupPosition={groupPosition}
             onProposalAction={onProposalAction}
+            onRescheduleAction={onRescheduleAction}
           />
         )}
       </div>
