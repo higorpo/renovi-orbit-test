@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
 import { generateIdempotencyKeyV7 } from "@/lib/utils/idempotencyKey";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -9,7 +9,11 @@ import {
   requestRescheduleAdjustment,
   requestServiceReschedule,
 } from "../api/serviceReschedule.api";
-import type { ServiceRescheduleSlot } from "../types/serviceReschedule.types";
+import type {
+  ServiceRescheduleMutationResponse,
+  ServiceRescheduleSlot,
+} from "../types/serviceReschedule.types";
+import { patchRescheduleQueryCaches } from "../utils/patchRescheduleQueryCaches";
 
 function assertOnline(isOnline: boolean): void {
   if (!isOnline) {
@@ -18,7 +22,18 @@ function assertOnline(isOnline: boolean): void {
   }
 }
 
+function applyMutationCachePatch(
+  queryClient: ReturnType<typeof useQueryClient>,
+  data: ServiceRescheduleMutationResponse,
+): void {
+  patchRescheduleQueryCaches(queryClient, data.chat_id ?? null, data.reschedule, {
+    supersededRequestId: data.superseded_request_id,
+    supersededSnapshot: data.superseded_reschedule ?? null,
+  });
+}
+
 export function useServiceRescheduleMutations() {
+  const queryClient = useQueryClient();
   const isOnline = useOnlineStatus();
   const requestKeyRef = useRef<string | null>(null);
   const proposeKeyRef = useRef<string | null>(null);
@@ -44,6 +59,9 @@ export function useServiceRescheduleMutations() {
       requestKeyRef.current = null;
       return result.data;
     },
+    onSuccess: (data) => {
+      applyMutationCachePatch(queryClient, data);
+    },
   });
 
   const proposeMutation = useMutation({
@@ -63,6 +81,9 @@ export function useServiceRescheduleMutations() {
 
       proposeKeyRef.current = null;
       return result.data;
+    },
+    onSuccess: (data) => {
+      applyMutationCachePatch(queryClient, data);
     },
   });
 
@@ -84,6 +105,9 @@ export function useServiceRescheduleMutations() {
       acceptKeyRef.current = null;
       return result.data;
     },
+    onSuccess: (data) => {
+      applyMutationCachePatch(queryClient, data);
+    },
   });
 
   const adjustmentMutation = useMutation({
@@ -104,6 +128,9 @@ export function useServiceRescheduleMutations() {
       adjustmentKeyRef.current = null;
       return result.data;
     },
+    onSuccess: (data) => {
+      applyMutationCachePatch(queryClient, data);
+    },
   });
 
   const cancelMutation = useMutation({
@@ -123,6 +150,9 @@ export function useServiceRescheduleMutations() {
 
       cancelKeyRef.current = null;
       return result.data;
+    },
+    onSuccess: (data) => {
+      applyMutationCachePatch(queryClient, data);
     },
   });
 

@@ -17,6 +17,10 @@ vi.mock("../ChatAudioMessage", () => ({
   ChatAudioMessage: () => <div data-testid="audio-message" />,
 }));
 
+vi.mock("../DynamicRescheduleProposalCard", () => ({
+  DynamicRescheduleProposalCard: () => <div data-testid="reschedule-card" />,
+}));
+
 const baseMessage: ChatMessageListItem = {
   id: "m1",
   chat_id: "c1",
@@ -65,6 +69,25 @@ describe("DynamicMessageRenderer", () => {
     );
 
     expect(screen.getByTestId("audio-message")).toBeTruthy();
+  });
+
+  it("renders reschedule card for WORKFLOW_ACTION reschedule proposals", () => {
+    render(
+      <DynamicMessageRenderer
+        chatId="chat-1"
+        message={{
+          ...baseMessage,
+          message_type: "WORKFLOW_ACTION",
+          linked_entity_type: "workflow",
+          linked_entity_id: "req-1",
+          payload: { text: "Nova data proposta: 15/08/2026 (manhã)" },
+        }}
+        viewerRole="client"
+        isOutgoing={false}
+      />,
+    );
+
+    expect(screen.getByTestId("reschedule-card")).toBeTruthy();
   });
 
   it("renders fallback for unknown message types without crashing", () => {

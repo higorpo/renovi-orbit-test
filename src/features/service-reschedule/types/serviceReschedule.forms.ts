@@ -39,7 +39,3 @@ export const proposeRescheduleFormSchema = z
   });
 
 export type ProposeRescheduleFormValues = z.infer<typeof proposeRescheduleFormSchema>;
-
-export const confirmRescheduleFormSchema = z.object({});
-
-export type ConfirmRescheduleFormValues = z.infer<typeof confirmRescheduleFormSchema>;

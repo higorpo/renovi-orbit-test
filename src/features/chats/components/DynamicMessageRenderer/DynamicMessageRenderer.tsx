@@ -11,6 +11,9 @@ import {
   type ProposalCardAction,
 } from "./DynamicProposalCard";
 import {
+  isServiceRescheduleProposedWorkflowMessage,
+} from "@/features/service-reschedule";
+import {
   DynamicRescheduleProposalCard,
   type DynamicRescheduleProposalCardProps,
   type RescheduleCardAction,
@@ -70,8 +73,7 @@ export function DynamicMessageRenderer({
   }
 
   if (message.message_type === "WORKFLOW_ACTION") {
-    const actionKey = message.payload?.action_key;
-    if (actionKey === "service_reschedule_proposed") {
+    if (isServiceRescheduleProposedWorkflowMessage(message)) {
       const rescheduleProps: DynamicRescheduleProposalCardProps = {
         chatId,
         message,

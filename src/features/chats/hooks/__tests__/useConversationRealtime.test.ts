@@ -14,6 +14,11 @@ const {
   const onHandlers: {
     messageInsert?: (payload: { id: string }) => void;
     proposalUpdate?: (payload: { id: string }) => void;
+    rescheduleRequestChange?: (payload: {
+      id: string;
+      status: string;
+      updatedAt: string;
+    }) => void;
     readReceiptChange?: (payload: {
       userId: string;
       lastReadMessageId: string | null;
@@ -31,6 +36,13 @@ const {
         }
         if (table === "provider_proposals") {
           onHandlers.proposalUpdate = handler as (payload: { id: string }) => void;
+        }
+        if (table === "service_reschedule_requests") {
+          onHandlers.rescheduleRequestChange = handler as (payload: {
+            id: string;
+            status: string;
+            updatedAt: string;
+          }) => void;
         }
         if (table === "chat_read_receipts") {
           onHandlers.readReceiptChange = handler as (payload: {
@@ -83,6 +95,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   onHandlers.messageInsert = undefined;
   onHandlers.proposalUpdate = undefined;
+  onHandlers.rescheduleRequestChange = undefined;
   onHandlers.readReceiptChange = undefined;
   onHandlers.statusChange = undefined;
   supabaseChannelMock.mockImplementation(() => channelMock);
@@ -96,7 +109,7 @@ describe("useConversationRealtime", () => {
     });
 
     expect(supabaseChannelMock).toHaveBeenCalledWith("conversation:chat-1");
-    expect(channelMock.on).toHaveBeenCalledTimes(3);
+    expect(channelMock.on).toHaveBeenCalledTimes(5);
     await waitFor(() => expect(onHandlers.statusChange).toBeDefined());
     expect(onReconcile).not.toHaveBeenCalled();
   });
@@ -113,7 +126,7 @@ describe("useConversationRealtime", () => {
       { wrapper: createWrapper() },
     );
 
-    expect(channelMock.on).toHaveBeenCalledTimes(4);
+    expect(channelMock.on).toHaveBeenCalledTimes(6);
     await waitFor(() => expect(onHandlers.statusChange).toBeDefined());
     expect(onReconcile).not.toHaveBeenCalled();
   });
@@ -185,7 +198,7 @@ describe("useConversationRealtime", () => {
 
     await waitFor(() => expect(onHandlers.statusChange).toBeDefined());
     expect(supabaseChannelMock).toHaveBeenCalledTimes(1);
-    expect(channelMock.on).toHaveBeenCalledTimes(4);
+    expect(channelMock.on).toHaveBeenCalledTimes(6);
     expect(onReconcile).not.toHaveBeenCalled();
   });
 
@@ -274,6 +287,49 @@ describe("useConversationRealtime", () => {
         (call) => call[0]?.[0] === "conversation-detail",
       );
       expect(detailReadReceiptPatches).toHaveLength(2);
+    });
+  });
+
+  it("invalidates reschedule hydration on each status transition for the same request", async () => {
+    const queryClient = new QueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const onReconcile = vi.fn();
+
+    function Wrapper({ children }: { children: ReactNode }) {
+      return createElement(QueryClientProvider, { client: queryClient }, children);
+    }
+
+    renderHook(() => useConversationRealtime("chat-1", { onReconcile }), { wrapper: Wrapper });
+
+    await waitFor(() => expect(onHandlers.rescheduleRequestChange).toBeDefined());
+    onReconcile.mockClear();
+    invalidateSpy.mockClear();
+
+    const proposed = {
+      new: {
+        id: "req-1",
+        status: "PROPOSED",
+        updated_at: "2026-07-08T12:00:00.000Z",
+      },
+    };
+    const adjustmentRequested = {
+      new: {
+        id: "req-1",
+        status: "ADJUSTMENT_REQUESTED",
+        updated_at: "2026-07-08T12:05:00.000Z",
+      },
+    };
+
+    onHandlers.rescheduleRequestChange?.(proposed as never);
+    onHandlers.rescheduleRequestChange?.(adjustmentRequested as never);
+    onHandlers.rescheduleRequestChange?.(proposed as never);
+
+    await waitFor(() => {
+      const rescheduleInvalidations = invalidateSpy.mock.calls.filter(
+        (call) => call[0]?.queryKey?.[0] === "chat_reschedule_timeline",
+      );
+      expect(rescheduleInvalidations).toHaveLength(2);
+      expect(onReconcile).toHaveBeenCalledTimes(2);
     });
   });
 

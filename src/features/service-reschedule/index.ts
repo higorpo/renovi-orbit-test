@@ -12,6 +12,7 @@ export type {
 export {
   acceptServiceReschedule,
   cancelServiceRescheduleRequest,
+  getActiveServiceRescheduleForChat,
   getServiceRescheduleRequest,
   proposeServiceReschedule,
   requestRescheduleAdjustment,
@@ -27,6 +28,10 @@ export {
   CHAT_RESCHEDULE_TIMELINE_QUERY_KEY,
   useRescheduleTimelineHydration,
 } from "./hooks/useRescheduleTimelineHydration";
+export {
+  CHAT_ACTIVE_RESCHEDULE_QUERY_KEY,
+  useActiveChatReschedule,
+} from "./hooks/useActiveChatReschedule";
 export { useChatRescheduleDialogs } from "./hooks/useChatRescheduleDialogs";
 
 export { ContractedServiceRescheduleAction } from "./components/ContractedServiceRescheduleAction";
@@ -41,11 +46,25 @@ export {
 export { formatRescheduleSlot } from "./utils/formatRescheduleSlot";
 export { mapRescheduleSnapshot } from "./utils/mapRescheduleSnapshot";
 export { mapServiceRescheduleRpcError } from "./utils/serviceRescheduleErrors";
-export { deriveLatestRescheduleRequestIdFromMessages } from "./utils/deriveRescheduleRequestFromMessages";
+export {
+  deriveLatestRescheduleRequestIdFromMessages,
+  isServiceRescheduleProposedWorkflowMessage,
+  SERVICE_RESCHEDULE_PROPOSED_ACTION_KEY,
+} from "./utils/deriveRescheduleRequestFromMessages";
+export {
+  getRescheduleCardSurfaceClass,
+  getRescheduleStatusIcon,
+} from "./utils/rescheduleVisualState";
+export { patchRescheduleQueryCaches } from "./utils/patchRescheduleQueryCaches";
+export { readRescheduleSlotFromWorkflowMessage } from "./utils/readRescheduleSlotFromWorkflowMessage";
+export { resolveRescheduleCardDisplaySlot } from "./utils/resolveRescheduleCardDisplaySlot";
 export {
   resolveRescheduleCardCtas,
   resolveRescheduleCardDescription,
   resolveRescheduleCardHeadline,
+  resolveEndedRescheduleCardCopy,
+  resolveRescheduleSlotSectionLabel,
+  shouldShowRescheduleSlotSection,
   type RescheduleCardCta,
   type RescheduleCardCtaId,
 } from "./utils/rescheduleCardCopy";

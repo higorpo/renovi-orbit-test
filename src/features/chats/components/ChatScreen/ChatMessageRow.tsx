@@ -5,6 +5,7 @@ import { areChatMessageListItemsEqual } from "../../utils/chatMessageEquality";
 import { DynamicMessageRenderer } from "../DynamicMessageRenderer/DynamicMessageRenderer";
 import type { ProposalCardAction } from "../DynamicMessageRenderer/DynamicProposalCard";
 import type { RescheduleCardAction } from "../DynamicMessageRenderer/DynamicRescheduleProposalCard";
+import { isServiceRescheduleProposedWorkflowMessage } from "@/features/service-reschedule";
 import type { ChatMessageListItem } from "../../types/chats.types";
 import type { ChatMessageGroupPosition } from "../../utils/groupChatTimeline";
 import { getChatMessageText } from "../../utils/getChatMessageText";
@@ -67,10 +68,12 @@ export const ChatMessageRow = memo(function ChatMessageRow({
     message.message_type === "TEXT" ||
     message.message_type === "IMAGE" ||
     message.message_type === "AUDIO";
-  const usesProposalRowLayout = message.message_type === "PROPOSAL";
+  const usesInteractiveCardRowLayout =
+    message.message_type === "PROPOSAL" ||
+    isServiceRescheduleProposedWorkflowMessage(message);
 
   if (!usesBubbleRowLayout) {
-    if (usesProposalRowLayout) {
+    if (usesInteractiveCardRowLayout) {
       return (
         <div className={cn("w-full", rowMargin)}>
           <div

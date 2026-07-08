@@ -25,8 +25,7 @@ import type { ChatActionBannerCtaPayload } from "../../hooks/useChatActionBanner
 import type { ProposalCardAction } from "../DynamicMessageRenderer/DynamicProposalCard";
 import type { RescheduleCardAction } from "../DynamicMessageRenderer/DynamicRescheduleProposalCard";
 import {
-  deriveLatestRescheduleRequestIdFromMessages,
-  useRescheduleTimelineHydration,
+  useActiveChatReschedule,
 } from "@/features/service-reschedule";
 import { createClientSendId } from "../../utils/clientSendId";
 import { deriveLatestProposalIdFromMessages } from "../../utils/deriveLatestProposalIdFromMessages";
@@ -119,14 +118,9 @@ export function ChatScreen({
     latestProposalId && isLatestProposalLoading && !latestProposal,
   );
 
-  const latestRescheduleRequestId = useMemo(
-    () => deriveLatestRescheduleRequestIdFromMessages(messages),
-    [messages],
-  );
-  const { snapshot: rescheduleSnapshot } = useRescheduleTimelineHydration(
+  const { snapshot: rescheduleSnapshot } = useActiveChatReschedule(
     chatId,
-    latestRescheduleRequestId,
-    Boolean(detail && latestRescheduleRequestId),
+    Boolean(detail),
   );
 
   const { banner, isVisible: isBannerVisible, dismiss, getCtaPayload } = useChatActionBannerState({
@@ -142,7 +136,7 @@ export function ChatScreen({
     lastInteractionAt: detail?.conversation.last_interaction_at ?? null,
     enabled: Boolean(detail),
     isLatestProposalStatusPending,
-    rescheduleRequestId: rescheduleSnapshot?.activeRequest?.id ?? latestRescheduleRequestId,
+    rescheduleRequestId: rescheduleSnapshot?.activeRequest?.id ?? null,
     canProposeReschedule: Boolean(rescheduleSnapshot?.canProposeReschedule),
     canAcceptReschedule: Boolean(rescheduleSnapshot?.canAcceptReschedule),
   });

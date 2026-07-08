@@ -14,9 +14,12 @@ select ok(
     join pg_namespace n on n.oid = t.typnamespace
     where n.nspname = 'public'
       and t.typname = 'service_reschedule_request_status'
-      and e.enumlabel in ('REQUESTED', 'PROPOSED', 'ADJUSTMENT_REQUESTED', 'ACCEPTED', 'CANCELLED', 'EXPIRED')
+      and e.enumlabel in (
+        'REQUESTED', 'PROPOSED', 'ADJUSTMENT_REQUESTED',
+        'ACCEPTED', 'CANCELLED', 'EXPIRED', 'SUPERSEDED'
+      )
     group by t.oid
-    having count(*) = 6
+    having count(*) = 7
   ),
   'service_reschedule_request_status enum has all FSM labels'
 );

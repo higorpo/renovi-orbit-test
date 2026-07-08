@@ -1,17 +1,27 @@
 import type { ProfileRole } from "@/features/auth";
 import {
   formatRescheduleSlot,
+  getRescheduleCardSurfaceClass,
+  getRescheduleStatusIcon,
+  resolveEndedRescheduleCardCopy,
   resolveRescheduleCardCtas,
   resolveRescheduleCardDescription,
   resolveRescheduleCardHeadline,
+  resolveRescheduleSlotSectionLabel,
+  shouldShowRescheduleSlotSection,
+  readRescheduleSlotFromWorkflowMessage,
+  resolveRescheduleCardDisplaySlot,
   type RescheduleCardCtaId,
   useRescheduleTimelineHydration,
 } from "@/features/service-reschedule";
 import { CalendarDays } from "lucide-react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { metrics } from "@/lib/sentry";
 import type { ChatMessageListItem } from "../../types/chats.types";
 import { CHAT_INTERACTIVE_FOCUS, CHAT_MIN_TOUCH_TARGET } from "../../utils/conversationVisualState";
+import { DynamicRescheduleProposalCardSkeleton } from "./DynamicRescheduleProposalCardSkeleton";
 
 export type RescheduleCardAction = RescheduleCardCtaId;
 
@@ -40,19 +50,45 @@ export function DynamicRescheduleProposalCard({
   );
 
   const activeRequest = snapshot?.activeRequest;
-  const status = activeRequest?.status ?? "PROPOSED";
-  const headline = resolveRescheduleCardHeadline(status, viewerRole);
-  const description = resolveRescheduleCardDescription(status, viewerRole);
-  const proposedSlot =
-    activeRequest?.proposed_slot ??
-    (message.payload?.slot as { start_date?: string; end_date?: string | null; shift?: string } | undefined);
+  const endedCopy = resolveEndedRescheduleCardCopy();
+  const status = activeRequest?.status ?? null;
+  const headline = status
+    ? resolveRescheduleCardHeadline(status, viewerRole)
+    : endedCopy.headline;
+  const description = status
+    ? resolveRescheduleCardDescription(status, viewerRole)
+    : endedCopy.description;
+  const StatusIcon = status ? getRescheduleStatusIcon(status) : getRescheduleStatusIcon("EXPIRED");
 
-  const ctas = resolveRescheduleCardCtas(status, viewerRole, {
-    canPropose: Boolean(snapshot?.canProposeReschedule),
-    canAccept: Boolean(snapshot?.canAcceptReschedule),
-    canRequestAdjustment: Boolean(snapshot?.canRequestAdjustment),
-    canCancel: Boolean(snapshot?.canCancelReschedule),
-  });
+  const messageSlot = readRescheduleSlotFromWorkflowMessage(message);
+  const slotForDisplay = resolveRescheduleCardDisplaySlot(
+    status,
+    messageSlot,
+    activeRequest?.original_slot ?? null,
+    activeRequest?.proposed_slot ?? null,
+  );
+
+  const slotSectionLabel = status ? resolveRescheduleSlotSectionLabel(status) : "Data proposta";
+  const showSlotSection = status
+    ? shouldShowRescheduleSlotSection(status, slotForDisplay)
+    : Boolean(slotForDisplay);
+
+  const ctas = status
+    ? resolveRescheduleCardCtas(status, viewerRole, {
+        canPropose: Boolean(snapshot?.canProposeReschedule),
+        canAccept: Boolean(snapshot?.canAcceptReschedule),
+        canRequestAdjustment: Boolean(snapshot?.canRequestAdjustment),
+        canCancel: Boolean(snapshot?.canCancelReschedule),
+      })
+    : [];
+
+  useEffect(() => {
+    if (isLoading || !activeRequest) return;
+
+    metrics.count("chats.dynamic_reschedule_card_render", 1, {
+      status: String(activeRequest.status),
+    });
+  }, [activeRequest, isLoading]);
 
   if (!requestId) {
     return (
@@ -62,55 +98,62 @@ export function DynamicRescheduleProposalCard({
     );
   }
 
-  if (isLoading && !snapshot) {
-    return (
-      <div className={cn("h-28 animate-pulse rounded-2xl border bg-muted/40", className)} aria-hidden />
-    );
+  if (isLoading) {
+    return <DynamicRescheduleProposalCardSkeleton isOutgoing={isOutgoing} className={className} />;
   }
 
   return (
     <article
       className={cn(
-        "w-full max-w-[88%] rounded-2xl border border-primary/20 bg-primary-soft/40 px-4 py-4 shadow-sm",
+        "w-full max-w-[88%] rounded-2xl border px-4 py-4 shadow-sm",
+        status ? getRescheduleCardSurfaceClass(status) : "border-muted-foreground/25 bg-muted/40",
         isOutgoing ? "ml-auto" : "mr-auto",
         className,
       )}
       aria-label={headline}
     >
-      <div className="space-y-4">
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-foreground">{headline}</p>
-          <p className="text-sm text-muted-foreground">{description}</p>
+      <div className="flex items-start gap-2">
+        <StatusIcon className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden />
+        <div className="min-w-0 flex-1 space-y-4">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-foreground">{headline}</p>
+            <p className="text-sm text-muted-foreground">{description}</p>
+          </div>
+
+          {showSlotSection && slotForDisplay && slotSectionLabel ? (
+            <div className="rounded-lg border border-primary/20 bg-background/70 px-3 py-2.5">
+              <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                {slotSectionLabel}
+              </p>
+              <p className="mt-1 text-sm font-medium text-foreground">
+                {formatRescheduleSlot(slotForDisplay)}
+              </p>
+            </div>
+          ) : null}
+
+          {ctas.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {ctas.map((cta) => (
+                <Button
+                  key={cta.id}
+                  type="button"
+                  size="sm"
+                  variant={cta.variant}
+                  className={cn(
+                    "rounded-full px-4",
+                    CHAT_MIN_TOUCH_TARGET,
+                    CHAT_INTERACTIVE_FOCUS,
+                    (cta.id === "accept" || cta.id === "propose") && "font-semibold",
+                  )}
+                  onClick={() => onRescheduleAction?.(cta.id, requestId)}
+                >
+                  {cta.label}
+                </Button>
+              ))}
+            </div>
+          ) : null}
         </div>
-
-        {proposedSlot ? (
-          <div className="rounded-lg border border-primary/20 bg-background/70 px-3 py-2.5">
-            <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              Data proposta
-            </p>
-            <p className="mt-1 text-sm font-medium text-foreground">
-              {formatRescheduleSlot(proposedSlot as never)}
-            </p>
-          </div>
-        ) : null}
-
-        {ctas.length > 0 ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            {ctas.map((cta) => (
-              <Button
-                key={cta.id}
-                type="button"
-                size="sm"
-                variant={cta.variant}
-                className={cn(CHAT_MIN_TOUCH_TARGET, CHAT_INTERACTIVE_FOCUS, "rounded-full")}
-                onClick={() => onRescheduleAction?.(cta.id, requestId)}
-              >
-                {cta.label}
-              </Button>
-            ))}
-          </div>
-        ) : null}
       </div>
     </article>
   );

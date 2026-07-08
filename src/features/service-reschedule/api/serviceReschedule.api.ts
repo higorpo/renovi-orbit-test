@@ -62,15 +62,24 @@ function normalizeMutationResponse(value: unknown): ServiceRescheduleMutationRes
   return {
     reschedule_request_id:
       typeof record.reschedule_request_id === "string" ? record.reschedule_request_id : undefined,
+    superseded_request_id:
+      typeof record.superseded_request_id === "string" ? record.superseded_request_id : undefined,
     chat_id: typeof record.chat_id === "string" ? record.chat_id : undefined,
     deep_link_path:
       typeof record.deep_link_path === "string" ? record.deep_link_path : undefined,
     reschedule: mapRescheduleSnapshot(record.reschedule),
+    superseded_reschedule: mapRescheduleSnapshot(record.superseded_reschedule),
   };
 }
 
 function isRescheduleSnapshotResponse(value: unknown): value is Record<string, unknown> {
   return mapRescheduleSnapshot(value) !== null;
+}
+
+function isNullableRescheduleSnapshotResponse(
+  value: unknown,
+): value is Record<string, unknown> | null {
+  return value === null || mapRescheduleSnapshot(value) !== null;
 }
 
 export async function getServiceRescheduleRequest(
@@ -84,6 +93,34 @@ export async function getServiceRescheduleRequest(
 
   if (!result.data) {
     return { data: null, error: result.error };
+  }
+
+  const snapshot = mapRescheduleSnapshot(result.data);
+  if (!snapshot) {
+    return {
+      data: null,
+      error: { code: "UNKNOWN", message: "Resposta inesperada do servidor." },
+    };
+  }
+
+  return { data: snapshot, error: null };
+}
+
+export async function getActiveServiceRescheduleForChat(
+  chatId: string,
+): Promise<ServiceRescheduleApiResult<ServiceRescheduleSnapshot | null>> {
+  const result = await invokeRpc(
+    "cns_get_active_service_reschedule_for_chat",
+    { p_chat_id: chatId },
+    isNullableRescheduleSnapshotResponse,
+  );
+
+  if (result.error) {
+    return { data: null, error: result.error };
+  }
+
+  if (result.data === null) {
+    return { data: null, error: null };
   }
 
   const snapshot = mapRescheduleSnapshot(result.data);

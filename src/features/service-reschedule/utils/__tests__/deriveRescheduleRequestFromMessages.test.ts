@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { deriveLatestRescheduleRequestIdFromMessages } from "../deriveRescheduleRequestFromMessages";
+import {
+  deriveLatestRescheduleRequestIdFromMessages,
+  isServiceRescheduleProposedWorkflowMessage,
+} from "../deriveRescheduleRequestFromMessages";
 import type { ChatMessageListItem } from "@/features/chats/types/chats.types";
 
 function buildMessage(
@@ -40,5 +43,17 @@ describe("deriveLatestRescheduleRequestIdFromMessages", () => {
     ];
 
     expect(deriveLatestRescheduleRequestIdFromMessages(messages)).toBe("req-new");
+  });
+
+  it("detects reschedule proposal when list projection omits action_key", () => {
+    const message = buildMessage({
+      message_type: "WORKFLOW_ACTION",
+      linked_entity_type: "workflow",
+      linked_entity_id: "req-new",
+      payload: { text: "Nova data proposta: 15/08/2026 (manhã)" },
+    });
+
+    expect(isServiceRescheduleProposedWorkflowMessage(message)).toBe(true);
+    expect(deriveLatestRescheduleRequestIdFromMessages([message])).toBe("req-new");
   });
 });

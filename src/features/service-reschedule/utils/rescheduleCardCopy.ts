@@ -27,6 +27,22 @@ export function resolveRescheduleCardHeadline(
       : "Cliente pediu outra data";
   }
 
+  if (status === "ACCEPTED") {
+    return "Reagendamento confirmado";
+  }
+
+  if (status === "CANCELLED") {
+    return "Reagendamento cancelado";
+  }
+
+  if (status === "EXPIRED") {
+    return "Reagendamento expirado";
+  }
+
+  if (status === "SUPERSEDED") {
+    return "Proposta substituída";
+  }
+
   return viewerRole === "provider"
     ? "Reagendamento solicitado"
     : "Aguardando proposta do prestador";
@@ -46,6 +62,22 @@ export function resolveRescheduleCardDescription(
     return viewerRole === "provider"
       ? "Envie uma nova proposta de data para o cliente."
       : "O prestador foi notificado para enviar outra data.";
+  }
+
+  if (status === "ACCEPTED") {
+    return "A nova data foi confirmada e o serviço foi reagendado.";
+  }
+
+  if (status === "CANCELLED") {
+    return "Esta solicitação foi cancelada. A data original do serviço permanece válida.";
+  }
+
+  if (status === "EXPIRED") {
+    return "Esta solicitação expirou sem resposta.";
+  }
+
+  if (status === "SUPERSEDED") {
+    return "Uma nova data foi proposta depois desta. Confira a mensagem mais recente.";
   }
 
   return viewerRole === "provider"
@@ -79,8 +111,36 @@ export function resolveRescheduleCardCtas(
   }
 
   if (flags.canCancel) {
-    ctas.push({ id: "cancel", label: "Cancelar solicitação", variant: "destructive" });
+    ctas.push({ id: "cancel", label: "Cancelar solicitação", variant: "outline" });
   }
 
   return ctas;
+}
+
+export function resolveRescheduleSlotSectionLabel(
+  status: ServiceRescheduleRequestStatus,
+): string | null {
+  if (status === "PROPOSED" || status === "ACCEPTED" || status === "SUPERSEDED") {
+    return "Data proposta";
+  }
+
+  if (status === "REQUESTED" || status === "ADJUSTMENT_REQUESTED") {
+    return "Data original";
+  }
+
+  return null;
+}
+
+export function shouldShowRescheduleSlotSection(
+  status: ServiceRescheduleRequestStatus,
+  slot: unknown,
+): boolean {
+  return Boolean(slot) && resolveRescheduleSlotSectionLabel(status) !== null;
+}
+
+export function resolveEndedRescheduleCardCopy(): { headline: string; description: string } {
+  return {
+    headline: "Reagendamento encerrado",
+    description: "Esta solicitação não está mais ativa.",
+  };
 }

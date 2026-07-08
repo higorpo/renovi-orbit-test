@@ -4,7 +4,8 @@ export type ServiceRescheduleRequestStatus =
   | "ADJUSTMENT_REQUESTED"
   | "ACCEPTED"
   | "CANCELLED"
-  | "EXPIRED";
+  | "EXPIRED"
+  | "SUPERSEDED";
 
 export type ServiceRescheduleRequestedByRole = "client" | "provider";
 
@@ -27,6 +28,7 @@ export interface ServiceRescheduleActiveRequest {
   adjustment_count: number;
   is_last_minute: boolean;
   chat_id: string;
+  parent_request_id: string | null;
 }
 
 export interface ServiceRescheduleSnapshot {
@@ -77,7 +79,9 @@ export interface ServiceRescheduleApiResult<T> {
 
 export interface ServiceRescheduleMutationResponse {
   reschedule_request_id?: string;
+  superseded_request_id?: string;
   chat_id?: string;
   deep_link_path?: string;
   reschedule: ServiceRescheduleSnapshot | null;
+  superseded_reschedule?: ServiceRescheduleSnapshot | null;
 }

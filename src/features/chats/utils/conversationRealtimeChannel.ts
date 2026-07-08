@@ -11,6 +11,11 @@ export type ConversationRealtimeScope = {
 export type ConversationRealtimeHandlers = {
   onMessageInsert: (payload: { id: string }) => void;
   onProposalUpdate: (payload: { id: string }) => void;
+  onRescheduleRequestChange: (payload: {
+    id: string;
+    status: string;
+    updatedAt: string;
+  }) => void;
   onReadReceiptChange: (payload: {
     userId: string;
     lastReadMessageId: string | null;
@@ -65,6 +70,38 @@ export function subscribeConversationChannel(
       },
     );
   }
+
+  const handleRescheduleRequestRow = (payload: { new: Record<string, unknown> | null }) => {
+    const row = payload.new as { id?: string; status?: string; updated_at?: string } | null;
+    const id = row?.id;
+    const status = row?.status;
+    const updatedAt = row?.updated_at;
+    if (id && status && updatedAt) {
+      handlers.onRescheduleRequestChange({ id, status, updatedAt });
+    }
+  };
+
+  channel.on(
+    "postgres_changes",
+    {
+      event: "INSERT",
+      schema: "public",
+      table: "service_reschedule_requests",
+      filter: `chat_id=eq.${chatId}`,
+    },
+    handleRescheduleRequestRow,
+  );
+
+  channel.on(
+    "postgres_changes",
+    {
+      event: "UPDATE",
+      schema: "public",
+      table: "service_reschedule_requests",
+      filter: `chat_id=eq.${chatId}`,
+    },
+    handleRescheduleRequestRow,
+  );
 
   channel
     .on(

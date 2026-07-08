@@ -53,6 +53,8 @@ function mapActiveRequest(value: unknown): ServiceRescheduleActiveRequest | null
     adjustment_count: typeof value.adjustment_count === "number" ? value.adjustment_count : 0,
     is_last_minute: Boolean(value.is_last_minute),
     chat_id: String(value.chat_id ?? ""),
+    parent_request_id:
+      typeof value.parent_request_id === "string" ? value.parent_request_id : null,
   };
 }
 
@@ -62,9 +64,13 @@ export function mapRescheduleSnapshot(value: unknown): ServiceRescheduleSnapshot
   const contractedServiceId = value.contracted_service_id;
   if (typeof contractedServiceId !== "string") return null;
 
+  // Prefer request (historical card hydration); fall back to active_request (live snapshot).
+  const request =
+    mapActiveRequest(value.request) ?? mapActiveRequest(value.active_request);
+
   return {
     contractedServiceId,
-    activeRequest: mapActiveRequest(value.active_request),
+    activeRequest: request,
     displayStatus: typeof value.display_status === "string" ? value.display_status : null,
     canClientRequestReschedule: Boolean(value.can_client_request_reschedule),
     canProviderRequestReschedule: Boolean(value.can_provider_request_reschedule),

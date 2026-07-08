@@ -9,7 +9,7 @@ describe("conversationRealtimeChannel", () => {
     expect(conversationChannelName("abc-123")).toBe("conversation:abc-123");
   });
 
-  it("registers message and read-receipt listeners without proposal scope", () => {
+  it("registers message, reschedule, and read-receipt listeners without proposal scope", () => {
     const channel = {
       on: vi.fn().mockReturnThis(),
       subscribe: vi.fn(),
@@ -19,12 +19,13 @@ describe("conversationRealtimeChannel", () => {
     subscribeConversationChannel(client as never, "chat-1", {
       onMessageInsert: vi.fn(),
       onProposalUpdate: vi.fn(),
+      onRescheduleRequestChange: vi.fn(),
       onReadReceiptChange: vi.fn(),
       onStatusChange: vi.fn(),
     });
 
     expect(client.channel).toHaveBeenCalledWith("conversation:chat-1");
-    expect(channel.on).toHaveBeenCalledTimes(3);
+    expect(channel.on).toHaveBeenCalledTimes(5);
     expect(channel.subscribe).toHaveBeenCalledTimes(1);
   });
 
@@ -42,13 +43,14 @@ describe("conversationRealtimeChannel", () => {
       {
         onMessageInsert: vi.fn(),
         onProposalUpdate,
+        onRescheduleRequestChange: vi.fn(),
         onReadReceiptChange: vi.fn(),
         onStatusChange: vi.fn(),
       },
       { serviceRequestId: "sr-1", providerId: "provider-1" },
     );
 
-    expect(channel.on).toHaveBeenCalledTimes(4);
+    expect(channel.on).toHaveBeenCalledTimes(6);
 
     const proposalBinding = channel.on.mock.calls.find(
       ([, filter]) =>
@@ -74,5 +76,70 @@ describe("conversationRealtimeChannel", () => {
       new: { id: "proposal-2", provider_id: "other-provider" },
     });
     expect(onProposalUpdate).not.toHaveBeenCalled();
+  });
+
+  it("registers reschedule listeners filtered by chat_id", () => {
+    const channel = {
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn(),
+    };
+    const client = { channel: vi.fn(() => channel) };
+    const onRescheduleRequestChange = vi.fn();
+
+    subscribeConversationChannel(client as never, "chat-1", {
+      onMessageInsert: vi.fn(),
+      onProposalUpdate: vi.fn(),
+      onRescheduleRequestChange,
+      onReadReceiptChange: vi.fn(),
+      onStatusChange: vi.fn(),
+    });
+
+    const rescheduleBindings = channel.on.mock.calls.filter(
+      ([, filter]) =>
+        typeof filter === "object" &&
+        filter !== null &&
+        "table" in filter &&
+        (filter as { table: string }).table === "service_reschedule_requests",
+    );
+
+    expect(rescheduleBindings).toHaveLength(2);
+    expect(rescheduleBindings[0]?.[1]).toMatchObject({
+      event: "INSERT",
+      filter: "chat_id=eq.chat-1",
+    });
+    expect(rescheduleBindings[1]?.[1]).toMatchObject({
+      event: "UPDATE",
+      filter: "chat_id=eq.chat-1",
+    });
+
+    const updateHandler = rescheduleBindings[1]?.[2] as (payload: {
+      new: Record<string, string>;
+    }) => void;
+    updateHandler({
+      new: {
+        id: "req-1",
+        status: "PROPOSED",
+        updated_at: "2026-07-08T12:00:00.000Z",
+      },
+    });
+    expect(onRescheduleRequestChange).toHaveBeenCalledWith({
+      id: "req-1",
+      status: "PROPOSED",
+      updatedAt: "2026-07-08T12:00:00.000Z",
+    });
+
+    onRescheduleRequestChange.mockClear();
+    updateHandler({
+      new: {
+        id: "req-1",
+        status: "ADJUSTMENT_REQUESTED",
+        updated_at: "2026-07-08T12:05:00.000Z",
+      },
+    });
+    expect(onRescheduleRequestChange).toHaveBeenCalledWith({
+      id: "req-1",
+      status: "ADJUSTMENT_REQUESTED",
+      updatedAt: "2026-07-08T12:05:00.000Z",
+    });
   });
 });

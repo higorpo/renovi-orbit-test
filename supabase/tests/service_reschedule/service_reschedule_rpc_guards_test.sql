@@ -317,14 +317,12 @@ select throws_ok(
 
 select pg_temp.service_reschedule_set_auth(current_setting('test.rpc.other_profile_id')::uuid);
 
-select throws_ok(
-  format(
-    $$ select public.cns_get_service_reschedule_request(%L::uuid) $$,
-    (select response->>'reschedule_request_id' from _rpc_request_once)
+select is(
+  public.cns_get_service_reschedule_request(
+    (select (response->>'reschedule_request_id')::uuid from _rpc_request_once)
   ),
-  'P0002',
-  'RESCHEDULE_REQUEST_NOT_FOUND',
-  'detail RPC masks unauthorized access as not found'
+  null,
+  'detail RPC masks unauthorized access as null'
 );
 
 select pg_temp.service_reschedule_set_auth(current_setting('test.rpc.client_id')::uuid);

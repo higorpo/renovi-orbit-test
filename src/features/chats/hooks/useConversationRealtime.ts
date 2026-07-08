@@ -9,6 +9,7 @@ import {
   CHAT_PROPOSAL_TIMELINE_QUERY_KEY,
   CONVERSATION_DETAIL_QUERY_KEY,
 } from "../constants/queryKeys";
+import { CHAT_ACTIVE_RESCHEDULE_QUERY_KEY, CHAT_RESCHEDULE_TIMELINE_QUERY_KEY, SERVICE_RESCHEDULE_REQUEST_QUERY_KEY } from "@/features/service-reschedule";
 import type { ConversationDetailResponse } from "../types/chats.types";
 import { wasRecentlySentChatMessageId } from "../utils/chatMessageSendSync";
 
@@ -90,6 +91,18 @@ export function useConversationRealtime(
       void queryClient.invalidateQueries({ queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY] });
     };
 
+    const invalidateRescheduleCardHydration = () => {
+      void queryClient.invalidateQueries({
+        queryKey: [CHAT_RESCHEDULE_TIMELINE_QUERY_KEY, chatId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: [CHAT_ACTIVE_RESCHEDULE_QUERY_KEY, chatId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: [SERVICE_RESCHEDULE_REQUEST_QUERY_KEY],
+      });
+    };
+
     const channel = subscribeConversationRealtime(
       chatId,
       {
@@ -110,6 +123,12 @@ export function useConversationRealtime(
           const key = `provider_proposals:UPDATE:${id}`;
           if (!rememberEvent(seenEventsRef.current, key)) return;
           invalidateProposal();
+          onReconcileRef.current?.();
+        },
+        onRescheduleRequestChange: ({ id, status, updatedAt }) => {
+          const key = `service_reschedule_requests:UPDATE:${id}:${status}:${updatedAt}`;
+          if (!rememberEvent(seenEventsRef.current, key)) return;
+          invalidateRescheduleCardHydration();
           onReconcileRef.current?.();
         },
         onReadReceiptChange: ({ userId, lastReadMessageId, lastReadAt }) => {
