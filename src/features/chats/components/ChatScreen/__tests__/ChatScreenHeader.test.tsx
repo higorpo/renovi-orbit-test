@@ -80,6 +80,20 @@ describe("ChatScreenHeader", () => {
     expect(onDetails).toHaveBeenCalledTimes(1);
   });
 
+  it("does not show status badge for ACTIVE conversations", () => {
+    render(
+      <ChatScreenHeader
+        counterpartyName="Maria Santos"
+        serviceTitle="Pintura da sala"
+        conversationStatus="ACTIVE"
+        onBack={vi.fn()}
+        onDetails={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("Ativa")).toBeNull();
+  });
+
   it("truncates long counterparty and service titles in desktop layout", () => {
     const longName = "Maria Santos da Silva Oliveira Carvalho Mendes";
     const longTitle =

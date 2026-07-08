@@ -91,6 +91,7 @@ export function ChatScreenHeader({
   const statusPresentation = conversationStatus
     ? getConversationStatusPresentation(conversationStatus)
     : null;
+  const showStatusBadge = statusPresentation?.showInList ?? false;
   const mobileTopInsetClass = isOnline
     ? "pt-[max(0.75rem,env(safe-area-inset-top))]"
     : "pt-3";
@@ -145,7 +146,7 @@ export function ChatScreenHeader({
               serviceClassName="mt-0 line-clamp-2 text-[13px] leading-snug"
             />
           </div>
-          {conversationStatus ? (
+          {showStatusBadge && conversationStatus ? (
             <div className="mt-1">
               <ConversationStatusBadge status={conversationStatus} />
             </div>
@@ -171,7 +172,9 @@ export function ChatScreenHeader({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {conversationStatus ? <ConversationStatusBadge status={conversationStatus} /> : null}
+          {showStatusBadge && conversationStatus ? (
+            <ConversationStatusBadge status={conversationStatus} />
+          ) : null}
           {onDetails ? <DetailsButton onClick={onDetails} /> : null}
         </div>
       </div>
