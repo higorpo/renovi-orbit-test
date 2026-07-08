@@ -40,6 +40,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `request-quote/` | `api/createRequestQuoteOrder.api.ts`, `smartDescription.api.ts`, `services.api.ts`, `forms.api.ts`; hooks submit/navigation/draft/IA | `RequestQuote.tsx`, passos 1–5, `ConfirmEmailScreen`, `TrustSidebar`; rascunho `requestQuoteDraft.persistence.ts` |
 | `chats/` | `api/chats.api.ts`, `chats.rpc.ts`; hooks lista, thread, mensagens, Realtime | `ChatListPage`, `ChatScreen`, `ChatsLayout` |
 | `negotiation-proposals/` | `api/proposals.api.ts`, `api/serviceRequestBudgetCompare.api.ts`, `proposals.rpc.ts`; RPC canônica `create_provider_proposal` | `ProposalComposerDialog`, `AcceptProposalDialog`, `ReceivedBudgetDetailsSheet`, composer em jobs |
+| `service-reschedule/` | `api/serviceReschedule.api.ts`; hooks mutações/detalhe; `deriveRescheduleDateMode`, `mapRescheduleSnapshot` | `ProposeRescheduleDialog`, `RequestRescheduleDialog`, cards/ações no chat e no serviço contratado |
 | `auth/` | (já listado) | — |
 
 ## Supabase — dados e regras
@@ -117,6 +118,20 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `src/index.css` | `padding-top` com `--safe-area-inset-top` injetado pelo SystemBars no Android WebView |
 | `android/app/src/main/res/values/colors.xml`, `drawable/splash.xml` | Splash nativo Android alinhado à cor de marca |
 | `package.json` | Dependências `@capacitor/app`, `keyboard`, `splash-screen`, `preferences`, `haptics` — **haptics** instalado, **sem import** em `src/` |
+
+## Reagendamento de serviço contratado
+
+| Artefato | Uso na documentação |
+|----------|---------------------|
+| `docs/business/modulos/service-reschedule/` | README + feature propor nova data |
+| `docs/cancelamento-reagendamento-servicos/CONTEXT.md` | Glossário de domínio (inclui modo de data na proposta) |
+| `src/features/service-reschedule/utils/deriveRescheduleDateMode.ts` | Data única vs período a partir de `duration_unit`/`duration_value` |
+| `src/features/service-reschedule/types/serviceReschedule.forms.ts` | Validação Zod + `matchesProposalDayDurationISO` |
+| `src/features/service-reschedule/components/ProposeRescheduleDialog.tsx` | Labels “Data de execução” / “Data de início” + “Data de fim” |
+| `src/features/service-reschedule/utils/mapRescheduleSnapshot.ts` | Lê `duration_unit`/`duration_value` do snapshot |
+| `src/features/service-reschedule/utils/rescheduleCardCopy.ts`, `formatRescheduleSlot.ts` | “Data proposta” / “Período proposto”; oculta range se fim nulo ou = início |
+| `supabase/migrations/20260802020000_service_reschedule_helpers.sql` | `_cns_validate_reschedule_slot(slot, duration_unit, duration_value)` |
+| `supabase/migrations/20260802130000_service_reschedule_supersede_rounds.sql` (e correlatas `20260802*`) | Snapshot JSON com `duration_unit`/`duration_value`; RPCs de propor |
 
 ## Matching progressivo (backend + feed)
 

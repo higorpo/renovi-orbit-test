@@ -74,6 +74,7 @@ begin
   select * into v_fixture from pg_temp.service_reschedule_seed_service(v_adjust_id);
   v_proposed_slot := jsonb_build_object(
     'start_date', to_char(public.cns_business_today() + 3, 'YYYY-MM-DD'),
+    'end_date', to_char(public.cns_business_today() + 3, 'YYYY-MM-DD'),
     'shift', 'afternoon'
   );
   v_req_id := pg_temp.service_reschedule_insert_request(

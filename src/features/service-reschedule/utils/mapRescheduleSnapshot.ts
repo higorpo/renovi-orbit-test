@@ -21,10 +21,20 @@ function mapSlot(value: unknown): ServiceRescheduleSlot | null {
     return null;
   }
 
+  const durationUnitRaw = value.duration_unit;
+  const durationValueRaw = value.duration_value;
+
   return {
     start_date: startDate,
     end_date: typeof value.end_date === "string" ? value.end_date : null,
     shift,
+    duration_unit: durationUnitRaw === "days" || durationUnitRaw === "hours" ? durationUnitRaw : null,
+    duration_value:
+      typeof durationValueRaw === "number" &&
+      Number.isFinite(durationValueRaw) &&
+      durationValueRaw > 0
+        ? durationValueRaw
+        : null,
   };
 }
 
@@ -68,8 +78,20 @@ export function mapRescheduleSnapshot(value: unknown): ServiceRescheduleSnapshot
   const request =
     mapActiveRequest(value.request) ?? mapActiveRequest(value.active_request);
 
+  const durationUnitRaw = value.duration_unit;
+  const durationUnit = durationUnitRaw === "days" ? "days" : "hours";
+  const durationValueRaw = value.duration_value;
+  const durationValue =
+    typeof durationValueRaw === "number" &&
+    Number.isFinite(durationValueRaw) &&
+    durationValueRaw > 0
+      ? durationValueRaw
+      : 1;
+
   return {
     contractedServiceId,
+    durationUnit,
+    durationValue,
     activeRequest: request,
     displayStatus: typeof value.display_status === "string" ? value.display_status : null,
     canClientRequestReschedule: Boolean(value.can_client_request_reschedule),

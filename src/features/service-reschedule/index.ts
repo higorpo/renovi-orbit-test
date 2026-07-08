@@ -44,6 +44,13 @@ export {
 } from "./components/RescheduleActionDialogs";
 
 export { formatRescheduleSlot } from "./utils/formatRescheduleSlot";
+export {
+  buildRescheduleProposedSlot,
+  deriveRescheduleDateMode,
+  isRescheduleDateRangeMode,
+  isRescheduleSlotDateRange,
+  type RescheduleDateMode,
+} from "./utils/deriveRescheduleDateMode";
 export { mapRescheduleSnapshot } from "./utils/mapRescheduleSnapshot";
 export { mapServiceRescheduleRpcError } from "./utils/serviceRescheduleErrors";
 export {

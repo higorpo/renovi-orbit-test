@@ -122,9 +122,6 @@ Fluxo de pagamentos, itens com problemas:
 
 - Fluxo de estorno de dinheiro em caso do serviço agendado não ser  prestado para o cliente.
 
-- (import { formatServiceCalendarDate } from "@/features/view-services/utils/serviceCalendarDate";
-import { formatShift } from "@/features/view-services/utils/formatShift";) são coisas globais usadas por mais de um módulo, poderiam ser utils globais. Outros devem seguir o mesmo padrão.
-
 - Ao reagendar um serviço, mesagem que mostra no chat "Maria da Silva solicitou o reagendamento do serviço agendado para 17/07/2026 (Dia inteiro). Não vou estar disponível nesse dia" não deixa claro o que é mensagem do sistema e o que é mensagem enviada pelo cliente/prestador.
 
 - Dialog de propor nova data para o prestador deve aparecer em tela cheia
@@ -143,6 +140,11 @@ import { formatShift } from "@/features/view-services/utils/formatShift";) são 
 
 - Alterar layout de alertdialog no mobile para ele não ocupar lateralmente toda a tela e ter cantos arredondados.
 
+- Não permitir na dialog de propor proposta que o prestador defina como dias mas coloque que só vai levar um dia. Deve ser horas daí.
+
+- Permitir prestador de serviço reagendar serviço não pago ainda.
+
+- É permitido fazer reagendamento de serviços  para muito longe (por exemplo +30 dias a frente). O prestador pode pedir reagendamento sem teto mínimo,o cliente pode pedir reagendamento até 48hrs antes, em tese o pagamento ainda naõ estaria capturado, mas tem chance. Como o prestador pode pedir faltando 4hrs por exemplo, o pagamento já poderia estar capturado, nesse caso teríamos que fazer uma lógica para remembolsar o valor e fazer a captura novamente em data futura caso a data do pedido fosse para muito mais a frente para evitar cair na liquidação automática.
 
 Detalhes dos testes:
 4970100000000048

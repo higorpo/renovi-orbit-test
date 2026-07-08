@@ -13,6 +13,9 @@ export interface ServiceRescheduleSlot {
   start_date: string;
   end_date?: string | null;
   shift: "morning" | "afternoon" | "full_day";
+  /** Optional on legacy rows; required on newly proposed slots. */
+  duration_unit?: "hours" | "days" | null;
+  duration_value?: number | null;
 }
 
 export interface ServiceRescheduleActiveRequest {
@@ -33,6 +36,9 @@ export interface ServiceRescheduleActiveRequest {
 
 export interface ServiceRescheduleSnapshot {
   contractedServiceId: string;
+  /** Frozen from accepted proposal — source of truth for single-day vs date-range. */
+  durationUnit: "hours" | "days";
+  durationValue: number;
   activeRequest: ServiceRescheduleActiveRequest | null;
   displayStatus: string | null;
   canClientRequestReschedule: boolean;
@@ -60,6 +66,7 @@ export const SERVICE_RESCHEDULE_BUSINESS_ERROR_CODES = [
   "INVALID_SLOT_SHIFT",
   "INVALID_SLOT_START_DATE",
   "INVALID_SLOT_END_DATE",
+  "INVALID_SLOT_DURATION",
   "OFFLINE",
 ] as const;
 

@@ -26,6 +26,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | **provider-profile** | [pagina-publica](./modulos/provider-profile/features/pagina-publica.md) | `/perfil/:slug` | RPC `get_public_provider_by_slug`, storage |
 | **request-quote** | [pedir-orcamento](./modulos/request-quote/features/pedir-orcamento.md) | `/pedir-orcamento` | `dynamic-form`, `addresses`, `auth`, Edge Functions |
 | **chats** + **negotiation-proposals** | [conversas-e-negociacao](./modulos/chats/features/conversas-e-negociacao.md), [comparar-orcamentos-meus-servicos](./modulos/chats/features/comparar-orcamentos-meus-servicos.md) | `/dashboard/chats`, `/dashboard/chats/:chatId` | `auth`, `provider-jobs`, `message-dispatcher`, `my-services` (sheet compare/history), RPCs CNS em `supabase/migrations/202607*` |
+| **service-reschedule** | [propor-nova-data](./modulos/service-reschedule/features/propor-nova-data.md) | Embutido em chat e detalhe do serviço contratado (dialogs/cards) | `chats`, `view-services`, `negotiation-proposals` (regra de duração), RPCs `cns_*_service_reschedule*`, migrations `20260802*` |
 | **message-dispatcher** *(backend)* | [horario-silencioso](./modulos/message-dispatcher/features/horario-silencioso.md) | *Sem rota de UI* | Supabase schema `message_dispatcher`, Edge Functions `message-dispatcher-worker` / `message-dispatcher-webhook-resend` |
 | **payments** | [checkout-e-cobranca](./modulos/payments/features/checkout-e-cobranca.md) | Checkout embutido no fluxo pós-aceite; histórico em conta/serviços | `negotiation-proposals`, NetCred EFs, RPCs `payment_*`, MMD |
 
@@ -83,6 +84,7 @@ flowchart TB
   PP[provider-profile]
   MA[my-account]
   CH[chats + negotiation-proposals]
+  SR[service-reschedule]
   MD[message-dispatcher]
   RQ --> DF
   RQ --> AD
@@ -92,4 +94,6 @@ flowchart TB
   PP --> MA
   PJ --> CH
   CH --> MD
+  CH --> SR
+  SR --> CH
 ```

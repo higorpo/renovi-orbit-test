@@ -42,6 +42,7 @@
 - **`provider-jobs`:** origem do pedido e envio de proposta (composer em `negotiation-proposals`).
 - **`message-dispatcher`:** entrega e-mail/push de eventos CNS.
 - **`my-services`:** lista de pedidos; sheet compare/history de orçamentos via Public API de `negotiation-proposals`.
+- **`service-reschedule`:** após serviço contratado, cards/dialogs de reagendamento na conversa; regras de data/período em [service-reschedule](../service-reschedule/README.md).
 
 ## 6. Lacunas conhecidas (produto)
 

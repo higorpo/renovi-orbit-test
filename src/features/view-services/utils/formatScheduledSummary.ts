@@ -17,7 +17,15 @@ export function formatScheduledSummary(
 ): ScheduledSummary | null {
   if (!contracted.scheduledStartDate) return null;
 
-  const dateLabel = formatServiceCalendarDate(contracted.scheduledStartDate);
+  const startLabel = formatServiceCalendarDate(contracted.scheduledStartDate);
+  const endIso = contracted.scheduledEndDate
+    ? normalizeServiceCalendarDateToIso(contracted.scheduledEndDate)
+    : null;
+  const startIso = normalizeServiceCalendarDateToIso(contracted.scheduledStartDate);
+  const dateLabel =
+    endIso && startIso && endIso !== startIso
+      ? `${startLabel} até ${formatServiceCalendarDate(contracted.scheduledEndDate!)}`
+      : startLabel;
   const shiftLabel = contracted.scheduledShift
     ? formatShift(contracted.scheduledShift)
     : null;

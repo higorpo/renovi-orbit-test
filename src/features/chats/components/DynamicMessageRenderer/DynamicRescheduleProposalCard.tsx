@@ -3,6 +3,7 @@ import {
   formatRescheduleSlot,
   getRescheduleCardSurfaceClass,
   getRescheduleStatusIcon,
+  isRescheduleSlotDateRange,
   resolveEndedRescheduleCardCopy,
   resolveRescheduleCardCtas,
   resolveRescheduleCardDescription,
@@ -68,9 +69,14 @@ export function DynamicRescheduleProposalCard({
     activeRequest?.proposed_slot ?? null,
   );
 
-  const slotSectionLabel = status ? resolveRescheduleSlotSectionLabel(status) : "Data proposta";
+  const isDateRange = isRescheduleSlotDateRange(slotForDisplay);
+  const slotSectionLabel = status
+    ? resolveRescheduleSlotSectionLabel(status, isDateRange)
+    : isDateRange
+      ? "Período proposto"
+      : "Data proposta";
   const showSlotSection = status
-    ? shouldShowRescheduleSlotSection(status, slotForDisplay)
+    ? shouldShowRescheduleSlotSection(status, slotForDisplay, isDateRange)
     : Boolean(slotForDisplay);
 
   const ctas = status

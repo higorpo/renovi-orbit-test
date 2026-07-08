@@ -36,6 +36,12 @@ Itens que exigem validação humana, evidência parcial ou conflito entre trecho
 - Uso de **Realtime** Supabase para notificações push ao usuário (config habilitado no `config.toml`, uso no `src` não mapeado de forma exaustiva).
 - ~~**Envio de e-mail** em produção: Resend aparece em comentários de config; ambiente local usa Inbucket.~~ **Resolvido:** o Message Dispatcher utiliza Resend como vendor de e-mail e FCM para push, com integração completa (ingest → checkout → worker → report → webhook reconcile). Evidência: `supabase/functions/message-dispatcher-worker/`, `supabase/functions/message-dispatcher-webhook-resend/`, migration FSM.
 
+## Observações do reagendamento de serviço
+
+| ID | Tema | Descrição | Severidade sugerida |
+|----|------|-----------|---------------------|
+| P-11 | Cobertura parcial de `service-reschedule` | Documentado com evidência: modo de data na **proposta** (duração contratada → data única vs período; `_cns_validate_reschedule_slot`; snapshot com duração; cópias UI). Ainda **não** há feature doc de negócio cobrindo o ciclo completo de estados (solicitação, ajuste, aceite, cancelamento, expiração, supersede) nem o detalhe de recálculo de cobrança pós-aceite. | Baixa — documentação |
+
 ## Observações do Message Dispatcher
 
 | ID | Tema | Descrição | Severidade sugerida |

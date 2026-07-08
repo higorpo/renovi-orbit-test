@@ -32,6 +32,9 @@ Termos extraídos ou inferidos a partir de nomes de entidades, rotas e interface
 | **Status do pedido** | `open`, `in_progress`, `closed`, `cancelled`. | `service_requests.status`. |
 | **Status da proposta** | `PENDING`, `ACCEPTED`, `REJECTED`, `REVISION_REQUESTED`, `REVISED`, `EXPIRED`, `REJECTED_AUTOMATICALLY`. | `provider_proposals.status` (enum CNS). |
 | **Unidade de duração da proposta** | `hours` ou `days`. | `provider_proposals.proposal_duration_unit`. |
+| **Duração do serviço contratado** | Cópia da duração da proposta aceita no contrato (`hours`/`days` + valor). Define se o reagendamento pede data única ou período. | `contracted_services.duration_unit`, `duration_value`; snapshot de reagendamento. |
+| **Solicitação de reagendamento** | Pedido formal para negociar nova data/período de execução de serviço contratado; não altera a data oficial até o aceite do cliente. | Feature `service-reschedule`; glossário em `docs/cancelamento-reagendamento-servicos/CONTEXT.md`. |
+| **Data proposta / Período proposto** | Rótulos de UI do slot enviado pelo prestador no reagendamento: data única vs intervalo com fim diferente do início. | `rescheduleCardCopy`, `ProposeRescheduleDialog`. |
 | **Taxa Renovi** | Constante de plataforma (`renovi_tax_provider`, ex. seed 0,15). Congelada na proposta (`tax_rate`, `final_amount`) e reutilizada no pagamento (`commission_rate_pct`, `provider_payout` em `payment_schedules`). | `platform_constants`, `provider_proposals`, `payment_schedules`. |
 | **Assinatura de precificação** | Mecanismo HMAC para integridade dos valores calculados no servidor ao criar proposta. | RPCs `generate_provider_pricing_signature`, `create_provider_proposal`. |
 | **reCAPTCHA** | Validação anti-abuso em cadastro e envio de pedido. | `verify-recaptcha`, `src/lib/recaptcha.ts`. |

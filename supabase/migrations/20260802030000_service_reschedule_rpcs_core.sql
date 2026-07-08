@@ -524,7 +524,11 @@ begin
       using errcode = 'P0001';
   end if;
 
-  perform public._cns_validate_reschedule_slot(p_new_slot);
+  perform public._cns_validate_reschedule_slot(
+    p_new_slot,
+    v_cs.duration_unit,
+    v_cs.duration_value
+  );
 
   update public.service_reschedule_requests srr
   set

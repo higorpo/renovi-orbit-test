@@ -119,7 +119,11 @@ $$;
 revoke all on function public.cns_cancel_active_service_reschedule_requests(uuid) from public, anon, authenticated;
 grant execute on function public.cns_cancel_active_service_reschedule_requests(uuid) to service_role;
 
-create or replace function public._cns_validate_reschedule_slot(p_slot jsonb)
+create or replace function public._cns_validate_reschedule_slot(
+  p_slot jsonb,
+  p_duration_unit text default null,
+  p_duration_value integer default null
+)
 returns void
 language plpgsql
 stable
@@ -129,9 +133,46 @@ declare
   v_shift text;
   v_start_date date;
   v_end_date date;
+  v_end_raw text;
+  v_duration_unit text;
+  v_duration_value integer;
 begin
   if p_slot is null or jsonb_typeof(p_slot) <> 'object' then
     raise exception 'INVALID_SLOT_SHAPE'
+      using errcode = '22023';
+  end if;
+
+  -- Prefer duration embedded in the proposed slot; fall back to contracted baseline.
+  v_duration_unit := coalesce(
+    nullif(btrim(p_slot->>'duration_unit'), ''),
+    nullif(btrim(p_duration_unit), '')
+  );
+  begin
+    v_duration_value := coalesce(
+      nullif(btrim(p_slot->>'duration_value'), '')::integer,
+      p_duration_value
+    );
+  exception
+    when others then
+      raise exception 'INVALID_SLOT_DURATION'
+        using errcode = '22023';
+  end;
+
+  if v_duration_unit not in ('hours', 'days')
+    or v_duration_value is null
+    or v_duration_value <= 0
+  then
+    raise exception 'INVALID_SLOT_DURATION'
+      using errcode = '22023';
+  end if;
+
+  if v_duration_unit = 'hours' and v_duration_value > 24 then
+    raise exception 'INVALID_SLOT_DURATION'
+      using errcode = '22023';
+  end if;
+
+  if v_duration_unit = 'days' and v_duration_value > 7 then
+    raise exception 'INVALID_SLOT_DURATION'
       using errcode = '22023';
   end if;
 
@@ -156,16 +197,48 @@ begin
 
   perform public.cns_assert_slot_start_date_allowed(v_start_date);
 
-  v_end_date := nullif(btrim(p_slot->>'end_date'), '')::date;
-  if v_end_date is not null and v_end_date < v_start_date then
+  v_end_raw := nullif(btrim(p_slot->>'end_date'), '');
+
+  if v_duration_unit = 'hours' then
+    if v_end_raw is not null then
+      raise exception 'INVALID_SLOT_END_DATE'
+        using errcode = '22023';
+    end if;
+    return;
+  end if;
+
+  -- Day-based slots always require end_date (equals start for single-day).
+  if v_end_raw is null then
     raise exception 'INVALID_SLOT_END_DATE'
+      using errcode = '22023';
+  end if;
+
+  begin
+    v_end_date := v_end_raw::date;
+  exception
+    when others then
+      raise exception 'INVALID_SLOT_END_DATE'
+        using errcode = '22023';
+  end;
+
+  if v_end_date < v_start_date then
+    raise exception 'INVALID_SLOT_END_DATE'
+      using errcode = '22023';
+  end if;
+
+  if (v_end_date - v_start_date + 1) <> v_duration_value
+    and public.count_inclusive_working_days(v_start_date, v_end_date) <> v_duration_value
+  then
+    raise exception 'INVALID_SLOT_DURATION'
       using errcode = '22023';
   end if;
 end;
 $$;
 
-revoke all on function public._cns_validate_reschedule_slot(jsonb) from public, anon, authenticated;
-grant execute on function public._cns_validate_reschedule_slot(jsonb) to service_role;
+revoke all on function public._cns_validate_reschedule_slot(jsonb, text, integer) from public, anon, authenticated;
+grant execute on function public._cns_validate_reschedule_slot(jsonb, text, integer) to service_role;
+
+drop function if exists public._cns_validate_reschedule_slot(jsonb);
 
 create or replace function public._cns_apply_service_reschedule_slot(
   p_contracted_service_id uuid,
@@ -181,16 +254,43 @@ declare
   v_shift text;
   v_start_date date;
   v_end_date date;
+  v_duration_unit text;
+  v_duration_value integer;
   v_payment jsonb;
 begin
-  perform public._cns_validate_reschedule_slot(p_new_slot);
+  select cs.*
+  into v_cs
+  from public.contracted_services cs
+  where cs.id = p_contracted_service_id
+  for update;
+
+  if not found then
+    raise exception 'CONTRACTED_SERVICE_NOT_FOUND'
+      using errcode = 'P0002';
+  end if;
+
+  perform public._cns_validate_reschedule_slot(
+    p_new_slot,
+    v_cs.duration_unit,
+    v_cs.duration_value
+  );
 
   v_shift := nullif(btrim(p_new_slot->>'shift'), '');
   v_start_date := (p_new_slot->>'start_date')::date;
   v_end_date := nullif(btrim(p_new_slot->>'end_date'), '')::date;
+  v_duration_unit := coalesce(
+    nullif(btrim(p_new_slot->>'duration_unit'), ''),
+    v_cs.duration_unit
+  );
+  v_duration_value := coalesce(
+    nullif(btrim(p_new_slot->>'duration_value'), '')::integer,
+    v_cs.duration_value
+  );
 
   update public.contracted_services cs
   set
+    duration_unit = v_duration_unit,
+    duration_value = v_duration_value,
     scheduled_start_date = v_start_date,
     scheduled_end_date = v_end_date,
     scheduled_shift = v_shift,
@@ -212,6 +312,8 @@ begin
 
   return jsonb_build_object(
     'contracted_service_id', p_contracted_service_id,
+    'duration_unit', v_cs.duration_unit,
+    'duration_value', v_cs.duration_value,
     'scheduled_start_date', v_cs.scheduled_start_date,
     'scheduled_end_date', v_cs.scheduled_end_date,
     'scheduled_shift', v_cs.scheduled_shift,

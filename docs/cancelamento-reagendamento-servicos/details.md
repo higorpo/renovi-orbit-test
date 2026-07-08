@@ -142,8 +142,11 @@ O prestador clica no action banner em:
 
 Informando:
 
-* Nova data.
+* Tempo estimado para executar e unidade (horas/dias), pré-preenchidos do serviço contratado e editáveis (máx. 24 h / 7 dias).
+* Nova data (ou período, quando a duração informada for multi-dia).
 * Novo turno.
+
+**Comportamento comprovado no produto (Orbit) — forma da data proposta:** a UI de “Propor nova data” permite editar **tempo estimado** e **unidade**, pré-preenchidos de `duration_unit` / `duration_value` do serviço contratado. O modo de data (com ou sem fim) deriva da duração **informada na proposta**: horas, ou dias com valor 1 → campo único “Data de execução” (horas persistem `end_date` nulo; 1 dia persiste `end_date = start_date`); dias com valor > 1 → “Data de início” + “Data de fim”, com validação igual à da proposta (dias corridos inclusivos **ou** dias úteis seg–sex iguais a `duration_value`). O slot proposto embute `duration_unit` e `duration_value`; no aceite, a duração do serviço contratado é atualizada. Backend: `_cns_validate_reschedule_slot`, `_cns_apply_service_reschedule_slot`. Detalhe: `docs/business/modulos/service-reschedule/features/propor-nova-data.md`.
 
 ---
 
@@ -497,7 +500,8 @@ Após chegarem a um acordo:
 
 O prestador envia uma atualização de agendamento contendo:
 
-* Nova data.
+* Tempo estimado para executar e unidade (pré-preenchidos do contrato; editáveis).
+* Nova data (ou período, conforme a duração informada).
 * Novo turno.
 
 ---

@@ -1,6 +1,6 @@
 # Matriz de cobertura documental
 
-Última auditoria completa: **2026-05-30** (revisão: módulo **chats** / CNS — conversas e negociação).
+Última auditoria completa: **2026-05-30** (revisão pontual **2026-07-08**: modo de data no **service-reschedule** / propor nova data).
 
 Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de inferência ou RPC/RLS não detalhados linha a linha; **N/A** = não aplicável como feature de produto.
 
@@ -18,6 +18,7 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 | provider-profile | Página pública; SEO; URL | OK (`pagina-publica.md`) | — | — |
 | request-quote | Wizard 4/5 passos; IA automática passo 3; rascunho local; multipart Edge; reCAPTCHA; nsfwjs | OK (`pedir-orcamento.md`) | Validação server-side fina do form na Edge | P-01 redirect `/dashboard/client`; mismatch 10 MB front / 5 MB Edge fotos |
 | chats + negotiation-proposals | Lista/thread; propostas FSM; slots; mensagem livre vs PENDING; aceite/cancelamento; sheet compare/history em Meus Serviços | OK (`conversas-e-negociacao.md`, `comparar-orcamentos-meus-servicos.md`) | Mapa exaustivo de mensagens SQL por código/errcode nas RPCs de compare | — |
+| service-reschedule | Propor nova data/período conforme `duration_unit`/`duration_value`; validação `_cns_validate_reschedule_slot`; snapshot com duração; cópias UI | Parcial (`propor-nova-data.md`) | Ciclo completo de estados (request/ajuste/aceite/cancel/expire/supersede) e integração pagamento pós-aceite | — |
 
 ## Módulos fora de `src/features` (documentados em `modulos/`)
 
@@ -32,13 +33,13 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 
 | Métrica | Valor |
 |---------|-------|
-| Pastas em `src/features` (módulos de topo) | 15 |
+| Pastas em `src/features` (módulos de topo) | 15+ |
 | Módulos adicionais documentados (shell + home + backend) | 3 |
-| **Total módulos no índice** `modulos/README.md` | **14** |
-| READMEs de módulo em `docs/business/modulos/` | 14 (+ nota em `client-budgets/`) |
-| Arquivos de feature em `modulos/*/features/` | 14+ |
+| **Total módulos no índice** `modulos/README.md` | **14** (inclui `service-reschedule` parcial) |
+| READMEs de módulo em `docs/business/modulos/` | 15 (+ nota em `client-budgets/`) |
+| Arquivos de feature em `modulos/*/features/` | 15+ |
 | Rotas placeholder identificadas | ≥6 |
-| Cobertura documental (critério do índice) | **100%** dos 14 módulos |
+| Cobertura documental (critério do índice) | **100%** dos módulos do índice; `service-reschedule` com feature parcial |
 
 ## Features globais fora de `src/features`
 

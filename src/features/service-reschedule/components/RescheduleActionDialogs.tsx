@@ -54,7 +54,7 @@ export function AcceptRescheduleDialog({
             {isLoading
               ? "Carregando detalhes da proposta…"
               : proposedSlotLabel
-                ? `A nova data será ${proposedSlotLabel}. A cobrança seguirá as regras do seu pagamento atual.`
+                ? `A execução passará a ser ${proposedSlotLabel}. A cobrança seguirá as regras do seu pagamento atual.`
                 : "Confirme para aplicar a nova data proposta pelo prestador."}
           </AlertDialogDescription>
         </AlertDialogHeader>

@@ -4,7 +4,7 @@ begin;
 
 \ir fixtures/seed_service_reschedule.inc
 
-select plan(27);
+select plan(32);
 
 select ok(
   exists (
@@ -82,37 +82,101 @@ select ok(
 
 select lives_ok(
   $$ select public._cns_validate_reschedule_slot(
-    jsonb_build_object('start_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'), 'shift', 'morning')
+    jsonb_build_object('start_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'), 'end_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'), 'shift', 'morning'),
+    'days',
+    1
   ) $$,
-  'valid reschedule slot passes validation'
+  'valid single-day reschedule slot passes validation'
+);
+
+select lives_ok(
+  $$ select public._cns_validate_reschedule_slot(
+    jsonb_build_object('start_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'), 'shift', 'morning'),
+    'hours',
+    2
+  ) $$,
+  'valid hourly reschedule slot passes validation without end_date'
 );
 
 select throws_ok(
-  $$ select public._cns_validate_reschedule_slot(null) $$,
+  $$ select public._cns_validate_reschedule_slot(null, 'days', 1) $$,
   '22023',
   'INVALID_SLOT_SHAPE',
   'slot validator rejects null slot'
 );
 
 select throws_ok(
-  $$ select public._cns_validate_reschedule_slot(jsonb_build_object('start_date', '2026-08-10', 'shift', 'night')) $$,
+  $$ select public._cns_validate_reschedule_slot(jsonb_build_object('start_date', '2026-08-10', 'end_date', '2026-08-10', 'shift', 'night'), 'days', 1) $$,
   '22023',
   'INVALID_SLOT_SHIFT',
   'slot validator rejects invalid shift'
 );
 
 select throws_ok(
-  $$ select public._cns_validate_reschedule_slot(jsonb_build_object('start_date', 'not-a-date', 'shift', 'morning')) $$,
+  $$ select public._cns_validate_reschedule_slot(jsonb_build_object('start_date', 'not-a-date', 'end_date', 'not-a-date', 'shift', 'morning'), 'days', 1) $$,
   '22023',
   'INVALID_SLOT_START_DATE',
   'slot validator rejects invalid start date'
 );
 
 select throws_ok(
-  $$ select public._cns_validate_reschedule_slot(jsonb_build_object('start_date', '2026-08-10', 'end_date', '2026-08-09', 'shift', 'morning')) $$,
+  $$ select public._cns_validate_reschedule_slot(jsonb_build_object('start_date', '2026-08-10', 'end_date', '2026-08-09', 'shift', 'morning'), 'days', 1) $$,
   '22023',
   'INVALID_SLOT_END_DATE',
   'slot validator rejects end date before start date'
+);
+
+select throws_ok(
+  $$ select public._cns_validate_reschedule_slot(
+    jsonb_build_object('start_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'), 'end_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'), 'shift', 'morning'),
+    'hours',
+    2
+  ) $$,
+  '22023',
+  'INVALID_SLOT_END_DATE',
+  'hourly services must not include end_date'
+);
+
+select throws_ok(
+  $$ select public._cns_validate_reschedule_slot(
+    jsonb_build_object('start_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'), 'shift', 'morning'),
+    'days',
+    1
+  ) $$,
+  '22023',
+  'INVALID_SLOT_END_DATE',
+  'day-based services require end_date'
+);
+
+select throws_ok(
+  $$ select public._cns_validate_reschedule_slot(
+    jsonb_build_object(
+      'start_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'),
+      'end_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'),
+      'shift', 'morning',
+      'duration_unit', 'days',
+      'duration_value', 3
+    ),
+    'days',
+    1
+  ) $$,
+  '22023',
+  'INVALID_SLOT_DURATION',
+  'slot-embedded duration overrides contracted baseline and must match date range'
+);
+
+select lives_ok(
+  $$ select public._cns_validate_reschedule_slot(
+    jsonb_build_object(
+      'start_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'),
+      'shift', 'morning',
+      'duration_unit', 'hours',
+      'duration_value', 4
+    ),
+    'days',
+    3
+  ) $$,
+  'slot-embedded hourly duration is accepted even when contracted service is day-based'
 );
 
 do $seed$

@@ -163,6 +163,11 @@ export {
   maskBudgetInput,
   parseCurrencyInputToNumber,
 } from "./utils/proposalComposerInput";
+export {
+  countInclusiveCalendarDaysISO,
+  countInclusiveWorkingDaysISO,
+  matchesProposalDayDurationISO,
+} from "./utils/proposalWorkingDays";
 export { formatProposalSuggestedSlot } from "./utils/formatProposalSuggestedSlot";
 export {
   PROPOSAL_REVISION_REASON_OPTIONS,

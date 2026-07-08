@@ -54,8 +54,8 @@ export function resolveRescheduleCardDescription(
 ): string {
   if (status === "PROPOSED") {
     return viewerRole === "client"
-      ? "Revise a nova data proposta e confirme ou peça um ajuste pelo chat."
-      : "O cliente pode aceitar ou pedir ajustes na data proposta.";
+      ? "Revise a proposta de reagendamento e confirme ou peça um ajuste pelo chat."
+      : "O cliente pode aceitar ou pedir ajustes na proposta enviada.";
   }
 
   if (status === "ADJUSTMENT_REQUESTED") {
@@ -65,7 +65,7 @@ export function resolveRescheduleCardDescription(
   }
 
   if (status === "ACCEPTED") {
-    return "A nova data foi confirmada e o serviço foi reagendado.";
+    return "O reagendamento foi confirmado e o serviço foi atualizado.";
   }
 
   if (status === "CANCELLED") {
@@ -119,13 +119,14 @@ export function resolveRescheduleCardCtas(
 
 export function resolveRescheduleSlotSectionLabel(
   status: ServiceRescheduleRequestStatus,
+  isDateRange = false,
 ): string | null {
   if (status === "PROPOSED" || status === "ACCEPTED" || status === "SUPERSEDED") {
-    return "Data proposta";
+    return isDateRange ? "Período proposto" : "Data proposta";
   }
 
   if (status === "REQUESTED" || status === "ADJUSTMENT_REQUESTED") {
-    return "Data original";
+    return isDateRange ? "Período original" : "Data original";
   }
 
   return null;
@@ -134,8 +135,9 @@ export function resolveRescheduleSlotSectionLabel(
 export function shouldShowRescheduleSlotSection(
   status: ServiceRescheduleRequestStatus,
   slot: unknown,
+  isDateRange = false,
 ): boolean {
-  return Boolean(slot) && resolveRescheduleSlotSectionLabel(status) !== null;
+  return Boolean(slot) && resolveRescheduleSlotSectionLabel(status, isDateRange) !== null;
 }
 
 export function resolveEndedRescheduleCardCopy(): { headline: string; description: string } {

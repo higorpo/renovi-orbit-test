@@ -13,8 +13,12 @@ Data e turno atualmente gravados no serviço contratado. Continua válida até o
 _Avoid_: Data em negociação, proposta de data
 
 **Data Proposta de Reagendamento**:
-Nova data e turno enviados formalmente pelo prestador para aprovação do cliente. Só vira Data Oficial do Serviço após aceite do cliente.
+Nova data (ou período) e turno enviados formalmente pelo prestador para aprovação do cliente. Só vira Data Oficial do Serviço após aceite do cliente.
 _Avoid_: Data oficial, reagendamento confirmado
+
+**Modo de data na proposta de reagendamento**:
+Derivado da **duração informada pelo prestador** no dialog “Propor nova data” (`duration_unit` + `duration_value`), pré-preenchida do serviço contratado e editável (máx. 24 h / 7 dias, mesmos limites do composer de proposta). Horas, ou dias com valor 1 → uma **Data de execução** (sem campo de fim na UI; em horas `end_date` fica nulo; em 1 dia `end_date = start_date`). Dias com valor maior que 1 → **Data de início** + **Data de fim**, com a mesma regra de duração da criação de proposta (dias corridos inclusivos **ou** dias úteis seg–sex inclusivos iguais a `duration_value`). O slot proposto embute `duration_unit` e `duration_value`; no aceite, o serviço contratado é atualizado com essa duração. Backend: `_cns_validate_reschedule_slot`, `_cns_apply_service_reschedule_slot`. Na UI, card usa “Data proposta” ou “Período proposto”; formatadores omitem intervalo quando fim é nulo ou igual ao início.
+_Avoid_: Escolha livre de “com/sem data de fim” independente da duração informada; tratar duração do contrato como imutável na proposta
 
 **Aceite Formal de Reagendamento**:
 Ação do cliente que aprova uma Data Proposta de Reagendamento. Somente nesse momento a Data Oficial do Serviço muda.

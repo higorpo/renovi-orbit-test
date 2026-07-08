@@ -74,7 +74,10 @@ export function ServiceContractedSection({
             <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
             <span>
               Agendado para {contracted.scheduledStartDate}
-              {contracted.scheduledEndDate ? ` até ${contracted.scheduledEndDate}` : ""}
+              {contracted.scheduledEndDate &&
+              contracted.scheduledEndDate !== contracted.scheduledStartDate
+                ? ` até ${contracted.scheduledEndDate}`
+                : ""}
               {contracted.scheduledShift ? ` (${formatShift(contracted.scheduledShift)})` : ""}
             </span>
           </p>

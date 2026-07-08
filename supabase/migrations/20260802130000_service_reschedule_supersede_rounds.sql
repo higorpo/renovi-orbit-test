@@ -336,6 +336,8 @@ begin
   if p_include_request_alias then
     return jsonb_build_object(
       'contracted_service_id', p_contracted_service_id,
+      'duration_unit', p_cs.duration_unit,
+      'duration_value', p_cs.duration_value,
       'request', v_req_json,
       'active_request', v_req_json,
       'display_status', v_display_status
@@ -344,6 +346,8 @@ begin
 
   return jsonb_build_object(
     'contracted_service_id', p_contracted_service_id,
+    'duration_unit', p_cs.duration_unit,
+    'duration_value', p_cs.duration_value,
     'active_request', v_req_json,
     'display_status', v_display_status
   ) || v_flags;
@@ -730,7 +734,11 @@ begin
       using errcode = 'P0001';
   end if;
 
-  perform public._cns_validate_reschedule_slot(p_new_slot);
+  perform public._cns_validate_reschedule_slot(
+    p_new_slot,
+    v_cs.duration_unit,
+    v_cs.duration_value
+  );
 
   if v_req.status = 'REQUESTED'::public.service_reschedule_request_status then
     update public.service_reschedule_requests srr

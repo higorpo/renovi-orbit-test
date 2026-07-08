@@ -20,8 +20,10 @@ const UI_MESSAGES: Record<ServiceRescheduleBusinessErrorCode, string> = {
   PROPOSED_SLOT_REQUIRED: "É necessário propor uma nova data antes de confirmar.",
   INVALID_SLOT_SHAPE: "Selecione uma data válida.",
   INVALID_SLOT_SHIFT: "Selecione um turno válido.",
-  INVALID_SLOT_START_DATE: "Selecione uma data de início válida.",
+  INVALID_SLOT_START_DATE: "Selecione uma data de execução válida.",
   INVALID_SLOT_END_DATE: "A data de término deve ser igual ou posterior à data de início.",
+  INVALID_SLOT_DURATION:
+    "Informe um tempo estimado válido e um intervalo de datas compatível com essa duração.",
   OFFLINE: "Você está offline. Conecte-se à internet para continuar.",
 };
 
