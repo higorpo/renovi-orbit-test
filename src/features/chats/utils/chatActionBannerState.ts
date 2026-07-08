@@ -7,7 +7,6 @@ export type ChatActionBannerAction =
   | "send_proposal"
   | "view_proposal"
   | "propose_reschedule"
-  | "accept_reschedule"
   | "close_conversation";
 
 export interface ChatActionBannerModel {
@@ -39,12 +38,10 @@ export interface ChatActionBannerContext {
   /** Active reschedule request awaiting provider proposal. */
   rescheduleRequestId?: string | null;
   canProposeReschedule?: boolean;
-  canAcceptReschedule?: boolean;
 }
 
 const PRIORITY = {
   revision: 300,
-  acceptReschedule: 275,
   proposeReschedule: 250,
   sendProposal: 200,
   viewProposal: 100,
@@ -116,18 +113,6 @@ function buildProviderProposeRescheduleBanner(requestId: string): ChatActionBann
   };
 }
 
-function buildClientAcceptRescheduleBanner(requestId: string): ChatActionBannerModel {
-  return {
-    action: "accept_reschedule",
-    priority: PRIORITY.acceptReschedule,
-    rescheduleRequestId: requestId,
-    body: "O prestador enviou uma nova data. Confira na conversa e confirme ou peça ajuste.",
-    ctaLabel: "Revisar reagendamento",
-    ctaAriaLabel: "Revisar proposta de reagendamento",
-    dismissAriaLabel: "Dispensar aviso de reagendamento",
-  };
-}
-
 function buildCloseConversationBanner(): ChatActionBannerModel {
   return {
     action: "close_conversation",
@@ -180,10 +165,6 @@ export function resolveChatActionBanner(
   }
 
   if (context.viewerRole === "client") {
-    if (context.rescheduleRequestId && context.canAcceptReschedule) {
-      return buildClientAcceptRescheduleBanner(context.rescheduleRequestId);
-    }
-
     if (context.pendingProposalId) {
       return buildClientViewBanner(context.pendingProposalId);
     }

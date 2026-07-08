@@ -91,7 +91,6 @@ export function ChatsConversationRoute() {
     activeRequestId,
     handleRescheduleAction,
     openProposeDialog,
-    openAcceptDialog,
   } = useChatRescheduleDialogs(chatId ?? null);
 
   const handleRescheduleSuccess = useCallback(() => {
@@ -127,11 +126,6 @@ export function ChatsConversationRoute() {
 
       if (payload.action === "propose_reschedule" && payload.rescheduleRequestId) {
         openProposeDialog(payload.rescheduleRequestId);
-        return;
-      }
-
-      if (payload.action === "accept_reschedule" && payload.rescheduleRequestId) {
-        openAcceptDialog(payload.rescheduleRequestId);
       }
     },
     [
@@ -139,7 +133,6 @@ export function ChatsConversationRoute() {
       openProposalComposerEdit,
       openProposalDetails,
       openProposeDialog,
-      openAcceptDialog,
     ],
   );
 

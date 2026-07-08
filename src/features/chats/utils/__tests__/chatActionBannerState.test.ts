@@ -136,18 +136,6 @@ describe("resolveChatActionBanner", () => {
     expect(banner).toBeNull();
   });
 
-  it("shows client accept reschedule banner when proposal is pending client action", () => {
-    const banner = resolveChatActionBanner({
-      viewerRole: "client",
-      ...activeContext,
-      rescheduleRequestId: "req-1",
-      canAcceptReschedule: true,
-    });
-
-    expect(banner?.action).toBe("accept_reschedule");
-    expect(banner?.rescheduleRequestId).toBe("req-1");
-  });
-
   it("shows provider propose reschedule banner when request awaits proposal", () => {
     const banner = resolveChatActionBanner({
       viewerRole: "provider",

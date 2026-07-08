@@ -28,7 +28,6 @@ export interface UseChatActionBannerStateParams {
   isLatestProposalStatusPending?: boolean;
   rescheduleRequestId?: string | null;
   canProposeReschedule?: boolean;
-  canAcceptReschedule?: boolean;
 }
 
 export interface ChatActionBannerCtaPayload {
@@ -52,7 +51,6 @@ export function useChatActionBannerState({
   isLatestProposalStatusPending = false,
   rescheduleRequestId = null,
   canProposeReschedule = false,
-  canAcceptReschedule = false,
 }: UseChatActionBannerStateParams) {
   const { trackEvent } = useAnalytics();
   const [dismissedForVisit, setDismissedForVisit] = useState(false);
@@ -87,12 +85,10 @@ export function useChatActionBannerState({
       isLatestProposalStatusPending,
       rescheduleRequestId,
       canProposeReschedule,
-      canAcceptReschedule,
     });
   }, [
     canShowCloseConversationBanner,
     canShowSendProposalBanner,
-    canAcceptReschedule,
     canProposeReschedule,
     chatId,
     conversationStatus,

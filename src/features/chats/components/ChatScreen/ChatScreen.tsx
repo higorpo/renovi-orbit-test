@@ -138,7 +138,6 @@ export function ChatScreen({
     isLatestProposalStatusPending,
     rescheduleRequestId: rescheduleSnapshot?.activeRequest?.id ?? null,
     canProposeReschedule: Boolean(rescheduleSnapshot?.canProposeReschedule),
-    canAcceptReschedule: Boolean(rescheduleSnapshot?.canAcceptReschedule),
   });
 
   useChatSentryContext({
