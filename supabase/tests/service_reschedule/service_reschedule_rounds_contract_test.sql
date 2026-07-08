@@ -149,9 +149,10 @@ select ok(
     where con.conrelid = 'public.service_reschedule_requests'::regclass
       and con.conname = 'service_reschedule_requests_parent_only_when_proposed'
       and pg_get_constraintdef(con.oid) like '%parent_request_id IS NULL%'
-      and pg_get_constraintdef(con.oid) like '%PROPOSED%'
+      and pg_get_constraintdef(con.oid) like '%REQUESTED%'
+      and pg_get_constraintdef(con.oid) like '%ADJUSTMENT_REQUESTED%'
   ),
-  'parent_request_id check constraint only allows proposed child rows'
+  'parent_request_id check constraint blocks parent link on REQUESTED and ADJUSTMENT_REQUESTED'
 );
 
 select ok(

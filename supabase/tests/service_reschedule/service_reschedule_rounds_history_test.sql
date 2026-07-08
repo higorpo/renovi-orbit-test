@@ -17,7 +17,7 @@ begin
 end;
 $$;
 
-select plan(13);
+select plan(15);
 
 do $seed$
 declare
@@ -238,6 +238,34 @@ select is(
   (select response->'superseded_reschedule'->'request'->'proposed_slot'->>'start_date' from _rounds_propose2),
   to_char(current_date + 12, 'YYYY-MM-DD'),
   'inline superseded_reschedule preserves first proposed slot'
+);
+
+select pg_temp.cns_set_auth(current_setting('test.rounds_client_id')::uuid);
+
+create temp table _rounds_accept as
+select public.cns_accept_service_reschedule(
+  (select (response->>'reschedule_request_id')::uuid from _rounds_propose2),
+  gen_random_uuid()
+) as response;
+
+select is(
+  (
+    select srr.status::text
+    from public.service_reschedule_requests srr
+    where srr.id = (select (response->>'reschedule_request_id')::uuid from _rounds_propose2)
+  ),
+  'ACCEPTED',
+  'accept on child round transitions PROPOSED to ACCEPTED'
+);
+
+select is(
+  (
+    select srr.parent_request_id::text
+    from public.service_reschedule_requests srr
+    where srr.id = (select (response->>'reschedule_request_id')::uuid from _rounds_propose2)
+  ),
+  (select response->>'reschedule_request_id' from _rounds_propose1),
+  'accepted child round keeps parent_request_id for history'
 );
 
 select * from finish();
