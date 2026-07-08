@@ -122,6 +122,27 @@ Fluxo de pagamentos, itens com problemas:
 
 - Fluxo de estorno de dinheiro em caso do serviço agendado não ser  prestado para o cliente.
 
+- (import { formatServiceCalendarDate } from "@/features/view-services/utils/serviceCalendarDate";
+import { formatShift } from "@/features/view-services/utils/formatShift";) são coisas globais usadas por mais de um módulo, poderiam ser utils globais. Outros devem seguir o mesmo padrão.
+
+- Ao reagendar um serviço, mesagem que mostra no chat "Maria da Silva solicitou o reagendamento do serviço agendado para 17/07/2026 (Dia inteiro). Não vou estar disponível nesse dia" não deixa claro o que é mensagem do sistema e o que é mensagem enviada pelo cliente/prestador.
+
+- Dialog de propor nova data para o prestador deve aparecer em tela cheia
+
+- Acho que temos que desativar a window de push que  hoje tá em 20 minutos.
+
+- Quando eu faço a solicitação de reagendamento do serviço pela tela de detalhes do serviço, a dialog pisca na tela ao apertar no botão para enviar a solicitação
+
+- Dúvida: O que acontece se eu  tentar aceitar uma data agendada que já passou?
+
+- Dúvida: O que acontece se o cliente não aceitar a data ou o prestador não enviar a data de agendamento e chegar a data de execução do serviço?
+
+- Está aparecendo botão  "Cancelar solicitação" para o prestador quando ele vai propor uma nova data
+
+- Não está sendo possível aceitar uma proposta de reagendamento.  Da um erro relacionado a imdepotency
+
+- Alterar layout de alertdialog no mobile para ele não ocupar lateralmente toda a tela e ter cantos arredondados.
+
 
 Detalhes dos testes:
 4970100000000048
