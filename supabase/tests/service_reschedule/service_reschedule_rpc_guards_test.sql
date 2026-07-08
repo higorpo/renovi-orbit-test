@@ -4,7 +4,7 @@ begin;
 
 \ir fixtures/seed_service_reschedule.inc
 
-select plan(20);
+select plan(21);
 
 do $seed$
 declare
@@ -316,6 +316,22 @@ select throws_ok(
 );
 
 select pg_temp.service_reschedule_set_auth(current_setting('test.rpc.other_profile_id')::uuid);
+
+select throws_ok(
+  format(
+    $sql$
+      select public.cns_propose_service_reschedule(
+        %L::uuid,
+        jsonb_build_object('start_date', to_char(public.cns_business_today() + 3, 'YYYY-MM-DD'), 'shift', 'morning'),
+        gen_random_uuid()
+      )
+    $sql$,
+    (select response->>'reschedule_request_id' from _rpc_request_once)
+  ),
+  'P0002',
+  'RESCHEDULE_REQUEST_NOT_FOUND',
+  'propose RPC masks unauthorized request ids as not found'
+);
 
 select is(
   public.cns_get_service_reschedule_request(

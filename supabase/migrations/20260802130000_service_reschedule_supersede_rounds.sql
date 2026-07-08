@@ -129,6 +129,11 @@ $$;
 comment on function public._cns_reschedule_request_json(public.service_reschedule_requests) is
   'Serializes a reschedule request row for snapshot JSON responses.';
 
+revoke all on function public._cns_reschedule_request_json(public.service_reschedule_requests)
+  from public, anon, authenticated;
+grant execute on function public._cns_reschedule_request_json(public.service_reschedule_requests)
+  to service_role;
+
 create or replace function public._cns_reschedule_display_status(
   p_status public.service_reschedule_request_status,
   p_requested_by_role public.service_reschedule_requested_by_role
@@ -163,6 +168,15 @@ comment on function public._cns_reschedule_display_status(
   public.service_reschedule_requested_by_role
 ) is
   'Product copy for reschedule snapshot display_status.';
+
+revoke all on function public._cns_reschedule_display_status(
+  public.service_reschedule_request_status,
+  public.service_reschedule_requested_by_role
+) from public, anon, authenticated;
+grant execute on function public._cns_reschedule_display_status(
+  public.service_reschedule_request_status,
+  public.service_reschedule_requested_by_role
+) to service_role;
 
 create or replace function public._cns_reschedule_snapshot_action_flags(
   p_req public.service_reschedule_requests,
@@ -265,6 +279,21 @@ comment on function public._cns_reschedule_snapshot_action_flags(
 ) is
   'Shared CTA flags for reschedule snapshot builders.';
 
+revoke all on function public._cns_reschedule_snapshot_action_flags(
+  public.service_reschedule_requests,
+  public.contracted_services,
+  text,
+  boolean,
+  boolean
+) from public, anon, authenticated;
+grant execute on function public._cns_reschedule_snapshot_action_flags(
+  public.service_reschedule_requests,
+  public.contracted_services,
+  text,
+  boolean,
+  boolean
+) to service_role;
+
 create or replace function public._cns_service_reschedule_snapshot_core(
   p_contracted_service_id uuid,
   p_req public.service_reschedule_requests,
@@ -330,6 +359,23 @@ comment on function public._cns_service_reschedule_snapshot_core(
   boolean
 ) is
   'Builds reschedule snapshot JSON from preloaded rows without extra lookups.';
+
+revoke all on function public._cns_service_reschedule_snapshot_core(
+  uuid,
+  public.service_reschedule_requests,
+  public.contracted_services,
+  text,
+  uuid,
+  boolean
+) from public, anon, authenticated;
+grant execute on function public._cns_service_reschedule_snapshot_core(
+  uuid,
+  public.service_reschedule_requests,
+  public.contracted_services,
+  text,
+  uuid,
+  boolean
+) to service_role;
 
 create or replace function public.cns_service_reschedule_active_request_id(
   p_contracted_service_id uuid
