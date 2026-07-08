@@ -95,9 +95,6 @@ function isProposalVersionListResponse(value: unknown): value is ProposalVersion
   return Array.isArray((value as ProposalVersionListResponse).items);
 }
 
-const PROPOSAL_CLIENT_DETAIL_SELECT =
-  "id, service_request_id, provider_id, status, version, revision_count, revision_reason, revision_notes, submitted_at, expired_at, proposed_amount, proposal_description, proposal_duration_unit, proposal_duration_value, proposal_suggested_slots, selected_slot, photos, client_rejection_response, created_at, updated_at" as const;
-
 function isProposalDetailRow(value: unknown): value is ProposalDetailView {
   if (!value || typeof value !== "object") return false;
   const row = value as ProposalDetailView;
@@ -255,28 +252,18 @@ export async function getProposalDetail(
     return { data: result.data, error: null };
   }
 
-  const { data, error } = await supabase
-    .from("provider_proposals")
-    .select(PROPOSAL_CLIENT_DETAIL_SELECT)
-    .eq("id", proposalId)
-    .maybeSingle();
+  const result = await invokeRpc<ProposalDetailView | null>(
+    CNS_PROPOSAL_RPC.getProposalDetailForParticipant,
+    { p_proposal_id: proposalId },
+    isProposalDetailRowOrNull,
+    "get_proposal_detail_for_participant_invalid_response",
+  );
 
-  if (error) {
-    logger.error("get_proposal_detail_error", {
-      proposalId,
-      audience,
-      error: error.message,
-    });
-    return {
-      data: null,
-      error: {
-        code: "UNKNOWN",
-        message: error.message,
-      },
-    };
+  if (result.error) {
+    return { data: null, error: result.error };
   }
 
-  if (!data || !isProposalDetailRow(data)) {
+  if (!result.data) {
     return {
       data: null,
       error: {
@@ -286,7 +273,7 @@ export async function getProposalDetail(
     };
   }
 
-  return { data, error: null };
+  return { data: result.data, error: null };
 }
 
 const LATEST_PROVIDER_PROPOSAL_SELECT =

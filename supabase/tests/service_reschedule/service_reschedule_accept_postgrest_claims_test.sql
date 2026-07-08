@@ -20,7 +20,7 @@ begin
 end;
 $$;
 
-select plan(4);
+select plan(7);
 
 do $seed$
 declare
@@ -61,11 +61,12 @@ begin
   insert into public.provider_proposals (
     id, provider_id, service_request_id, proposed_amount, proposal_description,
     proposal_duration_value, proposal_duration_unit, proposal_suggested_slots,
-    photos, tax_rate, tax_amount, final_amount, pricing_signature, status
+    selected_slot, photos, tax_rate, tax_amount, final_amount, pricing_signature, status
   )
   values (
     v_proposal_id, v_provider_id, v_sr_id, v_pricing.original_amount,
     'service reschedule postgrest claims proposal', 1, 'days', jsonb_build_array(v_slot),
+    v_slot,
     '{}'::text[], v_pricing.tax_rate, v_pricing.tax_amount, v_pricing.final_amount,
     v_pricing.pricing_signature, 'ACCEPTED'::public.proposal_status
   );
@@ -150,6 +151,44 @@ select is(
   auth.uid()::text,
   current_setting('test.pgrst_client_id'),
   'actor claims are restored after accept flow'
+);
+
+select is(
+  (
+    select public.get_conversation_detail(
+      (select (response->>'chat_id')::uuid from _pgrst_request)
+    )->'accepted_proposal'->'selected_slot'->>'shift'
+  ),
+  'afternoon',
+  'chat details accepted proposal shows rescheduled slot'
+);
+
+select is(
+  (
+    select public.get_proposal_detail_for_participant(
+      (
+        select cs.accepted_proposal_id
+        from public.contracted_services cs
+        where cs.id = current_setting('test.pgrst_service_id')::uuid
+      )
+    )->'selected_slot'->>'shift'
+  ),
+  'afternoon',
+  'timeline proposal hydration shows rescheduled slot'
+);
+
+select is(
+  (
+    select pp.selected_slot->>'shift'
+    from public.provider_proposals pp
+    where pp.id = (
+      select cs.accepted_proposal_id
+      from public.contracted_services cs
+      where cs.id = current_setting('test.pgrst_service_id')::uuid
+    )
+  ),
+  'morning',
+  'proposal selected_slot remains initial accept snapshot'
 );
 
 select finish();

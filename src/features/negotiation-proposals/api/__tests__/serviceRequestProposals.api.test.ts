@@ -224,7 +224,7 @@ describe("getProposalDetail", () => {
     expect(result.data).toEqual(row);
   });
 
-  it("returns client-safe proposal row on success", async () => {
+  it("returns client-safe proposal row via rpc on success", async () => {
     const row = {
       id: "p1",
       service_request_id: "sr-1",
@@ -246,14 +246,13 @@ describe("getProposalDetail", () => {
       created_at: "t",
       updated_at: "t",
     };
-    mocks.from.mockReturnValue({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: row, error: null }),
-    });
+    mocks.rpc.mockResolvedValue({ data: row, error: null });
 
     const result = await getProposalDetail("p1", "client");
 
+    expect(mocks.rpc).toHaveBeenCalledWith("get_proposal_detail_for_participant", {
+      p_proposal_id: "p1",
+    });
     expect(result.error).toBeNull();
     expect(result.data).toEqual(row);
   });
@@ -267,12 +266,8 @@ describe("getProposalDetail", () => {
     expect(result.error?.message).toBe("Proposta não encontrada.");
   });
 
-  it("returns not found when client row is missing", async () => {
-    mocks.from.mockReturnValue({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-    });
+  it("returns not found when client rpc row is missing", async () => {
+    mocks.rpc.mockResolvedValue({ data: null, error: null });
 
     const result = await getProposalDetail("missing", "client");
 
