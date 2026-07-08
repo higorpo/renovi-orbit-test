@@ -84,8 +84,6 @@ Coisas para fazer next
 
 - na tela de minha conta do cliente, precisa colocar skeleton para as informações relacionadas a pagamentos
 
-- garantir que reference code seja do proposal id e que a descrição etc do pagamento tenha os detalhes do serviço.
-
 - process-refund EF também ser a que faz o cancelamento do serviço. renomear ela.
 
 - verificar para o endereço: definir o tipo de endereço, se é casa ou apto ou algum outro tipo e permitir adicionar detalhes de interfone por exemplo. precisamos garantir que o prestador saiba como entrar em contato com o cliente.
@@ -118,6 +116,12 @@ Fluxo de pagamentos, itens com problemas:
 
 - Na tela de histórico de pagamento do cliente mostrar reembolso parcial (valor)
 
+- Como vai funcionar a emissão de nota fiscal da plataforma?
+
+- Verificar: um CNPJ pode agendar vários serviços para o mesmo dia?
+
+- Fluxo de estorno de dinheiro em caso do serviço agendado não ser  prestado para o cliente.
+
 
 Detalhes dos testes:
 4970100000000048
@@ -130,12 +134,3 @@ Maria da Silva
 
 
 ----
-Com base em tudo o que foi definido em @docs/cancelamento-reagendamento-servicos/details.md , no design do que já foi implementado em relação ao sistema de pagamentos em @docs/payment-system/design.md e nos seus requisitos @docs/payment-system/payment-system-requirements.md , e levando em consideração as tarefas já desenvolvidas do sistema de pagamentos @docs/payment-system/tasks.md , crie um plano para desenvolver agora o sistema de Reagendamento de serviços baseado nas regras e fluxos definidos em @docs/cancelamento-reagendamento-servicos/details.md , levando em consideração as questões envolvendo o sistema de pagamento como por exemplo alterar a data de cobrança do serviço caso ele ainda não tenha sido cobrado etc. 
-
-Para desenvolver o seu plano, deixe claro que antes de propor qualquer alteração para migrações existentes envolvendo RPCs, é OBRIGATÓRIO que  primeiro se veriifque o estado do banco de dados local do Supabase que está rodando, para obter o corpo mais atualizado de cada RPC e evitar regressões. É extremamente necessário que mantenhamos o corpo das RPCs que vamos modificar atualizado com base nas modificações mais recentes feitas. 
-
-O plano deve também deixar claro que precisamos  criar um código limpo e organizado, seguindo os padrões de código definidos no projeto e também seguindo os requirements definidos abaixo:
-
-@docs/infrastructure-constraints.md @docs/concurrency-requirements.md @docs/scalability-requirements.md @docs/technical-stack.md 
-
-Crie um plano que contemple o fluxo completo, desde o botão na tela de detalhes do serviço para solicitação do reagendamento, a navegação para o chat, as dialogs e cards que  aparecem durante o fluxo de reagendamento no chat, notificações push e e-mails que são disparados ao prestador e ao usuário em cada  parte do fluxo
