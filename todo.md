@@ -136,7 +136,6 @@ Fluxo de pagamentos, itens com problemas:
 
 - Está aparecendo botão  "Cancelar solicitação" para o prestador quando ele vai propor uma nova data
 
-- Não está sendo possível aceitar uma proposta de reagendamento.  Da um erro relacionado a imdepotency
 
 - Alterar layout de alertdialog no mobile para ele não ocupar lateralmente toda a tela e ter cantos arredondados.
 
