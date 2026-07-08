@@ -3,6 +3,11 @@ import {
   defineProposalStatusMap,
 } from "../constants/proposalStatus";
 import type { ProposalStatus } from "../types/proposals.types";
+import {
+  formatCalendarDate,
+  normalizeCalendarDateToIso,
+} from "@/lib/utils/calendarDate";
+import { formatShift } from "@/lib/utils/formatShift";
 
 const PROPOSAL_STATUS_LABELS = defineProposalStatusMap({
   PENDING: "Aguardando resposta",
@@ -35,16 +40,13 @@ export function formatProposalDateTime(value: string | null | undefined): string
 
 export function formatProposalDateOnly(value: string | null | undefined): string {
   if (!value) return "Data indisponível";
-  const parsedDate = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsedDate.getTime())) return "Data indisponível";
-  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(parsedDate);
+  const normalized = normalizeCalendarDateToIso(value);
+  if (!normalized) return "Data indisponível";
+  return formatCalendarDate(normalized);
 }
 
 export function translateProposalShift(
   shift: "morning" | "afternoon" | "full_day" | string,
 ): string {
-  if (shift === "morning") return "Manhã";
-  if (shift === "afternoon") return "Tarde";
-  if (shift === "full_day") return "Dia inteiro";
-  return shift;
+  return formatShift(shift, { capitalize: true });
 }

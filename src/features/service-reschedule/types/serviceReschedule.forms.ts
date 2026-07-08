@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   addCalendarDaysIso,
   todayCalendarIso,
-} from "@/features/view-services/utils/serviceCalendarDate";
+} from "@/lib/utils/calendarDate";
 
 export const requestRescheduleFormSchema = z.object({
   note: z.string().max(500, "A observação deve ter no máximo 500 caracteres."),

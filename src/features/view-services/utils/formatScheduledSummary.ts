@@ -1,11 +1,11 @@
 import type { ContractedServiceSummary } from "../types/service.types";
-import { formatShift, formatShiftHighlightSuffix } from "./formatShift";
+import { formatShift, formatShiftHighlightSuffix } from "@/lib/utils/formatShift";
 import {
   addCalendarDaysIso,
-  formatServiceCalendarDate,
-  normalizeServiceCalendarDateToIso,
+  formatCalendarDate,
+  normalizeCalendarDateToIso,
   todayCalendarIso,
-} from "./serviceCalendarDate";
+} from "@/lib/utils/calendarDate";
 
 export interface ScheduledSummary {
   dateLabel: string;
@@ -17,7 +17,7 @@ export function formatScheduledSummary(
 ): ScheduledSummary | null {
   if (!contracted.scheduledStartDate) return null;
 
-  const dateLabel = formatServiceCalendarDate(contracted.scheduledStartDate);
+  const dateLabel = formatCalendarDate(contracted.scheduledStartDate);
   const shiftLabel = contracted.scheduledShift
     ? formatShift(contracted.scheduledShift)
     : null;
@@ -31,11 +31,11 @@ export function getScheduledTiming(
   scheduledStartDate: string,
   scheduledEndDate?: string | null,
 ): ScheduledTiming {
-  const startIso = normalizeServiceCalendarDateToIso(scheduledStartDate);
+  const startIso = normalizeCalendarDateToIso(scheduledStartDate);
   if (!startIso) return "future";
 
   const endIso =
-    normalizeServiceCalendarDateToIso(scheduledEndDate ?? scheduledStartDate) ?? startIso;
+    normalizeCalendarDateToIso(scheduledEndDate ?? scheduledStartDate) ?? startIso;
   const rangeStart = startIso <= endIso ? startIso : endIso;
   const rangeEnd = startIso <= endIso ? endIso : startIso;
 

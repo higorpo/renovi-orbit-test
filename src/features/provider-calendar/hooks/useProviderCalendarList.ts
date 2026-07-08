@@ -4,7 +4,7 @@ import { fetchProviderScheduledServices } from "../api/providerCalendar.api";
 import { LIST_CHUNK_DAYS } from "../constants/calendar.constants";
 import { PROVIDER_CALENDAR_LIST_QUERY_KEY } from "../constants/queryKeys";
 import type { CalendarDayEntry } from "../types/provider-calendar.types";
-import { addDaysIso, todayIso } from "../utils/calendarDateUtils";
+import { addCalendarDaysIso, todayCalendarIso } from "@/lib/utils/calendarDate";
 import { getInitialListRange, groupServicesByDay, mergeScheduledItems } from "../utils/groupServicesByDay";
 
 interface ListPageParam {
@@ -13,13 +13,13 @@ interface ListPageParam {
 }
 
 function buildForwardPage(lastTo: string): ListPageParam {
-  const from = addDaysIso(lastTo, 1);
-  return { from, to: addDaysIso(from, LIST_CHUNK_DAYS - 1) };
+  const from = addCalendarDaysIso(lastTo, 1);
+  return { from, to: addCalendarDaysIso(from, LIST_CHUNK_DAYS - 1) };
 }
 
 function buildBackwardPage(firstFrom: string): ListPageParam {
-  const to = addDaysIso(firstFrom, -1);
-  return { from: addDaysIso(to, -(LIST_CHUNK_DAYS - 1)), to };
+  const to = addCalendarDaysIso(firstFrom, -1);
+  return { from: addCalendarDaysIso(to, -(LIST_CHUNK_DAYS - 1)), to };
 }
 
 function getScrollRoot(node: HTMLElement): Element | null {
@@ -28,7 +28,7 @@ function getScrollRoot(node: HTMLElement): Element | null {
 }
 
 export function useProviderCalendarList(enabled: boolean) {
-  const today = todayIso();
+  const today = todayCalendarIso();
   const initialRange = useMemo(() => getInitialListRange(today), [today]);
   const topSentinelRef = useRef<HTMLDivElement | null>(null);
   const bottomSentinelRef = useRef<HTMLDivElement | null>(null);

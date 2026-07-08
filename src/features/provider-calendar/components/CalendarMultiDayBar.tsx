@@ -1,5 +1,5 @@
 import type { WeekEventBar } from "../types/provider-calendar.types";
-import { formatShift } from "@/features/view-services/utils/formatShift";
+import { formatShift } from "@/lib/utils/formatShift";
 import { cn } from "@/lib/utils";
 
 export interface CalendarMultiDayBarProps {

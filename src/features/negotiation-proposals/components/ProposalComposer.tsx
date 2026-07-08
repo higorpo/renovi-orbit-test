@@ -23,7 +23,7 @@ import { formatCurrency } from "@/lib/formatCurrency";
 import {
   addCalendarDaysIso,
   todayCalendarIso,
-} from "@/features/view-services/utils/serviceCalendarDate";
+} from "@/lib/utils/calendarDate";
 
 export interface ProposalComposerProps {
   form: UseFormReturn<ProposalComposerFormValues>;

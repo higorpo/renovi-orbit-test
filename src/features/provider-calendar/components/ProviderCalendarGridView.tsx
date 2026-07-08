@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ScheduledServiceItem } from "../types/provider-calendar.types";
 import type { UseProviderCalendarMonthResult } from "../hooks/useProviderCalendarMonth";
-import { parseIsoDate, todayIso } from "../utils/calendarDateUtils";
+import { parseIsoDate, todayCalendarIso } from "@/lib/utils/calendarDate";
 import {
   getSingleDayServicesForCell,
   layoutWeekBars,
@@ -34,7 +34,7 @@ function getMultiDayBandHeight(laneCount: number): number {
 }
 
 export function ProviderCalendarGridView({ month, onOpenService }: ProviderCalendarGridViewProps) {
-  const today = todayIso();
+  const today = todayCalendarIso();
   const monthStart = `${month.year}-${String(month.monthIndex + 1).padStart(2, "0")}-01`;
 
   return (

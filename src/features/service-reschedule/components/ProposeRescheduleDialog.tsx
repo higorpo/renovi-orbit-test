@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import {
   addCalendarDaysIso,
   todayCalendarIso,
-} from "@/features/view-services/utils/serviceCalendarDate";
+} from "@/lib/utils/calendarDate";
 import { useServiceRescheduleMutations } from "../hooks/useServiceRescheduleMutations";
 import {
   proposeRescheduleFormSchema,

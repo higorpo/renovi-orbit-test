@@ -20,7 +20,7 @@ import type { ProposalSuggestedSlotRpc } from "../types/proposals.types";
 import { MAX_PROPOSAL_REVISIONS } from "../constants/proposalRevisions";
 import { AcceptProposalDialogSkeleton } from "./proposalDialogSkeletons";
 import { formatProposalSuggestedSlot } from "../utils/formatProposalSuggestedSlot";
-import { todayCalendarIso } from "@/features/view-services/utils/serviceCalendarDate";
+import { todayCalendarIso } from "@/lib/utils/calendarDate";
 
 type AcceptDialogPhase = "slot" | "checkout";
 

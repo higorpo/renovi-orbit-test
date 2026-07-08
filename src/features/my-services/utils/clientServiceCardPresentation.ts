@@ -1,6 +1,5 @@
 import {
   formatLocationDisplay,
-  formatServiceDate,
   getScheduleHighlightContent,
   getScheduledTiming,
   getServiceRequestBudgetActionState,
@@ -9,6 +8,7 @@ import {
   type ServiceModel,
   type StatusBadgeVariant,
 } from "@/features/view-services";
+import { formatDatePtBr } from "@/lib/utils/formatDate";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
 
 export type ClientCardActionIntent = "details" | "budgets" | "cancel" | "messages" | "chat";
@@ -108,7 +108,7 @@ function serviceLocationLabel(model: ServiceModel): string | null {
 
 function formatClosedDate(iso: string | null | undefined): string | null {
   if (!iso) return null;
-  return formatServiceDate(iso);
+  return formatDatePtBr(iso);
 }
 
 function providerName(model: ServiceModel): string | null {

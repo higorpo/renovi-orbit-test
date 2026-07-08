@@ -1,5 +1,5 @@
 import type { ScheduledServiceItem, WeekEventBar } from "../types/provider-calendar.types";
-import { compareIsoDates } from "./calendarDateUtils";
+import { compareIsoDates } from "@/lib/utils/calendarDate";
 import { serviceOverlapsDay } from "./groupServicesByDay";
 
 function serviceOverlapsWeek(service: ScheduledServiceItem, weekDates: string[]): boolean {

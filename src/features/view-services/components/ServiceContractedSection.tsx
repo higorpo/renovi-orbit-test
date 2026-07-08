@@ -13,7 +13,7 @@ import {
   type ServiceCompletionViewerRole,
 } from "./ServiceCompletionActions";
 import type { ContractedServiceSummary } from "../types/service.types";
-import { formatShift } from "../utils/formatShift";
+import { formatShift } from "@/lib/utils/formatShift";
 import { ServiceDetailSection } from "./ServiceDetailSection";
 
 interface ServiceContractedSectionProps {
