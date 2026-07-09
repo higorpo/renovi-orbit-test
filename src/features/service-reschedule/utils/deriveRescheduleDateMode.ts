@@ -5,13 +5,13 @@ export type RescheduleDateMode = "single_day" | "date_range";
 
 /**
  * Date-mode from the duration currently being proposed (or contracted baseline).
- * Hourly and 1-day services stay single-day; multi-day (duration_value > 1) requires a range.
+ * Hourly services stay single-day; multi-day (days + duration_value >= 2) requires a range.
  */
 export function deriveRescheduleDateMode(
   durationUnit: string | null | undefined,
   durationValue: number | null | undefined,
 ): RescheduleDateMode {
-  if (durationUnit === "days" && typeof durationValue === "number" && durationValue > 1) {
+  if (durationUnit === "days" && typeof durationValue === "number" && durationValue >= 2) {
     return "date_range";
   }
   return "single_day";
@@ -33,7 +33,7 @@ export function isRescheduleSlotDateRange(
 
 /**
  * Builds the slot payload for propose/accept persistence.
- * Hours → end_date null; days → end_date always set (equals start for single-day).
+ * Hours → end_date null; days (≥ 2) → end_date from the form.
  * Duration is embedded so accept can update contracted_services.
  */
 export function buildRescheduleProposedSlot(input: {
@@ -45,7 +45,6 @@ export function buildRescheduleProposedSlot(input: {
 }): ServiceRescheduleSlot {
   const startDate = input.startDate.trim();
   const shift = input.shift;
-  const dateMode = deriveRescheduleDateMode(input.durationUnit, input.durationValue);
   const duration = {
     duration_unit: input.durationUnit,
     duration_value: input.durationValue,
@@ -53,10 +52,6 @@ export function buildRescheduleProposedSlot(input: {
 
   if (input.durationUnit === "hours") {
     return { start_date: startDate, end_date: null, shift, ...duration };
-  }
-
-  if (dateMode === "single_day") {
-    return { start_date: startDate, end_date: startDate, shift, ...duration };
   }
 
   return {

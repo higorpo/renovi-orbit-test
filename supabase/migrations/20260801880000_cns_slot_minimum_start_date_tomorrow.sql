@@ -183,6 +183,11 @@ begin
       using errcode = '22023';
   end if;
 
+  if p_proposal_duration_unit = 'days' and p_proposal_duration_value < 2 then
+    raise exception 'Day-based proposals must last at least 2 days; use hours for single-day services'
+      using errcode = '22023';
+  end if;
+
   if p_proposal_duration_unit = 'days' and p_proposal_duration_value > 7 then
     raise exception 'Proposal duration in days cannot exceed 7'
       using errcode = '22023';

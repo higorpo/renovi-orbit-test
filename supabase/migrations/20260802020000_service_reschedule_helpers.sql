@@ -171,6 +171,11 @@ begin
       using errcode = '22023';
   end if;
 
+  if v_duration_unit = 'days' and v_duration_value < 2 then
+    raise exception 'INVALID_SLOT_DURATION'
+      using errcode = '22023';
+  end if;
+
   if v_duration_unit = 'days' and v_duration_value > 7 then
     raise exception 'INVALID_SLOT_DURATION'
       using errcode = '22023';

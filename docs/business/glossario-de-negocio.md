@@ -31,7 +31,7 @@ Termos extraídos ou inferidos a partir de nomes de entidades, rotas e interface
 | **Duração estimada (hint)** | Chaves como `under_1h`, `1_to_2h`, … definidas em CHECK. | `service_requests.estimated_duration_hint`. |
 | **Status do pedido** | `open`, `in_progress`, `closed`, `cancelled`. | `service_requests.status`. |
 | **Status da proposta** | `PENDING`, `ACCEPTED`, `REJECTED`, `REVISION_REQUESTED`, `REVISED`, `EXPIRED`, `REJECTED_AUTOMATICALLY`. | `provider_proposals.status` (enum CNS). |
-| **Unidade de duração da proposta** | `hours` ou `days`. | `provider_proposals.proposal_duration_unit`. |
+| **Unidade de duração da proposta** | `hours` ou `days`. Serviço de um único dia deve usar `hours` (`days` exige valor ≥ 2). | `provider_proposals.proposal_duration_unit`. |
 | **Duração do serviço contratado** | Cópia da duração da proposta aceita no contrato (`hours`/`days` + valor). Define se o reagendamento pede data única ou período. | `contracted_services.duration_unit`, `duration_value`; snapshot de reagendamento. |
 | **Solicitação de reagendamento** | Pedido formal para negociar nova data/período de execução de serviço contratado; não altera a data oficial até o aceite do cliente. | Feature `service-reschedule`; glossário em `docs/cancelamento-reagendamento-servicos/CONTEXT.md`. |
 | **Data proposta / Período proposto** | Rótulos de UI do slot enviado pelo prestador no reagendamento: data única vs intervalo com fim diferente do início. | `rescheduleCardCopy`, `ProposeRescheduleDialog`. |

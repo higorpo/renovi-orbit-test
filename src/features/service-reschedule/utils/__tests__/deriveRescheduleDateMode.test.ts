@@ -10,12 +10,12 @@ describe("deriveRescheduleDateMode", () => {
     expect(deriveRescheduleDateMode("hours", 8)).toBe("single_day");
   });
 
-  it("treats 1-day services as single-day", () => {
-    expect(deriveRescheduleDateMode("days", 1)).toBe("single_day");
-  });
-
   it("treats multi-day services as date range", () => {
     expect(deriveRescheduleDateMode("days", 3)).toBe("date_range");
+  });
+
+  it("does not treat days with value below 2 as a date range", () => {
+    expect(deriveRescheduleDateMode("days", 1)).toBe("single_day");
   });
 });
 
@@ -35,24 +35,6 @@ describe("buildRescheduleProposedSlot", () => {
       shift: "morning",
       duration_unit: "hours",
       duration_value: 4,
-    });
-  });
-
-  it("mirrors start_date as end_date for single-day day-based services", () => {
-    expect(
-      buildRescheduleProposedSlot({
-        startDate: "2030-06-10",
-        endDate: "",
-        shift: "afternoon",
-        durationUnit: "days",
-        durationValue: 1,
-      }),
-    ).toEqual({
-      start_date: "2030-06-10",
-      end_date: "2030-06-10",
-      shift: "afternoon",
-      duration_unit: "days",
-      duration_value: 1,
     });
   });
 

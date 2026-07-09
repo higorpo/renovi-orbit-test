@@ -41,8 +41,9 @@ O modo reage à **unidade e ao valor informados no formulário** (inicialmente o
 | Condição | Modo | Campos no dialog “Propor nova data” |
 |----------|------|-------------------------------------|
 | `duration_unit = hours` | **Data única** (`single_day`) | Só **Data de execução** (+ turno). Sem campo de data de fim. |
-| `duration_unit = days` e `duration_value = 1` | **Data única** (`single_day`) | Só **Data de execução** (+ turno). Sem campo de data de fim. |
-| `duration_unit = days` e `duration_value > 1` | **Período** (`date_range`) | **Data de início** + **Data de fim** (+ turno). |
+| `duration_unit = days` e `duration_value` ≥ 2 | **Período** (`date_range`) | **Data de início** + **Data de fim** (+ turno). |
+
+`days` + `duration_value = 1` **não é permitido** no formulário (use `hours`).
 
 Alterar unidade ou valor no dialog **mostra ou oculta** o campo de data de fim em tempo real (`showEndDate`).
 
@@ -54,9 +55,10 @@ O JSON do slot proposto inclui **`duration_unit`** e **`duration_value`** além 
 
 | Caso | `start_date` | `end_date` | `duration_unit` / `duration_value` |
 |------|--------------|------------|-------------------------------------|
-| Horas | data escolhida | `null` | valores informados no formulário |
-| Um dia em dias (`days` + `duration_value = 1`) | data escolhida | **igual** a `start_date` | valores informados no formulário |
-| Vários dias (`days` + `duration_value > 1`) | início | fim informado (obrigatório) | valores informados no formulário |
+| Horas (inclui serviço de um único dia) | data escolhida | `null` | valores informados no formulário |
+| Vários dias (`days` + `duration_value` ≥ 2) | início | fim informado (obrigatório) | valores informados no formulário |
+
+**Regra:** `days` + `duration_value = 1` **não é permitido** na proposta nem no reagendamento — use `hours`.
 
 ### Efeito no aceite
 

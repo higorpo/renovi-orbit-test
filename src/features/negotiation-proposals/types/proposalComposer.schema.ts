@@ -75,6 +75,14 @@ export function createProposalComposerSchema(
         });
       }
 
+      if (data.durationUnit === "days" && durationValue < 2) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["durationUnit"],
+          message: "Para serviços de um único dia, use a unidade em horas.",
+        });
+      }
+
       if (data.durationUnit === "days" && durationValue > MAX_PROPOSAL_DURATION_DAYS) {
         context.addIssue({
           code: z.ZodIssueCode.custom,

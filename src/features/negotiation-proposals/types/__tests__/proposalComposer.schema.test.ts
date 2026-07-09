@@ -26,6 +26,28 @@ describe("validateProposalComposerForm", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects single-day duration when unit is days", () => {
+    const result = validateProposalComposerForm({
+      priceInput: "500,00",
+      descriptionDraft: "Serviço em um dia.",
+      durationValueInput: "1",
+      durationUnit: "days",
+      availabilitySlots: [
+        { startDate: "2030-06-01", endDate: "2030-06-01", shift: "full_day" },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((issue) => issue.path[0] === "durationUnit")).toBe(true);
+      expect(
+        result.error.issues.some((issue) =>
+          issue.message.includes("use a unidade em horas"),
+        ),
+      ).toBe(true);
+    }
+  });
+
   it("rejects duration greater than 24 hours", () => {
     const result = validateProposalComposerForm({
       priceInput: "500,00",

@@ -68,16 +68,19 @@ describe("proposeRescheduleFormSchema", () => {
     ).toBe(true);
   });
 
-  it("does not require endDate for 1-day day-based services", () => {
-    expect(
-      proposeRescheduleFormSchema.safeParse({
-        startDate: "2030-06-10",
-        endDate: "",
-        shift: "afternoon",
-        durationUnit: "days",
-        durationValueInput: "1",
-      }).success,
-    ).toBe(true);
+  it("rejects single-day duration when unit is days", () => {
+    const result = proposeRescheduleFormSchema.safeParse({
+      startDate: "2030-06-10",
+      endDate: "",
+      shift: "afternoon",
+      durationUnit: "days",
+      durationValueInput: "1",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((issue) => issue.path[0] === "durationUnit")).toBe(true);
+    }
   });
 
   it("allows switching from days to hours without endDate", () => {
