@@ -59,12 +59,12 @@ export function ContractedServiceRescheduleAction({
       {hasActiveRequest ? (
         <Button
           type="button"
-          variant="secondary"
+          variant="outline"
           size="sm"
           className="w-full rounded-pill sm:w-auto"
           onClick={handleNavigateToChat}
         >
-          Ver reagendamento no chat
+          Ver pedido de reagendamento no chat
         </Button>
       ) : null}
 
