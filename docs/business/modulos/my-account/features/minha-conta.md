@@ -11,7 +11,7 @@ Documentação alinhada ao código em `src/features/my-account/`, guards em `src
 | **Objetivo do módulo** | Tela única `/dashboard/conta` para o usuário autenticado manter dados pessoais, foto de perfil, privacidade/LGPD, sessão e (prestador) identidade legal, perfil público, serviços ofertados, área de atuação e portfólio. |
 | **Contexto de negócio** | Dados alimentam `profiles`, perfis privados/públicos do prestador, matching geográfico (`provider_service_area_neighborhoods`) e página pública `/perfil/:slug`. |
 | **Perfis envolvidos** | `client` e `provider` (`MyAccountPage.tsx` ramifica por `profile.role`). |
-| **Dependências** | `@/features/auth` (`useAuth`, `profileApi.updateProfile`), `@/features/addresses` (`AddressesSection`, `ServiceAreaField`: `searchCities`, `listNeighborhoodsByCity`, `getNeighborhoodsByIds`), `@/features/request-quote` (`getServiceCardStyle` em oferta de serviços). |
+| **Dependências** | `@/features/auth` (`useAuth`, `profileApi.updateProfile`), `@/features/addresses` (`AddressesSection`, `ServiceAreaField`: `searchCities`, `listNeighborhoodsByCity`, `getNeighborhoodsByIds`), `@/features/request-quote` (`getServiceCardStyle` em oferta de serviços), `@/features/payments` (`SavedCardsList`, `PaymentHistorySection`). |
 
 ---
 
@@ -23,8 +23,10 @@ Documentação alinhada ao código em `src/features/my-account/`, guards em `src
 
 **Composição da página**
 
-- **Cliente:** `MyAccountClientPage.tsx` — resumo lateral + formulário (auto-save 1500 ms) + `AddressesSection` + privacidade + logout + zona de perigo.
-- **Prestador:** `MyAccountProviderPage.tsx` — resumo (com link público) + formulário (auto-save 2000 ms) + cartão Contato (telefone) + tipo entidade + dados legais + serviços + perfil público + texto auto-save + **portfólio** (fora do `Form`) + privacidade + logout + zona de perigo.
+- **Cliente:** `MyAccountClientPage.tsx` — resumo lateral + formulário (auto-save 1500 ms) + `AddressesSection` + `SavedCardsList` + `PaymentHistorySection` (histórico com breakdown de reembolso) + privacidade + logout + zona de perigo.
+- **Prestador:** `MyAccountProviderPage.tsx` — resumo (com link público) + formulário (auto-save 2000 ms) + cartão Contato (telefone) + tipo entidade + dados legais + serviços + perfil público + texto auto-save + **portfólio** (fora do `Form`) + `PaymentHistorySection` (recebimentos) + privacidade + logout + zona de perigo.
+
+Detalhe do histórico/reembolso: [historico-e-reembolso](../../payments/features/historico-e-reembolso.md).
 
 ---
 
@@ -37,6 +39,8 @@ Documentação alinhada ao código em `src/features/my-account/`, guards em `src
 | Upload foto de perfil | `AccountSummaryCard` | Ambos | Arquivo validado (`validateProfileImageFile`) | Storage `profile-images` + `profiles.profile_image_path` |
 | Remover foto de perfil | `AccountSummaryCard` | Ambos | Existe `profile_image_path` | Remove objeto no storage + limpa path |
 | CRUD endereços | `AddressesSection` (só cliente) | Cliente | Feature `addresses` | Tabela `client_addresses` |
+| Ver histórico de pagamentos | `PaymentHistorySection` | Cliente | Feature `payments` | View `client_payment_transactions_v` (breakdown se `refunded_amount`) |
+| Ver recebimentos | `PaymentHistorySection` | Prestador | Feature `payments` | View `provider_payment_receivables_v` (`net_amount_received` após `refunded_at`) |
 | Adicionar/remover serviços ofertados | `OfferedServicesSection` | Prestador | Busca em `platform_services` | `provider_offered_services` (delete all + insert) |
 | Visualizar / copiar link do perfil | Card resumo e/ou `PublicProfileSettingsSection` | Prestador | Existe `slug` | `navigator.clipboard` + `toast` |
 | Portfólio: criar/editar/reordenar/excluir | `PortfolioManagementSection` | Prestador | Título obrigatório (trim) no dialog | `provider_portfolio_items` + bucket `provider-portfolio-images` |

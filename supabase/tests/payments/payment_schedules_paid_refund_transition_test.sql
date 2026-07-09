@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(3);
+select plan(5);
 
 create or replace function pg_temp.paid_refund_set_service_role()
 returns void
@@ -147,6 +147,25 @@ select is(
   ),
   'CANCELLED',
   'contracted service is cancelled'
+);
+
+select is(
+  (
+    select ps.refunded_amount::text
+    from public.payment_schedules ps
+    where ps.contracted_service_id = current_setting('test.paid_refund.service_id')::uuid
+  ),
+  '633.70',
+  'REFUND_REQUESTED persists expected refunded_amount for client history'
+);
+
+select ok(
+  (
+    select ps.refunded_at is null
+    from public.payment_schedules ps
+    where ps.contracted_service_id = current_setting('test.paid_refund.service_id')::uuid
+  ),
+  'refunded_at stays null until gateway confirms refund'
 );
 
 select finish();

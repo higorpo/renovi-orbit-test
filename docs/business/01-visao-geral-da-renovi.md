@@ -4,7 +4,7 @@
 
 A Renovi, neste repositório, é uma aplicação web que conecta **clientes** que **pedem orçamentos** para serviços cadastrados na plataforma com **prestadores** que **visualizam oportunidades compatíveis** (localização, serviços ofertados), **trocam perguntas** com o cliente e **enviam propostas** com valores e condições. O **cliente** acompanha pedidos, responde perguntas e **aceita ou rejeita** propostas via fluxos dedicados no painel.
 
-Não há neste worktree implementação completa de **pagamentos** ou **webhooks de gateway**; há documentos de planejamento em `docs/payment-system-*.md` que **não** foram tratados como fonte de comportamento em produção.
+**Pagamentos** estão implementados (`src/features/payments/`, RPCs `payment_*`, Edge Functions NetCred). Documentação de negócio: [payments](./modulos/payments/README.md). Design de engenharia: `docs/payment-system/design.md`.
 
 ## Visão macro
 

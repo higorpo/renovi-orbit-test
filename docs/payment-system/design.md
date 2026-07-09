@@ -837,7 +837,7 @@ Provider commission at accept comes from the accepted proposal (`tax_rate`, `fin
 - **`base_amount`** — proposal price shown to the client (before card fees). Anchors ToS §2.2 refund tiers.
 - **`provider_payout`** — exact provider `FIXED_AMOUNT` in the NetCred split at `chargeCreate`, frozen at `accept_proposal` (`base_amount − commission`). This is what the provider "received de fato" at **capture**, before proportional refund clawback.
 - **`paid_at`** — gateway capture timestamp (`PAID`). **Not** bank settlement (NetCred card liquidation ≈ D+30). Provider UI MUST display estimated bank receipt from `paid_at`.
-- **`refunded_amount`** — total refunded to the client via gateway. Clawback proportional (`isLiable`): provider share = `refunded_amount × (provider_payout / paid_amount)` when `paid_amount > 0`.
+- **`refunded_amount`** — refund amount for the client. Set to the **expected** ToS §2.2 amount when entering `REFUND_REQUESTED` (so history UI can show breakdown immediately); overwritten by the gateway-confirmed amount on `TRANSACTION_REFUND` / reconciliation. Clawback proportional (`isLiable`): provider share = `refunded_amount × (provider_payout / paid_amount)` when `paid_amount > 0`. `refunded_at` remains null until gateway confirmation.
 
 ### `client_payment_transactions_v`
 
@@ -867,6 +867,8 @@ COMMENT ON VIEW public.client_payment_transactions_v IS
   'Client payment history: paid_amount (total charged) and base_amount (service value). No provider_payout.';
 ```
 
+**Display guidance (client):** UI SHOULD show `amount_paid` as the card charge. When `refunded_amount` is present (including `REFUND_REQUESTED`), strike through `amount_paid`, show net charged (`amount_paid − refunded_amount`), and show the refunded amount explicitly. Status label still comes from `state`.
+
 **RLS:** `security_invoker = true` — policies on `payment_schedules` apply. Additional view policy (defense in depth):
 
 ```sql
@@ -894,7 +896,8 @@ SELECT
   ps.provider_id,
   ps.provider_payout             AS amount_received_at_capture,
   CASE
-    WHEN ps.paid_amount IS NOT NULL AND ps.paid_amount > 0 AND ps.refunded_amount IS NOT NULL
+    WHEN ps.paid_amount IS NOT NULL AND ps.paid_amount > 0
+      AND ps.refunded_amount IS NOT NULL AND ps.refunded_at IS NOT NULL
       THEN ps.provider_payout
            - (ps.refunded_amount * ps.provider_payout / ps.paid_amount)
     ELSE ps.provider_payout

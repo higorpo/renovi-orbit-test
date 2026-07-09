@@ -21,6 +21,7 @@ Este diretório concentra a **documentação funcional e técnica por módulo**,
 | 12 | [chats](./chats/README.md) | Conversas e negociação (CNS): lista, thread, propostas; sheet compare/history | `/dashboard/chats`, `/dashboard/chats/:chatId` | `src/features/chats/`, `src/features/negotiation-proposals/` | Concluída |
 | 13 | [matching-dispatch](./matching-dispatch/README.md) | Dispatch progressivo, lotes, visibilidade, gates; feed via Edge | *Sem rota de UI; backend + Edge `list-provider-opportunities`* | `supabase/migrations/202607110*`, `supabase/functions/list-provider-opportunities/` | Concluída |
 | 14 | [service-reschedule](./service-reschedule/README.md) | Reagendamento de serviço contratado (`PENDING_PAYMENT`/`CONFIRMED`); propor nova data/período conforme duração | Embutido em chats e detalhe do serviço | `src/features/service-reschedule/`, migrations `20260802*` | Parcial (propor nova data + elegibilidade) |
+| 15 | [payments](./payments/README.md) | Checkout, cobrança T-2, KYC; histórico cliente/prestador e reembolso | Checkout pós-aceite; histórico em `/dashboard/conta` | `src/features/payments/`, RPCs `payment_*`, EFs NetCred | Concluída (checkout + histórico/reembolso) |
 
 > **Descontinuado:** [client-budgets](./client-budgets/README.md) — rota `/dashboard/orcamentos` removida; ver `my-services` + `negotiation-proposals`.
 
@@ -52,11 +53,11 @@ Um módulo conta como documentado quando o conjunto **README do módulo + arquiv
 
 | Métrica | Valor |
 |---------|------:|
-| Módulos identificados no escopo do produto (features + shell + home + backend + CNS + reagendamento) | **14** |
-| Módulos documentados (critério acima) | **14** |
+| Módulos identificados no escopo do produto (features + shell + home + backend + CNS + reagendamento + pagamentos) | **15** |
+| Módulos documentados (critério acima) | **15** |
 | **Percentual** | **100%** (cobertura do critério; `service-reschedule` ainda **parcial** no ciclo completo de estados) |
 
-Os diretórios em `src/features/` com produto documentado neste índice incluem **`chats`** e **`negotiation-proposals`** (agrupados em [chats](./chats/README.md)) e **`service-reschedule`**; **`client-budgets` foi removido**. Acrescentam-se **dashboard-shell**, **app-home**, **message-dispatcher** e **matching-dispatch** (backend). Outras pastas (`device-beacon`, `push-permission`, `notifications`, etc.) aparecem na [rastreabilidade](../rastreabilidade.md) sem README em `modulos/`.
+Os diretórios em `src/features/` com produto documentado neste índice incluem **`chats`** e **`negotiation-proposals`** (agrupados em [chats](./chats/README.md)), **`service-reschedule`** e **`payments`**; **`client-budgets` foi removido**. Acrescentam-se **dashboard-shell**, **app-home**, **message-dispatcher** e **matching-dispatch** (backend). Outras pastas (`device-beacon`, `push-permission`, `notifications`, etc.) aparecem na [rastreabilidade](../rastreabilidade.md) sem README em `modulos/`.
 
 ---
 
@@ -69,6 +70,7 @@ Os diretórios em `src/features/` com produto documentado neste índice incluem 
 - **negotiation-proposals** → sheet `ReceivedBudgetDetailsSheet` consumido por **my-services**; composer/propostas também em **provider-jobs** e **chats**.
 - **chats** + **negotiation-proposals** → negociação in-app por pedido; integra **message-dispatcher** (notificações), **provider-jobs** (origem do pedido), **my-services** (lista + sheet compare/history).
 - **service-reschedule** → propor/aceitar nova data de serviço contratado; UI embutida em **chats** e **view-services**; duração alinhada à proposta aceita (**negotiation-proposals**).
+- **payments** → checkout pós-aceite (**negotiation-proposals** / **chats**); histórico embutido em **my-account**; cancelamento pós-pagamento via **view-services** / CNS.
 
 ---
 

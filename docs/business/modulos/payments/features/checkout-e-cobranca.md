@@ -21,6 +21,10 @@ Permitir que o **cliente** pague o serviço aceito via cartão de crédito (NetC
 | `FAILED` | Falha retentável |
 | `FAILED_PERMANENT` | Esgotou tentativas — cliente deve pagar manualmente |
 | `IN_ANALYSIS` | Análise antifraude / gateway |
+| `REFUND_REQUESTED` | Reembolso solicitado; valor esperado já pode estar em `refunded_amount` (sem `refunded_at` até o gateway) |
+| `PARTIALLY_REFUNDED` / `REFUNDED` | Reembolso confirmado (parcial ou total) via webhook/reconciliação |
+
+Histórico na conta e regras de exibição de reembolso: [historico-e-reembolso.md](./historico-e-reembolso.md).
 
 ## Prestador (KYC)
 

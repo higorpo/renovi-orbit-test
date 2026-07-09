@@ -1,6 +1,6 @@
 # Matriz de cobertura documental
 
-Última auditoria completa: **2026-05-30** (revisões pontuais: **2026-07-08** modo de data no **service-reschedule** / propor nova data; **2026-07-09** formato da mensagem SYSTEM ao solicitar com `Observação:`; **2026-07-09** prestador solicita/propõe reagendamento também em `PENDING_PAYMENT`; **2026-07-09** highlight dos cards em Meus serviços quando `contracted.status === PENDING_PAYMENT`).
+Última auditoria completa: **2026-05-30** (revisões pontuais: **2026-07-08** modo de data no **service-reschedule** / propor nova data; **2026-07-09** formato da mensagem SYSTEM ao solicitar com `Observação:`; **2026-07-09** prestador solicita/propõe reagendamento também em `PENDING_PAYMENT`; **2026-07-09** highlight dos cards em Meus serviços quando `contracted.status === PENDING_PAYMENT`; **2026-07-09** histórico de pagamentos / breakdown de reembolso e clawback só com `refunded_at`).
 
 Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de inferência ou RPC/RLS não detalhados linha a linha; **N/A** = não aplicável como feature de produto.
 
@@ -13,12 +13,13 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 | my-services | Shell compartilhado; slot por role; abas/filtros RPC; deep link (cliente); sheet compare/history; card pipeline prestador; highlight `PENDING_PAYMENT` (título/descrição, ícone cartão, ênfase `attention`) | OK (`solicitacoes-do-cliente.md`, README §8–9) | — | Dropdowns só da página carregada; aba Disputas vazia |
 | view-services | RPCs unificados; `ServiceModel`; detalhe por fase; escopo cliente/prestador no SQL; `my_proposal`/`chat` na lista prestador | OK (`visualizacao-de-servicos.md`) | pgTAP `view_services_rpcs_test.sql` | — |
 | dynamic-form | Schema; steps; validação; demo DEV | OK (`motor-de-formularios.md`) | — | — |
-| my-account | Conta cliente/prestador; portfólio; área; exclusão | OK (`minha-conta.md`) | Impacto legal de exclusão de conta | — |
+| my-account | Conta cliente/prestador; portfólio; área; exclusão; embute cartões + histórico de pagamentos/recebimentos (`payments`) | OK (`minha-conta.md` + cross-link payments) | Impacto legal de exclusão de conta | — |
 | provider-jobs | Feed progressivo; dismiss; sort; geo feed; proposta via view-services/CNS | OK (`trabalhos-e-propostas.md`) | Gates dispatch (STOPPED/PAUSED) detalhados em matching-dispatch | — |
 | provider-profile | Página pública; SEO; URL | OK (`pagina-publica.md`) | — | — |
 | request-quote | Wizard 4/5 passos; IA automática passo 3; rascunho local; multipart Edge; reCAPTCHA; nsfwjs | OK (`pedir-orcamento.md`) | Validação server-side fina do form na Edge | P-01 redirect `/dashboard/client`; mismatch 10 MB front / 5 MB Edge fotos |
 | chats + negotiation-proposals | Lista/thread; propostas FSM; slots; mensagem livre vs PENDING; aceite/cancelamento; sheet compare/history em Meus Serviços | OK (`conversas-e-negociacao.md`, `comparar-orcamentos-meus-servicos.md`) | Mapa exaustivo de mensagens SQL por código/errcode nas RPCs de compare | — |
 | service-reschedule | Elegibilidade: cliente e prestador em `PENDING_PAYMENT`/`CONFIRMED` (cliente com janela 48h; prestador sem); propor nova data/período conforme `duration_unit`/`duration_value`; validação `_cns_validate_reschedule_slot`; snapshot com duração; cópias UI; lembrete dispensável no dialog “Propor nova data”; mensagem SYSTEM ao solicitar (observação opcional com prefixo `Observação:`) | Parcial (`propor-nova-data.md` + README § elegibilidade e mensagem SYSTEM) | Ciclo completo de estados (request/ajuste/aceite/cancel/expire/supersede) e integração pagamento pós-aceite | — |
+| payments | Checkout/T-2/KYC; histórico cliente (breakdown com `refunded_amount`); `REFUND_REQUESTED` persiste valor esperado sem `refunded_at`; recebimentos prestador com clawback só após `refunded_at` | OK (`checkout-e-cobranca.md`, `historico-e-reembolso.md`) | Matriz completa de faixas de multa/cancelamento ToS (detalhe em `docs/payment-system/`) | — |
 
 ## Módulos fora de `src/features` (documentados em `modulos/`)
 
@@ -35,7 +36,7 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 |---------|-------|
 | Pastas em `src/features` (módulos de topo) | 15+ |
 | Módulos adicionais documentados (shell + home + backend) | 3 |
-| **Total módulos no índice** `modulos/README.md` | **14** (inclui `service-reschedule` parcial) |
+| **Total módulos no índice** `modulos/README.md` | **15** (inclui `service-reschedule` parcial; `payments` com checkout + histórico) |
 | READMEs de módulo em `docs/business/modulos/` | 15 (+ nota em `client-budgets/`) |
 | Arquivos de feature em `modulos/*/features/` | 15+ |
 | Rotas placeholder identificadas | ≥6 |

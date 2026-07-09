@@ -333,6 +333,7 @@ begin
   update public.payment_schedules ps
   set
     state = 'REFUND_REQUESTED'::public.payment_schedule_state,
+    refunded_amount = v_refund_amount,
     cancellation_reason = v_reason,
     updated_at = now()
   where ps.id = v_schedule.id;

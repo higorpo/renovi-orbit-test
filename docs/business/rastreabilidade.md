@@ -148,9 +148,23 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `supabase/tests/matching/*.sql` | pgTAP matching |
 | `e2e/matching/*.spec.ts` | E2E feed + lifecycle |
 
-## Documentação pré-existente (não como fonte de comportamento)
+## Pagamentos (checkout, histórico, reembolso)
+
+| Artefato | Uso na documentação |
+|----------|---------------------|
+| `docs/business/modulos/payments/` | README + checkout + [historico-e-reembolso](./modulos/payments/features/historico-e-reembolso.md) |
+| `docs/payment-system/design.md` | Design normativo (§3.13 views de histórico; §4.8 reembolso) |
+| `src/features/payments/components/PaymentHistory/*` | UI histórico cliente/prestador em Minha conta |
+| `src/features/payments/utils/clientPaymentHistoryAmounts.ts` | Breakdown: original riscado, líquido, “Reembolsado: …” |
+| `src/features/payments/api/history.api.ts` | Leitura das views de histórico |
+| `supabase/migrations/20260801140000_create_payment_history_views.sql` | `client_payment_transactions_v`; `provider_payment_receivables_v` (clawback só com `refunded_at`) |
+| `payment_begin_refund_request` (migrations `20260801360000_*` / supersedidas) | `REFUND_REQUESTED` + `refunded_amount` esperado sem `refunded_at` |
+| `supabase/functions/process-refund/` | Edge de estorno |
+| `supabase/functions/netcred-webhook/` + `payment_process_webhook_event` | Confirma reembolso e define `refunded_at` |
+
+## Documentação pré-existente (planos legados)
 
 | Artefato | Nota |
 |----------|------|
-| `docs/payment-system-implementation-plan.md` | Plano; não confundir com implementação atual |
+| `docs/payment-system-implementation-plan.md` | Plano legado; preferir `docs/payment-system/design.md` + código |
 | `docs/payment-system-plan.md` | Idem |

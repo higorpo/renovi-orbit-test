@@ -57,9 +57,12 @@ select
   ps.provider_id,
   ps.provider_payout as amount_received_at_capture,
   case
+    -- Clawback only after gateway confirmation (refunded_at). Expected amount may
+    -- already be stored on REFUND_REQUESTED for client history display.
     when ps.paid_amount is not null
       and ps.paid_amount > 0
       and ps.refunded_amount is not null
+      and ps.refunded_at is not null
       then ps.provider_payout
         - (ps.refunded_amount * ps.provider_payout / ps.paid_amount)
     else ps.provider_payout

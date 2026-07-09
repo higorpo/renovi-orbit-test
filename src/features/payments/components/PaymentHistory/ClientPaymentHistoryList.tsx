@@ -1,6 +1,7 @@
 import { Loader2, Receipt } from "lucide-react";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { useClientPaymentHistory } from "../../hooks/useClientPaymentHistory";
+import { getClientPaymentHistoryAmounts } from "../../utils/clientPaymentHistoryAmounts";
 import {
   formatPaymentHistoryDate,
   formatPaymentHistoryState,
@@ -45,32 +46,53 @@ export function ClientPaymentHistoryList() {
         <p className="text-sm text-muted-foreground">Nenhum pagamento registrado ainda.</p>
       ) : (
         <ul className="space-y-3">
-          {transactions.map((transaction) => (
-            <li
-              key={transaction.scheduleId}
-              className="flex items-start gap-3 rounded-xl border border-border p-4"
-            >
-              <Receipt className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
-              <div className="min-w-0 flex-1 space-y-1 text-sm">
-                <p className="font-medium">
-                  {formatCurrency(transaction.amountPaid)}
-                  {transaction.installmentNumber > 1
-                    ? ` · ${transaction.installmentNumber}x`
-                    : null}
-                </p>
-                <p className="text-muted-foreground">
-                  Serviço: {formatCurrency(transaction.serviceAmount)}
-                </p>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span>
-                    {formatPaymentHistoryDate(transaction.paidAt)} ·{" "}
-                    {formatPaymentHistoryState(transaction.state)}
-                  </span>
-                  {transaction.isDisputed ? <PaymentDisputeBadge /> : null}
+          {transactions.map((transaction) => {
+            const amounts = getClientPaymentHistoryAmounts(transaction);
+
+            return (
+              <li
+                key={transaction.scheduleId}
+                className="flex items-start gap-3 rounded-xl border border-border p-4"
+              >
+                <Receipt className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+                <div className="min-w-0 flex-1 space-y-1 text-sm">
+                  <p className="font-medium">
+                    {amounts.showRefundBreakdown ? (
+                      <>
+                        <span className="text-muted-foreground line-through">
+                          {formatCurrency(amounts.originalAmount)}
+                        </span>
+                        <span className="mx-1.5" aria-hidden>
+                          →
+                        </span>
+                        <span>{formatCurrency(amounts.netAmount)}</span>
+                      </>
+                    ) : (
+                      formatCurrency(amounts.originalAmount)
+                    )}
+                    {transaction.installmentNumber > 1
+                      ? ` · ${transaction.installmentNumber}x`
+                      : null}
+                  </p>
+                  {amounts.showRefundBreakdown && amounts.refundedAmount != null ? (
+                    <p className="text-muted-foreground">
+                      Reembolsado: {formatCurrency(amounts.refundedAmount)}
+                    </p>
+                  ) : null}
+                  <p className="text-muted-foreground">
+                    Serviço: {formatCurrency(transaction.serviceAmount)}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>
+                      {formatPaymentHistoryDate(transaction.paidAt)} ·{" "}
+                      {formatPaymentHistoryState(transaction.state)}
+                    </span>
+                    {transaction.isDisputed ? <PaymentDisputeBadge /> : null}
+                  </div>
                 </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
