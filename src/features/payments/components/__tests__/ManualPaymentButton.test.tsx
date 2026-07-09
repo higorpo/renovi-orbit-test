@@ -75,6 +75,10 @@ describe("ManualPaymentRecovery", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Ajustar pagamento/i }));
     expect(screen.getByTestId("manual-payment-modal")).toBeInTheDocument();
+    expect(screen.getByText("Pagamento falhou")).toBeInTheDocument();
+    expect(
+      screen.getByText(/cancelado automaticamente perto da data agendada/i),
+    ).toBeInTheDocument();
   });
 
   it("does not render modal when schedule context is missing", () => {

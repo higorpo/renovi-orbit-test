@@ -3,6 +3,7 @@ import { CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isManualPaymentEligible } from "../types/paymentSchedule.types";
 import { usePaymentSchedule } from "../hooks/usePaymentSchedule";
+import { ManualPaymentFailureAlert } from "./ManualPaymentFailureAlert";
 import { ManualPaymentModal } from "./ManualPaymentModal";
 
 export type ManualPaymentButtonProps = {
@@ -49,11 +50,17 @@ export function ManualPaymentRecovery({
   const scheduleQuery = usePaymentSchedule(contractedServiceId);
   const schedule = scheduleQuery.data?.schedule;
   const context = scheduleQuery.data?.context;
+  const scheduleState = schedule?.state;
+
+  if (!isManualPaymentEligible(scheduleState ?? "")) {
+    return null;
+  }
 
   return (
-    <>
+    <div className="flex w-full flex-col gap-2.5">
+      <ManualPaymentFailureAlert scheduleState={scheduleState} />
       <ManualPaymentButton
-        scheduleState={schedule?.state}
+        scheduleState={scheduleState}
         onClick={() => setOpen(true)}
         disabled={scheduleQuery.isLoading}
         className="w-full rounded-pill sm:w-auto"
@@ -68,6 +75,6 @@ export function ManualPaymentRecovery({
           onCompleted={() => void scheduleQuery.refetch()}
         />
       ) : null}
-    </>
+    </div>
   );
 }

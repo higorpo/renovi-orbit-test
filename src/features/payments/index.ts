@@ -77,6 +77,7 @@ export {
   SavedCardsList,
   ManualPaymentButton,
   ManualPaymentRecovery,
+  ManualPaymentFailureAlert,
   ManualPaymentModal,
   ContractedServiceCancelAction,
   PaymentHistorySection,

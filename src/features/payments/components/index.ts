@@ -31,6 +31,8 @@ export type {
   ManualPaymentButtonProps,
   ManualPaymentRecoveryProps,
 } from "./ManualPaymentButton";
+export { ManualPaymentFailureAlert } from "./ManualPaymentFailureAlert";
+export type { ManualPaymentFailureAlertProps } from "./ManualPaymentFailureAlert";
 export { ManualPaymentModal } from "./ManualPaymentModal";
 export type { ManualPaymentModalProps } from "./ManualPaymentModal";
 export { PaymentHistorySection } from "./PaymentHistory/PaymentHistorySection";

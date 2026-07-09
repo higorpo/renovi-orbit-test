@@ -34,6 +34,7 @@ Histórico na conta e regras de exibição de reembolso: [historico-e-reembolso.
 ## Cobrança manual
 
 - Cliente pode disparar tentativa manual (`manual-charge-payment`) quando elegível (ex.: falha permanente, dentro da janela T-12h).
+- No **detalhe do serviço**, quando o schedule está em `FAILED` ou `FAILED_PERMANENT`, a seção “Serviço contratado” exibe alerta **“Pagamento falhou”** (ação necessária para evitar cancelamento automático perto da data) e o botão **“Ajustar pagamento”** (`ManualPaymentRecovery` / `ManualPaymentFailureAlert`).
 
 ## Mensagens de erro na UI (pt-BR)
 
