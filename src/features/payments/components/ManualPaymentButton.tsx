@@ -57,13 +57,13 @@ export function ManualPaymentRecovery({
   }
 
   return (
-    <div className="flex w-full flex-col gap-2.5">
+    <div className="flex w-full flex-col gap-2.5 sm:w-auto sm:max-w-full">
       <ManualPaymentFailureAlert scheduleState={scheduleState} />
       <ManualPaymentButton
         scheduleState={scheduleState}
         onClick={() => setOpen(true)}
         disabled={scheduleQuery.isLoading}
-        className="w-full rounded-pill sm:w-auto"
+        className="w-full self-stretch rounded-pill sm:w-auto sm:self-start"
       />
       {schedule && context ? (
         <ManualPaymentDialog

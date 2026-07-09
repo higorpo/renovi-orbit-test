@@ -82,6 +82,9 @@ describe("ManualPaymentRecovery", () => {
     expect(
       screen.getByText(/cancelado automaticamente perto da data agendada/i),
     ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ajustar pagamento/i })).toHaveClass(
+      "sm:w-auto",
+    );
   });
 
   it("does not render modal when schedule context is missing", () => {
