@@ -66,6 +66,8 @@ begin
   where ps.contracted_service_id = p_contracted_service_id;
 
   if not found then
+    perform public.cns_cancel_active_service_reschedule_requests(p_contracted_service_id);
+
     update public.contracted_services cs
     set
       status = 'CANCELLED'::public.contracted_service_status,

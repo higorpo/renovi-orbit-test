@@ -117,7 +117,7 @@ end;
 $$;
 
 revoke all on function public.cns_cancel_active_service_reschedule_requests(uuid) from public, anon, authenticated;
-grant execute on function public.cns_cancel_active_service_reschedule_requests(uuid) to service_role;
+grant execute on function public.cns_cancel_active_service_reschedule_requests(uuid) to service_role, postgres;
 
 create or replace function public._cns_validate_reschedule_slot(
   p_slot jsonb,

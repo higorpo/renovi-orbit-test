@@ -1,4 +1,5 @@
--- Service reschedule: expire stale open requests (terminal service or 24h past original execution).
+-- Service reschedule: expire/cancel stale open requests
+-- (terminal service, proposed start_date due, or 24h past original execution).
 
 create or replace function public.expire_stale_service_reschedule_requests(
   p_batch_size int default null
@@ -11,11 +12,13 @@ as $$
 declare
   v_processed int := 0;
   v_expired int := 0;
+  v_cancelled int := 0;
   v_skipped int := 0;
   v_error_count int := 0;
   v_row record;
   v_batch_size int;
   v_grace_hours int := public.platform_constant_int('service_reschedule.expiration_grace_hours', 24);
+  v_today date := public.cns_business_today();
   v_system_text text := 'A solicitação de reagendamento expirou porque o serviço seguiu a data original ou entrou em estado final.';
 begin
   v_batch_size := greatest(
@@ -37,7 +40,8 @@ begin
     select
       srr.id as request_id,
       srr.chat_id,
-      srr.status
+      srr.status,
+      cs.status as service_status
     from public.service_reschedule_requests srr
     inner join public.contracted_services cs on cs.id = srr.contracted_service_id
     where srr.status in (
@@ -55,6 +59,10 @@ begin
           cs.status = 'CONFIRMED'::public.contracted_service_status
           and now() > srr.original_service_execution_at + make_interval(hours => v_grace_hours)
         )
+        or (
+          srr.proposed_slot is not null
+          and (srr.proposed_slot->>'start_date')::date <= v_today
+        )
       )
     order by srr.created_at
     limit v_batch_size
@@ -62,6 +70,26 @@ begin
   loop
     begin
       v_processed := v_processed + 1;
+
+      -- Service cancellation safety-net: open requests become CANCELLED (not EXPIRED).
+      if v_row.service_status = 'CANCELLED'::public.contracted_service_status then
+        update public.service_reschedule_requests srr
+        set status = 'CANCELLED'::public.service_reschedule_request_status
+        where srr.id = v_row.request_id
+          and srr.status in (
+            'REQUESTED'::public.service_reschedule_request_status,
+            'PROPOSED'::public.service_reschedule_request_status,
+            'ADJUSTMENT_REQUESTED'::public.service_reschedule_request_status
+          );
+
+        if not found then
+          v_skipped := v_skipped + 1;
+          continue;
+        end if;
+
+        v_cancelled := v_cancelled + 1;
+        continue;
+      end if;
 
       update public.service_reschedule_requests srr
       set status = 'EXPIRED'::public.service_reschedule_request_status
@@ -111,6 +139,7 @@ begin
   return jsonb_build_object(
     'processed_count', v_processed,
     'expired_count', v_expired,
+    'cancelled_count', v_cancelled,
     'skipped_count', v_skipped,
     'error_count', v_error_count
   );
@@ -118,7 +147,7 @@ end;
 $$;
 
 comment on function public.expire_stale_service_reschedule_requests(int) is
-  'Expire open reschedule requests when service is terminal or grace hours past original execution while CONFIRMED.';
+  'Expire open reschedule requests when service is EXECUTED/COMPLETED, grace hours past original execution while CONFIRMED, or proposed_slot.start_date <= business today; cancel open requests when service is CANCELLED.';
 
 revoke all on function public.expire_stale_service_reschedule_requests(int) from public, anon, authenticated;
 grant execute on function public.expire_stale_service_reschedule_requests(int) to service_role, postgres;
@@ -143,7 +172,8 @@ begin
       v_job_run_id,
       v_started_at,
       coalesce((v_result->>'processed_count')::int, 0),
-      coalesce((v_result->>'expired_count')::int, 0),
+      coalesce((v_result->>'expired_count')::int, 0)
+        + coalesce((v_result->>'cancelled_count')::int, 0),
       coalesce((v_result->>'error_count')::int, 0),
       v_result,
       null
