@@ -51,7 +51,7 @@ export function ServiceContractedSection({
       title="Serviço contratado"
       className="border-primary/15 bg-primary-soft/50 shadow-none"
     >
-      <div className="mb-2.5">
+      <div className="mb-2.5 empty:hidden">
         <PaymentDisputeStatus contractedServiceId={contracted.id} />
       </div>
       <div className="space-y-2.5 text-caption text-body">
@@ -84,30 +84,26 @@ export function ServiceContractedSection({
         ) : null}
       </div>
       {showProviderSettlement ? (
-        <div className="pt-2">
+        <div className="pt-2 empty:hidden">
           <ProviderSettlementStatus contractedServiceId={contracted.id} />
         </div>
       ) : null}
-      {showManualPayment && serviceRequestId ? (
-        <div className="pt-3">
+      <div className="flex flex-col gap-2 pt-2.5 sm:flex-row sm:flex-wrap empty:hidden">
+        {showManualPayment && serviceRequestId ? (
           <ManualPaymentRecovery
             contractedServiceId={contracted.id}
             serviceRequestId={serviceRequestId}
           />
-        </div>
-      ) : null}
-      {showServiceCompletion && completionViewerRole ? (
-        <div className="pt-3">
+        ) : null}
+        {showServiceCompletion && completionViewerRole ? (
           <ServiceCompletionActions
             contractedServiceId={contracted.id}
             status={contracted.status}
             viewerRole={completionViewerRole}
             onSuccess={onCompletionSuccess}
           />
-        </div>
-      ) : null}
-      {showServiceCancellation && cancellationViewerRole ? (
-        <div className="pt-3">
+        ) : null}
+        {showServiceCancellation && cancellationViewerRole ? (
           <ContractedServiceCancelAction
             contractedServiceId={contracted.id}
             serviceStatus={contracted.status}
@@ -116,10 +112,8 @@ export function ServiceContractedSection({
             viewerRole={cancellationViewerRole}
             onSuccess={onCancellationSuccess}
           />
-        </div>
-      ) : null}
-      {profile?.role === "client" || profile?.role === "provider" ? (
-        <div className="flex flex-col gap-2 pt-3 sm:flex-row sm:flex-wrap">
+        ) : null}
+        {profile?.role === "client" || profile?.role === "provider" ? (
           <ContractedServiceRescheduleAction
             contractedServiceId={contracted.id}
             chatId={contracted.chatId}
@@ -127,8 +121,8 @@ export function ServiceContractedSection({
             reschedule={contracted.reschedule}
             onSuccess={onRescheduleSuccess}
           />
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </ServiceDetailSection>
   );
 }
