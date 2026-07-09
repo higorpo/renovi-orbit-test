@@ -16,7 +16,7 @@ export function PaymentDisputeBadge({ className }: PaymentDisputeBadgeProps) {
       )}
     >
       <Scale className="h-3 w-3 shrink-0" aria-hidden />
-      Disputa em análise
+      Chargeback em análise
     </Badge>
   );
 }

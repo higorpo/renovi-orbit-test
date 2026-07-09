@@ -137,7 +137,7 @@ _Avoid_: "Trabalho confirmado em risco", Silêncio total ao prestador, Retry man
 ## Disputas
 
 **Chargeback (Opção B)**:
-Webhook `TRANSACTION_DISPUTE` seta `is_disputed = true`, alerta CRITICAL para ops, status do serviço inalterado. Cliente e prestador recebem badge "Disputa em análise" + push neutro. Valores históricos só atualizam após reconciliação de estorno. Resolução automática fora do MVP.
+Webhook `TRANSACTION_DISPUTE` seta `is_disputed = true`, alerta CRITICAL para ops, status do serviço inalterado. Cliente e prestador recebem badge "Chargeback em análise" + push neutro. Valores históricos só atualizam após reconciliação de estorno. Resolução automática fora do MVP.
 _Avoid_: Auto-cancel por chargeback, Reverter COMPLETED, Silêncio total ao usuário
 
 ## Credenciamento — invariantes

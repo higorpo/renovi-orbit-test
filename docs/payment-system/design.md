@@ -244,7 +244,7 @@ both:               isLiable = true
 |---|---|---|
 | `FAILED_PERMANENT` | Push + Email (bypass) | Push: *aceite recebido, pagamento não concluído, serviço não confirmado, sem ação* |
 | Pre-charge reminder | Push + Email 24h before `charge_scheduled_at` | **No notification** |
-| `TRANSACTION_DISPUTE` | Push neutral + badge "Disputa em análise" | Same |
+| `TRANSACTION_DISPUTE` | Push neutral + badge "Chargeback em análise" | Same |
 | Pre-`PAID` client cancel | Confirmation | Push: *cliente cancelou — serviço não confirmado* |
 | `PAID` → `CONFIRMED` | Success | Confirmed + calendar (+ urgent if `<24h`) |
 

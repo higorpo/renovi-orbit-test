@@ -1058,7 +1058,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** a `TRANSACTION_DISPUTE` (chargeback) event is received  
 **WHEN** the handler processes it  
-**THEN** `payment_schedules.is_disputed = true` MUST be set; a `CRITICAL` Sentry alert MUST be emitted; ops MUST be notified; client and provider MUST receive neutral push and in-app badge *"Disputa em análise"*; `contracted_services.status` MUST NOT change automatically — service continues in current status pending manual ops resolution. Automated dispute resolution is out of MVP scope.
+**THEN** `payment_schedules.is_disputed = true` MUST be set; a `CRITICAL` Sentry alert MUST be emitted; ops MUST be notified; client and provider MUST receive neutral push and in-app badge *"Chargeback em análise"*; `contracted_services.status` MUST NOT change automatically — service continues in current status pending manual ops resolution. Automated dispute resolution is out of MVP scope.
 
 **GIVEN** a `TRANSACTION_REFUND` event is received  
 **WHEN** the handler processes it and `transactionState = 'REFUNDED'`  
