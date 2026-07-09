@@ -105,7 +105,7 @@ export function RequestRescheduleDialog({
                 name="note"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-medium">Observação (opcional)</FormLabel>
+                    <FormLabel>Observação (opcional)</FormLabel>
                     <FormControl>
                       <Textarea
                         id="reschedule-note"

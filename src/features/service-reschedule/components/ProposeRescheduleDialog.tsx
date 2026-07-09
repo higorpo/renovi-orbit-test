@@ -172,9 +172,7 @@ export function ProposeRescheduleDialog({
                     name="durationValueInput"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-medium">
-                          Tempo estimado para executar
-                        </FormLabel>
+                        <FormLabel>Tempo estimado para executar</FormLabel>
                         <FormControl>
                           <Input
                             id="reschedule-duration-value"
@@ -197,7 +195,7 @@ export function ProposeRescheduleDialog({
                     name="durationUnit"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-medium">Unidade</FormLabel>
+                        <FormLabel>Unidade</FormLabel>
                         <FormControl>
                           <select
                             id="reschedule-duration-unit"
@@ -225,7 +223,7 @@ export function ProposeRescheduleDialog({
                     name="startDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-medium">
+                        <FormLabel>
                           {showEndDate ? "Data de início" : "Data de execução"}
                         </FormLabel>
                         <FormControl>
@@ -248,7 +246,7 @@ export function ProposeRescheduleDialog({
                       name="endDate"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="font-medium">Data de fim</FormLabel>
+                          <FormLabel>Data de fim</FormLabel>
                           <FormControl>
                             <Input
                               id="reschedule-end-date"
@@ -269,7 +267,7 @@ export function ProposeRescheduleDialog({
                     name="shift"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="font-medium">Turno</FormLabel>
+                        <FormLabel>Turno</FormLabel>
                         <FormControl>
                           <select
                             id="reschedule-shift"
