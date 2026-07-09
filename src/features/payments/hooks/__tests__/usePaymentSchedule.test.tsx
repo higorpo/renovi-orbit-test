@@ -68,4 +68,44 @@ describe("usePaymentSchedule", () => {
 
     expect(scheduleSpy).not.toHaveBeenCalled();
   });
+
+  it("throws when schedule fetch fails", async () => {
+    vi.spyOn(chargesApi, "fetchPaymentScheduleByContractedService").mockResolvedValue({
+      data: null,
+      error: "schedule failed",
+    });
+    vi.spyOn(chargesApi, "fetchContractedServicePaymentContext").mockResolvedValue({
+      data: null,
+      error: null,
+    });
+
+    const { result } = renderHook(
+      () => usePaymentSchedule("service-1"),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+  });
+
+  it("throws when context fetch fails", async () => {
+    vi.spyOn(chargesApi, "fetchPaymentScheduleByContractedService").mockResolvedValue({
+      data: null,
+      error: null,
+    });
+    vi.spyOn(chargesApi, "fetchContractedServicePaymentContext").mockResolvedValue({
+      data: null,
+      error: "context failed",
+    });
+
+    const { result } = renderHook(
+      () => usePaymentSchedule("service-1"),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+  });
 });

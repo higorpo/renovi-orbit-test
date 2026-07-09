@@ -154,4 +154,77 @@ describe("useCheckoutStepper", () => {
     expect(firstSessionId).toBe(secondSessionId);
     expect(result.current.clearsaleSessionId).toBe(firstSessionId);
   });
+
+  it("supports goToStep and resetStepper", async () => {
+    vi.spyOn(checkoutApi, "getCheckoutStepRequirements").mockResolvedValue({
+      data: {
+        needs_cpf: true,
+        needs_phone: true,
+        needs_card: true,
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useCheckoutStepper(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoadingRequirements).toBe(false);
+    });
+
+    act(() => {
+      result.current.updateStepData({ cpf: "390.533.447-05" });
+      result.current.goToStep("card");
+    });
+    expect(result.current.currentStep).toBe("card");
+
+    act(() => {
+      result.current.goToStep("not-a-step" as never);
+    });
+    expect(result.current.currentStep).toBe("card");
+
+    act(() => {
+      result.current.resetStepper();
+    });
+    expect(result.current.currentStep).toBe("cpf");
+    expect(result.current.stepData).toEqual({});
+    expect(result.current.clearsaleSessionId).toBeNull();
+  });
+
+  it("clears session steps when disabled and clamps out-of-range index", async () => {
+    vi.spyOn(checkoutApi, "getCheckoutStepRequirements").mockResolvedValue({
+      data: {
+        needs_cpf: false,
+        needs_phone: false,
+        needs_card: true,
+      },
+      error: null,
+    });
+
+    const { result, rerender } = renderHook(
+      ({ enabled }: { enabled: boolean }) => useCheckoutStepper({ enabled }),
+      {
+        wrapper: createWrapper(),
+        initialProps: { enabled: true },
+      },
+    );
+
+    await waitFor(() => {
+      expect(result.current.isLoadingRequirements).toBe(false);
+    });
+
+    act(() => {
+      result.current.goToStep("confirmation");
+      result.current.completeStep({});
+    });
+
+    expect(result.current.currentStepIndex).toBeGreaterThanOrEqual(0);
+
+    rerender({ enabled: false });
+
+    await waitFor(() => {
+      expect(result.current.steps.length).toBeGreaterThan(0);
+    });
+  });
 });

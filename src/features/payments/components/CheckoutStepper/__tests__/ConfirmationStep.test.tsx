@@ -54,9 +54,71 @@ const defaultProps = {
   idempotencyKey: "idem-1",
   onSuccess: vi.fn(),
   onInstallmentSignatureExpired: vi.fn(),
+  onBack: vi.fn(),
 };
 
 describe("ConfirmationStep", () => {
+  it("shows error when clearsale session is missing", async () => {
+    render(
+      <ConfirmationStep
+        {...defaultProps}
+        clearsaleSessionId={null}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /Voltar/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /confirmar contratação/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Aguarde a inicialização da verificação de segurança/i),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("shows fallback error for non-Error throws", async () => {
+    mutateAsync.mockRejectedValueOnce("boom");
+
+    render(<ConfirmationStep {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /confirmar contratação/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Não foi possível confirmar/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows generic error for non-signature failures", async () => {
+    mutateAsync.mockRejectedValueOnce(new Error("gateway down"));
+
+    render(<ConfirmationStep {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /confirmar contratação/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("gateway down")).toBeInTheDocument();
+    });
+  });
+
+  it("calls onSuccess when accept proposal succeeds", async () => {
+    const onSuccess = vi.fn();
+    mutateAsync.mockResolvedValueOnce({ contractedServiceId: "service-1" });
+
+    render(
+      <ConfirmationStep
+        {...defaultProps}
+        onSuccess={onSuccess}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /confirmar contratação/i }));
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalledWith("service-1");
+    });
+  });
+
   it("re-opens installment step on INSTALLMENT_SIGNATURE_EXPIRED while preserving payment token", async () => {
     const onInstallmentSignatureExpired = vi.fn();
     const onSuccess = vi.fn();

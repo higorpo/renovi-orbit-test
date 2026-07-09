@@ -70,4 +70,35 @@ describe("injectClearSaleSdk", () => {
     onerror?.();
     expect(onLoadFailed).toHaveBeenCalledTimes(1);
   });
+
+  it("returns cleanup that removes the script and supports custom createScript", () => {
+    const onInitialized = vi.fn();
+    let onload: (() => void) | null = null;
+    const remove = vi.fn();
+    const script = {
+      async: false,
+      src: "",
+      set onload(handler: (() => void) | null) {
+        onload = handler;
+      },
+      remove,
+    } as unknown as HTMLScriptElement;
+
+    const cleanup = injectClearSaleSdk({
+      sessionId: "session-789",
+      appKey: "app-key",
+      documentRef: {
+        createElement: vi.fn(),
+        head: { appendChild: vi.fn() },
+      } as unknown as Document,
+      windowRef: { csdp: vi.fn() } as Window & { csdp: ReturnType<typeof vi.fn> },
+      createScript: () => script,
+      onInitialized,
+    });
+
+    onload?.();
+    expect(onInitialized).toHaveBeenCalled();
+    cleanup();
+    expect(remove).toHaveBeenCalled();
+  });
 });

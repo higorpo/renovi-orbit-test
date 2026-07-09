@@ -60,6 +60,34 @@ describe("listClientPaymentTransactions", () => {
     });
     expect(mockFrom).toHaveBeenCalledWith("client_payment_transactions_v");
   });
+
+  it("maps empty data arrays", async () => {
+    mockFrom.mockReturnValue(
+      createOrderChain({
+        data: null,
+        error: null,
+      }),
+    );
+
+    await expect(listClientPaymentTransactions()).resolves.toEqual({
+      data: [],
+      error: null,
+    });
+  });
+
+  it("returns empty list on fetch error", async () => {
+    mockFrom.mockReturnValue(
+      createOrderChain({
+        data: null,
+        error: { message: "client history failed" },
+      }),
+    );
+
+    await expect(listClientPaymentTransactions()).resolves.toEqual({
+      data: [],
+      error: "client history failed",
+    });
+  });
 });
 
 describe("listProviderPaymentReceivables", () => {
@@ -95,5 +123,33 @@ describe("listProviderPaymentReceivables", () => {
       state: "PAID",
     });
     expect(mockFrom).toHaveBeenCalledWith("provider_payment_receivables_v");
+  });
+
+  it("returns empty list on fetch error", async () => {
+    mockFrom.mockReturnValue(
+      createOrderChain({
+        data: null,
+        error: { message: "provider history failed" },
+      }),
+    );
+
+    await expect(listProviderPaymentReceivables()).resolves.toEqual({
+      data: [],
+      error: "provider history failed",
+    });
+  });
+
+  it("maps empty provider data arrays", async () => {
+    mockFrom.mockReturnValue(
+      createOrderChain({
+        data: null,
+        error: null,
+      }),
+    );
+
+    await expect(listProviderPaymentReceivables()).resolves.toEqual({
+      data: [],
+      error: null,
+    });
   });
 });

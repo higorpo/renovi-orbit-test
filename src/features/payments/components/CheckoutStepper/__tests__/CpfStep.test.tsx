@@ -4,13 +4,31 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import * as checkoutCpfApi from "../../../api/checkout.api";
 import { CpfStep } from "../CpfStep";
 
+const mockUseAuth = vi.fn(() => ({ user: { id: "user-1" } }));
+
 vi.mock("@/features/auth", () => ({
-  useAuth: vi.fn(() => ({ user: { id: "user-1" } })),
+  useAuth: () => mockUseAuth(),
 }));
 
 describe("CpfStep", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockUseAuth.mockReturnValue({ user: { id: "user-1" } });
+  });
+
+  it("shows session expired when user is missing", async () => {
+    mockUseAuth.mockReturnValue({ user: null as never });
+
+    render(<CpfStep onComplete={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText(/CPF/i), {
+      target: { value: "39053344705" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Sessão expirada/i)).toBeInTheDocument();
+    });
   });
 
   it("shows validation error for invalid CPF", async () => {

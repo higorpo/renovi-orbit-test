@@ -3,6 +3,7 @@ import {
   fetchInstallmentOptions,
   fetchPaymentTokenById,
   listActivePaymentTokens,
+  mapCardFormToTokenizeRequest,
   revokePaymentToken,
   tokenizePaymentCard,
   updatePaymentMethod,
@@ -138,6 +139,20 @@ describe("listActivePaymentTokens", () => {
     expect(result.data).toHaveLength(1);
     expect(mockFrom).toHaveBeenCalledWith("client_card_tokens_safe_v");
   });
+
+  it("returns empty list on error", async () => {
+    mockFrom.mockReturnValue(
+      createSelectChain({
+        data: null,
+        error: { message: "list failed" },
+      }),
+    );
+
+    await expect(listActivePaymentTokens("client-1")).resolves.toEqual({
+      data: [],
+      error: "list failed",
+    });
+  });
 });
 
 describe("fetchPaymentTokenById", () => {
@@ -166,6 +181,20 @@ describe("fetchPaymentTokenById", () => {
     expect(result.data?.id).toBe("tok-1");
     expect(mockFrom).toHaveBeenCalledWith("client_card_tokens_safe_v");
   });
+
+  it("returns error when token fetch fails", async () => {
+    mockFrom.mockReturnValue(
+      createSelectChain({
+        data: null,
+        error: { message: "token failed" },
+      }),
+    );
+
+    await expect(fetchPaymentTokenById("tok-1")).resolves.toEqual({
+      data: null,
+      error: "token failed",
+    });
+  });
 });
 
 describe("updatePaymentMethod", () => {
@@ -193,6 +222,54 @@ describe("updatePaymentMethod", () => {
       p_new_client_card_token_id: "tok-2",
       p_installment_selection_hmac: "hmac-1",
       p_installment_hmac_payload: { proposal_id: "proposal-1" },
+    });
+  });
+
+  it("maps RPC errors and invalid responses", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: "UPDATE_FAILED", code: "UPDATE_FAILED" },
+    });
+
+    await expect(
+      updatePaymentMethod({
+        contractedServiceId: "service-1",
+        newPaymentTokenId: "tok-2",
+      }),
+    ).resolves.toMatchObject({
+      data: null,
+      errorCode: "UPDATE_FAILED",
+    });
+
+    mockRpc.mockResolvedValue({
+      data: { unexpected: true },
+      error: null,
+    });
+
+    await expect(
+      updatePaymentMethod({
+        contractedServiceId: "service-1",
+        newPaymentTokenId: "tok-2",
+      }),
+    ).resolves.toEqual({
+      data: null,
+      error: "invalid_update_payment_method_response",
+    });
+
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: null,
+    });
+
+    await expect(
+      updatePaymentMethod({
+        contractedServiceId: "service-1",
+        newPaymentTokenId: "tok-2",
+      }),
+    ).resolves.toEqual({
+      data: null,
+      error: "Resposta inesperada do servidor.",
+      errorCode: "INVALID_RESPONSE",
     });
   });
 });
@@ -226,6 +303,63 @@ describe("fetchInstallmentOptions", () => {
       p_service_id: "s-1",
       p_card_brand: "VISA",
     });
+  });
+});
+
+describe("mapCardFormToTokenizeRequest", () => {
+  it("maps form values and defaults tokenize context", () => {
+    const request = mapCardFormToTokenizeRequest(
+      {
+        cardNumber: "4111 1111 1111 1111",
+        expiryMonth: "12",
+        expiryYear: "30",
+        cvv: "123",
+        cardholderName: " Maria ",
+        street: " Rua A ",
+        number: " 10 ",
+        additionalDetails: "  ",
+        district: " Centro ",
+        city: " Floripa ",
+        state: "sc",
+        zipCode: "88000-000",
+      },
+      {
+        providerServiceId: "proposal-1",
+        cpf: "390.533.447-05",
+        phone: "(48) 99999-9999",
+      },
+    );
+
+    expect(request.tokenizeContext).toBe("checkout");
+    expect(request.cardData.cardNumber).toBe("4111111111111111");
+    expect(request.cardData.expiryYear).toBe(2030);
+    expect(request.billingAddress.state).toBe("SC");
+    expect(request.billingAddress.additionalDetails).toBeUndefined();
+    expect(request.cpf).toBe("39053344705");
+  });
+
+  it("defaults profile context without providerServiceId", () => {
+    const request = mapCardFormToTokenizeRequest(
+      {
+        cardNumber: "4111111111111111",
+        expiryMonth: "12",
+        expiryYear: "2030",
+        cvv: "123",
+        cardholderName: "Maria",
+        street: "Rua A",
+        number: "10",
+        district: "Centro",
+        city: "Floripa",
+        state: "SC",
+        zipCode: "88000000",
+      },
+      {
+        cpf: "39053344705",
+        phone: "48999999999",
+      },
+    );
+
+    expect(request.tokenizeContext).toBe("profile");
   });
 });
 
@@ -272,6 +406,50 @@ describe("revokePaymentToken", () => {
         contractedServiceId: "service-1",
         state: "SCHEDULED",
       }],
+    });
+  });
+
+  it("returns empty blocked schedules when payload is not an array", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: {
+        message: "CARD_TOKEN_LINKED_TO_ACTIVE_SCHEDULE",
+        details: JSON.stringify({
+          code: "CARD_TOKEN_LINKED_TO_ACTIVE_SCHEDULE",
+          schedules: "bad",
+        }),
+      },
+    });
+
+    const result = await revokePaymentToken("tok-linked");
+    expect(result.data).toEqual({
+      outcome: "blocked",
+      schedules: [],
+    });
+  });
+
+  it("returns not_found for missing tokens and error for unexpected failures", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: {
+        message: "CLIENT_CARD_TOKEN_NOT_FOUND",
+        details: JSON.stringify({ code: "CLIENT_CARD_TOKEN_NOT_FOUND" }),
+      },
+    });
+
+    await expect(revokePaymentToken("missing")).resolves.toEqual({
+      data: { outcome: "not_found" },
+      error: null,
+    });
+
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: "unexpected", details: "{}" },
+    });
+
+    await expect(revokePaymentToken("tok-1")).resolves.toEqual({
+      data: null,
+      error: "unexpected",
     });
   });
 });

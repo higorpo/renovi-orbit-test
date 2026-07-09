@@ -60,6 +60,39 @@ describe("getCheckoutStepRequirements", () => {
     expect(result.data).toBeNull();
     expect(result.error).toBeTruthy();
   });
+
+  it("returns invalid response when payload cannot be parsed", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: null,
+    });
+
+    // null fails the RPC validator before parseCheckoutStepRequirements runs
+    await expect(getCheckoutStepRequirements()).resolves.toEqual({
+      data: null,
+      error: "Resposta inesperada do servidor.",
+    });
+  });
+
+  it("parses requirements from a valid object payload", async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        needs_cpf: 1,
+        needs_phone: 0,
+        needs_card: "yes",
+      },
+      error: null,
+    });
+
+    await expect(getCheckoutStepRequirements()).resolves.toEqual({
+      data: {
+        needs_cpf: true,
+        needs_phone: false,
+        needs_card: true,
+      },
+      error: null,
+    });
+  });
 });
 
 describe("getProposalCheckoutContext", () => {
@@ -94,6 +127,29 @@ describe("getProposalCheckoutContext", () => {
       p_proposal_id: "proposal-1",
     });
   });
+
+  it("returns invalid response when required fields are missing", async () => {
+    mockRpc.mockResolvedValue({
+      data: { proposal_id: "proposal-1" },
+      error: null,
+    });
+
+    await expect(getProposalCheckoutContext("proposal-1")).resolves.toEqual({
+      data: null,
+      error: "invalid_proposal_checkout_context_response",
+    });
+  });
+
+  it("maps rpc errors", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: "NOT_FOUND", details: '{"code":"NOT_FOUND"}' },
+    });
+
+    const result = await getProposalCheckoutContext("proposal-1");
+    expect(result.data).toBeNull();
+    expect(result.error).toBeTruthy();
+  });
 });
 
 describe("fetchInstallmentOptions", () => {
@@ -108,6 +164,7 @@ describe("fetchInstallmentOptions", () => {
         installment_selection_hmac: "hmac-1",
         installment_hmac_payload: { proposal_id: "p-1" },
         expires_at: "2026-07-04T00:00:00.000Z",
+        computed_at: 123,
       },
       error: null,
     });
@@ -120,10 +177,81 @@ describe("fetchInstallmentOptions", () => {
 
     expect(result.error).toBeNull();
     expect(result.data?.installment_selection_hmac).toBe("hmac-1");
+    expect(result.data?.computed_at).toBe("123");
     expect(mockRpc).toHaveBeenCalledWith(PAYMENT_RPC.calculateInstallmentOptions, {
       p_proposal_id: "p-1",
       p_service_id: "s-1",
       p_card_brand: "VISA",
+    });
+  });
+
+  it("maps rpc and invalid payload failures", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: "RATE_LIMIT", details: '{"code":"RATE_LIMIT"}' },
+    });
+
+    await expect(
+      fetchInstallmentOptions({
+        proposalId: "p-1",
+        serviceId: "s-1",
+        cardBrand: "VISA",
+      }),
+    ).resolves.toMatchObject({ data: null });
+
+    mockRpc.mockResolvedValue({
+      data: { installment_options: "bad" },
+      error: null,
+    });
+
+    await expect(
+      fetchInstallmentOptions({
+        proposalId: "p-1",
+        serviceId: "s-1",
+        cardBrand: "VISA",
+      }),
+    ).resolves.toEqual({
+      data: null,
+      error: "invalid_installment_options_response",
+    });
+
+    mockRpc.mockResolvedValue({
+      data: {
+        installment_options: [],
+        installment_selection_hmac: 123,
+      },
+      error: null,
+    });
+
+    await expect(
+      fetchInstallmentOptions({
+        proposalId: "p-1",
+        serviceId: "s-1",
+        cardBrand: "VISA",
+      }),
+    ).resolves.toEqual({
+      data: null,
+      error: "invalid_installment_options_response",
+    });
+
+    mockRpc.mockResolvedValue({
+      data: {
+        installment_options: [],
+        installment_selection_hmac: "hmac",
+        installment_hmac_payload: null,
+      },
+      error: null,
+    });
+
+    await expect(
+      fetchInstallmentOptions({
+        proposalId: "p-1",
+        serviceId: "s-1",
+        cardBrand: "VISA",
+      }),
+    ).resolves.toEqual({
+      data: null,
+      error: "invalid_installment_options_response",
     });
   });
 });
@@ -186,5 +314,46 @@ describe("acceptProposalWithPayment", () => {
       p_pricing_signature: "sig-1",
       p_client_ip: "189.0.0.1",
     });
+  });
+
+  it("returns mapped error when accept proposal fails", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: "PROPOSAL_NOT_FOUND", details: '{"code":"PROPOSAL_NOT_FOUND"}' },
+    });
+
+    const result = await acceptProposalWithPayment({
+      proposalId: "proposal-1",
+      selectedSlot: { start_date: "2026-07-10", shift: "morning" },
+      clientCardTokenId: "token-1",
+      installmentNumber: 1,
+      installmentSelectionHmac: "hmac-1",
+      installmentHmacPayload: { proposal_id: "proposal-1" },
+      clearsaleSessionId: "session-1",
+      pricingSignature: "sig-1",
+    });
+
+    expect(result.data).toBeNull();
+    expect(result.error).toBeTruthy();
+  });
+
+  it("rejects accept payload missing service or proposal", async () => {
+    mockRpc.mockResolvedValue({
+      data: { service: { id: "cs-1" } },
+      error: null,
+    });
+
+    await expect(
+      acceptProposalWithPayment({
+        proposalId: "proposal-1",
+        selectedSlot: { start_date: "2026-07-10", shift: "morning" },
+        clientCardTokenId: "token-1",
+        installmentNumber: 1,
+        installmentSelectionHmac: "hmac-1",
+        installmentHmacPayload: { proposal_id: "proposal-1" },
+        clearsaleSessionId: "session-1",
+        pricingSignature: "sig-1",
+      }),
+    ).resolves.toMatchObject({ data: null });
   });
 });

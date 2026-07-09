@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   approximateServiceExecutionAt,
   canCancelContractedService,
+  estimateClientPenaltyTier,
   estimateClientRefundAmount,
   getCancellationDisclosure,
   isPreChargeScheduleState,
@@ -85,6 +86,29 @@ describe("approximateServiceExecutionAt", () => {
     const date = approximateServiceExecutionAt("2026-08-01", "afternoon");
     expect(date?.getHours()).toBe(13);
   });
+
+  it("maps morning/full_day shifts, defaults unknown shifts, and rejects invalid dates", () => {
+    expect(approximateServiceExecutionAt("2026-08-01", "morning")?.getHours()).toBe(8);
+    expect(approximateServiceExecutionAt("2026-08-01", "full_day")?.getHours()).toBe(8);
+    expect(approximateServiceExecutionAt("2026-08-01", "unknown")?.getHours()).toBe(8);
+    expect(approximateServiceExecutionAt("not-a-date", "morning")).toBeNull();
+  });
+});
+
+describe("estimateClientPenaltyTier", () => {
+  const executionAt = new Date("2026-08-01T13:00:00");
+
+  it("returns FULL_REFUND, PENALTY_10 and PENALTY_30 by proximity", () => {
+    expect(estimateClientPenaltyTier(executionAt, new Date("2026-07-29T12:00:00"))).toBe(
+      "FULL_REFUND",
+    );
+    expect(estimateClientPenaltyTier(executionAt, new Date("2026-07-31T14:00:00"))).toBe(
+      "PENALTY_10",
+    );
+    expect(estimateClientPenaltyTier(executionAt, new Date("2026-08-01T08:00:00"))).toBe(
+      "PENALTY_30",
+    );
+  });
 });
 
 describe("getCancellationDisclosure", () => {
@@ -125,5 +149,42 @@ describe("getCancellationDisclosure", () => {
     expect(disclosure.description).not.toMatch(/R\$/);
 
     vi.useRealTimers();
+  });
+
+  it("describes FULL_REFUND and PENALTY_10 client disclosures", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-29T12:00:00"));
+
+    expect(
+      getCancellationDisclosure({
+        viewerRole: "client",
+        scheduleState: "PAID",
+        scheduledStartDate: "2026-08-01",
+        scheduledShift: "afternoon",
+      }).description,
+    ).toContain("Reembolso do valor do serviço");
+
+    vi.setSystemTime(new Date("2026-07-31T14:00:00"));
+    expect(
+      getCancellationDisclosure({
+        viewerRole: "client",
+        scheduleState: "PAID",
+        scheduledStartDate: "2026-08-01",
+        scheduledShift: "afternoon",
+      }).description,
+    ).toContain("90%");
+
+    vi.useRealTimers();
+  });
+
+  it("falls back when scheduled date cannot be parsed", () => {
+    const disclosure = getCancellationDisclosure({
+      viewerRole: "client",
+      scheduleState: "PAID",
+      scheduledStartDate: "invalid",
+      scheduledShift: "afternoon",
+    });
+
+    expect(disclosure.description).toContain("Termos de Uso");
   });
 });

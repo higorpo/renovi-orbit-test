@@ -17,7 +17,38 @@ vi.mock("@/features/auth", () => ({
 }));
 
 vi.mock("@/features/payments/components/CheckoutStepper/CardForm", () => ({
-  CardForm: () => <div data-testid="card-form">Card form</div>,
+  CardForm: ({
+    onSuccess,
+    onBack,
+  }: {
+    onSuccess: (result: {
+      paymentTokenId: string;
+      cardNumberMasked: string;
+      cardBrand: string;
+    }) => void;
+    onBack?: () => void;
+  }) => (
+    <div>
+      <button
+        type="button"
+        data-testid="card-form"
+        onClick={() =>
+          onSuccess({
+            paymentTokenId: "new-token",
+            cardNumberMasked: "•••• 9999",
+            cardBrand: "VISA",
+          })
+        }
+      >
+        Card form
+      </button>
+      {onBack ? (
+        <button type="button" onClick={onBack}>
+          Voltar da lista
+        </button>
+      ) : null}
+    </div>
+  ),
 }));
 
 vi.mock("sonner", () => ({
@@ -82,6 +113,165 @@ describe("SavedCardsList", () => {
       expect(
         screen.getByText(/vinculado a 1 pagamento\(s\) pendente\(s\)/i),
       ).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Entendi/i }));
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/vinculado a 1 pagamento\(s\) pendente\(s\)/i),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows loading and empty states", () => {
+    mockUseSavedCards.mockReturnValue({
+      cards: [],
+      isLoading: true,
+      revokeCard,
+      isRevoking: false,
+      revokingTokenId: null,
+      refetch: vi.fn(),
+    });
+
+    const { rerender } = render(<SavedCardsList tokenizeContext="profile" />);
+    expect(screen.getByText(/Carregando cartões/i)).toBeInTheDocument();
+
+    mockUseSavedCards.mockReturnValue({
+      cards: [],
+      isLoading: false,
+      revokeCard,
+      isRevoking: false,
+      revokingTokenId: null,
+      refetch: vi.fn(),
+    });
+    rerender(<SavedCardsList tokenizeContext="profile" />);
+    expect(screen.getByText("Nenhum cartão salvo ainda.")).toBeInTheDocument();
+  });
+
+  it("opens add card form and handles successful add", async () => {
+    const refetch = vi.fn();
+    mockUseSavedCards.mockReturnValue({
+      cards: [
+        {
+          id: "token-free",
+          card_number_masked: "555555XXXXXX4444",
+          card_brand: "MASTER",
+          expiry_month: 6,
+          expiry_year: 2029,
+          state: "ACTIVE",
+        },
+      ],
+      isLoading: false,
+      revokeCard,
+      isRevoking: false,
+      revokingTokenId: null,
+      refetch,
+    });
+
+    const { toast } = await import("sonner");
+    render(<SavedCardsList tokenizeContext="profile" />);
+    fireEvent.click(screen.getByRole("button", { name: /Adicionar Cartão/i }));
+    expect(screen.getByTestId("card-form")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Voltar da lista/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Voltar da lista/i }));
+    expect(screen.getByRole("button", { name: /Adicionar Cartão/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Adicionar Cartão/i }));
+    fireEvent.click(screen.getByTestId("card-form"));
+
+    await waitFor(() => {
+      expect(refetch).toHaveBeenCalled();
+      expect(toast.success).toHaveBeenCalledWith("Cartão adicionado com sucesso.");
+    });
+  });
+
+  it("defaults tokenizeContext to checkout when providerServiceId is set", () => {
+    mockUseSavedCards.mockReturnValue({
+      cards: [],
+      isLoading: false,
+      revokeCard,
+      isRevoking: false,
+      revokingTokenId: null,
+      refetch: vi.fn(),
+    });
+
+    render(<SavedCardsList providerServiceId="proposal-1" phone="48999999999" />);
+    fireEvent.click(screen.getByRole("button", { name: /Adicionar Cartão/i }));
+    expect(screen.getByTestId("card-form")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Voltar da lista/i })).toBeNull();
+  });
+
+  it("shows generic revoke error when thrown value is not an Error", async () => {
+    const { toast } = await import("sonner");
+    revokeCard.mockRejectedValue("fail");
+
+    render(<SavedCardsList tokenizeContext="profile" />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Remover cartão •••• 4444/i }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Remover" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Falha ao remover cartão.");
+    });
+  });
+
+  it("shows spinner while a specific card is being revoked", () => {
+    mockUseSavedCards.mockReturnValue({
+      cards: [
+        {
+          id: "token-free",
+          card_number_masked: "555555XXXXXX4444",
+          card_brand: "MASTER",
+          expiry_month: 6,
+          expiry_year: 2029,
+          state: "ACTIVE",
+        },
+      ],
+      isLoading: false,
+      revokeCard,
+      isRevoking: true,
+      revokingTokenId: "token-free",
+      refetch: vi.fn(),
+    });
+
+    render(<SavedCardsList tokenizeContext="profile" />);
+    expect(
+      screen.getByRole("button", { name: /Remover cartão •••• 4444/i }),
+    ).toBeDisabled();
+  });
+
+  it("shows error toast when revoke returns not_found", async () => {
+    const { toast } = await import("sonner");
+    revokeCard.mockResolvedValue({ outcome: "not_found" });
+
+    render(<SavedCardsList tokenizeContext="profile" />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Remover cartão •••• 1111/i }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Remover" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Não foi possível remover este cartão.");
+    });
+  });
+
+  it("shows error toast when revoke throws", async () => {
+    const { toast } = await import("sonner");
+    revokeCard.mockRejectedValue(new Error("revoke failed"));
+
+    render(<SavedCardsList tokenizeContext="profile" />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Remover cartão •••• 4444/i }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Remover" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("revoke failed");
     });
   });
 

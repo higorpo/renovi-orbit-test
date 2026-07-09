@@ -70,8 +70,51 @@ describe("InstallmentSelector", () => {
     expect(screen.getAllByText(/Total com taxas/i)).toHaveLength(2);
   });
 
+  it("shows loading and error states", () => {
+    mockUseInstallmentOptions.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    const { rerender } = render(
+      <InstallmentSelector
+        proposalId="proposal-1"
+        serviceId="service-1"
+        cardBrand="VISA"
+        paymentTokenId="token-1"
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/Calculando parcelas/i)).toBeInTheDocument();
+
+    const refetch = vi.fn();
+    mockUseInstallmentOptions.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error("parcelas indisponíveis"),
+      refetch,
+    });
+    rerender(
+      <InstallmentSelector
+        proposalId="proposal-1"
+        serviceId="service-1"
+        cardBrand="VISA"
+        paymentTokenId="token-1"
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("parcelas indisponíveis")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Tentar novamente/i }));
+    expect(refetch).toHaveBeenCalled();
+  });
+
   it("calls onSelect with installment number and HMAC", async () => {
     const onSelect = vi.fn();
+    const onBack = vi.fn();
     mockUseInstallmentOptions.mockReturnValue({
       data: {
         installment_options: [
@@ -99,8 +142,12 @@ describe("InstallmentSelector", () => {
         cardBrand="VISA"
         paymentTokenId="token-1"
         onSelect={onSelect}
+        onBack={onBack}
       />,
     );
+
+    fireEvent.click(screen.getByRole("button", { name: /Voltar/i }));
+    expect(onBack).toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("radio"));
     fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
@@ -123,6 +170,78 @@ describe("InstallmentSelector", () => {
         computedAt: "2030-01-01T00:00:00Z",
         expiresAt: "2030-01-01T00:00:00Z",
       });
+    });
+  });
+
+  it("does not call onSelect when hmac payload is missing", () => {
+    const onSelect = vi.fn();
+    mockUseInstallmentOptions.mockReturnValue({
+      data: {
+        installment_options: [
+          {
+            installment_number: 1,
+            applicable_rate_pct: 0,
+            total_with_fees: 100,
+            installment_amount: 100,
+          },
+        ],
+        installment_selection_hmac: undefined,
+        installment_hmac_payload: undefined,
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <InstallmentSelector
+        proposalId="proposal-1"
+        serviceId="service-1"
+        cardBrand="VISA"
+        paymentTokenId="token-1"
+        onSelect={onSelect}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("radio"));
+    fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("triggers signature recovery helper", async () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    mockUseInstallmentOptions.mockReturnValue({
+      data: {
+        installment_options: [
+          {
+            installment_number: 1,
+            applicable_rate_pct: 0,
+            total_with_fees: 100,
+            installment_amount: 100,
+          },
+        ],
+        installment_selection_hmac: "hmac",
+        installment_hmac_payload: installmentHmacPayload,
+        expires_at: "2030-01-01T00:00:00Z",
+      },
+      isLoading: false,
+      isError: false,
+      refetch,
+    });
+
+    render(
+      <InstallmentSelector
+        proposalId="proposal-1"
+        serviceId="service-1"
+        cardBrand="VISA"
+        paymentTokenId="token-1"
+        onSelect={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("installment-signature-recovery-trigger"));
+    await waitFor(() => {
+      expect(refetch).toHaveBeenCalled();
     });
   });
 });

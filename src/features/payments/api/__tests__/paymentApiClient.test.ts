@@ -3,9 +3,14 @@ import { FunctionsHttpError } from "@supabase/supabase-js";
 import {
   invokePaymentEdgeFunction,
   invokePaymentRpc,
+  mapEdgeErrorPayload,
+  paymentsApiErrorToMessage,
+  trackPaymentApiError,
 } from "../paymentApiClient";
 import { PAYMENT_EDGE } from "../payments.edge";
 import { PAYMENT_RPC } from "../payments.rpc";
+import { logger } from "@/lib/logger";
+import { metrics } from "@/lib/sentry";
 
 vi.mock("@/lib/supabase/client", () => ({
   supabase: {
@@ -123,5 +128,133 @@ describe("invokePaymentRpc", () => {
 
     expect(result.data).toBeNull();
     expect(result.error?.code).toBe("PROPOSAL_NOT_FOUND");
+  });
+
+  it("returns INVALID_RESPONSE when validator rejects payload", async () => {
+    rpcMock.mockResolvedValue({
+      data: "not-an-object",
+      error: null,
+    });
+
+    const result = await invokePaymentRpc(
+      PAYMENT_RPC.getCheckoutStepRequirements,
+      {},
+      (value): value is Record<string, unknown> => value !== null && typeof value === "object",
+      "invalid_response_key",
+    );
+
+    expect(result.data).toBeNull();
+    expect(result.error?.code).toBe("INVALID_RESPONSE");
+    expect(logger.error).toHaveBeenCalledWith(
+      "invalid_response_key",
+      expect.objectContaining({ rpc: PAYMENT_RPC.getCheckoutStepRequirements }),
+    );
+  });
+});
+
+describe("invokePaymentEdgeFunction non-http errors", () => {
+  it("maps generic invoke errors", async () => {
+    invokeMock.mockResolvedValue({
+      data: null,
+      error: { message: "network down" },
+    });
+
+    const result = await invokePaymentEdgeFunction(PAYMENT_EDGE.tokenizePaymentCard, {});
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(500);
+    expect(result.payload.error).toBe("network down");
+  });
+
+  it("falls back when FunctionsHttpError body cannot be parsed", async () => {
+    const response = {
+      status: 502,
+      json: vi.fn().mockRejectedValue(new Error("bad json")),
+    };
+    const httpError = new FunctionsHttpError("Edge Function returned a non-2xx status code");
+    Object.defineProperty(httpError, "context", { value: response });
+
+    invokeMock.mockResolvedValue({ data: null, error: httpError });
+
+    const result = await invokePaymentEdgeFunction(PAYMENT_EDGE.manualChargePayment, {
+      schedule_id: "sched-1",
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(502);
+  });
+
+  it("handles FunctionsHttpError without context", async () => {
+    const httpError = new FunctionsHttpError("Edge Function returned a non-2xx status code");
+    Object.defineProperty(httpError, "context", { value: undefined });
+
+    invokeMock.mockResolvedValue({ data: null, error: httpError });
+
+    const result = await invokePaymentEdgeFunction(PAYMENT_EDGE.manualChargePayment);
+
+    expect(result.ok).toBe(false);
+    expect(result.status).toBe(500);
+  });
+
+  it("invokes without body when omitted", async () => {
+    invokeMock.mockResolvedValue({
+      data: { ok: true },
+      error: null,
+    });
+
+    await invokePaymentEdgeFunction(PAYMENT_EDGE.dispatchKycEmail);
+
+    expect(invokeMock).toHaveBeenCalledWith(PAYMENT_EDGE.dispatchKycEmail, {});
+  });
+
+  it("maps array payloads to empty records", async () => {
+    invokeMock.mockResolvedValue({
+      data: [1, 2, 3],
+      error: null,
+    });
+
+    const result = await invokePaymentEdgeFunction(PAYMENT_EDGE.dispatchKycEmail, {});
+    expect(result.ok).toBe(true);
+    expect(result.payload).toEqual({});
+  });
+});
+
+describe("mapEdgeErrorPayload / paymentsApiErrorToMessage / trackPaymentApiError", () => {
+  it("maps edge payload fields", () => {
+    expect(
+      mapEdgeErrorPayload(
+        { error_code: "CARD_DECLINED", error: "ignored", field: "card" },
+        "fallback",
+      ),
+    ).toEqual({
+      message: "CARD_DECLINED",
+      errorCode: "CARD_DECLINED",
+      field: "card",
+    });
+
+    expect(mapEdgeErrorPayload({ error: "boom" }, "fallback")).toEqual({
+      message: "boom",
+      errorCode: undefined,
+      field: undefined,
+    });
+  });
+
+  it("converts payments API errors to messages", () => {
+    expect(paymentsApiErrorToMessage(null)).toBeNull();
+    expect(
+      paymentsApiErrorToMessage({ code: "X", message: "falhou" }),
+    ).toBe("falhou");
+  });
+
+  it("tracks payment API errors", () => {
+    trackPaymentApiError("source", "CODE");
+    expect(logger.error).toHaveBeenCalledWith("payments_api_error", {
+      source: "source",
+      code: "CODE",
+    });
+    expect(metrics.count).toHaveBeenCalledWith("payments.api_error", 1, {
+      source: "source",
+      code: "CODE",
+    });
   });
 });

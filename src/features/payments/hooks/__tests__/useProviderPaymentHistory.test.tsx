@@ -2,9 +2,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as historyApi from "../../api/history.api";
-import { useClientPaymentHistory } from "../useClientPaymentHistory";
+import { useProviderPaymentHistory } from "../useProviderPaymentHistory";
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -19,20 +19,19 @@ function createWrapper() {
   );
 }
 
-describe("useClientPaymentHistory", () => {
+describe("useProviderPaymentHistory", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("loads client payment transactions", async () => {
-    vi.spyOn(historyApi, "listClientPaymentTransactions").mockResolvedValue({
+  it("loads provider receivables", async () => {
+    vi.spyOn(historyApi, "listProviderPaymentReceivables").mockResolvedValue({
       data: [{
         scheduleId: "sched-1",
         contractedServiceId: "service-1",
-        amountPaid: 1000,
-        serviceAmount: 900,
-        installmentNumber: 1,
-        paidAt: "2026-07-01T12:00:00.000Z",
+        amountReceivedAtCapture: 900,
+        netAmountReceived: 850,
+        receivedAt: "2026-07-01T12:00:00.000Z",
         refundedAmount: null,
         refundedAt: null,
         state: "PAID",
@@ -42,25 +41,23 @@ describe("useClientPaymentHistory", () => {
       error: null,
     });
 
-    const { result } = renderHook(() => useClientPaymentHistory(), {
+    const { result } = renderHook(() => useProviderPaymentHistory(), {
       wrapper: createWrapper(),
     });
 
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
-
-    expect(result.current.data).toHaveLength(1);
     expect(result.current.data?.[0]?.scheduleId).toBe("sched-1");
   });
 
-  it("throws when history API fails", async () => {
-    vi.spyOn(historyApi, "listClientPaymentTransactions").mockResolvedValue({
-      data: [],
+  it("surfaces API errors", async () => {
+    vi.spyOn(historyApi, "listProviderPaymentReceivables").mockResolvedValue({
+      data: null,
       error: "history failed",
     });
 
-    const { result } = renderHook(() => useClientPaymentHistory(), {
+    const { result } = renderHook(() => useProviderPaymentHistory(), {
       wrapper: createWrapper(),
     });
 

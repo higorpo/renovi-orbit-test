@@ -126,6 +126,22 @@ describe("fetchPaymentScheduleByContractedService", () => {
       paidAt: "2026-07-01T12:00:00.000Z",
     });
   });
+
+  it("returns null data when schedule is missing or query fails", async () => {
+    mockFrom.mockReturnValue(createSelectChain({ data: null, error: null }));
+    await expect(fetchPaymentScheduleByContractedService("service-1")).resolves.toEqual({
+      data: null,
+      error: null,
+    });
+
+    mockFrom.mockReturnValue(
+      createSelectChain({ data: null, error: { message: "schedule failed" } }),
+    );
+    await expect(fetchPaymentScheduleByContractedService("service-1")).resolves.toEqual({
+      data: null,
+      error: "schedule failed",
+    });
+  });
 });
 
 describe("fetchPaymentScheduleLifecycleByContractedService", () => {
@@ -155,6 +171,20 @@ describe("fetchPaymentScheduleLifecycleByContractedService", () => {
       chargeScheduledAt: "2026-07-28T12:00:00.000Z",
     });
   });
+
+  it("returns null data when lifecycle row is missing or query fails", async () => {
+    mockFrom.mockReturnValue(createSelectChain({ data: null, error: null }));
+    await expect(
+      fetchPaymentScheduleLifecycleByContractedService("service-1"),
+    ).resolves.toEqual({ data: null, error: null });
+
+    mockFrom.mockReturnValue(
+      createSelectChain({ data: null, error: { message: "lifecycle failed" } }),
+    );
+    await expect(
+      fetchPaymentScheduleLifecycleByContractedService("service-1"),
+    ).resolves.toEqual({ data: null, error: "lifecycle failed" });
+  });
 });
 
 describe("fetchContractedServicePaymentContext", () => {
@@ -179,6 +209,22 @@ describe("fetchContractedServicePaymentContext", () => {
     expect(result.data).toEqual({
       acceptedProposalId: "proposal-1",
       serviceRequestId: "sr-1",
+    });
+  });
+
+  it("returns null data when context is missing or query fails", async () => {
+    mockFrom.mockReturnValue(createSelectChain({ data: null, error: null }));
+    await expect(fetchContractedServicePaymentContext("service-1")).resolves.toEqual({
+      data: null,
+      error: null,
+    });
+
+    mockFrom.mockReturnValue(
+      createSelectChain({ data: null, error: { message: "context failed" } }),
+    );
+    await expect(fetchContractedServicePaymentContext("service-1")).resolves.toEqual({
+      data: null,
+      error: "context failed",
     });
   });
 });

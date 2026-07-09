@@ -104,4 +104,23 @@ describe("useSavedCards", () => {
       expect(listSpy.mock.calls.length).toBeGreaterThan(1);
     });
   });
+
+  it("throws when revoke API returns an error", async () => {
+    vi.spyOn(revokeApi, "revokePaymentToken").mockResolvedValue({
+      data: null,
+      error: "revoke failed",
+    });
+
+    const { result } = renderHook(() => useSavedCards(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current.cards).toHaveLength(2);
+    });
+
+    await expect(
+      act(async () => {
+        await result.current.revokeCard("token-free");
+      }),
+    ).rejects.toThrow("revoke failed");
+  });
 });

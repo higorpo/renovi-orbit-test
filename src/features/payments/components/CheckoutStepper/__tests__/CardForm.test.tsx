@@ -133,4 +133,185 @@ describe("CardForm", () => {
 
     expect(screen.queryByLabelText("CPF do titular")).not.toBeInTheDocument();
   });
+
+  it("shows error when phone is missing", async () => {
+    render(
+      <CardForm
+        providerServiceId="provider-service-1"
+        savedCpf="390.533.447-05"
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: createWrapper() },
+    );
+
+    fillCardForm();
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Informe seu telefone para continuar/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows checkout-specific CPF error when saved CPF is missing", async () => {
+    render(
+      <CardForm
+        providerServiceId="provider-service-1"
+        tokenizeContext="checkout"
+        phone="(48) 99999-9999"
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: createWrapper() },
+    );
+
+    fillCardForm();
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Complete a etapa de CPF antes de continuar/i),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("shows checkout phone error when phone is missing", async () => {
+    render(
+      <CardForm
+        providerServiceId="provider-service-1"
+        tokenizeContext="checkout"
+        savedCpf="390.533.447-05"
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: createWrapper() },
+    );
+
+    fillCardForm();
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Complete a etapa de telefone antes de continuar/i),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("shows generic tokenize error when mutation throws a non-Error", async () => {
+    vi.spyOn(tokenizeApi, "tokenizePaymentCard").mockRejectedValue("boom");
+
+    render(
+      <CardForm
+        providerServiceId="provider-service-1"
+        savedCpf="390.533.447-05"
+        phone="(48) 99999-9999"
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: createWrapper() },
+    );
+
+    fillCardForm();
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Falha ao tokenizar cartão")).toBeInTheDocument();
+    });
+  });
+
+  it("shows tokenize error from mutation failure", async () => {
+    vi.spyOn(tokenizeApi, "tokenizePaymentCard").mockResolvedValue({
+      data: null,
+      error: "Cartão recusado",
+    });
+
+    render(
+      <CardForm
+        providerServiceId="provider-service-1"
+        savedCpf="390.533.447-05"
+        phone="(48) 99999-9999"
+        onSuccess={vi.fn()}
+        onBack={vi.fn()}
+        submitLabel="Salvar cartão"
+      />,
+      { wrapper: createWrapper() },
+    );
+
+    expect(screen.getByRole("button", { name: /Voltar/i })).toBeInTheDocument();
+
+    fillCardForm();
+    fireEvent.click(screen.getByRole("button", { name: "Salvar cartão" }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/Cartão recusado|Falha ao tokenizar/i)).toBeInTheDocument();
+    });
+  });
+
+  it("collects CPF in profile context when missing", async () => {
+    vi.spyOn(tokenizeApi, "tokenizePaymentCard").mockResolvedValue({
+      data: {
+        paymentTokenId: "token-1",
+        cardNumberMasked: "•••• 1111",
+        cardBrand: "VISA",
+      },
+      error: null,
+    });
+
+    const onSuccess = vi.fn();
+    render(
+      <CardForm
+        providerServiceId="provider-service-1"
+        phone="(48) 99999-9999"
+        onSuccess={onSuccess}
+      />,
+      { wrapper: createWrapper() },
+    );
+
+    fireEvent.change(screen.getByLabelText("CPF do titular"), {
+      target: { value: "390.533.447-05" },
+    });
+    fillCardForm();
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalled();
+    });
+  });
+
+  it("shows pending submit label while tokenizing", async () => {
+    let resolveTokenize: (value: {
+      data: { paymentTokenId: string; cardNumberMasked: string; cardBrand: string };
+      error: null;
+    }) => void = () => {};
+
+    vi.spyOn(tokenizeApi, "tokenizePaymentCard").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveTokenize = resolve;
+        }),
+    );
+
+    render(
+      <CardForm
+        providerServiceId="provider-service-1"
+        savedCpf="390.533.447-05"
+        phone="(48) 99999-9999"
+        onSuccess={vi.fn()}
+        onBack={vi.fn()}
+      />,
+      { wrapper: createWrapper() },
+    );
+
+    fillCardForm();
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Salvando cartão/i })).toBeDisabled();
+    });
+
+    resolveTokenize({
+      data: {
+        paymentTokenId: "token-1",
+        cardNumberMasked: "•••• 1111",
+        cardBrand: "VISA",
+      },
+      error: null,
+    });
+  });
 });
