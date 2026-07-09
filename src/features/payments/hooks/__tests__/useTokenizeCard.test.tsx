@@ -75,7 +75,7 @@ describe("useTokenizeCard", () => {
   it("throws when tokenization fails", async () => {
     vi.spyOn(cardsApi, "tokenizePaymentCard").mockResolvedValue({
       data: null,
-      error: "Cartão recusado",
+      error: "Seu cartão foi recusado. Tente outro cartão ou entre em contato com o emissor.",
     });
 
     const { result } = renderHook(() => useTokenizeCard(), { wrapper: createWrapper() });
@@ -84,6 +84,6 @@ describe("useTokenizeCard", () => {
       act(async () => {
         await result.current.mutateAsync(tokenizeRequest);
       }),
-    ).rejects.toThrow("Cartão recusado");
+    ).rejects.toThrow(/recusado/);
   });
 });

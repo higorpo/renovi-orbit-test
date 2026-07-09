@@ -98,7 +98,7 @@ describe("tokenizePaymentCard", () => {
     const result = await tokenizePaymentCard(tokenizeRequest);
 
     expect(result.data).toBeNull();
-    expect(result.error).toBe("Cartão inválido");
+    expect(result.error).toContain("validar este cartão");
     expect(result.gatewayErrors?.[0]?.code).toBe("INVALID_CARD");
   });
 });
@@ -253,7 +253,7 @@ describe("updatePaymentMethod", () => {
       }),
     ).resolves.toEqual({
       data: null,
-      error: "invalid_update_payment_method_response",
+      error: "Não foi possível atualizar o cartão. Tente novamente.",
     });
 
     mockRpc.mockResolvedValue({
@@ -268,7 +268,7 @@ describe("updatePaymentMethod", () => {
       }),
     ).resolves.toEqual({
       data: null,
-      error: "Resposta inesperada do servidor.",
+      error: "Resposta inesperada do servidor. Tente novamente.",
       errorCode: "INVALID_RESPONSE",
     });
   });
@@ -449,7 +449,7 @@ describe("revokePaymentToken", () => {
 
     await expect(revokePaymentToken("tok-1")).resolves.toEqual({
       data: null,
-      error: "unexpected",
+      error: "Não foi possível remover este cartão. Tente novamente.",
     });
   });
 });

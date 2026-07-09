@@ -214,7 +214,9 @@ describe("SavedCardsList", () => {
     fireEvent.click(screen.getByRole("button", { name: "Remover" }));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Falha ao remover cartão.");
+      expect(toast.error).toHaveBeenCalledWith(
+        "Não foi possível remover este cartão. Tente novamente.",
+      );
     });
   });
 
@@ -271,7 +273,9 @@ describe("SavedCardsList", () => {
     fireEvent.click(screen.getByRole("button", { name: "Remover" }));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("revoke failed");
+      expect(toast.error).toHaveBeenCalledWith(
+        "Não foi possível remover este cartão. Tente novamente.",
+      );
     });
   });
 

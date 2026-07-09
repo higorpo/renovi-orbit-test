@@ -13,7 +13,10 @@ export function useTokenizeCard() {
     mutationFn: async (request) => {
       const result = await tokenizePaymentCard(request);
       if (result.error || !result.data) {
-        throw new Error(result.error ?? "Falha ao tokenizar cartão");
+        throw new Error(
+          result.error
+            ?? "Não foi possível salvar o cartão. Verifique os dados e tente novamente.",
+        );
       }
       return result.data;
     },

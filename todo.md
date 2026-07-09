@@ -108,7 +108,6 @@ Fluxo de pagamentos, itens com problemas:
 
 - Forma que ele abre a dialog de pagamento naõ está boa
 - Precisamos coletar o CPF do títular do cartão de crédito e garantir que ele é o mesmo do dono da conta.
-- O frontend está mostrando erros que vem do backend sem muito tratamento na dialog de pagamento.
 
 
 
@@ -136,11 +135,15 @@ Fluxo de pagamentos, itens com problemas:
 
 
 Detalhes dos testes:
-4970100000000048
+Cartão aprovado: 4970100000000048
+Cartão rejeitado: 4970100000000071
+
 10/2027
 123
 Maria da Silva
 
+CPF/CNPJ terminando em 1 → aprovação
+CPF/CNPJ terminando em outro dígito → rejeição
 
 
 

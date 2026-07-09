@@ -83,7 +83,7 @@ describe("manualChargePayment", () => {
 
     expect(result.data).toBeNull();
     expect(result.errorCode).toBe("RATE_LIMIT_EXCEEDED");
-    expect(result.error).toBe("RATE_LIMIT_EXCEEDED");
+    expect(result.error).toContain("Muitas tentativas");
   });
 });
 

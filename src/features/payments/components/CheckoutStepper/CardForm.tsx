@@ -23,6 +23,7 @@ import {
   type CardFormData,
 } from "../../types/cardForm.validation";
 import { maskCardNumber } from "../../utils/card-validator";
+import { mapPaymentErrorToUserMessage } from "../../utils/mapPaymentUserMessage";
 import { PaymentTrustDisclosure } from "../PaymentTrustDisclosure";
 
 export type CardFormProps = {
@@ -93,7 +94,11 @@ export function CardForm({
       form.reset(defaultCardFormValues(collectCpf));
       onSuccess(result);
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Falha ao tokenizar cartão");
+      setSubmitError(
+        mapPaymentErrorToUserMessage(error, {
+          fallback: "Não foi possível salvar o cartão. Verifique os dados e tente novamente.",
+        }),
+      );
     }
   });
 

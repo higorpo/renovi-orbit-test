@@ -6,6 +6,7 @@ import type {
   PaymentScheduleSummary,
 } from "../types/paymentSchedule.types";
 import { invokePaymentEdgeFunction, mapEdgeErrorPayload } from "./paymentApiClient";
+import { mapPaymentUserMessage } from "../utils/mapPaymentUserMessage";
 import { PAYMENT_EDGE } from "./payments.edge";
 
 const PAYMENT_SCHEDULE_TABLE = "payment_schedules" as const;
@@ -130,7 +131,9 @@ export async function manualChargePayment(
 
     return {
       data: null,
-      error: message,
+      error: mapPaymentUserMessage(errorCode ?? message, {
+        fallback: "Não foi possível processar o pagamento. Tente novamente.",
+      }),
       errorCode,
       status,
     };

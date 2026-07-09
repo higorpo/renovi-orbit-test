@@ -1,4 +1,5 @@
 import type { PaymentsApiError } from "../types/paymentApi.types";
+import { mapPaymentUserMessage } from "./mapPaymentUserMessage";
 
 export function parsePaymentRpcDetailObject(
   details: string | undefined,
@@ -39,7 +40,9 @@ export function mapPaymentRpcError(error: {
 
   return {
     code,
-    message: error.message || "Não foi possível concluir a operação.",
+    message: mapPaymentUserMessage(code, {
+      fallback: "Não foi possível concluir a operação.",
+    }),
     ...(Number.isFinite(retryAfterSeconds) ? { retryAfterSeconds } : {}),
   };
 }

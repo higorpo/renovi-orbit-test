@@ -52,6 +52,10 @@ export {
 
 export { resolveCheckoutSteps } from "./utils/resolveCheckoutSteps";
 export { mapCheckoutStepperError } from "./utils/mapCheckoutStepperError";
+export {
+  mapPaymentUserMessage,
+  mapPaymentErrorToUserMessage,
+} from "./utils/mapPaymentUserMessage";
 export { getChargeTimingDisclosure } from "./utils/chargeTimingDisclosure";
 export { validateCPF, validateCNPJ } from "@/lib/validators";
 export { maskCNPJ } from "@/lib/masks";

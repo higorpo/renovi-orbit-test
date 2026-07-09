@@ -5,10 +5,11 @@ import {
 } from "../manualPaymentErrors";
 
 describe("formatManualPaymentFailureMessage", () => {
-  it("prefers trimmed failureReason when present", () => {
-    expect(formatManualPaymentFailureMessage("  Cartão bloqueado  ", "CARD_DECLINED")).toBe(
-      "Cartão bloqueado",
+  it("ignores raw failureReason and maps by failure code", () => {
+    expect(formatManualPaymentFailureMessage("  Cartão bloqueado  ", "CARD_DECLINED")).toContain(
+      "recusado",
     );
+    expect(formatManualPaymentFailureMessage("gateway dump", "REJECTED")).toContain("recusado");
   });
 
   it("maps known failure codes when reason is empty", () => {
@@ -18,8 +19,8 @@ describe("formatManualPaymentFailureMessage", () => {
     );
   });
 
-  it("returns default message for unknown codes", () => {
-    expect(formatManualPaymentFailureMessage(null, "OTHER")).toContain(
+  it("returns default message for unknown codes without leaking reason", () => {
+    expect(formatManualPaymentFailureMessage("raw reason", "OTHER")).toContain(
       "Não foi possível concluir o pagamento",
     );
     expect(formatManualPaymentFailureMessage(null, null)).toContain(

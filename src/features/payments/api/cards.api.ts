@@ -12,10 +12,11 @@ import {
   normalizeExpiryYear,
 } from "../utils/card-validator";
 import { parsePaymentRpcDetailObject } from "../utils/paymentApiErrors";
+import { mapPaymentUserMessage } from "../utils/mapPaymentUserMessage";
 import {
   invokePaymentEdgeFunction,
   invokePaymentRpc,
-  paymentsApiErrorToMessage,
+  mapEdgeErrorPayload,
   trackPaymentApiError,
 } from "./paymentApiClient";
 import { PAYMENT_EDGE } from "./payments.edge";
@@ -223,18 +224,27 @@ export async function tokenizePaymentCard(
     const gatewayErrors = Array.isArray(payload.errors)
       ? (payload.errors as Array<{ message: string; code?: string }>)
       : undefined;
-    const message =
-      gatewayErrors?.[0]?.message
-      ?? (typeof payload.error === "string" ? payload.error : "Falha ao tokenizar cartão");
+    const { errorCode, message: edgeMessage } = mapEdgeErrorPayload(
+      payload,
+      "Falha ao tokenizar cartão",
+    );
+    const code =
+      gatewayErrors?.[0]?.code
+      ?? errorCode
+      ?? (typeof gatewayErrors?.[0]?.message === "string" ? gatewayErrors[0].message : null)
+      ?? edgeMessage;
 
     logger.warn("tokenize_payment_card_failed", {
       status,
-      error: message,
+      errorCode: code,
+      error: edgeMessage,
     });
 
     return {
       data: null,
-      error: message,
+      error: mapPaymentUserMessage(code, {
+        fallback: "Não foi possível salvar o cartão. Verifique os dados e tente novamente.",
+      }),
       gatewayErrors,
     };
   }
@@ -279,7 +289,12 @@ export async function revokePaymentToken(
       paymentTokenId,
       error: error.message,
     });
-    return { data: null, error: error.message };
+    return {
+      data: null,
+      error: mapPaymentUserMessage(code, {
+        fallback: "Não foi possível remover este cartão. Tente novamente.",
+      }),
+    };
   }
 
   const payload = data as RpcSuccessResponse;
@@ -350,14 +365,19 @@ export async function updatePaymentMethod(
 
     return {
       data: null,
-      error: paymentsApiErrorToMessage(result.error) ?? "Falha ao atualizar cartão",
+      error: mapPaymentUserMessage(result.error.code, {
+        fallback: "Não foi possível atualizar o cartão. Tente novamente.",
+      }),
       errorCode: result.error.code,
     };
   }
 
   const parsed = parseUpdatePaymentMethodResponse(result.data);
   if (!parsed) {
-    return { data: null, error: "invalid_update_payment_method_response" };
+    return {
+      data: null,
+      error: "Não foi possível atualizar o cartão. Tente novamente.",
+    };
   }
 
   return { data: parsed, error: null };

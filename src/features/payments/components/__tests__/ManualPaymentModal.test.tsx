@@ -360,7 +360,9 @@ describe("ManualPaymentModal", () => {
     fireEvent.click(screen.getByRole("button", { name: /Confirmar pagamento/i }));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("timeout");
+      expect(toast.error).toHaveBeenCalledWith(
+        "Não foi possível processar o pagamento. Tente novamente.",
+      );
     });
   });
 
@@ -536,7 +538,9 @@ describe("ManualPaymentModal", () => {
     fireEvent.click(screen.getByRole("button", { name: /Selecionar outro cartão/i }));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("update failed");
+      expect(toast.error).toHaveBeenCalledWith(
+        "Não foi possível atualizar o cartão. Tente novamente.",
+      );
     });
   });
 
@@ -683,7 +687,9 @@ describe("ManualPaymentModal", () => {
     fireEvent.click(screen.getByRole("button", { name: /Confirmar pagamento/i }));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Falha ao processar pagamento.");
+      expect(toast.error).toHaveBeenCalledWith(
+        "Não foi possível processar o pagamento. Tente novamente.",
+      );
     });
   });
 

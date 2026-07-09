@@ -211,14 +211,16 @@ describe("CardForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Falha ao tokenizar cartão")).toBeInTheDocument();
+      expect(
+        screen.getByText("Não foi possível salvar o cartão. Verifique os dados e tente novamente."),
+      ).toBeInTheDocument();
     });
   });
 
   it("shows tokenize error from mutation failure", async () => {
     vi.spyOn(tokenizeApi, "tokenizePaymentCard").mockResolvedValue({
       data: null,
-      error: "Cartão recusado",
+      error: "Seu cartão foi recusado. Tente outro cartão ou entre em contato com o emissor.",
     });
 
     render(
@@ -239,7 +241,7 @@ describe("CardForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Salvar cartão" }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Cartão recusado|Falha ao tokenizar/i)).toBeInTheDocument();
+      expect(screen.getByText(/recusado/i)).toBeInTheDocument();
     });
   });
 

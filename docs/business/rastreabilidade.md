@@ -155,6 +155,8 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 |----------|---------------------|
 | `docs/business/modulos/payments/` | README + checkout + [historico-e-reembolso](./modulos/payments/features/historico-e-reembolso.md) |
 | `docs/payment-system/design.md` | Design normativo (§3.13 views de histórico; §4.8 reembolso) |
+| `src/features/payments/utils/mapPaymentUserMessage.ts` | Mapeamento código → mensagem amigável pt-BR; nunca texto bruto do backend |
+| `src/features/payments/utils/manualPaymentErrors.ts` / `paymentApiErrors.ts` | Falhas de cobrança manual e RPC usam o mapper (por código) |
 | `src/features/payments/components/PaymentHistory/*` | UI histórico cliente/prestador em Minha conta |
 | `src/features/payments/utils/clientPaymentHistoryAmounts.ts` | Breakdown: original riscado, líquido, “Reembolsado: …” |
 | `src/features/payments/api/history.api.ts` | Leitura das views de histórico |

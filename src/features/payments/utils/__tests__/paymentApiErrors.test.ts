@@ -60,4 +60,13 @@ describe("mapPaymentRpcError", () => {
       "Não foi possível concluir a operação.",
     );
   });
+
+  it("maps known codes to friendly messages instead of raw backend text", () => {
+    expect(
+      mapPaymentRpcError({
+        message: "PAYMENT_TOKEN_INACTIVE",
+        details: JSON.stringify({ code: "PAYMENT_TOKEN_INACTIVE" }),
+      }).message,
+    ).toContain("não está mais disponível");
+  });
 });

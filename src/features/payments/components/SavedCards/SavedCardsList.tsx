@@ -22,6 +22,7 @@ import {
   formatMaskedCardLabel,
   getCardBrandLabel,
 } from "../../utils/cardPresentation";
+import { mapPaymentErrorToUserMessage } from "../../utils/mapPaymentUserMessage";
 
 export type SavedCardsListProps = {
   phone?: string;
@@ -77,7 +78,11 @@ export function SavedCardsList({
       toast.error("Não foi possível remover este cartão.");
       setTokenToRemove(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Falha ao remover cartão.");
+      toast.error(
+        mapPaymentErrorToUserMessage(error, {
+          fallback: "Não foi possível remover este cartão. Tente novamente.",
+        }),
+      );
       setTokenToRemove(null);
     }
   };

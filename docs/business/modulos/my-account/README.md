@@ -38,7 +38,7 @@
 | `PortfolioManagementSection` | CRUD e ordenação de itens + imagens |
 | `PrivacySection` / `DangerZoneSection` / `LogoutSection` | LGPD, exclusão orientada ao DPO, logout |
 | `AddressesSection` | Apenas **cliente** (feature `@/features/addresses`) |
-| `SavedCardsList` / `PaymentHistorySection` | Cliente: cartões salvos + histórico de pagamentos (com breakdown de reembolso). Prestador: histórico de recebimentos. Feature `@/features/payments` — ver [historico-e-reembolso](../payments/features/historico-e-reembolso.md). |
+| `SavedCardsList` / `PaymentHistorySection` | Cliente: cartões salvos + histórico de pagamentos (com breakdown de reembolso). Prestador: histórico de recebimentos. Feature `@/features/payments` — ver [historico-e-reembolso](../payments/features/historico-e-reembolso.md). Erros de adicionar/remover cartão: mensagens amigáveis pt-BR ([checkout-e-cobranca](../payments/features/checkout-e-cobranca.md#mensagens-de-erro-na-ui-pt-br)). |
 
 ## 6. Hooks principais (orquestração)
 

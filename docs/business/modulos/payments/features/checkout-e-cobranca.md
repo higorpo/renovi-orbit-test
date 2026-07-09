@@ -35,6 +35,16 @@ Histórico na conta e regras de exibição de reembolso: [historico-e-reembolso.
 
 - Cliente pode disparar tentativa manual (`manual-charge-payment`) quando elegível (ex.: falha permanente, dentro da janela T-12h).
 
+## Mensagens de erro na UI (pt-BR)
+
+Nos fluxos de **checkout**, **cartão** (tokenizar, atualizar método, remover cartão salvo) e **cobrança manual**, a UI exibe apenas mensagens amigáveis em português (Brasil), mapeadas a partir de **códigos de erro** conhecidos.
+
+- Textos desconhecidos ou texto bruto do backend **não** são mostrados ao usuário; cai em mensagem genérica de retry.
+- Em falha de cobrança manual, a UI usa o **código** de falha (`failureCode`), não o `failureReason` textual do backend.
+- Superfícies cobertas: stepper de checkout (`CardForm`), modal de cobrança manual, lista de cartões salvos (também em Minha conta) e APIs/hooks de cartão e cobrança da feature `payments`.
+
+Evidência: `mapPaymentUserMessage.ts`, `manualPaymentErrors.ts`, `paymentApiErrors.ts`; APIs `cards.api.ts`, `charges.api.ts`, `paymentApiClient.ts`; componentes `ManualPaymentModal`, `CardForm`, `SavedCardsList`.
+
 ## Notificações
 
 - Cobrança próxima, sucesso, falha e cancelamento automático enfileirados via Message Dispatcher.

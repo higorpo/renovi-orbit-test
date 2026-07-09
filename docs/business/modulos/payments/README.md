@@ -21,9 +21,11 @@
 
 | Documento | Conteúdo |
 |-----------|----------|
-| [features/checkout-e-cobranca.md](./features/checkout-e-cobranca.md) | Checkout, T-2, estados de parcela, KYC, notificações |
+| [features/checkout-e-cobranca.md](./features/checkout-e-cobranca.md) | Checkout, T-2, estados de parcela, KYC, cobrança manual, mensagens de erro amigáveis (pt-BR), notificações |
 | [features/historico-e-reembolso.md](./features/historico-e-reembolso.md) | Histórico cliente/prestador; breakdown de reembolso; `REFUND_REQUESTED` vs clawback |
 | Engenharia | `docs/payment-system/design.md` (§3.13 histórico; §4.8 reembolso) |
+
+**Erros na UI:** checkout, cartões e cobrança manual nunca exibem texto bruto do backend — só mensagens amigáveis em pt-BR mapeadas por código (ver [checkout-e-cobranca](./features/checkout-e-cobranca.md#mensagens-de-erro-na-ui-pt-br)).
 
 ## 4. Relação com outros módulos
 

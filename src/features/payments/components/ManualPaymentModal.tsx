@@ -28,6 +28,7 @@ import {
   formatManualPaymentFailureMessage,
   isTerminalManualChargeOutcome,
 } from "../utils/manualPaymentErrors";
+import { mapPaymentErrorToUserMessage, mapPaymentUserMessage } from "../utils/mapPaymentUserMessage";
 import { useClientCpfForPayment } from "../hooks/useClientCpfForPayment";
 import { useAuth } from "@/features/auth";
 
@@ -141,7 +142,11 @@ export function ManualPaymentModal({
         return;
       }
 
-      toast.error(err.message ?? "Falha ao processar pagamento.");
+      toast.error(
+        mapPaymentErrorToUserMessage(err, {
+          fallback: "Não foi possível processar o pagamento. Tente novamente.",
+        }),
+      );
     }
   };
 
@@ -165,7 +170,11 @@ export function ManualPaymentModal({
     setIsUpdatingCard(false);
 
     if (result.error) {
-      toast.error(result.error);
+      toast.error(
+        mapPaymentUserMessage(result.errorCode ?? result.error, {
+          fallback: "Não foi possível atualizar o cartão. Tente novamente.",
+        }),
+      );
       return;
     }
 

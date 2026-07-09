@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { metrics } from "@/lib/sentry";
 import type { PaymentsApiError, PaymentsApiResult } from "../types/paymentApi.types";
 import { mapPaymentRpcError } from "../utils/paymentApiErrors";
+import { mapPaymentUserMessage } from "../utils/mapPaymentUserMessage";
 import type { PaymentEdgeFunctionName } from "./payments.edge";
 import type { PaymentRpcName } from "./payments.rpc";
 
@@ -54,7 +55,7 @@ export async function invokePaymentRpc<T>(
       data: null,
       error: {
         code: "INVALID_RESPONSE",
-        message: "Resposta inesperada do servidor.",
+        message: mapPaymentUserMessage("INVALID_RESPONSE"),
       },
     };
   }

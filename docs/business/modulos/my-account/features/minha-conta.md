@@ -39,6 +39,7 @@ Detalhe do histórico/reembolso: [historico-e-reembolso](../../payments/features
 | Upload foto de perfil | `AccountSummaryCard` | Ambos | Arquivo validado (`validateProfileImageFile`) | Storage `profile-images` + `profiles.profile_image_path` |
 | Remover foto de perfil | `AccountSummaryCard` | Ambos | Existe `profile_image_path` | Remove objeto no storage + limpa path |
 | CRUD endereços | `AddressesSection` (só cliente) | Cliente | Feature `addresses` | Tabela `client_addresses` |
+| Ver / gerenciar cartões salvos | `SavedCardsList` | Cliente | Feature `payments` | Tokenizar / remover cartão; erros amigáveis pt-BR (sem texto bruto do backend) — ver [checkout-e-cobranca](../../payments/features/checkout-e-cobranca.md#mensagens-de-erro-na-ui-pt-br) |
 | Ver histórico de pagamentos | `PaymentHistorySection` | Cliente | Feature `payments` | View `client_payment_transactions_v` (breakdown se `refunded_amount`) |
 | Ver recebimentos | `PaymentHistorySection` | Prestador | Feature `payments` | View `provider_payment_receivables_v` (`net_amount_received` após `refunded_at`) |
 | Adicionar/remover serviços ofertados | `OfferedServicesSection` | Prestador | Busca em `platform_services` | `provider_offered_services` (delete all + insert) |
