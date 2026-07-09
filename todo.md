@@ -135,11 +135,12 @@ Fluxo de pagamentos, itens com problemas:
 - A forma como está o checkout hoje para a seleção da parcela a ser paga e etc está segura? O usuário não consegue burlar a informação?
 
 
-- Quando for estornar 100% do valor para o cliente, hoje ele não está estornando o valor das taxas cobradas no cartão de crédito, mas nós devemos de fato estornar todo o valor sim nesse tipo de situação.
 
 - Quando um contracted_service ou service_request estiver marcado como cancelado, permitir o usuário criar um novo pedido de serviço a partir do serviço cancelado (será criado um novo service_request, que seguirá todo o fluxo normal como se ele tivesse criado pela tela de criação de pedido serviço).
 
 - Preciso testar o fluxo de cobrança manual.
+
+- Adicionar quando houver erro no pagamento do cliente um status com alerta vermelho no card do serviço na tela de meus serviços.
 
 
 Detalhes dos testes:

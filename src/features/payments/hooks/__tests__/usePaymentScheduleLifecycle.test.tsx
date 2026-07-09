@@ -30,6 +30,8 @@ describe("usePaymentScheduleLifecycle", () => {
         contractedServiceId: "service-1",
         state: "AUTHORIZED",
         chargeScheduledAt: "2026-07-10T12:00:00.000Z",
+        baseAmount: null,
+        paidAmount: null,
       },
       error: null,
     });

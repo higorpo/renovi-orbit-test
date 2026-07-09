@@ -24,7 +24,7 @@ The Renovi Payment System is a payment orchestration subsystem embedded within t
 - Minimize revenue leakage from unpaid services through automated retry and escalation flows, with auto-cancellation as a final safeguard.
 - Enable provider onboarding via structured KYC collection and external gateway credentialing, gating all service delivery behind credentialing completion.
 - Comply with PCI DSS data-at-rest requirements: no raw card data (PAN, CVV) is persisted in Renovi infrastructure at any layer.
-- Enforce the cancellation penalty rules as defined in Terms of Service §2.2. Penalties are calculated over `base_amount` (service price, excluding card processing fees): >48h before service = full refund of `base_amount`; 48h–12h = 90% of `base_amount`; <12h = 70% of `base_amount`. Card processing fees are non-refundable in all scenarios.
+- Enforce the cancellation penalty rules as defined in Terms of Service §2.2. Penalties are calculated over `base_amount` (service price, excluding card processing fees) for partial refunds: >48h before service = full refund of `charge_amount` (including card fees); 48h–12h = 90% of `base_amount`; <12h = 70% of `base_amount`. Card processing fees are refunded only on full (100%) client refunds and on all provider-initiated cancellations.
 
 **Technical Objectives:**
 
@@ -64,7 +64,7 @@ Full detail: [`design.md`](./design.md) §1.7 and [`CONTEXT.md`](./CONTEXT.md). 
 | **Scheduling** | `payment_payment_service_execution_at()` — shift-based timestamptz; `EXECUTED` gate is date-only |
 | **Split** | Client pays `base_amount` + card fees; provider `FIXED_AMOUNT = provider_payout` (frozen); Renovi `PERCENTAGE 100%` of remainder ([`ADR-0001`](../adr/0001-payment-split-commission-model.md)) |
 | **Commission** | Frozen at `accept_proposal`; card fees recalculated at T-2 |
-| **Refunds** | ToS §2.2 tiers on `base_amount`; clawback ∝ `provider_payout / paid_amount` |
+| **Refunds** | ToS §2.2: `FULL_REFUND` = `charge_amount`; `PENALTY_*` on `base_amount`; clawback ∝ `provider_payout / paid_amount` |
 | **IN_ANALYSIS** | No auto-cancel / no client cancel **before** T-12h; **after** T-12h → auto-cancel + gateway reconcile |
 | **SUSPENDED** | Immediate client notify + voluntary pre-PAID cancel; auto-cancel T-12h; no auto-resume on reactivation |
 | **REJECTED** | Pre-`ACTIVE` only — never after credentialing activation |
@@ -98,7 +98,7 @@ If any requirement below contradicts this table, **this table wins**.
 - **Split Model** ([`ADR-0001`](../adr/0001-payment-split-commission-model.md)): Client is charged `charge_amount = base_amount + card_fees`. Provider receives **`FIXED_AMOUNT = provider_payout`** where `provider_payout = base_amount × (1 − commission_rate_pct/100)`, **frozen at `accept_proposal`**. Renovi receives **`PERCENTAGE = 100.0`** of `(charge_amount − provider_payout)` (commission + gross card-fee pass-through). Both parties have `isLiable = true`; NetCred MDR is deducted proportionally; Renovi bank net ≈ commission. Example: base R$ 1.000, payout R$ 850, charge R$ 1.030 → provider R$ 850, Renovi gross R$ 180, Renovi net ~R$ 150 after MDR.
 - **Commission freeze**: `commission_rate_pct` and `provider_payout` are persisted on `payment_schedules` at accept and MUST NOT change. Only `charge_amount` (card fees) may drift at T-2.
 - **PCI DSS**: No raw card data (PAN, CVV) persisted in Renovi infrastructure. Only gateway-issued tokenized references: `gateway_payment_profile_id`, `card_number_masked`, `card_brand`, `gateway_card_token`.
-- **Cancellation Policy**: Per Terms of Service §2.2 — penalty is applied to `base_amount` only (card processing fees are non-refundable): >48h: `refund_amount = base_amount` (100%); 48h–12h: `refund_amount = base_amount × 0.90` (10% penalty); <12h: `refund_amount = base_amount × 0.70` (30% penalty). Provider-initiated cancellations: `refund_amount = charge_amount` (full amount including card fees). Gateway distributes the refund proportionally between all `isLiable` accounts.
+- **Cancellation Policy**: Per Terms of Service §2.2 — >48h: `refund_amount = charge_amount` (100% of amount paid, including card processing fees); 48h–12h: `refund_amount = base_amount × 0.90` (10% penalty on service price; card fees non-refundable); <12h: `refund_amount = base_amount × 0.70` (30% penalty on service price; card fees non-refundable). Provider-initiated cancellations: `refund_amount = charge_amount` (full amount including card fees). Gateway distributes the refund proportionally between all `isLiable` accounts.
 - **At-least-once Delivery**: Webhooks and cron executions operate under at-least-once semantics; idempotency keys prevent duplicate side effects.
 - **Secrets Management**: NetCred credentials, webhook `secretKey`, and HMAC signing secret stored exclusively in Supabase Vault. MUST NOT appear in application code, environment variable files committed to source control, or any client-accessible layer.
 - **Service scheduling anchor (`payment_service_execution_at`)**: Payment timing MUST NOT duplicate scheduling in a new column. The canonical service instant is derived from existing `contracted_services` columns: `scheduled_start_date` (DATE), `scheduled_shift` (`morning` \| `afternoon` \| `full_day`), combined as `(scheduled_start_date + shift start time) AT TIME ZONE 'America/Sao_Paulo'` where shift starts are `morning/full_day = 08:00`, `afternoon = 13:00`. Implemented as Postgres function `payment_service_execution_at(contracted_services)`. Multi-day jobs anchor on `scheduled_start_date` only. `mark_service_executed` uses date-only comparison on `scheduled_start_date`.
@@ -270,7 +270,7 @@ DEAD_LETTER
 - **VOIDED** *(terminal)*: Charge was created at gateway but voided via `chargeVoid`/`transactionVoid` before capture (reconciliation edge case during retry).
 - **REFUND_REQUESTED** *(transitional)*: `transactionRefund` submitted to gateway; awaiting `TRANSACTION_REFUND` webhook confirmation.
 - **REFUNDED** *(terminal)*: Full refund confirmed by gateway webhook. 100% of paid amount returned to client.
-- **PARTIALLY_REFUNDED** *(terminal)*: Partial refund confirmed (10% or 30% penalty retention per ToS §2.2; applied to `base_amount` only — card processing fees are non-refundable).
+- **PARTIALLY_REFUNDED** *(terminal)*: Partial refund confirmed (10% or 30% penalty retention per ToS §2.2; applied to `base_amount` only — card processing fees are non-refundable on penalty tiers).
 - **EXPIRED** *(terminal)*: Gateway transaction expired without capture (rare in this cron-driven model).
 
 #### Webhook Event Processing States
@@ -934,7 +934,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** a client cancels a service where `payment_schedules.state = 'PAID'` AND `payment_service_execution_at(contracted_services) - now() > 48 hours`  
 **WHEN** the cancellation is confirmed  
-**THEN** the system MUST compute `refund_amount = base_amount` (100% of service price; card processing fees are non-refundable); invoke `transactionRefund(transactionId, amount = refund_amount, reason = 'REQUESTED_BY_CUSTOMER')`; transition `payment_schedules.state = 'REFUND_REQUESTED'`; the gateway distributes the refund proportionally between all `isLiable` accounts (provider and Renovi).
+**THEN** the system MUST compute `refund_amount = charge_amount` (100% of the amount paid, including card processing fees); invoke `transactionRefund(transactionId, amount = refund_amount, reason = 'REQUESTED_BY_CUSTOMER')`; transition `payment_schedules.state = 'REFUND_REQUESTED'`; the gateway distributes the refund proportionally between all `isLiable` accounts (provider and Renovi).
 
 **GIVEN** a client cancels a service where `payment_schedules.state = 'PAID'` AND `12 hours <= payment_service_execution_at(contracted_services) - now() <= 48 hours`  
 **WHEN** the cancellation is confirmed  

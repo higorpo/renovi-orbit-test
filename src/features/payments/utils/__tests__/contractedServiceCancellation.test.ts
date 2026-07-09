@@ -56,25 +56,25 @@ describe("canCancelContractedService", () => {
 describe("estimateClientRefundAmount", () => {
   const executionAt = new Date("2026-08-01T13:00:00");
 
-  it("returns full base amount when more than 48h before execution", () => {
+  it("returns full charge amount when more than 48h before execution", () => {
     const now = new Date("2026-07-29T12:00:00");
-    expect(estimateClientRefundAmount(600, executionAt, now)).toEqual({
-      refundAmount: 600,
+    expect(estimateClientRefundAmount(600, 633.7, executionAt, now)).toEqual({
+      refundAmount: 633.7,
       penaltyTier: "FULL_REFUND",
     });
   });
 
-  it("applies 10% penalty between 12h and 48h", () => {
+  it("applies 10% penalty between 12h and 48h on base amount only", () => {
     const now = new Date("2026-07-31T14:00:00");
-    expect(estimateClientRefundAmount(600, executionAt, now)).toEqual({
+    expect(estimateClientRefundAmount(600, 633.7, executionAt, now)).toEqual({
       refundAmount: 540,
       penaltyTier: "PENALTY_10",
     });
   });
 
-  it("applies 30% penalty under 12h", () => {
+  it("applies 30% penalty under 12h on base amount only", () => {
     const now = new Date("2026-08-01T08:00:00");
-    expect(estimateClientRefundAmount(600, executionAt, now)).toEqual({
+    expect(estimateClientRefundAmount(600, 633.7, executionAt, now)).toEqual({
       refundAmount: 420,
       penaltyTier: "PENALTY_30",
     });
@@ -134,7 +134,7 @@ describe("getCancellationDisclosure", () => {
     expect(disclosure.description).toContain("estorno integral");
   });
 
-  it("describes client penalty tiers without exposing payment amounts", () => {
+  it("describes client penalty tiers without amounts when amounts are missing", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-01T10:00:00"));
 
@@ -151,7 +151,38 @@ describe("getCancellationDisclosure", () => {
     vi.useRealTimers();
   });
 
-  it("describes FULL_REFUND and PENALTY_10 client disclosures", () => {
+  it("includes estimated refund amount when base and paid amounts are provided", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-29T12:00:00"));
+
+    const disclosure = getCancellationDisclosure({
+      viewerRole: "client",
+      scheduleState: "PAID",
+      scheduledStartDate: "2026-08-01",
+      scheduledShift: "afternoon",
+      baseAmount: 600,
+      paidAmount: 633.7,
+    });
+
+    expect(disclosure.description).toContain("R$ 633,70");
+    expect(disclosure.description).toContain("incluindo taxas de cartão");
+
+    vi.setSystemTime(new Date("2026-07-31T14:00:00"));
+    expect(
+      getCancellationDisclosure({
+        viewerRole: "client",
+        scheduleState: "PAID",
+        scheduledStartDate: "2026-08-01",
+        scheduledShift: "afternoon",
+        baseAmount: 600,
+        paidAmount: 633.7,
+      }).description,
+    ).toContain("R$ 540,00");
+
+    vi.useRealTimers();
+  });
+
+  it("describes FULL_REFUND and PENALTY_10 client disclosures without amounts", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-29T12:00:00"));
 
@@ -162,7 +193,7 @@ describe("getCancellationDisclosure", () => {
         scheduledStartDate: "2026-08-01",
         scheduledShift: "afternoon",
       }).description,
-    ).toContain("Reembolso do valor do serviço");
+    ).toContain("Reembolso integral do valor pago");
 
     vi.setSystemTime(new Date("2026-07-31T14:00:00"));
     expect(

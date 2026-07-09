@@ -52,8 +52,8 @@ select is(
     now() + interval '72 hours',
     'client'
   )->>'refund_amount',
-  '100.00',
-  'client refund >48h returns full base_amount'
+  '110.00',
+  'client refund >48h returns full charge_amount including card fees'
 );
 
 select is(

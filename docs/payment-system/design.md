@@ -213,8 +213,8 @@ both:               isLiable = true
 
 ### 1.7.5 Refunds (ToS §2.2)
 
-- Penalty tiers computed on **`base_amount`**, not `provider_payout` or `charge_amount`.
-- Card processing fees (`charge_amount − base_amount`) are **never** refundable.
+- **`FULL_REFUND`** (client >48h) and provider-initiated cancel: `refund_amount = charge_amount` (includes card fees).
+- **`PENALTY_10` / `PENALTY_30`**: computed on **`base_amount`** only; card fees (`charge_amount − base_amount`) are not refunded on penalty tiers.
 - Gateway clawback proportional: provider share = `refunded_amount × (provider_payout / paid_amount)`.
 
 ### 1.7.6 Credentialing invariants
@@ -1537,13 +1537,14 @@ function computeRefundAmount(
   }
   const hoursUntilService = differenceInHours(serviceScheduledAt, new Date());
   if (hoursUntilService > 48) {
-    return { refundAmount: baseAmount, penaltyTier: 'FULL_REFUND' };         // 100% of base
+    // 100% of amount paid (base + card fees)
+    return { refundAmount: chargeAmount, penaltyTier: 'FULL_REFUND' };
   } else if (hoursUntilService >= 12) {
     return { refundAmount: baseAmount.mul('0.90'), penaltyTier: 'PENALTY_10' }; // 90% of base
   } else {
     return { refundAmount: baseAmount.mul('0.70'), penaltyTier: 'PENALTY_30' }; // 70% of base
   }
-  // Card processing fees (charge_amount - base_amount) are always non-refundable
+  // Card fees are refunded on FULL_REFUND / provider cancel; retained on PENALTY_* tiers
   // Clawback proportional on split: provider share uses provider_payout, not base_amount
 }
 ```

@@ -47,13 +47,14 @@ begin
 
   return case coalesce(p_refund_tier, '')
     when 'FULL_REFUND' then
-      'O serviço foi cancelado pelo cliente. O valor do serviço será reembolsado integralmente.'
+      'O serviço foi cancelado pelo cliente. O valor pago será reembolsado integralmente '
+      || '(incluindo taxas de cartão).'
     when 'PENALTY_10' then
       'O serviço foi cancelado pelo cliente. Será reembolsado 90% do valor do serviço '
-      || 'por cancelamento com menos de 48 h de antecedência.'
+      || 'por cancelamento com menos de 48 h de antecedência (taxas de cartão não são reembolsadas).'
     when 'PENALTY_30' then
       'O serviço foi cancelado pelo cliente. Será reembolsado 70% do valor do serviço '
-      || 'por cancelamento de última hora.'
+      || 'por cancelamento de última hora (taxas de cartão não são reembolsadas).'
     else
       'O serviço foi cancelado pelo cliente. O estorno seguirá as regras dos Termos de Uso.'
   end;

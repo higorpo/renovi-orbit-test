@@ -514,11 +514,11 @@ Guarde `contracted_service_id` e `schedule_id`.
 
 ### 11.4 Simular faixa de penalidade (opcional)
 
-Penalidades do cliente incidem sobre **`base_amount`** (não sobre taxas de cartão). Tiers (ToS §2.2):
+`FULL_REFUND` estorna o **`charge_amount`** (valor pago, com taxas). Penalidades (`PENALTY_*`) incidem sobre **`base_amount`** (taxas de cartão não reembolsadas). Tiers (ToS §2.2):
 
-| Tempo até execução | `penalty_tier` | Estorno (base R$ 600) |
-|--------------------|----------------|------------------------|
-| **> 48 h** | `FULL_REFUND` | R$ 600,00 |
+| Tempo até execução | `penalty_tier` | Estorno (base R$ 600 / charge R$ 633,70) |
+|--------------------|----------------|------------------------------------------|
+| **> 48 h** | `FULL_REFUND` | R$ 633,70 |
 | **12 h – 48 h** | `PENALTY_10` | R$ 540,00 |
 | **< 12 h** | `PENALTY_30` | R$ 420,00 |
 
@@ -580,7 +580,7 @@ curl -s -X POST 'http://127.0.0.1:54321/functions/v1/process-refund' \
 ```json
 {
   "schedule_id": "...",
-  "refund_amount": "600.00",
+  "refund_amount": "633.70",
   "penalty_tier": "FULL_REFUND",
   "expected_days": "30-60"
 }

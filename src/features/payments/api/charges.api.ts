@@ -64,6 +64,11 @@ type PaymentScheduleLifecycleRow = {
   charge_scheduled_at: string | null;
 };
 
+type ClientPaymentAmountsRow = {
+  amount_paid: number;
+  service_amount: number;
+};
+
 type ContractedServiceRow = {
   accepted_proposal_id: string;
   service_request_id: string;
@@ -84,11 +89,17 @@ function mapPaymentSchedule(row: PaymentScheduleRow): PaymentScheduleSummary {
   };
 }
 
-function mapPaymentScheduleLifecycle(row: PaymentScheduleLifecycleRow): PaymentScheduleLifecycle {
+function mapPaymentScheduleLifecycle(
+  row: PaymentScheduleLifecycleRow,
+  amounts?: ClientPaymentAmountsRow | null,
+): PaymentScheduleLifecycle {
   return {
     contractedServiceId: row.contracted_service_id,
     state: row.state,
     chargeScheduledAt: row.charge_scheduled_at,
+    // Amounts come from client_payment_transactions_v (column allowlist hides them on the table).
+    baseAmount: amounts != null ? Number(amounts.service_amount) : null,
+    paidAmount: amounts != null ? Number(amounts.amount_paid) : null,
   };
 }
 
@@ -156,8 +167,29 @@ export async function fetchPaymentScheduleLifecycleByContractedService(
     return { data: null, error: null };
   }
 
+  const row = data as PaymentScheduleLifecycleRow;
+  let amounts: ClientPaymentAmountsRow | null = null;
+
+  // Client history view exposes base/paid amounts; providers get null (RLS).
+  if (row.state === "PAID") {
+    const { data: tx, error: txError } = await supabase
+      .from("client_payment_transactions_v")
+      .select("amount_paid, service_amount")
+      .eq("contracted_service_id", contractedServiceId)
+      .maybeSingle();
+
+    if (txError) {
+      logger.warn("payment_schedule_lifecycle_amounts_fetch_error", {
+        contractedServiceId,
+        error: txError.message,
+      });
+    } else if (tx) {
+      amounts = tx as ClientPaymentAmountsRow;
+    }
+  }
+
   return {
-    data: mapPaymentScheduleLifecycle(data as PaymentScheduleLifecycleRow),
+    data: mapPaymentScheduleLifecycle(row, amounts),
     error: null,
   };
 }

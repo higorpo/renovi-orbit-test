@@ -203,19 +203,19 @@ select throws_ok(
 
 select is(
   public.cns_build_contracted_service_cancel_system_message('client', 'FULL_REFUND', false, null),
-  'O serviço foi cancelado pelo cliente. O valor do serviço será reembolsado integralmente.',
+  'O serviço foi cancelado pelo cliente. O valor pago será reembolsado integralmente (incluindo taxas de cartão).',
   'message builder: client FULL_REFUND'
 );
 
 select is(
   public.cns_build_contracted_service_cancel_system_message('client', 'PENALTY_10', false, null),
-  'O serviço foi cancelado pelo cliente. Será reembolsado 90% do valor do serviço por cancelamento com menos de 48 h de antecedência.',
+  'O serviço foi cancelado pelo cliente. Será reembolsado 90% do valor do serviço por cancelamento com menos de 48 h de antecedência (taxas de cartão não são reembolsadas).',
   'message builder: client PENALTY_10'
 );
 
 select is(
   public.cns_build_contracted_service_cancel_system_message('client', 'PENALTY_30', false, null),
-  'O serviço foi cancelado pelo cliente. Será reembolsado 70% do valor do serviço por cancelamento de última hora.',
+  'O serviço foi cancelado pelo cliente. Será reembolsado 70% do valor do serviço por cancelamento de última hora (taxas de cartão não são reembolsadas).',
   'message builder: client PENALTY_30'
 );
 

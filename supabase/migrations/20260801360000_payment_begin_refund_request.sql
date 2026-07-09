@@ -41,8 +41,9 @@ begin
 
   v_hours := extract(epoch from (p_service_scheduled_at - p_now)) / 3600.0;
 
+  -- FULL_REFUND: entire amount paid (base + card fees). Penalty tiers apply to base_amount only.
   if v_hours > 48 then
-    v_refund_amount := round(p_base_amount, 2);
+    v_refund_amount := round(p_charge_amount, 2);
     v_penalty_tier := 'FULL_REFUND';
   elsif v_hours >= 12 then
     v_refund_amount := round(p_base_amount * 0.90, 2);
@@ -265,7 +266,7 @@ end;
 $$;
 
 comment on function public.payment_calculate_refund_amount(numeric, numeric, timestamptz, text, timestamptz) is
-  'ToS §2.2 refund amount tiers for client/provider-initiated cancellations.';
+  'ToS §2.2 refund tiers: FULL_REFUND and provider cancel use charge_amount (incl. card fees); PENALTY_* use base_amount only.';
 
 comment on function public.payment_begin_refund_request(uuid, uuid, text, text) is
   'Computes refund amount, transitions schedule to REFUND_REQUESTED, cancels service (service_role only).';

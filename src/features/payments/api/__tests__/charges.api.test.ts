@@ -149,26 +149,87 @@ describe("fetchPaymentScheduleLifecycleByContractedService", () => {
     vi.clearAllMocks();
   });
 
-  it("maps lifecycle columns from participant allowlist", async () => {
-    mockFrom.mockReturnValue(
-      createSelectChain({
+  it("maps lifecycle columns and client refund amounts when PAID", async () => {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "payment_schedules") {
+        return createSelectChain({
+          data: {
+            contracted_service_id: "service-1",
+            state: "PAID",
+            charge_scheduled_at: "2026-07-28T12:00:00.000Z",
+          },
+          error: null,
+        });
+      }
+      return createSelectChain({
         data: {
-          contracted_service_id: "service-1",
-          state: "PAID",
-          charge_scheduled_at: "2026-07-28T12:00:00.000Z",
+          amount_paid: 633.7,
+          service_amount: 600,
         },
         error: null,
-      }),
-    );
+      });
+    });
 
     const result = await fetchPaymentScheduleLifecycleByContractedService("service-1");
 
     expect(mockFrom).toHaveBeenCalledWith("payment_schedules");
+    expect(mockFrom).toHaveBeenCalledWith("client_payment_transactions_v");
     expect(result.error).toBeNull();
     expect(result.data).toEqual({
       contractedServiceId: "service-1",
       state: "PAID",
       chargeScheduledAt: "2026-07-28T12:00:00.000Z",
+      baseAmount: 600,
+      paidAmount: 633.7,
+    });
+  });
+
+  it("returns null amounts when client history view has no row", async () => {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "payment_schedules") {
+        return createSelectChain({
+          data: {
+            contracted_service_id: "service-1",
+            state: "PAID",
+            charge_scheduled_at: "2026-07-28T12:00:00.000Z",
+          },
+          error: null,
+        });
+      }
+      return createSelectChain({ data: null, error: null });
+    });
+
+    const result = await fetchPaymentScheduleLifecycleByContractedService("service-1");
+
+    expect(result.data).toEqual({
+      contractedServiceId: "service-1",
+      state: "PAID",
+      chargeScheduledAt: "2026-07-28T12:00:00.000Z",
+      baseAmount: null,
+      paidAmount: null,
+    });
+  });
+
+  it("skips amounts fetch for pre-charge states", async () => {
+    const scheduleChain = createSelectChain({
+      data: {
+        contracted_service_id: "service-1",
+        state: "SCHEDULED",
+        charge_scheduled_at: "2026-07-28T12:00:00.000Z",
+      },
+      error: null,
+    });
+    mockFrom.mockReturnValue(scheduleChain);
+
+    const result = await fetchPaymentScheduleLifecycleByContractedService("service-1");
+
+    expect(mockFrom).toHaveBeenCalledTimes(1);
+    expect(result.data).toEqual({
+      contractedServiceId: "service-1",
+      state: "SCHEDULED",
+      chargeScheduledAt: "2026-07-28T12:00:00.000Z",
+      baseAmount: null,
+      paidAmount: null,
     });
   });
 

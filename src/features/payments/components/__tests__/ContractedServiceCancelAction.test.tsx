@@ -46,6 +46,8 @@ describe("ContractedServiceCancelAction", () => {
         contractedServiceId: "service-1",
         state: "AUTHORIZED",
         chargeScheduledAt: null,
+        baseAmount: null,
+        paidAmount: null,
       },
     });
   });

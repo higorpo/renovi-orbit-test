@@ -94,14 +94,16 @@ export function estimateClientPenaltyTier(
 
 export function estimateClientRefundAmount(
   baseAmount: number,
+  chargeAmount: number,
   serviceExecutionAt: Date,
   now: Date = new Date(),
 ): { refundAmount: number; penaltyTier: ClientRefundPenaltyTier } {
   const hoursUntilExecution =
     (serviceExecutionAt.getTime() - now.getTime()) / (60 * 60 * 1000);
 
+  // FULL_REFUND returns the full amount paid (service + card fees).
   if (hoursUntilExecution > 48) {
-    return { refundAmount: roundCurrency(baseAmount), penaltyTier: "FULL_REFUND" };
+    return { refundAmount: roundCurrency(chargeAmount), penaltyTier: "FULL_REFUND" };
   }
 
   if (hoursUntilExecution >= 12) {
@@ -132,6 +134,8 @@ export function getCancellationDisclosure(input: {
   scheduleState: string;
   scheduledStartDate: string;
   scheduledShift: string;
+  baseAmount?: number | null;
+  paidAmount?: number | null;
 }): CancellationDisclosure {
   if (isPreChargeScheduleState(input.scheduleState)) {
     return {
@@ -160,7 +164,29 @@ export function getCancellationDisclosure(input: {
     return {
       title: "Cancelar serviço?",
       description:
-        "Se o pagamento já foi realizado, será processado um estorno conforme nossos Termos de Uso. Taxas de cartão não são reembolsadas.",
+        "Se o pagamento já foi realizado, será processado um estorno conforme nossos Termos de Uso.",
+      confirmLabel: "Confirmar cancelamento",
+    };
+  }
+
+  const baseAmount = input.baseAmount;
+  const paidAmount = input.paidAmount;
+  const canEstimate =
+    baseAmount != null &&
+    baseAmount > 0 &&
+    paidAmount != null &&
+    paidAmount > 0;
+
+  if (canEstimate) {
+    const { refundAmount, penaltyTier } = estimateClientRefundAmount(
+      baseAmount,
+      paidAmount,
+      executionAt,
+    );
+    const refundHint = describeClientRefundPenalty(penaltyTier, refundAmount);
+    return {
+      title: "Cancelar serviço?",
+      description: `${refundHint} O estorno pode levar de 30 a 60 dias para aparecer na fatura.`,
       confirmLabel: "Confirmar cancelamento",
     };
   }
@@ -182,8 +208,8 @@ function describeClientRefundPenalty(
   switch (penaltyTier) {
     case "FULL_REFUND":
       return refundAmount != null
-        ? `Estimativa de reembolso: valor do serviço (R$ ${formatAmount(refundAmount)}). Taxas de cartão não são reembolsadas.`
-        : "Reembolso do valor do serviço conforme os Termos de Uso. Taxas de cartão não são reembolsadas.";
+        ? `Estimativa de reembolso integral: R$ ${formatAmount(refundAmount)} (valor pago, incluindo taxas de cartão).`
+        : "Reembolso integral do valor pago, incluindo taxas de cartão, conforme os Termos de Uso.";
     case "PENALTY_10":
       return refundAmount != null
         ? `Cancelamento com menos de 48 h de antecedência: estimativa de reembolso R$ ${formatAmount(refundAmount)} (penalidade de 10% sobre o valor do serviço). Taxas de cartão não são reembolsadas.`
