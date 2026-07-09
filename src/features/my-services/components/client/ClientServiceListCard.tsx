@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 import { getServiceCardStyle } from "@/features/request-quote";
 import { getUrgencyConfig, type ServiceModel } from "@/features/view-services";
 import { usePublicProfileImageUrl } from "@/features/provider-profile/hooks/usePublicProfileImageUrl";
-import { ManualPaymentModal } from "@/features/payments";
+import { ManualPaymentDialog } from "@/features/payments";
 import {
   getClientServiceCardPresentation,
   type ClientCardAction,
@@ -427,7 +427,7 @@ export function ClientServiceListCard({
       </div>
 
       {needsManualPayment && manualPayment.schedule && manualPayment.context ? (
-        <ManualPaymentModal
+        <ManualPaymentDialog
           open={manualPayment.open}
           onOpenChange={manualPayment.handleOpenChange}
           schedule={manualPayment.schedule}

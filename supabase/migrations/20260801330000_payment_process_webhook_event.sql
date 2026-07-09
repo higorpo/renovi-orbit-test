@@ -52,6 +52,9 @@ begin
 end;
 $$;
 
+comment on function public.payment_webhook_payload_reference_code(jsonb) is
+  'Extracts NetCred charge referenceCode as UUID (payment_schedules.gateway_reference_code).';
+
 create or replace function public.payment_webhook_payload_transaction_state(
   p_payload jsonb
 )
@@ -96,7 +99,8 @@ begin
   into v_schedule
   from public.payment_schedules ps
   inner join public.contracted_services cs on cs.id = ps.contracted_service_id
-  where ps.contracted_service_id = v_reference_code
+  where ps.gateway_reference_code = v_reference_code
+     or ps.contracted_service_id = v_reference_code
   for update of cs, ps;
 
   if not found then
@@ -257,7 +261,8 @@ begin
   into v_schedule
   from public.payment_schedules ps
   inner join public.contracted_services cs on cs.id = ps.contracted_service_id
-  where ps.contracted_service_id = v_reference_code
+  where ps.gateway_reference_code = v_reference_code
+     or ps.contracted_service_id = v_reference_code
   for update of cs, ps;
 
   if not found then
@@ -399,7 +404,8 @@ begin
   into v_schedule
   from public.payment_schedules ps
   inner join public.contracted_services cs on cs.id = ps.contracted_service_id
-  where ps.contracted_service_id = v_reference_code
+  where ps.gateway_reference_code = v_reference_code
+     or ps.contracted_service_id = v_reference_code
   for update of cs, ps;
 
   if not found then
@@ -509,7 +515,8 @@ begin
   into v_schedule
   from public.payment_schedules ps
   inner join public.contracted_services cs on cs.id = ps.contracted_service_id
-  where ps.contracted_service_id = v_reference_code
+  where ps.gateway_reference_code = v_reference_code
+     or ps.contracted_service_id = v_reference_code
   for update of cs, ps;
 
   if not found then
@@ -604,7 +611,8 @@ begin
   into v_schedule
   from public.payment_schedules ps
   inner join public.contracted_services cs on cs.id = ps.contracted_service_id
-  where ps.contracted_service_id = v_reference_code
+  where ps.gateway_reference_code = v_reference_code
+     or ps.contracted_service_id = v_reference_code
   for update of cs, ps;
 
   if not found then
@@ -692,7 +700,8 @@ begin
   into v_schedule
   from public.payment_schedules ps
   inner join public.contracted_services cs on cs.id = ps.contracted_service_id
-  where ps.contracted_service_id = v_reference_code
+  where ps.gateway_reference_code = v_reference_code
+     or ps.contracted_service_id = v_reference_code
   for update of cs, ps;
 
   if not found then

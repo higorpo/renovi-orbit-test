@@ -67,6 +67,9 @@ function mapBeginManualAttemptResult(data: unknown): ManualChargeSchedule {
     client_ip_address: row.client_ip_address
       ? String(row.client_ip_address)
       : null,
+    gateway_reference_code: row.gateway_reference_code
+      ? String(row.gateway_reference_code)
+      : null,
   };
 }
 

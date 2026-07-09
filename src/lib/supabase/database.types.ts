@@ -1494,6 +1494,7 @@ export type Database = {
           failure_code: string | null
           failure_reason: string | null
           gateway_charge_id: string | null
+          gateway_reference_code: string
           gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
           gateway_transaction_id: string | null
           id: string
@@ -1535,6 +1536,7 @@ export type Database = {
           failure_code?: string | null
           failure_reason?: string | null
           gateway_charge_id?: string | null
+          gateway_reference_code: string
           gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
           gateway_transaction_id?: string | null
           id?: string
@@ -1576,6 +1578,7 @@ export type Database = {
           failure_code?: string | null
           failure_reason?: string | null
           gateway_charge_id?: string | null
+          gateway_reference_code?: string
           gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
           gateway_transaction_id?: string | null
           id?: string
@@ -4713,6 +4716,7 @@ export type Database = {
       payment_update_method: {
         Args: {
           p_installment_hmac_payload?: Json
+          p_installment_number?: number
           p_installment_selection_hmac?: string
           p_new_client_card_token_id: string
           p_service_id: string

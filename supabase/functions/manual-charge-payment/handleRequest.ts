@@ -12,6 +12,7 @@ import type {
 } from "../_shared/payment/types.ts";
 import { extractClientIp } from "./extractClientIp.ts";
 import { buildPayoutRule } from "../_shared/payment/buildPayoutRule.ts";
+import { resolveChargeReferenceCode } from "../_shared/payment/chargeReferenceCode.ts";
 import { enqueueManualChargeNotifications } from "./enqueueNotifications.ts";
 import { resolveChargeOutcome } from "./resolveChargeOutcome.ts";
 import type {
@@ -233,7 +234,11 @@ export async function handleManualChargePaymentRequest(
   }
 
   const chargeInput: CreateChargeInput = {
-    referenceCode: schedule.contracted_service_id,
+    // Rotated UUID from payment_begin_manual_attempt (gateway_reference_code).
+    referenceCode: resolveChargeReferenceCode({
+      gatewayReferenceCode: schedule.gateway_reference_code,
+      contractedServiceId: schedule.contracted_service_id,
+    }),
     serviceTitle: schedule.service_request_title ?? undefined,
     amount: chargeAmount,
     paymentMethod: {

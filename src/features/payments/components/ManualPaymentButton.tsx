@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { isManualPaymentEligible } from "../types/paymentSchedule.types";
 import { usePaymentSchedule } from "../hooks/usePaymentSchedule";
 import { ManualPaymentFailureAlert } from "./ManualPaymentFailureAlert";
-import { ManualPaymentModal } from "./ManualPaymentModal";
+import { ManualPaymentDialog } from "./ManualPaymentDialog";
 
 export type ManualPaymentButtonProps = {
   scheduleState: string | null | undefined;
@@ -66,7 +66,7 @@ export function ManualPaymentRecovery({
         className="w-full rounded-pill sm:w-auto"
       />
       {schedule && context ? (
-        <ManualPaymentModal
+        <ManualPaymentDialog
           open={open}
           onOpenChange={setOpen}
           schedule={schedule}

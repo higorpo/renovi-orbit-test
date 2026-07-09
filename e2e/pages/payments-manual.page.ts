@@ -18,10 +18,35 @@ export class PaymentsManualPage {
     return this.page.getByRole("button", { name: "Efetuar Pagamento" });
   }
 
-  async openManualPaymentModal() {
+  async openManualPaymentDialog() {
     await this.manualPaymentButton.click();
     await expect(
       this.page.getByRole("heading", { name: "Efetuar pagamento" }),
+    ).toBeVisible({ timeout: 10_000 });
+  }
+
+  /** @deprecated Prefer openManualPaymentDialog */
+  async openManualPaymentModal() {
+    await this.openManualPaymentDialog();
+  }
+
+  async selectCardAndInstallments() {
+    await expect(this.page.getByText(/Escolha um cartão/i)).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await this.page.locator('label[for^="saved-card-"]').first().click();
+    await this.page.getByRole("button", { name: "Continuar" }).click();
+
+    await expect(this.page.getByText(/Escolha o parcelamento/i)).toBeVisible({
+      timeout: 10_000,
+    });
+
+    await this.page.locator('label[for^="installment-"]').first().click();
+    await this.page.getByRole("button", { name: "Continuar" }).click();
+
+    await expect(
+      this.page.getByRole("heading", { name: "Confirmar pagamento" }),
     ).toBeVisible({ timeout: 10_000 });
   }
 

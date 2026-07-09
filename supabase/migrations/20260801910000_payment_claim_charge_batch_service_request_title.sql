@@ -46,6 +46,7 @@ begin
       ps.max_attempts,
       ps.clearsale_session_id,
       ps.client_ip_address,
+      ps.gateway_reference_code,
       pga.netcred_company_id,
       public.payment_total_with_card_fees(
         ps.base_amount,
@@ -101,6 +102,7 @@ begin
       e.max_attempts,
       e.clearsale_session_id,
       e.client_ip_address,
+      e.gateway_reference_code,
       e.from_state,
       e.charge_amount
   )
@@ -287,6 +289,8 @@ begin
     state = 'PROCESSING',
     locked_until = now() + make_interval(mins => v_lease_minutes),
     manual_attempt_count = ps.manual_attempt_count + 1,
+    -- Fresh UUID so NetCred accepts a new chargeCreate after a prior REJECTED.
+    gateway_reference_code = gen_random_uuid(),
     clearsale_session_id = trim(p_clearsale_session_id),
     client_ip_address = nullif(trim(coalesce(p_client_ip_address, '')), ''),
     updated_at = now()
@@ -305,7 +309,8 @@ begin
     p_actor_id := coalesce(p_actor_id, p_client_id),
     p_metadata := jsonb_build_object(
       'clearsale_session_id', trim(p_clearsale_session_id),
-      'manual_attempt_count', v_schedule.manual_attempt_count
+      'manual_attempt_count', v_schedule.manual_attempt_count,
+      'gateway_reference_code', v_schedule.gateway_reference_code
     )
   );
 
@@ -350,6 +355,7 @@ begin
     'max_attempts', v_schedule.max_attempts,
     'clearsale_session_id', v_schedule.clearsale_session_id,
     'client_ip_address', v_schedule.client_ip_address,
+    'gateway_reference_code', v_schedule.gateway_reference_code,
     'charge_amount', public.payment_calculate_charge_amount(
       v_schedule.client_card_token_id,
       v_schedule.base_amount,

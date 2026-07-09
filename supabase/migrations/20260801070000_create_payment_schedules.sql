@@ -35,6 +35,9 @@ create table public.payment_schedules (
   needs_payment_method_update boolean not null default false,
   gateway_charge_id text,
   gateway_transaction_id text,
+  -- NetCred chargeCreate referenceCode (UUID). Starts as contracted_service_id;
+  -- manual retries rotate to a fresh UUID so REJECTED charges can be retried.
+  gateway_reference_code uuid not null,
   paid_at timestamptz,
   failed_at timestamptz,
   failed_permanently_at timestamptz,
@@ -50,6 +53,7 @@ create table public.payment_schedules (
   updated_at timestamptz not null default now(),
   constraint payment_schedules_idempotency_key_unique unique (idempotency_key),
   constraint payment_schedules_contracted_service_id_unique unique (contracted_service_id),
+  constraint payment_schedules_gateway_reference_code_unique unique (gateway_reference_code),
   constraint payment_schedules_idempotency_key_matches_service_check
     check (idempotency_key = contracted_service_id::text),
   constraint payment_schedules_payout_lte_base_check
@@ -76,6 +80,9 @@ comment on column public.payment_schedules.clearsale_session_id is
 
 comment on column public.payment_schedules.client_ip_address is
   'Client IP at accept/manual charge; service_role and client participant reads only.';
+
+comment on column public.payment_schedules.gateway_reference_code is
+  'NetCred chargeCreate referenceCode (UUID). Equals contracted_service_id initially; rotated on each manual retry.';
 
 -- automatic_attempt_count filter uses platform_constants.max_charge_attempts at runtime (not in index).
 create index payment_schedules_queue_claim_idx

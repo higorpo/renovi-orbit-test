@@ -26,6 +26,11 @@ export {
   PAYMENT_SCHEDULE_LIFECYCLE_QUERY_KEY,
 } from "./usePaymentScheduleLifecycle";
 export { useManualChargePayment } from "./useManualChargePayment";
+export { useManualPaymentDialog } from "./useManualPaymentDialog";
+export type {
+  ManualPaymentDialogView,
+  ManualPaymentDialogSelection,
+} from "./useManualPaymentDialog";
 export { useProcessRefund } from "./useProcessRefund";
 export type { ProcessRefundRequest } from "./useProcessRefund";
 export {

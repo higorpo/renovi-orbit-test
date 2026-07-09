@@ -8,7 +8,7 @@ import {
 import { SERVICES_LIST_QUERY_KEY } from "@/features/view-services";
 
 /**
- * Opens ManualPaymentModal from the client service card when payment failed permanently.
+ * Opens ManualPaymentDialog from the client service card when payment failed permanently.
  * Fetches schedule/context only after the user opens the modal.
  */
 export function useClientCardManualPayment(contractedServiceId: string | null) {

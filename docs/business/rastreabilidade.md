@@ -157,6 +157,10 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `docs/payment-system/design.md` | Design normativo (§3.13 views de histórico; §4.8 reembolso) |
 | `src/features/payments/utils/mapPaymentUserMessage.ts` | Mapeamento código → mensagem amigável pt-BR; nunca texto bruto do backend |
 | `src/features/payments/utils/manualPaymentErrors.ts` / `paymentApiErrors.ts` | Falhas de cobrança manual e RPC usam o mapper (por código) |
+| `src/features/payments/components/ManualPaymentDialog.tsx` + `hooks/useManualPaymentDialog.ts` | Dialog de recuperação (ShellDialog / `useMobileDialogViewport`); fluxo cartão → `InstallmentSelector` → confirmar |
+| `src/features/payments/api/cards.api.ts` (`updatePaymentMethod`) | Invoca RPC `payment_update_method` com token, HMAC e `p_installment_number` opcional |
+| `supabase/migrations/20260801210000_payment_update_method.sql` | RPC: `p_installment_number` opcional; estados `SCHEDULED`/`FAILED`/`FAILED_PERMANENT`; HMAC ao mudar bandeira/parcelas |
+| `supabase/functions/manual-charge-payment/` | Cobrança manual após atualização do método |
 | `src/features/payments/components/PaymentHistory/*` | UI histórico cliente/prestador em Minha conta |
 | `src/features/payments/utils/clientPaymentHistoryAmounts.ts` | Breakdown: original riscado, líquido, “Reembolsado: …” |
 | `src/features/payments/api/history.api.ts` | Leitura das views de histórico |

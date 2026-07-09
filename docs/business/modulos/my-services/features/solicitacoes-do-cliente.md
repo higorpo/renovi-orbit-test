@@ -108,7 +108,7 @@ Quando `contracted.status === PENDING_PAYMENT` na listagem (usa `contracted.paym
 
 - **Quando:** fase `in_progress` com `contracted.status === PENDING_PAYMENT` e `paymentScheduleState === FAILED_PERMANENT`.
 - **CTA primário:** label **“Ajustar pagamento”**, intent `adjust_payment`, ícone de cartão (`CreditCard`).
-- **Ao clicar:** abre o `ManualPaymentModal` (mesmo fluxo de pagamento manual do detalhe do serviço), via `useClientCardManualPayment`.
+- **Ao clicar:** abre o `ManualPaymentDialog` (mesmo fluxo de pagamento manual do detalhe do serviço: cartão → parcelas com taxas → confirmar), via `useClientCardManualPayment`.
 - **Secundário:** **“Ver detalhes”**.
 - **Prioridade do CTA:** esta ação tem prioridade sobre mensagem não lida no chat (não usa “Responder” / “Ver conversa com prestador” nesse caso). O destaque visual também prioriza o alerta de pagamento falhou (ver §7).
 

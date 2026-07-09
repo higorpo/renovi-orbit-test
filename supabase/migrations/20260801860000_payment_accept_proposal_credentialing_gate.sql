@@ -393,6 +393,7 @@ begin
     charge_scheduled_at,
     state,
     idempotency_key,
+    gateway_reference_code,
     clearsale_session_id,
     client_ip_address,
     max_attempts
@@ -409,6 +410,7 @@ begin
     v_charge_at,
     'SCHEDULED',
     v_service.id::text,
+    v_service.id,
     trim(p_clearsale_session_id),
     nullif(trim(coalesce(p_client_ip, '')), ''),
     public.platform_constant_int('max_charge_attempts', 3)::smallint

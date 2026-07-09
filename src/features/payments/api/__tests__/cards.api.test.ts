@@ -213,6 +213,7 @@ describe("updatePaymentMethod", () => {
       newPaymentTokenId: "tok-2",
       installmentSelectionHmac: "hmac-1",
       installmentHmacPayload: { proposal_id: "proposal-1" },
+      installmentNumber: 3,
     });
 
     expect(result.error).toBeNull();
@@ -222,6 +223,7 @@ describe("updatePaymentMethod", () => {
       p_new_client_card_token_id: "tok-2",
       p_installment_selection_hmac: "hmac-1",
       p_installment_hmac_payload: { proposal_id: "proposal-1" },
+      p_installment_number: 3,
     });
   });
 

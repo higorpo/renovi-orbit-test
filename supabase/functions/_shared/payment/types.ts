@@ -80,7 +80,10 @@ export type PayoutRuleInput = {
   ruleItems: PayoutRuleItem[];
 };
 
-/** referenceCode MUST be contracted_service_id (UUID string). */
+/**
+ * Gateway idempotency key.
+ * Cron: contracted_service_id. Manual retry after REJECTED: `{id}:m{n}`.
+ */
 export type CreateChargeInput = {
   referenceCode: string;
   amount: Decimal;
@@ -171,7 +174,7 @@ export type RefundTransactionResult = {
   error?: RefundError;
 };
 
-/** referenceCode MUST be contracted_service_id (UUID string). */
+/** referenceCode for getTransaction: usually plain contracted_service_id. */
 export type GetTransactionInput = {
   referenceCode: string;
   /** NetCred companyId scope for the transactions query (provider merchant). */

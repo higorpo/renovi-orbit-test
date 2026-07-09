@@ -33,8 +33,11 @@ export type {
 } from "./ManualPaymentButton";
 export { ManualPaymentFailureAlert } from "./ManualPaymentFailureAlert";
 export type { ManualPaymentFailureAlertProps } from "./ManualPaymentFailureAlert";
-export { ManualPaymentModal } from "./ManualPaymentModal";
-export type { ManualPaymentModalProps } from "./ManualPaymentModal";
+export { ManualPaymentDialog } from "./ManualPaymentDialog";
+export type { ManualPaymentDialogProps } from "./ManualPaymentDialog";
+/** @deprecated Prefer ManualPaymentDialog */
+export { ManualPaymentModal } from "./ManualPaymentDialog";
+export type { ManualPaymentModalProps } from "./ManualPaymentDialog";
 export { PaymentHistorySection } from "./PaymentHistory/PaymentHistorySection";
 export type {
   PaymentHistorySectionProps,

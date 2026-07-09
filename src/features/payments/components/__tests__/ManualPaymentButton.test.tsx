@@ -9,9 +9,12 @@ vi.mock("../../hooks/usePaymentSchedule", () => ({
   usePaymentSchedule: (...args: unknown[]) => mockUsePaymentSchedule(...args),
 }));
 
-vi.mock("../ManualPaymentModal", () => ({
+vi.mock("../ManualPaymentDialog", () => ({
+  ManualPaymentDialog: ({ open }: { open: boolean }) => (
+    open ? <div data-testid="manual-payment-dialog">Dialog</div> : null
+  ),
   ManualPaymentModal: ({ open }: { open: boolean }) => (
-    open ? <div data-testid="manual-payment-modal">Modal</div> : null
+    open ? <div data-testid="manual-payment-dialog">Dialog</div> : null
   ),
 }));
 
@@ -74,7 +77,7 @@ describe("ManualPaymentRecovery", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Ajustar pagamento/i }));
-    expect(screen.getByTestId("manual-payment-modal")).toBeInTheDocument();
+    expect(screen.getByTestId("manual-payment-dialog")).toBeInTheDocument();
     expect(screen.getByText("Pagamento falhou")).toBeInTheDocument();
     expect(
       screen.getByText(/cancelado automaticamente perto da data agendada/i),
@@ -110,7 +113,7 @@ describe("ManualPaymentRecovery", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Ajustar pagamento/i }));
-    expect(screen.queryByTestId("manual-payment-modal")).toBeNull();
+    expect(screen.queryByTestId("manual-payment-dialog")).toBeNull();
   });
 
   it("disables recovery button while schedule is loading", () => {

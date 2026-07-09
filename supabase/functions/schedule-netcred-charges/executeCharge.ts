@@ -1,3 +1,4 @@
+import { resolveChargeReferenceCode } from "../_shared/payment/chargeReferenceCode.ts";
 import type {
   CreateChargeInput,
   CreateChargeResult,
@@ -71,7 +72,10 @@ async function lookupExistingTransaction(
   schedule: CronChargeSchedule,
 ): Promise<GetTransactionResult | null> {
   return deps.getTransaction({
-    referenceCode: schedule.contracted_service_id,
+    referenceCode: resolveChargeReferenceCode({
+      gatewayReferenceCode: schedule.gateway_reference_code,
+      contractedServiceId: schedule.contracted_service_id,
+    }),
     companyId: resolveCompanyId(schedule),
   });
 }

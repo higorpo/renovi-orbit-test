@@ -74,13 +74,15 @@ test.describe("Payments manual recovery", () => {
 
     const manualPage = new PaymentsManualPage(page);
     await manualPage.goto();
-    await manualPage.openManualPaymentModal();
+    await manualPage.openManualPaymentDialog();
+    await manualPage.selectCardAndInstallments();
 
     await expect(manualPage.page.getByText(/•••• 0048/i)).toBeVisible({ timeout: 10_000 });
 
     await manualPage.confirmManualPayment();
     await manualPage.expectTerminalFailureState();
 
+    expect(mocks.captured.updateMethodRequests.length).toBe(1);
     expect(mocks.captured.manualChargeRequests.length).toBe(1);
   });
 });

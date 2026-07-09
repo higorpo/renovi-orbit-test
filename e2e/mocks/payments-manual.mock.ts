@@ -105,6 +105,7 @@ export async function installPaymentsManualMocks(
 
   const captured = {
     manualChargeRequests: [] as unknown[],
+    updateMethodRequests: [] as unknown[],
   };
 
   await page.route(/\/rest\/v1\/payment_schedules/, async (route) => {
@@ -160,7 +161,7 @@ export async function installPaymentsManualMocks(
     });
   });
 
-  await page.route(/\/rest\/v1\/client_card_tokens/, async (route) => {
+  await page.route(/\/rest\/v1\/client_card_tokens(_safe_v)?/, async (route) => {
     if (route.request().method() !== "GET") {
       await route.fallback();
       return;
@@ -178,10 +179,11 @@ export async function installPaymentsManualMocks(
       return;
     }
 
+    // Saved-card list for ManualPaymentDialog card step
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(null),
+      body: JSON.stringify([paymentTokenRow()]),
     });
   });
 
@@ -235,21 +237,58 @@ export async function installPaymentsManualMocks(
           status: 200,
           contentType: "application/json",
           body: JSON.stringify({
-            installment_options: [{
-              installment_number: 1,
-              applicable_rate_pct: 0,
-              installment_amount: 450,
-              total_with_fees: 450,
-            }],
+            installment_options: [
+              {
+                installment_number: 1,
+                applicable_rate_pct: 0,
+                installment_amount: 450,
+                total_with_fees: 450,
+              },
+              {
+                installment_number: 2,
+                applicable_rate_pct: 2.5,
+                installment_amount: 230.63,
+                total_with_fees: 461.25,
+              },
+            ],
             installment_selection_hmac: "installment-hmac-manual-e2e",
             installment_hmac_payload: {
               proposal_id: E2E_MANUAL_PROPOSAL_ID,
               service_id: E2E_MANUAL_SR_ID,
+              base_amount: 450,
               card_brand: "VISA",
-              installment_number: 1,
+              installment_options: [
+                {
+                  installment_number: 1,
+                  applicable_rate_pct: 0,
+                  installment_amount: 450,
+                  total_with_fees: 450,
+                },
+                {
+                  installment_number: 2,
+                  applicable_rate_pct: 2.5,
+                  installment_amount: 230.63,
+                  total_with_fees: 461.25,
+                },
+              ],
+              computed_at: new Date().toISOString(),
+              expires_at: new Date(Date.now() + 3600_000).toISOString(),
             },
             expires_at: new Date(Date.now() + 3600_000).toISOString(),
             computed_at: new Date().toISOString(),
+          }),
+        });
+        return;
+
+      case "payment_update_method":
+        captured.updateMethodRequests.push(route.request().postDataJSON());
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            schedule_id: E2E_PAYMENT_SCHEDULE_ID,
+            client_card_token_id: E2E_PAYMENT_TOKEN_ID,
+            installment_number: 1,
           }),
         });
         return;

@@ -23,6 +23,7 @@ const baseSchedule: ManualChargeSchedule = {
   max_attempts: 3,
   clearsale_session_id: null,
   client_ip_address: "189.0.0.1",
+  gateway_reference_code: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
 };
 
 function createDeps(overrides: Partial<ManualChargePaymentDeps> = {}): ManualChargePaymentDeps {
@@ -177,4 +178,39 @@ Deno.test("fresh clearsale_session_id is persisted before charge", async () => {
   assertEquals(response.status, 200);
   assertEquals(persistedSessionId, freshSessionId);
   assertEquals(chargeSessionId, freshSessionId);
+});
+
+Deno.test("manual charge uses gateway_reference_code from lease", async () => {
+  let referenceCode: string | undefined;
+  const rotatedReference = "11111111-2222-3333-4444-555555555555";
+
+  const response = await handleManualChargePaymentRequest(
+    authRequest({
+      schedule_id: "schedule-1",
+      clearsale_session_id: "fresh-clearsale-uuid",
+    }),
+    createDeps({
+      acquireLease: async () => ({
+        schedule: {
+          ...baseSchedule,
+          contracted_service_id: "be2fed77-cedd-4f34-bd07-14693e763298",
+          manual_attempt_count: 5,
+          gateway_reference_code: rotatedReference,
+          clearsale_session_id: "fresh-clearsale-uuid",
+        },
+      }),
+      createCharge: async (input: CreateChargeInput): Promise<CreateChargeResult> => {
+        referenceCode = input.referenceCode;
+        return {
+          success: true,
+          transactionState: "PAID",
+          chargeId: "417999",
+          transactionId: "tx-new",
+        };
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(referenceCode, rotatedReference);
 });

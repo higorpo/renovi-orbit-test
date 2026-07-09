@@ -69,7 +69,7 @@ Quando o serviço contratado está em **`PENDING_PAYMENT`**, o destaque do card 
 
 - **Fallback** (sem data utilizável, nos casos com data na descrição): detalhe curto “Pagamento ainda pendente.”
 - **Prioridade do destaque:** em `FAILED_PERMANENT`, o alerta de pagamento falhou prevalece sobre mensagem não lida. Nos demais casos de `PENDING_PAYMENT`, unread ainda sobrescreve o destaque (agenda / pagamento vão para info secundária).
-- **CTA do card do cliente:** com `PENDING_PAYMENT` + `paymentScheduleState === FAILED_PERMANENT`, o botão primário é **“Ajustar pagamento”** (`adjust_payment`, ícone de cartão) e abre o `ManualPaymentModal` (mesmo fluxo do detalhe); secundário **“Ver detalhes”**. Esse CTA tem prioridade sobre “Responder” / “Ver conversa com prestador” mesmo se houver mensagem não lida.
+- **CTA do card do cliente:** com `PENDING_PAYMENT` + `paymentScheduleState === FAILED_PERMANENT`, o botão primário é **“Ajustar pagamento”** (`adjust_payment`, ícone de cartão) e abre o `ManualPaymentDialog` (mesmo fluxo do detalhe: cartão → parcelas → confirmar → `payment_update_method` + `manual-charge-payment`); secundário **“Ver detalhes”**. Esse CTA tem prioridade sobre “Responder” / “Ver conversa com prestador” mesmo se houver mensagem não lida.
 - **Antes:** título era o highlight de agenda (“Agendado para…”) + detalhe curto “Aguardando pagamento” / “Aguardando pagamento do cliente” + ícone de calendário.
 
 ## 9. Card do prestador (`ProviderServiceListCard`)

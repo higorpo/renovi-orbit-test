@@ -159,11 +159,16 @@ revoke all on function public.payment_assert_installment_hmac_context(
   text, jsonb, uuid, uuid, smallint, numeric, text
 ) from authenticated;
 
+-- Replace 4-arg overload with 5-arg signature (installment_number optional).
+drop function if exists public.payment_update_method(uuid, uuid, text, jsonb);
+drop function if exists public.payment_update_method(uuid, uuid, text, jsonb, smallint);
+
 create or replace function public.payment_update_method(
   p_service_id uuid,
   p_new_client_card_token_id uuid,
   p_installment_selection_hmac text default null,
-  p_installment_hmac_payload jsonb default null
+  p_installment_hmac_payload jsonb default null,
+  p_installment_number smallint default null
 )
 returns jsonb
 language plpgsql
@@ -176,6 +181,10 @@ declare
   v_new_token public.client_card_tokens%rowtype;
   v_old_brand text;
   v_new_brand text;
+  v_brand_changed boolean;
+  v_installment_number smallint;
+  v_installment_changed boolean;
+  v_requires_hmac boolean;
 begin
   if auth.uid() is null then
     raise exception 'Authentication required for payment_update_method'
@@ -194,7 +203,7 @@ begin
   where ps.contracted_service_id = p_service_id
     and ps.client_id = auth.uid()
     and cs.client_id = auth.uid()
-    and ps.state in ('SCHEDULED', 'FAILED')
+    and ps.state in ('SCHEDULED', 'FAILED', 'FAILED_PERMANENT')
   for update of ps;
 
   if not found then
@@ -232,13 +241,19 @@ begin
     where cct.id = v_schedule.client_card_token_id;
   end if;
 
-  if coalesce(v_old_brand, '') <> v_new_brand then
+  v_brand_changed := coalesce(v_old_brand, '') <> v_new_brand;
+  v_installment_number := coalesce(p_installment_number, v_schedule.installment_number);
+  v_installment_changed := v_installment_number is distinct from v_schedule.installment_number;
+  -- Always require HMAC when the client explicitly selects installments (manual recovery flow).
+  v_requires_hmac := v_brand_changed or v_installment_changed or p_installment_number is not null;
+
+  if v_requires_hmac then
     perform public.payment_assert_installment_hmac_context(
       p_installment_selection_hmac,
       p_installment_hmac_payload,
       v_service.accepted_proposal_id,
       v_service.service_request_id,
-      v_schedule.installment_number,
+      v_installment_number,
       v_schedule.base_amount,
       v_new_brand
     );
@@ -247,6 +262,7 @@ begin
   update public.payment_schedules ps
   set
     client_card_token_id = p_new_client_card_token_id,
+    installment_number = v_installment_number,
     needs_payment_method_update = false,
     updated_at = now()
   where ps.id = v_schedule.id;
@@ -263,22 +279,25 @@ begin
       'old_client_card_token_id', v_schedule.client_card_token_id,
       'new_client_card_token_id', p_new_client_card_token_id,
       'old_brand', v_old_brand,
-      'new_brand', v_new_brand
+      'new_brand', v_new_brand,
+      'old_installment_number', v_schedule.installment_number,
+      'new_installment_number', v_installment_number
     )
   );
 
   return jsonb_build_object(
     'schedule_id', v_schedule.id,
-    'client_card_token_id', p_new_client_card_token_id
+    'client_card_token_id', p_new_client_card_token_id,
+    'installment_number', v_installment_number
   );
 end;
 $$;
 
-comment on function public.payment_update_method(uuid, uuid, text, jsonb) is
-  'Updates client_card_token_id on eligible schedules; revalidates installment HMAC when card brand changes.';
+comment on function public.payment_update_method(uuid, uuid, text, jsonb, smallint) is
+  'Updates card token and optional installment_number on eligible schedules; HMAC required when brand or installments change.';
 
-revoke all on function public.payment_update_method(uuid, uuid, text, jsonb) from public;
-revoke all on function public.payment_update_method(uuid, uuid, text, jsonb) from anon;
-revoke all on function public.payment_update_method(uuid, uuid, text, jsonb) from service_role;
+revoke all on function public.payment_update_method(uuid, uuid, text, jsonb, smallint) from public;
+revoke all on function public.payment_update_method(uuid, uuid, text, jsonb, smallint) from anon;
+revoke all on function public.payment_update_method(uuid, uuid, text, jsonb, smallint) from service_role;
 
-grant execute on function public.payment_update_method(uuid, uuid, text, jsonb) to authenticated;
+grant execute on function public.payment_update_method(uuid, uuid, text, jsonb, smallint) to authenticated;

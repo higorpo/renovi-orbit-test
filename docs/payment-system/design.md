@@ -1235,21 +1235,21 @@ sequenceDiagram
     participant UI as React App
     participant PG as PostgreSQL RPC
 
-    UI->>PG: payment_update_method(service_id, new_client_card_token_id, installment_selection_hmac?)
-    PG->>PG: SELECT payment_schedules … FOR UPDATE — state IN ('SCHEDULED','FAILED')
+    UI->>PG: payment_update_method(service_id, new_client_card_token_id, installment_hmac?, installment_number?)
+    PG->>PG: SELECT payment_schedules … FOR UPDATE — state IN ('SCHEDULED','FAILED','FAILED_PERMANENT')
     alt schedule not found or state not eligible
         PG-->>UI: RAISE INVALID_SCHEDULE_STATE
     else new token state != ACTIVE
         PG-->>UI: RAISE PAYMENT_TOKEN_INACTIVE
-    else card brand CHANGED
+    else brand changed OR installment_number provided/changed
         alt installment_selection_hmac missing or invalid
             PG-->>UI: RAISE INSTALLMENT_HMAC_REQUIRED
             Note over UI: Re-call payment_calculate_installment_options with new card_brand
         else HMAC valid
-            PG->>PG: BEGIN TX — UPDATE schedule, INSERT audit_log
+            PG->>PG: BEGIN TX — UPDATE card + installment_number, INSERT audit_log
             PG->>PG: COMMIT TX
         end
-    else same card brand
+    else same card brand and installment unchanged (no installment param)
         PG->>PG: BEGIN TX — UPDATE client_card_token_id only, INSERT audit_log
         PG->>PG: COMMIT TX
     end
@@ -1259,7 +1259,8 @@ sequenceDiagram
 
 **Invariants:**
 - `base_amount`, `provider_payout`, `commission_rate_pct`, and `charge_scheduled_at` MUST NOT change.
-- If brand changes, installment HMAC MUST be revalidated; `installment_number` MUST remain the same.
+- When brand changes or `p_installment_number` is provided, installment HMAC MUST be revalidated for the selected installment.
+- Manual recovery UI always re-selects card + installments and passes HMAC + `p_installment_number`.
 - `payment_audit_log` MUST record `PAYMENT_METHOD_UPDATED` in the same TX as the update.
 - `upcoming_charge_notified_at` is NOT reset — the client was already notified for the scheduled date.
 
@@ -1655,12 +1656,14 @@ sequenceDiagram
     EF->>PG: payment_begin_manual_attempt(schedule_id, clearsale_session_id, client_ip)
     Note over PG: FOR UPDATE; state IN (FAILED, FAILED_PERMANENT); T-12h gate
     PG-->>EF: leased schedule + charge_amount
-    EF->>NC: chargeCreate (identical payload to cron flow)
+    EF->>NC: chargeCreate (referenceCode = gateway_reference_code UUID)
     EF->>PG: payment_commit_charge_outcome(…)
     EF->>PG: payment_enqueue_notifications(…)
 ```
 
 **Lease acquisition and T-12h gate are RPC;** EF only calls NetCred and maps the response.
+
+**referenceCode for manual retries:** NetCred enforces uniqueness on `referenceCode` and expects a **UUID**. After a terminal `REJECTED` charge for `contracted_service_id`, a new `chargeCreate` with the same code only reconciles the old rejection (same `chargeId`) — card swaps would never create a new charge. On each manual lease, `payment_begin_manual_attempt` rotates `payment_schedules.gateway_reference_code` to `gen_random_uuid()`. Webhooks resolve the schedule via `gateway_reference_code` (fallback: `contracted_service_id` for legacy rows). Cron/automatic charges keep the initial `gateway_reference_code = contracted_service_id`.
 
 **ClearSale refresh (Req 31):** Manual payment UI MUST initialize ClearSale SDK with a FRESH UUID on the payment confirmation screen. The `manual-charge-payment` EF updates `clearsale_session_id` before calling `chargeCreate`, so the manual charge carries a current device fingerprint.
 
@@ -1887,7 +1890,7 @@ Every new `payment_*` RPC MUST ship with explicit **`REVOKE` / `GRANT EXECUTE`**
 | `payment_get_checkout_step_requirements()` | `auth.uid()` | N/A (read) | Returns `needs_cpf`, `needs_phone`, `needs_card` flags |
 | `payment_calculate_installment_options(proposal_id, service_id, card_brand)` | `auth.uid()` | N/A (read) | Fee table + HMAC signature (Vault) |
 | `accept_proposal(…)` | `auth.uid()` | `p_idempotency_key` + `UNIQUE(idempotency_key)` | Payment evolution: schedule + audit atomically (**existing RPC**) |
-| `payment_update_method(service_id, client_card_token_id, hmac?)` | `auth.uid()` | `FOR UPDATE` on schedule | Post-acceptance card swap |
+| `payment_update_method(service_id, client_card_token_id, hmac?, installment_number?)` | `auth.uid()` | `FOR UPDATE` on schedule | Post-acceptance card/installment update (manual recovery) |
 | `payment_mark_service_executed(service_id)` | provider scope | status guard | EXECUTED transition |
 | `payment_submit_provider_kyc(…)` | `auth.uid()` | per provider | KYC persist + MMD enqueue |
 | `payment_revoke_client_card_token(token_id)` | `auth.uid()` | schedule link check | REVOKED state |
@@ -2567,7 +2570,7 @@ RPC claim/begin → EF external I/O → RPC commit → RPC enqueue notifications
 | Checkout stepper | `components/CheckoutStepper/` |
 | ClearSale SDK injection | `components/CheckoutStepper/CardStep.tsx` |
 | Saved card management UI | `components/SavedCards/` |
-| Manual payment recovery UI | `components/ManualPaymentButton.tsx`, `ManualPaymentModal.tsx` |
+| Manual payment recovery UI | `components/ManualPaymentButton.tsx`, `ManualPaymentDialog.tsx` |
 | Provider KYC blocking UI | `components/ProviderKycGate.tsx`, `ProviderKycForm.tsx` |
 | Payment history UI | `components/PaymentHistory/` |
 | Card tokenization (PCI invoke) | `api/cards.api.ts` → `invokePaymentEdgeFunction('tokenize-payment-card')` |

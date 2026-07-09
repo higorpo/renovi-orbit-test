@@ -10,6 +10,7 @@ import type {
   GetTransactionResult,
   PaymentProvider,
 } from "../_shared/payment/types.ts";
+import { resolveChargeReferenceCode } from "../_shared/payment/chargeReferenceCode.ts";
 import { buildPayoutRule } from "../_shared/payment/buildPayoutRule.ts";
 import {
   buildChargeAttemptCompletedFields,
@@ -270,7 +271,10 @@ export async function processSchedule(
   );
 
   const chargeInput: CreateChargeInput = {
-    referenceCode: schedule.contracted_service_id,
+    referenceCode: resolveChargeReferenceCode({
+      gatewayReferenceCode: schedule.gateway_reference_code,
+      contractedServiceId: schedule.contracted_service_id,
+    }),
     serviceTitle: schedule.service_request_title ?? undefined,
     amount: chargeAmount,
     paymentMethod: {

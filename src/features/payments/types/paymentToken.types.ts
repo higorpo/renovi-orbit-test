@@ -35,6 +35,9 @@ export type InstallmentOptionsResponse = {
 export type SavedCardSelection = {
   paymentTokenId: string;
   cardBrand: string;
+  cardNumberMasked?: string;
+  expiryMonth?: number;
+  expiryYear?: number;
 };
 
 export type InstallmentSelection = {

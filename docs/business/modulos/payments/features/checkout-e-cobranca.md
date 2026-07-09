@@ -31,10 +31,25 @@ Histórico na conta e regras de exibição de reembolso: [historico-e-reembolso.
 - Prestador submete dados bancários/documentos (`payment_submit_provider_kyc`).
 - Onboarding NetCred detectado por cron; sem KYC ativo, cobrança não inclui o prestador.
 
-## Cobrança manual
+## Cobrança manual (recuperação)
 
-- Cliente pode disparar tentativa manual (`manual-charge-payment`) quando elegível (ex.: falha permanente, dentro da janela T-12h).
-- No **detalhe do serviço**, quando o schedule está em `FAILED` ou `FAILED_PERMANENT`, a seção “Serviço contratado” exibe alerta **“Pagamento falhou”** (ação necessária para evitar cancelamento automático perto da data) e o botão **“Ajustar pagamento”** (`ManualPaymentRecovery` / `ManualPaymentFailureAlert`).
+- Cliente pode disparar tentativa manual quando o schedule está em `FAILED` ou `FAILED_PERMANENT` (elegibilidade de UI) e dentro das regras da Edge `manual-charge-payment` (ex.: janela T-12h).
+- No **detalhe do serviço**, a seção “Serviço contratado” exibe alerta **“Pagamento falhou”** (`ManualPaymentFailureAlert`) e o botão **“Ajustar pagamento”** (`ManualPaymentButton` / `ManualPaymentRecovery`).
+- No **card de Meus serviços** (cliente), o mesmo dialog abre via CTA **“Ajustar pagamento”** quando `PENDING_PAYMENT` + `FAILED_PERMANENT` (ver [solicitacoes-do-cliente](../../my-services/features/solicitacoes-do-cliente.md)).
+
+### Dialog `ManualPaymentDialog`
+
+Componente canônico: `ManualPaymentDialog` (`ShellDialog` + `useMobileDialogViewport` — full-screen no mobile, footer sticky acima do teclado). Alias deprecado `ManualPaymentModal` ainda pode existir nos exports da feature.
+
+Fluxo na UI (views do hook `useManualPaymentDialog`):
+
+1. **Cartão** — selecionar cartão salvo ou cadastrar novo (mesmo padrão do checkout: `SavedCardSelector` / formulário de cartão + ClearSale).
+2. **Parcelas** — escolher parcelamento com taxas via `InstallmentSelector` (mesmo seletor do aceite de proposta), com HMAC da opção.
+3. **Confirmar** — revisar cartão e parcelas; ao confirmar:
+   - RPC `payment_update_method` com novo token de cartão, `p_installment_number` e HMAC da seleção;
+   - em seguida Edge Function `manual-charge-payment` (sessão ClearSale fresca).
+
+A RPC `payment_update_method` aceita `p_installment_number` opcional, permite schedules em `SCHEDULED` / `FAILED` / `FAILED_PERMANENT`, e pode atualizar `installment_number` com validação HMAC quando a bandeira muda, o número de parcelas muda ou o cliente envia parcelas explicitamente.
 
 ## Mensagens de erro na UI (pt-BR)
 
@@ -42,9 +57,9 @@ Nos fluxos de **checkout**, **cartão** (tokenizar, atualizar método, remover c
 
 - Textos desconhecidos ou texto bruto do backend **não** são mostrados ao usuário; cai em mensagem genérica de retry.
 - Em falha de cobrança manual, a UI usa o **código** de falha (`failureCode`), não o `failureReason` textual do backend.
-- Superfícies cobertas: stepper de checkout (`CardForm`), modal de cobrança manual, lista de cartões salvos (também em Minha conta) e APIs/hooks de cartão e cobrança da feature `payments`.
+- Superfícies cobertas: stepper de checkout (`CardForm`), dialog de cobrança manual (`ManualPaymentDialog`), lista de cartões salvos (também em Minha conta) e APIs/hooks de cartão e cobrança da feature `payments`.
 
-Evidência: `mapPaymentUserMessage.ts`, `manualPaymentErrors.ts`, `paymentApiErrors.ts`; APIs `cards.api.ts`, `charges.api.ts`, `paymentApiClient.ts`; componentes `ManualPaymentModal`, `CardForm`, `SavedCardsList`.
+Evidência: `mapPaymentUserMessage.ts`, `manualPaymentErrors.ts`, `paymentApiErrors.ts`; APIs `cards.api.ts`, `charges.api.ts`, `paymentApiClient.ts`; componentes `ManualPaymentDialog`, `CardForm`, `SavedCardsList`, `InstallmentSelector`.
 
 ## Notificações
 

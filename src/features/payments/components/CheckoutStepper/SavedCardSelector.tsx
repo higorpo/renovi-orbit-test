@@ -39,6 +39,7 @@ export function SavedCardSelector({
     onSelect({
       paymentTokenId: result.paymentTokenId,
       cardBrand: result.cardBrand,
+      cardNumberMasked: result.cardNumberMasked,
     });
   };
 
@@ -121,6 +122,9 @@ export function SavedCardSelector({
             onSelect({
               paymentTokenId: token.id,
               cardBrand: token.card_brand,
+              cardNumberMasked: token.card_number_masked,
+              expiryMonth: token.expiry_month,
+              expiryYear: token.expiry_year,
             });
           }}
         >

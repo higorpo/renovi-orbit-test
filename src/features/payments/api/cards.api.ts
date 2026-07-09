@@ -313,10 +313,11 @@ export type UpdatePaymentMethodRequest = {
   newPaymentTokenId: string;
   installmentSelectionHmac?: string;
   installmentHmacPayload?: InstallmentHmacPayload;
+  installmentNumber?: number;
 };
 
 export type UpdatePaymentMethodResult = {
-  data: { scheduleId: string } | null;
+  data: { scheduleId: string; installmentNumber?: number } | null;
   error: string | null;
   errorCode?: string;
 };
@@ -325,7 +326,9 @@ function isUpdatePaymentMethodPayload(value: unknown): value is Record<string, u
   return value !== null && typeof value === "object";
 }
 
-function parseUpdatePaymentMethodResponse(data: unknown): { scheduleId: string } | null {
+function parseUpdatePaymentMethodResponse(
+  data: unknown,
+): { scheduleId: string; installmentNumber?: number } | null {
   if (!isUpdatePaymentMethodPayload(data)) {
     return null;
   }
@@ -335,7 +338,11 @@ function parseUpdatePaymentMethodResponse(data: unknown): { scheduleId: string }
     return null;
   }
 
-  return { scheduleId };
+  const installmentNumber = data.installment_number;
+  return {
+    scheduleId,
+    ...(typeof installmentNumber === "number" ? { installmentNumber } : {}),
+  };
 }
 
 export async function updatePaymentMethod(
@@ -351,6 +358,9 @@ export async function updatePaymentMethod(
             p_installment_selection_hmac: request.installmentSelectionHmac,
             p_installment_hmac_payload: request.installmentHmacPayload,
           }
+        : {}),
+      ...(request.installmentNumber != null
+        ? { p_installment_number: request.installmentNumber }
         : {}),
     },
     isUpdatePaymentMethodPayload,

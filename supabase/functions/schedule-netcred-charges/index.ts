@@ -62,6 +62,9 @@ function parseClaimedSchedules(data: unknown): CronChargeSchedule[] {
       client_ip_address: schedule.client_ip_address
         ? String(schedule.client_ip_address)
         : null,
+      gateway_reference_code: schedule.gateway_reference_code
+        ? String(schedule.gateway_reference_code)
+        : null,
       service_request_id: schedule.service_request_id
         ? String(schedule.service_request_id)
         : null,

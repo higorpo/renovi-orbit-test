@@ -21,6 +21,7 @@ export type ManualChargeSchedule = {
   max_attempts: number;
   clearsale_session_id: string | null;
   client_ip_address: string | null;
+  gateway_reference_code: string | null;
 };
 
 export type PaymentTokenRecord = {

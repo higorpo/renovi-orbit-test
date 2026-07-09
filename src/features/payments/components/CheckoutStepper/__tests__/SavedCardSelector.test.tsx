@@ -24,7 +24,11 @@ vi.mock("../CardForm", () => ({
         type="button"
         data-testid="mock-card-form"
         onClick={() =>
-          onSuccess({ paymentTokenId: "new-token", cardBrand: "VISA" })
+          onSuccess({
+            paymentTokenId: "new-token",
+            cardBrand: "VISA",
+            cardNumberMasked: "497010XXXXXX0048",
+          })
         }
       >
         Tokenizar
@@ -104,6 +108,9 @@ describe("SavedCardSelector", () => {
       expect(onSelect).toHaveBeenCalledWith({
         paymentTokenId: "token-1",
         cardBrand: "VISA",
+        cardNumberMasked: "•••• 4242",
+        expiryMonth: 12,
+        expiryYear: 2030,
       });
     });
   });
@@ -141,6 +148,7 @@ describe("SavedCardSelector", () => {
       expect(onSelect).toHaveBeenCalledWith({
         paymentTokenId: "new-token",
         cardBrand: "VISA",
+        cardNumberMasked: "497010XXXXXX0048",
       });
     });
   });
