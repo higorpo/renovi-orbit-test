@@ -12,8 +12,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { Label } from "@/components/ui/label";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { ShellDialogContent } from "@/components/ui/shell-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useMobileDialogViewport } from "@/hooks/useMobileDialogViewport";
@@ -99,7 +105,7 @@ export function RequestRescheduleDialog({
                 name="note"
                 render={({ field }) => (
                   <FormItem>
-                    <Label htmlFor="reschedule-note">Observação (opcional)</Label>
+                    <FormLabel className="font-medium">Observação (opcional)</FormLabel>
                     <FormControl>
                       <Textarea
                         id="reschedule-note"
@@ -127,7 +133,7 @@ export function RequestRescheduleDialog({
                 onClick={() => onOpenChange(false)}
                 disabled={requestReschedule.isPending}
               >
-                Voltar
+                Cancelar
               </Button>
               <Button
                 type="submit"

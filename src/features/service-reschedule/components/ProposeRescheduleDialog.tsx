@@ -12,9 +12,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ShellDialogContent } from "@/components/ui/shell-dialog";
 import { getInclusiveDayRangeHint } from "@/features/negotiation-proposals";
 import { useMobileDialogViewport } from "@/hooks/useMobileDialogViewport";
@@ -166,9 +172,9 @@ export function ProposeRescheduleDialog({
                     name="durationValueInput"
                     render={({ field }) => (
                       <FormItem>
-                        <Label htmlFor="reschedule-duration-value">
+                        <FormLabel className="font-medium">
                           Tempo estimado para executar
-                        </Label>
+                        </FormLabel>
                         <FormControl>
                           <Input
                             id="reschedule-duration-value"
@@ -191,7 +197,7 @@ export function ProposeRescheduleDialog({
                     name="durationUnit"
                     render={({ field }) => (
                       <FormItem>
-                        <Label htmlFor="reschedule-duration-unit">Unidade</Label>
+                        <FormLabel className="font-medium">Unidade</FormLabel>
                         <FormControl>
                           <select
                             id="reschedule-duration-unit"
@@ -219,9 +225,9 @@ export function ProposeRescheduleDialog({
                     name="startDate"
                     render={({ field }) => (
                       <FormItem>
-                        <Label htmlFor="reschedule-start-date">
+                        <FormLabel className="font-medium">
                           {showEndDate ? "Data de início" : "Data de execução"}
-                        </Label>
+                        </FormLabel>
                         <FormControl>
                           <Input
                             id="reschedule-start-date"
@@ -242,7 +248,7 @@ export function ProposeRescheduleDialog({
                       name="endDate"
                       render={({ field }) => (
                         <FormItem>
-                          <Label htmlFor="reschedule-end-date">Data de fim</Label>
+                          <FormLabel className="font-medium">Data de fim</FormLabel>
                           <FormControl>
                             <Input
                               id="reschedule-end-date"
@@ -263,7 +269,7 @@ export function ProposeRescheduleDialog({
                     name="shift"
                     render={({ field }) => (
                       <FormItem>
-                        <Label htmlFor="reschedule-shift">Turno</Label>
+                        <FormLabel className="font-medium">Turno</FormLabel>
                         <FormControl>
                           <select
                             id="reschedule-shift"
@@ -302,7 +308,7 @@ export function ProposeRescheduleDialog({
                   onClick={() => onOpenChange(false)}
                   disabled={proposeReschedule.isPending}
                 >
-                  Voltar
+                  Cancelar
                 </Button>
                 <Button
                   type="submit"
