@@ -4,7 +4,7 @@ begin;
 
 \ir fixtures/seed_service_reschedule.inc
 
-select plan(21);
+select plan(22);
 
 do $seed$
 declare
@@ -174,16 +174,24 @@ select throws_ok(
   'request RPC rejects terminal contracted service'
 );
 
+select ok(
+  (
+    public.cns_service_reschedule_snapshot_for_viewer(
+      current_setting('test.rpc.pending_service_id')::uuid,
+      current_setting('test.rpc.provider_id')::uuid
+    )->>'can_provider_request_reschedule'
+  )::boolean,
+  'provider can initiate reschedule for pending-payment service'
+);
+
 select pg_temp.service_reschedule_set_auth(current_setting('test.rpc.provider_id')::uuid);
 
-select throws_ok(
+select lives_ok(
   format(
     $$ select public.cns_request_service_reschedule(%L::uuid, gen_random_uuid(), null) $$,
     current_setting('test.rpc.pending_service_id')
   ),
-  'P0001',
-  'PROVIDER_RESCHEDULE_REQUIRES_CONFIRMED',
-  'provider request RPC requires confirmed service'
+  'provider request RPC allows pending-payment service'
 );
 
 select pg_temp.service_reschedule_set_auth(current_setting('test.rpc.client_id')::uuid);
