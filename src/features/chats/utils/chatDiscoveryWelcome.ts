@@ -29,6 +29,6 @@ export function getChatDiscoveryWelcomeContent(
   return {
     title: "Negocie com o prestador",
     body:
-      "Use esta conversa para tirar dúvidas, combinar detalhes do serviço e analisar propostas. Quando receber uma proposta, você pode aceitar, pedir revisão ou recusar pelo card na conversa. As mensagens são monitoradas pela nossa equipe.",
+      "Use esta conversa para tirar dúvidas, combinar detalhes do serviço e analisar propostas. Quando receber uma proposta, você pode aceitar, pedir revisão ou recusar na própria conversa. As mensagens são monitoradas pela nossa equipe.",
   };
 }
