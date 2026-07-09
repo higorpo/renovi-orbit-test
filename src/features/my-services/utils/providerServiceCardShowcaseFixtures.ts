@@ -351,8 +351,9 @@ export function buildProviderServiceCardShowcaseVariants(
     },
     {
       id: "in-progress-payment",
-      label: "Aguardando pagamento",
-      description: "Serviço agendado com contrato em PENDING_PAYMENT.",
+      label: "Aguardando pagamento do cliente",
+      description:
+        "Contrato em PENDING_PAYMENT: título com “do cliente”, data do serviço e ícone de cartão.",
       group: "Em andamento",
       model: baseModel({
         id: "showcase-payment",

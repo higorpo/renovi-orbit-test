@@ -71,6 +71,7 @@ export function buildClientServiceCardShowcaseVariants(
   now = new Date(),
 ): ClientServiceCardShowcaseVariant[] {
   const today = toDateOnly(now);
+  const inSevenDays = toDateOnly(addDays(now, 7));
 
   return [
     {
@@ -168,6 +169,49 @@ export function buildClientServiceCardShowcaseVariants(
           provider: { id: "prov-maria", displayName: "Maria Instalações", profileImagePath: null },
           chatId: null,
           updatedAt: now.toISOString(),
+        },
+      }),
+    },
+    {
+      id: "in-progress-payment",
+      label: "Aguardando pagamento",
+      description:
+        "Contrato em PENDING_PAYMENT: título de pagamento pendente, data do serviço e ícone de cartão.",
+      group: "Em andamento",
+      model: baseModel({
+        id: "client-in-progress-payment",
+        listPhase: "in_progress",
+        statusTabId: "in_progress",
+        contractedServiceId: "cs-payment",
+        counterpartyName: "João Eletricista",
+        counterparty: {
+          id: "prov-joao",
+          displayName: "João Eletricista",
+          profileImagePath: null,
+        },
+        contracted: {
+          id: "cs-payment",
+          status: "PENDING_PAYMENT",
+          agreedSlot: null,
+          durationUnit: "hours",
+          durationValue: 5,
+          scheduledStartDate: inSevenDays,
+          scheduledEndDate: null,
+          scheduledShift: "morning",
+          provider: {
+            id: "prov-joao",
+            displayName: "João Eletricista",
+            profileImagePath: null,
+          },
+          chatId: "chat-payment",
+          updatedAt: now.toISOString(),
+        },
+        chatSummary: {
+          id: "chat-payment",
+          isUnread: false,
+          lastInteractionAt: addDays(now, -2).toISOString(),
+          lastMessagePreview: null,
+          providerDisplayName: "João Eletricista",
         },
       }),
     },
