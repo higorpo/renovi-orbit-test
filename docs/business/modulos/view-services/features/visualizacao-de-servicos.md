@@ -89,7 +89,7 @@ No detalhe (`ServiceDetailPage`), quando `listPhase === "cancelled"` e o viewer 
 - `listPhase` — fase de produto
 - `request` — título, descrição, fotos, endereço, `platform_service`, …
 - `negotiation` — `proposalCount`, `hasPendingProposal`
-- `contracted` — dados do contrato + provider (quando existir)
+- `contracted` — dados do contrato + provider (quando existir); inclui `payment_schedule_state` (frontend: `paymentScheduleState`) via `project_service_row`
 - `counterparty` — cliente vê prestador; prestador vê cliente mascarado
 
 ---

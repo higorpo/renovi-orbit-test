@@ -12,12 +12,19 @@ import { formatDatePtBr } from "@/lib/utils/formatDate";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
 import { getPendingPaymentHighlightContent } from "./pendingPaymentHighlight";
 
-export type ClientCardActionIntent = "details" | "budgets" | "cancel" | "messages" | "chat";
+export type ClientCardActionIntent =
+  | "details"
+  | "budgets"
+  | "cancel"
+  | "messages"
+  | "chat"
+  | "adjust_payment";
 
 export type ClientCardHighlightEmphasis =
   | "default"
   | "attention"
   | "urgent"
+  | "error"
   | "cancelled";
 
 export type ClientCardHighlightIcon =
@@ -266,6 +273,26 @@ function buildInProgressPresentation(
     pushSecondaryInfo(secondaryInfo, { icon: "provider", text: `Profissional: ${professional}` });
   }
 
+  if (paymentPending && contracted) {
+    const pendingPayment = getPendingPaymentHighlightContent(contracted, "client");
+    const isPermanentFailure = contracted.paymentScheduleState === "FAILED_PERMANENT";
+
+    // Permanent payment failure outranks unread chat — client must fix payment first.
+    if (isPermanentFailure || unreadCount === 0) {
+      return {
+        showProviderHeader: true,
+        isTodayService,
+        highlight: {
+          icon: "payment_pending",
+          title: pendingPayment.title,
+          detail: pendingPayment.detail,
+          emphasis: pendingPayment.emphasis,
+        },
+        secondaryInfo,
+      };
+    }
+  }
+
   if (unreadCount > 0) {
     pushSecondaryInfo(secondaryInfo, {
       icon: "date",
@@ -276,21 +303,6 @@ function buildInProgressPresentation(
       showProviderHeader: true,
       isTodayService,
       highlight: buildUnreadHighlight(model),
-      secondaryInfo,
-    };
-  }
-
-  if (paymentPending && contracted) {
-    const pendingPayment = getPendingPaymentHighlightContent(contracted, "client");
-    return {
-      showProviderHeader: true,
-      isTodayService,
-      highlight: {
-        icon: "payment_pending",
-        title: pendingPayment.title,
-        detail: pendingPayment.detail,
-        emphasis: "attention",
-      },
       secondaryInfo,
     };
   }
@@ -441,6 +453,17 @@ function buildNegotiationActions(
 function buildInProgressActions(
   model: ServiceModel,
 ): Pick<ClientServiceCardPresentation, "primaryAction" | "secondaryAction"> {
+  const needsManualPayment =
+    model.contracted?.status === "PENDING_PAYMENT" &&
+    model.contracted.paymentScheduleState === "FAILED_PERMANENT";
+
+  if (needsManualPayment) {
+    return {
+      primaryAction: { label: "Ajustar pagamento", intent: "adjust_payment" },
+      secondaryAction: { label: "Ver detalhes", intent: "details" },
+    };
+  }
+
   if (model.chatSummary?.isUnread || model.unreadChatCount > 0) {
     return {
       primaryAction: chatAction(model, "Responder"),

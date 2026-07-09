@@ -83,17 +83,18 @@ Re-export de `view-services/constants/statusTabs.ts`:
 
 ## 7. Destaque do card — `PENDING_PAYMENT`
 
-Apresentação montada em `clientServiceCardPresentation.ts` (cliente) e `providerServiceCardPresentation.ts` (prestador), com copy compartilhada em `pendingPaymentHighlight.ts`. Detalhe completo no [README do módulo](../README.md) (§8).
+Apresentação montada em `clientServiceCardPresentation.ts` (cliente) e `providerServiceCardPresentation.ts` (prestador), com copy compartilhada em `pendingPaymentHighlight.ts` e ênfase `error` no tema do card do cliente (`clientServiceCardTheme.ts`). Detalhe completo no [README do módulo](../README.md) (§8).
 
-Quando `contracted.status === PENDING_PAYMENT` na listagem:
+Quando `contracted.status === PENDING_PAYMENT` na listagem (usa `contracted.paymentScheduleState`, vindo de `payment_schedule_state` em `project_service_row`):
 
-| Papel | Título | Descrição |
-|-------|--------|-----------|
-| Cliente | Aguardando pagamento | Serviço agendado para {data}, pagamento ainda pendente. |
-| Prestador | Aguardando pagamento do cliente | Idem |
+| Papel / condição | Título | Descrição | Ênfase |
+|------------------|--------|-----------|--------|
+| Cliente — `FAILED_PERMANENT` | Pagamento falhou | Atualize suas informações de pagamento manualmente para confirmar o serviço. | `error` |
+| Cliente — demais | Aguardando pagamento | Serviço agendado para {data}, pagamento ainda pendente. | `attention` |
+| Prestador | Aguardando pagamento do cliente | Serviço agendado para {data}, pagamento ainda pendente. | `attention` |
 
-- **Ícone:** cartão (`payment_pending`); **ênfase:** `attention`.
-- Mensagem não lida no chat tem prioridade sobre este destaque.
+- **Ícone:** cartão (`payment_pending`) em todos os casos acima.
+- **Prioridade do destaque:** em `FAILED_PERMANENT`, o alerta de pagamento falhou prevalece sobre mensagem não lida. Nos demais casos de `PENDING_PAYMENT`, mensagem não lida ainda sobrescreve o destaque de pagamento.
 
 ---
 
@@ -102,6 +103,14 @@ Quando `contracted.status === PENDING_PAYMENT` na listagem:
 ### Ver detalhes
 
 - **Todas as fases:** `navigate(getServiceDetailPath(id))` → `/dashboard/services/:id`.
+
+### Ajustar pagamento
+
+- **Quando:** fase `in_progress` com `contracted.status === PENDING_PAYMENT` e `paymentScheduleState === FAILED_PERMANENT`.
+- **CTA primário:** label **“Ajustar pagamento”**, intent `adjust_payment`, ícone de cartão (`CreditCard`).
+- **Ao clicar:** abre o `ManualPaymentModal` (mesmo fluxo de pagamento manual do detalhe do serviço), via `useClientCardManualPayment`.
+- **Secundário:** **“Ver detalhes”**.
+- **Prioridade do CTA:** esta ação tem prioridade sobre mensagem não lida no chat (não usa “Responder” / “Ver conversa com prestador” nesse caso). O destaque visual também prioriza o alerta de pagamento falhou (ver §7).
 
 ### Comparar orçamentos / Histórico (`negotiation-proposals`)
 
@@ -138,7 +147,7 @@ flowchart LR
 
 ## 10. Evidências
 
-- `src/features/my-services/**/*` (inclui `utils/pendingPaymentHighlight.ts`, `clientServiceCardPresentation.ts`, `providerServiceCardPresentation.ts`)
+- `src/features/my-services/**/*` (inclui `utils/pendingPaymentHighlight.ts`, `clientServiceCardPresentation.ts`, `providerServiceCardPresentation.ts`, `hooks/useClientCardManualPayment.ts`, `components/client/ClientServiceListCard.tsx`)
 - `src/features/view-services/**/*`
 - `supabase/migrations/20260705208000_create_view_services_rpcs.sql`
 - `src/router.tsx`

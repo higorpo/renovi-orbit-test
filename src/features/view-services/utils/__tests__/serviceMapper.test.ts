@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
 import { mapRpcServiceRow } from "../serviceMapper";
 
@@ -53,6 +54,7 @@ describe("serviceMapper", () => {
         id: "cs-1",
         status: "PENDING_PAYMENT",
         chat_id: "chat-contracted-1",
+        payment_schedule_state: "FAILED_PERMANENT",
         provider: { id: "p-1", display_name: "João" },
       },
       counterparty: { id: "p-1", display_name: "João Silva", profile_image_path: "avatars/joao.jpg" },
@@ -66,6 +68,7 @@ describe("serviceMapper", () => {
     expect(model.service?.slug).toBe("eletricista");
     expect(model.contracted?.status).toBe("PENDING_PAYMENT");
     expect(model.contracted?.chatId).toBe("chat-contracted-1");
+    expect(model.contracted?.paymentScheduleState).toBe("FAILED_PERMANENT");
     expect(model.tags).toBeNull();
     expect(model.suggestedEquipment).toEqual(["ladder"]);
     expect(model.suggestedMaterials).toEqual(["screws"]);

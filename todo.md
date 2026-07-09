@@ -131,8 +131,6 @@ Fluxo de pagamentos, itens com problemas:
 
 - Preciso testar o fluxo de cobrança manual.
 
-- Adicionar quando houver erro no pagamento do cliente um status com alerta vermelho no card do serviço na tela de meus serviços.
-
 
 Detalhes dos testes:
 Cartão aprovado: 4970100000000048

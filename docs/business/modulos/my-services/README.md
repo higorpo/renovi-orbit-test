@@ -36,7 +36,7 @@
 | Cliente | `components/client/ClientMyServicesPage.tsx`, hooks `useClientMyServicesPage.ts` |
 | Cliente (card) | `components/client/ClientServiceListCard.tsx`, `ClientServiceCardIcons.tsx`, `utils/clientServiceCardPresentation.ts` |
 | Prestador | `components/provider/ProviderMyServicesPage.tsx`, `ProviderServiceListCard.tsx`, `ProviderServiceCardIcons.tsx`, `utils/providerServiceCardPresentation.ts`, `useProviderMyServicesPage.ts` |
-| Destaque compartilhado | `utils/pendingPaymentHighlight.ts` — copy do highlight quando `contracted.status === PENDING_PAYMENT` |
+| Destaque compartilhado | `utils/pendingPaymentHighlight.ts` — copy do highlight quando `contracted.status === PENDING_PAYMENT` (cliente varia se `paymentScheduleState === FAILED_PERMANENT`) |
 | Core | `hooks/useMyServicesPageCore.ts`, `useMyServicesList.ts`, `useMyServicesFilters.ts` |
 | Tipos / rotas | `types/my-services.types.ts`, `constants/routes.ts` |
 
@@ -57,15 +57,19 @@ Exporta: `MyServicesRouteSlot`, `ClientMyServicesPage`, `ProviderMyServicesPage`
 
 ## 8. Cards na listagem — destaque `PENDING_PAYMENT`
 
-Quando o serviço contratado está em **`PENDING_PAYMENT`**, o destaque do card (cliente e prestador) prioriza o pagamento em relação ao highlight genérico de agenda. Implementação: `getPendingPaymentHighlightContent` (`utils/pendingPaymentHighlight.ts`), consumido por `clientServiceCardPresentation.ts` e `providerServiceCardPresentation.ts`.
+Quando o serviço contratado está em **`PENDING_PAYMENT`**, o destaque do card (cliente e prestador) prioriza o pagamento em relação ao highlight genérico de agenda. Implementação: `getPendingPaymentHighlightContent` (`utils/pendingPaymentHighlight.ts`), consumido por `clientServiceCardPresentation.ts` e `providerServiceCardPresentation.ts`. A ênfase `error` no card do cliente vem de `clientServiceCardTheme.ts`.
 
-| Papel | Título do destaque | Descrição | Ícone / ênfase |
-|-------|--------------------|-----------|----------------|
-| Cliente | Aguardando pagamento | Serviço agendado para {data}, pagamento ainda pendente. | `payment_pending` (cartão) · `attention` |
-| Prestador | Aguardando pagamento do cliente | Mesma descrição do cliente | Idem |
+**Dado:** a RPC `project_service_row` (usada por `list_services` / `get_service`) inclui `payment_schedule_state` no objeto `contracted`; o frontend mapeia para `contracted.paymentScheduleState`.
 
-- **Fallback** (sem data utilizável): detalhe curto “Pagamento ainda pendente.”
-- **Prioridade:** mensagem não lida no chat ainda sobrescreve este destaque (agenda vai para info secundária).
+| Papel / condição | Título do destaque | Descrição | Ícone / ênfase |
+|------------------|--------------------|-----------|----------------|
+| Cliente — `paymentScheduleState === FAILED_PERMANENT` | Pagamento falhou | Atualize suas informações de pagamento manualmente para confirmar o serviço. | `payment_pending` (cartão) · `error` (alerta vermelho) |
+| Cliente — demais estados de parcela | Aguardando pagamento | Serviço agendado para {data}, pagamento ainda pendente. | `payment_pending` (cartão) · `attention` |
+| Prestador (qualquer `paymentScheduleState`) | Aguardando pagamento do cliente | Serviço agendado para {data}, pagamento ainda pendente. | `payment_pending` (cartão) · `attention` |
+
+- **Fallback** (sem data utilizável, nos casos com data na descrição): detalhe curto “Pagamento ainda pendente.”
+- **Prioridade do destaque:** em `FAILED_PERMANENT`, o alerta de pagamento falhou prevalece sobre mensagem não lida. Nos demais casos de `PENDING_PAYMENT`, unread ainda sobrescreve o destaque (agenda / pagamento vão para info secundária).
+- **CTA do card do cliente:** com `PENDING_PAYMENT` + `paymentScheduleState === FAILED_PERMANENT`, o botão primário é **“Ajustar pagamento”** (`adjust_payment`, ícone de cartão) e abre o `ManualPaymentModal` (mesmo fluxo do detalhe); secundário **“Ver detalhes”**. Esse CTA tem prioridade sobre “Responder” / “Ver conversa com prestador” mesmo se houver mensagem não lida.
 - **Antes:** título era o highlight de agenda (“Agendado para…”) + detalhe curto “Aguardando pagamento” / “Aguardando pagamento do cliente” + ícone de calendário.
 
 ## 9. Card do prestador (`ProviderServiceListCard`)

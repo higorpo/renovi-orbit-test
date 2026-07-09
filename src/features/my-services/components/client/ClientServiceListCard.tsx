@@ -19,11 +19,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Eye, MessageSquare, Trash2 } from "lucide-react";
+import { CreditCard, Eye, MessageSquare, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getServiceCardStyle } from "@/features/request-quote";
 import { getUrgencyConfig, type ServiceModel } from "@/features/view-services";
 import { usePublicProfileImageUrl } from "@/features/provider-profile/hooks/usePublicProfileImageUrl";
+import { ManualPaymentModal } from "@/features/payments";
 import {
   getClientServiceCardPresentation,
   type ClientCardAction,
@@ -31,6 +32,7 @@ import {
   type ClientServiceCardPresentation,
 } from "../../utils/clientServiceCardPresentation";
 import { getClientCardTheme } from "../../utils/clientServiceCardTheme";
+import { useClientCardManualPayment } from "../../hooks/useClientCardManualPayment";
 import { initialsFromName } from "@/lib/utils/initialsFromName";
 import {
   ClientCardHighlightIcon,
@@ -96,6 +98,7 @@ interface ClientCardActionsProps {
   onOpenBudgets?: (model: ServiceModel) => void;
   onOpenMessages?: (model: ServiceModel) => void;
   onOpenChat?: (model: ServiceModel) => void;
+  onAdjustPayment?: () => void;
   onCancel?: (id: string) => void;
   isCancelling?: boolean;
 }
@@ -108,6 +111,7 @@ function ClientCardActions({
   onOpenBudgets,
   onOpenMessages,
   onOpenChat,
+  onAdjustPayment,
   onCancel,
   isCancelling,
 }: ClientCardActionsProps) {
@@ -126,6 +130,10 @@ function ClientCardActions({
       onOpenChat?.(model);
       return;
     }
+    if (action.intent === "adjust_payment") {
+      onAdjustPayment?.();
+      return;
+    }
     if (action.intent === "cancel") {
       setCancelDialogOpen(true);
       return;
@@ -140,6 +148,9 @@ function ClientCardActions({
     }
     if (intent === "messages" || intent === "chat") {
       return <MessageSquare className="h-4 w-4 shrink-0" aria-hidden />;
+    }
+    if (intent === "adjust_payment") {
+      return <CreditCard className="h-4 w-4 shrink-0" aria-hidden />;
     }
     if (intent === "cancel") {
       return <Trash2 className="h-4 w-4 shrink-0" aria-hidden />;
@@ -315,6 +326,11 @@ export function ClientServiceListCard({
     "Profissional";
   const canOpenDetails = Boolean(onOpenDetails);
   const CardBody = canOpenDetails ? "button" : "div";
+  const needsManualPayment =
+    presentation.primaryAction.intent === "adjust_payment" && Boolean(model.contracted?.id);
+  const manualPayment = useClientCardManualPayment(
+    needsManualPayment ? (model.contracted?.id ?? null) : null,
+  );
 
   return (
     <Card
@@ -404,10 +420,22 @@ export function ClientServiceListCard({
           onOpenBudgets={onOpenBudgets}
           onOpenMessages={onOpenMessages}
           onOpenChat={onOpenChat}
+          onAdjustPayment={needsManualPayment ? manualPayment.openModal : undefined}
           onCancel={onCancel}
           isCancelling={isCancelling}
         />
       </div>
+
+      {needsManualPayment && manualPayment.schedule && manualPayment.context ? (
+        <ManualPaymentModal
+          open={manualPayment.open}
+          onOpenChange={manualPayment.handleOpenChange}
+          schedule={manualPayment.schedule}
+          acceptedProposalId={manualPayment.context.acceptedProposalId}
+          serviceRequestId={manualPayment.context.serviceRequestId}
+          onCompleted={manualPayment.handleCompleted}
+        />
+      ) : null}
     </Card>
   );
 }

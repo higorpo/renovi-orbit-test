@@ -50,7 +50,11 @@ export interface CounterpartySummary {
   profileImagePath: string | null;
 }
 
+import type { Database } from "@/lib/supabase/database.types";
 import type { ServiceRescheduleSnapshot } from "@/features/service-reschedule";
+
+export type PaymentScheduleState =
+  Database["public"]["Enums"]["payment_schedule_state"];
 
 export interface ContractedServiceSummary {
   id: string;
@@ -64,6 +68,8 @@ export interface ContractedServiceSummary {
   provider: CounterpartySummary | null;
   chatId: string | null;
   updatedAt: string | null;
+  /** Current payment_schedules.state when a schedule exists for this contracted service. */
+  paymentScheduleState?: PaymentScheduleState | null;
   reschedule?: ServiceRescheduleSnapshot | null;
 }
 

@@ -200,6 +200,7 @@ describe("getClientServiceCardPresentation", () => {
             provider: { id: "p-1", displayName: "Maria", profileImagePath: null },
             chatId: null,
             updatedAt: null,
+            paymentScheduleState: "SCHEDULED",
           },
         }),
       );
@@ -213,6 +214,74 @@ describe("getClientServiceCardPresentation", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("highlights permanent payment failure in red for the client", () => {
+    const pres = getClientServiceCardPresentation(
+      baseModel({
+        listPhase: "in_progress",
+        statusTabId: "in_progress",
+        contracted: {
+          id: "cs-1",
+          status: "PENDING_PAYMENT",
+          agreedSlot: null,
+          durationUnit: "hours",
+          durationValue: 2,
+          scheduledStartDate: "2025-06-15",
+          scheduledEndDate: null,
+          scheduledShift: "afternoon",
+          provider: { id: "p-1", displayName: "Maria", profileImagePath: null },
+          chatId: null,
+          updatedAt: null,
+          paymentScheduleState: "FAILED_PERMANENT",
+        },
+      }),
+    );
+
+    expect(pres.highlight.icon).toBe("payment_pending");
+    expect(pres.highlight.title).toBe("Pagamento falhou");
+    expect(pres.highlight.detail).toBe(
+      "Atualize suas informações de pagamento manualmente para confirmar o serviço.",
+    );
+    expect(pres.highlight.emphasis).toBe("error");
+    expect(pres.primaryAction).toMatchObject({
+      label: "Ajustar pagamento",
+      intent: "adjust_payment",
+    });
+    expect(pres.secondaryAction).toMatchObject({ label: "Ver detalhes", intent: "details" });
+  });
+
+  it("prefers adjust payment over unread chat when payment failed permanently", () => {
+    const pres = getClientServiceCardPresentation(
+      baseModel({
+        listPhase: "in_progress",
+        statusTabId: "in_progress",
+        unreadChatCount: 1,
+        chatSummary: {
+          id: "chat-1",
+          isUnread: true,
+          lastInteractionAt: "2025-06-10T12:00:00Z",
+          lastMessagePreview: "Oi",
+          providerDisplayName: "Maria",
+        },
+        contracted: {
+          id: "cs-1",
+          status: "PENDING_PAYMENT",
+          agreedSlot: null,
+          durationUnit: "hours",
+          durationValue: 2,
+          scheduledStartDate: "2025-06-15",
+          scheduledEndDate: null,
+          scheduledShift: "afternoon",
+          provider: { id: "p-1", displayName: "Maria", profileImagePath: null },
+          chatId: "chat-1",
+          updatedAt: null,
+          paymentScheduleState: "FAILED_PERMANENT",
+        },
+      }),
+    );
+
+    expect(pres.primaryAction.intent).toBe("adjust_payment");
   });
 
   it("shows provider chat as primary action when in progress", () => {

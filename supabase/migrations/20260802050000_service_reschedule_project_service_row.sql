@@ -233,6 +233,11 @@ begin
       'scheduled_end_date', cs.scheduled_end_date,
       'scheduled_shift', cs.scheduled_shift,
       'updated_at', cs.updated_at,
+      'payment_schedule_state', (
+        select ps.state
+        from public.payment_schedules ps
+        where ps.contracted_service_id = cs.id
+      ),
       'chat_id', (
         select c.id
         from public.chats c
@@ -359,4 +364,4 @@ end;
 $$;
 
 comment on function public.project_service_row(uuid, uuid) is
-  'Builds unified service JSON. Contracted summary includes reschedule snapshot and chat_id for client or accepted provider.';
+  'Builds unified service JSON. Contracted summary includes payment_schedule_state, reschedule snapshot and chat_id for client or accepted provider.';

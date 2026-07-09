@@ -59,7 +59,7 @@ function highlightForPhase(
     };
   }
 
-  if (emphasis === "cancelled") {
+  if (emphasis === "error" || emphasis === "cancelled") {
     return {
       box: "border border-rose-200 bg-rose-50 dark:border-rose-900/50 dark:bg-rose-950/35",
       title: "text-rose-950 dark:text-rose-50",
