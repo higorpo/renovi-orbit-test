@@ -60,7 +60,7 @@ export function AcceptRescheduleDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel type="button" disabled={acceptReschedule.isPending}>
-            Voltar
+            Cancelar
           </AlertDialogCancel>
           <AlertDialogAction
             type="button"
@@ -124,7 +124,7 @@ export function CancelRescheduleDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel type="button" disabled={cancelReschedule.isPending}>
-            Voltar
+            Cancelar
           </AlertDialogCancel>
           <AlertDialogAction
             type="button"
@@ -190,7 +190,7 @@ export function RequestAdjustmentRescheduleDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel type="button" disabled={requestAdjustment.isPending}>
-            Voltar
+            Cancelar
           </AlertDialogCancel>
           <AlertDialogAction
             type="button"
