@@ -23,6 +23,8 @@ import { CardStep } from "./CheckoutStepper/CardStep";
 import { SavedCardSelector } from "./CheckoutStepper/SavedCardSelector";
 import { InstallmentSelector } from "./InstallmentSelector";
 
+const SUPPORT_URL = `${(import.meta.env.VITE_MAIN_SITE_URL ?? "").replace(/\/$/, "")}/suporte`;
+
 export type ManualPaymentDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -227,8 +229,10 @@ export function ManualPaymentDialog({
             <Button type="button" onClick={() => setView("card")}>
               Tentar com outro cartão
             </Button>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Falar com suporte
+            <Button type="button" variant="outline" asChild>
+              <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
+                Falar com suporte
+              </a>
             </Button>
           </DialogFooter>
         ) : null}
