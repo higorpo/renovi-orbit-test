@@ -20,6 +20,7 @@ Itens interessantes de ter na plataforma (futuro)
 - Exibir sugestões de perguntas para o prestador na hora que ele abre o chat pela primeira vez
 -ver imagens que o chat gpt gerou da tela de detalhes do serviço e o que podemos incorporar de fato.
 - Permitir se inscrever em um tópico no FCM
+- Deixar página de erro mais bonita
 
 
 
@@ -122,8 +123,6 @@ Fluxo de pagamentos, itens com problemas:
 
 - Fluxo de estorno de dinheiro em caso do serviço agendado não ser  prestado para o cliente.
 
-- Ao reagendar um serviço, mesagem que mostra no chat "Maria da Silva solicitou o reagendamento do serviço agendado para 17/07/2026 (Dia inteiro). Não vou estar disponível nesse dia" não deixa claro o que é mensagem do sistema e o que é mensagem enviada pelo cliente/prestador.
-
 
 - Acho que temos que desativar a window de push que  hoje tá em 20 minutos.
 
@@ -133,11 +132,16 @@ Fluxo de pagamentos, itens com problemas:
 
 - Dúvida: O que acontece se o cliente não aceitar a data ou o prestador não enviar a data de agendamento e chegar a data de execução do serviço?
 
-- Está aparecendo botão  "Cancelar solicitação" para o prestador quando ele vai propor uma nova data
-
-- Permitir prestador de serviço reagendar serviço não pago ainda.
 
 - É permitido fazer reagendamento de serviços  para muito longe (por exemplo +30 dias a frente). O prestador pode pedir reagendamento sem teto mínimo,o cliente pode pedir reagendamento até 48hrs antes, em tese o pagamento ainda naõ estaria capturado, mas tem chance. Como o prestador pode pedir faltando 4hrs por exemplo, o pagamento já poderia estar capturado, nesse caso teríamos que fazer uma lógica para remembolsar o valor e fazer a captura novamente em data futura caso a data do pedido fosse para muito mais a frente para evitar cair na liquidação automática.
+
+
+- A forma como está o checkout hoje para a seleção da parcela a ser paga e etc está segura? O usuário não consegue burlar a informação?
+
+
+- Quando for estornar 100% do valor para o cliente, hoje ele não está estornando o valor das taxas cobradas no cartão de crédito, mas nós devemos de fato estornar todo o valor sim nesse tipo de situação.
+
+- Quando um serviço estiver marcado como cancelado, permitir o usuário criar um novo pedido de serviço a partir do serviço cancelado.
 
 Detalhes dos testes:
 4970100000000048
