@@ -73,6 +73,12 @@ Evidência: `supabase/migrations/20260802030000_service_reschedule_rpcs_core.sql
 
 Documentado com evidência direta neste ciclo: **elegibilidade de status** para cliente e prestador iniciarem (e para o prestador propor slot), **como o prestador informa duração e datas na proposta**, como o slot embute `duration_unit` / `duration_value`, como o aceite atualiza o serviço contratado, e o **formato da mensagem SYSTEM** ao solicitar (incluindo observação opcional com prefixo `Observação:`).
 
+### Expiração e cancelamento de solicitações abertas
+
+- **Proposta vencida:** se existir `proposed_slot` e `start_date` ≤ hoje (calendário `America/Sao_Paulo` / `cns_business_today`), o janitor `expire_stale_service_reschedule_requests` marca a solicitação como `EXPIRED` (alinha com o gate de aceite `SLOT_START_DATE_TOO_SOON`). Também expira em serviço `EXECUTED`/`COMPLETED` ou após grace de 24h da execução original com serviço `CONFIRMED`.
+- **Cancelamento do serviço:** ao cancelar o serviço contratado, requests abertas (`REQUESTED` / `PROPOSED` / `ADJUSTMENT_REQUESTED`) passam a `CANCELLED` via `cns_cancel_active_service_reschedule_requests` (incluindo o caminho `cancelled_no_schedule` em `cns_confirm_service_cancellation`). O janitor é safety-net: se o serviço já estiver `CANCELLED` e ainda houver request aberta, marca `CANCELLED` (não `EXPIRED`).
+
 Não reescreve aqui o ciclo completo de estados da solicitação (pedido, ajuste, aceite, cancelamento, expiração, supersede) — ver glossário de domínio e código/RPCs `cns_*_service_reschedule*`.
 
 Evidência de elegibilidade: `cns_request_service_reschedule`, snapshot/action flags e `cns_propose_service_reschedule` em `supabase/migrations/20260802030000_service_reschedule_rpcs_core.sql` e `20260802130000_service_reschedule_supersede_rounds.sql`.
+Evidência de expiração/cancelamento: `supabase/migrations/20260802080000_service_reschedule_expiration_janitor.sql`, `20260802020000_service_reschedule_helpers.sql` (`cns_cancel_active_service_reschedule_requests`), `20260801670000_payment_cns_confirm_service_cancellation.sql`.
