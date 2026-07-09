@@ -58,7 +58,7 @@ export function ProposeRescheduleDialog({
     mode: "onChange",
     resolver: zodResolver(proposeRescheduleFormSchema),
     defaultValues: {
-      startDate: minDate,
+      startDate: "",
       endDate: "",
       shift: "morning",
       durationValueInput: "1",
@@ -85,13 +85,13 @@ export function ProposeRescheduleDialog({
     if (!open || !snapshot) return;
 
     form.reset({
-      startDate: minDate,
+      startDate: "",
       endDate: "",
       shift: "morning",
       durationValueInput: String(snapshot.durationValue),
       durationUnit: snapshot.durationUnit,
     });
-  }, [open, form, minDate, snapshot]);
+  }, [open, form, snapshot]);
 
   useEffect(() => {
     if (!showEndDate && form.getValues("endDate")) {
