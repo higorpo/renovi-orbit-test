@@ -14,6 +14,7 @@
 | Lista | RPC `list_services(...)` — paginação, filtros, `list_phase` |
 | Detalhe | RPC `get_service(p_service_request_id)` |
 | Cancelamento (cliente) | RPC `cancel_service_request` via `cancelService` na API TS |
+| Republicação (cliente) | RPC `republish_cancelled_service_request` via `republishCancelledServiceRequest` — duplica pedido cancelado em novo `OPEN` |
 | Tabela de contrato | `contracted_services` (antes `services`) |
 | Modelo front | `ServiceModel` + `ServiceListPhase` |
 
@@ -29,12 +30,12 @@
 |------|----------|
 | API | `api/services.api.ts` (somente `supabase.rpc()`) |
 | Tipos | `types/service.types.ts` |
-| Hooks | `hooks/useServicesList.ts`, `useService.ts`, `useCancelService.ts` |
+| Hooks | `hooks/useServicesList.ts`, `useService.ts`, `useCancelService.ts`, `useRepublishCancelledService.ts` |
 | Página detalhe | `components/ServiceDetailPage.tsx`, `ServiceSections.tsx`, … |
 | Card lista | `components/ServiceListCard.tsx` |
 | Constantes | `constants/queryKeys.ts`, `routes.ts`, `statusTabs.ts`, `statusBadge.ts` |
-| SQL | `supabase/migrations/20260705207000_*`, `20260705208000_*`, `20260705209000_*` |
-| Testes pgTAP | `supabase/tests/view-services/view_services_rpcs_test.sql` |
+| SQL | `supabase/migrations/20260705207000_*`, `20260705208000_*`, `20260705209000_*`, `20260802170000_republish_cancelled_service_request.sql` |
+| Testes pgTAP | `supabase/tests/view-services/view_services_rpcs_test.sql`, `supabase/tests/view_services/republish_cancelled_service_request_test.sql` |
 
 ## 5. Integrações
 
@@ -44,7 +45,7 @@
 
 ## 6. API pública (`index.ts`)
 
-Exporta: `ServiceDetailPage`, `ServiceListCard`, `getServiceById`, `listServices`, `cancelService`, hooks, tipos, query keys, rotas, helpers de status/abas.
+Exporta: `ServiceDetailPage`, `ServiceListCard`, `getServiceById`, `listServices`, `cancelService`, `republishCancelledServiceRequest`, hooks (incl. `useRepublishCancelledService`), tipos, query keys, rotas, helpers de status/abas.
 
 ## 7. Fora de escopo (nesta entrega)
 

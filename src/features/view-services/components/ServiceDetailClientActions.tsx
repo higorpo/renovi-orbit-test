@@ -21,12 +21,15 @@ interface ServiceDetailClientActionsProps {
   showClientBudgetAction: boolean;
   showClientNegotiationChats: boolean;
   showContractedChat: boolean;
+  showRepublishAction: boolean;
   contractedChatId: string | null;
   cancelDialogOpen: boolean;
   onCancelDialogOpenChange: (open: boolean) => void;
   onOpenBudgetSheet: () => void;
   onCancelService: () => void;
+  onRepublishService: () => void;
   isCancelling: boolean;
+  isRepublishing: boolean;
 }
 
 export function ServiceDetailClientActions({
@@ -36,19 +39,35 @@ export function ServiceDetailClientActions({
   showClientBudgetAction,
   showClientNegotiationChats,
   showContractedChat,
+  showRepublishAction,
   contractedChatId,
   cancelDialogOpen,
   onCancelDialogOpenChange,
   onOpenBudgetSheet,
   onCancelService,
+  onRepublishService,
   isCancelling,
+  isRepublishing,
 }: ServiceDetailClientActionsProps) {
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-      {showClientBudgetAction && budgetAction && BudgetActionIcon ? (
+      {showRepublishAction ? (
         <Button
           type="button"
           variant="default"
+          size="sm"
+          className="w-full gap-1.5 rounded-pill transition-transform duration-fast ease-renovi active:scale-[0.97] sm:w-auto"
+          onClick={onRepublishService}
+          disabled={isRepublishing}
+        >
+          {isRepublishing ? "Republicando…" : "Republicar novo pedido de serviço"}
+        </Button>
+      ) : null}
+
+      {showClientBudgetAction && budgetAction && BudgetActionIcon ? (
+        <Button
+          type="button"
+          variant={showRepublishAction ? "outline" : "default"}
           size="sm"
           className="w-full gap-1.5 rounded-pill transition-transform duration-fast ease-renovi active:scale-[0.97] sm:w-auto"
           onClick={onOpenBudgetSheet}

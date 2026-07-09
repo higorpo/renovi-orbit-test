@@ -13,7 +13,13 @@ export type { SimpleServiceCardSkeletonProps } from "./components/SimpleServiceC
 export { ServiceDetailSkeleton } from "./components/ServiceDetailSkeleton";
 export type { ServiceDetailSkeletonProps } from "./components/ServiceDetailSkeleton";
 
-export { getServiceById, listServices, cancelService } from "./api/services.api";
+export {
+  getServiceById,
+  listServices,
+  cancelService,
+  republishCancelledServiceRequest,
+} from "./api/services.api";
+export type { RepublishCancelledServiceResult } from "./api/services.api";
 export {
   markServiceExecuted,
 } from "./api/markServiceExecuted.api";
@@ -29,6 +35,7 @@ export type { RecordProviderOpportunityViewResult } from "./api/opportunityView.
 export { useServicesList } from "./hooks/useServicesList";
 export { useService } from "./hooks/useService";
 export { useCancelService } from "./hooks/useCancelService";
+export { useRepublishCancelledService } from "./hooks/useRepublishCancelledService";
 export { useMarkServiceExecuted } from "./hooks/useMarkServiceExecuted";
 export { useConfirmServiceCompleted } from "./hooks/useConfirmServiceCompleted";
 export { useServiceDetailModal } from "./hooks/useServiceDetailModal";

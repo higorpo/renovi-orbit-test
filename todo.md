@@ -115,12 +115,6 @@ Fluxo de pagamentos, itens com problemas:
 
 
 
-- Na tela de histórico de pagamento do cliente mostrar reembolso parcial (valor)
-
-
-
-- Verificar: um CNPJ pode agendar vários serviços para o mesmo dia?
-
 - Fluxo de estorno de dinheiro em caso do serviço agendado não ser  prestado para o cliente.
 
 
@@ -135,8 +129,6 @@ Fluxo de pagamentos, itens com problemas:
 - A forma como está o checkout hoje para a seleção da parcela a ser paga e etc está segura? O usuário não consegue burlar a informação?
 
 
-
-- Quando um contracted_service ou service_request estiver marcado como cancelado, permitir o usuário criar um novo pedido de serviço a partir do serviço cancelado (será criado um novo service_request, que seguirá todo o fluxo normal como se ele tivesse criado pela tela de criação de pedido serviço).
 
 - Preciso testar o fluxo de cobrança manual.
 

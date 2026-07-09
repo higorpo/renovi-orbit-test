@@ -1,5 +1,10 @@
+// @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getServiceById, listServices } from "../services.api";
+import {
+  getServiceById,
+  listServices,
+  republishCancelledServiceRequest,
+} from "../services.api";
 
 const { rpc } = vi.hoisted(() => ({
   rpc: vi.fn(),
@@ -76,5 +81,33 @@ describe("services.api", () => {
     expect(rpc).toHaveBeenCalledWith("get_service", { p_service_request_id: "sr-focus" });
     expect(result.data?.items).toHaveLength(1);
     expect(result.data?.total_count).toBe(1);
+  });
+
+  it("republishCancelledServiceRequest calls RPC with idempotency key", async () => {
+    rpc.mockResolvedValue({
+      data: { requestId: "sr-new", sourceRequestId: "sr-old" },
+      error: null,
+    });
+
+    const result = await republishCancelledServiceRequest("sr-old", "idem-1");
+
+    expect(rpc).toHaveBeenCalledWith("republish_cancelled_service_request", {
+      p_service_request_id: "sr-old",
+      p_idempotency_key: "idem-1",
+    });
+    expect(result.data).toEqual({ requestId: "sr-new", sourceRequestId: "sr-old" });
+    expect(result.error).toBeNull();
+  });
+
+  it("republishCancelledServiceRequest returns error from RPC", async () => {
+    rpc.mockResolvedValue({
+      data: null,
+      error: { message: "SR_NOT_CANCELLED" },
+    });
+
+    const result = await republishCancelledServiceRequest("sr-open", "idem-2");
+
+    expect(result.data).toBeNull();
+    expect(result.error).toBe("SR_NOT_CANCELLED");
   });
 });

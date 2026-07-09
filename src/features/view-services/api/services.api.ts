@@ -126,3 +126,49 @@ export async function cancelService(
 
   return { error: null };
 }
+
+export interface RepublishCancelledServiceResult {
+  requestId: string;
+  sourceRequestId: string;
+}
+
+export async function republishCancelledServiceRequest(
+  serviceRequestId: string,
+  idempotencyKey: string,
+): Promise<{ data: RepublishCancelledServiceResult | null; error: string | null }> {
+  const id = serviceRequestId.trim();
+  if (!id) {
+    return { data: null, error: "ID do serviço é obrigatório" };
+  }
+  if (!idempotencyKey.trim()) {
+    return { data: null, error: "Chave de idempotência é obrigatória" };
+  }
+
+  const { data, error } = await supabase.rpc("republish_cancelled_service_request", {
+    p_service_request_id: id,
+    p_idempotency_key: idempotencyKey,
+  });
+
+  if (error) {
+    logger.error("view_services_republish_error", {
+      serviceRequestId: id,
+      error: error.message,
+    });
+    return { data: null, error: error.message };
+  }
+
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return { data: null, error: "Resposta inválida do servidor" };
+  }
+
+  const payload = data as Record<string, unknown>;
+  const requestId = typeof payload.requestId === "string" ? payload.requestId : null;
+  const sourceRequestId =
+    typeof payload.sourceRequestId === "string" ? payload.sourceRequestId : id;
+
+  if (!requestId) {
+    return { data: null, error: "Resposta inválida do servidor" };
+  }
+
+  return { data: { requestId, sourceRequestId }, error: null };
+}

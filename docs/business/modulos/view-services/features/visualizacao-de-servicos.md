@@ -57,16 +57,28 @@ Retorno: `{ items, total_count, page, page_size }` — cada item com o mesmo sha
 
 `cancelService` na API TS chama RPC existente **`cancel_service_request`** (somente cliente).
 
+### Republicação (pedido cancelado)
+
+No detalhe (`ServiceDetailPage`), quando `listPhase === "cancelled"` e o viewer é o **cliente**, a barra de ações exibe **"Republicar novo pedido de serviço"**.
+
+- API: `republishCancelledServiceRequest` → RPC **`republish_cancelled_service_request(p_service_request_id, p_idempotency_key)`**.
+- Elegível se `sr.status = CANCELLED` **ou** existe `contracted_services` com `status = CANCELLED` para o pedido.
+- Cria um **novo** `service_requests` `OPEN` copiando título, descrição, formulário, campos de IA e **paths de fotos** (mesmos objetos no Storage); o cancelado permanece no histórico.
+- Endereço precisa continuar ativo e do cliente; senão a RPC rejeita.
+- Após sucesso: toast, invalidação de listas/detalhe e navegação para `/dashboard/services/{novoId}`.
+- Matching: o INSERT `OPEN` dispara o bootstrap de dispatch como na criação normal.
+
 ---
 
 ## 4. Frontend
 
 | Camada | Responsável |
 |--------|-------------|
-| API | `services.api.ts` — `getServiceById`, `listServices`, `cancelService` |
+| API | `services.api.ts` — `getServiceById`, `listServices`, `cancelService`, `republishCancelledServiceRequest` |
 | Mapper | `serviceMapper.ts` — RPC JSON → `ServiceModel` |
 | Lista | `useServicesList` + `ServiceListCard` |
 | Detalhe | `useService` + `ServiceDetailPage` + seções condicionais por `listPhase` |
+| Republicar | `useRepublishCancelledService` + CTA em `ServiceDetailClientActions` |
 | Query keys | `["view-services", "list"]`, `["view-services", "detail"]` |
 
 ---

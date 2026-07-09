@@ -113,6 +113,11 @@ Quando `contracted.status === PENDING_PAYMENT` na listagem:
 - RPC `cancel_service_request` via `useCancelService`.
 - Aplicável na fase `negotiation` (pedido ainda aberto).
 
+### Republicar (somente no detalhe)
+
+- Em `/dashboard/services/:id` com `listPhase === "cancelled"`, o cliente vê **"Republicar novo pedido de serviço"** (`view-services` / `useRepublishCancelledService`).
+- Duplica o pedido cancelado em um novo `OPEN` via RPC `republish_cancelled_service_request` (sem abrir o wizard). Não há CTA de republicação no card da listagem.
+
 ---
 
 ## 9. Diagrama

@@ -100,6 +100,7 @@ keyRef.current = idempotencyKey;
 | `service_reschedule.adjustment` | `cns_request_reschedule_adjustment` |
 | `service_reschedule.cancel` | `cns_cancel_service_reschedule_request` |
 | `request_quote.create_order` | Edge `create-request-quote-order` + `create_request_quote_service_request` |
+| `view_services.republish_cancelled_service_request` | `republish_cancelled_service_request` |
 
 ## New mutations checklist
 

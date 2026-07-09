@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/auth";
 import { ReceivedBudgetDetailsSheet } from "@/features/negotiation-proposals";
 import { useCancelService } from "../hooks/useCancelService";
+import { useRepublishCancelledService } from "../hooks/useRepublishCancelledService";
 import { useService } from "../hooks/useService";
 import {
   mapSuggestedEquipmentToPt,
@@ -47,6 +48,7 @@ export function ServiceDetailPage({
   useRecordProviderOpportunityView(id);
   const { data: model, isLoading, isError, refetch } = useService(id);
   const { cancelService, isCancelling } = useCancelService();
+  const { republishCancelledService, isRepublishing } = useRepublishCancelledService();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const {
     budgetSheetOpen,
@@ -121,8 +123,12 @@ export function ServiceDetailPage({
     ? getServiceRequestBudgetActionIcon(model.listPhase)
     : null;
   const showClientBudgetAction = Boolean(budgetAction && !budgetAction.disabled);
+  const showRepublishAction = isClient && model.listPhase === "cancelled";
   const showClientActions =
-    showClientBudgetAction || showClientNegotiationChats || (isClient && model.contracted);
+    showClientBudgetAction ||
+    showClientNegotiationChats ||
+    showRepublishAction ||
+    (isClient && model.contracted);
   const showSecondarySections = showClientNegotiationChats || isProvider;
 
   return (
@@ -143,12 +149,15 @@ export function ServiceDetailPage({
               showClientBudgetAction={showClientBudgetAction}
               showClientNegotiationChats={showClientNegotiationChats}
               showContractedChat={Boolean(isClient && model.contracted)}
+              showRepublishAction={showRepublishAction}
               contractedChatId={contractedChatId}
               cancelDialogOpen={cancelDialogOpen}
               onCancelDialogOpenChange={setCancelDialogOpen}
               onOpenBudgetSheet={() => openBudgetSheet(model)}
               onCancelService={() => cancelService(model.id)}
+              onRepublishService={() => republishCancelledService(model.id)}
               isCancelling={isCancelling}
+              isRepublishing={isRepublishing}
             />
           </div>
         ) : null}

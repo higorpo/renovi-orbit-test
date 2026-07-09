@@ -32,7 +32,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 |-------|------------------------------|--------------|
 | `addresses/` | `api/addresses.api.ts`, `api/statesAndCities.api.ts` | `AddressSelectionStep`, `AddressesSection`, `AddressFormDialog` |
 | `my-services/` | hooks page/list/filters/cancel (delegam a `view-services`); `pendingPaymentHighlight.ts`, `clientServiceCardPresentation.ts`, `providerServiceCardPresentation.ts` | `ClientMyServicesPage` / `ProviderMyServicesPage`, cards com highlight `PENDING_PAYMENT`, `ReceivedBudgetDetailsSheet` via `negotiation-proposals` |
-| `view-services/` | `api/services.api.ts` (RPC `get_service`, `list_services`, `cancel_service_request`); hooks list/detail/cancel | `ServiceDetailPage`, `ServiceListCard`, `ServiceSections` |
+| `view-services/` | `api/services.api.ts` (RPC `get_service`, `list_services`, `cancel_service_request`, `republish_cancelled_service_request`); hooks list/detail/cancel/republish | `ServiceDetailPage`, `ServiceDetailClientActions` (CTA republicar), `ServiceListCard`, `ServiceSections` |
 | `dynamic-form/` | — | `DynamicForm`, `FormDemoPage` |
 | `my-account/` | `api/*Profile*.api.ts`, `portfolio.api.ts`, `offeredServices.api.ts` | `MyAccountPage`, `MyAccountClientPage`, `MyAccountProviderPage`, `ServiceAreaField` |
 | `provider-jobs/` | `api/providerJobs.api.ts`, `dismissOpportunity.api.ts`; propostas via `negotiation-proposals` | `ProviderJobsPage`, `JobCard`; detalhe via `view-services` |
@@ -77,6 +77,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `supabase/tests/chats/*.sql` | pgTAP FSM, mensagem livre, concorrência |
 | `supabase/migrations/20260705207000`–`20260705209000` | Rename `contracted_services`; RPCs `get_service`, `list_services` |
 | `supabase/tests/view-services/view_services_rpcs_test.sql` | pgTAP acesso cliente/prestador, filtros e paginação |
+| `supabase/tests/view_services/republish_cancelled_service_request_test.sql` | pgTAP republicação de pedido cancelado (ownership, elegibilidade, idempotência) |
 | `src/router.tsx` | Rotas `/chats`, `/chats/:chatId` |
 | `e2e/tests/chats.spec.ts` | E2E com mocks (`e2e/mocks/chats.mock.ts`) |
 | `docs/chats/wave-a-rollout-checklist.md`, `wave-bf-rollout-runbook.md` | Cutover operacional |
