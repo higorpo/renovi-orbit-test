@@ -1,6 +1,6 @@
 # Matriz de cobertura documental
 
-Última auditoria completa: **2026-05-30** (revisões pontuais: **2026-07-08** modo de data no **service-reschedule** / propor nova data; **2026-07-09** formato da mensagem SYSTEM ao solicitar com `Observação:`).
+Última auditoria completa: **2026-05-30** (revisões pontuais: **2026-07-08** modo de data no **service-reschedule** / propor nova data; **2026-07-09** formato da mensagem SYSTEM ao solicitar com `Observação:`; **2026-07-09** prestador solicita/propõe reagendamento também em `PENDING_PAYMENT`).
 
 Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de inferência ou RPC/RLS não detalhados linha a linha; **N/A** = não aplicável como feature de produto.
 
@@ -18,7 +18,7 @@ Legenda: **OK** = documentado com evidência direta; **Parcial** = depende de in
 | provider-profile | Página pública; SEO; URL | OK (`pagina-publica.md`) | — | — |
 | request-quote | Wizard 4/5 passos; IA automática passo 3; rascunho local; multipart Edge; reCAPTCHA; nsfwjs | OK (`pedir-orcamento.md`) | Validação server-side fina do form na Edge | P-01 redirect `/dashboard/client`; mismatch 10 MB front / 5 MB Edge fotos |
 | chats + negotiation-proposals | Lista/thread; propostas FSM; slots; mensagem livre vs PENDING; aceite/cancelamento; sheet compare/history em Meus Serviços | OK (`conversas-e-negociacao.md`, `comparar-orcamentos-meus-servicos.md`) | Mapa exaustivo de mensagens SQL por código/errcode nas RPCs de compare | — |
-| service-reschedule | Propor nova data/período conforme `duration_unit`/`duration_value`; validação `_cns_validate_reschedule_slot`; snapshot com duração; cópias UI; lembrete dispensável no dialog “Propor nova data”; mensagem SYSTEM ao solicitar (observação opcional com prefixo `Observação:`) | Parcial (`propor-nova-data.md` + README § mensagem SYSTEM) | Ciclo completo de estados (request/ajuste/aceite/cancel/expire/supersede) e integração pagamento pós-aceite | — |
+| service-reschedule | Elegibilidade: cliente e prestador em `PENDING_PAYMENT`/`CONFIRMED` (cliente com janela 48h; prestador sem); propor nova data/período conforme `duration_unit`/`duration_value`; validação `_cns_validate_reschedule_slot`; snapshot com duração; cópias UI; lembrete dispensável no dialog “Propor nova data”; mensagem SYSTEM ao solicitar (observação opcional com prefixo `Observação:`) | Parcial (`propor-nova-data.md` + README § elegibilidade e mensagem SYSTEM) | Ciclo completo de estados (request/ajuste/aceite/cancel/expire/supersede) e integração pagamento pós-aceite | — |
 
 ## Módulos fora de `src/features` (documentados em `modulos/`)
 

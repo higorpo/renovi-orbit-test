@@ -206,12 +206,9 @@ begin
         'REQUESTED'::public.service_reschedule_request_status,
         'ADJUSTMENT_REQUESTED'::public.service_reschedule_request_status
       )
-      and (
-        p_cs.status = 'CONFIRMED'::public.contracted_service_status
-        or (
-          p_cs.status = 'PENDING_PAYMENT'::public.contracted_service_status
-          and p_req.requested_by_role = 'client'::public.service_reschedule_requested_by_role
-        )
+      and p_cs.status in (
+        'PENDING_PAYMENT'::public.contracted_service_status,
+        'CONFIRMED'::public.contracted_service_status
       )
       then
         v_can_propose := true;
@@ -253,7 +250,10 @@ begin
     end if;
 
     if p_role = 'provider'
-      and p_cs.status = 'CONFIRMED'::public.contracted_service_status
+      and p_cs.status in (
+        'PENDING_PAYMENT'::public.contracted_service_status,
+        'CONFIRMED'::public.contracted_service_status
+      )
     then
       v_can_provider_request := true;
     end if;
@@ -720,17 +720,6 @@ begin
     'ADJUSTMENT_REQUESTED'::public.service_reschedule_request_status
   ) then
     raise exception 'INVALID_RESCHEDULE_STATUS'
-      using errcode = 'P0001';
-  end if;
-
-  if not (
-    v_cs.status = 'CONFIRMED'::public.contracted_service_status
-    or (
-      v_cs.status = 'PENDING_PAYMENT'::public.contracted_service_status
-      and v_req.requested_by_role = 'client'::public.service_reschedule_requested_by_role
-    )
-  ) then
-    raise exception 'RESCHEDULE_NOT_ALLOWED'
       using errcode = 'P0001';
   end if;
 

@@ -449,13 +449,13 @@ Permitir que a plataforma:
 
 ## Objetivo
 
-Permitir que o prestador solicite a alteração da data de execução de um serviço já confirmado quando houver necessidade operacional ou algum imprevisto.
+Permitir que o prestador solicite a alteração da data de execução de um serviço contratado em `PENDING_PAYMENT` (ainda não pago) ou `CONFIRMED` (pago) quando houver necessidade operacional ou algum imprevisto.
 
 ---
 
 ## Regra Principal
 
-O prestador poderá solicitar o reagendamento do serviço a qualquer momento.
+O prestador poderá solicitar o reagendamento do serviço a qualquer momento enquanto o status for `PENDING_PAYMENT` ou `CONFIRMED` (sem a janela mínima de 48h exigida do cliente).
 
 ---
 
@@ -715,7 +715,7 @@ Permitir que a plataforma:
 
 ## Reagendamento pelo Prestador
 
-* O prestador poderá solicitar o reagendamento do serviço a qualquer momento.
+* O prestador poderá solicitar o reagendamento do serviço a qualquer momento enquanto o status for `PENDING_PAYMENT` ou `CONFIRMED` (sem a janela mínima de 48h exigida do cliente).
 * O reagendamento depende de acordo entre cliente e prestador.
 * A nova data somente será considerada válida após formalização e aceitação pela plataforma.
 * Enquanto a alteração não for aceita, a data originalmente agendada permanecerá válida.

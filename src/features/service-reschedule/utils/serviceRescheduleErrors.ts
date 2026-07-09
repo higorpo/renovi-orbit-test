@@ -11,8 +11,6 @@ const UI_MESSAGES: Record<ServiceRescheduleBusinessErrorCode, string> = {
   INVALID_RESCHEDULE_STATUS: "Esta solicitação não está no estado esperado.",
   RESCHEDULE_NOT_ALLOWED: "Este serviço não pode ser reagendado no momento.",
   CLIENT_RESCHEDULE_WINDOW_CLOSED: "O prazo para reagendar este serviço já passou.",
-  PROVIDER_RESCHEDULE_REQUIRES_CONFIRMED:
-    "O reagendamento pelo prestador exige um serviço confirmado.",
   ACTIVE_RESCHEDULE_EXISTS: "Já existe uma solicitação de reagendamento em andamento.",
   ADJUSTMENT_LIMIT_REACHED: "O limite de ajustes nesta negociação foi atingido.",
   CHAT_NOT_FOUND: "Conversa não encontrada para este serviço.",

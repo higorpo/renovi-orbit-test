@@ -25,8 +25,8 @@ Ação do cliente que aprova uma Data Proposta de Reagendamento. Somente nesse m
 _Avoid_: Acordo verbal no chat, mensagem de confirmação informal
 
 **Reagendamento Iniciado pelo Prestador**:
-Solicitação aberta pelo prestador para negociar nova data. Só pode ser iniciada quando o serviço contratado está confirmado financeiramente e no calendário do prestador.
-_Avoid_: Reagendamento em pagamento pendente, cancelamento pelo prestador
+Solicitação aberta pelo prestador para negociar nova data. Pode ser iniciada com o serviço contratado em `PENDING_PAYMENT` (ainda não pago) ou `CONFIRMED` (pago), sem janela mínima de 48h. O prestador também pode propor o novo slot nesses mesmos status.
+_Avoid_: Exigir pagamento confirmado para o prestador iniciar; cancelamento pelo prestador
 
 **Reagendamento de Última Hora**:
 Reagendamento solicitado pelo prestador com menos de 24 horas até a execução oficial do serviço. Conta para histórico de confiabilidade do prestador.

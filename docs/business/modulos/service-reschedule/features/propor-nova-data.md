@@ -118,7 +118,7 @@ O lembrete é **apenas UI**: não altera validação, payload do slot nem compor
 
 | Papel | Ação documentada aqui |
 |-------|------------------------|
-| Prestador | Abre “Propor nova data”; pode ajustar Medido em, Tempo estimado, data(s) e turno; envia o slot validado |
+| Prestador | Abre “Propor nova data”; pode ajustar Medido em, Tempo estimado, data(s) e turno; envia o slot validado. A proposta (`cns_propose_service_reschedule`) exige serviço contratado em `PENDING_PAYMENT` ou `CONFIRMED` (igual à elegibilidade para o prestador **solicitar** reagendamento). |
 | Cliente | Vê “Data proposta” / “Período proposto” no card; aceite formal é outro passo (fora do detalhe deste doc) |
 
 ## 8. Evidências
@@ -133,9 +133,10 @@ O lembrete é **apenas UI**: não altera validação, payload do slot nem compor
 | Labels do card | `src/features/service-reschedule/utils/rescheduleCardCopy.ts` |
 | Formatação | `src/features/service-reschedule/utils/formatRescheduleSlot.ts` |
 | Validação e aceite (SQL) | `supabase/migrations/20260802020000_service_reschedule_helpers.sql` (`_cns_validate_reschedule_slot`, `_cns_apply_service_reschedule_slot`); `20260802150000_service_reschedule_apply_slot_restore_claims.sql` |
+| Elegibilidade de status (solicitar / propor) | `20260802030000_service_reschedule_rpcs_core.sql` (`cns_request_service_reschedule`); `20260802130000_service_reschedule_supersede_rounds.sql` (`_cns_reschedule_snapshot_action_flags`, `cns_propose_service_reschedule`) — prestador em `PENDING_PAYMENT` ou `CONFIRMED` |
 | Testes unitários | `utils/__tests__/deriveRescheduleDateMode.test.ts`, `types/__tests__/serviceReschedule.forms.test.ts` |
 
 ## 9. Lacunas / fora de escopo deste documento
 
-- Regras completas de quem pode solicitar, cancelar, pedir ajuste, aceitar ou expirar a solicitação.
+- Regras completas de quem pode cancelar, pedir ajuste, aceitar ou expirar a solicitação (a elegibilidade de **status** para o prestador solicitar/propor está no [README do módulo](../README.md)).
 - Integração detalhada com recálculo de cobrança após aceite (ver módulo `payments` / `docs/payment-system/`).

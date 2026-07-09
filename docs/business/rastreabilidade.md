@@ -123,9 +123,9 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 
 | Artefato | Uso na documentação |
 |----------|---------------------|
-| `docs/business/modulos/service-reschedule/` | README (inclui formato da mensagem SYSTEM ao solicitar) + feature propor nova data |
-| `docs/cancelamento-reagendamento-servicos/CONTEXT.md` | Glossário de domínio (inclui modo de data na proposta) |
-| `docs/cancelamento-reagendamento-servicos/details.md` | Fluxo de produto; exemplos de mensagem automática no pedido (com/sem `Observação:`) |
+| `docs/business/modulos/service-reschedule/` | README (elegibilidade cliente/prestador em `PENDING_PAYMENT`/`CONFIRMED`; mensagem SYSTEM ao solicitar) + feature propor nova data |
+| `docs/cancelamento-reagendamento-servicos/CONTEXT.md` | Glossário de domínio (inclui modo de data na proposta; reagendamento iniciado pelo prestador em `PENDING_PAYMENT` ou `CONFIRMED`) |
+| `docs/cancelamento-reagendamento-servicos/details.md` | Fluxo de produto; exemplos de mensagem automática no pedido (com/sem `Observação:`); regra do prestador sem janela de 48h |
 | `src/features/service-reschedule/utils/deriveRescheduleDateMode.ts` | Data única vs período a partir de `duration_unit`/`duration_value` |
 | `src/features/service-reschedule/types/serviceReschedule.forms.ts` | Validação Zod + `matchesProposalDayDurationISO` |
 | `src/features/service-reschedule/components/ProposeRescheduleDialog.tsx` | Duração: “Medido em” → “Tempo estimado”; datas: “Data de execução” / “Data de início” + “Data de fim”; exibe lembrete do fluxo no topo do formulário |
@@ -133,8 +133,8 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `src/features/service-reschedule/utils/mapRescheduleSnapshot.ts` | Lê `duration_unit`/`duration_value` do snapshot |
 | `src/features/service-reschedule/utils/rescheduleCardCopy.ts`, `formatRescheduleSlot.ts` | “Data proposta” / “Período proposto”; oculta range se fim nulo ou = início |
 | `supabase/migrations/20260802020000_service_reschedule_helpers.sql` | `_cns_validate_reschedule_slot(slot, duration_unit, duration_value)` |
-| `supabase/migrations/20260802030000_service_reschedule_rpcs_core.sql` | `cns_request_service_reschedule`: mensagem SYSTEM; observação opcional com `\n\nObservação: ` |
-| `supabase/migrations/20260802130000_service_reschedule_supersede_rounds.sql` (e correlatas `20260802*`) | Snapshot JSON com `duration_unit`/`duration_value`; RPCs de propor |
+| `supabase/migrations/20260802030000_service_reschedule_rpcs_core.sql` | `cns_request_service_reschedule`: elegibilidade `PENDING_PAYMENT`/`CONFIRMED` (cliente com janela 48h; prestador sem); mensagem SYSTEM; observação opcional com `\n\nObservação: ` |
+| `supabase/migrations/20260802130000_service_reschedule_supersede_rounds.sql` (e correlatas `20260802*`) | `_cns_reschedule_snapshot_action_flags` e `cns_propose_service_reschedule`: prestador solicita/propõe em `PENDING_PAYMENT` ou `CONFIRMED`; snapshot com `duration_unit`/`duration_value` |
 
 ## Matching progressivo (backend + feed)
 

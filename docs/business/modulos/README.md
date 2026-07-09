@@ -20,7 +20,7 @@ Este diretório concentra a **documentação funcional e técnica por módulo**,
 | 11 | [message-dispatcher](./message-dispatcher/README.md) | Notificações multicanal (e-mail, push); horário silencioso, quotas, FSM | *Sem rota de UI; backend-only* | `supabase/migrations/`, `supabase/functions/message-dispatcher-*` | Parcial (quiet hours) |
 | 12 | [chats](./chats/README.md) | Conversas e negociação (CNS): lista, thread, propostas; sheet compare/history | `/dashboard/chats`, `/dashboard/chats/:chatId` | `src/features/chats/`, `src/features/negotiation-proposals/` | Concluída |
 | 13 | [matching-dispatch](./matching-dispatch/README.md) | Dispatch progressivo, lotes, visibilidade, gates; feed via Edge | *Sem rota de UI; backend + Edge `list-provider-opportunities`* | `supabase/migrations/202607110*`, `supabase/functions/list-provider-opportunities/` | Concluída |
-| 14 | [service-reschedule](./service-reschedule/README.md) | Reagendamento de serviço contratado; propor nova data/período conforme duração | Embutido em chats e detalhe do serviço | `src/features/service-reschedule/`, migrations `20260802*` | Parcial (propor nova data) |
+| 14 | [service-reschedule](./service-reschedule/README.md) | Reagendamento de serviço contratado (`PENDING_PAYMENT`/`CONFIRMED`); propor nova data/período conforme duração | Embutido em chats e detalhe do serviço | `src/features/service-reschedule/`, migrations `20260802*` | Parcial (propor nova data + elegibilidade) |
 
 > **Descontinuado:** [client-budgets](./client-budgets/README.md) — rota `/dashboard/orcamentos` removida; ver `my-services` + `negotiation-proposals`.
 

@@ -4,6 +4,10 @@
 
 - **Para que serve:** negociar e confirmar uma **nova data (ou período) de execução** de um **serviço já contratado**, sem cancelar a contratação. A data oficial só muda após o **aceite formal** do cliente.
 - **Quem usa:** cliente e prestador participantes do serviço/conversa (ações conforme status da solicitação).
+- **Quando se pode iniciar (status do serviço contratado):**
+  - **Cliente:** `PENDING_PAYMENT` ou `CONFIRMED`, desde que ainda esteja dentro da **janela de 48h** antes da execução (`CLIENT_RESCHEDULE_WINDOW_CLOSED` se fechada).
+  - **Prestador:** `PENDING_PAYMENT` (ainda não pago) ou `CONFIRMED` (pago) — **sem** janela mínima de 48h (pode a qualquer momento nesses status). Antes, o prestador só podia iniciar em `CONFIRMED`.
+- **Propor nova data:** o prestador envia o slot no fluxo de reagendamento (`cns_propose_service_reschedule`) também com o serviço em `PENDING_PAYMENT` ou `CONFIRMED` (mesma elegibilidade de status).
 - **Valor:** formaliza a troca de agenda no chat e no detalhe do serviço; o prestador pode propor nova duração (dentro dos limites do composer de proposta), com validação alinhada ao slot enviado.
 - **Domínio de produto (glossário):** [docs/cancelamento-reagendamento-servicos/CONTEXT.md](../../../cancelamento-reagendamento-servicos/CONTEXT.md).
 
@@ -67,6 +71,8 @@ Evidência: `supabase/migrations/20260802030000_service_reschedule_rpcs_core.sql
 
 ## 7. Escopo documental desta pasta
 
-Documentado com evidência direta neste ciclo: **como o prestador informa duração e datas na proposta**, como o slot embute `duration_unit` / `duration_value`, como o aceite atualiza o serviço contratado, e o **formato da mensagem SYSTEM** ao solicitar (incluindo observação opcional com prefixo `Observação:`).
+Documentado com evidência direta neste ciclo: **elegibilidade de status** para cliente e prestador iniciarem (e para o prestador propor slot), **como o prestador informa duração e datas na proposta**, como o slot embute `duration_unit` / `duration_value`, como o aceite atualiza o serviço contratado, e o **formato da mensagem SYSTEM** ao solicitar (incluindo observação opcional com prefixo `Observação:`).
 
 Não reescreve aqui o ciclo completo de estados da solicitação (pedido, ajuste, aceite, cancelamento, expiração, supersede) — ver glossário de domínio e código/RPCs `cns_*_service_reschedule*`.
+
+Evidência de elegibilidade: `cns_request_service_reschedule`, snapshot/action flags e `cns_propose_service_reschedule` em `supabase/migrations/20260802030000_service_reschedule_rpcs_core.sql` e `20260802130000_service_reschedule_supersede_rounds.sql`.

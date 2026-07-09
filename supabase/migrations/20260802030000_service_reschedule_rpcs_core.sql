@@ -69,7 +69,10 @@ begin
     end if;
 
     if v_role = 'provider'
-      and v_cs.status = 'CONFIRMED'::public.contracted_service_status
+      and v_cs.status in (
+        'PENDING_PAYMENT'::public.contracted_service_status,
+        'CONFIRMED'::public.contracted_service_status
+      )
     then
       v_can_provider_request := true;
     end if;
@@ -102,12 +105,9 @@ begin
         'REQUESTED'::public.service_reschedule_request_status,
         'ADJUSTMENT_REQUESTED'::public.service_reschedule_request_status
       )
-      and (
-        v_cs.status = 'CONFIRMED'::public.contracted_service_status
-        or (
-          v_cs.status = 'PENDING_PAYMENT'::public.contracted_service_status
-          and v_active.requested_by_role = 'client'::public.service_reschedule_requested_by_role
-        )
+      and v_cs.status in (
+        'PENDING_PAYMENT'::public.contracted_service_status,
+        'CONFIRMED'::public.contracted_service_status
       )
       then
         v_can_propose := true;
@@ -256,8 +256,11 @@ begin
         using errcode = 'P0001';
     end if;
   elsif v_role = 'provider' then
-    if v_cs.status <> 'CONFIRMED'::public.contracted_service_status then
-      raise exception 'PROVIDER_RESCHEDULE_REQUIRES_CONFIRMED'
+    if v_cs.status not in (
+      'PENDING_PAYMENT'::public.contracted_service_status,
+      'CONFIRMED'::public.contracted_service_status
+    ) then
+      raise exception 'RESCHEDULE_NOT_ALLOWED'
         using errcode = 'P0001';
     end if;
 
@@ -510,17 +513,6 @@ begin
     'ADJUSTMENT_REQUESTED'::public.service_reschedule_request_status
   ) then
     raise exception 'INVALID_RESCHEDULE_STATUS'
-      using errcode = 'P0001';
-  end if;
-
-  if not (
-    v_cs.status = 'CONFIRMED'::public.contracted_service_status
-    or (
-      v_cs.status = 'PENDING_PAYMENT'::public.contracted_service_status
-      and v_req.requested_by_role = 'client'::public.service_reschedule_requested_by_role
-    )
-  ) then
-    raise exception 'RESCHEDULE_NOT_ALLOWED'
       using errcode = 'P0001';
   end if;
 
