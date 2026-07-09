@@ -40,7 +40,7 @@ Itens que exigem validação humana, evidência parcial ou conflito entre trecho
 
 | ID | Tema | Descrição | Severidade sugerida |
 |----|------|-----------|---------------------|
-| P-11 | Cobertura parcial de `service-reschedule` | Documentado com evidência: modo de data na **proposta** (duração contratada → data única vs período; `_cns_validate_reschedule_slot`; snapshot com duração; cópias UI). Ainda **não** há feature doc de negócio cobrindo o ciclo completo de estados (solicitação, ajuste, aceite, cancelamento, expiração, supersede) nem o detalhe de recálculo de cobrança pós-aceite. | Baixa — documentação |
+| P-11 | Cobertura parcial de `service-reschedule` | Documentado com evidência: modo de data na **proposta** (duração contratada → data única vs período; `_cns_validate_reschedule_slot`; snapshot com duração; cópias UI) e formato da mensagem SYSTEM ao **solicitar** (observação opcional com linha em branco + `Observação:`). Ainda **não** há feature doc de negócio cobrindo o ciclo completo de estados (solicitação, ajuste, aceite, cancelamento, expiração, supersede) nem o detalhe de recálculo de cobrança pós-aceite. | Baixa — documentação |
 
 ## Observações do Message Dispatcher
 

@@ -109,9 +109,17 @@ O sistema:
 * Altera o status para "Reagendamento Solicitado".
 * Insere uma mensagem automática no chat.
 
-Exemplo:
+Exemplo (sem observação do usuário):
 
-"João solicitou o reagendamento do serviço agendado para 15/11. Converse pelo chat para definir uma nova data."
+"João solicitou o reagendamento do serviço agendado para 15/11."
+
+Se o solicitante informar uma **observação** opcional, a mensagem de sistema separa a frase automática da nota com uma linha em branco e o prefixo `Observação:`:
+
+```
+João solicitou o reagendamento do serviço agendado para 15/11.
+
+Observação: Não vou estar disponível nesse dia
+```
 
 ---
 
@@ -482,9 +490,11 @@ O sistema:
 * Altera o status para "Reagendamento Solicitado pelo Prestador".
 * Insere uma mensagem automática no chat.
 
-Exemplo:
+Exemplo (sem observação do usuário):
 
 "Carlos solicitou o reagendamento deste serviço. Converse pelo chat para definir uma nova data."
+
+Se o solicitante informar uma **observação** opcional, a mensagem de sistema separa a frase automática da nota com uma linha em branco e o prefixo `Observação:` (mesmo padrão do pedido iniciado pelo cliente).
 
 ---
 

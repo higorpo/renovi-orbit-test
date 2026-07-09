@@ -123,14 +123,16 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 
 | Artefato | Uso na documentação |
 |----------|---------------------|
-| `docs/business/modulos/service-reschedule/` | README + feature propor nova data |
+| `docs/business/modulos/service-reschedule/` | README (inclui formato da mensagem SYSTEM ao solicitar) + feature propor nova data |
 | `docs/cancelamento-reagendamento-servicos/CONTEXT.md` | Glossário de domínio (inclui modo de data na proposta) |
+| `docs/cancelamento-reagendamento-servicos/details.md` | Fluxo de produto; exemplos de mensagem automática no pedido (com/sem `Observação:`) |
 | `src/features/service-reschedule/utils/deriveRescheduleDateMode.ts` | Data única vs período a partir de `duration_unit`/`duration_value` |
 | `src/features/service-reschedule/types/serviceReschedule.forms.ts` | Validação Zod + `matchesProposalDayDurationISO` |
 | `src/features/service-reschedule/components/ProposeRescheduleDialog.tsx` | Labels “Data de execução” / “Data de início” + “Data de fim” |
 | `src/features/service-reschedule/utils/mapRescheduleSnapshot.ts` | Lê `duration_unit`/`duration_value` do snapshot |
 | `src/features/service-reschedule/utils/rescheduleCardCopy.ts`, `formatRescheduleSlot.ts` | “Data proposta” / “Período proposto”; oculta range se fim nulo ou = início |
 | `supabase/migrations/20260802020000_service_reschedule_helpers.sql` | `_cns_validate_reschedule_slot(slot, duration_unit, duration_value)` |
+| `supabase/migrations/20260802030000_service_reschedule_rpcs_core.sql` | `cns_request_service_reschedule`: mensagem SYSTEM; observação opcional com `\n\nObservação: ` |
 | `supabase/migrations/20260802130000_service_reschedule_supersede_rounds.sql` (e correlatas `20260802*`) | Snapshot JSON com `duration_unit`/`duration_value`; RPCs de propor |
 
 ## Matching progressivo (backend + feed)

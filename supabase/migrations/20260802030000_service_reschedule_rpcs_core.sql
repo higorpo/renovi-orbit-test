@@ -348,7 +348,7 @@ begin
   end if;
 
   if v_note is not null then
-    v_system_text := v_system_text || ' ' || v_note;
+    v_system_text := v_system_text || E'\n\nObservação: ' || v_note;
   end if;
 
   insert into public.chat_messages (
