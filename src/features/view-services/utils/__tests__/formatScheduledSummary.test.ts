@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
+  formatScheduledSummary,
+  formatScheduledSummaryLabel,
   getScheduleHighlightContent,
   getScheduledTiming,
 } from "../formatScheduledSummary";
@@ -23,6 +25,63 @@ function contracted(
     ...overrides,
   };
 }
+
+describe("formatScheduledSummary", () => {
+  it("formats a single-day schedule with shift", () => {
+    expect(
+      formatScheduledSummary(
+        contracted({
+          scheduledStartDate: "2025-06-09",
+          scheduledEndDate: null,
+          scheduledShift: "morning",
+        }),
+      ),
+    ).toEqual({ dateLabel: "09/06/2025", shiftLabel: "manhã" });
+  });
+
+  it("formats a multi-day range", () => {
+    expect(
+      formatScheduledSummary(
+        contracted({
+          scheduledStartDate: "2025-06-09",
+          scheduledEndDate: "2025-06-11",
+          scheduledShift: "afternoon",
+        }),
+      ),
+    ).toEqual({ dateLabel: "09/06/2025 até 11/06/2025", shiftLabel: "tarde" });
+  });
+
+  it("returns null when there is no start date", () => {
+    expect(
+      formatScheduledSummary(contracted({ scheduledStartDate: "" })),
+    ).toBeNull();
+  });
+});
+
+describe("formatScheduledSummaryLabel", () => {
+  it("joins date and shift for detail UI", () => {
+    expect(
+      formatScheduledSummaryLabel(
+        contracted({
+          scheduledStartDate: "2025-06-09",
+          scheduledEndDate: "2025-06-11",
+          scheduledShift: "morning",
+        }),
+      ),
+    ).toBe("09/06/2025 até 11/06/2025 (manhã)");
+  });
+
+  it("omits shift parentheses when shift is missing", () => {
+    expect(
+      formatScheduledSummaryLabel(
+        contracted({
+          scheduledStartDate: "2025-06-09",
+          scheduledShift: "",
+        }),
+      ),
+    ).toBe("09/06/2025");
+  });
+});
 
 describe("getScheduleHighlightContent", () => {
   beforeEach(() => {

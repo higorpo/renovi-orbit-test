@@ -13,7 +13,8 @@ import {
   type ServiceCompletionViewerRole,
 } from "./ServiceCompletionActions";
 import type { ContractedServiceSummary } from "../types/service.types";
-import { formatShift } from "@/lib/utils/formatShift";
+import { getContractedServiceStatusLabel } from "../utils/contractedServiceStatusLabel";
+import { formatScheduledSummaryLabel } from "../utils/formatScheduledSummary";
 import { ServiceDetailSection } from "./ServiceDetailSection";
 
 interface ServiceContractedSectionProps {
@@ -45,6 +46,8 @@ export function ServiceContractedSection({
 }: ServiceContractedSectionProps) {
   const { profile } = useAuth();
   const providerName = contracted.provider?.displayName;
+  const statusLabel = getContractedServiceStatusLabel(contracted.status);
+  const scheduledLabel = formatScheduledSummaryLabel(contracted);
 
   return (
     <ServiceDetailSection
@@ -66,20 +69,13 @@ export function ServiceContractedSection({
         <p className="flex items-center gap-2">
           <CircleCheck className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
           <span>
-            Status: <span className="font-medium text-ink">{contracted.status}</span>
+            Status: <span className="font-medium text-ink">{statusLabel}</span>
           </span>
         </p>
-        {contracted.scheduledStartDate ? (
+        {scheduledLabel ? (
           <p className="flex items-start gap-2">
             <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-            <span>
-              Agendado para {contracted.scheduledStartDate}
-              {contracted.scheduledEndDate &&
-              contracted.scheduledEndDate !== contracted.scheduledStartDate
-                ? ` até ${contracted.scheduledEndDate}`
-                : ""}
-              {contracted.scheduledShift ? ` (${formatShift(contracted.scheduledShift)})` : ""}
-            </span>
+            <span>Agendado para {scheduledLabel}</span>
           </p>
         ) : null}
       </div>

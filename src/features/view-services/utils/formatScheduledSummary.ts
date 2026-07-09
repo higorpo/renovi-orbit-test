@@ -33,6 +33,17 @@ export function formatScheduledSummary(
   return { dateLabel, shiftLabel };
 }
 
+/** Single-line schedule label for detail UI (date range + optional shift). */
+export function formatScheduledSummaryLabel(
+  contracted: ContractedServiceSummary,
+): string | null {
+  const summary = formatScheduledSummary(contracted);
+  if (!summary) return null;
+  return summary.shiftLabel
+    ? `${summary.dateLabel} (${summary.shiftLabel})`
+    : summary.dateLabel;
+}
+
 export type ScheduledTiming = "today" | "tomorrow" | "future" | "past";
 
 export function getScheduledTiming(

@@ -6,6 +6,7 @@
  */
 
 export type {
+  ContractedServicePaymentStatus,
   PaymentGatewaySlug,
   PaymentMethodType,
   PaymentProviderMethod,
