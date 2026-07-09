@@ -22,13 +22,13 @@ describe("ManualPaymentButton", () => {
     const { rerender } = render(
       <ManualPaymentButton scheduleState="SCHEDULED" onClick={onClick} />,
     );
-    expect(screen.queryByRole("button", { name: /Efetuar Pagamento/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Ajustar pagamento/i })).toBeNull();
 
     rerender(<ManualPaymentButton scheduleState="PAID" onClick={onClick} />);
-    expect(screen.queryByRole("button", { name: /Efetuar Pagamento/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Ajustar pagamento/i })).toBeNull();
 
     rerender(<ManualPaymentButton scheduleState="CANCELLED" onClick={onClick} />);
-    expect(screen.queryByRole("button", { name: /Efetuar Pagamento/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Ajustar pagamento/i })).toBeNull();
   });
 
   it("renders for FAILED and FAILED_PERMANENT states", () => {
@@ -36,7 +36,7 @@ describe("ManualPaymentButton", () => {
 
     render(<ManualPaymentButton scheduleState="FAILED" onClick={onClick} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /Efetuar Pagamento/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Ajustar pagamento/i }));
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 });
@@ -73,7 +73,7 @@ describe("ManualPaymentRecovery", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Efetuar Pagamento/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Ajustar pagamento/i }));
     expect(screen.getByTestId("manual-payment-modal")).toBeInTheDocument();
   });
 
@@ -105,7 +105,7 @@ describe("ManualPaymentRecovery", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Efetuar Pagamento/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Ajustar pagamento/i }));
     expect(screen.queryByTestId("manual-payment-modal")).toBeNull();
   });
 
@@ -140,7 +140,7 @@ describe("ManualPaymentRecovery", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: /Efetuar Pagamento/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Ajustar pagamento/i })).toBeDisabled();
   });
 });
 

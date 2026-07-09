@@ -25,12 +25,13 @@ export function ManualPaymentButton({
   return (
     <Button
       type="button"
+      size="sm"
       className={className}
       onClick={onClick}
       disabled={disabled}
     >
       <CreditCard className="mr-2 h-4 w-4" aria-hidden />
-      Efetuar Pagamento
+      Ajustar pagamento
     </Button>
   );
 }
@@ -55,7 +56,7 @@ export function ManualPaymentRecovery({
         scheduleState={schedule?.state}
         onClick={() => setOpen(true)}
         disabled={scheduleQuery.isLoading}
-        className="w-full sm:w-auto"
+        className="w-full rounded-pill sm:w-auto"
       />
       {schedule && context ? (
         <ManualPaymentModal
