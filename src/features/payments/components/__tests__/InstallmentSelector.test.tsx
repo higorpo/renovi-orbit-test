@@ -1,5 +1,6 @@
 // @vitest-environment happy-dom
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { MutableRefObject } from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { InstallmentSelector } from "../InstallmentSelector";
 
@@ -68,6 +69,8 @@ describe("InstallmentSelector", () => {
     expect(screen.getByText(/1x de/i)).toBeInTheDocument();
     expect(screen.getByText(/3x de/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Total com taxas/i)).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: /Continuar/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Voltar/i })).toBeNull();
   });
 
   it("shows loading and error states", () => {
@@ -112,9 +115,10 @@ describe("InstallmentSelector", () => {
     expect(refetch).toHaveBeenCalled();
   });
 
-  it("calls onSelect with installment number and HMAC", async () => {
+  it("calls onSelect via continueRef with installment number and HMAC", async () => {
     const onSelect = vi.fn();
-    const onBack = vi.fn();
+    const continueRef: MutableRefObject<(() => void) | null> = { current: null };
+    const onCanContinueChange = vi.fn();
     mockUseInstallmentOptions.mockReturnValue({
       data: {
         installment_options: [
@@ -142,15 +146,22 @@ describe("InstallmentSelector", () => {
         cardBrand="VISA"
         paymentTokenId="token-1"
         onSelect={onSelect}
-        onBack={onBack}
+        continueRef={continueRef}
+        onCanContinueChange={onCanContinueChange}
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Voltar/i }));
-    expect(onBack).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(onCanContinueChange).toHaveBeenCalledWith(false);
+    });
 
     fireEvent.click(screen.getByRole("radio"));
-    fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+
+    await waitFor(() => {
+      expect(onCanContinueChange).toHaveBeenCalledWith(true);
+    });
+
+    continueRef.current?.();
 
     await waitFor(() => {
       expect(onSelect).toHaveBeenCalledWith({
@@ -175,6 +186,7 @@ describe("InstallmentSelector", () => {
 
   it("does not call onSelect when hmac payload is missing", () => {
     const onSelect = vi.fn();
+    const continueRef: MutableRefObject<(() => void) | null> = { current: null };
     mockUseInstallmentOptions.mockReturnValue({
       data: {
         installment_options: [
@@ -200,11 +212,12 @@ describe("InstallmentSelector", () => {
         cardBrand="VISA"
         paymentTokenId="token-1"
         onSelect={onSelect}
+        continueRef={continueRef}
       />,
     );
 
     fireEvent.click(screen.getByRole("radio"));
-    fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+    continueRef.current?.();
     expect(onSelect).not.toHaveBeenCalled();
   });
 

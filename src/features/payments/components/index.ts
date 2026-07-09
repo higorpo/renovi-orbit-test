@@ -9,10 +9,13 @@ export { PhoneStep } from "./CheckoutStepper/PhoneStep";
 export type { PhoneStepProps } from "./CheckoutStepper/PhoneStep";
 export { CardStep } from "./CheckoutStepper/CardStep";
 export type { CardStepProps } from "./CheckoutStepper/CardStep";
-export { CardForm } from "./CheckoutStepper/CardForm";
+export { CardForm, CARD_FORM_ID } from "./CheckoutStepper/CardForm";
 export type { CardFormProps } from "./CheckoutStepper/CardForm";
 export { SavedCardSelector } from "./CheckoutStepper/SavedCardSelector";
-export type { SavedCardSelectorProps } from "./CheckoutStepper/SavedCardSelector";
+export type {
+  SavedCardSelectorProps,
+  SavedCardSelectorMode,
+} from "./CheckoutStepper/SavedCardSelector";
 export {
   InstallmentSelector,
   useInstallmentSignatureRecovery,

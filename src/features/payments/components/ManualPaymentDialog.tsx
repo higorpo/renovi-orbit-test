@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +20,11 @@ import {
   getCardBrandLabel,
 } from "../utils/cardPresentation";
 import { CardStep } from "./CheckoutStepper/CardStep";
-import { SavedCardSelector } from "./CheckoutStepper/SavedCardSelector";
+import {
+  SavedCardSelector,
+  type SavedCardSelectorMode,
+} from "./CheckoutStepper/SavedCardSelector";
+import { CARD_FORM_ID } from "./CheckoutStepper/CardForm";
 import { InstallmentSelector } from "./InstallmentSelector";
 
 export type ManualPaymentDialogProps = {
@@ -93,6 +98,29 @@ export function ManualPaymentDialog({
     onCompleted,
   });
 
+  const [cardMode, setCardMode] = useState<SavedCardSelectorMode>("list");
+  const [canContinue, setCanContinue] = useState(false);
+  const [isCardPending, setIsCardPending] = useState(false);
+  const cardContinueRef = useRef<(() => void) | null>(null);
+  const cardBackRef = useRef<(() => void) | null>(null);
+  const installmentContinueRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setCardMode("list");
+      setCanContinue(false);
+      setIsCardPending(false);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    setCanContinue(false);
+    setIsCardPending(false);
+    if (view !== "card") {
+      setCardMode("list");
+    }
+  }, [view]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <ShellDialogContent ref={contentRef} size="md">
@@ -134,6 +162,12 @@ export function ManualPaymentDialog({
               phone={savedPhone}
               onSelect={handleCardSelected}
               onBack={() => onOpenChange(false)}
+              formId={CARD_FORM_ID}
+              onModeChange={setCardMode}
+              onCanContinueChange={setCanContinue}
+              onPendingChange={setIsCardPending}
+              continueRef={cardContinueRef}
+              backRef={cardBackRef}
             />
           ) : null}
 
@@ -144,7 +178,8 @@ export function ManualPaymentDialog({
               cardBrand={selection.cardBrand}
               paymentTokenId={selection.paymentTokenId}
               onSelect={handleInstallmentSelected}
-              onBack={() => setView("card")}
+              onCanContinueChange={setCanContinue}
+              continueRef={installmentContinueRef}
             />
           ) : null}
 
@@ -212,6 +247,58 @@ export function ManualPaymentDialog({
             </Button>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Falar com suporte
+            </Button>
+          </DialogFooter>
+        ) : null}
+
+        {view === "card" ? (
+          <DialogFooter className={DIALOG_FOOTER_CLASS}>
+            {cardMode === "form" ? (
+              <Button
+                type="submit"
+                form={CARD_FORM_ID}
+                disabled={isCardPending || !canContinue}
+              >
+                {isCardPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                    Salvando cartão…
+                  </>
+                ) : (
+                  "Continuar"
+                )}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                disabled={!canContinue}
+                onClick={() => cardContinueRef.current?.()}
+              >
+                Continuar
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isCardPending}
+              onClick={() => cardBackRef.current?.() ?? onOpenChange(false)}
+            >
+              Voltar
+            </Button>
+          </DialogFooter>
+        ) : null}
+
+        {view === "installments" ? (
+          <DialogFooter className={DIALOG_FOOTER_CLASS}>
+            <Button
+              type="button"
+              disabled={!canContinue}
+              onClick={() => installmentContinueRef.current?.()}
+            >
+              Continuar
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setView("card")}>
+              Voltar
             </Button>
           </DialogFooter>
         ) : null}

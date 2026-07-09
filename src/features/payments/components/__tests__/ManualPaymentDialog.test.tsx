@@ -39,6 +39,10 @@ vi.mock("../CheckoutStepper/SavedCardSelector", () => ({
   SavedCardSelector: ({
     onSelect,
     onBack,
+    onModeChange,
+    onCanContinueChange,
+    continueRef,
+    backRef,
   }: {
     onSelect: (selection: {
       paymentTokenId: string;
@@ -48,29 +52,47 @@ vi.mock("../CheckoutStepper/SavedCardSelector", () => ({
       expiryYear?: number;
     }) => void;
     onBack?: () => void;
-  }) => (
-    <div>
-      <button
-        type="button"
-        onClick={() =>
-          onSelect({
-            paymentTokenId: "token-1",
-            cardBrand: "VISA",
-            cardNumberMasked: "411111XXXXXX1111",
-            expiryMonth: 12,
-            expiryYear: 2030,
-          })
-        }
-      >
-        Selecionar cartão
-      </button>
-      {onBack ? (
-        <button type="button" onClick={onBack}>
-          Voltar do cartão
+    onModeChange?: (mode: "list" | "form") => void;
+    onCanContinueChange?: (canContinue: boolean) => void;
+    continueRef?: { current: (() => void) | null };
+    backRef?: { current: (() => void) | null };
+  }) => {
+    queueMicrotask(() => {
+      onModeChange?.("list");
+      onCanContinueChange?.(true);
+    });
+    if (continueRef) {
+      continueRef.current = () =>
+        onSelect({
+          paymentTokenId: "token-1",
+          cardBrand: "VISA",
+          cardNumberMasked: "411111XXXXXX1111",
+          expiryMonth: 12,
+          expiryYear: 2030,
+        });
+    }
+    if (backRef) {
+      backRef.current = onBack ?? null;
+    }
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() =>
+            onSelect({
+              paymentTokenId: "token-1",
+              cardBrand: "VISA",
+              cardNumberMasked: "411111XXXXXX1111",
+              expiryMonth: 12,
+              expiryYear: 2030,
+            })
+          }
+        >
+          Selecionar cartão
         </button>
-      ) : null}
-    </div>
-  ),
+      </div>
+    );
+  },
 }));
 
 const installmentSelection: InstallmentSelection = {
@@ -95,22 +117,27 @@ const installmentSelection: InstallmentSelection = {
 vi.mock("../InstallmentSelector", () => ({
   InstallmentSelector: ({
     onSelect,
-    onBack,
+    onCanContinueChange,
+    continueRef,
   }: {
     onSelect: (selection: InstallmentSelection) => void;
-    onBack?: () => void;
-  }) => (
-    <div>
-      <button type="button" onClick={() => onSelect(installmentSelection)}>
-        Selecionar parcelas
-      </button>
-      {onBack ? (
-        <button type="button" onClick={onBack}>
-          Voltar das parcelas
+    onCanContinueChange?: (canContinue: boolean) => void;
+    continueRef?: { current: (() => void) | null };
+  }) => {
+    queueMicrotask(() => {
+      onCanContinueChange?.(true);
+    });
+    if (continueRef) {
+      continueRef.current = () => onSelect(installmentSelection);
+    }
+    return (
+      <div>
+        <button type="button" onClick={() => onSelect(installmentSelection)}>
+          Selecionar parcelas
         </button>
-      ) : null}
-    </div>
-  ),
+      </div>
+    );
+  },
 }));
 
 const updatePaymentMethod = vi.fn();
@@ -182,6 +209,36 @@ describe("ManualPaymentDialog", () => {
       scheduleId: "schedule-1",
       outcome: "FAILED_PERMANENT",
       chargeAmount: "160.00",
+    });
+  });
+
+  it("keeps Continuar/Voltar in the dialog footer on card and installments views", async () => {
+    const onOpenChange = vi.fn();
+    render(
+      <ManualPaymentDialog
+        open
+        onOpenChange={onOpenChange}
+        schedule={schedule}
+        acceptedProposalId="proposal-1"
+        serviceRequestId="sr-1"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /^Continuar$/i })).toBeEnabled();
+    });
+    expect(screen.getByRole("button", { name: /^Voltar$/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /^Continuar$/i }));
+    expect(screen.getByText("Parcelamento")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /^Continuar$/i })).toBeEnabled();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^Continuar$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Confirmar pagamento" })).toBeInTheDocument();
     });
   });
 

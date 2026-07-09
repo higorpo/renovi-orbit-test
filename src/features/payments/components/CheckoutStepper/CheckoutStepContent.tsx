@@ -1,4 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth";
 import { ConfirmationStep } from "./ConfirmationStep";
 import { InstallmentSelector } from "../InstallmentSelector";
@@ -10,7 +12,11 @@ import { CardStep } from "./CardStep";
 import { CHECKOUT_STEP_LABELS } from "./checkoutStepLabels";
 import { CpfStep } from "./CpfStep";
 import { PhoneStep } from "./PhoneStep";
-import { SavedCardSelector } from "./SavedCardSelector";
+import {
+  SavedCardSelector,
+  type SavedCardSelectorMode,
+} from "./SavedCardSelector";
+import { CARD_FORM_ID } from "./CardForm";
 import { useClientCpfForPayment } from "../../hooks/useClientCpfForPayment";
 
 function DefaultStepPlaceholder({ step }: { step: CheckoutStepId }) {
@@ -20,6 +26,49 @@ function DefaultStepPlaceholder({ step }: { step: CheckoutStepId }) {
       className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground"
     >
       Etapa: {CHECKOUT_STEP_LABELS[step]}
+    </div>
+  );
+}
+
+function StepActions({
+  onBack,
+  onContinue,
+  continueDisabled,
+  continueLabel = "Continuar",
+  continueType = "button",
+  continueForm,
+  isPending = false,
+}: {
+  onBack?: () => void;
+  onContinue?: () => void;
+  continueDisabled?: boolean;
+  continueLabel?: string;
+  continueType?: "button" | "submit";
+  continueForm?: string;
+  isPending?: boolean;
+}) {
+  return (
+    <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+      {onBack ? (
+        <Button type="button" variant="outline" onClick={onBack} disabled={isPending}>
+          Voltar
+        </Button>
+      ) : null}
+      <Button
+        type={continueType}
+        form={continueForm}
+        disabled={continueDisabled || isPending}
+        onClick={continueType === "button" ? onContinue : undefined}
+      >
+        {isPending ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+            Salvando cartão...
+          </>
+        ) : (
+          continueLabel
+        )}
+      </Button>
     </div>
   );
 }
@@ -58,6 +107,15 @@ export function CheckoutStepContent({
   const resolvedCpf = stepData.cpf ?? profileCpf;
   const resolvedPhone = stepData.phone ?? profile?.phone ?? undefined;
 
+  const [cardMode, setCardMode] = useState<SavedCardSelectorMode>("list");
+  const [canContinueCard, setCanContinueCard] = useState(false);
+  const [canGoBackCard, setCanGoBackCard] = useState(false);
+  const [isCardPending, setIsCardPending] = useState(false);
+  const [canContinueInstallments, setCanContinueInstallments] = useState(false);
+  const cardContinueRef = useRef<(() => void) | null>(null);
+  const cardBackRef = useRef<(() => void) | null>(null);
+  const installmentContinueRef = useRef<(() => void) | null>(null);
+
   switch (currentStep) {
     case "cpf":
       return (
@@ -79,18 +137,35 @@ export function CheckoutStepContent({
       return (
         <CardStep onSessionIdGenerated={setClearsaleSessionId}>
           {proposalId ? (
-            <SavedCardSelector
-              providerServiceId={proposalId}
-              savedCpf={resolvedCpf}
-              phone={resolvedPhone}
-              onSelect={(selection) =>
-                completeStep({
-                  cardTokenId: selection.paymentTokenId,
-                  cardBrand: selection.cardBrand,
-                })
-              }
-              onBack={canGoBack ? goBack : undefined}
-            />
+            <div className="space-y-4">
+              <SavedCardSelector
+                providerServiceId={proposalId}
+                savedCpf={resolvedCpf}
+                phone={resolvedPhone}
+                onSelect={(selection) =>
+                  completeStep({
+                    cardTokenId: selection.paymentTokenId,
+                    cardBrand: selection.cardBrand,
+                  })
+                }
+                onBack={canGoBack ? goBack : undefined}
+                formId={CARD_FORM_ID}
+                onModeChange={setCardMode}
+                onCanContinueChange={setCanContinueCard}
+                onCanGoBackChange={setCanGoBackCard}
+                onPendingChange={setIsCardPending}
+                continueRef={cardContinueRef}
+                backRef={cardBackRef}
+              />
+              <StepActions
+                onBack={canGoBackCard ? () => cardBackRef.current?.() : undefined}
+                onContinue={() => cardContinueRef.current?.()}
+                continueDisabled={!canContinueCard}
+                continueType={cardMode === "form" ? "submit" : "button"}
+                continueForm={cardMode === "form" ? CARD_FORM_ID : undefined}
+                isPending={isCardPending}
+              />
+            </div>
           ) : (
             <DefaultStepPlaceholder step="card" />
           )}
@@ -98,25 +173,33 @@ export function CheckoutStepContent({
       );
     case "installments":
       return proposalId && serviceId && stepData.cardBrand && stepData.cardTokenId ? (
-        <InstallmentSelector
-          proposalId={proposalId}
-          serviceId={serviceId}
-          cardBrand={stepData.cardBrand}
-          paymentTokenId={stepData.cardTokenId}
-          onSelect={(selection) =>
-            completeStep({
-              installmentNumber: selection.installmentNumber,
-              hmac: selection.installmentSelectionHmac,
-              installmentHmacPayload: selection.installmentHmacPayload,
-              installmentAmount: selection.installmentAmount,
-              totalWithFees: selection.totalWithFees,
-              installmentOptions: selection.installmentOptions,
-              installmentComputedAt: selection.computedAt,
-              installmentExpiresAt: selection.expiresAt,
-            })
-          }
-          onBack={canGoBack ? goBack : undefined}
-        />
+        <div className="space-y-4">
+          <InstallmentSelector
+            proposalId={proposalId}
+            serviceId={serviceId}
+            cardBrand={stepData.cardBrand}
+            paymentTokenId={stepData.cardTokenId}
+            onSelect={(selection) =>
+              completeStep({
+                installmentNumber: selection.installmentNumber,
+                hmac: selection.installmentSelectionHmac,
+                installmentHmacPayload: selection.installmentHmacPayload,
+                installmentAmount: selection.installmentAmount,
+                totalWithFees: selection.totalWithFees,
+                installmentOptions: selection.installmentOptions,
+                installmentComputedAt: selection.computedAt,
+                installmentExpiresAt: selection.expiresAt,
+              })
+            }
+            onCanContinueChange={setCanContinueInstallments}
+            continueRef={installmentContinueRef}
+          />
+          <StepActions
+            onBack={canGoBack ? goBack : undefined}
+            onContinue={() => installmentContinueRef.current?.()}
+            continueDisabled={!canContinueInstallments}
+          />
+        </div>
       ) : (
         <DefaultStepPlaceholder step="installments" />
       );

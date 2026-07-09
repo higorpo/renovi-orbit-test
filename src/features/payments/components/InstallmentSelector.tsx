@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState, type MutableRefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -15,7 +15,9 @@ export type InstallmentSelectorProps = {
   cardBrand: string;
   paymentTokenId: string;
   onSelect: (selection: InstallmentSelection) => void;
-  onBack?: () => void;
+  onCanContinueChange?: (canContinue: boolean) => void;
+  /** Parent Continuar — confirms the selected installment. */
+  continueRef?: MutableRefObject<(() => void) | null>;
 };
 
 export function InstallmentSelector({
@@ -24,7 +26,8 @@ export function InstallmentSelector({
   cardBrand,
   paymentTokenId,
   onSelect,
-  onBack,
+  onCanContinueChange,
+  continueRef,
 }: InstallmentSelectorProps) {
   const [selectedInstallment, setSelectedInstallment] = useState<string>("");
   const installmentQuery = useInstallmentOptions({
@@ -70,6 +73,23 @@ export function InstallmentSelector({
       expiresAt: installmentData.expires_at ?? new Date().toISOString(),
     });
   };
+
+  useEffect(() => {
+    const canContinue =
+      !installmentQuery.isLoading &&
+      !installmentQuery.isError &&
+      Boolean(selectedInstallment);
+    onCanContinueChange?.(canContinue);
+  }, [
+    installmentQuery.isLoading,
+    installmentQuery.isError,
+    selectedInstallment,
+    onCanContinueChange,
+  ]);
+
+  if (continueRef) {
+    continueRef.current = handleContinue;
+  }
 
   if (installmentQuery.isLoading) {
     return <p className="text-sm text-muted-foreground">Calculando parcelas...</p>;
@@ -131,17 +151,6 @@ export function InstallmentSelector({
         As taxas variam conforme a bandeira e a quantidade de parcelas. O valor final será
         confirmado antes da cobrança.
       </p>
-
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        {onBack ? (
-          <Button type="button" variant="outline" onClick={onBack}>
-            Voltar
-          </Button>
-        ) : null}
-        <Button type="button" disabled={!selectedInstallment} onClick={handleContinue}>
-          Continuar
-        </Button>
-      </div>
 
       <button
         type="button"

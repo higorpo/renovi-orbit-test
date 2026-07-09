@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +26,8 @@ import { maskCardNumber } from "../../utils/card-validator";
 import { mapPaymentErrorToUserMessage } from "../../utils/mapPaymentUserMessage";
 import { PaymentTrustDisclosure } from "../PaymentTrustDisclosure";
 
+export const CARD_FORM_ID = "payment-card-form";
+
 export type CardFormProps = {
   providerServiceId?: string;
   tokenizeContext?: "checkout" | "profile";
@@ -34,6 +36,10 @@ export type CardFormProps = {
   onSuccess: (result: TokenizeCardSuccess) => void;
   onBack?: () => void;
   submitLabel?: string;
+  /** Hide inline Continuar/Voltar so a parent DialogFooter can own them. */
+  hideActions?: boolean;
+  formId?: string;
+  onPendingChange?: (isPending: boolean) => void;
 };
 
 export function CardForm({
@@ -44,6 +50,9 @@ export function CardForm({
   onSuccess,
   onBack,
   submitLabel,
+  hideActions = false,
+  formId = CARD_FORM_ID,
+  onPendingChange,
 }: CardFormProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const tokenizeCard = useTokenizeCard();
@@ -58,6 +67,10 @@ export function CardForm({
     defaultValues: defaultCardFormValues(collectCpf),
     mode: "onSubmit",
   });
+
+  useEffect(() => {
+    onPendingChange?.(tokenizeCard.isPending);
+  }, [onPendingChange, tokenizeCard.isPending]);
 
   const handleSubmit = form.handleSubmit(async (values) => {
     setSubmitError(null);
@@ -104,7 +117,7 @@ export function CardForm({
 
   return (
     <Form {...form}>
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form id={formId} onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
           <h2 className="text-lg font-semibold">Dados do cartão</h2>
           <p className="text-sm text-muted-foreground">
@@ -421,23 +434,25 @@ export function CardForm({
           </p>
         ) : null}
 
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          {onBack ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onBack}
-              disabled={tokenizeCard.isPending}
-            >
-              Voltar
+        {hideActions ? null : (
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            {onBack ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onBack}
+                disabled={tokenizeCard.isPending}
+              >
+                Voltar
+              </Button>
+            ) : null}
+            <Button type="submit" disabled={tokenizeCard.isPending}>
+              {tokenizeCard.isPending
+                ? "Salvando cartão..."
+                : (submitLabel ?? "Continuar")}
             </Button>
-          ) : null}
-          <Button type="submit" disabled={tokenizeCard.isPending}>
-            {tokenizeCard.isPending
-              ? "Salvando cartão..."
-              : (submitLabel ?? "Continuar")}
-          </Button>
-        </div>
+          </div>
+        )}
       </form>
     </Form>
   );
