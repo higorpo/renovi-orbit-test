@@ -169,10 +169,32 @@ export function ProposeRescheduleDialog({
                 <div className="grid gap-3 sm:grid-cols-2">
                   <FormField
                     control={form.control}
+                    name="durationUnit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Medido em</FormLabel>
+                        <FormControl>
+                          <select
+                            id="reschedule-duration-unit"
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            {...field}
+                            onFocus={scheduleSync}
+                          >
+                            <option value="hours">Horas</option>
+                            <option value="days">Dias</option>
+                          </select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name="durationValueInput"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Tempo estimado para executar</FormLabel>
+                        <FormLabel>Tempo estimado</FormLabel>
                         <FormControl>
                           <Input
                             id="reschedule-duration-value"
@@ -184,28 +206,6 @@ export function ProposeRescheduleDialog({
                             }
                             onFocus={scheduleSync}
                           />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="durationUnit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Unidade</FormLabel>
-                        <FormControl>
-                          <select
-                            id="reschedule-duration-unit"
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                            {...field}
-                            onFocus={scheduleSync}
-                          >
-                            <option value="hours">Horas</option>
-                            <option value="days">Dias</option>
-                          </select>
                         </FormControl>
                         <FormMessage />
                       </FormItem>

@@ -2,21 +2,23 @@
 
 ## 1. Resumo executivo
 
-Quando o prestador **propõe uma nova data** de reagendamento, o dialog “Propor nova data” permite informar **tempo estimado para executar** e **unidade** (horas/dias), além de data(s) e turno. Os campos de duração vêm **pré-preenchidos** com `duration_unit` e `duration_value` do serviço contratado (proposta aceita) e podem ser **alterados** pelo prestador na proposta, com os **mesmos limites** do composer de proposta (máx. 24 horas / 7 dias).
+Quando o prestador **propõe uma nova data** de reagendamento, o dialog “Propor nova data” permite informar **Medido em** (Horas/Dias) e **Tempo estimado**, nessa ordem, além de data(s) e turno. Os campos de duração vêm **pré-preenchidos** com `duration_unit` e `duration_value` do serviço contratado (proposta aceita) e podem ser **alterados** pelo prestador na proposta, com os **mesmos limites** do composer de proposta (máx. 24 horas / 7 dias).
 
 O modo do formulário (data única vs período) deriva da **duração informada na proposta** — não de uma escolha livre “com ou sem fim”. Ao aceitar, a duração do serviço contratado é atualizada a partir do slot proposto.
 
 ## 2. Duração no dialog
 
-| Campo na UI | Comportamento |
-|-------------|---------------|
-| **Tempo estimado para executar** | Numérico inteiro > 0. Pré-preenchido com `duration_value` do serviço contratado. Editável pelo prestador. |
-| **Unidade** | `Horas` ou `Dias`. Pré-preenchida com `duration_unit` do serviço contratado. Editável pelo prestador. |
+Ordem e rótulos na UI (iguais ao composer de proposta):
+
+| Campo na UI (ordem) | Comportamento |
+|---------------------|---------------|
+| 1. **Medido em** | Select: `Horas` ou `Dias`. Pré-preenchido com `duration_unit` do serviço contratado. Editável pelo prestador. |
+| 2. **Tempo estimado** | Numérico inteiro > 0. Pré-preenchido com `duration_value` do serviço contratado. Editável pelo prestador. |
 
 ### Limites (iguais ao composer de proposta)
 
-| Unidade | Máximo |
-|---------|--------|
+| Medido em | Máximo |
+|-----------|--------|
 | Horas | 24 |
 | Dias | 7 (1 semana) |
 
@@ -103,7 +105,7 @@ devem ser iguais a `duration_value` (do formulário / embutido no slot).
 
 | Papel | Ação documentada aqui |
 |-------|------------------------|
-| Prestador | Abre “Propor nova data”; pode ajustar tempo estimado, unidade, data(s) e turno; envia o slot validado |
+| Prestador | Abre “Propor nova data”; pode ajustar Medido em, Tempo estimado, data(s) e turno; envia o slot validado |
 | Cliente | Vê “Data proposta” / “Período proposto” no card; aceite formal é outro passo (fora do detalhe deste doc) |
 
 ## 8. Evidências

@@ -158,22 +158,21 @@ export function ProposalComposer({
           <div className="grid gap-3 sm:grid-cols-2">
             <FormField
               control={form.control}
-              name="durationValueInput"
+              name="durationUnit"
               render={({ field }) => (
                 <FormItem className="space-y-2">
-                  <FormLabel htmlFor="proposal-duration-value">
-                    Tempo estimado para executar
-                  </FormLabel>
+                  <FormLabel htmlFor="proposal-duration-unit">Medido em</FormLabel>
                   <FormControl>
-                    <Input
-                      id="proposal-duration-value"
-                      inputMode="numeric"
-                      placeholder="Ex.: 5"
+                    <select
+                      id="proposal-duration-unit"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
                       value={field.value}
-                      onChange={(event) =>
-                        field.onChange(event.target.value.replace(/[^\d]/g, ""))}
+                      onChange={(event) => field.onChange(event.target.value)}
                       onFocus={onInputFocus}
-                    />
+                    >
+                      <option value="hours">Horas</option>
+                      <option value="days">Dias</option>
+                    </select>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -182,20 +181,21 @@ export function ProposalComposer({
 
             <FormField
               control={form.control}
-              name="durationUnit"
+              name="durationValueInput"
               render={({ field }) => (
                 <FormItem className="space-y-2">
-                  <FormLabel htmlFor="proposal-duration-unit">Unidade</FormLabel>
+                  <FormLabel htmlFor="proposal-duration-value">Tempo estimado</FormLabel>
                   <FormControl>
-                    <select
-                      id="proposal-duration-unit"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                    <Input
+                      id="proposal-duration-value"
+                      inputMode="numeric"
+                      placeholder="Ex.: 5"
                       value={field.value}
-                      onChange={(event) => field.onChange(event.target.value)}
-                    >
-                      <option value="hours">Horas</option>
-                      <option value="days">Dias</option>
-                    </select>
+                      onChange={(event) =>
+                        field.onChange(event.target.value.replace(/[^\d]/g, ""))
+                      }
+                      onFocus={onInputFocus}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -244,7 +244,9 @@ export function ProposalComposer({
                         name={`availabilitySlots.${index}.startDate`}
                         render={({ field: startField }) => (
                           <FormItem className="space-y-1">
-                            <FormLabel htmlFor={`slot-start-${index}`}>Início</FormLabel>
+                            <FormLabel htmlFor={`slot-start-${index}`}>
+                              {durationUnit === "days" ? "Data de início" : "Data de execução"}
+                            </FormLabel>
                             <FormControl>
                               <Input
                                 id={`slot-start-${index}`}
@@ -265,7 +267,7 @@ export function ProposalComposer({
                           name={`availabilitySlots.${index}.endDate`}
                           render={({ field: endField }) => (
                             <FormItem className="space-y-1">
-                              <FormLabel htmlFor={`slot-end-${index}`}>Fim</FormLabel>
+                              <FormLabel htmlFor={`slot-end-${index}`}>Data de fim</FormLabel>
                               <FormControl>
                                 <Input
                                   id={`slot-end-${index}`}

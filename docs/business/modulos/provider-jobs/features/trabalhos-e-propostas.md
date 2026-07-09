@@ -162,8 +162,8 @@ Definições no código:
 |---------------|-----------------|
 | Valor (`priceInput`) | Máscara BRL `maskBudgetInput`; parse > 0; debounce **1500 ms** antes de chamar `calculate_provider_service_pricing` |
 | Descrição | Obrigatória; máx. **1200** caracteres |
-| Duração | Inteiro > 0 (`durationValueInput` só dígitos); máx. **24** em `hours`; em `days` mín. **2** e máx. **7** (1 semana) |
-| Unidade | `hours` \| `days` — serviço de **um único dia** deve usar `hours` (não `days` com valor 1) |
+| Medido em (`durationUnit`) | Select na UI: **Horas** / **Dias** (`hours` \| `days`) — serviço de **um único dia** deve usar `hours` (não `days` com valor 1). Ordem no formulário: **antes** de Tempo estimado |
+| Tempo estimado (`durationValueInput`) | Inteiro > 0 (só dígitos); máx. **24** em `hours`; em `days` mín. **2** e máx. **7** (1 semana). Label na UI: **Tempo estimado** |
 | Slots de disponibilidade | Entre **1 e 3**; adicionar além de 3 → toast *"Você pode sugerir no máximo 3 opções de data."*; remover último → *"Informe pelo menos 1 opção de data."* |
 | Data início | Obrigatória por slot; não pode ser **anterior a hoje** (meia-noite local) |
 | Modo **dias** | Só para duração ≥ 2; data final obrigatória; intervalo válido se tiver exatamente `durationValue` **dias corridos** (inclui fim de semana) **ou** `durationValue` **dias úteis** (seg–sex) |

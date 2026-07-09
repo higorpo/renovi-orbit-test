@@ -128,7 +128,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `docs/cancelamento-reagendamento-servicos/details.md` | Fluxo de produto; exemplos de mensagem automática no pedido (com/sem `Observação:`) |
 | `src/features/service-reschedule/utils/deriveRescheduleDateMode.ts` | Data única vs período a partir de `duration_unit`/`duration_value` |
 | `src/features/service-reschedule/types/serviceReschedule.forms.ts` | Validação Zod + `matchesProposalDayDurationISO` |
-| `src/features/service-reschedule/components/ProposeRescheduleDialog.tsx` | Labels “Data de execução” / “Data de início” + “Data de fim” |
+| `src/features/service-reschedule/components/ProposeRescheduleDialog.tsx` | Duração: “Medido em” → “Tempo estimado”; datas: “Data de execução” / “Data de início” + “Data de fim” |
 | `src/features/service-reschedule/utils/mapRescheduleSnapshot.ts` | Lê `duration_unit`/`duration_value` do snapshot |
 | `src/features/service-reschedule/utils/rescheduleCardCopy.ts`, `formatRescheduleSlot.ts` | “Data proposta” / “Período proposto”; oculta range se fim nulo ou = início |
 | `supabase/migrations/20260802020000_service_reschedule_helpers.sql` | `_cns_validate_reschedule_slot(slot, duration_unit, duration_value)` |
