@@ -352,7 +352,7 @@ export function buildProviderServiceCardShowcaseVariants(
     {
       id: "in-progress-payment",
       label: "Aguardando pagamento",
-      description: "Serviço hoje com contrato em PENDING_PAYMENT.",
+      description: "Serviço agendado com contrato em PENDING_PAYMENT.",
       group: "Em andamento",
       model: baseModel({
         id: "showcase-payment",
@@ -366,7 +366,7 @@ export function buildProviderServiceCardShowcaseVariants(
           agreedSlot: null,
           durationUnit: "hours",
           durationValue: 5,
-          scheduledStartDate: today,
+          scheduledStartDate: toDateOnly(addDays(now, 7)),
           scheduledEndDate: null,
           scheduledShift: "morning",
           provider: null,

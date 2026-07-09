@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ServiceModel } from "@/features/view-services";
 import { getClientServiceCardPresentation } from "../clientServiceCardPresentation";
 
@@ -177,6 +177,42 @@ describe("getClientServiceCardPresentation", () => {
     );
 
     expect(pres.showProviderHeader).toBe(true);
+  });
+
+  it("highlights pending payment with charge timing for the client", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2025, 5, 8, 12, 0, 0));
+
+    try {
+      const pres = getClientServiceCardPresentation(
+        baseModel({
+          listPhase: "in_progress",
+          statusTabId: "in_progress",
+          contracted: {
+            id: "cs-1",
+            status: "PENDING_PAYMENT",
+            agreedSlot: null,
+            durationUnit: "hours",
+            durationValue: 2,
+            scheduledStartDate: "2025-06-15",
+            scheduledEndDate: null,
+            scheduledShift: "afternoon",
+            provider: { id: "p-1", displayName: "Maria", profileImagePath: null },
+            chatId: null,
+            updatedAt: null,
+          },
+        }),
+      );
+
+      expect(pres.highlight.icon).toBe("payment_pending");
+      expect(pres.highlight.title).toBe("Aguardando pagamento");
+      expect(pres.highlight.detail).toBe(
+        "Serviço agendado para 15/06/2025, pagamento ainda pendente.",
+      );
+      expect(pres.highlight.emphasis).toBe("attention");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("shows provider chat as primary action when in progress", () => {

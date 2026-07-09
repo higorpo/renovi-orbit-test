@@ -12,6 +12,7 @@ import {
 import { formatCurrency } from "@/lib/formatCurrency";
 import { formatDatePtBr } from "@/lib/utils/formatDate";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
+import { getPendingPaymentHighlightContent } from "./pendingPaymentHighlight";
 import { isProposalExpiringSoon } from "./providerProposalStatus";
 
 export type ProviderCardActionIntent =
@@ -34,6 +35,7 @@ export type ProviderCardHighlightIcon =
   | "conversation"
   | "scheduled"
   | "today"
+  | "payment_pending"
   | "completed"
   | "cancelled";
 
@@ -277,6 +279,20 @@ function buildInProgressPresentation(
     };
   }
 
+  if (paymentPending && contracted) {
+    const pendingPayment = getPendingPaymentHighlightContent(contracted, "provider");
+    return {
+      isTodayService,
+      highlight: {
+        icon: "payment_pending",
+        title: pendingPayment.title,
+        detail: pendingPayment.detail,
+        emphasis: "attention",
+      },
+      secondaryInfo,
+    };
+  }
+
   const highlightIcon: ProviderCardHighlightIcon =
     timing === "today" ? "today" : "scheduled";
 
@@ -285,7 +301,6 @@ function buildInProgressPresentation(
     highlight: {
       icon: highlightIcon,
       title: scheduleHighlight?.title ?? "Serviço agendado",
-      detail: paymentPending ? "Aguardando pagamento do cliente" : undefined,
       emphasis: timing === "today" ? "urgent" : "default",
     },
     secondaryInfo,

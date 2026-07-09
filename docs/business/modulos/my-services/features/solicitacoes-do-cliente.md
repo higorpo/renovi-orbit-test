@@ -81,7 +81,23 @@ Re-export de `view-services/constants/statusTabs.ts`:
 
 ---
 
-## 7. Ações por card
+## 7. Destaque do card — `PENDING_PAYMENT`
+
+Apresentação montada em `clientServiceCardPresentation.ts` (cliente) e `providerServiceCardPresentation.ts` (prestador), com copy compartilhada em `pendingPaymentHighlight.ts`. Detalhe completo no [README do módulo](../README.md) (§8).
+
+Quando `contracted.status === PENDING_PAYMENT` na listagem:
+
+| Papel | Título | Descrição |
+|-------|--------|-----------|
+| Cliente | Aguardando pagamento | Serviço agendado para {data}, pagamento ainda pendente. |
+| Prestador | Aguardando pagamento do cliente | Idem |
+
+- **Ícone:** cartão (`payment_pending`); **ênfase:** `attention`.
+- Mensagem não lida no chat tem prioridade sobre este destaque.
+
+---
+
+## 8. Ações por card
 
 ### Ver detalhes
 
@@ -99,7 +115,7 @@ Re-export de `view-services/constants/statusTabs.ts`:
 
 ---
 
-## 8. Diagrama
+## 9. Diagrama
 
 ```mermaid
 flowchart LR
@@ -115,9 +131,9 @@ flowchart LR
 
 ---
 
-## 9. Evidências
+## 10. Evidências
 
-- `src/features/my-services/**/*`
+- `src/features/my-services/**/*` (inclui `utils/pendingPaymentHighlight.ts`, `clientServiceCardPresentation.ts`, `providerServiceCardPresentation.ts`)
 - `src/features/view-services/**/*`
 - `supabase/migrations/20260705208000_create_view_services_rpcs.sql`
 - `src/router.tsx`

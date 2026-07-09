@@ -10,6 +10,7 @@ import {
 } from "@/features/view-services";
 import { formatDatePtBr } from "@/lib/utils/formatDate";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
+import { getPendingPaymentHighlightContent } from "./pendingPaymentHighlight";
 
 export type ClientCardActionIntent = "details" | "budgets" | "cancel" | "messages" | "chat";
 
@@ -26,6 +27,7 @@ export type ClientCardHighlightIcon =
   | "conversation"
   | "scheduled"
   | "today"
+  | "payment_pending"
   | "completed"
   | "cancelled";
 
@@ -278,6 +280,21 @@ function buildInProgressPresentation(
     };
   }
 
+  if (paymentPending && contracted) {
+    const pendingPayment = getPendingPaymentHighlightContent(contracted, "client");
+    return {
+      showProviderHeader: true,
+      isTodayService,
+      highlight: {
+        icon: "payment_pending",
+        title: pendingPayment.title,
+        detail: pendingPayment.detail,
+        emphasis: "attention",
+      },
+      secondaryInfo,
+    };
+  }
+
   const highlightIcon: ClientCardHighlightIcon = timing === "today" ? "today" : "scheduled";
 
   return {
@@ -286,7 +303,6 @@ function buildInProgressPresentation(
     highlight: {
       icon: highlightIcon,
       title: scheduleHighlight?.title ?? "Serviço agendado",
-      detail: paymentPending ? "Aguardando pagamento" : undefined,
       emphasis: timing === "today" ? "urgent" : "default",
     },
     secondaryInfo,

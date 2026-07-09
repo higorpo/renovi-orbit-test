@@ -37,6 +37,7 @@ Urgentes:
 -cadastro e criação de service requests não estão funcionando por conta da proteção 
 - Adicionar no chat botão para envio de proposta que fica visível a todo momento
 - Ver vídeo no Youtube sobre a questão que eu estou usando para precificação exibida para o prestador/cliente, pois parece que há um problema de segurança: https://www.youtube.com/watch?v=rTXy2p9aAVw&list=WL&index=75&t=601s&pp=iAQBsAgC.
+- Como eu garanto que alterações feitas em tabelas/rpcs não quebram versões  anteriores do app?
 
 Telas/fluxos restantes:
 
@@ -57,6 +58,7 @@ Telas/fluxos restantes:
 - Weblab
 - Template dos emails
 - Refazer tela de erros
+- Como vai funcionar a emissão de nota fiscal da plataforma?
 
 Coisas para verificar:
 
@@ -111,13 +113,11 @@ Fluxo de pagamentos, itens com problemas:
 
 
 
-- Na tela de detalhes de um serviço, com serviço contratado aparece uma box "servico contratado" com informações como status CONFIRMED sem tratamento e data de agendamento também sem tratamento correto.
 
-- Na tela de meus serviços melhorar a visualização de que um pedido ainda está aguardando pagamento.
 
 - Na tela de histórico de pagamento do cliente mostrar reembolso parcial (valor)
 
-- Como vai funcionar a emissão de nota fiscal da plataforma?
+
 
 - Verificar: um CNPJ pode agendar vários serviços para o mesmo dia?
 
@@ -126,11 +126,7 @@ Fluxo de pagamentos, itens com problemas:
 
 - Acho que temos que desativar a window de push que  hoje tá em 20 minutos.
 
-- Quando eu faço a solicitação de reagendamento do serviço pela tela de detalhes do serviço, a dialog pisca na tela ao apertar no botão para enviar a solicitação
 
-- Dúvida: O que acontece se eu  tentar aceitar uma data agendada que já passou?
-
-- Dúvida: O que acontece se o cliente não aceitar a data ou o prestador não enviar a data de agendamento e chegar a data de execução do serviço?
 
 
 - É permitido fazer reagendamento de serviços  para muito longe (por exemplo +30 dias a frente). O prestador pode pedir reagendamento sem teto mínimo,o cliente pode pedir reagendamento até 48hrs antes, em tese o pagamento ainda naõ estaria capturado, mas tem chance. Como o prestador pode pedir faltando 4hrs por exemplo, o pagamento já poderia estar capturado, nesse caso teríamos que fazer uma lógica para remembolsar o valor e fazer a captura novamente em data futura caso a data do pedido fosse para muito mais a frente para evitar cair na liquidação automática.
@@ -141,7 +137,10 @@ Fluxo de pagamentos, itens com problemas:
 
 - Quando for estornar 100% do valor para o cliente, hoje ele não está estornando o valor das taxas cobradas no cartão de crédito, mas nós devemos de fato estornar todo o valor sim nesse tipo de situação.
 
-- Quando um serviço estiver marcado como cancelado, permitir o usuário criar um novo pedido de serviço a partir do serviço cancelado.
+- Quando um contracted_service ou service_request estiver marcado como cancelado, permitir o usuário criar um novo pedido de serviço a partir do serviço cancelado (será criado um novo service_request, que seguirá todo o fluxo normal como se ele tivesse criado pela tela de criação de pedido serviço).
+
+- Preciso testar o fluxo de cobrança manual.
+
 
 Detalhes dos testes:
 4970100000000048

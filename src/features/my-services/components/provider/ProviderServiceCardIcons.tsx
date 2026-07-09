@@ -4,6 +4,7 @@ import {
   CircleDollarSign,
   CircleX,
   Clock,
+  CreditCard,
   FilePenLine,
   Flame,
   Mail,
@@ -27,6 +28,7 @@ const HIGHLIGHT_ICONS: Record<ProviderCardHighlightIcon, LucideIcon> = {
   conversation: MessageSquare,
   scheduled: CalendarDays,
   today: Flame,
+  payment_pending: CreditCard,
   completed: CircleCheck,
   cancelled: CircleX,
 };

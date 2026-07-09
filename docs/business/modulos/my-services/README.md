@@ -34,7 +34,9 @@
 | Roteamento | `components/MyServicesRouteSlot.tsx` |
 | Shell compartilhado | `components/MyServicesPageShell.tsx`, `components/shared/*` |
 | Cliente | `components/client/ClientMyServicesPage.tsx`, hooks `useClientMyServicesPage.ts` |
-| Prestador | `components/provider/ProviderMyServicesPage.tsx`, `ProviderServiceListCard.tsx`, `utils/providerServiceCardPresentation.ts`, `useProviderMyServicesPage.ts` |
+| Cliente (card) | `components/client/ClientServiceListCard.tsx`, `ClientServiceCardIcons.tsx`, `utils/clientServiceCardPresentation.ts` |
+| Prestador | `components/provider/ProviderMyServicesPage.tsx`, `ProviderServiceListCard.tsx`, `ProviderServiceCardIcons.tsx`, `utils/providerServiceCardPresentation.ts`, `useProviderMyServicesPage.ts` |
+| Destaque compartilhado | `utils/pendingPaymentHighlight.ts` — copy do highlight quando `contracted.status === PENDING_PAYMENT` |
 | Core | `hooks/useMyServicesPageCore.ts`, `useMyServicesList.ts`, `useMyServicesFilters.ts` |
 | Tipos / rotas | `types/my-services.types.ts`, `constants/routes.ts` |
 
@@ -53,7 +55,20 @@ Exporta: `MyServicesRouteSlot`, `ClientMyServicesPage`, `ProviderMyServicesPage`
 
 - RPCs `get_service`, `list_services` — enriquecimento prestador: `my_proposal` (revisão, envio, recusa), `chat` (preview da última mensagem), `counterparty` (nome completo + avatar), `cancelled_at` / `completed_at` / `contracted.updated_at` (migrations `20260710120000_*`, `20260710160000_enrich_provider_service_card_data.sql`).
 
-## 8. Card do prestador (`ProviderServiceListCard`)
+## 8. Cards na listagem — destaque `PENDING_PAYMENT`
+
+Quando o serviço contratado está em **`PENDING_PAYMENT`**, o destaque do card (cliente e prestador) prioriza o pagamento em relação ao highlight genérico de agenda. Implementação: `getPendingPaymentHighlightContent` (`utils/pendingPaymentHighlight.ts`), consumido por `clientServiceCardPresentation.ts` e `providerServiceCardPresentation.ts`.
+
+| Papel | Título do destaque | Descrição | Ícone / ênfase |
+|-------|--------------------|-----------|----------------|
+| Cliente | Aguardando pagamento | Serviço agendado para {data}, pagamento ainda pendente. | `payment_pending` (cartão) · `attention` |
+| Prestador | Aguardando pagamento do cliente | Mesma descrição do cliente | Idem |
+
+- **Fallback** (sem data utilizável): detalhe curto “Pagamento ainda pendente.”
+- **Prioridade:** mensagem não lida no chat ainda sobrescreve este destaque (agenda vai para info secundária).
+- **Antes:** título era o highlight de agenda (“Agendado para…”) + detalhe curto “Aguardando pagamento” / “Aguardando pagamento do cliente” + ícone de calendário.
+
+## 9. Card do prestador (`ProviderServiceListCard`)
 
 Estrutura fixa em cinco zonas: **header** (avatar + nome do cliente | badge de fase + urgência só se `high`) → **título IA** (2 linhas) → **destaque** (ação pendente / situação atual, maior peso visual) → **informações secundárias** (local, valor, data — sem descrição do pedido) → **rodapé** (máx. 2 botões).
 
@@ -63,7 +78,8 @@ Estrutura fixa em cinco zonas: **header** (avatar + nome do cliente | badge de f
 | Negociação — proposta enviada | ⏳ Aguardando decisão do cliente sobre sua proposta | Ver proposta · Ver negociação |
 | Negociação — revisão | 📝 Cliente solicitou revisão | Revisar proposta · Ver negociação |
 | Negociação — conversa ativa | 💬 Negociação em andamento | Ver negociação · Ver detalhes |
-| `in_progress` (hoje) | 🔥 Serviço hoje — borda destacada | Ver conversa · Ver detalhes |
+| `in_progress` + `PENDING_PAYMENT` | 💳 Aguardando pagamento do cliente + data do serviço e “pagamento ainda pendente” (ver §8) | Ver conversa · Ver detalhes |
+| `in_progress` (hoje, já pago / sem pendência de pagamento) | 🔥 Serviço hoje — borda destacada | Ver conversa · Ver detalhes |
 | `in_progress` | 📅 Agendado para amanhã / data | Ver conversa · Ver detalhes |
 | `completed` | ✅ Serviço concluído + avaliação mock | Ver detalhes |
 | `cancelled` | ❌ Serviço cancelado + motivo | Ver detalhes |

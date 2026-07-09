@@ -199,7 +199,7 @@ describe("getProviderServiceCardPresentation", () => {
         },
         contracted: {
           id: "cs-1",
-          status: "PENDING_PAYMENT",
+          status: "CONFIRMED",
           agreedSlot: null,
           durationUnit: "hours",
           durationValue: 5,
@@ -233,6 +233,44 @@ describe("getProviderServiceCardPresentation", () => {
       expect(pres.primaryAction.label).toBe("Abrir no mapa");
       expect(pres.primaryAction.intent).toBe("open_map");
       expect(pres.primaryAction.disabled).toBe(true);
+    });
+
+    it("highlights pending payment with charge timing for the provider", () => {
+      const model = baseModel({
+        listPhase: "in_progress",
+        statusTabId: "in_progress",
+        myProposal: {
+          id: "p-1",
+          status: "ACCEPTED",
+          finalAmount: 425,
+          updatedAt: "2025-06-08T00:00:00Z",
+          expiredAt: null,
+          submittedAt: "2025-06-01T00:00:00Z",
+          revisionReason: null,
+          revisionNotes: null,
+          clientRejectionResponse: null,
+        },
+        contracted: {
+          id: "cs-1",
+          status: "PENDING_PAYMENT",
+          agreedSlot: null,
+          durationUnit: "hours",
+          durationValue: 5,
+          scheduledStartDate: "2025-06-15",
+          scheduledEndDate: null,
+          scheduledShift: "morning",
+          provider: null,
+          chatId: null,
+          updatedAt: null,
+        },
+      });
+      const pres = getProviderServiceCardPresentation(model);
+      expect(pres.highlight.icon).toBe("payment_pending");
+      expect(pres.highlight.title).toBe("Aguardando pagamento do cliente");
+      expect(pres.highlight.detail).toBe(
+        "Serviço agendado para 15/06/2025, pagamento ainda pendente.",
+      );
+      expect(pres.highlight.emphasis).toBe("attention");
     });
 
     it("enables Abrir no mapa when today service has coordinates", () => {
