@@ -16,6 +16,8 @@ export type {
   SavedCardSelectorProps,
   SavedCardSelectorMode,
 } from "./CheckoutStepper/SavedCardSelector";
+export { AddCardSheetDialog, ADD_CARD_FORM_ID } from "./AddCardSheetDialog";
+export type { AddCardSheetDialogProps } from "./AddCardSheetDialog";
 export {
   InstallmentSelector,
   useInstallmentSignatureRecovery,

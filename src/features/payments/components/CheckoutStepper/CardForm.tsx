@@ -38,6 +38,8 @@ export type CardFormProps = {
   submitLabel?: string;
   /** Hide inline Continuar/Voltar so a parent DialogFooter can own them. */
   hideActions?: boolean;
+  /** Hide the built-in title/description when a parent shell provides them. */
+  hideHeader?: boolean;
   formId?: string;
   onPendingChange?: (isPending: boolean) => void;
 };
@@ -51,6 +53,7 @@ export function CardForm({
   onBack,
   submitLabel,
   hideActions = false,
+  hideHeader = false,
   formId = CARD_FORM_ID,
   onPendingChange,
 }: CardFormProps) {
@@ -118,12 +121,14 @@ export function CardForm({
   return (
     <Form {...form}>
       <form id={formId} onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Dados do cartão</h2>
-          <p className="text-sm text-muted-foreground">
-            Seus dados de cartão são enviados de forma segura e não ficam salvos neste dispositivo.
-          </p>
-        </div>
+        {hideHeader ? null : (
+          <div className="space-y-2">
+            <h2 className="text-lg font-semibold">Dados do cartão</h2>
+            <p className="text-sm text-muted-foreground">
+              Seus dados de cartão são enviados de forma segura e não ficam salvos neste dispositivo.
+            </p>
+          </div>
+        )}
 
         <PaymentTrustDisclosure />
 

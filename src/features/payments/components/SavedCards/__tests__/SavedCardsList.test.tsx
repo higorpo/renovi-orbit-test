@@ -16,39 +16,41 @@ vi.mock("@/features/auth", () => ({
   useAuth: () => ({ profile: { phone: "(48) 99999-9999" } }),
 }));
 
-vi.mock("@/features/payments/components/CheckoutStepper/CardForm", () => ({
-  CardForm: ({
+vi.mock("@/features/payments/components/AddCardSheetDialog", () => ({
+  AddCardSheetDialog: ({
+    open,
     onSuccess,
-    onBack,
+    onOpenChange,
   }: {
+    open: boolean;
     onSuccess: (result: {
       paymentTokenId: string;
       cardNumberMasked: string;
       cardBrand: string;
     }) => void;
-    onBack?: () => void;
-  }) => (
-    <div>
-      <button
-        type="button"
-        data-testid="card-form"
-        onClick={() =>
-          onSuccess({
-            paymentTokenId: "new-token",
-            cardNumberMasked: "•••• 9999",
-            cardBrand: "VISA",
-          })
-        }
-      >
-        Card form
-      </button>
-      {onBack ? (
-        <button type="button" onClick={onBack}>
-          Voltar da lista
+    onOpenChange: (open: boolean) => void;
+  }) =>
+    open ? (
+      <div role="dialog" aria-label="Adicionar cartão">
+        <button
+          type="button"
+          data-testid="card-form"
+          onClick={() => {
+            onSuccess({
+              paymentTokenId: "new-token",
+              cardNumberMasked: "•••• 9999",
+              cardBrand: "VISA",
+            });
+            onOpenChange(false);
+          }}
+        >
+          Salvar cartão
         </button>
-      ) : null}
-    </div>
-  ),
+        <button type="button" onClick={() => onOpenChange(false)}>
+          Cancelar
+        </button>
+      </div>
+    ) : null,
 }));
 
 vi.mock("sonner", () => ({
@@ -148,7 +150,7 @@ describe("SavedCardsList", () => {
     expect(screen.getByText("Nenhum cartão salvo ainda.")).toBeInTheDocument();
   });
 
-  it("opens add card form and handles successful add", async () => {
+  it("opens add card sheet and handles successful add", async () => {
     const refetch = vi.fn();
     mockUseSavedCards.mockReturnValue({
       cards: [
@@ -171,11 +173,11 @@ describe("SavedCardsList", () => {
     const { toast } = await import("sonner");
     render(<SavedCardsList tokenizeContext="profile" />);
     fireEvent.click(screen.getByRole("button", { name: /Adicionar Cartão/i }));
-    expect(screen.getByTestId("card-form")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Voltar da lista/i })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: /Adicionar cartão/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Cancelar/i })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Voltar da lista/i }));
-    expect(screen.getByRole("button", { name: /Adicionar Cartão/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Cancelar/i }));
+    expect(screen.queryByRole("dialog", { name: /Adicionar cartão/i })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /Adicionar Cartão/i }));
     fireEvent.click(screen.getByTestId("card-form"));
@@ -198,8 +200,8 @@ describe("SavedCardsList", () => {
 
     render(<SavedCardsList providerServiceId="proposal-1" phone="48999999999" />);
     fireEvent.click(screen.getByRole("button", { name: /Adicionar Cartão/i }));
-    expect(screen.getByTestId("card-form")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Voltar da lista/i })).toBeNull();
+    expect(screen.getByRole("dialog", { name: /Adicionar cartão/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Salvar cartão/i })).toBeInTheDocument();
   });
 
   it("shows generic revoke error when thrown value is not an Error", async () => {

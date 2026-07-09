@@ -12,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CardForm } from "../CheckoutStepper/CardForm";
+import { AddCardSheetDialog } from "../AddCardSheetDialog";
 import { useSavedCards } from "../../hooks/useSavedCards";
 import { useClientCpfForPayment } from "../../hooks/useClientCpfForPayment";
 import { useAuth } from "@/features/auth";
@@ -39,7 +39,7 @@ export function SavedCardsList({
   const { profile } = useAuth();
   const { cpf: savedCpf } = useClientCpfForPayment();
   const resolvedPhone = phone ?? profile?.phone ?? undefined;
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [addCardOpen, setAddCardOpen] = useState(false);
   const [tokenToRemove, setTokenToRemove] = useState<string | null>(null);
   const [blockedWarning, setBlockedWarning] = useState<{
     tokenId: string;
@@ -47,7 +47,6 @@ export function SavedCardsList({
   } | null>(null);
 
   const handleAddSuccess = (_result: TokenizeCardSuccess) => {
-    setShowAddForm(false);
     void refetch();
     toast.success("Cartão adicionado com sucesso.");
   };
@@ -94,22 +93,6 @@ export function SavedCardsList({
           <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
           Carregando cartões…
         </div>
-      </section>
-    );
-  }
-
-  if (showAddForm) {
-    return (
-      <section className="rounded-xl border border-border p-6 space-y-4" aria-label="Adicionar cartão">
-        <CardForm
-          providerServiceId={providerServiceId}
-          tokenizeContext={tokenizeContext}
-          savedCpf={savedCpf}
-          phone={resolvedPhone}
-          submitLabel="Salvar cartão"
-          onSuccess={handleAddSuccess}
-          onBack={cards.length > 0 ? () => setShowAddForm(false) : undefined}
-        />
       </section>
     );
   }
@@ -164,11 +147,21 @@ export function SavedCardsList({
         type="button"
         variant="outline"
         className="w-full justify-start gap-2"
-        onClick={() => setShowAddForm(true)}
+        onClick={() => setAddCardOpen(true)}
       >
         <Plus className="h-4 w-4" aria-hidden />
         Adicionar Cartão
       </Button>
+
+      <AddCardSheetDialog
+        open={addCardOpen}
+        onOpenChange={setAddCardOpen}
+        providerServiceId={providerServiceId}
+        tokenizeContext={tokenizeContext}
+        savedCpf={savedCpf}
+        phone={resolvedPhone}
+        onSuccess={handleAddSuccess}
+      />
 
       <AlertDialog open={tokenToRemove !== null} onOpenChange={(open) => !open && setTokenToRemove(null)}>
         <AlertDialogContent>

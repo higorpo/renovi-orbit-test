@@ -11,46 +11,41 @@ vi.mock("../../../hooks/useSavedPaymentTokens", () => ({
   useSavedPaymentTokens: () => mockUseSavedPaymentTokens(),
 }));
 
-vi.mock("../CardForm", () => ({
-  CARD_FORM_ID: "payment-card-form",
-  CardForm: ({
+vi.mock("../../AddCardSheetDialog", () => ({
+  AddCardSheetDialog: ({
+    open,
     onSuccess,
-    onBack,
-    hideActions,
-    formId,
+    onOpenChange,
   }: {
+    open: boolean;
     onSuccess: (result: {
       paymentTokenId: string;
       cardBrand: string;
       cardNumberMasked?: string;
     }) => void;
-    onBack?: () => void;
-    hideActions?: boolean;
-    formId?: string;
-  }) => (
-    <div>
-      <form id={formId}>
+    onOpenChange: (open: boolean) => void;
+  }) =>
+    open ? (
+      <div role="dialog" aria-label="Adicionar cartão">
         <button
           type="button"
-          data-testid="mock-card-form"
-          onClick={() =>
+          data-testid="mock-save-card"
+          onClick={() => {
             onSuccess({
               paymentTokenId: "new-token",
               cardBrand: "VISA",
               cardNumberMasked: "497010XXXXXX0048",
-            })
-          }
+            });
+            onOpenChange(false);
+          }}
         >
-          Tokenizar
+          Salvar cartão
         </button>
-      </form>
-      {hideActions ? null : onBack ? (
-        <button type="button" onClick={onBack}>
-          Voltar do formulário
+        <button type="button" onClick={() => onOpenChange(false)}>
+          Cancelar
         </button>
-      ) : null}
-    </div>
-  ),
+      </div>
+    ) : null,
 }));
 
 function createWrapper() {
@@ -68,21 +63,19 @@ describe("SavedCardSelector", () => {
     mockUseSavedPaymentTokens.mockReset();
   });
 
-  it("shows card form when there are no saved cards", () => {
+  it("shows empty state CTA when there are no saved cards", () => {
     mockUseSavedPaymentTokens.mockReturnValue({
       data: [],
       isLoading: false,
     });
 
     render(
-      <SavedCardSelector
-        providerServiceId="proposal-1"
-        onSelect={vi.fn()}
-      />,
+      <SavedCardSelector providerServiceId="proposal-1" onSelect={vi.fn()} />,
       { wrapper: createWrapper() },
     );
 
-    expect(screen.getByTestId("mock-card-form")).toBeInTheDocument();
+    expect(screen.getByText(/Adicione um cartão/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Adicionar novo cartão/i })).toBeInTheDocument();
   });
 
   it("lets the parent continue with a selected saved card via continueRef", async () => {
@@ -108,15 +101,11 @@ describe("SavedCardSelector", () => {
       <SavedCardSelector
         providerServiceId="proposal-1"
         onSelect={onSelect}
-        onBack={vi.fn()}
         continueRef={continueRef}
         onCanContinueChange={onCanContinueChange}
       />,
       { wrapper: createWrapper() },
     );
-
-    expect(screen.queryByRole("button", { name: /Continuar/i })).toBeNull();
-    expect(screen.queryByRole("button", { name: /^Voltar$/i })).toBeNull();
 
     await waitFor(() => {
       expect(onCanContinueChange).toHaveBeenCalledWith(false);
@@ -141,9 +130,8 @@ describe("SavedCardSelector", () => {
     });
   });
 
-  it("opens new card form and selects newly tokenized card", async () => {
+  it("opens add-card sheet and selects newly tokenized card", async () => {
     const onSelect = vi.fn();
-    const onModeChange = vi.fn();
     mockUseSavedPaymentTokens.mockReturnValue({
       data: [
         {
@@ -164,16 +152,16 @@ describe("SavedCardSelector", () => {
         savedCpf="390.533.447-05"
         phone="48999999999"
         onSelect={onSelect}
-        onModeChange={onModeChange}
       />,
       { wrapper: createWrapper() },
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Adicionar novo cartão/i }));
-    await waitFor(() => {
-      expect(onModeChange).toHaveBeenCalledWith("form");
-    });
-    fireEvent.click(screen.getByTestId("mock-card-form"));
+    expect(screen.getByRole("dialog", { name: /Adicionar cartão/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Salvar cartão/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Cancelar/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("mock-save-card"));
 
     await waitFor(() => {
       expect(onSelect).toHaveBeenCalledWith({
@@ -214,67 +202,19 @@ describe("SavedCardSelector", () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it("returns from new card form to saved card list via backRef", async () => {
-    const backRef: MutableRefObject<(() => void) | null> = { current: null };
-    const onCanGoBackChange = vi.fn();
-    mockUseSavedPaymentTokens.mockReturnValue({
-      data: [
-        {
-          id: "token-1",
-          card_number_masked: "•••• 4242",
-          card_brand: "VISA",
-          expiry_month: 12,
-          expiry_year: 2030,
-          state: "ACTIVE",
-        },
-      ],
-      isLoading: false,
-    });
-
-    render(
-      <SavedCardSelector
-        providerServiceId="proposal-1"
-        onSelect={vi.fn()}
-        backRef={backRef}
-        onCanGoBackChange={onCanGoBackChange}
-      />,
-      { wrapper: createWrapper() },
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: /Adicionar novo cartão/i }));
-    await waitFor(() => {
-      expect(onCanGoBackChange).toHaveBeenCalledWith(true);
-      expect(backRef.current).toBeTypeOf("function");
-    });
-
-    backRef.current?.();
-    await waitFor(() => {
-      expect(screen.getByText(/Escolha um cartão/i)).toBeInTheDocument();
-    });
-  });
-
-  it("forwards parent onBack via backRef when there are no saved cards", async () => {
-    const onBack = vi.fn();
-    const backRef: MutableRefObject<(() => void) | null> = { current: null };
+  it("closes add-card sheet on cancel without selecting", () => {
     mockUseSavedPaymentTokens.mockReturnValue({
       data: [],
       isLoading: false,
     });
 
     render(
-      <SavedCardSelector
-        providerServiceId="proposal-1"
-        onSelect={vi.fn()}
-        onBack={onBack}
-        backRef={backRef}
-      />,
+      <SavedCardSelector providerServiceId="proposal-1" onSelect={vi.fn()} />,
       { wrapper: createWrapper() },
     );
 
-    await waitFor(() => {
-      expect(backRef.current).toBeTypeOf("function");
-    });
-    backRef.current?.();
-    expect(onBack).toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: /Adicionar novo cartão/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Cancelar/i }));
+    expect(screen.queryByRole("dialog", { name: /Adicionar cartão/i })).toBeNull();
   });
 });

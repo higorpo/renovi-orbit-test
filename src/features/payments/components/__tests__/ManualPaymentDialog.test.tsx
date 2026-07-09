@@ -38,11 +38,8 @@ vi.mock("../CheckoutStepper/CardStep", () => ({
 vi.mock("../CheckoutStepper/SavedCardSelector", () => ({
   SavedCardSelector: ({
     onSelect,
-    onBack,
-    onModeChange,
     onCanContinueChange,
     continueRef,
-    backRef,
   }: {
     onSelect: (selection: {
       paymentTokenId: string;
@@ -51,14 +48,10 @@ vi.mock("../CheckoutStepper/SavedCardSelector", () => ({
       expiryMonth?: number;
       expiryYear?: number;
     }) => void;
-    onBack?: () => void;
-    onModeChange?: (mode: "list" | "form") => void;
     onCanContinueChange?: (canContinue: boolean) => void;
     continueRef?: { current: (() => void) | null };
-    backRef?: { current: (() => void) | null };
   }) => {
     queueMicrotask(() => {
-      onModeChange?.("list");
       onCanContinueChange?.(true);
     });
     if (continueRef) {
@@ -70,9 +63,6 @@ vi.mock("../CheckoutStepper/SavedCardSelector", () => ({
           expiryMonth: 12,
           expiryYear: 2030,
         });
-    }
-    if (backRef) {
-      backRef.current = onBack ?? null;
     }
     return (
       <div>

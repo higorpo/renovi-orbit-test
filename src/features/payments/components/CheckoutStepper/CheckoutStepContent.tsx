@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth";
 import { ConfirmationStep } from "./ConfirmationStep";
@@ -12,11 +11,7 @@ import { CardStep } from "./CardStep";
 import { CHECKOUT_STEP_LABELS } from "./checkoutStepLabels";
 import { CpfStep } from "./CpfStep";
 import { PhoneStep } from "./PhoneStep";
-import {
-  SavedCardSelector,
-  type SavedCardSelectorMode,
-} from "./SavedCardSelector";
-import { CARD_FORM_ID } from "./CardForm";
+import { SavedCardSelector } from "./SavedCardSelector";
 import { useClientCpfForPayment } from "../../hooks/useClientCpfForPayment";
 
 function DefaultStepPlaceholder({ step }: { step: CheckoutStepId }) {
@@ -35,39 +30,21 @@ function StepActions({
   onContinue,
   continueDisabled,
   continueLabel = "Continuar",
-  continueType = "button",
-  continueForm,
-  isPending = false,
 }: {
   onBack?: () => void;
   onContinue?: () => void;
   continueDisabled?: boolean;
   continueLabel?: string;
-  continueType?: "button" | "submit";
-  continueForm?: string;
-  isPending?: boolean;
 }) {
   return (
     <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
       {onBack ? (
-        <Button type="button" variant="outline" onClick={onBack} disabled={isPending}>
+        <Button type="button" variant="outline" onClick={onBack}>
           Voltar
         </Button>
       ) : null}
-      <Button
-        type={continueType}
-        form={continueForm}
-        disabled={continueDisabled || isPending}
-        onClick={continueType === "button" ? onContinue : undefined}
-      >
-        {isPending ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-            Salvando cartão...
-          </>
-        ) : (
-          continueLabel
-        )}
+      <Button type="button" disabled={continueDisabled} onClick={onContinue}>
+        {continueLabel}
       </Button>
     </div>
   );
@@ -107,13 +84,9 @@ export function CheckoutStepContent({
   const resolvedCpf = stepData.cpf ?? profileCpf;
   const resolvedPhone = stepData.phone ?? profile?.phone ?? undefined;
 
-  const [cardMode, setCardMode] = useState<SavedCardSelectorMode>("list");
   const [canContinueCard, setCanContinueCard] = useState(false);
-  const [canGoBackCard, setCanGoBackCard] = useState(false);
-  const [isCardPending, setIsCardPending] = useState(false);
   const [canContinueInstallments, setCanContinueInstallments] = useState(false);
   const cardContinueRef = useRef<(() => void) | null>(null);
-  const cardBackRef = useRef<(() => void) | null>(null);
   const installmentContinueRef = useRef<(() => void) | null>(null);
 
   switch (currentStep) {
@@ -148,22 +121,13 @@ export function CheckoutStepContent({
                     cardBrand: selection.cardBrand,
                   })
                 }
-                onBack={canGoBack ? goBack : undefined}
-                formId={CARD_FORM_ID}
-                onModeChange={setCardMode}
                 onCanContinueChange={setCanContinueCard}
-                onCanGoBackChange={setCanGoBackCard}
-                onPendingChange={setIsCardPending}
                 continueRef={cardContinueRef}
-                backRef={cardBackRef}
               />
               <StepActions
-                onBack={canGoBackCard ? () => cardBackRef.current?.() : undefined}
+                onBack={canGoBack ? goBack : undefined}
                 onContinue={() => cardContinueRef.current?.()}
                 continueDisabled={!canContinueCard}
-                continueType={cardMode === "form" ? "submit" : "button"}
-                continueForm={cardMode === "form" ? CARD_FORM_ID : undefined}
-                isPending={isCardPending}
               />
             </div>
           ) : (
