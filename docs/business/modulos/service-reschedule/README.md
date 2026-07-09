@@ -44,13 +44,13 @@ Evidência: `supabase/migrations/20260802030000_service_reschedule_rpcs_core.sql
 
 | Documento | Conteúdo |
 |-----------|----------|
-| [features/propor-nova-data.md](./features/propor-nova-data.md) | Duração editável; modo data única vs período; slot com duração embutida; aceite atualiza contrato |
+| [features/propor-nova-data.md](./features/propor-nova-data.md) | Duração editável; modo data única vs período; slot com duração embutida; aceite atualiza contrato; lembrete dispensável no dialog |
 
 ## 5. Arquivos-chave (mapa rápido)
 
 | Área | Caminhos |
 |------|----------|
-| UI propor | `components/ProposeRescheduleDialog.tsx` |
+| UI propor | `components/ProposeRescheduleDialog.tsx`, `components/ProposeRescheduleFlowReminder.tsx` |
 | Formulário / Zod | `types/serviceReschedule.forms.ts` |
 | Modo de data | `utils/deriveRescheduleDateMode.ts` |
 | Snapshot | `utils/mapRescheduleSnapshot.ts` |

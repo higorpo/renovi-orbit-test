@@ -101,6 +101,19 @@ devem ser iguais a `duration_value` (do formulário / embutido no slot).
 
 `formatRescheduleSlot` **não** mostra intervalo quando `end_date` é `null` ou igual a `start_date`.
 
+### Lembrete do fluxo no dialog “Propor nova data”
+
+No topo do corpo do formulário, o dialog exibe um banner dispensável (`ProposeRescheduleFlowReminder`) que reforça a regra de negócio já existente: a data oficial só muda após o cliente confirmar; até lá, o agendamento atual continua valendo.
+
+| Elemento | Texto / comportamento |
+|----------|------------------------|
+| Título | “Como funciona o reagendamento?” |
+| Corpo | “Você propõe a nova data; o cliente confirma. Só depois disso a data oficial muda. Até lá, o agendamento atual continua valendo.” |
+| Dispensar | Botão X com `aria-label` “Dispensar lembrete de reagendamento” |
+| Visibilidade | Aparece ao abrir o dialog; ao dispensar, some até o dialog ser aberto de novo (estado local da sessão do dialog — não persiste entre aberturas) |
+
+O lembrete é **apenas UI**: não altera validação, payload do slot nem comportamento de backend.
+
 ## 7. Perfis e ações (neste fluxo)
 
 | Papel | Ação documentada aqui |
@@ -115,6 +128,7 @@ devem ser iguais a `duration_value` (do formulário / embutido no slot).
 | Modo de data | `src/features/service-reschedule/utils/deriveRescheduleDateMode.ts` |
 | Formulário / limites | `src/features/service-reschedule/types/serviceReschedule.forms.ts`; constantes em `src/features/negotiation-proposals/constants/proposalComposer.ts` |
 | Dialog | `src/features/service-reschedule/components/ProposeRescheduleDialog.tsx` |
+| Lembrete do fluxo (banner) | `src/features/service-reschedule/components/ProposeRescheduleFlowReminder.tsx` |
 | Snapshot / pré-preenchimento | `src/features/service-reschedule/utils/mapRescheduleSnapshot.ts`; SQL de snapshot em migrations `20260802*` |
 | Labels do card | `src/features/service-reschedule/utils/rescheduleCardCopy.ts` |
 | Formatação | `src/features/service-reschedule/utils/formatRescheduleSlot.ts` |

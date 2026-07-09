@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, X } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -38,6 +38,7 @@ import {
   buildRescheduleProposedSlot,
   deriveRescheduleDateMode,
 } from "../utils/deriveRescheduleDateMode";
+import { ProposeRescheduleFlowReminder } from "./ProposeRescheduleFlowReminder";
 
 export interface ProposeRescheduleDialogProps {
   open: boolean;
@@ -54,6 +55,7 @@ export function ProposeRescheduleDialog({
 }: ProposeRescheduleDialogProps) {
   const { contentRef, scheduleSync } = useMobileDialogViewport(open);
   const minDate = useMemo(() => addCalendarDaysIso(todayCalendarIso(), 1), []);
+  const [isFlowReminderVisible, setIsFlowReminderVisible] = useState(true);
   const { snapshot, isLoading: isSnapshotLoading } = useRescheduleRequestDetail(
     rescheduleRequestId,
     open,
@@ -86,6 +88,11 @@ export function ProposeRescheduleDialog({
   const rangeHint = showEndDate
     ? getInclusiveDayRangeHint(startDateValue ?? "", endDateValue ?? "")
     : null;
+
+  useEffect(() => {
+    if (!open) return;
+    setIsFlowReminderVisible(true);
+  }, [open]);
 
   useEffect(() => {
     if (!open || !snapshot) return;
@@ -166,6 +173,12 @@ export function ProposeRescheduleDialog({
               className="flex min-h-0 flex-1 flex-col"
             >
               <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 touch-pan-y overscroll-y-contain [-webkit-overflow-scrolling:touch] sm:px-0 sm:py-0">
+                {isFlowReminderVisible ? (
+                  <ProposeRescheduleFlowReminder
+                    onDismiss={() => setIsFlowReminderVisible(false)}
+                  />
+                ) : null}
+
                 <div className="grid gap-3 sm:grid-cols-2">
                   <FormField
                     control={form.control}
