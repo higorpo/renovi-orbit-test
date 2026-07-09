@@ -120,7 +120,7 @@ export function RequestRescheduleDialog({
               />
             </div>
 
-            <DialogFooter className="relative z-10 shrink-0 flex-row gap-2 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:mt-4 sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pb-0 sm:shadow-none sm:backdrop-blur-none sm:supports-[backdrop-filter]:bg-transparent [&>button]:flex-1 sm:[&>button]:flex-none">
+            <DialogFooter className="relative z-10 shrink-0 flex-row items-stretch gap-2 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:mt-4 sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pb-0 sm:shadow-none sm:backdrop-blur-none sm:supports-[backdrop-filter]:bg-transparent [&>button]:h-auto [&>button]:min-h-10 [&>button]:flex-1 sm:[&>button]:h-10 sm:[&>button]:flex-none">
               <Button
                 type="button"
                 variant="outline"
@@ -133,6 +133,7 @@ export function RequestRescheduleDialog({
                 type="submit"
                 form="request-reschedule-form"
                 disabled={requestReschedule.isPending}
+                className="whitespace-normal px-2.5 text-center leading-snug sm:whitespace-nowrap sm:px-4"
               >
                 {requestReschedule.isPending ? (
                   <>
