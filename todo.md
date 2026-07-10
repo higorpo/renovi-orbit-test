@@ -41,8 +41,6 @@ Urgentes:
 
 Telas/fluxos restantes:
 
-- Pagamento de um serviço
-- Visualização de detalhes de um serviço em execução
 - Visualizar checklist de conclusão do serviço
 - Avaliação do serviço após sua conclusão
 - Tela de perfil do prestador
@@ -53,8 +51,6 @@ Telas/fluxos restantes:
 - Todo o painel administrativo
 - Tela de onboarding para prestador
 - Tela de onboarding para cliente
-- Fluxo do prestador/cliente remarcar um serviço
-- Fluxo do prestador/cliente cancelar um serviço
 - Weblab
 - Template dos emails
 - Refazer tela de erros
@@ -75,7 +71,6 @@ Coisas para terminar do fluxo atual de trabalho:
 
 
 Coisas para fazer next
--renomear tabela de provider_proposals
 -[avaliar]simplificar query de get_service_list  (hoje ele tá trazendo um monte de dados que nem vai ser exibido no card)
 -fluxo de prestador recusar revisão de proposta
 
@@ -87,7 +82,6 @@ Coisas para fazer next
 
 - na tela de minha conta do cliente, precisa colocar skeleton para as informações relacionadas a pagamentos
 
-- process-refund EF também ser a que faz o cancelamento do serviço. renomear ela.
 
 - verificar para o endereço: definir o tipo de endereço, se é casa ou apto ou algum outro tipo e permitir adicionar detalhes de interfone por exemplo. precisamos garantir que o prestador saiba como entrar em contato com o cliente.
 
@@ -96,7 +90,6 @@ Coisas para fazer next
 
 - verificar se o e-mail de onboarding está sendo enviado para netcred 
 
-- no chat ele faz um platform_constant_int para obter o SLA do chat, faz sentido isso? é seguro? verificar em outros lugares que estamos chamando platform constants. porque talvez não faça sentido em termos de segurança
 
 
 Fluxo de pagamentos, itens com problemas:
@@ -106,8 +99,6 @@ Fluxo de pagamentos, itens com problemas:
 - Não está funcionamento o credenciamento de pagamentos, os dados não são enviados. Além disso há um problema que ele faz o upload dos documentos a  cada envio, deveria enviar tudo junto e fazer na própria edge function. Tela também naõ é amigável em relação ao número do banco.
 
 
-- Forma que ele abre a dialog de pagamento naõ está boa
-- Precisamos coletar o CPF do títular do cartão de crédito e garantir que ele é o mesmo do dono da conta.
 
 
 
