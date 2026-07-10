@@ -104,9 +104,9 @@ export function ConfirmationStep({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="space-y-2">
-        <h2 className="text-lg font-semibold">Confirme a contratação</h2>
+        <h2 className="text-sm font-medium text-foreground">Confirme a contratação</h2>
         <p className="text-sm text-muted-foreground">
           Revise os detalhes do serviço e do pagamento antes de confirmar.
         </p>
