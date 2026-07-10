@@ -66,4 +66,22 @@ describe("SimpleServiceInsightPanel", () => {
 
     expect(container.firstChild).toBeNull();
   });
+
+  it("renders non-compact warnings-only panel", () => {
+    render(
+      <SimpleServiceInsightPanel
+        model={{
+          ...baseModel,
+          urgency: null,
+          scopeComplexity: null,
+          estimatedDurationHint: null,
+          missingInfoWarnings: ["  Detalhe faltando  ", ""],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Informações pendentes")).toBeTruthy();
+    expect(screen.getByText("Detalhe faltando")).toBeTruthy();
+    expect(screen.queryByText("Resumo do pedido")).toBeNull();
+  });
 });

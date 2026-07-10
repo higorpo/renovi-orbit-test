@@ -102,4 +102,21 @@ describe("useRepublishCancelledService", () => {
     });
     expect(navigateMock).not.toHaveBeenCalled();
   });
+
+  it("throws fallback message when republish returns empty data", async () => {
+    republishMock.mockResolvedValue({
+      data: null,
+      error: null,
+    });
+
+    const { result } = renderHook(() => useRepublishCancelledService(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.republishCancelledService("sr-open");
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalled();
+    });
+  });
 });

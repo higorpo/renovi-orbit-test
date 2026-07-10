@@ -82,4 +82,96 @@ describe("serviceMapper", () => {
     expect(model.address?.latitude).toBe(-23.55);
     expect(model.address?.longitude).toBe(-46.63);
   });
+
+  it("defaults unknown list phase to negotiation and handles sparse rows", () => {
+    const model = mapRpcServiceRow({
+      id: "sr-sparse",
+      list_phase: "unknown_phase",
+      request: {
+        title: null,
+        description: null,
+        photos: null,
+        address: {
+          street: "Rua Só",
+          number: null,
+          neighborhood: null,
+          city_name: null,
+        },
+        platform_service: { title: "Sem slug" },
+      },
+      negotiation: {
+        my_proposal: { id: "p1" },
+        chat: { is_unread: true },
+      },
+      contracted: { id: "cs-1" },
+      counterparty: { display_name: "  " },
+    });
+
+    expect(model.listPhase).toBe("negotiation");
+    expect(model.statusTabId).toBe("negotiation");
+    expect(model.title).toBe("");
+    expect(model.descriptionPreview).toBe("");
+    expect(model.photoPaths).toEqual([]);
+    expect(model.address?.streetSummary).toBe("Rua Só");
+    expect(model.service).toBeNull();
+    expect(model.contracted).toBeNull();
+    expect(model.counterparty).toBeNull();
+    expect(model.myProposal).toBeNull();
+    expect(model.chatSummary).toBeNull();
+  });
+
+  it("maps street with number and contracted provider fallbacks", () => {
+    const model = mapRpcServiceRow({
+      id: "sr-2",
+      list_phase: "COMPLETED",
+      request: {
+        title: "Job",
+        form_data: { a: 1 },
+        form_schema: { type: "object" },
+        address: {
+          street: "Av. Paulista",
+          number: "1000",
+          neighborhood: "Bela Vista",
+          city_name: "São Paulo",
+          state_abbreviation: "SP",
+        },
+        platform_service: {
+          title: "Pintor",
+          slug: "pintor",
+          icon_key: "paint",
+          color_key: "blue",
+        },
+        tags: ["urgente"],
+        missing_info_warnings: ["foto"],
+      },
+      negotiation: {
+        chat: {
+          id: "chat-2",
+          last_message_preview: "  oi  ",
+          provider_display_name: "  Ana  ",
+        },
+      },
+      contracted: {
+        id: "cs-2",
+        status: "CONFIRMED",
+        agreed_slot: { day: "mon" },
+        provider: { id: "prov-1", display_name: "  " },
+        payment_schedule_state: null,
+      },
+      counterparty: null,
+    });
+
+    expect(model.listPhase).toBe("completed");
+    expect(model.address?.streetSummary).toBe("Av. Paulista, 1000");
+    expect(model.service?.icon_key).toBe("paint");
+    expect(model.formData).toEqual({ a: 1 });
+    expect(model.formSchema).toEqual({ type: "object" });
+    expect(model.tags).toEqual(["urgente"]);
+    expect(model.missingInfoWarnings).toEqual(["foto"]);
+    expect(model.chatSummary?.lastMessagePreview).toBe("oi");
+    expect(model.chatSummary?.providerDisplayName).toBe("Ana");
+    expect(model.contracted?.provider?.displayName).toBe("—");
+    expect(model.counterpartyName).toBe("—");
+    expect(model.contracted?.agreedSlot).toEqual({ day: "mon" });
+  });
 });

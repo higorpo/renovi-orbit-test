@@ -22,4 +22,29 @@ describe("formatLocationDisplay", () => {
       }),
     ).toBe("Rua Felipe Schmidt, 515 - Centro, Florianópolis (SC)");
   });
+
+  it("returns empty string when address is null", () => {
+    expect(formatLocationDisplay(null)).toBe("");
+  });
+
+  it("omits state parentheses when abbreviation is missing", () => {
+    expect(
+      formatLocationDisplay({
+        neighborhood: "Centro",
+        cityName: "Florianópolis",
+        streetSummary: "Rua A, 1",
+      }),
+    ).toBe("Rua A, 1 - Centro, Florianópolis");
+  });
+
+  it("returns only street when locality is empty", () => {
+    expect(
+      formatLocationDisplay({
+        neighborhood: "",
+        cityName: "",
+        streetSummary: "Rua Só",
+        stateAbbreviation: "PR",
+      }),
+    ).toBe("Rua Só (PR)");
+  });
 });
