@@ -94,4 +94,77 @@ describe("proposeRescheduleFormSchema", () => {
       }).success,
     ).toBe(true);
   });
+
+  it("rejects multi-day duration above one week", () => {
+    const result = proposeRescheduleFormSchema.safeParse({
+      startDate: "2030-06-10",
+      endDate: "2030-06-20",
+      shift: "full_day",
+      durationUnit: "days",
+      durationValueInput: "8",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((issue) => issue.path[0] === "durationValueInput")).toBe(
+        true,
+      );
+    }
+  });
+
+  it("requires startDate and rejects dates before tomorrow", () => {
+    expect(
+      proposeRescheduleFormSchema.safeParse({
+        startDate: "",
+        endDate: "",
+        shift: "morning",
+        durationUnit: "hours",
+        durationValueInput: "4",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      proposeRescheduleFormSchema.safeParse({
+        startDate: "2030-06-01",
+        endDate: "",
+        shift: "morning",
+        durationUnit: "hours",
+        durationValueInput: "4",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects endDate before startDate for date-range mode", () => {
+    const result = proposeRescheduleFormSchema.safeParse({
+      startDate: "2030-06-10",
+      endDate: "2030-06-09",
+      shift: "full_day",
+      durationUnit: "days",
+      durationValueInput: "3",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((issue) => issue.path[0] === "endDate")).toBe(true);
+    }
+  });
+
+  it("uses date-range wording when start date is before tomorrow", () => {
+    const result = proposeRescheduleFormSchema.safeParse({
+      startDate: "2030-06-01",
+      endDate: "2030-06-03",
+      shift: "full_day",
+      durationUnit: "days",
+      durationValueInput: "3",
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some((issue) =>
+          String(issue.message).includes("data de início deve ser a partir de amanhã"),
+        ),
+      ).toBe(true);
+    }
+  });
 });

@@ -56,4 +56,56 @@ describe("deriveLatestRescheduleRequestIdFromMessages", () => {
     expect(isServiceRescheduleProposedWorkflowMessage(message)).toBe(true);
     expect(deriveLatestRescheduleRequestIdFromMessages([message])).toBe("req-new");
   });
+
+  it("rejects non-workflow or non-reschedule messages", () => {
+    expect(
+      isServiceRescheduleProposedWorkflowMessage(
+        buildMessage({ message_type: "TEXT", payload: { text: "oi" } }),
+      ),
+    ).toBe(false);
+
+    expect(
+      isServiceRescheduleProposedWorkflowMessage(
+        buildMessage({
+          message_type: "WORKFLOW_ACTION",
+          linked_entity_type: "workflow",
+          linked_entity_id: "req-1",
+          payload: { text: "Outra ação" },
+        }),
+      ),
+    ).toBe(false);
+  });
+
+  it("derives id from SYSTEM messages that mention reagendamento", () => {
+    const messages = [
+      buildMessage({
+        message_type: "TEXT",
+        linked_entity_type: "workflow",
+        linked_entity_id: "ignored",
+        payload: { text: "hello" },
+      }),
+      buildMessage({
+        message_type: "SYSTEM",
+        linked_entity_type: "workflow",
+        linked_entity_id: "req-system",
+        payload: { text: "Solicitação de Reagendamento aberta." },
+      }),
+    ];
+
+    expect(deriveLatestRescheduleRequestIdFromMessages(messages)).toBe("req-system");
+  });
+
+  it("returns null when no reschedule-linked message exists", () => {
+    expect(
+      deriveLatestRescheduleRequestIdFromMessages([
+        buildMessage({ message_type: "TEXT", payload: { text: "oi" } }),
+        buildMessage({
+          message_type: "SYSTEM",
+          linked_entity_type: "workflow",
+          linked_entity_id: "other",
+          payload: { text: "Proposta enviada" },
+        }),
+      ]),
+    ).toBeNull();
+  });
 });

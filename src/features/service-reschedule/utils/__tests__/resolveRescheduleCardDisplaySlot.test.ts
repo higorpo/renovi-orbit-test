@@ -58,4 +58,14 @@ describe("resolveRescheduleCardDisplaySlot", () => {
       ),
     ).toEqual(originalSlot);
   });
+
+  it("falls back to proposed then message slot for ended statuses", () => {
+    expect(
+      resolveRescheduleCardDisplaySlot("CANCELLED", firstProposedSlot, originalSlot, null),
+    ).toEqual(firstProposedSlot);
+
+    expect(
+      resolveRescheduleCardDisplaySlot("EXPIRED", null, originalSlot, secondProposedSlot),
+    ).toEqual(secondProposedSlot);
+  });
 });

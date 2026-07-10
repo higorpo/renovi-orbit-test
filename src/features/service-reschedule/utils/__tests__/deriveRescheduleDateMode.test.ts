@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildRescheduleProposedSlot,
   deriveRescheduleDateMode,
+  isRescheduleDateRangeMode,
   isRescheduleSlotDateRange,
 } from "../deriveRescheduleDateMode";
 
@@ -16,6 +17,11 @@ describe("deriveRescheduleDateMode", () => {
 
   it("does not treat days with value below 2 as a date range", () => {
     expect(deriveRescheduleDateMode("days", 1)).toBe("single_day");
+  });
+
+  it("exposes isRescheduleDateRangeMode as a boolean helper", () => {
+    expect(isRescheduleDateRangeMode("days", 3)).toBe(true);
+    expect(isRescheduleDateRangeMode("hours", 8)).toBe(false);
   });
 });
 
