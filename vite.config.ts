@@ -56,6 +56,7 @@ export default defineConfig(({ mode }) => {
         '**/index.ts',
         '**/types.ts',
         '**/*.types.ts',
+        '**/*.interface.ts',
         '**/fixtures/**',
       ],
       reporter: ['text', 'text-summary'],

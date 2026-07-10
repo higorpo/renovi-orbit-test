@@ -34,4 +34,18 @@ describe("ProviderSettlementDisclosure", () => {
     expect(screen.getByText(/Previsão de depósito na conta/i)).toBeInTheDocument();
     expect(screen.getByText(/Marcar o serviço como concluído/i)).toBeInTheDocument();
   });
+
+  it("applies custom className and omits completion note by default", () => {
+    render(
+      <ProviderSettlementDisclosure
+        capturePaidAt="2026-07-01T00:00:00.000Z"
+        className="custom-settlement"
+      />,
+    );
+
+    expect(screen.getByText(/Previsão de depósito na conta/i).closest("p")).toHaveClass(
+      "custom-settlement",
+    );
+    expect(screen.queryByText(/Marcar o serviço como concluído/i)).toBeNull();
+  });
 });

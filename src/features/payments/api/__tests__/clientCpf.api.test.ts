@@ -54,6 +54,30 @@ describe("fetchClientCpf", () => {
     });
   });
 
+  it("returns null CPF when the profile row is missing", async () => {
+    mockFrom.mockReturnValue(createSelectChain({
+      data: null,
+      error: null,
+    }));
+
+    await expect(fetchClientCpf("client-1")).resolves.toEqual({
+      cpf: null,
+      error: null,
+    });
+  });
+
+  it("returns null CPF when the stored CPF is null", async () => {
+    mockFrom.mockReturnValue(createSelectChain({
+      data: { cpf: null },
+      error: null,
+    }));
+
+    await expect(fetchClientCpf("client-1")).resolves.toEqual({
+      cpf: null,
+      error: null,
+    });
+  });
+
   it("returns error and logs when supabase fails", async () => {
     mockFrom.mockReturnValue(createSelectChain({
       data: null,

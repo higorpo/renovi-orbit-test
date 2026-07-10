@@ -223,6 +223,70 @@ describe("InstallmentSelector", () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
+  it("does not call onSelect when continueRef is invoked without a selection", () => {
+    const onSelect = vi.fn();
+    const continueRef: MutableRefObject<(() => void) | null> = { current: null };
+    mockUseInstallmentOptions.mockReturnValue({
+      data: {
+        installment_options: [
+          {
+            installment_number: 1,
+            applicable_rate_pct: 0,
+            total_with_fees: 100,
+            installment_amount: 100,
+          },
+        ],
+        installment_selection_hmac: "hmac-456",
+        installment_hmac_payload: installmentHmacPayload,
+        expires_at: "2030-01-01T00:00:00Z",
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    render(
+      <InstallmentSelector
+        proposalId="proposal-1"
+        serviceId="service-1"
+        cardBrand="VISA"
+        paymentTokenId="token-1"
+        onSelect={onSelect}
+        continueRef={continueRef}
+      />,
+    );
+
+    continueRef.current?.();
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("shows generic error description when query error is not an Error instance", () => {
+    const refetch = vi.fn();
+    mockUseInstallmentOptions.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: "timeout",
+      refetch,
+    });
+
+    render(
+      <InstallmentSelector
+        proposalId="proposal-1"
+        serviceId="service-1"
+        cardBrand="VISA"
+        paymentTokenId="token-1"
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "Verifique sua conexão e tente novamente. Se o problema persistir, entre em contato com o suporte.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("triggers signature recovery helper", async () => {
     const refetch = vi.fn().mockResolvedValue(undefined);
     mockUseInstallmentOptions.mockReturnValue({

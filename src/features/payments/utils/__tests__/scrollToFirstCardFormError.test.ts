@@ -18,6 +18,10 @@ describe("getFirstCardFormErrorField", () => {
 
     expect(getFirstCardFormErrorField(errors)).toBe("cardNumber");
   });
+
+  it("returns undefined when there are no field errors", () => {
+    expect(getFirstCardFormErrorField({})).toBeUndefined();
+  });
 });
 
 describe("scrollToFirstCardFormError", () => {
@@ -54,5 +58,26 @@ describe("scrollToFirstCardFormError", () => {
     } as FieldErrors<CardFormData>;
 
     expect(scrollToFirstCardFormError(errors)).toBeNull();
+  });
+
+  it("returns null when there are no errors to scroll to", () => {
+    expect(scrollToFirstCardFormError({})).toBeNull();
+  });
+
+  it("scrolls a non-input element without focusing when it is not an HTMLElement", () => {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.id = CARD_FORM_FIELD_IDS.cvv;
+    document.body.appendChild(svg);
+
+    const scrollIntoView = vi.fn();
+    (svg as SVGElement & { scrollIntoView: typeof scrollIntoView }).scrollIntoView =
+      scrollIntoView;
+
+    const errors = {
+      cvv: { type: "too_small", message: "Informe o CVV" },
+    } as FieldErrors<CardFormData>;
+
+    expect(scrollToFirstCardFormError(errors)).toBe(svg);
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
   });
 });

@@ -70,7 +70,7 @@ describe("getCheckoutStepRequirements", () => {
     // null fails the RPC validator before parseCheckoutStepRequirements runs
     await expect(getCheckoutStepRequirements()).resolves.toEqual({
       data: null,
-      error: "Resposta inesperada do servidor.",
+      error: "Resposta inesperada do servidor. Tente novamente.",
     });
   });
 

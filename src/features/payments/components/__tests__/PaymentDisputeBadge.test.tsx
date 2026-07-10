@@ -6,6 +6,6 @@ describe("PaymentDisputeBadge", () => {
   it("renders neutral dispute label", () => {
     render(<PaymentDisputeBadge />);
 
-    expect(screen.getByText("Disputa em análise")).toBeInTheDocument();
+    expect(screen.getByText("Chargeback em análise")).toBeInTheDocument();
   });
 });

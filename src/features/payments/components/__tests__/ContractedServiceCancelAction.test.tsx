@@ -6,6 +6,7 @@ import { ContractedServiceCancelAction } from "../ContractedServiceCancelAction"
 const mockUsePaymentScheduleLifecycle = vi.fn();
 const mockMutateAsync = vi.fn();
 const mockOnSuccess = vi.fn();
+const processRefundIsPending = { current: false };
 
 vi.mock("../../hooks/usePaymentScheduleLifecycle", () => ({
   usePaymentScheduleLifecycle: (...args: unknown[]) => mockUsePaymentScheduleLifecycle(...args),
@@ -14,7 +15,9 @@ vi.mock("../../hooks/usePaymentScheduleLifecycle", () => ({
 vi.mock("../../hooks/useProcessRefund", () => ({
   useProcessRefund: () => ({
     mutateAsync: mockMutateAsync,
-    isPending: false,
+    get isPending() {
+      return processRefundIsPending.current;
+    },
   }),
 }));
 
@@ -39,6 +42,7 @@ vi.mock("sonner", () => ({
 describe("ContractedServiceCancelAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    processRefundIsPending.current = false;
     mockCanCancel.mockReturnValue(true);
     mockUsePaymentScheduleLifecycle.mockReturnValue({
       isLoading: false,
@@ -189,6 +193,50 @@ describe("ContractedServiceCancelAction", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("Falha ao cancelar");
+    });
+  });
+
+  it("shows Cancelando… spinner while refund is pending", async () => {
+    mockMutateAsync.mockImplementation(() => new Promise(() => {}));
+
+    const props = {
+      contractedServiceId: "service-1",
+      serviceStatus: "CONFIRMED",
+      scheduledStartDate: "2026-07-20",
+      scheduledShift: "MORNING",
+      viewerRole: "client" as const,
+    };
+
+    const { rerender } = render(<ContractedServiceCancelAction {...props} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Cancelar serviço/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Confirmar cancelamento/i }));
+
+    processRefundIsPending.current = true;
+    rerender(<ContractedServiceCancelAction {...props} />);
+
+    expect(screen.getByRole("button", { name: /Cancelando…/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /^Voltar$/i })).toBeDisabled();
+  });
+
+  it("shows generic error toast when cancel throws a non-Error value", async () => {
+    mockMutateAsync.mockRejectedValue("network down");
+
+    render(
+      <ContractedServiceCancelAction
+        contractedServiceId="service-1"
+        serviceStatus="CONFIRMED"
+        scheduledStartDate="2026-07-20"
+        scheduledShift="MORNING"
+        viewerRole="client"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Cancelar serviço/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Confirmar cancelamento/i }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Falha ao cancelar serviço.");
     });
   });
 });

@@ -75,4 +75,11 @@ describe("useSavedPaymentTokens", () => {
     renderHook(() => useSavedPaymentTokens(false), { wrapper: createWrapper() });
     expect(spy).not.toHaveBeenCalled();
   });
+
+  it("does not fetch when the user session is missing", () => {
+    mockUseAuth.mockReturnValue({ user: null });
+    const spy = vi.spyOn(cardsApi, "listActivePaymentTokens");
+    renderHook(() => useSavedPaymentTokens(), { wrapper: createWrapper() });
+    expect(spy).not.toHaveBeenCalled();
+  });
 });

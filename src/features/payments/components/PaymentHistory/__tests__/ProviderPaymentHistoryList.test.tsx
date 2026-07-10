@@ -71,7 +71,7 @@ describe("ProviderPaymentHistoryList", () => {
     render(<ProviderPaymentHistoryList />);
 
     expect(screen.getByText(/Valor original/i)).toBeInTheDocument();
-    expect(screen.getByText("Disputa em análise")).toBeInTheDocument();
+    expect(screen.getByText("Chargeback em análise")).toBeInTheDocument();
     expect(screen.getByTestId("settlement")).toHaveTextContent("2026-07-01T12:00:00.000Z");
   });
 
@@ -96,6 +96,6 @@ describe("ProviderPaymentHistoryList", () => {
     render(<ProviderPaymentHistoryList />);
 
     expect(screen.queryByText(/Valor original/i)).not.toBeInTheDocument();
-    expect(screen.queryByText("Disputa em análise")).not.toBeInTheDocument();
+    expect(screen.queryByText("Chargeback em análise")).not.toBeInTheDocument();
   });
 });

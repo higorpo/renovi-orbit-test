@@ -69,4 +69,29 @@ describe("useProposalCheckoutContext", () => {
     });
     expect(result.current.error?.message).toBe("context failed");
   });
+
+  it("does not fetch when explicitly disabled", () => {
+    const spy = vi.spyOn(checkoutApi, "getProposalCheckoutContext");
+    renderHook(() => useProposalCheckoutContext("prop-1", false), {
+      wrapper: createWrapper(),
+    });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("throws fallback when response has neither data nor error", async () => {
+    vi.spyOn(checkoutApi, "getProposalCheckoutContext").mockResolvedValue({
+      data: null,
+      error: null,
+    });
+
+    const { result } = renderHook(
+      () => useProposalCheckoutContext("prop-1"),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+    expect(result.current.error?.message).toBe("proposal_checkout_context_failed");
+  });
 });

@@ -9,18 +9,14 @@ vi.mock("@/hooks/useBreakpoint", () => ({
   useBreakpointMd: () => mockUseBreakpointMd(),
 }));
 
-vi.mock("@/features/auth", () => ({
-  useAuth: () => ({
-    profile: { full_name: "Maria Silva" },
-  }),
-}));
-
 vi.mock("../CheckoutStepper/CardForm", () => ({
   CardForm: ({
     onSuccess,
     formId,
     hideActions,
     accountFullName,
+    tokenizeContext,
+    onPendingChange,
   }: {
     onSuccess: (result: {
       paymentTokenId: string;
@@ -30,6 +26,8 @@ vi.mock("../CheckoutStepper/CardForm", () => ({
     formId?: string;
     hideActions?: boolean;
     accountFullName?: string | null;
+    tokenizeContext?: "checkout" | "profile";
+    onPendingChange?: (pending: boolean) => void;
   }) => (
     <form
       id={formId}
@@ -46,14 +44,32 @@ vi.mock("../CheckoutStepper/CardForm", () => ({
         {hideActions ? "hide-actions" : "show-actions"}
       </span>
       <span data-testid="account-full-name">{accountFullName ?? ""}</span>
+      <span data-testid="tokenize-context">{tokenizeContext ?? ""}</span>
+      <button
+        type="button"
+        onClick={() => onPendingChange?.(true)}
+      >
+        mark-pending
+      </button>
       <button type="submit">submit-form</button>
     </form>
   ),
 }));
 
+const mockUseAuth = vi.fn(() => ({
+  profile: { full_name: "Maria Silva" },
+}));
+
+vi.mock("@/features/auth", () => ({
+  useAuth: () => mockUseAuth(),
+}));
+
 describe("AddCardSheetDialog", () => {
   beforeEach(() => {
     mockUseBreakpointMd.mockReturnValue(false);
+    mockUseAuth.mockReturnValue({
+      profile: { full_name: "Maria Silva" },
+    });
   });
 
   it("renders bottom sheet on mobile with Salvar cartão and Cancelar", () => {
@@ -106,5 +122,82 @@ describe("AddCardSheetDialog", () => {
       cardNumberMasked: "•••• 1111",
     });
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("blocks close and shows Salvando while tokenization is pending", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <AddCardSheetDialog
+        open
+        onOpenChange={onOpenChange}
+        onSuccess={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /mark-pending/i }));
+
+    expect(screen.getByRole("button", { name: /Salvando/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Cancelar/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Fechar/i })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: /Cancelar/i }));
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it("closes via sheet/dialog dismiss when not pending", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <AddCardSheetDialog
+        open
+        onOpenChange={onOpenChange}
+        onSuccess={vi.fn()}
+      />,
+    );
+
+    fireEvent.keyDown(document, { key: "Escape", code: "Escape" });
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("blocks desktop dialog dismiss while pending", () => {
+    mockUseBreakpointMd.mockReturnValue(true);
+    const onOpenChange = vi.fn();
+    render(
+      <AddCardSheetDialog
+        open
+        onOpenChange={onOpenChange}
+        onSuccess={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /mark-pending/i }));
+    fireEvent.keyDown(document, { key: "Escape", code: "Escape" });
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it("does not mount CardForm when closed and passes profile tokenize context", () => {
+    mockUseAuth.mockReturnValue({ profile: null as unknown as { full_name: string } });
+
+    const { rerender } = render(
+      <AddCardSheetDialog
+        open={false}
+        onOpenChange={vi.fn()}
+        tokenizeContext="profile"
+        onSuccess={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId("card-form-flags")).toBeNull();
+
+    rerender(
+      <AddCardSheetDialog
+        open
+        onOpenChange={vi.fn()}
+        tokenizeContext="profile"
+        onSuccess={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("tokenize-context")).toHaveTextContent("profile");
+    expect(screen.getByTestId("account-full-name")).toHaveTextContent("");
   });
 });

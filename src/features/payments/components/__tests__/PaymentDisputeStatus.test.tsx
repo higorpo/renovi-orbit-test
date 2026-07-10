@@ -28,6 +28,6 @@ describe("PaymentDisputeStatus", () => {
 
     render(<PaymentDisputeStatus contractedServiceId="service-1" />);
 
-    expect(screen.getByText("Disputa em análise")).toBeInTheDocument();
+    expect(screen.getByText("Chargeback em análise")).toBeInTheDocument();
   });
 });

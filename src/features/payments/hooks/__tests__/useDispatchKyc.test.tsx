@@ -117,6 +117,23 @@ describe("useDispatchKyc", () => {
     ).rejects.toThrow("hard fail");
   });
 
+  it("throws fallback when submit fails without a message", async () => {
+    vi.spyOn(kycApi, "submitProviderKyc").mockResolvedValue({
+      data: null,
+      error: null,
+      errorCode: "INVALID_BANK",
+    });
+
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useDispatchKyc(), { wrapper });
+
+    await expect(
+      act(async () => {
+        await result.current.mutateAsync(request);
+      }),
+    ).rejects.toThrow("Falha ao salvar credenciamento");
+  });
+
   it("throws when email dispatch fails", async () => {
     vi.spyOn(kycApi, "submitProviderKyc").mockResolvedValue({
       data: {
@@ -139,5 +156,29 @@ describe("useDispatchKyc", () => {
         await result.current.mutateAsync(request);
       }),
     ).rejects.toThrow("email fail");
+  });
+
+  it("throws fallback when email dispatch returns empty failure", async () => {
+    vi.spyOn(kycApi, "submitProviderKyc").mockResolvedValue({
+      data: {
+        providerGatewayAccountId: "acc-1",
+        onboardingStatus: "DOCUMENTS_SUBMITTED",
+        dispatchKycEmailRequired: true,
+      },
+      error: null,
+    });
+    vi.spyOn(kycApi, "dispatchKycEmail").mockResolvedValue({
+      data: null,
+      error: null,
+    });
+
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useDispatchKyc(), { wrapper });
+
+    await expect(
+      act(async () => {
+        await result.current.mutateAsync(request);
+      }),
+    ).rejects.toThrow("Falha ao enviar credenciamento");
   });
 });
