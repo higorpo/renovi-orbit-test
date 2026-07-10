@@ -89,4 +89,35 @@ describe("SimpleServiceCard", () => {
     ).toBeTruthy();
   });
 
+  it("handles missing service, description, and location", () => {
+    render(
+      <SimpleServiceCard
+        model={{
+          ...model,
+          service: null,
+          descriptionPreview: "",
+          address: null,
+        }}
+      />,
+    );
+
+    expect(screen.getByText(model.title)).toBeTruthy();
+    expect(screen.queryByText("Instalação elétrica")).toBeNull();
+    expect(screen.getByText(/Solicitado em/)).toBeTruthy();
+  });
+
+  it("omits location separator in compact mode when address is missing", () => {
+    render(
+      <SimpleServiceCard
+        model={{
+          ...model,
+          address: null,
+        }}
+        compact
+      />,
+    );
+
+    expect(screen.getByText(/Solicitado em/)).toBeTruthy();
+    expect(screen.queryByText(/Centro/)).toBeNull();
+  });
 });

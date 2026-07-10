@@ -51,15 +51,10 @@ describe("ServiceProviderProposalRejectionAlert", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders nothing when proposal is not rejected", () => {
+  it("renders nothing when proposal is loading", () => {
     useLatestProviderProposalMock.mockReturnValue({
-      isLoading: false,
-      data: {
-        summary: {
-          status: "PENDING",
-          clientRejectionResponse: null,
-        },
-      },
+      isLoading: true,
+      data: null,
     });
 
     const { container } = render(

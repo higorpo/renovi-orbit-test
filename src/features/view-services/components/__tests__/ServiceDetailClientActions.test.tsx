@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { History } from "lucide-react";
 import { ServiceDetailClientActions } from "../ServiceDetailClientActions";
 import type { ServiceModel } from "../../types/service.types";
@@ -105,5 +105,110 @@ describe("ServiceDetailClientActions", () => {
     expect(
       screen.queryByRole("button", { name: "Republicar novo pedido de serviço" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("opens cancel dialog and confirms cancellation", () => {
+    const onCancelDialogOpenChange = vi.fn();
+    const onCancelService = vi.fn();
+
+    render(
+      <ServiceDetailClientActions
+        model={buildModel({ listPhase: "negotiation", statusTabId: "negotiation" })}
+        budgetAction={null}
+        BudgetActionIcon={null}
+        showClientBudgetAction={false}
+        showClientNegotiationChats
+        showContractedChat={false}
+        showRepublishAction={false}
+        contractedChatId={null}
+        cancelDialogOpen
+        onCancelDialogOpenChange={onCancelDialogOpenChange}
+        onOpenBudgetSheet={vi.fn()}
+        onCancelService={onCancelService}
+        onRepublishService={vi.fn()}
+        isCancelling={false}
+        isRepublishing={false}
+      />,
+    );
+
+    expect(screen.getByText("Cancelar serviço?")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(onCancelService).toHaveBeenCalled();
+    expect(onCancelDialogOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("opens cancel dialog from the cancel pedido button", () => {
+    const onCancelDialogOpenChange = vi.fn();
+
+    render(
+      <ServiceDetailClientActions
+        model={buildModel({ listPhase: "negotiation", statusTabId: "negotiation" })}
+        budgetAction={null}
+        BudgetActionIcon={null}
+        showClientBudgetAction={false}
+        showClientNegotiationChats
+        showContractedChat={false}
+        showRepublishAction={false}
+        contractedChatId={null}
+        cancelDialogOpen={false}
+        onCancelDialogOpenChange={onCancelDialogOpenChange}
+        onOpenBudgetSheet={vi.fn()}
+        onCancelService={vi.fn()}
+        onRepublishService={vi.fn()}
+        isCancelling={false}
+        isRepublishing={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar pedido" }));
+    expect(onCancelDialogOpenChange).toHaveBeenCalledWith(true);
+  });
+
+  it("renders contracted chat and budget action", () => {
+    const onOpenBudgetSheet = vi.fn();
+    render(
+      <ServiceDetailClientActions
+        model={buildModel({
+          listPhase: "in_progress",
+          statusTabId: "in_progress",
+          contracted: {
+            id: "cs-1",
+            status: "CONFIRMED",
+            agreedSlot: null,
+            durationUnit: "hours",
+            durationValue: 1,
+            scheduledStartDate: "2026-01-01",
+            scheduledEndDate: null,
+            scheduledShift: "morning",
+            provider: { id: "p-1", displayName: "João", profileImagePath: null },
+            chatId: "chat-1",
+            updatedAt: null,
+          },
+        })}
+        budgetAction={{
+          label: "Ver orçamento",
+          sheetMode: "compare",
+          disabled: false,
+          disabledReason: undefined,
+        }}
+        BudgetActionIcon={History}
+        showClientBudgetAction
+        showClientNegotiationChats={false}
+        showContractedChat
+        showRepublishAction={false}
+        contractedChatId="chat-1"
+        cancelDialogOpen={false}
+        onCancelDialogOpenChange={vi.fn()}
+        onOpenBudgetSheet={onOpenBudgetSheet}
+        onCancelService={vi.fn()}
+        onRepublishService={vi.fn()}
+        isCancelling={false}
+        isRepublishing={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Ver orçamento" }));
+    expect(onOpenBudgetSheet).toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Chat" })).toBeInTheDocument();
   });
 });

@@ -37,4 +37,22 @@ describe("recordProviderOpportunityView", () => {
     expect(result.data).toBeNull();
     expect(result.error).toBe("forbidden");
   });
+
+  it("rejects blank opportunity ids", async () => {
+    const result = await recordProviderOpportunityView("   ");
+
+    expect(result).toEqual({
+      data: null,
+      error: "ID da oportunidade é obrigatório",
+    });
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+
+  it("treats missing success flag as successful", async () => {
+    rpcMock.mockResolvedValue({ data: {}, error: null });
+
+    const result = await recordProviderOpportunityView("sr-1");
+
+    expect(result).toEqual({ data: { success: true }, error: null });
+  });
 });

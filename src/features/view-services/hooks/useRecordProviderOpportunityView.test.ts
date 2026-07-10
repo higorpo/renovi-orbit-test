@@ -53,4 +53,23 @@ describe("useRecordProviderOpportunityView", () => {
     rerender({ id: "sr-1" });
     expect(recordMock).toHaveBeenCalledTimes(1);
   });
+
+  it("logs a warning when recording fails", async () => {
+    const { logger } = await import("@/lib/logger");
+    recordMock.mockRejectedValue(new Error("network"));
+
+    renderHook(() => useRecordProviderOpportunityView("sr-fail"));
+
+    await waitFor(() => {
+      expect(logger.warn).toHaveBeenCalledWith(
+        "record_provider_opportunity_view_failed",
+        expect.objectContaining({ serviceRequestId: "sr-fail" }),
+      );
+    });
+  });
+
+  it("does nothing when serviceRequestId is missing", async () => {
+    renderHook(() => useRecordProviderOpportunityView(undefined));
+    await waitFor(() => expect(recordMock).not.toHaveBeenCalled());
+  });
 });

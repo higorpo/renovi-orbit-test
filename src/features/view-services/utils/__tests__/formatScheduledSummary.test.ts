@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   formatScheduledSummary,
   formatScheduledSummaryLabel,
+  formatScheduleHighlightTitle,
   getScheduleHighlightContent,
   getScheduledTiming,
 } from "../formatScheduledSummary";
@@ -113,6 +114,50 @@ describe("getScheduleHighlightContent", () => {
     );
     expect(result?.title).toBe("Serviço hoje · dia inteiro");
   });
+
+  it("uses date label for future and past schedules", () => {
+    expect(
+      getScheduleHighlightContent(
+        contracted({ scheduledStartDate: "2025-06-12", scheduledShift: "" }),
+      ),
+    ).toEqual({
+      timing: "future",
+      title: "Agendado para 12/06/2025",
+    });
+    expect(
+      getScheduleHighlightContent(
+        contracted({ scheduledStartDate: "2025-06-01", scheduledShift: "morning" }),
+      )?.timing,
+    ).toBe("past");
+  });
+
+  it("returns null when there is no schedule", () => {
+    expect(
+      getScheduleHighlightContent(contracted({ scheduledStartDate: "" })),
+    ).toBeNull();
+  });
+});
+
+describe("formatScheduleHighlightTitle", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-06-08T12:00:00Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("delegates to highlight content title", () => {
+    expect(
+      formatScheduleHighlightTitle(
+        contracted({ scheduledStartDate: "2025-06-08", scheduledShift: "" }),
+      ),
+    ).toBe("Serviço hoje");
+    expect(
+      formatScheduleHighlightTitle(contracted({ scheduledStartDate: "" })),
+    ).toBeNull();
+  });
 });
 
 describe("getScheduledTiming", () => {
@@ -164,5 +209,15 @@ describe("getScheduledTiming", () => {
         }),
       )?.title,
     ).toBe("Agendado para amanhã · turno da tarde");
+  });
+
+  it("treats invalid start dates as future", () => {
+    expect(getScheduledTiming("not-a-date", null)).toBe("future");
+  });
+
+  it("normalizes inverted ranges", () => {
+    // End before start is swapped into a range that still includes today.
+    expect(getScheduledTiming("2025-06-10", "2025-06-07")).toBe("today");
+    expect(getScheduledTiming("2025-06-06", "2025-06-01")).toBe("past");
   });
 });

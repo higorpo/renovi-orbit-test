@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { GitCompare, History } from "lucide-react";
 import {
+  getServiceRequestBudgetActionIcon,
   getServiceRequestBudgetActionLabel,
   getServiceRequestBudgetActionState,
   getServiceRequestBudgetSheetMode,
@@ -36,5 +38,24 @@ describe("serviceRequestBudgetAction", () => {
       disabled: true,
       disabledReason: "Nenhum orçamento recebido ainda",
     });
+  });
+
+  it("enables the action when proposals exist", () => {
+    expect(
+      getServiceRequestBudgetActionState({
+        proposalCount: 2,
+        listPhase: "negotiation",
+      }),
+    ).toMatchObject({
+      disabled: false,
+      disabledReason: undefined,
+      sheetMode: "compare",
+      label: "Comparar orçamentos",
+    });
+  });
+
+  it("picks compare vs history icons by list phase", () => {
+    expect(getServiceRequestBudgetActionIcon("negotiation")).toBe(GitCompare);
+    expect(getServiceRequestBudgetActionIcon("completed")).toBe(History);
   });
 });
