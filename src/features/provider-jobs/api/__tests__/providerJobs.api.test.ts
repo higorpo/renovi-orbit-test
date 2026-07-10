@@ -108,4 +108,90 @@ describe("fetchProviderJobs", () => {
     expect(result.error).toBe("Invalid feed cursor");
     expect(isInvalidProviderJobsCursorError(result.error)).toBe(true);
   });
+
+  it("uses data.message when error field is not a string", async () => {
+    mocks.invoke.mockResolvedValue({
+      data: { error: { code: "X" }, message: "Upstream failed" },
+      error: null,
+    } as never);
+
+    const result = await fetchProviderJobs({ sort_mode: "newest" });
+
+    expect(result).toEqual({ data: null, error: "Upstream failed" });
+  });
+
+  it("falls back to generic message when error payload has no string message", async () => {
+    mocks.invoke.mockResolvedValue({
+      data: { error: { code: "X" }, message: 42 },
+      error: null,
+    } as never);
+
+    const result = await fetchProviderJobs({ sort_mode: "newest" });
+
+    expect(result).toEqual({
+      data: null,
+      error: "Failed to fetch opportunities",
+    });
+  });
+
+  it("defaults missing items and cursor fields on success payload", async () => {
+    mocks.invoke.mockResolvedValue({
+      data: { has_more: 1 },
+      error: null,
+    } as never);
+
+    const result = await fetchProviderJobs({ sort_mode: "newest" });
+
+    expect(result).toEqual({
+      data: {
+        items: [],
+        next_cursor: null,
+        has_more: true,
+      },
+      error: null,
+    });
+  });
+
+  it("uses FEED_DEFAULT_LIMIT when limit is missing or non-finite", async () => {
+    mocks.invoke.mockResolvedValue({
+      data: { items: [], next_cursor: null, has_more: false },
+      error: null,
+    } as never);
+
+    await fetchProviderJobs({ sort_mode: "newest", limit: Number.NaN });
+    expect(mocks.invoke).toHaveBeenLastCalledWith(
+      "list-provider-opportunities",
+      expect.objectContaining({
+        body: expect.objectContaining({ limit: 20 }),
+      }),
+    );
+
+    await fetchProviderJobs({ sort_mode: "newest" });
+    expect(mocks.invoke).toHaveBeenLastCalledWith(
+      "list-provider-opportunities",
+      expect.objectContaining({
+        body: expect.objectContaining({ limit: 20 }),
+      }),
+    );
+  });
+
+  it("clamps limit to at least 1 after truncation", async () => {
+    mocks.invoke.mockResolvedValue({
+      data: { items: [], next_cursor: null, has_more: false },
+      error: null,
+    } as never);
+
+    await fetchProviderJobs({ sort_mode: "newest", limit: 0.4 });
+
+    expect(mocks.invoke).toHaveBeenCalledWith(
+      "list-provider-opportunities",
+      expect.objectContaining({
+        body: expect.objectContaining({ limit: 1 }),
+      }),
+    );
+  });
+
+  it("treats null error as not an invalid cursor", () => {
+    expect(isInvalidProviderJobsCursorError(null)).toBe(false);
+  });
 });

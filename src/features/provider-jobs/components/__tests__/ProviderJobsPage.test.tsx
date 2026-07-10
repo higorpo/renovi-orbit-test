@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
     insecureContext: false,
     hasFeedLocation: false,
     isUsingDefault: false,
+    isNativeApp: false,
     retry: vi.fn(),
   },
   jobs: {
@@ -32,6 +33,11 @@ const mocks = vi.hoisted(() => ({
     setSortMode: vi.fn(),
     resetFilters: vi.fn(),
   },
+  useProviderJobsArgs: [] as Array<{
+    latitude: number | null;
+    longitude: number | null;
+    sortMode: string;
+  }>,
 }));
 
 vi.mock("../../hooks/useProviderLocation", () => ({
@@ -39,7 +45,14 @@ vi.mock("../../hooks/useProviderLocation", () => ({
 }));
 
 vi.mock("../../hooks/useProviderJobs", () => ({
-  useProviderJobs: () => mocks.jobs,
+  useProviderJobs: (args: {
+    latitude: number | null;
+    longitude: number | null;
+    sortMode: string;
+  }) => {
+    mocks.useProviderJobsArgs.push(args);
+    return mocks.jobs;
+  },
 }));
 
 vi.mock("../../hooks/useProviderJobsFilters", () => ({
@@ -57,11 +70,15 @@ vi.mock("../../hooks/useDismissOpportunity", () => ({
 describe("ProviderJobsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.useProviderJobsArgs.length = 0;
     mocks.jobs.isLoading = false;
     mocks.jobs.isError = false;
     mocks.jobs.items = [];
     mocks.jobs.hasNextPage = false;
     mocks.location.isUsingDefault = false;
+    mocks.location.hasFeedLocation = false;
+    mocks.location.location = { latitude: -27.5, longitude: -48.5 };
+    mocks.filters.filters.sortMode = "newest";
   });
 
   it("shows skeletons while loading", () => {
@@ -115,5 +132,53 @@ describe("ProviderJobsPage", () => {
       </MemoryRouter>,
     );
     expect(screen.getAllByText(/localização aproximada/i).length).toBeGreaterThan(0);
+  });
+
+  it("falls back from nearest to newest when feed GPS is unavailable", () => {
+    mocks.location.hasFeedLocation = false;
+    mocks.filters.filters.sortMode = "nearest";
+
+    render(
+      <MemoryRouter>
+        <ProviderJobsPage />
+      </MemoryRouter>,
+    );
+
+    expect(mocks.filters.setSortMode).toHaveBeenCalledWith("newest");
+  });
+
+  it("passes feed coordinates to jobs hook when GPS is available", () => {
+    mocks.location.hasFeedLocation = true;
+    mocks.location.location = { latitude: -27.5, longitude: -48.5 };
+    mocks.location.isUsingDefault = false;
+    mocks.filters.filters.sortMode = "nearest";
+
+    render(
+      <MemoryRouter>
+        <ProviderJobsPage />
+      </MemoryRouter>,
+    );
+
+    expect(mocks.useProviderJobsArgs.at(-1)).toEqual({
+      latitude: -27.5,
+      longitude: -48.5,
+      sortMode: "nearest",
+    });
+  });
+
+  it("shows filtered empty state when active sort differs from default", () => {
+    mocks.location.hasFeedLocation = true;
+    mocks.filters.filters.sortMode = "least_competitive";
+    mocks.jobs.items = [];
+
+    render(
+      <MemoryRouter>
+        <ProviderJobsPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText(/nenhum trabalho encontrado/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /limpar filtros/i }));
+    expect(mocks.filters.resetFilters).toHaveBeenCalled();
   });
 });

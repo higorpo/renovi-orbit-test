@@ -475,4 +475,195 @@ describe("useProviderLocation", () => {
     );
     expect(nativeMocks.captureOperationalLocationFix).toHaveBeenCalled();
   });
+
+  it("clears feed when native permission status is denied", async () => {
+    nativeMocks.isNativePlatform.mockReturnValue(true);
+    nativeMocks.getOperationalLocationPermissionStatus.mockResolvedValue("denied");
+
+    const { result } = renderHook(() => useProviderLocation());
+
+    await waitFor(() => expect(result.current.permissionDenied).toBe(true));
+    expect(result.current.location).toBeNull();
+    expect(result.current.error).toContain("negada");
+    expect(nativeMocks.captureOperationalLocationFix).not.toHaveBeenCalled();
+  });
+
+  it("clears feed when native geolocation is unsupported", async () => {
+    nativeMocks.isNativePlatform.mockReturnValue(true);
+    nativeMocks.getOperationalLocationPermissionStatus.mockResolvedValue("unsupported");
+
+    const { result } = renderHook(() => useProviderLocation());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.permissionDenied).toBe(false);
+    expect(result.current.error).toContain("não disponível");
+    expect(result.current.location).toBeNull();
+  });
+
+  it("clears feed when native fix reports denied status", async () => {
+    nativeMocks.isNativePlatform.mockReturnValue(true);
+    nativeMocks.getOperationalLocationPermissionStatus.mockResolvedValue("granted");
+    nativeMocks.getLatestProviderLocationSample.mockReturnValue(null);
+    nativeMocks.captureOperationalLocationFix.mockResolvedValue({
+      granted: false,
+      status: "denied",
+      latitude: null,
+      longitude: null,
+    });
+
+    const { result } = renderHook(() => useProviderLocation());
+
+    await waitFor(() => expect(result.current.permissionDenied).toBe(true));
+    expect(result.current.error).toContain("negada");
+  });
+
+  it("clears feed when native fix cannot provide coordinates", async () => {
+    nativeMocks.isNativePlatform.mockReturnValue(true);
+    nativeMocks.getOperationalLocationPermissionStatus.mockResolvedValue("granted");
+    nativeMocks.getLatestProviderLocationSample.mockReturnValue(null);
+    nativeMocks.captureOperationalLocationFix.mockResolvedValue({
+      granted: false,
+      status: "unavailable",
+      latitude: null,
+      longitude: null,
+    });
+
+    const { result } = renderHook(() => useProviderLocation());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.permissionDenied).toBe(false);
+    expect(result.current.error).toContain("Não foi possível obter");
+  });
+
+  it("applies native beacon samples for the signed-in provider only", async () => {
+    nativeMocks.isNativePlatform.mockReturnValue(true);
+    nativeMocks.getOperationalLocationPermissionStatus.mockResolvedValue("prompt");
+    nativeMocks.getLatestProviderLocationSample.mockReturnValue(null);
+    nativeMocks.captureOperationalLocationFix.mockResolvedValue({
+      granted: false,
+      status: "prompt",
+      latitude: null,
+      longitude: null,
+    });
+
+    let sampleListener:
+      | ((id: string, sample: { latitude: number; longitude: number }) => void)
+      | null = null;
+    nativeMocks.subscribeProviderLocationSamples.mockImplementation((cb) => {
+      sampleListener = cb;
+      return () => {};
+    });
+
+    const { result } = renderHook(() => useProviderLocation());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.location).toBeNull();
+
+    await act(async () => {
+      sampleListener?.("other-provider", { latitude: 1, longitude: 2 });
+    });
+    expect(result.current.location).toBeNull();
+
+    await act(async () => {
+      sampleListener?.("provider-1", { latitude: -22.1, longitude: -43.2 });
+    });
+
+    await waitFor(() =>
+      expect(result.current.location).toEqual({
+        latitude: -22.1,
+        longitude: -43.2,
+      }),
+    );
+  });
+
+  it("applies cached native sample when location is still empty after mount", async () => {
+    nativeMocks.isNativePlatform.mockReturnValue(true);
+    nativeMocks.getOperationalLocationPermissionStatus.mockResolvedValue("granted");
+    nativeMocks.getLatestProviderLocationSample
+      .mockReturnValueOnce(null)
+      .mockReturnValueOnce({
+        latitude: -26.5,
+        longitude: -49.1,
+        accuracyMeters: 10,
+        recordedAt: new Date().toISOString(),
+      });
+    nativeMocks.captureOperationalLocationFix.mockResolvedValue({
+      granted: false,
+      status: "unavailable",
+      latitude: null,
+      longitude: null,
+    });
+
+    const { result } = renderHook(() => useProviderLocation());
+
+    await waitFor(() =>
+      expect(result.current.location).toEqual({
+        latitude: -26.5,
+        longitude: -49.1,
+      }),
+    );
+  });
+
+  it("does not re-request web location when permission change is not granted", async () => {
+    const listeners: Record<string, () => void> = {};
+    const status = {
+      state: "prompt",
+      addEventListener: vi.fn((event: string, cb: () => void) => {
+        listeners[event] = cb;
+      }),
+      removeEventListener: vi.fn(),
+    };
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      geolocation: geo as unknown as Geolocation,
+      permissions: {
+        query: vi.fn().mockResolvedValue(status),
+      },
+    });
+
+    geo.getCurrentPosition.mockImplementation((_success, fail) => {
+      queueMicrotask(() => fail?.({ code: 1 } as GeolocationPositionError));
+    });
+
+    const { result } = renderHook(() => useProviderLocation());
+
+    await waitFor(() => expect(result.current.permissionDenied).toBe(true));
+    const callsAfterDenied = geo.getCurrentPosition.mock.calls.length;
+
+    status.state = "denied";
+    await act(async () => {
+      listeners.change?.();
+    });
+
+    expect(geo.getCurrentPosition.mock.calls.length).toBe(callsAfterDenied);
+  });
+
+  it("removes geolocation permission listener on unmount", async () => {
+    const status = {
+      state: "prompt",
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      geolocation: geo as unknown as Geolocation,
+      permissions: {
+        query: vi.fn().mockResolvedValue(status),
+      },
+    });
+
+    geo.getCurrentPosition.mockImplementation((success) => {
+      queueMicrotask(() =>
+        success({
+          coords: { latitude: 1, longitude: 1 },
+        } as GeolocationPosition),
+      );
+    });
+
+    const { unmount } = renderHook(() => useProviderLocation());
+
+    await waitFor(() => expect(status.addEventListener).toHaveBeenCalled());
+    unmount();
+    expect(status.removeEventListener).toHaveBeenCalled();
+  });
 });

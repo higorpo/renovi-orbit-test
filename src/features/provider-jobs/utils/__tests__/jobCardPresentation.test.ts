@@ -66,4 +66,36 @@ describe("getJobCardPresentation", () => {
 
     expect(presentation.showFallbackBadge).toBe(true);
   });
+
+  it("formats published line as Publicado agora for very recent grants", () => {
+    const presentation = getJobCardPresentation(
+      createMinimalJob({
+        granted_at: new Date().toISOString(),
+      }),
+    );
+
+    expect(presentation.publishedLine).toBe("Publicado agora");
+  });
+
+  it("formats published line with absolute date when relative is not Há-prefixed", () => {
+    const presentation = getJobCardPresentation(
+      createMinimalJob({
+        granted_at: new Date(Date.now() - 60 * 86_400_000).toISOString(),
+      }),
+    );
+
+    expect(presentation.publishedLine).toMatch(/^Publicado em /);
+  });
+
+  it("shows urgency for high and medium, hides for low", () => {
+    expect(
+      getJobCardPresentation(createMinimalJob({ urgency: "high" })).showUrgency,
+    ).toBe(true);
+    expect(
+      getJobCardPresentation(createMinimalJob({ urgency: "medium" })).showUrgency,
+    ).toBe(true);
+    expect(
+      getJobCardPresentation(createMinimalJob({ urgency: "low" })).showUrgency,
+    ).toBe(false);
+  });
 });

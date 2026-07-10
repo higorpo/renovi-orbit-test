@@ -181,4 +181,64 @@ describe("useProviderJobs", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.hasNextPage).toBe(false);
   });
+
+  it("maps invalid cursor API errors to INVALID_PROVIDER_JOBS_CURSOR", async () => {
+    fetchProviderJobs.mockResolvedValue({
+      data: null,
+      error: "Invalid feed cursor",
+    });
+
+    const { result } = renderHook(
+      () =>
+        useProviderJobs({
+          latitude: -1,
+          longitude: -1,
+          sortMode: "newest",
+        }),
+      { wrapper: wrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe("INVALID_PROVIDER_JOBS_CURSOR");
+  });
+
+  it("uses generic error message when API returns null data without error string", async () => {
+    fetchProviderJobs.mockResolvedValue({
+      data: null,
+      error: null,
+    });
+
+    const { result } = renderHook(
+      () =>
+        useProviderJobs({
+          latitude: -1,
+          longitude: -1,
+          sortMode: "newest",
+        }),
+      { wrapper: wrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe("Erro ao buscar trabalhos");
+  });
+
+  it("stops pagination when has_more is true but next_cursor is null", async () => {
+    fetchProviderJobs.mockResolvedValue({
+      data: makePage({ has_more: true, next_cursor: null }),
+      error: null,
+    });
+
+    const { result } = renderHook(
+      () =>
+        useProviderJobs({
+          latitude: -1,
+          longitude: -1,
+          sortMode: "newest",
+        }),
+      { wrapper: wrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.hasNextPage).toBe(false);
+  });
 });
