@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type MutableRefObject } from "react";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { PaymentTrustDisclosure } from "../PaymentTrustDisclosure";
 import {
+  formatProposalSuggestedSlot,
   useAcceptProposalMutation,
   type ProposalSuggestedSlotRpc,
 } from "@/features/negotiation-proposals";
@@ -118,7 +119,11 @@ export function ConfirmationStep({
           <p className="font-medium">{serviceTitle}</p>
         </div>
         <div>
-          <p className="text-muted-foreground">Parcelamento</p>
+          <p className="text-muted-foreground">Agendamento</p>
+          <p className="font-medium">{formatProposalSuggestedSlot(selectedSlot)}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Pagamento</p>
           <p className="font-medium">
             {installmentNumber}x de {formatCurrency(installmentAmount)}
           </p>

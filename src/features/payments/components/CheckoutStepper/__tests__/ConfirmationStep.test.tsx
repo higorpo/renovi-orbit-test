@@ -5,12 +5,16 @@ import { ConfirmationStep } from "../ConfirmationStep";
 
 const mutateAsync = vi.fn();
 
-vi.mock("@/features/negotiation-proposals", () => ({
-  useAcceptProposalMutation: () => ({
-    mutateAsync,
-    isPending: false,
-  }),
-}));
+vi.mock("@/features/negotiation-proposals", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/negotiation-proposals")>();
+  return {
+    ...actual,
+    useAcceptProposalMutation: () => ({
+      mutateAsync,
+      isPending: false,
+    }),
+  };
+});
 
 vi.mock("../../PaymentTrustDisclosure", () => ({
   PaymentTrustDisclosure: () => null,
@@ -60,6 +64,13 @@ const defaultProps = {
 };
 
 describe("ConfirmationStep", () => {
+  it("shows the scheduled slot in the confirmation summary", () => {
+    render(<ConfirmationStep {...defaultProps} />);
+
+    expect(screen.getByText("Agendamento")).toBeInTheDocument();
+    expect(screen.getByText(/01\/07\/2026/)).toBeInTheDocument();
+  });
+
   it("shows error when clearsale session is missing", async () => {
     render(
       <ConfirmationStep
