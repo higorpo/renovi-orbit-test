@@ -93,6 +93,27 @@ describe("SavedCardSelector", () => {
     expect(screen.getByLabelText(/Carregando cartões/i)).toBeInTheDocument();
   });
 
+  it("shows error state and retries when saved cards fail to load", () => {
+    const refetch = vi.fn();
+    mockUseSavedPaymentTokens.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error("cartões indisponíveis"),
+      refetch,
+    });
+
+    render(
+      <SavedCardSelector providerServiceId="proposal-1" onSelect={vi.fn()} />,
+      { wrapper: createWrapper() },
+    );
+
+    expect(screen.getByText("Não foi possível carregar os cartões")).toBeInTheDocument();
+    expect(screen.getByText("cartões indisponíveis")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Tentar novamente/i }));
+    expect(refetch).toHaveBeenCalled();
+  });
+
   it("lets the parent continue with a selected saved card via continueRef", async () => {
     const onSelect = vi.fn();
     const continueRef: MutableRefObject<(() => void) | null> = { current: null };

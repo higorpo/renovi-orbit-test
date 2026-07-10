@@ -22,7 +22,7 @@ import {
 import { CardStep } from "./CheckoutStepper/CardStep";
 import { SavedCardSelector } from "./CheckoutStepper/SavedCardSelector";
 import { InstallmentSelector } from "./InstallmentSelector";
-import { PAYMENT_DIALOG_FOOTER_STACK_CLASS } from "./paymentDialogFooter";
+import { PAYMENT_DIALOG_FOOTER_ROW_CLASS } from "./paymentDialogFooter";
 
 const SUPPORT_URL = `${(import.meta.env.VITE_MAIN_SITE_URL ?? "").replace(/\/$/, "")}/suporte`;
 
@@ -215,7 +215,7 @@ export function ManualPaymentDialog({
         </div>
 
         {view === "service-cancelled" ? (
-          <DialogFooter className={PAYMENT_DIALOG_FOOTER_STACK_CLASS}>
+          <DialogFooter className={PAYMENT_DIALOG_FOOTER_ROW_CLASS}>
             <Button type="button" onClick={() => onOpenChange(false)}>
               Fechar
             </Button>
@@ -223,20 +223,23 @@ export function ManualPaymentDialog({
         ) : null}
 
         {view === "terminal-error" ? (
-          <DialogFooter className={PAYMENT_DIALOG_FOOTER_STACK_CLASS}>
-            <Button type="button" onClick={() => setView("card")}>
-              Tentar com outro cartão
-            </Button>
+          <DialogFooter className={PAYMENT_DIALOG_FOOTER_ROW_CLASS}>
             <Button type="button" variant="outline" asChild>
               <a href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
                 Falar com suporte
               </a>
             </Button>
+            <Button type="button" onClick={() => setView("card")}>
+              Tentar com outro cartão
+            </Button>
           </DialogFooter>
         ) : null}
 
         {view === "card" ? (
-          <DialogFooter className={PAYMENT_DIALOG_FOOTER_STACK_CLASS}>
+          <DialogFooter className={PAYMENT_DIALOG_FOOTER_ROW_CLASS}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
             <Button
               type="button"
               disabled={!canContinue}
@@ -244,14 +247,14 @@ export function ManualPaymentDialog({
             >
               Continuar
             </Button>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
           </DialogFooter>
         ) : null}
 
         {view === "installments" ? (
-          <DialogFooter className={PAYMENT_DIALOG_FOOTER_STACK_CLASS}>
+          <DialogFooter className={PAYMENT_DIALOG_FOOTER_ROW_CLASS}>
+            <Button type="button" variant="outline" onClick={() => setView("card")}>
+              Voltar
+            </Button>
             <Button
               type="button"
               disabled={!canContinue}
@@ -259,14 +262,19 @@ export function ManualPaymentDialog({
             >
               Continuar
             </Button>
-            <Button type="button" variant="outline" onClick={() => setView("card")}>
-              Voltar
-            </Button>
           </DialogFooter>
         ) : null}
 
         {view === "confirm" ? (
-          <DialogFooter className={PAYMENT_DIALOG_FOOTER_STACK_CLASS}>
+          <DialogFooter className={PAYMENT_DIALOG_FOOTER_ROW_CLASS}>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isSubmitting}
+              onClick={() => setView("installments")}
+            >
+              Voltar
+            </Button>
             <Button
               type="button"
               disabled={isSubmitting || !clearsaleSessionId || !selection?.installment}
@@ -280,14 +288,6 @@ export function ManualPaymentDialog({
               ) : (
                 "Confirmar pagamento"
               )}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isSubmitting}
-              onClick={() => setView("installments")}
-            >
-              Voltar
             </Button>
           </DialogFooter>
         ) : null}
