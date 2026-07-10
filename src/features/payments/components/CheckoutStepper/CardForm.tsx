@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -63,7 +64,6 @@ export function CardForm({
   formId = CARD_FORM_ID,
   onPendingChange,
 }: CardFormProps) {
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const tokenizeCard = useTokenizeCard();
 
   const form = useForm<CardFormData>({
@@ -86,10 +86,8 @@ export function CardForm({
 
   const handleSubmit = form.handleSubmit(
     async (values) => {
-      setSubmitError(null);
-
       if (!savedCpf?.trim()) {
-        setSubmitError(
+        toast.error(
           tokenizeContext === "checkout"
             ? "Complete a etapa de CPF antes de continuar."
             : "Cadastre seu CPF na conta antes de adicionar um cartão.",
@@ -98,7 +96,7 @@ export function CardForm({
       }
 
       if (!phone?.replace(/\D/g, "").trim()) {
-        setSubmitError(
+        toast.error(
           tokenizeContext === "checkout"
             ? "Complete a etapa de telefone antes de continuar."
             : "Informe seu telefone para continuar.",
@@ -118,7 +116,7 @@ export function CardForm({
         form.reset(defaultCardFormValues());
         onSuccess(result);
       } catch (error) {
-        setSubmitError(
+        toast.error(
           mapPaymentErrorToUserMessage(error, {
             fallback: "Não foi possível salvar o cartão. Verifique os dados e tente novamente.",
           }),
@@ -437,12 +435,6 @@ export function CardForm({
             )}
           />
         </div>
-
-        {submitError ? (
-          <p className="text-sm text-destructive" role="alert">
-            {submitError}
-          </p>
-        ) : null}
 
         {hideActions ? null : (
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">

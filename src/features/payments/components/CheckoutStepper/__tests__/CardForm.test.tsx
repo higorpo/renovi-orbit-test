@@ -3,8 +3,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { toast } from "sonner";
 import * as tokenizeApi from "../../../api/cards.api";
 import { CardForm } from "../CardForm";
+
+vi.mock("sonner", () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
+}));
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -81,6 +89,8 @@ function fillCardForm(overrides?: Partial<typeof validForm>) {
 describe("CardForm", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.mocked(toast.error).mockClear();
+    vi.mocked(toast.success).mockClear();
   });
 
   it("clears sensitive fields after successful tokenization", async () => {
@@ -131,7 +141,7 @@ describe("CardForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Informe seu telefone para continuar/i)).toBeInTheDocument();
+      expect(toast.error).toHaveBeenCalledWith("Informe seu telefone para continuar.");
     });
   });
 
@@ -150,9 +160,7 @@ describe("CardForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Complete a etapa de CPF antes de continuar/i),
-      ).toBeInTheDocument();
+      expect(toast.error).toHaveBeenCalledWith("Complete a etapa de CPF antes de continuar.");
     });
   });
 
@@ -171,9 +179,7 @@ describe("CardForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Complete a etapa de telefone antes de continuar/i),
-      ).toBeInTheDocument();
+      expect(toast.error).toHaveBeenCalledWith("Complete a etapa de telefone antes de continuar.");
     });
   });
 
@@ -194,9 +200,9 @@ describe("CardForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Não foi possível salvar o cartão. Verifique os dados e tente novamente."),
-      ).toBeInTheDocument();
+      expect(toast.error).toHaveBeenCalledWith(
+        "Não foi possível salvar o cartão. Verifique os dados e tente novamente.",
+      );
     });
   });
 
@@ -224,7 +230,9 @@ describe("CardForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Salvar cartão" }));
 
     await waitFor(() => {
-      expect(screen.getByText(/recusado/i)).toBeInTheDocument();
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringMatching(/recusado/i),
+      );
     });
   });
 
@@ -243,9 +251,9 @@ describe("CardForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Cadastre seu CPF na conta antes de adicionar um cartão/i),
-      ).toBeInTheDocument();
+      expect(toast.error).toHaveBeenCalledWith(
+        "Cadastre seu CPF na conta antes de adicionar um cartão.",
+      );
     });
   });
 
