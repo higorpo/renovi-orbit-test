@@ -76,4 +76,28 @@ describe("useProcessRefund", () => {
       status: 409,
     });
   });
+
+  it("passes cancellation reason and throws fallback on empty failure", async () => {
+    const spy = vi.spyOn(refundApi, "processContractedServiceRefund").mockResolvedValue({
+      data: null,
+      error: null,
+    });
+
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useProcessRefund(), { wrapper });
+
+    await expect(
+      act(async () => {
+        await result.current.mutateAsync({
+          contractedServiceId: "service-1",
+          cancellationReason: "Cliente desistiu",
+        });
+      }),
+    ).rejects.toThrow("Falha ao cancelar serviço");
+
+    expect(spy).toHaveBeenCalledWith({
+      contractedServiceId: "service-1",
+      cancellationReason: "Cliente desistiu",
+    });
+  });
 });

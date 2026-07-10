@@ -22,6 +22,14 @@ vi.mock("@/hooks/useMobileDialogViewport", () => ({
 
 const mockCardStepGenerateSession = vi.fn(() => true);
 
+const mockSavedCardSelection = {
+  paymentTokenId: "token-1",
+  cardBrand: "VISA",
+  cardNumberMasked: "411111XXXXXX1111" as string | undefined,
+  expiryMonth: 12 as number | undefined,
+  expiryYear: 2030 as number | undefined,
+};
+
 vi.mock("../CheckoutStepper/CardStep", () => ({
   CardStep: ({
     onSessionIdGenerated,
@@ -54,30 +62,21 @@ vi.mock("../CheckoutStepper/SavedCardSelector", () => ({
     queueMicrotask(() => {
       onCanContinueChange?.(true);
     });
+    const selectCard = () =>
+      onSelect({
+        paymentTokenId: mockSavedCardSelection.paymentTokenId,
+        cardBrand: mockSavedCardSelection.cardBrand,
+        cardNumberMasked: mockSavedCardSelection.cardNumberMasked,
+        expiryMonth: mockSavedCardSelection.expiryMonth,
+        expiryYear: mockSavedCardSelection.expiryYear,
+      });
+
     if (continueRef) {
-      continueRef.current = () =>
-        onSelect({
-          paymentTokenId: "token-1",
-          cardBrand: "VISA",
-          cardNumberMasked: "411111XXXXXX1111",
-          expiryMonth: 12,
-          expiryYear: 2030,
-        });
+      continueRef.current = selectCard;
     }
     return (
       <div>
-        <button
-          type="button"
-          onClick={() =>
-            onSelect({
-              paymentTokenId: "token-1",
-              cardBrand: "VISA",
-              cardNumberMasked: "411111XXXXXX1111",
-              expiryMonth: 12,
-              expiryYear: 2030,
-            })
-          }
-        >
+        <button type="button" onClick={selectCard}>
           Selecionar cartão
         </button>
       </div>
@@ -194,6 +193,11 @@ describe("ManualPaymentDialog", () => {
     vi.clearAllMocks();
     manualChargeIsPending.current = false;
     mockCardStepGenerateSession.mockReturnValue(true);
+    mockSavedCardSelection.paymentTokenId = "token-1";
+    mockSavedCardSelection.cardBrand = "VISA";
+    mockSavedCardSelection.cardNumberMasked = "411111XXXXXX1111";
+    mockSavedCardSelection.expiryMonth = 12;
+    mockSavedCardSelection.expiryYear = 2030;
     updatePaymentMethod.mockResolvedValue({ data: { scheduleId: "schedule-1" }, error: null });
     manualChargeMutateAsync.mockResolvedValue({
       scheduleId: "schedule-1",
@@ -305,12 +309,19 @@ describe("ManualPaymentDialog", () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it("shows terminal error and allows retry with another card", async () => {
+  it("shows terminal error title, message, support link, and retry action", async () => {
     await goToConfirmView();
-
     fireEvent.click(screen.getByRole("button", { name: /Confirmar pagamento/i }));
 
     await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Pagamento não concluído" })).toBeInTheDocument();
+      expect(
+        screen.getByText("Não foi possível concluir o pagamento com este cartão."),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /Falar com suporte/i })).toHaveAttribute(
+        "href",
+        expect.stringContaining("/suporte"),
+      );
       expect(screen.getByRole("button", { name: /Tentar com outro cartão/i })).toBeInTheDocument();
     });
 
@@ -318,17 +329,141 @@ describe("ManualPaymentDialog", () => {
     expect(screen.getByRole("button", { name: /Selecionar cartão/i })).toBeInTheDocument();
   });
 
-  it("shows service cancelled view for SERVICE_AUTO_CANCELLED", async () => {
+  it("shows service cancelled view with description, support hint, and close action", async () => {
+    const onOpenChange = vi.fn();
     const error = new Error("cancelled") as Error & { errorCode?: string };
     error.errorCode = "SERVICE_AUTO_CANCELLED";
     manualChargeMutateAsync.mockRejectedValue(error);
+
+    render(
+      <ManualPaymentDialog
+        open
+        onOpenChange={onOpenChange}
+        schedule={schedule}
+        acceptedProposalId="proposal-1"
+        serviceRequestId="sr-1"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Selecionar cartão/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Selecionar parcelas/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Confirmar pagamento/i })).not.toBeDisabled();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Confirmar pagamento/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Serviço cancelado" })).toBeInTheDocument();
+      expect(
+        screen.getByText("Este serviço foi cancelado automaticamente por falta de pagamento."),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Entre em contato com o suporte se precisar de ajuda."),
+      ).toBeInTheDocument();
+    });
+
+    const footerClose = screen
+      .getAllByRole("button", { name: /^Fechar$/i })
+      .find((button) => button.textContent === "Fechar");
+    expect(footerClose).toBeDefined();
+    fireEvent.click(footerClose!);
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("navigates from confirm view via Trocar cartão and Alterar parcelas", async () => {
+    await goToConfirmView();
+
+    fireEvent.click(screen.getByRole("button", { name: /Trocar cartão/i }));
+    expect(screen.getByText("Efetuar pagamento")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Selecionar cartão/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Selecionar cartão/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Selecionar parcelas/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Confirmar pagamento" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Alterar parcelas/i }));
+    expect(screen.getByText("Parcelamento")).toBeInTheDocument();
+  });
+
+  it("renders confirm card summary without mask or expiry when missing", async () => {
+    mockSavedCardSelection.cardNumberMasked = undefined;
+    mockSavedCardSelection.expiryMonth = undefined;
+    mockSavedCardSelection.expiryYear = undefined;
+
+    await goToConfirmView();
+
+    expect(screen.getByText("Visa")).toBeInTheDocument();
+    expect(screen.queryByText(/••••/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Validade/i)).not.toBeInTheDocument();
+  });
+
+  it("shows Processando… and disables Voltar while submitting", async () => {
+    let resolveUpdate: (value: { data: { scheduleId: string }; error: null }) => void;
+    updatePaymentMethod.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveUpdate = resolve;
+        }),
+    );
 
     await goToConfirmView();
     fireEvent.click(screen.getByRole("button", { name: /Confirmar pagamento/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("Serviço cancelado")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Processando…/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^Voltar$/i })).toBeDisabled();
     });
+
+    resolveUpdate!({ data: { scheduleId: "schedule-1" }, error: null });
+  });
+
+  it("closes from card view and navigates back via Voltar footer actions", async () => {
+    const onOpenChange = vi.fn();
+    render(
+      <ManualPaymentDialog
+        open
+        onOpenChange={onOpenChange}
+        schedule={schedule}
+        acceptedProposalId="proposal-1"
+        serviceRequestId="sr-1"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^Cancelar$/i }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+
+    fireEvent.click(screen.getByRole("button", { name: /Selecionar cartão/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Voltar$/i }));
+    expect(screen.getByText("Efetuar pagamento")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Selecionar cartão/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Selecionar parcelas/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Confirmar pagamento" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /^Voltar$/i }));
+    expect(screen.getByText("Parcelamento")).toBeInTheDocument();
+  });
+
+  it("does not mount CardStep when dialog is closed", () => {
+    render(
+      <ManualPaymentDialog
+        open={false}
+        onOpenChange={vi.fn()}
+        schedule={schedule}
+        acceptedProposalId="proposal-1"
+        serviceRequestId="sr-1"
+      />,
+    );
+
+    expect(screen.queryByTestId("checkout-card-step")).not.toBeInTheDocument();
   });
 
   it("toasts when updatePaymentMethod fails and does not charge", async () => {

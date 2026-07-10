@@ -85,6 +85,41 @@ describe("useInstallmentOptions", () => {
       expect(result.current.isError).toBe(true);
     });
   });
+
+  it("does not fetch when disabled", () => {
+    const spy = vi.spyOn(cardsApi, "fetchInstallmentOptions");
+    renderHook(
+      () => useInstallmentOptions({
+        proposalId: "p-1",
+        serviceId: "s-1",
+        cardBrand: "VISA",
+        enabled: false,
+      }),
+      { wrapper: createWrapper() },
+    );
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("throws fallback when response has neither data nor error", async () => {
+    vi.spyOn(cardsApi, "fetchInstallmentOptions").mockResolvedValue({
+      data: null,
+      error: null,
+    });
+
+    const { result } = renderHook(
+      () => useInstallmentOptions({
+        proposalId: "p-1",
+        serviceId: "s-1",
+        cardBrand: "VISA",
+      }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+    expect(result.current.error?.message).toBe("installment_options_unavailable");
+  });
 });
 
 describe("useInstallmentSignatureRecovery", () => {

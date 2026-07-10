@@ -10,8 +10,20 @@ vi.mock("../../hooks/usePaymentSchedule", () => ({
 }));
 
 vi.mock("../ManualPaymentDialog", () => ({
-  ManualPaymentDialog: ({ open }: { open: boolean }) => (
-    open ? <div data-testid="manual-payment-dialog">Dialog</div> : null
+  ManualPaymentDialog: ({
+    open,
+    onCompleted,
+  }: {
+    open: boolean;
+    onCompleted?: () => void;
+  }) => (
+    open ? (
+      <div data-testid="manual-payment-dialog">
+        <button type="button" onClick={() => onCompleted?.()}>
+          complete-payment
+        </button>
+      </div>
+    ) : null
   ),
   ManualPaymentModal: ({ open }: { open: boolean }) => (
     open ? <div data-testid="manual-payment-dialog">Dialog</div> : null
@@ -42,10 +54,32 @@ describe("ManualPaymentButton", () => {
     fireEvent.click(screen.getByRole("button", { name: /Ajustar pagamento/i }));
     expect(onClick).toHaveBeenCalledTimes(1);
   });
+
+  it("hides when schedule state is null and respects disabled/className", () => {
+    const onClick = vi.fn();
+    const { rerender } = render(
+      <ManualPaymentButton scheduleState={null} onClick={onClick} />,
+    );
+    expect(screen.queryByRole("button", { name: /Ajustar pagamento/i })).toBeNull();
+
+    rerender(
+      <ManualPaymentButton
+        scheduleState="FAILED_PERMANENT"
+        onClick={onClick}
+        disabled
+        className="custom-class"
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: /Ajustar pagamento/i });
+    expect(button).toBeDisabled();
+    expect(button).toHaveClass("custom-class");
+  });
 });
 
 describe("ManualPaymentRecovery", () => {
   it("opens modal when schedule and context are available", () => {
+    const refetch = vi.fn();
     mockUsePaymentSchedule.mockReturnValue({
       isLoading: false,
       data: {
@@ -66,7 +100,7 @@ describe("ManualPaymentRecovery", () => {
           serviceRequestId: "request-1",
         },
       },
-      refetch: vi.fn(),
+      refetch,
     });
 
     render(
@@ -85,6 +119,9 @@ describe("ManualPaymentRecovery", () => {
     expect(screen.getByRole("button", { name: /Ajustar pagamento/i })).toHaveClass(
       "sm:w-auto",
     );
+
+    fireEvent.click(screen.getByRole("button", { name: /complete-payment/i }));
+    expect(refetch).toHaveBeenCalled();
   });
 
   it("does not render modal when schedule context is missing", () => {
@@ -151,6 +188,40 @@ describe("ManualPaymentRecovery", () => {
     );
 
     expect(screen.getByRole("button", { name: /Ajustar pagamento/i })).toBeDisabled();
+  });
+
+  it("returns null when schedule is not eligible for manual recovery", () => {
+    mockUsePaymentSchedule.mockReturnValue({
+      isLoading: false,
+      data: {
+        schedule: {
+          id: "sched-1",
+          state: "PAID",
+          contractedServiceId: "service-1",
+          paymentTokenId: "token-1",
+          installmentNumber: 1,
+          baseAmount: 100,
+          failureReason: null,
+          failureCode: null,
+          isDisputed: false,
+          paidAt: "2026-07-01T00:00:00.000Z",
+        },
+        context: {
+          acceptedProposalId: "proposal-1",
+          serviceRequestId: "request-1",
+        },
+      },
+      refetch: vi.fn(),
+    });
+
+    const { container } = render(
+      <ManualPaymentRecovery
+        contractedServiceId="service-1"
+        serviceRequestId="request-1"
+      />,
+    );
+
+    expect(container).toBeEmptyDOMElement();
   });
 });
 

@@ -86,4 +86,19 @@ describe("useTokenizeCard", () => {
       }),
     ).rejects.toThrow(/recusado/);
   });
+
+  it("throws fallback message when API returns empty failure", async () => {
+    vi.spyOn(cardsApi, "tokenizePaymentCard").mockResolvedValue({
+      data: null,
+      error: null,
+    });
+
+    const { result } = renderHook(() => useTokenizeCard(), { wrapper: createWrapper() });
+
+    await expect(
+      act(async () => {
+        await result.current.mutateAsync(tokenizeRequest);
+      }),
+    ).rejects.toThrow(/Não foi possível salvar o cartão/);
+  });
 });

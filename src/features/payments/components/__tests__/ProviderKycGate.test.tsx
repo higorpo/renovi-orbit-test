@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProviderKycGate } from "../ProviderKycGate";
 
@@ -19,7 +19,13 @@ vi.mock("../../hooks/useRetryKycEmailDispatch", () => ({
 }));
 
 vi.mock("../ProviderKycForm", () => ({
-  ProviderKycForm: () => <div data-testid="provider-kyc-form">KYC Form</div>,
+  ProviderKycForm: ({ onSubmitted }: { onSubmitted?: () => void }) => (
+    <div data-testid="provider-kyc-form">
+      <button type="button" onClick={() => onSubmitted?.()}>
+        submit-kyc
+      </button>
+    </div>
+  ),
 }));
 
 const mockShouldBlock = vi.fn(
@@ -173,5 +179,27 @@ describe("ProviderKycGate", () => {
 
     // Blocked but neither pending nor submitting → fallthrough children.
     expect(screen.getByText("App content")).toBeInTheDocument();
+  });
+
+  it("shows KYC form when provider has no payment account yet", () => {
+    const refetch = vi.fn();
+    mockUseProviderPaymentAccount.mockReturnValue({
+      data: null,
+      isLoading: false,
+      refetch,
+    });
+
+    render(
+      <ProviderKycGate>
+        <div>App content</div>
+      </ProviderKycGate>,
+    );
+
+    expect(screen.getByTestId("provider-kyc-form")).toBeInTheDocument();
+    expect(mockUseProviderPaymentAccount).toHaveBeenCalledWith(true);
+    expect(mockUseRetryKycEmailDispatch).toHaveBeenCalledWith(false);
+
+    fireEvent.click(screen.getByRole("button", { name: /submit-kyc/i }));
+    expect(refetch).toHaveBeenCalled();
   });
 });

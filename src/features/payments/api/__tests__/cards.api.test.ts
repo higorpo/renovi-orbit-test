@@ -101,6 +101,22 @@ describe("tokenizePaymentCard", () => {
     expect(result.error).toContain("validar este cartão");
     expect(result.gatewayErrors?.[0]?.code).toBe("INVALID_CARD");
   });
+
+  it("maps tokenize failures without a gateway errors array", async () => {
+    mockInvoke.mockResolvedValue({
+      data: {
+        error: "Tokenize failed",
+        error_code: "TOKENIZE_FAILED",
+      },
+      error: null,
+    });
+
+    const result = await tokenizePaymentCard(tokenizeRequest);
+
+    expect(result.data).toBeNull();
+    expect(result.error).toBeTruthy();
+    expect(result.gatewayErrors).toBeUndefined();
+  });
 });
 
 function createSelectChain<T>(result: { data: T; error: { message: string } | null }) {
@@ -441,6 +457,16 @@ describe("revokePaymentToken", () => {
     });
 
     await expect(revokePaymentToken("missing")).resolves.toEqual({
+      data: { outcome: "not_found" },
+      error: null,
+    });
+
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: "no rows returned", code: "P0002" },
+    });
+
+    await expect(revokePaymentToken("missing-p0002")).resolves.toEqual({
       data: { outcome: "not_found" },
       error: null,
     });

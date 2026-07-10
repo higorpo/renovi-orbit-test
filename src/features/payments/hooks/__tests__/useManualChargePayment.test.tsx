@@ -4,6 +4,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import * as chargesApi from "../../api/charges.api";
+import { PAYMENT_SCHEDULE_QUERY_KEY } from "../usePaymentSchedule";
 import { useManualChargePayment } from "../useManualChargePayment";
 
 function createWrapper() {
@@ -76,5 +77,63 @@ describe("useManualChargePayment", () => {
         });
       }),
     ).rejects.toThrow("Muitas tentativas");
+  });
+
+  it("throws fallback message when charge returns empty failure", async () => {
+    vi.spyOn(chargesApi, "manualChargePayment").mockResolvedValue({
+      data: null,
+      error: null,
+    });
+
+    const { result } = renderHook(() => useManualChargePayment(), {
+      wrapper: createWrapper(),
+    });
+
+    await expect(
+      act(async () => {
+        await result.current.mutateAsync({
+          scheduleId: "sched-1",
+          clearsaleSessionId: "session-1",
+        });
+      }),
+    ).rejects.toThrow("Falha ao processar pagamento");
+  });
+
+  it("invalidates payment schedule queries after a successful charge", async () => {
+    vi.spyOn(chargesApi, "manualChargePayment").mockResolvedValue({
+      data: {
+        scheduleId: "sched-1",
+        outcome: "PAID",
+        chargeAmount: "100.00",
+      },
+      error: null,
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useManualChargePayment(), { wrapper });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        scheduleId: "sched-1",
+        clearsaleSessionId: "session-1",
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: PAYMENT_SCHEDULE_QUERY_KEY,
+    });
   });
 });

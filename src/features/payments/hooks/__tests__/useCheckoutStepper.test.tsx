@@ -227,4 +227,37 @@ describe("useCheckoutStepper", () => {
       expect(result.current.steps.length).toBeGreaterThan(0);
     });
   });
+
+  it("surfaces requirements errors and exposes refetchRequirements", async () => {
+    const spy = vi.spyOn(checkoutApi, "getCheckoutStepRequirements")
+      .mockResolvedValueOnce({
+        data: null,
+        error: "requirements failed",
+      })
+      .mockResolvedValue({
+        data: {
+          needs_cpf: false,
+          needs_phone: false,
+          needs_card: true,
+        },
+        error: null,
+      });
+
+    const { result } = renderHook(() => useCheckoutStepper(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(result.current.requirementsError).toBe("requirements failed");
+    });
+
+    act(() => {
+      result.current.refetchRequirements();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoadingRequirements).toBe(false);
+      expect(spy).toHaveBeenCalledTimes(2);
+    });
+  });
 });
