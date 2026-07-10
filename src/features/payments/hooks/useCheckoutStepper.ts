@@ -110,6 +110,10 @@ export function useCheckoutStepper(options: UseCheckoutStepperOptions = {}) {
     setSessionSteps(null);
   }, []);
 
+  const refetchRequirements = useCallback(() => {
+    void requirementsQuery.refetch();
+  }, [requirementsQuery.refetch]);
+
   const goToStep = useCallback(
     (stepId: CheckoutStepId) => {
       const index = steps.indexOf(stepId);
@@ -132,6 +136,7 @@ export function useCheckoutStepper(options: UseCheckoutStepperOptions = {}) {
     needsCard: requirements.needs_card,
     isLoadingRequirements: requirementsQuery.isLoading,
     requirementsError: requirementsQuery.error,
+    refetchRequirements,
     goNext,
     goBack,
     goToStep,

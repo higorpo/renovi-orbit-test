@@ -74,9 +74,10 @@ export function PhoneStep({
         className="space-y-6"
       >
         <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Informe seu telefone</h2>
+          <h2 className="text-sm font-medium text-foreground">Informe seu telefone</h2>
           <p className="text-sm text-muted-foreground">
-            Usamos seu telefone para contato sobre o pagamento e confirmações do serviço.
+            Usamos seu telefone para contato sobre o pagamento e confirmações do serviço, e
+            também para ajudar a prevenir fraudes.
           </p>
         </div>
 

@@ -79,12 +79,14 @@ describe("CheckoutStepper", () => {
     render(<CheckoutStepperHarness proposalId="proposal-1" />, { wrapper: createWrapper() });
 
     await waitFor(() => {
-      expect(screen.getByTestId("checkout-stepper-error")).toBeInTheDocument();
+      expect(screen.getByRole("alert")).toBeInTheDocument();
     });
 
+    expect(screen.getByText("Não foi possível carregar o checkout")).toBeInTheDocument();
     expect(
       screen.getByText(/Não foi possível carregar as etapas do checkout/i),
     ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Tentar novamente/i })).toBeInTheDocument();
   });
 
   it("advances to card step after CPF and phone are saved", async () => {

@@ -74,7 +74,7 @@ export function CpfStep({
         className="space-y-6"
       >
         <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Informe seu CPF</h2>
+          <h2 className="text-sm font-medium text-foreground">Informe seu CPF</h2>
           <p className="text-sm text-muted-foreground">
             Precisamos do seu CPF para concluir o pagamento com segurança, conforme exigido
             pelo parceiro de pagamentos.

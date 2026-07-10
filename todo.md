@@ -131,6 +131,8 @@ Fluxo de pagamentos, itens com problemas:
 
 - Preciso testar o fluxo de cobrança manual.
 
+- Preciso testar o fluxo de cobrança com rejeição de CPF
+
 
 Detalhes dos testes:
 Cartão aprovado: 4970100000000048

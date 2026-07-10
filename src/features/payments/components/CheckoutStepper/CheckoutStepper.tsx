@@ -1,9 +1,10 @@
-import { Loader2 } from "lucide-react";
+import { ErrorState } from "@/components/ui/error-state";
 import type { CheckoutHostBindings } from "../../hooks/useCheckoutHostActions";
 import type { UseCheckoutStepperResult } from "../../hooks/useCheckoutStepper";
 import type { CheckoutContext } from "../../types/checkoutStepper.types";
 import { mapCheckoutStepperError } from "../../utils/mapCheckoutStepperError";
 import { CheckoutStepContent } from "./CheckoutStepContent";
+import { CheckoutStepperSkeleton } from "./CheckoutStepperSkeleton";
 
 export type CheckoutStepperProps = {
   stepper: UseCheckoutStepperResult;
@@ -29,26 +30,17 @@ export function CheckoutStepper({
   onCheckoutSuccess,
 }: CheckoutStepperProps) {
   if (stepper.isLoadingRequirements) {
-    return (
-      <div
-        data-testid="checkout-stepper-loading"
-        className="flex items-center justify-center gap-2 py-8 text-muted-foreground"
-      >
-        <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-        <span>Carregando checkout…</span>
-      </div>
-    );
+    return <CheckoutStepperSkeleton />;
   }
 
   if (stepper.requirementsError) {
     return (
-      <div
-        data-testid="checkout-stepper-error"
-        className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
-        role="alert"
-      >
-        {mapCheckoutStepperError(stepper.requirementsError)}
-      </div>
+      <ErrorState
+        title="Não foi possível carregar o checkout"
+        description={mapCheckoutStepperError(stepper.requirementsError)}
+        onRetry={stepper.refetchRequirements}
+        className="py-8"
+      />
     );
   }
 
