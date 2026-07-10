@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createCardFormSchema, defaultCardFormValues } from "../cardForm.validation";
+import { cardFormSchema, defaultCardFormValues } from "../cardForm.validation";
 
 const validBase = {
   cardNumber: "4111111111111111",
@@ -16,42 +16,32 @@ const validBase = {
   zipCode: "88010000",
 };
 
-describe("createCardFormSchema", () => {
-  it("accepts a valid card form without CPF", () => {
-    const result = createCardFormSchema(false).safeParse(validBase);
+describe("cardFormSchema", () => {
+  it("accepts a valid card form", () => {
+    const result = cardFormSchema.safeParse(validBase);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.state).toBe("SC");
     }
   });
 
-  it("requires CPF when collectCpf is true", () => {
-    expect(createCardFormSchema(true).safeParse(validBase).success).toBe(false);
-    expect(
-      createCardFormSchema(true).safeParse({
-        ...validBase,
-        cpf: "390.533.447-05",
-      }).success,
-    ).toBe(true);
-  });
-
   it("rejects invalid card number, CVV, and expired cards", () => {
     expect(
-      createCardFormSchema(false).safeParse({
+      cardFormSchema.safeParse({
         ...validBase,
         cardNumber: "1234",
       }).success,
     ).toBe(false);
 
     expect(
-      createCardFormSchema(false).safeParse({
+      cardFormSchema.safeParse({
         ...validBase,
         cvv: "12",
       }).success,
     ).toBe(false);
 
     expect(
-      createCardFormSchema(false).safeParse({
+      cardFormSchema.safeParse({
         ...validBase,
         expiryMonth: "01",
         expiryYear: "20",
@@ -61,8 +51,8 @@ describe("createCardFormSchema", () => {
 });
 
 describe("defaultCardFormValues", () => {
-  it("includes cpf only when collectCpf is true", () => {
-    expect(defaultCardFormValues(false)).not.toHaveProperty("cpf");
-    expect(defaultCardFormValues(true)).toMatchObject({ cpf: "" });
+  it("returns empty card and billing fields without CPF", () => {
+    expect(defaultCardFormValues()).not.toHaveProperty("cpf");
+    expect(defaultCardFormValues().cardNumber).toBe("");
   });
 });

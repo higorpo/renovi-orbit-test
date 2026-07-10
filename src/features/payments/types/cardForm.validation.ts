@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { validateCPF } from "@/lib/validators";
 import {
   isValidCardExpiry,
   isValidCvv,
@@ -8,12 +7,7 @@ import {
   normalizeExpiryYear,
 } from "../utils/card-validator";
 
-const cpfFieldSchema = z
-  .string()
-  .min(1, "Informe seu CPF")
-  .refine((value) => validateCPF(value), "CPF inválido. Verifique os números informados.");
-
-const cardFormBaseSchema = z
+export const cardFormSchema = z
   .object({
     cardNumber: z
       .string()
@@ -71,23 +65,9 @@ const cardFormBaseSchema = z
     }
   });
 
-export function createCardFormSchema(collectCpf: boolean) {
-  if (!collectCpf) {
-    return cardFormBaseSchema;
-  }
+export type CardFormData = z.infer<typeof cardFormSchema>;
 
-  return cardFormBaseSchema.extend({
-    cpf: cpfFieldSchema,
-  });
-}
-
-export const cardFormSchema = createCardFormSchema(false);
-
-export type CardFormData = z.infer<typeof cardFormBaseSchema> & {
-  cpf?: string;
-};
-
-export function defaultCardFormValues(collectCpf = false): CardFormData {
+export function defaultCardFormValues(): CardFormData {
   return {
     cardNumber: "",
     expiryMonth: "",
@@ -101,6 +81,5 @@ export function defaultCardFormValues(collectCpf = false): CardFormData {
     city: "",
     state: "",
     zipCode: "",
-    ...(collectCpf ? { cpf: "" } : {}),
   };
 }

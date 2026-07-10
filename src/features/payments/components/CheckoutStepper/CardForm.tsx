@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,14 +11,14 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { maskCEP, maskCPF, unmask } from "@/lib/masks";
+import { maskCEP, unmask } from "@/lib/masks";
 import {
   mapCardFormToTokenizeRequest,
   type TokenizeCardSuccess,
 } from "../../api/cards.api";
 import { useTokenizeCard } from "../../hooks/useTokenizeCard";
 import {
-  createCardFormSchema,
+  cardFormSchema,
   defaultCardFormValues,
   type CardFormData,
 } from "../../types/cardForm.validation";
@@ -38,8 +38,6 @@ export type CardFormProps = {
   submitLabel?: string;
   /** Hide inline Continuar/Voltar so a parent DialogFooter can own them. */
   hideActions?: boolean;
-  /** Hide the built-in title/description when a parent shell provides them. */
-  hideHeader?: boolean;
   formId?: string;
   onPendingChange?: (isPending: boolean) => void;
 };
@@ -53,21 +51,15 @@ export function CardForm({
   onBack,
   submitLabel,
   hideActions = false,
-  hideHeader = false,
   formId = CARD_FORM_ID,
   onPendingChange,
 }: CardFormProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const tokenizeCard = useTokenizeCard();
-  const collectCpf = tokenizeContext !== "checkout" && !savedCpf?.trim();
-  const cardFormSchema = useMemo(
-    () => createCardFormSchema(collectCpf),
-    [collectCpf],
-  );
 
   const form = useForm<CardFormData>({
     resolver: zodResolver(cardFormSchema),
-    defaultValues: defaultCardFormValues(collectCpf),
+    defaultValues: defaultCardFormValues(),
     mode: "onSubmit",
   });
 
@@ -78,12 +70,11 @@ export function CardForm({
   const handleSubmit = form.handleSubmit(async (values) => {
     setSubmitError(null);
 
-    const cpf = collectCpf ? values.cpf : savedCpf;
-    if (!cpf?.trim()) {
+    if (!savedCpf?.trim()) {
       setSubmitError(
         tokenizeContext === "checkout"
           ? "Complete a etapa de CPF antes de continuar."
-          : "Informe seu CPF para continuar.",
+          : "Cadastre seu CPF na conta antes de adicionar um cartão.",
       );
       return;
     }
@@ -102,12 +93,12 @@ export function CardForm({
         mapCardFormToTokenizeRequest(values, {
           providerServiceId,
           tokenizeContext,
-          cpf: unmask(cpf),
+          cpf: unmask(savedCpf),
           phone: unmask(phone),
         }),
       );
 
-      form.reset(defaultCardFormValues(collectCpf));
+      form.reset(defaultCardFormValues());
       onSuccess(result);
     } catch (error) {
       setSubmitError(
@@ -121,41 +112,7 @@ export function CardForm({
   return (
     <Form {...form}>
       <form id={formId} onSubmit={handleSubmit} className="space-y-6">
-        {hideHeader ? null : (
-          <div className="space-y-2">
-            <h2 className="text-lg font-semibold">Dados do cartão</h2>
-            <p className="text-sm text-muted-foreground">
-              Seus dados de cartão são enviados de forma segura e não ficam salvos neste dispositivo.
-            </p>
-          </div>
-        )}
-
         <PaymentTrustDisclosure />
-
-        {collectCpf ? (
-          <FormField
-            control={form.control}
-            name="cpf"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel htmlFor="checkout-card-cpf">CPF do titular</FormLabel>
-                <FormControl>
-                  <Input
-                    id="checkout-card-cpf"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    placeholder="000.000.000-00"
-                    value={field.value ?? ""}
-                    onChange={(event) => field.onChange(maskCPF(event.target.value))}
-                    onBlur={field.onBlur}
-                    disabled={tokenizeCard.isPending}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        ) : null}
 
         <div className="space-y-4">
           <FormField

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import {
   Dialog,
   DialogDescription,
@@ -10,6 +10,7 @@ import {
 import { ShellDialogContent } from "@/components/ui/shell-dialog";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
   SheetFooter,
@@ -65,7 +66,6 @@ export function AddCardSheetDialog({
       phone={phone}
       onSuccess={handleSuccess}
       hideActions
-      hideHeader
       formId={ADD_CARD_FORM_ID}
       onPendingChange={setIsPending}
     />
@@ -112,10 +112,26 @@ export function AddCardSheetDialog({
 
   return (
     <Sheet open={open} onOpenChange={(next) => !next && handleClose()}>
-      <SheetContent side="bottom" className="flex max-h-[90vh] flex-col rounded-t-2xl p-0">
+      <SheetContent
+        side="bottom"
+        hideCloseButton
+        className="flex max-h-[90vh] flex-col gap-0 rounded-t-2xl p-0"
+      >
         <div className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-muted" aria-hidden />
-        <SheetHeader className="shrink-0 border-b px-4 py-3 text-left">
-          <SheetTitle className="text-lg font-semibold">Adicionar cartão</SheetTitle>
+        <SheetHeader className="shrink-0 space-y-1.5 border-b px-4 pb-3 pt-2 text-left">
+          <div className="flex items-center justify-between gap-3">
+            <SheetTitle className="text-base font-semibold sm:text-lg">Adicionar cartão</SheetTitle>
+            <SheetClose asChild>
+              <button
+                type="button"
+                aria-label="Fechar"
+                disabled={isPending}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-background text-foreground opacity-80 transition-all hover:bg-muted hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+              >
+                <X className="h-4 w-4" aria-hidden />
+              </button>
+            </SheetClose>
+          </div>
           <SheetDescription>
             Seus dados de cartão são enviados de forma segura e não ficam salvos neste dispositivo.
           </SheetDescription>

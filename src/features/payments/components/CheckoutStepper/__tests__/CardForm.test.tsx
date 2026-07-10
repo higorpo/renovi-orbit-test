@@ -112,28 +112,6 @@ describe("CardForm", () => {
     expect(screen.getByLabelText("Nome no cartão")).toHaveValue("");
   });
 
-  it("shows CPF field when savedCpf is missing outside checkout", () => {
-    render(
-      <CardForm providerServiceId="provider-service-1" onSuccess={vi.fn()} />,
-      { wrapper: createWrapper() },
-    );
-
-    expect(screen.getByLabelText("CPF do titular")).toBeInTheDocument();
-  });
-
-  it("does not show CPF field in checkout when savedCpf is missing", () => {
-    render(
-      <CardForm
-        providerServiceId="provider-service-1"
-        tokenizeContext="checkout"
-        onSuccess={vi.fn()}
-      />,
-      { wrapper: createWrapper() },
-    );
-
-    expect(screen.queryByLabelText("CPF do titular")).not.toBeInTheDocument();
-  });
-
   it("shows error when phone is missing", async () => {
     render(
       <CardForm
@@ -245,34 +223,24 @@ describe("CardForm", () => {
     });
   });
 
-  it("collects CPF in profile context when missing", async () => {
-    vi.spyOn(tokenizeApi, "tokenizePaymentCard").mockResolvedValue({
-      data: {
-        paymentTokenId: "token-1",
-        cardNumberMasked: "•••• 1111",
-        cardBrand: "VISA",
-      },
-      error: null,
-    });
-
-    const onSuccess = vi.fn();
+  it("shows profile CPF error when saved CPF is missing", async () => {
     render(
       <CardForm
         providerServiceId="provider-service-1"
+        tokenizeContext="profile"
         phone="(48) 99999-9999"
-        onSuccess={onSuccess}
+        onSuccess={vi.fn()}
       />,
       { wrapper: createWrapper() },
     );
 
-    fireEvent.change(screen.getByLabelText("CPF do titular"), {
-      target: { value: "390.533.447-05" },
-    });
     fillCardForm();
     fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
 
     await waitFor(() => {
-      expect(onSuccess).toHaveBeenCalled();
+      expect(
+        screen.getByText(/Cadastre seu CPF na conta antes de adicionar um cartão/i),
+      ).toBeInTheDocument();
     });
   });
 

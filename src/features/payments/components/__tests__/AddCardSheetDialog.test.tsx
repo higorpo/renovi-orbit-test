@@ -14,7 +14,6 @@ vi.mock("../CheckoutStepper/CardForm", () => ({
     onSuccess,
     formId,
     hideActions,
-    hideHeader,
   }: {
     onSuccess: (result: {
       paymentTokenId: string;
@@ -23,7 +22,6 @@ vi.mock("../CheckoutStepper/CardForm", () => ({
     }) => void;
     formId?: string;
     hideActions?: boolean;
-    hideHeader?: boolean;
   }) => (
     <form
       id={formId}
@@ -37,7 +35,7 @@ vi.mock("../CheckoutStepper/CardForm", () => ({
       }}
     >
       <span data-testid="card-form-flags">
-        {hideActions ? "hide-actions" : "show-actions"}/{hideHeader ? "hide-header" : "show-header"}
+        {hideActions ? "hide-actions" : "show-actions"}
       </span>
       <button type="submit">submit-form</button>
     </form>
@@ -65,7 +63,7 @@ describe("AddCardSheetDialog", () => {
     expect(screen.getByText("Adicionar cartão")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Salvar cartão/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Cancelar/i })).toBeInTheDocument();
-    expect(screen.getByTestId("card-form-flags")).toHaveTextContent("hide-actions/hide-header");
+    expect(screen.getByTestId("card-form-flags")).toHaveTextContent("hide-actions");
 
     fireEvent.click(screen.getByRole("button", { name: /Cancelar/i }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
