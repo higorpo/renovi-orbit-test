@@ -1,11 +1,11 @@
 export { CheckoutStepper } from "./CheckoutStepper/CheckoutStepper";
-export type {
-  CheckoutStepperProps,
-  CheckoutStepperRenderProps,
-} from "./CheckoutStepper/CheckoutStepper";
-export { CpfStep } from "./CheckoutStepper/CpfStep";
+export type { CheckoutStepperProps } from "./CheckoutStepper/CheckoutStepper";
+export type { CheckoutHostActions } from "../types/checkoutHostActions.types";
+export { CheckoutStepContent } from "./CheckoutStepper/CheckoutStepContent";
+export type { CheckoutStepContentProps } from "./CheckoutStepper/CheckoutStepContent";
+export { CpfStep, CPF_STEP_FORM_ID } from "./CheckoutStepper/CpfStep";
 export type { CpfStepProps } from "./CheckoutStepper/CpfStep";
-export { PhoneStep } from "./CheckoutStepper/PhoneStep";
+export { PhoneStep, PHONE_STEP_FORM_ID } from "./CheckoutStepper/PhoneStep";
 export type { PhoneStepProps } from "./CheckoutStepper/PhoneStep";
 export { CardStep } from "./CheckoutStepper/CardStep";
 export type { CardStepProps } from "./CheckoutStepper/CardStep";

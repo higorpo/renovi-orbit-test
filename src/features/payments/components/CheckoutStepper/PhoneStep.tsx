@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -19,17 +18,20 @@ import {
   phoneStepSchema,
   type PhoneStepFormData,
 } from "../../types/phoneStep.validation";
+import { PHONE_STEP_FORM_ID } from "../../constants/checkoutFormIds";
 
 export type PhoneStepProps = {
   defaultPhone?: string;
   onComplete: (phone: string) => void;
-  onBack?: () => void;
+  formId?: string;
 };
+
+export { PHONE_STEP_FORM_ID };
 
 export function PhoneStep({
   defaultPhone = "",
   onComplete,
-  onBack,
+  formId = PHONE_STEP_FORM_ID,
 }: PhoneStepProps) {
   const { user } = useAuth();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -66,6 +68,7 @@ export function PhoneStep({
   return (
     <Form {...form}>
       <form
+        id={formId}
         data-testid="checkout-step-phone"
         onSubmit={handleSubmit}
         className="space-y-6"
@@ -109,17 +112,6 @@ export function PhoneStep({
             {submitError}
           </p>
         ) : null}
-
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          {onBack ? (
-            <Button type="button" variant="outline" onClick={onBack} disabled={isSaving}>
-              Voltar
-            </Button>
-          ) : null}
-          <Button type="submit" disabled={isSaving}>
-            {isSaving ? "Salvando..." : "Continuar"}
-          </Button>
-        </div>
       </form>
     </Form>
   );

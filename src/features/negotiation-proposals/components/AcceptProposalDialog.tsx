@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Loader2, WifiOff, X } from "lucide-react";
+import { CalendarDays, ChevronRight, Loader2, WifiOff, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,6 +14,9 @@ import { cn } from "@/lib/utils";
 import { useMobileDialogViewport } from "@/hooks/useMobileDialogViewport";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { CheckoutStepper } from "@/features/payments/components/CheckoutStepper/CheckoutStepper";
+import { PAYMENT_DIALOG_FOOTER_ROW_CLASS } from "@/features/payments/components/paymentDialogFooter";
+import { useCheckoutHostActions } from "@/features/payments/hooks/useCheckoutHostActions";
+import { useCheckoutStepper } from "@/features/payments/hooks/useCheckoutStepper";
 import { useProposalCheckoutContext } from "@/features/payments/hooks/useProposalCheckoutContext";
 import { toast } from "sonner";
 import type { ProposalSuggestedSlotRpc } from "../types/proposals.types";
@@ -58,6 +61,13 @@ export function AcceptProposalDialog({
   const { contentRef, scheduleSync } = useMobileDialogViewport(open);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [phase, setPhase] = useState<AcceptDialogPhase>("slot");
+
+  const isCheckout = phase === "checkout";
+  const checkoutEnabled = open && isCheckout && Boolean(proposalId && serviceRequestId);
+
+  const stepper = useCheckoutStepper({ enabled: checkoutEnabled });
+  const { actions: checkoutActions, bindings: checkoutBindings } =
+    useCheckoutHostActions(stepper);
 
   useEffect(() => {
     if (!open) return;
@@ -112,6 +122,14 @@ export function AcceptProposalDialog({
     onOpenChange(false);
   };
 
+  const handleCheckoutSecondary = () => {
+    if (checkoutActions?.canGoBack) {
+      checkoutActions.onBack();
+      return;
+    }
+    setPhase("slot");
+  };
+
   const isPrimaryPending = checkoutContextQuery.isLoading;
 
   return (
@@ -120,7 +138,7 @@ export function AcceptProposalDialog({
         <DialogHeader className="shrink-0 space-y-0 border-b px-4 py-3 pr-0 text-left sm:border-b-0 sm:px-0 sm:py-0">
           <div className="flex items-center justify-between gap-3">
             <DialogTitle className="text-base sm:text-lg">
-              {phase === "checkout" ? "Pagamento" : "Aceitar proposta"}
+              {isCheckout ? "Pagamento" : "Aceitar proposta"}
             </DialogTitle>
             <DialogClose asChild>
               <button
@@ -133,7 +151,7 @@ export function AcceptProposalDialog({
             </DialogClose>
           </div>
           <DialogDescription className="text-sm text-muted-foreground">
-            {phase === "checkout"
+            {isCheckout
               ? "Complete o checkout para confirmar a contratação."
               : "Escolha a data sugerida pelo prestador para confirmar o serviço."}
           </DialogDescription>
@@ -147,8 +165,10 @@ export function AcceptProposalDialog({
             </div>
           ) : null}
 
-          {phase === "checkout" && proposalId && serviceRequestId && checkoutContext ? (
+          {isCheckout && proposalId && serviceRequestId && checkoutContext ? (
             <CheckoutStepper
+              stepper={stepper}
+              hostBindings={checkoutBindings}
               proposalId={proposalId}
               serviceId={serviceRequestId}
               chatId={chatId}
@@ -231,37 +251,62 @@ export function AcceptProposalDialog({
           ) : null}
         </div>
 
-        {phase === "slot" ? (
-          <DialogFooter className="relative z-10 shrink-0 flex-row items-stretch gap-2 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pb-0 sm:shadow-none sm:backdrop-blur-none sm:supports-[backdrop-filter]:bg-transparent [&>button]:h-auto [&>button]:min-h-10 [&>button]:flex-1 sm:[&>button]:h-10 sm:[&>button]:flex-none">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button
-              type="button"
-              disabled={
-                !canSubmitSlot || isPrimaryPending || isLoading || isError || bookableSlots.length === 0
-              }
-              onClick={handleSlotContinue}
-              className="whitespace-normal px-2.5 text-center leading-snug sm:whitespace-nowrap sm:px-4"
-            >
-              {isPrimaryPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-                  Carregando…
-                </>
-              ) : (
-                "Continuar para pagamento"
-              )}
-            </Button>
-          </DialogFooter>
-        ) : (
-          <DialogFooter className="relative z-10 shrink-0 flex-row gap-2 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pb-0 sm:shadow-none [&>button]:flex-1 sm:[&>button]:flex-none">
-            <Button type="button" variant="outline" onClick={() => setPhase("slot")}>
-              <ChevronLeft className="mr-1 h-4 w-4" aria-hidden />
-              Voltar às datas
-            </Button>
-          </DialogFooter>
-        )}
+        <DialogFooter className={PAYMENT_DIALOG_FOOTER_ROW_CLASS}>
+          {isCheckout ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={checkoutActions?.primaryPending}
+                onClick={handleCheckoutSecondary}
+              >
+                Voltar
+              </Button>
+              <Button
+                type="button"
+                disabled={
+                  !checkoutActions
+                  || checkoutActions.primaryDisabled
+                  || checkoutActions.primaryPending
+                }
+                onClick={() => checkoutActions?.onPrimary()}
+                className="whitespace-normal px-2.5 text-center leading-snug sm:whitespace-nowrap sm:px-4"
+              >
+                {checkoutActions?.primaryPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                    {checkoutActions.primaryLabel}
+                  </>
+                ) : (
+                  checkoutActions?.primaryLabel ?? "Continuar"
+                )}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                disabled={
+                  !canSubmitSlot || isPrimaryPending || isLoading || isError || bookableSlots.length === 0
+                }
+                onClick={handleSlotContinue}
+                className="whitespace-normal px-2.5 text-center leading-snug sm:whitespace-nowrap sm:px-4"
+              >
+                {isPrimaryPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+                    Carregando…
+                  </>
+                ) : (
+                  "Continuar para pagamento"
+                )}
+              </Button>
+            </>
+          )}
+        </DialogFooter>
       </ShellDialogContent>
     </Dialog>
   );

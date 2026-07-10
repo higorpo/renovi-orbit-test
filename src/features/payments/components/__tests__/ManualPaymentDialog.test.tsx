@@ -202,7 +202,7 @@ describe("ManualPaymentDialog", () => {
     });
   });
 
-  it("keeps Continuar/Voltar in the dialog footer on card and installments views", async () => {
+  it("keeps Continuar/Cancelar in the dialog footer on card view and Continuar/Voltar on installments", async () => {
     const onOpenChange = vi.fn();
     render(
       <ManualPaymentDialog
@@ -217,7 +217,7 @@ describe("ManualPaymentDialog", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /^Continuar$/i })).toBeEnabled();
     });
-    expect(screen.getByRole("button", { name: /^Voltar$/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Cancelar$/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /^Continuar$/i }));
     expect(screen.getByText("Parcelamento")).toBeInTheDocument();
@@ -225,6 +225,7 @@ describe("ManualPaymentDialog", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /^Continuar$/i })).toBeEnabled();
     });
+    expect(screen.getByRole("button", { name: /^Voltar$/i })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^Continuar$/i }));
 
     await waitFor(() => {

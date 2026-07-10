@@ -22,7 +22,7 @@ describe("PhoneStep", () => {
     fireEvent.change(screen.getByLabelText(/Telefone/i), {
       target: { value: "123" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+    fireEvent.submit(screen.getByTestId("checkout-step-phone"));
 
     await waitFor(() => {
       expect(screen.getByText(/Telefone inválido/i)).toBeInTheDocument();
@@ -41,7 +41,7 @@ describe("PhoneStep", () => {
     fireEvent.change(screen.getByLabelText(/Telefone/i), {
       target: { value: "48999999999" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+    fireEvent.submit(screen.getByTestId("checkout-step-phone"));
 
     await waitFor(() => {
       expect(onComplete).toHaveBeenCalledWith("(48) 99999-9999");
@@ -59,7 +59,7 @@ describe("PhoneStep", () => {
     fireEvent.change(screen.getByLabelText(/Telefone/i), {
       target: { value: "48999999999" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+    fireEvent.submit(screen.getByTestId("checkout-step-phone"));
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent("RLS violation");
@@ -74,7 +74,7 @@ describe("PhoneStep", () => {
     fireEvent.change(screen.getByLabelText(/Telefone/i), {
       target: { value: "48999999999" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+    fireEvent.submit(screen.getByTestId("checkout-step-phone"));
 
     await waitFor(() => {
       expect(screen.getByText(/Sessão expirada/i)).toBeInTheDocument();

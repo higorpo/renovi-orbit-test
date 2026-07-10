@@ -1,49 +1,33 @@
-import type { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useCheckoutStepper } from "../../hooks/useCheckoutStepper";
-import type { CheckoutContext, CheckoutStepId } from "../../types/checkoutStepper.types";
+import type { CheckoutHostBindings } from "../../hooks/useCheckoutHostActions";
+import type { UseCheckoutStepperResult } from "../../hooks/useCheckoutStepper";
+import type { CheckoutContext } from "../../types/checkoutStepper.types";
 import { mapCheckoutStepperError } from "../../utils/mapCheckoutStepperError";
 import { CheckoutStepContent } from "./CheckoutStepContent";
 
-export type CheckoutStepperRenderProps = ReturnType<typeof useCheckoutStepper>;
-
 export type CheckoutStepperProps = {
-  enabled?: boolean;
+  stepper: UseCheckoutStepperResult;
+  hostBindings: CheckoutHostBindings;
   proposalId?: string;
   serviceId?: string;
   chatId?: string | null;
-  /** @deprecated Use proposalId */
-  providerServiceId?: string;
   checkoutContext?: CheckoutContext;
   onCheckoutSuccess?: (contractedServiceId: string) => void;
-  renderStep?: (
-    step: CheckoutStepId,
-    stepper: CheckoutStepperRenderProps,
-  ) => ReactNode;
 };
 
-const STEPS_WITH_OWN_NAV: CheckoutStepId[] = [
-  "cpf",
-  "phone",
-  "card",
-  "installments",
-  "confirmation",
-];
-
+/**
+ * Checkout body: loading / error / current step.
+ * Host owns useCheckoutStepper + useCheckoutHostActions (footer actions).
+ */
 export function CheckoutStepper({
-  enabled = true,
+  stepper,
+  hostBindings,
   proposalId,
   serviceId,
   chatId = null,
-  providerServiceId,
   checkoutContext,
   onCheckoutSuccess,
-  renderStep,
 }: CheckoutStepperProps) {
-  const resolvedProposalId = proposalId ?? providerServiceId;
-  const stepper = useCheckoutStepper({ enabled });
-
   if (stepper.isLoadingRequirements) {
     return (
       <div
@@ -68,44 +52,17 @@ export function CheckoutStepper({
     );
   }
 
-  const stepContent = renderStep
-    ? renderStep(stepper.currentStep, stepper)
-    : (
+  return (
+    <div data-testid="checkout-stepper" className="space-y-4">
       <CheckoutStepContent
         stepper={stepper}
-        proposalId={resolvedProposalId}
+        hostBindings={hostBindings}
+        proposalId={proposalId}
         serviceId={serviceId}
         chatId={chatId}
         checkoutContext={checkoutContext}
         onCheckoutSuccess={onCheckoutSuccess}
       />
-    );
-
-  const showGenericNav = !STEPS_WITH_OWN_NAV.includes(stepper.currentStep);
-
-  return (
-    <div data-testid="checkout-stepper" className="space-y-4">
-      {stepContent}
-
-      {showGenericNav ? (
-        <div className="flex justify-between gap-2 pt-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={stepper.goBack}
-            disabled={!stepper.canGoBack}
-          >
-            Voltar
-          </Button>
-          <Button
-            type="button"
-            onClick={stepper.goNext}
-            disabled={!stepper.canGoNext}
-          >
-            Continuar
-          </Button>
-        </div>
-      ) : null}
     </div>
   );
 }

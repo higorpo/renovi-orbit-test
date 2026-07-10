@@ -4,6 +4,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import * as checkoutApi from "../../../api/checkout.api";
+import { useCheckoutHostActions } from "../../../hooks/useCheckoutHostActions";
+import { useCheckoutStepper } from "../../../hooks/useCheckoutStepper";
 import { CheckoutStepper } from "../CheckoutStepper";
 
 vi.mock("@/features/auth", () => ({
@@ -31,6 +33,19 @@ function createWrapper() {
   );
 }
 
+function CheckoutStepperHarness({ proposalId }: { proposalId: string }) {
+  const stepper = useCheckoutStepper();
+  const { bindings } = useCheckoutHostActions(stepper);
+
+  return (
+    <CheckoutStepper
+      stepper={stepper}
+      hostBindings={bindings}
+      proposalId={proposalId}
+    />
+  );
+}
+
 describe("CheckoutStepper", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -46,7 +61,7 @@ describe("CheckoutStepper", () => {
       error: null,
     });
 
-    render(<CheckoutStepper providerServiceId="proposal-1" />, { wrapper: createWrapper() });
+    render(<CheckoutStepperHarness proposalId="proposal-1" />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(screen.getByTestId("checkout-stepper")).toBeInTheDocument();
@@ -61,7 +76,7 @@ describe("CheckoutStepper", () => {
       error: "invalid_checkout_step_requirements_response",
     });
 
-    render(<CheckoutStepper providerServiceId="proposal-1" />, { wrapper: createWrapper() });
+    render(<CheckoutStepperHarness proposalId="proposal-1" />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(screen.getByTestId("checkout-stepper-error")).toBeInTheDocument();
@@ -90,7 +105,7 @@ describe("CheckoutStepper", () => {
       error: null,
     });
 
-    render(<CheckoutStepper providerServiceId="proposal-1" />, { wrapper: createWrapper() });
+    render(<CheckoutStepperHarness proposalId="proposal-1" />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(screen.getByTestId("checkout-step-cpf")).toBeInTheDocument();
@@ -99,7 +114,7 @@ describe("CheckoutStepper", () => {
     fireEvent.change(screen.getByLabelText(/^CPF$/i), {
       target: { value: "39053344705" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+    fireEvent.submit(screen.getByTestId("checkout-step-cpf"));
 
     await waitFor(() => {
       expect(screen.getByTestId("checkout-step-phone")).toBeInTheDocument();
@@ -108,7 +123,7 @@ describe("CheckoutStepper", () => {
     fireEvent.change(screen.getByLabelText(/Telefone/i), {
       target: { value: "48999999999" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+    fireEvent.submit(screen.getByTestId("checkout-step-phone"));
 
     await waitFor(() => {
       expect(screen.getByTestId("checkout-card-step")).toBeInTheDocument();

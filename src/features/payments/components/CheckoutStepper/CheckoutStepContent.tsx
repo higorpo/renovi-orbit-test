@@ -1,57 +1,20 @@
-import { useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useMemo } from "react";
 import { useAuth } from "@/features/auth";
 import { ConfirmationStep } from "./ConfirmationStep";
 import { InstallmentSelector } from "../InstallmentSelector";
 import { generateIdempotencyKeyV7 } from "@/lib/utils/idempotencyKey";
+import type { CheckoutHostBindings } from "../../hooks/useCheckoutHostActions";
+import type { UseCheckoutStepperResult } from "../../hooks/useCheckoutStepper";
 import type { CheckoutContext } from "../../types/checkoutStepper.types";
-import type { CheckoutStepperRenderProps } from "./CheckoutStepper";
-import type { CheckoutStepId } from "../../types/checkoutStepper.types";
 import { CardStep } from "./CardStep";
-import { CHECKOUT_STEP_LABELS } from "./checkoutStepLabels";
 import { CpfStep } from "./CpfStep";
 import { PhoneStep } from "./PhoneStep";
 import { SavedCardSelector } from "./SavedCardSelector";
 import { useClientCpfForPayment } from "../../hooks/useClientCpfForPayment";
 
-function DefaultStepPlaceholder({ step }: { step: CheckoutStepId }) {
-  return (
-    <div
-      data-testid={`checkout-step-${step}`}
-      className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground"
-    >
-      Etapa: {CHECKOUT_STEP_LABELS[step]}
-    </div>
-  );
-}
-
-function StepActions({
-  onBack,
-  onContinue,
-  continueDisabled,
-  continueLabel = "Continuar",
-}: {
-  onBack?: () => void;
-  onContinue?: () => void;
-  continueDisabled?: boolean;
-  continueLabel?: string;
-}) {
-  return (
-    <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
-      {onBack ? (
-        <Button type="button" variant="outline" onClick={onBack}>
-          Voltar
-        </Button>
-      ) : null}
-      <Button type="button" disabled={continueDisabled} onClick={onContinue}>
-        {continueLabel}
-      </Button>
-    </div>
-  );
-}
-
 export type CheckoutStepContentProps = {
-  stepper: CheckoutStepperRenderProps;
+  stepper: UseCheckoutStepperResult;
+  hostBindings: CheckoutHostBindings;
   proposalId?: string;
   serviceId?: string;
   chatId?: string | null;
@@ -59,8 +22,10 @@ export type CheckoutStepContentProps = {
   onCheckoutSuccess?: (contractedServiceId: string) => void;
 };
 
+/** Step body only — host dialog owns Voltar/Continuar via useCheckoutHostActions. */
 export function CheckoutStepContent({
   stepper,
+  hostBindings,
   proposalId,
   serviceId,
   chatId = null,
@@ -71,9 +36,7 @@ export function CheckoutStepContent({
     currentStep,
     stepData,
     completeStep,
-    goBack,
     goToStep,
-    canGoBack,
     setClearsaleSessionId,
     clearsaleSessionId,
   } = stepper;
@@ -84,18 +47,12 @@ export function CheckoutStepContent({
   const resolvedCpf = stepData.cpf ?? profileCpf;
   const resolvedPhone = stepData.phone ?? profile?.phone ?? undefined;
 
-  const [canContinueCard, setCanContinueCard] = useState(false);
-  const [canContinueInstallments, setCanContinueInstallments] = useState(false);
-  const cardContinueRef = useRef<(() => void) | null>(null);
-  const installmentContinueRef = useRef<(() => void) | null>(null);
-
   switch (currentStep) {
     case "cpf":
       return (
         <CpfStep
           defaultCpf={stepData.cpf ?? ""}
           onComplete={(cpf) => completeStep({ cpf })}
-          onBack={canGoBack ? goBack : undefined}
         />
       );
     case "phone":
@@ -103,79 +60,69 @@ export function CheckoutStepContent({
         <PhoneStep
           defaultPhone={stepData.phone ?? ""}
           onComplete={(phone) => completeStep({ phone })}
-          onBack={canGoBack ? goBack : undefined}
         />
       );
     case "card":
+      if (!proposalId) {
+        return null;
+      }
       return (
         <CardStep onSessionIdGenerated={setClearsaleSessionId}>
-          {proposalId ? (
-            <div className="space-y-4">
-              <SavedCardSelector
-                providerServiceId={proposalId}
-                savedCpf={resolvedCpf}
-                phone={resolvedPhone}
-                onSelect={(selection) =>
-                  completeStep({
-                    cardTokenId: selection.paymentTokenId,
-                    cardBrand: selection.cardBrand,
-                  })
-                }
-                onCanContinueChange={setCanContinueCard}
-                continueRef={cardContinueRef}
-              />
-              <StepActions
-                onBack={canGoBack ? goBack : undefined}
-                onContinue={() => cardContinueRef.current?.()}
-                continueDisabled={!canContinueCard}
-              />
-            </div>
-          ) : (
-            <DefaultStepPlaceholder step="card" />
-          )}
+          <SavedCardSelector
+            providerServiceId={proposalId}
+            savedCpf={resolvedCpf}
+            phone={resolvedPhone}
+            onSelect={(selection) =>
+              completeStep({
+                cardTokenId: selection.paymentTokenId,
+                cardBrand: selection.cardBrand,
+              })
+            }
+            onCanContinueChange={hostBindings.onCanContinueCardChange}
+            continueRef={hostBindings.cardContinueRef}
+          />
         </CardStep>
       );
     case "installments":
-      return proposalId && serviceId && stepData.cardBrand && stepData.cardTokenId ? (
-        <div className="space-y-4">
-          <InstallmentSelector
-            proposalId={proposalId}
-            serviceId={serviceId}
-            cardBrand={stepData.cardBrand}
-            paymentTokenId={stepData.cardTokenId}
-            onSelect={(selection) =>
-              completeStep({
-                installmentNumber: selection.installmentNumber,
-                hmac: selection.installmentSelectionHmac,
-                installmentHmacPayload: selection.installmentHmacPayload,
-                installmentAmount: selection.installmentAmount,
-                totalWithFees: selection.totalWithFees,
-                installmentOptions: selection.installmentOptions,
-                installmentComputedAt: selection.computedAt,
-                installmentExpiresAt: selection.expiresAt,
-              })
-            }
-            onCanContinueChange={setCanContinueInstallments}
-            continueRef={installmentContinueRef}
-          />
-          <StepActions
-            onBack={canGoBack ? goBack : undefined}
-            onContinue={() => installmentContinueRef.current?.()}
-            continueDisabled={!canContinueInstallments}
-          />
-        </div>
-      ) : (
-        <DefaultStepPlaceholder step="installments" />
+      if (!proposalId || !serviceId || !stepData.cardBrand || !stepData.cardTokenId) {
+        return null;
+      }
+      return (
+        <InstallmentSelector
+          proposalId={proposalId}
+          serviceId={serviceId}
+          cardBrand={stepData.cardBrand}
+          paymentTokenId={stepData.cardTokenId}
+          onSelect={(selection) =>
+            completeStep({
+              installmentNumber: selection.installmentNumber,
+              hmac: selection.installmentSelectionHmac,
+              installmentHmacPayload: selection.installmentHmacPayload,
+              installmentAmount: selection.installmentAmount,
+              totalWithFees: selection.totalWithFees,
+              installmentOptions: selection.installmentOptions,
+              installmentComputedAt: selection.computedAt,
+              installmentExpiresAt: selection.expiresAt,
+            })
+          }
+          onCanContinueChange={hostBindings.onCanContinueInstallmentsChange}
+          continueRef={hostBindings.installmentContinueRef}
+        />
       );
     case "confirmation":
-      return proposalId
-        && checkoutContext
-        && stepData.cardTokenId
-        && stepData.installmentNumber
-        && stepData.hmac
-        && stepData.installmentHmacPayload
-        && stepData.installmentAmount != null
-        && stepData.totalWithFees != null ? (
+      if (
+        !proposalId
+        || !checkoutContext
+        || !stepData.cardTokenId
+        || !stepData.installmentNumber
+        || !stepData.hmac
+        || !stepData.installmentHmacPayload
+        || stepData.installmentAmount == null
+        || stepData.totalWithFees == null
+      ) {
+        return null;
+      }
+      return (
         <ConfirmationStep
           serviceTitle={checkoutContext.serviceTitle}
           scheduledDate={checkoutContext.scheduledDate}
@@ -195,12 +142,11 @@ export function CheckoutStepContent({
           serviceRequestId={serviceId ?? null}
           onSuccess={(contractedServiceId) => onCheckoutSuccess?.(contractedServiceId)}
           onInstallmentSignatureExpired={() => goToStep("installments")}
-          onBack={canGoBack ? goBack : undefined}
+          confirmRef={hostBindings.confirmRef}
+          onPendingChange={hostBindings.onConfirmPendingChange}
         />
-      ) : (
-        <DefaultStepPlaceholder step="confirmation" />
       );
     default:
-      return <DefaultStepPlaceholder step={currentStep} />;
+      return null;
   }
 }

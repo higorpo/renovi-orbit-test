@@ -1,5 +1,4 @@
-import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useMemo, useState, type MutableRefObject } from "react";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { PaymentTrustDisclosure } from "../PaymentTrustDisclosure";
 import {
@@ -28,7 +27,9 @@ export type ConfirmationStepProps = {
   serviceRequestId?: string | null;
   onSuccess: (contractedServiceId: string) => void;
   onInstallmentSignatureExpired: () => void;
-  onBack?: () => void;
+  /** Parent Continuar/Confirmar — runs the accept mutation. */
+  confirmRef: MutableRefObject<(() => void) | null>;
+  onPendingChange?: (pending: boolean) => void;
 };
 
 export function ConfirmationStep({
@@ -49,7 +50,8 @@ export function ConfirmationStep({
   serviceRequestId = null,
   onSuccess,
   onInstallmentSignatureExpired,
-  onBack,
+  confirmRef,
+  onPendingChange,
 }: ConfirmationStepProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const acceptProposal = useAcceptProposalMutation(chatId, serviceRequestId);
@@ -58,6 +60,10 @@ export function ConfirmationStep({
     () => getChargeTimingDisclosure(new Date(scheduledDate)),
     [scheduledDate],
   );
+
+  useEffect(() => {
+    onPendingChange?.(acceptProposal.isPending);
+  }, [acceptProposal.isPending, onPendingChange]);
 
   const handleConfirm = async () => {
     setSubmitError(null);
@@ -91,6 +97,10 @@ export function ConfirmationStep({
 
       setSubmitError(error instanceof Error ? error.message : "Não foi possível confirmar.");
     }
+  };
+
+  confirmRef.current = () => {
+    void handleConfirm();
   };
 
   return (
@@ -129,17 +139,6 @@ export function ConfirmationStep({
           {submitError}
         </p>
       ) : null}
-
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        {onBack ? (
-          <Button type="button" variant="outline" onClick={onBack} disabled={acceptProposal.isPending}>
-            Voltar
-          </Button>
-        ) : null}
-        <Button type="button" onClick={() => void handleConfirm()} disabled={acceptProposal.isPending}>
-          {acceptProposal.isPending ? "Confirmando..." : "Confirmar contratação"}
-        </Button>
-      </div>
     </div>
   );
 }

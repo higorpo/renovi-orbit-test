@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -19,14 +18,21 @@ import {
   cpfStepSchema,
   type CpfStepFormData,
 } from "../../types/cpfStep.validation";
+import { CPF_STEP_FORM_ID } from "../../constants/checkoutFormIds";
 
 export type CpfStepProps = {
   defaultCpf?: string;
   onComplete: (cpf: string) => void;
-  onBack?: () => void;
+  formId?: string;
 };
 
-export function CpfStep({ defaultCpf = "", onComplete, onBack }: CpfStepProps) {
+export { CPF_STEP_FORM_ID };
+
+export function CpfStep({
+  defaultCpf = "",
+  onComplete,
+  formId = CPF_STEP_FORM_ID,
+}: CpfStepProps) {
   const { user } = useAuth();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -62,6 +68,7 @@ export function CpfStep({ defaultCpf = "", onComplete, onBack }: CpfStepProps) {
   return (
     <Form {...form}>
       <form
+        id={formId}
         data-testid="checkout-step-cpf"
         onSubmit={handleSubmit}
         className="space-y-6"
@@ -106,17 +113,6 @@ export function CpfStep({ defaultCpf = "", onComplete, onBack }: CpfStepProps) {
             {submitError}
           </p>
         ) : null}
-
-        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          {onBack ? (
-            <Button type="button" variant="outline" onClick={onBack} disabled={isSaving}>
-              Voltar
-            </Button>
-          ) : null}
-          <Button type="submit" disabled={isSaving}>
-            {isSaving ? "Salvando..." : "Continuar"}
-          </Button>
-        </div>
       </form>
     </Form>
   );

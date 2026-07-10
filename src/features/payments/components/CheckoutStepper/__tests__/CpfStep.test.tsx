@@ -24,7 +24,7 @@ describe("CpfStep", () => {
     fireEvent.change(screen.getByLabelText(/CPF/i), {
       target: { value: "39053344705" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+    fireEvent.submit(screen.getByTestId("checkout-step-cpf"));
 
     await waitFor(() => {
       expect(screen.getByText(/Sessão expirada/i)).toBeInTheDocument();
@@ -37,7 +37,7 @@ describe("CpfStep", () => {
     fireEvent.change(screen.getByLabelText(/CPF/i), {
       target: { value: "111.111.111-11" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+    fireEvent.submit(screen.getByTestId("checkout-step-cpf"));
 
     await waitFor(() => {
       expect(screen.getByText(/CPF inválido/i)).toBeInTheDocument();
@@ -56,7 +56,7 @@ describe("CpfStep", () => {
     fireEvent.change(screen.getByLabelText(/CPF/i), {
       target: { value: "39053344705" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+    fireEvent.submit(screen.getByTestId("checkout-step-cpf"));
 
     await waitFor(() => {
       expect(onComplete).toHaveBeenCalledWith("390.533.447-05");
@@ -74,7 +74,7 @@ describe("CpfStep", () => {
     fireEvent.change(screen.getByLabelText(/CPF/i), {
       target: { value: "39053344705" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Continuar/i }));
+    fireEvent.submit(screen.getByTestId("checkout-step-cpf"));
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent("RLS violation");

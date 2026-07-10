@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { CheckoutStepContent } from "../CheckoutStepContent";
-import type { CheckoutStepperRenderProps } from "../CheckoutStepper";
+import type { CheckoutHostBindings } from "../../../hooks/useCheckoutHostActions";
+import type { UseCheckoutStepperResult } from "../../../hooks/useCheckoutStepper";
 import type { CheckoutContext } from "../../../types/checkoutStepper.types";
 
 vi.mock("@/features/auth", () => ({
@@ -107,9 +108,20 @@ vi.mock("../ConfirmationStep", () => ({
   ),
 }));
 
+function makeBindings(): CheckoutHostBindings {
+  return {
+    cardContinueRef: { current: null },
+    installmentContinueRef: { current: null },
+    confirmRef: { current: null },
+    onCanContinueCardChange: vi.fn(),
+    onCanContinueInstallmentsChange: vi.fn(),
+    onConfirmPendingChange: vi.fn(),
+  };
+}
+
 function makeStepper(
-  overrides: Partial<CheckoutStepperRenderProps> = {},
-): CheckoutStepperRenderProps {
+  overrides: Partial<UseCheckoutStepperResult> = {},
+): UseCheckoutStepperResult {
   return {
     currentStep: "cpf",
     steps: ["cpf", "phone", "card", "installments", "confirmation"],
@@ -123,7 +135,7 @@ function makeStepper(
     isLoadingRequirements: false,
     requirementsError: null,
     ...overrides,
-  } as CheckoutStepperRenderProps;
+  } as UseCheckoutStepperResult;
 }
 
 const checkoutContext: CheckoutContext = {
@@ -139,13 +151,20 @@ const checkoutContext: CheckoutContext = {
 
 describe("CheckoutStepContent", () => {
   it("renders CPF and phone steps", () => {
+    const bindings = makeBindings();
     const { rerender } = render(
-      <CheckoutStepContent stepper={makeStepper({ currentStep: "cpf" })} />,
+      <CheckoutStepContent
+        stepper={makeStepper({ currentStep: "cpf" })}
+        hostBindings={bindings}
+      />,
     );
     expect(screen.getByTestId("cpf-step")).toBeInTheDocument();
 
     rerender(
-      <CheckoutStepContent stepper={makeStepper({ currentStep: "phone" })} />,
+      <CheckoutStepContent
+        stepper={makeStepper({ currentStep: "phone" })}
+        hostBindings={bindings}
+      />,
     );
     expect(screen.getByTestId("phone-step")).toBeInTheDocument();
   });
@@ -154,6 +173,7 @@ describe("CheckoutStepContent", () => {
     render(
       <CheckoutStepContent
         stepper={makeStepper({ currentStep: "card" })}
+        hostBindings={makeBindings()}
         proposalId="proposal-1"
       />,
     );
@@ -166,6 +186,7 @@ describe("CheckoutStepContent", () => {
     const completeStep = vi.fn();
     const goToStep = vi.fn();
     const onCheckoutSuccess = vi.fn();
+    const bindings = makeBindings();
 
     const { rerender } = render(
       <CheckoutStepContent
@@ -174,6 +195,7 @@ describe("CheckoutStepContent", () => {
           completeStep,
           canGoBack: true,
         })}
+        hostBindings={bindings}
         proposalId="proposal-1"
       />,
     );
@@ -194,6 +216,7 @@ describe("CheckoutStepContent", () => {
             cardTokenId: "token-1",
           },
         })}
+        hostBindings={bindings}
         proposalId="proposal-1"
         serviceId="service-1"
       />,
@@ -228,6 +251,7 @@ describe("CheckoutStepContent", () => {
             totalWithFees: 100,
           },
         })}
+        hostBindings={bindings}
         proposalId="proposal-1"
         serviceId="service-1"
         checkoutContext={checkoutContext}
@@ -241,12 +265,15 @@ describe("CheckoutStepContent", () => {
     expect(goToStep).toHaveBeenCalledWith("installments");
   });
 
-  it("renders card placeholder without proposalId", () => {
-    render(
-      <CheckoutStepContent stepper={makeStepper({ currentStep: "card" })} />,
+  it("renders nothing for card step without proposalId", () => {
+    const { container } = render(
+      <CheckoutStepContent
+        stepper={makeStepper({ currentStep: "card" })}
+        hostBindings={makeBindings()}
+      />,
     );
 
-    expect(screen.getByTestId("checkout-step-card")).toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("renders installment selector when card data is present", () => {
@@ -259,6 +286,7 @@ describe("CheckoutStepContent", () => {
             cardTokenId: "token-1",
           },
         })}
+        hostBindings={makeBindings()}
         proposalId="proposal-1"
         serviceId="service-1"
       />,
@@ -267,16 +295,17 @@ describe("CheckoutStepContent", () => {
     expect(screen.getByTestId("installment-selector")).toBeInTheDocument();
   });
 
-  it("renders installment placeholder when card data is missing", () => {
-    render(
+  it("renders nothing for installments when card data is missing", () => {
+    const { container } = render(
       <CheckoutStepContent
         stepper={makeStepper({ currentStep: "installments" })}
+        hostBindings={makeBindings()}
         proposalId="proposal-1"
         serviceId="service-1"
       />,
     );
 
-    expect(screen.getByTestId("checkout-step-installments")).toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("renders confirmation step when all required data is present", () => {
@@ -301,6 +330,7 @@ describe("CheckoutStepContent", () => {
             totalWithFees: 100,
           },
         })}
+        hostBindings={makeBindings()}
         proposalId="proposal-1"
         serviceId="service-1"
         checkoutContext={checkoutContext}
@@ -310,14 +340,15 @@ describe("CheckoutStepContent", () => {
     expect(screen.getByTestId("confirmation-step")).toBeInTheDocument();
   });
 
-  it("renders confirmation placeholder when context is incomplete", () => {
-    render(
+  it("renders nothing for confirmation when context is incomplete", () => {
+    const { container } = render(
       <CheckoutStepContent
         stepper={makeStepper({ currentStep: "confirmation" })}
+        hostBindings={makeBindings()}
         proposalId="proposal-1"
       />,
     );
 
-    expect(screen.getByTestId("checkout-step-confirmation")).toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
   });
 });

@@ -22,6 +22,7 @@ import {
 import { CardStep } from "./CheckoutStepper/CardStep";
 import { SavedCardSelector } from "./CheckoutStepper/SavedCardSelector";
 import { InstallmentSelector } from "./InstallmentSelector";
+import { PAYMENT_DIALOG_FOOTER_STACK_CLASS } from "./paymentDialogFooter";
 
 const SUPPORT_URL = `${(import.meta.env.VITE_MAIN_SITE_URL ?? "").replace(/\/$/, "")}/suporte`;
 
@@ -33,9 +34,6 @@ export type ManualPaymentDialogProps = {
   serviceRequestId: string;
   onCompleted?: () => void;
 };
-
-const DIALOG_FOOTER_CLASS =
-  "relative z-10 shrink-0 flex-col gap-2 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md supports-[backdrop-filter]:bg-background/85 sm:flex-col sm:border-t-0 sm:bg-transparent sm:px-0 sm:py-0 sm:pb-0 sm:shadow-none sm:backdrop-blur-none sm:supports-[backdrop-filter]:bg-transparent";
 
 function dialogTitle(view: string): string {
   switch (view) {
@@ -217,7 +215,7 @@ export function ManualPaymentDialog({
         </div>
 
         {view === "service-cancelled" ? (
-          <DialogFooter className={DIALOG_FOOTER_CLASS}>
+          <DialogFooter className={PAYMENT_DIALOG_FOOTER_STACK_CLASS}>
             <Button type="button" onClick={() => onOpenChange(false)}>
               Fechar
             </Button>
@@ -225,7 +223,7 @@ export function ManualPaymentDialog({
         ) : null}
 
         {view === "terminal-error" ? (
-          <DialogFooter className={DIALOG_FOOTER_CLASS}>
+          <DialogFooter className={PAYMENT_DIALOG_FOOTER_STACK_CLASS}>
             <Button type="button" onClick={() => setView("card")}>
               Tentar com outro cartão
             </Button>
@@ -238,7 +236,7 @@ export function ManualPaymentDialog({
         ) : null}
 
         {view === "card" ? (
-          <DialogFooter className={DIALOG_FOOTER_CLASS}>
+          <DialogFooter className={PAYMENT_DIALOG_FOOTER_STACK_CLASS}>
             <Button
               type="button"
               disabled={!canContinue}
@@ -253,7 +251,7 @@ export function ManualPaymentDialog({
         ) : null}
 
         {view === "installments" ? (
-          <DialogFooter className={DIALOG_FOOTER_CLASS}>
+          <DialogFooter className={PAYMENT_DIALOG_FOOTER_STACK_CLASS}>
             <Button
               type="button"
               disabled={!canContinue}
@@ -268,7 +266,7 @@ export function ManualPaymentDialog({
         ) : null}
 
         {view === "confirm" ? (
-          <DialogFooter className={DIALOG_FOOTER_CLASS}>
+          <DialogFooter className={PAYMENT_DIALOG_FOOTER_STACK_CLASS}>
             <Button
               type="button"
               disabled={isSubmitting || !clearsaleSessionId || !selection?.installment}

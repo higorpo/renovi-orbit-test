@@ -23,13 +23,20 @@ export type {
 } from "./types";
 
 export { CheckoutStepper } from "./components";
-export type { CheckoutStepperProps } from "./components";
+export type { CheckoutStepperProps, CheckoutHostActions } from "./components";
 
 export {
   useCheckoutStepper,
+  useCheckoutHostActions,
+  useCheckoutStepRequirements,
   CHECKOUT_STEP_REQUIREMENTS_QUERY_KEY,
 } from "./hooks";
-export type { UseCheckoutStepperOptions } from "./hooks";
+export type {
+  UseCheckoutStepperOptions,
+  UseCheckoutStepperResult,
+  UseCheckoutStepRequirementsOptions,
+  CheckoutHostBindings,
+} from "./hooks";
 
 export {
   getCheckoutStepRequirements,

@@ -1,25 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getCheckoutStepRequirements } from "../api/checkout.api";
+import { useQueryClient } from "@tanstack/react-query";
 import type {
   CheckoutStepData,
   CheckoutStepId,
-  CheckoutStepRequirements,
 } from "../types/checkoutStepper.types";
 import { generateClearSaleSessionId } from "../utils/generateClearSaleSessionId";
 import { resolveCheckoutSteps } from "../utils/resolveCheckoutSteps";
-
-export const CHECKOUT_STEP_REQUIREMENTS_QUERY_KEY = ["checkout-step-requirements"];
-
-const DEFAULT_REQUIREMENTS: CheckoutStepRequirements = {
-  needs_cpf: true,
-  needs_phone: true,
-  needs_card: true,
-};
+import {
+  CHECKOUT_STEP_REQUIREMENTS_QUERY_KEY,
+  useCheckoutStepRequirements,
+} from "./useCheckoutStepRequirements";
 
 export type UseCheckoutStepperOptions = {
   enabled?: boolean;
 };
+
+export type UseCheckoutStepperResult = ReturnType<typeof useCheckoutStepper>;
 
 export function useCheckoutStepper(options: UseCheckoutStepperOptions = {}) {
   const queryClient = useQueryClient();
@@ -28,21 +24,11 @@ export function useCheckoutStepper(options: UseCheckoutStepperOptions = {}) {
   const [clearsaleSessionId, setClearsaleSessionIdState] = useState<string | null>(null);
   const [sessionSteps, setSessionSteps] = useState<CheckoutStepId[] | null>(null);
 
-  const requirementsQuery = useQuery({
-    queryKey: CHECKOUT_STEP_REQUIREMENTS_QUERY_KEY,
-    queryFn: async () => {
-      const result = await getCheckoutStepRequirements();
-      if (result.error || !result.data) {
-        throw new Error(result.error ?? "checkout_step_requirements_unavailable");
-      }
-      return result.data;
-    },
+  const requirementsQuery = useCheckoutStepRequirements({
     enabled: options.enabled !== false,
-    staleTime: 0,
-    refetchOnWindowFocus: false,
   });
 
-  const requirements = requirementsQuery.data ?? DEFAULT_REQUIREMENTS;
+  const requirements = requirementsQuery.requirements;
 
   const resolvedSteps = useMemo(
     () => resolveCheckoutSteps(requirements),
@@ -145,7 +131,7 @@ export function useCheckoutStepper(options: UseCheckoutStepperOptions = {}) {
     requirements,
     needsCard: requirements.needs_card,
     isLoadingRequirements: requirementsQuery.isLoading,
-    requirementsError: requirementsQuery.error?.message ?? null,
+    requirementsError: requirementsQuery.error,
     goNext,
     goBack,
     goToStep,

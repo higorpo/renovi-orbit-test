@@ -1,8 +1,19 @@
 export {
   useCheckoutStepper,
-  CHECKOUT_STEP_REQUIREMENTS_QUERY_KEY,
 } from "./useCheckoutStepper";
-export type { UseCheckoutStepperOptions } from "./useCheckoutStepper";
+export type {
+  UseCheckoutStepperOptions,
+  UseCheckoutStepperResult,
+} from "./useCheckoutStepper";
+export {
+  useCheckoutStepRequirements,
+  CHECKOUT_STEP_REQUIREMENTS_QUERY_KEY,
+} from "./useCheckoutStepRequirements";
+export type { UseCheckoutStepRequirementsOptions } from "./useCheckoutStepRequirements";
+export {
+  useCheckoutHostActions,
+} from "./useCheckoutHostActions";
+export type { CheckoutHostBindings } from "./useCheckoutHostActions";
 export { useTokenizeCard } from "./useTokenizeCard";
 export {
   useClientCpfForPayment,

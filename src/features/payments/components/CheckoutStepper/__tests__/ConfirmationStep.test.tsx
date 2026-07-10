@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ConfirmationStep } from "../ConfirmationStep";
 
@@ -15,6 +15,8 @@ vi.mock("@/features/negotiation-proposals", () => ({
 vi.mock("../../PaymentTrustDisclosure", () => ({
   PaymentTrustDisclosure: () => null,
 }));
+
+const confirmRef = { current: null as (() => void) | null };
 
 const defaultProps = {
   serviceTitle: "Pintura interna",
@@ -54,7 +56,7 @@ const defaultProps = {
   idempotencyKey: "idem-1",
   onSuccess: vi.fn(),
   onInstallmentSignatureExpired: vi.fn(),
-  onBack: vi.fn(),
+  confirmRef,
 };
 
 describe("ConfirmationStep", () => {
@@ -66,9 +68,7 @@ describe("ConfirmationStep", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: /Voltar/i })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: /confirmar contratação/i }));
+    confirmRef.current?.();
 
     await waitFor(() => {
       expect(
@@ -82,7 +82,7 @@ describe("ConfirmationStep", () => {
 
     render(<ConfirmationStep {...defaultProps} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /confirmar contratação/i }));
+    confirmRef.current?.();
 
     await waitFor(() => {
       expect(screen.getByText(/Não foi possível confirmar/i)).toBeInTheDocument();
@@ -94,7 +94,7 @@ describe("ConfirmationStep", () => {
 
     render(<ConfirmationStep {...defaultProps} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /confirmar contratação/i }));
+    confirmRef.current?.();
 
     await waitFor(() => {
       expect(screen.getByText("gateway down")).toBeInTheDocument();
@@ -112,7 +112,7 @@ describe("ConfirmationStep", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /confirmar contratação/i }));
+    confirmRef.current?.();
 
     await waitFor(() => {
       expect(onSuccess).toHaveBeenCalledWith("service-1");
@@ -137,7 +137,7 @@ describe("ConfirmationStep", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /confirmar contratação/i }));
+    confirmRef.current?.();
 
     await waitFor(() => {
       expect(onInstallmentSignatureExpired).toHaveBeenCalledTimes(1);
