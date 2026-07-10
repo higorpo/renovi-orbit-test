@@ -1,9 +1,17 @@
 // @vitest-environment happy-dom
 import { render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { toast } from "sonner";
 import { ConfirmationStep } from "../ConfirmationStep";
 
 const mutateAsync = vi.fn();
+
+vi.mock("sonner", () => ({
+  toast: {
+    error: vi.fn(),
+    success: vi.fn(),
+  },
+}));
 
 vi.mock("@/features/negotiation-proposals", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/negotiation-proposals")>();
@@ -15,10 +23,6 @@ vi.mock("@/features/negotiation-proposals", async (importOriginal) => {
     }),
   };
 });
-
-vi.mock("../../PaymentTrustDisclosure", () => ({
-  PaymentTrustDisclosure: () => null,
-}));
 
 const confirmRef = { current: null as (() => void) | null };
 
@@ -64,11 +68,26 @@ const defaultProps = {
 };
 
 describe("ConfirmationStep", () => {
+  beforeEach(() => {
+    vi.mocked(toast.error).mockClear();
+    mutateAsync.mockReset();
+  });
+
   it("shows the scheduled slot in the confirmation summary", () => {
     render(<ConfirmationStep {...defaultProps} />);
 
     expect(screen.getByText("Agendamento")).toBeInTheDocument();
     expect(screen.getByText(/01\/07\/2026/)).toBeInTheDocument();
+  });
+
+  it("shows terms of use agreement note with main-site link", () => {
+    render(<ConfirmationStep {...defaultProps} />);
+
+    expect(screen.getByText(/Ao confirmar o pagamento/i)).toBeInTheDocument();
+    const termsLink = screen.getByRole("link", { name: /Termos de Uso/i });
+    expect(termsLink).toHaveAttribute("href", expect.stringContaining("/juridico/termos-de-uso"));
+    expect(termsLink).toHaveAttribute("target", "_blank");
+    expect(termsLink).toHaveAttribute("rel", "noopener noreferrer");
   });
 
   it("shows error when clearsale session is missing", async () => {
@@ -82,9 +101,9 @@ describe("ConfirmationStep", () => {
     confirmRef.current?.();
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Aguarde a inicialização da verificação de segurança/i),
-      ).toBeInTheDocument();
+      expect(toast.error).toHaveBeenCalledWith(
+        "Aguarde a inicialização da verificação de segurança.",
+      );
     });
   });
 
@@ -96,7 +115,7 @@ describe("ConfirmationStep", () => {
     confirmRef.current?.();
 
     await waitFor(() => {
-      expect(screen.getByText(/Não foi possível confirmar/i)).toBeInTheDocument();
+      expect(toast.error).toHaveBeenCalledWith("Não foi possível confirmar.");
     });
   });
 
@@ -108,7 +127,7 @@ describe("ConfirmationStep", () => {
     confirmRef.current?.();
 
     await waitFor(() => {
-      expect(screen.getByText("gateway down")).toBeInTheDocument();
+      expect(toast.error).toHaveBeenCalledWith("gateway down");
     });
   });
 
@@ -155,6 +174,7 @@ describe("ConfirmationStep", () => {
     });
 
     expect(onSuccess).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
     expect(mutateAsync).toHaveBeenCalledWith(
       expect.objectContaining({
         proposalId: "proposal-1",

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type MutableRefObject } from "react";
+import { useEffect, useMemo, type MutableRefObject } from "react";
+import { toast } from "sonner";
 import { formatCurrency } from "@/lib/formatCurrency";
-import { PaymentTrustDisclosure } from "../PaymentTrustDisclosure";
 import {
   formatProposalSuggestedSlot,
   useAcceptProposalMutation,
@@ -8,6 +8,8 @@ import {
 } from "@/features/negotiation-proposals";
 import type { InstallmentHmacPayload, InstallmentOption } from "../../types/paymentToken.types";
 import { getChargeTimingDisclosure } from "../../utils/chargeTimingDisclosure";
+
+const TERMS_OF_USE_URL = `${(import.meta.env.VITE_MAIN_SITE_URL ?? "").replace(/\/$/, "")}/juridico/termos-de-uso`;
 
 export type ConfirmationStepProps = {
   serviceTitle: string;
@@ -54,7 +56,6 @@ export function ConfirmationStep({
   confirmRef,
   onPendingChange,
 }: ConfirmationStepProps) {
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const acceptProposal = useAcceptProposalMutation(chatId, serviceRequestId);
 
   const chargeDisclosure = useMemo(
@@ -67,10 +68,8 @@ export function ConfirmationStep({
   }, [acceptProposal.isPending, onPendingChange]);
 
   const handleConfirm = async () => {
-    setSubmitError(null);
-
     if (!clearsaleSessionId) {
-      setSubmitError("Aguarde a inicialização da verificação de segurança.");
+      toast.error("Aguarde a inicialização da verificação de segurança.");
       return;
     }
 
@@ -96,7 +95,7 @@ export function ConfirmationStep({
         return;
       }
 
-      setSubmitError(error instanceof Error ? error.message : "Não foi possível confirmar.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível confirmar.");
     }
   };
 
@@ -137,11 +136,18 @@ export function ConfirmationStep({
         </div>
       </div>
 
-      {submitError ? (
-        <p className="text-sm text-destructive" role="alert">
-          {submitError}
-        </p>
-      ) : null}
+      <p className="text-xs text-muted-foreground">
+        Ao confirmar o pagamento, você declara que leu e concorda com os{" "}
+        <a
+          href={TERMS_OF_USE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-primary underline-offset-4 hover:underline"
+        >
+          Termos de Uso
+        </a>
+        .
+      </p>
     </div>
   );
 }
