@@ -29,6 +29,13 @@ import {
 
 type ProposalDetailsContent = ProposalDetailView | ProviderProposalHistoryItem;
 
+function getProposalExpiresAt(proposal: ProposalDetailsContent): string | null {
+  if ("expires_at" in proposal && typeof proposal.expires_at === "string") {
+    return proposal.expires_at;
+  }
+  return null;
+}
+
 function getProposalSubmittedAt(proposal: ProposalDetailsContent): string | null {
   if ("submitted_at" in proposal) {
     return proposal.submitted_at;
@@ -80,6 +87,7 @@ export function ProposalHistoryDetailContent({
   const amountLabel = providerPricing ? copy.amountInformedLabel : copy.amountLabel;
   const proposalStatus = getProposalStatusLabel(proposal.status);
   const submittedAt = getProposalSubmittedAt(proposal);
+  const expiresAt = getProposalExpiresAt(proposal);
 
   const statusSection = (
     <ProposalDetailSection variant="muted">
@@ -126,6 +134,7 @@ export function ProposalHistoryDetailContent({
       {detailAudience ? (
         <ProposalCountdownBanner
           status={proposal.status}
+          expiresAt={expiresAt}
           submittedAt={submittedAt}
           audience={detailAudience}
           copyVariant={copyVariant}

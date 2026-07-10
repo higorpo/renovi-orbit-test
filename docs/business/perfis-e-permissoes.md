@@ -56,6 +56,7 @@ Restrições de **atribuição de papel** (triggers / políticas):
 | `provider_profiles_private` / `public` | — | Dono (escrita pública condicionada a `provider`) | Conforme políticas |
 | `service_requests` | CRUD sobre próprios pedidos onde aplicável | Leitura / fluxos de job conforme RPC e RLS | Muitas políticas incluem admin |
 | `provider_proposals` | Ver/responder no fluxo de orçamento | Criar/atualizar próprias propostas | Conforme RPC (ex.: assinatura/preço) |
+| Helpers `platform_constant_*` | **Não** — EXECUTE revogado para `authenticated` / `anon` / `public` | Idem | `service_role` (e funções `SECURITY DEFINER` internas) |
 | Catálogo (`platform_services`, `platform_forms`, cidades…) | Leitura conforme política | Leitura conforme política | Gestão onde política exige `admin` |
 
 Para detalhes por tabela, ver arquivos em `supabase/migrations/` citados em [rastreabilidade](./rastreabilidade.md).

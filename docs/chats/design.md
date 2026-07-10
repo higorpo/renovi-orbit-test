@@ -872,7 +872,7 @@ Wrapper `cns_mmd_ingest` calls `message_dispatcher.message_dispatcher_ingest` wi
 
 ## 4.12 Proposal SLA reminder (Req. 9 — R9-AC06 SHOULD)
 
-When `submitted_at + SLA - 4h < now() < submitted_at + SLA` and status `PENDING`, consumer SHALL enqueue MMD template `proposal.expiring_soon` (`bypass_limits = false`). UI hook `useProposalCountdown` reads `submitted_at` + `platform_constants` SLA for countdown display (R9-AC07, checklist 129–130).
+When `submitted_at + SLA - 4h < now() < submitted_at + SLA` and status `PENDING`, consumer SHALL enqueue MMD template `proposal.expiring_soon` (`bypass_limits = false`). UI hook `useProposalCountdown` reads server-computed `expires_at` from `get_proposal_detail_*` (same SLA as `platform_constant_int('chats.proposal_response_sla_hours', 24)`); clients MUST NOT call `platform_constant_*` helpers directly (R9-AC07, checklist 129–130).
 
 ## 4.13 Accept / reject UI confirmation (Req. 7 — R7-AC01, R7-AC02)
 

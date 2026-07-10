@@ -163,11 +163,12 @@ grant execute on function public.generate_provider_pricing_signature(numeric, nu
 revoke all on function public.cns_chat_free_messaging_allowed(uuid) from public;
 grant execute on function public.cns_chat_free_messaging_allowed(uuid) to authenticated;
 
-revoke all on function public.platform_constant_int(text, integer) from public;
-grant execute on function public.platform_constant_int(text, integer) to authenticated;
+-- Platform constant helpers are server-side only (SECURITY DEFINER RPCs / service_role).
+revoke all on function public.platform_constant_int(text, integer) from public, anon, authenticated;
+grant execute on function public.platform_constant_int(text, integer) to service_role;
 
-revoke all on function public.platform_constant_bool(text, boolean) from public;
-grant execute on function public.platform_constant_bool(text, boolean) to authenticated;
+revoke all on function public.platform_constant_bool(text, boolean) from public, anon, authenticated;
+grant execute on function public.platform_constant_bool(text, boolean) to service_role;
 
 -- RLS helper functions (authenticated only).
 revoke all on function public.is_platform_admin() from public;

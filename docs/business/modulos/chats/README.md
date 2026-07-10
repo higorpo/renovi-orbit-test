@@ -16,7 +16,7 @@
 | Propostas | Feature `negotiation-proposals`: `submit_proposal`, `accept_proposal`, `reject_proposal`, `request_proposal_revision` |
 | Mídia | Edge `chat-upload-media` + sessão `chat_media_upload_sessions` |
 | Async | `domain_events` → `cns_process_domain_events` → MMD; crons reciprocidade e expiração de proposta (24h) |
-| Constantes | `chats.max_active_slots_per_service_request` (padrão 4), `chats.proposal_response_sla_hours` (padrão 24) |
+| Constantes (servidor) | `chats.max_active_slots_per_service_request` (padrão 4), `chats.proposal_response_sla_hours` (padrão 24) — lidas em RPCs/crons via helpers `platform_constant_*` (`service_role` only); UI recebe SLA já calculado como `expires_at` em `get_proposal_detail_*` |
 
 ## 3. Documentação da feature
 
@@ -47,4 +47,4 @@
 ## 6. Lacunas conhecidas (produto)
 
 - Item **Conversas** no menu do dashboard aponta para `/dashboard/chats` (`dashboardMenu.ts`).
-- Indicador de digitação (typing) e algumas integrações de banner → proposta: ver `docs/chats/tasks.md` pós-106.
+- Indicador de digitação (typing): ver `docs/chats/tasks.md` pós-106.

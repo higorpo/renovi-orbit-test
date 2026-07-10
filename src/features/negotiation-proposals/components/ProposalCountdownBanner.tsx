@@ -7,10 +7,17 @@ import {
   resolveProposalCountdownCopy,
   type ProposalCountdownAudience,
 } from "../utils/proposalCountdownCopy";
+import {
+  DEFAULT_PROPOSAL_RESPONSE_SLA_HOURS,
+  resolveProposalExpiresAt,
+} from "../utils/proposalCountdown";
 
 export interface ProposalCountdownBannerProps {
   status: ProposalStatus | string | null;
-  submittedAt: string | null;
+  /** Prefer server `expires_at` from get_proposal_detail_*. */
+  expiresAt?: string | null;
+  /** Fallback when API has not provided expires_at (e.g. budget compare select). */
+  submittedAt?: string | null;
   audience: ProposalCountdownAudience;
   copyVariant?: ProposalCopyVariant;
   enabled?: boolean;
@@ -20,16 +27,25 @@ export interface ProposalCountdownBannerProps {
 
 export function ProposalCountdownBanner({
   status,
-  submittedAt,
+  expiresAt = null,
+  submittedAt = null,
   audience,
   copyVariant = "proposal",
   enabled = true,
   density = "default",
   className,
 }: ProposalCountdownBannerProps) {
+  const resolvedExpiresAt =
+    expiresAt ??
+    resolveProposalExpiresAt({
+      submittedAt,
+      slaHours: DEFAULT_PROPOSAL_RESPONSE_SLA_HOURS,
+    })?.toISOString() ??
+    null;
+
   const countdown = useProposalCountdown({
     status: status as ProposalStatus | null,
-    submittedAt,
+    expiresAt: resolvedExpiresAt,
     enabled,
   });
 

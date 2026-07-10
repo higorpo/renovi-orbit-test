@@ -97,4 +97,5 @@ $$;
 comment on function public.platform_constant_int(text, int) is
   'Reads platform_constants as int: min 1, max chats.max_active_slots_upper_bound (default 50), fallback p_default with WARNING.';
 
-grant execute on function public.platform_constant_int(text, int) to service_role, authenticated;
+revoke all on function public.platform_constant_int(text, int) from public, anon, authenticated;
+grant execute on function public.platform_constant_int(text, int) to service_role;

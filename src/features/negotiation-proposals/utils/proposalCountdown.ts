@@ -1,6 +1,9 @@
 import type { ProposalStatus } from "../types/proposals.types";
 import { isPendingProposalStatus } from "./proposalStatus";
 
+/** Display fallback when API has not provided expires_at. Server remains source of truth. */
+export const DEFAULT_PROPOSAL_RESPONSE_SLA_HOURS = 24;
+
 export const PROPOSAL_COUNTDOWN_WARNING_MS = 4 * 60 * 60 * 1000;
 
 export type ProposalCountdownPhase = "inactive" | "active" | "warning" | "expired";

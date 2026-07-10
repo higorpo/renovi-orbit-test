@@ -156,6 +156,9 @@ as $$
 declare
   v_actor uuid := auth.uid();
   v_pp public.provider_proposals%rowtype;
+  v_sla_hours int;
+  v_anchor timestamptz;
+  v_expires_at timestamptz;
 begin
   if v_actor is null then
     raise exception 'Authentication required for get_proposal_detail_for_provider'
@@ -186,6 +189,13 @@ begin
         detail = jsonb_build_object('code', 'PROPOSAL_NOT_FOUND')::text;
   end if;
 
+  v_sla_hours := public.platform_constant_int('chats.proposal_response_sla_hours', 24);
+  v_anchor := coalesce(v_pp.submitted_at, v_pp.created_at);
+  v_expires_at := case
+    when v_anchor is null then null
+    else v_anchor + make_interval(hours => v_sla_hours)
+  end;
+
   return jsonb_build_object(
     'id', v_pp.id,
     'service_request_id', v_pp.service_request_id,
@@ -197,6 +207,7 @@ begin
     'revision_notes', v_pp.revision_notes,
     'submitted_at', v_pp.submitted_at,
     'expired_at', v_pp.expired_at,
+    'expires_at', v_expires_at,
     'proposed_amount', v_pp.proposed_amount,
     'tax_rate', v_pp.tax_rate,
     'tax_amount', v_pp.tax_amount,
@@ -215,7 +226,7 @@ end;
 $$;
 
 comment on function public.get_proposal_detail_for_provider(uuid) is
-  'Full provider proposal detail including pricing and effective selected slot (agreed_slot when rescheduled).';
+  'Full provider proposal detail including pricing, client-response expires_at, and effective selected slot (agreed_slot when rescheduled).';
 
 create or replace function public.get_proposal_detail_for_participant(p_proposal_id uuid)
 returns jsonb
@@ -228,6 +239,9 @@ declare
   v_actor uuid := auth.uid();
   v_pp public.provider_proposals%rowtype;
   v_sr public.service_requests%rowtype;
+  v_sla_hours int;
+  v_anchor timestamptz;
+  v_expires_at timestamptz;
 begin
   if v_actor is null then
     raise exception 'Authentication required for get_proposal_detail_for_participant'
@@ -268,6 +282,13 @@ begin
         detail = jsonb_build_object('code', 'PROPOSAL_NOT_FOUND')::text;
   end if;
 
+  v_sla_hours := public.platform_constant_int('chats.proposal_response_sla_hours', 24);
+  v_anchor := coalesce(v_pp.submitted_at, v_pp.created_at);
+  v_expires_at := case
+    when v_anchor is null then null
+    else v_anchor + make_interval(hours => v_sla_hours)
+  end;
+
   return jsonb_build_object(
     'id', v_pp.id,
     'service_request_id', v_pp.service_request_id,
@@ -279,6 +300,7 @@ begin
     'revision_notes', v_pp.revision_notes,
     'submitted_at', v_pp.submitted_at,
     'expired_at', v_pp.expired_at,
+    'expires_at', v_expires_at,
     'proposed_amount', v_pp.proposed_amount,
     'proposal_description', v_pp.proposal_description,
     'proposal_duration_unit', v_pp.proposal_duration_unit,
@@ -294,7 +316,18 @@ end;
 $$;
 
 comment on function public.get_proposal_detail_for_participant(uuid) is
-  'Client-safe proposal detail for chat participants with effective selected slot (agreed_slot when rescheduled).';
+  'Client-safe proposal detail for chat participants with client-response expires_at and effective selected slot (agreed_slot when rescheduled).';
 
 revoke all on function public.get_proposal_detail_for_participant(uuid) from public, anon;
 grant execute on function public.get_proposal_detail_for_participant(uuid) to authenticated;
+
+-- Platform constant helpers are server-side only (RPCs / service_role). Clients must not
+-- read arbitrary keys; UI SLA comes from get_proposal_detail_* expires_at instead.
+revoke all on function public.platform_constant_int(text, int) from public, anon, authenticated;
+grant execute on function public.platform_constant_int(text, int) to service_role;
+
+revoke all on function public.platform_constant_bool(text, boolean) from public, anon, authenticated;
+grant execute on function public.platform_constant_bool(text, boolean) to service_role;
+
+revoke all on function public.platform_constant_numeric(text, numeric) from public, anon, authenticated;
+grant execute on function public.platform_constant_numeric(text, numeric) to service_role;

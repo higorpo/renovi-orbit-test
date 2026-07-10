@@ -175,10 +175,14 @@ export {
 } from "./utils/proposalRevisionReasonLabels";
 
 export {
-  getProposalResponseSlaHours,
-  PROPOSAL_RESPONSE_SLA_KEY,
   DEFAULT_PROPOSAL_RESPONSE_SLA_HOURS,
-} from "./api/platformConstants.api";
+  resolveProposalExpiresAt,
+  computeProposalCountdown,
+  formatProposalRemainingMs,
+  PROPOSAL_COUNTDOWN_WARNING_MS,
+  type ProposalCountdownPhase,
+  type ProposalCountdownSnapshot,
+} from "./utils/proposalCountdown";
 export { useProposalCountdown, type UseProposalCountdownParams } from "./hooks/useProposalCountdown";
 export {
   ProposalCountdownBanner,
@@ -219,14 +223,6 @@ export {
   mockProviderCompletedServices,
   mockProviderRating,
 } from "./utils/mockProviderRating";
-export {
-  computeProposalCountdown,
-  formatProposalRemainingMs,
-  resolveProposalExpiresAt,
-  PROPOSAL_COUNTDOWN_WARNING_MS,
-  type ProposalCountdownPhase,
-  type ProposalCountdownSnapshot,
-} from "./utils/proposalCountdown";
 export {
   resolveProposalCountdownCopy,
   type ProposalCountdownAudience,

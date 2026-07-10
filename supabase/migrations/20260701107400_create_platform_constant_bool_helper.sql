@@ -42,4 +42,5 @@ $$;
 comment on function public.platform_constant_bool(text, boolean) is
   'Reads platform_constants as boolean with string/boolean jsonb support and WARNING fallback.';
 
-grant execute on function public.platform_constant_bool(text, boolean) to service_role, authenticated;
+revoke all on function public.platform_constant_bool(text, boolean) from public, anon, authenticated;
+grant execute on function public.platform_constant_bool(text, boolean) to service_role;

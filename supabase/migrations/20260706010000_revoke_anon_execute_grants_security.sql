@@ -79,8 +79,6 @@ begin
         'request_proposal_revision',
         'calculate_provider_service_pricing',
         'cns_chat_free_messaging_allowed',
-        'platform_constant_int',
-        'platform_constant_bool',
         'is_platform_admin',
         'is_provider',
         'is_chat_participant',
@@ -114,6 +112,13 @@ begin
   end loop;
 end;
 $grant$;
+
+-- Platform constant helpers — service_role / SECURITY DEFINER callers only (not client RPCs).
+revoke all on function public.platform_constant_int(text, integer) from public, anon, authenticated;
+grant execute on function public.platform_constant_int(text, integer) to service_role;
+
+revoke all on function public.platform_constant_bool(text, boolean) from public, anon, authenticated;
+grant execute on function public.platform_constant_bool(text, boolean) to service_role;
 
 -- Public provider profile page (intentional anon + authenticated).
 revoke all on function public.get_public_provider_by_slug(text) from public;

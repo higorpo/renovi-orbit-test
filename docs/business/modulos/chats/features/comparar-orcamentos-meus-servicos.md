@@ -40,6 +40,7 @@ Helpers em `constants/serviceRequestBudgetSheet.ts`:
 
 - Agrupa propostas por prestador; exibe preview do perfil (`ProviderProfileInlinePreview`).
 - Bloco da versão mais recente por prestador (`ServiceRequestBudgetCompareVersionBlock`).
+- Propostas **`PENDING`**: banner de countdown (`ProposalCountdownBanner`) com fallback local de SLA (24h) quando a RPC de compare não envia `expires_at`; expiração real permanece no servidor.
 - Versões anteriores do mesmo prestador aparecem em seção **Histórico** quando há mais de uma.
 - Badge de status por proposta (`ServiceRequestBudgetStatusBadge` / `getBudgetStatusConfig`).
 

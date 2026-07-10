@@ -38,6 +38,7 @@ beforeEach(() => {
       revision_notes: null,
       submitted_at: "2026-05-30T10:00:00.000Z",
       expired_at: null,
+      expires_at: "2026-05-31T10:00:00.000Z",
       proposed_amount: 100,
       tax_rate: 0,
       tax_amount: 0,

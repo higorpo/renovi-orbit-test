@@ -1,72 +1,56 @@
-import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { getProposalResponseSlaHours } from "../api/platformConstants.api";
 import type { ProposalStatus } from "../types/proposals.types";
 import {
   computeProposalCountdown,
-  resolveProposalExpiresAt,
   type ProposalCountdownSnapshot,
 } from "../utils/proposalCountdown";
 import { isPendingProposalStatus } from "../utils/proposalStatus";
 
-const SLA_QUERY_KEY = "proposal-response-sla-hours";
 const DEFAULT_TICK_MS = 30_000;
 
 export interface UseProposalCountdownParams {
   status: ProposalStatus | null;
-  submittedAt: string | null;
+  /** Server-computed client-response deadline (ISO). */
+  expiresAt: string | null;
   enabled?: boolean;
   tickIntervalMs?: number;
 }
 
+function parseExpiresAt(expiresAt: string | null): Date | null {
+  if (!expiresAt) return null;
+  const parsed = new Date(expiresAt);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export function useProposalCountdown({
   status,
-  submittedAt,
+  expiresAt,
   enabled = true,
   tickIntervalMs = DEFAULT_TICK_MS,
-}: UseProposalCountdownParams): ProposalCountdownSnapshot & { slaHours: number | null } {
+}: UseProposalCountdownParams): ProposalCountdownSnapshot {
   const [nowMs, setNowMs] = useState(() => Date.now());
 
-  const slaQuery = useQuery({
-    queryKey: [SLA_QUERY_KEY],
-    queryFn: getProposalResponseSlaHours,
-    enabled: enabled && Boolean(submittedAt),
-    staleTime: 5 * 60_000,
-    refetchOnWindowFocus: false,
-  });
-
-  const slaHours = slaQuery.data ?? null;
-
-  const expiresAt = useMemo(() => {
+  const expiresAtDate = useMemo(() => {
     if (!enabled) return null;
-
-    return resolveProposalExpiresAt({
-      submittedAt,
-      slaHours: slaHours ?? 24,
-    });
-  }, [enabled, slaHours, submittedAt]);
+    return parseExpiresAt(expiresAt);
+  }, [enabled, expiresAt]);
 
   useEffect(() => {
-    if (!enabled || !isPendingProposalStatus(status) || !expiresAt) return;
+    if (!enabled || !isPendingProposalStatus(status) || !expiresAtDate) return;
 
     setNowMs(Date.now());
     const timerId = window.setInterval(() => setNowMs(Date.now()), tickIntervalMs);
 
     return () => window.clearInterval(timerId);
-  }, [enabled, expiresAt, status, tickIntervalMs]);
+  }, [enabled, expiresAtDate, status, tickIntervalMs]);
 
-  const snapshot = useMemo(
+  return useMemo(
     () =>
       computeProposalCountdown({
         status,
-        expiresAt,
+        expiresAt: expiresAtDate,
         nowMs,
       }),
-    [expiresAt, nowMs, status],
+    [expiresAtDate, nowMs, status],
   );
-
-  return {
-    ...snapshot,
-    slaHours,
-  };
 }

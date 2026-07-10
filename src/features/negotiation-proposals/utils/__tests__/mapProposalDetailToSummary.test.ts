@@ -13,6 +13,7 @@ const baseProposal: ProposalDetailView = {
   revision_notes: null,
   submitted_at: "2026-03-20T10:00:00.000Z",
   expired_at: null,
+  expires_at: "2026-03-21T10:00:00.000Z",
   proposed_amount: 500,
   tax_rate: 0.15,
   tax_amount: 75,

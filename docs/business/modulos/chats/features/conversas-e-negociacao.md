@@ -32,7 +32,9 @@
 | `REVISION_REQUESTED` | **Sim** — janela para alinhar antes de nova proposta |
 | Nova `PENDING` após revisão | **Não** novamente |
 
-- SLA de resposta do cliente: **`chats.proposal_response_sla_hours`** (padrão **24h**); após isso proposta pode ir para **`EXPIRED`** via job `expire_pending_proposals`.
+- **SLA de resposta do cliente:** constante **`chats.proposal_response_sla_hours`** em `platform_constants` (padrão **24h**), lida **somente no servidor** (RPCs, crons, `SECURITY DEFINER`). O app **não** chama `platform_constant_int` / `platform_constant_bool` / `platform_constant_numeric` — EXECUTE revogado para `authenticated`, `anon` e `public`.
+- **Prazo exibido na UI:** as RPCs `get_proposal_detail_for_provider` e `get_proposal_detail_for_participant` devolvem **`expires_at`** = `coalesce(submitted_at, created_at)` + SLA (mesma fonte usada por `expire_pending_proposals` e `accept_proposal`). O countdown (`useProposalCountdown` / `ProposalCountdownBanner`) usa esse campo quando disponível (cards na conversa, detalhe de proposta, histórico). Onde a API não envia `expires_at` (ex.: sheet **Comparar orçamentos**), a UI usa fallback local com SLA padrão de **24h** — apenas exibição; a expiração real continua no servidor.
+- Após o prazo, proposta **`PENDING`** pode ir para **`EXPIRED`** via job `expire_pending_proposals`.
 
 ## 5. Fluxos principais
 
@@ -77,6 +79,7 @@
 | Tema | Onde verificar |
 |------|----------------|
 | RPCs | `src/features/chats/api/chats.rpc.ts`, `negotiation-proposals/api/proposals.rpc.ts` |
+| Detalhe de proposta / `expires_at` | RPCs `get_proposal_detail_for_provider`, `get_proposal_detail_for_participant`; `negotiation-proposals/hooks/useProposalCountdown.ts`, `components/ProposalCountdownBanner.tsx` |
 | Regras de slot / FSM | `docs/chats/design.md` §3.3.1, §4; pgTAP `supabase/tests/chats/` |
 | UI | `src/features/chats/components/ChatScreen/` |
 | E2E | `e2e/tests/chats.spec.ts` (mocks; opcional `CI_E2E_CHATS=1` no CI) |

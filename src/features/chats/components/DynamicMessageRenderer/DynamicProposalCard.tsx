@@ -128,6 +128,7 @@ export function DynamicProposalCard({
           {isPendingProposalStatus(status) && proposal ? (
             <ProposalCountdownBanner
               status={status}
+              expiresAt={proposal.expires_at}
               submittedAt={proposal.submitted_at}
               audience={viewerRole === "provider" ? "provider" : "client"}
               density="compact"

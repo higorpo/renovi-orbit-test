@@ -1,23 +1,7 @@
 // @vitest-environment happy-dom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { createElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProposalCountdownBanner } from "../ProposalCountdownBanner";
-
-vi.mock("../../api/platformConstants.api", () => ({
-  getProposalResponseSlaHours: vi.fn().mockResolvedValue(24),
-}));
-
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-
-  return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(QueryClientProvider, { client: queryClient }, children);
-  };
-}
 
 describe("ProposalCountdownBanner", () => {
   beforeEach(() => {
@@ -25,15 +9,14 @@ describe("ProposalCountdownBanner", () => {
     vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
   });
 
-  it("shows client warning copy in compact mode", () => {
+  it("shows client warning copy in compact mode from expires_at", () => {
     render(
       <ProposalCountdownBanner
         status="PENDING"
-        submittedAt="2025-12-31T03:00:00.000Z"
+        expiresAt="2026-01-01T03:00:00.000Z"
         audience="client"
         density="compact"
       />,
-      { wrapper: createWrapper() },
     );
 
     expect(screen.getByRole("status")).toBeInTheDocument();
@@ -41,14 +24,13 @@ describe("ProposalCountdownBanner", () => {
     expect(screen.getByText(/Restam 3 h/i)).toBeInTheDocument();
   });
 
-  it("shows provider copy in default mode", () => {
+  it("falls back to submitted_at plus default SLA when expires_at is missing", () => {
     render(
       <ProposalCountdownBanner
         status="PENDING"
         submittedAt="2026-01-01T00:00:00.000Z"
         audience="provider"
       />,
-      { wrapper: createWrapper() },
     );
 
     expect(screen.getByText("Aguardando resposta do cliente")).toBeInTheDocument();
@@ -59,10 +41,9 @@ describe("ProposalCountdownBanner", () => {
     render(
       <ProposalCountdownBanner
         status="ACCEPTED"
-        submittedAt="2026-01-01T00:00:00.000Z"
+        expiresAt="2026-01-02T00:00:00.000Z"
         audience="client"
       />,
-      { wrapper: createWrapper() },
     );
 
     expect(screen.queryByRole("status")).not.toBeInTheDocument();

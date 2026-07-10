@@ -10,10 +10,6 @@ vi.mock("@/lib/sentry", () => ({
   metrics: { count: vi.fn(), distribution: vi.fn() },
 }));
 
-vi.mock("@/features/negotiation-proposals/api/platformConstants.api", () => ({
-  getProposalResponseSlaHours: vi.fn().mockResolvedValue(24),
-}));
-
 const hydrateMock = vi.fn();
 
 vi.mock("../../../hooks/useProposalTimelineHydration", () => ({
@@ -84,12 +80,13 @@ describe("DynamicProposalCard", () => {
     expect(onProposalAction).toHaveBeenCalledWith("view_details", "p1");
   });
 
-  it("shows countdown for pending proposals using submitted_at SLA", () => {
+  it("shows countdown for pending proposals using expires_at", () => {
     hydrateMock.mockReturnValue({
       proposal: {
         status: "PENDING",
         proposed_amount: 500,
         submitted_at: "2025-12-31T03:00:00.000Z",
+        expires_at: "2026-01-01T03:00:00.000Z",
       },
       isLoading: false,
       isError: false,

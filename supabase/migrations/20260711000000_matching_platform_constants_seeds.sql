@@ -37,6 +37,7 @@ $$;
 comment on function public.platform_constant_numeric(text, numeric) is
   'Reads platform_constants as numeric with WARNING fallback to p_default when missing or invalid.';
 
+revoke all on function public.platform_constant_numeric(text, numeric) from public, anon, authenticated;
 grant execute on function public.platform_constant_numeric(text, numeric) to service_role;
 
 insert into public.platform_constants (key, value, description)

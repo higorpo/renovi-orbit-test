@@ -13,6 +13,8 @@ export interface ProposalDetailView {
   revision_notes: string | null;
   submitted_at: string | null;
   expired_at: string | null;
+  /** Client-response deadline: coalesce(submitted_at, created_at) + SLA hours. */
+  expires_at: string | null;
   proposed_amount: number;
   tax_rate?: number;
   tax_amount?: number;
