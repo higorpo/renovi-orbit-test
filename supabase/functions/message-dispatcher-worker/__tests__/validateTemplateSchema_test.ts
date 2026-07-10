@@ -2,6 +2,7 @@ import { assertEquals, assertThrows } from "std/testing/asserts";
 import {
   resetSchemaCache,
   TemplateSchemaValidationError,
+  formatAjvErrors,
   validateTemplateVariablesAgainstSchema,
 } from "../validateTemplateSchema.ts";
 
@@ -62,5 +63,27 @@ Deno.test("validateTemplateVariablesAgainstSchema uses cached compiled schema on
   assertThrows(
     () => validateTemplateVariablesAgainstSchema({ x: "not a number" }, schema),
     TemplateSchemaValidationError,
+  );
+});
+
+Deno.test("validateTemplateVariablesAgainstSchema skips empty or null schema", () => {
+  validateTemplateVariablesAgainstSchema({ anything: true }, {});
+  validateTemplateVariablesAgainstSchema({ anything: true }, null);
+  validateTemplateVariablesAgainstSchema({ anything: true }, undefined);
+});
+
+Deno.test("formatAjvErrors falls back when errors are empty or missing", () => {
+  assertEquals(formatAjvErrors(null), "template_variables failed schema validation");
+  assertEquals(formatAjvErrors(undefined), "template_variables failed schema validation");
+  assertEquals(formatAjvErrors([]), "template_variables failed schema validation");
+});
+
+Deno.test("formatAjvErrors joins Ajv error paths and messages", () => {
+  assertEquals(
+    formatAjvErrors([
+      { instancePath: "/name", message: "must be string" } as never,
+      { instancePath: "", message: undefined } as never,
+    ]),
+    "/name must be string; / invalid",
   );
 });

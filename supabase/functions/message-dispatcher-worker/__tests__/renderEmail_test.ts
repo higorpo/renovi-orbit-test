@@ -34,3 +34,15 @@ Deno.test("validateTemplateVariablesSize rejects payloads over 8KB", () => {
     TemplateVariablesSizeError,
   );
 });
+
+Deno.test("renderEmailFromTemplate treats null subject_template as empty", () => {
+  const rendered = renderEmailFromTemplate(
+    {
+      subject_template: null,
+      body_template: "<p>{{name}}</p>",
+    },
+    { name: "Ana" },
+  );
+  assertEquals(rendered.subject, "");
+  assertEquals(rendered.html, "<p>Ana</p>");
+});

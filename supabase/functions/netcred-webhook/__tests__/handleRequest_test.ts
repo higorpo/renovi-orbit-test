@@ -1,6 +1,7 @@
 import { assertEquals } from "std/testing/asserts";
 import { computeHMACSHA256 } from "../../_shared/crypto/hmac.ts";
 import {
+  buildSummary,
   handleNetcredWebhookRequest,
   type NetcredWebhookDeps,
 } from "../handleRequest.ts";
@@ -290,4 +291,64 @@ Deno.test("handler skipped outcome enqueues deferred processing", async () => {
 
   assertEquals(response.status, 200);
   assertEquals(queued, true);
+});
+
+Deno.test("OPTIONS returns 204 and GET returns 405", async () => {
+  const options = await handleNetcredWebhookRequest(
+    new Request("https://example.com/netcred-webhook", { method: "OPTIONS" }),
+    createDeps(),
+  );
+  assertEquals(options.status, 204);
+
+  const get = await handleNetcredWebhookRequest(
+    new Request("https://example.com/netcred-webhook", { method: "GET" }),
+    createDeps(),
+  );
+  assertEquals(get.status, 405);
+});
+
+Deno.test("persist failure returns 500", async () => {
+  const response = await handleNetcredWebhookRequest(
+    webhookRequest('{"id":"evt-1"}', { eventType: "WEBHOOK_PING" }),
+    createDeps({
+      persistWebhookEvent: async () => {
+        throw new Error("db unavailable");
+      },
+    }),
+  );
+  assertEquals(response.status, 500);
+  const body = await response.json();
+  assertEquals(body.error, "persist_failed");
+});
+
+Deno.test("process failure marks failed and still returns 200", async () => {
+  let failedReason = "";
+  const rawBody = '{"id":"evt-fail"}';
+  const signature = await computeHMACSHA256("test-webhook-secret", rawBody);
+
+  const response = await handleNetcredWebhookRequest(
+    webhookRequest(rawBody, {
+      eventType: "TRANSACTION_CAPTURE",
+      signature,
+    }),
+    createDeps({
+      processWebhookEvent: async () => {
+        throw new Error("rpc exploded");
+      },
+      markFailed: async (_eventId, reason) => {
+        failedReason = reason;
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(failedReason, "rpc exploded");
+});
+
+Deno.test("buildSummary returns outcome payload", () => {
+  assertEquals(buildSummary("WEBHOOK_PING", "processed", "event-1"), {
+    outcome: "processed",
+    event_type: "WEBHOOK_PING",
+    event_id: "event-1",
+  });
 });

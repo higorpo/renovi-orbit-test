@@ -1,5 +1,6 @@
 import { assertEquals, assertThrows } from "std/testing/asserts";
 import {
+  buildResendEmailPayload,
   buildResendFromAddress,
   ResendConfigError,
   sendResendEmail,
@@ -168,6 +169,54 @@ Deno.test("buildResendFromAddress uses default name when RESEND_FROM_NAME unset"
     const from = buildResendFromAddress();
     assertEquals(from, "Renovi <noreply@app.com>");
   } finally {
+    Deno.env.delete("RESEND_FROM_EMAIL");
+  }
+});
+
+Deno.test("buildResendEmailPayload rejects blank recipient email", () => {
+  Deno.env.set("RESEND_FROM_EMAIL", "noreply@test.com");
+  try {
+    assertThrows(
+      () =>
+        buildResendEmailPayload({
+          recipientEmail: "   ",
+          subject: "Hi",
+          html: "<p>Hi</p>",
+          correlationId: "corr",
+        }),
+      Error,
+      "recipient_email is required",
+    );
+  } finally {
+    Deno.env.delete("RESEND_FROM_EMAIL");
+  }
+});
+
+Deno.test("sendResendEmail treats non-JSON response body as plain message", async () => {
+  Deno.env.set("RESEND_API_KEY", "re_test");
+  Deno.env.set("RESEND_FROM_EMAIL", "noreply@test.com");
+
+  const mockFetch: typeof fetch = async () =>
+    new Response("plain text failure", { status: 502 });
+
+  try {
+    const result = await sendResendEmail(
+      {
+        recipientEmail: "user@test.com",
+        subject: "Hi",
+        html: "<p>Hi</p>",
+        correlationId: "corr-plain",
+      },
+      { fetchFn: mockFetch, timeoutMs: 5000 },
+    );
+
+    assertEquals(result.ok, false);
+    if (!result.ok) {
+      assertEquals(result.errorMessage, "plain text failure");
+      assertEquals(result.errorCode, "resend_send_failed");
+    }
+  } finally {
+    Deno.env.delete("RESEND_API_KEY");
     Deno.env.delete("RESEND_FROM_EMAIL");
   }
 });

@@ -1,7 +1,7 @@
-import { assertEquals } from "std/testing/asserts";
-import { executeCharge } from "../executeCharge.ts";
+import { assertEquals, assertRejects } from "std/testing/asserts";
+import { executeCharge, toCreateChargeResult } from "../executeCharge.ts";
 import type { CronChargeSchedule } from "../types.ts";
-import type { CreateChargeInput } from "../../_shared/payment/types.ts";
+import type { CreateChargeInput, GetTransactionResult } from "../../_shared/payment/types.ts";
 
 const baseSchedule: CronChargeSchedule = {
   id: "schedule-1",
@@ -152,4 +152,166 @@ Deno.test("executeCharge skips pre-check getTransaction on first attempt", async
   );
 
   assertEquals(getTransactionCalled, false);
+});
+
+Deno.test("toCreateChargeResult maps PAID existing transaction to success", () => {
+  const existing: GetTransactionResult = {
+    transactionId: "tx-1",
+    referenceCode: "service-1",
+    transactionState: "PAID",
+    paidAmount: "1024.29",
+    chargeId: "417417",
+  };
+
+  const result = toCreateChargeResult(existing);
+  assertEquals(result.success, true);
+  assertEquals(result.transactionState, "PAID");
+  assertEquals(result.chargeId, "417417");
+  assertEquals(result.transactionId, "tx-1");
+});
+
+Deno.test("toCreateChargeResult maps IN_ANALYSIS existing transaction to terminal failure", () => {
+  const result = toCreateChargeResult({
+    transactionId: "tx-1",
+    referenceCode: "service-1",
+    transactionState: "IN_ANALYSIS",
+    chargeId: "417417",
+  });
+
+  assertEquals(result.success, false);
+  assertEquals(result.transactionState, "IN_ANALYSIS");
+  assertEquals(result.error?.code, "TERMINAL");
+  assertEquals(result.error?.originalCode, "IN_ANALYSIS");
+});
+
+Deno.test("toCreateChargeResult maps VOIDED existing transaction to terminal failure", () => {
+  const result = toCreateChargeResult({
+    transactionId: "tx-1",
+    referenceCode: "service-1",
+    transactionState: "VOIDED",
+    chargeId: "417417",
+  });
+
+  assertEquals(result.success, false);
+  assertEquals(result.transactionState, "VOIDED");
+  assertEquals(result.error?.code, "TERMINAL");
+});
+
+Deno.test("toCreateChargeResult maps REJECTED existing transaction to terminal failure", () => {
+  const result = toCreateChargeResult({
+    transactionId: "tx-1",
+    referenceCode: "service-1",
+    transactionState: "REJECTED",
+    chargeId: "417417",
+  });
+
+  assertEquals(result.success, false);
+  assertEquals(result.transactionState, "REJECTED");
+  assertEquals(result.error?.code, "TERMINAL");
+});
+
+Deno.test("toCreateChargeResult maps unknown existing state to REJECTED terminal", () => {
+  const result = toCreateChargeResult({
+    transactionId: "tx-1",
+    referenceCode: "service-1",
+    transactionState: "CANCELLED",
+    chargeId: "417417",
+  });
+
+  assertEquals(result.success, false);
+  assertEquals(result.transactionState, "REJECTED");
+  assertEquals(result.error?.originalCode, "CANCELLED");
+});
+
+Deno.test("REFERENCE_CODE_CONFLICT with non-terminal existing returns charged result", async () => {
+  const result = await executeCharge(
+    {
+      getTransaction: async () => ({
+        transactionId: "tx-conflict",
+        referenceCode: "service-1",
+        transactionState: "IN_ANALYSIS",
+        chargeId: "417417",
+      }),
+      createCharge: async () => ({
+        success: false,
+        error: {
+          code: "REFERENCE_CODE_CONFLICT",
+          message: "referenceCode already exists",
+        },
+      }),
+    },
+    { ...baseSchedule, automatic_attempt_count: 1 },
+    chargeInput,
+  );
+
+  assertEquals(result.kind, "charged");
+  if (result.kind === "charged") {
+    assertEquals(result.chargeResult.error?.code, "REFERENCE_CODE_CONFLICT");
+  }
+});
+
+Deno.test("REFERENCE_CODE_CONFLICT reconciles REJECTED existing transaction", async () => {
+  const result = await executeCharge(
+    {
+      getTransaction: async () => ({
+        transactionId: "tx-conflict",
+        referenceCode: "service-1",
+        transactionState: "REJECTED",
+        chargeId: "417417",
+      }),
+      createCharge: async () => ({
+        success: false,
+        error: {
+          code: "REFERENCE_CODE_CONFLICT",
+          message: "referenceCode already exists",
+        },
+      }),
+    },
+    { ...baseSchedule, automatic_attempt_count: 1 },
+    chargeInput,
+  );
+
+  assertEquals(result.kind, "reconciled");
+  if (result.kind === "reconciled") {
+    assertEquals(result.existing.transactionState, "REJECTED");
+  }
+});
+
+Deno.test("executeCharge reports gatewayLatencyMs from now stub", async () => {
+  let tick = 1_000;
+
+  const result = await executeCharge(
+    {
+      getTransaction: async () => null,
+      createCharge: async () => ({ success: true, transactionState: "PAID" }),
+      now: () => {
+        const value = tick;
+        tick += 250;
+        return value;
+      },
+    },
+    { ...baseSchedule, automatic_attempt_count: 1 },
+    chargeInput,
+  );
+
+  assertEquals(result.kind, "charged");
+  if (result.kind === "charged") {
+    assertEquals(result.gatewayLatencyMs, 250);
+  }
+});
+
+Deno.test("executeCharge throws when netcred company id is missing on retry lookup", async () => {
+  await assertRejects(
+    () =>
+      executeCharge(
+        {
+          getTransaction: async () => null,
+          createCharge: async () => ({ success: true, transactionState: "PAID" }),
+        },
+        { ...baseSchedule, netcred_company_id: null },
+        chargeInput,
+      ),
+    Error,
+    "NETCRED_COMPANY_ID_REQUIRED",
+  );
 });

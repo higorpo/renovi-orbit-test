@@ -7,6 +7,8 @@ import {
 } from "../processDispatch.ts";
 import { createWorkerWallClockBudget } from "../workerBudget.ts";
 import type { CheckoutDispatchDto } from "../types.ts";
+import { TemplateVariablesSizeError } from "../templateVariables.ts";
+import { TemplateSchemaValidationError } from "../validateTemplateSchema.ts";
 
 function emailItem(overrides: Partial<CheckoutDispatchDto> = {}): CheckoutDispatchDto {
   return {
@@ -267,4 +269,148 @@ Deno.test("processCheckoutItemsSequential handles empty batch gracefully", async
   assertEquals(result.succeeded, 0);
   assertEquals(result.failed, 0);
   assertEquals(result.skipped, 0);
+});
+
+Deno.test("processDispatch email: maps TemplateVariablesSizeError code on render failure", async () => {
+  const reportCalls: Array<{ errorCode?: string | null }> = [];
+  const deps = baseDeps({
+    renderEmailFromTemplate: () => {
+      throw new TemplateVariablesSizeError(9000);
+    },
+    reportDeliveryOutcome: async (_supabase, input) => {
+      reportCalls.push({ errorCode: input.errorCode });
+      return { applied: true, status: "FAILED_TERMINAL" };
+    },
+  });
+
+  const counts = await processDispatchItem(
+    {} as SupabaseClient,
+    emailItem(),
+    "worker-1",
+    deps,
+  );
+  assertEquals(counts.renderFailed, 1);
+  assertEquals(reportCalls[0]?.errorCode, "template_variables_too_large");
+});
+
+Deno.test("processDispatch email: maps TemplateSchemaValidationError code on render failure", async () => {
+  const reportCalls: Array<{ errorCode?: string | null }> = [];
+  const deps = baseDeps({
+    renderEmailFromTemplate: () => {
+      throw new TemplateSchemaValidationError("schema invalid");
+    },
+    reportDeliveryOutcome: async (_supabase, input) => {
+      reportCalls.push({ errorCode: input.errorCode });
+      return { applied: true, status: "FAILED_TERMINAL" };
+    },
+  });
+
+  const counts = await processDispatchItem(
+    {} as SupabaseClient,
+    emailItem(),
+    "worker-1",
+    deps,
+  );
+  assertEquals(counts.renderFailed, 1);
+  assertEquals(reportCalls[0]?.errorCode, "template_schema_invalid");
+});
+
+Deno.test("processDispatch email: continues when missing-email report throws", async () => {
+  const deps = baseDeps({
+    reportDeliveryOutcome: async () => {
+      throw new Error("report rpc down");
+    },
+  });
+  const counts = await processDispatchItem(
+    {} as SupabaseClient,
+    emailItem({ recipient_email: null }),
+    "worker-1",
+    deps,
+  );
+  assertEquals(counts.sendFailed, 1);
+});
+
+Deno.test("processDispatch email: continues when render-failure report throws", async () => {
+  const deps = baseDeps({
+    fetchEmailTemplate: async () => {
+      throw new Error("template missing");
+    },
+    reportDeliveryOutcome: async () => {
+      throw "report failed";
+    },
+  });
+  const counts = await processDispatchItem(
+    {} as SupabaseClient,
+    emailItem(),
+    "worker-1",
+    deps,
+  );
+  assertEquals(counts.renderFailed, 1);
+});
+
+Deno.test("processDispatch push: blank chat_id and deep_link_path are omitted", async () => {
+  let capturedChatId: string | undefined = "sentinel";
+  let capturedDeepLink: string | undefined = "sentinel";
+
+  const deps = baseDeps({
+    sendFcmPush: async (input) => {
+      capturedChatId = input.chatId;
+      capturedDeepLink = input.deepLinkPath;
+      return { ok: true, vendorMessageId: "fcm_1", httpStatus: 200 };
+    },
+  });
+
+  await processDispatchItem(
+    {} as SupabaseClient,
+    pushItem({
+      template_variables: {
+        name: "Test",
+        headline: "Hi",
+        body: "Body",
+        chat_id: "   ",
+        deep_link_path: "  ",
+      },
+    }),
+    "worker-1",
+    deps,
+  );
+
+  assertEquals(capturedChatId, undefined);
+  assertEquals(capturedDeepLink, undefined);
+});
+
+Deno.test("processDispatch push: sendFailed when success report is not applied", async () => {
+  const deps = baseDeps({
+    reportDeliveryOutcome: async () => ({
+      applied: false,
+      status: "PROCESSING",
+      reason: "stale_worker",
+    }),
+  });
+  const counts = await processDispatchItem(
+    {} as SupabaseClient,
+    pushItem(),
+    "worker-1",
+    deps,
+  );
+  assertEquals(counts.sendFailed, 1);
+  assertEquals(counts.sendSucceeded, 0);
+});
+
+Deno.test("processDispatch push: continues when render-failure report throws", async () => {
+  const deps = baseDeps({
+    fetchPushTemplate: async () => {
+      throw new Error("push template missing");
+    },
+    reportDeliveryOutcome: async () => {
+      throw new Error("report rpc down");
+    },
+  });
+  const counts = await processDispatchItem(
+    {} as SupabaseClient,
+    pushItem(),
+    "worker-1",
+    deps,
+  );
+  assertEquals(counts.renderFailed, 1);
 });

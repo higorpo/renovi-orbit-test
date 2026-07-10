@@ -94,3 +94,86 @@ Deno.test("dispatches alerts from cron bridge payload", async () => {
     }
   }
 });
+
+Deno.test("OPTIONS returns 204", async () => {
+  const response = await handlePaymentEmitSentryAlertsRequest(
+    new Request("https://example.com/payment-emit-sentry-alerts", {
+      method: "OPTIONS",
+    }),
+    { dispatchAlerts: async () => 0 },
+  );
+  assertEquals(response.status, 204);
+});
+
+Deno.test("non-POST returns 405", async () => {
+  Deno.env.set("ORBIT_CRON_SECRET", "orbit-cron-secret");
+  try {
+    const response = await handlePaymentEmitSentryAlertsRequest(
+      new Request("https://example.com/payment-emit-sentry-alerts", {
+        method: "GET",
+        headers: { "X-Orbit-Cron-Secret": "orbit-cron-secret" },
+      }),
+      { dispatchAlerts: async () => 0 },
+    );
+    assertEquals(response.status, 405);
+  } finally {
+    Deno.env.delete("ORBIT_CRON_SECRET");
+  }
+});
+
+Deno.test("invalid JSON returns 400", async () => {
+  Deno.env.set("ORBIT_CRON_SECRET", "orbit-cron-secret");
+  try {
+    const response = await handlePaymentEmitSentryAlertsRequest(
+      new Request("https://example.com/payment-emit-sentry-alerts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Orbit-Cron-Secret": "orbit-cron-secret",
+        },
+        body: "{bad",
+      }),
+      { dispatchAlerts: async () => 0 },
+    );
+    assertEquals(response.status, 400);
+    const body = await response.json();
+    assertEquals(body.error, "invalid_json");
+  } finally {
+    Deno.env.delete("ORBIT_CRON_SECRET");
+  }
+});
+
+Deno.test("missing or non-array alerts defaults to empty list", async () => {
+  Deno.env.set("ORBIT_CRON_SECRET", "orbit-cron-secret");
+  try {
+    const response = await handlePaymentEmitSentryAlertsRequest(
+      createRequest({ alerts: "nope" }, {
+        "X-Orbit-Cron-Secret": "orbit-cron-secret",
+      }),
+      { dispatchAlerts: async (alerts) => alerts.length },
+    );
+    const body = await response.json();
+    assertEquals(response.status, 200);
+    assertEquals(body.received, 0);
+    assertEquals(body.dispatched, 0);
+  } finally {
+    Deno.env.delete("ORBIT_CRON_SECRET");
+  }
+});
+
+Deno.test("null body parses as empty alerts", async () => {
+  Deno.env.set("ORBIT_CRON_SECRET", "orbit-cron-secret");
+  try {
+    const response = await handlePaymentEmitSentryAlertsRequest(
+      createRequest(null, {
+        "X-Orbit-Cron-Secret": "orbit-cron-secret",
+      }),
+      { dispatchAlerts: async (alerts) => alerts.length },
+    );
+    const body = await response.json();
+    assertEquals(response.status, 200);
+    assertEquals(body.received, 0);
+  } finally {
+    Deno.env.delete("ORBIT_CRON_SECRET");
+  }
+});

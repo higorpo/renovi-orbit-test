@@ -401,3 +401,206 @@ Deno.test("handleRequest source does not log raw card fields", async () => {
   assertEquals(source.includes("logger.info("), false);
   assertEquals(source.includes("console.log("), false);
 });
+
+Deno.test("OPTIONS returns 204 and non-POST returns 405", async () => {
+  const options = await handleTokenizePaymentCardRequest(
+    new Request("https://example.com/tokenize-payment-card", { method: "OPTIONS" }),
+    createDeps(),
+  );
+  assertEquals(options.status, 204);
+
+  const get = await handleTokenizePaymentCardRequest(
+    new Request("https://example.com/tokenize-payment-card", { method: "GET" }),
+    createDeps(),
+  );
+  assertEquals(get.status, 405);
+});
+
+Deno.test("rate limit exceeded returns HTTP 429 with Retry-After", async () => {
+  const response = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      providerServiceId: "proposal-1",
+      ...customerFields,
+    }),
+    createDeps({
+      checkRateLimit: async () => ({
+        allowed: false,
+        remaining: 0,
+        retryAfter: 30,
+      }),
+    }),
+  );
+
+  assertEquals(response.status, 429);
+  assertEquals(response.headers.get("Retry-After"), "30");
+  const body = await response.json();
+  assertEquals(body.error, "rate_limited");
+});
+
+Deno.test("provider_not_credentialed returns HTTP 409", async () => {
+  const response = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      providerServiceId: "proposal-1",
+      ...customerFields,
+    }),
+    createDeps({
+      resolveProviderAccount: async () => null,
+    }),
+  );
+
+  assertEquals(response.status, 409);
+  const body = await response.json();
+  assertEquals(body.error, "provider_not_credentialed");
+});
+
+Deno.test("persist failure returns HTTP 500", async () => {
+  const response = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      providerServiceId: "proposal-1",
+      ...customerFields,
+    }),
+    createDeps({
+      insertPaymentToken: async () => null,
+    }),
+  );
+
+  assertEquals(response.status, 500);
+  const body = await response.json();
+  assertEquals(body.error, "failed_to_persist_payment_token");
+});
+
+Deno.test("invalid CPF returns HTTP 422 before gateway call", async () => {
+  let tokenizeCalled = false;
+
+  const response = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      providerServiceId: "proposal-1",
+      cpf: "123.456.789-00",
+      phone: customerFields.phone,
+    }),
+    createDeps({
+      tokenizeCard: async () => {
+        tokenizeCalled = true;
+        return { isActive: true };
+      },
+    }),
+  );
+
+  assertEquals(response.status, 422);
+  assertEquals(tokenizeCalled, false);
+  const body = await response.json();
+  assertEquals(body.errors?.[0]?.code, "CPF_INVALID");
+});
+
+Deno.test("incomplete cardData returns HTTP 400", async () => {
+  const response = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData: { ...cardData, cardNumber: "" },
+      billingAddress,
+      providerServiceId: "proposal-1",
+      ...customerFields,
+    }),
+    createDeps(),
+  );
+
+  assertEquals(response.status, 400);
+  const body = await response.json();
+  assertEquals(body.error, "cardData is incomplete");
+});
+
+Deno.test("missing Authorization returns HTTP 401", async () => {
+  const response = await handleTokenizePaymentCardRequest(
+    new Request("https://example.com/tokenize-payment-card", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cardData,
+        billingAddress,
+        providerServiceId: "proposal-1",
+        ...customerFields,
+      }),
+    }),
+    createDeps(),
+  );
+
+  assertEquals(response.status, 401);
+});
+
+Deno.test("invalid JWT user returns HTTP 401", async () => {
+  const response = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      providerServiceId: "proposal-1",
+      ...customerFields,
+    }),
+    createDeps({
+      getUser: async () => ({ user: null, error: new Error("invalid") }),
+    }),
+  );
+  assertEquals(response.status, 401);
+});
+
+Deno.test("invalid JSON body returns HTTP 400", async () => {
+  const response = await handleTokenizePaymentCardRequest(
+    new Request("https://example.com/tokenize-payment-card", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer jwt-token",
+        "Content-Type": "application/json",
+      },
+      body: "{not-json",
+    }),
+    createDeps(),
+  );
+  assertEquals(response.status, 400);
+  const body = await response.json();
+  assertEquals(body.error, "Invalid JSON body");
+});
+
+Deno.test("inactive tokenization without errors array still returns 422", async () => {
+  const response = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      providerServiceId: "proposal-1",
+      ...customerFields,
+    }),
+    createDeps({
+      tokenizeCard: async () => ({
+        isActive: false,
+      }),
+    }),
+  );
+  assertEquals(response.status, 422);
+  const body = await response.json();
+  assertEquals(body.errors?.[0]?.message, "Tokenization failed");
+});
+
+Deno.test("inactive tokenization with empty errors array logs null error_code", async () => {
+  const response = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      providerServiceId: "proposal-1",
+      ...customerFields,
+    }),
+    createDeps({
+      tokenizeCard: async () => ({
+        isActive: false,
+        errors: [],
+      }),
+    }),
+  );
+  assertEquals(response.status, 422);
+  const body = await response.json();
+  assertEquals(body.errors, []);
+});

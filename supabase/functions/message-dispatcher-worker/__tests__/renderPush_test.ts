@@ -56,3 +56,33 @@ Deno.test("validateAndRenderPush preserves PT-BR date slashes in plain text", ()
     "Pagamento aprovado para Instalação elétrica, agendado para 26/03/2026, turno da manhã.",
   );
 });
+
+Deno.test("validateAndRenderPush uses empty title when subject_template is null", () => {
+  const rendered = validateAndRenderPush(
+    {
+      subject_template: null,
+      body_template: "{{body}}",
+      variable_schema: engagementPushSchema,
+    },
+    { name: "Ana", headline: "H", body: "Open" },
+  );
+  assertEquals(rendered.title, "");
+  assertEquals(rendered.body, "Open");
+});
+
+Deno.test("validateAndRenderPush stringifies nullish mustache values without HTML escape", () => {
+  const rendered = validateAndRenderPush(
+    {
+      subject_template: "{{missing}}",
+      body_template: "Hello {{name}}",
+      variable_schema: {
+        type: "object",
+        properties: { name: { type: "string" } },
+        additionalProperties: true,
+      },
+    },
+    { name: "Ana", missing: null },
+  );
+  assertEquals(rendered.title, "");
+  assertEquals(rendered.body, "Hello Ana");
+});

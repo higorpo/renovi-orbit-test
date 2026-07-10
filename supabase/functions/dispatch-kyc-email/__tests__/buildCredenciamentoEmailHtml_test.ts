@@ -78,4 +78,51 @@ Deno.test("buildCredenciamentoEmailHtml includes PJ representative fields", () =
   assertEquals(html.includes("Empresa LTDA"), true);
   assertEquals(html.includes("Maria Souza"), true);
   assertEquals(html.includes("contrato social"), true);
+  assertEquals(html.includes("12.345.678/0001-90"), true);
+});
+
+Deno.test("buildCredenciamentoEmailSubject falls back to document for PJ without razaoSocial", () => {
+  assertEquals(
+    buildCredenciamentoEmailSubject({
+      ...baseContext,
+      gatewayAccount: {
+        ...baseContext.gatewayAccount,
+        document: "12345678000190",
+      },
+      privateProfile: {
+        ...baseContext.privateProfile,
+        entityType: "pj",
+        razaoSocial: null,
+      },
+    }),
+    "[Renovi] Credenciamento prestador — 12345678000190",
+  );
+});
+
+Deno.test("buildCredenciamentoEmailHtml leaves unformatted documents as-is and skips blank rows", () => {
+  const html = buildCredenciamentoEmailHtml({
+    ...baseContext,
+    gatewayAccount: {
+      ...baseContext.gatewayAccount,
+      document: "123",
+    },
+    profile: {
+      fullName: "A & B <C>",
+      phone: "",
+      email: "a@example.com",
+    },
+    privateProfile: {
+      ...baseContext.privateProfile,
+      bankInstitutionCode: "",
+      bankBranch: "  ",
+      bankAccount: "56789-0",
+      pixKey: null,
+    },
+  });
+
+  assertEquals(html.includes("123"), true);
+  assertEquals(html.includes("A &amp; B &lt;C&gt;"), true);
+  assertEquals(html.includes("Código do banco"), false);
+  assertEquals(html.includes("Agência"), false);
+  assertEquals(html.includes("Conta corrente"), true);
 });

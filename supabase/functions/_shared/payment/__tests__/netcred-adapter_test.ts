@@ -458,3 +458,513 @@ Deno.test("NetCredAdapter.createCharge emits gateway span for chargeCreate", asy
     setGatewaySpanRecorderForTests(null);
   }
 });
+
+Deno.test("createCharge returns RETRYABLE when chargeCreate has no transaction state", async () => {
+  const adapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () =>
+      new Response(
+        JSON.stringify({
+          data: {
+            chargeCreate: {
+              errors: [],
+              charge: {
+                id: "417417",
+                referenceCode: "c4a81f63-2d9e-4b1c-8e7a-1f0d9c8b7a6e",
+                transactions: { edges: [{ node: { id: "tx-1", amount: "1000.00" } }] },
+              },
+            },
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+  });
+
+  const result = await adapter.createCharge(sampleChargeInput());
+
+  assertEquals(result.success, false);
+  assertEquals(result.error?.code, "RETRYABLE");
+  assertEquals(result.error?.message, "chargeCreate returned no transaction state");
+});
+
+Deno.test("createCharge maps terminal gateway errors to TERMINAL", async () => {
+  const adapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () =>
+      new Response(
+        JSON.stringify({
+          data: {
+            chargeCreate: {
+              errors: [{ code: "CPF_INVALID", message: "invalid cpf" }],
+              charge: null,
+            },
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+  });
+
+  const result = await adapter.createCharge(sampleChargeInput());
+
+  assertEquals(result.success, false);
+  assertEquals(result.error?.code, "TERMINAL");
+  assertEquals(result.error?.originalCode, "CPF_INVALID");
+  assertEquals(result.error?.message, "invalid cpf");
+});
+
+Deno.test("createCharge maps REJECTED gateway error code to REJECTED transactionState", async () => {
+  const adapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () =>
+      new Response(
+        JSON.stringify({
+          data: {
+            chargeCreate: {
+              errors: [{ code: "REJECTED", message: "antifraud" }],
+              charge: null,
+            },
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+  });
+
+  const result = await adapter.createCharge(sampleChargeInput());
+
+  assertEquals(result.success, false);
+  assertEquals(result.transactionState, "REJECTED");
+  assertEquals(result.error?.code, "TERMINAL");
+  assertEquals(result.error?.originalCode, "REJECTED");
+});
+
+Deno.test("createCharge maps INTERNAL_SERVER_ERROR and unknown gateway errors to RETRYABLE", async () => {
+  const adapterInternal = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () =>
+      new Response(
+        JSON.stringify({
+          data: {
+            chargeCreate: {
+              errors: [{ code: "INTERNAL_SERVER_ERROR", message: "upstream" }],
+              charge: null,
+            },
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+  });
+
+  const internal = await adapterInternal.createCharge(sampleChargeInput());
+  assertEquals(internal.success, false);
+  assertEquals(internal.error?.code, "RETRYABLE");
+  assertEquals(internal.error?.message, "upstream");
+
+  const adapterUnknown = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () =>
+      new Response(
+        JSON.stringify({
+          data: {
+            chargeCreate: {
+              errors: [{ code: "RATE_LIMITED", message: "slow down" }],
+              charge: null,
+            },
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+  });
+
+  const unknown = await adapterUnknown.createCharge(sampleChargeInput());
+  assertEquals(unknown.success, false);
+  assertEquals(unknown.error?.code, "RETRYABLE");
+  assertEquals(unknown.error?.message, "slow down");
+});
+
+Deno.test("createCharge maps TypeError network failure to RETRYABLE", async () => {
+  const adapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () => {
+      throw new TypeError("fetch failed");
+    },
+  });
+
+  const result = await adapter.createCharge(sampleChargeInput());
+
+  assertEquals(result.success, false);
+  assertEquals(result.error?.code, "RETRYABLE");
+  assertEquals(result.error?.message, "fetch failed");
+});
+
+Deno.test("createCharge rethrows non-network errors", async () => {
+  const adapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () => {
+      throw new Error("unexpected adapter failure");
+    },
+  });
+
+  await assertRejects(
+    () => adapter.createCharge(sampleChargeInput()),
+    Error,
+    "unexpected adapter failure",
+  );
+});
+
+Deno.test("referenceCode conflict reconciles existing REJECTED as TERMINAL", async () => {
+  const referenceCode = "c4a81f63-2d9e-4b1c-8e7a-1f0d9c8b7a6e";
+  let callCount = 0;
+
+  const adapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () => {
+      callCount += 1;
+      if (callCount === 1) {
+        return new Response(
+          JSON.stringify({
+            data: {
+              chargeCreate: {
+                errors: [{
+                  code: "REFERENCE_CODE_CONFLICT",
+                  message: "referenceCode conflict",
+                  field: "referenceCode",
+                }],
+                charge: null,
+              },
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return transactionsResponse("REJECTED", referenceCode);
+    },
+  });
+
+  const result = await adapter.createCharge(sampleChargeInput(referenceCode));
+
+  assertEquals(result.success, false);
+  assertEquals(result.transactionState, "REJECTED");
+  assertEquals(result.error?.code, "TERMINAL");
+  assertEquals(result.error?.originalCode, "REJECTED");
+  assertEquals(result.transactionId, "tx-existing");
+});
+
+Deno.test("referenceCode conflict with unreconcilable state is TERMINAL", async () => {
+  const referenceCode = "c4a81f63-2d9e-4b1c-8e7a-1f0d9c8b7a6e";
+  let callCount = 0;
+
+  const adapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () => {
+      callCount += 1;
+      if (callCount === 1) {
+        return new Response(
+          JSON.stringify({
+            data: {
+              chargeCreate: {
+                errors: [{
+                  message: "duplicate reference code",
+                }],
+                charge: null,
+              },
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return transactionsResponse("PROCESSING", referenceCode);
+    },
+  });
+
+  const result = await adapter.createCharge(sampleChargeInput(referenceCode));
+
+  assertEquals(result.success, false);
+  assertEquals(result.transactionState, "PROCESSING");
+  assertEquals(result.error?.code, "TERMINAL");
+  assertEquals(result.error?.originalCode, "PROCESSING");
+});
+
+Deno.test("referenceCode conflict reconciles existing IN_ANALYSIS as success", async () => {
+  const referenceCode = "c4a81f63-2d9e-4b1c-8e7a-1f0d9c8b7a6e";
+  let callCount = 0;
+
+  const adapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () => {
+      callCount += 1;
+      if (callCount === 1) {
+        return new Response(
+          JSON.stringify({
+            data: {
+              chargeCreate: {
+                errors: [{
+                  code: "DUPLICATE_REFERENCE_CODE",
+                  message: "already exists",
+                }],
+                charge: null,
+              },
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return transactionsResponse("IN_ANALYSIS", referenceCode);
+    },
+  });
+
+  const result = await adapter.createCharge(sampleChargeInput(referenceCode));
+
+  assertEquals(result.success, true);
+  assertEquals(result.transactionState, "IN_ANALYSIS");
+  assertEquals(result.transactionId, "tx-existing");
+});
+
+Deno.test("reconcileFromExisting returns REFERENCE_CODE_CONFLICT when existing is null", () => {
+  const adapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+  });
+
+  const result = adapter.reconcileFromExisting(null, "ref");
+
+  assertEquals(result.success, false);
+  assertEquals(result.error?.code, "REFERENCE_CODE_CONFLICT");
+  assertEquals(result.error?.originalCode, "REFERENCE_CODE_CONFLICT_UNRESOLVABLE");
+});
+
+Deno.test("processWebhookEvent always delegates to edge function", async () => {
+  const adapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+  });
+
+  const result = await adapter.processWebhookEvent({
+    gatewaySlug: "netcred",
+    eventType: "charge.paid",
+    providerEventId: "evt-1",
+    rawPayload: {},
+    rawHeaders: {},
+    webhookEventId: "wh-1",
+  });
+
+  assertEquals(result.handled, false);
+  assertEquals(result.skippedReason, "WEBHOOK_PROCESSING_DELEGATED_TO_EDGE_FUNCTION");
+});
+
+Deno.test("refundTransaction success and invalid transactionId", async () => {
+  const successAdapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () =>
+      new Response(
+        JSON.stringify({
+          data: {
+            transactionRefund: {
+              errors: [],
+              transaction: { id: "444677", transactionState: "REFUNDED" },
+            },
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+  });
+
+  const ok = await successAdapter.refundTransaction({
+    transactionId: "444677",
+    amount: "10.00",
+  });
+  assertEquals(ok.success, true);
+
+  const invalidAdapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () => new Response("{}", { status: 200 }),
+  });
+
+  const invalid = await invalidAdapter.refundTransaction({ transactionId: "abc" });
+  assertEquals(invalid.success, false);
+  assertEquals(invalid.error?.code, "UNKNOWN");
+  assertEquals(invalid.error?.message, "Invalid transactionId");
+});
+
+Deno.test("refundTransaction maps gateway error codes", async () => {
+  async function refundWithError(code: string, message: string) {
+    const adapter = new NetCredAdapter({
+      supabase: createSupabaseStub(),
+      platformBankAccountId: "2052",
+      graphqlUrl: TEST_GRAPHQL_URL,
+      fetchFn: async () =>
+        new Response(
+          JSON.stringify({
+            data: {
+              transactionRefund: {
+                errors: [{ code, message }],
+                transaction: null,
+              },
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+    });
+    return adapter.refundTransaction({ transactionId: "444677" });
+  }
+
+  const notFound = await refundWithError("TRANSACTION_DOES_NOT_EXIST", "missing");
+  assertEquals(notFound.success, false);
+  assertEquals(notFound.error?.code, "TRANSACTION_NOT_FOUND");
+
+  const invalidAmount = await refundWithError(
+    "TRANSACTION_INVALID_REFUND_AMOUNT",
+    "amount too high",
+  );
+  assertEquals(invalidAmount.success, false);
+  assertEquals(invalidAmount.error?.code, "INVALID_REFUND_AMOUNT");
+
+  const alreadyZero = await refundWithError(
+    "TRANSACTION_INVALID_REFUND_AMOUNT",
+    "Refundable amount (0.00)",
+  );
+  assertEquals(alreadyZero.success, true);
+  assertEquals(alreadyZero.error?.code, "ALREADY_REFUNDED");
+
+  const unknown = await refundWithError("WEIRD", "no idea");
+  assertEquals(unknown.success, false);
+  assertEquals(unknown.error?.code, "UNKNOWN");
+});
+
+Deno.test("refundTransaction maps network error to UNKNOWN", async () => {
+  const adapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () => {
+      throw new TypeError("offline");
+    },
+  });
+
+  const result = await adapter.refundTransaction({ transactionId: "444677" });
+
+  assertEquals(result.success, false);
+  assertEquals(result.error?.code, "UNKNOWN");
+  assertEquals(result.error?.message, "offline");
+});
+
+Deno.test("tokenizeCard maps gateway errors and inactive profile without reason", async () => {
+  const gatewayErrorAdapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () =>
+      new Response(
+        JSON.stringify({
+          data: {
+            paymentProfileCreate: {
+              errors: [{ code: "CARD_INVALID", message: "bad card" }],
+              paymentProfile: null,
+            },
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+  });
+
+  const gatewayError = await gatewayErrorAdapter.tokenizeCard(sampleTokenizeInput());
+  assertEquals(gatewayError.isActive, false);
+  assertEquals(gatewayError.errors?.[0]?.code, "CARD_INVALID");
+  assertEquals(gatewayError.errors?.[0]?.message, "bad card");
+
+  const inactiveAdapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () =>
+      new Response(
+        JSON.stringify({
+          data: {
+            paymentProfileCreate: {
+              errors: [],
+              paymentProfile: { id: "1", isActive: false },
+            },
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+  });
+
+  const inactive = await inactiveAdapter.tokenizeCard(sampleTokenizeInput());
+  assertEquals(inactive.isActive, false);
+  assertEquals(inactive.errors?.[0]?.code, "PAYMENT_PROFILE_INACTIVE");
+  assertEquals(inactive.errors?.[0]?.message, "Tokenization failed");
+});
+
+Deno.test("tokenizeCard maps network error and throws for invalid companyId", async () => {
+  const networkAdapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () => {
+      throw new TypeError("tokenize offline");
+    },
+  });
+
+  const network = await networkAdapter.tokenizeCard(sampleTokenizeInput());
+  assertEquals(network.isActive, false);
+  assertEquals(network.errors?.[0]?.message, "tokenize offline");
+
+  const invalidCompanyAdapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () => new Response("{}", { status: 200 }),
+  });
+
+  await assertRejects(
+    () =>
+      invalidCompanyAdapter.tokenizeCard({
+        ...sampleTokenizeInput(),
+        customerInput: { companyId: "bad", persist: false },
+      }),
+    Error,
+    "TOKENIZE_COMPANY_ID_REQUIRED",
+  );
+});
+
+Deno.test("createCharge accepts graphqlUrl override without /graphql suffix", async () => {
+  let requestedUrl = "";
+  const adapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: "https://api.netcredbrasil.com.br/",
+    fetchFn: async (url) => {
+      requestedUrl = String(url);
+      return chargeCreateResponse("PAID");
+    },
+  });
+
+  await adapter.createCharge(sampleChargeInput());
+  assertEquals(requestedUrl, "https://api.netcredbrasil.com.br/graphql");
+});

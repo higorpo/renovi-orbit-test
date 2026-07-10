@@ -108,3 +108,19 @@ Deno.test("isRetryableProviderFailure returns false for FCM invalid token even w
 Deno.test("isRetryableProviderFailure returns false for Resend terminal even with 0 status", () => {
   assertEquals(isRetryableProviderFailure(400, "invalid_email"), false);
 });
+
+Deno.test("isInvalidFcmTokenError recognizes invalid+token combination", () => {
+  assertEquals(isInvalidFcmTokenError(400, "INVALID_ARGUMENT_TOKEN"), true);
+  assertEquals(isInvalidFcmTokenError(400, "not_found_entity"), true);
+  assertEquals(isInvalidFcmTokenError(400, "other"), false);
+});
+
+Deno.test("normalizeResendErrorCode defaults terminal 400 without email hint", () => {
+  assertEquals(normalizeResendErrorCode(400, "bad_request"), "bad_request");
+  assertEquals(normalizeResendErrorCode(400, null), "resend_terminal");
+});
+
+Deno.test("isRetryableProviderFailure returns false for non-retryable statuses", () => {
+  assertEquals(isRetryableProviderFailure(500, "INTERNAL"), false);
+  assertEquals(isRetryableProviderFailure(0, "other"), false);
+});

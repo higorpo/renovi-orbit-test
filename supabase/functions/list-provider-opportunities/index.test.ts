@@ -270,3 +270,99 @@ Deno.test("maps generic RPC failure to 500", async () => {
   const body = await response.json();
   assertEquals(body.error, "Failed to fetch opportunities");
 });
+
+Deno.test("OPTIONS returns 204 and non-POST returns 405", async () => {
+  const options = await handleListProviderOpportunitiesRequest(
+    new Request("https://example.com/list-provider-opportunities", { method: "OPTIONS" }),
+    createDeps(),
+  );
+  assertEquals(options.status, 204);
+
+  const get = await handleListProviderOpportunitiesRequest(
+    new Request("https://example.com/list-provider-opportunities", { method: "GET" }),
+    createDeps(),
+  );
+  assertEquals(get.status, 405);
+});
+
+Deno.test("returns 500 when profile lookup fails", async () => {
+  const response = await handleListProviderOpportunitiesRequest(
+    authedRequest(),
+    createDeps({
+      getProfile: async () => ({ profile: null, error: new Error("db") }),
+    }),
+  );
+  assertEquals(response.status, 500);
+  const body = await response.json();
+  assertEquals(body.error, "Failed to load profile");
+});
+
+Deno.test("returns 400 for invalid JSON body", async () => {
+  const response = await handleListProviderOpportunitiesRequest(
+    requestWith({
+      headers: { Authorization: "Bearer token" },
+      body: "{not-json",
+    }),
+    createDeps(),
+  );
+  assertEquals(response.status, 400);
+  const body = await response.json();
+  assertEquals(body.error, "Invalid JSON body");
+});
+
+Deno.test("returns 400 when only one coordinate is provided", async () => {
+  const response = await handleListProviderOpportunitiesRequest(
+    authedRequest({ lat: -23.5 }),
+    createDeps(),
+  );
+  assertEquals(response.status, 400);
+  const body = await response.json();
+  assertEquals(body.error, "lat and lng must both be provided when either is set");
+});
+
+Deno.test("returns 400 when nearest sort lacks coordinates", async () => {
+  const response = await handleListProviderOpportunitiesRequest(
+    authedRequest({ sort_mode: "nearest" }),
+    createDeps(),
+  );
+  assertEquals(response.status, 400);
+  const body = await response.json();
+  assertEquals(body.error, "nearest sort requires lat and lng");
+});
+
+Deno.test("returns empty feed when RPC data is null", async () => {
+  const response = await handleListProviderOpportunitiesRequest(
+    authedRequest(),
+    createDeps({
+      listOpportunities: async () => ({ data: null, error: null }),
+    }),
+  );
+  assertEquals(response.status, 200);
+  assertEquals(await response.json(), EMPTY_FEED_RESPONSE);
+});
+
+Deno.test("validateCoordinates accepts valid pair and rejects out-of-range lng", () => {
+  assertEquals(validateCoordinates(-23.5, -46.6), null);
+  assertEquals(validateCoordinates(0, 181), "Valid lat (-90..90) and lng (-180..180) are required");
+});
+
+Deno.test("validateNearestSortRequiresCoordinates accepts nearest with coords", () => {
+  assertEquals(validateNearestSortRequiresCoordinates("nearest", -23.5, -46.6), null);
+});
+
+Deno.test("parseListProviderOpportunitiesBody nulls blank cursor and clamps non-finite limit", () => {
+  assertEquals(
+    parseListProviderOpportunitiesBody({
+      cursor: "   ",
+      limit: Number.NaN,
+      sort_mode: "newest",
+    }),
+    {
+      sortMode: "newest",
+      cursor: null,
+      limit: 20,
+      lat: null,
+      lng: null,
+    },
+  );
+});

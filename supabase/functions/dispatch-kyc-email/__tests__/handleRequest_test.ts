@@ -205,3 +205,212 @@ Deno.test("email mismatch with auth user returns 403", async () => {
   const body = await response.json();
   assertEquals(body.error_code, "FORBIDDEN");
 });
+
+Deno.test("OPTIONS returns 204", async () => {
+  const response = await handleDispatchKycEmailRequest(
+    new Request("https://example.com/dispatch-kyc-email", { method: "OPTIONS" }),
+    createDeps(),
+  );
+  assertEquals(response.status, 204);
+});
+
+Deno.test("non-POST returns 405", async () => {
+  const response = await handleDispatchKycEmailRequest(
+    new Request("https://example.com/dispatch-kyc-email", { method: "GET" }),
+    createDeps(),
+  );
+  assertEquals(response.status, 405);
+});
+
+Deno.test("missing gateway account returns INVALID_ONBOARDING_STATE", async () => {
+  const response = await handleDispatchKycEmailRequest(
+    authRequest(cpfBody),
+    createDeps({
+      loadGatewayAccount: async () => null,
+    }),
+  );
+  assertEquals(response.status, 409);
+  const body = await response.json();
+  assertEquals(body.error_code, "INVALID_ONBOARDING_STATE");
+});
+
+Deno.test("wrong onboarding status returns INVALID_ONBOARDING_STATE", async () => {
+  const response = await handleDispatchKycEmailRequest(
+    authRequest(cpfBody),
+    createDeps({
+      loadGatewayAccount: async () => ({
+        ...gatewayAccount,
+        onboarding_status: "PENDING_DOCUMENTS",
+      }),
+    }),
+  );
+  assertEquals(response.status, 409);
+  const body = await response.json();
+  assertEquals(body.error_code, "INVALID_ONBOARDING_STATE");
+});
+
+Deno.test("storage download failure returns STORAGE_DOWNLOAD_FAILED", async () => {
+  const response = await handleDispatchKycEmailRequest(
+    authRequest(cpfBody),
+    createDeps({
+      downloadStorageObject: async () => ({
+        data: null,
+        error: "object missing",
+      }),
+    }),
+  );
+  assertEquals(response.status, 502);
+  const body = await response.json();
+  assertEquals(body.error_code, "STORAGE_DOWNLOAD_FAILED");
+});
+
+Deno.test("markEmailDispatched failure returns MARK_DISPATCHED_FAILED", async () => {
+  const response = await handleDispatchKycEmailRequest(
+    authRequest(cpfBody),
+    createDeps({
+      markEmailDispatched: async () => {
+        throw new Error("db write failed");
+      },
+    }),
+  );
+  assertEquals(response.status, 500);
+  const body = await response.json();
+  assertEquals(body.error_code, "MARK_DISPATCHED_FAILED");
+  assertEquals(body.email_pending, true);
+});
+
+Deno.test("rate limit exceeded returns 429", async () => {
+  const response = await handleDispatchKycEmailRequest(
+    authRequest(cpfBody),
+    createDeps({
+      checkRateLimit: async () => ({
+        allowed: false,
+        remaining: 0,
+        retryAfter: 20,
+      }),
+    }),
+  );
+  assertEquals(response.status, 429);
+  assertEquals(response.headers.get("Retry-After"), "20");
+});
+
+Deno.test("invalid JSON body returns INVALID_JSON", async () => {
+  const response = await handleDispatchKycEmailRequest(
+    new Request("https://example.com/dispatch-kyc-email", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer jwt-token",
+        "Content-Type": "application/json",
+      },
+      body: "{not-json",
+    }),
+    createDeps(),
+  );
+  assertEquals(response.status, 400);
+  const body = await response.json();
+  assertEquals(body.error_code, "INVALID_JSON");
+});
+
+Deno.test("invalid JWT user returns 401", async () => {
+  const response = await handleDispatchKycEmailRequest(
+    authRequest(cpfBody),
+    createDeps({
+      getUser: async () => ({ user: null, error: new Error("bad token") }),
+    }),
+  );
+  assertEquals(response.status, 401);
+});
+
+Deno.test("missing auth email returns 401", async () => {
+  const response = await handleDispatchKycEmailRequest(
+    authRequest(cpfBody),
+    createDeps({
+      getUser: async () => ({ user: { id: "provider-1" }, error: null }),
+    }),
+  );
+  assertEquals(response.status, 401);
+});
+
+Deno.test("document mismatch returns DOCUMENT_MISMATCH", async () => {
+  const response = await handleDispatchKycEmailRequest(
+    authRequest({ ...cpfBody, document: "11144477735" }),
+    createDeps(),
+  );
+  assertEquals(response.status, 409);
+  const body = await response.json();
+  assertEquals(body.error_code, "DOCUMENT_MISMATCH");
+  assertEquals(body.field, "document");
+});
+
+Deno.test("missing provider KYC context returns PROVIDER_PROFILE_NOT_FOUND", async () => {
+  const response = await handleDispatchKycEmailRequest(
+    authRequest(cpfBody),
+    createDeps({
+      loadProviderKycContext: async () => null,
+    }),
+  );
+  assertEquals(response.status, 404);
+  const body = await response.json();
+  assertEquals(body.error_code, "PROVIDER_PROFILE_NOT_FOUND");
+});
+
+Deno.test("entity type mismatch returns DOCUMENT_MISMATCH on entity_type", async () => {
+  const response = await handleDispatchKycEmailRequest(
+    authRequest(cpfBody),
+    createDeps({
+      loadProviderKycContext: async () => ({
+        ...kycContext,
+        privateProfile: {
+          ...kycContext.privateProfile,
+          entityType: "pj",
+          razaoSocial: "Empresa LTDA",
+          nomeFantasia: "Empresa",
+          legalRepresentativeName: "Rep",
+          legalRepresentativeCpf: "39053344705",
+          legalRepresentativePhone: "48988887777",
+          corporateCharterStoragePath: "providers/provider-1/kyc/corporate-charter/document.pdf",
+          legalRepDocStoragePath: "providers/provider-1/kyc/legal-rep-doc/document.pdf",
+        },
+      }),
+    }),
+  );
+  assertEquals(response.status, 409);
+  const body = await response.json();
+  assertEquals(body.error_code, "DOCUMENT_MISMATCH");
+  assertEquals(body.field, "entity_type");
+});
+
+Deno.test("already dispatched still succeeds when notification ingest fails", async () => {
+  const response = await handleDispatchKycEmailRequest(
+    authRequest(cpfBody),
+    createDeps({
+      loadGatewayAccount: async () => ({
+        ...gatewayAccount,
+        email_dispatched_at: "2026-07-01T00:00:00.000Z",
+      }),
+      ingestProviderKycSubmitted: async () => {
+        throw new Error("notify failed");
+      },
+      sendCredenciamentoEmail: async () => {
+        throw new Error("should not send");
+      },
+    }),
+  );
+  assertEquals(response.status, 200);
+  const body = await response.json();
+  assertEquals(body.email_dispatched, true);
+});
+
+Deno.test("successful dispatch still returns 200 when post-send notification fails", async () => {
+  const response = await handleDispatchKycEmailRequest(
+    authRequest(cpfBody),
+    createDeps({
+      ingestProviderKycSubmitted: async () => {
+        throw new Error("notify failed");
+      },
+    }),
+  );
+  assertEquals(response.status, 200);
+  const body = await response.json();
+  assertEquals(body.email_dispatched, true);
+});

@@ -61,3 +61,47 @@ Deno.test("parseFormData accepts file[] fields and optional idempotency_key", ()
     assertEquals(result.files.length, 1);
   }
 });
+
+Deno.test("parseFormData rejects empty audio upload with audio-specific message", () => {
+  const form = new FormData();
+  form.append("chat_id", "chat-1");
+  form.append("upload_session_id", "session-1");
+  form.append("media_kind", "audio");
+
+  const result = parseFormData(form);
+  assertEquals(result.ok, false);
+  if (!result.ok) {
+    assertEquals(result.error, "An audio file is required.");
+  }
+});
+
+Deno.test("parseFormData accepts file[0] field names and omits blank idempotency_key", () => {
+  const form = new FormData();
+  form.append("chat_id", "chat-1");
+  form.append("upload_session_id", "session-1");
+  form.append("idempotency_key", "   ");
+  form.append("media_kind", "AUDIO");
+  form.append("file[0]", jpegFile("voice.jpg"));
+
+  const result = parseFormData(form);
+  assertEquals(result.ok, true);
+  if (result.ok) {
+    assertEquals(result.mediaKind, "audio");
+    assertEquals(result.idempotencyKey, undefined);
+    assertEquals(result.files.length, 1);
+  }
+});
+
+Deno.test("parseFormData ignores zero-size files and non-file fields", () => {
+  const form = new FormData();
+  form.append("chat_id", "chat-1");
+  form.append("upload_session_id", "session-1");
+  form.append("file", new File([], "empty.jpg", { type: "image/jpeg" }));
+  form.append("notes", "not a file");
+
+  const result = parseFormData(form);
+  assertEquals(result.ok, false);
+  if (!result.ok) {
+    assertEquals(result.error, "At least one image file is required.");
+  }
+});

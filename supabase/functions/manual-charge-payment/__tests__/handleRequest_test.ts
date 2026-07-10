@@ -214,3 +214,204 @@ Deno.test("manual charge uses gateway_reference_code from lease", async () => {
   assertEquals(response.status, 200);
   assertEquals(referenceCode, rotatedReference);
 });
+
+Deno.test("OPTIONS returns 204 and non-POST returns 405", async () => {
+  const options = await handleManualChargePaymentRequest(
+    new Request("https://example.com/manual-charge-payment", { method: "OPTIONS" }),
+    createDeps(),
+  );
+  assertEquals(options.status, 204);
+
+  const get = await handleManualChargePaymentRequest(
+    new Request("https://example.com/manual-charge-payment", { method: "GET" }),
+    createDeps(),
+  );
+  assertEquals(get.status, 405);
+});
+
+Deno.test("missing Authorization returns HTTP 401", async () => {
+  const response = await handleManualChargePaymentRequest(
+    new Request("https://example.com/manual-charge-payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        schedule_id: "schedule-1",
+        clearsale_session_id: "fresh-clearsale-uuid",
+      }),
+    }),
+    createDeps(),
+  );
+
+  assertEquals(response.status, 401);
+});
+
+Deno.test("missing schedule_id returns HTTP 400", async () => {
+  const response = await handleManualChargePaymentRequest(
+    authRequest({ clearsale_session_id: "fresh-clearsale-uuid" }),
+    createDeps(),
+  );
+
+  assertEquals(response.status, 400);
+  const body = await response.json();
+  assertEquals(body.error, "schedule_id is required");
+});
+
+Deno.test("missing clearsale_session_id returns HTTP 400", async () => {
+  const response = await handleManualChargePaymentRequest(
+    authRequest({ schedule_id: "schedule-1" }),
+    createDeps(),
+  );
+
+  assertEquals(response.status, 400);
+  const body = await response.json();
+  assertEquals(body.error_code, "CLEARSALE_SESSION_REQUIRED");
+});
+
+Deno.test("SCHEDULE_NOT_FOUND acquire error returns HTTP 404", async () => {
+  const response = await handleManualChargePaymentRequest(
+    authRequest({
+      schedule_id: "missing",
+      clearsale_session_id: "fresh-clearsale-uuid",
+    }),
+    createDeps({
+      acquireLease: async () => ({ error: "SCHEDULE_NOT_FOUND" }),
+    }),
+  );
+
+  assertEquals(response.status, 404);
+  const body = await response.json();
+  assertEquals(body.error_code, "SCHEDULE_NOT_FOUND");
+});
+
+Deno.test("missing client_card_token_id returns PAYMENT_TOKEN_MISSING", async () => {
+  const response = await handleManualChargePaymentRequest(
+    authRequest({
+      schedule_id: "schedule-1",
+      clearsale_session_id: "fresh-clearsale-uuid",
+    }),
+    createDeps({
+      acquireLease: async () => ({
+        schedule: {
+          ...baseSchedule,
+          client_card_token_id: null,
+          clearsale_session_id: "fresh-clearsale-uuid",
+        },
+      }),
+    }),
+  );
+
+  assertEquals(response.status, 422);
+  const body = await response.json();
+  assertEquals(body.error_code, "PAYMENT_TOKEN_MISSING");
+});
+
+Deno.test("inactive payment token returns PAYMENT_TOKEN_INACTIVE", async () => {
+  const response = await handleManualChargePaymentRequest(
+    authRequest({
+      schedule_id: "schedule-1",
+      clearsale_session_id: "fresh-clearsale-uuid",
+    }),
+    createDeps({
+      loadPaymentToken: async () => ({
+        id: "token-1",
+        gateway_payment_profile_id: "403137",
+        gateway_card_token: "tok",
+        state: "INACTIVE",
+      }),
+    }),
+  );
+
+  assertEquals(response.status, 422);
+  const body = await response.json();
+  assertEquals(body.error_code, "PAYMENT_TOKEN_INACTIVE");
+});
+
+Deno.test("provider not credentialed returns PROVIDER_NOT_CREDENTIALED", async () => {
+  const response = await handleManualChargePaymentRequest(
+    authRequest({
+      schedule_id: "schedule-1",
+      clearsale_session_id: "fresh-clearsale-uuid",
+    }),
+    createDeps({
+      loadProviderAccount: async () => ({
+        provider_id: "provider-1",
+        netcred_company_id: null,
+        netcred_bank_account_id: null,
+        onboarding_status: "PENDING",
+      }),
+    }),
+  );
+
+  assertEquals(response.status, 422);
+  const body = await response.json();
+  assertEquals(body.error_code, "PROVIDER_NOT_CREDENTIALED");
+});
+
+Deno.test("charge amount calculation failure returns HTTP 500", async () => {
+  const response = await handleManualChargePaymentRequest(
+    authRequest({
+      schedule_id: "schedule-1",
+      clearsale_session_id: "fresh-clearsale-uuid",
+    }),
+    createDeps({
+      calculateChargeAmount: async () => null,
+    }),
+  );
+
+  assertEquals(response.status, 500);
+  const body = await response.json();
+  assertEquals(body.error, "charge_amount_calculation_failed");
+});
+
+Deno.test("commit failure returns HTTP 500", async () => {
+  const response = await handleManualChargePaymentRequest(
+    authRequest({
+      schedule_id: "schedule-1",
+      clearsale_session_id: "fresh-clearsale-uuid",
+    }),
+    createDeps({
+      commitResult: async () => null,
+    }),
+  );
+
+  assertEquals(response.status, 500);
+  const body = await response.json();
+  assertEquals(body.error, "manual_charge_commit_failed");
+});
+
+Deno.test("notification enqueue failure does not fail the charge response", async () => {
+  const response = await handleManualChargePaymentRequest(
+    authRequest({
+      schedule_id: "schedule-1",
+      clearsale_session_id: "fresh-clearsale-uuid",
+    }),
+    createDeps({
+      enqueueNotification: async () => {
+        throw new Error("queue down");
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  const body = await response.json();
+  assertEquals(body.outcome, "PAID");
+});
+
+Deno.test("FAILED charge outcome still returns HTTP 200 with outcome", async () => {
+  const response = await handleManualChargePaymentRequest(
+    authRequest({
+      schedule_id: "schedule-1",
+      clearsale_session_id: "fresh-clearsale-uuid",
+    }),
+    createDeps({
+      createCharge: async () => ({
+        success: false,
+        error: { code: "RETRYABLE", message: "issuer unavailable" },
+      }),
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  const body = await response.json();
+  assertEquals(body.outcome, "FAILED");
+});

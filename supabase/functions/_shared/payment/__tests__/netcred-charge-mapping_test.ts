@@ -1,4 +1,4 @@
-import { assertEquals } from "std/testing/asserts";
+import { assertEquals, assertThrows } from "std/testing/asserts";
 import { mapToNetCredChargeInput } from "../netcred-charge-mapping.ts";
 import type { CreateChargeInput } from "../types.ts";
 
@@ -54,4 +54,109 @@ Deno.test("mapToNetCredChargeInput falls back when service title is missing", ()
 
   assertEquals(mapped.extraInfo, "Renovi — Serviço");
   assertEquals(mapped.orderInput?.orderItems[0].productInput.name, "Serviço");
+});
+
+
+Deno.test("mapToNetCredChargeInput rejects unsupported payment method", () => {
+  assertThrows(
+    () =>
+      mapToNetCredChargeInput(
+        {
+          ...baseInput,
+          paymentMethod: { type: "PIX" } as never,
+        },
+        "2052",
+      ),
+    Error,
+    "UNSUPPORTED_PAYMENT_METHOD",
+  );
+});
+
+Deno.test("mapToNetCredChargeInput rejects invalid bank account id", () => {
+  assertThrows(
+    () =>
+      mapToNetCredChargeInput(
+        {
+          ...baseInput,
+          payoutRule: {
+            ...baseInput.payoutRule,
+            providerAccount: {
+              netcredCompanyId: "1048",
+              netcredBankAccountId: "not-a-number",
+            },
+          },
+        },
+        "2052",
+      ),
+    Error,
+    "INVALID_BANK_ACCOUNT_ID:provider",
+  );
+});
+
+Deno.test("mapToNetCredChargeInput rejects invalid company or profile id", () => {
+  assertThrows(
+    () =>
+      mapToNetCredChargeInput(
+        {
+          ...baseInput,
+          payoutRule: {
+            ...baseInput.payoutRule,
+            providerAccount: {
+              netcredCompanyId: "abc",
+              netcredBankAccountId: "2053",
+            },
+          },
+        },
+        "2052",
+      ),
+    Error,
+    "INVALID_NETCRED_COMPANY_OR_PROFILE_ID",
+  );
+});
+
+Deno.test("mapToNetCredChargeInput requires percentage and amount on rule items", () => {
+  assertThrows(
+    () =>
+      mapToNetCredChargeInput(
+        {
+          ...baseInput,
+          payoutRule: {
+            ...baseInput.payoutRule,
+            ruleItems: [
+              {
+                type: "PERCENTAGE",
+                receiver: "platform",
+                isLiable: true,
+              },
+            ],
+          },
+        },
+        "2052",
+      ),
+    Error,
+    "PAYOUT_RULE_PERCENTAGE_REQUIRED",
+  );
+
+  assertThrows(
+    () =>
+      mapToNetCredChargeInput(
+        {
+          ...baseInput,
+          payoutRule: {
+            ...baseInput.payoutRule,
+            ruleItems: [
+              {
+                type: "FIXED_AMOUNT",
+                receiver: "provider",
+                isLiable: false,
+                amount: "",
+              },
+            ],
+          },
+        },
+        "2052",
+      ),
+    Error,
+    "PAYOUT_RULE_AMOUNT_REQUIRED",
+  );
 });

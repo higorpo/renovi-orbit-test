@@ -20,3 +20,33 @@ Deno.test("fetchWithTimeout aborts when fetch exceeds timeout", async () => {
     "Aborted",
   );
 });
+
+Deno.test("fetchWithTimeout returns response when fetch completes in time", async () => {
+  const mockFetch: typeof fetch = async () =>
+    new Response("ok", { status: 200 });
+
+  const response = await fetchWithTimeout(
+    "https://example.com",
+    { method: "GET" },
+    { timeoutMs: 5_000, fetchFn: mockFetch },
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(await response.text(), "ok");
+});
+
+Deno.test("fetchWithTimeout uses default timeout and global fetch when options omitted", async () => {
+  const originalFetch = globalThis.fetch;
+  let seenSignal: AbortSignal | undefined;
+  globalThis.fetch = (async (_input, init) => {
+    seenSignal = (init as { signal?: AbortSignal })?.signal;
+    return new Response("ok", { status: 200 });
+  }) as typeof fetch;
+  try {
+    const response = await fetchWithTimeout("https://example.com");
+    assertEquals(response.status, 200);
+    assertEquals(seenSignal instanceof AbortSignal, true);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

@@ -72,3 +72,64 @@ Deno.test("handleReconcileInanalysisAutoCancelVoidsRequest rejects unauthorized 
 
   assertEquals(response.status, 401);
 });
+
+Deno.test("handleRequest OPTIONS returns 204 and non-POST returns 405", async () => {
+  const options = await handleReconcileInanalysisAutoCancelVoidsRequest(
+    new Request("https://example.com/reconcile-inanalysis-auto-cancel-voids", {
+      method: "OPTIONS",
+    }),
+    createDeps(),
+  );
+  assertEquals(options.status, 204);
+
+  const get = await handleReconcileInanalysisAutoCancelVoidsRequest(
+    new Request("https://example.com/reconcile-inanalysis-auto-cancel-voids", {
+      method: "GET",
+    }),
+    createDeps(),
+  );
+  assertEquals(get.status, 405);
+});
+
+Deno.test("handleRequest summary buckets deferred, already_terminal, failures and warnings", async () => {
+  Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "test-service-role");
+  Deno.env.set("ENVIRONMENT", "development");
+  try {
+    const schedules: InanalysisVoidSchedule[] = [
+      { ...pendingSchedule, id: "s-deferred" },
+      { ...pendingSchedule, id: "s-terminal" },
+      { ...pendingSchedule, id: "s-fail" },
+      { ...pendingSchedule, id: "s-throw" },
+    ];
+
+    const response = await handleReconcileInanalysisAutoCancelVoidsRequest(
+      cronRequest(),
+      createDeps({
+        listPendingSchedules: async () => schedules,
+        processSchedule: async (schedule) => {
+          if (schedule.id === "s-deferred") {
+            return { scheduleId: schedule.id, outcome: "DEFERRED" };
+          }
+          if (schedule.id === "s-terminal") {
+            return { scheduleId: schedule.id, outcome: "ALREADY_TERMINAL" };
+          }
+          if (schedule.id === "s-fail") {
+            return { scheduleId: schedule.id, outcome: "FAILURE", failureCount: 3 };
+          }
+          throw new Error("unexpected");
+        },
+      }),
+    );
+
+    assertEquals(response.status, 200);
+    const body = await response.json();
+    assertEquals(body.processed, 4);
+    assertEquals(body.deferred, 1);
+    assertEquals(body.already_terminal, 1);
+    assertEquals(body.failures, 2);
+    assertEquals(body.warnings_emitted, 2);
+  } finally {
+    Deno.env.delete("SUPABASE_SERVICE_ROLE_KEY");
+    Deno.env.delete("ENVIRONMENT");
+  }
+});

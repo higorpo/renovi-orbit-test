@@ -29,6 +29,12 @@ export function isSentryEnabled(): boolean {
   return Boolean(getDsn());
 }
 
+/** Clears init state (tests only). */
+export function resetSentryEdgeForTests(): void {
+  sentryModule = null;
+  initialized = false;
+}
+
 export async function initSentryEdge(serviceName: string): Promise<void> {
   const dsn = getDsn();
   if (!dsn || initialized) return;

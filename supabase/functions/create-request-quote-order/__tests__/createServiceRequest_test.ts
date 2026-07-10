@@ -59,3 +59,57 @@ Deno.test("createServiceRequest returns error message on insert failure", async 
     assertEquals(result.error, 'invalid input value for enum service_request_status: "open"');
   }
 });
+
+Deno.test("createServiceRequest maps optional fields when provided", async () => {
+  let inserted: Record<string, unknown> | undefined;
+  const supabase = makeSupabaseStub((row) => {
+    inserted = row;
+    return { data: { id: "req-2" }, error: null };
+  });
+
+  const result = await createServiceRequest(supabase, {
+    ...baseParams,
+    description: "",
+    photoUrls: ["https://cdn/a.jpg"],
+    form_data: { rooms: 2 },
+    form_schema: { type: "object" },
+    form_version: "v1",
+    urgency: "high",
+    scope_complexity: "complex",
+    tags: ["pintura"],
+    missing_info_warnings: ["need photos"],
+    suggested_equipment: ["escada"],
+    suggested_materials: ["tinta"],
+    estimated_duration_hint: "2h",
+  });
+
+  assertEquals(result.ok, true);
+  assertEquals(inserted?.description, null);
+  assertEquals(inserted?.photos, ["https://cdn/a.jpg"]);
+  assertEquals(inserted?.form_data, { rooms: 2 });
+  assertEquals(inserted?.urgency, "high");
+  assertEquals(inserted?.tags, ["pintura"]);
+  assertEquals(inserted?.suggested_equipment, ["escada"]);
+  assertEquals(inserted?.estimated_duration_hint, "2h");
+});
+
+Deno.test("createServiceRequest nulls empty optional arrays", async () => {
+  let inserted: Record<string, unknown> | undefined;
+  const supabase = makeSupabaseStub((row) => {
+    inserted = row;
+    return { data: { id: "req-3" }, error: null };
+  });
+
+  await createServiceRequest(supabase, {
+    ...baseParams,
+    tags: [],
+    missing_info_warnings: [],
+    suggested_equipment: [],
+    suggested_materials: [],
+  });
+
+  assertEquals(inserted?.tags, null);
+  assertEquals(inserted?.missing_info_warnings, null);
+  assertEquals(inserted?.suggested_equipment, null);
+  assertEquals(inserted?.suggested_materials, null);
+});

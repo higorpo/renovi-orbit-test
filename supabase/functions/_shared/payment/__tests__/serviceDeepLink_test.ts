@@ -1,6 +1,7 @@
 import { assertEquals } from "std/testing/asserts";
 import {
   buildServiceDetailDeepLinkPath,
+  enrichSchedulesWithServiceRequestIds,
   resolveServiceDeepLinkPath,
   SERVICE_LIST_DEEP_LINK_PATH,
 } from "../serviceDeepLink.ts";
@@ -26,4 +27,59 @@ Deno.test("resolveServiceDeepLinkPath builds service detail route", () => {
     resolveServiceDeepLinkPath("sr-123"),
     "/dashboard/services/sr-123",
   );
+});
+
+Deno.test("enrichSchedulesWithServiceRequestIds returns empty for empty input", async () => {
+  const supabase = {
+    from: () => {
+      throw new Error("should not query");
+    },
+  };
+  assertEquals(await enrichSchedulesWithServiceRequestIds(supabase as never, []), []);
+});
+
+Deno.test("enrichSchedulesWithServiceRequestIds maps service_request_id from DB", async () => {
+  const supabase = {
+    from: () => ({
+      select: () => ({
+        in: async () => ({
+          data: [
+            { id: "cs-1", service_request_id: "sr-1" },
+            { id: "cs-2", service_request_id: null },
+          ],
+          error: null,
+        }),
+      }),
+    }),
+  };
+
+  const result = await enrichSchedulesWithServiceRequestIds(supabase as never, [
+    { contracted_service_id: "cs-1" },
+    { contracted_service_id: "cs-2" },
+    { contracted_service_id: "cs-missing" },
+  ]);
+
+  assertEquals(result, [
+    { contracted_service_id: "cs-1", service_request_id: "sr-1" },
+    { contracted_service_id: "cs-2", service_request_id: null },
+    { contracted_service_id: "cs-missing", service_request_id: null },
+  ]);
+});
+
+Deno.test("enrichSchedulesWithServiceRequestIds nulls ids when query fails", async () => {
+  const supabase = {
+    from: () => ({
+      select: () => ({
+        in: async () => ({ data: null, error: { message: "db down" } }),
+      }),
+    }),
+  };
+
+  const result = await enrichSchedulesWithServiceRequestIds(supabase as never, [
+    { contracted_service_id: "cs-1" },
+  ]);
+
+  assertEquals(result, [
+    { contracted_service_id: "cs-1", service_request_id: null },
+  ]);
 });

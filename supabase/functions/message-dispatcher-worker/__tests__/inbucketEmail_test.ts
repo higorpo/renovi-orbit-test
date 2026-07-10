@@ -310,6 +310,199 @@ Deno.test("sendInbucketEmail returns failure on connect error", async () => {
   }
 });
 
+Deno.test("sendInbucketEmail returns failure on HELO rejection", async () => {
+  Deno.env.set("INBUCKET_SMTP_HOST", "localhost");
+  Deno.env.set("INBUCKET_SMTP_PORT", "1025");
+  Deno.env.set("RESEND_FROM_EMAIL", "noreply@test.com");
+
+  const { deps } = createMockConn([
+    "220 Ready",
+    "550 HELO rejected",
+  ]);
+
+  try {
+    const result = await sendInbucketEmail(
+      {
+        recipientEmail: "user@example.com",
+        subject: "Test",
+        html: "<p>Test</p>",
+        correlationId: "corr-helo-fail",
+      },
+      deps,
+    );
+    assertEquals(result.ok, false);
+    if (!result.ok) {
+      assertEquals(result.errorMessage.includes("HELO rejected"), true);
+    }
+  } finally {
+    Deno.env.delete("INBUCKET_SMTP_HOST");
+    Deno.env.delete("INBUCKET_SMTP_PORT");
+    Deno.env.delete("RESEND_FROM_EMAIL");
+  }
+});
+
+Deno.test("sendInbucketEmail returns failure on MAIL FROM rejection", async () => {
+  Deno.env.set("INBUCKET_SMTP_HOST", "localhost");
+  Deno.env.set("INBUCKET_SMTP_PORT", "1025");
+  Deno.env.set("RESEND_FROM_EMAIL", "noreply@test.com");
+
+  const { deps } = createMockConn([
+    "220 Ready",
+    "250 Hello",
+    "550 Sender rejected",
+  ]);
+
+  try {
+    const result = await sendInbucketEmail(
+      {
+        recipientEmail: "user@example.com",
+        subject: "Test",
+        html: "<p>Test</p>",
+        correlationId: "corr-mail-from-fail",
+      },
+      deps,
+    );
+    assertEquals(result.ok, false);
+    if (!result.ok) {
+      assertEquals(result.errorMessage.includes("MAIL FROM rejected"), true);
+    }
+  } finally {
+    Deno.env.delete("INBUCKET_SMTP_HOST");
+    Deno.env.delete("INBUCKET_SMTP_PORT");
+    Deno.env.delete("RESEND_FROM_EMAIL");
+  }
+});
+
+Deno.test("sendInbucketEmail returns failure on DATA rejection", async () => {
+  Deno.env.set("INBUCKET_SMTP_HOST", "localhost");
+  Deno.env.set("INBUCKET_SMTP_PORT", "1025");
+  Deno.env.set("RESEND_FROM_EMAIL", "noreply@test.com");
+
+  const { deps } = createMockConn([
+    "220 Ready",
+    "250 Hello",
+    "250 Sender ok",
+    "250 Recipient ok",
+    "503 Bad sequence",
+  ]);
+
+  try {
+    const result = await sendInbucketEmail(
+      {
+        recipientEmail: "user@example.com",
+        subject: "Test",
+        html: "<p>Test</p>",
+        correlationId: "corr-data-fail",
+      },
+      deps,
+    );
+    assertEquals(result.ok, false);
+    if (!result.ok) {
+      assertEquals(result.errorMessage.includes("DATA rejected"), true);
+    }
+  } finally {
+    Deno.env.delete("INBUCKET_SMTP_HOST");
+    Deno.env.delete("INBUCKET_SMTP_PORT");
+    Deno.env.delete("RESEND_FROM_EMAIL");
+  }
+});
+
+Deno.test("sendInbucketEmail returns failure when message is rejected after DATA", async () => {
+  Deno.env.set("INBUCKET_SMTP_HOST", "localhost");
+  Deno.env.set("INBUCKET_SMTP_PORT", "1025");
+  Deno.env.set("RESEND_FROM_EMAIL", "noreply@test.com");
+
+  const { deps } = createMockConn([
+    "220 Ready",
+    "250 Hello",
+    "250 Sender ok",
+    "250 Recipient ok",
+    "354 Go ahead",
+    "554 Message rejected",
+  ]);
+
+  try {
+    const result = await sendInbucketEmail(
+      {
+        recipientEmail: "user@example.com",
+        subject: "Test",
+        html: "<p>Test</p>",
+        correlationId: "corr-msg-reject",
+      },
+      deps,
+    );
+    assertEquals(result.ok, false);
+    if (!result.ok) {
+      assertEquals(result.errorMessage.includes("Message rejected"), true);
+    }
+  } finally {
+    Deno.env.delete("INBUCKET_SMTP_HOST");
+    Deno.env.delete("INBUCKET_SMTP_PORT");
+    Deno.env.delete("RESEND_FROM_EMAIL");
+  }
+});
+
+Deno.test("sendInbucketEmail returns failure when SMTP stream ends early", async () => {
+  Deno.env.set("INBUCKET_SMTP_HOST", "localhost");
+  Deno.env.set("INBUCKET_SMTP_PORT", "1025");
+  Deno.env.set("RESEND_FROM_EMAIL", "noreply@test.com");
+
+  const { deps } = createMockConn([]);
+
+  try {
+    const result = await sendInbucketEmail(
+      {
+        recipientEmail: "user@example.com",
+        subject: "Test",
+        html: "<p>Test</p>",
+        correlationId: "corr-eof",
+      },
+      deps,
+    );
+    assertEquals(result.ok, false);
+  } finally {
+    Deno.env.delete("INBUCKET_SMTP_HOST");
+    Deno.env.delete("INBUCKET_SMTP_PORT");
+    Deno.env.delete("RESEND_FROM_EMAIL");
+  }
+});
+
+Deno.test("sendInbucketEmail ignores close errors in finally", async () => {
+  Deno.env.set("INBUCKET_SMTP_HOST", "localhost");
+  Deno.env.set("INBUCKET_SMTP_PORT", "1025");
+  Deno.env.set("RESEND_FROM_EMAIL", "noreply@test.com");
+
+  const { conn, deps } = createMockConn([
+    "220 Ready",
+    "250 Hello",
+    "250 Sender ok",
+    "250 Recipient ok",
+    "354 Go ahead",
+    "250 Message accepted",
+    "221 Bye",
+  ]);
+  conn.close = () => {
+    throw new Error("already closed");
+  };
+
+  try {
+    const result = await sendInbucketEmail(
+      {
+        recipientEmail: "user@example.com",
+        subject: "Test",
+        html: "<p>Test</p>",
+        correlationId: "corr-close",
+      },
+      deps,
+    );
+    assertEquals(result.ok, true);
+  } finally {
+    Deno.env.delete("INBUCKET_SMTP_HOST");
+    Deno.env.delete("INBUCKET_SMTP_PORT");
+    Deno.env.delete("RESEND_FROM_EMAIL");
+  }
+});
+
 // --- resolveEmailSender ---
 
 Deno.test("resolveEmailSender returns sendInbucketEmail when INBUCKET_SMTP_HOST is set", () => {

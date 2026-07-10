@@ -1,5 +1,6 @@
 import { assertEquals } from "std/testing/asserts";
 import type { CreateChargeResult } from "../../_shared/payment/types.ts";
+import { ProviderAuthError } from "../../_shared/payment/errors.ts";
 import {
   handleScheduleNetcredChargesRequest,
   type ScheduleNetcredChargesDeps,
@@ -234,4 +235,238 @@ Deno.test("concurrent invocations dequeue disjoint schedule sets", async () => {
       Deno.env.set("ENVIRONMENT", previousEnvironment);
     }
   }
+});
+
+Deno.test("OPTIONS returns 204 for schedule-netcred-charges", async () => {
+  const response = await handleScheduleNetcredChargesRequest(
+    new Request("https://example.com/schedule-netcred-charges", { method: "OPTIONS" }),
+    {
+      dequeueSchedules: async () => [],
+      processSchedule: async () => ({ scheduleId: "x", outcome: "PAID" }),
+      captureException: () => {},
+      maxAttempts: 3,
+    },
+  );
+  assertEquals(response.status, 204);
+});
+
+Deno.test("non-POST returns 405 for schedule-netcred-charges", async () => {
+  const response = await handleScheduleNetcredChargesRequest(
+    new Request("https://example.com/schedule-netcred-charges", { method: "GET" }),
+    {
+      dequeueSchedules: async () => [],
+      processSchedule: async () => ({ scheduleId: "x", outcome: "PAID" }),
+      captureException: () => {},
+      maxAttempts: 3,
+    },
+  );
+  assertEquals(response.status, 405);
+});
+
+Deno.test("unauthorized cron request returns auth error", async () => {
+  const previousServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "test-service-role");
+  try {
+    const response = await handleScheduleNetcredChargesRequest(
+      new Request("https://example.com/schedule-netcred-charges", {
+        method: "POST",
+        headers: { Authorization: "Bearer wrong" },
+      }),
+      {
+        dequeueSchedules: async () => [],
+        processSchedule: async () => ({ scheduleId: "x", outcome: "PAID" }),
+        captureException: () => {},
+        maxAttempts: 3,
+      },
+    );
+    assertEquals(response.status >= 400, true);
+  } finally {
+    if (previousServiceRoleKey === undefined) {
+      Deno.env.delete("SUPABASE_SERVICE_ROLE_KEY");
+    } else {
+      Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", previousServiceRoleKey);
+    }
+  }
+});
+
+Deno.test("summary buckets cover all outcomes including reconciled and errors", async () => {
+  const previousServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const previousEnvironment = Deno.env.get("ENVIRONMENT");
+  Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "test-service-role");
+  Deno.env.set("ENVIRONMENT", "development");
+
+  const outcomes = [
+    { scheduleId: "s1", outcome: "PAID" as const, reconciled: true },
+    { scheduleId: "s2", outcome: "FAILED" as const },
+    { scheduleId: "s3", outcome: "FAILED_PERMANENT" as const },
+    { scheduleId: "s4", outcome: "IN_ANALYSIS" as const },
+  ];
+  let index = 0;
+
+  try {
+    const response = await handleScheduleNetcredChargesRequest(
+      new Request("https://example.com/schedule-netcred-charges", {
+        method: "POST",
+        headers: { Authorization: "Bearer test-service-role" },
+      }),
+      {
+        dequeueSchedules: async () =>
+          outcomes.map((o, i) => ({ ...baseSchedule, id: `schedule-${i}` })),
+        processSchedule: async () => {
+          const next = outcomes[index++]!;
+          if (next.scheduleId === "s-error") {
+            throw new Error("boom");
+          }
+          return next;
+        },
+        captureException: () => {},
+        maxAttempts: 3,
+      },
+    );
+
+    // Second request to exercise error path with one schedule
+    const errorResponse = await handleScheduleNetcredChargesRequest(
+      new Request("https://example.com/schedule-netcred-charges", {
+        method: "POST",
+        headers: { Authorization: "Bearer test-service-role" },
+      }),
+      {
+        dequeueSchedules: async () => [{ ...baseSchedule, id: "schedule-err" }],
+        processSchedule: async () => {
+          throw "string-error";
+        },
+        captureException: () => {},
+        maxAttempts: 3,
+      },
+    );
+
+    assertEquals(response.status, 200);
+    const summary = await response.json();
+    assertEquals(summary.processed, 4);
+    assertEquals(summary.paid, 1);
+    assertEquals(summary.failed, 1);
+    assertEquals(summary.failed_permanent, 1);
+    assertEquals(summary.in_analysis, 1);
+    assertEquals(summary.reconciled, 1);
+
+    assertEquals(errorResponse.status, 200);
+    const errorSummary = await errorResponse.json();
+    assertEquals(errorSummary.errors, 1);
+  } finally {
+    if (previousServiceRoleKey === undefined) {
+      Deno.env.delete("SUPABASE_SERVICE_ROLE_KEY");
+    } else {
+      Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", previousServiceRoleKey);
+    }
+    if (previousEnvironment === undefined) {
+      Deno.env.delete("ENVIRONMENT");
+    } else {
+      Deno.env.set("ENVIRONMENT", previousEnvironment);
+    }
+  }
+});
+
+Deno.test("processSchedule throws when payment token is missing", async () => {
+  let threw = false;
+  try {
+    await processSchedule(
+      createProcessDeps({
+        loadPaymentToken: async () => null,
+      }),
+      baseSchedule,
+    );
+  } catch (error) {
+    threw = error instanceof Error && error.message === "PAYMENT_TOKEN_NOT_FOUND";
+  }
+  assertEquals(threw, true);
+});
+
+Deno.test("processSchedule throws when provider is not credentialed", async () => {
+  let threw = false;
+  try {
+    await processSchedule(
+      createProcessDeps({
+        loadProviderAccount: async () => ({
+          netcred_company_id: null,
+          netcred_bank_account_id: null,
+          onboarding_status: "PENDING",
+        }),
+      }),
+      baseSchedule,
+    );
+  } catch (error) {
+    threw = error instanceof Error && error.message === "PROVIDER_NOT_CREDENTIALED";
+  }
+  assertEquals(threw, true);
+});
+
+Deno.test("processSchedule throws when charge amount calculation fails", async () => {
+  let threw = false;
+  try {
+    await processSchedule(
+      createProcessDeps({
+        calculateChargeAmount: async () => null as never,
+      }),
+      { ...baseSchedule, charge_amount: null },
+    );
+  } catch (error) {
+    threw = error instanceof Error &&
+      error.message === "CHARGE_AMOUNT_CALCULATION_FAILED";
+  }
+  assertEquals(threw, true);
+});
+
+Deno.test("processSchedule uses schedule.charge_amount when present", async () => {
+  let calculated = false;
+  const result = await processSchedule(
+    createProcessDeps({
+      calculateChargeAmount: async () => {
+        calculated = true;
+        return "999.00";
+      },
+    }),
+    { ...baseSchedule, charge_amount: 55.5 },
+  );
+  assertEquals(calculated, false);
+  assertEquals(result.outcome, "PAID");
+});
+
+Deno.test("processSchedule continues when clearsale_session_id is missing", async () => {
+  const result = await processSchedule(
+    createProcessDeps(),
+    { ...baseSchedule, clearsale_session_id: null, client_ip_address: null },
+  );
+  assertEquals(result.outcome, "PAID");
+});
+
+Deno.test("processSchedule reconciles REJECTED existing transaction", async () => {
+  const result = await processSchedule(
+    createProcessDeps({
+      getTransaction: async () => ({
+        transactionId: "tx-rej",
+        referenceCode: "service-1",
+        transactionState: "REJECTED",
+        chargeId: "c-rej",
+      }),
+      createCharge: async () => {
+        throw new Error("should not create");
+      },
+    }),
+    { ...baseSchedule, automatic_attempt_count: 2 },
+  );
+  assertEquals(result.outcome, "FAILED_PERMANENT");
+  assertEquals(result.reconciled, true);
+});
+
+
+Deno.test("processSchedule maps ProviderAuthError to FAILED with auth_failure", async () => {
+  const result = await processSchedule(
+    createProcessDeps({
+      createCharge: async () => {
+        throw new ProviderAuthError("NETCRED_AUTH_FAILURE");
+      },
+    }),
+    baseSchedule,
+  );
+  assertEquals(result.outcome, "FAILED");
 });

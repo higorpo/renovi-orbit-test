@@ -56,24 +56,30 @@ function mapErrorStatus(error: ProcessRefundErrorCode): number {
   }
 }
 
-function mapRpcError(message: string): ProcessRefundErrorCode | null {
-  const known: ProcessRefundErrorCode[] = [
-    "SERVICE_NOT_FOUND",
-    "SCHEDULE_NOT_FOUND",
-    "FORBIDDEN",
-    "SERVICE_NOT_CANCELLABLE",
-    "PAYMENT_IN_ANALYSIS",
-    "INVALID_SCHEDULE_STATE",
-    "TRANSACTION_NOT_FOUND",
-    "PAYMENT_SCHEDULE_TERMINAL_STATE",
-    "PAYMENT_SCHEDULE_INVALID_TRANSITION",
-  ];
+const PROCESS_REFUND_ERROR_CODES: readonly ProcessRefundErrorCode[] = [
+  "SERVICE_NOT_FOUND",
+  "SCHEDULE_NOT_FOUND",
+  "FORBIDDEN",
+  "SERVICE_NOT_CANCELLABLE",
+  "PAYMENT_IN_ANALYSIS",
+  "INVALID_SCHEDULE_STATE",
+  "TRANSACTION_NOT_FOUND",
+  "PAYMENT_SCHEDULE_TERMINAL_STATE",
+  "PAYMENT_SCHEDULE_INVALID_TRANSITION",
+];
 
-  return known.find((code) => message.includes(code)) ?? null;
+function mapRpcError(message: string): ProcessRefundErrorCode | null {
+  return PROCESS_REFUND_ERROR_CODES.find((code) => message.includes(code)) ?? null;
 }
 
 export function mapRpcErrorCode(message: string): ProcessRefundErrorCode | null {
   return mapRpcError(message);
+}
+
+function isProcessRefundErrorCode(
+  value: string,
+): value is ProcessRefundErrorCode {
+  return (PROCESS_REFUND_ERROR_CODES as readonly string[]).includes(value);
 }
 
 export async function handleProcessRefundRequest(
@@ -159,20 +165,21 @@ export async function handleProcessRefundRequest(
       initiator,
     });
 
-    if (typeof preChargeResult === "string") {
+    // Error codes and schedule IDs are both strings; discriminate known codes.
+    if (isProcessRefundErrorCode(preChargeResult)) {
       return jsonResponse(
-        {
-          schedule_id: preChargeResult,
-          outcome: "PRE_CHARGE_CANCELLED",
-        },
-        200,
+        { error_code: preChargeResult },
+        mapErrorStatus(preChargeResult),
         cors,
       );
     }
 
     return jsonResponse(
-      { error_code: preChargeResult },
-      mapErrorStatus(preChargeResult),
+      {
+        schedule_id: preChargeResult,
+        outcome: "PRE_CHARGE_CANCELLED",
+      },
+      200,
       cors,
     );
   }

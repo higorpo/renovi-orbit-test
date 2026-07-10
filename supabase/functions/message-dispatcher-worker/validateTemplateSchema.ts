@@ -17,6 +17,9 @@ function formatAjvErrors(errors: ErrorObject[] | null | undefined): string {
     .join("; ");
 }
 
+/** Exported for unit tests of Ajv error formatting edge cases. */
+export { formatAjvErrors };
+
 const ajv = new Ajv({ allErrors: true, strict: false });
 const compiledSchemaCache = new Map<string, ValidateFunction>();
 

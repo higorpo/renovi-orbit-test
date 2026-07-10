@@ -8,7 +8,12 @@ Deno.test("isValidCpf accepts valid CPF", () => {
 });
 
 Deno.test("isValidCpf rejects invalid CPF", () => {
-  assertEquals(isValidCpf("504.432.630-51"), false);
+  // Checksum mismatch (not a known-valid number)
+  assertEquals(isValidCpf("123.456.789-00"), false);
+  // All digits equal
+  assertEquals(isValidCpf("111.111.111-11"), false);
+  // Wrong length
+  assertEquals(isValidCpf("123"), false);
 });
 
 const validCustomer = {
@@ -82,4 +87,72 @@ Deno.test("validateTokenizePaymentCardBody rejects missing phone", () => {
   if ("error" in result) {
     assertEquals(result.errors?.[0]?.code, "PHONE_REQUIRED");
   }
+});
+
+Deno.test("validateTokenizePaymentCardBody rejects invalid CPF", () => {
+  const result = validateTokenizePaymentCardBody({
+    tokenizeContext: "profile",
+    ...validCardPayload,
+    cpf: "123.456.789-00",
+  });
+
+  assertEquals("error" in result, true);
+  if ("error" in result) {
+    assertEquals(result.error, "invalid_cpf");
+    assertEquals(result.errors?.[0]?.code, "CPF_INVALID");
+  }
+});
+
+Deno.test("validateTokenizePaymentCardBody rejects invalid phone", () => {
+  const result = validateTokenizePaymentCardBody({
+    tokenizeContext: "profile",
+    ...validCardPayload,
+    phone: "123",
+  });
+
+  assertEquals("error" in result, true);
+  if ("error" in result) {
+    assertEquals(result.error, "invalid_phone");
+    assertEquals(result.errors?.[0]?.code, "PHONE_INVALID");
+  }
+});
+
+Deno.test("validateTokenizePaymentCardBody rejects incomplete cardData", () => {
+  const result = validateTokenizePaymentCardBody({
+    tokenizeContext: "profile",
+    ...validCardPayload,
+    cardData: {
+      cardNumber: "",
+      cvv: "123",
+      expiryMonth: 10,
+      expiryYear: 2027,
+      cardholderName: "Maria",
+    },
+  });
+
+  assertEquals("error" in result, true);
+  if ("error" in result) {
+    assertEquals(result.status, 400);
+    assertEquals(result.error, "cardData is incomplete");
+  }
+});
+
+Deno.test("validateTokenizePaymentCardBody rejects invalid expiryMonth", () => {
+  const result = validateTokenizePaymentCardBody({
+    tokenizeContext: "profile",
+    ...validCardPayload,
+    cardData: {
+      ...validCardPayload.cardData,
+      expiryMonth: 13,
+    },
+  });
+
+  assertEquals("error" in result, true);
+  if ("error" in result) {
+    assertEquals(result.error, "cardData is incomplete");
+  }
+});
+
+Deno.test("isValidCpf handles remainder 10 mapped to check digit 0", () => {
+  assertEquals(isValidCpf("00000000604"), true);
 });

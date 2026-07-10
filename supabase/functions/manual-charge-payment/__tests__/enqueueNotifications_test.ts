@@ -69,3 +69,33 @@ Deno.test("enqueueManualChargeNotifications maps IN_ANALYSIS to CHARGE_IN_ANALYS
 
   assertEquals(notificationEvent, "CHARGE_IN_ANALYSIS");
 });
+
+Deno.test("enqueueManualChargeNotifications maps FAILED to CHARGE_FAILED", async () => {
+  let notificationEvent: string | undefined;
+
+  await enqueueManualChargeNotifications(
+    async (_scheduleId, event) => {
+      notificationEvent = event;
+    },
+    schedule,
+    "FAILED",
+    "1024.29",
+  );
+
+  assertEquals(notificationEvent, "CHARGE_FAILED");
+});
+
+Deno.test("enqueueManualChargeNotifications skips unknown outcomes", async () => {
+  let called = false;
+
+  await enqueueManualChargeNotifications(
+    async () => {
+      called = true;
+    },
+    schedule,
+    "UNKNOWN" as never,
+    "1024.29",
+  );
+
+  assertEquals(called, false);
+});
