@@ -18,6 +18,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/features/auth";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import type { TokenizeCardSuccess } from "../api/cards.api";
 import { CardForm } from "./CheckoutStepper/CardForm";
@@ -44,6 +45,7 @@ export function AddCardSheetDialog({
   onSuccess,
 }: AddCardSheetDialogProps) {
   const isDesktop = useBreakpointMd();
+  const { profile } = useAuth();
   const [isPending, setIsPending] = useState(false);
 
   const handleClose = () => {
@@ -63,6 +65,7 @@ export function AddCardSheetDialog({
       providerServiceId={providerServiceId}
       tokenizeContext={tokenizeContext}
       savedCpf={savedCpf}
+      accountFullName={profile?.full_name}
       phone={phone}
       onSuccess={handleSuccess}
       hideActions

@@ -1,17 +1,18 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { maskCEP, unmask } from "@/lib/masks";
+import { maskCEP, maskCPF, unmask } from "@/lib/masks";
 import {
   mapCardFormToTokenizeRequest,
   type TokenizeCardSuccess,
@@ -23,7 +24,12 @@ import {
   type CardFormData,
 } from "../../types/cardForm.validation";
 import { maskCardNumber } from "../../utils/card-validator";
+import {
+  CARDHOLDER_NAME_SOFT_WARNING,
+  cardholderFirstNameMatchesAccount,
+} from "../../utils/cardholderIdentity";
 import { mapPaymentErrorToUserMessage } from "../../utils/mapPaymentUserMessage";
+import { scrollToFirstCardFormError } from "../../utils/scrollToFirstCardFormError";
 import { PaymentTrustDisclosure } from "../PaymentTrustDisclosure";
 
 export const CARD_FORM_ID = "payment-card-form";
@@ -32,6 +38,8 @@ export type CardFormProps = {
   providerServiceId?: string;
   tokenizeContext?: "checkout" | "profile";
   savedCpf?: string | null;
+  /** Account full name used for soft first-name check against the embossed name. */
+  accountFullName?: string | null;
   phone?: string;
   onSuccess: (result: TokenizeCardSuccess) => void;
   onBack?: () => void;
@@ -46,6 +54,7 @@ export function CardForm({
   providerServiceId,
   tokenizeContext,
   savedCpf,
+  accountFullName,
   phone,
   onSuccess,
   onBack,
@@ -63,52 +72,63 @@ export function CardForm({
     mode: "onSubmit",
   });
 
+  const watchedCardholderName = useWatch({
+    control: form.control,
+    name: "cardholderName",
+  });
+  const showNameSoftWarning =
+    Boolean(watchedCardholderName?.trim()) &&
+    !cardholderFirstNameMatchesAccount(watchedCardholderName, accountFullName);
+
   useEffect(() => {
     onPendingChange?.(tokenizeCard.isPending);
   }, [onPendingChange, tokenizeCard.isPending]);
 
-  const handleSubmit = form.handleSubmit(async (values) => {
-    setSubmitError(null);
+  const handleSubmit = form.handleSubmit(
+    async (values) => {
+      setSubmitError(null);
 
-    if (!savedCpf?.trim()) {
-      setSubmitError(
-        tokenizeContext === "checkout"
-          ? "Complete a etapa de CPF antes de continuar."
-          : "Cadastre seu CPF na conta antes de adicionar um cartão.",
-      );
-      return;
-    }
+      if (!savedCpf?.trim()) {
+        setSubmitError(
+          tokenizeContext === "checkout"
+            ? "Complete a etapa de CPF antes de continuar."
+            : "Cadastre seu CPF na conta antes de adicionar um cartão.",
+        );
+        return;
+      }
 
-    if (!phone?.replace(/\D/g, "").trim()) {
-      setSubmitError(
-        tokenizeContext === "checkout"
-          ? "Complete a etapa de telefone antes de continuar."
-          : "Informe seu telefone para continuar.",
-      );
-      return;
-    }
+      if (!phone?.replace(/\D/g, "").trim()) {
+        setSubmitError(
+          tokenizeContext === "checkout"
+            ? "Complete a etapa de telefone antes de continuar."
+            : "Informe seu telefone para continuar.",
+        );
+        return;
+      }
 
-    try {
-      const result = await tokenizeCard.mutateAsync(
-        mapCardFormToTokenizeRequest(values, {
-          providerServiceId,
-          tokenizeContext,
-          cpf: unmask(savedCpf),
-          phone: unmask(phone),
-        }),
-      );
+      try {
+        const result = await tokenizeCard.mutateAsync(
+          mapCardFormToTokenizeRequest(values, {
+            providerServiceId,
+            tokenizeContext,
+            phone: unmask(phone),
+          }),
+        );
 
-      form.reset(defaultCardFormValues());
-      onSuccess(result);
-    } catch (error) {
-      setSubmitError(
-        mapPaymentErrorToUserMessage(error, {
-          fallback: "Não foi possível salvar o cartão. Verifique os dados e tente novamente.",
-        }),
-      );
-    }
-  });
-
+        form.reset(defaultCardFormValues());
+        onSuccess(result);
+      } catch (error) {
+        setSubmitError(
+          mapPaymentErrorToUserMessage(error, {
+            fallback: "Não foi possível salvar o cartão. Verifique os dados e tente novamente.",
+          }),
+        );
+      }
+    },
+    (errors) => {
+      scrollToFirstCardFormError(errors);
+    },
+  );
   return (
     <Form {...form}>
       <form id={formId} onSubmit={handleSubmit} className="space-y-6">
@@ -225,6 +245,34 @@ export function CardForm({
                     placeholder="Como impresso no cartão"
                     value={field.value}
                     onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    disabled={tokenizeCard.isPending}
+                  />
+                </FormControl>
+                {showNameSoftWarning ? (
+                  <FormDescription className="text-amber-700 dark:text-amber-400">
+                    {CARDHOLDER_NAME_SOFT_WARNING}
+                  </FormDescription>
+                ) : null}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="cardholderCpf"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel htmlFor="checkout-cardholder-cpf">CPF do titular do cartão</FormLabel>
+                <FormControl>
+                  <Input
+                    id="checkout-cardholder-cpf"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="000.000.000-00"
+                    value={field.value}
+                    onChange={(event) => field.onChange(maskCPF(event.target.value))}
                     onBlur={field.onBlur}
                     disabled={tokenizeCard.isPending}
                   />

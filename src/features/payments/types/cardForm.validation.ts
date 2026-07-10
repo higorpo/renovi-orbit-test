@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { validateCPF } from "@/lib/validators";
 import {
   isValidCardExpiry,
   isValidCvv,
@@ -36,6 +37,10 @@ export const cardFormSchema = z
       .string()
       .trim()
       .min(1, "Informe o nome impresso no cartão"),
+    cardholderCpf: z
+      .string()
+      .min(1, "Informe o CPF do titular do cartão")
+      .refine((value) => validateCPF(value), "CPF inválido. Verifique os números informados."),
     street: z.string().trim().min(1, "Informe o logradouro"),
     number: z.string().trim().min(1, "Informe o número"),
     additionalDetails: z.string().optional(),
@@ -74,6 +79,7 @@ export function defaultCardFormValues(): CardFormData {
     expiryYear: "",
     cvv: "",
     cardholderName: "",
+    cardholderCpf: "",
     street: "",
     number: "",
     additionalDetails: "",

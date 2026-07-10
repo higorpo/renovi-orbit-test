@@ -155,6 +155,8 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 |----------|---------------------|
 | `docs/business/modulos/payments/` | README + checkout + [historico-e-reembolso](./modulos/payments/features/historico-e-reembolso.md) |
 | `docs/payment-system/design.md` | Design normativo (§3.13 views de histórico; §4.8 reembolso) |
+| `src/features/payments/components/CheckoutStepper/CardForm.tsx` + `AddCardSheetDialog.tsx` | Tokenização/cadastro de cartão: coleta CPF do titular (enviado à NetCred) e alerta não bloqueante quando o primeiro nome no cartão difere do perfil |
+| `src/features/payments/utils/cardholderIdentity.ts` | Conferência auxiliar do primeiro nome (soft check) |
 | `src/features/payments/utils/mapPaymentUserMessage.ts` | Mapeamento código → mensagem amigável pt-BR; nunca texto bruto do backend |
 | `src/features/payments/utils/manualPaymentErrors.ts` / `paymentApiErrors.ts` | Falhas de cobrança manual e RPC usam o mapper (por código) |
 | `src/features/payments/components/ManualPaymentDialog.tsx` + `hooks/useManualPaymentDialog.ts` | Dialog de recuperação (ShellDialog / `useMobileDialogViewport`); fluxo cartão → `InstallmentSelector` → confirmar |

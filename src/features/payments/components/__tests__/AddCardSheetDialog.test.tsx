@@ -9,11 +9,18 @@ vi.mock("@/hooks/useBreakpoint", () => ({
   useBreakpointMd: () => mockUseBreakpointMd(),
 }));
 
+vi.mock("@/features/auth", () => ({
+  useAuth: () => ({
+    profile: { full_name: "Maria Silva" },
+  }),
+}));
+
 vi.mock("../CheckoutStepper/CardForm", () => ({
   CardForm: ({
     onSuccess,
     formId,
     hideActions,
+    accountFullName,
   }: {
     onSuccess: (result: {
       paymentTokenId: string;
@@ -22,6 +29,7 @@ vi.mock("../CheckoutStepper/CardForm", () => ({
     }) => void;
     formId?: string;
     hideActions?: boolean;
+    accountFullName?: string | null;
   }) => (
     <form
       id={formId}
@@ -37,6 +45,7 @@ vi.mock("../CheckoutStepper/CardForm", () => ({
       <span data-testid="card-form-flags">
         {hideActions ? "hide-actions" : "show-actions"}
       </span>
+      <span data-testid="account-full-name">{accountFullName ?? ""}</span>
       <button type="submit">submit-form</button>
     </form>
   ),
@@ -64,6 +73,7 @@ describe("AddCardSheetDialog", () => {
     expect(screen.getByRole("button", { name: /Salvar cartão/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Cancelar/i })).toBeInTheDocument();
     expect(screen.getByTestId("card-form-flags")).toHaveTextContent("hide-actions");
+    expect(screen.getByTestId("account-full-name")).toHaveTextContent("Maria Silva");
 
     fireEvent.click(screen.getByRole("button", { name: /Cancelar/i }));
     expect(onOpenChange).toHaveBeenCalledWith(false);

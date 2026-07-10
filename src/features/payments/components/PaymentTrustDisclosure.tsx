@@ -12,15 +12,11 @@ export function PaymentTrustDisclosure() {
         <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
         <div className="space-y-2 text-sm">
           <p className="font-medium text-foreground">
-            Pagamento processado por parceiro certificado
+            Pagamento protegido por parceiro certificado
           </p>
           <p className="text-muted-foreground">
             Seus dados de cartão são tokenizados com segurança pelo nosso parceiro de pagamentos.
             A Renovi não armazena número completo do cartão nem CVV.
-          </p>
-          <p className="text-muted-foreground">
-            Por exigência regulatória, o titular do cartão de crédito deve ser o mesmo da conta Renovi
-            (mesmo CPF).
           </p>
           <p className="text-muted-foreground">
             Ao confirmar, você declara que leu e aceita os{" "}

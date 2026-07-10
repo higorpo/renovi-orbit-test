@@ -133,6 +133,8 @@ Fluxo de pagamentos, itens com problemas:
 
 - Preciso testar o fluxo de cobrança com rejeição de CPF
 
+- O que acontece com um serviço postado que ficou muito tempo  sem receber nenhuma proposta?
+
 
 Detalhes dos testes:
 Cartão aprovado: 4970100000000048

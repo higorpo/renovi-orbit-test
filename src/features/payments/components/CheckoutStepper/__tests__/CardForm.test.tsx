@@ -25,6 +25,7 @@ const validForm = {
   expiryYear: "2030",
   cvv: "123",
   cardholderName: "Maria Silva",
+  cardholderCpf: "390.533.447-05",
   street: "Rua das Flores",
   number: "100",
   additionalDetails: "Apto 12",
@@ -34,42 +35,46 @@ const validForm = {
   zipCode: "88000-000",
 };
 
-function fillCardForm() {
+function fillCardForm(overrides?: Partial<typeof validForm>) {
+  const values = { ...validForm, ...overrides };
   fireEvent.change(screen.getByLabelText("Número do cartão"), {
-    target: { value: validForm.cardNumber },
+    target: { value: values.cardNumber },
   });
   fireEvent.change(screen.getByLabelText("Mês"), {
-    target: { value: validForm.expiryMonth },
+    target: { value: values.expiryMonth },
   });
   fireEvent.change(screen.getByLabelText("Ano"), {
-    target: { value: validForm.expiryYear },
+    target: { value: values.expiryYear },
   });
   fireEvent.change(screen.getByLabelText("CVV"), {
-    target: { value: validForm.cvv },
+    target: { value: values.cvv },
   });
   fireEvent.change(screen.getByLabelText("Nome no cartão"), {
-    target: { value: validForm.cardholderName },
+    target: { value: values.cardholderName },
+  });
+  fireEvent.change(screen.getByLabelText("CPF do titular do cartão"), {
+    target: { value: values.cardholderCpf },
   });
   fireEvent.change(screen.getByLabelText("Logradouro"), {
-    target: { value: validForm.street },
+    target: { value: values.street },
   });
   fireEvent.change(screen.getByLabelText("Número"), {
-    target: { value: validForm.number },
+    target: { value: values.number },
   });
   fireEvent.change(screen.getByLabelText("Complemento"), {
-    target: { value: validForm.additionalDetails },
+    target: { value: values.additionalDetails },
   });
   fireEvent.change(screen.getByLabelText("Bairro"), {
-    target: { value: validForm.district },
+    target: { value: values.district },
   });
   fireEvent.change(screen.getByLabelText("Cidade"), {
-    target: { value: validForm.city },
+    target: { value: values.city },
   });
   fireEvent.change(screen.getByLabelText("UF"), {
-    target: { value: validForm.state },
+    target: { value: values.state },
   });
   fireEvent.change(screen.getByLabelText("CEP"), {
-    target: { value: validForm.zipCode },
+    target: { value: values.zipCode },
   });
 }
 
@@ -282,6 +287,96 @@ describe("CardForm", () => {
         cardBrand: "VISA",
       },
       error: null,
+    });
+  });
+
+  it("sends cardholder CPF to tokenize even when it differs from account CPF", async () => {
+    const tokenizeSpy = vi.spyOn(tokenizeApi, "tokenizePaymentCard").mockResolvedValue({
+      data: {
+        paymentTokenId: "token-1",
+        cardNumberMasked: "•••• 1111",
+        cardBrand: "VISA",
+      },
+      error: null,
+    });
+
+    render(
+      <CardForm
+        providerServiceId="provider-service-1"
+        savedCpf="390.533.447-05"
+        phone="(48) 99999-9999"
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: createWrapper() },
+    );
+
+    fillCardForm({ cardholderCpf: "529.982.247-25" });
+    fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+
+    await waitFor(() => {
+      expect(tokenizeSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cpf: "52998224725",
+        }),
+      );
+    });
+  });
+
+  it("scrolls to the first invalid field when validation fails", async () => {
+    const scrollIntoView = vi.fn();
+    const scrollSpy = vi
+      .spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(scrollIntoView);
+
+    try {
+      render(
+        <CardForm
+          providerServiceId="provider-service-1"
+          savedCpf="390.533.447-05"
+          phone="(48) 99999-9999"
+          onSuccess={vi.fn()}
+        />,
+        { wrapper: createWrapper() },
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Continuar" }));
+
+      await waitFor(() => {
+        expect(screen.getByText(/Informe o número do cartão/i)).toBeInTheDocument();
+      });
+
+      expect(scrollIntoView).toHaveBeenCalled();
+      expect(document.activeElement).toBe(screen.getByLabelText("Número do cartão"));
+    } finally {
+      scrollSpy.mockRestore();
+    }
+  });
+
+  it("shows soft warning when first name differs from account name", async () => {
+    render(
+      <CardForm
+        providerServiceId="provider-service-1"
+        savedCpf="390.533.447-05"
+        accountFullName="Maria Silva"
+        phone="(48) 99999-9999"
+        onSuccess={vi.fn()}
+      />,
+      { wrapper: createWrapper() },
+    );
+
+    const nameInput = screen.getByLabelText("Nome no cartão");
+    fireEvent.change(nameInput, {
+      target: { value: "João Silva" },
+    });
+
+    await waitFor(() => {
+      expect(nameInput).toHaveValue("João Silva");
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Aconselhamos usar um cartão de titularidade/i),
+      ).toBeInTheDocument();
     });
   });
 });

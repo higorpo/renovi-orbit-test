@@ -7,6 +7,7 @@ const validBase = {
   expiryYear: "30",
   cvv: "123",
   cardholderName: "Maria da Silva",
+  cardholderCpf: "390.533.447-05",
   street: "Rua A",
   number: "100",
   additionalDetails: "",
@@ -48,11 +49,27 @@ describe("cardFormSchema", () => {
       }).success,
     ).toBe(false);
   });
+
+  it("rejects missing or invalid cardholder CPF", () => {
+    expect(
+      cardFormSchema.safeParse({
+        ...validBase,
+        cardholderCpf: "",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      cardFormSchema.safeParse({
+        ...validBase,
+        cardholderCpf: "111.111.111-11",
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("defaultCardFormValues", () => {
-  it("returns empty card and billing fields without CPF", () => {
-    expect(defaultCardFormValues()).not.toHaveProperty("cpf");
+  it("returns empty card, cardholder CPF, and billing fields", () => {
+    expect(defaultCardFormValues().cardholderCpf).toBe("");
     expect(defaultCardFormValues().cardNumber).toBe("");
   });
 });

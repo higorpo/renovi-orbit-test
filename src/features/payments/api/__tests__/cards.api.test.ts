@@ -317,6 +317,7 @@ describe("mapCardFormToTokenizeRequest", () => {
         expiryYear: "30",
         cvv: "123",
         cardholderName: " Maria ",
+        cardholderCpf: "390.533.447-05",
         street: " Rua A ",
         number: " 10 ",
         additionalDetails: "  ",
@@ -327,7 +328,6 @@ describe("mapCardFormToTokenizeRequest", () => {
       },
       {
         providerServiceId: "proposal-1",
-        cpf: "390.533.447-05",
         phone: "(48) 99999-9999",
       },
     );
@@ -348,6 +348,7 @@ describe("mapCardFormToTokenizeRequest", () => {
         expiryYear: "2030",
         cvv: "123",
         cardholderName: "Maria",
+        cardholderCpf: "529.982.247-25",
         street: "Rua A",
         number: "10",
         district: "Centro",
@@ -356,12 +357,12 @@ describe("mapCardFormToTokenizeRequest", () => {
         zipCode: "88000000",
       },
       {
-        cpf: "39053344705",
         phone: "48999999999",
       },
     );
 
     expect(request.tokenizeContext).toBe("profile");
+    expect(request.cpf).toBe("52998224725");
   });
 });
 

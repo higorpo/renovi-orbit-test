@@ -11,6 +11,12 @@ Permitir que o **cliente** pague o serviço aceito via cartão de crédito (NetC
 3. `accept_proposal` (evoluído) cria `payment_schedules` com parcelas e datas de cobrança.
 4. Disclosure de timing: cobrança automática antes do serviço; cliente pode tentar cobrança manual em falha.
 
+### CPF do titular do cartão
+
+Ao cadastrar ou tokenizar um cartão, o formulário exige o campo **“CPF do titular do cartão”**. Esse CPF é enviado à Edge `tokenize-payment-card` e repassado à NetCred como documento do pagador; **não** precisa ser igual ao CPF da conta Renovi (coletado no step de CPF do checkout / perfil).
+
+- Como conferência auxiliar, a UI compara apenas o primeiro nome do nome impresso no cartão com o primeiro nome do perfil. Quando forem diferentes, exibe o aviso: **“O primeiro nome no cartão parece diferente do nome da sua conta. Confira se digitou exatamente como está impresso.”** Esse aviso não bloqueia o envio.
+
 ## Estados da parcela (`payment_schedules`)
 
 | Estado | Significado para negócio |

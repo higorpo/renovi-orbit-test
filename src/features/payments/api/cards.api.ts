@@ -129,7 +129,6 @@ export function mapCardFormToTokenizeRequest(
   options: {
     providerServiceId?: string;
     tokenizeContext?: "checkout" | "profile";
-    cpf: string;
     phone: string;
   },
 ): TokenizeCardRequest {
@@ -153,7 +152,7 @@ export function mapCardFormToTokenizeRequest(
       zipCode: normalizeCardDigits(form.zipCode),
       additionalDetails: form.additionalDetails?.trim() || undefined,
     },
-    cpf: options.cpf.replace(/\D/g, ""),
+    cpf: form.cardholderCpf.replace(/\D/g, ""),
     phone: options.phone.replace(/\D/g, ""),
   };
 }

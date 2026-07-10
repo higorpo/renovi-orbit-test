@@ -21,7 +21,7 @@
 
 | Documento | Conteúdo |
 |-----------|----------|
-| [features/checkout-e-cobranca.md](./features/checkout-e-cobranca.md) | Checkout, T-2, estados de parcela, KYC, cobrança manual (`ManualPaymentDialog`: cartão → parcelas → `payment_update_method` + `manual-charge-payment`), mensagens de erro amigáveis (pt-BR), notificações |
+| [features/checkout-e-cobranca.md](./features/checkout-e-cobranca.md) | Checkout, tokenização com CPF do titular enviado à NetCred (independente do CPF da conta) e aviso não bloqueante de primeiro nome, T-2, estados de parcela, KYC, cobrança manual (`ManualPaymentDialog`: cartão → parcelas → `payment_update_method` + `manual-charge-payment`), mensagens de erro amigáveis (pt-BR), notificações |
 | [features/historico-e-reembolso.md](./features/historico-e-reembolso.md) | Histórico cliente/prestador; breakdown de reembolso; `REFUND_REQUESTED` vs clawback |
 | Engenharia | `docs/payment-system/design.md` (§3.13 histórico; §4.8 reembolso) |
 
