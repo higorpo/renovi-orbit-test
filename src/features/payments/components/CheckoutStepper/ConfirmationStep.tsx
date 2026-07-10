@@ -132,8 +132,6 @@ export function ConfirmationStep({
         </div>
       </div>
 
-      <PaymentTrustDisclosure />
-
       {submitError ? (
         <p className="text-sm text-destructive" role="alert">
           {submitError}
