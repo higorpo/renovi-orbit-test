@@ -3,6 +3,7 @@ import { CreditCard, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { useSavedPaymentTokens } from "../../hooks/useSavedPaymentTokens";
 import type { SavedCardSelection } from "../../types/paymentToken.types";
 import type { TokenizeCardSuccess } from "../../api/cards.api";
@@ -12,6 +13,7 @@ import {
   getCardBrandLabel,
 } from "../../utils/cardPresentation";
 import { AddCardSheetDialog } from "../AddCardSheetDialog";
+import { SavedCardSelectorSkeleton } from "./SavedCardSelectorSkeleton";
 
 export type SavedCardSelectorProps = {
   providerServiceId: string;
@@ -71,14 +73,13 @@ export function SavedCardSelector({
   };
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Carregando cartões…</p>;
+    return <SavedCardSelectorSkeleton />;
   }
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Escolha um cartão</h2>
           <p className="text-sm text-muted-foreground">
             {hasSavedCards
               ? "Selecione um cartão salvo ou adicione um novo para continuar."
@@ -90,27 +91,71 @@ export function SavedCardSelector({
           <RadioGroup
             value={selectedTokenId}
             onValueChange={setSelectedTokenId}
-            className="space-y-3"
+            className="gap-3"
           >
-            {tokens.map((token) => (
-              <Label
-                key={token.id}
-                htmlFor={`saved-card-${token.id}`}
-                className="flex cursor-pointer items-center gap-3 rounded-xl border border-border p-4"
-              >
-                <RadioGroupItem id={`saved-card-${token.id}`} value={token.id} />
-                <CreditCard className="h-5 w-5 text-muted-foreground" aria-hidden />
-                <div className="flex-1 space-y-1">
-                  <p className="text-sm font-medium">
-                    {getCardBrandLabel(token.card_brand)} ·{" "}
-                    {formatMaskedCardLabel(token.card_number_masked)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Validade {formatCardExpiry(token.expiry_month, token.expiry_year)}
-                  </p>
-                </div>
-              </Label>
-            ))}
+            {tokens.map((token) => {
+              const isSelected = selectedTokenId === token.id;
+              const brandLabel = getCardBrandLabel(token.card_brand);
+              const maskedLabel = formatMaskedCardLabel(token.card_number_masked);
+
+              return (
+                <Label
+                  key={token.id}
+                  htmlFor={`saved-card-${token.id}`}
+                  className={cn(
+                    "flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border p-4",
+                    "transition-[transform,border-color,background-color,box-shadow] duration-150 ease-out",
+                    "active:scale-[0.97]",
+                    "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+                    "[@media(hover:hover)_and_(pointer:fine)]:hover:border-primary/40",
+                    isSelected
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                      : "border-border bg-card",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
+                      "transition-colors duration-150 ease-out",
+                      isSelected
+                        ? "bg-primary/15 text-primary"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                    aria-hidden
+                  >
+                    <CreditCard className="h-5 w-5" />
+                  </span>
+
+                  <span className="min-w-0 flex-1 space-y-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={cn(
+                          "rounded-md px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide",
+                          isSelected
+                            ? "bg-primary/15 text-primary"
+                            : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {brandLabel}
+                      </span>
+                      <span className="text-base font-semibold tracking-wide text-foreground">
+                        {maskedLabel}
+                      </span>
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      Validade {formatCardExpiry(token.expiry_month, token.expiry_year)}
+                    </span>
+                  </span>
+
+                  <RadioGroupItem
+                    id={`saved-card-${token.id}`}
+                    value={token.id}
+                    className="sr-only"
+                    aria-label={`${brandLabel} ${maskedLabel}`}
+                  />
+                </Label>
+              );
+            })}
           </RadioGroup>
         ) : null}
 
@@ -137,6 +182,3 @@ export function SavedCardSelector({
     </>
   );
 }
-
-/** @deprecated Mode is no longer used; card form opens in AddCardSheetDialog. */
-export type SavedCardSelectorMode = "list" | "form";

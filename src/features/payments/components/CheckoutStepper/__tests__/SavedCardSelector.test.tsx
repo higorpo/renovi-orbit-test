@@ -78,6 +78,21 @@ describe("SavedCardSelector", () => {
     expect(screen.getByRole("button", { name: /Adicionar novo cartão/i })).toBeInTheDocument();
   });
 
+  it("shows skeleton while saved cards are loading", () => {
+    mockUseSavedPaymentTokens.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    });
+
+    render(
+      <SavedCardSelector providerServiceId="proposal-1" onSelect={vi.fn()} />,
+      { wrapper: createWrapper() },
+    );
+
+    expect(screen.getByTestId("saved-card-selector-skeleton")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Carregando cartões/i)).toBeInTheDocument();
+  });
+
   it("lets the parent continue with a selected saved card via continueRef", async () => {
     const onSelect = vi.fn();
     const continueRef: MutableRefObject<(() => void) | null> = { current: null };

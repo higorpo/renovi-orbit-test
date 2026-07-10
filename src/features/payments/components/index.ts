@@ -12,10 +12,7 @@ export type { CardStepProps } from "./CheckoutStepper/CardStep";
 export { CardForm, CARD_FORM_ID } from "./CheckoutStepper/CardForm";
 export type { CardFormProps } from "./CheckoutStepper/CardForm";
 export { SavedCardSelector } from "./CheckoutStepper/SavedCardSelector";
-export type {
-  SavedCardSelectorProps,
-  SavedCardSelectorMode,
-} from "./CheckoutStepper/SavedCardSelector";
+export type { SavedCardSelectorProps } from "./CheckoutStepper/SavedCardSelector";
 export { AddCardSheetDialog, ADD_CARD_FORM_ID } from "./AddCardSheetDialog";
 export type { AddCardSheetDialogProps } from "./AddCardSheetDialog";
 export {

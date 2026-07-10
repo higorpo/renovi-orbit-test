@@ -36,7 +36,7 @@ describe("CheckoutStepper", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders ordered steps from payment_get_checkout_step_requirements", async () => {
+  it("renders the first required step from payment_get_checkout_step_requirements", async () => {
     vi.spyOn(checkoutApi, "getCheckoutStepRequirements").mockResolvedValue({
       data: {
         needs_cpf: true,
@@ -53,9 +53,6 @@ describe("CheckoutStepper", () => {
     });
 
     expect(screen.getByTestId("checkout-step-cpf")).toBeInTheDocument();
-    expect(screen.getByTestId("checkout-step-indicator-phone")).toBeInTheDocument();
-    expect(screen.getByTestId("checkout-step-indicator-card")).toBeInTheDocument();
-    expect(screen.getByTestId("checkout-step-indicator-confirmation")).toBeInTheDocument();
   });
 
   it("maps requirements errors to a user-visible message", async () => {

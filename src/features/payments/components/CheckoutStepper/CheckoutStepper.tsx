@@ -5,7 +5,6 @@ import { useCheckoutStepper } from "../../hooks/useCheckoutStepper";
 import type { CheckoutContext, CheckoutStepId } from "../../types/checkoutStepper.types";
 import { mapCheckoutStepperError } from "../../utils/mapCheckoutStepperError";
 import { CheckoutStepContent } from "./CheckoutStepContent";
-import { CHECKOUT_STEP_LABELS } from "./checkoutStepLabels";
 
 export type CheckoutStepperRenderProps = ReturnType<typeof useCheckoutStepper>;
 
@@ -86,26 +85,6 @@ export function CheckoutStepper({
 
   return (
     <div data-testid="checkout-stepper" className="space-y-4">
-      <ol
-        aria-label="Etapas do checkout"
-        className="flex flex-wrap gap-2 text-xs text-muted-foreground"
-      >
-        {stepper.steps.map((step, index) => (
-          <li
-            key={step}
-            data-testid={`checkout-step-indicator-${step}`}
-            aria-current={index === stepper.currentStepIndex ? "step" : undefined}
-            className={
-              index === stepper.currentStepIndex
-                ? "font-medium text-foreground"
-                : undefined
-            }
-          >
-            {CHECKOUT_STEP_LABELS[step]}
-          </li>
-        ))}
-      </ol>
-
       {stepContent}
 
       {showGenericNav ? (
