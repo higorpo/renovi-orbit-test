@@ -66,8 +66,8 @@ describe("InstallmentSelector", () => {
     );
 
     expect(screen.getByText(/Escolha o parcelamento/i)).toBeInTheDocument();
-    expect(screen.getByText(/1x de/i)).toBeInTheDocument();
-    expect(screen.getByText(/3x de/i)).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /1x de/i })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /3x de/i })).toBeInTheDocument();
     expect(screen.getAllByText(/Total com taxas/i)).toHaveLength(2);
     expect(screen.queryByRole("button", { name: /Continuar/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /Voltar/i })).toBeNull();
@@ -90,7 +90,8 @@ describe("InstallmentSelector", () => {
         onSelect={vi.fn()}
       />,
     );
-    expect(screen.getByText(/Calculando parcelas/i)).toBeInTheDocument();
+    expect(screen.getByTestId("installment-selector-skeleton")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Calculando parcelas/i)).toBeInTheDocument();
 
     const refetch = vi.fn();
     mockUseInstallmentOptions.mockReturnValue({
@@ -110,6 +111,7 @@ describe("InstallmentSelector", () => {
       />,
     );
 
+    expect(screen.getByText("Não foi possível carregar as parcelas")).toBeInTheDocument();
     expect(screen.getByText("parcelas indisponíveis")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Tentar novamente/i }));
     expect(refetch).toHaveBeenCalled();

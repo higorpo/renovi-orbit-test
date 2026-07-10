@@ -15,10 +15,7 @@ export { SavedCardSelector } from "./CheckoutStepper/SavedCardSelector";
 export type { SavedCardSelectorProps } from "./CheckoutStepper/SavedCardSelector";
 export { AddCardSheetDialog, ADD_CARD_FORM_ID } from "./AddCardSheetDialog";
 export type { AddCardSheetDialogProps } from "./AddCardSheetDialog";
-export {
-  InstallmentSelector,
-  useInstallmentSignatureRecovery,
-} from "./InstallmentSelector";
+export { InstallmentSelector } from "./InstallmentSelector";
 export type { InstallmentSelectorProps } from "./InstallmentSelector";
 export { ConfirmationStep } from "./CheckoutStepper/ConfirmationStep";
 export type { ConfirmationStepProps } from "./CheckoutStepper/ConfirmationStep";

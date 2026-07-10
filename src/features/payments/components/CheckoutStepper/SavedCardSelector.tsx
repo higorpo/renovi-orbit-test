@@ -1,6 +1,7 @@
 import { useEffect, useState, type MutableRefObject } from "react";
 import { CreditCard, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/ui/error-state";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -76,10 +77,28 @@ export function SavedCardSelector({
     return <SavedCardSelectorSkeleton />;
   }
 
+  if (tokensQuery.isError) {
+    return (
+      <ErrorState
+        title="Não foi possível carregar os cartões"
+        description={
+          tokensQuery.error instanceof Error
+            ? tokensQuery.error.message
+            : "Verifique sua conexão e tente novamente. Se o problema persistir, entre em contato com o suporte."
+        }
+        onRetry={() => {
+          void tokensQuery.refetch();
+        }}
+        className="py-8"
+      />
+    );
+  }
+
   return (
     <>
       <div className="space-y-4">
         <div className="space-y-2">
+          <h2 className="text-sm font-medium text-foreground">Escolha o cartão</h2>
           <p className="text-sm text-muted-foreground">
             {hasSavedCards
               ? "Selecione um cartão salvo ou adicione um novo para continuar."
