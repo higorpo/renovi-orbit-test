@@ -247,7 +247,7 @@ export function ManualPaymentDialog({
               Continuar
             </Button>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Voltar
+              Cancelar
             </Button>
           </DialogFooter>
         ) : null}
