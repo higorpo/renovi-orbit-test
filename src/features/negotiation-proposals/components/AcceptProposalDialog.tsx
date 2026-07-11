@@ -135,7 +135,7 @@ export function AcceptProposalDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <ShellDialogContent ref={contentRef}>
-        <DialogHeader className="shrink-0 space-y-0 border-b px-4 py-3 pr-0 text-left sm:border-b-0 sm:px-0 sm:py-0">
+        <DialogHeader className="shrink-0 space-y-0 border-b px-4 py-3 pr-0 text-left sm:space-y-1.5 sm:px-0 sm:pb-4 sm:pt-0">
           <div className="flex items-center justify-between gap-3">
             <DialogTitle className="text-base sm:text-lg">
               {isCheckout ? "Pagamento" : "Aceitar proposta"}
