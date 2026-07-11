@@ -141,7 +141,6 @@ export function InstallmentSelector({
                 "flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border p-4",
                 "transition-[transform,border-color,background-color,box-shadow] duration-150 ease-out",
                 "active:scale-[0.97]",
-                "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
                 "[@media(hover:hover)_and_(pointer:fine)]:hover:border-primary/40",
                 isSelected
                   ? "border-primary bg-primary/5 ring-1 ring-primary/20"
