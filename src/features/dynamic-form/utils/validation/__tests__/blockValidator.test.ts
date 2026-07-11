@@ -38,6 +38,36 @@ describe("validateBlocks", () => {
     expect(result.warnings.some((e) => e.code === "BLOCK_MISSING_LABEL")).toBe(true);
   });
 
+  it("does not warn about missing label for conditional_alert", () => {
+    const blocks: FormBlock[] = [
+      { id: "alert1", type: "conditional_alert", label: "", description_ai: "Alert" },
+    ];
+    const result = validateBlocks(blocks, "s1", "steps[0]");
+    expect(result.warnings.some((e) => e.code === "BLOCK_MISSING_LABEL")).toBe(false);
+  });
+
+  it("reports INVALID_RANGE when slider min is greater than max", () => {
+    const blocks: FormBlock[] = [
+      { id: "b1", type: "slider", label: "S", min: 10, max: 5, description_ai: "Slider" },
+    ];
+    const result = validateBlocks(blocks, "s1", "steps[0]");
+    expect(result.errors.some((e) => e.code === "INVALID_RANGE")).toBe(true);
+  });
+
+  it("reports OPTION_INVALID for checkbox options missing label", () => {
+    const blocks: FormBlock[] = [
+      {
+        id: "b1",
+        type: "checkbox",
+        label: "C",
+        description_ai: "C",
+        options: [{ value: "a", label: "" }],
+      },
+    ];
+    const result = validateBlocks(blocks, "s1", "steps[0]");
+    expect(result.errors.some((e) => e.code === "OPTION_INVALID")).toBe(true);
+  });
+
   it("reports error when block has no or empty description_ai", () => {
     const blocks: FormBlock[] = [{ id: "b1", type: "text", label: "Name", description_ai: "" }];
     const result = validateBlocks(blocks, "s1", "steps[0]");
@@ -93,6 +123,118 @@ describe("validateBlocks", () => {
     expect(validateBlocks(blocksBad, "s1", "steps[1]").errors.some((e) => e.code === "BLOCK_MISSING_DESCRIPTION_AI")).toBe(
       true
     );
+  });
+});
+
+describe("blockValidator additional branches", () => {
+  it.each(["multi_select", "radio"] as const)(
+    "reports SELECT_NO_OPTIONS when %s options are undefined",
+    (type) => {
+      const block = {
+        id: "select",
+        type,
+        label: "Select",
+        description_ai: "Selection",
+      } as FormBlock;
+
+      expect(
+        validateBlocks([block], "step", "steps[0]").errors.some(
+          (error) => error.code === "SELECT_NO_OPTIONS",
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it("reports OPTION_INVALID when an option has an empty value and a label", () => {
+    const block: FormBlock = {
+      id: "multi",
+      type: "multi_select",
+      label: "Select",
+      description_ai: "Selection",
+      options: [{ value: "", label: "Named option" }],
+    };
+
+    expect(
+      validateBlocks([block], "step", "steps[0]").errors.some(
+        (error) => error.code === "OPTION_INVALID",
+      ),
+    ).toBe(true);
+  });
+
+  it("does not report INVALID_RANGE when only min is defined", () => {
+    const block: FormBlock = {
+      id: "number",
+      type: "number",
+      label: "Number",
+      description_ai: "Number",
+      min: 5,
+    };
+
+    expect(
+      validateBlocks([block], "step", "steps[0]").errors.some(
+        (error) => error.code === "INVALID_RANGE",
+      ),
+    ).toBe(false);
+  });
+
+  it("returns no errors when validation is null", () => {
+    const block = {
+      id: "text",
+      type: "text",
+      label: "Text",
+      description_ai: "Text",
+      validation: null,
+    } as unknown as FormBlock;
+
+    expect(validateBlockValidation(block, "path")).toHaveLength(0);
+  });
+
+  it("reports INVALID_DATE_MIN when dateMin is numeric", () => {
+    const block = {
+      id: "date",
+      type: "date",
+      label: "Date",
+      description_ai: "Date",
+      validation: { dateMin: 20250101 },
+    } as unknown as FormBlock;
+
+    expect(
+      validateBlockValidation(block, "path").some(
+        (error) => error.code === "INVALID_DATE_MIN",
+      ),
+    ).toBe(true);
+  });
+
+  it("reports invalid length range for textarea", () => {
+    const block: FormBlock = {
+      id: "textarea",
+      type: "textarea",
+      label: "Details",
+      description_ai: "Details",
+      validation: { minLength: 10, maxLength: 2 },
+    };
+
+    expect(
+      validateBlockValidation(block, "path").some(
+        (error) => error.code === "VALIDATION_INVALID_LENGTH_RANGE",
+      ),
+    ).toBe(true);
+  });
+
+  it("forbids date validation on a number block", () => {
+    const block: FormBlock = {
+      id: "number",
+      type: "number",
+      label: "Number",
+      description_ai: "Number",
+      validation: { dateMin: "2025-01-01" },
+    };
+
+    expect(
+      validateBlockValidation(block, "path").some(
+        (error) => error.code === "VALIDATION_DATE_FORBIDDEN",
+      ),
+    ).toBe(true);
   });
 });
 
@@ -252,5 +394,91 @@ describe("validateBlockValidation", () => {
     expect(
       validateBlockValidation(block, "path").some((e) => e.code === "VALIDATION_INVALID_NUMBER_RANGE")
     ).toBe(true);
+  });
+
+  it("reports VALIDATION_INVALID_NUMBER_RANGE for slider block", () => {
+    const block: FormBlock = {
+      id: "b1",
+      type: "slider",
+      label: "S",
+      description_ai: "S",
+      validation: { min: 10, max: 5 },
+    };
+    expect(
+      validateBlockValidation(block, "path").some((e) => e.code === "VALIDATION_INVALID_NUMBER_RANGE")
+    ).toBe(true);
+  });
+
+  it("returns no errors when validation is a non-object value", () => {
+    const block = {
+      id: "b1",
+      type: "text",
+      label: "T",
+      description_ai: "T",
+      validation: "bad" as unknown as FormBlock["validation"],
+    } as FormBlock;
+    expect(validateBlockValidation(block, "path")).toHaveLength(0);
+  });
+
+  it("allows equal min and max on slider block", () => {
+    const blocks: FormBlock[] = [
+      { id: "b1", type: "slider", label: "S", min: 5, max: 5, description_ai: "Slider" },
+    ];
+    expect(validateBlocks(blocks, "s1", "steps[0]").errors.some((e) => e.code === "INVALID_RANGE")).toBe(
+      false,
+    );
+  });
+
+  it("allows equal validation.min and validation.max", () => {
+    const block: FormBlock = {
+      id: "b1",
+      type: "number",
+      label: "N",
+      description_ai: "N",
+      validation: { min: 5, max: 5 },
+    };
+    expect(
+      validateBlockValidation(block, "path").some((e) => e.code === "VALIDATION_INVALID_NUMBER_RANGE"),
+    ).toBe(false);
+  });
+
+  it("accepts date block with only dateMin", () => {
+    const block: FormBlock = {
+      id: "b1",
+      type: "date",
+      label: "D",
+      description_ai: "Date",
+      validation: { dateMin: "2025-01-01" },
+    };
+    expect(validateBlockValidation(block, "path")).toHaveLength(0);
+  });
+
+  it("accepts time block with only timeMax", () => {
+    const block: FormBlock = {
+      id: "b1",
+      type: "time",
+      label: "T",
+      description_ai: "Time",
+      validation: { timeMax: "18:00" },
+    };
+    expect(validateBlockValidation(block, "path")).toHaveLength(0);
+  });
+
+  it("does not report INVALID_RANGE when only max is set on slider", () => {
+    const blocks: FormBlock[] = [
+      { id: "b1", type: "slider", label: "S", max: 10, description_ai: "Slider" },
+    ];
+    expect(validateBlocks(blocks, "s1", "steps[0]").errors.some((e) => e.code === "INVALID_RANGE")).toBe(
+      false,
+    );
+  });
+
+  it("reports SELECT_NO_OPTIONS for checkbox without options", () => {
+    const blocks: FormBlock[] = [
+      { id: "b1", type: "checkbox", label: "C", description_ai: "C", options: [] },
+    ];
+    expect(validateBlocks(blocks, "s1", "steps[0]").errors.some((e) => e.code === "SELECT_NO_OPTIONS")).toBe(
+      true,
+    );
   });
 });

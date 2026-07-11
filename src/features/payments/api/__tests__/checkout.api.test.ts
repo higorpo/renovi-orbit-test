@@ -357,3 +357,139 @@ describe("acceptProposalWithPayment", () => {
     ).resolves.toMatchObject({ data: null });
   });
 });
+
+describe("checkout API branch coverage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("passes an explicit idempotency key to accept proposal", async () => {
+    mockRpc.mockResolvedValue({
+      data: { service: { id: "s1" }, proposal: { id: "p1" } },
+      error: null,
+    });
+
+    await acceptProposalWithPayment({
+      proposalId: "p1",
+      selectedSlot: { start_date: "2099-01-01", shift: "morning" },
+      idempotencyKey: "explicit-key",
+      clientCardTokenId: "token",
+      installmentNumber: 1,
+      installmentSelectionHmac: "hmac",
+      installmentHmacPayload: { proposal_id: "p1" },
+      clearsaleSessionId: "session",
+      pricingSignature: "sig",
+    });
+
+    expect(mockRpc).toHaveBeenCalledWith(
+      PAYMENT_RPC.acceptProposal,
+      expect.objectContaining({ p_idempotency_key: "explicit-key" }),
+    );
+  });
+
+  it("rejects whitespace-only checkout phone before calling the API", async () => {
+    const { saveCheckoutPhone } = await import("../checkout.api");
+
+    await expect(saveCheckoutPhone("user-1", "   ")).resolves.toEqual({
+      phone: null,
+      error: "Telefone inválido. Verifique os números informados.",
+    });
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+
+  it("omits computed_at and stringifies a numeric expires_at", async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        installment_options: [],
+        installment_selection_hmac: "hmac",
+        installment_hmac_payload: { proposal_id: "p1" },
+        expires_at: 123456,
+      },
+      error: null,
+    });
+
+    const result = await fetchInstallmentOptions({
+      proposalId: "p1",
+      serviceId: "s1",
+      cardBrand: "VISA",
+    });
+
+    expect(result.data?.expires_at).toBe("123456");
+    expect(result.data).not.toHaveProperty("computed_at");
+  });
+
+  it("rejects accept responses with a null proposal", async () => {
+    mockRpc.mockResolvedValue({
+      data: { service: { id: "s1" }, proposal: null },
+      error: null,
+    });
+
+    const result = await acceptProposalWithPayment({
+      proposalId: "p1",
+      selectedSlot: { start_date: "2099-01-01", shift: "morning" },
+      clientCardTokenId: "token",
+      installmentNumber: 1,
+      installmentSelectionHmac: "hmac",
+      installmentHmacPayload: { proposal_id: "p1" },
+      clearsaleSessionId: "session",
+      pricingSignature: "sig",
+    });
+
+    expect(result.data).toBeNull();
+    expect(result.error).toBeTruthy();
+  });
+
+  it("rejects accept response missing service", async () => {
+    mockRpc.mockResolvedValue({
+      data: { service: null, proposal: { id: "p1" } },
+      error: null,
+    });
+
+    const result = await acceptProposalWithPayment({
+      proposalId: "p1",
+      selectedSlot: { start_date: "2099-01-01", shift: "morning" },
+      clientCardTokenId: "token",
+      installmentNumber: 1,
+      installmentSelectionHmac: "hmac",
+      installmentHmacPayload: { proposal_id: "p1" },
+      clearsaleSessionId: "session",
+      pricingSignature: "sig",
+    });
+
+    expect(result.data).toBeNull();
+    expect(result.error).toBeTruthy();
+  });
+
+  it("preserves string computed_at in installment options", async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        installment_options: [],
+        installment_selection_hmac: "hmac",
+        installment_hmac_payload: { proposal_id: "p1" },
+        expires_at: "2099-01-01T00:00:00Z",
+        computed_at: "2025-01-01T00:00:00Z",
+      },
+      error: null,
+    });
+
+    const result = await fetchInstallmentOptions({
+      proposalId: "p1",
+      serviceId: "s1",
+      cardBrand: "VISA",
+    });
+
+    expect(result.data?.computed_at).toBe("2025-01-01T00:00:00Z");
+  });
+
+  it("parses empty requirements object as all false", async () => {
+    mockRpc.mockResolvedValue({ data: {}, error: null });
+
+    const result = await getCheckoutStepRequirements();
+
+    expect(result.data).toEqual({
+      needs_cpf: false,
+      needs_phone: false,
+      needs_card: false,
+    });
+  });
+});

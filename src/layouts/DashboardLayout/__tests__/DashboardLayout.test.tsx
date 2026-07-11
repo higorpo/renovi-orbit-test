@@ -4,12 +4,28 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { DashboardLayout } from "../DashboardLayout";
 
+const useOnlineStatusMock = vi.hoisted(() => vi.fn(() => true));
+const useServiceDetailModalMock = vi.hoisted(() =>
+  vi.fn(() => ({
+    isOpen: false,
+    isFromProviderJobs: false,
+    isFromProviderMyServices: false,
+    isFromClientMyServices: false,
+    serviceRequestId: undefined as string | undefined,
+    background: null,
+  })),
+);
+
 vi.mock("@/features/auth", () => ({
   useAuth: vi.fn(),
 }));
 
 vi.mock("@/hooks/useBreakpoint", () => ({
   useBreakpointMd: vi.fn(),
+}));
+
+vi.mock("@/hooks/useOnlineStatus", () => ({
+  useOnlineStatus: () => useOnlineStatusMock(),
 }));
 
 vi.mock("@/features/provider-jobs", () => ({
@@ -22,19 +38,20 @@ vi.mock("@/features/my-services", () => ({
 }));
 
 vi.mock("@/features/view-services", () => ({
-  ServiceDetailSheet: () => null,
-  useServiceDetailModal: () => ({
-    isOpen: false,
-    isFromProviderJobs: false,
-    isFromProviderMyServices: false,
-    isFromClientMyServices: false,
-    serviceRequestId: undefined,
-    background: null,
-  }),
+  ServiceDetailSheet: ({ serviceRequestId }: { serviceRequestId: string }) => (
+    <div data-testid="service-detail-sheet">{serviceRequestId}</div>
+  ),
+  useServiceDetailModal: () => useServiceDetailModalMock(),
 }));
 
 vi.mock("@/features/payments", () => ({
   ProviderKycGate: ({ children }: { children: ReactNode }) => children,
+}));
+
+vi.mock("../MobileStackTransition", () => ({
+  MobileStackTransition: ({ children }: { children: ReactNode }) => (
+    <div data-testid="mobile-stack-transition">{children}</div>
+  ),
 }));
 
 const useAuth = vi.mocked(await import("@/features/auth").then((m) => m.useAuth));
@@ -44,6 +61,15 @@ const useBreakpointMd = vi.mocked(
 
 describe("DashboardLayout", () => {
   beforeEach(() => {
+    useOnlineStatusMock.mockReturnValue(true);
+    useServiceDetailModalMock.mockReturnValue({
+      isOpen: false,
+      isFromProviderJobs: false,
+      isFromProviderMyServices: false,
+      isFromClientMyServices: false,
+      serviceRequestId: undefined,
+      background: null,
+    });
     useAuth.mockReturnValue({
       profile: { id: "p1", role: "client", full_name: "User" },
       user: null,
@@ -188,5 +214,56 @@ describe("DashboardLayout", () => {
     expect(screen.getByRole("heading", { name: "Ajuda" })).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Navegação principal" })).toBeNull();
     expect(screen.getByRole("main")).not.toHaveClass("pb-20");
+  });
+
+  it("offsets desktop header when offline", () => {
+    useBreakpointMd.mockReturnValue(true);
+    useOnlineStatusMock.mockReturnValue(false);
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <DashboardLayout />
+      </MemoryRouter>,
+    );
+
+    const header = screen.getByRole("banner");
+    expect(header).toHaveClass("top-11");
+    expect(header).not.toHaveClass("top-0");
+  });
+
+  it("renders ServiceDetailSheet when modal is open", () => {
+    useBreakpointMd.mockReturnValue(true);
+    useServiceDetailModalMock.mockReturnValue({
+      isOpen: true,
+      isFromProviderJobs: false,
+      isFromProviderMyServices: false,
+      isFromClientMyServices: true,
+      serviceRequestId: "sr-42",
+      background: null,
+    });
+
+    render(
+      <MemoryRouter initialEntries={["/dashboard/services"]}>
+        <DashboardLayout />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("service-detail-sheet")).toHaveTextContent("sr-42");
+  });
+
+  it("wraps outlet in MobileStackTransition on stack routes", () => {
+    useBreakpointMd.mockReturnValue(false);
+    render(
+      <MemoryRouter initialEntries={["/dashboard/help"]}>
+        <Routes>
+          <Route path="/dashboard/*" element={<DashboardLayout />}>
+            <Route path="help" element={<p>Help page</p>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId("mobile-stack-transition")).toBeInTheDocument();
+    expect(screen.getByText("Help page")).toBeInTheDocument();
   });
 });

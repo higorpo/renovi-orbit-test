@@ -2,9 +2,10 @@
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatComposerBar } from "../ChatComposerBar";
 import type { ChatComposerState } from "../../../utils/composerState";
+import { CHAT_AUDIO_PERMISSION_COPY } from "../../../utils/chatAudioPermissionCopy";
 
 vi.mock("../../../utils/chatImagePrepare", () => ({
   prepareWebChatImageFile: vi.fn(async (file: File) => file),
@@ -15,19 +16,39 @@ vi.mock("../../../utils/chatImagePrepare", () => ({
   })),
 }));
 
+const nativePickerMocks = vi.hoisted(() => ({
+  isNativeAvailable: false,
+  pickFromCamera: vi.fn(async () => []),
+  pickFromGallery: vi.fn(async () => []),
+  getAudioPermissionStatus: vi.fn(async () => "granted" as const),
+  canRequestAudioPermission: vi.fn(() => false),
+  isAudioPermissionBlocked: vi.fn(() => false),
+  requestAudioPermission: vi.fn(async () => "granted" as const),
+}));
+
 vi.mock("../../../utils/chatNativeImagePicker", () => ({
-  isNativeChatImagePickerAvailable: () => false,
+  isNativeChatImagePickerAvailable: () => nativePickerMocks.isNativeAvailable,
   isNativeCameraUserCancellation: () => false,
-  pickChatImageFromNativeCamera: vi.fn(),
-  pickChatImagesFromNativeGallery: vi.fn(),
+  pickChatImageFromNativeCamera: (...args: unknown[]) =>
+    nativePickerMocks.pickFromCamera(...args),
+  pickChatImagesFromNativeGallery: (...args: unknown[]) =>
+    nativePickerMocks.pickFromGallery(...args),
 }));
 
 vi.mock("@/lib/capacitor/audioPermission", () => ({
-  getAudioRecordingPermissionStatus: vi.fn(async () => "granted"),
-  canRequestAudioRecordingPermission: vi.fn(() => false),
-  isAudioRecordingPermissionBlocked: vi.fn(() => false),
-  requestAudioRecordingPermission: vi.fn(async () => "granted"),
+  getAudioRecordingPermissionStatus: (...args: unknown[]) =>
+    nativePickerMocks.getAudioPermissionStatus(...args),
+  canRequestAudioRecordingPermission: (...args: unknown[]) =>
+    nativePickerMocks.canRequestAudioPermission(...args),
+  isAudioRecordingPermissionBlocked: (...args: unknown[]) =>
+    nativePickerMocks.isAudioPermissionBlocked(...args),
+  requestAudioRecordingPermission: (...args: unknown[]) =>
+    nativePickerMocks.requestAudioPermission(...args),
   waitBeforeSystemPermissionPrompt: vi.fn(async () => undefined),
+}));
+
+vi.mock("@/lib/capacitor/openAppSettings", () => ({
+  openAppSettings: vi.fn(async () => undefined),
 }));
 
 vi.mock("@/lib/capacitor/audioRecorder", () => ({
@@ -50,6 +71,17 @@ const enabledComposer: ChatComposerState = {
 };
 
 describe("ChatComposerBar", () => {
+  beforeEach(() => {
+    nativePickerMocks.isNativeAvailable = false;
+    nativePickerMocks.pickFromCamera.mockClear();
+    nativePickerMocks.pickFromGallery.mockClear();
+    nativePickerMocks.getAudioPermissionStatus.mockReset();
+    nativePickerMocks.getAudioPermissionStatus.mockResolvedValue("granted");
+    nativePickerMocks.canRequestAudioPermission.mockReturnValue(false);
+    nativePickerMocks.isAudioPermissionBlocked.mockReturnValue(false);
+    nativePickerMocks.requestAudioPermission.mockResolvedValue("granted");
+  });
+
   it("shows image preview after file selection without sending", async () => {
     const onSend = vi.fn();
     const { container } = render(
@@ -207,5 +239,133 @@ describe("ChatComposerBar", () => {
       expect(screen.getByRole("button", { name: "Enviar mensagem" })).not.toBeDisabled();
     });
     expect(screen.queryByRole("button", { name: "Gravar áudio" })).toBeNull();
+  });
+
+  it("sends on Enter without Shift and notifies typing stop", async () => {
+    const onSend = vi.fn().mockResolvedValue(undefined);
+    const onTypingStopNow = vi.fn();
+    const onComposerChange = vi.fn();
+    render(
+      <ChatComposerBar
+        composer={enabledComposer}
+        onSend={onSend}
+        onTypingStopNow={onTypingStopNow}
+        onComposerChange={onComposerChange}
+      />,
+    );
+
+    const textarea = screen.getByPlaceholderText("Escreva uma mensagem…");
+    fireEvent.change(textarea, { target: { value: "Enter send" } });
+    expect(onComposerChange).toHaveBeenCalled();
+
+    fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
+
+    await waitFor(() => {
+      expect(onSend).toHaveBeenCalledWith({ text: "Enter send", files: [] });
+    });
+    expect(onTypingStopNow).toHaveBeenCalled();
+  });
+
+  it("shows helper and moderation block messages", () => {
+    render(
+      <ChatComposerBar
+        composer={{
+          ...enabledComposer,
+          helperText: "Proposta pendente",
+        }}
+        onSend={vi.fn()}
+        sendBlockMessage="Mensagem bloqueada"
+      />,
+    );
+
+    expect(screen.getByText("Proposta pendente")).toBeTruthy();
+    expect(screen.getByRole("alert")).toHaveTextContent("Mensagem bloqueada");
+  });
+
+  it("opens the native attachment source sheet and picks camera", async () => {
+    nativePickerMocks.isNativeAvailable = true;
+    nativePickerMocks.pickFromCamera.mockResolvedValue([]);
+
+    render(<ChatComposerBar composer={enabledComposer} onSend={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Anexar foto" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Tirar foto/i }));
+
+    await waitFor(() => expect(nativePickerMocks.pickFromCamera).toHaveBeenCalled());
+  });
+
+  it("picks gallery from the native attachment source sheet", async () => {
+    nativePickerMocks.isNativeAvailable = true;
+    nativePickerMocks.pickFromGallery.mockResolvedValue([]);
+
+    render(<ChatComposerBar composer={enabledComposer} onSend={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Anexar foto" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Escolher da galeria/i }));
+
+    await waitFor(() => expect(nativePickerMocks.pickFromGallery).toHaveBeenCalled());
+  });
+
+  it("opens the audio recording sheet when mic permission is granted", async () => {
+    const onSendAudio = vi.fn();
+    render(
+      <ChatComposerBar
+        composer={enabledComposer}
+        onSend={vi.fn()}
+        onSendAudio={onSendAudio}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Gravar áudio" }));
+
+    expect(await screen.findByRole("button", { name: "Enviar" })).toBeTruthy();
+
+    // Wait for minimum recording duration used by the sheet.
+    await new Promise((resolve) => setTimeout(resolve, 1100));
+    fireEvent.click(screen.getByRole("button", { name: "Enviar" }));
+
+    await waitFor(() => {
+      expect(onSendAudio).toHaveBeenCalledWith(
+        expect.objectContaining({
+          file: expect.any(File),
+          durationMs: expect.any(Number),
+        }),
+      );
+    });
+  });
+
+  it("shows the pre-permission dialog when mic can be requested", async () => {
+    nativePickerMocks.getAudioPermissionStatus.mockResolvedValue("prompt");
+    nativePickerMocks.canRequestAudioPermission.mockReturnValue(true);
+
+    render(
+      <ChatComposerBar
+        composer={enabledComposer}
+        onSend={vi.fn()}
+        onSendAudio={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Gravar áudio" }));
+
+    expect(await screen.findByRole("button", { name: /Permitir|Continuar|Aceitar/i })).toBeTruthy();
+  });
+
+  it("shows the blocked permission dialog when mic access is denied", async () => {
+    nativePickerMocks.getAudioPermissionStatus.mockResolvedValue("denied");
+    nativePickerMocks.isAudioPermissionBlocked.mockReturnValue(true);
+
+    render(
+      <ChatComposerBar
+        composer={enabledComposer}
+        onSend={vi.fn()}
+        onSendAudio={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Gravar áudio" }));
+
+    expect(await screen.findByRole("button", { name: "Fechar" })).toBeTruthy();
+    expect(screen.getByText(CHAT_AUDIO_PERMISSION_COPY.blockedTitle)).toBeTruthy();
   });
 });

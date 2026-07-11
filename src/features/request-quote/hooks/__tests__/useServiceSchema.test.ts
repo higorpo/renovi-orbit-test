@@ -29,6 +29,132 @@ vi.mock("@/features/dynamic-form", async (importOriginal) => {
   };
 });
 
+describe("useServiceSchema additional branches", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getServiceBySlug.mockResolvedValue({ service: null, error: null });
+    getServiceById.mockResolvedValue({ service: null, error: null });
+    getFormById.mockResolvedValue({ form: null, error: null });
+    validateFormSchema.mockReturnValue({
+      valid: true,
+      errors: [],
+      warnings: [],
+    } as SchemaValidationResult);
+  });
+
+  it("prefers service slug when both slug and id are provided", async () => {
+    getServiceBySlug.mockResolvedValue({ service: mockService, error: null });
+    getFormById.mockResolvedValue({ form: mockForm(), error: null });
+
+    const { result } = renderHook(
+      () => useServiceSchema({ serviceSlug: "limpeza", serviceId: "other-id" }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.schema).not.toBeNull());
+    expect(getServiceBySlug).toHaveBeenCalledWith("limpeza");
+    expect(getServiceById).not.toHaveBeenCalled();
+  });
+
+  it("returns no_service_slug_or_id for empty slug and id", async () => {
+    const { result } = renderHook(
+      () => useServiceSchema({ serviceSlug: "", serviceId: "" }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.fallbackReason).toBe("no_service_slug_or_id");
+    expect(getServiceBySlug).not.toHaveBeenCalled();
+    expect(getServiceById).not.toHaveBeenCalled();
+  });
+
+  it("keeps the loading fallback while a known form is loading", async () => {
+    getServiceBySlug.mockResolvedValue({ service: mockService, error: null });
+    getFormById.mockImplementation(() => new Promise(() => {}));
+
+    const { result } = renderHook(
+      () => useServiceSchema({ serviceSlug: "limpeza" }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(getFormById).toHaveBeenCalledWith("form-1"));
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.fallbackReason).toBe("loading");
+  });
+
+  it("returns no_v2_schema when form_schema is null", async () => {
+    getServiceBySlug.mockResolvedValue({ service: mockService, error: null });
+    getFormById.mockResolvedValue({
+      form: mockForm({ form_schema: null }),
+      error: null,
+    });
+
+    const { result } = renderHook(
+      () => useServiceSchema({ serviceSlug: "limpeza" }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.fallbackReason).toBe("no_v2_schema");
+  });
+
+  it("returns no_v2_schema when version 2 steps are not an array", async () => {
+    getServiceBySlug.mockResolvedValue({ service: mockService, error: null });
+    getFormById.mockResolvedValue({
+      form: mockForm({
+        form_schema: {
+          version: "2.0",
+          steps: "invalid",
+        } as unknown as FormRow["form_schema"],
+      }),
+      error: null,
+    });
+
+    const { result } = renderHook(
+      () => useServiceSchema({ serviceSlug: "limpeza" }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.fallbackReason).toBe("no_v2_schema");
+  });
+
+  it("returns service_fetch_failed for an id query error", async () => {
+    getServiceById.mockRejectedValue(new Error("id lookup failed"));
+
+    const { result } = renderHook(
+      () => useServiceSchema({ serviceId: "s1" }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() =>
+      expect(result.current.fallbackReason).toBe("service_fetch_failed"),
+    );
+  });
+
+  it("fills categoryId when metadata only defines categorySlug", async () => {
+    getServiceBySlug.mockResolvedValue({ service: mockService, error: null });
+    getFormById.mockResolvedValue({
+      form: mockForm({
+        form_schema: {
+          ...validFormSchema,
+          metadata: { categorySlug: "existing-slug" },
+        },
+      }),
+      error: null,
+    });
+
+    const { result } = renderHook(
+      () => useServiceSchema({ serviceSlug: "limpeza" }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.schema).not.toBeNull());
+    expect(result.current.schema?.metadata.categorySlug).toBe("existing-slug");
+    expect(result.current.schema?.metadata.categoryId).toBe("s1");
+  });
+});
+
 const getServiceBySlug = await import("../../api/services.api").then(
   (m) => vi.mocked(m.getServiceBySlug)
 );
@@ -376,6 +502,46 @@ describe("useServiceSchema", () => {
       expect(result.current.schema).not.toBeNull();
     });
     expect(result.current.schema!.metadata.categorySlug).toBe("s1");
+    expect(result.current.schema!.metadata.categoryId).toBe("s1");
+  });
+
+  it("returns no_v2_schema when form_schema is a primitive", async () => {
+    getServiceBySlug.mockResolvedValue({ service: mockService, error: null });
+    getFormById.mockResolvedValue({
+      form: mockForm({ form_schema: "not-an-object" as unknown as FormRow["form_schema"] }),
+      error: null,
+    });
+    const { result } = renderHook(
+      () => useServiceSchema({ serviceSlug: "limpeza" }),
+      { wrapper: createWrapper() },
+    );
+    await waitFor(() => {
+      expect(result.current.fallbackReason).toBe("no_v2_schema");
+    });
+  });
+
+  it("fills metadata when schema has no metadata object", async () => {
+    const schemaWithoutMeta = {
+      version: "2.0",
+      id: "f1",
+      title: "Form",
+      config: {},
+      steps: [],
+    };
+    getServiceBySlug.mockResolvedValue({ service: mockService, error: null });
+    getFormById.mockResolvedValue({
+      form: mockForm({ form_schema: schemaWithoutMeta as FormRow["form_schema"] }),
+      error: null,
+    });
+    validateFormSchema.mockReturnValue({ valid: true, errors: [], warnings: [] });
+    const { result } = renderHook(
+      () => useServiceSchema({ serviceSlug: "limpeza" }),
+      { wrapper: createWrapper() },
+    );
+    await waitFor(() => {
+      expect(result.current.schema).not.toBeNull();
+    });
+    expect(result.current.schema!.metadata.categorySlug).toBe("limpeza");
     expect(result.current.schema!.metadata.categoryId).toBe("s1");
   });
 });

@@ -5,6 +5,9 @@ import { toast } from "sonner";
 import { ConfirmationStep } from "../ConfirmationStep";
 
 const mutateAsync = vi.fn();
+const acceptProposalState = vi.hoisted(() => ({
+  isPending: false,
+}));
 
 vi.mock("sonner", () => ({
   toast: {
@@ -19,7 +22,7 @@ vi.mock("@/features/negotiation-proposals", async (importOriginal) => {
     ...actual,
     useAcceptProposalMutation: () => ({
       mutateAsync,
-      isPending: false,
+      isPending: acceptProposalState.isPending,
     }),
   };
 });
@@ -71,6 +74,7 @@ describe("ConfirmationStep", () => {
   beforeEach(() => {
     vi.mocked(toast.error).mockClear();
     mutateAsync.mockReset();
+    acceptProposalState.isPending = false;
   });
 
   it("shows the scheduled slot in the confirmation summary", () => {
@@ -184,5 +188,22 @@ describe("ConfirmationStep", () => {
         installmentHmacPayload: defaultProps.installmentHmacPayload,
       }),
     );
+  });
+
+  it("notifies onPendingChange when accept mutation pending state changes", () => {
+    const onPendingChange = vi.fn();
+    acceptProposalState.isPending = true;
+
+    const { rerender } = render(
+      <ConfirmationStep {...defaultProps} onPendingChange={onPendingChange} />,
+    );
+
+    expect(onPendingChange).toHaveBeenCalledWith(true);
+
+    acceptProposalState.isPending = false;
+    onPendingChange.mockClear();
+    rerender(<ConfirmationStep {...defaultProps} onPendingChange={onPendingChange} />);
+
+    expect(onPendingChange).toHaveBeenCalledWith(false);
   });
 });

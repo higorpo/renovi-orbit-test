@@ -17,6 +17,248 @@ vi.mock("@/features/auth", async (importOriginal) => {
   };
 });
 
+const useRequestQuoteSubmit = await import("../../../hooks/useRequestQuoteSubmit").then((m) =>
+  vi.mocked(m.useRequestQuoteSubmit)
+);
+
+const validIdentity = {
+  firstName: "João",
+  lastName: "Silva",
+  email: "joao@example.com",
+  password: "SecurePass123!",
+  confirmPassword: "SecurePass123!",
+  termsAccepted: true,
+};
+
+const loggedInAuth = {
+  user: { id: "u1", email: "u@test.com" },
+  loadingSession: false,
+  session: null,
+  profile: null,
+  loading: false,
+  signIn: vi.fn(),
+  signInWithGoogle: vi.fn(),
+  signUp: vi.fn(),
+  signOut: vi.fn(),
+  refreshProfile: vi.fn(),
+  getRedirectPath: vi.fn(),
+} as unknown as AuthContextType;
+
+describe("RequestQuote additional branches", () => {
+  beforeEach(() => {
+    useAuth.mockReturnValue({
+      ...loggedInAuth,
+      user: null,
+    } as AuthContextType);
+    useSearchParams.mockReturnValue([new URLSearchParams(), vi.fn()]);
+    useRequestQuoteDraft.mockReturnValue({
+      hasRestorableDraft: false,
+      restoreDraft: vi.fn(),
+      discardDraft: vi.fn(),
+    });
+    useServiceSchema.mockReturnValue({
+      schema: null,
+      isLoading: false,
+      fallbackReason: null,
+    });
+    useRequestQuoteSubmit.mockReturnValue({
+      handleSubmit: vi.fn(),
+      handleSubmitLoggedIn: vi.fn(),
+    });
+  });
+
+  it.each([
+    [0, "Escolha o tipo de serviço"],
+    [99, "Seus dados"],
+  ])("clamps current step %s to a renderable step", (currentStep, expectedText) => {
+    useRequestQuoteState.mockReturnValue(
+      mockRequestQuoteState({ currentStep, step5Data: validIdentity }) as ReturnType<
+        typeof useRequestQuoteState
+      >,
+    );
+
+    renderWithRequestQuoteProviders(<RequestQuote />);
+
+    expect(screen.getByText(expectedText)).toBeInTheDocument();
+  });
+
+  it("disables Próximo when step 4 data is null", () => {
+    useRequestQuoteState.mockReturnValue(
+      mockRequestQuoteState({ currentStep: 4, step4Data: null }) as ReturnType<
+        typeof useRequestQuoteState
+      >,
+    );
+
+    renderWithRequestQuoteProviders(<RequestQuote />);
+
+    expect(screen.getByRole("button", { name: /Próximo/i })).toBeDisabled();
+  });
+
+  it("disables Próximo for an invalid new address", () => {
+    useRequestQuoteState.mockReturnValue(
+      mockRequestQuoteState({
+        currentStep: 4,
+        step4Data: { kind: "new", formData: {} as never },
+      }) as ReturnType<typeof useRequestQuoteState>,
+    );
+
+    renderWithRequestQuoteProviders(<RequestQuote />);
+
+    expect(screen.getByRole("button", { name: /Próximo/i })).toBeDisabled();
+  });
+
+  it("enables Próximo for an existing address", () => {
+    useRequestQuoteState.mockReturnValue(
+      mockRequestQuoteState({
+        currentStep: 4,
+        step4Data: { kind: "existing", addressId: "address-1" },
+      }) as ReturnType<typeof useRequestQuoteState>,
+    );
+
+    renderWithRequestQuoteProviders(<RequestQuote />);
+
+    expect(screen.getByRole("button", { name: /Próximo/i })).toBeEnabled();
+  });
+
+  it("enables Próximo for a valid new address on step 4", () => {
+    useRequestQuoteState.mockReturnValue(
+      mockRequestQuoteState({
+        currentStep: 4,
+        step4Data: {
+          kind: "new",
+          formData: {
+            address_label: "Casa",
+            address_zip: "01310-100",
+            address_street: "Avenida Paulista",
+            address_number: "1000",
+            address_complement: "",
+            address_neighborhood_id: "11111111-1111-4111-8111-111111111111",
+            address_neighborhood: "Bela Vista",
+            address_state_id: "22222222-2222-4222-8222-222222222222",
+            address_state: "SP",
+            address_city_id: "33333333-3333-4333-8333-333333333333",
+            address_city: "São Paulo",
+          },
+        },
+      }) as ReturnType<typeof useRequestQuoteState>,
+    );
+
+    renderWithRequestQuoteProviders(<RequestQuote />);
+
+    expect(screen.getByRole("button", { name: /Próximo/i })).toBeEnabled();
+  });
+
+  it("enables Próximo on step 3 when description is filled", () => {
+    useRequestQuoteState.mockReturnValue(
+      mockRequestQuoteState({
+        currentStep: 3,
+        step3Data: {
+          description: "Preciso de um eletricista",
+          photos: [],
+          photoPreviews: [],
+        },
+      }) as ReturnType<typeof useRequestQuoteState>,
+    );
+
+    renderWithRequestQuoteProviders(<RequestQuote />);
+
+    expect(screen.getByRole("button", { name: /Próximo/i })).toBeEnabled();
+  });
+
+  it("disables Enviar pedido for logged-in user with invalid new address", () => {
+    useAuth.mockReturnValue(loggedInAuth);
+    useRequestQuoteState.mockReturnValue(
+      mockRequestQuoteState({
+        currentStep: 4,
+        step4Data: { kind: "new", formData: {} as never },
+      }) as ReturnType<typeof useRequestQuoteState>,
+    );
+
+    renderWithRequestQuoteProviders(<RequestQuote />);
+
+    expect(screen.getByRole("button", { name: /Enviar pedido/i })).toBeDisabled();
+  });
+
+  it("enables final submit for a logged-in user with an existing address", () => {
+    useAuth.mockReturnValue(loggedInAuth);
+    useRequestQuoteState.mockReturnValue(
+      mockRequestQuoteState({
+        currentStep: 4,
+        step4Data: { kind: "existing", addressId: "address-1" },
+      }) as ReturnType<typeof useRequestQuoteState>,
+    );
+
+    renderWithRequestQuoteProviders(<RequestQuote />);
+
+    expect(screen.getByRole("button", { name: /Enviar pedido/i })).toBeEnabled();
+  });
+
+  it("enables guest submit when step 5 identity is valid", () => {
+    useRequestQuoteState.mockReturnValue(
+      mockRequestQuoteState({
+        currentStep: 5,
+        step5Data: validIdentity,
+      }) as ReturnType<typeof useRequestQuoteState>,
+    );
+
+    renderWithRequestQuoteProviders(<RequestQuote />);
+
+    expect(screen.getByRole("button", { name: /Enviar pedido/i })).toBeEnabled();
+  });
+
+  it("invokes submit when Enviar pedido is clicked", () => {
+    const handleSubmit = vi.fn();
+    useRequestQuoteSubmit.mockReturnValue({
+      handleSubmit,
+      handleSubmitLoggedIn: vi.fn(),
+    });
+    useRequestQuoteState.mockReturnValue(
+      mockRequestQuoteState({
+        currentStep: 5,
+        step5Data: validIdentity,
+      }) as ReturnType<typeof useRequestQuoteState>,
+    );
+
+    renderWithRequestQuoteProviders(<RequestQuote />);
+    fireEvent.click(screen.getByRole("button", { name: /Enviar pedido/i }));
+
+    expect(handleSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders the mobile TrustSidebar only on step 1", () => {
+    useRequestQuoteState.mockReturnValue(
+      mockRequestQuoteState({ currentStep: 1 }) as ReturnType<
+        typeof useRequestQuoteState
+      >,
+    );
+    const { rerender } = renderWithRequestQuoteProviders(<RequestQuote />);
+    expect(screen.getAllByTestId("trust-sidebar")).toHaveLength(2);
+
+    useRequestQuoteState.mockReturnValue(
+      mockRequestQuoteState({
+        currentStep: 2,
+        selectedService: mockServiceWithChildren,
+      }) as ReturnType<typeof useRequestQuoteState>,
+    );
+    rerender(<RequestQuote />);
+
+    expect(screen.getAllByTestId("trust-sidebar")).toHaveLength(1);
+  });
+
+  it("renders Step5Identity for a guest on step 5", () => {
+    useRequestQuoteState.mockReturnValue(
+      mockRequestQuoteState({
+        currentStep: 5,
+        step5Data: validIdentity,
+      }) as ReturnType<typeof useRequestQuoteState>,
+    );
+
+    renderWithRequestQuoteProviders(<RequestQuote />);
+
+    expect(screen.getByText("Seus dados")).toBeInTheDocument();
+  });
+});
+
 vi.mock("react-router", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-router")>();
   return {

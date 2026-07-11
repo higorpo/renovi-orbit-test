@@ -56,6 +56,7 @@ describe("chatDetailsCopy", () => {
   it("maps participant role labels", () => {
     expect(getChatParticipantRoleLabel("client")).toBe("Cliente");
     expect(getChatParticipantRoleLabel("provider")).toBe("Prestador");
+    expect(getChatParticipantRoleLabel("admin")).toBe("Participante");
   });
 
   it("builds client and provider participants for a client viewer", () => {
@@ -71,6 +72,40 @@ describe("chatDetailsCopy", () => {
       id: "provider-1",
       role: "provider",
       isCurrentUser: false,
+    });
+  });
+
+  it("builds participants for a provider viewer using counterparty as client", () => {
+    const providerProfile: Profile = {
+      id: "provider-1",
+      role: "provider",
+      full_name: "João Prestador",
+      profile_image_path: "avatars/joao.png",
+    };
+    const detail: ConversationDetailResponse = {
+      ...baseDetail,
+      counterparty: {
+        id: "client-1",
+        full_name: null,
+        profile_image_path: null,
+        role: "client",
+      },
+    };
+
+    const participants = buildChatDetailsParticipants(detail, providerProfile);
+
+    expect(participants[0]).toMatchObject({
+      id: "client-1",
+      fullName: "Cliente",
+      role: "client",
+      isCurrentUser: false,
+    });
+    expect(participants[1]).toMatchObject({
+      id: "provider-1",
+      fullName: "João Prestador",
+      profileImagePath: "avatars/joao.png",
+      role: "provider",
+      isCurrentUser: true,
     });
   });
 });

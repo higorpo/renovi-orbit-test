@@ -132,9 +132,122 @@ describe("ClientSignupForm", () => {
     expect(screen.getByText("user@test.com")).toBeInTheDocument();
   });
 
+  it("success state shows spam-folder guidance", () => {
+    renderForm(<Harness signupSuccess registeredEmail="user@test.com" />);
+    expect(screen.getByText("Não encontrou o email?")).toBeInTheDocument();
+    expect(screen.getByText(/pasta de/i)).toBeInTheDocument();
+  });
+
+  it("unchecking terms disables submit again", () => {
+    renderForm(<Harness initialStep={2} />);
+    const terms = screen.getByRole("checkbox");
+    fireEvent.click(terms);
+    expect(terms).toBeChecked();
+    fireEvent.click(terms);
+    expect(terms).not.toBeChecked();
+  });
+
+  it("renders legal links with empty base URL", () => {
+    vi.stubEnv("VITE_MAIN_SITE_URL", "");
+    renderForm(<Harness initialStep={2} />);
+    expect(screen.getByRole("link", { name: "Termos de Uso" })).toHaveAttribute(
+      "href",
+      "/juridico/termos-de-uso",
+    );
+    vi.unstubAllEnvs();
+  });
+
   it("step 1: Voltar returns to step 0", () => {
     renderForm(<Harness initialStep={1} />);
     fireEvent.click(screen.getByRole("button", { name: /Voltar/i }));
     expect(screen.getByLabelText(/Nome Completo/i)).toBeInTheDocument();
+  });
+
+  it("renders muted future progress steps at step 0 and completed steps at step 2", () => {
+    const { container, unmount } = renderForm(<Harness />);
+    expect(container.querySelectorAll(".bg-white\\/20.text-white\\/50")).toHaveLength(2);
+    unmount();
+
+    const final = renderForm(<Harness initialStep={2} />);
+    expect(
+      final.container.firstElementChild?.querySelectorAll("svg")
+    ).toHaveLength(2);
+    expect(final.container.querySelectorAll(".bg-white.text-\\[\\#0F2F3A\\]")).toHaveLength(1);
+  });
+
+  it("step 1 hides password again and toggles confirm password visibility", () => {
+    renderForm(<Harness initialStep={1} />);
+    const password = screen.getByLabelText(/^Senha \*/i);
+    const confirmation = screen.getByLabelText(/Confirmar Senha/i);
+
+    fireEvent.click(screen.getAllByRole("button", { name: /Mostrar senha/i })[0]);
+    expect(password).toHaveAttribute("type", "text");
+    fireEvent.click(screen.getByRole("button", { name: /Ocultar senha/i }));
+    expect(password).toHaveAttribute("type", "password");
+
+    fireEvent.click(screen.getAllByRole("button", { name: /Mostrar senha/i })[1]);
+    expect(confirmation).toHaveAttribute("type", "text");
+    fireEvent.click(screen.getByRole("button", { name: /Ocultar senha/i }));
+    expect(confirmation).toHaveAttribute("type", "password");
+  });
+
+  it("step 1 shows password strength, passing and failing requirements, and errors", () => {
+    const { container } = renderForm(
+      <Harness
+        initialStep={1}
+        errors={{
+          password: "Senha inválida",
+          confirmPassword: "Senhas diferentes",
+        }}
+      />
+    );
+    fireEvent.change(screen.getByLabelText(/^Senha \*/i), {
+      target: { value: "Longpassword" },
+    });
+
+    expect(screen.getByText("Senha inválida")).toBeInTheDocument();
+    expect(screen.getByText("Senhas diferentes")).toBeInTheDocument();
+    expect(container.querySelector("div[style*='width']")).toBeInTheDocument();
+    expect(container.querySelectorAll("svg.lucide-check").length).toBeGreaterThan(0);
+    expect(container.querySelectorAll("svg.lucide-x").length).toBeGreaterThan(0);
+  });
+
+  it("step 2 shows validation errors, submitting state, and returns on Voltar", () => {
+    renderForm(
+      <Harness
+        initialStep={2}
+        submitting
+        errors={{
+          termsAccepted: "Aceite os termos",
+          recaptcha: "Confirme o reCAPTCHA",
+        }}
+      />
+    );
+
+    expect(screen.getByText("Aceite os termos")).toBeInTheDocument();
+    expect(screen.getByText("Confirme o reCAPTCHA")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Criando/i })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: /Voltar/i }));
+    expect(screen.getByLabelText(/^Senha \*/i)).toBeInTheDocument();
+  });
+
+  it("normalizes legal link URLs with or without a trailing slash", () => {
+    vi.stubEnv("VITE_MAIN_SITE_URL", "https://renovi.test/");
+    const { unmount } = renderForm(<Harness initialStep={2} />);
+    expect(screen.getByRole("link", { name: "Termos de Uso" })).toHaveAttribute(
+      "href",
+      "https://renovi.test/juridico/termos-de-uso"
+    );
+    unmount();
+
+    vi.stubEnv("VITE_MAIN_SITE_URL", "https://renovi.test");
+    renderForm(<Harness initialStep={2} />);
+    expect(
+      screen.getByRole("link", { name: "Política de Privacidade" })
+    ).toHaveAttribute(
+      "href",
+      "https://renovi.test/juridico/politica-de-privacidade"
+    );
+    vi.unstubAllEnvs();
   });
 });

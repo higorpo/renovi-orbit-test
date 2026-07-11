@@ -87,8 +87,8 @@ export function ReceivedBudgetDetailsSheet({
               ) : providerCount > 0 ? (
                 <p className="text-sm text-muted-foreground">
                   {isCompareMode
-                    ? `${providerCount} profissional${providerCount === 1 ? "" : "is"} com proposta para este pedido. Compare escopo, experiência e valor antes de decidir.`
-                    : `${providerCount} profissional${providerCount === 1 ? "" : "is"} enviou proposta para este pedido.`}
+                    ? `${providerCount} ${providerCount === 1 ? "profissional" : "profissionais"} com proposta para este pedido. Compare escopo, experiência e valor antes de decidir.`
+                    : `${providerCount} ${providerCount === 1 ? "profissional" : "profissionais"} enviou proposta para este pedido.`}
                 </p>
               ) : null}
 

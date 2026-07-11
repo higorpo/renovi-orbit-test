@@ -148,4 +148,83 @@ describe("ServiceRequestProposalSummaryCard", () => {
     expect(historyTrigger).toHaveClass("text-sm");
     expect(historyTrigger).toHaveClass("font-display");
   });
+
+  it("renders embedded variant without card title chrome", () => {
+    render(
+      <ServiceRequestProposalSummaryCard
+        summary={baseSummary}
+        canEdit={false}
+        onEdit={vi.fn()}
+        variant="embedded"
+      />,
+    );
+    expect(screen.queryByText(/seu orçamento mais recente/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/descrição do serviço/i)).toBeInTheDocument();
+  });
+
+  it("uses details title when summary is not the latest proposal", () => {
+    render(
+      <ServiceRequestProposalSummaryCard
+        summary={{ ...baseSummary, isLatestProposal: false }}
+        canEdit={false}
+        onEdit={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/detalhes do orçamento/i)).toBeInTheDocument();
+  });
+
+  it("omits amount and tax sections when values are absent", () => {
+    render(
+      <ServiceRequestProposalSummaryCard
+        summary={{
+          ...baseSummary,
+          proposedAmount: null as unknown as number,
+          taxAmount: null as unknown as number,
+          taxRate: null as unknown as number,
+          description: null,
+        }}
+        canEdit={false}
+        onEdit={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText(/valor informado/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/taxa da plataforma/i)).not.toBeInTheDocument();
+  });
+
+  it("shows tax percent when taxRate is provided", () => {
+    render(
+      <ServiceRequestProposalSummaryCard summary={baseSummary} canEdit={false} onEdit={vi.fn()} />,
+    );
+    expect(screen.getByText(/taxa da plataforma/i)).toBeInTheDocument();
+    expect(screen.getByText(/\(10%\)/)).toBeInTheDocument();
+  });
+
+  it("shows tax amount without percent when taxRate is absent", () => {
+    render(
+      <ServiceRequestProposalSummaryCard
+        summary={{
+          ...baseSummary,
+          taxAmount: 50,
+          taxRate: undefined,
+        }}
+        canEdit={false}
+        onEdit={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/taxa da plataforma/i)).toBeInTheDocument();
+    expect(screen.getByText(/R\$\s*50,00/)).toBeInTheDocument();
+    expect(screen.queryByText(/\(\d+%\)/)).not.toBeInTheDocument();
+  });
+
+  it("clears selected history proposal when details dialog closes", () => {
+    historyState.items = [historyItem];
+    render(
+      <ServiceRequestProposalSummaryCard summary={baseSummary} canEdit={false} onEdit={vi.fn()} />,
+    );
+    fireEvent.click(screen.getByText(/ver histórico de orçamentos/i));
+    fireEvent.click(screen.getByRole("button", { name: /detalhes do orçamento/i }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /fechar/i }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
 });

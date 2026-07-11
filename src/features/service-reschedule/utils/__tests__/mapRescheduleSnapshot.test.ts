@@ -175,4 +175,57 @@ describe("mapRescheduleSnapshot", () => {
     expect(snapshot?.activeRequest?.original_slot.duration_unit).toBeNull();
     expect(snapshot?.activeRequest?.original_slot.duration_value).toBeNull();
   });
+
+  it("rejects active request when original_slot has no start_date", () => {
+    expect(
+      mapRescheduleSnapshot({
+        contracted_service_id: "cs-1",
+        active_request: {
+          ...validActiveRequest,
+          original_slot: { shift: "morning" },
+        },
+      })?.activeRequest,
+    ).toBeNull();
+  });
+
+  it("returns null activeRequest when id is missing", () => {
+    const { id: _id, ...withoutId } = validActiveRequest;
+    expect(
+      mapRescheduleSnapshot({
+        contracted_service_id: "cs-1",
+        active_request: withoutId,
+      })?.activeRequest,
+    ).toBeNull();
+  });
+
+  it("maps invalid proposed_slot to null", () => {
+    const snapshot = mapRescheduleSnapshot({
+      contracted_service_id: "cs-1",
+      active_request: {
+        ...validActiveRequest,
+        proposed_slot: { start_date: "2030-06-15", shift: "evening" },
+      },
+    });
+    expect(snapshot?.activeRequest?.proposed_slot).toBeNull();
+  });
+
+  it("returns snapshot without activeRequest when both request keys invalid", () => {
+    const snapshot = mapRescheduleSnapshot({
+      contracted_service_id: "cs-1",
+      request: { id: "bad" },
+      active_request: { id: "also-bad" },
+      display_status: 42,
+    });
+    expect(snapshot?.activeRequest).toBeNull();
+    expect(snapshot?.displayStatus).toBeNull();
+  });
+
+  it("coerces non-string display_status to null", () => {
+    expect(
+      mapRescheduleSnapshot({
+        contracted_service_id: "cs-1",
+        display_status: { status: "REQUESTED" },
+      })?.displayStatus,
+    ).toBeNull();
+  });
 });

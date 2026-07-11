@@ -78,6 +78,9 @@ describe("ProviderJobsPage", () => {
     mocks.location.isUsingDefault = false;
     mocks.location.hasFeedLocation = false;
     mocks.location.location = { latitude: -27.5, longitude: -48.5 };
+    mocks.location.permissionDenied = false;
+    mocks.location.insecureContext = false;
+    mocks.location.isNativeApp = false;
     mocks.filters.filters.sortMode = "newest";
   });
 
@@ -132,6 +135,46 @@ describe("ProviderJobsPage", () => {
       </MemoryRouter>,
     );
     expect(screen.getAllByText(/localização aproximada/i).length).toBeGreaterThan(0);
+  });
+
+  it("shows permission-denied banner and wires retry", () => {
+    mocks.location.isUsingDefault = true;
+    mocks.location.permissionDenied = true;
+    mocks.location.insecureContext = false;
+    mocks.location.isNativeApp = false;
+    render(
+      <MemoryRouter>
+        <ProviderJobsPage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/localização bloqueada no navegador/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /tentar novamente/i }));
+    expect(mocks.location.retry).toHaveBeenCalled();
+  });
+
+  it("shows insecure-context banner copy when HTTPS is missing", () => {
+    mocks.location.isUsingDefault = true;
+    mocks.location.permissionDenied = true;
+    mocks.location.insecureContext = true;
+    render(
+      <MemoryRouter>
+        <ProviderJobsPage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/conexão sem https/i)).toBeInTheDocument();
+  });
+
+  it("shows native app permission-denied copy", () => {
+    mocks.location.isUsingDefault = true;
+    mocks.location.permissionDenied = true;
+    mocks.location.insecureContext = false;
+    mocks.location.isNativeApp = true;
+    render(
+      <MemoryRouter>
+        <ProviderJobsPage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/localização bloqueada no app/i)).toBeInTheDocument();
   });
 
   it("falls back from nearest to newest when feed GPS is unavailable", () => {

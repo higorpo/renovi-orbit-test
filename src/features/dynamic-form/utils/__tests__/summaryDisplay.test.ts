@@ -349,5 +349,45 @@ describe("summaryDisplay", () => {
       expect(c.filled).toBe(1);
       expect(c.percentage).toBe(100);
     });
+
+    it("excludes hidden steps and blocks from completeness totals", () => {
+      const schema: FormSchema = {
+        version: "2.0",
+        id: "s",
+        title: "T",
+        metadata: { categorySlug: "x", categoryId: null, status: "draft" },
+        config: { showProgressBar: true },
+        steps: [
+          {
+            id: "one",
+            order: 0,
+            title: "S",
+            blocks: [
+              { id: "a", type: "text", label: "A", required: false, description_ai: "A" },
+              {
+                id: "b",
+                type: "text",
+                label: "B",
+                required: false,
+                description_ai: "B",
+                visibility: [{ dependsOn: "a", operator: "equals", value: "show" }],
+              },
+            ],
+          },
+          {
+            id: "hidden-step",
+            order: 1,
+            title: "Hidden",
+            visibility: [{ dependsOn: "a", operator: "equals", value: "never" }],
+            blocks: [
+              { id: "c", type: "text", label: "C", required: false, description_ai: "C" },
+            ],
+          },
+        ],
+      };
+      const c = getFormCompleteness(schema, { a: "x" });
+      expect(c.total).toBe(1);
+      expect(c.filled).toBe(1);
+    });
   });
 });

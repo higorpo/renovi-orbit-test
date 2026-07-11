@@ -135,9 +135,9 @@ export const mockFormSchema: FormSchema = {
 };
 
 /** Valid UUIDs for address form (addressFormSchema expects UUIDs for *_id fields). */
-const UUID_NEIGHBORHOOD = "11111111-1111-1111-1111-111111111111";
-const UUID_STATE = "22222222-2222-2222-2222-222222222222";
-const UUID_CITY = "33333333-3333-3333-3333-333333333333";
+const UUID_NEIGHBORHOOD = "11111111-1111-4111-8111-111111111111";
+const UUID_STATE = "22222222-2222-4222-8222-222222222222";
+const UUID_CITY = "33333333-3333-4333-8333-333333333333";
 
 /** Step 4: existing address selection (always valid). */
 export const mockStep4DataExisting: AddressSelection = {

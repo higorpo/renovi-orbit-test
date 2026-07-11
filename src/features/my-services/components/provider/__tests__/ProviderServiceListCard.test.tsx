@@ -310,3 +310,238 @@ describe("ProviderServiceListCard", () => {
     expect(onViewProposal).toHaveBeenCalledWith(proposalModel);
   });
 });
+
+describe("ProviderServiceListCard additional branches", () => {
+  function contracted(
+    overrides: Partial<NonNullable<ServiceModel["contracted"]>> = {},
+  ): NonNullable<ServiceModel["contracted"]> {
+    return {
+      id: "cs-1",
+      status: "CONFIRMED",
+      agreedSlot: null,
+      durationUnit: "hours",
+      durationValue: 2,
+      scheduledStartDate: "2025-06-15",
+      scheduledEndDate: null,
+      scheduledShift: "morning",
+      provider: null,
+      chatId: null,
+      updatedAt: null,
+      ...overrides,
+    };
+  }
+
+  it("renders a completed card with one action", () => {
+    render(
+      <MemoryRouter>
+        <ProviderServiceListCard
+          model={{
+            ...baseModel,
+            listPhase: "completed",
+            statusTabId: "completed",
+            completedAt: "2025-06-10T00:00:00Z",
+            contracted: contracted({ status: "COMPLETED" }),
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Serviço concluído")).toBeInTheDocument();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Ver detalhes" })).toBeInTheDocument();
+  });
+
+  it("renders cancellation detail and subdetail", () => {
+    render(
+      <MemoryRouter>
+        <ProviderServiceListCard
+          model={{
+            ...baseModel,
+            listPhase: "cancelled",
+            statusTabId: "cancelled",
+            requestStatus: "CANCELLED",
+            cancelledAt: "2025-06-05T12:00:00Z",
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Cliente desistiu da execução")).toBeInTheDocument();
+    expect(screen.getByText(/Cancelado em 05\/06\/2025/)).toBeInTheDocument();
+  });
+
+  it("shows high urgency", () => {
+    render(
+      <MemoryRouter>
+        <ProviderServiceListCard model={{ ...baseModel, urgency: "high" }} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Urgente")).toBeInTheDocument();
+  });
+
+  it("renders an expired proposal", () => {
+    render(
+      <MemoryRouter>
+        <ProviderServiceListCard
+          model={{
+            ...baseModel,
+            hasPendingProposal: false,
+            chatSummary: null,
+            myProposal: {
+              ...baseModel.myProposal!,
+              status: "EXPIRED",
+              expiredAt: "2025-03-03T00:00:00Z",
+            },
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Proposta expirada")).toBeInTheDocument();
+  });
+
+  it("invites starting a chat without a proposal or conversation", () => {
+    render(
+      <MemoryRouter>
+        <ProviderServiceListCard
+          model={{
+            ...baseModel,
+            hasPendingProposal: false,
+            myProposal: null,
+            chatSummary: null,
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Inicie a conversa com o cliente")).toBeInTheDocument();
+  });
+
+  it("renders a non-interactive card body when details callback is omitted", () => {
+    render(
+      <MemoryRouter>
+        <ProviderServiceListCard model={baseModel} />
+      </MemoryRouter>,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /Ver detalhes de Troca de disjuntor/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("disables today's map action without coordinates", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2025-06-08T12:00:00Z"));
+
+    try {
+      render(
+        <MemoryRouter>
+          <ProviderServiceListCard
+            model={{
+              ...baseModel,
+              listPhase: "in_progress",
+              statusTabId: "in_progress",
+              chatSummary: null,
+              address: { neighborhood: "Centro", cityName: "Florianópolis" },
+              contracted: contracted({ scheduledStartDate: "2025-06-08" }),
+            }}
+          />
+        </MemoryRouter>,
+      );
+
+      expect(screen.getByRole("button", { name: "Abrir no mapa" })).toBeDisabled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("falls back to counterpartyName", () => {
+    render(
+      <MemoryRouter>
+        <ProviderServiceListCard
+          model={{ ...baseModel, counterparty: null, counterpartyName: "Cliente legado" }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Cliente legado")).toBeInTheDocument();
+  });
+
+  it("renders pending payment in progress", () => {
+    render(
+      <MemoryRouter>
+        <ProviderServiceListCard
+          model={{
+            ...baseModel,
+            listPhase: "in_progress",
+            statusTabId: "in_progress",
+            chatSummary: null,
+            contracted: contracted({ status: "PENDING_PAYMENT" }),
+          }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Aguardando pagamento do cliente")).toBeInTheDocument();
+  });
+
+  it("falls back to Cliente when client name is missing", () => {
+    render(
+      <MemoryRouter>
+        <ProviderServiceListCard
+          model={{ ...baseModel, counterparty: null, counterpartyName: null }}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Cliente")).toBeInTheDocument();
+  });
+
+  it("hides urgency badge when showUrgency is false", () => {
+    render(
+      <MemoryRouter>
+        <ProviderServiceListCard model={{ ...baseModel, urgency: null }} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText(/Urgente/i)).not.toBeInTheDocument();
+  });
+
+  it("renders the resolved client avatar image", async () => {
+    const usePublicProfileImageUrl = vi.mocked(
+      await import(
+        "@/features/provider-profile/hooks/usePublicProfileImageUrl"
+      ).then((module) => module.usePublicProfileImageUrl)
+    );
+    usePublicProfileImageUrl.mockReturnValue({
+      url: "https://cdn.example/client.jpg",
+      isLoading: false,
+    });
+
+    render(
+      <MemoryRouter>
+        <ProviderServiceListCard model={baseModel} />
+      </MemoryRouter>,
+    );
+
+    expect(usePublicProfileImageUrl).toHaveBeenCalledWith(null);
+    expect(screen.getByText("MS")).toBeInTheDocument();
+  });
+
+  it("dispatches the details footer action", () => {
+    const onOpenDetails = vi.fn();
+    render(
+      <MemoryRouter>
+        <ProviderServiceListCard
+          model={baseModel}
+          onOpenDetails={onOpenDetails}
+        />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Ver detalhes" }));
+
+    expect(onOpenDetails).toHaveBeenCalledWith(baseModel);
+  });
+});

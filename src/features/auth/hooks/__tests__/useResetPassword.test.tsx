@@ -157,4 +157,47 @@ describe("useResetPassword", () => {
     });
     expect(navigate).toHaveBeenCalledWith("/login", { replace: true });
   });
+
+  it("sets generic password error for other API failures", async () => {
+    updateUserPassword.mockResolvedValue({
+      error: { message: "rate limited" },
+    });
+    const { result } = renderHook(() => useResetPassword(), { wrapper });
+    act(() => {
+      result.current.setFormData({
+        password: "Str0ng!pass",
+        confirmPassword: "Str0ng!pass",
+      });
+    });
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault: vi.fn(),
+      } as unknown as React.FormEvent);
+    });
+    expect(result.current.errors.password).toBe(
+      "Não foi possível alterar a senha. Tente novamente."
+    );
+    expect(result.current.submitting).toBe(false);
+  });
+
+  it("toasts error when updateUserPassword throws", async () => {
+    const { toast } = await import("sonner");
+    updateUserPassword.mockRejectedValue(new Error("network"));
+    const { result } = renderHook(() => useResetPassword(), { wrapper });
+    act(() => {
+      result.current.setFormData({
+        password: "Str0ng!pass",
+        confirmPassword: "Str0ng!pass",
+      });
+    });
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault: vi.fn(),
+      } as unknown as React.FormEvent);
+    });
+    expect(toast.error).toHaveBeenCalledWith(
+      "Erro ao alterar senha. Tente novamente."
+    );
+    expect(result.current.submitting).toBe(false);
+  });
 });

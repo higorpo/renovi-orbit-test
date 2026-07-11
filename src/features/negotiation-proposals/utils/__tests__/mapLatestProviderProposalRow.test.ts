@@ -42,4 +42,12 @@ describe("mapLatestProviderProposalRow", () => {
       durationUnit: "hours",
     });
   });
+
+  it("sets suggestedSlots to null when the RPC value is not an array", () => {
+    const result = mapLatestProviderProposalRow({
+      ...baseRow,
+      proposal_suggested_slots: { unexpected: true } as never,
+    });
+    expect(result.draft.suggestedSlots).toBeNull();
+  });
 });

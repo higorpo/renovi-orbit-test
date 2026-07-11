@@ -84,4 +84,115 @@ describe('useOnlineStatus', () => {
     await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
     resolveFetch?.({ ok: true } as Response)
   })
+
+  it('marks offline immediately on the browser offline event', async () => {
+    const { getByTestId } = render(
+      <OnlineStatusProvider>
+        <ProbeConsumer />
+      </OnlineStatusProvider>,
+    )
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
+    window.dispatchEvent(new Event('offline'))
+
+    await waitFor(() => expect(getByTestId('online').textContent).toBe('false'))
+  })
+
+  it('marks offline when the probe fetch fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network')))
+
+    const { getByTestId } = render(
+      <OnlineStatusProvider>
+        <ProbeConsumer />
+      </OnlineStatusProvider>,
+    )
+
+    await waitFor(() => expect(getByTestId('online').textContent).toBe('false'))
+  })
+
+  it('skips the probe when navigator reports offline', async () => {
+    Object.defineProperty(navigator, 'onLine', {
+      configurable: true,
+      value: false,
+    })
+
+    const { getByTestId } = render(
+      <OnlineStatusProvider>
+        <ProbeConsumer />
+      </OnlineStatusProvider>,
+    )
+
+    await waitFor(() => expect(getByTestId('online').textContent).toBe('false'))
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('marks offline when the probe returns a non-ok response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
+
+    const { getByTestId } = render(
+      <OnlineStatusProvider>
+        <ProbeConsumer />
+      </OnlineStatusProvider>,
+    )
+
+    await waitFor(() => expect(getByTestId('online').textContent).toBe('false'))
+  })
+
+  it('marks online immediately on browser online event then re-probes', async () => {
+    const { getByTestId } = render(
+      <OnlineStatusProvider>
+        <ProbeConsumer />
+      </OnlineStatusProvider>,
+    )
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
+    window.dispatchEvent(new Event('offline'))
+    await waitFor(() => expect(getByTestId('online').textContent).toBe('false'))
+
+    window.dispatchEvent(new Event('online'))
+    await waitFor(() => expect(getByTestId('online').textContent).toBe('true'))
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
+  })
+
+  it('re-probes on the 60s interval while online', async () => {
+    vi.useFakeTimers()
+    render(
+      <OnlineStatusProvider>
+        <ProbeConsumer />
+      </OnlineStatusProvider>,
+    )
+
+    await vi.advanceTimersByTimeAsync(0)
+    expect(fetch).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(fetch).toHaveBeenCalledTimes(2)
+    vi.useRealTimers()
+  })
+
+  it('clears --offline-banner-inset on provider unmount', async () => {
+    const { unmount } = render(
+      <OnlineStatusProvider>
+        <ProbeConsumer />
+      </OnlineStatusProvider>,
+    )
+
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1))
+    document.documentElement.style.setProperty('--offline-banner-inset', '1rem')
+    unmount()
+    expect(document.documentElement.style.getPropertyValue('--offline-banner-inset')).toBe('')
+  })
+
+  it('does not notify listeners when status is unchanged', async () => {
+    const { getByTestId } = render(
+      <OnlineStatusProvider>
+        <ProbeConsumer />
+      </OnlineStatusProvider>,
+    )
+
+    await waitFor(() => expect(getByTestId('online').textContent).toBe('true'))
+    window.dispatchEvent(new Event('online'))
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2))
+    expect(getByTestId('online').textContent).toBe('true')
+  })
 })

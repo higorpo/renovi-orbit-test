@@ -53,6 +53,50 @@ describe("pushNotificationSuppression", () => {
     });
     expect(suppress).toBe(false);
   });
+
+  it("does not suppress when app is in background or chat id is missing", () => {
+    expect(
+      shouldSuppressChatPushNotification({
+        activeConversationId: "chat-1",
+        payload: { data: { chat_id: "chat-1" } },
+        appInForeground: false,
+        webTabVisible: true,
+      }),
+    ).toBe(false);
+
+    expect(
+      shouldSuppressChatPushNotification({
+        activeConversationId: null,
+        payload: { data: { chat_id: "chat-1" } },
+        appInForeground: true,
+        webTabVisible: true,
+      }),
+    ).toBe(false);
+
+    expect(
+      shouldSuppressChatPushNotification({
+        activeConversationId: "chat-1",
+        payload: { data: {} },
+        appInForeground: true,
+        webTabVisible: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("uses document visibility when webTabVisible is omitted", () => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "visible",
+    });
+
+    expect(
+      shouldSuppressChatPushNotification({
+        activeConversationId: "chat-1",
+        payload: { data: { chat_id: "chat-1" } },
+        appInForeground: true,
+      }),
+    ).toBe(true);
+  });
 });
 
 describe("isWebTabVisible", () => {
@@ -64,5 +108,14 @@ describe("isWebTabVisible", () => {
     });
     expect(isWebTabVisible()).toBe(false);
     vi.restoreAllMocks();
+  });
+
+  it("returns true when document is visible", async () => {
+    const { isWebTabVisible } = await import("../pushNotificationSuppression");
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => "visible",
+    });
+    expect(isWebTabVisible()).toBe(true);
   });
 });

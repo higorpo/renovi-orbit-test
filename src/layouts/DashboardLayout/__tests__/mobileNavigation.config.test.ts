@@ -60,4 +60,43 @@ describe("resolveMobileChrome", () => {
     expect(chrome.stackTitle).toBe("Ajuda");
     expect(chrome.showBottomNav).toBe(false);
   });
+
+  it.each([
+    {
+      pathname: "/dashboard/settings",
+      stackTitle: "Configurações",
+      backFallback: "/dashboard",
+    },
+    {
+      pathname: "/dashboard/services/calendar",
+      stackTitle: "Calendário",
+      backFallback: "/dashboard/services",
+    },
+  ])(
+    "returns stack chrome with transition for $pathname",
+    ({ pathname, stackTitle, backFallback }) => {
+      const chrome = resolveMobileChrome(pathname, location(pathname));
+      expect(chrome.mode).toBe("stack");
+      expect(chrome.stackTitle).toBe(stackTitle);
+      expect(chrome.backFallback).toBe(backFallback);
+      expect(chrome.enableStackTransition).toBe(true);
+      expect(chrome.showBottomNav).toBe(false);
+    },
+  );
+
+  it("returns tab-root for chats list path", () => {
+    const chrome = resolveMobileChrome("/dashboard/chats", location("/dashboard/chats"));
+    expect(chrome.mode).toBe("tab-root");
+    expect(chrome.showTabHeader).toBe(true);
+    expect(chrome.showBottomNav).toBe(true);
+    expect(chrome.enableStackTransition).toBe(false);
+  });
+
+  it("returns hidden chrome outside dashboard", () => {
+    const chrome = resolveMobileChrome("/login", location("/login"));
+    expect(chrome.mode).toBe("hidden");
+    expect(chrome.showTabHeader).toBe(false);
+    expect(chrome.showStackHeader).toBe(false);
+    expect(chrome.showBottomNav).toBe(false);
+  });
 });

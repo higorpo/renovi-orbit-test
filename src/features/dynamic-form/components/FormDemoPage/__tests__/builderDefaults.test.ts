@@ -68,15 +68,62 @@ describe("builderDefaults", () => {
     expect(createBlock("checkbox").options?.length).toBeGreaterThan(0);
     expect(createBlock("conditional_alert").config?.alertType).toBe("info");
     expect(createBlock("static_text").config?.variant).toBe("p");
+    expect(createBlock("preview_summary").type).toBe("preview_summary");
+    expect(createBlock("number").min).toBe(0);
   });
 
-  it("createDefaultVisibilityRule and optionFromTemplate", () => {
+  it("createBlock preserves provided options and numeric overrides", () => {
+    const opts = [{ value: "x", label: "X" }];
+    expect(createBlock("single_select", { options: opts }).options).toEqual(opts);
+    expect(
+      createBlock("number", { min: 2, max: 9, step: 3, unit: "kg" }).unit,
+    ).toBe("kg");
+    expect(createBlock("property_type", { options: opts }).options).toEqual(opts);
+    expect(createBlock("urgency", { options: opts }).options).toEqual(opts);
+    expect(
+      createBlock("conditional_alert", {
+        visibility: [{ dependsOn: "a", operator: "equals", value: "1" }],
+      }).visibility?.[0]?.dependsOn,
+    ).toBe("a");
+  });
+
+  it("createBlock falls back to default option when options array is empty", () => {
+    const block = createBlock("checkbox", { options: [] });
+    expect(block.options).toEqual([{ value: "opcao_1", label: "Opção 1" }]);
+  });
+
+  it("createStep keeps optional description and visibility", () => {
+    const step = createStep({
+      description: "Desc",
+      visibility: [{ dependsOn: "f", operator: "isNotEmpty", value: "" }],
+      icon: "🔧",
+    });
+    expect(step.description).toBe("Desc");
+    expect(step.icon).toBe("🔧");
+    expect(step.visibility?.[0]?.operator).toBe("isNotEmpty");
+  });
+
+  it("optionFromTemplate copies optional fields", () => {
     const rule = createDefaultVisibilityRule();
     expect(rule.operator).toBe("equals");
-    const opt = optionFromTemplate({ label: "L" }, 2);
-    expect(opt.value).toMatch(/opt_/);
-    expect(opt.label).toBe("L");
+    const opt = optionFromTemplate(
+      {
+        label: "L",
+        emoji: "x",
+        description: "d",
+        exclusive: true,
+        metadata: { k: 1 },
+        image: "img",
+        tags: ["t"],
+      },
+      0,
+    );
+    expect(opt.emoji).toBe("x");
+    expect(opt.exclusive).toBe(true);
+    expect(opt.tags).toEqual(["t"]);
     const optFixed = optionFromTemplate({ value: "v", label: "L2" }, 0);
     expect(optFixed.value).toBe("v");
+    const optIndex = optionFromTemplate({ label: "L" }, 2);
+    expect(optIndex.value).toMatch(/opt_/);
   });
 });

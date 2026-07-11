@@ -74,4 +74,68 @@ describe("useChatComposerState", () => {
     await waitFor(() => expect(result.current.disabledReason).toBe("pending_proposal"));
     expect(result.current.helperText).toContain("Aguarde a resposta do cliente");
   });
+
+  it("does not fetch when chatId is null", () => {
+    const { result } = renderHook(
+      () =>
+        useChatComposerState({
+          chatId: null,
+          conversationStatus: "ACTIVE",
+        }),
+      { wrapper: createWrapper() },
+    );
+
+    expect(checkFreeMessagingMock).not.toHaveBeenCalled();
+    expect(result.current.proposalTimelineQueryKey).toBeNull();
+    expect(result.current.freeMessagingAllowed).toBeNull();
+  });
+
+  it("does not fetch when enabled is false", () => {
+    renderHook(
+      () =>
+        useChatComposerState({
+          chatId: "chat-1",
+          conversationStatus: "ACTIVE",
+          enabled: false,
+        }),
+      { wrapper: createWrapper() },
+    );
+
+    expect(checkFreeMessagingMock).not.toHaveBeenCalled();
+  });
+
+  it("surfaces isError when free messaging check fails", async () => {
+    checkFreeMessagingMock.mockResolvedValue({
+      data: null,
+      error: { message: "rpc failed" },
+    });
+
+    const { result } = renderHook(
+      () =>
+        useChatComposerState({
+          chatId: "chat-1",
+          conversationStatus: "ACTIVE",
+        }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toBeInstanceOf(Error);
+  });
+
+  it("disables composer when conversation is CLOSED", async () => {
+    checkFreeMessagingMock.mockResolvedValue({ data: true, error: null });
+
+    const { result } = renderHook(
+      () =>
+        useChatComposerState({
+          chatId: "chat-1",
+          conversationStatus: "CLOSED",
+        }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.disabledReason).toBe("conversation_closed"));
+    expect(result.current.isInputEnabled).toBe(false);
+  });
 });

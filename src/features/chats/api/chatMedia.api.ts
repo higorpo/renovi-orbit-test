@@ -196,7 +196,13 @@ export async function resolveChatAudioSignedUrl(params: {
   });
 
   if (result.error) {
-    return { url: null, error: result.error };
+    return {
+      url: null,
+      error:
+        result.error === "Não foi possível carregar a imagem."
+          ? "Não foi possível carregar o áudio."
+          : result.error,
+    };
   }
 
   const url = result.urls[0] ?? null;

@@ -340,4 +340,94 @@ describe("DynamicProposalCard", () => {
 
     expect(screen.queryByText(/revisão solicitada pelo cliente/i)).not.toBeInTheDocument();
   });
+
+  it("shows unlink fallback when message has no proposal id", () => {
+    renderCard(
+      <DynamicProposalCard
+        chatId="chat-1"
+        message={{ ...message, linked_entity_id: null }}
+        viewerRole="client"
+        isOutgoing={false}
+      />,
+    );
+
+    expect(
+      screen.getByText("Não foi possível vincular esta proposta à conversa."),
+    ).toBeInTheDocument();
+    expect(hydrateMock).toHaveBeenCalledWith("chat-1", null, false);
+  });
+
+  it("emits accept action when client taps Aceitar", () => {
+    hydrateMock.mockReturnValue({
+      proposal: { status: "PENDING", proposed_amount: 500 },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    const onProposalAction = vi.fn();
+
+    renderCard(
+      <DynamicProposalCard
+        chatId="chat-1"
+        message={message}
+        viewerRole="client"
+        isOutgoing={false}
+        onProposalAction={onProposalAction}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^Aceitar$/i }));
+    expect(onProposalAction).toHaveBeenCalledWith("accept", "p1");
+  });
+
+  it("shows provider edit CTA when revision was requested", () => {
+    hydrateMock.mockReturnValue({
+      proposal: {
+        status: "REVISION_REQUESTED",
+        proposed_amount: 500,
+        revision_reason: "PRICE_TOO_HIGH",
+      },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    const onProposalAction = vi.fn();
+
+    renderCard(
+      <DynamicProposalCard
+        chatId="chat-1"
+        message={message}
+        viewerRole="provider"
+        isOutgoing
+        onProposalAction={onProposalAction}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Editar proposta/i }));
+    expect(onProposalAction).toHaveBeenCalledWith("edit_proposal", "p1");
+  });
+
+  it("renders without amount when proposed_amount is missing", () => {
+    hydrateMock.mockReturnValue({
+      proposal: { status: "EXPIRED" },
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+
+    renderCard(
+      <DynamicProposalCard
+        chatId="chat-1"
+        message={message}
+        viewerRole="client"
+        isOutgoing={false}
+        onProposalAction={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText(/R\$/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Proposta expirada")).toBeInTheDocument();
+  });
 });

@@ -19,6 +19,21 @@ vi.mock("@/features/auth", () => ({
   getProfile: vi.fn(),
 }));
 
+const capturedQueryFns: Array<() => Promise<unknown>> = [];
+
+vi.mock("@tanstack/react-query", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-query")>();
+  return {
+    ...actual,
+    useQuery: (options: Parameters<typeof actual.useQuery>[0]) => {
+      if (typeof options.queryFn === "function") {
+        capturedQueryFns.push(options.queryFn as () => Promise<unknown>);
+      }
+      return actual.useQuery(options);
+    },
+  };
+});
+
 const useAuth = vi.mocked(await import("@/features/auth").then((m) => m.useAuth));
 const getProfile = vi.mocked(await import("@/features/auth").then((m) => m.getProfile));
 
@@ -34,6 +49,7 @@ function createWrapper() {
 describe("useAccountProfile", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    capturedQueryFns.length = 0;
     useAuth.mockReturnValue({
       user: { id: "user-1", email: "u@e.com" },
       profile: null,
@@ -86,5 +102,20 @@ describe("useAccountProfile", () => {
 
     expect(result.current.profile).toBeNull();
     expect(result.current.error).toBe("Not found");
+  });
+
+  it("queryFn returns Not authenticated when user id is missing", async () => {
+    useAuth.mockReturnValue({
+      user: null,
+      profile: null,
+    } as ReturnType<typeof useAuth>);
+
+    renderHook(() => useAccountProfile(), { wrapper: createWrapper() });
+    expect(capturedQueryFns.length).toBeGreaterThan(0);
+
+    getProfile.mockClear();
+    const result = await capturedQueryFns[capturedQueryFns.length - 1]!();
+    expect(result).toEqual({ profile: null, error: "Not authenticated" });
+    expect(getProfile).not.toHaveBeenCalled();
   });
 });

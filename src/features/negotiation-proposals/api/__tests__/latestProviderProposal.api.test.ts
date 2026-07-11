@@ -92,4 +92,25 @@ describe("getLatestProviderProposalForServiceRequest", () => {
     expect(result.data).toBeNull();
     expect(result.error).toBe("permission denied");
   });
+
+  it("returns null data for malformed latest proposal row", async () => {
+    maybeSingle.mockResolvedValue({
+      data: {
+        id: "prop-1",
+        service_request_id: "sr-1",
+        status: "PENDING",
+        proposed_amount: 300,
+        // missing proposal_description
+      },
+      error: null,
+    });
+
+    const result = await getLatestProviderProposalForServiceRequest({
+      serviceRequestId: "sr-1",
+      providerId: "provider-1",
+    });
+
+    expect(result.data).toBeNull();
+    expect(result.error).toBeNull();
+  });
 });

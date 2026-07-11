@@ -4,7 +4,24 @@ import {
   hasActiveServiceRequestProposal,
   isPendingProposalStatus,
   isRejectedProposalStatus,
+  normalizeProposalStatus,
+  resolveProposalStatus,
 } from "../proposalStatus";
+
+describe("normalizeProposalStatus", () => {
+  it("trims and uppercases status values", () => {
+    expect(normalizeProposalStatus(" pending ")).toBe("PENDING");
+    expect(normalizeProposalStatus(null)).toBe("");
+    expect(normalizeProposalStatus(undefined)).toBe("");
+  });
+});
+
+describe("resolveProposalStatus", () => {
+  it("coerces known statuses and rejects unknown ones", () => {
+    expect(resolveProposalStatus("accepted")).toBe("ACCEPTED");
+    expect(resolveProposalStatus("unknown")).toBeNull();
+  });
+});
 
 describe("canEditServiceRequestProposal", () => {
   it("allows edit for PENDING and REVISION_REQUESTED", () => {
@@ -29,6 +46,12 @@ describe("hasActiveServiceRequestProposal", () => {
 
   it("treats PENDING as active when proposal id exists", () => {
     expect(hasActiveServiceRequestProposal("prop-1", "PENDING")).toBe(true);
+  });
+
+  it("returns false when proposal id is missing", () => {
+    expect(hasActiveServiceRequestProposal(null, "PENDING")).toBe(false);
+    expect(hasActiveServiceRequestProposal(undefined, "PENDING")).toBe(false);
+    expect(hasActiveServiceRequestProposal("", "PENDING")).toBe(false);
   });
 });
 

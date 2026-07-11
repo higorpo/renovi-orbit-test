@@ -209,3 +209,79 @@ describe("resolveFormDataFromCep", () => {
     });
   });
 });
+
+describe("resolveFormDataFromCep fallback values", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    listStates.mockResolvedValue({ states: [mockState], error: null });
+    listCitiesByState.mockResolvedValue({ cities: [mockCity], error: null });
+    listNeighborhoodsByCity.mockResolvedValue({
+      neighborhoods: [mockNeighborhood],
+      error: null,
+    });
+  });
+
+  it("matches a city by normalized name when the IBGE code is invalid", async () => {
+    fetchAddressByCEP.mockResolvedValue({
+      logradouro: "  Rua A  ",
+      bairro: "  Bela Vista ",
+      localidade: " sao paulo ",
+      uf: "sp",
+      ibge: "invalid",
+    });
+
+    const result = await resolveFormDataFromCep("01310-100");
+
+    expect(result).toEqual({
+      ok: true,
+      data: expect.objectContaining({
+        address_street: "Rua A",
+        address_city_id: mockCity.id,
+        address_neighborhood_id: mockNeighborhood.id,
+      }),
+    });
+  });
+
+  it("returns unavailable when ViaCEP omits the state", async () => {
+    fetchAddressByCEP.mockResolvedValue({
+      bairro: "Bela Vista",
+      localidade: "São Paulo",
+      uf: undefined,
+    });
+
+    expect(await resolveFormDataFromCep("01310-100")).toEqual({
+      ok: false,
+      notAvailable: true,
+    });
+  });
+
+  it("still resolves by IBGE when ViaCEP omits the city name", async () => {
+    fetchAddressByCEP.mockResolvedValue({
+      logradouro: "Rua A",
+      bairro: "Bela Vista",
+      localidade: undefined,
+      uf: "SP",
+      ibge: "3550308",
+    });
+
+    expect(await resolveFormDataFromCep("01310-100")).toEqual({
+      ok: true,
+      data: expect.objectContaining({ address_city_id: mockCity.id }),
+    });
+  });
+
+  it("returns unavailable when ViaCEP omits the neighborhood", async () => {
+    fetchAddressByCEP.mockResolvedValue({
+      logradouro: "Rua A",
+      bairro: undefined,
+      localidade: "São Paulo",
+      uf: "SP",
+      ibge: "3550308",
+    });
+
+    expect(await resolveFormDataFromCep("01310-100")).toEqual({
+      ok: false,
+      notAvailable: true,
+    });
+  });
+});

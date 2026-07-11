@@ -16,10 +16,13 @@ describe("presentational components", () => {
   });
 
   it("renders JobsEmptyState with and without filters", () => {
+    const onClear = vi.fn();
     const { rerender } = render(
-      <JobsEmptyState hasFilters onClearFilters={vi.fn()} />,
+      <JobsEmptyState hasFilters onClearFilters={onClear} />,
     );
     expect(screen.getByText(/nenhum trabalho encontrado/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /limpar filtros/i }));
+    expect(onClear).toHaveBeenCalled();
     rerender(<JobsEmptyState hasFilters={false} />);
     expect(screen.getByText(/nenhuma oportunidade na sua região/i)).toBeInTheDocument();
   });
@@ -27,6 +30,11 @@ describe("presentational components", () => {
   it("renders JobsHeader with feed GPS warning when using default location", () => {
     render(<JobsHeader isUsingDefaultLocation />);
     expect(screen.getByText(/sem gps do feed/i)).toBeInTheDocument();
+  });
+
+  it("hides GPS warning when not using default location", () => {
+    render(<JobsHeader isUsingDefaultLocation={false} />);
+    expect(screen.queryByText(/sem gps do feed/i)).not.toBeInTheDocument();
   });
 
   it("renders JobsSortTabs and notifies mode change", () => {

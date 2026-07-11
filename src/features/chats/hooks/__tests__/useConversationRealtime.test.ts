@@ -352,4 +352,78 @@ describe("useConversationRealtime", () => {
       expect(invalidateSpy).not.toHaveBeenCalled();
     });
   });
+
+  it("invalidates proposal timeline on proposal updates and cleans up on unmount", async () => {
+    const queryClient = new QueryClient();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const onReconcile = vi.fn();
+    const onRealtimeStatusChange = vi.fn();
+
+    function Wrapper({ children }: { children: ReactNode }) {
+      return createElement(QueryClientProvider, { client: queryClient }, children);
+    }
+
+    const { unmount } = renderHook(
+      () =>
+        useConversationRealtime("chat-1", {
+          onReconcile,
+          onRealtimeStatusChange,
+          serviceRequestId: "sr-1",
+          providerId: "provider-1",
+        }),
+      { wrapper: Wrapper },
+    );
+
+    await waitFor(() => expect(onHandlers.proposalUpdate).toBeDefined());
+    onReconcile.mockClear();
+    invalidateSpy.mockClear();
+
+    const payload = { new: { id: "prop-1", provider_id: "provider-1" } };
+    onHandlers.proposalUpdate?.(payload as never);
+    onHandlers.proposalUpdate?.(payload as never);
+
+    await waitFor(() => {
+      expect(onReconcile).toHaveBeenCalledTimes(1);
+      const proposalInvalidations = invalidateSpy.mock.calls.filter(
+        (call) => call[0]?.queryKey?.[0] === "chat-proposal-timeline",
+      );
+      expect(proposalInvalidations.length).toBeGreaterThan(0);
+    });
+
+    unmount();
+    expect(removeChannelMock).toHaveBeenCalled();
+  });
+
+  it("ignores own read receipts and missing current user", async () => {
+    const queryClient = new QueryClient();
+    const setQueryDataSpy = vi.spyOn(queryClient, "setQueryData");
+
+    function Wrapper({ children }: { children: ReactNode }) {
+      return createElement(QueryClientProvider, { client: queryClient }, children);
+    }
+
+    renderHook(
+      () => useConversationRealtime("chat-1", { currentUserId: "user-a" }),
+      { wrapper: Wrapper },
+    );
+
+    onHandlers.readReceiptChange?.({
+      new: {
+        user_id: "user-a",
+        last_read_message_id: "msg-1",
+        last_read_at: "2026-01-01T10:00:00Z",
+      },
+    } as never);
+
+    expect(setQueryDataSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("isRealtimeConnectionHealthy", () => {
+  it("returns true only for SUBSCRIBED", async () => {
+    const { isRealtimeConnectionHealthy } = await import("../useConversationRealtime");
+    expect(isRealtimeConnectionHealthy("SUBSCRIBED")).toBe(true);
+    expect(isRealtimeConnectionHealthy("CHANNEL_ERROR")).toBe(false);
+    expect(isRealtimeConnectionHealthy(null)).toBe(false);
+  });
 });

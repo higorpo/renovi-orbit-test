@@ -974,3 +974,181 @@ describe("useServiceRequestProposalComposer", () => {
     expect(result.current.canSubmitProposal).toBe(true);
   });
 });
+
+describe("useServiceRequestProposalComposer branch coverage", () => {
+  const pricing = {
+    original_amount: 100,
+    tax_rate: 0,
+    tax_amount: 0,
+    final_amount: 100,
+    pricing_signature: "sig",
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.clearAllMocks();
+    mockPricingResult({ data: pricing, error: null });
+    uploadProposalPhotos.mockResolvedValue({ paths: [], error: null });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  async function prepareValidProposal(
+    result: { current: ReturnType<typeof useServiceRequestProposalComposer> },
+  ) {
+    act(() => {
+      result.current.openComposer();
+      result.current.setPriceInput("100");
+      result.current.setDescriptionDraft("Descrição válida");
+      result.current.setDurationValueInput("1");
+      result.current.updateAvailabilitySlot(0, "startDate", "2099-11-01");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(1500);
+    });
+  }
+
+  it("maps zero amount, null duration, and slot end date when editing", () => {
+    const { result } = renderHook(
+      () =>
+        useServiceRequestProposalComposer({
+          serviceRequestId: "sr-1",
+          existingProposal: {
+            proposedAmount: 0,
+            description: "Existing",
+            durationValue: null,
+            durationUnit: "days",
+            suggestedSlots: [{
+              start_date: "2099-04-01",
+              end_date: "2099-04-03",
+              shift: "morning",
+            }],
+            photos: [],
+          },
+        }),
+      { wrapper: createWrapper() },
+    );
+
+    act(() => result.current.openComposer({ mode: "edit" }));
+
+    expect(result.current.priceInput).toBe("");
+    expect(result.current.durationValueInput).toBe("");
+    expect(result.current.availabilitySlots[0].endDate).toBe("2099-04-03");
+  });
+
+  it("treats reordered existing photo paths as an edit", async () => {
+    const existingProposal = {
+      proposedAmount: 100,
+      description: "Existing",
+      durationValue: 1,
+      durationUnit: "hours" as const,
+      suggestedSlots: [{ start_date: "2099-04-01", shift: "morning" as const }],
+      photos: ["a.jpg", "b.jpg"],
+    };
+    const { result } = renderHook(
+      () => useServiceRequestProposalComposer({ serviceRequestId: "sr-1", existingProposal }),
+      { wrapper: createWrapper() },
+    );
+    act(() => result.current.openComposer({ mode: "edit" }));
+    const values = result.current.form.getValues();
+
+    act(() => result.current.loadFromForm(values, ["b.jpg", "a.jpg"]));
+    await act(async () => {
+      vi.advanceTimersByTime(1500);
+    });
+
+    expect(result.current.canSubmitProposal).toBe(true);
+  });
+
+  it("reuses the same idempotency key after a failed submit", async () => {
+    createProviderProposal
+      .mockResolvedValueOnce({
+        data: null,
+        error: { code: "UNKNOWN", message: "Temporary failure" },
+      })
+      .mockResolvedValueOnce({
+        data: { id: "p1", proposal: { id: "p1" }, timeline_message: null },
+        error: null,
+      });
+    const { result } = renderHook(
+      () => useServiceRequestProposalComposer({ serviceRequestId: "sr-1" }),
+      { wrapper: createWrapper() },
+    );
+    await prepareValidProposal(result);
+
+    await act(async () => {
+      await result.current.submitProposal();
+      await result.current.submitProposal();
+    });
+
+    const firstKey = createProviderProposal.mock.calls[0]?.[0].idempotencyKey;
+    expect(firstKey).toBeTruthy();
+    expect(createProviderProposal.mock.calls[1]?.[0].idempotencyKey).toBe(firstKey);
+  });
+
+  it("shows a generic toast when proposal creation returns no data or error", async () => {
+    createProviderProposal.mockResolvedValue({ data: null, error: null });
+    const { result } = renderHook(
+      () => useServiceRequestProposalComposer({ serviceRequestId: "sr-1" }),
+      { wrapper: createWrapper() },
+    );
+    await prepareValidProposal(result);
+
+    await act(async () => {
+      await result.current.submitProposal();
+    });
+
+    expect(toast.error).toHaveBeenCalledWith("Não foi possível enviar a proposta.");
+  });
+
+  it("uses custom success copy, merges photos, and invokes the success callback", async () => {
+    const onSubmitSuccess = vi.fn().mockResolvedValue(undefined);
+    uploadProposalPhotos.mockResolvedValue({ paths: ["new/upload.jpg"], error: null });
+    createProviderProposal.mockResolvedValue({
+      data: { id: "p1", proposal: { id: "p1" }, timeline_message: null },
+      error: null,
+    });
+    const existingProposal = {
+      proposedAmount: 100,
+      description: "Existing description",
+      durationValue: 1,
+      durationUnit: "hours" as const,
+      suggestedSlots: [{ start_date: "2099-11-01", shift: "morning" as const }],
+      photos: ["existing/photo.jpg"],
+    };
+    const { result } = renderHook(
+      () =>
+        useServiceRequestProposalComposer({
+          serviceRequestId: "sr-1",
+          existingProposal,
+          successMessage: "Proposta atualizada.",
+          onSubmitSuccess,
+        }),
+      { wrapper: createWrapper() },
+    );
+    act(() => {
+      result.current.openComposer({ mode: "edit" });
+      result.current.setDescriptionDraft("Updated description");
+      const file = new File(["new"], "new.jpg", { type: "image/jpeg" });
+      result.current.addPhotos({
+        length: 1,
+        item: () => file,
+        [Symbol.iterator]: function* () {
+          yield file;
+        },
+      } as unknown as FileList);
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(1500);
+      await result.current.submitProposal();
+    });
+
+    expect(createProviderProposal).toHaveBeenCalledWith(
+      expect.objectContaining({ photos: ["existing/photo.jpg", "new/upload.jpg"] }),
+    );
+    expect(onSubmitSuccess).toHaveBeenCalledOnce();
+    expect(toast.success).toHaveBeenCalledWith("Proposta atualizada.");
+  });
+});

@@ -278,3 +278,227 @@ describe("services.api", () => {
     });
   });
 });
+
+describe("services API branch coverage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("rejects null and primitive list payloads", async () => {
+    rpc
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: "invalid", error: null });
+    const params = { page: 1, pageSize: 20, statusTabId: "all" as const };
+
+    await expect(listServices(params)).resolves.toEqual({
+      data: null,
+      error: "Resposta inválida do servidor",
+    });
+    await expect(listServices(params)).resolves.toEqual({
+      data: null,
+      error: "Resposta inválida do servidor",
+    });
+  });
+
+  it("defaults a missing items array to an empty list", async () => {
+    rpc.mockResolvedValue({
+      data: { total_count: 4, page: 2, page_size: 10 },
+      error: null,
+    });
+
+    const result = await listServices({
+      page: 2,
+      pageSize: 10,
+      statusTabId: "all",
+    });
+
+    expect(result.data).toEqual({
+      items: [],
+      total_count: 4,
+      page: 2,
+      page_size: 10,
+    });
+  });
+
+  it("returns null when getServiceById receives null data", async () => {
+    rpc.mockResolvedValue({ data: null, error: null });
+
+    await expect(getServiceById("sr-null")).resolves.toEqual({
+      data: null,
+      error: null,
+    });
+  });
+
+  it("treats a whitespace focused id as a normal list request", async () => {
+    rpc.mockResolvedValue({ data: { items: [] }, error: null });
+
+    await listServices({
+      page: 1,
+      pageSize: 20,
+      statusTabId: "all",
+      serviceRequestId: "   ",
+    });
+
+    expect(rpc).toHaveBeenCalledWith("list_services", expect.any(Object));
+  });
+
+  it("omits empty trimmed filter parameters", async () => {
+    rpc.mockResolvedValue({ data: { items: [] }, error: null });
+
+    await listServices({
+      page: 1,
+      pageSize: 20,
+      statusTabId: "all",
+      search: " ",
+      categoryId: "\t",
+      cityName: "",
+      neighborhoodName: "  ",
+      dateFrom: "",
+      dateTo: "",
+    });
+
+    expect(rpc).toHaveBeenCalledWith("list_services", {
+      p_page: 1,
+      p_page_size: 20,
+      p_list_phase: undefined,
+      p_search: undefined,
+      p_category_title: undefined,
+      p_city_name: undefined,
+      p_neighborhood: undefined,
+      p_date_from: undefined,
+      p_date_to: undefined,
+      p_has_images: undefined,
+      p_has_proposals: undefined,
+    });
+  });
+
+  it("preserves hasImages false and distinguishes it from undefined", async () => {
+    rpc.mockResolvedValue({ data: { items: [] }, error: null });
+
+    await listServices({
+      page: 1,
+      pageSize: 20,
+      statusTabId: "all",
+      hasImages: false,
+    });
+    await listServices({
+      page: 1,
+      pageSize: 20,
+      statusTabId: "all",
+    });
+
+    expect(rpc.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({ p_has_images: false }),
+    );
+    expect(rpc.mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({ p_has_images: undefined }),
+    );
+  });
+
+  it("preserves hasProposals false distinct from undefined", async () => {
+    rpc.mockResolvedValue({ data: { items: [] }, error: null });
+
+    await listServices({
+      page: 1,
+      pageSize: 20,
+      statusTabId: "all",
+      hasProposals: false,
+    });
+    await listServices({
+      page: 1,
+      pageSize: 20,
+      statusTabId: "all",
+    });
+
+    expect(rpc.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({ p_has_proposals: false }),
+    );
+    expect(rpc.mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({ p_has_proposals: undefined }),
+    );
+  });
+
+  it("clamps pageSize below 1 to 1", async () => {
+    rpc.mockResolvedValue({ data: { items: [] }, error: null });
+
+    await listServices({
+      page: 1,
+      pageSize: 0,
+      statusTabId: "all",
+    });
+
+    expect(rpc).toHaveBeenCalledWith(
+      "list_services",
+      expect.objectContaining({ p_page_size: 1 }),
+    );
+  });
+
+  it("forwards date and location filters when provided", async () => {
+    rpc.mockResolvedValue({ data: { items: [] }, error: null });
+
+    await listServices({
+      page: 1,
+      pageSize: 20,
+      statusTabId: "all",
+      search: "pintura",
+      categoryId: "Eletricista",
+      cityName: "São Paulo",
+      neighborhoodName: "Centro",
+      dateFrom: "2025-01-01",
+      dateTo: "2025-01-31",
+      hasProposals: true,
+    });
+
+    expect(rpc).toHaveBeenCalledWith("list_services", {
+      p_page: 1,
+      p_page_size: 20,
+      p_list_phase: undefined,
+      p_search: "pintura",
+      p_category_title: "Eletricista",
+      p_city_name: "São Paulo",
+      p_neighborhood: "Centro",
+      p_date_from: "2025-01-01",
+      p_date_to: "2025-01-31",
+      p_has_images: undefined,
+      p_has_proposals: true,
+    });
+  });
+
+  it("treats non-array items as empty list", async () => {
+    rpc.mockResolvedValue({
+      data: { items: "bad", total_count: 0, page: 1, page_size: 20 },
+      error: null,
+    });
+
+    const result = await listServices({
+      page: 1,
+      pageSize: 20,
+      statusTabId: "all",
+    });
+
+    expect(result.data?.items).toEqual([]);
+  });
+
+  it("getServiceById returns null data for primitive RPC payload", async () => {
+    rpc.mockResolvedValue({ data: "foo", error: null });
+
+    await expect(getServiceById("sr-1")).resolves.toEqual({
+      data: null,
+      error: null,
+    });
+  });
+
+  it("getServiceById trims surrounding whitespace from id", async () => {
+    rpc.mockResolvedValue({
+      data: { id: "sr-1", list_phase: "negotiation", request: { title: "T" } },
+      error: null,
+    });
+
+    const result = await getServiceById("  sr-1  ");
+
+    expect(rpc).toHaveBeenCalledWith("get_service", {
+      p_service_request_id: "sr-1",
+    });
+    expect(result.data?.id).toBe("sr-1");
+  });
+});

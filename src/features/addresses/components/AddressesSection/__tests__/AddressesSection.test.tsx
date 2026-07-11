@@ -15,8 +15,27 @@ vi.mock("../../../hooks/useAddressMutations", () => ({
 }));
 
 vi.mock("../../AddressFormDialog/AddressFormDialog", () => ({
-  AddressFormDialog: ({ open, onClose }: { open: boolean; onClose: () => void }) =>
-    open ? <div data-testid="address-form-dialog"><button type="button" onClick={onClose}>Close form</button></div> : null,
+  AddressFormDialog: ({
+    open,
+    onClose,
+    onSuccess,
+    mode,
+  }: {
+    open: boolean;
+    onClose: () => void;
+    onSuccess?: () => void;
+    mode?: string;
+  }) =>
+    open ? (
+      <div data-testid="address-form-dialog" data-mode={mode}>
+        <button type="button" onClick={onClose}>
+          Close form
+        </button>
+        <button type="button" onClick={() => onSuccess?.()}>
+          Success form
+        </button>
+      </div>
+    ) : null,
 }));
 
 vi.mock("../../DeleteAddressDialog/DeleteAddressDialog", () => ({
@@ -158,5 +177,46 @@ describe("AddressesSection", () => {
   it("accepts custom cardHeaderClassName and titleSize", () => {
     render(<AddressesSection cardHeaderClassName="custom-header" titleSize="default" />);
     expect(screen.getByText("Endereços")).toBeInTheDocument();
+  });
+
+  it("opens edit dialog with selected address", () => {
+    useAddressesList.mockReturnValue({
+      addresses: [mockAddress({ id: "addr-1" })],
+      error: null,
+      isLoading: false,
+      refetch,
+    });
+    render(<AddressesSection />);
+    fireEvent.click(screen.getByRole("button", { name: /Editar endereço/ }));
+    expect(screen.getByTestId("address-form-dialog")).toHaveAttribute("data-mode", "edit");
+  });
+
+  it("refetches list after add/edit success", () => {
+    render(<AddressesSection />);
+    fireEvent.click(screen.getByRole("button", { name: /Adicionar endereço/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Success form/ }));
+    expect(refetch).toHaveBeenCalled();
+    expect(screen.queryByTestId("address-form-dialog")).not.toBeInTheDocument();
+  });
+
+  it("closes add/edit dialog via onClose", () => {
+    render(<AddressesSection />);
+    fireEvent.click(screen.getByRole("button", { name: /Adicionar endereço/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Close form/ }));
+    expect(screen.queryByTestId("address-form-dialog")).not.toBeInTheDocument();
+  });
+
+  it("closes delete dialog without mutating when cancelled", () => {
+    useAddressesList.mockReturnValue({
+      addresses: [mockAddress({ id: "addr-1" })],
+      error: null,
+      isLoading: false,
+      refetch,
+    });
+    render(<AddressesSection />);
+    fireEvent.click(screen.getByRole("button", { name: /Excluir endereço/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Close delete/ }));
+    expect(deleteAddressMutation).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("delete-address-dialog")).not.toBeInTheDocument();
   });
 });

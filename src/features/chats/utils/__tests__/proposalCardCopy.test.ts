@@ -69,4 +69,17 @@ describe("proposalCardCopy", () => {
       "O cliente seguiu com outra proposta ou encerrou o pedido.",
     );
   });
+
+  it("maps remaining statuses to headlines and empty CTAs", () => {
+    expect(resolveProposalCardHeadline("EXPIRED", "client")).toBe("Proposta expirada");
+    expect(resolveProposalCardHeadline("REVISION_REQUESTED", "client")).toBe(
+      "Revisão solicitada",
+    );
+    expect(resolveProposalCardHeadline("REJECTED", "client")).toBe("Proposta recusada");
+    expect(resolveProposalCardHeadline("not-a-status", "client")).toBe("Proposta");
+
+    expect(resolveProposalCardCtas("EXPIRED", "client")).toEqual([]);
+    expect(resolveProposalCardCtas("PENDING", "provider")).toEqual([]);
+    expect(resolveProposalCardCtas("ACCEPTED", "client")).toEqual([]);
+  });
 });

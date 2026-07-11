@@ -171,4 +171,136 @@ describe('useLocationPermissionDialog', () => {
     expect(storageMocks.markLocationPromptSeen).toHaveBeenCalled()
     expect(storageMocks.setStoredLocationPermissionGranted).toHaveBeenCalledWith(true)
   })
+
+  it('skips dialog when permission is denied', async () => {
+    locationMocks.getOperationalLocationPermissionStatus.mockResolvedValue('denied')
+    const { result } = renderHook(() => useLocationPermissionDialog())
+
+    await waitFor(() =>
+      expect(storageMocks.setStoredLocationPermissionGranted).toHaveBeenCalledWith(false),
+    )
+    expect(result.current.open).toBe(false)
+    expect(storageMocks.markLocationPromptSeen).toHaveBeenCalled()
+  })
+
+  it('skips dialog when location is unsupported', async () => {
+    locationMocks.getOperationalLocationPermissionStatus.mockResolvedValue('unsupported')
+    const { result } = renderHook(() => useLocationPermissionDialog())
+
+    await waitFor(() =>
+      expect(locationMocks.getOperationalLocationPermissionStatus).toHaveBeenCalled(),
+    )
+    expect(result.current.open).toBe(false)
+    expect(storageMocks.markLocationPromptSeen).not.toHaveBeenCalled()
+  })
+
+  it('skips dialog when stored grant is false and prompt was already seen', async () => {
+    storageMocks.getStoredLocationPermissionGranted.mockResolvedValue(false)
+    storageMocks.isLocationPromptSeen.mockResolvedValue(true)
+    const { result } = renderHook(() => useLocationPermissionDialog())
+
+    await waitFor(() =>
+      expect(locationMocks.getOperationalLocationPermissionStatus).toHaveBeenCalled(),
+    )
+    expect(result.current.open).toBe(false)
+  })
+
+  it('persists denied state when OS permission is refused', async () => {
+    locationMocks.requestOperationalLocationPermission.mockResolvedValue({
+      granted: false,
+      status: 'denied',
+    })
+    const { result } = renderHook(() => useLocationPermissionDialog())
+    await waitFor(() => expect(result.current.open).toBe(true), { timeout: 2000 })
+
+    await act(async () => {
+      await result.current.acceptAndRequestPermission()
+    })
+
+    expect(storageMocks.setStoredLocationPermissionGranted).toHaveBeenCalledWith(false)
+    expect(trackingMocks.syncProviderBeaconNow).toHaveBeenCalledWith('user-1')
+    expect(trackEventMock).toHaveBeenCalledWith('location_permission_denied', {
+      user_role: 'provider',
+      source: 'explainer_confirm',
+    })
+  })
+
+  it('tracks error when OS permission request throws', async () => {
+    const loggerWarn = vi.mocked(
+      await import('@/lib/logger').then((m) => m.logger.warn),
+    )
+    locationMocks.requestOperationalLocationPermission.mockRejectedValue(
+      new Error('request failed'),
+    )
+    const { result } = renderHook(() => useLocationPermissionDialog())
+    await waitFor(() => expect(result.current.open).toBe(true), { timeout: 2000 })
+
+    await act(async () => {
+      await result.current.acceptAndRequestPermission()
+    })
+
+    expect(loggerWarn).toHaveBeenCalledWith(
+      'location_permission_request_failed',
+      expect.objectContaining({ message: 'request failed' }),
+    )
+    expect(trackEventMock).toHaveBeenCalledWith('location_permission_denied', {
+      user_role: 'provider',
+      source: 'explainer_confirm_error',
+    })
+  })
+
+  it('captures a fix when grant response has no coordinates', async () => {
+    const captureFix = vi.mocked(
+      await import('../../utils/requestOperationalLocationPermission').then(
+        (m) => m.captureOperationalLocationFix,
+      ),
+    )
+    captureFix.mockResolvedValue({
+      granted: true,
+      status: 'granted',
+      latitude: -27.1,
+      longitude: -48.1,
+      accuracyMeters: 4,
+    })
+    locationMocks.requestOperationalLocationPermission.mockResolvedValue({
+      granted: true,
+      status: 'granted',
+    })
+
+    const { result } = renderHook(() => useLocationPermissionDialog())
+    await waitFor(() => expect(result.current.open).toBe(true), { timeout: 2000 })
+
+    await act(async () => {
+      await result.current.acceptAndRequestPermission()
+    })
+
+    expect(captureFix).toHaveBeenCalled()
+    expect(trackingMocks.scheduleLocationBeaconSync).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ latitude: -27.1, longitude: -48.1 }),
+    )
+  })
+
+  it('syncs beacon without coordinates when grant and fix capture both lack a location', async () => {
+    const captureFix = vi.mocked(
+      await import('../../utils/requestOperationalLocationPermission').then(
+        (m) => m.captureOperationalLocationFix,
+      ),
+    )
+    captureFix.mockResolvedValue(null)
+    locationMocks.requestOperationalLocationPermission.mockResolvedValue({
+      granted: true,
+      status: 'granted',
+    })
+
+    const { result } = renderHook(() => useLocationPermissionDialog())
+    await waitFor(() => expect(result.current.open).toBe(true), { timeout: 2000 })
+
+    await act(async () => {
+      await result.current.acceptAndRequestPermission()
+    })
+
+    expect(trackingMocks.syncProviderBeaconNow).toHaveBeenCalledWith('user-1')
+    expect(trackingMocks.startProviderLocationTracking).toHaveBeenCalledWith('user-1')
+  })
 })

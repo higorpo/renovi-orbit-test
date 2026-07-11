@@ -32,12 +32,18 @@ vi.mock("../CardStep", () => ({
 vi.mock("../SavedCardSelector", () => ({
   SavedCardSelector: ({
     onSelect,
+    savedCpf,
+    phone,
   }: {
     onSelect: (selection: { paymentTokenId: string; cardBrand: string }) => void;
+    savedCpf?: string | null;
+    phone?: string;
   }) => (
     <button
       type="button"
       data-testid="saved-card-selector"
+      data-saved-cpf={savedCpf ?? ""}
+      data-phone={phone ?? ""}
       onClick={() => onSelect({ paymentTokenId: "token-1", cardBrand: "VISA" })}
     >
       Saved cards
@@ -180,6 +186,37 @@ describe("CheckoutStepContent", () => {
 
     expect(screen.getByTestId("card-step")).toBeInTheDocument();
     expect(screen.getByTestId("saved-card-selector")).toBeInTheDocument();
+  });
+
+  it("falls back to profile CPF and phone when stepData is empty", () => {
+    render(
+      <CheckoutStepContent
+        stepper={makeStepper({ currentStep: "card" })}
+        hostBindings={makeBindings()}
+        proposalId="proposal-1"
+      />,
+    );
+
+    const selector = screen.getByTestId("saved-card-selector");
+    expect(selector).toHaveAttribute("data-saved-cpf", "39053344705");
+    expect(selector).toHaveAttribute("data-phone", "48999999999");
+  });
+
+  it("prefers stepData CPF and phone over profile values", () => {
+    render(
+      <CheckoutStepContent
+        stepper={makeStepper({
+          currentStep: "card",
+          stepData: { cpf: "11144477735", phone: "11988887777" },
+        })}
+        hostBindings={makeBindings()}
+        proposalId="proposal-1"
+      />,
+    );
+
+    const selector = screen.getByTestId("saved-card-selector");
+    expect(selector).toHaveAttribute("data-saved-cpf", "11144477735");
+    expect(selector).toHaveAttribute("data-phone", "11988887777");
   });
 
   it("wires child callbacks for card, installments and confirmation", () => {

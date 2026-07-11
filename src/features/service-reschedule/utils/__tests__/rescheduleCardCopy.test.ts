@@ -124,4 +124,56 @@ describe("rescheduleCardCopy", () => {
       description: "Esta solicitação não está mais ativa.",
     });
   });
+
+  it("hides propose CTA when canPropose is false", () => {
+    expect(
+      resolveRescheduleCardCtas("REQUESTED", "provider", {
+        canPropose: false,
+        canAccept: false,
+        canRequestAdjustment: false,
+        canCancel: true,
+      }).map((cta) => cta.id),
+    ).toEqual(["cancel"]);
+  });
+
+  it("shows only request_adjustment CTA when accept is false", () => {
+    expect(
+      resolveRescheduleCardCtas("PROPOSED", "client", {
+        canPropose: false,
+        canAccept: false,
+        canRequestAdjustment: true,
+        canCancel: false,
+      }).map((cta) => cta.id),
+    ).toEqual(["request_adjustment"]);
+  });
+
+  it("shows only accept CTA when adjustment is false", () => {
+    expect(
+      resolveRescheduleCardCtas("PROPOSED", "client", {
+        canPropose: false,
+        canAccept: true,
+        canRequestAdjustment: false,
+        canCancel: false,
+      }).map((cta) => cta.id),
+    ).toEqual(["accept"]);
+  });
+
+  it("shows only cancel CTA when other flags are false", () => {
+    expect(
+      resolveRescheduleCardCtas("REQUESTED", "client", {
+        canPropose: false,
+        canAccept: false,
+        canRequestAdjustment: false,
+        canCancel: true,
+      }).map((cta) => cta.id),
+    ).toEqual(["cancel"]);
+  });
+
+  it("labels accepted range as Período proposto and requested single-day as Data original", () => {
+    expect(resolveRescheduleSlotSectionLabel("ACCEPTED", true)).toBe("Período proposto");
+    expect(resolveRescheduleSlotSectionLabel("ACCEPTED")).toBe("Data proposta");
+    expect(resolveRescheduleSlotSectionLabel("REQUESTED")).toBe("Data original");
+    expect(resolveRescheduleSlotSectionLabel("ADJUSTMENT_REQUESTED")).toBe("Data original");
+    expect(resolveRescheduleSlotSectionLabel("SUPERSEDED")).toBe("Data proposta");
+  });
 });

@@ -16,6 +16,11 @@ describe("getChatImagePathsFromPayload", () => {
       }),
     ).toEqual(["chat/session/a.png", "chat/session/b.png"]);
   });
+
+  it("returns an empty list for invalid paths payloads", () => {
+    expect(getChatImagePathsFromPayload({ paths: "nope" })).toEqual([]);
+    expect(getChatImagePathsFromPayload({ paths: ["", 3, "ok.png"] })).toEqual(["ok.png"]);
+  });
 });
 
 describe("buildImageMessageSendPayload", () => {
@@ -60,6 +65,13 @@ describe("getLocalPreviewUrlsFromPayload", () => {
       }),
     ).toEqual(["blob:abc", "blob:def"]);
   });
+
+  it("returns an empty list for invalid local preview payloads", () => {
+    expect(getLocalPreviewUrlsFromPayload({ local_preview_urls: "nope" })).toEqual([]);
+    expect(getLocalPreviewUrlsFromPayload({ local_preview_urls: ["", 12, "blob:ok"] })).toEqual([
+      "blob:ok",
+    ]);
+  });
 });
 
 describe("getChatImageCaption", () => {
@@ -73,6 +85,11 @@ describe("getChatImageCaption", () => {
     expect(getChatImageCaption({ preview: "Foto" })).toBeNull();
     expect(getChatImageCaption({ preview: "📷 Foto" })).toBeNull();
     expect(getChatImageCaption({ preview: "3 fotos" })).toBeNull();
+  });
+
+  it("returns null for missing or blank captions", () => {
+    expect(getChatImageCaption({})).toBeNull();
+    expect(getChatImageCaption({ preview: "   " })).toBeNull();
   });
 
   it("shows user caption from list-projected payload", () => {

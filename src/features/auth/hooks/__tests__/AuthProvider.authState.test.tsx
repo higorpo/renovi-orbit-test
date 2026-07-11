@@ -175,4 +175,212 @@ describe("AuthProvider auth state orchestration", () => {
       }
     );
   });
+
+  it("sets Sentry user when setUser is called and clears on null", async () => {
+    const { setSentryUser } = await import("@/lib/sentry");
+    let capturedCtx: { setUser: (u: unknown) => void } | null = null;
+    authHarness.processAuthEvent.mockImplementation(
+      (_event: AuthChangeEvent, _session: unknown, ctx: { setUser: (u: unknown) => void }) => {
+        capturedCtx = ctx;
+      }
+    );
+
+    renderWithAuth(<div />);
+    await act(async () => {
+      authHarness.onAuthCallback!("INITIAL_SESSION", null);
+    });
+
+    expect(capturedCtx).not.toBeNull();
+    await act(async () => {
+      capturedCtx!.setUser({ id: "u-sentry", email: "a@b.com" });
+    });
+    expect(setSentryUser).toHaveBeenCalledWith({
+      id: "u-sentry",
+      email: "a@b.com",
+    });
+
+    await act(async () => {
+      capturedCtx!.setUser(null);
+    });
+    expect(setSentryUser).toHaveBeenCalledWith(null);
+  });
+
+  it("unregisters device beacon on signOut when user id is present", async () => {
+    const { unregisterDeviceBeaconOnLogout } = await import(
+      "@/features/device-beacon"
+    );
+    const { authApi } = await import("@/features/auth/api/auth.api");
+    vi.mocked(authApi.signOut).mockResolvedValue({ error: null });
+
+    let capturedCtx: {
+      setUser: (u: unknown) => void;
+    } | null = null;
+    authHarness.processAuthEvent.mockImplementation(
+      (_event: AuthChangeEvent, _session: unknown, ctx: { setUser: (u: unknown) => void }) => {
+        capturedCtx = ctx;
+      }
+    );
+
+    function SignOutProbe() {
+      const { signOut } = useAuth();
+      return (
+        <button type="button" onClick={() => void signOut()}>
+          out
+        </button>
+      );
+    }
+
+    const { getByRole } = renderWithAuth(<SignOutProbe />);
+    await act(async () => {
+      authHarness.onAuthCallback!("INITIAL_SESSION", null);
+    });
+    await act(async () => {
+      capturedCtx!.setUser({ id: "u-logout", email: "x@y.com" });
+    });
+
+    await act(async () => {
+      getByRole("button", { name: /out/i }).click();
+    });
+
+    expect(unregisterDeviceBeaconOnLogout).toHaveBeenCalledWith("u-logout");
+    expect(authApi.signOut).toHaveBeenCalled();
+  });
+
+  it("does not process a debounced auth event after unmount", async () => {
+    const { unmount } = renderWithAuth(<div />);
+    await act(async () => {});
+
+    await act(async () => {
+      authHarness.onAuthCallback!("SIGNED_IN", { fake: 1 } as never);
+    });
+    unmount();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+
+    expect(authHarness.processAuthEvent).not.toHaveBeenCalled();
+  });
+
+  it("sets an undefined Sentry email when the auth user email is null", async () => {
+    const { setSentryUser } = await import("@/lib/sentry");
+    let capturedCtx: { setUser: (u: unknown) => void } | null = null;
+    authHarness.processAuthEvent.mockImplementation(
+      (_event: AuthChangeEvent, _session: unknown, ctx: { setUser: (u: unknown) => void }) => {
+        capturedCtx = ctx;
+      }
+    );
+
+    renderWithAuth(<div />);
+    await act(async () => {
+      authHarness.onAuthCallback!("INITIAL_SESSION", null);
+      capturedCtx!.setUser({ id: "u-no-email", email: null });
+    });
+
+    expect(setSentryUser).toHaveBeenCalledWith({
+      id: "u-no-email",
+      email: undefined,
+    });
+  });
+
+  it("uses the profile id to unregister the beacon when user is null", async () => {
+    const { unregisterDeviceBeaconOnLogout } = await import(
+      "@/features/device-beacon"
+    );
+    const { authApi } = await import("@/features/auth/api/auth.api");
+    vi.mocked(authApi.signOut).mockResolvedValue({ error: null });
+    let capturedCtx: { setProfile: (profile: unknown) => void } | null = null;
+    authHarness.processAuthEvent.mockImplementation(
+      (
+        _event: AuthChangeEvent,
+        _session: unknown,
+        ctx: { setProfile: (profile: unknown) => void }
+      ) => {
+        capturedCtx = ctx;
+      }
+    );
+
+    function SignOutProbe() {
+      const { signOut } = useAuth();
+      return <button onClick={() => void signOut()}>profile-out</button>;
+    }
+
+    const { getByRole } = renderWithAuth(<SignOutProbe />);
+    await act(async () => {
+      authHarness.onAuthCallback!("INITIAL_SESSION", null);
+      capturedCtx!.setProfile({
+        id: "profile-only",
+        role: "provider",
+        full_name: "Provider",
+      });
+    });
+    await act(async () => {
+      getByRole("button", { name: "profile-out" }).click();
+    });
+
+    expect(unregisterDeviceBeaconOnLogout).toHaveBeenCalledWith("profile-only");
+  });
+
+  it("signOut skips beacon unregister when no user or profile id", async () => {
+    const { unregisterDeviceBeaconOnLogout } = await import(
+      "@/features/device-beacon"
+    );
+    const { authApi } = await import("@/features/auth/api/auth.api");
+    vi.mocked(authApi.signOut).mockResolvedValue({ error: null });
+    vi.mocked(unregisterDeviceBeaconOnLogout).mockClear();
+
+    function SignOutProbe() {
+      const { signOut } = useAuth();
+      return <button onClick={() => void signOut()}>no-id-out</button>;
+    }
+
+    const { getByRole } = renderWithAuth(<SignOutProbe />);
+    await act(async () => {
+      authHarness.onAuthCallback!("INITIAL_SESSION", null);
+    });
+    await act(async () => {
+      getByRole("button", { name: "no-id-out" }).click();
+    });
+
+    expect(unregisterDeviceBeaconOnLogout).not.toHaveBeenCalled();
+    expect(authApi.signOut).toHaveBeenCalled();
+  });
+
+  it("signOut shows error toast when API throws", async () => {
+    const { toast } = await import("sonner");
+    const { authApi } = await import("@/features/auth/api/auth.api");
+    vi.mocked(authApi.signOut).mockResolvedValue({
+      error: { message: "network" } as never,
+    });
+
+    function SignOutProbe() {
+      const { signOut } = useAuth();
+      return <button onClick={() => void signOut()}>fail-out</button>;
+    }
+
+    const { getByRole } = renderWithAuth(<SignOutProbe />);
+    await act(async () => {
+      authHarness.onAuthCallback!("INITIAL_SESSION", null);
+    });
+    await act(async () => {
+      getByRole("button", { name: "fail-out" }).click();
+    });
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "Não foi possível sair. Tente novamente.",
+    );
+  });
+
+  it("ignores auth callbacks delivered after unmount", async () => {
+    const { unmount } = renderWithAuth(<div />);
+    await act(async () => {});
+    const callback = authHarness.onAuthCallback;
+
+    unmount();
+    await act(async () => {
+      callback!("SIGNED_IN", { fake: "late" } as never);
+      await vi.advanceTimersByTimeAsync(300);
+    });
+
+    expect(authHarness.processAuthEvent).not.toHaveBeenCalled();
+  });
 });

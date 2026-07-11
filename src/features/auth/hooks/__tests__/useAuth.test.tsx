@@ -6,11 +6,21 @@ import type { User } from "@supabase/supabase-js";
 import { AuthProvider } from "../../AuthProvider";
 import { useAuth } from "../useAuth";
 
+const navigateMock = vi.hoisted(() => vi.fn());
+
 const profileMocks = vi.hoisted(() => ({
   fetchProfile: vi.fn().mockResolvedValue(null),
   refreshProfile: vi.fn(),
   lastFetchedUserId: { current: null as string | null },
 }));
+
+vi.mock("react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router")>();
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
 
 vi.mock("@/features/auth/api/auth.api", () => ({
   authApi: {
@@ -67,6 +77,7 @@ function wrapper({ children }: { children: React.ReactNode }) {
 describe("useAuth", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    navigateMock.mockClear();
     profileMocks.fetchProfile.mockResolvedValue(null);
   });
 
@@ -322,6 +333,10 @@ describe("useAuth", () => {
     expect(toast.success).toHaveBeenCalledWith(
       "Logout realizado com sucesso!"
     );
+    expect(navigateMock).toHaveBeenCalledWith("/", { replace: true });
+    expect(result.current.user).toBeNull();
+    expect(result.current.session).toBeNull();
+    expect(result.current.profile).toBeNull();
   });
 
   it("signOut shows error toast when API returns error", async () => {
@@ -337,5 +352,168 @@ describe("useAuth", () => {
     expect(toast.error).toHaveBeenCalledWith(
       "Não foi possível sair. Tente novamente."
     );
+  });
+
+  it("getRedirectPath routes by role", () => {
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    const base = {
+      id: "p1",
+      full_name: "Test",
+      email: "t@e.com",
+    };
+
+    expect(
+      result.current.getRedirectPath({ ...base, role: "admin" } as never)
+    ).toBe("/admin/dashboard");
+    expect(
+      result.current.getRedirectPath({ ...base, role: "provider" } as never)
+    ).toBe("/dashboard");
+    expect(
+      result.current.getRedirectPath({ ...base, role: "client" } as never)
+    ).toBe("/dashboard");
+    expect(
+      result.current.getRedirectPath({ ...base, role: "unknown" } as never)
+    ).toBe("/onboarding");
+  });
+
+  it("logs a warning for an unknown role in development", async () => {
+    const { logger } = await import("@/lib/logger");
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    expect(
+      result.current.getRedirectPath({
+        id: "p-unknown",
+        full_name: "Unknown",
+        email: "unknown@example.com",
+        role: "unexpected",
+      } as never)
+    ).toBe("/onboarding");
+    expect(logger.warn).toHaveBeenCalledWith("auth_unknown_role", {
+      role: "unexpected",
+    });
+  });
+
+  it("signUp recognizes the Email already registered message", async () => {
+    vi.mocked(authApi.signUp).mockResolvedValue({
+      user: null,
+      error: new Error("Email already registered"),
+    });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    let out: Awaited<ReturnType<typeof result.current.signUp>>;
+    await act(async () => {
+      out = await result.current.signUp(
+        "existing@example.com",
+        "Validpass1!",
+        "Name",
+        "client"
+      );
+    });
+
+    expect(out!).toEqual({ success: false, reason: "already_registered" });
+  });
+
+  it("signUp uses the fallback message when the API error message is empty", async () => {
+    const { toast } = await import("sonner");
+    vi.mocked(authApi.signUp).mockResolvedValue({
+      user: null,
+      error: new Error(""),
+    });
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    let out: Awaited<ReturnType<typeof result.current.signUp>>;
+    await act(async () => {
+      out = await result.current.signUp(
+        "new@example.com",
+        "Validpass1!",
+        "Name",
+        "provider"
+      );
+    });
+
+    expect(out!).toEqual({
+      success: false,
+      reason: "error",
+      message: "Não foi possível criar sua conta.",
+    });
+    expect(toast.error).toHaveBeenCalledWith(
+      "Não foi possível criar sua conta."
+    );
+  });
+
+  it("stores the profile returned after signUp", async () => {
+    vi.mocked(authApi.signUp).mockResolvedValue({
+      user: { id: "u-profile", email_confirmed_at: undefined } as User,
+      error: null,
+    });
+    profileMocks.fetchProfile.mockResolvedValue({
+      id: "u-profile",
+      role: "provider",
+      full_name: "Profile Name",
+    } as never);
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await act(async () => {
+      await result.current.signUp(
+        "profile@example.com",
+        "Validpass1!",
+        "Profile Name",
+        "provider"
+      );
+    });
+
+    expect(result.current.profile).toMatchObject({
+      id: "u-profile",
+      role: "provider",
+    });
+  });
+
+  it("logs and rethrows a non-Error Google sign-in failure", async () => {
+    const { logger } = await import("@/lib/logger");
+    vi.mocked(authApi.signInWithOAuth).mockRejectedValue("oauth unavailable");
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await expect(result.current.signInWithGoogle()).rejects.toBe(
+      "oauth unavailable"
+    );
+    expect(logger.error).toHaveBeenCalledWith("auth_sign_in_google_error", {
+      error: "oauth unavailable",
+    });
+  });
+
+  it("logs and rethrows a non-Error password sign-in failure", async () => {
+    const { logger } = await import("@/lib/logger");
+    vi.mocked(authApi.signInWithPassword).mockRejectedValue("network down");
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await expect(
+      result.current.signIn("user@example.com", "Validpass1!")
+    ).rejects.toBe("network down");
+    expect(logger.error).toHaveBeenCalledWith("auth_sign_in_error", {
+      error: "network down",
+    });
+  });
+
+  it("uses the generic signup message for a non-Error rejection", async () => {
+    const { toast } = await import("sonner");
+    vi.mocked(authApi.signUp).mockRejectedValue("signup unavailable");
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    let output: Awaited<ReturnType<typeof result.current.signUp>>;
+    await act(async () => {
+      output = await result.current.signUp(
+        "new@example.com",
+        "Validpass1!",
+        "New User",
+        "client"
+      );
+    });
+
+    expect(output!).toEqual({
+      success: false,
+      reason: "error",
+      message: "Erro ao criar conta",
+    });
+    expect(toast.error).toHaveBeenCalledWith("Erro ao criar conta");
   });
 });

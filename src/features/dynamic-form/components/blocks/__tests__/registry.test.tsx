@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import type { FormSchema } from "../../../types";
 import { renderBlockByType, isBlockTypeRegistered } from "../registry";
 
@@ -60,5 +60,88 @@ describe("block registry", () => {
       </>
     );
     expect(screen.getByText("Hello static")).toBeInTheDocument();
+  });
+
+  it("wires single_select other text via setFieldValue", () => {
+    const setFieldValue = vi.fn();
+    const handleFieldChange = vi.fn();
+    render(
+      <>
+        {renderBlockByType({
+          schema: minimalSchema,
+          block: {
+            id: "sel",
+            type: "single_select",
+            label: "Escolha",
+            description_ai: "Select",
+            options: [
+              { value: "a", label: "A" },
+              { value: "other", label: "Outro" },
+            ],
+            config: { allowOther: true },
+          },
+          formData: { sel: "other", sel_other_text: "x" },
+          setFieldValue,
+          handleFieldChange,
+        })}
+      </>
+    );
+    fireEvent.change(screen.getByDisplayValue("x"), {
+      target: { value: "novo" },
+    });
+    expect(setFieldValue).toHaveBeenCalledWith("sel_other_text", "novo");
+  });
+
+  it("wires multi_select other text via setFieldValue", () => {
+    const setFieldValue = vi.fn();
+    render(
+      <>
+        {renderBlockByType({
+          schema: minimalSchema,
+          block: {
+            id: "multi",
+            type: "multi_select",
+            label: "Multi",
+            description_ai: "Multi",
+            options: [
+              { value: "a", label: "A" },
+              { value: "other", label: "Outro" },
+            ],
+            config: { allowOther: true },
+          },
+          formData: { multi: ["other"], multi_other_text: "detalhe" },
+          setFieldValue,
+          handleFieldChange: () => {},
+        })}
+      </>
+    );
+    fireEvent.change(screen.getByDisplayValue("detalhe"), {
+      target: { value: "atualizado" },
+    });
+    expect(setFieldValue).toHaveBeenCalledWith("multi_other_text", "atualizado");
+  });
+
+  it("calls handleFieldChange when text block value changes", () => {
+    const handleFieldChange = vi.fn();
+    render(
+      <>
+        {renderBlockByType({
+          schema: minimalSchema,
+          block: {
+            id: "t1",
+            type: "text",
+            label: "Campo",
+            description_ai: "Text",
+          },
+          formData: { t1: "" },
+          setFieldValue: () => {},
+          handleFieldChange,
+        })}
+      </>
+    );
+    fireEvent.change(screen.getByLabelText(/Campo/i), {
+      target: { value: "hi" },
+    });
+    expect(handleFieldChange).toHaveBeenCalledWith("t1", "hi");
   });
 });

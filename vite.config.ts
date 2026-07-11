@@ -45,8 +45,8 @@ export default defineConfig(({ mode }) => {
     pool: 'threads',
     deps: { optimizer: { ssr: { enabled: true } } },
     coverage: {
-      // Avoid coverage/.tmp under workspace paths with unicode (Vitest v8 merge ENOENT)
-      tempDirectory: path.join(os.tmpdir(), 'orbit-vitest-coverage'),
+      // Vitest 4 writes shards under reportsDirectory/.tmp — keep off unicode workspace paths (ENOENT)
+      reportsDirectory: path.join(os.tmpdir(), 'orbit-vitest-coverage'),
       reportOnFailure: true,
       include: ['src/**/*.{ts,tsx}'],
       exclude: [
@@ -59,7 +59,7 @@ export default defineConfig(({ mode }) => {
         '**/*.interface.ts',
         '**/fixtures/**',
       ],
-      reporter: ['text', 'text-summary'],
+      reporter: ['text', 'text-summary', 'json-summary'],
     },
     projects: [
       {

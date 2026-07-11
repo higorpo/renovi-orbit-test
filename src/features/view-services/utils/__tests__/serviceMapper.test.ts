@@ -175,3 +175,272 @@ describe("serviceMapper", () => {
     expect(model.contracted?.agreedSlot).toEqual({ day: "mon" });
   });
 });
+
+describe("serviceMapper branch coverage", () => {
+  it("maps null addresses and number-only or empty street summaries", () => {
+    const noAddress = mapRpcServiceRow({ id: "none", request: { address: null } });
+    const numberOnly = mapRpcServiceRow({
+      id: "number",
+      request: { address: { street: " ", number: "42" } },
+    });
+    const empty = mapRpcServiceRow({
+      id: "empty",
+      request: { address: { street: " ", number: "" } },
+    });
+
+    expect(noAddress.address).toBeNull();
+    expect(numberOnly.address?.streetSummary).toBe("42");
+    expect(empty.address?.streetSummary).toBeUndefined();
+  });
+
+  it("rejects incomplete nested entities and normalizes explicit list phases", () => {
+    const negotiation = mapRpcServiceRow({
+      id: "negotiation",
+      list_phase: "NEGOTIATION",
+      request: { platform_service: { title: "Only title" } },
+      negotiation: { my_proposal: { id: "p1" } },
+      contracted: { id: "c1" },
+    });
+    const cancelled = mapRpcServiceRow({ id: "cancelled", list_phase: " cancelled " });
+
+    expect(negotiation.listPhase).toBe("negotiation");
+    expect(negotiation.service).toBeNull();
+    expect(negotiation.myProposal).toBeNull();
+    expect(negotiation.contracted).toBeNull();
+    expect(cancelled.listPhase).toBe("cancelled");
+  });
+
+  it("normalizes optional records, arrays, unread state, and blank proposal copy", () => {
+    const model = mapRpcServiceRow({
+      id: "sparse",
+      request: {
+        form_data: [],
+        photos: "not-an-array",
+        tags: "tag",
+        missing_info_warnings: {},
+        suggested_equipment: "ladder",
+        suggested_materials: 123,
+      },
+      negotiation: {
+        my_proposal: {
+          id: "p1",
+          status: "PENDING",
+          revision_notes: "   ",
+          client_rejection_response: "\n",
+        },
+        chat: { id: "chat-1" },
+      },
+    } as unknown as Parameters<typeof mapRpcServiceRow>[0]);
+
+    expect(model.formData).toBeNull();
+    expect(model.photoPaths).toEqual([]);
+    expect(model.tags).toBeNull();
+    expect(model.missingInfoWarnings).toBeNull();
+    expect(model.suggestedEquipment).toBeNull();
+    expect(model.suggestedMaterials).toBeNull();
+    expect(model.myProposal?.revisionNotes).toBeNull();
+    expect(model.myProposal?.clientRejectionResponse).toBeNull();
+    expect(model.chatSummary?.isUnread).toBe(false);
+  });
+
+  it("uses the contracted id and provider name fallbacks and rejects non-record slots", () => {
+    const model = mapRpcServiceRow({
+      id: "contracted",
+      request: { contracted_service_id: null },
+      contracted: {
+        id: "contracted-1",
+        status: "CONFIRMED",
+        agreed_slot: "invalid",
+        provider: { id: "provider-1", display_name: "Maria" },
+      },
+      counterparty: null,
+    });
+
+    expect(model.contractedServiceId).toBe("contracted-1");
+    expect(model.contracted?.agreedSlot).toBeNull();
+    expect(model.counterpartyName).toBe("Maria");
+  });
+
+  it("returns null platform service when title is missing but slug exists", () => {
+    const model = mapRpcServiceRow({
+      id: "no-title",
+      request: { platform_service: { slug: "eletricista" } },
+    });
+    expect(model.service).toBeNull();
+  });
+
+  it("returns null platform service when platform_service is null", () => {
+    const model = mapRpcServiceRow({
+      id: "null-ps",
+      request: { platform_service: null },
+    });
+    expect(model.service).toBeNull();
+  });
+
+  it("preserves null icon_key and color_key on platform service", () => {
+    const model = mapRpcServiceRow({
+      id: "null-keys",
+      request: {
+        platform_service: {
+          title: "Pintor",
+          slug: "pintor",
+          icon_key: null,
+          color_key: null,
+        },
+      },
+    });
+    expect(model.service).toEqual({
+      title: "Pintor",
+      slug: "pintor",
+      icon_key: null,
+      color_key: null,
+    });
+  });
+
+  it("maps counterparty whitespace display name and blank profile path", () => {
+    const model = mapRpcServiceRow({
+      id: "cp",
+      counterparty: {
+        id: "cp-1",
+        display_name: "   ",
+        profile_image_path: "  ",
+      },
+    });
+    expect(model.counterparty).toEqual({
+      id: "cp-1",
+      displayName: "—",
+      profileImagePath: null,
+    });
+  });
+
+  it("returns null contracted when status exists but id is missing", () => {
+    const model = mapRpcServiceRow({
+      id: "no-cs-id",
+      contracted: { status: "CONFIRMED" },
+    });
+    expect(model.contracted).toBeNull();
+  });
+
+  it("maps contracted service with null provider and null agreed_slot", () => {
+    const model = mapRpcServiceRow({
+      id: "cs-null-provider",
+      contracted: {
+        id: "cs-1",
+        status: "CONFIRMED",
+        agreed_slot: null,
+        provider: null,
+      },
+    });
+    expect(model.contracted?.provider).toBeNull();
+    expect(model.contracted?.agreedSlot).toBeNull();
+  });
+
+  it("maps contracted reschedule snapshot when present", () => {
+    const model = mapRpcServiceRow({
+      id: "cs-reschedule",
+      contracted: {
+        id: "cs-1",
+        status: "CONFIRMED",
+        reschedule: {
+          contracted_service_id: "cs-1",
+          duration_unit: "hours",
+          duration_value: 2,
+          active_request: null,
+          display_status: "REQUESTED",
+        },
+      },
+    });
+    expect(model.contracted?.reschedule?.contractedServiceId).toBe("cs-1");
+    expect(model.contracted?.reschedule?.displayStatus).toBe("REQUESTED");
+  });
+
+  it("normalizes in_progress list phase and defaults missing list_phase", () => {
+    expect(mapRpcServiceRow({ id: "ip", list_phase: "IN_PROGRESS" }).listPhase).toBe(
+      "in_progress",
+    );
+    expect(mapRpcServiceRow({ id: "missing" }).listPhase).toBe("negotiation");
+  });
+
+  it("returns null myProposal when status exists but id is missing", () => {
+    const model = mapRpcServiceRow({
+      id: "no-prop-id",
+      negotiation: { my_proposal: { status: "PENDING" } },
+    });
+    expect(model.myProposal).toBeNull();
+  });
+
+  it("maps myProposal clientRejectionResponse and defaults omitted numeric fields", () => {
+    const model = mapRpcServiceRow({
+      id: "prop-defaults",
+      negotiation: {
+        my_proposal: {
+          id: "p1",
+          status: "PENDING",
+          client_rejection_response: "  Preço alto  ",
+        },
+      },
+    });
+    expect(model.myProposal).toMatchObject({
+      id: "p1",
+      finalAmount: 0,
+      updatedAt: "",
+      expiredAt: null,
+      submittedAt: null,
+      clientRejectionResponse: "Preço alto",
+    });
+  });
+
+  it("returns null formSchema for non-record form_schema and null formData", () => {
+    const model = mapRpcServiceRow({
+      id: "schema",
+      request: {
+        form_data: null,
+        form_schema: ["not", "a", "record"],
+      },
+    } as unknown as Parameters<typeof mapRpcServiceRow>[0]);
+    expect(model.formData).toBeNull();
+    expect(model.formSchema).toBeNull();
+  });
+
+  it("prefers request contracted_service_id and counterparty displayName", () => {
+    const model = mapRpcServiceRow({
+      id: "pref",
+      request: { contracted_service_id: "from-request" },
+      contracted: {
+        id: "from-contracted",
+        status: "CONFIRMED",
+        provider: { id: "p1", display_name: "Provider Name" },
+      },
+      counterparty: { id: "c1", display_name: "Counterparty Name" },
+    });
+    expect(model.contractedServiceId).toBe("from-request");
+    expect(model.counterpartyName).toBe("Counterparty Name");
+  });
+
+  it("maps request metadata and defaults negotiation counters when omitted", () => {
+    const model = mapRpcServiceRow({
+      id: "meta",
+      request: {
+        urgency: "high",
+        scope_complexity: "medium",
+        estimated_duration_hint: "2h",
+        address: {
+          neighborhood: null,
+          city_name: null,
+          latitude: null,
+          longitude: null,
+        },
+      },
+    });
+    expect(model.urgency).toBe("high");
+    expect(model.scopeComplexity).toBe("medium");
+    expect(model.estimatedDurationHint).toBe("2h");
+    expect(model.proposalCount).toBe(0);
+    expect(model.activeChatCount).toBe(0);
+    expect(model.unreadChatCount).toBe(0);
+    expect(model.address?.neighborhood).toBe("");
+    expect(model.address?.cityName).toBe("");
+    expect(model.address?.latitude).toBeNull();
+    expect(model.address?.longitude).toBeNull();
+  });
+});

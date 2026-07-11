@@ -48,4 +48,15 @@ describe("useServiceRequestBudgetCompareDetail", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.detail).toEqual(detail);
   });
+
+  it("surfaces API errors as query error state", async () => {
+    fetchDetail.mockResolvedValue({ data: null, error: "boom" });
+
+    const { result } = renderHook(() => useServiceRequestBudgetCompareDetail("sr-1"), {
+      wrapper: wrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.detail).toBeNull();
+  });
 });

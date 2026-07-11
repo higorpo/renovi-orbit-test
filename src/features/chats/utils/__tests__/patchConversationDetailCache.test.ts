@@ -63,4 +63,60 @@ describe("patchConversationDetailCache", () => {
     expect(detail?.conversation.inactivation_reason).toBeNull();
     expect(detail?.conversation.last_interaction_at).toBe("2026-01-03T12:00:00.000Z");
   });
+
+  it("returns false when detail cache is empty", () => {
+    const queryClient = new QueryClient();
+
+    expect(
+      patchConversationDetailCache(queryClient, "chat-1", {
+        status: "ACTIVE",
+      }),
+    ).toBe(false);
+  });
+
+  it("updates only lastInteractionAt when status is omitted", () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData([CONVERSATION_DETAIL_QUERY_KEY, "chat-1"], baseDetail);
+
+    const patched = patchConversationDetailCache(queryClient, "chat-1", {
+      lastInteractionAt: "2026-01-04T09:00:00.000Z",
+    });
+
+    expect(patched).toBe(true);
+    const detail = queryClient.getQueryData<ConversationDetailResponse>([
+      CONVERSATION_DETAIL_QUERY_KEY,
+      "chat-1",
+    ]);
+    expect(detail?.conversation.status).toBe("INACTIVE");
+    expect(detail?.conversation.inactivated_at).toBe("2026-01-02T08:00:00.000Z");
+    expect(detail?.conversation.last_interaction_at).toBe("2026-01-04T09:00:00.000Z");
+    expect(detail?.conversation.updated_at).toBe("2026-01-04T09:00:00.000Z");
+  });
+
+  it("sets non-ACTIVE status without clearing inactivation fields", () => {
+    const queryClient = new QueryClient();
+    const activeDetail: ConversationDetailResponse = {
+      ...baseDetail,
+      conversation: {
+        ...baseDetail.conversation,
+        status: "ACTIVE",
+        inactivated_at: null,
+        inactivation_reason: null,
+      },
+    };
+    queryClient.setQueryData([CONVERSATION_DETAIL_QUERY_KEY, "chat-1"], activeDetail);
+
+    const patched = patchConversationDetailCache(queryClient, "chat-1", {
+      status: "CLOSED",
+    });
+
+    expect(patched).toBe(true);
+    const detail = queryClient.getQueryData<ConversationDetailResponse>([
+      CONVERSATION_DETAIL_QUERY_KEY,
+      "chat-1",
+    ]);
+    expect(detail?.conversation.status).toBe("CLOSED");
+    expect(detail?.conversation.inactivated_at).toBeNull();
+    expect(detail?.conversation.inactivation_reason).toBeNull();
+  });
 });

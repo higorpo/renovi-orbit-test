@@ -10,8 +10,10 @@ let dynamicFormAutoCompleteCount = 0;
 vi.mock("../../DynamicForm/DynamicForm", () => ({
   DynamicForm: ({
     onComplete,
+    onCancel,
   }: {
     onComplete: (data: Record<string, unknown>) => void;
+    onCancel?: () => void;
   }) => {
     React.useEffect(() => {
       dynamicFormAutoCompleteCount += 1;
@@ -20,7 +22,16 @@ vi.mock("../../DynamicForm/DynamicForm", () => ({
         onComplete({ demo: true });
       }
     }, [onComplete]);
-    return <div data-testid="dynamic-form-mock">Preview mock</div>;
+    return (
+      <div data-testid="dynamic-form-mock">
+        Preview mock
+        {onCancel ? (
+          <button type="button" onClick={onCancel}>
+            Cancel preview
+          </button>
+        ) : null}
+      </div>
+    );
   },
 }));
 
@@ -80,6 +91,74 @@ describe("FormDemoPage", { timeout: 20_000 }, () => {
     await waitFor(() => {
       expect(screen.getByText(/Motor de formulário dinâmico/)).toBeInTheDocument();
     });
+  });
+
+  it("renders preview tab content when initialTab is preview", async () => {
+    // Avoid auto-complete so we stay on the preview form (not success screen).
+    dynamicFormAutoCompleteCount = 99;
+    render(<FormDemoPage initialTab="preview" />);
+    await waitFor(() => {
+      expect(screen.getByTestId("dynamic-form-mock")).toBeInTheDocument();
+    });
+    expect(
+      screen.getByText(/Preencha o formulário abaixo/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /Preview/i })).toHaveAttribute(
+      "data-state",
+      "active",
+    );
+  });
+
+  it("selects a block and updates inspector label", async () => {
+    render(<FormDemoPage />);
+    fireEvent.click(screen.getByText("Você já possui um imóvel?"));
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Rótulo do campo")).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByPlaceholderText("Rótulo do campo"), {
+      target: { value: "Novo rótulo" },
+    });
+    expect(screen.getByDisplayValue("Novo rótulo")).toBeInTheDocument();
+  });
+
+  it("selects a step and shows step inspector", async () => {
+    render(<FormDemoPage />);
+    fireEvent.click(screen.getByText(/Informações iniciais/i));
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Título do step")).toBeInTheDocument();
+    });
+  });
+  it("removes a step from the canvas", async () => {
+    render(<FormDemoPage />);
+    const removeButtons = () =>
+      screen.getAllByRole("button", { name: "Remover step" });
+    const initial = removeButtons().length;
+    fireEvent.click(removeButtons()[0]!);
+    await waitFor(() => {
+      expect(removeButtons().length).toBe(initial - 1);
+    });
+  });
+
+  it("removes a block from the canvas", async () => {
+    render(<FormDemoPage />);
+    const removeBlock = () =>
+      screen.getAllByRole("button", { name: "Remover bloco" });
+    const initial = removeBlock().length;
+    expect(initial).toBeGreaterThan(0);
+    fireEvent.click(removeBlock()[0]!);
+    await waitFor(() => {
+      expect(removeBlock().length).toBe(initial - 1);
+    });
+  });
+
+  it("calls history.back when preview DynamicForm cancels", async () => {
+    dynamicFormAutoCompleteCount = 99;
+    render(<FormDemoPage initialTab="preview" />);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Cancel preview/i })).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Cancel preview/i }));
+    expect(window.history.back).toHaveBeenCalled();
   });
 });
 

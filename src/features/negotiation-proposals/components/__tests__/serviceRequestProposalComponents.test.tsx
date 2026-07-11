@@ -250,6 +250,65 @@ describe("ProposalHistoryAccordion", () => {
     );
     expect(screen.getByText(/ver histórico de orçamentos/i)).toBeInTheDocument();
   });
+
+  it("shows loading, error, and selectable history items", () => {
+    const onHistoryOpenChange = vi.fn();
+    const onProposalSelect = vi.fn();
+    const { rerender } = render(
+      <ProposalHistoryAccordion
+        historyOpen={false}
+        proposalHistory={[]}
+        isHistoryLoading
+        isHistoryError={false}
+        onHistoryOpenChange={onHistoryOpenChange}
+        onProposalSelect={onProposalSelect}
+        copyVariant="proposal"
+      />,
+    );
+
+    fireEvent.click(screen.getByText(/ver histórico de propostas/i));
+    expect(onHistoryOpenChange).toHaveBeenCalledWith(true);
+
+    rerender(
+      <ProposalHistoryAccordion
+        historyOpen
+        proposalHistory={[]}
+        isHistoryLoading
+        isHistoryError={false}
+        onHistoryOpenChange={onHistoryOpenChange}
+        onProposalSelect={onProposalSelect}
+        copyVariant="proposal"
+      />,
+    );
+    expect(screen.getByLabelText(/carregando histórico/i)).toBeInTheDocument();
+
+    rerender(
+      <ProposalHistoryAccordion
+        historyOpen
+        proposalHistory={[]}
+        isHistoryLoading={false}
+        isHistoryError
+        onHistoryOpenChange={onHistoryOpenChange}
+        onProposalSelect={onProposalSelect}
+        copyVariant="proposal"
+      />,
+    );
+    expect(screen.getByText(/não foi possível carregar o histórico/i)).toBeInTheDocument();
+
+    rerender(
+      <ProposalHistoryAccordion
+        historyOpen
+        proposalHistory={[baseProposal]}
+        isHistoryLoading={false}
+        isHistoryError={false}
+        onHistoryOpenChange={onHistoryOpenChange}
+        onProposalSelect={onProposalSelect}
+        copyVariant="proposal"
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /detalhes da proposta/i }));
+    expect(onProposalSelect).toHaveBeenCalledWith(baseProposal);
+  });
 });
 
 describe("ProposalDetailsDialog summary mode", () => {
@@ -307,5 +366,46 @@ describe("ProposalComposerShellDialog (service request)", () => {
     render(<ProposalComposerShellDialog {...serviceRequestShellProps} onSubmit={onSubmit} />);
     fireEvent.click(screen.getByRole("button", { name: /^enviar orçamento$/i }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+  });
+
+  it("does not submit when form validation fails", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const form = {
+      trigger: vi.fn().mockResolvedValue(false),
+    } as unknown as UseFormReturn<ProposalComposerFormValues>;
+    render(
+      <ProposalComposerShellDialog
+        {...serviceRequestShellProps}
+        form={form}
+        onSubmit={onSubmit}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^enviar orçamento$/i }));
+    await waitFor(() => expect(form.trigger).toHaveBeenCalled());
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("shows submitting label and disables cancel while submitting", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <ProposalComposerShellDialog
+        {...serviceRequestShellProps}
+        isSubmitting
+        onOpenChange={onOpenChange}
+        cancelLabel="Fechar composer"
+      />,
+    );
+    expect(screen.getByRole("button", { name: /enviando/i })).toBeDisabled();
+    const cancel = screen.getByRole("button", { name: /fechar composer/i });
+    expect(cancel).toBeDisabled();
+  });
+
+  it("closes dialog when cancel is clicked", () => {
+    const onOpenChange = vi.fn();
+    render(
+      <ProposalComposerShellDialog {...serviceRequestShellProps} onOpenChange={onOpenChange} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /cancelar/i }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

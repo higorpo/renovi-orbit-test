@@ -72,6 +72,55 @@ describe("useFieldValidation", () => {
     });
     expect(validateBlockValue).toHaveBeenCalledWith(block, "x");
   });
+
+  it("debounces validateOnChange after markAsTouched when value changes", async () => {
+    vi.useFakeTimers();
+    vi.mocked(validateBlockValue).mockReturnValue({ valid: true });
+    const { result, rerender } = renderHook(
+      ({ value }) =>
+        useFieldValidation({ block, value, validateOnChange: true, debounceMs: 200 }),
+      { initialProps: { value: "a" } }
+    );
+
+    act(() => {
+      result.current.markAsTouched();
+    });
+    expect(result.current.validation.isValid).toBe(true);
+
+    vi.mocked(validateBlockValue).mockClear();
+    rerender({ value: "ab" });
+
+    expect(validateBlockValue).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+    expect(validateBlockValue).toHaveBeenCalledWith(block, "ab");
+    vi.useRealTimers();
+  });
+
+  it("transitions through validating then invalid after delay", () => {
+    vi.useFakeTimers();
+    vi.mocked(validateBlockValue).mockReturnValue({
+      valid: false,
+      error: "Campo obrigatório",
+    });
+    const { result } = renderHook(() =>
+      useFieldValidation({ block, value: "", validateOnChange: false })
+    );
+
+    act(() => {
+      result.current.markAsTouched();
+    });
+    expect(result.current.validation.state).toBe("validating");
+    expect(result.current.validation.isValid).toBe(false);
+
+    act(() => {
+      vi.advanceTimersByTime(50);
+    });
+    expect(result.current.validation.state).toBe("invalid");
+    expect(result.current.validation.error).toBe("Campo obrigatório");
+    vi.useRealTimers();
+  });
 });
 
 describe("getValidationErrorMessage", () => {

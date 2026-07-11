@@ -167,4 +167,74 @@ describe("useProfileFetcher", () => {
     });
     expect(cache.cacheRemove).not.toHaveBeenCalled();
   });
+
+  it("reuses in-flight promise for concurrent fetchProfile calls", async () => {
+    let resolveProfile!: (value: { profile: Profile; error: null }) => void;
+    getProfile.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveProfile = resolve;
+        }),
+    );
+    const setProfile = vi.fn();
+    const { result } = renderHook(() => useProfileFetcher(setProfile, "u1"));
+
+    let first!: Promise<Profile | null>;
+    let second!: Promise<Profile | null>;
+    act(() => {
+      first = result.current.fetchProfile("u1");
+      second = result.current.fetchProfile("u1");
+    });
+
+    await vi.waitFor(() => expect(getProfile).toHaveBeenCalledTimes(1));
+    resolveProfile({ profile, error: null });
+
+    await act(async () => {
+      await Promise.all([first, second]);
+    });
+
+    expect(getProfile).toHaveBeenCalledTimes(1);
+    expect(await first).toEqual(profile);
+    expect(await second).toEqual(profile);
+  });
+
+  it("returns null when API has error and no disk fallback", async () => {
+    getProfile.mockResolvedValue({ profile: null, error: new Error("404") });
+    vi.mocked(cache.cachePersistGet).mockResolvedValue(null);
+
+    const setProfile = vi.fn();
+    const { result } = renderHook(() => useProfileFetcher(setProfile, "u1"));
+
+    let out: Profile | null = null;
+    await act(async () => {
+      out = await result.current.fetchProfile("u1");
+    });
+    expect(out).toBeNull();
+  });
+
+  it("returns null when getProfile throws and no disk fallback", async () => {
+    getProfile.mockRejectedValue(new Error("boom"));
+    vi.mocked(cache.cachePersistGet).mockResolvedValue(null);
+
+    const setProfile = vi.fn();
+    const { result } = renderHook(() => useProfileFetcher(setProfile, "u1"));
+
+    let out: Profile | null = null;
+    await act(async () => {
+      out = await result.current.fetchProfile("u1");
+    });
+    expect(out).toBeNull();
+  });
+
+  it("does not call setProfile when refresh returns null", async () => {
+    getProfile.mockResolvedValue({ profile: null, error: null });
+    vi.mocked(cache.cachePersistGet).mockResolvedValue(null);
+    const setProfile = vi.fn();
+    const { result } = renderHook(() => useProfileFetcher(setProfile, "u1"));
+
+    await act(async () => {
+      await result.current.refreshProfile();
+    });
+    expect(setProfile).not.toHaveBeenCalled();
+  });
 });

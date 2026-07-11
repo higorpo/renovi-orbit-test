@@ -14,6 +14,11 @@ vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }));
 
+vi.mock("@/features/payments", () => ({
+  PaymentHistorySection: () =>
+    createElement("div", { "data-testid": "payment-history-section" }, "Pagamentos"),
+}));
+
 vi.mock("../../hooks/useProfileImageUrl", () => ({
   useProfileImageUrl: () => ({ url: null, isLoading: false }),
 }));
@@ -122,7 +127,7 @@ describe("MyAccountProviderPage", () => {
       user: { id: "p1", email: "provider@example.com" },
     } as ReturnType<typeof useAuth>);
     useProviderProfile.mockReturnValue({
-      profile: { id: "p1", role: "provider", full_name: "João" },
+      profile: { id: "p1", role: "provider", full_name: "João Silva" },
       privateData: {
         provider_id: "p1",
         entity_type: "pf",
@@ -367,6 +372,437 @@ describe("MyAccountProviderPage", () => {
     await waitFor(() => {
       expect(uploadPhotoAsync).toHaveBeenCalledWith(file);
     });
+  });
+
+  it("shows Salvando while a profile mutation is in flight", () => {
+    useUpdateAccountProfile.mockReturnValue({
+      updateProfile: vi.fn(),
+      updateProfileAsync: vi.fn().mockResolvedValue({ error: null }),
+      isUpdating: true,
+    } as unknown as ReturnType<typeof useUpdateAccountProfile>);
+
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+    expect(screen.getByText("Salvando…")).toBeInTheDocument();
+  });
+
+  it("toasts validation error when auto-save receives an invalid full name", async () => {
+    const { toast } = await import("sonner");
+    vi.useFakeTimers();
+
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+
+    fireEvent.change(screen.getByLabelText(/Nome completo/), {
+      target: { value: "" },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringMatching(/campo inválido/i)
+    );
+    vi.useRealTimers();
+  });
+
+  it("auto-saves private profile fields when CPF changes", async () => {
+    vi.useFakeTimers();
+    const updatePrivateAsync = vi.fn().mockResolvedValue({ error: null });
+    useUpdateProviderProfile.mockReturnValue({
+      updatePrivateAsync,
+      updatePublicAsync: vi.fn().mockResolvedValue({ error: null }),
+      isUpdatingPrivate: false,
+      isUpdatingPublic: false,
+    } as ReturnType<typeof useUpdateProviderProfile>);
+
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+
+    fireEvent.change(screen.getByLabelText(/^CPF$/), {
+      target: { value: "529.982.247-25" },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(updatePrivateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ cpf: expect.stringMatching(/529/) })
+    );
+    vi.useRealTimers();
+  });
+
+  it("auto-saves public profile fields when display name changes", async () => {
+    vi.useFakeTimers();
+    const updatePublicAsync = vi.fn().mockResolvedValue({ error: null });
+    useUpdateProviderProfile.mockReturnValue({
+      updatePrivateAsync: vi.fn().mockResolvedValue({ error: null }),
+      updatePublicAsync,
+      isUpdatingPrivate: false,
+      isUpdatingPublic: false,
+    } as ReturnType<typeof useUpdateProviderProfile>);
+
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+
+    fireEvent.change(screen.getByLabelText(/Nome profissional/), {
+      target: { value: "João Prestador" },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(updatePublicAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ display_name: "João Prestador" })
+    );
+    vi.useRealTimers();
+  });
+
+  it("toasts error when auto-save mutations partially fail", async () => {
+    const { toast } = await import("sonner");
+    vi.useFakeTimers();
+    const updateProfileAsync = vi.fn().mockResolvedValue({ error: "fail" });
+    useUpdateAccountProfile.mockReturnValue({
+      updateProfile: vi.fn(),
+      updateProfileAsync,
+      isUpdating: false,
+    } as unknown as ReturnType<typeof useUpdateAccountProfile>);
+
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+
+    fireEvent.change(screen.getByLabelText(/Nome completo/), {
+      target: { value: "João Pereira Silva" },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringMatching(/Não foi possível salvar todas as alterações/i)
+    );
+    vi.useRealTimers();
+  });
+
+  it("toasts error when clipboard copy fails", async () => {
+    const { toast } = await import("sonner");
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
+      configurable: true,
+      writable: true,
+    });
+
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+
+    fireEvent.click(screen.getAllByRole("button", { name: /Copiar link do perfil/ })[0]);
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Não foi possível copiar.");
+    });
+  });
+
+  it("toasts error when auto-save mutation rejects", async () => {
+    const { toast } = await import("sonner");
+    vi.useFakeTimers();
+    const updateProfileAsync = vi.fn().mockRejectedValue(new Error("network"));
+    useUpdateAccountProfile.mockReturnValue({
+      updateProfile: vi.fn(),
+      updateProfileAsync,
+      isUpdating: false,
+    } as unknown as ReturnType<typeof useUpdateAccountProfile>);
+
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+
+    fireEvent.change(screen.getByLabelText(/Nome completo/), {
+      target: { value: "João Pereira Silva" },
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringMatching(/Não foi possível atualizar seus dados/i)
+    );
+    vi.useRealTimers();
+  });
+
+  it("masks phone input as the user types", () => {
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+    const phone = screen.getByLabelText(/Telefone \/ WhatsApp/);
+    fireEvent.change(phone, { target: { value: "48999887766" } });
+    expect(phone).toHaveValue("(48) 99988-7766");
+  });
+
+  it("keeps rendering the account when a profile is present with an error", () => {
+    const current = useProviderProfile();
+    useProviderProfile.mockReturnValue({
+      ...current,
+      error: new Error("stale refresh failed"),
+    } as ReturnType<typeof useProviderProfile>);
+
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+
+    expect(screen.getByText("Minha conta")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Não foi possível carregar sua conta")
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not expose copy profile actions when slug is null", () => {
+    const current = useProviderProfile();
+    useProviderProfile.mockReturnValue({
+      ...current,
+      publicData: { ...current.publicData!, slug: null },
+    } as ReturnType<typeof useProviderProfile>);
+
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+
+    expect(
+      screen.queryByRole("button", { name: /Copiar link do perfil/ })
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows a success toast after a successful auto-save", async () => {
+    const { toast } = await import("sonner");
+    vi.useFakeTimers();
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+
+    fireEvent.change(screen.getByLabelText(/Nome completo/), {
+      target: { value: "João Atualizado" },
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100);
+    });
+
+    expect(toast.success).toHaveBeenCalledWith(
+      "Dados atualizados com sucesso."
+    );
+  });
+
+  it("omits neighborhoods when only bio is dirty", async () => {
+    vi.useFakeTimers();
+    const updatePublicAsync = vi.fn().mockResolvedValue({ error: null });
+    useUpdateProviderProfile.mockReturnValue({
+      updatePrivateAsync: vi.fn().mockResolvedValue({ error: null }),
+      updatePublicAsync,
+      isUpdatingPrivate: false,
+      isUpdatingPublic: false,
+    } as ReturnType<typeof useUpdateProviderProfile>);
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+
+    fireEvent.change(screen.getByLabelText(/Biografia/), {
+      target: { value: "Especialista em reformas" },
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100);
+    });
+
+    expect(updatePublicAsync).toHaveBeenCalledWith({
+      display_name: "João",
+      bio: "Especialista em reformas",
+      profile_visibility: "restricted",
+    });
+  });
+
+  it("switches to the PJ fields and shows saving for private updates", () => {
+    useUpdateProviderProfile.mockReturnValue({
+      updatePrivateAsync: vi.fn().mockResolvedValue({ error: null }),
+      updatePublicAsync: vi.fn().mockResolvedValue({ error: null }),
+      isUpdatingPrivate: true,
+      isUpdatingPublic: false,
+    } as ReturnType<typeof useUpdateProviderProfile>);
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+
+    fireEvent.click(screen.getByRole("button", { name: /Pessoa jurídica/ }));
+
+    expect(screen.getByLabelText(/CNPJ/)).toBeInTheDocument();
+    expect(screen.getByText("Salvando…")).toBeInTheDocument();
+  });
+
+  it("shows Salvando when isUpdatingPublic is true", () => {
+    useUpdateProviderProfile.mockReturnValue({
+      updatePrivateAsync: vi.fn().mockResolvedValue({ error: null }),
+      updatePublicAsync: vi.fn().mockResolvedValue({ error: null }),
+      isUpdatingPrivate: false,
+      isUpdatingPublic: true,
+    } as ReturnType<typeof useUpdateProviderProfile>);
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+
+    expect(screen.getByText("Salvando…")).toBeInTheDocument();
+  });
+
+  it("keeps the profile form skeleton visible while an identified profile is loading", () => {
+    const current = useProviderProfile();
+    useProviderProfile.mockReturnValue({
+      ...current,
+      isLoading: true,
+    } as ReturnType<typeof useProviderProfile>);
+
+    const { container } = render(<MyAccountProviderPage />, {
+      wrapper: createWrapper(),
+    });
+
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
+    expect(screen.queryByLabelText(/Nome completo/)).not.toBeInTheDocument();
+  });
+
+  it("does not rehydrate the form twice for the same profile id", () => {
+    const initial = useProviderProfile();
+    const { rerender } = render(<MyAccountProviderPage />, {
+      wrapper: createWrapper(),
+    });
+
+    useProviderProfile.mockReturnValue({
+      ...initial,
+      profile: {
+        ...initial.profile!,
+        full_name: "Server refresh",
+      },
+    } as ReturnType<typeof useProviderProfile>);
+    rerender(<MyAccountProviderPage />);
+
+    expect(screen.getByLabelText(/Nome completo/)).toHaveValue("João Silva");
+  });
+
+  it("renders without a summary card when no profile is available and no error occurred", () => {
+    const current = useProviderProfile();
+    useProviderProfile.mockReturnValue({
+      ...current,
+      profile: null,
+      error: null,
+      isLoading: false,
+    } as ReturnType<typeof useProviderProfile>);
+
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+
+    expect(screen.getByText("Minha conta")).toBeInTheDocument();
+    expect(screen.queryByText("João Silva")).not.toBeInTheDocument();
+  });
+
+  it("uses an empty email when the authenticated user has none", () => {
+    useAuth.mockReturnValue({
+      user: { id: "p1" },
+    } as ReturnType<typeof useAuth>);
+
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+
+    expect(screen.getByText("Minha conta")).toBeInTheDocument();
+  });
+
+  it("normalizes a cleared CPF to null during auto-save", async () => {
+    vi.useFakeTimers();
+    const updatePrivateAsync = vi.fn().mockResolvedValue({ error: null });
+    useUpdateProviderProfile.mockReturnValue({
+      updatePrivateAsync,
+      updatePublicAsync: vi.fn().mockResolvedValue({ error: null }),
+      isUpdatingPrivate: false,
+      isUpdatingPublic: false,
+    } as ReturnType<typeof useUpdateProviderProfile>);
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+    const cpf = screen.getByLabelText(/^CPF$/);
+
+    fireEvent.change(cpf, { target: { value: "529.982.247-25" } });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100);
+    });
+    updatePrivateAsync.mockClear();
+
+    fireEvent.change(cpf, { target: { value: "" } });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100);
+    });
+
+    expect(updatePrivateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ cpf: null })
+    );
+  });
+
+  it("normalizes a missing display name to null when saving another public field", async () => {
+    vi.useFakeTimers();
+    const current = useProviderProfile();
+    useProviderProfile.mockReturnValue({
+      ...current,
+      publicData: {
+        ...current.publicData!,
+        display_name: null,
+      },
+    } as ReturnType<typeof useProviderProfile>);
+    const updatePublicAsync = vi.fn().mockResolvedValue({ error: null });
+    useUpdateProviderProfile.mockReturnValue({
+      updatePrivateAsync: vi.fn().mockResolvedValue({ error: null }),
+      updatePublicAsync,
+      isUpdatingPrivate: false,
+      isUpdatingPublic: false,
+    } as ReturnType<typeof useUpdateProviderProfile>);
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+
+    fireEvent.change(screen.getByLabelText(/Biografia/), {
+      target: { value: "Nova biografia" },
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100);
+    });
+
+    expect(updatePublicAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ display_name: null })
+    );
+  });
+
+  it("handles an undefined mutation result as a partial auto-save failure", async () => {
+    const { toast } = await import("sonner");
+    vi.useFakeTimers();
+    useUpdateAccountProfile.mockReturnValue({
+      updateProfile: vi.fn(),
+      updateProfileAsync: vi.fn().mockResolvedValue(undefined),
+      isUpdating: false,
+    } as unknown as ReturnType<typeof useUpdateAccountProfile>);
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+
+    fireEvent.change(screen.getByLabelText(/Nome completo/), {
+      target: { value: "João Sem Resultado" },
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100);
+    });
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "Não foi possível salvar todas as alterações. Tente novamente."
+    );
+  });
+
+  it("handles a non-Error auto-save rejection", async () => {
+    const { toast } = await import("sonner");
+    vi.useFakeTimers();
+    useUpdateAccountProfile.mockReturnValue({
+      updateProfile: vi.fn(),
+      updateProfileAsync: vi.fn().mockRejectedValue("offline"),
+      isUpdating: false,
+    } as unknown as ReturnType<typeof useUpdateAccountProfile>);
+    render(<MyAccountProviderPage />, { wrapper: createWrapper() });
+
+    fireEvent.change(screen.getByLabelText(/Nome completo/), {
+      target: { value: "João Offline" },
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2100);
+    });
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "Não foi possível atualizar seus dados. Tente novamente."
+    );
   });
 
   afterEach(() => {

@@ -67,6 +67,23 @@ describe("validateGlobalBlocks", () => {
     const result = validateGlobalBlocks(steps);
     expect(result.errors).toHaveLength(0);
   });
+
+  it("does not warn MISSING_DESCRIPTION when description_ai block exists", () => {
+    const steps: FormStep[] = [
+      {
+        id: "s1",
+        order: 0,
+        title: "S1",
+        blocks: [
+          { id: "pt", type: "property_type", label: "T", description_ai: "T", options: [{ value: "a", label: "A" }] },
+          { id: "urgency", type: "urgency", label: "U", description_ai: "U", options: [{ value: "low", label: "Low" }] },
+          { id: "desc", type: "description_ai", label: "D", description_ai: "D" },
+        ],
+      },
+    ];
+    const result = validateGlobalBlocks(steps);
+    expect(result.warnings.some((e) => e.code === "MISSING_DESCRIPTION")).toBe(false);
+  });
 });
 
 describe("validateGlobalOrder", () => {

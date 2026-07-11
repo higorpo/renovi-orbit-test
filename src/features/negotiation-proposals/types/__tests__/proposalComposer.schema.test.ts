@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { validateProposalComposerForm } from "../proposalComposer.schema";
+import {
+  getInclusiveDayRangeHint,
+  getProposalComposerFieldError,
+  validateProposalComposerForm,
+} from "../proposalComposer.schema";
 
 describe("validateProposalComposerForm", () => {
   it("accepts a valid hours-based draft", () => {
@@ -124,5 +128,126 @@ describe("validateProposalComposerForm", () => {
         true,
       );
     }
+  });
+
+  it("rejects empty availability slots", () => {
+    const result = validateProposalComposerForm({
+      priceInput: "100,00",
+      descriptionDraft: "Descrição válida do orçamento.",
+      durationValueInput: "2",
+      durationUnit: "hours",
+      availabilitySlots: [],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some((issue) => issue.path[0] === "availabilitySlots"),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects invalid and past start dates", () => {
+    const invalid = validateProposalComposerForm({
+      priceInput: "100,00",
+      descriptionDraft: "Descrição válida do orçamento.",
+      durationValueInput: "2",
+      durationUnit: "hours",
+      availabilitySlots: [{ startDate: "not-a-date", endDate: "", shift: "morning" }],
+    });
+    expect(invalid.success).toBe(false);
+
+    const past = validateProposalComposerForm({
+      priceInput: "100,00",
+      descriptionDraft: "Descrição válida do orçamento.",
+      durationValueInput: "2",
+      durationUnit: "hours",
+      availabilitySlots: [{ startDate: "2020-01-01", endDate: "", shift: "morning" }],
+    });
+    expect(past.success).toBe(false);
+    if (!past.success) {
+      expect(
+        past.error.issues.some((issue) =>
+          issue.message.includes("a partir de amanhã"),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects inverted day ranges and invalid end dates", () => {
+    const inverted = validateProposalComposerForm({
+      priceInput: "100,00",
+      descriptionDraft: "Descrição válida do orçamento.",
+      durationValueInput: "2",
+      durationUnit: "days",
+      availabilitySlots: [
+        { startDate: "2030-06-10", endDate: "2030-06-09", shift: "full_day" },
+      ],
+    });
+    expect(inverted.success).toBe(false);
+
+    const invalidEnd = validateProposalComposerForm({
+      priceInput: "100,00",
+      descriptionDraft: "Descrição válida do orçamento.",
+      durationValueInput: "2",
+      durationUnit: "days",
+      availabilitySlots: [
+        { startDate: "2030-06-10", endDate: "bad-date", shift: "full_day" },
+      ],
+    });
+    expect(invalidEnd.success).toBe(false);
+  });
+
+  it("rejects zero duration values", () => {
+    const result = validateProposalComposerForm({
+      priceInput: "100,00",
+      descriptionDraft: "Descrição válida do orçamento.",
+      durationValueInput: "0",
+      durationUnit: "hours",
+      availabilitySlots: [{ startDate: "2030-06-01", endDate: "", shift: "morning" }],
+    });
+
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("getProposalComposerFieldError", () => {
+  it("returns the matching issue message", () => {
+    const result = validateProposalComposerForm({
+      priceInput: "",
+      descriptionDraft: "ok",
+      durationValueInput: "2",
+      durationUnit: "hours",
+      availabilitySlots: [{ startDate: "2030-06-01", endDate: "", shift: "morning" }],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(getProposalComposerFieldError(result.error.issues, ["priceInput"])).toMatch(
+        /quanto você quer cobrar/i,
+      );
+      expect(getProposalComposerFieldError(result.error.issues, ["missing"])).toBeNull();
+    }
+  });
+});
+
+describe("getInclusiveDayRangeHint", () => {
+  it("returns null for incomplete or invalid dates", () => {
+    expect(getInclusiveDayRangeHint("", "2030-06-02")).toBeNull();
+    expect(getInclusiveDayRangeHint("not-a-date", "2030-06-02")).toBeNull();
+  });
+
+  it("flags inverted ranges", () => {
+    expect(getInclusiveDayRangeHint("2030-06-05", "2030-06-01")).toEqual({
+      message: "A data final não pode ser anterior à inicial.",
+      isError: true,
+    });
+  });
+
+  it("summarizes calendar and working days", () => {
+    const hint = getInclusiveDayRangeHint("2030-06-14", "2030-06-16");
+    expect(hint?.isError).toBe(false);
+    expect(hint?.message).toMatch(/dias corridos/);
+    expect(hint?.message).toMatch(/dia útil/);
   });
 });

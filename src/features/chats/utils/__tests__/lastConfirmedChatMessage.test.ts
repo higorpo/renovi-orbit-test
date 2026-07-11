@@ -27,4 +27,17 @@ describe("lastConfirmedChatMessage", () => {
       ])?.id,
     ).toBe("msg-1");
   });
+
+  it("returns null when every row is optimistic", () => {
+    expect(
+      lastConfirmedChatMessage([
+        message("optimistic:a"),
+        message("optimistic:b"),
+      ]),
+    ).toBeNull();
+  });
+
+  it("returns null for an empty timeline", () => {
+    expect(lastConfirmedChatMessage([])).toBeNull();
+  });
 });

@@ -667,3 +667,115 @@ describe("useProviderLocation", () => {
     expect(status.removeEventListener).toHaveBeenCalled();
   });
 });
+
+describe("useProviderLocation additional branches", () => {
+  const geo = {
+    getCurrentPosition: vi.fn(),
+  };
+
+  beforeEach(() => {
+    nativeMocks.isNativePlatform.mockReturnValue(false);
+    nativeMocks.captureOperationalLocationFix.mockReset();
+    nativeMocks.getOperationalLocationPermissionStatus.mockReset();
+    nativeMocks.getLatestProviderLocationSample.mockReset();
+    nativeMocks.getLatestProviderLocationSample.mockReturnValue(null);
+    nativeMocks.subscribeProviderLocationSamples.mockReset();
+    nativeMocks.subscribeProviderLocationSamples.mockReturnValue(() => {});
+    vi.spyOn(globalThis.navigator, "geolocation", "get").mockReturnValue(
+      geo as unknown as Geolocation,
+    );
+    geo.getCurrentPosition.mockReset();
+    Object.defineProperty(window, "isSecureContext", {
+      configurable: true,
+      value: true,
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("does not look up a cached native sample when the user is null", async () => {
+    const authModule = await import("@/features/auth");
+    vi.spyOn(authModule, "useAuth").mockReturnValue({ user: null } as ReturnType<
+      typeof authModule.useAuth
+    >);
+    nativeMocks.isNativePlatform.mockReturnValue(true);
+    nativeMocks.getOperationalLocationPermissionStatus.mockResolvedValue("prompt");
+    nativeMocks.captureOperationalLocationFix.mockResolvedValue({
+      granted: false,
+      status: "prompt",
+    });
+
+    const { result } = renderHook(() => useProviderLocation());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(nativeMocks.getLatestProviderLocationSample).not.toHaveBeenCalled();
+    expect(nativeMocks.subscribeProviderLocationSamples).not.toHaveBeenCalled();
+  });
+
+  it("shows a generic error when a granted native fix has no coordinates", async () => {
+    nativeMocks.isNativePlatform.mockReturnValue(true);
+    nativeMocks.getOperationalLocationPermissionStatus.mockResolvedValue("granted");
+    nativeMocks.captureOperationalLocationFix.mockResolvedValue({
+      granted: true,
+      status: "granted",
+    });
+
+    const { result } = renderHook(() => useProviderLocation());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.location).toBeNull();
+    expect(result.current.error).toContain("Não foi possível obter");
+  });
+
+  it("skips the cache effect after the initial native request sets location", async () => {
+    nativeMocks.isNativePlatform.mockReturnValue(true);
+    nativeMocks.getOperationalLocationPermissionStatus.mockResolvedValue("granted");
+    nativeMocks.getLatestProviderLocationSample.mockReturnValue({
+      latitude: 10,
+      longitude: 20,
+      accuracyMeters: 5,
+      recordedAt: new Date().toISOString(),
+    });
+
+    const { result } = renderHook(() => useProviderLocation());
+
+    await waitFor(() =>
+      expect(result.current.location).toEqual({ latitude: 10, longitude: 20 }),
+    );
+    expect(nativeMocks.getLatestProviderLocationSample).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not subscribe to native samples on web", async () => {
+    geo.getCurrentPosition.mockImplementation((success: PositionCallback) => {
+      queueMicrotask(() =>
+        success({
+          coords: { latitude: 1, longitude: 2 },
+        } as GeolocationPosition),
+      );
+    });
+
+    const { result } = renderHook(() => useProviderLocation());
+
+    await waitFor(() => expect(result.current.location).not.toBeNull());
+    expect(nativeMocks.subscribeProviderLocationSamples).not.toHaveBeenCalled();
+  });
+
+  it("does not register a web permission listener on native", async () => {
+    const query = vi.fn();
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      geolocation: geo as unknown as Geolocation,
+      permissions: { query },
+    });
+    nativeMocks.isNativePlatform.mockReturnValue(true);
+    nativeMocks.getOperationalLocationPermissionStatus.mockResolvedValue("denied");
+
+    const { result } = renderHook(() => useProviderLocation());
+
+    await waitFor(() => expect(result.current.permissionDenied).toBe(true));
+    expect(query).not.toHaveBeenCalled();
+  });
+});

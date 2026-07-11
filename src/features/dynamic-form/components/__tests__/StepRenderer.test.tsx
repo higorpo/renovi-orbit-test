@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import type { FormSchema } from "../../types";
-import { FormProvider } from "../FormContext";
+import { FormProvider, useFormContext } from "../FormContext";
 import { StepRenderer } from "../StepRenderer";
 
 describe("StepRenderer", () => {
@@ -245,5 +245,66 @@ describe("StepRenderer", () => {
     );
     fireEvent.click(screen.getByRole("radio", { name: /Sim/i }));
     expect(screen.getByText("Heads up")).toBeInTheDocument();
+  });
+
+  it("navigates to the step that owns a field when editing from preview summary", () => {
+    const schema: FormSchema = {
+      version: "2.0",
+      id: "edit-summary",
+      title: "Edit",
+      metadata: { categorySlug: "c", categoryId: null, status: "draft" },
+      config: {},
+      steps: [
+        {
+          id: "s1",
+          order: 0,
+          title: "First step",
+          blocks: [
+            {
+              id: "name",
+              type: "text",
+              label: "Nome",
+              required: true,
+              description_ai: "Name",
+            },
+          ],
+        },
+        {
+          id: "s2",
+          order: 1,
+          title: "Summary step",
+          blocks: [
+            {
+              id: "preview",
+              type: "preview_summary",
+              label: "Resumo",
+              description_ai: "Summary",
+            },
+          ],
+        },
+      ],
+    };
+
+    function JumpToSummary() {
+      const { goToStep } = useFormContext();
+      return (
+        <button type="button" onClick={() => goToStep(1)}>
+          go-summary
+        </button>
+      );
+    }
+
+    render(
+      <FormProvider schema={schema} initialData={{ name: "Ana" }}>
+        <JumpToSummary />
+        <StepRenderer />
+      </FormProvider>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /go-summary/i }));
+    expect(screen.getByRole("heading", { name: "Summary step" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Editar/i }));
+    expect(screen.getByRole("heading", { name: "First step" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /Nome/i })).toBeInTheDocument();
   });
 });

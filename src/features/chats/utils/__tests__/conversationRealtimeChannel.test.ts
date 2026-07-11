@@ -142,4 +142,89 @@ describe("conversationRealtimeChannel", () => {
       updatedAt: "2026-07-08T12:05:00.000Z",
     });
   });
+
+  it("forwards message inserts, read receipts and subscription status", () => {
+    const channel = {
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn((cb: (status: string) => void) => {
+        cb("SUBSCRIBED");
+        return channel;
+      }),
+    };
+    const client = { channel: vi.fn(() => channel) };
+    const onMessageInsert = vi.fn();
+    const onReadReceiptChange = vi.fn();
+    const onStatusChange = vi.fn();
+    const onRescheduleRequestChange = vi.fn();
+
+    subscribeConversationChannel(client as never, "chat-1", {
+      onMessageInsert,
+      onProposalUpdate: vi.fn(),
+      onRescheduleRequestChange,
+      onReadReceiptChange,
+      onStatusChange,
+    });
+
+    expect(onStatusChange).toHaveBeenCalledWith("SUBSCRIBED");
+
+    const messageHandler = channel.on.mock.calls.find(
+      ([, filter]) =>
+        typeof filter === "object" &&
+        filter !== null &&
+        "table" in filter &&
+        (filter as { table: string }).table === "chat_messages",
+    )?.[2] as (payload: { new: Record<string, string> | null }) => void;
+
+    messageHandler({ new: { id: "m1" } });
+    expect(onMessageInsert).toHaveBeenCalledWith({ id: "m1" });
+    messageHandler({ new: null });
+    expect(onMessageInsert).toHaveBeenCalledTimes(1);
+
+    const receiptHandler = channel.on.mock.calls.find(
+      ([, filter]) =>
+        typeof filter === "object" &&
+        filter !== null &&
+        "table" in filter &&
+        (filter as { table: string }).table === "chat_read_receipts" &&
+        (filter as { event: string }).event === "INSERT",
+    )?.[2] as (payload: { new: Record<string, string | null> | null }) => void;
+
+    receiptHandler({
+      new: {
+        user_id: "user-2",
+        last_read_message_id: "m1",
+        last_read_at: "2026-01-01T12:00:00.000Z",
+      },
+    });
+    expect(onReadReceiptChange).toHaveBeenCalledWith({
+      userId: "user-2",
+      lastReadMessageId: "m1",
+      lastReadAt: "2026-01-01T12:00:00.000Z",
+    });
+
+    receiptHandler({
+      new: {
+        user_id: "user-2",
+        last_read_message_id: null,
+        last_read_at: "2026-01-01T12:01:00.000Z",
+      },
+    });
+    expect(onReadReceiptChange).toHaveBeenLastCalledWith({
+      userId: "user-2",
+      lastReadMessageId: null,
+      lastReadAt: "2026-01-01T12:01:00.000Z",
+    });
+
+    const rescheduleInsert = channel.on.mock.calls.find(
+      ([, filter]) =>
+        typeof filter === "object" &&
+        filter !== null &&
+        "table" in filter &&
+        (filter as { table: string }).table === "service_reschedule_requests" &&
+        (filter as { event: string }).event === "INSERT",
+    )?.[2] as (payload: { new: Record<string, string> | null }) => void;
+
+    rescheduleInsert({ new: { id: "req-x" } });
+    expect(onRescheduleRequestChange).not.toHaveBeenCalled();
+  });
 });

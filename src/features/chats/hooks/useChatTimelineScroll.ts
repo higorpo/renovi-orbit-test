@@ -95,7 +95,7 @@ export function useChatTimelineScroll({
     setInitialScrollDone(true);
     markStickToBottom();
     scrollToLatest("auto");
-  }, [isLoading, markStickToBottom, scrollToLatest, timelineItemCount]);
+  }, [isLoading, markStickToBottom, resetKey, scrollToLatest, timelineItemCount]);
 
   useEffect(() => {
     if (!didInitialScrollRef.current || actionBannerTopInset <= 0) return;

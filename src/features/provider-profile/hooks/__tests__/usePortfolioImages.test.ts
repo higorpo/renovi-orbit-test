@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
+import { logger } from "@/lib/logger";
 import { usePortfolioImages } from "../usePortfolioImages";
 import type { ProviderPortfolioItemPublic } from "../../types/providerProfilePublic.types";
 
@@ -9,6 +10,10 @@ const getPortfolioImageSignedUrlMock = vi.fn();
 vi.mock("../../api/profileImagePublic.api", () => ({
   getPortfolioImageSignedUrl: (...args: unknown[]) =>
     getPortfolioImageSignedUrlMock(...args),
+}));
+
+vi.mock("@/lib/logger", () => ({
+  logger: { error: vi.fn() },
 }));
 
 function makeItem(
@@ -102,5 +107,35 @@ describe("usePortfolioImages", () => {
     expect(result.current.imageMap["item-1"]).toEqual([
       "https://cdn.com/ok.jpg",
     ]);
+  });
+
+  it("skips falsy image paths when collecting URLs", async () => {
+    getPortfolioImageSignedUrlMock.mockResolvedValueOnce("https://cdn.com/ok.jpg");
+    const items = [
+      makeItem({ id: "item-1", image_paths: ["", "ok.jpg"] }),
+    ];
+
+    const { result } = renderHook(() => usePortfolioImages(items));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(getPortfolioImageSignedUrlMock).toHaveBeenCalledTimes(1);
+    expect(getPortfolioImageSignedUrlMock).toHaveBeenCalledWith("ok.jpg");
+    expect(result.current.imageMap["item-1"]).toEqual([
+      "https://cdn.com/ok.jpg",
+    ]);
+  });
+
+  it("clears map and logs when signed URL loading fails", async () => {
+    getPortfolioImageSignedUrlMock.mockRejectedValue(new Error("network"));
+    const items = [makeItem({ image_paths: ["img1.jpg"] })];
+
+    const { result } = renderHook(() => usePortfolioImages(items));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.imageMap).toEqual({});
+    expect(logger.error).toHaveBeenCalledWith(
+      "provider_portfolio_images_load_failed",
+      expect.objectContaining({ error: "network" }),
+    );
   });
 });

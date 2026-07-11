@@ -87,4 +87,35 @@ describe("moderateChatComposerSend", () => {
     expect(result.violation).toBe("phone");
     expect(result.message).toBeTruthy();
   });
+
+  it("allows empty drafts and skips recent history when userId is null", () => {
+    expect(
+      moderateChatComposerSend({
+        text: "   ",
+        messages: [
+          textMessage({
+            id: "1",
+            sender_user_id: "user-a",
+            created_at: "2026-01-01T10:00:00.000Z",
+            text: "9",
+          }),
+        ],
+        userId: "user-a",
+      }),
+    ).toEqual({ allowed: true, violation: null, message: null });
+
+    const result = moderateChatComposerSend({
+      text: "Olá",
+      messages: [
+        textMessage({
+          id: "1",
+          sender_user_id: "user-a",
+          created_at: "2026-01-01T10:00:00.000Z",
+          text: "9",
+        }),
+      ],
+      userId: null,
+    });
+    expect(result.allowed).toBe(true);
+  });
 });

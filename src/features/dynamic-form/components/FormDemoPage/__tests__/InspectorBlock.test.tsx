@@ -163,4 +163,128 @@ describe("InspectorBlock", () => {
     render(<InspectorBlock {...base} block={block} />);
     expect(screen.getByText(/Opções \(JSON array\)/)).toBeInTheDocument();
   });
+
+  it("updates slider step/unit and multi_select options", () => {
+    const slider: FormBlock = {
+      id: "sl",
+      type: "slider",
+      label: "S",
+      description_ai: "d",
+      min: 0,
+      max: 10,
+      step: 1,
+      unit: "%",
+    };
+    const { rerender } = render(<InspectorBlock {...base} block={slider} />);
+    const numberInputs = screen.getAllByRole("spinbutton");
+    fireEvent.change(numberInputs[2]!, { target: { value: "2" } });
+    expect(base.onUpdate).toHaveBeenCalledWith({ step: 2 });
+    fireEvent.change(screen.getByPlaceholderText(/ex: m/), {
+      target: { value: "un" },
+    });
+    expect(base.onUpdate).toHaveBeenCalledWith({ unit: "un" });
+
+    base.onUpdate.mockClear();
+    const multi: FormBlock = {
+      id: "m1",
+      type: "multi_select",
+      label: "M",
+      description_ai: "d",
+      options: [{ value: "a", label: "A" }],
+    };
+    rerender(<InspectorBlock {...base} block={multi} />);
+    const jsonArea = screen.getByPlaceholderText(/Opção A/);
+    fireEvent.change(jsonArea, {
+      target: { value: '[{"value":"z","label":"Z"}]' },
+    });
+    expect(base.onUpdate).toHaveBeenCalledWith({
+      options: [{ value: "z", label: "Z" }],
+    });
+    base.onUpdate.mockClear();
+    fireEvent.change(jsonArea, { target: { value: '{"a":1}' } });
+    expect(base.onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("updates placeholder, helpText and description_ai", () => {
+    const block: FormBlock = {
+      id: "t1",
+      type: "text",
+      label: "T",
+      description_ai: "old",
+      placeholder: "ph",
+      helpText: "help",
+    };
+    render(<InspectorBlock {...base} block={block} />);
+    fireEvent.change(screen.getByPlaceholderText("Placeholder"), {
+      target: { value: "new-ph" },
+    });
+    expect(base.onUpdate).toHaveBeenCalledWith({ placeholder: "new-ph" });
+    fireEvent.change(screen.getByPlaceholderText("Help text"), {
+      target: { value: "new-help" },
+    });
+    expect(base.onUpdate).toHaveBeenCalledWith({ helpText: "new-help" });
+    fireEvent.change(
+      screen.getByPlaceholderText(/O que é este dado/),
+      { target: { value: "ai" } },
+    );
+    expect(base.onUpdate).toHaveBeenCalledWith({ description_ai: "ai" });
+  });
+
+  it("renders radio options editor", () => {
+    render(
+      <InspectorBlock
+        {...base}
+        block={{
+          id: "r1",
+          type: "radio",
+          label: "R",
+          description_ai: "d",
+          options: [{ value: "a", label: "A" }],
+        }}
+      />,
+    );
+    expect(screen.getByText(/Opções \(JSON array\)/)).toBeInTheDocument();
+  });
+
+  it("clears options when JSON textarea is emptied to an empty array", () => {
+    const block: FormBlock = {
+      id: "s1",
+      type: "radio",
+      label: "Pick",
+      description_ai: "d",
+      options: [{ value: "a", label: "A" }],
+    };
+    render(<InspectorBlock {...base} block={block} />);
+    const jsonArea = screen.getByPlaceholderText(/Opção A/);
+    fireEvent.change(jsonArea, { target: { value: "" } });
+    expect(base.onUpdate).toHaveBeenCalledWith({ options: [] });
+  });
+
+  it("uses default static_text and conditional_alert config when missing", () => {
+    const { rerender } = render(
+      <InspectorBlock
+        {...base}
+        block={{
+          id: "st",
+          type: "static_text",
+          label: "T",
+          description_ai: "d",
+        }}
+      />,
+    );
+    expect(screen.getAllByRole("combobox").length).toBeGreaterThan(0);
+
+    rerender(
+      <InspectorBlock
+        {...base}
+        block={{
+          id: "ca",
+          type: "conditional_alert",
+          label: "",
+          description_ai: "d",
+        }}
+      />,
+    );
+    expect(screen.getByPlaceholderText("Título")).toHaveValue("");
+  });
 });

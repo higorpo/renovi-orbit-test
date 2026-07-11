@@ -48,6 +48,6 @@ describe("ContatoIdentidadeSection", () => {
     );
     const cpfInput = screen.getByLabelText(/CPF/);
     fireEvent.change(cpfInput, { target: { value: "12345678900" } });
-    expect(cpfInput).toHaveValue("504.432.630-51");
+    expect(cpfInput).toHaveValue("123.456.789-00");
   });
 });

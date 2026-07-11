@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { useForm } from "react-hook-form";
 import { Form } from "@/components/ui/form";
 import { PublicProfileSettingsSection } from "../PublicProfileSettingsSection";
@@ -124,6 +124,21 @@ describe("PublicProfileSettingsSection", () => {
     expect(publicRadio).toBeChecked();
   });
 
+  it("switches visibility to restricted when the restricted radio is selected", () => {
+    render(<Wrapper profileSlug={null} />);
+    const publicRadio = screen
+      .getAllByRole("radio")
+      .find((el) => (el as HTMLInputElement).value === "public");
+    fireEvent.click(publicRadio!);
+
+    const restrictedRadio = screen
+      .getAllByRole("radio")
+      .find((el) => (el as HTMLInputElement).value === "restricted");
+    expect(restrictedRadio).toBeDefined();
+    fireEvent.click(restrictedRadio!);
+    expect(restrictedRadio).toBeChecked();
+  });
+
   it("shows toast error when clipboard write fails on copy", async () => {
     const writeText = vi.fn().mockRejectedValue(new Error("denied"));
     Object.defineProperty(navigator, "clipboard", {
@@ -136,5 +151,56 @@ describe("PublicProfileSettingsSection", () => {
     await vi.waitFor(() => {
       expect(toast.error).toHaveBeenCalled();
     });
+  });
+
+  it("shows toast success and check icon after copying the profile link", async () => {
+    vi.useFakeTimers();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+      writable: true,
+    });
+    render(<Wrapper profileSlug="meu-perfil" />);
+    fireEvent.click(screen.getByRole("button", { name: /Copiar link do perfil/ }));
+    await vi.waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith(
+        "Link copiado para a área de transferência."
+      );
+    });
+    // Copied state swaps the icon; button remains available
+    expect(screen.getByRole("button", { name: /Copiar link do perfil/ })).toBeInTheDocument();
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+    vi.useRealTimers();
+  });
+
+  it("does not open a tab when Visualizar perfil is unavailable without slug", () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    render(<Wrapper profileSlug={null} />);
+    expect(screen.queryByRole("button", { name: /Visualizar perfil/ })).not.toBeInTheDocument();
+    expect(openSpy).not.toHaveBeenCalled();
+    openSpy.mockRestore();
+  });
+
+  it("updates bio and display name fields when typed", () => {
+    render(<Wrapper profileSlug={null} />);
+    fireEvent.change(screen.getByLabelText(/Nome profissional/), {
+      target: { value: "Studio Renovi" },
+    });
+    fireEvent.change(screen.getByLabelText(/Biografia/), {
+      target: { value: "Especialista em pintura" },
+    });
+    expect(screen.getByLabelText(/Nome profissional/)).toHaveValue("Studio Renovi");
+    expect(screen.getByLabelText(/Biografia/)).toHaveValue("Especialista em pintura");
+  });
+
+  it("disables profile actions when disabled prop is set", () => {
+    render(<Wrapper profileSlug="slug" disabled />);
+    expect(screen.getByRole("button", { name: /Visualizar perfil/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Copiar link do perfil/ })).toBeDisabled();
+    expect(screen.getByLabelText(/Nome profissional/)).toBeDisabled();
+    expect(screen.getByLabelText(/Biografia/)).toBeDisabled();
   });
 });

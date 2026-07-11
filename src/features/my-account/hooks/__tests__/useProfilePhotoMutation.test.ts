@@ -125,6 +125,48 @@ describe("useUploadProfilePhoto", () => {
       expect(toast.error).toHaveBeenCalledWith("File too large");
     });
   });
+
+  it("shows error toast when upload returns no path", async () => {
+    uploadProfileImage.mockResolvedValue({ path: null, error: null });
+
+    const { result } = renderHook(() => useUploadProfilePhoto(), {
+      wrapper: createWrapper(),
+    });
+    const file = new File(["x"], "photo.jpg", { type: "image/jpeg" });
+
+    await act(async () => {
+      try {
+        await result.current.uploadPhotoAsync(file);
+      } catch {
+        // expected
+      }
+    });
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Upload failed");
+    });
+  });
+
+  it("shows error toast when profile update fails after upload", async () => {
+    vi.mocked(profileApi.updateProfile).mockResolvedValue({ error: "Update failed" });
+
+    const { result } = renderHook(() => useUploadProfilePhoto(), {
+      wrapper: createWrapper(),
+    });
+    const file = new File(["x"], "photo.jpg", { type: "image/jpeg" });
+
+    await act(async () => {
+      try {
+        await result.current.uploadPhotoAsync(file);
+      } catch {
+        // expected
+      }
+    });
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Update failed");
+    });
+  });
 });
 
 describe("useRemoveProfilePhoto", () => {
@@ -167,6 +209,50 @@ describe("useRemoveProfilePhoto", () => {
 
   it("shows error toast when remove fails", async () => {
     removeProfileImageFromStorage.mockResolvedValue({ error: "Storage error" });
+
+    const { result } = renderHook(() => useRemoveProfilePhoto(), {
+      wrapper: createWrapper(),
+    });
+
+    await act(async () => {
+      try {
+        await result.current.removePhotoAsync("path");
+      } catch {
+        // expected
+      }
+    });
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Não foi possível remover a foto.");
+    });
+  });
+
+  it("shows error toast when not authenticated on remove", async () => {
+    useAuth.mockReturnValue({
+      user: null,
+      profile: null,
+    } as ReturnType<typeof useAuth>);
+
+    const { result } = renderHook(() => useRemoveProfilePhoto(), {
+      wrapper: createWrapper(),
+    });
+
+    await act(async () => {
+      try {
+        await result.current.removePhotoAsync("path");
+      } catch {
+        // expected
+      }
+    });
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Não foi possível remover a foto.");
+    });
+    expect(removeProfileImageFromStorage).not.toHaveBeenCalled();
+  });
+
+  it("shows error toast when profile update fails after storage remove", async () => {
+    vi.mocked(profileApi.updateProfile).mockResolvedValue({ error: "Update failed" });
 
     const { result } = renderHook(() => useRemoveProfilePhoto(), {
       wrapper: createWrapper(),

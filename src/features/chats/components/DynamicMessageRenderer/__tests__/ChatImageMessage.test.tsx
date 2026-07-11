@@ -77,4 +77,131 @@ describe("ChatImageMessage", () => {
 
     expect(screen.getByText("Detalhe do serviço")).toBeTruthy();
   });
+
+  it("shows unavailable copy when there are no image paths", () => {
+    useChatImageDisplayMock.mockReturnValue({
+      urls: [],
+      caption: null,
+      isLoading: false,
+      hasError: false,
+      pathCount: 0,
+    });
+
+    render(<ChatImageMessage message={baseMessage} isOutgoing={false} />);
+    expect(screen.getByText("Imagem indisponível")).toBeTruthy();
+  });
+
+  it("shows a loading placeholder while signed urls resolve", () => {
+    useChatImageDisplayMock.mockReturnValue({
+      urls: [],
+      caption: null,
+      isLoading: true,
+      hasError: false,
+      pathCount: 1,
+    });
+
+    render(<ChatImageMessage message={baseMessage} isOutgoing />);
+    expect(screen.getByLabelText("Carregando imagem")).toHaveAttribute("aria-busy", "true");
+  });
+
+  it("shows an error state when signed urls fail", () => {
+    useChatImageDisplayMock.mockReturnValue({
+      urls: [],
+      caption: null,
+      isLoading: false,
+      hasError: true,
+      pathCount: 1,
+    });
+
+    render(<ChatImageMessage message={baseMessage} isOutgoing={false} />);
+    expect(screen.getByText("Não foi possível carregar a imagem")).toBeTruthy();
+  });
+
+  it("renders a two-column grid for multiple images", () => {
+    useChatImageDisplayMock.mockReturnValue({
+      urls: ["https://example.com/a.png", "https://example.com/b.png"],
+      caption: null,
+      isLoading: false,
+      hasError: false,
+      pathCount: 2,
+    });
+
+    render(<ChatImageMessage message={baseMessage} isOutgoing />);
+
+    expect(screen.getByRole("button", { name: "Ampliar imagem 1 de 2" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Ampliar imagem 2 de 2" })).toBeTruthy();
+  });
+
+  it("closes the lightbox when Fechar is clicked", () => {
+    useChatImageDisplayMock.mockReturnValue({
+      urls: ["https://example.com/signed.png"],
+      caption: null,
+      isLoading: false,
+      hasError: false,
+      pathCount: 1,
+    });
+
+    render(<ChatImageMessage message={baseMessage} isOutgoing />);
+    fireEvent.click(screen.getByRole("button", { name: "Ampliar imagem 1 de 1" }));
+    expect(screen.getByRole("dialog")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Fechar imagem ampliada" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("uses caption in enlarge aria-label when present", () => {
+    useChatImageDisplayMock.mockReturnValue({
+      urls: ["https://example.com/signed.png"],
+      caption: "Detalhe",
+      isLoading: false,
+      hasError: false,
+      pathCount: 1,
+    });
+
+    render(<ChatImageMessage message={baseMessage} isOutgoing={false} />);
+    expect(screen.getByRole("button", { name: "Ampliar imagem: Detalhe" })).toBeTruthy();
+  });
+
+  it("shows error styling for incoming failed images", () => {
+    useChatImageDisplayMock.mockReturnValue({
+      urls: [],
+      caption: null,
+      isLoading: false,
+      hasError: false,
+      pathCount: 1,
+    });
+
+    render(<ChatImageMessage message={baseMessage} isOutgoing={false} />);
+    expect(screen.getByText("Não foi possível carregar a imagem")).toBeTruthy();
+  });
+
+  it("skips re-render when memoized props are unchanged", () => {
+    useChatImageDisplayMock.mockReturnValue({
+      urls: ["https://example.com/signed.png"],
+      caption: null,
+      isLoading: false,
+      hasError: false,
+      pathCount: 1,
+    });
+
+    const { rerender } = render(
+      <ChatImageMessage message={baseMessage} isOutgoing groupPosition="single" className="x" />,
+    );
+    const callsAfterFirst = useChatImageDisplayMock.mock.calls.length;
+
+    rerender(
+      <ChatImageMessage message={baseMessage} isOutgoing groupPosition="single" className="x" />,
+    );
+    expect(useChatImageDisplayMock.mock.calls.length).toBe(callsAfterFirst);
+
+    rerender(
+      <ChatImageMessage
+        message={baseMessage}
+        isOutgoing={false}
+        groupPosition="single"
+        className="x"
+      />,
+    );
+    expect(useChatImageDisplayMock.mock.calls.length).toBeGreaterThan(callsAfterFirst);
+  });
 });

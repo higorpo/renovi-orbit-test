@@ -53,4 +53,28 @@ describe("getChatMessageBubbleClassName", () => {
     expect(className).toContain("rounded-tl-md");
     expect(className).toContain("rounded-bl-md");
   });
+
+  it("covers remaining group positions and pending opacity", () => {
+    expect(
+      getChatMessageBubbleClassName({
+        isOutgoing: true,
+        groupPosition: "middle",
+        isPending: true,
+      }),
+    ).toContain("opacity-70");
+
+    expect(
+      getChatMessageBubbleClassName({
+        isOutgoing: false,
+        groupPosition: "first",
+      }),
+    ).toContain("rounded-bl-md");
+
+    expect(
+      getChatMessageBubbleClassName({
+        isOutgoing: false,
+        groupPosition: "last",
+      }),
+    ).toContain("rounded-tl-md");
+  });
 });

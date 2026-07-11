@@ -7,20 +7,30 @@ import { toast } from "sonner";
 import {
   useAcceptProposalMutation,
   useRejectProposalMutation,
+  useRequestProposalRevisionMutation,
 } from "../useProposalClientMutations";
 
 const acceptProposalWithPaymentMock = vi.fn();
 const rejectProposalMock = vi.fn();
+const requestProposalRevisionMock = vi.fn();
 const getClientIpBestEffortMock = vi.fn();
 
-const { useOnlineStatusMock } = vi.hoisted(() => ({
+const {
+  proposalAcceptedMock,
+  proposalRejectedMock,
+  revisionRequestedMock,
+  useOnlineStatusMock,
+} = vi.hoisted(() => ({
+  proposalAcceptedMock: vi.fn(),
+  proposalRejectedMock: vi.fn(),
+  revisionRequestedMock: vi.fn(),
   useOnlineStatusMock: vi.fn(() => true),
 }));
 
 vi.mock("../../api/proposals.api", () => ({
   acceptProposalWithPayment: (...args: unknown[]) => acceptProposalWithPaymentMock(...args),
   rejectProposal: (...args: unknown[]) => rejectProposalMock(...args),
-  requestProposalRevision: vi.fn(),
+  requestProposalRevision: (...args: unknown[]) => requestProposalRevisionMock(...args),
 }));
 
 vi.mock("@/lib/getClientIp", () => ({
@@ -33,15 +43,23 @@ vi.mock("@/hooks/useOnlineStatus", () => ({
 
 vi.mock("@/features/chats", () => ({
   useChatAnalytics: () => ({
-    proposal_accepted: vi.fn(),
-    proposal_rejected: vi.fn(),
-    revision_requested: vi.fn(),
+    proposal_accepted: proposalAcceptedMock,
+    proposal_rejected: proposalRejectedMock,
+    revision_requested: revisionRequestedMock,
   }),
   CHAT_MESSAGES_QUERY_KEY: "chat-messages",
   CHAT_CONVERSATIONS_LIST_QUERY_KEY: "chat-conversations",
   CHAT_FREE_MESSAGING_QUERY_KEY: "chat-free-messaging",
   CHAT_PROPOSAL_TIMELINE_QUERY_KEY: "chat-proposal-timeline",
   CONVERSATION_DETAIL_QUERY_KEY: "conversation-detail",
+}));
+
+vi.mock("@/features/chats/hooks/useChatAnalytics", () => ({
+  useChatAnalytics: () => ({
+    proposal_accepted: proposalAcceptedMock,
+    proposal_rejected: proposalRejectedMock,
+    revision_requested: revisionRequestedMock,
+  }),
 }));
 
 vi.mock("sonner", () => ({
@@ -157,6 +175,44 @@ describe("useProposalClientMutations", () => {
         clientIp: "203.0.113.1",
       }),
     );
+    await waitFor(() => {
+      expect(proposalAcceptedMock).toHaveBeenCalledWith({
+        proposal_id: "prop-1",
+        chat_id: "chat-1",
+        service_request_id: "sr-1",
+      });
+      expect(toast.success).toHaveBeenCalledWith("Proposta aceita com sucesso.");
+    });
+  });
+
+  it("uses an explicit client IP and accepts a missing payment schedule", async () => {
+    acceptProposalWithPaymentMock.mockResolvedValue({
+      data: {
+        service: { id: "cs-1" },
+        payment_schedule: null,
+      },
+      error: null,
+    });
+    const { result } = renderHook(
+      () => useAcceptProposalMutation(null, null),
+      { wrapper: createWrapper() },
+    );
+
+    await expect(
+      result.current.mutateAsync({
+        proposalId: "prop-1",
+        selectedSlot: { start_date: "2026-06-01", shift: "morning" },
+        clientIp: "198.51.100.5",
+        ...paymentParams,
+      }),
+    ).resolves.toEqual({ contractedServiceId: "cs-1", scheduleId: undefined });
+
+    expect(getClientIpBestEffortMock).not.toHaveBeenCalled();
+    expect(acceptProposalWithPaymentMock).toHaveBeenCalledWith(
+      expect.objectContaining({ clientIp: "198.51.100.5" }),
+    );
+    expect(proposalAcceptedMock).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it("propagates INSTALLMENT_SIGNATURE_EXPIRED from payment accept", async () => {
@@ -201,5 +257,128 @@ describe("useProposalClientMutations", () => {
     ).rejects.toThrow("OFFLINE");
 
     expect(rejectProposalMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a proposal and tracks success", async () => {
+    rejectProposalMock.mockResolvedValue({
+      data: { id: "prop-1", status: "REJECTED" },
+      error: null,
+    });
+    const { result } = renderHook(
+      () => useRejectProposalMutation("chat-1", "sr-1"),
+      { wrapper: createWrapper() },
+    );
+
+    await expect(
+      result.current.mutateAsync({
+        proposalId: "prop-1",
+        rejectionReason: "Prazo incompatível",
+      }),
+    ).resolves.toMatchObject({ status: "REJECTED" });
+
+    await waitFor(() => {
+      expect(proposalRejectedMock).toHaveBeenCalledWith({
+        proposal_id: "prop-1",
+        chat_id: "chat-1",
+        service_request_id: "sr-1",
+      });
+      expect(toast.success).toHaveBeenCalledWith("Proposta recusada.");
+    });
+  });
+
+  it("shows the API message when rejecting fails", async () => {
+    rejectProposalMock.mockResolvedValue({
+      data: null,
+      error: { message: "A proposta já foi encerrada." },
+    });
+    const { result } = renderHook(
+      () => useRejectProposalMutation(null, null),
+      { wrapper: createWrapper() },
+    );
+
+    await expect(
+      result.current.mutateAsync({
+        proposalId: "prop-1",
+        rejectionReason: "Outro motivo",
+      }),
+    ).rejects.toMatchObject({ message: "A proposta já foi encerrada." });
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("A proposta já foi encerrada."),
+    );
+  });
+
+  it("blocks revision requests when offline", async () => {
+    useOnlineStatusMock.mockReturnValue(false);
+    const { result } = renderHook(
+      () => useRequestProposalRevisionMutation("chat-1", "sr-1"),
+      { wrapper: createWrapper() },
+    );
+
+    await expect(
+      result.current.mutateAsync({
+        proposalId: "prop-1",
+        revisionReason: "OTHER",
+      }),
+    ).rejects.toThrow("OFFLINE");
+
+    expect(requestProposalRevisionMock).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "Você está offline. Conecte-se à internet para aceitar a proposta.",
+      ),
+    );
+  });
+
+  it("requests a proposal revision and tracks success", async () => {
+    requestProposalRevisionMock.mockResolvedValue({
+      data: { id: "prop-1", status: "REVISION_REQUESTED" },
+      error: null,
+    });
+    const { result } = renderHook(
+      () => useRequestProposalRevisionMutation("chat-1", "sr-1"),
+      { wrapper: createWrapper() },
+    );
+
+    await expect(
+      result.current.mutateAsync({
+        proposalId: "prop-1",
+        revisionReason: "OTHER",
+        revisionNotes: "Preciso de outra data",
+      }),
+    ).resolves.toMatchObject({ status: "REVISION_REQUESTED" });
+
+    await waitFor(() => {
+      expect(revisionRequestedMock).toHaveBeenCalledWith({
+        proposal_id: "prop-1",
+        chat_id: "chat-1",
+        service_request_id: "sr-1",
+        revision_reason: "OTHER",
+      });
+      expect(toast.success).toHaveBeenCalledWith(
+        "Pedido de revisão enviado ao prestador.",
+      );
+    });
+  });
+
+  it("uses the revision fallback when the API returns no result", async () => {
+    requestProposalRevisionMock.mockResolvedValue({ data: null, error: null });
+    const { result } = renderHook(
+      () => useRequestProposalRevisionMutation(null, null),
+      { wrapper: createWrapper() },
+    );
+
+    await expect(
+      result.current.mutateAsync({
+        proposalId: "prop-1",
+        revisionReason: "OTHER",
+      }),
+    ).rejects.toThrow("Não foi possível solicitar revisão.");
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "Não foi possível solicitar revisão.",
+      ),
+    );
   });
 });

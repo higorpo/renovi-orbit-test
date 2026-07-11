@@ -127,6 +127,50 @@ describe("useClientMyServicesPage", () => {
     });
   });
 
+  it("navigates to chats list and conversation from card actions", () => {
+    const { result } = renderHook(() => useClientMyServicesPage(), {
+      wrapper: wrapper(["/dashboard/services"]),
+    });
+
+    act(() => {
+      result.current.handleOpenMessages(openModel);
+    });
+    expect(mockNavigate).toHaveBeenCalledWith(
+      expect.stringContaining("serviceRequestId=sr-open"),
+    );
+
+    act(() => {
+      result.current.handleOpenChat(openModel);
+    });
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      result.current.handleOpenChat({
+        ...openModel,
+        chatSummary: {
+          id: "chat-9",
+          isUnread: false,
+          lastInteractionAt: "2025-03-02T00:00:00Z",
+          lastMessagePreview: null,
+          providerDisplayName: "João",
+        },
+      });
+    });
+    expect(mockNavigate).toHaveBeenCalledWith("/dashboard/chats/chat-9");
+  });
+
+  it("clears focus together with other filters", () => {
+    const { result } = renderHook(() => useClientMyServicesPage(), {
+      wrapper: wrapper(["/dashboard/services?serviceRequestId=sr-1&status=negotiation"]),
+    });
+
+    act(() => {
+      result.current.handleClearFilters();
+    });
+
+    expect(result.current.focusServiceRequestId).toBeNull();
+  });
+
   it("syncs status tab from focused request status", async () => {
     mockUseList.mockReturnValue({
       ...defaultListReturn,

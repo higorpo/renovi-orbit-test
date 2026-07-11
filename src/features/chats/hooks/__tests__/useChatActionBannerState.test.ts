@@ -84,4 +84,60 @@ describe("useChatActionBannerState", () => {
       expect.objectContaining({ action: "send_proposal", chat_id: "chat-1" }),
     );
   });
+
+  it("returns null banner when disabled or chatId is missing", () => {
+    const { result, rerender } = renderHook(
+      ({ enabled, chatId }: { enabled: boolean; chatId: string | null }) =>
+        useChatActionBannerState({
+          chatId,
+          viewerRole: "client",
+          conversationStatus: "ACTIVE",
+          pendingProposalId: "p-1",
+          enabled,
+        }),
+      { initialProps: { enabled: false, chatId: "chat-1" as string | null } },
+    );
+
+    expect(result.current.banner).toBeNull();
+    expect(result.current.isVisible).toBe(false);
+
+    rerender({ enabled: true, chatId: null });
+    expect(result.current.banner).toBeNull();
+  });
+
+  it("exposes rescheduleRequestId on CTA payload for provider reschedule banner", () => {
+    const { result } = renderHook(() =>
+      useChatActionBannerState({
+        chatId: "chat-1",
+        viewerRole: "provider",
+        conversationStatus: "ACTIVE",
+        pendingProposalId: null,
+        rescheduleRequestId: "req-9",
+        canProposeReschedule: true,
+      }),
+    );
+
+    expect(result.current.banner?.action).toBe("propose_reschedule");
+    expect(result.current.getCtaPayload()).toEqual({
+      action: "propose_reschedule",
+      proposalId: undefined,
+      rescheduleRequestId: "req-9",
+    });
+  });
+
+  it("does not show send_proposal banner without client/provider ids", () => {
+    const { result } = renderHook(() =>
+      useChatActionBannerState({
+        chatId: "chat-1",
+        viewerRole: "provider",
+        conversationStatus: "ACTIVE",
+        pendingProposalId: null,
+        clientId: null,
+        providerId: null,
+        messages: [],
+      }),
+    );
+
+    expect(result.current.banner).toBeNull();
+  });
 });

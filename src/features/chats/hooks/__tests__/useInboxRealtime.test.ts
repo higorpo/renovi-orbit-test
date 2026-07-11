@@ -160,4 +160,66 @@ describe("useInboxRealtime", () => {
       expect(data?.pages[0]?.items[0]?.is_unread).toBe(true);
     });
   });
+
+  it("dedupes repeated inserts and refreshes when chat is not cached", async () => {
+    const { Wrapper, queryClient } = createWrapper();
+    const refetchSpy = vi.spyOn(queryClient, "refetchQueries");
+    renderHook(() => useInboxRealtime(), { wrapper: Wrapper });
+    await waitFor(() => expect(onHandlers.messageInsert).toBeDefined());
+    refetchSpy.mockClear();
+
+    const payload = {
+      new: {
+        id: "msg-uncached",
+        chat_id: "chat-missing",
+        sender_user_id: "provider-1",
+        message_type: "TEXT",
+        created_at: "2026-01-01T11:00:00.000Z",
+        payload: { text: "Fora do cache" },
+        linked_entity_type: null,
+        linked_entity_id: null,
+      },
+    };
+
+    onHandlers.messageInsert?.(payload);
+    onHandlers.messageInsert?.(payload);
+
+    await waitFor(() => {
+      expect(refetchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY],
+          type: "active",
+        }),
+      );
+    });
+    expect(refetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes inbox after reconnecting from a channel error", async () => {
+    const { Wrapper, queryClient } = createWrapper();
+    const refetchSpy = vi.spyOn(queryClient, "refetchQueries");
+    renderHook(() => useInboxRealtime(), { wrapper: Wrapper });
+    await waitFor(() => expect(onHandlers.statusChange).toBeDefined());
+    refetchSpy.mockClear();
+
+    onHandlers.statusChange?.("CHANNEL_ERROR");
+    onHandlers.statusChange?.("SUBSCRIBED");
+
+    await waitFor(() => {
+      expect(refetchSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queryKey: [CHAT_CONVERSATIONS_LIST_QUERY_KEY],
+          type: "active",
+        }),
+      );
+    });
+  });
+
+  it("clears status on unmount", () => {
+    const { Wrapper } = createWrapper();
+    const { unmount } = renderHook(() => useInboxRealtime(), { wrapper: Wrapper });
+
+    unmount();
+    expect(removeChannelMock).toHaveBeenCalled();
+  });
 });

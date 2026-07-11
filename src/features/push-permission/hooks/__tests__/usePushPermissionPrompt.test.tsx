@@ -204,4 +204,24 @@ describe('usePushPermissionPrompt', () => {
     expect(clearPushPermissionPromptDismissed).toHaveBeenCalled()
     expect(result.current.open).toBe(false)
   })
+
+  it('marks dismissed and logs when permission request throws', async () => {
+    const { logger } = await import('@/lib/logger')
+    pushMocks.setupPushNotifications.mockRejectedValueOnce(new Error('blocked'))
+    const { result } = renderHook(() => usePushPermissionPrompt())
+
+    await waitFor(() => expect(result.current.open).toBe(true), { timeout: 2000 })
+
+    await act(async () => {
+      await result.current.acceptAndRequestPermission()
+    })
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      'push_permission_request_failed',
+      expect.objectContaining({ message: 'blocked' }),
+    )
+    expect(markPushPermissionPromptDismissed).toHaveBeenCalled()
+    expect(result.current.requesting).toBe(false)
+    expect(result.current.open).toBe(false)
+  })
 })

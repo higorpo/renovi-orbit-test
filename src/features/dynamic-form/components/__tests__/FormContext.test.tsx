@@ -195,4 +195,91 @@ describe("FormContext", () => {
     });
     expect(screen.getByTestId("idx")).toHaveTextContent("0");
   });
+
+  it("exposes step validity, completion, and visible blocks APIs", () => {
+    const schema: FormSchema = {
+      version: "2.0",
+      id: "api",
+      title: "API",
+      metadata: { categorySlug: "c", categoryId: null, status: "draft" },
+      config: {},
+      steps: [
+        {
+          id: "s1",
+          order: 0,
+          title: "One",
+          blocks: [
+            { id: "req", type: "text", label: "Req", required: true, description_ai: "R" },
+            {
+              id: "hidden",
+              type: "text",
+              label: "Hidden",
+              required: false,
+              description_ai: "H",
+              visibility: [{ dependsOn: "req", operator: "equals", value: "show" }],
+            },
+          ],
+        },
+        {
+          id: "s2",
+          order: 1,
+          title: "Two",
+          blocks: [
+            { id: "b2", type: "text", label: "B2", required: false, description_ai: "B2" },
+          ],
+        },
+      ],
+    };
+
+    function ApiProbe() {
+      const v = useFormContext();
+      return (
+        <div>
+          <span data-testid="canProceed">{String(v.canProceed)}</span>
+          <span data-testid="isFirst">{String(v.isFirstStep)}</span>
+          <span data-testid="isLast">{String(v.isLastStep)}</span>
+          <span data-testid="complete">{String(v.isFormComplete())}</span>
+          <span data-testid="stepValid">{String(v.isStepValid(0))}</span>
+          <span data-testid="visibleCount">{v.getVisibleBlocks(v.visibleSteps[0]).length}</span>
+          <button type="button" onClick={() => v.setFieldValue("req", "ok")}>
+            fill
+          </button>
+          <button type="button" onClick={() => v.setFormData({ req: "ok", b2: "x" })}>
+            setAll
+          </button>
+          <button type="button" onClick={() => v.nextStep()}>
+            next
+          </button>
+        </div>
+      );
+    }
+
+    render(
+      <FormProvider schema={schema}>
+        <ApiProbe />
+      </FormProvider>
+    );
+
+    expect(screen.getByTestId("canProceed")).toHaveTextContent("false");
+    expect(screen.getByTestId("isFirst")).toHaveTextContent("true");
+    expect(screen.getByTestId("isLast")).toHaveTextContent("false");
+    expect(screen.getByTestId("complete")).toHaveTextContent("false");
+    expect(screen.getByTestId("stepValid")).toHaveTextContent("false");
+    expect(screen.getByTestId("visibleCount")).toHaveTextContent("1");
+
+    act(() => {
+      screen.getByRole("button", { name: "fill" }).click();
+    });
+    expect(screen.getByTestId("canProceed")).toHaveTextContent("true");
+    expect(screen.getByTestId("stepValid")).toHaveTextContent("true");
+
+    act(() => {
+      screen.getByRole("button", { name: "setAll" }).click();
+    });
+    act(() => {
+      screen.getByRole("button", { name: "next" }).click();
+    });
+    expect(screen.getByTestId("isLast")).toHaveTextContent("true");
+    expect(screen.getByTestId("complete")).toHaveTextContent("true");
+  });
 });

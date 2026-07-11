@@ -1,57 +1,78 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import type { FormBlock } from "../../../types";
 import { ConditionalAlertBlock } from "../ConditionalAlertBlock";
 
-function alertBlock(overrides: Partial<FormBlock> = {}): FormBlock {
+function buildBlock(overrides: Partial<FormBlock> = {}): FormBlock {
   return {
-    id: "a1",
+    id: "alert-1",
     type: "conditional_alert",
-    label: "Alert body",
-    description_ai: "d",
+    label: "Atenção ao prazo",
+    description_ai: "Alert",
     ...overrides,
   };
 }
 
 describe("ConditionalAlertBlock", () => {
-  it("renders info variant by default", () => {
-    render(<ConditionalAlertBlock block={alertBlock()} />);
-    expect(screen.getByText("Alert body")).toBeInTheDocument();
-  });
-
-  it("renders warning variant", () => {
+  it("renders info alert with title and help text", () => {
     render(
       <ConditionalAlertBlock
-        block={alertBlock({ config: { alertType: "warning", alertTitle: "Cuidado" } })}
-      />
+        block={buildBlock({
+          helpText: "Mais detalhes",
+          config: { alertType: "info", alertTitle: "Info" },
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Info")).toBeInTheDocument();
+    expect(screen.getByText("Atenção ao prazo")).toBeInTheDocument();
+    expect(screen.getByText("Mais detalhes")).toBeInTheDocument();
+  });
+
+  it("renders warning and success variants", () => {
+    const { rerender } = render(
+      <ConditionalAlertBlock
+        block={buildBlock({
+          label: "Cuidado",
+          config: { alertType: "warning" },
+        })}
+      />,
     );
     expect(screen.getByText("Cuidado")).toBeInTheDocument();
-    expect(screen.getByText("Alert body")).toBeInTheDocument();
-  });
 
-  it("renders success variant", () => {
-    render(
+    rerender(
       <ConditionalAlertBlock
-        block={alertBlock({ config: { alertType: "success" }, helpText: "Extra help" })}
-      />
+        block={buildBlock({
+          label: "Tudo certo",
+          config: { alertType: "success" },
+        })}
+      />,
     );
-    expect(screen.getByText("Extra help")).toBeInTheDocument();
+    expect(screen.getByText("Tudo certo")).toBeInTheDocument();
   });
 
-  it("does not render title paragraph when alertTitle is empty", () => {
+  it("falls back to info styles for unknown alert types", () => {
     const { container } = render(
-      <ConditionalAlertBlock block={alertBlock({ config: { alertTitle: "" } })} />
+      <ConditionalAlertBlock
+        block={buildBlock({
+          config: { alertType: "unknown" },
+        })}
+      />,
     );
-    expect(container.querySelectorAll("p.font-medium")).toHaveLength(0);
-    expect(screen.getByText("Alert body")).toBeInTheDocument();
+
+    expect(container.firstChild).toHaveClass("bg-blue-500/10");
   });
 
-  it("falls back to info for unknown alertType", () => {
+  it("omits empty alert titles", () => {
     render(
       <ConditionalAlertBlock
-        block={alertBlock({ config: { alertType: "unknown_kind" } })}
-      />
+        block={buildBlock({
+          config: { alertTitle: "" },
+        })}
+      />,
     );
-    expect(screen.getByText("Alert body")).toBeInTheDocument();
+
+    expect(screen.queryByText("Info")).not.toBeInTheDocument();
+    expect(screen.getByText("Atenção ao prazo")).toBeInTheDocument();
   });
 });

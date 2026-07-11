@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ProviderProfileHeader } from "../ProviderProfileHeader";
 import type { ProviderPublicProfile } from "../../types/providerProfilePublic.types";
+import { usePublicProfileImageUrl } from "../../hooks/usePublicProfileImageUrl";
 
 vi.mock("../../hooks/usePublicProfileImageUrl", () => ({
   usePublicProfileImageUrl: vi.fn(() => ({ url: "", isLoading: false })),
@@ -39,6 +40,10 @@ function makeProfile(
 describe("ProviderProfileHeader", () => {
   beforeEach(() => {
     shareMock.mockReset();
+    vi.mocked(usePublicProfileImageUrl).mockReturnValue({
+      url: "",
+      isLoading: false,
+    });
   });
 
   it("renders display name as heading", () => {
@@ -112,6 +117,29 @@ describe("ProviderProfileHeader", () => {
 
     fireEvent.click(shareBtn);
     expect(shareMock).toHaveBeenCalledOnce();
+  });
+
+  it("shows loading placeholder in avatar while image URL is loading", () => {
+    vi.mocked(usePublicProfileImageUrl).mockReturnValue({
+      url: "",
+      isLoading: true,
+    });
+
+    render(<ProviderProfileHeader profile={makeProfile()} />);
+    expect(screen.getByText("...")).toBeInTheDocument();
+  });
+
+  it("does not show loading placeholder when image URL is ready", () => {
+    vi.mocked(usePublicProfileImageUrl).mockReturnValue({
+      url: "https://cdn.example.com/avatar.jpg",
+      isLoading: false,
+    });
+
+    render(<ProviderProfileHeader profile={makeProfile()} />);
+    expect(screen.queryByText("...")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /joão silva/i }),
+    ).toBeInTheDocument();
   });
 
   it("does not render 'solicitar orçamento' button", () => {

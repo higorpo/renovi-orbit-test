@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createAuthEventHandlers, processAuthEvent } from "../authStateHandlers";
 import type { AuthHandlersContext } from "../authStateHandlers";
 import type { Session, User } from "@supabase/supabase-js";
+import { cachePersistRemove, cacheRemove } from "@/lib/cache";
 
 vi.mock("@/lib/cache", () => ({
   cacheRemove: vi.fn(),
@@ -76,6 +77,37 @@ describe("createAuthEventHandlers", () => {
     expect((ctx.isExplicitSignIn as { current: boolean }).current).toBe(false);
   });
 
+  it("SIGNED_IN does not navigate when isExplicitSignIn is false", async () => {
+    ctx = makeCtx({ isExplicitSignIn: { current: false } });
+    const handlers = createAuthEventHandlers(ctx);
+    handlers.SIGNED_IN(makeSession());
+    await (ctx.fetchProfile as ReturnType<typeof vi.fn>).mock.results[0]?.value;
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(ctx.setProfile).toHaveBeenCalled();
+    expect(ctx.navigate).not.toHaveBeenCalled();
+    expect(ctx.setLoading).toHaveBeenCalledWith(false);
+  });
+
+  it("SIGNED_IN with explicit sign-in but null profile does not navigate", async () => {
+    const fetchProfile = vi.fn().mockResolvedValue(null);
+    ctx = makeCtx({
+      isExplicitSignIn: { current: true },
+      fetchProfile,
+    });
+    const handlers = createAuthEventHandlers(ctx);
+    handlers.SIGNED_IN(makeSession());
+    await fetchProfile.mock.results[0]?.value;
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(ctx.setProfile).not.toHaveBeenCalled();
+    expect(ctx.navigate).not.toHaveBeenCalled();
+    expect((ctx.isExplicitSignIn as { current: boolean }).current).toBe(false);
+    expect(ctx.setLoading).toHaveBeenCalledWith(false);
+  });
+
   it("SIGNED_IN does not update state when unmounted", async () => {
     ctx = makeCtx({ getIsMounted: vi.fn().mockReturnValue(false) });
     const handlers = createAuthEventHandlers(ctx);
@@ -114,6 +146,24 @@ describe("createAuthEventHandlers", () => {
     expect(ctx.setUser).toHaveBeenCalledWith(null);
     expect(ctx.setProfile).toHaveBeenCalledWith(null);
     expect(ctx.setLoading).toHaveBeenCalledWith(false);
+  });
+
+  it("SIGNED_OUT evicts cached profile when lastFetchedUserId is set", () => {
+    ctx = makeCtx({ lastFetchedUserId: { current: "user-123" } });
+    const handlers = createAuthEventHandlers(ctx);
+    handlers.SIGNED_OUT(null);
+
+    expect(cacheRemove).toHaveBeenCalledWith("profile_user-123");
+    expect(cachePersistRemove).toHaveBeenCalledWith("profile_user-123");
+  });
+
+  it("SIGNED_OUT skips cache eviction when lastFetchedUserId is null", () => {
+    ctx = makeCtx({ lastFetchedUserId: { current: null } });
+    const handlers = createAuthEventHandlers(ctx);
+    handlers.SIGNED_OUT(null);
+
+    expect(cacheRemove).not.toHaveBeenCalled();
+    expect(cachePersistRemove).not.toHaveBeenCalled();
   });
 
   it("TOKEN_REFRESHED updates session without fetching profile", () => {

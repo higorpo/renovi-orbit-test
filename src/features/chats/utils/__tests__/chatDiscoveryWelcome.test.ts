@@ -19,6 +19,15 @@ describe("resolveChatDiscoveryWelcomeAnchorIso", () => {
       "2026-05-01T10:00:00.000Z",
     );
   });
+
+  it("falls back to now when messages and conversation created_at are missing", () => {
+    const before = Date.now();
+    const iso = resolveChatDiscoveryWelcomeAnchorIso([], null);
+    const after = Date.now();
+    const parsed = Date.parse(iso);
+    expect(parsed).toBeGreaterThanOrEqual(before);
+    expect(parsed).toBeLessThanOrEqual(after);
+  });
 });
 
 describe("getChatDiscoveryWelcomeContent", () => {

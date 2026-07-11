@@ -13,6 +13,7 @@ const serviceMocks = vi.hoisted(() => ({
   isLoading: false,
   isError: false,
   refetch: vi.fn(),
+  requestedId: undefined as string | undefined,
 }));
 
 const cancelMocks = vi.hoisted(() => ({
@@ -51,7 +52,10 @@ vi.mock("../../hooks/useRecordProviderOpportunityView", () => ({
 }));
 
 vi.mock("../../hooks/useService", () => ({
-  useService: () => serviceMocks,
+  useService: (id?: string) => {
+    serviceMocks.requestedId = id;
+    return serviceMocks;
+  },
 }));
 
 vi.mock("../../hooks/useCancelService", () => ({
@@ -80,9 +84,14 @@ vi.mock("@/features/negotiation-proposals", () => ({
   }: {
     onOpenChange: (open: boolean) => void;
   }) => (
-    <button type="button" data-testid="budget-sheet" onClick={() => onOpenChange(false)}>
-      close-budget
-    </button>
+    <div data-testid="budget-sheet">
+      <button type="button" onClick={() => onOpenChange(false)}>
+        close-budget
+      </button>
+      <button type="button" onClick={() => onOpenChange(true)}>
+        keep-budget-open
+      </button>
+    </div>
   ),
 }));
 
@@ -106,8 +115,12 @@ vi.mock("../ServiceDetailClientActions", () => ({
     onCancelService: () => void;
     onRepublishService: () => void;
     onCancelDialogOpenChange: (open: boolean) => void;
+    showClientBudgetAction: boolean;
   }) => (
-    <div data-testid="client-actions">
+    <div
+      data-testid="client-actions"
+      data-show-budget-action={String(props.showClientBudgetAction)}
+    >
       <button type="button" onClick={props.onOpenBudgetSheet}>
         open-budget
       </button>
@@ -129,8 +142,14 @@ vi.mock("../ServiceContractedSection", () => ({
     onCancellationSuccess?: () => void;
     onCompletionSuccess?: () => void;
     onRescheduleSuccess?: () => void;
+    completionViewerRole?: string;
+    cancellationViewerRole?: string;
   }) => (
-    <div data-testid="contracted-section">
+    <div
+      data-testid="contracted-section"
+      data-completion-viewer-role={props.completionViewerRole}
+      data-cancellation-viewer-role={props.cancellationViewerRole}
+    >
       <button type="button" onClick={() => props.onCancellationSuccess?.()}>
         cancel-ok
       </button>
@@ -219,6 +238,7 @@ beforeEach(() => {
   serviceMocks.data = null;
   serviceMocks.isLoading = false;
   serviceMocks.isError = false;
+  serviceMocks.requestedId = undefined;
 });
 
 describe("ServiceDetailPage", () => {
@@ -311,5 +331,148 @@ describe("ServiceDetailPage", () => {
     });
     render(<ServiceDetailPage />);
     expect(screen.queryByTestId("client-actions")).not.toBeInTheDocument();
+  });
+});
+
+describe("ServiceDetailPage branch coverage", () => {
+  const contracted: NonNullable<ServiceModel["contracted"]> = {
+    id: "cs-1",
+    status: "CONFIRMED",
+    agreedSlot: null,
+    durationUnit: "hours",
+    durationValue: 2,
+    scheduledStartDate: "2026-06-01",
+    scheduledEndDate: null,
+    scheduledShift: "morning",
+    provider: { id: "p-1", displayName: "João", profileImagePath: null },
+    chatId: "chat-1",
+    updatedAt: null,
+  };
+
+  it("uses the default page shell spacing outside a sheet", () => {
+    serviceMocks.data = buildModel();
+    const { container } = render(<ServiceDetailPage />);
+
+    expect(container.firstElementChild).toHaveClass("space-y-4", "pb-24");
+    expect(container.firstElementChild).not.toHaveClass("px-0", "py-0");
+  });
+
+  it("hides the conversation list for a contracted client service", () => {
+    serviceMocks.data = buildModel({ contracted });
+    render(<ServiceDetailPage />);
+
+    expect(screen.queryByTestId("conversation-list")).not.toBeInTheDocument();
+    expect(screen.getByTestId("contracted-section")).toBeInTheDocument();
+  });
+
+  it("does not render the client budget sheet for providers", () => {
+    authMocks.profile = { role: "provider" };
+    serviceMocks.data = buildModel();
+    render(<ServiceDetailPage />);
+
+    expect(screen.queryByTestId("budget-sheet")).not.toBeInTheDocument();
+  });
+
+  it("passes a disabled budget action without showing its button", () => {
+    serviceMocks.data = buildModel({ proposalCount: 0 });
+    render(<ServiceDetailPage />);
+
+    expect(screen.getByTestId("client-actions")).toHaveAttribute(
+      "data-show-budget-action",
+      "false",
+    );
+  });
+
+  it("hides provider location when there is no contracted service", () => {
+    authMocks.profile = { role: "provider" };
+    serviceMocks.data = buildModel({ contracted: null });
+    render(<ServiceDetailPage />);
+
+    expect(screen.queryByTestId("location-section")).not.toBeInTheDocument();
+  });
+
+  it("passes undefined viewer roles for an unknown profile role", () => {
+    (authMocks as { profile: { role: string } }).profile = { role: "admin" };
+    serviceMocks.data = buildModel({ contracted });
+    render(<ServiceDetailPage />);
+
+    expect(screen.getByTestId("contracted-section")).not.toHaveAttribute(
+      "data-completion-viewer-role",
+    );
+    expect(screen.getByTestId("contracted-section")).not.toHaveAttribute(
+      "data-cancellation-viewer-role",
+    );
+  });
+
+  it("ignores an open=true budget sheet change", () => {
+    serviceMocks.data = buildModel();
+    render(<ServiceDetailPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "keep-budget-open" }));
+    expect(budgetSheetMocks.setBudgetSheetOpen).not.toHaveBeenCalled();
+  });
+
+  it("prefers the service request id prop over the route id", () => {
+    serviceMocks.data = buildModel({ id: "prop-id" });
+    render(<ServiceDetailPage serviceRequestId="prop-id" />);
+
+    expect(serviceMocks.requestedId).toBe("prop-id");
+  });
+
+  it("passes client completionViewerRole for contracted client", () => {
+    authMocks.profile = { role: "client" };
+    serviceMocks.data = buildModel({
+      listPhase: "in_progress",
+      statusTabId: "in_progress",
+      contracted,
+      proposalCount: 0,
+    });
+    render(<ServiceDetailPage />);
+
+    expect(screen.getByTestId("contracted-section")).toHaveAttribute(
+      "data-completion-viewer-role",
+      "client",
+    );
+    expect(screen.getByTestId("client-actions")).toBeInTheDocument();
+    expect(screen.queryByTestId("rejection-alert")).not.toBeInTheDocument();
+  });
+
+  it("passes provider completionViewerRole for contracted provider", () => {
+    authMocks.profile = { role: "provider" };
+    serviceMocks.data = buildModel({
+      listPhase: "in_progress",
+      statusTabId: "in_progress",
+      contracted,
+    });
+    render(<ServiceDetailPage />);
+
+    expect(screen.getByTestId("contracted-section")).toHaveAttribute(
+      "data-completion-viewer-role",
+      "provider",
+    );
+  });
+
+  it("renders provider proposal section without contracted service", () => {
+    authMocks.profile = { role: "provider" };
+    serviceMocks.data = buildModel({
+      listPhase: "negotiation",
+      statusTabId: "negotiation",
+      contracted: null,
+    });
+    render(<ServiceDetailPage />);
+
+    expect(screen.getByTestId("proposal-section")).toBeInTheDocument();
+    expect(screen.queryByTestId("contracted-section")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("conversation-list")).not.toBeInTheDocument();
+  });
+
+  it("renders without role-specific sections when profile is missing", () => {
+    (authMocks as { profile: null }).profile = null;
+    serviceMocks.data = buildModel({ contracted });
+    render(<ServiceDetailPage />);
+
+    expect(screen.queryByTestId("client-actions")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("rejection-alert")).not.toBeInTheDocument();
+    expect(screen.getByTestId("contracted-section")).toBeInTheDocument();
   });
 });

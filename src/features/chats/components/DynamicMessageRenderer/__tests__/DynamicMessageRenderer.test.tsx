@@ -17,6 +17,10 @@ vi.mock("../ChatAudioMessage", () => ({
   ChatAudioMessage: () => <div data-testid="audio-message" />,
 }));
 
+vi.mock("../ChatImageMessage", () => ({
+  ChatImageMessage: () => <div data-testid="image-message" />,
+}));
+
 vi.mock("../DynamicRescheduleProposalCard", () => ({
   DynamicRescheduleProposalCard: () => <div data-testid="reschedule-card" />,
 }));
@@ -71,6 +75,23 @@ describe("DynamicMessageRenderer", () => {
     expect(screen.getByTestId("audio-message")).toBeTruthy();
   });
 
+  it("renders image card for IMAGE messages", () => {
+    render(
+      <DynamicMessageRenderer
+        chatId="chat-1"
+        message={{
+          ...baseMessage,
+          message_type: "IMAGE",
+          payload: { paths: ["chat/s/a.png"] },
+        }}
+        viewerRole="client"
+        isOutgoing={false}
+      />,
+    );
+
+    expect(screen.getByTestId("image-message")).toBeTruthy();
+  });
+
   it("renders reschedule card for WORKFLOW_ACTION reschedule proposals", () => {
     render(
       <DynamicMessageRenderer
@@ -105,5 +126,42 @@ describe("DynamicMessageRenderer", () => {
     );
 
     expect(screen.getByText("Mensagem não suportada")).toBeTruthy();
+  });
+
+  it("renders a system status bubble", () => {
+    render(
+      <DynamicMessageRenderer
+        chatId="chat-1"
+        message={{
+          ...baseMessage,
+          message_type: "SYSTEM",
+          payload: { text: "Conversa iniciada" },
+        }}
+        viewerRole="client"
+        isOutgoing={false}
+      />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent("Conversa iniciada");
+  });
+
+  it("renders a generic workflow action when it is not a reschedule proposal", () => {
+    render(
+      <DynamicMessageRenderer
+        chatId="chat-1"
+        message={{
+          ...baseMessage,
+          message_type: "WORKFLOW_ACTION",
+          linked_entity_type: "workflow",
+          linked_entity_id: "wf-1",
+          payload: { text: "Proposta aceita", action_key: "proposal.accepted" },
+        }}
+        viewerRole="client"
+        isOutgoing={false}
+      />,
+    );
+
+    expect(screen.getByText("Proposta aceita")).toBeTruthy();
+    expect(screen.queryByTestId("reschedule-card")).toBeNull();
   });
 });

@@ -3,7 +3,10 @@ import {
   listStates,
   listCitiesByState,
   listNeighborhoodsByCity,
+  getNeighborhoodsByIds,
+  searchCities,
 } from "../statesAndCities.api";
+import { logger } from "@/lib/logger";
 
 vi.mock("@/lib/supabase/client", () => ({
   supabase: {
@@ -109,5 +112,171 @@ describe("listNeighborhoodsByCity", () => {
 
     expect(result.neighborhoods).toEqual([]);
     expect(result.error).toBe("Error");
+  });
+});
+
+describe("getNeighborhoodsByIds", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns immediately when no valid ids are provided", async () => {
+    await expect(getNeighborhoodsByIds(["", ""])).resolves.toEqual({
+      neighborhoods: [],
+      error: null,
+    });
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("deduplicates ids and maps joined city data", async () => {
+    const query = {
+      select: vi.fn().mockReturnThis(),
+      in: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: "n1",
+            name: "Centro",
+            city_id: "c1",
+            platform_cities: {
+              name: "Florianópolis",
+              platform_states: { abbreviation: "SC" },
+            },
+          },
+          {
+            id: "n2",
+            name: "Interior",
+            city_id: "c2",
+            platform_cities: null,
+          },
+        ],
+        error: null,
+      }),
+    };
+    from.mockReturnValue(query as never);
+
+    const result = await getNeighborhoodsByIds(["n1", "n1", "n2"]);
+
+    expect(query.in).toHaveBeenCalledWith("id", ["n1", "n2"]);
+    expect(result).toEqual({
+      neighborhoods: [
+        {
+          id: "n1",
+          name: "Centro",
+          city_id: "c1",
+          city_name: "Florianópolis",
+          state_abbreviation: "SC",
+        },
+        {
+          id: "n2",
+          name: "Interior",
+          city_id: "c2",
+          city_name: "",
+          state_abbreviation: "",
+        },
+      ],
+      error: null,
+    });
+  });
+
+  it("chunks large id lists and merges every response", async () => {
+    const query = {
+      select: vi.fn().mockReturnThis(),
+      in: vi
+        .fn()
+        .mockResolvedValueOnce({
+          data: [{ id: "n0", name: "First", city_id: "c1", platform_cities: null }],
+          error: null,
+        })
+        .mockResolvedValueOnce({
+          data: [{ id: "n100", name: "Last", city_id: "c2", platform_cities: null }],
+          error: null,
+        }),
+    };
+    from.mockReturnValue(query as never);
+    const ids = Array.from({ length: 101 }, (_, index) => `n${index}`);
+
+    const result = await getNeighborhoodsByIds(ids);
+
+    expect(query.in).toHaveBeenCalledTimes(2);
+    expect(query.in.mock.calls[0][1]).toHaveLength(100);
+    expect(query.in.mock.calls[1][1]).toEqual(["n100"]);
+    expect(result.neighborhoods.map((item) => item.id)).toEqual(["n0", "n100"]);
+  });
+
+  it("returns the first chunk error and logs it", async () => {
+    const query = {
+      select: vi.fn().mockReturnThis(),
+      in: vi.fn().mockResolvedValue({ data: null, error: { message: "lookup failed" } }),
+    };
+    from.mockReturnValue(query as never);
+
+    await expect(getNeighborhoodsByIds(["n1"])).resolves.toEqual({
+      neighborhoods: [],
+      error: "lookup failed",
+    });
+    expect(logger.error).toHaveBeenCalledWith("platform_neighborhoods_by_ids_error", {
+      error: "lookup failed",
+    });
+  });
+});
+
+describe("searchCities", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("skips the query for blank input", async () => {
+    await expect(searchCities("   ")).resolves.toEqual({ cities: [], error: null });
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("trims the query and maps state abbreviations", async () => {
+    const query = {
+      select: vi.fn().mockReturnThis(),
+      ilike: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: "c1",
+            name: "Florianópolis",
+            platform_states: { abbreviation: "SC" },
+          },
+          { id: "c2", name: "Flórida", platform_states: null },
+        ],
+        error: null,
+      }),
+    };
+    from.mockReturnValue(query as never);
+
+    const result = await searchCities("  Flo ");
+
+    expect(query.ilike).toHaveBeenCalledWith("name", "%Flo%");
+    expect(query.limit).toHaveBeenCalledWith(30);
+    expect(result.cities).toEqual([
+      { id: "c1", name: "Florianópolis", state_abbreviation: "SC" },
+      { id: "c2", name: "Flórida", state_abbreviation: "" },
+    ]);
+  });
+
+  it("returns and logs search errors", async () => {
+    const query = {
+      select: vi.fn().mockReturnThis(),
+      ilike: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: "search failed" },
+      }),
+    };
+    from.mockReturnValue(query as never);
+
+    await expect(searchCities("Flo")).resolves.toEqual({
+      cities: [],
+      error: "search failed",
+    });
+    expect(logger.error).toHaveBeenCalledWith("platform_cities_search_error", {
+      error: "search failed",
+    });
   });
 });

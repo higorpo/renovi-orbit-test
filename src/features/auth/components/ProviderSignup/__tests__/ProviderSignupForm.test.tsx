@@ -115,8 +115,94 @@ describe("ProviderSignupForm", () => {
     expect(screen.getByText("pro@example.com")).toBeInTheDocument();
   });
 
+  it("success state shows spam-folder guidance", () => {
+    renderForm(<Harness signupSuccess registeredEmail="pro@example.com" />);
+    expect(screen.getByText("Não encontrou o email?")).toBeInTheDocument();
+    expect(screen.getByText(/spam/i)).toBeInTheDocument();
+  });
+
   it("shows submitting state on final button", () => {
     renderForm(<Harness initialStep={2} submitting />);
     expect(screen.getByText("Criando...")).toBeInTheDocument();
+  });
+
+  it("renders step 0 field errors and muted future progress steps", () => {
+    const { container } = renderForm(
+      <Harness errors={{ fullName: "Informe o nome", email: "Email inválido" }} />
+    );
+    expect(screen.getByText("Informe o nome")).toBeInTheDocument();
+    expect(screen.getByText("Email inválido")).toBeInTheDocument();
+    expect(container.querySelectorAll(".bg-white\\/20.text-white\\/50")).toHaveLength(2);
+  });
+
+  it("renders completed progress checks at step 2", () => {
+    const { container } = renderForm(<Harness initialStep={2} />);
+    expect(container.firstElementChild?.querySelectorAll("svg")).toHaveLength(2);
+    expect(container.querySelectorAll(".bg-white.text-\\[\\#0F2F3A\\]")).toHaveLength(1);
+  });
+
+  it("step 1 toggles password show and hide and renders strength branches", () => {
+    const { container } = renderForm(
+      <Harness
+        initialStep={1}
+        errors={{
+          password: "Senha inválida",
+          confirmPassword: "Senhas diferentes",
+        }}
+      />
+    );
+    const password = screen.getByLabelText(/^Senha \*/i);
+    fireEvent.click(screen.getAllByRole("button", { name: /Mostrar senha/i })[0]);
+    expect(password).toHaveAttribute("type", "text");
+    fireEvent.click(screen.getByRole("button", { name: /Ocultar senha/i }));
+    expect(password).toHaveAttribute("type", "password");
+
+    fireEvent.change(password, { target: { value: "Longpassword" } });
+    expect(screen.getByText("Senha inválida")).toBeInTheDocument();
+    expect(screen.getByText("Senhas diferentes")).toBeInTheDocument();
+    expect(container.querySelector("div[style*='width']")).toBeInTheDocument();
+    expect(container.querySelectorAll("svg.lucide-check").length).toBeGreaterThan(0);
+    expect(container.querySelectorAll("svg.lucide-x").length).toBeGreaterThan(0);
+  });
+
+  it("step 2 keeps submit disabled before terms acceptance and shows errors", () => {
+    renderForm(
+      <Harness
+        initialStep={2}
+        errors={{
+          termsAccepted: "Aceite os termos",
+          recaptcha: "Confirme o reCAPTCHA",
+        }}
+      />
+    );
+    expect(screen.getByRole("button", { name: /Criar minha conta/i })).toBeDisabled();
+    expect(screen.getByText("Aceite os termos")).toBeInTheDocument();
+    expect(screen.getByText("Confirme o reCAPTCHA")).toBeInTheDocument();
+  });
+
+  it("step 2 returns to password entry and exposes every legal link", () => {
+    renderForm(<Harness initialStep={2} />);
+    const terms = screen.getByRole("link", { name: "Termos de Uso" });
+    const adhesion = screen.getByRole("link", { name: "Contrato de Adesão" });
+    const commissions = screen.getByRole("link", {
+      name: "Política de Comissões",
+    });
+
+    expect(terms.getAttribute("href")).toMatch(/\/juridico\/termos-de-uso$/);
+    expect(adhesion.getAttribute("href")).toMatch(/\/juridico\/adesao-prestador$/);
+    expect(commissions.getAttribute("href")).toMatch(
+      /\/juridico\/comissao-prestador$/
+    );
+    expect(terms.getAttribute("href")).not.toContain("//juridico");
+
+    fireEvent.click(screen.getByRole("button", { name: /Voltar/i }));
+    expect(screen.getByLabelText(/^Senha \*/i)).toBeInTheDocument();
+  });
+
+  it("disables the final button and shows a loader while submitting", () => {
+    renderForm(<Harness initialStep={2} submitting />);
+    const submit = screen.getByRole("button", { name: /Criando/i });
+    expect(submit).toBeDisabled();
+    expect(submit.querySelector(".animate-spin")).toBeInTheDocument();
   });
 });

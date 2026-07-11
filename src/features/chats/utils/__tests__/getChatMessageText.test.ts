@@ -21,11 +21,23 @@ describe("getChatMessageText", () => {
     expect(getChatMessageText({ ...base, payload: { text: "  Olá  " } })).toBe("Olá");
   });
 
-  it("falls back when payload is empty", () => {
+  it("falls back when TEXT payload is empty", () => {
     expect(getChatMessageText(base)).toBe("Mensagem");
+    expect(getChatMessageText({ ...base, payload: { text: "   " } })).toBe("Mensagem");
   });
 
-  it("returns trimmed text payload for SYSTEM messages", () => {
+  it("returns audio preview or default label for AUDIO messages", () => {
+    expect(
+      getChatMessageText({
+        ...base,
+        message_type: "AUDIO",
+        payload: { preview: "  Áudio curto  " },
+      }),
+    ).toBe("Áudio curto");
+    expect(getChatMessageText({ ...base, message_type: "AUDIO", payload: {} })).toBe("Áudio");
+  });
+
+  it("returns trimmed text payload for SYSTEM and WORKFLOW_ACTION messages", () => {
     expect(
       getChatMessageText({
         ...base,
@@ -33,5 +45,31 @@ describe("getChatMessageText", () => {
         payload: { text: "  Outra proposta foi aceita neste pedido.  " },
       }),
     ).toBe("Outra proposta foi aceita neste pedido.");
+
+    expect(
+      getChatMessageText({
+        ...base,
+        message_type: "WORKFLOW_ACTION",
+        payload: { text: "  Ação concluída  " },
+      }),
+    ).toBe("Ação concluída");
+  });
+
+  it("falls back to preview for other message types", () => {
+    expect(
+      getChatMessageText({
+        ...base,
+        message_type: "IMAGE",
+        payload: { preview: "  Foto do vazamento  " },
+      }),
+    ).toBe("Foto do vazamento");
+
+    expect(
+      getChatMessageText({
+        ...base,
+        message_type: "IMAGE",
+        payload: { preview: "   " },
+      }),
+    ).toBe("Mensagem");
   });
 });
