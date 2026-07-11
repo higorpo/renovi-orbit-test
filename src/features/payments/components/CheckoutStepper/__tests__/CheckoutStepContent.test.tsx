@@ -1,14 +1,18 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { CheckoutStepContent } from "../CheckoutStepContent";
 import type { CheckoutHostBindings } from "../../../hooks/useCheckoutHostActions";
 import type { UseCheckoutStepperResult } from "../../../hooks/useCheckoutStepper";
 import type { CheckoutContext } from "../../../types/checkoutStepper.types";
 
+const mockRefreshProfile = vi.fn();
+const mockUseAuth = vi.fn(() => ({
+  profile: { phone: "48999999999" } as { phone?: string | null },
+  refreshProfile: mockRefreshProfile,
+}));
+
 vi.mock("@/features/auth", () => ({
-  useAuth: () => ({
-    profile: { phone: "48999999999" },
-  }),
+  useAuth: () => mockUseAuth(),
 }));
 
 vi.mock("../../../hooks/useClientCpfForPayment", () => ({
@@ -156,6 +160,14 @@ const checkoutContext: CheckoutContext = {
 };
 
 describe("CheckoutStepContent", () => {
+  beforeEach(() => {
+    mockRefreshProfile.mockClear();
+    mockUseAuth.mockReturnValue({
+      profile: { phone: "48999999999" },
+      refreshProfile: mockRefreshProfile,
+    });
+  });
+
   it("renders CPF and phone steps", () => {
     const bindings = makeBindings();
     const { rerender } = render(
@@ -200,6 +212,24 @@ describe("CheckoutStepContent", () => {
     const selector = screen.getByTestId("saved-card-selector");
     expect(selector).toHaveAttribute("data-saved-cpf", "39053344705");
     expect(selector).toHaveAttribute("data-phone", "48999999999");
+    expect(mockRefreshProfile).not.toHaveBeenCalled();
+  });
+
+  it("refreshes profile when card step has no phone in stepData or profile", () => {
+    mockUseAuth.mockReturnValue({
+      profile: { phone: null },
+      refreshProfile: mockRefreshProfile,
+    });
+
+    render(
+      <CheckoutStepContent
+        stepper={makeStepper({ currentStep: "card", stepData: {} })}
+        hostBindings={makeBindings()}
+        proposalId="proposal-1"
+      />,
+    );
+
+    expect(mockRefreshProfile).toHaveBeenCalled();
   });
 
   it("prefers stepData CPF and phone over profile values", () => {

@@ -9,7 +9,11 @@ import { useCheckoutStepper } from "../../../hooks/useCheckoutStepper";
 import { CheckoutStepper } from "../CheckoutStepper";
 
 vi.mock("@/features/auth", () => ({
-  useAuth: vi.fn(() => ({ user: { id: "user-1" }, profile: null })),
+  useAuth: vi.fn(() => ({
+    user: { id: "user-1" },
+    profile: null,
+    refreshProfile: vi.fn().mockResolvedValue(undefined),
+  })),
 }));
 
 vi.mock("../../../hooks/useSavedPaymentTokens", () => ({

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CreditCard, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -36,9 +36,14 @@ export function SavedCardsList({
   tokenizeContext = providerServiceId ? "checkout" : "profile",
 }: SavedCardsListProps) {
   const { cards, isLoading, revokeCard, isRevoking, revokingTokenId, refetch } = useSavedCards();
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const { cpf: savedCpf } = useClientCpfForPayment();
   const resolvedPhone = phone ?? profile?.phone ?? undefined;
+
+  useEffect(() => {
+    if (resolvedPhone?.replace(/\D/g, "").trim()) return;
+    void refreshProfile();
+  }, [resolvedPhone, refreshProfile]);
   const [addCardOpen, setAddCardOpen] = useState(false);
   const [tokenToRemove, setTokenToRemove] = useState<string | null>(null);
   const [blockedWarning, setBlockedWarning] = useState<{

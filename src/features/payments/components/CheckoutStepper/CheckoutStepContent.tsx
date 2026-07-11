@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useAuth } from "@/features/auth";
 import { ConfirmationStep } from "./ConfirmationStep";
 import { InstallmentSelector } from "../InstallmentSelector";
@@ -42,10 +42,18 @@ export function CheckoutStepContent({
   } = stepper;
 
   const idempotencyKey = useMemo(() => generateIdempotencyKeyV7(), []);
-  const { profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const { cpf: profileCpf } = useClientCpfForPayment();
   const resolvedCpf = stepData.cpf ?? profileCpf;
   const resolvedPhone = stepData.phone ?? profile?.phone ?? undefined;
+
+  // Phone step is skipped when the DB already has a phone, but auth profile may
+  // still be stale from before that save — refresh once so tokenization gets it.
+  useEffect(() => {
+    if (currentStep !== "card") return;
+    if (resolvedPhone?.replace(/\D/g, "").trim()) return;
+    void refreshProfile();
+  }, [currentStep, resolvedPhone, refreshProfile]);
 
   switch (currentStep) {
     case "cpf":

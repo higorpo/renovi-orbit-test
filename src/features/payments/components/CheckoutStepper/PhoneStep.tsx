@@ -33,7 +33,7 @@ export function PhoneStep({
   onComplete,
   formId = PHONE_STEP_FORM_ID,
 }: PhoneStepProps) {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -59,6 +59,9 @@ export function PhoneStep({
         return;
       }
 
+      // Keep auth profile in sync so later checkout sessions can skip the phone
+      // step and still pass phone into card tokenization.
+      await refreshProfile();
       onComplete(result.phone);
     } finally {
       setIsSaving(false);

@@ -4,7 +4,11 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import * as checkoutPhoneApi from "../../../api/checkout.api";
 import { PhoneStep } from "../PhoneStep";
 
-const mockUseAuth = vi.fn(() => ({ user: { id: "user-1" } }));
+const mockRefreshProfile = vi.fn().mockResolvedValue(undefined);
+const mockUseAuth = vi.fn(() => ({
+  user: { id: "user-1" },
+  refreshProfile: mockRefreshProfile,
+}));
 
 vi.mock("@/features/auth", () => ({
   useAuth: () => mockUseAuth(),
@@ -12,8 +16,12 @@ vi.mock("@/features/auth", () => ({
 
 describe("PhoneStep", () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
-    mockUseAuth.mockReturnValue({ user: { id: "user-1" } });
+    vi.clearAllMocks();
+    mockRefreshProfile.mockResolvedValue(undefined);
+    mockUseAuth.mockReturnValue({
+      user: { id: "user-1" },
+      refreshProfile: mockRefreshProfile,
+    });
   });
 
   it("shows validation error for invalid phone", async () => {
@@ -46,6 +54,7 @@ describe("PhoneStep", () => {
     await waitFor(() => {
       expect(onComplete).toHaveBeenCalledWith("(48) 99999-9999");
     });
+    expect(mockRefreshProfile).toHaveBeenCalled();
   });
 
   it("shows submit error when save fails", async () => {
@@ -64,10 +73,14 @@ describe("PhoneStep", () => {
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent("RLS violation");
     });
+    expect(mockRefreshProfile).not.toHaveBeenCalled();
   });
 
   it("shows session expired when user is missing", async () => {
-    mockUseAuth.mockReturnValue({ user: null as never });
+    mockUseAuth.mockReturnValue({
+      user: null as never,
+      refreshProfile: mockRefreshProfile,
+    });
 
     render(<PhoneStep onComplete={vi.fn()} />);
 

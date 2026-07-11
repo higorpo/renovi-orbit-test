@@ -13,7 +13,10 @@ vi.mock("@/features/payments/hooks/useClientCpfForPayment", () => ({
 }));
 
 vi.mock("@/features/auth", () => ({
-  useAuth: () => ({ profile: { phone: "(48) 99999-9999" } }),
+  useAuth: () => ({
+    profile: { phone: "(48) 99999-9999" },
+    refreshProfile: vi.fn(),
+  }),
 }));
 
 vi.mock("@/features/payments/components/AddCardSheetDialog", () => ({
