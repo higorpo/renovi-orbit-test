@@ -1,4 +1,5 @@
-home services app that lists local vendors app
+- Precisamos optar pelo regime de caixa para declaração de imposto de renda
+
 
 Itens interessantes de ter na plataforma (futuro)
 
@@ -8,6 +9,8 @@ Itens interessantes de ter na plataforma (futuro)
 - Usar IA pra ela criar novas perguntas baseado em tudo o que o cliente respondeu para que ele responda em caso de ter ficado alguma coisa em aberto, alguma coisa que o prestador teria que saber
 - Colocar a IA pra sugerir fotos pra ele tirar que seriam interessantes pro prestador entender melhor o problema
 - Poder denunciar pedidos de orçamento feitos na plataforma por infringir as regras
+- Poder denunciar clientes
+- Poder denunciar prestadores
 - Criar mecanismo de descontos de taxas, onde a gente pode definir a % de desconto em cima da taxa original, título e descrição para o desconto e a data de início e fim que o desconto pode ser aplicado
 - Usar IA para sugerir datas pro profissional na hora de montar o orçamento dele
 - Usar IA para melhorar a descrição do orçamento do profissional
@@ -39,6 +42,8 @@ Urgentes:
 - Ver vídeo no Youtube sobre a questão que eu estou usando para precificação exibida para o prestador/cliente, pois parece que há um problema de segurança: https://www.youtube.com/watch?v=rTXy2p9aAVw&list=WL&index=75&t=601s&pp=iAQBsAgC.
 - Como eu garanto que alterações feitas em tabelas/rpcs não quebram versões  anteriores do app?
 
+
+
 Telas/fluxos restantes:
 
 - Visualizar checklist de conclusão do serviço
@@ -55,12 +60,15 @@ Telas/fluxos restantes:
 - Template dos emails
 - Refazer tela de erros
 - Como vai funcionar a emissão de nota fiscal da plataforma?
+- Nova tela de minha conta
 
 Coisas para verificar:
 
 - Prestadores marcados como "Pioneiros" tem taxa de serviço menor
 - Direcionar prestador para que ele cadastre serviços que ele atenda para exibir trabalhos
 - Estrelas de avaliação dos cards devem estar usando dados reais
+- Verificar como estamos fazendo upload de arquivos hoje na plataforma. Precisamos usar pre-signed urls e não passar nada pelo servidor/EFs. Também precisamos eliminar arquivos órfãos.
+- Verificar se devemos usar ULID a o invés de UUID
 
 
 Coisas para terminar do fluxo atual de trabalho:
@@ -68,6 +76,10 @@ Coisas para terminar do fluxo atual de trabalho:
 - ao gerar a descrição do pedido, também gerar o checklist de conclusão do serviço
   - mostrar o checklist de conclusão do serviço pro prestador na hora que ele vai fazer o orçamento e permitir que ele altere alguma coisa
   - apresentar o checklist de conclusão do serviço para o cliente quando ele vai fechar o serviço
+
+
+
+
 
 
 Coisas para fazer next
@@ -89,6 +101,10 @@ Coisas para fazer next
 - payment_cron_post_sentry_alerts e payment-emite-sentry-alerts talvez poderiam ser algo compartilhado e não exclusivo de payments
 
 - verificar se o e-mail de onboarding está sendo enviado para netcred 
+
+
+
+
 
 
 
@@ -120,11 +136,28 @@ Fluxo de pagamentos, itens com problemas:
 
 
 
-- Preciso testar o fluxo de cobrança manual.
-
 - Preciso testar o fluxo de cobrança com rejeição de CPF
 
+- Testar fluxo com cartão com algum dado inválido
+
 - O que acontece com um serviço postado que ficou muito tempo  sem receber nenhuma proposta?
+
+- Entender melhor modelo de liquidação da Netcred: https://app.sandbox.netcredbrasil.com.br/app/relatorio/liquidacoes?transactionId=446079. Foi gerado 4 parcelas pra Renovi e 1 parcela pro prestador e ser pago logo em seguida (sem esperar os 30 dias pra liquidar por exemplo). Entender porque isso está  acontecendo, além disso verificar se eu consigo obter essas informações de liquidação via API da netcred para mostrar em tela pro prestador. As regras de estorno parecem estar diferentes também, parece que ele estorna o valor aos poucos mensalmente conforme a cobrança vai sendo feita. Além disso, pelo que eu entendi parece que o FIXED_VALUE faz a cobrança no cartão de uma só vez e depois parcela o resto do PERCENTAGE, preciso confirmar isso com a N*etcred.
+  O scheduleType = "MONTHLY" define quando vai ser a liquidação, nesse caso eu alterei e ela foi colocada pro mes seguinte conforme o esperado. 
+
+  Aparentemente temos uma taxa de análise de risco.
+
+
+- Mostrar liquidações para o prestador
+
+- Precisamos garantir que a EF de webhooks está muito bem testada, ela é a principal coisa para garantir consistencia entre o sistema e a netcred.
+
+- Precisamos talvez ter uma tabela de auditoria nessas relacionadas a pagamento.
+
+- Permitir remarcar serviços sem tempo mínimo
+
+- Deixar claro que o orçamento é só para maõ de obra, tanto para o cliente quanto para o prestador.
+
 
 
 Detalhes dos testes:
