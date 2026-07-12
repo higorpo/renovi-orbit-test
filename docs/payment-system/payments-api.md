@@ -2,6 +2,8 @@
 
 Documento derivado da coleção Postman **API Netcred** ([coleção](https://go.postman.co/collection/55609940-a4b17641-251f-4c8e-a147-c3a5facc5715)) e da documentação oficial em [docs.netcredbrasil.com.br](https://docs.netcredbrasil.com.br/).
 
+**Schema real (introspection):** a coleção Postman cobre só um subconjunto. Snapshot autenticado do GraphQL sandbox — todas as queries/mutations/types — em [`netcred-graphql-introspection.md`](./netcred-graphql-introspection.md) + [`netcred-graphql-introspection.json`](./netcred-graphql-introspection.json) (inclui `movements` / `payouts` para liquidações).
+
 Foco: **cartão com tokenização** → **cobrança agendada (T-2)** → **split/PayoutRule** → **liberação ao prestador (negociada com Netcred)** → **Pix** → **cancelamentos/estornos e disputas** → **webhooks**.
 
 ---
