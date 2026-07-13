@@ -289,10 +289,11 @@ export async function processSchedule(
     customerIpAddress: schedule.client_ip_address ?? undefined,
   };
 
+  // Provider company id is guaranteed non-empty by the credential gate above.
   const scheduleForCharge: CronChargeSchedule = {
     ...schedule,
     netcred_company_id:
-      schedule.netcred_company_id?.trim() || providerAccount.netcred_company_id?.trim() || null,
+      schedule.netcred_company_id?.trim() || providerAccount.netcred_company_id.trim(),
     provider_payout: schedule.provider_payout ?? schedule.base_amount,
   };
 

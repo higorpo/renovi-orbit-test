@@ -358,6 +358,8 @@ Deno.test("mapRpcErrorCode extracts known codes from messages", async () => {
   const { mapRpcErrorCode } = await import("../handleRequest.ts");
   assertEquals(mapRpcErrorCode("error: FORBIDDEN"), "FORBIDDEN");
   assertEquals(mapRpcErrorCode("SCHEDULE_NOT_FOUND in rpc"), "SCHEDULE_NOT_FOUND");
+  assertEquals(mapRpcErrorCode("PAYMENT_SCHEDULE_TERMINAL_STATE"), "PAYMENT_SCHEDULE_TERMINAL_STATE");
+  assertEquals(mapRpcErrorCode("PAYMENT_SCHEDULE_INVALID_TRANSITION"), "PAYMENT_SCHEDULE_INVALID_TRANSITION");
   assertEquals(mapRpcErrorCode("unknown boom"), null);
 });
 
@@ -371,4 +373,161 @@ Deno.test("refund failure without error object uses UNKNOWN code", async () => {
   assertEquals(response.status, 500);
   const body = await response.json();
   assertEquals(body.error_code, "UNKNOWN");
+});
+
+Deno.test("REFUND_REQUESTED allows idempotent resubmit without re-calling gateway when already_submitted", async () => {
+  let refundCalled = false;
+
+  const response = await handleProcessRefundRequest(
+    authRequest({ service_id: "service-1" }),
+    createDeps({
+      loadRefundContext: async () => ({
+        ...paidContext,
+        scheduleState: "REFUND_REQUESTED",
+      }),
+      submitRefundRequest: async () => ({
+        scheduleId: "schedule-1",
+        providerTransactionId: "tx-1",
+        paidAmount: "1024.29",
+        baseAmount: "1000.00",
+        refundAmount: "1000.00",
+        penaltyTier: "FULL_REFUND",
+        alreadySubmitted: true,
+      }),
+      refundTransaction: async () => {
+        refundCalled = true;
+        return { success: true };
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(refundCalled, false);
+  const body = await response.json();
+  assertEquals(body.already_submitted, true);
+});
+
+Deno.test("paid refund passes NetCred transactionId and amount to refundTransaction", async () => {
+  let refundInput: {
+    transactionId: string;
+    amount: string;
+    referenceCode?: string;
+  } | undefined;
+
+  const response = await handleProcessRefundRequest(
+    authRequest({ service_id: "service-1" }),
+    createDeps({
+      submitRefundRequest: async () => ({
+        scheduleId: "schedule-1",
+        providerTransactionId: "262273",
+        paidAmount: "1024.29",
+        baseAmount: "1000.00",
+        refundAmount: "900.00",
+        penaltyTier: "PENALTY_10",
+        alreadySubmitted: false,
+      }),
+      refundTransaction: async (input) => {
+        refundInput = input;
+        return { success: true };
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  // NetCred transactionRefund requires transaction.id (not charge.id).
+  assertEquals(refundInput?.transactionId, "262273");
+  assertEquals(refundInput?.amount, "900.00");
+  assertEquals(refundInput?.referenceCode, "service-1");
+  const body = await response.json();
+  assertEquals(body.penalty_tier, "PENALTY_10");
+  assertEquals(body.refund_amount, "900.00");
+  assertEquals(body.expected_days, "30-60");
+});
+
+Deno.test("submitRefundRequest TRANSACTION_NOT_FOUND maps to HTTP 409", async () => {
+  const response = await handleProcessRefundRequest(
+    authRequest({ service_id: "service-1" }),
+    createDeps({
+      submitRefundRequest: async () => "TRANSACTION_NOT_FOUND",
+    }),
+  );
+
+  assertEquals(response.status, 409);
+  const body = await response.json();
+  assertEquals(body.error_code, "TRANSACTION_NOT_FOUND");
+});
+
+Deno.test("pre-charge FAILED_PERMANENT cancel succeeds without gateway refund", async () => {
+  let refundCalled = false;
+  let submitCalled = false;
+
+  const response = await handleProcessRefundRequest(
+    authRequest({ service_id: "service-1" }),
+    createDeps({
+      loadRefundContext: async () => ({
+        ...paidContext,
+        scheduleState: "FAILED_PERMANENT",
+        paidAmount: null,
+        providerTransactionId: null,
+      }),
+      preChargeCancel: async () => "schedule-1",
+      submitRefundRequest: async () => {
+        submitCalled = true;
+        return "INVALID_SCHEDULE_STATE";
+      },
+      refundTransaction: async () => {
+        refundCalled = true;
+        return { success: true };
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(submitCalled, false);
+  assertEquals(refundCalled, false);
+  const body = await response.json();
+  assertEquals(body.outcome, "PRE_CHARGE_CANCELLED");
+});
+
+Deno.test("pre-charge SERVICE_NOT_CANCELLABLE maps to HTTP 409 via default status", async () => {
+  const response = await handleProcessRefundRequest(
+    authRequest({ service_id: "service-1" }),
+    createDeps({
+      loadRefundContext: async () => ({
+        ...paidContext,
+        scheduleState: "SCHEDULED",
+      }),
+      preChargeCancel: async () => "SERVICE_NOT_CANCELLABLE",
+    }),
+  );
+
+  assertEquals(response.status, 409);
+  const body = await response.json();
+  assertEquals(body.error_code, "SERVICE_NOT_CANCELLABLE");
+});
+
+Deno.test("provider full refund still returns expected_days for invoice timing", async () => {
+  const response = await handleProcessRefundRequest(
+    authRequest({ service_id: "service-1" }),
+    createDeps({
+      getUser: async () => ({ user: { id: "provider-1" }, error: null }),
+      submitRefundRequest: async (input) => {
+        assertEquals(input.initiator, "provider");
+        return {
+          scheduleId: "schedule-1",
+          providerTransactionId: "tx-1",
+          paidAmount: "1024.29",
+          baseAmount: "1000.00",
+          refundAmount: "1024.29",
+          penaltyTier: "FULL_REFUND",
+          alreadySubmitted: false,
+        };
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  const body = await response.json();
+  assertEquals(body.refund_amount, "1024.29");
+  assertEquals(body.expected_days, "30-60");
 });

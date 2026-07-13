@@ -150,7 +150,6 @@ Fluxo de pagamentos, itens com problemas:
 
 - Mostrar liquidações para o prestador
 
-- Precisamos garantir que a EF de webhooks está muito bem testada, ela é a principal coisa para garantir consistencia entre o sistema e a netcred.
 
 - Precisamos talvez ter uma tabela de auditoria nessas relacionadas a pagamento.
 
@@ -160,6 +159,7 @@ Fluxo de pagamentos, itens com problemas:
 
 - Confirmar se após as últimas alterações agora os valores líquidos na  netcred após um pagamento batem com o que a plataforma deveria receber de fato
 
+- Perguntar pra Netcred se há retry automático ou manual de envio de webhook se por  algum motivo o webhook der erro/estiver indisponível.
 
 Detalhes dos testes:
 Cartão aprovado: 4970100000000048

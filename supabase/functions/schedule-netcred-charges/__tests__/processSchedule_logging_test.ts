@@ -72,6 +72,45 @@ Deno.test("chargeResultLogFields exposes NetCred message and codes", () => {
   });
 });
 
+Deno.test("chargeResultLogFields returns empty object for success or missing result", () => {
+  assertEquals(chargeResultLogFields(undefined), {});
+  assertEquals(
+    chargeResultLogFields({ success: true, transactionState: "PAID" }),
+    {},
+  );
+});
+
+Deno.test("chargeResultLogFields falls back to error.code when originalCode is absent", () => {
+  assertEquals(
+    chargeResultLogFields({
+      success: false,
+      transactionState: "REJECTED",
+      error: { code: "TERMINAL", message: "declined" },
+    }),
+    {
+      failure_code: "TERMINAL",
+      failure_reason: "declined",
+      gateway_error_class: "TERMINAL",
+      transaction_state: "REJECTED",
+    },
+  );
+});
+
+Deno.test("chargeResultLogFields uses nulls when failure has no error object", () => {
+  assertEquals(
+    chargeResultLogFields({
+      success: false,
+      transactionState: "REJECTED",
+    }),
+    {
+      failure_code: null,
+      failure_reason: null,
+      gateway_error_class: null,
+      transaction_state: "REJECTED",
+    },
+  );
+});
+
 Deno.test("buildProviderResponseSummary persists gateway error message", () => {
   assertEquals(buildProviderResponseSummary({
     success: false,

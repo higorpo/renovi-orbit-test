@@ -352,3 +352,184 @@ Deno.test("buildSummary returns outcome payload", () => {
     event_id: "event-1",
   });
 });
+
+Deno.test("TRANSACTION_CAPTURE processes inline and persists NetCred transaction payload id", async () => {
+  // Shape from Postman TransactionWebhook sample (numeric id + nested charge).
+  const rawBody = JSON.stringify({
+    id: 123456,
+    uuid: "f6412196-35fb-4716-b308-0e2cfea7c970",
+    transaction_state: "PAID",
+    amount: "10.00",
+    paid_amount: "10.00",
+    refunded_amount: "0.00",
+    charge: { id: 44892, reference_code: "service-1" },
+  });
+  const signature = await computeHMACSHA256("test-webhook-secret", rawBody);
+
+  let persistedEventId: string | undefined;
+  let processedEventId: string | undefined;
+  let queued = false;
+  let capturedProviderEventId: string | undefined;
+
+  const response = await handleNetcredWebhookRequest(
+    webhookRequest(rawBody, {
+      eventType: "TRANSACTION_CAPTURE",
+      signature,
+    }),
+    createDeps({
+      persistWebhookEvent: async (input) => {
+        capturedProviderEventId = input.providerEventId;
+        return { status: "inserted", eventId: "event-capture-1" };
+      },
+      processWebhookEvent: async (eventId) => {
+        processedEventId = eventId;
+        return { outcome: "processed", handler: { outcome: "applied" } };
+      },
+      enqueueHeavyProcessing: async () => {
+        queued = true;
+      },
+      markValidating: async (eventId) => {
+        persistedEventId = eventId;
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(capturedProviderEventId, "123456");
+  assertEquals(persistedEventId, "event-capture-1");
+  assertEquals(processedEventId, "event-capture-1");
+  assertEquals(queued, false);
+  assertEquals(await response.text(), "OK");
+});
+
+Deno.test("TRANSACTION_REFUND is processed inline like CAPTURE (not heavy path)", async () => {
+  const rawBody = JSON.stringify({
+    id: "tx-refund-1",
+    transaction_state: "REFUNDED",
+    refunded_amount: "1000.00",
+  });
+  const signature = await computeHMACSHA256("test-webhook-secret", rawBody);
+
+  let processed = false;
+  let queued = false;
+
+  const response = await handleNetcredWebhookRequest(
+    webhookRequest(rawBody, {
+      eventType: "TRANSACTION_REFUND",
+      signature,
+    }),
+    createDeps({
+      processWebhookEvent: async () => {
+        processed = true;
+        return { outcome: "processed" };
+      },
+      enqueueHeavyProcessing: async () => {
+        queued = true;
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(processed, true);
+  assertEquals(queued, false);
+});
+
+Deno.test("handler not_found outcome enqueues deferred processing", async () => {
+  let queued = false;
+  const rawBody = '{"id":"evt-not-found"}';
+  const signature = await computeHMACSHA256("test-webhook-secret", rawBody);
+
+  const response = await handleNetcredWebhookRequest(
+    webhookRequest(rawBody, {
+      eventType: "TRANSACTION_CAPTURE",
+      signature,
+    }),
+    createDeps({
+      processWebhookEvent: async () => ({
+        outcome: "processed",
+        handler: { outcome: "not_found" },
+      }),
+      enqueueHeavyProcessing: async () => {
+        queued = true;
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(queued, true);
+});
+
+Deno.test("persist failure with non-Error still returns persist_failed", async () => {
+  const response = await handleNetcredWebhookRequest(
+    webhookRequest('{"id":"evt-1"}', { eventType: "WEBHOOK_PING" }),
+    createDeps({
+      persistWebhookEvent: async () => {
+        throw "db unavailable string";
+      },
+    }),
+  );
+
+  assertEquals(response.status, 500);
+  const body = await response.json();
+  assertEquals(body.error, "persist_failed");
+});
+
+Deno.test("missing X-NETCRED-Event defaults to UNKNOWN and still accepts valid signature", async () => {
+  const rawBody = '{"id":"evt-unknown-type"}';
+  const signature = await computeHMACSHA256("test-webhook-secret", rawBody);
+  let seenEventType: string | undefined;
+
+  const response = await handleNetcredWebhookRequest(
+    webhookRequest(rawBody, { signature }),
+    createDeps({
+      persistWebhookEvent: async (input) => {
+        seenEventType = input.eventType;
+        return { status: "inserted", eventId: "event-unknown" };
+      },
+      processWebhookEvent: async () => ({ outcome: "processed" }),
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(seenEventType, "UNKNOWN");
+});
+
+Deno.test("process failure with non-Error still returns 200 after markFailed", async () => {
+  let failedReason = "";
+  const rawBody = '{"id":"evt-fail-string"}';
+  const signature = await computeHMACSHA256("test-webhook-secret", rawBody);
+
+  const response = await handleNetcredWebhookRequest(
+    webhookRequest(rawBody, {
+      eventType: "TRANSACTION_CAPTURE",
+      signature,
+    }),
+    createDeps({
+      processWebhookEvent: async () => {
+        throw "rpc exploded string";
+      },
+      markFailed: async (_eventId, reason) => {
+        failedReason = reason;
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(failedReason, "rpc exploded string");
+});
+
+Deno.test("rate limit without retryAfter still returns Retry-After header default 60", async () => {
+  const response = await handleNetcredWebhookRequest(
+    webhookRequest('{"id":"evt-1"}', { eventType: "WEBHOOK_PING" }),
+    createDeps({
+      checkIPRateLimit: async () => ({
+        allowed: false,
+        remaining: 0,
+        retryAfter: 0,
+      }),
+    }),
+  );
+
+  assertEquals(response.status, 429);
+  assertEquals(response.headers.get("Retry-After"), "60");
+});

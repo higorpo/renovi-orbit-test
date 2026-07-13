@@ -315,3 +315,67 @@ Deno.test("executeCharge throws when netcred company id is missing on retry look
     "NETCRED_COMPANY_ID_REQUIRED",
   );
 });
+
+Deno.test("retry with non-terminal existing state continues to createCharge", async () => {
+  let createChargeCalled = false;
+
+  const result = await executeCharge(
+    {
+      getTransaction: async () => ({
+        transactionId: "tx-analysis",
+        referenceCode: "service-1",
+        transactionState: "IN_ANALYSIS",
+        chargeId: "417417",
+      }),
+      createCharge: async () => {
+        createChargeCalled = true;
+        return {
+          success: true,
+          transactionState: "PAID",
+          chargeId: "417417",
+          transactionId: "tx-analysis",
+        };
+      },
+    },
+    baseSchedule,
+    chargeInput,
+  );
+
+  assertEquals(createChargeCalled, true);
+  assertEquals(result.kind, "charged");
+});
+
+Deno.test("toCreateChargeResult uses default message when rejectedReason is blank", () => {
+  const result = toCreateChargeResult({
+    transactionId: "tx-1",
+    referenceCode: "service-1",
+    transactionState: "REJECTED",
+    chargeId: "417417",
+    rejectedReason: "   ",
+  });
+
+  assertEquals(result.success, false);
+  assertEquals(result.error?.message, "Existing transaction is REJECTED");
+});
+
+Deno.test("REFERENCE_CODE_CONFLICT with null existing returns charged conflict result", async () => {
+  const result = await executeCharge(
+    {
+      getTransaction: async () => null,
+      createCharge: async () => ({
+        success: false,
+        error: {
+          code: "REFERENCE_CODE_CONFLICT",
+          message: "referenceCode already exists",
+        },
+      }),
+    },
+    { ...baseSchedule, automatic_attempt_count: 1 },
+    chargeInput,
+  );
+
+  assertEquals(result.kind, "charged");
+  if (result.kind === "charged") {
+    assertEquals(result.chargeResult.error?.code, "REFERENCE_CODE_CONFLICT");
+  }
+});
