@@ -35,7 +35,12 @@ values
   (
     'cc_fixed_processing_fee_brl',
     '0.39'::jsonb,
-    'Fixed processing fee BRL'
+    'Fixed card processing fee BRL (NetCred PROCESSING)'
+  ),
+  (
+    'cc_risk_analysis_fee_brl',
+    '0.49'::jsonb,
+    'Fixed risk analysis fee BRL (NetCred RISK_ANALYSIS); prod target R$0.49'
   ),
   (
     'max_charge_attempts',
@@ -138,6 +143,7 @@ on conflict (key) do update set
 --   'cc_elo_other_2_6x_rate',
 --   'cc_elo_other_7_12x_rate',
 --   'cc_fixed_processing_fee_brl',
+--   'cc_risk_analysis_fee_brl',
 --   'max_charge_attempts',
 --   'charge_retry_interval_minutes',
 --   'payment_lease_duration_minutes',

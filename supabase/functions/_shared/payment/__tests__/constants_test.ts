@@ -120,6 +120,10 @@ Deno.test("resolvePaymentPlatformConstants overrides valid row values", () => {
     resolved.cc_fixed_processing_fee_brl,
     PAYMENT_PLATFORM_CONSTANT_DEFAULTS.cc_fixed_processing_fee_brl,
   );
+  assertEquals(
+    resolved.cc_risk_analysis_fee_brl,
+    PAYMENT_PLATFORM_CONSTANT_DEFAULTS.cc_risk_analysis_fee_brl,
+  );
 });
 
 Deno.test("loadPaymentPlatformConstants maps rows from supabase client", async () => {

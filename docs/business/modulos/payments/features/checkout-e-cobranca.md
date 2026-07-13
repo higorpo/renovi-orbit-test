@@ -32,6 +32,29 @@ Ao cadastrar ou tokenizar um cartão, o formulário exige o campo **“CPF do ti
 
 Histórico na conta e regras de exibição de reembolso: [historico-e-reembolso.md](./historico-e-reembolso.md).
 
+## Valor cobrado no cartão (`charge_amount`)
+
+O cliente paga o **preço do serviço** (`base_amount`, valor da proposta aceita) **mais** o repasse das taxas de cartão da NetCred. O valor debitado no cartão (`charge_amount` / `total_with_fees`) usa **gross-up NetCred**, para que, após MDR percentual e taxas fixas do gateway, o líquido da plataforma fique ≈ à **comissão Renovi**.
+
+### Fórmula
+
+```
+fixed_fees    = cc_fixed_processing_fee_brl + cc_risk_analysis_fee_brl
+charge_amount = ROUND_HALF_EVEN((base_amount + fixed_fees) / (1 - MDR%/100), 2)
+```
+
+- **MDR%** (`applicable_rate_pct`): percentual conforme bandeira (Visa/Master vs Elo/outras) e faixa de parcelas (1x, 2–6x, 7–12x), lido de `platform_constants` (`cc_visa_master_*_rate`, `cc_elo_other_*_rate`).
+- **Taxas fixas:** `cc_fixed_processing_fee_brl` (PROCESSING) e `cc_risk_analysis_fee_brl` (RISK_ANALYSIS). Default de produção: R$ 0,39 e R$ 0,49; no seed/sandbox local a RISK_ANALYSIS sobe para R$ 5,00 (e PROCESSING para R$ 4,90) para espelhar tarifas de teste NetCred.
+- **Arredondamento:** `ROUND_HALF_EVEN` (banker's rounding) em 2 casas decimais.
+- **Antecipação:** não entra na fórmula padrão — cobranças enviadas com `automaticAdvance: false`.
+- **Onde calcula:** `fee-calculator` (Edge compartilhado) e RPCs `payment_total_with_card_fees` / `payment_calculate_charge_amount` / `payment_calculate_installment_options` (seletor de parcelas, cobrança T-2 e manual). Mesma fórmula nos dois lados.
+
+### O que não muda nesta regra
+
+- Split do prestador continua **`FIXED_AMOUNT = provider_payout`** (congelado no aceite: `base_amount × (1 − commission_rate_pct/100)`).
+- A plataforma recebe o restante (`charge_amount − provider_payout`) via `PERCENTAGE` 100%.
+- Detalhe normativo de engenharia: `docs/payment-system/design.md` e `docs/adr/0001-payment-split-commission-model.md`.
+
 ## Prestador (KYC)
 
 - Prestador submete dados bancários/documentos (`payment_submit_provider_kyc`).

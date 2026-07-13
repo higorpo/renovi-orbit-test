@@ -21,7 +21,7 @@ Este diretório concentra a **documentação funcional e técnica por módulo**,
 | 12 | [chats](./chats/README.md) | Conversas e negociação (CNS): lista, thread, propostas; sheet compare/history | `/dashboard/chats`, `/dashboard/chats/:chatId` | `src/features/chats/`, `src/features/negotiation-proposals/` | Concluída |
 | 13 | [matching-dispatch](./matching-dispatch/README.md) | Dispatch progressivo, lotes, visibilidade, gates; feed via Edge | *Sem rota de UI; backend + Edge `list-provider-opportunities`* | `supabase/migrations/202607110*`, `supabase/functions/list-provider-opportunities/` | Concluída |
 | 14 | [service-reschedule](./service-reschedule/README.md) | Reagendamento de serviço contratado (`PENDING_PAYMENT`/`CONFIRMED`); propor nova data/período conforme duração | Embutido em chats e detalhe do serviço | `src/features/service-reschedule/`, migrations `20260802*` | Parcial (propor nova data + elegibilidade) |
-| 15 | [payments](./payments/README.md) | Checkout, cobrança T-2, KYC; histórico cliente/prestador e reembolso | Checkout pós-aceite; histórico em `/dashboard/conta` | `src/features/payments/`, RPCs `payment_*`, EFs NetCred | Concluída (checkout + histórico/reembolso) |
+| 15 | [payments](./payments/README.md) | Checkout, cobrança T-2 (gross-up NetCred), KYC; histórico cliente/prestador e reembolso | Checkout pós-aceite; histórico em `/dashboard/conta` | `src/features/payments/`, RPCs `payment_*`, EFs NetCred | Concluída (checkout + histórico/reembolso) |
 
 > **Descontinuado:** [client-budgets](./client-budgets/README.md) — rota `/dashboard/orcamentos` removida; ver `my-services` + `negotiation-proposals`.
 

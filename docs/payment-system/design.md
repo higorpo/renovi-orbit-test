@@ -805,7 +805,8 @@ INSERT INTO platform_constants (key, value, description) VALUES
   ('cc_elo_other_1x_rate',              '2.69',  'Elo/Other 1x fee rate %'),
   ('cc_elo_other_2_6x_rate',            '2.89',  'Elo/Other 2-6x fee rate %'),
   ('cc_elo_other_7_12x_rate',           '3.19',  'Elo/Other 7-12x fee rate %'),
-  ('cc_fixed_processing_fee_brl',       '0.39',  'Fixed processing fee BRL'),
+  ('cc_fixed_processing_fee_brl',       '0.39',  'Fixed card processing fee BRL (NetCred PROCESSING)'),
+  ('cc_risk_analysis_fee_brl',          '0.49',  'Fixed risk analysis fee BRL (NetCred RISK_ANALYSIS)'),
   ('max_charge_attempts',               '3',     'Max automatic cron retry attempts'),
   ('charge_retry_interval_minutes',     '30',    'Minutes between retryable failures'),
   ('payment_lease_duration_minutes',    '10',    'PROCESSING lock TTL minutes'),
@@ -1130,8 +1131,8 @@ For installment `n` with `card_brand` and `base_amount` (from proposal's `propos
 
 ```
 applicable_rate_pct = platform_constants[brand_range_key]
-total_with_fees = ROUND((base_amount * (1 + applicable_rate_pct/100)) + cc_fixed_processing_fee_brl, 2)
-installment_amount = ROUND(total_with_fees / n, 2)  -- banker's rounding (ROUND_HALF_EVEN)
+total_with_fees = ROUND_HALF_EVEN((base_amount + cc_fixed_processing_fee_brl + cc_risk_analysis_fee_brl) / (1 - applicable_rate_pct/100), 2)
+installment_amount = ROUND_HALF_EVEN(total_with_fees / n, 2)  -- banker's rounding (ROUND_HALF_EVEN)
 ```
 
 Brand/range key resolution:

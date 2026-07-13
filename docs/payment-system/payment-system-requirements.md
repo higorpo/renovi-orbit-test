@@ -630,13 +630,14 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** `calculate-installment-options` is invoked  
 **WHEN** it reads fee configuration  
-**THEN** it MUST read all rate values exclusively from `platform_constants`; specifically: `cc_visa_master_1x_rate`, `cc_visa_master_2_6x_rate`, `cc_visa_master_7_12x_rate`, `cc_elo_other_1x_rate`, `cc_elo_other_2_6x_rate`, `cc_elo_other_7_12x_rate`, `cc_fixed_processing_fee_brl`.
+**THEN** it MUST read all rate values exclusively from `platform_constants`; specifically: `cc_visa_master_1x_rate`, `cc_visa_master_2_6x_rate`, `cc_visa_master_7_12x_rate`, `cc_elo_other_1x_rate`, `cc_elo_other_2_6x_rate`, `cc_elo_other_7_12x_rate`, `cc_fixed_processing_fee_brl`, `cc_risk_analysis_fee_brl`.
 
 **GIVEN** fee rates are loaded and `base_amount` is known  
 **WHEN** installment options 1 through 12 are computed  
 **THEN** for each installment `n`, the system MUST compute:
-- `applicable_rate_pct`: determined by `card_brand` and range (`1x`, `2–6x`, `7–12x`) from `platform_constants`
-- `total_with_fees = (base_amount × (1 + applicable_rate_pct / 100)) + cc_fixed_processing_fee_brl`
+- `applicable_rate_pct`: determined by `card_brand` and range (`1x`, `2–6x`, `7–12x`) from `platform_constants` (MDR %; anticipation is not included when `automaticAdvance` is false)
+- `fixed_fees = cc_fixed_processing_fee_brl + cc_risk_analysis_fee_brl`
+- `total_with_fees = (base_amount + fixed_fees) / (1 - applicable_rate_pct / 100)` (NetCred gross-up so platform net ≈ commission after MDR + fixed fees)
 - `installment_amount = total_with_fees / n`
 - `installment_amount` MUST be rounded to 2 decimal places using banker's rounding (round half to even)
 
@@ -1262,7 +1263,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** `platform_constants` defines credit card fee rates  
 **WHEN** the rows are validated  
-**THEN** the following keys MUST exist: `cc_visa_master_1x_rate` (2.39), `cc_visa_master_2_6x_rate` (2.59), `cc_visa_master_7_12x_rate` (2.79), `cc_elo_other_1x_rate` (2.69), `cc_elo_other_2_6x_rate` (2.89), `cc_elo_other_7_12x_rate` (3.19), `cc_fixed_processing_fee_brl` (0.39); all stored as NUMERIC.
+**THEN** the following keys MUST exist: `cc_visa_master_1x_rate` (2.39), `cc_visa_master_2_6x_rate` (2.59), `cc_visa_master_7_12x_rate` (2.79), `cc_elo_other_1x_rate` (2.69), `cc_elo_other_2_6x_rate` (2.89), `cc_elo_other_7_12x_rate` (3.19), `cc_fixed_processing_fee_brl` (0.39), `cc_risk_analysis_fee_brl` (0.49); all stored as NUMERIC.
 
 **GIVEN** `platform_constants` defines operational limits  
 **WHEN** the rows are validated  
@@ -1274,7 +1275,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** fee rates are stored as percentages in `platform_constants`  
 **WHEN** `calculate_charge_amount` applies them  
-**THEN** the computation MUST be: `final_amount = ROUND((base_amount * (1 + rate/100)) + fixed_fee, 2)` where `ROUND` uses ROUND_HALF_UP semantics; the formula MUST be identical between the Edge Function and the PostgreSQL RPC.
+**THEN** the computation MUST be NetCred gross-up: `final_amount = ROUND_HALF_EVEN((base_amount + cc_fixed_processing_fee_brl + cc_risk_analysis_fee_brl) / (1 - rate/100), 2)`; the formula MUST be identical between the Edge Function (`fee-calculator.ts`) and the PostgreSQL RPC (`payment_total_with_card_fees`).
 
 ---
 

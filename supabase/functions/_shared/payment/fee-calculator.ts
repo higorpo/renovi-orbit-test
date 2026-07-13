@@ -48,19 +48,23 @@ export function bankersRound(value: number, decimals = 2): number {
   return evenTruncated / factor;
 }
 
-/** Mirrors PostgreSQL `round(numeric, scale)` (half away from zero) used by calculate_charge_amount RPC. */
+/** Mirrors PostgreSQL `round(numeric, scale)` (half away from zero). */
 export function postgresRound(value: number, decimals = 2): number {
   const factor = 10 ** decimals;
   const scaled = value * factor;
   return Math.sign(scaled) * Math.round(Math.abs(scaled)) / factor;
 }
 
+/**
+ * Mirrors SQL `payment_total_with_card_fees`:
+ * charge = round_half_even((base + processing + risk_analysis) / (1 - MDR%/100), 2)
+ */
 export function calculateChargeAmount(
   baseAmount: number,
   cardBrand: string,
   installmentNumber: number,
   constants: PlatformConstants,
-  rounding: "bankers" | "postgres" = "postgres",
+  rounding: "bankers" | "postgres" = "bankers",
 ): ChargeAmountBreakdown {
   if (installmentNumber < 1 || installmentNumber > 12) {
     throw new Error("INVALID_INSTALLMENT_COUNT");
@@ -69,8 +73,19 @@ export function calculateChargeAmount(
   const roundFn = rounding === "postgres" ? postgresRound : bankersRound;
   const rateKey = resolveRateKey(cardBrand, installmentNumber);
   const applicableRatePct = constants[rateKey as PaymentPlatformConstantKey];
+
+  if (
+    !Number.isFinite(applicableRatePct) ||
+    applicableRatePct < 0 ||
+    applicableRatePct >= 100
+  ) {
+    throw new Error("INVALID_CARD_FEE_RATE");
+  }
+
+  const fixedFees =
+    constants.cc_fixed_processing_fee_brl + constants.cc_risk_analysis_fee_brl;
   const totalWithFees = roundFn(
-    (baseAmount * (1 + applicableRatePct / 100)) + constants.cc_fixed_processing_fee_brl,
+    (baseAmount + fixedFees) / (1 - applicableRatePct / 100),
     2,
   );
   const installmentAmount = roundFn(totalWithFees / installmentNumber, 2);
@@ -108,6 +123,6 @@ export function mirrorRpcChargeAmount(
     cardBrand,
     installmentNumber,
     constants,
-    "postgres",
-  ).installment_amount;
+    "bankers",
+  ).total_with_fees;
 }

@@ -1503,7 +1503,7 @@ where d.status in (
   'FAILED_RETRYABLE'::message_dispatcher.message_dispatch_status
 );
 
--- Atualizar taxas de cartão de crédito
+-- Atualizar taxas de cartão de crédito (sandbox NetCred)
 UPDATE public.platform_constants SET value = '3.10'::jsonb WHERE key = 'cc_visa_master_1x_rate';
 UPDATE public.platform_constants SET value = '3.80'::jsonb WHERE key = 'cc_visa_master_2_6x_rate';
 UPDATE public.platform_constants SET value = '4.80'::jsonb WHERE key = 'cc_visa_master_7_12x_rate';
@@ -1511,3 +1511,5 @@ UPDATE public.platform_constants SET value = '3.80'::jsonb WHERE key = 'cc_elo_o
 UPDATE public.platform_constants SET value = '4.20'::jsonb WHERE key = 'cc_elo_other_2_6x_rate';
 UPDATE public.platform_constants SET value = '5.20'::jsonb WHERE key = 'cc_elo_other_7_12x_rate';
 UPDATE public.platform_constants SET value = '4.90'::jsonb WHERE key = 'cc_fixed_processing_fee_brl';
+-- Sandbox RISK_ANALYSIS temporarily set to R$5 (prod target remains R$0.49 in migration seed)
+UPDATE public.platform_constants SET value = '5.00'::jsonb WHERE key = 'cc_risk_analysis_fee_brl';

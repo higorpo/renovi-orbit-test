@@ -95,28 +95,44 @@ set search_path = public
 as $$
 declare
   v_rate_pct numeric;
-  v_fixed_fee numeric;
+  v_processing_fee numeric;
+  v_risk_analysis_fee numeric;
+  v_fixed_fees numeric;
+  v_denominator numeric;
 begin
   if p_base_amount is null or p_base_amount <= 0 then
     raise exception 'p_base_amount must be positive'
       using errcode = '22023';
   end if;
 
+  -- Gross-up so platform net ≈ commission after NetCred percentage (MDR) + fixed fees
+  -- (PROCESSING + RISK_ANALYSIS): charge = (base + fixed) / (1 - rate_pct/100)
+  -- Equivalent to NetCred guidance:
+  --   (base * (base + fixed)) / (base - base*rate_pct/100)
   v_rate_pct := public.platform_constant_numeric(
     public.payment_cc_fee_rate_key(p_card_brand, p_installment_number),
     0
   );
-  v_fixed_fee := public.platform_constant_numeric('cc_fixed_processing_fee_brl', 0);
+  v_processing_fee := public.platform_constant_numeric('cc_fixed_processing_fee_brl', 0);
+  v_risk_analysis_fee := public.platform_constant_numeric('cc_risk_analysis_fee_brl', 0);
+  v_fixed_fees := coalesce(v_processing_fee, 0) + coalesce(v_risk_analysis_fee, 0);
+
+  if v_rate_pct is null or v_rate_pct < 0 or v_rate_pct >= 100 then
+    raise exception 'card fee rate_pct must be in [0, 100)'
+      using errcode = '22023';
+  end if;
+
+  v_denominator := 1 - (v_rate_pct / 100);
 
   return public.payment_round_half_even(
-    (p_base_amount * (1 + v_rate_pct / 100)) + v_fixed_fee,
+    (p_base_amount + v_fixed_fees) / v_denominator,
     2
   );
 end;
 $$;
 
 comment on function public.payment_total_with_card_fees(numeric, text, smallint) is
-  'Total charge amount (base + card fees) shared by installment options and charge RPCs.';
+  'Total charge amount via NetCred gross-up: (base + processing + risk_analysis) / (1 - MDR%). Shared by installment options and charge RPCs.';
 
 revoke all on function public.payment_cc_fee_rate_key(text, smallint) from public;
 revoke all on function public.payment_cc_fee_rate_key(text, smallint) from anon;
@@ -187,7 +203,7 @@ end;
 $$;
 
 comment on function public.payment_calculate_charge_amount(uuid, numeric, smallint) is
-  'Computes total charge amount from base_amount, card brand fee tier, and platform_constants (ROUND_HALF_EVEN).';
+  'Computes total charge amount via payment_total_with_card_fees gross-up (MDR% + fixed PROCESSING/RISK_ANALYSIS; ROUND_HALF_EVEN).';
 
 revoke all on function public.payment_calculate_charge_amount(uuid, numeric, smallint) from public;
 revoke all on function public.payment_calculate_charge_amount(uuid, numeric, smallint) from anon;

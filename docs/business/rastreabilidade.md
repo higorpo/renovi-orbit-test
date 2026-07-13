@@ -154,7 +154,14 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | Artefato | Uso na documentação |
 |----------|---------------------|
 | `docs/business/modulos/payments/` | README + checkout + [historico-e-reembolso](./modulos/payments/features/historico-e-reembolso.md) |
-| `docs/payment-system/design.md` | Design normativo (§3.13 views de histórico; §4.8 reembolso) |
+| `docs/payment-system/design.md` | Design normativo (§3.13 views de histórico; §4.8 reembolso; §4.3.1 fórmula de taxas) |
+| `docs/adr/0001-payment-split-commission-model.md` | Split: prestador `FIXED_AMOUNT` / plataforma `PERCENTAGE` 100% do restante |
+| `supabase/migrations/20260801020000_payment_platform_constants_seeds.sql` | Seeds MDR + `cc_fixed_processing_fee_brl` + `cc_risk_analysis_fee_brl` (prod R$ 0,49) |
+| `supabase/migrations/20260801150000_payment_calculate_charge_amount.sql` | `payment_total_with_card_fees` / `payment_calculate_charge_amount` (gross-up + `ROUND_HALF_EVEN`) |
+| `supabase/migrations/20260801160000_payment_calculate_installment_options.sql` | Opções de parcela + HMAC (mesma fórmula) |
+| `supabase/functions/_shared/payment/fee-calculator.ts` | Mesma fórmula no Edge compartilhado (cobrança / espelho) |
+| `supabase/functions/_shared/payment/netcred-charge-mapping.ts` | `automaticAdvance: false` (antecipação fora da fórmula padrão) |
+| `supabase/seed.sql` | Sandbox local: PROCESSING R$ 4,90 + RISK_ANALYSIS R$ 5,00 |
 | `src/features/payments/components/CheckoutStepper/CardForm.tsx` + `AddCardSheetDialog.tsx` | Tokenização/cadastro de cartão: coleta CPF do titular (enviado à NetCred) e alerta não bloqueante quando o primeiro nome no cartão difere do perfil |
 | `src/features/payments/utils/cardholderIdentity.ts` | Conferência auxiliar do primeiro nome (soft check) |
 | `src/features/payments/utils/mapPaymentUserMessage.ts` | Mapeamento código → mensagem amigável pt-BR; nunca texto bruto do backend |

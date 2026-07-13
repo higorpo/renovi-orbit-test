@@ -158,6 +158,7 @@ Fluxo de pagamentos, itens com problemas:
 
 - Deixar claro que o orçamento é só para maõ de obra, tanto para o cliente quanto para o prestador.
 
+- Adicionar rejectedReason e deixar mais claro porque uma transação foi rejeitada para o cliente 
 
 
 Detalhes dos testes:

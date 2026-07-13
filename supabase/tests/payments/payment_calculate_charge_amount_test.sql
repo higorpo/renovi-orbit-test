@@ -62,14 +62,21 @@ with ins as (
 )
 select id from ins;
 
+-- Hermetic fee constants (migration defaults), independent of seed.sql sandbox overrides
+update public.platform_constants set value = '2.39'::jsonb where key = 'cc_visa_master_1x_rate';
+update public.platform_constants set value = '2.59'::jsonb where key = 'cc_visa_master_2_6x_rate';
+update public.platform_constants set value = '2.79'::jsonb where key = 'cc_visa_master_7_12x_rate';
+update public.platform_constants set value = '0.39'::jsonb where key = 'cc_fixed_processing_fee_brl';
+update public.platform_constants set value = '0.49'::jsonb where key = 'cc_risk_analysis_fee_brl';
+
 select is(
   public.payment_calculate_charge_amount(
     (select id from _payment_fee_test_token),
     1000::numeric,
     1::smallint
   ),
-  1024.29::numeric,
-  'visa/master 1x fee formula matches platform_constants seeds'
+  1025.39::numeric,
+  'visa/master 1x gross-up matches platform_constants seeds'
 );
 
 select is(
@@ -78,7 +85,7 @@ select is(
     1000::numeric,
     4::smallint
   ),
-  1026.29::numeric,
+  1027.49::numeric,
   'visa/master 2-6x fee tier applies for installment 4'
 );
 
@@ -90,8 +97,8 @@ select is(
 
 select is(
   public.payment_total_with_card_fees(1000::numeric, 'MASTER', 1::smallint),
-  1024.29::numeric,
-  'payment_total_with_card_fees matches charge_amount formula'
+  1025.39::numeric,
+  'payment_total_with_card_fees matches charge_amount gross-up formula'
 );
 
 select finish();

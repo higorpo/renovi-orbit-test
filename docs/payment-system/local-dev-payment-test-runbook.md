@@ -203,7 +203,7 @@ Esperado: `onboarding_status = ACTIVE`, `netcred_company_id = 1048`, `netcred_ba
 
 ## 4. Taxas de cartão (sandbox NetCred)
 
-Após `db:reset`, os seeds em `platform_constants` podem estar desatualizados em relação ao sandbox. Para o exemplo **R$ 600 em 12x Visa** o valor correto é **R$ 633,70**.
+Após `db:reset`, o `seed.sql` já aplica as taxas sandbox (MDR + PROCESSING R$ 4,90 + RISK_ANALYSIS R$ 5,00). Para o exemplo **R$ 600 em 12x Visa** o valor correto com gross-up é **R$ 640,65**.
 
 ```sql
 UPDATE public.platform_constants SET value = '3.10'::jsonb WHERE key = 'cc_visa_master_1x_rate';
@@ -213,18 +213,23 @@ UPDATE public.platform_constants SET value = '3.80'::jsonb WHERE key = 'cc_elo_o
 UPDATE public.platform_constants SET value = '4.20'::jsonb WHERE key = 'cc_elo_other_2_6x_rate';
 UPDATE public.platform_constants SET value = '5.20'::jsonb WHERE key = 'cc_elo_other_7_12x_rate';
 UPDATE public.platform_constants SET value = '4.90'::jsonb WHERE key = 'cc_fixed_processing_fee_brl';
+UPDATE public.platform_constants SET value = '5.00'::jsonb WHERE key = 'cc_risk_analysis_fee_brl';
 
 -- Conferir charge_amount para base 600, 12x, Visa
 SELECT set_config('request.jwt.claim.role', 'service_role', true);
 SELECT public.payment_total_with_card_fees(600::numeric, 'VCC', 12::smallint);
--- Esperado: 633.70
+-- Esperado: 640.65
 ```
 
-Fórmula atual (repasse ao cliente):
+Fórmula (gross-up NetCred — para a plataforma permanecer com a comissão líquida após MDR + taxas fixas):
 
 ```
-charge_amount = ROUND(base_amount × (1 + taxa%/100) + tarifa_fixa, 2)
+fixed_fees    = cc_fixed_processing_fee_brl + cc_risk_analysis_fee_brl
+charge_amount = ROUND_HALF_EVEN((base_amount + fixed_fees) / (1 - taxa%/100), 2)
 ```
+
+Equivalente à orientação NetCred:
+`(base * (base + taxas_fixas)) / (base - base * taxa%/100)`.
 
 ---
 
@@ -438,12 +443,12 @@ Para cada schedule (ADR-0001):
 | Prestador | `FIXED_AMOUNT` | `provider_payout` (ex.: 510 sobre base 600) |
 | Plataforma | `PERCENTAGE` 100% | `charge_amount − provider_payout` |
 
-Exemplo validado no sandbox (base 600, 12x, após correção NetCred de antecipação):
+Exemplo validado no sandbox (base 600, 12x Visa, gross-up NetCred com RISK R$ 5,00):
 
 ```
-charge_amount   = 633,70
+charge_amount   = 640,65
 provider_payout = 510,00
-plataforma      = 123,70  (90 comissão + 33,70 taxas repassadas ao cliente)
+plataforma      = 130,65  (90 comissão + 40,65 taxas embutidas no cliente)
 ```
 
 ---
@@ -453,7 +458,7 @@ plataforma      = 123,70  (90 comissão + 33,70 taxas repassadas ao cliente)
 ```text
 1. yarn supabase functions serve
 2. SQL §3 — ativar prestador (1048 / 2053)
-3. SQL §4 — taxas sandbox (633,70 para 600/12x)
+3. SQL §4 — taxas sandbox (640,65 para 600/12x)
 4. App — aceitar proposta com cartão
 5. SQL §6.1 — charge_scheduled_at = now()
 6. SQL §6.1 — payment_cron_schedule_netcred_charges()
@@ -516,9 +521,9 @@ Guarde `contracted_service_id` e `schedule_id`.
 
 `FULL_REFUND` estorna o **`charge_amount`** (valor pago, com taxas). Penalidades (`PENALTY_*`) incidem sobre **`base_amount`** (taxas de cartão não reembolsadas). Tiers (ToS §2.2):
 
-| Tempo até execução | `penalty_tier` | Estorno (base R$ 600 / charge R$ 633,70) |
+| Tempo até execução | `penalty_tier` | Estorno (base R$ 600 / charge R$ 640,65) |
 |--------------------|----------------|------------------------------------------|
-| **> 48 h** | `FULL_REFUND` | R$ 633,70 |
+| **> 48 h** | `FULL_REFUND` | R$ 640,65 |
 | **12 h – 48 h** | `PENALTY_10` | R$ 540,00 |
 | **< 12 h** | `PENALTY_30` | R$ 420,00 |
 
@@ -528,7 +533,7 @@ Pré-visualizar sem cancelar:
 SELECT set_config('request.jwt.claim.role', 'service_role', true);
 
 SELECT public.payment_calculate_refund_amount(
-  633.70,   -- paid_amount / charge_amount
+  640.65,   -- paid_amount / charge_amount
   600.00,   -- base_amount
   (SELECT service_execution_at FROM public.contracted_services WHERE id = '<CONTRACTED_SERVICE_ID>'),
   'client',
@@ -580,7 +585,7 @@ curl -s -X POST 'http://127.0.0.1:54321/functions/v1/process-refund' \
 ```json
 {
   "schedule_id": "...",
-  "refund_amount": "633.70",
+  "refund_amount": "640.65",
   "penalty_tier": "FULL_REFUND",
   "expected_days": "30-60"
 }
@@ -671,7 +676,7 @@ Esperado: `payment_schedules.state = CANCELLED`, serviço `CANCELLED`, sem `tran
 ### 11.11 Sequência rápida (estorno pós-PAID)
 
 ```text
-1. Fluxo §8 — serviço PAID (paid_amount 633,70, base 600)
+1. Fluxo §8 — serviço PAID (paid_amount 640,65, base 600)
 2. SQL §11.3 — contracted_service_id
 3. SQL §11.4 — (opcional) ajustar data para FULL_REFUND
 4. §11.5 — JWT cliente@renovi.com.br
@@ -693,7 +698,7 @@ Esperado: `payment_schedules.state = CANCELLED`, serviço `CANCELLED`, sem `tran
 | Schedule em `PROCESSING` eterno | Commit falhou / EF parou | §6.3 |
 | Retentativa não grava attempt | `attempt_number` duplicado | Não resetar `automatic_attempt_count` para valor já usado §6.4 |
 | Webhook 503 / 511 | Tunnel / localtunnel | `yarn enable-webhook`, `maskUserAgent: false` |
-| `617,13` em vez de `633,70` | Seeds antigos | §4 |
+| `617,13` em vez de `640,65` | Seeds antigos / fórmula antiga | §4 |
 
 ---
 

@@ -29,7 +29,7 @@ Itens que exigem validação humana, evidência parcial ou conflito entre trecho
 
 - Regras exatas de **matching** geográfico (raio, ordenação) e pesos de negócio além do que está em SQL/RPC. → **Parcialmente resolvido (2026-06):** ver [matching-dispatch](./modulos/matching-dispatch/README.md) e [trabalhos-e-propostas](./modulos/provider-jobs/features/trabalhos-e-propostas.md).
 - Política de **expiração** de propostas (`expire_stale_provider_proposals`) — frequência de execução (cron) não verificada neste escopo.
-- ~~**Pagamentos e contratos** — apenas planos em `docs/payment-system-*.md`, sem implementação mapeada nas Edge Functions deste tree.~~ **Resolvido (2026-07):** módulo `payments` implementado (`src/features/payments/`, RPCs `payment_*`, Edge Functions NetCred). Histórico cliente/prestador e exibição de reembolso documentados em [historico-e-reembolso](./modulos/payments/features/historico-e-reembolso.md). Detalhe normativo de engenharia: `docs/payment-system/design.md`.
+- ~~**Pagamentos e contratos** — apenas planos em `docs/payment-system-*.md`, sem implementação mapeada nas Edge Functions deste tree.~~ **Resolvido (2026-07):** módulo `payments` implementado (`src/features/payments/`, RPCs `payment_*`, Edge Functions NetCred). Histórico cliente/prestador e exibição de reembolso documentados em [historico-e-reembolso](./modulos/payments/features/historico-e-reembolso.md). **Fórmula `charge_amount` (gross-up NetCred + `cc_risk_analysis_fee_brl`)** documentada em [checkout-e-cobranca](./modulos/payments/features/checkout-e-cobranca.md#valor-cobrado-no-cartão-charge_amount) (2026-07-13). Detalhe normativo de engenharia: `docs/payment-system/design.md`.
 
 ## Inferências explicitamente não comprovadas
 
