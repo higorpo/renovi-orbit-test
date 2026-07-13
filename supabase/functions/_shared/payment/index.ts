@@ -1,3 +1,10 @@
+export {
+  mapRejectedReasonToFailureCode,
+  resolveRejectedTransactionFailureCode,
+  RISK_ANALYSIS_FAILURE_CODES,
+  type RiskAnalysisFailureCode,
+} from "./map-rejected-reason.ts";
+
 export type {
   BillingAddress,
   BoletoCharge,

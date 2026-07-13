@@ -1,4 +1,5 @@
 import { resolveChargeReferenceCode } from "../_shared/payment/chargeReferenceCode.ts";
+import { resolveRejectedTransactionFailureCode } from "../_shared/payment/map-rejected-reason.ts";
 import type {
   CreateChargeInput,
   CreateChargeResult,
@@ -46,15 +47,22 @@ function buildChargeResultFromExisting(
     };
   }
 
+  const resolvedState = resolveExistingChargeState(existing.transactionState);
+  const message = existing.rejectedReason?.trim() ||
+    `Existing transaction is ${existing.transactionState}`;
+  const originalCode = existing.transactionState === "REJECTED"
+    ? resolveRejectedTransactionFailureCode(existing.rejectedReason)
+    : existing.transactionState;
+
   return {
     success: false,
-    transactionState: resolveExistingChargeState(existing.transactionState),
+    transactionState: resolvedState,
     chargeId: existing.chargeId,
     transactionId: existing.transactionId,
     error: {
       code: "TERMINAL",
-      message: `Existing transaction is ${existing.transactionState}`,
-      originalCode: existing.transactionState,
+      message,
+      originalCode,
     },
   };
 }

@@ -144,7 +144,10 @@ export function useManualPaymentDialog({
 
       if (isTerminalManualChargeOutcome(result.outcome)) {
         setTerminalErrorMessage(
-          formatManualPaymentFailureMessage(schedule.failureReason, schedule.failureCode),
+          formatManualPaymentFailureMessage(
+            null,
+            result.failureCode ?? schedule.failureCode,
+          ),
         );
         setView("terminal-error");
       }

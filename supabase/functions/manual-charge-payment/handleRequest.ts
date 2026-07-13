@@ -317,6 +317,7 @@ export async function handleManualChargePaymentRequest(
       schedule_id: committedScheduleId,
       outcome,
       charge_amount: chargeAmount,
+      failure_code: chargeResult.error?.originalCode ?? chargeResult.error?.code ?? null,
     },
     200,
     cors,

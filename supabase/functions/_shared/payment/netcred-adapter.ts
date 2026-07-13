@@ -25,6 +25,7 @@ import {
   isReferenceCodeConflict,
   isTerminalGatewayError,
 } from "./netcred-charge-errors.ts";
+import { resolveRejectedTransactionFailureCode } from "./map-rejected-reason.ts";
 import { buildNetCredAuthorizationHeader, resolveNetCredApiBaseUrl } from "./constants.ts";
 import { BillingAddressRequiredError } from "./errors.ts";
 import type {
@@ -74,6 +75,7 @@ type ChargeCreateGraphQLResponse = {
               transactionState?: string | null;
               amount?: string | null;
               paidAmount?: string | null;
+              rejectedReason?: string | null;
             } | null;
           } | null> | null;
         } | null;
@@ -92,6 +94,7 @@ type TransactionsGraphQLResponse = {
           transactionState?: string | null;
           amount?: string | null;
           paidAmount?: string | null;
+          rejectedReason?: string | null;
           charge?: {
             id?: string | null;
             referenceCode?: string | null;
@@ -317,6 +320,7 @@ export class NetCredAdapter {
         transactionState,
         charge?.id ?? undefined,
         transaction?.id ?? undefined,
+        transaction?.rejectedReason,
       );
     } catch (error) {
       if (isNetworkError(error)) {
@@ -377,6 +381,7 @@ export class NetCredAdapter {
         transactionState: node.transactionState as GatewayTransactionState,
         paidAmount: node.paidAmount ?? node.amount ?? undefined,
         refundedAmount: undefined,
+        rejectedReason: node.rejectedReason ?? null,
       };
     } catch (error) {
       if (isNetworkError(error) || error instanceof ProviderAuthError) {
@@ -711,14 +716,15 @@ export class NetCredAdapter {
     }
 
     if (existing.transactionState === "REJECTED") {
+      const reason = existing.rejectedReason?.trim() || "Existing transaction is REJECTED";
       return {
         success: false,
         transactionState: "REJECTED",
         chargeId: existing.chargeId,
         transactionId: existing.transactionId,
         error: buildTerminalError(
-          "Existing transaction is REJECTED",
-          "REJECTED",
+          reason,
+          resolveRejectedTransactionFailureCode(existing.rejectedReason),
         ),
       };
     }
@@ -750,14 +756,19 @@ export class NetCredAdapter {
     transactionState: NonNullable<CreateChargeResult["transactionState"]>,
     chargeId?: string,
     transactionId?: string,
+    rejectedReason?: string | null,
   ): CreateChargeResult {
     if (transactionState === "REJECTED") {
+      const reason = rejectedReason?.trim() || "charge rejected";
       return {
         success: false,
         transactionState,
         chargeId,
         transactionId,
-        error: buildTerminalError("charge rejected", "REJECTED"),
+        error: buildTerminalError(
+          reason,
+          resolveRejectedTransactionFailureCode(rejectedReason),
+        ),
       };
     }
 

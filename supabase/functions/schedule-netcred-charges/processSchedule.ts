@@ -12,6 +12,7 @@ import type {
 } from "../_shared/payment/types.ts";
 import { resolveChargeReferenceCode } from "../_shared/payment/chargeReferenceCode.ts";
 import { buildPayoutRule } from "../_shared/payment/buildPayoutRule.ts";
+import { resolveRejectedTransactionFailureCode } from "../_shared/payment/map-rejected-reason.ts";
 import {
   buildChargeAttemptCompletedFields,
   buildProviderResponseSummary,
@@ -326,8 +327,11 @@ export async function processSchedule(
       transactionId: execution.existing.transactionId,
       error: {
         code: "TERMINAL",
-        message: "Existing transaction is REJECTED",
-        originalCode: "REJECTED",
+        message: execution.existing.rejectedReason?.trim() ||
+          "Existing transaction is REJECTED",
+        originalCode: resolveRejectedTransactionFailureCode(
+          execution.existing.rejectedReason,
+        ),
       },
     };
 

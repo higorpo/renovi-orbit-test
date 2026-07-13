@@ -61,12 +61,38 @@ describe("manualChargePayment", () => {
       scheduleId: "sched-1",
       outcome: "PAID",
       chargeAmount: "1024.29",
+      failureCode: null,
     });
     expect(mockInvoke).toHaveBeenCalledWith(PAYMENT_EDGE.manualChargePayment, {
       body: {
         schedule_id: "sched-1",
         clearsale_session_id: "session-1",
       },
+    });
+  });
+
+  it("returns failure_code from edge response on terminal decline", async () => {
+    mockInvoke.mockResolvedValue({
+      data: {
+        schedule_id: "sched-1",
+        outcome: "FAILED_PERMANENT",
+        charge_amount: "1024.29",
+        failure_code: "RISK_ANALYSIS_NO_CONTACT",
+      },
+      error: null,
+    });
+
+    const result = await manualChargePayment({
+      scheduleId: "sched-1",
+      clearsaleSessionId: "session-1",
+    });
+
+    expect(result.error).toBeNull();
+    expect(result.data).toEqual({
+      scheduleId: "sched-1",
+      outcome: "FAILED_PERMANENT",
+      chargeAmount: "1024.29",
+      failureCode: "RISK_ANALYSIS_NO_CONTACT",
     });
   });
 

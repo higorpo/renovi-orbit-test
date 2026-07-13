@@ -59,7 +59,10 @@ function sampleChargeInput(referenceCode = "c4a81f63-2d9e-4b1c-8e7a-1f0d9c8b7a6e
   };
 }
 
-function chargeCreateResponse(transactionState: string): Response {
+function chargeCreateResponse(
+  transactionState: string,
+  rejectedReason?: string | null,
+): Response {
   return new Response(
     JSON.stringify({
       data: {
@@ -74,6 +77,7 @@ function chargeCreateResponse(transactionState: string): Response {
                   id: "tx-1",
                   transactionState,
                   amount: "1000.00",
+                  ...(rejectedReason != null ? { rejectedReason } : {}),
                 },
               }],
             },
@@ -139,6 +143,30 @@ Deno.test("createCharge maps REJECTED to TERMINAL error", async () => {
   assertEquals(result.transactionState, "REJECTED");
   assertEquals(result.error?.code, "TERMINAL");
   assertEquals(result.error?.originalCode, "REJECTED");
+});
+
+Deno.test("createCharge maps risk-analysis rejectedReason to stable failure code", async () => {
+  const adapter = new NetCredAdapter({
+    supabase: createSupabaseStub(),
+    platformBankAccountId: "2052",
+    graphqlUrl: TEST_GRAPHQL_URL,
+    fetchFn: async () =>
+      chargeCreateResponse(
+        "REJECTED",
+        "Análise de Risco: Pedido Suspenso por suspeita de fraude baseado no contato com o “cliente” ou ainda na base ClearSale.",
+      ),
+  });
+
+  const result = await adapter.createCharge(sampleChargeInput());
+
+  assertEquals(result.success, false);
+  assertEquals(result.transactionState, "REJECTED");
+  assertEquals(result.error?.code, "TERMINAL");
+  assertEquals(result.error?.originalCode, "RISK_ANALYSIS_FRAUD_SUSPICION");
+  assertEquals(
+    result.error?.message.includes("Análise de Risco"),
+    true,
+  );
 });
 
 Deno.test("createCharge maps network timeout to RETRYABLE error", async () => {

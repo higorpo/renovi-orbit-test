@@ -22,11 +22,11 @@
 
 | Documento | Conteúdo |
 |-----------|----------|
-| [features/checkout-e-cobranca.md](./features/checkout-e-cobranca.md) | Checkout, tokenização com CPF do titular enviado à NetCred (independente do CPF da conta) e aviso não bloqueante de primeiro nome, T-2, estados de parcela, **fórmula `charge_amount` (gross-up NetCred)**, KYC, cobrança manual (`ManualPaymentDialog`: cartão → parcelas → `payment_update_method` + `manual-charge-payment`), mensagens de erro amigáveis (pt-BR), notificações |
+| [features/checkout-e-cobranca.md](./features/checkout-e-cobranca.md) | Checkout, tokenização com CPF do titular enviado à NetCred (independente do CPF da conta) e aviso não bloqueante de primeiro nome, T-2, estados de parcela, **fórmula `charge_amount` (gross-up NetCred)**, KYC, cobrança manual (`ManualPaymentDialog`: cartão → parcelas → `payment_update_method` + `manual-charge-payment`), **rejeição por análise de risco ClearSale → códigos `RISK_ANALYSIS_*` em `failure_code`**, mensagens de erro amigáveis (pt-BR; nunca texto bruto ClearSale/NetCred), notificações |
 | [features/historico-e-reembolso.md](./features/historico-e-reembolso.md) | Histórico cliente/prestador; breakdown de reembolso; `REFUND_REQUESTED` vs clawback |
 | Engenharia | `docs/payment-system/design.md` (§3.13 histórico; §4.8 reembolso) |
 
-**Erros na UI:** checkout, cartões e cobrança manual nunca exibem texto bruto do backend — só mensagens amigáveis em pt-BR mapeadas por código (ver [checkout-e-cobranca](./features/checkout-e-cobranca.md#mensagens-de-erro-na-ui-pt-br)).
+**Erros na UI:** checkout, cartões e cobrança manual nunca exibem texto bruto do backend — só mensagens amigáveis em pt-BR mapeadas por código (ver [checkout-e-cobranca](./features/checkout-e-cobranca.md#mensagens-de-erro-na-ui-pt-br)). Rejeições ClearSale “Análise de Risco: …” viram `RISK_ANALYSIS_*` em `failure_code` (mensagem bruta só em `failure_reason` para diagnóstico).
 
 ## 4. Relação com outros módulos
 

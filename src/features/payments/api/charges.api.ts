@@ -29,6 +29,7 @@ export type ManualChargePaymentSuccess = {
   scheduleId: string;
   outcome: ManualChargeOutcome;
   chargeAmount: string;
+  failureCode?: string | null;
 };
 
 export type ManualChargePaymentResult = {
@@ -144,6 +145,9 @@ export async function manualChargePayment(
       scheduleId: String(payload.schedule_id),
       outcome: payload.outcome as ManualChargeOutcome,
       chargeAmount: String(payload.charge_amount),
+      failureCode: payload.failure_code != null
+        ? String(payload.failure_code)
+        : null,
     },
     error: null,
   };

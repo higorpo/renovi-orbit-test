@@ -41,6 +41,9 @@ Termos extraídos ou inferidos a partir de nomes de entidades, rotas e interface
 | **MDR (cartão)** | Percentual NetCred por bandeira e faixa de parcelas (constantes `cc_*_rate`). Usado no denominador do gross-up. | `platform_constants`; `payment_cc_fee_rate_key`. |
 | **Taxa fixa PROCESSING** | Taxa fixa NetCred de processamento, em BRL (`cc_fixed_processing_fee_brl`; default prod R$ 0,39). Soma-se ao base antes do gross-up. | `platform_constants`. |
 | **Taxa fixa RISK_ANALYSIS** | Taxa fixa NetCred de análise de risco, em BRL (`cc_risk_analysis_fee_brl`; default prod R$ 0,49; seed/sandbox local R$ 5,00). Soma-se ao base antes do gross-up. | `platform_constants`; `seed.sql`. |
+| **Código de falha (`failure_code`)** | Código estável Renovi gravado na parcela quando a cobrança falha. A UI de pagamento (alerta e dialog manual) mapeia esse código para mensagem amigável pt-BR — nunca o texto bruto do gateway. | `payment_schedules.failure_code`; `mapPaymentUserMessage`. |
+| **Motivo de falha (`failure_reason`)** | Texto bruto retornado pelo gateway (ex.: `rejectedReason` NetCred/ClearSale), guardado para diagnóstico/suporte. **Não** é exibido ao cliente na UI. | `payment_schedules.failure_reason`. |
+| **Rejeição por análise de risco (`RISK_ANALYSIS_*`)** | Quando `rejectedReason` da transação NetCred começa com “Análise de Risco: …”, o backend mapeia para códigos estáveis (`RISK_ANALYSIS_NO_CONTACT`, `…_FRAUD_SUSPICION`, `…_CANCELLED_DUPLICATE`, `…_CONFIRMED_FRAUD`, `…_BUSINESS_RULE`, `…_POLICY`, `…_MANUAL_FACILITATOR`, ou fallback `RISK_ANALYSIS_REJECTED`) e grava em `failure_code`. | `map-rejected-reason.ts`; cobrança T-2 e manual; [checkout-e-cobranca](./modulos/payments/features/checkout-e-cobranca.md#rejeição-por-análise-de-risco-clearsale--netcred). |
 | **Repasse ao prestador (`provider_payout`)** | Valor fixo do prestador no split NetCred (`FIXED_AMOUNT`), congelado no aceite: `base_amount × (1 − commission_rate_pct/100)`. Não muda com a fórmula de `charge_amount`. | `payment_schedules.provider_payout`; ADR-0001. |
 | **Histórico de pagamentos (cliente)** | Lista de cobranças no cartão pós-captura (`PAID` e estados de reembolso). Com `refunded_amount` > 0, a UI risca o valor original, mostra o líquido cobrado e a linha “Reembolsado: …”. | `client_payment_transactions_v`; `ClientPaymentHistoryList` em Minha conta. |
 | **Reembolso solicitado (`REFUND_REQUESTED`)** | Estado após pedido de estorno: parcela já tem `refunded_amount` **esperado**; `refunded_at` só após confirmação do gateway (webhook/reconciliação). | RPC `payment_begin_refund_request`; Edge `process-refund`. |
@@ -76,6 +79,7 @@ Termos extraídos ou inferidos a partir de nomes de entidades, rotas e interface
 | **JWT** | Token de sessão Supabase (uso em funções com `verify_jwt` ou validação manual). |
 | **CEP** | Código de endereçamento postal — usado em fluxos de endereço. |
 | **IA / LLM** | Modelos OpenAI ou Google Gemini conforme configuração da função de descrição inteligente. |
+| **ClearSale** | Antifraude / análise de risco usada via NetCred; motivos “Análise de Risco: …” viram códigos `RISK_ANALYSIS_*`. |
 
 ## Nomenclaturas que podem confundir
 

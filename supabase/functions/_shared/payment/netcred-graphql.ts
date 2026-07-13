@@ -15,6 +15,7 @@ mutation chargeCreateCardWithSplit($input: ChargeCreateInput!) {
             amount
             paidAmount
             paidAt
+            rejectedReason
           }
         }
       }
@@ -116,6 +117,7 @@ query transactionsByReference(
         amount
         paidAmount
         paidAt
+        rejectedReason
         charge {
           id
           referenceCode

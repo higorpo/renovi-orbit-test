@@ -158,7 +158,7 @@ Fluxo de pagamentos, itens com problemas:
 
 - Deixar claro que o orçamento é só para maõ de obra, tanto para o cliente quanto para o prestador.
 
-- Adicionar rejectedReason e deixar mais claro porque uma transação foi rejeitada para o cliente 
+- Confirmar se após as últimas alterações agora os valores líquidos na  netcred após um pagamento batem com o que a plataforma deveria receber de fato
 
 
 Detalhes dos testes:

@@ -31,4 +31,20 @@ describe("ManualPaymentFailureAlert", () => {
     rerender(<ManualPaymentFailureAlert scheduleState="FAILED_PERMANENT" />);
     expect(screen.getByText("Pagamento falhou")).toBeInTheDocument();
   });
+
+  it("shows mapped risk-analysis message when failureCode is present", () => {
+    render(
+      <ManualPaymentFailureAlert
+        scheduleState="FAILED_PERMANENT"
+        failureCode="RISK_ANALYSIS_FRAUD_SUSPICION"
+      />,
+    );
+
+    expect(
+      screen.getByText(/recusado pela análise de segurança/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/ClearSale/i),
+    ).toBeNull();
+  });
 });

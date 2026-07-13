@@ -85,10 +85,34 @@ A RPC `payment_update_method` aceita `p_installment_number` opcional, permite sc
 Nos fluxos de **checkout**, **cartão** (tokenizar, atualizar método, remover cartão salvo) e **cobrança manual**, a UI exibe apenas mensagens amigáveis em português (Brasil), mapeadas a partir de **códigos de erro** conhecidos.
 
 - Textos desconhecidos ou texto bruto do backend **não** são mostrados ao usuário; cai em mensagem genérica de retry.
-- Em falha de cobrança manual, a UI usa o **código** de falha (`failureCode`), não o `failureReason` textual do backend.
-- Superfícies cobertas: stepper de checkout (`CardForm`), dialog de cobrança manual (`ManualPaymentDialog`), lista de cartões salvos (também em Minha conta) e APIs/hooks de cartão e cobrança da feature `payments`.
+- Em falha de cobrança manual, a UI usa o **código** de falha (`failureCode` / `payment_schedules.failure_code`), não o `failureReason` textual do backend.
+- Superfícies cobertas: stepper de checkout (`CardForm`), dialog de cobrança manual (`ManualPaymentDialog` — erro terminal), alerta **“Pagamento falhou”** (`ManualPaymentFailureAlert`), lista de cartões salvos (também em Minha conta) e APIs/hooks de cartão e cobrança da feature `payments`.
 
-Evidência: `mapPaymentUserMessage.ts`, `manualPaymentErrors.ts`, `paymentApiErrors.ts`; APIs `cards.api.ts`, `charges.api.ts`, `paymentApiClient.ts`; componentes `ManualPaymentDialog`, `CardForm`, `SavedCardsList`, `InstallmentSelector`.
+Evidência: `mapPaymentUserMessage.ts`, `manualPaymentErrors.ts`, `paymentApiErrors.ts`; APIs `cards.api.ts`, `charges.api.ts`, `paymentApiClient.ts`; componentes `ManualPaymentDialog`, `ManualPaymentFailureAlert`, `CardForm`, `SavedCardsList`, `InstallmentSelector`.
+
+### Rejeição por análise de risco (ClearSale / NetCred)
+
+Quando a NetCred rejeita a transação com `transactions.node.rejectedReason` começando por **“Análise de Risco: …”** (texto da ClearSale), o backend **não** grava esse texto como código estável. Em vez disso:
+
+1. A mutation GraphQL `chargeCreate` solicita `transactions.node.rejectedReason`.
+2. O adapter mapeia a string para um **código Renovi** estável (prefixo `RISK_ANALYSIS_*`) e persiste em `payment_schedules.failure_code`.
+3. A mensagem bruta NetCred/ClearSale fica em `payment_schedules.failure_reason` **só para diagnóstico** — a UI **nunca** a exibe ao cliente.
+4. Na cobrança manual, o alerta e o dialog de erro terminal mostram a cópia pt-BR de `mapPaymentUserMessage` a partir do `failure_code`.
+
+| Código Renovi (`failure_code`) | Quando (resumo do motivo ClearSale) | Mensagem ao usuário (pt-BR) |
+|--------------------------------|-------------------------------------|-----------------------------|
+| `RISK_ANALYSIS_NO_CONTACT` | Falta de contato / reprovado sem suspeita | Não foi possível validar… confira dados de contato ou use outro cartão |
+| `RISK_ANALYSIS_FRAUD_SUSPICION` | Suspeita de fraude | Recusado pela análise de segurança… outro cartão ou suporte |
+| `RISK_ANALYSIS_CANCELLED_DUPLICATE` | Duplicidade ou solicitação do cliente | Cancelado por duplicidade… tente de novo com outro cartão |
+| `RISK_ANALYSIS_CONFIRMED_FRAUD` | Fraude confirmada | Recusado pela análise de segurança… outro cartão ou suporte |
+| `RISK_ANALYSIS_BUSINESS_RULE` | Regra de negócio | Recusado pelas regras de segurança… outro cartão |
+| `RISK_ANALYSIS_POLICY` | Política estabelecida (cliente/ClearSale) | Recusado pela política de segurança… outro cartão ou suporte |
+| `RISK_ANALYSIS_MANUAL_FACILITATOR` | Reprovado manualmente pelo facilitador | Recusado na análise de segurança… outro cartão ou suporte |
+| `RISK_ANALYSIS_REJECTED` | Fallback: texto “Análise de Risco: …” sem matcher específico | Recusado pela análise de segurança… outro cartão ou suporte |
+
+Se `rejectedReason` **não** for análise de risco ClearSale, o código continua o fallback genérico de rejeição do gateway (ex.: `REJECTED`), sem inventar um `RISK_ANALYSIS_*`.
+
+Evidência: `supabase/functions/_shared/payment/map-rejected-reason.ts`, `netcred-adapter.ts`, `netcred-graphql.ts` (`chargeCreate` + `rejectedReason`); UI `mapPaymentUserMessage.ts`, `ManualPaymentFailureAlert`, `ManualPaymentDialog`.
 
 ## Notificações
 

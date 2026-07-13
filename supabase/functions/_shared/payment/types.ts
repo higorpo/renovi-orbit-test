@@ -192,6 +192,8 @@ export type GetTransactionResult = {
   transactionState: GatewayTransactionState;
   paidAmount?: Decimal;
   refundedAmount?: Decimal;
+  /** NetCred / ClearSale rejection summary when transactionState is REJECTED. */
+  rejectedReason?: string | null;
 };
 
 export type ProcessWebhookInput = {

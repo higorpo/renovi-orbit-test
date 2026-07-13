@@ -164,9 +164,13 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `supabase/seed.sql` | Sandbox local: PROCESSING R$ 4,90 + RISK_ANALYSIS R$ 5,00 |
 | `src/features/payments/components/CheckoutStepper/CardForm.tsx` + `AddCardSheetDialog.tsx` | Tokenização/cadastro de cartão: coleta CPF do titular (enviado à NetCred) e alerta não bloqueante quando o primeiro nome no cartão difere do perfil |
 | `src/features/payments/utils/cardholderIdentity.ts` | Conferência auxiliar do primeiro nome (soft check) |
-| `src/features/payments/utils/mapPaymentUserMessage.ts` | Mapeamento código → mensagem amigável pt-BR; nunca texto bruto do backend |
-| `src/features/payments/utils/manualPaymentErrors.ts` / `paymentApiErrors.ts` | Falhas de cobrança manual e RPC usam o mapper (por código) |
-| `src/features/payments/components/ManualPaymentDialog.tsx` + `hooks/useManualPaymentDialog.ts` | Dialog de recuperação (ShellDialog / `useMobileDialogViewport`); fluxo cartão → `InstallmentSelector` → confirmar |
+| `src/features/payments/utils/mapPaymentUserMessage.ts` | Mapeamento código → mensagem amigável pt-BR (inclui `RISK_ANALYSIS_*`); nunca texto bruto do backend |
+| `src/features/payments/utils/manualPaymentErrors.ts` / `paymentApiErrors.ts` | Falhas de cobrança manual e RPC usam o mapper (por código / `failure_code`) |
+| `src/features/payments/components/ManualPaymentFailureAlert.tsx` | Alerta “Pagamento falhou” no detalhe: mensagem via `failure_code`, não `failure_reason` |
+| `src/features/payments/components/ManualPaymentDialog.tsx` + `hooks/useManualPaymentDialog.ts` | Dialog de recuperação (ShellDialog / `useMobileDialogViewport`); fluxo cartão → `InstallmentSelector` → confirmar; erro terminal por código |
+| `supabase/functions/_shared/payment/map-rejected-reason.ts` | `rejectedReason` “Análise de Risco: …” → códigos estáveis `RISK_ANALYSIS_*` |
+| `supabase/functions/_shared/payment/netcred-graphql.ts` | `chargeCreate` solicita `transactions.node.rejectedReason` |
+| `supabase/functions/_shared/payment/netcred-adapter.ts` | Persiste código mapeado em falha terminal; motivo bruto para diagnóstico |
 | `src/features/payments/api/cards.api.ts` (`updatePaymentMethod`) | Invoca RPC `payment_update_method` com token, HMAC e `p_installment_number` opcional |
 | `supabase/migrations/20260801210000_payment_update_method.sql` | RPC: `p_installment_number` opcional; estados `SCHEDULED`/`FAILED`/`FAILED_PERMANENT`; HMAC ao mudar bandeira/parcelas |
 | `supabase/functions/manual-charge-payment/` | Cobrança manual após atualização do método |

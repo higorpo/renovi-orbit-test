@@ -9,6 +9,12 @@ describe("mapPaymentUserMessage", () => {
     expect(mapPaymentUserMessage("REJECTED")).toContain("recusado");
     expect(mapPaymentUserMessage("RATE_LIMIT_EXCEEDED")).toContain("Muitas tentativas");
     expect(mapPaymentUserMessage("CPF_INVALID")).toContain("CPF");
+    expect(mapPaymentUserMessage("RISK_ANALYSIS_NO_CONTACT")).toContain(
+      "análise de segurança",
+    );
+    expect(mapPaymentUserMessage("RISK_ANALYSIS_FRAUD_SUSPICION")).toContain(
+      "análise de segurança",
+    );
   });
 
   it("never returns raw unknown backend text", () => {

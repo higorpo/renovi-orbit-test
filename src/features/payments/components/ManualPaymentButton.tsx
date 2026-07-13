@@ -58,7 +58,10 @@ export function ManualPaymentRecovery({
 
   return (
     <div className="flex w-full flex-col gap-2.5 sm:w-auto sm:max-w-full">
-      <ManualPaymentFailureAlert scheduleState={scheduleState} />
+      <ManualPaymentFailureAlert
+        scheduleState={scheduleState}
+        failureCode={schedule?.failureCode}
+      />
       <ManualPaymentButton
         scheduleState={scheduleState}
         onClick={() => setOpen(true)}

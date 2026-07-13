@@ -48,6 +48,24 @@ const PAYMENT_USER_MESSAGES: Record<string, string> = {
   TERMINAL: "Não foi possível concluir o pagamento com este cartão. Tente outro cartão.",
   RETRYABLE: "Não foi possível concluir o pagamento. Tente novamente em instantes.",
 
+  // ClearSale / NetCred risk analysis (rejectedReason → stable codes)
+  RISK_ANALYSIS_NO_CONTACT:
+    "Não foi possível validar seu pagamento na análise de segurança. Confira seus dados de contato e tente novamente, ou use outro cartão.",
+  RISK_ANALYSIS_FRAUD_SUSPICION:
+    "Seu pagamento foi recusado pela análise de segurança. Tente outro cartão ou fale com o suporte.",
+  RISK_ANALYSIS_CANCELLED_DUPLICATE:
+    "Este pagamento foi cancelado por duplicidade ou solicitação. Se ainda precisar, tente novamente com outro cartão.",
+  RISK_ANALYSIS_CONFIRMED_FRAUD:
+    "Seu pagamento foi recusado pela análise de segurança. Use outro cartão ou fale com o suporte.",
+  RISK_ANALYSIS_BUSINESS_RULE:
+    "Seu pagamento foi recusado pelas regras de segurança. Tente outro cartão.",
+  RISK_ANALYSIS_POLICY:
+    "Seu pagamento foi recusado pela política de segurança. Tente outro cartão ou fale com o suporte.",
+  RISK_ANALYSIS_MANUAL_FACILITATOR:
+    "Seu pagamento foi recusado na análise de segurança. Tente outro cartão ou fale com o suporte.",
+  RISK_ANALYSIS_REJECTED:
+    "Seu pagamento foi recusado pela análise de segurança. Tente outro cartão ou fale com o suporte.",
+
   // Update payment method / installments
   INSTALLMENT_HMAC_REQUIRED: "Selecione novamente as parcelas antes de continuar.",
   INSTALLMENT_HMAC_PAYLOAD_INVALID: "Selecione novamente as parcelas antes de continuar.",

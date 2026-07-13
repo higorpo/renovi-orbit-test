@@ -293,7 +293,10 @@ describe("useManualPaymentDialog", () => {
   });
 
   it("shows terminal error view for terminal charge outcomes", async () => {
-    mockMutateAsync.mockResolvedValue({ outcome: "FAILED_PERMANENT" });
+    mockMutateAsync.mockResolvedValue({
+      outcome: "FAILED_PERMANENT",
+      failureCode: "RISK_ANALYSIS_POLICY",
+    });
 
     const { result } = renderHook(() =>
       useManualPaymentDialog({
@@ -317,7 +320,7 @@ describe("useManualPaymentDialog", () => {
     });
 
     expect(result.current.view).toBe("terminal-error");
-    expect(result.current.terminalErrorMessage).toBeTruthy();
+    expect(result.current.terminalErrorMessage).toMatch(/política de segurança/i);
   });
 
   it("shows service-cancelled view when charge reports auto-cancel", async () => {
