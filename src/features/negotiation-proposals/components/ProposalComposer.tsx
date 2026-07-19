@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -95,6 +96,10 @@ export function ProposalComposer({
                   onFocus={onInputFocus}
                 />
               </FormControl>
+              <FormDescription className="text-xs">
+                Este valor corresponde apenas à sua mão de obra. Não inclui compra de
+                materiais nem outros custos do serviço.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
