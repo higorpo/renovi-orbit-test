@@ -24,7 +24,10 @@ Itens interessantes de ter na plataforma (futuro)
 -ver imagens que o chat gpt gerou da tela de detalhes do serviço e o que podemos incorporar de fato.
 - Permitir se inscrever em um tópico no FCM
 - Deixar página de erro mais bonita
-
+- Adicionar no chat tanto do prestador  quanto do cliente ações rápidas para um serviço em estado de em andamento
+  - Poder cancelar o serviço
+  - Poder reagendar o serviço
+  - Ver informações do serviço
 
 
 Urgentes:
@@ -136,30 +139,24 @@ Fluxo de pagamentos, itens com problemas:
 
 
 
-- Preciso testar o fluxo de cobrança com rejeição de CPF
-
-- Testar fluxo com cartão com algum dado inválido
 
 - O que acontece com um serviço postado que ficou muito tempo  sem receber nenhuma proposta?
-
-- Entender melhor modelo de liquidação da Netcred: https://app.sandbox.netcredbrasil.com.br/app/relatorio/liquidacoes?transactionId=446079. Foi gerado 4 parcelas pra Renovi e 1 parcela pro prestador e ser pago logo em seguida (sem esperar os 30 dias pra liquidar por exemplo). Entender porque isso está  acontecendo, além disso verificar se eu consigo obter essas informações de liquidação via API da netcred para mostrar em tela pro prestador. As regras de estorno parecem estar diferentes também, parece que ele estorna o valor aos poucos mensalmente conforme a cobrança vai sendo feita. Além disso, pelo que eu entendi parece que o FIXED_VALUE faz a cobrança no cartão de uma só vez e depois parcela o resto do PERCENTAGE, preciso confirmar isso com a N*etcred.
-  O scheduleType = "MONTHLY" define quando vai ser a liquidação, nesse caso eu alterei e ela foi colocada pro mes seguinte conforme o esperado. 
-
-  Aparentemente temos uma taxa de análise de risco.
 
 
 - Mostrar liquidações para o prestador
 
 
-- Precisamos talvez ter uma tabela de auditoria nessas relacionadas a pagamento.
 
-- Permitir remarcar serviços sem tempo mínimo
 
-- Deixar claro que o orçamento é só para maõ de obra, tanto para o cliente quanto para o prestador.
 
-- Confirmar se após as últimas alterações agora os valores líquidos na  netcred após um pagamento batem com o que a plataforma deveria receber de fato
+
+
+
+---
 
 - Perguntar pra Netcred se há retry automático ou manual de envio de webhook se por  algum motivo o webhook der erro/estiver indisponível.
+
+
 
 Detalhes dos testes:
 Cartão aprovado: 4970100000000048
@@ -168,6 +165,7 @@ Cartão rejeitado: 4970100000000071
 10/2027
 123
 Maria da Silva
+504.432.630-51
 
 CPF/CNPJ terminando em 1 → aprovação
 CPF/CNPJ terminando em outro dígito → rejeição

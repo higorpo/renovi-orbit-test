@@ -181,6 +181,8 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `payment_begin_refund_request` (migrations `20260801360000_*` / supersedidas) | `REFUND_REQUESTED` + `refunded_amount` esperado sem `refunded_at` |
 | `supabase/functions/process-refund/` | Edge de estorno |
 | `supabase/functions/netcred-webhook/` + `payment_process_webhook_event` | Confirma reembolso e define `refunded_at` |
+| `supabase/migrations/20260802180000_payment_schedules_audit_trigger.sql` | Tabela `payment_schedules_audit` (row-history append-only), `row_version`/`audit_txid` só no audit, trigger statement único set-based, RLS admin-only, INSERT só via DEFINER |
+| `supabase/tests/payments/payment_schedules_audit_trigger_test.sql` | pgTAP: snapshot INSERT/UPDATE/DELETE, versões contíguas, drift de colunas, bloqueio UPDATE/INSERT direto, privilégios |
 
 ## Documentação pré-existente (planos legados)
 

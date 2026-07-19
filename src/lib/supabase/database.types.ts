@@ -1639,6 +1639,150 @@ export type Database = {
           },
         ]
       }
+      payment_schedules_audit: {
+        Row: {
+          audit_id: number
+          audit_op: string
+          audit_txid: unknown
+          audited_at: string
+          automatic_attempt_count: number
+          base_amount: number
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          charge_frozen_at: string | null
+          charge_scheduled_at: string
+          clearsale_session_id: string | null
+          client_card_token_id: string | null
+          client_id: string
+          client_ip_address: string | null
+          commission_rate_pct: number
+          contracted_service_id: string
+          created_at: string
+          failed_at: string | null
+          failed_permanently_at: string | null
+          failure_code: string | null
+          failure_reason: string | null
+          gateway_charge_id: string | null
+          gateway_reference_code: string
+          gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
+          gateway_transaction_id: string | null
+          id: string
+          idempotency_key: string
+          installment_number: number
+          is_disputed: boolean
+          locked_until: string | null
+          manual_attempt_count: number
+          max_attempts: number
+          needs_payment_method_update: boolean
+          next_retry_at: string | null
+          paid_amount: number | null
+          paid_at: string | null
+          provider_id: string
+          provider_payout: number
+          reconciliation_failure_count: number
+          refunded_amount: number | null
+          refunded_at: string | null
+          row_version: number
+          state: Database["public"]["Enums"]["payment_schedule_state"]
+          upcoming_charge_notified_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          audit_id?: never
+          audit_op: string
+          audit_txid?: unknown
+          audited_at?: string
+          automatic_attempt_count: number
+          base_amount: number
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          charge_frozen_at?: string | null
+          charge_scheduled_at: string
+          clearsale_session_id?: string | null
+          client_card_token_id?: string | null
+          client_id: string
+          client_ip_address?: string | null
+          commission_rate_pct: number
+          contracted_service_id: string
+          created_at: string
+          failed_at?: string | null
+          failed_permanently_at?: string | null
+          failure_code?: string | null
+          failure_reason?: string | null
+          gateway_charge_id?: string | null
+          gateway_reference_code: string
+          gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
+          gateway_transaction_id?: string | null
+          id: string
+          idempotency_key: string
+          installment_number: number
+          is_disputed: boolean
+          locked_until?: string | null
+          manual_attempt_count: number
+          max_attempts: number
+          needs_payment_method_update: boolean
+          next_retry_at?: string | null
+          paid_amount?: number | null
+          paid_at?: string | null
+          provider_id: string
+          provider_payout: number
+          reconciliation_failure_count: number
+          refunded_amount?: number | null
+          refunded_at?: string | null
+          row_version: number
+          state: Database["public"]["Enums"]["payment_schedule_state"]
+          upcoming_charge_notified_at?: string | null
+          updated_at: string
+        }
+        Update: {
+          audit_id?: never
+          audit_op?: string
+          audit_txid?: unknown
+          audited_at?: string
+          automatic_attempt_count?: number
+          base_amount?: number
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          charge_frozen_at?: string | null
+          charge_scheduled_at?: string
+          clearsale_session_id?: string | null
+          client_card_token_id?: string | null
+          client_id?: string
+          client_ip_address?: string | null
+          commission_rate_pct?: number
+          contracted_service_id?: string
+          created_at?: string
+          failed_at?: string | null
+          failed_permanently_at?: string | null
+          failure_code?: string | null
+          failure_reason?: string | null
+          gateway_charge_id?: string | null
+          gateway_reference_code?: string
+          gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          gateway_transaction_id?: string | null
+          id?: string
+          idempotency_key?: string
+          installment_number?: number
+          is_disputed?: boolean
+          locked_until?: string | null
+          manual_attempt_count?: number
+          max_attempts?: number
+          needs_payment_method_update?: boolean
+          next_retry_at?: string | null
+          paid_amount?: number | null
+          paid_at?: string | null
+          provider_id?: string
+          provider_payout?: number
+          reconciliation_failure_count?: number
+          refunded_amount?: number | null
+          refunded_at?: string | null
+          row_version?: number
+          state?: Database["public"]["Enums"]["payment_schedule_state"]
+          upcoming_charge_notified_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payment_webhook_events: {
         Row: {
           created_at: string

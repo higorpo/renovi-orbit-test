@@ -17,6 +17,7 @@
 | Cobrança automática | pg_cron → `schedule-netcred-charges` → `payment_claim_charge_batch` → NetCred |
 | Constantes | `platform_constants` (MDR por bandeira/parcela, `cc_fixed_processing_fee_brl`, `cc_risk_analysis_fee_brl`, tentativas, batch sizes) |
 | Fórmula de cobrança | Gross-up: `ROUND_HALF_EVEN((base + PROCESSING + RISK_ANALYSIS) / (1 − MDR%/100), 2)` — ver [checkout-e-cobranca](./features/checkout-e-cobranca.md#valor-cobrado-no-cartão-charge_amount) |
+| Auditoria de linha (`payment_schedules`) | Tabela append-only `payment_schedules_audit` grava o snapshot completo da parcela em toda INSERT/UPDATE/DELETE de `payment_schedules`, via um trigger de statement (transition tables) com versionamento set-based. Cada linha tem `audit_id`, `audit_op` (`INSERT`/`UPDATE`/`DELETE`), `audited_at`, `row_version` (só no audit; max+1 por parcela) e `audit_txid` (correlação com o mesmo TX). **Distinta** do `payment_audit_log` (eventos de ciclo de vida): esta é histórico técnico de linha, sem escrita pela aplicação. RLS: só admin lê (`SELECT`); sem UPDATE/DELETE/TRUNCATE; `service_role` só `SELECT` (INSERT só pelo trigger DEFINER). Sem uso na UI. |
 
 ## 3. Documentação da feature
 

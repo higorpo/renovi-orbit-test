@@ -160,7 +160,7 @@ Definições no código:
 
 | Campo / grupo | Regras no front |
 |---------------|-----------------|
-| Valor (`priceInput`) | Máscara BRL `maskBudgetInput`; parse > 0; debounce **1500 ms** antes de chamar `calculate_provider_service_pricing` |
+| Valor (`priceInput`) | Label na UI: **Quanto você quer cobrar?** Máscara BRL `maskBudgetInput`; parse > 0; debounce **1500 ms** antes de chamar `calculate_provider_service_pricing`. Abaixo do campo, texto informativo (apenas UI): *"Este valor corresponde apenas à sua mão de obra. Não inclui compra de materiais nem outros custos do serviço."* — não altera validação nem payload |
 | Descrição | Obrigatória; máx. **1200** caracteres |
 | Medido em (`durationUnit`) | Select na UI: **Horas** / **Dias** (`hours` \| `days`) — serviço de **um único dia** deve usar `hours` (não `days` com valor 1). Ordem no formulário: **antes** de Tempo estimado |
 | Tempo estimado (`durationValueInput`) | Inteiro > 0 (só dígitos); máx. **24** em `hours`; em `days` mín. **2** e máx. **7** (1 semana). Label na UI: **Tempo estimado** |
