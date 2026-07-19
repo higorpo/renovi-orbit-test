@@ -37,6 +37,10 @@ flowchart TD
 | **STOPPED** | **Não** envia nova proposta (`DISPATCH_STOPPED`); pode **iniciar conversa** se slot disponível | Limite de propostas em andamento atingido |
 | **EXPIRED** | Visibilidade de **lote** pode persistir; **mercado aberto lazy** some | Pedido envelheceu na política de dispatch |
 | **Proposta aceita** | Dispatch **MATCHED**; demais fluxos seguem CNS | Contratação via aceite de proposta |
+| **Sem proposta 24h** | — | Push “ainda buscando orçamentos” |
+| **Sem proposta 48h** | Dispatch cancelado com o pedido | Auto-cancel do `OPEN` + push/e-mail; republicar no detalhe |
+
+Pedidos com **qualquer** proposta registrada não entram nesse janitor. Evidência: migration `20260802190000_service_request_no_proposal_lifecycle.sql`, teste `supabase/tests/matching/no_proposal_lifecycle_test.sql`.
 
 ---
 
@@ -51,5 +55,6 @@ flowchart TD
 ## 4. Evidências
 
 - Migrations `20260711040000`–`20260711230000` (`supabase/migrations/`).
+- Lifecycle sem proposta: `20260802190000_service_request_no_proposal_lifecycle.sql`.
 - Testes pgTAP em `supabase/tests/matching/`.
 - E2E Playwright: `e2e/matching/dispatch-lifecycle.spec.ts`, `provider-feed.spec.ts`.

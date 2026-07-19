@@ -18,6 +18,15 @@
 | **MATCHED** | Cliente aceitou uma proposta; dispatch concluído. |
 | **CANCELLED / EXPIRED** | Pedido cancelado ou janela de vida do dispatch esgotada; **mercado aberto lazy** deixa de aplicar após **EXPIRED**. |
 
+### Pedido sem nenhuma proposta (cliente)
+
+| Marco | Comportamento |
+|-------|----------------|
+| **24h** sem nenhuma proposta | Push ao cliente: ainda buscando orçamentos (`matching.no_proposal_seeking`). Pedido permanece `OPEN`. |
+| **48h** sem nenhuma proposta | Push + e-mail; **cancelamento automático** do pedido (`CANCELLED`). Cliente pode **republicar** ou melhorar o pedido no detalhe. |
+
+Constantes: `matching.no_proposal_seeking_hours` (24), `matching.no_proposal_auto_cancel_hours` (48). Cron: `process_service_requests_without_proposals` (a cada 15 min). Se já existir qualquer linha em `provider_proposals`, o fluxo não se aplica.
+
 ## 3. Visibilidade no feed do prestador
 
 | Origem (`source`) | Quando aparece |
@@ -61,6 +70,7 @@ RPCs `submit_service_rating` / `update_service_rating` e agregados em `provider_
 |------|----------|
 | Edge feed | `supabase/functions/list-provider-opportunities/` |
 | Cron / lotes | `matching_open_batch`, `cron_process_service_request_dispatches` |
+| Sem proposta (cliente) | `process_service_requests_without_proposals`, templates `matching.no_proposal_*` |
 | Discovery | `matching_discover_candidates`, `provider_latest_locations` |
 | Beacon | `user_device_beacons`, trigger `trg_user_device_beacon_refresh_provider_location` |
 | Cliente geo | `src/features/device-beacon/` (`useProviderLocationTracking`, `DeviceBeaconProvider`) |

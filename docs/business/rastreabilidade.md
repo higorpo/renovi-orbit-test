@@ -141,7 +141,9 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 
 | Artefato | Uso na documentação |
 |----------|---------------------|
-| `docs/business/modulos/matching-dispatch/` | README + feature dispatch/visibilidade |
+| `docs/business/modulos/matching-dispatch/` | README + feature dispatch/visibilidade; lifecycle sem proposta (24h/48h) |
+| `supabase/migrations/20260802190000_service_request_no_proposal_lifecycle.sql` | Templates MMD + cron auto-cancel sem propostas |
+| `supabase/tests/matching/no_proposal_lifecycle_test.sql` | pgTAP seeking notify + auto-cancel |
 | `docs/matching-algorithm/` | Design técnico e tasks de implementação |
 | `docs/matching-algorithm/qa/staging-*-checklist.md` | QA staging geo/batch/MMD |
 | `supabase/migrations/202607110*`–`20260711230000_*` | Schema dispatch, discovery, cron, visibilidade, ratings |

@@ -140,7 +140,6 @@ Fluxo de pagamentos, itens com problemas:
 
 
 
-- O que acontece com um serviço postado que ficou muito tempo  sem receber nenhuma proposta?
 
 
 - Mostrar liquidações para o prestador
