@@ -29,7 +29,7 @@ Features em `src/features/<nome>/` (`api`, `components`, `hooks`, `types`, `util
 
 | Sempre ativas | Por contexto (globs) |
 |---------------|----------------------|
-| `yarn`, `nvm-node` | `platform-ux` → `src/**`, `android/**` |
+| `yarn`, `nvm-node`, `subagent-model-grok` | `platform-ux` → `src/**`, `android/**` |
 | `api-layer`, `feature-architecture` | `e2e-testing` → `e2e/**` |
 | `business-logic-in-hooks`, `code-comments` | `supabase-migrations`, `supabase-types`, `supabase-rls-performance` → `supabase/**` |
 | | `edge-function-tests` → `supabase/functions/**` |

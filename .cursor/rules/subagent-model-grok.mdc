@@ -1,0 +1,32 @@
+---
+description: Subagents (Task) devem usar Grok 4.5 por default; Sonnet/Fable só se o prompt pedir
+alwaysApply: true
+---
+
+# Modelo obrigatório para subagents
+
+Ao lançar qualquer subagente via ferramenta **Task**, o modelo **deve** ser **Grok 4.5**.
+
+## Default (obrigatório)
+
+- Sempre passar `model: "cursor-grok-4.5-high"` em chamadas **Task**.
+- Não omitir `model` “para herdar o do parent” — deixe o default explícito.
+- Em hipótese alguma usar Sonnet, Fable, Opus, Composer, Gemini, GPT ou outros, **salvo** se o **prompt do usuário** pedir outro modelo de forma explícita.
+
+## Exceções
+
+Só use outro slug de `model` quando o usuário **especificar no prompt** (ex.: “use Sonnet”, “rode com Fable”). Nesse caso, use exatamente o modelo pedido e ignore o default Grok 4.5.
+
+## Exemplos
+
+```
+# ✅ GOOD — default do projeto
+Task({ model: "cursor-grok-4.5-high", subagent_type: "explore", ... })
+
+# ❌ BAD — Sonnet/Fable sem pedido explícito do usuário
+Task({ model: "claude-sonnet-5-thinking-high", ... })
+Task({ model: "claude-fable-5-thinking-high", ... })
+
+# ❌ BAD — omitir model (não garantir Grok 4.5)
+Task({ subagent_type: "generalPurpose", ... })
+```
