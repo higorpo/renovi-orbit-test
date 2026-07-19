@@ -69,6 +69,9 @@ describe("ProposalComposer", () => {
 
     expect(price).toHaveValue("1.500");
     expect(onInputFocus).toHaveBeenCalled();
+    expect(
+      screen.getByText(/corresponde apenas à sua mão de obra/i),
+    ).toBeInTheDocument();
     expect(screen.getByText("0/2000 caracteres")).toBeInTheDocument();
   });
 

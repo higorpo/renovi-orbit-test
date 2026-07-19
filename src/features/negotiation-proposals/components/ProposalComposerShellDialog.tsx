@@ -65,7 +65,8 @@ export function ProposalComposerShellDialog({
           </div>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-4 py-4 [-webkit-overflow-scrolling:touch] sm:max-h-[calc(90vh-3rem)] sm:px-0 sm:py-0">
+        {/* Desktop gutter so focus rings are not clipped by overflow-y-auto */}
+        <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-4 py-4 [-webkit-overflow-scrolling:touch] sm:max-h-[calc(90vh-3rem)] sm:-mx-1 sm:px-1 sm:py-1">
           <ProposalComposer {...composerProps} onInputFocus={scheduleSync} />
         </div>
 
