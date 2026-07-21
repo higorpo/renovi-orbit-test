@@ -22,13 +22,19 @@ describe("isPreChargeScheduleState", () => {
 });
 
 describe("canCancelContractedService", () => {
-  it("blocks terminal service statuses", () => {
+  it("blocks CANCELLED and COMPLETED service statuses", () => {
     expect(
       canCancelContractedService({ serviceStatus: "CANCELLED", scheduleState: "PAID" }),
     ).toBe(false);
     expect(
       canCancelContractedService({ serviceStatus: "COMPLETED", scheduleState: "PAID" }),
     ).toBe(false);
+  });
+
+  it("allows EXECUTED when schedule is PAID (aligned with RPC)", () => {
+    expect(
+      canCancelContractedService({ serviceStatus: "EXECUTED", scheduleState: "PAID" }),
+    ).toBe(true);
   });
 
   it("allows pre-charge cancellation without schedule", () => {
@@ -82,15 +88,23 @@ describe("estimateClientRefundAmount", () => {
 });
 
 describe("approximateServiceExecutionAt", () => {
-  it("maps afternoon shift to 13:00 local time", () => {
+  it("maps afternoon shift to 13:00 America/Sao_Paulo", () => {
     const date = approximateServiceExecutionAt("2026-08-01", "afternoon");
-    expect(date?.getHours()).toBe(13);
+    expect(date).not.toBeNull();
+    // 13:00 America/Sao_Paulo in August is UTC-03 → 16:00Z
+    expect(date?.toISOString()).toBe("2026-08-01T16:00:00.000Z");
   });
 
   it("maps morning/full_day shifts, defaults unknown shifts, and rejects invalid dates", () => {
-    expect(approximateServiceExecutionAt("2026-08-01", "morning")?.getHours()).toBe(8);
-    expect(approximateServiceExecutionAt("2026-08-01", "full_day")?.getHours()).toBe(8);
-    expect(approximateServiceExecutionAt("2026-08-01", "unknown")?.getHours()).toBe(8);
+    expect(approximateServiceExecutionAt("2026-08-01", "morning")?.toISOString()).toBe(
+      "2026-08-01T11:00:00.000Z",
+    );
+    expect(approximateServiceExecutionAt("2026-08-01", "full_day")?.toISOString()).toBe(
+      "2026-08-01T11:00:00.000Z",
+    );
+    expect(approximateServiceExecutionAt("2026-08-01", "unknown")?.toISOString()).toBe(
+      "2026-08-01T11:00:00.000Z",
+    );
     expect(approximateServiceExecutionAt("not-a-date", "morning")).toBeNull();
   });
 });

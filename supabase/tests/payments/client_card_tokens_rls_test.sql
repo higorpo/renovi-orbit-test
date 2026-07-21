@@ -36,6 +36,8 @@ select ok(
     and has_column_privilege('authenticated', 'public.client_card_tokens', 'card_brand', 'SELECT')
     and not has_column_privilege('authenticated', 'public.client_card_tokens', 'gateway_card_token', 'SELECT')
     and not has_column_privilege('authenticated', 'public.client_card_tokens', 'billing_address', 'SELECT')
+    and not has_column_privilege('authenticated', 'public.client_card_tokens', 'gateway_payment_profile_id', 'SELECT')
+    and not has_column_privilege('authenticated', 'public.client_card_tokens', 'netcred_company_id', 'SELECT')
     and not has_table_privilege('authenticated', 'public.client_card_tokens', 'INSERT')
     and not has_table_privilege('authenticated', 'public.client_card_tokens', 'UPDATE')
     and not has_table_privilege('authenticated', 'public.client_card_tokens', 'DELETE'),

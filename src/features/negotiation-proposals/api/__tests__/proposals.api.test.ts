@@ -124,6 +124,7 @@ describe("acceptProposalWithPayment", () => {
         p_client_card_token_id: "tok-1",
         p_pricing_signature: "pricing-sig",
         p_installment_selection_hmac: "hmac",
+        p_client_ip: "127.0.0.1",
       }),
     );
   });

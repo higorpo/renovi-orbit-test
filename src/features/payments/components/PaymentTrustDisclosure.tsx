@@ -15,8 +15,11 @@ export function PaymentTrustDisclosure() {
             Pagamento protegido por parceiro certificado
           </p>
           <p className="text-muted-foreground">
-            Seus dados de cartão são tokenizados com segurança pelo nosso parceiro de pagamentos.
-            A Renovi não armazena número completo do cartão nem CVV.
+            Seus dados de cartão são enviados com segurança ao nosso parceiro de
+            pagamentos para tokenização. A Renovi não armazena o número completo
+            do cartão nem o CVV — apenas referências tokenizadas. O envio passa
+            por um serviço seguro da plataforma até o gateway (o cartão não fica
+            gravado nos nossos sistemas).
           </p>
           <p className="text-muted-foreground">
             Ao confirmar, você declara que leu e aceita os{" "}
@@ -28,7 +31,11 @@ export function PaymentTrustDisclosure() {
             >
               Termos de Uso
             </a>
-            , incluindo as regras de cobrança, cancelamento e reembolso.
+            , incluindo as regras de cobrança, cancelamento e reembolso. As taxas de cartão
+            podem ser recalculadas no momento da cobrança (cerca de 48 horas antes do
+            serviço, ou imediatamente em casos urgentes) conforme a bandeira e o número de
+            parcelas então vigentes — o valor final cobrado pode diferir levemente da
+            estimativa exibida no checkout.
           </p>
         </div>
       </div>

@@ -34,6 +34,7 @@ function createProcessDeps(
     loadPaymentToken: async () => ({
       gateway_payment_profile_id: "403137",
       gateway_card_token: "tok",
+      netcred_company_id: "1014",
     }),
     loadProviderAccount: async () => ({
       netcred_company_id: "1048",
@@ -49,6 +50,8 @@ function createProcessDeps(
     emitFailedPermanentWarning: () => {},
     ingestNotification: async () => {},
     maxAttempts: 3,
+    platformCompanyId: "1014",
+    isProduction: false,
     ...overrides,
   };
 }

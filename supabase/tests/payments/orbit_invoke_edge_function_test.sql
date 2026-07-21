@@ -81,12 +81,14 @@ select ok(
 select ok(
   (
     select pg_get_functiondef(p.oid) ~* 'orbit_invoke_edge_function'
+      and pg_get_functiondef(p.oid) ~* '90000'
+      and pg_get_functiondef(p.oid) ~* 'schedule-netcred-charges'
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
       and p.proname = 'payment_cron_invoke_edge_function'
   ),
-  'payment_cron_invoke_edge_function delegates to orbit_invoke_edge_function'
+  'payment_cron_invoke uses 90s timeout for schedule-netcred-charges'
 );
 
 select * from finish();

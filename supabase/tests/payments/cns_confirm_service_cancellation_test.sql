@@ -110,15 +110,15 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key
-  )
+    charge_scheduled_at, state, idempotency_key,
+    gateway_reference_code)
   values (
     v_pre_paid_id, v_client_id, v_provider_id, 'netcred',
     1, 100.00, 10.00, 90.00,
     now() + interval '5 days',
     'SCHEDULED'::public.payment_schedule_state,
-    v_pre_paid_id::text
-  );
+    v_pre_paid_id::text,
+    v_pre_paid_id);
 
   select client_id into v_client_id
   from pg_temp.cns_seed_cancel_fixture(
@@ -131,8 +131,8 @@ begin
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
     charge_scheduled_at, state, idempotency_key, paid_at,
-    gateway_transaction_id
-  )
+    gateway_transaction_id,
+    gateway_reference_code)
   values (
     v_post_paid_id, v_client_id, v_provider_id, 'netcred',
     1, 100.00, 10.00, 90.00,
@@ -140,8 +140,8 @@ begin
     'PAID'::public.payment_schedule_state,
     v_post_paid_id::text,
     now() - interval '1 day',
-    'txn-post-paid-pgtap'
-  );
+    'txn-post-paid-pgtap',
+    v_post_paid_id);
 
   select client_id into v_client_id
   from pg_temp.cns_seed_cancel_fixture(v_in_analysis_id, v_provider_id);
@@ -149,15 +149,15 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key
-  )
+    charge_scheduled_at, state, idempotency_key,
+    gateway_reference_code)
   values (
     v_in_analysis_id, v_client_id, v_provider_id, 'netcred',
     1, 100.00, 10.00, 90.00,
     now() + interval '2 days',
     'IN_ANALYSIS'::public.payment_schedule_state,
-    v_in_analysis_id::text
-  );
+    v_in_analysis_id::text,
+    v_in_analysis_id);
 
   perform set_config('test.cns_cancel.pre_paid', v_pre_paid_id::text, true);
   perform set_config('test.cns_cancel.post_paid', v_post_paid_id::text, true);

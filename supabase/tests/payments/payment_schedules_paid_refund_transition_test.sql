@@ -101,8 +101,8 @@ begin
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
     charge_scheduled_at, state, idempotency_key, paid_at, paid_amount,
-    gateway_transaction_id
-  )
+    gateway_transaction_id,
+    gateway_reference_code)
   values (
     v_service_id, v_client_id, v_provider_id, 'netcred',
     1, 600.00, 15.00, 510.00,
@@ -111,8 +111,8 @@ begin
     v_service_id::text,
     now() - interval '1 day',
     633.70,
-    'txn-paid-refund-transition-pgtap'
-  );
+    'txn-paid-refund-transition-pgtap',
+    v_service_id);
 
   perform set_config('test.paid_refund.service_id', v_service_id::text, true);
   perform set_config('test.paid_refund.client_id', v_client_id::text, true);

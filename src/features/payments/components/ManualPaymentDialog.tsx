@@ -130,7 +130,13 @@ export function ManualPaymentDialog({
         </DialogHeader>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 touch-pan-y overscroll-y-contain sm:px-0">
-          {open ? <CardStep onSessionIdGenerated={setClearsaleSessionId} /> : null}
+          {open ? (
+            <CardStep
+              purpose="manual"
+              scheduleId={schedule.id}
+              onSessionIdGenerated={setClearsaleSessionId}
+            />
+          ) : null}
 
           {view === "service-cancelled" ? (
             <p className="text-sm text-muted-foreground">

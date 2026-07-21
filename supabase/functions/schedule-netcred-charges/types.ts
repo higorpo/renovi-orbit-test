@@ -40,4 +40,6 @@ export type CronRunSummary = {
   in_analysis: number;
   reconciled: number;
   errors: number;
+  /** Claimed but not started because invoke wall-clock budget was exhausted. */
+  skipped_deadline: number;
 };

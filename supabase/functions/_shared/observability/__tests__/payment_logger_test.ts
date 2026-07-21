@@ -35,6 +35,33 @@ Deno.test("sanitizePaymentLogContext strips blocked sensitive keys", () => {
   assertEquals("billingAddress" in sanitized, false);
 });
 
+Deno.test("sanitizePaymentLogContext deep-scrubs nested CHD/PII", () => {
+  const sanitized = sanitizePaymentLogContext({
+    service_id: "svc-1",
+    request: {
+      cardData: { cardNumber: "4111", securityCode: "123" },
+      cpf: "03019758092",
+      phone: "48999999999",
+      email: "a@b.com",
+      nested: { ok: true, cvv: "999" },
+    },
+    items: [{ pan: "4111", schedule_id: "sch-1" }],
+  });
+
+  assertEquals(sanitized.service_id, "svc-1");
+  assertEquals(
+    (sanitized.request as Record<string, unknown>).nested,
+    { ok: true },
+  );
+  assertEquals("cardData" in (sanitized.request as object), false);
+  assertEquals("cpf" in (sanitized.request as object), false);
+  assertEquals("phone" in (sanitized.request as object), false);
+  assertEquals("email" in (sanitized.request as object), false);
+  assertEquals((sanitized.items as Array<Record<string, unknown>>)[0], {
+    schedule_id: "sch-1",
+  });
+});
+
 Deno.test("buildPaymentLogContext sets correlation_id from service_id", () => {
   const context = buildPaymentLogContext({
     service_id: "svc-1",

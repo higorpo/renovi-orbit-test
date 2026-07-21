@@ -66,10 +66,21 @@ declare
   v_gateway public.provider_gateway_accounts%rowtype;
   v_document text;
   v_from_state text;
+  v_rate_limit jsonb;
 begin
   if v_provider_id is null then
     raise exception 'Authentication required for payment_submit_provider_kyc'
       using errcode = '42501';
+  end if;
+
+  v_rate_limit := public.platform_check_rate_limit(
+    format('payment_submit_provider_kyc:%s', v_provider_id),
+    3
+  );
+
+  if not coalesce((v_rate_limit->>'allowed')::boolean, false) then
+    raise exception 'RATE_LIMITED'
+      using errcode = 'P0001';
   end if;
 
   if not exists (

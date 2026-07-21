@@ -41,7 +41,8 @@ begin
     raw_headers,
     state,
     retry_count,
-    failure_reason
+    failure_reason,
+    signature_validated
   )
   values (
     v_event_id,
@@ -56,7 +57,8 @@ begin
     '{}'::jsonb,
     'DEAD_LETTER'::public.payment_webhook_event_state,
     3,
-    'handler timeout'
+    'handler timeout',
+    true
   );
 
   insert into public.payment_webhook_processing_queue (

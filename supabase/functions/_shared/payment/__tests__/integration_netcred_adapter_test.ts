@@ -153,6 +153,7 @@ Deno.test("integration: createCharge refreshes auth after JWT_EXPIRED GraphQL er
   const adapter = new NetCredAdapter({
     supabase: createAuthRefreshSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     username: "user",
     password: "pass",
@@ -194,6 +195,7 @@ Deno.test("integration: createCharge refreshes auth after HTTP 401", async () =>
   const adapter = new NetCredAdapter({
     supabase: createAuthRefreshSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     username: "user",
     password: "pass",
@@ -230,6 +232,7 @@ Deno.test("integration: createCharge throws ProviderAuthError when auth refresh 
   const adapter = new NetCredAdapter({
     supabase: createAuthRefreshSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     username: "user",
     password: "pass",
@@ -265,6 +268,7 @@ Deno.test("integration: referenceCode conflict reconciles existing PAID transact
   const adapter = new NetCredAdapter({
     supabase: createCachedTokenSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () => {
       graphqlCalls += 1;
@@ -322,6 +326,7 @@ Deno.test("integration: referenceCode conflict with null getTransaction is termi
   const adapter = new NetCredAdapter({
     supabase: createCachedTokenSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () => {
       graphqlCalls += 1;
@@ -366,6 +371,7 @@ Deno.test("integration: getTransaction returns null when no transaction matches 
   const adapter = new NetCredAdapter({
     supabase: createCachedTokenSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () =>
       new Response(
@@ -403,6 +409,7 @@ Deno.test("integration: refreshAuthToken delegates to token cache RPC path", asy
       },
     } as unknown as SupabaseClient<Database>,
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
   });
 

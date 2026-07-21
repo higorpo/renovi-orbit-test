@@ -89,8 +89,8 @@ values
   ),
   (
     'charge_batch_size',
-    '10'::jsonb,
-    'Max payment schedules claimed per payment_claim_charge_batch cron tick'
+    '3'::jsonb,
+    'Max payment schedules claimed per payment_claim_charge_batch cron tick (sized for pg_net invoke wall-clock)'
   ),
   (
     'webhook_processing_batch_size',
@@ -126,6 +126,21 @@ values
     'webhook_stuck_processing_minutes',
     '15'::jsonb,
     'Minutes before stuck webhook PROCESSING rows are reclaimed by janitor'
+  ),
+  (
+    'max_active_client_card_tokens',
+    '8'::jsonb,
+    'Max ACTIVE client_card_tokens per client (carding / token sprawl cap)'
+  ),
+  (
+    'payment_webhook_auth_fail_spike_threshold_15m',
+    '10'::jsonb,
+    'Alert when INVALID_SIGNATURE webhook events in last 15m exceed this count'
+  ),
+  (
+    'payment_failed_permanent_spike_threshold_15m',
+    '5'::jsonb,
+    'Alert when CHARGE_FAILED_PERMANENT audit events in last 15m exceed this count'
   )
 on conflict (key) do update set
   value = excluded.value,

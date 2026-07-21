@@ -94,11 +94,13 @@ function mapPaymentSchedule(row: PaymentScheduleRow): PaymentScheduleSummary {
 function mapPaymentScheduleLifecycle(
   row: PaymentScheduleLifecycleRow,
   amounts?: ClientPaymentAmountsRow | null,
+  serviceExecutionAt?: string | null,
 ): PaymentScheduleLifecycle {
   return {
     contractedServiceId: row.contracted_service_id,
     state: row.state,
     chargeScheduledAt: row.charge_scheduled_at,
+    serviceExecutionAt: serviceExecutionAt ?? null,
     // Amounts come from client_payment_transactions_v (column allowlist hides them on the table).
     baseAmount: amounts != null ? Number(amounts.service_amount) : null,
     paidAmount: amounts != null ? Number(amounts.amount_paid) : null,
@@ -176,6 +178,23 @@ export async function fetchPaymentScheduleLifecycleByContractedService(
 
   const row = data as PaymentScheduleLifecycleRow;
   let amounts: ClientPaymentAmountsRow | null = null;
+  let serviceExecutionAt: string | null = null;
+
+  const { data: serviceRow, error: serviceError } = await supabase
+    .from("contracted_services")
+    .select("service_execution_at")
+    .eq("id", contractedServiceId)
+    .maybeSingle();
+
+  if (serviceError) {
+    logger.warn("payment_schedule_lifecycle_execution_at_fetch_error", {
+      contractedServiceId,
+      error: serviceError.message,
+    });
+  } else if (serviceRow) {
+    serviceExecutionAt =
+      (serviceRow as { service_execution_at: string | null }).service_execution_at ?? null;
+  }
 
   // Client history view exposes base/paid amounts; providers get null (RLS).
   if (row.state === "PAID") {
@@ -196,7 +215,7 @@ export async function fetchPaymentScheduleLifecycleByContractedService(
   }
 
   return {
-    data: mapPaymentScheduleLifecycle(row, amounts),
+    data: mapPaymentScheduleLifecycle(row, amounts, serviceExecutionAt),
     error: null,
   };
 }

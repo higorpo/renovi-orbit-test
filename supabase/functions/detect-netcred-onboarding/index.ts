@@ -109,11 +109,11 @@ function createDeps(): DetectNetcredOnboardingDeps {
       logger.warn(message, extra);
       if (
         message === "multiple_company_edges" &&
-        typeof extra.document === "string" &&
+        typeof extra.document_suffix === "string" &&
         typeof extra.edges_count === "number"
       ) {
         void emitProviderMultipleEdgesWarning({
-          document: extra.document,
+          document_suffix: extra.document_suffix,
           edges_count: extra.edges_count,
         });
       }

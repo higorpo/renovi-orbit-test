@@ -184,3 +184,41 @@ Deno.test("multiple schedule failures each emit isolated captureException", asyn
     assertEquals(capturedScheduleIds, ["schedule-a", "schedule-c"]);
   });
 });
+
+Deno.test("invoke deadline stops starting new charges; leftover counted as skipped_deadline", async () => {
+  await withCronAuthEnv(async () => {
+    const processedIds: string[] = [];
+    let clock = 0;
+
+    const deps: ScheduleNetcredChargesDeps = {
+      dequeueSchedules: async () => [
+        scheduleVariant("schedule-1", "service-1"),
+        scheduleVariant("schedule-2", "service-2"),
+        scheduleVariant("schedule-3", "service-3"),
+      ],
+      processSchedule: async (schedule) => {
+        processedIds.push(schedule.id);
+        clock += 20_000;
+        return {
+          scheduleId: schedule.id,
+          outcome: "PAID",
+          chargeAmount: "1024.29",
+        };
+      },
+      captureException: () => {},
+      maxAttempts: 3,
+      invokeStartedAtMs: 0,
+      invokeDeadlineMs: 25_000,
+      now: () => clock,
+    };
+
+    const response = await handleScheduleNetcredChargesRequest(cronRequest(), deps);
+    const summary = await response.json();
+
+    assertEquals(response.status, 200);
+    assertEquals(processedIds, ["schedule-1", "schedule-2"]);
+    assertEquals(summary.processed, 2);
+    assertEquals(summary.paid, 2);
+    assertEquals(summary.skipped_deadline, 1);
+  });
+});

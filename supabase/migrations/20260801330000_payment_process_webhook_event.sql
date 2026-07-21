@@ -85,9 +85,10 @@ declare
   v_schedule public.payment_schedules%rowtype;
   v_from_state text;
   v_charge_amount numeric(12, 2);
-  v_paid_amount numeric(12, 2);
+  v_gateway_paid_amount numeric(12, 2);
   v_gateway_charge_id text;
   v_gateway_transaction_id text;
+  v_amount_mismatch boolean := false;
 begin
   v_reference_code := public.payment_webhook_payload_reference_code(p_payload);
 
@@ -133,7 +134,7 @@ begin
     );
   end if;
 
-  v_paid_amount := nullif(
+  v_gateway_paid_amount := nullif(
     public.payment_webhook_payload_text(p_payload, array[
       'paid_amount',
       'paidAmount',
@@ -158,15 +159,20 @@ begin
     'transaction,uuid'
   ]), '');
 
-  v_charge_amount := coalesce(
-    v_paid_amount,
-    v_schedule.paid_amount,
-    public.payment_calculate_charge_amount(
-      v_schedule.client_card_token_id,
-      v_schedule.base_amount,
-      v_schedule.installment_number
-    )
+  -- Server-authoritative settlement amount; gateway amount kept in audit metadata only.
+  v_charge_amount := public.payment_calculate_charge_amount(
+    v_schedule.client_card_token_id,
+    v_schedule.base_amount,
+    v_schedule.installment_number
   );
+
+  if v_gateway_paid_amount is not null
+    and abs(v_gateway_paid_amount - v_charge_amount) > 0.01 then
+    v_amount_mismatch := true;
+    raise log
+      'payment_webhook_handle_capture: CHARGE_AMOUNT_MISMATCH event=% schedule=% expected=% gateway=%',
+      p_webhook_event_id, v_schedule.id, v_charge_amount, v_gateway_paid_amount;
+  end if;
 
   update public.payment_schedules ps
   set
@@ -175,6 +181,14 @@ begin
     paid_amount = v_charge_amount,
     gateway_charge_id = coalesce(v_gateway_charge_id, ps.gateway_charge_id),
     gateway_transaction_id = coalesce(v_gateway_transaction_id, ps.gateway_transaction_id),
+    refund_anchor_execution_at = coalesce(
+      ps.refund_anchor_execution_at,
+      (
+        select public.payment_service_execution_at(cs)
+        from public.contracted_services cs
+        where cs.id = v_schedule.contracted_service_id
+      )
+    ),
     locked_until = null,
     next_retry_at = null,
     failure_code = null,
@@ -199,6 +213,8 @@ begin
     p_metadata := jsonb_build_object(
       'webhook_event_id', p_webhook_event_id,
       'charge_amount', v_charge_amount,
+      'gateway_paid_amount', v_gateway_paid_amount,
+      'amount_mismatch', v_amount_mismatch,
       'gateway_charge_id', v_gateway_charge_id,
       'gateway_transaction_id', v_gateway_transaction_id,
       'source', 'TRANSACTION_CAPTURE'
@@ -213,6 +229,8 @@ begin
     p_payload := jsonb_build_object(
       'outcome', 'PAID',
       'charge_amount', v_charge_amount,
+      'gateway_paid_amount', v_gateway_paid_amount,
+      'amount_mismatch', v_amount_mismatch,
       'initiator', 'webhook',
       'webhook_event_id', p_webhook_event_id
     )
@@ -230,7 +248,10 @@ begin
     'service_id', v_schedule.contracted_service_id,
     'client_id', v_schedule.client_id,
     'provider_id', v_schedule.provider_id,
-    'from_state', v_from_state
+    'from_state', v_from_state,
+    'charge_amount', v_charge_amount,
+    'gateway_paid_amount', v_gateway_paid_amount,
+    'amount_mismatch', v_amount_mismatch
   );
 end;
 $$;
@@ -426,7 +447,11 @@ begin
     );
   end if;
 
-  if v_schedule.state <> 'REFUND_REQUESTED'::public.payment_schedule_state then
+  -- Allow PAID (external refund/chargeback) or REFUND_REQUESTED (cancel flow).
+  if v_schedule.state not in (
+    'PAID'::public.payment_schedule_state,
+    'REFUND_REQUESTED'::public.payment_schedule_state
+  ) then
     raise log 'payment_process_webhook_event: regression guard skipped refund from % (event %)',
       v_from_state, p_webhook_event_id;
     return jsonb_build_object(
@@ -449,6 +474,7 @@ begin
     state = v_to_state,
     refunded_amount = v_refunded_amount,
     refunded_at = coalesce(ps.refunded_at, now()),
+    refund_submit_status = 'CONFIRMED'::public.payment_refund_submit_status,
     updated_at = now()
   where ps.id = v_schedule.id;
 
@@ -651,10 +677,11 @@ begin
     )
   );
 
+  -- CHK-037: dual MMD — client and provider both get neutral dispute push.
   perform public.mmd_ingest_event(
     'TRANSACTION_DISPUTE',
     v_schedule.client_id,
-    format('transaction-dispute:%s', v_schedule.id),
+    format('transaction-dispute:%s:client', v_schedule.id),
     jsonb_build_object(
       'contracted_service_id', v_schedule.contracted_service_id,
       'schedule_id', v_schedule.id,
@@ -667,11 +694,39 @@ begin
     )
   );
 
+  perform public.mmd_ingest_event(
+    'TRANSACTION_DISPUTE',
+    v_schedule.provider_id,
+    format('transaction-dispute:%s:provider', v_schedule.id),
+    jsonb_build_object(
+      'contracted_service_id', v_schedule.contracted_service_id,
+      'schedule_id', v_schedule.id,
+      'service_request_title', v_service_request_title,
+      'deep_link_path', format('/dashboard/services/%s', v_service_request_id)
+    ),
+    jsonb_build_object(
+      'source', 'payment_webhook_handle_dispute',
+      'recipient', 'provider'
+    )
+  );
+
+  -- CRITICAL Sentry is emitted by netcred-webhook / webhook cron wrappers when
+  -- handler.outcome = 'disputed' (payment_cron_post_sentry_alerts exists later).
+
   return jsonb_build_object(
     'outcome', 'disputed',
     'schedule_id', v_schedule.id,
     'service_id', v_schedule.contracted_service_id,
-    'is_disputed', true
+    'client_id', v_schedule.client_id,
+    'provider_id', v_schedule.provider_id,
+    'is_disputed', true,
+    'sentry_alert', jsonb_build_object(
+      'kind', 'transaction_dispute',
+      'schedule_id', v_schedule.id,
+      'service_id', v_schedule.contracted_service_id,
+      'event_id', p_webhook_event_id,
+      'gateway_transaction_id', coalesce(v_gateway_transaction_id, v_schedule.gateway_transaction_id)
+    )
   );
 end;
 $$;
@@ -1115,6 +1170,11 @@ begin
     );
   end if;
 
+  if not v_event.signature_validated then
+    raise exception 'WEBHOOK_SIGNATURE_NOT_VALIDATED'
+      using errcode = 'P0001';
+  end if;
+
   if v_event.state = 'DEAD_LETTER'::public.payment_webhook_event_state then
     raise exception 'WEBHOOK_EVENT_DEAD_LETTER'
       using errcode = 'P0001';
@@ -1199,7 +1259,7 @@ end;
 $$;
 
 comment on function public.payment_process_webhook_event(uuid) is
-  'Dispatches NetCred webhook events to schedule/token handlers; retries transient handler skips (service_role only).';
+  'Dispatches signature-validated NetCred webhook events; refuses unsigned/auth-failed rows (service_role only).';
 
 revoke all on function public.payment_webhook_payload_text(jsonb, text[]) from public, anon, authenticated, service_role;
 revoke all on function public.payment_webhook_payload_reference_code(jsonb) from public, anon, authenticated, service_role;

@@ -36,8 +36,8 @@ select public.payment_ingest_webhook_event(
   'TRANSACTION_CAPTURE',
   'evt-state-1',
   '{"id":"evt-state-1"}'::jsonb,
-  '{"X-NETCRED-Event":"TRANSACTION_CAPTURE"}'::jsonb
-);
+  '{"X-NETCRED-Event":"TRANSACTION_CAPTURE"}'::jsonb,
+  true);
 
 select is(
   (
@@ -90,8 +90,8 @@ select is(
       'INVALID_SIGNATURE'
     )->>'state'
   ),
-  'FAILED',
-  'VALIDATING to FAILED transition succeeds'
+  'DEAD_LETTER',
+  'INVALID_SIGNATURE remaps FAILED target to non-retryable DEAD_LETTER'
 );
 
 select public.payment_ingest_webhook_event(
@@ -99,16 +99,16 @@ select public.payment_ingest_webhook_event(
   'TRANSACTION_CAPTURE',
   'evt-state-dup',
   '{"id":"evt-state-dup"}'::jsonb,
-  '{"X-NETCRED-Event":"TRANSACTION_CAPTURE"}'::jsonb
-);
+  '{"X-NETCRED-Event":"TRANSACTION_CAPTURE"}'::jsonb,
+  true);
 
 select public.payment_ingest_webhook_event(
   'netcred'::public.payment_gateway_slug,
   'TRANSACTION_CAPTURE',
   'evt-state-dup',
   '{"id":"evt-state-dup"}'::jsonb,
-  '{"X-NETCRED-Event":"TRANSACTION_CAPTURE"}'::jsonb
-);
+  '{"X-NETCRED-Event":"TRANSACTION_CAPTURE"}'::jsonb,
+  true);
 
 select is(
   (

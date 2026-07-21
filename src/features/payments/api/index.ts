@@ -26,9 +26,17 @@ export type {
   FetchInstallmentOptionsResult,
   AcceptProposalWithPaymentResult,
   AcceptProposalCheckoutParams,
+  AcceptProposalCheckoutResult,
   SaveCheckoutCpfResult,
   SaveCheckoutPhoneResult,
 } from "./checkout.api";
+
+export { issueClearSaleSession } from "./clearsale.api";
+export type {
+  ClearSaleSessionPurpose,
+  IssueClearSaleSessionParams,
+  IssueClearSaleSessionResult,
+} from "./clearsale.api";
 
 export {
   listActivePaymentTokens,
@@ -67,6 +75,17 @@ export type {
   FetchPaymentScheduleLifecycleResult,
   FetchContractedServicePaymentContextResult,
 } from "./charges.api";
+
+export {
+  markServiceExecuted,
+  confirmServiceCompleted,
+} from "./serviceLifecycle.api";
+export type {
+  MarkServiceExecutedSuccess,
+  MarkServiceExecutedResult,
+  ConfirmServiceCompletedSuccess,
+  ConfirmServiceCompletedResult,
+} from "./serviceLifecycle.api";
 
 export {
   uploadKycDocument,
@@ -131,6 +150,7 @@ import {
   dispatchKycEmail,
   fetchProviderPaymentAccount,
 } from "./kyc.api";
+import { issueClearSaleSession } from "./clearsale.api";
 import {
   listClientPaymentTransactions,
   listProviderPaymentReceivables,
@@ -145,6 +165,7 @@ export const paymentsApi = {
     acceptProposalWithPayment,
     saveCpf: saveCheckoutCpf,
     savePhone: saveCheckoutPhone,
+    issueClearSaleSession,
   },
   cards: {
     listActiveTokens: listActivePaymentTokens,

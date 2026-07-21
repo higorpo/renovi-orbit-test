@@ -67,7 +67,7 @@ export function useCheckoutStepper(options: UseCheckoutStepperOptions = {}) {
     }
   }, [currentStepIndex, steps.length]);
 
-  const setClearsaleSessionId = useCallback((sessionId: string) => {
+  const setClearsaleSessionId = useCallback((sessionId: string | null) => {
     setClearsaleSessionIdState(sessionId);
   }, []);
 

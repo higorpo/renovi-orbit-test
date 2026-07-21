@@ -39,8 +39,8 @@ select public.payment_ingest_webhook_event(
   'TRANSACTION_UPDATE',
   'evt-queue-1',
   '{"id":"evt-queue-1"}'::jsonb,
-  '{"X-NETCRED-Event":"TRANSACTION_UPDATE"}'::jsonb
-);
+  '{"X-NETCRED-Event":"TRANSACTION_UPDATE"}'::jsonb,
+  true);
 
 select ok(
   exists (

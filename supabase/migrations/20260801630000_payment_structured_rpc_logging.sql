@@ -735,7 +735,8 @@ begin
       ) as has_attempt_row,
       case
         when o.gateway_charge_id is not null then 'IN_ANALYSIS'::public.payment_schedule_state
-        when o.manual_attempt_count > 0 then 'FAILED'::public.payment_schedule_state
+        -- Ambiguous manual timeout: hold for getTransaction reconcile (do not FAILED→rotate).
+        when o.manual_attempt_count > 0 then 'IN_ANALYSIS'::public.payment_schedule_state
         when o.automatic_attempt_count = 0 then 'SCHEDULED'::public.payment_schedule_state
         when not exists (
           select 1

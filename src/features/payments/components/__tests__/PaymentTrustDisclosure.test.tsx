@@ -16,6 +16,9 @@ describe("PaymentTrustDisclosure", () => {
       screen.getByRole("region", { name: /Informações sobre pagamento seguro/i }),
     ).toBeInTheDocument();
     expect(screen.getByText(/parceiro certificado/i)).toBeInTheDocument();
+    expect(screen.getByText(/não armazena o número completo/i)).toBeInTheDocument();
+    expect(screen.getByText(/serviço seguro da plataforma/i)).toBeInTheDocument();
+    expect(screen.getByText(/recalculadas no momento da cobrança/i)).toBeInTheDocument();
 
     const termsLink = screen.getByRole("link", { name: /Termos de Uso/i });
     expect(termsLink).toHaveAttribute("href", "https://renovi.com.br/juridico/termos-de-uso");

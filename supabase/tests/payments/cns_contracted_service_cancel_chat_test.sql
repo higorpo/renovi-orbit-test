@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(51);
+select plan(52);
 
 create or replace function pg_temp.cns_seed_chat(
   p_service_request_id uuid,
@@ -302,13 +302,13 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key
-  )
+    charge_scheduled_at, state, idempotency_key,
+    gateway_reference_code)
   values (
     v_pre_paid_id, v_fixture.client_id, v_provider_id, 'netcred',
     1, 100.00, 10.00, 90.00, now() + interval '5 days',
-    'SCHEDULED'::public.payment_schedule_state, v_pre_paid_id::text
-  );
+    'SCHEDULED'::public.payment_schedule_state, v_pre_paid_id::text,
+    v_pre_paid_id);
 
   -- post-PAID full refund (>48h)
   select * into v_fixture from pg_temp.cns_seed_cancel_chat_fixture(
@@ -317,14 +317,14 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key, paid_at, paid_amount, gateway_transaction_id
-  )
+    charge_scheduled_at, state, idempotency_key, paid_at, paid_amount, gateway_transaction_id,
+    gateway_reference_code)
   values (
     v_post_paid_id, v_fixture.client_id, v_provider_id, 'netcred',
     1, 100.00, 10.00, 90.00, now() - interval '1 day',
     'PAID'::public.payment_schedule_state, v_post_paid_id::text,
-    now() - interval '1 day', 110.00, 'txn-cancel-chat-full'
-  );
+    now() - interval '1 day', 110.00, 'txn-cancel-chat-full',
+    v_post_paid_id);
 
   -- PENALTY_10 (tomorrow morning)
   select * into v_fixture from pg_temp.cns_seed_cancel_chat_fixture(
@@ -333,14 +333,14 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key, paid_at, paid_amount, gateway_transaction_id
-  )
+    charge_scheduled_at, state, idempotency_key, paid_at, paid_amount, gateway_transaction_id,
+    gateway_reference_code)
   values (
     v_penalty_id, v_fixture.client_id, v_provider_id, 'netcred',
     1, 100.00, 10.00, 90.00, now() - interval '1 day',
     'PAID'::public.payment_schedule_state, v_penalty_id::text,
-    now() - interval '1 day', 110.00, 'txn-cancel-chat-penalty'
-  );
+    now() - interval '1 day', 110.00, 'txn-cancel-chat-penalty',
+    v_penalty_id);
 
   -- PENALTY_30 (today morning — execution already passed or <12h)
   select * into v_fixture from pg_temp.cns_seed_cancel_chat_fixture(
@@ -349,14 +349,14 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key, paid_at, paid_amount, gateway_transaction_id
-  )
+    charge_scheduled_at, state, idempotency_key, paid_at, paid_amount, gateway_transaction_id,
+    gateway_reference_code)
   values (
     v_penalty30_id, v_fixture.client_id, v_provider_id, 'netcred',
     1, 100.00, 10.00, 90.00, now() - interval '1 day',
     'PAID'::public.payment_schedule_state, v_penalty30_id::text,
-    now() - interval '1 day', 110.00, 'txn-cancel-chat-penalty30'
-  );
+    now() - interval '1 day', 110.00, 'txn-cancel-chat-penalty30',
+    v_penalty30_id);
 
   -- provider post-PAID refund
   select * into v_fixture from pg_temp.cns_seed_cancel_chat_fixture(
@@ -365,14 +365,14 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key, paid_at, paid_amount, gateway_transaction_id
-  )
+    charge_scheduled_at, state, idempotency_key, paid_at, paid_amount, gateway_transaction_id,
+    gateway_reference_code)
   values (
     v_provider_refund_id, v_fixture.client_id, v_provider_id, 'netcred',
     1, 100.00, 10.00, 90.00, now() - interval '1 day',
     'PAID'::public.payment_schedule_state, v_provider_refund_id::text,
-    now() - interval '1 day', 110.00, 'txn-cancel-chat-provider'
-  );
+    now() - interval '1 day', 110.00, 'txn-cancel-chat-provider',
+    v_provider_refund_id);
 
   -- provider pre-PAID cancel
   select * into v_fixture from pg_temp.cns_seed_cancel_chat_fixture(
@@ -381,13 +381,13 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key
-  )
+    charge_scheduled_at, state, idempotency_key,
+    gateway_reference_code)
   values (
     v_provider_pre_id, v_fixture.client_id, v_provider_id, 'netcred',
     1, 100.00, 10.00, 90.00, now() + interval '2 days',
-    'SCHEDULED'::public.payment_schedule_state, v_provider_pre_id::text
-  );
+    'SCHEDULED'::public.payment_schedule_state, v_provider_pre_id::text,
+    v_provider_pre_id);
 
   -- auto-cancel NON_PAYMENT
   select * into v_fixture from pg_temp.cns_seed_cancel_chat_fixture(
@@ -396,13 +396,13 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key, failure_reason
-  )
+    charge_scheduled_at, state, idempotency_key, failure_reason,
+    gateway_reference_code)
   values (
     v_auto_id, v_fixture.client_id, v_provider_id, 'netcred',
     1, 100.00, 10.00, 90.00, now() - interval '1 hour',
-    'FAILED'::public.payment_schedule_state, v_auto_id::text, 'CARD_DECLINED'
-  );
+    'FAILED'::public.payment_schedule_state, v_auto_id::text, 'CARD_DECLINED',
+    v_auto_id);
 
   -- auto-cancel PROVIDER_SUSPENDED
   insert into public.provider_gateway_accounts (
@@ -421,13 +421,13 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key
-  )
+    charge_scheduled_at, state, idempotency_key,
+    gateway_reference_code)
   values (
     v_auto_suspended_id, v_fixture.client_id, v_suspended_provider_id, 'netcred',
     1, 100.00, 10.00, 90.00, now() - interval '1 hour',
-    'SCHEDULED'::public.payment_schedule_state, v_auto_suspended_id::text
-  );
+    'SCHEDULED'::public.payment_schedule_state, v_auto_suspended_id::text,
+    v_auto_suspended_id);
 
   -- contracted service without chat
   select * into v_fixture from pg_temp.cns_seed_cancel_chat_fixture(
@@ -843,6 +843,22 @@ select lives_ok(
   'idempotent refund request succeeds when already REFUND_REQUESTED'
 );
 
+-- FIX-005 / CHK-008: already_submitted=true only after gateway ACK (SUBMITTED).
+select lives_ok(
+  format(
+    $$ select public.payment_set_refund_submit_status(
+         (select id from public.payment_schedules
+          where contracted_service_id = %L::uuid),
+         'SUBMITTED'::public.payment_refund_submit_status,
+         %L::uuid,
+         null
+       ) $$,
+    current_setting('test.cancel_chat.post_paid'),
+    current_setting('test.cancel_chat.client_id')
+  ),
+  'mark refund SUBMITTED to simulate gateway ACK'
+);
+
 select is(
   (
     select public.payment_begin_refund_request(
@@ -853,7 +869,7 @@ select is(
     )->>'already_submitted'
   ),
   'true',
-  'idempotent refund request returns already_submitted=true'
+  'idempotent refund request returns already_submitted=true after gateway ACK'
 );
 
 select isnt(

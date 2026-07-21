@@ -54,6 +54,8 @@ export {
   fetchPaymentScheduleLifecycleByContractedService,
   listClientPaymentTransactions,
   listProviderPaymentReceivables,
+  markServiceExecuted,
+  confirmServiceCompleted,
   paymentsApi,
 } from "./api";
 

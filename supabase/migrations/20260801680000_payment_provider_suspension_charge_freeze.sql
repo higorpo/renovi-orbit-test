@@ -63,8 +63,14 @@ begin
   end if;
 
   if new.onboarding_status = 'ACTIVE'::public.payment_provider_onboarding_status
-    and new.netcred_company_id is null then
+    and nullif(btrim(new.netcred_company_id), '') is null then
     raise exception 'PROVIDER_NETCRED_COMPANY_ID_REQUIRED'
+      using errcode = 'P0001';
+  end if;
+
+  if new.onboarding_status = 'ACTIVE'::public.payment_provider_onboarding_status
+    and nullif(btrim(new.netcred_bank_account_id), '') is null then
+    raise exception 'PROVIDER_NETCRED_BANK_ACCOUNT_ID_REQUIRED'
       using errcode = 'P0001';
   end if;
 

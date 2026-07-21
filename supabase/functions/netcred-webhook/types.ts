@@ -4,11 +4,13 @@ export type PersistWebhookInput = {
   providerEventId: string;
   rawPayload: Record<string, unknown>;
   rawHeaders: Record<string, string>;
+  signatureValidated: boolean;
 };
 
 export type PersistWebhookResult =
   | { status: "inserted"; eventId: string }
-  | { status: "duplicate"; eventId: string };
+  | { status: "duplicate"; eventId: string }
+  | { status: "quarantined"; eventId: string };
 
 export type WebhookHandlerContext = {
   eventId: string;
@@ -21,7 +23,19 @@ export type WebhookHandlerResult = "processed" | "queued";
 export type ProcessWebhookRpcResult = {
   outcome: string;
   event_id?: string;
-  handler?: { outcome?: string; reason?: string };
+  handler?: {
+    outcome?: string;
+    reason?: string;
+    schedule_id?: string;
+    service_id?: string;
+    sentry_alert?: {
+      kind?: string;
+      schedule_id?: string;
+      service_id?: string;
+      event_id?: string;
+      gateway_transaction_id?: string | null;
+    };
+  };
 };
 
 export type NetcredWebhookRunSummary = {

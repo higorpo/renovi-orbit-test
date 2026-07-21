@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(3);
+select plan(4);
 
 create or replace function pg_temp.payment_set_service_role()
 returns void
@@ -28,7 +28,8 @@ select throws_ok(
     12::smallint,
     2030::smallint,
     'Test Client',
-    '{"street":"Rua A","number":"1","district":"Centro","city":"SP","state":"SP","zipCode":"01001000"}'::jsonb
+    '{"street":"Rua A","number":"1","district":"Centro","city":"SP","state":"SP","zipCode":"01001000"}'::jsonb,
+    '1014'
   ) $$,
   '42501',
   'service_role required for payment_persist_client_card_token',
@@ -47,7 +48,8 @@ select is(
     12::smallint,
     2030::smallint,
     'Test Client',
-    '{"street":"Rua A","number":"1","district":"Centro","city":"SP","state":"SP","zipCode":"01001000"}'::jsonb
+    '{"street":"Rua A","number":"1","district":"Centro","city":"SP","state":"SP","zipCode":"01001000"}'::jsonb,
+    '1014'
   )->>'state',
   'ACTIVE',
   'persists ACTIVE client card token for service_role'
@@ -59,9 +61,28 @@ select ok(
     from public.client_card_tokens cct
     where cct.client_id = '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid
       and cct.gateway_payment_profile_id = 'pgtap-persist-profile-1'
+      and cct.netcred_company_id = '1014'
       and cct.state = 'ACTIVE'
   ),
-  'token row exists after persist RPC'
+  'token row exists after persist RPC with netcred_company_id'
+);
+
+select throws_ok(
+  $$ select public.payment_persist_client_card_token(
+    '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
+    'pgtap-profile-missing-company',
+    '497010XXXXXX0048',
+    'MASTER',
+    'opaque-token',
+    12::smallint,
+    2030::smallint,
+    'Test Client',
+    '{"street":"Rua A","number":"1","district":"Centro","city":"SP","state":"SP","zipCode":"01001000"}'::jsonb,
+    '   '
+  ) $$,
+  '22023',
+  'p_netcred_company_id is required',
+  'rejects blank netcred_company_id'
 );
 
 select finish();

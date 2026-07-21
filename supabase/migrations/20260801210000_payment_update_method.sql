@@ -185,10 +185,21 @@ declare
   v_installment_number smallint;
   v_installment_changed boolean;
   v_requires_hmac boolean;
+  v_rate_limit jsonb;
 begin
   if auth.uid() is null then
     raise exception 'Authentication required for payment_update_method'
       using errcode = '42501';
+  end if;
+
+  v_rate_limit := public.platform_check_rate_limit(
+    format('payment_update_method:%s', auth.uid()),
+    10
+  );
+
+  if not coalesce((v_rate_limit->>'allowed')::boolean, false) then
+    raise exception 'RATE_LIMITED'
+      using errcode = 'P0001';
   end if;
 
   if p_service_id is null or p_new_client_card_token_id is null then
@@ -230,6 +241,15 @@ begin
       using
         errcode = 'P0001',
         detail = jsonb_build_object('code', 'PAYMENT_TOKEN_INACTIVE')::text;
+  end if;
+
+  -- Token must be issued under Renovi platform NetCred company (marketplace model).
+  if nullif(btrim(v_new_token.netcred_company_id), '')
+    is distinct from public.payment_netcred_platform_company_id() then
+    raise exception 'PAYMENT_TOKEN_COMPANY_MISMATCH'
+      using
+        errcode = 'P0001',
+        detail = jsonb_build_object('code', 'PAYMENT_TOKEN_COMPANY_MISMATCH')::text;
   end if;
 
   v_new_brand := upper(trim(v_new_token.card_brand));

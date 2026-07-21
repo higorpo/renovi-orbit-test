@@ -128,13 +128,13 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, installment_number,
     base_amount, commission_rate_pct, provider_payout, charge_scheduled_at,
-    state, idempotency_key
-  )
+    state, idempotency_key,
+    gateway_reference_code)
   values (
     v_service_id, v_client_id, v_provider_id, 1,
     100.00, 10.00, 90.00, now() + interval '2 days',
-    'SCHEDULED'::public.payment_schedule_state, v_service_id::text
-  )
+    'SCHEDULED'::public.payment_schedule_state, v_service_id::text,
+    v_service_id)
   returning id into v_schedule_id;
 
   insert into public.payment_attempts (

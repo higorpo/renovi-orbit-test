@@ -14,6 +14,8 @@ import {
   emitMissingClearSaleSessionWarning,
   emitProviderMultipleEdgesWarning,
   emitReconciliationFailureWarning,
+  emitWebhookAuthFailSpikeWarning,
+  emitFailedPermanentSpikeWarning,
   setPaymentSentryRecordersForTests,
 } from "../payment-sentry-matrix.ts";
 
@@ -169,11 +171,23 @@ Deno.test("dispatchPaymentSentryAlerts routes auto_cancel and dead_letter alerts
         gateway_event_id: "gw-1",
         failure_reason: "timeout",
       },
+      {
+        kind: "webhook_auth_fail_spike",
+        count_15m: 12,
+        threshold: 10,
+      },
+      {
+        kind: "failed_permanent_spike",
+        count_15m: 8,
+        threshold: 5,
+      },
     ]);
 
-    assertEquals(dispatched, 2);
+    assertEquals(dispatched, 4);
     assertEquals(messages.includes("payment_service_auto_cancelled"), true);
     assertEquals(messages.includes("WEBHOOK_DEAD_LETTER"), true);
+    assertEquals(messages.includes("payment_webhook_auth_fail_spike"), true);
+    assertEquals(messages.includes("payment_failed_permanent_spike"), true);
   } finally {
     setPaymentSentryRecordersForTests({});
   }
@@ -233,7 +247,10 @@ Deno.test("emitProviderMultipleEdgesWarning and emitReconciliationFailureWarning
     onMessage: (record) => messages.push(record.message),
   });
   try {
-    await emitProviderMultipleEdgesWarning({ document: "123", edges_count: 2 });
+    await emitProviderMultipleEdgesWarning({
+      document_suffix: "0181",
+      edges_count: 2,
+    });
     await emitReconciliationFailureWarning({
       schedule_id: "sch-1",
       service_id: "svc-1",
@@ -241,6 +258,23 @@ Deno.test("emitProviderMultipleEdgesWarning and emitReconciliationFailureWarning
     });
     assertEquals(messages.includes("provider_multiple_company_edges"), true);
     assertEquals(messages.includes("payment_reconciliation_failure_threshold"), true);
+  } finally {
+    setPaymentSentryRecordersForTests({});
+  }
+});
+
+Deno.test("emitWebhookAuthFailSpikeWarning and emitFailedPermanentSpikeWarning record", async () => {
+  const messages: Array<{ message: string; extra: Record<string, unknown> }> = [];
+  setPaymentSentryRecordersForTests({
+    onMessage: (record) => messages.push(record),
+  });
+  try {
+    await emitWebhookAuthFailSpikeWarning({ count_15m: 15, threshold: 10 });
+    await emitFailedPermanentSpikeWarning({ count_15m: 7, threshold: 5 });
+    assertEquals(messages[0]?.message, "payment_webhook_auth_fail_spike");
+    assertEquals(messages[0]?.extra.count_15m, 15);
+    assertEquals(messages[1]?.message, "payment_failed_permanent_spike");
+    assertEquals(messages[1]?.extra.threshold, 5);
   } finally {
     setPaymentSentryRecordersForTests({});
   }
@@ -350,7 +384,10 @@ Deno.test("captureMessage path with DSN set remains non-blocking", async () => {
     onMessage: () => {},
   });
   try {
-    await emitProviderMultipleEdgesWarning({ document: "123", edges_count: 2 });
+    await emitProviderMultipleEdgesWarning({
+      document_suffix: "1234",
+      edges_count: 2,
+    });
     await capturePaymentException(new Error("with dsn"), { schedule_id: "sch-dsn" });
   } finally {
     setPaymentSentryRecordersForTests({});

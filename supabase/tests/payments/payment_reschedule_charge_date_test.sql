@@ -84,7 +84,7 @@ where sr.id = '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid;
 create temp table _reschedule_slot as
 select jsonb_build_object(
   'start_date', (current_date + 7)::text,
-  'end_date', (current_date + 7)::text,
+  'end_date', (current_date + 8)::text,
   'shift', 'morning'
 ) as selected_slot;
 
@@ -100,7 +100,7 @@ select
     gen_random_uuid(),
     pricing.original_amount,
     'reschedule pgTAP proposal',
-    1,
+    2,
     'days',
     jsonb_build_array((select selected_slot from _reschedule_slot)),
     '{}'::text[],

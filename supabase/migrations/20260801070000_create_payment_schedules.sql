@@ -44,7 +44,13 @@ create table public.payment_schedules (
   cancelled_at timestamptz,
   refunded_at timestamptz,
   paid_amount numeric(12, 2),
+  -- Amount frozen at claim / manual lease; commit validates against this (not live fees).
+  claimed_charge_amount numeric(12, 2),
   refunded_amount numeric(12, 2),
+  -- Gateway ACK machine for refunds (CHK-008). Null until first REFUND_REQUESTED.
+  refund_submit_status public.payment_refund_submit_status,
+  -- Snapshot of service execution_at at first PAID (audit). ToS refund tiers use live payment_service_execution_at.
+  refund_anchor_execution_at timestamptz,
   failure_code text,
   failure_reason text,
   cancellation_reason text,
@@ -76,13 +82,22 @@ comment on column public.payment_schedules.max_attempts is
   'Informational snapshot at accept; cron evaluates platform_constants.max_charge_attempts at runtime.';
 
 comment on column public.payment_schedules.clearsale_session_id is
-  'Client fraud-session identifier; service_role and client participant reads only.';
+  'ClearSale session UUID minted by payment_issue_clearsale_session and consumed at accept/manual; reused by T-2 cron.';
 
 comment on column public.payment_schedules.client_ip_address is
-  'Client IP at accept/manual charge; service_role and client participant reads only.';
+  'Client IP from Edge request headers on manual charge; accept path does not trust client-asserted IP.';
 
 comment on column public.payment_schedules.gateway_reference_code is
-  'NetCred chargeCreate referenceCode (UUID). Equals contracted_service_id initially; rotated on each manual retry.';
+  'NetCred chargeCreate referenceCode (UUID). Equals contracted_service_id initially; Edge rotates only after getTransaction confirms REJECTED/VOIDED/absent.';
+
+comment on column public.payment_schedules.claimed_charge_amount is
+  'Charge amount frozen when cron claim or manual attempt leases PROCESSING; payment_commit_charge_outcome validates against this so mid-flight fee changes cannot CHARGE_AMOUNT_MISMATCH.';
+
+comment on column public.payment_schedules.refund_submit_status is
+  'PENDING_GATEWAY|SUBMITTED|CONFIRMED|FAILED. already_submitted to Edge only when SUBMITTED or CONFIRMED.';
+
+comment on column public.payment_schedules.refund_anchor_execution_at is
+  'Service execution_at snapshot at first PAID (audit). Client ToS refund tiers use payment_service_execution_at (current slot after reschedule).';
 
 -- automatic_attempt_count filter uses platform_constants.max_charge_attempts at runtime (not in index).
 create index payment_schedules_queue_claim_idx
@@ -373,3 +388,271 @@ grant select (
 ) on table public.payment_schedules to authenticated;
 
 grant select, insert, update, delete on table public.payment_schedules to service_role;
+
+-- ClearSale device-fingerprint sessions: server-minted, TTL-bound, one-time consume (CHK-011/013).
+create table public.payment_clearsale_sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  purpose text not null
+    constraint payment_clearsale_sessions_purpose_check
+      check (purpose in ('accept', 'manual')),
+  proposal_id uuid references public.provider_proposals (id) on delete cascade,
+  schedule_id uuid references public.payment_schedules (id) on delete cascade,
+  expires_at timestamptz not null,
+  consumed_at timestamptz,
+  created_at timestamptz not null default now(),
+  constraint payment_clearsale_sessions_binding_check check (
+    (
+      purpose = 'accept'
+      and proposal_id is not null
+      and schedule_id is null
+    )
+    or (
+      purpose = 'manual'
+      and schedule_id is not null
+      and proposal_id is null
+    )
+  )
+);
+
+comment on table public.payment_clearsale_sessions is
+  'Server-issued ClearSale sessionIds bound to user+proposal (accept) or user+schedule (manual); one-time consume.';
+
+create index payment_clearsale_sessions_active_accept_idx
+  on public.payment_clearsale_sessions (user_id, proposal_id, expires_at)
+  where purpose = 'accept' and consumed_at is null;
+
+create index payment_clearsale_sessions_active_manual_idx
+  on public.payment_clearsale_sessions (user_id, schedule_id, expires_at)
+  where purpose = 'manual' and consumed_at is null;
+
+alter table public.payment_clearsale_sessions enable row level security;
+
+revoke all on table public.payment_clearsale_sessions from public;
+revoke all on table public.payment_clearsale_sessions from anon;
+revoke all on table public.payment_clearsale_sessions from authenticated;
+
+grant select, insert, update, delete on table public.payment_clearsale_sessions to service_role;
+
+create or replace function public.payment_issue_clearsale_session(
+  p_purpose text,
+  p_proposal_id uuid default null,
+  p_schedule_id uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_actor uuid := auth.uid();
+  v_ttl_minutes int;
+  v_session_id uuid;
+  v_expires_at timestamptz;
+  v_sr_client_id uuid;
+  v_schedule_client_id uuid;
+begin
+  if v_actor is null then
+    raise exception 'Authentication required for payment_issue_clearsale_session'
+      using errcode = '42501';
+  end if;
+
+  if p_purpose is null or p_purpose not in ('accept', 'manual') then
+    raise exception 'CLEARSALE_PURPOSE_INVALID'
+      using
+        errcode = '22023',
+        detail = jsonb_build_object('code', 'CLEARSALE_PURPOSE_INVALID')::text;
+  end if;
+
+  v_ttl_minutes := public.platform_constant_int('clearsale_session_ttl_minutes', 120);
+
+  if p_purpose = 'accept' then
+    if p_proposal_id is null or p_schedule_id is not null then
+      raise exception 'CLEARSALE_PURPOSE_INVALID'
+        using
+          errcode = '22023',
+          detail = jsonb_build_object('code', 'CLEARSALE_PURPOSE_INVALID')::text;
+    end if;
+
+    select sr.client_id
+    into v_sr_client_id
+    from public.provider_proposals pp
+    join public.service_requests sr on sr.id = pp.service_request_id
+    where pp.id = p_proposal_id;
+
+    if v_sr_client_id is null then
+      raise exception 'PROPOSAL_NOT_FOUND'
+        using
+          errcode = 'P0002',
+          detail = jsonb_build_object('code', 'PROPOSAL_NOT_FOUND')::text;
+    end if;
+
+    if v_sr_client_id is distinct from v_actor then
+      raise exception 'CLEARSALE_SESSION_FORBIDDEN'
+        using
+          errcode = '42501',
+          detail = jsonb_build_object('code', 'CLEARSALE_SESSION_FORBIDDEN')::text;
+    end if;
+
+    insert into public.payment_clearsale_sessions (
+      user_id,
+      purpose,
+      proposal_id,
+      expires_at
+    )
+    values (
+      v_actor,
+      'accept',
+      p_proposal_id,
+      now() + make_interval(mins => v_ttl_minutes)
+    )
+    returning id, expires_at into v_session_id, v_expires_at;
+  else
+    if p_schedule_id is null or p_proposal_id is not null then
+      raise exception 'CLEARSALE_PURPOSE_INVALID'
+        using
+          errcode = '22023',
+          detail = jsonb_build_object('code', 'CLEARSALE_PURPOSE_INVALID')::text;
+    end if;
+
+    select ps.client_id
+    into v_schedule_client_id
+    from public.payment_schedules ps
+    where ps.id = p_schedule_id;
+
+    if v_schedule_client_id is null then
+      raise exception 'SCHEDULE_NOT_FOUND'
+        using
+          errcode = 'P0002',
+          detail = jsonb_build_object('code', 'SCHEDULE_NOT_FOUND')::text;
+    end if;
+
+    if v_schedule_client_id is distinct from v_actor then
+      raise exception 'CLEARSALE_SESSION_FORBIDDEN'
+        using
+          errcode = '42501',
+          detail = jsonb_build_object('code', 'CLEARSALE_SESSION_FORBIDDEN')::text;
+    end if;
+
+    insert into public.payment_clearsale_sessions (
+      user_id,
+      purpose,
+      schedule_id,
+      expires_at
+    )
+    values (
+      v_actor,
+      'manual',
+      p_schedule_id,
+      now() + make_interval(mins => v_ttl_minutes)
+    )
+    returning id, expires_at into v_session_id, v_expires_at;
+  end if;
+
+  return jsonb_build_object(
+    'session_id', v_session_id,
+    'expires_at', v_expires_at,
+    'purpose', p_purpose
+  );
+end;
+$$;
+
+comment on function public.payment_issue_clearsale_session(text, uuid, uuid) is
+  'Mints a ClearSale session UUID bound to the authenticated client and proposal (accept) or schedule (manual).';
+
+revoke all on function public.payment_issue_clearsale_session(text, uuid, uuid) from public;
+revoke all on function public.payment_issue_clearsale_session(text, uuid, uuid) from anon;
+grant execute on function public.payment_issue_clearsale_session(text, uuid, uuid) to authenticated;
+grant execute on function public.payment_issue_clearsale_session(text, uuid, uuid) to service_role;
+
+create or replace function public.payment_consume_clearsale_session(
+  p_session_id text,
+  p_user_id uuid,
+  p_purpose text,
+  p_proposal_id uuid default null,
+  p_schedule_id uuid default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_session public.payment_clearsale_sessions%rowtype;
+  v_session_uuid uuid;
+begin
+  if p_session_id is null or btrim(p_session_id) = '' then
+    raise exception 'CLEARSALE_SESSION_REQUIRED'
+      using
+        errcode = 'P0001',
+        detail = jsonb_build_object('code', 'CLEARSALE_SESSION_REQUIRED')::text;
+  end if;
+
+  begin
+    v_session_uuid := btrim(p_session_id)::uuid;
+  exception
+    when invalid_text_representation then
+      raise exception 'CLEARSALE_SESSION_INVALID'
+        using
+          errcode = 'P0001',
+          detail = jsonb_build_object('code', 'CLEARSALE_SESSION_INVALID')::text;
+  end;
+
+  if p_purpose is null or p_purpose not in ('accept', 'manual') then
+    raise exception 'CLEARSALE_PURPOSE_INVALID'
+      using
+        errcode = '22023',
+        detail = jsonb_build_object('code', 'CLEARSALE_PURPOSE_INVALID')::text;
+  end if;
+
+  select *
+  into v_session
+  from public.payment_clearsale_sessions pcs
+  where pcs.id = v_session_uuid
+  for update;
+
+  if not found
+    or v_session.user_id is distinct from p_user_id
+    or v_session.purpose is distinct from p_purpose
+    or (
+      p_purpose = 'accept'
+      and v_session.proposal_id is distinct from p_proposal_id
+    )
+    or (
+      p_purpose = 'manual'
+      and v_session.schedule_id is distinct from p_schedule_id
+    )
+  then
+    raise exception 'CLEARSALE_SESSION_INVALID'
+      using
+        errcode = 'P0001',
+        detail = jsonb_build_object('code', 'CLEARSALE_SESSION_INVALID')::text;
+  end if;
+
+  if v_session.consumed_at is not null then
+    raise exception 'CLEARSALE_SESSION_USED'
+      using
+        errcode = 'P0001',
+        detail = jsonb_build_object('code', 'CLEARSALE_SESSION_USED')::text;
+  end if;
+
+  if v_session.expires_at < now() then
+    raise exception 'CLEARSALE_SESSION_EXPIRED'
+      using
+        errcode = 'P0001',
+        detail = jsonb_build_object('code', 'CLEARSALE_SESSION_EXPIRED')::text;
+  end if;
+
+  update public.payment_clearsale_sessions
+  set consumed_at = now()
+  where id = v_session.id;
+end;
+$$;
+
+comment on function public.payment_consume_clearsale_session(text, uuid, text, uuid, uuid) is
+  'Validates and one-time-consumes a server-issued ClearSale session; called by accept_proposal and payment_begin_manual_attempt.';
+
+revoke all on function public.payment_consume_clearsale_session(text, uuid, text, uuid, uuid) from public;
+revoke all on function public.payment_consume_clearsale_session(text, uuid, text, uuid, uuid) from anon;
+revoke all on function public.payment_consume_clearsale_session(text, uuid, text, uuid, uuid) from authenticated;
+grant execute on function public.payment_consume_clearsale_session(text, uuid, text, uuid, uuid) to service_role;

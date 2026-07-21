@@ -62,6 +62,7 @@ declare
     'schedule-netcred-charges',
     'detect-netcred-onboarding',
     'reconcile-netcred-payments',
+    'reconcile-inanalysis-auto-cancel-voids',
     'payment-emit-sentry-alerts'
   ];
 begin
@@ -130,17 +131,24 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_timeout_ms int := 55000;
 begin
+  -- schedule-netcred-charges: raise above legacy 55s so batch_size 3 × gateway RTT fits.
+  if nullif(btrim(p_function_name), '') = 'schedule-netcred-charges' then
+    v_timeout_ms := 90000;
+  end if;
+
   return public.orbit_invoke_edge_function(
     p_function_name,
     '{}'::jsonb,
-    55000
+    v_timeout_ms
   );
 end;
 $$;
 
 comment on function public.payment_cron_invoke_edge_function(text) is
-  'Payment cron wrapper: delegates to orbit_invoke_edge_function (allowlist enforced there).';
+  'Payment cron wrapper: delegates to orbit_invoke_edge_function (allowlist enforced there). Uses 90s timeout for schedule-netcred-charges.';
 
 create or replace function public.payment_cron_post_sentry_alerts(
   p_alerts jsonb

@@ -182,7 +182,7 @@ begin
   insert into public.client_card_tokens (
     id,
     client_id,
-    gateway_payment_profile_id,
+    gateway_payment_profile_id, netcred_company_id,
     card_number_masked,
     card_brand,
     gateway_card_token,
@@ -195,7 +195,7 @@ begin
     (
       v_client_card_id,
       v_client_id,
-      'matrix-client-profile',
+      'matrix-client-profile', '1014',
       '411111******1111',
       'VISA',
       'opaque-client-token',
@@ -207,7 +207,7 @@ begin
     (
       v_stranger_card_id,
       v_stranger_id,
-      'matrix-stranger-profile',
+      'matrix-stranger-profile', '1014',
       '555555******4444',
       'MASTERCARD',
       'opaque-stranger-token',
@@ -244,8 +244,8 @@ begin
     provider_payout,
     charge_scheduled_at,
     state,
-    idempotency_key
-  )
+    idempotency_key,
+    gateway_reference_code)
   values (
     v_service_id,
     v_client_id,
@@ -257,8 +257,8 @@ begin
     90.00,
     now() + interval '2 days',
     'SCHEDULED'::public.payment_schedule_state,
-    v_service_id::text
-  )
+    v_service_id::text,
+    v_service_id)
   on conflict (contracted_service_id) do nothing
   returning id into v_schedule_id;
 
@@ -303,7 +303,8 @@ begin
     event_type,
     gateway_event_id,
     raw_payload,
-    raw_headers
+    raw_headers,
+    signature_validated
   )
   values (
     v_webhook_event_id,
@@ -311,9 +312,10 @@ begin
     'CHARGE_PAID',
     'matrix-webhook-event-1',
     '{"referenceCode":"matrix"}'::jsonb,
-    '{"x-test":"1"}'::jsonb
+    '{"x-test":"1"}'::jsonb,
+    true
   )
-  on conflict (gateway_slug, event_type, gateway_event_id) do nothing;
+  on conflict (gateway_slug, event_type, gateway_event_id) where (signature_validated) do nothing;
 
   insert into public.payment_webhook_processing_queue (
     webhook_event_id,
@@ -489,12 +491,12 @@ select is(
 select throws_ok(
   $$ insert into public.payment_schedules (
        contracted_service_id, client_id, provider_id, installment_number,
-       base_amount, commission_rate_pct, provider_payout, charge_scheduled_at, idempotency_key
-     ) values (
+       base_amount, commission_rate_pct, provider_payout, charge_scheduled_at, idempotency_key,
+    gateway_reference_code) values (
        gen_random_uuid(), current_setting('payment.rls.client_id')::uuid,
        current_setting('payment.rls.provider_id')::uuid, 1,
-       100, 10, 90, now(), gen_random_uuid()::text
-     ) $$,
+       100, 10, 90, now(), gen_random_uuid()::text,
+    gen_random_uuid()) $$,
   '42501',
   null,
   'authenticated cannot insert payment_schedules directly'
@@ -502,10 +504,10 @@ select throws_ok(
 
 select throws_ok(
   $$ insert into public.client_card_tokens (
-       client_id, gateway_payment_profile_id, card_number_masked, card_brand,
+       client_id, gateway_payment_profile_id, netcred_company_id, card_number_masked, card_brand,
        gateway_card_token, expiry_month, expiry_year, cardholder_name, billing_address
      ) values (
-       current_setting('payment.rls.client_id')::uuid, 'blocked-profile', '0000', 'VISA',
+       current_setting('payment.rls.client_id')::uuid, 'blocked-profile', '1014', '0000', 'VISA',
        'blocked', 1, 2030, 'Blocked', '{}'::jsonb
      ) $$,
   '42501',

@@ -23,6 +23,7 @@ create table public.client_card_tokens (
   client_id uuid not null references public.profiles (id) on delete restrict,
   gateway_slug public.payment_gateway_slug not null default 'netcred',
   gateway_payment_profile_id text not null,
+  netcred_company_id text not null,
   card_number_masked text not null,
   card_brand text not null,
   gateway_card_token text not null,
@@ -38,14 +39,19 @@ create table public.client_card_tokens (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint client_card_tokens_client_profile_unique
-    unique (client_id, gateway_payment_profile_id)
+    unique (client_id, gateway_payment_profile_id),
+  constraint client_card_tokens_netcred_company_id_nonempty
+    check (length(btrim(netcred_company_id)) > 0)
 );
 
 comment on table public.client_card_tokens is
   'Gateway-issued card tokens per client. No raw PAN or CVV columns (PCI).';
 
 comment on column public.client_card_tokens.gateway_payment_profile_id is
-  'NetCred paymentProfile.id — opaque gateway reference.';
+  'NetCred paymentProfile.id — opaque gateway reference; service_role / charge pipeline only.';
+
+comment on column public.client_card_tokens.netcred_company_id is
+  'NetCred companyId used at tokenization; always Renovi platform company. Accept/charge MUST match payment_netcred_platform_company_id(). chargeCreate uses provider company separately.';
 
 comment on column public.client_card_tokens.gateway_card_token is
   'NetCred paymentProfile.token — opaque gateway reference; not exposed via client_card_tokens_safe_v.';
@@ -78,7 +84,6 @@ select
   cct.id,
   cct.client_id,
   cct.gateway_slug,
-  cct.gateway_payment_profile_id,
   cct.card_number_masked,
   cct.card_brand,
   cct.expiry_month,
@@ -90,7 +95,7 @@ select
 from public.client_card_tokens cct;
 
 comment on view public.client_card_tokens_safe_v is
-  'Client-facing card token read model; excludes gateway_card_token and billing_address (PCI).';
+  'Client-facing card token read model; excludes gateway_payment_profile_id, gateway_card_token, billing_address, and netcred_company_id (PCI).';
 
 revoke all on table public.client_card_tokens from public;
 revoke all on table public.client_card_tokens from anon;
@@ -102,7 +107,6 @@ grant select (
   id,
   client_id,
   gateway_slug,
-  gateway_payment_profile_id,
   card_number_masked,
   card_brand,
   expiry_month,
@@ -125,3 +129,39 @@ revoke all on function public.payment_client_card_token_is_expired(smallint, sma
 
 grant execute on function public.payment_client_card_token_is_expired(smallint, smallint) to service_role;
 grant execute on function public.payment_client_card_token_is_expired(smallint, smallint) to authenticated;
+
+-- Mirrors Edge NETCRED_PLATFORM_COMPANY_ID (must stay in sync via Vault provisioning).
+create or replace function public.payment_netcred_platform_company_id()
+returns text
+language plpgsql
+stable
+security definer
+set search_path = public, vault
+as $$
+declare
+  v_company_id text;
+begin
+  select nullif(btrim(ds.decrypted_secret), '')
+  into v_company_id
+  from vault.decrypted_secrets ds
+  where ds.name = 'netcred_platform_company_id'
+  limit 1;
+
+  if v_company_id is null then
+    raise exception 'NETCRED_PLATFORM_COMPANY_ID_NOT_CONFIGURED'
+      using
+        errcode = 'P0001',
+        detail = jsonb_build_object('code', 'NETCRED_PLATFORM_COMPANY_ID_NOT_CONFIGURED')::text;
+  end if;
+
+  return v_company_id;
+end;
+$$;
+
+comment on function public.payment_netcred_platform_company_id() is
+  'Vault netcred_platform_company_id — Renovi platform merchant that owns card payment profiles.';
+
+revoke all on function public.payment_netcred_platform_company_id() from public;
+revoke all on function public.payment_netcred_platform_company_id() from anon;
+revoke all on function public.payment_netcred_platform_company_id() from authenticated;
+grant execute on function public.payment_netcred_platform_company_id() to service_role;

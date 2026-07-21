@@ -73,6 +73,7 @@ Deno.test("multiple edges emits warning and skips activation", () => {
   });
 
   assertEquals(outcome.action, "warning_multiple_edges");
+  assertEquals(outcome.edgesCount, 2);
 
   if (outcome.action === "warning_multiple_edges") {
     warningEmitted = true;
@@ -260,6 +261,8 @@ Deno.test("activates provider and sleeps between full batches", async () => {
 });
 
 Deno.test("multiple edges path increments warnings and skipped", async () => {
+  let warningExtra: Record<string, unknown> | undefined;
+
   const deps: DetectNetcredOnboardingDeps = {
     loadPendingProviders: async () => [account],
     fetchCompaniesBatch: async () => ({
@@ -274,7 +277,9 @@ Deno.test("multiple edges path increments warnings and skipped", async () => {
       throw new Error("should not activate");
     },
     markUnderReview: async () => {},
-    emitWarning: () => {},
+    emitWarning: (_message, extra) => {
+      warningExtra = extra;
+    },
     sleep: async () => {},
   };
 
@@ -292,6 +297,9 @@ Deno.test("multiple edges path increments warnings and skipped", async () => {
     assertEquals(body.warnings, 1);
     assertEquals(body.skipped, 1);
     assertEquals(body.activated, 0);
+    assertEquals(warningExtra?.document_suffix, "0181");
+    assertEquals(warningExtra?.edges_count, 2);
+    assertEquals("document" in (warningExtra ?? {}), false);
   } finally {
     Deno.env.delete("SUPABASE_SERVICE_ROLE_KEY");
     Deno.env.delete("ENVIRONMENT");

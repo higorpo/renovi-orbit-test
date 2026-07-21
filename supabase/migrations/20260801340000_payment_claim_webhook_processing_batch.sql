@@ -31,8 +31,10 @@ begin
   with eligible as (
     select q.id
     from public.payment_webhook_processing_queue q
+    inner join public.payment_webhook_events e on e.id = q.webhook_event_id
     where q.state = 'PENDING'::public.payment_webhook_queue_state
       and q.scheduled_at <= now()
+      and e.signature_validated
     order by q.scheduled_at
     limit v_batch_size
     for update of q skip locked

@@ -2,6 +2,7 @@ import { generateIdempotencyKeyV7 } from "@/lib/utils/idempotencyKey";
 import { logger } from "@/lib/logger";
 import { metrics } from "@/lib/sentry";
 import { supabase } from "@/lib/supabase/client";
+import { acceptProposalWithPayment as paymentsAcceptProposalWithPayment } from "@/features/payments/api/checkout.api";
 import type { ProposalDetailAudience, ProposalDetailView } from "../types/proposalDetails.types";
 import type {
   AcceptProposalResult,
@@ -131,28 +132,34 @@ export async function createProviderProposal(
   );
 }
 
+/** CHK-040: delegate to payments.acceptProposalWithPayment (single owner). */
 export async function acceptProposalWithPayment(
   params: AcceptProposalWithPaymentParams,
 ): Promise<ProposalsApiResult<AcceptProposalResult>> {
-  const idempotencyKey = params.idempotencyKey ?? generateIdempotencyKeyV7();
+  const result = await paymentsAcceptProposalWithPayment(params);
 
-  return invokeRpc(
-    CNS_PROPOSAL_RPC.acceptProposal,
-    {
-      p_proposal_id: params.proposalId,
-      p_selected_slot: params.selectedSlot,
-      p_idempotency_key: idempotencyKey,
-      p_client_card_token_id: params.clientCardTokenId,
-      p_installment_number: params.installmentNumber,
-      p_installment_selection_hmac: params.installmentSelectionHmac,
-      p_installment_hmac_payload: params.installmentHmacPayload,
-      p_clearsale_session_id: params.clearsaleSessionId,
-      p_pricing_signature: params.pricingSignature,
-      p_client_ip: params.clientIp,
-    },
-    isAcceptProposalResult,
-    "proposals_accept_with_payment_invalid_response",
-  );
+  if (result.error) {
+    const code = result.errorCode ?? "UNKNOWN";
+    const mapped = mapProposalRpcError({
+      message: code,
+      details: JSON.stringify({ code }),
+    });
+    return {
+      data: null,
+      error: {
+        ...mapped,
+        message:
+          mapped.code === "UNKNOWN"
+            ? (result.error ?? mapped.message)
+            : mapped.message,
+      },
+    };
+  }
+
+  return {
+    data: result.data as AcceptProposalResult | null,
+    error: null,
+  };
 }
 
 export async function rejectProposal(params: {

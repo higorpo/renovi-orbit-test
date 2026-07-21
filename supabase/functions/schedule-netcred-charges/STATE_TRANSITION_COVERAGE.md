@@ -32,6 +32,7 @@
 - **Task 78:** concurrent dequeue SKIP LOCKED (pgTAP + parallel clients).
 - **Task 79:** webhook dedup and out-of-order delivery (netcred-webhook tests).
 - **Production parity:** harness mirrors RPC semantics; pgTAP remains authoritative for SQL triggers.
+- **FIX-010:** leftover `PROCESSING` policy — see `PROCESSING_LEFTOVER_POLICY.md` (commit-after-success retry, MMD non-fatal, deadline skips, orphan-before-claim).
 
 ## Run
 

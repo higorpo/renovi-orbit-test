@@ -42,14 +42,15 @@ begin
   v_hours := extract(epoch from (p_service_scheduled_at - p_now)) / 3600.0;
 
   -- FULL_REFUND: entire amount paid (base + card fees). Penalty tiers apply to base_amount only.
+  -- CHK-042g: never refund more than charged (LEAST clamp).
   if v_hours > 48 then
     v_refund_amount := round(p_charge_amount, 2);
     v_penalty_tier := 'FULL_REFUND';
   elsif v_hours >= 12 then
-    v_refund_amount := round(p_base_amount * 0.90, 2);
+    v_refund_amount := least(round(p_base_amount * 0.90, 2), round(p_charge_amount, 2));
     v_penalty_tier := 'PENALTY_10';
   else
-    v_refund_amount := round(p_base_amount * 0.70, 2);
+    v_refund_amount := least(round(p_base_amount * 0.70, 2), round(p_charge_amount, 2));
     v_penalty_tier := 'PENALTY_30';
   end if;
 

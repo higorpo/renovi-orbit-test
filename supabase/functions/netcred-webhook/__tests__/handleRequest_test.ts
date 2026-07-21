@@ -97,8 +97,12 @@ Deno.test("rate limit exceeded returns 429 with Retry-After", async () => {
   assertEquals(rateLimitWarningEmitted, true);
 });
 
-Deno.test("invalid signature returns 401 and marks event failed", async () => {
-  let failedReason = "";
+Deno.test("invalid signature returns 401 and quarantines without processing", async () => {
+  let signatureValidated: boolean | undefined;
+  let persistStatus: string | undefined;
+  let failedCalled = false;
+  let warningEmitted = false;
+  let processed = false;
 
   const response = await handleNetcredWebhookRequest(
     webhookRequest('{"id":"evt-1"}', {
@@ -106,20 +110,60 @@ Deno.test("invalid signature returns 401 and marks event failed", async () => {
       signature: "deadbeef",
     }),
     createDeps({
-      markFailed: async (_eventId, reason) => {
-        failedReason = reason;
+      persistWebhookEvent: async (input) => {
+        signatureValidated = input.signatureValidated;
+        persistStatus = "quarantined";
+        return { status: "quarantined", eventId: "event-1" };
       },
-      emitInvalidSignatureWarning: () => {},
+      markFailed: async () => {
+        failedCalled = true;
+      },
+      processWebhookEvent: async () => {
+        processed = true;
+        return { outcome: "processed" };
+      },
+      emitInvalidSignatureWarning: () => {
+        warningEmitted = true;
+      },
     }),
   );
 
   assertEquals(response.status, 401);
-  assertEquals(failedReason, "INVALID_SIGNATURE");
+  assertEquals(signatureValidated, false);
+  assertEquals(persistStatus, "quarantined");
+  assertEquals(failedCalled, false);
+  assertEquals(warningEmitted, true);
+  assertEquals(processed, false);
 });
 
-Deno.test("invalid signature does not mutate state beyond ingest", async () => {
+Deno.test("invalid signature auth path is not retryable (no markFailed FAILED)", async () => {
+  let markFailedReason = "";
+  let persistedValidated: boolean | undefined;
+
+  const response = await handleNetcredWebhookRequest(
+    webhookRequest('{"id":"evt-auth-dead"}', {
+      eventType: "TRANSACTION_CAPTURE",
+      signature: "deadbeef",
+    }),
+    createDeps({
+      persistWebhookEvent: async (input) => {
+        persistedValidated = input.signatureValidated;
+        return { status: "quarantined", eventId: "event-auth-dead" };
+      },
+      markFailed: async (_eventId, reason) => {
+        markFailedReason = reason;
+      },
+    }),
+  );
+
+  assertEquals(response.status, 401);
+  assertEquals(persistedValidated, false);
+  // Quarantine is DEAD_LETTER via ingest; handler must not leave retryable FAILED.
+  assertEquals(markFailedReason, "");
+});
+
+Deno.test("invalid signature does not mutate state beyond quarantine ingest", async () => {
   let persisted = false;
-  let failedReason = "";
   let warningEmitted = false;
   let duplicateMarked = false;
   let validatingMarked = false;
@@ -132,12 +176,10 @@ Deno.test("invalid signature does not mutate state beyond ingest", async () => {
       signature: "deadbeef",
     }),
     createDeps({
-      persistWebhookEvent: async () => {
+      persistWebhookEvent: async (input) => {
         persisted = true;
-        return { status: "inserted", eventId: "event-invalid" };
-      },
-      markFailed: async (_eventId, reason) => {
-        failedReason = reason;
+        assertEquals(input.signatureValidated, false);
+        return { status: "quarantined", eventId: "event-invalid" };
       },
       markDuplicate: async () => {
         duplicateMarked = true;
@@ -160,7 +202,6 @@ Deno.test("invalid signature does not mutate state beyond ingest", async () => {
 
   assertEquals(response.status, 401);
   assertEquals(persisted, true);
-  assertEquals(failedReason, "INVALID_SIGNATURE");
   assertEquals(warningEmitted, true);
   assertEquals(duplicateMarked, false);
   assertEquals(validatingMarked, false);
@@ -168,16 +209,38 @@ Deno.test("invalid signature does not mutate state beyond ingest", async () => {
   assertEquals(queued, false);
 });
 
-Deno.test("duplicate webhook returns 200 and marks duplicate", async () => {
-  let duplicateMarked = false;
+Deno.test("webhook IP rate limit uses failClosed:true", async () => {
+  let seenFailClosed: boolean | undefined;
 
   const response = await handleNetcredWebhookRequest(
-    webhookRequest('{"id":"evt-dup"}', { eventType: "WEBHOOK_PING" }),
+    webhookRequest('{"id":"evt-1"}', { eventType: "WEBHOOK_PING" }),
     createDeps({
-      persistWebhookEvent: async () => ({
-        status: "duplicate",
-        eventId: "event-dup",
-      }),
+      checkIPRateLimit: async (_ip, _endpoint, config) => {
+        seenFailClosed = config.failClosed;
+        return { allowed: false, remaining: 0, retryAfter: 15 };
+      },
+    }),
+  );
+
+  assertEquals(response.status, 429);
+  assertEquals(seenFailClosed, true);
+});
+
+Deno.test("duplicate webhook returns 200 and marks duplicate", async () => {
+  let duplicateMarked = false;
+  const rawBody = '{"id":"evt-dup"}';
+  const signature = await computeHMACSHA256("test-webhook-secret", rawBody);
+
+  const response = await handleNetcredWebhookRequest(
+    webhookRequest(rawBody, { eventType: "WEBHOOK_PING", signature }),
+    createDeps({
+      persistWebhookEvent: async (input) => {
+        assertEquals(input.signatureValidated, true);
+        return {
+          status: "duplicate",
+          eventId: "event-dup",
+        };
+      },
       markDuplicate: async () => {
         duplicateMarked = true;
       },
@@ -308,8 +371,11 @@ Deno.test("OPTIONS returns 204 and GET returns 405", async () => {
 });
 
 Deno.test("persist failure returns 500", async () => {
+  const rawBody = '{"id":"evt-1"}';
+  const signature = await computeHMACSHA256("test-webhook-secret", rawBody);
+
   const response = await handleNetcredWebhookRequest(
-    webhookRequest('{"id":"evt-1"}', { eventType: "WEBHOOK_PING" }),
+    webhookRequest(rawBody, { eventType: "WEBHOOK_PING", signature }),
     createDeps({
       persistWebhookEvent: async () => {
         throw new Error("db unavailable");
@@ -460,8 +526,11 @@ Deno.test("handler not_found outcome enqueues deferred processing", async () => 
 });
 
 Deno.test("persist failure with non-Error still returns persist_failed", async () => {
+  const rawBody = '{"id":"evt-1"}';
+  const signature = await computeHMACSHA256("test-webhook-secret", rawBody);
+
   const response = await handleNetcredWebhookRequest(
-    webhookRequest('{"id":"evt-1"}', { eventType: "WEBHOOK_PING" }),
+    webhookRequest(rawBody, { eventType: "WEBHOOK_PING", signature }),
     createDeps({
       persistWebhookEvent: async () => {
         throw "db unavailable string";

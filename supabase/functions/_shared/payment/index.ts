@@ -5,6 +5,13 @@ export {
   type RiskAnalysisFailureCode,
 } from "./map-rejected-reason.ts";
 
+export {
+  isRiskAnalysisFailureCode,
+  toClientFacingChargeFailureCode,
+  toOpaqueTokenizeClientError,
+  type ClientFacingChargeFailureCode,
+} from "./client-facing-errors.ts";
+
 export type {
   BillingAddress,
   BoletoCharge,

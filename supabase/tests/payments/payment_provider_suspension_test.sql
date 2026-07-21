@@ -91,12 +91,12 @@ begin
   );
 
   insert into public.client_card_tokens (
-    id, client_id, gateway_slug, gateway_payment_profile_id, card_number_masked,
+    id, client_id, gateway_slug, gateway_payment_profile_id, netcred_company_id, card_number_masked,
     card_brand, gateway_card_token, expiry_month, expiry_year, cardholder_name,
     billing_address, state
   )
   values (
-    v_card_token_id, v_client_id, 'netcred', 'profile-suspension-pgtap',
+    v_card_token_id, v_client_id, 'netcred', 'profile-suspension-pgtap', '1014',
     '497010XXXXXX0048', 'VCC', 'token-suspension-pgtap', 12, 2030,
     'Suspension Test', '{}'::jsonb, 'ACTIVE'::public.payment_client_card_token_state
   );
@@ -137,15 +137,15 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     client_card_token_id, installment_number, base_amount, commission_rate_pct,
-    provider_payout, charge_scheduled_at, state, idempotency_key
-  )
+    provider_payout, charge_scheduled_at, state, idempotency_key,
+    gateway_reference_code)
   values (
     v_service_id, v_fixture.client_id, v_provider_id, 'netcred',
     v_fixture.card_token_id, 1, 100.00, 10.00, 90.00,
     now() - interval '1 hour',
     'SCHEDULED'::public.payment_schedule_state,
-    v_service_id::text
-  );
+    v_service_id::text,
+    v_service_id);
 
   perform set_config('test.suspension.service_id', v_service_id::text, true);
   perform set_config('test.suspension.provider_id', v_provider_id::text, true);

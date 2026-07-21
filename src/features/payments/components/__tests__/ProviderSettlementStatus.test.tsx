@@ -12,13 +12,17 @@ vi.mock("../ProviderSettlementDisclosure", () => ({
   ProviderSettlementDisclosure: ({
     capturePaidAt,
     showCompletionNote,
+    settlementOnHold,
+    holdReason,
   }: {
     capturePaidAt: string;
     showCompletionNote?: boolean;
+    settlementOnHold?: boolean;
+    holdReason?: string;
   }) => (
     <div data-testid="settlement-disclosure">
-      {capturePaidAt}
-      {showCompletionNote ? " with-note" : ""}
+      {settlementOnHold ? `hold:${holdReason}` : capturePaidAt}
+      {!settlementOnHold && showCompletionNote ? " with-note" : ""}
     </div>
   ),
 }));
@@ -46,6 +50,7 @@ describe("ProviderSettlementStatus", () => {
         schedule: {
           state: "PAID",
           paidAt: "2026-07-01T00:00:00.000Z",
+          isDisputed: false,
         },
       },
     });
@@ -56,5 +61,35 @@ describe("ProviderSettlementStatus", () => {
       "2026-07-01T00:00:00.000Z",
     );
     expect(screen.getByTestId("settlement-disclosure")).toHaveTextContent("with-note");
+  });
+
+  it("shows hold disclosure for REFUND_REQUESTED and disputes", () => {
+    mockUsePaymentSchedule.mockReturnValue({
+      data: {
+        schedule: {
+          state: "REFUND_REQUESTED",
+          paidAt: "2026-07-01T00:00:00.000Z",
+          isDisputed: false,
+        },
+      },
+    });
+
+    const { rerender } = render(
+      <ProviderSettlementStatus contractedServiceId="service-1" />,
+    );
+
+    expect(screen.getByTestId("settlement-disclosure")).toHaveTextContent("hold:refund");
+
+    mockUsePaymentSchedule.mockReturnValue({
+      data: {
+        schedule: {
+          state: "PAID",
+          paidAt: "2026-07-01T00:00:00.000Z",
+          isDisputed: true,
+        },
+      },
+    });
+    rerender(<ProviderSettlementStatus contractedServiceId="service-1" />);
+    expect(screen.getByTestId("settlement-disclosure")).toHaveTextContent("hold:dispute");
   });
 });

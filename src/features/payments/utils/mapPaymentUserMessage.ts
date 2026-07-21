@@ -26,6 +26,7 @@ const PAYMENT_USER_MESSAGES: Record<string, string> = {
     "O prestador ainda não está apto a receber pagamentos. Tente novamente mais tarde.",
   PROVIDER_NOT_CREDENTIALED:
     "O prestador ainda não está apto a receber pagamentos. Tente novamente mais tarde.",
+  PROFILE_INCOMPLETE: "Complete seu CPF e telefone no checkout antes de confirmar.",
   method_not_allowed: "Não foi possível concluir a operação. Tente novamente.",
   forbidden: "Você não tem permissão para esta ação.",
   Unauthorized: "Sua sessão expirou. Entre novamente para continuar.",
@@ -34,9 +35,15 @@ const PAYMENT_USER_MESSAGES: Record<string, string> = {
   RATE_LIMIT_EXCEEDED: "Muitas tentativas em pouco tempo. Aguarde um momento e tente novamente.",
   PAYMENT_ALREADY_IN_PROGRESS: "Já existe um pagamento em andamento. Aguarde e tente novamente.",
   CLEARSALE_SESSION_REQUIRED: "Aguarde a inicialização da verificação de segurança.",
+  CLEARSALE_SESSION_INVALID: "Não foi possível validar a verificação de segurança. Tente novamente.",
+  CLEARSALE_SESSION_STALE: "A verificação de segurança expirou. Atualize a tela e tente novamente.",
+  CLEARSALE_SESSION_USED: "A verificação de segurança já foi utilizada. Atualize a tela e tente novamente.",
+  CLEARSALE_SESSION_EXPIRED: "A verificação de segurança expirou. Atualize a tela e tente novamente.",
   PAYMENT_TOKEN_MISSING: "Nenhum cartão vinculado a este pagamento. Adicione um cartão e tente novamente.",
   PAYMENT_TOKEN_INACTIVE:
     "Este cartão não está mais disponível. Selecione ou adicione outro cartão.",
+  PAYMENT_TOKEN_COMPANY_MISMATCH:
+    "Este cartão não está vinculado à empresa de pagamento da Renovi. Adicione o cartão novamente.",
   CHARGE_AMOUNT_CALCULATION_FAILED:
     "Não foi possível calcular o valor do pagamento. Tente novamente.",
   COMMIT_FAILED: "Não foi possível concluir o pagamento. Tente novamente em instantes.",
@@ -47,6 +54,11 @@ const PAYMENT_USER_MESSAGES: Record<string, string> = {
   SERVICE_AUTO_CANCELLED: "Este serviço foi cancelado automaticamente por falta de pagamento.",
   TERMINAL: "Não foi possível concluir o pagamento com este cartão. Tente outro cartão.",
   RETRYABLE: "Não foi possível concluir o pagamento. Tente novamente em instantes.",
+  // FIX-007 coarse client buckets (Edge returns these; fine codes stay in DB/logs)
+  CARD_REJECTED:
+    "Não foi possível cadastrar este cartão. Verifique os dados ou tente outro cartão.",
+  RISK_REJECTED:
+    "Seu pagamento foi recusado pela análise de segurança. Tente outro cartão ou fale com o suporte.",
 
   // ClearSale / NetCred risk analysis (rejectedReason → stable codes)
   RISK_ANALYSIS_NO_CONTACT:

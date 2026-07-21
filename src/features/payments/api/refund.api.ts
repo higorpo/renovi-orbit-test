@@ -20,6 +20,14 @@ export type ProcessRefundResult = {
   status?: number;
 };
 
+function isRefundFailedPayload(payload: Record<string, unknown>): boolean {
+  return (
+    payload.error === "refund_failed" ||
+    payload.refund_submit_status === "FAILED" ||
+    payload.error_code === "refund_failed"
+  );
+}
+
 export async function processContractedServiceRefund(request: {
   contractedServiceId: string;
   cancellationReason?: string;
@@ -32,22 +40,33 @@ export async function processContractedServiceRefund(request: {
     },
   );
 
-  if (!ok) {
-    const { message, errorCode } = mapEdgeErrorPayload(payload, "Falha ao cancelar serviço");
+  // Gateway FAILED must never surface as toast success (CHK-008).
+  if (!ok || isRefundFailedPayload(payload)) {
+    const { message, errorCode } = mapEdgeErrorPayload(
+      isRefundFailedPayload(payload) && ok
+        ? { ...payload, error: "refund_failed", error_code: "refund_failed" }
+        : payload,
+      "Falha ao cancelar serviço",
+    );
+
+    const resolvedCode =
+      (isRefundFailedPayload(payload) ? "refund_failed" : null) ??
+      errorCode ??
+      message;
 
     logger.warn("process_refund_failed", {
       contractedServiceId: request.contractedServiceId,
-      status,
-      errorCode,
+      status: isRefundFailedPayload(payload) && ok ? 500 : status,
+      errorCode: resolvedCode,
       error: message,
+      refundSubmitStatus: payload.refund_submit_status,
     });
 
-    const resolvedCode = errorCode ?? message;
     return {
       data: null,
       error: mapCancellationErrorMessage(resolvedCode),
       errorCode: resolvedCode,
-      status,
+      status: isRefundFailedPayload(payload) && ok ? 500 : status,
     };
   }
 

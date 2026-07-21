@@ -88,6 +88,8 @@ export function mapToNetCredChargeInput(
   const paymentMethod = assertCreditCardCharge(input);
   const serviceTitle = resolveNetCredServiceTitle(input.serviceTitle);
   const chargeExtraInfo = buildNetCredChargeExtraInfo(input.serviceTitle);
+  // Cards are tokenized under the Renovi platform company; chargeCreate still
+  // uses the provider merchant so payout bank accounts belong to that company.
   const companyId = Number.parseInt(
     input.payoutRule.providerAccount.netcredCompanyId,
     10,

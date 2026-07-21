@@ -29,6 +29,7 @@ export type PaymentTokenRecord = {
   gateway_payment_profile_id: string;
   gateway_card_token: string;
   state: string;
+  netcred_company_id: string;
 };
 
 export type ProviderAccountRecord = {
@@ -45,6 +46,10 @@ export type ManualChargeAcquireErrorCode =
   | "SCHEDULE_NOT_FOUND"
   | "SERVICE_CANCELLED"
   | "CLEARSALE_SESSION_REQUIRED"
+  | "CLEARSALE_SESSION_INVALID"
+  | "CLEARSALE_SESSION_STALE"
+  | "CLEARSALE_SESSION_USED"
+  | "CLEARSALE_SESSION_EXPIRED"
   | "PAYMENT_TOKEN_INACTIVE"
   | "RATE_LIMIT_EXCEEDED";
 

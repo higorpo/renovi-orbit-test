@@ -117,6 +117,7 @@ Deno.test("createCharge parses PAID response correctly", async () => {
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () => chargeCreateResponse("PAID"),
   });
@@ -133,6 +134,7 @@ Deno.test("createCharge maps REJECTED to TERMINAL error", async () => {
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () => chargeCreateResponse("REJECTED"),
   });
@@ -149,6 +151,7 @@ Deno.test("createCharge maps risk-analysis rejectedReason to stable failure code
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () =>
       chargeCreateResponse(
@@ -173,6 +176,7 @@ Deno.test("createCharge maps network timeout to RETRYABLE error", async () => {
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () => {
       throw new DOMException("The operation was aborted.", "AbortError");
@@ -192,6 +196,7 @@ Deno.test("referenceCode conflict reconciles via getTransaction", async () => {
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () => {
       callCount += 1;
@@ -256,6 +261,7 @@ Deno.test("refundTransaction maps ALREADY_REFUNDED to idempotent success", async
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () => new Response(
       JSON.stringify({
@@ -286,6 +292,7 @@ Deno.test("tokenizeCard includes email in customerInput", async () => {
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async (_url, init) => {
       requestBody = JSON.parse(String(init?.body ?? "{}"));
@@ -318,6 +325,7 @@ Deno.test("tokenizeCard surfaces rejectedReason when profile is inactive", async
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () => new Response(
       JSON.stringify({
@@ -348,6 +356,7 @@ Deno.test("tokenizeCard throws BILLING_ADDRESS_REQUIRED before gateway call in p
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     isProduction: true,
     fetchFn: async () => {
@@ -380,6 +389,7 @@ Deno.test("AdapterRegistry.get returns configured netcred adapter", () => {
   configureAdapterRegistry({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
   });
 
@@ -391,6 +401,7 @@ Deno.test("AdapterRegistry.get throws for unknown gateway slug", () => {
   configureAdapterRegistry({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
   });
 
@@ -433,6 +444,7 @@ Deno.test("NetCredAdapter.createCharge aborts sandbox credentials in production"
   configureAdapterRegistry({
     supabase,
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     username: "user",
     password: "pass",
@@ -476,6 +488,7 @@ Deno.test("NetCredAdapter.createCharge emits gateway span for chargeCreate", asy
     const adapter = new NetCredAdapter({
       supabase: createSupabaseStub(),
       platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
       fetchFn: async () => chargeCreateResponse("PAID"),
     });
@@ -491,6 +504,7 @@ Deno.test("createCharge returns RETRYABLE when chargeCreate has no transaction s
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () =>
       new Response(
@@ -521,6 +535,7 @@ Deno.test("createCharge maps terminal gateway errors to TERMINAL", async () => {
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () =>
       new Response(
@@ -548,6 +563,7 @@ Deno.test("createCharge maps REJECTED gateway error code to REJECTED transaction
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () =>
       new Response(
@@ -575,6 +591,7 @@ Deno.test("createCharge maps INTERNAL_SERVER_ERROR and unknown gateway errors to
   const adapterInternal = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () =>
       new Response(
@@ -598,6 +615,7 @@ Deno.test("createCharge maps INTERNAL_SERVER_ERROR and unknown gateway errors to
   const adapterUnknown = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () =>
       new Response(
@@ -623,6 +641,7 @@ Deno.test("createCharge maps TypeError network failure to RETRYABLE", async () =
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () => {
       throw new TypeError("fetch failed");
@@ -640,6 +659,7 @@ Deno.test("createCharge rethrows non-network errors", async () => {
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () => {
       throw new Error("unexpected adapter failure");
@@ -660,6 +680,7 @@ Deno.test("referenceCode conflict reconciles existing REJECTED as TERMINAL", asy
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () => {
       callCount += 1;
@@ -700,6 +721,7 @@ Deno.test("referenceCode conflict with unreconcilable state is TERMINAL", async 
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () => {
       callCount += 1;
@@ -737,6 +759,7 @@ Deno.test("referenceCode conflict reconciles existing IN_ANALYSIS as success", a
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () => {
       callCount += 1;
@@ -771,6 +794,7 @@ Deno.test("reconcileFromExisting returns REFERENCE_CODE_CONFLICT when existing i
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
   });
 
@@ -785,6 +809,7 @@ Deno.test("processWebhookEvent always delegates to edge function", async () => {
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
   });
 
@@ -805,6 +830,7 @@ Deno.test("refundTransaction success and invalid transactionId", async () => {
   const successAdapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () =>
       new Response(
@@ -829,6 +855,7 @@ Deno.test("refundTransaction success and invalid transactionId", async () => {
   const invalidAdapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () => new Response("{}", { status: 200 }),
   });
@@ -844,6 +871,7 @@ Deno.test("refundTransaction maps gateway error codes", async () => {
     const adapter = new NetCredAdapter({
       supabase: createSupabaseStub(),
       platformBankAccountId: "2052",
+    platformCompanyId: "1014",
       graphqlUrl: TEST_GRAPHQL_URL,
       fetchFn: async () =>
         new Response(
@@ -888,6 +916,7 @@ Deno.test("refundTransaction maps network error to UNKNOWN", async () => {
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () => {
       throw new TypeError("offline");
@@ -905,6 +934,7 @@ Deno.test("tokenizeCard maps gateway errors and inactive profile without reason"
   const gatewayErrorAdapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () =>
       new Response(
@@ -928,6 +958,7 @@ Deno.test("tokenizeCard maps gateway errors and inactive profile without reason"
   const inactiveAdapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () =>
       new Response(
@@ -953,6 +984,7 @@ Deno.test("tokenizeCard maps network error and throws for invalid companyId", as
   const networkAdapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () => {
       throw new TypeError("tokenize offline");
@@ -966,6 +998,7 @@ Deno.test("tokenizeCard maps network error and throws for invalid companyId", as
   const invalidCompanyAdapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn: async () => new Response("{}", { status: 200 }),
   });
@@ -986,6 +1019,7 @@ Deno.test("createCharge accepts graphqlUrl override without /graphql suffix", as
   const adapter = new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: "https://api.netcredbrasil.com.br/",
     fetchFn: async (url) => {
       requestedUrl = String(url);

@@ -129,6 +129,31 @@ describe("processContractedServiceRefund", () => {
     );
   });
 
+  it("treats FAILED refund_submit_status as error even when HTTP ok", async () => {
+    mockInvokePaymentEdgeFunction.mockResolvedValue({
+      ok: true,
+      status: 200,
+      payload: {
+        schedule_id: "sched-fail",
+        refund_submit_status: "FAILED",
+        error: "refund_failed",
+      },
+    });
+    mockMapEdgeErrorPayload.mockReturnValue({
+      message: "refund_failed",
+      errorCode: "refund_failed",
+    });
+
+    const result = await processContractedServiceRefund({
+      contractedServiceId: "service-failed",
+    });
+
+    expect(result.data).toBeNull();
+    expect(result.errorCode).toBe("refund_failed");
+    expect(result.error).toContain("estorno");
+    expect(result.status).toBe(500);
+  });
+
   it("uses message as code when errorCode is missing", async () => {
     mockInvokePaymentEdgeFunction.mockResolvedValue({
       ok: false,

@@ -89,7 +89,7 @@ Set in repo root `.env` (loaded by Supabase CLI) **and** mirror `ORBIT_CRON_SECR
 
 ```bash
 ORBIT_SUPABASE_URL=http://127.0.0.1:54321
-ORBIT_CRON_SECRET=local-dev-orbit-cron-secret-min-32-chars
+ORBIT_CRON_SECRET=CHANGE_ME_GENERATE_RANDOM_32+
 ```
 
 After changing vault env vars: restart Supabase (`supabase stop && supabase start`) or `yarn db:reset`.

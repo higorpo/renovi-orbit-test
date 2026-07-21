@@ -10,6 +10,13 @@ import type { CronChargeSchedule, CronRunSummary } from "./types.ts";
 
 const logger = createPaymentLogger("schedule-netcred-charges");
 
+/**
+ * Wall-clock budget for sequential charge processing under pg_net invoke timeout.
+ * Default leaves headroom under 90s charge-cron timeout (and legacy 55s).
+ * Leftover claimed schedules stay PROCESSING until lease orphan (see PROCESSING_LEFTOVER_POLICY.md).
+ */
+export const DEFAULT_INVOKE_DEADLINE_MS = 45_000;
+
 export type ScheduleNetcredChargesDeps = {
   dequeueSchedules: (batchSize?: number) => Promise<CronChargeSchedule[]>;
   processSchedule: (
@@ -17,6 +24,11 @@ export type ScheduleNetcredChargesDeps = {
   ) => Promise<Awaited<ReturnType<typeof processSchedule>>>;
   captureException: (error: unknown, extra: Record<string, unknown>) => void;
   maxAttempts: number;
+  /** Override invoke start (tests). */
+  invokeStartedAtMs?: number;
+  /** Stop starting new charges after this many ms (default 45s). */
+  invokeDeadlineMs?: number;
+  now?: () => number;
 };
 
 function emptySummary(): CronRunSummary {
@@ -28,6 +40,7 @@ function emptySummary(): CronRunSummary {
     in_analysis: 0,
     reconciled: 0,
     errors: 0,
+    skipped_deadline: 0,
   };
 }
 
@@ -50,10 +63,27 @@ export async function handleScheduleNetcredChargesRequest(
     return jsonResponse({ error: auth.code }, auth.status, cors);
   }
 
+  const now = deps.now ?? Date.now;
+  const startedAt = deps.invokeStartedAtMs ?? now();
+  const deadlineMs = deps.invokeDeadlineMs ?? DEFAULT_INVOKE_DEADLINE_MS;
+
   const schedules = await deps.dequeueSchedules();
   const summary = emptySummary();
 
   for (const schedule of schedules) {
+    if (now() - startedAt >= deadlineMs) {
+      // Unstarted claimed rows stay PROCESSING until lease orphan (CHK-022 policy).
+      summary.skipped_deadline = schedules.length - summary.processed;
+      logger.warn(PAYMENT_LOG_EVENTS.CHARGE_BATCH_DEADLINE_REACHED, {
+        schedule_id: schedule.id,
+        service_id: schedule.contracted_service_id,
+        elapsed_ms: now() - startedAt,
+        deadline_ms: deadlineMs,
+        skipped_deadline: summary.skipped_deadline,
+      });
+      break;
+    }
+
     summary.processed += 1;
 
     try {

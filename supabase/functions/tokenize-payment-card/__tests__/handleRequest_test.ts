@@ -32,10 +32,6 @@ function createDeps(overrides: Partial<TokenizePaymentCardDeps> = {}): TokenizeP
       error: null,
     }),
     validateCheckoutAccess: async () => {},
-    resolveProviderAccount: async () => ({
-      providerUserId: "provider-1",
-      netcredCompanyId: "1048",
-    }),
     resolvePlatformCompany: async () => ({
       providerUserId: "platform",
       netcredCompanyId: "1014",
@@ -200,7 +196,7 @@ Deno.test("cpf and phone from body are forwarded to tokenization", async () => {
   assertEquals(tokenizePhone, "48999999999");
 });
 
-Deno.test("inactive profile rejectedReason is returned to the client", async () => {
+Deno.test("inactive profile rejectedReason is returned as opaque CARD_REJECTED", async () => {
   const response = await handleTokenizePaymentCardRequest(
     authRequest({
       cardData,
@@ -221,8 +217,38 @@ Deno.test("inactive profile rejectedReason is returned to the client", async () 
 
   assertEquals(response.status, 422);
   const body = await response.json();
-  assertEquals(body.errors?.[0]?.message, "Antifraud rejected the transaction");
-  assertEquals(body.errors?.[0]?.code, "PAYMENT_PROFILE_REJECTED");
+  assertEquals(body.errors?.[0]?.message, "Card was rejected");
+  assertEquals(body.errors?.[0]?.code, "CARD_REJECTED");
+  assertEquals(
+    JSON.stringify(body).includes("PAYMENT_PROFILE_REJECTED"),
+    false,
+  );
+  assertEquals(JSON.stringify(body).includes("RISK_ANALYSIS_"), false);
+});
+
+Deno.test("gateway RISK_ANALYSIS codes are not exposed to tokenize clients", async () => {
+  const response = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      tokenizeContext: "profile",
+      ...customerFields,
+    }),
+    createDeps({
+      tokenizeCard: async () => ({
+        isActive: false,
+        errors: [{
+          message: "Suspeita de fraude",
+          code: "RISK_ANALYSIS_FRAUD_SUSPICION",
+        }],
+      }),
+    }),
+  );
+
+  assertEquals(response.status, 422);
+  const body = await response.json();
+  assertEquals(body.errors?.[0]?.code, "CARD_REJECTED");
+  assertEquals(JSON.stringify(body).includes("RISK_ANALYSIS_"), false);
 });
 
 Deno.test("missing billingAddress returns HTTP 422 before gateway call", async () => {
@@ -283,6 +309,7 @@ Deno.test("isActive=false returns HTTP 422 and does not persist token", async ()
 });
 
 Deno.test("successful tokenization persists token and returns masked metadata", async () => {
+  let persistedCompanyId: string | null = null;
   const response = await handleTokenizePaymentCardRequest(
     authRequest({
       cardData,
@@ -290,7 +317,16 @@ Deno.test("successful tokenization persists token and returns masked metadata", 
       providerServiceId: "proposal-1",
       ...customerFields,
     }),
-    createDeps(),
+    createDeps({
+      insertPaymentToken: async (input) => {
+        persistedCompanyId = input.netcredCompanyId;
+        return {
+          id: "token-1",
+          card_number_masked: "497010XXXXXX0048",
+          card_brand: "VCC",
+        };
+      },
+    }),
   );
 
   assertEquals(response.status, 200);
@@ -298,37 +334,57 @@ Deno.test("successful tokenization persists token and returns masked metadata", 
   assertEquals(body.payment_token_id, "token-1");
   assertEquals(body.card_number_masked, "497010XXXXXX0048");
   assertEquals(body.card_brand, "VCC");
+  assertEquals(persistedCompanyId, "1014");
 });
 
-Deno.test("profile context uses platform company without providerServiceId", async () => {
-  let resolveProviderCalled = false;
-  let resolvePlatformCalled = false;
+Deno.test("profile and checkout always use platform company", async () => {
+  let resolvePlatformCalled = 0;
+  let tokenizeCompanyId: string | undefined;
 
-  const response = await handleTokenizePaymentCardRequest(
+  const deps = createDeps({
+    resolvePlatformCompany: async () => {
+      resolvePlatformCalled += 1;
+      return {
+        providerUserId: "platform",
+        netcredCompanyId: "1014",
+      };
+    },
+    tokenizeCard: async (input) => {
+      tokenizeCompanyId = input.customerInput.companyId;
+      return {
+        isActive: true,
+        paymentProfileId: "403137",
+        cardNumberMasked: "497010XXXXXX0048",
+        cardBrand: "VCC",
+        token: "gateway-token",
+      };
+    },
+  });
+
+  const profile = await handleTokenizePaymentCardRequest(
     authRequest({
       cardData,
       billingAddress,
       tokenizeContext: "profile",
       ...customerFields,
     }),
-    createDeps({
-      resolveProviderAccount: async () => {
-        resolveProviderCalled = true;
-        return null;
-      },
-      resolvePlatformCompany: async () => {
-        resolvePlatformCalled = true;
-        return {
-          providerUserId: "platform",
-          netcredCompanyId: "1014",
-        };
-      },
-    }),
+    deps,
   );
+  assertEquals(profile.status, 200);
+  assertEquals(tokenizeCompanyId, "1014");
 
-  assertEquals(response.status, 200);
-  assertEquals(resolveProviderCalled, false);
-  assertEquals(resolvePlatformCalled, true);
+  const checkout = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      providerServiceId: "proposal-1",
+      ...customerFields,
+    }),
+    deps,
+  );
+  assertEquals(checkout.status, 200);
+  assertEquals(tokenizeCompanyId, "1014");
+  assertEquals(resolvePlatformCalled >= 2, true);
 });
 
 Deno.test("checkout context validates proposal ownership before gateway call", async () => {
@@ -439,8 +495,71 @@ Deno.test("rate limit exceeded returns HTTP 429 with Retry-After", async () => {
   assertEquals(body.error, "rate_limited");
 });
 
-Deno.test("provider_not_credentialed returns HTTP 409", async () => {
+Deno.test("profile tokenize enforces 3/min then daily cap keys", async () => {
+  const calls: Array<{
+    functionName: string;
+    perMinute: number;
+    windowMs?: number;
+  }> = [];
+
   const response = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      tokenizeContext: "profile",
+      ...customerFields,
+    }),
+    createDeps({
+      checkRateLimit: async (_ip, _userId, functionName, config) => {
+        calls.push({
+          functionName,
+          perMinute: config.perMinute,
+          windowMs: config.windowMs,
+        });
+        return { allowed: true, remaining: 1, retryAfter: 0 };
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(calls.length, 2);
+  assertEquals(calls[0]?.functionName, "tokenize-payment-card:profile");
+  assertEquals(calls[0]?.perMinute, 3);
+  assertEquals(calls[1]?.functionName, "tokenize-payment-card:profile:daily");
+  assertEquals(calls[1]?.perMinute, 30);
+  assertEquals(calls[1]?.windowMs, 86_400_000);
+});
+
+Deno.test("profile daily cap exceeded returns HTTP 429", async () => {
+  let call = 0;
+  const response = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      tokenizeContext: "profile",
+      ...customerFields,
+    }),
+    createDeps({
+      checkRateLimit: async () => {
+        call += 1;
+        if (call === 1) {
+          return { allowed: true, remaining: 2, retryAfter: 0 };
+        }
+        return { allowed: false, remaining: 0, retryAfter: 3600 };
+      },
+    }),
+  );
+
+  assertEquals(response.status, 429);
+  assertEquals(response.headers.get("Retry-After"), "3600");
+  const body = await response.json();
+  assertEquals(body.error, "rate_limited");
+});
+
+Deno.test("checkout tokenize uses checkout per-minute key only", async () => {
+  const calls: string[] = [];
+
+  await handleTokenizePaymentCardRequest(
     authRequest({
       cardData,
       billingAddress,
@@ -448,13 +567,30 @@ Deno.test("provider_not_credentialed returns HTTP 409", async () => {
       ...customerFields,
     }),
     createDeps({
-      resolveProviderAccount: async () => null,
+      checkRateLimit: async (_ip, _userId, functionName) => {
+        calls.push(functionName);
+        return { allowed: true, remaining: 9, retryAfter: 0 };
+      },
     }),
   );
 
-  assertEquals(response.status, 409);
+  assertEquals(calls, ["tokenize-payment-card:checkout"]);
+});
+
+Deno.test("checkout tokenize does not require provider credentialing (platform merchant)", async () => {
+  const response = await handleTokenizePaymentCardRequest(
+    authRequest({
+      cardData,
+      billingAddress,
+      providerServiceId: "proposal-1",
+      ...customerFields,
+    }),
+    createDeps(),
+  );
+
+  assertEquals(response.status, 200);
   const body = await response.json();
-  assertEquals(body.error, "provider_not_credentialed");
+  assertEquals(body.payment_token_id, "token-1");
 });
 
 Deno.test("persist failure returns HTTP 500", async () => {
@@ -582,10 +718,11 @@ Deno.test("inactive tokenization without errors array still returns 422", async 
   );
   assertEquals(response.status, 422);
   const body = await response.json();
-  assertEquals(body.errors?.[0]?.message, "Tokenization failed");
+  assertEquals(body.errors?.[0]?.code, "CARD_REJECTED");
+  assertEquals(body.errors?.[0]?.message, "Card was rejected");
 });
 
-Deno.test("inactive tokenization with empty errors array logs null error_code", async () => {
+Deno.test("inactive tokenization with empty errors array returns opaque CARD_REJECTED", async () => {
   const response = await handleTokenizePaymentCardRequest(
     authRequest({
       cardData,
@@ -602,5 +739,6 @@ Deno.test("inactive tokenization with empty errors array logs null error_code", 
   );
   assertEquals(response.status, 422);
   const body = await response.json();
-  assertEquals(body.errors, []);
+  assertEquals(body.errors?.[0]?.code, "CARD_REJECTED");
+  assertEquals(JSON.stringify(body).includes("RISK_ANALYSIS_"), false);
 });

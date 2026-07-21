@@ -54,3 +54,27 @@ Deno.test("buildPayoutRule rejects non-numeric amounts", () => {
     "INVALID_PAYOUT_AMOUNTS",
   );
 });
+
+Deno.test("buildPayoutRule rejects zero payout", () => {
+  assertThrows(
+    () => buildPayoutRule(sampleAccount, "0.00", "1030.00"),
+    Error,
+    "INVALID_PAYOUT_AMOUNTS",
+  );
+});
+
+Deno.test("buildPayoutRule rejects zero charge", () => {
+  assertThrows(
+    () => buildPayoutRule(sampleAccount, "850.00", "0.00"),
+    Error,
+    "INVALID_PAYOUT_AMOUNTS",
+  );
+});
+
+Deno.test("buildPayoutRule rejects payout greater than charge", () => {
+  assertThrows(
+    () => buildPayoutRule(sampleAccount, "1100.00", "1030.00"),
+    Error,
+    "INVALID_PAYOUT_AMOUNTS",
+  );
+});

@@ -33,6 +33,7 @@ function createDeps(overrides: Partial<ProcessRefundDeps> = {}): ProcessRefundDe
       alreadySubmitted: false,
     }),
     refundTransaction: async () => ({ success: true }),
+    markRefundSubmitted: async () => {},
     recordRefundFailed: async () => {},
     captureCriticalError: () => {},
     getSupportUrl: () => "https://renovi.com.br/suporte",
@@ -83,6 +84,7 @@ Deno.test("paid cancellation returns refund amount and expected_days", async () 
 });
 
 Deno.test("ALREADY_REFUNDED gateway response is treated as success", async () => {
+  let submitted = false;
   const response = await handleProcessRefundRequest(
     authRequest({ service_id: "service-1" }),
     createDeps({
@@ -90,14 +92,19 @@ Deno.test("ALREADY_REFUNDED gateway response is treated as success", async () =>
         success: false,
         error: { code: "ALREADY_REFUNDED", message: "already refunded" },
       }),
+      markRefundSubmitted: async () => {
+        submitted = true;
+      },
     }),
   );
 
   assertEquals(response.status, 200);
+  assertEquals(submitted, true);
 });
 
 Deno.test("gateway refund failure returns HTTP 500 with support_url", async () => {
   let failedRecorded = false;
+  let submittedMarked = false;
 
   const response = await handleProcessRefundRequest(
     authRequest({ service_id: "service-1" }),
@@ -106,6 +113,9 @@ Deno.test("gateway refund failure returns HTTP 500 with support_url", async () =
         success: false,
         error: { code: "UNKNOWN", message: "gateway unavailable" },
       }),
+      markRefundSubmitted: async () => {
+        submittedMarked = true;
+      },
       recordRefundFailed: async () => {
         failedRecorded = true;
       },
@@ -114,8 +124,64 @@ Deno.test("gateway refund failure returns HTTP 500 with support_url", async () =
 
   assertEquals(response.status, 500);
   assertEquals(failedRecorded, true);
+  assertEquals(submittedMarked, false);
   const body = await response.json();
   assertEquals(body.support_url, "https://renovi.com.br/suporte");
+  assertEquals(body.refund_submit_status, "FAILED");
+});
+
+Deno.test("gateway failure then retry invokes refundTransaction again", async () => {
+  let gatewayCalls = 0;
+  let submitCalls = 0;
+  let markedSubmitted = false;
+
+  const deps = createDeps({
+    submitRefundRequest: async () => {
+      submitCalls += 1;
+      // First begin → PENDING_GATEWAY; after fail, retry still already_submitted=false.
+      return {
+        scheduleId: "schedule-1",
+        providerTransactionId: "tx-1",
+        paidAmount: "1024.29",
+        baseAmount: "1000.00",
+        refundAmount: "1000.00",
+        penaltyTier: "FULL_REFUND",
+        alreadySubmitted: false,
+        refundSubmitStatus: submitCalls === 1 ? "PENDING_GATEWAY" : "PENDING_GATEWAY",
+      };
+    },
+    refundTransaction: async () => {
+      gatewayCalls += 1;
+      if (gatewayCalls === 1) {
+        return {
+          success: false,
+          error: { code: "UNKNOWN", message: "gateway unavailable" },
+        };
+      }
+      return { success: true };
+    },
+    markRefundSubmitted: async () => {
+      markedSubmitted = true;
+    },
+  });
+
+  const first = await handleProcessRefundRequest(
+    authRequest({ service_id: "service-1" }),
+    deps,
+  );
+  assertEquals(first.status, 500);
+  assertEquals(gatewayCalls, 1);
+  assertEquals(markedSubmitted, false);
+
+  const second = await handleProcessRefundRequest(
+    authRequest({ service_id: "service-1" }),
+    deps,
+  );
+  assertEquals(second.status, 200);
+  assertEquals(gatewayCalls, 2);
+  assertEquals(markedSubmitted, true);
+  const body = await second.json();
+  assertEquals(body.refund_submit_status, "SUBMITTED");
 });
 
 Deno.test("pre-charge SCHEDULED cancel returns PRE_CHARGE_CANCELLED", async () => {

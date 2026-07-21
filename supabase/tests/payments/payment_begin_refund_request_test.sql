@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(6);
+select plan(7);
 
 create or replace function pg_temp.payment_set_service_role()
 returns void
@@ -65,6 +65,17 @@ select is(
   )->>'refund_amount',
   '110.00',
   'provider-initiated refund returns full charge_amount'
+);
+
+select is(
+  public.payment_calculate_refund_amount(
+    50.00,
+    100.00,
+    now() + interval '1 hour',
+    'client'
+  )->>'refund_amount',
+  '50.00',
+  'CHK-042g: penalty tier refund is clamped with LEAST to charge_amount'
 );
 
 select ok(

@@ -8,6 +8,9 @@ export const PAYMENT_LOG_EVENTS = {
   CHARGE_ATTEMPT_STARTED: "charge_attempt_started",
   CHARGE_ATTEMPT_COMPLETED: "charge_attempt_completed",
   CHARGE_ATTEMPT_FAILED: "charge_attempt_failed",
+  CHARGE_COMMIT_RETRY: "charge_commit_retry",
+  NOTIFICATION_ENQUEUE_FAILED: "notification_enqueue_failed",
+  CHARGE_BATCH_DEADLINE_REACHED: "charge_batch_deadline_reached",
   WEBHOOK_RECEIVED: "webhook_received",
   WEBHOOK_PROCESSED: "webhook_processed",
   ORPHAN_RECOVERED: "orphan_recovered",
@@ -20,27 +23,61 @@ export type PaymentLogFields = {
   error_code?: string;
 };
 
+/** CHD / PII keys that must never appear in payment Edge logs (case-insensitive). */
 const BLOCKED_PAYMENT_LOG_KEYS = new Set([
-  "cardNumber",
+  "cardnumber",
+  "card_number",
   "cvv",
+  "cvc",
+  "securitycode",
+  "security_code",
+  "pan",
   "password",
   "token",
   "authorization",
-  "rawBody",
-  "pan",
-  "card_number",
-  "billingAddress",
+  "rawbody",
+  "raw_body",
+  "billingaddress",
+  "billing_address",
+  "carddata",
+  "card_data",
+  "cardholdername",
+  "cardholder_name",
+  "cpf",
+  "document",
+  "phone",
+  "email",
+  "gateway_card_token",
+  "gatewaycardtoken",
 ]);
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function sanitizeValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeValue(item));
+  }
+
+  if (!isPlainObject(value)) {
+    return value;
+  }
+
+  const sanitized: Record<string, unknown> = {};
+  for (const [key, nested] of Object.entries(value)) {
+    if (BLOCKED_PAYMENT_LOG_KEYS.has(key.toLowerCase())) {
+      continue;
+    }
+    sanitized[key] = sanitizeValue(nested);
+  }
+  return sanitized;
+}
 
 export function sanitizePaymentLogContext(
   context: LogContext = {},
 ): LogContext {
-  const sanitized: LogContext = {};
-  for (const [key, value] of Object.entries(context)) {
-    if (BLOCKED_PAYMENT_LOG_KEYS.has(key)) continue;
-    sanitized[key] = value;
-  }
-  return sanitized;
+  return sanitizeValue(context) as LogContext;
 }
 
 export function buildPaymentLogContext(

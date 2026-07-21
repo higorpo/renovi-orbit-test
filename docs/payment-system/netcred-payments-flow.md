@@ -881,7 +881,7 @@ mutation webhookCreate($input: WebhookCreateInput!) {
 | `Content-Type` | `application/json` |
 | `X-NETCRED-Event` | Tipo do evento (ex.: `TRANSACTION_CAPTURE`) |
 | `X-NETCRED-Domain` | Origem sandbox vs produção |
-| `X-NETCRED-Signature` | `SHA256(secretKey + body)` — comparar com corpo **raw** |
+| `X-NETCRED-Signature` | `HMAC-SHA256(secretKey, rawBody)` — comparar com corpo **raw** (`NETCRED_WEBHOOK_SECRET` in Edge secrets) |
 
 Rejeitar request se assinatura inválida. Logar `X-NETCRED-Event` + IDs do payload para auditoria.
 

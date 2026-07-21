@@ -52,6 +52,11 @@ begin
           'auto-complete-executed-services',
           '45 9,15,21,3 * * *',
           $$select public.payment_cron_auto_complete_executed_services();$$
+        ),
+        (
+          'payment-emit-sentry-spike-alerts',
+          '*/5 * * * *',
+          $$select public.payment_cron_emit_sentry_spike_alerts();$$
         )
     ) as jobs(jobname, schedule, command)
   loop

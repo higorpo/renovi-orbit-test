@@ -34,6 +34,20 @@ comment on type public.payment_schedule_state is
   'Authoritative payment_schedules.state vocabulary (12-state machine including EXPIRED terminal).';
 
 -- ---------------------------------------------------------------------------
+-- Refund gateway submit status (CHK-008 / FIX-005)
+-- ---------------------------------------------------------------------------
+
+create type public.payment_refund_submit_status as enum (
+  'PENDING_GATEWAY',
+  'SUBMITTED',
+  'CONFIRMED',
+  'FAILED'
+);
+
+comment on type public.payment_refund_submit_status is
+  'Tracks whether gateway ACK was observed for a REFUND_REQUESTED schedule; distinct from schedule.state.';
+
+-- ---------------------------------------------------------------------------
 -- Client card token lifecycle (design.md §3.3)
 -- ---------------------------------------------------------------------------
 

@@ -16,6 +16,26 @@ describe("sentryPiiScrubbing", () => {
     });
   });
 
+  it("redacts nested CHD keys", () => {
+    expect(
+      scrubPiiData({
+        request: {
+          cardData: { cardNumber: "4111", securityCode: "123" },
+          cpf: "03019758092",
+          phone: "48999999999",
+        },
+        schedule_id: "sch-1",
+      }),
+    ).toEqual({
+      request: {
+        cardData: "[redacted]",
+        cpf: "[redacted]",
+        phone: "[redacted]",
+      },
+      schedule_id: "sch-1",
+    });
+  });
+
   it("does not redact operational message fields outside chat scrubbing", () => {
     expect(
       scrubPiiData({

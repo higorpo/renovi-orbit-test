@@ -14,6 +14,7 @@ as $$
 declare
   v_event public.payment_webhook_events%rowtype;
   v_failure_reason text;
+  v_effective_target public.payment_webhook_event_state := p_target_state;
 begin
   if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'service_role required for payment_update_webhook_event_state'
@@ -36,14 +37,21 @@ begin
       using errcode = 'P0002';
   end if;
 
-  if v_event.state = p_target_state
-    and p_target_state in (
+  -- Auth failures are terminal — never leave as retryable FAILED.
+  if p_target_state = 'FAILED'::public.payment_webhook_event_state
+    and p_failure_reason is not null
+    and upper(btrim(p_failure_reason)) = 'INVALID_SIGNATURE' then
+    v_effective_target := 'DEAD_LETTER'::public.payment_webhook_event_state;
+  end if;
+
+  if v_event.state = v_effective_target
+    and v_effective_target in (
       'PROCESSED'::public.payment_webhook_event_state,
       'DUPLICATE'::public.payment_webhook_event_state,
       'DEAD_LETTER'::public.payment_webhook_event_state,
       'FAILED'::public.payment_webhook_event_state
     ) then
-    if p_target_state = 'DUPLICATE'::public.payment_webhook_event_state
+    if v_effective_target = 'DUPLICATE'::public.payment_webhook_event_state
        and v_event.processed_at is null then
       update public.payment_webhook_events e
       set
@@ -65,7 +73,7 @@ begin
     );
   end if;
 
-  if p_target_state = 'DUPLICATE'::public.payment_webhook_event_state then
+  if v_effective_target = 'DUPLICATE'::public.payment_webhook_event_state then
     if v_event.state = 'DEAD_LETTER'::public.payment_webhook_event_state then
       raise exception 'WEBHOOK_EVENT_TERMINAL'
         using errcode = 'P0001';
@@ -86,7 +94,12 @@ begin
     );
   end if;
 
-  if p_target_state = 'VALIDATING'::public.payment_webhook_event_state then
+  if v_effective_target = 'VALIDATING'::public.payment_webhook_event_state then
+    if not v_event.signature_validated then
+      raise exception 'WEBHOOK_SIGNATURE_NOT_VALIDATED'
+        using errcode = 'P0001';
+    end if;
+
     if v_event.state <> 'RECEIVED'::public.payment_webhook_event_state then
       raise exception 'WEBHOOK_INVALID_STATE_TRANSITION'
         using errcode = 'P0001';
@@ -105,7 +118,12 @@ begin
     );
   end if;
 
-  if p_target_state = 'PROCESSING'::public.payment_webhook_event_state then
+  if v_effective_target = 'PROCESSING'::public.payment_webhook_event_state then
+    if not v_event.signature_validated then
+      raise exception 'WEBHOOK_SIGNATURE_NOT_VALIDATED'
+        using errcode = 'P0001';
+    end if;
+
     if v_event.state not in (
       'RECEIVED'::public.payment_webhook_event_state,
       'VALIDATING'::public.payment_webhook_event_state
@@ -127,7 +145,12 @@ begin
     );
   end if;
 
-  if p_target_state = 'PROCESSED'::public.payment_webhook_event_state then
+  if v_effective_target = 'PROCESSED'::public.payment_webhook_event_state then
+    if not v_event.signature_validated then
+      raise exception 'WEBHOOK_SIGNATURE_NOT_VALIDATED'
+        using errcode = 'P0001';
+    end if;
+
     if v_event.state not in (
       'RECEIVED'::public.payment_webhook_event_state,
       'VALIDATING'::public.payment_webhook_event_state,
@@ -151,10 +174,48 @@ begin
     );
   end if;
 
-  if p_target_state = 'FAILED'::public.payment_webhook_event_state then
+  if v_effective_target = 'DEAD_LETTER'::public.payment_webhook_event_state then
+    if p_failure_reason is null or btrim(p_failure_reason) = '' then
+      raise exception 'p_failure_reason is required for DEAD_LETTER state'
+        using errcode = '22023';
+    end if;
+
+    if v_event.state not in (
+      'RECEIVED'::public.payment_webhook_event_state,
+      'VALIDATING'::public.payment_webhook_event_state,
+      'PROCESSING'::public.payment_webhook_event_state,
+      'FAILED'::public.payment_webhook_event_state
+    ) then
+      raise exception 'WEBHOOK_INVALID_STATE_TRANSITION'
+        using errcode = 'P0001';
+    end if;
+
+    v_failure_reason := left(btrim(p_failure_reason), 4000);
+
+    update public.payment_webhook_events e
+    set
+      state = 'DEAD_LETTER'::public.payment_webhook_event_state,
+      failure_reason = v_failure_reason,
+      next_retry_at = null,
+      updated_at = now()
+    where e.id = p_webhook_event_id;
+
+    return jsonb_build_object(
+      'event_id', p_webhook_event_id,
+      'state', 'DEAD_LETTER'::public.payment_webhook_event_state,
+      'updated', true
+    );
+  end if;
+
+  if v_effective_target = 'FAILED'::public.payment_webhook_event_state then
     if p_failure_reason is null or btrim(p_failure_reason) = '' then
       raise exception 'p_failure_reason is required for FAILED state'
         using errcode = '22023';
+    end if;
+
+    if not v_event.signature_validated then
+      raise exception 'WEBHOOK_SIGNATURE_NOT_VALIDATED'
+        using errcode = 'P0001';
     end if;
 
     if v_event.state not in (
@@ -192,7 +253,7 @@ comment on function public.payment_update_webhook_event_state(
   public.payment_webhook_event_state,
   text
 ) is
-  'Validated payment_webhook_events state transitions for netcred-webhook EF ingress (service_role only).';
+  'Validated payment_webhook_events state transitions; INVALID_SIGNATURE→DEAD_LETTER (service_role only).';
 
 revoke all on function public.payment_update_webhook_event_state(
   uuid,

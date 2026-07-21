@@ -27,10 +27,15 @@ function resolvePlatformCompanyId(): string | null {
 
 function createDeps(): TokenizePaymentCardDeps {
   const supabase = createServiceRoleClient();
+  const platformCompanyId = resolvePlatformCompanyId();
+  if (!platformCompanyId) {
+    throw new Error("NETCRED_PLATFORM_COMPANY_ID is not configured");
+  }
 
   configureAdapterRegistry({
     supabase,
     platformBankAccountId: resolvePlatformBankAccountId(),
+    platformCompanyId,
     isProduction: resolveIsProduction(),
   });
 
@@ -52,46 +57,14 @@ function createDeps(): TokenizePaymentCardDeps {
         throw new Error(error.message);
       }
     },
-    resolveProviderAccount: async (providerServiceId) => {
-      const { data: proposal, error: proposalError } = await supabase
-        .from("provider_proposals")
-        .select("provider_id")
-        .eq("id", providerServiceId)
-        .maybeSingle();
-
-      if (proposalError || !proposal?.provider_id) {
-        return null;
-      }
-
-      const { data: account, error: accountError } = await supabase
-        .from("provider_gateway_accounts")
-        .select("provider_id, netcred_company_id, onboarding_status")
-        .eq("provider_id", proposal.provider_id)
-        .eq("gateway_slug", "netcred")
-        .maybeSingle();
-
-      if (accountError || account?.onboarding_status !== "ACTIVE") {
-        return null;
-      }
-
-      return mapProviderAccountRow({
-        provider_id: account.provider_id,
-        netcred_company_id: account.netcred_company_id,
-      });
-    },
     resolvePlatformCompany: async () => {
-      const companyId = resolvePlatformCompanyId();
-      if (!companyId) {
-        return null;
-      }
-
       return mapProviderAccountRow({
         provider_id: "platform",
-        netcred_company_id: companyId,
+        netcred_company_id: platformCompanyId,
       });
     },
     tokenizeCard: (input) => AdapterRegistry.get("netcred").tokenizeCard(input),
-    insertPaymentToken: async ({ clientId, parsed, tokenizeResult }) => {
+    insertPaymentToken: async ({ clientId, parsed, tokenizeResult, netcredCompanyId }) => {
       const { data, error } = await supabase.rpc("payment_persist_client_card_token", {
         p_client_id: clientId,
         p_gateway_payment_profile_id: tokenizeResult.paymentProfileId ?? "",
@@ -102,6 +75,7 @@ function createDeps(): TokenizePaymentCardDeps {
         p_expiry_year: parsed.cardData.expiryYear,
         p_cardholder_name: parsed.cardData.cardholderName,
         p_billing_address: parsed.billingAddress,
+        p_netcred_company_id: netcredCompanyId,
         p_gateway_slug: "netcred",
       });
 

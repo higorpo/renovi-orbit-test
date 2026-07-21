@@ -56,8 +56,11 @@ export function postgresRound(value: number, decimals = 2): number {
 }
 
 /**
- * Mirrors SQL `payment_total_with_card_fees`:
- * charge = round_half_even((base + processing + risk_analysis) / (1 - MDR%/100), 2)
+ * TEST-ONLY / parity helper.
+ *
+ * Charge-authoritative fee math lives in PostgreSQL (`payment_total_with_card_fees`).
+ * This TypeScript mirror exists for Edge unit tests and local parity checks only —
+ * do not use it to authorize production charge amounts (CHK-040 / CHK-042d).
  */
 export function calculateChargeAmount(
   baseAmount: number,

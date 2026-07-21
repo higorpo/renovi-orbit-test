@@ -62,14 +62,14 @@ select ok(
 select ok(
   exists (
     select 1
-    from pg_constraint c
-    join pg_class rel on rel.oid = c.conrelid
-    join pg_namespace n on n.oid = rel.relnamespace
-    where n.nspname = 'public'
-      and rel.relname = 'payment_webhook_events'
-      and c.conname = 'payment_webhook_events_dedup_unique'
+    from pg_indexes
+    where schemaname = 'public'
+      and tablename = 'payment_webhook_events'
+      and indexname = 'payment_webhook_events_dedup_validated_unique'
+      and indexdef ilike '%UNIQUE%'
+      and indexdef ilike '%signature_validated%'
   ),
-  'deduplication unique constraint exists'
+  'deduplication unique index exists only for signature_validated rows'
 );
 
 select finish();

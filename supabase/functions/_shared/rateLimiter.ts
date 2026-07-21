@@ -8,7 +8,10 @@
 import { createServiceRoleClient } from "./serviceRoleClient.ts";
 
 export interface RateLimitConfig {
+  /** Max requests allowed within `windowMs` (historically per-minute). */
   perMinute: number;
+  /** Sliding window length in ms. Defaults to 60_000 (1 minute). */
+  windowMs?: number;
   burst?: number;
   blockDuration?: number;
   attackBlockDuration?: number;
@@ -34,7 +37,8 @@ export interface RateLimitDeps {
   ) => Promise<{ data: RateLimitRpcPayload | null; error: { message: string } | null }>;
 }
 
-const WINDOW_MS = 60_000;
+export const DEFAULT_RATE_LIMIT_WINDOW_MS = 60_000;
+export const DAILY_RATE_LIMIT_WINDOW_MS = 86_400_000;
 const FAIL_CLOSED_RETRY_AFTER_SEC = 60;
 
 function failOpenResult(perMinute: number): RateLimitResult {
@@ -69,6 +73,7 @@ export async function checkRateLimitWithDeps(
   deps: RateLimitDeps,
 ): Promise<RateLimitResult> {
   const perMinute = config.perMinute || 60;
+  const windowMs = config.windowMs ?? DEFAULT_RATE_LIMIT_WINDOW_MS;
   const failClosed = config.failClosed === true;
   const uniqueKey = `${functionName}:${userId ?? ip ?? "anonymous"}`;
 
@@ -76,7 +81,7 @@ export async function checkRateLimitWithDeps(
     const { data, error } = await deps.rpc({
       p_key: uniqueKey,
       p_per_minute: perMinute,
-      p_window_ms: WINDOW_MS,
+      p_window_ms: windowMs,
     });
 
     if (error) {

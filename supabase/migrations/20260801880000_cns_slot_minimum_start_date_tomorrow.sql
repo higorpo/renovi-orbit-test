@@ -538,12 +538,23 @@ declare
   v_expected_pricing_sig text;
   v_card_token public.client_card_tokens%rowtype;
   v_schedule_inserted boolean := false;
+  v_rate_limit jsonb;
   v_competitor_system_message constant text :=
     'Outra proposta foi aceita neste pedido.';
 begin
   if v_actor is null then
     raise exception 'Authentication required for accept_proposal'
       using errcode = '42501';
+  end if;
+
+  v_rate_limit := public.platform_check_rate_limit(
+    format('accept_proposal:%s', v_actor),
+    5
+  );
+
+  if not coalesce((v_rate_limit->>'allowed')::boolean, false) then
+    raise exception 'RATE_LIMITED'
+      using errcode = 'P0001';
   end if;
 
   if p_proposal_id is null then
@@ -633,6 +644,25 @@ begin
       using errcode = '42501';
   end if;
 
+  -- CHK-028: CPF/phone are required for payment checkout; UI steps alone are insufficient.
+  if not exists (
+    select 1
+    from public.client_profiles_private cpp
+    where cpp.client_id = v_actor
+      and nullif(trim(cpp.cpf), '') is not null
+  )
+    or not exists (
+      select 1
+      from public.profiles p
+      where p.id = v_actor
+        and nullif(trim(p.phone), '') is not null
+    ) then
+    raise exception 'PROFILE_INCOMPLETE'
+      using
+        errcode = 'P0001',
+        detail = jsonb_build_object('code', 'PROFILE_INCOMPLETE')::text;
+  end if;
+
   perform 1
   from public.provider_proposals pp
   where pp.service_request_id = v_sr.id
@@ -703,6 +733,15 @@ begin
         detail = jsonb_build_object('code', 'PAYMENT_FIELDS_REQUIRED')::text;
   end if;
 
+  -- Reject client-forged ClearSale UUIDs; require a server-minted unused session (CHK-011).
+  perform public.payment_consume_clearsale_session(
+    trim(p_clearsale_session_id),
+    v_actor,
+    'accept',
+    p_proposal_id,
+    null
+  );
+
   v_expected_pricing_sig := public.generate_provider_pricing_signature(
     round(v_proposal.proposed_amount::numeric, 2),
     round(v_proposal.tax_rate::numeric, 4),
@@ -732,6 +771,15 @@ begin
       using
         errcode = 'P0001',
         detail = jsonb_build_object('code', 'PAYMENT_TOKEN_INACTIVE')::text;
+  end if;
+
+  -- Token must be issued under Renovi platform NetCred company (marketplace model).
+  if nullif(btrim(v_card_token.netcred_company_id), '')
+    is distinct from public.payment_netcred_platform_company_id() then
+    raise exception 'PAYMENT_TOKEN_COMPANY_MISMATCH'
+      using
+        errcode = 'P0001',
+        detail = jsonb_build_object('code', 'PAYMENT_TOKEN_COMPANY_MISMATCH')::text;
   end if;
 
   perform public.payment_assert_installment_hmac_context(
@@ -917,7 +965,8 @@ begin
     v_service.id::text,
     v_service.id,
     trim(p_clearsale_session_id),
-    nullif(trim(coalesce(p_client_ip, '')), ''),
+    -- CHK-011: do not persist client-asserted IP on accept (Edge headers only on manual).
+    null,
     public.platform_constant_int('max_charge_attempts', 3)::smallint
   )
   on conflict on constraint payment_schedules_idempotency_key_unique

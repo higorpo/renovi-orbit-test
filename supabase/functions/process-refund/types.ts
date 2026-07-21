@@ -26,6 +26,7 @@ export type RefundSubmitResult = {
   refundAmount: string;
   penaltyTier: string | null;
   alreadySubmitted: boolean;
+  refundSubmitStatus?: string | null;
 };
 
 export type ProcessRefundErrorCode =

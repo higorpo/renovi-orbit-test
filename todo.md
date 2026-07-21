@@ -62,6 +62,7 @@ Telas/fluxos restantes:
 - Weblab
 - Template dos emails
 - Refazer tela de erros
+- Refazer tela de minha conta
 - Como vai funcionar a emissão de nota fiscal da plataforma?
 - Nova tela de minha conta
 
@@ -135,7 +136,6 @@ Fluxo de pagamentos, itens com problemas:
 - É permitido fazer reagendamento de serviços  para muito longe (por exemplo +30 dias a frente). O prestador pode pedir reagendamento sem teto mínimo,o cliente pode pedir reagendamento até 48hrs antes, em tese o pagamento ainda naõ estaria capturado, mas tem chance. Como o prestador pode pedir faltando 4hrs por exemplo, o pagamento já poderia estar capturado, nesse caso teríamos que fazer uma lógica para remembolsar o valor e fazer a captura novamente em data futura caso a data do pedido fosse para muito mais a frente para evitar cair na liquidação automática.
 
 
-- A forma como está o checkout hoje para a seleção da parcela a ser paga e etc está segura? O usuário não consegue burlar a informação?
 
 
 
@@ -147,13 +147,14 @@ Fluxo de pagamentos, itens com problemas:
 
 
 
+- /home/higor/Área de Trabalho/Renovi/orbit/src/features/payments/api/serviceLifecycle.api.ts não deveria estar dentro de payments.
 
 
+- Erro de fluxo ao solicitar reembolso documentado em docs/payment-system/critical-bug-refund-partial-commit.md
 
 
 ---
 
-- Perguntar pra Netcred se há retry automático ou manual de envio de webhook se por  algum motivo o webhook der erro/estiver indisponível.
 
 
 

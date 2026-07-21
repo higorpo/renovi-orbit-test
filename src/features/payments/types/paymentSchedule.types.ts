@@ -15,6 +15,8 @@ export type PaymentScheduleLifecycle = {
   contractedServiceId: string;
   state: string;
   chargeScheduledAt: string | null;
+  /** Server America/Sao_Paulo execution instant; preferred for cancel disclosure (CHK-038). */
+  serviceExecutionAt: string | null;
   /** Service price before card fees. Present for the client via history view when paid. */
   baseAmount: number | null;
   /** Total charged to the card. Present for the client via history view when paid. */

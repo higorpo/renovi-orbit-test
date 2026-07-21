@@ -2,6 +2,7 @@ import "xhr";
 import { servePaymentFunction } from "../_shared/observability/sentry.ts";
 import type { Json } from "../_shared/database.types.ts";
 import { emitInvalidWebhookSignatureWarning } from "../_shared/observability/payment-sentry-matrix.ts";
+import { captureTransactionDisputeCritical } from "../_shared/observability/payment-sentry-matrix.ts";
 import { createLogger } from "../_shared/logger.ts";
 import {
   checkIPRateLimit,
@@ -22,7 +23,7 @@ import type {
 const logger = createLogger("netcred-webhook");
 
 type IngestRpcResult = {
-  status: "inserted" | "duplicate";
+  status: "inserted" | "duplicate" | "quarantined";
   event_id: string;
 };
 
@@ -31,7 +32,8 @@ type WebhookEventState =
   | "VALIDATING"
   | "PROCESSING"
   | "PROCESSED"
-  | "FAILED";
+  | "FAILED"
+  | "DEAD_LETTER";
 
 function parseIngestResult(data: unknown): IngestRpcResult {
   return data as IngestRpcResult;
@@ -70,6 +72,7 @@ function createDeps(): NetcredWebhookDeps {
         p_gateway_event_id: input.providerEventId,
         p_raw_payload: input.rawPayload as Json,
         p_raw_headers: input.rawHeaders as Json,
+        p_signature_validated: input.signatureValidated,
       });
 
       if (error) {
@@ -86,6 +89,7 @@ function createDeps(): NetcredWebhookDeps {
       await updateWebhookEventState(supabase, eventId, "DUPLICATE");
     },
     markFailed: async (eventId, failureReason) => {
+      // INVALID_SIGNATURE is remapped to DEAD_LETTER by the RPC (non-retryable).
       await updateWebhookEventState(supabase, eventId, "FAILED", failureReason);
     },
     markValidating: async (eventId) => {
@@ -122,6 +126,9 @@ function createDeps(): NetcredWebhookDeps {
         source_ip: extra.source_ip != null ? String(extra.source_ip) : undefined,
         event_id: extra.event_id != null ? String(extra.event_id) : undefined,
       });
+    },
+    emitTransactionDisputeCritical: (extra) => {
+      captureTransactionDisputeCritical(extra);
     },
     checkIPRateLimit,
     emitIPRateLimitWarning,

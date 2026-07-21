@@ -18,6 +18,7 @@ const UI_MESSAGES: Record<ProposalBusinessErrorCode, string> = {
   PAYMENT_REQUIRED: "Este prestador exige pagamento para confirmar a contratação.",
   PAYMENT_FIELDS_REQUIRED: "Complete os dados de pagamento antes de confirmar.",
   PROVIDER_NOT_CREDENTIALED: "O prestador ainda não está habilitado para receber pagamentos.",
+  PROFILE_INCOMPLETE: "Complete seu CPF e telefone no checkout antes de confirmar.",
   PROPOSAL_PRICING_INVALID: "Os valores da proposta foram alterados. Atualize a página e tente novamente.",
   PAYMENT_TOKEN_INACTIVE: "O cartão selecionado não está mais disponível. Escolha outro cartão.",
   INSTALLMENT_SIGNATURE_EXPIRED: "A simulação de parcelas expirou. Selecione novamente.",

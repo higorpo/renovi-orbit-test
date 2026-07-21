@@ -28,7 +28,8 @@ begin
       'auto-cancel-unpaid-services',
       'schedule-netcred-charges',
       'detect-netcred-onboarding',
-      'auto-complete-executed-services'
+      'auto-complete-executed-services',
+      'payment-emit-sentry-spike-alerts'
     ]::text[]) as job_name
   ),
   lookback as (

@@ -3,9 +3,15 @@ import { jsonResponse } from "../_shared/jsonResponse.ts";
 import { createPaymentLogger } from "../_shared/observability/payment-logger.ts";
 import {
   AdapterRegistry,
+  toOpaqueTokenizeClientError,
   type PaymentProvider,
 } from "../_shared/payment/index.ts";
-import { checkRateLimit, getClientIP } from "../_shared/rateLimiter.ts";
+import {
+  checkRateLimit,
+  DAILY_RATE_LIMIT_WINDOW_MS,
+  getClientIP,
+  type RateLimitConfig,
+} from "../_shared/rateLimiter.ts";
 import type {
   ResolvedProviderAccount,
   TokenizePaymentCardBody,
@@ -17,7 +23,14 @@ import {
 } from "./validateRequest.ts";
 
 const logger = createPaymentLogger("tokenize-payment-card");
-const RATE_LIMIT_CONFIG = { perMinute: 10, failClosed: true };
+
+/** Profile tokenize: tight carding controls (CHK-014). */
+const PROFILE_PER_MINUTE_LIMIT = 3;
+const PROFILE_DAILY_LIMIT = 30;
+/** Checkout tokenize: moderate per-minute cap. */
+const CHECKOUT_PER_MINUTE_LIMIT = 10;
+
+const FAIL_CLOSED: Pick<RateLimitConfig, "failClosed"> = { failClosed: true };
 
 export type PaymentTokenInsertResult = {
   id: string;
@@ -34,15 +47,13 @@ export type TokenizePaymentCardDeps = {
     clientId: string,
     proposalId: string,
   ) => Promise<void>;
-  resolveProviderAccount: (
-    providerServiceId: string,
-  ) => Promise<ResolvedProviderAccount | null>;
   resolvePlatformCompany: () => Promise<ResolvedProviderAccount | null>;
   tokenizeCard: PaymentProvider["tokenizeCard"];
   insertPaymentToken: (input: {
     clientId: string;
     parsed: ParsedTokenizeRequest;
     tokenizeResult: Awaited<ReturnType<PaymentProvider["tokenizeCard"]>>;
+    netcredCompanyId: string;
   }) => Promise<PaymentTokenInsertResult | null>;
   recordCardTokenizedEvent: (input: {
     paymentTokenId: string;
@@ -50,6 +61,69 @@ export type TokenizePaymentCardDeps = {
   }) => Promise<void>;
   checkRateLimit: typeof checkRateLimit;
 };
+
+function rateLimitedResponse(
+  cors: Record<string, string>,
+  retryAfter: number,
+): Response {
+  return jsonResponse(
+    {
+      error: "rate_limited",
+      message: "Too many requests. Try again shortly.",
+      retryAfter,
+    },
+    429,
+    { ...cors, "Retry-After": String(retryAfter) },
+  );
+}
+
+async function enforceTokenizeRateLimits(
+  deps: TokenizePaymentCardDeps,
+  clientIP: string,
+  userId: string,
+  tokenizeContext: "profile" | "checkout",
+  cors: Record<string, string>,
+): Promise<Response | null> {
+  if (tokenizeContext === "profile") {
+    const perMinute = await deps.checkRateLimit(
+      clientIP,
+      userId,
+      "tokenize-payment-card:profile",
+      { perMinute: PROFILE_PER_MINUTE_LIMIT, ...FAIL_CLOSED },
+    );
+    if (!perMinute.allowed) {
+      return rateLimitedResponse(cors, perMinute.retryAfter);
+    }
+
+    const daily = await deps.checkRateLimit(
+      clientIP,
+      userId,
+      "tokenize-payment-card:profile:daily",
+      {
+        perMinute: PROFILE_DAILY_LIMIT,
+        windowMs: DAILY_RATE_LIMIT_WINDOW_MS,
+        ...FAIL_CLOSED,
+      },
+    );
+    if (!daily.allowed) {
+      return rateLimitedResponse(cors, daily.retryAfter);
+    }
+
+    return null;
+  }
+
+  const checkout = await deps.checkRateLimit(
+    clientIP,
+    userId,
+    "tokenize-payment-card:checkout",
+    { perMinute: CHECKOUT_PER_MINUTE_LIMIT, ...FAIL_CLOSED },
+  );
+  if (!checkout.allowed) {
+    return rateLimitedResponse(cors, checkout.retryAfter);
+  }
+
+  return null;
+}
 
 export async function handleTokenizePaymentCardRequest(
   req: Request,
@@ -76,26 +150,6 @@ export async function handleTokenizePaymentCardRequest(
     return jsonResponse({ error: "Unauthorized" }, 401, cors);
   }
 
-  const clientIP = getClientIP(req);
-  const rateLimit = await deps.checkRateLimit(
-    clientIP,
-    user.id,
-    "tokenize-payment-card",
-    RATE_LIMIT_CONFIG,
-  );
-
-  if (!rateLimit.allowed) {
-    return jsonResponse(
-      {
-        error: "rate_limited",
-        message: "Too many requests. Try again shortly.",
-        retryAfter: rateLimit.retryAfter,
-      },
-      429,
-      { ...cors, "Retry-After": String(rateLimit.retryAfter) },
-    );
-  }
-
   let body: TokenizePaymentCardBody;
   try {
     body = await req.json() as TokenizePaymentCardBody;
@@ -114,6 +168,18 @@ export async function handleTokenizePaymentCardRequest(
     );
   }
 
+  const clientIP = getClientIP(req);
+  const rateLimitResponse = await enforceTokenizeRateLimits(
+    deps,
+    clientIP,
+    user.id,
+    validated.tokenizeContext,
+    cors,
+  );
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   if (validated.tokenizeContext === "checkout") {
     try {
       await deps.validateCheckoutAccess(
@@ -125,11 +191,10 @@ export async function handleTokenizePaymentCardRequest(
     }
   }
 
-  const providerAccount = validated.tokenizeContext === "profile"
-    ? await deps.resolvePlatformCompany()
-    : await deps.resolveProviderAccount(validated.providerServiceId ?? "");
-  if (!providerAccount) {
-    return jsonResponse({ error: "provider_not_credentialed" }, 409, cors);
+  // Marketplace model: always tokenize under Renovi platform company (not provider).
+  const platformCompany = await deps.resolvePlatformCompany();
+  if (!platformCompany?.netcredCompanyId?.trim()) {
+    return jsonResponse({ error: "platform_company_not_configured" }, 503, cors);
   }
 
   const email = user.email?.trim();
@@ -148,7 +213,7 @@ export async function handleTokenizePaymentCardRequest(
     cardData: validated.cardData,
     billingAddress: validated.billingAddress,
     customerInput: {
-      companyId: providerAccount.netcredCompanyId,
+      companyId: platformCompany.netcredCompanyId.trim(),
       persist: false,
     },
     cpf: validated.cpf,
@@ -157,15 +222,16 @@ export async function handleTokenizePaymentCardRequest(
   });
 
   if (!tokenizeResult.isActive) {
+    const fineCode = tokenizeResult.errors?.[0]?.code ?? null;
     logger.warn("tokenization_failed", {
       client_id: user.id,
       tokenize_context: validated.tokenizeContext,
       provider_service_id: validated.providerServiceId ?? null,
       error_count: tokenizeResult.errors?.length ?? 0,
-      error_code: tokenizeResult.errors?.[0]?.code ?? null,
+      error_code: fineCode,
     });
     return jsonResponse(
-      { errors: tokenizeResult.errors ?? [{ message: "Tokenization failed" }] },
+      { errors: [toOpaqueTokenizeClientError()] },
       422,
       cors,
     );
@@ -175,6 +241,7 @@ export async function handleTokenizePaymentCardRequest(
     clientId: user.id,
     parsed: validated,
     tokenizeResult,
+    netcredCompanyId: platformCompany.netcredCompanyId.trim(),
   });
 
   if (!inserted) {

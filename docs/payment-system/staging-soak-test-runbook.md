@@ -13,12 +13,14 @@ Prove the async payment loop is stable for **72 consecutive hours**:
 ## Prerequisites
 
 - [ ] Staging Supabase project with migrations through `20260801780000` (or current HEAD)
-- [ ] Seven payment Edge Functions deployed to staging
+- [ ] Nine payment Edge Functions deployed to staging (includes `reconcile-inanalysis-auto-cancel-voids`)
 - [ ] Vault + Edge secrets per [`vault-secrets-runbook.md`](./vault-secrets-runbook.md)
-- [ ] `ORBIT_CRON_SECRET` configured (pg_cron → EF auth)
+- [ ] `ORBIT_CRON_SECRET` configured (pg_cron → EF auth); secrets ≠ `.env.example` placeholders
+- [ ] `ENVIRONMENT` not `development` on staging Edge secrets (unless intentionally sandbox-testing the guard off — prefer unset)
 - [ ] NetCred **sandbox** credentials (not production)
 - [ ] NetCred webhook URL points to staging `netcred-webhook`
-- [ ] All eight payment crons **active** (see [`production-rollout-checklist.md`](./production-rollout-checklist.md))
+- [ ] All nine payment crons **active** (see [`production-rollout-checklist.md`](./production-rollout-checklist.md))
+- [ ] Smoke: unsigned `POST` to `netcred-webhook` returns HTTP 401
 - [ ] Sentry staging DSN receiving payment events (Task 82)
 - [ ] At least **3 test contracted services** seeded with different charge windows:
   - T-2 schedule (charge in ~48h)

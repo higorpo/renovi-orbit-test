@@ -39,8 +39,8 @@ select public.payment_ingest_webhook_event(
   'WEBHOOK_PING',
   'evt-process-ping',
   '{"ping":true}'::jsonb,
-  '{"X-NETCRED-Event":"WEBHOOK_PING"}'::jsonb
-);
+  '{"X-NETCRED-Event":"WEBHOOK_PING"}'::jsonb,
+  true);
 
 select ok(
   exists (

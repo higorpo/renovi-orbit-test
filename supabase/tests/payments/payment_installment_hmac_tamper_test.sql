@@ -111,7 +111,7 @@ select pg_temp.cns_seed_chat(
 create temp table _hmac_slot as
 select jsonb_build_object(
   'start_date', (current_date + 7)::text,
-  'end_date', (current_date + 7)::text,
+  'end_date', (current_date + 8)::text,
   'shift', 'morning'
 ) as selected_slot;
 
@@ -127,7 +127,7 @@ select
     gen_random_uuid(),
     pricing.original_amount,
     'installment HMAC pgTAP proposal',
-    1,
+    2,
     'days',
     jsonb_build_array((select selected_slot from _hmac_slot)),
     '{}'::text[],
@@ -161,7 +161,7 @@ create temp table _hmac_card as
 select gen_random_uuid() as card_token_id;
 
 insert into public.client_card_tokens (
-  id, client_id, gateway_slug, gateway_payment_profile_id, card_number_masked,
+  id, client_id, gateway_slug, gateway_payment_profile_id, netcred_company_id, card_number_masked,
   card_brand, gateway_card_token, expiry_month, expiry_year, cardholder_name,
   billing_address, state
 )
@@ -169,7 +169,7 @@ select
   card_token_id,
   '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
   'netcred',
-  'hmac-tamper-profile',
+  'hmac-tamper-profile', '1014',
   '411111******1111',
   'VISA',
   'opaque-hmac-token',
@@ -224,6 +224,20 @@ select throws_ok(
   'payment_verify_installment_selection_hmac rejects expired payload'
 );
 
+-- Server-minted ClearSale sessions so accept_proposal reaches installment HMAC checks (CHK-011).
+create temp table _hmac_clearsale as
+select
+  (public.payment_issue_clearsale_session(
+    'accept',
+    (select proposal_id from _hmac_proposal),
+    null
+  )->>'session_id') as session_tamper,
+  (public.payment_issue_clearsale_session(
+    'accept',
+    (select proposal_id from _hmac_proposal),
+    null
+  )->>'session_id') as session_expired;
+
 select throws_ok(
   format(
     $$ select public.accept_proposal(
@@ -244,7 +258,7 @@ select throws_ok(
     (select card_token_id from _hmac_card),
     'deadbeef00',
     (select result->'installment_hmac_payload' from _hmac_installment),
-    'clearsale-session-hmac-test',
+    (select session_tamper from _hmac_clearsale),
     (select pricing_signature from _hmac_proposal)
   ),
   'P0001',
@@ -272,7 +286,7 @@ select throws_ok(
     (select card_token_id from _hmac_card),
     (select hmac from _hmac_expired_payload),
     (select payload from _hmac_expired_payload),
-    'clearsale-session-hmac-test',
+    (select session_expired from _hmac_clearsale),
     (select pricing_signature from _hmac_proposal)
   ),
   'P0001',

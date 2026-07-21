@@ -12,6 +12,24 @@ const PII_KEYS = new Set([
   "notes",
   "password",
   "token",
+  // CHD / payment cardholder data (CHK-031)
+  "cardnumber",
+  "card_number",
+  "cvv",
+  "cvc",
+  "securitycode",
+  "security_code",
+  "pan",
+  "carddata",
+  "card_data",
+  "cardholdername",
+  "cardholder_name",
+  "cpf",
+  "document",
+  "billingaddress",
+  "billing_address",
+  "gateway_card_token",
+  "gatewaycardtoken",
 ]);
 
 const REDACTED = "[redacted]";

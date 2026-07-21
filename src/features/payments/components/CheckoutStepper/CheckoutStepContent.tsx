@@ -75,7 +75,11 @@ export function CheckoutStepContent({
         return null;
       }
       return (
-        <CardStep onSessionIdGenerated={setClearsaleSessionId}>
+        <CardStep
+          purpose="accept"
+          proposalId={proposalId}
+          onSessionIdGenerated={setClearsaleSessionId}
+        >
           <SavedCardSelector
             providerServiceId={proposalId}
             savedCpf={resolvedCpf}

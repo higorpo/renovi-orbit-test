@@ -168,6 +168,8 @@ declare
   v_refund_amount numeric(12, 2);
   v_penalty_tier text;
   v_actor public.payment_audit_actor;
+  v_already_submitted boolean;
+  v_submit_status public.payment_refund_submit_status;
 begin
   if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'service_role required for payment_begin_refund_request'
@@ -241,6 +243,24 @@ begin
         and ps.state = 'REFUND_REQUESTED'::public.payment_schedule_state
       for update;
 
+      v_already_submitted := v_schedule.refund_submit_status in (
+        'SUBMITTED'::public.payment_refund_submit_status,
+        'CONFIRMED'::public.payment_refund_submit_status
+      );
+
+      -- Retry path: gateway not ACK'd yet — keep REFUND_REQUESTED, re-call gateway.
+      if not v_already_submitted then
+        update public.payment_schedules ps
+        set
+          refund_submit_status = 'PENDING_GATEWAY'::public.payment_refund_submit_status,
+          updated_at = now()
+        where ps.id = v_schedule.id;
+
+        v_submit_status := 'PENDING_GATEWAY'::public.payment_refund_submit_status;
+      else
+        v_submit_status := v_schedule.refund_submit_status;
+      end if;
+
       v_reason := coalesce(
         nullif(btrim(v_service.cancellation_reason), ''),
         case p_initiator
@@ -249,6 +269,7 @@ begin
         end
       );
 
+      -- Post-PAID reschedule updates slot columns; ToS tiers use current execution_at.
       v_exec_at := public.payment_service_execution_at(v_service);
       v_charge_amount := coalesce(
         v_schedule.paid_amount,
@@ -281,9 +302,10 @@ begin
         'gateway_transaction_id', v_schedule.gateway_transaction_id,
         'paid_amount', v_schedule.paid_amount,
         'base_amount', v_schedule.base_amount,
-        'refund_amount', v_schedule.refunded_amount,
+        'refund_amount', coalesce(v_schedule.refunded_amount, (v_refund->>'refund_amount')::numeric(12, 2)),
         'penalty_tier', v_penalty_tier,
-        'already_submitted', true
+        'already_submitted', v_already_submitted,
+        'refund_submit_status', v_submit_status
       );
     end if;
 
@@ -296,6 +318,7 @@ begin
       using errcode = 'P0001';
   end if;
 
+  -- ToS refund tiers follow the current service slot (post-PAID reschedule included).
   v_exec_at := public.payment_service_execution_at(v_service);
 
   v_charge_amount := coalesce(
@@ -334,6 +357,7 @@ begin
   set
     state = 'REFUND_REQUESTED'::public.payment_schedule_state,
     refunded_amount = v_refund_amount,
+    refund_submit_status = 'PENDING_GATEWAY'::public.payment_refund_submit_status,
     cancellation_reason = v_reason,
     updated_at = now()
   where ps.id = v_schedule.id;
@@ -370,7 +394,8 @@ begin
       'penalty_tier', v_penalty_tier,
       'charge_amount', v_charge_amount,
       'cancellation_reason', v_reason,
-      'initiator', p_initiator
+      'initiator', p_initiator,
+      'refund_submit_status', 'PENDING_GATEWAY'
     )
   );
 
@@ -394,10 +419,106 @@ begin
     'charge_amount', v_charge_amount,
     'refund_amount', v_refund_amount,
     'penalty_tier', v_penalty_tier,
-    'already_submitted', false
+    'already_submitted', false,
+    'refund_submit_status', 'PENDING_GATEWAY'
   );
 end;
 $$;
+
+create or replace function public.payment_set_refund_submit_status(
+  p_schedule_id uuid,
+  p_status public.payment_refund_submit_status,
+  p_actor_id uuid default null,
+  p_error_message text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_schedule public.payment_schedules%rowtype;
+  v_actor public.payment_audit_actor;
+begin
+  if coalesce(auth.role(), '') <> 'service_role' then
+    raise exception 'service_role required for payment_set_refund_submit_status'
+      using errcode = '42501';
+  end if;
+
+  if p_schedule_id is null or p_status is null then
+    raise exception 'p_schedule_id and p_status are required'
+      using errcode = '22023';
+  end if;
+
+  select ps.*
+  into v_schedule
+  from public.payment_schedules ps
+  where ps.id = p_schedule_id
+  for update;
+
+  if not found then
+    raise exception 'SCHEDULE_NOT_FOUND'
+      using errcode = 'P0002';
+  end if;
+
+  if v_schedule.state <> 'REFUND_REQUESTED'::public.payment_schedule_state then
+    raise exception 'INVALID_SCHEDULE_STATE'
+      using errcode = 'P0001';
+  end if;
+
+  -- Do not regress CONFIRMED; SUBMITTED may still move to CONFIRMED via webhook.
+  if v_schedule.refund_submit_status = 'CONFIRMED'::public.payment_refund_submit_status then
+    return;
+  end if;
+
+  if p_status = 'FAILED'::public.payment_refund_submit_status
+    and v_schedule.refund_submit_status = 'SUBMITTED'::public.payment_refund_submit_status then
+    return;
+  end if;
+
+  update public.payment_schedules ps
+  set
+    refund_submit_status = p_status,
+    updated_at = now()
+  where ps.id = v_schedule.id;
+
+  v_actor := case
+    when p_actor_id is not null and p_actor_id = v_schedule.client_id then 'client'::public.payment_audit_actor
+    when p_actor_id is not null and p_actor_id = v_schedule.provider_id then 'provider'::public.payment_audit_actor
+    else 'system'::public.payment_audit_actor
+  end;
+
+  perform public.payment_write_audit(
+    p_event_type := case p_status
+      when 'FAILED'::public.payment_refund_submit_status then 'REFUND_FAILED'
+      when 'SUBMITTED'::public.payment_refund_submit_status then 'REFUND_GATEWAY_ACK'
+      when 'CONFIRMED'::public.payment_refund_submit_status then 'REFUND_CONFIRMED'
+      else 'REFUND_SUBMIT_STATUS'
+    end,
+    p_entity_type := 'payment_schedule',
+    p_entity_id := v_schedule.id,
+    p_service_id := v_schedule.contracted_service_id,
+    p_schedule_id := v_schedule.id,
+    p_from_state := v_schedule.state::text,
+    p_to_state := v_schedule.state::text,
+    p_actor := v_actor,
+    p_actor_id := p_actor_id,
+    p_metadata := jsonb_build_object(
+      'refund_submit_status', p_status,
+      'previous_status', v_schedule.refund_submit_status,
+      'error_message', p_error_message
+    )
+  );
+end;
+$$;
+
+comment on function public.payment_set_refund_submit_status(uuid, public.payment_refund_submit_status, uuid, text) is
+  'Updates refund_submit_status after gateway ACK/failure; service_role only (CHK-008).';
+
+revoke all on function public.payment_set_refund_submit_status(uuid, public.payment_refund_submit_status, uuid, text)
+  from public, anon, authenticated;
+grant execute on function public.payment_set_refund_submit_status(uuid, public.payment_refund_submit_status, uuid, text)
+  to service_role;
 
 create or replace function public.payment_auto_cancel_services(
   p_batch_size int default null

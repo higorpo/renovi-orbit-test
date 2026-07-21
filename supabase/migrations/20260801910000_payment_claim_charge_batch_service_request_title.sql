@@ -12,6 +12,7 @@ declare
   v_batch_size int;
   v_lease_minutes int;
   v_max_attempts int;
+  v_cancel_hours int;
   v_rows jsonb := '[]'::jsonb;
   v_claimed record;
 begin
@@ -22,10 +23,11 @@ begin
 
   v_batch_size := coalesce(
     p_batch_size,
-    public.platform_constant_int('charge_batch_size', 10)
+    public.platform_constant_int('charge_batch_size', 3)
   );
   v_lease_minutes := public.platform_constant_int('payment_lease_duration_minutes', 10);
   v_max_attempts := public.platform_constant_int('max_charge_attempts', 3);
+  v_cancel_hours := public.platform_constant_int('auto_cancel_hours_before_service', 12);
 
   create temp table _payment_claim_batch_result on commit drop as
   with eligible as materialized (
@@ -69,6 +71,9 @@ begin
       and ps.charge_frozen_at is null
       and ps.automatic_attempt_count < v_max_attempts
       and ps.charge_scheduled_at <= now()
+      -- Match payment_begin_manual_attempt T-12h gate (exec_at - now() > auto_cancel_hours).
+      and public.payment_service_execution_at(cs) - now()
+        > make_interval(hours => v_cancel_hours)
       and (ps.locked_until is null or ps.locked_until < now())
       and (ps.next_retry_at is null or ps.next_retry_at <= now())
       and cs.status not in ('CANCELLED', 'COMPLETED')
@@ -82,6 +87,7 @@ begin
       state = 'PROCESSING',
       locked_until = now() + make_interval(mins => v_lease_minutes),
       automatic_attempt_count = ps.automatic_attempt_count + 1,
+      claimed_charge_amount = e.charge_amount,
       updated_at = now()
     from eligible e
     where ps.id = e.id
@@ -159,7 +165,7 @@ end;
 $$;
 
 comment on function public.payment_claim_charge_batch(int) is
-  'Cron dequeue: SKIP LOCKED lease, increment automatic_attempt_count, return charge_amount, provider_payout, netcred_company_id, service_request_title per row. Skips charge_frozen_at schedules.';
+  'Cron dequeue: SKIP LOCKED lease, freeze claimed_charge_amount, T-12h upper bound matching manual, return charge_amount, provider_payout, netcred_company_id, service_request_title. Skips charge_frozen_at schedules.';
 
 create or replace function public.payment_begin_manual_attempt(
   p_schedule_id uuid,
@@ -182,6 +188,7 @@ declare
   v_from_state text;
   v_exec_at timestamptz;
   v_rate_limit jsonb;
+  v_charge_amount numeric;
 begin
   if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'service_role required for payment_begin_manual_attempt'
@@ -202,6 +209,16 @@ begin
     raise exception 'CLEARSALE_SESSION_REQUIRED'
       using errcode = 'P0001';
   end if;
+
+  begin
+    perform btrim(p_clearsale_session_id)::uuid;
+  exception
+    when invalid_text_representation then
+      raise exception 'CLEARSALE_SESSION_INVALID'
+        using
+          errcode = 'P0001',
+          detail = jsonb_build_object('code', 'CLEARSALE_SESSION_INVALID')::text;
+  end;
 
   select ps.*
   into v_schedule
@@ -281,16 +298,38 @@ begin
         detail = jsonb_build_object('code', 'PAYMENT_TOKEN_INACTIVE')::text;
   end if;
 
+  -- Fresh fingerprint required: reject reuse of the prior schedule session (CHK-013).
+  if btrim(p_clearsale_session_id) is not distinct from v_schedule.clearsale_session_id then
+    raise exception 'CLEARSALE_SESSION_STALE'
+      using
+        errcode = 'P0001',
+        detail = jsonb_build_object('code', 'CLEARSALE_SESSION_STALE')::text;
+  end if;
+
+  perform public.payment_consume_clearsale_session(
+    btrim(p_clearsale_session_id),
+    p_client_id,
+    'manual',
+    null,
+    p_schedule_id
+  );
+
   v_lease_minutes := public.platform_constant_int('payment_lease_duration_minutes', 10);
   v_from_state := v_schedule.state;
+  v_charge_amount := public.payment_calculate_charge_amount(
+    v_schedule.client_card_token_id,
+    v_schedule.base_amount,
+    v_schedule.installment_number
+  );
 
+  -- Keep prior gateway_reference_code until Edge getTransaction confirms
+  -- REJECTED/VOIDED/absent; rotating here enables double-charge after ambiguous success.
   update public.payment_schedules ps
   set
     state = 'PROCESSING',
     locked_until = now() + make_interval(mins => v_lease_minutes),
     manual_attempt_count = ps.manual_attempt_count + 1,
-    -- Fresh UUID so NetCred accepts a new chargeCreate after a prior REJECTED.
-    gateway_reference_code = gen_random_uuid(),
+    claimed_charge_amount = v_charge_amount,
     clearsale_session_id = trim(p_clearsale_session_id),
     client_ip_address = nullif(trim(coalesce(p_client_ip_address, '')), ''),
     updated_at = now()
@@ -356,14 +395,10 @@ begin
     'clearsale_session_id', v_schedule.clearsale_session_id,
     'client_ip_address', v_schedule.client_ip_address,
     'gateway_reference_code', v_schedule.gateway_reference_code,
-    'charge_amount', public.payment_calculate_charge_amount(
-      v_schedule.client_card_token_id,
-      v_schedule.base_amount,
-      v_schedule.installment_number
-    )
+    'charge_amount', v_charge_amount
   );
 end;
 $$;
 
 comment on function public.payment_begin_manual_attempt(uuid, uuid, text, text, uuid) is
-  'Manual charge lease: rate-limited via platform_rate_limits (10/min per client), T-12h gate, increments manual_attempt_count, returns service_request_title.';
+  'Manual charge lease: rate-limited via platform_rate_limits (10/min per client), T-12h gate, freezes claimed_charge_amount, increments manual_attempt_count, preserves gateway_reference_code for Edge reconcile, returns service_request_title.';

@@ -26,9 +26,29 @@ export type WebhookDeadLetterContext = {
   retry_count?: number;
 };
 
+export type WebhookAuthFailSpikeContext = {
+  count_15m: number;
+  threshold: number;
+};
+
+export type FailedPermanentSpikeContext = {
+  count_15m: number;
+  threshold: number;
+};
+
+export type TransactionDisputeContext = {
+  schedule_id: string;
+  service_id: string;
+  event_id?: string;
+  gateway_transaction_id?: string | null;
+};
+
 export type PaymentSentryAlert =
   | ({ kind: "auto_cancel" } & AutoCancelWarningContext)
-  | ({ kind: "webhook_dead_letter" } & WebhookDeadLetterContext);
+  | ({ kind: "webhook_dead_letter" } & WebhookDeadLetterContext)
+  | ({ kind: "webhook_auth_fail_spike" } & WebhookAuthFailSpikeContext)
+  | ({ kind: "failed_permanent_spike" } & FailedPermanentSpikeContext)
+  | ({ kind: "transaction_dispute" } & TransactionDisputeContext);
 
 export type RecordedSentryMessage = {
   level: "warning" | "fatal";
@@ -207,13 +227,43 @@ export async function emitMissingClearSaleSessionWarning(input: {
 }
 
 export async function emitProviderMultipleEdgesWarning(extra: {
-  document: string;
+  document_suffix: string;
   edges_count: number;
 }): Promise<void> {
   await captureMessage(
     "provider_multiple_company_edges",
     "warning",
     extra,
+    [],
+  );
+}
+
+export async function emitWebhookAuthFailSpikeWarning(
+  input: WebhookAuthFailSpikeContext,
+): Promise<void> {
+  await captureMessage(
+    "payment_webhook_auth_fail_spike",
+    "warning",
+    {
+      count_15m: input.count_15m,
+      threshold: input.threshold,
+      window: "15m",
+    },
+    [],
+  );
+}
+
+export async function emitFailedPermanentSpikeWarning(
+  input: FailedPermanentSpikeContext,
+): Promise<void> {
+  await captureMessage(
+    "payment_failed_permanent_spike",
+    "warning",
+    {
+      count_15m: input.count_15m,
+      threshold: input.threshold,
+      window: "15m",
+    },
     [],
   );
 }
@@ -235,6 +285,9 @@ export const CRITICAL_ALERTS = {
   NETCRED_AUTH_FAILURE: "NETCRED_AUTH_FAILURE",
   WEBHOOK_DEAD_LETTER: "WEBHOOK_DEAD_LETTER",
   SANDBOX_CREDENTIALS_IN_PRODUCTION: "SANDBOX_CREDENTIALS_IN_PRODUCTION",
+  /** Gateway succeeded (or reconcile confirmed) but payment_commit_charge_outcome still fails. */
+  CHARGE_COMMIT_AFTER_SUCCESS_FAILED: "CHARGE_COMMIT_AFTER_SUCCESS_FAILED",
+  TRANSACTION_DISPUTE: "TRANSACTION_DISPUTE",
 } as const;
 
 export async function captureCriticalAlert(
@@ -283,6 +336,15 @@ export function captureWebhookDeadLetterCritical(
   captureCriticalAlertSync(CRITICAL_ALERTS.WEBHOOK_DEAD_LETTER, extra);
 }
 
+export function captureTransactionDisputeCritical(
+  extra: TransactionDisputeContext,
+): void {
+  captureCriticalAlertSync(CRITICAL_ALERTS.TRANSACTION_DISPUTE, {
+    error_type: "TRANSACTION_DISPUTE",
+    ...extra,
+  });
+}
+
 export function createNetcredCaptureCriticalHook(): (
   message: string,
   extra?: Record<string, unknown>,
@@ -315,6 +377,18 @@ export async function dispatchPaymentSentryAlerts(
         break;
       case "webhook_dead_letter":
         captureWebhookDeadLetterCritical(alert);
+        dispatched += 1;
+        break;
+      case "transaction_dispute":
+        captureTransactionDisputeCritical(alert);
+        dispatched += 1;
+        break;
+      case "webhook_auth_fail_spike":
+        await emitWebhookAuthFailSpikeWarning(alert);
+        dispatched += 1;
+        break;
+      case "failed_permanent_spike":
+        await emitFailedPermanentSpikeWarning(alert);
         dispatched += 1;
         break;
     }

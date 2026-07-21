@@ -4,10 +4,12 @@ Direct production launch (no phased rollout or shadow mode). Crons are registere
 
 ## Pre-deploy checklist
 
-- [ ] Migrations applied (through `20260801730000` minimum)
-- [ ] Seven payment Edge Functions deployed
+- [ ] Migrations applied (through `20260801760000` minimum for IN_ANALYSIS void reconciler)
+- [ ] Nine payment Edge Functions deployed (includes `reconcile-inanalysis-auto-cancel-voids` + `dispatch-kyc-email`)
 - [ ] Vault + Edge secrets per [`vault-secrets-runbook.md`](./vault-secrets-runbook.md)
-- [ ] `ORBIT_CRON_SECRET` configured for pg_cron → EF auth
+- [ ] Go-live secret gates in [`production-rollout-checklist.md`](./production-rollout-checklist.md) passed
+- [ ] `ORBIT_CRON_SECRET` configured for pg_cron → EF auth (unique; ≠ example placeholders)
+- [ ] `ENVIRONMENT` not `development` in production Edge secrets
 - [ ] NetCred production credentials (not sandbox)
 
 ## Verify crons after deploy
@@ -19,6 +21,7 @@ where jobname in (
   'payment_recover_orphaned_schedules',
   'process-webhook-retry',
   'reconcile-netcred-payments',
+  'reconcile-inanalysis-auto-cancel-voids',
   'notify-upcoming-charges',
   'auto-cancel-unpaid-services',
   'schedule-netcred-charges',
@@ -28,7 +31,7 @@ where jobname in (
 order by jobname;
 ```
 
-Expected: eight rows, all **`active = true`**.
+Expected: nine rows, all **`active = true`**.
 
 ## Post-deploy monitoring
 

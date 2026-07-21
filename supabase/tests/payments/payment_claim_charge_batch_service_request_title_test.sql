@@ -148,7 +148,7 @@ begin
     id,
     client_id,
     gateway_slug,
-    gateway_payment_profile_id,
+    gateway_payment_profile_id, netcred_company_id,
     card_number_masked,
     card_brand,
     gateway_card_token,
@@ -162,7 +162,7 @@ begin
     v_card_token_id,
     v_client_id,
     'netcred',
-    format('profile-%s', v_contracted_service_id),
+    format('profile-%s', v_contracted_service_id), '1014',
     '497010XXXXXX0048',
     'visa',
     format('token-%s', v_contracted_service_id),
@@ -186,8 +186,8 @@ begin
     provider_payout,
     charge_scheduled_at,
     state,
-    idempotency_key
-  )
+    idempotency_key,
+    gateway_reference_code)
   values (
     v_schedule_id,
     v_contracted_service_id,
@@ -201,8 +201,8 @@ begin
     90.00,
     now() - interval '1 minute',
     'SCHEDULED'::public.payment_schedule_state,
-    v_contracted_service_id::text
-  );
+    v_contracted_service_id::text,
+    v_contracted_service_id);
 
   perform set_config('test.charge_batch.schedule_id', v_schedule_id::text, true);
 end;

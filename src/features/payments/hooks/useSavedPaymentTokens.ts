@@ -11,7 +11,7 @@ export function useSavedPaymentTokens(enabled = true) {
   return useQuery({
     queryKey: [...SAVED_PAYMENT_TOKENS_QUERY_KEY, clientId],
     queryFn: async () => {
-      const result = await listActivePaymentTokens(clientId!);
+      const result = await listActivePaymentTokens();
       if (result.error) {
         throw new Error(result.error);
       }

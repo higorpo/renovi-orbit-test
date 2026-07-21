@@ -73,7 +73,10 @@ begin
     or (old.state = 'PAID'::public.payment_schedule_state
       and new.state in (
         'REFUND_REQUESTED'::public.payment_schedule_state,
-        'VOIDED'::public.payment_schedule_state
+        'VOIDED'::public.payment_schedule_state,
+        -- External gateway refund / chargeback while still PAID (CHK-010).
+        'REFUNDED'::public.payment_schedule_state,
+        'PARTIALLY_REFUNDED'::public.payment_schedule_state
       ))
     or (old.state = 'REFUND_REQUESTED'::public.payment_schedule_state
       and new.state in (
@@ -120,4 +123,4 @@ end;
 $$;
 
 comment on function public.payment_schedules_guard_state_transition() is
-  'Enforces payment_schedules.state transition matrix. PAID may move to REFUND_REQUESTED or VOIDED; truly terminal states cannot change.';
+  'Enforces payment_schedules.state transition matrix. PAID may move to REFUND_REQUESTED, VOIDED, REFUNDED, or PARTIALLY_REFUNDED; truly terminal states cannot change.';

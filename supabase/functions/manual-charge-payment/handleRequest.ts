@@ -12,8 +12,12 @@ import type {
 } from "../_shared/payment/types.ts";
 import { extractClientIp } from "./extractClientIp.ts";
 import { buildPayoutRule } from "../_shared/payment/buildPayoutRule.ts";
-import { resolveChargeReferenceCode } from "../_shared/payment/chargeReferenceCode.ts";
+import {
+  executeManualCharge,
+  toCreateChargeResultFromExisting,
+} from "./executeManualCharge.ts";
 import { enqueueManualChargeNotifications } from "./enqueueNotifications.ts";
+import { toClientFacingChargeFailureCode } from "../_shared/payment/client-facing-errors.ts";
 import { resolveChargeOutcome } from "./resolveChargeOutcome.ts";
 import type {
   ManualChargeAcquireErrorCode,
@@ -45,7 +49,9 @@ export type ManualChargePaymentDeps = {
   }) => Promise<string | null>;
   loadPaymentToken: (tokenId: string) => Promise<PaymentTokenRecord | null>;
   loadProviderAccount: (providerId: string) => Promise<ProviderAccountRecord | null>;
+  getTransaction: PaymentProvider["getTransaction"];
   createCharge: PaymentProvider["createCharge"];
+  rotateGatewayReference: (scheduleId: string) => Promise<string>;
   commitResult: (input: {
     scheduleId: string;
     clientId: string;
@@ -65,6 +71,8 @@ export type ManualChargePaymentDeps = {
     metadata: Record<string, unknown>,
   ) => Promise<void>;
   checkRateLimit: typeof checkRateLimit;
+  /** Renovi platform NetCred company — card profiles and chargeCreate scope. */
+  platformCompanyId: string;
   now?: () => number;
 };
 
@@ -157,6 +165,12 @@ export async function handleManualChargePaymentRequest(
     return jsonResponse({ error_code: "CLEARSALE_SESSION_REQUIRED" }, 400, cors);
   }
 
+  const uuidPattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidPattern.test(clearsaleSessionId)) {
+    return jsonResponse({ error_code: "CLEARSALE_SESSION_INVALID" }, 400, cors);
+  }
+
   const clientIpAddress = extractClientIp(req);
   const acquireResult = await deps.acquireLease({
     scheduleId,
@@ -180,6 +194,8 @@ export async function handleManualChargePaymentRequest(
     service_id: schedule.contracted_service_id,
     schedule_id: schedule.id,
     gateway_slug: schedule.gateway_slug,
+    gateway_reference_code: schedule.gateway_reference_code?.trim() ||
+      schedule.contracted_service_id,
     attempt_number: schedule.manual_attempt_count + 1,
     initiator: "manual",
   });
@@ -202,6 +218,15 @@ export async function handleManualChargePaymentRequest(
     return jsonResponse({ error_code: "PROVIDER_NOT_CREDENTIALED" }, 422, cors);
   }
 
+  const platformCompanyId = deps.platformCompanyId.trim();
+  if (!platformCompanyId) {
+    return jsonResponse({ error_code: "PLATFORM_COMPANY_NOT_CONFIGURED" }, 503, cors);
+  }
+
+  if (paymentToken.netcred_company_id.trim() !== platformCompanyId) {
+    return jsonResponse({ error_code: "PAYMENT_TOKEN_COMPANY_MISMATCH" }, 422, cors);
+  }
+
   const chargeAmount = await deps.calculateChargeAmount({
     clientCardTokenId: schedule.client_card_token_id,
     baseAmount: schedule.base_amount,
@@ -213,6 +238,8 @@ export async function handleManualChargePaymentRequest(
       service_id: schedule.contracted_service_id,
       schedule_id: schedule.id,
       gateway_slug: schedule.gateway_slug,
+      gateway_reference_code: schedule.gateway_reference_code?.trim() ||
+        schedule.contracted_service_id,
       error_code: "CHARGE_AMOUNT_CALCULATION_FAILED",
       error: "charge_amount_calculation_failed",
     });
@@ -234,11 +261,10 @@ export async function handleManualChargePaymentRequest(
   }
 
   const chargeInput: CreateChargeInput = {
-    // Rotated UUID from payment_begin_manual_attempt (gateway_reference_code).
-    referenceCode: resolveChargeReferenceCode({
-      gatewayReferenceCode: schedule.gateway_reference_code,
-      contractedServiceId: schedule.contracted_service_id,
-    }),
+    // Prior gateway_reference_code; executeManualCharge rotates only after
+    // getTransaction confirms REJECTED/VOIDED/absent.
+    referenceCode: schedule.gateway_reference_code?.trim() ||
+      schedule.contracted_service_id,
     serviceTitle: schedule.service_request_title ?? undefined,
     amount: chargeAmount,
     paymentMethod: {
@@ -252,9 +278,24 @@ export async function handleManualChargePaymentRequest(
     customerIpAddress: schedule.client_ip_address ?? clientIpAddress ?? undefined,
   };
 
-  const startedAt = deps.now?.() ?? Date.now();
-  const chargeResult = await deps.createCharge(chargeInput);
-  const gatewayLatencyMs = Math.max(0, (deps.now?.() ?? Date.now()) - startedAt);
+  const execution = await executeManualCharge(
+    {
+      getTransaction: deps.getTransaction,
+      createCharge: deps.createCharge,
+      rotateGatewayReference: deps.rotateGatewayReference,
+      now: deps.now,
+    },
+    schedule,
+    providerAccount.netcred_company_id.trim(),
+    chargeInput,
+  );
+
+  const chargeResult = execution.kind === "reconciled"
+    ? toCreateChargeResultFromExisting(execution.existing)
+    : execution.chargeResult;
+  const gatewayLatencyMs = execution.kind === "reconciled"
+    ? 0
+    : execution.gatewayLatencyMs;
   const outcome = resolveChargeOutcome(chargeResult);
 
   const committedScheduleId = await deps.commitResult({
@@ -276,6 +317,9 @@ export async function handleManualChargePaymentRequest(
       service_id: schedule.contracted_service_id,
       schedule_id: schedule.id,
       gateway_slug: schedule.gateway_slug,
+      gateway_reference_code: schedule.gateway_reference_code?.trim() ||
+        schedule.contracted_service_id,
+      gateway_charge_id: chargeResult.chargeId ?? null,
       error_code: "COMMIT_FAILED",
       outcome,
     });
@@ -286,6 +330,9 @@ export async function handleManualChargePaymentRequest(
     service_id: schedule.contracted_service_id,
     schedule_id: schedule.id,
     gateway_slug: schedule.gateway_slug,
+    gateway_reference_code: schedule.gateway_reference_code?.trim() ||
+      schedule.contracted_service_id,
+    gateway_charge_id: chargeResult.chargeId ?? null,
     outcome,
     gateway_latency_ms: gatewayLatencyMs,
     charge_amount: chargeAmount,
@@ -312,12 +359,13 @@ export async function handleManualChargePaymentRequest(
     });
   }
 
+  // Client gets coarse buckets only; fine codes remain in DB/logs via commitResult.
   return jsonResponse(
     {
       schedule_id: committedScheduleId,
       outcome,
       charge_amount: chargeAmount,
-      failure_code: chargeResult.error?.originalCode ?? chargeResult.error?.code ?? null,
+      failure_code: toClientFacingChargeFailureCode(chargeResult.error),
     },
     200,
     cors,

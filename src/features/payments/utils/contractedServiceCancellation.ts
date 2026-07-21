@@ -2,7 +2,8 @@ export type CancellationViewerRole = "client" | "provider";
 
 export type ClientRefundPenaltyTier = "FULL_REFUND" | "PENALTY_10" | "PENALTY_30";
 
-const NON_CANCELLABLE_SERVICE_STATUSES = new Set(["CANCELLED", "COMPLETED", "EXECUTED"]);
+/** EXECUTED is cancellable when a PAID schedule exists (RPC allows; UI previously blocked). */
+const NON_CANCELLABLE_SERVICE_STATUSES = new Set(["CANCELLED", "COMPLETED"]);
 
 const BLOCKED_SCHEDULE_STATES = new Set([
   "IN_ANALYSIS",
@@ -25,6 +26,8 @@ const SHIFT_START_HOUR: Record<string, number> = {
   afternoon: 13,
   full_day: 8,
 };
+
+const SAO_PAULO_TZ = "America/Sao_Paulo";
 
 export function isPreChargeScheduleState(state: string): boolean {
   return state === "SCHEDULED" || state === "FAILED" || state === "FAILED_PERMANENT";
@@ -51,6 +54,10 @@ export function canCancelContractedService(input: {
   return CANCELLABLE_SCHEDULE_STATES.has(scheduleState);
 }
 
+/**
+ * Approximates service execution instant in America/Sao_Paulo (CHK-038).
+ * Prefer `serviceExecutionAt` from the API when available.
+ */
 export function approximateServiceExecutionAt(
   scheduledStartDate: string,
   scheduledShift: string,
@@ -61,17 +68,62 @@ export function approximateServiceExecutionAt(
   }
 
   const hour = SHIFT_START_HOUR[scheduledShift] ?? 8;
-  const parsed = new Date(
-    Number(match[1]),
-    Number(match[2]) - 1,
-    Number(match[3]),
-    hour,
-    0,
-    0,
-    0,
-  );
+  const isoLocal = `${match[1]}-${match[2]}-${match[3]}T${String(hour).padStart(2, "0")}:00:00`;
 
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+  // Interpret wall-clock in America/Sao_Paulo via Intl offset at that calendar day.
+  const probe = new Date(`${isoLocal}Z`);
+  if (Number.isNaN(probe.getTime())) {
+    return null;
+  }
+
+  const offsetMinutes = getTimeZoneOffsetMinutes(SAO_PAULO_TZ, probe);
+  if (offsetMinutes == null) {
+    return null;
+  }
+
+  return new Date(
+    Date.UTC(
+      Number(match[1]),
+      Number(match[2]) - 1,
+      Number(match[3]),
+      hour,
+      0,
+      0,
+      0,
+    ) -
+      offsetMinutes * 60_000,
+  );
+}
+
+function getTimeZoneOffsetMinutes(timeZone: string, date: Date): number | null {
+  try {
+    const dtf = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      timeZoneName: "shortOffset",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    });
+    const parts = dtf.formatToParts(date);
+    const tzName = parts.find((p) => p.type === "timeZoneName")?.value;
+    if (!tzName) {
+      return null;
+    }
+    const match = /GMT([+-]\d{1,2})(?::?(\d{2}))?/.exec(tzName);
+    if (!match) {
+      return tzName === "GMT" ? 0 : null;
+    }
+    const hours = Number(match[1]);
+    const minutes = Number(match[2] ?? "0");
+    const sign = hours < 0 || match[1].startsWith("-") ? -1 : 1;
+    return sign * (Math.abs(hours) * 60 + minutes);
+  } catch {
+    return null;
+  }
 }
 
 export function estimateClientPenaltyTier(
@@ -108,13 +160,13 @@ export function estimateClientRefundAmount(
 
   if (hoursUntilExecution >= 12) {
     return {
-      refundAmount: roundCurrency(baseAmount * 0.9),
+      refundAmount: roundCurrency(Math.min(baseAmount * 0.9, chargeAmount)),
       penaltyTier: "PENALTY_10",
     };
   }
 
   return {
-    refundAmount: roundCurrency(baseAmount * 0.7),
+    refundAmount: roundCurrency(Math.min(baseAmount * 0.7, chargeAmount)),
     penaltyTier: "PENALTY_30",
   };
 }
@@ -134,6 +186,8 @@ export function getCancellationDisclosure(input: {
   scheduleState: string;
   scheduledStartDate: string;
   scheduledShift: string;
+  /** Prefer server `contracted_services.service_execution_at` (America/Sao_Paulo). */
+  serviceExecutionAt?: string | Date | null;
   baseAmount?: number | null;
   paidAmount?: number | null;
 }): CancellationDisclosure {
@@ -155,10 +209,7 @@ export function getCancellationDisclosure(input: {
     };
   }
 
-  const executionAt = approximateServiceExecutionAt(
-    input.scheduledStartDate,
-    input.scheduledShift,
-  );
+  const executionAt = resolveServiceExecutionAt(input);
 
   if (!executionAt) {
     return {
@@ -199,6 +250,27 @@ export function getCancellationDisclosure(input: {
     description: `${refundHint} O estorno pode levar de 30 a 60 dias para aparecer na fatura.`,
     confirmLabel: "Confirmar cancelamento",
   };
+}
+
+function resolveServiceExecutionAt(input: {
+  serviceExecutionAt?: string | Date | null;
+  scheduledStartDate: string;
+  scheduledShift: string;
+}): Date | null {
+  if (input.serviceExecutionAt instanceof Date) {
+    return Number.isNaN(input.serviceExecutionAt.getTime())
+      ? null
+      : input.serviceExecutionAt;
+  }
+
+  if (typeof input.serviceExecutionAt === "string" && input.serviceExecutionAt.trim()) {
+    const parsed = new Date(input.serviceExecutionAt);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+  }
+
+  return approximateServiceExecutionAt(input.scheduledStartDate, input.scheduledShift);
 }
 
 function describeClientRefundPenalty(

@@ -10,6 +10,7 @@ create or replace function public.payment_persist_client_card_token(
   p_expiry_year smallint,
   p_cardholder_name text,
   p_billing_address jsonb,
+  p_netcred_company_id text,
   p_gateway_slug public.payment_gateway_slug default 'netcred'::public.payment_gateway_slug
 )
 returns jsonb
@@ -19,6 +20,7 @@ set search_path = public
 as $$
 declare
   v_token_id uuid;
+  v_company_id text;
 begin
   if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'service_role required for payment_persist_client_card_token'
@@ -34,6 +36,13 @@ begin
     raise exception 'p_gateway_payment_profile_id is required'
       using errcode = '22023';
   end if;
+
+  if p_netcred_company_id is null or trim(p_netcred_company_id) = '' then
+    raise exception 'p_netcred_company_id is required'
+      using errcode = '22023';
+  end if;
+
+  v_company_id := trim(p_netcred_company_id);
 
   if p_card_brand is null or trim(p_card_brand) = '' then
     raise exception 'p_card_brand is required'
@@ -61,6 +70,7 @@ begin
     client_id,
     gateway_slug,
     gateway_payment_profile_id,
+    netcred_company_id,
     card_number_masked,
     card_brand,
     gateway_card_token,
@@ -74,6 +84,7 @@ begin
     p_client_id,
     p_gateway_slug,
     trim(p_gateway_payment_profile_id),
+    v_company_id,
     coalesce(p_card_number_masked, ''),
     upper(trim(p_card_brand)),
     trim(p_gateway_card_token),
@@ -85,6 +96,7 @@ begin
   )
   on conflict on constraint client_card_tokens_client_profile_unique
   do update set
+    netcred_company_id = excluded.netcred_company_id,
     card_number_masked = excluded.card_number_masked,
     card_brand = excluded.card_brand,
     gateway_card_token = excluded.gateway_card_token,
@@ -119,20 +131,20 @@ end;
 $$;
 
 comment on function public.payment_persist_client_card_token(
-  uuid, text, text, text, text, smallint, smallint, text, jsonb, public.payment_gateway_slug
+  uuid, text, text, text, text, smallint, smallint, text, jsonb, text, public.payment_gateway_slug
 ) is
-  'Inserts or reactivates client_card_tokens after NetCred tokenization (service_role only).';
+  'Inserts or reactivates client_card_tokens after NetCred tokenization (service_role only). Binds netcred_company_id for charge/accept match.';
 
 revoke all on function public.payment_persist_client_card_token(
-  uuid, text, text, text, text, smallint, smallint, text, jsonb, public.payment_gateway_slug
+  uuid, text, text, text, text, smallint, smallint, text, jsonb, text, public.payment_gateway_slug
 ) from public;
 revoke all on function public.payment_persist_client_card_token(
-  uuid, text, text, text, text, smallint, smallint, text, jsonb, public.payment_gateway_slug
+  uuid, text, text, text, text, smallint, smallint, text, jsonb, text, public.payment_gateway_slug
 ) from anon;
 revoke all on function public.payment_persist_client_card_token(
-  uuid, text, text, text, text, smallint, smallint, text, jsonb, public.payment_gateway_slug
+  uuid, text, text, text, text, smallint, smallint, text, jsonb, text, public.payment_gateway_slug
 ) from authenticated;
 
 grant execute on function public.payment_persist_client_card_token(
-  uuid, text, text, text, text, smallint, smallint, text, jsonb, public.payment_gateway_slug
+  uuid, text, text, text, text, smallint, smallint, text, jsonb, text, public.payment_gateway_slug
 ) to service_role;

@@ -51,13 +51,13 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key
-  )
+    charge_scheduled_at, state, idempotency_key,
+    gateway_reference_code)
   values (
     v_pre_id, v_fixture.client_id, v_fixture.provider_id, 'netcred',
     1, 100.00, 10.00, 90.00, now() + interval '5 days',
-    'SCHEDULED'::public.payment_schedule_state, v_pre_id::text
-  );
+    'SCHEDULED'::public.payment_schedule_state, v_pre_id::text,
+    v_pre_id);
   perform set_config('test.cron.pre_id', v_pre_id::text, true);
   perform set_config('test.cron.pre_req_id', v_req_id::text, true);
 
@@ -72,14 +72,14 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key, paid_at, paid_amount, gateway_transaction_id
-  )
+    charge_scheduled_at, state, idempotency_key, paid_at, paid_amount, gateway_transaction_id,
+    gateway_reference_code)
   values (
     v_refund_id, v_fixture.client_id, v_fixture.provider_id, 'netcred',
     1, 100.00, 10.00, 90.00, now() - interval '1 day',
     'PAID'::public.payment_schedule_state, v_refund_id::text,
-    now() - interval '1 day', 110.00, 'txn-service-reschedule-refund'
-  );
+    now() - interval '1 day', 110.00, 'txn-service-reschedule-refund',
+    v_refund_id);
   perform set_config('test.cron.refund_id', v_refund_id::text, true);
   perform set_config('test.cron.refund_req_id', v_req_id::text, true);
 
@@ -98,13 +98,13 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key, failure_reason
-  )
+    charge_scheduled_at, state, idempotency_key, failure_reason,
+    gateway_reference_code)
   values (
     v_auto_id, v_fixture.client_id, v_fixture.provider_id, 'netcred',
     1, 100.00, 10.00, 90.00, now() - interval '1 hour',
-    'FAILED'::public.payment_schedule_state, v_auto_id::text, 'CARD_DECLINED'
-  );
+    'FAILED'::public.payment_schedule_state, v_auto_id::text, 'CARD_DECLINED',
+    v_auto_id);
   perform set_config('test.cron.auto_id', v_auto_id::text, true);
   perform set_config('test.cron.auto_req_id', v_req_id::text, true);
 

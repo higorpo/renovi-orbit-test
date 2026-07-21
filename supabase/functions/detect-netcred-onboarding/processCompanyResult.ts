@@ -11,6 +11,7 @@ export type ResolvedCompanyOutcome = {
   netcredCompanyId?: string;
   netcredBankAccountId?: string;
   warningReason?: string;
+  edgesCount?: number;
 };
 
 function resolveActiveBankAccount(node: CompanyNode): string | null {
@@ -38,6 +39,7 @@ export function resolveCompanyOutcome(
     return {
       action: "warning_multiple_edges",
       warningReason: "multiple_company_edges",
+      edgesCount: edges.length,
     };
   }
 

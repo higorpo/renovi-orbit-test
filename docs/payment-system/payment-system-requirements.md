@@ -89,18 +89,18 @@ If any requirement below contradicts this table, **this table wins**.
 - **Locking Semantics**: Row-level pessimistic locking (`FOR UPDATE`) for payment schedule checkout; `SKIP LOCKED` for parallel worker safety; all transitions inside PL/pgSQL RPCs for atomicity.
 - **External Payment Gateway**: NetCred GraphQL API — sandbox: `https://api.sandbox.netcredbrasil.com.br/graphql`; production: `https://api.netcredbrasil.com.br/graphql`. Authenticated via JWT (`tokenAuth` mutation, 24h TTL).
 - **Payment Gateway Abstraction**: `PaymentProvider` interface (TypeScript name retained) defined in `src/features/payments/types/`; `NetCredAdapter` in `src/features/payments/adapters/netcred/`. In database columns and logs, **`gateway_slug`** identifies the payment gateway (e.g., `'netcred'`). **`provider_id`** / **`provider_id`** refer to the **service provider** (prestador) — never the gateway.
-- **Gateway JWT Cache**: Platform NetCred JWT cached in `payment_gateway_tokens` (one row per `gateway_slug`); login credentials remain in Vault.
+- **Gateway JWT Cache**: Platform NetCred JWT cached in `payment_gateway_tokens` (one row per `gateway_slug`); login credentials remain in Edge Function secrets.
 - **Notification Channels**: Push notifications via Firebase Cloud Messaging (FCM); transactional email via Resend. Both routed through the Orbit Multichannel Message Dispatcher with bypass-priority configuration for payment events.
 - **Observability**: Sentry for Edge Function error tracking and performance spans; structured logger (`supabase/functions/_shared/`) with correlation IDs; PostgreSQL audit tables for immutable event history.
-- **Webhook Reception**: Supabase Edge Function `netcred-webhook` receives NetCred webhook payloads. Validates `X-NETCRED-Signature = SHA256(secretKey + rawBody)`. `secretKey` stored in Supabase Vault.
+- **Webhook Reception**: Supabase Edge Function `netcred-webhook` receives NetCred webhook payloads. Validates `X-NETCRED-Signature = HMAC-SHA256(secretKey, rawBody)`. `secretKey` is Edge secret `NETCRED_WEBHOOK_SECRET` (not Vault).
 - **Retry Mechanism**: Automatic cron-initiated attempts tracked in `automatic_attempt_count`, up to `max_charge_attempts` (default: 3, from `platform_constants`); manual client-initiated attempts tracked in `manual_attempt_count` (unlimited until T-12h, rate-limited by Edge Function). Retry interval: `charge_retry_interval_minutes` (default: 30 minutes). All configurable without code changes.
-- **Installment Fees**: Configurable per card brand and installment range in `platform_constants`; Edge Function computes final charged amount; responses are HMAC-SHA256 signed to prevent client-side tampering of computed amounts.
+- **Installment Fees**: Configurable per card brand and installment range in `platform_constants`; RPC `payment_calculate_installment_options` computes final charged amounts; responses are HMAC-SHA256 signed to prevent client-side tampering of computed amounts.
 - **Split Model** ([`ADR-0001`](../adr/0001-payment-split-commission-model.md)): Client is charged `charge_amount = base_amount + card_fees`. Provider receives **`FIXED_AMOUNT = provider_payout`** where `provider_payout = base_amount × (1 − commission_rate_pct/100)`, **frozen at `accept_proposal`**. Renovi receives **`PERCENTAGE = 100.0`** of `(charge_amount − provider_payout)` (commission + gross card-fee pass-through). Both parties have `isLiable = true`; NetCred MDR is deducted proportionally; Renovi bank net ≈ commission. Example: base R$ 1.000, payout R$ 850, charge R$ 1.030 → provider R$ 850, Renovi gross R$ 180, Renovi net ~R$ 150 after MDR.
 - **Commission freeze**: `commission_rate_pct` and `provider_payout` are persisted on `payment_schedules` at accept and MUST NOT change. Only `charge_amount` (card fees) may drift at T-2.
-- **PCI DSS**: No raw card data (PAN, CVV) persisted in Renovi infrastructure. Only gateway-issued tokenized references: `gateway_payment_profile_id`, `card_number_masked`, `card_brand`, `gateway_card_token`.
+- **PCI DSS**: No raw card data (PAN, CVV) persisted at rest. CHD transit through `tokenize-payment-card` Edge is in CDE until hosted-fields migration. Stored references: `gateway_payment_profile_id`, `netcred_company_id`, `card_number_masked`, `card_brand`, `gateway_card_token`.
 - **Cancellation Policy**: Per Terms of Service §2.2 — >48h: `refund_amount = charge_amount` (100% of amount paid, including card processing fees); 48h–12h: `refund_amount = base_amount × 0.90` (10% penalty on service price; card fees non-refundable); <12h: `refund_amount = base_amount × 0.70` (30% penalty on service price; card fees non-refundable). Provider-initiated cancellations: `refund_amount = charge_amount` (full amount including card fees). Gateway distributes the refund proportionally between all `isLiable` accounts.
 - **At-least-once Delivery**: Webhooks and cron executions operate under at-least-once semantics; idempotency keys prevent duplicate side effects.
-- **Secrets Management**: NetCred credentials, webhook `secretKey`, and HMAC signing secret stored exclusively in Supabase Vault. MUST NOT appear in application code, environment variable files committed to source control, or any client-accessible layer.
+- **Secrets Management**: NetCred credentials and webhook `secretKey` live in **Edge Function secrets**; installment/pricing HMAC signing secrets live in **Supabase Vault** (RPC-only). MUST NOT appear in application code or committed env files. SSOT: [`vault-secrets-runbook.md`](./vault-secrets-runbook.md).
 - **Service scheduling anchor (`payment_service_execution_at`)**: Payment timing MUST NOT duplicate scheduling in a new column. The canonical service instant is derived from existing `contracted_services` columns: `scheduled_start_date` (DATE), `scheduled_shift` (`morning` \| `afternoon` \| `full_day`), combined as `(scheduled_start_date + shift start time) AT TIME ZONE 'America/Sao_Paulo'` where shift starts are `morning/full_day = 08:00`, `afternoon = 13:00`. Implemented as Postgres function `payment_service_execution_at(contracted_services)`. Multi-day jobs anchor on `scheduled_start_date` only. `mark_service_executed` uses date-only comparison on `scheduled_start_date`.
 - **Rescheduling Interaction**: When a service is rescheduled, the rescheduling subsystem updates slot columns. Pre-`PAID` (`state ∈ {SCHEDULED, FAILED, IN_ANALYSIS}`): recalculate `charge_scheduled_at = MAX(now(), payment_service_execution_at(cs) − 2 days)` (emergency → `now()`). Post-`PAID`: allowed **only** while `contracted_services.status = 'CONFIRMED'` (not after `EXECUTED`); slot columns update only; **no new charge**; refund/T-12h windows use updated `payment_service_execution_at`.
 - **Emergency Scheduling**: If `payment_service_execution_at(contracted_services) - now() < 48 hours` at acceptance time, `charge_scheduled_at` is set to `now()` so the next cron picks it up immediately.
@@ -306,7 +306,7 @@ Each invocation MUST:
 - **Audit log**: Every state transition MUST produce an immutable INSERT into `payment_audit_log` within the same transaction as the state change. This table is INSERT-only; application roles MUST NOT have UPDATE or DELETE permissions.
 - **Webhook events**: ALL received webhook payloads MUST be persisted to `payment_webhook_events` before any validation or processing occurs.
 - **Fee configuration**: All rate values stored in `payment_providers` / `platform_constants`; NEVER hardcoded in Edge Function or application code.
-- **Secrets**: NetCred JWT credentials, `secretKey`, and HMAC signing secret stored exclusively in Supabase Vault. Accessed only by server-side Edge Functions via service role.
+- **Secrets**: Installment/pricing HMAC secrets in Supabase Vault (RPC). NetCred JWT credentials and webhook `secretKey` in Edge Function secrets. Accessed only server-side. SSOT: [`vault-secrets-runbook.md`](./vault-secrets-runbook.md).
 
 ### Concurrency Control
 
@@ -584,7 +584,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 ## Requirement 6: PCI-Compliant Card Tokenization
 
-*User Story*: As a security engineer, I want raw card data to never be stored in Renovi infrastructure so that the platform does not incur PCI DSS cardholder data environment scope obligations.
+*User Story*: As a security engineer, I want raw card data never stored at rest in Renovi infrastructure, and transit through Orbit Edge acknowledged as CDE, so compliance posture stays accurate until hosted-fields migration.
 
 ### Acceptance Criteria
 
@@ -594,19 +594,27 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** the Edge Function `tokenize-payment-card` receives the card payload  
 **WHEN** it calls `paymentProfileCreate` via the `NetCredAdapter`  
-**THEN** `customerInput.persist` MUST be `false`; `customerInput.companyId` MUST be set to `netcred_company_id` of the service provider; `billingAddressInput` MUST be included in ALL calls (production and sandbox with ClearSale enabled) — it is not optional; omitting it when ClearSale is active causes `PaymentProfile requires BillingAddress` error from the gateway.
+**THEN** `customerInput.persist` MUST be `false`; `customerInput.companyId` MUST be set to the Renovi platform company (`NETCRED_PLATFORM_COMPANY_ID`) for **both** profile and checkout contexts; `billingAddressInput` MUST be included in ALL calls (production and sandbox with ClearSale enabled) — it is not optional; omitting it when ClearSale is active causes `PaymentProfile requires BillingAddress` error from the gateway. **Orbit Edge is in PCI CDE for CHD transit** — do not claim out-of-scope while PAN/CVV transit this EF; follow-on: NetCred hosted fields.
 
 **GIVEN** `paymentProfileCreate` returns a successful response  
 **WHEN** `paymentProfile.isActive = true`  
-**THEN** the Edge Function MUST insert a `payment_tokens` record containing ONLY: `gateway_payment_profile_id` (= `paymentProfile.id`), `card_number_masked`, `card_brand`, `gateway_card_token` (= `paymentProfile.token`), `expiry_month`, `expiry_year`, `cardholder_name`, `billing_address` (JSONB); PAN, CVV, and any raw credential MUST NOT exist in this record.
+**THEN** the Edge Function MUST persist via `payment_persist_client_card_token` ONLY: `gateway_payment_profile_id` (= `paymentProfile.id`), `netcred_company_id` (= platform `companyId`), `card_number_masked`, `card_brand`, `gateway_card_token` (= `paymentProfile.token`), `expiry_month`, `expiry_year`, `cardholder_name`, `billing_address` (JSONB); PAN, CVV, and any raw credential MUST NOT exist in this record.
+
+**GIVEN** a saved token is presented at `accept_proposal`, `payment_update_method`, or charge  
+**WHEN** `client_card_tokens.netcred_company_id` does not match the platform company (`payment_netcred_platform_company_id()` / `NETCRED_PLATFORM_COMPANY_ID`)  
+**THEN** the operation MUST fail with `PAYMENT_TOKEN_COMPANY_MISMATCH` (token must be re-added under the Renovi platform merchant).
+
+**GIVEN** `chargeCreate` / `getTransaction` runs for a schedule  
+**WHEN** the adapter maps the charge  
+**THEN** `companyId` MUST be the **provider** NetCred company (so payout bank accounts belong to that merchant); card `paymentProfileId` MAY reference a profile tokenized under the platform company.
 
 **GIVEN** `paymentProfileCreate` returns `errors[]` or `isActive = false`  
 **WHEN** the tokenization fails  
 **THEN** the Edge Function MUST return an error response to the client exposing `errors[].message`; the `accept_proposal` flow MUST NOT proceed; no partial `payment_tokens` record MUST be created.
 
-**GIVEN** a client adds a card from the Profile screen (not acceptance flow)  
+**GIVEN** a client adds a card from the Profile screen or checkout  
 **WHEN** tokenization is executed  
-**THEN** the SAME `tokenize-payment-card` Edge Function MUST be used; the resulting `payment_tokens` record MUST be associated with `client_id` but without a `service_id` linkage; it MUST be available for selection in future acceptance flows.
+**THEN** the SAME `tokenize-payment-card` Edge Function MUST always use platform `NETCRED_PLATFORM_COMPANY_ID`; the resulting token row MUST store that `netcred_company_id` and MUST be reusable across providers at accept (binding checks platform, not provider).
 
 **GIVEN** a `PAYMENT_PROFILE_TOKENIZE` webhook arrives with `isActive = false`  
 **WHEN** the handler processes it  
@@ -626,9 +634,9 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** the client reaches the installment selection step in the acceptance stepper  
 **WHEN** the step is rendered  
-**THEN** the frontend MUST invoke the Edge Function `calculate-installment-options` passing `proposal_id`, `service_id`, and `card_brand`; installment fees MUST NOT be computed client-side.
+**THEN** the frontend MUST invoke the RPC `payment_calculate_installment_options` passing `proposal_id`, `service_id`, and `card_brand`; installment fees MUST NOT be computed client-side. (The former Edge Function `calculate-installment-options` was removed — RPC-first.)
 
-**GIVEN** `calculate-installment-options` is invoked  
+**GIVEN** `payment_calculate_installment_options` is invoked  
 **WHEN** it reads fee configuration  
 **THEN** it MUST read all rate values exclusively from `platform_constants`; specifically: `cc_visa_master_1x_rate`, `cc_visa_master_2_6x_rate`, `cc_visa_master_7_12x_rate`, `cc_elo_other_1x_rate`, `cc_elo_other_2_6x_rate`, `cc_elo_other_7_12x_rate`, `cc_fixed_processing_fee_brl`, `cc_risk_analysis_fee_brl`.
 
@@ -642,16 +650,16 @@ All Edge Function charge execution paths MUST invoke operations through this int
 - `installment_amount` MUST be rounded to 2 decimal places using banker's rounding (round half to even)
 
 **GIVEN** the installment options array is computed  
-**WHEN** the Edge Function prepares its response  
+**WHEN** the RPC prepares its response  
 **THEN** it MUST generate an HMAC-SHA256 signature over the serialized payload `{ proposal_id, service_id, base_amount, card_brand, installment_options, computed_at, expires_at }` using `INSTALLMENT_SIGNING_SECRET` from Vault; `expires_at = computed_at + 10 minutes`; the signature MUST be included in the response as `installment_selection_hmac`.
 
 **GIVEN** the client selects an installment option and submits acceptance  
 **WHEN** `accept_proposal` receives the payload  
-**THEN** the server MUST recompute the HMAC over the submitted payload fields and compare with `installment_selection_hmac` using a constant-time comparison; a signature mismatch MUST return HTTP 400 with `error_code: 'INVALID_INSTALLMENT_SIGNATURE'`; an expired payload MUST return HTTP 400 with `error_code: 'INSTALLMENT_SIGNATURE_EXPIRED'`; in both cases the acceptance MUST NOT proceed. The client app MUST handle `INSTALLMENT_SIGNATURE_EXPIRED` by re-opening the installment selection step with a fresh `calculate-installment-options` call; the card token, billing address, and all other stepper data MUST be preserved — only the installment selection and HMAC are reset.
+**THEN** the server MUST recompute the HMAC over the submitted payload fields and compare with `installment_selection_hmac` using a constant-time comparison; a signature mismatch MUST return HTTP 400 with `error_code: 'INVALID_INSTALLMENT_SIGNATURE'`; an expired payload MUST return HTTP 400 with `error_code: 'INSTALLMENT_SIGNATURE_EXPIRED'`; in both cases the acceptance MUST NOT proceed. The client app MUST handle `INSTALLMENT_SIGNATURE_EXPIRED` by re-opening the installment selection step with a fresh `payment_calculate_installment_options` call; the card token, billing address, and all other stepper data MUST be preserved — only the installment selection and HMAC are reset.
 
 **GIVEN** the cron executes the actual charge at T-2  
 **WHEN** the charge amount is computed  
-**THEN** the cron MUST call the Postgres RPC `calculate_charge_amount(payment_token_id, base_amount, installment_number)` using the persisted `card_brand` from `payment_tokens`; this RPC MUST use the same fee formula as the Edge Function; the HMAC payload is NOT used for this computation — only the current `platform_constants` values.
+**THEN** the cron MUST call the Postgres RPC `calculate_charge_amount(payment_token_id, base_amount, installment_number)` using the persisted `card_brand` from `payment_tokens`; this RPC MUST use the same fee formula as `payment_calculate_installment_options`; the HMAC payload is NOT used for this computation — only the current `platform_constants` values.
 
 **GIVEN** `platform_constants` fee rates are updated between checkout and charge execution  
 **WHEN** the cron executes `calculate_charge_amount`  
@@ -995,7 +1003,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** the payload is persisted  
 **WHEN** signature validation begins  
-**THEN** the function MUST compute `HMAC-SHA256(secretKey, rawBody)` where `secretKey` is read from Supabase Vault; it MUST compare the computed hex digest to the value in `X-NETCRED-Signature` using a constant-time comparison function (e.g., `crypto.timingSafeEqual`) to prevent timing side-channel attacks.
+**THEN** the function MUST compute `HMAC-SHA256(secretKey, rawBody)` where `secretKey` is Edge secret `NETCRED_WEBHOOK_SECRET`; it MUST compare the computed hex digest to the value in `X-NETCRED-Signature` using a constant-time comparison function (e.g., `crypto.timingSafeEqual`) to prevent timing side-channel attacks.
 
 **GIVEN** the HMAC comparison fails  
 **WHEN** the mismatch is detected  
@@ -1217,7 +1225,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 ## Requirement 24: PCI DSS Compliance and Security Controls
 
-*User Story*: As the security and compliance officer, I want the payment system to conform to PCI DSS requirements so that Renovi does not incur obligations for storing, processing, or transmitting raw cardholder data.
+*User Story*: As the security and compliance officer, I want the payment system to conform to PCI DSS for data at rest and to acknowledge CHD transit through Orbit Edge as CDE, so Renovi does not understate compliance obligations.
 
 ### Acceptance Criteria
 
@@ -1239,7 +1247,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** the `INSTALLMENT_SIGNING_SECRET` is required  
 **WHEN** it is accessed  
-**THEN** it MUST be read from Supabase Vault; it MUST be rotatable by updating the Vault secret and redeploying the Edge Function; a rotation MUST NOT require a database migration.
+**THEN** it MUST be read from Supabase Vault inside RPCs; it MUST be rotatable by updating the Vault secret (no database migration; no Edge redeploy required for installment HMAC).
 
 **GIVEN** `payment_tokens` RLS policies are applied  
 **WHEN** a query is executed  
@@ -1247,7 +1255,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** NetCred credentials are required  
 **WHEN** Edge Functions access them  
-**THEN** they MUST be read from Supabase Vault at runtime; they MUST NOT be present in `.env` files, source code, or any client-accessible key-value store.
+**THEN** they MUST be read from Edge Function secrets at runtime (`NETCRED_USERNAME`, `NETCRED_PASSWORD`, `NETCRED_WEBHOOK_SECRET`); they MUST NOT be present in committed `.env.example` values, source code, or any client-accessible key-value store. See [`vault-secrets-runbook.md`](./vault-secrets-runbook.md).
 
 ---
 
@@ -1258,7 +1266,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 ### Acceptance Criteria
 
 **GIVEN** installment fee rates are updated in `platform_constants`  
-**WHEN** the next `calculate-installment-options` or `calculate_charge_amount` execution runs  
+**WHEN** the next `payment_calculate_installment_options` or `calculate_charge_amount` execution runs  
 **THEN** the updated rates MUST take effect immediately without Edge Function redeployment.
 
 **GIVEN** `platform_constants` defines credit card fee rates  
@@ -1625,21 +1633,22 @@ The payment system follows the Orbit platform's established layered architecture
 | Responsibility | Location |
 |---|---|
 | Card tokenization (calls `paymentProfileCreate`) | `supabase/functions/tokenize-payment-card/` |
-| Installment calculation + HMAC signing | `supabase/functions/calculate-installment-options/` |
+| Installment calculation + HMAC signing | **RPC** `payment_calculate_installment_options` (Vault) — EF `calculate-installment-options` removed |
 | Scheduled charge execution cron (T-2) | `supabase/functions/schedule-netcred-charges/` |
 | Manual charge execution (client-triggered) | `supabase/functions/manual-charge-payment/` |
 | Webhook ingestion, signature validation, routing | `supabase/functions/netcred-webhook/` |
-| Webhook retry worker | `supabase/functions/process-webhook-retry/` |
+| Webhook retry worker | **RPC** `payment_cron_process_webhook_retry` (EF removed) |
 | Refund processing | `supabase/functions/process-refund/` |
 | Provider onboarding detection cron (batch `companies` query) | `supabase/functions/detect-netcred-onboarding/` |
-| Auto-cancellation at T-12h | `supabase/functions/auto-cancel-unpaid-services/` |
-| Pre-charge client notification (24h before `charge_scheduled_at`) | `supabase/functions/notify-upcoming-charges/` |
+| Auto-cancellation at T-12h | **RPC** `payment_cron_auto_cancel_unpaid_services` (EF removed) |
+| IN_ANALYSIS void compensation after auto-cancel | `supabase/functions/reconcile-inanalysis-auto-cancel-voids/` |
+| Pre-charge client notification (24h before `charge_scheduled_at`) | **RPC** `payment_cron_notify_upcoming_charges` (EF removed) |
 | Reconciliation polling (webhook fallback) | `supabase/functions/reconcile-netcred-payments/` |
-| Orphaned lease janitor invocation | RPC called directly via `pg_cron` OR `supabase/functions/recover-payment-leases/` |
+| Orphaned lease janitor invocation | **RPC** `payment_cron_recover_orphaned_schedules` via `pg_cron` |
 | KYC email dispatch | `supabase/functions/dispatch-kyc-email/` |
 | Shared `NetCredAdapter` and `PaymentProvider` utilities | `supabase/functions/_shared/payment/` |
 | NetCred JWT token refresh (shared adapter concern) | `supabase/functions/_shared/payment/netcred-auth.ts` |
-| ClearSale `sessionId` + client IP capture and persistence at acceptance | Within `accept_proposal` Edge Function; values passed in request body from the frontend |
+| ClearSale `sessionId` + client IP capture and persistence at acceptance | Within `accept_proposal` RPC; values passed from the frontend |
 | `orderInput.sessionId` and `customerIpAddress` injection into `chargeCreate` | Within `schedule-netcred-charges` and `manual-charge-payment`; read from `payment_schedules` columns |
 
 ---

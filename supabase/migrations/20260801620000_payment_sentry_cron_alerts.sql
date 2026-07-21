@@ -348,6 +348,14 @@ begin
 
           v_processed_count := v_processed_count + 1;
           v_queue_processed := v_queue_processed + 1;
+
+          -- CHK-037: CRITICAL dispute alert when deferred webhook path processes TRANSACTION_DISPUTE.
+          if coalesce(v_process_result #>> '{handler,outcome}', '') = 'disputed'
+            and v_process_result #> '{handler,sentry_alert}' is not null then
+            v_sentry_alerts := v_sentry_alerts || jsonb_build_array(
+              v_process_result #> '{handler,sentry_alert}'
+            );
+          end if;
         elsif v_process_result->>'outcome' = 'retry_scheduled' then
           v_fail_result := public.payment_finish_webhook_retry_failure(
             v_event_id,
@@ -439,6 +447,13 @@ begin
 
           v_processed_count := v_processed_count + 1;
           v_events_retried := v_events_retried + 1;
+
+          if coalesce(v_process_result #>> '{handler,outcome}', '') = 'disputed'
+            and v_process_result #> '{handler,sentry_alert}' is not null then
+            v_sentry_alerts := v_sentry_alerts || jsonb_build_array(
+              v_process_result #> '{handler,sentry_alert}'
+            );
+          end if;
         elsif v_process_result->>'outcome' = 'retry_scheduled' then
           v_fail_result := public.payment_finish_webhook_retry_failure(
             v_event_id,
@@ -533,3 +548,157 @@ begin
   end;
 end;
 $$;
+
+-- FIX-011 / CHK-026: 15m spike views + cron → payment-emit-sentry-alerts.
+
+create or replace view public.payment_alert_webhook_auth_fail_spike_v
+with (security_invoker = true) as
+select count(*)::bigint as auth_fail_15m
+from public.payment_webhook_events e
+where e.failure_reason = 'INVALID_SIGNATURE'
+  and e.created_at > now() - interval '15 minutes';
+
+comment on view public.payment_alert_webhook_auth_fail_spike_v is
+  'Webhook INVALID_SIGNATURE count in last 15m (alert when auth_fail_15m > threshold).';
+
+create or replace view public.payment_alert_failed_permanent_spike_v
+with (security_invoker = true) as
+select count(*)::bigint as failed_permanent_15m
+from public.payment_audit_log a
+where a.event_type = 'CHARGE_FAILED_PERMANENT'
+  and a.created_at > now() - interval '15 minutes';
+
+comment on view public.payment_alert_failed_permanent_spike_v is
+  'CHARGE_FAILED_PERMANENT audit events in last 15m (alert when count > threshold).';
+
+revoke all on public.payment_alert_webhook_auth_fail_spike_v from public;
+revoke all on public.payment_alert_webhook_auth_fail_spike_v from anon;
+revoke all on public.payment_alert_webhook_auth_fail_spike_v from authenticated;
+revoke all on public.payment_alert_failed_permanent_spike_v from public;
+revoke all on public.payment_alert_failed_permanent_spike_v from anon;
+revoke all on public.payment_alert_failed_permanent_spike_v from authenticated;
+
+grant select on public.payment_alert_webhook_auth_fail_spike_v to service_role;
+grant select on public.payment_alert_failed_permanent_spike_v to service_role;
+
+create or replace function public.payment_evaluate_sentry_spike_alerts()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+stable
+as $$
+declare
+  v_auth_fail_15m bigint;
+  v_failed_permanent_15m bigint;
+  v_auth_fail_threshold int;
+  v_failed_permanent_threshold int;
+  v_alerts jsonb := '[]'::jsonb;
+begin
+  select auth_fail_15m into v_auth_fail_15m
+  from public.payment_alert_webhook_auth_fail_spike_v;
+
+  select failed_permanent_15m into v_failed_permanent_15m
+  from public.payment_alert_failed_permanent_spike_v;
+
+  v_auth_fail_threshold := greatest(
+    public.platform_constant_int('payment_webhook_auth_fail_spike_threshold_15m', 10),
+    1
+  );
+  v_failed_permanent_threshold := greatest(
+    public.platform_constant_int('payment_failed_permanent_spike_threshold_15m', 5),
+    1
+  );
+
+  if coalesce(v_auth_fail_15m, 0) > v_auth_fail_threshold then
+    v_alerts := v_alerts || jsonb_build_array(
+      jsonb_build_object(
+        'kind', 'webhook_auth_fail_spike',
+        'count_15m', v_auth_fail_15m,
+        'threshold', v_auth_fail_threshold
+      )
+    );
+  end if;
+
+  if coalesce(v_failed_permanent_15m, 0) > v_failed_permanent_threshold then
+    v_alerts := v_alerts || jsonb_build_array(
+      jsonb_build_object(
+        'kind', 'failed_permanent_spike',
+        'count_15m', v_failed_permanent_15m,
+        'threshold', v_failed_permanent_threshold
+      )
+    );
+  end if;
+
+  return v_alerts;
+end;
+$$;
+
+comment on function public.payment_evaluate_sentry_spike_alerts() is
+  'Returns payment-emit-sentry-alerts payloads for breached 15m webhook auth / FAILED_PERMANENT spikes.';
+
+revoke all on function public.payment_evaluate_sentry_spike_alerts() from public;
+revoke all on function public.payment_evaluate_sentry_spike_alerts() from anon;
+revoke all on function public.payment_evaluate_sentry_spike_alerts() from authenticated;
+
+grant execute on function public.payment_evaluate_sentry_spike_alerts() to service_role;
+grant execute on function public.payment_evaluate_sentry_spike_alerts() to postgres;
+
+create or replace function public.payment_cron_emit_sentry_spike_alerts()
+returns void
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  v_job_name constant text := 'payment-emit-sentry-spike-alerts';
+  v_job_run_id bigint;
+  v_started_at timestamptz := clock_timestamp();
+  v_alerts jsonb;
+  v_alert_count int := 0;
+begin
+  v_job_run_id := public.job_run_begin(v_job_name, 'v1');
+
+  begin
+    perform set_config('request.jwt.claim.role', 'service_role', true);
+    perform set_config(
+      'request.jwt.claims',
+      json_build_object('role', 'service_role')::text,
+      true
+    );
+
+    v_alerts := public.payment_evaluate_sentry_spike_alerts();
+    v_alert_count := coalesce(jsonb_array_length(v_alerts), 0);
+
+    if v_alert_count > 0 then
+      perform public.payment_cron_post_sentry_alerts(v_alerts);
+    end if;
+
+    perform public.job_run_finish(
+      v_job_run_id,
+      v_started_at,
+      v_alert_count,
+      v_alert_count,
+      0,
+      jsonb_build_object(
+        'alerts', v_alerts,
+        'alert_count', v_alert_count
+      ),
+      null
+    );
+  exception
+    when others then
+      perform public.job_run_abort_latest(v_job_name, sqlerrm);
+      raise;
+  end;
+end;
+$$;
+
+comment on function public.payment_cron_emit_sentry_spike_alerts() is
+  'pg_cron wrapper: evaluate 15m payment spike views and post breached alerts to Sentry EF.';
+
+revoke all on function public.payment_cron_emit_sentry_spike_alerts() from public;
+revoke all on function public.payment_cron_emit_sentry_spike_alerts() from anon;
+revoke all on function public.payment_cron_emit_sentry_spike_alerts() from authenticated;
+
+grant execute on function public.payment_cron_emit_sentry_spike_alerts() to postgres;

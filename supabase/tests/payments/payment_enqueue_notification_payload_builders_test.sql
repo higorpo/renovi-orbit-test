@@ -154,8 +154,8 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key, paid_at, paid_amount
-  )
+    charge_scheduled_at, state, idempotency_key, paid_at, paid_amount,
+    gateway_reference_code)
   values (
     p_contracted_service_id, v_client_id, p_provider_id, 'netcred',
     1, 100.00, 10.00, 90.00,
@@ -163,8 +163,8 @@ begin
     'PAID'::public.payment_schedule_state,
     p_contracted_service_id::text,
     now(),
-    102.50
-  )
+    102.50,
+    p_contracted_service_id)
   returning id into v_schedule_id;
 
   schedule_id := v_schedule_id;

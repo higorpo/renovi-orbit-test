@@ -24,8 +24,8 @@ select throws_ok(
     'TRANSACTION_CAPTURE',
     'evt-auth-1',
     '{"id":"evt-auth-1"}'::jsonb,
-    '{"X-NETCRED-Event":"TRANSACTION_CAPTURE"}'::jsonb
-  ) $$,
+    '{"X-NETCRED-Event":"TRANSACTION_CAPTURE"}'::jsonb,
+  true) $$,
   '42501',
   'service_role required for payment_ingest_webhook_event',
   'rejects non-service_role callers'
@@ -39,8 +39,8 @@ select is(
     'TRANSACTION_CAPTURE',
     'evt-ingest-1',
     '{"id":"evt-ingest-1","transaction":{"referenceCode":"svc-1"}}'::jsonb,
-    '{"X-NETCRED-Event":"TRANSACTION_CAPTURE","X-NETCRED-Signature":"abc"}'::jsonb
-  )->>'status',
+    '{"X-NETCRED-Event":"TRANSACTION_CAPTURE","X-NETCRED-Signature":"abc"}'::jsonb,
+  true)->>'status',
   'inserted',
   'first ingest returns inserted status'
 );
@@ -61,8 +61,8 @@ select is(
     'TRANSACTION_CAPTURE',
     'evt-ingest-1',
     '{"id":"evt-ingest-1","changed":true}'::jsonb,
-    '{"X-NETCRED-Event":"TRANSACTION_CAPTURE"}'::jsonb
-  )->>'status',
+    '{"X-NETCRED-Event":"TRANSACTION_CAPTURE"}'::jsonb,
+  true)->>'status',
   'duplicate',
   'duplicate dedup key returns duplicate status'
 );

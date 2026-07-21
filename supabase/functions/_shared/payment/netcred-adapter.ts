@@ -249,6 +249,8 @@ function mapRefundGatewayError(
 
 export type NetCredAdapterDeps = NetCredAuthDeps & {
   platformBankAccountId: string;
+  /** Required by adapter registry; card tokenize scope (not chargeCreate.companyId). */
+  platformCompanyId: string;
   fetchFn?: typeof fetch;
   graphqlUrl?: string;
 };

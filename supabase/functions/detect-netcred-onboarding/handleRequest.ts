@@ -92,6 +92,7 @@ async function processBatch(
         deps.emitWarning(outcome.warningReason ?? "multiple_company_edges", {
           provider_account_id: account.id,
           document_suffix: documentLogSuffix(account.document),
+          edges_count: outcome.edgesCount ?? 0,
         });
         break;
       default:

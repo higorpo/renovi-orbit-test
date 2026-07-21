@@ -129,6 +129,14 @@ begin
       paid_amount = v_charge_amount,
       gateway_charge_id = coalesce(p_gateway_charge_id, ps.gateway_charge_id),
       gateway_transaction_id = coalesce(p_gateway_transaction_id, ps.gateway_transaction_id),
+      refund_anchor_execution_at = coalesce(
+        ps.refund_anchor_execution_at,
+        (
+          select public.payment_service_execution_at(cs)
+          from public.contracted_services cs
+          where cs.id = v_schedule.contracted_service_id
+        )
+      ),
       locked_until = null,
       next_retry_at = null,
       failure_code = null,
@@ -206,7 +214,7 @@ begin
       jsonb_build_object('source', 'reconciliation')
     );
   elsif v_gateway_state in ('REFUNDED', 'PARTIALLY_REFUNDED')
-    and v_from_state = 'REFUND_REQUESTED' then
+    and v_from_state in ('REFUND_REQUESTED', 'PAID') then
     v_to_state := v_gateway_state;
 
     update public.payment_schedules ps
@@ -214,6 +222,7 @@ begin
       state = v_to_state::public.payment_schedule_state,
       refunded_at = coalesce(ps.refunded_at, now()),
       refunded_amount = coalesce(p_refunded_amount, ps.refunded_amount),
+      refund_submit_status = 'CONFIRMED'::public.payment_refund_submit_status,
       locked_until = null,
       reconciliation_failure_count = 0,
       updated_at = now()

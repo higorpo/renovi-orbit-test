@@ -116,8 +116,8 @@ begin
     state,
     idempotency_key,
     paid_at,
-    is_disputed
-  )
+    is_disputed,
+    gateway_reference_code)
   values (
     p_contracted_service_id,
     p_client_id,
@@ -131,8 +131,8 @@ begin
     'PAID'::public.payment_schedule_state,
     p_contracted_service_id::text,
     now() - interval '24 hours',
-    p_is_disputed
-  );
+    p_is_disputed,
+    p_contracted_service_id);
 end;
 $$;
 

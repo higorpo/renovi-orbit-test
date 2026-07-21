@@ -77,11 +77,13 @@ as $$
     where pga.provider_id = p_provider_id
       and pga.gateway_slug = p_gateway_slug
       and pga.onboarding_status = 'ACTIVE'::public.payment_provider_onboarding_status
+      and nullif(btrim(pga.netcred_company_id), '') is not null
+      and nullif(btrim(pga.netcred_bank_account_id), '') is not null
   );
 $$;
 
 comment on function public.payment_provider_is_credentialed(uuid, public.payment_gateway_slug) is
-  'True when provider has ACTIVE gateway onboarding for the given slug.';
+  'True when provider has ACTIVE gateway onboarding with both NetCred company and bank account ids.';
 
 revoke all on function public.payment_provider_is_credentialed(uuid, public.payment_gateway_slug) from public;
 revoke all on function public.payment_provider_is_credentialed(uuid, public.payment_gateway_slug) from anon;
@@ -157,8 +159,14 @@ begin
   end if;
 
   if new.onboarding_status = 'ACTIVE'::public.payment_provider_onboarding_status
-    and new.netcred_company_id is null then
+    and nullif(btrim(new.netcred_company_id), '') is null then
     raise exception 'PROVIDER_NETCRED_COMPANY_ID_REQUIRED'
+      using errcode = 'P0001';
+  end if;
+
+  if new.onboarding_status = 'ACTIVE'::public.payment_provider_onboarding_status
+    and nullif(btrim(new.netcred_bank_account_id), '') is null then
+    raise exception 'PROVIDER_NETCRED_BANK_ACCOUNT_ID_REQUIRED'
       using errcode = 'P0001';
   end if;
 

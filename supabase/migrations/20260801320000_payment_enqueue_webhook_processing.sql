@@ -41,6 +41,11 @@ begin
       using errcode = 'P0001';
   end if;
 
+  if not v_event.signature_validated then
+    raise exception 'WEBHOOK_SIGNATURE_NOT_VALIDATED'
+      using errcode = 'P0001';
+  end if;
+
   if v_event.state in (
     'PROCESSED'::public.payment_webhook_event_state,
     'DUPLICATE'::public.payment_webhook_event_state,

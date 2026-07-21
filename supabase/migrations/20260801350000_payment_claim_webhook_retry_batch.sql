@@ -34,6 +34,8 @@ begin
     select e.id
     from public.payment_webhook_events e
     where e.state = 'FAILED'::public.payment_webhook_event_state
+      and e.signature_validated
+      and coalesce(e.failure_reason, '') <> 'INVALID_SIGNATURE'
       and e.retry_count < v_max_retries
       and (e.next_retry_at is null or e.next_retry_at <= now())
     order by coalesce(e.next_retry_at, e.created_at)
@@ -82,7 +84,7 @@ end;
 $$;
 
 comment on function public.payment_claim_webhook_retry_batch(int) is
-  'Claims FAILED webhook events eligible for retry with SKIP LOCKED (service_role only).';
+  'Claims signature-validated FAILED webhook events eligible for retry with SKIP LOCKED (service_role only).';
 
 revoke all on function public.payment_claim_webhook_retry_batch(int) from public;
 revoke all on function public.payment_claim_webhook_retry_batch(int) from anon;

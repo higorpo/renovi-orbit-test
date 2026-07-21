@@ -177,7 +177,7 @@ export type RefundTransactionResult = {
 /** referenceCode for getTransaction: usually plain contracted_service_id. */
 export type GetTransactionInput = {
   referenceCode: string;
-  /** NetCred companyId scope for the transactions query (provider merchant). */
+  /** NetCred companyId scope for the transactions query (provider merchant on charge). */
   companyId?: string;
 };
 

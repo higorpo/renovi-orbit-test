@@ -31,6 +31,7 @@ function createDeps(
     loadPaymentToken: async () => ({
       gateway_payment_profile_id: "403137",
       gateway_card_token: "tok_abc",
+      netcred_company_id: "1014",
     }),
     loadProviderAccount: async () => ({
       netcred_company_id: "1048",
@@ -49,6 +50,8 @@ function createDeps(
     emitFailedPermanentWarning: () => {},
     ingestNotification: async () => {},
     maxAttempts: 3,
+    platformCompanyId: "1014",
+    isProduction: false,
     ...overrides,
   };
 }
@@ -160,7 +163,7 @@ Deno.test("nullish provider_payout still builds NetCred FIXED_AMOUNT split item"
         };
       },
     }),
-    // Covers scheduleForCharge fallback (?? base_amount); Number(null) → "0.00" for split.
+    // Covers scheduleForCharge fallback (?? base_amount) applied before toFixed.
     { ...baseSchedule, provider_payout: null as unknown as number },
   );
 
@@ -168,7 +171,7 @@ Deno.test("nullish provider_payout still builds NetCred FIXED_AMOUNT split item"
   const fixedItem = captured?.payoutRule.ruleItems.find(
     (item) => item.type === "FIXED_AMOUNT",
   );
-  assertEquals(fixedItem?.amount, "0.00");
+  assertEquals(fixedItem?.amount, "1000.00");
   assertEquals(
     captured?.payoutRule.ruleItems.some((item) => item.type === "PERCENTAGE"),
     true,
@@ -222,7 +225,7 @@ Deno.test("reconciled REJECTED uses rejectedReason as failure message", async ()
   assertEquals(typeof failureCode, "string");
 });
 
-Deno.test("company id prefers schedule netcred_company_id then provider account", async () => {
+Deno.test("getTransaction uses provider company id on charge reconcile", async () => {
   let capturedCompanyId: string | null | undefined;
 
   await processSchedule(
@@ -240,11 +243,6 @@ Deno.test("company id prefers schedule netcred_company_id then provider account"
       createCharge: async () => {
         throw new Error("should reconcile without createCharge");
       },
-      loadProviderAccount: async () => ({
-        netcred_company_id: "9999",
-        netcred_bank_account_id: "2053",
-        onboarding_status: "ACTIVE",
-      }),
     }),
     {
       ...baseSchedule,
@@ -282,7 +280,7 @@ Deno.test("missing schedule company id falls back to provider company on retry",
   assertEquals(capturedCompanyId, "1048");
 });
 
-Deno.test("reconciled PAID without paidAmount commits charge_amount 0.00", async () => {
+Deno.test("reconciled PAID without paidAmount commits expected charge amount", async () => {
   let committedAmount: string | undefined;
 
   const result = await processSchedule(
@@ -300,13 +298,75 @@ Deno.test("reconciled PAID without paidAmount commits charge_amount 0.00", async
         committedAmount = input.chargeAmount;
         return input.scheduleId;
       },
+      isProduction: false,
     }),
-    { ...baseSchedule, automatic_attempt_count: 2 },
+    { ...baseSchedule, automatic_attempt_count: 2, charge_amount: 1024.29 },
   );
 
   assertEquals(result.outcome, "PAID");
   assertEquals(result.reconciled, true);
-  assertEquals(committedAmount, "0.00");
+  assertEquals(committedAmount, "1024.29");
+});
+
+Deno.test("reconciled PAID without paidAmount uses calculateChargeAmount when claim amount missing", async () => {
+  let committedAmount: string | undefined;
+
+  const result = await processSchedule(
+    createDeps({
+      calculateChargeAmount: async () => "1111.11",
+      getTransaction: async () => ({
+        transactionId: "tx-1",
+        referenceCode: "ref-service-1",
+        transactionState: "PAID",
+        chargeId: "417417",
+      }),
+      createCharge: async () => {
+        throw new Error("should reconcile");
+      },
+      commitResult: async (input) => {
+        committedAmount = input.chargeAmount;
+        return input.scheduleId;
+      },
+      isProduction: false,
+    }),
+    { ...baseSchedule, automatic_attempt_count: 2, charge_amount: null },
+  );
+
+  assertEquals(result.outcome, "PAID");
+  assertEquals(result.reconciled, true);
+  assertEquals(committedAmount, "1111.11");
+});
+
+Deno.test("reconciled PAID with mismatched paidAmount fails closed to IN_ANALYSIS", async () => {
+  let committedOutcome: string | undefined;
+  let committedAmount: string | undefined;
+
+  const result = await processSchedule(
+    createDeps({
+      getTransaction: async () => ({
+        transactionId: "tx-1",
+        referenceCode: "ref-service-1",
+        transactionState: "PAID",
+        paidAmount: "50.00",
+        chargeId: "417417",
+      }),
+      createCharge: async () => {
+        throw new Error("should reconcile");
+      },
+      commitResult: async (input) => {
+        committedOutcome = input.outcome;
+        committedAmount = input.chargeAmount;
+        return input.scheduleId;
+      },
+      isProduction: false,
+    }),
+    { ...baseSchedule, automatic_attempt_count: 2, charge_amount: 1024.29 },
+  );
+
+  assertEquals(result.outcome, "IN_ANALYSIS");
+  assertEquals(result.reconciled, true);
+  assertEquals(committedOutcome, "IN_ANALYSIS");
+  assertEquals(committedAmount, "1024.29");
 });
 
 Deno.test("reconciled REJECTED without rejectedReason uses default failure message", async () => {
@@ -335,7 +395,7 @@ Deno.test("reconciled REJECTED without rejectedReason uses default failure messa
   assertEquals(failureReason, "Existing transaction is REJECTED");
 });
 
-Deno.test("whitespace netcred_company_id falls back to provider company id", async () => {
+Deno.test("whitespace schedule company id still pays out via provider company", async () => {
   let captured: CreateChargeInput | undefined;
 
   await processSchedule(
@@ -361,6 +421,24 @@ Deno.test("whitespace netcred_company_id falls back to provider company id", asy
   assertEquals(
     captured?.payoutRule.providerAccount.netcredCompanyId,
     "1048",
+  );
+});
+
+Deno.test("token company mismatch throws PAYMENT_TOKEN_COMPANY_MISMATCH", async () => {
+  await assertRejects(
+    () =>
+      processSchedule(
+        createDeps({
+          loadPaymentToken: async () => ({
+            gateway_payment_profile_id: "403137",
+            gateway_card_token: "tok_abc",
+            netcred_company_id: "9999",
+          }),
+        }),
+        { ...baseSchedule, automatic_attempt_count: 1 },
+      ),
+    Error,
+    "PAYMENT_TOKEN_COMPANY_MISMATCH",
   );
 });
 

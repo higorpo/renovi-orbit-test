@@ -110,18 +110,19 @@ declare
   v_ok_id uuid := gen_random_uuid();
   v_provider_id uuid := '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid;
   v_fixture record;
+  v_today date := (now() at time zone 'America/Sao_Paulo')::date;
 begin
   perform pg_temp.payment_seed_contracted_service_fixture(
     v_future_id,
     v_provider_id,
-    current_date + 3,
+    v_today + 3,
     'CONFIRMED'::public.contracted_service_status
   );
 
   perform pg_temp.payment_seed_contracted_service_fixture(
     v_pending_id,
     v_provider_id,
-    current_date,
+    v_today,
     'PENDING_PAYMENT'::public.contracted_service_status
   );
 
@@ -129,23 +130,23 @@ begin
   from pg_temp.payment_seed_contracted_service_fixture(
     v_ok_id,
     v_provider_id,
-    current_date,
+    v_today,
     'CONFIRMED'::public.contracted_service_status
   );
 
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key, paid_at
-  )
+    charge_scheduled_at, state, idempotency_key, paid_at,
+    gateway_reference_code)
   values (
     v_ok_id, v_fixture.client_id, v_provider_id, 'netcred',
     1, 100.00, 10.00, 90.00,
     now() - interval '24 hours',
     'PAID'::public.payment_schedule_state,
     v_ok_id::text,
-    now() - interval '24 hours'
-  );
+    now() - interval '24 hours',
+    v_ok_id);
 
   perform set_config('test.mark_executed.future', v_future_id::text, true);
   perform set_config('test.mark_executed.pending', v_pending_id::text, true);

@@ -14,6 +14,25 @@ export type SupportedPaymentMethod =
 /** Edge env var for NetCred GraphQL base URL (non-secret). */
 export const NETCRED_API_BASE_URL_ENV = "NETCRED_API_BASE_URL";
 
+/** Platform NetCred company that owns all card payment profiles. */
+export const NETCRED_PLATFORM_COMPANY_ID_ENV = "NETCRED_PLATFORM_COMPANY_ID";
+
+/** Platform NetCred bank account for payout remainder. */
+export const NETCRED_PLATFORM_BANK_ACCOUNT_ID_ENV =
+  "NETCRED_PLATFORM_BANK_ACCOUNT_ID";
+
+export function resolveNetCredPlatformCompanyId(
+  getEnv: (key: string) => string | undefined = (key) => Deno.env.get(key),
+): string {
+  const companyId = getEnv(NETCRED_PLATFORM_COMPANY_ID_ENV)?.trim();
+  if (!companyId) {
+    throw new Error(
+      `${NETCRED_PLATFORM_COMPANY_ID_ENV} is required for card tokenization (platform payment-profile scope)`,
+    );
+  }
+  return companyId;
+}
+
 /** Edge env var names for NetCred credentials consumed by payment EFs. */
 export const NETCRED_ENV_SECRET_KEYS = [
   "NETCRED_USERNAME",

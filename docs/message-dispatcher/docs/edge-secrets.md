@@ -44,10 +44,10 @@ Secrets for MMD Edge Functions. Platform-wide internal EF auth: **[../../interna
 ```bash
 # Repo root .env
 ORBIT_SUPABASE_URL=http://127.0.0.1:54321
-ORBIT_CRON_SECRET=local-dev-orbit-cron-secret-min-32-chars
+ORBIT_CRON_SECRET=CHANGE_ME_GENERATE_RANDOM_32+
 
 # supabase/functions/.env
-ORBIT_CRON_SECRET=local-dev-orbit-cron-secret-min-32-chars
+ORBIT_CRON_SECRET=CHANGE_ME_GENERATE_RANDOM_32+
 RESEND_API_KEY=re_xxxx
 FCM_SERVICE_ACCOUNT={"type":"service_account",...}
 ```

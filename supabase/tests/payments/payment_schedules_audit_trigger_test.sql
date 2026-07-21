@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(16);
+select plan(18);
 
 create or replace function pg_temp.payment_set_service_role()
 returns void
@@ -235,6 +235,36 @@ select is(
   ),
   1,
   'UPDATE writes one audit snapshot at row_version 2'
+);
+
+select ok(
+  exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'payment_schedules_audit'
+      and column_name = 'audited_by'
+  )
+  and exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'payment_schedules_audit'
+      and column_name = 'audited_role'
+  ),
+  'payment_schedules_audit has audited_by and audited_role'
+);
+
+select is(
+  (
+    select a.audited_role
+    from public.payment_schedules_audit a
+    where a.id = current_setting('test.schedules_audit.schedule_id')::uuid
+      and a.audit_op = 'UPDATE'
+      and a.row_version = 2
+  ),
+  'service_role',
+  'audit snapshot records audited_role from session JWT claim'
 );
 
 select lives_ok(

@@ -42,6 +42,12 @@ export type NetcredWebhookDeps = {
     eventType: string;
   }) => Promise<void>;
   emitInvalidSignatureWarning: (extra: Record<string, unknown>) => void;
+  emitTransactionDisputeCritical?: (extra: {
+    schedule_id: string;
+    service_id: string;
+    event_id?: string;
+    gateway_transaction_id?: string | null;
+  }) => void;
   checkIPRateLimit: typeof checkIPRateLimit;
   emitIPRateLimitWarning: typeof emitIPRateLimitWarning;
 };
@@ -108,6 +114,15 @@ export async function handleNetcredWebhookRequest(
   const signature = req.headers.get("X-NETCRED-Signature")?.trim() || "";
   const payload = parseWebhookPayload(rawBody);
   const providerEventId = await extractProviderEventId(rawBody, payload);
+  const headersRecord = headersToRecord(req);
+
+  // Prefer HMAC before processable persist (CHK-023).
+  const secret = await deps.getWebhookSecret();
+  const signatureValid = await validateNetcredWebhookSignature(
+    rawBody,
+    signature,
+    secret,
+  );
 
   let persistResult: PersistWebhookResult;
   try {
@@ -116,7 +131,8 @@ export async function handleNetcredWebhookRequest(
       eventType,
       providerEventId,
       rawPayload: payload,
-      rawHeaders: headersToRecord(req),
+      rawHeaders: headersRecord,
+      signatureValidated: signatureValid,
     });
   } catch (error) {
     logger.error("webhook_persist_failed", {
@@ -133,7 +149,18 @@ export async function handleNetcredWebhookRequest(
     gateway_event_id: providerEventId,
     gateway_slug: "netcred",
     correlation_id: providerEventId,
+    signature_validated: signatureValid,
   });
+
+  if (!signatureValid) {
+    deps.emitInvalidSignatureWarning({
+      event_type: eventType,
+      gateway_event_id: providerEventId,
+      source_ip: clientIp,
+      event_id: persistResult.eventId,
+    });
+    return new Response("Unauthorized", { status: 401, headers: cors });
+  }
 
   if (persistResult.status === "duplicate") {
     await deps.markDuplicate(persistResult.eventId);
@@ -146,24 +173,6 @@ export async function handleNetcredWebhookRequest(
       correlation_id: providerEventId,
     });
     return new Response("OK", { status: 200, headers: cors });
-  }
-
-  const secret = await deps.getWebhookSecret();
-  const signatureValid = await validateNetcredWebhookSignature(
-    rawBody,
-    signature,
-    secret,
-  );
-
-  if (!signatureValid) {
-    await deps.markFailed(persistResult.eventId, "INVALID_SIGNATURE");
-    deps.emitInvalidSignatureWarning({
-      event_type: eventType,
-      gateway_event_id: providerEventId,
-      source_ip: clientIp,
-      event_id: persistResult.eventId,
-    });
-    return new Response("Unauthorized", { status: 401, headers: cors });
   }
 
   await deps.markValidating(persistResult.eventId);
@@ -184,6 +193,21 @@ export async function handleNetcredWebhookRequest(
     }
 
     const processResult = await deps.processWebhookEvent(persistResult.eventId);
+
+    const disputeAlert = processResult.handler?.sentry_alert;
+    if (
+      processResult.handler?.outcome === "disputed" &&
+      disputeAlert?.schedule_id &&
+      disputeAlert.service_id &&
+      deps.emitTransactionDisputeCritical
+    ) {
+      deps.emitTransactionDisputeCritical({
+        schedule_id: disputeAlert.schedule_id,
+        service_id: disputeAlert.service_id,
+        event_id: disputeAlert.event_id ?? persistResult.eventId,
+        gateway_transaction_id: disputeAlert.gateway_transaction_id,
+      });
+    }
 
     if (shouldEnqueueAfterProcess(processResult)) {
       await enqueueDeferredProcessing(deps, persistResult.eventId, eventType);

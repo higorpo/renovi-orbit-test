@@ -29,6 +29,7 @@ declare
   v_initiator public.payment_attempt_initiator;
   v_effective_outcome text;
   v_expected_charge_amount numeric;
+  v_live_charge_amount numeric;
   v_from_state text;
   v_reconciling boolean := false;
 begin
@@ -63,10 +64,15 @@ begin
         detail = jsonb_build_object('code', 'INVALID_SCHEDULE_STATE')::text;
   end if;
 
-  v_expected_charge_amount := public.payment_calculate_charge_amount(
+  -- Prefer amount frozen at claim/manual lease; live recompute is drift-only.
+  v_live_charge_amount := public.payment_calculate_charge_amount(
     v_schedule.client_card_token_id,
     v_schedule.base_amount,
     v_schedule.installment_number
+  );
+  v_expected_charge_amount := coalesce(
+    v_schedule.claimed_charge_amount,
+    v_live_charge_amount
   );
 
   if abs(coalesce(p_charge_amount, 0) - v_expected_charge_amount) > 0.01 then
@@ -76,8 +82,22 @@ begin
         detail = jsonb_build_object(
           'code', 'CHARGE_AMOUNT_MISMATCH',
           'expected', v_expected_charge_amount,
-          'submitted', p_charge_amount
+          'submitted', p_charge_amount,
+          'live', v_live_charge_amount
         )::text;
+  end if;
+
+  if abs(v_live_charge_amount - v_expected_charge_amount) > 0.01 then
+    perform public.payment_raise_log(
+      'charge_amount_fee_drift',
+      v_schedule.contracted_service_id,
+      v_schedule.id,
+      jsonb_build_object(
+        'claimed', v_expected_charge_amount,
+        'live', v_live_charge_amount,
+        'submitted', p_charge_amount
+      )
+    );
   end if;
 
   if p_gateway_charge_id is not null
@@ -178,6 +198,14 @@ begin
       paid_amount = v_expected_charge_amount,
       gateway_charge_id = p_gateway_charge_id,
       gateway_transaction_id = p_gateway_transaction_id,
+      refund_anchor_execution_at = coalesce(
+        ps.refund_anchor_execution_at,
+        (
+          select public.payment_service_execution_at(cs)
+          from public.contracted_services cs
+          where cs.id = v_schedule.contracted_service_id
+        )
+      ),
       locked_until = null,
       next_retry_at = null,
       failure_code = null,
@@ -318,6 +346,8 @@ begin
       'attempt_number', v_attempt_number,
       'automatic_attempt_count', v_attempt_count,
       'gateway_slug', v_schedule.gateway_slug,
+      'gateway_reference_code', v_schedule.gateway_reference_code,
+      'gateway_charge_id', coalesce(p_gateway_charge_id, v_schedule.gateway_charge_id),
       'gateway_latency_ms', p_gateway_latency_ms,
       'failure_code', p_failure_code,
       'reconciled', v_reconciling

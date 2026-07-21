@@ -1,6 +1,5 @@
 import "xhr";
 import { servePaymentFunction } from "../_shared/observability/sentry.ts";
-import type { Json } from "../_shared/database.types.ts";
 import { checkRateLimit } from "../_shared/rateLimiter.ts";
 import {
   AdapterRegistry,
@@ -14,6 +13,15 @@ import {
   type ProcessRefundDeps,
 } from "./handleRequest.ts";
 import type { RefundContext, RefundSubmitResult } from "./types.ts";
+
+
+function resolvePlatformCompanyId(): string {
+  const value = Deno.env.get("NETCRED_PLATFORM_COMPANY_ID")?.trim();
+  if (!value) {
+    throw new Error("NETCRED_PLATFORM_COMPANY_ID is not configured");
+  }
+  return value;
+}
 
 function resolvePlatformBankAccountId(): string {
   const value = Deno.env.get("NETCRED_PLATFORM_BANK_ACCOUNT_ID")?.trim();
@@ -29,6 +37,7 @@ function createDeps(): ProcessRefundDeps {
   configureAdapterRegistry({
     supabase,
     platformBankAccountId: resolvePlatformBankAccountId(),
+    platformCompanyId: resolvePlatformCompanyId(),
     isProduction: resolveIsProduction(),
   });
 
@@ -110,19 +119,29 @@ function createDeps(): ProcessRefundDeps {
           ? String(payload.penalty_tier)
           : null,
         alreadySubmitted: Boolean(payload.already_submitted),
+        refundSubmitStatus: payload.refund_submit_status != null
+          ? String(payload.refund_submit_status)
+          : null,
       } satisfies RefundSubmitResult;
     },
     refundTransaction: (input) => AdapterRegistry.get("netcred").refundTransaction(input),
-    recordRefundFailed: async (input) => {
-      const { error } = await supabase.rpc("payment_write_audit", {
-        p_event_type: "REFUND_FAILED",
-        p_entity_type: "payment_schedule",
-        p_entity_id: input.scheduleId,
-        p_service_id: input.serviceId,
+    markRefundSubmitted: async (input) => {
+      const { error } = await supabase.rpc("payment_set_refund_submit_status", {
         p_schedule_id: input.scheduleId,
-        p_actor: input.initiator === "client" ? "client" : "provider",
+        p_status: "SUBMITTED",
         p_actor_id: input.actorId,
-        p_metadata: { error_message: input.errorMessage } as Json,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+    },
+    recordRefundFailed: async (input) => {
+      const { error } = await supabase.rpc("payment_set_refund_submit_status", {
+        p_schedule_id: input.scheduleId,
+        p_status: "FAILED",
+        p_actor_id: input.actorId,
+        p_error_message: input.errorMessage,
       });
 
       if (error) {

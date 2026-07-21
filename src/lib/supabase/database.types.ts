@@ -987,6 +987,7 @@ export type Database = {
           gateway_payment_profile_id: string
           gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
           id: string
+          netcred_company_id: string
           state: Database["public"]["Enums"]["payment_client_card_token_state"]
           updated_at: string
         }
@@ -1003,6 +1004,7 @@ export type Database = {
           gateway_payment_profile_id: string
           gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
           id?: string
+          netcred_company_id: string
           state?: Database["public"]["Enums"]["payment_client_card_token_state"]
           updated_at?: string
         }
@@ -1019,6 +1021,7 @@ export type Database = {
           gateway_payment_profile_id?: string
           gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
           id?: string
+          netcred_company_id?: string
           state?: Database["public"]["Enums"]["payment_client_card_token_state"]
           updated_at?: string
         }
@@ -1406,6 +1409,75 @@ export type Database = {
           },
         ]
       }
+      payment_clearsale_sessions: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          proposal_id: string | null
+          purpose: string
+          schedule_id: string | null
+          user_id: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          proposal_id?: string | null
+          purpose: string
+          schedule_id?: string | null
+          user_id: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          proposal_id?: string | null
+          purpose?: string
+          schedule_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_clearsale_sessions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "provider_proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_clearsale_sessions_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "client_payment_transactions_v"
+            referencedColumns: ["schedule_id"]
+          },
+          {
+            foreignKeyName: "payment_clearsale_sessions_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "payment_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_clearsale_sessions_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "provider_payment_receivables_v"
+            referencedColumns: ["schedule_id"]
+          },
+          {
+            foreignKeyName: "payment_clearsale_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_events: {
         Row: {
           aggregate_id: string
@@ -1482,6 +1554,7 @@ export type Database = {
           cancelled_at: string | null
           charge_frozen_at: string | null
           charge_scheduled_at: string
+          claimed_charge_amount: number | null
           clearsale_session_id: string | null
           client_card_token_id: string | null
           client_id: string
@@ -1511,6 +1584,10 @@ export type Database = {
           provider_id: string
           provider_payout: number
           reconciliation_failure_count: number
+          refund_anchor_execution_at: string | null
+          refund_submit_status:
+            | Database["public"]["Enums"]["payment_refund_submit_status"]
+            | null
           refunded_amount: number | null
           refunded_at: string | null
           state: Database["public"]["Enums"]["payment_schedule_state"]
@@ -1524,6 +1601,7 @@ export type Database = {
           cancelled_at?: string | null
           charge_frozen_at?: string | null
           charge_scheduled_at: string
+          claimed_charge_amount?: number | null
           clearsale_session_id?: string | null
           client_card_token_id?: string | null
           client_id: string
@@ -1553,6 +1631,10 @@ export type Database = {
           provider_id: string
           provider_payout: number
           reconciliation_failure_count?: number
+          refund_anchor_execution_at?: string | null
+          refund_submit_status?:
+            | Database["public"]["Enums"]["payment_refund_submit_status"]
+            | null
           refunded_amount?: number | null
           refunded_at?: string | null
           state?: Database["public"]["Enums"]["payment_schedule_state"]
@@ -1566,6 +1648,7 @@ export type Database = {
           cancelled_at?: string | null
           charge_frozen_at?: string | null
           charge_scheduled_at?: string
+          claimed_charge_amount?: number | null
           clearsale_session_id?: string | null
           client_card_token_id?: string | null
           client_id?: string
@@ -1595,6 +1678,10 @@ export type Database = {
           provider_id?: string
           provider_payout?: number
           reconciliation_failure_count?: number
+          refund_anchor_execution_at?: string | null
+          refund_submit_status?:
+            | Database["public"]["Enums"]["payment_refund_submit_status"]
+            | null
           refunded_amount?: number | null
           refunded_at?: string | null
           state?: Database["public"]["Enums"]["payment_schedule_state"]
@@ -1645,12 +1732,15 @@ export type Database = {
           audit_op: string
           audit_txid: unknown
           audited_at: string
+          audited_by: string | null
+          audited_role: string | null
           automatic_attempt_count: number
           base_amount: number
           cancellation_reason: string | null
           cancelled_at: string | null
           charge_frozen_at: string | null
           charge_scheduled_at: string
+          claimed_charge_amount: number | null
           clearsale_session_id: string | null
           client_card_token_id: string | null
           client_id: string
@@ -1680,6 +1770,10 @@ export type Database = {
           provider_id: string
           provider_payout: number
           reconciliation_failure_count: number
+          refund_anchor_execution_at: string | null
+          refund_submit_status:
+            | Database["public"]["Enums"]["payment_refund_submit_status"]
+            | null
           refunded_amount: number | null
           refunded_at: string | null
           row_version: number
@@ -1692,12 +1786,15 @@ export type Database = {
           audit_op: string
           audit_txid?: unknown
           audited_at?: string
+          audited_by?: string | null
+          audited_role?: string | null
           automatic_attempt_count: number
           base_amount: number
           cancellation_reason?: string | null
           cancelled_at?: string | null
           charge_frozen_at?: string | null
           charge_scheduled_at: string
+          claimed_charge_amount?: number | null
           clearsale_session_id?: string | null
           client_card_token_id?: string | null
           client_id: string
@@ -1727,6 +1824,10 @@ export type Database = {
           provider_id: string
           provider_payout: number
           reconciliation_failure_count: number
+          refund_anchor_execution_at?: string | null
+          refund_submit_status?:
+            | Database["public"]["Enums"]["payment_refund_submit_status"]
+            | null
           refunded_amount?: number | null
           refunded_at?: string | null
           row_version: number
@@ -1739,12 +1840,15 @@ export type Database = {
           audit_op?: string
           audit_txid?: unknown
           audited_at?: string
+          audited_by?: string | null
+          audited_role?: string | null
           automatic_attempt_count?: number
           base_amount?: number
           cancellation_reason?: string | null
           cancelled_at?: string | null
           charge_frozen_at?: string | null
           charge_scheduled_at?: string
+          claimed_charge_amount?: number | null
           clearsale_session_id?: string | null
           client_card_token_id?: string | null
           client_id?: string
@@ -1774,6 +1878,10 @@ export type Database = {
           provider_id?: string
           provider_payout?: number
           reconciliation_failure_count?: number
+          refund_anchor_execution_at?: string | null
+          refund_submit_status?:
+            | Database["public"]["Enums"]["payment_refund_submit_status"]
+            | null
           refunded_amount?: number | null
           refunded_at?: string | null
           row_version?: number
@@ -1797,6 +1905,7 @@ export type Database = {
           raw_headers: Json
           raw_payload: Json
           retry_count: number
+          signature_validated: boolean
           state: Database["public"]["Enums"]["payment_webhook_event_state"]
           updated_at: string
         }
@@ -1813,6 +1922,7 @@ export type Database = {
           raw_headers: Json
           raw_payload: Json
           retry_count?: number
+          signature_validated?: boolean
           state?: Database["public"]["Enums"]["payment_webhook_event_state"]
           updated_at?: string
         }
@@ -1829,6 +1939,7 @@ export type Database = {
           raw_headers?: Json
           raw_payload?: Json
           retry_count?: number
+          signature_validated?: boolean
           state?: Database["public"]["Enums"]["payment_webhook_event_state"]
           updated_at?: string
         }
@@ -3502,7 +3613,6 @@ export type Database = {
           created_at: string | null
           expiry_month: number | null
           expiry_year: number | null
-          gateway_payment_profile_id: string | null
           gateway_slug:
             | Database["public"]["Enums"]["payment_gateway_slug"]
             | null
@@ -3520,7 +3630,6 @@ export type Database = {
           created_at?: string | null
           expiry_month?: number | null
           expiry_year?: number | null
-          gateway_payment_profile_id?: string | null
           gateway_slug?:
             | Database["public"]["Enums"]["payment_gateway_slug"]
             | null
@@ -3538,7 +3647,6 @@ export type Database = {
           created_at?: string | null
           expiry_month?: number | null
           expiry_year?: number | null
-          gateway_payment_profile_id?: string | null
           gateway_slug?:
             | Database["public"]["Enums"]["payment_gateway_slug"]
             | null
@@ -3617,6 +3725,18 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_alert_failed_permanent_spike_v: {
+        Row: {
+          failed_permanent_15m: number | null
+        }
+        Relationships: []
+      }
+      payment_alert_webhook_auth_fail_spike_v: {
+        Row: {
+          auth_fail_15m: number | null
+        }
+        Relationships: []
       }
       provider_payment_receivables_v: {
         Row: {
@@ -4061,6 +4181,10 @@ export type Database = {
       }
       cron_payment_recover_orphaned_schedules: { Args: never; Returns: Json }
       cron_process_service_request_dispatches: { Args: never; Returns: Json }
+      cron_process_service_requests_without_proposals: {
+        Args: never
+        Returns: Json
+      }
       cron_proposal_expire_pending: { Args: never; Returns: Json }
       cron_purge_stale_user_device_beacons: { Args: never; Returns: Json }
       decline_revision_request: {
@@ -4611,6 +4735,16 @@ export type Database = {
         Args: { p_schedule_id: string }
         Returns: boolean
       }
+      payment_consume_clearsale_session: {
+        Args: {
+          p_proposal_id?: string
+          p_purpose: string
+          p_schedule_id?: string
+          p_session_id: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       payment_cron_auto_cancel_unpaid_services: {
         Args: never
         Returns: undefined
@@ -4623,6 +4757,7 @@ export type Database = {
         Args: never
         Returns: undefined
       }
+      payment_cron_emit_sentry_spike_alerts: { Args: never; Returns: undefined }
       payment_cron_invoke_edge_function: {
         Args: { p_function_name: string }
         Returns: number
@@ -4658,6 +4793,7 @@ export type Database = {
         Args: { p_scheduled_at?: string; p_webhook_event_id: string }
         Returns: Json
       }
+      payment_evaluate_sentry_spike_alerts: { Args: never; Returns: Json }
       payment_finish_webhook_retry_failure: {
         Args: {
           p_event_id: string
@@ -4690,12 +4826,21 @@ export type Database = {
           p_gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
           p_raw_headers: Json
           p_raw_payload: Json
+          p_signature_validated?: boolean
         }
         Returns: Json
       }
       payment_installment_hmac_canonical_text: {
         Args: { p_payload: Json }
         Returns: string
+      }
+      payment_issue_clearsale_session: {
+        Args: {
+          p_proposal_id?: string
+          p_purpose: string
+          p_schedule_id?: string
+        }
+        Returns: Json
       }
       payment_list_gateway_accounts_for_onboarding: {
         Args: { p_batch_size?: number }
@@ -4733,6 +4878,7 @@ export type Database = {
           p_gateway_card_token: string
           p_gateway_payment_profile_id: string
           p_gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          p_netcred_company_id: string
         }
         Returns: Json
       }
@@ -4829,6 +4975,15 @@ export type Database = {
           p_cs: Database["public"]["Tables"]["contracted_services"]["Row"]
         }
         Returns: string
+      }
+      payment_set_refund_submit_status: {
+        Args: {
+          p_actor_id?: string
+          p_error_message?: string
+          p_schedule_id: string
+          p_status: Database["public"]["Enums"]["payment_refund_submit_status"]
+        }
+        Returns: undefined
       }
       payment_submit_provider_kyc: {
         Args: {
@@ -4987,6 +5142,10 @@ export type Database = {
         Args: { p_default: number; p_key: string }
         Returns: number
       }
+      process_service_requests_without_proposals: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
       project_service_row: {
         Args: { p_service_request_id: string; p_viewer_id: string }
         Returns: Json
@@ -5089,6 +5248,10 @@ export type Database = {
         Args: { p_provider_id: string; p_reason?: string }
         Returns: Json
       }
+      system_cancel_service_request_no_proposals: {
+        Args: { p_service_request_id: string }
+        Returns: Json
+      }
       update_service_rating: {
         Args: {
           p_comment?: string
@@ -5156,6 +5319,11 @@ export type Database = {
         | "ACTIVE"
         | "REJECTED"
         | "SUSPENDED"
+      payment_refund_submit_status:
+        | "PENDING_GATEWAY"
+        | "SUBMITTED"
+        | "CONFIRMED"
+        | "FAILED"
       payment_schedule_state:
         | "SCHEDULED"
         | "PROCESSING"
@@ -5434,6 +5602,12 @@ export const Constants = {
         "ACTIVE",
         "REJECTED",
         "SUSPENDED",
+      ],
+      payment_refund_submit_status: [
+        "PENDING_GATEWAY",
+        "SUBMITTED",
+        "CONFIRMED",
+        "FAILED",
       ],
       payment_schedule_state: [
         "SCHEDULED",

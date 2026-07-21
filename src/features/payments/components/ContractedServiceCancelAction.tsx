@@ -57,6 +57,7 @@ export function ContractedServiceCancelAction({
         scheduleState: schedule.state,
         scheduledStartDate,
         scheduledShift,
+        serviceExecutionAt: schedule.serviceExecutionAt,
         baseAmount: schedule.baseAmount,
         paidAmount: schedule.paidAmount,
       })

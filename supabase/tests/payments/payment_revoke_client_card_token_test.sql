@@ -40,6 +40,7 @@ with ins as (
   insert into public.client_card_tokens (
     client_id,
     gateway_payment_profile_id,
+    netcred_company_id,
     card_number_masked,
     card_brand,
     gateway_card_token,
@@ -51,6 +52,7 @@ with ins as (
   values (
     '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
     'pgtap-revoke-profile',
+    '1014',
     '497010XXXXXX0048',
     'MASTER',
     'opaque-revoke',

@@ -2,7 +2,7 @@
 
 begin;
 
-\ir ../fixtures/accept_proposal_payment_helpers.inc
+\ir fixtures/accept_proposal_payment_helpers.inc
 
 select plan(1);
 
@@ -97,7 +97,7 @@ select pg_temp.cns_seed_chat(
 create temp table _credentialing_slot as
 select jsonb_build_object(
   'start_date', (current_date + 7)::text,
-  'end_date', (current_date + 7)::text,
+  'end_date', (current_date + 8)::text,
   'shift', 'morning'
 ) as selected_slot;
 
@@ -112,7 +112,7 @@ select public.create_provider_proposal(
   gen_random_uuid(),
   pricing.original_amount,
   'Credentialing gate proposal',
-  1,
+  2,
   'days',
   jsonb_build_array((select selected_slot from _credentialing_slot)),
   '{}'::text[],

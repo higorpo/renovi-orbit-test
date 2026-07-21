@@ -2,8 +2,9 @@
 import { render, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { CardStep } from "../CardStep";
-import * as generateSessionModule from "../../../utils/generateClearSaleSessionId";
+import * as clearsaleApi from "../../../api/clearsale.api";
 import * as injectSdkModule from "../../../utils/injectClearSaleSdk";
+import * as failClosedModule from "../../../utils/isClearSaleProductionFailClosed";
 
 vi.mock("@/lib/logger", () => ({
   logger: {
@@ -18,72 +19,85 @@ describe("CardStep", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.stubEnv("VITE_CLEARSALE_APP_KEY", "test-clearsale-app-key");
-    vi.spyOn(injectSdkModule, "injectClearSaleSdk").mockReturnValue(() => {});
+    vi.spyOn(failClosedModule, "isClearSaleProductionFailClosed").mockReturnValue(false);
+    vi.spyOn(clearsaleApi, "issueClearSaleSession").mockResolvedValue({
+      sessionId: "11111111-1111-4111-8111-111111111111",
+      expiresAt: "2099-01-01T00:00:00Z",
+      error: null,
+    });
+    vi.spyOn(injectSdkModule, "injectClearSaleSdk").mockImplementation((options) => {
+      options.onInitialized?.();
+      return () => {};
+    });
   });
 
-  it("keeps the same clearsaleSessionId across re-renders", async () => {
-    vi.spyOn(generateSessionModule, "generateClearSaleSessionId").mockReturnValue(
-      "stable-session-id",
-    );
-
+  it("issues a server session and unlocks after SDK init", async () => {
     const onSessionIdGenerated = vi.fn();
-    const { rerender } = render(
-      <CardStep onSessionIdGenerated={onSessionIdGenerated} />,
+    render(
+      <CardStep
+        purpose="accept"
+        proposalId="proposal-1"
+        onSessionIdGenerated={onSessionIdGenerated}
+      />,
     );
 
     await waitFor(() => {
-      expect(onSessionIdGenerated).toHaveBeenCalledWith("stable-session-id");
-    });
-
-    rerender(<CardStep onSessionIdGenerated={onSessionIdGenerated} />);
-
-    expect(onSessionIdGenerated).toHaveBeenCalledTimes(1);
-    expect(onSessionIdGenerated).toHaveBeenCalledWith("stable-session-id");
-  });
-
-  it("generates a new clearsaleSessionId after unmount and remount", async () => {
-    vi.spyOn(generateSessionModule, "generateClearSaleSessionId")
-      .mockReturnValueOnce("first-session-id")
-      .mockReturnValueOnce("second-session-id");
-
-    const firstCallback = vi.fn();
-    const secondCallback = vi.fn();
-
-    const { unmount } = render(
-      <CardStep onSessionIdGenerated={firstCallback} />,
-    );
-
-    await waitFor(() => {
-      expect(firstCallback).toHaveBeenCalledWith("first-session-id");
-    });
-
-    unmount();
-
-    render(<CardStep onSessionIdGenerated={secondCallback} />);
-
-    await waitFor(() => {
-      expect(secondCallback).toHaveBeenCalledWith("second-session-id");
+      expect(clearsaleApi.issueClearSaleSession).toHaveBeenCalledWith({
+        purpose: "accept",
+        proposalId: "proposal-1",
+        scheduleId: undefined,
+      });
+      expect(onSessionIdGenerated).toHaveBeenCalledWith(
+        "11111111-1111-4111-8111-111111111111",
+      );
     });
   });
 
-  it("logs a warning when SDK load fails without blocking checkout", async () => {
+  it("does not unlock confirm on SDK load failure in production", async () => {
     const { logger } = await import("@/lib/logger");
-
-    vi.spyOn(generateSessionModule, "generateClearSaleSessionId").mockReturnValue(
-      "failed-session-id",
-    );
-
+    vi.spyOn(failClosedModule, "isClearSaleProductionFailClosed").mockReturnValue(true);
     vi.spyOn(injectSdkModule, "injectClearSaleSdk").mockImplementation((options) => {
       options.onLoadFailed?.();
       return () => {};
     });
 
-    render(<CardStep onSessionIdGenerated={vi.fn()} />);
+    const onSessionIdGenerated = vi.fn();
+    render(
+      <CardStep
+        purpose="accept"
+        proposalId="proposal-1"
+        onSessionIdGenerated={onSessionIdGenerated}
+      />,
+    );
 
     await waitFor(() => {
-      expect(logger.warn).toHaveBeenCalledWith("clearsale_sdk_load_failed", {
-        session_id: "failed-session-id",
-      });
+      expect(logger.warn).toHaveBeenCalledWith(
+        "clearsale_sdk_load_failed",
+        expect.objectContaining({
+          session_id: "11111111-1111-4111-8111-111111111111",
+        }),
+      );
+      expect(onSessionIdGenerated).toHaveBeenCalledWith(null);
     });
+  });
+
+  it("keeps issued session after unmount so checkout can confirm later", async () => {
+    const onSessionIdGenerated = vi.fn();
+    const { unmount } = render(
+      <CardStep
+        purpose="manual"
+        scheduleId="schedule-1"
+        onSessionIdGenerated={onSessionIdGenerated}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(onSessionIdGenerated).toHaveBeenCalledWith(
+        "11111111-1111-4111-8111-111111111111",
+      );
+    });
+
+    unmount();
+    expect(onSessionIdGenerated).not.toHaveBeenCalledWith(null);
   });
 });

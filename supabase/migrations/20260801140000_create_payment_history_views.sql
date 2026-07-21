@@ -90,7 +90,10 @@ where (
 comment on view public.provider_payment_receivables_v is
   'Provider receivables: provider_payout at capture and net after proportional refund. received_at = paid_at (capture), not bank settlement (~D+30).';
 
--- security_invoker=false: view owner reads revoked columns; participant filter is in WHERE.
+-- CHK-030 invariant: security_invoker=false so the view owner can project revoked
+-- amount columns (base_amount/paid_amount/provider_payout) that authenticated cannot
+-- SELECT directly on payment_schedules. Tenancy is enforced in the view WHERE clause
+-- (owner via auth.uid() or is_platform_admin()). pgTAP covers stranger/owner/admin.
 
 revoke all on public.client_payment_transactions_v from public;
 revoke all on public.client_payment_transactions_v from anon;

@@ -1,14 +1,31 @@
 import type { CreateChargeResult } from "../_shared/payment/types.ts";
 import type { CronChargeSchedule } from "./types.ts";
 
+export function resolveGatewayReferenceCode(
+  schedule: CronChargeSchedule,
+): string {
+  const trimmed = schedule.gateway_reference_code?.trim();
+  return trimmed || schedule.contracted_service_id;
+}
+
 export function chargeResultLogFields(
   result: CreateChargeResult | undefined,
 ): Record<string, unknown> {
-  if (!result || result.success) {
+  if (!result) {
     return {};
   }
 
+  const gatewayIds: Record<string, unknown> = {};
+  if (result.chargeId) {
+    gatewayIds.gateway_charge_id = result.chargeId;
+  }
+
+  if (result.success) {
+    return gatewayIds;
+  }
+
   return {
+    ...gatewayIds,
     failure_code: result.error?.originalCode ?? result.error?.code ?? null,
     failure_reason: result.error?.message ?? null,
     gateway_error_class: result.error?.code ?? null,
@@ -41,6 +58,7 @@ export function buildChargeAttemptCompletedFields(
     gateway_slug: schedule.gateway_slug,
     initiator: "cron",
     attempt_number: schedule.automatic_attempt_count,
+    gateway_reference_code: resolveGatewayReferenceCode(schedule),
     ...extra,
     ...chargeResultLogFields(chargeResult),
   };

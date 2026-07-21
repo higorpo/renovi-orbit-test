@@ -35,9 +35,10 @@ const baseInput: CreateChargeInput = {
   sessionId: "clearsale-session",
 };
 
-Deno.test("mapToNetCredChargeInput uses service title in extraInfo and orderInput", () => {
+Deno.test("mapToNetCredChargeInput uses provider companyId and service title", () => {
   const mapped = mapToNetCredChargeInput(baseInput, "2052");
 
+  assertEquals(mapped.companyId, 1048);
   assertEquals(mapped.extraInfo, "Renovi — Pintura interna");
   assertEquals(mapped.orderInput?.orderItems[0].productInput.name, "Pintura interna");
   assertEquals(
@@ -55,7 +56,6 @@ Deno.test("mapToNetCredChargeInput falls back when service title is missing", ()
   assertEquals(mapped.extraInfo, "Renovi — Serviço");
   assertEquals(mapped.orderInput?.orderItems[0].productInput.name, "Serviço");
 });
-
 
 Deno.test("mapToNetCredChargeInput rejects unsupported payment method", () => {
   assertThrows(
@@ -93,7 +93,7 @@ Deno.test("mapToNetCredChargeInput rejects invalid bank account id", () => {
   );
 });
 
-Deno.test("mapToNetCredChargeInput rejects invalid company or profile id", () => {
+Deno.test("mapToNetCredChargeInput rejects invalid provider company or profile id", () => {
   assertThrows(
     () =>
       mapToNetCredChargeInput(

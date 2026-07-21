@@ -17,7 +17,13 @@ export function buildPayoutRule(
   const charge = Number.parseFloat(chargeAmount);
   const payout = Number.parseFloat(providerPayout);
 
-  if (!Number.isFinite(charge) || !Number.isFinite(payout)) {
+  if (
+    !Number.isFinite(charge) ||
+    !Number.isFinite(payout) ||
+    charge <= 0 ||
+    payout <= 0 ||
+    payout > charge
+  ) {
     throw new Error("INVALID_PAYOUT_AMOUNTS");
   }
 

@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(10);
+select plan(11);
 
 select ok(
   to_regtype('public.payment_gateway_slug') is not null,
@@ -49,6 +49,11 @@ select ok(
   'payment_audit_actor enum exists'
 );
 
+select ok(
+  to_regtype('public.payment_refund_submit_status') is not null,
+  'payment_refund_submit_status enum exists'
+);
+
 select is(
   (
     select count(*)::int
@@ -58,8 +63,8 @@ select is(
       and t.typtype = 'e'
       and t.typname like 'payment\_%'
   ),
-  9,
-  'creates nine payment enum types'
+  10,
+  'creates ten payment enum types'
 );
 
 select finish();

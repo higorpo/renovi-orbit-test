@@ -23,6 +23,7 @@ function createAdapter(fetchFn: typeof fetch): NetCredAdapter {
   return new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn,
   });

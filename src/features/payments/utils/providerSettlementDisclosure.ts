@@ -36,3 +36,13 @@ export function formatProviderSettlementDisclosure(capturePaidAt: string): strin
 
   return `Previsão de depósito na conta: ${formattedDate}`;
 }
+
+export function formatProviderSettlementHoldDisclosure(
+  reason: "refund" | "dispute" = "refund",
+): string {
+  if (reason === "dispute") {
+    return "Há um chargeback em análise. A previsão de depósito fica suspensa até a resolução da disputa.";
+  }
+
+  return "Há um estorno em andamento. A previsão de depósito fica suspensa até a conclusão do reembolso.";
+}

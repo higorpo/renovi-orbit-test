@@ -1703,14 +1703,14 @@ mutation webhookCreate($input: WebhookCreateInput!) {
 | `Content-Type` | `application/json` | Corpo JSON |
 | `X-NETCRED-Event` | `TRANSACTION_UPDATE` | Tipo do evento |
 | `X-NETCRED-Domain` | `https://api.sandbox.netcredbrasil.com.br` | Origem (sandbox ou produção) |
-| `X-NETCRED-Signature` | `87e99e04...` | SHA256 do corpo com `secretKey` |
+| `X-NETCRED-Signature` | `87e99e04...` | HMAC-SHA256 hex digest do corpo com `secretKey` |
 
 ### Validação de assinatura
 
 1. Ler corpo raw da requisição (bytes exatos).
-2. Calcular `SHA256(secretKey + body)` (confirmar algoritmo exato com Netcred na homologação).
-3. Comparar com `X-NETCRED-Signature`.
-4. Rejeitar se divergir.
+2. Calcular `HMAC-SHA256(secretKey, rawBody)` onde `secretKey` = Edge secret `NETCRED_WEBHOOK_SECRET` (não Vault).
+3. Comparar com `X-NETCRED-Signature` (constant-time).
+4. Rejeitar se divergir (HTTP 401).
 
 ### Catálogo completo de eventos
 

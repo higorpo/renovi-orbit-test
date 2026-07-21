@@ -83,8 +83,8 @@ end;
 $seed$;
 
 select ok(
-  (public.payment_ops_job_health(24, 30)->'summary'->>'jobs_tracked')::int = 9,
-  'tracks all nine payment cron job names'
+  (public.payment_ops_job_health(24, 30)->'summary'->>'jobs_tracked')::int = 10,
+  'tracks all ten payment cron job names including spike alerts'
 );
 
 select ok(

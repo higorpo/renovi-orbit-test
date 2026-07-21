@@ -294,6 +294,27 @@ Deno.test("checkRateLimitWithDeps uses anonymous key when ip and userId are null
   assertEquals(result.remaining, 4);
 });
 
+Deno.test("checkRateLimitWithDeps passes custom windowMs to RPC", async () => {
+  let capturedWindow = 0;
+  const result = await checkRateLimitWithDeps(
+    "1.2.3.4",
+    "user-1",
+    "tokenize-payment-card:profile:daily",
+    { perMinute: 30, windowMs: 86_400_000, failClosed: true },
+    makeDeps(async (params) => {
+      capturedWindow = params.p_window_ms;
+      return {
+        data: { allowed: true, remaining: 29, retry_after: 0 },
+        error: null,
+      };
+    }),
+  );
+
+  assertEquals(capturedWindow, 86_400_000);
+  assertEquals(result.allowed, true);
+  assertEquals(result.remaining, 29);
+});
+
 Deno.test("getUserIdFromRequest returns null when auth.getUser fails against unreachable host", async () => {
   const prevUrl = Deno.env.get("SUPABASE_URL");
   const prevKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");

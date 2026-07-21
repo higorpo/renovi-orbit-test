@@ -189,13 +189,13 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key
-  )
+    charge_scheduled_at, state, idempotency_key,
+    gateway_reference_code)
   values (
     v_cs_failed, v_fixture.client_id, v_provider_id,
     'netcred', 1, 100.00, 10.00, 90.00,
-    now(), 'FAILED'::public.payment_schedule_state, v_cs_failed::text
-  );
+    now(), 'FAILED'::public.payment_schedule_state, v_cs_failed::text,
+    v_cs_failed);
 
   select * into v_fixture
   from pg_temp.payment_seed_contracted_service_fixture(
@@ -207,13 +207,13 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key
-  )
+    charge_scheduled_at, state, idempotency_key,
+    gateway_reference_code)
   values (
     v_cs_analysis, v_fixture.client_id, v_provider_id,
     'netcred', 1, 100.00, 10.00, 90.00,
-    now(), 'IN_ANALYSIS'::public.payment_schedule_state, v_cs_analysis::text
-  );
+    now(), 'IN_ANALYSIS'::public.payment_schedule_state, v_cs_analysis::text,
+    v_cs_analysis);
 
   select * into v_fixture
   from pg_temp.payment_seed_contracted_service_fixture(
@@ -225,13 +225,13 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key
-  )
+    charge_scheduled_at, state, idempotency_key,
+    gateway_reference_code)
   values (
     v_cs_future_analysis, v_fixture.client_id, v_provider_id,
     'netcred', 1, 100.00, 10.00, 90.00,
-    now(), 'IN_ANALYSIS'::public.payment_schedule_state, v_cs_future_analysis::text
-  );
+    now(), 'IN_ANALYSIS'::public.payment_schedule_state, v_cs_future_analysis::text,
+    v_cs_future_analysis);
 
   select * into v_fixture
   from pg_temp.payment_seed_contracted_service_fixture(
@@ -244,13 +244,13 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key
-  )
+    charge_scheduled_at, state, idempotency_key,
+    gateway_reference_code)
   values (
     v_cs_cancelled, v_fixture.client_id, v_provider_id,
     'netcred', 1, 100.00, 10.00, 90.00,
-    now(), 'FAILED'::public.payment_schedule_state, v_cs_cancelled::text
-  );
+    now(), 'FAILED'::public.payment_schedule_state, v_cs_cancelled::text,
+    v_cs_cancelled);
 
   insert into public.provider_gateway_accounts (
     provider_id, gateway_slug, document, onboarding_status
@@ -274,13 +274,13 @@ begin
   insert into public.payment_schedules (
     contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key
-  )
+    charge_scheduled_at, state, idempotency_key,
+    gateway_reference_code)
   values (
     v_cs_suspended, v_fixture.client_id, v_provider_suspended,
     'netcred', 1, 100.00, 10.00, 90.00,
-    now(), 'FAILED'::public.payment_schedule_state, v_cs_suspended::text
-  );
+    now(), 'FAILED'::public.payment_schedule_state, v_cs_suspended::text,
+    v_cs_suspended);
 
   perform set_config('test.auto_cancel.failed', v_cs_failed::text, true);
   perform set_config('test.auto_cancel.analysis', v_cs_analysis::text, true);

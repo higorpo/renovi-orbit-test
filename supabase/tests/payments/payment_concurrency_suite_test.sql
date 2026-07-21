@@ -161,12 +161,12 @@ begin
   );
 
   insert into public.client_card_tokens (
-    id, client_id, gateway_slug, gateway_payment_profile_id, card_number_masked,
+    id, client_id, gateway_slug, gateway_payment_profile_id, netcred_company_id, card_number_masked,
     card_brand, gateway_card_token, expiry_month, expiry_year, cardholder_name,
     billing_address, state
   )
   values (
-    v_card_token_id, v_client_id, 'netcred', format('profile-%s', p_contracted_service_id),
+    v_card_token_id, v_client_id, 'netcred', format('profile-%s', p_contracted_service_id), '1014',
     '497010XXXXXX0048', 'visa', format('token-%s', p_contracted_service_id), 12, 2030,
     'Concurrency Test', '{}'::jsonb, 'ACTIVE'::public.payment_client_card_token_state
   );
@@ -175,13 +175,13 @@ begin
     id, contracted_service_id, client_id, provider_id, gateway_slug,
     client_card_token_id, installment_number, base_amount, commission_rate_pct,
     provider_payout, charge_scheduled_at, state, idempotency_key,
-    locked_until, automatic_attempt_count
-  )
+    locked_until, automatic_attempt_count,
+    gateway_reference_code)
   values (
     v_schedule_id, p_contracted_service_id, v_client_id, p_provider_id, 'netcred',
     v_card_token_id, 1, 100.00, 10.00, 90.00, p_charge_at, p_schedule_state,
-    p_contracted_service_id::text, p_locked_until, p_automatic_attempt_count
-  );
+    p_contracted_service_id::text, p_locked_until, p_automatic_attempt_count,
+    p_contracted_service_id);
 
   schedule_id := v_schedule_id;
   client_id := v_client_id;
@@ -359,15 +359,43 @@ select is(
   'cron claims the FAILED schedule before manual payment race'
 );
 
+-- Mint a real ClearSale manual session so begin_manual_attempt reaches schedule-state guard.
+do $issue_cs$
+declare
+  v_client_id uuid := current_setting('test.concurrency.client_id')::uuid;
+  v_schedule_id uuid := current_setting('test.concurrency.schedule_manual')::uuid;
+  v_session text;
+begin
+  perform set_config('request.jwt.claim.sub', v_client_id::text, true);
+  perform set_config(
+    'request.jwt.claims',
+    json_build_object('role', 'authenticated', 'sub', v_client_id::text)::text,
+    true
+  );
+  perform set_config('request.jwt.claim.role', 'authenticated', true);
+
+  v_session := public.payment_issue_clearsale_session(
+    'manual',
+    null,
+    v_schedule_id
+  )->>'session_id';
+
+  perform set_config('test.concurrency.clearsale_session', v_session, true);
+end;
+$issue_cs$;
+
+select pg_temp.payment_set_service_role();
+
 select throws_ok(
   format(
     $$ select public.payment_begin_manual_attempt(
       %L::uuid,
       %L::uuid,
-      'clearsale-concurrency-session'
+      %L
     ) $$,
     current_setting('test.concurrency.schedule_manual'),
-    current_setting('test.concurrency.client_id')
+    current_setting('test.concurrency.client_id'),
+    current_setting('test.concurrency.clearsale_session')
   ),
   'P0001',
   'INVALID_SCHEDULE_STATE',

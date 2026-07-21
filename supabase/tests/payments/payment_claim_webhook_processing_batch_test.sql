@@ -38,8 +38,8 @@ select public.payment_ingest_webhook_event(
   'TRANSACTION_UPDATE',
   'evt-claim-queue-1',
   '{"id":"evt-claim-queue-1"}'::jsonb,
-  '{"X-NETCRED-Event":"TRANSACTION_UPDATE"}'::jsonb
-);
+  '{"X-NETCRED-Event":"TRANSACTION_UPDATE"}'::jsonb,
+  true);
 
 select public.payment_enqueue_webhook_processing(
   (

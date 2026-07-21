@@ -132,6 +132,25 @@ begin
       using errcode = '42501';
   end if;
 
+  -- CHK-028: CPF/phone are required for payment checkout; UI steps alone are insufficient.
+  if not exists (
+    select 1
+    from public.client_profiles_private cpp
+    where cpp.client_id = v_actor
+      and nullif(trim(cpp.cpf), '') is not null
+  )
+    or not exists (
+      select 1
+      from public.profiles p
+      where p.id = v_actor
+        and nullif(trim(p.phone), '') is not null
+    ) then
+    raise exception 'PROFILE_INCOMPLETE'
+      using
+        errcode = 'P0001',
+        detail = jsonb_build_object('code', 'PROFILE_INCOMPLETE')::text;
+  end if;
+
   perform 1
   from public.provider_proposals pp
   where pp.service_request_id = v_sr.id
@@ -227,6 +246,15 @@ begin
       using
         errcode = 'P0001',
         detail = jsonb_build_object('code', 'PAYMENT_TOKEN_INACTIVE')::text;
+  end if;
+
+  -- Token must be issued under Renovi platform NetCred company (marketplace model).
+  if nullif(btrim(v_card_token.netcred_company_id), '')
+    is distinct from public.payment_netcred_platform_company_id() then
+    raise exception 'PAYMENT_TOKEN_COMPANY_MISMATCH'
+      using
+        errcode = 'P0001',
+        detail = jsonb_build_object('code', 'PAYMENT_TOKEN_COMPANY_MISMATCH')::text;
   end if;
 
   perform public.payment_assert_installment_hmac_context(

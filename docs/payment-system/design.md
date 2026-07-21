@@ -19,7 +19,7 @@ The Renovi Payment System is a **database-centric, event-driven orchestration la
 
 Edge Functions are **thin, stateless I/O connectors** — they MUST NOT own business logic, queues, leases, or state transitions. No Edge Function memory is authoritative between invocations.
 
-**Single-gateway (Option A):** MVP uses **NetCred only**. There is **no `payment_providers` registry table**. Non-secret gateway metadata (slug, API base URL, supported methods) lives in **`supabase/functions/_shared/payment/constants.ts`** and Edge env; **credentials and signing secrets** live in **Supabase Vault**. Rows store `gateway_slug payment_gateway_slug NOT NULL DEFAULT 'netcred'` — enough for webhook dedup and a future multi-gateway migration without redesigning charge semantics.
+**Single-gateway (Option A):** MVP uses **NetCred only**. There is **no `payment_providers` registry table**. Non-secret gateway metadata (slug, API base URL, supported methods) lives in **`supabase/functions/_shared/payment/constants.ts`** and Edge env; **NetCred credentials + webhook HMAC** live in **Edge Function secrets**; **installment/pricing HMAC secrets** live in **Supabase Vault** (RPC-only). See [`vault-secrets-runbook.md`](./vault-secrets-runbook.md). Rows store `gateway_slug payment_gateway_slug NOT NULL DEFAULT 'netcred'` — enough for webhook dedup and a future multi-gateway migration without redesigning charge semantics.
 
 The system enforces **exactly-once charge semantics** through a combination of:
 - Row-level pessimistic locking (`SELECT … FOR UPDATE SKIP LOCKED`) for queue dequeueing
@@ -44,6 +44,7 @@ graph TB
         EF_REFUND["process-refund\n(begin RPC → NetCred refund)"]
         EF_ONBOARD["detect-netcred-onboarding\n(NetCred batch query)"]
         EF_RECON["reconcile-netcred-payments\n(claim RPC → NetCred → commit RPC)"]
+        EF_VOID["reconcile-inanalysis-auto-cancel-voids\n(claim RPC → NetCred void → commit RPC)"]
     end
 
     subgraph pg["PostgreSQL — Supabase (source of truth)"]
@@ -68,7 +69,7 @@ graph TB
     pg -->|enqueue notifications| MMD
 ```
 
-**Eight Edge Functions** (charge/webhook/onboarding I/O plus KYC credenciamento email). Everything else is RPC + `pg_cron`.
+**Nine Edge Functions** (charge/webhook/onboarding/void I/O plus KYC credenciamento email). Everything else is RPC + `pg_cron`.
 
 ## 1.3 Component Responsibilities
 
@@ -87,7 +88,7 @@ graph TB
 | `netcred-webhook` EF | Stateless | **Ingress only:** persist raw body → HMAC validate → inline `payment_process_webhook_event` OR `payment_enqueue_webhook_processing` RPC |
 | `manual-charge-payment` EF | Stateless | **I/O only:** `payment_begin_manual_attempt` RPC → NetCred → `payment_commit_charge_outcome` RPC |
 | `tokenize-payment-card` EF | Stateless | **PCI only:** forward card to NetCred; persist token metadata via RPC |
-| `NetCredAdapter` (TypeScript) | Stateless | Gateway translation; JWT refresh; used **only** by the seven EFs above |
+| `NetCredAdapter` (TypeScript) | Stateless | Gateway translation; JWT refresh; used **only** by the payment EFs above |
 | React Checkout Stepper | Ephemeral | UI orchestration; ClearSale SDK injection; calls RPCs via feature `api/` layer |
 
 ## 1.4 RPC vs Edge Function Decision Matrix
@@ -432,7 +433,7 @@ ALTER TABLE public.contracted_services
 | Gateway slug | `PAYMENT_GATEWAY_SLUG = 'netcred'` in `_shared/payment/constants.ts` | Copied into `gateway_slug` columns at INSERT |
 | GraphQL API base URL | `NETCRED_API_BASE_URL` (Edge env / `.env.example`) | Not in Postgres |
 | Webhook ingress path | `supabase/functions/netcred-webhook` + `config.toml` | Not in Postgres |
-| Username / password / webhook secret | **Supabase Vault** | `NETCRED_*`, `NETCRED_WEBHOOK_SECRET` |
+| Username / password / webhook secret | **Edge Function secrets** | `NETCRED_*`, `NETCRED_WEBHOOK_SECRET` (see [`vault-secrets-runbook.md`](./vault-secrets-runbook.md)) |
 | Installment / pricing HMAC secrets | **Supabase Vault** | Read inside RPCs (`vault.decrypted_secrets`) |
 | JWT cache (mutable) | `payment_gateway_tokens` | One row: `gateway_slug = 'netcred'` |
 | Supported methods (MVP) | Constant `['CREDIT_CARD']` in TypeScript | Pix/Boleto = code change + migration when added |
@@ -454,7 +455,7 @@ CREATE TABLE payment_gateway_tokens (
 );
 -- Single row (gateway_slug = 'netcred'). Accessed only via service_role (Edge Functions).
 -- SELECT FOR UPDATE serializes concurrent refresh attempts.
--- Vault holds NetCred username/password used to obtain this JWT.
+-- Edge secrets hold NetCred username/password used to obtain this JWT.
 ```
 
 **Invariant:** `expires_at - now() >= 60 minutes` at read time; otherwise refresh is triggered. The `FOR UPDATE` lock prevents thundering-herd refreshes when multiple workers start simultaneously.
@@ -467,6 +468,7 @@ CREATE TABLE client_card_tokens (
   client_id                   UUID        NOT NULL REFERENCES profiles(id),
   gateway_slug                payment_gateway_slug NOT NULL DEFAULT 'netcred',
   gateway_payment_profile_id TEXT        NOT NULL,  -- NetCred paymentProfile.id
+  netcred_company_id          TEXT        NOT NULL,  -- companyId used at tokenization
   card_number_masked          TEXT        NOT NULL,  -- '497010XXXXXX0048'
   card_brand                  TEXT        NOT NULL,  -- 'VCC','MASTER','ELO',...
   gateway_card_token         TEXT        NOT NULL,  -- NetCred paymentProfile.token
@@ -482,15 +484,18 @@ CREATE TABLE client_card_tokens (
 -- PCI constraint: NO columns for raw PAN or CVV.
 CREATE INDEX idx_client_card_tokens_client_state ON client_card_tokens(client_id, state);
 -- RLS on base table: (select auth.uid()) = client_id for SELECT; mutations via service_role only.
+-- Invariant: accept/charge/update_method MUST reject when token.netcred_company_id
+-- differs from Renovi platform company (Vault netcred_platform_company_id / Edge NETCRED_PLATFORM_COMPANY_ID).
+-- ChargeCreate.companyId is the provider merchant (payout banks); cards tokenize under platform.
 ```
 
 ### `client_card_tokens_safe_v` (client read model)
 
-**Product intent:** the authenticated client app MUST read saved cards from this view, **not** from `client_card_tokens` directly. The base table still holds `gateway_card_token` and `billing_address` for charge RPCs and Edge Functions (`service_role`).
+**Product intent:** the authenticated client app MUST read saved cards from this view, **not** from `client_card_tokens` directly. The base table still holds `gateway_payment_profile_id`, `gateway_card_token`, `netcred_company_id`, and `billing_address` for charge RPCs and Edge Functions (`service_role`).
 
 | Surface | Columns exposed | Must not expose |
 |---|---|---|
-| `client_card_tokens_safe_v` | id, client_id, gateway_slug, gateway_payment_profile_id, card_number_masked, card_brand, expiry_month, expiry_year, cardholder_name, state, created_at, updated_at | `gateway_card_token`, `billing_address` |
+| `client_card_tokens_safe_v` | id, client_id, gateway_slug, card_number_masked, card_brand, expiry_month, expiry_year, cardholder_name, state, created_at, updated_at | `gateway_payment_profile_id`, `gateway_card_token`, `billing_address`, `netcred_company_id` |
 | `client_card_tokens` (base) | Full row | Client browser — `service_role` / tokenize EF / charge pipeline only |
 
 ```sql
@@ -500,7 +505,6 @@ SELECT
   cct.id,
   cct.client_id,
   cct.gateway_slug,
-  cct.gateway_payment_profile_id,
   cct.card_number_masked,
   cct.card_brand,
   cct.expiry_month,
@@ -512,14 +516,14 @@ SELECT
 FROM public.client_card_tokens cct;
 
 COMMENT ON VIEW public.client_card_tokens_safe_v IS
-  'Client-facing card token read model; excludes gateway_card_token and billing_address (PCI).';
+  'Client-facing card token read model; excludes gateway refs, company id, and billing_address (PCI).';
 ```
 
-**Frontend contract:** `src/features/payments/api/cards.api.ts` (`listActivePaymentTokens`, `fetchPaymentTokenById`) queries `client_card_tokens` today; target read path is `client_card_tokens_safe_v` (see migration task deliverables). Checkout stepper saved-card selection, card picker UI, and any client-side listing MUST use this API module — never `.from('client_card_tokens')` in hooks/components.
+**Frontend contract:** `src/features/payments/api/cards.api.ts` (`listActivePaymentTokens`, `fetchPaymentTokenById`) queries `client_card_tokens_safe_v`. Checkout stepper saved-card selection, card picker UI, and any client-side listing MUST use this API module — never `.from('client_card_tokens')` in hooks/components.
 
 **RLS:** `security_invoker = true` — the view inherits `client_card_tokens_select_own` on the base table (`auth.uid() = client_id`).
 
-**PCI Invariant:** The schema CHECK constraints plus RLS policies enforce PCI DSS data-at-rest scope limitation. `gateway_payment_profile_id` and `gateway_card_token` are gateway-issued opaque references stored on the base table; they MUST NOT be returned to the client UI.
+**PCI Invariant:** The schema CHECK constraints plus RLS policies enforce PCI DSS data-at-rest scope limitation. `gateway_payment_profile_id`, `gateway_card_token`, and `netcred_company_id` are gateway-scoped references on the base table; they MUST NOT be returned to the client UI (no authenticated column GRANT; omitted from `safe_v`).
 
 ## 3.4 `provider_gateway_accounts`
 
@@ -1120,7 +1124,8 @@ sequenceDiagram
 **PCI compliance enforcement:**
 - Raw card data (PAN, CVV) MUST NOT be logged, cached in React Query, stored in IndexedDB, or transmitted to any endpoint other than `tokenize-payment-card`
 - The EF never logs card fields from the request body
-- Only `gateway_payment_profile_id`, `card_number_masked`, `card_brand`, `gateway_card_token` are persisted
+- Only `gateway_payment_profile_id`, `netcred_company_id`, `card_number_masked`, `card_brand`, `gateway_card_token` are persisted (no PAN/CVV)
+- `netcred_company_id` MUST equal the NetCred `customerInput.companyId` used for that tokenize call (always platform `NETCRED_PLATFORM_COMPANY_ID`); accept/charge reject mismatch vs platform company
 - `billingAddressInput` is ALWAYS included in production (ClearSale requirement); omission causes `PaymentProfile requires BillingAddress` gateway error
 
 ## 4.3 Phase 4: Installment Calculation and HMAC Signing (Req 7, 25, 27)
@@ -1453,7 +1458,7 @@ sequenceDiagram
     EF->>PG: payment_ingest_webhook_event(raw_payload, raw_headers) — INSERT state='RECEIVED'
     Note over EF,PG: Event persisted BEFORE validation — never lost
 
-    EF->>EF: HMAC-SHA256(NETCRED_WEBHOOK_SECRET, rawBody) — Vault read in EF (ingress secret)
+    EF->>EF: HMAC-SHA256(NETCRED_WEBHOOK_SECRET, rawBody) — Edge env secret (ingress)
     EF->>EF: crypto.timingSafeEqual(computed, X-NETCRED-Signature)
     alt Signature invalid
         EF->>PG: mark_webhook_event_failed(event_id, 'INVALID_SIGNATURE')
@@ -1948,7 +1953,7 @@ Batch RPCs accept `p_record_job_run boolean DEFAULT true` where applicable; **cr
 
 **HMAC secrets** (`INSTALLMENT_SIGNING_SECRET`, pricing signature) are read via `vault.decrypted_secrets` inside `SECURITY DEFINER` RPCs (`SET search_path = public, vault, extensions`), matching `generate_provider_pricing_signature`.
 
-## 5.3 Edge Function Contracts (strictly necessary — eight total)
+## 5.3 Edge Function Contracts (strictly necessary — nine total)
 
 | Function | Trigger | Auth | Role |
 |---|---|---|---|
@@ -1960,8 +1965,9 @@ Batch RPCs accept `p_record_job_run boolean DEFAULT true` where applicable; **cr
 | `process-refund` | Client POST | JWT | `payment_begin_refund_request` RPC → NetCred `transactionRefund` |
 | `detect-netcred-onboarding` | pg_cron 1×/day via `payment_cron_detect_netcred_onboarding()` | cron secret | NetCred batch query → activation RPCs |
 | `reconcile-netcred-payments` | pg_cron 30 min via `payment_cron_reconcile_netcred_payments()` | cron secret | `claim_stale_*` → NetCred `getTransaction` → commit RPC |
+| `reconcile-inanalysis-auto-cancel-voids` | pg_cron 30 min via `payment_cron_reconcile_inanalysis_auto_cancel_voids()` | cron secret | Claim IN_ANALYSIS void batch → NetCred void → commit RPC |
 
-**Removed from v1.0 (now RPC):** `calculate-installment-options`, `accept-proposal` (payment path), `update-payment-method`, `process-webhook-retry`, `auto-cancel-unpaid-services`, `notify-upcoming-charges`, `auto-complete-executed-services`, `recover-payment-leases`.
+**Removed from v1.0 (now RPC):** `calculate-installment-options` (use `payment_calculate_installment_options` RPC), `accept-proposal` (payment path), `update-payment-method`, `process-webhook-retry`, `auto-cancel-unpaid-services`, `notify-upcoming-charges`, `auto-complete-executed-services`, `recover-payment-leases`.
 
 ## 5.4 NetCred GraphQL Operations Used
 
@@ -1989,6 +1995,7 @@ Batch RPCs accept `p_record_job_run boolean DEFAULT true` where applicable; **cr
 | Onboarding detection | 1×/day | `SELECT public.payment_cron_detect_netcred_onboarding();` | `0 10 * * *` |
 | Reconciliation polling | Every 30 min | `SELECT public.payment_cron_reconcile_netcred_payments();` | `*/30 * * * *` |
 | Orphan recovery (janitor) | Every 30 min | `SELECT public.payment_cron_recover_orphaned_schedules();` | `*/30 * * * *` |
+| IN_ANALYSIS auto-cancel voids | Every 30 min | `SELECT public.payment_cron_reconcile_inanalysis_auto_cancel_voids();` | `*/30 * * * *` |
 | Webhook retry + queue worker | Every 5 min | `SELECT public.payment_cron_process_webhook_retry();` | `*/5 * * * *` |
 | Auto-complete executed | 4×/day | `SELECT public.payment_cron_auto_complete_executed_services();` | `45 9,15,21,3 * * *` |
 
@@ -2358,13 +2365,18 @@ The `payment_audit_log` provides a complete, immutable, chronologically ordered 
 | Control | Implementation |
 |---|---|
 | No raw PAN/CVV at rest | `client_card_tokens` schema has no PAN/CVV columns; CHECK constraints; audited columns |
-| Raw card data in transit | Only `tokenize-payment-card` EF receives card data; transmitted immediately to NetCred; not logged |
+| Raw card data in transit (CDE) | Browser → `tokenize-payment-card` Edge → NetCred GraphQL. **Orbit Edge is in PCI CDE for CHD transit** — it receives PAN/CVV briefly, forwards to the gateway, and must never log or persist them. Follow-on: NetCred hosted fields so PAN never hits Orbit (product/QSA). |
+| CHD log hygiene | Deep recursive scrubbers in Edge `payment-logger` and client `sentryPiiScrubbing` (deny `cardData`, `securityCode`, CPF, phone, email, …) |
+| Token ↔ company binding | Tokenize under Renovi platform company; `client_card_tokens.netcred_company_id` must match Vault/`NETCRED_PLATFORM_COMPANY_ID`; `chargeCreate.companyId` = provider merchant for payout banks |
+| ClearSale SDK supply chain | `injectClearSaleSdk` pins SRI `integrity` + `crossOrigin=anonymous` for `fp.js` |
 | No card data in React Query cache | Card input state is managed in local component state only; cleared after EF call |
 | No card data in IndexedDB | TanStack Query `gcTime: 0` for card input queries; never persisted |
 | HMAC comparison (installment, pricing) | `extensions.hmac` + constant-time compare in PL/pgSQL RPCs |
 | Webhook HMAC | `crypto.timingSafeEqual` in `netcred-webhook` EF only (raw body ingress) |
-| Secrets management | Vault: RPCs read signing secrets; EFs read NetCred credentials + webhook secret |
-| Secret rotation | `INSTALLMENT_SIGNING_SECRET` and `NETCRED_WEBHOOK_SECRET` rotatable via Vault without DB migration |
+| Secrets management | Vault: RPCs read signing secrets; Edge secrets: NetCred credentials + webhook HMAC |
+| Secret rotation | `INSTALLMENT_SIGNING_SECRET` via Vault; `NETCRED_WEBHOOK_SECRET` via Edge Secrets — no DB migration |
+
+**Do not claim out-of-PCI-scope** while Edge receives CHD. Data-at-rest scope is limited to tokenized references; data-in-transit scope includes the tokenize Edge Function until hosted-fields migration.
 
 ## 11.2 Row Level Security and RPC Privileges (mandatory)
 
@@ -2404,7 +2416,7 @@ Payment data is financial and PCI-adjacent. **Maximum security is the default.**
 | Table / view | Policy |
 |---|---|
 | `client_card_tokens` | Base table: `SELECT` where `(select auth.uid()) = client_id`; no direct `INSERT`/`UPDATE` from client (tokenize EF + RPC); `service_role` bypass for EFs. **Browser app MUST NOT query this table** — use `client_card_tokens_safe_v`. |
-| `client_card_tokens_safe_v` | Client read model (`security_invoker`); same RLS as base table; exposes masked card metadata only — no `gateway_card_token` or `billing_address` (§3.3) |
+| `client_card_tokens_safe_v` | Client read model (`security_invoker`); same RLS as base table; exposes masked card metadata only — no `gateway_payment_profile_id`, `gateway_card_token`, `billing_address`, or `netcred_company_id` (§3.3) |
 | `payment_schedules` | `SELECT` where `(select auth.uid()) IN (client_id, provider_id)` or `is_platform_admin()`; **no** `UPDATE`/`INSERT` for `authenticated` — RPC only |
 | `payment_attempts` | No `authenticated` access (ops/support via `service_role` or admin RPCs only) |
 | `payment_webhook_events` | `service_role` only; no `authenticated` / `anon` |
@@ -2521,10 +2533,10 @@ Per [`infrastructure-constraints.md`](../infrastructure-constraints.md): **start
 |---|---|
 | `PAYMENT_GATEWAY_SLUG`, supported methods | `_shared/payment/constants.ts` |
 | NetCred API URL | Edge env `NETCRED_API_BASE_URL` |
-| NetCred credentials, webhook secret | Supabase Vault |
+| NetCred credentials, webhook secret | Edge Function secrets (`NETCRED_*`) |
 | JWT runtime cache | `payment_gateway_tokens` (single row) |
 
-## What belongs in Edge Functions (strictly necessary — seven)
+## What belongs in Edge Functions (strictly necessary — nine)
 
 | Responsibility | Function | Why EF is required |
 |---|---|---|
@@ -2535,6 +2547,8 @@ Per [`infrastructure-constraints.md`](../infrastructure-constraints.md): **start
 | NetCred refund | `process-refund` | `transactionRefund` GraphQL |
 | NetCred onboarding poll | `detect-netcred-onboarding` | Batch GraphQL `companies` query |
 | NetCred reconciliation poll | `reconcile-netcred-payments` | `getTransaction` GraphQL |
+| IN_ANALYSIS void compensation | `reconcile-inanalysis-auto-cancel-voids` | NetCred void GraphQL after auto-cancel |
+| KYC credenciamento email | `dispatch-kyc-email` | Private Storage download + Resend attachments |
 | Shared NetCred adapter | `_shared/payment/` | JWT refresh; used only by EFs above |
 
 **Edge Function pattern for charges/refunds/reconcile:**

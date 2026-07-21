@@ -1,9 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
 import { profileApi } from "@/features/auth";
-import type {
-  AcceptProposalResult,
-  AcceptProposalWithPaymentParams,
-} from "@/features/negotiation-proposals";
 import { logger } from "@/lib/logger";
 import { maskCPF, maskPhone, unmask } from "@/lib/masks";
 import { generateIdempotencyKeyV7 } from "@/lib/utils/idempotencyKey";
@@ -44,12 +40,48 @@ export type FetchInstallmentOptionsResult = {
   error: string | null;
 };
 
-export type AcceptProposalWithPaymentResult = {
-  data: AcceptProposalResult | null;
-  error: string | null;
+/** Own accept types in payments to avoid cross-feature cycles (CHK-040). */
+export type AcceptProposalCheckoutParams = {
+  proposalId: string;
+  selectedSlot: { start_date: string; shift: string; end_date?: string | null };
+  idempotencyKey?: string;
+  clientCardTokenId: string;
+  installmentNumber: number;
+  installmentSelectionHmac: string;
+  installmentHmacPayload: Record<string, unknown>;
+  clearsaleSessionId: string;
+  pricingSignature: string;
+  clientIp: string | null;
 };
 
-export type AcceptProposalCheckoutParams = AcceptProposalWithPaymentParams;
+export type AcceptProposalCheckoutResult = {
+  service: {
+    id: string;
+    service_request_id: string;
+    accepted_proposal_id: string;
+    status: string;
+    scheduled_start_date: string;
+    scheduled_shift: string | null;
+    agreed_slot: { start_date: string; shift: string; end_date?: string | null };
+  };
+  proposal: {
+    id: string;
+    status: string;
+    selected_slot: { start_date: string; shift: string; end_date?: string | null };
+    provider_id: string;
+  };
+  payment_schedule?: {
+    id: string;
+    state: string;
+    charge_scheduled_at: string;
+  };
+};
+
+export type AcceptProposalWithPaymentResult = {
+  data: AcceptProposalCheckoutResult | null;
+  error: string | null;
+  errorCode?: string | null;
+};
 
 function parseCheckoutStepRequirements(
   data: unknown,
@@ -214,7 +246,7 @@ export async function fetchInstallmentOptions(
   return { data: parsed, error: null };
 }
 
-function isAcceptProposalResult(value: unknown): value is AcceptProposalResult {
+function isAcceptProposalResult(value: unknown): value is AcceptProposalCheckoutResult {
   if (!value || typeof value !== "object") {
     return false;
   }
@@ -247,7 +279,11 @@ export async function acceptProposalWithPayment(
   );
 
   if (result.error) {
-    return { data: null, error: paymentsApiErrorToMessage(result.error) };
+    return {
+      data: null,
+      error: paymentsApiErrorToMessage(result.error),
+      errorCode: result.error.code,
+    };
   }
 
   return { data: result.data, error: null };

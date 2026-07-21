@@ -1,5 +1,8 @@
 # Runbook — testes de pagamento em desenvolvimento local
 
+> **LOCAL-ONLY.** SQL and commands in this runbook target the local Supabase stack.
+> Do **not** run destructive statements (`DELETE`, `TRUNCATE`, force-cron wrappers) against staging/production.
+
 Passo a passo para validar o fluxo **checkout → cron de cobrança → webhook → PAID** no Supabase local, usando o sandbox NetCred.
 
 **Relacionado:** [`vault-secrets-runbook.md`](./vault-secrets-runbook.md) · [`netcred-payments-flow.md`](./netcred-payments-flow.md) · [`CONTEXT.md`](./CONTEXT.md)
@@ -39,10 +42,11 @@ No `.env` raiz: `INSTALLMENT_SIGNING_SECRET` e `PRICING_SIGNATURE_SECRET` (ver [
 
 ```bash
 yarn enable-webhook
-# URL: https://pj-orbit-sb.loca.lt/functions/v1/netcred-webhook
+# localtunnel prints a random https://<subdomain>.loca.lt URL — use that host:
+# https://<subdomain>.loca.lt/functions/v1/netcred-webhook
 ```
 
-No painel/API NetCred, cadastre essa URL. Para localtunnel, use `maskUserAgent: false` no `webhookCreate` (evita erro 511).
+No painel/API NetCred, cadastre a URL impressa pelo tunnel (subdomínio aleatório a cada execução). Para localtunnel, use `maskUserAgent: false` no `webhookCreate` (evita erro 511).
 
 ### 1.5 Acesso ao Postgres local
 
@@ -425,6 +429,8 @@ SELECT public.payment_cron_process_webhook_retry();
 ```
 
 ### 6.9 Limpar token NetCred em cache (auth stale)
+
+> **LOCAL-ONLY** — do not run against hosted environments without an explicit ops ticket.
 
 ```sql
 DELETE FROM public.payment_gateway_tokens WHERE gateway_slug = 'netcred';

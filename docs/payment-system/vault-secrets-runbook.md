@@ -15,7 +15,7 @@ Platform-wide internal EF auth (pg_cron → Edge): **[../internal-edge-functions
 | NetCred webhook HMAC | — | `NETCRED_WEBHOOK_SECRET` | `netcred-webhook` | **Edge secret** |
 | NetCred GraphQL base URL | — | `NETCRED_API_BASE_URL` | Charge, tokenize, refund, reconcile, onboarding | **Edge config** (non-secret) |
 | Platform bank account ID | — | `NETCRED_PLATFORM_BANK_ACCOUNT_ID` | tokenize, manual-charge, schedule, reconcile, refund | **Edge config** |
-| Platform company ID | — | `NETCRED_PLATFORM_COMPANY_ID` | `tokenize-payment-card` (optional) | **Edge config** |
+| Platform company ID | `netcred_platform_company_id` | `NETCRED_PLATFORM_COMPANY_ID` | Tokenize + chargeCreate (payment-profile merchant); RPCs via `payment_netcred_platform_company_id()` | **Vault + Edge** (must match) |
 
 **Rule:** never commit real secret values. `.env.example` files contain placeholders only. Production values live in Supabase Dashboard (Vault or Edge Secrets).
 
@@ -34,6 +34,7 @@ orbit_supabase_url = "env(ORBIT_SUPABASE_URL)"
 orbit_cron_secret = "env(ORBIT_CRON_SECRET)"
 pricing_signature_secret = "env(PRICING_SIGNATURE_SECRET)"
 installment_signing_secret = "env(INSTALLMENT_SIGNING_SECRET)"
+netcred_platform_company_id = "env(NETCRED_PLATFORM_COMPANY_ID)"
 ```
 
 3. Restart local Supabase after changing `[db.vault]` or root `.env`:
@@ -46,7 +47,7 @@ nvm use 24.13 && yarn db:reset   # or: supabase stop && supabase start
 
 ```bash
 npx supabase db query --local \
-  "select name from vault.secrets where name in ('installment_signing_secret','pricing_signature_secret') order by 1"
+  "select name from vault.secrets where name in ('installment_signing_secret','pricing_signature_secret','netcred_platform_company_id') order by 1"
 ```
 
 ### Production / staging
@@ -91,13 +92,16 @@ Shared module: `supabase/functions/_shared/payment/netcred-auth.ts`. Secret key 
 
 ```bash
 # supabase/functions/.env (local sandbox — never commit)
+# Generate secrets: openssl rand -hex 32 — do NOT copy example placeholders to staging/prod
 NETCRED_USERNAME=sandbox-user@example.com
 NETCRED_PASSWORD=sandbox-password
-NETCRED_WEBHOOK_SECRET=local-webhook-hmac-secret
+NETCRED_WEBHOOK_SECRET=CHANGE_ME_GENERATE_RANDOM_32+
 NETCRED_API_BASE_URL=https://api.sandbox.netcredbrasil.com.br
 NETCRED_PLATFORM_BANK_ACCOUNT_ID=12345
 NETCRED_PLATFORM_COMPANY_ID=67890
-ORBIT_CRON_SECRET=local-dev-orbit-cron-secret-min-32-chars
+ORBIT_CRON_SECRET=CHANGE_ME_GENERATE_RANDOM_32+
+# Local sandbox ONLY (never set in staging/prod Edge secrets):
+# ENVIRONMENT=development
 ```
 
 ### Production / staging
@@ -106,7 +110,7 @@ ORBIT_CRON_SECRET=local-dev-orbit-cron-secret-min-32-chars
 
 **Rotation (webhook secret):** update Edge secret + NetCred webhook configuration. No migration. Redeploy is not required — Edge reads secrets at cold start; new invocations pick up the new value.
 
-**Rotation (NetCred username/password):** update Edge secrets; next `tokenAuth` refresh uses new credentials. Clear stale JWT if needed: `DELETE FROM payment_gateway_tokens WHERE gateway_slug = 'netcred'` (forces refresh on next EF call).
+**Rotation (NetCred username/password):** update Edge secrets; next `tokenAuth` refresh uses new credentials. Clear stale JWT if needed (LOCAL/ops only): `DELETE FROM payment_gateway_tokens WHERE gateway_slug = 'netcred'` (forces refresh on next EF call).
 
 ## Sandbox vs production guard (Req 2 AC5)
 
@@ -114,14 +118,17 @@ In production, `NetCredAdapter` asserts `user.sandbox === false` after `tokenAut
 
 ## Provisioning checklist
 
-### New environment (staging)
+### New environment (staging / production)
 
-- [ ] Root `.env`: `INSTALLMENT_SIGNING_SECRET`, `PRICING_SIGNATURE_SECRET`, `ORBIT_*` (local only)
+- [ ] Root `.env` (local only): `INSTALLMENT_SIGNING_SECRET`, `PRICING_SIGNATURE_SECRET`, `ORBIT_*` — values ≠ `.env.example` placeholders
 - [ ] Postgres Vault: `installment_signing_secret`, `pricing_signature_secret`, `orbit_supabase_url`, `orbit_cron_secret`
-- [ ] Edge Secrets: `NETCRED_USERNAME`, `NETCRED_PASSWORD`, `NETCRED_WEBHOOK_SECRET`, `NETCRED_API_BASE_URL`, `NETCRED_PLATFORM_BANK_ACCOUNT_ID`, `ORBIT_CRON_SECRET`
+- [ ] Edge Secrets: `NETCRED_USERNAME`, `NETCRED_PASSWORD`, `NETCRED_WEBHOOK_SECRET`, `NETCRED_API_BASE_URL`, `NETCRED_PLATFORM_BANK_ACCOUNT_ID`, `ORBIT_CRON_SECRET`, `ALLOWED_ORIGINS`
+- [ ] `ENVIRONMENT` unset or not `development` in hosted Edge secrets
 - [ ] NetCred dashboard: webhook URL → `{SUPABASE_URL}/functions/v1/netcred-webhook`
 - [ ] Smoke: `payment_calculate_installment_options` returns `installment_selection_hmac`
 - [ ] Smoke: `netcred-webhook` rejects unsigned POST with HTTP 401
+
+Production go-live gates are also mirrored in [`production-rollout-checklist.md`](./production-rollout-checklist.md).
 
 ### Secret leak response
 

@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(5);
+select plan(6);
 
 create or replace function pg_temp.payment_set_service_role()
 returns void
@@ -38,8 +38,8 @@ select public.payment_ingest_webhook_event(
   'TRANSACTION_CAPTURE',
   'evt-retry-claim-1',
   '{"id":"evt-retry-claim-1"}'::jsonb,
-  '{"X-NETCRED-Event":"TRANSACTION_CAPTURE"}'::jsonb
-);
+  '{"X-NETCRED-Event":"TRANSACTION_CAPTURE"}'::jsonb,
+  true);
 
 update public.payment_webhook_events
 set
@@ -63,6 +63,31 @@ select is(
   ),
   'PROCESSING',
   'claimed failed event moves to PROCESSING'
+);
+
+-- INVALID_SIGNATURE must never be claimed for retry (CHK-001).
+select public.payment_ingest_webhook_event(
+  'netcred'::public.payment_gateway_slug,
+  'TRANSACTION_CAPTURE',
+  'evt-retry-invalid-sig',
+  '{"id":"evt-retry-invalid-sig"}'::jsonb,
+  '{"X-NETCRED-Event":"TRANSACTION_CAPTURE"}'::jsonb,
+  false
+);
+
+update public.payment_webhook_events
+set
+  state = 'FAILED'::public.payment_webhook_event_state,
+  retry_count = 0,
+  next_retry_at = now() - interval '1 minute',
+  failure_reason = 'INVALID_SIGNATURE',
+  signature_validated = false
+where gateway_event_id = 'evt-retry-invalid-sig';
+
+select is(
+  public.payment_claim_webhook_retry_batch(),
+  '[]'::jsonb,
+  'claim retry batch empty for INVALID_SIGNATURE / unsigned events'
 );
 
 select ok(

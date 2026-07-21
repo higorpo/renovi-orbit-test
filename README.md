@@ -75,7 +75,8 @@ Exemplo local:
 
 ```bash
 ORBIT_SUPABASE_URL=http://127.0.0.1:54321
-ORBIT_CRON_SECRET=local-dev-orbit-cron-secret-min-32-chars
+# openssl rand -hex 32 — never reuse .env.example placeholders in staging/prod
+ORBIT_CRON_SECRET=CHANGE_ME_GENERATE_RANDOM_32+
 ```
 
 #### Edge Functions — secrets (`supabase/functions/.env` local / Dashboard em prod)

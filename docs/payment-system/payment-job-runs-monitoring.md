@@ -34,6 +34,7 @@ Returns JSON with:
 | `schedule-netcred-charges` | `payment_cron_schedule_netcred_charges()` | `0 9,15,21,3 * * *` |
 | `detect-netcred-onboarding` | `payment_cron_detect_netcred_onboarding()` | `0 10 * * *` |
 | `auto-complete-executed-services` | `payment_cron_auto_complete_executed_services()` | `45 9,15,21,3 * * *` |
+| `payment-emit-sentry-spike-alerts` | `payment_cron_emit_sentry_spike_alerts()` | `*/5 * * * *` |
 
 ## Alert thresholds (on-call)
 
@@ -43,8 +44,25 @@ Returns JSON with:
 | Row errors | `error_count > 0` on latest run | **P2** | Inspect `metadata` (batch errors, webhook queue depth) |
 | Fatal abort | `metadata.fatal_error` present | **P1** | Wrapper exception before `job_run_finish`; see rollback runbook |
 | Missing recent run | No `job_runs` row in 2× expected interval | **P2** | Verify `cron.job.active = true` |
+| Webhook auth fail spike | `payment_alert_webhook_auth_fail_spike_v.auth_fail_15m` > `payment_webhook_auth_fail_spike_threshold_15m` (default 10) | **P1** | Spray/forged webhooks; check NetCred HMAC secret + source IPs |
+| FAILED_PERMANENT spike | `payment_alert_failed_permanent_spike_v.failed_permanent_15m` > `payment_failed_permanent_spike_threshold_15m` (default 5) | **P1** | Mass declines/config; inspect recent `CHARGE_FAILED_PERMANENT` audit rows |
 
-Pair with Sentry alerts from Task 82 (`payment-emit-sentry-alerts` EF) for `tokenAuth` CRITICAL and `FAILED_PERMANENT` WARNING events.
+### Sentry alert routing
+
+| Source | Kind / message | Path |
+|--------|----------------|------|
+| SQL cron → `payment-emit-sentry-alerts` EF | `auto_cancel` WARNING | `payment_cron_auto_cancel_unpaid_services` |
+| SQL cron → `payment-emit-sentry-alerts` EF | `webhook_dead_letter` CRITICAL | `payment_cron_process_webhook_retry` |
+| SQL cron → `payment-emit-sentry-alerts` EF | `webhook_auth_fail_spike` / `failed_permanent_spike` WARNING | `payment_cron_emit_sentry_spike_alerts` (every 5m) |
+| Edge (direct matrix) | `NETCRED_AUTH_FAILURE` / `tokenAuth` CRITICAL | NetCred auth helpers — **not** via emit-sentry-alerts |
+| Edge (direct matrix) | per-event `FAILED_PERMANENT` WARNING | schedule/manual charge paths — **not** via emit-sentry-alerts |
+
+Spike evaluator SQL:
+
+```sql
+select public.payment_evaluate_sentry_spike_alerts();
+-- empty array [] when under threshold; otherwise alerts[] for payment-emit-sentry-alerts
+```
 
 ## Manual query pack
 
@@ -63,7 +81,8 @@ where job_name in (
   'auto-cancel-unpaid-services',
   'schedule-netcred-charges',
   'detect-netcred-onboarding',
-  'auto-complete-executed-services'
+  'auto-complete-executed-services',
+  'payment-emit-sentry-spike-alerts'
 )
   and finished_at is null
   and started_at < now() - interval '30 minutes'
@@ -84,7 +103,8 @@ where job_name like '%netcred%'
      'auto-cancel-unpaid-services',
      'schedule-netcred-charges',
      'auto-complete-executed-services',
-     'reconcile-inanalysis-auto-cancel-voids'
+     'reconcile-inanalysis-auto-cancel-voids',
+     'payment-emit-sentry-spike-alerts'
    )
   and error_count > 0
   and started_at > now() - interval '24 hours'
@@ -126,7 +146,8 @@ where job_name in (
   'auto-cancel-unpaid-services',
   'schedule-netcred-charges',
   'detect-netcred-onboarding',
-  'auto-complete-executed-services'
+  'auto-complete-executed-services',
+  'payment-emit-sentry-spike-alerts'
 )
 order by job_name, started_at desc;
 ```
@@ -145,7 +166,8 @@ where jobname in (
   'auto-cancel-unpaid-services',
   'schedule-netcred-charges',
   'detect-netcred-onboarding',
-  'auto-complete-executed-services'
+  'auto-complete-executed-services',
+  'payment-emit-sentry-spike-alerts'
 )
 order by jobname;
 ```

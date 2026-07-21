@@ -40,7 +40,27 @@ Ao iniciar o reembolso, `payment_begin_refund_request`:
 
 Assim o histórico do cliente já pode mostrar o breakdown enquanto o gateway ainda não confirmou. O webhook (ou reconciliação) **sobrescreve** `refunded_amount` com o valor confirmado e define `refunded_at`.
 
-Evidência: migration/RPC `payment_begin_refund_request`; webhook `payment_process_webhook_event` (`TRANSACTION_REFUND`); design técnico em `docs/payment-system/design.md` §3.13 (não reeditado aqui).
+### Retry até ACK do gateway
+
+Enquanto o estorno **não** estiver ACK’d (`refund_submit_status` ainda não `SUBMITTED`/`CONFIRMED`), um novo disparo de `process-refund` **pode chamar de novo** a NetCred (`refundTransaction`). Só quando já submetido com sucesso a Edge trata como idempotente (`already_submitted`) e **não** reenvia.
+
+> **BUG CRÍTICO (aberto):** hoje o cancelamento do serviço/chat é commitado **antes** da chamada ao gateway. Se `refundTransaction` falhar, o cliente vê erro na UI, o serviço já está `CANCELLED`, a parcela fica `REFUND_REQUESTED` e **não há cron/fila que reenvie o estorno** — só intervenção manual / reinvocação de `process-refund`. O invariante desejado é all-or-nothing. Detalhe, impacto e opções de correção: [`docs/payment-system/critical-bug-refund-partial-commit.md`](../../../../payment-system/critical-bug-refund-partial-commit.md) (pendência **P-12**).
+
+### Faixa ToS após reagendamento pós-PAID
+
+Cancelamento/reembolso pós-pagamento calcula a faixa ToS de multa/estorno com o **`payment_service_execution_at` atual** do `contracted_services` (slot vigente após reagendamento). Assim, janelas de reembolso/T-12h acompanham a nova data — alinhado à estimativa da UI.
+
+No primeiro `PAID`, a parcela ainda grava **`refund_anchor_execution_at`** como **snapshot de auditoria** (horário de execução na captura). Esse campo **não** alimenta o cálculo de faixa ToS.
+
+### Webhook: `PAID` → `REFUNDED`
+
+Além do caminho clássico `PAID` → `REFUND_REQUESTED` → `REFUNDED`/`PARTIALLY_REFUNDED`, o processamento de `TRANSACTION_REFUND` pode aplicar o reembolso também a partir de **`PAID`** (ex.: estorno iniciado fora do fluxo app / confirmação direta do gateway).
+
+### Webhook: assinatura inválida
+
+Evento com assinatura HMAC inválida vai para estado terminal (**`DEAD_LETTER`** / não retentável). Não há retry que “promova” captura forjada sem `signature_validated`.
+
+Evidência: migration/RPC `payment_begin_refund_request`; Edge `process-refund`; webhook `payment_process_webhook_event` (`TRANSACTION_REFUND` / captura); design técnico em `docs/payment-system/design.md` §3.13 (não reeditado aqui).
 
 ## Histórico / recebimentos do prestador
 

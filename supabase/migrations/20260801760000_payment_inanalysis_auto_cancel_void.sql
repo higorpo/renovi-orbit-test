@@ -344,8 +344,17 @@ begin
     )
     into v_requires_void_reconcile;
 
+    -- Void invoke must not poison CANCELLED commits from payment_auto_cancel_services.
     if v_requires_void_reconcile then
-      v_void_request_id := public.payment_cron_invoke_edge_function(v_void_edge_slug);
+      begin
+        v_void_request_id := public.payment_cron_invoke_edge_function(v_void_edge_slug);
+      exception
+        when others then
+          raise warning
+            'inanalysis void reconcile invoke failed sqlstate=% message=%',
+            sqlstate,
+            sqlerrm;
+      end;
     end if;
 
     if v_cancelled_count > 0 then

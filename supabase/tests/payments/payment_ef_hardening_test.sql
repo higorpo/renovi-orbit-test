@@ -276,8 +276,8 @@ begin
     provider_payout,
     charge_scheduled_at,
     state,
-    idempotency_key
-  )
+    idempotency_key,
+    gateway_reference_code)
   values (
     v_schedule_id,
     v_service_id,
@@ -290,8 +290,8 @@ begin
     90.00,
     now() + interval '24 hours',
     'SCHEDULED'::public.payment_schedule_state,
-    v_service_id::text
-  );
+    v_service_id::text,
+    v_service_id);
 
   perform set_config('payment_ef.unsupported_schedule_id', v_schedule_id::text, true);
   perform pg_temp.payment_set_service_role();

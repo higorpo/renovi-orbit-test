@@ -24,6 +24,7 @@ function createAdapter(fetchFn: typeof fetch): NetCredAdapter {
   return new NetCredAdapter({
     supabase: createSupabaseStub(),
     platformBankAccountId: "2052",
+    platformCompanyId: "1014",
     graphqlUrl: TEST_GRAPHQL_URL,
     fetchFn,
   });
@@ -66,6 +67,7 @@ Deno.test("getTransaction returns mapped transaction when node is present", asyn
     transactionState: "PAID",
     paidAmount: "1000.00",
     refundedAmount: undefined,
+    rejectedReason: null,
   });
 });
 

@@ -75,6 +75,15 @@ function createProcessScheduleDeps(
   };
 }
 
+
+function resolvePlatformCompanyId(): string {
+  const value = Deno.env.get("NETCRED_PLATFORM_COMPANY_ID")?.trim();
+  if (!value) {
+    throw new Error("NETCRED_PLATFORM_COMPANY_ID is not configured");
+  }
+  return value;
+}
+
 function resolvePlatformBankAccountId(): string {
   const value = Deno.env.get("NETCRED_PLATFORM_BANK_ACCOUNT_ID")?.trim();
   if (!value) {
@@ -89,6 +98,7 @@ function createDeps(): ReconcileInanalysisAutoCancelVoidsDeps {
   configureAdapterRegistry({
     supabase,
     platformBankAccountId: resolvePlatformBankAccountId(),
+    platformCompanyId: resolvePlatformCompanyId(),
     isProduction: resolveIsProduction(),
   });
 

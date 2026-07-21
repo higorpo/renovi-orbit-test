@@ -9,6 +9,10 @@ describe("mapPaymentUserMessage", () => {
     expect(mapPaymentUserMessage("REJECTED")).toContain("recusado");
     expect(mapPaymentUserMessage("RATE_LIMIT_EXCEEDED")).toContain("Muitas tentativas");
     expect(mapPaymentUserMessage("CPF_INVALID")).toContain("CPF");
+    expect(mapPaymentUserMessage("CARD_REJECTED")).toContain("cartão");
+    expect(mapPaymentUserMessage("RISK_REJECTED")).toContain("análise de segurança");
+    expect(mapPaymentUserMessage("RETRYABLE")).toContain("Tente novamente");
+    expect(mapPaymentUserMessage("TERMINAL")).toContain("outro cartão");
     expect(mapPaymentUserMessage("RISK_ANALYSIS_NO_CONTACT")).toContain(
       "análise de segurança",
     );

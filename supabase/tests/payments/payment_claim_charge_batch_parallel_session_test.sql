@@ -101,12 +101,12 @@ begin
   );
 
   insert into public.client_card_tokens (
-    id, client_id, gateway_slug, gateway_payment_profile_id, card_number_masked,
+    id, client_id, gateway_slug, gateway_payment_profile_id, netcred_company_id, card_number_masked,
     card_brand, gateway_card_token, expiry_month, expiry_year, cardholder_name,
     billing_address, state
   )
   values (
-    v_card_token_id, v_client_id, 'netcred', format('profile-%s', p_contracted_service_id),
+    v_card_token_id, v_client_id, 'netcred', format('profile-%s', p_contracted_service_id), '1014',
     '497010XXXXXX0048', 'visa', format('token-%s', p_contracted_service_id), 12, 2030,
     'Parallel Claim', '{}'::jsonb, 'ACTIVE'::public.payment_client_card_token_state
   );
@@ -114,13 +114,13 @@ begin
   insert into public.payment_schedules (
     id, contracted_service_id, client_id, provider_id, gateway_slug,
     client_card_token_id, installment_number, base_amount, commission_rate_pct,
-    provider_payout, charge_scheduled_at, state, idempotency_key
-  )
+    provider_payout, charge_scheduled_at, state, idempotency_key,
+    gateway_reference_code)
   values (
     p_schedule_id, p_contracted_service_id, v_client_id, p_provider_id, 'netcred',
     v_card_token_id, 1, 100.00, 10.00, 90.00, now() - interval '1 minute',
-    'SCHEDULED'::public.payment_schedule_state, p_contracted_service_id::text
-  );
+    'SCHEDULED'::public.payment_schedule_state, p_contracted_service_id::text,
+    p_contracted_service_id);
 end;
 $$;
 

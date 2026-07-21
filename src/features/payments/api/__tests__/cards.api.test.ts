@@ -14,11 +14,15 @@ import { PAYMENT_RPC } from "../payments.rpc";
 const mockRpc = vi.fn();
 const mockInvoke = vi.fn();
 const mockFrom = vi.fn();
+const mockGetUser = vi.fn();
 
 vi.mock("@/lib/supabase/client", () => ({
   supabase: {
     rpc: (...args: unknown[]) => mockRpc(...args),
     from: (...args: unknown[]) => mockFrom(...args),
+    auth: {
+      getUser: (...args: unknown[]) => mockGetUser(...args),
+    },
     functions: {
       invoke: (...args: unknown[]) => mockInvoke(...args),
     },
@@ -132,9 +136,13 @@ function createSelectChain<T>(result: { data: T; error: { message: string } | nu
 describe("listActivePaymentTokens", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetUser.mockResolvedValue({
+      data: { user: { id: "client-1" } },
+      error: null,
+    });
   });
 
-  it("reads active tokens from client_card_tokens_safe_v", async () => {
+  it("reads active tokens from client_card_tokens_safe_v for the session user", async () => {
     mockFrom.mockReturnValue(
       createSelectChain({
         data: [{
@@ -149,7 +157,7 @@ describe("listActivePaymentTokens", () => {
       }),
     );
 
-    const result = await listActivePaymentTokens("client-1");
+    const result = await listActivePaymentTokens();
 
     expect(result.error).toBeNull();
     expect(result.data).toHaveLength(1);
@@ -164,7 +172,7 @@ describe("listActivePaymentTokens", () => {
       }),
     );
 
-    await expect(listActivePaymentTokens("client-1")).resolves.toEqual({
+    await expect(listActivePaymentTokens()).resolves.toEqual({
       data: [],
       error: "list failed",
     });

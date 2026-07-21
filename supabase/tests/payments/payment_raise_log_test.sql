@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(6);
+select plan(7);
 
 select has_function(
   'public',
@@ -61,6 +61,18 @@ select ok(
       and p.proname = 'payment_commit_charge_outcome'
   ),
   'payment_commit_charge_outcome emits structured logs'
+);
+
+select ok(
+  (
+    select pg_get_functiondef(p.oid) ~ 'gateway_reference_code'
+      and pg_get_functiondef(p.oid) ~ 'gateway_charge_id'
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'payment_commit_charge_outcome'
+  ),
+  'payment_commit_charge_outcome raise_log includes gateway_reference_code and gateway_charge_id'
 );
 
 select ok(

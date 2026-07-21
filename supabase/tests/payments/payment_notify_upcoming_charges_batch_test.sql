@@ -188,7 +188,7 @@ begin
     id,
     client_id,
     gateway_slug,
-    gateway_payment_profile_id,
+    gateway_payment_profile_id, netcred_company_id,
     gateway_card_token,
     card_brand,
     card_number_masked,
@@ -202,7 +202,7 @@ begin
     v_token_id,
     v_client_id,
     'netcred',
-    'profile-notify-test',
+    'profile-notify-test', '1014',
     'token-notify-test',
     'visa',
     '****4242',
@@ -224,15 +224,15 @@ begin
     contracted_service_id, client_id, provider_id, gateway_slug,
     client_card_token_id, installment_number, base_amount,
     commission_rate_pct, provider_payout, charge_scheduled_at, state,
-    idempotency_key
-  )
+    idempotency_key,
+    gateway_reference_code)
   values (
     v_cs_eligible, v_fixture.client_id, v_provider_id, 'netcred',
     v_token_id, 1, 100.00, 10.00, 90.00,
     now() + interval '12 hours',
     'SCHEDULED'::public.payment_schedule_state,
-    v_cs_eligible::text
-  );
+    v_cs_eligible::text,
+    v_cs_eligible);
 
   select * into v_fixture
   from pg_temp.payment_seed_contracted_service_fixture(
@@ -245,16 +245,16 @@ begin
     contracted_service_id, client_id, provider_id, gateway_slug,
     client_card_token_id, installment_number, base_amount,
     commission_rate_pct, provider_payout, charge_scheduled_at, state,
-    idempotency_key, upcoming_charge_notified_at
-  )
+    idempotency_key, upcoming_charge_notified_at,
+    gateway_reference_code)
   values (
     v_cs_notified, v_fixture.client_id, v_provider_id, 'netcred',
     v_token_id, 1, 100.00, 10.00, 90.00,
     now() + interval '12 hours',
     'SCHEDULED'::public.payment_schedule_state,
     v_cs_notified::text,
-    now()
-  );
+    now(),
+    v_cs_notified);
 
   select * into v_fixture
   from pg_temp.payment_seed_contracted_service_fixture(
@@ -267,15 +267,15 @@ begin
     contracted_service_id, client_id, provider_id, gateway_slug,
     client_card_token_id, installment_number, base_amount,
     commission_rate_pct, provider_payout, charge_scheduled_at, state,
-    idempotency_key
-  )
+    idempotency_key,
+    gateway_reference_code)
   values (
     v_cs_future, v_fixture.client_id, v_provider_id, 'netcred',
     v_token_id, 1, 100.00, 10.00, 90.00,
     now() + interval '3 days',
     'SCHEDULED'::public.payment_schedule_state,
-    v_cs_future::text
-  );
+    v_cs_future::text,
+    v_cs_future);
 
   select * into v_fixture
   from pg_temp.payment_seed_contracted_service_fixture(
@@ -288,15 +288,15 @@ begin
     contracted_service_id, client_id, provider_id, gateway_slug,
     client_card_token_id, installment_number, base_amount,
     commission_rate_pct, provider_payout, charge_scheduled_at, state,
-    idempotency_key
-  )
+    idempotency_key,
+    gateway_reference_code)
   values (
     v_cs_emergency, v_fixture.client_id, v_provider_id, 'netcred',
     v_token_id, 1, 100.00, 10.00, 90.00,
     now() + interval '30 minutes',
     'SCHEDULED'::public.payment_schedule_state,
-    v_cs_emergency::text
-  );
+    v_cs_emergency::text,
+    v_cs_emergency);
 
   perform set_config('test.notify.eligible', v_cs_eligible::text, true);
   perform set_config('test.notify.notified', v_cs_notified::text, true);

@@ -35,6 +35,7 @@ function createProcessDeps(
     loadPaymentToken: async () => ({
       gateway_payment_profile_id: "403137",
       gateway_card_token: "tok",
+      netcred_company_id: "1014",
     }),
     loadProviderAccount: async () => ({
       netcred_company_id: "1048",
@@ -53,6 +54,8 @@ function createProcessDeps(
     emitFailedPermanentWarning: () => {},
     ingestNotification: async () => {},
     maxAttempts: 3,
+    platformCompanyId: "1014",
+    isProduction: false,
     ...overrides,
   };
 }
@@ -425,18 +428,57 @@ Deno.test("processSchedule uses schedule.charge_amount when present", async () =
         return "999.00";
       },
     }),
-    { ...baseSchedule, charge_amount: 55.5 },
+    { ...baseSchedule, charge_amount: 1024.29, provider_payout: 850 },
   );
   assertEquals(calculated, false);
   assertEquals(result.outcome, "PAID");
 });
 
-Deno.test("processSchedule continues when clearsale_session_id is missing", async () => {
+Deno.test("processSchedule continues when clearsale_session_id is missing in non-production", async () => {
   const result = await processSchedule(
-    createProcessDeps(),
+    createProcessDeps({ isProduction: false }),
     { ...baseSchedule, clearsale_session_id: null, client_ip_address: null },
   );
   assertEquals(result.outcome, "PAID");
+});
+
+Deno.test("processSchedule fails closed without createCharge when clearsale_session_id missing in production", async () => {
+  let createChargeCalled = false;
+  let committed: {
+    outcome?: string;
+    failureCode?: string;
+    undoAttemptIncrement?: boolean;
+  } = {};
+
+  const result = await processSchedule(
+    createProcessDeps({
+      isProduction: true,
+      createCharge: async () => {
+        createChargeCalled = true;
+        return {
+          success: true,
+          transactionState: "PAID",
+          chargeId: "should-not-run",
+          transactionId: "tx-x",
+        };
+      },
+      commitResult: async (input) => {
+        committed = {
+          outcome: input.outcome,
+          failureCode: input.failureCode,
+          undoAttemptIncrement: input.undoAttemptIncrement,
+        };
+        return "schedule-1";
+      },
+    }),
+    { ...baseSchedule, clearsale_session_id: null, client_ip_address: null },
+  );
+
+  assertEquals(createChargeCalled, false);
+  assertEquals(result.outcome, "FAILED");
+  assertEquals(committed.outcome, "FAILED");
+  assertEquals(committed.failureCode, "MISSING_CLEARSALE_SESSION_ID");
+  assertEquals(committed.undoAttemptIncrement, true);
 });
 
 Deno.test("processSchedule reconciles REJECTED existing transaction", async () => {

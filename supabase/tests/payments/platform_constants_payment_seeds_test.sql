@@ -63,7 +63,7 @@ select is(
 
 select is(
   public.platform_constant_numeric('charge_batch_size', 0),
-  10::numeric,
+  3::numeric,
   'charge_batch_size default seed value'
 );
 

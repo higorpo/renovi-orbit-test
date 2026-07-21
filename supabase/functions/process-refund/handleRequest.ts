@@ -31,6 +31,11 @@ export type ProcessRefundDeps = {
     initiator: "client" | "provider";
   }) => Promise<RefundSubmitResult | ProcessRefundErrorCode>;
   refundTransaction: PaymentProvider["refundTransaction"];
+  markRefundSubmitted: (input: {
+    scheduleId: string;
+    serviceId: string;
+    actorId: string;
+  }) => Promise<void>;
   recordRefundFailed: (input: {
     scheduleId: string;
     serviceId: string;
@@ -215,12 +220,19 @@ export async function handleProcessRefundRequest(
     });
 
     if (refundResult.success || refundResult.error?.code === "ALREADY_REFUNDED") {
+      await deps.markRefundSubmitted({
+        scheduleId: submitResult.scheduleId,
+        serviceId,
+        actorId: user.id,
+      });
+
       return jsonResponse(
         {
           schedule_id: submitResult.scheduleId,
           refund_amount: submitResult.refundAmount,
           penalty_tier: submitResult.penaltyTier,
           expected_days: EXPECTED_REFUND_DAYS,
+          refund_submit_status: "SUBMITTED",
         },
         200,
         cors,
@@ -252,6 +264,7 @@ export async function handleProcessRefundRequest(
       {
         error: "refund_failed",
         error_code: refundResult.error?.code ?? "UNKNOWN",
+        refund_submit_status: "FAILED",
         support_url: deps.getSupportUrl(),
       },
       500,
@@ -266,6 +279,7 @@ export async function handleProcessRefundRequest(
       penalty_tier: submitResult.penaltyTier,
       expected_days: EXPECTED_REFUND_DAYS,
       already_submitted: true,
+      refund_submit_status: submitResult.refundSubmitStatus ?? "SUBMITTED",
     },
     200,
     cors,

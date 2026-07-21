@@ -99,13 +99,13 @@ begin
   insert into public.payment_schedules (
     id, contracted_service_id, client_id, provider_id, gateway_slug,
     installment_number, base_amount, commission_rate_pct, provider_payout,
-    charge_scheduled_at, state, idempotency_key
-  )
+    charge_scheduled_at, state, idempotency_key,
+    gateway_reference_code)
   values (
     v_schedule_id, p_contracted_service_id, v_client_id, p_provider_id,
     'netcred', 1, 100.00, 10.00, 90.00,
-    now(), 'IN_ANALYSIS'::public.payment_schedule_state, p_contracted_service_id::text
-  );
+    now(), 'IN_ANALYSIS'::public.payment_schedule_state, p_contracted_service_id::text,
+    p_contracted_service_id);
 
   schedule_id := v_schedule_id;
   client_id := v_client_id;

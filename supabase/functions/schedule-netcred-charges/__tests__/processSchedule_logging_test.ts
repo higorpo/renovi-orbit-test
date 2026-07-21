@@ -1,5 +1,6 @@
 import { assertEquals, assertRejects } from "std/testing/asserts";
 import {
+  buildChargeAttemptCompletedFields,
   buildProviderResponseSummary,
   chargeResultLogFields,
 } from "../chargeAttemptLogging.ts";
@@ -10,6 +11,7 @@ const baseSchedule: CronChargeSchedule = {
   id: "schedule-1",
   contracted_service_id: "service-1",
   service_request_id: "sr-1",
+  service_request_title: "Test service",
   client_id: "client-1",
   provider_id: "provider-1",
   gateway_slug: "netcred",
@@ -32,6 +34,7 @@ function buildDeps(
     loadPaymentToken: async () => ({
       gateway_payment_profile_id: "403137",
       gateway_card_token: "tok",
+      netcred_company_id: "1014",
     }),
     loadProviderAccount: async () => ({
       netcred_company_id: "1048",
@@ -52,6 +55,8 @@ function buildDeps(
     emitFailedPermanentWarning: () => {},
     ingestNotification: async () => {},
     maxAttempts: 3,
+    platformCompanyId: "1014",
+    isProduction: false,
     ...overrides,
   };
 }
@@ -72,12 +77,67 @@ Deno.test("chargeResultLogFields exposes NetCred message and codes", () => {
   });
 });
 
-Deno.test("chargeResultLogFields returns empty object for success or missing result", () => {
+Deno.test("chargeResultLogFields returns empty object for missing result", () => {
   assertEquals(chargeResultLogFields(undefined), {});
+});
+
+Deno.test("chargeResultLogFields includes gateway_charge_id on success when known", () => {
+  assertEquals(
+    chargeResultLogFields({
+      success: true,
+      transactionState: "PAID",
+      chargeId: "417417",
+    }),
+    { gateway_charge_id: "417417" },
+  );
   assertEquals(
     chargeResultLogFields({ success: true, transactionState: "PAID" }),
     {},
   );
+});
+
+Deno.test("chargeResultLogFields includes gateway_charge_id on failure when known", () => {
+  assertEquals(
+    chargeResultLogFields({
+      success: false,
+      chargeId: "417418",
+      transactionState: "REJECTED",
+      error: { code: "TERMINAL", message: "declined", originalCode: "51" },
+    }),
+    {
+      gateway_charge_id: "417418",
+      failure_code: "51",
+      failure_reason: "declined",
+      gateway_error_class: "TERMINAL",
+      transaction_state: "REJECTED",
+    },
+  );
+});
+
+Deno.test("buildChargeAttemptCompletedFields always includes gateway_reference_code", () => {
+  const fields = buildChargeAttemptCompletedFields(
+    baseSchedule,
+    { outcome: "PAID" },
+    { success: true, chargeId: "417417", transactionState: "PAID" },
+  );
+
+  assertEquals(fields.gateway_reference_code, "service-1");
+  assertEquals(fields.gateway_charge_id, "417417");
+  assertEquals(fields.outcome, "PAID");
+});
+
+Deno.test("buildChargeAttemptCompletedFields prefers schedule gateway_reference_code", () => {
+  const fields = buildChargeAttemptCompletedFields(
+    { ...baseSchedule, gateway_reference_code: "ref-abc" },
+    { outcome: "FAILED" },
+    {
+      success: false,
+      error: { code: "RETRYABLE", message: "timeout" },
+    },
+  );
+
+  assertEquals(fields.gateway_reference_code, "ref-abc");
+  assertEquals(fields.failure_code, "RETRYABLE");
 });
 
 Deno.test("chargeResultLogFields falls back to error.code when originalCode is absent", () => {

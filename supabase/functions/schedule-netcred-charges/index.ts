@@ -1,9 +1,15 @@
 import "xhr";
 import { servePaymentFunction } from "../_shared/observability/sentry.ts";
 import {
+  captureCriticalAlertSync,
   capturePaymentExceptionSync,
+  CRITICAL_ALERTS,
   emitFailedPermanentTransitionWarning,
 } from "../_shared/observability/payment-sentry-matrix.ts";
+import {
+  createPaymentLogger,
+  PAYMENT_LOG_EVENTS,
+} from "../_shared/observability/payment-logger.ts";
 import type { Json } from "../_shared/database.types.ts";
 import {
   AdapterRegistry,
@@ -22,6 +28,17 @@ import {
 } from "./handleRequest.ts";
 import { processSchedule } from "./processSchedule.ts";
 import type { CronChargeSchedule } from "./types.ts";
+
+const logger = createPaymentLogger("schedule-netcred-charges");
+
+
+function resolvePlatformCompanyId(): string {
+  const value = Deno.env.get("NETCRED_PLATFORM_COMPANY_ID")?.trim();
+  if (!value) {
+    throw new Error("NETCRED_PLATFORM_COMPANY_ID is not configured");
+  }
+  return value;
+}
 
 function resolvePlatformBankAccountId(): string {
   const value = Deno.env.get("NETCRED_PLATFORM_BANK_ACCOUNT_ID")?.trim();
@@ -96,7 +113,7 @@ function createProcessScheduleDeps(
     loadPaymentToken: async (tokenId) => {
       const { data, error } = await supabase
         .from("client_card_tokens")
-        .select("gateway_payment_profile_id, gateway_card_token")
+        .select("gateway_payment_profile_id, gateway_card_token, netcred_company_id")
         .eq("id", tokenId)
         .maybeSingle();
 
@@ -167,6 +184,18 @@ function createProcessScheduleDeps(
     emitFailedPermanentWarning: (input) => {
       void emitFailedPermanentTransitionWarning(input);
     },
+    emitCommitAfterSuccessCritical: (input) => {
+      captureCriticalAlertSync(CRITICAL_ALERTS.CHARGE_COMMIT_AFTER_SUCCESS_FAILED, {
+        gateway_slug: input.gateway_slug,
+        error_type: "CHARGE_COMMIT_AFTER_SUCCESS_FAILED",
+        schedule_id: input.schedule_id,
+        service_id: input.service_id,
+        gateway_charge_id: input.gateway_charge_id,
+        gateway_reference_code: input.gateway_reference_code,
+        error: input.error,
+        current_state: "PROCESSING",
+      });
+    },
     ingestNotification: async (scheduleId, notificationEvent, metadata) => {
       const { error } = await supabase.rpc("payment_enqueue_notifications", {
         p_schedule_id: scheduleId,
@@ -179,6 +208,8 @@ function createProcessScheduleDeps(
       }
     },
     maxAttempts,
+    platformCompanyId: resolvePlatformCompanyId(),
+    isProduction: resolveIsProduction(),
   };
 }
 
@@ -189,6 +220,7 @@ function createDeps(): ScheduleNetcredChargesDeps {
   configureAdapterRegistry({
     supabase,
     platformBankAccountId: resolvePlatformBankAccountId(),
+    platformCompanyId: resolvePlatformCompanyId(),
     isProduction: resolveIsProduction(),
   });
 
@@ -199,6 +231,17 @@ function createDeps(): ScheduleNetcredChargesDeps {
       const constants = await loadPaymentPlatformConstants(supabase);
       maxAttempts = constants.max_charge_attempts;
       processDeps.maxAttempts = maxAttempts;
+
+      // Orphan recovery before claim in the same EF tick (CHK-022 / design §4.6).
+      const { error: orphanError } = await supabase.rpc(
+        "payment_recover_orphaned_schedules",
+      );
+      if (orphanError) {
+        logger.warn(PAYMENT_LOG_EVENTS.ORPHAN_RECOVERED, {
+          phase: "pre_claim_failed",
+          error: orphanError.message,
+        });
+      }
 
       const { data, error } = await supabase.rpc("payment_claim_charge_batch", {
         p_batch_size: batchSize ?? undefined,

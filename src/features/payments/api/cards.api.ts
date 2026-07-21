@@ -180,19 +180,26 @@ export async function fetchPaymentTokenById(
   };
 }
 
-export async function listActivePaymentTokens(
-  clientId: string,
-): Promise<ListActivePaymentTokensResult> {
+export async function listActivePaymentTokens(): Promise<ListActivePaymentTokensResult> {
+  // CHK-042b: never trust a caller-supplied clientId — scope from the session.
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { data: [], error: authError?.message ?? "Unauthorized" };
+  }
+
   const { data, error } = await supabase
     .from(CLIENT_CARD_TOKENS_READ_MODEL)
     .select(TOKEN_SELECT)
-    .eq("client_id", clientId)
+    .eq("client_id", user.id)
     .eq("state", "ACTIVE")
     .order("created_at", { ascending: false });
 
   if (error) {
     logger.error("payment_tokens_list_error", {
-      clientId,
       error: error.message,
     });
     return { data: [], error: error.message };

@@ -165,8 +165,11 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `supabase/functions/_shared/payment/netcred-charge-mapping.ts` | `automaticAdvance: false` (antecipação fora da fórmula padrão) |
 | `supabase/seed.sql` | Sandbox local: PROCESSING R$ 4,90 + RISK_ANALYSIS R$ 5,00 |
 | `src/features/payments/components/CheckoutStepper/CardForm.tsx` + `AddCardSheetDialog.tsx` | Tokenização/cadastro de cartão: coleta CPF do titular (enviado à NetCred) e alerta não bloqueante quando o primeiro nome no cartão difere do perfil |
+| `src/features/payments/components/CheckoutStepper/CardStep.tsx` + `api/clearsale.api.ts` | Sessão ClearSale emitida no servidor; fail-closed em produção se SDK falhar |
+| `src/features/payments/utils/isClearSaleProductionFailClosed.ts` | Gate de fail-closed ClearSale em produção |
+| `src/features/payments/components/PaymentTrustDisclosure.tsx` | Disclosure: taxas podem ser recalculadas na cobrança (drift checkout→T-2) |
 | `src/features/payments/utils/cardholderIdentity.ts` | Conferência auxiliar do primeiro nome (soft check) |
-| `src/features/payments/utils/mapPaymentUserMessage.ts` | Mapeamento código → mensagem amigável pt-BR (inclui `RISK_ANALYSIS_*`); nunca texto bruto do backend |
+| `src/features/payments/utils/mapPaymentUserMessage.ts` | Mapeamento código → mensagem amigável pt-BR (inclui `RISK_ANALYSIS_*`, `CARD_REJECTED`, `PROFILE_INCOMPLETE`, `PAYMENT_TOKEN_COMPANY_MISMATCH`); nunca texto bruto do backend |
 | `src/features/payments/utils/manualPaymentErrors.ts` / `paymentApiErrors.ts` | Falhas de cobrança manual e RPC usam o mapper (por código / `failure_code`) |
 | `src/features/payments/components/ManualPaymentFailureAlert.tsx` | Alerta “Pagamento falhou” no detalhe: mensagem via `failure_code`, não `failure_reason` |
 | `src/features/payments/components/ManualPaymentDialog.tsx` + `hooks/useManualPaymentDialog.ts` | Dialog de recuperação (ShellDialog / `useMobileDialogViewport`); fluxo cartão → `InstallmentSelector` → confirmar; erro terminal por código |
@@ -175,14 +178,18 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `supabase/functions/_shared/payment/netcred-adapter.ts` | Persiste código mapeado em falha terminal; motivo bruto para diagnóstico |
 | `src/features/payments/api/cards.api.ts` (`updatePaymentMethod`) | Invoca RPC `payment_update_method` com token, HMAC e `p_installment_number` opcional |
 | `supabase/migrations/20260801210000_payment_update_method.sql` | RPC: `p_installment_number` opcional; estados `SCHEDULED`/`FAILED`/`FAILED_PERMANENT`; HMAC ao mudar bandeira/parcelas |
-| `supabase/functions/manual-charge-payment/` | Cobrança manual após atualização do método |
+| `supabase/functions/manual-charge-payment/` (+ `executeManualCharge.ts`) | Cobrança manual: reconcilia `gateway_reference_code` anterior antes de nova charge; exige sessão ClearSale fresca |
+| `supabase/functions/schedule-netcred-charges/processSchedule.ts` | Cron T-2: fail-closed sem `clearsale_session_id` em produção; exige provider `ACTIVE` com company+bank |
+| `supabase/functions/tokenize-payment-card/` | Tokenização sob merchant da **plataforma** Renovi (`NETCRED_PLATFORM_COMPANY_ID` / Vault); `CARD_REJECTED` opaco ao cliente; rate limit mais restrito no path de perfil |
 | `src/features/payments/components/PaymentHistory/*` | UI histórico cliente/prestador em Minha conta |
 | `src/features/payments/utils/clientPaymentHistoryAmounts.ts` | Breakdown: original riscado, líquido, “Reembolsado: …” |
 | `src/features/payments/api/history.api.ts` | Leitura das views de histórico |
 | `supabase/migrations/20260801140000_create_payment_history_views.sql` | `client_payment_transactions_v`; `provider_payment_receivables_v` (clawback só com `refunded_at`) |
-| `payment_begin_refund_request` (migrations `20260801360000_*` / supersedidas) | `REFUND_REQUESTED` + `refunded_amount` esperado sem `refunded_at` |
-| `supabase/functions/process-refund/` | Edge de estorno |
-| `supabase/functions/netcred-webhook/` + `payment_process_webhook_event` | Confirma reembolso e define `refunded_at` |
+| `payment_begin_refund_request` (migrations `20260801360000_*` / supersedidas + `20260802070000_*`) | `REFUND_REQUESTED` + `refunded_amount` esperado; faixa ToS via `payment_service_execution_at` vigente (não `refund_anchor_execution_at`, que é só auditoria); retry gateway até ACK. **Risco aberto (P-12):** commit de cancelamento antes do ACK NetCred — ver `docs/payment-system/critical-bug-refund-partial-commit.md` |
+| `supabase/functions/process-refund/` | Edge de estorno; re-chama gateway se ainda não ACK’d |
+| `supabase/functions/netcred-webhook/` + `payment_process_webhook_event` | Assinatura inválida → terminal; `paid_amount` server-authoritative; confirma reembolso (`refunded_at`); `PAID`→`REFUNDED` via `TRANSACTION_REFUND` |
+| `supabase/tests/payments/client_card_tokens_company_binding_test.sql` | Token ligado à company NetCred da **plataforma** (`payment_netcred_platform_company_id` / Vault); mismatch no aceite é vs platform (não vs company do prestador); prestador só no payout |
+| `supabase/tests/payments/payment_accept_proposal_profile_incomplete_test.sql` | `accept_proposal` exige CPF+telefone (`PROFILE_INCOMPLETE`) |
 | `supabase/migrations/20260802180000_payment_schedules_audit_trigger.sql` | Tabela `payment_schedules_audit` (row-history append-only), `row_version`/`audit_txid` só no audit, trigger statement único set-based, RLS admin-only, INSERT só via DEFINER |
 | `supabase/tests/payments/payment_schedules_audit_trigger_test.sql` | pgTAP: snapshot INSERT/UPDATE/DELETE, versões contíguas, drift de colunas, bloqueio UPDATE/INSERT direto, privilégios |
 

@@ -384,7 +384,11 @@ begin
 end;
 $$;
 
--- payment_persist_client_card_token: emit CardTokenized.
+-- payment_persist_client_card_token: emit CardTokenized; bind netcred_company_id.
+drop function if exists public.payment_persist_client_card_token(
+  uuid, text, text, text, text, smallint, smallint, text, jsonb, public.payment_gateway_slug
+);
+
 create or replace function public.payment_persist_client_card_token(
   p_client_id uuid,
   p_gateway_payment_profile_id text,
@@ -395,6 +399,7 @@ create or replace function public.payment_persist_client_card_token(
   p_expiry_year smallint,
   p_cardholder_name text,
   p_billing_address jsonb,
+  p_netcred_company_id text,
   p_gateway_slug public.payment_gateway_slug default 'netcred'::public.payment_gateway_slug
 )
 returns jsonb
@@ -404,6 +409,12 @@ set search_path = public
 as $$
 declare
   v_token_id uuid;
+  v_max_active int;
+  v_active_count int;
+  v_existing_id uuid;
+  v_existing_state public.payment_client_card_token_state;
+  v_profile_id text := trim(p_gateway_payment_profile_id);
+  v_company_id text;
 begin
   if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'service_role required for payment_persist_client_card_token'
@@ -419,6 +430,13 @@ begin
     raise exception 'p_gateway_payment_profile_id is required'
       using errcode = '22023';
   end if;
+
+  if p_netcred_company_id is null or trim(p_netcred_company_id) = '' then
+    raise exception 'p_netcred_company_id is required'
+      using errcode = '22023';
+  end if;
+
+  v_company_id := trim(p_netcred_company_id);
 
   if p_card_brand is null or trim(p_card_brand) = '' then
     raise exception 'p_card_brand is required'
@@ -442,10 +460,40 @@ begin
         detail = jsonb_build_object('code', 'CLIENT_CARD_TOKEN_EXPIRED')::text;
   end if;
 
+  -- ACTIVE token cap (CHK-042f): allow in-place refresh of an already-ACTIVE profile.
+  v_max_active := public.platform_constant_int('max_active_client_card_tokens', 8);
+
+  select cct.id, cct.state
+  into v_existing_id, v_existing_state
+  from public.client_card_tokens cct
+  where cct.client_id = p_client_id
+    and cct.gateway_payment_profile_id = v_profile_id;
+
+  if v_existing_id is null
+    or v_existing_state is distinct from 'ACTIVE'::public.payment_client_card_token_state
+  then
+    select count(*)::int
+    into v_active_count
+    from public.client_card_tokens cct
+    where cct.client_id = p_client_id
+      and cct.state = 'ACTIVE'::public.payment_client_card_token_state;
+
+    if coalesce(v_active_count, 0) >= v_max_active then
+      raise exception 'MAX_ACTIVE_CARD_TOKENS'
+        using
+          errcode = 'P0001',
+          detail = jsonb_build_object(
+            'code', 'MAX_ACTIVE_CARD_TOKENS',
+            'max_active', v_max_active
+          )::text;
+    end if;
+  end if;
+
   insert into public.client_card_tokens (
     client_id,
     gateway_slug,
     gateway_payment_profile_id,
+    netcred_company_id,
     card_number_masked,
     card_brand,
     gateway_card_token,
@@ -458,7 +506,8 @@ begin
   values (
     p_client_id,
     p_gateway_slug,
-    trim(p_gateway_payment_profile_id),
+    v_profile_id,
+    v_company_id,
     coalesce(p_card_number_masked, ''),
     upper(trim(p_card_brand)),
     trim(p_gateway_card_token),
@@ -470,6 +519,7 @@ begin
   )
   on conflict on constraint client_card_tokens_client_profile_unique
   do update set
+    netcred_company_id = excluded.netcred_company_id,
     card_number_masked = excluded.card_number_masked,
     card_brand = excluded.card_brand,
     gateway_card_token = excluded.gateway_card_token,
@@ -490,7 +540,7 @@ begin
     p_metadata := jsonb_build_object(
       'client_id', p_client_id,
       'card_brand', upper(trim(p_card_brand)),
-      'gateway_payment_profile_id', trim(p_gateway_payment_profile_id)
+      'gateway_payment_profile_id', v_profile_id
     )
   );
 
@@ -515,13 +565,18 @@ begin
 end;
 $$;
 
--- payment_ingest_webhook_event: emit WebhookReceived on first ingest (not dedup replay).
+-- payment_ingest_webhook_event: emit WebhookReceived on first validated ingest (not dedup/unsigned).
+drop function if exists public.payment_ingest_webhook_event(
+  public.payment_gateway_slug, text, text, jsonb, jsonb
+);
+
 create or replace function public.payment_ingest_webhook_event(
   p_gateway_slug public.payment_gateway_slug,
   p_event_type text,
   p_gateway_event_id text,
   p_raw_payload jsonb,
-  p_raw_headers jsonb
+  p_raw_headers jsonb,
+  p_signature_validated boolean default false
 )
 returns jsonb
 language plpgsql
@@ -536,6 +591,7 @@ declare
   v_is_duplicate boolean;
   v_sanitized_headers jsonb;
   v_service_id uuid;
+  v_signature_validated boolean := coalesce(p_signature_validated, false);
 begin
   if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'service_role required for payment_ingest_webhook_event'
@@ -566,13 +622,50 @@ begin
   v_gateway_event_id := btrim(p_gateway_event_id);
   v_sanitized_headers := public.payment_sanitize_webhook_headers(p_raw_headers);
 
+  if not v_signature_validated then
+    insert into public.payment_webhook_events (
+      gateway_slug,
+      event_type,
+      gateway_event_id,
+      raw_payload,
+      raw_headers,
+      state,
+      failure_reason,
+      signature_validated
+    )
+    values (
+      p_gateway_slug,
+      v_event_type,
+      v_gateway_event_id,
+      p_raw_payload,
+      v_sanitized_headers,
+      'DEAD_LETTER'::public.payment_webhook_event_state,
+      'INVALID_SIGNATURE',
+      false
+    )
+    returning id, state, is_duplicate
+    into v_event_id, v_state, v_is_duplicate;
+
+    return jsonb_build_object(
+      'status', 'quarantined',
+      'event_id', v_event_id,
+      'gateway_slug', p_gateway_slug,
+      'event_type', v_event_type,
+      'gateway_event_id', v_gateway_event_id,
+      'state', v_state,
+      'is_duplicate', false,
+      'signature_validated', false
+    );
+  end if;
+
   insert into public.payment_webhook_events (
     gateway_slug,
     event_type,
     gateway_event_id,
     raw_payload,
     raw_headers,
-    state
+    state,
+    signature_validated
   )
   values (
     p_gateway_slug,
@@ -580,9 +673,10 @@ begin
     v_gateway_event_id,
     p_raw_payload,
     v_sanitized_headers,
-    'RECEIVED'::public.payment_webhook_event_state
+    'RECEIVED'::public.payment_webhook_event_state,
+    true
   )
-  on conflict on constraint payment_webhook_events_dedup_unique do update
+  on conflict (gateway_slug, event_type, gateway_event_id) where (signature_validated) do update
   set
     is_duplicate = true,
     state = case
@@ -604,7 +698,8 @@ begin
       'event_type', v_event_type,
       'gateway_event_id', v_gateway_event_id,
       'state', v_state,
-      'is_duplicate', true
+      'is_duplicate', true,
+      'signature_validated', true
     );
   end if;
 
@@ -624,7 +719,8 @@ begin
       'gateway_slug', p_gateway_slug,
       'gateway_event_id', v_gateway_event_id,
       'webhook_event_type', v_event_type,
-      'state', v_state
+      'state', v_state,
+      'signature_validated', true
     )
   );
 
@@ -635,7 +731,27 @@ begin
     'event_type', v_event_type,
     'gateway_event_id', v_gateway_event_id,
     'state', v_state,
-    'is_duplicate', false
+    'is_duplicate', false,
+    'signature_validated', true
   );
 end;
 $$;
+
+comment on function public.payment_ingest_webhook_event(
+  public.payment_gateway_slug, text, text, jsonb, jsonb, boolean
+) is
+  'Persists NetCred webhooks: validated→RECEIVED + WebhookReceived; unsigned→DEAD_LETTER quarantine (service_role only).';
+
+revoke all on function public.payment_ingest_webhook_event(
+  public.payment_gateway_slug, text, text, jsonb, jsonb, boolean
+) from public;
+revoke all on function public.payment_ingest_webhook_event(
+  public.payment_gateway_slug, text, text, jsonb, jsonb, boolean
+) from anon;
+revoke all on function public.payment_ingest_webhook_event(
+  public.payment_gateway_slug, text, text, jsonb, jsonb, boolean
+) from authenticated;
+
+grant execute on function public.payment_ingest_webhook_event(
+  public.payment_gateway_slug, text, text, jsonb, jsonb, boolean
+) to service_role;

@@ -14,6 +14,15 @@ import {
 } from "./handleRequest.ts";
 import type { ManualChargeAcquireErrorCode, ManualChargeSchedule } from "./types.ts";
 
+
+function resolvePlatformCompanyId(): string {
+  const value = Deno.env.get("NETCRED_PLATFORM_COMPANY_ID")?.trim();
+  if (!value) {
+    throw new Error("NETCRED_PLATFORM_COMPANY_ID is not configured");
+  }
+  return value;
+}
+
 function resolvePlatformBankAccountId(): string {
   const value = Deno.env.get("NETCRED_PLATFORM_BANK_ACCOUNT_ID")?.trim();
   if (!value) {
@@ -30,6 +39,10 @@ function mapRpcError(message: string): ManualChargeAcquireErrorCode | null {
     "SCHEDULE_NOT_FOUND",
     "SERVICE_CANCELLED",
     "CLEARSALE_SESSION_REQUIRED",
+    "CLEARSALE_SESSION_INVALID",
+    "CLEARSALE_SESSION_STALE",
+    "CLEARSALE_SESSION_USED",
+    "CLEARSALE_SESSION_EXPIRED",
     "PAYMENT_TOKEN_INACTIVE",
     "RATE_LIMIT_EXCEEDED",
   ];
@@ -79,6 +92,7 @@ function createDeps(): ManualChargePaymentDeps {
   configureAdapterRegistry({
     supabase,
     platformBankAccountId: resolvePlatformBankAccountId(),
+    platformCompanyId: resolvePlatformCompanyId(),
     isProduction: resolveIsProduction(),
   });
 
@@ -134,7 +148,7 @@ function createDeps(): ManualChargePaymentDeps {
     loadPaymentToken: async (tokenId) => {
       const { data, error } = await supabase
         .from("client_card_tokens")
-        .select("id, gateway_payment_profile_id, gateway_card_token, state")
+        .select("id, gateway_payment_profile_id, gateway_card_token, state, netcred_company_id")
         .eq("id", tokenId)
         .maybeSingle();
 
@@ -161,6 +175,25 @@ function createDeps(): ManualChargePaymentDeps {
       return data;
     },
     createCharge: (input) => AdapterRegistry.get("netcred").createCharge(input),
+    getTransaction: (input) =>
+      AdapterRegistry.get("netcred").getTransaction(input),
+    rotateGatewayReference: async (scheduleId) => {
+      const newReference = crypto.randomUUID();
+      const { error } = await supabase
+        .from("payment_schedules")
+        .update({
+          gateway_reference_code: newReference,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", scheduleId)
+        .eq("state", "PROCESSING");
+
+      if (error) {
+        throw new Error(`rotate_gateway_reference_failed: ${error.message}`);
+      }
+
+      return newReference;
+    },
     commitResult: async (input) => {
       const { data, error } = await supabase.rpc("payment_commit_charge_outcome", {
         p_schedule_id: input.scheduleId,
@@ -194,6 +227,7 @@ function createDeps(): ManualChargePaymentDeps {
       }
     },
     checkRateLimit,
+    platformCompanyId: resolvePlatformCompanyId(),
   };
 }
 

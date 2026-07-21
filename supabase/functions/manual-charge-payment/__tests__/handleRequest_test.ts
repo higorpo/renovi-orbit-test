@@ -32,7 +32,7 @@ function createDeps(overrides: Partial<ManualChargePaymentDeps> = {}): ManualCha
     acquireLease: async () => ({
       schedule: {
         ...baseSchedule,
-        clearsale_session_id: "fresh-clearsale-uuid",
+        clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       },
     }),
     calculateChargeAmount: async () => "1024.29",
@@ -41,6 +41,7 @@ function createDeps(overrides: Partial<ManualChargePaymentDeps> = {}): ManualCha
       gateway_payment_profile_id: "403137",
       gateway_card_token: "tok",
       state: "ACTIVE",
+      netcred_company_id: "1014",
     }),
     loadProviderAccount: async () => ({
       provider_id: "provider-1",
@@ -48,15 +49,18 @@ function createDeps(overrides: Partial<ManualChargePaymentDeps> = {}): ManualCha
       netcred_bank_account_id: "2053",
       onboarding_status: "ACTIVE",
     }),
+    getTransaction: async () => null,
     createCharge: async () => ({
       success: true,
       transactionState: "PAID",
       chargeId: "417417",
       transactionId: "tx-1",
     }),
+    rotateGatewayReference: async () => "11111111-2222-3333-4444-555555555555",
     commitResult: async () => "schedule-1",
     enqueueNotification: async () => {},
     checkRateLimit: async () => ({ allowed: true, retryAfter: 0 }),
+    platformCompanyId: "1014",
     ...overrides,
   };
 }
@@ -77,7 +81,7 @@ Deno.test("EF rate limit exceeded returns HTTP 429 with Retry-After", async () =
   const response = await handleManualChargePaymentRequest(
     authRequest({
       schedule_id: "schedule-1",
-      clearsale_session_id: "fresh-clearsale-uuid",
+      clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     }),
     createDeps({
       checkRateLimit: async () => ({
@@ -98,7 +102,7 @@ Deno.test("RPC rate limit exceeded returns HTTP 429 RATE_LIMIT_EXCEEDED", async 
   const response = await handleManualChargePaymentRequest(
     authRequest({
       schedule_id: "schedule-1",
-      clearsale_session_id: "fresh-clearsale-uuid",
+      clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     }),
     createDeps({
       acquireLease: async () => ({ error: "RATE_LIMIT_EXCEEDED" }),
@@ -114,7 +118,7 @@ Deno.test("T-12h gate returns HTTP 409 SERVICE_AUTO_CANCELLED", async () => {
   const response = await handleManualChargePaymentRequest(
     authRequest({
       schedule_id: "schedule-1",
-      clearsale_session_id: "fresh-clearsale-uuid",
+      clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     }),
     createDeps({
       acquireLease: async () => ({ error: "SERVICE_AUTO_CANCELLED" }),
@@ -130,7 +134,7 @@ Deno.test("concurrent cron lock returns HTTP 409 PAYMENT_ALREADY_IN_PROGRESS", a
   const response = await handleManualChargePaymentRequest(
     authRequest({
       schedule_id: "schedule-1",
-      clearsale_session_id: "fresh-clearsale-uuid",
+      clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     }),
     createDeps({
       acquireLease: async () => ({ error: "PAYMENT_ALREADY_IN_PROGRESS" }),
@@ -143,7 +147,7 @@ Deno.test("concurrent cron lock returns HTTP 409 PAYMENT_ALREADY_IN_PROGRESS", a
 });
 
 Deno.test("fresh clearsale_session_id is persisted before charge", async () => {
-  const freshSessionId = "11111111-2222-3333-4444-555555555555";
+  const freshSessionId = "11111111-2222-4333-8444-555555555555";
   let persistedSessionId: string | null = null;
   let chargeSessionId: string | undefined;
 
@@ -180,14 +184,15 @@ Deno.test("fresh clearsale_session_id is persisted before charge", async () => {
   assertEquals(chargeSessionId, freshSessionId);
 });
 
-Deno.test("manual charge uses gateway_reference_code from lease", async () => {
+Deno.test("manual charge uses rotated gateway_reference_code after absent prior", async () => {
   let referenceCode: string | undefined;
+  const priorReference = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
   const rotatedReference = "11111111-2222-3333-4444-555555555555";
 
   const response = await handleManualChargePaymentRequest(
     authRequest({
       schedule_id: "schedule-1",
-      clearsale_session_id: "fresh-clearsale-uuid",
+      clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     }),
     createDeps({
       acquireLease: async () => ({
@@ -195,10 +200,12 @@ Deno.test("manual charge uses gateway_reference_code from lease", async () => {
           ...baseSchedule,
           contracted_service_id: "be2fed77-cedd-4f34-bd07-14693e763298",
           manual_attempt_count: 5,
-          gateway_reference_code: rotatedReference,
-          clearsale_session_id: "fresh-clearsale-uuid",
+          gateway_reference_code: priorReference,
+          clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         },
       }),
+      getTransaction: async () => null,
+      rotateGatewayReference: async () => rotatedReference,
       createCharge: async (input: CreateChargeInput): Promise<CreateChargeResult> => {
         referenceCode = input.referenceCode;
         return {
@@ -215,6 +222,72 @@ Deno.test("manual charge uses gateway_reference_code from lease", async () => {
   assertEquals(referenceCode, rotatedReference);
 });
 
+Deno.test(
+  "PAID under old ref + FAILED_PERMANENT lease returns PAID without second createCharge",
+  async () => {
+    const priorReference = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+    let createChargeCalls = 0;
+    let rotateCalls = 0;
+    let committedOutcome: string | undefined;
+    let lookedUpRef: string | undefined;
+    let lookedUpCompanyId: string | undefined;
+
+    const response = await handleManualChargePaymentRequest(
+      authRequest({
+        schedule_id: "schedule-1",
+        clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      }),
+      createDeps({
+        acquireLease: async () => ({
+          schedule: {
+            ...baseSchedule,
+            state: "PROCESSING",
+            manual_attempt_count: 2,
+            gateway_reference_code: priorReference,
+            clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          },
+        }),
+        getTransaction: async (input) => {
+          lookedUpRef = input.referenceCode;
+          lookedUpCompanyId = input.companyId;
+          return {
+            transactionId: "tx-prior-paid",
+            referenceCode: priorReference,
+            transactionState: "PAID",
+            paidAmount: "1024.29",
+            chargeId: "417417",
+          };
+        },
+        rotateGatewayReference: async () => {
+          rotateCalls += 1;
+          return "should-not-rotate";
+        },
+        createCharge: async () => {
+          createChargeCalls += 1;
+          return {
+            success: true,
+            transactionState: "PAID",
+            chargeId: "second-charge",
+            transactionId: "tx-second",
+          };
+        },
+        commitResult: async (input) => {
+          committedOutcome = input.outcome;
+          return "schedule-1";
+        },
+      }),
+    );
+
+    assertEquals(response.status, 200);
+    const body = await response.json();
+    assertEquals(body.outcome, "PAID");
+    assertEquals(lookedUpRef, priorReference);
+    assertEquals(lookedUpCompanyId, "1048");
+    assertEquals(createChargeCalls, 0);
+    assertEquals(rotateCalls, 0);
+    assertEquals(committedOutcome, "PAID");
+  },
+);
 Deno.test("OPTIONS returns 204 and non-POST returns 405", async () => {
   const options = await handleManualChargePaymentRequest(
     new Request("https://example.com/manual-charge-payment", { method: "OPTIONS" }),
@@ -236,7 +309,7 @@ Deno.test("missing Authorization returns HTTP 401", async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         schedule_id: "schedule-1",
-        clearsale_session_id: "fresh-clearsale-uuid",
+        clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       }),
     }),
     createDeps(),
@@ -247,7 +320,7 @@ Deno.test("missing Authorization returns HTTP 401", async () => {
 
 Deno.test("missing schedule_id returns HTTP 400", async () => {
   const response = await handleManualChargePaymentRequest(
-    authRequest({ clearsale_session_id: "fresh-clearsale-uuid" }),
+    authRequest({ clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" }),
     createDeps(),
   );
 
@@ -267,11 +340,25 @@ Deno.test("missing clearsale_session_id returns HTTP 400", async () => {
   assertEquals(body.error_code, "CLEARSALE_SESSION_REQUIRED");
 });
 
+Deno.test("non-UUID clearsale_session_id returns HTTP 400 CLEARSALE_SESSION_INVALID", async () => {
+  const response = await handleManualChargePaymentRequest(
+    authRequest({
+      schedule_id: "schedule-1",
+      clearsale_session_id: "not-a-uuid",
+    }),
+    createDeps(),
+  );
+
+  assertEquals(response.status, 400);
+  const body = await response.json();
+  assertEquals(body.error_code, "CLEARSALE_SESSION_INVALID");
+});
+
 Deno.test("SCHEDULE_NOT_FOUND acquire error returns HTTP 404", async () => {
   const response = await handleManualChargePaymentRequest(
     authRequest({
       schedule_id: "missing",
-      clearsale_session_id: "fresh-clearsale-uuid",
+      clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     }),
     createDeps({
       acquireLease: async () => ({ error: "SCHEDULE_NOT_FOUND" }),
@@ -287,14 +374,14 @@ Deno.test("missing client_card_token_id returns PAYMENT_TOKEN_MISSING", async ()
   const response = await handleManualChargePaymentRequest(
     authRequest({
       schedule_id: "schedule-1",
-      clearsale_session_id: "fresh-clearsale-uuid",
+      clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     }),
     createDeps({
       acquireLease: async () => ({
         schedule: {
           ...baseSchedule,
           client_card_token_id: null,
-          clearsale_session_id: "fresh-clearsale-uuid",
+          clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         },
       }),
     }),
@@ -309,7 +396,7 @@ Deno.test("inactive payment token returns PAYMENT_TOKEN_INACTIVE", async () => {
   const response = await handleManualChargePaymentRequest(
     authRequest({
       schedule_id: "schedule-1",
-      clearsale_session_id: "fresh-clearsale-uuid",
+      clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     }),
     createDeps({
       loadPaymentToken: async () => ({
@@ -317,6 +404,7 @@ Deno.test("inactive payment token returns PAYMENT_TOKEN_INACTIVE", async () => {
         gateway_payment_profile_id: "403137",
         gateway_card_token: "tok",
         state: "INACTIVE",
+        netcred_company_id: "1014",
       }),
     }),
   );
@@ -330,7 +418,7 @@ Deno.test("provider not credentialed returns PROVIDER_NOT_CREDENTIALED", async (
   const response = await handleManualChargePaymentRequest(
     authRequest({
       schedule_id: "schedule-1",
-      clearsale_session_id: "fresh-clearsale-uuid",
+      clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     }),
     createDeps({
       loadProviderAccount: async () => ({
@@ -347,11 +435,33 @@ Deno.test("provider not credentialed returns PROVIDER_NOT_CREDENTIALED", async (
   assertEquals(body.error_code, "PROVIDER_NOT_CREDENTIALED");
 });
 
+Deno.test("token company mismatch returns PAYMENT_TOKEN_COMPANY_MISMATCH", async () => {
+  const response = await handleManualChargePaymentRequest(
+    authRequest({
+      schedule_id: "schedule-1",
+      clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    }),
+    createDeps({
+      loadPaymentToken: async () => ({
+        id: "token-1",
+        gateway_payment_profile_id: "403137",
+        gateway_card_token: "tok",
+        state: "ACTIVE",
+        netcred_company_id: "9999",
+      }),
+    }),
+  );
+
+  assertEquals(response.status, 422);
+  const body = await response.json();
+  assertEquals(body.error_code, "PAYMENT_TOKEN_COMPANY_MISMATCH");
+});
+
 Deno.test("charge amount calculation failure returns HTTP 500", async () => {
   const response = await handleManualChargePaymentRequest(
     authRequest({
       schedule_id: "schedule-1",
-      clearsale_session_id: "fresh-clearsale-uuid",
+      clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     }),
     createDeps({
       calculateChargeAmount: async () => null,
@@ -367,7 +477,7 @@ Deno.test("commit failure returns HTTP 500", async () => {
   const response = await handleManualChargePaymentRequest(
     authRequest({
       schedule_id: "schedule-1",
-      clearsale_session_id: "fresh-clearsale-uuid",
+      clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     }),
     createDeps({
       commitResult: async () => null,
@@ -383,7 +493,7 @@ Deno.test("notification enqueue failure does not fail the charge response", asyn
   const response = await handleManualChargePaymentRequest(
     authRequest({
       schedule_id: "schedule-1",
-      clearsale_session_id: "fresh-clearsale-uuid",
+      clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     }),
     createDeps({
       enqueueNotification: async () => {
@@ -401,7 +511,7 @@ Deno.test("FAILED charge outcome still returns HTTP 200 with outcome", async () 
   const response = await handleManualChargePaymentRequest(
     authRequest({
       schedule_id: "schedule-1",
-      clearsale_session_id: "fresh-clearsale-uuid",
+      clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     }),
     createDeps({
       createCharge: async () => ({
@@ -414,4 +524,69 @@ Deno.test("FAILED charge outcome still returns HTTP 200 with outcome", async () 
   assertEquals(response.status, 200);
   const body = await response.json();
   assertEquals(body.outcome, "FAILED");
+  assertEquals(body.failure_code, "RETRYABLE");
+});
+
+Deno.test("client failure_code uses coarse RISK_REJECTED not fine RISK_ANALYSIS matrix", async () => {
+  let committedFailureCode: string | null | undefined;
+
+  const response = await handleManualChargePaymentRequest(
+    authRequest({
+      schedule_id: "schedule-1",
+      clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    }),
+    createDeps({
+      createCharge: async () => ({
+        success: false,
+        error: {
+          code: "TERMINAL",
+          message: "risk analysis",
+          originalCode: "RISK_ANALYSIS_FRAUD_SUSPICION",
+        },
+      }),
+      commitResult: async (input) => {
+        committedFailureCode = input.failureCode;
+        return input.scheduleId;
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  const body = await response.json();
+  assertEquals(body.outcome, "FAILED_PERMANENT");
+  assertEquals(body.failure_code, "RISK_REJECTED");
+  assertEquals(JSON.stringify(body).includes("RISK_ANALYSIS_"), false);
+  // Fine code still persisted for ops/audit.
+  assertEquals(committedFailureCode, "RISK_ANALYSIS_FRAUD_SUSPICION");
+});
+
+Deno.test("client failure_code TERMINAL does not leak REJECTED originalCode", async () => {
+  let committedFailureCode: string | null | undefined;
+
+  const response = await handleManualChargePaymentRequest(
+    authRequest({
+      schedule_id: "schedule-1",
+      clearsale_session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    }),
+    createDeps({
+      createCharge: async () => ({
+        success: false,
+        error: {
+          code: "TERMINAL",
+          message: "card declined",
+          originalCode: "REJECTED",
+        },
+      }),
+      commitResult: async (input) => {
+        committedFailureCode = input.failureCode;
+        return input.scheduleId;
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  const body = await response.json();
+  assertEquals(body.failure_code, "TERMINAL");
+  assertEquals(body.failure_code, "TERMINAL");
+  assertEquals(committedFailureCode, "REJECTED");
 });

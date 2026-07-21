@@ -26,6 +26,8 @@ alter table public.payment_schedules_audit
   add column audit_id bigint generated always as identity (cache 1000),
   add column audit_op text not null,
   add column audited_at timestamptz not null default now(),
+  add column audited_by uuid,
+  add column audited_role text,
   add column row_version bigint not null,
   add column audit_txid xid8 not null default pg_current_xact_id(),
   add primary key (audit_id),
@@ -45,6 +47,12 @@ comment on column public.payment_schedules_audit.audit_op is
 
 comment on column public.payment_schedules_audit.audited_at is
   'Transaction time of the audit write (now() of the mutating transaction).';
+
+comment on column public.payment_schedules_audit.audited_by is
+  'auth.uid() of the session that mutated payment_schedules (null for service_role/system).';
+
+comment on column public.payment_schedules_audit.audited_role is
+  'JWT role (or auth.role()) of the mutating session at write time.';
 
 comment on column public.payment_schedules_audit.row_version is
   'Per-schedule monotonic version assigned only on audit insert (not stored on payment_schedules).';
@@ -72,7 +80,7 @@ create or replace function public.payment_schedules_audit_after_stmt()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, auth
 as $$
 begin
   insert into public.payment_schedules_audit (
@@ -108,7 +116,10 @@ begin
     cancelled_at,
     refunded_at,
     paid_amount,
+    claimed_charge_amount,
     refunded_amount,
+    refund_submit_status,
+    refund_anchor_execution_at,
     failure_code,
     failure_reason,
     cancellation_reason,
@@ -119,6 +130,8 @@ begin
     row_version,
     audit_op,
     audited_at,
+    audited_by,
+    audited_role,
     audit_txid
   )
   select
@@ -154,7 +167,10 @@ begin
     c.cancelled_at,
     c.refunded_at,
     c.paid_amount,
+    c.claimed_charge_amount,
     c.refunded_amount,
+    c.refund_submit_status,
+    c.refund_anchor_execution_at,
     c.failure_code,
     c.failure_reason,
     c.cancellation_reason,
@@ -165,6 +181,11 @@ begin
     coalesce(v.max_rv, 0) + 1,
     tg_op,
     now(),
+    (select auth.uid()),
+    coalesce(
+      nullif(current_setting('request.jwt.claim.role', true), ''),
+      auth.role()
+    ),
     pg_current_xact_id()
   from changed_rows c
   left join (

@@ -1,5 +1,5 @@
 -- Payment Task 33: payment_ingest_webhook_event RPC (design.md §4.7.1, Req 16 AC1).
--- Persist raw webhook body and headers with state=RECEIVED before EF HMAC validation.
+-- HMAC-validated events persist as RECEIVED; unsigned quarantine as DEAD_LETTER (non-retryable).
 
 create or replace function public.payment_sanitize_webhook_headers(p_headers jsonb)
 returns jsonb
@@ -65,12 +65,17 @@ comment on column public.payment_webhook_events.raw_payload is
 comment on column public.payment_webhook_events.raw_headers is
   'Immutable after INSERT — allowlisted keys only; never modified post-commit.';
 
+drop function if exists public.payment_ingest_webhook_event(
+  public.payment_gateway_slug, text, text, jsonb, jsonb
+);
+
 create or replace function public.payment_ingest_webhook_event(
   p_gateway_slug public.payment_gateway_slug,
   p_event_type text,
   p_gateway_event_id text,
   p_raw_payload jsonb,
-  p_raw_headers jsonb
+  p_raw_headers jsonb,
+  p_signature_validated boolean default false
 )
 returns jsonb
 language plpgsql
@@ -84,6 +89,7 @@ declare
   v_state public.payment_webhook_event_state;
   v_is_duplicate boolean;
   v_sanitized_headers jsonb;
+  v_signature_validated boolean := coalesce(p_signature_validated, false);
 begin
   if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'service_role required for payment_ingest_webhook_event'
@@ -114,13 +120,51 @@ begin
   v_gateway_event_id := btrim(p_gateway_event_id);
   v_sanitized_headers := public.payment_sanitize_webhook_headers(p_raw_headers);
 
+  -- Unsigned quarantine: audit only; does not occupy validated dedup UNIQUE.
+  if not v_signature_validated then
+    insert into public.payment_webhook_events (
+      gateway_slug,
+      event_type,
+      gateway_event_id,
+      raw_payload,
+      raw_headers,
+      state,
+      failure_reason,
+      signature_validated
+    )
+    values (
+      p_gateway_slug,
+      v_event_type,
+      v_gateway_event_id,
+      p_raw_payload,
+      v_sanitized_headers,
+      'DEAD_LETTER'::public.payment_webhook_event_state,
+      'INVALID_SIGNATURE',
+      false
+    )
+    returning id, state, is_duplicate
+    into v_event_id, v_state, v_is_duplicate;
+
+    return jsonb_build_object(
+      'status', 'quarantined',
+      'event_id', v_event_id,
+      'gateway_slug', p_gateway_slug,
+      'event_type', v_event_type,
+      'gateway_event_id', v_gateway_event_id,
+      'state', v_state,
+      'is_duplicate', false,
+      'signature_validated', false
+    );
+  end if;
+
   insert into public.payment_webhook_events (
     gateway_slug,
     event_type,
     gateway_event_id,
     raw_payload,
     raw_headers,
-    state
+    state,
+    signature_validated
   )
   values (
     p_gateway_slug,
@@ -128,9 +172,10 @@ begin
     v_gateway_event_id,
     p_raw_payload,
     v_sanitized_headers,
-    'RECEIVED'::public.payment_webhook_event_state
+    'RECEIVED'::public.payment_webhook_event_state,
+    true
   )
-  on conflict on constraint payment_webhook_events_dedup_unique do update
+  on conflict (gateway_slug, event_type, gateway_event_id) where (signature_validated) do update
   set
     is_duplicate = true,
     state = case
@@ -152,7 +197,8 @@ begin
       'event_type', v_event_type,
       'gateway_event_id', v_gateway_event_id,
       'state', v_state,
-      'is_duplicate', true
+      'is_duplicate', true,
+      'signature_validated', true
     );
   end if;
 
@@ -163,30 +209,31 @@ begin
     'event_type', v_event_type,
     'gateway_event_id', v_gateway_event_id,
     'state', v_state,
-    'is_duplicate', false
+    'is_duplicate', false,
+    'signature_validated', true
   );
 end;
 $$;
 
 comment on function public.payment_ingest_webhook_event(
-  public.payment_gateway_slug, text, text, jsonb, jsonb
+  public.payment_gateway_slug, text, text, jsonb, jsonb, boolean
 ) is
-  'Persists raw NetCred webhook payload with state RECEIVED before HMAC validation (service_role only).';
+  'Persists NetCred webhooks: validated→RECEIVED (dedup UNIQUE); unsigned→DEAD_LETTER quarantine (service_role only).';
 
 revoke all on function public.payment_sanitize_webhook_headers(jsonb) from public;
 revoke all on function public.payment_sanitize_webhook_headers(jsonb) from anon;
 revoke all on function public.payment_sanitize_webhook_headers(jsonb) from authenticated;
 
 revoke all on function public.payment_ingest_webhook_event(
-  public.payment_gateway_slug, text, text, jsonb, jsonb
+  public.payment_gateway_slug, text, text, jsonb, jsonb, boolean
 ) from public;
 revoke all on function public.payment_ingest_webhook_event(
-  public.payment_gateway_slug, text, text, jsonb, jsonb
+  public.payment_gateway_slug, text, text, jsonb, jsonb, boolean
 ) from anon;
 revoke all on function public.payment_ingest_webhook_event(
-  public.payment_gateway_slug, text, text, jsonb, jsonb
+  public.payment_gateway_slug, text, text, jsonb, jsonb, boolean
 ) from authenticated;
 
 grant execute on function public.payment_ingest_webhook_event(
-  public.payment_gateway_slug, text, text, jsonb, jsonb
+  public.payment_gateway_slug, text, text, jsonb, jsonb, boolean
 ) to service_role;

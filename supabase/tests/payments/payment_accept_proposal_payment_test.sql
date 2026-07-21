@@ -60,7 +60,7 @@ select pg_temp.cns_seed_chat(
 create temp table _payment_accept_slot as
 select jsonb_build_object(
   'start_date', (current_date + 7)::text,
-  'end_date', (current_date + 7)::text,
+  'end_date', (current_date + 8)::text,
   'shift', 'morning'
 ) as selected_slot;
 
@@ -75,7 +75,7 @@ select public.create_provider_proposal(
   gen_random_uuid(),
   pricing.original_amount,
   'Payment accept guard proposal',
-  1,
+  2,
   'days',
   jsonb_build_array((select selected_slot from _payment_accept_slot)),
   '{}'::text[],

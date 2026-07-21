@@ -21,10 +21,20 @@ export function ProviderSettlementStatus({
     return null;
   }
 
+  const settlementOnHold =
+    schedule.isDisputed ||
+    schedule.state === "REFUND_REQUESTED" ||
+    schedule.state === "REFUNDED" ||
+    schedule.state === "PARTIALLY_REFUNDED";
+
+  const holdReason = schedule.isDisputed ? "dispute" : "refund";
+
   return (
     <ProviderSettlementDisclosure
       capturePaidAt={schedule.paidAt}
       showCompletionNote={showCompletionNote}
+      settlementOnHold={settlementOnHold}
+      holdReason={holdReason}
       className={className}
     />
   );

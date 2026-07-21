@@ -1,18 +1,30 @@
 import { Info } from "lucide-react";
-import { formatProviderSettlementDisclosure, PROVIDER_SETTLEMENT_COMPLETION_NOTE } from "../utils/providerSettlementDisclosure";
+import {
+  formatProviderSettlementDisclosure,
+  formatProviderSettlementHoldDisclosure,
+  PROVIDER_SETTLEMENT_COMPLETION_NOTE,
+} from "../utils/providerSettlementDisclosure";
 
 export type ProviderSettlementDisclosureProps = {
   capturePaidAt: string;
   showCompletionNote?: boolean;
+  /** When true, bank deposit estimate is withheld (refund/dispute in progress). */
+  settlementOnHold?: boolean;
+  holdReason?: "refund" | "dispute";
   className?: string;
 };
 
 export function ProviderSettlementDisclosure({
   capturePaidAt,
   showCompletionNote = false,
+  settlementOnHold = false,
+  holdReason = "refund",
   className,
 }: ProviderSettlementDisclosureProps) {
-  const disclosure = formatProviderSettlementDisclosure(capturePaidAt);
+  const disclosure = settlementOnHold
+    ? formatProviderSettlementHoldDisclosure(holdReason)
+    : formatProviderSettlementDisclosure(capturePaidAt);
+
   if (!disclosure) {
     return null;
   }
@@ -22,7 +34,9 @@ export function ProviderSettlementDisclosure({
       <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
       <span>
         {disclosure}
-        {showCompletionNote ? ` ${PROVIDER_SETTLEMENT_COMPLETION_NOTE}` : null}
+        {!settlementOnHold && showCompletionNote
+          ? ` ${PROVIDER_SETTLEMENT_COMPLETION_NOTE}`
+          : null}
       </span>
     </p>
   );
