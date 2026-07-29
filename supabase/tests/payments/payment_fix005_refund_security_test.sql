@@ -201,7 +201,7 @@ select is(
 );
 
 -- ---------------------------------------------------------------------------
--- CHK-008: already_submitted only after SUBMITTED
+-- CHK-008: Option A prepare/commit + already_submitted only after SUBMITTED
 -- ---------------------------------------------------------------------------
 
 do $seed_submit$
@@ -218,7 +218,7 @@ $seed_submit$;
 
 select is(
   (
-    select public.payment_begin_refund_request(
+    select public.payment_prepare_refund_request(
       current_setting('test.fix005.submit_service_id')::uuid,
       current_setting('test.fix005.submit_client_id')::uuid,
       'CLIENT_INITIATED',
@@ -226,85 +226,69 @@ select is(
     )->>'already_submitted'
   ),
   'false',
-  'CHK-008: first begin_refund returns already_submitted=false'
+  'CHK-008: prepare returns already_submitted=false'
 );
 
 select is(
   (
-    select ps.refund_submit_status::text
+    select ps.state::text
     from public.payment_schedules ps
     where ps.contracted_service_id = current_setting('test.fix005.submit_service_id')::uuid
   ),
-  'PENDING_GATEWAY',
-  'CHK-008: begin_refund sets PENDING_GATEWAY'
+  'PAID',
+  'CHK-008: prepare leaves schedule PAID (no cancel)'
 );
 
 select is(
   (
-    select public.payment_begin_refund_request(
+    select public.payment_commit_refund_after_gateway(
       current_setting('test.fix005.submit_service_id')::uuid,
       current_setting('test.fix005.submit_client_id')::uuid,
       'CLIENT_INITIATED',
-      'client'
-    )->>'already_submitted'
+      'client',
+      1024.29
+    )->>'refund_submit_status'
   ),
-  'false',
-  'CHK-008: retry before gateway ACK keeps already_submitted=false'
-);
-
-select lives_ok(
-  format(
-    $$ select public.payment_set_refund_submit_status(
-         (select id from public.payment_schedules
-          where contracted_service_id = %L::uuid),
-         'FAILED'::public.payment_refund_submit_status,
-         %L::uuid,
-         'gateway unavailable'
-       ) $$,
-    current_setting('test.fix005.submit_service_id'),
-    current_setting('test.fix005.submit_client_id')
-  ),
-  'CHK-008: gateway failure marks FAILED while schedule stays REFUND_REQUESTED'
+  'SUBMITTED',
+  'CHK-008: commit sets SUBMITTED after gateway ACK'
 );
 
 select is(
   (
-    select public.payment_begin_refund_request(
-      current_setting('test.fix005.submit_service_id')::uuid,
-      current_setting('test.fix005.submit_client_id')::uuid,
-      'CLIENT_INITIATED',
-      'client'
-    )->>'already_submitted'
+    select cs.status::text
+    from public.contracted_services cs
+    where cs.id = current_setting('test.fix005.submit_service_id')::uuid
   ),
-  'false',
-  'CHK-008: FAILED status still returns already_submitted=false for Edge retry'
+  'CANCELLED',
+  'CHK-008: commit cancels contracted service'
 );
-
-do $ack$
-begin
-  perform public.payment_set_refund_submit_status(
-    (
-      select id
-      from public.payment_schedules
-      where contracted_service_id = current_setting('test.fix005.submit_service_id')::uuid
-    ),
-    'SUBMITTED'::public.payment_refund_submit_status,
-    current_setting('test.fix005.submit_client_id')::uuid
-  );
-end;
-$ack$;
 
 select is(
   (
-    select public.payment_begin_refund_request(
+    select public.payment_commit_refund_after_gateway(
       current_setting('test.fix005.submit_service_id')::uuid,
       current_setting('test.fix005.submit_client_id')::uuid,
       'CLIENT_INITIATED',
-      'client'
+      'client',
+      1024.29
     )->>'already_submitted'
   ),
   'true',
-  'CHK-008: already_submitted=true only after gateway ACK (SUBMITTED)'
+  'CHK-008: commit idempotent re-entry returns already_submitted=true after SUBMITTED'
+);
+
+select is(
+  (
+    select public.payment_commit_refund_after_gateway(
+      current_setting('test.fix005.submit_service_id')::uuid,
+      current_setting('test.fix005.submit_client_id')::uuid,
+      'CLIENT_INITIATED',
+      'client',
+      1024.29
+    )->>'path'
+  ),
+  'already_submitted',
+  'CHK-008: commit idempotent re-entry uses path=already_submitted'
 );
 
 select finish();

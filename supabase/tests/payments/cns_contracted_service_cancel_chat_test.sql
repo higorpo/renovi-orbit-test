@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(52);
+select plan(53);
 
 create or replace function pg_temp.cns_seed_chat(
   p_service_request_id uuid,
@@ -699,16 +699,37 @@ select ok(
 );
 
 -- ---------------------------------------------------------------------------
--- payment_begin_refund_request + chat
+-- Option A: prepare (no cancel) + commit (cancel + chat)
 -- ---------------------------------------------------------------------------
 
 select lives_ok(
   format(
-    $$ select public.payment_begin_refund_request(%L::uuid, %L::uuid, 'CLIENT_INITIATED', 'client') $$,
+    $$ select public.payment_prepare_refund_request(%L::uuid, %L::uuid, 'CLIENT_INITIATED', 'client') $$,
     current_setting('test.cancel_chat.post_paid'),
     current_setting('test.cancel_chat.client_id')
   ),
-  'payment_begin_refund_request client FULL_REFUND path succeeds'
+  'payment_prepare_refund_request client FULL_REFUND path succeeds'
+);
+
+select is(
+  (
+    select ps.state::text
+    from public.payment_schedules ps
+    where ps.contracted_service_id = current_setting('test.cancel_chat.post_paid')::uuid
+  ),
+  'PAID',
+  'prepare leaves schedule PAID (Option A)'
+);
+
+select lives_ok(
+  format(
+    $$ select public.payment_commit_refund_after_gateway(
+         %L::uuid, %L::uuid, 'CLIENT_INITIATED', 'client', null
+       ) $$,
+    current_setting('test.cancel_chat.post_paid'),
+    current_setting('test.cancel_chat.client_id')
+  ),
+  'payment_commit_refund_after_gateway client FULL_REFUND path succeeds'
 );
 
 select is(
@@ -718,7 +739,7 @@ select is(
     where ps.contracted_service_id = current_setting('test.cancel_chat.post_paid')::uuid
   ),
   'REFUND_REQUESTED',
-  'post-PAID refund sets schedule REFUND_REQUESTED'
+  'post-PAID commit sets schedule REFUND_REQUESTED'
 );
 
 select ok(
@@ -729,7 +750,7 @@ select ok(
       and pal.event_type = 'REFUND_SUBMITTED'
       and pal.metadata->>'penalty_tier' = 'FULL_REFUND'
   ),
-  'post-PAID refund writes REFUND_SUBMITTED audit with penalty tier'
+  'post-PAID commit writes REFUND_SUBMITTED audit with penalty tier'
 );
 
 select ok(
@@ -750,15 +771,16 @@ select ok(
 
 select is(
   (
-    select public.payment_begin_refund_request(
+    select public.payment_commit_refund_after_gateway(
       current_setting('test.cancel_chat.penalty')::uuid,
       current_setting('test.cancel_chat.client_id')::uuid,
       'CLIENT_INITIATED',
-      'client'
+      'client',
+      null
     )->>'penalty_tier'
   ),
   'PENALTY_10',
-  'payment_begin_refund_request returns PENALTY_10 within 12-48h window'
+  'payment_commit_refund_after_gateway returns PENALTY_10 within 12-48h window'
 );
 
 select ok(
@@ -780,15 +802,16 @@ select ok(
 
 select is(
   (
-    select public.payment_begin_refund_request(
+    select public.payment_commit_refund_after_gateway(
       current_setting('test.cancel_chat.penalty30')::uuid,
       current_setting('test.cancel_chat.client_id')::uuid,
       'CLIENT_INITIATED',
-      'client'
+      'client',
+      null
     )->>'penalty_tier'
   ),
   'PENALTY_30',
-  'payment_begin_refund_request returns PENALTY_30 within <12h window'
+  'payment_commit_refund_after_gateway returns PENALTY_30 within <12h window'
 );
 
 select ok(
@@ -810,11 +833,13 @@ select ok(
 
 select lives_ok(
   format(
-    $$ select public.payment_begin_refund_request(%L::uuid, %L::uuid, 'PROVIDER_INITIATED', 'provider') $$,
+    $$ select public.payment_commit_refund_after_gateway(
+         %L::uuid, %L::uuid, 'PROVIDER_INITIATED', 'provider', null
+       ) $$,
     current_setting('test.cancel_chat.provider_refund'),
     current_setting('test.cancel_chat.provider_id')
   ),
-  'payment_begin_refund_request provider path succeeds'
+  'payment_commit_refund_after_gateway provider path succeeds'
 );
 
 select ok(
@@ -836,53 +861,40 @@ select ok(
 
 select lives_ok(
   format(
-    $$ select public.payment_begin_refund_request(%L::uuid, %L::uuid, 'CLIENT_INITIATED', 'client') $$,
+    $$ select public.payment_commit_refund_after_gateway(%L::uuid, %L::uuid, 'CLIENT_INITIATED', 'client', null) $$,
     current_setting('test.cancel_chat.post_paid'),
     current_setting('test.cancel_chat.client_id')
   ),
-  'idempotent refund request succeeds when already REFUND_REQUESTED'
+  'idempotent commit succeeds when already REFUND_REQUESTED + SUBMITTED'
 );
 
--- FIX-005 / CHK-008: already_submitted=true only after gateway ACK (SUBMITTED).
-select lives_ok(
-  format(
-    $$ select public.payment_set_refund_submit_status(
-         (select id from public.payment_schedules
-          where contracted_service_id = %L::uuid),
-         'SUBMITTED'::public.payment_refund_submit_status,
-         %L::uuid,
-         null
-       ) $$,
-    current_setting('test.cancel_chat.post_paid'),
-    current_setting('test.cancel_chat.client_id')
-  ),
-  'mark refund SUBMITTED to simulate gateway ACK'
-);
-
+-- Commit already set SUBMITTED; ACK re-entry returns already_submitted=true.
 select is(
   (
-    select public.payment_begin_refund_request(
+    select public.payment_commit_refund_after_gateway(
       current_setting('test.cancel_chat.post_paid')::uuid,
       current_setting('test.cancel_chat.client_id')::uuid,
       'CLIENT_INITIATED',
-      'client'
+      'client',
+      null
     )->>'already_submitted'
   ),
   'true',
-  'idempotent refund request returns already_submitted=true after gateway ACK'
+  'idempotent commit returns already_submitted=true after gateway ACK'
 );
 
 select isnt(
   (
-    select public.payment_begin_refund_request(
+    select public.payment_commit_refund_after_gateway(
       current_setting('test.cancel_chat.post_paid')::uuid,
       current_setting('test.cancel_chat.client_id')::uuid,
       'CLIENT_INITIATED',
-      'client'
+      'client',
+      null
     )->>'penalty_tier'
   ),
   null,
-  'idempotent refund request returns computed penalty_tier'
+  'idempotent commit returns computed penalty_tier'
 );
 
 select is(
@@ -898,7 +910,7 @@ select is(
       and m.message_type = 'SYSTEM'::public.cns_message_type
   ),
   1,
-  'idempotent refund request does not duplicate system message'
+  'idempotent commit does not duplicate system message'
 );
 
 select is(

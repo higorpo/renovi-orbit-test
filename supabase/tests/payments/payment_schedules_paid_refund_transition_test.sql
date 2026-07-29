@@ -1,8 +1,8 @@
--- pgTAP: PAID → REFUND_REQUESTED must be allowed for post-payment cancellation.
+-- pgTAP: Option A — prepare leaves PAID intact; commit cancels + SUBMITTED.
 
 begin;
 
-select plan(5);
+select plan(7);
 
 create or replace function pg_temp.paid_refund_set_service_role()
 returns void
@@ -122,11 +122,43 @@ $seed$;
 select lives_ok(
   format(
     $$ select pg_temp.paid_refund_set_service_role();
-       select public.payment_begin_refund_request(%L::uuid, %L::uuid, 'CLIENT_INITIATED', 'client'); $$,
+       select public.payment_prepare_refund_request(%L::uuid, %L::uuid, 'CLIENT_INITIATED', 'client'); $$,
     current_setting('test.paid_refund.service_id'),
     current_setting('test.paid_refund.client_id')
   ),
-  'payment_begin_refund_request succeeds for PAID schedule'
+  'payment_prepare_refund_request succeeds for PAID schedule'
+);
+
+select is(
+  (
+    select ps.state::text
+    from public.payment_schedules ps
+    where ps.contracted_service_id = current_setting('test.paid_refund.service_id')::uuid
+  ),
+  'PAID',
+  'prepare leaves schedule in PAID (no cancel)'
+);
+
+select is(
+  (
+    select cs.status::text
+    from public.contracted_services cs
+    where cs.id = current_setting('test.paid_refund.service_id')::uuid
+  ),
+  'CONFIRMED',
+  'prepare does not cancel contracted service'
+);
+
+select lives_ok(
+  format(
+    $$ select pg_temp.paid_refund_set_service_role();
+       select public.payment_commit_refund_after_gateway(
+         %L::uuid, %L::uuid, 'CLIENT_INITIATED', 'client', 633.70
+       ); $$,
+    current_setting('test.paid_refund.service_id'),
+    current_setting('test.paid_refund.client_id')
+  ),
+  'payment_commit_refund_after_gateway succeeds after gateway ACK'
 );
 
 select is(
@@ -136,7 +168,7 @@ select is(
     where ps.contracted_service_id = current_setting('test.paid_refund.service_id')::uuid
   ),
   'REFUND_REQUESTED',
-  'schedule transitions PAID → REFUND_REQUESTED'
+  'commit transitions PAID → REFUND_REQUESTED'
 );
 
 select is(
@@ -146,26 +178,17 @@ select is(
     where cs.id = current_setting('test.paid_refund.service_id')::uuid
   ),
   'CANCELLED',
-  'contracted service is cancelled'
+  'commit cancels contracted service'
 );
 
 select is(
   (
-    select ps.refunded_amount::text
+    select ps.refund_submit_status::text
     from public.payment_schedules ps
     where ps.contracted_service_id = current_setting('test.paid_refund.service_id')::uuid
   ),
-  '633.70',
-  'REFUND_REQUESTED persists expected refunded_amount for client history'
-);
-
-select ok(
-  (
-    select ps.refunded_at is null
-    from public.payment_schedules ps
-    where ps.contracted_service_id = current_setting('test.paid_refund.service_id')::uuid
-  ),
-  'refunded_at stays null until gateway confirms refund'
+  'SUBMITTED',
+  'commit sets refund_submit_status SUBMITTED'
 );
 
 select finish();

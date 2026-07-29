@@ -9,7 +9,7 @@ import type {
   RefundContext,
   RefundSubmitResult,
 } from "./types.ts";
-import { isPreChargeState, resolveInitiator } from "./types.ts";
+import { isPreChargeState, isRefundGatewayAcked, resolveInitiator } from "./types.ts";
 
 const logger = createPaymentLogger("process-refund");
 const RATE_LIMIT_CONFIG = { perMinute: 10, failClosed: true };
@@ -24,25 +24,25 @@ export type ProcessRefundDeps = {
     cancellationReason?: string;
     initiator: "client" | "provider";
   }) => Promise<string | ProcessRefundErrorCode>;
-  submitRefundRequest: (input: {
+  prepareRefundRequest: (input: {
     serviceId: string;
     actorId: string;
     cancellationReason?: string;
     initiator: "client" | "provider";
   }) => Promise<RefundSubmitResult | ProcessRefundErrorCode>;
-  refundTransaction: PaymentProvider["refundTransaction"];
-  markRefundSubmitted: (input: {
-    scheduleId: string;
+  commitRefundAfterGateway: (input: {
     serviceId: string;
     actorId: string;
-  }) => Promise<void>;
-  recordRefundFailed: (input: {
-    scheduleId: string;
-    serviceId: string;
-    actorId: string;
+    cancellationReason?: string;
     initiator: "client" | "provider";
-    errorMessage: string;
+    expectedRefundAmount?: string;
+  }) => Promise<RefundSubmitResult | ProcessRefundErrorCode>;
+  markRefundGatewayAcked: (input: {
+    scheduleId: string;
+    actorId: string;
+    refundedAmount?: string;
   }) => Promise<void>;
+  refundTransaction: PaymentProvider["refundTransaction"];
   captureCriticalError: (error: unknown, extra: Record<string, unknown>) => void;
   getSupportUrl: () => string;
   checkRateLimit: typeof checkRateLimit;
@@ -71,6 +71,7 @@ const PROCESS_REFUND_ERROR_CODES: readonly ProcessRefundErrorCode[] = [
   "TRANSACTION_NOT_FOUND",
   "PAYMENT_SCHEDULE_TERMINAL_STATE",
   "PAYMENT_SCHEDULE_INVALID_TRANSITION",
+  "INVALID_REFUND_AMOUNT",
 ];
 
 function mapRpcError(message: string): ProcessRefundErrorCode | null {
@@ -85,6 +86,65 @@ function isProcessRefundErrorCode(
   value: string,
 ): value is ProcessRefundErrorCode {
   return (PROCESS_REFUND_ERROR_CODES as readonly string[]).includes(value);
+}
+
+function successRefundBody(result: RefundSubmitResult, alreadySubmitted = false) {
+  return {
+    schedule_id: result.scheduleId,
+    refund_amount: result.refundAmount,
+    penalty_tier: result.penaltyTier,
+    expected_days: EXPECTED_REFUND_DAYS,
+    refund_submit_status: result.refundSubmitStatus ?? "SUBMITTED",
+    ...(alreadySubmitted ? { already_submitted: true } : {}),
+  };
+}
+
+async function commitWithRecovery(
+  deps: ProcessRefundDeps,
+  input: {
+    serviceId: string;
+    actorId: string;
+    cancellationReason?: string;
+    initiator: "client" | "provider";
+    prepareResult: RefundSubmitResult;
+  },
+): Promise<RefundSubmitResult | ProcessRefundErrorCode> {
+  const commitInput = {
+    serviceId: input.serviceId,
+    actorId: input.actorId,
+    cancellationReason: input.cancellationReason,
+    initiator: input.initiator,
+    expectedRefundAmount: input.prepareResult.refundAmount,
+  };
+
+  const first = await deps.commitRefundAfterGateway(commitInput);
+  if (typeof first !== "string") {
+    return first;
+  }
+
+  deps.captureCriticalError(new Error(first), {
+    schedule_id: input.prepareResult.scheduleId,
+    service_id: input.serviceId,
+    error_code: first,
+    phase: "commit_refund_after_gateway",
+  });
+
+  try {
+    await deps.markRefundGatewayAcked({
+      scheduleId: input.prepareResult.scheduleId,
+      actorId: input.actorId,
+      refundedAmount: input.prepareResult.refundAmount,
+    });
+  } catch (markError) {
+    deps.captureCriticalError(markError, {
+      schedule_id: input.prepareResult.scheduleId,
+      service_id: input.serviceId,
+      phase: "mark_refund_gateway_acked",
+    });
+  }
+
+  const retry = await deps.commitRefundAfterGateway(commitInput);
+  return retry;
 }
 
 export async function handleProcessRefundRequest(
@@ -170,7 +230,6 @@ export async function handleProcessRefundRequest(
       initiator,
     });
 
-    // Error codes and schedule IDs are both strings; discriminate known codes.
     if (isProcessRefundErrorCode(preChargeResult)) {
       return jsonResponse(
         { error_code: preChargeResult },
@@ -189,99 +248,116 @@ export async function handleProcessRefundRequest(
     );
   }
 
-  if (context.scheduleState !== "PAID" && context.scheduleState !== "REFUND_REQUESTED") {
-    return jsonResponse({ error_code: "INVALID_SCHEDULE_STATE" }, 409, cors);
-  }
-
-  if (!context.serviceScheduledAt && context.scheduleState === "PAID") {
-    return jsonResponse({ error: "service_scheduled_at_missing" }, 422, cors);
-  }
-
-  const submitResult = await deps.submitRefundRequest({
-    serviceId,
-    actorId: user.id,
-    cancellationReason: body.cancellation_reason,
-    initiator,
-  });
-
-  if (typeof submitResult === "string") {
-    return jsonResponse(
-      { error_code: submitResult },
-      mapErrorStatus(submitResult),
-      cors,
-    );
-  }
-
-  if (!submitResult.alreadySubmitted) {
-    const refundResult = await deps.refundTransaction({
-      transactionId: submitResult.providerTransactionId,
-      amount: submitResult.refundAmount,
-      referenceCode: serviceId,
-    });
-
-    if (refundResult.success || refundResult.error?.code === "ALREADY_REFUNDED") {
-      await deps.markRefundSubmitted({
-        scheduleId: submitResult.scheduleId,
-        serviceId,
-        actorId: user.id,
-      });
-
+  // ---------------------------------------------------------------------------
+  // Greenfield REFUND_REQUESTED: ACK short-circuit only (no cancel-first retry)
+  // ---------------------------------------------------------------------------
+  if (context.scheduleState === "REFUND_REQUESTED") {
+    if (isRefundGatewayAcked(context.refundSubmitStatus)) {
       return jsonResponse(
         {
-          schedule_id: submitResult.scheduleId,
-          refund_amount: submitResult.refundAmount,
-          penalty_tier: submitResult.penaltyTier,
+          schedule_id: context.scheduleId,
+          refund_amount: context.paidAmount != null
+            ? String(context.paidAmount)
+            : String(context.baseAmount),
+          penalty_tier: null,
           expected_days: EXPECTED_REFUND_DAYS,
-          refund_submit_status: "SUBMITTED",
+          refund_submit_status: context.refundSubmitStatus,
+          already_submitted: true,
         },
         200,
         cors,
       );
     }
 
-    const errorMessage = refundResult.error?.message ?? "refund_failed";
-    deps.captureCriticalError(new Error(errorMessage), {
-      schedule_id: submitResult.scheduleId,
-      service_id: serviceId,
-      error_code: refundResult.error?.code ?? "UNKNOWN",
-    });
+    return jsonResponse({ error_code: "INVALID_SCHEDULE_STATE" }, 409, cors);
+  }
 
-    await deps.recordRefundFailed({
-      scheduleId: submitResult.scheduleId,
-      serviceId,
-      actorId: user.id,
-      initiator,
-      errorMessage,
-    });
+  if (context.scheduleState !== "PAID") {
+    return jsonResponse({ error_code: "INVALID_SCHEDULE_STATE" }, 409, cors);
+  }
 
-    logger.error("refund_gateway_failed", {
-      schedule_id: submitResult.scheduleId,
-      service_id: serviceId,
-      error: errorMessage,
-    });
+  if (!context.serviceScheduledAt) {
+    return jsonResponse({ error: "service_scheduled_at_missing" }, 422, cors);
+  }
 
+  // ---------------------------------------------------------------------------
+  // Option A — PAID: prepare → gateway → commit (zero DB writes on gateway fail)
+  // ---------------------------------------------------------------------------
+  const prepareResult = await deps.prepareRefundRequest({
+    serviceId,
+    actorId: user.id,
+    cancellationReason: body.cancellation_reason,
+    initiator,
+  });
+
+  if (typeof prepareResult === "string") {
     return jsonResponse(
-      {
-        error: "refund_failed",
-        error_code: refundResult.error?.code ?? "UNKNOWN",
-        refund_submit_status: "FAILED",
-        support_url: deps.getSupportUrl(),
-      },
-      500,
+      { error_code: prepareResult },
+      mapErrorStatus(prepareResult),
       cors,
     );
   }
 
+  const refundResult = await deps.refundTransaction({
+    transactionId: prepareResult.providerTransactionId,
+    amount: prepareResult.refundAmount,
+    referenceCode: serviceId,
+  });
+
+  if (refundResult.success || refundResult.error?.code === "ALREADY_REFUNDED") {
+    const commitResult = await commitWithRecovery(deps, {
+      serviceId,
+      actorId: user.id,
+      cancellationReason: body.cancellation_reason,
+      initiator,
+      prepareResult,
+    });
+
+    if (typeof commitResult === "string") {
+      deps.captureCriticalError(new Error(commitResult), {
+        schedule_id: prepareResult.scheduleId,
+        service_id: serviceId,
+        error_code: commitResult,
+        phase: "commit_refund_exhausted",
+      });
+
+      return jsonResponse(
+        {
+          error: "refund_commit_failed",
+          error_code: commitResult,
+          refund_submit_status: "SUBMITTED",
+          support_url: deps.getSupportUrl(),
+        },
+        500,
+        cors,
+      );
+    }
+
+    return jsonResponse(successRefundBody(commitResult), 200, cors);
+  }
+
+  // Gateway fail on PAID: zero DB writes.
+  const errorMessage = refundResult.error?.message ?? "refund_failed";
+  deps.captureCriticalError(new Error(errorMessage), {
+    schedule_id: prepareResult.scheduleId,
+    service_id: serviceId,
+    error_code: refundResult.error?.code ?? "UNKNOWN",
+    phase: "gateway_refund_paid",
+  });
+
+  logger.error("refund_gateway_failed", {
+    schedule_id: prepareResult.scheduleId,
+    service_id: serviceId,
+    error: errorMessage,
+  });
+
   return jsonResponse(
     {
-      schedule_id: submitResult.scheduleId,
-      refund_amount: submitResult.refundAmount,
-      penalty_tier: submitResult.penaltyTier,
-      expected_days: EXPECTED_REFUND_DAYS,
-      already_submitted: true,
-      refund_submit_status: submitResult.refundSubmitStatus ?? "SUBMITTED",
+      error: "refund_failed",
+      error_code: refundResult.error?.code ?? "UNKNOWN",
+      support_url: deps.getSupportUrl(),
     },
-    200,
+    500,
     cors,
   );
 }

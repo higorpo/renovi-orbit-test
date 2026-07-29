@@ -16,6 +16,7 @@ export type RefundContext = {
   baseAmount: number;
   paidAmount: number | null;
   providerTransactionId: string | null;
+  refundSubmitStatus: string | null;
 };
 
 export type RefundSubmitResult = {
@@ -27,6 +28,7 @@ export type RefundSubmitResult = {
   penaltyTier: string | null;
   alreadySubmitted: boolean;
   refundSubmitStatus?: string | null;
+  path?: string | null;
 };
 
 export type ProcessRefundErrorCode =
@@ -38,7 +40,8 @@ export type ProcessRefundErrorCode =
   | "INVALID_SCHEDULE_STATE"
   | "TRANSACTION_NOT_FOUND"
   | "PAYMENT_SCHEDULE_TERMINAL_STATE"
-  | "PAYMENT_SCHEDULE_INVALID_TRANSITION";
+  | "PAYMENT_SCHEDULE_INVALID_TRANSITION"
+  | "INVALID_REFUND_AMOUNT";
 
 export function resolveInitiator(
   userId: string,
@@ -57,4 +60,8 @@ export function resolveInitiator(
 
 export function isPreChargeState(state: string): boolean {
   return state === "SCHEDULED" || state === "FAILED" || state === "FAILED_PERMANENT";
+}
+
+export function isRefundGatewayAcked(status: string | null | undefined): boolean {
+  return status === "SUBMITTED" || status === "CONFIRMED";
 }

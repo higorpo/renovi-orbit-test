@@ -53,6 +53,15 @@ function parseClaimedSchedules(data: unknown): ReconcileSchedule[] {
       manual_attempt_count: Number(schedule.manual_attempt_count ?? 0),
       max_attempts: Number(schedule.max_attempts ?? 0),
       reconciliation_failure_count: Number(schedule.reconciliation_failure_count ?? 0),
+      gateway_transaction_id: schedule.gateway_transaction_id != null
+        ? String(schedule.gateway_transaction_id)
+        : null,
+      refunded_amount: schedule.refunded_amount != null
+        ? schedule.refunded_amount as number | string
+        : null,
+      refund_submit_status: schedule.refund_submit_status != null
+        ? String(schedule.refund_submit_status)
+        : null,
       service_request_id: null,
     };
   });

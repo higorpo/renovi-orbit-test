@@ -1,37 +1,20 @@
--- pgTAP: payment Task 38 — payment_begin_refund_request and refund amount helper.
+-- pgTAP: payment_begin_refund_request dropped; refund amount helper remains.
 
 begin;
 
-select plan(7);
+select plan(6);
 
-create or replace function pg_temp.payment_set_service_role()
-returns void
-language plpgsql
-as $$
-begin
-  perform set_config(
-    'request.jwt.claims',
-    json_build_object('role', 'service_role')::text,
-    true
-  );
-  perform set_config('request.jwt.claim.role', 'service_role', true);
-end;
-$$;
-
-select throws_ok(
-  $$ select public.payment_begin_refund_request(gen_random_uuid(), gen_random_uuid()) $$,
-  '42501',
-  'service_role required for payment_begin_refund_request',
-  'rejects non-service_role callers'
-);
-
-select pg_temp.payment_set_service_role();
-
-select throws_ok(
-  $$ select public.payment_begin_refund_request(gen_random_uuid(), gen_random_uuid()) $$,
-  'P0002',
-  'SERVICE_NOT_FOUND',
-  'rejects missing contracted service'
+select ok(
+  (
+    select not exists (
+      select 1
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.proname = 'payment_begin_refund_request'
+    )
+  ),
+  'payment_begin_refund_request is dropped (callers use prepare/commit)'
 );
 
 select is(
@@ -84,9 +67,9 @@ select ok(
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
-      and p.proname = 'payment_begin_refund_request'
+      and p.proname = 'payment_prepare_refund_request'
   ),
-  'payment_begin_refund_request is SECURITY DEFINER'
+  'payment_prepare_refund_request is SECURITY DEFINER'
 );
 
 select finish();

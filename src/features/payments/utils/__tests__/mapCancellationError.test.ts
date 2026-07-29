@@ -7,13 +7,15 @@ describe("mapCancellationErrorMessage", () => {
     expect(mapCancellationErrorMessage("SERVICE_NOT_CANCELLABLE")).toContain("não pode mais ser cancelado");
     expect(mapCancellationErrorMessage("FORBIDDEN")).toContain("não tem permissão");
     expect(mapCancellationErrorMessage("SERVICE_NOT_FOUND")).toBe("Serviço não encontrado.");
-    expect(mapCancellationErrorMessage("refund_failed")).toContain("estorno");
+    expect(mapCancellationErrorMessage("refund_failed")).toBe(
+      "Não foi possível processar o cancelamento/reembolso. Tente novamente.",
+    );
     expect(mapCancellationErrorMessage("PAYMENT_SCHEDULE_TERMINAL_STATE")).toContain("estado final");
   });
 
   it("returns fallback for unknown codes", () => {
     expect(mapCancellationErrorMessage("UNKNOWN_CODE")).toBe(
-      "Não foi possível cancelar o serviço. Tente novamente.",
+      "Não foi possível processar o cancelamento/reembolso. Tente novamente.",
     );
   });
 });

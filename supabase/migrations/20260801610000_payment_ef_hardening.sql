@@ -606,11 +606,18 @@ begin
       join public.provider_gateway_accounts pga
         on pga.provider_id = ps.provider_id
        and pga.gateway_slug = ps.gateway_slug
-      where ps.state in (
-        'IN_ANALYSIS'::public.payment_schedule_state,
-        'PROCESSING'::public.payment_schedule_state,
-        'REFUND_REQUESTED'::public.payment_schedule_state
-      )
+      where (
+          ps.state in (
+            'IN_ANALYSIS'::public.payment_schedule_state,
+            'PROCESSING'::public.payment_schedule_state,
+            'REFUND_REQUESTED'::public.payment_schedule_state
+          )
+          or (
+            ps.state = 'PAID'::public.payment_schedule_state
+            and ps.refund_submit_status = 'SUBMITTED'::public.payment_refund_submit_status
+            and ps.refunded_at is null
+          )
+        )
         and ps.updated_at < now() - make_interval(mins => v_stale_minutes)
         and (ps.locked_until is null or ps.locked_until < now())
       order by ps.updated_at
@@ -635,6 +642,7 @@ begin
         ps.gateway_transaction_id,
         ps.paid_amount,
         ps.refunded_amount,
+        ps.refund_submit_status,
         ps.automatic_attempt_count,
         ps.manual_attempt_count,
         ps.max_attempts,
@@ -658,6 +666,7 @@ begin
       'gateway_transaction_id', v_row.gateway_transaction_id,
       'paid_amount', v_row.paid_amount,
       'refunded_amount', v_row.refunded_amount,
+      'refund_submit_status', v_row.refund_submit_status,
       'automatic_attempt_count', v_row.automatic_attempt_count,
       'manual_attempt_count', v_row.manual_attempt_count,
       'max_attempts', v_row.max_attempts,
@@ -672,7 +681,7 @@ end;
 $$;
 
 comment on function public.payment_claim_stale_schedules_for_reconciliation(int) is
-  'Claims stale intermediate schedules for reconcile-netcred-payments EF; includes netcred_company_id (service_role only).';
+  'Claims stale intermediate schedules (incl. PAID+SUBMITTED crash recovery) for reconcile-netcred-payments EF; includes netcred_company_id (service_role only).';
 
 revoke all on function public.payment_claim_stale_schedules_for_reconciliation(int) from public;
 revoke all on function public.payment_claim_stale_schedules_for_reconciliation(int) from anon;

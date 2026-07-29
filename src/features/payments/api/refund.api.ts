@@ -18,6 +18,7 @@ export type ProcessRefundResult = {
   error: string | null;
   errorCode?: string;
   status?: number;
+  supportUrl?: string;
 };
 
 function isRefundFailedPayload(payload: Record<string, unknown>): boolean {
@@ -26,6 +27,12 @@ function isRefundFailedPayload(payload: Record<string, unknown>): boolean {
     payload.refund_submit_status === "FAILED" ||
     payload.error_code === "refund_failed"
   );
+}
+
+function readSupportUrl(payload: Record<string, unknown>): string | undefined {
+  return typeof payload.support_url === "string" && payload.support_url.trim()
+    ? payload.support_url
+    : undefined;
 }
 
 export async function processContractedServiceRefund(request: {
@@ -46,7 +53,7 @@ export async function processContractedServiceRefund(request: {
       isRefundFailedPayload(payload) && ok
         ? { ...payload, error: "refund_failed", error_code: "refund_failed" }
         : payload,
-      "Falha ao cancelar serviço",
+      "Falha ao processar cancelamento/reembolso",
     );
 
     const resolvedCode =
@@ -54,12 +61,15 @@ export async function processContractedServiceRefund(request: {
       errorCode ??
       message;
 
+    const supportUrl = readSupportUrl(payload);
+
     logger.warn("process_refund_failed", {
       contractedServiceId: request.contractedServiceId,
       status: isRefundFailedPayload(payload) && ok ? 500 : status,
       errorCode: resolvedCode,
       error: message,
       refundSubmitStatus: payload.refund_submit_status,
+      supportUrl,
     });
 
     return {
@@ -67,6 +77,7 @@ export async function processContractedServiceRefund(request: {
       error: mapCancellationErrorMessage(resolvedCode),
       errorCode: resolvedCode,
       status: isRefundFailedPayload(payload) && ok ? 500 : status,
+      supportUrl,
     };
   }
 

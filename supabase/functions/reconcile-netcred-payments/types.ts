@@ -13,6 +13,9 @@ export type ReconcileSchedule = {
   manual_attempt_count: number;
   max_attempts: number;
   reconciliation_failure_count: number;
+  gateway_transaction_id?: string | null;
+  refunded_amount?: number | string | null;
+  refund_submit_status?: string | null;
 };
 
 export type ReconcileApplyResult = {

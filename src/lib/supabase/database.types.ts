@@ -4588,15 +4588,6 @@ export type Database = {
         }
         Returns: Json
       }
-      payment_begin_refund_request: {
-        Args: {
-          p_actor_id: string
-          p_cancellation_reason?: string
-          p_initiator?: string
-          p_service_id: string
-        }
-        Returns: Json
-      }
       payment_build_log_payload: {
         Args: {
           p_context?: Json
@@ -4720,6 +4711,26 @@ export type Database = {
           p_schedule_id: string
         }
         Returns: Json
+      }
+      payment_commit_refund_after_gateway: {
+        Args: {
+          p_actor_id: string
+          p_cancellation_reason?: string
+          p_expected_refund_amount?: number
+          p_initiator?: string
+          p_service_id: string
+        }
+        Returns: Json
+      }
+      payment_complete_refund_domain_side_effects: {
+        Args: {
+          p_cancellation_reason?: string
+          p_closed_by_user_id?: string
+          p_initiator?: string
+          p_refund_tier?: string
+          p_service_id: string
+        }
+        Returns: undefined
       }
       payment_compute_charge_scheduled_at: {
         Args: {
@@ -4850,10 +4861,19 @@ export type Database = {
         Args: { p_provider_gateway_account_id: string }
         Returns: undefined
       }
+      payment_mark_refund_gateway_acked: {
+        Args: {
+          p_actor_id?: string
+          p_refunded_amount?: number
+          p_schedule_id: string
+        }
+        Returns: undefined
+      }
       payment_mark_service_executed: {
         Args: { p_service_id: string }
         Returns: Json
       }
+      payment_netcred_platform_company_id: { Args: never; Returns: string }
       payment_notification_deep_link_path: {
         Args: { p_service_request_id?: string }
         Returns: string
@@ -4890,6 +4910,15 @@ export type Database = {
           p_service_id: string
         }
         Returns: string
+      }
+      payment_prepare_refund_request: {
+        Args: {
+          p_actor_id: string
+          p_cancellation_reason?: string
+          p_initiator?: string
+          p_service_id: string
+        }
+        Returns: Json
       }
       payment_process_reconciliation_outcome: {
         Args: {

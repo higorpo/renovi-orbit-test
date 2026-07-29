@@ -252,11 +252,13 @@ select is(
 
 select lives_ok(
   format(
-    $$ select public.payment_begin_refund_request(%L::uuid, %L::uuid, 'CLIENT_INITIATED', 'client') $$,
+    $$ select public.payment_commit_refund_after_gateway(
+         %L::uuid, %L::uuid, 'CLIENT_INITIATED', 'client', null
+       ) $$,
     current_setting('test.cron.refund_id'),
     current_setting('test.cron.actor_client_id')
   ),
-  'refund request succeeds with active reschedule'
+  'refund commit succeeds with active reschedule'
 );
 
 select is(
@@ -266,7 +268,7 @@ select is(
     where id = current_setting('test.cron.refund_req_id')::uuid
   ),
   'CANCELLED',
-  'refund request cancels active reschedule request'
+  'refund commit cancels active reschedule request'
 );
 
 select lives_ok(

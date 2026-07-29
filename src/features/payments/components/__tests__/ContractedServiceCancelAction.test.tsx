@@ -171,8 +171,35 @@ describe("ContractedServiceCancelAction", () => {
     });
 
     expect(toast.success).toHaveBeenCalledWith(
-      "Cancelamento solicitado. O estorno será processado em breve.",
+      "Cancelamento solicitado. O estorno pode levar de 30 a 60 dias para aparecer na fatura.",
     );
+  });
+
+  it("uses expectedDays from API in post-charge success toast", async () => {
+    mockMutateAsync.mockResolvedValue({
+      scheduleId: "sched-1",
+      outcome: "REFUND_SUBMITTED",
+      expectedDays: "30-60",
+    });
+
+    render(
+      <ContractedServiceCancelAction
+        contractedServiceId="service-1"
+        serviceStatus="CONFIRMED"
+        scheduledStartDate="2026-07-20"
+        scheduledShift="MORNING"
+        viewerRole="client"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Cancelar serviço/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Confirmar cancelamento/i }));
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith(
+        "Cancelamento solicitado. O estorno pode levar de 30 a 60 dias para aparecer na fatura.",
+      );
+    });
   });
 
   it("shows error toast when cancel fails", async () => {
@@ -236,7 +263,9 @@ describe("ContractedServiceCancelAction", () => {
     fireEvent.click(screen.getByRole("button", { name: /Confirmar cancelamento/i }));
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("Falha ao cancelar serviço.");
+      expect(toast.error).toHaveBeenCalledWith(
+        "Não foi possível processar o cancelamento/reembolso. Tente novamente.",
+      );
     });
   });
 });

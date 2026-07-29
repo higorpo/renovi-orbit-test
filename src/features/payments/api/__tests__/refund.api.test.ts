@@ -59,7 +59,8 @@ describe("processContractedServiceRefund", () => {
         schedule_id: "sched-2",
         refund_amount: 150.5,
         penalty_tier: "TIER_1",
-        expected_days: 7,
+        expected_days: "30-60",
+        refund_submit_status: "SUBMITTED",
       },
     });
 
@@ -74,7 +75,7 @@ describe("processContractedServiceRefund", () => {
       outcome: "REFUND_SUBMITTED",
       refundAmount: "150.5",
       penaltyTier: "TIER_1",
-      expectedDays: "7",
+      expectedDays: "30-60",
     });
   });
 
@@ -150,8 +151,38 @@ describe("processContractedServiceRefund", () => {
 
     expect(result.data).toBeNull();
     expect(result.errorCode).toBe("refund_failed");
-    expect(result.error).toContain("estorno");
+    expect(result.error).toBe(
+      "Não foi possível processar o cancelamento/reembolso. Tente novamente.",
+    );
     expect(result.status).toBe(500);
+  });
+
+  it("maps refund_failed with support_url", async () => {
+    mockInvokePaymentEdgeFunction.mockResolvedValue({
+      ok: false,
+      status: 500,
+      payload: {
+        error: "refund_failed",
+        error_code: "refund_failed",
+        refund_submit_status: "FAILED",
+        support_url: "https://support.example/refund",
+      },
+    });
+    mockMapEdgeErrorPayload.mockReturnValue({
+      message: "refund_failed",
+      errorCode: "refund_failed",
+    });
+
+    const result = await processContractedServiceRefund({
+      contractedServiceId: "service-failed-support",
+    });
+
+    expect(result.data).toBeNull();
+    expect(result.errorCode).toBe("refund_failed");
+    expect(result.error).toBe(
+      "Não foi possível processar o cancelamento/reembolso. Tente novamente.",
+    );
+    expect(result.supportUrl).toBe("https://support.example/refund");
   });
 
   it("uses message as code when errorCode is missing", async () => {
@@ -161,7 +192,7 @@ describe("processContractedServiceRefund", () => {
       payload: {},
     });
     mockMapEdgeErrorPayload.mockReturnValue({
-      message: "Falha ao cancelar serviço",
+      message: "Falha ao processar cancelamento/reembolso",
       errorCode: undefined,
     });
 
@@ -169,7 +200,9 @@ describe("processContractedServiceRefund", () => {
       contractedServiceId: "service-4",
     });
 
-    expect(result.errorCode).toBe("Falha ao cancelar serviço");
-    expect(result.error).toBe("Não foi possível cancelar o serviço. Tente novamente.");
+    expect(result.errorCode).toBe("Falha ao processar cancelamento/reembolso");
+    expect(result.error).toBe(
+      "Não foi possível processar o cancelamento/reembolso. Tente novamente.",
+    );
   });
 });

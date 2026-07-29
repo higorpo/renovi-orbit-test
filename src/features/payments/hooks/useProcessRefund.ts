@@ -22,9 +22,14 @@ export function useProcessRefund() {
     mutationFn: async (request: ProcessRefundRequest): Promise<ProcessRefundSuccess> => {
       const result = await processContractedServiceRefund(request);
       if (result.error || !result.data) {
-        const error = new Error(result.error ?? "Falha ao cancelar serviço");
-        (error as Error & { errorCode?: string; status?: number }).errorCode = result.errorCode;
+        const error = new Error(
+          result.error ??
+            "Não foi possível processar o cancelamento/reembolso. Tente novamente.",
+        );
+        (error as Error & { errorCode?: string; status?: number; supportUrl?: string }).errorCode =
+          result.errorCode;
         (error as Error & { status?: number }).status = result.status;
+        (error as Error & { supportUrl?: string }).supportUrl = result.supportUrl;
         throw error;
       }
       return result.data;

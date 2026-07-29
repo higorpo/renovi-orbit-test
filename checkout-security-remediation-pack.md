@@ -86,7 +86,7 @@ flowchart LR
 | CHK-005 | High | Money | Reconcile PAID without `paidAmount` commits `0.00` | `processSchedule.ts`, `payment_commit_charge_outcome` | S4 |
 | CHK-006 | High | Money | Commit recompute vs claimed amount race on fee change | claim batch + commit RPC | S4 |
 | CHK-007 | High | Money | Automatic claim lacks T-12h upper bound (manual has it) | `payment_claim_charge_batch` | S4 |
-| CHK-008 | High | Refund | Gateway refund fail + `already_submitted` false success | `process-refund/handleRequest.ts`, `payment_begin_refund_request` | S7 |
+| CHK-008 | High | Refund | Gateway refund fail + `already_submitted` false success | `process-refund/handleRequest.ts`, `payment_prepare_refund_request` / `payment_commit_refund_after_gateway` | S7 |
 | CHK-009 | High | Refund | Post-PAID reschedule rebinds refund tiers (arbitrage) | `payment_reschedule_charge_date`, `payment_calculate_refund_amount` | S7 |
 | CHK-010 | High | Refund | `TRANSACTION_REFUND` ignored unless `REFUND_REQUESTED` | `payment_webhook_handle_refund` | S7 |
 | CHK-011 | High | Fraud | ClearSale session client-asserted; SDK failure does not block | accept_proposal, ClearSale utils, CardStep | S1, S6 |
@@ -325,7 +325,7 @@ id: CHK-008
 title: Gateway refund failure + already_submitted skips retry and returns success
 severity: High
 category: Refund
-assets: [process-refund, payment_begin_refund_request, contracted_services]
+assets: [process-refund, payment_prepare_refund_request, payment_commit_refund_after_gateway, contracted_services]
 attack_path: |
   begin_refund commits REFUND_REQUESTED + CANCELLED → gateway fails → retry already_submitted=true →
   Edge skips refundTransaction → HTTP 200 / UI success; funds never returned.
@@ -336,6 +336,9 @@ root_cause: Idempotency equates DB REFUND_REQUESTED with gateway ACK.
 fix_brief: |
   Persist refund_submit_status PENDING_GATEWAY|SUBMITTED|CONFIRMED|FAILED.
   already_submitted only after gateway ACK. Retry must call refundTransaction when FAILED.
+  **Superseded (2026-07-29):** Option A gateway-first (`payment_prepare_refund_request` →
+  `refundTransaction` → `payment_commit_refund_after_gateway`) removes cancel-first on the PAID path
+  (gateway fail = zero irreversible mutations). See docs/payment-system/critical-bug-refund-partial-commit.md.
 verification: Deno fail once then retry must invoke gateway; UI must not toast success on FAILED
 non_goals: Do not allow unrestricted double refunds
 reported_by: [S7]
@@ -983,7 +986,7 @@ title: Refund submit status machine + external refund webhook from PAID + refund
 objective: CHK-008, CHK-009, CHK-010.
 scope_paths:
   - supabase/functions/process-refund/
-  - supabase/migrations/ (payment_begin_refund_request, webhook refund handler, reschedule)
+  - supabase/migrations/ (payment_prepare_refund_request / payment_commit_refund_after_gateway, webhook refund handler, reschedule)
   - src/features/payments/api/refund.api.ts
 implementation_steps:
   - refund_submit_status; retry calls gateway when not ACK'd; UI not success on FAILED.

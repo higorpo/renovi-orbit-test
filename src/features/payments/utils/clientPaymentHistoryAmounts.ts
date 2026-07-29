@@ -5,6 +5,8 @@ export type ClientPaymentHistoryAmounts = {
   netAmount: number;
   refundedAmount: number | null;
   showRefundBreakdown: boolean;
+  /** True when amount is known but gateway credit is not confirmed yet. */
+  isRefundPending: boolean;
 };
 
 function roundCurrency(value: number): number {
@@ -13,7 +15,10 @@ function roundCurrency(value: number): number {
 
 /** Derives display amounts for client payment history rows with refunds. */
 export function getClientPaymentHistoryAmounts(
-  transaction: Pick<ClientPaymentTransaction, "amountPaid" | "refundedAmount">,
+  transaction: Pick<
+    ClientPaymentTransaction,
+    "amountPaid" | "refundedAmount" | "refundedAt"
+  >,
 ): ClientPaymentHistoryAmounts {
   const refundedAmount =
     transaction.refundedAmount != null && transaction.refundedAmount > 0
@@ -26,13 +31,17 @@ export function getClientPaymentHistoryAmounts(
       netAmount: transaction.amountPaid,
       refundedAmount: null,
       showRefundBreakdown: false,
+      isRefundPending: false,
     };
   }
+
+  const isRefundPending = transaction.refundedAt == null;
 
   return {
     originalAmount: transaction.amountPaid,
     netAmount: roundCurrency(Math.max(0, transaction.amountPaid - refundedAmount)),
     refundedAmount,
     showRefundBreakdown: true,
+    isRefundPending,
   };
 }

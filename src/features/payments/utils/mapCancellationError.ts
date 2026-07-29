@@ -10,14 +10,16 @@ const CANCELLATION_ERROR_MESSAGES: Record<string, string> = {
   TRANSACTION_NOT_FOUND:
     "Não encontramos a transação de pagamento. Entre em contato com o suporte.",
   refund_failed:
-    "Não foi possível processar o estorno no momento. Tente novamente ou fale com o suporte.",
+    "Não foi possível processar o cancelamento/reembolso. Tente novamente.",
   PAYMENT_SCHEDULE_TERMINAL_STATE:
     "Não é possível cancelar neste momento. O pagamento já está em um estado final.",
   PAYMENT_SCHEDULE_INVALID_TRANSITION:
     "Não é possível cancelar neste momento. Atualize a página e tente novamente.",
 };
 
+const FALLBACK_CANCELLATION_ERROR =
+  "Não foi possível processar o cancelamento/reembolso. Tente novamente.";
+
 export function mapCancellationErrorMessage(errorCode: string): string {
-  return CANCELLATION_ERROR_MESSAGES[errorCode]
-    ?? "Não foi possível cancelar o serviço. Tente novamente.";
+  return CANCELLATION_ERROR_MESSAGES[errorCode] ?? FALLBACK_CANCELLATION_ERROR;
 }

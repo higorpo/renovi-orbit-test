@@ -93,7 +93,9 @@ describe("useProcessRefund", () => {
           cancellationReason: "Cliente desistiu",
         });
       }),
-    ).rejects.toThrow("Falha ao cancelar serviço");
+    ).rejects.toThrow(
+      "Não foi possível processar o cancelamento/reembolso. Tente novamente.",
+    );
 
     expect(spy).toHaveBeenCalledWith({
       contractedServiceId: "service-1",

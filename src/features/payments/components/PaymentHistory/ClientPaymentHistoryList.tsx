@@ -76,7 +76,9 @@ export function ClientPaymentHistoryList() {
                   </p>
                   {amounts.showRefundBreakdown && amounts.refundedAmount != null ? (
                     <p className="text-muted-foreground">
-                      Reembolsado: {formatCurrency(amounts.refundedAmount)}
+                      {amounts.isRefundPending
+                        ? `Reembolso em processamento: ${formatCurrency(amounts.refundedAmount)}`
+                        : `Reembolsado: ${formatCurrency(amounts.refundedAmount)}`}
                     </p>
                   ) : null}
                   <p className="text-muted-foreground">

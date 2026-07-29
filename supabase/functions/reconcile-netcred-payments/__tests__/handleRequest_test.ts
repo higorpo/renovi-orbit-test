@@ -421,3 +421,39 @@ Deno.test("handleRequest OPTIONS returns 204 and non-POST returns 405", async ()
   );
   assertEquals(get.status, 405);
 });
+
+Deno.test("REFUND_REQUESTED with gateway PAID applies reconciliation outcome (no re-fire)", async () => {
+  let applyCalled = false;
+
+  const refundSchedule: ReconcileSchedule = {
+    ...inAnalysisSchedule,
+    id: "schedule-refund",
+    state: "REFUND_REQUESTED",
+    refund_submit_status: "SUBMITTED",
+    gateway_transaction_id: "tx-refund",
+    refunded_amount: 900.0,
+  };
+
+  const result = await processReconcileSchedule(
+    {
+      getTransaction: async () => ({
+        transactionId: "tx-refund",
+        chargeId: "charge-1",
+        referenceCode: "service-1",
+        transactionState: "PAID",
+        paidAmount: "1024.29",
+      }),
+      applyGatewayState: async (input) => {
+        applyCalled = true;
+        assertEquals(input.gatewayState, "PAID");
+        return { applied: false, reason: "no_transition" };
+      },
+      incrementFailureCount: async () => 0,
+      emitWarning: () => {},
+    },
+    refundSchedule,
+  );
+
+  assertEquals(result.outcome, "SKIPPED");
+  assertEquals(applyCalled, true);
+});

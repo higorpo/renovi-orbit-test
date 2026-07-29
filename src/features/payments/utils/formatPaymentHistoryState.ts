@@ -2,7 +2,7 @@ const PAYMENT_HISTORY_STATE_LABELS: Record<string, string> = {
   PAID: "Pago",
   REFUNDED: "Reembolsado",
   PARTIALLY_REFUNDED: "Reembolso parcial",
-  REFUND_REQUESTED: "Reembolso solicitado",
+  REFUND_REQUESTED: "Reembolso solicitado / em processamento",
 };
 
 export function formatPaymentHistoryState(state: string): string {

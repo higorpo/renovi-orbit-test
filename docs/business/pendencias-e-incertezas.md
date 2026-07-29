@@ -6,13 +6,18 @@ Itens que exigem validação humana, evidência parcial ou conflito entre trecho
 
 | ID | Tema | Descrição | Severidade sugerida |
 |----|------|-----------|---------------------|
-| P-12 | Cancelamento pós-`PAID` com commit parcial | Edge `process-refund` comita `CANCELLED` + chat + `REFUND_REQUESTED` **antes** de `refundTransaction` na NetCred. Se o gateway falha: UI mostra erro, serviço já cancelado, **sem worker automático** que reenvie o estorno (`reconcile-netcred-payments` só confirma se o gateway já estiver reembolsado). Quebra invariante all-or-nothing (ou estorno encaminhado, ou nada muda). Doc: [`docs/payment-system/critical-bug-refund-partial-commit.md`](../payment-system/critical-bug-refund-partial-commit.md). Relacionado: CHK-008. | **Crítica** — financeira / go-live pagamentos |
 | P-01 | Redirecionamento pós-pedido | `useRequestQuoteSubmit` navega para `/dashboard/client` após sucesso; **não existe** essa rota em `router.tsx` (apenas `/dashboard/...`). **Comportamento provável:** 404 ou fallback do router. | Alta — fluxo cliente após pedido |
 | P-02 | Destino do admin | `getRedirectPathForProfile` envia `admin` para `/admin/dashboard`; **rotas `/admin` não constam** do `router.tsx`. | Alta — se existirem usuários admin reais |
 | P-03 | Onboarding | Papéis desconhecidos redirecionam para `/onboarding`; rota **não listada** no router analisado. | Média |
 | P-04 | Menu vs rota “Endereços” | Menu do cliente aponta `/dashboard/addresses`, mas a rota renderiza `DashboardFakePage` (“Endereços” placeholder). Gestão real em `MyAccountClientPage` (`AddressesSection`). | Média — UX/ops |
 | P-05 | `/dashboard/services/:id` | Rota renderiza `ServiceDetailShell` (`view-services`); detalhe unificado por fase. Evoluções pendentes são de produto (ex.: disputas), não placeholder de lista. | Baixa |
 | P-06 | Default do provedor de IA | Comentários em tipos vs `handlerHelpers` do Edge Function: default efetivo do campo `provider` pode ser **Gemini**; documentação interna pode divergir. | Baixa — transparência operacional |
+
+## Resolvidas (histórico)
+
+| ID | Tema | Resolução |
+|----|------|-----------|
+| ~~P-12~~ | Cancelamento pós-`PAID` com commit parcial | **Resolvido (2026-07-29):** Opção A (gateway first) — `payment_prepare_refund_request` → `refundTransaction` → `payment_commit_refund_after_gateway`; falha de gateway = zero mutações irreversíveis. Recovery: `payment_mark_refund_gateway_acked`, reconcile (PAID+SUBMITTED; completa cancel se gateway REFUNDED) e webhook. Doc: [`critical-bug-refund-partial-commit.md`](../payment-system/critical-bug-refund-partial-commit.md). Relacionado: CHK-008. |
 
 ## Evidência parcial
 

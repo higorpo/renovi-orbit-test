@@ -121,7 +121,7 @@ describe("ClientPaymentHistoryList", () => {
     expect(screen.getByText(/Reembolso parcial/)).toBeInTheDocument();
   });
 
-  it("shows refund breakdown while refund is still requested", () => {
+  it("shows pending refund wording while refund is still requested", () => {
     mockUseClientPaymentHistory.mockReturnValue({
       data: [{
         scheduleId: "sched-4",
@@ -145,7 +145,8 @@ describe("ClientPaymentHistoryList", () => {
     const struckOriginal = screen.getByText("R$ 633,70");
     expect(struckOriginal).toHaveClass("line-through");
     expect(screen.getByText("R$ 0,00")).toBeInTheDocument();
-    expect(screen.getByText(/Reembolsado:\s*R\$ 633,70/)).toBeInTheDocument();
-    expect(screen.getByText(/Reembolso solicitado/)).toBeInTheDocument();
+    expect(screen.getByText(/Reembolso em processamento:\s*R\$ 633,70/)).toBeInTheDocument();
+    expect(screen.queryByText(/Reembolsado:/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Reembolso solicitado \/ em processamento/)).toBeInTheDocument();
   });
 });

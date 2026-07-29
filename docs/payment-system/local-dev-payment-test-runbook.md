@@ -597,7 +597,7 @@ curl -s -X POST 'http://127.0.0.1:54321/functions/v1/process-refund' \
 }
 ```
 
-A EF chama `payment_begin_refund_request` (RPC) e em seguida `transactionRefund` na NetCred.
+A EF segue Opção A: `payment_prepare_refund_request` → NetCred `transactionRefund` → `payment_commit_refund_after_gateway` (só cancela após ACK do gateway).
 
 ### 11.7 Conferir no banco
 
@@ -607,6 +607,7 @@ SELECT
   cs.status AS service_status,
   cs.cancellation_reason,
   ps.state AS schedule_state,
+  ps.refund_submit_status,
   ps.refunded_amount,
   ps.cancellation_reason AS schedule_cancel_reason
 FROM public.contracted_services cs
@@ -620,13 +621,14 @@ ORDER BY created_at DESC
 LIMIT 10;
 ```
 
-Após a EF:
+Após a EF (sucesso):
 
 | Campo | Esperado |
 |-------|----------|
 | `contracted_services.status` | `CANCELLED` |
-| `payment_schedules.state` | `REFUND_REQUESTED` (imediatamente) |
-| Audit | `REFUND_SUBMITTED` |
+| `payment_schedules.state` | `REFUND_REQUESTED` |
+| `payment_schedules.refund_submit_status` | `SUBMITTED` |
+| Audit | `REFUND_SUBMITTED` / gateway ACK |
 
 Após webhook `TRANSACTION_REFUND` da NetCred (ou reconciliação):
 

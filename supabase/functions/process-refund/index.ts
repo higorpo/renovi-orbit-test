@@ -14,7 +14,6 @@ import {
 } from "./handleRequest.ts";
 import type { RefundContext, RefundSubmitResult } from "./types.ts";
 
-
 function resolvePlatformCompanyId(): string {
   const value = Deno.env.get("NETCRED_PLATFORM_COMPANY_ID")?.trim();
   if (!value) {
@@ -29,6 +28,25 @@ function resolvePlatformBankAccountId(): string {
     throw new Error("NETCRED_PLATFORM_BANK_ACCOUNT_ID is not configured");
   }
   return value;
+}
+
+function mapRefundRpcPayload(data: unknown): RefundSubmitResult {
+  const payload = data as Record<string, unknown>;
+  return {
+    scheduleId: String(payload.schedule_id),
+    providerTransactionId: String(payload.gateway_transaction_id ?? ""),
+    paidAmount: String(payload.paid_amount ?? "0.00"),
+    baseAmount: String(payload.base_amount ?? "0.00"),
+    refundAmount: String(payload.refund_amount ?? "0.00"),
+    penaltyTier: payload.penalty_tier != null
+      ? String(payload.penalty_tier)
+      : null,
+    alreadySubmitted: Boolean(payload.already_submitted),
+    refundSubmitStatus: payload.refund_submit_status != null
+      ? String(payload.refund_submit_status)
+      : null,
+    path: payload.path != null ? String(payload.path) : null,
+  };
 }
 
 function createDeps(): ProcessRefundDeps {
@@ -60,7 +78,7 @@ function createDeps(): ProcessRefundDeps {
       const { data: schedule, error: scheduleError } = await supabase
         .from("payment_schedules")
         .select(
-          "id, state, base_amount, paid_amount, gateway_transaction_id",
+          "id, state, base_amount, paid_amount, gateway_transaction_id, refund_submit_status",
         )
         .eq("contracted_service_id", serviceId)
         .maybeSingle();
@@ -80,6 +98,7 @@ function createDeps(): ProcessRefundDeps {
         baseAmount: schedule.base_amount,
         paidAmount: schedule.paid_amount,
         providerTransactionId: schedule.gateway_transaction_id,
+        refundSubmitStatus: schedule.refund_submit_status ?? null,
       } satisfies RefundContext;
     },
     preChargeCancel: async (input) => {
@@ -96,8 +115,8 @@ function createDeps(): ProcessRefundDeps {
 
       return String(data);
     },
-    submitRefundRequest: async (input) => {
-      const { data, error } = await supabase.rpc("payment_begin_refund_request", {
+    prepareRefundRequest: async (input) => {
+      const { data, error } = await supabase.rpc("payment_prepare_refund_request", {
         p_service_id: input.serviceId,
         p_actor_id: input.actorId,
         p_cancellation_reason: input.cancellationReason ?? undefined,
@@ -108,51 +127,44 @@ function createDeps(): ProcessRefundDeps {
         return mapRpcErrorCode(error.message) ?? "INVALID_SCHEDULE_STATE";
       }
 
-      const payload = data as Record<string, unknown>;
-      return {
-        scheduleId: String(payload.schedule_id),
-        providerTransactionId: String(payload.gateway_transaction_id ?? ""),
-        paidAmount: String(payload.paid_amount ?? "0.00"),
-        baseAmount: String(payload.base_amount ?? "0.00"),
-        refundAmount: String(payload.refund_amount ?? "0.00"),
-        penaltyTier: payload.penalty_tier != null
-          ? String(payload.penalty_tier)
-          : null,
-        alreadySubmitted: Boolean(payload.already_submitted),
-        refundSubmitStatus: payload.refund_submit_status != null
-          ? String(payload.refund_submit_status)
-          : null,
-      } satisfies RefundSubmitResult;
+      return mapRefundRpcPayload(data);
+    },
+    commitRefundAfterGateway: async (input) => {
+      const { data, error } = await supabase.rpc("payment_commit_refund_after_gateway", {
+        p_service_id: input.serviceId,
+        p_actor_id: input.actorId,
+        p_cancellation_reason: input.cancellationReason ?? undefined,
+        p_initiator: input.initiator,
+        p_expected_refund_amount: input.expectedRefundAmount != null
+          ? Number(input.expectedRefundAmount)
+          : undefined,
+      });
+
+      if (error) {
+        return mapRpcErrorCode(error.message) ?? "INVALID_SCHEDULE_STATE";
+      }
+
+      return mapRefundRpcPayload(data);
+    },
+    markRefundGatewayAcked: async (input) => {
+      const { error } = await supabase.rpc("payment_mark_refund_gateway_acked", {
+        p_schedule_id: input.scheduleId,
+        p_actor_id: input.actorId,
+        p_refunded_amount: input.refundedAmount != null
+          ? Number(input.refundedAmount)
+          : undefined,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
     },
     refundTransaction: (input) => AdapterRegistry.get("netcred").refundTransaction(input),
-    markRefundSubmitted: async (input) => {
-      const { error } = await supabase.rpc("payment_set_refund_submit_status", {
-        p_schedule_id: input.scheduleId,
-        p_status: "SUBMITTED",
-        p_actor_id: input.actorId,
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-    },
-    recordRefundFailed: async (input) => {
-      const { error } = await supabase.rpc("payment_set_refund_submit_status", {
-        p_schedule_id: input.scheduleId,
-        p_status: "FAILED",
-        p_actor_id: input.actorId,
-        p_error_message: input.errorMessage,
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-    },
     captureCriticalError: (error, extra) => {
       console.error(JSON.stringify({
         level: "critical",
         scope: "process-refund",
-        event: "refund_gateway_failed",
+        event: "refund_critical",
         error: error instanceof Error ? error.message : String(error),
         ...extra,
       }));

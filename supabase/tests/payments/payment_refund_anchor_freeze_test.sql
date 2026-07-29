@@ -148,7 +148,7 @@ select is(
 
 select is(
   (
-    select public.payment_begin_refund_request(
+    select public.payment_prepare_refund_request(
       current_setting('test.refund_tier.service_id')::uuid,
       current_setting('test.refund_tier.client_id')::uuid,
       'CLIENT_INITIATED',
@@ -161,7 +161,7 @@ select is(
 
 select is(
   (
-    select public.payment_begin_refund_request(
+    select public.payment_prepare_refund_request(
       current_setting('test.refund_tier.service_id')::uuid,
       current_setting('test.refund_tier.client_id')::uuid,
       'CLIENT_INITIATED',
@@ -169,7 +169,7 @@ select is(
     )->>'penalty_tier'
   ),
   'FULL_REFUND',
-  'idempotent begin_refund keeps FULL_REFUND after post-PAID reschedule'
+  'idempotent prepare keeps FULL_REFUND after post-PAID reschedule'
 );
 
 select finish();

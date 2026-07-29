@@ -17,6 +17,7 @@ import {
   getCancellationDisclosure,
   type CancellationViewerRole,
 } from "../utils/contractedServiceCancellation";
+import { formatPostChargeCancelSuccessMessage } from "../utils/formatPostChargeCancelSuccessMessage";
 import { usePaymentScheduleLifecycle } from "../hooks/usePaymentScheduleLifecycle";
 import { useProcessRefund } from "../hooks/useProcessRefund";
 
@@ -78,13 +79,17 @@ export function ContractedServiceCancelAction({
       const message =
         result.outcome === "PRE_CHARGE_CANCELLED"
           ? "Serviço cancelado com sucesso."
-          : "Cancelamento solicitado. O estorno será processado em breve.";
+          : formatPostChargeCancelSuccessMessage(result.expectedDays);
 
       toast.success(message);
       setOpen(false);
       onSuccess?.();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Falha ao cancelar serviço.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível processar o cancelamento/reembolso. Tente novamente.",
+      );
     }
   };
 

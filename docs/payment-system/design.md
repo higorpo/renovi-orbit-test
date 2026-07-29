@@ -41,7 +41,7 @@ graph TB
         EF_CHARGE["schedule-netcred-charges\n(claim RPC → NetCred → commit RPC)"]
         EF_MANUAL["manual-charge-payment\n(begin RPC → NetCred → commit RPC)"]
         EF_WH["netcred-webhook\n(ingress + HMAC → inline or enqueue)"]
-        EF_REFUND["process-refund\n(begin RPC → NetCred refund)"]
+        EF_REFUND["process-refund\n(prepare → NetCred → commit)"]
         EF_ONBOARD["detect-netcred-onboarding\n(NetCred batch query)"]
         EF_RECON["reconcile-netcred-payments\n(claim RPC → NetCred → commit RPC)"]
         EF_VOID["reconcile-inanalysis-auto-cancel-voids\n(claim RPC → NetCred void → commit RPC)"]
@@ -118,7 +118,7 @@ graph TB
 | Notification enqueueing | **Async** (enqueue to dispatcher) | Notification failure MUST NOT revert payment state |
 | Webhook raw persistence | **Synchronous, before validation** | Events logged even if processing fails |
 | Webhook state reconciliation | **Synchronous, single DB TX** | State + audit commit atomically |
-| `transactionRefund` submission | **Synchronous, sets REFUND_REQUESTED** | Confirmation via webhook is async |
+| `transactionRefund` submission | **Synchronous gateway first; then RPC sets REFUND_REQUESTED + SUBMITTED** | Confirmation (`REFUNDED`) via webhook/reconcile is async |
 | KYC email dispatch | **Async** (`dispatch-kyc-email` EF after RPC commit) | Email failure MUST NOT block `DOCUMENTS_SUBMITTED`; EF retries; `email_dispatched_at` set on success |
 | Installment recalculation at charge time | **Synchronous, within cron TX** | Fee MUST be accurate at charge time using current rates |
 | Service completion (EXECUTED→COMPLETED) | **Synchronous, single DB TX** | Status + audit atomic |
@@ -325,7 +325,7 @@ stateDiagram-v2
     IN_ANALYSIS --> PAID: TRANSACTION_CAPTURE webhook
     IN_ANALYSIS --> FAILED_PERMANENT: TRANSACTION_UPDATE REJECTED webhook
     IN_ANALYSIS --> CANCELLED: T-12h exceeded (auto-cancel + gateway reconcile)
-    PAID --> REFUND_REQUESTED: transactionRefund submitted
+    PAID --> REFUND_REQUESTED: gateway transactionRefund ACK then commit RPC
     PAID --> VOIDED: CHARGE_VOID webhook
     REFUND_REQUESTED --> REFUNDED: TRANSACTION_REFUND webhook (full)
     REFUND_REQUESTED --> PARTIALLY_REFUNDED: TRANSACTION_REFUND webhook (partial)
@@ -1571,7 +1571,9 @@ COMMIT;
 -- No transactionRefund call; cron skips CANCELLED records
 ```
 
-### 4.8.3 Post-Charge Cancellation (requires gateway call)
+### 4.8.3 Post-Charge Cancellation (requires gateway call) — Option A (gateway first)
+
+**Invariant:** on the happy `PAID` path, either the gateway accepts the refund request (or returns `ALREADY_REFUNDED`) **and then** the DB cancels service/chat and marks `REFUND_REQUESTED` + `SUBMITTED`, **or** nothing irreversible changes (schedule stays `PAID`, service open). Gateway failure MUST NOT leave a cancelled service without a durable gateway submit.
 
 ```mermaid
 sequenceDiagram
@@ -1581,22 +1583,20 @@ sequenceDiagram
     participant NC as NetCred GraphQL
 
     UI->>EF: POST /process-refund {service_id, cancellation_reason} — thin EF; auth validated
-    EF->>PG: payment_begin_refund_request(service_id, reason) — FOR UPDATE, computeRefundAmount in SQL
-    PG->>PG: BEGIN TX — REFUND_REQUESTED, CANCELLED service, audit_log
-    PG->>PG: COMMIT TX
-    PG-->>EF: {refund_amount, netcred_transaction_id}
+    EF->>PG: payment_prepare_refund_request(service_id, reason) — FOR UPDATE, computeRefundAmount; no cancel
+    PG-->>EF: {refund_amount, netcred_transaction_id} — schedule still PAID
     EF->>NC: mutation transactionRefund(…) — external I/O only
-    alt refund accepted
+    alt refund accepted or ALREADY_REFUNDED
+        EF->>PG: payment_commit_refund_after_gateway(…) — REFUND_REQUESTED + SUBMITTED + CANCELLED service/chat
+        Note over EF,PG: If commit fails after gateway ACK: payment_mark_refund_gateway_acked (PAID+SUBMITTED); reconcile/webhook complete cancel
         EF-->>UI: HTTP 200 {refund_amount, expected_days: 30-60}
-    else ALREADY_REFUNDED
-        EF-->>UI: HTTP 200 (idempotent)
     else other error
-        EF->>PG: INSERT payment_audit_log (REFUND_FAILED) via RPC
-        EF-->>UI: HTTP 500 + support escalation
+        Note over PG: zero irreversible DB mutations on PAID path
+        EF-->>UI: HTTP 500 — client may retry
     end
 ```
 
-**Refund rules and state transition are RPC;** only `transactionRefund` GraphQL call requires the Edge Function.
+**Refund amount / eligibility are RPC;** gateway I/O and ordering (prepare → NetCred → commit) are in the Edge Function. Domain cancel side effects are centralized in `payment_complete_refund_domain_side_effects` (also used by reconcile/webhook when service is still open).
 
 **Gateway split distribution:** The `isLiable: true` flag on both provider and Renovi `ruleItems` causes NetCred to distribute refunds proportionally between all liable accounts. No custom split logic needed in Renovi code.
 
@@ -1881,7 +1881,7 @@ Every new `payment_*` RPC MUST ship with explicit **`REVOKE` / `GRANT EXECUTE`**
 | Group | Functions |
 |---|---|
 | Client | `payment_get_checkout_step_requirements`, `payment_calculate_installment_options`, `payment_update_method`, `payment_mark_service_executed`, `payment_submit_provider_kyc`, `payment_revoke_client_card_token` |
-| Charge / webhook | `payment_persist_client_card_token`, `payment_claim_charge_batch`, `payment_begin_manual_attempt`, `payment_commit_charge_outcome`, `payment_enqueue_notifications`, `payment_ingest_webhook_event`, `payment_enqueue_webhook_processing`, `payment_process_webhook_event`, `payment_claim_webhook_processing_batch`, `payment_claim_webhook_retry_batch`, `payment_begin_refund_request`, `payment_claim_stale_schedules_for_reconciliation`, `payment_process_reconciliation_outcome` |
+| Charge / webhook | `payment_persist_client_card_token`, `payment_claim_charge_batch`, `payment_begin_manual_attempt`, `payment_commit_charge_outcome`, `payment_enqueue_notifications`, `payment_ingest_webhook_event`, `payment_enqueue_webhook_processing`, `payment_process_webhook_event`, `payment_claim_webhook_processing_batch`, `payment_claim_webhook_retry_batch`, `payment_prepare_refund_request`, `payment_commit_refund_after_gateway`, `payment_mark_refund_gateway_acked`, `payment_complete_refund_domain_side_effects`, `payment_claim_stale_schedules_for_reconciliation`, `payment_process_reconciliation_outcome` |
 | Onboarding | `payment_list_gateway_accounts_for_onboarding`, `payment_activate_provider_from_netcred`, `payment_update_provider_onboarding_status` |
 | Batch / cron targets | `payment_auto_cancel_services`, `payment_notify_upcoming_charges_batch`, `payment_auto_complete_executed_services`, `payment_recover_orphaned_schedules`, `payment_claim_upcoming_charge_notifications` |
 | Helpers | `payment_cc_fee_rate_key`, `payment_total_with_card_fees`, `payment_calculate_charge_amount`, `payment_service_execution_at`, `payment_reschedule_charge_date` |
@@ -1915,7 +1915,10 @@ Every new `payment_*` RPC MUST ship with explicit **`REVOKE` / `GRANT EXECUTE`**
 | `payment_process_webhook_event(event_id)` | webhook EF (inline) + retry cron | Full webhook state machine |
 | `payment_claim_webhook_processing_batch()` | `payment_cron_process_webhook_retry` | `SKIP LOCKED` on queue `PENDING` |
 | `payment_claim_webhook_retry_batch()` | `payment_cron_process_webhook_retry` | `SKIP LOCKED` on events `FAILED` |
-| `payment_begin_refund_request(…)` | `process-refund` EF | REFUND_REQUESTED + cancel service |
+| `payment_prepare_refund_request(…)` | `process-refund` EF | PAID path: validate + ToS amount; no cancel |
+| `payment_commit_refund_after_gateway(…)` | `process-refund` EF | After gateway ACK: REFUND_REQUESTED + SUBMITTED + cancel service/chat |
+| `payment_mark_refund_gateway_acked(…)` | `process-refund` EF | Crash recovery: PAID + SUBMITTED (no cancel yet) |
+| `payment_complete_refund_domain_side_effects(…)` | commit / reconcile / webhook | Cancel service + close chat if still open |
 | `payment_claim_stale_schedules_for_reconciliation()` | `reconcile-netcred-payments` EF | Stale intermediate states |
 | `payment_process_reconciliation_outcome(…)` | `reconcile-netcred-payments` EF | Commit after `getTransaction` |
 | `payment_list_gateway_accounts_for_onboarding(…)` | `detect-netcred-onboarding` EF | Batch credentialing poll |
@@ -1962,9 +1965,9 @@ Batch RPCs accept `p_record_job_run boolean DEFAULT true` where applicable; **cr
 | `schedule-netcred-charges` | pg_cron 4×/day via `payment_cron_schedule_netcred_charges()` | cron secret | `payment_claim_charge_batch` → NetCred loop → `payment_commit_charge_outcome` RPC |
 | `manual-charge-payment` | Client POST | JWT + rate limit | `payment_begin_manual_attempt` → NetCred → `payment_commit_charge_outcome` RPC |
 | `netcred-webhook` | NetCred POST | HMAC (no JWT) | Ingest + HMAC → inline `payment_process_webhook_event` OR `payment_enqueue_webhook_processing` RPC |
-| `process-refund` | Client POST | JWT | `payment_begin_refund_request` RPC → NetCred `transactionRefund` |
+| `process-refund` | Client POST | JWT | PAID: `payment_prepare_refund_request` → NetCred `transactionRefund` → `payment_commit_refund_after_gateway` |
 | `detect-netcred-onboarding` | pg_cron 1×/day via `payment_cron_detect_netcred_onboarding()` | cron secret | NetCred batch query → activation RPCs |
-| `reconcile-netcred-payments` | pg_cron 30 min via `payment_cron_reconcile_netcred_payments()` | cron secret | `claim_stale_*` → NetCred `getTransaction` → commit RPC |
+| `reconcile-netcred-payments` | pg_cron 30 min via `payment_cron_reconcile_netcred_payments()` | cron secret | `claim_stale_*` (incl. PAID+SUBMITTED) → `getTransaction` → commit / complete domain cancel |
 | `reconcile-inanalysis-auto-cancel-voids` | pg_cron 30 min via `payment_cron_reconcile_inanalysis_auto_cancel_voids()` | cron secret | Claim IN_ANALYSIS void batch → NetCred void → commit RPC |
 
 **Removed from v1.0 (now RPC):** `calculate-installment-options` (use `payment_calculate_installment_options` RPC), `accept-proposal` (payment path), `update-payment-method`, `process-webhook-retry`, `auto-cancel-unpaid-services`, `notify-upcoming-charges`, `auto-complete-executed-services`, `recover-payment-leases`.
@@ -2177,7 +2180,7 @@ sequenceDiagram
 |---|---|---|
 | Queue dequeue | `FOR UPDATE SKIP LOCKED` | `payment_claim_charge_batch()` RPC |
 | JWT refresh serialization | `FOR UPDATE` (blocking) | `NetCredAdapter.refreshAuthToken()` (EF only) |
-| Cancellation / refund prep | `FOR UPDATE` | `payment_begin_refund_request()` RPC |
+| Cancellation / refund prep | `FOR UPDATE` | `payment_prepare_refund_request()` / `payment_commit_refund_after_gateway()` RPCs |
 | Token validation at accept | `FOR UPDATE` | `accept_proposal()` RPC |
 | Manual payment + cron race | `FOR UPDATE` (blocking) | `payment_begin_manual_attempt()` RPC |
 
@@ -2227,7 +2230,8 @@ Notifications are enqueued AFTER the transaction commits. If notification enqueu
 | Webhook HMAC failure | `timingSafeEqual` false | `FAILED` state on event; HTTP 401; WARN Sentry | Event not processed |
 | Webhook processing exception | Any unhandled exception | `FAILED` on event; `retry_count++`; exponential backoff | Event retried |
 | Webhook retry exhausted | `retry_count >= 3` | `DEAD_LETTER`; CRITICAL Sentry | Manual ops intervention |
-| `transactionRefund` failure | Non-ALREADY_REFUNDED error | CRITICAL Sentry; `payment_audit_log` entry; support escalation | `REFUND_REQUESTED` remains |
+| `transactionRefund` failure (PAID / Option A) | Non-ALREADY_REFUNDED error | CRITICAL Sentry; HTTP 500; client may retry | Schedule stays `PAID`; service **not** cancelled |
+| Gateway ACK then commit crash | Commit RPC fails after NetCred success | `payment_mark_refund_gateway_acked` → PAID+SUBMITTED; reconcile/webhook complete cancel | Temporary `PAID`+`SUBMITTED` until domain side effects |
 | KYC email failure | MMD ingest error | MMD retries; `DOCUMENTS_SUBMITTED` preserved | State unchanged |
 | Duplicate `chargeCreate` (referenceCode) | Gateway error code | Call `getTransaction`; reconcile existing charge | No new charge |
 | `IN_ANALYSIS` no webhook | Missed webhook | `reconcile-netcred-payments` cron polls `getTransaction` every 30min | `IN_ANALYSIS` → resolved |
@@ -2249,7 +2253,7 @@ The system is fully **resumable** at every failure point:
 | Permanently failed payment requires force-cancel | Execute `payment_auto_cancel_services()` manually or set schedule to `CANCELLED` via support RPC |
 | Provider with multiple NetCred edges | Manual investigation; operator sets `onboarding_status='ACTIVE'` with correct IDs after review |
 | Sandbox token in production | CRITICAL Sentry fires; operator must update Vault with production credentials |
-| Stale REFUND_REQUESTED > 7 days | Trigger `reconcile-netcred-payments` manually or call `getTransaction` directly |
+| Stale REFUND_REQUESTED > 7 days | Trigger `reconcile-netcred-payments` (completes cancel if gateway already REFUNDED) or call `getTransaction` directly |
 
 ---
 
@@ -2475,7 +2479,7 @@ Payment data is financial and PCI-adjacent. **Maximum security is the default.**
 | 12 | Payment success/failure notifications | §4.5.2, §10.1 | `payment_enqueue_notifications` RPC → MMD after commit |
 | 13 | Manual payment recovery flow | §4.11 | EF thin: `payment_begin_manual_attempt` RPC → NetCred; T-12h gate in RPC |
 | 14 | Auto-cancellation at T-12h | §4.12, §5.2 | `payment_cron_auto_cancel_unpaid_services()` RPC |
-| 15 | Cancellation and refund rules | §4.8 | `computeRefundAmount()`; ToS §2.2 tiers; `transactionRefund`; `REFUND_REQUESTED` → webhook confirmation |
+| 15 | Cancellation and refund rules | §4.8 | `computeRefundAmount()`; ToS §2.2 tiers; gateway-first `transactionRefund` then commit; `REFUND_REQUESTED` → webhook confirmation |
 | 16 | Webhook ingestion + signature validation | §4.7.1, §3.8 | EF ingress + HMAC; inline `payment_process_webhook_event` or `payment_enqueue_webhook_processing` RPC |
 | 17 | Webhook idempotent processing | §4.7.3, §3.7 | UNIQUE `(gateway_slug, event_type, gateway_event_id)`; `is_duplicate` flag; regression guard |
 | 18 | Webhook event catalog + reconciliation | §4.7.3, §4.7.2 | Per-event dispatch table; `TRANSACTION_UPDATE` queued; DISPUTE → `is_disputed` |
@@ -2624,7 +2628,7 @@ RPC claim/begin → EF external I/O → RPC commit → RPC enqueue notifications
 | Webhook raw persistence | **Synchronous** (RPC before HMAC in EF) | Events logged even if validation fails |
 | Webhook state reconciliation (fast path) | **Synchronous TX** (RPC in EF) | Simple handlers; state + audit commit atomically |
 | Webhook state reconciliation (heavy path) | **Async** (`payment_webhook_processing_queue` + `payment_cron_process_webhook_retry`) | NetCred timeout budget; `TRANSACTION_UPDATE` and unresolved schedules |
-| `transactionRefund` submission | **RPC sets REFUND_REQUESTED** then EF calls NetCred | Confirmation async via webhook |
+| `transactionRefund` submission | **EF calls NetCred first; RPC then sets REFUND_REQUESTED + SUBMITTED** (Option A) | Confirmation async via webhook/reconcile |
 | KYC email | **Async** (`dispatch-kyc-email` EF after RPC commit) | Email failure MUST NOT block KYC state |
 | Provider onboarding detection | **Async** (EF cron 1×/day) | External API; activation commit in RPC |
 | Installment recalculation at charge time | **Synchronous** (`payment_calculate_charge_amount` in claim RPC) | Current rates at charge time |

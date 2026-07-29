@@ -9,6 +9,9 @@ describe("formatPaymentHistoryState", () => {
     expect(formatPaymentHistoryState("PAID")).toBe("Pago");
     expect(formatPaymentHistoryState("REFUNDED")).toBe("Reembolsado");
     expect(formatPaymentHistoryState("PARTIALLY_REFUNDED")).toBe("Reembolso parcial");
+    expect(formatPaymentHistoryState("REFUND_REQUESTED")).toBe(
+      "Reembolso solicitado / em processamento",
+    );
     expect(formatPaymentHistoryState("CUSTOM")).toBe("CUSTOM");
   });
 
