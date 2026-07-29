@@ -128,8 +128,6 @@ Fluxo de pagamentos, itens com problemas:
 - Fluxo de estorno de dinheiro em caso do serviço agendado não ser  prestado para o cliente.
 
 
-- Acho que temos que desativar a window de push que  hoje tá em 20 minutos.
-
 
 
 
@@ -147,10 +145,10 @@ Fluxo de pagamentos, itens com problemas:
 
 
 
-- /home/higor/Área de Trabalho/Renovi/orbit/src/features/payments/api/serviceLifecycle.api.ts não deveria estar dentro de payments.
+- /home/higor/Área de Trabalho/Renovi/orbit/src/features/payments/api/serviceLifecycle.api.ts não deveria estar dentro de payments. Ele faz parte do fluxo de conclusão de um serviço, então deveria estar na feature de acordo
 
 
-- Erro de fluxo ao solicitar reembolso documentado em docs/payment-system/critical-bug-refund-partial-commit.md
+- [RETESTAR TODO O FLUXO] Erro de fluxo ao solicitar reembolso documentado em docs/payment-system/critical-bug-refund-partial-commit.md
 
 
 ---

@@ -10,7 +10,7 @@ O **Message Dispatcher** é o subsistema responsável pelo envio de **notificaç
 |------------|-----------|
 | Ingestão idempotente | RPC `message_dispatcher_ingest` recebe intenção de envio com chave de idempotência, template e canal. |
 | Máquina de estados (FSM) | Status do dispatch: `PENDING_EVALUATION → SCHEDULED → QUEUED → PROCESSING → DELIVERED / FAILED_*`. Transições validadas por trigger. |
-| Controle de quota | Limites diários por canal (e-mail 5/dia, push 20/dia) e cooldown entre pushes (padrão 10 min). |
+| Controle de quota | Limites diários por canal (e-mail 5/dia, push 20/dia) e cooldown entre pushes (padrão 1 min). |
 | Horário silencioso | Mensagens entre **22:00** e **06:00** (horário de Brasília) são automaticamente reagendadas para **06:00 BRT** do dia seguinte (ou mesmo dia se < 06:00). Ver [feature: horário silencioso](./features/horario-silencioso.md). |
 | Cancelamento | RPC `message_dispatcher_cancel` permite cancelar dispatches em estados não terminais. |
 | Checkout e lease | Worker consome lote via `message_dispatcher_checkout_batch` com `SKIP LOCKED` e lease temporário. |
@@ -35,7 +35,7 @@ Valores padrão em `platform_constants`; podem ser ajustados sem deploy.
 |-----------|-------|--------|
 | Limite diário e-mail | `message_dispatcher.email_daily_limit` | 5 |
 | Limite diário push | `message_dispatcher.push_daily_limit` | 20 |
-| Cooldown entre pushes | `message_dispatcher.push_cooldown_minutes` | 10 min |
+| Cooldown entre pushes | `message_dispatcher.push_cooldown_minutes` | 1 min |
 | Lease do worker | `message_dispatcher.lease_seconds` | 30 s |
 | Base do backoff | `message_dispatcher.backoff_base_seconds` | 60 s |
 | Máx. devices por dispatch | `message_dispatcher.max_devices_per_dispatch` | 10 |

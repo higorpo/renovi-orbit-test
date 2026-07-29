@@ -18,7 +18,7 @@ select is(
 
 select is(
   (select (value #>> '{}')::int from public.platform_constants where key = 'message_dispatcher.push_cooldown_minutes'),
-  10,
+  1,
   'push_cooldown_minutes'
 );
 

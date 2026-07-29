@@ -39,7 +39,7 @@ select
   profile_id,
   timezone(
     'America/Sao_Paulo',
-    date_trunc('day', timezone('America/Sao_Paulo', now()) + interval '1 day') + interval '21 hours 55 minutes'
+    date_trunc('day', timezone('America/Sao_Paulo', now()) + interval '1 day') + interval '21 hours 59 minutes 30 seconds'
   )
 from _eval_fixture
 on conflict (profile_id) do update
@@ -70,7 +70,7 @@ select
   false
 from _eval_fixture;
 
--- The cooldown_until = 21:55 + 10min = 22:05 BRT → in quiet hours → should reschedule to 06:00
+-- The cooldown_until = 21:59:30 + 1min = 22:00:30 BRT → in quiet hours → should reschedule to 06:00
 
 select lives_ok(
   'select message_dispatcher.message_dispatcher_evaluate_pending()',
@@ -84,7 +84,7 @@ select ok(
       and d.scheduled_for = message_dispatcher.message_dispatcher_next_send_window(
         (select last_push_sent_at from message_dispatcher.message_dispatcher_user_limits u
          join _eval_fixture f on u.profile_id = f.profile_id)
-        + make_interval(mins => 10)
+        + make_interval(mins => 1)
       )
     from message_dispatcher.message_dispatches d
     join _eval_fixture f on d.idempotency_key = f.dispatch_key

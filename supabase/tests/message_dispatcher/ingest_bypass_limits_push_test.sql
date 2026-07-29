@@ -9,7 +9,7 @@ select
   p.id as profile_id,
   gen_random_uuid() as bypass_quota_key,
   gen_random_uuid() as bypass_cooldown_key,
-  now() - interval '5 minutes' as last_sent
+  now() - interval '30 seconds' as last_sent
 from public.profiles p
 limit 1;
 
@@ -64,7 +64,7 @@ select ok(
 );
 
 -- Scenario 2: bypass_limits=true skips push cooldown
--- (last_push_sent_at is 5 minutes ago, within the 10-minute cooldown)
+-- (last_push_sent_at is 30 seconds ago, within the 1-minute cooldown)
 select is(
   (
     select message_dispatcher.message_dispatcher_ingest(

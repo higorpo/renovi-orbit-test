@@ -8,7 +8,7 @@ create temp table _cooldown_fixture as
 select
   p.id as profile_id,
   gen_random_uuid() as ingest_key,
-  now() - interval '5 minutes' as last_sent
+  now() - interval '30 seconds' as last_sent
 from public.profiles p
 limit 1;
 
@@ -41,10 +41,10 @@ select is(
     join _cooldown_fixture f on d.idempotency_key = f.ingest_key
   ),
   (
-    select f.last_sent + interval '10 minutes'
+    select f.last_sent + interval '1 minute'
     from _cooldown_fixture f
   ),
-  'scheduled_for is last_push_sent_at + 10 minutes'
+  'scheduled_for is last_push_sent_at + 1 minute'
 );
 
 select is(
