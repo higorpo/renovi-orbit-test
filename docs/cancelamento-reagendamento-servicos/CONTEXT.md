@@ -21,8 +21,16 @@ Derivado da **duração informada pelo prestador** no dialog “Propor nova data
 _Avoid_: Escolha livre de “com/sem data de fim” independente da duração informada; tratar duração do contrato como imutável na proposta
 
 **Aceite Formal de Reagendamento**:
-Ação do cliente que aprova uma Data Proposta de Reagendamento. Somente nesse momento a Data Oficial do Serviço muda.
-_Avoid_: Acordo verbal no chat, mensagem de confirmação informal
+Ação do cliente que aprova uma Data Proposta de Reagendamento. Somente nesse momento a Data Oficial do Serviço muda. No backend, o aceite também dispara `payment_reschedule_charge_date` (ajuste de cobrança conforme estado da parcela e distância da nova data).
+_Avoid_: Acordo verbal no chat, mensagem de confirmação informal; o cliente invocar Edge Function de dinheiro no aceite
+
+**Reagendamento pós-pagamento perto (≤15 dias)**:
+Com parcela `PAID` e serviço `CONFIRMED`, se a nova execução fica a no máximo `far_reschedule_recapture_threshold_days` (padrão 15) à frente: atualiza só o slot; mantém o dinheiro capturado (`paid_no_charge_update`).
+_Avoid_: Nova cobrança automática; estorno por mera mudança de agenda perto
+
+**Reagendamento pós-pagamento longe (>15 dias) / Recaptura longe**:
+Com parcela `PAID`, se a nova execução fica além do limiar: backend marca `far_recapture_pending_at`, reembolsa integralmente no gateway e cria nova parcela `SCHEDULED` em T-2; o serviço volta a `PENDING_PAYMENT` até a nova captura. Não cancela o serviço nem fecha o chat. Orquestração só no backend (pg_net + cron).
+_Avoid_: Cancelamento disfarçado; o app chamar `process-far-reschedule-recapture` / `process-refund` no aceite
 
 **Reagendamento Iniciado pelo Prestador**:
 Solicitação aberta pelo prestador para negociar nova data. Pode ser iniciada com o serviço contratado em `PENDING_PAYMENT` (ainda não pago) ou `CONFIRMED` (pago), sem janela mínima de 48h. O prestador também pode propor o novo slot nesses mesmos status.

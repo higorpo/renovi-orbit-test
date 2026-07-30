@@ -1566,6 +1566,7 @@ export type Database = {
           failed_permanently_at: string | null
           failure_code: string | null
           failure_reason: string | null
+          far_recapture_pending_at: string | null
           gateway_charge_id: string | null
           gateway_reference_code: string
           gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
@@ -1591,6 +1592,7 @@ export type Database = {
           refunded_amount: number | null
           refunded_at: string | null
           state: Database["public"]["Enums"]["payment_schedule_state"]
+          supersedes_schedule_id: string | null
           upcoming_charge_notified_at: string | null
           updated_at: string
         }
@@ -1613,6 +1615,7 @@ export type Database = {
           failed_permanently_at?: string | null
           failure_code?: string | null
           failure_reason?: string | null
+          far_recapture_pending_at?: string | null
           gateway_charge_id?: string | null
           gateway_reference_code: string
           gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
@@ -1638,6 +1641,7 @@ export type Database = {
           refunded_amount?: number | null
           refunded_at?: string | null
           state?: Database["public"]["Enums"]["payment_schedule_state"]
+          supersedes_schedule_id?: string | null
           upcoming_charge_notified_at?: string | null
           updated_at?: string
         }
@@ -1660,6 +1664,7 @@ export type Database = {
           failed_permanently_at?: string | null
           failure_code?: string | null
           failure_reason?: string | null
+          far_recapture_pending_at?: string | null
           gateway_charge_id?: string | null
           gateway_reference_code?: string
           gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
@@ -1685,6 +1690,7 @@ export type Database = {
           refunded_amount?: number | null
           refunded_at?: string | null
           state?: Database["public"]["Enums"]["payment_schedule_state"]
+          supersedes_schedule_id?: string | null
           upcoming_charge_notified_at?: string | null
           updated_at?: string
         }
@@ -1713,7 +1719,7 @@ export type Database = {
           {
             foreignKeyName: "payment_schedules_contracted_service_id_fkey"
             columns: ["contracted_service_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "contracted_services"
             referencedColumns: ["id"]
           },
@@ -1723,6 +1729,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_schedules_supersedes_schedule_id_fkey"
+            columns: ["supersedes_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "client_payment_transactions_v"
+            referencedColumns: ["schedule_id"]
+          },
+          {
+            foreignKeyName: "payment_schedules_supersedes_schedule_id_fkey"
+            columns: ["supersedes_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "payment_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_schedules_supersedes_schedule_id_fkey"
+            columns: ["supersedes_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "provider_payment_receivables_v"
+            referencedColumns: ["schedule_id"]
           },
         ]
       }
@@ -1752,6 +1779,7 @@ export type Database = {
           failed_permanently_at: string | null
           failure_code: string | null
           failure_reason: string | null
+          far_recapture_pending_at: string | null
           gateway_charge_id: string | null
           gateway_reference_code: string
           gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
@@ -1778,6 +1806,7 @@ export type Database = {
           refunded_at: string | null
           row_version: number
           state: Database["public"]["Enums"]["payment_schedule_state"]
+          supersedes_schedule_id: string | null
           upcoming_charge_notified_at: string | null
           updated_at: string
         }
@@ -1806,6 +1835,7 @@ export type Database = {
           failed_permanently_at?: string | null
           failure_code?: string | null
           failure_reason?: string | null
+          far_recapture_pending_at?: string | null
           gateway_charge_id?: string | null
           gateway_reference_code: string
           gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
@@ -1832,6 +1862,7 @@ export type Database = {
           refunded_at?: string | null
           row_version: number
           state: Database["public"]["Enums"]["payment_schedule_state"]
+          supersedes_schedule_id?: string | null
           upcoming_charge_notified_at?: string | null
           updated_at: string
         }
@@ -1860,6 +1891,7 @@ export type Database = {
           failed_permanently_at?: string | null
           failure_code?: string | null
           failure_reason?: string | null
+          far_recapture_pending_at?: string | null
           gateway_charge_id?: string | null
           gateway_reference_code?: string
           gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
@@ -1886,6 +1918,7 @@ export type Database = {
           refunded_at?: string | null
           row_version?: number
           state?: Database["public"]["Enums"]["payment_schedule_state"]
+          supersedes_schedule_id?: string | null
           upcoming_charge_notified_at?: string | null
           updated_at?: string
         }
@@ -3720,7 +3753,7 @@ export type Database = {
           {
             foreignKeyName: "payment_schedules_contracted_service_id_fkey"
             columns: ["contracted_service_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "contracted_services"
             referencedColumns: ["id"]
           },
@@ -3782,7 +3815,7 @@ export type Database = {
           {
             foreignKeyName: "payment_schedules_contracted_service_id_fkey"
             columns: ["contracted_service_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "contracted_services"
             referencedColumns: ["id"]
           },
@@ -4179,6 +4212,7 @@ export type Database = {
         Args: { p_batch_size?: number }
         Returns: Json
       }
+      cron_payment_far_reschedule_recapture: { Args: never; Returns: Json }
       cron_payment_recover_orphaned_schedules: { Args: never; Returns: Json }
       cron_process_service_request_dispatches: { Args: never; Returns: Json }
       cron_process_service_requests_without_proposals: {
@@ -4662,6 +4696,10 @@ export type Database = {
         Args: { p_batch_size?: number }
         Returns: Json
       }
+      payment_claim_far_reschedule_recapture_batch: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
       payment_claim_inanalysis_auto_cancel_void_batch: {
         Args: { p_batch_size?: number }
         Returns: Json
@@ -4702,6 +4740,10 @@ export type Database = {
           p_undo_attempt_increment?: boolean
         }
         Returns: string
+      }
+      payment_commit_far_reschedule_after_gateway: {
+        Args: { p_expected_refund_amount?: number; p_schedule_id: string }
+        Returns: Json
       }
       payment_commit_inanalysis_auto_cancel_void_outcome: {
         Args: {
@@ -4857,6 +4899,10 @@ export type Database = {
         Args: { p_batch_size?: number }
         Returns: Json
       }
+      payment_mark_far_recapture_gateway_acked: {
+        Args: { p_refunded_amount?: number; p_schedule_id: string }
+        Returns: undefined
+      }
       payment_mark_kyc_credenciamento_email_dispatched: {
         Args: { p_provider_gateway_account_id: string }
         Returns: undefined
@@ -4910,6 +4956,10 @@ export type Database = {
           p_service_id: string
         }
         Returns: string
+      }
+      payment_prepare_far_reschedule_recapture: {
+        Args: { p_contracted_service_id?: string; p_schedule_id?: string }
+        Returns: Json
       }
       payment_prepare_refund_request: {
         Args: {
@@ -4998,6 +5048,10 @@ export type Database = {
       payment_sanitize_webhook_headers: {
         Args: { p_headers: Json }
         Returns: Json
+      }
+      payment_schedule_state_is_terminal: {
+        Args: { p_state: Database["public"]["Enums"]["payment_schedule_state"] }
+        Returns: boolean
       }
       payment_service_execution_at: {
         Args: {

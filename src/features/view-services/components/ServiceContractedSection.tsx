@@ -78,6 +78,11 @@ export function ServiceContractedSection({
             <span>Agendado para {scheduledLabel}</span>
           </p>
         ) : null}
+        {contracted.farRecapturePending ? (
+          <p className="text-muted-foreground" data-testid="far-recapture-pending-notice">
+            Estamos reajustando a cobrança para a nova data. Isso pode levar alguns minutos.
+          </p>
+        ) : null}
       </div>
       {showProviderSettlement ? (
         <div className="pt-2 empty:hidden">

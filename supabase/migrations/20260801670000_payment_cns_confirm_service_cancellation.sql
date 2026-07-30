@@ -63,7 +63,9 @@ begin
   select ps.*
   into v_schedule
   from public.payment_schedules ps
-  where ps.contracted_service_id = p_contracted_service_id;
+  where ps.contracted_service_id = p_contracted_service_id
+    and not public.payment_schedule_state_is_terminal(ps.state)
+  for update;
 
   if not found then
     perform public.cns_cancel_active_service_reschedule_requests(p_contracted_service_id);

@@ -77,4 +77,17 @@ describe("ServiceContractedSection", () => {
     expect(screen.getByTestId("settlement")).toBeInTheDocument();
     expect(screen.queryByText(/Profissional:/)).not.toBeInTheDocument();
   });
+
+  it("shows far-recapture pending notice when flag is set", () => {
+    authMocks.profile = { role: "client" };
+    render(
+      <ServiceContractedSection
+        contracted={{ ...contracted, farRecapturePending: true }}
+      />,
+    );
+
+    expect(screen.getByTestId("far-recapture-pending-notice")).toHaveTextContent(
+      /reajustando a cobrança/i,
+    );
+  });
 });

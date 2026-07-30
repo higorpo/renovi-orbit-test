@@ -124,8 +124,8 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 
 | Artefato | Uso na documentação |
 |----------|---------------------|
-| `docs/business/modulos/service-reschedule/` | README (elegibilidade cliente/prestador em `PENDING_PAYMENT`/`CONFIRMED`; mensagem SYSTEM ao solicitar) + feature propor nova data |
-| `docs/cancelamento-reagendamento-servicos/CONTEXT.md` | Glossário de domínio (inclui modo de data na proposta; reagendamento iniciado pelo prestador em `PENDING_PAYMENT` ou `CONFIRMED`) |
+| `docs/business/modulos/service-reschedule/` | README (elegibilidade; mensagem SYSTEM; relação com `payments`) + features propor nova data e [integração pagamento pós-aceite](./modulos/service-reschedule/features/integracao-pagamento-pos-aceite.md) |
+| `docs/cancelamento-reagendamento-servicos/CONTEXT.md` | Glossário de domínio (modo de data; prestador em `PENDING_PAYMENT`/`CONFIRMED`; aceite + ramificação pós-`PAID` perto/longe) |
 | `docs/cancelamento-reagendamento-servicos/details.md` | Fluxo de produto; exemplos de mensagem automática no pedido (com/sem `Observação:`); regra do prestador sem janela de 48h |
 | `src/features/service-reschedule/utils/deriveRescheduleDateMode.ts` | Data única vs período a partir de `duration_unit`/`duration_value` |
 | `src/features/service-reschedule/types/serviceReschedule.forms.ts` | Validação Zod + `matchesProposalDayDurationISO` |
@@ -133,9 +133,14 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `src/features/service-reschedule/components/ProposeRescheduleFlowReminder.tsx` | Banner “Como funciona o reagendamento?” (dispensável; visibilidade local à abertura do dialog) |
 | `src/features/service-reschedule/utils/mapRescheduleSnapshot.ts` | Lê `duration_unit`/`duration_value` do snapshot |
 | `src/features/service-reschedule/utils/rescheduleCardCopy.ts`, `formatRescheduleSlot.ts` | “Data proposta” / “Período proposto”; oculta range se fim nulo ou = início |
+| `src/features/view-services/components/ServiceContractedSection.tsx` | Aviso discreto enquanto `farRecapturePending` (recaptura longe pós-`PAID`) |
+| `src/features/view-services/utils/serviceMapper.ts` | Mapeia `far_recapture_pending` → `farRecapturePending` |
 | `supabase/migrations/20260802020000_service_reschedule_helpers.sql` | `_cns_validate_reschedule_slot(slot, duration_unit, duration_value)` |
 | `supabase/migrations/20260802030000_service_reschedule_rpcs_core.sql` | `cns_request_service_reschedule`: elegibilidade `PENDING_PAYMENT`/`CONFIRMED` (cliente com janela 48h; prestador sem); mensagem SYSTEM; observação opcional com `\n\nObservação: ` |
 | `supabase/migrations/20260802130000_service_reschedule_supersede_rounds.sql` (e correlatas `20260802*`) | `_cns_reschedule_snapshot_action_flags` e `cns_propose_service_reschedule`: prestador solicita/propõe em `PENDING_PAYMENT` ou `CONFIRMED`; snapshot com `duration_unit`/`duration_value` |
+| `supabase/migrations/20260801220000_payment_reschedule_charge_date.sql` / `20260802200000_payment_far_reschedule_recapture.sql` | `payment_reschedule_charge_date` (perto vs longe); prepare/commit/claim/cron de recaptura longe |
+| `supabase/functions/process-far-reschedule-recapture/` | EF interna: reembolso integral + commit de nova parcela T-2 (acordada via pg_net; client não invoca) |
+| `supabase/tests/payments/payment_far_reschedule_*.sql` | pgTAP: ramificação perto/longe e prepare/commit |
 
 ## Matching progressivo (backend + feed)
 

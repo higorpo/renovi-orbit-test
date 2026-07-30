@@ -141,6 +141,21 @@ values
     'payment_failed_permanent_spike_threshold_15m',
     '5'::jsonb,
     'Alert when CHARGE_FAILED_PERMANENT audit events in last 15m exceed this count'
+  ),
+  (
+    'far_reschedule_recapture_threshold_days',
+    '15'::jsonb,
+    'Post-PAID reschedule: when new execution_at is more than this many days ahead, full refund + new T-2 charge cycle'
+  ),
+  (
+    'far_reschedule_recapture_batch_size',
+    '10'::jsonb,
+    'Max PAID schedules with far_recapture_pending_at claimed per safety-net cron tick'
+  ),
+  (
+    'far_reschedule_recapture_stale_minutes',
+    '15'::jsonb,
+    'Minutes after far_recapture_pending_at before Sentry CRITICAL stale alert'
   )
 on conflict (key) do update set
   value = excluded.value,

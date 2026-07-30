@@ -139,4 +139,4 @@ O lembrete é **apenas UI**: não altera validação, payload do slot nem compor
 ## 9. Lacunas / fora de escopo deste documento
 
 - Regras completas de quem pode cancelar, pedir ajuste, aceitar ou expirar a solicitação (a elegibilidade de **status** para o prestador solicitar/propor está no [README do módulo](../README.md)).
-- Integração detalhada com recálculo de cobrança após aceite (ver módulo `payments` / `docs/payment-system/`).
+- Integração com cobrança após aceite: ver [integracao-pagamento-pos-aceite.md](./integracao-pagamento-pos-aceite.md) (e módulo `payments` / `docs/payment-system/` para o design técnico).

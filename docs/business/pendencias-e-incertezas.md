@@ -47,7 +47,7 @@ Itens que exigem validação humana, evidência parcial ou conflito entre trecho
 
 | ID | Tema | Descrição | Severidade sugerida |
 |----|------|-----------|---------------------|
-| P-11 | Cobertura parcial de `service-reschedule` | Documentado com evidência: elegibilidade de status para **solicitar/propor** (cliente e prestador em `PENDING_PAYMENT`/`CONFIRMED`; cliente com janela 48h; prestador sem); modo de data na **proposta** (duração contratada → data única vs período; `_cns_validate_reschedule_slot`; snapshot com duração; cópias UI); formato da mensagem SYSTEM ao **solicitar** (observação opcional com linha em branco + `Observação:`). Ainda **não** há feature doc de negócio cobrindo o ciclo completo de estados (ajuste, aceite, cancelamento, expiração, supersede) nem o detalhe de recálculo de cobrança pós-aceite. | Baixa — documentação |
+| P-11 | Cobertura parcial de `service-reschedule` | Documentado com evidência: elegibilidade de status para **solicitar/propor** (cliente e prestador em `PENDING_PAYMENT`/`CONFIRMED`; cliente com janela 48h; prestador sem); modo de data na **proposta**; formato da mensagem SYSTEM ao **solicitar**; **integração pagamento pós-aceite** (pré-`PAID` retarget; pós-`PAID` perto `paid_no_charge_update`; pós-`PAID` longe recaptura via `process-far-reschedule-recapture`; aviso `far_recapture_pending`) em [integracao-pagamento-pos-aceite](./modulos/service-reschedule/features/integracao-pagamento-pos-aceite.md). Ainda **não** há feature doc cobrindo o ciclo completo de estados da solicitação (ajuste, cancelamento, expiração, supersede). | Baixa — documentação |
 
 ## Observações do Message Dispatcher
 

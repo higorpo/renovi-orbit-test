@@ -237,6 +237,18 @@ begin
         select ps.state
         from public.payment_schedules ps
         where ps.contracted_service_id = cs.id
+          and not public.payment_schedule_state_is_terminal(ps.state)
+        order by ps.created_at desc
+        limit 1
+      ),
+      'far_recapture_pending', (
+        exists (
+          select 1
+          from public.payment_schedules ps
+          where ps.contracted_service_id = cs.id
+            and ps.state = 'PAID'::public.payment_schedule_state
+            and ps.far_recapture_pending_at is not null
+        )
       ),
       'chat_id', (
         select c.id

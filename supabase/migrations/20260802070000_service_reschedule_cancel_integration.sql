@@ -57,6 +57,7 @@ begin
   into v_schedule
   from public.payment_schedules ps
   where ps.contracted_service_id = p_service_id
+    and not public.payment_schedule_state_is_terminal(ps.state)
   for update;
 
   if not found then
@@ -849,7 +850,9 @@ begin
       ps.failure_reason,
       pga.onboarding_status
     from public.contracted_services cs
-    inner join public.payment_schedules ps on ps.contracted_service_id = cs.id
+    inner join public.payment_schedules ps
+      on ps.contracted_service_id = cs.id
+      and not public.payment_schedule_state_is_terminal(ps.state)
     left join public.provider_gateway_accounts pga
       on pga.provider_id = ps.provider_id
       and pga.gateway_slug = ps.gateway_slug
@@ -1209,16 +1212,24 @@ begin
       updated_at = now()
     where ps.id = v_schedule.id;
 
-    perform public.payment_complete_refund_domain_side_effects(
-      p_service_id := v_schedule.contracted_service_id,
-      p_closed_by_user_id := null,
-      p_initiator := 'system',
-      p_cancellation_reason := coalesce(
-        nullif(btrim(v_schedule.cancellation_reason), ''),
-        'CLIENT_INITIATED'
-      ),
-      p_refund_tier := null
-    );
+    -- Far-reschedule recapture must not cancel service/chat.
+    if coalesce(v_schedule.cancellation_reason, '') <> 'FAR_RESCHEDULE_RECAPTURE'
+      and not exists (
+        select 1
+        from public.payment_schedules newer
+        where newer.supersedes_schedule_id = v_schedule.id
+      ) then
+      perform public.payment_complete_refund_domain_side_effects(
+        p_service_id := v_schedule.contracted_service_id,
+        p_closed_by_user_id := null,
+        p_initiator := 'system',
+        p_cancellation_reason := coalesce(
+          nullif(btrim(v_schedule.cancellation_reason), ''),
+          'CLIENT_INITIATED'
+        ),
+        p_refund_tier := null
+      );
+    end if;
 
     v_audit_event := case
       when v_gateway_state = 'REFUNDED' then 'RECONCILIATION_REFUNDED'
@@ -1384,16 +1395,24 @@ begin
     updated_at = now()
   where ps.id = v_schedule.id;
 
-  perform public.payment_complete_refund_domain_side_effects(
-    p_service_id := v_schedule.contracted_service_id,
-    p_closed_by_user_id := null,
-    p_initiator := 'system',
-    p_cancellation_reason := coalesce(
-      nullif(btrim(v_schedule.cancellation_reason), ''),
-      'CLIENT_INITIATED'
-    ),
-    p_refund_tier := null
-  );
+  -- Far-reschedule recapture must not cancel service/chat.
+  if coalesce(v_schedule.cancellation_reason, '') <> 'FAR_RESCHEDULE_RECAPTURE'
+    and not exists (
+      select 1
+      from public.payment_schedules newer
+      where newer.supersedes_schedule_id = v_schedule.id
+    ) then
+    perform public.payment_complete_refund_domain_side_effects(
+      p_service_id := v_schedule.contracted_service_id,
+      p_closed_by_user_id := null,
+      p_initiator := 'system',
+      p_cancellation_reason := coalesce(
+        nullif(btrim(v_schedule.cancellation_reason), ''),
+        'CLIENT_INITIATED'
+      ),
+      p_refund_tier := null
+    );
+  end if;
 
   perform public.payment_write_audit(
     p_event_type := 'REFUND_CONFIRMED',

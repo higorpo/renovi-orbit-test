@@ -443,6 +443,10 @@ verify_jwt = false
 [functions.process-refund]
 verify_jwt = true
 
+# Internal pg_net / cron — orbit cron secret in handler (far post-PAID reschedule recapture).
+[functions.process-far-reschedule-recapture]
+verify_jwt = false
+
 # pg_cron via payment_cron_detect_netcred_onboarding(); cron secret in handler.
 [functions.detect-netcred-onboarding]
 verify_jwt = false

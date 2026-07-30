@@ -24,7 +24,7 @@
 | Documento | Conteúdo |
 |-----------|----------|
 | [features/checkout-e-cobranca.md](./features/checkout-e-cobranca.md) | Checkout, ClearSale (sessão server-side; fail-closed em prod), tokenização com CPF do titular, vínculo token↔**company da plataforma** Renovi (prestador só no payout), T-2, estados de parcela, **fórmula `charge_amount` (gross-up NetCred)** + disclosure de recálculo na cobrança, KYC (`ACTIVE` = company+bank; sem ACTIVE **não cobra**), cobrança manual (reconcilia ref. anterior; sessão ClearSale fresca), `CARD_REJECTED` opaco, `PROFILE_INCOMPLETE`, rejeição ClearSale → `RISK_ANALYSIS_*`, mensagens amigáveis pt-BR |
-| [features/historico-e-reembolso.md](./features/historico-e-reembolso.md) | Histórico cliente/prestador; breakdown de reembolso; **gateway first** pós-`PAID`; faixa ToS pelo slot vigente pós-reagendamento (`refund_anchor` só auditoria); `PAID`→`REFUNDED` via webhook; assinatura inválida terminal |
+| [features/historico-e-reembolso.md](./features/historico-e-reembolso.md) | Histórico cliente/prestador; breakdown de reembolso; **gateway first** pós-`PAID`; faixa ToS pelo slot vigente pós-reagendamento (`refund_anchor` só auditoria); recaptura longe pós-reagendamento distinta de cancelamento ToS; `PAID`→`REFUNDED` via webhook; assinatura inválida terminal |
 | Engenharia | `docs/payment-system/design.md` (§3.13 histórico; §4.8 reembolso) |
 
 **Erros na UI:** checkout, cartões e cobrança manual nunca exibem texto bruto do backend — só mensagens amigáveis em pt-BR mapeadas por código (ver [checkout-e-cobranca](./features/checkout-e-cobranca.md#mensagens-de-erro-na-ui-pt-br)). Rejeições ClearSale “Análise de Risco: …” viram `RISK_ANALYSIS_*` em `failure_code` (mensagem bruta só em `failure_reason` para diagnóstico). Tokenização rejeitada ao cliente: `CARD_REJECTED`.
@@ -33,5 +33,6 @@
 
 - **`negotiation-proposals` / `chats`:** aceite de proposta cria `payment_schedules` e abre checkout.
 - **`my-account`:** embute `PaymentHistorySection` (cliente e prestador) em `/dashboard/conta`.
-- **`my-services` / `view-services`:** status do serviço contratado reflete ciclo de pagamento; cancelamento pós-pagamento dispara reembolso.
+- **`my-services` / `view-services`:** status do serviço contratado reflete ciclo de pagamento; cancelamento pós-pagamento dispara reembolso; aviso discreto de `far_recapture_pending` no detalhe.
+- **`service-reschedule`:** ao aceitar nova data, `payment_reschedule_charge_date` retarget pré-`PAID`, mantém captura pós-`PAID` perto (≤15d) ou orquestra recaptura longe (EF `process-far-reschedule-recapture`) — ver [integracao-pagamento-pos-aceite](../service-reschedule/features/integracao-pagamento-pos-aceite.md).
 - **`message-dispatcher`:** notificações de cobrança (`payment_enqueue_notifications`).

@@ -232,6 +232,7 @@ describe("propose / accept / adjustment / cancel mutations", () => {
       p_reschedule_request_id: "req-1",
       p_idempotency_key: "idem-accept",
     });
+    expect(rpcMock).toHaveBeenCalledTimes(1);
     expect(result.data?.superseded_request_id).toBe("req-old");
     expect(result.data?.superseded_reschedule?.activeRequest?.id).toBe("req-old");
   });

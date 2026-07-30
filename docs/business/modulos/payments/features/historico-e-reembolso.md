@@ -56,6 +56,8 @@ Cancelamento/reembolso pós-pagamento calcula a faixa ToS de multa/estorno com o
 
 No primeiro `PAID`, a parcela ainda grava **`refund_anchor_execution_at`** como **snapshot de auditoria** (horário de execução na captura). Esse campo **não** alimenta o cálculo de faixa ToS.
 
+**Reagendamento pós-`PAID` longe (>15 dias):** além da atualização do slot, o backend pode reembolsar integralmente a captura e abrir nova parcela `SCHEDULED` em T-2 (`FAR_RESCHEDULE_RECAPTURE`), com o serviço em `PENDING_PAYMENT` até a nova captura — ver [integracao-pagamento-pos-aceite](../../service-reschedule/features/integracao-pagamento-pos-aceite.md). Isso é distinto do cancelamento com multa ToS.
+
 ### Webhook: `PAID` → `REFUNDED`
 
 Além do caminho clássico `PAID` → `REFUND_REQUESTED` → `REFUNDED`/`PARTIALLY_REFUNDED`, o processamento de `TRANSACTION_REFUND` pode aplicar o reembolso também a partir de **`PAID`** (ex.: estorno iniciado fora do fluxo app / confirmação direta do gateway).

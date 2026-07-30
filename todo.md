@@ -131,7 +131,7 @@ Fluxo de pagamentos, itens com problemas:
 
 
 
-- É permitido fazer reagendamento de serviços  para muito longe (por exemplo +30 dias a frente). O prestador pode pedir reagendamento sem teto mínimo,o cliente pode pedir reagendamento até 48hrs antes, em tese o pagamento ainda naõ estaria capturado, mas tem chance. Como o prestador pode pedir faltando 4hrs por exemplo, o pagamento já poderia estar capturado, nesse caso teríamos que fazer uma lógica para remembolsar o valor e fazer a captura novamente em data futura caso a data do pedido fosse para muito mais a frente para evitar cair na liquidação automática.
+- ~~É permitido fazer reagendamento de serviços para muito longe (por exemplo +30 dias a frente). … lógica para reembolsar o valor e fazer a captura novamente…~~ **Feito:** pós-`PAID` com execução >15 dias → `paid_far_recapture_required` + EF `process-far-reschedule-recapture` (gateway-first, backend-only).
 
 
 

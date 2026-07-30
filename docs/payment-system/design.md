@@ -237,7 +237,8 @@ both:               isLiable = true
 ### 1.7.8 Rescheduling
 
 - **Pre-`PAID`:** recalculates `charge_scheduled_at`, T-12h, pre-charge notification.
-- **Post-`PAID`:** allowed while `contracted_services.status = 'CONFIRMED'` only (not after `EXECUTED`); updates slot columns; **no new charge**; refund tiers use **new** `payment_service_execution_at`; provider notified by rescheduling subsystem.
+- **Post-`PAID` near (≤ `far_reschedule_recapture_threshold_days`, default 15):** allowed while `contracted_services.status = 'CONFIRMED'` only (not after `EXECUTED`); updates slot columns; **no new charge**; refund tiers use **new** `payment_service_execution_at`; provider notified by rescheduling subsystem.
+- **Post-`PAID` far (> threshold days ahead):** outcome `paid_far_recapture_required` — set `far_recapture_pending_at`, wake `process-far-reschedule-recapture` via `orbit_invoke_edge_function` (pg_net); safety-net cron reclaims orphans. Gateway **full refund first**, then atomic commit: old schedule → `REFUNDED` (`FAR_RESCHEDULE_RECAPTURE`), new `SCHEDULED` at T-2 (`supersedes_schedule_id`, cycle `idempotency_key`), CS → `PENDING_PAYMENT`. **Does not** cancel service or close chat. ClearSale session/IP copied to the new schedule; if charge fails weeks later, existing `FAILED` + manual payment path applies.
 
 ### 1.7.9 Notifications (MMD)
 
@@ -1647,7 +1648,7 @@ WHERE id = :schedule_id AND upcoming_charge_notified_at IS NULL;
 
 **Emergency provider notification (§1.7.2):** When `PAID → CONFIRMED` and `payment_service_execution_at(cs) - now() < 24 hours`, enqueue **urgent** provider push (MMD bypass priority) in addition to standard confirmation.
 
-**Rescheduling reset:** When the rescheduling subsystem updates slot columns: pre-`PAID` recalculates `charge_scheduled_at` (§1.7.8); post-`PAID` allowed only while `contracted_services.status = 'CONFIRMED'` — no new charge, refund tiers use updated `payment_service_execution_at`.
+**Rescheduling reset:** When the rescheduling subsystem updates slot columns: pre-`PAID` recalculates `charge_scheduled_at` (§1.7.8); post-`PAID` near (≤ threshold) — no new charge, refund tiers use updated `payment_service_execution_at`; post-`PAID` far — full refund + new T-2 `SCHEDULED` cycle (§1.7.8). Allowed only while `contracted_services.status = 'CONFIRMED'`.
 
 ## 4.11 Phase 12: Manual Payment Recovery (Req 13, 31)
 

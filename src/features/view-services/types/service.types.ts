@@ -70,6 +70,8 @@ export interface ContractedServiceSummary {
   updatedAt: string | null;
   /** Current payment_schedules.state when a schedule exists for this contracted service. */
   paymentScheduleState?: PaymentScheduleState | null;
+  /** True while post-PAID far reschedule refund+recapture is in flight. */
+  farRecapturePending?: boolean;
   reschedule?: ServiceRescheduleSnapshot | null;
 }
 

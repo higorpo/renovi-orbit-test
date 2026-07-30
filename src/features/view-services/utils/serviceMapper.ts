@@ -100,6 +100,7 @@ export interface RpcContractedService {
   updated_at?: string | null;
   chat_id?: string | null;
   payment_schedule_state?: string | null;
+  far_recapture_pending?: boolean | null;
   provider?: RpcContractedProvider | null;
   reschedule?: unknown;
 }
@@ -182,6 +183,7 @@ function mapContracted(contracted: RpcContractedService | null | undefined): Con
     chatId: contracted.chat_id ?? null,
     updatedAt: contracted.updated_at ?? null,
     paymentScheduleState: (contracted.payment_schedule_state as ContractedServiceSummary["paymentScheduleState"]) ?? null,
+    farRecapturePending: Boolean(contracted.far_recapture_pending),
     reschedule: mapRescheduleSnapshot(contracted.reschedule),
   };
 }

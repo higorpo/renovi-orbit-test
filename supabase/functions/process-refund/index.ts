@@ -81,6 +81,9 @@ function createDeps(): ProcessRefundDeps {
           "id, state, base_amount, paid_amount, gateway_transaction_id, refund_submit_status",
         )
         .eq("contracted_service_id", serviceId)
+        .not("state", "in", "(REFUNDED,PARTIALLY_REFUNDED,CANCELLED,VOIDED,EXPIRED)")
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (scheduleError || !schedule) {

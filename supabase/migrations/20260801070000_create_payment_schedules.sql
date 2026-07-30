@@ -55,19 +55,25 @@ create table public.payment_schedules (
   failure_reason text,
   cancellation_reason text,
   reconciliation_failure_count smallint not null default 0,
+  -- Far post-PAID reschedule: refund + re-capture cycle (see payment_reschedule_charge_date).
+  far_recapture_pending_at timestamptz,
+  supersedes_schedule_id uuid references public.payment_schedules (id) on delete restrict,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint payment_schedules_idempotency_key_unique unique (idempotency_key),
-  constraint payment_schedules_contracted_service_id_unique unique (contracted_service_id),
   constraint payment_schedules_gateway_reference_code_unique unique (gateway_reference_code),
+  -- Cycle 1: equals contracted_service_id; later cycles: {cs_id}:c{n}.
   constraint payment_schedules_idempotency_key_matches_service_check
-    check (idempotency_key = contracted_service_id::text),
+    check (
+      idempotency_key = contracted_service_id::text
+      or idempotency_key like (contracted_service_id::text || ':c%')
+    ),
   constraint payment_schedules_payout_lte_base_check
     check (provider_payout <= base_amount)
 );
 
 comment on table public.payment_schedules is
-  'Authoritative charge queue; one row per contracted service. State machine source of truth.';
+  'Authoritative charge queue; at most one non-terminal row per contracted service. State machine source of truth.';
 
 comment on column public.payment_schedules.client_id is
   'Denormalized from contracted_services for RLS; enforced by participant trigger and accept_proposal writer.';
@@ -76,7 +82,13 @@ comment on column public.payment_schedules.provider_id is
   'Denormalized from contracted_services for RLS; enforced by participant trigger and accept_proposal writer.';
 
 comment on column public.payment_schedules.idempotency_key is
-  'Equals contracted_service_id text; prevents duplicate schedule on accept_proposal retry.';
+  'Cycle key: contracted_service_id text on first schedule; {cs_id}:c{n} on far-recapture cycles.';
+
+comment on column public.payment_schedules.far_recapture_pending_at is
+  'Set when post-PAID far reschedule requires full refund + new T-2 schedule; cleared on commit.';
+
+comment on column public.payment_schedules.supersedes_schedule_id is
+  'Prior payment_schedules.id this cycle replaces after far-reschedule recapture.';
 
 comment on column public.payment_schedules.max_attempts is
   'Informational snapshot at accept; cron evaluates platform_constants.max_charge_attempts at runtime.';
@@ -98,6 +110,22 @@ comment on column public.payment_schedules.refund_submit_status is
 
 comment on column public.payment_schedules.refund_anchor_execution_at is
   'Service execution_at snapshot at first PAID (audit). Client ToS refund tiers use payment_service_execution_at (current slot after reschedule).';
+
+-- One active (non-terminal) schedule per contracted service; REFUNDED/CANCELLED history may coexist.
+create unique index payment_schedules_one_active_per_service_idx
+  on public.payment_schedules (contracted_service_id)
+  where state not in (
+    'REFUNDED'::public.payment_schedule_state,
+    'PARTIALLY_REFUNDED'::public.payment_schedule_state,
+    'CANCELLED'::public.payment_schedule_state,
+    'VOIDED'::public.payment_schedule_state,
+    'EXPIRED'::public.payment_schedule_state
+  );
+
+create index payment_schedules_far_recapture_pending_idx
+  on public.payment_schedules (far_recapture_pending_at, id)
+  where far_recapture_pending_at is not null
+    and state = 'PAID'::public.payment_schedule_state;
 
 -- automatic_attempt_count filter uses platform_constants.max_charge_attempts at runtime (not in index).
 create index payment_schedules_queue_claim_idx

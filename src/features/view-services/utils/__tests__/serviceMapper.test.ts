@@ -69,6 +69,7 @@ describe("serviceMapper", () => {
     expect(model.contracted?.status).toBe("PENDING_PAYMENT");
     expect(model.contracted?.chatId).toBe("chat-contracted-1");
     expect(model.contracted?.paymentScheduleState).toBe("FAILED_PERMANENT");
+    expect(model.contracted?.farRecapturePending).toBe(false);
     expect(model.tags).toBeNull();
     expect(model.suggestedEquipment).toEqual(["ladder"]);
     expect(model.suggestedMaterials).toEqual(["screws"]);

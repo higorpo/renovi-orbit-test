@@ -55,7 +55,10 @@ begin
   select ps.id
   into v_schedule_id
   from public.payment_schedules ps
-  where ps.contracted_service_id = p_service_id;
+  where ps.contracted_service_id = p_service_id
+    and not public.payment_schedule_state_is_terminal(ps.state)
+  order by ps.created_at desc
+  limit 1;
 
   if v_schedule_id is not null then
     perform public.payment_write_audit(
