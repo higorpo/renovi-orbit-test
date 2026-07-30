@@ -2,6 +2,8 @@
 
 begin;
 
+\ir fixtures/clear_due_dispatches.inc
+
 select plan(4);
 
 create temp table _upd_fixture as

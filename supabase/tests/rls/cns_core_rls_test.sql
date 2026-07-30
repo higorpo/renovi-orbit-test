@@ -78,7 +78,7 @@ select public.create_provider_proposal(
   'hours',
   jsonb_build_array(
     jsonb_build_object(
-      'start_date', current_date::text,
+      'start_date', (current_date + 1)::text,
       'shift', 'morning'
     )
   ),

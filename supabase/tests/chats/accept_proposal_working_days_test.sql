@@ -57,21 +57,28 @@ select pg_temp.cns_seed_chat(
   p_provider_id := '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid
 );
 
--- Thu through Tue (+5 days): 6 calendar days, 4 working days (one weekend inside).
+-- Next Thursday through the following Tuesday (+5 days): 6 calendar days, 4 working days.
+-- When today is already Thursday, offset must be 7 (not 0) so start_date is after today.
 create temp table _working_days_slot as
 select jsonb_build_object(
   'start_date',
   (
     current_date
     + (
-      (4 - extract(isodow from current_date)::int + 7) % 7
+      case
+        when ((4 - extract(isodow from current_date)::int + 7) % 7) = 0 then 7
+        else (4 - extract(isodow from current_date)::int + 7) % 7
+      end
     )::int
   )::text,
   'end_date',
   (
     current_date
     + (
-      (4 - extract(isodow from current_date)::int + 7) % 7
+      case
+        when ((4 - extract(isodow from current_date)::int + 7) % 7) = 0 then 7
+        else (4 - extract(isodow from current_date)::int + 7) % 7
+      end
     )::int
     + 5
   )::text,

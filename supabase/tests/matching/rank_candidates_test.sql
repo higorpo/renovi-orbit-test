@@ -7,6 +7,11 @@ select plan(3);
 create temp table _rank_sr as
 select '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid as service_request_id;
 
+-- Clear leftover visibility from seeds/crons for the seed SR + provider pair.
+delete from public.service_request_provider_visibility
+where service_request_id = (select service_request_id from _rank_sr)
+  and provider_id = '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid;
+
 insert into public.service_request_provider_visibility (
   service_request_id,
   provider_id,

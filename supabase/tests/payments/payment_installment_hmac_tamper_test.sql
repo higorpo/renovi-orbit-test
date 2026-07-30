@@ -169,7 +169,7 @@ select
   card_token_id,
   '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
   'netcred',
-  'hmac-tamper-profile', '1014',
+  'hmac-tamper-profile', public.payment_netcred_platform_company_id(),
   '411111******1111',
   'VISA',
   'opaque-hmac-token',

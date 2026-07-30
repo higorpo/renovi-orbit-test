@@ -209,7 +209,7 @@ Deno.test("invalid signature does not mutate state beyond quarantine ingest", as
   assertEquals(queued, false);
 });
 
-Deno.test("webhook IP rate limit uses failClosed:true", async () => {
+Deno.test("webhook IP rate limit uses failClosed:false (fail-open)", async () => {
   let seenFailClosed: boolean | undefined;
 
   const response = await handleNetcredWebhookRequest(
@@ -223,7 +223,8 @@ Deno.test("webhook IP rate limit uses failClosed:true", async () => {
   );
 
   assertEquals(response.status, 429);
-  assertEquals(seenFailClosed, true);
+  // Prefer accepting webhooks if rate-limit infra is down (payment events).
+  assertEquals(seenFailClosed, false);
 });
 
 Deno.test("duplicate webhook returns 200 and marks duplicate", async () => {

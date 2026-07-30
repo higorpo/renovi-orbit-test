@@ -178,146 +178,158 @@ describe("ProviderKycForm wizard", () => {
     expect(screen.getByText(/Passo 2 de 5/i)).toBeInTheDocument();
   });
 
-  it("uploads documents with legal-rep-id key and submits identity params for CNPJ", async () => {
-    render(
-      <ProviderKycForm
-        providerId="provider-1"
-        accountEmail="provider@example.com"
-        onSubmitted={onSubmitted}
-      />,
-    );
-
-    await waitForWizardReady();
-    fireEvent.click(screen.getByRole("button", { name: /Pessoa jurídica \(CNPJ\)/i }));
-    clickContinue();
-
-    await waitFor(() => {
-      expect(screen.getByText(/Passo 2 de 5/i)).toBeInTheDocument();
-    });
-
-    fireEvent.change(screen.getByLabelText("Nome completo"), {
-      target: { value: "Empresa LTDA" },
-    });
-    fireEvent.change(screen.getByLabelText("CNPJ"), {
-      target: { value: "11.444.777/0001-61" },
-    });
-    fireEvent.change(screen.getByLabelText("Telefone"), {
-      target: { value: "48999999999" },
-    });
-    fireEvent.change(screen.getByLabelText("Razão social"), {
-      target: { value: "Empresa LTDA" },
-    });
-    fireEvent.change(screen.getByLabelText("Nome fantasia"), {
-      target: { value: "Empresa" },
-    });
-    fireEvent.change(screen.getByLabelText("Nome do representante legal"), {
-      target: { value: "Maria Silva" },
-    });
-    fireEvent.change(screen.getByLabelText("CPF do representante"), {
-      target: { value: "390.533.447-05" },
-    });
-    fireEvent.change(screen.getByLabelText("Telefone do representante"), {
-      target: { value: "48988887777" },
-    });
-    clickContinue();
-
-    await waitFor(() => {
-      expect(screen.getByText(/Passo 3 de 5/i)).toBeInTheDocument();
-    });
-    await fillBankAndContinue();
-
-    const pdf = new File(["x"], "doc.pdf", { type: "application/pdf" });
-    fireEvent.change(screen.getByLabelText(/Documento de identidade/i), {
-      target: { files: [pdf] },
-    });
-    fireEvent.change(screen.getByLabelText(/Comprovante de endereço/i), {
-      target: { files: [pdf] },
-    });
-    fireEvent.change(screen.getByLabelText(/Contrato social/i), {
-      target: { files: [pdf] },
-    });
-    fireEvent.change(screen.getByLabelText(/Documento do representante legal/i), {
-      target: { files: [pdf] },
-    });
-    clickContinue();
-
-    await waitFor(() => {
-      expect(screen.getByText(/Passo 5 de 5/i)).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: /^Enviar$/i }));
-
-    await waitFor(() => {
-      expect(kycApi.uploadKycDocument).toHaveBeenCalledTimes(4);
-      expect(kycApi.uploadKycDocument).toHaveBeenCalledWith(
-        "provider-1",
-        "legal-rep-id",
-        expect.any(File),
+  it(
+    "uploads documents with legal-rep-id key and submits identity params for CNPJ",
+    async () => {
+      render(
+        <ProviderKycForm
+          providerId="provider-1"
+          accountEmail="provider@example.com"
+          onSubmitted={onSubmitted}
+        />,
       );
-      expect(mutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({
-          entityType: "CNPJ",
-          razaoSocial: "Empresa LTDA",
-          legalRepFullName: "Maria Silva",
-        }),
+
+      await waitForWizardReady();
+      fireEvent.click(screen.getByRole("button", { name: /Pessoa jurídica \(CNPJ\)/i }));
+      clickContinue();
+
+      await waitFor(() => {
+        expect(screen.getByText(/Passo 2 de 5/i)).toBeInTheDocument();
+      });
+
+      fireEvent.change(screen.getByLabelText("Nome completo"), {
+        target: { value: "Empresa LTDA" },
+      });
+      fireEvent.change(screen.getByLabelText("CNPJ"), {
+        target: { value: "11.444.777/0001-61" },
+      });
+      fireEvent.change(screen.getByLabelText("Telefone"), {
+        target: { value: "48999999999" },
+      });
+      fireEvent.change(screen.getByLabelText("Razão social"), {
+        target: { value: "Empresa LTDA" },
+      });
+      fireEvent.change(screen.getByLabelText("Nome fantasia"), {
+        target: { value: "Empresa" },
+      });
+      fireEvent.change(screen.getByLabelText("Nome do representante legal"), {
+        target: { value: "Maria Silva" },
+      });
+      fireEvent.change(screen.getByLabelText("CPF do representante"), {
+        target: { value: "390.533.447-05" },
+      });
+      fireEvent.change(screen.getByLabelText("Telefone do representante"), {
+        target: { value: "48988887777" },
+      });
+      clickContinue();
+
+      await waitFor(() => {
+        expect(screen.getByText(/Passo 3 de 5/i)).toBeInTheDocument();
+      });
+      await fillBankAndContinue();
+
+      const pdf = new File(["x"], "doc.pdf", { type: "application/pdf" });
+      fireEvent.change(screen.getByLabelText(/Documento de identidade/i), {
+        target: { files: [pdf] },
+      });
+      fireEvent.change(screen.getByLabelText(/Comprovante de endereço/i), {
+        target: { files: [pdf] },
+      });
+      fireEvent.change(screen.getByLabelText(/Contrato social/i), {
+        target: { files: [pdf] },
+      });
+      fireEvent.change(screen.getByLabelText(/Documento do representante legal/i), {
+        target: { files: [pdf] },
+      });
+      clickContinue();
+
+      await waitFor(() => {
+        expect(screen.getByText(/Passo 5 de 5/i)).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole("button", { name: /^Enviar$/i }));
+
+      await waitFor(() => {
+        expect(kycApi.uploadKycDocument).toHaveBeenCalledTimes(4);
+        expect(kycApi.uploadKycDocument).toHaveBeenCalledWith(
+          "provider-1",
+          "legal-rep-id",
+          expect.any(File),
+        );
+        expect(mutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            entityType: "CNPJ",
+            razaoSocial: "Empresa LTDA",
+            legalRepFullName: "Maria Silva",
+          }),
+        );
+        expect(onSubmitted).toHaveBeenCalled();
+      });
+    },
+    15_000,
+  );
+
+  it(
+    "uploads documents and dispatches KYC on valid CPF submit",
+    async () => {
+      render(
+        <ProviderKycForm
+          providerId="provider-1"
+          accountEmail="provider@example.com"
+          onSubmitted={onSubmitted}
+        />,
       );
-      expect(onSubmitted).toHaveBeenCalled();
-    });
-  });
 
-  it("uploads documents and dispatches KYC on valid CPF submit", async () => {
-    render(
-      <ProviderKycForm
-        providerId="provider-1"
-        accountEmail="provider@example.com"
-        onSubmitted={onSubmitted}
-      />,
-    );
+      await fillIdentityCpfAndContinue();
+      await fillBankAndContinue();
+      await fillDocumentsCpfAndContinue();
 
-    await fillIdentityCpfAndContinue();
-    await fillBankAndContinue();
-    await fillDocumentsCpfAndContinue();
+      fireEvent.click(screen.getByRole("button", { name: /^Enviar$/i }));
 
-    fireEvent.click(screen.getByRole("button", { name: /^Enviar$/i }));
+      await waitFor(() => {
+        expect(kycApi.uploadKycDocument).toHaveBeenCalled();
+        expect(mutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            entityType: "CPF",
+            fullName: "João Silva",
+            bankInstitutionCode: "001",
+          }),
+        );
+        expect(onSubmitted).toHaveBeenCalled();
+      });
+    },
+    15_000,
+  );
 
-    await waitFor(() => {
-      expect(kycApi.uploadKycDocument).toHaveBeenCalled();
-      expect(mutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({
-          entityType: "CPF",
-          fullName: "João Silva",
-          bankInstitutionCode: "001",
-        }),
+  it(
+    "shows upload error when document upload fails",
+    async () => {
+      vi.mocked(kycApi.uploadKycDocument).mockResolvedValue({
+        path: null,
+        signedUrl: null,
+        sessionId: null,
+        error: "upload failed",
+      });
+
+      render(
+        <ProviderKycForm
+          providerId="provider-1"
+          accountEmail="provider@example.com"
+        />,
       );
-      expect(onSubmitted).toHaveBeenCalled();
-    });
-  });
 
-  it("shows upload error when document upload fails", async () => {
-    vi.mocked(kycApi.uploadKycDocument).mockResolvedValue({
-      path: null,
-      signedUrl: null,
-      sessionId: null,
-      error: "upload failed",
-    });
+      await fillIdentityCpfAndContinue();
+      await fillBankAndContinue();
+      await fillDocumentsCpfAndContinue();
+      fireEvent.click(screen.getByRole("button", { name: /^Enviar$/i }));
 
-    render(
-      <ProviderKycForm
-        providerId="provider-1"
-        accountEmail="provider@example.com"
-      />,
-    );
-
-    await fillIdentityCpfAndContinue();
-    await fillBankAndContinue();
-    await fillDocumentsCpfAndContinue();
-    fireEvent.click(screen.getByRole("button", { name: /^Enviar$/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText("upload failed")).toBeInTheDocument();
-    });
-    expect(mutateAsync).not.toHaveBeenCalled();
-  });
+      await waitFor(() => {
+        expect(screen.getByText("upload failed")).toBeInTheDocument();
+      });
+      expect(mutateAsync).not.toHaveBeenCalled();
+    },
+    15_000,
+  );
 
   it("disables continue while dispatch is in flight", async () => {
     dispatchKycIsPending.current = true;

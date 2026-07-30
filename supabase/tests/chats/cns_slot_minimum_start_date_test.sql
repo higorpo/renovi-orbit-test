@@ -189,7 +189,7 @@ begin
 
   v_slot := jsonb_build_object(
     'start_date', to_char(public.cns_business_today() + 10, 'YYYY-MM-DD'),
-    'end_date', to_char(public.cns_business_today() + 10, 'YYYY-MM-DD'),
+    'end_date', to_char(public.cns_business_today() + 11, 'YYYY-MM-DD'),
     'shift', 'morning'
   );
 
@@ -200,7 +200,7 @@ begin
   )
   values (
     v_proposal_id, p_provider_id, v_service_request_id, v_pricing.original_amount,
-    'slot minimum reschedule pgTAP proposal', 1, 'days', jsonb_build_array(v_slot),
+    'slot minimum reschedule pgTAP proposal', 2, 'days', jsonb_build_array(v_slot),
     '{}'::text[], v_pricing.tax_rate, v_pricing.tax_amount, v_pricing.final_amount,
     v_pricing.pricing_signature, 'ACCEPTED'::public.proposal_status
   );
@@ -212,7 +212,7 @@ begin
   )
   values (
     p_contracted_service_id, v_service_request_id, v_proposal_id, v_client_id,
-    p_provider_id, 'days', 1, public.cns_business_today() + 10, public.cns_business_today() + 10,
+    p_provider_id, 'days', 2, public.cns_business_today() + 10, public.cns_business_today() + 11,
     'morning', v_slot, 'PENDING_PAYMENT'::public.contracted_service_status
   );
 
@@ -327,11 +327,11 @@ select throws_ok(
         )
       ),
       'days',
-      1
+      2
     ) $$,
     (select service_request_id from _slot_sr),
     to_char(public.cns_business_today(), 'YYYY-MM-DD'),
-    to_char(public.cns_business_today() + 6, 'YYYY-MM-DD')
+    to_char(public.cns_business_today() + 1, 'YYYY-MM-DD')
   ),
   '22023',
   'SLOT_START_DATE_TOO_SOON',
@@ -344,12 +344,12 @@ select pg_temp.cns_call_create_provider_proposal(
   jsonb_build_array(
     jsonb_build_object(
       'start_date', to_char(public.cns_business_today() + 1, 'YYYY-MM-DD'),
-      'end_date', to_char(public.cns_business_today() + 1, 'YYYY-MM-DD'),
+      'end_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'),
       'shift', 'morning'
     )
   ),
   'days',
-  1
+  2
 ) as response;
 
 select is(
@@ -542,11 +542,16 @@ select throws_ok(
   format(
     $$ select public.cns_propose_service_reschedule(
       %L::uuid,
-      jsonb_build_object('start_date', %L, 'shift', 'morning'),
+      jsonb_build_object(
+        'start_date', %L,
+        'end_date', %L,
+        'shift', 'morning'
+      ),
       gen_random_uuid()
     ) $$,
     (select response->>'reschedule_request_id' from _reschedule_request),
-    to_char(public.cns_business_today(), 'YYYY-MM-DD')
+    to_char(public.cns_business_today(), 'YYYY-MM-DD'),
+    to_char(public.cns_business_today() + 1, 'YYYY-MM-DD')
   ),
   '22023',
   'SLOT_START_DATE_TOO_SOON',
@@ -558,7 +563,7 @@ select public.cns_propose_service_reschedule(
   (select (response->>'reschedule_request_id')::uuid from _reschedule_request),
   jsonb_build_object(
     'start_date', to_char(public.cns_business_today() + 1, 'YYYY-MM-DD'),
-    'end_date', to_char(public.cns_business_today() + 1, 'YYYY-MM-DD'),
+    'end_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'),
     'shift', 'afternoon'
   ),
   gen_random_uuid()

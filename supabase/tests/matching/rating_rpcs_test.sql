@@ -212,11 +212,12 @@ returns numeric
 language sql
 stable
 as $$
+  -- Mirror matching.rating_dimension_weight_* seeds (service_role-only helper).
   select round((
-    public.platform_constant_numeric('matching.rating_dimension_weight_quality', 0.40) * p_quality
-    + public.platform_constant_numeric('matching.rating_dimension_weight_punctuality', 0.25) * p_punctuality
-    + public.platform_constant_numeric('matching.rating_dimension_weight_communication', 0.20) * p_communication
-    + public.platform_constant_numeric('matching.rating_dimension_weight_value', 0.15) * p_value
+    0.40::numeric * p_quality
+    + 0.25::numeric * p_punctuality
+    + 0.20::numeric * p_communication
+    + 0.15::numeric * p_value
   )::numeric, 2);
 $$;
 

@@ -4,6 +4,20 @@ begin;
 
 select plan(8);
 
+-- Clear leftover visibility from seeds/crons for seed SR + fixture pairs used below.
+delete from public.service_request_provider_visibility
+where (
+    service_request_id = '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid
+    and provider_id in (
+      '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid,
+      '4cf92e3a-64cd-4491-998e-9163138f8e96'::uuid
+    )
+  )
+  or (
+    service_request_id = '8017e001-5a32-44e7-b8da-1727a14f4d01'::uuid
+    and provider_id = '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid
+  );
+
 create or replace function pg_temp.discovery_seed_sr(p_location extensions.geography)
 returns uuid
 language plpgsql

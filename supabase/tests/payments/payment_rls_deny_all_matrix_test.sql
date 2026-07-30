@@ -259,7 +259,7 @@ begin
     'SCHEDULED'::public.payment_schedule_state,
     v_service_id::text,
     v_service_id)
-  on conflict (contracted_service_id) do nothing
+  on conflict (idempotency_key) do nothing
   returning id into v_schedule_id;
 
   if v_schedule_id is null then

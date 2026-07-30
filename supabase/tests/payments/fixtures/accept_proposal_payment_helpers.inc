@@ -81,7 +81,13 @@ create or replace function pg_temp.cns_payment_seed_client_card(
 returns uuid
 language plpgsql
 as $$
+declare
+  v_platform_company_id text;
 begin
+  -- Match whatever platform company is in Vault (local env may differ from fixture default).
+  perform pg_temp.cns_payment_vault_secrets();
+  v_platform_company_id := public.payment_netcred_platform_company_id();
+
   insert into public.client_card_tokens (
     id,
     client_id,
@@ -102,7 +108,7 @@ begin
     p_client_id,
     'netcred',
     format('pgtap-accept-profile-%s', p_card_token_id),
-    '1014',
+    v_platform_company_id,
     '411111******1111',
     'VISA',
     'opaque-pgtap-token',

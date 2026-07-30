@@ -41,21 +41,26 @@ as $$
 declare
   v_raw jsonb;
   v_parsed int;
-  v_upper_bound int := 50;
+  -- Generous ceiling for non-chats keys (matching/payment batches, TTLs, etc.).
+  v_upper_bound int := 1000000;
   v_upper_raw jsonb;
 begin
-  select pc.value
-  into v_upper_raw
-  from public.platform_constants pc
-  where pc.key = 'chats.max_active_slots_upper_bound';
+  -- chats.max_active_slots_upper_bound applies only to chats.* keys.
+  if p_key like 'chats.%' then
+    v_upper_bound := 50;
+    select pc.value
+    into v_upper_raw
+    from public.platform_constants pc
+    where pc.key = 'chats.max_active_slots_upper_bound';
 
-  if v_upper_raw is not null then
-    begin
-      v_upper_bound := greatest((v_upper_raw #>> '{}')::int, 1);
-    exception
-      when others then
-        v_upper_bound := 50;
-    end;
+    if v_upper_raw is not null then
+      begin
+        v_upper_bound := greatest((v_upper_raw #>> '{}')::int, 1);
+      exception
+        when others then
+          v_upper_bound := 50;
+      end;
+    end if;
   end if;
 
   select pc.value
@@ -95,7 +100,7 @@ end;
 $$;
 
 comment on function public.platform_constant_int(text, int) is
-  'Reads platform_constants as int: min 1, max chats.max_active_slots_upper_bound (default 50), fallback p_default with WARNING.';
+  'Reads platform_constants as int: min 1; chats.* capped by chats.max_active_slots_upper_bound; other keys capped at 1e6; fallback p_default with WARNING.';
 
 revoke all on function public.platform_constant_int(text, int) from public, anon, authenticated;
 grant execute on function public.platform_constant_int(text, int) to service_role;

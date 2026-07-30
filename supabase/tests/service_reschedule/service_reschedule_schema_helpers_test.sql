@@ -82,11 +82,11 @@ select ok(
 
 select lives_ok(
   $$ select public._cns_validate_reschedule_slot(
-    jsonb_build_object('start_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'), 'end_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'), 'shift', 'morning'),
+    jsonb_build_object('start_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'), 'end_date', to_char(public.cns_business_today() + 3, 'YYYY-MM-DD'), 'shift', 'morning'),
     'days',
-    1
+    2
   ) $$,
-  'valid single-day reschedule slot passes validation'
+  'valid multi-day reschedule slot passes validation'
 );
 
 select lives_ok(
@@ -106,21 +106,21 @@ select throws_ok(
 );
 
 select throws_ok(
-  $$ select public._cns_validate_reschedule_slot(jsonb_build_object('start_date', '2026-08-10', 'end_date', '2026-08-10', 'shift', 'night'), 'days', 1) $$,
+  $$ select public._cns_validate_reschedule_slot(jsonb_build_object('start_date', '2026-08-10', 'end_date', '2026-08-11', 'shift', 'night'), 'days', 2) $$,
   '22023',
   'INVALID_SLOT_SHIFT',
   'slot validator rejects invalid shift'
 );
 
 select throws_ok(
-  $$ select public._cns_validate_reschedule_slot(jsonb_build_object('start_date', 'not-a-date', 'end_date', 'not-a-date', 'shift', 'morning'), 'days', 1) $$,
+  $$ select public._cns_validate_reschedule_slot(jsonb_build_object('start_date', 'not-a-date', 'end_date', 'not-a-date', 'shift', 'morning'), 'days', 2) $$,
   '22023',
   'INVALID_SLOT_START_DATE',
   'slot validator rejects invalid start date'
 );
 
 select throws_ok(
-  $$ select public._cns_validate_reschedule_slot(jsonb_build_object('start_date', '2026-08-10', 'end_date', '2026-08-09', 'shift', 'morning'), 'days', 1) $$,
+  $$ select public._cns_validate_reschedule_slot(jsonb_build_object('start_date', '2026-08-10', 'end_date', '2026-08-09', 'shift', 'morning'), 'days', 2) $$,
   '22023',
   'INVALID_SLOT_END_DATE',
   'slot validator rejects end date before start date'
@@ -141,7 +141,7 @@ select throws_ok(
   $$ select public._cns_validate_reschedule_slot(
     jsonb_build_object('start_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'), 'shift', 'morning'),
     'days',
-    1
+    2
   ) $$,
   '22023',
   'INVALID_SLOT_END_DATE',
@@ -152,13 +152,13 @@ select throws_ok(
   $$ select public._cns_validate_reschedule_slot(
     jsonb_build_object(
       'start_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'),
-      'end_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'),
+      'end_date', to_char(public.cns_business_today() + 3, 'YYYY-MM-DD'),
       'shift', 'morning',
       'duration_unit', 'days',
       'duration_value', 3
     ),
     'days',
-    1
+    2
   ) $$,
   '22023',
   'INVALID_SLOT_DURATION',

@@ -19,6 +19,11 @@ begin
 end;
 $$;
 
+-- Seed provider is ACTIVE in seed.sql; remove gateway row so credentialing fails.
+delete from public.provider_gateway_accounts
+where provider_id = '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid
+  and gateway_slug = 'netcred'::public.payment_gateway_slug;
+
 create temp table _credentialing_sr as
 select gen_random_uuid() as service_request_id;
 

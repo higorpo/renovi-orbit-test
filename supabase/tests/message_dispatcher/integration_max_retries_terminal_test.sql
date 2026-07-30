@@ -2,6 +2,8 @@
 
 begin;
 
+\ir fixtures/clear_due_dispatches.inc
+
 select plan(12);
 
 create temp table _max_retries_fixture as

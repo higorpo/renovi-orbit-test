@@ -24,7 +24,7 @@ select is(
 
 select is(
   (select count(*)::int from public.platform_constants where key like 'matching.%'),
-  29,
+  32,
   'seeds all matching.* platform constants'
 );
 

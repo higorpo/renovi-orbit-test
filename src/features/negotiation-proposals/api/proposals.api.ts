@@ -79,12 +79,6 @@ function isCreateProviderProposalResult(value: unknown): value is CreateProvider
   );
 }
 
-function isAcceptProposalResult(value: unknown): value is AcceptProposalResult {
-  if (!value || typeof value !== "object") return false;
-  const v = value as Record<string, unknown>;
-  return v.service != null && v.proposal != null;
-}
-
 function isProposalMutationResult(value: unknown): value is ProposalMutationResult {
   if (!value || typeof value !== "object") return false;
   const proposal = (value as ProposalMutationResult).proposal;

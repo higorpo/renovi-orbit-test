@@ -54,7 +54,7 @@ begin
 
   v_slot := jsonb_build_object(
     'start_date', to_char(current_date + 10, 'YYYY-MM-DD'),
-    'end_date', to_char(current_date + 10, 'YYYY-MM-DD'),
+    'end_date', to_char(current_date + 11, 'YYYY-MM-DD'),
     'shift', 'morning'
   );
 
@@ -65,7 +65,7 @@ begin
   )
   values (
     v_proposal_id, v_provider_id, v_sr_id, v_pricing.original_amount,
-    'service reschedule postgrest claims proposal', 1, 'days', jsonb_build_array(v_slot),
+    'service reschedule postgrest claims proposal', 2, 'days', jsonb_build_array(v_slot),
     v_slot,
     '{}'::text[], v_pricing.tax_rate, v_pricing.tax_amount, v_pricing.final_amount,
     v_pricing.pricing_signature, 'ACCEPTED'::public.proposal_status
@@ -78,7 +78,7 @@ begin
   )
   values (
     v_service_id, v_sr_id, v_proposal_id, v_client_id, v_provider_id,
-    'days', 1, current_date + 10, current_date + 10, 'morning', v_slot,
+    'days', 2, current_date + 10, current_date + 11, 'morning', v_slot,
     'CONFIRMED'::public.contracted_service_status
   );
 
@@ -111,7 +111,7 @@ select public.cns_propose_service_reschedule(
   (select (response->>'reschedule_request_id')::uuid from _pgrst_request),
   jsonb_build_object(
     'start_date', to_char(current_date + 12, 'YYYY-MM-DD'),
-    'end_date', to_char(current_date + 12, 'YYYY-MM-DD'),
+    'end_date', to_char(current_date + 13, 'YYYY-MM-DD'),
     'shift', 'afternoon'
   ),
   gen_random_uuid()

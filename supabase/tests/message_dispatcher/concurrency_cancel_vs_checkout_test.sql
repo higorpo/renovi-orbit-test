@@ -2,6 +2,8 @@
 
 begin;
 
+\ir fixtures/clear_due_dispatches.inc
+
 select plan(6);
 
 select set_config('request.jwt.claim.role', 'service_role', true);

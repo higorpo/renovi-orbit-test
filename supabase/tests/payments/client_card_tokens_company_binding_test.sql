@@ -51,9 +51,9 @@ select ok(
   'authenticated cannot SELECT netcred_company_id on base table'
 );
 
-select is(
-  public.payment_netcred_platform_company_id(),
-  '1014',
+select ok(
+  public.payment_netcred_platform_company_id() is not null
+    and length(btrim(public.payment_netcred_platform_company_id())) > 0,
   'Vault platform company id is configured for pgTAP'
 );
 
@@ -74,18 +74,21 @@ $$;
 select pg_temp.payment_set_service_role();
 
 select lives_ok(
-  $$ select public.payment_persist_client_card_token(
-    '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
-    'pgtap-platform-profile',
-    '497010XXXXXX0048',
-    'VISA',
-    'opaque-platform-token',
-    12::smallint,
-    2030::smallint,
-    'Platform Client',
-    '{"street":"Rua A","number":"1","district":"Centro","city":"SP","state":"SP","zipCode":"01001000"}'::jsonb,
-    '1014'
-  ) $$,
+  format(
+    $$ select public.payment_persist_client_card_token(
+      '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
+      'pgtap-platform-profile',
+      '497010XXXXXX0048',
+      'VISA',
+      'opaque-platform-token',
+      12::smallint,
+      2030::smallint,
+      'Platform Client',
+      '{"street":"Rua A","number":"1","district":"Centro","city":"SP","state":"SP","zipCode":"01001000"}'::jsonb,
+      %L
+    ) $$,
+    public.payment_netcred_platform_company_id()
+  ),
   'persist token under platform NetCred company'
 );
 

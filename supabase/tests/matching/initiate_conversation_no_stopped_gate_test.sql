@@ -71,7 +71,8 @@ begin
     document,
     onboarding_status,
     onboarding_activated_at,
-    netcred_company_id
+    netcred_company_id,
+    netcred_bank_account_id
   )
   values (
     p_user_id,
@@ -79,13 +80,15 @@ begin
     right(replace(p_user_id::text, '-', ''), 11),
     'ACTIVE'::public.payment_provider_onboarding_status,
     now(),
-    substr(replace(p_user_id::text, '-', ''), 1, 8)
+    substr(replace(p_user_id::text, '-', ''), 1, 8),
+    'bank-' || substr(replace(p_user_id::text, '-', ''), 1, 8)
   )
   on conflict (provider_id, gateway_slug) do update
   set
     onboarding_status = 'ACTIVE'::public.payment_provider_onboarding_status,
     onboarding_activated_at = excluded.onboarding_activated_at,
-    netcred_company_id = excluded.netcred_company_id;
+    netcred_company_id = excluded.netcred_company_id,
+    netcred_bank_account_id = excluded.netcred_bank_account_id;
 end;
 $$;
 

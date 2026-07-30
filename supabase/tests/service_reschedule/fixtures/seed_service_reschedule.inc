@@ -138,7 +138,7 @@ begin
 
   v_slot := jsonb_build_object(
     'start_date', to_char(p_scheduled_start_date, 'YYYY-MM-DD'),
-    'end_date', to_char(p_scheduled_start_date, 'YYYY-MM-DD'),
+    'end_date', to_char(p_scheduled_start_date + 1, 'YYYY-MM-DD'),
     'shift', 'morning'
   );
 
@@ -164,7 +164,7 @@ begin
     v_service_request_id,
     v_pricing.original_amount,
     'service reschedule pgTAP proposal',
-    1,
+    2,
     'days',
     jsonb_build_array(v_slot),
     '{}'::text[],
@@ -196,9 +196,9 @@ begin
     v_client_id,
     p_provider_id,
     'days',
-    1,
+    2,
     p_scheduled_start_date,
-    p_scheduled_start_date,
+    p_scheduled_start_date + 1,
     'morning',
     v_slot,
     p_service_status
@@ -302,6 +302,7 @@ begin
         p_proposed_slot,
         jsonb_build_object(
           'start_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'),
+          'end_date', to_char(public.cns_business_today() + 3, 'YYYY-MM-DD'),
           'shift', 'morning'
         )
       ),
@@ -316,6 +317,7 @@ begin
         p_proposed_slot,
         jsonb_build_object(
           'start_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'),
+          'end_date', to_char(public.cns_business_today() + 3, 'YYYY-MM-DD'),
           'shift', 'morning'
         )
       ),
@@ -335,6 +337,7 @@ begin
         p_proposed_slot,
         jsonb_build_object(
           'start_date', to_char(public.cns_business_today() + 2, 'YYYY-MM-DD'),
+          'end_date', to_char(public.cns_business_today() + 3, 'YYYY-MM-DD'),
           'shift', 'morning'
         )
       ),

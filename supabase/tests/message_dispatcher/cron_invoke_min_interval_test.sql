@@ -3,6 +3,8 @@
 
 begin;
 
+\ir fixtures/clear_due_dispatches.inc
+
 select plan(5);
 
 -- Empty queue → 0 workers invoked (vault secrets are not seeded so early return).

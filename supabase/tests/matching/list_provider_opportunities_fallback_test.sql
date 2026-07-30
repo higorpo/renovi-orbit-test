@@ -6,6 +6,19 @@ select plan(3);
 
 select set_config('request.jwt.claim.role', 'service_role', true);
 
+-- Clear leftover batch visibility so opportunity counts stay exact.
+delete from public.service_request_provider_visibility
+where provider_id = '4cf92e3a-64cd-4491-998e-9163138f8e96'::uuid;
+
+-- Close leftover fallback-open market from crons/prior committed state.
+update public.service_request_dispatches
+set
+  status = 'DISPATCH_EXPIRED'::public.service_request_dispatch_status,
+  fallback_opened_at = null,
+  next_batch_at = null
+where fallback_opened_at is not null
+   or status = 'DISPATCH_FALLBACK_OPEN_MARKET'::public.service_request_dispatch_status;
+
 create or replace function pg_temp.matching_seed_open_service_request()
 returns uuid
 language plpgsql

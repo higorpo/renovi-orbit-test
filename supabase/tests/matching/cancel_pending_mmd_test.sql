@@ -7,6 +7,15 @@ select plan(3);
 create temp table _cancel_mmd_sr as
 select '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid as service_request_id;
 
+-- Clear leftover matching.new_opportunity rows from seeds/crons for this SR.
+do $$
+begin
+  perform public.matching_cancel_pending_mmd_for_service_request(
+    (select service_request_id from _cancel_mmd_sr)
+  );
+end;
+$$;
+
 insert into message_dispatcher.message_dispatcher_user_limits (profile_id)
 select p.id
 from public.profiles p
