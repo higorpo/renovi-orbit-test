@@ -131,7 +131,7 @@ Fluxo de pagamentos, itens com problemas:
 
 
 
-- ~~É permitido fazer reagendamento de serviços para muito longe (por exemplo +30 dias a frente). … lógica para reembolsar o valor e fazer a captura novamente…~~ **Feito:** pós-`PAID` com execução >15 dias → `paid_far_recapture_required` + EF `process-far-reschedule-recapture` (gateway-first, backend-only).
+- [RETESTAR TODO O FLUXO] ~~É permitido fazer reagendamento de serviços para muito longe (por exemplo +30 dias a frente). … lógica para reembolsar o valor e fazer a captura novamente…~~ **Feito:** pós-`PAID` com execução >15 dias → `paid_far_recapture_required` + EF `process-far-reschedule-recapture` (gateway-first, backend-only).
 
 
 
