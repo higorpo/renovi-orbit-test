@@ -232,4 +232,51 @@ describe("getCancellationDisclosure", () => {
 
     expect(disclosure.description).toContain("Termos de Uso");
   });
+
+  it("prefers explicit serviceExecutionAt Date over schedule approximation", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-29T12:00:00"));
+
+    const disclosure = getCancellationDisclosure({
+      viewerRole: "client",
+      scheduleState: "PAID",
+      scheduledStartDate: "invalid",
+      scheduledShift: "afternoon",
+      serviceExecutionAt: new Date("2026-08-10T16:00:00.000Z"),
+      baseAmount: 600,
+      paidAmount: 633.7,
+    });
+
+    expect(disclosure.description).toContain("R$ 633,70");
+    vi.useRealTimers();
+  });
+
+  it("accepts serviceExecutionAt as ISO string and ignores invalid Date", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-29T12:00:00"));
+
+    expect(
+      getCancellationDisclosure({
+        viewerRole: "client",
+        scheduleState: "PAID",
+        scheduledStartDate: "2026-08-01",
+        scheduledShift: "afternoon",
+        serviceExecutionAt: "2026-08-10T16:00:00.000Z",
+        baseAmount: 600,
+        paidAmount: 633.7,
+      }).description,
+    ).toContain("R$ 633,70");
+
+    expect(
+      getCancellationDisclosure({
+        viewerRole: "client",
+        scheduleState: "PAID",
+        scheduledStartDate: "invalid",
+        scheduledShift: "afternoon",
+        serviceExecutionAt: new Date("invalid"),
+      }).description,
+    ).toContain("Termos de Uso");
+
+    vi.useRealTimers();
+  });
 });

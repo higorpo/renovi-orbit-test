@@ -368,7 +368,7 @@ describe("ProviderKycForm wizard", () => {
     });
   });
 
-  it("shows review summary with selected bank", async () => {
+  it("shows review summary with selected bank and PIX when provided", async () => {
     render(
       <ProviderKycForm
         providerId="provider-1"
@@ -376,11 +376,27 @@ describe("ProviderKycForm wizard", () => {
       />,
     );
     await fillIdentityCpfAndContinue();
-    await fillBankAndContinue();
+
+    fireEvent.click(screen.getByRole("combobox"));
+    fireEvent.click(await screen.findByText(/Banco do Brasil \(001\)/i));
+    fireEvent.change(screen.getByLabelText("Agência"), {
+      target: { value: "1234" },
+    });
+    fireEvent.change(screen.getByLabelText(/Conta com dígito/i), {
+      target: { value: "56789-0" },
+    });
+    fireEvent.change(screen.getByLabelText(/Chave PIX/i), {
+      target: { value: "joao@email.com" },
+    });
+    clickContinue();
+    await waitFor(() => {
+      expectActiveStep("kyc-step-documents");
+    });
     await fillDocumentsCpfAndContinue();
 
     const review = screen.getByTestId("kyc-step-review");
     expect(within(review).getByText(/Banco do Brasil \(001\)/i)).toBeInTheDocument();
     expect(within(review).getByText("João Silva")).toBeInTheDocument();
+    expect(within(review).getByText("joao@email.com")).toBeInTheDocument();
   });
 });

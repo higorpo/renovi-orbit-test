@@ -61,4 +61,30 @@ describe("issueClearSaleSession", () => {
     expect(result.sessionId).toBeNull();
     expect(result.error).toBeTruthy();
   });
+
+  it("rejects non-object or empty session payloads as invalid", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: null,
+    });
+
+    const nullPayload = await issueClearSaleSession({
+      purpose: "accept",
+      proposalId: "proposal-1",
+    });
+    expect(nullPayload.sessionId).toBeNull();
+    expect(nullPayload.error).toBeTruthy();
+
+    mockRpc.mockResolvedValue({
+      data: { session_id: "", expires_at: "2099-01-01T00:00:00Z", purpose: "accept" },
+      error: null,
+    });
+
+    const emptySession = await issueClearSaleSession({
+      purpose: "accept",
+      proposalId: "proposal-1",
+    });
+    expect(emptySession.sessionId).toBeNull();
+    expect(emptySession.error).toBeTruthy();
+  });
 });

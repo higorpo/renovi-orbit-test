@@ -73,6 +73,49 @@ describe("mapBrasilApiBanks", () => {
     ]);
     expect(banks).toEqual([{ code: "999", name: "Friendly Full Name S.A." }]);
   });
+
+  it("skips duplicate FEBRABAN codes and blank names", () => {
+    const banks = mapBrasilApiBanks([
+      {
+        ispb: "1",
+        name: "First",
+        code: 999,
+        fullName: "First Bank",
+      },
+      {
+        ispb: "2",
+        name: "Duplicate",
+        code: 999,
+        fullName: "Duplicate Bank",
+      },
+      {
+        ispb: "3",
+        name: "   ",
+        code: 998,
+        fullName: "   ",
+      },
+      {
+        ispb: "4",
+        name: "Alpha",
+        code: 100,
+        fullName: "",
+      },
+    ]);
+
+    expect(banks.filter((b) => b.code === "999")).toHaveLength(1);
+    expect(banks.find((b) => b.code === "999")?.name).toBe("First Bank");
+    expect(banks.some((b) => b.code === "998")).toBe(false);
+    expect(banks.find((b) => b.code === "100")?.name).toBe("Alpha");
+  });
+
+  it("falls back to name when fullName is empty and sorts ties by code", () => {
+    const banks = mapBrasilApiBanks([
+      { ispb: "1", name: "Same Name", code: 2, fullName: "" },
+      { ispb: "2", name: "Same Name", code: 1, fullName: "" },
+    ]);
+
+    expect(banks.map((b) => b.code)).toEqual(["001", "002"]);
+  });
 });
 
 describe("loadBrazilianBanksFallback + helpers", () => {
@@ -104,5 +147,6 @@ describe("loadBrazilianBanksFallback + helpers", () => {
     expect(filterBrazilianBanks("001", banks).map((b) => b.code)).toContain("001");
     expect(filterBrazilianBanks("itaú", banks).some((b) => b.code === "341")).toBe(true);
     expect(filterBrazilianBanks("zzzz-not-a-bank", banks)).toHaveLength(0);
+    expect(filterBrazilianBanks("   ", banks)).toHaveLength(banks.length);
   });
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatEstimatedBankReceiptDate,
   formatProviderSettlementDisclosure,
+  formatProviderSettlementHoldDisclosure,
   estimateProviderBankSettlementDate,
 } from "../providerSettlementDisclosure";
 
@@ -23,7 +24,20 @@ describe("providerSettlementDisclosure", () => {
   });
 
   it("returns null for invalid dates", () => {
+    expect(estimateProviderBankSettlementDate("invalid")).toBeNull();
     expect(formatEstimatedBankReceiptDate("invalid")).toBeNull();
     expect(formatProviderSettlementDisclosure("invalid")).toBeNull();
+  });
+
+  it("describes refund hold suspending bank deposit estimate", () => {
+    expect(formatProviderSettlementHoldDisclosure()).toContain("estorno");
+    expect(formatProviderSettlementHoldDisclosure("refund")).toContain(
+      "previsão de depósito fica suspensa",
+    );
+  });
+
+  it("describes dispute hold suspending bank deposit estimate", () => {
+    expect(formatProviderSettlementHoldDisclosure("dispute")).toContain("chargeback");
+    expect(formatProviderSettlementHoldDisclosure("dispute")).toContain("disputa");
   });
 });

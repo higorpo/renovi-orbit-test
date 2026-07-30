@@ -103,4 +103,60 @@ describe("fetchBrazilianBanks", () => {
     expect(banks).toEqual([...fallback]);
     expect(loggerMocks.warn).toHaveBeenCalled();
   });
+
+  it("falls back when payload rows have an unexpected shape", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [{ ispb: 1, name: "bad", fullName: "bad", code: "x" }],
+      }),
+    );
+
+    const banks = await fetchBrazilianBanks();
+    const fallback = await loadBrazilianBanksFallback();
+
+    expect(banks).toEqual([...fallback]);
+    expect(loggerMocks.warn).toHaveBeenCalledWith(
+      "brazilian_banks_api_fallback",
+      expect.objectContaining({ message: expect.stringContaining("unexpected shape") }),
+    );
+  });
+
+  it("falls back when mapped bank list is empty", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [
+          {
+            ispb: "0",
+            name: "Selic",
+            code: null,
+            fullName: "Banco Central",
+          },
+        ],
+      }),
+    );
+
+    const banks = await fetchBrazilianBanks();
+    const fallback = await loadBrazilianBanksFallback();
+
+    expect(banks).toEqual([...fallback]);
+    expect(loggerMocks.warn).toHaveBeenCalledWith(
+      "brazilian_banks_api_fallback",
+      expect.objectContaining({ message: expect.stringContaining("empty list") }),
+    );
+  });
+
+  it("stringifies non-Error failures in the fallback log", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue("offline-string"));
+
+    await fetchBrazilianBanks();
+
+    expect(loggerMocks.warn).toHaveBeenCalledWith(
+      "brazilian_banks_api_fallback",
+      expect.objectContaining({ message: "offline-string" }),
+    );
+  });
 });

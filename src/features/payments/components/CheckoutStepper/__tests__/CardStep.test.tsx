@@ -100,4 +100,116 @@ describe("CardStep", () => {
     unmount();
     expect(onSessionIdGenerated).not.toHaveBeenCalledWith(null);
   });
+
+  it("does not unlock confirm when session issue returns no sessionId", async () => {
+    const { logger } = await import("@/lib/logger");
+    vi.spyOn(clearsaleApi, "issueClearSaleSession").mockResolvedValue({
+      sessionId: null,
+      expiresAt: null,
+      error: "CLEARSALE_SESSION_FORBIDDEN",
+    });
+
+    const onSessionIdGenerated = vi.fn();
+    render(
+      <CardStep
+        purpose="accept"
+        proposalId="proposal-1"
+        onSessionIdGenerated={onSessionIdGenerated}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(logger.warn).toHaveBeenCalledWith(
+        "clearsale_issue_session_unavailable",
+        expect.objectContaining({ session_id: null }),
+      );
+      expect(onSessionIdGenerated).toHaveBeenCalledWith(null);
+    });
+  });
+
+  it("does not unlock confirm when ClearSale app key is missing in production", async () => {
+    const { logger } = await import("@/lib/logger");
+    vi.spyOn(failClosedModule, "isClearSaleProductionFailClosed").mockReturnValue(true);
+    vi.stubEnv("VITE_CLEARSALE_APP_KEY", "");
+
+    const onSessionIdGenerated = vi.fn();
+    render(
+      <CardStep
+        purpose="accept"
+        proposalId="proposal-1"
+        onSessionIdGenerated={onSessionIdGenerated}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(logger.warn).toHaveBeenCalledWith(
+        "clearsale_app_key_missing",
+        expect.objectContaining({
+          session_id: "11111111-1111-4111-8111-111111111111",
+        }),
+      );
+      expect(onSessionIdGenerated).toHaveBeenCalledWith(null);
+      expect(injectSdkModule.injectClearSaleSdk).not.toHaveBeenCalled();
+    });
+  });
+
+  it("degrades with issued session when app key is missing outside production", async () => {
+    const { logger } = await import("@/lib/logger");
+    vi.spyOn(failClosedModule, "isClearSaleProductionFailClosed").mockReturnValue(false);
+    vi.stubEnv("VITE_CLEARSALE_APP_KEY", "   ");
+
+    const onSessionIdGenerated = vi.fn();
+    render(
+      <CardStep
+        purpose="manual"
+        scheduleId="schedule-1"
+        onSessionIdGenerated={onSessionIdGenerated}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(logger.warn).toHaveBeenCalledWith(
+        "clearsale_app_key_missing",
+        expect.any(Object),
+      );
+      expect(onSessionIdGenerated).toHaveBeenCalledWith(
+        "11111111-1111-4111-8111-111111111111",
+      );
+      expect(injectSdkModule.injectClearSaleSdk).not.toHaveBeenCalled();
+    });
+  });
+
+  it("ignores late session issue after unmount", async () => {
+    let resolveIssue!: (value: {
+      sessionId: string;
+      expiresAt: string;
+      error: null;
+    }) => void;
+    vi.spyOn(clearsaleApi, "issueClearSaleSession").mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveIssue = resolve;
+        }),
+    );
+
+    const onSessionIdGenerated = vi.fn();
+    const { unmount } = render(
+      <CardStep
+        purpose="accept"
+        proposalId="proposal-1"
+        onSessionIdGenerated={onSessionIdGenerated}
+      />,
+    );
+
+    unmount();
+    resolveIssue({
+      sessionId: "11111111-1111-4111-8111-111111111111",
+      expiresAt: "2099-01-01T00:00:00Z",
+      error: null,
+    });
+
+    await Promise.resolve();
+    expect(onSessionIdGenerated).not.toHaveBeenCalled();
+    expect(injectSdkModule.injectClearSaleSdk).not.toHaveBeenCalled();
+  });
 });

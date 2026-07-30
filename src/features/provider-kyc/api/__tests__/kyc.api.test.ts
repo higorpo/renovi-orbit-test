@@ -252,6 +252,60 @@ describe("upload sessions", () => {
       p_storage_path: "providers/provider-1/kyc/identity/document.pdf",
     });
   });
+
+  it("createKycUploadSession maps RPC errors", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: "session denied", code: "DENIED" },
+    });
+
+    await expect(createKycUploadSession("identity")).resolves.toEqual({
+      uploadSessionId: null,
+      storagePathPrefix: null,
+      error: expect.stringMatching(/Não foi possível/),
+    });
+  });
+
+  it("createKycUploadSession rejects incomplete success payloads", async () => {
+    mockRpc.mockResolvedValue({
+      data: { upload_session_id: "session-1" },
+      error: null,
+    });
+
+    await expect(createKycUploadSession("identity")).resolves.toEqual({
+      uploadSessionId: null,
+      storagePathPrefix: null,
+      error: "Resposta inválida ao criar sessão de upload",
+    });
+  });
+
+  it("registerKycUploadPath maps RPC errors", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: "register denied", code: "DENIED" },
+    });
+
+    await expect(
+      registerKycUploadPath("session-1", "path.pdf"),
+    ).resolves.toEqual({
+      storagePath: null,
+      error: expect.stringMatching(/Não foi possível/),
+    });
+  });
+
+  it("registerKycUploadPath rejects missing storage_path", async () => {
+    mockRpc.mockResolvedValue({
+      data: { upload_session_id: "session-1" },
+      error: null,
+    });
+
+    await expect(
+      registerKycUploadPath("session-1", "path.pdf"),
+    ).resolves.toEqual({
+      storagePath: null,
+      error: "Resposta inválida ao registrar caminho do documento",
+    });
+  });
 });
 
 describe("dispatchKycEmail", () => {
@@ -386,7 +440,7 @@ describe("validateKycDocumentFile", () => {
       validateKycDocumentFile(new File(["x"], "a.txt", { type: "text/plain" })),
     ).toMatch(/Formato não permitido/);
 
-    const big = new File([new Uint8Array(51 * 1024 * 1024)], "big.pdf", {
+    const big = new File([new Uint8Array(101 * 1024 * 1024)], "big.pdf", {
       type: "application/pdf",
     });
     expect(validateKycDocumentFile(big)).toMatch(/no máximo/);
@@ -522,6 +576,94 @@ describe("uploadKycDocument", () => {
     expect(result.sessionId).toBe("session-1");
     expect(result.signedUrl).toBeNull();
     expect(result.error).toBe("signed url failed");
+  });
+
+  it("returns session creation failure before storage upload", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: { message: "no session", code: "DENIED" },
+    });
+
+    const result = await uploadKycDocument(
+      "provider-1",
+      "identity",
+      new File(["x"], "doc.pdf", { type: "application/pdf" }),
+    );
+
+    expect(result.path).toBeNull();
+    expect(result.sessionId).toBeNull();
+    expect(result.error).toMatch(/Não foi possível/);
+    expect(mockStorageFrom).not.toHaveBeenCalled();
+  });
+
+  it("returns register failure after successful storage upload", async () => {
+    mockRpc
+      .mockResolvedValueOnce({
+        data: {
+          upload_session_id: "session-1",
+          storage_path_prefix: "providers/provider-1/kyc/identity/",
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: null,
+        error: { message: "register failed", code: "DENIED" },
+      });
+    mockStorageFrom.mockReturnValue({
+      upload: vi.fn().mockResolvedValue({ error: null }),
+      createSignedUrl: vi.fn(),
+    });
+
+    const result = await uploadKycDocument(
+      "provider-1",
+      "identity",
+      new File(["x"], "doc.pdf", { type: "application/pdf" }),
+    );
+
+    expect(result).toEqual({
+      path: null,
+      signedUrl: null,
+      sessionId: "session-1",
+      error: expect.stringMatching(/Não foi possível/),
+    });
+  });
+
+  it("falls back to pdf extension for filenames without a known extension", async () => {
+    mockRpc
+      .mockResolvedValueOnce({
+        data: {
+          upload_session_id: "session-1",
+          storage_path_prefix: "providers/provider-1/kyc/identity/",
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          upload_session_id: "session-1",
+          storage_path: "providers/provider-1/kyc/identity/document.pdf",
+        },
+        error: null,
+      });
+    const upload = vi.fn().mockResolvedValue({ error: null });
+    mockStorageFrom.mockReturnValue({
+      upload,
+      createSignedUrl: vi.fn().mockResolvedValue({
+        data: { signedUrl: "https://signed.example/doc.pdf" },
+        error: null,
+      }),
+    });
+
+    await uploadKycDocument(
+      "provider-1",
+      "identity",
+      new File(["x"], "doc", { type: "application/pdf" }),
+    );
+
+    expect(upload).toHaveBeenCalledWith(
+      expect.stringMatching(/document\.pdf$/),
+      expect.any(File),
+      expect.any(Object),
+    );
   });
 });
 
@@ -662,6 +804,98 @@ describe("fetchProviderPrivateProfileForKyc", () => {
       document: "39053344705",
       bankInstitutionCode: "001",
     });
+  });
+
+  it("maps private profile for PJ prefill using CNPJ", async () => {
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          entity_type: "pj",
+          cpf: null,
+          cnpj: "11444777000161",
+          bank_institution_code: "341",
+          bank_branch: "0001",
+          bank_account: "12345-6",
+          pix_key: "pix@empresa.com",
+          razao_social: "Empresa LTDA",
+          nome_fantasia: "Empresa",
+          legal_representative_name: "Maria",
+          legal_representative_cpf: "39053344705",
+          legal_representative_phone: "48988887777",
+        },
+        error: null,
+      }),
+    });
+
+    const result = await fetchProviderPrivateProfileForKyc("provider-1");
+
+    expect(result.error).toBeNull();
+    expect(result.data).toMatchObject({
+      entityType: "CNPJ",
+      document: "11444777000161",
+      razaoSocial: "Empresa LTDA",
+      legalRepFullName: "Maria",
+    });
+  });
+
+  it("returns null data when private profile row is missing", async () => {
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    });
+
+    await expect(fetchProviderPrivateProfileForKyc("provider-1")).resolves.toEqual({
+      data: null,
+      error: null,
+    });
+  });
+
+  it("returns error on private profile db failure", async () => {
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: "profile db error" },
+      }),
+    });
+
+    await expect(fetchProviderPrivateProfileForKyc("provider-1")).resolves.toEqual({
+      data: null,
+      error: "profile db error",
+    });
+  });
+
+  it("falls back to cpf/cnpj when entity type is unknown", async () => {
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          entity_type: "unknown",
+          cpf: null,
+          cnpj: "11444777000161",
+          bank_institution_code: null,
+          bank_branch: null,
+          bank_account: null,
+          pix_key: null,
+          razao_social: null,
+          nome_fantasia: null,
+          legal_representative_name: null,
+          legal_representative_cpf: null,
+          legal_representative_phone: null,
+        },
+        error: null,
+      }),
+    });
+
+    const result = await fetchProviderPrivateProfileForKyc("provider-1");
+
+    expect(result.data?.entityType).toBeNull();
+    expect(result.data?.document).toBe("11444777000161");
   });
 });
 

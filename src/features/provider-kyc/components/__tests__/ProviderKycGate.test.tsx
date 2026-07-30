@@ -258,12 +258,17 @@ describe("ProviderKycGate", () => {
   });
 
   it("shows rejected status and switches to form on resubmit", () => {
+    const refetch = vi.fn();
     mockUseProviderPaymentAccount.mockReturnValue({
       data: account("REJECTED", {
         emailDispatchedAt: "2026-07-01T00:00:00.000Z",
       }),
       isLoading: false,
-      refetch: vi.fn(),
+      refetch,
+    });
+    mockUseAuth.mockReturnValue({
+      user: { id: "provider-1", email: undefined },
+      profile: { role: "provider", phone: null, full_name: null },
     });
 
     render(
@@ -275,6 +280,9 @@ describe("ProviderKycGate", () => {
     expect(screen.getByText(/Credenciamento não aprovado/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Reenviar documentos/i }));
     expect(screen.getByTestId("provider-kyc-form")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /submit-kyc/i }));
+    expect(refetch).toHaveBeenCalled();
   });
 
   it("shows suspended status", () => {

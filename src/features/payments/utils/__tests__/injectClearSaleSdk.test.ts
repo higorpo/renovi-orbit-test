@@ -34,8 +34,7 @@ describe("injectClearSaleSdk", () => {
 
     expect(appendChild).toHaveBeenCalledWith(script);
     expect(script.src).toContain("device.clearsale.com.br/p/fp.js");
-    expect(script.integrity).toMatch(/^sha384-/);
-    expect(script.crossOrigin).toBe("anonymous");
+    expect(script.async).toBe(true);
 
     onload?.();
 

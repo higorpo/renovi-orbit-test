@@ -96,4 +96,83 @@ describe("useProviderPaymentAccount", () => {
     renderHook(() => useProviderPaymentAccount(), { wrapper: createWrapper() });
     expect(spy).not.toHaveBeenCalled();
   });
+
+  it("polls every 30s after email dispatch and during partner review", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    vi.spyOn(kycApi, "fetchProviderPaymentAccount").mockResolvedValue({
+      data: {
+        id: "acc-1",
+        onboardingStatus: "DOCUMENTS_SUBMITTED",
+        emailDispatchedAt: "2026-07-01T00:00:00.000Z",
+        onboardingSubmittedAt: "2026-06-30T00:00:00.000Z",
+      },
+      error: null,
+    });
+
+    const { result } = renderHook(() => useProviderPaymentAccount(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    const query = queryClient.getQueryCache().find({
+      queryKey: ["provider-payment-account", "provider-1"],
+    });
+    const refetchInterval = query?.options.refetchInterval;
+    expect(typeof refetchInterval).toBe("function");
+
+    const intervalFn = refetchInterval as (q: {
+      state: { data: kycApi.ProviderPaymentAccount | null | undefined };
+    }) => number | false;
+
+    expect(
+      intervalFn({
+        state: {
+          data: {
+            id: "acc-1",
+            onboardingStatus: "DOCUMENTS_SUBMITTED",
+            emailDispatchedAt: "2026-07-01T00:00:00.000Z",
+            onboardingSubmittedAt: "2026-06-30T00:00:00.000Z",
+          },
+        },
+      }),
+    ).toBe(30_000);
+
+    expect(
+      intervalFn({
+        state: {
+          data: {
+            id: "acc-1",
+            onboardingStatus: "UNDER_NETCRED_REVIEW",
+            emailDispatchedAt: "2026-07-01T00:00:00.000Z",
+            onboardingSubmittedAt: "2026-06-30T00:00:00.000Z",
+          },
+        },
+      }),
+    ).toBe(30_000);
+
+    expect(
+      intervalFn({
+        state: {
+          data: {
+            id: "acc-1",
+            onboardingStatus: "ACTIVE",
+            emailDispatchedAt: "2026-07-01T00:00:00.000Z",
+            onboardingSubmittedAt: "2026-06-30T00:00:00.000Z",
+          },
+        },
+      }),
+    ).toBe(false);
+
+    expect(intervalFn({ state: { data: null } })).toBe(false);
+  });
 });

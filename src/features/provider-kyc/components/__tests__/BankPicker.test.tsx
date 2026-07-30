@@ -4,9 +4,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BankPicker } from "../BankPicker";
+import { useBrazilianBanks } from "../../hooks/useBrazilianBanks";
 
 vi.mock("../../hooks/useBrazilianBanks", () => ({
-  useBrazilianBanks: () => ({
+  useBrazilianBanks: vi.fn(() => ({
     data: [
       { code: "001", name: "Banco do Brasil" },
       { code: "260", name: "Nubank" },
@@ -14,7 +15,7 @@ vi.mock("../../hooks/useBrazilianBanks", () => ({
     ],
     isLoading: false,
     isSuccess: true,
-  }),
+  })),
 }));
 
 function renderWithQuery(ui: ReactNode) {
@@ -29,6 +30,15 @@ function renderWithQuery(ui: ReactNode) {
 describe("BankPicker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useBrazilianBanks).mockReturnValue({
+      data: [
+        { code: "001", name: "Banco do Brasil" },
+        { code: "260", name: "Nubank" },
+        { code: "341", name: "Itaú Unibanco" },
+      ],
+      isLoading: false,
+      isSuccess: true,
+    } as ReturnType<typeof useBrazilianBanks>);
   });
 
   it("opens list and selects institution code by name search", async () => {
@@ -59,5 +69,17 @@ describe("BankPicker", () => {
   it("shows selected bank label", () => {
     renderWithQuery(<BankPicker value="001" onChange={vi.fn()} />);
     expect(screen.getByRole("combobox")).toHaveTextContent(/Banco do Brasil \(001\)/i);
+  });
+
+  it("renders empty list safely while banks are still loading", () => {
+    vi.mocked(useBrazilianBanks).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isSuccess: false,
+    } as ReturnType<typeof useBrazilianBanks>);
+
+    renderWithQuery(<BankPicker value="" onChange={vi.fn()} />);
+    fireEvent.click(screen.getByRole("combobox"));
+    expect(screen.getByText(/Nenhum banco encontrado/i)).toBeInTheDocument();
   });
 });
