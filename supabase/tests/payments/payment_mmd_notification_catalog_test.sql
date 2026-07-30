@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(17);
+select plan(21);
 
 select ok(
   exists (
@@ -193,6 +193,61 @@ select is(
   )->>'template_key',
   'account.provider_kyc_submitted',
   'PROVIDER_KYC_SUBMITTED routes to account.provider_kyc_submitted'
+);
+
+select ok(
+  exists (
+    select 1
+    from message_dispatcher.message_templates mt
+    where mt.template_key = 'account.provider_kyc_submitted'
+      and mt.channel = 'email'
+      and mt.active
+  ),
+  'account.provider_kyc_submitted email template registered'
+);
+
+select is(
+  public.mmd_ingest_event(
+    'PROVIDER_ONBOARDING_UNDER_REVIEW',
+    current_setting('test.mmd.profile_id')::uuid,
+    'pgtap-provider-kyc-under-review',
+    jsonb_build_object(
+      'provider_id', current_setting('test.mmd.profile_id'),
+      'provider_gateway_account_id', gen_random_uuid()::text,
+      'deep_link_path', '/dashboard'
+    ),
+    '{"source":"payment_update_provider_onboarding_status","recipient":"provider"}'::jsonb
+  )->>'template_key',
+  'account.provider_kyc_under_review',
+  'PROVIDER_ONBOARDING_UNDER_REVIEW routes to account.provider_kyc_under_review'
+);
+
+select is(
+  public.mmd_ingest_event(
+    'PROVIDER_KYC_REJECTED',
+    current_setting('test.mmd.profile_id')::uuid,
+    'pgtap-provider-kyc-rejected',
+    jsonb_build_object(
+      'provider_id', current_setting('test.mmd.profile_id'),
+      'provider_gateway_account_id', gen_random_uuid()::text,
+      'reason', 'ADMIN_REJECTION',
+      'deep_link_path', '/dashboard'
+    ),
+    '{"source":"payment_reject_provider_onboarding","recipient":"provider"}'::jsonb
+  )->>'template_key',
+  'account.provider_kyc_rejected',
+  'PROVIDER_KYC_REJECTED routes to account.provider_kyc_rejected'
+);
+
+select ok(
+  exists (
+    select 1
+    from message_dispatcher.message_templates mt
+    where mt.template_key = 'account.provider_kyc_rejected'
+      and mt.channel = 'email'
+      and mt.active
+  ),
+  'account.provider_kyc_rejected email template registered'
 );
 
 select is(

@@ -8,7 +8,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 
 | Área | Documento | Rotas / código |
 |------|-----------|----------------|
-| Shell do dashboard e placeholders | [dashboard-shell](./modulos/dashboard-shell/README.md) | `DashboardLayout`, `DashboardFakePage`, `dashboardMenu.ts` |
+| Shell do dashboard e placeholders | [dashboard-shell](./modulos/dashboard-shell/README.md) | `DashboardLayout`, `DashboardFakePage`, `dashboardMenu.ts`; gate KYC via `provider-kyc` |
 | Página inicial | [app-home](./modulos/app-home/README.md) | `/` → `src/App.tsx` |
 
 ## Tabela mestra
@@ -28,7 +28,8 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | **chats** + **negotiation-proposals** | [conversas-e-negociacao](./modulos/chats/features/conversas-e-negociacao.md), [comparar-orcamentos-meus-servicos](./modulos/chats/features/comparar-orcamentos-meus-servicos.md) | `/dashboard/chats`, `/dashboard/chats/:chatId` | `auth`, `provider-jobs`, `message-dispatcher`, `my-services` (sheet compare/history), RPCs CNS em `supabase/migrations/202607*` |
 | **service-reschedule** | [propor-nova-data](./modulos/service-reschedule/features/propor-nova-data.md), [integracao-pagamento-pos-aceite](./modulos/service-reschedule/features/integracao-pagamento-pos-aceite.md) | Embutido em chat e detalhe do serviço contratado (dialogs/cards) | `chats`, `view-services`, `payments` (pós-aceite: retarget / recaptura longe), `negotiation-proposals` (regra de duração), RPCs `cns_*_service_reschedule*`, migrations `20260802*` |
 | **message-dispatcher** *(backend)* | [horario-silencioso](./modulos/message-dispatcher/features/horario-silencioso.md) | *Sem rota de UI* | Supabase schema `message_dispatcher`, Edge Functions `message-dispatcher-worker` / `message-dispatcher-webhook-resend` |
-| **payments** | [checkout-e-cobranca](./modulos/payments/features/checkout-e-cobranca.md), [historico-e-reembolso](./modulos/payments/features/historico-e-reembolso.md) | Checkout pós-aceite (gross-up NetCred; ClearSale session server-side; token↔**platform** company; `PROFILE_INCOMPLETE`); cobrança manual com reconcile anti double-charge; KYC `ACTIVE` obrigatório para cobrar; histórico/reembolso (gateway first pós-`PAID`; faixa ToS pelo `payment_service_execution_at` vigente; `PAID`→`REFUNDED` via webhook) | `negotiation-proposals`, `my-account`, NetCred EFs, RPCs `payment_*` / `payment_total_with_card_fees`, views de histórico, MMD |
+| **payments** | [checkout-e-cobranca](./modulos/payments/features/checkout-e-cobranca.md), [historico-e-reembolso](./modulos/payments/features/historico-e-reembolso.md) | Checkout pós-aceite (gross-up NetCred; ClearSale session server-side; token↔**platform** company; `PROFILE_INCOMPLETE`); cobrança manual com reconcile anti double-charge; KYC `ACTIVE` obrigatório para cobrar; histórico/reembolso (gateway first pós-`PAID`; faixa ToS pelo `payment_service_execution_at` vigente; `PAID`→`REFUNDED` via webhook) | `negotiation-proposals`, `my-account`, `provider-kyc` (UI/gate), NetCred EFs, RPCs `payment_*` / `payment_total_with_card_fees`, views de histórico, MMD |
+| **provider-kyc** | [gate-e-acesso-operacional](./modulos/provider-kyc/features/gate-e-acesso-operacional.md), [formulario-credenciamento-wizard](./modulos/provider-kyc/features/formulario-credenciamento-wizard.md) | Bloqueia shell operacional até `ACTIVE`; exceção `/dashboard/conta*`; nav só Minha conta; telas por status; **wizard** entity→identity→bank→documents→review (BankPicker FEBRABAN, upload Option A, identidade na RPC, analytics); polling 5s/30s | `dashboard-shell`, `my-account`, `payments` (conta NetCred / RPCs KYC / cobrança) |
 
 ## Telas placeholder (evidência)
 
@@ -57,7 +58,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | `manual-charge-payment` | `payments` — cobrança manual cliente |
 | `netcred-webhook` | `payments` — webhooks gateway |
 | `process-refund` | `payments` — estornos |
-| `detect-netcred-onboarding` | `payments` — KYC prestador |
+| `detect-netcred-onboarding` | `payments` / `provider-kyc` — detecção de status KYC do prestador |
 | `reconcile-netcred-payments` | `payments` — reconciliação |
 
 ## Status da documentação
@@ -83,6 +84,7 @@ flowchart TB
   PJ[provider-jobs]
   PP[provider-profile]
   MA[my-account]
+  PK[provider-kyc]
   CH[chats + negotiation-proposals]
   SR[service-reschedule]
   MD[message-dispatcher]
@@ -96,4 +98,5 @@ flowchart TB
   CH --> MD
   CH --> SR
   SR --> CH
+  PK --> MA
 ```

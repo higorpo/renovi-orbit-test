@@ -10,7 +10,7 @@ import type { KycEmailAttachment } from "./types.ts";
 
 export const RESEND_API_URL = "https://api.resend.com/emails";
 export const NETCRED_CREDENCIAMENTO_EMAIL_ENV = "NETCRED_CREDENCIAMENTO_EMAIL";
-export const DEFAULT_NETCRED_CREDENCIAMENTO_EMAIL = "credenciamento@prestway.com";
+export const DEFAULT_NETCRED_CREDENCIAMENTO_EMAIL = "credenciamento@renovi.com.br";
 
 export type SendCredenciamentoEmailInput = {
   recipientEmail: string;

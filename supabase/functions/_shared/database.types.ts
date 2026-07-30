@@ -2509,6 +2509,47 @@ export type Database = {
           },
         ]
       }
+      provider_kyc_upload_sessions: {
+        Row: {
+          created_at: string
+          document_key: string
+          expires_at: string
+          id: string
+          linked_at: string | null
+          provider_id: string
+          status: string
+          storage_path: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_key: string
+          expires_at?: string
+          id?: string
+          linked_at?: string | null
+          provider_id: string
+          status?: string
+          storage_path?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_key?: string
+          expires_at?: string
+          id?: string
+          linked_at?: string | null
+          provider_id?: string
+          status?: string
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_kyc_upload_sessions_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       provider_latest_locations: {
         Row: {
           device_id: string | null
@@ -4213,6 +4254,7 @@ export type Database = {
         Returns: Json
       }
       cron_payment_far_reschedule_recapture: { Args: never; Returns: Json }
+      cron_payment_janitor_orphan_kyc_documents: { Args: never; Returns: Json }
       cron_payment_recover_orphaned_schedules: { Args: never; Returns: Json }
       cron_process_service_request_dispatches: { Args: never; Returns: Json }
       cron_process_service_requests_without_proposals: {
@@ -4798,6 +4840,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      payment_create_provider_kyc_upload_session: {
+        Args: { p_document_key: string }
+        Returns: Json
+      }
       payment_cron_auto_cancel_unpaid_services: {
         Args: never
         Returns: undefined
@@ -4894,6 +4940,14 @@ export type Database = {
           p_schedule_id?: string
         }
         Returns: Json
+      }
+      payment_janitor_orphan_kyc_documents: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      payment_link_provider_kyc_upload_sessions_by_paths: {
+        Args: { p_provider_id: string; p_storage_paths: string[] }
+        Returns: number
       }
       payment_list_gateway_accounts_for_onboarding: {
         Args: { p_batch_size?: number }
@@ -5029,6 +5083,14 @@ export type Database = {
         Args: { p_stale_minutes?: number }
         Returns: Json
       }
+      payment_register_provider_kyc_upload_path: {
+        Args: { p_storage_path: string; p_upload_session_id: string }
+        Returns: Json
+      }
+      payment_reject_provider_onboarding: {
+        Args: { p_provider_gateway_account_id: string; p_reason?: string }
+        Returns: Json
+      }
       payment_reschedule_charge_date: {
         Args: { p_contracted_service_id: string }
         Returns: Json
@@ -5075,11 +5137,18 @@ export type Database = {
           p_bank_branch: string
           p_bank_institution_code: string
           p_corporate_charter_storage_path?: string
+          p_document: string
+          p_entity_type: string
+          p_full_name?: string
           p_identity_doc_storage_path: string
           p_legal_rep_doc_storage_path?: string
+          p_legal_representative_cpf?: string
+          p_legal_representative_name?: string
           p_legal_representative_phone?: string
+          p_nome_fantasia?: string
           p_phone?: string
           p_pix_key?: string
+          p_razao_social?: string
         }
         Returns: Json
       }

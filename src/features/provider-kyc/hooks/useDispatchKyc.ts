@@ -12,6 +12,9 @@ export function useDispatchKyc() {
   return useMutation({
     mutationFn: async (request: DispatchKycRequest) => {
       const submitResult = await submitProviderKyc({
+        entityType: request.entityType,
+        document: request.document,
+        fullName: request.fullName,
         bankInstitutionCode: request.bankInstitutionCode,
         bankBranch: request.bankBranch,
         bankAccount: request.bankAccount,
@@ -19,6 +22,10 @@ export function useDispatchKyc() {
         addressProofStoragePath: request.addressProofStoragePath,
         pixKey: request.pixKey,
         phone: request.phone,
+        razaoSocial: request.razaoSocial,
+        nomeFantasia: request.nomeFantasia,
+        legalRepresentativeName: request.legalRepFullName,
+        legalRepresentativeCpf: request.legalRepCpf,
         legalRepresentativePhone: request.legalRepPhone,
         corporateCharterStoragePath: request.corporateCharterStoragePath,
         legalRepDocStoragePath: request.legalRepDocStoragePath,

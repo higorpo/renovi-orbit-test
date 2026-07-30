@@ -25,6 +25,8 @@
 |------|--------|
 | `/dashboard/conta` | `ProtectedRoute` com `allowedRoles={['client', 'provider']}` (`src/router.tsx`) |
 
+**Prestador sem KYC `ACTIVE`:** esta rota (e paths aninhados sob `/dashboard/conta/`) permanece acessível pelo allowlist do `ProviderKycGate` — ponto de saída para logout e ajustes de conta enquanto o restante do painel operacional está bloqueado. Ver [provider-kyc](../provider-kyc/features/gate-e-acesso-operacional.md).
+
 ## 5. Mapa rápido de componentes
 
 | Componente | Uso |

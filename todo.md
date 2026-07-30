@@ -104,7 +104,7 @@ Coisas para fazer next
 
 - payment_cron_post_sentry_alerts e payment-emite-sentry-alerts talvez poderiam ser algo compartilhado e não exclusivo de payments
 
-- verificar se o e-mail de onboarding está sendo enviado para netcred 
+- [x] verificar se o e-mail de onboarding está sendo enviado para netcred — `dispatch-kyc-email` + default `credenciamento@renovi.com.br` (override `NETCRED_CREDENCIAMENTO_EMAIL`)
 
 
 
@@ -113,10 +113,7 @@ Coisas para fazer next
 
 
 Fluxo de pagamentos, itens com problemas:
-- A tela de "credenciamento de pagamentos" do prestador não está com um design bom
-- A tela de "credenciamento de pagamentos" não aparece quando eu navego para meus servoços ou trabalhos como algo obrigatório
-- Verificar se depois que eu preenchi os detalhes do credencimento do prestador se aparece as telas com os status correspondentes.
-- Não está funcionamento o credenciamento de pagamentos, os dados não são enviados. Além disso há um problema que ele faz o upload dos documentos a  cada envio, deveria enviar tudo junto e fazer na própria edge function. Tela também naõ é amigável em relação ao número do banco.
+- [x] Credenciamento KYC: feature `provider-kyc`, wizard multi-step + BankPicker, gate no shell (slots+nav; libera só Minha conta), telas de status FSM, identidade no submit RPC, upload sessions + janitor de órfãos, key `legal-rep-id`.
 
 
 

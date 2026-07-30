@@ -8,7 +8,6 @@ export const PAYMENT_RPC = {
   calculateInstallmentOptions: "payment_calculate_installment_options",
   acceptProposal: "accept_proposal",
   issueClearSaleSession: "payment_issue_clearsale_session",
-  submitProviderKyc: "payment_submit_provider_kyc",
   revokeClientCardToken: "payment_revoke_client_card_token",
   updatePaymentMethod: "payment_update_method",
 } as const;

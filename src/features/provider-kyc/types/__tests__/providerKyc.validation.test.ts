@@ -1,6 +1,12 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
-import { providerKycCnpjSchema, providerKycCpfSchema } from "../providerKyc.validation";
+import {
+  bankStepSchema,
+  fromRpcEntityType,
+  providerKycCnpjSchema,
+  providerKycCpfSchema,
+  toRpcEntityType,
+} from "../providerKyc.validation";
 
 function makeFile(name = "doc.pdf", type = "application/pdf") {
   return new File(["content"], name, { type });
@@ -72,5 +78,27 @@ describe("providerKycCnpjSchema", () => {
         legalRepPhone: "48988887777",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("bankStepSchema", () => {
+  it("rejects agency with non-digits", () => {
+    expect(
+      bankStepSchema.safeParse({
+        bankInstitutionCode: "001",
+        bankBranch: "1234-5",
+        bankAccount: "56789-0",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe("entity type RPC mapping", () => {
+  it("maps CPF/CNPJ to pf/pj and back", () => {
+    expect(toRpcEntityType("CPF")).toBe("pf");
+    expect(toRpcEntityType("CNPJ")).toBe("pj");
+    expect(fromRpcEntityType("pf")).toBe("CPF");
+    expect(fromRpcEntityType("pj")).toBe("CNPJ");
+    expect(fromRpcEntityType("other")).toBeNull();
   });
 });

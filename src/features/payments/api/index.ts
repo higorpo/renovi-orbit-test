@@ -88,26 +88,6 @@ export type {
 } from "./serviceLifecycle.api";
 
 export {
-  uploadKycDocument,
-  validateKycDocumentFile,
-  submitProviderKyc,
-  dispatchKycEmail,
-  fetchProviderPaymentAccount,
-  shouldBlockProviderForKyc,
-  isProviderKycPending,
-  isProviderKycSubmitting,
-} from "./kyc.api";
-export type {
-  DispatchKycRequest,
-  SubmitProviderKycRequest,
-  SubmitProviderKycResult,
-  DispatchKycResult,
-  UploadKycDocumentResult,
-  ProviderPaymentAccount,
-  FetchProviderPaymentAccountResult,
-} from "./kyc.api";
-
-export {
   listClientPaymentTransactions,
   listProviderPaymentReceivables,
 } from "./history.api";
@@ -145,11 +125,6 @@ import {
   fetchPaymentScheduleLifecycleByContractedService,
   fetchContractedServicePaymentContext,
 } from "./charges.api";
-import {
-  uploadKycDocument,
-  dispatchKycEmail,
-  fetchProviderPaymentAccount,
-} from "./kyc.api";
 import { issueClearSaleSession } from "./clearsale.api";
 import {
   listClientPaymentTransactions,
@@ -181,11 +156,6 @@ export const paymentsApi = {
     fetchScheduleByContractedService: fetchPaymentScheduleByContractedService,
     fetchScheduleLifecycleByContractedService: fetchPaymentScheduleLifecycleByContractedService,
     fetchContractedServiceContext: fetchContractedServicePaymentContext,
-  },
-  kyc: {
-    uploadDocument: uploadKycDocument,
-    dispatchEmail: dispatchKycEmail,
-    fetchProviderAccount: fetchProviderPaymentAccount,
   },
   history: {
     listClientTransactions: listClientPaymentTransactions,

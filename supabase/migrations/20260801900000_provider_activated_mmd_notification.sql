@@ -188,8 +188,18 @@ begin
       end if;
     when 'PROVIDER_KYC_SUBMITTED' then
       v_template_key := 'account.provider_kyc_submitted';
-      v_channels := array['push']::message_dispatcher.message_channel[];
+      v_channels := array['push', 'email']::message_dispatcher.message_channel[];
       v_push_bypass_limits := false;
+      v_email_bypass_limits := false;
+    when 'PROVIDER_ONBOARDING_UNDER_REVIEW' then
+      v_template_key := 'account.provider_kyc_under_review';
+      v_channels := array['push', 'email']::message_dispatcher.message_channel[];
+      v_push_bypass_limits := true;
+      v_email_bypass_limits := false;
+    when 'PROVIDER_KYC_REJECTED' then
+      v_template_key := 'account.provider_kyc_rejected';
+      v_channels := array['push', 'email']::message_dispatcher.message_channel[];
+      v_push_bypass_limits := true;
       v_email_bypass_limits := false;
     when 'PROVIDER_ACTIVATED' then
       v_template_key := 'account.provider_activated';

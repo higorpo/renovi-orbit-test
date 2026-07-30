@@ -30,6 +30,7 @@ Itens que exigem validação humana, evidência parcial ou conflito entre trecho
 
 - Prestador e cliente compartilham o layout `/dashboard`; a **especialização** ocorre por submenu + guards aninhados.
 - “Ganhos”, “Configurações”, “Ajuda”, “Visão geral” no menu são **placeholders** até nova implementação.
+- ~~Prestador compartilha o menu operacional completo independentemente do KYC.~~ **Corrigido (2026-07-30):** sem onboarding `ACTIVE`, o menu do prestador fica só em Minha conta e o shell operacional é bloqueado pelo `ProviderKycGate` — ver [provider-kyc](./modulos/provider-kyc/features/gate-e-acesso-operacional.md).
 
 ## Necessita validação com negócio/produto
 
@@ -37,6 +38,8 @@ Itens que exigem validação humana, evidência parcial ou conflito entre trecho
 - Política de **expiração** de propostas (`expire_stale_provider_proposals`) — frequência de execução (cron) não verificada neste escopo.
 - ~~**Pagamentos e contratos** — apenas planos em `docs/payment-system-*.md`, sem implementação mapeada nas Edge Functions deste tree.~~ **Resolvido (2026-07):** módulo `payments` implementado (`src/features/payments/`, RPCs `payment_*`, Edge Functions NetCred). Histórico cliente/prestador e exibição de reembolso documentados em [historico-e-reembolso](./modulos/payments/features/historico-e-reembolso.md). **Fórmula `charge_amount` (gross-up NetCred + `cc_risk_analysis_fee_brl`)** documentada em [checkout-e-cobranca](./modulos/payments/features/checkout-e-cobranca.md#valor-cobrado-no-cartão-charge_amount) (2026-07-13). **Remediações de segurança de checkout (2026-07-19)** documentadas nos mesmos feature docs (ClearSale fail-closed, manual reconcile, webhook terminal, reembolso (faixa ToS pelo slot vigente; `refund_anchor` só auditoria), token↔**platform** company (merchant `chargeCreate` sempre Renovi; prestador só no payout), `PROFILE_INCOMPLETE`, disclosure de drift de taxas, KYC `ACTIVE` obrigatório, `CARD_REJECTED`). Detalhe normativo de engenharia: `docs/payment-system/design.md`.
 - ~~**Drift de taxas checkout → T-2** — se congelar ou recalcular.~~ **Resolvido (produto):** drift intencional; UI divulga recálculo no momento da cobrança (`PaymentTrustDisclosure`).
+- ~~**Acesso do prestador ao dashboard antes do KYC `ACTIVE`.**~~ **Resolvido (2026-07-30, Fase 2):** shell operacional bloqueado até `ACTIVE` (conta null ou qualquer status ≠ ACTIVE); exceção `/dashboard/conta*`; nav só Minha conta; telas por status — [gate-e-acesso-operacional](./modulos/provider-kyc/features/gate-e-acesso-operacional.md).
+- ~~**Detalhe campo a campo do formulário KYC.**~~ **Resolvido (2026-07-30, Fase 3):** wizard multi-etapas documentado em [formulário-credenciamento-wizard](./modulos/provider-kyc/features/formulario-credenciamento-wizard.md) (passos, BankPicker FEBRABAN, upload Option A + janitor, identidade na RPC, `legal-rep-id`, e-mail ops `credenciamento@renovi.com.br`, MMD under review/rejected, FSM `REJECTED`→`DOCUMENTS_SUBMITTED`).
 
 ## Inferências explicitamente não comprovadas
 

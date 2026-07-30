@@ -20,8 +20,19 @@ export function useProviderPaymentAccount(enabled = true) {
     enabled: enabled && Boolean(providerId),
     refetchInterval: (query) => {
       const account = query.state.data;
-      if (account?.onboardingStatus === "DOCUMENTS_SUBMITTED" && !account.emailDispatchedAt) {
+      if (!account) {
+        return false;
+      }
+      // Retry email dispatch quickly while still submitting.
+      if (account.onboardingStatus === "DOCUMENTS_SUBMITTED" && !account.emailDispatchedAt) {
         return 5_000;
+      }
+      // Partner review may flip to ACTIVE / UNDER_NETCRED_REVIEW / REJECTED.
+      if (
+        (account.onboardingStatus === "DOCUMENTS_SUBMITTED" && account.emailDispatchedAt)
+        || account.onboardingStatus === "UNDER_NETCRED_REVIEW"
+      ) {
+        return 30_000;
       }
       return false;
     },

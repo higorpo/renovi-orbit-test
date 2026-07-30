@@ -6,6 +6,7 @@
 - **Quem usa:** clientes e prestadores autenticados (`ProtectedRoute` com `allowedRoles={['client','provider']}` no pai, com restrições nas rotas filhas).
 - **Problema que resolve:** experiência consistente do painel após login.
 - **Risco operacional:** usuário clica em “Endereços” no menu e vê “Página em construção”, embora endereços existam em **Minha conta** — ver feature [placeholders e menu](./features/placeholders-e-menu.md).
+- **Gate KYC (prestador):** o layout envolve slots persistentes do prestador + outlet com `ProviderKycGate` e filtra o menu quando o onboarding não está `ACTIVE` — ver [provider-kyc](../provider-kyc/README.md).
 
 ## 2. Features do módulo
 
@@ -18,4 +19,5 @@
 - `src/layouts/DashboardLayout/DashboardLayout.tsx`
 - `src/layouts/DashboardLayout/dashboardMenu.ts`
 - `src/layouts/DashboardLayout/DashboardFakePage.tsx`
+- `src/features/provider-kyc/` (`ProviderKycGate`, `useProviderKycNavItems`)
 - `src/router.tsx` (filhos de `path: 'dashboard'`)

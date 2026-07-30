@@ -202,9 +202,9 @@ describe("invokePaymentEdgeFunction non-http errors", () => {
       error: null,
     });
 
-    await invokePaymentEdgeFunction(PAYMENT_EDGE.dispatchKycEmail);
+    await invokePaymentEdgeFunction(PAYMENT_EDGE.processRefund);
 
-    expect(invokeMock).toHaveBeenCalledWith(PAYMENT_EDGE.dispatchKycEmail, {});
+    expect(invokeMock).toHaveBeenCalledWith(PAYMENT_EDGE.processRefund, {});
   });
 
   it("maps array payloads to empty records", async () => {
@@ -213,7 +213,7 @@ describe("invokePaymentEdgeFunction non-http errors", () => {
       error: null,
     });
 
-    const result = await invokePaymentEdgeFunction(PAYMENT_EDGE.dispatchKycEmail, {});
+    const result = await invokePaymentEdgeFunction(PAYMENT_EDGE.processRefund, {});
     expect(result.ok).toBe(true);
     expect(result.payload).toEqual({});
   });

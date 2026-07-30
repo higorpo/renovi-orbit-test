@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(4);
+select plan(5);
 
 create or replace function pg_temp.payment_set_provider_auth(p_user_id uuid)
 returns void
@@ -23,7 +23,9 @@ select throws_ok(
   $$ select public.payment_submit_provider_kyc(
     '001', '0001', '12345-6',
     'providers/x/kyc/identity/a.pdf',
-    'providers/x/kyc/address-proof/b.pdf'
+    'providers/x/kyc/address-proof/b.pdf',
+    'pf',
+    '12345678901'
   ) $$,
   '42501',
   'Authentication required for payment_submit_provider_kyc',
@@ -31,6 +33,24 @@ select throws_ok(
 );
 
 select pg_temp.payment_set_provider_auth('5d09e025-20a2-4842-aeef-324d42a431e1'::uuid);
+
+-- Seed provider is ACTIVE (terminal); delete then insert PENDING_DOCUMENTS.
+delete from public.provider_gateway_accounts
+where provider_id = '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid
+  and gateway_slug = 'netcred'::public.payment_gateway_slug;
+
+insert into public.provider_gateway_accounts (
+  provider_id,
+  gateway_slug,
+  document,
+  onboarding_status
+)
+values (
+  '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid,
+  'netcred',
+  '00000000000',
+  'PENDING_DOCUMENTS'::public.payment_provider_onboarding_status
+);
 
 insert into storage.objects (id, bucket_id, name, owner, metadata)
 values
@@ -55,7 +75,12 @@ select public.payment_submit_provider_kyc(
   '0001',
   '12345-6',
   'providers/5d09e025-20a2-4842-aeef-324d42a431e1/kyc/identity/doc.pdf',
-  'providers/5d09e025-20a2-4842-aeef-324d42a431e1/kyc/address-proof/doc.pdf'
+  'providers/5d09e025-20a2-4842-aeef-324d42a431e1/kyc/address-proof/doc.pdf',
+  'pf',
+  '12345678901',
+  null,
+  '11999998888',
+  'Prestador Teste KYC'
 ) as payload;
 
 select is(
@@ -80,6 +105,16 @@ select ok(
       and pga.provider_id = '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid
   ),
   'writes KYC_SUBMITTED audit log entry'
+);
+
+select is(
+  (
+    select ppp.cpf
+    from public.provider_profiles_private ppp
+    where ppp.provider_id = '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid
+  ),
+  '12345678901',
+  'upserts identity document into provider_profiles_private'
 );
 
 select finish();

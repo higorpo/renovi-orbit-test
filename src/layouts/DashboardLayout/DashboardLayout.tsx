@@ -1,6 +1,6 @@
 import { Link, Outlet } from "react-router";
 import { useAuth } from "@/features/auth";
-import { ProviderKycGate } from "@/features/payments";
+import { ProviderKycGate, useProviderKycNavItems } from "@/features/provider-kyc";
 import { ClientMyServicesPersistentSlot, ProviderMyServicesPersistentSlot } from "@/features/my-services";
 import { ProviderJobsPersistentSlot } from "@/features/provider-jobs";
 import { ServiceDetailSheet, useServiceDetailModal } from "@/features/view-services";
@@ -22,7 +22,8 @@ export function DashboardLayout() {
   const serviceDetailModal = useServiceDetailModal();
   const mobileChrome = useMobileNavigationChrome();
   const role = profile?.role ?? "client";
-  const menu = getDashboardMenu(role);
+  const baseMenu = getDashboardMenu(role);
+  const menu = useProviderKycNavItems(baseMenu.allItems, baseMenu.mainItems);
 
   const outlet = mobileChrome.enableStackTransition ? (
     <MobileStackTransition>
@@ -70,12 +71,14 @@ export function DashboardLayout() {
           mobileChrome.enableStackTransition && "relative overflow-hidden",
         )}
       >
-        <ProviderJobsPersistentSlot />
-        <ProviderMyServicesPersistentSlot />
-        <ClientMyServicesPersistentSlot />
         <ProviderKycGate>
-          {outlet}
+          <>
+            <ProviderJobsPersistentSlot />
+            <ProviderMyServicesPersistentSlot />
+            {outlet}
+          </>
         </ProviderKycGate>
+        <ClientMyServicesPersistentSlot />
         {serviceDetailModal.isOpen && serviceDetailModal.serviceRequestId ? (
           <ServiceDetailSheet serviceRequestId={serviceDetailModal.serviceRequestId} />
         ) : null}

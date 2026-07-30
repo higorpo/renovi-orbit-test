@@ -78,9 +78,16 @@ Em captura (`TRANSACTION_CAPTURE`), o `paid_amount` gravado na parcela é o valo
 
 ## Prestador (KYC / onboarding NetCred)
 
-- Prestador submete dados bancários/documentos (`payment_submit_provider_kyc`).
-- Onboarding NetCred detectado por cron (`detect-netcred-onboarding`). Status **`ACTIVE`** exige `netcred_company_id` **e** `netcred_bank_account_id` preenchidos.
+> **UI do credenciamento** (gate, wizard, telas de status) vive em **`src/features/provider-kyc/`**, não na feature `payments`. Este doc cobre o **backend** (RPCs `payment_*`, Edge NetCred) e o requisito de cobrança.
+
+- Prestador submete identidade, dados bancários e documentos (`payment_submit_provider_kyc`), incluindo `p_entity_type` (`pf`|`pj`), documento, nome, telefone e campos PJ quando aplicável — identidade upsert em **`provider_profiles_private`** (fonte única).
+- Uploads usam sessões Option A (`payment_create_provider_kyc_upload_session` → storage → `payment_register_provider_kyc_upload_path`); chave do documento do representante: **`legal-rep-id`**. Janitor de órfãos: `payment_janitor_orphan_kyc_documents`.
+- Após submit, Edge `dispatch-kyc-email` envia anexos ao e-mail operacional default **`credenciamento@renovi.com.br`** (override `NETCRED_CREDENCIAMENTO_EMAIL`).
+- Onboarding NetCred detectado por cron (`detect-netcred-onboarding`). Status **`ACTIVE`** exige `netcred_company_id` **e** `netcred_bank_account_id` preenchidos. Reenvio: FSM permite `REJECTED` → `DOCUMENTS_SUBMITTED`.
 - **Sem onboarding `ACTIVE` não há cobrança** (nem aceite de proposta com pagamento): gate `PROVIDER_NOT_CREDENTIALED` / `provider_not_credentialed`. Não existe fluxo de “cobrar sem o prestador no split”.
+- **Acesso ao painel (Fase 2):** além do gate de cobrança, o shell operacional do dashboard do prestador fica bloqueado até `ACTIVE` (exceção: `/dashboard/conta*`; slots jobs/my-services do prestador ficam dentro do gate). UI/status/menu: [gate-e-acesso-operacional](../../provider-kyc/features/gate-e-acesso-operacional.md).
+- **Wizard de envio (Fase 3):** [formulário-credenciamento-wizard](../../provider-kyc/features/formulario-credenciamento-wizard.md).
+- **MMD:** `PROVIDER_KYC_SUBMITTED`, `PROVIDER_ONBOARDING_UNDER_REVIEW`, `PROVIDER_KYC_REJECTED`, `PROVIDER_ACTIVATED`, `PROVIDER_SUSPENDED` (detalhe no gate).
 
 ## Cobrança manual (recuperação)
 

@@ -24,16 +24,18 @@
 
 **Menu lateral / bottom nav:** `src/layouts/DashboardLayout/dashboardMenu.ts` — `getDashboardMenu(role)` retorna labels e paths; cliente inclui `Visão geral`, `Meus Serviços`, `Conversas`, `Endereços`, `Minha conta`, `Ajuda`; prestador inclui `Visão geral`, `Meus Serviços`, `Trabalhos`, `Orçamentos`, `Conversas`, `Ganhos`, `Minha conta`, `Ajuda`.
 
+**Filtro KYC (prestador):** se a conta NetCred estiver ausente ou `onboarding_status !== ACTIVE` (incl. loading), `useProviderKycNavItems` deixa **somente Minha conta** no menu desktop e bottom nav. Detalhe: [gate-e-acesso-operacional](../../provider-kyc/features/gate-e-acesso-operacional.md).
+
 ---
 
 ## 3. Ações disponíveis
 
 | Ação | Onde aparece | Quem pode executar | Regras | Efeitos |
 |------|--------------|--------------------|--------|---------|
-| Navegar pelo menu | Header (desktop) / bottom nav (mobile) | Conforme itens do menu para o papel | Requer sessão válida no layout protegido | `react-router` navegação |
-| Ver título da página placeholder | Dentro do `Card` | Mesmo do guard da rota | Nenhuma | Exibe título + texto “Página em construção.” |
+| Navegar pelo menu | Header (desktop) / bottom nav (mobile) | Conforme itens do menu para o papel | Requer sessão válida no layout protegido; prestador sem KYC `ACTIVE` só vê Minha conta | `react-router` navegação |
+| Ver título da página placeholder | Dentro do `Card` | Mesmo do guard da rota | Prestador bloqueado por KYC: outlet operacional substituído pelas telas do gate (exceto `/dashboard/conta*`) | Exibe título + texto “Página em construção.” (quando o outlet real chega ao placeholder) |
 
-**Evidência:** `DashboardLayout.tsx`, `DesktopNav.tsx`, `MobileNav.tsx`, `DashboardFakePage.tsx`.
+**Evidência:** `DashboardLayout.tsx`, `DesktopNav.tsx`, `MobileNav.tsx`, `DashboardFakePage.tsx`, `useProviderKycNavItems`.
 
 ---
 
@@ -59,8 +61,9 @@ Placeholder **não possui** formulários, filtros nem campos de entrada.
 
 - Título exibido: prop `title` **ou** `titleByRole[profile.role]` **ou** fallback `"Dashboard"` — `profile?.role ?? "client"` quando necessário.
 - Rotas placeholder **não** aplicam regras de domínio (pedido, orçamento, etc.).
+- **Prestador:** `ProviderKycGate` envolve slots persistentes do prestador + outlet; bloqueia conteúdo operacional até `ACTIVE`, com exceção de `/dashboard/conta*`. Slot de Meus serviços do **cliente** fica fora do gate.
 
-**Evidência:** `DashboardFakePage.tsx` linhas 15–21.
+**Evidência:** `DashboardFakePage.tsx` linhas 15–21; `DashboardLayout.tsx`; [provider-kyc](../../provider-kyc/README.md).
 
 ---
 
@@ -87,8 +90,9 @@ Nenhuma persistência ou query no layout/placeholder além de leitura de `profil
 
 | Camada | Nome | Responsabilidade | Arquivo/Caminho |
 |--------|------|------------------|-----------------|
-| UI | `DashboardLayout` | Shell + offline banner implícito (`useOnlineStatus`) | `layouts/DashboardLayout/DashboardLayout.tsx` |
+| UI | `DashboardLayout` | Shell + offline banner implícito (`useOnlineStatus`); gate KYC + filtro de menu do prestador | `layouts/DashboardLayout/DashboardLayout.tsx` |
 | Config | `getDashboardMenu` | Itens por papel | `layouts/DashboardLayout/dashboardMenu.ts` |
+| Feature | `ProviderKycGate` / `useProviderKycNavItems` | Bloqueio operacional e menu só Minha conta | `src/features/provider-kyc/` |
 | UI | `DashboardFakePage` | Placeholder | `layouts/DashboardLayout/DashboardFakePage.tsx` |
 | Roteamento | `createBrowserRouter` | Árvore de rotas | `src/router.tsx` |
 
@@ -99,12 +103,14 @@ Nenhuma persistência ou query no layout/placeholder além de leitura de `profil
 ### Fluxo principal
 
 1. Usuário autenticado entra em uma rota `/dashboard/...`.
-2. `DashboardLayout` monta menu conforme `profile.role`.
-3. `Outlet` renderiza a página filha (real ou `DashboardFakePage`).
+2. `DashboardLayout` monta menu conforme `profile.role` (e, se prestador sem KYC `ACTIVE`, reduz a Minha conta).
+3. Para prestador, `ProviderKycGate` libera outlet/slots só se `ACTIVE` ou path `/dashboard/conta*`; caso contrário mostra telas de status/formulário KYC.
+4. `Outlet` (quando liberado) renderiza a página filha (real ou `DashboardFakePage`).
 
 ### Fluxos alternativos
 
 1. **Offline:** layout ajusta posição do header quando `!isOnline` (`top-11` vs `top-0`) — `DashboardLayout.tsx`.
+2. **Prestador suspenso / rejeitado / em análise:** conteúdo operacional substituído pelas UIs de status do módulo [provider-kyc](../../provider-kyc/features/gate-e-acesso-operacional.md).
 
 ---
 
@@ -138,3 +144,9 @@ Nenhuma persistência ou query no layout/placeholder além de leitura de `profil
 - **Subguards por rota placeholder:** `/dashboard/addresses` é cliente-only e `/dashboard/earnings` provider-only.
 - **Menu é derivado de papel em runtime:** `getDashboardMenu(role)` controla itens desktop/mobile do shell.
 - **Comportamento offline no layout:** header ajusta offset quando `useOnlineStatus` indica ausência de conexão.
+
+## 15. Atualização (2026-07-30) — gate KYC no shell
+
+- Prestador sem onboarding `ACTIVE`: shell operacional bloqueado; nav só **Minha conta**; `/dashboard/conta*` permanece acessível.
+- `ProviderKycGate` envolve slots persistentes do prestador + outlet; slot de Meus serviços do cliente fica fora.
+- Doc canônico: [gate-e-acesso-operacional](../../provider-kyc/features/gate-e-acesso-operacional.md).

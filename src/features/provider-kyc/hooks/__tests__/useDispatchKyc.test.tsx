@@ -69,6 +69,14 @@ describe("useDispatchKyc", () => {
       expect(result.current.isSuccess).toBe(true);
     });
     expect(result.current.data?.submissionId).toBe("sub-1");
+    expect(kycApi.submitProviderKyc).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityType: "CPF",
+        document: request.document,
+        fullName: request.fullName,
+        bankInstitutionCode: "001",
+      }),
+    );
     expect(invalidateSpy).toHaveBeenCalled();
   });
 

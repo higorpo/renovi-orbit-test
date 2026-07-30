@@ -81,7 +81,9 @@ select throws_ok(
   $$ select public.payment_submit_provider_kyc(
     '001', '0001', '12345-6',
     'providers/5d09e025-20a2-4842-aeef-324d42a431e1/kyc/identity/doc.pdf',
-    'providers/5d09e025-20a2-4842-aeef-324d42a431e1/kyc/address-proof/doc.pdf'
+    'providers/5d09e025-20a2-4842-aeef-324d42a431e1/kyc/address-proof/doc.pdf',
+    'pf',
+    '12345678901'
   ) $$,
   'P0001',
   'RATE_LIMITED',

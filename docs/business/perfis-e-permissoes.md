@@ -1,6 +1,6 @@
 # Perfis e permissões
 
-Consolidação a partir de `src/router.tsx`, `src/features/auth/components/routeGuards.tsx`, `src/features/auth/types/auth.types.ts`, `src/features/auth/hooks/useAuth.tsx`, `src/layouts/DashboardLayout/dashboardMenu.ts` e políticas nas migrações Supabase (visão resumida).
+Consolidação a partir de `src/router.tsx`, `src/features/auth/components/routeGuards.tsx`, `src/features/auth/types/auth.types.ts`, `src/features/auth/hooks/useAuth.tsx`, `src/layouts/DashboardLayout/dashboardMenu.ts`, `src/features/provider-kyc/` (gate de shell) e políticas nas migrações Supabase (visão resumida).
 
 ## Papéis (`profiles.role`)
 
@@ -45,7 +45,22 @@ Restrições de **atribuição de papel** (triggers / políticas):
 - Se `role === "client"` → itens de cliente (Visão geral, Meus Serviços, Conversas, Endereços, Minha conta, Ajuda).
 - Caso contrário → menu de prestador (Visão geral, Meus Serviços, Trabalhos, Conversas, Ganhos, Minha conta, Ajuda).
 
+**Filtro KYC (prestador):** se a conta NetCred estiver ausente, ainda carregando, ou `onboarding_status !== ACTIVE`, `useProviderKycNavItems` reduz desktop e bottom nav a **somente Minha conta** (`/dashboard/conta`). Com `ACTIVE`, o menu completo do prestador permanece.
+
 **Comportamento inferido:** um usuário `admin` que de alguma forma renderizasse o layout com esse helper veria o **menu de prestador**, pois só há ramificação explícita para `client`. Na prática, `admin` não passa pelo `ProtectedRoute` do dashboard com as roles atuais.
+
+## Gate de KYC no shell (`ProviderKycGate`)
+
+Complementa (não substitui) os `ProtectedRoute`:
+
+| Situação | Efeito |
+|----------|--------|
+| `client` | Sem efeito |
+| `provider` + `ACTIVE` | Conteúdo operacional liberado |
+| `provider` + conta null ou status ≠ `ACTIVE` | Slots do prestador + outlet bloqueados; telas de status/formulário KYC |
+| Path `/dashboard/conta` ou `/dashboard/conta/…` | Sempre liberado (logout / conta) |
+
+Detalhe: [gate-e-acesso-operacional](./modulos/provider-kyc/features/gate-e-acesso-operacional.md).
 
 ## Ações permitidas no banco (visão de alto nível)
 
@@ -68,5 +83,6 @@ Para detalhes por tabela, ver arquivos em `supabase/migrations/` citados em [ras
 ## Resumo executivo para operações
 
 - O **painel principal** (`/dashboard`) é compartilhado por cliente e prestador, mas **cada área sensível** reforça o papel com `ProtectedRoute` aninhado.
+- **Prestador sem KYC `ACTIVE`:** não opera o shell (jobs, chats, ajuda, etc.); só **Minha conta** no menu e no allowlist de path.
 - **Admin** existe no banco mas **não** está integrado ao conjunto de rotas analisado do app.
 - Endereços: rota dedicada no menu é **placeholder**; gestão real ocorre em **Minha conta** e no **Pedir orçamento**.

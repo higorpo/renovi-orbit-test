@@ -43,6 +43,8 @@ Documentação derivada do código da aplicação (front-end React/Vite, Supabas
 | Message Dispatcher (notificações) | [modulos/message-dispatcher](./modulos/message-dispatcher/README.md) |
 | Matching progressivo / dispatch | [modulos/matching-dispatch](./modulos/matching-dispatch/README.md) |
 | Reagendamento de serviço | [modulos/service-reschedule](./modulos/service-reschedule/README.md) |
+| Credenciamento KYC do prestador | [modulos/provider-kyc](./modulos/provider-kyc/README.md) |
+| Pagamentos | [modulos/payments](./modulos/payments/README.md) |
 
 ## Atualização
 

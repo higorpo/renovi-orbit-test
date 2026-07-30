@@ -157,6 +157,46 @@ values
     true
   ),
   (
+    'account.provider_kyc_submitted',
+    'email',
+    'Documentos de credenciamento enviados',
+    '<p>Seus documentos de credenciamento foram enviados com sucesso.</p><p>Aguarde a análise da plataforma. Você será notificado quando houver uma atualização.</p><p><a href="{{deep_link_path}}">Acessar o app</a></p>',
+    '{"type":"object","properties":{"provider_id":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["provider_id","deep_link_path"],"additionalProperties":true}'::jsonb,
+    true
+  ),
+  (
+    'account.provider_kyc_under_review',
+    'push',
+    'Credenciamento em análise',
+    'Seus documentos estão em análise. Você será notificado quando houver uma atualização.',
+    '{"type":"object","properties":{"provider_id":{"type":"string"},"provider_gateway_account_id":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["provider_id"],"additionalProperties":true}'::jsonb,
+    true
+  ),
+  (
+    'account.provider_kyc_under_review',
+    'email',
+    'Credenciamento em análise',
+    '<p>Seus documentos de credenciamento estão em análise na plataforma de pagamentos.</p><p>Você será notificado quando houver uma atualização.</p><p><a href="{{deep_link_path}}">Acessar o app</a></p>',
+    '{"type":"object","properties":{"provider_id":{"type":"string"},"provider_gateway_account_id":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["provider_id","deep_link_path"],"additionalProperties":true}'::jsonb,
+    true
+  ),
+  (
+    'account.provider_kyc_rejected',
+    'push',
+    'Credenciamento não aprovado',
+    'Seu credenciamento não foi aprovado. Revise os documentos e envie novamente.',
+    '{"type":"object","properties":{"provider_id":{"type":"string"},"provider_gateway_account_id":{"type":"string"},"reason":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["provider_id"],"additionalProperties":true}'::jsonb,
+    true
+  ),
+  (
+    'account.provider_kyc_rejected',
+    'email',
+    'Credenciamento não aprovado',
+    '<p>Seu credenciamento de pagamentos não foi aprovado.</p><p>Revise os documentos e envie novamente pelo app.</p><p><a href="{{deep_link_path}}">Corrigir e reenviar</a></p>',
+    '{"type":"object","properties":{"provider_id":{"type":"string"},"provider_gateway_account_id":{"type":"string"},"reason":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["provider_id","deep_link_path"],"additionalProperties":true}'::jsonb,
+    true
+  ),
+  (
     'payment.transaction_dispute',
     'push',
     'Disputa em análise — {{service_request_title}}',
@@ -375,8 +415,18 @@ begin
       end if;
     when 'PROVIDER_KYC_SUBMITTED' then
       v_template_key := 'account.provider_kyc_submitted';
-      v_channels := array['push']::message_dispatcher.message_channel[];
+      v_channels := array['push', 'email']::message_dispatcher.message_channel[];
       v_push_bypass_limits := false;
+      v_email_bypass_limits := false;
+    when 'PROVIDER_ONBOARDING_UNDER_REVIEW' then
+      v_template_key := 'account.provider_kyc_under_review';
+      v_channels := array['push', 'email']::message_dispatcher.message_channel[];
+      v_push_bypass_limits := true;
+      v_email_bypass_limits := false;
+    when 'PROVIDER_KYC_REJECTED' then
+      v_template_key := 'account.provider_kyc_rejected';
+      v_channels := array['push', 'email']::message_dispatcher.message_channel[];
+      v_push_bypass_limits := true;
       v_email_bypass_limits := false;
     when 'TRANSACTION_DISPUTE' then
       v_template_key := 'payment.transaction_dispute';

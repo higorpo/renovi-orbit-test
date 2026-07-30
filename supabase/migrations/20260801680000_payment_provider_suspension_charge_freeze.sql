@@ -49,7 +49,11 @@ begin
         'UNDER_NETCRED_REVIEW'::public.payment_provider_onboarding_status
       ))
     or (old.onboarding_status = 'REJECTED'::public.payment_provider_onboarding_status
-      and new.onboarding_status = 'REJECTED'::public.payment_provider_onboarding_status)
+      and new.onboarding_status in (
+        'REJECTED'::public.payment_provider_onboarding_status,
+        'DOCUMENTS_SUBMITTED'::public.payment_provider_onboarding_status,
+        'PENDING_DOCUMENTS'::public.payment_provider_onboarding_status
+      ))
     or (old.onboarding_status = 'ACTIVE'::public.payment_provider_onboarding_status
       and new.onboarding_status = 'SUSPENDED'::public.payment_provider_onboarding_status)
     or (old.onboarding_status = 'SUSPENDED'::public.payment_provider_onboarding_status

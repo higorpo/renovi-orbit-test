@@ -21,6 +21,8 @@ Documentação alinhada ao código em `src/features/my-account/`, guards em `src
 |------|------|----------|-------------------|
 | Minha conta | `/dashboard/conta` | Configurações da conta | `client`, `provider` (`ProtectedRoute` em `router.tsx`) |
 
+**Prestador sem KYC `ACTIVE`:** `/dashboard/conta` (e paths aninhados) permanece acessível pelo allowlist do `ProviderKycGate` — logout e ajustes de conta enquanto o shell operacional está bloqueado. Ver [gate-e-acesso-operacional](../../provider-kyc/features/gate-e-acesso-operacional.md).
+
 **Composição da página**
 
 - **Cliente:** `MyAccountClientPage.tsx` — resumo lateral + formulário (auto-save 1500 ms) + `AddressesSection` + `SavedCardsList` + `PaymentHistorySection` (histórico com breakdown de reembolso) + privacidade + logout + zona de perigo.

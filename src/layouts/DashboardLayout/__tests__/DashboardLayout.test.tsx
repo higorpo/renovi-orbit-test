@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ReactNode } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { DashboardLayout } from "../DashboardLayout";
 
@@ -14,6 +14,9 @@ const useServiceDetailModalMock = vi.hoisted(() =>
     serviceRequestId: undefined as string | undefined,
     background: null,
   })),
+);
+const useProviderKycNavItemsMock = vi.hoisted(() =>
+  vi.fn((allItems: unknown[], mainItems: unknown[]) => ({ allItems, mainItems })),
 );
 
 vi.mock("@/features/auth", () => ({
@@ -29,12 +32,12 @@ vi.mock("@/hooks/useOnlineStatus", () => ({
 }));
 
 vi.mock("@/features/provider-jobs", () => ({
-  ProviderJobsPersistentSlot: () => null,
+  ProviderJobsPersistentSlot: () => <div data-testid="provider-jobs-slot" />,
 }));
 
 vi.mock("@/features/my-services", () => ({
-  ProviderMyServicesPersistentSlot: () => null,
-  ClientMyServicesPersistentSlot: () => null,
+  ProviderMyServicesPersistentSlot: () => <div data-testid="provider-my-services-slot" />,
+  ClientMyServicesPersistentSlot: () => <div data-testid="client-my-services-slot" />,
 }));
 
 vi.mock("@/features/view-services", () => ({
@@ -44,8 +47,11 @@ vi.mock("@/features/view-services", () => ({
   useServiceDetailModal: () => useServiceDetailModalMock(),
 }));
 
-vi.mock("@/features/payments", () => ({
-  ProviderKycGate: ({ children }: { children: ReactNode }) => children,
+vi.mock("@/features/provider-kyc", () => ({
+  ProviderKycGate: ({ children }: { children: ReactNode }) => (
+    <div data-testid="provider-kyc-gate">{children}</div>
+  ),
+  useProviderKycNavItems: (...args: unknown[]) => useProviderKycNavItemsMock(...args),
 }));
 
 vi.mock("../MobileStackTransition", () => ({
@@ -70,6 +76,9 @@ describe("DashboardLayout", () => {
       serviceRequestId: undefined,
       background: null,
     });
+    useProviderKycNavItemsMock.mockImplementation(
+      (allItems: unknown[], mainItems: unknown[]) => ({ allItems, mainItems }),
+    );
     useAuth.mockReturnValue({
       profile: { id: "p1", role: "client", full_name: "User" },
       user: null,
@@ -166,6 +175,26 @@ describe("DashboardLayout", () => {
     const main = screen.getByRole("main");
     expect(main).toBeInTheDocument();
     expect(main.tagName).toBe("MAIN");
+  });
+
+  it("wraps provider persistent slots and outlet inside ProviderKycGate", () => {
+    useBreakpointMd.mockReturnValue(true);
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <Routes>
+          <Route path="/dashboard" element={<DashboardLayout />}>
+            <Route index element={<p>Outlet page</p>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const gate = screen.getByTestId("provider-kyc-gate");
+    expect(within(gate).getByTestId("provider-jobs-slot")).toBeInTheDocument();
+    expect(within(gate).getByTestId("provider-my-services-slot")).toBeInTheDocument();
+    expect(within(gate).getByText("Outlet page")).toBeInTheDocument();
+    expect(screen.getByTestId("client-my-services-slot")).toBeInTheDocument();
+    expect(within(gate).queryByTestId("client-my-services-slot")).toBeNull();
   });
 
   it("applies padding bottom to main on mobile so content is not under bottom nav", () => {

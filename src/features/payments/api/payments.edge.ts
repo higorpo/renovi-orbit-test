@@ -6,7 +6,6 @@ export const PAYMENT_EDGE = {
   tokenizePaymentCard: "tokenize-payment-card",
   manualChargePayment: "manual-charge-payment",
   processRefund: "process-refund",
-  dispatchKycEmail: "dispatch-kyc-email",
 } as const;
 
 export type PaymentEdgeFunctionName = (typeof PAYMENT_EDGE)[keyof typeof PAYMENT_EDGE];

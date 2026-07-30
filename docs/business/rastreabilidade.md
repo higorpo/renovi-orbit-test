@@ -11,8 +11,9 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `docs/business/modulos/README.md` | Índice de módulos, cobertura, lacunas |
 | `src/main.tsx` | Bootstrap assíncrono: `initCapacitorPlugins` → `hydratePersistSessionPreference` → `RouterProvider` |
 | `src/layouts/DashboardLayout/dashboardMenu.ts` | Menus por papel |
-| `src/layouts/DashboardLayout/DashboardLayout.tsx` | Layout autenticado |
+| `src/layouts/DashboardLayout/DashboardLayout.tsx` | Layout autenticado; `ProviderKycGate` + `useProviderKycNavItems` |
 | `src/layouts/DashboardLayout/DashboardFakePage.tsx` | Placeholders de seção |
+| `src/features/provider-kyc/` | Gate KYC, wizard de credenciamento, status, API/upload/submit |
 
 ## Autenticação e perfil
 
@@ -41,6 +42,8 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `chats/` | `api/chats.api.ts`, `chats.rpc.ts`; hooks lista, thread, mensagens, Realtime | `ChatListPage`, `ChatScreen`, `ChatsLayout` |
 | `negotiation-proposals/` | `api/proposals.api.ts`, `api/serviceRequestBudgetCompare.api.ts`, `proposals.rpc.ts`; RPCs `create_provider_proposal`, `get_proposal_detail_for_provider`, `get_proposal_detail_for_participant`; countdown `useProposalCountdown`, `ProposalCountdownBanner` | `ProposalComposerDialog`, `AcceptProposalDialog`, `ReceivedBudgetDetailsSheet`, composer em jobs |
 | `service-reschedule/` | `api/serviceReschedule.api.ts`; hooks mutações/detalhe; `deriveRescheduleDateMode`, `mapRescheduleSnapshot` | `ProposeRescheduleDialog` (inclui lembrete dispensável `ProposeRescheduleFlowReminder`), `RequestRescheduleDialog`, cards/ações no chat e no serviço contratado |
+| `payments/` | APIs checkout/cartões/histórico/cobrança; RPCs `payment_*` | Checkout stepper, `ManualPaymentDialog`, histórico em Minha conta |
+| `provider-kyc/` | `api/kyc.api.ts`, `providerKyc.rpc.ts`, `brazilianBanks.api.ts`; hooks `useProviderPaymentAccount`, `useProviderKycNavItems`, `useProviderKycWizard`, `useDispatchKyc`, `useBrazilianBanks` | `ProviderKycGate`, `ProviderKycForm`, `BankPicker`, `ProviderKycWizardStepContent`, telas `components/status/*` |
 | `auth/` | (já listado) | — |
 
 ## Supabase — dados e regras
@@ -198,6 +201,31 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `supabase/tests/payments/payment_accept_proposal_profile_incomplete_test.sql` | `accept_proposal` exige CPF+telefone (`PROFILE_INCOMPLETE`) |
 | `supabase/migrations/20260802180000_payment_schedules_audit_trigger.sql` | Tabela `payment_schedules_audit` (row-history append-only), `row_version`/`audit_txid` só no audit, trigger statement único set-based, RLS admin-only, INSERT só via DEFINER |
 | `supabase/tests/payments/payment_schedules_audit_trigger_test.sql` | pgTAP: snapshot INSERT/UPDATE/DELETE, versões contíguas, drift de colunas, bloqueio UPDATE/INSERT direto, privilégios |
+
+## Credenciamento do prestador (gate + wizard)
+
+| Artefato | Uso na documentação |
+|----------|---------------------|
+| `docs/business/modulos/provider-kyc/` | README + [gate-e-acesso-operacional](./modulos/provider-kyc/features/gate-e-acesso-operacional.md) + [formulário-credenciamento-wizard](./modulos/provider-kyc/features/formulario-credenciamento-wizard.md) |
+| `src/features/provider-kyc/components/ProviderKycGate.tsx` | Bloqueio do shell; allowlist `/dashboard/conta*`; UIs por status; host do `ProviderKycForm` |
+| `src/features/provider-kyc/hooks/useProviderKycNavItems.ts` | Menu só Minha conta quando não `ACTIVE` |
+| `src/features/provider-kyc/hooks/useProviderPaymentAccount.ts` | Polling 5s (e-mail pendente) / 30s (documentos enviados ou análise) |
+| `src/features/provider-kyc/hooks/useProviderKycWizard.ts` | Wizard multi-etapas; prefill; uploads; analytics |
+| `src/features/provider-kyc/hooks/useDispatchKyc.ts` | `payment_submit_provider_kyc` + `dispatch-kyc-email` |
+| `src/features/provider-kyc/api/kyc.api.ts` | Critérios de status; upload Option A; submit com identidade; prefill `provider_profiles_private` |
+| `src/features/provider-kyc/api/providerKyc.rpc.ts` | Nomes das RPCs/Edge KYC |
+| `src/features/provider-kyc/api/brazilianBanks.api.ts` | `fetchBrazilianBanks` — BrasilAPI `/banks/v1` + fallback lazy |
+| `src/features/provider-kyc/hooks/useBrazilianBanks.ts` | React Query da lista de bancos do `BankPicker` |
+| `src/features/provider-kyc/constants/brazilianBanks.ts` | Overrides de nome, mapeamento FEBRABAN, `loadBrazilianBanksFallback` |
+| `src/features/provider-kyc/constants/brazilianBanksDefault.json` | Snapshot local carregado sob demanda quando a BrasilAPI falha |
+| `src/features/provider-kyc/types/providerKyc.validation.ts` | Schemas Zod por passo; mapeamento `pf`/`pj` |
+| `src/layouts/DashboardLayout/DashboardLayout.tsx` | Integração gate + nav |
+| `src/features/provider-kyc/components/__tests__/ProviderKycGate.test.tsx` | Cobertura de status e allowlist |
+| `src/features/provider-kyc/components/__tests__/ProviderKycForm.test.tsx` | Wizard, `legal-rep-id`, identidade no submit |
+| `supabase/functions/dispatch-kyc-email/` | E-mail operacional (default `credenciamento@renovi.com.br`; env `NETCRED_CREDENCIAMENTO_EMAIL`) |
+| `supabase/migrations/20260802210000_provider_kyc_upload_sessions.sql` | Sessões Option A + janitor `payment_janitor_orphan_kyc_documents` |
+| `supabase/migrations/20260801750000_payment_mmd_notification_catalog.sql` (+ `20260801900000_provider_activated_*`) | Templates/rotas MMD KYC (submitted, under review, rejected, activated, suspended) |
+| `supabase/migrations/20260801060000_create_provider_gateway_accounts.sql` | FSM `onboarding_status` (incl. `REJECTED` → `DOCUMENTS_SUBMITTED`) |
 
 ## Documentação pré-existente (planos legados)
 

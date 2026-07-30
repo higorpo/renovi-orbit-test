@@ -45,6 +45,11 @@ declare
   v_provider_id uuid := '5d09e025-20a2-4842-aeef-324d42a431e1'::uuid;
   v_account_id uuid;
 begin
+  -- Seed provider is ACTIVE (terminal); delete then insert DOCUMENTS_SUBMITTED.
+  delete from public.provider_gateway_accounts
+  where provider_id = v_provider_id
+    and gateway_slug = 'netcred'::public.payment_gateway_slug;
+
   insert into public.provider_gateway_accounts (
     id,
     provider_id,
@@ -59,13 +64,6 @@ begin
     '12345678901',
     'DOCUMENTS_SUBMITTED'::public.payment_provider_onboarding_status
   )
-  on conflict (provider_id, gateway_slug) do update
-  set
-    onboarding_status = 'DOCUMENTS_SUBMITTED'::public.payment_provider_onboarding_status,
-    netcred_company_id = null,
-    netcred_bank_account_id = null,
-    onboarding_activated_at = null,
-    updated_at = now()
   returning id into v_account_id;
 
   perform set_config('test.onboarding.account_id', v_account_id::text, true);

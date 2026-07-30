@@ -345,6 +345,7 @@ stateDiagram-v2
     SUSPENDED --> ACTIVE: admin reactivation
     DOCUMENTS_SUBMITTED --> REJECTED: admin/support action
     UNDER_NETCRED_REVIEW --> REJECTED: gateway rejection confirmed
+    REJECTED --> DOCUMENTS_SUBMITTED: provider resubmits KYC
 ```
 
 ---
@@ -999,7 +1000,7 @@ sequenceDiagram
     P->>EF: POST dispatch-kyc-email (JWT)
     EF->>PG: SELECT provider_profiles_private + profiles (service_role)
     EF->>ST: download objects (service_role)
-    EF->>RS: email credenciamento@… with attachments (no public URLs)
+    EF->>RS: email credenciamento@renovi.com.br (or NETCRED_CREDENCIAMENTO_EMAIL) with attachments (no public URLs)
     alt send success
         EF->>PG: payment_mark_kyc_credenciamento_email_dispatched(id)
     else send failure
@@ -1962,7 +1963,7 @@ Batch RPCs accept `p_record_job_run boolean DEFAULT true` where applicable; **cr
 | Function | Trigger | Auth | Role |
 |---|---|---|---|
 | `tokenize-payment-card` | Client POST | JWT | PCI → NetCred `paymentProfileCreate` → `payment_persist_client_card_token` RPC |
-| `dispatch-kyc-email` | Client POST after KYC RPC | JWT (provider) | Load KYC row + **download private Storage objects** → Resend email with **attachments** to credenciamento@… → `payment_mark_kyc_credenciamento_email_dispatched` RPC |
+| `dispatch-kyc-email` | Client POST after KYC RPC | JWT (provider) | Load KYC row + **download private Storage objects** → Resend email with **attachments** to default `credenciamento@renovi.com.br` (override env `NETCRED_CREDENCIAMENTO_EMAIL`) → `payment_mark_kyc_credenciamento_email_dispatched` RPC |
 | `schedule-netcred-charges` | pg_cron 4×/day via `payment_cron_schedule_netcred_charges()` | cron secret | `payment_claim_charge_batch` → NetCred loop → `payment_commit_charge_outcome` RPC |
 | `manual-charge-payment` | Client POST | JWT + rate limit | `payment_begin_manual_attempt` → NetCred → `payment_commit_charge_outcome` RPC |
 | `netcred-webhook` | NetCred POST | HMAC (no JWT) | Ingest + HMAC → inline `payment_process_webhook_event` OR `payment_enqueue_webhook_processing` RPC |
@@ -2561,44 +2562,52 @@ Per [`infrastructure-constraints.md`](../infrastructure-constraints.md): **start
 RPC claim/begin → EF external I/O → RPC commit → RPC enqueue notifications (or MMD in cron wrapper)
 ```
 
-## What belongs in the Application Layer (`src/features/payments/`)
+## What belongs in the Application Layer (`src/features/payments/` + `src/features/provider-kyc/`)
 
 **File naming (Orbit convention):** React components use PascalCase files and folders matching the exported component (`CheckoutStepper/CardStep.tsx`). Feature API modules use camelCase domain files (`checkout.api.ts`, `cards.api.ts`). Shared infra: `payments.rpc.ts`, `payments.edge.ts`, `paymentApiClient.ts`. Non-component helpers may use camelCase (`checkoutStepLabels.ts`).
 
-**Feature boundary (app layer):** `payments` owns money movement (checkout, tokens, charges, KYC gateway, payment history). Contracted-service lifecycle UI on the service detail page (mark executed, confirm completion, cancel) lives in `view-services` — even when RPCs use the `payment_*` prefix in Postgres.
+**Feature boundary (app layer):** `payments` owns money movement (checkout, tokens, charges, payment history) and **Postgres/Edge KYC gateway** (`payment_*` RPCs, `dispatch-kyc-email`, `detect-netcred-onboarding`). **Provider KYC UI** (gate, status screens, wizard, BankPicker, upload client) lives in **`src/features/provider-kyc/`** — not under `payments/components`. Contracted-service lifecycle UI on the service detail page (mark executed, confirm completion, cancel) lives in `view-services` — even when RPCs use the `payment_*` prefix in Postgres.
 
-### API layer layout (aligned with `negotiation-proposals/api/`)
+### API layer layout — `payments` (aligned with `negotiation-proposals/api/`)
 
 | Module | Responsibility | Transport |
 |---|---|---|
-| `payments.rpc.ts` | Registry of `payment_*` RPC names | — |
-| `payments.edge.ts` | Registry of payment Edge Function slugs | — |
+| `payments.rpc.ts` | Registry of `payment_*` RPC names (incl. KYC submit/upload when still re-exported) | — |
+| `payments.edge.ts` | Registry of payment Edge Function slugs (incl. `dispatch-kyc-email`) | — |
 | `paymentApiClient.ts` | `invokePaymentRpc`, `invokePaymentEdgeFunction` (`supabase.functions.invoke`), error tracking | RPC + EF |
 | `checkout.api.ts` | Step requirements, CPF/phone capture | RPC + table upsert / `profileApi` |
 | `cards.api.ts` | Token list/read, tokenize, installments, revoke, update method on schedule | EF (`invoke`) + RPC (`payment_calculate_installment_options`, `payment_update_method`, revoke) + table read |
 | `charges.api.ts` | Manual charge, schedule/context reads | EF + table read |
-| `kyc.api.ts` | KYC storage, dispatch email, provider account | Storage + EF + table read |
 | `history.api.ts` | Client/provider payment history views | View read |
 | `api/index.ts` | Re-exports + `paymentsApi` aggregate | — |
 
+### API / UI — `provider-kyc` (credenciamento NetCred)
+
+| Module / path | Responsibility | Transport |
+|---|---|---|
+| `api/providerKyc.rpc.ts` / `providerKycApiClient.ts` | RPC/Edge names + invoke helpers for KYC | RPC + EF |
+| `api/kyc.api.ts` | Account read, upload Option A, submit + identity upsert, prefill `provider_profiles_private` | Storage + RPC + EF |
+| `components/ProviderKycGate.tsx`, `ProviderKycForm.tsx`, `BankPicker.tsx`, `components/status/*` | Gate until `ACTIVE`, wizard, status UIs | — |
+| `hooks/useProviderKycWizard.ts`, `useDispatchKyc.ts`, `useProviderPaymentAccount.ts`, `useProviderKycNavItems.ts` | Wizard, submit/dispatch, polling, nav filter | via `api/` |
+
 **Types:** `types/paymentApi.types.ts` (`PaymentsApiResult`, `PaymentsApiError`). **Errors:** `utils/paymentApiErrors.ts` (`mapPaymentRpcError`, `parsePaymentRpcDetailObject`).
 
-**Hooks MUST import from `api/` domain modules (or `@/features/payments` public API) — never call Supabase directly.**
+**Hooks MUST import from `api/` domain modules (or the feature public API) — never call Supabase directly.**
 
 | Responsibility | Location |
 |---|---|
-| Checkout stepper | `components/CheckoutStepper/` |
-| ClearSale SDK injection | `components/CheckoutStepper/CardStep.tsx` |
-| Saved card management UI | `components/SavedCards/` |
-| Manual payment recovery UI | `components/ManualPaymentButton.tsx`, `ManualPaymentDialog.tsx` |
-| Provider KYC blocking UI | `components/ProviderKycGate.tsx`, `ProviderKycForm.tsx` |
-| Payment history UI | `components/PaymentHistory/` |
-| Card tokenization (PCI invoke) | `api/cards.api.ts` → `invokePaymentEdgeFunction('tokenize-payment-card')` |
-| Installment options + HMAC | `api/cards.api.ts` → `invokePaymentRpc(PAYMENT_RPC.calculateInstallmentOptions)` |
-| Saved token read path | `api/cards.api.ts` → `client_card_tokens` (migrate to `client_card_tokens_safe_v`) |
-| Payment hooks | `hooks/` — call `api/` only |
-| Feature API layer | `api/` — `invokePaymentRpc` / `invokePaymentEdgeFunction`; no raw `fetch` to `/functions/v1/` in domain modules |
-| Public API | `index.ts` — exports `paymentsApi` aggregate |
+| Checkout stepper | `payments/components/CheckoutStepper/` |
+| ClearSale SDK injection | `payments/components/CheckoutStepper/CardStep.tsx` |
+| Saved card management UI | `payments/components/SavedCards/` |
+| Manual payment recovery UI | `payments/components/ManualPaymentButton.tsx`, `ManualPaymentDialog.tsx` |
+| Provider KYC blocking UI + wizard | `provider-kyc/components/ProviderKycGate.tsx`, `ProviderKycForm.tsx`, … |
+| Payment history UI | `payments/components/PaymentHistory/` |
+| Card tokenization (PCI invoke) | `payments/api/cards.api.ts` → `invokePaymentEdgeFunction('tokenize-payment-card')` |
+| Installment options + HMAC | `payments/api/cards.api.ts` → `invokePaymentRpc(PAYMENT_RPC.calculateInstallmentOptions)` |
+| Saved token read path | `payments/api/cards.api.ts` → `client_card_tokens` (migrate to `client_card_tokens_safe_v`) |
+| Payment hooks | `payments/hooks/` — call `api/` only |
+| Feature API layer | `payments/api/` — `invokePaymentRpc` / `invokePaymentEdgeFunction`; no raw `fetch` to `/functions/v1/` in domain modules |
+| Public API | `payments/index.ts` — exports `paymentsApi` aggregate; KYC UI via `@/features/provider-kyc` |
 
 ## What belongs in `src/features/view-services/` (service detail integration)
 

@@ -22,9 +22,6 @@ export type { ConfirmationStepProps } from "./CheckoutStepper/ConfirmationStep";
 export { PaymentTrustDisclosure } from "./PaymentTrustDisclosure";
 export { SavedCardsList } from "./SavedCards/SavedCardsList";
 export type { SavedCardsListProps } from "./SavedCards/SavedCardsList";
-export { ProviderKycForm } from "./ProviderKycForm";
-export type { ProviderKycFormProps } from "./ProviderKycForm";
-export { ProviderKycGate } from "./ProviderKycGate";
 export { ManualPaymentButton, ManualPaymentRecovery } from "./ManualPaymentButton";
 export type {
   ManualPaymentButtonProps,

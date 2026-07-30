@@ -1,18 +1,25 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
+  createKycUploadSession,
   dispatchKycEmail,
   fetchProviderPaymentAccount,
+  fetchProviderPrivateProfileForKyc,
+  isProviderCredentialed,
+  isProviderKycAwaitingReview,
+  isProviderKycDocumentsSubmitted,
   isProviderKycPending,
+  isProviderKycRejected,
   isProviderKycSubmitting,
+  isProviderKycSuspended,
+  registerKycUploadPath,
   retryProviderKycEmailDispatch,
   shouldBlockProviderForKyc,
   submitProviderKyc,
   uploadKycDocument,
   validateKycDocumentFile,
 } from "../kyc.api";
-import { PAYMENT_EDGE } from "../payments.edge";
-import { PAYMENT_RPC } from "../payments.rpc";
+import { PROVIDER_KYC_EDGE, PROVIDER_KYC_RPC } from "../providerKyc.rpc";
 
 const mockInvoke = vi.fn();
 const mockRpc = vi.fn();
@@ -60,7 +67,7 @@ describe("submitProviderKyc", () => {
     vi.clearAllMocks();
   });
 
-  it("persists KYC via payment_submit_provider_kyc RPC", async () => {
+  it("persists KYC via payment_submit_provider_kyc RPC with identity args", async () => {
     mockRpc.mockResolvedValue({
       data: {
         provider_gateway_account_id: "acc-1",
@@ -71,6 +78,9 @@ describe("submitProviderKyc", () => {
     });
 
     const result = await submitProviderKyc({
+      entityType: "CPF",
+      document: "390.533.447-05",
+      fullName: "João Silva",
       bankInstitutionCode: "001",
       bankBranch: "1234",
       bankAccount: "56789-0",
@@ -85,18 +95,65 @@ describe("submitProviderKyc", () => {
       onboardingStatus: "DOCUMENTS_SUBMITTED",
       dispatchKycEmailRequired: true,
     });
-    expect(mockRpc).toHaveBeenCalledWith(PAYMENT_RPC.submitProviderKyc, {
+    expect(mockRpc).toHaveBeenCalledWith(PROVIDER_KYC_RPC.submitProviderKyc, {
       p_bank_institution_code: "001",
       p_bank_branch: "1234",
       p_bank_account: "56789-0",
       p_identity_doc_storage_path: "provider-1/identity/document.pdf",
       p_address_proof_storage_path: "provider-1/address-proof/document.pdf",
+      p_entity_type: "pf",
+      p_document: "39053344705",
       p_pix_key: undefined,
       p_phone: "48999999999",
+      p_full_name: "João Silva",
       p_legal_representative_phone: undefined,
       p_corporate_charter_storage_path: undefined,
       p_legal_rep_doc_storage_path: undefined,
+      p_razao_social: undefined,
+      p_nome_fantasia: undefined,
+      p_legal_representative_name: undefined,
+      p_legal_representative_cpf: undefined,
     });
+  });
+
+  it("maps CNPJ entity type to pj and passes PJ identity fields", async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        provider_gateway_account_id: "acc-2",
+        onboarding_status: "DOCUMENTS_SUBMITTED",
+        dispatch_kyc_email_required: true,
+      },
+      error: null,
+    });
+
+    await submitProviderKyc({
+      entityType: "CNPJ",
+      document: "11.444.777/0001-61",
+      fullName: "Empresa LTDA",
+      bankInstitutionCode: "001",
+      bankBranch: "1234",
+      bankAccount: "56789-0",
+      identityDocStoragePath: "a",
+      addressProofStoragePath: "b",
+      razaoSocial: "Empresa LTDA",
+      nomeFantasia: "Empresa",
+      legalRepresentativeName: "Maria",
+      legalRepresentativeCpf: "390.533.447-05",
+      legalRepresentativePhone: "48988887777",
+      corporateCharterStoragePath: "c",
+      legalRepDocStoragePath: "d",
+    });
+
+    expect(mockRpc).toHaveBeenCalledWith(
+      PROVIDER_KYC_RPC.submitProviderKyc,
+      expect.objectContaining({
+        p_entity_type: "pj",
+        p_document: "11444777000161",
+        p_razao_social: "Empresa LTDA",
+        p_legal_representative_cpf: "39053344705",
+        p_legal_rep_doc_storage_path: "d",
+      }),
+    );
   });
 
   it("maps RPC errors and invalid response payloads", async () => {
@@ -107,6 +164,8 @@ describe("submitProviderKyc", () => {
 
     await expect(
       submitProviderKyc({
+        entityType: "CPF",
+        document: "390.533.447-05",
         bankInstitutionCode: "001",
         bankBranch: "1234",
         bankAccount: "56789-0",
@@ -125,6 +184,8 @@ describe("submitProviderKyc", () => {
 
     await expect(
       submitProviderKyc({
+        entityType: "CPF",
+        document: "390.533.447-05",
         bankInstitutionCode: "001",
         bankBranch: "1234",
         bankAccount: "56789-0",
@@ -134,6 +195,61 @@ describe("submitProviderKyc", () => {
     ).resolves.toEqual({
       data: null,
       error: "invalid_submit_provider_kyc_response",
+    });
+  });
+});
+
+describe("upload sessions", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("createKycUploadSession returns session id and path prefix", async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        upload_session_id: "session-1",
+        document_key: "identity",
+        status: "pending",
+        storage_path_prefix: "providers/provider-1/kyc/identity/",
+      },
+      error: null,
+    });
+
+    const result = await createKycUploadSession("identity");
+
+    expect(result).toEqual({
+      uploadSessionId: "session-1",
+      storagePathPrefix: "providers/provider-1/kyc/identity/",
+      error: null,
+    });
+    expect(mockRpc).toHaveBeenCalledWith(PROVIDER_KYC_RPC.createUploadSession, {
+      p_document_key: "identity",
+    });
+  });
+
+  it("registerKycUploadPath registers storage path on session", async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        upload_session_id: "session-1",
+        document_key: "identity",
+        storage_path: "providers/provider-1/kyc/identity/document.pdf",
+        status: "pending",
+      },
+      error: null,
+    });
+
+    const result = await registerKycUploadPath(
+      "session-1",
+      "providers/provider-1/kyc/identity/document.pdf",
+    );
+
+    expect(result).toEqual({
+      storagePath: "providers/provider-1/kyc/identity/document.pdf",
+      error: null,
+    });
+    expect(mockRpc).toHaveBeenCalledWith(PROVIDER_KYC_RPC.registerUploadPath, {
+      p_upload_session_id: "session-1",
+      p_storage_path: "providers/provider-1/kyc/identity/document.pdf",
     });
   });
 });
@@ -162,7 +278,7 @@ describe("dispatchKycEmail", () => {
       emailPending: false,
     });
     expect(mockInvoke).toHaveBeenCalledWith(
-      PAYMENT_EDGE.dispatchKycEmail,
+      PROVIDER_KYC_EDGE.dispatchKycEmail,
       expect.objectContaining({
         body: expect.objectContaining({
           entity_type: "CPF",
@@ -214,7 +330,7 @@ describe("dispatchKycEmail", () => {
 
     expect(result.error).toBeNull();
     expect(mockInvoke).toHaveBeenCalledWith(
-      PAYMENT_EDGE.dispatchKycEmail,
+      PROVIDER_KYC_EDGE.dispatchKycEmail,
       expect.objectContaining({
         body: expect.objectContaining({
           entity_type: "CNPJ",
@@ -227,32 +343,40 @@ describe("dispatchKycEmail", () => {
 });
 
 describe("shouldBlockProviderForKyc", () => {
-  it("blocks when account is missing or pending documents", () => {
+  it("blocks when account is missing", () => {
     expect(shouldBlockProviderForKyc(null)).toBe(true);
-    expect(shouldBlockProviderForKyc({
-      id: "acc-1",
-      onboardingStatus: "PENDING_DOCUMENTS",
-      emailDispatchedAt: null,
-      onboardingSubmittedAt: null,
-    })).toBe(true);
   });
 
-  it("blocks when documents submitted without email dispatch", () => {
-    expect(shouldBlockProviderForKyc({
-      id: "acc-1",
-      onboardingStatus: "DOCUMENTS_SUBMITTED",
-      emailDispatchedAt: null,
-      onboardingSubmittedAt: "2026-06-30T00:00:00.000Z",
-    })).toBe(true);
+  it("blocks any non-ACTIVE onboarding status", () => {
+    for (const onboardingStatus of [
+      "PENDING_DOCUMENTS",
+      "DOCUMENTS_SUBMITTED",
+      "UNDER_NETCRED_REVIEW",
+      "REJECTED",
+      "SUSPENDED",
+    ]) {
+      expect(shouldBlockProviderForKyc({
+        id: "acc-1",
+        onboardingStatus,
+        emailDispatchedAt: "2026-07-01T00:00:00.000Z",
+        onboardingSubmittedAt: "2026-06-30T00:00:00.000Z",
+      })).toBe(true);
+    }
   });
 
-  it("allows active onboarding status", () => {
+  it("allows only ACTIVE onboarding status", () => {
     expect(shouldBlockProviderForKyc({
       id: "acc-1",
       onboardingStatus: "ACTIVE",
       emailDispatchedAt: "2026-07-01T00:00:00.000Z",
       onboardingSubmittedAt: "2026-06-30T00:00:00.000Z",
     })).toBe(false);
+    expect(isProviderCredentialed({
+      id: "acc-1",
+      onboardingStatus: "ACTIVE",
+      emailDispatchedAt: "2026-07-01T00:00:00.000Z",
+      onboardingSubmittedAt: "2026-06-30T00:00:00.000Z",
+    })).toBe(true);
   });
 });
 
@@ -288,10 +412,29 @@ describe("uploadKycDocument", () => {
     );
 
     expect(result.error).toMatch(/Formato não permitido/);
+    expect(result.sessionId).toBeNull();
     expect(mockStorageFrom).not.toHaveBeenCalled();
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
-  it("uploads and returns signed URL", async () => {
+  it("creates session, uploads, registers path and returns signed URL", async () => {
+    mockRpc
+      .mockResolvedValueOnce({
+        data: {
+          upload_session_id: "session-1",
+          document_key: "identity",
+          storage_path_prefix: "providers/provider-1/kyc/identity/",
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          upload_session_id: "session-1",
+          storage_path: "providers/provider-1/kyc/identity/document.pdf",
+        },
+        error: null,
+      });
+
     const upload = vi.fn().mockResolvedValue({ error: null });
     const createSignedUrl = vi.fn().mockResolvedValue({
       data: { signedUrl: "https://signed.example/doc.pdf" },
@@ -306,11 +449,26 @@ describe("uploadKycDocument", () => {
     );
 
     expect(result.error).toBeNull();
+    expect(result.sessionId).toBe("session-1");
     expect(result.path).toContain("providers/provider-1/kyc/identity/");
     expect(result.signedUrl).toBe("https://signed.example/doc.pdf");
+    expect(mockRpc).toHaveBeenNthCalledWith(1, PROVIDER_KYC_RPC.createUploadSession, {
+      p_document_key: "identity",
+    });
+    expect(mockRpc).toHaveBeenNthCalledWith(2, PROVIDER_KYC_RPC.registerUploadPath, {
+      p_upload_session_id: "session-1",
+      p_storage_path: expect.stringContaining("providers/provider-1/kyc/identity/"),
+    });
   });
 
   it("returns upload error from storage", async () => {
+    mockRpc.mockResolvedValueOnce({
+      data: {
+        upload_session_id: "session-1",
+        storage_path_prefix: "providers/provider-1/kyc/identity/",
+      },
+      error: null,
+    });
     mockStorageFrom.mockReturnValue({
       upload: vi.fn().mockResolvedValue({ error: { message: "upload failed" } }),
       createSignedUrl: vi.fn(),
@@ -325,11 +483,27 @@ describe("uploadKycDocument", () => {
     expect(result).toEqual({
       path: null,
       signedUrl: null,
+      sessionId: "session-1",
       error: "upload failed",
     });
   });
 
-  it("returns signed URL generation failure", async () => {
+  it("returns signed URL generation failure after register", async () => {
+    mockRpc
+      .mockResolvedValueOnce({
+        data: {
+          upload_session_id: "session-1",
+          storage_path_prefix: "providers/provider-1/kyc/identity/",
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: {
+          upload_session_id: "session-1",
+          storage_path: "providers/provider-1/kyc/identity/document.pdf",
+        },
+        error: null,
+      });
     mockStorageFrom.mockReturnValue({
       upload: vi.fn().mockResolvedValue({ error: null }),
       createSignedUrl: vi.fn().mockResolvedValue({
@@ -345,6 +519,7 @@ describe("uploadKycDocument", () => {
     );
 
     expect(result.path).toContain("document.pdf");
+    expect(result.sessionId).toBe("session-1");
     expect(result.signedUrl).toBeNull();
     expect(result.error).toBe("signed url failed");
   });
@@ -370,7 +545,7 @@ describe("retryProviderKycEmailDispatch", () => {
     expect(result.error).toBeNull();
     expect(result.data?.submissionId).toBe("sub-retry");
     expect(mockInvoke).toHaveBeenCalledWith(
-      PAYMENT_EDGE.dispatchKycEmail,
+      PROVIDER_KYC_EDGE.dispatchKycEmail,
       expect.objectContaining({
         body: { retry_only: true },
       }),
@@ -451,8 +626,48 @@ describe("fetchProviderPaymentAccount", () => {
   });
 });
 
+describe("fetchProviderPrivateProfileForKyc", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("maps private profile for PF prefill", async () => {
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({
+        data: {
+          entity_type: "pf",
+          cpf: "39053344705",
+          cnpj: null,
+          bank_institution_code: "001",
+          bank_branch: "1234",
+          bank_account: "56789-0",
+          pix_key: null,
+          razao_social: null,
+          nome_fantasia: null,
+          legal_representative_name: null,
+          legal_representative_cpf: null,
+          legal_representative_phone: null,
+        },
+        error: null,
+      }),
+    });
+
+    const result = await fetchProviderPrivateProfileForKyc("provider-1");
+
+    expect(result.error).toBeNull();
+    expect(result.data).toMatchObject({
+      entityType: "CPF",
+      document: "39053344705",
+      bankInstitutionCode: "001",
+    });
+  });
+});
+
 describe("kyc status helpers", () => {
-  it("detects pending and submitting states", () => {
+  it("detects pending, submitting, review, rejected and suspended states", () => {
+    expect(isProviderKycPending(null)).toBe(true);
     expect(isProviderKycPending({
       id: "a",
       onboardingStatus: "PENDING_DOCUMENTS",
@@ -467,11 +682,39 @@ describe("kyc status helpers", () => {
       onboardingSubmittedAt: "2026-07-01T00:00:00.000Z",
     })).toBe(true);
 
+    expect(isProviderKycDocumentsSubmitted({
+      id: "a",
+      onboardingStatus: "DOCUMENTS_SUBMITTED",
+      emailDispatchedAt: "2026-07-01T00:00:00.000Z",
+      onboardingSubmittedAt: "2026-07-01T00:00:00.000Z",
+    })).toBe(true);
+
     expect(isProviderKycSubmitting({
       id: "a",
       onboardingStatus: "DOCUMENTS_SUBMITTED",
       emailDispatchedAt: "2026-07-01T00:00:00.000Z",
       onboardingSubmittedAt: "2026-07-01T00:00:00.000Z",
     })).toBe(false);
+
+    expect(isProviderKycAwaitingReview({
+      id: "a",
+      onboardingStatus: "UNDER_NETCRED_REVIEW",
+      emailDispatchedAt: "2026-07-01T00:00:00.000Z",
+      onboardingSubmittedAt: "2026-07-01T00:00:00.000Z",
+    })).toBe(true);
+
+    expect(isProviderKycRejected({
+      id: "a",
+      onboardingStatus: "REJECTED",
+      emailDispatchedAt: "2026-07-01T00:00:00.000Z",
+      onboardingSubmittedAt: "2026-07-01T00:00:00.000Z",
+    })).toBe(true);
+
+    expect(isProviderKycSuspended({
+      id: "a",
+      onboardingStatus: "SUSPENDED",
+      emailDispatchedAt: "2026-07-01T00:00:00.000Z",
+      onboardingSubmittedAt: "2026-07-01T00:00:00.000Z",
+    })).toBe(true);
   });
 });
