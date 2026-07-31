@@ -372,7 +372,7 @@ begin
       into v_sentry_alerts
       from jsonb_array_elements(v_result->'cancelled') as item;
 
-      perform public.payment_cron_post_sentry_alerts(v_sentry_alerts);
+      perform public.orbit_post_sentry_alerts(v_sentry_alerts);
     end if;
 
     perform public.job_run_finish(

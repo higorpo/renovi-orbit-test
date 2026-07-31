@@ -63,7 +63,7 @@ declare
     'detect-netcred-onboarding',
     'reconcile-netcred-payments',
     'reconcile-inanalysis-auto-cancel-voids',
-    'payment-emit-sentry-alerts',
+    'orbit-emit-sentry-alerts',
     'process-far-reschedule-recapture',
     'sync-netcred-settlements'
   ];
@@ -152,7 +152,7 @@ $$;
 comment on function public.payment_cron_invoke_edge_function(text) is
   'Payment cron wrapper: delegates to orbit_invoke_edge_function (allowlist enforced there). Uses 90s timeout for schedule-netcred-charges.';
 
-create or replace function public.payment_cron_post_sentry_alerts(
+create or replace function public.orbit_post_sentry_alerts(
   p_alerts jsonb
 )
 returns bigint
@@ -167,20 +167,25 @@ begin
 
   begin
     return public.orbit_invoke_edge_function(
-      'payment-emit-sentry-alerts',
+      'orbit-emit-sentry-alerts',
       jsonb_build_object('alerts', p_alerts),
       15000
     );
   exception
     when others then
-      raise warning 'payment_cron_post_sentry_alerts skipped: %', sqlerrm;
+      raise warning 'orbit_post_sentry_alerts skipped: %', sqlerrm;
       return null;
   end;
 end;
 $$;
 
-comment on function public.payment_cron_post_sentry_alerts(jsonb) is
-  'Payment Sentry bridge: delegates to orbit_invoke_edge_function(payment-emit-sentry-alerts).';
+comment on function public.orbit_post_sentry_alerts(jsonb) is
+  'Platform Sentry bridge: delegates to orbit_invoke_edge_function(orbit-emit-sentry-alerts). Replaces the interim net.http_post body from 20260801620000.';
+
+revoke all on function public.orbit_post_sentry_alerts(jsonb) from public;
+revoke all on function public.orbit_post_sentry_alerts(jsonb) from anon;
+revoke all on function public.orbit_post_sentry_alerts(jsonb) from authenticated;
+grant execute on function public.orbit_post_sentry_alerts(jsonb) to postgres;
 
 create or replace function message_dispatcher.message_dispatcher_invoke_worker()
 returns integer

@@ -711,7 +711,7 @@ begin
   );
 
   -- CRITICAL Sentry is emitted by netcred-webhook / webhook cron wrappers when
-  -- handler.outcome = 'disputed' (payment_cron_post_sentry_alerts exists later).
+  -- handler.outcome = 'disputed' (orbit_post_sentry_alerts exists later).
 
   return jsonb_build_object(
     'outcome', 'disputed',

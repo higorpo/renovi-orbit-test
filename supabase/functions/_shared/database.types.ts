@@ -4875,6 +4875,7 @@ export type Database = {
         }
         Returns: number
       }
+      orbit_post_sentry_alerts: { Args: { p_alerts: Json }; Returns: number }
       payment_activate_provider_from_netcred: {
         Args: {
           p_netcred_bank_account_id: string
@@ -5120,10 +5121,6 @@ export type Database = {
         Returns: number
       }
       payment_cron_notify_upcoming_charges: { Args: never; Returns: undefined }
-      payment_cron_post_sentry_alerts: {
-        Args: { p_alerts: Json }
-        Returns: number
-      }
       payment_cron_process_webhook_retry: { Args: never; Returns: undefined }
       payment_cron_reconcile_inanalysis_auto_cancel_voids: {
         Args: never

@@ -6,7 +6,7 @@ import type {
   EmitSentryAlertsSummary,
 } from "./types.ts";
 
-export type PaymentEmitSentryAlertsDeps = {
+export type OrbitEmitSentryAlertsDeps = {
   dispatchAlerts: (alerts: EmitSentryAlertsBody["alerts"]) => Promise<number>;
 };
 
@@ -23,9 +23,9 @@ function parseAlertsBody(body: unknown): EmitSentryAlertsBody["alerts"] {
   return alerts as EmitSentryAlertsBody["alerts"];
 }
 
-export async function handlePaymentEmitSentryAlertsRequest(
+export async function handleOrbitEmitSentryAlertsRequest(
   req: Request,
-  deps: PaymentEmitSentryAlertsDeps,
+  deps: OrbitEmitSentryAlertsDeps,
 ): Promise<Response> {
   const cors = getCorsHeaders(req);
 

@@ -731,9 +731,10 @@ begin
       < now() - make_interval(mins => v_stale_minutes);
 
   if v_stale_count > 0 then
+    -- Generic orbit-emit-sentry-alerts contract (level + message; code/count → tags/extra).
     v_alerts := jsonb_build_array(
       jsonb_build_object(
-        'level', 'CRITICAL',
+        'level', 'fatal',
         'code', 'FAR_RESCHEDULE_RECAPTURE_STALE',
         'message', format(
           '%s far-recapture pending older than %s minutes',
@@ -743,7 +744,7 @@ begin
         'count', v_stale_count
       )
     );
-    perform public.payment_cron_post_sentry_alerts(v_alerts);
+    perform public.orbit_post_sentry_alerts(v_alerts);
   end if;
 
   perform public.job_run_finish(

@@ -1,14 +1,14 @@
 import { assertEquals } from "std/testing/asserts";
 import {
-  handlePaymentEmitSentryAlertsRequest,
-  type PaymentEmitSentryAlertsDeps,
+  handleOrbitEmitSentryAlertsRequest,
+  type OrbitEmitSentryAlertsDeps,
 } from "../handleRequest.ts";
 
 function createRequest(
   body: unknown,
   headers: Record<string, string> = {},
 ): Request {
-  return new Request("https://example.com/payment-emit-sentry-alerts", {
+  return new Request("https://example.com/orbit-emit-sentry-alerts", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -19,7 +19,7 @@ function createRequest(
 }
 
 Deno.test("rejects requests without orbit cron auth", async () => {
-  const response = await handlePaymentEmitSentryAlertsRequest(
+  const response = await handleOrbitEmitSentryAlertsRequest(
     createRequest({ alerts: [] }),
     { dispatchAlerts: async () => 0 },
   );
@@ -31,7 +31,7 @@ Deno.test("accepts X-Orbit-Cron-Secret from pg_net bridge", async () => {
   Deno.env.set("ORBIT_CRON_SECRET", "orbit-cron-secret");
 
   try {
-    const response = await handlePaymentEmitSentryAlertsRequest(
+    const response = await handleOrbitEmitSentryAlertsRequest(
       createRequest({ alerts: [] }, { "X-Orbit-Cron-Secret": "orbit-cron-secret" }),
       { dispatchAlerts: async () => 0 },
     );
@@ -42,23 +42,25 @@ Deno.test("accepts X-Orbit-Cron-Secret from pg_net bridge", async () => {
   }
 });
 
-Deno.test("dispatches alerts from cron bridge payload", async () => {
+Deno.test("dispatches payment kind alerts from cron bridge payload", async () => {
   const prev = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   Deno.env.set("SUPABASE_SERVICE_ROLE_KEY", "test-service-role");
 
   const dispatchedKinds: string[] = [];
 
   try {
-    const deps: PaymentEmitSentryAlertsDeps = {
+    const deps: OrbitEmitSentryAlertsDeps = {
       dispatchAlerts: async (alerts) => {
         for (const alert of alerts) {
-          dispatchedKinds.push(alert.kind);
+          if ("kind" in alert && typeof alert.kind === "string") {
+            dispatchedKinds.push(alert.kind);
+          }
         }
         return alerts.length;
       },
     };
 
-    const response = await handlePaymentEmitSentryAlertsRequest(
+    const response = await handleOrbitEmitSentryAlertsRequest(
       createRequest({
         alerts: [
           {
@@ -95,9 +97,47 @@ Deno.test("dispatches alerts from cron bridge payload", async () => {
   }
 });
 
+Deno.test("dispatches generic level+message alerts", async () => {
+  Deno.env.set("ORBIT_CRON_SECRET", "orbit-cron-secret");
+
+  const received: unknown[] = [];
+
+  try {
+    const response = await handleOrbitEmitSentryAlertsRequest(
+      createRequest({
+        alerts: [
+          {
+            level: "fatal",
+            code: "FAR_RESCHEDULE_RECAPTURE_STALE",
+            message: "2 far-recapture pending older than 15 minutes",
+            count: 2,
+          },
+        ],
+      }, { "X-Orbit-Cron-Secret": "orbit-cron-secret" }),
+      {
+        dispatchAlerts: async (alerts) => {
+          received.push(...alerts);
+          return alerts.length;
+        },
+      },
+    );
+
+    const body = await response.json();
+    assertEquals(response.status, 200);
+    assertEquals(body.received, 1);
+    assertEquals(body.dispatched, 1);
+    assertEquals(
+      (received[0] as { code?: string }).code,
+      "FAR_RESCHEDULE_RECAPTURE_STALE",
+    );
+  } finally {
+    Deno.env.delete("ORBIT_CRON_SECRET");
+  }
+});
+
 Deno.test("OPTIONS returns 204", async () => {
-  const response = await handlePaymentEmitSentryAlertsRequest(
-    new Request("https://example.com/payment-emit-sentry-alerts", {
+  const response = await handleOrbitEmitSentryAlertsRequest(
+    new Request("https://example.com/orbit-emit-sentry-alerts", {
       method: "OPTIONS",
     }),
     { dispatchAlerts: async () => 0 },
@@ -108,8 +148,8 @@ Deno.test("OPTIONS returns 204", async () => {
 Deno.test("non-POST returns 405", async () => {
   Deno.env.set("ORBIT_CRON_SECRET", "orbit-cron-secret");
   try {
-    const response = await handlePaymentEmitSentryAlertsRequest(
-      new Request("https://example.com/payment-emit-sentry-alerts", {
+    const response = await handleOrbitEmitSentryAlertsRequest(
+      new Request("https://example.com/orbit-emit-sentry-alerts", {
         method: "GET",
         headers: { "X-Orbit-Cron-Secret": "orbit-cron-secret" },
       }),
@@ -124,8 +164,8 @@ Deno.test("non-POST returns 405", async () => {
 Deno.test("invalid JSON returns 400", async () => {
   Deno.env.set("ORBIT_CRON_SECRET", "orbit-cron-secret");
   try {
-    const response = await handlePaymentEmitSentryAlertsRequest(
-      new Request("https://example.com/payment-emit-sentry-alerts", {
+    const response = await handleOrbitEmitSentryAlertsRequest(
+      new Request("https://example.com/orbit-emit-sentry-alerts", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -146,7 +186,7 @@ Deno.test("invalid JSON returns 400", async () => {
 Deno.test("missing or non-array alerts defaults to empty list", async () => {
   Deno.env.set("ORBIT_CRON_SECRET", "orbit-cron-secret");
   try {
-    const response = await handlePaymentEmitSentryAlertsRequest(
+    const response = await handleOrbitEmitSentryAlertsRequest(
       createRequest({ alerts: "nope" }, {
         "X-Orbit-Cron-Secret": "orbit-cron-secret",
       }),
@@ -164,7 +204,7 @@ Deno.test("missing or non-array alerts defaults to empty list", async () => {
 Deno.test("null body parses as empty alerts", async () => {
   Deno.env.set("ORBIT_CRON_SECRET", "orbit-cron-secret");
   try {
-    const response = await handlePaymentEmitSentryAlertsRequest(
+    const response = await handleOrbitEmitSentryAlertsRequest(
       createRequest(null, {
         "X-Orbit-Cron-Secret": "orbit-cron-secret",
       }),

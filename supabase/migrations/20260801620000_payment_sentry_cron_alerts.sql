@@ -1,6 +1,8 @@
 -- Payment Task 82: Sentry alert bridge for SQL cron paths (design.md §10.1, Req 21.5–21.7).
+-- orbit_post_sentry_alerts is created here so cron wrappers below can reference it;
+-- 20260801690000 replaces the body to delegate via orbit_invoke_edge_function.
 
-create or replace function public.payment_cron_post_sentry_alerts(
+create or replace function public.orbit_post_sentry_alerts(
   p_alerts jsonb
 )
 returns bigint
@@ -10,7 +12,7 @@ set search_path = public, vault, extensions
 as $$
 declare
   v_url text;
-  v_key text;
+  v_secret text;
 begin
   if p_alerts is null or jsonb_typeof(p_alerts) <> 'array' or jsonb_array_length(p_alerts) = 0 then
     return null;
@@ -19,31 +21,32 @@ begin
   select nullif(trim(decrypted_secret), '')
   into v_url
   from vault.decrypted_secrets
-  where name = 'payment_supabase_url';
+  where name = 'orbit_supabase_url';
 
   select nullif(trim(decrypted_secret), '')
-  into v_key
+  into v_secret
   from vault.decrypted_secrets
-  where name = 'payment_service_role_key';
+  where name = 'orbit_cron_secret';
 
   if v_url is null then
     v_url := nullif(btrim(current_setting('app.supabase_url', true)), '');
   end if;
 
-  if v_key is null then
-    v_key := nullif(btrim(current_setting('app.service_role_key', true)), '');
+  if v_secret is null then
+    v_secret := nullif(btrim(current_setting('app.cron_secret', true)), '');
   end if;
 
-  if v_url is null or v_key is null then
-    raise warning 'payment_cron_post_sentry_alerts skipped: missing payment_supabase_url or payment_service_role_key';
+  if v_url is null or v_secret is null then
+    raise warning 'orbit_post_sentry_alerts skipped: missing orbit_supabase_url or orbit_cron_secret';
     return null;
   end if;
 
   return net.http_post(
-    url := v_url || '/functions/v1/payment-emit-sentry-alerts',
+    url := v_url || '/functions/v1/orbit-emit-sentry-alerts',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer ' || v_key
+      'Authorization', 'Bearer ' || v_secret,
+      'X-Orbit-Cron-Secret', v_secret
     ),
     body := jsonb_build_object('alerts', p_alerts),
     timeout_milliseconds := 15000
@@ -51,14 +54,14 @@ begin
 end;
 $$;
 
-comment on function public.payment_cron_post_sentry_alerts(jsonb) is
-  'Internal pg_net helper: dispatch §10.1 Sentry alerts from SQL cron wrappers via payment-emit-sentry-alerts EF.';
+comment on function public.orbit_post_sentry_alerts(jsonb) is
+  'Platform pg_net helper: dispatch Sentry alerts from SQL cron wrappers via orbit-emit-sentry-alerts EF. Superseded by orbit_invoke_edge_function delegate in 20260801690000.';
 
-revoke all on function public.payment_cron_post_sentry_alerts(jsonb) from public;
-revoke all on function public.payment_cron_post_sentry_alerts(jsonb) from anon;
-revoke all on function public.payment_cron_post_sentry_alerts(jsonb) from authenticated;
+revoke all on function public.orbit_post_sentry_alerts(jsonb) from public;
+revoke all on function public.orbit_post_sentry_alerts(jsonb) from anon;
+revoke all on function public.orbit_post_sentry_alerts(jsonb) from authenticated;
 
-grant execute on function public.payment_cron_post_sentry_alerts(jsonb) to postgres;
+grant execute on function public.orbit_post_sentry_alerts(jsonb) to postgres;
 
 create or replace function public.payment_auto_cancel_services(
   p_batch_size int default null
@@ -258,7 +261,7 @@ begin
       into v_sentry_alerts
       from jsonb_array_elements(v_result->'cancelled') as item;
 
-      perform public.payment_cron_post_sentry_alerts(v_sentry_alerts);
+      perform public.orbit_post_sentry_alerts(v_sentry_alerts);
     end if;
 
     perform public.job_run_finish(
@@ -523,7 +526,7 @@ begin
     end loop;
 
     if jsonb_array_length(v_sentry_alerts) > 0 then
-      perform public.payment_cron_post_sentry_alerts(v_sentry_alerts);
+      perform public.orbit_post_sentry_alerts(v_sentry_alerts);
     end if;
 
     perform public.job_run_finish(
@@ -549,7 +552,7 @@ begin
 end;
 $$;
 
--- FIX-011 / CHK-026: 15m spike views + cron → payment-emit-sentry-alerts.
+-- FIX-011 / CHK-026: 15m spike views + cron → orbit-emit-sentry-alerts.
 
 create or replace view public.payment_alert_webhook_auth_fail_spike_v
 with (security_invoker = true) as
@@ -635,7 +638,7 @@ end;
 $$;
 
 comment on function public.payment_evaluate_sentry_spike_alerts() is
-  'Returns payment-emit-sentry-alerts payloads for breached 15m webhook auth / FAILED_PERMANENT spikes.';
+  'Returns orbit-emit-sentry-alerts payloads for breached 15m webhook auth / FAILED_PERMANENT spikes.';
 
 revoke all on function public.payment_evaluate_sentry_spike_alerts() from public;
 revoke all on function public.payment_evaluate_sentry_spike_alerts() from anon;
@@ -671,7 +674,7 @@ begin
     v_alert_count := coalesce(jsonb_array_length(v_alerts), 0);
 
     if v_alert_count > 0 then
-      perform public.payment_cron_post_sentry_alerts(v_alerts);
+      perform public.orbit_post_sentry_alerts(v_alerts);
     end if;
 
     perform public.job_run_finish(

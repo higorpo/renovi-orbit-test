@@ -101,7 +101,7 @@ Coisas para fazer next
 - verificar para o endereço: definir o tipo de endereço, se é casa ou apto ou algum outro tipo e permitir adicionar detalhes de interfone por exemplo. precisamos garantir que o prestador saiba como entrar em contato com o cliente.
 
 
-- payment_cron_post_sentry_alerts e payment-emite-sentry-alerts talvez poderiam ser algo compartilhado e não exclusivo de payments
+- [x] payment_cron_post_sentry_alerts e payment-emit-sentry-alerts generalizados para `orbit_post_sentry_alerts` + `orbit-emit-sentry-alerts` (transporte compartilhado; matrix payment permanece)
 
 - [x] verificar se o e-mail de onboarding está sendo enviado para netcred — `dispatch-kyc-email` + default `credenciamento@renovi.com.br` (override `NETCRED_CREDENCIAMENTO_EMAIL`)
 

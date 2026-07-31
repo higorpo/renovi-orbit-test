@@ -20,7 +20,7 @@ Edge Function (verify_jwt = false) → validateOrbitCronAuth(req)
 | `schedule-netcred-charges` | `payment_cron_schedule_netcred_charges` | `payment_cron_invoke_edge_function(...)` |
 | `detect-netcred-onboarding` | `payment_cron_detect_netcred_onboarding` | idem |
 | `reconcile-netcred-payments` | `payment_cron_reconcile_netcred_payments` | idem |
-| `payment-emit-sentry-alerts` | auto-cancel / webhook-retry crons | `payment_cron_post_sentry_alerts(...)` |
+| `orbit-emit-sentry-alerts` | auto-cancel / webhook-retry / far-recapture crons | `orbit_post_sentry_alerts(...)` |
 
 ## Authentication
 

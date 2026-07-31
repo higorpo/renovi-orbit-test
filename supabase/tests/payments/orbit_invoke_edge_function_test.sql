@@ -40,7 +40,7 @@ select ok(
 select ok(
   (
     select pg_get_functiondef(p.oid) ~* 'message-dispatcher-worker'
-      and pg_get_functiondef(p.oid) ~* 'payment-emit-sentry-alerts'
+      and pg_get_functiondef(p.oid) ~* 'orbit-emit-sentry-alerts'
       and pg_get_functiondef(p.oid) ~* 'sync-netcred-settlements'
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace

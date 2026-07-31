@@ -51,9 +51,10 @@ Returns JSON with:
 
 | Source | Kind / message | Path |
 |--------|----------------|------|
-| SQL cron → `payment-emit-sentry-alerts` EF | `auto_cancel` WARNING | `payment_cron_auto_cancel_unpaid_services` |
-| SQL cron → `payment-emit-sentry-alerts` EF | `webhook_dead_letter` CRITICAL | `payment_cron_process_webhook_retry` |
-| SQL cron → `payment-emit-sentry-alerts` EF | `webhook_auth_fail_spike` / `failed_permanent_spike` WARNING | `payment_cron_emit_sentry_spike_alerts` (every 5m) |
+| SQL cron → `orbit-emit-sentry-alerts` EF | `auto_cancel` WARNING | `payment_cron_auto_cancel_unpaid_services` |
+| SQL cron → `orbit-emit-sentry-alerts` EF | `webhook_dead_letter` CRITICAL | `payment_cron_process_webhook_retry` |
+| SQL cron → `orbit-emit-sentry-alerts` EF | `webhook_auth_fail_spike` / `failed_permanent_spike` WARNING | `payment_cron_emit_sentry_spike_alerts` (every 5m) |
+| SQL cron → `orbit-emit-sentry-alerts` EF | generic `level`+`message` (`FAR_RESCHEDULE_RECAPTURE_STALE`) fatal | `cron_payment_far_reschedule_recapture` |
 | Edge (direct matrix) | `NETCRED_AUTH_FAILURE` / `tokenAuth` CRITICAL | NetCred auth helpers — **not** via emit-sentry-alerts |
 | Edge (direct matrix) | per-event `FAILED_PERMANENT` WARNING | schedule/manual charge paths — **not** via emit-sentry-alerts |
 
@@ -61,7 +62,7 @@ Spike evaluator SQL:
 
 ```sql
 select public.payment_evaluate_sentry_spike_alerts();
--- empty array [] when under threshold; otherwise alerts[] for payment-emit-sentry-alerts
+-- empty array [] when under threshold; otherwise alerts[] for orbit-emit-sentry-alerts
 ```
 
 ## Manual query pack

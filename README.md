@@ -83,7 +83,7 @@ ORBIT_CRON_SECRET=CHANGE_ME_GENERATE_RANDOM_32+
 
 | Secret | Obrigatório | EFs |
 |--------|-------------|-----|
-| **`ORBIT_CRON_SECRET`** | Sim (internas) | `message-dispatcher-worker`, `schedule-netcred-charges`, `detect-netcred-onboarding`, `reconcile-netcred-payments`, `payment-emit-sentry-alerts` |
+| **`ORBIT_CRON_SECRET`** | Sim (internas) | `message-dispatcher-worker`, `schedule-netcred-charges`, `detect-netcred-onboarding`, `reconcile-netcred-payments`, `orbit-emit-sentry-alerts` |
 | `OPENAI_API_KEY` | `generate-smart-description` | IA |
 | `RESEND_*`, `FCM_*` | MMD worker | Notificações |
 | `NETCRED_*` | Payment EFs | Pagamentos |

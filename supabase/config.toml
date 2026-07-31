@@ -464,7 +464,7 @@ verify_jwt = false
 verify_jwt = false
 
 # Internal pg_net bridge for Sentry alerts from SQL cron wrappers (not in §5.3 table).
-[functions.payment-emit-sentry-alerts]
+[functions.orbit-emit-sentry-alerts]
 verify_jwt = false
 
 [analytics]
