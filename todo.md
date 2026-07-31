@@ -93,7 +93,6 @@ Coisas para fazer next
 - Verificar se todos os locais onde tenho carregando de mais páginas no sistema estão usando cursor de forma performática.
 
 
-- fazer um checkup geral do banco de dados para RLS e CLS
 
 
 - na tela de minha conta do cliente, precisa colocar skeleton para as informações relacionadas a pagamentos
@@ -133,7 +132,6 @@ Fluxo de pagamentos, itens com problemas:
 
 
 
-- Garantir segurança RLS e CLS nas tabelas
 
 
 
