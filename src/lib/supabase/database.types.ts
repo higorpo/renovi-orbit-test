@@ -5000,6 +5000,10 @@ export type Database = {
         Args: { p_batch_size?: number }
         Returns: Json
       }
+      payment_claim_schedules_for_settlement_sync: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
       payment_claim_stale_schedules_for_reconciliation: {
         Args: { p_batch_size?: number }
         Returns: Json
@@ -5134,6 +5138,7 @@ export type Database = {
         Returns: undefined
       }
       payment_cron_schedule_netcred_charges: { Args: never; Returns: undefined }
+      payment_cron_sync_netcred_settlements: { Args: never; Returns: undefined }
       payment_enqueue_notifications: {
         Args: {
           p_metadata?: Json
@@ -5467,6 +5472,10 @@ export type Database = {
         Args: { p_payload: Json; p_webhook_event_id: string }
         Returns: Json
       }
+      payment_webhook_handle_payout: {
+        Args: { p_payload: Json; p_webhook_event_id: string }
+        Returns: Json
+      }
       payment_webhook_handle_profile_delete: {
         Args: { p_payload: Json; p_webhook_event_id: string }
         Returns: Json
@@ -5509,6 +5518,10 @@ export type Database = {
       }
       payment_webhook_payload_transaction_state: {
         Args: { p_payload: Json }
+        Returns: string
+      }
+      payment_webhook_payout_bank_account_mask: {
+        Args: { p_bank_account: Json }
         Returns: string
       }
       payment_write_audit: {

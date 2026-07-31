@@ -498,10 +498,12 @@ select is(
   'authenticated cannot SELECT service_request_dispatch_events'
 );
 
-select is(
-  (select count(*)::int from public.provider_latest_locations),
-  0,
-  'authenticated cannot SELECT provider_latest_locations'
+-- Grant hygiene revoked table SELECT (42501) rather than RLS empty-set (0 rows).
+select throws_ok(
+  $$select count(*)::int from public.provider_latest_locations$$,
+  '42501',
+  null,
+  'authenticated cannot SELECT provider_latest_locations (no table privilege)'
 );
 
 -- Behavioral: INSERT denied (RLS) -------------------------------------------
@@ -585,29 +587,28 @@ select is(
   'authenticated cannot SELECT provider_proposal_stats'
 );
 
--- provider_rating_stats: public aggregate read --------------------------------
+-- provider_rating_stats: client SELECT revoked (grant hygiene) ----------------
 
 select ok(
-  has_table_privilege('authenticated', 'public.provider_rating_stats', 'SELECT'),
-  'authenticated can SELECT provider_rating_stats'
+  not has_table_privilege('authenticated', 'public.provider_rating_stats', 'SELECT'),
+  'authenticated cannot SELECT provider_rating_stats'
 );
 
-select pg_temp.rls_set_anon();
-
 select ok(
-  has_table_privilege('anon', 'public.provider_rating_stats', 'SELECT'),
-  'anon can SELECT provider_rating_stats'
+  not has_table_privilege('anon', 'public.provider_rating_stats', 'SELECT'),
+  'anon cannot SELECT provider_rating_stats'
 );
 
 select pg_temp.rls_set_auth(current_setting('rls.other_id')::uuid);
 
-select ok(
-  (
-    select count(*) >= 1
-    from public.provider_rating_stats
-    where provider_id = current_setting('rls.provider_id')::uuid
+select throws_ok(
+  format(
+    $$select count(*)::int from public.provider_rating_stats where provider_id = %L$$,
+    current_setting('rls.provider_id')
   ),
-  'authenticated reads provider_rating_stats aggregates for any provider'
+  '42501',
+  null,
+  'authenticated cannot read provider_rating_stats aggregates'
 );
 
 -- service_ratings: scoped SELECT, RPC-only writes -------------------------------

@@ -150,7 +150,7 @@ select throws_ok(
   $$,
   '42501',
   null,
-  'authenticated cannot INSERT chat-media (storage_objects_chat_media_insert_denied)'
+  'authenticated cannot INSERT chat-media (default deny; no positive INSERT policy)'
 );
 
 -- Structural policy counts ----------------------------------------------------
@@ -162,8 +162,8 @@ select is(
     where schemaname = 'storage'
       and tablename = 'objects'
   ),
-  22,
-  'storage.objects has 22 RLS policies'
+  19,
+  'storage.objects has 19 RLS policies'
 );
 
 select ok(

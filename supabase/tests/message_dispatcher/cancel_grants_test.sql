@@ -16,12 +16,12 @@ select ok(
 );
 
 select ok(
-  has_function_privilege(
+  not has_function_privilege(
     'authenticated',
     'message_dispatcher.message_dispatcher_cancel(uuid,text)',
     'EXECUTE'
   ),
-  'authenticated can EXECUTE cancel'
+  'authenticated cannot EXECUTE cancel (service_role only)'
 );
 
 select ok(

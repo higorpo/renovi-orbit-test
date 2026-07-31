@@ -58,10 +58,11 @@ select is(
 
 select pg_temp.rls_set_anon();
 
-select is(
-  (select count(*)::int from public.platform_ai_prompts),
-  0,
-  'anon cannot read platform_ai_prompts'
+select throws_ok(
+  $$select count(*)::int from public.platform_ai_prompts$$,
+  '42501',
+  null,
+  'anon cannot read platform_ai_prompts (no table privilege)'
 );
 
 -- get_prompt_by_key is service_role only ------------------------------------
@@ -76,7 +77,7 @@ select ok(
   'service_role can execute get_prompt_by_key'
 );
 
--- Writes ----------------------------------------------------------------------
+-- Writes: INSERT privilege revoked from authenticated (admin RLS alone insufficient)
 
 select pg_temp.rls_set_auth(current_setting('rls.provider_id')::uuid);
 
@@ -92,12 +93,14 @@ select throws_ok(
 
 select pg_temp.rls_set_auth(current_setting('rls.admin_id')::uuid);
 
-select lives_ok(
+select throws_ok(
   $$
     insert into public.platform_ai_prompts (prompt_key, name, system_prompt)
     values ('rls_admin_prompt', 'Admin created', 'admin system prompt')
   $$,
-  'admin can insert platform_ai_prompts'
+  '42501',
+  null,
+  'authenticated admin cannot insert platform_ai_prompts (no INSERT privilege)'
 );
 
 select finish();

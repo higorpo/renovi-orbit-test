@@ -5,6 +5,7 @@
 -- Provides:
 --   pg_temp.rls_set_auth(uuid)   -> impersonate an authenticated user (jwt sub).
 --   pg_temp.rls_set_anon()       -> impersonate the anon role (auth.uid() null).
+--   pg_temp.rls_set_service_as_user(uuid) -> service_role EXECUTE + actor jwt (auth.uid()).
 --   pg_temp.rls_seed_user(uuid, role, name) -> create auth user + profile, with admin trick.
 
 -- Impersonate an authenticated user: set role + jwt claims (sub = user id).
@@ -36,6 +37,24 @@ begin
   perform set_config(
     'request.jwt.claims',
     json_build_object('role', 'anon')::text,
+    true
+  );
+end;
+$$;
+
+-- service_role for EXECUTE on locked-down DEFINER RPCs; jwt sub drives auth.uid().
+create or replace function pg_temp.rls_set_service_as_user(p_user_id uuid)
+returns void
+language plpgsql
+as $$
+begin
+  reset role;
+  execute 'set local role service_role';
+  perform set_config('request.jwt.claim.sub', p_user_id::text, true);
+  perform set_config('request.jwt.claim.role', 'authenticated', true);
+  perform set_config(
+    'request.jwt.claims',
+    json_build_object('role', 'authenticated', 'sub', p_user_id::text)::text,
     true
   );
 end;

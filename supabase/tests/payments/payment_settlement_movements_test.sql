@@ -118,12 +118,12 @@ select ok(
 
 select ok(
   not has_table_privilege('authenticated', 'public.payment_settlement_movements', 'SELECT')
-    and has_column_privilege('authenticated', 'public.payment_settlement_movements', 'net_amount', 'SELECT')
+    and not has_column_privilege('authenticated', 'public.payment_settlement_movements', 'net_amount', 'SELECT')
     and not has_column_privilege('authenticated', 'public.payment_settlement_movements', 'raw_snapshot', 'SELECT')
     and not has_table_privilege('authenticated', 'public.payment_settlement_movements', 'INSERT')
     and not has_table_privilege('authenticated', 'public.payment_settlement_movements', 'UPDATE')
     and not has_table_privilege('authenticated', 'public.payment_settlement_movements', 'DELETE'),
-  'authenticated has CLS allowlist without raw_snapshot; no mutations'
+  'authenticated has no table/column SELECT on settlement movements; no mutations (RPC-only reads)'
 );
 
 select ok(
@@ -517,14 +517,11 @@ select throws_ok(
   'authenticated provider cannot execute upsert (no GRANT)'
 );
 
-select is(
-  (
-    select count(*)::int
-    from public.provider_settlement_movements_v
-    where gateway_movement_id in ('mov-provider-1', 'mov-debit-1')
-  ),
-  2,
-  'provider owner can read own settlement view rows'
+select throws_ok(
+  $$select count(*)::int from public.provider_settlement_movements_v$$,
+  '42501',
+  null,
+  'provider cannot read settlement view when base table SELECT is revoked (security_invoker)'
 );
 
 select is(
@@ -540,14 +537,11 @@ select is(
 );
 
 select pg_temp.settlement_set_auth(current_setting('test.settlement.stranger_id')::uuid);
-select is(
-  (
-    select count(*)::int
-    from public.provider_settlement_movements_v
-    where gateway_movement_id in ('mov-provider-1', 'mov-debit-1')
-  ),
-  0,
-  'stranger cannot read provider settlement rows via view'
+select throws_ok(
+  $$select count(*)::int from public.provider_settlement_movements_v$$,
+  '42501',
+  null,
+  'stranger cannot read settlement view when base table SELECT is revoked'
 );
 
 select is(
@@ -650,14 +644,11 @@ select throws_ok(
 );
 
 select pg_temp.settlement_set_auth(current_setting('test.settlement.admin_id')::uuid);
-select is(
-  (
-    select count(*)::int
-    from public.provider_settlement_movements_v
-    where gateway_movement_id = 'mov-provider-1'
-  ),
-  1,
-  'platform admin can read settlement view rows'
+select throws_ok(
+  $$select count(*)::int from public.provider_settlement_movements_v$$,
+  '42501',
+  null,
+  'platform admin also cannot read settlement view without base table SELECT (use RPC/service_role)'
 );
 
 select * from finish();

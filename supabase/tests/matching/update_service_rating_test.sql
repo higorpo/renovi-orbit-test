@@ -4,7 +4,7 @@ begin;
 
 reset role;
 
-select plan(3);
+select plan(4);
 
 \ir ../rls/fixtures/seed_rls_actors.inc
 
@@ -200,7 +200,17 @@ select set_config(
   true
 );
 
-select pg_temp.rls_set_auth(current_setting('test.update.client_id')::uuid);
+-- EXECUTE revoked from authenticated; call via service_role + actor JWT.
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.update_service_rating(uuid, smallint, smallint, smallint, smallint, text)'::regprocedure,
+    'EXECUTE'
+  ),
+  'authenticated cannot execute update_service_rating'
+);
+
+select pg_temp.rls_set_service_as_user(current_setting('test.update.client_id')::uuid);
 
 select public.submit_service_rating(
   current_setting('test.update.cs_id')::uuid,
@@ -232,7 +242,7 @@ update public.service_ratings
 set submitted_at = now() - interval '72 hours'
 where contracted_service_id = current_setting('test.update.cs_id')::uuid;
 
-select pg_temp.rls_set_auth(current_setting('test.update.client_id')::uuid);
+select pg_temp.rls_set_service_as_user(current_setting('test.update.client_id')::uuid);
 
 select throws_ok(
   $$
@@ -249,7 +259,7 @@ select throws_ok(
   'edit after 48 hours is rejected'
 );
 
-select pg_temp.rls_set_auth('00000000-0000-0000-0000-000000000001'::uuid);
+select pg_temp.rls_set_service_as_user('00000000-0000-0000-0000-000000000001'::uuid);
 
 select throws_ok(
   $$

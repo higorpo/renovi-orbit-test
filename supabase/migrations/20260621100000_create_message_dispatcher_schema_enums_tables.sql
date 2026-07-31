@@ -280,16 +280,12 @@ create policy message_dispatch_deliveries_select_owner
 
 revoke insert, update, delete on message_dispatcher.message_dispatch_deliveries from authenticated;
 
--- RLS: message_templates (design §3.8, task 16). Read-only catalog for authenticated; writes via migrations/seeds only.
+-- RLS: message_templates — service_role / Edge worker only; no client SELECT.
+-- Writes via migrations/seeds only. service_role bypasses RLS.
 alter table message_dispatcher.message_templates enable row level security;
 
-create policy message_templates_select_authenticated
-  on message_dispatcher.message_templates
-  for select
-  to authenticated
-  using (true);
-
-revoke insert, update, delete on message_dispatcher.message_templates from authenticated;
+revoke all on table message_dispatcher.message_templates from anon, authenticated, public;
+grant select on table message_dispatcher.message_templates to service_role;
 
 -- RLS: message_dispatcher_user_limits (design §3.8). Owner read-only; mutations via SECURITY DEFINER RPCs only.
 alter table message_dispatcher.message_dispatcher_user_limits enable row level security;

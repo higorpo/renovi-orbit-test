@@ -1,8 +1,8 @@
--- pgTAP: message_templates RLS (design §3.8, task 16).
+-- pgTAP: message_templates RLS — service_role only (no client SELECT).
 
 begin;
 
-select plan(4);
+select plan(5);
 
 select ok(
   c.relrowsecurity,
@@ -14,16 +14,13 @@ where n.nspname = 'message_dispatcher'
   and c.relname = 'message_templates';
 
 select ok(
-  exists (
+  not exists (
     select 1
     from pg_policies p
     where p.schemaname = 'message_dispatcher'
       and p.tablename = 'message_templates'
-      and p.policyname = 'message_templates_select_authenticated'
-      and p.cmd = 'SELECT'
-      and p.roles = array['authenticated']::name[]
   ),
-  'authenticated read-only SELECT policy'
+  'message_templates has no client RLS policies'
 );
 
 select ok(
@@ -34,8 +31,13 @@ select ok(
 );
 
 select ok(
-  has_table_privilege('authenticated', 'message_dispatcher.message_templates', 'SELECT'),
-  'authenticated can SELECT templates'
+  not has_table_privilege('authenticated', 'message_dispatcher.message_templates', 'SELECT'),
+  'authenticated cannot SELECT templates'
+);
+
+select ok(
+  has_table_privilege('service_role', 'message_dispatcher.message_templates', 'SELECT'),
+  'service_role can SELECT templates'
 );
 
 select finish();

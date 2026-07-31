@@ -4,7 +4,7 @@ begin;
 
 \ir ../rls/fixtures/seed_rls_actors.inc
 
-select plan(12);
+select plan(14);
 
 select set_config('rls.owner_id', '28e30f1d-3c47-441f-94c6-76b6ea0db470', true);
 select set_config('rls.other_id', 'b2222222-2222-4222-8222-222222222222', true);
@@ -121,13 +121,15 @@ select is(
   'non-owner cannot read message_dispatcher_audit'
 );
 
--- message_templates_select_authenticated --------------------------------------
+-- message_templates — service_role only ---------------------------------------
 
 select pg_temp.rls_set_auth(current_setting('rls.owner_id')::uuid);
 
-select ok(
-  (select count(*) >= 1 from message_dispatcher.message_templates),
-  'authenticated reads message_templates (message_templates_select_authenticated)'
+select throws_ok(
+  $$ select count(*) from message_dispatcher.message_templates $$,
+  '42501',
+  null,
+  'authenticated cannot SELECT message_templates'
 );
 
 select throws_ok(
@@ -158,14 +160,23 @@ select ok(
 );
 
 select ok(
-  (
-    select count(*) = 1
+  not has_table_privilege('authenticated', 'message_dispatcher.message_templates', 'SELECT'),
+  'authenticated has no SELECT privilege on message_templates'
+);
+
+select ok(
+  has_table_privilege('service_role', 'message_dispatcher.message_templates', 'SELECT'),
+  'service_role can SELECT message_templates'
+);
+
+select ok(
+  not exists (
+    select 1
     from pg_policies
     where schemaname = 'message_dispatcher'
       and tablename = 'message_templates'
-      and policyname = 'message_templates_select_authenticated'
   ),
-  'message_templates_select_authenticated policy exists'
+  'message_templates has no client RLS policies'
 );
 
 select finish();

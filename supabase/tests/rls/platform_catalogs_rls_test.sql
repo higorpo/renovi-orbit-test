@@ -40,57 +40,57 @@ select ok(
   'anon reads active platform_forms (platform_forms_select)'
 );
 
--- platform_constants_all: non-admin denied ------------------------------------
+-- platform_constants: table privileges revoked (no client SELECT) -------------
 
-select is(
-  (select count(*)::int from public.platform_constants),
-  0,
-  'anon cannot read platform_constants (platform_constants_all)'
+select throws_ok(
+  $$select count(*)::int from public.platform_constants$$,
+  '42501',
+  null,
+  'anon cannot read platform_constants (no table privilege)'
 );
 
 select pg_temp.rls_set_auth(current_setting('rls.client_id')::uuid);
 
-select is(
-  (select count(*)::int from public.platform_constants),
-  0,
-  'client cannot read platform_constants (platform_constants_all)'
+select throws_ok(
+  $$select count(*)::int from public.platform_constants$$,
+  '42501',
+  null,
+  'client cannot read platform_constants (no table privilege)'
 );
 
 select pg_temp.rls_set_auth(current_setting('rls.admin_id')::uuid);
 
-select ok(
-  (select count(*) >= 1 from public.platform_constants),
-  'admin reads platform_constants (platform_constants_all)'
+select throws_ok(
+  $$select count(*)::int from public.platform_constants$$,
+  '42501',
+  null,
+  'authenticated admin cannot read platform_constants (service_role/helpers only)'
 );
 
--- platform_* mutations: admin only --------------------------------------------
+-- platform_* mutations: client role has no INSERT/UPDATE grants -------------------
 
-select lives_ok(
+select throws_ok(
   $$
     update public.platform_states
     set name = name
     where abbreviation = 'SC'
   $$,
-  'admin can UPDATE platform_states (platform_states_update)'
+  '42501',
+  null,
+  'authenticated admin cannot UPDATE platform_states (no UPDATE privilege)'
 );
 
 select pg_temp.rls_set_auth(current_setting('rls.client_id')::uuid);
 
-create temp table _platform_update_rows (n int);
-
-with updated as (
-  update public.platform_states
-  set name = 'Hacked'
-  where abbreviation = 'SC'
-  returning 1
-)
-insert into _platform_update_rows (n)
-select count(*)::int from updated;
-
-select is(
-  (select n from _platform_update_rows),
-  0,
-  'client cannot UPDATE platform_states (platform_states_update deny)'
+select throws_ok(
+  $$
+    update public.platform_states
+    set name = 'Hacked'
+    where abbreviation = 'SC'
+  $$,
+  '42501',
+  null,
+  'client cannot UPDATE platform_states (no UPDATE privilege)'
 );
 
 select throws_ok(
@@ -118,19 +118,22 @@ select throws_ok(
   'client cannot INSERT platform_services (platform_services_insert deny)'
 );
 
--- platform_ai_prompt_usage_select: admin only -----------------------------------
+-- platform_ai_prompt_usage: no client table privilege ---------------------------
 
-select is(
-  (select count(*)::int from public.platform_ai_prompt_usage),
-  0,
+select throws_ok(
+  $$select count(*)::int from public.platform_ai_prompt_usage$$,
+  '42501',
+  null,
   'client cannot read platform_ai_prompt_usage'
 );
 
 select pg_temp.rls_set_auth(current_setting('rls.admin_id')::uuid);
 
-select ok(
-  (select count(*) >= 0 from public.platform_ai_prompt_usage),
-  'admin can read platform_ai_prompt_usage (platform_ai_prompt_usage_select)'
+select throws_ok(
+  $$select count(*)::int from public.platform_ai_prompt_usage$$,
+  '42501',
+  null,
+  'authenticated admin cannot read platform_ai_prompt_usage (no table privilege)'
 );
 
 -- Structural: single SELECT policy per catalog table --------------------------

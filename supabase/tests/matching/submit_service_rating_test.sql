@@ -4,7 +4,7 @@ begin;
 
 reset role;
 
-select plan(4);
+select plan(5);
 
 \ir ../rls/fixtures/seed_rls_actors.inc
 
@@ -208,7 +208,17 @@ select set_config(
   true
 );
 
-select pg_temp.rls_set_auth(current_setting('test.submit.client_id')::uuid);
+-- EXECUTE revoked from authenticated; call via service_role + actor JWT.
+select ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.submit_service_rating(uuid, smallint, smallint, smallint, smallint, text)'::regprocedure,
+    'EXECUTE'
+  ),
+  'authenticated cannot execute submit_service_rating'
+);
+
+select pg_temp.rls_set_service_as_user(current_setting('test.submit.client_id')::uuid);
 
 select ok(
   (
@@ -239,7 +249,7 @@ select throws_ok(
   'duplicate submit is rejected'
 );
 
-select pg_temp.rls_set_auth('4cf92e3a-64cd-4491-998e-9163138f8e96'::uuid);
+select pg_temp.rls_set_service_as_user('4cf92e3a-64cd-4491-998e-9163138f8e96'::uuid);
 
 select throws_ok(
   $$
@@ -267,7 +277,7 @@ select set_config(
   true
 );
 
-select pg_temp.rls_set_auth(current_setting('test.submit.client_id')::uuid);
+select pg_temp.rls_set_service_as_user(current_setting('test.submit.client_id')::uuid);
 
 select throws_ok(
   $$

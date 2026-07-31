@@ -14,7 +14,6 @@ insert into _expected_policies (schemaname, tablename, policyname) values
     ('message_dispatcher', 'message_dispatcher_audit', 'message_dispatcher_audit_select_owner'),
     ('message_dispatcher', 'message_dispatcher_user_limits', 'message_dispatcher_user_limits_select_owner'),
     ('message_dispatcher', 'message_dispatches', 'message_dispatches_select_owner'),
-    ('message_dispatcher', 'message_templates', 'message_templates_select_authenticated'),
     -- public — chat / CNS
     ('public', 'chat_audit', 'chat_audit_admin_select'),
     ('public', 'chat_messages', 'chat_messages_delete_denied'),
@@ -99,11 +98,8 @@ insert into _expected_policies (schemaname, tablename, policyname) values
     ('public', 'platform_ai_prompts', 'platform_ai_prompts_select'),
     ('public', 'platform_ai_prompts', 'platform_ai_prompts_update'),
     ('public', 'platform_ai_prompt_usage', 'platform_ai_prompt_usage_select'),
-    -- storage.objects
-    ('storage', 'objects', 'storage_objects_chat_media_delete_denied'),
-    ('storage', 'objects', 'storage_objects_chat_media_insert_denied'),
+    -- storage.objects (chat-media *_denied dropped: OR-permissive hole; default deny)
     ('storage', 'objects', 'storage_objects_chat_media_select'),
-    ('storage', 'objects', 'storage_objects_chat_media_update_denied'),
     ('storage', 'objects', 'storage_objects_portfolio_images_delete'),
     ('storage', 'objects', 'storage_objects_portfolio_images_insert'),
     ('storage', 'objects', 'storage_objects_portfolio_images_select'),
@@ -120,8 +116,8 @@ insert into _expected_policies (schemaname, tablename, policyname) values
 
 select is(
   (select count(*)::int from _expected_policies),
-  103,
-  'expected policy manifest has 103 entries'
+  99,
+  'expected policy manifest has 99 entries'
 );
 
 select is(
