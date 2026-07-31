@@ -137,7 +137,7 @@ Fluxo de pagamentos, itens com problemas:
 
 
 
-- Mostrar liquidações para o prestador
+- [TESTAR TODO O FLUXO] Mostrar liquidações para o prestador
 
 
 
