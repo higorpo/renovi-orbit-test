@@ -27,7 +27,7 @@ Restrições de **atribuição de papel** (triggers / políticas):
 | `/dashboard/conta` | Aninhado | `client`, `provider` |
 | `/dashboard/jobs`, `/dashboard/jobs/:jobId` | Aninhado | **`provider` apenas** |
 | `/dashboard/chats`, `/dashboard/chats/:chatId` | Aninhado | `client`, `provider` |
-| `/dashboard/earnings` | Aninhado | **`provider` apenas** |
+| `/dashboard/earnings` | Aninhado | **`provider` apenas** — feature `provider-earnings` (Ganhos / liquidações) |
 | `/example` | `ProtectedRoute` | **`client` apenas** |
 
 ### Redirecionamento pós-login (`getRedirectPathForProfile`)

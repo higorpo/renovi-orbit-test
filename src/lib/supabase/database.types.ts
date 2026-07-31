@@ -1924,6 +1924,125 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_settlement_movements: {
+        Row: {
+          bank_account_mask: string | null
+          base_settle_date: string | null
+          brand: string | null
+          created_at: string
+          gateway_movement_id: string
+          gateway_payout_id: string
+          gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
+          gateway_transaction_id: string
+          gross_amount: number
+          id: string
+          installment: number | null
+          is_advance: boolean
+          is_refund_clawback: boolean
+          movement_source: string | null
+          movement_status: string
+          movement_type: string | null
+          net_amount: number
+          payment_schedule_id: string | null
+          payout_status: string | null
+          provider_id: string
+          raw_snapshot: Json
+          record_type: string
+          settled_at: string | null
+          settling_at: string | null
+          sync_source: string
+          synced_at: string
+          updated_at: string
+        }
+        Insert: {
+          bank_account_mask?: string | null
+          base_settle_date?: string | null
+          brand?: string | null
+          created_at?: string
+          gateway_movement_id: string
+          gateway_payout_id: string
+          gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          gateway_transaction_id: string
+          gross_amount: number
+          id?: string
+          installment?: number | null
+          is_advance?: boolean
+          is_refund_clawback?: boolean
+          movement_source?: string | null
+          movement_status: string
+          movement_type?: string | null
+          net_amount: number
+          payment_schedule_id?: string | null
+          payout_status?: string | null
+          provider_id: string
+          raw_snapshot?: Json
+          record_type: string
+          settled_at?: string | null
+          settling_at?: string | null
+          sync_source?: string
+          synced_at?: string
+          updated_at?: string
+        }
+        Update: {
+          bank_account_mask?: string | null
+          base_settle_date?: string | null
+          brand?: string | null
+          created_at?: string
+          gateway_movement_id?: string
+          gateway_payout_id?: string
+          gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
+          gateway_transaction_id?: string
+          gross_amount?: number
+          id?: string
+          installment?: number | null
+          is_advance?: boolean
+          is_refund_clawback?: boolean
+          movement_source?: string | null
+          movement_status?: string
+          movement_type?: string | null
+          net_amount?: number
+          payment_schedule_id?: string | null
+          payout_status?: string | null
+          provider_id?: string
+          raw_snapshot?: Json
+          record_type?: string
+          settled_at?: string | null
+          settling_at?: string | null
+          sync_source?: string
+          synced_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_settlement_movements_payment_schedule_id_fkey"
+            columns: ["payment_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "client_payment_transactions_v"
+            referencedColumns: ["schedule_id"]
+          },
+          {
+            foreignKeyName: "payment_settlement_movements_payment_schedule_id_fkey"
+            columns: ["payment_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "payment_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_settlement_movements_payment_schedule_id_fkey"
+            columns: ["payment_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "provider_payment_receivables_v"
+            referencedColumns: ["schedule_id"]
+          },
+          {
+            foreignKeyName: "payment_settlement_movements_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_webhook_events: {
         Row: {
           created_at: string
@@ -3869,6 +3988,128 @@ export type Database = {
           },
         ]
       }
+      provider_settlement_movements_v: {
+        Row: {
+          bank_account_mask: string | null
+          base_settle_date: string | null
+          brand: string | null
+          created_at: string | null
+          gateway_movement_id: string | null
+          gateway_payout_id: string | null
+          gateway_slug:
+            | Database["public"]["Enums"]["payment_gateway_slug"]
+            | null
+          gateway_transaction_id: string | null
+          gross_amount: number | null
+          id: string | null
+          installment: number | null
+          is_advance: boolean | null
+          is_refund_clawback: boolean | null
+          movement_source: string | null
+          movement_status: string | null
+          movement_type: string | null
+          net_amount: number | null
+          payment_schedule_id: string | null
+          payout_status: string | null
+          provider_id: string | null
+          record_type: string | null
+          settled_at: string | null
+          settling_at: string | null
+          sync_source: string | null
+          synced_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          bank_account_mask?: string | null
+          base_settle_date?: string | null
+          brand?: string | null
+          created_at?: string | null
+          gateway_movement_id?: string | null
+          gateway_payout_id?: string | null
+          gateway_slug?:
+            | Database["public"]["Enums"]["payment_gateway_slug"]
+            | null
+          gateway_transaction_id?: string | null
+          gross_amount?: number | null
+          id?: string | null
+          installment?: number | null
+          is_advance?: boolean | null
+          is_refund_clawback?: boolean | null
+          movement_source?: string | null
+          movement_status?: string | null
+          movement_type?: string | null
+          net_amount?: number | null
+          payment_schedule_id?: string | null
+          payout_status?: string | null
+          provider_id?: string | null
+          record_type?: string | null
+          settled_at?: string | null
+          settling_at?: string | null
+          sync_source?: string | null
+          synced_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          bank_account_mask?: string | null
+          base_settle_date?: string | null
+          brand?: string | null
+          created_at?: string | null
+          gateway_movement_id?: string | null
+          gateway_payout_id?: string | null
+          gateway_slug?:
+            | Database["public"]["Enums"]["payment_gateway_slug"]
+            | null
+          gateway_transaction_id?: string | null
+          gross_amount?: number | null
+          id?: string | null
+          installment?: number | null
+          is_advance?: boolean | null
+          is_refund_clawback?: boolean | null
+          movement_source?: string | null
+          movement_status?: string | null
+          movement_type?: string | null
+          net_amount?: number | null
+          payment_schedule_id?: string | null
+          payout_status?: string | null
+          provider_id?: string | null
+          record_type?: string | null
+          settled_at?: string | null
+          settling_at?: string | null
+          sync_source?: string | null
+          synced_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_settlement_movements_payment_schedule_id_fkey"
+            columns: ["payment_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "client_payment_transactions_v"
+            referencedColumns: ["schedule_id"]
+          },
+          {
+            foreignKeyName: "payment_settlement_movements_payment_schedule_id_fkey"
+            columns: ["payment_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "payment_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_settlement_movements_payment_schedule_id_fkey"
+            columns: ["payment_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "provider_payment_receivables_v"
+            referencedColumns: ["schedule_id"]
+          },
+          {
+            foreignKeyName: "payment_settlement_movements_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       _cns_apply_service_reschedule_slot: {
@@ -4432,6 +4673,19 @@ export type Database = {
       }
       list_provider_scheduled_services: {
         Args: { p_from_date: string; p_to_date: string }
+        Returns: Json
+      }
+      list_provider_settlement_movements: {
+        Args: {
+          p_movement_status?: string
+          p_page?: number
+          p_page_size?: number
+          p_record_type?: string
+          p_settled_from?: string
+          p_settled_to?: string
+          p_settling_from?: string
+          p_settling_to?: string
+        }
         Returns: Json
       }
       list_services: {
@@ -5187,6 +5441,10 @@ export type Database = {
           p_target_state: Database["public"]["Enums"]["payment_webhook_event_state"]
           p_webhook_event_id: string
         }
+        Returns: Json
+      }
+      payment_upsert_settlement_movements: {
+        Args: { p_movements: Json }
         Returns: Json
       }
       payment_validate_tokenize_checkout_access: {

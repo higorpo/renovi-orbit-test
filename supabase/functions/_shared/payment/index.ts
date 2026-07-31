@@ -66,10 +66,20 @@ export {
   CHARGE_CREATE_MUTATION,
   CHARGE_VOID_MUTATION,
   COMPANIES_BY_DOCUMENT_QUERY,
+  MOVEMENTS_BY_PAYOUT_QUERY,
+  MOVEMENTS_BY_TRANSACTION_QUERY,
   PAYMENT_PROFILE_CREATE_MUTATION,
   TRANSACTION_REFUND_MUTATION,
   TRANSACTIONS_BY_REFERENCE_QUERY,
 } from "./netcred-graphql.ts";
+
+export {
+  mapSettlementMovementToUpsertItem,
+  maskBankAccount,
+  type SettlementMovementSource,
+  type SettlementMovementUpsertItem,
+  type SettlementSyncSource,
+} from "./mapSettlementMovementUpsert.ts";
 
 export { buildPayoutRule, type BuildPayoutRuleProviderAccount } from "./buildPayoutRule.ts";
 

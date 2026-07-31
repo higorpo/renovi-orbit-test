@@ -92,7 +92,6 @@ export {
   PaymentHistorySection,
   PaymentDisputeBadge,
   PaymentDisputeStatus,
-  ProviderSettlementDisclosure,
   ProviderSettlementStatus,
 } from "./components";
 export type { PaymentHistoryRole } from "./components";

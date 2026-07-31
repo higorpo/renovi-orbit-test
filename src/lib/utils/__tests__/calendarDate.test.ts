@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   addCalendarDaysIso,
   formatCalendarDate,
+  formatLongDatePtBr,
   normalizeCalendarDateToIso,
   parseIsoDate,
   toLocalDateOnlyIso,
@@ -12,6 +13,7 @@ describe("calendarDate", () => {
   it("keeps civil YYYY-MM-DD dates in the local calendar", () => {
     expect(normalizeCalendarDateToIso("2026-06-24")).toBe("2026-06-24");
     expect(formatCalendarDate("2026-06-24")).toBe("24/06/2026");
+    expect(formatLongDatePtBr("2026-06-24")).toBe("24 de junho de 2026");
     expect(parseIsoDate("2026-06-24")).toEqual(new Date(2026, 5, 24));
   });
 

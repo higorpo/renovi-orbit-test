@@ -111,7 +111,7 @@ begin
 end;
 $$;
 
-select plan(33);
+select plan(35);
 
 select set_config('payment.rls.client_id', '28e30f1d-3c47-441f-94c6-76b6ea0db470', true);
 select set_config('payment.rls.provider_id', '5d09e025-20a2-4842-aeef-324d42a431e1', true);
@@ -367,10 +367,11 @@ select ok(
         'payment_webhook_events',
         'payment_webhook_processing_queue',
         'payment_audit_log',
-        'payment_events'
+        'payment_events',
+        'payment_settlement_movements'
       )
   ),
-  'all nine payment-domain tables have RLS enabled'
+  'all payment-domain tables have RLS enabled'
 );
 
 select pg_temp.rls_set_anon();
@@ -384,6 +385,7 @@ select throws_ok($$ select count(*) from public.payment_webhook_events $$, '4250
 select throws_ok($$ select count(*) from public.payment_webhook_processing_queue $$, '42501', null, 'anon cannot read payment_webhook_processing_queue');
 select throws_ok($$ select count(*) from public.payment_audit_log $$, '42501', null, 'anon cannot read payment_audit_log');
 select throws_ok($$ select count(*) from public.payment_events $$, '42501', null, 'anon cannot read payment_events');
+select throws_ok($$ select count(*) from public.payment_settlement_movements $$, '42501', null, 'anon cannot read payment_settlement_movements');
 
 select pg_temp.rls_set_auth(current_setting('payment.rls.client_id')::uuid);
 
@@ -570,6 +572,19 @@ select throws_ok(
   '42501',
   null,
   'authenticated cannot insert payment_events'
+);
+
+select throws_ok(
+  $$ insert into public.payment_settlement_movements (
+       provider_id, gateway_payout_id, gateway_movement_id, gateway_transaction_id,
+       movement_status, record_type, gross_amount, net_amount
+     ) values (
+       current_setting('payment.rls.provider_id')::uuid, 'p1', 'm1', 't1',
+       'PENDING', 'CREDIT', 1.00, 1.00
+     ) $$,
+  '42501',
+  null,
+  'authenticated cannot insert payment_settlement_movements'
 );
 
 select finish();

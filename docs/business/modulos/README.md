@@ -15,14 +15,15 @@ Este diretório concentra a **documentação funcional e técnica por módulo**,
 | 6 | [provider-jobs](./provider-jobs/README.md) | Trabalhos, detalhe, propostas, perguntas | `/dashboard/jobs`, `/dashboard/jobs/:jobId` | `src/features/provider-jobs/` | Concluída |
 | 7 | [provider-profile](./provider-profile/README.md) | Perfil público do prestador | `/perfil/:slug` | `src/features/provider-profile/` | Concluída |
 | 8 | [dynamic-form](./dynamic-form/README.md) | Motor de formulários + demo DEV | `/demo/form` (somente `import.meta.env.DEV`) | `src/features/dynamic-form/` | Concluída |
-| 9 | [dashboard-shell](./dashboard-shell/README.md) | Placeholders do dashboard (visão geral, endereços, config, ajuda, ganhos) | `/dashboard`, `/dashboard/addresses`, `/dashboard/settings`, `/dashboard/help`, `/dashboard/earnings` | `src/layouts/DashboardLayout/` | Concluída |
+| 9 | [dashboard-shell](./dashboard-shell/README.md) | Placeholders do dashboard (visão geral, endereços, config, ajuda) | `/dashboard`, `/dashboard/addresses`, `/dashboard/settings`, `/dashboard/help` | `src/layouts/DashboardLayout/` | Concluída |
 | 10 | [app-home](./app-home/README.md) | Página inicial mínima | `/` (index) | `src/App.tsx` | Concluída |
 | 11 | [message-dispatcher](./message-dispatcher/README.md) | Notificações multicanal (e-mail, push); horário silencioso, quotas, FSM | *Sem rota de UI; backend-only* | `supabase/migrations/`, `supabase/functions/message-dispatcher-*` | Parcial (quiet hours) |
 | 12 | [chats](./chats/README.md) | Conversas e negociação (CNS): lista, thread, propostas; sheet compare/history | `/dashboard/chats`, `/dashboard/chats/:chatId` | `src/features/chats/`, `src/features/negotiation-proposals/` | Concluída |
 | 13 | [matching-dispatch](./matching-dispatch/README.md) | Dispatch progressivo, lotes, visibilidade, gates; feed via Edge | *Sem rota de UI; backend + Edge `list-provider-opportunities`* | `supabase/migrations/202607110*`, `supabase/functions/list-provider-opportunities/` | Concluída |
 | 14 | [service-reschedule](./service-reschedule/README.md) | Reagendamento de serviço contratado (`PENDING_PAYMENT`/`CONFIRMED`); propor nova data/período; pós-aceite: retarget pré-`PAID` / recaptura longe pós-`PAID` | Embutido em chats e detalhe do serviço | `src/features/service-reschedule/`, migrations `20260802*`, EF `process-far-reschedule-recapture` | Parcial (propor nova data + elegibilidade + pagamento pós-aceite; falta ciclo completo de estados) |
-| 15 | [payments](./payments/README.md) | Checkout, cobrança T-2 (gross-up NetCred), requisito KYC `ACTIVE` para cobrar; histórico cliente/prestador e reembolso | Checkout pós-aceite; histórico em `/dashboard/conta` | `src/features/payments/`, RPCs `payment_*`, EFs NetCred | Concluída (checkout + histórico/reembolso) |
+| 15 | [payments](./payments/README.md) | Checkout, cobrança T-2 (gross-up NetCred), requisito KYC `ACTIVE` para cobrar; histórico cliente/prestador e reembolso; backend de settlements | Checkout pós-aceite; histórico em `/dashboard/conta` | `src/features/payments/`, RPCs `payment_*`, EFs NetCred | Concluída (checkout + histórico/reembolso) |
 | 16 | [provider-kyc](./provider-kyc/README.md) | Gate do shell até `ACTIVE`; telas de status; menu só Minha conta; wizard de credenciamento (Fase 3) | Embutido no `DashboardLayout` (exceção `/dashboard/conta*`) | `src/features/provider-kyc/` | Concluída (gate Fase 2 + wizard Fase 3) |
+| 17 | [provider-earnings](./provider-earnings/README.md) | Ganhos do prestador: liquidações bancárias (previsto / liquidado / estorno) | `/dashboard/earnings` | `src/features/provider-earnings/` | Concluída |
 
 > **Descontinuado:** [client-budgets](./client-budgets/README.md) — rota `/dashboard/orcamentos` removida; ver `my-services` + `negotiation-proposals`.
 
@@ -54,11 +55,11 @@ Um módulo conta como documentado quando o conjunto **README do módulo + arquiv
 
 | Métrica | Valor |
 |---------|------:|
-| Módulos identificados no escopo do produto (features + shell + home + backend + CNS + reagendamento + pagamentos + KYC prestador) | **16** |
-| Módulos documentados (critério acima) | **16** |
+| Módulos identificados no escopo do produto (features + shell + home + backend + CNS + reagendamento + pagamentos + KYC prestador + ganhos) | **17** |
+| Módulos documentados (critério acima) | **17** |
 | **Percentual** | **100%** (cobertura do critério; `service-reschedule` ainda **parcial** no ciclo completo de estados) |
 
-Os diretórios em `src/features/` com produto documentado neste índice incluem **`chats`** e **`negotiation-proposals`** (agrupados em [chats](./chats/README.md)), **`service-reschedule`**, **`payments`** e **`provider-kyc`**; **`client-budgets` foi removido**. Acrescentam-se **dashboard-shell**, **app-home**, **message-dispatcher** e **matching-dispatch** (backend). Outras pastas (`device-beacon`, `push-permission`, `notifications`, etc.) aparecem na [rastreabilidade](../rastreabilidade.md) sem README em `modulos/`.
+Os diretórios em `src/features/` com produto documentado neste índice incluem **`chats`** e **`negotiation-proposals`** (agrupados em [chats](./chats/README.md)), **`service-reschedule`**, **`payments`**, **`provider-earnings`** e **`provider-kyc`**; **`client-budgets` foi removido**. Acrescentam-se **dashboard-shell**, **app-home**, **message-dispatcher** e **matching-dispatch** (backend). Outras pastas (`device-beacon`, `push-permission`, `notifications`, etc.) aparecem na [rastreabilidade](../rastreabilidade.md) sem README em `modulos/`.
 
 ---
 
@@ -71,7 +72,8 @@ Os diretórios em `src/features/` com produto documentado neste índice incluem 
 - **negotiation-proposals** → sheet `ReceivedBudgetDetailsSheet` consumido por **my-services**; composer/propostas também em **provider-jobs** e **chats**.
 - **chats** + **negotiation-proposals** → negociação in-app por pedido; integra **message-dispatcher** (notificações), **provider-jobs** (origem do pedido), **my-services** (lista + sheet compare/history).
 - **service-reschedule** → propor/aceitar nova data de serviço contratado; UI embutida em **chats** e **view-services**; duração alinhada à proposta aceita (**negotiation-proposals**).
-- **payments** → checkout pós-aceite (**negotiation-proposals** / **chats**); histórico embutido em **my-account**; cancelamento pós-pagamento via **view-services** / CNS.
+- **payments** → checkout pós-aceite (**negotiation-proposals** / **chats**); histórico de captura embutido em **my-account**; cancelamento pós-pagamento via **view-services** / CNS; backend de settlements consumido por **provider-earnings**.
+- **provider-earnings** → liquidações bancárias do prestador (`/dashboard/earnings`); lê RPC/view de settlements; disclosure importado por **payments** / detalhe do serviço.
 - **provider-kyc** → gate do shell do prestador no **dashboard-shell** até onboarding NetCred `ACTIVE`; allowlist **my-account**; wizard de envio (Fase 3); backend KYC/cobrança em **payments**.
 
 ---

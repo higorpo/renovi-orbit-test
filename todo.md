@@ -133,7 +133,7 @@ Fluxo de pagamentos, itens com problemas:
 
 
 
-
+- Garantir segurança RLS e CLS nas tabelas
 
 
 

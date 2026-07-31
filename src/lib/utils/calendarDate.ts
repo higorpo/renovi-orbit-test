@@ -48,6 +48,21 @@ export function formatCalendarDate(value: string): string {
   });
 }
 
+/** Formats a calendar date (or timestamp) as pt-BR long date (e.g. "14 de fevereiro de 2026"). */
+export function formatLongDatePtBr(value: string): string {
+  const normalized = normalizeCalendarDateToIso(value);
+  if (!normalized) return value;
+
+  const parsed = parseIsoDate(normalized);
+  if (!parsed) return value;
+
+  return parsed.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 export function todayCalendarIso(): string {
   return toLocalDateOnlyIso(new Date());
 }

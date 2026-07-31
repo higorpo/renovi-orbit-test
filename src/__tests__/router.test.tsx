@@ -79,6 +79,9 @@ vi.mock("@/features/provider-profile/components/ProviderProfilePage", () => ({
 vi.mock("@/features/provider-jobs/components/ProviderJobsRouteSlot", () => ({
   ProviderJobsRouteSlot: () => null,
 }));
+vi.mock("@/features/provider-earnings/components/EarningsPage", () => ({
+  EarningsPage: () => null,
+}));
 vi.mock("@/features/provider-calendar/components/ProviderCalendarPage", () => ({
   ProviderCalendarPage: () => null,
 }));

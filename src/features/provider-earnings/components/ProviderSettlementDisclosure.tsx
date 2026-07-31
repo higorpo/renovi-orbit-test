@@ -7,6 +7,8 @@ import {
 
 export type ProviderSettlementDisclosureProps = {
   capturePaidAt: string;
+  /** Real Netcred settling_at when available; preferred over D+30 estimate. */
+  settlingAt?: string | null;
   showCompletionNote?: boolean;
   /** When true, bank deposit estimate is withheld (refund/dispute in progress). */
   settlementOnHold?: boolean;
@@ -16,6 +18,7 @@ export type ProviderSettlementDisclosureProps = {
 
 export function ProviderSettlementDisclosure({
   capturePaidAt,
+  settlingAt = null,
   showCompletionNote = false,
   settlementOnHold = false,
   holdReason = "refund",
@@ -23,7 +26,7 @@ export function ProviderSettlementDisclosure({
 }: ProviderSettlementDisclosureProps) {
   const disclosure = settlementOnHold
     ? formatProviderSettlementHoldDisclosure(holdReason)
-    : formatProviderSettlementDisclosure(capturePaidAt);
+    : formatProviderSettlementDisclosure(capturePaidAt, { settlingAt });
 
   if (!disclosure) {
     return null;

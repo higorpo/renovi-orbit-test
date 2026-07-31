@@ -64,7 +64,8 @@ declare
     'reconcile-netcred-payments',
     'reconcile-inanalysis-auto-cancel-voids',
     'payment-emit-sentry-alerts',
-    'process-far-reschedule-recapture'
+    'process-far-reschedule-recapture',
+    'sync-netcred-settlements'
   ];
 begin
   v_slug := nullif(btrim(p_function_slug), '');

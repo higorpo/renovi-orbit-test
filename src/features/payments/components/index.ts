@@ -45,8 +45,6 @@ export { PaymentDisputeBadge } from "./PaymentDisputeBadge";
 export type { PaymentDisputeBadgeProps } from "./PaymentDisputeBadge";
 export { PaymentDisputeStatus } from "./PaymentDisputeStatus";
 export type { PaymentDisputeStatusProps } from "./PaymentDisputeStatus";
-export { ProviderSettlementDisclosure } from "./ProviderSettlementDisclosure";
-export type { ProviderSettlementDisclosureProps } from "./ProviderSettlementDisclosure";
 export { ProviderSettlementStatus } from "./ProviderSettlementStatus";
 export type { ProviderSettlementStatusProps } from "./ProviderSettlementStatus";
 export { ContractedServiceCancelAction } from "./ContractedServiceCancelAction";

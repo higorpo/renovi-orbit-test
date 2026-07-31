@@ -2,7 +2,9 @@
 
 ## Objetivo
 
-Exibir ao **cliente** o histórico de cobranças no cartão (incluindo reembolsos) e ao **prestador** o histórico de recebimentos na plataforma, com valores líquidos após clawback confirmado pelo gateway.
+Exibir ao **cliente** o histórico de cobranças no cartão (incluindo reembolsos) e ao **prestador** o histórico de **recebimentos na captura** (valor do split no momento do pagamento), com valores líquidos após clawback confirmado pelo gateway.
+
+> **Não confundir** com **Ganhos** (`/dashboard/earnings`): lá estão as **liquidações bancárias** (depósito na conta). Ver [ganhos-e-liquidacoes](../../provider-earnings/features/ganhos-e-liquidacoes.md).
 
 ## Onde aparece na UI
 
@@ -81,7 +83,7 @@ A view `provider_payment_receivables_v` expõe:
 
 Na UI, se líquido ≠ valor na captura, mostra “Valor original: …”.
 
-Evidência: `provider_payment_receivables_v` em `20260801140000_create_payment_history_views.sql`; `ProviderPaymentHistoryList.tsx`.
+Evidência: `provider_payment_receivables_v` em `20260801140000_create_payment_history_views.sql`; `ProviderPaymentHistoryList.tsx` (usa `ProviderSettlementDisclosure` de `@/features/provider-earnings` para previsão de depósito / fallback D+30).
 
 ## Rótulos de estado (histórico)
 
@@ -94,5 +96,6 @@ Evidência: `provider_payment_receivables_v` em `20260801140000_create_payment_h
 
 ## Fora de escopo neste documento
 
+- Liquidações bancárias / página Ganhos — [provider-earnings](../../provider-earnings/features/ganhos-e-liquidacoes.md).
 - Matriz completa de cancelamento / faixas de multa (ToS) — ver `docs/payment-system/` e fluxos de cancelamento do serviço contratado.
 - Detalhe de API NetCred e runbooks operacionais.

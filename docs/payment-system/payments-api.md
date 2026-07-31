@@ -178,7 +178,8 @@ A pasta **Payout (Liquidação)** contém somente a documentação do objeto `Pa
 - `payoutCreate` / `payoutRelease` / `payoutHold` / `payoutSuspend`
 - Atualização de `PayoutRule` após a cobrança
 - Segunda cobrança ou transferência interna para “liberar” saldo retido
-- Webhook específico de liquidação/repasse (só eventos de `Transaction` e `Charge`)
+
+> **Webhooks de liquidação:** a coleção Postman histórica listava só eventos de `Transaction` / `Charge` / `PaymentProfile`. A API oficial Netcred ([docs.netcredbrasil.com.br](https://docs.netcredbrasil.com.br/)) e o schema GraphQL expõem **`PAYOUT_CREATE`** e **`PAYOUT_SETTLE`** com payload `PayoutPayload` (movements aninhados). Orbit persiste esses movements — ver **§10** e `design.md` §3.13.
 
 #### Única forma documentada de “reter” valor do prestador
 
@@ -1728,13 +1729,17 @@ mutation webhookCreate($input: WebhookCreateInput!) {
 | `TRANSACTION_VOID` | Transação cancelada | `TransactionPayload` |
 | `TRANSACTION_REFUND` | Estorno | `TransactionPayload` |
 | `TRANSACTION_DISPUTE` | Chargeback iniciado | `TransactionPayload` |
-
-> **Cancelamento/estorno (disputas):** a Netcred confirmou (2026-06) que `TRANSACTION_VOID` indica cancelamento e `TRANSACTION_REFUND` indica estorno — usar para automatizar a confirmação hoje feita por e-mail após solicitação de cancelamento em disputas (ver **§4.14**). Em disputas decididas a favor do cliente, a solicitação à Netcred é por **e-mail** (código da transação, nome do cliente, valor); o webhook deve refletir o processamento efetivo.
+| `PAYOUT_CREATE` | Lote de liquidação criado (previsão) | `PayoutPayload` |
+| `PAYOUT_SETTLE` | Lote liquidado / atualizado (incl. falha no lote) | `PayoutPayload` |
 | `PAYMENT_PROFILE_TOKENIZE` | Tokenização concluída (sucesso ou falha) | `PaymentProfilePayload` |
 | `PAYMENT_PROFILE_UPDATE` | Perfil atualizado | `PaymentProfilePayload` |
 | `PAYMENT_PROFILE_DELETE` | Perfil desativado | `PaymentProfilePayload` |
 | `PAYMENT_PROFILE_EXPIRING` | Cartão expira em ~1 mês | `PaymentProfilePayload` |
 | `WEBHOOK_PING` | Teste via `webhookPing` | Ping |
+
+> **Cancelamento/estorno (disputas):** a Netcred confirmou (2026-06) que `TRANSACTION_VOID` indica cancelamento e `TRANSACTION_REFUND` indica estorno — usar para automatizar a confirmação hoje feita por e-mail após solicitação de cancelamento em disputas (ver **§4.14**). Em disputas decididas a favor do cliente, a solicitação à Netcred é por **e-mail** (código da transação, nome do cliente, valor); o webhook deve refletir o processamento efetivo.
+
+> **Liquidação bancária:** `PAYOUT_*` documentados na API oficial Netcred (e no schema GraphQL). A coleção Postman antiga omite esses eventos — não usar Postman como fonte negativa. Orbit: handler `payment_webhook_handle_payout` + upsert em `payment_settlement_movements`; reconcile secundário `sync-netcred-settlements`.
 
 > **Nota:** Na descrição textual da coleção aparece `TRANSACTION_EXPIRE`; no cadastro de webhook (`webhookCreate`) o valor aceito é `TRANSACTION_EXPIRED`.
 
@@ -1810,6 +1815,50 @@ Se `is_active: false` e `rejected_reason` preenchido → tokenização falhou.
 ### Payload `ChargePayload`
 
 Inclui `id`, `reference_code`, `charge_type` (`SINGLE` | `RECURRING`), `charge_status`, `installment_number`, `payment_profile`, `rrule` e array `transactions` com `TransactionPayload` aninhados.
+
+### Payload `PayoutPayload` (liquidação — `PAYOUT_CREATE` / `PAYOUT_SETTLE`)
+
+Fonte: [API Netcred](https://docs.netcredbrasil.com.br/) + parser Orbit (`parsePayoutPayload`). Headers iguais aos demais webhooks (`X-NETCRED-Event`, `X-NETCRED-Signature`).
+
+**Cabeçalho do lote (resumo):**
+
+| Campo | Uso no Orbit |
+|-------|----------------|
+| `id` | `gateway_payout_id` |
+| `amount` / `paid_amount` | Total previsto / efetivamente liquidado do lote |
+| `payout_status` | Status do **lote** (não confundir com `movement_status`) |
+| `brand` | Bandeira agregada (nullable) |
+| `is_advance` | Antecipação |
+| `settling_at` / `settled_at` | Previsão / efetiva do lote |
+| `bank_account.*` | Destino — Orbit persiste só **máscara** (`bank_account_mask`) |
+| `company` / `original_holder_company` | Ownership / filtro split |
+| `movements[]` | Unidade persistida (1 movement = 1 row) |
+
+**Semântica por evento:** `PAYOUT_CREATE` cria/atualiza previsão (`settling_at`; `settled_at` tipicamente null). `PAYOUT_SETTLE` avança status/datas (`settled_at`, `PAID_OUT` ou falha no lote). Upsert idempotente por `movements.id`.
+
+**Movements aninhados (campos usados):**
+
+| Campo | Uso no Orbit |
+|-------|----------------|
+| `id` | `gateway_movement_id` (UNIQUE) |
+| `transaction_id` | Join → `payment_schedules.gateway_transaction_id` |
+| `movement_status` | Status da linha |
+| `movement_type` / `movement_source` / `record_type` | Tipo / origem / CREDIT\|DEBIT |
+| `base_settle_date` / `settling_at` / `settled_at` | Datas |
+| `installment` | Parcela |
+| `amount` / `net_amount` | `gross_amount` / `net_amount` |
+| `company_id` / `holder_company_id` | Filtrar perna do prestador vs plataforma |
+
+**Enums dos movements** (validação sandbox GraphQL 2026-07-31; campos são `String!`, não GraphQL ENUM):
+
+| Campo | Valores aceitos |
+|-------|-----------------|
+| `movement_status` | `PENDING`, `PAID_OUT` |
+| `record_type` | `CREDIT`, `DEBIT` |
+| `movement_source` | `TRANSACTION`, `REFUND`, `DISPUTE`, `LEASE`, `ADVANCE`, `PERIODIC_FEE`, `MANUAL`, `NEGATIVE_BALANCE`, `OTHER` |
+| `movement_type` | `CARD_PAYMENT`, `PIX_PAYMENT`, `BILLET_PAYMENT`, `REFUND`, `LEASE`, `PERIODIC_FEE`, `ADJUSTMENT`, `CHARGEBACK` |
+
+**`payout_status` do lote** (cabeçalho): `PENDING`, `APPROVED`, `IN_QUEUE`, `PROCESSING`, `FAILED`, `PAID_OUT` — distinto do status binário do movement.
 
 ### Tipos de `operations` em Transaction
 

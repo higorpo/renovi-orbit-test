@@ -1,5 +1,5 @@
+import { ProviderSettlementDisclosure } from "@/features/provider-earnings";
 import { usePaymentSchedule } from "../hooks/usePaymentSchedule";
-import { ProviderSettlementDisclosure } from "./ProviderSettlementDisclosure";
 
 const PAID_SCHEDULE_STATES = new Set(["PAID", "REFUNDED", "PARTIALLY_REFUNDED", "REFUND_REQUESTED"]);
 

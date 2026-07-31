@@ -156,6 +156,11 @@ values
     'far_reschedule_recapture_stale_minutes',
     '15'::jsonb,
     'Minutes after far_recapture_pending_at before Sentry CRITICAL stale alert'
+  ),
+  (
+    'settlement_sync_batch_size',
+    '20'::jsonb,
+    'Max PAID/REFUNDED* schedules claimed per sync-netcred-settlements cron tick'
   )
 on conflict (key) do update set
   value = excluded.value,

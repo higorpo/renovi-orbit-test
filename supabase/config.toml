@@ -455,6 +455,10 @@ verify_jwt = false
 [functions.reconcile-netcred-payments]
 verify_jwt = false
 
+# pg_cron via payment_cron_sync_netcred_settlements(); cron secret in handler.
+[functions.sync-netcred-settlements]
+verify_jwt = false
+
 # pg_cron via payment_cron_reconcile_inanalysis_auto_cancel_voids(); cron secret in handler (design §4.12).
 [functions.reconcile-inanalysis-auto-cancel-voids]
 verify_jwt = false

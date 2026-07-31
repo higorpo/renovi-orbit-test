@@ -1217,6 +1217,9 @@ begin
       v_handler_result := public.payment_webhook_handle_profile_delete(v_event.id, v_event.raw_payload);
     when 'PAYMENT_PROFILE_EXPIRING' then
       v_handler_result := public.payment_webhook_handle_profile_expiring(v_event.id, v_event.raw_payload);
+    when 'PAYOUT_CREATE', 'PAYOUT_SETTLE' then
+      -- Handler defined in payment_settlement_movements migration (depends on upsert RPC).
+      v_handler_result := public.payment_webhook_handle_payout(v_event.id, v_event.raw_payload);
     when 'WEBHOOK_PING' then
       v_handler_result := jsonb_build_object('outcome', 'noop', 'reason', 'webhook_ping');
     else

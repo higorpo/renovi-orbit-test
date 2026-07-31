@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(8);
+select plan(9);
 
 select ok(
   exists (
@@ -41,12 +41,20 @@ select ok(
   (
     select pg_get_functiondef(p.oid) ~* 'message-dispatcher-worker'
       and pg_get_functiondef(p.oid) ~* 'payment-emit-sentry-alerts'
+      and pg_get_functiondef(p.oid) ~* 'sync-netcred-settlements'
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
       and p.proname = 'orbit_invoke_edge_function'
   ),
-  'allowlist includes MMD and payment internal slugs'
+  'allowlist includes MMD, payment, and sync-netcred-settlements slugs'
+);
+
+select throws_ok(
+  $$ select public.orbit_invoke_edge_function('not-an-allowlisted-slug', '{}'::jsonb) $$,
+  '22023',
+  'INVALID_EDGE_FUNCTION_SLUG',
+  'rejects slugs outside the internal allowlist'
 );
 
 select ok(

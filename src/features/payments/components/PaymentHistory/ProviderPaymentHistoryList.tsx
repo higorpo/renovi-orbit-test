@@ -1,4 +1,10 @@
 import { Loader2, Wallet } from "lucide-react";
+import { Link } from "react-router";
+import {
+  ProviderSettlementDisclosure,
+  PROVIDER_SETTLEMENT_COMPLETION_NOTE,
+  ROUTE_PROVIDER_EARNINGS,
+} from "@/features/provider-earnings";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { useProviderPaymentHistory } from "../../hooks/useProviderPaymentHistory";
 import {
@@ -6,8 +12,6 @@ import {
   formatPaymentHistoryState,
 } from "../../utils/formatPaymentHistoryState";
 import { PaymentDisputeBadge } from "../PaymentDisputeBadge";
-import { ProviderSettlementDisclosure } from "../ProviderSettlementDisclosure";
-import { PROVIDER_SETTLEMENT_COMPLETION_NOTE } from "../../utils/providerSettlementDisclosure";
 
 export function ProviderPaymentHistoryList() {
   const historyQuery = useProviderPaymentHistory();
@@ -40,7 +44,14 @@ export function ProviderPaymentHistoryList() {
         <h2 className="text-lg font-semibold">Recebimentos</h2>
         <p className="text-sm text-muted-foreground">
           Valores pagos pelo cliente na plataforma. O depósito na sua conta costuma levar cerca de 30 dias após a
-          confirmação do pagamento. {PROVIDER_SETTLEMENT_COMPLETION_NOTE}
+          confirmação do pagamento. {PROVIDER_SETTLEMENT_COMPLETION_NOTE} Acompanhe liquidações em{" "}
+          <Link
+            to={ROUTE_PROVIDER_EARNINGS}
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            Ganhos
+          </Link>
+          .
         </p>
       </div>
 

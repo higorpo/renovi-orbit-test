@@ -43,6 +43,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `negotiation-proposals/` | `api/proposals.api.ts`, `api/serviceRequestBudgetCompare.api.ts`, `proposals.rpc.ts`; RPCs `create_provider_proposal`, `get_proposal_detail_for_provider`, `get_proposal_detail_for_participant`; countdown `useProposalCountdown`, `ProposalCountdownBanner` | `ProposalComposerDialog`, `AcceptProposalDialog`, `ReceivedBudgetDetailsSheet`, composer em jobs |
 | `service-reschedule/` | `api/serviceReschedule.api.ts`; hooks mutações/detalhe; `deriveRescheduleDateMode`, `mapRescheduleSnapshot` | `ProposeRescheduleDialog` (inclui lembrete dispensável `ProposeRescheduleFlowReminder`), `RequestRescheduleDialog`, cards/ações no chat e no serviço contratado |
 | `payments/` | APIs checkout/cartões/histórico/cobrança; RPCs `payment_*` | Checkout stepper, `ManualPaymentDialog`, histórico em Minha conta |
+| `provider-earnings/` | `api/settlements.api.ts`; `useProviderSettlements`; disclosure D+30 / `settling_at` | `EarningsPage`, filtros Previsto/Liquidado/Estorno, `ProviderSettlementDisclosure` |
 | `provider-kyc/` | `api/kyc.api.ts`, `providerKyc.rpc.ts`, `brazilianBanks.api.ts`; hooks `useProviderPaymentAccount`, `useProviderKycNavItems`, `useProviderKycWizard`, `useDispatchKyc`, `useBrazilianBanks` | `ProviderKycGate`, `ProviderKycForm`, `BankPicker`, `ProviderKycWizardStepContent`, telas `components/status/*` |
 | `auth/` | (já listado) | — |
 
@@ -164,7 +165,9 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | Artefato | Uso na documentação |
 |----------|---------------------|
 | `docs/business/modulos/payments/` | README + checkout + [historico-e-reembolso](./modulos/payments/features/historico-e-reembolso.md) |
-| `docs/payment-system/design.md` | Design normativo (§3.13 views de histórico; §4.8 reembolso; §4.3.1 fórmula de taxas) |
+| `docs/business/modulos/provider-earnings/` | README + [ganhos-e-liquidacoes](./modulos/provider-earnings/features/ganhos-e-liquidacoes.md) |
+| `docs/payment-system/design.md` | Design normativo (§3.13 views de histórico + `payment_settlement_movements`; §4.8 reembolso; §4.3.1 fórmula de taxas) |
+| `docs/payment-system/payments-api.md` §10 | Catálogo `PAYOUT_*` + `PayoutPayload` + enums de movement |
 | `docs/adr/0001-payment-split-commission-model.md` | Split: prestador `FIXED_AMOUNT` / plataforma `PERCENTAGE` 100% do restante |
 | `supabase/migrations/20260801020000_payment_platform_constants_seeds.sql` | Seeds MDR + `cc_fixed_processing_fee_brl` + `cc_risk_analysis_fee_brl` (prod R$ 0,49) |
 | `supabase/migrations/20260801150000_payment_calculate_charge_amount.sql` | `payment_total_with_card_fees` / `payment_calculate_charge_amount` (gross-up + `ROUND_HALF_EVEN`) |
@@ -196,7 +199,12 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `payment_prepare_refund_request` / `payment_commit_refund_after_gateway` / `payment_mark_refund_gateway_acked` / `payment_complete_refund_domain_side_effects` (migration `20260802070000_*` e correlatas) | Opção A (gateway first): prepare (read-only) → NetCred → commit cancel+`REFUND_REQUESTED`+`SUBMITTED`; crash recovery PAID+SUBMITTED; side effects de domínio reutilizados por reconcile/webhook. P-12 resolvido — ver `docs/payment-system/critical-bug-refund-partial-commit.md` |
 | `supabase/functions/process-refund/` | Edge: prepare → `refundTransaction` → commit |
 | `supabase/functions/reconcile-netcred-payments/` | Claim PAID+SUBMITTED; completa cancel se gateway REFUNDED |
-| `supabase/functions/netcred-webhook/` + `payment_process_webhook_event` | Assinatura inválida → terminal; `paid_amount` server-authoritative; confirma reembolso (`refunded_at`); `PAID`→`REFUNDED` via `TRANSACTION_REFUND`; completa cancel de domínio se serviço ainda aberto |
+| `supabase/functions/netcred-webhook/` + `payment_process_webhook_event` | Assinatura inválida → terminal; `paid_amount` server-authoritative; confirma reembolso (`refunded_at`); `PAID`→`REFUNDED` via `TRANSACTION_REFUND`; `PAYOUT_CREATE`/`PAYOUT_SETTLE` → `payment_webhook_handle_payout`; completa cancel de domínio se serviço ainda aberto |
+| `supabase/migrations/20260802240000_create_payment_settlement_movements.sql` | Tabela `payment_settlement_movements`, view `provider_settlement_movements_v`, upsert/list RPCs, handler payout |
+| `supabase/migrations/20260802250000_payment_sync_netcred_settlements_cron.sql` | Cron `payment_cron_sync_netcred_settlements` → EF `sync-netcred-settlements` |
+| `supabase/functions/sync-netcred-settlements/` | Reconcile GraphQL de movements (secundário aos webhooks) |
+| `supabase/tests/payments/payment_settlement_movements_test.sql` | pgTAP RLS/CLS/upsert/list settlements |
+| `src/features/provider-earnings/` | UI Ganhos + Vitest (api/hooks/utils/disclosure) |
 | `supabase/tests/payments/client_card_tokens_company_binding_test.sql` | Token ligado à company NetCred da **plataforma** (`payment_netcred_platform_company_id` / Vault); mismatch no aceite é vs platform (não vs company do prestador); prestador só no payout |
 | `supabase/tests/payments/payment_accept_proposal_profile_incomplete_test.sql` | `accept_proposal` exige CPF+telefone (`PROFILE_INCOMPLETE`) |
 | `supabase/migrations/20260802180000_payment_schedules_audit_trigger.sql` | Tabela `payment_schedules_audit` (row-history append-only), `row_version`/`audit_txid` só no audit, trigger statement único set-based, RLS admin-only, INSERT só via DEFINER |

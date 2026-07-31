@@ -29,7 +29,7 @@ Itens que exigem validação humana, evidência parcial ou conflito entre trecho
 ## Comportamento inferido
 
 - Prestador e cliente compartilham o layout `/dashboard`; a **especialização** ocorre por submenu + guards aninhados.
-- “Ganhos”, “Configurações”, “Ajuda”, “Visão geral” no menu são **placeholders** até nova implementação.
+- “Configurações”, “Ajuda”, “Visão geral” no menu são **placeholders** até nova implementação. **Ganhos** (`/dashboard/earnings`) passou a ser feature real (`provider-earnings`) — ver [ganhos-e-liquidacoes](./modulos/provider-earnings/features/ganhos-e-liquidacoes.md).
 - ~~Prestador compartilha o menu operacional completo independentemente do KYC.~~ **Corrigido (2026-07-30):** sem onboarding `ACTIVE`, o menu do prestador fica só em Minha conta e o shell operacional é bloqueado pelo `ProviderKycGate` — ver [provider-kyc](./modulos/provider-kyc/features/gate-e-acesso-operacional.md).
 
 ## Necessita validação com negócio/produto

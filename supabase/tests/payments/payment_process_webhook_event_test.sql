@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(7);
+select plan(10);
 
 create or replace function pg_temp.payment_set_service_role()
 returns void
@@ -94,6 +94,50 @@ select ok(
       and p.proname = 'payment_process_webhook_event'
   ),
   'payment_process_webhook_event is SECURITY DEFINER'
+);
+
+select ok(
+  (
+    select pg_get_functiondef(p.oid) ~* 'PAYOUT_CREATE'
+      and pg_get_functiondef(p.oid) ~* 'PAYOUT_SETTLE'
+      and pg_get_functiondef(p.oid) ~* 'payment_webhook_handle_payout'
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'payment_process_webhook_event'
+  ),
+  'routes PAYOUT_CREATE/PAYOUT_SETTLE to payment_webhook_handle_payout'
+);
+
+select public.payment_ingest_webhook_event(
+  'netcred'::public.payment_gateway_slug,
+  'PAYOUT_CREATE',
+  'evt-process-payout-empty',
+  jsonb_build_object('id', 'payout-empty-1', 'movements', '[]'::jsonb),
+  '{"X-NETCRED-Event":"PAYOUT_CREATE"}'::jsonb,
+  true
+);
+
+select is(
+  public.payment_process_webhook_event(
+    (
+      select id
+      from public.payment_webhook_events
+      where gateway_event_id = 'evt-process-payout-empty'
+    )
+  )->'handler'->>'outcome',
+  'noop',
+  'PAYOUT_CREATE with empty movements is terminal noop'
+);
+
+select is(
+  (
+    select state::text
+    from public.payment_webhook_events
+    where gateway_event_id = 'evt-process-payout-empty'
+  ),
+  'PROCESSED',
+  'PAYOUT_CREATE empty movements ends PROCESSED (no retry storm)'
 );
 
 select finish();

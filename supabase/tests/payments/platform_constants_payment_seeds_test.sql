@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(6);
+select plan(7);
 
 select is(
   (
@@ -26,11 +26,12 @@ select is(
       'installment_hmac_expires_minutes',
       'reconciliation_poll_interval_minutes',
       'webhook_base_retry_interval_minutes',
-      'charge_batch_size'
+      'charge_batch_size',
+      'settlement_sync_batch_size'
     )
   ),
-  18,
-  'seeds all 18 payment platform_constants keys'
+  19,
+  'seeds core payment platform_constants keys including settlement_sync_batch_size'
 );
 
 -- Hermetic: migration defaults (seed.sql may override sandbox rates/risk on local DB)
@@ -65,6 +66,12 @@ select is(
   public.platform_constant_numeric('charge_batch_size', 0),
   3::numeric,
   'charge_batch_size default seed value'
+);
+
+select is(
+  public.platform_constant_numeric('settlement_sync_batch_size', 0),
+  20::numeric,
+  'settlement_sync_batch_size default seed value'
 );
 
 select finish();

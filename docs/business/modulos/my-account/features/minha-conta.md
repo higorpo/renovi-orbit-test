@@ -43,7 +43,8 @@ Detalhe do histórico/reembolso: [historico-e-reembolso](../../payments/features
 | CRUD endereços | `AddressesSection` (só cliente) | Cliente | Feature `addresses` | Tabela `client_addresses` |
 | Ver / gerenciar cartões salvos | `SavedCardsList` | Cliente | Feature `payments` | Tokenizar / remover cartão; erros amigáveis pt-BR (sem texto bruto do backend) — ver [checkout-e-cobranca](../../payments/features/checkout-e-cobranca.md#mensagens-de-erro-na-ui-pt-br) |
 | Ver histórico de pagamentos | `PaymentHistorySection` | Cliente | Feature `payments` | View `client_payment_transactions_v` (breakdown se `refunded_amount`) |
-| Ver recebimentos | `PaymentHistorySection` | Prestador | Feature `payments` | View `provider_payment_receivables_v` (`net_amount_received` após `refunded_at`) |
+| Ver recebimentos (captura) | `PaymentHistorySection` | Prestador | Feature `payments` | View `provider_payment_receivables_v` (`net_amount_received` após `refunded_at`); disclosure de depósito via `provider-earnings` |
+| Ver liquidações bancárias | Menu **Ganhos** | Prestador | Feature `provider-earnings` | `/dashboard/earnings` — ver [ganhos-e-liquidacoes](../../provider-earnings/features/ganhos-e-liquidacoes.md) |
 | Adicionar/remover serviços ofertados | `OfferedServicesSection` | Prestador | Busca em `platform_services` | `provider_offered_services` (delete all + insert) |
 | Visualizar / copiar link do perfil | Card resumo e/ou `PublicProfileSettingsSection` | Prestador | Existe `slug` | `navigator.clipboard` + `toast` |
 | Portfólio: criar/editar/reordenar/excluir | `PortfolioManagementSection` | Prestador | Título obrigatório (trim) no dialog | `provider_portfolio_items` + bucket `provider-portfolio-images` |

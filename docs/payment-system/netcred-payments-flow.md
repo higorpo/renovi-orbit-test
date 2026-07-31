@@ -906,15 +906,21 @@ Rejeitar request se assinatura inválida. Logar `X-NETCRED-Event` + IDs do paylo
 | `TRANSACTION_VOID` | Cancelamento da transação (pré ou pós-análise, conforme regra Netcred) | `TransactionPayload` | Confirmar cancelamento solicitado via `chargeVoid`/`transactionVoid`; `payment_phase` → `voided`; fechar ciclo sem depender só de e-mail |
 | `TRANSACTION_REFUND` | Estorno processado | `TransactionPayload` | Confirmar `transactionRefund`; `payment_phase` → `refunded` / `partially_refunded`; `refund_confirmed_at`, `refunded_amount`; comunicar prazo 30–60 dias na fatura |
 | `TRANSACTION_DISPUTE` | Chargeback / disputa iniciada | `TransactionPayload` | `is_disputed = true`; abrir fluxo de disputa Renovi; bloquear payout se aplicável |
+| `PAYOUT_CREATE` | Lote de liquidação criado (previsão) | `PayoutPayload` | Upsert `payment_settlement_movements` a partir de `payload.movements[]` (`payment_webhook_handle_payout`); join `movements.transaction_id` → `payment_schedules.gateway_transaction_id` |
+| `PAYOUT_SETTLE` | Lote liquidado / atualizado | `PayoutPayload` | Mesmo handler; avança `settled_at` / `movement_status` (`PAID_OUT` etc.) |
 
-> **Nota:** Na documentação textual da coleção Postman aparece `TRANSACTION_EXPIRE`; em `webhookCreate` o valor correto é `TRANSACTION_EXPIRED`.
+> **Nota:** Na documentação textual da coleção Postman aparece `TRANSACTION_EXPIRE`; em `webhookCreate` o valor correto é `TRANSACTION_EXPIRED`. A mesma coleção omite `PAYOUT_*` — eventos oficiais de liquidação estão na [doc Netcred](https://docs.netcredbrasil.com.br/) e em [`payments-api.md` §10](./payments-api.md) (`PayoutPayload` + enums).
+
+> **Reconcile secundário:** Edge `sync-netcred-settlements` (cron `payment_cron_sync_netcred_settlements`) consulta GraphQL `movements(transactionId)` para gaps (webhook perdido / pós-captura sem payout ainda) e reusa `payment_upsert_settlement_movements`.
 
 ### 6.4 Chaves de match (payload → linha local)
 
 | Chave Netcred | Campo Renovi | Observação |
 |---------------|--------------|------------|
 | `charge.reference_code` | UUID do serviço / proposta | Idempotência principal |
-| `transaction.id` | `netcred_transaction_id` | Refund, void, disputa |
+| `transaction.id` | `netcred_transaction_id` / `gateway_transaction_id` | Refund, void, disputa; **join de settlement** |
+| `movements.transaction_id` (PayoutPayload) | `payment_schedules.gateway_transaction_id` | Liquidação bancária → schedule |
+| `movements.id` (PayoutPayload) | `payment_settlement_movements.gateway_movement_id` | Upsert idempotente |
 | `charge.id` | `netcred_charge_id` | `chargeVoid` — **não** usar em `transactionRefund` |
 | `payment_profile.id` | `netcred_payment_profile_id` | Tokenização e cartões salvos |
 

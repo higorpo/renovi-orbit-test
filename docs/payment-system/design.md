@@ -253,7 +253,7 @@ both:               isLiable = true
 ### 1.7.10 ClearSale, completion, settlement
 
 - **ClearSale cron T-2:** reuse `clearsale_session_id` from accept (~48h). **Manual retry:** fresh SDK UUID required.
-- **Bank settlement:** ~D+30 from `paid_at`; **not** gated by `EXECUTED`/`COMPLETED`. Provider UI MUST show estimated receipt date from `paid_at`.
+- **Bank settlement:** Netcred liquidates on its schedule (card often ≈ D+30); **not** gated by `EXECUTED`/`COMPLETED`. Persist real movements in `payment_settlement_movements` (§3.13). Provider UI prefers `settling_at` / `settled_at` from that table; fallback estimate remains `paid_at + 30 days` when no movement exists yet.
 - **Chargeback:** `is_disputed = true`; service status unchanged; `COMPLETED` not blocked; ops resolves manually (MVP).
 
 ### 1.7.11 Payment history views
@@ -261,7 +261,8 @@ both:               isLiable = true
 | Role | Primary columns |
 |---|---|
 | Client | `paid_amount`, `base_amount` (service value), refunds |
-| Provider | `provider_payout` at capture, net after proportional refund |
+| Provider (capture) | `provider_payout` at capture, net after proportional refund |
+| Provider (bank) | Settlement movements (`settling_at` / `settled_at` / `net_amount`) — Ganhos UI |
 | Never | Provider sees `paid_amount`; client sees `provider_payout` as "service price" |
 
 ---
@@ -843,7 +844,7 @@ Provider commission at accept comes from the accepted proposal (`tax_rate`, `fin
 - **`paid_amount`** — total charged to the client's card (`base_amount` + card processing fees at charge time).
 - **`base_amount`** — proposal price shown to the client (before card fees). Anchors ToS §2.2 refund tiers.
 - **`provider_payout`** — exact provider `FIXED_AMOUNT` in the NetCred split at `chargeCreate`, frozen at `accept_proposal` (`base_amount − commission`). This is what the provider "received de fato" at **capture**, before proportional refund clawback.
-- **`paid_at`** — gateway capture timestamp (`PAID`). **Not** bank settlement (NetCred card liquidation ≈ D+30). Provider UI MUST display estimated bank receipt from `paid_at`.
+- **`paid_at`** — gateway capture timestamp (`PAID`). **Not** bank settlement. Capture history (`provider_payment_receivables_v`) uses this; bank liquidation lives in `payment_settlement_movements` (§3.13 settlement).
 - **`refunded_amount`** — refund amount for the client. Set to the **expected** ToS §2.2 amount when entering `REFUND_REQUESTED` (so history UI can show breakdown immediately); overwritten by the gateway-confirmed amount on `TRANSACTION_REFUND` / reconciliation. Clawback proportional (`isLiable`): provider share = `refunded_amount × (provider_payout / paid_amount)` when `paid_amount > 0`. `refunded_at` remains null until gateway confirmation.
 
 ### `client_payment_transactions_v`
@@ -955,12 +956,38 @@ CREATE INDEX idx_payment_schedules_provider_paid_history
   WHERE state IN ('PAID', 'REFUNDED', 'PARTIALLY_REFUNDED');
 ```
 
-### Out of scope for these views
+### Out of scope for these **capture** views
 
 - Pending / failed charges (`SCHEDULED`, `PROCESSING`, `FAILED`, `FAILED_PERMANENT`, `CANCELLED`, …) — use service detail + `payment_schedules` RLS directly if needed.
 - Per-attempt charge log — `payment_attempts` (support/ops only).
-- Bank payout / liquidation date — not persisted; future enhancement if NetCred exposes settlement events.
+- Bank payout / liquidation lines — **in scope** via `payment_settlement_movements` below (not columns on these capture views).
 - Service title / SR context — optional `JOIN contracted_services` → `service_requests` in a paginated RPC; views stay thin for PostgREST.
+
+### Bank settlement: `payment_settlement_movements`
+
+**In scope.** One Netcred payout **movement** = one row. Linked to `payment_schedules` by:
+
+`movements.transaction_id` → `payment_schedules.gateway_transaction_id`
+
+(Primary ingest: webhooks `PAYOUT_CREATE` / `PAYOUT_SETTLE` → `payment_webhook_handle_payout` → `payment_upsert_settlement_movements`. Secondary: Edge `sync-netcred-settlements` / cron `payment_cron_sync_netcred_settlements` via GraphQL `movements(transactionId)`.)
+
+| Column (key) | Meaning |
+|---|---|
+| `gateway_movement_id` | Netcred `movements.id` — UNIQUE with `gateway_slug` |
+| `gateway_transaction_id` | Join key to schedule |
+| `payment_schedule_id` / `provider_id` | Resolved from schedule (provider denormalized for RLS) |
+| `movement_status` | `PENDING` (forecast) \| `PAID_OUT` (bank settled) |
+| `record_type` | `CREDIT` \| `DEBIT` (`DEBIT` → `is_refund_clawback`) |
+| `movement_source` / `movement_type` | Netcred enums (see `payments-api.md` §10) |
+| `settling_at` / `settled_at` | Forecast date / effective bank settlement |
+| `gross_amount` / `net_amount` | Movement amounts |
+| `bank_account_mask` | Masked destination only (CLS) |
+| `raw_snapshot` | Ops-only JSON; **not** granted to `authenticated` |
+| `sync_source` | `webhook` \| `graphql_reconcile` |
+
+**Read model:** view `provider_settlement_movements_v` (`security_invoker`) — same CLS allowlist, no `raw_snapshot`. Provider UI (feature `provider-earnings` / Ganhos) lists via RPC `list_provider_settlement_movements(...)` → `{ items, total_count }`.
+
+**RLS / CLS:** deny-by-default; no authenticated mutation; SELECT where `provider_id = auth.uid()` OR `is_platform_admin()`; column revoke on `raw_snapshot`; upsert only `service_role` / `payment_upsert_settlement_movements`.
 
 **Migration checklist:**
 
@@ -972,6 +999,8 @@ ALTER VIEW public.provider_payment_receivables_v SET (security_invoker = true);
 ALTER VIEW public.client_payment_transactions_v ENABLE ROW LEVEL SECURITY;
 ALTER VIEW public.provider_payment_receivables_v ENABLE ROW LEVEL SECURITY;
 -- policies as above; REVOKE ALL from anon on both views
+-- settlement: payment_settlement_movements + provider_settlement_movements_v
+--   + payment_upsert_settlement_movements + list_provider_settlement_movements
 ```
 
 ---

@@ -178,7 +178,7 @@ export async function handleNetcredWebhookRequest(
   await deps.markValidating(persistResult.eventId);
 
   try {
-    if (isHeavyPathEventType(eventType)) {
+    if (isHeavyPathEventType(eventType, payload)) {
       await enqueueDeferredProcessing(deps, persistResult.eventId, eventType);
       logger.info(PAYMENT_LOG_EVENTS.WEBHOOK_PROCESSED, {
         event_type: eventType,

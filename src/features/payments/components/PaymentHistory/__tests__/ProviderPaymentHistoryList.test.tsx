@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 import { ProviderPaymentHistoryList } from "../ProviderPaymentHistoryList";
 
@@ -8,11 +9,22 @@ vi.mock("../../../hooks/useProviderPaymentHistory", () => ({
   useProviderPaymentHistory: () => mockUseProviderPaymentHistory(),
 }));
 
-vi.mock("../../ProviderSettlementDisclosure", () => ({
+vi.mock("@/features/provider-earnings", () => ({
   ProviderSettlementDisclosure: ({ capturePaidAt }: { capturePaidAt: string }) => (
     <div data-testid="settlement">{capturePaidAt}</div>
   ),
+  PROVIDER_SETTLEMENT_COMPLETION_NOTE:
+    "Marcar o serviço como concluído não antecipa quando o valor será depositado na sua conta.",
+  ROUTE_PROVIDER_EARNINGS: "/dashboard/earnings",
 }));
+
+function renderList() {
+  return render(
+    <MemoryRouter>
+      <ProviderPaymentHistoryList />
+    </MemoryRouter>,
+  );
+}
 
 describe("ProviderPaymentHistoryList", () => {
   it("shows loading state", () => {
@@ -22,7 +34,7 @@ describe("ProviderPaymentHistoryList", () => {
       isError: false,
     });
 
-    render(<ProviderPaymentHistoryList />);
+    renderList();
     expect(screen.getByText(/Carregando recebimentos/i)).toBeInTheDocument();
   });
 
@@ -33,7 +45,7 @@ describe("ProviderPaymentHistoryList", () => {
       isError: true,
     });
 
-    render(<ProviderPaymentHistoryList />);
+    renderList();
     expect(screen.getByRole("alert")).toHaveTextContent(
       /Não foi possível carregar o histórico de recebimentos/i,
     );
@@ -46,7 +58,7 @@ describe("ProviderPaymentHistoryList", () => {
       isError: false,
     });
 
-    render(<ProviderPaymentHistoryList />);
+    renderList();
     expect(screen.getByText(/Nenhum recebimento registrado ainda/i)).toBeInTheDocument();
   });
 
@@ -68,7 +80,7 @@ describe("ProviderPaymentHistoryList", () => {
       isError: false,
     });
 
-    render(<ProviderPaymentHistoryList />);
+    renderList();
 
     expect(screen.getByText(/Valor original/i)).toBeInTheDocument();
     expect(screen.getByText("Chargeback em análise")).toBeInTheDocument();
@@ -93,7 +105,7 @@ describe("ProviderPaymentHistoryList", () => {
       isError: false,
     });
 
-    render(<ProviderPaymentHistoryList />);
+    renderList();
 
     expect(screen.queryByText(/Valor original/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Chargeback em análise")).not.toBeInTheDocument();

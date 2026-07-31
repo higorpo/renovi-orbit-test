@@ -18,9 +18,9 @@
 | Endereços (placeholder) | `/dashboard/addresses` | Marcador; **não** usa feature `addresses` | Somente `client` (guard aninhado) |
 | Configurações (placeholder) | `/dashboard/settings` | Marcador | `client`, `provider` |
 | Ajuda (placeholder) | `/dashboard/help` | Marcador | `client`, `provider` |
-| Ganhos (placeholder) | `/dashboard/earnings` | Marcador | Somente `provider` (guard aninhado) |
+| Ganhos | `/dashboard/earnings` | Liquidações bancárias (`provider-earnings`) — **não** é mais placeholder | Somente `provider` (guard aninhado) |
 
-**Evidência:** `src/router.tsx` (rotas filhas de `dashboard` com `DashboardFakePage`); `DashboardFakePage.tsx`.
+**Evidência:** `src/router.tsx` (rotas filhas de `dashboard`; placeholders via `DashboardFakePage`; `provider-earnings` lazy → `EarningsPage`); `DashboardFakePage.tsx`; [ganhos-e-liquidacoes](../../provider-earnings/features/ganhos-e-liquidacoes.md).
 
 **Menu lateral / bottom nav:** `src/layouts/DashboardLayout/dashboardMenu.ts` — `getDashboardMenu(role)` retorna labels e paths; cliente inclui `Visão geral`, `Meus Serviços`, `Conversas`, `Endereços`, `Minha conta`, `Ajuda`; prestador inclui `Visão geral`, `Meus Serviços`, `Trabalhos`, `Orçamentos`, `Conversas`, `Ganhos`, `Minha conta`, `Ajuda`.
 
@@ -69,7 +69,7 @@ Placeholder **não possui** formulários, filtros nem campos de entrada.
 
 ## 7. Perfis e permissões
 
-| Perfil | Visualizar placeholders gerais | `/dashboard/addresses` | `/dashboard/earnings` |
+| Perfil | Visualizar placeholders gerais | `/dashboard/addresses` | `/dashboard/settings`, `/dashboard/help` |
 |--------|--------------------------------|-------------------------|------------------------|
 | client | Sim (onde router permitir) | Sim | Não (rota com `allowedRoles={['provider']}`) |
 | provider | Sim (onde router permitir) | Não | Sim |
@@ -141,7 +141,7 @@ Nenhuma persistência ou query no layout/placeholder além de leitura de `profil
 ## 14. Atualização de auditoria (2026-04-27)
 
 - **Rota mãe protegida:** todo `/dashboard/*` exige auth com papel `client` ou `provider`.
-- **Subguards por rota placeholder:** `/dashboard/addresses` é cliente-only e `/dashboard/earnings` provider-only.
+- **Subguards por rota:** `/dashboard/addresses` é cliente-only; `/dashboard/earnings` é provider-only (página real em `provider-earnings`).
 - **Menu é derivado de papel em runtime:** `getDashboardMenu(role)` controla itens desktop/mobile do shell.
 - **Comportamento offline no layout:** header ajusta offset quando `useOnlineStatus` indica ausência de conexão.
 

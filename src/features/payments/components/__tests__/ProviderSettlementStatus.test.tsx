@@ -8,7 +8,7 @@ vi.mock("../../hooks/usePaymentSchedule", () => ({
   usePaymentSchedule: (...args: unknown[]) => mockUsePaymentSchedule(...args),
 }));
 
-vi.mock("../ProviderSettlementDisclosure", () => ({
+vi.mock("@/features/provider-earnings", () => ({
   ProviderSettlementDisclosure: ({
     capturePaidAt,
     showCompletionNote,

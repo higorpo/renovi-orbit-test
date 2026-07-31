@@ -10,10 +10,13 @@ import {
   CHARGE_CREATE_MUTATION,
   CHARGE_VOID_MUTATION,
   COMPANIES_BY_DOCUMENT_QUERY,
+  MOVEMENTS_BY_PAYOUT_QUERY,
+  MOVEMENTS_BY_TRANSACTION_QUERY,
   PAYMENT_PROFILE_CREATE_MUTATION,
   TRANSACTION_REFUND_MUTATION,
   TRANSACTIONS_BY_REFERENCE_QUERY,
 } from "./netcred-graphql.ts";
+import type { SettlementMovementSource } from "./mapSettlementMovementUpsert.ts";
 import { ProviderAuthError } from "./errors.ts";
 import { mapToNetCredChargeInput } from "./netcred-charge-mapping.ts";
 import {
@@ -179,6 +182,104 @@ type CompaniesGraphQLResponse = {
   };
   errors?: GraphQLError[];
 };
+
+type MovementGraphQLNode = {
+  id?: string | null;
+  amount?: string | null;
+  netAmount?: string | null;
+  movementStatus?: string | null;
+  movementType?: string | null;
+  movementSource?: string | null;
+  recordType?: string | null;
+  installment?: number | null;
+  baseSettleDate?: string | null;
+  settlingAt?: string | null;
+  settledAt?: string | null;
+  isAdvance?: boolean | null;
+  brand?: string | null;
+  bankAccountNumber?: string | null;
+  bankAccountBank?: {
+    compe?: string | null;
+    name?: string | null;
+  } | null;
+  holderCompany?: { id?: string | null; name?: string | null } | null;
+  company?: { id?: string | null } | null;
+  payout?: {
+    id?: string | null;
+    payoutStatus?: string | null;
+    settlingAt?: string | null;
+    settledAt?: string | null;
+    brand?: string | null;
+    isAdvance?: boolean | null;
+  } | null;
+  transaction?: { id?: string | null } | null;
+};
+
+type MovementsGraphQLResponse = {
+  data?: {
+    movements?: {
+      totalCount?: number | null;
+      pageInfo?: {
+        hasNextPage?: boolean | null;
+        endCursor?: string | null;
+      } | null;
+      edges?: Array<{
+        node?: MovementGraphQLNode | null;
+      } | null> | null;
+    } | null;
+  };
+  errors?: GraphQLError[];
+};
+
+const DEFAULT_MOVEMENTS_PAGE_SIZE = 50;
+const MAX_MOVEMENTS_PAGES = 20;
+
+function mapMovementNode(
+  node: MovementGraphQLNode,
+  fallbackTransactionId?: string,
+): SettlementMovementSource | null {
+  const id = node.id != null ? String(node.id).trim() : "";
+  const recordType = node.recordType?.trim() ?? "";
+  const movementStatus = node.movementStatus?.trim() ?? "";
+  const amount = node.amount?.trim() ?? "";
+  const netAmount = node.netAmount?.trim() ?? "";
+  if (!id || !recordType || !movementStatus || !amount || !netAmount) {
+    return null;
+  }
+
+  const transactionId =
+    (node.transaction?.id != null ? String(node.transaction.id).trim() : "") ||
+    (fallbackTransactionId?.trim() ?? "");
+
+  return {
+    id,
+    amount,
+    netAmount,
+    movementStatus,
+    movementType: node.movementType ?? null,
+    movementSource: node.movementSource ?? null,
+    recordType,
+    installment: node.installment ?? null,
+    baseSettleDate: node.baseSettleDate ?? null,
+    settlingAt: node.settlingAt ?? null,
+    settledAt: node.settledAt ?? null,
+    isAdvance: node.isAdvance ?? false,
+    brand: node.brand ?? null,
+    bankAccountNumber: node.bankAccountNumber ?? null,
+    bankCompe: node.bankAccountBank?.compe ?? null,
+    bankName: node.bankAccountBank?.name ?? null,
+    holderCompanyId: node.holderCompany?.id != null
+      ? String(node.holderCompany.id)
+      : null,
+    companyId: node.company?.id != null ? String(node.company.id) : null,
+    payoutId: node.payout?.id != null ? String(node.payout.id) : null,
+    payoutStatus: node.payout?.payoutStatus ?? null,
+    payoutBrand: node.payout?.brand ?? null,
+    payoutIsAdvance: node.payout?.isAdvance ?? null,
+    transactionId: transactionId || null,
+    rawSnapshot: node as Record<string, unknown>,
+  };
+}
 
 const ALREADY_REFUNDED_CODES = new Set([
   "ALREADY_REFUNDED",
@@ -649,6 +750,112 @@ export class NetCredAdapter {
       }
       throw error;
     }
+  }
+
+  async listMovementsByTransactionId(
+    transactionId: string,
+    options?: { first?: number },
+  ): Promise<SettlementMovementSource[]> {
+    return withGatewaySpan(
+      "listMovementsByTransactionId",
+      "netcred",
+      () =>
+        this.runListMovements({
+          query: MOVEMENTS_BY_TRANSACTION_QUERY,
+          filterKey: "transactionId",
+          filterValue: transactionId,
+          fallbackTransactionId: transactionId,
+          first: options?.first,
+        }),
+      (result) => ({
+        http_status: 200,
+        outcome: "success",
+        movement_count: result.length,
+      }),
+    );
+  }
+
+  async listMovementsByPayoutId(
+    payoutId: string,
+    options?: { first?: number },
+  ): Promise<SettlementMovementSource[]> {
+    return withGatewaySpan(
+      "listMovementsByPayoutId",
+      "netcred",
+      () =>
+        this.runListMovements({
+          query: MOVEMENTS_BY_PAYOUT_QUERY,
+          filterKey: "payoutId",
+          filterValue: payoutId,
+          first: options?.first,
+        }),
+      (result) => ({
+        http_status: 200,
+        outcome: "success",
+        movement_count: result.length,
+      }),
+    );
+  }
+
+  private async runListMovements(input: {
+    query: string;
+    filterKey: "transactionId" | "payoutId";
+    filterValue: string;
+    fallbackTransactionId?: string;
+    first?: number;
+  }): Promise<SettlementMovementSource[]> {
+    const filterValue = input.filterValue.trim();
+    if (!filterValue) {
+      return [];
+    }
+
+    const pageSize = Math.max(
+      1,
+      Math.min(input.first ?? DEFAULT_MOVEMENTS_PAGE_SIZE, 100),
+    );
+    const collected: SettlementMovementSource[] = [];
+    let after: string | null = null;
+
+    for (let page = 0; page < MAX_MOVEMENTS_PAGES; page++) {
+      const variables: Record<string, unknown> = {
+        [input.filterKey]: filterValue,
+        first: pageSize,
+      };
+      if (after) {
+        variables.after = after;
+      }
+
+      const response = await this.graphqlRequestWithAuthRetry<MovementsGraphQLResponse>(
+        input.query,
+        variables,
+      );
+
+      if (response.errors?.length) {
+        const primary = getPrimaryGatewayError(response.errors);
+        throw new Error(
+          primary?.message ??
+            `NetCred movements query failed (${input.filterKey})`,
+        );
+      }
+
+      const connection = response.data?.movements;
+      const edges = connection?.edges ?? [];
+      for (const edge of edges) {
+        const node = edge?.node;
+        if (!node) continue;
+        const mapped = mapMovementNode(node, input.fallbackTransactionId);
+        if (mapped) {
+          collected.push(mapped);
+        }
+      }
+
+      if (!connection?.pageInfo?.hasNextPage || !connection.pageInfo.endCursor) {
+        break;
+      }
+      after = connection.pageInfo.endCursor;
+    }
+
+    return collected;
   }
 
   async getProviderCredentials(

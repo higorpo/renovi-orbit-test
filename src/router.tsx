@@ -72,6 +72,11 @@ const ProviderJobsRouteSlot = lazy(() =>
     default: m.ProviderJobsRouteSlot,
   })),
 )
+const EarningsPage = lazy(() =>
+  import('@/features/provider-earnings/components/EarningsPage').then((m) => ({
+    default: m.EarningsPage,
+  })),
+)
 const ProviderCalendarPage = lazy(() =>
   import('@/features/provider-calendar/components/ProviderCalendarPage').then((m) => ({
     default: m.ProviderCalendarPage,
@@ -199,7 +204,7 @@ export const router = createBrowserRouter([
             path: 'earnings',
             element: (
               <ProtectedRoute allowedRoles={['provider']}>
-                <DashboardFakePage title="Ganhos" />
+                <EarningsPage />
               </ProtectedRoute>
             ),
           },

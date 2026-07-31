@@ -127,3 +127,78 @@ query transactionsByReference(
   }
 }
 `;
+
+/** Shared selection set for settlement reconcile (portal liquidations report). */
+const MOVEMENT_NODE_SELECTION = `
+  id
+  amount
+  netAmount
+  movementStatus
+  movementType
+  movementSource
+  recordType
+  installment
+  baseSettleDate
+  settlingAt
+  settledAt
+  isAdvance
+  brand
+  bankAccountNumber
+  bankAccountBank { compe name }
+  holderCompany { id name }
+  company { id }
+  payout { id payoutStatus settlingAt settledAt brand isAdvance }
+  transaction { id }
+`;
+
+export const MOVEMENTS_BY_TRANSACTION_QUERY = `
+query MovementsByTransaction(
+  $transactionId: String!
+  $first: Int!
+  $after: String
+) {
+  movements(
+    first: $first
+    after: $after
+    transactionId: $transactionId
+    orderBy: "id"
+  ) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      node {
+        ${MOVEMENT_NODE_SELECTION}
+      }
+    }
+  }
+}
+`;
+
+export const MOVEMENTS_BY_PAYOUT_QUERY = `
+query MovementsByPayout(
+  $payoutId: String!
+  $first: Int!
+  $after: String
+) {
+  movements(
+    first: $first
+    after: $after
+    payoutId: $payoutId
+    orderBy: "id"
+  ) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      node {
+        ${MOVEMENT_NODE_SELECTION}
+      }
+    }
+  }
+}
+`;

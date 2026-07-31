@@ -308,6 +308,95 @@ Deno.test("TRANSACTION_UPDATE enqueues without inline RPC processing", async () 
   assertEquals(queued, true);
 });
 
+Deno.test("PAYOUT_CREATE with few movements processes inline", async () => {
+  let processed = false;
+  let queued = false;
+
+  const rawBody = JSON.stringify({
+    id: "payout-1",
+    movements: [{ id: 1, transaction_id: 2 }],
+  });
+  const signature = await computeHMACSHA256("test-webhook-secret", rawBody);
+
+  const response = await handleNetcredWebhookRequest(
+    webhookRequest(rawBody, {
+      eventType: "PAYOUT_CREATE",
+      signature,
+    }),
+    createDeps({
+      processWebhookEvent: async () => {
+        processed = true;
+        return { outcome: "processed", handler: { outcome: "upserted" } };
+      },
+      enqueueHeavyProcessing: async () => {
+        queued = true;
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(processed, true);
+  assertEquals(queued, false);
+});
+
+Deno.test("PAYOUT_SETTLE with many movements enqueues heavy path", async () => {
+  let processed = false;
+  let queued = false;
+
+  const movements = Array.from({ length: 21 }, (_, i) => ({ id: i }));
+  const rawBody = JSON.stringify({ id: "payout-big", movements });
+  const signature = await computeHMACSHA256("test-webhook-secret", rawBody);
+
+  const response = await handleNetcredWebhookRequest(
+    webhookRequest(rawBody, {
+      eventType: "PAYOUT_SETTLE",
+      signature,
+    }),
+    createDeps({
+      processWebhookEvent: async () => {
+        processed = true;
+        return { outcome: "processed" };
+      },
+      enqueueHeavyProcessing: async () => {
+        queued = true;
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(processed, false);
+  assertEquals(queued, true);
+});
+
+Deno.test("PAYOUT not_found handler outcome enqueues deferred processing", async () => {
+  let queued = false;
+
+  const rawBody = JSON.stringify({
+    id: "payout-retry",
+    movements: [{ id: 1 }],
+  });
+  const signature = await computeHMACSHA256("test-webhook-secret", rawBody);
+
+  const response = await handleNetcredWebhookRequest(
+    webhookRequest(rawBody, {
+      eventType: "PAYOUT_CREATE",
+      signature,
+    }),
+    createDeps({
+      processWebhookEvent: async () => ({
+        outcome: "retry_scheduled",
+        handler: { outcome: "not_found" },
+      }),
+      enqueueHeavyProcessing: async () => {
+        queued = true;
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(queued, true);
+});
+
 Deno.test("retry_scheduled RPC outcome enqueues deferred processing", async () => {
   let queued = false;
 
