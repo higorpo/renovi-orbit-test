@@ -20,20 +20,19 @@ Deno.test("blobToBase64 encodes blob contents", async () => {
   assertEquals(encoded, btoa("abc"));
 });
 
-Deno.test("buildKycAttachmentSpecs includes PJ docs when present", () => {
+Deno.test("buildKycAttachmentSpecs includes PJ docs without duplicate identity", () => {
   const specs = buildKycAttachmentSpecs({
     entityType: "pj",
-    identityDocStoragePath: "id.pdf",
+    identityDocStoragePath: "rep.pdf",
     addressProofStoragePath: "addr.pdf",
     corporateCharterStoragePath: "charter.pdf",
     legalRepDocStoragePath: "rep.pdf",
   });
 
   assertEquals(specs.map((s) => s.label), [
-    "identity",
+    "legal-rep-id",
     "address-proof",
     "corporate-charter",
-    "legal-rep-id",
   ]);
 });
 
@@ -46,6 +45,7 @@ Deno.test("buildKycAttachmentSpecs omits PJ docs for pf", () => {
     legalRepDocStoragePath: "rep.pdf",
   });
   assertEquals(specs.length, 2);
+  assertEquals(specs.map((s) => s.label), ["identity", "address-proof"]);
 });
 
 Deno.test("downloadKycAttachments returns attachments on success", async () => {

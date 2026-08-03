@@ -28,15 +28,15 @@ comment on column public.provider_profiles_private.pix_key is
   'Optional PIX key submitted with KYC. Plaintext PII — service_role/onboarding RPCs only.';
 
 comment on column public.provider_profiles_private.identity_doc_storage_path is
-  'Private storage path in provider-kyc-documents (providers/{id}/kyc/identity/…).';
+  'Private storage path in provider-kyc-documents (providers/{id}/kyc/identity/…). For PJ, typically the same legal-rep-id object.';
 
 comment on column public.provider_profiles_private.address_proof_storage_path is
-  'Private storage path in provider-kyc-documents (providers/{id}/kyc/address-proof/…).';
+  'Private storage path (providers/{id}/kyc/address-proof/…). PF: personal address; PJ: company address.';
 
 comment on column public.provider_profiles_private.corporate_charter_storage_path is
   'Private storage path for corporate charter (PJ only).';
 
 comment on column public.provider_profiles_private.legal_rep_doc_storage_path is
-  'Private storage path for legal representative ID (PJ only).';
+  'Private storage path for legal representative ID (PJ only). For PJ, identity_doc_storage_path typically points to the same legal-rep-id object.';
 
 -- Bucket + RLS: migration 20260801185000_create_provider_kyc_documents_storage.sql

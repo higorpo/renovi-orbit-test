@@ -65,24 +65,27 @@ export function buildKycAttachmentSpecs(input: {
   corporateCharterStoragePath: string | null;
   legalRepDocStoragePath: string | null;
 }): KycAttachmentSpec[] {
+  if (input.entityType === "pf") {
+    return [
+      { label: "identity", storagePath: input.identityDocStoragePath },
+      { label: "address-proof", storagePath: input.addressProofStoragePath },
+    ];
+  }
+
+  // PJ: avoid attaching the same legal-rep file twice (identity dual-maps to legal-rep-id).
   const specs: KycAttachmentSpec[] = [
-    { label: "identity", storagePath: input.identityDocStoragePath },
+    {
+      label: "legal-rep-id",
+      storagePath: input.legalRepDocStoragePath ?? input.identityDocStoragePath,
+    },
     { label: "address-proof", storagePath: input.addressProofStoragePath },
   ];
 
-  if (input.entityType === "pj") {
-    if (input.corporateCharterStoragePath) {
-      specs.push({
-        label: "corporate-charter",
-        storagePath: input.corporateCharterStoragePath,
-      });
-    }
-    if (input.legalRepDocStoragePath) {
-      specs.push({
-        label: "legal-rep-id",
-        storagePath: input.legalRepDocStoragePath,
-      });
-    }
+  if (input.corporateCharterStoragePath) {
+    specs.push({
+      label: "corporate-charter",
+      storagePath: input.corporateCharterStoragePath,
+    });
   }
 
   return specs;

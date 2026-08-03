@@ -773,9 +773,9 @@ ALTER TABLE public.provider_profiles_private
   ADD COLUMN IF NOT EXISTS bank_account              TEXT,
   ADD COLUMN IF NOT EXISTS pix_key                   TEXT,
   ADD COLUMN IF NOT EXISTS identity_doc_storage_path     TEXT,
-  ADD COLUMN IF NOT EXISTS address_proof_storage_path    TEXT,
+  ADD COLUMN IF NOT EXISTS address_proof_storage_path    TEXT,  -- PF: personal; PJ: company
   ADD COLUMN IF NOT EXISTS corporate_charter_storage_path TEXT,  -- PJ only
-  ADD COLUMN IF NOT EXISTS legal_rep_doc_storage_path    TEXT;  -- PJ only
+  ADD COLUMN IF NOT EXISTS legal_rep_doc_storage_path    TEXT;  -- PJ only (also dual-mapped to identity_doc for PJ)
 ```
 
 **Private Storage bucket `provider-kyc-documents`** (migration `20260801185000_create_provider_kyc_documents_storage.sql`):

@@ -62,7 +62,8 @@ Labels na UI: “Tipo de cadastro”, “Dados pessoais”, “Dados bancários�
 
 1. Tipo de entidade no form: `CPF` ou `CNPJ`; na RPC vira `p_entity_type` **`pf`** | **`pj`** (`toRpcEntityType`).
 2. PF: documentos obrigatórios `identity` + `address-proof`.
-3. PJ: além dos de PF, `corporate-charter` e **`legal-rep-id`** (chave de storage; não usar `legal-rep-doc`).
+2. PF: documentos obrigatórios `identity` + `address-proof`.
+3. PJ: `legal-rep-id` (identidade do representante; no submit o mesmo path é dual-mapeado para `identity_doc_storage_path` e `legal_rep_doc_storage_path` — a RPC exige que coincidam), `address-proof` (comprovante de endereço da empresa) e `corporate-charter`. Não há upload separado de `identity` no wizard PJ.
 4. Banco: código FEBRABAN via `BankPicker` (lista da BrasilAPI `/banks/v1`, com fallback no JSON local e overrides de nome amigáveis); agência só dígitos (sem dígito verificador no campo); conta com dígito; PIX opcional.
 5. Upload Option A: criar sessão → upload no storage → registrar path → URL assinada.
 6. Prefill: dados de `provider_profiles_private`; telefone/nome/e-mail vêm do perfil/conta passados pelo gate (`defaultPhone`, `defaultFullName`, `accountEmail`).
@@ -102,10 +103,10 @@ Labels na UI: “Tipo de cadastro”, “Dados pessoais”, “Dados bancários�
 
 | Campo form | Chave de upload (`documentKey`) | PF | PJ | Label UI |
 |------------|----------------------------------|----|----|----------|
-| identityDoc | `identity` | Sim | Sim | Documento de identidade (CPF/CNH) |
-| addressProofDoc | `address-proof` | Sim | Sim | Comprovante de endereço |
+| identityDoc | `identity` | Sim | — | Documento de identidade (CPF/CNH) |
+| legalRepDoc | **`legal-rep-id`** | — | Sim | Documento do representante legal (dual-map: `identity_doc_storage_path` + `legal_rep_doc_storage_path`) |
+| addressProofDoc | `address-proof` | Sim | Sim | Comprovante de endereço (PF pessoal / PJ empresa) |
 | corporateCharterDoc | `corporate-charter` | — | Sim | Contrato social |
-| legalRepDoc | **`legal-rep-id`** | — | Sim | Documento do representante legal |
 
 Arquivos: PDF/JPEG/PNG/WebP/HEIC/HEIF; até **50 MB** (`KYC_DOCUMENT_MAX_BYTES`). Path: `providers/{providerId}/kyc/{documentKey}/document.{ext}` no bucket `provider-kyc-documents`.
 
@@ -216,4 +217,4 @@ Breadcrumbs Sentry: `provider_kyc.step_viewed`, `provider_kyc.submit_started`, `
 
 ## 21. Atualização de auditoria (2026-08-02)
 
-- Revalidado sem drift: passos `KYC_WIZARD_STEPS` = entity → identity → bank → documents → review; labels e regras PF/PJ/`legal-rep-id` alinhados ao código.
+- Revalidado sem drift: passos `KYC_WIZARD_STEPS` = entity → identity → bank → documents → review; labels e regras PF/PJ (`legal-rep-id` + endereço da empresa via `address-proof`) alinhados ao código.

@@ -51,6 +51,12 @@ function expectActiveStep(testId: string) {
   expect(screen.getByTestId(testId)).not.toHaveAttribute("aria-hidden", "true");
 }
 
+function expectWizardProgress(step: number) {
+  const bar = screen.getByRole("progressbar");
+  expect(bar).toHaveAttribute("aria-valuenow", String(step));
+  expect(bar).toHaveAccessibleName(`Passo ${step} de 5`);
+}
+
 async function waitForWizardReady() {
   await waitFor(() => {
     expectActiveStep("kyc-step-entity");
@@ -65,7 +71,7 @@ async function goToIdentityStep() {
   await waitForWizardReady();
   clickContinue();
   await waitFor(() => {
-    expect(screen.getByText(/Passo 2 de 5/i)).toBeInTheDocument();
+    expectWizardProgress(2);
     expectActiveStep("kyc-step-identity");
   });
 }
@@ -83,7 +89,7 @@ async function fillIdentityCpfAndContinue() {
   });
   clickContinue();
   await waitFor(() => {
-    expect(screen.getByText(/Passo 3 de 5/i)).toBeInTheDocument();
+    expectWizardProgress(3);
     expectActiveStep("kyc-step-bank");
   });
 }
@@ -101,7 +107,7 @@ async function fillBankAndContinue() {
   });
   clickContinue();
   await waitFor(() => {
-    expect(screen.getByText(/Passo 4 de 5/i)).toBeInTheDocument();
+    expectWizardProgress(4);
     expectActiveStep("kyc-step-documents");
   });
 }
@@ -117,7 +123,7 @@ async function fillDocumentsCpfAndContinue() {
   });
   clickContinue();
   await waitFor(() => {
-    expect(screen.getByText(/Passo 5 de 5/i)).toBeInTheDocument();
+    expectWizardProgress(5);
     expectActiveStep("kyc-step-review");
   });
 }
@@ -151,7 +157,7 @@ describe("ProviderKycForm wizard", () => {
     );
 
     await waitForWizardReady();
-    expect(screen.getByText(/Passo 1 de 5/i)).toBeInTheDocument();
+    expectWizardProgress(1);
     expect(screen.queryByTestId("kyc-cnpj-fields")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /Pessoa jurídica \(CNPJ\)/i }));
@@ -175,7 +181,7 @@ describe("ProviderKycForm wizard", () => {
     await waitFor(() => {
       expect(screen.getAllByText(/Informe o nome completo/i).length).toBeGreaterThan(0);
     });
-    expect(screen.getByText(/Passo 2 de 5/i)).toBeInTheDocument();
+    expectWizardProgress(2);
   });
 
   it(
@@ -194,7 +200,7 @@ describe("ProviderKycForm wizard", () => {
       clickContinue();
 
       await waitFor(() => {
-        expect(screen.getByText(/Passo 2 de 5/i)).toBeInTheDocument();
+        expectWizardProgress(2);
       });
 
       fireEvent.change(screen.getByLabelText("Nome completo"), {
@@ -224,36 +230,43 @@ describe("ProviderKycForm wizard", () => {
       clickContinue();
 
       await waitFor(() => {
-        expect(screen.getByText(/Passo 3 de 5/i)).toBeInTheDocument();
+        expectWizardProgress(3);
       });
       await fillBankAndContinue();
 
       const pdf = new File(["x"], "doc.pdf", { type: "application/pdf" });
-      fireEvent.change(screen.getByLabelText(/Documento de identidade/i), {
+      fireEvent.change(screen.getByLabelText(/Documento do representante legal/i), {
         target: { files: [pdf] },
       });
-      fireEvent.change(screen.getByLabelText(/Comprovante de endereço/i), {
+      fireEvent.change(screen.getByLabelText(/Comprovante de endereço da empresa/i), {
         target: { files: [pdf] },
       });
       fireEvent.change(screen.getByLabelText(/Contrato social/i), {
         target: { files: [pdf] },
       });
-      fireEvent.change(screen.getByLabelText(/Documento do representante legal/i), {
-        target: { files: [pdf] },
-      });
       clickContinue();
 
       await waitFor(() => {
-        expect(screen.getByText(/Passo 5 de 5/i)).toBeInTheDocument();
+        expectWizardProgress(5);
       });
 
       fireEvent.click(screen.getByRole("button", { name: /^Enviar$/i }));
 
       await waitFor(() => {
-        expect(kycApi.uploadKycDocument).toHaveBeenCalledTimes(4);
+        expect(kycApi.uploadKycDocument).toHaveBeenCalledTimes(3);
         expect(kycApi.uploadKycDocument).toHaveBeenCalledWith(
           "provider-1",
           "legal-rep-id",
+          expect.any(File),
+        );
+        expect(kycApi.uploadKycDocument).toHaveBeenCalledWith(
+          "provider-1",
+          "address-proof",
+          expect.any(File),
+        );
+        expect(kycApi.uploadKycDocument).not.toHaveBeenCalledWith(
+          "provider-1",
+          "identity",
           expect.any(File),
         );
         expect(mutateAsync).toHaveBeenCalledWith(
@@ -261,6 +274,8 @@ describe("ProviderKycForm wizard", () => {
             entityType: "CNPJ",
             razaoSocial: "Empresa LTDA",
             legalRepFullName: "Maria Silva",
+            identityDocStoragePath: expect.any(String),
+            legalRepDocStoragePath: expect.any(String),
           }),
         );
         expect(onSubmitted).toHaveBeenCalled();
@@ -375,7 +390,7 @@ describe("ProviderKycForm wizard", () => {
     await goToIdentityStep();
     fireEvent.click(screen.getByRole("button", { name: /^Voltar$/i }));
     await waitFor(() => {
-      expect(screen.getByText(/Passo 1 de 5/i)).toBeInTheDocument();
+      expectWizardProgress(1);
       expectActiveStep("kyc-step-entity");
     });
   });

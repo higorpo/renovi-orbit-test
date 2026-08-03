@@ -5,6 +5,10 @@ export const PROVIDER_KYC_ALLOWED_PATH_PREFIX = "/dashboard/conta";
 
 export const PROVIDER_KYC_SUPPORT_URL = `${(import.meta.env.VITE_MAIN_SITE_URL ?? "").replace(/\/$/, "")}/suporte`;
 
+export const PROVIDER_KYC_HELP_EMAIL = "contato@prestway.com";
+
+export const PROVIDER_KYC_HELP_MAILTO = `mailto:${PROVIDER_KYC_HELP_EMAIL}?subject=${encodeURIComponent("Ajuda com documentos do onboarding")}`;
+
 export const KYC_DOCUMENT_SIGNED_URL_EXPIRY_SEC = 7 * 24 * 3600;
 
 export const KYC_DOCUMENT_MAX_BYTES = 100 * 1024 * 1024;

@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -51,16 +50,17 @@ export function BankPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
+        <button
           id={id}
           type="button"
-          variant="outline"
           role="combobox"
           aria-expanded={open}
           aria-invalid={ariaInvalid}
           disabled={disabled}
           className={cn(
-            "min-h-11 w-full justify-between font-normal",
+            "flex min-h-11 w-full items-center justify-between rounded-md border border-input bg-background px-3 text-base font-normal ring-offset-background transition-colors",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            "disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
             !selected && "text-muted-foreground",
           )}
         >
@@ -68,7 +68,7 @@ export function BankPicker({
             {selected ? formatBankLabel(selected) : "Selecione o banco"}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" aria-hidden />
-        </Button>
+        </button>
       </PopoverTrigger>
       <PopoverContent
         className="w-[var(--radix-popover-trigger-width)] p-0"

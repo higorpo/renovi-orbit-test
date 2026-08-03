@@ -144,8 +144,8 @@ Coleta **obrigatória** após o cadastro do prestador (tela bloqueante até conc
 | Nome fantasia | |
 | CNPJ | Match no cron (`document`) |
 | Anexo: estatuto, ato constitutivo e/ou contrato social | |
-| Anexo: documento do representante legal (CPF/CNH) | |
-| Anexo: comprovante de endereço da empresa | |
+| Anexo: documento do representante legal (CPF/CNH) | Upload `legal-rep-id`; path dual-mapeado para `identity_doc_storage_path` e `legal_rep_doc_storage_path` |
+| Anexo: comprovante de endereço da empresa | `address-proof` |
 | Dados bancários: código do banco | |
 | Agência (sem dígito) | |
 | Conta corrente com dígito | |

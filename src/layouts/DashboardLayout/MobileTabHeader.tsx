@@ -18,12 +18,15 @@ interface MobileTabHeaderProps {
   title?: string;
   /** When true, header sticks below the offline banner. */
   isOffline?: boolean;
+  /** Hide hamburger + sheet (e.g. provider blocked on KYC). */
+  hideMenu?: boolean;
 }
 
 export function MobileTabHeader({
   menu,
   title = "Dashboard",
   isOffline = false,
+  hideMenu = false,
 }: MobileTabHeaderProps) {
   const [open, setOpen] = useState(false);
   const { allItems } = menu;
@@ -37,42 +40,44 @@ export function MobileTabHeader({
       data-testid="mobile-tab-header"
     >
       <div className="flex w-10 shrink-0 items-center">
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label="Abrir menu">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-[min(85vw,320px)] p-0">
-            <SheetHeader className="border-b p-4 text-left">
-              <SheetTitle className="text-lg font-semibold">{title}</SheetTitle>
-            </SheetHeader>
-            <nav className="flex flex-col py-2" aria-label="Menu principal">
-              {allItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    end={item.path === "/dashboard"}
-                    onClick={() => setOpen(false)}
-                    className={({ isActive }) =>
-                      cn(
-                        "flex items-center gap-3 px-4 py-3 text-base font-medium transition-colors",
-                        isActive
-                          ? "bg-primary/10 text-primary"
-                          : "text-foreground hover:bg-muted",
-                      )
-                    }
-                  >
-                    <Icon className="h-5 w-5 shrink-0" aria-hidden />
-                    {item.label}
-                  </NavLink>
-                );
-              })}
-            </nav>
-          </SheetContent>
-        </Sheet>
+        {hideMenu ? null : (
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Abrir menu">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[min(85vw,320px)] p-0">
+              <SheetHeader className="border-b p-4 text-left">
+                <SheetTitle className="text-lg font-semibold">{title}</SheetTitle>
+              </SheetHeader>
+              <nav className="flex flex-col py-2" aria-label="Menu principal">
+                {allItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      end={item.path === "/dashboard"}
+                      onClick={() => setOpen(false)}
+                      className={({ isActive }) =>
+                        cn(
+                          "flex items-center gap-3 px-4 py-3 text-base font-medium transition-colors",
+                          isActive
+                            ? "bg-primary/10 text-primary"
+                            : "text-foreground hover:bg-muted",
+                        )
+                      }
+                    >
+                      <Icon className="h-5 w-5 shrink-0" aria-hidden />
+                      {item.label}
+                    </NavLink>
+                  );
+                })}
+              </nav>
+            </SheetContent>
+          </Sheet>
+        )}
       </div>
       <Link to="/dashboard" className="flex flex-1 justify-center">
         <img src="/logo-renovi.webp" alt="Renovi" className="h-7 w-auto" />

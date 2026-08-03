@@ -66,7 +66,7 @@ Espelham `src/features/` (e shells/backends documentados). Links apontam para o 
 | Negociação (CNS) | [chats](./modulos/chats/README.md) (+ `negotiation-proposals`) | Conversas, propostas, aceite → checkout; sheet comparar orçamentos |
 | Pós-contrato | [service-reschedule](./modulos/service-reschedule/README.md), [provider-calendar](./modulos/provider-calendar/README.md) | Reagendar data/turno; agenda **somente leitura** de serviços contratados |
 | Dinheiro | [payments](./modulos/payments/README.md), [provider-earnings](./modulos/provider-earnings/README.md) | Checkout, cobrança T-2, histórico/reembolso; Ganhos (`/dashboard/earnings`) |
-| Credenciamento | [provider-kyc](./modulos/provider-kyc/README.md) | Gate do shell até KYC `ACTIVE`; wizard de credenciamento |
+| Credenciamento | [provider-kyc](./modulos/provider-kyc/README.md) | Gate do shell até KYC `ACTIVE`; chrome de nav oculto; wizard de credenciamento |
 | Notificações | [message-dispatcher](./modulos/message-dispatcher/README.md) (MMD), [push-permission](./modulos/push-permission/README.md), [notifications](./modulos/notifications/README.md), [device-beacon](./modulos/device-beacon/README.md) | Fila e-mail/push; soft prompt de permissão; clique em push; beacon FCM + geo operacional do prestador |
 | Shell | [dashboard-shell](./modulos/dashboard-shell/README.md), [app-home](./modulos/app-home/README.md) | Layout/menu/placeholders; home |
 
@@ -91,7 +91,7 @@ Espelham `src/features/` (e shells/backends documentados). Links apontam para o 
 | Papel | Uso típico na aplicação |
 |-------|-------------------------|
 | **Cliente** | Pedir orçamento; Meus Serviços; Conversas; checkout/histórico; Minha conta (endereços reais aqui). |
-| **Prestador** | KYC → Trabalhos; Conversas; Meus Serviços / calendário; Ganhos; Minha conta. Sem KYC `ACTIVE`, conteúdo operacional bloqueado pelo gate (menu completo permanece). |
+| **Prestador** | KYC → Trabalhos; Conversas; Meus Serviços / calendário; Ganhos; Minha conta. Sem KYC `ACTIVE` (ou conta carregando): conteúdo operacional bloqueado pelo gate; menus ocultos; header/logo permanece. |
 | **Admin** | Existe no banco e em parte das políticas RLS/RPC; **não há painel `/admin` no `router.tsx`**. Redirecionamento pós-login aponta para `/admin/dashboard` (rota inexistente neste tree). |
 
 Matriz detalhada: [Perfis e permissões](./perfis-e-permissoes.md).
@@ -107,7 +107,7 @@ Matriz detalhada: [Perfis e permissões](./perfis-e-permissoes.md).
 
 ### Prestador
 
-1. **Credenciar (KYC)** — gate no dashboard até onboarding NetCred `ACTIVE`; wizard em Minha conta / telas de status.
+1. **Credenciar (KYC)** — gate no dashboard até onboarding NetCred `ACTIVE` (conteúdo + chrome de nav oculto); wizard / telas de status; allowlist `/dashboard/conta*`.
 2. **Receber oportunidades** — matching progressivo + beacon de localização; feed `/dashboard/jobs` (`list-provider-opportunities`).
 3. **Negociar e propor** — detalhe do job → CNS (`/dashboard/chats`); envio de proposta; aceite pelo cliente dispara pagamento.
 4. **Executar agenda** — Meus Serviços + calendário `/dashboard/services/calendar` (consulta); reagendamento quando aplicável.

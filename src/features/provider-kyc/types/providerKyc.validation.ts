@@ -26,11 +26,6 @@ const bankFields = {
   pixKey: z.string().trim().optional(),
 };
 
-const documentFields = {
-  identityDoc: z.custom<File>((value) => value instanceof File, "Envie o documento de identidade"),
-  addressProofDoc: z.custom<File>((value) => value instanceof File, "Envie o comprovante de endereço"),
-};
-
 export const identityStepCpfSchema = z.object({
   entityType: z.literal("CPF"),
   fullName: z.string().trim().min(3, "Informe o nome completo"),
@@ -60,16 +55,24 @@ export const identityStepCnpjSchema = identityStepCpfSchema.extend({
 
 export const bankStepSchema = z.object(bankFields);
 
-export const documentsStepCpfSchema = z.object(documentFields);
+export const documentsStepCpfSchema = z.object({
+  identityDoc: z.custom<File>((value) => value instanceof File, "Envie o documento de identidade"),
+  addressProofDoc: z.custom<File>((value) => value instanceof File, "Envie o comprovante de endereço"),
+});
 
-export const documentsStepCnpjSchema = documentsStepCpfSchema.extend({
-  corporateCharterDoc: z.custom<File>(
-    (value) => value instanceof File,
-    "Envie o contrato social",
-  ),
+/** PJ: legal-rep ID replaces PF identity; address-proof is the company address. */
+export const documentsStepCnpjSchema = z.object({
   legalRepDoc: z.custom<File>(
     (value) => value instanceof File,
     "Envie o documento do representante",
+  ),
+  addressProofDoc: z.custom<File>(
+    (value) => value instanceof File,
+    "Envie o comprovante de endereço da empresa",
+  ),
+  corporateCharterDoc: z.custom<File>(
+    (value) => value instanceof File,
+    "Envie o contrato social",
   ),
 });
 

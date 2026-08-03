@@ -70,6 +70,16 @@ function createDeps(): DispatchKycEmailDeps {
 
       const entityType = privateProfile.entity_type === "pj" ? "pj" : "pf";
 
+      if (
+        entityType === "pj"
+        && (
+          !privateProfile.corporate_charter_storage_path
+          || !privateProfile.legal_rep_doc_storage_path
+        )
+      ) {
+        return null;
+      }
+
       const context: ProviderKycContext = {
         providerId,
         gatewayAccount,

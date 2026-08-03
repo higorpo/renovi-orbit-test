@@ -141,7 +141,7 @@ describe("submitProviderKyc", () => {
       legalRepresentativeCpf: "390.533.447-05",
       legalRepresentativePhone: "48988887777",
       corporateCharterStoragePath: "c",
-      legalRepDocStoragePath: "d",
+      legalRepDocStoragePath: "a",
     });
 
     expect(mockRpc).toHaveBeenCalledWith(
@@ -151,7 +151,8 @@ describe("submitProviderKyc", () => {
         p_document: "11444777000161",
         p_razao_social: "Empresa LTDA",
         p_legal_representative_cpf: "39053344705",
-        p_legal_rep_doc_storage_path: "d",
+        p_identity_doc_storage_path: "a",
+        p_legal_rep_doc_storage_path: "a",
       }),
     );
   });

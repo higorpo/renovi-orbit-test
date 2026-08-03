@@ -92,6 +92,22 @@ function firstIssueMessage(issues: { message: string }[]): string {
   return issues[0]?.message ?? "Verifique os campos deste passo";
 }
 
+function applyStepIssuesToForm(
+  form: ReturnType<typeof useForm<ProviderKycWizardFormValues>>,
+  issues: { path: (string | number)[]; message: string }[],
+): boolean {
+  let appliedToField = false;
+  for (const issue of issues) {
+    const field = issue.path[0];
+    if (typeof field !== "string") continue;
+    form.setError(field as keyof ProviderKycWizardFormValues, {
+      message: issue.message,
+    });
+    appliedToField = true;
+  }
+  return appliedToField;
+}
+
 export function useProviderKycWizard({
   providerId,
   accountEmail,
@@ -111,6 +127,16 @@ export function useProviderKycWizard({
     mode: "onSubmit",
     shouldUnregister: false,
   });
+
+  // Manual setError persists until cleared — drop field errors as values update.
+  useEffect(() => {
+    const subscription = form.watch((_values, info) => {
+      if (!info.name) return;
+      form.clearErrors(info.name);
+      setStepError(null);
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   const step = KYC_WIZARD_STEPS[stepIndex]!;
   const totalSteps = KYC_WIZARD_STEPS.length;
@@ -184,12 +210,15 @@ export function useProviderKycWizard({
 
   const validateCurrentStep = useCallback((): boolean => {
     setStepError(null);
+    form.clearErrors();
     const values = form.getValues();
 
     if (step === "entity") {
       const parsed = entityStepSchema.safeParse({ entityType: values.entityType });
       if (!parsed.success) {
-        setStepError(firstIssueMessage(parsed.error.issues));
+        if (!applyStepIssuesToForm(form, parsed.error.issues)) {
+          setStepError(firstIssueMessage(parsed.error.issues));
+        }
         return false;
       }
       return true;
@@ -200,13 +229,9 @@ export function useProviderKycWizard({
         ? identityStepCpfSchema.safeParse(values)
         : identityStepCnpjSchema.safeParse(values);
       if (!parsed.success) {
-        const issue = parsed.error.issues[0];
-        if (issue?.path[0]) {
-          form.setError(issue.path[0] as keyof ProviderKycWizardFormValues, {
-            message: issue.message,
-          });
+        if (!applyStepIssuesToForm(form, parsed.error.issues)) {
+          setStepError(firstIssueMessage(parsed.error.issues));
         }
-        setStepError(firstIssueMessage(parsed.error.issues));
         return false;
       }
       return true;
@@ -215,13 +240,9 @@ export function useProviderKycWizard({
     if (step === "bank") {
       const parsed = bankStepSchema.safeParse(values);
       if (!parsed.success) {
-        const issue = parsed.error.issues[0];
-        if (issue?.path[0]) {
-          form.setError(issue.path[0] as keyof ProviderKycWizardFormValues, {
-            message: issue.message,
-          });
+        if (!applyStepIssuesToForm(form, parsed.error.issues)) {
+          setStepError(firstIssueMessage(parsed.error.issues));
         }
-        setStepError(firstIssueMessage(parsed.error.issues));
         return false;
       }
       return true;
@@ -232,13 +253,9 @@ export function useProviderKycWizard({
         ? documentsStepCpfSchema.safeParse(values)
         : documentsStepCnpjSchema.safeParse(values);
       if (!parsed.success) {
-        const issue = parsed.error.issues[0];
-        if (issue?.path[0]) {
-          form.setError(issue.path[0] as keyof ProviderKycWizardFormValues, {
-            message: issue.message,
-          });
+        if (!applyStepIssuesToForm(form, parsed.error.issues)) {
+          setStepError(firstIssueMessage(parsed.error.issues));
         }
-        setStepError(firstIssueMessage(parsed.error.issues));
         return false;
       }
       return true;
@@ -250,18 +267,21 @@ export function useProviderKycWizard({
   const goNext = useCallback(() => {
     if (!validateCurrentStep()) return;
     if (isLastStep) return;
+    form.clearErrors();
     setStepIndex((current) => Math.min(current + 1, totalSteps - 1));
-  }, [isLastStep, totalSteps, validateCurrentStep]);
+  }, [form, isLastStep, totalSteps, validateCurrentStep]);
 
   const goBack = useCallback(() => {
     setStepError(null);
     setSubmitError(null);
+    form.clearErrors();
     setStepIndex((current) => Math.max(current - 1, 0));
-  }, []);
+  }, [form]);
 
   const submit = useCallback(async () => {
     setSubmitError(null);
     setStepError(null);
+    form.clearErrors();
 
     const values = form.getValues();
     const parsed = values.entityType === "CPF"
@@ -269,7 +289,9 @@ export function useProviderKycWizard({
       : providerKycCnpjSchema.safeParse(values);
 
     if (!parsed.success) {
-      setStepError(firstIssueMessage(parsed.error.issues));
+      if (!applyStepIssuesToForm(form, parsed.error.issues)) {
+        setStepError(firstIssueMessage(parsed.error.issues));
+      }
       return;
     }
 
@@ -282,52 +304,74 @@ export function useProviderKycWizard({
     });
 
     try {
-      const uploads = await Promise.all([
-        uploadKycDocument(providerId, "identity", data.identityDoc),
-        uploadKycDocument(providerId, "address-proof", data.addressProofDoc),
-        ...(data.entityType === "CNPJ"
-          ? [
-              uploadKycDocument(providerId, "corporate-charter", data.corporateCharterDoc),
-              uploadKycDocument(providerId, "legal-rep-id", data.legalRepDoc),
-            ]
-          : []),
-      ]);
+      if (data.entityType === "CPF") {
+        const [identity, addressProof] = await Promise.all([
+          uploadKycDocument(providerId, "identity", data.identityDoc),
+          uploadKycDocument(providerId, "address-proof", data.addressProofDoc),
+        ]);
 
-      const failedUpload = uploads.find((upload) => upload.error || !upload.signedUrl || !upload.path);
-      if (failedUpload) {
-        throw new Error(failedUpload.error ?? "Falha ao enviar documentos");
+        const failedUpload = [identity, addressProof].find(
+          (upload) => upload.error || !upload.signedUrl || !upload.path,
+        );
+        if (failedUpload) {
+          throw new Error(failedUpload.error ?? "Falha ao enviar documentos");
+        }
+
+        await dispatchKyc.mutateAsync({
+          entityType: data.entityType,
+          fullName: data.fullName,
+          document: data.document,
+          phone: data.phone,
+          email: data.email,
+          bankInstitutionCode: data.bankInstitutionCode,
+          bankBranch: data.bankBranch,
+          bankAccount: data.bankAccount,
+          pixKey: data.pixKey,
+          identityDocStoragePath: identity.path!,
+          addressProofStoragePath: addressProof.path!,
+          identityDocUrl: identity.signedUrl!,
+          addressProofUrl: addressProof.signedUrl!,
+        });
+      } else {
+        // PJ: legal-rep ID is the identity document (dual-mapped to identity + legal_rep columns).
+        const [legalRepDoc, addressProof, corporateCharter] = await Promise.all([
+          uploadKycDocument(providerId, "legal-rep-id", data.legalRepDoc),
+          uploadKycDocument(providerId, "address-proof", data.addressProofDoc),
+          uploadKycDocument(providerId, "corporate-charter", data.corporateCharterDoc),
+        ]);
+
+        const failedUpload = [legalRepDoc, addressProof, corporateCharter].find(
+          (upload) => upload.error || !upload.signedUrl || !upload.path,
+        );
+        if (failedUpload) {
+          throw new Error(failedUpload.error ?? "Falha ao enviar documentos");
+        }
+
+        await dispatchKyc.mutateAsync({
+          entityType: data.entityType,
+          fullName: data.fullName,
+          document: data.document,
+          phone: data.phone,
+          email: data.email,
+          bankInstitutionCode: data.bankInstitutionCode,
+          bankBranch: data.bankBranch,
+          bankAccount: data.bankAccount,
+          pixKey: data.pixKey,
+          identityDocStoragePath: legalRepDoc.path!,
+          addressProofStoragePath: addressProof.path!,
+          identityDocUrl: legalRepDoc.signedUrl!,
+          addressProofUrl: addressProof.signedUrl!,
+          razaoSocial: data.razaoSocial,
+          nomeFantasia: data.nomeFantasia,
+          legalRepFullName: data.legalRepFullName,
+          legalRepCpf: data.legalRepCpf,
+          legalRepPhone: data.legalRepPhone,
+          corporateCharterStoragePath: corporateCharter.path!,
+          legalRepDocStoragePath: legalRepDoc.path!,
+          corporateCharterUrl: corporateCharter.signedUrl!,
+          legalRepDocUrl: legalRepDoc.signedUrl!,
+        });
       }
-
-      const [identity, addressProof, corporateCharter, legalRepDoc] = uploads;
-
-      await dispatchKyc.mutateAsync({
-        entityType: data.entityType,
-        fullName: data.fullName,
-        document: data.document,
-        phone: data.phone,
-        email: data.email,
-        bankInstitutionCode: data.bankInstitutionCode,
-        bankBranch: data.bankBranch,
-        bankAccount: data.bankAccount,
-        pixKey: data.pixKey,
-        identityDocStoragePath: identity.path!,
-        addressProofStoragePath: addressProof.path!,
-        identityDocUrl: identity.signedUrl!,
-        addressProofUrl: addressProof.signedUrl!,
-        ...(data.entityType === "CNPJ"
-          ? {
-              razaoSocial: data.razaoSocial,
-              nomeFantasia: data.nomeFantasia,
-              legalRepFullName: data.legalRepFullName,
-              legalRepCpf: data.legalRepCpf,
-              legalRepPhone: data.legalRepPhone,
-              corporateCharterStoragePath: corporateCharter?.path ?? undefined,
-              legalRepDocStoragePath: legalRepDoc?.path ?? undefined,
-              corporateCharterUrl: corporateCharter?.signedUrl ?? undefined,
-              legalRepDocUrl: legalRepDoc?.signedUrl ?? undefined,
-            }
-          : {}),
-      });
 
       trackEvent("provider_kyc_submitted", {
         step: "review",

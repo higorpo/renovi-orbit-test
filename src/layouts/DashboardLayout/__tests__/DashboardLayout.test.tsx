@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { DashboardLayout } from "../DashboardLayout";
 
 const useOnlineStatusMock = vi.hoisted(() => vi.fn(() => true));
+const useProviderKycBlocksNavMock = vi.hoisted(() => vi.fn(() => false));
 const useServiceDetailModalMock = vi.hoisted(() =>
   vi.fn(() => ({
     isOpen: false,
@@ -47,6 +48,7 @@ vi.mock("@/features/provider-kyc", () => ({
   ProviderKycGate: ({ children }: { children: ReactNode }) => (
     <div data-testid="provider-kyc-gate">{children}</div>
   ),
+  useProviderKycBlocksNav: () => useProviderKycBlocksNavMock(),
 }));
 
 vi.mock("../MobileStackTransition", () => ({
@@ -63,6 +65,7 @@ const useBreakpointMd = vi.mocked(
 describe("DashboardLayout", () => {
   beforeEach(() => {
     useOnlineStatusMock.mockReturnValue(true);
+    useProviderKycBlocksNavMock.mockReturnValue(false);
     useServiceDetailModalMock.mockReturnValue({
       isOpen: false,
       isFromProviderJobs: false,
@@ -198,6 +201,29 @@ describe("DashboardLayout", () => {
     );
     const main = screen.getByRole("main");
     expect(main).toHaveClass("pb-20");
+  });
+
+  it("hides desktop and mobile navigation while provider KYC blocks nav", () => {
+    useProviderKycBlocksNavMock.mockReturnValue(true);
+
+    useBreakpointMd.mockReturnValue(true);
+    const { unmount } = render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <DashboardLayout />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("navigation", { name: "Dashboard navigation" })).toBeNull();
+    unmount();
+
+    useBreakpointMd.mockReturnValue(false);
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <DashboardLayout />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("button", { name: "Abrir menu" })).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Navegação principal" })).toBeNull();
+    expect(screen.getByRole("main")).not.toHaveClass("pb-20");
   });
 
   it("hides mobile nav on a specific chat conversation route", () => {

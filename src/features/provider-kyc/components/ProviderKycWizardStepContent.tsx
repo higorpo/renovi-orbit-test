@@ -1,4 +1,5 @@
-import { Loader2 } from "lucide-react";
+import { useId, useRef } from "react";
+import { FileText, HelpCircle, Loader2, Upload } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import {
   FormControl,
@@ -11,7 +12,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { maskCNPJ, maskCPF, maskPhone } from "@/lib/masks";
 import { cn } from "@/lib/utils";
-import { KYC_DOCUMENT_ACCEPT } from "../constants/kyc.constants";
+import {
+  KYC_DOCUMENT_ACCEPT,
+  PROVIDER_KYC_HELP_MAILTO,
+} from "../constants/kyc.constants";
 import {
   findBrazilianBankByCode,
   formatBankLabel,
@@ -36,21 +40,67 @@ function FileField({
   onChange: (file: File | null) => void;
   disabled?: boolean;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const describedById = useId();
+
   return (
     <div className="space-y-2">
       <FormLabel htmlFor={id}>{label}</FormLabel>
-      <FormDescription>{helper}</FormDescription>
-      <Input
+      <FormDescription id={describedById}>{helper}</FormDescription>
+      <input
+        ref={inputRef}
         id={id}
         type="file"
         accept={KYC_DOCUMENT_ACCEPT}
         disabled={disabled}
-        className="min-h-11"
+        className="sr-only"
+        aria-describedby={describedById}
         onChange={(event) => onChange(event.target.files?.[0] ?? null)}
       />
-      {value ? (
-        <p className="text-xs text-muted-foreground">{value.name}</p>
-      ) : null}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => inputRef.current?.click()}
+        className={cn(
+          "flex min-h-11 w-full items-center gap-3 rounded-md border border-input bg-background px-3 text-left text-base transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          "disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+          "hover:bg-muted/40",
+        )}
+      >
+        <span
+          className={cn(
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-md",
+            value ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+          )}
+          aria-hidden
+        >
+          {value ? <FileText className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
+        </span>
+        <span className="min-w-0 flex-1">
+          {value ? (
+            <>
+              <span className="block truncate font-medium text-foreground">{value.name}</span>
+              <span className="block text-xs text-muted-foreground md:hidden">
+                Toque para trocar o arquivo
+              </span>
+              <span className="hidden text-xs text-muted-foreground md:block">
+                Clique para trocar o arquivo
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="block font-medium text-foreground">Escolher arquivo</span>
+              <span className="block text-xs text-muted-foreground md:hidden">
+                Toque para selecionar
+              </span>
+              <span className="hidden text-xs text-muted-foreground md:block">
+                Clique para selecionar
+              </span>
+            </>
+          )}
+        </span>
+      </button>
     </div>
   );
 }
@@ -164,8 +214,8 @@ export function ProviderKycWizardStepContent({
 
       <StepPanel active={step === "identity"} testId="kyc-step-identity">
         <p className="text-sm text-muted-foreground">
-          Usamos esses dados para validar sua identidade junto ao parceiro de
-          pagamentos e manter seus recebimentos seguros.
+          Usamos esses dados para validar sua identidade e garantir a segurança
+          da plataforma para você e para os clientes.
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField
@@ -229,7 +279,7 @@ export function ProviderKycWizardStepContent({
               <FormItem className="sm:col-span-2">
                 <FormLabel>E-mail</FormLabel>
                 <FormDescription>
-                  E-mail da sua conta Renovi — não é possível alterar aqui.
+                  E-mail cadastrado na plataforma. Não é possível alterar aqui.
                 </FormDescription>
                 <FormControl>
                   <Input {...field} readOnly disabled className="min-h-11" />
@@ -403,62 +453,11 @@ export function ProviderKycWizardStepContent({
 
       <StepPanel active={step === "documents"} testId="kyc-step-documents">
         <p className="text-sm text-muted-foreground">
-          Envie arquivos legíveis (PDF ou imagem, até 50 MB). Eles são usados
-          apenas para o credenciamento de pagamentos.
+          Envie documentos legíveis para concluirmos a verificação de segurança
+          da sua conta na Renovi.
         </p>
-        <FormField
-          control={form.control}
-          name="identityDoc"
-          render={({ field }) => (
-            <FormItem>
-              <FileField
-                id="kyc-identity-doc"
-                label="Documento de identidade (CPF/CNH)"
-                helper="Comprova quem você é perante o parceiro de pagamentos."
-                value={field.value}
-                onChange={field.onChange}
-                disabled={disabled}
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="addressProofDoc"
-          render={({ field }) => (
-            <FormItem>
-              <FileField
-                id="kyc-address-proof"
-                label="Comprovante de endereço"
-                helper="Conta de luz, água ou extrato recente em seu nome."
-                value={field.value}
-                onChange={field.onChange}
-                disabled={disabled}
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
         {isCnpj ? (
           <>
-            <FormField
-              control={form.control}
-              name="corporateCharterDoc"
-              render={({ field }) => (
-                <FormItem>
-                  <FileField
-                    id="kyc-corporate-charter"
-                    label="Contrato social"
-                    helper="Documento que comprova a constituição da empresa."
-                    value={field.value}
-                    onChange={field.onChange}
-                    disabled={disabled}
-                  />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <FormField
               control={form.control}
               name="legalRepDoc"
@@ -476,14 +475,95 @@ export function ProviderKycWizardStepContent({
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="addressProofDoc"
+              render={({ field }) => (
+                <FormItem>
+                  <FileField
+                    id="kyc-address-proof"
+                    label="Comprovante de endereço da empresa"
+                    helper="Conta de luz, água ou extrato recente em nome da empresa."
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={disabled}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="corporateCharterDoc"
+              render={({ field }) => (
+                <FormItem>
+                  <FileField
+                    id="kyc-corporate-charter"
+                    label="Contrato social"
+                    helper="Documento que comprova a constituição da empresa."
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={disabled}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </>
-        ) : null}
+        ) : (
+          <>
+            <FormField
+              control={form.control}
+              name="identityDoc"
+              render={({ field }) => (
+                <FormItem>
+                  <FileField
+                    id="kyc-identity-doc"
+                    label="Documento de identidade (CPF/CNH)"
+                    helper="Comprova sua identidade para uso da plataforma."
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={disabled}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="addressProofDoc"
+              render={({ field }) => (
+                <FormItem>
+                  <FileField
+                    id="kyc-address-proof"
+                    label="Comprovante de endereço"
+                    helper="Conta de luz, água ou extrato recente em seu nome."
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={disabled}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
+        <a
+          href={PROVIDER_KYC_HELP_MAILTO}
+          className={cn(
+            "inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-md px-1 text-sm font-medium text-muted-foreground transition-colors",
+            "hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          )}
+        >
+          <HelpCircle className="h-4 w-4 shrink-0" aria-hidden />
+          Precisa de ajuda?
+        </a>
       </StepPanel>
 
       <StepPanel active={step === "review"} testId="kyc-step-review">
         <p className="text-sm text-muted-foreground">
-          Confira os dados antes de enviar. Após o envio, nossa equipe e o
-          parceiro de pagamentos analisam o cadastro.
+          Confira os dados antes de enviar. Após o envio, nossa equipe analisa o
+          cadastro para liberar o uso da plataforma.
         </p>
         <dl className="space-y-3 rounded-xl border p-4 text-sm">
           <div>
@@ -542,10 +622,9 @@ export function ProviderKycWizardStepContent({
             <dt className="text-muted-foreground">Documentos</dt>
             <dd className="font-medium">
               {[
-                values.identityDoc?.name,
+                isCnpj ? values.legalRepDoc?.name : values.identityDoc?.name,
                 values.addressProofDoc?.name,
                 isCnpj ? values.corporateCharterDoc?.name : null,
-                isCnpj ? values.legalRepDoc?.name : null,
               ]
                 .filter(Boolean)
                 .join(" · ")}

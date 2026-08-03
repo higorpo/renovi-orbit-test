@@ -431,7 +431,7 @@ SET
   bank_branch = '1410',
   bank_account = '303939',
   pix_key = 'joao@prestway.com',
-  identity_doc_storage_path = 'providers/5d09e025-20a2-4842-aeef-324d42a431e1/kyc/identity/doc.pdf',
+  identity_doc_storage_path = 'providers/5d09e025-20a2-4842-aeef-324d42a431e1/kyc/legal-rep-id/doc.pdf',
   address_proof_storage_path = 'providers/5d09e025-20a2-4842-aeef-324d42a431e1/kyc/address-proof/doc.pdf',
   corporate_charter_storage_path = 'providers/5d09e025-20a2-4842-aeef-324d42a431e1/kyc/corporate-charter/doc.pdf',
   legal_rep_doc_storage_path = 'providers/5d09e025-20a2-4842-aeef-324d42a431e1/kyc/legal-rep-id/doc.pdf',

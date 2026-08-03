@@ -12,6 +12,7 @@ export {
   useDispatchKyc,
   useRetryKycEmailDispatch,
   useProviderPaymentAccount,
+  useProviderKycBlocksNav,
   useProviderKycWizard,
   PROVIDER_PAYMENT_ACCOUNT_QUERY_KEY,
 } from "./hooks";

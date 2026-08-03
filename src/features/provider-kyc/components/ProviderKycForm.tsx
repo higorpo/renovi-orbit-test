@@ -32,7 +32,7 @@ export function ProviderKycForm({
 
   return (
     <Form {...wizard.form}>
-      <div className="flex flex-col pb-6 md:min-h-full md:flex-1">
+      <div className="flex min-h-full flex-1 flex-col">
         <div className="space-y-6">
           <div className="space-y-3">
             <KycWizardStepper
@@ -77,7 +77,7 @@ export function ProviderKycForm({
           ) : null}
         </div>
 
-        <div className="mt-6 flex gap-3 md:mt-auto md:shrink-0 md:pt-6">
+        <div className="mt-auto flex shrink-0 gap-3 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))]">
           {!wizard.isFirstStep ? (
             <Button
               type="button"

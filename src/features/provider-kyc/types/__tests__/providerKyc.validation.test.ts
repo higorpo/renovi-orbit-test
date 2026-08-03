@@ -59,8 +59,9 @@ describe("providerKycCnpjSchema", () => {
         legalRepFullName: "Maria Silva",
         legalRepCpf: "390.533.447-05",
         legalRepPhone: "48988887777",
-        corporateCharterDoc: makeFile("charter.pdf"),
         legalRepDoc: makeFile("rep.pdf"),
+        addressProofDoc: makeFile("company-address.pdf"),
+        corporateCharterDoc: makeFile("charter.pdf"),
       }).success,
     ).toBe(true);
   });
@@ -76,6 +77,22 @@ describe("providerKycCnpjSchema", () => {
         legalRepFullName: "Maria Silva",
         legalRepCpf: "390.533.447-05",
         legalRepPhone: "48988887777",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects CNPJ payload missing legal representative document", () => {
+    expect(
+      providerKycCnpjSchema.safeParse({
+        ...baseCpf,
+        entityType: "CNPJ",
+        document: "11.444.777/0001-61",
+        razaoSocial: "Empresa LTDA",
+        nomeFantasia: "Empresa",
+        legalRepFullName: "Maria Silva",
+        legalRepCpf: "390.533.447-05",
+        legalRepPhone: "48988887777",
+        corporateCharterDoc: makeFile("charter.pdf"),
       }).success,
     ).toBe(false);
   });

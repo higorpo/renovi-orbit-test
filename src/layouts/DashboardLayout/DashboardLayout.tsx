@@ -1,6 +1,6 @@
 import { Link, Outlet } from "react-router";
 import { useAuth } from "@/features/auth";
-import { ProviderKycGate } from "@/features/provider-kyc";
+import { ProviderKycGate, useProviderKycBlocksNav } from "@/features/provider-kyc";
 import { ClientMyServicesPersistentSlot, ProviderMyServicesPersistentSlot } from "@/features/my-services";
 import { ProviderJobsPersistentSlot } from "@/features/provider-jobs";
 import { ServiceDetailSheet, useServiceDetailModal } from "@/features/view-services";
@@ -21,9 +21,10 @@ export function DashboardLayout() {
   const isOnline = useOnlineStatus();
   const serviceDetailModal = useServiceDetailModal();
   const mobileChrome = useMobileNavigationChrome();
+  const hideNavForKyc = useProviderKycBlocksNav();
   const role = profile?.role ?? "client";
-  // Full menu always; ProviderKycGate replaces page content until KYC is ACTIVE.
   const menu = getDashboardMenu(role);
+  const showBottomNav = !isDesktop && mobileChrome.showBottomNav && !hideNavForKyc;
 
   const outlet = mobileChrome.enableStackTransition ? (
     <MobileStackTransition>
@@ -46,13 +47,19 @@ export function DashboardLayout() {
             <Link to="/dashboard" className="flex shrink-0 items-center">
               <img src="/logo-renovi.webp" alt="Renovi" className="h-7 w-auto md:h-8" />
             </Link>
-            <DesktopNav items={menu.allItems} className="min-w-0 flex-1 justify-end" />
+            {hideNavForKyc ? null : (
+              <DesktopNav items={menu.allItems} className="min-w-0 flex-1 justify-end" />
+            )}
           </div>
         </header>
       )}
 
       {!isDesktop && mobileChrome.showTabHeader ? (
-        <MobileTabHeader menu={menu} isOffline={!isOnline} />
+        <MobileTabHeader
+          menu={menu}
+          isOffline={!isOnline}
+          hideMenu={hideNavForKyc}
+        />
       ) : null}
 
       {!isDesktop && mobileChrome.showStackHeader ? (
@@ -67,7 +74,7 @@ export function DashboardLayout() {
         className={cn(
           "flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden",
           mobileChrome.mainOverflowHidden ? "overflow-hidden" : "overflow-y-auto",
-          mobileChrome.mainPaddingBottom && "pb-20",
+          showBottomNav && "pb-20",
           mobileChrome.enableStackTransition && "relative overflow-hidden",
         )}
       >
@@ -84,7 +91,7 @@ export function DashboardLayout() {
         ) : null}
       </main>
 
-      {!isDesktop && mobileChrome.showBottomNav ? (
+      {showBottomNav ? (
         <MobileBottomNav items={menu.mainItems} />
       ) : null}
     </div>

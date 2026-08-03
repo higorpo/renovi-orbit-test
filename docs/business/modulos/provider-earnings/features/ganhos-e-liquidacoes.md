@@ -10,7 +10,7 @@ Documentação baseada em `src/features/provider-earnings/`, rota `/dashboard/ea
 
 - **O que é:** tela **Ganhos** com lista paginada de **linhas de liquidação bancária** (movements do payout NetCred) e componente reutilizável de **previsão de depósito**.
 - **Problema que resolve:** prestador precisa ver **quando o valor cai na conta** (previsto / liquidado / estorno na liquidação), separado do momento em que o cartão do cliente foi capturado.
-- **Quem usa:** prestador autenticado; conteúdo da lista só após KYC `ACTIVE` (gate do shell); item Ganhos sempre no menu do prestador.
+- **Quem usa:** prestador autenticado; conteúdo da lista só após KYC `ACTIVE` (gate do shell); item Ganhos no menu do prestador quando chrome visível.
 - **Quem não usa:** cliente, visitante; admin sem UI dedicada nesta feature.
 - **Resultado esperado:** lista com valor líquido, título do serviço (link para detalhe), status Previsto/Liquidado, previsão/data de liquidação, parcela e máscara de conta; abas de filtro (Todos/Previsto/Liquidado = só CREDIT, sem aba Estorno); disclosure de previsão em outras superfícies.
 - **Impacto se indisponível:** prestador perde a visão de depósito bancário; Recebimentos (captura) e detalhe do serviço continuam; ingestão backend independente da UI.
@@ -45,12 +45,12 @@ Documentação baseada em `src/features/provider-earnings/`, rota `/dashboard/ea
 | Papel | Acesso | Evidência |
 |-------|--------|-----------|
 | Prestador | Rota + RPC com `provider_id = auth.uid()` | `ProtectedRoute`; `list_provider_settlement_movements` |
-| Prestador KYC ≠ `ACTIVE` (ou conta ainda carregando) | Menu completo; outlet sob `ProviderKycGate` (UI KYC, não a lista) | `ProviderKycGate`; `DashboardLayout` + `getDashboardMenu` |
+| Prestador KYC ≠ `ACTIVE` (ou conta ainda carregando) | Menus ocultos; outlet sob `ProviderKycGate` (UI KYC, não a lista) | `ProviderKycGate`; `useProviderKycBlocksNav` + `DashboardLayout` |
 | Cliente autenticado | Rota bloqueada pelo guard | `allowedRoles={['provider']}` |
 | Não autenticado | Bloqueado pelo dashboard `ProtectedRoute` | `router.tsx` |
 | Admin | Sem tela; list RPC só retorna linhas do `auth.uid()` | Migration da RPC |
 
-**Ações bloqueadas:** papel errado → redirect dos guards; prestador sem KYC ativo → conteúdo de Ganhos substituído pelo gate (item permanece no menu).
+**Ações bloqueadas:** papel errado → redirect dos guards; prestador sem KYC ativo → conteúdo de Ganhos substituído pelo gate; chrome de nav oculto (item não navegável pelo menu).
 
 ## 5. Fluxo funcional principal
 
@@ -303,7 +303,7 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 - `src/features/provider-earnings/` — `components/` (`EarningsPage`, filtros, lista, cards, empty/error, `ProviderSettlementDisclosure`), `api/settlements.api.ts`, `api/settlements.rpc.ts`, `hooks/useProviderSettlements.ts`, `types/settlements.types.ts`, `utils/*`, `constants/*`, `index.ts`
 - Testes Vitest sob `**/__tests__/` na feature
 - `src/router.tsx` — lazy + guard provider em `earnings`
-- `src/layouts/DashboardLayout/dashboardMenu.ts`, `mobileNavigation.config.ts`, `DashboardLayout.tsx` (`getDashboardMenu` + `ProviderKycGate`)
+- `src/layouts/DashboardLayout/dashboardMenu.ts`, `mobileNavigation.config.ts`, `DashboardLayout.tsx` (`getDashboardMenu` + `ProviderKycGate` + `useProviderKycBlocksNav`)
 - Consumidores: `src/features/payments/components/PaymentHistory/ProviderPaymentHistoryList.tsx`, `ProviderSettlementStatus.tsx`, `src/features/view-services/components/ServiceContractedSection.tsx`
 
 ### Backend
@@ -350,7 +350,7 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 
 - [ ] Prestador ACTIVE: menu mostra Ganhos; abre `/dashboard/earnings` com título e link para Recebimentos.
 - [ ] Cliente: sem item Ganhos; URL direta bloqueada pelo guard.
-- [ ] Prestador KYC não ACTIVE: item Ganhos **visível** no menu; ao abrir, UI KYC (não a lista).
+- [ ] Prestador KYC não ACTIVE: menus **ocultos**; deep link `/dashboard/earnings` mostra UI KYC (não a lista).
 - [ ] Lista com CREDIT PENDING: badge Previsto + previsão.
 - [ ] Lista com PAID_OUT + `settledAt`: badge Liquidado + “Liquidado em …”.
 - [ ] DEBIT/clawback não aparece nas abas Todos/Previsto/Liquidado (RPC).

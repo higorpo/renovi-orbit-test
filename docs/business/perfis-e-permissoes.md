@@ -81,7 +81,9 @@ Evidência: `src/layouts/DashboardLayout/dashboardMenu.ts`. Bottom nav mobile = 
 
 **Não estão no menu:** `/dashboard/services/calendar`, `/dashboard/services/:id`, `/dashboard/settings`. Não há item “Orçamentos”.
 
-**Menu do prestador:** sempre completo via `getDashboardMenu(role)` — sem filtro por status KYC. O `ProviderKycGate` substitui apenas o **conteúdo** operacional quando `onboarding_status !== ACTIVE` (exceto allowlist `/dashboard/conta*`).
+**Menu do prestador (definição):** `getDashboardMenu(role)` sempre retorna o menu completo do papel — sem filtro por status KYC na definição dos itens.
+
+**Chrome quando KYC bloqueia:** `useProviderKycBlocksNav` (provider + loading **ou** `shouldBlockProviderForKyc`) faz o `DashboardLayout` **ocultar** DesktopNav, bottom nav e hamburger (`MobileTabHeader` `hideMenu`); header/logo permanece; `pb-20` só com bottom nav visível. O `ProviderKycGate` substitui o **conteúdo** operacional quando `onboarding_status !== ACTIVE` (exceto allowlist `/dashboard/conta*`).
 
 **Admin no helper:** ramificação só trata `client`; demais papéis recebem menu de prestador. Na prática o `ProtectedRoute` do dashboard **exclui** `admin`.
 
@@ -89,19 +91,19 @@ Detalhe: [placeholders-e-menu](./modulos/dashboard-shell/features/placeholders-e
 
 ---
 
-## Gate de KYC no shell (`ProviderKycGate`)
+## Gate de KYC no shell (`ProviderKycGate` + chrome)
 
-Complementa (não substitui) os `ProtectedRoute`. Allowlist: `PROVIDER_KYC_ALLOWED_PATH_PREFIX = "/dashboard/conta"` (pathname igual ou `/dashboard/conta/…`).
+Complementa (não substitui) os `ProtectedRoute`. Allowlist de conteúdo: `PROVIDER_KYC_ALLOWED_PATH_PREFIX = "/dashboard/conta"` (pathname igual ou `/dashboard/conta/…`).
 
 | Situação | Efeito |
 |----------|--------|
-| `client` (ou `role !== "provider"`) | Gate transparente — renderiza children |
-| `provider` + `onboarding_status === ACTIVE` | Conteúdo operacional liberado |
-| `provider` + loading da conta | Spinner “Verificando credenciamento…” (**antes** da allowlist) |
-| `provider` + conta null ou status ≠ `ACTIVE`, path **fora** da allowlist | Slots do prestador + outlet substituídos por UIs KYC / wizard |
-| Path `/dashboard/conta` ou `/dashboard/conta/…` (após loading) | Children liberados (logout / conta) mesmo se ≠ `ACTIVE` |
+| `client` (ou `role !== "provider"`) | Gate transparente — renderiza children; nav normal |
+| `provider` + `onboarding_status === ACTIVE` (conta carregada) | Conteúdo operacional liberado; chrome de nav visível |
+| `provider` + loading da conta | Spinner “Verificando credenciamento…” (**antes** da allowlist); **menus ocultos** |
+| `provider` + conta null ou status ≠ `ACTIVE`, path **fora** da allowlist | Slots + outlet → UIs KYC / wizard; **menus ocultos** |
+| Path `/dashboard/conta` ou `/dashboard/conta/…` (após loading) | Children liberados (logout / conta) mesmo se ≠ `ACTIVE`; chrome **ainda oculto** se não-`ACTIVE` |
 
-Guards de rota **não** impedem URL direta de `/dashboard/jobs`, `/dashboard/earnings`, `/dashboard/chats`, etc.: o papel `provider` passa; o **gate substitui** o conteúdo se não-`ACTIVE`.
+Guards de rota **não** impedem URL direta de `/dashboard/jobs`, `/dashboard/earnings`, `/dashboard/chats`, etc.: o papel `provider` passa; o **gate substitui** o conteúdo se não-`ACTIVE`; chrome permanece oculto.
 
 Detalhe: [gate-e-acesso-operacional](./modulos/provider-kyc/features/gate-e-acesso-operacional.md).
 
@@ -218,7 +220,7 @@ Para detalhes por tabela, ver arquivos em `supabase/migrations/` citados em [ras
 
 - O **painel** `/dashboard` é só para **`client` e `provider`**; cada área sensível reforça papel com `ProtectedRoute` aninhado (`addresses` → client; `jobs` / `earnings` / `services/calendar` → provider; `chats` / `conta` → ambos).
 - Rotas reais fora do menu: **calendário** (`/dashboard/services/calendar`), **detalhe** (`/dashboard/services/:id`), **settings** (fake).
-- **Prestador sem KYC `ACTIVE`:** conteúdo operacional bloqueado pelo gate; menu completo permanece; allowlist de conteúdo **`/dashboard/conta*`**.
+- **Prestador sem KYC `ACTIVE`:** conteúdo operacional bloqueado pelo gate; **menus ocultos** (desktop, bottom nav, hamburger); header/logo permanece; allowlist de conteúdo **`/dashboard/conta*`**.
 - **Push:** soft prompt para autenticados (copy por papel); **geo operacional só prestador** (device-beacon).
 - **CNS / propostas / reagendamento / pagamentos:** matrizes acima; admin sem UI de mutação nesses fluxos.
 - **Admin:** papel no banco + redirect para `/admin/dashboard` **sem rota** — **P-02**.

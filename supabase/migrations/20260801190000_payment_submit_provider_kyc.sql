@@ -175,31 +175,43 @@ begin
 
   perform public.payment_assert_provider_kyc_storage_path(
     v_provider_id,
-    p_identity_doc_storage_path,
-    'identity'
-  );
-  perform public.payment_assert_provider_kyc_storage_path(
-    v_provider_id,
     p_address_proof_storage_path,
     'address-proof'
   );
 
-  if v_entity_type = 'pj' then
+  if v_entity_type = 'pf' then
+    perform public.payment_assert_provider_kyc_storage_path(
+      v_provider_id,
+      p_identity_doc_storage_path,
+      'identity'
+    );
+  else
+    -- PJ: legal-rep ID is the identity document (single upload dual-mapped to both columns).
     if p_corporate_charter_storage_path is null or trim(p_corporate_charter_storage_path) = ''
       or p_legal_rep_doc_storage_path is null or trim(p_legal_rep_doc_storage_path) = '' then
       raise exception 'KYC_PJ_DOCUMENTS_REQUIRED'
         using errcode = '22023';
     end if;
 
+    if trim(p_identity_doc_storage_path) <> trim(p_legal_rep_doc_storage_path) then
+      raise exception 'KYC_PJ_IDENTITY_MUST_MATCH_LEGAL_REP'
+        using errcode = '22023';
+    end if;
+
     perform public.payment_assert_provider_kyc_storage_path(
       v_provider_id,
-      p_corporate_charter_storage_path,
-      'corporate-charter'
+      p_identity_doc_storage_path,
+      'legal-rep-id'
     );
     perform public.payment_assert_provider_kyc_storage_path(
       v_provider_id,
       p_legal_rep_doc_storage_path,
       'legal-rep-id'
+    );
+    perform public.payment_assert_provider_kyc_storage_path(
+      v_provider_id,
+      p_corporate_charter_storage_path,
+      'corporate-charter'
     );
   end if;
 

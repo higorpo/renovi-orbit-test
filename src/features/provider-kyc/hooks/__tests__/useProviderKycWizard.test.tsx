@@ -85,7 +85,53 @@ describe("useProviderKycWizard", () => {
     });
 
     expect(result.current.step).toBe("identity");
-    expect(result.current.stepError).toMatch(/Informe o nome completo|CPF inválido/i);
+    expect(result.current.stepError).toBeNull();
+    expect(
+      result.current.form.getFieldState("fullName").error?.message
+        ?? result.current.form.getFieldState("document").error?.message,
+    ).toMatch(/Informe o nome completo|CPF inválido/i);
+  });
+
+  it("clears field error when the user edits the field and on goBack", async () => {
+    const { result } = renderHook(() =>
+      useProviderKycWizard({
+        providerId: "provider-1",
+        accountEmail: "provider@example.com",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.isPrefilling).toBe(false);
+    });
+
+    act(() => {
+      result.current.goNext();
+    });
+    act(() => {
+      result.current.goNext();
+    });
+
+    expect(result.current.form.getFieldState("document").error?.message).toBeTruthy();
+
+    act(() => {
+      result.current.form.setValue("document", "390.533.447-05", {
+        shouldDirty: true,
+        shouldTouch: true,
+      });
+    });
+
+    await waitFor(() => {
+      expect(result.current.form.getFieldState("document").error).toBeUndefined();
+    });
+
+    act(() => {
+      result.current.form.setError("document", { message: "CPF inválido" });
+    });
+    act(() => {
+      result.current.goBack();
+    });
+
+    expect(result.current.form.getFieldState("document").error).toBeUndefined();
   });
 
   it("goes back to previous step", async () => {
@@ -181,7 +227,12 @@ describe("useProviderKycWizard", () => {
     });
 
     expect(result.current.step).toBe("bank");
-    expect(result.current.stepError).toBeTruthy();
+    expect(result.current.stepError).toBeNull();
+    expect(
+      result.current.form.getFieldState("bankInstitutionCode").error
+        ?? result.current.form.getFieldState("bankBranch").error
+        ?? result.current.form.getFieldState("bankAccount").error,
+    ).toBeTruthy();
   });
 
   it("blocks advance from documents step when files are missing", async () => {
@@ -223,7 +274,11 @@ describe("useProviderKycWizard", () => {
     });
 
     expect(result.current.step).toBe("documents");
-    expect(result.current.stepError).toBeTruthy();
+    expect(result.current.stepError).toBeNull();
+    expect(
+      result.current.form.getFieldState("identityDoc").error
+        ?? result.current.form.getFieldState("addressProofDoc").error,
+    ).toBeTruthy();
   });
 
   it("rejects submit when review payload is incomplete", async () => {
@@ -278,7 +333,8 @@ describe("useProviderKycWizard", () => {
       await result.current.submit();
     });
 
-    expect(result.current.stepError).toBeTruthy();
+    expect(result.current.stepError).toBeNull();
+    expect(result.current.form.getFieldState("identityDoc").error).toBeTruthy();
     expect(mutateAsync).not.toHaveBeenCalled();
   });
 
@@ -486,10 +542,9 @@ describe("useProviderKycWizard", () => {
       result.current.goNext();
     });
     act(() => {
-      result.current.form.setValue("identityDoc", pdf());
+      result.current.form.setValue("legalRepDoc", pdf());
       result.current.form.setValue("addressProofDoc", pdf());
       result.current.form.setValue("corporateCharterDoc", pdf());
-      result.current.form.setValue("legalRepDoc", pdf());
     });
     act(() => {
       result.current.goNext();
@@ -503,8 +558,9 @@ describe("useProviderKycWizard", () => {
       expect.objectContaining({
         entityType: "CNPJ",
         razaoSocial: "Empresa LTDA",
-        corporateCharterStoragePath: "path.pdf",
+        identityDocStoragePath: "path.pdf",
         legalRepDocStoragePath: "path.pdf",
+        corporateCharterStoragePath: "path.pdf",
       }),
     );
     expect(onSubmitted).toHaveBeenCalled();
