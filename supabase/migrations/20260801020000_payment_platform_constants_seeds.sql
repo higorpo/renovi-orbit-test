@@ -145,7 +145,7 @@ values
   (
     'far_reschedule_recapture_threshold_days',
     '15'::jsonb,
-    'Post-PAID reschedule: when new execution_at is more than this many days ahead, full refund + new T-2 charge cycle'
+    'Post-PAID reschedule: when new execution_at is more than this many days after paid_at, full refund + new T-2 charge cycle'
   ),
   (
     'far_reschedule_recapture_batch_size',

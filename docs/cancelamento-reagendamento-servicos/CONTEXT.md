@@ -25,7 +25,7 @@ Ação do cliente que aprova uma Data Proposta de Reagendamento. Somente nesse m
 _Avoid_: Acordo verbal no chat, mensagem de confirmação informal; o cliente invocar Edge Function de dinheiro no aceite
 
 **Reagendamento pós-pagamento perto (≤15 dias)**:
-Com parcela `PAID` e serviço `CONFIRMED`, se a nova execução fica a no máximo `far_reschedule_recapture_threshold_days` (padrão 15) à frente: atualiza só o slot; mantém o dinheiro capturado (`paid_no_charge_update`).
+Com parcela `PAID` e serviço `CONFIRMED`, se a nova execução fica a no máximo `far_reschedule_recapture_threshold_days` (padrão 15) **após `paid_at`**: atualiza só o slot; mantém o dinheiro capturado (`paid_no_charge_update`).
 _Avoid_: Nova cobrança automática; estorno por mera mudança de agenda perto
 
 **Reagendamento pós-pagamento longe (>15 dias) / Recaptura longe**:

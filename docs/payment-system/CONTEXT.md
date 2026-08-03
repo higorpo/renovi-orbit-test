@@ -105,7 +105,7 @@ _Avoid_: Isenção indefinida, Bloqueio permanente do cliente
 **Reagendamento pós-pagamento (Opção D + far-recapture):**
 Com `PAID`, cliente/prestador podem reagendar enquanto `status = CONFIRMED` (antes de `EXECUTED`). Atualiza slot do serviço; faixas de estorno e T-12h recalculam com o novo Service Execution At.
 - **Perto (≤15 dias):** sem nova cobrança; dinheiro permanece capturado (`paid_no_charge_update`).
-- **Longe (>15 dias, `far_reschedule_recapture_threshold_days`):** reembolso integral no gateway + nova parcela `SCHEDULED` em T-2; serviço volta a `PENDING_PAYMENT` até a nova captura. Orquestração 100% backend (`far_recapture_pending_at` + pg_net wake + cron safety-net); o app **não** invoca a EF de dinheiro no aceite.
+- **Longe (`exec_at > paid_at + far_reschedule_recapture_threshold_days`, padrão 15):** reembolso integral no gateway + nova parcela `SCHEDULED` em T-2; serviço volta a `PENDING_PAYMENT` até a nova captura. Limiar ancorado em `paid_at` (relógio de liquidação), não em `now()`. Orquestração 100% backend (`far_recapture_pending_at` + pg_net wake + cron safety-net); o app **não** invoca a EF de dinheiro no aceite.
 Liquidação D+30 continua a partir do `paid_at` da captura **vigente**.
 _Avoid_: Reagendamento pós-EXECUTED (MVP), Estorno congelado na data original, Dependência do client `functions.invoke` para refund pós-aceite
 

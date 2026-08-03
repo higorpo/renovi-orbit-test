@@ -58,7 +58,11 @@ begin
       'far_reschedule_recapture_threshold_days',
       15
     );
-    v_far := v_exec_at > (now() + make_interval(days => v_threshold_days));
+    -- Anchor on paid_at (settlement clock), not now(): NetCred ~D+30 from capture.
+    v_far := v_exec_at > (
+      coalesce(v_schedule.paid_at, now())
+      + make_interval(days => v_threshold_days)
+    );
 
     if v_far then
       if v_schedule.far_recapture_pending_at is null then
@@ -77,6 +81,7 @@ begin
           p_actor := 'system',
           p_metadata := jsonb_build_object(
             'execution_at', v_exec_at,
+            'paid_at', v_schedule.paid_at,
             'threshold_days', v_threshold_days
           )
         );
@@ -104,6 +109,7 @@ begin
         'outcome', 'paid_far_recapture_required',
         'schedule_id', v_schedule.id,
         'execution_at', v_exec_at,
+        'paid_at', v_schedule.paid_at,
         'threshold_days', v_threshold_days
       );
     end if;
@@ -157,7 +163,7 @@ end;
 $$;
 
 comment on function public.payment_reschedule_charge_date(uuid) is
-  'Recomputes charge_scheduled_at after slot reschedule; post-PAID near keeps money; far marks pending + wakes process-far-reschedule-recapture (service_role).';
+  'Recomputes charge_scheduled_at after slot reschedule; post-PAID near (exec_at ≤ paid_at + threshold) keeps money; far marks pending + wakes process-far-reschedule-recapture (service_role).';
 
 -- ---------------------------------------------------------------------------
 -- Prepare: validate PAID + pending; full refund amount; no cancel

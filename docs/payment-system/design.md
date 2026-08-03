@@ -237,8 +237,8 @@ both:               isLiable = true
 ### 1.7.8 Rescheduling
 
 - **Pre-`PAID`:** recalculates `charge_scheduled_at`, T-12h, pre-charge notification.
-- **Post-`PAID` near (≤ `far_reschedule_recapture_threshold_days`, default 15):** allowed while `contracted_services.status = 'CONFIRMED'` only (not after `EXECUTED`); updates slot columns; **no new charge**; refund tiers use **new** `payment_service_execution_at`; provider notified by rescheduling subsystem.
-- **Post-`PAID` far (> threshold days ahead):** outcome `paid_far_recapture_required` — set `far_recapture_pending_at`, wake `process-far-reschedule-recapture` via `orbit_invoke_edge_function` (pg_net); safety-net cron reclaims orphans. Gateway **full refund first**, then atomic commit: old schedule → `REFUNDED` (`FAR_RESCHEDULE_RECAPTURE`), new `SCHEDULED` at T-2 (`supersedes_schedule_id`, cycle `idempotency_key`), CS → `PENDING_PAYMENT`. **Does not** cancel service or close chat. ClearSale session/IP copied to the new schedule; if charge fails weeks later, existing `FAILED` + manual payment path applies.
+- **Post-`PAID` near (`payment_service_execution_at ≤ paid_at + far_reschedule_recapture_threshold_days`, default 15):** allowed while `contracted_services.status = 'CONFIRMED'` only (not after `EXECUTED`); updates slot columns; **no new charge**; refund tiers use **new** `payment_service_execution_at`; provider notified by rescheduling subsystem. Threshold is anchored on `paid_at` (settlement clock), not `now()`.
+- **Post-`PAID` far (`exec_at > paid_at + threshold`):** outcome `paid_far_recapture_required` — set `far_recapture_pending_at`, wake `process-far-reschedule-recapture` via `orbit_invoke_edge_function` (pg_net); safety-net cron reclaims orphans. Gateway **full refund first**, then atomic commit: old schedule → `REFUNDED` (`FAR_RESCHEDULE_RECAPTURE`), new `SCHEDULED` at T-2 (`supersedes_schedule_id`, cycle `idempotency_key`), CS → `PENDING_PAYMENT`. **Does not** cancel service or close chat. ClearSale session/IP copied to the new schedule; if charge fails weeks later, existing `FAILED` + manual payment path applies.
 
 ### 1.7.9 Notifications (MMD)
 

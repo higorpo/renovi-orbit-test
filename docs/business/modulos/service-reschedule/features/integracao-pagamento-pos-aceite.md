@@ -64,7 +64,7 @@ flowchart TD
 4. **RN-PAY-04** Pré-captura (`SCHEDULED` / `FAILED` / `IN_ANALYSIS`): retarget `charge_scheduled_at`.  
 5. **RN-PAY-05** Pós-`PAID` ≤ limiar: `paid_no_charge_update` — mantém captura.  
 6. **RN-PAY-06** Pós-`PAID` > limiar: marca pending e acorda EF; reembolso **integral**; nova parcela `SCHEDULED` T-2; motivo `FAR_RESCHEDULE_RECAPTURE`.  
-7. **RN-PAY-07** Limiar: `far_reschedule_recapture_threshold_days` (padrão **15**).  
+7. **RN-PAY-07** Limiar: `far_reschedule_recapture_threshold_days` (padrão **15**) — âncora em `paid_at` (`exec_at > paid_at + N`), não em `now()`.  
 8. **RN-PAY-08** Far-recapture **não** cancela serviço/chat.  
 9. **RN-PAY-09** App não chama `process-far-reschedule-recapture` / `process-refund` no aceite.  
 10. **RN-PAY-10** UI mostra aviso enquanto `far_recapture_pending` / `farRecapturePending`.
