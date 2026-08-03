@@ -54,7 +54,7 @@ flowchart TD
 
 - **Sessão expirada:** handler dedicado (`useSessionExpiredHandler` — evidência em estrutura do `useAuth`).
 - **Redirect aberto:** `GuestOnlyRoute` só aceita paths relativos seguros (`isSafeRedirect`).
-- **Cadastro:** reCAPTCHA antes de submit (`useSignupForm`).
+- **Cadastro:** reCAPTCHA pré-carregado no mount do formulário (`preloadRecaptcha` em `useSignupForm`); token gerado no submit (`executeRecaptcha`).
 
 ## 7. Regras de negócio
 
@@ -113,7 +113,7 @@ Transição: eventos `onAuthStateChange` do Supabase.
 
 ## 13. Integrações
 
-- **reCAPTCHA** (`verify-recaptcha` Edge) no cadastro.
+- **reCAPTCHA** (`verify-recaptcha` Edge) no cadastro: script pré-carregado no mount (`preloadRecaptcha` / `src/lib/recaptcha.ts`); token gerado e validado no submit.
 - **E-mail** Auth (reset/confirmação).
 
 ## 14. Listagens, buscas e filtros
@@ -175,7 +175,7 @@ Transição: eventos `onAuthStateChange` do Supabase.
 | password / confirmPassword | Senha / Confirmar | mín. 10, política `validatePasswordStrength`, iguais | `passwordPolicy.ts` |
 | termsAccepted | Termos e privacidade | obrigatório true no submit | links nos componentes de formulário |
 
-Fluxo: reCAPTCHA → `authApi.signUp` com metadata `full_name`, `role`; redirect de e-mail conforme `emailRedirectTo` (`useClientSignupForm` / `useProviderSignupForm`).
+Fluxo: no mount, `preloadRecaptcha()`; no submit, `executeRecaptcha` → `authApi.signUp` com metadata `full_name`, `role`; redirect de e-mail conforme `emailRedirectTo` (`useClientSignupForm` / `useProviderSignupForm`).
 
 ### Esqueci senha (`/esqueceu-senha`)
 
@@ -213,3 +213,7 @@ Sem sessão de recuperação: cópia + link para `/esqueceu-senha` e login — `
 - **Drift:** evidências apontavam `useAuth.tsx`; provider está em `AuthProvider.tsx` e o hook em `hooks/useAuth.ts`.
 - **Drift:** cadastro standalone (`signUpSchema`) **não** coleta telefone — só nome, e-mail, senha e termos; papel vem da rota.
 - Regras de redirect, anti-open-redirect, debounce 300ms, timeout 5s e persistência de sessão revalidadas sem drift adicional.
+
+## 25. Atualização de auditoria (2026-08-03)
+
+- **reCAPTCHA v3 no cadastro (cliente/profissional):** `useSignupForm` chama `preloadRecaptcha()` no mount para carregar o script enquanto o usuário preenche o wizard; no submit continua `executeRecaptcha` + validação via `verify-recaptcha`. Motivo: Google recomenda não carregar só na ação restrita (score insuficiente).

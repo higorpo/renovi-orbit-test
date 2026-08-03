@@ -26,7 +26,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `src/features/auth/types/auth.types.ts` | `ProfileRole`, tipos de perfil |
 | `src/features/auth/api/auth.api.ts` | Operações Supabase Auth |
 | `src/features/auth/api/profile.api.ts` | Perfil, bloqueio de promoção admin |
-| `src/features/auth/hooks/useSignupForm.ts` | reCAPTCHA no cadastro |
+| `src/features/auth/hooks/useSignupForm.ts` | reCAPTCHA no cadastro: pré-carga no mount (`preloadRecaptcha`); token no submit |
 | Componentes `Login`, `ClientSignup`, `ProviderSignup`, `ForgotPassword`, `ResetPassword` | Jornadas de auth |
 
 ## Features por pasta (`src/features/*`)
@@ -44,7 +44,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `my-account/` | `api/*Profile*.api.ts`, `portfolio.api.ts`, `offeredServices.api.ts` | `MyAccountPage`, `MyAccountClientPage`, `MyAccountProviderPage`, `ServiceAreaField` |
 | `provider-jobs/` | `api/providerJobs.api.ts`, `dismissOpportunity.api.ts`; propostas via `negotiation-proposals` | `ProviderJobsPage`, `JobCard`; detalhe via `view-services` |
 | `provider-profile/` | hooks + componentes públicos | `ProviderProfilePage` |
-| `request-quote/` | `api/createRequestQuoteOrder.api.ts`, `smartDescription.api.ts`, `services.api.ts`, `forms.api.ts`; hooks submit/navigation/draft/IA | `RequestQuote.tsx`, passos 1–5, `ConfirmEmailScreen`, `TrustSidebar`; rascunho `requestQuoteDraft.persistence.ts` |
+| `request-quote/` | `api/createRequestQuoteOrder.api.ts`, `smartDescription.api.ts`, `services.api.ts`, `forms.api.ts`; hooks submit (`preloadRecaptcha` no mount)/navigation/draft/IA | `RequestQuote.tsx`, passos 1–5, `ConfirmEmailScreen`, `TrustSidebar`; rascunho `requestQuoteDraft.persistence.ts` |
 | `chats/` | `api/chats.api.ts`, `chats.rpc.ts`; hooks lista, thread, mensagens, Realtime | `ChatListPage`, `ChatScreen`, `ChatsLayout` |
 | `negotiation-proposals/` | `api/proposals.api.ts`, `api/serviceRequestBudgetCompare.api.ts`, `proposals.rpc.ts`; RPCs `create_provider_proposal`, `get_proposal_detail_for_provider`, `get_proposal_detail_for_participant`; countdown `useProposalCountdown`, `ProposalCountdownBanner` | `ProposalComposerDialog`, `AcceptProposalDialog`, `ReceivedBudgetDetailsSheet`, composer em jobs |
 | `service-reschedule/` | `api/serviceReschedule.api.ts`; hooks mutações/detalhe; `deriveRescheduleDateMode`, `mapRescheduleSnapshot`; FSM em docs `ciclo-estados-reagendamento.md` | `ProposeRescheduleDialog` (inclui lembrete dispensável `ProposeRescheduleFlowReminder`), `RequestRescheduleDialog`, cards/ações no chat e no serviço contratado |
@@ -144,7 +144,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 
 | Artefato | Uso na documentação |
 |----------|---------------------|
-| `src/lib/recaptcha.ts` | Cliente reCAPTCHA v3 |
+| `src/lib/recaptcha.ts` | Cliente reCAPTCHA v3: `preloadRecaptcha` (carga antecipada) e `executeRecaptcha` (token no submit); promise compartilhada para loads concorrentes |
 | `src/lib/logger.ts` / `src/lib/sentry.ts` | Observabilidade (mencionado onde impacta fluxo) |
 | `src/lib/cache.ts` | Cache em memória + `cachePersist*` em Preferences (`orbit.cache.persist.v1:`) |
 | `src/lib/persistSession.ts` | Reexport de preferência **Manter conectado** |

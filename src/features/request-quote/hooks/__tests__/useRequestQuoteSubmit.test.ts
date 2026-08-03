@@ -50,6 +50,7 @@ vi.mock("../../utils/photoContentCheck", () => ({
 
 vi.mock("@/lib/recaptcha", () => ({
   executeRecaptcha: vi.fn(),
+  preloadRecaptcha: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("sonner", () => ({

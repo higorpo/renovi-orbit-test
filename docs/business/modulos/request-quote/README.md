@@ -26,7 +26,7 @@ Detalhamento passo a passo, validações, analytics e matriz de lacunas: [featur
 | **Criação** | POST multipart → Edge **`create-request-quote-order`** (`verify_jwt = false`; validação interna) |
 | **IA** | Edge **`generate-smart-description`** (`verify_jwt = true`); disparo automático ao entrar no passo 3 vindo do passo 2 |
 | **Rascunho** | Capacitor Preferences `renovi_request_quote_draft`, versão `REQUEST_QUOTE_DRAFT_VERSION`; sem PII do passo 5; debounce 400 ms |
-| **Antes do POST** | reCAPTCHA ação `request_quote_submit`; opcionalmente **nsfwjs** nas fotos |
+| **Antes do POST** | reCAPTCHA ação `request_quote_submit` (script **pré-carregado no mount** do submit hook; token no submit); opcionalmente **nsfwjs** nas fotos |
 | **Pós-sucesso** | Convidado → `ConfirmEmailScreen`; logado → toast + `navigate("/dashboard/client")` (**rota inexistente** — P-01) |
 | **Limites** | Não cobre listagem/acompanhamento do pedido (ver [my-services](../my-services/README.md) / [view-services](../view-services/README.md)) |
 | **Relação** | Consome `dynamic-form`, `addresses`, `auth`; alimenta matching via `OPEN` |
@@ -89,7 +89,7 @@ Detalhe: [pedir-orcamento.md](./features/pedir-orcamento.md).
 - Serviços listados só com `show_on_request_quote = true`; formulário só se `form_status === 'active'` e schema JSON v2 válido.
 - Pedido criado com **`status: "OPEN"`** (enum CNS) na Edge `createServiceRequest`.
 - Rate limit Edge: **`RATE_LIMIT_PER_MINUTE = 10`** (`failClosed: true` no handler).
-- reCAPTCHA obrigatório na ação **`request_quote_submit`** antes do POST.
+- reCAPTCHA obrigatório na ação **`request_quote_submit`** antes do POST; o script é pré-carregado no mount de `useRequestQuoteSubmit` (`preloadRecaptcha`), e o token é gerado no submit (`executeRecaptcha`).
 - Fotos: cliente aceita até **10 MB**; Edge rejeita acima de **5 MB** e no máx. **10** fotos — mismatch documentado.
 - Rascunho: **não** persiste fotos nem PII do passo 5; incrementar `REQUEST_QUOTE_DRAFT_VERSION` ao mudar shape persistido.
 - Deep link `?serviceSlug=` **limpa** rascunho antes de pré-selecionar serviço.
@@ -120,7 +120,7 @@ Detalhe: [pedir-orcamento.md](./features/pedir-orcamento.md).
 | **[auth](../auth/README.md)** | Sessão, signup inline, política de senha, redirect de e-mail |
 | **Edge `create-request-quote-order`** | Ordem completa: rate limit, multipart, reCAPTCHA, usuário, endereço, fotos, insert pedido |
 | **Edge `generate-smart-description`** | Descrição estruturada via `supabase.functions.invoke` |
-| **reCAPTCHA / `verify-recaptcha`** | Token no submit; validação na Edge de pedido (função dedicada no ecossistema) |
+| **reCAPTCHA / `verify-recaptcha`** | Pré-carga do script no mount do fluxo; token no submit; validação na Edge de pedido (função dedicada no ecossistema) |
 | **[matching-dispatch](../matching-dispatch/README.md)** | Downstream: bootstrap no primeiro `OPEN` |
 | **[my-services](../my-services/README.md)** | Upstream UX: CTA novo pedido; acompanhamento fora deste módulo |
 | **Analytics / Sentry** | Funil `quote_request_*`, métricas `request_quote.order_created` / `smart_description_generated` |

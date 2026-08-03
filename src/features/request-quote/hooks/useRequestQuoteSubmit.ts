@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useAuth } from "@/features/auth";
@@ -12,7 +12,7 @@ import {
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { logger } from "@/lib/logger";
 import { metrics, addBreadcrumb, Sentry } from "@/lib/sentry";
-import { executeRecaptcha } from "@/lib/recaptcha";
+import { executeRecaptcha, preloadRecaptcha } from "@/lib/recaptcha";
 import { createRequestQuoteOrder } from "../api/createRequestQuoteOrder.api";
 import { clearDraft } from "../utils/requestQuoteDraft.persistence";
 import { checkPhotosContent } from "../utils/photoContentCheck";
@@ -34,6 +34,11 @@ export function useRequestQuoteSubmit({
   const { trackEvent } = useAnalytics();
   const { user, session, signUp } = useAuth();
   const submitIdempotencyKeyRef = useRef<string | null>(null);
+
+  // Load reCAPTCHA while the wizard runs so v3 has interaction context before submit.
+  useEffect(() => {
+    void preloadRecaptcha();
+  }, []);
 
   const getSubmitIdempotencyKey = useCallback(() => {
     const key = submitIdempotencyKeyRef.current ?? generateIdempotencyKeyV7();

@@ -1,7 +1,12 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { z } from "zod";
 import { useAuth } from "./useAuth";
-import { executeRecaptcha, verifyRecaptchaToken, type RecaptchaAction } from "@/lib/recaptcha";
+import {
+  executeRecaptcha,
+  preloadRecaptcha,
+  verifyRecaptchaToken,
+  type RecaptchaAction,
+} from "@/lib/recaptcha";
 import { validatePasswordStrength } from "../utils/passwordPolicy";
 import { usePasswordFieldDisplay } from "./usePasswordFieldDisplay";
 import {
@@ -44,6 +49,11 @@ export function useSignupForm({ role, onboardingPath, recaptchaAction }: UseSign
     setShowConfirmPassword,
     passwordDisplay,
   } = usePasswordFieldDisplay({ password: formData.password });
+
+  // Load reCAPTCHA while the user fills the multi-step form so v3 has interaction context.
+  useEffect(() => {
+    void preloadRecaptcha();
+  }, []);
 
   const getEmailRedirectTo = useCallback((): string => {
     if (typeof window === "undefined") return "";

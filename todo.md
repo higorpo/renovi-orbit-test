@@ -65,6 +65,7 @@ Telas/fluxos restantes:
 - Refazer tela de minha conta
 - Como vai funcionar a emissão de nota fiscal da plataforma?
 - Nova tela de minha conta
+  - Criar telas exclusivas para "ganhos" e para os pagamentos recebidos e enviados do prestador e cliente, se atentando a todos os cenários possíveis de estado de um pagamento (pagamento efetuado, pagamento com reembolso parcial, pagamento com reembolso total etc..)
 - Fluxo de antecipação de recebíveis 
 
 Coisas para verificar:
@@ -126,23 +127,12 @@ Fluxo de pagamentos, itens com problemas:
 
 
 
-- [RETESTAR TODO O FLUXO] ~~É permitido fazer reagendamento de serviços para muito longe (por exemplo +30 dias a frente). … lógica para reembolsar o valor e fazer a captura novamente…~~ **Feito:** pós-`PAID` com execução >15 dias → `paid_far_recapture_required` + EF `process-far-reschedule-recapture` (gateway-first, backend-only).
-
-
-
-
-
-
-
-- [TESTAR TODO O FLUXO] Mostrar liquidações para o prestador
-
-
 
 
 - /home/higor/Área de Trabalho/Renovi/orbit/src/features/payments/api/serviceLifecycle.api.ts não deveria estar dentro de payments. Ele faz parte do fluxo de conclusão de um serviço, então deveria estar na feature de acordo
 
 
-- [RETESTAR TODO O FLUXO] Erro de fluxo ao solicitar reembolso documentado em docs/payment-system/critical-bug-refund-partial-commit.md
+
 
 - Perguntar para Netcred como funciona um estorno, https://app.sandbox.netcredbrasil.com.br/app/relatorio/liquidacoes?transactionId=446537
 

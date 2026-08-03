@@ -118,7 +118,7 @@ Documentação baseada em `src/features/request-quote/`, Edge Functions `create-
 - **Submit (`handleSubmit`):** se já existe `user`, delega a `handleSubmitLoggedIn`.
 - **Validação:** `clientSignupIdentitySchema` + `validatePasswordStrength`; toast com primeiro erro.
 - **Fluxo:** `signUp` com papel `client` e `getClientEmailRedirectTo()`; se `already_registered` → `navigate("/login", { state: { email } })` + evento `quote_request_guest_already_registered`.
-- **reCAPTCHA:** ação **`request_quote_submit`** (`executeRecaptcha`); sem token → toast e abort.
+- **reCAPTCHA:** no mount de `useRequestQuoteSubmit`, `preloadRecaptcha()` carrega o script cedo; no submit, ação **`request_quote_submit`** (`executeRecaptcha`); sem token → toast e abort.
 - **Pedido:** `createRequestQuoteOrder` com `session: null` (Bearer = **anon key** na API).
 - **Sucesso convidado:** `setOrderCreatedEmail(email)` → UI mostra `ConfirmEmailScreen` (sem redirect para dashboard).
 
@@ -126,7 +126,7 @@ Documentação baseada em `src/features/request-quote/`, Edge Functions `create-
 
 ## 9. Envio logado
 
-- **`handleSubmitLoggedIn`:** reCAPTCHA, opcionalmente `checkPhotosContent`, depois `createRequestQuoteOrder` com `session` (JWT do usuário).
+- **`handleSubmitLoggedIn`:** reCAPTCHA (token via `executeRecaptcha`; script já pré-carregado no mount), opcionalmente `checkPhotosContent`, depois `createRequestQuoteOrder` com `session` (JWT do usuário).
 - **Sucesso:** `clearDraft()`, toast “Pedido enviado com sucesso!”, delay 800 ms, **`navigate("/dashboard/client")`** (lacuna).
 - **Erros:** 429 → mensagem com `Retry-After`; outros → toast genérico; 413 no cliente → “Arquivos muito grandes. Reduza o tamanho das fotos.”
 - **Observação:** `getRedirectPath` em `useAuth` hoje retorna **`/dashboard`** para cliente — o submit do request-quote **não** reutiliza essa função.
@@ -213,7 +213,7 @@ Consumo externo típico: página do wizard; outros módulos importam estilos de 
 | `dynamic-form` | `DynamicForm`, `validateFormSchema`, skeleton |
 | `addresses` | `AddressSelectionStep`, `addressFormSchema` |
 | `auth` | `useAuth`, `signUp`, schemas de identidade/senha, `getClientEmailRedirectTo` |
-| `@/lib/recaptcha` | `executeRecaptcha` |
+| `@/lib/recaptcha` | `preloadRecaptcha` (mount), `executeRecaptcha` (submit) |
 | `@/hooks/useAnalytics` | Eventos de funil |
 
 ---
@@ -261,3 +261,7 @@ flowchart TD
 - **Rascunho local evita dados sensíveis:** fotos e dados do passo 5 não entram no payload persistido em Preferences.
 - **Armazenamento:** rascunho usa Capacitor Preferences (mesma camada transversal do auth).
 - **Envio convidado usa autorização anônima no cliente, com validação de identidade no servidor:** a Edge confere consistência de `userId`/`email` e aplica reCAPTCHA.
+
+## 21. Atualização de auditoria (2026-08-03)
+
+- **reCAPTCHA v3 no pedido:** `useRequestQuoteSubmit` chama `preloadRecaptcha()` no mount (enquanto o usuário preenche o wizard); no submit continua `executeRecaptcha("request_quote_submit")` + validação na Edge. Evita carregar o script só na ação restrita (recomendação Google; score insuficiente).

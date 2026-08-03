@@ -25,6 +25,9 @@ declare global {
 
 const RECAPTCHA_SCRIPT_ID = "google-recaptcha-script";
 
+/** Shared so concurrent preload/execute calls wait on the same script load. */
+let scriptLoadPromise: Promise<void> | null = null;
+
 function getRecaptchaSiteKey(): string | null {
   const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
   return typeof siteKey === "string" && siteKey.trim().length > 0
@@ -40,20 +43,46 @@ function getSupabaseFunctionsUrl(): string {
   return `${url.replace(/\/$/, "")}/functions/v1`;
 }
 
-async function ensureRecaptchaScript(siteKey: string): Promise<void> {
-  if (typeof window === "undefined") return;
+function waitForExistingScript(existingScript: HTMLElement): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    if (window.grecaptcha) {
+      resolve();
+      return;
+    }
+
+    const onLoad = () => resolve();
+    const onError = () => reject(new Error("Falha ao carregar reCAPTCHA."));
+    existingScript.addEventListener("load", onLoad, { once: true });
+    existingScript.addEventListener("error", onError, { once: true });
+
+    // load may have already fired before listeners were attached
+    const intervalId = window.setInterval(() => {
+      if (window.grecaptcha) {
+        cleanup();
+        resolve();
+      }
+    }, 50);
+    const timeoutId = window.setTimeout(() => {
+      cleanup();
+      if (window.grecaptcha) resolve();
+      else reject(new Error("Falha ao carregar reCAPTCHA."));
+    }, 10_000);
+
+    function cleanup() {
+      window.clearInterval(intervalId);
+      window.clearTimeout(timeoutId);
+      existingScript.removeEventListener("load", onLoad);
+      existingScript.removeEventListener("error", onError);
+    }
+  });
+}
+
+async function loadRecaptchaScript(siteKey: string): Promise<void> {
   if (window.grecaptcha) return;
 
   const existingScript = document.getElementById(RECAPTCHA_SCRIPT_ID);
   if (existingScript) {
-    await new Promise<void>((resolve, reject) => {
-      existingScript.addEventListener("load", () => resolve(), { once: true });
-      existingScript.addEventListener(
-        "error",
-        () => reject(new Error("Falha ao carregar reCAPTCHA.")),
-        { once: true }
-      );
-    });
+    await waitForExistingScript(existingScript);
     return;
   }
 
@@ -67,6 +96,46 @@ async function ensureRecaptchaScript(siteKey: string): Promise<void> {
     script.onerror = () => reject(new Error("Falha ao carregar reCAPTCHA."));
     document.head.appendChild(script);
   });
+}
+
+async function ensureRecaptchaScript(siteKey: string): Promise<void> {
+  if (typeof window === "undefined") return;
+  if (window.grecaptcha) return;
+
+  // Script removed from DOM (e.g. test cleanup) — allow a fresh load.
+  if (!document.getElementById(RECAPTCHA_SCRIPT_ID)) {
+    scriptLoadPromise = null;
+  }
+
+  if (scriptLoadPromise) return scriptLoadPromise;
+
+  scriptLoadPromise = loadRecaptchaScript(siteKey).catch((error) => {
+    scriptLoadPromise = null;
+    throw error;
+  });
+  return scriptLoadPromise;
+}
+
+/**
+ * Load reCAPTCHA early so v3 can observe page interactions before submit.
+ * Google recommends against loading only at the restricted action (e.g. form submit).
+ */
+export async function preloadRecaptcha(): Promise<void> {
+  const siteKey = getRecaptchaSiteKey();
+  if (!siteKey || typeof window === "undefined") return;
+
+  try {
+    await ensureRecaptchaScript(siteKey);
+    if (!window.grecaptcha) return;
+
+    await new Promise<void>((resolve) => {
+      window.grecaptcha?.ready(() => resolve());
+    });
+  } catch (error) {
+    logger.warn("recaptcha_preload_failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 export async function executeRecaptcha(action: RecaptchaAction): Promise<string | null> {

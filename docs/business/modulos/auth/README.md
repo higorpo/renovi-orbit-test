@@ -46,7 +46,7 @@
 
 ## 8. Integrações
 
-- **Google reCAPTCHA v3** no cadastro (`verify-recaptcha`).
+- **Google reCAPTCHA v3** no cadastro (`verify-recaptcha`): o script é **pré-carregado no mount** do formulário (`preloadRecaptcha` em `useSignupForm`); o token é gerado e validado no submit.
 - E-mail via **Supabase Auth** (Inbucket local / SMTP comentado para Resend).
 
 ## 9. Riscos e lacunas
@@ -66,3 +66,7 @@
 ## 11. Atualização de auditoria (2026-08-02)
 
 - Revalidado sem drift: escopo, entidades, reCAPTCHA, persistência Capacitor e lacunas de redirect órfão.
+
+## 12. Atualização de auditoria (2026-08-03)
+
+- **reCAPTCHA v3 no cadastro:** pré-carregamento do script no mount do fluxo (`preloadRecaptcha` / `useSignupForm`), enquanto o usuário preenche; token ainda gerado e validado no submit. Evita carregar só na ação restrita (recomendação Google; score baixo).

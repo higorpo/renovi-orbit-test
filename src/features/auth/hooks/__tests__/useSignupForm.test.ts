@@ -15,10 +15,12 @@ vi.mock("../useAuth", () => ({
 
 const executeRecaptcha = vi.fn();
 const verifyRecaptchaToken = vi.fn();
+const preloadRecaptcha = vi.fn();
 
 vi.mock("@/lib/recaptcha", () => ({
   executeRecaptcha: (...a: unknown[]) => executeRecaptcha(...a),
   verifyRecaptchaToken: (...a: unknown[]) => verifyRecaptchaToken(...a),
+  preloadRecaptcha: (...a: unknown[]) => preloadRecaptcha(...a),
 }));
 
 describe("useSignupForm", () => {
@@ -31,8 +33,20 @@ describe("useSignupForm", () => {
     });
     executeRecaptcha.mockResolvedValue("token");
     verifyRecaptchaToken.mockResolvedValue({ success: true });
+    preloadRecaptcha.mockResolvedValue(undefined);
     signUp.mockResolvedValue({ success: true, userId: "new" });
     signInWithGoogle.mockResolvedValue(undefined);
+  });
+
+  it("preloads reCAPTCHA on mount", () => {
+    renderHook(() =>
+      useSignupForm({
+        role: "client",
+        onboardingPath: "/onboarding/client",
+        recaptchaAction: "client_signup_submit",
+      })
+    );
+    expect(preloadRecaptcha).toHaveBeenCalledTimes(1);
   });
 
   it("validateStep 0 fails on invalid full name", () => {

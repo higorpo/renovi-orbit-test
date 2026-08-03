@@ -9,8 +9,61 @@ vi.mock("@/lib/logger", () => ({
   logger: { warn: vi.fn(), error: vi.fn() },
 }));
 
-import { executeRecaptcha, verifyRecaptchaToken } from "@/lib/recaptcha";
+import { executeRecaptcha, preloadRecaptcha, verifyRecaptchaToken } from "@/lib/recaptcha";
 import { logger } from "@/lib/logger";
+
+describe("preloadRecaptcha", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+    window.grecaptcha = undefined;
+    document.head.innerHTML = "";
+  });
+
+  it("no-ops when the site key is not configured", async () => {
+    vi.stubEnv("VITE_RECAPTCHA_SITE_KEY", "");
+    const appendSpy = vi.spyOn(document.head, "appendChild");
+    await preloadRecaptcha();
+    expect(appendSpy).not.toHaveBeenCalled();
+  });
+
+  it("loads the script and waits for grecaptcha.ready", async () => {
+    vi.stubEnv("VITE_RECAPTCHA_SITE_KEY", "site-key");
+    const ready = vi.fn((cb: () => void) => cb());
+    const appendSpy = vi
+      .spyOn(document.head, "appendChild")
+      .mockImplementation((node) => node);
+
+    const pending = preloadRecaptcha();
+    const script = appendSpy.mock.calls[0][0] as HTMLScriptElement;
+    window.grecaptcha = {
+      ready,
+      execute: vi.fn(),
+    };
+    script.onload?.(new Event("load"));
+    await pending;
+
+    expect(script.src).toContain("render=site-key");
+    expect(ready).toHaveBeenCalled();
+  });
+
+  it("logs a warning when preload fails", async () => {
+    vi.stubEnv("VITE_RECAPTCHA_SITE_KEY", "site-key");
+    const appendSpy = vi
+      .spyOn(document.head, "appendChild")
+      .mockImplementation((node) => node);
+
+    const pending = preloadRecaptcha();
+    const script = appendSpy.mock.calls[0][0] as HTMLScriptElement;
+    script.onerror?.(new Event("error"));
+    await pending;
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      "recaptcha_preload_failed",
+      expect.objectContaining({ error: expect.any(String) }),
+    );
+  });
+});
 
 describe("executeRecaptcha", () => {
   beforeEach(() => {
