@@ -15,10 +15,6 @@ const useServiceDetailModalMock = vi.hoisted(() =>
     background: null,
   })),
 );
-const useProviderKycNavItemsMock = vi.hoisted(() =>
-  vi.fn((allItems: unknown[], mainItems: unknown[]) => ({ allItems, mainItems })),
-);
-
 vi.mock("@/features/auth", () => ({
   useAuth: vi.fn(),
 }));
@@ -51,7 +47,6 @@ vi.mock("@/features/provider-kyc", () => ({
   ProviderKycGate: ({ children }: { children: ReactNode }) => (
     <div data-testid="provider-kyc-gate">{children}</div>
   ),
-  useProviderKycNavItems: (...args: unknown[]) => useProviderKycNavItemsMock(...args),
 }));
 
 vi.mock("../MobileStackTransition", () => ({
@@ -76,9 +71,6 @@ describe("DashboardLayout", () => {
       serviceRequestId: undefined,
       background: null,
     });
-    useProviderKycNavItemsMock.mockImplementation(
-      (allItems: unknown[], mainItems: unknown[]) => ({ allItems, mainItems }),
-    );
     useAuth.mockReturnValue({
       profile: { id: "p1", role: "client", full_name: "User" },
       user: null,

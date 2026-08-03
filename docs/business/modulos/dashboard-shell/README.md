@@ -7,14 +7,14 @@
 - **Problema que resolve:** experiência consistente do painel após login — menu por papel, deep links e chrome mobile previsíveis.
 - **Risco operacional:**
   - Item de menu **Endereços** (`/dashboard/addresses`) ainda é **placeholder** (“Página em construção”), embora endereços reais existam em **Minha conta** (`AddressesSection`).
-  - Prestador sem KYC `ACTIVE` vê o shell operacional bloqueado (menu só **Minha conta**); detalhes em [provider-kyc](../provider-kyc/README.md).
+  - Prestador sem KYC `ACTIVE` vê o **conteúdo** operacional substituído pelo gate (wizard/status); o **menu completo** do prestador permanece; detalhes em [provider-kyc](../provider-kyc/README.md).
 - **Não inventar expectativa:** calendário do prestador **não** aparece no menu — entrada via banner em Meus Serviços.
 
 ## 2. Visão geral funcional
 
 O shell (`DashboardLayout`) monta:
 
-1. Menu a partir de `getDashboardMenu(role)` + filtro KYC `useProviderKycNavItems`.
+1. Menu a partir de `getDashboardMenu(role)` (completo, sem filtro KYC).
 2. Chrome desktop (logo + `DesktopNav`) ou mobile (`MobileTabHeader` / `MobileStackHeader` / `MobileBottomNav` conforme `resolveMobileChrome`).
 3. Conteúdo: `ProviderKycGate` envolve slots do prestador + outlet; slot de Meus Serviços do **cliente** fica **fora** do gate.
 4. Sheet de detalhe de serviço (`ServiceDetailSheet`) quando a navegação usa modal routing.
@@ -38,15 +38,15 @@ Páginas filhas podem ser **reais** (features) ou **placeholder** (`DashboardFak
 ## 5. Principais fluxos
 
 1. Usuário autenticado entra em `/dashboard/...` → layout resolve menu e chrome.
-2. Prestador sem `ACTIVE` → nav só Minha conta; outlet operacional substituído pelas UIs do `ProviderKycGate` (exceto `/dashboard/conta*`).
-3. Navegação por item de menu ou deep link → `Outlet` (ou slot/sheet) da feature correspondente.
+2. Prestador sem `ACTIVE` → menu completo; outlet operacional substituído pelas UIs do `ProviderKycGate` (exceto `/dashboard/conta*`).
+3. Navegação por item de menu ou deep link → `Outlet` (ou slot/sheet) da feature correspondente — ou UI KYC se o gate bloquear.
 4. Offline → offset do header (`top-11` vs `top-0`) via `useOnlineStatus`.
 
 ## 6. Regras transversais
 
 - **Menu ≠ inventário completo de rotas:** existem rotas reais/placeholder sem item no menu (`/dashboard/settings`, `/dashboard/services/calendar`, `/dashboard/services/:id`).
 - **Bottom nav mobile:** primeiros **5** itens de `allItems` (`CLIENT_MAIN_COUNT` / `PROVIDER_MAIN_COUNT`); demais ficam no overflow do hamburger / desktop “mais”.
-- **KYC:** bloqueio e allowlist são responsabilidade embutida do módulo [provider-kyc](../provider-kyc/features/gate-e-acesso-operacional.md); o shell só hospeda o gate e consome o filtro de nav.
+- **KYC:** bloqueio de **conteúdo** e allowlist são responsabilidade do módulo [provider-kyc](../provider-kyc/features/gate-e-acesso-operacional.md); o shell hospeda o gate e monta o menu completo via `getDashboardMenu(role)`.
 - **Fallback de papel:** se `profile` ainda sem `role`, o layout trata como `"client"` (`profile?.role ?? "client"`).
 
 ## 7. Entidades
@@ -58,7 +58,7 @@ Nenhuma persistência própria do shell. Lê `profile.role` via `useAuth`. O gat
 | Módulo / feature | Como o shell integra |
 |------------------|----------------------|
 | **auth** | `useAuth`, `ProtectedRoute` |
-| **provider-kyc** | `ProviderKycGate`, `useProviderKycNavItems` |
+| **provider-kyc** | `ProviderKycGate` (bloqueio de conteúdo; menu não filtrado) |
 | **my-services** | `ClientMyServicesPersistentSlot`, `ProviderMyServicesPersistentSlot` |
 | **provider-jobs** | `ProviderJobsPersistentSlot` |
 | **view-services** | `ServiceDetailSheet`, `useServiceDetailModal` |
@@ -80,6 +80,6 @@ Nenhuma persistência própria do shell. Lê `profile.role` via `useAuth`. O gat
 - `src/layouts/DashboardLayout/DashboardFakePage.tsx`
 - `src/layouts/DashboardLayout/mobileNavigation.config.ts`
 - `src/layouts/DashboardLayout/DesktopNav.tsx`, `MobileBottomNav.tsx`, `MobileTabHeader.tsx`, `MobileStackHeader.tsx`
-- `src/features/provider-kyc/` (`ProviderKycGate`, `useProviderKycNavItems`, `PROVIDER_KYC_ALLOWED_PATH_PREFIX`)
+- `src/features/provider-kyc/` (`ProviderKycGate`, `PROVIDER_KYC_ALLOWED_PATH_PREFIX`)
 - `src/router.tsx` (filhos de `path: 'dashboard'`)
 - Feature: [placeholders-e-menu.md](./features/placeholders-e-menu.md)

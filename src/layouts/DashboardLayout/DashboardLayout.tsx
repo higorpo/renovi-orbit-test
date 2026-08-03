@@ -1,6 +1,6 @@
 import { Link, Outlet } from "react-router";
 import { useAuth } from "@/features/auth";
-import { ProviderKycGate, useProviderKycNavItems } from "@/features/provider-kyc";
+import { ProviderKycGate } from "@/features/provider-kyc";
 import { ClientMyServicesPersistentSlot, ProviderMyServicesPersistentSlot } from "@/features/my-services";
 import { ProviderJobsPersistentSlot } from "@/features/provider-jobs";
 import { ServiceDetailSheet, useServiceDetailModal } from "@/features/view-services";
@@ -22,8 +22,8 @@ export function DashboardLayout() {
   const serviceDetailModal = useServiceDetailModal();
   const mobileChrome = useMobileNavigationChrome();
   const role = profile?.role ?? "client";
-  const baseMenu = getDashboardMenu(role);
-  const menu = useProviderKycNavItems(baseMenu.allItems, baseMenu.mainItems);
+  // Full menu always; ProviderKycGate replaces page content until KYC is ACTIVE.
+  const menu = getDashboardMenu(role);
 
   const outlet = mobileChrome.enableStackTransition ? (
     <MobileStackTransition>

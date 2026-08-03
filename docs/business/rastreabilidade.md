@@ -13,7 +13,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `docs/business/modulos/README.md` | Índice de módulos, cobertura, lacunas |
 | `src/main.tsx` | Bootstrap assíncrono: `initCapacitorPlugins` → `hydratePersistSessionPreference` → `RouterProvider` |
 | `src/layouts/DashboardLayout/dashboardMenu.ts` | Menus por papel |
-| `src/layouts/DashboardLayout/DashboardLayout.tsx` | Layout autenticado; `ProviderKycGate` + `useProviderKycNavItems` |
+| `src/layouts/DashboardLayout/DashboardLayout.tsx` | Layout autenticado; `ProviderKycGate` + `getDashboardMenu(role)` |
 | `src/layouts/DashboardLayout/DashboardFakePage.tsx` | Placeholders de seção |
 | `src/features/provider-kyc/` | Gate KYC, wizard de credenciamento, status, API/upload/submit |
 
@@ -50,7 +50,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `service-reschedule/` | `api/serviceReschedule.api.ts`; hooks mutações/detalhe; `deriveRescheduleDateMode`, `mapRescheduleSnapshot`; FSM em docs `ciclo-estados-reagendamento.md` | `ProposeRescheduleDialog` (inclui lembrete dispensável `ProposeRescheduleFlowReminder`), `RequestRescheduleDialog`, cards/ações no chat e no serviço contratado |
 | `payments/` | APIs checkout/cartões/histórico/cobrança; RPCs `payment_*` | Checkout stepper, `ManualPaymentDialog`, histórico em Minha conta |
 | `provider-earnings/` | `api/settlements.api.ts`; `useProviderSettlements`; disclosure D+30 / `settling_at` | `EarningsPage`, filtros Previsto/Liquidado/Estorno, `ProviderSettlementDisclosure` |
-| `provider-kyc/` | `api/kyc.api.ts`, `providerKyc.rpc.ts`, `brazilianBanks.api.ts`; hooks `useProviderPaymentAccount`, `useProviderKycNavItems`, `useProviderKycWizard`, `useDispatchKyc`, `useBrazilianBanks` | `ProviderKycGate`, `ProviderKycForm`, `BankPicker`, `ProviderKycWizardStepContent`, telas `components/status/*` |
+| `provider-kyc/` | `api/kyc.api.ts`, `providerKyc.rpc.ts`, `brazilianBanks.api.ts`; hooks `useProviderPaymentAccount`, `useProviderKycWizard`, `useDispatchKyc`, `useBrazilianBanks` | `ProviderKycGate`, `ProviderKycForm`, `BankPicker`, `ProviderKycWizardStepContent`, telas `components/status/*` |
 | `auth/` | (já listado) | — |
 
 ## Supabase — dados e regras
@@ -261,7 +261,6 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 |----------|---------------------|
 | `docs/business/modulos/provider-kyc/` | README + [gate-e-acesso-operacional](./modulos/provider-kyc/features/gate-e-acesso-operacional.md) + [formulário-credenciamento-wizard](./modulos/provider-kyc/features/formulario-credenciamento-wizard.md) |
 | `src/features/provider-kyc/components/ProviderKycGate.tsx` | Bloqueio do shell; allowlist `/dashboard/conta*`; UIs por status; host do `ProviderKycForm` |
-| `src/features/provider-kyc/hooks/useProviderKycNavItems.ts` | Menu só Minha conta quando não `ACTIVE` |
 | `src/features/provider-kyc/hooks/useProviderPaymentAccount.ts` | Polling 5s (e-mail pendente) / 30s (documentos enviados ou análise) |
 | `src/features/provider-kyc/hooks/useProviderKycWizard.ts` | Wizard multi-etapas; prefill; uploads; analytics |
 | `src/features/provider-kyc/hooks/useDispatchKyc.ts` | `payment_submit_provider_kyc` + `dispatch-kyc-email` |

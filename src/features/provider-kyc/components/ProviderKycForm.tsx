@@ -32,15 +32,16 @@ export function ProviderKycForm({
   return (
     <Form {...wizard.form}>
       <div className="flex min-h-[70dvh] flex-col">
-        <div className="flex-1 space-y-6 pb-28">
+        <div className="flex-1 space-y-6">
           <div className="space-y-2">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {wizard.progressLabel}
+              {wizard.progressLabel} · {wizard.stepLabel}
             </p>
-            <h1 className="text-xl font-semibold">Credenciamento de pagamentos</h1>
+            <h1 className="text-xl font-semibold">Bem-vindo à Renovi</h1>
             <p className="text-sm text-muted-foreground">
-              {wizard.stepLabel}. Complete os passos para receber pagamentos pelos
-              serviços na Renovi.
+              É um prazer ter você conosco. Sua conta está quase pronta, complete
+              o onboarding de segurança da Renovi para começar a prestar serviços
+              na plataforma.
             </p>
           </div>
 
@@ -68,42 +69,38 @@ export function ProviderKycForm({
           ) : null}
         </div>
 
-        <div
-          className="fixed inset-x-0 bottom-0 z-10 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none"
-        >
-          <div className="mx-auto flex max-w-2xl gap-3">
-            {!wizard.isFirstStep ? (
-              <Button
-                type="button"
-                variant="outline"
-                className="min-h-11 flex-1"
-                disabled={wizard.isSubmitting}
-                onClick={wizard.goBack}
-              >
-                Voltar
-              </Button>
-            ) : null}
+        <div className="mt-6 flex gap-3">
+          {!wizard.isFirstStep ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 flex-1"
+              disabled={wizard.isSubmitting}
+              onClick={wizard.goBack}
+            >
+              Voltar
+            </Button>
+          ) : null}
 
-            {wizard.isLastStep ? (
-              <Button
-                type="button"
-                className="min-h-11 flex-1"
-                disabled={wizard.isSubmitting || wizard.isPrefilling}
-                onClick={() => void wizard.submit()}
-              >
-                {wizard.isSubmitting ? <WizardFooterPendingLabel /> : "Enviar"}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                className="min-h-11 flex-1"
-                disabled={wizard.isSubmitting || wizard.isPrefilling}
-                onClick={wizard.goNext}
-              >
-                Continuar
-              </Button>
-            )}
-          </div>
+          {wizard.isLastStep ? (
+            <Button
+              type="button"
+              className="min-h-11 flex-1"
+              disabled={wizard.isSubmitting || wizard.isPrefilling}
+              onClick={() => void wizard.submit()}
+            >
+              {wizard.isSubmitting ? <WizardFooterPendingLabel /> : "Enviar"}
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              className="min-h-11 flex-1"
+              disabled={wizard.isSubmitting || wizard.isPrefilling}
+              onClick={wizard.goNext}
+            >
+              Continuar
+            </Button>
+          )}
         </div>
       </div>
     </Form>

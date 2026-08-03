@@ -4,7 +4,6 @@ export {
   useProviderPaymentAccount,
   PROVIDER_PAYMENT_ACCOUNT_QUERY_KEY,
 } from "./useProviderPaymentAccount";
-export { useProviderKycNavItems } from "./useProviderKycNavItems";
 export { useProviderKycWizard } from "./useProviderKycWizard";
 export type {
   ProviderKycWizardFormValues,

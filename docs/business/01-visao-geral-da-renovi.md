@@ -91,7 +91,7 @@ Espelham `src/features/` (e shells/backends documentados). Links apontam para o 
 | Papel | Uso típico na aplicação |
 |-------|-------------------------|
 | **Cliente** | Pedir orçamento; Meus Serviços; Conversas; checkout/histórico; Minha conta (endereços reais aqui). |
-| **Prestador** | KYC → Trabalhos; Conversas; Meus Serviços / calendário; Ganhos; Minha conta. Sem KYC `ACTIVE`, shell operacional bloqueado (só Minha conta). |
+| **Prestador** | KYC → Trabalhos; Conversas; Meus Serviços / calendário; Ganhos; Minha conta. Sem KYC `ACTIVE`, conteúdo operacional bloqueado pelo gate (menu completo permanece). |
 | **Admin** | Existe no banco e em parte das políticas RLS/RPC; **não há painel `/admin` no `router.tsx`**. Redirecionamento pós-login aponta para `/admin/dashboard` (rota inexistente neste tree). |
 
 Matriz detalhada: [Perfis e permissões](./perfis-e-permissoes.md).

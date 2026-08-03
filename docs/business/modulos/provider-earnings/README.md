@@ -3,7 +3,7 @@
 ## 1. Leitura para negócio
 
 - **Para que serve:** mostrar ao **prestador** as **liquidações bancárias** (depósitos previstos e efetivos na conta), distintas dos **recebimentos na captura** listados em Minha conta.
-- **Quem usa:** prestadores autenticados (`profiles.role === provider`), com rota guard provider-only e menu sujeito ao gate KYC `ACTIVE`.
+- **Quem usa:** prestadores autenticados (`profiles.role === provider`), com rota guard provider-only. Sem KYC `ACTIVE`, o item **Ganhos** permanece no menu, mas o `ProviderKycGate` substitui o conteúdo.
 - **Não é:** histórico de captura/`provider_payout` (isso fica em `payments` → Minha conta → Recebimentos). Também não altera o calendário NetCred — só **lê** movements já sincronizados.
 - **Valor:** transparência de “quando cai na conta”, com filtros Previsto / Liquidado e fallback de estimativa D+30 quando ainda não há `settling_at` real.
 - **Riscos operacionais:** lista vazia se ingestão (PAYOUT_*, enrich pós-captura/estorno ou `sync-netcred-settlements`) atrasar; disclosure embutido em Recebimentos/detalhe do serviço pode usar só o fallback D+30 (sem `settlingAt` real) — ver feature.
@@ -26,7 +26,7 @@
 | Papel | Acesso |
 |-------|--------|
 | Prestador (`ACTIVE` KYC) | Menu Ganhos + rota + RPC lista os próprios movements |
-| Prestador (KYC não `ACTIVE`) | Menu reduzido a Minha conta; gate do shell bloqueia outlet operacional |
+| Prestador (KYC não `ACTIVE`) | Menu completo (incl. Ganhos); gate do shell substitui o outlet operacional pela UI KYC |
 | Cliente / visitante | Sem item de menu; rota guard `allowedRoles={['provider']}` |
 | Admin | Sem UI dedicada; RLS da tabela permite SELECT a admin na política original — app autenticado lê via RPC DEFINER filtrando `provider_id = auth.uid()` |
 
@@ -58,7 +58,7 @@
 - **payments / NetCred:** (1) `PAYOUT_CREATE` / `PAYOUT_SETTLE` → `payment_webhook_handle_payout`; (2) após `TRANSACTION_CAPTURE` / `TRANSACTION_REFUND` com sucesso, `netcred-webhook` enriquece best-effort via GraphQL `movements(transactionId)` → `payment_upsert_settlement_movements` (mesmo pipeline do sync; falha do enrich **não** falha o ACK); (3) cron `sync-netcred-settlements` como backfill. Motivo do enrich: NetCred reusa lotes de payout por `(company, settling_at)` — movements novos em lote existente **não** disparam `PAYOUT_CREATE`.
 - **my-account / payments UI:** link cruzado Recebimentos ↔ Ganhos; disclosure importado da Public API.
 - **view-services:** `ProviderSettlementStatus` (payments) no detalhe contratado, usando o disclosure.
-- **provider-kyc / dashboard-shell:** visibilidade do menu e gate do outlet.
+- **provider-kyc / dashboard-shell:** gate do outlet; menu completo via `getDashboardMenu` (Ganhos sempre no menu do prestador).
 
 ## 9. Riscos e lacunas
 

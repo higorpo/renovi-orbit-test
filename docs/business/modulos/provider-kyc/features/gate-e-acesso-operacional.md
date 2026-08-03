@@ -5,12 +5,12 @@
 - **O que é:** barreira de UI no `DashboardLayout` que substitui o conteúdo operacional do prestador (slots persistentes + `<Outlet />`) por telas de status ou pelo wizard de credenciamento, enquanto a conta NetCred não estiver `ACTIVE`.
 - **Problema que resolve:** impedir uso de trabalhos, serviços, conversas, ganhos e demais áreas do painel antes do credenciamento de pagamentos; manter **Minha conta** (logout) acessível.
 - **Quem usa:** prestador autenticado (`profiles.role === provider`). Cliente passa pelo componente sem efeito.
-- **Resultado esperado:** com `onboarding_status === ACTIVE`, children do gate renderizam normalmente; caso contrário, UI de status/wizard + menu reduzido a Minha conta.
+- **Resultado esperado:** com `onboarding_status === ACTIVE`, children do gate renderizam normalmente; caso contrário, UI de status/wizard no lugar do conteúdo operacional. O **menu completo** do prestador permanece visível (`getDashboardMenu(role)`).
 
 ## 2. Objetivo de negócio
 
-- **Finalidade:** só prestadores com onboarding NetCred **ativo** operam o shell do dashboard.
-- **Valor:** alinha UX ao requisito de cobrança/split (sem `ACTIVE` não há operação comercial plena); evita confusão com menus operacionais antes do KYC.
+- **Finalidade:** só prestadores com onboarding NetCred **ativo** operam o conteúdo do dashboard.
+- **Valor:** alinha UX ao requisito de cobrança/split (sem `ACTIVE` não há operação comercial plena); o menu completo antecipa a estrutura do painel, mas o gate impede o uso operacional até o KYC.
 - **Impacto se falhar / indisponível:** prestador não-`ACTIVE` veria slots e rotas operacionais; ou, se a query da conta falhar, o gate trata `data` ausente como “sem conta” e exibe o formulário (ver §17).
 - **Não é:** cadastro/auth (`/cadastro/profissional`); nem o detalhe campo a campo do wizard — ver [formulário-credenciamento-wizard](./formulario-credenciamento-wizard.md).
 
@@ -22,9 +22,9 @@
 | Entry point | `ProviderKycGate` em `DashboardLayout` envolvendo slots do prestador + outlet |
 | Rota dedicada | **Nenhuma** — embutido no layout do dashboard |
 | Allowlist | `PROVIDER_KYC_ALLOWED_PATH_PREFIX = "/dashboard/conta"` (pathname igual ou prefixo `/dashboard/conta/…`) |
-| Menu | `useProviderKycNavItems` filtra `allItems` / `mainItems` do `getDashboardMenu` |
+| Menu | Sem filtro KYC — `DashboardLayout` usa `getDashboardMenu(role)` diretamente (menu completo do prestador) |
 | Query params / deep link | **Nenhum** específico do gate |
-| Public API | `ProviderKycGate`, `useProviderKycNavItems`, `useProviderPaymentAccount`, helpers de status em `@/features/provider-kyc` |
+| Public API | `ProviderKycGate`, `useProviderPaymentAccount`, helpers de status em `@/features/provider-kyc` |
 
 **Dentro do gate:** `ProviderJobsPersistentSlot`, `ProviderMyServicesPersistentSlot`, `<Outlet />` (com ou sem `MobileStackTransition`).
 
@@ -34,8 +34,8 @@
 
 | Papel | Comportamento |
 |-------|---------------|
-| Prestador | Gate ativo; query da conta habilitada; nav pode reduzir a Minha conta |
-| Cliente | `ProviderKycGate` devolve `children` imediatamente; `useProviderPaymentAccount(false)` no nav |
+| Prestador | Gate ativo; query da conta habilitada; menu completo do papel; conteúdo operacional substituído se ≠ `ACTIVE` |
+| Cliente | `ProviderKycGate` devolve `children` imediatamente |
 | Visitante | Sem dashboard autenticado (guards de `auth` — fora deste doc) |
 | Admin / outros | Mesmo caminho do cliente no gate se `role !== "provider"` |
 
@@ -68,7 +68,7 @@ flowchart TD
   K -->|Não| S6[KycGenericBlockedStatus]
 ```
 
-Em paralelo, `useProviderKycNavItems`: se prestador e (`isLoading` **ou** `shouldBlockProviderForKyc`), menu = só itens com `path === "/dashboard/conta"`.
+O menu do prestador **não** é filtrado pelo KYC: `DashboardLayout` chama `getDashboardMenu(role)` e exibe o menu completo independentemente do status de onboarding.
 
 ## 6. Fluxos alternativos e exceções
 
@@ -82,18 +82,19 @@ Em paralelo, `useProviderKycNavItems`: se prestador e (`isLoading` **ou** `shoul
 | Status desconhecido ≠ `ACTIVE` | `KycGenericBlockedStatus` (“Credenciamento necessário”) |
 | Cliente no mesmo layout | Gate transparent; slots de prestador tipicamente não aplicáveis ao papel |
 | Polling 5 s / 30 s | Ver §11 / §12 — enquanto status aguarda parceiro/e-mail |
+| Clique em item operacional do menu (ex.: Ganhos) sem `ACTIVE` | Navega para a rota; gate substitui o conteúdo pela UI KYC / status |
 
 ## 7. Regras de negócio
 
 1. **Escopo do bloqueio:** só `role === "provider"`.
 2. **Critério de liberação operacional:** `isProviderCredentialed` ⇔ `account?.onboardingStatus === "ACTIVE"`.
-3. **Critério de bloqueio (nav + helpers):** `shouldBlockProviderForKyc` ⇔ `!account` **ou** `onboardingStatus !== "ACTIVE"`.
+3. **Critério de bloqueio (helpers):** `shouldBlockProviderForKyc` ⇔ `!account` **ou** `onboardingStatus !== "ACTIVE"`.
 4. **Allowlist:** pathname `=== "/dashboard/conta"` ou `startsWith("/dashboard/conta/")`.
 5. **Ordem de decisão no gate:** não-provider → loading → allowlist → ACTIVE → submitting → pending/null → documents submitted → under review → rejected → suspended → genérico.
 6. **Submitting:** `DOCUMENTS_SUBMITTED` **e** `emailDispatchedAt` nulo/ausente.
 7. **Documents submitted (UI “enviados”):** `DOCUMENTS_SUBMITTED` **e** `emailDispatchedAt` truthy.
 8. **Pending / form:** conta null **ou** `PENDING_DOCUMENTS`.
-9. **Menu reduzido também durante loading** da conta (mesmo critério de `blocked` no nav).
+9. **Menu completo:** o gate **não** reduz a navegação; itens operacionais permanecem no menu mesmo durante loading ou status ≠ `ACTIVE`.
 10. **Host do wizard:** `ProviderKycForm` recebe `providerId`, `accountEmail`, `defaultPhone`, `defaultFullName`, `onSubmitted` → `accountQuery.refetch()`.
 11. **Suporte nas telas de status:** CTA “Falar com suporte” via `PROVIDER_KYC_SUPPORT_URL` (`VITE_MAIN_SITE_URL` + `/suporte`); se vazio, fallback `href="/dashboard/help"`.
 12. **Submitting sem CTA de suporte:** `KycSubmittingStatus` usa `showSupportCta={false}`.
@@ -209,7 +210,7 @@ stateDiagram-v2
 | Integração | Papel no gate |
 |------------|---------------|
 | `auth` (`useAuth`) | `role`, `user`, `profile` |
-| `DashboardLayout` | Hospeda gate e consome nav filtrada |
+| `DashboardLayout` | Hospeda gate; menu via `getDashboardMenu(role)` (sem filtro KYC) |
 | `my-account` | Allowlist — logout e ajustes |
 | Wizard (`ProviderKycForm`) | Coleta/reenvio — [formulário-credenciamento-wizard](./formulario-credenciamento-wizard.md) |
 | Edge `dispatch-kyc-email` | Retry via `useRetryKycEmailDispatch` |
@@ -230,7 +231,7 @@ Evidência: migrations `payment_mmd_notification_catalog`, `provider_activated_m
 
 ## 14. Listagens, buscas, filtros, paginação, ordenação
 
-**Não aplicável** a esta feature: não há listagem, busca, filtro de grade nem paginação. A “filtragem” existente é só a **redução do menu** a Minha conta e a **seleção de tela de status** por campos da conta.
+**Não aplicável** a esta feature: não há listagem, busca, filtro de grade nem paginação. A seleção de UI é a **tela de status / wizard** por campos da conta (e allowlist de path).
 
 ## 15. Ações disponíveis
 
@@ -242,14 +243,14 @@ Evidência: migrations `payment_mmd_notification_catalog`, `provider_activated_m
 | Reenviar documentos | Prestador `REJECTED` | CTA na tela de rejeição | Abre wizard (`showRejectedForm`) | Estado local |
 | Falar com suporte | Prestador em status screens | CTA padrão (exceto submitting) | Abre URL suporte (nova aba) | Fallback `/dashboard/help` se env vazio |
 | Retry dispatch e-mail | Sistema (hook) | Submitting e não loading | Mutation `retry_only`; invalida conta se disparado | Log `retry_dispatch_kyc_email_failed`; não bloqueia UI |
-| Navegar só Minha conta | Prestador bloqueado/loading | Nav filtrada | Desktop + bottom nav só conta | Deep link manual a `/dashboard/jobs` ainda cai no gate (tela KYC), não no jobs |
+| Navegar item operacional do menu | Prestador bloqueado/loading | Menu completo | URL muda; conteúdo permanece UI KYC (gate) | Deep link a `/dashboard/jobs` cai no gate, não na lista de jobs |
 
 ## 16. Dependências
 
 | Dependência | Tipo |
 |-------------|------|
 | `auth` | Sessão / perfil |
-| `dashboard-shell` (`DashboardLayout`, `dashboardMenu`) | Hospedeiro |
+| `dashboard-shell` (`DashboardLayout`, `dashboardMenu`) | Hospedeiro; menu completo sem filtro KYC |
 | `my-account` | Allowlist de rota |
 | Wizard interno do mesmo módulo | Host do form |
 | `payments` / Supabase | Conta NetCred, RPCs, Edge, FSM |
@@ -264,7 +265,7 @@ Evidência: migrations `payment_mmd_notification_catalog`, `provider_activated_m
 1. **Loading precede allowlist:** em `ProviderKycGate`, o spinner roda antes do check de `/dashboard/conta*`.
 2. **Erro na fetch:** o hook `throw`s em `result.error`; com query em erro e sem `data`, o gate usa `account = null` → caminho do formulário (comportamento de “sem conta”), **não** uma tela de erro dedicada.
 3. **Slots do prestador vs. cliente:** mesmo com gate bloqueando o outlet do prestador, `ClientMyServicesPersistentSlot` e o sheet de detalhe ficam **fora** do gate.
-4. **Dois consumidores da mesma query:** gate e `useProviderKycNavItems` chamam `useProviderPaymentAccount` — compartilham cache pela query key.
+4. **Query da conta:** `ProviderKycGate` (via `useProviderPaymentAccount`) é o consumidor da query no shell; cache compartilhado pela query key se outros hooks lerem a mesma conta.
 5. **Retry de e-mail a cada 15 s** (independente do polling de 5 s da conta) enquanto `isSubmitting && !isLoading`.
 6. **Guard de rota ≠ gate:** URL operacional permanece válida; conteúdo é mascarado.
 7. **`onboardingSubmittedAt` não participa** da árvore de decisão do gate.
@@ -275,10 +276,10 @@ Evidência: migrations `payment_mmd_notification_catalog`, `provider_activated_m
 | Risco | Detalhe |
 |-------|---------|
 | Falha de leitura da conta | Pode empurrar o prestador para o wizard como se não houvesse conta |
-| Deep link operacional | Usuário bloqueado ainda “entra” na rota, mas vê KYC — pode confundir QA/analytics de página |
+| Deep link / clique no menu operacional | Usuário bloqueado ainda “entra” na rota, mas vê KYC — pode confundir QA/analytics de página |
 | Janela de loading | Conta/logout inacessíveis até terminar o primeiro fetch |
 | Estado `showRejectedForm` | Perde-se em remount; não há deep link “modo reenvio” |
-| Divergência menu × URL | Menu só conta, mas URL pode ser `/dashboard/...` com UI KYC |
+| Divergência menu × conteúdo | Menu completo (incl. Ganhos, Trabalhos), mas URL operacional mostra UI KYC até `ACTIVE` |
 | Dependência de env | Suporte sem `VITE_MAIN_SITE_URL` cai em `/dashboard/help` (rota placeholder do shell) |
 
 ## 19. Evidências
@@ -288,16 +289,14 @@ Evidência: migrations `payment_mmd_notification_catalog`, `provider_activated_m
 | `src/features/provider-kyc/components/ProviderKycGate.tsx` | Decisão de UI / allowlist / host do form |
 | `src/features/provider-kyc/components/status/*` | Telas de status + `KycStatusLayout` |
 | `src/features/provider-kyc/hooks/useProviderPaymentAccount.ts` | Query, polling, staleTime |
-| `src/features/provider-kyc/hooks/useProviderKycNavItems.ts` | Filtro de menu |
 | `src/features/provider-kyc/hooks/useRetryKycEmailDispatch.ts` | Retry 15 s |
 | `src/features/provider-kyc/api/kyc.api.ts` | Fetch conta, helpers de status, retry Edge |
 | `src/features/provider-kyc/api/providerKyc.rpc.ts` | Nomes RPC/Edge |
 | `src/features/provider-kyc/constants/kyc.constants.ts` | Allowlist, support URL, bucket (wizard) |
 | `src/features/provider-kyc/index.ts` | Public API |
-| `src/layouts/DashboardLayout/DashboardLayout.tsx` | Integração gate + nav |
-| `src/layouts/DashboardLayout/dashboardMenu.ts` | Item Minha conta `/dashboard/conta` |
+| `src/layouts/DashboardLayout/DashboardLayout.tsx` | Integração gate + menu via `getDashboardMenu(role)` |
+| `src/layouts/DashboardLayout/dashboardMenu.ts` | Menu completo do prestador (incl. Minha conta `/dashboard/conta`) |
 | `src/features/provider-kyc/components/__tests__/ProviderKycGate.test.tsx` | Status, allowlist, nested conta, reenvio |
-| `src/features/provider-kyc/hooks/__tests__/useProviderKycNavItems.test.tsx` | Menu reduzido |
 | `src/features/provider-kyc/hooks/__tests__/useProviderPaymentAccount.test.tsx` | Polling |
 | `supabase/migrations/20260801060000_create_provider_gateway_accounts.sql` | FSM |
 | Docs relacionados | [formulário-credenciamento-wizard](./formulario-credenciamento-wizard.md), [checkout-e-cobranca](../../payments/features/checkout-e-cobranca.md), [placeholders-e-menu](../../dashboard-shell/features/placeholders-e-menu.md) |
@@ -317,15 +316,15 @@ Evidência: migrations `payment_mmd_notification_catalog`, `provider_activated_m
 
 - [ ] Cliente: dashboard operacional sem spinner/KYC do gate.
 - [ ] Prestador `ACTIVE`: slots + outlet + menu completo (incl. Trabalhos, Ganhos, Ajuda).
-- [ ] Prestador sem conta / `PENDING_DOCUMENTS`: formulário; menu só Minha conta.
-- [ ] Prestador `DOCUMENTS_SUBMITTED` sem e-mail: “Enviando…”; retry ativo; sem CTA suporte.
+- [ ] Prestador sem conta / `PENDING_DOCUMENTS`: formulário; **menu completo** do prestador; conteúdo operacional substituído pelo wizard.
+- [ ] Prestador `DOCUMENTS_SUBMITTED` sem e-mail: “Enviando…”; retry ativo; sem CTA suporte; menu completo.
 - [ ] Prestador `DOCUMENTS_SUBMITTED` com e-mail: “Documentos enviados”; polling 30 s.
 - [ ] Prestador `UNDER_NETCRED_REVIEW`: “em análise”; polling 30 s.
 - [ ] Prestador `REJECTED`: tela + “Reenviar documentos” abre form; pós-submit refetch.
 - [ ] Prestador `SUSPENDED`: “Conta suspensa”; em `/dashboard/conta` conteúdo da conta visível.
 - [ ] Path aninhado `/dashboard/conta/...` liberado com status bloqueante.
 - [ ] Durante loading inicial: spinner mesmo em intenção de abrir conta.
-- [ ] Deep link `/dashboard/jobs` com KYC pendente: UI KYC, não lista de trabalhos.
+- [ ] Deep link ou clique no menu `/dashboard/jobs` com KYC pendente: UI KYC, não lista de trabalhos.
 - [ ] Status desconhecido: “Credenciamento necessário”.
 
 ## Anexo B — Matriz status → UI (atalho)

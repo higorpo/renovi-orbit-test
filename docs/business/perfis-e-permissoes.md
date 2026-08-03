@@ -81,7 +81,7 @@ Evidência: `src/layouts/DashboardLayout/dashboardMenu.ts`. Bottom nav mobile = 
 
 **Não estão no menu:** `/dashboard/services/calendar`, `/dashboard/services/:id`, `/dashboard/settings`. Não há item “Orçamentos”.
 
-**Filtro KYC (prestador):** se conta NetCred ausente, ainda carregando, ou `onboarding_status !== ACTIVE`, `useProviderKycNavItems` reduz desktop e bottom nav a **somente Minha conta** (`path === "/dashboard/conta"`).
+**Menu do prestador:** sempre completo via `getDashboardMenu(role)` — sem filtro por status KYC. O `ProviderKycGate` substitui apenas o **conteúdo** operacional quando `onboarding_status !== ACTIVE` (exceto allowlist `/dashboard/conta*`).
 
 **Admin no helper:** ramificação só trata `client`; demais papéis recebem menu de prestador. Na prática o `ProtectedRoute` do dashboard **exclui** `admin`.
 
@@ -218,7 +218,7 @@ Para detalhes por tabela, ver arquivos em `supabase/migrations/` citados em [ras
 
 - O **painel** `/dashboard` é só para **`client` e `provider`**; cada área sensível reforça papel com `ProtectedRoute` aninhado (`addresses` → client; `jobs` / `earnings` / `services/calendar` → provider; `chats` / `conta` → ambos).
 - Rotas reais fora do menu: **calendário** (`/dashboard/services/calendar`), **detalhe** (`/dashboard/services/:id`), **settings** (fake).
-- **Prestador sem KYC `ACTIVE`:** shell operacional bloqueado; menu e allowlist só **`/dashboard/conta*`**.
+- **Prestador sem KYC `ACTIVE`:** conteúdo operacional bloqueado pelo gate; menu completo permanece; allowlist de conteúdo **`/dashboard/conta*`**.
 - **Push:** soft prompt para autenticados (copy por papel); **geo operacional só prestador** (device-beacon).
 - **CNS / propostas / reagendamento / pagamentos:** matrizes acima; admin sem UI de mutação nesses fluxos.
 - **Admin:** papel no banco + redirect para `/admin/dashboard` **sem rota** — **P-02**.

@@ -48,7 +48,7 @@ Dar navegação estável e previsível no painel pós-login, sem misturar regras
 | Perfil | Menu | Observação |
 |--------|------|------------|
 | `client` | Ver §7 tabela cliente | Sem jobs / earnings / calendar |
-| `provider` | Ver §7 tabela prestador | Gate KYC pode reduzir menu a Minha conta |
+| `provider` | Ver §7 tabela prestador | Gate KYC substitui conteúdo operacional se ≠ `ACTIVE`; menu completo |
 | Sem `role` no profile | Tratado como `client` no layout | `profile?.role ?? "client"` |
 
 ## 5. Fluxo funcional principal
@@ -57,10 +57,7 @@ Dar navegação estável e previsível no painel pós-login, sem misturar regras
 flowchart TD
   A[Usuário autenticado em /dashboard/*] --> B[DashboardLayout]
   B --> C[getDashboardMenu role]
-  C --> D[useProviderKycNavItems]
-  D --> E{Prestador bloqueado ou loading KYC?}
-  E -->|Sim| F[Nav só Minha conta]
-  E -->|Não| G[Menu completo do papel]
+  C --> G[Menu completo do papel]
   B --> H[ProviderKycGate]
   H --> I{role provider e path fora de /dashboard/conta*?}
   I -->|Não ACTIVE| J[Telas KYC / status]
@@ -70,16 +67,15 @@ flowchart TD
 
 Passos:
 
-1. Layout resolve `role` e menu base.
-2. Filtro KYC eventualmente reduz nav.
-3. Chrome desktop ou mobile conforme breakpoint e `resolveMobileChrome(pathname, location)`.
-4. Conteúdo liberado ou substituído pelo gate; outlet renderiza página real ou `DashboardFakePage`.
+1. Layout resolve `role` e menu completo via `getDashboardMenu(role)`.
+2. Chrome desktop ou mobile conforme breakpoint e `resolveMobileChrome(pathname, location)`.
+3. Conteúdo liberado ou substituído pelo gate; outlet renderiza página real ou `DashboardFakePage` (ou UI KYC).
 
 ## 6. Fluxos alternativos e exceções
 
 1. **Offline:** header sticky usa `top-11` quando `!isOnline` (desktop e headers mobile passam `isOffline`).
-2. **Prestador em loading de conta KYC:** gate mostra “Verificando credenciamento…”; nav já limitada a Minha conta (`useProviderKycNavItems` trata `isLoading` como blocked).
-3. **Prestador rejeitado / suspenso / em análise:** UIs de status do módulo provider-kyc no lugar do outlet operacional.
+2. **Prestador em loading de conta KYC:** gate mostra “Verificando credenciamento…”; menu permanece completo.
+3. **Prestador rejeitado / suspenso / em análise:** UIs de status do módulo provider-kyc no lugar do outlet operacional; menu completo.
 4. **Detalhe de serviço em sheet:** chrome permanece tab-root; lista fica no persistent slot.
 5. **Conversa `/dashboard/chats/:chatId`:** modo mobile `custom` (header da feature; sem bottom nav do shell).
 
@@ -114,7 +110,7 @@ Passos:
 
 5. **Allowlist KYC:** paths `/dashboard/conta` e `/dashboard/conta/…` passam pelo gate sem substituir children. Constante `PROVIDER_KYC_ALLOWED_PATH_PREFIX = "/dashboard/conta"`.
 
-6. **Filtro de nav KYC:** se prestador e (`accountQuery.isLoading` **ou** `shouldBlockProviderForKyc`), menu vira somente itens cujo `path === "/dashboard/conta"`.
+6. **Menu e KYC:** o shell **não** filtra itens de menu pelo status de onboarding. Prestador sempre vê o menu completo de `getDashboardMenu("provider")`; o `ProviderKycGate` só substitui o **conteúdo**.
 
 7. **Escopo do gate no layout:** dentro — `ProviderJobsPersistentSlot`, `ProviderMyServicesPersistentSlot`, outlet. Fora — `ClientMyServicesPersistentSlot` e `ServiceDetailSheet`.
 
@@ -124,7 +120,7 @@ Passos:
 
 ## 8. Campos e dados
 
-Placeholders **não** possuem formulários. Shell lê apenas `profile` (role) e, via hooks KYC, estado da conta NetCred (para filtro de menu / gate — lógica em provider-kyc).
+Placeholders **não** possuem formulários. Shell lê apenas `profile` (role). O gate KYC (módulo provider-kyc) lê o estado da conta NetCred para decidir se substitui o conteúdo.
 
 ## 9. Validações de front-end
 
@@ -140,9 +136,9 @@ Nenhuma RPC/RLS própria do shell. Persistência e regras de KYC/contas estão e
 |-----------------------------|-----|----------------------|
 | Cliente | Menu cliente completo | Sem gate |
 | Prestador `ACTIVE` | Menu prestador completo | Children liberados |
-| Prestador loading conta | Só Minha conta | Spinner “Verificando credenciamento…” |
-| Prestador não-`ACTIVE` em `/dashboard/conta*` | Só Minha conta | Children (Minha conta) |
-| Prestador não-`ACTIVE` fora da allowlist | Só Minha conta | Telas de status / formulário KYC |
+| Prestador loading conta | Menu prestador completo | Spinner “Verificando credenciamento…” |
+| Prestador não-`ACTIVE` em `/dashboard/conta*` | Menu prestador completo | Children (Minha conta) |
+| Prestador não-`ACTIVE` fora da allowlist | Menu prestador completo | Telas de status / formulário KYC |
 
 FSM detalhada de `onboarding_status`: [gate-e-acesso-operacional](../../provider-kyc/features/gate-e-acesso-operacional.md).
 
@@ -154,7 +150,7 @@ Sem persistência própria. Chrome mobile e menu são derivados de rota + role e
 
 | Integração | Papel no shell |
 |------------|----------------|
-| `ProviderKycGate` / `useProviderKycNavItems` | Bloqueio operacional + filtro de menu |
+| `ProviderKycGate` | Bloqueio do conteúdo operacional (menu não filtrado) |
 | Persistent slots my-services / provider-jobs | Listas montadas para sheet/modal routing |
 | `useServiceDetailModal` + `ServiceDetailSheet` | Detalhe sobre lista |
 | `useOnlineStatus` | Offset de header offline |
@@ -168,7 +164,7 @@ Não aplicável ao shell/placeholder. Listagens ficam nas features hospedadas.
 
 | Ação | Onde | Quem | Pré-condição | Resultado |
 |------|------|------|--------------|-----------|
-| Navegar item do menu | DesktopNav / MobileBottomNav / overflow hamburger | Conforme itens filtrados | Sessão válida | `react-router` navigation |
+| Navegar item do menu | DesktopNav / MobileBottomNav / overflow hamburger | Conforme itens do papel | Sessão válida | `react-router` navigation (conteúdo pode ser UI KYC se gate bloquear) |
 | Abrir “mais” (desktop) | `DesktopNav` overflow | Itens que não cabem na largura | — | Dropdown com itens restantes |
 | Ver placeholder | Outlet em rota Fake | Guard da rota | Outlet liberado pelo KYC (prestador) | Card + “Página em construção.” |
 | Voltar (mobile stack) | `MobileStackHeader` | Qualquer | Modo stack | `stackBackPath` / `backFallback` / `navigate(-1)` |
@@ -178,7 +174,7 @@ Não aplicável ao shell/placeholder. Listagens ficam nas features hospedadas.
 | Dependência | Tipo |
 |-------------|------|
 | `auth` | Sessão, role, guards |
-| `provider-kyc` | Gate + filtro nav |
+| `provider-kyc` | Gate de conteúdo (sem filtro de menu) |
 | `my-services`, `provider-jobs`, `view-services` | Slots / sheet |
 | Features lazy no router (`chats`, `provider-earnings`, `my-account`, `provider-calendar`, …) | Conteúdo real das rotas |
 | Docs canônicas de domínio | Não duplicar regras: apontar para o módulo da feature |
@@ -211,7 +207,6 @@ Não aplicável ao shell/placeholder. Listagens ficam nas features hospedadas.
 | Chrome mobile | `src/layouts/DashboardLayout/mobileNavigation.config.ts` |
 | Rotas | `src/router.tsx` (bloco `path: 'dashboard'`) |
 | Gate / allowlist | `src/features/provider-kyc/components/ProviderKycGate.tsx`, `constants/kyc.constants.ts` |
-| Filtro nav KYC | `src/features/provider-kyc/hooks/useProviderKycNavItems.ts` |
 | Banner calendário | `src/features/provider-calendar/components/ProviderCalendarEntryBanner.tsx` |
 | Constante rota calendário | `src/features/provider-calendar/constants/routes.ts` |
 
@@ -242,7 +237,7 @@ Evidência: `mobileNavigation.config.ts`, `mobileNavigation.types.ts`.
 
 - [ ] Cliente: bottom nav = Visão geral, Meus Serviços, Conversas, Endereços, Minha conta; Ajuda no overflow.
 - [ ] Prestador ACTIVE: bottom nav = Visão geral, Meus Serviços, Trabalhos, Conversas, Ganhos; Minha conta e Ajuda no overflow.
-- [ ] Prestador não-ACTIVE: só Minha conta na nav; outras rotas mostram UI KYC.
+- [ ] Prestador não-ACTIVE: menu completo igual ao ACTIVE; rotas operacionais mostram UI KYC (exceto `/dashboard/conta*`).
 - [ ] `/dashboard/addresses` (cliente) → “Página em construção.”
 - [ ] `/dashboard/earnings` (prestador ACTIVE) → página real de ganhos (não placeholder).
 - [ ] `/dashboard/chats` → layout real de conversas.

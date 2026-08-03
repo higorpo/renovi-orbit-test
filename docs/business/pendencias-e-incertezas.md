@@ -82,7 +82,7 @@ Também referenciados no módulo matching (fora desta consolidação se já fech
 
 - Prestador e cliente compartilham o layout `/dashboard`; a **especialização** ocorre por submenu + guards aninhados.
 - “Configurações”, “Ajuda”, “Visão geral” no menu são **placeholders** até nova implementação. **Ganhos** (`/dashboard/earnings`) passou a ser feature real (`provider-earnings`) — ver [ganhos-e-liquidacoes](./modulos/provider-earnings/features/ganhos-e-liquidacoes.md). **Calendário** (`/dashboard/services/calendar`) é feature real (`provider-calendar`); entrada via banner em Meus Serviços (prestador), sem item de menu dedicado (PC-02).
-- ~~Prestador compartilha o menu operacional completo independentemente do KYC.~~ **Corrigido (2026-07-30):** sem onboarding `ACTIVE`, o menu do prestador fica só em Minha conta e o shell operacional é bloqueado pelo `ProviderKycGate` — ver [provider-kyc](./modulos/provider-kyc/features/gate-e-acesso-operacional.md).
+- ~~Prestador compartilha o menu operacional completo independentemente do KYC.~~ ~~**Corrigido (2026-07-30):** sem onboarding `ACTIVE`, o menu do prestador fica só em Minha conta e o shell operacional é bloqueado pelo `ProviderKycGate`.~~ **Atualizado (2026-08-03):** menu completo do prestador **sempre** visível (`getDashboardMenu`); o `ProviderKycGate` continua substituindo o **conteúdo** operacional até `ACTIVE` (allowlist `/dashboard/conta*`) — ver [provider-kyc](./modulos/provider-kyc/features/gate-e-acesso-operacional.md). Hook `useProviderKycNavItems` removido.
 
 ## Necessita validação com negócio/produto
 
@@ -90,7 +90,7 @@ Também referenciados no módulo matching (fora desta consolidação se já fech
 - Política de **expiração** de propostas (`expire_stale_provider_proposals`) — frequência de execução (cron) não verificada neste escopo.
 - ~~**Pagamentos e contratos** — apenas planos em `docs/payment-system-*.md`, sem implementação mapeada nas Edge Functions deste tree.~~ **Resolvido (2026-07):** módulo `payments` implementado. Inclui [reconciliacao-e-voids](./modulos/payments/features/reconciliacao-e-voids.md) (2026-08-02). Residual: **PAY-DC** (`deferred_captured`).
 - ~~**Drift de taxas checkout → T-2** — se congelar ou recalcular.~~ **Resolvido (produto):** drift intencional; UI divulga recálculo no momento da cobrança (`PaymentTrustDisclosure`).
-- ~~**Acesso do prestador ao dashboard antes do KYC `ACTIVE`.**~~ **Resolvido (2026-07-30, Fase 2):** shell operacional bloqueado até `ACTIVE`.
+- ~~**Acesso do prestador ao dashboard antes do KYC `ACTIVE`.**~~ **Resolvido (2026-07-30, Fase 2; menu atualizado 2026-08-03):** conteúdo operacional bloqueado até `ACTIVE`; menu completo sempre visível.
 - ~~**Detalhe campo a campo do formulário KYC.**~~ **Resolvido (2026-07-30, Fase 3):** wizard multi-etapas documentado.
 
 ## Inferências explicitamente não comprovadas

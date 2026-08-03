@@ -67,6 +67,7 @@ Telas/fluxos restantes:
 - Nova tela de minha conta
   - Criar telas exclusivas para "ganhos" e para os pagamentos recebidos e enviados do prestador e cliente, se atentando a todos os cenários possíveis de estado de um pagamento (pagamento efetuado, pagamento com reembolso parcial, pagamento com reembolso total etc..)
 - Fluxo de antecipação de recebíveis 
+- Está dando a opçaõ de verificar a conta com código ao invés do link no e-mail, mas no app não tem essa opção. Vamos alterar para só permitir via código, sem link... vai ficar melhor para o nosso fluxo!
 
 Coisas para verificar:
 

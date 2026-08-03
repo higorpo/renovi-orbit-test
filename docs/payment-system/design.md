@@ -2617,7 +2617,7 @@ RPC claim/begin → EF external I/O → RPC commit → RPC enqueue notifications
 | `api/providerKyc.rpc.ts` / `providerKycApiClient.ts` | RPC/Edge names + invoke helpers for KYC | RPC + EF |
 | `api/kyc.api.ts` | Account read, upload Option A, submit + identity upsert, prefill `provider_profiles_private` | Storage + RPC + EF |
 | `components/ProviderKycGate.tsx`, `ProviderKycForm.tsx`, `BankPicker.tsx`, `components/status/*` | Gate until `ACTIVE`, wizard, status UIs | — |
-| `hooks/useProviderKycWizard.ts`, `useDispatchKyc.ts`, `useProviderPaymentAccount.ts`, `useProviderKycNavItems.ts` | Wizard, submit/dispatch, polling, nav filter | via `api/` |
+| `hooks/useProviderKycWizard.ts`, `useDispatchKyc.ts`, `useProviderPaymentAccount.ts` | Wizard, submit/dispatch, polling | via `api/` |
 
 **Types:** `types/paymentApi.types.ts` (`PaymentsApiResult`, `PaymentsApiError`). **Errors:** `utils/paymentApiErrors.ts` (`mapPaymentRpcError`, `parsePaymentRpcDetailObject`).
 
