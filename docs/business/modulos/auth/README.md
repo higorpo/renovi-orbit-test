@@ -61,3 +61,8 @@
 - `supabase/migrations/20260223100000_create_public_profiles.sql`
 - `supabase/migrations/20260224140000_restrict_role_admin_security.sql`
 - `src/router.tsx`
+
+
+## 11. Atualização de auditoria (2026-08-02)
+
+- Revalidado sem drift: escopo, entidades, reCAPTCHA, persistência Capacitor e lacunas de redirect órfão.

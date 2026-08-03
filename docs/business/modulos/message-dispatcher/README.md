@@ -1,119 +1,149 @@
 # Message Dispatcher (Notificações)
 
-## 1. Contexto de negócio
+## 1. Leitura para negócio
 
-O **Message Dispatcher** é o subsistema responsável pelo envio de **notificações multicanal** (e-mail e push) aos usuários da plataforma Renovi. Ele opera inteiramente no backend (Supabase — schema `message_dispatcher`, Edge Functions e cron jobs), sem tela própria no front-end. Outros módulos produzem "intenções de envio" via RPC e o dispatcher se encarrega de agendar, avaliar limites, entregar e rastrear cada mensagem.
+- **Para que serve:** enviar **e-mail** e **push** de forma confiável, com limites anti-spam, horário silencioso, retries e rastreio de abertura/clique.
+- **Quem é afetado:** **todos os usuários** com perfil (destinatários); **módulos produtores** (CNS, matching, payments, KYC, reagendamento, etc.) que ingerem intenções; **ops** (fila, crons, webhooks).
+- **Sem tela própria:** não há rota de UI; o app só participa no **clique de push** (`recordPushClick`).
+- **Não confundir** com **dispatch de pedido** do matching (`service_request_dispatches`) — ver [matching-dispatch](../matching-dispatch/README.md).
 
-## 2. Escopo funcional
+## 2. Visão geral funcional
 
-| Capacidade | Descrição |
-|------------|-----------|
-| Ingestão idempotente | RPC `message_dispatcher_ingest` recebe intenção de envio com chave de idempotência, template e canal. |
-| Máquina de estados (FSM) | Status do dispatch: `PENDING_EVALUATION → SCHEDULED → QUEUED → PROCESSING → DELIVERED / FAILED_*`. Transições validadas por trigger. |
-| Controle de quota | Limites diários por canal (e-mail 5/dia, push 20/dia) e cooldown entre pushes (padrão 1 min). |
-| Horário silencioso | Mensagens entre **22:00** e **06:00** (horário de Brasília) são automaticamente reagendadas para **06:00 BRT** do dia seguinte (ou mesmo dia se < 06:00). Ver [feature: horário silencioso](./features/horario-silencioso.md). |
-| Cancelamento | RPC `message_dispatcher_cancel` permite cancelar dispatches em estados não terminais. |
-| Checkout e lease | Worker consome lote via `message_dispatcher_checkout_batch` com `SKIP LOCKED` e lease temporário. |
-| Report de entrega | Worker reporta sucesso/falha via `message_dispatcher_report_delivery_outcome`; falhas retryable seguem backoff exponencial. |
-| Reconciliação de webhook | Eventos de vendor (Resend, FCM) reconciliados via `message_dispatcher_reconcile_vendor_event` com deduplicação por `vendor_event_id`. |
-| Engagement tracking | Abertura de e-mail (webhook Resend) e clique em push (app) registrados em `message_dispatch_engagements`. |
-| Auditoria | Tabela `message_dispatcher_audit` mantém histórico de transições de status com delta. |
-| Higiene de token FCM | Tokens inválidos detectados no report desabilitam o beacon do dispositivo automaticamente. |
+O **Multichannel Message Dispatcher (MMD)** vive no schema `message_dispatcher`. Fluxo macro:
 
-## 3. Canais suportados
-
-| Canal | Vendor | Observações |
-|-------|--------|-------------|
-| `email` | Resend | Template renderizado na Edge Function `message-dispatcher-worker`. Webhook de delivered/bounce/opened tratados. |
-| `push` | FCM (Firebase Cloud Messaging) | Fan-out por dispositivo; até 10 devices por dispatch (configurável). |
-
-## 4. Limites e constantes operacionais
-
-Valores padrão em `platform_constants`; podem ser ajustados sem deploy.
-
-| Constante | Chave | Padrão |
-|-----------|-------|--------|
-| Limite diário e-mail | `message_dispatcher.email_daily_limit` | 5 |
-| Limite diário push | `message_dispatcher.push_daily_limit` | 20 |
-| Cooldown entre pushes | `message_dispatcher.push_cooldown_minutes` | 1 min |
-| Lease do worker | `message_dispatcher.lease_seconds` | 30 s |
-| Base do backoff | `message_dispatcher.backoff_base_seconds` | 60 s |
-| Máx. devices por dispatch | `message_dispatcher.max_devices_per_dispatch` | 10 |
-| Janela de horário silencioso | (hardcoded) | 22:00–06:00 America/Sao_Paulo |
-
-## 5. Fluxo macro
+1. **Ingest** (`message_dispatcher_ingest`) — intenção idempotente (template + canal + perfil).
+2. **Quota / cooldown / quiet hours / stagger push** — podem resultar em `QUEUED`, `SCHEDULED` ou `FAILED_TERMINAL`.
+3. **Crons** ativam agendados, promovem retries, reclamam leases e invocam o worker.
+4. **Worker** (`message-dispatcher-worker`) — checkout → render → Resend/FCM → report.
+5. **Webhook Resend** — delivered / bounce / opened (engagement).
+6. **App** — clique em push → `message_dispatcher_record_push_click`.
 
 ```mermaid
 flowchart TD
-  CALLER["Módulo chamador (Edge Function, cron, etc.)"]
+  CALLER["Produtor (RPC / Edge / trigger)"]
   INGEST["message_dispatcher_ingest"]
-  QUIET{"Horário silencioso?"}
-  QUOTA{"Quota OK?"}
-  SCHEDULED["SCHEDULED (scheduled_for > now)"]
+  QUIET{"Quiet hours?"}
+  QUOTA{"Quota / cooldown / stagger"}
+  SCHEDULED["SCHEDULED"]
   QUEUED["QUEUED"]
-  FAILED_T["FAILED_TERMINAL (quota)"]
-  CRON_ACT["Cron: activate_scheduled"]
+  FAILED_T["FAILED_TERMINAL"]
+  CRON_ACT["Cron mmd_activate_scheduled"]
   EVAL["evaluate_pending"]
+  CRON_W["Cron mmd_invoke_worker"]
   CHECKOUT["checkout_batch"]
-  WORKER["Worker (Edge Function)"]
+  WORKER["message-dispatcher-worker"]
+  REPORT["report_delivery_outcome"]
   DELIVERED["DELIVERED"]
   FAILED_R["FAILED_RETRYABLE"]
-  REPORT["report_delivery_outcome"]
-  WEBHOOK["Webhook reconcile"]
+  WEBHOOK["webhook-resend → reconcile"]
+  ENG["engagements opened/clicked"]
 
   CALLER --> INGEST
   INGEST --> QUIET
-  QUIET -- Sim --> SCHEDULED
-  QUIET -- Não --> QUOTA
-  QUOTA -- Excedida --> FAILED_T
-  QUOTA -- OK, futuro --> SCHEDULED
-  QUOTA -- OK, agora --> QUEUED
+  QUIET --> QUOTA
+  QUOTA -->|excedida| FAILED_T
+  QUOTA -->|futuro| SCHEDULED
+  QUOTA -->|agora| QUEUED
   SCHEDULED --> CRON_ACT --> EVAL --> QUEUED
-  QUEUED --> CHECKOUT --> WORKER
-  WORKER --> REPORT
-  REPORT -- Sucesso --> DELIVERED
-  REPORT -- Retryable --> FAILED_R --> QUEUED
+  QUEUED --> CRON_W --> CHECKOUT --> WORKER --> REPORT
+  REPORT -->|ok| DELIVERED
+  REPORT -->|retryable| FAILED_R
+  FAILED_R -->|promote_retries| QUEUED
   WEBHOOK --> DELIVERED
+  WEBHOOK --> ENG
+  DELIVERED -.-> ENG
 ```
 
-## 6. Entidades principais
-
-| Tabela (schema `message_dispatcher`) | Papel |
-|--------------------------------------|-------|
-| `message_dispatches` | Registro central de cada envio, com FSM de status. |
-| `message_dispatch_deliveries` | Fan-out por dispositivo (push); snapshot de token FCM. |
-| `message_templates` | Templates de mensagem por canal e chave. |
-| `message_dispatcher_user_limits` | Contadores e timestamps de quota/cooldown por perfil. |
-| `message_dispatcher_audit` | Log de transições de status. |
-| `message_dispatcher_vendor_events` | Deduplicação de webhooks de vendor. |
-| `message_dispatch_engagements` | Tracking de abertura/clique por dispatch. |
-
-## 7. Segurança e permissões
-
-- Todas as RPCs do fluxo core (`ingest`, `evaluate_pending`, `activate_scheduled`, `checkout_batch`, `report_delivery_outcome`, `reconcile_vendor_event`) são **`SECURITY DEFINER`** com acesso restrito a **`service_role`**.
-- `message_dispatcher_cancel` e `message_dispatcher_audit_timeline` permitem **`authenticated`** (com validação de ownership via `auth.uid()`).
-- `message_dispatcher_record_push_click` permite **`authenticated`** com validação de ownership e canal `push`.
-- Tabelas do schema `message_dispatcher` possuem **RLS** habilitado; acesso via RPCs SECURITY DEFINER.
-
-## 8. Edge Functions relacionadas
-
-| Função | Papel |
-|--------|-------|
-| `message-dispatcher-worker` | Consome `checkout_batch`, renderiza templates, envia via Resend/FCM, reporta outcome. |
-| `message-dispatcher-webhook-resend` | Recebe webhooks Resend, valida assinatura, chama `reconcile_vendor_event`. |
-
-## 9. Features documentadas
+## 3. Features do módulo
 
 | Feature | Documento | Status |
 |---------|-----------|--------|
-| Horário silencioso (quiet hours) | [horario-silencioso.md](./features/horario-silencioso.md) | Concluída |
+| Pipeline e FSM | [pipeline-e-fsm.md](./features/pipeline-e-fsm.md) | Documentada |
+| Quotas e canais | [quotas-e-canais.md](./features/quotas-e-canais.md) | Documentada |
+| Horário silencioso | [horario-silencioso.md](./features/horario-silencioso.md) | Documentada |
+| Engagement (push click / e-mail open) | [engagement-push-click.md](./features/engagement-push-click.md) | Documentada |
+
+## 4. Perfis envolvidos
+
+| Papel | Relação com o MMD |
+|-------|-------------------|
+| Destinatário (`profiles.id`) | Recebe e-mail/push; pode cancelar próprio dispatch e registrar clique de push |
+| `service_role` / Edge / cron | Ingest privilegiado, checkout, report, reconcile, disable beacon |
+| Produtores de domínio | Chamam ingest (direto ou via wrappers); **não** mutam FSM pelo client |
+| Ops | Observam fila via `message_dispatcher_stats` / alert views (sem `job_runs`) |
+
+## 5. Principais fluxos
+
+| Fluxo | Resumo |
+|-------|--------|
+| Ingest feliz | Template ativo + quota OK → `QUEUED` ou `SCHEDULED` |
+| Quiet hours | Entrega na janela 22:00–06:00 BRT → reagenda 06:00 + `bypass_limits` |
+| Quota diária | Contagem live 24h → insert já em `FAILED_TERMINAL` com `*_daily_quota_exceeded` |
+| Push stagger | Slot = max(now, last_sent+cooldown, cauda da fila) |
+| Worker | Lease + send + report → `DELIVERED` / `FAILED_*` |
+| Webhook | Svix verify → reconcile (delivered / hard bounce / opened) |
+| Engagement app | Tap na notificação com `data.dispatch_id` → RPC click |
+
+Detalhe: [pipeline-e-fsm](./features/pipeline-e-fsm.md), [quotas-e-canais](./features/quotas-e-canais.md).
+
+## 6. Regras transversais
+
+- Mutações de **status** só via RPCs / triggers; client **não** faz UPDATE direto em `message_dispatches.status`.
+- Enum de canal: **`email` | `push`** apenas.
+- Terminais FSM: `DELIVERED`, `FAILED_TERMINAL`, `CANCELED`.
+- `bypass_limits` pula reavaliação de quota/cooldown (ex.: quiet hours, alguns templates de domínio).
+- Telemetria MMD: schema próprio (`message_dispatcher_stats`, audit) — **não** usa `job_runs` (exceção documentada na regra de crons).
+
+## 7. Entidades
+
+| Tabela / tipo | Papel |
+|---------------|-------|
+| `message_dispatches` | Registro FSM central |
+| `message_dispatch_deliveries` | Fan-out push por device (snapshot FCM no checkout) |
+| `message_templates` | Catálogo `(template_key, channel)` |
+| `message_dispatcher_user_limits` | Âncora FOR UPDATE + cache de contadores / `last_push_sent_at` |
+| `message_dispatcher_audit` | Histórico de transições |
+| `message_dispatcher_vendor_events` | Dedup de webhook por `vendor_event_id` |
+| `message_dispatch_engagements` | opened / clicked (ortogonal à FSM) |
+| `message_dispatcher_stats` | Gauges de fila (cron `mmd_refresh_stats`) |
+
+## 8. Integrações
+
+| Integração | Papel |
+|------------|-------|
+| Resend (+ Inbucket local) | E-mail; webhook delivered/bounce/opened |
+| FCM HTTP v1 | Push por device |
+| `user_device_beacons` | Tokens no checkout; higiene em token inválido |
+| `auth.users.email` | Destinatário de e-mail no checkout |
+| Vault `dispatcher_worker_url` / `dispatcher_cron_secret` | Fan-out HTTP do cron para o worker |
+| Edge `message-dispatcher-ingest` | Ingest autenticado (JWT = `profileId`; `bypass_limits` forçado `false`) |
+| Edge `message-dispatcher-worker` | Entrega |
+| Edge `message-dispatcher-webhook-resend` | Ingress Resend |
+
+`orbit-emit-sentry-alerts` é ponte SQL→Sentry de **ops/observabilidade** (pagamentos/crons), **fora** do pipeline MMD — ver [rastreabilidade § ops](../../rastreabilidade.md#opsobservabilidade--orbit-emit-sentry-alerts).
+## 9. Riscos e lacunas
+
+| Risco / lacuna | Nota |
+|----------------|------|
+| Quiet hours hardcoded | P-08 — ver [horario-silencioso](./features/horario-silencioso.md) |
+| Fuso único BRT | P-09 |
+| Fallback SQL ≠ seed | Se `platform_constants` ausente: cooldown fallback **10** min / lease fallback **30** s; seeds oficiais: cooldown **1**, lease **90** |
+| Ingest Edge vs RPC service_role | Maioria dos produtores usa RPC privilegiada; Edge ingest é caminho autenticado restrito |
+| Webhook FCM | Tabela aceita vendor `fcm`, mas Edge de webhook documentada é só Resend |
 
 ## 10. Evidências
 
 | Artefato | Relevância |
 |----------|------------|
-| `supabase/migrations/20260621100100_create_message_dispatcher_fsm_functions.sql` | FSM, RPCs, quiet hours, quotas |
-| `supabase/functions/message-dispatcher-worker/` | Worker de entrega |
-| `supabase/functions/message-dispatcher-webhook-resend/` | Webhook Resend |
-| `src/features/notifications/` | API client-side para engagement tracking |
-| `supabase/tests/message_dispatcher/` | Testes pgTAP da lógica SQL |
+| `supabase/migrations/20260621100000_create_message_dispatcher_schema_enums_tables.sql` | Schema, enums, constants, engagements |
+| `supabase/migrations/20260621100100_create_message_dispatcher_fsm_functions.sql` | FSM, ingest, cancel, checkout, report, reconcile |
+| `supabase/migrations/20260621100200_create_message_dispatcher_audit_triggers.sql` | Audit |
+| `supabase/migrations/20260621100300_create_message_dispatcher_cron_jobs.sql` | Crons + invoke worker + stats |
+| `supabase/migrations/20260712110000_mmd_push_stagger_scheduled_slots.sql` | Stagger de push (substitui trechos de ingest/evaluate) |
+| `supabase/migrations/20260802270000_lockdown_message_dispatcher_disable_device_beacon.sql` | Lockdown disable beacon |
+| `supabase/functions/message-dispatcher-worker/` | Worker |
+| `supabase/functions/message-dispatcher-webhook-resend/` | Webhook |
+| `supabase/functions/message-dispatcher-ingest/` | Ingest HTTP autenticado |
+| `src/features/notifications/` | `recordPushClick` |
+| `src/lib/push.ts` | Disparo de engagement no tap |
+| `supabase/tests/message_dispatcher/` | pgTAP |

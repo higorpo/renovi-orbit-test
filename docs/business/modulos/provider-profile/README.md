@@ -49,3 +49,8 @@
 
 - `src/features/provider-profile/`
 - `supabase/migrations/20260318100007_get_public_provider_by_slug.sql`
+
+
+## 11. Atualização de auditoria (2026-08-02)
+
+- Revalidado sem drift: `/perfil/:slug`, RPC `get_public_provider_by_slug`, edição fora deste módulo.

@@ -1,153 +1,294 @@
-# Meus Serviços do cliente (Meus Serviços)
+# Meus Serviços (cliente e prestador)
 
-Documentação baseada em `src/features/my-services/` e integração com `view-services`, `negotiation-proposals` e `request-quote`.
-
----
-
-## 1. Visão geral
-
-| Item | Descrição |
-|------|-----------|
-| **Objetivo** | Listar e gerenciar **pedidos** do cliente autenticado: filtros, busca, abas por fase, deep link, sheet de orçamentos e navegação para detalhe em página. |
-| **Rotas** | **`/dashboard/services`** — `ClientMyServicesPage`. **`/dashboard/services/:id`** — `ServiceDetailPage` (`view-services`). |
-| **Menu** | Cliente: **“Meus Serviços”**. Prestador: **“Meus Serviços”** (mesmo path; UI voltada ao cliente). |
-| **Dados** | RPCs `list_services` e `get_service` via `view-services`; cancelamento via `cancel_service_request`. |
+Documentação baseada em `src/features/my-services/`, com dados e detalhe em `view-services`, sheet de orçamentos em `negotiation-proposals`, pagamento manual em `payments` e banner/rota de calendário em `provider-calendar`.
 
 ---
 
-## 2. Arquitetura da página
+## 1. Resumo executivo
 
-| Camada | Responsável |
-|--------|-------------|
-| Página | `ClientMyServicesPage.tsx` — header, busca, filtros, abas, lista, sheet de orçamentos. |
-| Orquestração | `useClientMyServicesPage.ts` — search params, foco, opções de filtro, scroll, navegação para detalhe. |
-| Lista | `useClientMyServicesList.ts` → `useServicesList` (RPC `list_services`). |
-| Filtros | `useClientMyServicesFilters.ts` — estado local + busca debounced. |
-| Cancelamento | `useClientMyServicesCancel.ts` → `useCancelService`. |
-| Card | `ServiceListCard` de `view-services`. |
+Lista unificada **Meus Serviços** em `/dashboard/services`: o cliente acompanha pedidos solicitados (filtros, deep link, sheet de orçamentos, cancelamento, ajuste de pagamento); o prestador acompanha propostas e serviços (mesmos filtros, CTAs de chat/mapa/proposta, banner para calendário). A UI é escolhida por `profile.role` via persistent slots no `DashboardLayout`; o outlet da rota (`MyServicesRouteSlot`) não renderiza conteúdo.
+
+## 2. Objetivo de negócio
+
+- Dar uma visão operacional contínua do funil pós-pedido (cliente) e pós-proposta (prestador).
+- Encaminhar ações críticas sem sair do hub: comparar orçamentos, abrir chat, detalhe, calendário, pagamento falhou.
+- Reduzir atrito de deep link: `?serviceRequestId=` foca um pedido na lista do cliente.
+
+## 3. Localização na plataforma
+
+| Superfície | Path / entry | Observação |
+|------------|--------------|------------|
+| Lista | `/dashboard/services` | Menu “Meus Serviços” (`dashboardMenu.ts`); chrome mobile **tab-root** |
+| Detalhe | `/dashboard/services/:id` | `ServiceDetailShell` (`view-services`); sheet se state de my-services |
+| Calendário prestador | `/dashboard/services/calendar` | `ProviderCalendarPage`; stack mobile título “Calendário”; **não** é pasta `my-services`, mas entrada via banner |
+| Deep link cliente | `/dashboard/services?serviceRequestId=<uuid>` | `SERVICE_REQUEST_FOCUS_QUERY`; helper `getMyServicesPageUrlWithFocus` |
+| CTA novo pedido (cliente) | `/pedir-orcamento` | Header desktop + FAB mobile |
+| Empty prestador | `/dashboard/jobs` | “Ver trabalhos” |
+| Showcase cards (DEV) | Rotas lazy de showcase em `router.tsx` | Fora do fluxo produto |
+
+**Persistent slots:** `ClientMyServicesPersistentSlot` / `ProviderMyServicesPersistentSlot` mantêm a lista montada ao abrir detalhe em sheet (`DashboardLayout`).
+
+## 4. Perfis envolvidos
+
+| Perfil | Usa esta feature? | Quem não usa |
+|--------|-------------------|--------------|
+| `client` | Sim — página cliente | — |
+| `provider` | Sim — página prestador + banner calendário | — |
+| Visitante | Não | Redirecionado por `ProtectedRoute` |
+| `admin` | Sem superfície dedicada no router | — |
+
+## 5. Fluxo funcional principal
+
+```mermaid
+flowchart TD
+  A[/dashboard/services] --> B{profile.role}
+  B -->|client| C[ClientMyServicesPersistentSlot]
+  B -->|provider| D[ProviderMyServicesPersistentSlot]
+  C --> E[ClientMyServicesPage]
+  D --> F[ProviderMyServicesPage]
+  E --> G[MyServicesPageShell]
+  F --> G
+  F --> H[ProviderCalendarEntryBanner]
+  H --> I[/dashboard/services/calendar]
+  G --> J[useMyServicesPageCore]
+  J --> K[useServicesList / list_services]
+  E --> L[ReceivedBudgetDetailsSheet]
+  E --> M[ManualPaymentDialog se FAILED_PERMANENT]
+  F --> N[ProviderServiceProposalDialogs]
+  G --> O[/dashboard/services/:id]
+```
+
+## 6. Fluxos alternativos e exceções
+
+| Fluxo | Comportamento |
+|-------|---------------|
+| Deep link inválido / pedido ausente | Banner: “Não encontramos esse pedido…” + botão “Ver todos os serviços” |
+| Sheet de orçamentos aberto | `document.body` / `html` overflow `hidden` enquanto aberto |
+| Cancelar pedido | Só se `requestStatus === "OPEN"` (ação no card); RPC via `useCancelService` |
+| Chat sem `chatSummary.id` | CTA chat desabilitado: “Conversa ainda não disponível…” |
+| Pagamento sem `contractedServiceId` | Toast: “Não foi possível carregar o pagamento deste serviço.” |
+| Erro ao carregar schedule do modal | Fecha modal + mesmo toast de erro |
+| Erro de lista | `MyServicesErrorState` + “Tentar novamente” |
+| Filtros ativos sem resultados | `MyServicesNoFilterResultsState` + limpar filtros |
+| Lista vazia sem filtros | Empty state por papel (cliente → pedir orçamento; prestador → trabalhos) |
+| Aba Disputas | Sempre vazia de dados (`tabIncludesStatus` false) |
+| Prestador — revisar sem `myProposal.id` | `openReviseProposal` / `openViewProposal` no-op |
+
+## 7. Regras de negócio (numeradas)
+
+1. **Papel define a página:** `profile.role === "provider"` → prestador; caso contrário (com perfil) → cliente (`MyAccount`/`slots` equivalentes em my-services).
+2. **Paginação:** 20 itens por página (`useServicesList`); “Carregar mais” via `fetchNextPage`.
+3. **Busca:** debounce 300 ms antes de ir ao RPC (`SEARCH_DEBOUNCE_MS`).
+4. **Fase / aba:** `statusTabIdToListPhase` — `all` e `dispute` → `p_list_phase` null / sem match; demais mapeiam 1:1.
+5. **Foco (`serviceRequestId`):** conta como filtro ativo; limpar foco remove query; limpar filtros da barra também remove o focus query (cliente).
+6. **Foco sincroniza aba:** `setStatusTabId(statusToTabId(focusedRequest.listPhase))` quando o item focado carrega.
+7. **Scroll ao foco:** só quando loading terminou e `items.length === 1`; elemento `#service-request-{id}`.
+8. **Sheet compare vs history:** `listPhase === "negotiation"` → `compare`; senão → `history` (`getServiceRequestBudgetSheetMode` em `view-services`).
+9. **Labels do CTA de orçamentos:** 1 proposta → “Ver orçamento” / “Ver histórico”; >1 → “Comparar orçamentos” / “Histórico de orçamentos”; desabilitado se `proposalCount <= 0`.
+10. **Cancelar no card:** apenas negociação com `requestStatus === "OPEN"` (secundário “Cancelar pedido”).
+11. **Ajustar pagamento:** `listPhase` in_progress + `contracted.status === PENDING_PAYMENT` + `paymentScheduleState === FAILED_PERMANENT` → CTA primário; prioridade sobre unread.
+12. **Destaque pagamento (cliente):** em `FAILED_PERMANENT`, alerta de falha prevalece sobre unread; nos demais `PENDING_PAYMENT`, unread sobrescreve o destaque de pagamento.
+13. **Destaque pagamento (prestador):** unread sobrescreve pagamento; se não unread e `PENDING_PAYMENT` → destaque “Aguardando pagamento do cliente”.
+14. **Urgência no card:** badge/urgência visual só se `urgency === "high"` (`showUrgency`).
+15. **Proposta expirando (prestador):** `expiredAt` dentro de 3 dias e ainda no futuro → sufixo “Expira em breve” / ênfase attention.
+16. **Banner calendário:** apenas na página do prestador; link para `ROUTE_PROVIDER_CALENDAR` (`/dashboard/services/calendar`).
+17. **Portfólio de CTAs do card:** no máximo 2 ações (primary + secondary); detalhes sempre disponíveis como fallback em vários ramos.
+18. **Categoria no filtro:** valor selecionado é o **título** do serviço enviado como `p_category_title`.
+19. **staleTime da lista:** 60 s; `refetchOnWindowFocus: false`.
+20. **Invalidação pós-pagamento manual / proposta:** invalida `SERVICES_LIST_QUERY_KEY` (e chaves de payment/proposal conforme hook).
+
+## 8. Campos e dados (inputs / shape)
+
+Não há formulário de criação nesta feature. Filtros locais:
+
+| Campo de UI / estado | Tipo | Envio RPC (via `listServices`) |
+|----------------------|------|--------------------------------|
+| Busca | string (debounced) | `p_search` |
+| Aba status | `StatusTabId` | `p_list_phase` (null se all/dispute) |
+| Categoria | título string \| null (`categoryId` no state) | `p_category_title` |
+| Cidade | string \| null | `p_city_name` |
+| Bairro | string \| null | `p_neighborhood` |
+| Data de / até | string \| null | `p_date_from` / `p_date_to` |
+| Com orçamentos/proposta | boolean \| null | `p_has_proposals` |
+| Com imagens | boolean \| null | `p_has_images` |
+| Foco | UUID \| null | `serviceRequestId` → listagem focada |
+
+Labels de “com propostas”: cliente **“Com orçamentos recebidos”**; prestador **“Com proposta enviada”**.
+
+Modelo de card: `ServiceModel` (`view-services`) — título, fase, endereço, contracted, myProposal, chatSummary, contadores de proposta/chat, etc.
+
+## 9. Validações de front-end
+
+- Filtros: sem Zod; selects nativos e toggles booleanos.
+- Ações: guards de disabled (chat sem id; orçamentos com count 0; mapa sem coordenadas).
+- Pagamento manual: exige `contractedServiceId`; schedule só fetch com modal aberto.
+- Prestador revise/view: exige `myProposal.id`.
+
+## 10. Validações de back-end (RPC, RLS, Edge)
+
+Delegadas a `view-services` / migrations:
+
+- `list_services` / `get_service` — escopo por `auth.uid()` + papel.
+- `cancel_service_request` — cancelamento do cliente.
+- Sheet: RPC de compare/histórico em `negotiation-proposals` (ver doc do sheet).
+- Pagamento: `usePaymentSchedule` / fluxos `payment_*` + Edge de cobrança (ver `payments`).
+
+**Evidência parcial neste módulo:** my-services não encapsula SQL; regras de elegibilidade de cancelamento/pagamento estão no backend consumido.
+
+## 11. Status, estados e transições
+
+| `listPhase` / aba | UI |
+|-------------------|-----|
+| `negotiation` | Cards de negociação; sheet **compare** |
+| `in_progress` | Agenda / pagamento / chat |
+| `completed` | Concluído; CTA só detalhes |
+| `cancelled` | Cancelado; CTA só detalhes |
+| `dispute` (aba) | Sem itens |
+| `all` | Todas as fases |
+
+Transições de domínio (OPEN → contratado → etc.) **não** são feitas nesta feature além de cancelar (cliente) e side-effects via dialogs/sheet/detalhe.
+
+## 12. Persistência
+
+| Camada | O quê |
+|--------|--------|
+| Servidor | Pedidos, contratos, propostas, chats (via RPCs) |
+| Cliente | Estado de filtros/busca em memória (não Preferences); TanStack Query cache lista (`SERVICES_LIST_QUERY_KEY`, stale 60s) |
+| URL | `serviceRequestId` no cliente |
+
+## 13. Integrações
+
+| Integração | Papel |
+|------------|-------|
+| `view-services` | Lista, detalhe path, cancel, budget helpers, modal detail state |
+| `negotiation-proposals` | Sheet cliente; getProposalDetail / composer / details dialogs prestador |
+| `chats` | `getChatsPageUrlWithServiceRequestFilter`; `/dashboard/chats/:chatId` |
+| `payments` | `ManualPaymentDialog`, `usePaymentSchedule`, `PAYMENT_SCHEDULE_QUERY_KEY` |
+| `provider-calendar` | Banner + rota calendar |
+| Maps | `openGoogleMaps` + `getServiceCoordinates` (prestador, serviço hoje) |
+
+## 14. Listagens, buscas, filtros, paginação, ordenação
+
+- **Lista:** infinite query, page size 20, botão carregar mais.
+- **Busca:** texto livre debounced 300 ms.
+- **Filtros avançados:** popover (desktop) / sheet (mobile) em `MyServicesFiltersBar`.
+- **Opções de categoria/cidade/bairro:** uniques dos `items` atuais ordenados — **lacuna** se houver mais páginas.
+- **Ordenação:** definida no RPC `list_services` (não reordenada no front desta feature).
+- **Skeletons:** 4 cards (`SKELETON_COUNT`).
+
+## 15. Ações disponíveis
+
+### Cliente (`ClientServiceListCard` / presentation)
+
+| Ação | Pré-condição | Resultado | Erro / disabled |
+|------|--------------|-----------|-----------------|
+| Ver detalhes | Sempre (ramos) | Navigate detalhe + state sheet | — |
+| Comparar / ver orçamentos | `proposalCount > 0` | Abre `ReceivedBudgetDetailsSheet` | Disabled se count 0 |
+| Ver mensagem(ns) | Unread | Chat direto ou lista chats filtrada | — |
+| Cancelar pedido | `OPEN` e sem propostas/unread priorizados | `cancel_service_request` | `isCancelling` |
+| Responder / ver conversa | in_progress | Chat | Sem `chatSummary.id` |
+| Ajustar pagamento | `PENDING_PAYMENT` + `FAILED_PERMANENT` | `ManualPaymentDialog` | Toast se sem contracted id / erro schedule |
+| Novo serviço | Header/FAB/empty | `/pedir-orcamento` | — |
+| Limpar foco | Query focus | Remove `serviceRequestId` | — |
+
+### Prestador (`ProviderServiceListCard`)
+
+| Ação | Pré-condição | Resultado |
+|------|--------------|-----------|
+| Responder / Ver conversa / Ver negociação | Chat disponível | `/dashboard/chats/:id` |
+| Ver proposta | Proposta PENDING/REVISED/hasPending | Dialog detalhes |
+| Revisar proposta | `REVISION_REQUESTED` | Composer com proposta carregada |
+| Abrir no mapa | Serviço **hoje** + coordenadas | Google Maps |
+| Ver detalhes | — | Detalhe sheet/página |
+| Ver calendário | Banner | `/dashboard/services/calendar` |
+| Ver trabalhos | Empty state | `/dashboard/jobs` |
+
+## 16. Dependências
+
+- **Upstream de dados:** `view-services`, RPCs Supabase.
+- **Downstream UI:** `negotiation-proposals`, `chats`, `payments`, `provider-calendar`, `provider-jobs`, `request-quote`.
+- **Shell:** `DashboardLayout`, menu, mobile chrome (`services` tab-root; `services/calendar` stack; `services/:id` sheet/stack).
+
+## 17. Regras implícitas
+
+- `MyServicesRouteSlot` retorna `null` — a lista só aparece se o persistent slot estiver visível.
+- `handleClearFilters` **não** reseta a aba de status nem a busca (só filtros da barra: categoria, cidade, bairro, datas, flags); no cliente, versão da página também limpa focus query.
+- Prestador **não** tem deep link `serviceRequestId` no hook.
+- Card concluído prestador: nota 4.0–4.9 fake por hash do id.
+- Motivos de cancelamento no card prestador: heurísticas de `myProposal` / status (`cancelReason`).
+- Body scroll lock também no sheet de filtros mobile.
+- CTA “Enviar orçamento” **não** aparece no card do prestador em negociação sem proposta — primário é “Ver negociação”.
+
+## 18. Riscos
+
+- Filtros derivados da página carregada podem omitir valores existentes no servidor.
+- Mock de avaliação pode induzir leitura de negócio incorreta se não sinalizado.
+- Doc legado do sheet (status `open`) pode divergir de `listPhase` — preferir código `serviceRequestBudgetAction.ts`.
+- Dependência forte de enriquecimento RPC (`my_proposal`, `chat`, `payment_schedule_state`); se RPC atrasar, cards degradam.
+
+## 19. Evidências
+
+- `src/features/my-services/components/client/ClientMyServicesPage.tsx`
+- `src/features/my-services/components/provider/ProviderMyServicesPage.tsx`
+- `src/features/my-services/hooks/useClientMyServicesPage.ts`, `useProviderMyServicesPage.ts`, `useMyServicesPageCore.ts`, `useMyServicesList.ts`, `useClientCardManualPayment.ts`, `useClientMyServicesCancel.ts`, `useProviderServiceProposalDialogs.ts`
+- `src/features/my-services/utils/clientServiceCardPresentation.ts`, `providerServiceCardPresentation.ts`, `pendingPaymentHighlight.ts`, `providerProposalStatus.ts`
+- `src/features/my-services/constants/routes.ts`, `constants/statusTabs.ts`
+- `src/features/view-services/hooks/useServicesList.ts`, `utils/serviceRequestBudgetAction.ts`
+- `src/features/provider-calendar/components/ProviderCalendarEntryBanner.tsx`
+- `src/router.tsx`, `src/layouts/DashboardLayout/*`
+
+## 20. Pendências
+
+| Item | Nota |
+|------|------|
+| Aba Disputas | Sem implementação de dados |
+| Completude das opções de filtro | Só itens já paginados |
+| Rating mock no card prestador | Substituir por dado real quando existir |
+| Alinhar doc do sheet compare | Atualização cabe ao módulo chats/negotiation-proposals (fora deste escopo de edição forçada) |
+| Showcase DEV | Não documentar como fluxo de negócio |
 
 ---
 
-## 3. Lista e paginação (RPC)
-
-- **Delegação:** `listServices` em `view-services/api/services.api.ts`.
-- **Escopo:** servidor filtra por `auth.uid()` + `profiles.role` (cliente vê só seus SR).
-- **Paginação:** `useInfiniteQuery`, página **20**, `total_count` do RPC.
-- **Fase:** campo `list_phase` no JSON (`negotiation`, `in_progress`, `completed`, `cancelled`) — sem lógica duplicada no front.
-
-**Modo foco (`serviceRequestId` na URL):** a lista chama `get_service` para o ID focado e retorna um único item (demais filtros de aba não restringem o foco na API).
-
----
-
-## 4. Abas de status (`StatusTabId`)
-
-Re-export de `view-services/constants/statusTabs.ts`:
-
-| Tab id | Label UI | Filtro RPC |
-|--------|----------|------------|
-| `all` | Todos | `p_list_phase` null |
-| `negotiation` | Em negociação | `negotiation` |
-| `in_progress` | Em andamento | `in_progress` |
-| `completed` | Concluídos | `completed` |
-| `cancelled` | Cancelados | `cancelled` |
-| `dispute` | Disputas | Sem linhas (reservado) |
-
----
-
-## 5. Busca e filtros
-
-| Filtro | Parâmetro RPC |
-|--------|---------------|
-| Busca | `p_search` |
-| Categoria | `p_category_title` |
-| Cidade | `p_city_name` |
-| Bairro | `p_neighborhood` |
-| Datas | `p_date_from` / `p_date_to` |
-| Com orçamentos | `p_has_proposals` |
-| Com imagens | `p_has_images` |
-
-**Debounce da busca:** 300 ms.
-
-**Opções dos dropdowns:** derivadas dos `items` já carregados — podem ficar incompletas com paginação (lacuna de UX).
-
----
-
-## 6. Deep link e foco
-
-- **Query:** `SERVICE_REQUEST_FOCUS_QUERY` = `serviceRequestId`.
-- **Helper:** `getServiceRequestsPageUrlWithFocus(id)`.
-- **Banner:** `ClientMyServicesFocusBanner`.
-- **Aba:** sincronizada com `statusToTabId(focusedService.listPhase)`.
-
----
-
-## 7. Destaque do card — `PENDING_PAYMENT`
-
-Apresentação montada em `clientServiceCardPresentation.ts` (cliente) e `providerServiceCardPresentation.ts` (prestador), com copy compartilhada em `pendingPaymentHighlight.ts` e ênfase `error` no tema do card do cliente (`clientServiceCardTheme.ts`). Detalhe completo no [README do módulo](../README.md) (§8).
-
-Quando `contracted.status === PENDING_PAYMENT` na listagem (usa `contracted.paymentScheduleState`, vindo de `payment_schedule_state` em `project_service_row`):
+## Anexo A — Destaque `PENDING_PAYMENT` (copy)
 
 | Papel / condição | Título | Descrição | Ênfase |
 |------------------|--------|-----------|--------|
 | Cliente — `FAILED_PERMANENT` | Pagamento falhou | Atualize suas informações de pagamento manualmente para confirmar o serviço. | `error` |
-| Cliente — demais | Aguardando pagamento | Serviço agendado para {data}, pagamento ainda pendente. | `attention` |
-| Prestador | Aguardando pagamento do cliente | Serviço agendado para {data}, pagamento ainda pendente. | `attention` |
+| Cliente — demais | Aguardando pagamento | Serviço agendado para {data}, pagamento ainda pendente. (fallback: “Pagamento ainda pendente.”) | `attention` |
+| Prestador | Aguardando pagamento do cliente | Idem padrão com data / fallback | `attention` |
 
-- **Ícone:** cartão (`payment_pending`) em todos os casos acima.
-- **Prioridade do destaque:** em `FAILED_PERMANENT`, o alerta de pagamento falhou prevalece sobre mensagem não lida. Nos demais casos de `PENDING_PAYMENT`, mensagem não lida ainda sobrescreve o destaque de pagamento.
+Ícone: `payment_pending` (cartão).
 
----
+## Anexo B — Sheet compare / history (ponto de vista my-services)
 
-## 8. Ações por card
+- Componente: `ReceivedBudgetDetailsSheet` no footer do shell cliente.
+- Estado: `useServiceRequestBudgetSheet` (`view-services`).
+- Modo: `compare` se `listPhase === "negotiation"`; senão `history`.
+- Documentação aprofundada do conteúdo do sheet: [comparar-orcamentos-meus-servicos.md](../../chats/features/comparar-orcamentos-meus-servicos.md).
 
-### Ver detalhes
+## Anexo C — Banner calendário prestador
 
-- **Todas as fases:** `navigate(getServiceDetailPath(id))` → `/dashboard/services/:id`.
+- Componente: `ProviderCalendarEntryBanner` (`@/features/provider-calendar`).
+- Texto: “Ver calendário de serviços” / subtítulo sobre agenda por dia ou mês e turnos.
+- Destino: `/dashboard/services/calendar` (`ROUTE_PROVIDER_CALENDAR`).
+- Renderizado no header da `ProviderMyServicesPage` abaixo de `ProviderMyServicesHeader`.
 
-### Ajustar pagamento
+## Anexo D — Checklist QA (cenários)
 
-- **Quando:** fase `in_progress` com `contracted.status === PENDING_PAYMENT` e `paymentScheduleState === FAILED_PERMANENT`.
-- **CTA primário:** label **“Ajustar pagamento”**, intent `adjust_payment`, ícone de cartão (`CreditCard`).
-- **Ao clicar:** abre o `ManualPaymentDialog` (mesmo fluxo de pagamento manual do detalhe do serviço: cartão → parcelas com taxas → confirmar), via `useClientCardManualPayment`.
-- **Secundário:** **“Ver detalhes”**.
-- **Prioridade do CTA:** esta ação tem prioridade sobre mensagem não lida no chat (não usa “Responder” / “Ver conversa com prestador” nesse caso). O destaque visual também prioriza o alerta de pagamento falhou (ver §7).
+- [ ] Cliente: lista vazia → CTA pedir orçamento
+- [ ] Cliente: foco válido / inválido / limpar
+- [ ] Cliente: abas + carregar mais + erro de rede
+- [ ] Cliente: compare (negociação) vs history (outras fases)
+- [ ] Cliente: cancelar OPEN; FAILED_PERMANENT → ajustar pagamento
+- [ ] Prestador: banner calendário → rota calendar (só provider)
+- [ ] Prestador: revisar / ver proposta; mapa só “hoje” com coords
+- [ ] Disputas: lista vazia mesmo com outros itens
+- [ ] Sheet detalhe: lista permanece montada (persistent slot)
 
-### Comparar orçamentos / Histórico (`negotiation-proposals`)
+## 21. Atualização de auditoria (2026-08-02)
 
-- Sheet `ReceivedBudgetDetailsSheet` quando `proposalCount > 0`.
-- Modo compare vs history conforme fase do pedido.
-
-### Cancelar
-
-- RPC `cancel_service_request` via `useCancelService`.
-- Aplicável na fase `negotiation` (pedido ainda aberto).
-
-### Republicar (somente no detalhe)
-
-- Em `/dashboard/services/:id` com `listPhase === "cancelled"`, o cliente vê **"Republicar novo pedido de serviço"** (`view-services` / `useRepublishCancelledService`).
-- Duplica o pedido cancelado em um novo `OPEN` via RPC `republish_cancelled_service_request` (sem abrir o wizard). Não há CTA de republicação no card da listagem.
-
----
-
-## 9. Diagrama
-
-```mermaid
-flowchart LR
-  P[ClientMyServicesPage] --> VS[view-services]
-  VS --> LS[list_services RPC]
-  VS --> GS[get_service RPC]
-  P --> B[ReceivedBudgetDetailsSheet]
-  P --> D[ServiceDetailPage]
-  B --> NP[negotiation-proposals]
-  LS --> SR[(service_requests)]
-  LS --> CS[(contracted_services)]
-```
-
----
-
-## 10. Evidências
-
-- `src/features/my-services/**/*` (inclui `utils/pendingPaymentHighlight.ts`, `clientServiceCardPresentation.ts`, `providerServiceCardPresentation.ts`, `hooks/useClientCardManualPayment.ts`, `components/client/ClientServiceListCard.tsx`)
-- `src/features/view-services/**/*`
-- `supabase/migrations/20260705208000_create_view_services_rpcs.sql`
-- `src/router.tsx`
+- Confirmado persistent slot + `MyServicesRouteSlot` null.
+- Banner calendário prestador evidenciado em `ProviderMyServicesPage`.
+- Modo sheet por `listPhase` (não status legado `open`).
+- CTAs e prioridades de `PENDING_PAYMENT` / unread revalidados em presentation utils.
+- Empty states e labels de filtro por papel documentados.

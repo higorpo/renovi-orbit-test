@@ -33,18 +33,29 @@ Documentação derivada do código da aplicação (front-end React/Vite, Supabas
 | Módulo | Pasta |
 |--------|--------|
 | Endereços | [modulos/addresses](./modulos/addresses/README.md) |
+| Página inicial da aplicação | [modulos/app-home](./modulos/app-home/README.md) |
 | Autenticação e sessão | [modulos/auth](./modulos/auth/README.md) |
-| Meus serviços / pedidos (cliente) | [modulos/my-services](./modulos/my-services/README.md) |
+| Conversas e negociação (CNS) | [modulos/chats](./modulos/chats/README.md) |
+| Dashboard — layout e navegação | [modulos/dashboard-shell](./modulos/dashboard-shell/README.md) |
+| Beacon de dispositivo | [modulos/device-beacon](./modulos/device-beacon/README.md) |
 | Formulários dinâmicos | [modulos/dynamic-form](./modulos/dynamic-form/README.md) |
-| Minha conta | [modulos/my-account](./modulos/my-account/README.md) |
-| Trabalhos e propostas (prestador) | [modulos/provider-jobs](./modulos/provider-jobs/README.md) |
-| Perfil público do prestador | [modulos/provider-profile](./modulos/provider-profile/README.md) |
-| Pedir orçamento | [modulos/request-quote](./modulos/request-quote/README.md) |
-| Message Dispatcher (notificações) | [modulos/message-dispatcher](./modulos/message-dispatcher/README.md) |
 | Matching progressivo / dispatch | [modulos/matching-dispatch](./modulos/matching-dispatch/README.md) |
-| Reagendamento de serviço | [modulos/service-reschedule](./modulos/service-reschedule/README.md) |
-| Credenciamento KYC do prestador | [modulos/provider-kyc](./modulos/provider-kyc/README.md) |
+| Message Dispatcher (notificações) | [modulos/message-dispatcher](./modulos/message-dispatcher/README.md) |
+| Minha conta | [modulos/my-account](./modulos/my-account/README.md) |
+| Meus serviços / pedidos (cliente) | [modulos/my-services](./modulos/my-services/README.md) |
+| Notifications (engagement de push) | [modulos/notifications](./modulos/notifications/README.md) |
 | Pagamentos | [modulos/payments](./modulos/payments/README.md) |
+| Calendário do prestador | [modulos/provider-calendar](./modulos/provider-calendar/README.md) |
+| Ganhos / liquidações | [modulos/provider-earnings](./modulos/provider-earnings/README.md) |
+| Trabalhos e propostas (prestador) | [modulos/provider-jobs](./modulos/provider-jobs/README.md) |
+| Credenciamento KYC do prestador | [modulos/provider-kyc](./modulos/provider-kyc/README.md) |
+| Perfil público do prestador | [modulos/provider-profile](./modulos/provider-profile/README.md) |
+| Permissão de push | [modulos/push-permission](./modulos/push-permission/README.md) |
+| Pedir orçamento | [modulos/request-quote](./modulos/request-quote/README.md) |
+| Reagendamento de serviço | [modulos/service-reschedule](./modulos/service-reschedule/README.md) |
+| Visualização de serviços | [modulos/view-services](./modulos/view-services/README.md) |
+
+> **Nota:** a pasta [modulos/client-budgets](./modulos/client-budgets/README.md) existe apenas como registro de módulo **descontinuado** (removido do código); não entra na tabela acima.
 
 ## Atualização
 

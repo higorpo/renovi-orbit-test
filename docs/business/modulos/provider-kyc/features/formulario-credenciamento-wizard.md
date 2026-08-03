@@ -213,3 +213,7 @@ Breadcrumbs Sentry: `provider_kyc.step_viewed`, `provider_kyc.submit_started`, `
 ## 20. Pendências para validação com negócio/produto
 
 - ~~Lista FEBRABAN curada (subconjunto)~~ **Resolvido:** catálogo via BrasilAPI + fallback JSON local e overrides de nome.
+
+## 21. Atualização de auditoria (2026-08-02)
+
+- Revalidado sem drift: passos `KYC_WIZARD_STEPS` = entity → identity → bank → documents → review; labels e regras PF/PJ/`legal-rep-id` alinhados ao código.

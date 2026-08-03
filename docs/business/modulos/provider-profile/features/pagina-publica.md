@@ -123,3 +123,7 @@ Helpers: `getProviderProfilePath`, `buildProfileUrl` (`provider-profile`).
 - **Portfólio público:** apenas itens com `provider_portfolio_items.visibility = 'public'` entram na resposta da RPC.
 - **Área de atuação pública:** cidade/UF/bairro são agregados por joins de `provider_service_area_neighborhoods`.
 - **CTA da página pública:** botão principal sempre leva para `/pedir-orcamento`.
+
+## 22. Atualização de auditoria (2026-08-02)
+
+- Revalidado sem drift.

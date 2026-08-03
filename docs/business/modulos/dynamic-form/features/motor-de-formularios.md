@@ -4,7 +4,7 @@
 
 - **O que é:** biblioteca de UI + lógica para renderizar **formulários multi-etapa** a partir de um **schema JSON** versionado, com visibilidade condicional, validação por bloco e barra de progresso.
 - **Problema que resolve:** mudar perguntas de serviço **sem alterar código** do wizard principal.
-- **Quem usa:** principalmente o fluxo **Pedir orçamento**; desenvolvedores em **`/demo/form` (somente DEV)**.
+- **Quem usa:** principalmente o fluxo **Pedir orçamento**; desenvolvedores em **`/dev/demo/form` (somente DEV)**.
 - **Resultado esperado:** objeto de dados estruturado + schema/versiono enviados ao backend no pedido.
 
 ## 2. Objetivo de negócio
@@ -19,7 +19,7 @@
 | Aspecto | Detalhe |
 |---------|---------|
 | Módulo | `dynamic-form` |
-| Rota DEV | `/demo/form` |
+| Rota DEV | `/dev/demo/form` |
 | Consumidor principal | `request-quote` Step 2 (`Step2ServiceForm`) |
 | API HTTP própria | Não — schema vem de `getFormById` / serviço |
 
@@ -134,3 +134,8 @@ Os campos **não são fixos**: cada serviço define blocos no JSON. Para documen
 - **Enforcement de formulário ativo no consumo principal:** `useServiceSchema` (request-quote) recusa `form_status !== "active"` com fallback `form_inactive`.
 - **Parser de schema no request-quote:** só aceita JSON objeto com `version = "2.0"` e `steps` array; qualquer outro formato cai em fallback `no_v2_schema`.
 - **Metadados de serviço são normalizados no consumo:** quando ausentes no schema, `categorySlug`/`categoryId` são injetados a partir do serviço selecionado.
+
+## 22. Atualização de auditoria (2026-08-02)
+
+- **Drift:** rota DEV da demo é `/dev/demo/form` (`router.tsx`), não `/demo/form`.
+- Demais regras da auditoria 2026-04-27 revalidadas sem drift adicional (`validateFormSchema`, `useServiceSchema`, schema v2).

@@ -154,3 +154,7 @@ flowchart TD
 - **Ordenação da lista:** endereços vêm com `is_default` primeiro e, em seguida, por `created_at` ascendente.
 - **CEP só autopreenche quando há correspondência completa na base da plataforma:** UF + cidade + bairro precisam existir; caso contrário o retorno é `notAvailable`.
 - **Geodados persistidos no endereço:** quando latitude/longitude existem, o app grava `location` (EWKT SRID 4326) e `h3_index`.
+
+## 22. Atualização de auditoria (2026-08-02)
+
+- Revalidado sem drift.

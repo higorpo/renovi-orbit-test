@@ -49,3 +49,8 @@
 
 - `src/features/dynamic-form/`
 - `supabase/migrations/20260226100000_create_forms.sql`
+
+
+## 11. Atualização de auditoria (2026-08-02)
+
+- Revalidado sem drift no README; rota DEV da demo corrigida no feature (`/dev/demo/form`).

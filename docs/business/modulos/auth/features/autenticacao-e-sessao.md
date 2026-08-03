@@ -25,7 +25,7 @@
 | `/recuperar-senha` | Redefinir senha (token) |
 | `/dashboard/*` | Requer auth + papéis conforme aninhamento |
 
-Arquivos: `src/features/auth/components/*`, `routeGuards.tsx`, `useAuth.tsx`.
+Arquivos: `src/features/auth/components/*`, `routeGuards.tsx`, `AuthProvider.tsx`, `hooks/useAuth.ts`.
 
 ## 4. Perfis envolvidos
 
@@ -71,7 +71,7 @@ flowchart TD
 | Área | Dados típicos | Onde |
 |------|---------------|------|
 | Login | e-mail, senha | `Login` |
-| Cadastro | e-mail, senha (política), nome, telefone, papel | Signup components |
+| Cadastro | e-mail, senha (política), nome; papel via rota (`/cadastro/cliente` vs `/cadastro/profissional`) | Signup components |
 | Reset | e-mail ou nova senha conforme fluxo Supabase | Forgot/Reset |
 
 ## 9. Validações de front-end
@@ -146,7 +146,7 @@ Transição: eventos `onAuthStateChange` do Supabase.
 ## 19. Evidências
 
 - `src/features/auth/components/routeGuards.tsx`
-- `src/features/auth/hooks/useAuth.tsx`
+- `src/features/auth/AuthProvider.tsx`, `hooks/useAuth.ts`
 - `src/features/auth/api/auth.api.ts`, `profile.api.ts`
 - `src/features/auth/utils/passwordPolicy.ts`
 - `src/lib/persistSession.ts`
@@ -207,3 +207,9 @@ Sem sessão de recuperação: cópia + link para `/esqueceu-senha` e login — `
 
 - **Persistência de sessão:** uso de **Capacitor Preferences** (não `localStorage` do browser) para token Supabase e flag `orbit_persist_session` quando “Manter conectado” está ativo; caso contrário, token só em memória até o app encerrar.
 - **Boot:** hidratação de `orbit_persist_session` antes do primeiro render (`main.tsx`).
+
+## 24. Atualização de auditoria (2026-08-02)
+
+- **Drift:** evidências apontavam `useAuth.tsx`; provider está em `AuthProvider.tsx` e o hook em `hooks/useAuth.ts`.
+- **Drift:** cadastro standalone (`signUpSchema`) **não** coleta telefone — só nome, e-mail, senha e termos; papel vem da rota.
+- Regras de redirect, anti-open-redirect, debounce 300ms, timeout 5s e persistência de sessão revalidadas sem drift adicional.

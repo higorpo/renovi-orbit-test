@@ -10,29 +10,43 @@ Este diretório concentra a **documentação funcional e técnica por módulo**,
 | 2 | [request-quote](./request-quote/README.md) | Wizard pedir orçamento | `/pedir-orcamento` | `src/features/request-quote/` | Concluída |
 | 3 | [addresses](./addresses/README.md) | Seleção/CRUD endereços (embutido em fluxos) | *Sem rota dedicada funcional*; menu aponta para placeholder | `src/features/addresses/` | Concluída |
 | 4 | [my-account](./my-account/README.md) | Minha conta cliente/prestador | `/dashboard/conta` | `src/features/my-account/` | Concluída |
-| 5 | [my-services](./my-services/README.md) | Lista de pedidos (shell); sheet compare/histórico | `/dashboard/services` | `src/features/my-services/` | Concluída |
-| 5b | [view-services](./view-services/README.md) | Lista/detalhe unificados (RPC); agnóstico de papel | `/dashboard/services/:id` (+ consumo por my-services) | `src/features/view-services/` | Concluída |
-| 6 | [provider-jobs](./provider-jobs/README.md) | Trabalhos, detalhe, propostas, perguntas | `/dashboard/jobs`, `/dashboard/jobs/:jobId` | `src/features/provider-jobs/` | Concluída |
+| 5 | [my-services](./my-services/README.md) | Lista de pedidos (shell); sheet compare/histórico; banner calendário (prestador) | `/dashboard/services` | `src/features/my-services/` | Concluída |
+| 5b | [view-services](./view-services/README.md) | Lista/detalhe unificados (RPC); `ServiceDetailShell` (página ou sheet) | `/dashboard/services/:id` (+ consumo por my-services / jobs / calendar) | `src/features/view-services/` | Concluída |
+| 6 | [provider-jobs](./provider-jobs/README.md) | Feed de trabalhos (oportunidades); dismiss; propostas via CNS; detalhe via `ServiceDetailShell` / sheet | `/dashboard/jobs` (lista); detalhe `/dashboard/services/:id` | `src/features/provider-jobs/` | Concluída |
 | 7 | [provider-profile](./provider-profile/README.md) | Perfil público do prestador | `/perfil/:slug` | `src/features/provider-profile/` | Concluída |
-| 8 | [dynamic-form](./dynamic-form/README.md) | Motor de formulários + demo DEV | `/demo/form` (somente `import.meta.env.DEV`) | `src/features/dynamic-form/` | Concluída |
-| 9 | [dashboard-shell](./dashboard-shell/README.md) | Placeholders do dashboard (visão geral, endereços, config, ajuda) | `/dashboard`, `/dashboard/addresses`, `/dashboard/settings`, `/dashboard/help` | `src/layouts/DashboardLayout/` | Concluída |
+| 8 | [dynamic-form](./dynamic-form/README.md) | Motor de formulários + demo DEV | `/dev/demo/form` (somente `import.meta.env.DEV`) | `src/features/dynamic-form/` | Concluída |
+| 9 | [dashboard-shell](./dashboard-shell/README.md) | Layout, menu por papel (Conversas / Ganhos), placeholders (visão geral, endereços, config, ajuda); calendar **fora** do menu | `/dashboard`, `/dashboard/addresses`, `/dashboard/settings`, `/dashboard/help` | `src/layouts/DashboardLayout/` | Concluída |
 | 10 | [app-home](./app-home/README.md) | Página inicial mínima | `/` (index) | `src/App.tsx` | Concluída |
-| 11 | [message-dispatcher](./message-dispatcher/README.md) | Notificações multicanal (e-mail, push); horário silencioso, quotas, FSM | *Sem rota de UI; backend-only* | `supabase/migrations/`, `supabase/functions/message-dispatcher-*` | Parcial (quiet hours) |
-| 12 | [chats](./chats/README.md) | Conversas e negociação (CNS): lista, thread, propostas; sheet compare/history | `/dashboard/chats`, `/dashboard/chats/:chatId` | `src/features/chats/`, `src/features/negotiation-proposals/` | Concluída |
-| 13 | [matching-dispatch](./matching-dispatch/README.md) | Dispatch progressivo, lotes, visibilidade, gates; feed via Edge | *Sem rota de UI; backend + Edge `list-provider-opportunities`* | `supabase/migrations/202607110*`, `supabase/functions/list-provider-opportunities/` | Concluída |
-| 14 | [service-reschedule](./service-reschedule/README.md) | Reagendamento de serviço contratado (`PENDING_PAYMENT`/`CONFIRMED`); propor nova data/período; pós-aceite: retarget pré-`PAID` / recaptura longe pós-`PAID` | Embutido em chats e detalhe do serviço | `src/features/service-reschedule/`, migrations `20260802*`, EF `process-far-reschedule-recapture` | Parcial (propor nova data + elegibilidade + pagamento pós-aceite; falta ciclo completo de estados) |
-| 15 | [payments](./payments/README.md) | Checkout, cobrança T-2 (gross-up NetCred), requisito KYC `ACTIVE` para cobrar; histórico cliente/prestador e reembolso; backend de settlements | Checkout pós-aceite; histórico em `/dashboard/conta` | `src/features/payments/`, RPCs `payment_*`, EFs NetCred | Concluída (checkout + histórico/reembolso) |
+| 11 | [message-dispatcher](./message-dispatcher/README.md) | Notificações multicanal (e-mail, push): pipeline/FSM, quotas, quiet hours, engagement | *Sem rota de UI; backend-only* | `supabase/migrations/`, `supabase/functions/message-dispatcher-*` | Concluída (critério doc); P-08/P-09 produto abertos |
+| 12 | [chats](./chats/README.md) | Conversas e negociação (CNS): lista, thread, propostas; sheet compare/history | `/dashboard/chats`, `/dashboard/chats/:chatId` (menu **Conversas**) | `src/features/chats/`, `src/features/negotiation-proposals/` | Concluída |
+| 13 | [matching-dispatch](./matching-dispatch/README.md) | Dispatch progressivo, lotes, visibilidade, gates; feed via Edge viva; legado feed aberto | *Sem rota de UI; backend + Edge `list-provider-opportunities`* | `supabase/migrations/202607110*`, `supabase/functions/list-provider-opportunities/` | Concluída |
+| 14 | [service-reschedule](./service-reschedule/README.md) | FSM reagendamento; propor nova data/período; pós-aceite retarget / far-recapture | Embutido em chats e detalhe do serviço | `src/features/service-reschedule/`, migrations `20260802*`, EF `process-far-reschedule-recapture` | Concluída (critério doc); P-SR-* abertos |
+| 15 | [payments](./payments/README.md) | Checkout, cobrança T-2, KYC `ACTIVE` para cobrar; histórico/reembolso; reconciliação e voids (ops) | Checkout pós-aceite; histórico em `/dashboard/conta` | `src/features/payments/`, RPCs `payment_*`, EFs NetCred | Concluída (checkout + histórico/reembolso + reconciliacao-e-voids) |
 | 16 | [provider-kyc](./provider-kyc/README.md) | Gate do shell até `ACTIVE`; telas de status; menu só Minha conta; wizard de credenciamento (Fase 3) | Embutido no `DashboardLayout` (exceção `/dashboard/conta*`) | `src/features/provider-kyc/` | Concluída (gate Fase 2 + wizard Fase 3) |
-| 17 | [provider-earnings](./provider-earnings/README.md) | Ganhos do prestador: liquidações bancárias (previsto / liquidado / estorno) | `/dashboard/earnings` | `src/features/provider-earnings/` | Concluída |
+| 17 | [provider-earnings](./provider-earnings/README.md) | Ganhos do prestador: liquidações bancárias (previsto / liquidado / estorno) | `/dashboard/earnings` (menu **Ganhos**) | `src/features/provider-earnings/` | Concluída |
+| 18 | [provider-calendar](./provider-calendar/README.md) | Agenda de serviços contratados (lista/grade); só leitura | `/dashboard/services/calendar` (provider); **sem** item de menu; banner em Meus Serviços | `src/features/provider-calendar/` | Concluída |
+| 19 | [device-beacon](./device-beacon/README.md) | Sync FCM + localização operacional do prestador; explainer de permissão | *Sem rota; RootLayout (`DeviceBeaconProvider`)* | `src/features/device-beacon/` | Concluída |
+| 20 | [push-permission](./push-permission/README.md) | Soft prompt de notificações + cooldown 7 dias | *Sem rota; RootLayout (`PushPermissionPromptHost`)* | `src/features/push-permission/` | Concluída |
+| 21 | [notifications](./notifications/README.md) | Cliente `recordPushClick` (engagement de push) | *Sem rota / UI; API + Public API* | `src/features/notifications/` | Concluída |
 
 > **Descontinuado:** [client-budgets](./client-budgets/README.md) — rota `/dashboard/orcamentos` removida; ver `my-services` + `negotiation-proposals`.
+
+### Menu real (evidência `dashboardMenu.ts`)
+
+| Papel | Itens |
+|-------|--------|
+| Cliente | Visão geral · Meus Serviços · **Conversas** · Endereços · Minha conta · Ajuda |
+| Prestador | Visão geral · Meus Serviços · Trabalhos · **Conversas** · **Ganhos** · Minha conta · Ajuda |
+
+Calendário do prestador: rota `/dashboard/services/calendar` **não** entra no menu.
 
 ### Rotas adicionais fora da tabela (evidência direta)
 
 | Rota | Elemento | Observação |
 |------|----------|------------|
 | `/example` | `div` estático | `ProtectedRoute` apenas `client`; não é módulo em `src/features/` |
-| `/dashboard/settings` | `DashboardFakePage` | Ver [dashboard-shell](./dashboard-shell/README.md) |
+| `/dashboard/settings` | `DashboardFakePage` | Ver [dashboard-shell](./dashboard-shell/README.md); fora do menu |
+| `/dev/demo/*` | Demos DEV | `form`, showcases de cards — só com `import.meta.env.DEV` |
 
 ---
 
@@ -41,7 +55,7 @@ Este diretório concentra a **documentação funcional e técnica por módulo**,
 Um módulo conta como documentado quando o conjunto **README do módulo + arquivo(s) em `features/`** cobre, com referência a arquivos de código:
 
 - visão geral e contexto de negócio;
-- telas/rotas (ou ausência de rota quando o módulo é biblioteca);
+- telas/rotas (ou ausência de rota quando o módulo é biblioteca / infra);
 - ações principais e integrações (API, RPC, Edge, storage);
 - campos/validações **onde existem formulários** (ou referência explícita ao schema);
 - regras de negócio verificáveis no código;
@@ -55,51 +69,66 @@ Um módulo conta como documentado quando o conjunto **README do módulo + arquiv
 
 | Métrica | Valor |
 |---------|------:|
-| Módulos identificados no escopo do produto (features + shell + home + backend + CNS + reagendamento + pagamentos + KYC prestador + ganhos) | **17** |
-| Módulos documentados (critério acima) | **17** |
-| **Percentual** | **100%** (cobertura do critério; `service-reschedule` ainda **parcial** no ciclo completo de estados) |
+| Módulos identificados no escopo do produto (features + shell + home + backends MMD/matching + CNS + reagendamento + pagamentos + KYC + ganhos + calendário + beacon + push + notifications) | **22** |
+| Módulos documentados (critério acima) | **22** |
+| **Percentual** | **100%** (critério documental) |
 
-Os diretórios em `src/features/` com produto documentado neste índice incluem **`chats`** e **`negotiation-proposals`** (agrupados em [chats](./chats/README.md)), **`service-reschedule`**, **`payments`**, **`provider-earnings`** e **`provider-kyc`**; **`client-budgets` foi removido**. Acrescentam-se **dashboard-shell**, **app-home**, **message-dispatcher** e **matching-dispatch** (backend). Outras pastas (`device-beacon`, `push-permission`, `notifications`, etc.) aparecem na [rastreabilidade](../rastreabilidade.md) sem README em `modulos/`.
+Contagem: inventário anterior tinha **18** linhas ativas (itens 1–17 + **5b** view-services; a métrica antiga “17” subcontava o 5b) + **4 novos** (`provider-calendar`, `device-beacon`, `push-permission`, `notifications`) = **22** pastas ativas com README (exclui `client-budgets` descontinuado). `negotiation-proposals` permanece agrupado sob [chats](./chats/README.md).
+
+**Notas de profundidade (não quebram o critério):**
+
+- **service-reschedule** — README + 3 features (ciclo-estados, propor-nova-data, integracao-pagamento-pos-aceite). Pendências de produto/UX: P-SR-* (ver README do módulo).
+- **message-dispatcher** — README + 4 features (pipeline, quotas, quiet hours, engagement). P-08 (janela quiet hours hardcoded) e P-09 (fuso único BRT) abertos; engagement documentado no módulo (lado cliente também em **notifications**).
+- **matching-dispatch** — Edge `match-provider-jobs` morta; RPC `match_provider_jobs` órfã; feed vivo = `list-provider-opportunities`.
 
 ---
 
 ## Dependências entre módulos (visão rápida)
 
-- **auth** → base de sessão e guards para todo o dashboard.
+- **auth** → base de sessão e guards para todo o dashboard; logout dispara limpeza de **device-beacon**.
 - **dynamic-form** → usado por **request-quote** (passo 2).
 - **addresses** → usado por **request-quote** (passo 4) e **my-account** (`AddressesSection`).
-- **provider-jobs** → propostas e negociação via **chats** / **negotiation-proposals**; detalhe unificado em **view-services**; feed via **matching-dispatch** (`list-provider-opportunities`).
+- **provider-jobs** → propostas e negociação via **chats** / **negotiation-proposals**; detalhe unificado em **view-services**; feed via **matching-dispatch** (`list-provider-opportunities`); GPS de sort “Mais próximos” via **device-beacon**.
+- **matching-dispatch** → consome localização fresca alimentada por **device-beacon**; notifica via **message-dispatcher**.
 - **negotiation-proposals** → sheet `ReceivedBudgetDetailsSheet` consumido por **my-services**; composer/propostas também em **provider-jobs** e **chats**.
-- **chats** + **negotiation-proposals** → negociação in-app por pedido; integra **message-dispatcher** (notificações), **provider-jobs** (origem do pedido), **my-services** (lista + sheet compare/history).
-- **service-reschedule** → propor/aceitar nova data de serviço contratado; UI embutida em **chats** e **view-services**; duração alinhada à proposta aceita (**negotiation-proposals**).
-- **payments** → checkout pós-aceite (**negotiation-proposals** / **chats**); histórico de captura embutido em **my-account**; cancelamento pós-pagamento via **view-services** / CNS; backend de settlements consumido por **provider-earnings**.
-- **provider-earnings** → liquidações bancárias do prestador (`/dashboard/earnings`); lê RPC/view de settlements; disclosure importado por **payments** / detalhe do serviço.
-- **provider-kyc** → gate do shell do prestador no **dashboard-shell** até onboarding NetCred `ACTIVE`; allowlist **my-account**; wizard de envio (Fase 3); backend KYC/cobrança em **payments**.
+- **chats** + **negotiation-proposals** → negociação in-app; integra **message-dispatcher**, **provider-jobs**, **my-services** / **view-services**, **payments**, **service-reschedule**.
+- **service-reschedule** → UI em **chats** e **view-services**; duração alinhada a **negotiation-proposals**; pós-aceite em **payments**.
+- **payments** → checkout pós-aceite; histórico em **my-account**; cancelamento/reembolso com **view-services** / CNS; settlements → **provider-earnings**; ops em reconciliacao-e-voids.
+- **provider-earnings** → `/dashboard/earnings` (menu prestador); disclosure também em detalhe/payments.
+- **provider-kyc** → gate no **dashboard-shell** até NetCred `ACTIVE`; allowlist **my-account**; backend KYC/cobrança em **payments**.
+- **provider-calendar** → entrada pelo banner em **my-services** (prestador); detalhe em **view-services**; **não** no menu do shell.
+- **device-beacon** → token push + geo operacional; sequência de prompt com **push-permission**; matching e MMD leem `user_device_beacons`.
+- **push-permission** → soft prompt no root; token efetivo via `@/lib/push` + sync no beacon.
+- **notifications** → `recordPushClick` → RPC do **message-dispatcher**; caller nativo em `src/lib/push.ts`.
 
 ---
 
 ## Principais lacunas conhecidas (produto vs código)
 
 1. **`/dashboard/addresses`** renderiza `DashboardFakePage` (“Página em construção”) enquanto a gestão real de endereços está em **Minha conta** e no wizard — evidência: `src/router.tsx`, `MyAccountClientPage.tsx`.
-2. **`/dashboard/services/:id`** é placeholder (`ClientMyServicesDetailPlaceholder`) — evidência: `src/router.tsx`.
-3. **Pós-sucesso do pedido de orçamento (logado):** há menção em documentação de rota de navegação possivelmente inconsistente com o router; validar em `useRequestQuoteSubmit` / `RequestQuote` (pendência de QA).
+2. **`/dashboard/services/:id`** usa **`ServiceDetailShell`** (página full ou `null` quando sheet no layout) — **não** é mais placeholder. Evidência: `src/router.tsx`, `src/features/view-services/components/ServiceDetailShell.tsx`. (Afirmação antiga de `ClientMyServicesDetailPlaceholder` está **obsoleta**.)
+3. **Pós-sucesso do pedido de orçamento (logado):** possível inconsistência de navegação vs router; validar em `useRequestQuoteSubmit` / `RequestQuote` (pendência de QA).
 4. **Papel `admin`:** existe no tipo de perfil; **sem** área administrativa mapeada no `router.tsx` para este repositório.
 5. **`/example`:** rota de exemplo, não documentada como módulo de negócio.
-6. **`/dashboard/chats`:** rota CNS ativa no router e item **Conversas** no menu cliente e prestador (`dashboardMenu.ts`).
+6. **Menu vs rotas:** Conversas e Ganhos estão no menu; calendário e detalhe de serviço são rotas reais **fora** do menu; Visão geral / Ajuda / Configurações / Endereços (menu) ainda placeholder ou sem conteúdo de produto.
+7. **Matching legado:** Edge `match-provider-jobs` morta (pasta vazia); RPC `match_provider_jobs` ainda no schema sem caller de app — ver [matching-dispatch](./matching-dispatch/README.md).
+8. **Engagement push na web:** `src/sw.ts` navega no `notificationclick` mas **não** chama `recordPushClick` — gap coberto em [notifications](./notifications/README.md).
 
 ---
 
 ## Subagentes utilizados nesta rodada de orquestração
 
-Análise em paralelo (exploração baseada em código):
+Análise em paralelo (exploração baseada em código) — rodada histórica + consolidação mapa:
 
-1. **Auth + guards** — rotas guest, `ProtectedRoute` / `GuestOnlyRoute`, telas, APIs `auth.api` / `profile.api`, schemas Zod.
-2. **request-quote + addresses** — passos do wizard, Edge `create-request-quote-order`, `generate-smart-description`, rascunho local, analytics.
-3. **provider-jobs** — RPCs, edge `match-provider-jobs`, filtros, composição de proposta.
-4. **my-services, my-account, provider-profile** — shells, sheets, RPCs cliente, storage buckets.
-5. **dynamic-form + DashboardFakePage + App** — demo DEV, placeholders, home.
+1. **Auth + guards** — rotas guest, `ProtectedRoute` / `GuestOnlyRoute`, telas, APIs.
+2. **request-quote + addresses** — wizard, Edge, rascunho.
+3. **provider-jobs / matching-dispatch** — feed vivo vs legado `match-provider-jobs`.
+4. **my-services, view-services, my-account, provider-profile** — shells, `ServiceDetailShell`, sheets.
+5. **dynamic-form + dashboard-shell + app-home** — demos DEV, menu real, placeholders.
+6. **chats / negotiation-proposals, service-reschedule, payments, provider-kyc, provider-earnings** — CNS, FSM reagendamento, checkout/reconcile, gate KYC, ganhos.
+7. **message-dispatcher + notifications + device-beacon + push-permission + provider-calendar** — MMD, engagement cliente, infra nativa, calendário.
 
-Consolidação e arquivos novos/atualizados: índice (este README), [dashboard-shell](./dashboard-shell/README.md), [app-home](./app-home/README.md), atualização da [matriz de cobertura documental](../matriz-cobertura-documental.md).
+Consolidação transversal (este índice + [mapa](../02-mapa-de-modulos-e-features.md)). Matriz / rastreabilidade / pendências / README raiz: outros workers.
 
 ---
 
@@ -110,3 +139,4 @@ Consolidação e arquivos novos/atualizados: índice (este README), [dashboard-s
 - [Glossário](../glossario-de-negocio.md)
 - [Rastreabilidade](../rastreabilidade.md)
 - [Pendências e incertezas](../pendencias-e-incertezas.md)
+- [Matriz de cobertura documental](../matriz-cobertura-documental.md)

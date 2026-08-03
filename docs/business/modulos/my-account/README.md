@@ -2,58 +2,85 @@
 
 ## 1. Leitura para negócio
 
-- **Para que serve:** configuração central da conta (**cliente** e **prestador**): dados cadastrais, foto, privacidade/LGPD, sessão; no prestador, também identidade legal, **perfil público** (`/perfil/:slug`), **serviços ofertados**, **área de atuação** (bairros) e **portfólio** com imagens.
-- **Quem usa:** usuários com `role` `client` ou `provider` autenticados.
-- **Valor:** qualidade dos dados para matching, confiança na contratação e conformidade (LGPD).
-- **Riscos:** dados sensíveis (CPF/CNPJ); exclusão de conta hoje é **processo via DPO por e-mail**, não botão que apaga dados na API.
+- **Para que serve:** configuração central da conta (**cliente** e **prestador**) em `/dashboard/conta`: dados cadastrais, foto, privacidade/LGPD, sessão; no prestador, identidade legal, perfil público (`/perfil/:slug`), serviços ofertados, área de atuação e portfólio.
+- **Quem usa:** `client` e `provider` autenticados (`ProtectedRoute`).
+- **Valor:** qualidade cadastral para matching/confiança; conformidade LGPD (exportação/exclusão via DPO).
+- **Embutidos (não documentar aqui em profundidade):** endereços (`addresses`) e histórico/cartões (`payments`) — apenas links.
+- **Riscos:** dados sensíveis (CPF/CNPJ); exclusão **não** apaga via API — fluxo por e-mail ao DPO.
 
 ## 2. Visão geral funcional
 
-- **Entrada:** `MyAccountPage` → `MyAccountClientPage` | `MyAccountProviderPage`.
-- **Persistência:** Supabase — `profiles`, `client_profiles_private`, `provider_profiles_private`, `provider_profiles_public`, `provider_offered_services`, `provider_service_area_neighborhoods`, `provider_portfolio_items`; storage `profile-images` e `provider-portfolio-images`.
-- **Padrão de UX:** formulários com **salvamento automático** (debounce **1,5 s** cliente, **2 s** prestador), exceto portfólio e serviços ofertados (ações explícitas ao selecionar/remover).
+- **Entrada:** `MyAccountPage` → `MyAccountClientPage` \| `MyAccountProviderPage` conforme `profile.role`.
+- **Persistência:** `profiles`, `client_profiles_private`, `provider_profiles_private`, `provider_profiles_public`, `provider_offered_services`, `provider_service_area_neighborhoods`, `provider_portfolio_items`; buckets `profile-images` e `provider-portfolio-images`.
+- **UX:** auto-save (debounce **1,5 s** cliente, **2 s** prestador); portfólio e serviços ofertados com ações explícitas; texto “As alterações são salvas automaticamente.”
 
-## 3. Features
+## 3. Features do módulo
 
 | Feature | Documento |
 |---------|-----------|
-| Minha conta (telas, campos, validações, mensagens, APIs) | [features/minha-conta.md](./features/minha-conta.md) |
+| Minha conta (telas, campos, validações, seções por papel) | [features/minha-conta.md](./features/minha-conta.md) |
 
-## 4. Rota e guard
+## 4. Perfis envolvidos
 
-| Rota | Guard |
+| Perfil | `/dashboard/conta` | Seções exclusivas |
+|--------|--------------------|-------------------|
+| Cliente | Sim | Endereços embutidos, CPF privado, cartões salvos, histórico pagamentos (`role="client"`) |
+| Prestador | Sim | PF/PJ, legal, ofertados, perfil público, área, portfólio, histórico recebimentos (`role="provider"`) |
+| Prestador sem KYC `ACTIVE` | Sim (allowlist `ProviderKycGate`) | Logout/ajustes enquanto shell operacional bloqueado — ver [provider-kyc](../provider-kyc/features/gate-e-acesso-operacional.md) |
+
+## 5. Principais fluxos
+
+1. Abrir conta → carregar perfil (+ privado/público no prestador).
+2. Editar campos → debounce → Zod → persistência por grupos.
+3. Foto → upload/remove storage + path em `profiles`.
+4. Cliente: gerenciar endereços / cartões / ver histórico (features externas embutidas).
+5. Prestador: ofertados, área, portfólio, link público; histórico de recebimentos embutido.
+6. Privacidade / exclusão → mailto DPO; logout → `signOut`.
+
+## 6. Regras transversais
+
+- E-mail Auth **somente leitura** na UI.
+- Slug público: gerado na primeira definição “real” de `display_name` (quando slug ainda é null/`providerId`); depois de slug real, mudança de nome **não** regenera slug.
+- Política de privacidade: link só se `VITE_MAIN_SITE_URL`; senão “Política de privacidade em breve.”
+- `DeleteAccountDialog` (digitar EXCLUIR) existe no código mas **não** é usado por `DangerZoneSection`.
+
+## 7. Entidades
+
+| Tabela / bucket | Uso |
+|-----------------|-----|
+| `profiles` | Nome, telefone, foto, role |
+| `client_profiles_private` | CPF cliente |
+| `provider_profiles_private` | PF/PJ e documentos |
+| `provider_profiles_public` | slug, display_name, bio, visibility |
+| `provider_offered_services` | Catálogo escolhido |
+| `provider_service_area_neighborhoods` | Bairros |
+| `provider_portfolio_items` | Portfólio |
+| Storage `profile-images` / `provider-portfolio-images` | Imagens |
+
+## 8. Integrações
+
+| Módulo | Uso nesta tela |
+|--------|----------------|
+| `auth` | `useAuth`, `profileApi.updateProfile`, `signOut` |
+| `addresses` | `AddressesSection` (só cliente) — ver [addresses](../addresses/README.md) |
+| `payments` | `SavedCardsList` (cliente) + `PaymentHistorySection` (ambos) — ver [historico-e-reembolso](../payments/features/historico-e-reembolso.md) |
+| `request-quote` | Estilo de card em ofertados (`getServiceCardStyle`) |
+| `provider-profile` | Página pública `/perfil/:slug` (destino do link) |
+| `provider-kyc` | Allowlist da rota conta |
+| `provider-earnings` | Liquidações **não** nesta tela — menu Ganhos |
+
+## 9. Riscos e lacunas
+
+| Item | Status |
 |------|--------|
-| `/dashboard/conta` | `ProtectedRoute` com `allowedRoles={['client', 'provider']}` (`src/router.tsx`) |
+| Exclusão de conta | Só orientação DPO; `DeleteAccountDialog` morto/reservado |
+| Limite máx. imagens por item de portfólio | Não explícito no front (só 5 MB/arquivo) |
+| Erro de validação de foto no seletor | Retorno silencioso sem toast em `AccountSummaryCard` |
+| Rota `/dashboard/addresses` | Fake page — gestão real só em Minha conta |
 
-**Prestador sem KYC `ACTIVE`:** esta rota (e paths aninhados sob `/dashboard/conta/`) permanece acessível pelo allowlist do `ProviderKycGate` — ponto de saída para logout e ajustes de conta enquanto o restante do painel operacional está bloqueado. Ver [provider-kyc](../provider-kyc/features/gate-e-acesso-operacional.md).
+## 10. Evidências
 
-## 5. Mapa rápido de componentes
-
-| Componente | Uso |
-|------------|-----|
-| `AccountSummaryCard` | Avatar, nome, e-mail, “cliente desde” / “no ar desde”, foto, link público (prestador) |
-| `DadosPessoaisSection` | Nome completo + e-mail somente leitura |
-| `ContatoIdentidadeSection` | Cliente: telefone + CPF |
-| `EntityTypeSection` / `LegalIdentitySection` | Prestador: PF/PJ e documentos |
-| `OfferedServicesSection` | Busca e chips de `platform_services` |
-| `PublicProfileSettingsSection` + `ServiceAreaField` | Nome profissional, bio, visibilidade, bairros |
-| `PortfolioManagementSection` | CRUD e ordenação de itens + imagens |
-| `PrivacySection` / `DangerZoneSection` / `LogoutSection` | LGPD, exclusão orientada ao DPO, logout |
-| `AddressesSection` | Apenas **cliente** (feature `@/features/addresses`) |
-| `SavedCardsList` / `PaymentHistorySection` | Cliente: cartões salvos + histórico de pagamentos (com breakdown de reembolso). Prestador: histórico de **recebimentos na captura** (não liquidação bancária — ver [provider-earnings](../provider-earnings/README.md)). Feature `@/features/payments` — ver [historico-e-reembolso](../payments/features/historico-e-reembolso.md). Erros de adicionar/remover cartão: mensagens amigáveis pt-BR ([checkout-e-cobranca](../payments/features/checkout-e-cobranca.md#mensagens-de-erro-na-ui-pt-br)). |
-
-## 6. Hooks principais (orquestração)
-
-`useAccountProfile`, `useClientPrivateProfile`, `useUpdateAccountProfile`, `useProviderProfile`, `useUpdateProviderProfile`, `useOfferedServices`, `usePortfolioItems`, `useProfilePhotoMutation`, `useProfileImageUrl`.
-
-## 7. Constantes relevantes (`constants.ts`)
-
-- `PROFILE_IMAGE_MAX_BYTES` = 2 MB; `PROVIDER_PORTFOLIO_IMAGE_MAX_BYTES` = 5 MB.
-- `DPO_EMAIL` = `dpo@renovi.com.br`.
-- `PRIVACY_POLICY_URL` depende de `VITE_MAIN_SITE_URL`.
-
-## 8. Evidências
-
-- Pasta: `src/features/my-account/`
-- Documento detalhado: [features/minha-conta.md](./features/minha-conta.md)
-- Migrações típicas: `20260318100000_*` … `20260318100010_*` (perfil cliente/prestador; ver repositório)
+- `src/features/my-account/`
+- `src/router.tsx` — `path: 'conta'`
+- Detalhe: [features/minha-conta.md](./features/minha-conta.md)
+- Constantes: `constants.ts` (2 MB foto, 5 MB portfólio, `dpo@renovi.com.br`)

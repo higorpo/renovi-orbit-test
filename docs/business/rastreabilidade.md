@@ -2,6 +2,8 @@
 
 Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linhas podem referir-se a múltiplos documentos derivados.
 
+**Última auditoria transversal:** 2026-08-02 (spot-check auth/addresses/dynamic-form/provider-profile/KYC-wizard; ops `orbit-emit-sentry-alerts`; módulos calendar/device-beacon/push/notifications e correlatos anteriores).
+
 ## Núcleo de aplicação e roteamento
 
 | Artefato | Uso na documentação |
@@ -20,7 +22,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | Artefato | Uso na documentação |
 |----------|---------------------|
 | `src/features/auth/components/routeGuards.tsx` | `ProtectedRoute`, `GuestOnlyRoute` |
-| `src/features/auth/hooks/useAuth.tsx` | Sessão, redirect por papel |
+| `src/features/auth/AuthProvider.tsx`, `hooks/useAuth.ts` | Sessão, redirect por papel |
 | `src/features/auth/types/auth.types.ts` | `ProfileRole`, tipos de perfil |
 | `src/features/auth/api/auth.api.ts` | Operações Supabase Auth |
 | `src/features/auth/api/profile.api.ts` | Perfil, bloqueio de promoção admin |
@@ -33,7 +35,11 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 |-------|------------------------------|--------------|
 | `addresses/` | `api/addresses.api.ts`, `api/statesAndCities.api.ts` | `AddressSelectionStep`, `AddressesSection`, `AddressFormDialog` |
 | `my-services/` | hooks page/list/filters/cancel (delegam a `view-services`); `pendingPaymentHighlight.ts`, `clientServiceCardPresentation.ts`, `providerServiceCardPresentation.ts` | `ClientMyServicesPage` / `ProviderMyServicesPage`, cards com highlight `PENDING_PAYMENT`, `ReceivedBudgetDetailsSheet` via `negotiation-proposals` |
-| `view-services/` | `api/services.api.ts` (RPC `get_service`, `list_services`, `cancel_service_request`, `republish_cancelled_service_request`); hooks list/detail/cancel/republish | `ServiceDetailPage`, `ServiceDetailClientActions` (CTA republicar), `ServiceListCard`, `ServiceSections` |
+| `view-services/` | `api/services.api.ts` (RPC `get_service`, `list_services`, `cancel_service_request`, `republish_cancelled_service_request`); hooks list/detail/cancel/republish | `ServiceDetailShell` (rota `/dashboard/services/:id` — **não** placeholder), `ServiceDetailPage`, `ServiceDetailClientActions`, `ServiceListCard`, `ServiceSections` |
+| `provider-calendar/` | `api/providerCalendar.api.ts` (RPC `list_provider_scheduled_services`); hooks de intervalo/vista | `ProviderCalendarPage` (`/dashboard/services/calendar`); banner de entrada em `my-services` |
+| `device-beacon/` | `api/deviceBeacon.api.ts`, `deviceBeaconHttp.api.ts`; `useProviderLocationTracking`; `syncSchedule.ts` / `locationSync.ts` | `DeviceBeaconProvider` (RootLayout); dialog de permissão de localização (prestador) |
+| `push-permission/` | `utils/pushPermissionPrompt.storage.ts`; hooks/host do soft prompt | `PushPermissionPromptHost` (RootLayout); cooldown Preferences |
+| `notifications/` | `api/engagementTracking.api.ts` (`recordPushClick`) | Sem UI — consumido por `src/lib/push.ts` (listeners nativos) |
 | `dynamic-form/` | — | `DynamicForm`, `FormDemoPage` |
 | `my-account/` | `api/*Profile*.api.ts`, `portfolio.api.ts`, `offeredServices.api.ts` | `MyAccountPage`, `MyAccountClientPage`, `MyAccountProviderPage`, `ServiceAreaField` |
 | `provider-jobs/` | `api/providerJobs.api.ts`, `dismissOpportunity.api.ts`; propostas via `negotiation-proposals` | `ProviderJobsPage`, `JobCard`; detalhe via `view-services` |
@@ -41,7 +47,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `request-quote/` | `api/createRequestQuoteOrder.api.ts`, `smartDescription.api.ts`, `services.api.ts`, `forms.api.ts`; hooks submit/navigation/draft/IA | `RequestQuote.tsx`, passos 1–5, `ConfirmEmailScreen`, `TrustSidebar`; rascunho `requestQuoteDraft.persistence.ts` |
 | `chats/` | `api/chats.api.ts`, `chats.rpc.ts`; hooks lista, thread, mensagens, Realtime | `ChatListPage`, `ChatScreen`, `ChatsLayout` |
 | `negotiation-proposals/` | `api/proposals.api.ts`, `api/serviceRequestBudgetCompare.api.ts`, `proposals.rpc.ts`; RPCs `create_provider_proposal`, `get_proposal_detail_for_provider`, `get_proposal_detail_for_participant`; countdown `useProposalCountdown`, `ProposalCountdownBanner` | `ProposalComposerDialog`, `AcceptProposalDialog`, `ReceivedBudgetDetailsSheet`, composer em jobs |
-| `service-reschedule/` | `api/serviceReschedule.api.ts`; hooks mutações/detalhe; `deriveRescheduleDateMode`, `mapRescheduleSnapshot` | `ProposeRescheduleDialog` (inclui lembrete dispensável `ProposeRescheduleFlowReminder`), `RequestRescheduleDialog`, cards/ações no chat e no serviço contratado |
+| `service-reschedule/` | `api/serviceReschedule.api.ts`; hooks mutações/detalhe; `deriveRescheduleDateMode`, `mapRescheduleSnapshot`; FSM em docs `ciclo-estados-reagendamento.md` | `ProposeRescheduleDialog` (inclui lembrete dispensável `ProposeRescheduleFlowReminder`), `RequestRescheduleDialog`, cards/ações no chat e no serviço contratado |
 | `payments/` | APIs checkout/cartões/histórico/cobrança; RPCs `payment_*` | Checkout stepper, `ManualPaymentDialog`, histórico em Minha conta |
 | `provider-earnings/` | `api/settlements.api.ts`; `useProviderSettlements`; disclosure D+30 / `settling_at` | `EarningsPage`, filtros Previsto/Liquidado/Estorno, `ProviderSettlementDisclosure` |
 | `provider-kyc/` | `api/kyc.api.ts`, `providerKyc.rpc.ts`, `brazilianBanks.api.ts`; hooks `useProviderPaymentAccount`, `useProviderKycNavItems`, `useProviderKycWizard`, `useDispatchKyc`, `useBrazilianBanks` | `ProviderKycGate`, `ProviderKycForm`, `BankPicker`, `ProviderKycWizardStepContent`, telas `components/status/*` |
@@ -62,14 +68,35 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 |----------|---------------------|
 | `supabase/functions/create-request-quote-order/index.ts` (+ módulos) | Criação atômica de pedido, fotos, rate limit |
 | `supabase/functions/generate-smart-description/*` | IA, prompts, uso |
-| `supabase/functions/match-provider-jobs/index.ts` | *(Legado — removido)* Lista aberta de jobs |
+| `supabase/functions/match-provider-jobs/` | *(Legado — código removido; pasta vazia residual)* Feed aberto; RPC SQL `match_provider_jobs` ainda no schema (P-MD-04) |
 | `supabase/functions/list-provider-opportunities/*` | Feed progressivo do prestador (visibilidade + cursor) |
 | `supabase/functions/verify-recaptcha/index.ts` | Validação Google |
-| `supabase/functions/_shared/*` | CORS, rate limit, tipos |
+| `supabase/functions/_shared/*` | CORS, rate limit, tipos, payment shared |
+| `supabase/functions/message-dispatcher-ingest/*` | Ingest HTTP autenticado → `message_dispatcher_ingest` (JWT = profileId) |
 | `supabase/functions/message-dispatcher-worker/*` | Worker de entrega multicanal (Resend/FCM) |
 | `supabase/functions/message-dispatcher-webhook-resend/*` | Webhook Resend (delivered, bounce, opened) |
 | `supabase/functions/chat-upload-media/*` | Upload de mídia em conversa CNS |
-| `supabase/functions/cns_process_domain_events/*` | Processamento de `domain_events` → MMD |
+| `supabase/functions/tokenize-payment-card/` | Tokenização NetCred (merchant plataforma) |
+| `supabase/functions/manual-charge-payment/` | Cobrança manual + reconcile anti double-charge |
+| `supabase/functions/schedule-netcred-charges/` | Cron T-2 |
+| `supabase/functions/reconcile-netcred-payments/` | Reconcile gateway / crash recovery reembolso |
+| `supabase/functions/reconcile-inanalysis-auto-cancel-voids/` | Void pós auto-cancel de `IN_ANALYSIS`; outcome `deferred_captured` (PAY-DC) |
+| `supabase/functions/process-refund/` | Prepare → NetCred refund → commit |
+| `supabase/functions/process-far-reschedule-recapture/` | Recaptura longe pós-`PAID` (reagendamento) |
+| `supabase/functions/netcred-webhook/` | Webhook NetCred (pagamento + payout) |
+| `supabase/functions/sync-netcred-settlements/` | Reconcile GraphQL de settlements |
+| `supabase/functions/detect-netcred-onboarding/` | Detecção onboarding KYC NetCred |
+| `supabase/functions/dispatch-kyc-email/` | E-mail ops credenciamento |
+| `supabase/functions/orbit-emit-sentry-alerts/` | Ponte cron/SQL → Sentry (ops; ver § abaixo) |
+
+## Ops/observabilidade — `orbit-emit-sentry-alerts`
+
+**Evidência parcial** (sem regra de negócio de produto; não é módulo de feature).
+
+- **Papel:** Edge interna (`POST`, auth `ORBIT_CRON_SECRET` via `validateOrbitCronAuth`) que recebe `{ alerts: [...] }` e despacha para Sentry (`dispatchOrbitSentryAlerts` / matrix de pagamento + alertas genéricos `level`+`message`).
+- **Produtores (SQL):** `orbit_post_sentry_alerts` → `orbit_invoke_edge_function('orbit-emit-sentry-alerts')`; crons de pagamento emitem kinds como `auto_cancel`, `webhook_dead_letter`, spikes `webhook_auth_fail_spike` / `failed_permanent_spike`, e payloads genéricos (ex. far-reschedule stale).
+- **Resposta:** `{ received, dispatched }`; sem efeito em FSM de pedidos, MMD ou UX.
+- **Artefatos:** `supabase/functions/orbit-emit-sentry-alerts/`, `_shared/observability/generic-sentry-alerts.ts`, migrations `20260801620000_*` / `20260801690000_*`; detalhe operacional em `docs/payment-system/payment-job-runs-monitoring.md`.
 
 ## CNS — conversas e negociação
 
@@ -90,11 +117,28 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 
 | Artefato | Uso na documentação |
 |----------|---------------------|
+| `docs/business/modulos/message-dispatcher/` | README + features pipeline/FSM, quotas, quiet hours, engagement |
 | `supabase/migrations/20260621100100_create_message_dispatcher_fsm_functions.sql` | FSM, RPCs core (ingest, cancel, checkout, report, reconcile), quiet hours, quotas |
+| `supabase/functions/message-dispatcher-ingest/` | Ingest autenticado |
+| `supabase/functions/message-dispatcher-worker/` | Worker checkout → send → report |
+| `supabase/functions/message-dispatcher-webhook-resend/` | Webhook Resend |
 | `supabase/tests/message_dispatcher/quiet_hours_helpers_test.sql` | Testes pgTAP dos helpers de horário silencioso |
 | `supabase/tests/message_dispatcher/quiet_hours_ingest_reschedule_test.sql` | Testes pgTAP do reagendamento no ingest |
 | `supabase/tests/message_dispatcher/quiet_hours_evaluate_pending_test.sql` | Testes pgTAP da rede de segurança no evaluate_pending |
 | `src/features/notifications/api/engagementTracking.api.ts` | API client-side para registro de push click |
+| `docs/business/modulos/notifications/` | Engagement push (cliente); N-01 web |
+
+## Calendário, beacon e permissão de push
+
+| Artefato | Uso na documentação |
+|----------|---------------------|
+| `docs/business/modulos/provider-calendar/` | README + [calendario-do-prestador](./modulos/provider-calendar/features/calendario-do-prestador.md) |
+| `src/features/provider-calendar/` | Página, API RPC, hooks de vista lista/grade |
+| `docs/business/modulos/device-beacon/` | README + [rastreamento-dispositivo](./modulos/device-beacon/features/rastreamento-dispositivo.md) |
+| `src/features/device-beacon/` | Provider, geo, Preferences `orbit_device_beacon_last_sync_v1` |
+| `docs/business/modulos/push-permission/` | README + [prompt-e-cooldown](./modulos/push-permission/features/prompt-e-cooldown.md) |
+| `src/features/push-permission/` | Soft prompt + cooldown `orbit_push_permission_prompt_dismissed_at` |
+| `src/lib/push.ts` | Setup FCM / listeners nativos → `recordPushClick` |
 
 ## Bibliotecas transversais
 
@@ -115,10 +159,10 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `src/lib/persistSession.ts` | Chave `orbit_persist_session`; hydrate no boot |
 | `src/lib/capacitor/constants.ts` | Cor de marca `#0F2F3A` (splash / tema) |
 | `capacitor.config.ts` | `appId` `br.com.renovi.orbit`, plugins `SystemBars`, `SplashScreen`, `Keyboard`; `server.url` aponta para dev local (evidência de ambiente de desenvolvimento) |
-| `src/features/device-beacon/hooks/useProviderLocationTracking.ts` | Beacon + background geo (Android) → `user_device_beacons` |
+| `src/features/device-beacon/hooks/useProviderLocationTracking.ts` | Beacon + background geo (Android) → `user_device_beacons` — ver [device-beacon](./modulos/device-beacon/README.md) |
 | `src/features/device-beacon/utils/locationSync.ts` | Debounce sync de localização operacional |
 | `src/features/device-beacon/utils/syncSchedule.ts` | Snapshots de sync em Preferences (`orbit_device_beacon_last_sync_v1`) |
-| `src/features/push-permission/utils/pushPermissionPrompt.storage.ts` | Cooldown do prompt de push (`orbit_push_permission_prompt_dismissed_at`) |
+| `src/features/push-permission/utils/pushPermissionPrompt.storage.ts` | Cooldown do prompt de push (`orbit_push_permission_prompt_dismissed_at`) — ver [push-permission](./modulos/push-permission/README.md) |
 | `e2e/fixtures/auth.fixture.ts`, `e2e/helpers/preferencesStorage.ts` | `seedSession` grava em `localStorage` com prefixo `CapacitorStorage.` (espelho do fallback web do plugin) |
 | `src/index.css` | `padding-top` com `--safe-area-inset-top` injetado pelo SystemBars no Android WebView |
 | `android/app/src/main/res/values/colors.xml`, `drawable/splash.xml` | Splash nativo Android alinhado à cor de marca |
@@ -128,7 +172,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 
 | Artefato | Uso na documentação |
 |----------|---------------------|
-| `docs/business/modulos/service-reschedule/` | README (elegibilidade; mensagem SYSTEM; relação com `payments`) + features propor nova data e [integração pagamento pós-aceite](./modulos/service-reschedule/features/integracao-pagamento-pos-aceite.md) |
+| `docs/business/modulos/service-reschedule/` | README + [propor-nova-data](./modulos/service-reschedule/features/propor-nova-data.md) + [ciclo-estados-reagendamento](./modulos/service-reschedule/features/ciclo-estados-reagendamento.md) + [integração pagamento pós-aceite](./modulos/service-reschedule/features/integracao-pagamento-pos-aceite.md) |
 | `docs/cancelamento-reagendamento-servicos/CONTEXT.md` | Glossário de domínio (modo de data; prestador em `PENDING_PAYMENT`/`CONFIRMED`; aceite + ramificação pós-`PAID` perto/longe) |
 | `docs/cancelamento-reagendamento-servicos/details.md` | Fluxo de produto; exemplos de mensagem automática no pedido (com/sem `Observação:`); regra do prestador sem janela de 48h |
 | `src/features/service-reschedule/utils/deriveRescheduleDateMode.ts` | Data única vs período a partir de `duration_unit`/`duration_value` |
@@ -164,7 +208,8 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 
 | Artefato | Uso na documentação |
 |----------|---------------------|
-| `docs/business/modulos/payments/` | README + checkout + [historico-e-reembolso](./modulos/payments/features/historico-e-reembolso.md) |
+| `docs/business/modulos/payments/` | README + checkout + [historico-e-reembolso](./modulos/payments/features/historico-e-reembolso.md) + [reconciliacao-e-voids](./modulos/payments/features/reconciliacao-e-voids.md) |
+| `supabase/functions/reconcile-inanalysis-auto-cancel-voids/` | Void pós-`IN_ANALYSIS` / `deferred_captured` |
 | `docs/business/modulos/provider-earnings/` | README + [ganhos-e-liquidacoes](./modulos/provider-earnings/features/ganhos-e-liquidacoes.md) |
 | `docs/payment-system/design.md` | Design normativo (§3.13 views de histórico + `payment_settlement_movements`; §4.8 reembolso; §4.3.1 fórmula de taxas) |
 | `docs/payment-system/payments-api.md` §10 | Catálogo `PAYOUT_*` + `PayoutPayload` + enums de movement |

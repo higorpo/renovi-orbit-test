@@ -61,3 +61,8 @@
 - `supabase/migrations/20260226100200_create_client_addresses.sql`
 - `src/router.tsx` (rota placeholder)
 - `src/features/my-account/components/MyAccountClientPage.tsx` (`AddressesSection`)
+
+
+## 11. Atualização de auditoria (2026-08-02)
+
+- Revalidado sem drift: CRUD em `client_addresses`, uso real em Minha conta / pedido, rota `/dashboard/addresses` placeholder.

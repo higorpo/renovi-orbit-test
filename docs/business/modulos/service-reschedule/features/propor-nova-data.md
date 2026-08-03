@@ -1,142 +1,204 @@
 # Propor nova data (reagendamento)
 
+Documentação baseada em `ProposeRescheduleDialog`, formulários Zod, `_cns_validate_reschedule_slot` / `cns_propose_service_reschedule` e cópias de card.
+
+---
+
 ## 1. Resumo executivo
 
-Quando o prestador **propõe uma nova data** de reagendamento, o dialog “Propor nova data” permite informar **Medido em** (Horas/Dias) e **Tempo estimado**, nessa ordem, além de data(s) e turno. Os campos de duração vêm **pré-preenchidos** com `duration_unit` e `duration_value` do serviço contratado (proposta aceita) e podem ser **alterados** pelo prestador na proposta, com os **mesmos limites** do composer de proposta (máx. 24 horas / 7 dias).
+Quando o prestador **propõe uma nova data** de reagendamento, o dialog “Propor nova data” permite informar **Medido em** (Horas/Dias) e **Tempo estimado**, nessa ordem, além de data(s) e turno. Os campos de duração vêm **pré-preenchidos** do serviço contratado e podem ser **alterados**, com os **mesmos limites** do composer de proposta (máx. 24 horas / 7 dias). O modo data única vs período deriva da duração informada. Ao aceitar (outro passo), a duração e o slot oficiais do contrato são atualizados a partir do slot proposto.
 
-O modo do formulário (data única vs período) deriva da **duração informada na proposta** — não de uma escolha livre “com ou sem fim”. Ao aceitar, a duração do serviço contratado é atualizada a partir do slot proposto.
+## 2. Objetivo de negócio
 
-## 2. Duração no dialog
+Permitir que o prestador envie formalmente uma **Data Proposta de Reagendamento** (ou período) para o cliente aprovar — sem alterar a Data Oficial até o aceite.
 
-Ordem e rótulos na UI (iguais ao composer de proposta):
+## 3. Localização na plataforma
 
-| Campo na UI (ordem) | Comportamento |
-|---------------------|---------------|
-| 1. **Medido em** | Select: `Horas` ou `Dias`. Pré-preenchido com `duration_unit` do serviço contratado. Editável pelo prestador. |
-| 2. **Tempo estimado** | Numérico inteiro > 0. Pré-preenchido com `duration_value` do serviço contratado. Editável pelo prestador. |
+| Entrada | Detalhe |
+|---------|---------|
+| Chat | CTA “Propor nova data” no card (`resolveRescheduleCardCtas`) → `ProposeRescheduleDialog` via `useChatRescheduleDialogs` |
+| Pré-condição | Snapshot `canProposeReschedule` e status `REQUESTED` ou `ADJUSTMENT_REQUESTED` |
+| Rota própria | Nenhuma |
+| Deep link | Notificação `SERVICE_RESCHEDULE_*` aponta ao chat; não abre o dialog automaticamente (**evidência:** path só navega ao chat) |
 
-### Limites (iguais ao composer de proposta)
+## 4. Perfis envolvidos
 
-| Medido em | Máximo |
-|-----------|--------|
-| Horas | 24 |
-| Dias | 7 (1 semana) |
+| Papel | Neste fluxo |
+|-------|-------------|
+| Prestador | Único que envia o slot (`cns_propose_service_reschedule` exige `provider_id`) |
+| Cliente | Visualiza “Data proposta” / “Período proposto”; não propõe |
+| Outros | Sem acesso |
 
-| Camada | Evidência |
-|--------|-----------|
-| Front (Zod) | `MAX_PROPOSAL_DURATION_HOURS` / `MAX_PROPOSAL_DURATION_DAYS` em `proposeRescheduleFormSchema` |
-| Backend | `_cns_validate_reschedule_slot`: rejeita `duration_value > 24` (horas) ou `> 7` (dias) |
+## 5. Fluxo funcional principal
 
-### Fonte do pré-preenchimento
+```mermaid
+flowchart TD
+  A[Card: Propor nova data] --> B[Dialog com duração pré-preenchida]
+  B --> C{Unidade/valor}
+  C -->|hours| D[Data única + turno]
+  C -->|days ≥ 2| E[Início + fim + turno]
+  D --> F[buildRescheduleProposedSlot]
+  E --> F
+  F --> G[cns_propose_service_reschedule]
+  G -->|REQUESTED| H[Mesma linha → PROPOSED]
+  G -->|ADJUSTMENT_REQUESTED| I[SUPERSEDED + nova PROPOSED]
+  H --> J[WORKFLOW_ACTION no chat + MMD]
+  I --> J
+```
 
-| Campo | Origem |
-|-------|--------|
-| `duration_unit` | `contracted_services.duration_unit` (proposta aceita), exposto no snapshot |
-| `duration_value` | `contracted_services.duration_value` (proposta aceita), exposto no snapshot |
+## 6. Fluxos alternativos e exceções
 
-O snapshot JSON da solicitação inclui `duration_unit` e `duration_value` do serviço contratado. O front mapeia em `mapRescheduleSnapshot`; ao abrir o dialog, `ProposeRescheduleDialog` faz `reset` do formulário com esses valores.
+| Cenário | Comportamento |
+|---------|---------------|
+| Dispensar lembrete do fluxo | Banner some só na sessão aberta do dialog |
+| Validação Zod falha | Mensagens de campo; não chama API |
+| Offline | Erro `OFFLINE` |
+| Slot rejeitado no backend | Códigos `INVALID_SLOT_*` mapeados em `serviceRescheduleErrors` |
+| Serviço não PENDING_PAYMENT/CONFIRMED | `RESCHEDULE_NOT_ALLOWED` |
+| Request não é a ativa | `INVALID_RESCHEDULE_STATUS` |
+| Retry idempotente | Mesmo UUID na mutação |
 
-## 3. Modos de data (`deriveRescheduleDateMode`)
+## 7. Regras de negócio
 
-O modo reage à **unidade e ao valor informados no formulário** (inicialmente os do contrato; podem mudar antes do envio).
+1. **RN-P01** Duração editável; limites 24h / 7 dias (front e `_cns_validate_reschedule_slot`).
+2. **RN-P02** `days` + `duration_value = 1` **proibido** — use `hours`.
+3. **RN-P03** Modo UI: hours → `single_day`; days ≥ 2 → `date_range`.
+4. **RN-P04** Slot JSON embute `duration_unit`, `duration_value`, datas e `shift`.
+5. **RN-P05** Horas: `end_date` ausente; dias: `end_date` obrigatório (intervalo compatível com duração corrida **ou** dias úteis).
+6. **RN-P06** `start_date` ≥ amanhã (`cns_business_today` + 1 / Zod `addCalendarDaysIso(today, 1)`).
+7. **RN-P07** Turnos: `morning` \| `afternoon` \| `full_day`.
+8. **RN-P08** Data oficial só muda no aceite — lembrete UI reforça isso.
+9. **RN-P09** Elegibilidade de status do serviço: `PENDING_PAYMENT` ou `CONFIRMED`.
+10. **RN-P10** Após ajuste, re-proposta supersede a rodada anterior (ver [ciclo-estados-reagendamento](./ciclo-estados-reagendamento.md)).
 
-| Condição | Modo | Campos no dialog “Propor nova data” |
-|----------|------|-------------------------------------|
-| `duration_unit = hours` | **Data única** (`single_day`) | Só **Data de execução** (+ turno). Sem campo de data de fim. |
-| `duration_unit = days` e `duration_value` ≥ 2 | **Período** (`date_range`) | **Data de início** + **Data de fim** (+ turno). |
+## 8. Campos e dados
 
-`days` + `duration_value = 1` **não é permitido** no formulário (use `hours`).
+| Campo UI (ordem) | Payload / origem |
+|------------------|------------------|
+| Medido em | `duration_unit` — pré: snapshot/contrato |
+| Tempo estimado | `duration_value` — pré: snapshot/contrato |
+| Data de execução / início | `start_date` ISO |
+| Data de fim | `end_date` (só período; horas → null no build) |
+| Turno | `shift` |
 
-Alterar unidade ou valor no dialog **mostra ou oculta** o campo de data de fim em tempo real (`showEndDate`).
+Montagem: `buildRescheduleProposedSlot`.
 
-## 4. Persistência do slot proposto
+## 9. Validações de front-end
 
-Função de montagem: `buildRescheduleProposedSlot`.
+| Regra | Onde |
+|-------|------|
+| Limites duração | `proposeRescheduleFormSchema` + `MAX_PROPOSAL_DURATION_*` |
+| Dias ≥ 2 | Mensagem “Para serviços de um único dia, use… horas” |
+| Data ≥ amanhã | Zod superRefine |
+| Período vs `matchesProposalDayDurationISO` | Mesma regra da proposta |
+| Nota de solicitação (outro dialog) | `requestRescheduleFormSchema` máx. 500 — fora deste form, mas mesmo módulo |
 
-O JSON do slot proposto inclui **`duration_unit`** e **`duration_value`** além de datas e turno.
+## 10. Validações de back-end
 
-| Caso | `start_date` | `end_date` | `duration_unit` / `duration_value` |
-|------|--------------|------------|-------------------------------------|
-| Horas (inclui serviço de um único dia) | data escolhida | `null` | valores informados no formulário |
-| Vários dias (`days` + `duration_value` ≥ 2) | início | fim informado (obrigatório) | valores informados no formulário |
+`_cns_validate_reschedule_slot(slot, duration_unit_fallback, duration_value_fallback)`:
 
-**Regra:** `days` + `duration_value = 1` **não é permitido** na proposta nem no reagendamento — use `hours`.
+- Prefere duração embutida no slot; fallback contrato  
+- Horas: sem `end_date`; dias: `end_date` obrigatório  
+- `cns_assert_slot_start_date_allowed` → pode lançar `SLOT_START_DATE_TOO_SOON`  
+- Duração incompatível → `INVALID_SLOT_DURATION`  
 
-### Efeito no aceite
+## 11. Status, estados e transições
 
-Ao **aceitar** a proposta de reagendamento, `_cns_apply_service_reschedule_slot` persiste no `contracted_services`:
+Este fluxo produz/avança para **`PROPOSED`** (in-place ou nova linha pós-`SUPERSEDED`). Não aceita, não cancela. Estados e CTAs: [ciclo-estados-reagendamento](./ciclo-estados-reagendamento.md).
 
-- `duration_unit` e `duration_value` — preferindo os embutidos no slot proposto; se ausentes (legado), mantém os do contrato;
-- `scheduled_start_date`, `scheduled_end_date`, `scheduled_shift`, `agreed_slot`.
+## 12. Persistência
 
-## 5. Validação de duração (multi-dia)
+| Camada | Detalhe |
+|--------|---------|
+| Servidor | `proposed_slot`, `proposed_at`; opcionalmente nova row + `parent_request_id` |
+| Cliente | Patch de caches React Query; lembrete do banner **não** persiste |
+| Mensagem | Payload `action_key: service_reschedule_proposed` + `slot` |
 
-No modo período, o intervalo deve bater a **duração informada na proposta** com a **mesma regra da criação de proposta**:
+## 13. Integrações
 
-- dias **corridos** inclusivos **ou**
-- dias **úteis** inclusivos (segunda a sexta)
+- Chat: mensagem WORKFLOW_ACTION  
+- MMD: `SERVICE_RESCHEDULE_PROPOSED` (push + email)  
+- negotiation-proposals: constantes e helper de dias úteis  
+- Aceite posterior → payments (doc irmão)
 
-devem ser iguais a `duration_value` (do formulário / embutido no slot).
+## 14. Listagens, buscas, filtros, paginação
 
-| Camada | Evidência |
-|--------|-----------|
-| Front (Zod) | `matchesProposalDayDurationISO` em `proposeRescheduleFormSchema` |
-| Backend | `_cns_validate_reschedule_slot`: lê `duration_unit` / `duration_value` do slot (fallback: contrato); compara `(end − start + 1)` **ou** `count_inclusive_working_days(start, end)` com `duration_value` |
+N/A — ação pontual no card/dialog. Slot legado sem duração: UI/backend usam fallback do contrato (**evidência** em validate/apply).
 
-### Backend — forma do slot (`_cns_validate_reschedule_slot`)
+## 15. Ações disponíveis
 
-- **Horas:** `end_date` deve estar ausente / vazio; se vier preenchido → erro de fim inválido.
-- **Dias:** `end_date` é **obrigatório** (incluindo o caso de 1 dia, em que fim = início).
-- Fim anterior ao início → inválido.
-- Duração incompatível (nem corridos nem úteis) → `INVALID_SLOT_DURATION`.
-- `duration_value` fora dos limites (horas > 24, dias > 7) → `INVALID_SLOT_DURATION`.
+| Ação | Quem | Pré | Resultado | Erro |
+|------|------|-----|-----------|------|
+| Abrir dialog | Prestador | `canPropose` | Form pré-preenchido | — |
+| Enviar proposta | Prestador | Form válido | PROPOSED + card | Códigos slot/status |
+| Dispensar lembrete | Prestador | Dialog aberto | Só UI local | — |
 
-## 6. Cópias e formatação na UI
+## 16. Dependências
 
-| Contexto | Data única | Período (fim ≠ início) |
-|----------|------------|-------------------------|
-| Labels do dialog | “Data de execução” | “Data de início” + “Data de fim” |
-| Seção do card (proposta / aceito / substituído) | “Data proposta” | “Período proposto” |
-| Formatação exibida | data + turno | `início até fim (turno)` |
+`negotiation-proposals` (limites/dias), `chats` (card/dialogs), tipos/API do próprio módulo, calendário `@/lib/utils/calendarDate`.
 
-`formatRescheduleSlot` **não** mostra intervalo quando `end_date` é `null` ou igual a `start_date`.
+## 17. Regras implícitas
 
-### Lembrete do fluxo no dialog “Propor nova data”
+- Alterar unidade/valor no dialog **mostra/oculta** fim em tempo real (`showEndDate`).  
+- `formatRescheduleSlot` omite intervalo se fim null ou = início.  
+- Labels de seção: “Data proposta” vs “Período proposto”.  
+- Lembrete é puramente educativo.  
+- Na 1ª proposta a partir de REQUESTED, **não** cria linha nova.
 
-No topo do corpo do formulário, o dialog exibe um banner dispensável (`ProposeRescheduleFlowReminder`) que reforça a regra de negócio já existente: a data oficial só muda após o cliente confirmar; até lá, o agendamento atual continua valendo.
+## 18. Riscos
 
-| Elemento | Texto / comportamento |
-|----------|------------------------|
-| Título | “Como funciona o reagendamento?” |
-| Corpo | “Você propõe a nova data; o cliente confirma. Só depois disso a data oficial muda. Até lá, o agendamento atual continua valendo.” |
-| Dispensar | Botão X com `aria-label` “Dispensar lembrete de reagendamento” |
-| Visibilidade | Aparece ao abrir o dialog; ao dispensar, some até o dialog ser aberto de novo (estado local da sessão do dialog — não persiste entre aberturas) |
+| Risco | Nota |
+|-------|------|
+| Front aceita 10MB vs… | N/A aqui |
+| `SLOT_START_DATE_TOO_SOON` sem mapa UI | Pode mostrar mensagem genérica |
+| Drift fuso | Front usa calendário local ISO; backend `cns_business_today` America/Sao_Paulo — alinhar testes |
 
-O lembrete é **apenas UI**: não altera validação, payload do slot nem comportamento de backend.
+## 19. Evidências
 
-## 7. Perfis e ações (neste fluxo)
-
-| Papel | Ação documentada aqui |
-|-------|------------------------|
-| Prestador | Abre “Propor nova data”; pode ajustar Medido em, Tempo estimado, data(s) e turno; envia o slot validado. A proposta (`cns_propose_service_reschedule`) exige serviço contratado em `PENDING_PAYMENT` ou `CONFIRMED` (igual à elegibilidade para o prestador **solicitar** reagendamento). |
-| Cliente | Vê “Data proposta” / “Período proposto” no card; aceite formal é outro passo (fora do detalhe deste doc) |
-
-## 8. Evidências
-
-| Tema | Onde |
+| Tema | Path |
 |------|------|
-| Modo de data | `src/features/service-reschedule/utils/deriveRescheduleDateMode.ts` |
-| Formulário / limites | `src/features/service-reschedule/types/serviceReschedule.forms.ts`; constantes em `src/features/negotiation-proposals/constants/proposalComposer.ts` |
-| Dialog | `src/features/service-reschedule/components/ProposeRescheduleDialog.tsx` |
-| Lembrete do fluxo (banner) | `src/features/service-reschedule/components/ProposeRescheduleFlowReminder.tsx` |
-| Snapshot / pré-preenchimento | `src/features/service-reschedule/utils/mapRescheduleSnapshot.ts`; SQL de snapshot em migrations `20260802*` |
-| Labels do card | `src/features/service-reschedule/utils/rescheduleCardCopy.ts` |
-| Formatação | `src/features/service-reschedule/utils/formatRescheduleSlot.ts` |
-| Validação e aceite (SQL) | `supabase/migrations/20260802020000_service_reschedule_helpers.sql` (`_cns_validate_reschedule_slot`, `_cns_apply_service_reschedule_slot`); `20260802150000_service_reschedule_apply_slot_restore_claims.sql` |
-| Elegibilidade de status (solicitar / propor) | `20260802030000_service_reschedule_rpcs_core.sql` (`cns_request_service_reschedule`); `20260802130000_service_reschedule_supersede_rounds.sql` (`_cns_reschedule_snapshot_action_flags`, `cns_propose_service_reschedule`) — prestador em `PENDING_PAYMENT` ou `CONFIRMED` |
-| Testes unitários | `utils/__tests__/deriveRescheduleDateMode.test.ts`, `types/__tests__/serviceReschedule.forms.test.ts` |
+| Modo de data | `utils/deriveRescheduleDateMode.ts` |
+| Formulário | `types/serviceReschedule.forms.ts` |
+| Dialog / lembrete | `ProposeRescheduleDialog.tsx`, `ProposeRescheduleFlowReminder.tsx` |
+| Snapshot | `mapRescheduleSnapshot.ts` |
+| Cópias / format | `rescheduleCardCopy.ts`, `formatRescheduleSlot.ts` |
+| SQL validate / propose | `20260802020000_*`, `20260802130000_*` |
+| Testes | `deriveRescheduleDateMode.test.ts`, `serviceReschedule.forms.test.ts`, `ProposeRescheduleDialog.test.tsx` |
 
-## 9. Lacunas / fora de escopo deste documento
+## 20. Pendências
 
-- Regras completas de quem pode cancelar, pedir ajuste, aceitar ou expirar a solicitação (a elegibilidade de **status** para o prestador solicitar/propor está no [README do módulo](../README.md)).
-- Integração com cobrança após aceite: ver [integracao-pagamento-pos-aceite.md](./integracao-pagamento-pos-aceite.md) (e módulo `payments` / `docs/payment-system/` para o design técnico).
+| ID | Item |
+|----|------|
+| P-SR-03 | Mapa UI para `SLOT_START_DATE_TOO_SOON` |
+| — | Deep link que abra o dialog de propor automaticamente: não implementado |
+| — | Analytics GA específico de “propose reschedule”: **não evidenciado** neste módulo (há `metrics` no card de chats — gap para worker chats) |
+
+## 21. Anexo — efeito no aceite (resumo)
+
+`_cns_apply_service_reschedule_slot` grava `duration_*`, `scheduled_*`, `agreed_slot` e chama pagamento. Detalhe: [integracao-pagamento-pos-aceite.md](./integracao-pagamento-pos-aceite.md).
+
+## 22. Anexo — matriz de erros de slot (UI)
+
+| Código | Mensagem pt-BR (`serviceRescheduleErrors`) |
+|--------|-----------------------------------------------|
+| `INVALID_SLOT_SHAPE` | Selecione uma data válida. |
+| `INVALID_SLOT_SHIFT` | Selecione um turno válido. |
+| `INVALID_SLOT_START_DATE` | Selecione uma data de execução válida. |
+| `INVALID_SLOT_END_DATE` | A data de término deve ser igual ou posterior à data de início. |
+| `INVALID_SLOT_DURATION` | Informe um tempo estimado válido e um intervalo… |
+
+## 23. Anexo — checklist QA
+
+- [ ] Pré-preenche duração do contrato  
+- [ ] Trocar para dias ≥2 mostra data fim  
+- [ ] hours rejeita end_date no backend  
+- [ ] Intervalo inválido vs duração  
+- [ ] start_date = hoje rejeitado  
+- [ ] Re-propor após ajuste supersede card antigo  
+- [ ] Lembrete reaparece ao reabrir dialog  
+
+## 24. Anexo — texto do lembrete
+
+- Título: “Como funciona o reagendamento?”  
+- Corpo: “Você propõe a nova data; o cliente confirma. Só depois disso a data oficial muda. Até lá, o agendamento atual continua valendo.”  
+- Aria dismiss: “Dispensar lembrete de reagendamento”

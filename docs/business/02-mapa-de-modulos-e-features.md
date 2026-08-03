@@ -1,6 +1,6 @@
 # Mapa de módulos e features
 
-Inventário alinhado ao código em `src/features/`. “Localização no código” indica a pasta raiz do módulo. “Rotas” referem-se a `src/router.tsx` e shells internos.
+Inventário alinhado ao código em `src/features/`. “Localização no código” indica a pasta raiz do módulo. “Rotas” referem-se a `src/router.tsx` e shells internos. Menu: `src/layouts/DashboardLayout/dashboardMenu.ts`.
 
 **Índice consolidado com cobertura:** [modulos/README.md](./modulos/README.md).
 
@@ -8,29 +8,33 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 
 | Área | Documento | Rotas / código |
 |------|-----------|----------------|
-| Shell do dashboard e placeholders | [dashboard-shell](./modulos/dashboard-shell/README.md) | `DashboardLayout`, `DashboardFakePage`, `dashboardMenu.ts`; gate KYC via `provider-kyc` |
+| Shell do dashboard e placeholders | [dashboard-shell](./modulos/dashboard-shell/README.md) | `DashboardLayout`, `DashboardFakePage`, `dashboardMenu.ts` (Conversas + Ganhos no menu; calendário **fora**); gate KYC via `provider-kyc` |
 | Página inicial | [app-home](./modulos/app-home/README.md) | `/` → `src/App.tsx` |
 
 ## Tabela mestra
 
-| Módulo (`src/features`) | Feature documentada | Rotas / telas principais | Dependências de outros módulos |
-|-------------------------|---------------------|--------------------------|--------------------------------|
+| Módulo (`src/features` ou backend) | Feature documentada | Rotas / telas principais | Dependências de outros módulos |
+|------------------------------------|---------------------|--------------------------|--------------------------------|
 | **addresses** | [gestao-de-enderecos](./modulos/addresses/features/gestao-de-enderecos.md) | Embarcado em `request-quote` e `my-account`; rota `/dashboard/addresses` é **placeholder** (`DashboardFakePage`) | `auth` (usuário), Supabase `client_addresses`, geografia |
 | **auth** | [autenticacao-e-sessao](./modulos/auth/features/autenticacao-e-sessao.md) | `/login`, `/cadastro/cliente`, `/cadastro/profissional`, `/esqueceu-senha`, `/recuperar-senha` | Supabase Auth, `profiles` |
-| **my-services** | [solicitacoes-do-cliente](./modulos/my-services/features/solicitacoes-do-cliente.md) | `/dashboard/services` | `view-services` (lista); sheet de orçamentos via `negotiation-proposals` |
-| **view-services** | [visualizacao-de-servicos](./modulos/view-services/features/visualizacao-de-servicos.md) | `/dashboard/services/:id` | RPCs `get_service`, `list_services`; `contracted_services`; consumido por `my-services` |
-| **dynamic-form** | [motor-de-formularios](./modulos/dynamic-form/features/motor-de-formularios.md) | `/demo/form` (somente DEV) | Consumido por `request-quote` |
-| **my-account** | [minha-conta](./modulos/my-account/features/minha-conta.md) | `/dashboard/conta` | `addresses`, storage, perfis público/privado |
-| **provider-jobs** | [trabalhos-e-propostas](./modulos/provider-jobs/features/trabalhos-e-propostas.md) | `/dashboard/jobs`, `/dashboard/jobs/:jobId` | Edge `list-provider-opportunities`, propostas, negociação CNS; backend [matching-dispatch](./modulos/matching-dispatch/README.md) |
-| **matching-dispatch** *(backend)* | [dispatch-e-visibilidade](./modulos/matching-dispatch/features/dispatch-e-visibilidade.md) | *Sem rota de UI* | Migrations `202607110*`, cron `matching_open_batch`, visibilidade; consumido por **provider-jobs** |
+| **my-services** | [solicitacoes-do-cliente](./modulos/my-services/features/solicitacoes-do-cliente.md) | `/dashboard/services`; banner prestador → calendário | `view-services` (lista/detalhe); sheet de orçamentos via `negotiation-proposals`; `provider-calendar` (entrada) |
+| **view-services** | [visualizacao-de-servicos](./modulos/view-services/features/visualizacao-de-servicos.md) | `/dashboard/services/:id` → **`ServiceDetailShell`** (página ou `null` se sheet); sheet no `DashboardLayout` | RPCs `get_service`, `list_services`; `contracted_services`; consumido por `my-services`, `provider-jobs`, `provider-calendar` |
+| **dynamic-form** | [motor-de-formularios](./modulos/dynamic-form/features/motor-de-formularios.md) | `/dev/demo/form` (somente DEV) | Consumido por `request-quote` |
+| **my-account** | [minha-conta](./modulos/my-account/features/minha-conta.md) | `/dashboard/conta` | `addresses`, storage, perfis público/privado; histórico de captura via `payments` |
+| **provider-jobs** | [trabalhos-e-propostas](./modulos/provider-jobs/features/trabalhos-e-propostas.md) | `/dashboard/jobs` (lista); detalhe `/dashboard/services/:id` (`ServiceDetailShell` / sheet) | Edge **viva** `list-provider-opportunities`; propostas / CNS; backend [matching-dispatch](./modulos/matching-dispatch/README.md); GPS feed via `device-beacon` |
+| **matching-dispatch** *(backend)* | [dispatch-e-visibilidade](./modulos/matching-dispatch/features/dispatch-e-visibilidade.md) | *Sem rota de UI* | Migrations `202607110*`, cron matching, visibilidade; consumido por **provider-jobs**; beacon → `provider_latest_locations` (**device-beacon**). Legado: Edge `match-provider-jobs` **morta** (pasta vazia); RPC `match_provider_jobs` **órfã** no schema |
 | **provider-profile** | [pagina-publica](./modulos/provider-profile/features/pagina-publica.md) | `/perfil/:slug` | RPC `get_public_provider_by_slug`, storage |
 | **request-quote** | [pedir-orcamento](./modulos/request-quote/features/pedir-orcamento.md) | `/pedir-orcamento` | `dynamic-form`, `addresses`, `auth`, Edge Functions |
-| **chats** + **negotiation-proposals** | [conversas-e-negociacao](./modulos/chats/features/conversas-e-negociacao.md), [comparar-orcamentos-meus-servicos](./modulos/chats/features/comparar-orcamentos-meus-servicos.md) | `/dashboard/chats`, `/dashboard/chats/:chatId` | `auth`, `provider-jobs`, `message-dispatcher`, `my-services` (sheet compare/history), RPCs CNS em `supabase/migrations/202607*` |
-| **service-reschedule** | [propor-nova-data](./modulos/service-reschedule/features/propor-nova-data.md), [integracao-pagamento-pos-aceite](./modulos/service-reschedule/features/integracao-pagamento-pos-aceite.md) | Embutido em chat e detalhe do serviço contratado (dialogs/cards) | `chats`, `view-services`, `payments` (pós-aceite: retarget / recaptura longe), `negotiation-proposals` (regra de duração), RPCs `cns_*_service_reschedule*`, migrations `20260802*` |
-| **message-dispatcher** *(backend)* | [horario-silencioso](./modulos/message-dispatcher/features/horario-silencioso.md) | *Sem rota de UI* | Supabase schema `message_dispatcher`, Edge Functions `message-dispatcher-worker` / `message-dispatcher-webhook-resend` |
-| **payments** | [checkout-e-cobranca](./modulos/payments/features/checkout-e-cobranca.md), [historico-e-reembolso](./modulos/payments/features/historico-e-reembolso.md) | Checkout pós-aceite (gross-up NetCred; ClearSale session server-side; token↔**platform** company; `PROFILE_INCOMPLETE`); cobrança manual com reconcile anti double-charge; KYC `ACTIVE` obrigatório para cobrar; histórico/reembolso (gateway first pós-`PAID`; faixa ToS pelo `payment_service_execution_at` vigente; `PAID`→`REFUNDED` via webhook); ingestão `PAYOUT_*` / settlements no backend | `negotiation-proposals`, `my-account`, `provider-kyc` (UI/gate), `provider-earnings` (disclosure de liquidação), NetCred EFs, RPCs `payment_*` / `payment_total_with_card_fees`, views de histórico, MMD |
-| **provider-earnings** | [ganhos-e-liquidacoes](./modulos/provider-earnings/features/ganhos-e-liquidacoes.md) | `/dashboard/earnings` — lista de liquidações bancárias (Previsto / Liquidado / Estorno); disclosure D+30 / `settling_at` | `payments` (tabela/RPC settlements; histórico captura em Minha conta), `dashboard-shell` (menu Ganhos) |
-| **provider-kyc** | [gate-e-acesso-operacional](./modulos/provider-kyc/features/gate-e-acesso-operacional.md), [formulario-credenciamento-wizard](./modulos/provider-kyc/features/formulario-credenciamento-wizard.md) | Bloqueia shell operacional até `ACTIVE`; exceção `/dashboard/conta*`; nav só Minha conta; telas por status; **wizard** entity→identity→bank→documents→review (BankPicker FEBRABAN, upload Option A, identidade na RPC, analytics); polling 5s/30s | `dashboard-shell`, `my-account`, `payments` (conta NetCred / RPCs KYC / cobrança) |
+| **chats** + **negotiation-proposals** | [conversas-e-negociacao](./modulos/chats/features/conversas-e-negociacao.md), [propostas-negociacao](./modulos/chats/features/propostas-negociacao.md), [comparar-orcamentos-meus-servicos](./modulos/chats/features/comparar-orcamentos-meus-servicos.md) | `/dashboard/chats`, `/dashboard/chats/:chatId` (item **Conversas** no menu cliente e prestador) | `auth`, `provider-jobs`, `message-dispatcher`, `my-services` / `view-services` (sheet compare/history), `payments` (aceite→checkout), `service-reschedule`, RPCs CNS |
+| **service-reschedule** | [ciclo-estados-reagendamento](./modulos/service-reschedule/features/ciclo-estados-reagendamento.md), [propor-nova-data](./modulos/service-reschedule/features/propor-nova-data.md), [integracao-pagamento-pos-aceite](./modulos/service-reschedule/features/integracao-pagamento-pos-aceite.md) | Embutido em chat e detalhe do serviço contratado (dialogs/cards) | `chats`, `view-services`, `payments` (retarget / far-recapture), `negotiation-proposals` (duração), `message-dispatcher`, RPCs `cns_*_service_reschedule*`, migrations `20260802*` |
+| **message-dispatcher** *(backend)* | [pipeline-e-fsm](./modulos/message-dispatcher/features/pipeline-e-fsm.md), [quotas-e-canais](./modulos/message-dispatcher/features/quotas-e-canais.md), [horario-silencioso](./modulos/message-dispatcher/features/horario-silencioso.md), [engagement-push-click](./modulos/message-dispatcher/features/engagement-push-click.md) | *Sem rota de UI* | Schema `message_dispatcher`; Edge `message-dispatcher-worker` / `webhook-resend` / `ingest`; clique app via **notifications** (`recordPushClick`); beacons em `user_device_beacons` |
+| **notifications** | [engagement-push](./modulos/notifications/features/engagement-push.md) | *Sem rota de UI* — API `recordPushClick` | RPC `message_dispatcher_record_push_click`; caller `src/lib/push.ts` (nativo) |
+| **payments** | [checkout-e-cobranca](./modulos/payments/features/checkout-e-cobranca.md), [historico-e-reembolso](./modulos/payments/features/historico-e-reembolso.md), [reconciliacao-e-voids](./modulos/payments/features/reconciliacao-e-voids.md) | Checkout pós-aceite; histórico em `/dashboard/conta`; ops/reconcile sem UI | `negotiation-proposals`, `my-account`, `provider-kyc`, `provider-earnings`, `service-reschedule`, NetCred EFs, RPCs `payment_*` |
+| **provider-earnings** | [ganhos-e-liquidacoes](./modulos/provider-earnings/features/ganhos-e-liquidacoes.md) | `/dashboard/earnings` — item **Ganhos** no menu prestador | `payments` (settlements); `dashboard-shell` (menu) |
+| **provider-kyc** | [gate-e-acesso-operacional](./modulos/provider-kyc/features/gate-e-acesso-operacional.md), [formulario-credenciamento-wizard](./modulos/provider-kyc/features/formulario-credenciamento-wizard.md) | Bloqueia shell até `ACTIVE`; exceção `/dashboard/conta*`; wizard entity→identity→bank→documents→review | `dashboard-shell`, `my-account`, `payments` (NetCred / cobrança) |
+| **provider-calendar** | [calendario-do-prestador](./modulos/provider-calendar/features/calendario-do-prestador.md) | `/dashboard/services/calendar` (guard provider); **sem** item no menu; entrada via banner em Meus Serviços | RPC `list_provider_scheduled_services`; `my-services` (banner); `view-services` (detalhe) |
+| **device-beacon** | [rastreamento-dispositivo](./modulos/device-beacon/features/rastreamento-dispositivo.md) | *Sem rota* — `DeviceBeaconProvider` no `RootLayout` | `auth` (logout); FCM via `@/lib/push`; geo operacional → matching; sequência com **push-permission** |
+| **push-permission** | [prompt-e-cooldown](./modulos/push-permission/features/prompt-e-cooldown.md) | *Sem rota* — `PushPermissionPromptHost` no `RootLayout` | `auth`; `@/lib/push`; cooldown Preferences; espera localização do prestador (**device-beacon**) |
 
 ## Telas placeholder (evidência)
 
@@ -38,8 +42,19 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 |------|-------------------------|
 | `/dashboard` | `DashboardFakePage` “Visão geral” |
 | `/dashboard/addresses` | `DashboardFakePage` “Endereços” — **não** renderiza o módulo `addresses` |
-| `/dashboard/settings` | Placeholder “Configurações” |
+| `/dashboard/settings` | Placeholder “Configurações” (rota existe; **não** está no menu) |
 | `/dashboard/help` | Placeholder “Ajuda” |
+
+> **Não é placeholder:** `/dashboard/services/:id` → `ServiceDetailShell` (`src/features/view-services/components/ServiceDetailShell.tsx`).
+
+## Menu do dashboard (evidência: `dashboardMenu.ts`)
+
+| Papel | Itens (`allItems`) |
+|-------|--------------------|
+| **Cliente** | Visão geral, Meus Serviços, Conversas, Endereços, Minha conta, Ajuda |
+| **Prestador** | Visão geral, Meus Serviços, Trabalhos, Conversas, Ganhos, Minha conta, Ajuda |
+
+**Fora do menu (rotas reais):** `/dashboard/services/calendar`, `/dashboard/services/:id`, `/dashboard/settings`.
 
 ## Edge Functions (Supabase)
 
@@ -48,30 +63,36 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | `create-request-quote-order` | `request-quote` |
 | `generate-smart-description` | `request-quote` |
 | `verify-recaptcha` | `auth`, `request-quote` |
-| `list-provider-opportunities` | `provider-jobs` — feed progressivo (cursor, sort, visibilidade batch/fallback) |
-| `match-provider-jobs` | **Removido** — substituído por `list-provider-opportunities` + RPC `list_provider_opportunities` |
+| `list-provider-opportunities` | `provider-jobs` / `matching-dispatch` — feed progressivo (caminho **vivo**) |
+| `match-provider-jobs` | **Morta** — código removido; pasta vazia residual; **sem** entrada em `config.toml`. RPC SQL `match_provider_jobs` permanece **órfã** (sem caller em `src/`). Substituída por `list-provider-opportunities` |
 | `message-dispatcher-worker` | `message-dispatcher` — consome fila, renderiza templates, envia via Resend/FCM |
-| `message-dispatcher-webhook-resend` | `message-dispatcher` — recebe webhooks Resend (delivered, bounce, opened) |
-| `chat-upload-media` | `chats` — upload de mídia na conversa (sessão + storage) |
+| `message-dispatcher-webhook-resend` | `message-dispatcher` — webhooks Resend (delivered, bounce, opened) |
+| `message-dispatcher-ingest` | `message-dispatcher` — ingest HTTP autenticado |
+| `chat-upload-media` | `chats` — upload de mídia na conversa |
 | `schedule-netcred-charges` | `payments` — cobrança automática T-2 (cron) |
 | `tokenize-payment-card` | `payments` — tokenização checkout |
 | `manual-charge-payment` | `payments` — cobrança manual cliente |
-| `netcred-webhook` | `payments` — webhooks gateway (incl. `PAYOUT_CREATE` / `PAYOUT_SETTLE` → settlements) |
+| `netcred-webhook` | `payments` — webhooks gateway (incl. `PAYOUT_*` → settlements) |
 | `process-refund` | `payments` — estornos |
-| `detect-netcred-onboarding` | `payments` / `provider-kyc` — detecção de status KYC do prestador |
+| `detect-netcred-onboarding` | `payments` / `provider-kyc` — status KYC |
 | `reconcile-netcred-payments` | `payments` — reconciliação de cobranças |
-| `sync-netcred-settlements` | `payments` / `provider-earnings` — reconcile GraphQL de movements de liquidação |
+| `reconcile-inanalysis-auto-cancel-voids` | `payments` — voids / auto-cancel (ops) |
+| `sync-netcred-settlements` | `payments` / `provider-earnings` — movements de liquidação |
+| `process-far-reschedule-recapture` | `service-reschedule` / `payments` — recaptura longe pós-aceite |
+| `dispatch-kyc-email` | `provider-kyc` / `message-dispatcher` — e-mails de KYC |
 
 ## Status da documentação
 
 | Área | Status |
 |------|--------|
-| Módulos em `src/features` | Documentados (README + ≥1 feature); CNS em `chats/` + `negotiation-proposals/` |
+| Módulos em `src/features` + shell + home + backends documentados | **22** com README + ≥1 feature (critério do índice); ver [modulos/README.md](./modulos/README.md) |
 | Admin UI | **Não localizada** no router — evidência parcial |
-| Pagamentos | **Implementado** — módulo `src/features/payments/` + backend `docs/payment-system/`; runbooks operacionais para rollout |
-| PWA / Sentry / analytics | Mencionados na rastreabilidade; não detalhados por feature |
-| App nativo (Capacitor / Android) | Shell + **persistência cliente** (Preferences) em [rastreabilidade](./rastreabilidade.md) e [matriz](./matriz-cobertura-documental.md); `device-beacon` e `push-permission` em `src/features/` sem pasta em `modulos/` |
-| Message Dispatcher (backend) | **Parcial** — módulo em `modulos/message-dispatcher/`; feature documentada: horário silencioso. Demais features (quotas, FSM, checkout, reconciliação) cobrem visão geral no README mas sem feature doc dedicada |
+| Pagamentos | **Implementado** — `payments` (+ reconciliacao-e-voids) + backend; runbooks em `docs/payment-system/` |
+| Message Dispatcher | Critério doc **OK** (pipeline, quotas, quiet hours, engagement); pendências de **produto** P-08 (janela hardcoded) e P-09 (fuso único BRT) |
+| service-reschedule | Critério doc **OK** (ciclo de estados + propor + pagamento pós-aceite); pendências P-SR-* (UX erros, templates MMD, consumo de `is_last_minute`) |
+| PWA / Sentry / analytics | Mencionados na rastreabilidade; não detalhados como módulos de produto |
+| App nativo (Capacitor) | Infra cliente documentada em **device-beacon**, **push-permission**, **notifications** (+ libs `src/lib/push`, Preferences) |
+| Matching legado | Edge morta + RPC órfã documentados em matching-dispatch / provider-jobs |
 
 ## Diagrama de dependências entre módulos (simplificado)
 
@@ -82,6 +103,7 @@ flowchart TB
   AD[addresses]
   AU[auth]
   CM[my-services]
+  VS[view-services]
   PJ[provider-jobs]
   PP[provider-profile]
   MA[my-account]
@@ -89,19 +111,33 @@ flowchart TB
   CH[chats + negotiation-proposals]
   SR[service-reschedule]
   MD[message-dispatcher]
+  NOTIF[notifications]
   PAY[payments]
   PE[provider-earnings]
+  PC[provider-calendar]
+  DB[device-beacon]
+  PUSH[push-permission]
+  MATCH[matching-dispatch]
   RQ --> DF
   RQ --> AD
   RQ --> AU
-  CM --> CH
+  CM --> VS
+  CM --> PC
+  PC --> VS
   MA --> AD
   PP --> MA
   PJ --> CH
+  PJ --> MATCH
+  MATCH --> DB
   CH --> MD
   CH --> SR
   SR --> CH
+  SR --> PAY
   PK --> MA
   PE --> PAY
   MA --> PAY
+  NOTIF --> MD
+  PUSH --> DB
+  DB --> AU
+  MD --> DB
 ```

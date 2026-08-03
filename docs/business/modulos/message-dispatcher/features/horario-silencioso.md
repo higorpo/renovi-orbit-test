@@ -1,94 +1,143 @@
 # Horário silencioso (Quiet Hours)
 
-## 1. Resumo
+## 1. Resumo executivo
 
-O Message Dispatcher impõe uma **janela de silêncio** das **22:00 às 06:00** no fuso horário **America/Sao_Paulo** (BRT/BRST). Mensagens cuja entrega cairia nessa janela são automaticamente reagendadas para **06:00 BRT** do próximo dia útil de envio, garantindo que os usuários não recebam notificações durante a madrugada.
+O Message Dispatcher impõe uma **janela de silêncio** das **22:00 às 06:00** no fuso **America/Sao_Paulo**. Entregas que cairiam nessa janela são reagendadas para o próximo **06:00 BRT**, com `bypass_limits = true` para não reaplicar quota na reativação.
 
-## 2. Regra de negócio
+## 2. Objetivo de negócio
 
-| Aspecto | Detalhe |
-|---------|---------|
-| Janela | **22:00–06:00** America/Sao_Paulo |
-| Comportamento | Mensagens agendadas para dentro da janela são reagendadas para o próximo **06:00 BRT** |
-| `bypass_limits` | Mensagens reagendadas por horário silencioso recebem `bypass_limits = true`, para que ao serem ativadas não sofram nova avaliação de quota (já foram aprovadas na ingestão original) |
-| Abrangência | Aplica-se a **todos os canais** (e-mail e push) |
-| Configurabilidade | A janela está **hardcoded** nas funções SQL; não há constante em `platform_constants` para alterar sem deploy |
+Evitar notificações na madrugada (experiência e redução de churn por spam noturno), de forma uniforme para e-mail e push.
 
-## 3. Pontos de aplicação
+## 3. Localização na plataforma
 
-A regra é aplicada em **dois pontos** da pipeline, garantindo cobertura mesmo em cenários de corrida ou reprocessamento:
+Sem UI. Aplicado em SQL:
 
-### 3.1. Ingestão (`message_dispatcher_ingest`)
+- `message_dispatcher_ingest` (inclui composição com stagger de push — migration `20260712110000`)
+- `message_dispatcher_evaluate_pending` (rede de segurança pós-`activate_scheduled`)
 
-Após aprovação de quota e cálculo do horário de envio, a função verifica se o `scheduled_for` calculado cai na janela de silêncio:
+Helpers: `message_dispatcher_is_quiet_hours`, `message_dispatcher_next_send_window`.
 
-- **Se sim:** `scheduled_for` é movido para `06:00 BRT` do dia seguinte (ou mesmo dia, se o horário atual < 06:00), o status é `SCHEDULED` e `bypass_limits` é marcado como `true`.
-- **Se não:** fluxo normal (status `QUEUED` se imediato, `SCHEDULED` se futuro).
+Ver também: [pipeline-e-fsm](./pipeline-e-fsm.md), [quotas-e-canais](./quotas-e-canais.md).
 
-Adicionalmente, quando um push é reagendado por **cooldown** e o horário resultante do cooldown cai na janela de silêncio, a mesma lógica é aplicada: o `scheduled_for` é movido para 06:00 BRT e `bypass_limits` é definido como `true`.
+## 4. Perfis envolvidos
 
-### 3.2. Avaliação de pendentes (`message_dispatcher_evaluate_pending`)
+Todos os destinatários (`profile_id`). Não há opt-out por usuário nem fuso por perfil (P-09).
 
-Funciona como **rede de segurança** para dispatches que chegaram ao estado `PENDING_EVALUATION` (via cron `activate_scheduled`) durante horário silencioso:
+## 5. Fluxo funcional principal
 
-- Se `now()` está na janela de silêncio, todos os dispatches restantes em `PENDING_EVALUATION` (após aplicação de quotas e cooldown) são reagendados para `06:00 BRT` com `bypass_limits = true`, em vez de serem movidos para `QUEUED`.
-- Fora da janela, o fluxo normal move para `QUEUED`.
+```mermaid
+flowchart TD
+  CALC[Calcula scheduled_for / slot push]
+  Q{is_quiet_hours?}
+  NEXT[next_send_window = 06:00 BRT]
+  SCH[status SCHEDULED + bypass_limits]
+  NORM[QUEUED ou SCHEDULED normal]
+  CALC --> Q
+  Q -->|sim| NEXT --> SCH
+  Q -->|não| NORM
+```
 
-Também afeta a lógica de cooldown de push dentro do `evaluate_pending`: se o horário de cooldown resultante cai na janela silenciosa, o dispatch é reagendado para 06:00 BRT.
+## 6. Fluxos alternativos e exceções
 
-## 4. Funções auxiliares
+| Cenário | Resultado |
+|---------|-----------|
+| Push stagger gera slot às 23h | Reagenda 06:00 + bypass |
+| Evaluate durante quiet hours | Pendentes restantes → 06:00 + bypass (não `QUEUED`) |
+| Cooldown/stagger dentro da janela | Mesma regra de next window |
+| Fora da janela | Sem alteração por quiet hours |
 
-| Função | Assinatura | Comportamento |
-|--------|-----------|---------------|
-| `message_dispatcher_is_quiet_hours` | `(p_ts timestamptz) → boolean` | Retorna `true` quando a hora em `America/Sao_Paulo` é ≥ 22 ou < 6. |
-| `message_dispatcher_next_send_window` | `(p_ts timestamptz) → timestamptz` | Retorna o próximo `06:00 America/Sao_Paulo`. Se a hora atual < 6, retorna 06:00 do mesmo dia; caso contrário, 06:00 do dia seguinte. |
+## 7. Regras de negócio
 
-Ambas são `STABLE`, `PARALLEL SAFE` e acessíveis apenas via `service_role`.
+1. Janela: hora local BRT/BRST ≥ 22 ou &lt; 6.
+2. `next_send_window`: se hora &lt; 6 → 06:00 **mesmo dia**; senão → 06:00 **dia seguinte**.
+3. Reagendamento por quiet hours define `status = SCHEDULED` e `bypass_limits = true` (OR com bypass já pedido).
+4. Aplica-se a **email e push**.
+5. Janela **hardcoded** (não está em `platform_constants`) — P-08.
+6. Abrange ingest e evaluate_pending.
 
-## 5. Impacto no `bypass_limits`
+## 8. Campos e dados
 
-Mensagens reagendadas por horário silencioso recebem `bypass_limits = true`. Isso tem duas consequências:
+| Campo | Impacto |
+|-------|---------|
+| `scheduled_for` | Movido para 06:00 BRT |
+| `status` | `SCHEDULED` |
+| `bypass_limits` | `true` quando quiet reschedule |
 
-1. **Na reativação pelo cron:** quando o cron `activate_scheduled` move a mensagem para `PENDING_EVALUATION` e `evaluate_pending` reavalia, a flag `bypass_limits` faz com que as verificações de quota (diária e cooldown) sejam puladas — a mensagem já foi aprovada na ingestão.
-2. **Composição com cooldown de push:** se o cooldown resulta em horário dentro da janela silenciosa, o `bypass_limits` é habilitado para a mesma razão.
+## 9. Validações de front-end
 
-## 6. Cenários de exemplo
+Não aplicável.
 
-| Cenário | Horário de ingestão | scheduled_for original | Resultado |
-|---------|---------------------|----------------------|-----------|
-| Push imediato às 23h | 23:00 BRT | now() (23:00) | Reagendado para 06:00 BRT do dia seguinte, `SCHEDULED`, `bypass_limits = true` |
-| E-mail agendado para 03h | qualquer | 03:00 BRT | Reagendado para 06:00 BRT do mesmo dia |
-| Push com cooldown até 22:30 | 22:20 BRT | cooldown_until = 22:30 | cooldown_until cai na janela → reagendado para 06:00 BRT do dia seguinte |
-| Push imediato às 10h | 10:00 BRT | now() (10:00) | Fluxo normal: `QUEUED` |
-| Cron ativa scheduled às 01h | — | `PENDING_EVALUATION` | `evaluate_pending` detecta janela → reagenda para 06:00 BRT |
+## 10. Validações de back-end
 
-## 7. Testes (evidência)
+Helpers `STABLE` / `PARALLEL SAFE`; execute grant `service_role`. Testes pgTAP cobrem limites 21:59 / 22:00 / 05:59 / 06:00.
 
-| Arquivo de teste | Cobertura |
-|------------------|-----------|
-| `supabase/tests/message_dispatcher/quiet_hours_helpers_test.sql` | Funções auxiliares `is_quiet_hours` e `next_send_window` com valores-limite (21:59, 22:00, 05:59, 06:00, 12:00) |
-| `supabase/tests/message_dispatcher/quiet_hours_ingest_reschedule_test.sql` | Reagendamento no `ingest` para mensagens cuja entrega cairia na janela silenciosa |
-| `supabase/tests/message_dispatcher/quiet_hours_evaluate_pending_test.sql` | Rede de segurança no `evaluate_pending` durante horário silencioso |
+## 11. Status, estados e transições
 
-## 8. Persistência e campos afetados
+Quiet hours forçam caminho via `SCHEDULED` → cron `activate_scheduled` → `PENDING_EVALUATION` → `evaluate_pending` (com bypass pula quota) → `QUEUED`.
 
-| Campo (`message_dispatches`) | Impacto |
-|------------------------------|---------|
-| `scheduled_for` | Movido para próximo 06:00 BRT quando na janela silenciosa |
-| `status` | Definido como `SCHEDULED` (em vez de `QUEUED`) |
-| `bypass_limits` | Marcado como `true` para pular reavaliação de quota |
+## 12. Persistência
 
-## 9. Limitações e pendências
+Apenas campos do dispatch; sem flag separada “quiet_hours” — inferível por horário + bypass.
 
-- A janela 22:00–06:00 está **hardcoded** em SQL; para ajustar é necessário alterar a migration e refazer deploy. Uma evolução possível seria parametrizar via `platform_constants`.
-- Não há suporte a **fusos horários por usuário** — a janela é fixa em `America/Sao_Paulo` para todos os perfis.
-- Não há **notificação ao usuário** de que sua mensagem foi reagendada por horário silencioso (o dispatch simplesmente aparece como `SCHEDULED`).
+## 13. Integrações
 
-## 10. Evidências
+Com [quotas-e-canais](./quotas-e-canais.md) (stagger) e crons `mmd_activate_scheduled`.
 
-| Artefato | Seções relevantes |
-|----------|-------------------|
-| `supabase/migrations/20260621100100_create_message_dispatcher_fsm_functions.sql` | Funções `message_dispatcher_is_quiet_hours`, `message_dispatcher_next_send_window`, blocos de quiet hours em `ingest` e `evaluate_pending` |
-| `supabase/tests/message_dispatcher/quiet_hours_helpers_test.sql` | Testes dos helpers |
-| `supabase/tests/message_dispatcher/quiet_hours_ingest_reschedule_test.sql` | Testes do ingest |
-| `supabase/tests/message_dispatcher/quiet_hours_evaluate_pending_test.sql` | Testes do evaluate_pending |
+## 14. Listagens
+
+Não há.
+
+## 15. Ações disponíveis
+
+Nenhuma ação de usuário; comportamento automático na pipeline.
+
+## 16. Dependências
+
+Pipeline FSM; `platform_constants` **não** controla a janela.
+
+## 17. Regras implícitas
+
+- `bypass_limits` após quiet hours evita que a mensagem “morra” por quota ao ser reativada de manhã (já aprovada na ingestão original).
+- Não há notificação ao usuário de que a mensagem foi adiadas.
+
+## 18. Riscos
+
+- P-08 hardcoded; P-09 fuso único.
+- Usuário em outro fuso ainda recebe no relógio de Brasília.
+
+## 19. Evidências
+
+| Artefato | Relevância |
+|----------|------------|
+| `supabase/migrations/20260621100100_create_message_dispatcher_fsm_functions.sql` | Helpers + quiet no ingest/evaluate (base) |
+| `supabase/migrations/20260712110000_mmd_push_stagger_scheduled_slots.sql` | Ingest/evaluate atuais com stagger + quiet |
+| `supabase/tests/message_dispatcher/quiet_hours_*_test.sql` | pgTAP |
+
+## 20. Pendências
+
+- P-08: parametrizar janela via `platform_constants`.
+- P-09: fuso por perfil.
+- UX de transparência ao usuário: não implementada.
+
+## 21. Checklist de completude
+
+- [x] Regra, pontos de aplicação, bypass, testes
+- [x] Composição com stagger documentada
+- [x] Links para pipeline/quotas
+- [ ] Preferência de usuário — inexistente (pendência de produto)
+
+## 22. Anexo — Cenários
+
+| Cenário | Horário | Resultado |
+|---------|---------|-----------|
+| Push imediato 23h | 23:00 BRT | 06:00 dia seguinte, SCHEDULED, bypass |
+| E-mail agendado 03h | 03:00 BRT | 06:00 mesmo dia |
+| Push 10h | 10:00 BRT | Fluxo normal |
+| Cron activate 01h | PENDING_EVALUATION | evaluate → 06:00 |
+
+## 23. Anexo — Funções auxiliares
+
+| Função | Comportamento |
+|--------|---------------|
+| `message_dispatcher_is_quiet_hours(ts)` | true se hora SP ≥ 22 ou &lt; 6 |
+| `message_dispatcher_next_send_window(ts)` | próximo 06:00 America/Sao_Paulo |

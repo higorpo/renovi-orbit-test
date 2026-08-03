@@ -2,90 +2,98 @@
 
 ## 1. Leitura para negócio
 
-- **Para que serve:** lista unificada de **pedidos em acompanhamento** para **cliente** e **prestador** na mesma rota `/dashboard/services`, com UI por papel.
-- **Cliente:** vê pedidos solicitados; busca, filtros, abas por fase, deep link `?serviceRequestId=`, sheet comparar/histórico de orçamentos, cancelamento.
-- **Prestador:** central de gerenciamento com cards compactos por fase; header (cliente + status), título IA, destaque contextual, metadados secundários e até 2 CTAs.
-- **Dados:** `view-services` (`list_services`, `get_service`, `cancel_service_request`); detalhe em `/dashboard/services/:id`.
+- **Para que serve:** lista unificada de **pedidos em acompanhamento** na rota `/dashboard/services`, com UI distinta por papel (`client` | `provider`).
+- **Cliente:** acompanha pedidos solicitados — busca, filtros, abas por fase, deep link `?serviceRequestId=`, sheet comparar/histórico de orçamentos (`ReceivedBudgetDetailsSheet`), cancelamento na listagem, CTA de pagamento manual quando falha permanente.
+- **Prestador:** acompanha propostas e serviços contratados — mesmos filtros/abas; banner de entrada para **calendário** (`ProviderCalendarEntryBanner` → `/dashboard/services/calendar`); dialogs de ver/revisar proposta; CTAs de chat, mapa e detalhe.
+- **Valor:** hub operacional pós-pedido/proposta; detalhe canônico em `/dashboard/services/:id` (`view-services`).
+- **Impacto se falhar:** cliente/prestador perdem visão consolidada do funil; deep links e CTAs de pagamento/chat deixam de funcionar nesta superfície.
 
-## 2. Visão geral técnica
+## 2. Visão geral funcional
 
 | Aspecto | Detalhe |
 |---------|---------|
-| Rota lista | `/dashboard/services` — `MyServicesRouteSlot` (cliente ou prestador por `profile.role`) |
-| Detalhe | `/dashboard/services/:id` — `ServiceDetailShell` (`view-services`) |
-| Cliente | `ClientMyServicesPage` → `MyServicesPageShell` + `ServiceListCard` |
-| Prestador | `ProviderMyServicesPage` → `MyServicesPageShell` + `ProviderServiceListCard` |
-| Dados lista | `useMyServicesList` → `useServicesList` → RPC `list_services` |
-| Deep link (cliente) | `?serviceRequestId=` — `getMyServicesPageUrlWithFocus` |
-| Orçamentos (cliente) | `ReceivedBudgetDetailsSheet` (`negotiation-proposals`) |
+| Rota lista | `/dashboard/services` — outlet `MyServicesRouteSlot` (retorna `null`); lista real nos **persistent slots** do `DashboardLayout` |
+| Detalhe | `/dashboard/services/:id` — `ServiceDetailShell` (`view-services`); sheet modal quando navegação com state de my-services |
+| Calendário (prestador) | `/dashboard/services/calendar` — `ProviderCalendarPage` (`provider-calendar`); guard `allowedRoles={['provider']}` |
+| Cliente | `ClientMyServicesPersistentSlot` → `ClientMyServicesPage` → `MyServicesPageShell` + `ClientServiceListCard` |
+| Prestador | `ProviderMyServicesPersistentSlot` → `ProviderMyServicesPage` → shell + `ProviderServiceListCard` + `ProviderCalendarEntryBanner` |
+| Dados | `useMyServicesList` → `useServicesList` (`view-services`) → RPC `list_services` (página 20) |
+| Deep link (cliente) | `?serviceRequestId=` — `getMyServicesPageUrlWithFocus` / `SERVICE_REQUEST_FOCUS_QUERY` |
+| Orçamentos (cliente) | `ReceivedBudgetDetailsSheet` (`negotiation-proposals`); modo `compare` \| `history` por `listPhase` |
 
-## 3. Documentação da feature
+## 3. Features do módulo
 
 | Documento | Conteúdo |
 |-----------|----------|
-| [features/solicitacoes-do-cliente.md](./features/solicitacoes-do-cliente.md) | Fluxo cliente (abas, filtros, card, sheet) |
-| [Comparar orçamentos / histórico](../chats/features/comparar-orcamentos-meus-servicos.md) | Sheet `ReceivedBudgetDetailsSheet` |
+| [features/solicitacoes-do-cliente.md](./features/solicitacoes-do-cliente.md) | Fluxo completo cliente + prestador (abas, filtros, cards, sheet, banner calendário, CTAs) |
+| [Comparar orçamentos / histórico](../chats/features/comparar-orcamentos-meus-servicos.md) | Sheet `ReceivedBudgetDetailsSheet` (detalhe do sheet) |
 | [Visualização de serviços (RPC)](../view-services/features/visualizacao-de-servicos.md) | Contrato `ServiceModel`, RPCs, fases |
+| Calendário do prestador | Feature `provider-calendar` — rota `/dashboard/services/calendar`; entrada via banner em Meus Serviços |
 
-## 4. Mapa de arquivos
+## 4. Perfis envolvidos
 
-| Área | Caminhos |
-|------|----------|
-| Roteamento | `components/MyServicesRouteSlot.tsx` |
-| Shell compartilhado | `components/MyServicesPageShell.tsx`, `components/shared/*` |
-| Cliente | `components/client/ClientMyServicesPage.tsx`, hooks `useClientMyServicesPage.ts` |
-| Cliente (card) | `components/client/ClientServiceListCard.tsx`, `ClientServiceCardIcons.tsx`, `utils/clientServiceCardPresentation.ts` |
-| Prestador | `components/provider/ProviderMyServicesPage.tsx`, `ProviderServiceListCard.tsx`, `ProviderServiceCardIcons.tsx`, `utils/providerServiceCardPresentation.ts`, `useProviderMyServicesPage.ts` |
-| Destaque compartilhado | `utils/pendingPaymentHighlight.ts` — copy do highlight quando `contracted.status === PENDING_PAYMENT` (cliente varia se `paymentScheduleState === FAILED_PERMANENT`) |
-| Core | `hooks/useMyServicesPageCore.ts`, `useMyServicesList.ts`, `useMyServicesFilters.ts` |
-| Tipos / rotas | `types/my-services.types.ts`, `constants/routes.ts` |
+| Perfil | Acesso à lista `/dashboard/services` | Superfície |
+|--------|--------------------------------------|------------|
+| `client` | Sim (menu “Meus Serviços”) | `ClientMyServicesPage` |
+| `provider` | Sim (menu “Meus Serviços”) | `ProviderMyServicesPage` + banner calendário |
+| `admin` | Sem rota dedicada nesta feature | — |
 
-## 5. Integrações
+Guards: dashboard sob `ProtectedRoute` `client` \| `provider`. Calendário: guard adicional `provider`.
 
-- **`view-services`** — lista, detalhe, cancelamento (cliente), fases, `ServiceModel` enriquecido (`myProposal`, `chatSummary`, `lastActivityAt` para prestador).
-- **`negotiation-proposals`** — sheet compare/history (cliente).
-- **`chats`** — ação primária no card prestador.
-- **`provider-jobs`** — descoberta de oportunidades (fora desta lista).
+## 5. Principais fluxos
 
-## 6. API pública (`index.ts`)
+1. **Abrir lista** → persistent slot monta página por `profile.role` → `list_services` com filtros.
+2. **Cliente — foco** → `?serviceRequestId=` → lista com 1 item (`get_service` no backend via list) + banner + scroll até o card.
+3. **Cliente — orçamentos** → CTA no card → sheet compare (negociação) ou history (demais fases).
+4. **Cliente — pagamento falhou** → CTA “Ajustar pagamento” → `ManualPaymentDialog` (`payments`).
+5. **Prestador — calendário** → banner “Ver calendário de serviços” → `/dashboard/services/calendar`.
+6. **Prestador — proposta** → “Ver proposta” / “Revisar proposta” → dialogs `ProviderServiceProposalDialogs`.
+7. **Detalhe** → navega para `/dashboard/services/:id` com state de sheet (lista permanece montada).
 
-Exporta: `MyServicesRouteSlot`, `ClientMyServicesPage`, `ProviderMyServicesPage`, `ROUTE_MY_SERVICES_LIST`, `getMyServicesPageUrlWithFocus`, `SERVICE_REQUEST_FOCUS_QUERY`.
+## 6. Regras transversais
 
-## 7. Migração / schema
+- Paginação server-side (20 itens); busca debounced **300 ms**.
+- Aba **Disputas** existe na UI mas `tabIncludesStatus(..., dispute)` sempre `false` — sem linhas.
+- Opções de dropdown de filtro (categoria/cidade/bairro) derivadas dos **itens já carregados** — podem ficar incompletas com paginação.
+- Campo `categoryId` no estado de filtro envia **título** do serviço como `p_category_title` (não UUID).
+- Destaque `PENDING_PAYMENT`: copy compartilhada em `pendingPaymentHighlight.ts`; no cliente, `FAILED_PERMANENT` prevalece sobre unread.
+- Prestador: avaliação no card `completed` usa **hash mock** (`mockClientRating`) — não é nota real do cliente.
+- Calendário: documentação de domínio em `provider-calendar`; neste módulo só o **ponto de entrada** (banner).
 
-- RPCs `get_service`, `list_services` — enriquecimento prestador: `my_proposal` (revisão, envio, recusa), `chat` (preview da última mensagem), `counterparty` (nome completo + avatar), `cancelled_at` / `completed_at` / `contracted.updated_at` (migrations `20260710120000_*`, `20260710160000_enrich_provider_service_card_data.sql`).
+## 7. Entidades
 
-## 8. Cards na listagem — destaque `PENDING_PAYMENT`
+Consumidas via `view-services` / RPCs (não há API própria de `my-services`):
 
-Quando o serviço contratado está em **`PENDING_PAYMENT`**, o destaque do card (cliente e prestador) prioriza o pagamento em relação ao highlight genérico de agenda. Implementação: `getPendingPaymentHighlightContent` (`utils/pendingPaymentHighlight.ts`), consumido por `clientServiceCardPresentation.ts` e `providerServiceCardPresentation.ts`. A ênfase `error` no card do cliente vem de `clientServiceCardTheme.ts`.
+- `service_requests`, `contracted_services`, propostas (`my_proposal`), chat summary, counterparty.
+- Fases de lista: `negotiation` \| `in_progress` \| `completed` \| `cancelled` (`list_phase`).
 
-**Dado:** a RPC `project_service_row` (usada por `list_services` / `get_service`) inclui `payment_schedule_state` no objeto `contracted`; o frontend mapeia para `contracted.paymentScheduleState`.
+## 8. Integrações
 
-| Papel / condição | Título do destaque | Descrição | Ícone / ênfase |
-|------------------|--------------------|-----------|----------------|
-| Cliente — `paymentScheduleState === FAILED_PERMANENT` | Pagamento falhou | Atualize suas informações de pagamento manualmente para confirmar o serviço. | `payment_pending` (cartão) · `error` (alerta vermelho) |
-| Cliente — demais estados de parcela | Aguardando pagamento | Serviço agendado para {data}, pagamento ainda pendente. | `payment_pending` (cartão) · `attention` |
-| Prestador (qualquer `paymentScheduleState`) | Aguardando pagamento do cliente | Serviço agendado para {data}, pagamento ainda pendente. | `payment_pending` (cartão) · `attention` |
+| Módulo | Uso |
+|--------|-----|
+| `view-services` | Lista, detalhe, cancelamento, budget sheet helpers, navegação sheet |
+| `negotiation-proposals` | `ReceivedBudgetDetailsSheet`; dialogs de proposta do prestador |
+| `chats` | Navegação para conversa / filtro por service request |
+| `payments` | `ManualPaymentDialog` + `usePaymentSchedule` no card cliente |
+| `provider-calendar` | `ProviderCalendarEntryBanner` + rota calendar |
+| `provider-jobs` | Empty state prestador → `/dashboard/jobs` |
+| `request-quote` | Empty/CTA cliente → `/pedir-orcamento` |
 
-- **Fallback** (sem data utilizável, nos casos com data na descrição): detalhe curto “Pagamento ainda pendente.”
-- **Prioridade do destaque:** em `FAILED_PERMANENT`, o alerta de pagamento falhou prevalece sobre mensagem não lida. Nos demais casos de `PENDING_PAYMENT`, unread ainda sobrescreve o destaque (agenda / pagamento vão para info secundária).
-- **CTA do card do cliente:** com `PENDING_PAYMENT` + `paymentScheduleState === FAILED_PERMANENT`, o botão primário é **“Ajustar pagamento”** (`adjust_payment`, ícone de cartão) e abre o `ManualPaymentDialog` (mesmo fluxo do detalhe: cartão → parcelas → confirmar → `payment_update_method` + `manual-charge-payment`); secundário **“Ver detalhes”**. Esse CTA tem prioridade sobre “Responder” / “Ver conversa com prestador” mesmo se houver mensagem não lida.
-- **Antes:** título era o highlight de agenda (“Agendado para…”) + detalhe curto “Aguardando pagamento” / “Aguardando pagamento do cliente” + ícone de calendário.
+## 9. Riscos e lacunas
 
-## 9. Card do prestador (`ProviderServiceListCard`)
+| Item | Status |
+|------|--------|
+| Aba Disputas | Placeholder — sem dados |
+| Opções de filtro só dos itens carregados | Lacuna de UX com paginação |
+| Rating no card concluído (prestador) | Mock determinístico por `serviceId` |
+| Sheet compare / modo | **Reconciliado (2026-08-02):** modo via `listPhase` (`getServiceRequestBudgetSheetMode`); ver [comparar-orcamentos](../chats/features/comparar-orcamentos-meus-servicos.md) |
+| Showcase DEV | Rotas de showcase de cards existem em `router.tsx` (DEV) — fora do fluxo de negócio |
 
-Estrutura fixa em cinco zonas: **header** (avatar + nome do cliente | badge de fase + urgência só se `high`) → **título IA** (2 linhas) → **destaque** (ação pendente / situação atual, maior peso visual) → **informações secundárias** (local, valor, data — sem descrição do pedido) → **rodapé** (máx. 2 botões).
+## 10. Evidências
 
-| Fase / substatus | Destaque (exemplo) | CTAs |
-|------------------|-------------------|------|
-| Negociação — nova mensagem | 📩 Nova mensagem recebida + preview | Responder · Ver detalhes |
-| Negociação — proposta enviada | ⏳ Aguardando decisão do cliente sobre sua proposta | Ver proposta · Ver negociação |
-| Negociação — revisão | 📝 Cliente solicitou revisão | Revisar proposta · Ver negociação |
-| Negociação — conversa ativa | 💬 Negociação em andamento | Ver negociação · Ver detalhes |
-| `in_progress` + `PENDING_PAYMENT` | 💳 Aguardando pagamento do cliente + data do serviço e “pagamento ainda pendente” (ver §8) | Ver conversa · Ver detalhes |
-| `in_progress` (hoje, já pago / sem pendência de pagamento) | 🔥 Serviço hoje — borda destacada | Ver conversa · Ver detalhes |
-| `in_progress` | 📅 Agendado para amanhã / data | Ver conversa · Ver detalhes |
-| `completed` | ✅ Serviço concluído + avaliação mock | Ver detalhes |
-| `cancelled` | ❌ Serviço cancelado + motivo | Ver detalhes |
-
-Regras: negociação **sem proposta** → CTA primário **Ver negociação** (nunca "Enviar orçamento" no card). Urgência baixa/média oculta. Aba **Disputas** permanece placeholder.
+- `src/features/my-services/`
+- `src/router.tsx` — `services`, `services/calendar`, `services/:id`
+- `src/layouts/DashboardLayout/DashboardLayout.tsx` — persistent slots
+- `src/layouts/DashboardLayout/dashboardMenu.ts` — item “Meus Serviços”
+- `src/features/provider-calendar/components/ProviderCalendarEntryBanner.tsx`
+- Feature detalhada: [features/solicitacoes-do-cliente.md](./features/solicitacoes-do-cliente.md)
