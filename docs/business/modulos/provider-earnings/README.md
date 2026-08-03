@@ -5,7 +5,7 @@
 - **Para que serve:** mostrar ao **prestador** as **liquidações bancárias** (depósitos previstos e efetivos na conta), distintas dos **recebimentos na captura** listados em Minha conta.
 - **Quem usa:** prestadores autenticados (`profiles.role === provider`), com rota guard provider-only e menu sujeito ao gate KYC `ACTIVE`.
 - **Não é:** histórico de captura/`provider_payout` (isso fica em `payments` → Minha conta → Recebimentos). Também não altera o calendário NetCred — só **lê** movements já sincronizados.
-- **Valor:** transparência de “quando cai na conta”, com filtros Previsto / Liquidado / Estorno e fallback de estimativa D+30 quando ainda não há `settling_at` real.
+- **Valor:** transparência de “quando cai na conta”, com filtros Previsto / Liquidado e fallback de estimativa D+30 quando ainda não há `settling_at` real.
 - **Riscos operacionais:** lista vazia se webhooks/`sync-netcred-settlements` atrasarem; disclosure embutido em Recebimentos/detalhe do serviço pode usar só o fallback D+30 (sem `settlingAt` real) — ver feature.
 
 ## 2. Visão geral funcional

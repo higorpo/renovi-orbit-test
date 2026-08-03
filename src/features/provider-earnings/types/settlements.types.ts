@@ -2,7 +2,7 @@ export type SettlementMovementStatus = "PENDING" | "PAID_OUT";
 
 export type SettlementRecordType = "CREDIT" | "DEBIT";
 
-export type SettlementFilterId = "all" | "pending" | "paid_out" | "debit";
+export type SettlementFilterId = "all" | "pending" | "paid_out";
 
 export type SettlementFilterConfig = {
   id: SettlementFilterId;

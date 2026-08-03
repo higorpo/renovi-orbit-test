@@ -12,7 +12,7 @@ Documentação baseada em `src/features/provider-earnings/`, rota `/dashboard/ea
 - **Problema que resolve:** prestador precisa ver **quando o valor cai na conta** (previsto / liquidado / estorno na liquidação), separado do momento em que o cartão do cliente foi capturado.
 - **Quem usa:** prestador autenticado com acesso operacional ao dashboard (KYC `ACTIVE` para ver o item no menu).
 - **Quem não usa:** cliente, visitante; admin sem UI dedicada nesta feature.
-- **Resultado esperado:** lista com valor líquido, título do serviço (link para detalhe), status Previsto/Liquidado, previsão/data de liquidação, parcela e máscara de conta; abas de filtro (Todos/Previsto/Liquidado = só CREDIT; Estorno = DEBIT); disclosure de previsão em outras superfícies.
+- **Resultado esperado:** lista com valor líquido, título do serviço (link para detalhe), status Previsto/Liquidado, previsão/data de liquidação, parcela e máscara de conta; abas de filtro (Todos/Previsto/Liquidado = só CREDIT, sem aba Estorno); disclosure de previsão em outras superfícies.
 - **Impacto se indisponível:** prestador perde a visão de depósito bancário; Recebimentos (captura) e detalhe do serviço continuam; ingestão backend independente da UI.
 
 ## 2. Objetivo de negócio
@@ -102,7 +102,7 @@ flowchart TD
 
 1. Ganhos = **liquidação bancária** (movement); Recebimentos = **captura** (`provider_payout` / view de receivables) — cópia explícita na página e link cruzado.
 2. Somente o prestador dono (`provider_id = auth.uid()`) lista movements na RPC.
-3. Filtros UI → RPC: Todos / Previsto / Liquidado enviam `record_type = CREDIT`; a RPC **esconde** CREDITS de schedules `REFUNDED`/`REFUND_REQUESTED` e parcelas cujo somatório de DEBIT ≥ CREDIT (clawback total). Previsto também `movement_status = PENDING`; Liquidado → `PAID_OUT`; Estorno → `record_type = DEBIT` (sem exclusão).
+3. Filtros UI → RPC: Todos / Previsto / Liquidado enviam `record_type = CREDIT`; a RPC **esconde** CREDITS de schedules `REFUNDED`/`REFUND_REQUESTED` e parcelas cujo somatório de DEBIT ≥ CREDIT (clawback total). Previsto também `movement_status = PENDING`; Liquidado → `PAID_OUT`. Não há aba Estorno na UI.
 4. Paginação: `page` ≥ 1; `page_size` entre 1 e **100** (front fixa **20**).
 5. Ordenação da lista: `settling_at DESC NULLS LAST`, depois `created_at DESC`.
 6. Upsert backend persiste só a perna do prestador (`holder_company_id` = `provider_gateway_accounts.netcred_company_id`); pula platform / company não casada (`skipped_platform`).
@@ -243,7 +243,7 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 |---------|---------------|
 | Listagem | Infinite query; flatten de páginas |
 | Busca textual | **Não há** |
-| Filtros | Abas: Todos / Previsto / Liquidado (= CREDIT) / Estorno (= DEBIT); server-side |
+| Filtros | Abas: Todos / Previsto / Liquidado (= CREDIT); server-side |
 | Serviço | Título + link sheet para `/dashboard/services/:id` (RPC devolve `service_request_id` / `service_request_title`) |
 | Paginação | `PAGE_SIZE = 20`; botão Carregar mais |
 | Ordenação | Definida na RPC (settling_at desc, created_at desc) |
@@ -352,7 +352,7 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 - [ ] Prestador KYC não ACTIVE: Ganhos sumido do menu.
 - [ ] Lista com CREDIT PENDING: badge Previsto + previsão.
 - [ ] Lista com PAID_OUT + `settledAt`: badge Liquidado + “Liquidado em …”.
-- [ ] DEBIT: valor negativo visual + badge Estorno; aba Estorno lista o item.
+- [ ] DEBIT/clawback não aparece nas abas Todos/Previsto/Liquidado (RPC).
 - [ ] Duas parcelas consecutivas mesmo `paymentScheduleId`: grupo “Parcelas do mesmo pagamento”.
 - [ ] Filtro sem resultados: empty + limpar filtros volta a Todos.
 - [ ] Erro simulado: ErrorState + retry.

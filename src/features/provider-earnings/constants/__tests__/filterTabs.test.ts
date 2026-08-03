@@ -26,9 +26,11 @@ describe("getSettlementFilterConfig", () => {
         recordType: "CREDIT",
       }),
     );
-    expect(getSettlementFilterConfig("debit")).toEqual(
-      expect.objectContaining({ id: "debit", recordType: "DEBIT" }),
-    );
+    expect(SETTLEMENT_FILTER_TABS.map((tab) => tab.id)).toEqual([
+      "all",
+      "pending",
+      "paid_out",
+    ]);
   });
 
   it("falls back to default tab for unknown filter id", () => {

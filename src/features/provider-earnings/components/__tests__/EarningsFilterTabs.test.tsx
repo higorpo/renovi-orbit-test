@@ -26,6 +26,6 @@ describe("EarningsFilterTabs", () => {
     );
 
     expect(screen.getByRole("tab", { name: "Liquidado" })).toBeDisabled();
-    expect(screen.getByRole("tab", { name: "Estorno" })).toBeDisabled();
+    expect(screen.queryByRole("tab", { name: "Estorno" })).not.toBeInTheDocument();
   });
 });

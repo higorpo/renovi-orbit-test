@@ -131,19 +131,19 @@ describe("useProviderSettlements", () => {
     );
   });
 
-  it("applies debit filter", async () => {
+  it("applies paid_out filter", async () => {
     listProviderSettlements.mockResolvedValue({
       data: makePage(),
       error: null,
     });
 
-    const { result } = renderHook(() => useProviderSettlements({ filterId: "debit" }), {
+    const { result } = renderHook(() => useProviderSettlements({ filterId: "paid_out" }), {
       wrapper: wrapperFor(createClient()),
     });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(listProviderSettlements).toHaveBeenCalledWith(
-      expect.objectContaining({ movementStatus: null, recordType: "DEBIT" }),
+      expect.objectContaining({ movementStatus: "PAID_OUT", recordType: "CREDIT" }),
     );
   });
 

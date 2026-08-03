@@ -112,7 +112,7 @@ describe("EarningsPage", () => {
     mocks.settlements.items = [];
     renderPage();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Estorno" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Previsto" }));
     expect(screen.getByText("Nenhuma liquidação neste filtro")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Limpar filtros/i }));
