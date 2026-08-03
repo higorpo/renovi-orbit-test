@@ -6,7 +6,7 @@ export function KycDocumentsSubmittedStatus() {
     <KycStatusLayout
       icon={Clock}
       title="Documentos enviados"
-      body="Recebemos seu credenciamento e já encaminhamos para análise do parceiro. Avisaremos quando houver novidade. Enquanto isso, você pode acessar Minha conta."
+      body="Recebemos seu credenciamento e já encaminhamos para análise do parceiro. Avisaremos quando houver novidade."
     />
   );
 }
