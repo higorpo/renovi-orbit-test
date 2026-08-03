@@ -72,7 +72,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | `schedule-netcred-charges` | `payments` — cobrança automática T-2 (cron) |
 | `tokenize-payment-card` | `payments` — tokenização checkout |
 | `manual-charge-payment` | `payments` — cobrança manual cliente |
-| `netcred-webhook` | `payments` — webhooks gateway (incl. `PAYOUT_*` → settlements) |
+| `netcred-webhook` | `payments` — webhooks gateway (PAYOUT_* → settlements; enrich GraphQL pós-CAPTURE/REFUND) |
 | `process-refund` | `payments` — estornos |
 | `detect-netcred-onboarding` | `payments` / `provider-kyc` — status KYC |
 | `reconcile-netcred-payments` | `payments` — reconciliação de cobranças |

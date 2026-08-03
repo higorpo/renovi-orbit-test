@@ -969,7 +969,7 @@ CREATE INDEX idx_payment_schedules_provider_paid_history
 
 `movements.transaction_id` → `payment_schedules.gateway_transaction_id`
 
-(Primary ingest: webhooks `PAYOUT_CREATE` / `PAYOUT_SETTLE` → `payment_webhook_handle_payout` → `payment_upsert_settlement_movements`. Secondary: Edge `sync-netcred-settlements` / cron `payment_cron_sync_netcred_settlements` via GraphQL `movements(transactionId)`.)
+(Primary ingest: (1) webhooks `PAYOUT_CREATE` / `PAYOUT_SETTLE` → `payment_webhook_handle_payout`; (2) after successful `TRANSACTION_CAPTURE` / `TRANSACTION_REFUND`, Edge `netcred-webhook` enriches via GraphQL `movements(transactionId)` → `payment_upsert_settlement_movements` — covers movements attached to **existing** payout lots that do not emit `PAYOUT_CREATE`. Secondary: Edge `sync-netcred-settlements` / cron `payment_cron_sync_netcred_settlements` for gaps.)
 
 | Column (key) | Meaning |
 |---|---|

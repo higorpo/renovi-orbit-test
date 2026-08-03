@@ -83,7 +83,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `supabase/functions/reconcile-inanalysis-auto-cancel-voids/` | Void pós auto-cancel de `IN_ANALYSIS`; outcome `deferred_captured` (PAY-DC) |
 | `supabase/functions/process-refund/` | Prepare → NetCred refund → commit |
 | `supabase/functions/process-far-reschedule-recapture/` | Recaptura longe pós-`PAID` (reagendamento) |
-| `supabase/functions/netcred-webhook/` | Webhook NetCred (pagamento + payout) |
+| `supabase/functions/netcred-webhook/` | Webhook NetCred (pagamento + payout; enrich settlements pós-CAPTURE/REFUND) |
 | `supabase/functions/sync-netcred-settlements/` | Reconcile GraphQL de settlements |
 | `supabase/functions/detect-netcred-onboarding/` | Detecção onboarding KYC NetCred |
 | `supabase/functions/dispatch-kyc-email/` | E-mail ops credenciamento |
@@ -244,10 +244,10 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `payment_prepare_refund_request` / `payment_commit_refund_after_gateway` / `payment_mark_refund_gateway_acked` / `payment_complete_refund_domain_side_effects` (migration `20260802070000_*` e correlatas) | Opção A (gateway first): prepare (read-only) → NetCred → commit cancel+`REFUND_REQUESTED`+`SUBMITTED`; crash recovery PAID+SUBMITTED; side effects de domínio reutilizados por reconcile/webhook. P-12 resolvido — ver `docs/payment-system/critical-bug-refund-partial-commit.md` |
 | `supabase/functions/process-refund/` | Edge: prepare → `refundTransaction` → commit |
 | `supabase/functions/reconcile-netcred-payments/` | Claim PAID+SUBMITTED; completa cancel se gateway REFUNDED |
-| `supabase/functions/netcred-webhook/` + `payment_process_webhook_event` | Assinatura inválida → terminal; `paid_amount` server-authoritative; confirma reembolso (`refunded_at`); `PAID`→`REFUNDED` via `TRANSACTION_REFUND`; `PAYOUT_CREATE`/`PAYOUT_SETTLE` → `payment_webhook_handle_payout`; completa cancel de domínio se serviço ainda aberto |
+| `supabase/functions/netcred-webhook/` + `payment_process_webhook_event` | Assinatura inválida → terminal; `paid_amount` server-authoritative; confirma reembolso (`refunded_at`); `PAID`→`REFUNDED` via `TRANSACTION_REFUND`; `PAYOUT_CREATE`/`PAYOUT_SETTLE` → `payment_webhook_handle_payout`; após `TRANSACTION_CAPTURE`/`TRANSACTION_REFUND` bem-sucedidos → enrich GraphQL best-effort `movements(transactionId)` → `payment_upsert_settlement_movements` (falha não falha ACK); completa cancel de domínio se serviço ainda aberto |
 | `supabase/migrations/20260802240000_create_payment_settlement_movements.sql` | Tabela `payment_settlement_movements`, view `provider_settlement_movements_v`, upsert/list RPCs, handler payout |
 | `supabase/migrations/20260802250000_payment_sync_netcred_settlements_cron.sql` | Cron `payment_cron_sync_netcred_settlements` → EF `sync-netcred-settlements` |
-| `supabase/functions/sync-netcred-settlements/` | Reconcile GraphQL de movements (secundário aos webhooks) |
+| `supabase/functions/sync-netcred-settlements/` | Reconcile GraphQL de movements (backfill; mesmo pipeline do enrich pós-captura) |
 | `supabase/tests/payments/payment_settlement_movements_test.sql` | pgTAP RLS/CLS/upsert/list settlements |
 | `src/features/provider-earnings/` | UI Ganhos + Vitest (api/hooks/utils/disclosure) |
 | `supabase/tests/payments/client_card_tokens_company_binding_test.sql` | Token ligado à company NetCred da **plataforma** (`payment_netcred_platform_company_id` / Vault); mismatch no aceite é vs platform (não vs company do prestador); prestador só no payout |

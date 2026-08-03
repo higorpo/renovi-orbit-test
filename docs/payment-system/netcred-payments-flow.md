@@ -900,18 +900,20 @@ Rejeitar request se assinatura inválida. Logar `X-NETCRED-Event` + IDs do paylo
 | `CHARGE_VOID` | Cobrança cancelada antes da execução | `ChargePayload` | `payment_phase` → `voided`; serviço cancelado sem débito |
 | `TRANSACTION_CREATE` | Transação filha criada na charge | `TransactionPayload` | Persistir `netcred_transaction_id`; ligar `charge.reference_code` ao serviço |
 | `TRANSACTION_AUTHORIZE` | Autorização / emissão (antifraude) | `TransactionPayload` | `payment_phase` → `authorizing` ou `in_analysis`; aguardar captura |
-| `TRANSACTION_CAPTURE` | Captura efetivada (T-2 cartão) | `TransactionPayload` | **`PAID`:** `payment_phase` → `paid`, `charge_captured_at`, `paid_amount`; notificar cliente/prestador |
+| `TRANSACTION_CAPTURE` | Captura efetivada (T-2 cartão) | `TransactionPayload` | **`PAID`:** schedule → `paid`; depois enrich GraphQL `movements(transactionId)` → upsert settlements (movements em lote já existente **não** disparam `PAYOUT_CREATE`) |
 | `TRANSACTION_UPDATE` | Qualquer mudança de estado | `TransactionPayload` | **Evento mais abrangente** — mapear `transaction_state` → `payment_phase` (`PAID`, `REJECTED`, `IN_ANALYSIS`, `SCHEDULED`, etc.); usar como fallback se `CAPTURE` não chegar |
 | `TRANSACTION_EXPIRED` | Prazo da transação expirou | `TransactionPayload` | `payment_phase` → `expired`; solicitar novo cartão ou reagendar |
 | `TRANSACTION_VOID` | Cancelamento da transação (pré ou pós-análise, conforme regra Netcred) | `TransactionPayload` | Confirmar cancelamento solicitado via `chargeVoid`/`transactionVoid`; `payment_phase` → `voided`; fechar ciclo sem depender só de e-mail |
-| `TRANSACTION_REFUND` | Estorno processado | `TransactionPayload` | Confirmar `transactionRefund`; `payment_phase` → `refunded` / `partially_refunded`; `refund_confirmed_at`, `refunded_amount`; comunicar prazo 30–60 dias na fatura |
+| `TRANSACTION_REFUND` | Estorno processado | `TransactionPayload` | Confirmar refund no schedule; enrich GraphQL movements (DEBIT/clawback) → upsert; comunicar prazo 30–60 dias na fatura |
 | `TRANSACTION_DISPUTE` | Chargeback / disputa iniciada | `TransactionPayload` | `is_disputed = true`; abrir fluxo de disputa Renovi; bloquear payout se aplicável |
 | `PAYOUT_CREATE` | Lote de liquidação criado (previsão) | `PayoutPayload` | Upsert `payment_settlement_movements` a partir de `payload.movements[]` (`payment_webhook_handle_payout`); join `movements.transaction_id` → `payment_schedules.gateway_transaction_id` |
 | `PAYOUT_SETTLE` | Lote liquidado / atualizado | `PayoutPayload` | Mesmo handler; avança `settled_at` / `movement_status` (`PAID_OUT` etc.) |
 
 > **Nota:** Na documentação textual da coleção Postman aparece `TRANSACTION_EXPIRE`; em `webhookCreate` o valor correto é `TRANSACTION_EXPIRED`. A mesma coleção omite `PAYOUT_*` — eventos oficiais de liquidação estão na [doc Netcred](https://docs.netcredbrasil.com.br/) e em [`payments-api.md` §10](./payments-api.md) (`PayoutPayload` + enums).
 
-> **Reconcile secundário:** Edge `sync-netcred-settlements` (cron `payment_cron_sync_netcred_settlements`) consulta GraphQL `movements(transactionId)` para gaps (webhook perdido / pós-captura sem payout ainda) e reusa `payment_upsert_settlement_movements`.
+> **Enrich na captura:** Netcred reusa lotes de payout por `(company, settling_at)`; movements novos frequentemente **não** disparam `PAYOUT_CREATE`. Por isso `netcred-webhook`, após `TRANSACTION_CAPTURE`/`TRANSACTION_REFUND`, busca movements via GraphQL e upserta (best-effort; falha não quebra o ACK).
+>
+> **Reconcile secundário:** Edge `sync-netcred-settlements` (cron `payment_cron_sync_netcred_settlements`) para gaps (enrich falhou / movements ainda indisponíveis) e reusa `payment_upsert_settlement_movements`.
 
 ### 6.4 Chaves de match (payload → linha local)
 

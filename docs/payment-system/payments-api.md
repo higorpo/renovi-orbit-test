@@ -1739,7 +1739,7 @@ mutation webhookCreate($input: WebhookCreateInput!) {
 
 > **Cancelamento/estorno (disputas):** a Netcred confirmou (2026-06) que `TRANSACTION_VOID` indica cancelamento e `TRANSACTION_REFUND` indica estorno — usar para automatizar a confirmação hoje feita por e-mail após solicitação de cancelamento em disputas (ver **§4.14**). Em disputas decididas a favor do cliente, a solicitação à Netcred é por **e-mail** (código da transação, nome do cliente, valor); o webhook deve refletir o processamento efetivo.
 
-> **Liquidação bancária:** `PAYOUT_*` documentados na API oficial Netcred (e no schema GraphQL). A coleção Postman antiga omite esses eventos — não usar Postman como fonte negativa. Orbit: handler `payment_webhook_handle_payout` + upsert em `payment_settlement_movements`; reconcile secundário `sync-netcred-settlements`.
+> **Liquidação bancária:** `PAYOUT_*` documentados na API oficial Netcred (e no schema GraphQL). A coleção Postman antiga omite esses eventos — não usar Postman como fonte negativa. Orbit: (1) `payment_webhook_handle_payout` quando o lote é criado/liquidado; (2) enrich GraphQL após `TRANSACTION_CAPTURE`/`TRANSACTION_REFUND` quando movements entram em lote já existente; (3) reconcile secundário `sync-netcred-settlements`.
 
 > **Nota:** Na descrição textual da coleção aparece `TRANSACTION_EXPIRE`; no cadastro de webhook (`webhookCreate`) o valor aceito é `TRANSACTION_EXPIRED`.
 

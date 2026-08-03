@@ -233,7 +233,7 @@ FSM SQL: trigger de matriz em migração de `payment_schedules` (invariantes PAI
 | Tokens | `client_card_tokens` (leitura segura: `client_card_tokens_safe_v`) |
 | Parcela | `payment_schedules` (+ audit append-only `payment_schedules_audit`) |
 | Sessão ClearSale | Coluna `clearsale_session_id` na parcela / consumo no aceite |
-| Settlement movements | `payment_settlement_movements` (webhook `PAYOUT_*`) — **UI em provider-earnings**, não neste fluxo |
+| Settlement movements | `payment_settlement_movements` (PAYOUT_*; enrich pós-CAPTURE/REFUND; sync) — **UI em provider-earnings**, não neste fluxo |
 | Cliente (Preferences) | Sem draft de checkout local (estado só em memória do dialog/stepper) |
 | Cache React Query | Requirements, tokens, schedule, installment options |
 
@@ -248,8 +248,8 @@ FSM SQL: trigger de matriz em migração de `payment_schedules` (invariantes PAI
 | **pg_cron → schedule-netcred-charges** | Cobrança T-2 em lote (`payment_claim_charge_batch`) |
 | **reconcile-netcred-payments** | Cron reconcilia schedules stale vs gateway |
 | **auto-cancel-unpaid-services** + **reconcile-inanalysis-auto-cancel-voids** | T-12h cancel + void pós-`IN_ANALYSIS` — [reconciliacao-e-voids](./reconciliacao-e-voids.md) |
-| **sync-netcred-settlements** | Gap fill GraphQL de `payment_settlement_movements` (UI Ganhos) |
-| **netcred-webhook** | Captura, updates, voids, payouts (pesados enfileirados); unsigned → `DEAD_LETTER` |
+| **sync-netcred-settlements** | Backfill GraphQL de `payment_settlement_movements` (UI Ganhos) |
+| **netcred-webhook** | Captura, updates, voids, payouts (pesados enfileirados); enrich settlements pós-CAPTURE/REFUND; unsigned → `DEAD_LETTER` |
 | **detect-netcred-onboarding** | Poll company NetCred → `ACTIVE` com bank account |
 | **Message Dispatcher** | `payment.upcoming_charge`, `payment.charge_succeeded`, falhas, análise, `SERVICE_AUTO_CANCELLED`, etc. |
 | **fee-calculator / RPCs fee** | `payment_total_with_card_fees`, `payment_calculate_charge_amount`, `payment_calculate_installment_options` |
@@ -354,7 +354,7 @@ Neste escopo (checkout/cobrança):
 | ID | Tema | Status |
 |----|------|--------|
 | **P-KYC-ACTIVE** | Credenciamento completo (wizard/gate UI) documentado em `provider-kyc`; este doc só cobre gate de cobrança (`ACTIVE` + company + bank). Manter links sincronizados se FSM de onboarding mudar. | Evidência ok; fronteira de módulo |
-| **P-SETTLEMENTS→EARNINGS** | Persistência de `payment_settlement_movements` / webhook `PAYOUT_*` / sync settlements vive no domínio payments; **UI e breakdown de Ganhos** em `provider-earnings`. Não duplicar produto de liquidação aqui. | Gap documental de fronteira — intencional |
+| **P-SETTLEMENTS→EARNINGS** | Persistência de `payment_settlement_movements` / webhook `PAYOUT_*` / enrich pós-CAPTURE/REFUND / sync settlements vive no domínio payments; **UI e breakdown de Ganhos** em `provider-earnings`. Não duplicar produto de liquidação aqui. | Gap documental de fronteira — intencional |
 | **P-REFUNDS** | Reembolso / histórico de captura → [historico-e-reembolso.md](./historico-e-reembolso.md) (outro worker). | Fora de escopo |
 | **P-OPS-RECONCILE** | Auto-cancel / void / DEAD_LETTER / sync settlements → [reconciliacao-e-voids.md](./reconciliacao-e-voids.md). | Fora de escopo (doc irmão) |
 | **P-mapCheckoutStepperError** | Erros desconhecidos de requirements podem vazar o **código** bruto (`?? code`) em vez do fallback genérico de `mapPaymentUserMessage`. | Evidência parcial / inconsistência UX |

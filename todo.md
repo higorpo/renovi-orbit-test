@@ -28,6 +28,7 @@ Itens interessantes de ter na plataforma (futuro)
   - Poder cancelar o serviço
   - Poder reagendar o serviço
   - Ver informações do serviço
+- Prestador poder vender para clientes de fora da plataforma
 
 
 Urgentes:
@@ -52,7 +53,6 @@ Telas/fluxos restantes:
 - Visualizar checklist de conclusão do serviço
 - Avaliação do serviço após sua conclusão
 - Tela de perfil do prestador
-- Prestador poder vender para clientes de fora da plataforma
 - Sistema de disputas
 - Tela de notificação
 - Mesmo com cadastro manual precisa fazer aceite dos termos de uso
@@ -61,10 +61,11 @@ Telas/fluxos restantes:
 - Tela de onboarding para cliente
 - Weblab
 - Template dos emails
-- Refazer tela de erros
+- Refazer tela de erros quando da crash no app
 - Refazer tela de minha conta
 - Como vai funcionar a emissão de nota fiscal da plataforma?
 - Nova tela de minha conta
+- Fluxo de antecipação de recebíveis 
 
 Coisas para verificar:
 

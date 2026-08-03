@@ -81,6 +81,16 @@ export {
   type SettlementSyncSource,
 } from "./mapSettlementMovementUpsert.ts";
 
+export {
+  enrichSettlementMovementsForTransaction,
+  extractGatewayTransactionIdFromPayload,
+  isTransactionSettlementEnrichEvent,
+  mapGraphqlMovementsToUpsertItems,
+  type EnrichSettlementDeps,
+  type EnrichSettlementResult,
+  type EnrichSettlementUpsertResult,
+} from "./enrichSettlementMovements.ts";
+
 export { buildPayoutRule, type BuildPayoutRuleProviderAccount } from "./buildPayoutRule.ts";
 
 export { NetCredAdapter, type NetCredAdapterDeps } from "./netcred-adapter.ts";

@@ -193,7 +193,7 @@ begin
 
   perform cron.schedule(
     'sync-netcred-settlements',
-    '15,45 * * * *',
+    '*/10 * * * *',
     $$select public.payment_cron_sync_netcred_settlements();$$
   );
 end;

@@ -346,11 +346,11 @@ Batches server-side apenas (claim RPCs). Sem UI de listagem operacional neste m�
 
 | `event_type` | Handler / efeito |
 |--------------|------------------|
-| `TRANSACTION_CAPTURE` | Captura → tipicamente `PAID` |
+| `TRANSACTION_CAPTURE` | Captura → tipicamente `PAID`; depois enrich settlements best-effort (GraphQL) |
 | `TRANSACTION_UPDATE` | Roteia por `transactionState` (incl. `VOIDED`, `REJECTED`, refunds) — heavy path enqueue |
 | `CHARGE_VOID` / `TRANSACTION_VOID` | `payment_webhook_handle_void` |
-| `TRANSACTION_REFUND` | Confirma estorno |
-| `PAYOUT_CREATE` / `PAYOUT_SETTLE` | Settlements (gap coberto pelo sync) |
+| `TRANSACTION_REFUND` | Confirma estorno; depois enrich settlements best-effort (GraphQL) |
+| `PAYOUT_CREATE` / `PAYOUT_SETTLE` | Settlements via payout; gaps cobertos por enrich pós-captura e pelo sync |
 | `WEBHOOK_PING` | Noop / ignorável no ingress |
 
 ## Anexo C — Checklist QA / ops (negócio)

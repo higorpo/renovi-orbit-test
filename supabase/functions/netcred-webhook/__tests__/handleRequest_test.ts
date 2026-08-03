@@ -526,6 +526,7 @@ Deno.test("TRANSACTION_CAPTURE processes inline and persists NetCred transaction
   let processedEventId: string | undefined;
   let queued = false;
   let capturedProviderEventId: string | undefined;
+  let enrichedTransactionId: string | undefined;
 
   const response = await handleNetcredWebhookRequest(
     webhookRequest(rawBody, {
@@ -547,6 +548,18 @@ Deno.test("TRANSACTION_CAPTURE processes inline and persists NetCred transaction
       markValidating: async (eventId) => {
         persistedEventId = eventId;
       },
+      enrichSettlementMovementsForTransaction: async (transactionId) => {
+        enrichedTransactionId = transactionId;
+        return {
+          transactionId,
+          outcome: "upserted",
+          movementCount: 1,
+          upserted: 1,
+          skippedPlatform: 0,
+          skippedNotFound: 0,
+          skippedInvalid: 0,
+        };
+      },
     }),
   );
 
@@ -555,6 +568,7 @@ Deno.test("TRANSACTION_CAPTURE processes inline and persists NetCred transaction
   assertEquals(persistedEventId, "event-capture-1");
   assertEquals(processedEventId, "event-capture-1");
   assertEquals(queued, false);
+  assertEquals(enrichedTransactionId, "123456");
   assertEquals(await response.text(), "OK");
 });
 
@@ -568,6 +582,7 @@ Deno.test("TRANSACTION_REFUND is processed inline like CAPTURE (not heavy path)"
 
   let processed = false;
   let queued = false;
+  let enrichedTransactionId: string | undefined;
 
   const response = await handleNetcredWebhookRequest(
     webhookRequest(rawBody, {
@@ -582,16 +597,21 @@ Deno.test("TRANSACTION_REFUND is processed inline like CAPTURE (not heavy path)"
       enqueueHeavyProcessing: async () => {
         queued = true;
       },
+      enrichSettlementMovementsForTransaction: async (transactionId) => {
+        enrichedTransactionId = transactionId;
+      },
     }),
   );
 
   assertEquals(response.status, 200);
   assertEquals(processed, true);
   assertEquals(queued, false);
+  assertEquals(enrichedTransactionId, "tx-refund-1");
 });
 
 Deno.test("handler not_found outcome enqueues deferred processing", async () => {
   let queued = false;
+  let enrichCalled = false;
   const rawBody = '{"id":"evt-not-found"}';
   const signature = await computeHMACSHA256("test-webhook-secret", rawBody);
 
@@ -608,11 +628,44 @@ Deno.test("handler not_found outcome enqueues deferred processing", async () => 
       enqueueHeavyProcessing: async () => {
         queued = true;
       },
+      enrichSettlementMovementsForTransaction: async () => {
+        enrichCalled = true;
+      },
     }),
   );
 
   assertEquals(response.status, 200);
   assertEquals(queued, true);
+  assertEquals(enrichCalled, false);
+});
+
+Deno.test("CAPTURE enrich failure still returns 200 OK", async () => {
+  const rawBody = JSON.stringify({ id: 446534, charge: { reference_code: "svc" } });
+  const signature = await computeHMACSHA256("test-webhook-secret", rawBody);
+  let failedCalled = false;
+
+  const response = await handleNetcredWebhookRequest(
+    webhookRequest(rawBody, {
+      eventType: "TRANSACTION_CAPTURE",
+      signature,
+    }),
+    createDeps({
+      processWebhookEvent: async () => ({
+        outcome: "processed",
+        handler: { outcome: "paid" },
+      }),
+      enrichSettlementMovementsForTransaction: async () => {
+        throw new Error("graphql timeout");
+      },
+      markFailed: async () => {
+        failedCalled = true;
+      },
+    }),
+  );
+
+  assertEquals(response.status, 200);
+  assertEquals(failedCalled, false);
+  assertEquals(await response.text(), "OK");
 });
 
 Deno.test("persist failure with non-Error still returns persist_failed", async () => {

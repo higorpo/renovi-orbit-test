@@ -11,6 +11,11 @@ import {
   type IPRateLimitConfig,
 } from "../_shared/security/rate-limit.ts";
 import {
+  extractGatewayTransactionIdFromPayload,
+  isTransactionSettlementEnrichEvent,
+  type EnrichSettlementResult,
+} from "../_shared/payment/enrichSettlementMovements.ts";
+import {
   extractProviderEventId,
   parseWebhookPayload,
 } from "./parseWebhook.ts";
@@ -41,6 +46,13 @@ export type NetcredWebhookDeps = {
     eventId: string;
     eventType: string;
   }) => Promise<void>;
+  /**
+   * Best-effort GraphQL settle enrich after CAPTURE/REFUND SQL success.
+   * Must not throw — webhook ACK stays independent of GraphQL/upsert outcome.
+   */
+  enrichSettlementMovementsForTransaction?: (
+    transactionId: string,
+  ) => Promise<EnrichSettlementResult | void>;
   emitInvalidSignatureWarning: (extra: Record<string, unknown>) => void;
   emitTransactionDisputeCritical?: (extra: {
     schedule_id: string;
@@ -66,6 +78,66 @@ async function enqueueDeferredProcessing(
   eventType: string,
 ): Promise<void> {
   await deps.enqueueHeavyProcessing({ eventId, eventType });
+}
+
+async function maybeEnrichSettlementMovements(
+  deps: NetcredWebhookDeps,
+  eventType: string,
+  payload: Record<string, unknown>,
+  correlationId: string | null,
+): Promise<void> {
+  if (!deps.enrichSettlementMovementsForTransaction) {
+    return;
+  }
+  if (!isTransactionSettlementEnrichEvent(eventType)) {
+    return;
+  }
+
+  const transactionId = extractGatewayTransactionIdFromPayload(payload);
+  if (!transactionId) {
+    logger.warn("settlement_enrich_skipped", {
+      event_type: eventType,
+      gateway_slug: "netcred",
+      correlation_id: correlationId,
+      reason: "missing_gateway_transaction_id",
+    });
+    return;
+  }
+
+  try {
+    const result = await deps.enrichSettlementMovementsForTransaction(
+      transactionId,
+    );
+    const outcome = result && typeof result === "object"
+      ? result.outcome
+      : "unknown";
+    const logFields = {
+      event_type: eventType,
+      gateway_slug: "netcred",
+      correlation_id: correlationId,
+      gateway_transaction_id: transactionId,
+      outcome,
+      upserted: result && typeof result === "object" ? result.upserted : undefined,
+      movement_count: result && typeof result === "object"
+        ? result.movementCount
+        : undefined,
+      error: result && typeof result === "object" ? result.error : undefined,
+    };
+    if (outcome === "failure") {
+      logger.warn("settlement_enrich_completed", logFields);
+    } else {
+      logger.info("settlement_enrich_completed", logFields);
+    }
+  } catch (error) {
+    // Never fail webhook ACK on GraphQL/upsert problems — cron backfills.
+    logger.warn("settlement_enrich_failed", {
+      event_type: eventType,
+      gateway_slug: "netcred",
+      correlation_id: correlationId,
+      gateway_transaction_id: transactionId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 export async function handleNetcredWebhookRequest(
@@ -223,6 +295,13 @@ export async function handleNetcredWebhookRequest(
       });
       return new Response("OK", { status: 200, headers: cors });
     }
+
+    await maybeEnrichSettlementMovements(
+      deps,
+      eventType,
+      payload,
+      providerEventId,
+    );
 
     logger.info(PAYMENT_LOG_EVENTS.WEBHOOK_PROCESSED, {
       event_type: eventType,

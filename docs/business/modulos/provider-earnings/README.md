@@ -6,7 +6,7 @@
 - **Quem usa:** prestadores autenticados (`profiles.role === provider`), com rota guard provider-only e menu sujeito ao gate KYC `ACTIVE`.
 - **Não é:** histórico de captura/`provider_payout` (isso fica em `payments` → Minha conta → Recebimentos). Também não altera o calendário NetCred — só **lê** movements já sincronizados.
 - **Valor:** transparência de “quando cai na conta”, com filtros Previsto / Liquidado e fallback de estimativa D+30 quando ainda não há `settling_at` real.
-- **Riscos operacionais:** lista vazia se webhooks/`sync-netcred-settlements` atrasarem; disclosure embutido em Recebimentos/detalhe do serviço pode usar só o fallback D+30 (sem `settlingAt` real) — ver feature.
+- **Riscos operacionais:** lista vazia se ingestão (PAYOUT_*, enrich pós-captura/estorno ou `sync-netcred-settlements`) atrasar; disclosure embutido em Recebimentos/detalhe do serviço pode usar só o fallback D+30 (sem `settlingAt` real) — ver feature.
 
 ## 2. Visão geral funcional
 
@@ -40,7 +40,7 @@
 ## 6. Regras transversais
 
 - Distinção **captura** vs **liquidação bancária** (obrigatória na cópia da página e nos docs de payments).
-- Somente leitura; ingestão só por `service_role` (webhook / reconcile).
+- Somente leitura; ingestão só por `service_role` (webhook PAYOUT_*, enrich GraphQL pós-captura/estorno, cron reconcile).
 - Página e RPC não antecipam depósito ao marcar serviço concluído (`PROVIDER_SETTLEMENT_COMPLETION_NOTE`).
 
 ## 7. Entidades
@@ -55,7 +55,7 @@
 
 ## 8. Integrações
 
-- **payments / NetCred:** `PAYOUT_CREATE` / `PAYOUT_SETTLE` → `payment_webhook_handle_payout`; cron `sync-netcred-settlements` (GraphQL) como caminho secundário.
+- **payments / NetCred:** (1) `PAYOUT_CREATE` / `PAYOUT_SETTLE` → `payment_webhook_handle_payout`; (2) após `TRANSACTION_CAPTURE` / `TRANSACTION_REFUND` com sucesso, `netcred-webhook` enriquece best-effort via GraphQL `movements(transactionId)` → `payment_upsert_settlement_movements` (mesmo pipeline do sync; falha do enrich **não** falha o ACK); (3) cron `sync-netcred-settlements` como backfill. Motivo do enrich: NetCred reusa lotes de payout por `(company, settling_at)` — movements novos em lote existente **não** disparam `PAYOUT_CREATE`.
 - **my-account / payments UI:** link cruzado Recebimentos ↔ Ganhos; disclosure importado da Public API.
 - **view-services:** `ProviderSettlementStatus` (payments) no detalhe contratado, usando o disclosure.
 - **provider-kyc / dashboard-shell:** visibilidade do menu e gate do outlet.
@@ -73,6 +73,6 @@
 - `src/router.tsx` — `path: 'earnings'`, lazy `EarningsPage`, guard provider
 - `src/layouts/DashboardLayout/dashboardMenu.ts` — item Ganhos
 - Migrations `20260802240000_create_payment_settlement_movements.sql`, `20260802250000_payment_sync_netcred_settlements_cron.sql`, grants em `20260802300000_*`
-- EFs: `netcred-webhook` (PAYOUT_*), `sync-netcred-settlements`
+- EFs: `netcred-webhook` (PAYOUT_* + enrich pós-CAPTURE/REFUND), `sync-netcred-settlements`; shared `enrichSettlementMovements`
 - Feature: [ganhos-e-liquidacoes.md](./features/ganhos-e-liquidacoes.md)
 - Engenharia complementar: `docs/payment-system/design.md` §3.13; `docs/payment-system/payments-api.md` §10 (`PayoutPayload`)

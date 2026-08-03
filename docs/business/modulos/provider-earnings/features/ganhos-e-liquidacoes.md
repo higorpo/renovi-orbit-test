@@ -1,6 +1,6 @@
 # Ganhos e liquidações bancárias
 
-Documentação baseada em `src/features/provider-earnings/`, rota `/dashboard/earnings`, RPC `list_provider_settlement_movements`, tabela/view de settlements e ingestão NetCred (webhooks `PAYOUT_*` + Edge `sync-netcred-settlements`). Idioma de produto na UI: pt-BR.
+Documentação baseada em `src/features/provider-earnings/`, rota `/dashboard/earnings`, RPC `list_provider_settlement_movements`, tabela/view de settlements e ingestão NetCred (webhooks `PAYOUT_*`, enrich GraphQL pós-`TRANSACTION_CAPTURE`/`TRANSACTION_REFUND`, Edge `sync-netcred-settlements`). Idioma de produto na UI: pt-BR.
 
 > **Não confundir** com **Recebimentos** (captura / `provider_payout` em Minha conta). Ver [historico-e-reembolso](../../payments/features/historico-e-reembolso.md). Este doc **não** redefine checkout, T-2 ou reembolso ToS — só links para [payments](../../payments/README.md).
 
@@ -75,7 +75,7 @@ flowchart TD
   P --> F
 ```
 
-**Ingestão (fora da UI, pré-condição de dados):** captura → `payment_schedules` com `gateway_transaction_id` → webhook `PAYOUT_CREATE`/`PAYOUT_SETTLE` e/ou cron GraphQL → `payment_upsert_settlement_movements` → linhas visíveis na lista.
+**Ingestão (fora da UI, pré-condição de dados):** captura → `payment_schedules` com `gateway_transaction_id` → (1) webhook `PAYOUT_CREATE`/`PAYOUT_SETTLE` → `payment_webhook_handle_payout`; (2) após processar com sucesso `TRANSACTION_CAPTURE` ou `TRANSACTION_REFUND`, `netcred-webhook` faz enrich best-effort GraphQL `movements(transactionId)` → `payment_upsert_settlement_movements` (mesmo pipeline do sync; cobre movements que entram em lote de payout já existente e **não** disparam `PAYOUT_CREATE`; falha do enrich **não** falha o ACK); (3) cron `sync-netcred-settlements` como backfill → linhas visíveis na lista.
 
 ## 6. Fluxos alternativos e exceções
 
@@ -231,8 +231,8 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 
 | Integração | Papel | Escopo deste doc |
 |------------|-------|------------------|
-| Edge `netcred-webhook` | Eventos `PAYOUT_CREATE` / `PAYOUT_SETTLE` → handler SQL | Link; detalhe em payments / payment-system |
-| Edge `sync-netcred-settlements` | Cron `15,45 * * * *` → claim + GraphQL reconcile | Secundário a webhooks |
+| Edge `netcred-webhook` | `PAYOUT_CREATE` / `PAYOUT_SETTLE` → handler SQL; após `TRANSACTION_CAPTURE` / `TRANSACTION_REFUND` bem-sucedidos → enrich GraphQL best-effort (`enrichSettlementMovements`) | Link; detalhe em payments / payment-system |
+| Edge `sync-netcred-settlements` | Cron `15,45 * * * *` → claim + GraphQL reconcile (mesmo pipeline do enrich) | Backfill quando PAYOUT_* / enrich falham ou atrasam |
 | RPC `payment_claim_schedules_for_settlement_sync` | Elegíveis: PAID/REFUNDED/PARTIALLY_REFUNDED, sem movements ou pending vencido; grace 30 min pós-`paid_at` | Backend payments |
 | MMD / e-mail / push / IA | **Sem** evidência nesta feature | — |
 | GA / Sentry dedicados | **Sem** `trackEvent` / breadcrumbs na pasta `provider-earnings` (erros de API usam `logger.error`) | — |
@@ -283,13 +283,13 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 4. `refetchOnWindowFocus: false` — voltar à aba do browser não atualiza sozinho até stale/manual.
 5. Valores DEBIT continuam com `net_amount ≥ 0` no banco; o sinal negativo é **só UI**.
 6. Admin platform na política RLS histórica da tabela não altera a listagem do app (RPC amarra ao `auth.uid()`).
-7. Cron GraphQL: schedules elegíveis só após ~30 min de `paid_at` (exceto pending já vencido) para dar prioridade ao webhook.
+7. Cron GraphQL: schedules elegíveis só após ~30 min de `paid_at` (exceto pending já vencido) para dar prioridade a PAYOUT_* e ao enrich pós-captura/estorno.
 
 ## 18. Riscos
 
 | Risco | Impacto | Mitigação observada / lacuna |
 |-------|---------|------------------------------|
-| Atraso webhook / reconcile | Lista vazia ou só D+30 no disclosure | Cron `15,45 * * * *`; retry `not_found` no payout |
+| Atraso PAYOUT_* / enrich / reconcile | Lista vazia ou só D+30 no disclosure | Enrich pós-CAPTURE/REFUND; cron `15,45 * * * *`; retry `not_found` no payout |
 | Orphan skip (`skipped_not_found`) | Movement NetCred sem schedule local | Retry fila webhook; claim GraphQL |
 | Confusão captura × liquidação | Suporte / prestador | Copy + links cruzados |
 | Disclosure desatualizado vs Ganhos | Expectativa de data errada | **Pendência:** consumidores não passam `settlingAt` |
@@ -312,7 +312,8 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 - `supabase/migrations/20260802250000_payment_sync_netcred_settlements_cron.sql`
 - `supabase/migrations/20260802300000_payment_schedules_audit_cls_and_settlement_grants.sql` (revoke SELECT authenticated na tabela)
 - `supabase/functions/sync-netcred-settlements/`
-- `supabase/functions/netcred-webhook/` (`parsePayoutPayload`, routing PAYOUT_*)
+- `supabase/functions/netcred-webhook/` (`parsePayoutPayload`, routing PAYOUT_*, `maybeEnrichSettlementMovements`)
+- `supabase/functions/_shared/payment/enrichSettlementMovements.ts`
 - pgTAP: `supabase/tests/payments/payment_settlement_*.sql`, `payment_webhook_handle_payout_test.sql`, `payment_claim_schedules_for_settlement_sync_test.sql`
 
 ### Docs relacionados (não substituem evidência de código)

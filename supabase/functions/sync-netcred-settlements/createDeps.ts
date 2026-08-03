@@ -1,6 +1,6 @@
+import type { Json } from "../_shared/database.types.ts";
 import { NetCredAdapter } from "../_shared/payment/index.ts";
 import { resolveIsProduction } from "../_shared/payment/netcred-auth.ts";
-import type { SettlementMovementUpsertItem } from "../_shared/payment/mapSettlementMovementUpsert.ts";
 import { createServiceRoleClient } from "../_shared/serviceRoleClient.ts";
 import type { SyncNetcredSettlementsDeps } from "./handleRequest.ts";
 import { parseClaimedSchedules } from "./parseClaimedSchedules.ts";
@@ -77,7 +77,7 @@ export function createSyncNetcredSettlementsDeps(
           upsertSettlementMovements: async (movements) => {
             const { data, error } = await supabase.rpc(
               "payment_upsert_settlement_movements",
-              { p_movements: movements as SettlementMovementUpsertItem[] },
+              { p_movements: movements as unknown as Json },
             );
 
             if (error) {
