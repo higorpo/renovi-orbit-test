@@ -144,6 +144,8 @@ Fluxo de pagamentos, itens com problemas:
 
 - [RETESTAR TODO O FLUXO] Erro de fluxo ao solicitar reembolso documentado em docs/payment-system/critical-bug-refund-partial-commit.md
 
+- Perguntar para Netcred como funciona um estorno, https://app.sandbox.netcredbrasil.com.br/app/relatorio/liquidacoes?transactionId=446537
+
 
 ---
 
