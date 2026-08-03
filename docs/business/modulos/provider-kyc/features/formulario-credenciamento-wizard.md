@@ -48,7 +48,7 @@ flowchart TD
 
 Passos fixos (`KYC_WIZARD_STEPS`): **entity → identity → bank → documents → review**.
 
-Labels na UI: “Tipo de cadastro”, “Dados pessoais”, “Dados bancários”, “Documentos”, “Revisão”. Progresso: “Passo N de 5 · {label do passo}”. Título: “Bem-vindo à Renovi”. Texto de apoio: conta quase pronta + onboarding de segurança antes de prestar serviços.
+Labels na UI: “Tipo de cadastro”, “Dados pessoais”, “Dados bancários”, “Documentos”, “Revisão”. Progresso visual: `KycWizardStepper` com 5 segmentos (preenche até o passo atual). Título de boas-vindas (“Boas-vindas à Renovi” + texto de conta quase pronta / onboarding de segurança) **somente no passo 1**; nos demais, o `h1` é o label do passo.
 
 ## 6. Fluxos alternativos e exceções
 

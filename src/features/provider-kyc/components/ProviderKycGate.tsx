@@ -68,7 +68,7 @@ export function ProviderKycGate({ children }: { children: React.ReactNode }) {
 
   if (isProviderKycPending(account)) {
     return (
-      <div className="container max-w-2xl px-4 py-6">
+      <div className="container flex max-w-2xl flex-col px-4 pt-6 md:min-h-full md:flex-1">
         <ProviderKycForm
           providerId={user!.id}
           accountEmail={user?.email ?? ""}
@@ -91,7 +91,7 @@ export function ProviderKycGate({ children }: { children: React.ReactNode }) {
   if (isProviderKycRejected(account)) {
     if (showRejectedForm) {
       return (
-        <div className="container max-w-2xl px-4 py-6">
+        <div className="container flex max-w-2xl flex-col px-4 pt-6 md:min-h-full md:flex-1">
           <ProviderKycForm
             providerId={user!.id}
             accountEmail={user?.email ?? ""}

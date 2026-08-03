@@ -132,6 +132,8 @@ Fluxo de pagamentos, itens com problemas:
 
 - /home/higor/Área de Trabalho/Renovi/orbit/src/features/payments/api/serviceLifecycle.api.ts não deveria estar dentro de payments. Ele faz parte do fluxo de conclusão de um serviço, então deveria estar na feature de acordo
 
+- Enviar notificação para prestadores que ainda não completaram o onboarding de tempos em tempos para eles completarem.
+
 
 
 

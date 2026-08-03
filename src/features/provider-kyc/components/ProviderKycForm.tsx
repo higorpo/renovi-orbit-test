@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { useProviderKycWizard } from "../hooks/useProviderKycWizard";
+import { KycWizardStepper } from "./KycWizardStepper";
 import {
   ProviderKycWizardStepContent,
   WizardFooterPendingLabel,
@@ -31,18 +32,25 @@ export function ProviderKycForm({
 
   return (
     <Form {...wizard.form}>
-      <div className="flex min-h-[70dvh] flex-col">
-        <div className="flex-1 space-y-6">
-          <div className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {wizard.progressLabel} · {wizard.stepLabel}
-            </p>
-            <h1 className="text-xl font-semibold">Bem-vindo à Renovi</h1>
-            <p className="text-sm text-muted-foreground">
-              É um prazer ter você conosco. Sua conta está quase pronta, complete
-              o onboarding de segurança da Renovi para começar a prestar serviços
-              na plataforma.
-            </p>
+      <div className="flex flex-col pb-6 md:min-h-full md:flex-1">
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <KycWizardStepper
+              currentStep={wizard.stepIndex + 1}
+              totalSteps={wizard.totalSteps}
+            />
+            {wizard.isFirstStep ? (
+              <div className="space-y-2">
+                <h1 className="text-xl font-semibold">Boas-vindas à Renovi</h1>
+                <p className="text-sm text-muted-foreground">
+                  É um prazer ter você conosco. Sua conta está quase pronta, complete
+                  o onboarding de segurança da Renovi para começar a prestar serviços
+                  na plataforma.
+                </p>
+              </div>
+            ) : (
+              <h1 className="text-xl font-semibold">{wizard.stepLabel}</h1>
+            )}
           </div>
 
           {wizard.isPrefilling ? (
@@ -69,7 +77,7 @@ export function ProviderKycForm({
           ) : null}
         </div>
 
-        <div className="mt-6 flex gap-3">
+        <div className="mt-6 flex gap-3 md:mt-auto md:shrink-0 md:pt-6">
           {!wizard.isFirstStep ? (
             <Button
               type="button"
