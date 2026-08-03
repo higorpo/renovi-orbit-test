@@ -428,7 +428,7 @@ describe("useProviderLocation", () => {
     });
     vi.spyOn(window, "location", "get").mockReturnValue({
       ...window.location,
-      hostname: "192.168.0.248",
+      hostname: "192.168.0.67",
     } as Location);
 
     nativeMocks.getOperationalLocationPermissionStatus.mockResolvedValue("granted");

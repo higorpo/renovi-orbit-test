@@ -9,7 +9,7 @@ const config: CapacitorConfig = {
   },
   // Remove this when production is ready
   server: {
-    url: 'http://192.168.0.248:5854',
+    url: 'http://192.168.0.67:5854',
     cleartext: true,
   },
   plugins: {
