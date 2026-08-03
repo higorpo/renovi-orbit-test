@@ -1,7 +1,12 @@
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/formatCurrency";
 import { cn } from "@/lib/utils";
+import {
+  createProviderEarningsServiceDetailState,
+  getServiceDetailPath,
+} from "@/features/view-services";
 import { Undo2, Wallet } from "lucide-react";
+import { Link, useLocation } from "react-router";
 import type { SettlementMovement } from "../types/settlements.types";
 import {
   formatSettlementDate,
@@ -14,14 +19,23 @@ import {
 export type SettlementMovementCardProps = {
   item: SettlementMovement;
   className?: string;
+  /** When false, omit service title link (e.g. already shown on group header). */
+  showServiceLink?: boolean;
 };
 
-export function SettlementMovementCard({ item, className }: SettlementMovementCardProps) {
+export function SettlementMovementCard({
+  item,
+  className,
+  showServiceLink = true,
+}: SettlementMovementCardProps) {
+  const location = useLocation();
   const isDebit = isSettlementDebit(item);
   const settlingLabel = formatSettlementDate(item.settlingAt);
   const installmentLabel = formatSettlementInstallmentLabel(item.installment);
   const statusLabel = formatSettlementMovementStatus(item.movementStatus);
   const settledLabel = formatSettlementSettledLabel(item);
+  const serviceTitle = item.serviceRequestTitle?.trim() || null;
+  const serviceRequestId = item.serviceRequestId;
 
   return (
     <article
@@ -39,6 +53,16 @@ export function SettlementMovementCard({ item, className }: SettlementMovementCa
         aria-hidden
       />
       <div className="min-w-0 flex-1 space-y-1.5 text-sm">
+        {showServiceLink && serviceRequestId && serviceTitle ? (
+          <Link
+            to={getServiceDetailPath(serviceRequestId)}
+            state={createProviderEarningsServiceDetailState(location)}
+            className="line-clamp-2 font-medium text-foreground underline-offset-2 hover:underline"
+          >
+            {serviceTitle}
+          </Link>
+        ) : null}
+
         <div className="flex flex-wrap items-center gap-2">
           <p
             className={cn(

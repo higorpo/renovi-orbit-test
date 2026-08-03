@@ -62,6 +62,8 @@ const sampleItem: SettlementMovement = {
   syncedAt: "2026-06-01T00:00:00.000Z",
   createdAt: "2026-06-01T00:00:00.000Z",
   updatedAt: "2026-06-01T00:00:00.000Z",
+  serviceRequestId: "sr-1",
+  serviceRequestTitle: "Instalação de ar",
 };
 
 describe("useProviderSettlements", () => {
@@ -85,7 +87,7 @@ describe("useProviderSettlements", () => {
       page: 1,
       pageSize: 20,
       movementStatus: null,
-      recordType: null,
+      recordType: "CREDIT",
     });
     expect(result.current.items).toEqual([sampleItem]);
     expect(result.current.hasNextPage).toBe(false);
@@ -118,7 +120,7 @@ describe("useProviderSettlements", () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(listProviderSettlements).toHaveBeenCalledWith(
-      expect.objectContaining({ movementStatus: "PENDING", recordType: null }),
+      expect.objectContaining({ movementStatus: "PENDING", recordType: "CREDIT" }),
     );
     expect(result.current.hasNextPage).toBe(true);
 
@@ -199,7 +201,7 @@ describe("useProviderSettlements", () => {
 
     await waitFor(() => expect(listProviderSettlements).toHaveBeenCalledTimes(2));
     expect(listProviderSettlements).toHaveBeenLastCalledWith(
-      expect.objectContaining({ movementStatus: "PAID_OUT", recordType: null }),
+      expect.objectContaining({ movementStatus: "PAID_OUT", recordType: "CREDIT" }),
     );
   });
 });

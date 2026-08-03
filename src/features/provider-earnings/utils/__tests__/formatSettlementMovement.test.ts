@@ -36,6 +36,8 @@ function makeItem(overrides: Partial<SettlementMovement> = {}): SettlementMoveme
     syncedAt: "2026-06-01T00:00:00.000Z",
     createdAt: "2026-06-01T00:00:00.000Z",
     updatedAt: "2026-06-01T00:00:00.000Z",
+    serviceRequestId: null,
+    serviceRequestTitle: null,
     ...overrides,
   };
 }

@@ -1,4 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
+import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 import type { SettlementMovement } from "../../types/settlements.types";
 import { SettlementMovementsList } from "../SettlementMovementsList";
@@ -31,6 +33,8 @@ function makeItem(overrides: Partial<SettlementMovement> = {}): SettlementMoveme
     syncedAt: "2026-06-01T00:00:00.000Z",
     createdAt: "2026-06-01T00:00:00.000Z",
     updatedAt: "2026-06-01T00:00:00.000Z",
+    serviceRequestId: "sr-1",
+    serviceRequestTitle: "Instalação de ar",
     ...overrides,
   };
 }
@@ -46,15 +50,21 @@ const baseProps = {
   onClearFilters: vi.fn(),
 };
 
+function renderList(ui: ReactElement) {
+  return render(<MemoryRouter initialEntries={["/dashboard/earnings"]}>{ui}</MemoryRouter>);
+}
+
 describe("SettlementMovementsList", () => {
   it("shows loading state", () => {
-    render(<SettlementMovementsList {...baseProps} items={[]} isLoading />);
+    renderList(<SettlementMovementsList {...baseProps} items={[]} isLoading />);
     expect(screen.getByText(/Carregando ganhos/i)).toBeInTheDocument();
   });
 
   it("shows error state with retry", () => {
     const onRetry = vi.fn();
-    render(<SettlementMovementsList {...baseProps} items={[]} isError onRetry={onRetry} />);
+    renderList(
+      <SettlementMovementsList {...baseProps} items={[]} isError onRetry={onRetry} />,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: /Tentar novamente/i }));
     expect(onRetry).toHaveBeenCalledTimes(1);
@@ -62,7 +72,7 @@ describe("SettlementMovementsList", () => {
 
   it("shows empty state and clear filters when filtered", () => {
     const onClearFilters = vi.fn();
-    render(
+    renderList(
       <SettlementMovementsList
         {...baseProps}
         items={[]}
@@ -76,8 +86,8 @@ describe("SettlementMovementsList", () => {
     expect(onClearFilters).toHaveBeenCalledTimes(1);
   });
 
-  it("renders single cards and grouped installments", () => {
-    render(
+  it("renders single cards and grouped installments with service link on group", () => {
+    renderList(
       <SettlementMovementsList
         {...baseProps}
         items={[
@@ -88,6 +98,8 @@ describe("SettlementMovementsList", () => {
             paymentScheduleId: null,
             installment: null,
             netAmount: 50,
+            serviceRequestId: "sr-orphan",
+            serviceRequestTitle: "Serviço órfão",
           }),
         ]}
       />,
@@ -95,12 +107,20 @@ describe("SettlementMovementsList", () => {
 
     expect(screen.getByRole("list", { name: /Lista de liquidações/i })).toBeInTheDocument();
     expect(screen.getByText("Parcelas do mesmo pagamento")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Instalação de ar" })).toHaveAttribute(
+      "href",
+      "/dashboard/services/sr-1",
+    );
+    expect(screen.getByRole("link", { name: "Serviço órfão" })).toHaveAttribute(
+      "href",
+      "/dashboard/services/sr-orphan",
+    );
     expect(screen.getAllByRole("article").length).toBe(3);
   });
 
   it("renders load more when there is a next page", () => {
     const onLoadMore = vi.fn();
-    render(
+    renderList(
       <SettlementMovementsList
         {...baseProps}
         items={[makeItem()]}

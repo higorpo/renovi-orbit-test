@@ -4,9 +4,10 @@ import type {
 } from "../types/settlements.types";
 
 export const SETTLEMENT_FILTER_TABS: SettlementFilterConfig[] = [
-  { id: "all", label: "Todos", movementStatus: null, recordType: null },
-  { id: "pending", label: "Previsto", movementStatus: "PENDING", recordType: null },
-  { id: "paid_out", label: "Liquidado", movementStatus: "PAID_OUT", recordType: null },
+  // CREDIT excludes clawbacks from Todos / Previsto / Liquidado (Estorno tab is DEBIT-only).
+  { id: "all", label: "Todos", movementStatus: null, recordType: "CREDIT" },
+  { id: "pending", label: "Previsto", movementStatus: "PENDING", recordType: "CREDIT" },
+  { id: "paid_out", label: "Liquidado", movementStatus: "PAID_OUT", recordType: "CREDIT" },
   { id: "debit", label: "Estorno", movementStatus: null, recordType: "DEBIT" },
 ];
 

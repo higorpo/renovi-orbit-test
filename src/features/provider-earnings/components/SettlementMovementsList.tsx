@@ -1,5 +1,10 @@
 import { LoadMoreButton } from "@/components/ui/load-more-button";
+import {
+  createProviderEarningsServiceDetailState,
+  getServiceDetailPath,
+} from "@/features/view-services";
 import { Loader2 } from "lucide-react";
+import { Link, useLocation } from "react-router";
 import type { SettlementMovement } from "../types/settlements.types";
 import { groupSettlementsBySchedule } from "../utils/groupSettlementsBySchedule";
 import { EarningsEmptyState } from "./EarningsEmptyState";
@@ -18,6 +23,14 @@ export type SettlementMovementsListProps = {
   onClearFilters: () => void;
 };
 
+function groupServiceLink(items: SettlementMovement[]) {
+  const first = items[0];
+  const serviceRequestId = first?.serviceRequestId ?? null;
+  const serviceRequestTitle = first?.serviceRequestTitle?.trim() || null;
+  if (!serviceRequestId || !serviceRequestTitle) return null;
+  return { serviceRequestId, serviceRequestTitle };
+}
+
 export function SettlementMovementsList({
   items,
   isLoading,
@@ -29,6 +42,8 @@ export function SettlementMovementsList({
   onRetry,
   onClearFilters,
 }: SettlementMovementsListProps) {
+  const location = useLocation();
+
   if (isLoading) {
     return (
       <div
@@ -58,17 +73,34 @@ export function SettlementMovementsList({
       <ul className="space-y-4" aria-label="Lista de liquidações">
         {groups.map((group, groupIndex) => {
           const isGrouped = group.items.length > 1 && group.paymentScheduleId != null;
+          const service = isGrouped ? groupServiceLink(group.items) : null;
+
           return (
             <li key={group.paymentScheduleId ?? `orphan-${groupIndex}`} className="min-w-0">
               {isGrouped ? (
                 <div className="space-y-2 rounded-xl border border-border/80 bg-muted/20 p-3">
-                  <p className="px-1 text-xs font-medium text-muted-foreground">
-                    Parcelas do mesmo pagamento
-                  </p>
+                  <div className="space-y-0.5 px-1">
+                    {service ? (
+                      <Link
+                        to={getServiceDetailPath(service.serviceRequestId)}
+                        state={createProviderEarningsServiceDetailState(location)}
+                        className="line-clamp-2 text-sm font-medium text-foreground underline-offset-2 hover:underline"
+                      >
+                        {service.serviceRequestTitle}
+                      </Link>
+                    ) : null}
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Parcelas do mesmo pagamento
+                    </p>
+                  </div>
                   <ul className="space-y-2">
                     {group.items.map((item) => (
                       <li key={item.id}>
-                        <SettlementMovementCard item={item} className="bg-background" />
+                        <SettlementMovementCard
+                          item={item}
+                          className="bg-background"
+                          showServiceLink={false}
+                        />
                       </li>
                     ))}
                   </ul>

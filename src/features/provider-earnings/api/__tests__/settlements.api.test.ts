@@ -53,6 +53,8 @@ describe("listProviderSettlements", () => {
             synced_at: "2026-06-01T00:00:00.000Z",
             created_at: "2026-06-01T00:00:00.000Z",
             updated_at: "2026-06-01T00:00:00.000Z",
+            service_request_id: "sr-1",
+            service_request_title: "Instalação de ar",
           },
         ],
         total_count: 1,
@@ -85,6 +87,8 @@ describe("listProviderSettlements", () => {
       netAmount: 95.5,
       recordType: "CREDIT",
       settlingAt: "2026-06-15",
+      serviceRequestId: "sr-1",
+      serviceRequestTitle: "Instalação de ar",
     });
   });
 

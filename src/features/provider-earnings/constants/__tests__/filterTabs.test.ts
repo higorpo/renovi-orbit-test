@@ -9,8 +9,22 @@ import { ROUTE_PROVIDER_EARNINGS } from "../routes";
 
 describe("getSettlementFilterConfig", () => {
   it("returns matching tab config", () => {
+    expect(getSettlementFilterConfig("all")).toEqual(
+      expect.objectContaining({ id: "all", recordType: "CREDIT" }),
+    );
     expect(getSettlementFilterConfig("pending")).toEqual(
-      expect.objectContaining({ id: "pending", movementStatus: "PENDING" }),
+      expect.objectContaining({
+        id: "pending",
+        movementStatus: "PENDING",
+        recordType: "CREDIT",
+      }),
+    );
+    expect(getSettlementFilterConfig("paid_out")).toEqual(
+      expect.objectContaining({
+        id: "paid_out",
+        movementStatus: "PAID_OUT",
+        recordType: "CREDIT",
+      }),
     );
     expect(getSettlementFilterConfig("debit")).toEqual(
       expect.objectContaining({ id: "debit", recordType: "DEBIT" }),

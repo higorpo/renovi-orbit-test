@@ -59,6 +59,7 @@ export { ROUTE_SERVICE_DETAIL, getServiceDetailPath } from "./constants/routes";
 export {
   createProviderJobsServiceDetailState,
   createProviderMyServicesServiceDetailState,
+  createProviderEarningsServiceDetailState,
   createProviderCalendarServiceDetailState,
   createClientMyServicesServiceDetailState,
   type ServiceDetailLocationState,

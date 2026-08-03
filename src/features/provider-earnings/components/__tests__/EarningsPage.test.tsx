@@ -52,6 +52,8 @@ const sampleItem: SettlementMovement = {
   syncedAt: "2026-06-01T00:00:00.000Z",
   createdAt: "2026-06-01T00:00:00.000Z",
   updatedAt: "2026-06-01T00:00:00.000Z",
+  serviceRequestId: "sr-1",
+  serviceRequestTitle: "Instalação de ar",
 };
 
 function renderPage() {

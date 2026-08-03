@@ -38,6 +38,9 @@ export type SettlementMovement = {
   syncedAt: string;
   createdAt: string;
   updatedAt: string;
+  /** service_requests.id — navigate to /dashboard/services/:id */
+  serviceRequestId: string | null;
+  serviceRequestTitle: string | null;
 };
 
 export type ListProviderSettlementsParams = {

@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(31);
+select plan(40);
 
 create or replace function pg_temp.settlement_set_auth(p_user_id uuid)
 returns void
@@ -423,6 +423,7 @@ begin
   perform set_config('test.settlement.stranger_id', v_stranger_id::text, true);
   perform set_config('test.settlement.admin_id', v_admin_id::text, true);
   perform set_config('test.settlement.schedule_id', v_schedule_id::text, true);
+  perform set_config('test.settlement.sr_id', v_sr_id::text, true);
 end;
 $seed$;
 
@@ -572,6 +573,21 @@ select is(
 
 select is(
   (
+    public.list_provider_settlement_movements(1, 20)->'items'->0->>'service_request_title'
+  ),
+  'Settlement movements fixture',
+  'list items include service_request_title from joined service_request'
+);
+
+select ok(
+  (
+    public.list_provider_settlement_movements(1, 20)->'items'->0->>'service_request_id'
+  ) = current_setting('test.settlement.sr_id'),
+  'list items include service_request_id for navigation'
+);
+
+select is(
+  (
     public.list_provider_settlement_movements(
       1, 20, 'PAID_OUT', null, null, null, null, null
     )->'total_count'
@@ -588,6 +604,16 @@ select is(
   )::int,
   1,
   'list filter by record_type=DEBIT'
+);
+
+select is(
+  (
+    public.list_provider_settlement_movements(
+      1, 20, null, 'CREDIT', null, null, null, null
+    )->'total_count'
+  )::int,
+  1,
+  'CREDIT filter keeps receivable when DEBIT clawback is only partial'
 );
 
 select is(
@@ -613,6 +639,84 @@ select throws_ok(
   '22023',
   null,
   'list rejects invalid record_type'
+);
+
+-- CREDIT exclusion: refund-in-flight schedule (PAID → REFUND_REQUESTED → PAID).
+select pg_temp.settlement_set_service_role();
+select lives_ok(
+  $$
+    update public.payment_schedules
+    set state = 'REFUND_REQUESTED'::public.payment_schedule_state
+    where id = current_setting('test.settlement.schedule_id')::uuid
+  $$,
+  'fixture schedule can move to REFUND_REQUESTED for CREDIT exclusion test'
+);
+
+select pg_temp.settlement_set_auth(current_setting('test.settlement.provider_id')::uuid);
+select is(
+  (
+    public.list_provider_settlement_movements(
+      1, 20, null, 'CREDIT', null, null, null, null
+    )->'total_count'
+  )::int,
+  0,
+  'CREDIT filter hides movements on REFUND_REQUESTED schedules'
+);
+
+select is(
+  (
+    public.list_provider_settlement_movements(
+      1, 20, null, 'DEBIT', null, null, null, null
+    )->'total_count'
+  )::int,
+  1,
+  'DEBIT filter still lists clawbacks while schedule is REFUND_REQUESTED'
+);
+
+select pg_temp.settlement_set_service_role();
+select lives_ok(
+  $$
+    update public.payment_schedules
+    set state = 'PAID'::public.payment_schedule_state
+    where id = current_setting('test.settlement.schedule_id')::uuid
+  $$,
+  'restore fixture schedule to PAID after refund-request exclusion asserts'
+);
+
+select is(
+  (
+    select (public.payment_upsert_settlement_movements(
+      jsonb_build_array(
+        jsonb_build_object(
+          'gateway_slug', 'netcred',
+          'gateway_payout_id', 'payout-1',
+          'gateway_movement_id', 'mov-debit-full-clawback',
+          'gateway_transaction_id', 'settlement-tx-1001',
+          'holder_company_id', '1048',
+          'movement_status', 'PENDING',
+          'record_type', 'DEBIT',
+          'installment', 1,
+          'gross_amount', '90.00',
+          'net_amount', '90.00',
+          'settling_at', (current_date + 5)::text,
+          'sync_source', 'webhook'
+        )
+      )
+    )->>'upserted')::int
+  ),
+  1,
+  'upsert full clawback DEBIT equal to CREDIT net_amount'
+);
+
+select pg_temp.settlement_set_auth(current_setting('test.settlement.provider_id')::uuid);
+select is(
+  (
+    public.list_provider_settlement_movements(
+      1, 20, null, 'CREDIT', null, null, null, null
+    )->'total_count'
+  )::int,
+  0,
+  'CREDIT filter hides installment fully clawed back by DEBIT sum'
 );
 
 select pg_temp.settlement_set_service_role();

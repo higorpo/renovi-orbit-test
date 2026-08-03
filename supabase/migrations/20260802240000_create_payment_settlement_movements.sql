@@ -174,11 +174,19 @@ select
   psm.sync_source,
   psm.synced_at,
   psm.created_at,
-  psm.updated_at
-from public.payment_settlement_movements psm;
+  psm.updated_at,
+  cs.service_request_id,
+  coalesce(nullif(btrim(sr.title), ''), null) as service_request_title
+from public.payment_settlement_movements psm
+left join public.payment_schedules ps
+  on ps.id = psm.payment_schedule_id
+left join public.contracted_services cs
+  on cs.id = ps.contracted_service_id
+left join public.service_requests sr
+  on sr.id = cs.service_request_id;
 
 comment on view public.provider_settlement_movements_v is
-  'Provider settlement (bank liquidation) lines for Ganhos UI. No raw_snapshot; RLS via security_invoker.';
+  'Provider settlement (bank liquidation) lines for Ganhos UI. Includes service_request id/title for navigation. No raw_snapshot; RLS via security_invoker.';
 
 revoke all on public.provider_settlement_movements_v from public;
 revoke all on public.provider_settlement_movements_v from anon;
@@ -482,7 +490,36 @@ begin
     and (p_settling_from is null or psm.settling_at >= p_settling_from)
     and (p_settling_to is null or psm.settling_at <= p_settling_to)
     and (p_settled_from is null or psm.settled_at >= p_settled_from)
-    and (p_settled_to is null or psm.settled_at <= p_settled_to);
+    and (p_settled_to is null or psm.settled_at <= p_settled_to)
+    -- CREDIT tabs (Todos/Previsto/Liquidado): only amounts the provider is still expected to receive.
+    and (
+      v_record is distinct from 'CREDIT'
+      or (
+        (
+          psm.payment_schedule_id is null
+          or exists (
+            select 1
+            from public.payment_schedules ps
+            where ps.id = psm.payment_schedule_id
+              and ps.state not in (
+                'REFUNDED'::public.payment_schedule_state,
+                'REFUND_REQUESTED'::public.payment_schedule_state
+              )
+          )
+        )
+        and coalesce(
+          (
+            select sum(d.net_amount)
+            from public.payment_settlement_movements d
+            where d.provider_id = psm.provider_id
+              and d.record_type = 'DEBIT'
+              and d.payment_schedule_id is not distinct from psm.payment_schedule_id
+              and d.installment is not distinct from psm.installment
+          ),
+          0
+        ) < psm.net_amount
+      )
+    );
 
   select coalesce(
     jsonb_agg(row_to_json(x)::jsonb order by x.settling_at desc nulls last, x.created_at desc),
@@ -516,8 +553,16 @@ begin
       psm.sync_source,
       psm.synced_at,
       psm.created_at,
-      psm.updated_at
+      psm.updated_at,
+      cs.service_request_id,
+      coalesce(nullif(btrim(sr.title), ''), null) as service_request_title
     from public.payment_settlement_movements psm
+    left join public.payment_schedules ps
+      on ps.id = psm.payment_schedule_id
+    left join public.contracted_services cs
+      on cs.id = ps.contracted_service_id
+    left join public.service_requests sr
+      on sr.id = cs.service_request_id
     where psm.provider_id = v_actor
       and (v_status is null or psm.movement_status = v_status)
       and (v_record is null or psm.record_type = v_record)
@@ -525,6 +570,34 @@ begin
       and (p_settling_to is null or psm.settling_at <= p_settling_to)
       and (p_settled_from is null or psm.settled_at >= p_settled_from)
       and (p_settled_to is null or psm.settled_at <= p_settled_to)
+      and (
+        v_record is distinct from 'CREDIT'
+        or (
+          (
+            psm.payment_schedule_id is null
+            or exists (
+              select 1
+              from public.payment_schedules ps_recv
+              where ps_recv.id = psm.payment_schedule_id
+                and ps_recv.state not in (
+                  'REFUNDED'::public.payment_schedule_state,
+                  'REFUND_REQUESTED'::public.payment_schedule_state
+                )
+            )
+          )
+          and coalesce(
+            (
+              select sum(d.net_amount)
+              from public.payment_settlement_movements d
+              where d.provider_id = psm.provider_id
+                and d.record_type = 'DEBIT'
+                and d.payment_schedule_id is not distinct from psm.payment_schedule_id
+                and d.installment is not distinct from psm.installment
+            ),
+            0
+          ) < psm.net_amount
+        )
+      )
     order by psm.settling_at desc nulls last, psm.created_at desc
     offset v_offset
     limit v_page_size
@@ -540,7 +613,7 @@ end;
 $$;
 
 comment on function public.list_provider_settlement_movements(integer, integer, text, text, date, date, timestamptz, timestamptz) is
-  'Paginated settlement movements for the authenticated provider (Ganhos). Filters: movement_status, record_type, settling/settled date ranges.';
+  'Paginated settlement movements for the authenticated provider (Ganhos). Filters: movement_status, record_type, settling/settled date ranges. CREDIT excludes refunded schedules and fully clawed-back installments. Includes service_request_id/title for navigation.';
 
 revoke all on function public.list_provider_settlement_movements(integer, integer, text, text, date, date, timestamptz, timestamptz) from public;
 revoke all on function public.list_provider_settlement_movements(integer, integer, text, text, date, date, timestamptz, timestamptz) from anon;

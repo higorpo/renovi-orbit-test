@@ -3,7 +3,8 @@ import type { Location } from "react-router";
 export type ServiceDetailReturnTo =
   | "/dashboard/jobs"
   | "/dashboard/services"
-  | "/dashboard/services/calendar";
+  | "/dashboard/services/calendar"
+  | "/dashboard/earnings";
 
 export type MyServicesViewerRole = "client" | "provider";
 
@@ -31,6 +32,17 @@ export function createProviderMyServicesServiceDetailState(
   return {
     serviceDetailPresentation: "sheet",
     returnTo: "/dashboard/services",
+    myServicesRole: "provider",
+    background,
+  };
+}
+
+export function createProviderEarningsServiceDetailState(
+  background: Location,
+): ServiceDetailLocationState {
+  return {
+    serviceDetailPresentation: "sheet",
+    returnTo: "/dashboard/earnings",
     myServicesRole: "provider",
     background,
   };

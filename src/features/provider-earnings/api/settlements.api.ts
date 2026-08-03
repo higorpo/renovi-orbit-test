@@ -36,6 +36,8 @@ type RpcSettlementMovementRow = {
   synced_at: string;
   created_at: string;
   updated_at: string;
+  service_request_id?: string | null;
+  service_request_title?: string | null;
 };
 
 type RpcListSettlementsResponse = {
@@ -84,6 +86,8 @@ function mapSettlementMovementRow(row: RpcSettlementMovementRow): SettlementMove
     syncedAt: row.synced_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    serviceRequestId: row.service_request_id ?? null,
+    serviceRequestTitle: row.service_request_title ?? null,
   };
 }
 

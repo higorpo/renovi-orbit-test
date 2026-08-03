@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router";
 import { describe, expect, it } from "vitest";
 import type { SettlementMovement } from "../../types/settlements.types";
 import { SettlementMovementCard } from "../SettlementMovementCard";
@@ -31,15 +32,28 @@ function makeItem(overrides: Partial<SettlementMovement> = {}): SettlementMoveme
     syncedAt: "2026-06-01T00:00:00.000Z",
     createdAt: "2026-06-01T00:00:00.000Z",
     updatedAt: "2026-06-01T00:00:00.000Z",
+    serviceRequestId: "sr-1",
+    serviceRequestTitle: "Instalação de ar condicionado",
     ...overrides,
   };
 }
 
+function renderCard(item: SettlementMovement, props?: { showServiceLink?: boolean }) {
+  return render(
+    <MemoryRouter initialEntries={["/dashboard/earnings"]}>
+      <SettlementMovementCard item={item} showServiceLink={props?.showServiceLink} />
+    </MemoryRouter>,
+  );
+}
+
 describe("SettlementMovementCard", () => {
-  it("renders credit settlement with forecast, installment and bank mask", () => {
-    render(<SettlementMovementCard item={makeItem()} />);
+  it("renders credit settlement with forecast, installment, bank mask and service link", () => {
+    renderCard(makeItem());
 
     expect(screen.getByRole("article", { name: /Liquidação/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Instalação de ar condicionado" }),
+    ).toHaveAttribute("href", "/dashboard/services/sr-1");
     expect(screen.getByText("Previsto")).toBeInTheDocument();
     expect(screen.getByText(/Previsão:/i)).toBeInTheDocument();
     expect(screen.getByText("Pendente")).toBeInTheDocument();
@@ -48,20 +62,25 @@ describe("SettlementMovementCard", () => {
     expect(screen.queryByText("Estorno")).not.toBeInTheDocument();
   });
 
+  it("hides service link when showServiceLink is false", () => {
+    renderCard(makeItem(), { showServiceLink: false });
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
   it("renders debit clawback with destructive styling and settled label", () => {
-    render(
-      <SettlementMovementCard
-        item={makeItem({
-          recordType: "DEBIT",
-          isRefundClawback: true,
-          movementStatus: "PAID_OUT",
-          settledAt: "2026-06-20",
-          settlingAt: null,
-          installment: null,
-          bankAccountMask: null,
-          netAmount: 40,
-        })}
-      />,
+    renderCard(
+      makeItem({
+        recordType: "DEBIT",
+        isRefundClawback: true,
+        movementStatus: "PAID_OUT",
+        settledAt: "2026-06-20",
+        settlingAt: null,
+        installment: null,
+        bankAccountMask: null,
+        netAmount: 40,
+        serviceRequestId: null,
+        serviceRequestTitle: null,
+      }),
     );
 
     expect(screen.getByText("Estorno")).toBeInTheDocument();
@@ -72,14 +91,12 @@ describe("SettlementMovementCard", () => {
   });
 
   it("shows paid-out badge without settled date as Liquidado", () => {
-    render(
-      <SettlementMovementCard
-        item={makeItem({
-          movementStatus: "PAID_OUT",
-          settledAt: null,
-          settlingAt: "2026-07-01",
-        })}
-      />,
+    renderCard(
+      makeItem({
+        movementStatus: "PAID_OUT",
+        settledAt: null,
+        settlingAt: "2026-07-01",
+      }),
     );
 
     expect(screen.getAllByText("Liquidado").length).toBeGreaterThanOrEqual(1);
