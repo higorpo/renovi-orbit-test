@@ -277,7 +277,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `src/features/provider-kyc/types/providerKyc.validation.ts` | Schemas Zod por passo; mapeamento `pf`/`pj` |
 | `src/features/provider-kyc/components/__tests__/ProviderKycGate.test.tsx` | Cobertura de status e allowlist |
 | `src/features/provider-kyc/components/__tests__/ProviderKycForm.test.tsx` | Wizard PJ: `legal-rep-id`, endereço da empresa (`address-proof`), dual-map identity |
-| `supabase/functions/dispatch-kyc-email/` | E-mail operacional (default `credenciamento@renovi.com.br`; env `NETCRED_CREDENCIAMENTO_EMAIL`) |
+| `supabase/functions/dispatch-kyc-email/` | E-mail operacional (default `credenciamento@renovi.com.br`; env `NETCRED_CREDENCIAMENTO_EMAIL`; local Inbucket/Mailpit se `INBUCKET_SMTP_HOST`, senão Resend) |
 | `supabase/migrations/20260802210000_provider_kyc_upload_sessions.sql` | Sessões Option A + janitor `payment_janitor_orphan_kyc_documents` |
 | `supabase/migrations/20260801750000_payment_mmd_notification_catalog.sql` (+ `20260801900000_provider_activated_*`) | Templates/rotas MMD KYC (submitted, under review, rejected, activated, suspended) |
 | `supabase/migrations/20260801060000_create_provider_gateway_accounts.sql` | FSM `onboarding_status` (incl. `REJECTED` → `DOCUMENTS_SUBMITTED`) |

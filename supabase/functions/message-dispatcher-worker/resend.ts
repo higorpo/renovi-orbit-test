@@ -2,6 +2,10 @@ import {
   fetchWithTimeout,
   PROVIDER_HTTP_TIMEOUT_MS,
 } from "../_shared/providerHttp.ts";
+import {
+  buildOutboundFromAddress,
+  EmailFromConfigError,
+} from "../_shared/emailFrom.ts";
 
 /** Resend HTTP client for worker email sends (design §5.5, task 58, Req.5 AC3). */
 
@@ -48,12 +52,14 @@ export interface ResendEmailPayload {
 }
 
 export function buildResendFromAddress(): string {
-  const email = Deno.env.get("RESEND_FROM_EMAIL");
-  const name = Deno.env.get("RESEND_FROM_NAME") ?? "Renovi";
-  if (!email?.trim()) {
-    throw new ResendConfigError("RESEND_FROM_EMAIL is required");
+  try {
+    return buildOutboundFromAddress();
+  } catch (err) {
+    if (err instanceof EmailFromConfigError) {
+      throw new ResendConfigError(err.message);
+    }
+    throw err;
   }
-  return `${name} <${email.trim()}>`;
 }
 
 export function buildResendEmailPayload(

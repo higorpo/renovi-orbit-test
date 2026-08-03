@@ -1,7 +1,11 @@
 import {
-  buildResendFromAddress,
-  ResendConfigError,
-} from "../message-dispatcher-worker/resend.ts";
+  buildOutboundFromAddress,
+  EmailFromConfigError,
+} from "../_shared/emailFrom.ts";
+import {
+  sendInbucketEmail,
+  shouldUseInbucketEmail,
+} from "../_shared/inbucketEmail.ts";
 import {
   fetchWithTimeout,
   PROVIDER_HTTP_TIMEOUT_MS,
@@ -11,6 +15,15 @@ import type { KycEmailAttachment } from "./types.ts";
 export const RESEND_API_URL = "https://api.resend.com/emails";
 export const NETCRED_CREDENCIAMENTO_EMAIL_ENV = "NETCRED_CREDENCIAMENTO_EMAIL";
 export const DEFAULT_NETCRED_CREDENCIAMENTO_EMAIL = "credenciamento@renovi.com.br";
+
+export class ResendConfigError extends Error {
+  readonly code = "resend_config_missing";
+
+  constructor(message: string) {
+    super(message);
+    this.name = "ResendConfigError";
+  }
+}
 
 export type SendCredenciamentoEmailInput = {
   recipientEmail: string;
@@ -32,8 +45,18 @@ export function resolveCredenciamentoRecipientEmail(): string {
 export function buildCredenciamentoEmailPayload(
   input: SendCredenciamentoEmailInput,
 ): Record<string, unknown> {
+  let from: string;
+  try {
+    from = buildOutboundFromAddress();
+  } catch (err) {
+    if (err instanceof EmailFromConfigError) {
+      throw new ResendConfigError(err.message);
+    }
+    throw err;
+  }
+
   return {
-    from: buildResendFromAddress(),
+    from,
     to: [input.recipientEmail],
     subject: input.subject,
     html: input.html,
@@ -44,7 +67,7 @@ export function buildCredenciamentoEmailPayload(
   };
 }
 
-export async function sendCredenciamentoEmail(
+async function sendCredenciamentoEmailViaResend(
   input: SendCredenciamentoEmailInput,
   options?: { fetchFn?: typeof fetch; timeoutMs?: number },
 ): Promise<SendCredenciamentoEmailResult> {
@@ -98,4 +121,40 @@ export async function sendCredenciamentoEmail(
       errorMessage: message,
     };
   }
+}
+
+async function sendCredenciamentoEmailViaInbucket(
+  input: SendCredenciamentoEmailInput,
+): Promise<SendCredenciamentoEmailResult> {
+  const result = await sendInbucketEmail({
+    recipientEmail: input.recipientEmail,
+    subject: input.subject,
+    html: input.html,
+    correlationId: input.correlationId,
+    attachments: input.attachments.map((attachment) => ({
+      filename: attachment.filename,
+      contentBase64: attachment.contentBase64,
+    })),
+  });
+
+  if (result.ok) {
+    return { ok: true, vendorMessageId: result.vendorMessageId };
+  }
+
+  return {
+    ok: false,
+    errorCode: result.errorCode,
+    errorMessage: result.errorMessage,
+  };
+}
+
+/** Local: Inbucket/Mailpit when INBUCKET_SMTP_HOST is set; otherwise Resend. */
+export async function sendCredenciamentoEmail(
+  input: SendCredenciamentoEmailInput,
+  options?: { fetchFn?: typeof fetch; timeoutMs?: number },
+): Promise<SendCredenciamentoEmailResult> {
+  if (shouldUseInbucketEmail()) {
+    return sendCredenciamentoEmailViaInbucket(input);
+  }
+  return sendCredenciamentoEmailViaResend(input, options);
 }

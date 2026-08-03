@@ -787,7 +787,7 @@ ALTER TABLE public.provider_profiles_private
 | `document_key` | `identity`, `address-proof`, `corporate-charter`, `legal-rep-id` |
 | Upload | Provider `authenticated` INSERT under own `providers/{auth.uid()}/kyc/…` prefix |
 | Read | Provider own prefix **or** `is_platform_admin()` |
-| Credenciamento email | **`dispatch-kyc-email` EF** (`service_role`) downloads objects and attaches bytes to Resend — **never** public links |
+| Credenciamento email | **`dispatch-kyc-email` EF** (`service_role`) downloads objects and attaches bytes (MIME) — local Inbucket/Mailpit when `INBUCKET_SMTP_HOST` is set (same as MMD), otherwise Resend — **never** public links |
 | RPC validation | `payment_submit_provider_kyc` stores paths only after `payment_assert_provider_kyc_storage_path` confirms object exists |
 
 **RLS (unchanged pattern on `provider_profiles_private`, already in production):** provider SELECT/UPDATE own row; platform admin SELECT all; no client/anon access; **`payment_submit_provider_kyc()`** (`SECURITY DEFINER`) is the write path for KYC submit — updates `provider_profiles_private`, syncs `provider_gateway_accounts.document` from `cpf`/`cnpj`, sets `onboarding_status`, inserts audit. Document columns store **storage paths**, not HTTP URLs.
@@ -1017,7 +1017,7 @@ sequenceDiagram
     participant ST as Storage (private bucket)
     participant PG as PostgreSQL RPC
     participant EF as dispatch-kyc-email EF
-    participant RS as Resend
+    participant ML as Inbucket/Mailpit or Resend
 
     P->>ST: upload KYC files (providers/{id}/kyc/{document_key}/…)
     P->>PG: payment_submit_provider_kyc(bank fields, storage_paths[])
@@ -1029,7 +1029,7 @@ sequenceDiagram
     P->>EF: POST dispatch-kyc-email (JWT)
     EF->>PG: SELECT provider_profiles_private + profiles (service_role)
     EF->>ST: download objects (service_role)
-    EF->>RS: email credenciamento@renovi.com.br (or NETCRED_CREDENCIAMENTO_EMAIL) with attachments (no public URLs)
+    EF->>ML: email credenciamento@renovi.com.br (or NETCRED_CREDENCIAMENTO_EMAIL) with MIME attachments (Inbucket when INBUCKET_SMTP_HOST set; else Resend; no public URLs)
     alt send success
         EF->>PG: payment_mark_kyc_credenciamento_email_dispatched(id)
     else send failure
@@ -1038,7 +1038,7 @@ sequenceDiagram
     P-->>P: Show "Aguardando análise" state
 ```
 
-**Split responsibility:** KYC persistence and `DOCUMENTS_SUBMITTED` transition are **fully transactional** in `payment_submit_provider_kyc`. Credenciamento email requires **Storage download + Resend attachment I/O**, so it runs in **`dispatch-kyc-email` Edge Function** after commit (Req 3 AC5). **`KYC_SUBMITTED`** in `payment_audit_log` is the immutable record of each NetCred-bound submission.
+**Split responsibility:** KYC persistence and `DOCUMENTS_SUBMITTED` transition are **fully transactional** in `payment_submit_provider_kyc`. Credenciamento email requires **Storage download + attachment I/O** (Inbucket/Mailpit when `INBUCKET_SMTP_HOST` is set, otherwise Resend), so it runs in **`dispatch-kyc-email` Edge Function** after commit (Req 3 AC5). **`KYC_SUBMITTED`** in `payment_audit_log` is the immutable record of each NetCred-bound submission.
 
 **Blocking enforcement (Req 3 AC1):** The `match_provider_jobs` RPC contains a guard:
 ```sql
@@ -1992,7 +1992,7 @@ Batch RPCs accept `p_record_job_run boolean DEFAULT true` where applicable; **cr
 | Function | Trigger | Auth | Role |
 |---|---|---|---|
 | `tokenize-payment-card` | Client POST | JWT | PCI → NetCred `paymentProfileCreate` → `payment_persist_client_card_token` RPC |
-| `dispatch-kyc-email` | Client POST after KYC RPC | JWT (provider) | Load KYC row + **download private Storage objects** → Resend email with **attachments** to default `credenciamento@renovi.com.br` (override env `NETCRED_CREDENCIAMENTO_EMAIL`) → `payment_mark_kyc_credenciamento_email_dispatched` RPC |
+| `dispatch-kyc-email` | Client POST after KYC RPC | JWT (provider) | Load KYC row + **download private Storage objects** → email with **attachments** to default `credenciamento@renovi.com.br` (override env `NETCRED_CREDENCIAMENTO_EMAIL`; local Inbucket/Mailpit when `INBUCKET_SMTP_HOST` is set, otherwise Resend) → `payment_mark_kyc_credenciamento_email_dispatched` RPC |
 | `schedule-netcred-charges` | pg_cron 4×/day via `payment_cron_schedule_netcred_charges()` | cron secret | `payment_claim_charge_batch` → NetCred loop → `payment_commit_charge_outcome` RPC |
 | `manual-charge-payment` | Client POST | JWT + rate limit | `payment_begin_manual_attempt` → NetCred → `payment_commit_charge_outcome` RPC |
 | `netcred-webhook` | NetCred POST | HMAC (no JWT) | Ingest + HMAC → inline `payment_process_webhook_event` OR `payment_enqueue_webhook_processing` RPC |
@@ -2583,7 +2583,7 @@ Per [`infrastructure-constraints.md`](../infrastructure-constraints.md): **start
 | NetCred onboarding poll | `detect-netcred-onboarding` | Batch GraphQL `companies` query |
 | NetCred reconciliation poll | `reconcile-netcred-payments` | `getTransaction` GraphQL |
 | IN_ANALYSIS void compensation | `reconcile-inanalysis-auto-cancel-voids` | NetCred void GraphQL after auto-cancel |
-| KYC credenciamento email | `dispatch-kyc-email` | Private Storage download + Resend attachments |
+| KYC credenciamento email | `dispatch-kyc-email` | Private Storage download + MIME attachments (Inbucket/Mailpit if `INBUCKET_SMTP_HOST`, else Resend) |
 | Shared NetCred adapter | `_shared/payment/` | JWT refresh; used only by EFs above |
 
 **Edge Function pattern for charges/refunds/reconcile:**

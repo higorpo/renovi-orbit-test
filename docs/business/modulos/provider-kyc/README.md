@@ -65,7 +65,7 @@
 | **my-account** | Allowlist `/dashboard/conta*` — conteúdo liberado com KYC bloqueado |
 | **payments** | Conta NetCred; RPCs `payment_*`; cron `detect-netcred-onboarding`; cobrança exige `ACTIVE` |
 | **message-dispatcher** | Eventos `PROVIDER_KYC_SUBMITTED`, `PROVIDER_ONBOARDING_UNDER_REVIEW`, `PROVIDER_KYC_REJECTED`, `PROVIDER_ACTIVATED`, `PROVIDER_SUSPENDED` |
-| Edge `dispatch-kyc-email` | Envio pós-submit e retry do gate |
+| Edge `dispatch-kyc-email` | Envio pós-submit e retry do gate (Inbucket/Mailpit se `INBUCKET_SMTP_HOST`; senão Resend) |
 
 ## 9. Riscos e lacunas
 

@@ -1,16 +1,12 @@
 /**
  * Minimal SMTP client for routing emails to the local Inbucket (Mailpit)
- * server during development. Uses raw TCP via Deno.connect — no external
- * dependencies, no TLS, no auth (Inbucket accepts everything).
+ * during development. Uses raw TCP via Deno.connect — no TLS, no auth.
  *
- * Env vars: INBUCKET_SMTP_HOST, INBUCKET_SMTP_PORT.
+ * Env: INBUCKET_SMTP_HOST, INBUCKET_SMTP_PORT.
+ * Consumers: message-dispatcher-worker, dispatch-kyc-email.
  */
 
-import {
-  buildResendFromAddress,
-  type ResendSendResult,
-  type SendResendEmailInput,
-} from "./resend.ts";
+import { buildOutboundFromAddress } from "./emailFrom.ts";
 
 const DEFAULT_SMTP_PORT = 54325;
 const SMTP_CONNECT_TIMEOUT_MS = 5_000;
@@ -42,34 +38,115 @@ export function resolveSmtpConfig(): SmtpConfig {
   return { host: host.trim(), port };
 }
 
+/** True when local SMTP (Mailpit/Inbucket) should replace Resend. */
+export function shouldUseInbucketEmail(): boolean {
+  return Boolean(Deno.env.get("INBUCKET_SMTP_HOST")?.trim());
+}
+
+export type InbucketAttachment = {
+  filename: string;
+  contentBase64: string;
+  contentType?: string;
+};
+
+export type SendInbucketEmailInput = {
+  recipientEmail: string;
+  subject: string;
+  html: string;
+  correlationId: string;
+  attachments?: InbucketAttachment[];
+};
+
+export type InbucketSendResult =
+  | { ok: true; vendorMessageId: string; httpStatus: number }
+  | { ok: false; httpStatus: number; errorCode: string; errorMessage: string };
+
 export interface SmtpMessage {
   from: string;
   to: string;
   subject: string;
   html: string;
   messageId: string;
+  attachments: InbucketAttachment[];
 }
 
-export function buildSmtpMessage(input: SendResendEmailInput): SmtpMessage {
-  const from = buildResendFromAddress();
-  const to = input.recipientEmail.trim();
-  const messageId = input.correlationId;
+export function contentTypeForFilename(filename: string): string {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith(".pdf")) return "application/pdf";
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".heic")) return "image/heic";
+  if (lower.endsWith(".heif")) return "image/heif";
+  return "application/octet-stream";
+}
 
-  return { from, to, subject: input.subject, html: input.html, messageId };
+export function wrapBase64(contentBase64: string, lineLength = 76): string {
+  const cleaned = contentBase64.replace(/\s+/g, "");
+  const lines: string[] = [];
+  for (let i = 0; i < cleaned.length; i += lineLength) {
+    lines.push(cleaned.slice(i, i + lineLength));
+  }
+  return lines.join("\r\n");
+}
+
+export function buildSmtpMessage(input: SendInbucketEmailInput): SmtpMessage {
+  return {
+    from: buildOutboundFromAddress(),
+    to: input.recipientEmail.trim(),
+    subject: input.subject,
+    html: input.html,
+    messageId: input.correlationId,
+    attachments: input.attachments ?? [],
+  };
 }
 
 export function formatSmtpPayload(msg: SmtpMessage): string {
-  const lines = [
+  const headers = [
     `From: ${msg.from}`,
     `To: ${msg.to}`,
     `Subject: ${msg.subject}`,
     `Message-ID: <${msg.messageId}@orbit.local>`,
     "MIME-Version: 1.0",
+  ];
+
+  if (msg.attachments.length === 0) {
+    return [
+      ...headers,
+      "Content-Type: text/html; charset=UTF-8",
+      "",
+      msg.html,
+    ].join("\r\n");
+  }
+
+  const boundary = `----=_OrbitBoundary_${msg.messageId.replace(/[^a-zA-Z0-9]/g, "")}`;
+  const parts: string[] = [
+    ...headers,
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
     "Content-Type: text/html; charset=UTF-8",
+    "Content-Transfer-Encoding: 7bit",
     "",
     msg.html,
   ];
-  return lines.join("\r\n");
+
+  for (const attachment of msg.attachments) {
+    const filename = attachment.filename.trim() || "document.bin";
+    const contentType = attachment.contentType
+      ?? contentTypeForFilename(filename);
+    parts.push(
+      `--${boundary}`,
+      `Content-Type: ${contentType}; name="${filename}"`,
+      "Content-Transfer-Encoding: base64",
+      `Content-Disposition: attachment; filename="${filename}"`,
+      "",
+      wrapBase64(attachment.contentBase64),
+    );
+  }
+
+  parts.push(`--${boundary}--`, "");
+  return parts.join("\r\n");
 }
 
 function extractEmailAddress(addr: string): string {
@@ -107,9 +184,9 @@ const defaultDeps: InbucketSmtpDeps = {
 };
 
 export async function sendInbucketEmail(
-  input: SendResendEmailInput,
+  input: SendInbucketEmailInput,
   deps: InbucketSmtpDeps = defaultDeps,
-): Promise<ResendSendResult> {
+): Promise<InbucketSendResult> {
   const config = resolveSmtpConfig();
   const msg = buildSmtpMessage(input);
   const payload = formatSmtpPayload(msg);
@@ -193,7 +270,7 @@ export async function sendInbucketEmail(
   }
 }
 
-function smtpFailure(errorMessage: string): ResendSendResult {
+function smtpFailure(errorMessage: string): InbucketSendResult {
   return {
     ok: false,
     httpStatus: 0,

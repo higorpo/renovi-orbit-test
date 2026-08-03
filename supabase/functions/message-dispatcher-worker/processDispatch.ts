@@ -17,7 +17,7 @@ import {
 } from "./report.ts";
 import { renderEmailFromTemplate } from "./renderEmail.ts";
 import { validateAndRenderPush } from "./renderPush.ts";
-import { InbucketConfigError, sendInbucketEmail } from "./inbucketEmail.ts";
+import { InbucketConfigError, sendInbucketEmail, shouldUseInbucketEmail } from "../_shared/inbucketEmail.ts";
 import { ResendConfigError, sendResendEmail, type SendResendEmailInput } from "./resend.ts";
 import { fetchEmailTemplate, fetchPushTemplate } from "./templates.ts";
 import { TemplateVariablesSizeError } from "./templateVariables.ts";
@@ -79,7 +79,7 @@ export interface ProcessDispatchDeps {
 }
 
 export function resolveEmailSender(): ProcessDispatchDeps["sendResendEmail"] {
-  return Deno.env.get("INBUCKET_SMTP_HOST")
+  return shouldUseInbucketEmail()
     ? sendInbucketEmail
     : sendResendEmail;
 }

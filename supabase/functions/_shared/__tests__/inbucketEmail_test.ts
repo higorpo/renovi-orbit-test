@@ -7,8 +7,6 @@ import {
   sendInbucketEmail,
   type InbucketSmtpDeps,
 } from "../inbucketEmail.ts";
-import { resolveEmailSender } from "../processDispatch.ts";
-import { sendResendEmail } from "../resend.ts";
 
 // --- resolveSmtpConfig ---
 
@@ -93,6 +91,7 @@ Deno.test("formatSmtpPayload includes required MIME headers", () => {
     subject: "Welcome",
     html: "<p>Hi</p>",
     messageId: "msg-001",
+    attachments: [],
   });
 
   assertEquals(payload.includes("From: Renovi <noreply@renovi.com.br>"), true);
@@ -111,9 +110,48 @@ Deno.test("formatSmtpPayload uses CRLF line endings", () => {
     subject: "S",
     html: "<b>B</b>",
     messageId: "m",
+    attachments: [],
   });
   const lines = payload.split("\r\n");
   assertEquals(lines.length >= 7, true);
+});
+
+Deno.test("formatSmtpPayload builds multipart when attachments are present", () => {
+  const payload = formatSmtpPayload({
+    from: "Renovi <noreply@renovi.com.br>",
+    to: "credenciamento@renovi.com.br",
+    subject: "KYC",
+    html: "<p>Docs</p>",
+    messageId: "kyc-1",
+    attachments: [
+      { filename: "doc.pdf", contentBase64: btoa("pdf-bytes") },
+    ],
+  });
+
+  assertEquals(payload.includes("multipart/mixed"), true);
+  assertEquals(payload.includes('filename="doc.pdf"'), true);
+  assertEquals(payload.includes("Content-Transfer-Encoding: base64"), true);
+  assertEquals(payload.includes(btoa("pdf-bytes")), true);
+  assertEquals(payload.includes("<p>Docs</p>"), true);
+});
+
+Deno.test("buildSmtpMessage includes attachments when provided", () => {
+  Deno.env.set("RESEND_FROM_EMAIL", "noreply@renovi.com.br");
+  Deno.env.set("RESEND_FROM_NAME", "Renovi");
+  try {
+    const msg = buildSmtpMessage({
+      recipientEmail: "user@example.com",
+      subject: "KYC",
+      html: "<p>Hi</p>",
+      correlationId: "corr-att",
+      attachments: [{ filename: "a.pdf", contentBase64: "YQ==" }],
+    });
+    assertEquals(msg.attachments.length, 1);
+    assertEquals(msg.attachments[0]?.filename, "a.pdf");
+  } finally {
+    Deno.env.delete("RESEND_FROM_EMAIL");
+    Deno.env.delete("RESEND_FROM_NAME");
+  }
 });
 
 // --- sendInbucketEmail ---
@@ -501,22 +539,4 @@ Deno.test("sendInbucketEmail ignores close errors in finally", async () => {
     Deno.env.delete("INBUCKET_SMTP_PORT");
     Deno.env.delete("RESEND_FROM_EMAIL");
   }
-});
-
-// --- resolveEmailSender ---
-
-Deno.test("resolveEmailSender returns sendInbucketEmail when INBUCKET_SMTP_HOST is set", () => {
-  Deno.env.set("INBUCKET_SMTP_HOST", "localhost");
-  try {
-    const sender = resolveEmailSender();
-    assertEquals(sender, sendInbucketEmail);
-  } finally {
-    Deno.env.delete("INBUCKET_SMTP_HOST");
-  }
-});
-
-Deno.test("resolveEmailSender returns sendResendEmail when INBUCKET_SMTP_HOST is not set", () => {
-  Deno.env.delete("INBUCKET_SMTP_HOST");
-  const sender = resolveEmailSender();
-  assertEquals(sender, sendResendEmail);
 });
