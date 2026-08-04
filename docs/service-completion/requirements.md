@@ -19,7 +19,7 @@ The **Service Completion & Publication Readiness** subsystem owns two coupled bu
 1. **Publication Readiness (pre-matching enrichment)** — After a `service_request` is created, the platform MUST asynchronously materialize a **completion checklist** (Dynamic Form schema) before matching/dispatch may begin. Until enrichment reaches `READY`, the request exists but MUST NOT be visible to providers and MUST NOT bootstrap progressive matching batches.
 2. **Service Completion (post-contract execution)** — After a `contracted_service` reaches `CONFIRMED` (payment captured), the contracted provider fills checklist responses and evidence, transitions to `EXECUTED`, and the client confirms delivery (with mandatory rating on the manual path) or the system auto-completes after grace (~24h) into `COMPLETED`, enabling optional post-auto-complete rating.
 
-**Problem Statement.** Today, matching bootstraps on first `service_requests.status = OPEN` insert, and execution marking (`payment_mark_service_executed`) lacks a structured, auditable completion checklist with evidence, late-execution signaling, draft persistence, and atomic confirm+rating. Separately, AI-assisted enrichment (checklist generation) is a different failure domain from matching distribution (retries, leases, LLM timeouts, template fallback). Folding enrichment into `service_request_status` or into matching `DISPATCH_*` conflates negotiation lifecycle with operational readiness ([ADR-0001](./adr/0001-separate-enrichment-fsm-for-publication-readiness.md)).
+**Problem Statement.** Today, matching bootstraps on first `service_requests.status = OPEN` insert, and execution marking (legacy `payment_mark_service_executed`; successor `service_completion_mark_executed`) lacks a structured, auditable completion checklist with evidence, late-execution signaling, draft persistence, and atomic confirm+rating. Separately, AI-assisted enrichment (checklist generation) is a different failure domain from matching distribution (retries, leases, LLM timeouts, template fallback). Folding enrichment into `service_request_status` or into matching `DISPATCH_*` conflates negotiation lifecycle with operational readiness ([ADR-0001](./adr/0001-separate-enrichment-fsm-for-publication-readiness.md)).
 
 **Business Objectives:**
 
@@ -33,7 +33,7 @@ The **Service Completion & Publication Readiness** subsystem owns two coupled bu
 
 - Introduce a durable **enrichment FSM** (`PENDING` → `RUNNING` → `READY`, with retry/fallback paths) as the sole source of truth for publication readiness; `service_requests.status` MUST NOT encode readiness.
 - Change matching bootstrap from “first OPEN insert” to “enrichment `READY` handoff,” preserving the existing 5-minute `matching.dispatch_start_delay_minutes` clock **after** readiness.
-- Extend (do not replace) `contracted_services` lifecycle `PENDING_PAYMENT | CONFIRMED | EXECUTED | COMPLETED | CANCELLED` and existing RPCs `payment_mark_service_executed`, `payment_confirm_service_completed`, and auto-complete cron.
+- Extend (do not replace) `contracted_services` lifecycle `PENDING_PAYMENT | CONFIRMED | EXECUTED | COMPLETED | CANCELLED`. Self-serve writers MUST be `service_completion_mark_executed`, `service_completion_confirm_with_rating`, and `service_completion_auto_complete_executed` (+ cron/`job_runs`). Legacy `payment_mark_service_executed` / `payment_confirm_service_completed` / `payment_cron_auto_complete_*` MUST be removed from the product API ([ADR-0004](./adr/0004-completion-rpcs-outside-payments.md)).
 - Reuse Dynamic Form engine with a dedicated `completion_criterion` block; reuse `service_ratings` (quality / punctuality / communication / value, 1–5) and restore authenticated grants on submit/update RPCs as needed.
 - Keep `generate-smart-description` as **pre-create sync**; checklist generation is **post-create async enrichment**.
 - Route notifications (including existing `SERVICE_EXECUTED` pattern) through Message Dispatcher (MMD) for push + email.
@@ -88,7 +88,7 @@ Dispute-stub support destination SHALL be configured via env / remote config, no
 - **Frontend**: React 19, Vite 7, TypeScript, TanStack Query, Dynamic Form engine (`src/features/dynamic-form/`) for checklist schema render and response capture.
 - **Backend**: Supabase PostgreSQL 15+, RLS on all new tables, Supabase Auth JWT sessions; `service_role` for workers/crons.
 - **Existing CS lifecycle**: `contracted_services.status ∈ {PENDING_PAYMENT, CONFIRMED, EXECUTED, COMPLETED, CANCELLED}` — extend, do not invent a parallel CS FSM.
-- **Existing payment completion RPCs**: `payment_mark_service_executed`, `payment_confirm_service_completed`, `payment_cron_auto_complete_executed_services` (and related job_runs) — extend for checklist/evidence/`executed_late`/atomic rating; do not create duplicate status writers.
+- **Completion RPCs (domain ownership)**: `service_completion_mark_executed`, `service_completion_confirm_with_rating`, `service_completion_auto_complete_executed` (+ cron wrappers with `job_runs`) — include checklist/evidence/`executed_late`/atomic rating. MUST NOT keep parallel product writers under `payment_*` for these transitions ([ADR-0004](./adr/0004-completion-rpcs-outside-payments.md)).
 - **Existing ratings**: `service_ratings` with dimensions quality, punctuality, communication, value (1–5); RPCs `submit_service_rating` / `update_service_rating` (authenticated EXECUTE grants restored as needed); stats refresh triggers from matching ADR-0005 remain authoritative for ranking inputs.
 - **Smart description**: Edge Function `generate-smart-description` remains **synchronous pre-create**; checklist enrichment is **asynchronous post-create** and MUST NOT block SR insert success beyond enqueueing enrichment.
 - **Matching today**: Dispatch bootstrap trigger fires on first `service_requests` `OPEN` — this MUST change to enrichment `READY` handoff; the 5-minute `matching.dispatch_start_delay_minutes` applies only after bootstrap.
@@ -301,6 +301,10 @@ The Service Completion & Publication Readiness subsystem SHALL operate as a pers
 8. **GIVEN** matching documentation referencing OPEN-insert bootstrap  
    **WHEN** this feature ships  
    **THEN** matching bootstrap semantics MUST be updated to READY-handoff as the normative rule for new requests.
+
+9. **GIVEN** `republish_cancelled_service_request` creates a new `OPEN` service request  
+   **WHEN** the insert commits  
+   **THEN** the system MUST enqueue enrichment `PENDING` for the **new** request (same helper as create-request) and MUST NOT bootstrap matching from the OPEN insert; MUST NOT copy enrichment/checklist from the cancelled source request.
 
 ---
 
@@ -592,7 +596,7 @@ The Service Completion & Publication Readiness subsystem SHALL operate as a pers
 
 1. **GIVEN** CS `status = CONFIRMED`, payment PAID as required by payment invariants, checklist schema exists for the SR  
    **WHEN** provider submits final execution package  
-   **THEN** `payment_mark_service_executed` (extended) or successor RPC MUST validate all required checklist responses in the same transaction that transitions to `EXECUTED`.
+   **THEN** `service_completion_mark_executed` MUST validate all required checklist responses in the same transaction that transitions to `EXECUTED`.
 
 2. **GIVEN** final submit  
    **WHEN** validation passes  
@@ -783,7 +787,7 @@ The Service Completion & Publication Readiness subsystem SHALL operate as a pers
 ### Acceptance Criteria
 
 1. **GIVEN** CS `status = EXECUTED` and `executed_at + auto_complete_grace` elapsed (default ~24h from `platform_constants.auto_complete_grace_hours`)  
-   **WHEN** `payment_cron_auto_complete_executed_services` runs  
+   **WHEN** `service_completion_cron_auto_complete_executed` runs (invoking `service_completion_auto_complete_executed`)  
    **THEN** it MUST set `COMPLETED`, `completed_by = 'system'`, `completed_at = now()`, audit `SERVICE_AUTO_COMPLETED`, notify client — and MUST NOT require or invent a rating.
 
 2. **GIVEN** auto-complete batch  
@@ -1182,7 +1186,7 @@ The Service Completion & Publication Readiness subsystem SHALL operate as a pers
 
 ## Implementation Guidance
 
-- **Do not invent parallel CS status enums.** Extend `payment_mark_service_executed`, `payment_confirm_service_completed`, and `payment_cron_auto_complete_executed_services`.
+- **Do not invent parallel CS status enums.** Implement `service_completion_mark_executed`, `service_completion_confirm_with_rating`, and `service_completion_auto_complete_executed` (+ cron); remove legacy `payment_*` completion product APIs ([ADR-0004](./adr/0004-completion-rpcs-outside-payments.md)).
 - **Implement enrichment as its own tables/FSM** per ADR-0001; remove or gate the OPEN-insert matching bootstrap trigger in favor of READY handoff + repair sweeper.
 - **Keep AI I/O in Edge Functions**; keep transition RPCs in Postgres; never hold transactions open across LLM HTTP.
 - **Reuse Dynamic Form** with a new `completion_criterion` block (ADR-0003); enforce allowlist/cardinality at materialize and again at EXECUTED submit. Do not compose intake `yes_no` + `image_gallery`.
@@ -1190,7 +1194,7 @@ The Service Completion & Publication Readiness subsystem SHALL operate as a pers
 - **Reuse MMD** for `SERVICE_EXECUTED` and completion notifications; reuse `job_runs`, leases, pg_cron patterns from matching/payments/MMD.
 - **Seed checklist templates** with cascade coverage (per `platform_service`, category, and a **global** default) before enabling fallback in production; missing templates at all levels are CRITICAL.
 - **Seed platform_constants** per decision 23 table (criterion 3–12, evidence 1–5, AI attempts 3, lease 120s, batch 20, retry base 30s, orphan TTL 24h; reuse `auto_complete_grace_hours=24`).
-- **Feature modules**: MUST use `src/features/service-completion/` as the app ownership boundary (enrichment UX, checklist fill, confirm+rating, feature APIs). `view-services` consumes its public API. `payment_*` RPCs remain in Postgres; payments feature retains money movement only. Matching bootstrap remains matching-owned. API layer mandatory.
+- **Feature modules**: MUST use `src/features/service-completion/` as the app ownership boundary (enrichment UX, checklist fill, confirm+rating, feature APIs). `view-services` consumes its public API. Payments feature retains money movement only (`payment_*` NetCred/settlement). Matching bootstrap remains matching-owned. API layer mandatory.
 - **Tests**: pgTAP for FSM transitions, cancel races, idempotent EXECUTED/confirm, executed_late boundaries (BRT date), fallback materialize; Deno tests for LLM validation/retry; Vitest for hooks/UI gates.
 - **Docs sync**: update matching requirements bootstrap wording when implementing; keep CONTEXT.md glossary authoritative.
 - **Cutover:** database will be reset in current development phase — no legacy OPEN grandfather/backfill. Enrichment gate applies to all post-deploy requests.

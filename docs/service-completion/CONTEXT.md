@@ -2,9 +2,9 @@
 
 Termos canônicos do domínio de **enriquecimento pré-publicação do pedido**, **checklist de execução**, **marcação de execução**, **confirmação de entrega** e **avaliação pós-conclusão**. Sem detalhes de implementação.
 
-Requisitos: [`requirements.md`](./requirements.md).
+Requisitos: [`requirements.md`](./requirements.md). Design: [`design.md`](./design.md). Tasks: [`tasks.md`](./tasks.md).
 
-ADR: [`adr/0001-separate-enrichment-fsm-for-publication-readiness.md`](./adr/0001-separate-enrichment-fsm-for-publication-readiness.md) · [`adr/0002-evidence-images-block-not-image-gallery.md`](./adr/0002-evidence-images-block-not-image-gallery.md) · [`adr/0003-completion-criterion-block.md`](./adr/0003-completion-criterion-block.md).
+ADR: [`adr/0001-separate-enrichment-fsm-for-publication-readiness.md`](./adr/0001-separate-enrichment-fsm-for-publication-readiness.md) · [`adr/0002-evidence-images-block-not-image-gallery.md`](./adr/0002-evidence-images-block-not-image-gallery.md) · [`adr/0003-completion-criterion-block.md`](./adr/0003-completion-criterion-block.md) · [`adr/0004-completion-rpcs-outside-payments.md`](./adr/0004-completion-rpcs-outside-payments.md).
 
 ## Language
 
@@ -108,6 +108,34 @@ _Avoid_: upload direto sem sessão; reuso do bucket de fotos do pedido/chat
 Defaults seed de `platform_constants` para cardinalidade, evidência, retries de IA, lease de enrichment, batch claim, backoff e orphan TTL (ver decisão 23).
 _Avoid_: hardcode sem constant
 
+**Registro de enrichment**:
+Linha 1:1 com o pedido que materializa a FSM de prontidão e o schema do checklist (quando READY).
+_Avoid_: colunas de enrichment em service_requests
+
+**Finalize CAS de enrichment**:
+Commit idempotente do worker que só aplica se lease_owner + lease_generation ainda forem os do claim; materializa checklist e READY.
+_Avoid_: update service_role sem geração; TX aberta durante LLM
+
+**RPCs de conclusão de serviço**:
+Funções Postgres do domínio de conclusão (`service_completion_*`) que escrevem `EXECUTED` / `COMPLETED` (+ rating no path manual) e auto-complete de sistema. Distintas do domínio de cobrança/payments.
+_Avoid_: payment_mark_service_executed, payment_confirm_service_completed, payment_cron_auto_complete_* como API de produto
+
+**Registro de evidência de conclusão**:
+Linha 1:1 com o serviço contratado que guarda draft mutável e, após EXECUTED, o pacote congelado de respostas/evidências.
+_Avoid_: colunas jsonb em contracted_services; duas tabelas draft+package no MVP
+
+**Enqueue de enrichment**:
+Ação de domínio que coloca um pedido novo (create ou republish) na fila de enriquecimento com status `PENDING`, sem iniciar matching.
+_Avoid_: bootstrap de matching no insert OPEN; copiar checklist do pedido origem no republish
+
+**Read model de conclusão**:
+Projeção autorizada do estado de enrichment, capabilities e evidências (schema vs respostas) para UI de listagem e detalhe.
+_Avoid_: embutir schema completo em cards de lista; expor draft ao cliente
+
+**Atenção operacional de enrichment**:
+Sinal de que o pedido não pode alcançar prontidão sem intervenção (ex.: cascata de template ausente após esgotar IA).
+_Avoid_: auto-cancel do pedido; publicar vazio; retry infinito silencioso
+
 ## Decisões registradas
 
 | # | Decisão | Data |
@@ -135,4 +163,12 @@ _Avoid_: hardcode sem constant
 | 21 | **Upload de evidência (opção A):** `completion_evidence_upload_sessions` (padrão KYC/chat); janitor de órfãos. | 2026-08-04 |
 | 22 | **Cutover (dev reset):** banco será resetado; sem grandfather/backfill de SRs OPEN legados. Enrichment gate aplica a todos os pedidos pós-deploy. | 2026-08-04 |
 | 23 | **Defaults operacionais (opção A):** criterion 3–12; evidence 1–5; AI attempts 3; lease 120s; batch 20; retry base 30s; orphan TTL 24h; auto-complete 24h. Support link via env/remote config. | 2026-08-04 |
-| 24 | **Feature ownership (opção A):** `src/features/service-completion/` concentra enrichment UX, checklist fill, confirm+rating e APIs de app. RPCs `payment_*` permanecem no Postgres; `view-services` consome a public API. Matching bootstrap e payments monetários ficam nos domínios atuais. | 2026-08-04 |
+| 24 | **Feature ownership (opção A):** `src/features/service-completion/` concentra enrichment UX, checklist fill, confirm+rating e APIs de app. Writers de EXECUTED/COMPLETED/rating são RPCs `service_completion_*` (não payments). `view-services` consome a public API. Matching bootstrap e cobrança NetCred ficam nos domínios atuais. | 2026-08-04 |
+| 25 | **Wake de enrichment (design B):** após enqueue `PENDING`, wake imediato via `orbit_invoke_edge_function` + **cron sweeper** para retries/`next_attempt_at`/leases órfãos. Sem bloquear create no client; sem fan-out 1:1 sem claim. | 2026-08-04 |
+| 26 | **Persistência enrichment (design A):** tabela `service_request_enrichments` 1:1 com SR (FSM, lease, attempts, schema jsonb, source); eventos append-only em `service_request_enrichment_events`. Schema não duplicado em `service_requests`. | 2026-08-04 |
+| 27 | **TX boundaries enrichment (design A):** claim (TX curta → RUNNING+lease+generation) → LLM fora do DB → finalize CAS `(lease_owner, lease_generation)` materializa schema+READY+bootstrap matching na mesma TX. | 2026-08-04 |
+| 28 | **RPCs de conclusão fora de payments:** remover `payment_mark_service_executed` e `payment_confirm_service_completed` da API de produto; criar `service_completion_mark_executed` e `service_completion_confirm_with_rating` como únicos writers self-serve de EXECUTED / COMPLETED+rating. | 2026-08-04 |
+| 29 | **Auto-complete fora de payments (design A):** mover para `service_completion_auto_complete_executed` + cron/`job_runs`; remover wrappers `payment_*` de auto-complete. | 2026-08-04 |
+| 30 | **Evidência (design A):** tabela `contracted_service_completion_evidence` 1:1 com CS (`draft`\|`frozen`, responses jsonb, version, executed_late no freeze). Freeze atômico com mark executed. | 2026-08-04 |
+| 31 | **Bootstrap matching (design A):** `matching_bootstrap_dispatch_for_service_request(sr_id)` chamado na mesma TX de `enrichment_finalize_ready`; trigger OPEN removido; sweeper repara READY sem dispatch. | 2026-08-04 |
+| 32 | **Gap closure (design v1.1):** create e republish compartilham enqueue de enrichment (sem bootstrap no OPEN); read model `get_service_completion_context` + campos leves em lista; MMD catalog inclui `SERVICE_AUTO_COMPLETED` (template + routing); disputa stub com `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL` / `orbit.dispute_support_url`; `ops_attention_*` sem retry infinito; `responses_hash` = sha256(canonical JSON); GRANTs de rating restaurados. | 2026-08-04 |
