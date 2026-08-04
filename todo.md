@@ -106,21 +106,6 @@ Coisas para fazer next
 - verificar para o endereço: definir o tipo de endereço, se é casa ou apto ou algum outro tipo e permitir adicionar detalhes de interfone por exemplo. precisamos garantir que o prestador saiba como entrar em contato com o cliente.
 
 
-- [x] verificar se o e-mail de onboarding está sendo enviado para netcred — `dispatch-kyc-email` + default `credenciamento@renovi.com.br` (override `NETCRED_CREDENCIAMENTO_EMAIL`)
-
-
-
-
-
-
-
-Fluxo de pagamentos, itens com problemas:
-- [x] Credenciamento KYC: feature `provider-kyc`, wizard multi-step + BankPicker, gate no shell (slots+nav; libera só Minha conta), telas de status FSM, identidade no submit RPC, upload sessions + janitor de órfãos, key `legal-rep-id`.
-
-
-
-
-
 
 
 
