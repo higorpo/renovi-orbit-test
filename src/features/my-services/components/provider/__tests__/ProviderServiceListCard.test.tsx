@@ -346,7 +346,7 @@ describe("ProviderServiceListCard additional branches", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText("Serviço concluído")).toBeInTheDocument();
+    expect(screen.queryByText("Serviço concluído")).not.toBeInTheDocument();
     expect(screen.getAllByRole("button")).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Ver detalhes" })).toBeInTheDocument();
   });

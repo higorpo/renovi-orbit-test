@@ -237,7 +237,7 @@ describe("ClientServiceListCard", () => {
         showProviderHeader: true,
         highlight: {
           icon: "completed",
-          title: "Serviço concluído",
+          title: "Avaliação recebida",
           emphasis: "default",
         },
         secondaryInfo: [],
@@ -247,8 +247,24 @@ describe("ClientServiceListCard", () => {
     render(<ClientServiceListCard model={model} />);
 
     expect(screen.getByText("Maria Silva")).toBeInTheDocument();
-    expect(screen.getByText("Serviço concluído")).toBeInTheDocument();
+    expect(screen.getByText("Avaliação recebida")).toBeInTheDocument();
     expect(screen.queryByText("Urgente")).not.toBeInTheDocument();
+  });
+
+  it("omits the highlight block when presentation has none", () => {
+    getPresentationMock.mockReturnValue(
+      presentation({
+        showProviderHeader: true,
+        highlight: null,
+        secondaryInfo: [{ icon: "date", text: "Concluído em 05/08/2026" }],
+        showUrgency: false,
+      }),
+    );
+    render(<ClientServiceListCard model={model} />);
+
+    expect(screen.getByText("Maria Silva")).toBeInTheDocument();
+    expect(screen.getByText("Concluído em 05/08/2026")).toBeInTheDocument();
+    expect(screen.queryByText("Serviço concluído")).not.toBeInTheDocument();
   });
 });
 
@@ -263,8 +279,8 @@ describe("ClientServiceListCard additional branches", () => {
     getPresentationMock.mockReturnValue(
       presentation({
         highlight: {
-          icon: "completed",
-          title: "Serviço concluído",
+          icon: "scheduled",
+          title: "Serviço agendado",
           emphasis: "default",
         },
       }),
@@ -272,7 +288,7 @@ describe("ClientServiceListCard additional branches", () => {
 
     render(<ClientServiceListCard model={model} />);
 
-    expect(screen.getByText("Serviço concluído")).toBeInTheDocument();
+    expect(screen.getByText("Serviço agendado")).toBeInTheDocument();
   });
 
   it("renders a non-interactive card body when details callback is omitted", () => {

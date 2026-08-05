@@ -383,7 +383,7 @@ describe("getClientServiceCardPresentation", () => {
     expect(pres.highlight.detail).toMatch(/última interação/i);
   });
 
-  it("builds completed presentation with provider and date", () => {
+  it("builds completed presentation without highlight", () => {
     const pres = getClientServiceCardPresentation(
       baseModel({
         listPhase: "completed",
@@ -412,7 +412,7 @@ describe("getClientServiceCardPresentation", () => {
     );
 
     expect(pres.showProviderHeader).toBe(true);
-    expect(pres.highlight.title).toBe("Serviço concluído");
+    expect(pres.highlight).toBeNull();
     expect(pres.secondaryInfo.some((item) => item.text?.includes("Concluído em"))).toBe(true);
     expect(pres.primaryAction.intent).toBe("details");
   });

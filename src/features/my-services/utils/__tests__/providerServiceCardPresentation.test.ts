@@ -393,7 +393,7 @@ describe("getProviderServiceCardPresentation", () => {
   });
 
   describe("completed", () => {
-    it("shows completed highlight with mock rating", () => {
+    it("omits highlight and shows amount, date and mock rating", () => {
       const model = baseModel({
         listPhase: "completed",
         statusTabId: "completed",
@@ -424,8 +424,7 @@ describe("getProviderServiceCardPresentation", () => {
         },
       });
       const pres = getProviderServiceCardPresentation(model);
-      expect(pres.highlight.title).toBe("Serviço concluído");
-      expect(pres.highlight.icon).toBe("completed");
+      expect(pres.highlight).toBeNull();
       expect(
         pres.secondaryInfo.some(
           (item) => item.icon === "amount" && item.text.includes("Você recebe"),

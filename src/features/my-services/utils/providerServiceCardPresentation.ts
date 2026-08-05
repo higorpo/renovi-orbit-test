@@ -71,7 +71,7 @@ export interface ProviderCardAction {
 export interface ProviderServiceCardPresentation {
   phaseLabel: string;
   phaseBadgeVariant: StatusBadgeVariant;
-  highlight: ProviderCardHighlight;
+  highlight: ProviderCardHighlight | null;
   secondaryInfo: ProviderCardSecondaryInfo[];
   showUrgency: boolean;
   isTodayService: boolean;
@@ -322,11 +322,7 @@ function buildCompletedPresentation(
 
   return {
     isTodayService: false,
-    highlight: {
-      icon: "completed",
-      title: "Serviço concluído",
-      emphasis: "default",
-    },
+    highlight: null,
     secondaryInfo,
   };
 }

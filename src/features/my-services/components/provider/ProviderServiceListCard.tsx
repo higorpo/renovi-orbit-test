@@ -162,7 +162,7 @@ function HighlightBlock({
   highlight,
   theme,
 }: {
-  highlight: ProviderServiceCardPresentation["highlight"];
+  highlight: NonNullable<ProviderServiceCardPresentation["highlight"]>;
   theme: ReturnType<typeof getProviderCardTheme>;
 }) {
   const lineCount =
@@ -237,9 +237,13 @@ export function ProviderServiceListCard({
   className,
 }: ProviderServiceListCardProps) {
   const presentation = getProviderServiceCardPresentation(model);
-  const theme = getProviderCardTheme(model.listPhase, presentation.highlight.emphasis, {
-    isTodayService: presentation.isTodayService,
-  });
+  const theme = getProviderCardTheme(
+    model.listPhase,
+    presentation.highlight?.emphasis ?? "default",
+    {
+      isTodayService: presentation.isTodayService,
+    },
+  );
   const urgencyConfig = presentation.showUrgency ? getUrgencyConfig(model.urgency) : null;
   const clientName =
     model.counterparty?.displayName?.trim() || model.counterpartyName?.trim() || "Cliente";
@@ -294,7 +298,9 @@ export function ProviderServiceListCard({
         {model.title}
       </h2>
 
-      <HighlightBlock highlight={presentation.highlight} theme={theme} />
+      {presentation.highlight ? (
+        <HighlightBlock highlight={presentation.highlight} theme={theme} />
+      ) : null}
 
       {presentation.secondaryInfo.length > 0 ? (
         <div className="flex flex-col gap-1.5 rounded-md border border-border/40 bg-background/60 px-2.5 py-2">

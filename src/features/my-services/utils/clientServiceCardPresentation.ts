@@ -70,7 +70,7 @@ export interface ClientCardAction {
 export interface ClientServiceCardPresentation {
   phaseLabel: string;
   phaseBadgeVariant: StatusBadgeVariant;
-  highlight: ClientCardHighlight;
+  highlight: ClientCardHighlight | null;
   secondaryInfo: ClientCardSecondaryInfo[];
   showUrgency: boolean;
   isTodayService: boolean;
@@ -338,11 +338,7 @@ function buildCompletedPresentation(
   return {
     showProviderHeader: true,
     isTodayService: false,
-    highlight: {
-      icon: "completed",
-      title: "Serviço concluído",
-      emphasis: "default",
-    },
+    highlight: null,
     secondaryInfo,
   };
 }
