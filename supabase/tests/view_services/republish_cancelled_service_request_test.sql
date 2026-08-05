@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(9);
+select plan(10);
 
 create or replace function pg_temp.cns_set_auth(p_user_id uuid)
 returns void
@@ -138,8 +138,19 @@ select is(
     from public.service_request_dispatches d
     where d.service_request_id = (select (payload->>'requestId')::uuid from _republish_result)
   ),
-  1,
-  'republish bootstraps matching dispatch for the new OPEN request'
+  0,
+  'republish does not bootstrap matching dispatch (OPEN trigger dropped; enrichment enqueue only)'
+);
+
+select ok(
+  exists (
+    select 1
+    from public.service_request_enrichments e
+    where e.service_request_id = (select (payload->>'requestId')::uuid from _republish_result)
+      and e.status = 'PENDING'::public.enrichment_status
+      and e.checklist_schema is null
+  ),
+  'republish enqueues fresh PENDING enrichment without schema'
 );
 
 -- Idempotent replay returns the same requestId without a second insert
