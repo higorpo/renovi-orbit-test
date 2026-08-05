@@ -1,8 +1,8 @@
--- pgTAP: Task 57 — orphan upload claim excludes frozen refs; claims TTL orphans.
+-- pgTAP: Task 57 — orphan janitor (SQL-only) deletes unreferenced; skips frozen; expires sessions.
 
 begin;
 
-select plan(7);
+select plan(8);
 
 create or replace function pg_temp.set_service_role()
 returns void
@@ -22,7 +22,7 @@ select throws_ok(
   $$ select public.service_completion_janitor_orphan_uploads(10) $$,
   '42501',
   null,
-  'janitor claim rejects non-service_role'
+  'janitor rejects non-service_role'
 );
 
 create temp table _fx as
@@ -45,7 +45,7 @@ insert into public.service_requests (
 )
 select
   f.sr_id, sr.client_id, sr.service_id, sr.address_id,
-  'orphan janitor claim pgTAP', sr.description, sr.form_data, sr.form_version,
+  'orphan janitor pgTAP', sr.description, sr.form_data, sr.form_version,
   'OPEN', sr.urgency
 from _fx f
 join public.service_requests sr on sr.id = '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid;
@@ -169,18 +169,16 @@ from _fx;
 
 select pg_temp.set_service_role();
 
-create temp table _claim as
+create temp table _run as
 select public.service_completion_janitor_orphan_uploads(50) as payload;
 
 select ok(
-  (select (payload->>'ok')::boolean from _claim),
-  'claim succeeds'
+  (select (payload->>'ok')::boolean from _run),
+  'janitor succeeds'
 );
 
 select ok(
-  (
-    select (payload->>'sessions_marked_expired')::int >= 1 from _claim
-  ),
+  (select (payload->>'sessions_marked_expired')::int >= 1 from _run),
   'expired open session marked expired'
 );
 
@@ -195,30 +193,33 @@ select ok(
 );
 
 select ok(
-  exists (
+  (select (payload->>'objects_deleted')::int >= 1 from _run)
+  and not exists (
     select 1
-    from jsonb_array_elements((select payload->'objects' from _claim)) o
-    where o->>'object_id' = (select obj_orphan::text from _fx)
-  ),
-  'unreferenced orphan object is claimed'
-);
-
-select ok(
-  not exists (
-    select 1
-    from jsonb_array_elements((select payload->'objects' from _claim)) o
-    where o->>'object_id' = (select obj_frozen::text from _fx)
-  ),
-  'frozen-referenced path is never claimed'
-);
-
-select ok(
-  (
-    select o.janitor_claimed_at is not null
     from public.completion_evidence_upload_objects o
     join _fx f on o.id = f.obj_orphan
   ),
-  'claimed orphan has janitor_claimed_at set'
+  'unreferenced orphan object registry row deleted'
+);
+
+select ok(
+  exists (
+    select 1
+    from public.completion_evidence_upload_objects o
+    join _fx f on o.id = f.obj_frozen
+    where o.referenced_in_responses = true
+  ),
+  'frozen-referenced path is retained and flagged referenced'
+);
+
+select ok(
+  (select (payload->>'skipped_frozen')::int >= 1 from _run),
+  'janitor reports skipped_frozen for defensive frozen hit'
+);
+
+select ok(
+  (select (payload->>'delete_failures')::int = 0 from _run),
+  'no delete failures on happy path'
 );
 
 select finish();

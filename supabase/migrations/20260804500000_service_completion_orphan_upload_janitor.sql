@@ -1,7 +1,10 @@
--- Service completion Task 58: orphan upload janitor cron + Edge wake
--- (design §3.6 / §10.2). Claim RPC: Task 57; Storage delete in Edge.
+-- Service completion Task 58: orphan upload janitor cron + job_runs (SQL-only).
+-- Storage delete lives in service_completion_janitor_orphan_uploads (Task 57) — no Edge.
 
--- Allowlist completion-evidence-orphan-janitor (+ keep prior slugs).
+-- Drop Edge-era finalize helper if present (claim→Edge→finalize split removed).
+drop function if exists public.service_completion_janitor_orphan_uploads_finalize(uuid[]);
+
+-- Keep allowlist without completion-evidence-orphan-janitor (EF removed).
 create or replace function public.orbit_invoke_edge_function(
   p_function_slug text,
   p_body jsonb default '{}'::jsonb,
@@ -25,8 +28,7 @@ declare
     'orbit-emit-sentry-alerts',
     'process-far-reschedule-recapture',
     'sync-netcred-settlements',
-    'generate-completion-checklist',
-    'completion-evidence-orphan-janitor'
+    'generate-completion-checklist'
   ];
 begin
   v_slug := nullif(btrim(p_function_slug), '');
@@ -79,54 +81,11 @@ end;
 $$;
 
 comment on function public.orbit_invoke_edge_function(text, jsonb, int) is
-  'Canonical pg_net helper for internal Edge Functions; allowlist includes generate-completion-checklist + completion-evidence-orphan-janitor (Task 58).';
+  'Canonical pg_net helper for internal Edge Functions; allowlist includes generate-completion-checklist (orphan janitor is SQL-only).';
 
 revoke all on function public.orbit_invoke_edge_function(text, jsonb, int)
   from public, anon, authenticated;
 grant execute on function public.orbit_invoke_edge_function(text, jsonb, int) to postgres;
-
--- After Edge Storage delete (missing object = success), drop registry rows.
-create or replace function public.service_completion_janitor_orphan_uploads_finalize(
-  p_object_ids uuid[]
-)
-returns jsonb
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  v_deleted int := 0;
-begin
-  if coalesce(auth.role(), '') <> 'service_role' then
-    raise exception 'service_role required for service_completion_janitor_orphan_uploads_finalize'
-      using errcode = '42501';
-  end if;
-
-  if p_object_ids is null or coalesce(cardinality(p_object_ids), 0) = 0 then
-    return jsonb_build_object('ok', true, 'deleted_count', 0);
-  end if;
-
-  delete from public.completion_evidence_upload_objects o
-  where o.id = any (p_object_ids)
-    and o.referenced_in_responses = false
-    and o.janitor_claimed_at is not null;
-
-  get diagnostics v_deleted = row_count;
-
-  return jsonb_build_object(
-    'ok', true,
-    'deleted_count', v_deleted
-  );
-end;
-$$;
-
-comment on function public.service_completion_janitor_orphan_uploads_finalize(uuid[]) is
-  'Delete claimed orphan upload_object registry rows after Edge Storage delete (Task 58). service_role only.';
-
-revoke all on function public.service_completion_janitor_orphan_uploads_finalize(uuid[])
-  from public, anon, authenticated;
-grant execute on function public.service_completion_janitor_orphan_uploads_finalize(uuid[])
-  to service_role;
 
 create or replace function public.service_completion_cron_orphan_upload_janitor()
 returns jsonb
@@ -138,11 +97,10 @@ declare
   v_job_name constant text := 'service_completion_cron_orphan_upload_janitor';
   v_job_run_id bigint;
   v_started_at timestamptz := clock_timestamp();
-  v_claim jsonb := '{}'::jsonb;
+  v_result jsonb := '{}'::jsonb;
   v_sessions int := 0;
   v_objects int := 0;
-  v_wake_requested boolean := false;
-  v_wake_request_id bigint := null;
+  v_failures int := 0;
   v_error_count int := 0;
   v_error_samples jsonb := '[]'::jsonb;
 begin
@@ -157,52 +115,28 @@ begin
     );
 
     begin
-      v_claim := public.service_completion_janitor_orphan_uploads(null);
-      v_sessions := coalesce((v_claim->>'sessions_marked_expired')::int, 0);
-      v_objects := coalesce((v_claim->>'objects_claimed')::int, 0);
+      v_result := public.service_completion_janitor_orphan_uploads(null);
+      v_sessions := coalesce((v_result->>'sessions_marked_expired')::int, 0);
+      v_objects := coalesce((v_result->>'objects_deleted')::int, 0);
+      v_failures := coalesce((v_result->>'delete_failures')::int, 0);
+      if v_failures > 0 then
+        v_error_count := v_failures;
+      end if;
     exception
       when others then
         v_error_count := v_error_count + 1;
         v_error_samples := v_error_samples || jsonb_build_array(
           jsonb_build_object(
-            'step', 'claim',
+            'step', 'janitor',
             'sqlstate', sqlstate,
             'message', public.sanitize_job_error(sqlerrm)
           )
         );
         raise warning
-          'service_completion_cron_orphan_upload_janitor claim failed sqlstate=% message=%',
+          'service_completion_cron_orphan_upload_janitor failed sqlstate=% message=%',
           sqlstate,
           sqlerrm;
     end;
-
-    if v_objects > 0 and public.orbit_internal_edge_invoke_is_configured() then
-      begin
-        v_wake_request_id := public.orbit_invoke_edge_function(
-          'completion-evidence-orphan-janitor',
-          jsonb_build_object(
-            'reason', 'orphan_janitor',
-            'claim', v_claim
-          ),
-          60000
-        );
-        v_wake_requested := true;
-      exception
-        when others then
-          v_error_count := v_error_count + 1;
-          v_error_samples := v_error_samples || jsonb_build_array(
-            jsonb_build_object(
-              'step', 'wake_edge',
-              'sqlstate', sqlstate,
-              'message', public.sanitize_job_error(sqlerrm)
-            )
-          );
-          raise warning
-            'service_completion_cron_orphan_upload_janitor wake failed sqlstate=% message=%',
-            sqlstate,
-            sqlerrm;
-      end;
-    end if;
 
     perform public.job_run_finish(
       v_job_run_id,
@@ -212,11 +146,10 @@ begin
       v_error_count,
       jsonb_build_object(
         'sessions_marked_expired', v_sessions,
-        'objects_claimed', v_objects,
-        'wake_requested', v_wake_requested,
-        'wake_request_id', v_wake_request_id,
+        'objects_deleted', v_objects,
+        'delete_failures', v_failures,
         'error_samples', v_error_samples,
-        'claim', coalesce(v_claim, '{}'::jsonb)
+        'result', coalesce(v_result, '{}'::jsonb)
       ),
       case when v_error_count > 0 then 'row_errors' else null end
     );
@@ -224,9 +157,8 @@ begin
     return jsonb_build_object(
       'job_run_id', v_job_run_id,
       'sessions_marked_expired', v_sessions,
-      'objects_claimed', v_objects,
-      'wake_requested', v_wake_requested,
-      'wake_request_id', v_wake_request_id,
+      'objects_deleted', v_objects,
+      'delete_failures', v_failures,
       'errors_count', v_error_count
     );
   exception
@@ -238,7 +170,7 @@ end;
 $$;
 
 comment on function public.service_completion_cron_orphan_upload_janitor() is
-  'pg_cron: claim orphan uploads + wake completion-evidence-orphan-janitor Edge for Storage delete; job_runs telemetry (Task 58).';
+  'pg_cron: run SQL orphan janitor (expire sessions + DELETE storage.objects); job_runs telemetry (Task 58).';
 
 revoke all on function public.service_completion_cron_orphan_upload_janitor()
   from public, anon, authenticated;

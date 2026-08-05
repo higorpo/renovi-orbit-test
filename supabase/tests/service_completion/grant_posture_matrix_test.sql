@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(28);
+select plan(27);
 
 create or replace function pg_temp.fn_oid(p_name text)
 returns regprocedure
@@ -181,13 +181,6 @@ select ok(
   and not has_function_privilege('authenticated', pg_temp.fn_oid('service_completion_janitor_orphan_uploads'), 'EXECUTE')
   and not has_function_privilege('anon', pg_temp.fn_oid('service_completion_janitor_orphan_uploads'), 'EXECUTE'),
   'service_completion_janitor_orphan_uploads: service_role only'
-);
-
-select ok(
-  has_function_privilege('service_role', pg_temp.fn_oid('service_completion_janitor_orphan_uploads_finalize'), 'EXECUTE')
-  and not has_function_privilege('authenticated', pg_temp.fn_oid('service_completion_janitor_orphan_uploads_finalize'), 'EXECUTE')
-  and not has_function_privilege('anon', pg_temp.fn_oid('service_completion_janitor_orphan_uploads_finalize'), 'EXECUTE'),
-  'service_completion_janitor_orphan_uploads_finalize: service_role only'
 );
 
 select ok(

@@ -232,11 +232,8 @@ revoke all on function public.service_completion_janitor_orphan_uploads(int)
   from public, anon, authenticated;
 grant execute on function public.service_completion_janitor_orphan_uploads(int)
   to service_role;
-
-revoke all on function public.service_completion_janitor_orphan_uploads_finalize(uuid[])
-  from public, anon, authenticated;
-grant execute on function public.service_completion_janitor_orphan_uploads_finalize(uuid[])
-  to service_role;
+grant execute on function public.service_completion_janitor_orphan_uploads(int)
+  to postgres;
 
 revoke all on function public.service_completion_cron_orphan_upload_janitor()
   from public, anon, authenticated;

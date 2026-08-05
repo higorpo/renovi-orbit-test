@@ -21,8 +21,8 @@ comment on column public.completion_evidence_upload_objects.referenced_in_respon
 comment on column public.completion_evidence_upload_objects.content_checksum is
   'Optional content checksum for audit after signed upload.';
 
--- Note: idx_upload_objects_unref omitted — superseded by idx_upload_objects_janitor_claim
--- in 20260804490000 (registered_at WHERE unreferenced AND janitor_claimed_at IS NULL).
+-- Note: orphan janitor index lives in 20260804490000
+-- (idx_upload_objects_orphan_janitor on registered_at WHERE referenced_in_responses = false).
 
 create index idx_upload_objects_session
   on public.completion_evidence_upload_objects (session_id);

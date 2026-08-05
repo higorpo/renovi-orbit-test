@@ -1,4 +1,4 @@
--- pgTAP: Task 58 — orphan finalize + cron wrapper exist; finalize deletes claimed rows.
+-- pgTAP: Task 58 — cron wrapper exists; SQL janitor (no Edge finalize).
 
 begin;
 
@@ -18,24 +18,14 @@ begin
 end;
 $$;
 
-select throws_ok(
-  $$ select public.service_completion_janitor_orphan_uploads_finalize(array[]::uuid[]) $$,
-  '42501',
-  null,
-  'finalize rejects non-service_role'
-);
-
 select ok(
   to_regprocedure('public.service_completion_cron_orphan_upload_janitor()') is not null,
   'cron orphan janitor wrapper exists'
 );
 
-select pg_temp.set_service_role();
-
-select is(
-  (public.service_completion_janitor_orphan_uploads_finalize(array[]::uuid[])->>'deleted_count')::int,
-  0,
-  'finalize empty array is no-op'
+select ok(
+  to_regprocedure('public.service_completion_janitor_orphan_uploads_finalize(uuid[])') is null,
+  'Edge-era finalize RPC is dropped'
 );
 
 select ok(
@@ -45,6 +35,13 @@ select ok(
     where j.jobname = 'service_completion_orphan_upload_janitor'
   ),
   'pg_cron job service_completion_orphan_upload_janitor is scheduled'
+);
+
+select pg_temp.set_service_role();
+
+select ok(
+  (public.service_completion_janitor_orphan_uploads(5)->>'ok')::boolean,
+  'SQL janitor callable from service_role (empty batch ok)'
 );
 
 select finish();
