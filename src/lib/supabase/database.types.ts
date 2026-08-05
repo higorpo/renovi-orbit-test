@@ -1061,6 +1061,218 @@ export type Database = {
           },
         ]
       }
+      completion_checklist_templates: {
+        Row: {
+          category_id: string | null
+          checklist_schema: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          is_global: boolean
+          platform_service_id: string | null
+          schema_version: number
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          checklist_schema: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_global?: boolean
+          platform_service_id?: string | null
+          schema_version?: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          checklist_schema?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_global?: boolean
+          platform_service_id?: string | null
+          schema_version?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "completion_checklist_templates_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "platform_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "completion_checklist_templates_platform_service_id_fkey"
+            columns: ["platform_service_id"]
+            isOneToOne: false
+            referencedRelation: "platform_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      completion_evidence_upload_objects: {
+        Row: {
+          byte_size: number | null
+          content_checksum: string | null
+          id: string
+          referenced_in_responses: boolean
+          registered_at: string
+          session_id: string
+          storage_path: string
+        }
+        Insert: {
+          byte_size?: number | null
+          content_checksum?: string | null
+          id?: string
+          referenced_in_responses?: boolean
+          registered_at?: string
+          session_id: string
+          storage_path: string
+        }
+        Update: {
+          byte_size?: number | null
+          content_checksum?: string | null
+          id?: string
+          referenced_in_responses?: boolean
+          registered_at?: string
+          session_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "completion_evidence_upload_objects_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "completion_evidence_upload_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      completion_evidence_upload_sessions: {
+        Row: {
+          contracted_service_id: string
+          created_at: string
+          criterion_block_id: string
+          expires_at: string
+          id: string
+          idempotency_key: string | null
+          max_files: number
+          provider_id: string
+          status: Database["public"]["Enums"]["completion_upload_session_status"]
+          storage_bucket: string
+          storage_prefix: string
+          updated_at: string
+        }
+        Insert: {
+          contracted_service_id: string
+          created_at?: string
+          criterion_block_id: string
+          expires_at: string
+          id?: string
+          idempotency_key?: string | null
+          max_files?: number
+          provider_id: string
+          status?: Database["public"]["Enums"]["completion_upload_session_status"]
+          storage_bucket: string
+          storage_prefix: string
+          updated_at?: string
+        }
+        Update: {
+          contracted_service_id?: string
+          created_at?: string
+          criterion_block_id?: string
+          expires_at?: string
+          id?: string
+          idempotency_key?: string | null
+          max_files?: number
+          provider_id?: string
+          status?: Database["public"]["Enums"]["completion_upload_session_status"]
+          storage_bucket?: string
+          storage_prefix?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "completion_evidence_upload_sessions_contracted_service_id_fkey"
+            columns: ["contracted_service_id"]
+            isOneToOne: false
+            referencedRelation: "contracted_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "completion_evidence_upload_sessions_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contracted_service_completion_evidence: {
+        Row: {
+          checklist_schema_hash: string | null
+          contracted_service_id: string
+          created_at: string
+          draft_version: number
+          enrichment_id: string | null
+          executed_late: boolean | null
+          frozen_at: string | null
+          id: string
+          idempotency_key: string | null
+          phase: Database["public"]["Enums"]["completion_evidence_phase"]
+          responses: Json
+          responses_hash: string | null
+          updated_at: string
+        }
+        Insert: {
+          checklist_schema_hash?: string | null
+          contracted_service_id: string
+          created_at?: string
+          draft_version?: number
+          enrichment_id?: string | null
+          executed_late?: boolean | null
+          frozen_at?: string | null
+          id?: string
+          idempotency_key?: string | null
+          phase?: Database["public"]["Enums"]["completion_evidence_phase"]
+          responses?: Json
+          responses_hash?: string | null
+          updated_at?: string
+        }
+        Update: {
+          checklist_schema_hash?: string | null
+          contracted_service_id?: string
+          created_at?: string
+          draft_version?: number
+          enrichment_id?: string | null
+          executed_late?: boolean | null
+          frozen_at?: string | null
+          id?: string
+          idempotency_key?: string | null
+          phase?: Database["public"]["Enums"]["completion_evidence_phase"]
+          responses?: Json
+          responses_hash?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "completion_evidence_cs_fk"
+            columns: ["contracted_service_id"]
+            isOneToOne: true
+            referencedRelation: "contracted_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracted_service_completion_evidence_enrichment_id_fkey"
+            columns: ["enrichment_id"]
+            isOneToOne: false
+            referencedRelation: "service_request_enrichments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracted_services: {
         Row: {
           accepted_proposal_id: string
@@ -3405,6 +3617,137 @@ export type Database = {
           },
         ]
       }
+      service_request_enrichment_events: {
+        Row: {
+          actor: string
+          correlation_id: string | null
+          created_at: string
+          enrichment_id: string
+          event_type: string
+          from_status: Database["public"]["Enums"]["enrichment_status"] | null
+          id: string
+          lease_generation: number | null
+          payload: Json
+          service_request_id: string
+          to_status: Database["public"]["Enums"]["enrichment_status"]
+        }
+        Insert: {
+          actor: string
+          correlation_id?: string | null
+          created_at?: string
+          enrichment_id: string
+          event_type: string
+          from_status?: Database["public"]["Enums"]["enrichment_status"] | null
+          id?: string
+          lease_generation?: number | null
+          payload?: Json
+          service_request_id: string
+          to_status: Database["public"]["Enums"]["enrichment_status"]
+        }
+        Update: {
+          actor?: string
+          correlation_id?: string | null
+          created_at?: string
+          enrichment_id?: string
+          event_type?: string
+          from_status?: Database["public"]["Enums"]["enrichment_status"] | null
+          id?: string
+          lease_generation?: number | null
+          payload?: Json
+          service_request_id?: string
+          to_status?: Database["public"]["Enums"]["enrichment_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrichment_events_enrichment_sr_fk"
+            columns: ["enrichment_id", "service_request_id"]
+            isOneToOne: false
+            referencedRelation: "service_request_enrichments"
+            referencedColumns: ["id", "service_request_id"]
+          },
+          {
+            foreignKeyName: "service_request_enrichment_events_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_request_enrichments: {
+        Row: {
+          attempt_count: number
+          checklist_schema: Json | null
+          correlation_id: string | null
+          created_at: string
+          id: string
+          last_error_code: string | null
+          last_error_message: string | null
+          lease_generation: number
+          lease_owner: string | null
+          locked_until: string | null
+          materialized_at: string | null
+          next_attempt_at: string | null
+          ops_attention_at: string | null
+          ops_attention_reason: string | null
+          schema_version: number | null
+          service_request_id: string
+          source: Database["public"]["Enums"]["checklist_source"] | null
+          status: Database["public"]["Enums"]["enrichment_status"]
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          checklist_schema?: Json | null
+          correlation_id?: string | null
+          created_at?: string
+          id?: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          lease_generation?: number
+          lease_owner?: string | null
+          locked_until?: string | null
+          materialized_at?: string | null
+          next_attempt_at?: string | null
+          ops_attention_at?: string | null
+          ops_attention_reason?: string | null
+          schema_version?: number | null
+          service_request_id: string
+          source?: Database["public"]["Enums"]["checklist_source"] | null
+          status?: Database["public"]["Enums"]["enrichment_status"]
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          checklist_schema?: Json | null
+          correlation_id?: string | null
+          created_at?: string
+          id?: string
+          last_error_code?: string | null
+          last_error_message?: string | null
+          lease_generation?: number
+          lease_owner?: string | null
+          locked_until?: string | null
+          materialized_at?: string | null
+          next_attempt_at?: string | null
+          ops_attention_at?: string | null
+          ops_attention_reason?: string | null
+          schema_version?: number | null
+          service_request_id?: string
+          source?: Database["public"]["Enums"]["checklist_source"] | null
+          status?: Database["public"]["Enums"]["enrichment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_request_enrichments_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: true
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_request_negotiation_stats: {
         Row: {
           active_chat_count: number
@@ -4013,73 +4356,22 @@ export type Database = {
           payout_status: string | null
           provider_id: string | null
           record_type: string | null
+          service_request_id: string | null
+          service_request_title: string | null
           settled_at: string | null
           settling_at: string | null
           sync_source: string | null
           synced_at: string | null
           updated_at: string | null
         }
-        Insert: {
-          bank_account_mask?: string | null
-          base_settle_date?: string | null
-          brand?: string | null
-          created_at?: string | null
-          gateway_movement_id?: string | null
-          gateway_payout_id?: string | null
-          gateway_slug?:
-            | Database["public"]["Enums"]["payment_gateway_slug"]
-            | null
-          gateway_transaction_id?: string | null
-          gross_amount?: number | null
-          id?: string | null
-          installment?: number | null
-          is_advance?: boolean | null
-          is_refund_clawback?: boolean | null
-          movement_source?: string | null
-          movement_status?: string | null
-          movement_type?: string | null
-          net_amount?: number | null
-          payment_schedule_id?: string | null
-          payout_status?: string | null
-          provider_id?: string | null
-          record_type?: string | null
-          settled_at?: string | null
-          settling_at?: string | null
-          sync_source?: string | null
-          synced_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          bank_account_mask?: string | null
-          base_settle_date?: string | null
-          brand?: string | null
-          created_at?: string | null
-          gateway_movement_id?: string | null
-          gateway_payout_id?: string | null
-          gateway_slug?:
-            | Database["public"]["Enums"]["payment_gateway_slug"]
-            | null
-          gateway_transaction_id?: string | null
-          gross_amount?: number | null
-          id?: string | null
-          installment?: number | null
-          is_advance?: boolean | null
-          is_refund_clawback?: boolean | null
-          movement_source?: string | null
-          movement_status?: string | null
-          movement_type?: string | null
-          net_amount?: number | null
-          payment_schedule_id?: string | null
-          payout_status?: string | null
-          provider_id?: string | null
-          record_type?: string | null
-          settled_at?: string | null
-          settling_at?: string | null
-          sync_source?: string | null
-          synced_at?: string | null
-          updated_at?: string | null
-        }
         Relationships: [
+          {
+            foreignKeyName: "contracted_services_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: true
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payment_settlement_movements_payment_schedule_id_fkey"
             columns: ["payment_schedule_id"]
@@ -4432,6 +4724,10 @@ export type Database = {
         Args: { p_chat_id?: string; p_upload_session_id: string }
         Returns: Json
       }
+      completion_evidence_path_referenced_in_frozen: {
+        Args: { p_storage_path: string }
+        Returns: boolean
+      }
       count_inclusive_working_days: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: number
@@ -4531,6 +4827,86 @@ export type Database = {
         Args: { p_batch_size?: number }
         Returns: Json
       }
+      enrichment_abort_for_service_request: {
+        Args: {
+          p_actor?: string
+          p_correlation_id?: string
+          p_payload?: Json
+          p_service_request_id: string
+        }
+        Returns: undefined
+      }
+      enrichment_append_event: {
+        Args: {
+          p_actor: string
+          p_correlation_id?: string
+          p_enrichment_id: string
+          p_event_type: string
+          p_from_status?: Database["public"]["Enums"]["enrichment_status"]
+          p_payload?: Json
+          p_to_status: Database["public"]["Enums"]["enrichment_status"]
+        }
+        Returns: undefined
+      }
+      enrichment_claim_batch: {
+        Args: { p_batch_size?: number; p_lease_owner: string }
+        Returns: Json
+      }
+      enrichment_clear_ops_attention: {
+        Args: {
+          p_actor?: string
+          p_correlation_id?: string
+          p_enrichment_id: string
+          p_payload?: Json
+          p_rearm_next_attempt?: boolean
+        }
+        Returns: Json
+      }
+      enrichment_cron_sweep: { Args: never; Returns: Json }
+      enrichment_finalize_ready: {
+        Args: {
+          p_correlation_id?: string
+          p_enrichment_id: string
+          p_lease_generation: number
+          p_lease_owner: string
+          p_schema: Json
+          p_source: Database["public"]["Enums"]["checklist_source"]
+        }
+        Returns: Json
+      }
+      enrichment_mark_ops_attention: {
+        Args: {
+          p_correlation_id?: string
+          p_enrichment_id: string
+          p_lease_generation?: number
+          p_lease_owner?: string
+          p_payload?: Json
+          p_reason: string
+        }
+        Returns: Json
+      }
+      enrichment_reclaim_expired_leases: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      enrichment_repair_ready_without_dispatch: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      enrichment_schedule_retry: {
+        Args: {
+          p_enrichment_id: string
+          p_error_code?: string
+          p_error_message?: string
+          p_lease_generation: number
+          p_lease_owner: string
+        }
+        Returns: Json
+      }
+      enrichment_validate_checklist_schema: {
+        Args: { p_schema: Json }
+        Returns: boolean
+      }
       evaluate_service_request_dispatch_gates: {
         Args: { p_service_request_id: string }
         Returns: undefined
@@ -4575,6 +4951,10 @@ export type Database = {
         Returns: Json
       }
       get_service: { Args: { p_service_request_id: string }; Returns: Json }
+      get_service_completion_context: {
+        Args: { p_service_request_id: string }
+        Returns: Json
+      }
       idempotency_begin: {
         Args: {
           p_idempotency_key: string
@@ -4720,6 +5100,10 @@ export type Database = {
       matching_acquire_dispatch_lease: {
         Args: { p_dispatch_id: string; p_owner: string; p_ttl_seconds?: number }
         Returns: boolean
+      }
+      matching_bootstrap_dispatch_for_service_request: {
+        Args: { p_service_request_id: string }
+        Returns: undefined
       }
       matching_cancel_pending_mmd_for_service_request: {
         Args: { p_service_request_id: string; p_template_prefix?: string }
@@ -4908,7 +5292,6 @@ export type Database = {
         Args: { p_batch_size?: number }
         Returns: Json
       }
-      payment_auto_complete_executed_services: { Args: never; Returns: Json }
       payment_begin_manual_attempt: {
         Args: {
           p_actor_id?: string
@@ -5081,10 +5464,6 @@ export type Database = {
         }
         Returns: string
       }
-      payment_confirm_service_completed: {
-        Args: { p_service_id: string }
-        Returns: Json
-      }
       payment_confirm_upcoming_charge_notified: {
         Args: { p_schedule_id: string }
         Returns: boolean
@@ -5104,10 +5483,6 @@ export type Database = {
         Returns: Json
       }
       payment_cron_auto_cancel_unpaid_services: {
-        Args: never
-        Returns: undefined
-      }
-      payment_cron_auto_complete_executed_services: {
         Args: never
         Returns: undefined
       }
@@ -5224,10 +5599,6 @@ export type Database = {
           p_schedule_id: string
         }
         Returns: undefined
-      }
-      payment_mark_service_executed: {
-        Args: { p_service_id: string }
-        Returns: Json
       }
       payment_netcred_platform_company_id: { Args: never; Returns: string }
       payment_notification_deep_link_path: {
@@ -5635,11 +6006,125 @@ export type Database = {
         }
         Returns: string
       }
+      resolve_completion_checklist_template: {
+        Args: { p_category_id?: string; p_platform_service_id: string }
+        Returns: Json
+      }
       resolve_proposal_chat_id: {
         Args: { p_provider_id: string; p_service_request_id: string }
         Returns: string
       }
       sanitize_job_error: { Args: { p_message: string }; Returns: string }
+      service_completion_auto_complete_executed: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      service_completion_brt_today: { Args: never; Returns: string }
+      service_completion_compute_executed_late:
+        | {
+            Args: {
+              p_cs: Database["public"]["Tables"]["contracted_services"]["Row"]
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              p_scheduled_end_date: string
+              p_scheduled_start_date: string
+            }
+            Returns: boolean
+          }
+      service_completion_confirm_with_rating: {
+        Args: {
+          p_comment?: string
+          p_contracted_service_id: string
+          p_idempotency_key?: string
+          p_score_communication: number
+          p_score_punctuality: number
+          p_score_quality: number
+          p_score_value: number
+        }
+        Returns: Json
+      }
+      service_completion_create_upload_session: {
+        Args: {
+          p_contracted_service_id: string
+          p_criterion_block_id: string
+          p_idempotency_key?: string
+        }
+        Returns: Json
+      }
+      service_completion_cron_auto_complete_executed: {
+        Args: never
+        Returns: Json
+      }
+      service_completion_cron_emit_sentry_alerts: {
+        Args: never
+        Returns: undefined
+      }
+      service_completion_cron_orphan_upload_janitor: {
+        Args: never
+        Returns: Json
+      }
+      service_completion_cron_prune_enrichment_events: {
+        Args: never
+        Returns: Json
+      }
+      service_completion_evaluate_sentry_alerts: { Args: never; Returns: Json }
+      service_completion_evidence_storage_path_owned: {
+        Args: { p_storage_path: string }
+        Returns: boolean
+      }
+      service_completion_evidence_storage_upload_allowed: {
+        Args: { p_storage_path: string }
+        Returns: boolean
+      }
+      service_completion_janitor_orphan_uploads: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      service_completion_mark_executed: {
+        Args: {
+          p_contracted_service_id: string
+          p_expected_draft_version?: number
+          p_idempotency_key: string
+          p_responses: Json
+        }
+        Returns: Json
+      }
+      service_completion_ops_metrics: {
+        Args: { p_lookback_hours?: number }
+        Returns: Json
+      }
+      service_completion_prune_enrichment_events: {
+        Args: { p_batch_limit?: number; p_retention_days?: number }
+        Returns: Json
+      }
+      service_completion_register_upload_object: {
+        Args: {
+          p_byte_size?: number
+          p_content_checksum?: string
+          p_storage_path: string
+          p_upload_session_id: string
+        }
+        Returns: Json
+      }
+      service_completion_save_evidence_draft: {
+        Args: {
+          p_contracted_service_id: string
+          p_expected_draft_version?: number
+          p_responses: Json
+        }
+        Returns: Json
+      }
+      service_completion_validate_evidence_responses: {
+        Args: { p_responses: Json; p_schema: Json }
+        Returns: boolean
+      }
+      service_request_enqueue_enrichment: {
+        Args: { p_correlation_id?: string; p_service_request_id: string }
+        Returns: undefined
+      }
       service_row_last_activity_at: {
         Args: {
           p_service_request_id: string
@@ -5689,6 +6174,7 @@ export type Database = {
       }
     }
     Enums: {
+      checklist_source: "ai" | "fallback_template"
       cns_closure_type:
         | "MANUAL"
         | "PROPOSAL_ACCEPTED_ELSEWHERE"
@@ -5705,12 +6191,19 @@ export type Database = {
         | "PROPOSAL"
         | "WORKFLOW_ACTION"
         | "AUDIO"
+      completion_evidence_phase: "draft" | "frozen"
+      completion_upload_session_status:
+        | "open"
+        | "committed"
+        | "expired"
+        | "aborted"
       contracted_service_status:
         | "PENDING_PAYMENT"
         | "COMPLETED"
         | "CANCELLED"
         | "CONFIRMED"
         | "EXECUTED"
+      enrichment_status: "PENDING" | "RUNNING" | "READY" | "ABORTED"
       payment_attempt_initiator: "cron" | "client"
       payment_attempt_outcome:
         | "PAID"
@@ -5966,6 +6459,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      checklist_source: ["ai", "fallback_template"],
       cns_closure_type: [
         "MANUAL",
         "PROPOSAL_ACCEPTED_ELSEWHERE",
@@ -5984,6 +6478,13 @@ export const Constants = {
         "WORKFLOW_ACTION",
         "AUDIO",
       ],
+      completion_evidence_phase: ["draft", "frozen"],
+      completion_upload_session_status: [
+        "open",
+        "committed",
+        "expired",
+        "aborted",
+      ],
       contracted_service_status: [
         "PENDING_PAYMENT",
         "COMPLETED",
@@ -5991,6 +6492,7 @@ export const Constants = {
         "CONFIRMED",
         "EXECUTED",
       ],
+      enrichment_status: ["PENDING", "RUNNING", "READY", "ABORTED"],
       payment_attempt_initiator: ["cron", "client"],
       payment_attempt_outcome: [
         "PAID",

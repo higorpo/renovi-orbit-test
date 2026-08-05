@@ -387,6 +387,10 @@ deno_version = 2
 [functions.generate-smart-description]
 verify_jwt = true
 
+# Internal pg_net/cron enrichment worker; auth via X-Orbit-Cron-Secret (design §5.2).
+[functions.generate-completion-checklist]
+verify_jwt = false
+
 # Edge function for full order creation (guest + logged-in). Validates user inside handler; no runtime JWT required.
 [functions.create-request-quote-order]
 verify_jwt = false
