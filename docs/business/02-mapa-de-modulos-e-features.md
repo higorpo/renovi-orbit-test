@@ -18,13 +18,14 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | **addresses** | [gestao-de-enderecos](./modulos/addresses/features/gestao-de-enderecos.md) | Embarcado em `request-quote` e `my-account`; rota `/dashboard/addresses` é **placeholder** (`DashboardFakePage`) | `auth` (usuário), Supabase `client_addresses`, geografia |
 | **auth** | [autenticacao-e-sessao](./modulos/auth/features/autenticacao-e-sessao.md) | `/login`, `/cadastro/cliente`, `/cadastro/profissional`, `/esqueceu-senha`, `/recuperar-senha` | Supabase Auth, `profiles` |
 | **my-services** | [solicitacoes-do-cliente](./modulos/my-services/features/solicitacoes-do-cliente.md) | `/dashboard/services`; banner prestador → calendário | `view-services` (lista/detalhe); sheet de orçamentos via `negotiation-proposals`; `provider-calendar` (entrada) |
-| **view-services** | [visualizacao-de-servicos](./modulos/view-services/features/visualizacao-de-servicos.md) | `/dashboard/services/:id` → **`ServiceDetailShell`** (página ou `null` se sheet); sheet no `DashboardLayout` | RPCs `get_service`, `list_services`; `contracted_services`; consumido por `my-services`, `provider-jobs`, `provider-calendar` |
+| **view-services** | [visualizacao-de-servicos](./modulos/view-services/features/visualizacao-de-servicos.md) | `/dashboard/services/:id` → **`ServiceDetailShell`** (página ou `null` se sheet); sheet no `DashboardLayout` | RPCs `get_service`, `list_services`; `contracted_services`; consumido por `my-services`, `provider-jobs`, `provider-calendar`; conclusão via **service-completion** |
 | **dynamic-form** | [motor-de-formularios](./modulos/dynamic-form/features/motor-de-formularios.md) | `/dev/demo/form` (somente DEV) | Consumido por `request-quote` |
 | **my-account** | [minha-conta](./modulos/my-account/features/minha-conta.md) | `/dashboard/conta` | `addresses`, storage, perfis público/privado; histórico de captura via `payments` |
 | **provider-jobs** | [trabalhos-e-propostas](./modulos/provider-jobs/features/trabalhos-e-propostas.md) | `/dashboard/jobs` (lista); detalhe `/dashboard/services/:id` (`ServiceDetailShell` / sheet) | Edge **viva** `list-provider-opportunities`; propostas / CNS; backend [matching-dispatch](./modulos/matching-dispatch/README.md); GPS feed via `device-beacon` |
-| **matching-dispatch** *(backend)* | [dispatch-e-visibilidade](./modulos/matching-dispatch/features/dispatch-e-visibilidade.md) | *Sem rota de UI* | Migrations `202607110*`, cron matching, visibilidade; consumido por **provider-jobs**; beacon → `provider_latest_locations` (**device-beacon**). Legado: Edge `match-provider-jobs` **morta** (pasta vazia); RPC `match_provider_jobs` **órfã** no schema |
+| **matching-dispatch** *(backend)* | [dispatch-e-visibilidade](./modulos/matching-dispatch/features/dispatch-e-visibilidade.md) | *Sem rota de UI* | Migrations `202607110*`, cron matching, visibilidade; bootstrap via READY-handoff ([service-completion](./modulos/service-completion/README.md)); consumido por **provider-jobs**; beacon → `provider_latest_locations` (**device-beacon**). Legado: Edge `match-provider-jobs` **morta** (pasta vazia); RPC `match_provider_jobs` **órfã** no schema |
+| **service-completion** | [conclusao-e-enrichment](./modulos/service-completion/features/conclusao-e-enrichment.md) | Embutido em detalhe/lista (`view-services`); *sem rota própria* | Enrichment pré-matching; RPCs `service_completion_*` / `get_service_completion_context`; Edges checklist + upload URL; janitor SQL de órfãos; host UI só Public API |
 | **provider-profile** | [pagina-publica](./modulos/provider-profile/features/pagina-publica.md) | `/perfil/:slug` | RPC `get_public_provider_by_slug`, storage |
-| **request-quote** | [pedir-orcamento](./modulos/request-quote/features/pedir-orcamento.md) | `/pedir-orcamento` | `dynamic-form`, `addresses`, `auth`, Edge Functions |
+| **request-quote** | [pedir-orcamento](./modulos/request-quote/features/pedir-orcamento.md) | `/pedir-orcamento` | `dynamic-form`, `addresses`, `auth`, Edge Functions; enqueue enrichment (matching após READY) |
 | **chats** + **negotiation-proposals** | [conversas-e-negociacao](./modulos/chats/features/conversas-e-negociacao.md), [propostas-negociacao](./modulos/chats/features/propostas-negociacao.md), [comparar-orcamentos-meus-servicos](./modulos/chats/features/comparar-orcamentos-meus-servicos.md) | `/dashboard/chats`, `/dashboard/chats/:chatId` (item **Conversas** no menu cliente e prestador) | `auth`, `provider-jobs`, `message-dispatcher`, `my-services` / `view-services` (sheet compare/history), `payments` (aceite→checkout), `service-reschedule`, RPCs CNS |
 | **service-reschedule** | [ciclo-estados-reagendamento](./modulos/service-reschedule/features/ciclo-estados-reagendamento.md), [propor-nova-data](./modulos/service-reschedule/features/propor-nova-data.md), [integracao-pagamento-pos-aceite](./modulos/service-reschedule/features/integracao-pagamento-pos-aceite.md) | Embutido em chat e detalhe do serviço contratado (dialogs/cards) | `chats`, `view-services`, `payments` (retarget / far-recapture), `negotiation-proposals` (duração), `message-dispatcher`, RPCs `cns_*_service_reschedule*`, migrations `20260802*` |
 | **message-dispatcher** *(backend)* | [pipeline-e-fsm](./modulos/message-dispatcher/features/pipeline-e-fsm.md), [quotas-e-canais](./modulos/message-dispatcher/features/quotas-e-canais.md), [horario-silencioso](./modulos/message-dispatcher/features/horario-silencioso.md), [engagement-push-click](./modulos/message-dispatcher/features/engagement-push-click.md) | *Sem rota de UI* | Schema `message_dispatcher`; Edge `message-dispatcher-worker` / `webhook-resend` / `ingest`; clique app via **notifications** (`recordPushClick`); beacons em `user_device_beacons` |
@@ -60,6 +61,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 
 | Função | Relação com módulos |
 |--------|---------------------|
+| `generate-completion-checklist` | `service-completion` — LLM/worker de enrichment do checklist |
 | `create-request-quote-order` | `request-quote` |
 | `generate-smart-description` | `request-quote` |
 | `verify-recaptcha` | `auth`, `request-quote` |
@@ -85,11 +87,12 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 
 | Área | Status |
 |------|--------|
-| Módulos em `src/features` + shell + home + backends documentados | **22** com README + ≥1 feature (critério do índice); ver [modulos/README.md](./modulos/README.md) |
+| Módulos em `src/features` + shell + home + backends documentados | **23** com README + ≥1 feature (critério do índice); ver [modulos/README.md](./modulos/README.md) |
 | Admin UI | **Não localizada** no router — evidência parcial |
 | Pagamentos | **Implementado** — `payments` (+ reconciliacao-e-voids) + backend; runbooks em `docs/payment-system/` |
 | Message Dispatcher | Critério doc **OK** (pipeline, quotas, quiet hours, engagement); pendências de **produto** P-08 (janela hardcoded) e P-09 (fuso único BRT) |
 | service-reschedule | Critério doc **OK** (ciclo de estados + propor + pagamento pós-aceite); pendências P-SR-* (UX erros, templates MMD, consumo de `is_last_minute`) |
+| service-completion | Critério doc **OK** (enrichment READY-handoff + conclusão + stub disputa + endurecimento SQL 2026-08-05); design técnico em `docs/service-completion/` |
 | PWA / Sentry / analytics | Mencionados na rastreabilidade; não detalhados como módulos de produto |
 | App nativo (Capacitor) | Infra cliente documentada em **device-beacon**, **push-permission**, **notifications** (+ libs `src/lib/push`, Preferences) |
 | Matching legado | Edge morta + RPC órfã documentados em matching-dispatch / provider-jobs |
@@ -104,6 +107,7 @@ flowchart TB
   AU[auth]
   CM[my-services]
   VS[view-services]
+  SC[service-completion]
   PJ[provider-jobs]
   PP[provider-profile]
   MA[my-account]
@@ -121,9 +125,12 @@ flowchart TB
   RQ --> DF
   RQ --> AD
   RQ --> AU
+  RQ --> SC
+  SC --> MATCH
   CM --> VS
   CM --> PC
   PC --> VS
+  VS --> SC
   MA --> AD
   PP --> MA
   PJ --> CH

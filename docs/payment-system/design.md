@@ -101,7 +101,7 @@ graph TB
 | KYC submission | **RPC** `payment_submit_provider_kyc` + **`dispatch-kyc-email` EF** | Persist KYC + private Storage paths in TX; EF downloads docs and emails attachments to NetCred |
 | Auto-cancel T-12h | **RPC** `payment_cron_auto_cancel_unpaid_services` | Batch + per-row `EXCEPTION`; MMD enqueue after commit |
 | Pre-charge notification | **RPC** `payment_cron_notify_upcoming_charges` | Claim + `upcoming_charge_notified_at` + MMD |
-| Auto-complete executed | **RPC** `payment_cron_auto_complete_executed_services` | Batch transition + MMD |
+| Auto-complete executed | **Moved** → `service_completion_cron_auto_complete_executed` ([ADR-0004](../service-completion/adr/0004-completion-rpcs-outside-payments.md)) | Batch COMPLETED + MMD; **not** a payment product writer |
 | Webhook retry / dead letter | **RPC** `payment_cron_process_webhook_retry` | Claim `payment_webhook_processing_queue` PENDING + `FAILED` events → `payment_process_webhook_event` |
 | Orphan lease recovery | **RPC** `payment_cron_recover_orphaned_schedules()` → `payment_recover_orphaned_schedules()` | `pg_cron` wrapper + `job_runs`; no EF |
 | Card tokenization | **EF** `tokenize-payment-card` | PCI: raw PAN/CVV must not touch Postgres |
@@ -152,7 +152,7 @@ sequenceDiagram
 SELECT public.payment_cron_schedule_netcred_charges();
 SELECT public.payment_cron_auto_cancel_unpaid_services();
 SELECT public.payment_cron_notify_upcoming_charges();
-SELECT public.payment_cron_auto_complete_executed_services();
+-- auto-complete: SELECT public.service_completion_cron_auto_complete_executed(); (ADR-0004)
 SELECT public.payment_cron_process_webhook_retry();
 SELECT public.payment_cron_recover_orphaned_schedules();
 SELECT public.payment_cron_detect_netcred_onboarding();
@@ -188,7 +188,7 @@ Two aggregates, 1:1, coupled only at atomic boundaries (`PAID`→`CONFIRMED`, ca
 - **Formula:** `(scheduled_start_date + shift start) AT TIME ZONE 'America/Sao_Paulo'` — `morning`/`full_day` = 08:00, `afternoon` = 13:00.
 - **Multi-day jobs:** anchor on `scheduled_start_date` only.
 - **Shift times:** business reference for payment/refund windows — **not** physical arrival SLA.
-- **`payment_mark_service_executed`:** date-only gate (`scheduled_start_date <= CURRENT_DATE`); payment/refund use timestamptz helper.
+- **EXECUTED self-serve:** `service_completion_mark_executed` (checklist + BRT temporal rules) — **not** `payment_mark_service_executed` (DROPped; ADR-0004). Payment/refund still use the timestamptz helper.
 
 ### 1.7.4 Money model and split ([`ADR-0001`](../adr/0001-payment-split-commission-model.md))
 
@@ -412,7 +412,7 @@ $$;
 - **Anchor date** is always `scheduled_start_date` (start of work), never `scheduled_end_date`.
 - **Timezone** is `America/Sao_Paulo` for all payment comparisons (cron, T-12h, refund windows).
 - **Reagendamento** updates `scheduled_start_date` / `scheduled_end_date` / `scheduled_shift`; all payment RPCs re-read `payment_service_execution_at(cs)` — no separate sync column.
-- **`payment_mark_service_executed`** keeps a **date-only** gate: `scheduled_start_date <= CURRENT_DATE` (existing CNS semantics); payment uses the timestamptz helper for hour-precision thresholds.
+- **EXECUTED self-serve** is owned by service-completion (`service_completion_mark_executed` — BRT date-only + checklist). Payment uses the timestamptz helper for hour-precision charge/refund thresholds. Do **not** reintroduce `payment_mark_service_executed`.
 
 **New columns on `contracted_services` (payment migration only):**
 
@@ -1781,30 +1781,17 @@ The batch RPC is invoked by `payment_cron_auto_cancel_unpaid_services()`. After 
 
 ## 4.13 Phase 14: Service Completion Flow (Req 32)
 
+> **Superseded (service-completion / [ADR-0004](../service-completion/adr/0004-completion-rpcs-outside-payments.md)):**  
+> Product writers are `service_completion_mark_executed`, `service_completion_confirm_with_rating`, and `service_completion_auto_complete_executed` (+ `service_completion_cron_auto_complete_executed`).  
+> `payment_mark_service_executed`, `payment_confirm_service_completed`, and `payment_cron_auto_complete_*` are **DROPped**.  
+> Normative contracts: [service-completion design §5.4–5.5](../service-completion/design.md). Payments retains NetCred/settlement and the Req 32 ACs that dispute MUST NOT block completion and D+30 disclosure is from `paid_at`.
+
 ```sql
--- payment_mark_service_executed(service_id UUID) — called by provider
-CREATE OR REPLACE FUNCTION public.payment_mark_service_executed(p_service_id UUID)
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
-DECLARE
-  v_cs contracted_services%ROWTYPE;
-BEGIN
-  SELECT * INTO v_cs FROM contracted_services WHERE id = p_service_id;
-  IF v_cs.status != 'CONFIRMED' THEN
-    RAISE EXCEPTION 'INVALID_STATUS_TRANSITION' USING ERRCODE = 'P0001';
-  END IF;
-  IF v_cs.scheduled_start_date > CURRENT_DATE THEN
-    RAISE EXCEPTION 'SERVICE_NOT_YET_DUE' USING ERRCODE = 'P0002';
-  END IF;
-  UPDATE contracted_services
-  SET status = 'EXECUTED', executed_at = now() WHERE id = p_service_id;
-  INSERT INTO payment_audit_log (event_type, entity_type, entity_id, service_id, actor)
-  VALUES ('SERVICE_EXECUTED', 'contracted_service', p_service_id, p_service_id, 'provider');
-  -- Enqueue Push to client: "Confirmar recebimento do serviço"
-END;
-$$;
+-- HISTORICAL (DROPPED) — do not reintroduce as product API
+-- payment_mark_service_executed(service_id UUID) — superseded by service_completion_mark_executed
 ```
 
-**Auto-completion cron (Req 32 AC3):** `payment_cron_auto_complete_executed_services()` runs min 4×/day via pg_cron. Selects `EXECUTED` records where `executed_at + interval '24 hours' <= now()`, commits `COMPLETED` with `completed_by = 'system'` atomically, enqueues MMD notification. **No Edge Function.** Chargeback disputes (`is_disputed = true`) do not block completion.
+**Auto-completion cron:** use `service_completion_cron_auto_complete_executed` / job_runs name `service_completion_cron_auto_complete_executed` (min 4×/day). Selects past-grace `EXECUTED` rows, commits `COMPLETED` with `completed_by = 'system'`, enqueues MMD. Chargeback disputes (`is_disputed = true`) still MUST NOT block completion.
 
 ---
 
@@ -1911,13 +1898,13 @@ Every new `payment_*` RPC MUST ship with explicit **`REVOKE` / `GRANT EXECUTE`**
 
 | Group | Functions |
 |---|---|
-| Client | `payment_get_checkout_step_requirements`, `payment_calculate_installment_options`, `payment_update_method`, `payment_mark_service_executed`, `payment_submit_provider_kyc`, `payment_revoke_client_card_token` |
+| Client | `payment_get_checkout_step_requirements`, `payment_calculate_installment_options`, `payment_update_method`, `payment_submit_provider_kyc`, `payment_revoke_client_card_token` *(completion: use `service_completion_*` — ADR-0004; `payment_mark_service_executed` DROPped)* |
 | Charge / webhook | `payment_persist_client_card_token`, `payment_claim_charge_batch`, `payment_begin_manual_attempt`, `payment_commit_charge_outcome`, `payment_enqueue_notifications`, `payment_ingest_webhook_event`, `payment_enqueue_webhook_processing`, `payment_process_webhook_event`, `payment_claim_webhook_processing_batch`, `payment_claim_webhook_retry_batch`, `payment_prepare_refund_request`, `payment_commit_refund_after_gateway`, `payment_mark_refund_gateway_acked`, `payment_complete_refund_domain_side_effects`, `payment_claim_stale_schedules_for_reconciliation`, `payment_process_reconciliation_outcome` |
 | Onboarding | `payment_list_gateway_accounts_for_onboarding`, `payment_activate_provider_from_netcred`, `payment_update_provider_onboarding_status` |
 | Batch / cron targets | `payment_auto_cancel_services`, `payment_notify_upcoming_charges_batch`, `payment_auto_complete_executed_services`, `payment_recover_orphaned_schedules`, `payment_claim_upcoming_charge_notifications` |
 | Helpers | `payment_cc_fee_rate_key`, `payment_total_with_card_fees`, `payment_calculate_charge_amount`, `payment_service_execution_at`, `payment_reschedule_charge_date` |
 | Operator | `payment_reset_dead_letter_event`, `payment_reconstruct_audit_lifecycle` |
-| pg_cron wrappers | `payment_cron_schedule_netcred_charges`, `payment_cron_auto_cancel_unpaid_services`, `payment_cron_notify_upcoming_charges`, `payment_cron_auto_complete_executed_services`, `payment_cron_process_webhook_retry`, `payment_cron_recover_orphaned_schedules`, `payment_cron_detect_netcred_onboarding`, `payment_cron_reconcile_netcred_payments` |
+| pg_cron wrappers | `payment_cron_schedule_netcred_charges`, `payment_cron_auto_cancel_unpaid_services`, `payment_cron_notify_upcoming_charges`, `payment_cron_process_webhook_retry`, `payment_cron_recover_orphaned_schedules`, `payment_cron_detect_netcred_onboarding`, `payment_cron_reconcile_netcred_payments` *(auto-complete moved to `service_completion_cron_auto_complete_executed`)* |
 | Internal | `payment_cron_invoke_edge_function` |
 
 ### Client-facing (`authenticated`)
@@ -1928,7 +1915,7 @@ Every new `payment_*` RPC MUST ship with explicit **`REVOKE` / `GRANT EXECUTE`**
 | `payment_calculate_installment_options(proposal_id, service_id, card_brand)` | `auth.uid()` | N/A (read) | Fee table + HMAC signature (Vault) |
 | `accept_proposal(…)` | `auth.uid()` | `p_idempotency_key` + `UNIQUE(idempotency_key)` | Payment evolution: schedule + audit atomically (**existing RPC**) |
 | `payment_update_method(service_id, client_card_token_id, hmac?, installment_number?)` | `auth.uid()` | `FOR UPDATE` on schedule | Post-acceptance card/installment update (manual recovery) |
-| `payment_mark_service_executed(service_id)` | provider scope | status guard | EXECUTED transition |
+| `service_completion_mark_executed` *(service-completion)* | provider scope | checklist + status + temporal | EXECUTED transition — **replaces** DROPped `payment_mark_service_executed` |
 | `payment_submit_provider_kyc(…)` | `auth.uid()` | per provider | KYC persist + MMD enqueue |
 | `payment_revoke_client_card_token(token_id)` | `auth.uid()` | schedule link check | REVOKED state |
 
@@ -1965,7 +1952,7 @@ Every new `payment_*` RPC MUST ship with explicit **`REVOKE` / `GRANT EXECUTE`**
 | `payment_cron_schedule_netcred_charges()` | `payment_schedule_netcred_charges` | 4×/day | `payment_cron_invoke_edge_function('schedule-netcred-charges')` |
 | `payment_cron_auto_cancel_unpaid_services()` | `payment_auto_cancel_unpaid_services` | 4×/day | `payment_auto_cancel_services()` (SQL batch) |
 | `payment_cron_notify_upcoming_charges()` | `payment_notify_upcoming_charges` | 4×/day | `payment_notify_upcoming_charges_batch()` (SQL batch) |
-| `payment_cron_auto_complete_executed_services()` | `payment_auto_complete_executed_services` | 4×/day | `payment_auto_complete_executed_services()` (SQL batch) |
+| `service_completion_cron_auto_complete_executed()` *(service-completion)* | `service_completion_auto_complete_executed` | 4×/day | DROPped: `payment_cron_auto_complete_executed_services` |
 | `payment_cron_process_webhook_retry()` | `payment_process_webhook_retry` | every 5 min | `payment_claim_webhook_processing_batch()` + `payment_claim_webhook_retry_batch()` + `payment_process_webhook_event()` (SQL batch) |
 | `payment_cron_recover_orphaned_schedules()` | `payment_recover_orphaned_schedules` | every 30 min | `payment_recover_orphaned_schedules()` (SQL batch) |
 | `payment_cron_detect_netcred_onboarding()` | `payment_detect_netcred_onboarding` | 1×/day | `payment_cron_invoke_edge_function('detect-netcred-onboarding')` |
@@ -2031,7 +2018,7 @@ Batch RPCs accept `p_record_job_run boolean DEFAULT true` where applicable; **cr
 | Orphan recovery (janitor) | Every 30 min | `SELECT public.payment_cron_recover_orphaned_schedules();` | `*/30 * * * *` |
 | IN_ANALYSIS auto-cancel voids | Every 30 min | `SELECT public.payment_cron_reconcile_inanalysis_auto_cancel_voids();` | `*/30 * * * *` |
 | Webhook retry + queue worker | Every 5 min | `SELECT public.payment_cron_process_webhook_retry();` | `*/5 * * * *` |
-| Auto-complete executed | 4×/day | `SELECT public.payment_cron_auto_complete_executed_services();` | `45 9,15,21,3 * * *` |
+| Auto-complete executed | 4×/day | `SELECT public.service_completion_cron_auto_complete_executed();` | `45 9,15,21,3 * * *` |
 
 **MUST:** every row above produces exactly one `public.job_runs` record per invocation via its wrapper (§6.4). Edge Functions invoked by wrappers additionally log to Sentry; that does **not** replace `job_runs`.
 
@@ -2062,7 +2049,7 @@ Per-row failures inside batch loops use nested `EXCEPTION` handlers so one bad r
 |---|---|---|---|---|
 | `payment_cron_auto_cancel_unpaid_services` | services evaluated | services cancelled | per-row cancel failures | `{ "cancelled_ids": [...] }` (ids truncated if large) |
 | `payment_cron_notify_upcoming_charges` | schedules claimed | notifications enqueued | MMD ingest failures | `{ "skipped_already_notified": n }` |
-| `payment_cron_auto_complete_executed_services` | EXECUTED rows scanned | → COMPLETED transitions | per-row failures | `{ "completed_by": "system" }` |
+| `service_completion_cron_auto_complete_executed` | EXECUTED rows scanned | → COMPLETED transitions | per-row failures | `{ "completed_by": "system" }` *(moved from payments — ADR-0004)* |
 | `payment_cron_process_webhook_retry` | queue rows + dead-letter events claimed | webhooks → PROCESSED | handler exceptions | `{ "queue_processed": n, "events_retried": n }` |
 | `payment_cron_recover_orphaned_schedules` | orphaned leases found | → SCHEDULED + → FAILED | 0 (or per-row if extended) | `{ "recovered_to_scheduled": n, "recovered_to_failed": n }` |
 
@@ -2476,7 +2463,7 @@ Payment data is financial and PCI-adjacent. **Maximum security is the default.**
 | Provider opportunity access gate | `match_provider_jobs` RPC (`SECURITY DEFINER`) |
 | Manual payment only for own services | `manual-charge-payment` EF validates `auth.uid() = client_id` |
 | Refund only for own services | `process-refund` EF validates service ownership |
-| Provider mark-executed only for own services | `payment_mark_service_executed` RPC validates provider ownership |
+| Provider mark-executed only for own services | `service_completion_mark_executed` validates contracted provider ownership |
 | Webhook endpoint HMAC | `netcred-webhook` EF validates `X-NETCRED-Signature` before any processing |
 
 ## 11.4 Anti-Abuse Mechanisms
@@ -2527,7 +2514,7 @@ Payment data is financial and PCI-adjacent. **Maximum security is the default.**
 | 29 | Provider marketplace access gate | §4.1.1, §5.3 | `match_provider_jobs` RPC gate; chat initiation RPC gate; `accept_proposal` provider check; SUSPENDED = same as PENDING |
 | 30 | Event-driven internal architecture | §3.10, §4.5.2 | `payment_events` table; domain events on every state transition; dispatcher decoupled; analytics derivation |
 | 31 | ClearSale device fingerprint | §4.2.2, §4.11 | `fp.js` async init at card step mount; UUID stable per session; new UUID on re-entry; persisted in `payment_schedules.clearsale_session_id`; injected in chargeCreate |
-| 32 | Service completion flow | §4.13 | `payment_mark_service_executed` RPC; `payment_cron_auto_complete_executed_services` RPC |
+| 32 | Service completion flow | §4.13 → [service-completion design](../service-completion/design.md) | `service_completion_*` writers; payments retain dispute-non-block + D+30 disclosure |
 | 33 | Pre-charge client notification | §4.10 | `payment_cron_notify_upcoming_charges()` RPC |
 
 ---
@@ -2643,7 +2630,7 @@ RPC claim/begin → EF external I/O → RPC commit → RPC enqueue notifications
 | Responsibility | Location |
 |---|---|
 | Service completion actions (provider EXECUTED / client COMPLETED) | `components/ServiceCompletionActions.tsx` |
-| Mark executed / confirm completion RPC wrappers | `api/markServiceExecuted.api.ts`, `api/confirmServiceCompleted.api.ts` → `payment_mark_service_executed`, `payment_confirm_service_completed` |
+| Mark executed / confirm completion | `@/features/service-completion` Public API → `service_completion_mark_executed` / `service_completion_confirm_with_rating` (ADR-0004; view-services must not call DROPped `payment_*` writers) |
 | Service cancellation | `api/services.api.ts` → `cancel_service_request` |
 | Service detail hooks | `hooks/useMarkServiceExecuted.ts`, `useConfirmServiceCompleted.ts`, `useCancelService.ts` |
 | Manual payment recovery slot | `ServiceContractedSection` consumes `ManualPaymentRecovery` from `@/features/payments` |
@@ -2672,7 +2659,7 @@ RPC claim/begin → EF external I/O → RPC commit → RPC enqueue notifications
 | Provider onboarding detection | **Async** (EF cron 1×/day) | External API; activation commit in RPC |
 | Installment recalculation at charge time | **Synchronous** (`payment_calculate_charge_amount` in claim RPC) | Current rates at charge time |
 | Service completion | **Synchronous TX** (RPC) | Status + audit atomic |
-| Auto-completion (24h) | **Async** (`payment_cron_auto_complete_executed_services`) | Client inaction must not block |
+| Auto-completion (24h) | **Async** (`service_completion_cron_auto_complete_executed`) | Client inaction must not block |
 
 ---
 

@@ -322,6 +322,8 @@ Acceptance Criteria covered:
 
 ### 6. [x] Migration M6 — Service Request dispatch bootstrap trigger
 
+> **Superseded (service-completion Task 12 / matching CONTEXT #135):** `trg_service_request_dispatch_bootstrap` was **DROPped**. Normative bootstrap is `matching_bootstrap_dispatch_for_service_request` on enrichment `READY` ([service-completion design §3.7](../service-completion/design.md)). M6 remains historical implementation record.
+
 Description:
 Implement `trg_service_request_dispatch_bootstrap` on `service_requests` `AFTER INSERT OR UPDATE` when status becomes `OPEN` for the first time — INSERT `service_request_dispatches` (`DISPATCH_PENDING`, `next_batch_at = now() + matching.dispatch_start_delay_minutes`) if no row exists (#60, #99).
 

@@ -4,7 +4,7 @@ Documento macro da plataforma Orbit (Renovi). Inventário operacional (rotas, pa
 
 ## Propósito da plataforma (evidência no código)
 
-A Renovi conecta **clientes** que pedem orçamentos para serviços do catálogo a **prestadores** que recebem oportunidades compatíveis (serviço, geografia, matching progressivo), negociam in-app (**CNS** — conversas e propostas), aceitam/recusam orçamentos e, após aceite, seguem para **pagamento** (checkout NetCred), execução agendada, eventual **reagendamento**, **liquidação** (ganhos do prestador) e notificações (**MMD** — e-mail/push).
+A Renovi conecta **clientes** que pedem orçamentos para serviços do catálogo a **prestadores** que recebem oportunidades compatíveis (serviço, geografia, matching progressivo **após enrichment READY**), negociam in-app (**CNS** — conversas e propostas), aceitam/recusam orçamentos e, após aceite, seguem para **pagamento** (checkout NetCred), execução agendada, **conclusão com checklist/evidências** (`service-completion`), eventual **reagendamento**, **liquidação** (ganhos do prestador) e notificações (**MMD** — e-mail/push).
 
 Plataformas: **Web/PWA** + **Android** (Capacitor); iOS previsto. Bootstrap: sessão, beacons de dispositivo e permissão de push no root da app.
 
@@ -36,15 +36,19 @@ flowchart TB
 
   subgraph Backend["Backend / infra"]
     MATCH[Matching progressivo]
+    SC[Service completion / enrichment]
     MMD[Message Dispatcher]
     BEACON[Device beacon + push]
   end
 
   RQ --> MS
+  RQ --> SC
+  SC --> MATCH
   MATCH --> JOBS
   JOBS --> CH_P
   CH_C --> PAY_C
   CH_P --> PAY_C
+  PAY_C --> SC
   PAY_C --> EARN
   BEACON --> MATCH
   BEACON --> MMD
@@ -62,9 +66,9 @@ Espelham `src/features/` (e shells/backends documentados). Links apontam para o 
 | Entrada / pedido | [request-quote](./modulos/request-quote/README.md), [dynamic-form](./modulos/dynamic-form/README.md), [addresses](./modulos/addresses/README.md) | Wizard pedir orçamento; formulário dinâmico; endereços (embutidos no wizard e em Minha conta) |
 | Identidade | [auth](./modulos/auth/README.md), [my-account](./modulos/my-account/README.md), [provider-profile](./modulos/provider-profile/README.md) | Login/cadastro/sessão; conta; perfil público `/perfil/:slug` |
 | Pedidos e serviços | [my-services](./modulos/my-services/README.md), [view-services](./modulos/view-services/README.md) | Lista Meus Serviços; detalhe unificado `/dashboard/services/:id` |
-| Oportunidades | [provider-jobs](./modulos/provider-jobs/README.md), [matching-dispatch](./modulos/matching-dispatch/README.md) | Feed Trabalhos; dispatch progressivo em lotes (backend) |
+| Oportunidades | [provider-jobs](./modulos/provider-jobs/README.md), [matching-dispatch](./modulos/matching-dispatch/README.md), [service-completion](./modulos/service-completion/README.md) (enrichment) | Feed Trabalhos; dispatch após READY; checklist pré-matching |
 | Negociação (CNS) | [chats](./modulos/chats/README.md) (+ `negotiation-proposals`) | Conversas, propostas, aceite → checkout; sheet comparar orçamentos |
-| Pós-contrato | [service-reschedule](./modulos/service-reschedule/README.md), [provider-calendar](./modulos/provider-calendar/README.md) | Reagendar data/turno; agenda **somente leitura** de serviços contratados |
+| Pós-contrato | [service-completion](./modulos/service-completion/README.md), [service-reschedule](./modulos/service-reschedule/README.md), [provider-calendar](./modulos/provider-calendar/README.md) | Conclusão (EXECUTED/confirm/auto-complete); reagendar; agenda **somente leitura** |
 | Dinheiro | [payments](./modulos/payments/README.md), [provider-earnings](./modulos/provider-earnings/README.md) | Checkout, cobrança T-2, histórico/reembolso; Ganhos (`/dashboard/earnings`) |
 | Credenciamento | [provider-kyc](./modulos/provider-kyc/README.md) | Gate do shell até KYC `ACTIVE`; chrome de nav oculto; wizard de credenciamento |
 | Notificações | [message-dispatcher](./modulos/message-dispatcher/README.md) (MMD), [push-permission](./modulos/push-permission/README.md), [notifications](./modulos/notifications/README.md), [device-beacon](./modulos/device-beacon/README.md) | Fila e-mail/push; soft prompt de permissão; clique em push; beacon FCM + geo operacional do prestador |
@@ -81,7 +85,8 @@ Espelham `src/features/` (e shells/backends documentados). Links apontam para o 
 | `platform_services` / `platform_forms` | Catálogo e formulários versionados. |
 | `client_addresses` | Endereços do cliente + geografia. |
 | `provider_profiles_*` / área / portfólio | Perfil público/privado, serviços ofertados, bairros, portfólio. |
-| Dispatch / matching | `service_request_dispatches` e lotes de visibilidade (backend). |
+| Dispatch / matching | `service_request_dispatches` e lotes (bootstrap só após enrichment READY). |
+| Enrichment / conclusão | `service_request_enrichments`, evidência congelada, ratings; RPCs `service_completion_*`. |
 | Pagamentos / settlements | Schedules, cobranças NetCred, liquidações exibidas em Ganhos. |
 | `user_device_beacons` | Device + FCM (+ localização operacional do prestador). |
 | Schema `message_dispatcher` | Intenções, fila, entregas e engagements (MMD). |
@@ -102,7 +107,7 @@ Matriz detalhada: [Perfis e permissões](./perfis-e-permissoes.md).
 
 1. **Pedir orçamento** — `/pedir-orcamento` → serviço → formulário dinâmico → descrição/fotos (IA opcional) → endereço → identidade (logado ou cadastro convidado) → Edge `create-request-quote-order`.
 2. **Acompanhar e negociar** — `/dashboard/services` (+ detalhe) e `/dashboard/chats` (CNS: perguntas implícitas na thread, propostas, aceite).
-3. **Pagar e acompanhar execução** — checkout pós-aceite; histórico em Minha conta; reagendamento embutido em chat/detalhe quando elegível.
+3. **Pagar, executar e concluir** — checkout pós-aceite; histórico em Minha conta; prestador marca EXECUTED com checklist; cliente confirma+avalia (ou auto-complete ~24h); reagendamento embutido quando elegível.
 4. **Conta** — `/dashboard/conta` (dados e endereços).
 
 ### Prestador
@@ -110,7 +115,7 @@ Matriz detalhada: [Perfis e permissões](./perfis-e-permissoes.md).
 1. **Credenciar (KYC)** — gate no dashboard até onboarding NetCred `ACTIVE` (conteúdo + chrome de nav oculto); wizard / telas de status; allowlist `/dashboard/conta*`.
 2. **Receber oportunidades** — matching progressivo + beacon de localização; feed `/dashboard/jobs` (`list-provider-opportunities`).
 3. **Negociar e propor** — detalhe do job → CNS (`/dashboard/chats`); envio de proposta; aceite pelo cliente dispara pagamento.
-4. **Executar agenda** — Meus Serviços + calendário `/dashboard/services/calendar` (consulta); reagendamento quando aplicável.
+4. **Executar e concluir** — Meus Serviços + calendário; checklist/EXECUTED (`service-completion`); reagendamento quando aplicável.
 5. **Receber** — `/dashboard/earnings` (previsto / liquidado / estorno).
 6. **Perfil público** — `/perfil/:slug` para captação.
 
@@ -125,7 +130,7 @@ Matriz detalhada: [Perfis e permissões](./perfis-e-permissoes.md).
 |--------|-----------|
 | **Painel admin** | Sem rotas `/admin/*` no `router.tsx`; papel `admin` redireciona para destino inexistente neste tree. |
 | **Aba Disputas (lista)** | Em Meus Serviços, tab `dispute` retorna **lista vazia** no client (`listServices` short-circuit) — não há listagem de disputas. |
-| **Fluxo de disputa completo na UI** | Há flag `is_disputed` / badge no detalhe do serviço contratado e webhook de dispute no backend de pagamentos; **não** há jornada de abertura/resolução de disputa pelo usuário no app. |
+| **Fluxo de disputa completo na UI** | Stub em **service-completion** (`DisputeStubEntry`): URL de suporte via `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL` / `orbit.dispute_support_url`, ou toast “Em breve” + analytics — **sem** FSM de disputa. Separado: flag `is_disputed` / badge de chargeback no detalhe (payments) e webhook de dispute no gateway. |
 | **Placeholders do dashboard** | `/dashboard` (Visão geral), `/dashboard/addresses` (menu Endereços), `/dashboard/settings`, `/dashboard/help` → `DashboardFakePage`. Gestão real de endereços fica em Minha conta / wizard. |
 | **Calendário editável / disponibilidade** | Calendário do prestador é **só consulta** de serviços já contratados — não agenda livre nem CRUD de disponibilidade. |
 | **Onboarding de papel desconhecido** | Redirect para `/onboarding` sem rota correspondente no router. |

@@ -8,10 +8,10 @@ UI do feed: [provider-jobs](../provider-jobs/README.md). Beacon GPS: link em [de
 
 ## 1. Leitura para negócio
 
-- **Para que serve:** quando um cliente abre um **pedido** (`OPEN`), a plataforma **não** mostra o pedido a todos os prestadores elegíveis de uma vez. Um **dispatch** (`service_request_dispatches`) abre **lotes** de prestadores compatíveis ao longo do tempo, envia **notificações** (e-mail/push via Message Dispatcher) e aplica **gates** (pausa, parada, expiração, mercado aberto).
+- **Para que serve:** quando um pedido fica **pronto para matching** (enrichment `READY` — ver [service-completion](../service-completion/README.md)), a plataforma **não** mostra o pedido a todos os prestadores elegíveis de uma vez. Um **dispatch** (`service_request_dispatches`) abre **lotes** de prestadores compatíveis ao longo do tempo, envia **notificações** (e-mail/push via Message Dispatcher) e aplica **gates** (pausa, parada, expiração, mercado aberto).
 - **Quem é afetado:** **prestadores** (feed em Trabalhos, notificações, elegibilidade para proposta); **clientes** (tempo até receber orçamentos; lifecycle 24h/48h sem proposta); **operações** (crons, telemetria `job_runs`).
 - **Valor:** reduz ruído no feed, prioriza proximidade e qualidade, alinha notificação à visibilidade.
-- **Riscos de suporte:** confundir **dispatch de pedido** com **dispatch de notificação** (Message Dispatcher); prestador sem oportunidade pode estar fora do lote, sem beacon recente, `operational_status = suspended`, ou com dispatch **DISPATCH_PAUSED** / **DISPATCH_STOPPED** / terminal.
+- **Riscos de suporte:** confundir **dispatch de pedido** com **dispatch de notificação** (Message Dispatcher); pedido `OPEN` ainda em enrichment **não** tem dispatch; prestador sem oportunidade pode estar fora do lote, sem beacon recente, `operational_status = suspended`, ou com dispatch **DISPATCH_PAUSED** / **DISPATCH_STOPPED** / terminal.
 
 ---
 
@@ -47,12 +47,13 @@ UI do feed: [provider-jobs](../provider-jobs/README.md). Beacon GPS: link em [de
 
 ## 5. Principais fluxos
 
-1. Pedido → `OPEN` → trigger bootstrap cria `service_request_dispatches` (`DISPATCH_PENDING`, `next_batch_at` = agora + delay).
-2. Cron `matching_process_service_request_dispatches` (a cada **2 min**): expira lifecycle → abre lotes devidos → reavalia gates PAUSED/STOPPED.
-3. Abertura de lote: discover → rank → batch + visibility `source=batch` → trigger MMD `matching.new_opportunity`.
-4. Prestador lista oportunidades (Edge → RPC); pode dismiss.
-5. Pool vazio → `DISPATCH_FALLBACK_OPEN_MARKET` (mercado aberto lazy no feed).
-6. Gates / aceite / cancel / expire / auto-cancel 48h sem proposta → estados terminais ou pausa.
+1. Pedido → `OPEN` + enrichment `PENDING` (create/republish). Matching **não** inicia aqui — trigger `trg_service_request_dispatch_bootstrap` foi **DROP**ada.
+2. Enrichment → `READY` → `matching_bootstrap_dispatch_for_service_request` (mesma TX de finalize, ou sweeper de reparo **apenas** se `materialized_at` nos últimos **7 dias**) cria `service_request_dispatches` (`DISPATCH_PENDING`, `next_batch_at` = agora + `matching.dispatch_start_delay_minutes`, default **5**). O delay e o lifecycle do dispatch começam neste bootstrap, **não** no insert `OPEN`.
+3. Cron `matching_process_service_request_dispatches` (a cada **2 min**): expira lifecycle → abre lotes devidos → reavalia gates PAUSED/STOPPED.
+4. Abertura de lote: discover → rank → batch + visibility `source=batch` → trigger MMD `matching.new_opportunity`.
+5. Prestador lista oportunidades (Edge → RPC); pode dismiss.
+6. Pool vazio → `DISPATCH_FALLBACK_OPEN_MARKET` (mercado aberto lazy no feed).
+7. Gates / aceite / cancel / expire / auto-cancel 48h sem proposta → estados terminais ou pausa.
 
 Detalhe e Mermaid: [dispatch-e-visibilidade](./features/dispatch-e-visibilidade.md).
 
@@ -85,7 +86,8 @@ Detalhe e Mermaid: [dispatch-e-visibilidade](./features/dispatch-e-visibilidade.
 
 | Integração | Como |
 |------------|------|
-| **request-quote / service_requests** | Bootstrap no primeiro `OPEN` |
+| **request-quote / service_requests** | Create/republish enfileiram enrichment; bootstrap matching só após READY ([service-completion](../service-completion/README.md)) |
+| **service-completion** | Chama `matching_bootstrap_dispatch_for_service_request` no finalize READY |
 | **provider-jobs** | Consome Edge `list-provider-opportunities` |
 | **message-dispatcher** | Templates `matching.new_opportunity`, `matching.no_proposal_*` |
 | **chats / negotiation-proposals** | Gates STOPPED/PAUSED; `DISPATCH_MATCHED` no aceite; chat **sem** gate STOPPED |
@@ -111,6 +113,7 @@ Detalhe e Mermaid: [dispatch-e-visibilidade](./features/dispatch-e-visibilidade.
 | Área | Caminhos |
 |------|----------|
 | Migrations matching | `supabase/migrations/202607110*`, `2026071209*`, `2026071212*`, `20260802190000_service_request_no_proposal_lifecycle.sql` |
+| Bootstrap READY-handoff | `20260804110000_matching_bootstrap_dispatch_rpc.sql`, `20260804120000_drop_service_request_dispatch_bootstrap_trigger.sql`; enrichment finalize/repair `202608042*` |
 | Edge feed **viva** | `supabase/functions/list-provider-opportunities/` + `[functions.list-provider-opportunities]` em `supabase/config.toml` |
 | Edge feed **morta** | `supabase/functions/match-provider-jobs/` — diretório **vazio** residual (sem `.ts`; sem entrada em `config.toml`; arquivos removidos no commit do matching) |
 | RPC legado (ainda no DB) | `public.match_provider_jobs` — última redefinição `20260801240000_payment_match_provider_jobs_onboarding_gate.sql`; pgTAP `supabase/tests/payments/payment_match_provider_jobs_onboarding_gate_test.sql` |

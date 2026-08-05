@@ -78,7 +78,7 @@ Coisas para verificar:
 - Estrelas de avaliação dos cards devem estar usando dados reais
 - Verificar como estamos fazendo upload de arquivos hoje na plataforma. Precisamos usar pre-signed urls e não passar nada pelo servidor/EFs. Também precisamos eliminar arquivos órfãos.
 - Verificar se devemos usar ULID a o invés de UUID
-
+- Avaliação de onboarding de prestadores por parte da plataforma, depois que a netcred aprova nós precisamos aprovar também.
 
 Coisas para terminar do fluxo atual de trabalho:
 
@@ -117,14 +117,15 @@ Coisas para fazer next
 
 
 
-- /home/higor/Área de Trabalho/Renovi/orbit/src/features/payments/api/serviceLifecycle.api.ts não deveria estar dentro de payments. Ele faz parte do fluxo de conclusão de um serviço, então deveria estar na feature de acordo
 
 - Enviar notificação para prestadores que ainda não completaram o onboarding de tempos em tempos para eles completarem.
 
 
 
 
-- Perguntar para Netcred como funciona um estorno, https://app.sandbox.netcredbrasil.com.br/app/relatorio/liquidacoes?transactionId=446537
+Itens relacionados a conclusão do serviço:
+
+- Há muita coisa em comum entre a nova parte de gerar checklist com IA e a parte antiga que gerava algumas coisas com IA também, vamos tentar compartilhar mais recursos
 
 
 ---

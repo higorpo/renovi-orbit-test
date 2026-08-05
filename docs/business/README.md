@@ -53,6 +53,7 @@ Documentação derivada do código da aplicação (front-end React/Vite, Supabas
 | Permissão de push | [modulos/push-permission](./modulos/push-permission/README.md) |
 | Pedir orçamento | [modulos/request-quote](./modulos/request-quote/README.md) |
 | Reagendamento de serviço | [modulos/service-reschedule](./modulos/service-reschedule/README.md) |
+| Conclusão / enrichment | [modulos/service-completion](./modulos/service-completion/README.md) |
 | Visualização de serviços | [modulos/view-services](./modulos/view-services/README.md) |
 
 > **Nota:** a pasta [modulos/client-budgets](./modulos/client-budgets/README.md) existe apenas como registro de módulo **descontinuado** (removido do código); não entra na tabela acima.

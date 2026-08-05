@@ -38,7 +38,7 @@ Use after migrations + Edge Functions are deployed. See [`phased-cron-enablement
 | `auto-cancel-unpaid-services` | `payment_cron_auto_cancel_unpaid_services()` | `15 9,15,21,3 * * *` |
 | `schedule-netcred-charges` | `payment_cron_schedule_netcred_charges()` | `0 9,15,21,3 * * *` |
 | `detect-netcred-onboarding` | `payment_cron_detect_netcred_onboarding()` | `0 10 * * *` |
-| `auto-complete-executed-services` | `payment_cron_auto_complete_executed_services()` | `45 9,15,21,3 * * *` |
+| ~~`auto-complete-executed-services`~~ | **Removed (Task 40 / ADR-0004)** — use `service_completion_auto_complete_executed` | `45 9,15,21,3 * * *` |
 
 ## Rollback
 

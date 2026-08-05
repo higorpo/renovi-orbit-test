@@ -1,6 +1,6 @@
 # Implementation Tasks — Service Completion & Publication Readiness
 
-**Sources:** [`requirements.md`](./requirements.md) · [`design.md`](./design.md) · [`CONTEXT.md`](./CONTEXT.md) · [`ADR-0001`](./adr/0001-separate-enrichment-fsm-for-publication-readiness.md) · [`ADR-0002`](./adr/0002-evidence-images-block-not-image-gallery.md) · [`ADR-0003`](./adr/0003-completion-criterion-block.md) · [`ADR-0004`](./adr/0004-completion-rpcs-outside-payments.md)  
+**Sources:** [`requirements.md`](./requirements.md) · [`design.md`](./design.md) · [`CONTEXT.md`](./CONTEXT.md) · [`cutover.md`](./cutover.md) · [`ADR-0001`](./adr/0001-separate-enrichment-fsm-for-publication-readiness.md) · [`ADR-0002`](./adr/0002-evidence-images-block-not-image-gallery.md) · [`ADR-0003`](./adr/0003-completion-criterion-block.md) · [`ADR-0004`](./adr/0004-completion-rpcs-outside-payments.md)  
 **Scope:** Requirements 1–25 · **80 tasks** (1–80)  
 **Migration policy:** Net-new timestamped files under `supabase/migrations/` only — SHALL NOT edit shipped migrations.  
 **Precedence:** CONTEXT + ADR-0001…0004 > design.md > requirements.md. Where requirements still name `payment_mark_service_executed` / `payment_confirm_service_completed` / `payment_cron_auto_complete_*` as product APIs, **ADR-0004 + design §1 win**: implement `service_completion_*` and DROP/REVOKE those `payment_*` product writers.
@@ -76,8 +76,8 @@ flowchart TD
 
 ### Validation strategy
 
-- **pgTAP:** Enrichment FSM, bootstrap/republish, cancel vs READY race, `executed_late` BRT boundaries, confirm vs auto-complete race, `ops_attention` skip, RLS deny matrix, idempotent mark/confirm.
-- **Deno:** Edge claim→LLM→finalize/retry/fallback; schema validation; lease timeout margin; orphan Storage delete.
+- **Deno:** Edge claim→LLM→finalize/retry/fallback; schema validation; lease timeout margin.
+- **pgTAP (orphan):** SQL janitor deletes Storage orphans (KYC pattern); cron wrapper + grants.
 - **Vitest:** Feature hooks/API contracts; enrichment “em processamento”; dispute stub analytics; view-services Public API consumption.
 - **Failure injection:** Lease reclaim + stale finalize reject; wake failure → cron recovery; missing template → CRITICAL hold.
 
@@ -145,7 +145,7 @@ flowchart TD
 
 ## Phase 1: Database Foundation
 
-### 1. [ ] Seed `platform_constants` for checklist / enrichment / orphan / auto-complete
+### 1. [x] Seed `platform_constants` for checklist / enrichment / orphan / auto-complete
 
 Description:
 Ship migration introducing/upserting service-completion operational constants per CONTEXT decision 23 and design §3.1. Keys MUST be readable via existing `platform_constant_int` (or numeric helper if required). Defaults: criterion 3–12, evidence 1–5, AI max attempts 3, lease TTL 120s, claim batch 20, retry base 30s, orphan TTL 24h; reuse existing `auto_complete_grace_hours = 24`. Dispute support URL MUST NOT be seeded here (env/remote config only).
@@ -190,7 +190,7 @@ Acceptance Criteria covered:
 4.2, 5.1, 6.2, 6.4, 6.7, 11.1, 15.1, 20.2, 22.4
 
 ---
-### 2. [ ] Create enums: `enrichment_status`, `checklist_source`, `completion_evidence_phase`, `completion_upload_session_status`
+### 2. [x] Create enums: `enrichment_status`, `checklist_source`, `completion_evidence_phase`, `completion_upload_session_status`
 
 Description:
 Ship migration defining PostgreSQL enums required by enrichment and evidence persistence (design §3). Values MUST match design exactly: enrichment `PENDING|RUNNING|READY|ABORTED`; source `ai|fallback_template`; evidence phase `draft|frozen`; upload session `open|committed|expired|aborted`.
@@ -234,7 +234,7 @@ Acceptance Criteria covered:
 ---
 ## Phase 2: Persistence Layer
 
-### 3. [ ] Create `service_request_enrichments` with CHECKs, lease columns, ops_attention, indexes
+### 3. [x] Create `service_request_enrichments` with CHECKs, lease columns, ops_attention, indexes
 
 Description:
 Create 1:1 enrichment FSM table per design §3.2: UNIQUE(`service_request_id`), lease_owner/generation/locked_until, checklist_schema jsonb, source, materialized_at, ops_attention_at/reason, attempt_count, next_attempt_at, CHECKs for READY-requires-schema, ABORTED-no-schema, RUNNING-has-lease. Add partial indexes for claim due, lease expired, READY repair.
@@ -278,7 +278,7 @@ Acceptance Criteria covered:
 1.1, 1.2, 1.5, 1.6, 5.4, 6.1, 6.2, 25.1
 
 ---
-### 4. [ ] Create append-only `service_request_enrichment_events`
+### 4. [x] Create append-only `service_request_enrichment_events`
 
 Description:
 Create enrichment event audit table per design §3.3: from_status/to_status, actor, event_type, lease_generation, correlation_id, payload jsonb. Indexes on (enrichment_id, created_at) and (service_request_id, created_at). Authenticated MUST NOT UPDATE/DELETE.
@@ -320,7 +320,7 @@ Acceptance Criteria covered:
 1.8, 7.6, 21.1, 21.6
 
 ---
-### 5. [ ] Create `completion_checklist_templates` + seed cascade (service → category → global)
+### 5. [x] Create `completion_checklist_templates` + seed cascade (service → category → global)
 
 Description:
 Create template catalog with XOR scope CHECK (exactly one of platform_service_id / category_id / is_global), unique active indexes per scope, and seed at least one active global template (3 valid `completion_criterion` + optional `static_text` per design §3.4). Prefer additional per-service/category seeds when catalog known. Templates MUST pass allowlist/cardinality before use.
@@ -364,7 +364,7 @@ Acceptance Criteria covered:
 4.7, 5.1, 5.4, 5.5, 22.6
 
 ---
-### 6. [ ] Create `contracted_service_completion_evidence` (draft|frozen, version, executed_late, responses_hash)
+### 6. [x] Create `contracted_service_completion_evidence` (draft|frozen, version, executed_late, responses_hash)
 
 Description:
 Create 1:1 evidence table per design §3.5: phase draft|frozen, responses jsonb, draft_version, executed_late (null on draft), responses_hash + frozen_at required when frozen, optional idempotency_key UNIQUE, enrichment_id/schema hash optional bind. CHECKs enforce frozen integrity and draft_no_late.
@@ -408,7 +408,7 @@ Acceptance Criteria covered:
 9.1, 10.2, 11.3, 11.4, 12.1, 12.6
 
 ---
-### 7. [ ] Create `completion_evidence_upload_sessions`
+### 7. [x] Create `completion_evidence_upload_sessions`
 
 Description:
 Create upload session table per design §3.6: contracted_service_id, provider_id, criterion_block_id, status, storage_bucket, storage_prefix, max_files, expires_at, idempotency_key UNIQUE. Partial index for orphan sweep on open sessions by expires_at. Dedicated completion evidence bucket — MUST NOT reuse request-quote/chat buckets.
@@ -450,7 +450,7 @@ Acceptance Criteria covered:
 9.6, 9.8, 20.7, 22.4
 
 ---
-### 8. [ ] Create `completion_evidence_upload_objects`
+### 8. [x] Create `completion_evidence_upload_objects`
 
 Description:
 Create object registry table: session_id FK, storage_path UNIQUE, checksum, byte_size, referenced_in_responses flag. Partial index on unreferenced objects for janitor. Paths registered after signed upload; frozen packages set referenced flags.
@@ -491,7 +491,7 @@ Acceptance Criteria covered:
 9.6, 18.8, 22.4, 22.5
 
 ---
-### 9. [ ] Enable RLS deny-by-default on all new completion/enrichment tables
+### 9. [x] Enable RLS deny-by-default on all new completion/enrichment tables
 
 Description:
 ENABLE ROW LEVEL SECURITY on enrichments, enrichment_events, templates, evidence, upload_sessions, upload_objects. Ship initial SELECT policies per design §11.2.1 sketches: owning client enrichment SELECT; provider evidence SELECT; client frozen-only evidence SELECT; provider upload session ownership. NO authenticated INSERT/UPDATE/DELETE on FSM/freeze columns — mutations via SECURITY DEFINER RPCs only.
@@ -533,7 +533,7 @@ Acceptance Criteria covered:
 8.4, 8.5, 8.7, 11.2, 23.5, 23.6
 
 ---
-### 10. [ ] Storage bucket + GRANT posture scaffolding for completion evidence
+### 10. [x] Storage bucket + GRANT posture scaffolding for completion evidence
 
 Description:
 Provision dedicated Supabase Storage bucket/prefix for completion evidence; document signed-upload policies (provider write to own prefix; no silent overwrite of frozen paths). Scaffold GRANT REVOKE matrix comments for upcoming worker vs authenticated RPCs (full GRANT application lands with each RPC task; this task documents + creates bucket).
@@ -577,7 +577,7 @@ Acceptance Criteria covered:
 ---
 ## Phase 3: Matching Bootstrap Handoff
 
-### 11. [ ] Extract `matching_bootstrap_dispatch_for_service_request` from OPEN trigger body
+### 11. [x] Extract `matching_bootstrap_dispatch_for_service_request` from OPEN trigger body
 
 Description:
 Create matching-owned idempotent RPC that INSERTs `service_request_dispatches` with `DISPATCH_PENDING` and `next_batch_at = now() + matching.dispatch_start_delay_minutes`, `ON CONFLICT (service_request_id) DO NOTHING` — MUST NOT reset `next_batch_at` on conflict. Extract logic from current OPEN-insert trigger body without changing delay semantics.
@@ -619,7 +619,7 @@ Acceptance Criteria covered:
 2.2, 2.3, 2.4, 23.1, 23.2
 
 ---
-### 12. [ ] DROP `trg_service_request_dispatch_bootstrap` / trigger function
+### 12. [x] DROP `trg_service_request_dispatch_bootstrap` / trigger function
 
 Description:
 DROP TRIGGER `trg_service_request_dispatch_bootstrap` on `service_requests` and associated trigger function(s) that bootstrap dispatch on first OPEN insert (design §3.7). After this migration, OPEN insert alone MUST NOT create dispatch rows. Cutover assumes DB reset — no grandfather of legacy OPEN SRs without enrichment (decision 22).
@@ -662,7 +662,7 @@ Acceptance Criteria covered:
 2.1, 2.5, 2.8, 23.1, 23.7
 
 ---
-### 13. [ ] Implement `service_request_enqueue_enrichment` helper
+### 13. [x] Implement `service_request_enqueue_enrichment` helper
 
 Description:
 Create shared helper that INSERTs `service_request_enrichments` PENDING with attempt_count=0, next_attempt_at NULL, correlation_id, `ON CONFLICT (service_request_id) DO NOTHING`. Schedules/records wake intent for `generate-completion-checklist` after commit (deferred net / AFTER pattern). Create and republish MUST call this helper only — no divergent inline inserts.
@@ -705,7 +705,7 @@ Acceptance Criteria covered:
 1.1, 1.5, 2.9, 3.7
 
 ---
-### 14. [ ] Wire create-request-quote-order path to enqueue enrichment
+### 14. [x] Wire create-request-quote-order path to enqueue enrichment
 
 Description:
 Patch Edge/RPC create-request-quote-order (or successor) so after successful `service_requests` INSERT it calls `service_request_enqueue_enrichment` in the same TX. MUST NOT call matching bootstrap. Client success returns with enrichment processing UX expected. MUST NOT block on LLM.
@@ -747,7 +747,7 @@ Acceptance Criteria covered:
 1.1, 1.3, 2.1, 3.7
 
 ---
-### 15. [ ] Wire `republish_cancelled_service_request` to enqueue enrichment
+### 15. [x] Wire `republish_cancelled_service_request` to enqueue enrichment
 
 Description:
 Update republish RPC: after inserting new OPEN SR, call `service_request_enqueue_enrichment` for the **new** id. MUST NOT bootstrap matching; MUST NOT copy enrichment/checklist/evidence from cancelled source. Update COMMENT ON FUNCTION per design §4.11.
@@ -789,7 +789,7 @@ Acceptance Criteria covered:
 2.9
 
 ---
-### 16. [ ] Implement `enrichment_abort_for_service_request` + wire cancel same TX
+### 16. [x] Implement `enrichment_abort_for_service_request` + wire cancel same TX
 
 Description:
 Implement abort RPC/helper that sets enrichment `ABORTED`, clears next_attempt_at and lease fields when status ∈ {PENDING,RUNNING}, appends ABORTED event with cancel correlation. Wire into `cancel_service_request` (or equivalent) **same TX**. If already READY, leave enrichment READY and follow published-request cancel (matching dispatch cancel) — outside abort scope.
@@ -834,7 +834,7 @@ Acceptance Criteria covered:
 ---
 ## Phase 4: Enrichment Transactional RPCs
 
-### 17. [ ] Implement `enrichment_claim_batch` (SKIP LOCKED, skip ops_attention)
+### 17. [x] Implement `enrichment_claim_batch` (SKIP LOCKED, skip ops_attention)
 
 Description:
 Implement service_role RPC claiming due PENDING enrichments: `ops_attention_at IS NULL`, next_attempt_at null or due, `FOR UPDATE SKIP LOCKED`, LIMIT from `enrichment_claim_batch_size`. Set RUNNING, lease_owner, locked_until=now()+TTL, lease_generation++, append CLAIMED event. Commit before any LLM.
@@ -878,7 +878,7 @@ Acceptance Criteria covered:
 3.1, 6.1, 6.7, 19.1, 20.2
 
 ---
-### 18. [ ] Implement `enrichment_schedule_retry`
+### 18. [x] Implement `enrichment_schedule_retry`
 
 Description:
 Implement RPC to release lease, set status PENDING, increment attempt_count, set next_attempt_at with exponential backoff + jitter from `enrichment_retry_base_seconds * 2^attempt`, persist last_error_*, append RETRY event. Used for invalid schema and transient LLM failures while attempts remain.
@@ -921,7 +921,7 @@ Acceptance Criteria covered:
 3.4, 3.5, 6.4
 
 ---
-### 19. [ ] Implement `enrichment_validate_checklist_schema`
+### 19. [x] Implement `enrichment_validate_checklist_schema`
 
 Description:
 Implement SQL helper `enrichment_validate_checklist_schema(jsonb) RETURNS boolean` enforcing allowlist `{completion_criterion, static_text}`, cardinality from platform_constants (3–12 criteria; static_text excluded), required structure (label, met slot, evidence config, justification slot, `requires_evidence_when_met`). Return false on malformed JSON — no exception required if callers handle boolean.
@@ -963,7 +963,7 @@ Acceptance Criteria covered:
 4.1, 4.2, 4.3, 4.4, 4.5, 5.5
 
 ---
-### 20. [ ] Implement `enrichment_finalize_ready` (CAS lease_owner+generation, READY+schema+bootstrap same TX)
+### 20. [x] Implement `enrichment_finalize_ready` (CAS lease_owner+generation, READY+schema+bootstrap same TX)
 
 Description:
 Implement CAS finalize per design §5.3: validate schema; lock enrichment; if SR cancelled → ABORT path; else UPDATE WHERE RUNNING AND lease_owner AND lease_generation AND checklist_schema IS NULL → set READY+schema+source+materialized_at, clear lease, append READY/FALLBACK_APPLIED event, call `matching_bootstrap_dispatch_for_service_request` same TX. Stale/idempotent READY handling per design SQL shape.
@@ -1007,7 +1007,7 @@ Acceptance Criteria covered:
 2.2, 2.3, 2.6, 3.2, 3.3, 3.8, 5.7, 5.8, 6.2, 6.3, 6.6, 7.2, 18.6, 25.1
 
 ---
-### 21. [ ] Implement `enrichment_mark_ops_attention`
+### 21. [x] Implement `enrichment_mark_ops_attention`
 
 Description:
 Implement RPC setting ops_attention_at/reason, status remains PENDING, next_attempt_at NULL, clear lease, append event. Used when template cascade fails after max AI attempts. Claim MUST skip these rows. Emit path for CRITICAL metric/alert (Task 56).
@@ -1049,7 +1049,7 @@ Acceptance Criteria covered:
 5.4, 5.5, 22.6
 
 ---
-### 22. [ ] Implement `enrichment_clear_ops_attention`
+### 22. [x] Implement `enrichment_clear_ops_attention`
 
 Description:
 Implement RPC clearing ops_attention_* and optionally re-arming next_attempt_at for retry/fallback after ops seeds templates. MAY grant to restricted ops role in addition to service_role.
@@ -1090,7 +1090,7 @@ Acceptance Criteria covered:
 5.4, 22.6
 
 ---
-### 23. [ ] Implement `enrichment_reclaim_expired_leases`
+### 23. [x] Implement `enrichment_reclaim_expired_leases`
 
 Description:
 Implement sweeper RPC: RUNNING rows with locked_until < now() → return to PENDING (or re-claimable), increment lease_generation, clear owner, append RECLAIM event. Stale finalize with old generation MUST fail (Task 20).
@@ -1132,7 +1132,7 @@ Acceptance Criteria covered:
 6.2, 6.3, 19.1, 22.1
 
 ---
-### 24. [ ] Implement `enrichment_repair_ready_without_dispatch`
+### 24. [x] Implement `enrichment_repair_ready_without_dispatch`
 
 Description:
 Implement sweeper RPC selecting READY enrichments lacking dispatch row and calling `matching_bootstrap_dispatch_for_service_request`. MUST NOT regenerate schema. Idempotent under concurrent repair.
@@ -1174,7 +1174,7 @@ Acceptance Criteria covered:
 2.7, 18.6, 22.2
 
 ---
-### 25. [ ] Implement template cascade resolve helper
+### 25. [x] Implement template cascade resolve helper
 
 Description:
 Implement SQL helper resolving active template: platform_service → category → global. Returns schema + scope metadata or NULL if missing/inactive. Caller validates via `enrichment_validate_checklist_schema` before finalize; invalid/missing → mark_ops_attention.
@@ -1218,7 +1218,7 @@ Acceptance Criteria covered:
 ---
 ## Phase 5: Scheduling & Workers
 
-### 26. [ ] Edge Function `generate-completion-checklist`
+### 26. [x] Edge Function `generate-completion-checklist`
 
 Description:
 Implement Deno Edge worker: auth via cron/internal secret (verify_jwt false + orbit pattern); claim batch → load SR form_data + smart description; truncate oversized context with log; LLM HTTP outside DB TX; validate allowlist/cardinality; finalize AI OR schedule retry OR cascade fallback finalize OR mark_ops_attention. MUST NO-OP on abort/stale generation. Distinct from `generate-smart-description` (pre-create sync).
@@ -1261,7 +1261,7 @@ Acceptance Criteria covered:
 3.1–3.9, 4.6, 5.1–5.3, 6.5, 20.3–20.5, 21.1, 21.2
 
 ---
-### 27. [ ] Wire `orbit_invoke_edge_function` wake on enrichment enqueue
+### 27. [x] Wire `orbit_invoke_edge_function` wake on enrichment enqueue
 
 Description:
 After PENDING enqueue commit (create/republish), invoke `orbit_invoke_edge_function('generate-completion-checklist', payload, timeout)` via deferred net/AFTER pattern. Wake failure MUST NOT fail client create/republish. Payload includes reason `enqueue_wake` + service_request_id.
@@ -1303,7 +1303,7 @@ Acceptance Criteria covered:
 3.7, 6.5, 20.1, 22.8
 
 ---
-### 28. [ ] Implement `enrichment_cron_sweep` + `job_runs`
+### 28. [x] Implement `enrichment_cron_sweep` + `job_runs`
 
 Description:
 Implement pg_cron wrapper that: (a) reclaim expired leases, (b) repair READY-without-dispatch, (c) wake Edge for due PENDING (ops_attention skipped), (d) record job_runs scanned/succeeded/failed/error samples. Schedule interval sized for PENDING age SLO.
@@ -1344,7 +1344,7 @@ Acceptance Criteria covered:
 6.5, 6.7, 20.1, 20.2, 21.4, 22.1, 22.2, 22.8
 
 ---
-### 29. [ ] LLM rate limit / timeout / truncation patterns in enrichment worker
+### 29. [x] LLM rate limit / timeout / truncation patterns in enrichment worker
 
 Description:
 Hardening pass inside `generate-completion-checklist`: token-bucket or max concurrent LLM calls per invocation; explicit HTTP timeout < lease margin; truncation policy for oversized intake with structured log; classify errors transient vs validation. Document constants/env for pacing.
@@ -1388,7 +1388,7 @@ Acceptance Criteria covered:
 ---
 ## Phase 6: Completion Writers (outside payments)
 
-### 30. [ ] Implement `service_completion_brt_today` + `service_completion_compute_executed_late`
+### 30. [x] Implement `service_completion_brt_today` + `service_completion_compute_executed_late`
 
 Description:
 Implement date-only America/Sao_Paulo helpers per design §5.4.1: brt_today(); executed_late when today > coalesce(scheduled_end_date, scheduled_start_date)+1. MUST NOT use `payment_service_execution_at` for completion gates.
@@ -1430,7 +1430,7 @@ Acceptance Criteria covered:
 11.1, 11.3, 11.4, 11.6, 11.7
 
 ---
-### 31. [ ] Implement `service_completion_save_evidence_draft`
+### 31. [x] Implement `service_completion_save_evidence_draft`
 
 Description:
 Authenticated provider RPC: upsert evidence phase=draft for CONFIRMED CS; optimistic draft_version CAS; incomplete drafts allowed; reject non-CONFIRMED; client-invisible via RLS. Optional idempotency for attachment binds.
@@ -1472,7 +1472,7 @@ Acceptance Criteria covered:
 9.1–9.8, 19.3
 
 ---
-### 32. [ ] Implement `service_completion_create_upload_session`
+### 32. [x] Implement `service_completion_create_upload_session`
 
 Description:
 Authenticated provider RPC creating open upload session bound to criterion_block_id, storage prefix, expires_at, max_files, idempotency_key UNIQUE. Returns session id + upload instructions metadata for signed URL step.
@@ -1513,7 +1513,7 @@ Acceptance Criteria covered:
 9.8, 18.1, 20.7
 
 ---
-### 33. [ ] Implement `service_completion_register_upload_object`
+### 33. [x] Implement `service_completion_register_upload_object`
 
 Description:
 Authenticated provider RPC registering storage_path under session with UNIQUE path idempotency; checksum/size optional. Does not proxy file bytes.
@@ -1554,40 +1554,40 @@ Acceptance Criteria covered:
 9.6, 18.8
 
 ---
-### 34. [ ] Edge/thin helper for completion evidence signed upload URLs
+### 34. [x] Completion evidence Storage upload (KYC pattern)
 
 Description:
-Implement thin Edge (or existing Storage signed-URL pattern) issuing short-lived upload URLs for open sessions. Client uploads directly to Storage (bypass Edge body). AuthZ: session owner + open status. MUST NOT become FSM authority.
+Client uploads evidence via authenticated Storage API under an open session prefix (RLS), same Option A pattern as provider KYC. No Edge signed-URL helper. AuthZ: session owner + open status via Storage policies + register RPC.
 
 Responsibilities:
-- Enable direct uploads at scale.
-- Keep Edge I/O-only.
+- Enable direct uploads at scale without Edge body proxy.
+- Keep path minting under session prefix.
 
 Implementation Details:
-- Align with KYC/chat signed URL patterns.
-- Rate-limit issuance if exposed.
+- create session RPC → `storage.upload` → register path RPC.
+- Rate limits / max_files enforced by Storage policy helper + register RPC.
 
 Deliverables:
-- Edge function or shared storage helper
-- Deno auth tests
+- Client upload API + Vitest
+- Storage RLS policies (Task 10)
 
 Dependencies:
 - Tasks 32–33
 
 Runtime Guarantees:
-- URL expiry bounds abuse window
+- Unique paths; no authenticated UPDATE
 
 Failure Handling:
-- Deny signed URL for frozen/expired sessions
+- Deny upload when session expired/closed or max_files reached
 
 Observability:
-- Sentry on issue failures
+- Client logs on upload failure
 
 Security Considerations:
-- JWT + ownership checks
+- JWT + ownership via RLS helpers
 
 Performance Considerations:
-- No file proxy through Edge
+- No file proxy through Edge; no signed-URL Edge hop
 
 Requirements covered:
 20
@@ -1596,7 +1596,7 @@ Acceptance Criteria covered:
 20.7
 
 ---
-### 35. [ ] Implement `service_completion_mark_executed`
+### 35. [x] Implement `service_completion_mark_executed`
 
 Description:
 Authenticated provider RPC per design §5.4: LOCK CS; idempotent if EXECUTED+key; require CONFIRMED + payment invariants; reject D < scheduled_start_date (SERVICE_NOT_YET_DUE); validate all criteria (Req 13); compute executed_late; freeze evidence with responses_hash; CS→EXECUTED; audit SERVICE_EXECUTED; mmd_ingest_event same TX intent. Reject legacy callers without checklist payload. ADR-0004 product writer.
@@ -1639,7 +1639,7 @@ Acceptance Criteria covered:
 10.1–10.9, 11.2–11.5, 12.1, 12.6, 13.1–13.7, 18.3, 24.1, 25.2, 25.3, 25.8
 
 ---
-### 36. [ ] Implement `service_completion_confirm_with_rating`
+### 36. [x] Implement `service_completion_confirm_with_rating`
 
 Description:
 Authenticated client RPC: single TX insert service_ratings (4 dimensions 1–5 + optional comment) + CS COMPLETED completed_by=client + audit SERVICE_COMPLETED + MMD provider notify. Reject missing scores with full rollback. Idempotent ALREADY_COMPLETED / unique rating. Race with auto-complete via FOR UPDATE + status predicate.
@@ -1682,7 +1682,7 @@ Acceptance Criteria covered:
 14.1–14.7, 18.2, 18.4, 18.7, 24.2, 25.2
 
 ---
-### 37. [ ] Implement `service_completion_auto_complete_executed`
+### 37. [x] Implement `service_completion_auto_complete_executed`
 
 Description:
 Service_role batch RPC: select EXECUTED where executed_at + grace elapsed, FOR UPDATE SKIP LOCKED, UPDATE WHERE status=EXECUTED → COMPLETED completed_by=system, audit SERVICE_AUTO_COMPLETED, MMD client notify with optional rating CTA. NO rating insert. Preserve executed_late. Per-row exception isolation. Default: do not block on payment is_disputed unless newer payment rule says so.
@@ -1724,7 +1724,7 @@ Acceptance Criteria covered:
 15.1–15.6, 18.7, 19.2, 24.3, 25.2
 
 ---
-### 38. [ ] Implement `service_completion_cron_auto_complete_executed` + `job_runs`
+### 38. [x] Implement `service_completion_cron_auto_complete_executed` + `job_runs`
 
 Description:
 pg_cron wrapper invoking auto-complete batch and recording job_runs scanned/succeeded/failed. Schedule ~aligned with existing payment auto-complete cadence or documented interval.
@@ -1764,7 +1764,7 @@ Acceptance Criteria covered:
 15.1, 15.7, 21.4
 
 ---
-### 39. [ ] Restore `submit_service_rating` / `update_service_rating` authenticated GRANTs
+### 39. [x] Restore `submit_service_rating` / `update_service_rating` authenticated GRANTs
 
 Description:
 GRANT EXECUTE on submit/update rating RPCs to authenticated for optional post-auto-complete path (Req 16). Manual confirm embeds rating inside `service_completion_confirm_with_rating` and MUST NOT rely on multi-call client saga. Enforce COMPLETED + ownership + edit window inside rating RPCs.
@@ -1806,7 +1806,7 @@ Acceptance Criteria covered:
 14.4, 16.1–16.5
 
 ---
-### 40. [ ] DROP/REVOKE `payment_mark_service_executed`, `payment_confirm_service_completed`, `payment_cron_auto_complete_*`
+### 40. [x] DROP/REVOKE `payment_mark_service_executed`, `payment_confirm_service_completed`, `payment_cron_auto_complete_*`
 
 Description:
 Remove product API surface for legacy payment-prefixed completion writers per ADR-0004: REVOKE EXECUTE from authenticated/anon/public and DROP or replace functions as appropriate after callers migrated (Task 41). NetCred charge/refund/settlement RPCs MUST remain. Update payment tests that asserted these names.
@@ -1848,7 +1848,7 @@ Acceptance Criteria covered:
 10.1, 14.1, 15.1 (ADR-0004 supersession)
 
 ---
-### 41. [ ] Migrate app callers from payments `serviceLifecycle` to `service-completion`
+### 41. [x] Migrate app callers from payments `serviceLifecycle` to `service-completion`
 
 Description:
 Update all app/Edge callers of mark-executed / confirm / auto-complete from payments feature re-exports to `src/features/service-completion` API (or interim RPC names). Remove payments ownership of EXECUTED/COMPLETED product transitions. Keep NetCred flows in payments.
@@ -1891,7 +1891,7 @@ Acceptance Criteria covered:
 10.9, 14.8, 15.1
 
 ---
-### 42. [ ] Seed MMD `SERVICE_AUTO_COMPLETED` template + `mmd_ingest_event` routing
+### 42. [x] Seed MMD `SERVICE_AUTO_COMPLETED` template + `mmd_ingest_event` routing
 
 Description:
 Add when-branch for `SERVICE_AUTO_COMPLETED` in `mmd_ingest_event` if missing; seed template `service.service_auto_completed` with optional_rating_cta vars; ensure unsupported_event_type cannot occur for auto-complete path.
@@ -1933,7 +1933,7 @@ Acceptance Criteria covered:
 15.6, 24.3, 24.5
 
 ---
-### 43. [ ] Extend MMD `SERVICE_EXECUTED` / `SERVICE_COMPLETED` templates for checklist/late
+### 43. [x] Extend MMD `SERVICE_EXECUTED` / `SERVICE_COMPLETED` templates for checklist/late
 
 Description:
 Extend existing SERVICE_EXECUTED client template vars with executed_late + deep link to confirm; ensure SERVICE_COMPLETED provider template still fires on manual confirm. Reuse channels/priority patterns; no READY spam.
@@ -1975,7 +1975,7 @@ Acceptance Criteria covered:
 ---
 ## Phase 7: Read Model & Dynamic Form
 
-### 44. [ ] Implement Dynamic Form `completion_criterion` block (ADR-0003)
+### 44. [x] Implement Dynamic Form `completion_criterion` block (ADR-0003)
 
 Description:
 Add `completion_criterion` block type to `src/features/dynamic-form/`: enunciado/label, met/not-met control, embedded evidence upload UI hooks, justification required when met=false, config `requires_evidence_when_met` + evidence min/max. Allowlist for completion schemas: completion_criterion | static_text only. MUST NOT reuse intake yes_no + image_gallery composition ([ADR-0002](./adr/0002-evidence-images-block-not-image-gallery.md) superseded for allowlist by ADR-0003).
@@ -2017,7 +2017,7 @@ Acceptance Criteria covered:
 4.3, 4.8, 8.1, 13.1, 13.4
 
 ---
-### 45. [ ] Implement `get_service_completion_context` RPC
+### 45. [x] Implement `get_service_completion_context` RPC
 
 Description:
 SECURITY DEFINER read-model RPC returning enrichment status/source/materialized_at/ops_attention boolean/schema (if READY+authorized), CS fields, evidence phase projection, capabilities flags per design §5.10. Omit draft responses to clients always; omit frozen responses unless client or contracted provider; omit schema until READY.
@@ -2059,7 +2059,7 @@ Acceptance Criteria covered:
 1.3, 1.4, 8.1–8.5, 23.5, 23.6
 
 ---
-### 46. [ ] Add lightweight enrichment/executed_late fields to `list_services` / `get_service`
+### 46. [x] Add lightweight enrichment/executed_late fields to `list_services` / `get_service`
 
 Description:
 Extend list/detail projections with enrichment_status, enrichment_ready, executed_late (when frozen). MUST NOT embed full checklist_schema in list cards. Detail may branch to context RPC for schema/responses.
@@ -2102,7 +2102,7 @@ Acceptance Criteria covered:
 ---
 ## Phase 8: App Feature
 
-### 47. [ ] Scaffold `src/features/service-completion/` Public API
+### 47. [x] Scaffold `src/features/service-completion/` Public API
 
 Description:
 Create feature folders api/ components/ hooks/ types/ utils/ index.ts. Export only Public API consumed by view-services. api/ wraps RPCs/Edge; hooks orchestrate; components do not import Supabase. Align with feature-architecture + api-layer rules.
@@ -2144,7 +2144,7 @@ Acceptance Criteria covered:
 1.3 (architecture assumption)
 
 ---
-### 48. [ ] Enrichment processing UX (“em processamento”)
+### 48. [x] Enrichment processing UX (“em processamento”)
 
 Description:
 Hooks + UI projecting enrichment PENDING/RUNNING as processing; READY clears; ABORTED/cancelled clears to cancelled messaging. Poll/subscribe via get_service_completion_context or list fields. MUST NOT invent new service_request_status.
@@ -2186,7 +2186,7 @@ Acceptance Criteria covered:
 1.3, 7.7
 
 ---
-### 49. [ ] Provider draft checklist UX
+### 49. [x] Provider draft checklist UX
 
 Description:
 Provider UI to render READY schema via completion_criterion, save drafts through API, handle draft_version conflicts with reload prompt. Invisible to client. Available while CS CONFIRMED.
@@ -2226,7 +2226,7 @@ Acceptance Criteria covered:
 9.1, 9.3, 9.7
 
 ---
-### 50. [ ] Provider EXECUTED wizard (final submit)
+### 50. [x] Provider EXECUTED wizard (final submit)
 
 Description:
 Wizard: complete all criteria, enforce unmet justification+evidence, show not-yet-due errors, allow late with executed_late messaging, single final submit calling `service_completion_mark_executed` with idempotency key. No post-EXECUTED self-serve edit.
@@ -2267,7 +2267,7 @@ Acceptance Criteria covered:
 10.1, 11.2, 11.5, 12.1, 13.1–13.4
 
 ---
-### 51. [ ] Client confirm+rating review flow
+### 51. [x] Client confirm+rating review flow
 
 Description:
 Client UI: review frozen checklist/evidence (highlight unmet), enter 4 scores + optional comment, confirm via `service_completion_confirm_with_rating`. Order: review → ratings → confirm. Show executed_late badge. Support optional post-auto-complete rating via submit_service_rating when completed_by=system.
@@ -2309,7 +2309,7 @@ Acceptance Criteria covered:
 11.4, 13.4, 14.1, 14.8, 16.1
 
 ---
-### 52. [ ] Dispute stub UI + `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL`
+### 52. [x] Dispute stub UI + `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL`
 
 Description:
 Client dispute entry on EXECUTED/COMPLETED: copy “Abrir disputa” / “Em breve — fale com o suporte Renovi”; trackEvent then open support URL (env or orbit.dispute_support_url). If URL unset → toast Em breve only; MUST NOT crash. MUST NOT pause auto-complete, mutate evidence, or create dispute rows.
@@ -2349,7 +2349,7 @@ Acceptance Criteria covered:
 17.1–17.5
 
 ---
-### 53. [ ] view-services cutover from payments re-exports to service-completion Public API
+### 53. [x] view-services cutover from payments re-exports to service-completion Public API
 
 Description:
 Update view-services to import completion UX/hooks/types only from `@/features/service-completion`. Remove payments re-exports for mark/confirm lifecycle. Compose service detail with enrichment/completion panels.
@@ -2392,7 +2392,7 @@ Acceptance Criteria covered:
 ---
 ## Phase 9: Observability
 
-### 54. [ ] Enrichment events completeness + correlation propagation
+### 54. [x] Enrichment events completeness + correlation propagation
 
 Description:
 Ensure every claim/retry/ready/fallback/abort/reclaim/ops_attention path appends enrichment events with actor, from/to, lease_generation, correlation_id, payload. Propagate correlation_id into Edge logs and finalize.
@@ -2432,7 +2432,7 @@ Acceptance Criteria covered:
 1.8, 21.1, 21.6
 
 ---
-### 55. [ ] Sentry tags + structured logging for enrichment and completion
+### 55. [x] Sentry tags + structured logging for enrichment and completion
 
 Description:
 Instrument Edge and RPC error paths with Sentry tags distinguishing transient LLM, validation, fallback, ops_attention, mark-executed, confirm, auto-complete. Use shared logger — not console. Redact checklist free text and evidence URLs.
@@ -2473,7 +2473,7 @@ Acceptance Criteria covered:
 21.1, 21.2, 21.8
 
 ---
-### 56. [ ] Metrics and alerts (ops_attention CRITICAL, enrichment age, ratios)
+### 56. [x] Metrics and alerts (ops_attention CRITICAL, enrichment age, ratios)
 
 Description:
 Define/query metrics: enrichment age p50/p95, AI vs fallback ratio, executed_late ratio, auto-complete vs manual ratio, confirm success, lease reclaim count, orphan deletes. Alerts: ops_attention CRITICAL; missing templates CRITICAL; PENDING age threshold WARNING→CRITICAL (excluding ops_attention); auto-complete job_runs errors WARNING.
@@ -2515,29 +2515,29 @@ Acceptance Criteria covered:
 ---
 ## Phase 10: Recovery & Reliability
 
-### 57. [ ] Implement `service_completion_janitor_orphan_uploads` claim RPC
+### 57. [x] Implement `service_completion_janitor_orphan_uploads` (SQL, KYC pattern)
 
 Description:
-Service_role RPC selecting expired open sessions / unreferenced objects older than `completion_evidence_orphan_ttl_hours`, SKIP LOCKED/batch, marking candidates for delete; MUST NEVER select objects referenced by frozen packages or referenced_in_responses=true.
+Service_role RPC that expires open sessions past TTL and deletes unreferenced Storage objects (`DELETE FROM storage.objects`) + registry rows older than `completion_evidence_orphan_ttl_hours`, SKIP LOCKED/batch; MUST NEVER delete objects referenced by frozen packages or `referenced_in_responses=true` (defensive frozen scan on locked batch only).
 
 Responsibilities:
-- Identify orphans safely.
+- Identify and remove orphans safely in SQL (same pattern as `payment_janitor_orphan_kyc_documents`).
 
 Implementation Details:
-- Return storage paths for Edge delete.
+- No Edge claim/finalize split; delete in-place like KYC.
 
 Deliverables:
 - Migration RPC
-- pgTAP: frozen refs excluded
+- pgTAP: frozen refs excluded; orphans deleted; sessions expired
 
 Dependencies:
 - Tasks 1, 7–8
 
 Runtime Guarantees:
-- Idempotent candidate selection
+- Idempotent (missing Storage object = success)
 
 Failure Handling:
-- Skip locked under concurrent janitors
+- Skip locked under concurrent janitors; per-row delete failures counted
 
 Observability:
 - Counts for job_runs
@@ -2555,20 +2555,19 @@ Acceptance Criteria covered:
 22.4, 22.5
 
 ---
-### 58. [ ] Orphan janitor cron + Edge Storage delete
+### 58. [x] Orphan janitor cron (SQL-only)
 
 Description:
-Implement `service_completion_cron_orphan_upload_janitor` with job_runs; Edge deletes Storage objects for claimed orphans; mark sessions expired/aborted; rate-limit deletes. Idempotent re-runs.
+Implement `service_completion_cron_orphan_upload_janitor` with job_runs; calls SQL janitor (expire sessions + Storage delete). Idempotent re-runs. No Edge Function.
 
 Responsibilities:
-- Self-heal storage cost.
+- Self-heal storage cost on schedule.
 
 Implementation Details:
-- I/O delete in Edge; DB claim in RPC.
+- Cron wrapper sets service_role JWT claims and invokes `service_completion_janitor_orphan_uploads`.
 
 Deliverables:
-- Cron + Edge function
-- Deno delete idempotency tests
+- Cron + pgTAP (wrapper exists; finalize RPC dropped)
 
 Dependencies:
 - Tasks 34, 57
@@ -2583,10 +2582,10 @@ Observability:
 - job_runs + orphan delete metric
 
 Security Considerations:
-- Storage admin credentials Edge-only
+- service_role / postgres cron only
 
 Performance Considerations:
-- Rate-limited deletes
+- Bounded batch per tick
 
 Requirements covered:
 20, 22
@@ -2595,7 +2594,7 @@ Acceptance Criteria covered:
 20.2, 22.4
 
 ---
-### 59. [ ] Failure matrix verification — reclaim, wake-fail, READY-without-dispatch
+### 59. [x] Failure matrix verification — reclaim, wake-fail, READY-without-dispatch
 
 Description:
 Executable verification task (scripts/pgTAP/Deno) covering design §8 failure matrix: expired lease reclaim + stale finalize reject; wake failure recovered by cron; READY without dispatch repaired; invalid AI → retry → fallback; missing template → ops_attention. Document expected outcomes in test names.
@@ -2637,7 +2636,7 @@ Acceptance Criteria covered:
 ---
 ## Phase 11: Security
 
-### 60. [ ] RLS pgTAP deny matrix (schema vs responses, draft hidden)
+### 60. [x] RLS pgTAP deny matrix (schema vs responses, draft hidden)
 
 Description:
 pgTAP suite asserting: client cannot SELECT draft responses; other providers cannot read frozen responses; schema hidden until READY; authenticated cannot UPDATE enrichment/evidence freeze columns directly; worker RPCs denied to authenticated.
@@ -2676,7 +2675,7 @@ Acceptance Criteria covered:
 8.3–8.7, 11.2, 23.5, 23.6
 
 ---
-### 61. [ ] GRANT posture audit for enrichment vs completion RPCs
+### 61. [x] GRANT posture audit for enrichment vs completion RPCs
 
 Description:
 Apply/verify GRANT/REVOKE matrix from design §11.2.2: worker enrichment RPCs service_role only; mark/confirm/draft/upload/context authenticated; auto-complete/janitor/ops_attention service_role; clear_ops_attention service_role (+ optional ops).
@@ -2715,7 +2714,7 @@ Acceptance Criteria covered:
 6.8, 8.7
 
 ---
-### 62. [ ] Idempotency/replay tests for mark-executed and confirm-with-rating
+### 62. [x] Idempotency/replay tests for mark-executed and confirm-with-rating
 
 Description:
 pgTAP/Deno: replay same idempotency key after success returns same outcome without mutating frozen package or duplicating ratings; concurrent confirm vs auto-complete single winner; duplicate upload path register safe.
@@ -2756,7 +2755,7 @@ Acceptance Criteria covered:
 ---
 ## Phase 12: Performance
 
-### 63. [ ] Verify/tune partial indexes for enrichment claim and lease reclaim
+### 63. [x] Verify/tune partial indexes for enrichment claim and lease reclaim
 
 Description:
 EXPLAIN/pgTAP performance notes confirming claim due and lease expired partial indexes used by enrichment_claim_batch and reclaim. Add auto-complete supporting indexes on CS (status, executed_at) if missing.
@@ -2796,7 +2795,7 @@ Acceptance Criteria covered:
 6.1, 6.7, 19.6, 20.2
 
 ---
-### 64. [ ] Verify batch/LLM pacing constants under load assumptions
+### 64. [x] Verify batch/LLM pacing constants under load assumptions
 
 Description:
 Validate defaults (batch 20, lease 120s, retry base 30s, AI attempts 3) against Edge timeout and LLM provider quotas. Document tuning knobs; ensure worker respects constants dynamically (no stale hardcodes).
@@ -2838,7 +2837,7 @@ Acceptance Criteria covered:
 ---
 ## Phase 13: Verification
 
-### 65. [ ] pgTAP — Enrichment FSM legal transitions
+### 65. [x] pgTAP — Enrichment FSM legal transitions
 
 Description:
 Suite covering PENDING→RUNNING→READY; RUNNING→PENDING retry; ABORT from PENDING/RUNNING; reject illegal transitions; READY/ABORTED terminal; schema immutability after READY.
@@ -2877,7 +2876,7 @@ Acceptance Criteria covered:
 25.1, 25.3, 25.4
 
 ---
-### 66. [ ] pgTAP — Bootstrap handoff, OPEN non-bootstrap, republish enqueue
+### 66. [x] pgTAP — Bootstrap handoff, OPEN non-bootstrap, republish enqueue
 
 Description:
 Assert: OPEN insert creates no dispatch; finalize READY creates DISPATCH_PENDING with delay; conflict does not reset next_batch_at; republish enqueues fresh PENDING enrichment without copying schema; repair bootstrap works.
@@ -2916,7 +2915,7 @@ Acceptance Criteria covered:
 2.1–2.4, 2.7, 2.9, 23.1
 
 ---
-### 67. [ ] pgTAP — Cancel vs READY race
+### 67. [x] pgTAP — Cancel vs READY race
 
 Description:
 Concurrent-style tests: cancel wins → ABORTED, no schema, no dispatch; READY wins → schema+dispatch then cancel follows published path. Delayed finalize after abort NO-OP.
@@ -2955,7 +2954,7 @@ Acceptance Criteria covered:
 2.6, 7.1–7.5
 
 ---
-### 68. [ ] pgTAP — `executed_late` BRT boundaries + not-yet-due
+### 68. [x] pgTAP — `executed_late` BRT boundaries + not-yet-due
 
 Description:
 Freeze clock/BRT dates: before start → SERVICE_NOT_YET_DUE; on-time window → executed_late false; after end+1 → executed_late true still allowed; auto-complete does not clear flag; reschedule dates honored.
@@ -2994,7 +2993,7 @@ Acceptance Criteria covered:
 11.1–11.5, 11.7, 11.8
 
 ---
-### 69. [ ] pgTAP — Mark executed validation (negatives, hash, idempotency)
+### 69. [x] pgTAP — Mark executed validation (negatives, hash, idempotency)
 
 Description:
 Unmet without justification/evidence rejected; unmet with both → EXECUTED; responses_hash stable; idempotent replay; missing checklist fail closed; draft invisible assertions optional here or RLS suite.
@@ -3033,7 +3032,7 @@ Acceptance Criteria covered:
 10.1–10.7, 12.6, 13.1–13.3, 13.6
 
 ---
-### 70. [ ] pgTAP — Confirm+rating vs auto-complete race + rating uniqueness
+### 70. [x] pgTAP — Confirm+rating vs auto-complete race + rating uniqueness
 
 Description:
 Manual confirm inserts rating+COMPLETED; missing score rolls back; auto-complete no rating; race yields single COMPLETED; duplicate rating prevented; completed_by preserved for winner.
@@ -3072,7 +3071,7 @@ Acceptance Criteria covered:
 14.2, 14.3, 14.5, 14.6, 15.2, 15.3, 15.5, 25.2
 
 ---
-### 71. [ ] pgTAP — ops_attention skip + template cascade fallback
+### 71. [x] pgTAP — ops_attention skip + template cascade fallback
 
 Description:
 After max attempts with missing templates → ops_attention set, claim skips row, no READY; after seeding template + clear_ops_attention → fallback READY with source fallback_template; invalid template treated as missing.
@@ -3111,10 +3110,10 @@ Acceptance Criteria covered:
 5.1–5.5, 22.6, 22.7
 
 ---
-### 72. [ ] Deno Edge tests — generate-completion-checklist + orphan janitor
+### 72. [x] Deno Edge tests — generate-completion-checklist
 
 Description:
-Deno suite: claim→validate→finalize mocking LLM; invalid schema→retry; exhausted→fallback; abort/stale NO-OP; truncation logged; timeout classification; orphan delete idempotent. yarn test:deno filter for these functions.
+Deno suite: claim→validate→finalize mocking LLM; invalid schema→retry; exhausted→fallback; abort/stale NO-OP; truncation logged; timeout classification. Orphan janitor is SQL-only (pgTAP Tasks 57–58). yarn test:deno filter for checklist function.
 
 Responsibilities:
 - Worker behavior without live LLM.
@@ -3123,7 +3122,7 @@ Implementation Details:
 - Mock LLM/provider HTTP.
 
 Deliverables:
-- Deno test files under supabase/functions
+- Deno test files under supabase/functions/generate-completion-checklist
 
 Dependencies:
 - Tasks 26, 29, 58
@@ -3150,7 +3149,7 @@ Acceptance Criteria covered:
 3.2–3.5, 4.1, 20.5, 22.3, 22.4
 
 ---
-### 73. [ ] Vitest — service-completion feature hooks/UI gates
+### 73. [x] Vitest — service-completion feature hooks/UI gates
 
 Description:
 Vitest (dom/unit as appropriate): enrichment processing projection; draft conflict handling; EXECUTED wizard validation; confirm missing scores blocked; dispute stub analytics + URL missing toast; view-services consumes Public API only (import boundary test if feasible).
@@ -3191,7 +3190,7 @@ Acceptance Criteria covered:
 ---
 ## Phase 14: Rollout & Docs
 
-### 74. [ ] Cutover checklist — DB reset, templates before traffic, no OPEN backfill
+### 74. [x] Cutover checklist — DB reset, templates before traffic, no OPEN backfill
 
 Description:
 Publish engineering cutover checklist: reset DB (decision 22); deploy migrations Phases 1–6; verify global template seeded; DROP OPEN trigger verified; create+republish enqueue smoke; enrichment worker live; payment_* writers revoked; app feature flags/env for dispute URL; no grandfather of legacy OPEN without enrichment.
@@ -3204,8 +3203,8 @@ Implementation Details:
 - Document rollback boundaries from Execution Strategy.
 
 Deliverables:
-- `docs/service-completion/cutover.md` or section in README — only if team wants; else checklist in this task completion notes + PR template
-- Ops sign-off list
+- [`docs/service-completion/cutover.md`](./cutover.md) — engineering checklist + ops sign-off
+- Ops sign-off list (in cutover.md §0)
 
 Dependencies:
 - Phases 1–8 complete
@@ -3232,7 +3231,7 @@ Acceptance Criteria covered:
 2.1, 2.8, 5.4 (operational)
 
 ---
-### 75. [ ] Sync matching docs — bootstrap is READY-handoff not OPEN-insert
+### 75. [x] Sync matching docs — bootstrap is READY-handoff not OPEN-insert
 
 Description:
 Update matching-algorithm requirements/design/CONTEXT references that still say dispatch bootstraps on first OPEN insert. Normative rule: enrichment READY handoff via `matching_bootstrap_dispatch_for_service_request`; 5-minute delay starts at bootstrap.
@@ -3271,7 +3270,7 @@ Acceptance Criteria covered:
 2.8, 23.7
 
 ---
-### 76. [ ] Sync payment Req 32 / design refs to `service_completion_*`
+### 76. [x] Sync payment Req 32 / design refs to `service_completion_*`
 
 Description:
 Update payment-system docs/tests commentary that owned mark/confirm/auto-complete under payment_* to point at service-completion design + ADR-0004. Clarify NetCred remains payments; completion writers moved.
@@ -3310,7 +3309,7 @@ Acceptance Criteria covered:
 ADR-0004; design precedence note
 
 ---
-### 77. [ ] Sync `docs/business/` for completion checklist and confirmation UX
+### 77. [x] Sync `docs/business/` for completion checklist and confirmation UX
 
 Description:
 Update business docs for enrichment processing, checklist evidence, executed_late, confirm+rating, auto-complete, dispute stub support link — per business-docs-sync rule after product behavior ships.
@@ -3349,7 +3348,7 @@ Acceptance Criteria covered:
 17.1, 24.1–24.3 (product-facing)
 
 ---
-### 78. [ ] Regenerate Supabase types after schema/RPC freeze
+### 78. [x] Regenerate Supabase types after schema/RPC freeze
 
 Description:
 Run `yarn generate-supabase-types` (nvm use 24.13) after migrations stabilize; commit database.types.ts updates; ensure feature types align with generated RPC signatures.
@@ -3388,7 +3387,7 @@ Acceptance Criteria covered:
 1.1 (engineering hygiene)
 
 ---
-### 79. [ ] Provision completion evidence Storage bucket in all environments
+### 79. [x] Provision completion evidence Storage bucket in all environments
 
 Description:
 Ensure dedicated bucket exists in local/staging/prod with policies matching Task 10; document env-specific names if any; verify janitor service_role can delete. Include in cutover checklist.
@@ -3400,8 +3399,9 @@ Implementation Details:
 - MUST NOT reuse request-quote/chat buckets.
 
 Deliverables:
-- Infra/config scripts or Supabase dashboard notes
-- Smoke upload in staging
+- [`docs/service-completion/storage-bucket.md`](./storage-bucket.md) — env provisioning + smoke
+- Cutover checklist §3 link
+- Local verified: bucket + 3 policies present after `db:reset`
 
 Dependencies:
 - Tasks 10, 34, 58
@@ -3428,7 +3428,7 @@ Acceptance Criteria covered:
 20.7, 22.4
 
 ---
-### 80. [ ] Final architecture compliance review (ADRs 0001–0004 + CONTEXT decisions)
+### 80. [x] Final architecture compliance review (ADRs 0001–0004 + CONTEXT decisions)
 
 Description:
 Staff review checklist: separate enrichment FSM (0001); no image_gallery in completion schemas (0002); completion_criterion allowlist (0003); no payment_* product completion writers (0004); decisions 22–32 honored (reset cutover, wake+cron, evidence table, bootstrap extract, MMD auto-complete, grants, dispute env). Produce sign-off before declaring feature done.
@@ -3441,7 +3441,7 @@ Implementation Details:
 - Confirm Traceability table coverage 1–25.
 
 Deliverables:
-- Review notes / PR checklist completion
+- [`docs/service-completion/compliance-signoff.md`](./compliance-signoff.md) — ADR/decision checklist + local spot-checks + human sign-off table
 
 Dependencies:
 - Tasks 1–79

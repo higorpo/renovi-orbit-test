@@ -4,7 +4,7 @@
 
 - **Para que serve:** lista e detalhe unificados de um **pedido** (`service_request_id`) para cliente e prestador, com fase de produto (`list_phase`) calculada no servidor e um único shape (`ServiceModel`).
 - **Quem usa:** cliente e prestador autenticados; a UI do detalhe muda por papel. Visitante não acessa (dashboard protegido).
-- **Valor:** evita telas divergentes; centraliza badges, filtros de aba e ações contextuais (orçamentos, cancelar, republicar, pagamento, conclusão, reagendar).
+- **Valor:** evita telas divergentes; centraliza badges, filtros de aba e ações contextuais (orçamentos, cancelar, republicar, pagamento, **conclusão via service-completion**, reagendar).
 - **ID canônico:** `service_request_id` — rota `/dashboard/services/:id`.
 - **Apresentação:** a partir de Meus Serviços / Trabalhos o detalhe abre em **sheet** (modal routing); deep link ou calendário abrem **página** (stack). Não é mais placeholder de dashboard.
 
@@ -18,7 +18,7 @@
 | Sheet | `ServiceDetailSheet` montado no `DashboardLayout` quando `useServiceDetailModal().isOpen` |
 | Cancelamento pedido (cliente) | RPC `cancel_service_request` via `cancelService` |
 | Republicação (cliente) | RPC `republish_cancelled_service_request` |
-| Contrato | Tabela `contracted_services`; seção + ações de payments / reschedule / lifecycle |
+| Contrato | Tabela `contracted_services`; seção payments/reschedule; conclusão via **service-completion** (wizards) |
 | Sem PostgREST list/detail | API TS só `supabase.rpc(...)` |
 
 ## 3. Features do módulo
@@ -66,6 +66,7 @@
 - **negotiation-proposals** — sheet de orçamentos; composer no detalhe prestador.
 - **chats** — conversas, initiate, botão chat contratado.
 - **payments** / **service-reschedule** — ações na `ServiceContractedSection`.
+- **service-completion** — banner enrichment; `ProviderExecutedWizard` / `ClientConfirmRatingWizard` (+ stub disputa no wizard); só Public API.
 - **DashboardLayout** — hospeda `ServiceDetailSheet`.
 
 ## 9. Riscos e lacunas
@@ -80,9 +81,9 @@
 | Área | Caminhos |
 |------|----------|
 | Public API | `src/features/view-services/index.ts` |
-| API | `api/services.api.ts`, `markServiceExecuted.api.ts`, `confirmServiceCompleted.api.ts`, `opportunityView.api.ts` |
-| Hooks | `useServicesList`, `useService`, `useCancelService`, `useRepublishCancelledService`, `useServiceDetailModal`, conclusão, chat, budget sheet |
-| UI | `ServiceDetailShell`, `ServiceDetailSheet`, `ServiceDetailPage`, `ServiceContractedSection`, `SimpleServiceCard`, … |
+| API | `api/services.api.ts`, `opportunityView.api.ts` (conclusão **não** vive mais em APIs locais de lifecycle) |
+| Hooks | `useServicesList`, `useService`, `useCancelService`, `useRepublishCancelledService`, `useServiceDetailModal`, chat, budget sheet |
+| UI | `ServiceDetailShell`, `ServiceDetailSheet`, `ServiceDetailPage` (compõe wizards de `service-completion`), `ServiceContractedSection`, `SimpleServiceCard`, … |
 | Tipos / nav | `types/service.types.ts`, `types/serviceDetailNavigation.types.ts` |
 | Constantes | `queryKeys.ts`, `routes.ts`, `statusTabs.ts`, `statusBadge.ts` |
 | SQL | `20260705207000_*`, `20260705208000_*`, `20260705209000_*`, `20260802170000_republish_*` |

@@ -1,6 +1,6 @@
 # Pedir orçamento (`request-quote`)
 
-Canal principal de **entrada de pedidos** na plataforma. Wizard público em `/pedir-orcamento` que cria `service_requests` prontos para matching e orçamentos.
+Canal principal de **entrada de pedidos** na plataforma. Wizard público em `/pedir-orcamento` que cria `service_requests` `OPEN` e enfileira enrichment; matching começa só após READY.
 
 Detalhamento passo a passo, validações, analytics e matriz de lacunas: [features/pedir-orcamento.md](./features/pedir-orcamento.md).
 
@@ -10,7 +10,7 @@ Detalhamento passo a passo, validações, analytics e matriz de lacunas: [featur
 
 - **Para que serve:** visitante ou cliente monta o pedido (serviço, detalhes estruturados, descrição com IA opcional, fotos, endereço, identidade se necessário) e o backend cria **`service_requests`** com `status: "OPEN"`.
 - **Quem usa:** visitantes e clientes; **não** é fluxo do prestador.
-- **Processo suportado:** captação padronizada de demanda → matching ([matching-dispatch](../matching-dispatch/README.md)) → orçamentos / negociação.
+- **Processo suportado:** captação padronizada de demanda → enrichment (checklist) → matching após READY ([matching-dispatch](../matching-dispatch/README.md) / [service-completion](../service-completion/README.md)) → orçamentos / negociação.
 - **Valor:** formulário versionado por serviço + metadados opcionais de IA + geolocalização via endereço; rascunho local reduz abandono.
 - **Riscos operacionais:** abuso (rate limit + reCAPTCHA); **redirect pós-pedido logado** quebrado ([P-01](../../pendencias-e-incertezas.md)); **limite de foto** diverge entre cliente (10 MB) e servidor (5 MB).
 
@@ -29,7 +29,7 @@ Detalhamento passo a passo, validações, analytics e matriz de lacunas: [featur
 | **Antes do POST** | reCAPTCHA ação `request_quote_submit` (script **pré-carregado no mount** do submit hook; token no submit); opcionalmente **nsfwjs** nas fotos |
 | **Pós-sucesso** | Convidado → `ConfirmEmailScreen`; logado → toast + `navigate("/dashboard/client")` (**rota inexistente** — P-01) |
 | **Limites** | Não cobre listagem/acompanhamento do pedido (ver [my-services](../my-services/README.md) / [view-services](../view-services/README.md)) |
-| **Relação** | Consome `dynamic-form`, `addresses`, `auth`; alimenta matching via `OPEN` |
+| **Relação** | Consome `dynamic-form`, `addresses`, `auth`; cria `OPEN` + enqueue enrichment; matching só após enrichment READY |
 
 ---
 
@@ -76,7 +76,7 @@ flowchart TD
 3. **Descrição/fotos:** IA automática (condições em feature); fotos opcionais.
 4. **Endereço:** logado = existente ou novo (submit imediato); convidado = só novo → passo 5.
 5. **Identidade (convidado):** signup `client` + reCAPTCHA + POST com anon key.
-6. **Saída:** pedido `OPEN` → bootstrap de matching; convidado aguarda e-mail; logado tenta ir a `/dashboard/client` (quebrado).
+6. **Saída:** pedido `OPEN` + enrichment `PENDING` (matching **não** inicia só com OPEN — bootstrap após READY); convidado aguarda e-mail; logado tenta ir a `/dashboard/client` (quebrado).
 
 **Alternativos:** restauração de rascunho; login no meio do fluxo (passo 5 → força passo 4); e-mail já cadastrado → `/login`; rate limit 429; falha de fotos NSFW / tamanho.
 
@@ -121,7 +121,8 @@ Detalhe: [pedir-orcamento.md](./features/pedir-orcamento.md).
 | **Edge `create-request-quote-order`** | Ordem completa: rate limit, multipart, reCAPTCHA, usuário, endereço, fotos, insert pedido |
 | **Edge `generate-smart-description`** | Descrição estruturada via `supabase.functions.invoke` |
 | **reCAPTCHA / `verify-recaptcha`** | Pré-carga do script no mount do fluxo; token no submit; validação na Edge de pedido (função dedicada no ecossistema) |
-| **[matching-dispatch](../matching-dispatch/README.md)** | Downstream: bootstrap no primeiro `OPEN` |
+| **[matching-dispatch](../matching-dispatch/README.md)** | Downstream **após** enrichment READY (não no insert `OPEN`) |
+| **[service-completion](../service-completion/README.md)** | Enqueue enrichment na criação do pedido; checklist antes do feed |
 | **[my-services](../my-services/README.md)** | Upstream UX: CTA novo pedido; acompanhamento fora deste módulo |
 | **Analytics / Sentry** | Funil `quote_request_*`, métricas `request_quote.order_created` / `smart_description_generated` |
 

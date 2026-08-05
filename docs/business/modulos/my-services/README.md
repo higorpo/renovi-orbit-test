@@ -53,7 +53,7 @@ Guards: dashboard sob `ProtectedRoute` `client` \| `provider`. Calendário: guar
 ## 6. Regras transversais
 
 - Paginação server-side (20 itens); busca debounced **300 ms**.
-- Aba **Disputas** existe na UI mas `tabIncludesStatus(..., dispute)` sempre `false` — sem linhas.
+- Aba **Disputas** existe na UI mas `tabIncludesStatus(..., dispute)` sempre `false` — sem linhas (stub de disputa fica no detalhe via **service-completion**, não nesta aba).
 - Opções de dropdown de filtro (categoria/cidade/bairro) derivadas dos **itens já carregados** — podem ficar incompletas com paginação.
 - Campo `categoryId` no estado de filtro envia **título** do serviço como `p_category_title` (não UUID).
 - Destaque `PENDING_PAYMENT`: copy compartilhada em `pendingPaymentHighlight.ts`; no cliente, `FAILED_PERMANENT` prevalece sobre unread.
@@ -72,6 +72,7 @@ Consumidas via `view-services` / RPCs (não há API própria de `my-services`):
 | Módulo | Uso |
 |--------|-----|
 | `view-services` | Lista, detalhe, cancelamento, budget sheet helpers, navegação sheet |
+| `service-completion` | Conclusão no **detalhe** (`view-services`): enrichment banner, wizards EXECUTED/confirm, stub disputa — não na listagem |
 | `negotiation-proposals` | `ReceivedBudgetDetailsSheet`; dialogs de proposta do prestador |
 | `chats` | Navegação para conversa / filtro por service request |
 | `payments` | `ManualPaymentDialog` + `usePaymentSchedule` no card cliente |

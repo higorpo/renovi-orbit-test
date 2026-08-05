@@ -1512,21 +1512,26 @@ The script MUST be loaded asynchronously to avoid blocking card form rendering; 
 
 ## Requirement 32: Service Completion Flow (EXECUTED → COMPLETED)
 
+> **Superseded for product writers (2026-08 / [ADR-0004](../service-completion/adr/0004-completion-rpcs-outside-payments.md)):**  
+> Self-serve `EXECUTED` / manual `COMPLETED`+rating / system auto-complete are **`service_completion_*`** only — see [service-completion design](../service-completion/design.md) (§5.4–5.5, auto-complete) and [CONTEXT decisions 28–29](../service-completion/CONTEXT.md).  
+> Legacy `payment_mark_service_executed`, `payment_confirm_service_completed`, and `payment_cron_auto_complete_*` are **DROPped** from the product API.  
+> **Payments still owns:** NetCred charge/refund/settlement, `is_disputed` chargeback handling that MUST NOT block completion, and D+30 payout disclosure from `paid_at` (AC below). Checklist evidence, `executed_late`, confirm+rating atomicity, and enrichment gates live in service-completion.
+
 *User Story*: As a service provider, I want to mark a service as executed after I deliver it, and as a client I want to confirm the service was completed, so that both parties have a clear record of service delivery.
 
 ### Acceptance Criteria
 
 **GIVEN** `contracted_services.status = 'CONFIRMED'` and `payment_schedules.state = 'PAID'`  
-**WHEN** the provider marks the service as executed  
-**THEN** the system MUST verify `scheduled_start_date <= CURRENT_DATE` (date-only comparison, no time component); if the scheduled date is in the future, the RPC MUST return HTTP 409 with `error_code: 'SERVICE_NOT_YET_DUE'`; if eligible, the system MUST atomically: (1) transition `contracted_services.status = 'EXECUTED'`, `executed_at = now()`; (2) insert a `payment_audit_log` entry for `event_type = 'SERVICE_EXECUTED'`, `actor = 'provider'`; (3) enqueue a Push notification to the client requesting confirmation ("Confirmar recebimento do serviço").
+**WHEN** the provider marks the service as executed via **`service_completion_mark_executed`** (checklist + evidence payload required)  
+**THEN** the system MUST enforce service-completion temporal/checklist rules (including not-yet-due); if eligible, atomically transition to `EXECUTED` with frozen evidence + audit/`SERVICE_EXECUTED` + client notify — see service-completion Req 10–13. *(Historical payment-only date gate without checklist is obsolete.)*
 
 **GIVEN** `contracted_services.status = 'EXECUTED'`  
-**WHEN** the client explicitly confirms service delivery  
-**THEN** the system MUST atomically: (1) transition `contracted_services.status = 'COMPLETED'`, `completed_at = now()`, `completed_by = 'client'`; (2) insert a `payment_audit_log` entry for `event_type = 'SERVICE_COMPLETED'`; (3) enqueue a Push notification to the provider confirming completion.
+**WHEN** the client explicitly confirms service delivery via **`service_completion_confirm_with_rating`**  
+**THEN** the system MUST atomically transition to `COMPLETED` with `completed_by = 'client'` **and** insert `service_ratings` (manual path requires scores) + audit/`SERVICE_COMPLETED` + provider notify — see service-completion Req 14.
 
-**GIVEN** `contracted_services.status = 'EXECUTED'` AND `executed_at + interval '24 hours' <= now()`  
-**WHEN** the `auto-complete-executed-services` cron fires  
-**THEN** the system MUST atomically: (1) transition `contracted_services.status = 'COMPLETED'`, `completed_at = now()`, `completed_by = 'system'`; (2) insert a `payment_audit_log` entry for `event_type = 'SERVICE_AUTO_COMPLETED'`; (3) enqueue a Push notification to the client informing them the service was automatically confirmed.
+**GIVEN** `contracted_services.status = 'EXECUTED'` AND grace window elapsed (`executed_at` + ~24h)  
+**WHEN** **`service_completion_cron_auto_complete_executed`** / `service_completion_auto_complete_executed` runs  
+**THEN** the system MUST atomically transition to `COMPLETED` with `completed_by = 'system'` (rating optional afterward) + audit/`SERVICE_AUTO_COMPLETED` + client notify — see service-completion Req 15. *(Replaces `payment_cron_auto_complete_executed_services`.)*
 
 **GIVEN** `contracted_services.status = 'EXECUTED'`  
 **WHEN** `payment_schedules.is_disputed = true` (chargeback in progress)  
@@ -1537,8 +1542,8 @@ The script MUST be loaded asynchronously to avoid blocking card form rendering; 
 **THEN** it MUST show estimated bank receipt ~D+30 from `paid_at` and MUST NOT imply that `COMPLETED` triggers bank transfer.
 
 **GIVEN** the provider tries to mark a service as executed  
-**WHEN** `contracted_services.status ≠ 'CONFIRMED'`  
-**THEN** the RPC MUST return HTTP 409 with `error_code: 'INVALID_STATUS_TRANSITION'`; the operation MUST NOT proceed.
+**WHEN** `contracted_services.status ≠ 'CONFIRMED'` (or other service-completion guards fail)  
+**THEN** the RPC MUST reject with a stable error code (e.g. `INVALID_STATUS_TRANSITION`); the operation MUST NOT proceed.
 
 ---
 

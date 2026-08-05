@@ -19,7 +19,8 @@ Este diretório concentra a **documentação funcional e técnica por módulo**,
 | 10 | [app-home](./app-home/README.md) | Página inicial mínima | `/` (index) | `src/App.tsx` | Concluída |
 | 11 | [message-dispatcher](./message-dispatcher/README.md) | Notificações multicanal (e-mail, push): pipeline/FSM, quotas, quiet hours, engagement | *Sem rota de UI; backend-only* | `supabase/migrations/`, `supabase/functions/message-dispatcher-*` | Concluída (critério doc); P-08/P-09 produto abertos |
 | 12 | [chats](./chats/README.md) | Conversas e negociação (CNS): lista, thread, propostas; sheet compare/history | `/dashboard/chats`, `/dashboard/chats/:chatId` (menu **Conversas**) | `src/features/chats/`, `src/features/negotiation-proposals/` | Concluída |
-| 13 | [matching-dispatch](./matching-dispatch/README.md) | Dispatch progressivo, lotes, visibilidade, gates; feed via Edge viva; legado feed aberto | *Sem rota de UI; backend + Edge `list-provider-opportunities`* | `supabase/migrations/202607110*`, `supabase/functions/list-provider-opportunities/` | Concluída |
+| 13 | [matching-dispatch](./matching-dispatch/README.md) | Dispatch progressivo, lotes, visibilidade, gates; bootstrap READY-handoff; feed via Edge viva; legado feed aberto | *Sem rota de UI; backend + Edge `list-provider-opportunities`* | `supabase/migrations/202607110*`, `2026080411*`, `supabase/functions/list-provider-opportunities/` | Concluída |
+| 13b | [service-completion](./service-completion/README.md) | Enrichment pré-matching; checklist; EXECUTED/confirm/auto-complete; stub disputa | Embutido em `view-services` (Public API) | `src/features/service-completion/`, migrations `20260804*`, EF `generate-completion-checklist` | Concluída |
 | 14 | [service-reschedule](./service-reschedule/README.md) | FSM reagendamento; propor nova data/período; pós-aceite retarget / far-recapture | Embutido em chats e detalhe do serviço | `src/features/service-reschedule/`, migrations `20260802*`, EF `process-far-reschedule-recapture` | Concluída (critério doc); P-SR-* abertos |
 | 15 | [payments](./payments/README.md) | Checkout, cobrança T-2, KYC `ACTIVE` para cobrar; histórico/reembolso; reconciliação e voids (ops) | Checkout pós-aceite; histórico em `/dashboard/conta` | `src/features/payments/`, RPCs `payment_*`, EFs NetCred | Concluída (checkout + histórico/reembolso + reconciliacao-e-voids) |
 | 16 | [provider-kyc](./provider-kyc/README.md) | Gate do conteúdo até `ACTIVE`; chrome de nav oculto (loading/bloqueio); telas de status; wizard de credenciamento (Fase 3) | Embutido no `DashboardLayout` (exceção conteúdo `/dashboard/conta*`) | `src/features/provider-kyc/` | Concluída (gate Fase 2 + wizard Fase 3 + ocultação de nav) |
@@ -69,17 +70,18 @@ Um módulo conta como documentado quando o conjunto **README do módulo + arquiv
 
 | Métrica | Valor |
 |---------|------:|
-| Módulos identificados no escopo do produto (features + shell + home + backends MMD/matching + CNS + reagendamento + pagamentos + KYC + ganhos + calendário + beacon + push + notifications) | **22** |
-| Módulos documentados (critério acima) | **22** |
+| Módulos identificados no escopo do produto (features + shell + home + backends MMD/matching + CNS + reagendamento + pagamentos + KYC + ganhos + calendário + beacon + push + notifications + **service-completion**) | **23** |
+| Módulos documentados (critério acima) | **23** |
 | **Percentual** | **100%** (critério documental) |
 
-Contagem: inventário anterior tinha **18** linhas ativas (itens 1–17 + **5b** view-services; a métrica antiga “17” subcontava o 5b) + **4 novos** (`provider-calendar`, `device-beacon`, `push-permission`, `notifications`) = **22** pastas ativas com README (exclui `client-budgets` descontinuado). `negotiation-proposals` permanece agrupado sob [chats](./chats/README.md).
+Contagem: inventário anterior **22** + **service-completion** = **23** pastas ativas com README (exclui `client-budgets` descontinuado). `negotiation-proposals` permanece agrupado sob [chats](./chats/README.md).
 
 **Notas de profundidade (não quebram o critério):**
 
+- **service-completion** — README + feature `conclusao-e-enrichment` (enrichment READY-handoff, conclusão, stub disputa).
 - **service-reschedule** — README + 3 features (ciclo-estados, propor-nova-data, integracao-pagamento-pos-aceite). Pendências de produto/UX: P-SR-* (ver README do módulo).
 - **message-dispatcher** — README + 4 features (pipeline, quotas, quiet hours, engagement). P-08 (janela quiet hours hardcoded) e P-09 (fuso único BRT) abertos; engagement documentado no módulo (lado cliente também em **notifications**).
-- **matching-dispatch** — Edge `match-provider-jobs` morta; RPC `match_provider_jobs` órfã; feed vivo = `list-provider-opportunities`.
+- **matching-dispatch** — Bootstrap READY-handoff (CONTEXT #135); Edge `match-provider-jobs` morta; RPC `match_provider_jobs` órfã; feed vivo = `list-provider-opportunities`.
 
 ---
 
@@ -89,11 +91,13 @@ Contagem: inventário anterior tinha **18** linhas ativas (itens 1–17 + **5b**
 - **dynamic-form** → usado por **request-quote** (passo 2).
 - **addresses** → usado por **request-quote** (passo 4) e **my-account** (`AddressesSection`).
 - **provider-jobs** → propostas e negociação via **chats** / **negotiation-proposals**; detalhe unificado em **view-services**; feed via **matching-dispatch** (`list-provider-opportunities`); GPS de sort “Mais próximos” via **device-beacon**.
-- **matching-dispatch** → consome localização fresca alimentada por **device-beacon**; notifica via **message-dispatcher**.
+- **matching-dispatch** → bootstrap após enrichment READY (**service-completion**); consome localização fresca alimentada por **device-beacon**; notifica via **message-dispatcher**.
+- **service-completion** → enrichment na create/republish; UI no **view-services**; writers `service_completion_*` (fora de **payments**).
 - **negotiation-proposals** → sheet `ReceivedBudgetDetailsSheet` consumido por **my-services**; composer/propostas também em **provider-jobs** e **chats**.
 - **chats** + **negotiation-proposals** → negociação in-app; integra **message-dispatcher**, **provider-jobs**, **my-services** / **view-services**, **payments**, **service-reschedule**.
 - **service-reschedule** → UI em **chats** e **view-services**; duração alinhada a **negotiation-proposals**; pós-aceite em **payments**.
-- **payments** → checkout pós-aceite; histórico em **my-account**; cancelamento/reembolso com **view-services** / CNS; settlements → **provider-earnings**; ops em reconciliacao-e-voids.
+- **payments** → checkout pós-aceite; histórico em **my-account**; cancelamento/reembolso com **view-services** / CNS; settlements → **provider-earnings**; ops em reconciliacao-e-voids (**não** ownership de EXECUTED/COMPLETED de produto).
+- **view-services** → detalhe/lista; compõe wizards de **service-completion**.
 - **provider-earnings** → `/dashboard/earnings` (menu prestador); disclosure também em detalhe/payments.
 - **provider-kyc** → gate de conteúdo + ocultação do chrome de nav no **dashboard-shell** até NetCred `ACTIVE`; allowlist **my-account**; backend KYC/cobrança em **payments**.
 - **provider-calendar** → entrada pelo banner em **my-services** (prestador); detalhe em **view-services**; **não** no menu do shell.

@@ -35,7 +35,8 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 |-------|------------------------------|--------------|
 | `addresses/` | `api/addresses.api.ts`, `api/statesAndCities.api.ts` | `AddressSelectionStep`, `AddressesSection`, `AddressFormDialog` |
 | `my-services/` | hooks page/list/filters/cancel (delegam a `view-services`); `pendingPaymentHighlight.ts`, `clientServiceCardPresentation.ts`, `providerServiceCardPresentation.ts` | `ClientMyServicesPage` / `ProviderMyServicesPage`, cards com highlight `PENDING_PAYMENT`, `ReceivedBudgetDetailsSheet` via `negotiation-proposals` |
-| `view-services/` | `api/services.api.ts` (RPC `get_service`, `list_services`, `cancel_service_request`, `republish_cancelled_service_request`); hooks list/detail/cancel/republish | `ServiceDetailShell` (rota `/dashboard/services/:id` — **não** placeholder), `ServiceDetailPage`, `ServiceDetailClientActions`, `ServiceListCard`, `ServiceSections` |
+| `view-services/` | `api/services.api.ts` (RPC `get_service`, `list_services`, `cancel_service_request`, `republish_cancelled_service_request`); hooks list/detail/cancel/republish; UI compõe **service-completion** | `ServiceDetailShell` (rota `/dashboard/services/:id` — **não** placeholder), `ServiceDetailPage`, `ServiceDetailClientActions`, `ServiceListCard`, `ServiceSections` |
+| `service-completion/` | `api/lifecycle.api.ts`, `context.api.ts`, `draft.api.ts`, `upload.api.ts`, `ratings.api.ts`; hooks draft/mark/confirm/dispute/enrichment | `EnrichmentProcessingBanner`, `ProviderExecutedWizard`, `ClientConfirmRatingWizard`, `DisputeStubEntry` (Public API → `view-services`) |
 | `provider-calendar/` | `api/providerCalendar.api.ts` (RPC `list_provider_scheduled_services`); hooks de intervalo/vista | `ProviderCalendarPage` (`/dashboard/services/calendar`); banner de entrada em `my-services` |
 | `device-beacon/` | `api/deviceBeacon.api.ts`, `deviceBeaconHttp.api.ts`; `useProviderLocationTracking`; `syncSchedule.ts` / `locationSync.ts` | `DeviceBeaconProvider` (RootLayout); dialog de permissão de localização (prestador) |
 | `push-permission/` | `utils/pushPermissionPrompt.storage.ts`; hooks/host do soft prompt | `PushPermissionPromptHost` (RootLayout); cooldown Preferences |
@@ -66,6 +67,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 
 | Artefato | Uso na documentação |
 |----------|---------------------|
+| `supabase/functions/generate-completion-checklist/*` | Enrichment / checklist de conclusão (`service-completion`) |
 | `supabase/functions/create-request-quote-order/index.ts` (+ módulos) | Criação atômica de pedido, fotos, rate limit |
 | `supabase/functions/generate-smart-description/*` | IA, prompts, uso |
 | `supabase/functions/match-provider-jobs/` | *(Legado — código removido; pasta vazia residual)* Feed aberto; RPC SQL `match_provider_jobs` ainda no schema (P-MD-04) |
@@ -194,7 +196,20 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 
 | Artefato | Uso na documentação |
 |----------|---------------------|
-| `docs/business/modulos/matching-dispatch/` | README + feature dispatch/visibilidade; lifecycle sem proposta (24h/48h) |
+| `docs/business/modulos/matching-dispatch/` | README + feature dispatch/visibilidade; lifecycle sem proposta (24h/48h); bootstrap READY-handoff (CONTEXT #135); repair READY-sem-dispatch ≤7 dias |
+| `docs/business/modulos/service-completion/` | Enrichment, conclusão EXECUTED/confirm/auto-complete, stub disputa; endurecimento SQL (evidência registrada, contexto full vs marketplace, imutabilidade) |
+| `docs/service-completion/` | Design técnico / ADR (fonte normativa de engenharia) |
+| `supabase/migrations/20260804010000_service_completion_platform_constants.sql` | Seeds checklist/enrichment/`auto_complete_batch_size`/orphan TTL |
+| `supabase/migrations/20260804060000_*`–`20260804100000_*` | Evidence + upload sessions/objects + storage INSERT gates; frozen imutável; FK RESTRICT; deferred EXECUTED/COMPLETED↔frozen |
+| `supabase/migrations/20260804090000_service_completion_rls.sql` | REVOKE SELECT authenticated em `service_request_enrichments` |
+| `supabase/migrations/20260804350000_service_completion_mark_executed.sql` | Paths registrados / `EVIDENCE_PATH_NOT_REGISTERED`; sessões → `committed` |
+| `supabase/migrations/20260804450000_get_service_completion_context.sql` | Read-model full vs marketplace limited |
+| `supabase/migrations/20260804240000_enrichment_repair_ready_without_dispatch.sql` | Sweeper READY-sem-dispatch (janela 7 dias) |
+| `supabase/migrations/20260804490000_*` / `20260804500000_*` | Janitor SQL orphan uploads (`referenced_in_responses`); drop finalize RPC; cron `service_completion_cron_orphan_upload_janitor` + `job_runs` (sem Edge) |
+| `supabase/functions/generate-completion-checklist/` | Worker enrichment |
+| `service_completion_create_upload_session` / `service_completion_register_upload_object` | Upload evidência Option A (KYC): sessão → `storage.from('completion-evidence').upload()` autenticado (RLS) → register; **sem** Edge de URL assinada |
+| `service_completion_janitor_orphan_uploads` / `service_completion_cron_orphan_upload_janitor` | `DELETE FROM storage.objects` + limpeza do registry (padrão KYC); sem `completion-evidence-orphan-janitor` |
+| `supabase/tests/service_completion/*.sql` | pgTAP: mark-executed, context matrix, storage, janitor, RLS |
 | `supabase/migrations/20260802190000_service_request_no_proposal_lifecycle.sql` | Templates MMD + cron auto-cancel sem propostas |
 | `supabase/tests/matching/no_proposal_lifecycle_test.sql` | pgTAP seeking notify + auto-cancel |
 | `docs/matching-algorithm/` | Design técnico e tasks de implementação |

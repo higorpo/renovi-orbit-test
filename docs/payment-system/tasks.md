@@ -2693,6 +2693,8 @@ Acceptance Criteria covered:
 
 ## 48. [x] Implement RPC `payment_mark_service_executed`
 
+> **Superseded:** DROPped in service-completion Task 40 / [ADR-0004](../service-completion/adr/0004-completion-rpcs-outside-payments.md). Use `service_completion_mark_executed`.
+
 Description:
 Provider RPC: CONFIRMED→EXECUTED date gate.
 
@@ -3013,6 +3015,8 @@ Acceptance Criteria covered:
 6.4 telemetry ACs
 
 ## 54. [x] Implement pg_cron wrapper `payment_cron_auto_complete_executed_services` with job_runs telemetry
+
+> **Superseded:** DROPped / replaced by `service_completion_cron_auto_complete_executed` ([ADR-0004](../service-completion/adr/0004-completion-rpcs-outside-payments.md)).
 
 Description:
 SECURITY DEFINER wrapper: job_run_begin → delegate payment_auto_complete_executed_services() → job_run_finish; GRANT EXECUTE TO postgres ONLY; register pg_cron schedule `45 9,15,21,3 * * *` (disabled until rollout phase).
@@ -5891,6 +5895,8 @@ Acceptance Criteria covered:
 
 ## 108. [x] Implement RPC `payment_confirm_service_completed` (client completion)
 
+> **Superseded:** DROPped in service-completion Task 40 / [ADR-0004](../service-completion/adr/0004-completion-rpcs-outside-payments.md). Use `service_completion_confirm_with_rating`.
+
 Description:
 EXECUTED→COMPLETED by client; audit SERVICE_COMPLETED; MMD to provider; dispute does not block.
 
@@ -7154,7 +7160,7 @@ Today accept flows split across two hooks in `negotiation-proposals/hooks/usePro
 | `payment_cron_schedule_netcred_charges` | 51 | `0 9,15,21,3 * * *` |
 | `payment_cron_auto_cancel_unpaid_services` | 52 | `15 9,15,21,3 * * *` |
 | `payment_cron_notify_upcoming_charges` | 53 | `30 9,15,21,3 * * *` |
-| `payment_cron_auto_complete_executed_services` | 54 | `45 9,15,21,3 * * *` |
+| `service_completion_cron_auto_complete_executed` | service-completion | `45 9,15,21,3 * * *` | *(replaces DROPped `payment_cron_auto_complete_executed_services`)* |
 | `payment_cron_process_webhook_retry` | 55 | `*/5 * * * *` |
 | `payment_cron_recover_orphaned_schedules` | 56 | `*/30 * * * *` |
 | `payment_cron_detect_netcred_onboarding` | 57 | `0 10 * * *` |
@@ -7410,12 +7416,14 @@ Today accept flows split across two hooks in `negotiation-proposals/hooks/usePro
 | [Req31.AC10](#) | 31 | §4.2.2, §4.11 | 35, 9 | 118 | **COVERED** | Keep clearsale_session_id through IN_ANALYSIS |
 | [Req31.AC11](#) | 31 | §4.2.2, §4.11 | 64, 74 | 94 | **COVERED** | billingAddress required before tokenize |
 | [Req31.AC12](#) | 31 | §4.2.2, §4.11 | 114, 90 | — | **PARTIAL** | GAP: ops confirmation ClearSale sandbox AppKey with NetCred — runbook only |
-| [Req32.AC1](#) | 32 | §4.13 | 48, 80 | 94 | **COVERED** | Provider mark EXECUTED date gate |
-| [Req32.AC2](#) | 32 | §4.13 | 108, 80 | 94 | **COVERED** | Client confirm COMPLETED |
-| [Req32.AC3](#) | 32 | §4.13 | 47, 54 | 119 | **COVERED** | Auto-complete after 24h system |
-| [Req32.AC4](#) | 32 | §4.13 | 47, 108 | 119 | **COVERED** | Dispute does not block completion |
+| [Req32.AC1](#) | 32 | §4.13 → service-completion | 48† | — | **MOVED** | Provider mark EXECUTED → `service_completion_mark_executed` (ADR-0004) |
+| [Req32.AC2](#) | 32 | §4.13 → service-completion | 108† | — | **MOVED** | Client confirm → `service_completion_confirm_with_rating` |
+| [Req32.AC3](#) | 32 | §4.13 → service-completion | 54† | — | **MOVED** | Auto-complete → `service_completion_cron_auto_complete_executed` |
+| [Req32.AC4](#) | 32 | §4.13 | 47, 108 | 119 | **COVERED** | Dispute does not block completion (payments + service-completion) |
 | [Req32.AC5](#) | 32 | §4.13 | 112, 81 | 94 | **COVERED** | D+30 settlement disclosure from paid_at |
-| [Req32.AC6](#) | 32 | §4.13 | 48 | 94 | **COVERED** | INVALID_STATUS_TRANSITION guard |
+| [Req32.AC6](#) | 32 | §4.13 → service-completion | 48† | — | **MOVED** | INVALID_STATUS_TRANSITION / guards on mark-executed |
+
+† Historical payment task IDs; product writers DROPped — see service-completion tasks 33–40.
 | [Req33.AC1](#) | 33 | §4.10 | 45, 46, 53 | 119 | **COVERED** | Claim SCHEDULED within 24h of charge_scheduled_at |
 | [Req33.AC2](#) | 33 | §4.10 | 45, 53, 126 | 119 | **COVERED** | Client Push+Email; no provider notification |
 | [Req33.AC3](#) | 33 | §4.10 | 45, 53 | 119 | **COVERED** | Set upcoming_charge_notified_at atomically |

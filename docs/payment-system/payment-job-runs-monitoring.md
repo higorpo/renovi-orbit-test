@@ -33,8 +33,9 @@ Returns JSON with:
 | `auto-cancel-unpaid-services` | `payment_cron_auto_cancel_unpaid_services()` | `15 9,15,21,3 * * *` |
 | `schedule-netcred-charges` | `payment_cron_schedule_netcred_charges()` | `0 9,15,21,3 * * *` |
 | `detect-netcred-onboarding` | `payment_cron_detect_netcred_onboarding()` | `0 10 * * *` |
-| `auto-complete-executed-services` | `payment_cron_auto_complete_executed_services()` | `45 9,15,21,3 * * *` |
 | `payment-emit-sentry-spike-alerts` | `payment_cron_emit_sentry_spike_alerts()` | `*/5 * * * *` |
+
+> **Ops (2026-08-04 / service-completion Task 40):** `auto-complete-executed-services` / `payment_cron_auto_complete_executed_services` were **DROPPed**. Monitor `service_completion_cron_auto_complete_executed` / job `service_completion_cron_auto_complete_executed` instead (ADR-0004). See also [service-completion-monitoring.md](../service-completion/service-completion-monitoring.md) (Task 56).
 
 ## Alert thresholds (on-call)
 

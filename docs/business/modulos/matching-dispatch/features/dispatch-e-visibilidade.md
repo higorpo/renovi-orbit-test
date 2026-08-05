@@ -6,7 +6,7 @@ Documentação de negócio do **matching progressivo** (backend). UI corresponde
 
 ## 1. Resumo executivo
 
-Pedido `OPEN` gera um **dispatch** 1:1. Um cron abre **lotes** de prestadores elegíveis (discovery + ranking), grava **visibilidade** e notifica via Message Dispatcher. O prestador consome o feed pela Edge **`list-provider-opportunities`**. Gates pausam ou param novos lotes/propostas; pool esgotado abre **mercado aberto**; sem nenhuma proposta em 24h/48h o cliente é avisado e o pedido pode ser cancelado automaticamente.
+Pedido `OPEN` **não** cria dispatch sozinho. Após enrichment `READY`, `matching_bootstrap_dispatch_for_service_request` cria um **dispatch** 1:1 (`DISPATCH_PENDING` + delay). Um cron abre **lotes** de prestadores elegíveis (discovery + ranking), grava **visibilidade** e notifica via Message Dispatcher. O prestador consome o feed pela Edge **`list-provider-opportunities`**. Gates pausam ou param novos lotes/propostas; pool esgotado abre **mercado aberto**; sem nenhuma proposta em 24h/48h o cliente é avisado e o pedido pode ser cancelado automaticamente.
 
 ---
 
@@ -47,7 +47,8 @@ Pedido `OPEN` gera um **dispatch** 1:1. Um cron abre **lotes** de prestadores el
 
 ```mermaid
 flowchart TD
-  A[Pedido status OPEN] --> B[Trigger bootstrap<br/>DISPATCH_PENDING + next_batch_at]
+  A[Pedido OPEN + enrichment PENDING] --> R[Enrichment READY]
+  R --> B[matching_bootstrap_dispatch<br/>DISPATCH_PENDING + next_batch_at]
   B --> C[Cron a cada 2 min]
   C --> C1[Fase 1: expire lifecycle 48h]
   C --> C2[Fase 2a: lotes com next_batch_at vencido]
@@ -83,6 +84,7 @@ flowchart TD
 | **Cancelamento do pedido (cliente ou sistema 48h)** | → `DISPATCH_CANCELLED`; revoke visibility |
 | **Lifecycle dispatch 48h** | Cron fase 1 → `DISPATCH_EXPIRED` |
 | **Lease em uso / expirado** | Outro worker não adquire; janitor `matching_force_release_stale_leases` |
+| READY sem dispatch | Sweeper `enrichment_repair_ready_without_dispatch` (janela **7 dias** em `materialized_at`) |
 | **Prestador dismiss** | Batch: `dismissed_at`; fallback: linha `fallback_dismiss`; evento `provider_declined` |
 | **MMD falha** | Ingest pode falhar; **não** revoga visibilidade |
 | **Duplo cron no mesmo dispatch** | Lease + `SKIP LOCKED` + unique `(dispatch_id, batch_number)` |
@@ -91,11 +93,11 @@ flowchart TD
 
 ## 7. Regras de negócio (numeradas)
 
-1. **Bootstrap:** na primeira transição/insert para `OPEN`, cria-se no máximo um dispatch (`UNIQUE service_request_id`), status `DISPATCH_PENDING`, `next_batch_at = now() + matching.dispatch_start_delay_minutes` (default **5**).
+1. **Bootstrap (READY-handoff):** `trg_service_request_dispatch_bootstrap` **DROP**ada. Dispatch criado só por `matching_bootstrap_dispatch_for_service_request` na TX de `enrichment_finalize_ready` (ou sweeper READY-sem-dispatch, limitado a enrichments com `materialized_at` nos **últimos 7 dias**). No máximo um dispatch (`UNIQUE service_request_id`), status `DISPATCH_PENDING`, `next_batch_at = now() + matching.dispatch_start_delay_minutes` (default **5**). O delay de 5 min e o relógio de lifecycle começam neste bootstrap — **não** no insert `OPEN` (matching CONTEXT #135).
 2. **Um lote por processamento** quando status ∈ {`DISPATCH_PENDING`, `DISPATCH_ACTIVE`} e `next_batch_at ≤ now()`.
 3. **Tamanho do lote:** `matching.batch_size` (default **10**) após ranking.
 4. **Intervalo entre lotes:** `matching.batch_interval_minutes` (default **60**).
-5. **Lifecycle do dispatch:** `matching.dispatch_lifecycle_hours` (default **48**) a partir de `created_at` do dispatch → `DISPATCH_EXPIRED`.
+5. **Lifecycle do dispatch:** `matching.dispatch_lifecycle_hours` (default **48**) a partir de `created_at` do dispatch (pós-bootstrap) → `DISPATCH_EXPIRED`.
 6. **Ladder de gates** (`evaluate_service_request_dispatch_gates`): STOPPED > PAUSED > FALLBACK (se `fallback_opened_at`) > ACTIVE/PENDING. Terminais (`MATCHED`/`CANCELLED`/`EXPIRED`) não são reavaliados.
 7. **STOPPED:** propostas `PENDING` + `REVISION_REQUESTED` ≥ `chats.max_active_slots_per_service_request` (default **4**).
 8. **PAUSED:** chats `ACTIVE` com mensagem e `last_interaction_at` na janela `matching.dispatch_active_chat_window_hours` (default **24**) ≥ `matching.dispatch_pause_active_chat_threshold` (default **10**).
@@ -293,7 +295,8 @@ Filtros implícitos do feed: SR OPEN; exclusões por proposta/chat do próprio p
 |----------|------|
 | Constantes | `supabase/migrations/20260711000000_matching_platform_constants_seeds.sql` |
 | Enums/tabelas | `.../20260711040000_matching_dispatch_enums_tables.sql` |
-| Bootstrap | `.../20260711050000_matching_dispatch_bootstrap_trigger.sql` |
+| Bootstrap (legado OPEN trigger) | `.../20260711050000_matching_dispatch_bootstrap_trigger.sql` — **superseded**; DROP em `20260804120000_drop_service_request_dispatch_bootstrap_trigger.sql` |
+| Bootstrap READY-handoff | `20260804110000_matching_bootstrap_dispatch_rpc.sql`; chamado de `enrichment_finalize_ready` / sweeper repair |
 | Gates | `.../20260711070000_matching_gate_helper.sql` |
 | Discovery/ranking | `.../20260711080000_matching_discovery_ranking.sql` |
 | Open batch + cron 2 min | `.../20260711090000_matching_open_batch_and_cron.sql` |
@@ -374,7 +377,8 @@ Ordenação final: `ranking_score DESC`, `exposure_count ASC`, `provider_id ASC`
 
 ## Anexo C — Checklist QA (cenários)
 
-- [ ] OPEN cria dispatch PENDING com delay 5 min  
+- [ ] Enrichment READY → bootstrap cria dispatch PENDING com delay 5 min (OPEN sozinho **não** cria)  
+
 - [ ] Cron abre 1º lote ≤ batch_size; notificação MMD; card no feed  
 - [ ] Segundo lote após intervalo; sem duplicate batch_number  
 - [ ] Pool vazio → FALLBACK; badge Mercado aberto  
@@ -395,3 +399,5 @@ Ordenação final: `ranking_score DESC`, `exposure_count ASC`, `provider_id ASC`
 
 - **2026-08-02** — Documentação expandida para 20+ seções canônicas com evidência em migrations `20260711*`, `20260712*`, `20260802190000`, Edge `list-provider-opportunities` e consumo em `provider-jobs`.
 - **2026-08-02 (legado)** — Esclarecido: Edge `match-provider-jobs` removida + pasta vazia residual; RPC `match_provider_jobs` ainda no schema; migration de drop M15 ausente; gate de credentialing só na RPC legado (P-MD-04/05).
+- **2026-08-04** — Bootstrap alinhado ao READY-handoff (service-completion): DROP do trigger OPEN; `matching_bootstrap_dispatch_for_service_request`; delay 5 min a partir do bootstrap (CONTEXT #135).
+- **2026-08-05** — Sweeper READY-sem-dispatch documentado com janela de **7 dias** em `materialized_at` (hardening service-completion).

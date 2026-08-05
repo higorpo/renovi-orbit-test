@@ -267,7 +267,7 @@ All keys below SHALL be seeded in one migration file (`*_matching_platform_const
 
 | Key | Default | Purpose |
 |-----|---------|---------|
-| `matching.dispatch_start_delay_minutes` | 5 | Delay before first batch after SR creation |
+| `matching.dispatch_start_delay_minutes` | 5 | Delay before first batch after **matching bootstrap** (enrichment `READY` handoff) — **not** after SR `OPEN` insert alone (supersedes historical “after SR creation”; see [service-completion design §3.7 / §4.1](../service-completion/design.md)) |
 | `matching.batch_interval_minutes` | 60 | Minimum time between batches |
 | `matching.batch_size` | 10 | Max Providers per progressive batch (#89) |
 | `matching.dispatch_lifecycle_hours` | 48 | Max dispatch duration → `DISPATCH_EXPIRED`; clock starts at `service_request_dispatches.created_at` (#90) |
@@ -296,7 +296,7 @@ All keys below SHALL be seeded in one migration file (`*_matching_platform_const
 
 | Table | Role |
 |-------|------|
-| `service_request_dispatches` | 1:1 dispatch FSM per SR; trigger bootstrap; `status`; `next_batch_at`; **`fallback_opened_at`** (#75); lease columns (#68) |
+| `service_request_dispatches` | 1:1 dispatch FSM per SR; bootstrap via `matching_bootstrap_dispatch_for_service_request` on enrichment `READY` (OPEN-insert trigger **DROPped**); `status`; `next_batch_at`; **`fallback_opened_at`** (#75); lease columns (#68) |
 | `service_request_dispatch_batches` | Batch sequence per dispatch |
 | `service_request_dispatch_batch_providers` | Providers per batch + ranking score snapshot |
 | `service_request_provider_visibility` | **Persisted batch visibility only** (`source = batch`; `granted_at`; `dismissed_at`; `revoked_at`). Fallback visibility is **computed at query time** (#75); dismiss on fallback-only MAY insert a row here to record `dismissed_at`. |
@@ -328,7 +328,7 @@ _User Story_: Como sistema da Renovi, eu quero resolver candidatos dinamicamente
 
 ### Acceptance Criteria
 
-1.  GIVEN a Service Request becomes **`OPEN` for the first time** (on `INSERT` with `status = OPEN`, or on `UPDATE` transitioning to `OPEN`) WHEN no `service_request_dispatches` row exists yet THEN a trigger on `service_requests` SHALL create the dispatch row (`DISPATCH_PENDING`, `next_batch_at = now + matching.dispatch_start_delay_minutes`) in the same transaction, without generating a static candidate snapshot (#60, #99).
+1.  GIVEN enrichment for a Service Request reaches **`READY`** (AI or `fallback_template`) WHEN no `service_request_dispatches` row exists yet THEN `matching_bootstrap_dispatch_for_service_request(sr_id)` SHALL create the dispatch row (`DISPATCH_PENDING`, `next_batch_at = now() + matching.dispatch_start_delay_minutes`) in the **same transaction** as enrichment finalize (or via READY-without-dispatch sweeper repair), without generating a static candidate snapshot. GIVEN a Service Request becomes **`OPEN` alone** (insert or update) WHEN enrichment is not yet `READY` THEN the system SHALL **NOT** create a dispatch row from that OPEN transition (OPEN-insert trigger `trg_service_request_dispatch_bootstrap` is **DROPped**; supersedes #60/#99 OPEN-trigger wording — [service-completion Req 2 AC8](../service-completion/requirements.md), [design §3.7](../service-completion/design.md)).
 2.  GIVEN a batch is about to open WHEN candidate discovery starts THEN the system SHALL dynamically renew a search window of up to **200** closest eligible Providers (**hardcoded cap**, #126).
 3.  GIVEN candidate discovery occurs WHEN Providers are evaluated THEN the system SHALL use the most recent Provider availability data.    
 4.  GIVEN candidate discovery occurs WHEN Providers are evaluated THEN the system SHALL use the most recent Provider geolocation from **`provider_latest_locations`** (derived from `user_device_beacons`; most recent `location_recorded_at` across permitted devices).
@@ -459,7 +459,7 @@ _User Story_: Como sistema da Renovi, eu quero liberar Service Requests em batch
 
 ### Acceptance Criteria
 
-1.  GIVEN a ranked candidate list WHEN dispatch starts THEN the system SHALL create progressive batches of Providers; the **first batch** SHALL be scheduled `matching.dispatch_start_delay_minutes` (default 5 min) after Service Request creation; **`DISPATCH_PENDING` → `DISPATCH_ACTIVE`** SHALL occur when batch #1 opens (same transaction).
+1.  GIVEN a ranked candidate list WHEN dispatch starts THEN the system SHALL create progressive batches of Providers; the **first batch** SHALL be scheduled `matching.dispatch_start_delay_minutes` (default 5 min) after **matching bootstrap** (enrichment `READY` handoff — `service_request_dispatches.created_at` / `next_batch_at`), **not** after SR `OPEN` insert alone; **`DISPATCH_PENDING` → `DISPATCH_ACTIVE`** SHALL occur when batch #1 opens (same transaction).
 2.  GIVEN batch generation occurs WHEN Providers are grouped for dispatch THEN each batch SHALL contain a maximum of `matching.batch_size` Providers (read from `platform_constants` at runtime, default 10) (#89); GIVEN discovery finds **fewer than `matching.batch_size` but at least one** newly eligible Provider THEN the system SHALL still open the batch with all found Providers, grant visibility, enqueue notifications, and schedule the next attempt per #110 — **not** defer until the batch is full (#111).
 3.  GIVEN the first batch WHEN dispatch begins THEN the system SHALL notify only Providers belonging to the first batch.
 4.  GIVEN a Provider is included in an active batch WHEN the Provider becomes eligible to view the Service Request THEN the system SHALL persist batch visibility in `service_request_provider_visibility` (`source = batch`, `granted_at = now()`).
@@ -783,7 +783,7 @@ Dispatch executions SHOULD remain short-lived, resumable, and independently rest
 | gate re-evaluation hook in `expire_pending_proposals` | PG (#105) |
 | trigger-based enqueue of Message Dispatcher ingest on batch open | PG (trigger on `service_request_dispatch_batch_providers`) |
 | dispatch cron worker (`cron_process_service_request_dispatches`) | PG (`pg_cron` + `job_runs`) |
-| dispatch row bootstrap on first SR `OPEN` | PG (trigger on `service_requests` INSERT/UPDATE, #99) |
+| dispatch row bootstrap on enrichment `READY` | PG (`matching_bootstrap_dispatch_for_service_request`, called from enrichment finalize / repair sweeper; OPEN-insert trigger DROPped — [service-completion §3.7](../service-completion/design.md)) |
 | dispatch → `MATCHED` on accept | PG (`accept_proposal` RPC inline) |
 | dispatch → `CANCELLED` on SR cancel | PG (`cancel_service_request` RPC inline) |
 | `list_provider_opportunities` feed query | PG |

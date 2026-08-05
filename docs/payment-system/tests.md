@@ -122,11 +122,13 @@ Cartões sandbox (do seu `todo.md`): aprovado `4970100000000048` / rejeitado `49
 
 ### 10. Conclusão do serviço
 
+> Writers moved to **service-completion** ([ADR-0004](../service-completion/adr/0004-completion-rpcs-outside-payments.md)). Validate via `service_completion_*` + feature Vitest/pgTAP — not `payment_*` completion RPCs.
+
 | # | Fluxo | O que validar |
 |---|--------|----------------|
-| 10.1 | Prestador marca EXECUTED | Só em `CONFIRMED` e na/após data; push ao cliente |
-| 10.2 | Cliente confirma COMPLETED | `payment_confirm_service_completed` |
-| 10.3 | Auto-complete 24h | Cron → `completed_by = system` |
+| 10.1 | Prestador marca EXECUTED | `service_completion_mark_executed` — checklist + CONFIRMED + temporal gates; push ao cliente |
+| 10.2 | Cliente confirma COMPLETED | `service_completion_confirm_with_rating` (scores obrigatórios no path manual) |
+| 10.3 | Auto-complete 24h | `service_completion_cron_auto_complete_executed` → `completed_by = system` |
 | 10.4 | Dispute não bloqueia | `is_disputed` ainda permite COMPLETED |
 
 ---

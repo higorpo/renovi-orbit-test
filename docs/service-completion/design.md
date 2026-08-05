@@ -66,7 +66,6 @@ graph TB
 
     subgraph ef["Edge Functions — Deno (I/O)"]
         EF_CHK["generate-completion-checklist\nclaim → LLM → finalize CAS"]
-        EF_JAN["completion-evidence-orphan-janitor\nStorage delete"]
     end
 
     subgraph pg["PostgreSQL — Supabase (source of truth)"]
@@ -94,8 +93,8 @@ graph TB
     CRON -->|SQL wrappers| RPC
     ef -->|service_role RPC| pg
     ef -->|HTTP| LLM
-    ef -->|Storage admin| STOR
-    app -->|signed upload| STOR
+    app -->|Storage.upload (RLS)| STOR
+    RPC -->|DELETE storage.objects| STOR
     RPC -->|enqueue| MMD
     RPC -->|READY handoff| DISP
 ```
@@ -415,10 +414,10 @@ CREATE TABLE public.service_request_enrichments (
   )
 );
 
--- Claim polling: due PENDING jobs
+-- Claim polling: due PENDING jobs (excludes ops_attention holds — Task 63)
 CREATE INDEX idx_enrichments_claim_due
   ON public.service_request_enrichments (next_attempt_at NULLS FIRST, created_at)
-  WHERE status = 'PENDING';
+  WHERE status = 'PENDING' AND ops_attention_at IS NULL;
 
 -- Lease reclaim: expired RUNNING
 CREATE INDEX idx_enrichments_lease_expired
@@ -667,13 +666,13 @@ Sweeper repair: `READY` enrichment AND no dispatch row ⇒ call same bootstrap R
 
 | Index | Supports |
 |---|---|
-| `idx_enrichments_claim_due` | Claim polling + SKIP LOCKED |
+| `idx_enrichments_claim_due` | Claim polling + SKIP LOCKED (`PENDING` ∧ `ops_attention_at IS NULL`) |
 | `idx_enrichments_lease_expired` | Lease reclaim |
 | `idx_enrichments_ready` | Bootstrap repair join |
 | `uq_template_active_*` | Cascade uniqueness |
 | `completion_evidence_cs_uk` | 1:1 evidence |
 | `uq_completion_evidence_idempotency` | EXECUTED submit replay |
-| Partial indexes on CS `status = 'EXECUTED'` + `executed_at` | Auto-complete cron selection (existing CS indexes + new if needed) |
+| `contracted_services_executed_auto_complete_idx` | Auto-complete cron (`EXECUTED` ∧ `executed_at`) |
 
 ---
 
@@ -952,7 +951,7 @@ On successful EXECUTED: phase → `frozen` atomically; draft mutability ends.
 ## 4.10 Upload Session Flow
 
 1. RPC `service_completion_create_upload_session` → row `open` + storage prefix + expiry.
-2. Client obtains signed upload URL (EF or Storage policy pattern consistent with KYC/chat).
+2. Client uploads via authenticated Storage API under open session prefix (KYC Option A / RLS).
 3. Client uploads directly to Storage (bypass Edge body proxy — Req 20 AC7).
 4. RPC register object path (idempotent by path UNIQUE).
 5. Draft/EXECUTED responses reference registered paths.
@@ -1016,7 +1015,7 @@ Wake failure after commit MUST NOT fail the republish response — cron sweeper 
 | `enrichment_clear_ops_attention` | Ops clears hold; may re-arm `next_attempt_at` |
 | `matching_bootstrap_dispatch_for_service_request` | Idempotent dispatch insert |
 | `service_completion_auto_complete_executed` | Batch COMPLETED by system |
-| `service_completion_janitor_orphan_uploads` | Claim orphans for delete |
+| `service_completion_janitor_orphan_uploads` | Expire sessions + DELETE storage orphans (SQL) |
 
 **Cron wrappers (`job_runs` mandatory):**
 
@@ -1024,7 +1023,7 @@ Wake failure after commit MUST NOT fail the republish response — cron sweeper 
 |---|---|
 | `enrichment_cron_sweep` | reclaim + repair + `orbit_invoke_edge_function('generate-completion-checklist')` |
 | `service_completion_cron_auto_complete_executed` | auto-complete batch |
-| `service_completion_cron_orphan_upload_janitor` | janitor ± EF Storage delete |
+| `service_completion_cron_orphan_upload_janitor` | SQL janitor (`DELETE FROM storage.objects`, KYC pattern) |
 
 **REMOVE from product API (ADR-0004):**
 
@@ -1637,8 +1636,9 @@ Orbit delivers **at-least-once** workers/crons. Exactly-once **effects** are sim
 
 ## 9.4 Backpressure
 
-- Claim batch size caps work per invocation.
-- LLM pacing token bucket inside EF.
+- Claim batch size caps work per invocation (`enrichment_claim_batch_size` = **20** in DB; Edge further caps via `ENRICHMENT_MAX_LLM_PER_INVOCATION`, default **1**, so lease 120s is not overrun by serial LLM at 75s timeout).
+- LLM pacing: timeout hard-capped to lease − 30s margin; worker reads lease TTL + claim batch from `platform_constants` each tick (no stale Edge-only hardcodes for those knobs). See `supabase/functions/generate-completion-checklist/PACING.md`.
+- Retry base **30s** (`enrichment_retry_base_seconds`) and AI max attempts **3** remain DB-driven.
 - Storage: direct signed uploads avoid Edge memory ceiling.
 - PostgREST `max_rows` unchanged; list via existing paginated RPCs.
 
@@ -1707,6 +1707,8 @@ Logs SHOULD redact checklist free text and MUST NOT broadly log evidence URLs. P
 | Repeated finalize CAS mismatches spike | WARNING |
 | Auto-complete job_runs error_count > 0 consecutive | WARNING |
 | Janitor failing to delete | WARNING |
+
+**Ops runbook:** [service-completion-monitoring.md](./service-completion-monitoring.md) — `service_completion_ops_metrics`, `service_completion_evaluate_sentry_alerts`, cron `service_completion_emit_sentry_alerts` → `orbit-emit-sentry-alerts` (Task 56).
 
 ---
 

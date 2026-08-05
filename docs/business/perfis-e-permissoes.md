@@ -1,6 +1,6 @@
 # Perfis e permissões
 
-Consolidação transversal a partir de `src/router.tsx`, `src/features/auth/` (`routeGuards`, `AuthProvider` / `getRedirectPathForProfile`, tipos), `src/layouts/DashboardLayout/dashboardMenu.ts`, `src/features/provider-kyc/` (gate + allowlist), `src/features/push-permission/`, `src/features/device-beacon/`, docs de [dashboard-shell](./modulos/dashboard-shell/), [chats](./modulos/chats/README.md), [service-reschedule](./modulos/service-reschedule/), [payments](./modulos/payments/) e políticas resumidas nas migrações Supabase.
+Consolidação transversal a partir de `src/router.tsx`, `src/features/auth/` (`routeGuards`, `AuthProvider` / `getRedirectPathForProfile`, tipos), `src/layouts/DashboardLayout/dashboardMenu.ts`, `src/features/provider-kyc/` (gate + allowlist), `src/features/push-permission/`, `src/features/device-beacon/`, docs de [dashboard-shell](./modulos/dashboard-shell/), [chats](./modulos/chats/README.md), [service-reschedule](./modulos/service-reschedule/), [payments](./modulos/payments/), [service-completion](./modulos/service-completion/) e políticas resumidas nas migrações Supabase.
 
 ## Papéis (`profiles.role`)
 
@@ -125,7 +125,7 @@ Evidências: [prompt-e-cooldown](./modulos/push-permission/features/prompt-e-coo
 
 ---
 
-## Ações por papel — CNS, propostas, reagendamento, pagamentos
+## Ações por papel — CNS, propostas, reagendamento, pagamentos, conclusão
 
 Admin **não** tem mutações de produto autenticadas documentadas nesses módulos; SELECT administrativo aparece em RLS/views pontuais. Resumo operacional:
 
@@ -178,6 +178,22 @@ Fonte: [service-reschedule](./modulos/service-reschedule/README.md).
 
 Fonte: [payments](./modulos/payments/README.md), [checkout-e-cobranca](./modulos/payments/features/checkout-e-cobranca.md), [historico-e-reembolso](./modulos/payments/features/historico-e-reembolso.md).
 
+### Conclusão / enrichment (`service-completion`)
+
+| Ação | Cliente (dono SR) | Prestador contratado | Prestador só-marketplace | Sistema |
+|------|-------------------|----------------------|--------------------------|---------|
+| `get_service_completion_context` (detalhe completo: checklist + ids) | Sim | Sim | **Não** — payload limitado (status/`ready`) | — |
+| SELECT direto `service_request_enrichments` | **Não** (REVOKE authenticated) | **Não** | **Não** | `service_role` / workers |
+| Ver banner enrichment “em processamento” | Sim (`PENDING`/`RUNNING`) | Sim (mesmo contexto no detalhe) | Status limitado se tiver acesso ao SR | Worker enrichment → READY |
+| Draft checklist + marcar `EXECUTED` | — | Sim (`CONFIRMED`; paths registrados) | — | — |
+| Upload evidência (RPC create session → storage.upload autenticado → register) | — | Sim (sessão open, CS CONFIRMED, &lt; max_files, bucket `completion-evidence`; sem Edge de URL assinada) | — | Janitor SQL órfãos (`service_completion_janitor_orphan_uploads` / cron; sem Edge) |
+| Confirmar + rating (scores obrigatórios) | Sim (`EXECUTED`) | — | — | — |
+| Auto-complete ~24h após `EXECUTED` | — | — | — | Cron (`completed_by=system`; batch `auto_complete_batch_size`) |
+| Stub disputa (URL ou “Em breve”) | Sim | — | — | — |
+| Rating opcional pós auto-complete | Sim | — | — | — |
+
+Admin de plataforma: contexto completo via RPC (mesmo sem ser participante); sem UI de mutação no app. Matching: create/republish **não** bootstrapa dispatch; só após enrichment READY; repair READY-sem-dispatch limitado a **7 dias**. Fonte: [service-completion](./modulos/service-completion/README.md).
+
 ---
 
 ## Admin sem área de produto (P-02)
@@ -203,6 +219,7 @@ RLS/admin em tabelas de pagamento e catálogo **não** implica painel operaciona
 | `provider_profiles_private` / `public` | — | Dono (escrita pública condicionada a `provider`) | Conforme políticas |
 | `service_requests` | CRUD sobre próprios pedidos onde aplicável | Leitura / fluxos de job conforme RPC e RLS | Muitas políticas incluem admin |
 | `provider_proposals` / CNS | Ver/responder no fluxo de orçamento | Criar/atualizar próprias propostas; mutações CNS de participante | Sem mutação de produto autenticada documentada no app |
+| `service_request_enrichments` | **Não** SELECT autenticado — RPC `get_service_completion_context` | Idem (detalhe completo só se prestador do CS) | Contexto completo via RPC; workers `service_role` |
 | Helpers `platform_constant_*` | **Não** — EXECUTE revogado para `authenticated` / `anon` / `public` | Idem | `service_role` (e funções `SECURITY DEFINER` internas) |
 | Catálogo (`platform_services`, `platform_forms`, cidades…) | Leitura conforme política | Leitura conforme política | Gestão onde política exige `admin` |
 
@@ -222,6 +239,6 @@ Para detalhes por tabela, ver arquivos em `supabase/migrations/` citados em [ras
 - Rotas reais fora do menu: **calendário** (`/dashboard/services/calendar`), **detalhe** (`/dashboard/services/:id`), **settings** (fake).
 - **Prestador sem KYC `ACTIVE`:** conteúdo operacional bloqueado pelo gate; **menus ocultos** (desktop, bottom nav, hamburger); header/logo permanece; allowlist de conteúdo **`/dashboard/conta*`**.
 - **Push:** soft prompt para autenticados (copy por papel); **geo operacional só prestador** (device-beacon).
-- **CNS / propostas / reagendamento / pagamentos:** matrizes acima; admin sem UI de mutação nesses fluxos.
+- **CNS / propostas / reagendamento / pagamentos / conclusão:** matrizes acima; admin sem UI de mutação nesses fluxos.
 - **Admin:** papel no banco + redirect para `/admin/dashboard` **sem rota** — **P-02**.
 - Endereços no menu cliente: **placeholder**; gestão real em **Minha conta**.

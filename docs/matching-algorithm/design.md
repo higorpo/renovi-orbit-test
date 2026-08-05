@@ -101,7 +101,7 @@ flowchart TB
 
 | Operation | Model | Max latency | Consistency |
 |-----------|-------|-------------|-------------|
-| SR first `OPEN` → dispatch bootstrap | **Sync** (trigger, same txn as SR) | ms | Strong |
+| SR enrichment `READY` → matching bootstrap | **Sync** (`matching_bootstrap_dispatch_for_service_request` in enrichment finalize TX; OPEN insert alone does **not** bootstrap) | ms | Strong |
 | Gate re-eval on proposal RPC | **Sync** (inline, same txn) | ms | Strong |
 | Batch discovery + visibility + MMD ingest | **Sync txn** in cron worker; MMD **delivery async** | batch txn < 5s; push minutes | Strong for visibility; eventual for push |
 | Push/e-mail delivery | **Async** (MMD worker) | seconds–hours | Eventual |
@@ -211,7 +211,7 @@ erDiagram
 | M3 | `*_matching_beacon_location_columns.sql` | Extend `user_device_beacons` with location columns |
 | M4 | `*_matching_provider_latest_locations.sql` | Table + trigger on beacon upsert |
 | M5 | `*_matching_dispatch_enums_tables.sql` | Enums, 5 dispatch tables, indexes, RLS deny authenticated direct write |
-| M6 | `*_matching_dispatch_bootstrap_trigger.sql` | SR first `OPEN` → dispatch row |
+| M6 | `*_matching_dispatch_bootstrap_trigger.sql` | **Historical:** SR first `OPEN` → dispatch row. **Superseded:** trigger DROPped; bootstrap is `matching_bootstrap_dispatch_for_service_request` on enrichment `READY` ([service-completion §3.7](../service-completion/design.md)) |
 | M7 | `*_matching_rating_stats_schema.sql` | `service_ratings`, stats tables, bootstrap + refresh triggers |
 | M8 | `*_matching_gate_helper.sql` | `evaluate_service_request_dispatch_gates` |
 | M9 | `*_matching_discovery_ranking.sql` | Internal SQL functions: eligibility, ranking, tie-break |
@@ -461,15 +461,21 @@ alter table public.user_device_beacons
 
 ## 4.1 Service Request publication → first batch
 
+> **Normative (post service-completion cutover):** Matching bootstrap is **not** on first `OPEN` insert. Enrichment reaches `READY`, then `matching_bootstrap_dispatch_for_service_request` inserts `DISPATCH_PENDING` with `next_batch_at = now() + matching.dispatch_start_delay_minutes` in the same TX (or sweeper repair). See [service-completion design §3.7 / §4.1](../service-completion/design.md). The 5-minute delay clock starts at **bootstrap**, not at OPEN.
+
 ```mermaid
 sequenceDiagram
   participant C as Client
   participant PG as PostgreSQL
+  participant EDGE as generate-completion-checklist
   participant CRON as pg_cron
   participant MMD as message_dispatcher
 
-  C->>PG: INSERT/UPDATE service_requests SET status=OPEN
-  PG->>PG: trg_service_request_dispatch_bootstrap
+  C->>PG: Create/republish SR (OPEN) + enqueue enrichment PENDING
+  Note over PG: No dispatch row yet (OPEN trigger DROPped)
+  PG->>EDGE: wake (best-effort)
+  EDGE->>PG: claim → LLM → enrichment_finalize_ready
+  PG->>PG: matching_bootstrap_dispatch_for_service_request
   Note over PG: INSERT dispatches PENDING next_batch_at=now()+5min
 
   CRON->>PG: cron_process_service_request_dispatches()
@@ -488,7 +494,7 @@ sequenceDiagram
 
 **Txn boundaries:**
 
-1. **Bootstrap trigger:** SR row + dispatch row — **one txn**.
+1. **Matching bootstrap:** enrichment `READY` + dispatch row — **one txn** (finalize CAS or repair sweeper). OPEN insert alone MUST NOT create dispatch.
 2. **Batch open:** lease acquire → gates → discovery → visibility → batch rows → MMD ingest trigger — **one txn per dispatch**; failure rolls back entire batch (no partial visibility without batch row).
 
 ## 4.2 Gate re-evaluation (inline vs cron)
@@ -932,7 +938,7 @@ This section maps **all 200 acceptance criteria** (Req 1–13, 4A, 10A, 10B) to 
 
 | Req | AC | Section | Mechanism |
 |-----|-----|---------|-----------|
-| 1 | 1 | §4.1 M6 | T-Bootstrap: `trg_service_request_dispatch_bootstrap` on SR first OPEN |
+| 1 | 1 | §4.1 | T-Bootstrap: `matching_bootstrap_dispatch_for_service_request` on enrichment `READY` (OPEN trigger DROPped — [service-completion §3.7](../service-completion/design.md)) |
 | 1 | 2 | §15.1 | T-Disc: `matching_discover_candidates` LIMIT 200 hardcoded |
 | 1 | 3 | §15.1 | T-Disc: live join `profiles`, load, proposals at batch-open time |
 | 1 | 4 | §3.5 M4 | T-Geo: read `provider_latest_locations` |

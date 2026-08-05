@@ -8,7 +8,7 @@ Documentação baseada em `src/features/request-quote/`, Edge Functions `create-
 
 | Item | Descrição |
 |------|-----------|
-| **Objetivo** | Captar demanda: criar **`service_requests`** com formulário dinâmico, descrição (IA opcional), fotos, endereço e identidade (visitante com cadastro inline ou cliente logado). |
+| **Objetivo** | Captar demanda: criar **`service_requests`** `OPEN` com formulário dinâmico, descrição (IA opcional), fotos, endereço e identidade (visitante com cadastro inline ou cliente logado). Na mesma TX o backend **enfileira enrichment** `PENDING` (checklist); matching **só** após enrichment `READY` — ver [service-completion](../../service-completion/README.md) / [matching-dispatch](../../matching-dispatch/README.md). |
 | **Rota** | **`/pedir-orcamento`** — componente `RequestQuote` (`router.tsx`, lazy). |
 | **Query string** | **`?serviceSlug=<slug>`** — deep link: após carregar serviços, seleciona automaticamente o serviço cujo `slug` coincide; **rascunho local é apagado** ao entrar com esse parâmetro (`useRequestQuoteDraft`). |
 | **Quem usa** | Visitante (cadastro no fluxo) ou **cliente** logado. Prestador não é público-alvo do pedido. |
@@ -154,7 +154,7 @@ Documentação baseada em `src/features/request-quote/`, Edge Functions `create-
 | Usuário | `validateRequestUser` — com JWT: `auth.uid() === userId`; sem JWT: usuário existe e bate e-mail |
 | Endereço | Existente por id ou criação (`createAddress`) |
 | Fotos | `uploadPhotos` — bucket **`service-requests`**, magic bytes, tipos permitidos, **máx. 10 fotos, 5 MB cada** |
-| Pedido | `createServiceRequest` — `status: "open"`, campos de formulário e metadados estruturados da IA |
+| Pedido | `create_request_quote_service_request` — `status: OPEN`, campos de formulário e metadados estruturados da IA; **`service_request_enqueue_enrichment`** na mesma TX (`PENDING`). Matching **não** inicia no insert `OPEN` (bootstrap só após READY). |
 
 **Config:** `supabase/config.toml` — **`verify_jwt = false`**; segurança descrita no comentário do arquivo e no handler.
 
@@ -213,6 +213,8 @@ Consumo externo típico: página do wizard; outros módulos importam estilos de 
 | `dynamic-form` | `DynamicForm`, `validateFormSchema`, skeleton |
 | `addresses` | `AddressSelectionStep`, `addressFormSchema` |
 | `auth` | `useAuth`, `signUp`, schemas de identidade/senha, `getClientEmailRedirectTo` |
+| `service-completion` | Downstream: enrichment enfileirado na criação; checklist antes do feed |
+| `matching-dispatch` | Downstream **após** enrichment READY (não no insert `OPEN`) |
 | `@/lib/recaptcha` | `preloadRecaptcha` (mount), `executeRecaptcha` (submit) |
 | `@/hooks/useAnalytics` | Eventos de funil |
 
@@ -265,3 +267,7 @@ flowchart TD
 ## 21. Atualização de auditoria (2026-08-03)
 
 - **reCAPTCHA v3 no pedido:** `useRequestQuoteSubmit` chama `preloadRecaptcha()` no mount (enquanto o usuário preenche o wizard); no submit continua `executeRecaptcha("request_quote_submit")` + validação na Edge. Evita carregar o script só na ação restrita (recomendação Google; score insuficiente).
+
+## 22. Atualização de auditoria (2026-08-04)
+
+- **Enrichment na criação:** insert `OPEN` enfileira enrichment `PENDING` (`service_request_enqueue_enrichment`); matching bootstrap só após READY (READY-handoff; trigger OPEN DROP). Ver README do módulo e [service-completion](../../service-completion/README.md).
