@@ -77,17 +77,6 @@ export type {
 } from "./charges.api";
 
 export {
-  markServiceExecuted,
-  confirmServiceCompleted,
-} from "./serviceLifecycle.api";
-export type {
-  MarkServiceExecutedSuccess,
-  MarkServiceExecutedResult,
-  ConfirmServiceCompletedSuccess,
-  ConfirmServiceCompletedResult,
-} from "./serviceLifecycle.api";
-
-export {
   listClientPaymentTransactions,
   listProviderPaymentReceivables,
 } from "./history.api";
