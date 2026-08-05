@@ -1,0 +1,50 @@
+// @vitest-environment happy-dom
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { FrozenEvidenceReview } from "../FrozenEvidenceReview";
+
+const schema = {
+  version: 1,
+  blocks: [
+    {
+      id: "c1",
+      type: "completion_criterion",
+      label: "Trabalho concluído?",
+      required: true,
+      config: { requires_evidence_when_met: false },
+    },
+    {
+      id: "c2",
+      type: "completion_criterion",
+      label: "Área limpa?",
+      required: true,
+      config: { requires_evidence_when_met: false },
+    },
+  ],
+};
+
+describe("FrozenEvidenceReview", () => {
+  it("shows executed_late badge and highlights unmet criteria", () => {
+    render(
+      <FrozenEvidenceReview
+        checklistSchema={schema}
+        executedLate
+        responses={{
+          c1: { met: true, evidence_paths: [] },
+          c2: {
+            met: false,
+            justification: "Faltou acabamento",
+            evidence_paths: ["a.jpg"],
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByTestId("executed-late-badge")).toHaveTextContent(
+      /atraso/i,
+    );
+    const unmet = screen.getByText(/Critério não atendido/i);
+    expect(unmet).toBeInTheDocument();
+    expect(screen.getByText("Área limpa?")).toBeInTheDocument();
+  });
+});

@@ -1,0 +1,76 @@
+/**
+ * Client-only dispute stub entry (Task 52 / design §11.6).
+ * No dispute FSM — opens support URL or "Em breve" toast.
+ */
+
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { MessageCircleWarning } from "lucide-react";
+import { useDisputeStub } from "../hooks/useDisputeStub";
+
+export type DisputeStubEntryProps = {
+  contractedServiceId: string;
+  csStatus: string;
+  className?: string;
+  remoteSupportUrl?: string | null;
+};
+
+export function DisputeStubEntry({
+  contractedServiceId,
+  csStatus,
+  className,
+  remoteSupportUrl,
+}: DisputeStubEntryProps) {
+  const { openDisputeStub } = useDisputeStub();
+
+  return (
+    <div
+      className={cn(
+        "rounded-lg border border-border bg-muted/30 px-3 py-3",
+        className,
+      )}
+      data-testid="dispute-stub-entry"
+    >
+      <div className="flex items-start gap-3">
+        <MessageCircleWarning
+          className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground"
+          aria-hidden
+        />
+        <div className="min-w-0 flex-1 space-y-2">
+          <div>
+            <p className="text-sm font-medium text-foreground">Abrir disputa</p>
+            <p className="text-xs text-muted-foreground">
+              Em breve — fale com o suporte Renovi
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9"
+            data-testid="dispute-stub-open"
+            onClick={() =>
+              openDisputeStub({
+                contractedServiceId,
+                csStatus,
+                remoteSupportUrl,
+              })
+            }
+          >
+            Abrir disputa
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** True when client should see the stub for EXECUTED/COMPLETED (design §11.6). */
+export function shouldShowDisputeStub(input: {
+  showDisputeStubCapability?: boolean;
+  csStatus?: string | null;
+}): boolean {
+  if (input.showDisputeStubCapability) return true;
+  const status = (input.csStatus ?? "").toUpperCase();
+  return status === "EXECUTED" || status === "COMPLETED";
+}

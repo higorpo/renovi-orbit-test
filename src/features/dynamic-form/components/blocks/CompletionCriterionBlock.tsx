@@ -16,7 +16,8 @@ import { getCompletionCriterionConfig } from "../../utils/completionCriterion";
 export type CompletionCriterionBlockProps = {
   block: FormBlock;
   value: CompletionCriterionValue | undefined;
-  onChange: (value: CompletionCriterionValue) => void;
+  /** Required for editable use; omit when `readOnly`. */
+  onChange?: (value: CompletionCriterionValue) => void;
   /** Legacy hook returning a storage path string after parent-handled upload. */
   onRequestEvidenceUpload?: () => void | Promise<void | string | null>;
   /** Preferred: pick file in the block, then upload via parent session flow. */
@@ -67,6 +68,10 @@ export function CompletionCriterionBlock({
   const hasSuccess =
     validation.touched && validation.state === "valid" && typeof current.met === "boolean";
 
+  const emitChange = (next: CompletionCriterionValue) => {
+    onChange?.(next);
+  };
+
   const patch = (partial: Partial<DraftValue> & { met?: boolean }) => {
     const met = partial.met ?? current.met;
     if (typeof met !== "boolean") return;
@@ -75,7 +80,7 @@ export function CompletionCriterionBlock({
       justification: partial.justification ?? current.justification,
       evidence_paths: partial.evidence_paths ?? current.evidence_paths,
     };
-    onChange(next);
+    emitChange(next);
     if (!validation.touched) setTimeout(() => markAsTouched(), 0);
   };
 
@@ -98,7 +103,7 @@ export function CompletionCriterionBlock({
   const appendEvidencePath = (path: string) => {
     const latest = normalizeValue(valueRef.current);
     if (typeof latest.met !== "boolean") return;
-    onChange({
+    emitChange({
       met: latest.met,
       justification: latest.justification,
       evidence_paths: [...latest.evidence_paths, path],
