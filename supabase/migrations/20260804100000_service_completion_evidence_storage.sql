@@ -8,7 +8,8 @@
 --
 -- Signed uploads: provider INSERT under own open session prefix; no authenticated UPDATE
 -- (immutability — unique paths). DELETE is service_role/janitor only (Tasks 57–59, 79).
--- Direct signed uploads bypass Edge body (Req 20 AC7); Task 34 may wrap signed URL helper.
+-- Direct client uploads under open session prefix (KYC Option A / RLS; Req 20 AC7).
+-- No Edge body proxy; Task 34 uses storage.upload + register RPC.
 --
 -- =============================================================================
 -- GRANT / REVOKE matrix scaffolding (design §11.2.2) — apply with each RPC task:
