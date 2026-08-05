@@ -10,6 +10,7 @@ import {
   DEFAULT_PROPERTY_TYPE_OPTIONS,
   DEFAULT_URGENCY_OPTIONS,
 } from "./defaults";
+import { validateCompletionCriterionValue } from "../utils/completionCriterion";
 
 export function evaluateVisibilityRule(rule: VisibilityRule, formData: FormData): boolean {
   const fieldValue = formData[rule.dependsOn];
@@ -201,6 +202,10 @@ export function validateBlockValue(
 ): ValidateBlockResult {
   if (block.type === "static_text") return { valid: true };
 
+  if (block.type === "completion_criterion") {
+    return validateCompletionCriterionValue(block, value);
+  }
+
   if (isValueEmpty(value)) {
     if (!block.required) return { valid: true };
     return { valid: false, error: block.validation?.message || "Campo obrigatório" };
@@ -285,6 +290,14 @@ export function getDisplayValue(block: FormBlock, value: unknown): string {
     }
     case "yes_no":
       return value === true ? "Sim" : value === false ? "Não" : "-";
+    case "completion_criterion": {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return "-";
+      const v = value as { met?: boolean; evidence_paths?: string[] };
+      if (typeof v.met !== "boolean") return "-";
+      const paths = Array.isArray(v.evidence_paths) ? v.evidence_paths.length : 0;
+      const status = v.met ? "Atendido" : "Não atendido";
+      return paths > 0 ? `${status} (${paths} foto(s))` : status;
+    }
     case "number":
     case "slider": {
       const num = typeof value === "number" ? value : Number(value);

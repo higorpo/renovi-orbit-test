@@ -41,6 +41,7 @@ export const BLOCK_TYPE_LABELS: Record<FormBlockType, string> = {
   static_text: "Texto estático",
   image_gallery: "Galeria de imagens",
   preview_summary: "Resumo / Preview",
+  completion_criterion: "Critério de conclusão",
 };
 
 export const BLOCK_TYPE_ICONS: Record<FormBlockType, string> = {
@@ -62,6 +63,7 @@ export const BLOCK_TYPE_ICONS: Record<FormBlockType, string> = {
   static_text: "📋",
   image_gallery: "🖼️",
   preview_summary: "✅",
+  completion_criterion: "✔️",
 };
 
 export const VISIBILITY_OPERATORS: { value: VisibilityOperator; label: string }[] = [
@@ -139,6 +141,20 @@ export function createBlock(type: FormBlockType, overrides?: Partial<FormBlock>)
         ...base,
         config: { ...base.config, multiSelect: false, columns: 2 },
         options: base.options ?? [],
+      };
+    case "completion_criterion":
+      return {
+        ...base,
+        required: overrides?.required ?? true,
+        description_ai:
+          overrides?.description_ai ??
+          "Critério de conclusão do serviço: atendido/não atendido, justificativa e evidências fotográficas.",
+        config: {
+          requires_evidence_when_met: false,
+          evidence_min: 1,
+          evidence_max: 5,
+          ...base.config,
+        },
       };
     default:
       return base;

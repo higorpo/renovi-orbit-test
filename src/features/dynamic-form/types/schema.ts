@@ -16,7 +16,8 @@ export type FormBlockType =
   | "conditional_alert"
   | "static_text"
   | "image_gallery"
-  | "preview_summary";
+  | "preview_summary"
+  | "completion_criterion";
 
 /** Single source of truth for valid block types (used by schema validator and block registry). */
 export const FORM_BLOCK_TYPES: readonly FormBlockType[] = [
@@ -38,7 +39,27 @@ export const FORM_BLOCK_TYPES: readonly FormBlockType[] = [
   "static_text",
   "image_gallery",
   "preview_summary",
+  "completion_criterion",
 ] as const;
+
+/** Completion checklist allowlist (ADR-0003 / design §5.8). */
+export const COMPLETION_CHECKLIST_BLOCK_TYPES: readonly FormBlockType[] = [
+  "completion_criterion",
+  "static_text",
+] as const;
+
+export interface CompletionCriterionBlockConfig {
+  requires_evidence_when_met: boolean;
+  evidence_min?: number;
+  evidence_max?: number;
+}
+
+/** Response value for `completion_criterion` (design §5.8.2). */
+export interface CompletionCriterionValue {
+  met: boolean;
+  justification?: string;
+  evidence_paths: string[];
+}
 
 export type VisibilityOperator =
   | "equals"

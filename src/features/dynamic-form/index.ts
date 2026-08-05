@@ -27,8 +27,13 @@ export type {
   FormSchemaConfig,
   PreviewSummarySectionConfig,
   PreviewSummaryBlockConfig,
+  CompletionCriterionBlockConfig,
+  CompletionCriterionValue,
 } from "./types";
-export { FORM_BLOCK_TYPES } from "./types/schema";
+export {
+  FORM_BLOCK_TYPES,
+  COMPLETION_CHECKLIST_BLOCK_TYPES,
+} from "./types/schema";
 export {
   getVisibleSteps,
   getVisibleBlocks,
@@ -71,3 +76,21 @@ export type {
   SummarySection,
   FormCompleteness,
 } from "./utils/summaryDisplay";
+
+export {
+  getCompletionCriterionConfig,
+  validateCompletionCriterionValue,
+  isCompletionCriterionValue,
+  DEFAULT_EVIDENCE_MIN,
+  DEFAULT_EVIDENCE_MAX,
+} from "./utils/completionCriterion";
+export {
+  validateCompletionChecklistSchema,
+  isCompletionChecklistBlockType,
+  countCompletionCriteria,
+} from "./utils/completionChecklist";
+export type { CompletionChecklistValidationResult } from "./utils/completionChecklist";
+
+export { CompletionCriterionBlock } from "./components/blocks/CompletionCriterionBlock";
+export type { CompletionCriterionBlockProps } from "./components/blocks/CompletionCriterionBlock";
+export { StaticTextBlock } from "./components/blocks/StaticTextBlock";

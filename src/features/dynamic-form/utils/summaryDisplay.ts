@@ -17,6 +17,7 @@ export const INPUT_BLOCK_TYPES = new Set([
   "urgency",
   "description_ai",
   "image_gallery",
+  "completion_criterion",
 ]);
 
 export interface SummaryEntry {

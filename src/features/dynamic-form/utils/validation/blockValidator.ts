@@ -110,6 +110,40 @@ export function validateBlocks(
       }
     }
 
+    if (block.type === "completion_criterion") {
+      const cfg = block.config as Record<string, unknown> | undefined;
+      if (!cfg || typeof cfg.requires_evidence_when_met !== "boolean") {
+        errors.push({
+          code: "COMPLETION_CRITERION_CONFIG",
+          message: `Block "${block.id}" must set config.requires_evidence_when_met (boolean)`,
+          path: `${path}.config`,
+          severity: "error",
+        });
+      }
+      const evMin = cfg?.evidence_min;
+      const evMax = cfg?.evidence_max;
+      if (evMin !== undefined && (typeof evMin !== "number" || evMin < 1)) {
+        errors.push({
+          code: "COMPLETION_CRITERION_EVIDENCE_MIN",
+          message: `Block "${block.id}" evidence_min must be an integer >= 1`,
+          path: `${path}.config.evidence_min`,
+          severity: "error",
+        });
+      }
+      if (
+        typeof evMin === "number" &&
+        typeof evMax === "number" &&
+        evMax < evMin
+      ) {
+        errors.push({
+          code: "COMPLETION_CRITERION_EVIDENCE_RANGE",
+          message: `Block "${block.id}" evidence_max must be >= evidence_min`,
+          path: `${path}.config`,
+          severity: "error",
+        });
+      }
+    }
+
     const validationErrors = validateBlockValidation(block, path);
     errors.push(...validationErrors);
   }

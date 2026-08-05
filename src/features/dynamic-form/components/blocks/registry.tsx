@@ -20,6 +20,8 @@ import { StaticTextBlock } from "./StaticTextBlock";
 import { PreviewSummaryBlock } from "./PreviewSummaryBlock";
 import { ImageGalleryBlock } from "./ImageGalleryBlock";
 import { YesNoBlock } from "./YesNoBlock";
+import { CompletionCriterionBlock } from "./CompletionCriterionBlock";
+import type { CompletionCriterionValue } from "../../types";
 
 /** Unified props passed to every block renderer from StepRenderer. */
 export interface BlockRenderProps {
@@ -108,6 +110,8 @@ export const blockRegistry: Record<FormBlockType, BlockRenderer> = {
   preview_summary: renderPreviewSummary,
   image_gallery: (p) =>
     renderWithValue<string | string[]>(p, ImageGalleryBlock),
+  completion_criterion: (p) =>
+    renderWithValue<CompletionCriterionValue>(p, CompletionCriterionBlock),
 };
 
 export function renderBlockByType(props: BlockRenderProps): ReactNode {

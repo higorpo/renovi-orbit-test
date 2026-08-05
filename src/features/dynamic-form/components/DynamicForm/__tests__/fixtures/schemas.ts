@@ -93,6 +93,14 @@ export const allBlocksSchema: FormSchema = {
           options: [{ value: "c1", label: "C1" }, { value: "c2", label: "C2", exclusive: true }],
         },
         { id: "yes_no", type: "yes_no", label: "Sim/Não", required: true, description_ai: "Yes or no." },
+        {
+          id: "completion_criterion",
+          type: "completion_criterion",
+          label: "Critério de conclusão",
+          required: true,
+          description_ai: "Completion criterion.",
+          config: { requires_evidence_when_met: false, evidence_min: 1, evidence_max: 5 },
+        },
         { id: "text", type: "text", label: "Texto", required: true, description_ai: "Text input.", validation: { minLength: 2, maxLength: 100 } },
         { id: "textarea", type: "textarea", label: "Área de texto", required: false, description_ai: "Long text.", validation: { maxLength: 500 } },
         { id: "number", type: "number", label: "Número", required: true, min: 1, max: 99, unit: "un", description_ai: "Numeric value." },
@@ -188,6 +196,7 @@ export const allBlocksPartialData: FormData = {
   single_select: "x",
   radio: "r1",
   yes_no: true,
+  completion_criterion: { met: true, evidence_paths: [] },
   text: "Ab",
   number: 10,
 };

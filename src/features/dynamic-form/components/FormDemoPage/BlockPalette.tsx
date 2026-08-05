@@ -26,6 +26,7 @@ const BLOCK_TYPES: FormBlockType[] = [
   "static_text",
   "image_gallery",
   "preview_summary",
+  "completion_criterion",
 ];
 
 const PALETTE_DRAG_TYPE = "palette-block";
