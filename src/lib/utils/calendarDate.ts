@@ -1,4 +1,8 @@
 const ISO_DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+const ISO_DATE_PREFIX_RE = /^(\d{4}-\d{2}-\d{2})/;
+
+/** IANA timezone for Brazil business calendar (BRT / América/São Paulo). */
+export const AMERICA_SAO_PAULO_TZ = "America/Sao_Paulo";
 
 /** Formats a Date as a local civil calendar ISO date (YYYY-MM-DD). */
 export function toLocalDateOnlyIso(date: Date): string {
@@ -17,6 +21,36 @@ export function parseIsoDate(isoDate: string): Date | null {
   const day = Number(match[3]);
   const parsed = new Date(year, month, day);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+/**
+ * Extracts the leading civil YYYY-MM-DD from a date-only or ISO timestamp string.
+ * Does not convert timezones — use for DB date columns / ISO prefixes.
+ */
+export function extractDateOnlyIso(
+  value: string | null | undefined,
+): string | null {
+  if (!value) return null;
+  const match = ISO_DATE_PREFIX_RE.exec(value.trim());
+  return match?.[1] ?? null;
+}
+
+/** Today's calendar date in an IANA timezone as YYYY-MM-DD (`en-CA` → ISO shape). */
+export function todayInTimeZoneIso(
+  timeZone: string,
+  now: Date = new Date(),
+): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+}
+
+/** Today's calendar date in America/Sao_Paulo as YYYY-MM-DD. */
+export function todayInSaoPauloIso(now: Date = new Date()): string {
+  return todayInTimeZoneIso(AMERICA_SAO_PAULO_TZ, now);
 }
 
 /** Normalizes civil calendar dates (YYYY-MM-DD) and timestamps to a local ISO date. */

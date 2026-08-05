@@ -114,6 +114,9 @@ export interface RpcCounterparty {
 export interface RpcServiceRow {
   id: string;
   list_phase?: string;
+  enrichment_status?: string | null;
+  enrichment_ready?: boolean | null;
+  executed_late?: boolean | null;
   request?: RpcServiceRequest;
   negotiation?: RpcServiceNegotiation;
   contracted?: RpcContractedService | null;
@@ -231,6 +234,21 @@ function mapChatSummary(
   };
 }
 
+function normalizeEnrichmentStatus(
+  value: string | null | undefined,
+): ServiceModel["enrichmentStatus"] {
+  const normalized = (value ?? "").trim().toUpperCase();
+  if (
+    normalized === "PENDING" ||
+    normalized === "RUNNING" ||
+    normalized === "READY" ||
+    normalized === "ABORTED"
+  ) {
+    return normalized;
+  }
+  return null;
+}
+
 export function mapRpcServiceRow(row: RpcServiceRow): ServiceModel {
   const request = row.request ?? {};
   const negotiation = row.negotiation ?? {};
@@ -239,6 +257,7 @@ export function mapRpcServiceRow(row: RpcServiceRow): ServiceModel {
   const service = mapPlatformService(request.platform_service);
   const counterparty = mapCounterparty(row.counterparty);
   const contracted = mapContracted(row.contracted);
+  const enrichmentStatus = normalizeEnrichmentStatus(row.enrichment_status);
 
   return {
     id: row.id,
@@ -282,5 +301,9 @@ export function mapRpcServiceRow(row: RpcServiceRow): ServiceModel {
     lastActivityAt: negotiation.last_activity_at ?? null,
     myProposal: mapMyProposal(negotiation.my_proposal),
     chatSummary: mapChatSummary(negotiation.chat),
+    enrichmentStatus,
+    enrichmentReady: Boolean(row.enrichment_ready) || enrichmentStatus === "READY",
+    executedLate:
+      typeof row.executed_late === "boolean" ? row.executed_late : null,
   };
 }

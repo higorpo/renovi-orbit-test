@@ -8,10 +8,6 @@ import {
 } from "@/features/payments";
 import { ContractedServiceRescheduleAction } from "@/features/service-reschedule";
 import { useAuth } from "@/features/auth";
-import {
-  ServiceCompletionActions,
-  type ServiceCompletionViewerRole,
-} from "./ServiceCompletionActions";
 import type { ContractedServiceSummary } from "../types/service.types";
 import { getContractedServiceStatusLabel } from "../utils/contractedServiceStatusLabel";
 import { formatScheduledSummaryLabel } from "../utils/formatScheduledSummary";
@@ -21,13 +17,10 @@ interface ServiceContractedSectionProps {
   contracted: ContractedServiceSummary;
   serviceRequestId?: string;
   showManualPayment?: boolean;
-  showServiceCompletion?: boolean;
-  completionViewerRole?: ServiceCompletionViewerRole;
   showProviderSettlement?: boolean;
   showServiceCancellation?: boolean;
   cancellationViewerRole?: CancellationViewerRole;
   onCancellationSuccess?: () => void;
-  onCompletionSuccess?: () => void;
   onRescheduleSuccess?: () => void;
 }
 
@@ -35,13 +28,10 @@ export function ServiceContractedSection({
   contracted,
   serviceRequestId,
   showManualPayment = false,
-  showServiceCompletion = false,
-  completionViewerRole,
   showProviderSettlement = false,
   showServiceCancellation = false,
   cancellationViewerRole,
   onCancellationSuccess,
-  onCompletionSuccess,
   onRescheduleSuccess,
 }: ServiceContractedSectionProps) {
   const { profile } = useAuth();
@@ -94,14 +84,6 @@ export function ServiceContractedSection({
           <ManualPaymentRecovery
             contractedServiceId={contracted.id}
             serviceRequestId={serviceRequestId}
-          />
-        ) : null}
-        {showServiceCompletion && completionViewerRole ? (
-          <ServiceCompletionActions
-            contractedServiceId={contracted.id}
-            status={contracted.status}
-            viewerRole={completionViewerRole}
-            onSuccess={onCompletionSuccess}
           />
         ) : null}
         {showServiceCancellation && cancellationViewerRole ? (

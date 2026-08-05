@@ -115,6 +115,11 @@ export interface ServiceModel {
   lastActivityAt: string | null;
   myProposal: MyProposalSummary | null;
   chatSummary: ServiceChatSummary | null;
+  /** Enrichment FSM status from service_request_enrichments (lightweight). */
+  enrichmentStatus: "PENDING" | "RUNNING" | "READY" | "ABORTED" | null;
+  enrichmentReady: boolean;
+  /** Frozen evidence late flag when CS is EXECUTED/COMPLETED; otherwise null. */
+  executedLate: boolean | null;
 }
 
 export interface ListServicesParams {

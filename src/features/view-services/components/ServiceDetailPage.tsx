@@ -5,6 +5,13 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/auth";
+import {
+  EnrichmentProcessingBanner,
+  ProviderExecutedWizard,
+  ClientConfirmRatingWizard,
+  deriveEnrichmentProcessingUi,
+  useServiceCompletionContext,
+} from "@/features/service-completion";
 import { ReceivedBudgetDetailsSheet } from "@/features/negotiation-proposals";
 import { useCancelService } from "../hooks/useCancelService";
 import { useRepublishCancelledService } from "../hooks/useRepublishCancelledService";
@@ -47,6 +54,11 @@ export function ServiceDetailPage({
   const { profile } = useAuth();
   useRecordProviderOpportunityView(id);
   const { data: model, isLoading, isError, refetch } = useService(id);
+  const { data: completionContext } = useServiceCompletionContext(id, {
+    pollWhileProcessing: true,
+    requestStatus: model?.requestStatus ?? null,
+    listPhase: model?.listPhase ?? null,
+  });
   const { cancelService, isCancelling } = useCancelService();
   const { republishCancelledService, isRepublishing } = useRepublishCancelledService();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -131,6 +143,17 @@ export function ServiceDetailPage({
     (isClient && model.contracted);
   const showSecondarySections = showClientNegotiationChats || isProvider;
 
+  const enrichmentStatus =
+    completionContext?.enrichment?.status ?? model.enrichmentStatus;
+  const enrichmentReady =
+    completionContext?.enrichment?.status === "READY" || model.enrichmentReady;
+  const enrichmentBannerUi = deriveEnrichmentProcessingUi({
+    enrichmentStatus,
+    enrichmentReady,
+    requestStatus: model.requestStatus,
+    listPhase: model.listPhase,
+  });
+
   return (
     <div className={pageClassName}>
       {isProvider ? (
@@ -139,6 +162,17 @@ export function ServiceDetailPage({
 
       <article className="overflow-hidden rounded-lg border border-border bg-card shadow-elevation-1">
         <ServiceDetailHeader model={model} isClient={isClient} isProvider={isProvider} />
+
+        {enrichmentBannerUi.kind !== "hidden" ? (
+          <div className="border-t border-border/80 px-4 py-3 sm:px-6">
+            <EnrichmentProcessingBanner
+              enrichmentStatus={enrichmentStatus}
+              enrichmentReady={enrichmentReady}
+              requestStatus={model.requestStatus}
+              listPhase={model.listPhase}
+            />
+          </div>
+        ) : null}
 
         {showClientActions ? (
           <div className="border-t border-border/80 px-4 py-3 sm:px-6">
@@ -169,18 +203,27 @@ export function ServiceDetailPage({
             contracted={model.contracted}
             serviceRequestId={model.id}
             showManualPayment={Boolean(isClient)}
-            showServiceCompletion={Boolean(isClient || isProvider)}
-            completionViewerRole={
-              isClient ? "client" : isProvider ? "provider" : undefined
-            }
             showProviderSettlement={isProvider}
             showServiceCancellation={Boolean(isClient || isProvider)}
             cancellationViewerRole={
               isClient ? "client" : isProvider ? "provider" : undefined
             }
             onCancellationSuccess={() => void refetch()}
-            onCompletionSuccess={() => void refetch()}
             onRescheduleSuccess={() => void refetch()}
+          />
+        ) : null}
+        {isProvider && model.contracted ? (
+          <ProviderExecutedWizard
+            serviceRequestId={model.id}
+            scheduledStartDate={model.contracted.scheduledStartDate}
+            scheduledEndDate={model.contracted.scheduledEndDate}
+            onExecuted={() => void refetch()}
+          />
+        ) : null}
+        {isClient && model.contracted ? (
+          <ClientConfirmRatingWizard
+            serviceRequestId={model.id}
+            onCompleted={() => void refetch()}
           />
         ) : null}
         {isProvider && model.contracted ? (

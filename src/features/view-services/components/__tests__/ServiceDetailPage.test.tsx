@@ -140,27 +140,29 @@ vi.mock("../ServiceDetailClientActions", () => ({
 vi.mock("../ServiceContractedSection", () => ({
   ServiceContractedSection: (props: {
     onCancellationSuccess?: () => void;
-    onCompletionSuccess?: () => void;
     onRescheduleSuccess?: () => void;
-    completionViewerRole?: string;
     cancellationViewerRole?: string;
   }) => (
     <div
       data-testid="contracted-section"
-      data-completion-viewer-role={props.completionViewerRole}
       data-cancellation-viewer-role={props.cancellationViewerRole}
     >
       <button type="button" onClick={() => props.onCancellationSuccess?.()}>
         cancel-ok
-      </button>
-      <button type="button" onClick={() => props.onCompletionSuccess?.()}>
-        complete-ok
       </button>
       <button type="button" onClick={() => props.onRescheduleSuccess?.()}>
         reschedule-ok
       </button>
     </div>
   ),
+}));
+
+vi.mock("@/features/service-completion", () => ({
+  EnrichmentProcessingBanner: () => null,
+  deriveEnrichmentProcessingUi: () => ({ kind: "hidden", message: null, shouldPoll: false }),
+  useServiceCompletionContext: () => ({ data: null }),
+  ProviderExecutedWizard: () => <div data-testid="provider-executed-wizard" />,
+  ClientConfirmRatingWizard: () => <div data-testid="client-confirm-rating-wizard" />,
 }));
 
 vi.mock("../ServiceProviderLocationSection", () => ({
@@ -304,10 +306,10 @@ describe("ServiceDetailPage", () => {
     expect(screen.getByTestId("proposal-section")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Abrir chat/i }));
     expect(chatNavMocks.openChat).toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "complete-ok" }));
+    expect(screen.getByTestId("provider-executed-wizard")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "cancel-ok" }));
     fireEvent.click(screen.getByRole("button", { name: "reschedule-ok" }));
-    expect(serviceMocks.refetch).toHaveBeenCalledTimes(3);
+    expect(serviceMocks.refetch).toHaveBeenCalledTimes(2);
   });
 
   it("shows republish path for cancelled client services", () => {
@@ -391,14 +393,11 @@ describe("ServiceDetailPage branch coverage", () => {
     expect(screen.queryByTestId("location-section")).not.toBeInTheDocument();
   });
 
-  it("passes undefined viewer roles for an unknown profile role", () => {
+  it("passes undefined cancellation viewer role for an unknown profile role", () => {
     (authMocks as { profile: { role: string } }).profile = { role: "admin" };
     serviceMocks.data = buildModel({ contracted });
     render(<ServiceDetailPage />);
 
-    expect(screen.getByTestId("contracted-section")).not.toHaveAttribute(
-      "data-completion-viewer-role",
-    );
     expect(screen.getByTestId("contracted-section")).not.toHaveAttribute(
       "data-cancellation-viewer-role",
     );
@@ -419,7 +418,7 @@ describe("ServiceDetailPage branch coverage", () => {
     expect(serviceMocks.requestedId).toBe("prop-id");
   });
 
-  it("passes client completionViewerRole for contracted client", () => {
+  it("composes client confirm wizard from service-completion for contracted client", () => {
     authMocks.profile = { role: "client" };
     serviceMocks.data = buildModel({
       listPhase: "in_progress",
@@ -429,15 +428,13 @@ describe("ServiceDetailPage branch coverage", () => {
     });
     render(<ServiceDetailPage />);
 
-    expect(screen.getByTestId("contracted-section")).toHaveAttribute(
-      "data-completion-viewer-role",
-      "client",
-    );
+    expect(screen.getByTestId("client-confirm-rating-wizard")).toBeInTheDocument();
     expect(screen.getByTestId("client-actions")).toBeInTheDocument();
     expect(screen.queryByTestId("rejection-alert")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("provider-executed-wizard")).not.toBeInTheDocument();
   });
 
-  it("passes provider completionViewerRole for contracted provider", () => {
+  it("composes provider executed wizard from service-completion for contracted provider", () => {
     authMocks.profile = { role: "provider" };
     serviceMocks.data = buildModel({
       listPhase: "in_progress",
@@ -446,10 +443,8 @@ describe("ServiceDetailPage branch coverage", () => {
     });
     render(<ServiceDetailPage />);
 
-    expect(screen.getByTestId("contracted-section")).toHaveAttribute(
-      "data-completion-viewer-role",
-      "provider",
-    );
+    expect(screen.getByTestId("provider-executed-wizard")).toBeInTheDocument();
+    expect(screen.queryByTestId("client-confirm-rating-wizard")).not.toBeInTheDocument();
   });
 
   it("renders provider proposal section without contracted service", () => {

@@ -23,10 +23,6 @@ vi.mock("@/features/service-reschedule", () => ({
   ContractedServiceRescheduleAction: () => <div data-testid="reschedule-action" />,
 }));
 
-vi.mock("../ServiceCompletionActions", () => ({
-  ServiceCompletionActions: () => <div data-testid="completion-actions" />,
-}));
-
 const contracted: ContractedServiceSummary = {
   id: "cs-1",
   status: "CONFIRMED",
@@ -42,15 +38,13 @@ const contracted: ContractedServiceSummary = {
 };
 
 describe("ServiceContractedSection", () => {
-  it("renders contracted summary and optional actions for clients", () => {
+  it("renders contracted summary without completion CTAs (owned by service-completion wizards)", () => {
     authMocks.profile = { role: "client" };
     render(
       <ServiceContractedSection
         contracted={contracted}
         serviceRequestId="sr-1"
         showManualPayment
-        showServiceCompletion
-        completionViewerRole="client"
         showServiceCancellation
         cancellationViewerRole="client"
       />,
@@ -60,7 +54,7 @@ describe("ServiceContractedSection", () => {
     expect(screen.getByText(/João/)).toBeInTheDocument();
     expect(screen.getByText(/Agendado para/)).toBeInTheDocument();
     expect(screen.getByTestId("manual-payment")).toBeInTheDocument();
-    expect(screen.getByTestId("completion-actions")).toBeInTheDocument();
+    expect(screen.queryByTestId("completion-actions")).not.toBeInTheDocument();
     expect(screen.getByTestId("cancel-action")).toBeInTheDocument();
     expect(screen.getByTestId("reschedule-action")).toBeInTheDocument();
   });
