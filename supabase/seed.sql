@@ -628,9 +628,9 @@ values
   ('4cf92e3a-64cd-4491-998e-9163138f8e96', 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a34')
 on conflict (provider_id, neighborhood_id) do nothing;
 
--- 11) service_requests (20 total: eletrica or ar condicionado)
+-- 11) service_requests (21 total: eletrica or ar condicionado)
 --     form_schema snapshot from platform_forms via platform_services.form_id.
---     10 negotiated (seeded via RPCs below), 9 open, 1 cancelled by client after chat.
+--     10 negotiated (seeded via RPCs below), 10 open (incl. matching-wait demo), 1 cancelled.
 insert into public.service_requests (
   id, client_id, service_id, address_id,
   title, description, form_data, form_schema, form_version,
@@ -957,6 +957,22 @@ from (
       array['vacuum_pump', 'manifold_gauges', 'drill']::text[],
       array['line_set', 'refrigerant', 'cable_wire']::text[],
       '4_to_8h'
+    ),
+    -- Matching-wait demo: READY enrichment + DISPATCH_PENDING (first batch not opened yet).
+    (
+      'eb207b54-6261-45df-8b6a-8117a0aaa57b'::uuid,
+      '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
+      'f5eebc99-9c0b-4ef8-bb6d-6bb9bd380a63'::uuid,
+      'acd13138-0d54-431f-a672-55903f31301e'::uuid,
+      'Instalação de 2 Ar Condicionados (24.000 e 9.000 BTUs) com Ponto Elétrico',
+      'Preciso de orçamento para instalação de 2 aparelhos de ar condicionado em minha residência. Um dos aparelhos é de 24.000 BTUs e o outro de 9.000 BTUs. Ainda não há ponto elétrico nos locais, então será necessário puxar fiação do contador geral e passá-la por dentro das paredes dos quartos até os pontos de instalação. A urgência é alta e prefiro o período da manhã para o serviço.',
+      '{"urgency":"high","descricao":"Preciso instalar 2 ar condicionados, 1 de 24 mil btus e outro de 9 mil bts. ainda não tem ponto eletrico entao vai ter que puxar do contador geral um fio e psasar por dentro da parede dos quartos ate o local","tipo_imovel":"residencial","ja_tem_ponto":false,"tipo_servico":"instalacao_nova","qtd_aparelhos":2,"capacidade_btu":"24000","horario_preferido":"manha"}'::jsonb,
+      'OPEN', 'high', 'medium',
+      array['residencial', 'instalação nova', 'urgente', 'elétrica'],
+      array['Qual a data preferida para o serviço?'],
+      array['wire_strippers', 'voltage_tester', 'multimeter', 'cable_cutter', 'level', 'measuring_tape', 'drill', 'hammer_drill', 'ladder', 'extension_cord', 'work_light']::text[],
+      array['cable_wire', 'conduit', 'junction_boxes', 'breakers', 'electrical_tape', 'screws', 'sealant', 'wire_nuts', 'pipe_cement']::text[],
+      '4_to_8h'
     )
 ) as d(
   id, client_id, service_id, address_id, title, description, form_data,
@@ -1033,6 +1049,14 @@ set photos = array[
   '28e30f1d-3c47-441f-94c6-76b6ea0db470/1719001401_1.jpg'
 ]::text[]
 where id = '8017e014-5a32-44e7-b8da-1727a14f4d14'::uuid;
+
+update public.service_requests
+set photos = array[
+  '28e30f1d-3c47-441f-94c6-76b6ea0db470/1719000001_0.jpg',
+  '28e30f1d-3c47-441f-94c6-76b6ea0db470/1719000001_1.jpg',
+  '28e30f1d-3c47-441f-94c6-76b6ea0db470/1719000101_0.jpg'
+]::text[]
+where id = 'eb207b54-6261-45df-8b6a-8117a0aaa57b'::uuid;
 
 -- 12) Negotiation flows via RPCs (chats, messages, proposals)
 create or replace function pg_temp.seed_set_auth(p_user_id uuid)
@@ -1435,6 +1459,153 @@ begin
   perform pg_temp.seed_finalize_chat_timeline(v_chat_id, 18);
 end;
 $seed_negotiations$;
+
+-- 11c) Completion enrichments + matching dispatch bootstrap (OPEN trigger removed).
+-- Matching only bootstraps when enrichment = READY. Seed inserts READY rows and
+-- DISPATCH_PENDING directly (matching_bootstrap RPC requires service_role JWT).
+insert into public.service_request_enrichments (
+  id,
+  service_request_id,
+  status,
+  checklist_schema,
+  source,
+  materialized_at,
+  schema_version,
+  attempt_count,
+  lease_generation
+)
+select
+  case
+    when sr.id = 'eb207b54-6261-45df-8b6a-8117a0aaa57b'::uuid
+      then 'f8875581-2751-467c-ba84-60de3b099df0'::uuid
+    else md5('seed-enrichment:' || sr.id::text)::uuid
+  end,
+  sr.id,
+  'READY'::public.enrichment_status,
+  case
+    when sr.id = 'eb207b54-6261-45df-8b6a-8117a0aaa57b'::uuid then
+      '{
+        "blocks": [
+          {
+            "id": "trabalho_executado_corretamente",
+            "type": "completion_criterion",
+            "label": "O serviço de instalação dos dois aparelhos de ar condicionado foi concluído com sucesso?",
+            "config": {"evidence_max": 3, "evidence_min": 1, "requires_evidence_when_met": true},
+            "helpText": "Confirme se ambos os aparelhos foram instalados e estão funcionando.",
+            "required": true
+          },
+          {
+            "id": "ponto_eletrico_criado",
+            "type": "completion_criterion",
+            "label": "Os pontos elétricos necessários foram criados e instalados corretamente?",
+            "config": {"evidence_max": 3, "evidence_min": 1, "requires_evidence_when_met": true},
+            "helpText": "Verifique se a fiação foi passada do contador geral até os locais de instalação e se os pontos elétricos estão seguros.",
+            "required": true
+          },
+          {
+            "id": "fiao_passada_parede",
+            "type": "completion_criterion",
+            "label": "A fiação foi passada por dentro das paredes conforme solicitado?",
+            "config": {"evidence_max": 3, "evidence_min": 1, "requires_evidence_when_met": true},
+            "helpText": "Confirme se a passagem da fiação foi feita de forma limpa e segura dentro das paredes.",
+            "required": true
+          },
+          {
+            "id": "limpeza_organizacao",
+            "type": "completion_criterion",
+            "label": "O local de trabalho foi deixado limpo e organizado após o serviço?",
+            "config": {"evidence_max": 2, "evidence_min": 1, "requires_evidence_when_met": false},
+            "helpText": "O profissional deve recolher todo o material e lixo gerado durante a instalação.",
+            "required": true
+          },
+          {
+            "id": "horario_cumprido",
+            "type": "completion_criterion",
+            "label": "O serviço foi realizado no período da manhã, conforme preferência?",
+            "config": {"evidence_max": 2, "evidence_min": 1, "requires_evidence_when_met": false},
+            "helpText": "Confirme se o profissional iniciou e concluiu o serviço no período da manhã.",
+            "required": true
+          },
+          {
+            "id": "funcionamento_aparelhos",
+            "type": "completion_criterion",
+            "label": "Ambos os aparelhos de ar condicionado (24.000 e 9.000 BTUs) estão funcionando corretamente?",
+            "config": {"evidence_max": 3, "evidence_min": 1, "requires_evidence_when_met": true},
+            "helpText": "Teste ambos os aparelhos para garantir que estão gelando e sem ruídos estranhos.",
+            "required": true
+          },
+          {
+            "id": "seguranca_instalacao",
+            "type": "completion_criterion",
+            "label": "A instalação elétrica e dos aparelhos está segura e de acordo com as normas?",
+            "config": {"evidence_max": 3, "evidence_min": 1, "requires_evidence_when_met": true},
+            "helpText": "Verifique se as conexões estão bem feitas e se não há riscos de curto-circuito ou queda dos aparelhos.",
+            "required": true
+          }
+        ],
+        "version": 1
+      }'::jsonb
+    else tpl.checklist_schema
+  end,
+  case
+    when sr.id = 'eb207b54-6261-45df-8b6a-8117a0aaa57b'::uuid
+      then 'ai'::public.checklist_source
+    else 'fallback_template'::public.checklist_source
+  end,
+  now(),
+  coalesce(tpl.schema_version, 1),
+  0,
+  0
+from public.service_requests sr
+cross join lateral (
+  select t.checklist_schema, t.schema_version
+  from public.completion_checklist_templates t
+  where t.is_global and t.is_active
+  order by t.id
+  limit 1
+) tpl
+where sr.status = 'OPEN'::public.service_request_status
+on conflict (service_request_id) do nothing;
+
+insert into public.service_request_dispatches (
+  service_request_id,
+  status,
+  next_batch_at
+)
+select
+  sr.id,
+  'DISPATCH_PENDING'::public.service_request_dispatch_status,
+  case
+    -- Demo SR waits for first matching batch (default start delay).
+    when sr.id = 'eb207b54-6261-45df-8b6a-8117a0aaa57b'::uuid
+      then now() + interval '5 minutes'
+    -- Other OPEN seeds are due immediately so local feed/batch can open on first cron tick.
+    else now()
+  end
+from public.service_requests sr
+where sr.status = 'OPEN'::public.service_request_status
+on conflict (service_request_id) do nothing;
+
+insert into public.service_request_dispatch_events (
+  dispatch_id,
+  service_request_id,
+  event_type,
+  payload
+)
+select
+  d.id,
+  d.service_request_id,
+  'state_transition'::public.service_request_dispatch_event_type,
+  jsonb_build_object('bootstrap', true, 'to', 'DISPATCH_PENDING', 'seed', true)
+from public.service_request_dispatches d
+join public.service_requests sr on sr.id = d.service_request_id
+where sr.status = 'OPEN'::public.service_request_status
+  and not exists (
+    select 1
+    from public.service_request_dispatch_events e
+    where e.dispatch_id = d.id
+      and e.event_type = 'state_transition'::public.service_request_dispatch_event_type
+  );
 
 -- Message Dispatcher templates
 insert into message_dispatcher.message_templates (

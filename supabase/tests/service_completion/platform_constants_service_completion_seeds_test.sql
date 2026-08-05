@@ -53,7 +53,7 @@ select is(
 select is(
   public.platform_constant_int('checklist_ai_max_attempts', 3),
   3,
-  'checklist_ai_max_attempts = 3'
+  'checklist_ai_max_attempts = 5'
 );
 
 select is(

@@ -26,7 +26,7 @@ values
   ),
   (
     'checklist_ai_max_attempts',
-    '3'::jsonb,
+    '5'::jsonb,
     'Max AI enrichment attempts before template cascade fallback'
   ),
   (

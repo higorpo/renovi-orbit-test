@@ -127,6 +127,19 @@ Itens relacionados a conclusão do serviço:
 
 - Há muita coisa em comum entre a nova parte de gerar checklist com IA e a parte antiga que gerava algumas coisas com IA também, vamos tentar compartilhar mais recursos
 
+- O checklist de conclusão do serviço está na própria tela de detalhes do serviço, na verdade, deveria ter um botão ao lado de Solicitar reagendamento ou Cancelar serviço escrito "Marcar serviço como concluído", onde aí sim, ao clicar, abre uma dialog onde o prestador pode preencher o checklist e demais informações. O mesmo serve para a visualização do cliente, deve ter um botão "Avaliar serviço", que quando ele clica abre uma dialog stepper de 2 etapas, a primeira para verificar o serviço feito e a segunda para avaliar o prestador de serviço e o serviço.
+
+- No checklist, a visualização para o cliente não mostra as imagens anexadas pelo prestador. Elas deveriam ser visíveis para o cliente e para o prestador depois, com opção de ao clicar nelas abrir elas em tela cheia  seguindo o padrão do projeto.
+
+- No checklist quando o prestador aperta "atendido" ou "não atendido", imediatamente já aparece um  erro falando para anexar pelo menos 1 foto, antes mesmo de eu tentar passar pela validação. Isso não deveria estar ocorrendo.
+
+- Revisar todo  o mecanismo de rating da aplicação, ainda não está funcional em alguns lugares e está mocado.
+
+- Informação "Previsão de depósito na conta" está incorreta (quando tem parcelamento ou algo do tipo). Ao invés disso, redirecionar para tela de Ganhos com filtro específico apenas para os ganhos relacionados aquele serviço.
+
+- Quando o cliente tiver uma avaliação de serviço concluído pendente, ao abrir o app aparecer popup para ele preencher as informações.
+
+- Mensagem "checklist em processamento" no card do componente não está tão legal, acho que não faz tanto sentido.
 
 ---
 
