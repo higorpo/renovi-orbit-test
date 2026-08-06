@@ -61,7 +61,7 @@ export function DisputeStubEntry({
               })
             }
           >
-            Abrir disputa
+            Falar com o suporte
           </Button>
         </div>
       </div>

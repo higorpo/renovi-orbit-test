@@ -213,9 +213,9 @@ Calculada em `derive_service_list_phase`:
 | Papel | Pré-condição | Superfície |
 |-------|--------------|------------|
 | Prestador (contratado) | Contrato `CONFIRMED` **e** `enrichmentReady` do `get_service` (sem prefetch do completion context) | Botão **“Marcar serviço como concluído”** na seção Serviço contratado (ao lado de cancelar/reagendar) → bottom sheet (mobile) ou dialog (desktop); ao abrir, `ProviderExecutedWizard` chama `get_service_completion_context` (draft + upload + EXECUTED) |
-| Cliente | Contrato `EXECUTED` ou `COMPLETED` (só então busca contexto); CTA se `canConfirmWithRating` ou rating opcional pós auto-complete | Botão **“Avaliar serviço”** na mesma seção → sheet/dialog com stepper **2 etapas**: (1) revisar evidências/checklist congelado; (2) avaliar prestador/serviço (`ClientConfirmRatingWizard` embutido); badge `executed_late` se atrasado |
+| Cliente | Contrato `EXECUTED` ou `COMPLETED` (só então busca contexto); CTA se `canConfirmWithRating` ou rating opcional pós auto-complete | Botão **“Avaliar serviço”** na mesma seção → sheet/dialog com stepper **2 etapas**: (1) revisar evidências/checklist congelado + checkbox obrigatório de declaração de execução (“Continuar para avaliação” disabled até marcar); (2) avaliar prestador/serviço (`ClientConfirmRatingWizard` embutido); badge `executed_late` se atrasado |
 | Ambos / cliente | Enrichment `PENDING`/`RUNNING` | `EnrichmentProcessingBanner` no detalhe/card — campos leves do modelo (`enrichmentStatus`/`enrichmentReady`); **não** usa `get_service_completion_context` ao abrir o detalhe |
-| Cliente | Sem CTA avaliar, mas stub elegível | `DisputeStubEntry` **inline** na seção contratada (também no wizard Avaliar serviço): título “Abrir disputa” e descrição sobre correção/devolução — URL/toast, sem FSM |
+| Cliente | Sem CTA avaliar, mas stub elegível | `DisputeStubEntry` **inline** na seção contratada (também no wizard Avaliar serviço): título “Abrir disputa”, botão **“Falar com o suporte”**; descrição sobre correção/devolução — URL/toast, sem FSM; superfície dispute-only **sem** checkbox de declaração |
 | Sistema | ~24h após EXECUTED | Auto-complete → `COMPLETED` (`completed_by=system`); rating opcional depois |
 
 Fotos de evidência: thumbnails com lightbox fullscreen (padrão galeria do pedido). Checklist/evidências via RPC `get_service_completion_context` **dentro** do sheet/wizard (não no load do detalhe). Paths de evidência precisam estar registrados antes do mark-executed.
@@ -291,8 +291,8 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | Lista conversas negociação | Cliente | negotiation sem contracted | `ServiceRequestConversationList` |
 | Ajustar pagamento | Cliente | `showManualPayment` + elegibilidade schedule (`FAILED` / `FAILED_PERMANENT` etc. em payments) | `ManualPaymentRecovery` |
 | Marcar executado | Prestador | contracted `CONFIRMED` + `enrichmentReady` (`get_service`); contexto ao abrir sheet | CTA “Marcar serviço como concluído” → sheet/dialog → RPC `service_completion_mark_executed` |
-| Confirmar + avaliar | Cliente | contracted `EXECUTED`/`COMPLETED` + `canConfirmWithRating` (ou rating opcional) | CTA “Avaliar serviço” → sheet 2 etapas → `service_completion_confirm_with_rating` (scores obrigatórios no caminho manual); badge `executed_late` se atrasado |
-| Abrir disputa (stub) | Cliente | sem CTA avaliar elegível, tipicamente pós-rating / `EXECUTED`/`COMPLETED` | Banner (wizard Avaliar serviço e/ou inline): copy título/descrição; URL suporte ou toast “Em breve” + analytics — sem FSM. Detalhe: [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md) §8 |
+| Confirmar + avaliar | Cliente | contracted `EXECUTED`/`COMPLETED` + `canConfirmWithRating` (ou rating opcional) | CTA “Avaliar serviço” → sheet 2 etapas (review exige checkbox de declaração) → `service_completion_confirm_with_rating` (scores obrigatórios no caminho manual); badge `executed_late` se atrasado |
+| Falar com o suporte (stub disputa) | Cliente | sem CTA avaliar elegível, tipicamente pós-rating / `EXECUTED`/`COMPLETED` | Banner título “Abrir disputa”, botão “Falar com o suporte” (wizard Avaliar serviço e/ou inline): URL suporte ou toast “Em breve” + analytics — sem FSM. Detalhe: [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md) §8 |
 | Cancelar serviço contratado | Client/provider | flags + status no componente payments | `ContractedServiceCancelAction` |
 | Reagendar (CTA) | Client/provider | role client\|provider + seção contratada | `ContractedServiceRescheduleAction` |
 | Iniciar / ver negociação | Prestador | sempre no detalhe (FAB) | `initiateConversation` ou navega chat existente |
@@ -398,7 +398,8 @@ Helpers de state: `createClientMyServicesServiceDetailState`, `createProviderMyS
 - [ ] Cliente negotiation: cancelar pedido (dialog) e comparar orçamentos
 - [ ] Cliente cancelled: republicar → novo id
 - [ ] Cliente contracted PENDING_PAYMENT elegível: “Ajustar pagamento”
-- [ ] Prestador CONFIRMED: CTA “Marcar serviço como concluído” abre sheet/dialog com checklist (não inline); cliente EXECUTED: CTA “Avaliar serviço” com 2 etapas; thumbnails de evidência + lightbox; badge atraso se `executed_late`
+- [ ] Prestador CONFIRMED: CTA “Marcar serviço como concluído” abre sheet/dialog com checklist (não inline); cliente EXECUTED: CTA “Avaliar serviço” com 2 etapas (review com checkbox de declaração; Continuar disabled até marcar); thumbnails de evidência + lightbox; badge atraso se `executed_late`
+- [ ] Stub disputa: título “Abrir disputa”, botão “Falar com o suporte”; dispute-only sem checkbox de declaração
 - [ ] Enrichment PENDING: banner “em processamento” no detalhe/card
 - [ ] Prestador: FAB inicia chat; local/mapa com contrato
 - [ ] Prestador sem proposta/contrato: detalhe negado / empty
@@ -418,3 +419,5 @@ Reescrita para o padrão 20+ seções do orquestrador: sheet vs página, diferen
 **2026-08-05 (UX):** conclusão/avaliação via CTAs na `ServiceContractedSection` + sheet/dialog (não wizards inline no detalhe); stepper cliente 2 etapas; galeria de evidências.
 
 **2026-08-06:** banner e gate de conclusão no detalhe usam só `enrichmentStatus`/`enrichmentReady` de `get_service` (sem `get_service_completion_context` ao abrir); CTA prestador = `CONFIRMED` + `enrichmentReady`; contexto RPC no wizard; CTA cliente só em `EXECUTED`/`COMPLETED`. Cross-ref lista: prestador `CONFIRMED` + past pode concluir pelo card em `my-services` (ver Anexo D de solicitacoes-do-cliente).
+
+**2026-08-06 (Avaliar serviço):** step de revisão com checkbox obrigatório de declaração de execução; stub de disputa com botão “Falar com o suporte” (título “Abrir disputa”). Normas em [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md).

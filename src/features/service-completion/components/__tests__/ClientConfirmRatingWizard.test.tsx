@@ -121,11 +121,27 @@ describe("ClientConfirmRatingWizard", () => {
     expect(container.firstChild).toBeNull();
   });
 
+  it("keeps Continuar para avaliação disabled until execution confirmation is checked", () => {
+    contextState.current = baseContext({ canConfirmWithRating: true });
+    render(<ClientConfirmRatingWizard serviceRequestId="sr-1" />, { wrapper });
+
+    const continueBtn = screen.getByTestId("client-confirm-continue-rating");
+    expect(continueBtn).toBeDisabled();
+
+    fireEvent.click(
+      screen.getByTestId("client-confirm-execution-acknowledged"),
+    );
+    expect(continueBtn).toBeEnabled();
+  });
+
   it("blocks confirm submit when scores are missing", async () => {
     contextState.current = baseContext({ canConfirmWithRating: true });
     render(<ClientConfirmRatingWizard serviceRequestId="sr-1" />, { wrapper });
 
     expect(screen.getByTestId("executed-late-badge")).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByTestId("client-confirm-execution-acknowledged"),
+    );
     fireEvent.click(screen.getByTestId("client-confirm-continue-rating"));
     fireEvent.click(screen.getByTestId("client-confirm-submit"));
 
@@ -150,6 +166,9 @@ describe("ClientConfirmRatingWizard", () => {
     });
 
     render(<ClientConfirmRatingWizard serviceRequestId="sr-1" />, { wrapper });
+    fireEvent.click(
+      screen.getByTestId("client-confirm-execution-acknowledged"),
+    );
     fireEvent.click(screen.getByTestId("client-confirm-continue-rating"));
 
     for (const name of ["quality", "punctuality", "communication", "value"]) {
@@ -187,6 +206,9 @@ describe("ClientConfirmRatingWizard", () => {
     });
 
     render(<ClientConfirmRatingWizard serviceRequestId="sr-1" />, { wrapper });
+    fireEvent.click(
+      screen.getByTestId("client-confirm-execution-acknowledged"),
+    );
     fireEvent.click(screen.getByTestId("client-confirm-continue-rating"));
 
     for (const name of ["quality", "punctuality", "communication", "value"]) {

@@ -10,10 +10,10 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 
 ## 1. Leitura para negócio
 
-- **Para que serve:** após criar/republicar um pedido, materializa um **checklist de conclusão** imutável; só então o matching pode começar. Depois do pagamento (`CONFIRMED`), o prestador abre **“Marcar serviço como concluído”** (sheet/dialog com checklist + evidências) e marca **EXECUTED**; o cliente abre **“Avaliar serviço”** (2 etapas: revisar → avaliar) ou o sistema **auto-completa** ~24h após EXECUTED.
+- **Para que serve:** após criar/republicar um pedido, materializa um **checklist de conclusão** imutável; só então o matching pode começar. Depois do pagamento (`CONFIRMED`), o prestador abre **“Marcar serviço como concluído”** (sheet/dialog com checklist + evidências) e marca **EXECUTED**; o cliente abre **“Avaliar serviço”** (2 etapas: revisar evidências + declarar execução → avaliar) ou o sistema **auto-completa** ~24h após EXECUTED.
 - **Quem usa:** cliente e prestador no detalhe do serviço (seção Serviço contratado); prestador também no card Meus Serviços (`CONFIRMED` + past → “Concluir serviço”); cliente também no card Meus Serviços (`EXECUTED` → “Avaliar serviço”); sistema (cron enrichment + auto-complete).
 - **Valor:** pedido só entra no feed após READY; conclusão com evidência congelada e rating; writers fora do domínio de pagamentos.
-- **Riscos de suporte:** pedido `OPEN` ainda “em processamento” **não** aparece no feed; disputa no app é **stub** (banner “Abrir disputa” com descrição sobre correção/devolução; URL de suporte ou toast “Em breve”) — sem FSM de disputa.
+- **Riscos de suporte:** pedido `OPEN` ainda “em processamento” **não** aparece no feed; disputa no app é **stub** (banner título “Abrir disputa”, botão **“Falar com o suporte”**; descrição sobre correção/devolução; URL de suporte ou toast “Em breve”) — sem FSM de disputa.
 
 ---
 
@@ -22,7 +22,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 | Aspecto | Detalhe |
 |---------|---------|
 | Feature front | `src/features/service-completion/` |
-| Superfícies UI | Banner enrichment; CTAs na seção contratada → sheet (mobile) / dialog (desktop); wizards embutidos; stub de disputa (no fluxo Avaliar serviço e inline quando sem CTA avaliar) — título e descrição explicativa |
+| Superfícies UI | Banner enrichment; CTAs na seção contratada → sheet (mobile) / dialog (desktop); wizards embutidos; stub de disputa (no fluxo Avaliar serviço e inline quando sem CTA avaliar) — título “Abrir disputa”, botão “Falar com o suporte”; no step de revisão do Avaliar serviço, checkbox obrigatório de declaração de execução |
 | Public API (host) | `EnrichmentProcessingBanner`, **`ProviderMarkExecutedAction`** / **`ProviderMarkExecutedSheet`**, **`ClientEvaluateServiceAction`** / **`ClientEvaluateServiceSheet`** (+ wizards ainda exportados para composição embutida) |
 | Host | `view-services` (`ServiceContractedSection`, `ServiceDetailPage`, `SimpleServiceCard`); `my-services` (sheets hospedados na página do card) — **só** imports da Public API |
 | Enrichment | Tabela `service_request_enrichments` (`PENDING` → `RUNNING` → `READY` \| `ABORTED`); enqueue em create/republish |
@@ -44,7 +44,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 
 | Perfil | Papel |
 |--------|--------|
-| **Cliente** | Vê banner “em processamento”; após EXECUTED: CTA **“Avaliar serviço”** (revisão + scores); stub de disputa; rating opcional pós auto-complete |
+| **Cliente** | Vê banner “em processamento”; após EXECUTED: CTA **“Avaliar serviço”** (revisão + declaração de execução + scores); stub de disputa; rating opcional pós auto-complete |
 | **Prestador** | Em `CONFIRMED`: CTA **“Marcar serviço como concluído”** (checklist no sheet/dialog, não inline); vê conclusão após COMPLETED |
 | **Sistema** | Worker/cron enrichment; cron auto-complete (`completed_by=system`, batch `auto_complete_batch_size`); sweeper READY-sem-dispatch (≤7 dias); janitor de uploads órfãos |
 
@@ -54,7 +54,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 
 1. Create/republish → `OPEN` + enrichment `PENDING` → Edge `generate-completion-checklist` → READY → `matching_bootstrap_dispatch_for_service_request` (delay 5 min a partir daí).
 2. Prestador `CONFIRMED` → CTA “Marcar serviço como concluído” → sheet/dialog com draft + upload evidência (RPC create session → `storage.from('completion-evidence').upload()` autenticado → RPC register; sem Edge) → fotos como thumbnails + lightbox → `service_completion_mark_executed` → `EXECUTED` (+ `executed_late` se atrasado).
-3. Cliente → CTA “Avaliar serviço” → etapa 1 revisão congelada (thumbnails) → etapa 2 scores → `service_completion_confirm_with_rating` → `COMPLETED`.
+3. Cliente → CTA “Avaliar serviço” → etapa 1 revisão congelada (thumbnails) + checkbox obrigatório de declaração de execução (“Continuar para avaliação” só habilita com o aceite) → etapa 2 scores → `service_completion_confirm_with_rating` → `COMPLETED`.
 4. Sem confirmação manual → cron ~24h (`auto_complete_grace_hours`) → `COMPLETED` pelo sistema; rating pode vir depois (mesmo CTA, label opcional).
 
 ---
@@ -64,7 +64,8 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 - Enrichment ≠ `service_request_status` ≠ `DISPATCH_*` ≠ status do contrato.
 - Matching **não** inicia no insert `OPEN` (trigger bootstrap removida).
 - Writers de EXECUTED/COMPLETED são `service_completion_*` (não `payment_*`).
-- Disputa (stub): UI com título “Abrir disputa” e descrição (checklist evidenciado / não cumprimento → plataforma pode pedir correção ou devolver parcial/integralmente). Ação: `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL` / override `orbit.dispute_support_url`; sem URL → toast “Em breve” + analytics `service_completion_dispute_stub_opened`. Sem FSM in-app.
+- Disputa (stub): UI com título “Abrir disputa”, botão **“Falar com o suporte”** e descrição (checklist evidenciado / não cumprimento → plataforma pode pedir correção ou devolver parcial/integralmente). Ação do botão: `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL` / override `orbit.dispute_support_url`; sem URL → toast “Em breve” + analytics `service_completion_dispute_stub_opened`. Sem FSM in-app. Superfície dispute-only (inline, sem CTA Avaliar serviço) **não** inclui o checkbox de declaração de execução.
+- Declaração de execução (cliente): no step de revisão do wizard **Avaliar serviço**, abaixo do card de disputa (quando houver), checkbox obrigatório: “Declaro que revisei as evidências acima e que o serviço foi executado corretamente, conforme o combinado.” — aceite jurídico / validade da execução antes das notas; só no step de review (não no de rating).
 - **Paths de evidência** no mark-executed devem estar registrados em `completion_evidence_upload_objects` sob sessão do CS/prestador; caso contrário → `EVIDENCE_PATH_NOT_REGISTERED`.
 - No freeze, sessões de upload **`open`** do CS passam a **`committed`**.
 - Upload de evidência (padrão KYC): `service_completion_create_upload_session` → upload autenticado no bucket `completion-evidence` sob prefixo da sessão (RLS) → `service_completion_register_upload_object`. **Sem** Edge de URL assinada.

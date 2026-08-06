@@ -8,7 +8,9 @@ import { useEffect, useState } from "react";
 import type { CompletionCriterionEvidenceRenderArgs } from "@/features/dynamic-form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorState } from "@/components/ui/error-state";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { cn } from "@/lib/utils";
@@ -95,6 +97,7 @@ export function ClientConfirmRatingWizard({
   const [step, setStep] = useState<Step>("review");
   const [scores, setScores] = useState<RatingScoresDraft>(EMPTY_RATING_SCORES);
   const [scoreError, setScoreError] = useState<string | null>(null);
+  const [executionAcknowledged, setExecutionAcknowledged] = useState(false);
   const isDesktop = useBreakpointMd();
 
   const canConfirm = Boolean(context?.capabilities.canConfirmWithRating);
@@ -162,6 +165,7 @@ export function ClientConfirmRatingWizard({
   }
 
   const handleContinueToRating = () => {
+    if (!executionAcknowledged) return;
     setStep("rating");
     setScoreError(null);
   };
@@ -216,11 +220,45 @@ export function ClientConfirmRatingWizard({
     </>
   );
 
+  const dispute =
+    showDispute && contractedId ? (
+      <DisputeStubEntry
+        contractedServiceId={contractedId}
+        csStatus={csStatus}
+        className="border-t-0"
+      />
+    ) : null;
+
+  const executionAck = (
+    <div
+      className="flex items-start gap-3 rounded-lg border border-border bg-background px-3 py-3"
+      data-testid="client-confirm-execution-ack"
+    >
+      <Checkbox
+        id="client-confirm-execution-acknowledged"
+        checked={executionAcknowledged}
+        onCheckedChange={(checked) =>
+          setExecutionAcknowledged(checked === true)
+        }
+        className="mt-0.5 h-5 w-5 shrink-0"
+        data-testid="client-confirm-execution-acknowledged"
+      />
+      <Label
+        htmlFor="client-confirm-execution-acknowledged"
+        className="cursor-pointer text-sm leading-snug text-foreground"
+      >
+        Declaro que revisei as evidências acima e que o serviço foi executado
+        corretamente, conforme o combinado.
+      </Label>
+    </div>
+  );
+
   const reviewFooter = (
     <Button
       type="button"
       className="w-full transition-transform duration-150 ease-out active:scale-[0.97] sm:w-auto"
       data-testid="client-confirm-continue-rating"
+      disabled={!executionAcknowledged}
       onClick={handleContinueToRating}
     >
       Continuar para avaliação
@@ -257,15 +295,6 @@ export function ClientConfirmRatingWizard({
     </div>
   );
 
-  const dispute =
-    showDispute && contractedId ? (
-      <DisputeStubEntry
-        contractedServiceId={contractedId}
-        csStatus={csStatus}
-        className="border-t-0"
-      />
-    ) : null;
-
   if (isDesktop) {
     return (
       <div
@@ -277,8 +306,15 @@ export function ClientConfirmRatingWizard({
         data-step={step}
         aria-label={title}
       >
-        {step === "review" ? reviewBody : ratingBody}
-        {dispute}
+        {step === "review" ? (
+          <>
+            {reviewBody}
+            {dispute}
+            {executionAck}
+          </>
+        ) : (
+          ratingBody
+        )}
         <div className="border-t border-border/80 pt-4">
           {step === "review" ? (
             <div className="flex justify-end">{reviewFooter}</div>
@@ -298,8 +334,15 @@ export function ClientConfirmRatingWizard({
       aria-label={title}
     >
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain px-4 py-4 touch-pan-y">
-        {step === "review" ? reviewBody : ratingBody}
-        {dispute}
+        {step === "review" ? (
+          <>
+            {reviewBody}
+            {dispute}
+            {executionAck}
+          </>
+        ) : (
+          ratingBody
+        )}
       </div>
       <div className="shrink-0 border-t border-border/80 bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md">
         {step === "review" ? reviewFooter : ratingFooter}

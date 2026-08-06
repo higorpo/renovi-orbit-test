@@ -6,7 +6,7 @@ Documentação de negócio do módulo **service-completion**. Host de UI: [visua
 
 ## 1. Resumo executivo
 
-Pedido `OPEN` enfileira **enrichment** (`PENDING`). Enquanto `PENDING`/`RUNNING`, a UI mostra “Checklist de conclusão em processamento…” e o pedido **não** entra no feed. Em `READY`, o matching faz bootstrap (delay de 5 min a partir daí). Pós-contrato, na seção **Serviço contratado** do detalhe: o prestador usa o botão **“Marcar serviço como concluído”** (abre sheet/dialog com o checklist — **não** fica inline na página); o cliente usa **“Avaliar serviço”** (sheet/dialog em 2 etapas: revisar evidências → avaliar). Sem confirmação, auto-complete ~24h. Disputa no app é stub (banner “Abrir disputa” com descrição sobre correção/devolução; suporte ou “Em breve”).
+Pedido `OPEN` enfileira **enrichment** (`PENDING`). Enquanto `PENDING`/`RUNNING`, a UI mostra “Checklist de conclusão em processamento…” e o pedido **não** entra no feed. Em `READY`, o matching faz bootstrap (delay de 5 min a partir daí). Pós-contrato, na seção **Serviço contratado** do detalhe: o prestador usa o botão **“Marcar serviço como concluído”** (abre sheet/dialog com o checklist — **não** fica inline na página); o cliente usa **“Avaliar serviço”** (sheet/dialog em 2 etapas: revisar evidências + declarar execução → avaliar). Sem confirmação, auto-complete ~24h. Disputa no app é stub (banner título “Abrir disputa”, botão “Falar com o suporte”; descrição sobre correção/devolução; suporte ou “Em breve”).
 
 ---
 
@@ -57,7 +57,7 @@ flowchart TD
   I --> I2[Sheet/dialog: checklist + evidências]
   I2 --> J[mark_executed → EXECUTED]
   J --> K{Cliente confirma?}
-  K -->|CTA Avaliar serviço| K2[Sheet: 1 revisão · 2 avaliação]
+  K -->|CTA Avaliar serviço| K2[Sheet: 1 revisão + declaração · 2 avaliação]
   K2 -->|scores| L[COMPLETED + rating]
   K -->|Não ~24h| M[auto_complete COMPLETED system]
   M --> N[Rating opcional depois]
@@ -88,10 +88,10 @@ flowchart TD
 3. Delay `matching.dispatch_start_delay_minutes` (default **5**) e lifecycle do dispatch começam no **bootstrap**, não no insert `OPEN`.
 4. Prestador em `CONFIRMED`: draft mutável; submit EXECUTED valida critérios/evidências/janela temporal (BRT).
 5. `service_completion_mark_executed`: paths em `evidence_paths` devem existir em `completion_evidence_upload_objects` ligados a sessão do CS/prestador (`EVIDENCE_PATH_NOT_REGISTERED` se não); marca `referenced_in_responses`; sessões `open` → `committed`; freeze + `executed_late` + CS → `EXECUTED` + MMD.
-6. Confirm manual: scores de rating **obrigatórios** (`service_completion_confirm_with_rating`).
+6. Confirm manual: scores de rating **obrigatórios** (`service_completion_confirm_with_rating`). Na UI, o step de revisão exige checkbox de declaração de execução antes de “Continuar para avaliação” (aceite jurídico / validade da execução; só no step review do wizard Avaliar serviço — não na superfície dispute-only).
 7. Auto-complete: `auto_complete_grace_hours` (default **24**) após `executed_at`; `completed_by = system`; lote `auto_complete_batch_size` (default **100**, distinto de `enrichment_claim_batch_size`).
 8. Writers removidos do produto: `payment_mark_service_executed`, `payment_confirm_service_completed`, `payment_cron_auto_complete_*`.
-9. Stub disputa: env `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL` ou remote `orbit.dispute_support_url`; sem FSM.
+9. Stub disputa: título “Abrir disputa”, botão **“Falar com o suporte”**; env `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL` ou remote `orbit.dispute_support_url`; sem FSM.
 10. Imutabilidade DB: trigger bloqueia alteração de schema/source/`materialized_at` (e saída de status) após enrichment `READY`; evidência `frozen` tem colunas críticas imutáveis; CS em `EXECUTED`/`COMPLETED` exige linha de evidência `frozen` (constraint trigger deferred); FK evidência→CS **ON DELETE RESTRICT**.
 11. Upload (padrão KYC, sem Edge de URL assinada): RPC `service_completion_create_upload_session` → `supabase.storage.from('completion-evidence').upload()` autenticado sob prefixo da sessão (RLS) → RPC `service_completion_register_upload_object`. Sessão com `storage_bucket = completion-evidence` e `provider_id` = CS; INSERT storage só com sessão `open`, não expirada, CS `CONFIRMED`, abaixo de `max_files` (**só prestador**).
 12. Leitura de produto: `authenticated` **não** faz SELECT em `service_request_enrichments`. Status/`ready` leves vêm de `get_service` / `list_services` (banner/card e gate de CTA). Checklist, evidências e capabilities: RPC `get_service_completion_context` (detalhe completo vs limitado — §4), só quando o fluxo de conclusão/avaliação precisa (abrir sheet/wizard ou CTA cliente elegível).
@@ -109,16 +109,18 @@ flowchart TD
 | CTA prestador | Botão **“Marcar serviço como concluído”** na seção Serviço contratado (visível se contrato `CONFIRMED` **e** `enrichmentReady` do `get_service` — sem prefetch do completion context) |
 | Sheet/dialog prestador | Título “Checklist de conclusão”; ao abrir, `ProviderExecutedWizard` busca `get_service_completion_context` e embute draft + upload + submit EXECUTED |
 | CTA cliente | Botão **“Avaliar serviço”** na mesma seção: só monta/busca contexto se contrato `EXECUTED` ou `COMPLETED`; então usa `canConfirmWithRating` / rating opcional do contexto |
-| Sheet/dialog cliente | Stepper **2 etapas** (“1 de 2” / “2 de 2”): (1) revisar evidências/checklist congelado; (2) avaliar prestador/serviço (`ClientConfirmRatingWizard` embutido) |
+| Sheet/dialog cliente | Stepper **2 etapas** (“1 de 2” / “2 de 2”): (1) revisar evidências/checklist congelado + checkbox obrigatório de declaração de execução; (2) avaliar prestador/serviço (`ClientConfirmRatingWizard` embutido) |
+| Declaração de execução (checkbox) | Só no **step de revisão** do wizard Avaliar serviço, **abaixo** do card de disputa (quando houver). Texto: “Declaro que revisei as evidências acima e que o serviço foi executado corretamente, conforme o combinado.” Botão **“Continuar para avaliação”** fica **disabled** até o checkbox estar marcado. Declaração do cliente para validade jurídica / aceite da execução antes das notas. **Não** aparece no step de rating nem na superfície dispute-only (inline sem CTA Avaliar serviço) |
 | Fotos de evidência | Thumbnails (`CompletionEvidenceGallery`); clique abre lightbox fullscreen (padrão `ServicePhotoGallery`); prestador ao preencher e cliente ao revisar; URLs via `createSignedUrl` — cliente só após evidência `frozen` (RLS) |
 | Badge atraso | “Executado com atraso” (`executed_late`) |
-| Dispute stub | Banner `DisputeStubEntry` no fluxo **Avaliar serviço** (wizard) e **inline** na seção contratada (sem CTA de avaliar): título “Abrir disputa”; **descrição** explicando que, se algo estiver errado na execução com base no checklist evidenciado ou não tiver sido cumprido corretamente, o cliente pode abrir disputa — a plataforma avalia e pode pedir correção ao prestador ou devolver parcial/integralmente o valor pago. Comportamento: URL de suporte ou toast “Em breve” + analytics (**sem** FSM) |
+| Dispute stub | Banner `DisputeStubEntry` no fluxo **Avaliar serviço** (wizard) e **inline** na seção contratada (sem CTA de avaliar): título “Abrir disputa”; botão **“Falar com o suporte”** (evita repetir o título); **descrição** explicando que, se algo estiver errado na execução com base no checklist evidenciado ou não tiver sido cumprido corretamente, o cliente pode abrir disputa — a plataforma avalia e pode pedir correção ao prestador ou devolver parcial/integralmente o valor pago. Comportamento do botão: URL de suporte ou toast “Em breve” + analytics (**sem** FSM). Superfície dispute-only **não** inclui o checkbox de declaração |
 
 ---
 
 ## 9. Validações de front-end
 
 - Draft/wizard prestador (no sheet): `validateExecutedResponses` + gate temporal (`deriveExecutedTemporalGate`).
+- Confirm cliente (etapa 1 / review): checkbox de declaração de execução marcado antes de “Continuar para avaliação”.
 - Confirm cliente (etapa 2 do sheet): scores completos antes do submit.
 - Upload de evidência: sessão RPC + upload autenticado no storage (prefixo/RLS) + register; limites de imagem; URLs assinadas para thumbnails via `useCompletionEvidencePhotoUrls` (`createSignedUrl` — prestador no próprio prefixo; cliente do CS quando evidência `frozen`).
 - Shell modal: dismiss bloqueado enquanto mutação em voo (`dismissDisabled`).
@@ -188,9 +190,9 @@ Servidor: tabelas enrichment/evidence/upload sessions+objects/ratings; `platform
 | Salvar draft | Prestador contratado | `CONFIRMED` (+ capability do contexto no wizard) | Evidência draft |
 | Criar sessão → upload autenticado → register path | Prestador contratado | CS CONFIRMED; sessão open; &lt; max_files | Objeto em `completion-evidence` + registry |
 | Marcar executado (submit no sheet) | Prestador contratado | `CONFIRMED` + paths registrados + validação | `EXECUTED`; sessões → committed; fecha sheet |
-| Abrir “Avaliar serviço” | Cliente | UI: contrato `EXECUTED` ou `COMPLETED`; então `canConfirmWithRating` / rating opcional do contexto | Sheet/dialog 2 etapas (detalhe via `ClientEvaluateServiceAction`; lista Meus Serviços via `ClientEvaluateServiceSheet` hospedado na página) |
+| Abrir “Avaliar serviço” | Cliente | UI: contrato `EXECUTED` ou `COMPLETED`; então `canConfirmWithRating` / rating opcional do contexto | Sheet/dialog 2 etapas (detalhe via `ClientEvaluateServiceAction`; lista Meus Serviços via `ClientEvaluateServiceSheet` hospedado na página); etapa 1 exige checkbox de declaração |
 | Confirmar + avaliar | Cliente | `EXECUTED` | `COMPLETED` + rating; fecha sheet |
-| Abrir disputa (stub) | Cliente | tipicamente pós-rating / `EXECUTED`/`COMPLETED` | Banner com título/subtítulo/descrição (ver §8); URL ou toast (no wizard de avaliar e inline se sem CTA avaliar) |
+| Falar com o suporte (stub disputa) | Cliente | tipicamente pós-rating / `EXECUTED`/`COMPLETED` | Banner título “Abrir disputa”; botão “Falar com o suporte” → URL ou toast (no wizard de avaliar e inline se sem CTA avaliar; ver §8) |
 | Submeter rating pós auto | Cliente | `COMPLETED` system | Rating opcional (mesmo CTA/sheet) |
 
 ---
@@ -256,3 +258,4 @@ Upstream: pedido (`request-quote` / republish), contrato pago (`payments`/`CNS`)
 - **2026-08-06 (card prestador)** — Prestador `CONFIRMED` + past: CTA **“Concluir serviço”** no card abre sheet (`ProviderMarkExecutedSheet`; contexto RPC ao abrir; gate `enrichmentReady`); secundário “Ver detalhes”.
 - **2026-08-06 (card cliente)** — Cliente `EXECUTED`: CTA **“Avaliar serviço”** no card abre `ClientEvaluateServiceSheet` hospedado na página (`ClientEvaluateServiceDialogs` + `useClientEvaluateServiceDialog`); secundário “Ver detalhes”; contexto RPC só ao abrir o wizard; `ClientEvaluateServiceAction` no detalhe reutiliza o mesmo sheet.
 - **2026-08-06 (storage SELECT cliente)** — Política `storage_objects_completion_evidence_select` passa a permitir SELECT/`createSignedUrl` ao cliente do CS quando a evidência está `frozen` (helper `service_completion_evidence_storage_path_client_readable`); corrige thumbnails/lightbox “Indisponível” em “Avaliar serviço”. INSERT continua só prestador; SELECT do prestador (draft + frozen no próprio prefixo) inalterado. Migração editada in-place: `20260804100000_service_completion_evidence_storage.sql`.
+- **2026-08-06 (Avaliar serviço — declaração + CTA disputa)** — Step de revisão do `ClientConfirmRatingWizard`: checkbox obrigatório de declaração de execução (copy fixa; “Continuar para avaliação” disabled até marcar); só no review, abaixo do stub de disputa quando houver; ausente na superfície dispute-only. `DisputeStubEntry`: título permanece “Abrir disputa”; botão interno passa a **“Falar com o suporte”** (URL/toast + analytics, sem FSM).

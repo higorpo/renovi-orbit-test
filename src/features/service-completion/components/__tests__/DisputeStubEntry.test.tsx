@@ -45,7 +45,7 @@ describe("DisputeStubEntry", () => {
         /Se você acha que há algo errado na execução do serviço/i,
       ),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Abrir disputa/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Falar com o suporte/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("dispute-stub-open"));
     expect(trackEvent).toHaveBeenCalledWith(DISPUTE_STUB_ANALYTICS_EVENT, {
