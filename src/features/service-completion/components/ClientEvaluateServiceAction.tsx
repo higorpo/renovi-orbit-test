@@ -1,13 +1,13 @@
 /**
  * Client CTA + 2-step sheet/dialog to review evidence and rate the service.
- * Skips get_service_completion_context unless contracted status can need evaluate/dispute.
+ * Skips get_service_completion_context unless contracted status can need evaluate.
+ * Dispute stub is not shown on the service detail host — only inside the evaluate wizard.
  */
 
 import { useState } from "react";
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useServiceCompletionContext } from "../hooks/useServiceCompletionContext";
-import { shouldShowDisputeStub, DisputeStubEntry } from "./DisputeStubEntry";
 import { ClientEvaluateServiceSheet } from "./ClientEvaluateServiceSheet";
 
 export type ClientEvaluateServiceActionProps = {
@@ -38,12 +38,6 @@ export function ClientEvaluateServiceAction({
 
   const canConfirm = Boolean(context?.capabilities.canConfirmWithRating);
   const canOptional = Boolean(context?.capabilities.canSubmitOptionalRating);
-  const showDispute = shouldShowDisputeStub({
-    showDisputeStubCapability: context?.capabilities.showDisputeStub,
-    csStatus: context?.contractedService.status,
-  });
-  const contractedId = context?.contractedService.id ?? "";
-  const csStatus = context?.contractedService.status ?? "";
 
   if (!needsContext) {
     return null;
@@ -53,21 +47,7 @@ export function ClientEvaluateServiceAction({
     return null;
   }
 
-  // After rating, only dispute stub may remain — keep it inline (no evaluate CTA).
   if (!canConfirm && !canOptional) {
-    if (showDispute && contractedId) {
-      return (
-        <div
-          className="w-full sm:max-w-sm"
-          data-testid="client-dispute-only-inline"
-        >
-          <DisputeStubEntry
-            contractedServiceId={contractedId}
-            csStatus={csStatus}
-          />
-        </div>
-      );
-    }
     return null;
   }
 

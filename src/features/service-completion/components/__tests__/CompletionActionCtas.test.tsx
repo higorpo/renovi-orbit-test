@@ -155,4 +155,25 @@ describe("completion action CTAs", () => {
     );
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("does not show dispute stub on the detail host when evaluate is unavailable", () => {
+    contextState.current = baseContext({
+      canConfirmWithRating: false,
+      canSubmitOptionalRating: false,
+      showDisputeStub: true,
+    });
+    contextState.current.contractedService.status = "COMPLETED";
+    const { container } = render(
+      <ClientEvaluateServiceAction
+        serviceRequestId="sr-1"
+        contractedStatus="COMPLETED"
+      />,
+      { wrapper },
+    );
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByTestId("dispute-stub-entry")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("client-dispute-only-inline"),
+    ).not.toBeInTheDocument();
+  });
 });

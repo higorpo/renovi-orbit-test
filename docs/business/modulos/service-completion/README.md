@@ -22,7 +22,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 | Aspecto | Detalhe |
 |---------|---------|
 | Feature front | `src/features/service-completion/` |
-| Superfícies UI | CTAs na seção contratada → sheet (mobile) / dialog (desktop); wizards embutidos; stub de disputa (no fluxo Avaliar serviço e inline quando sem CTA avaliar) — título “Abrir disputa”, botão “Falar com o suporte”; no step de revisão do Avaliar serviço, checkbox obrigatório de declaração de execução |
+| Superfícies UI | CTAs na seção contratada → sheet (mobile) / dialog (desktop); wizards embutidos; stub de disputa **somente** no wizard Avaliar serviço (`ClientConfirmRatingWizard`) — **nunca** inline no detalhe — título “Abrir disputa”, botão “Falar com o suporte”; no step de revisão do Avaliar serviço, checkbox obrigatório de declaração de execução |
 | Public API (host) | **`ProviderMarkExecutedAction`** / **`ProviderMarkExecutedSheet`**, **`ClientEvaluateServiceAction`** / **`ClientEvaluateServiceSheet`** (+ wizards ainda exportados para composição embutida) |
 | Host | `view-services` (`ServiceContractedSection`, `ServiceDetailPage`); `my-services` (sheets hospedados na página do card) — **só** imports da Public API |
 | Enrichment | Tabela `service_request_enrichments` (`PENDING` → `RUNNING` → `READY` \| `ABORTED`); enqueue em create/republish |
@@ -44,7 +44,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 
 | Perfil | Papel |
 |--------|--------|
-| **Cliente** | Após EXECUTED: CTA **“Avaliar serviço”** (revisão + declaração de execução + scores; alerta se auto-mark sem checklist); stub de disputa; rating opcional pós auto-complete |
+| **Cliente** | Após EXECUTED: CTA **“Avaliar serviço”** (revisão + declaração de execução + scores; alerta se auto-mark sem checklist; stub de disputa **só** no wizard); rating opcional pós auto-complete |
 | **Prestador** | Em `CONFIRMED`: CTA **“Marcar serviço como concluído”** (checklist no sheet/dialog, não inline); vê conclusão após COMPLETED |
 | **Sistema** | Worker/cron enrichment; cron **auto-mark EXECUTED** (`service_completion_auto_mark_executed`, grace `auto_mark_executed_grace_hours`); cron **auto-complete** EXECUTED→COMPLETED (`auto_complete_grace_hours`, `completed_by=system`); sweeper READY-sem-dispatch (≤7 dias); janitor de uploads órfãos |
 
@@ -65,7 +65,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 - Enrichment ≠ `service_request_status` ≠ `DISPATCH_*` ≠ status do contrato.
 - Matching **não** inicia no insert `OPEN` (trigger bootstrap removida).
 - Writers de EXECUTED/COMPLETED são `service_completion_*` (não `payment_*`).
-- Disputa (stub): UI com título “Abrir disputa”, botão **“Falar com o suporte”** e descrição (checklist evidenciado / não cumprimento → plataforma pode pedir correção ou devolver parcial/integralmente). Ação do botão: `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL` / override `orbit.dispute_support_url`; sem URL → toast “Em breve” + analytics `service_completion_dispute_stub_opened`. Sem FSM in-app. Superfície dispute-only (inline, sem CTA Avaliar serviço) **não** inclui o checkbox de declaração de execução.
+- Disputa (stub): UI com título “Abrir disputa”, botão **“Falar com o suporte”** e descrição (checklist evidenciado / não cumprimento → plataforma pode pedir correção ou devolver parcial/integralmente). Ação do botão: `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL` / override `orbit.dispute_support_url`; sem URL → toast “Em breve” + analytics `service_completion_dispute_stub_opened`. Sem FSM in-app. Stub **somente** no wizard Avaliar serviço (`ClientConfirmRatingWizard`) — **nunca** inline no detalhe / `ServiceContractedSection` (ex.: sem CTA avaliar após rating).
 - Declaração de execução (cliente): no step de revisão do wizard **Avaliar serviço**, abaixo do card de disputa (quando houver), checkbox obrigatório. Copy padrão: “Declaro que revisei as evidências acima e que o serviço foi executado corretamente, conforme o combinado.” Com `auto_executed_without_checklist`: “Declaro que o serviço foi executado corretamente, conforme o combinado.” — aceite jurídico / validade da execução antes das notas; só no step de review (não no de rating).
 - **Auto-mark EXECUTED (sem checklist):** âncora = `service_completion_scheduled_end_at(start, end)` (fim do dia BRT de `coalesce(end, start)`) + `auto_mark_executed_grace_hours`; batch `service_completion_auto_mark_executed` / cron `service_completion_cron_auto_mark_executed` (`15 9,15,21,3 * * *`). **Distinto** do auto-complete EXECUTED→COMPLETED (`auto_complete_grace_hours` após `executed_at`).
 - **Paths de evidência** no mark-executed **manual** devem estar registrados em `completion_evidence_upload_objects` sob sessão do CS/prestador; caso contrário → `EVIDENCE_PATH_NOT_REGISTERED`.
