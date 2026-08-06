@@ -63,6 +63,9 @@ function baseModel(overrides: Partial<ServiceModel> & { id: string }): ServiceMo
     lastActivityAt: "2025-03-02T12:00:00Z",
     myProposal: null,
     chatSummary: null,
+    enrichmentReady: true,
+    enrichmentStatus: "READY",
+    executedLate: null,
     ...rest,
   };
 }
@@ -71,6 +74,7 @@ export function buildClientServiceCardShowcaseVariants(
   now = new Date(),
 ): ClientServiceCardShowcaseVariant[] {
   const today = toDateOnly(now);
+  const yesterday = toDateOnly(addDays(now, -1));
   const inSevenDays = toDateOnly(addDays(now, 7));
 
   return [
@@ -257,6 +261,92 @@ export function buildClientServiceCardShowcaseVariants(
           lastInteractionAt: addDays(now, -2).toISOString(),
           lastMessagePreview: null,
           providerDisplayName: "João Eletricista",
+        },
+      }),
+    },
+    {
+      id: "in-progress-awaiting-provider",
+      label: "Aguardando conclusão do prestador",
+      description:
+        "Data de fim agendada já passou (CONFIRMED): cliente aguarda evidências e marcação como executado.",
+      group: "Em andamento",
+      model: baseModel({
+        id: "client-awaiting-provider",
+        listPhase: "in_progress",
+        statusTabId: "in_progress",
+        contractedServiceId: "cs-awaiting-provider",
+        counterpartyName: "Maria Instalações",
+        counterparty: {
+          id: "prov-maria",
+          displayName: "Maria Instalações",
+          profileImagePath: null,
+        },
+        contracted: {
+          id: "cs-awaiting-provider",
+          status: "CONFIRMED",
+          agreedSlot: null,
+          durationUnit: "hours",
+          durationValue: 4,
+          scheduledStartDate: yesterday,
+          scheduledEndDate: null,
+          scheduledShift: "full_day",
+          provider: {
+            id: "prov-maria",
+            displayName: "Maria Instalações",
+            profileImagePath: null,
+          },
+          chatId: "chat-awaiting-provider",
+          updatedAt: now.toISOString(),
+        },
+        chatSummary: {
+          id: "chat-awaiting-provider",
+          isUnread: false,
+          lastInteractionAt: addDays(now, -2).toISOString(),
+          lastMessagePreview: null,
+          providerDisplayName: "Maria Instalações",
+        },
+      }),
+    },
+    {
+      id: "in-progress-evaluate",
+      label: "Aceite a conclusão e avalie o serviço",
+      description:
+        "Contrato EXECUTED: CTA “Avaliar serviço” abre revisão de evidências + avaliação do prestador.",
+      group: "Em andamento",
+      model: baseModel({
+        id: "client-evaluate",
+        listPhase: "in_progress",
+        statusTabId: "in_progress",
+        contractedServiceId: "cs-evaluate",
+        counterpartyName: "Maria Instalações",
+        counterparty: {
+          id: "prov-maria",
+          displayName: "Maria Instalações",
+          profileImagePath: null,
+        },
+        contracted: {
+          id: "cs-evaluate",
+          status: "EXECUTED",
+          agreedSlot: null,
+          durationUnit: "hours",
+          durationValue: 4,
+          scheduledStartDate: yesterday,
+          scheduledEndDate: null,
+          scheduledShift: "full_day",
+          provider: {
+            id: "prov-maria",
+            displayName: "Maria Instalações",
+            profileImagePath: null,
+          },
+          chatId: "chat-evaluate",
+          updatedAt: now.toISOString(),
+        },
+        chatSummary: {
+          id: "chat-evaluate",
+          isUnread: false,
+          lastInteractionAt: addDays(now, -1).toISOString(),
+          lastMessagePreview: null,
+          providerDisplayName: "Maria Instalações",
         },
       }),
     },

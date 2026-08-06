@@ -49,6 +49,21 @@ describe("buildProviderServiceCardShowcaseVariants", () => {
       "payment_pending",
     );
 
+    const markExecuted = variants.find((variant) => variant.id === "in-progress-mark-executed");
+    expect(markExecuted?.group).toBe("Em andamento");
+    expect(getProviderServiceCardPresentation(markExecuted!.model)).toMatchObject({
+      highlight: { title: "Marque o serviço como executado" },
+      primaryAction: { label: "Concluir serviço", intent: "mark_executed" },
+    });
+
+    const awaitingClient = variants.find(
+      (variant) => variant.id === "in-progress-awaiting-client",
+    );
+    expect(getProviderServiceCardPresentation(awaitingClient!.model)).toMatchObject({
+      highlight: { title: "Aguardando confirmação do cliente" },
+      primaryAction: { intent: "details" },
+    });
+
     const cancelled = variants.find((variant) => variant.id === "cancelled-contract");
     expect(cancelled?.group).toBe("Cancelados");
     expect(cancelled?.model.contracted?.status).toBe("CANCELLED");
@@ -75,6 +90,8 @@ describe("buildProviderServiceCardShowcaseVariants", () => {
         "in-progress-today",
         "in-progress-unread",
         "in-progress-payment",
+        "in-progress-mark-executed",
+        "in-progress-awaiting-client",
         "completed",
         "cancelled-request",
         "cancelled-proposal-rejected",

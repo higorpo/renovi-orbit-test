@@ -38,6 +38,21 @@ describe("buildClientServiceCardShowcaseVariants", () => {
     expect(today?.group).toBe("Em andamento");
     expect(today?.model.contracted?.scheduledStartDate).toBe("2025-06-08");
 
+    const awaitingProvider = variants.find(
+      (variant) => variant.id === "in-progress-awaiting-provider",
+    );
+    expect(getClientServiceCardPresentation(awaitingProvider!.model)).toMatchObject({
+      highlight: { title: "Aguardando conclusão do prestador" },
+      primaryAction: { intent: "details" },
+    });
+
+    const evaluate = variants.find((variant) => variant.id === "in-progress-evaluate");
+    expect(getClientServiceCardPresentation(evaluate!.model)).toMatchObject({
+      highlight: { title: "Aceite a conclusão e avalie o serviço" },
+      primaryAction: { label: "Avaliar serviço", intent: "evaluate_service" },
+      secondaryAction: { label: "Ver detalhes", intent: "details" },
+    });
+
     const cancelled = variants.find((variant) => variant.id === "cancelled");
     expect(cancelled?.group).toBe("Cancelados");
     expect(getClientServiceCardPresentation(cancelled!.model).highlight.emphasis).toBe(
@@ -62,6 +77,8 @@ describe("buildClientServiceCardShowcaseVariants", () => {
         "in-progress-today",
         "in-progress-payment",
         "in-progress-payment-failed",
+        "in-progress-awaiting-provider",
+        "in-progress-evaluate",
         "completed",
         "cancelled",
       ]),
@@ -71,8 +88,8 @@ describe("buildClientServiceCardShowcaseVariants", () => {
     expect(
       getClientServiceCardPresentation(
         variants.find((variant) => variant.id === "completed")!.model,
-      ).highlight.emphasis,
-    ).not.toBe("cancelled");
+      ).highlight,
+    ).toBeNull();
 
     const payment = variants.find((variant) => variant.id === "in-progress-payment");
     expect(payment?.model.contracted?.paymentScheduleState).toBe("SCHEDULED");

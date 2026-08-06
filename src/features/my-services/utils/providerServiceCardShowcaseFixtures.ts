@@ -70,6 +70,9 @@ function baseModel(overrides: Partial<ServiceModel> & { id: string }): ServiceMo
     lastActivityAt: "2025-03-02T12:00:00Z",
     myProposal: null,
     chatSummary: null,
+    enrichmentReady: true,
+    enrichmentStatus: "READY",
+    executedLate: null,
     ...rest,
   };
 }
@@ -91,6 +94,7 @@ export function buildProviderServiceCardShowcaseVariants(
 ): ProviderServiceCardShowcaseVariant[] {
   const today = toDateOnly(now);
   const tomorrow = toDateOnly(addDays(now, 1));
+  const yesterday = toDateOnly(addDays(now, -1));
   const inFifteenDays = toDateOnly(addDays(now, 15));
   const inTwoDaysIso = addDays(now, 2).toISOString();
   const twoDaysAgoIso = addDays(now, -2).toISOString();
@@ -376,6 +380,73 @@ export function buildProviderServiceCardShowcaseVariants(
         },
         chatSummary: {
           id: "chat-payment",
+          isUnread: false,
+          lastInteractionAt: twoDaysAgoIso,
+          lastMessagePreview: null,
+        },
+      }),
+    },
+    {
+      id: "in-progress-mark-executed",
+      label: "Marque o serviço como executado",
+      description:
+        "Data de fim agendada já passou (CONFIRMED): CTA “Concluir serviço” abre o checklist de evidências.",
+      group: "Em andamento",
+      model: baseModel({
+        id: "showcase-mark-executed",
+        listPhase: "in_progress",
+        statusTabId: "in_progress",
+        contractedServiceId: "cs-mark-executed",
+        enrichmentReady: true,
+        myProposal: { ...defaultProposal, status: "ACCEPTED", finalAmount: 425 },
+        contracted: {
+          id: "cs-mark-executed",
+          status: "CONFIRMED",
+          agreedSlot: null,
+          durationUnit: "hours",
+          durationValue: 5,
+          scheduledStartDate: yesterday,
+          scheduledEndDate: null,
+          scheduledShift: "full_day",
+          provider: null,
+          chatId: "chat-mark-executed",
+          updatedAt: now.toISOString(),
+        },
+        chatSummary: {
+          id: "chat-mark-executed",
+          isUnread: false,
+          lastInteractionAt: twoDaysAgoIso,
+          lastMessagePreview: null,
+        },
+      }),
+    },
+    {
+      id: "in-progress-awaiting-client",
+      label: "Aguardando confirmação do cliente",
+      description:
+        "Contrato EXECUTED: prestador já enviou evidências e aguarda confirmação/avaliação do cliente.",
+      group: "Em andamento",
+      model: baseModel({
+        id: "showcase-awaiting-client",
+        listPhase: "in_progress",
+        statusTabId: "in_progress",
+        contractedServiceId: "cs-awaiting-client",
+        myProposal: { ...defaultProposal, status: "ACCEPTED", finalAmount: 425 },
+        contracted: {
+          id: "cs-awaiting-client",
+          status: "EXECUTED",
+          agreedSlot: null,
+          durationUnit: "hours",
+          durationValue: 5,
+          scheduledStartDate: yesterday,
+          scheduledEndDate: null,
+          scheduledShift: "full_day",
+          provider: null,
+          chatId: "chat-awaiting-client",
+          updatedAt: now.toISOString(),
+        },
+        chatSummary: {
+          id: "chat-awaiting-client",
           isUnread: false,
           lastInteractionAt: twoDaysAgoIso,
           lastMessagePreview: null,
