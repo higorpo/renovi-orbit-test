@@ -10,7 +10,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ErrorState } from "@/components/ui/error-state";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { cn } from "@/lib/utils";
@@ -231,7 +230,7 @@ export function ClientConfirmRatingWizard({
 
   const executionAck = (
     <div
-      className="flex items-start gap-3 rounded-lg border border-border bg-background px-3 py-3"
+      className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-3"
       data-testid="client-confirm-execution-ack"
     >
       <Checkbox
@@ -240,16 +239,16 @@ export function ClientConfirmRatingWizard({
         onCheckedChange={(checked) =>
           setExecutionAcknowledged(checked === true)
         }
-        className="mt-0.5 h-5 w-5 shrink-0"
+        className="shrink-0"
         data-testid="client-confirm-execution-acknowledged"
       />
-      <Label
+      <label
         htmlFor="client-confirm-execution-acknowledged"
-        className="cursor-pointer text-sm leading-snug text-foreground"
+        className="cursor-pointer text-sm font-normal leading-snug text-foreground"
       >
         Declaro que revisei as evidências acima e que o serviço foi executado
         corretamente, conforme o combinado.
-      </Label>
+      </label>
     </div>
   );
 
