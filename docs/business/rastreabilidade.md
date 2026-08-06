@@ -197,20 +197,21 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | Artefato | Uso na documentação |
 |----------|---------------------|
 | `docs/business/modulos/matching-dispatch/` | README + feature dispatch/visibilidade; lifecycle sem proposta (24h/48h); bootstrap READY-handoff (CONTEXT #135); repair READY-sem-dispatch ≤7 dias |
-| `docs/business/modulos/service-completion/` | Enrichment, conclusão EXECUTED/confirm/auto-complete, stub disputa; CTAs sheet/dialog + galeria evidências; endurecimento SQL (evidência registrada, contexto full vs marketplace, imutabilidade); lazy load de `get_service_completion_context` (detalhe via campos leves de `get_service`); SELECT storage `completion-evidence` também para cliente com evidência `frozen` (`createSignedUrl`) |
+| `docs/business/modulos/service-completion/` | Enrichment, conclusão EXECUTED (manual ou auto-mark sem checklist) / confirm / auto-complete, stub disputa; CTAs sheet/dialog + galeria evidências; endurecimento SQL (evidência registrada, contexto full vs marketplace, imutabilidade); lazy load de `get_service_completion_context` (detalhe via campos leves de `get_service`); SELECT storage `completion-evidence` também para cliente com evidência `frozen` (`createSignedUrl`) |
 | `docs/service-completion/` | Design técnico / ADR (fonte normativa de engenharia); `storage-bucket.md` (políticas SELECT/INSERT) |
-| `supabase/migrations/20260804010000_service_completion_platform_constants.sql` | Seeds checklist/enrichment/`auto_complete_batch_size`/orphan TTL |
+| `supabase/migrations/20260804010000_service_completion_platform_constants.sql` | Seeds checklist/enrichment/`auto_complete_batch_size`/`auto_mark_executed_*`/orphan TTL |
 | `supabase/migrations/20260804060000_*`–`20260804100000_*` | Evidence + upload sessions/objects + storage INSERT gates; SELECT cliente via `service_completion_evidence_storage_path_client_readable` quando frozen; frozen imutável; FK RESTRICT; deferred EXECUTED/COMPLETED↔frozen |
 | `supabase/migrations/20260804090000_service_completion_rls.sql` | REVOKE SELECT authenticated em `service_request_enrichments` |
 | `supabase/migrations/20260804350000_service_completion_mark_executed.sql` | Paths registrados / `EVIDENCE_PATH_NOT_REGISTERED`; sessões → `committed` |
-| `supabase/migrations/20260804450000_get_service_completion_context.sql` | Read-model full vs marketplace limited |
+| `supabase/migrations/20260804450000_get_service_completion_context.sql` | Read-model full vs marketplace limited (incl. `auto_executed_without_checklist`) |
+| `supabase/migrations/20260806180328_service_completion_auto_mark_executed.sql` | Auto-mark CONFIRMED→EXECUTED sem checklist; cron `service_completion_cron_auto_mark_executed`; helper `service_completion_scheduled_end_at` |
 | `supabase/migrations/20260804240000_enrichment_repair_ready_without_dispatch.sql` | Sweeper READY-sem-dispatch (janela 7 dias) |
 | `supabase/migrations/20260804490000_*` / `20260804500000_*` | Janitor SQL orphan uploads (`referenced_in_responses`); drop finalize RPC; cron `service_completion_cron_orphan_upload_janitor` + `job_runs` (sem Edge) |
 | `supabase/functions/generate-completion-checklist/` | Worker enrichment |
 | `service_completion_create_upload_session` / `service_completion_register_upload_object` | Upload evidência Option A (KYC): sessão → `storage.from('completion-evidence').upload()` autenticado (RLS) → register; **sem** Edge de URL assinada de upload |
 | `service_completion_evidence_storage_path_owned` / `*_path_client_readable` / `*_upload_allowed` | Helpers RLS do bucket `completion-evidence` (prestador; cliente frozen; INSERT) |
 | `service_completion_janitor_orphan_uploads` / `service_completion_cron_orphan_upload_janitor` | `DELETE FROM storage.objects` + limpeza do registry (padrão KYC); sem `completion-evidence-orphan-janitor` |
-| `supabase/tests/service_completion/*.sql` | pgTAP: mark-executed, context matrix, storage (incl. SELECT cliente frozen), janitor, RLS |
+| `supabase/tests/service_completion/*.sql` | pgTAP: mark-executed, auto-mark EXECUTED, context matrix, storage (incl. SELECT cliente frozen), janitor, RLS |
 | `supabase/migrations/20260802190000_service_request_no_proposal_lifecycle.sql` | Templates MMD + cron auto-cancel sem propostas |
 | `supabase/tests/matching/no_proposal_lifecycle_test.sql` | pgTAP seeking notify + auto-cancel |
 | `docs/matching-algorithm/` | Design técnico e tasks de implementação |

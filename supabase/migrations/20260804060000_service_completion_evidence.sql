@@ -14,6 +14,8 @@ create table public.contracted_service_completion_evidence (
   responses_hash text,
   frozen_at timestamptz,
   idempotency_key text,
+  -- True when system auto-marked EXECUTED after schedule-end grace (empty checklist).
+  auto_executed_without_checklist boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint completion_evidence_cs_uk unique (contracted_service_id),
@@ -43,6 +45,8 @@ comment on column public.contracted_service_completion_evidence.executed_late is
   'BRT late flag set only when freezing; MUST be null while draft.';
 comment on column public.contracted_service_completion_evidence.idempotency_key is
   'Last successful EXECUTED submit key for replay.';
+comment on column public.contracted_service_completion_evidence.auto_executed_without_checklist is
+  'True when CONFIRMED→EXECUTED was system auto-mark after schedule-end grace with empty checklist responses.';
 comment on constraint completion_evidence_cs_fk
   on public.contracted_service_completion_evidence is
   'ON DELETE RESTRICT — preserve forensic evidence if CS hard-delete is attempted.';
@@ -152,6 +156,7 @@ begin
       or new.contracted_service_id is distinct from old.contracted_service_id
       or new.draft_version is distinct from old.draft_version
       or new.idempotency_key is distinct from old.idempotency_key
+      or new.auto_executed_without_checklist is distinct from old.auto_executed_without_checklist
     then
       raise exception 'FROZEN_EVIDENCE_IMMUTABLE'
         using errcode = '23514',

@@ -53,6 +53,11 @@ values
     'auto_complete_batch_size',
     '100'::jsonb,
     'Max EXECUTED rows claimed per service_completion_auto_complete_executed tick (distinct from enrichment_claim_batch_size)'
+  ),
+  (
+    'auto_mark_executed_batch_size',
+    '100'::jsonb,
+    'Max CONFIRMED rows claimed per service_completion_auto_mark_executed tick'
   )
 on conflict (key) do update set
   value = excluded.value,
@@ -65,6 +70,18 @@ values (
   'auto_complete_grace_hours',
   '24'::jsonb,
   'Hours after executed_at before auto-complete promotes service to COMPLETED'
+)
+on conflict (key) do update set
+  description = excluded.description,
+  updated_at = now();
+
+-- Hours after end-of-day (BRT) of coalesce(scheduled_end_date, scheduled_start_date)
+-- before system auto-marks CONFIRMED → EXECUTED without checklist.
+insert into public.platform_constants (key, value, description)
+values (
+  'auto_mark_executed_grace_hours',
+  '24'::jsonb,
+  'Hours after BRT end-of-day of coalesce(scheduled_end_date, scheduled_start_date) before auto-mark EXECUTED without checklist'
 )
 on conflict (key) do update set
   description = excluded.description,

@@ -42,6 +42,7 @@ describe("mapServiceCompletionContextRpc", () => {
           frozen_at: null,
           draft_version: 2,
           responses: { c1: { met: true, evidence_paths: [] } },
+          auto_executed_without_checklist: false,
         },
         capabilities: {
           can_mark_executed: true,
@@ -58,7 +59,25 @@ describe("mapServiceCompletionContextRpc", () => {
     expect(mapped.enrichment?.status).toBe("READY");
     expect(mapped.enrichment?.checklistSchema).toEqual({ version: 1, blocks: [] });
     expect(mapped.evidence.draftVersion).toBe(2);
+    expect(mapped.evidence.autoExecutedWithoutChecklist).toBe(false);
     expect(mapped.capabilities.canMarkExecuted).toBe(true);
+  });
+
+  it("maps auto_executed_without_checklist flag", () => {
+    const mapped = mapServiceCompletionContextRpc(
+      {
+        evidence: {
+          phase: "frozen",
+          auto_executed_without_checklist: true,
+          responses: {},
+        },
+        contracted_service: { id: "cs-1", status: "EXECUTED" },
+        capabilities: {},
+      },
+      "sr-1",
+    );
+
+    expect(mapped.evidence.autoExecutedWithoutChecklist).toBe(true);
   });
 });
 

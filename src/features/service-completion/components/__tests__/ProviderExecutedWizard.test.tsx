@@ -95,6 +95,7 @@ function baseContext(): ServiceCompletionContext {
       frozenAt: null,
       draftVersion: 1,
       responses: {},
+      autoExecutedWithoutChecklist: false,
     },
     capabilities: {
       canMarkExecuted: true,

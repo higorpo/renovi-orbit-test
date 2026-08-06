@@ -75,3 +75,33 @@ grant execute on function public.service_completion_compute_executed_late(date, 
   to service_role;
 grant execute on function public.service_completion_compute_executed_late(date, date)
   to postgres;
+
+-- Effective schedule end instant: end-of-day BRT of coalesce(end, start).
+-- Used by auto-mark-executed grace (not payment clocks).
+create or replace function public.service_completion_scheduled_end_at(
+  p_scheduled_start_date date,
+  p_scheduled_end_date date
+)
+returns timestamptz
+language sql
+immutable
+parallel safe
+set search_path = public
+as $$
+  select ((coalesce(p_scheduled_end_date, p_scheduled_start_date) + 1)::timestamp
+    at time zone 'America/Sao_Paulo');
+$$;
+
+comment on function public.service_completion_scheduled_end_at(date, date) is
+  'BRT end-of-day timestamptz for coalesce(scheduled_end_date, scheduled_start_date). Auto-mark grace anchors here.';
+
+revoke all on function public.service_completion_scheduled_end_at(date, date)
+  from public;
+revoke all on function public.service_completion_scheduled_end_at(date, date)
+  from anon;
+revoke all on function public.service_completion_scheduled_end_at(date, date)
+  from authenticated;
+grant execute on function public.service_completion_scheduled_end_at(date, date)
+  to service_role;
+grant execute on function public.service_completion_scheduled_end_at(date, date)
+  to postgres;

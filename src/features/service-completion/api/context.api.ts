@@ -49,6 +49,7 @@ type RpcEvidence = {
   frozen_at?: string | null;
   draft_version?: number | null;
   responses?: CompletionResponsesMap | null;
+  auto_executed_without_checklist?: boolean | null;
 };
 
 type RpcContext = {
@@ -110,6 +111,7 @@ function mapEvidence(raw: RpcEvidence | undefined): ServiceCompletionEvidence {
     frozenAt: raw?.frozen_at ?? null,
     draftVersion: coerceDraftVersion(raw?.draft_version),
     responses: raw?.responses ?? null,
+    autoExecutedWithoutChecklist: Boolean(raw?.auto_executed_without_checklist),
   };
 }
 

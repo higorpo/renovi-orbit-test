@@ -191,11 +191,16 @@ export function ClientConfirmRatingWizard({
     }
   };
 
+  const autoWithoutChecklist = Boolean(
+    context.evidence.autoExecutedWithoutChecklist,
+  );
+
   const reviewBody = (
     <FrozenEvidenceReview
       checklistSchema={context.enrichment?.checklistSchema}
       responses={context.evidence.responses}
       executedLate={context.evidence.executedLate}
+      autoExecutedWithoutChecklist={autoWithoutChecklist}
       renderEvidence={renderEvidence}
     />
   );
@@ -246,8 +251,9 @@ export function ClientConfirmRatingWizard({
         htmlFor="client-confirm-execution-acknowledged"
         className="cursor-pointer text-sm font-normal leading-snug text-foreground"
       >
-        Declaro que revisei as evidências acima e que o serviço foi executado
-        corretamente, conforme o combinado.
+        {autoWithoutChecklist
+          ? "Declaro que o serviço foi executado corretamente, conforme o combinado."
+          : "Declaro que revisei as evidências acima e que o serviço foi executado corretamente, conforme o combinado."}
       </label>
     </div>
   );
@@ -275,7 +281,7 @@ export function ClientConfirmRatingWizard({
         onClick={() => setStep("review")}
       >
         <ChevronLeft className="mr-1.5 h-4 w-4" aria-hidden />
-        Voltar às evidências
+        {autoWithoutChecklist ? "Voltar" : "Voltar às evidências"}
       </Button>
       <Button
         type="button"

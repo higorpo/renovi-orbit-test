@@ -47,4 +47,19 @@ describe("FrozenEvidenceReview", () => {
     expect(unmet).toBeInTheDocument();
     expect(screen.getByText("Área limpa?")).toBeInTheDocument();
   });
+
+  it("shows auto-executed alert instead of checklist criteria", () => {
+    render(
+      <FrozenEvidenceReview
+        checklistSchema={schema}
+        autoExecutedWithoutChecklist
+        responses={{}}
+      />,
+    );
+
+    expect(
+      screen.getByTestId("auto-executed-without-checklist-alert"),
+    ).toHaveTextContent(/prestador não registrou/i);
+    expect(screen.queryByText("Trabalho concluído?")).not.toBeInTheDocument();
+  });
 });

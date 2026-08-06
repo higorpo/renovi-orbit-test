@@ -93,6 +93,7 @@ function baseContext(
       responses: {
         c1: { met: true, evidence_paths: [] },
       },
+      autoExecutedWithoutChecklist: false,
     },
     capabilities: {
       canMarkExecuted: false,
@@ -191,6 +192,26 @@ describe("ClientConfirmRatingWizard", () => {
         }),
       ),
     );
+  });
+
+  it("shows auto-executed-without-checklist alert and softens ack copy", () => {
+    contextState.current = baseContext({
+      canConfirmWithRating: true,
+    });
+    contextState.current.evidence.autoExecutedWithoutChecklist = true;
+    contextState.current.evidence.responses = {};
+
+    render(<ClientConfirmRatingWizard serviceRequestId="sr-1" />, { wrapper });
+
+    expect(
+      screen.getByTestId("auto-executed-without-checklist-alert"),
+    ).toHaveTextContent(/sem o checklist/i);
+    expect(screen.getByTestId("client-confirm-execution-ack")).toHaveTextContent(
+      /Declaro que o serviço foi executado corretamente/i,
+    );
+    expect(
+      screen.queryByText(/revisei as evidências acima/i),
+    ).not.toBeInTheDocument();
   });
 
   it("uses submit_service_rating for optional post-auto-complete path", async () => {

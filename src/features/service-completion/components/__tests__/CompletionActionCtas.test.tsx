@@ -67,6 +67,7 @@ function baseContext(
       frozenAt: null,
       draftVersion: 1,
       responses: {},
+      autoExecutedWithoutChecklist: false,
     },
     capabilities: {
       canMarkExecuted: false,

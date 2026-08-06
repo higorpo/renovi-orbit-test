@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(13);
+select plan(15);
 
 select is(
   (
@@ -19,10 +19,12 @@ select is(
       'enrichment_retry_base_seconds',
       'completion_evidence_orphan_ttl_hours',
       'auto_complete_batch_size',
-      'auto_complete_grace_hours'
+      'auto_complete_grace_hours',
+      'auto_mark_executed_batch_size',
+      'auto_mark_executed_grace_hours'
     )
   ),
-  11,
+  13,
   'seeds all service-completion platform_constants keys'
 );
 
@@ -51,8 +53,8 @@ select is(
 );
 
 select is(
-  public.platform_constant_int('checklist_ai_max_attempts', 3),
-  3,
+  public.platform_constant_int('checklist_ai_max_attempts', 5),
+  5,
   'checklist_ai_max_attempts = 5'
 );
 
@@ -90,6 +92,18 @@ select is(
   public.platform_constant_int('auto_complete_grace_hours', 24),
   24,
   'auto_complete_grace_hours reused (= 24)'
+);
+
+select is(
+  public.platform_constant_int('auto_mark_executed_grace_hours', 24),
+  24,
+  'auto_mark_executed_grace_hours = 24'
+);
+
+select is(
+  public.platform_constant_int('auto_mark_executed_batch_size', 100),
+  100,
+  'auto_mark_executed_batch_size = 100'
 );
 
 -- Helper documents fallback when key is absent (WARNING emitted; default returned).

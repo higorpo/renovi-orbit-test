@@ -107,7 +107,7 @@ Matriz detalhada: [Perfis e permissões](./perfis-e-permissoes.md).
 
 1. **Pedir orçamento** — `/pedir-orcamento` → serviço → formulário dinâmico → descrição/fotos (IA opcional) → endereço → identidade (logado ou cadastro convidado) → Edge `create-request-quote-order`.
 2. **Acompanhar e negociar** — `/dashboard/services` (+ detalhe) e `/dashboard/chats` (CNS: perguntas implícitas na thread, propostas, aceite).
-3. **Pagar, executar e concluir** — checkout pós-aceite; histórico em Minha conta; prestador marca EXECUTED com checklist; cliente confirma+avalia (ou auto-complete ~24h); reagendamento embutido quando elegível.
+3. **Pagar, executar e concluir** — checkout pós-aceite; histórico em Minha conta; prestador marca EXECUTED com checklist (ou auto-mark sem checklist se não marcar a tempo); cliente confirma+avalia (ou auto-complete ~24h após EXECUTED); reagendamento embutido quando elegível.
 4. **Conta** — `/dashboard/conta` (dados e endereços).
 
 ### Prestador

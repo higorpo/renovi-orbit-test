@@ -59,6 +59,8 @@ export type ServiceCompletionEvidence = {
   frozenAt: string | null;
   draftVersion: number | null;
   responses: CompletionResponsesMap | null;
+  /** System auto-marked EXECUTED after schedule-end grace without provider checklist. */
+  autoExecutedWithoutChecklist: boolean;
 };
 
 export type ServiceCompletionContext = {

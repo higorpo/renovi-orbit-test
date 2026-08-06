@@ -60,6 +60,7 @@ function baseContext(
       responses: {
         crit_1: { met: true, evidence_paths: [] },
       },
+      autoExecutedWithoutChecklist: false,
     },
     capabilities: {
       canMarkExecuted: true,
@@ -367,6 +368,7 @@ describe("useProviderCompletionDraft", () => {
               evidence_paths: [],
             },
           },
+          autoExecutedWithoutChecklist: false,
         },
       }),
     });

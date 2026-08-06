@@ -1212,6 +1212,7 @@ export type Database = {
       }
       contracted_service_completion_evidence: {
         Row: {
+          auto_executed_without_checklist: boolean
           checklist_schema_hash: string | null
           contracted_service_id: string
           created_at: string
@@ -1227,6 +1228,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_executed_without_checklist?: boolean
           checklist_schema_hash?: string | null
           contracted_service_id: string
           created_at?: string
@@ -1242,6 +1244,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_executed_without_checklist?: boolean
           checklist_schema_hash?: string | null
           contracted_service_id?: string
           created_at?: string
@@ -4274,6 +4277,27 @@ export type Database = {
         }
         Relationships: []
       }
+      pg_all_foreign_keys: {
+        Row: {
+          fk_columns: unknown[] | null
+          fk_constraint_name: unknown
+          fk_schema_name: unknown
+          fk_table_name: unknown
+          fk_table_oid: unknown
+          is_deferrable: boolean | null
+          is_deferred: boolean | null
+          match_type: string | null
+          on_delete: string | null
+          on_update: string | null
+          pk_columns: unknown[] | null
+          pk_constraint_name: unknown
+          pk_index_name: unknown
+          pk_schema_name: unknown
+          pk_table_name: unknown
+          pk_table_oid: unknown
+        }
+        Relationships: []
+      }
       provider_payment_receivables_v: {
         Row: {
           amount_received_at_capture: number | null
@@ -4402,8 +4426,27 @@ export type Database = {
           },
         ]
       }
+      tap_funky: {
+        Row: {
+          args: string | null
+          is_definer: boolean | null
+          is_strict: boolean | null
+          is_visible: boolean | null
+          kind: unknown
+          langoid: unknown
+          name: unknown
+          oid: unknown
+          owner: unknown
+          returns: string | null
+          returns_set: boolean | null
+          schema: unknown
+          volatility: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      _cleanup: { Args: never; Returns: boolean }
       _cns_apply_service_reschedule_slot: {
         Args: { p_contracted_service_id: string; p_new_slot: Json }
         Returns: Json
@@ -4454,6 +4497,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      _contract_on: { Args: { "": string }; Returns: unknown }
+      _currtest: { Args: never; Returns: number }
+      _db_privs: { Args: never; Returns: unknown[] }
+      _extensions: { Args: never; Returns: unknown[] }
+      _get: { Args: { "": string }; Returns: number }
+      _get_latest: { Args: { "": string }; Returns: number[] }
+      _get_note: { Args: { "": string }; Returns: string }
+      _is_verbose: { Args: never; Returns: boolean }
+      _prokind: { Args: { p_oid: unknown }; Returns: unknown }
+      _query: { Args: { "": string }; Returns: string }
+      _refine_vol: { Args: { "": string }; Returns: string }
+      _table_privs: { Args: never; Returns: unknown[] }
+      _temptypes: { Args: { "": string }; Returns: string }
+      _todo: { Args: never; Returns: string }
       accept_proposal: {
         Args: {
           p_clearsale_session_id: string
@@ -4724,6 +4781,42 @@ export type Database = {
         Args: { p_chat_id?: string; p_upload_session_id: string }
         Returns: Json
       }
+      col_is_null:
+        | {
+            Args: {
+              column_name: unknown
+              description?: string
+              schema_name: unknown
+              table_name: unknown
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              column_name: unknown
+              description?: string
+              table_name: unknown
+            }
+            Returns: string
+          }
+      col_not_null:
+        | {
+            Args: {
+              column_name: unknown
+              description?: string
+              schema_name: unknown
+              table_name: unknown
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              column_name: unknown
+              description?: string
+              table_name: unknown
+            }
+            Returns: string
+          }
       completion_evidence_path_referenced_in_frozen: {
         Args: { p_storage_path: string }
         Returns: boolean
@@ -4814,10 +4907,27 @@ export type Database = {
         }
         Returns: string
       }
+      diag:
+        | {
+            Args: { msg: unknown }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.diag(msg => text), public.diag(msg => anyelement). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+          }
+        | {
+            Args: { msg: string }
+            Returns: {
+              error: true
+            } & "Could not choose the best candidate function between: public.diag(msg => text), public.diag(msg => anyelement). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+          }
+      diag_test_name: { Args: { "": string }; Returns: string }
       dismiss_provider_opportunity: {
         Args: { p_service_request_id: string }
         Returns: Json
       }
+      do_tap:
+        | { Args: never; Returns: string[] }
+        | { Args: { "": string }; Returns: string[] }
       domain_events_release_stale_leases: { Args: never; Returns: number }
       enqueue_proposal_expiring_soon_reminders: {
         Args: { p_batch_size?: number }
@@ -4919,6 +5029,11 @@ export type Database = {
         Args: { p_batch_size?: number }
         Returns: Json
       }
+      fail:
+        | { Args: never; Returns: string }
+        | { Args: { "": string }; Returns: string }
+      findfuncs: { Args: { "": string }; Returns: string[] }
+      finish: { Args: { exception_on_failure?: boolean }; Returns: string[] }
       generate_provider_pricing_signature: {
         Args: {
           p_final_amount: number
@@ -4955,6 +5070,7 @@ export type Database = {
         Args: { p_service_request_id: string }
         Returns: Json
       }
+      has_unique: { Args: { "": string }; Returns: string }
       idempotency_begin: {
         Args: {
           p_idempotency_key: string
@@ -4993,9 +5109,12 @@ export type Database = {
         }
         Returns: undefined
       }
+      in_todo: { Args: never; Returns: boolean }
       is_chat_participant: { Args: { p_chat_id: string }; Returns: boolean }
+      is_empty: { Args: { "": string }; Returns: string }
       is_platform_admin: { Args: never; Returns: boolean }
       is_provider: { Args: never; Returns: boolean }
+      isnt_empty: { Args: { "": string }; Returns: string }
       job_run_abort_latest: {
         Args: { p_fatal_error: string; p_job_name: string }
         Returns: undefined
@@ -5084,6 +5203,7 @@ export type Database = {
         }
         Returns: Json
       }
+      lives_ok: { Args: { "": string }; Returns: string }
       match_provider_jobs: {
         Args: {
           p_lat: number
@@ -5215,6 +5335,7 @@ export type Database = {
         }
         Returns: Json
       }
+      no_plan: { Args: never; Returns: boolean[] }
       notify_proposal_accepted: {
         Args: { p_proposal_id: string }
         Returns: Json
@@ -5247,6 +5368,7 @@ export type Database = {
         Args: { p_proposal_id: string }
         Returns: Json
       }
+      num_failed: { Args: never; Returns: number }
       orbit_internal_edge_invoke_is_configured: {
         Args: never
         Returns: boolean
@@ -5260,6 +5382,10 @@ export type Database = {
         Returns: number
       }
       orbit_post_sentry_alerts: { Args: { p_alerts: Json }; Returns: number }
+      os_name: { Args: never; Returns: string }
+      pass:
+        | { Args: never; Returns: string }
+        | { Args: { "": string }; Returns: string }
       payment_activate_provider_from_netcred: {
         Args: {
           p_netcred_bank_account_id: string
@@ -5917,6 +6043,9 @@ export type Database = {
         }
         Returns: string
       }
+      pg_version: { Args: never; Returns: string }
+      pg_version_num: { Args: never; Returns: number }
+      pgtap_version: { Args: never; Returns: number }
       platform_check_rate_limit: {
         Args: { p_key: string; p_per_minute: number; p_window_ms?: number }
         Returns: Json
@@ -6014,8 +6143,15 @@ export type Database = {
         Args: { p_provider_id: string; p_service_request_id: string }
         Returns: string
       }
+      runtests:
+        | { Args: never; Returns: string[] }
+        | { Args: { "": string }; Returns: string[] }
       sanitize_job_error: { Args: { p_message: string }; Returns: string }
       service_completion_auto_complete_executed: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      service_completion_auto_mark_executed: {
         Args: { p_batch_size?: number }
         Returns: Json
       }
@@ -6058,6 +6194,7 @@ export type Database = {
         Args: never
         Returns: Json
       }
+      service_completion_cron_auto_mark_executed: { Args: never; Returns: Json }
       service_completion_cron_emit_sentry_alerts: {
         Args: never
         Returns: undefined
@@ -6071,6 +6208,10 @@ export type Database = {
         Returns: Json
       }
       service_completion_evaluate_sentry_alerts: { Args: never; Returns: Json }
+      service_completion_evidence_storage_path_client_readable: {
+        Args: { p_storage_path: string }
+        Returns: boolean
+      }
       service_completion_evidence_storage_path_owned: {
         Args: { p_storage_path: string }
         Returns: boolean
@@ -6117,6 +6258,10 @@ export type Database = {
         }
         Returns: Json
       }
+      service_completion_scheduled_end_at: {
+        Args: { p_scheduled_end_date: string; p_scheduled_start_date: string }
+        Returns: string
+      }
       service_completion_validate_evidence_responses: {
         Args: { p_responses: Json; p_schema: Json }
         Returns: boolean
@@ -6137,6 +6282,9 @@ export type Database = {
         Args: { p_service_request_id: string; p_viewer_id: string }
         Returns: boolean
       }
+      skip:
+        | { Args: { "": string }; Returns: string }
+        | { Args: { how_many: number; why: string }; Returns: string }
       slugify_for_provider: { Args: { name_input: string }; Returns: string }
       submit_service_rating: {
         Args: {
@@ -6157,6 +6305,16 @@ export type Database = {
         Args: { p_service_request_id: string }
         Returns: Json
       }
+      throws_ok: { Args: { "": string }; Returns: string }
+      todo:
+        | { Args: { how_many: number }; Returns: boolean[] }
+        | { Args: { how_many: number; why: string }; Returns: boolean[] }
+        | { Args: { why: string }; Returns: boolean[] }
+        | { Args: { how_many: number; why: string }; Returns: boolean[] }
+      todo_end: { Args: never; Returns: boolean[] }
+      todo_start:
+        | { Args: never; Returns: boolean[] }
+        | { Args: { "": string }; Returns: boolean[] }
       update_service_rating: {
         Args: {
           p_comment?: string
@@ -6309,7 +6467,9 @@ export type Database = {
       service_reschedule_requested_by_role: "client" | "provider"
     }
     CompositeTypes: {
-      [_ in never]: never
+      _time_trial_type: {
+        a_time: number | null
+      }
     }
   }
 }

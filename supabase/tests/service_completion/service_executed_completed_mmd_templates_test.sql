@@ -12,11 +12,12 @@ select ok(
       and mt.channel = 'push'
       and mt.active
       and mt.body_template like '%executed_late_suffix%'
-      and mt.body_template ilike '%checklist%'
+      and mt.body_template ilike '%confirm%'
+      and mt.body_template ilike '%avali%'
       and (mt.variable_schema->'properties') ? 'executed_late'
       and (mt.variable_schema->'properties') ? 'deep_link_path'
   ),
-  'service.service_executed includes late suffix + checklist confirm copy'
+  'service.service_executed includes late suffix + confirm/avaliate copy'
 );
 
 select ok(

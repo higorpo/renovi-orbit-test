@@ -7,6 +7,7 @@ import {
   CompletionCriterionBlock,
   type CompletionCriterionEvidenceRenderArgs,
 } from "@/features/dynamic-form";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { parseCompletionChecklistBlocks } from "../utils/parseChecklistSchema";
@@ -19,6 +20,8 @@ export type FrozenEvidenceReviewProps = {
   checklistSchema: Record<string, unknown> | null | undefined;
   responses: CompletionResponsesMap | null | undefined;
   executedLate?: boolean | null;
+  /** System auto-marked EXECUTED without provider checklist. */
+  autoExecutedWithoutChecklist?: boolean | null;
   className?: string;
   renderEvidence?: (args: CompletionCriterionEvidenceRenderArgs) => ReactNode;
 };
@@ -27,11 +30,31 @@ export function FrozenEvidenceReview({
   checklistSchema,
   responses,
   executedLate = false,
+  autoExecutedWithoutChecklist = false,
   className,
   renderEvidence,
 }: FrozenEvidenceReviewProps) {
   const blocks = parseCompletionChecklistBlocks(checklistSchema);
   const map = responses ?? {};
+
+  if (autoExecutedWithoutChecklist) {
+    return (
+      <div
+        className={cn("space-y-4", className)}
+        data-testid="frozen-evidence-review"
+        data-auto-executed-without-checklist="true"
+      >
+        <Alert data-testid="auto-executed-without-checklist-alert">
+          <AlertTitle>Conclusão automática sem checklist</AlertTitle>
+          <AlertDescription>
+            Este serviço foi marcado como concluído automaticamente pelo sistema,
+            sem o checklist de evidências, porque o prestador não registrou a
+            conclusão no prazo.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div

@@ -198,6 +198,11 @@ begin
       'phase', v_phase,
       'executed_late', case when v_has_evidence then v_evidence.executed_late else null end,
       'frozen_at', case when v_has_evidence then v_evidence.frozen_at else null end,
+      'auto_executed_without_checklist',
+        case
+          when v_has_evidence then v_evidence.auto_executed_without_checklist
+          else false
+        end,
       'draft_version', case
         when v_has_evidence and (v_is_contracted_provider or v_is_platform_admin)
         then v_evidence.draft_version
@@ -214,6 +219,7 @@ begin
       'phase', v_phase,
       'executed_late', null,
       'frozen_at', null,
+      'auto_executed_without_checklist', null,
       'draft_version', null
     );
   end if;
