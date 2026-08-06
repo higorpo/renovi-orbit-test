@@ -33,6 +33,9 @@ function makeProfile(
     created_at: "2024-01-01T00:00:00Z",
     offered_services: [],
     portfolio_items: [],
+    rating_avg: null,
+    rating_count: 0,
+    completed_services_count: 0,
     ...overrides,
   };
 }
@@ -147,5 +150,34 @@ describe("ProviderProfileHeader", () => {
     expect(
       screen.queryByRole("button", { name: /solicitar orçamento/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("hides rating summary when rating_count is 0", () => {
+    render(
+      <ProviderProfileHeader
+        profile={makeProfile({
+          rating_avg: null,
+          rating_count: 0,
+          completed_services_count: 12,
+        })}
+      />,
+    );
+    expect(screen.queryByText(/avaliações/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/serviços concluídos/i)).not.toBeInTheDocument();
+  });
+
+  it("shows average, count and completed services when rating_count > 0", () => {
+    render(
+      <ProviderProfileHeader
+        profile={makeProfile({
+          rating_avg: 4.5,
+          rating_count: 3,
+          completed_services_count: 12,
+        })}
+      />,
+    );
+    expect(screen.getByText("4.5")).toBeInTheDocument();
+    expect(screen.getByText(/· 3 avaliações/i)).toBeInTheDocument();
+    expect(screen.getByText(/· 12 serviços concluídos/i)).toBeInTheDocument();
   });
 });

@@ -77,6 +77,10 @@ export interface ContractedServiceSummary {
   /** True while post-PAID far reschedule refund+recapture is in flight. */
   farRecapturePending?: boolean;
   reschedule?: ServiceRescheduleSnapshot | null;
+  /** Client overall score for this contracted service; null when not rated yet. */
+  clientRatingOverallScore?: number | null;
+  /** When the client submitted the rating for this contracted service. */
+  clientRatingSubmittedAt?: string | null;
 }
 
 /** Unified service model for list and detail (from get_service / list_services RPCs). */

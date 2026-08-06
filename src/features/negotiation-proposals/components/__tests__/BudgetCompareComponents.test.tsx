@@ -25,6 +25,9 @@ const pendingProposal: ServiceRequestBudgetCompareProposal = {
   provider_name: "Ana Prestadora",
   provider_slug: "ana-prestadora",
   provider_profile_image_path: null,
+  rating_avg: 4.5,
+  rating_count: 8,
+  completed_services_count: 22,
   proposed_amount: 350,
   revision_count: 0,
   status: "PENDING",
@@ -47,29 +50,55 @@ describe("BudgetCompareProviderHeader", () => {
     render(
       <MemoryRouter>
         <BudgetCompareProviderHeader
-          providerId="provider-1"
           providerName="Ana Prestadora"
           providerSlug="ana-prestadora"
           providerProfileImagePath={null}
+          ratingAvg={4.5}
+          ratingCount={8}
+          completedServicesCount={22}
         />
       </MemoryRouter>,
     );
 
     expect(screen.getByText("Ana Prestadora")).toBeInTheDocument();
+    expect(screen.getByText("4.5")).toBeInTheDocument();
+    expect(screen.getByText(/22 serviços/)).toBeInTheDocument();
+    expect(screen.queryByText("Sem avaliações")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ver perfil" })).toHaveAttribute(
       "href",
       expect.stringContaining("ana-prestadora"),
     );
   });
 
+  it("shows Sem avaliações when rating_count is zero", () => {
+    render(
+      <MemoryRouter>
+        <BudgetCompareProviderHeader
+          providerName="Novo Prestador"
+          providerSlug="novo"
+          providerProfileImagePath={null}
+          ratingAvg={null}
+          ratingCount={0}
+          completedServicesCount={3}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Sem avaliações")).toBeInTheDocument();
+    expect(screen.getByText(/3 serviços/)).toBeInTheDocument();
+    expect(screen.queryByText("4.5")).not.toBeInTheDocument();
+  });
+
   it("hides the profile link when slug is missing", () => {
     render(
       <MemoryRouter>
         <BudgetCompareProviderHeader
-          providerId="provider-1"
           providerName="Sem slug"
           providerSlug={null}
           providerProfileImagePath={null}
+          ratingAvg={null}
+          ratingCount={0}
+          completedServicesCount={0}
         />
       </MemoryRouter>,
     );

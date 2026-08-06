@@ -1,5 +1,6 @@
 -- RPC to fetch public provider profile by slug (respects visibility).
--- Returns a single JSONB with base profile, offered services, and public portfolio items.
+-- Returns a single JSONB with base profile, offered services, public portfolio items,
+-- and rating aggregates (via SECURITY DEFINER; no client SELECT on provider_rating_stats).
 -- Used by the public profile page; no direct read of profiles table for other users.
 
 create or replace function public.get_public_provider_by_slug(slug_param text)
@@ -18,6 +19,9 @@ declare
   service_area_neighborhoods text[];
   services_json jsonb;
   portfolio_json jsonb;
+  v_rating_count int := 0;
+  v_rating_avg numeric(4, 2) := null;
+  v_completed_services_count int := 0;
 begin
   select * into pub from public.provider_profiles_public p where p.slug = slug_param limit 1;
   if not found then
@@ -81,6 +85,22 @@ begin
   from public.provider_portfolio_items pi
   where pi.provider_id = pub.provider_id and pi.visibility = 'public';
 
+  select
+    coalesce(prs.rating_count, 0),
+    case
+      when coalesce(prs.rating_count, 0) > 0 then prs.overall_avg
+      else null
+    end
+  into v_rating_count, v_rating_avg
+  from public.provider_rating_stats prs
+  where prs.provider_id = pub.provider_id;
+
+  select count(*)::int
+  into v_completed_services_count
+  from public.contracted_services cs
+  where cs.provider_id = pub.provider_id
+    and cs.status = 'COMPLETED'::public.contracted_service_status;
+
   result := jsonb_build_object(
     'provider_id', pub.provider_id,
     'slug', pub.slug,
@@ -94,10 +114,14 @@ begin
     'profile_image_path', profile_row.profile_image_path,
     'created_at', profile_row.created_at,
     'offered_services', services_json,
-    'portfolio_items', portfolio_json
+    'portfolio_items', portfolio_json,
+    'rating_avg', v_rating_avg,
+    'rating_count', v_rating_count,
+    'completed_services_count', v_completed_services_count
   );
   return result;
 end;
 $$;
 
-comment on function public.get_public_provider_by_slug(text) is 'Returns public provider profile by slug when visible; null if not found or restricted for current user.';
+comment on function public.get_public_provider_by_slug(text) is
+  'Returns public provider profile by slug when visible (incl. rating_avg/count and completed_services_count); null if not found or restricted for current user.';

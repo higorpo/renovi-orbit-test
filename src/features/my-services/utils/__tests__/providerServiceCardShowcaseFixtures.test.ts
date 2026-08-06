@@ -102,6 +102,12 @@ describe("buildProviderServiceCardShowcaseVariants", () => {
     const completed = variants.find((variant) => variant.id === "completed");
     expect(completed?.group).toBe("Concluídos");
     expect(completed?.model.contracted?.status).toBe("COMPLETED");
+    expect(completed?.model.contracted?.clientRatingOverallScore).toBe(4.8);
+    expect(
+      getProviderServiceCardPresentation(completed!.model).secondaryInfo.some(
+        (item) => item.icon === "rating" && item.text === "4.8",
+      ),
+    ).toBe(true);
 
     const startChat = variants.find((variant) => variant.id === "negotiation-start-chat");
     expect(startChat?.model.chatSummary).toBeNull();

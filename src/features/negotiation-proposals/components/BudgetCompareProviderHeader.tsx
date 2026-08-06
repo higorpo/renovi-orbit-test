@@ -1,57 +1,32 @@
 import { Link } from "react-router";
-import { Star } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { usePublicProfileImageUrl } from "@/features/provider-profile/hooks/usePublicProfileImageUrl";
-import { getProviderProfilePath } from "@/features/provider-profile";
+import { getProviderProfilePath, ProviderRatingStars } from "@/features/provider-profile";
 import { initialsFromName } from "@/lib/utils/initialsFromName";
 import { cn } from "@/lib/utils";
-import {
-  mockProviderCompletedServices,
-  mockProviderRating,
-} from "../utils/mockProviderRating";
 
 interface BudgetCompareProviderHeaderProps {
-  providerId: string;
   providerName: string;
   providerSlug: string | null;
   providerProfileImagePath: string | null;
+  ratingAvg: number | null;
+  ratingCount: number;
+  completedServicesCount: number;
   className?: string;
 }
 
-function ProviderRatingStars({ rating }: { rating: number }) {
-  const fullStars = Math.floor(rating);
-  const hasHalf = rating - fullStars >= 0.5;
-
-  return (
-    <span className="inline-flex items-center gap-0.5" aria-hidden>
-      {Array.from({ length: 5 }, (_, index) => {
-        const filled = index < fullStars || (index === fullStars && hasHalf);
-        return (
-          <Star
-            key={index}
-            className={cn(
-              "h-3.5 w-3.5",
-              filled ? "fill-amber-400 text-amber-500" : "text-muted-foreground/35",
-            )}
-            strokeWidth={1.5}
-          />
-        );
-      })}
-    </span>
-  );
-}
-
 export function BudgetCompareProviderHeader({
-  providerId,
   providerName,
   providerSlug,
   providerProfileImagePath,
+  ratingAvg,
+  ratingCount,
+  completedServicesCount,
   className,
 }: BudgetCompareProviderHeaderProps) {
   const { url } = usePublicProfileImageUrl(providerProfileImagePath);
-  const ratingValue = Number(mockProviderRating(providerId));
-  const completedServices = mockProviderCompletedServices(providerId);
+  const hasRatings = ratingCount > 0 && ratingAvg != null;
 
   return (
     <div
@@ -70,12 +45,18 @@ export function BudgetCompareProviderHeader({
         <div className="min-w-0 space-y-1">
           <p className="truncate text-base font-semibold text-foreground">{providerName}</p>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <ProviderRatingStars rating={ratingValue} />
-            <span className="text-sm font-semibold text-foreground">
-              {ratingValue.toFixed(1)}
-            </span>
+            {hasRatings ? (
+              <>
+                <ProviderRatingStars rating={ratingAvg} />
+                <span className="text-sm font-semibold text-foreground">
+                  {ratingAvg.toFixed(1)}
+                </span>
+              </>
+            ) : (
+              <span className="text-sm text-muted-foreground">Sem avaliações</span>
+            )}
             <span className="text-sm text-muted-foreground">
-              · {completedServices} serviços
+              · {completedServicesCount} serviços
             </span>
           </div>
         </div>

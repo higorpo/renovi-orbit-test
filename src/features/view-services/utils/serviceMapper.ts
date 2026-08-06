@@ -104,6 +104,8 @@ export interface RpcContractedService {
   far_recapture_pending?: boolean | null;
   provider?: RpcContractedProvider | null;
   reschedule?: unknown;
+  client_rating_overall_score?: number | string | null;
+  client_rating_submitted_at?: string | null;
 }
 
 export interface RpcCounterparty {
@@ -172,6 +174,14 @@ function mapCounterparty(counterparty: RpcCounterparty | null | undefined): Coun
   };
 }
 
+function mapClientRatingOverallScore(
+  value: RpcContractedService["client_rating_overall_score"],
+): number | null {
+  if (value == null) return null;
+  const score = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(score) ? score : null;
+}
+
 function mapContracted(contracted: RpcContractedService | null | undefined): ContractedServiceSummary | null {
   if (!contracted?.id || !contracted.status) return null;
   return {
@@ -189,6 +199,8 @@ function mapContracted(contracted: RpcContractedService | null | undefined): Con
     paymentScheduleState: (contracted.payment_schedule_state as ContractedServiceSummary["paymentScheduleState"]) ?? null,
     farRecapturePending: Boolean(contracted.far_recapture_pending),
     reschedule: mapRescheduleSnapshot(contracted.reschedule),
+    clientRatingOverallScore: mapClientRatingOverallScore(contracted.client_rating_overall_score),
+    clientRatingSubmittedAt: contracted.client_rating_submitted_at ?? null,
   };
 }
 

@@ -53,6 +53,9 @@ describe("getPublicProfileBySlug", () => {
       created_at: "2024-01-01T00:00:00Z",
       offered_services: [{ service_id: "s1", title: "Eletricista" }],
       portfolio_items: [],
+    rating_avg: null,
+    rating_count: 0,
+    completed_services_count: 0,
     };
     rpcMock.mockResolvedValue({ data: payload, error: null });
     const result = await getPublicProfileBySlug("joao-silva");

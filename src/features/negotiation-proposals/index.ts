@@ -220,10 +220,6 @@ export {
   type ClientProposalCta,
 } from "./utils/clientProposalCtas";
 export {
-  mockProviderCompletedServices,
-  mockProviderRating,
-} from "./utils/mockProviderRating";
-export {
   resolveProposalCountdownCopy,
   type ProposalCountdownAudience,
   type ProposalCountdownCopy,

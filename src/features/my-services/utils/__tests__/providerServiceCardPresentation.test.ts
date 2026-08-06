@@ -393,7 +393,7 @@ describe("getProviderServiceCardPresentation", () => {
   });
 
   describe("completed", () => {
-    it("omits highlight and shows amount, date and mock rating", () => {
+    it("omits highlight and shows amount, date and client rating when rated", () => {
       const model = baseModel({
         listPhase: "completed",
         statusTabId: "completed",
@@ -421,6 +421,8 @@ describe("getProviderServiceCardPresentation", () => {
           provider: null,
           chatId: null,
           updatedAt: "2025-06-10T00:00:00Z",
+          clientRatingOverallScore: 4.5,
+          clientRatingSubmittedAt: "2025-06-10T12:00:00Z",
         },
       });
       const pres = getProviderServiceCardPresentation(model);
@@ -435,9 +437,49 @@ describe("getProviderServiceCardPresentation", () => {
           (item) => item.icon === "date" && item.text.includes("Concluído em"),
         ),
       ).toBe(true);
-      expect(pres.secondaryInfo.some((item) => item.icon === "rating")).toBe(true);
+      expect(
+        pres.secondaryInfo.some(
+          (item) => item.icon === "rating" && item.text === "4.5",
+        ),
+      ).toBe(true);
       expect(pres.primaryAction.label).toBe("Ver detalhes");
       expect(pres.secondaryAction).toBeNull();
+    });
+
+    it("omits rating icon when client has not rated yet", () => {
+      const model = baseModel({
+        listPhase: "completed",
+        statusTabId: "completed",
+        completedAt: "2025-06-10T00:00:00Z",
+        myProposal: {
+          id: "p-1",
+          status: "ACCEPTED",
+          finalAmount: 425,
+          updatedAt: "2025-06-10T00:00:00Z",
+          expiredAt: null,
+          submittedAt: "2025-06-01T00:00:00Z",
+          revisionReason: null,
+          revisionNotes: null,
+          clientRejectionResponse: null,
+        },
+        contracted: {
+          id: "cs-1",
+          status: "COMPLETED",
+          agreedSlot: null,
+          durationUnit: "hours",
+          durationValue: 5,
+          scheduledStartDate: "2025-06-08",
+          scheduledEndDate: null,
+          scheduledShift: "full_day",
+          provider: null,
+          chatId: null,
+          updatedAt: "2025-06-10T00:00:00Z",
+          clientRatingOverallScore: null,
+          clientRatingSubmittedAt: null,
+        },
+      });
+      const pres = getProviderServiceCardPresentation(model);
+      expect(pres.secondaryInfo.some((item) => item.icon === "rating")).toBe(false);
     });
   });
 

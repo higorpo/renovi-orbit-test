@@ -4,6 +4,7 @@ import { ProviderProfileAbout } from "./ProviderProfileAbout";
 import { ProviderProfileServices } from "./ProviderProfileServices";
 import { ProviderProfilePortfolio } from "./ProviderProfilePortfolio";
 import { ProviderProfileServiceArea } from "./ProviderProfileServiceArea";
+import { ProviderProfileReviews } from "./ProviderProfileReviews";
 import { ProviderProfileCtaBanner } from "./ProviderProfileCtaBanner";
 import { ProviderProfileSkeleton } from "./ProviderProfileSkeleton";
 import { useProviderPublicProfile } from "../hooks/useProviderPublicProfile";
@@ -63,6 +64,7 @@ export function ProviderProfilePage() {
         <ProviderProfileAbout profile={profile} />
         <ProviderProfileServices profile={profile} />
         <ProviderProfilePortfolio profile={profile} />
+        <ProviderProfileReviews providerId={profile.provider_id} />
         <ProviderProfileServiceArea profile={profile} />
         <ProviderProfileCtaBanner />
       </div>

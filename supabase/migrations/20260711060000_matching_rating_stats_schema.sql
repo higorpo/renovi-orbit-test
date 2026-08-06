@@ -22,8 +22,10 @@ comment on table public.service_ratings is
 comment on column public.service_ratings.overall_score is
   'Computed and persisted by rating RPCs from platform_constants dimension weights.';
 
-create index service_ratings_provider_id_idx
-  on public.service_ratings (provider_id);
+-- Keyset pagination for public rating lists: (provider_id, submitted_at DESC, id DESC).
+-- Also covers provider_id-only lookups used by stats refresh.
+create index service_ratings_provider_submitted_at_id_idx
+  on public.service_ratings (provider_id, submitted_at desc, id desc);
 
 create table public.provider_rating_stats (
   provider_id uuid primary key references public.profiles (id) on delete cascade,

@@ -290,7 +290,17 @@ begin
           'Profissional'
         )
       ),
-      'reschedule', public.cns_service_reschedule_snapshot_for_viewer(cs.id, p_viewer_id)
+      'reschedule', public.cns_service_reschedule_snapshot_for_viewer(cs.id, p_viewer_id),
+      'client_rating_overall_score', (
+        select sr.overall_score
+        from public.service_ratings sr
+        where sr.contracted_service_id = cs.id
+      ),
+      'client_rating_submitted_at', (
+        select sr.submitted_at
+        from public.service_ratings sr
+        where sr.contracted_service_id = cs.id
+      )
     )
     into v_contracted_provider
     from public.contracted_services cs
@@ -403,4 +413,4 @@ end;
 $$;
 
 comment on function public.project_service_row(uuid, uuid) is
-  'Builds unified service JSON with lightweight enrichment_status/enrichment_ready/executed_late (Task 46).';
+  'Builds unified service JSON with enrichment_status/enrichment_ready/executed_late and contracted client_rating_* when present.';

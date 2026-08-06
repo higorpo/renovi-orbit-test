@@ -222,7 +222,7 @@ Transições de domínio (OPEN → contratado → etc.) **não** são feitas nes
 - `MyServicesRouteSlot` retorna `null` — a lista só aparece se o persistent slot estiver visível.
 - `handleClearFilters` **não** reseta a aba de status nem a busca (só filtros da barra: categoria, cidade, bairro, datas, flags); no cliente, versão da página também limpa focus query.
 - Prestador **não** tem deep link `serviceRequestId` no hook.
-- Card concluído prestador: nota 4.0–4.9 fake por hash do id.
+- Card concluído prestador: nota real `clientRatingOverallScore` (omitida se null).
 - Motivos de cancelamento no card prestador: heurísticas de `myProposal` / status (`cancelReason`).
 - Body scroll lock também no sheet de filtros mobile.
 - CTA “Enviar orçamento” **não** aparece no card do prestador em negociação sem proposta — primário é “Ver negociação”.
@@ -230,7 +230,6 @@ Transições de domínio (OPEN → contratado → etc.) **não** são feitas nes
 ## 18. Riscos
 
 - Filtros derivados da página carregada podem omitir valores existentes no servidor.
-- Mock de avaliação pode induzir leitura de negócio incorreta se não sinalizado.
 - Doc legado do sheet (status `open`) pode divergir de `listPhase` — preferir código `serviceRequestBudgetAction.ts`.
 - Dependência forte de enriquecimento RPC (`my_proposal`, `chat`, `payment_schedule_state`); se RPC atrasar, cards degradam.
 
@@ -253,7 +252,6 @@ Transições de domínio (OPEN → contratado → etc.) **não** são feitas nes
 |------|------|
 | Aba Disputas | Sem implementação de dados |
 | Completude das opções de filtro | Só itens já paginados |
-| Rating mock no card prestador | Substituir por dado real quando existir |
 | Alinhar doc do sheet compare | Atualização cabe ao módulo chats/negotiation-proposals (fora deste escopo de edição forçada) |
 | Showcase DEV | Não documentar como fluxo de negócio |
 

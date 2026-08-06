@@ -7,6 +7,10 @@ export interface ServiceRequestBudgetCompareProposal {
   provider_name: string;
   provider_slug: string | null;
   provider_profile_image_path: string | null;
+  /** overall_avg when rating_count > 0; otherwise null. */
+  rating_avg: number | null;
+  rating_count: number;
+  completed_services_count: number;
   proposed_amount: number;
   revision_count: number;
   status: string;

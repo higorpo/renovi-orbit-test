@@ -7,6 +7,7 @@ import {
 const getServiceByIdMock = vi.fn();
 const rejectProposalMock = vi.fn();
 const fromMock = vi.fn();
+const rpcMock = vi.fn();
 
 vi.mock("@/features/view-services", () => ({
   getServiceById: (...args: unknown[]) => getServiceByIdMock(...args),
@@ -23,10 +24,15 @@ vi.mock("@/lib/logger", () => ({
 vi.mock("@/lib/supabase/client", () => ({
   supabase: {
     from: (...args: unknown[]) => fromMock(...args),
+    rpc: (...args: unknown[]) => rpcMock(...args),
   },
 }));
 
-function mockProposalsQuery(rows: unknown[], publicRows: unknown[] = []) {
+function mockProposalsQuery(
+  rows: unknown[],
+  publicRows: unknown[] = [],
+  ratingRows: unknown[] = [],
+) {
   const proposalsChain = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
@@ -43,6 +49,8 @@ function mockProposalsQuery(rows: unknown[], publicRows: unknown[] = []) {
     throw new Error(`Unexpected table: ${table}`);
   });
 
+  rpcMock.mockResolvedValue({ data: ratingRows, error: null });
+
   return { proposalsChain, publicChain };
 }
 
@@ -51,7 +59,7 @@ beforeEach(() => {
 });
 
 describe("fetchServiceRequestBudgetCompareDetail", () => {
-  it("combines get_service payload with provider proposals", async () => {
+  it("combines get_service payload with provider proposals and rating summaries", async () => {
     getServiceByIdMock.mockResolvedValue({
       data: {
         id: "req-1",
@@ -85,11 +93,22 @@ describe("fetchServiceRequestBudgetCompareDetail", () => {
         },
       ],
       [{ provider_id: "prov-1", slug: "joao", display_name: "João Eletricista" }],
+      [
+        {
+          provider_id: "prov-1",
+          rating_avg: 4.7,
+          rating_count: 12,
+          completed_services_count: 34,
+        },
+      ],
     );
 
     const result = await fetchServiceRequestBudgetCompareDetail("req-1");
 
     expect(getServiceByIdMock).toHaveBeenCalledWith("req-1");
+    expect(rpcMock).toHaveBeenCalledWith("get_provider_rating_summaries", {
+      p_provider_ids: ["prov-1"],
+    });
     expect(result.error).toBeNull();
     expect(result.data?.service_request.title).toBe("Job");
     expect(result.data?.budgets).toHaveLength(1);
@@ -98,6 +117,9 @@ describe("fetchServiceRequestBudgetCompareDetail", () => {
       provider_name: "João Eletricista",
       provider_slug: "joao",
       proposed_amount: 100,
+      rating_avg: 4.7,
+      rating_count: 12,
+      completed_services_count: 34,
       proposal_suggested_slots: [
         { start_date: "2026-06-12", shift: "afternoon" },
         { start_date: "2026-06-14", shift: "morning" },
@@ -204,10 +226,66 @@ describe("fetchServiceRequestBudgetCompareDetail", () => {
       if (table === "provider_profiles_public") return publicChain;
       throw new Error(`Unexpected table: ${table}`);
     });
+    rpcMock.mockResolvedValue({ data: [], error: null });
 
     const result = await fetchServiceRequestBudgetCompareDetail("req-1");
     expect(result.data).toBeNull();
     expect(result.error).toBe("public profiles down");
+  });
+
+  it("returns rating summaries query error", async () => {
+    getServiceByIdMock.mockResolvedValue({
+      data: {
+        id: "req-1",
+        title: "Job",
+        description: null,
+        listPhase: "negotiation",
+        createdAt: "2026-01-01T00:00:00Z",
+        service: { title: "S", slug: "s", icon_key: null, color_key: null },
+        address: null,
+      },
+      error: null,
+    });
+
+    const proposalsChain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: "prop-1",
+            provider_id: "prov-1",
+            proposed_amount: 50,
+            revision_count: 0,
+            status: "PENDING",
+            created_at: "2026-01-02T00:00:00Z",
+            submitted_at: null,
+            proposal_description: "x",
+            proposal_suggested_slots: null,
+            photos: null,
+            profiles: { full_name: "Ana", profile_image_path: null },
+          },
+        ],
+        error: null,
+      }),
+    };
+    const publicChain = {
+      select: vi.fn().mockReturnThis(),
+      in: vi.fn().mockResolvedValue({
+        data: [{ provider_id: "prov-1", slug: "ana", display_name: "Ana" }],
+        error: null,
+      }),
+    };
+    fromMock.mockImplementation((table: string) => {
+      if (table === "provider_proposals") return proposalsChain;
+      if (table === "provider_profiles_public") return publicChain;
+      throw new Error(`Unexpected table: ${table}`);
+    });
+    rpcMock.mockResolvedValue({ data: null, error: { message: "ratings down" } });
+
+    const result = await fetchServiceRequestBudgetCompareDetail("req-1");
+    expect(result.data).toBeNull();
+    expect(result.error).toBe("ratings down");
   });
 
   it("falls back to profile full name and Prestador when display name is missing", async () => {
@@ -257,6 +335,20 @@ describe("fetchServiceRequestBudgetCompareDetail", () => {
         { provider_id: "prov-1", slug: "maria", display_name: "   " },
         { provider_id: "prov-2", slug: null, display_name: null },
       ],
+      [
+        {
+          provider_id: "prov-1",
+          rating_avg: null,
+          rating_count: 0,
+          completed_services_count: 5,
+        },
+        {
+          provider_id: "prov-2",
+          rating_avg: null,
+          rating_count: 0,
+          completed_services_count: 0,
+        },
+      ],
     );
 
     const result = await fetchServiceRequestBudgetCompareDetail("req-1");
@@ -265,10 +357,16 @@ describe("fetchServiceRequestBudgetCompareDetail", () => {
       provider_name: "Maria",
       provider_slug: "maria",
       photos: [],
+      rating_avg: null,
+      rating_count: 0,
+      completed_services_count: 5,
     });
     expect(result.data?.budgets[1]).toMatchObject({
       provider_name: "Prestador",
       provider_slug: null,
+      rating_avg: null,
+      rating_count: 0,
+      completed_services_count: 0,
     });
     expect(result.data?.service_request).toMatchObject({
       service_title: "",
@@ -324,6 +422,7 @@ describe("fetchServiceRequestBudgetCompareDetail", () => {
       if (table === "provider_profiles_public") return publicChain;
       throw new Error(`Unexpected table: ${table}`);
     });
+    rpcMock.mockResolvedValue({ data: null, error: null });
 
     const result = await fetchServiceRequestBudgetCompareDetail("req-1");
     expect(result.error).toBeNull();
@@ -331,10 +430,13 @@ describe("fetchServiceRequestBudgetCompareDetail", () => {
       provider_name: "Prestador",
       provider_slug: null,
       provider_profile_image_path: null,
+      rating_avg: null,
+      rating_count: 0,
+      completed_services_count: 0,
     });
   });
 
-  it("skips public profile fetch when there are no proposals", async () => {
+  it("skips public profile and rating fetch when there are no proposals", async () => {
     getServiceByIdMock.mockResolvedValue({
       data: {
         id: "req-1",
@@ -354,6 +456,7 @@ describe("fetchServiceRequestBudgetCompareDetail", () => {
     expect(result.data?.budgets).toEqual([]);
     expect(fromMock).toHaveBeenCalledWith("provider_proposals");
     expect(fromMock).not.toHaveBeenCalledWith("provider_profiles_public");
+    expect(rpcMock).not.toHaveBeenCalled();
   });
 
   it("treats empty profiles array as missing and null proposal rows as empty", async () => {
@@ -420,6 +523,17 @@ describe("fetchServiceRequestBudgetCompareDetail", () => {
       if (table === "provider_profiles_public") return publicChain2;
       throw new Error(`Unexpected table: ${table}`);
     });
+    rpcMock.mockResolvedValue({
+      data: [
+        {
+          provider_id: "prov-1",
+          rating_avg: "4.2",
+          rating_count: 3,
+          completed_services_count: 8,
+        },
+      ],
+      error: null,
+    });
 
     const result = await fetchServiceRequestBudgetCompareDetail("req-1");
     expect(result.error).toBeNull();
@@ -428,6 +542,9 @@ describe("fetchServiceRequestBudgetCompareDetail", () => {
       revision_count: 0,
       photos: [],
       provider_slug: null,
+      rating_avg: 4.2,
+      rating_count: 3,
+      completed_services_count: 8,
     });
   });
 });

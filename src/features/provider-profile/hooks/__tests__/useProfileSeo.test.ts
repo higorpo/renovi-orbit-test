@@ -21,6 +21,9 @@ function makeProfile(
     created_at: "2024-01-01T00:00:00Z",
     offered_services: [],
     portfolio_items: [],
+    rating_avg: null,
+    rating_count: 0,
+    completed_services_count: 0,
     ...overrides,
   };
 }

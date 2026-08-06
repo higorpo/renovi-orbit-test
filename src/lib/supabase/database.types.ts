@@ -5061,6 +5061,10 @@ export type Database = {
         Args: { p_proposal_id: string }
         Returns: Json
       }
+      get_provider_rating_summaries: {
+        Args: { p_provider_ids: string[] }
+        Returns: Json
+      }
       get_public_provider_by_slug: {
         Args: { slug_param: string }
         Returns: Json
@@ -5184,6 +5188,15 @@ export type Database = {
           p_settled_to?: string
           p_settling_from?: string
           p_settling_to?: string
+        }
+        Returns: Json
+      }
+      list_public_provider_ratings: {
+        Args: {
+          p_cursor_id?: string
+          p_cursor_submitted_at?: string
+          p_page_size?: number
+          p_provider_id: string
         }
         Returns: Json
       }

@@ -33,4 +33,29 @@ export interface ProviderPublicProfile {
   created_at: string;
   offered_services: ProviderPublicService[];
   portfolio_items: ProviderPortfolioItemPublic[];
+  /** Overall average from provider_rating_stats; null when rating_count is 0. Never use ranking_quality_score. */
+  rating_avg: number | null;
+  rating_count: number;
+  completed_services_count: number;
+}
+
+/** Cursor for list_public_provider_ratings keyset pagination. */
+export interface ProviderPublicRatingCursor {
+  submitted_at: string;
+  id: string;
+}
+
+/** Single public rating item (no client PII). */
+export interface ProviderPublicRatingItem {
+  id: string;
+  overall_score: number;
+  comment: string | null;
+  submitted_at: string;
+}
+
+/** Cursor-paginated response from list_public_provider_ratings. */
+export interface ProviderPublicRatingsPage {
+  items: ProviderPublicRatingItem[];
+  next_cursor: ProviderPublicRatingCursor | null;
+  has_more: boolean;
 }

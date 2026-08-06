@@ -34,7 +34,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | Pasta | APIs / hooks representativos | UI principal |
 |-------|------------------------------|--------------|
 | `addresses/` | `api/addresses.api.ts`, `api/statesAndCities.api.ts` | `AddressSelectionStep`, `AddressesSection`, `AddressFormDialog` |
-| `my-services/` | hooks page/list/filters/cancel (delegam a `view-services`); `pendingPaymentHighlight.ts`, `clientServiceCardPresentation.ts`, `providerServiceCardPresentation.ts`, `clientServiceCardTheme.ts` | `ClientMyServicesPage` / `ProviderMyServicesPage`, cards com highlight `PENDING_PAYMENT`, follow-up de conclusão pós-data-fim/`EXECUTED`, prestador `CONFIRMED`+past → “Concluir serviço” (`CompletionFlowSheetDialog` no card), `ReceivedBudgetDetailsSheet` via `negotiation-proposals` |
+| `my-services/` | hooks page/list/filters/cancel (delegam a `view-services`); `pendingPaymentHighlight.ts`, `clientServiceCardPresentation.ts`, `providerServiceCardPresentation.ts` (nota real `clientRatingOverallScore` no card `completed`), `clientServiceCardTheme.ts` | `ClientMyServicesPage` / `ProviderMyServicesPage`, cards com highlight `PENDING_PAYMENT`, follow-up de conclusão pós-data-fim/`EXECUTED`, prestador `CONFIRMED`+past → “Concluir serviço” (`CompletionFlowSheetDialog` no card), `ReceivedBudgetDetailsSheet` via `negotiation-proposals` |
 | `view-services/` | `api/services.api.ts` (RPC `get_service`, `list_services`, `cancel_service_request`, `republish_cancelled_service_request`); hooks list/detail/cancel/republish; UI compõe **service-completion** | `ServiceDetailShell` (rota `/dashboard/services/:id` — **não** placeholder), `ServiceDetailPage`, `ServiceDetailClientActions`, `ServiceListCard`, `ServiceSections` |
 | `service-completion/` | `api/lifecycle.api.ts`, `context.api.ts`, `draft.api.ts`, `upload.api.ts`, `evidencePhotoStorage.api.ts`, `ratings.api.ts`; hooks draft/mark/confirm/dispute/enrichment/evidence URLs | `EnrichmentProcessingBanner`, **`ProviderMarkExecutedAction`**, **`ClientEvaluateServiceAction`**, `CompletionFlowSheetDialog`, `CompletionEvidenceGallery`, wizards embutidos, `DisputeStubEntry` (Public API → `view-services`) |
 | `provider-calendar/` | `api/providerCalendar.api.ts` (RPC `list_provider_scheduled_services`); hooks de intervalo/vista | `ProviderCalendarPage` (`/dashboard/services/calendar`); banner de entrada em `my-services` |
@@ -44,10 +44,10 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `dynamic-form/` | — | `DynamicForm`, `FormDemoPage` |
 | `my-account/` | `api/*Profile*.api.ts`, `portfolio.api.ts`, `offeredServices.api.ts` | `MyAccountPage`, `MyAccountClientPage`, `MyAccountProviderPage`, `ServiceAreaField` |
 | `provider-jobs/` | `api/providerJobs.api.ts`, `dismissOpportunity.api.ts`; propostas via `negotiation-proposals` | `ProviderJobsPage`, `JobCard`; detalhe via `view-services` |
-| `provider-profile/` | hooks + componentes públicos | `ProviderProfilePage` |
+| `provider-profile/` | `api/providerProfilePublic.api.ts`, `api/providerProfileRatings.api.ts`; hooks `useProviderPublicProfile`, `usePublicProviderRatings`, SEO/share | `ProviderProfilePage`, `ProviderProfileHeader` (média/contagem), `ProviderProfileReviews` (cursor), `ProviderRatingStars` |
 | `request-quote/` | `api/createRequestQuoteOrder.api.ts`, `smartDescription.api.ts`, `services.api.ts`, `forms.api.ts`; hooks submit (`preloadRecaptcha` no mount)/navigation/draft/IA | `RequestQuote.tsx`, passos 1–5, `ConfirmEmailScreen`, `TrustSidebar`; rascunho `requestQuoteDraft.persistence.ts` |
 | `chats/` | `api/chats.api.ts`, `chats.rpc.ts`; hooks lista, thread, mensagens, Realtime | `ChatListPage`, `ChatScreen`, `ChatsLayout` |
-| `negotiation-proposals/` | `api/proposals.api.ts`, `api/serviceRequestBudgetCompare.api.ts`, `proposals.rpc.ts`; RPCs `create_provider_proposal`, `get_proposal_detail_for_provider`, `get_proposal_detail_for_participant`; countdown `useProposalCountdown`, `ProposalCountdownBanner` | `ProposalComposerDialog`, `AcceptProposalDialog`, `ReceivedBudgetDetailsSheet`, composer em jobs |
+| `negotiation-proposals/` | `api/proposals.api.ts`, `api/serviceRequestBudgetCompare.api.ts` (+ `get_provider_rating_summaries`); `proposals.rpc.ts`; RPCs `create_provider_proposal`, `get_proposal_detail_for_provider`, `get_proposal_detail_for_participant`; countdown `useProposalCountdown`, `ProposalCountdownBanner` | `ProposalComposerDialog`, `AcceptProposalDialog`, `ReceivedBudgetDetailsSheet`, `BudgetCompareProviderHeader` (rating real), composer em jobs |
 | `service-reschedule/` | `api/serviceReschedule.api.ts`; hooks mutações/detalhe; `deriveRescheduleDateMode`, `mapRescheduleSnapshot`; FSM em docs `ciclo-estados-reagendamento.md` | `ProposeRescheduleDialog` (inclui lembrete dispensável `ProposeRescheduleFlowReminder`), `RequestRescheduleDialog`, cards/ações no chat e no serviço contratado |
 | `payments/` | APIs checkout/cartões/histórico/cobrança; RPCs `payment_*` | Checkout stepper, `ManualPaymentDialog`, histórico em Minha conta |
 | `provider-earnings/` | `api/settlements.api.ts`; `useProviderSettlements`; disclosure D+30 / `settling_at` | `EarningsPage`, filtros Previsto/Liquidado/Estorno, `ProviderSettlementDisclosure` |
@@ -219,6 +219,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `supabase/migrations/202607110*`–`20260711230000_*` | Schema dispatch, discovery, cron, visibilidade, ratings |
 | `supabase/functions/list-provider-opportunities/` | Edge feed prestador |
 | `supabase/tests/matching/*.sql` | pgTAP matching |
+| `supabase/tests/matching/provider_rating_read_rpcs_test.sql` | pgTAP leitura de ratings: summaries, lista pública cursor, slug, deny restringido |
 | `e2e/matching/*.spec.ts` | E2E feed + lifecycle |
 
 ## Pagamentos (checkout, histórico, reembolso)

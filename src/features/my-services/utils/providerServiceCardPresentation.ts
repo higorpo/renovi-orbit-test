@@ -104,15 +104,6 @@ function formatClosedDate(iso: string | null | undefined): string | null {
   return formatDatePtBr(iso);
 }
 
-function mockClientRating(serviceId: string): string {
-  let hash = 0;
-  for (const char of serviceId) {
-    hash = (hash * 31 + char.charCodeAt(0)) | 0;
-  }
-  const rating = 4.0 + (Math.abs(hash) % 10) / 10;
-  return rating.toFixed(1);
-}
-
 function cancelReason(model: ServiceModel): string | null {
   const response = model.myProposal?.clientRejectionResponse;
   if (response) return response;
@@ -357,7 +348,11 @@ function buildCompletedPresentation(
 
   pushSecondaryInfo(secondaryInfo, { icon: "amount", text: amount });
   pushSecondaryInfo(secondaryInfo, { icon: "date", text: `Concluído em ${executedAt}` });
-  pushSecondaryInfo(secondaryInfo, { icon: "rating", text: mockClientRating(model.id) });
+  const ratingScore = model.contracted?.clientRatingOverallScore;
+  pushSecondaryInfo(secondaryInfo, {
+    icon: "rating",
+    text: ratingScore != null ? ratingScore.toFixed(1) : null,
+  });
 
   return {
     isTodayService: false,

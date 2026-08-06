@@ -5,10 +5,19 @@ import { usePublicProfileImageUrl } from "../hooks/usePublicProfileImageUrl";
 import { useShareProfile } from "../hooks/useShareProfile";
 import { initialsFromName } from "@/lib/utils/initialsFromName";
 import { formatProviderSince } from "../utils/formatProviderSince";
+import { ProviderRatingStars } from "./ProviderRatingStars";
 import type { ProviderPublicProfile } from "../types/providerProfilePublic.types";
 
 export interface ProviderProfileHeaderProps {
   profile: ProviderPublicProfile;
+}
+
+function ratingsSummaryLabel(count: number): string {
+  return count === 1 ? "1 avaliação" : `${count} avaliações`;
+}
+
+function completedServicesLabel(count: number): string {
+  return count === 1 ? "1 serviço concluído" : `${count} serviços concluídos`;
 }
 
 export function ProviderProfileHeader({
@@ -24,6 +33,9 @@ export function ProviderProfileHeader({
   );
   const since = formatProviderSince(profile.created_at);
   const { share } = useShareProfile(profile);
+  const ratingCount = profile.rating_count ?? 0;
+  const showRating = ratingCount > 0 && profile.rating_avg != null;
+  const completedServices = profile.completed_services_count ?? 0;
 
   return (
     <header className="flex flex-col sm:flex-row gap-5 sm:gap-6 items-center sm:items-start">
@@ -45,6 +57,25 @@ export function ProviderProfileHeader({
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
             {displayName}
           </h1>
+          {showRating ? (
+            <div
+              className="mt-2 flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-1"
+              aria-label={`${profile.rating_avg!.toFixed(1)} de 5, ${ratingsSummaryLabel(ratingCount)}`}
+            >
+              <ProviderRatingStars rating={profile.rating_avg!} />
+              <span className="text-sm font-semibold text-foreground">
+                {profile.rating_avg!.toFixed(1)}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                · {ratingsSummaryLabel(ratingCount)}
+              </span>
+              {completedServices > 0 ? (
+                <span className="text-sm text-muted-foreground">
+                  · {completedServicesLabel(completedServices)}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
           <div className="mt-2 flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 text-sm text-muted-foreground">
             {since && (
               <span className="inline-flex items-center gap-1.5">

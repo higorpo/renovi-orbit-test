@@ -78,7 +78,16 @@ flowchart TD
 | Bloco | Campos típicos |
 |-------|----------------|
 | `service_request` | id, title, description, status/fase, created_at, service_title |
-| `budgets[]` | id, provider_id, amounts, revision_count, status, submitted_at, description, slots, photos, nome/slug/imagem prestador |
+| `budgets[]` | id, provider_id, amounts, revision_count, status, submitted_at, description, slots, photos, nome/slug/imagem prestador; **reputação:** `rating_avg`, `rating_count`, `completed_services_count` (RPC `get_provider_rating_summaries` após coletar `provider_ids`) |
+
+### Header do card do prestador (`BudgetCompareProviderHeader`)
+
+| Dado | Origem / regra de UI |
+|------|----------------------|
+| Média (`rating_avg`) + estrelas | Só se `rating_count > 0` e `rating_avg` não nulo — vem de `provider_rating_stats.overall_avg` (não usar `ranking_quality_score`) |
+| Sem avaliações | Copy **“Sem avaliações”** (sem estrela fake) quando `rating_count = 0` |
+| Contagem de serviços | `completed_services_count` — serviços `COMPLETED` daquele prestador (“N serviços”) |
+| Ver perfil | Link para `/perfil/:slug` quando há slug |
 
 ### Labels de status no badge
 
@@ -103,10 +112,11 @@ flowchart TD
 | Operação | Backend |
 |----------|---------|
 | Carregar detalhe | Select/propostas + `getServiceById` (view-services) — ver `serviceRequestBudgetCompare.api.ts` |
+| Reputação dos prestadores | RPC `get_provider_rating_summaries(p_provider_ids)` (`SECURITY DEFINER`; `GRANT` a `authenticated`) — mapeada nos cards do compare |
 | Aceitar | `accept_proposal` (via payments) |
 | Recusar | `reject_proposal` |
 | Revisar | `request_proposal_revision` |
-| RLS | Cliente só vê propostas do próprio pedido (evidência: queries autenticadas + policies de `provider_proposals`) |
+| RLS | Cliente só vê propostas do próprio pedido (evidência: queries autenticadas + policies de `provider_proposals`); stats de rating **não** via SELECT direto em `provider_rating_stats` |
 
 **Evidência parcial:** detalhe fino de RLS deve ser confirmado em migrations de proposals se auditoria SQL for necessária.
 
@@ -169,6 +179,7 @@ flowchart TD
 - **Não** existe botão “Aprovar orçamento” desabilitado no código atual — o CTA é **Aceitar** ativo em PENDING/compare (doc antiga estava desatualizada).
 - `ServiceRequestBudgetRejectDialog` existe no código/testes mas o sheet atual usa `RejectProposalDialog`.
 - Painéis `BudgetCompareGuidancePanel` / `BudgetCompareTrustPanel` só em compare (guidance) / com providers (trust).
+- Rating no header é **real** (RPC de summaries); não há mock determinístico no compare.
 - Ao pedir revisão a partir do Accept (datas indisponíveis), pode pré-preencher `DATE_NOT_AVAILABLE` (`buildDateUnavailableRevisionInitialValues`).
 
 ## 18. Riscos
@@ -183,8 +194,9 @@ flowchart TD
 |----------|------|
 | Sheet | `components/ReceivedBudgetDetailsSheet.tsx` |
 | Card prestador / CTAs | `BudgetCompareProviderCard.tsx` |
+| Header + rating | `BudgetCompareProviderHeader.tsx` + `ProviderRatingStars` (`provider-profile`) |
 | Modos | `constants/serviceRequestBudgetSheet.ts` |
-| API | `api/serviceRequestBudgetCompare.api.ts` |
+| API | `api/serviceRequestBudgetCompare.api.ts` (+ `get_provider_rating_summaries`) |
 | Dialogs bridge | `hooks/useServiceRequestBudgetProposalDialogs.ts` |
 | Hook detalhe | `hooks/useServiceRequestBudgetCompareDetail.ts` |
 | Consumer | `src/features/my-services/...`, imports em `view-services` |

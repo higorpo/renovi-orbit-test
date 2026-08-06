@@ -36,6 +36,10 @@ vi.mock("../ProviderProfileServiceArea", () => ({
   ProviderProfileServiceArea: () => <div data-testid="service-area" />,
 }));
 
+vi.mock("../ProviderProfileReviews", () => ({
+  ProviderProfileReviews: () => <div data-testid="reviews" />,
+}));
+
 vi.mock("../ProviderProfileCtaBanner", () => ({
   ProviderProfileCtaBanner: () => <div data-testid="cta-banner" />,
 }));
@@ -79,6 +83,9 @@ const mockProfile: ProviderPublicProfile = {
     { service_id: "s1", title: "Eletricista", icon_key: "Zap", color_key: "sky_indigo" },
   ],
   portfolio_items: [],
+  rating_avg: null,
+  rating_count: 0,
+  completed_services_count: 0,
 };
 
 describe("ProviderProfilePage", () => {
@@ -139,6 +146,7 @@ describe("ProviderProfilePage", () => {
     expect(screen.getByTestId("about")).toBeInTheDocument();
     expect(screen.getByTestId("services")).toBeInTheDocument();
     expect(screen.getByTestId("portfolio")).toBeInTheDocument();
+    expect(screen.getByTestId("reviews")).toBeInTheDocument();
     expect(screen.getByTestId("service-area")).toBeInTheDocument();
     expect(screen.getByTestId("cta-banner")).toBeInTheDocument();
   });

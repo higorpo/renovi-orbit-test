@@ -58,7 +58,7 @@ Guards: dashboard sob `ProtectedRoute` `client` \| `provider`. Calendário: guar
 - Campo `categoryId` no estado de filtro envia **título** do serviço como `p_category_title` (não UUID).
 - Destaque `PENDING_PAYMENT`: copy compartilhada em `pendingPaymentHighlight.ts`; no cliente, `FAILED_PERMANENT` prevalece sobre unread.
 - Destaque de **follow-up de conclusão** (fase `in_progress`): quando a data fim agendada já passou (`getScheduledTiming` = `past`, end default = start) com contrato `CONFIRMED`, ou quando o contrato já está `EXECUTED`, o card deixa de mostrar só “Agendado para…” e passa a pedir ação de conclusão (copy por papel). Unread e pagamento pendente **vencem** esse banner. Sem prefetch de `get_service_completion_context` na lista. **Prestador** `CONFIRMED` + past: primário **“Concluir serviço”** abre o checklist no card; secundário “Ver detalhes”; botão disabled + tooltip se `!enrichmentReady`. **Cliente** `EXECUTED`: primário **“Avaliar serviço”** (`evaluate_service`) abre sheet/dialog na página (`ClientEvaluateServiceSheet` via `ClientEvaluateServiceDialogs` + `useClientEvaluateServiceDialog`); secundário “Ver detalhes”; contexto RPC só ao abrir o wizard. Prestador `EXECUTED`: primário “Ver detalhes” (aguardar no detalhe).
-- Prestador: avaliação no card `completed` usa **hash mock** (`mockClientRating`) — não é nota real do cliente.
+- Prestador: no card `completed`, a nota exibida vem de `contracted.clientRatingOverallScore` (RPC `list_services` / `project_service_row` → `service_ratings.overall_score` daquele CS). Se não houver rating, o ícone/nota **não** aparece.
 - Calendário: documentação de domínio em `provider-calendar`; neste módulo só o **ponto de entrada** (banner).
 
 ## 7. Entidades
@@ -87,7 +87,7 @@ Consumidas via `view-services` / RPCs (não há API própria de `my-services`):
 |------|--------|
 | Aba Disputas | Placeholder — sem dados |
 | Opções de filtro só dos itens carregados | Lacuna de UX com paginação |
-| Rating no card concluído (prestador) | Mock determinístico por `serviceId` |
+| Rating no card concluído (prestador) | **Real** — `clientRatingOverallScore` do CS; omitido se null |
 | Sheet compare / modo | **Reconciliado (2026-08-02):** modo via `listPhase` (`getServiceRequestBudgetSheetMode`); ver [comparar-orcamentos](../chats/features/comparar-orcamentos-meus-servicos.md) |
 | Showcase DEV | Rotas de showcase de cards existem em `router.tsx` (DEV) — fora do fluxo de negócio |
 

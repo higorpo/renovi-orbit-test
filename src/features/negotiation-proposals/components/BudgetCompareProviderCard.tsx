@@ -33,10 +33,12 @@ export function BudgetCompareProviderCard({
     <article className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
       <div className="space-y-4 p-4">
         <BudgetCompareProviderHeader
-          providerId={proposal.provider_id}
           providerName={proposal.provider_name}
           providerSlug={proposal.provider_slug}
           providerProfileImagePath={proposal.provider_profile_image_path}
+          ratingAvg={proposal.rating_avg}
+          ratingCount={proposal.rating_count}
+          completedServicesCount={proposal.completed_services_count}
         />
 
         <ServiceRequestBudgetCompareVersionBlock proposal={proposal} />

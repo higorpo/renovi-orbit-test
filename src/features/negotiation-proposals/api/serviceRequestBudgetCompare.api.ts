@@ -41,6 +41,19 @@ interface ProviderPublicProfileRow {
   display_name: string | null;
 }
 
+interface ProviderRatingSummaryRow {
+  provider_id: string;
+  rating_avg: number | null;
+  rating_count: number;
+  completed_services_count: number;
+}
+
+const EMPTY_RATING_SUMMARY: Omit<ProviderRatingSummaryRow, "provider_id"> = {
+  rating_avg: null,
+  rating_count: 0,
+  completed_services_count: 0,
+};
+
 function resolveProfile(
   profiles: BudgetCompareProposalRow["profiles"],
 ): { full_name: string; profile_image_path: string | null } | null {
@@ -67,13 +80,47 @@ function mapServiceToCompareRequest(
   };
 }
 
+function parseRatingSummaries(data: unknown): Map<string, ProviderRatingSummaryRow> {
+  const rows = Array.isArray(data) ? data : [];
+  const map = new Map<string, ProviderRatingSummaryRow>();
+
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const record = row as Record<string, unknown>;
+    const providerId = record.provider_id;
+    if (typeof providerId !== "string" || !providerId) continue;
+
+    const ratingCount = Number(record.rating_count) || 0;
+    const rawAvg = record.rating_avg;
+    const parsedAvg =
+      typeof rawAvg === "number"
+        ? rawAvg
+        : typeof rawAvg === "string"
+          ? Number(rawAvg)
+          : NaN;
+    const ratingAvg =
+      ratingCount > 0 && Number.isFinite(parsedAvg) ? parsedAvg : null;
+
+    map.set(providerId, {
+      provider_id: providerId,
+      rating_avg: ratingAvg,
+      rating_count: ratingCount,
+      completed_services_count: Number(record.completed_services_count) || 0,
+    });
+  }
+
+  return map;
+}
+
 function mapProposalRow(
   row: BudgetCompareProposalRow,
   publicProfile: ProviderPublicProfileRow | undefined,
+  ratingSummary: ProviderRatingSummaryRow | undefined,
 ): ServiceRequestBudgetCompareProposal {
   const profile = resolveProfile(row.profiles);
   const displayName = publicProfile?.display_name?.trim();
   const fullName = profile?.full_name?.trim();
+  const ratings = ratingSummary ?? { provider_id: row.provider_id, ...EMPTY_RATING_SUMMARY };
 
   return {
     id: row.id,
@@ -81,6 +128,9 @@ function mapProposalRow(
     provider_name: displayName || fullName || "Prestador",
     provider_slug: publicProfile?.slug ?? null,
     provider_profile_image_path: profile?.profile_image_path ?? null,
+    rating_avg: ratings.rating_avg,
+    rating_count: ratings.rating_count,
+    completed_services_count: ratings.completed_services_count,
     proposed_amount: row.proposed_amount,
     revision_count: row.revision_count ?? 0,
     status: row.status,
@@ -113,27 +163,49 @@ async function fetchBudgetCompareProposals(
   const providerIds = [...new Set(rows.map((row) => row.provider_id))];
 
   let publicProfiles = new Map<string, ProviderPublicProfileRow>();
-  if (providerIds.length > 0) {
-    const { data: publicRows, error: publicError } = await supabase
-      .from("provider_profiles_public")
-      .select("provider_id, slug, display_name")
-      .in("provider_id", providerIds);
+  let ratingSummaries = new Map<string, ProviderRatingSummaryRow>();
 
-    if (publicError) {
+  if (providerIds.length > 0) {
+    const [publicResult, ratingsResult] = await Promise.all([
+      supabase
+        .from("provider_profiles_public")
+        .select("provider_id, slug, display_name")
+        .in("provider_id", providerIds),
+      supabase.rpc("get_provider_rating_summaries", {
+        p_provider_ids: providerIds,
+      }),
+    ]);
+
+    if (publicResult.error) {
       logger.error("fetch_service_request_budget_compare_provider_profiles_error", {
-        error: publicError.message,
+        error: publicResult.error.message,
         serviceRequestId,
       });
-      return { budgets: [], error: publicError.message };
+      return { budgets: [], error: publicResult.error.message };
+    }
+
+    if (ratingsResult.error) {
+      logger.error("fetch_service_request_budget_compare_rating_summaries_error", {
+        error: ratingsResult.error.message,
+        serviceRequestId,
+      });
+      return { budgets: [], error: ratingsResult.error.message };
     }
 
     publicProfiles = new Map(
-      (publicRows ?? []).map((row) => [row.provider_id, row as ProviderPublicProfileRow]),
+      (publicResult.data ?? []).map((row) => [row.provider_id, row as ProviderPublicProfileRow]),
     );
+    ratingSummaries = parseRatingSummaries(ratingsResult.data);
   }
 
   return {
-    budgets: rows.map((row) => mapProposalRow(row, publicProfiles.get(row.provider_id))),
+    budgets: rows.map((row) =>
+      mapProposalRow(
+        row,
+        publicProfiles.get(row.provider_id),
+        ratingSummaries.get(row.provider_id),
+      ),
+    ),
     error: null,
   };
 }

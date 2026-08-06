@@ -456,7 +456,7 @@ export function buildProviderServiceCardShowcaseVariants(
     {
       id: "completed",
       label: "Serviço concluído",
-      description: "Fase finalizada com valor, data e avaliação mock.",
+      description: "Fase finalizada com valor, data e avaliação do cliente.",
       group: "Concluídos",
       model: baseModel({
         id: "showcase-completed",
@@ -476,6 +476,8 @@ export function buildProviderServiceCardShowcaseVariants(
           provider: null,
           chatId: null,
           updatedAt: addDays(now, -3).toISOString(),
+          clientRatingOverallScore: 4.8,
+          clientRatingSubmittedAt: addDays(now, -3).toISOString(),
         },
         chatSummary: {
           id: "chat-completed",

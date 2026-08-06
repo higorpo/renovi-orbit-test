@@ -342,6 +342,45 @@ describe("serviceMapper branch coverage", () => {
     expect(model.contracted?.agreedSlot).toBeNull();
   });
 
+  it("maps contracted client rating fields from RPC", () => {
+    const model = mapRpcServiceRow({
+      id: "cs-rated",
+      contracted: {
+        id: "cs-1",
+        status: "COMPLETED",
+        client_rating_overall_score: 4.5,
+        client_rating_submitted_at: "2025-06-10T12:00:00Z",
+      },
+    });
+    expect(model.contracted?.clientRatingOverallScore).toBe(4.5);
+    expect(model.contracted?.clientRatingSubmittedAt).toBe("2025-06-10T12:00:00Z");
+  });
+
+  it("maps contracted client rating score from numeric string and nulls missing rating", () => {
+    const rated = mapRpcServiceRow({
+      id: "cs-rated-string",
+      contracted: {
+        id: "cs-1",
+        status: "COMPLETED",
+        client_rating_overall_score: "4.0",
+        client_rating_submitted_at: "2025-06-10T12:00:00Z",
+      },
+    });
+    expect(rated.contracted?.clientRatingOverallScore).toBe(4);
+
+    const unrated = mapRpcServiceRow({
+      id: "cs-unrated",
+      contracted: {
+        id: "cs-2",
+        status: "COMPLETED",
+        client_rating_overall_score: null,
+        client_rating_submitted_at: null,
+      },
+    });
+    expect(unrated.contracted?.clientRatingOverallScore).toBeNull();
+    expect(unrated.contracted?.clientRatingSubmittedAt).toBeNull();
+  });
+
   it("maps contracted reschedule snapshot when present", () => {
     const model = mapRpcServiceRow({
       id: "cs-reschedule",
