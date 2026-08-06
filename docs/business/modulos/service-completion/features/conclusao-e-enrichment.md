@@ -6,7 +6,7 @@ Documentação de negócio do módulo **service-completion**. Host de UI: [visua
 
 ## 1. Resumo executivo
 
-Pedido `OPEN` enfileira **enrichment** (`PENDING`). Enquanto `PENDING`/`RUNNING`, a UI mostra “Checklist de conclusão em processamento…” e o pedido **não** entra no feed. Em `READY`, o matching faz bootstrap (delay de 5 min a partir daí). Pós-contrato, na seção **Serviço contratado** do detalhe: o prestador usa o botão **“Marcar serviço como concluído”** (abre sheet/dialog com o checklist — **não** fica inline na página); o cliente usa **“Avaliar serviço”** (sheet/dialog em 2 etapas: revisar evidências → avaliar). Sem confirmação, auto-complete ~24h. Disputa no app é stub (suporte ou “Em breve”).
+Pedido `OPEN` enfileira **enrichment** (`PENDING`). Enquanto `PENDING`/`RUNNING`, a UI mostra “Checklist de conclusão em processamento…” e o pedido **não** entra no feed. Em `READY`, o matching faz bootstrap (delay de 5 min a partir daí). Pós-contrato, na seção **Serviço contratado** do detalhe: o prestador usa o botão **“Marcar serviço como concluído”** (abre sheet/dialog com o checklist — **não** fica inline na página); o cliente usa **“Avaliar serviço”** (sheet/dialog em 2 etapas: revisar evidências → avaliar). Sem confirmação, auto-complete ~24h. Disputa no app é stub (banner “Abrir disputa” com descrição sobre correção/devolução; suporte ou “Em breve”).
 
 ---
 
@@ -112,7 +112,7 @@ flowchart TD
 | Sheet/dialog cliente | Stepper **2 etapas** (“1 de 2” / “2 de 2”): (1) revisar evidências/checklist congelado; (2) avaliar prestador/serviço (`ClientConfirmRatingWizard` embutido) |
 | Fotos de evidência | Thumbnails (`CompletionEvidenceGallery`); clique abre lightbox fullscreen (padrão `ServicePhotoGallery`); prestador ao preencher e cliente ao revisar; URLs via `createSignedUrl` — cliente só após evidência `frozen` (RLS) |
 | Badge atraso | “Executado com atraso” (`executed_late`) |
-| Dispute stub | Após avaliação (ou sem CTA de avaliar): copy “Abrir disputa” / “Em breve…” **inline** na seção contratada |
+| Dispute stub | Banner `DisputeStubEntry` no fluxo **Avaliar serviço** (wizard) e **inline** na seção contratada (sem CTA de avaliar): título “Abrir disputa”; **descrição** explicando que, se algo estiver errado na execução com base no checklist evidenciado ou não tiver sido cumprido corretamente, o cliente pode abrir disputa — a plataforma avalia e pode pedir correção ao prestador ou devolver parcial/integralmente o valor pago. Comportamento: URL de suporte ou toast “Em breve” + analytics (**sem** FSM) |
 
 ---
 
@@ -190,7 +190,7 @@ Servidor: tabelas enrichment/evidence/upload sessions+objects/ratings; `platform
 | Marcar executado (submit no sheet) | Prestador contratado | `CONFIRMED` + paths registrados + validação | `EXECUTED`; sessões → committed; fecha sheet |
 | Abrir “Avaliar serviço” | Cliente | UI: contrato `EXECUTED` ou `COMPLETED`; então `canConfirmWithRating` / rating opcional do contexto | Sheet/dialog 2 etapas (detalhe via `ClientEvaluateServiceAction`; lista Meus Serviços via `ClientEvaluateServiceSheet` hospedado na página) |
 | Confirmar + avaliar | Cliente | `EXECUTED` | `COMPLETED` + rating; fecha sheet |
-| Abrir disputa (stub) | Cliente | tipicamente pós-rating / `EXECUTED`/`COMPLETED` | URL ou toast (inline se sem CTA avaliar) |
+| Abrir disputa (stub) | Cliente | tipicamente pós-rating / `EXECUTED`/`COMPLETED` | Banner com título/subtítulo/descrição (ver §8); URL ou toast (no wizard de avaliar e inline se sem CTA avaliar) |
 | Submeter rating pós auto | Cliente | `COMPLETED` system | Rating opcional (mesmo CTA/sheet) |
 
 ---

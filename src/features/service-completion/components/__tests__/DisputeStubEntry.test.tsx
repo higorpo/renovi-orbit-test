@@ -41,7 +41,9 @@ describe("DisputeStubEntry", () => {
 
     expect(screen.getByTestId("dispute-stub-entry")).toBeInTheDocument();
     expect(
-      screen.getByText(/Em breve — fale com o suporte Renovi/i),
+      screen.getByText(
+        /Se você acha que há algo errado na execução do serviço/i,
+      ),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Abrir disputa/i })).toBeInTheDocument();
 

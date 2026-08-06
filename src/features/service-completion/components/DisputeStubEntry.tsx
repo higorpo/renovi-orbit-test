@@ -37,10 +37,14 @@ export function DisputeStubEntry({
           aria-hidden
         />
         <div className="min-w-0 flex-1 space-y-2">
-          <div>
+          <div className="space-y-1.5">
             <p className="text-sm font-medium text-foreground">Abrir disputa</p>
-            <p className="text-xs text-muted-foreground">
-              Em breve — fale com o suporte Renovi
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Se você acha que há algo errado na execução do serviço com base no
+              checklist evidenciado acima, ou se algo não foi cumprido
+              corretamente, pode abrir uma disputa. A plataforma avalia os
+              detalhes e pode pedir ao prestador que corrija o que não está bom,
+              ou devolver parcial ou integralmente o valor pago.
             </p>
           </div>
           <Button
