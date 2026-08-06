@@ -12,8 +12,14 @@ export type ClaimedEnrichmentRow = {
 
 export type ServiceRequestContext = {
   service_request_id: string;
+  /** Kept for fallback template resolution — not sent to the LLM. */
   service_id: string | null;
+  /** Kept for fallback template resolution — not sent to the LLM. */
   category_id: string | null;
+  /** Human-readable catalog label for the LLM prompt. */
+  service_title: string | null;
+  /** Human-readable parent category label for the LLM prompt. */
+  category_title: string | null;
   title: string | null;
   description: string | null;
   form_data: Record<string, unknown> | null;

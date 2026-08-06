@@ -6,6 +6,8 @@ const ctx: ServiceRequestContext = {
   service_request_id: "sr-1",
   service_id: "svc-1",
   category_id: null,
+  service_title: "Pintura de parede",
+  category_title: null,
   title: "Teste",
   description: "desc",
   form_data: {},

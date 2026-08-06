@@ -112,6 +112,8 @@ Deno.test("handleGenerateCompletionChecklistRequest claim→validate→finalize 
         service_request_id: "sr-0",
         service_id: "svc-1",
         category_id: null,
+        service_title: "Serviço teste",
+        category_title: null,
         title: "t",
         description: "d",
         form_data: {},

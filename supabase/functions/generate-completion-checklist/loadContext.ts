@@ -11,6 +11,12 @@ export type RawServiceRequestRow = {
   form_data: unknown;
 };
 
+export type CatalogLabels = {
+  categoryId?: string | null;
+  serviceTitle?: string | null;
+  categoryTitle?: string | null;
+};
+
 function payloadLength(
   title: string | null,
   description: string | null,
@@ -21,7 +27,7 @@ function payloadLength(
 
 export function buildServiceRequestContext(
   row: RawServiceRequestRow,
-  categoryId: string | null,
+  catalog: CatalogLabels = {},
   maxContextChars: number = MAX_CONTEXT_CHARS,
 ): ServiceRequestContext {
   const formData =
@@ -80,7 +86,9 @@ export function buildServiceRequestContext(
   return {
     service_request_id: row.id,
     service_id: row.service_id,
-    category_id: categoryId,
+    category_id: catalog.categoryId ?? null,
+    service_title: catalog.serviceTitle ?? null,
+    category_title: catalog.categoryTitle ?? null,
     title,
     description,
     form_data,
@@ -90,16 +98,18 @@ export function buildServiceRequestContext(
   };
 }
 
+/** Prompt payload uses catalog titles, never internal UUIDs. */
 export function formatContextForPrompt(ctx: ServiceRequestContext): string {
-  return JSON.stringify(
-    {
-      title: ctx.title,
-      description: ctx.description,
-      form_data: ctx.form_data,
-      service_id: ctx.service_id,
-      category_id: ctx.category_id,
-    },
-    null,
-    2,
-  );
+  const payload: Record<string, unknown> = {
+    title: ctx.title,
+    description: ctx.description,
+    form_data: ctx.form_data,
+  };
+  if (ctx.service_title) {
+    payload.service = ctx.service_title;
+  }
+  if (ctx.category_title) {
+    payload.category = ctx.category_title;
+  }
+  return JSON.stringify(payload, null, 2);
 }

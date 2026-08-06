@@ -131,13 +131,26 @@ export function createGenerateCompletionChecklistDeps(
       }
 
       let categoryId: string | null = null;
+      let serviceTitle: string | null = null;
+      let categoryTitle: string | null = null;
+
       if (data.service_id) {
         const { data: serviceRow } = await supabase
           .from("platform_services")
-          .select("parent_id")
+          .select("parent_id, title")
           .eq("id", data.service_id)
           .maybeSingle();
+        serviceTitle = serviceRow?.title ?? null;
         categoryId = serviceRow?.parent_id ?? null;
+
+        if (categoryId) {
+          const { data: categoryRow } = await supabase
+            .from("platform_services")
+            .select("title")
+            .eq("id", categoryId)
+            .maybeSingle();
+          categoryTitle = categoryRow?.title ?? null;
+        }
       }
 
       return buildServiceRequestContext(
@@ -148,7 +161,11 @@ export function createGenerateCompletionChecklistDeps(
           description: data.description,
           form_data: data.form_data,
         },
-        categoryId,
+        {
+          categoryId,
+          serviceTitle,
+          categoryTitle,
+        },
         resolveMaxContextChars(),
       );
     },
