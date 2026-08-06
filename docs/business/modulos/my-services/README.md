@@ -57,7 +57,7 @@ Guards: dashboard sob `ProtectedRoute` `client` \| `provider`. Calendário: guar
 - Opções de dropdown de filtro (categoria/cidade/bairro) derivadas dos **itens já carregados** — podem ficar incompletas com paginação.
 - Campo `categoryId` no estado de filtro envia **título** do serviço como `p_category_title` (não UUID).
 - Destaque `PENDING_PAYMENT`: copy compartilhada em `pendingPaymentHighlight.ts`; no cliente, `FAILED_PERMANENT` prevalece sobre unread.
-- Destaque de **follow-up de conclusão** (fase `in_progress`): quando a data fim agendada já passou (`getScheduledTiming` = `past`, end default = start) com contrato `CONFIRMED`, ou quando o contrato já está `EXECUTED`, o card deixa de mostrar só “Agendado para…” e passa a pedir ação de conclusão (copy por papel). Unread e pagamento pendente **vencem** esse banner. Sem prefetch de `get_service_completion_context` na lista — CTA primário “Ver detalhes”; mutações ficam no detalhe (`service-completion`).
+- Destaque de **follow-up de conclusão** (fase `in_progress`): quando a data fim agendada já passou (`getScheduledTiming` = `past`, end default = start) com contrato `CONFIRMED`, ou quando o contrato já está `EXECUTED`, o card deixa de mostrar só “Agendado para…” e passa a pedir ação de conclusão (copy por papel). Unread e pagamento pendente **vencem** esse banner. Sem prefetch de `get_service_completion_context` na lista. **Prestador** `CONFIRMED` + past: primário **“Concluir serviço”** abre o checklist no card; secundário “Ver detalhes”; botão disabled + tooltip se `!enrichmentReady`. Cliente e prestador `EXECUTED`: primário “Ver detalhes” (avaliar / aguardar no detalhe).
 - Prestador: avaliação no card `completed` usa **hash mock** (`mockClientRating`) — não é nota real do cliente.
 - Calendário: documentação de domínio em `provider-calendar`; neste módulo só o **ponto de entrada** (banner).
 
@@ -73,7 +73,7 @@ Consumidas via `view-services` / RPCs (não há API própria de `my-services`):
 | Módulo | Uso |
 |--------|-----|
 | `view-services` | Lista, detalhe, cancelamento, budget sheet helpers, navegação sheet |
-| `service-completion` | Conclusão no **detalhe** (`view-services`): enrichment banner; CTAs “Marcar serviço como concluído” / “Avaliar serviço” (sheet/dialog); stub disputa. Na **listagem**, só highlight/CTA “Ver detalhes” quando follow-up de conclusão é devido (pós-data-fim / `EXECUTED`) — sem wizards nem RPC de contexto |
+| `service-completion` | Conclusão: enrichment banner; no **detalhe**, CTAs “Marcar serviço como concluído” / “Avaliar serviço” (sheet/dialog); stub disputa. Na **listagem** do prestador (`CONFIRMED` + past): CTA **“Concluir serviço”** abre o mesmo sheet/wizard no card (contexto RPC só ao abrir; gate `enrichmentReady`); demais follow-ups → “Ver detalhes” |
 | `negotiation-proposals` | `ReceivedBudgetDetailsSheet`; dialogs de proposta do prestador |
 | `chats` | Navegação para conversa / filtro por service request |
 | `payments` | `ManualPaymentDialog` + `usePaymentSchedule` no card cliente |

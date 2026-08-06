@@ -7,8 +7,7 @@
 import { useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CompletionFlowSheetDialog } from "./CompletionFlowSheetDialog";
-import { ProviderExecutedWizard } from "./ProviderExecutedWizard";
+import { ProviderMarkExecutedSheet } from "./ProviderMarkExecutedSheet";
 
 export type ProviderMarkExecutedActionProps = {
   serviceRequestId: string;
@@ -30,7 +29,6 @@ export function ProviderMarkExecutedAction({
   onExecuted,
 }: ProviderMarkExecutedActionProps) {
   const [open, setOpen] = useState(false);
-  const [dismissDisabled, setDismissDisabled] = useState(false);
 
   // Mirrors get_service_completion_context capabilities without an extra RPC.
   const canShow =
@@ -54,28 +52,14 @@ export function ProviderMarkExecutedAction({
         Marcar serviço como concluído
       </Button>
 
-      <CompletionFlowSheetDialog
+      <ProviderMarkExecutedSheet
         open={open}
         onOpenChange={setOpen}
-        title="Checklist de conclusão"
-        description="Preencha os critérios e envie quando o serviço estiver concluído. O cliente só verá as respostas após a marcação como executado."
-        dismissDisabled={dismissDisabled}
-        size="md"
-        testId="provider-mark-executed-sheet"
-      >
-        {open ? (
-          <ProviderExecutedWizard
-            serviceRequestId={serviceRequestId}
-            scheduledStartDate={scheduledStartDate}
-            scheduledEndDate={scheduledEndDate}
-            onPendingChange={setDismissDisabled}
-            onExecuted={() => {
-              setOpen(false);
-              onExecuted?.();
-            }}
-          />
-        ) : null}
-      </CompletionFlowSheetDialog>
+        serviceRequestId={serviceRequestId}
+        scheduledStartDate={scheduledStartDate}
+        scheduledEndDate={scheduledEndDate}
+        onExecuted={onExecuted}
+      />
     </>
   );
 }

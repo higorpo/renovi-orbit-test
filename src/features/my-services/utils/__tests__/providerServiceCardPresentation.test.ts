@@ -703,6 +703,7 @@ describe("getProviderServiceCardPresentation additional branches", () => {
             scheduledEndDate: null,
             scheduledShift: "full_day",
           }),
+          enrichmentReady: true,
         }),
       );
 
@@ -713,10 +714,32 @@ describe("getProviderServiceCardPresentation additional branches", () => {
         emphasis: "attention",
       });
       expect(allDayPast.primaryAction).toMatchObject({
+        label: "Concluir serviço",
+        intent: "mark_executed",
+        disabled: false,
+      });
+      expect(allDayPast.secondaryAction).toMatchObject({
         label: "Ver detalhes",
         intent: "details",
       });
-      expect(allDayPast.secondaryAction?.intent).toBe("chat");
+
+      const enrichmentPending = getProviderServiceCardPresentation(
+        baseModel({
+          listPhase: "in_progress",
+          statusTabId: "in_progress",
+          enrichmentReady: false,
+          contracted: contracted({
+            status: "CONFIRMED",
+            scheduledStartDate: "2025-06-05",
+            scheduledEndDate: null,
+            scheduledShift: "full_day",
+          }),
+        }),
+      );
+      expect(enrichmentPending.primaryAction).toMatchObject({
+        intent: "mark_executed",
+        disabled: true,
+      });
 
       const rangedPast = getProviderServiceCardPresentation(
         baseModel({

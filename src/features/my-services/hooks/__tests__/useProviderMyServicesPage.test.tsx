@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   openGoogleMaps: vi.fn(),
   openReviseProposal: vi.fn(),
   openViewProposal: vi.fn(),
+  openMarkExecuted: vi.fn(),
 }))
 
 const coreResult = {
@@ -49,6 +50,16 @@ vi.mock('../useProviderServiceProposalDialogs', () => ({
   useProviderServiceProposalDialogs: () => ({
     openReviseProposal: mocks.openReviseProposal,
     openViewProposal: mocks.openViewProposal,
+  }),
+}))
+
+vi.mock('../useProviderMarkExecutedDialog', () => ({
+  useProviderMarkExecutedDialog: () => ({
+    open: false,
+    model: null,
+    openMarkExecuted: mocks.openMarkExecuted,
+    handleOpenChange: vi.fn(),
+    handleExecuted: vi.fn(),
   }),
 }))
 
@@ -171,5 +182,14 @@ describe('useProviderMyServicesPage', () => {
 
     expect(mocks.openReviseProposal).toHaveBeenCalledWith(model)
     expect(mocks.openViewProposal).toHaveBeenCalledWith(model)
+  })
+
+  it('delegates mark-executed action to the dialog controller', () => {
+    const model = serviceModel()
+    const { result } = renderHook(() => useProviderMyServicesPage())
+
+    act(() => result.current.handleMarkExecuted(model))
+
+    expect(mocks.openMarkExecuted).toHaveBeenCalledWith(model)
   })
 })

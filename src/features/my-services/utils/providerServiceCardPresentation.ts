@@ -21,7 +21,8 @@ export type ProviderCardActionIntent =
   | "details"
   | "open_map"
   | "revise_proposal"
-  | "view_proposal";
+  | "view_proposal"
+  | "mark_executed";
 
 export type ProviderCardHighlightEmphasis =
   | "default"
@@ -461,11 +462,24 @@ function buildInProgressActions(
       )
     : "future";
   const status = model.contracted?.status;
-  const needsCompletionFollowUp =
-    status === "EXECUTED" || (status === "CONFIRMED" && timing === "past");
 
-  // Detail hosts mark-executed / evidence CTAs — prefer it over chat when follow-up is due.
-  if (needsCompletionFollowUp) {
+  // Past schedule + CONFIRMED → open mark-executed checklist from the card.
+  if (status === "CONFIRMED" && timing === "past") {
+    const enrichmentReady = model.enrichmentReady;
+    return {
+      primaryAction: {
+        label: "Concluir serviço",
+        intent: "mark_executed",
+        disabled: !enrichmentReady,
+        disabledReason: enrichmentReady
+          ? undefined
+          : "Checklist de conclusão ainda não está pronto",
+      },
+      secondaryAction: { label: "Ver detalhes", intent: "details" },
+    };
+  }
+
+  if (status === "EXECUTED") {
     return {
       primaryAction: { label: "Ver detalhes", intent: "details" },
       secondaryAction: chatAction(model),

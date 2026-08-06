@@ -11,7 +11,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 ## 1. Leitura para negócio
 
 - **Para que serve:** após criar/republicar um pedido, materializa um **checklist de conclusão** imutável; só então o matching pode começar. Depois do pagamento (`CONFIRMED`), o prestador abre **“Marcar serviço como concluído”** (sheet/dialog com checklist + evidências) e marca **EXECUTED**; o cliente abre **“Avaliar serviço”** (2 etapas: revisar → avaliar) ou o sistema **auto-completa** ~24h após EXECUTED.
-- **Quem usa:** cliente e prestador no detalhe do serviço (seção Serviço contratado); sistema (cron enrichment + auto-complete).
+- **Quem usa:** cliente e prestador no detalhe do serviço (seção Serviço contratado); prestador também no card Meus Serviços (`CONFIRMED` + past → “Concluir serviço”); sistema (cron enrichment + auto-complete).
 - **Valor:** pedido só entra no feed após READY; conclusão com evidência congelada e rating; writers fora do domínio de pagamentos.
 - **Riscos de suporte:** pedido `OPEN` ainda “em processamento” **não** aparece no feed; disputa no app é **stub** (URL de suporte ou toast “Em breve”) — sem FSM de disputa.
 
@@ -98,7 +98,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 | **request-quote** / republish | Enfileiram enrichment `PENDING` (não bootstrap matching) |
 | **matching-dispatch** | Bootstrap só após READY |
 | **view-services** | Consome Public API: banner; **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceContractedSection` |
-| **my-services** | Cards da lista: highlight de follow-up pós-data-fim / `EXECUTED` aponta para o detalhe (sem wizards nem prefetch de contexto) |
+| **my-services** | Cards da lista: highlight de follow-up pós-data-fim / `EXECUTED`; prestador `CONFIRMED` + past → **“Concluir serviço”** abre sheet/wizard no card (contexto ao abrir; gate `enrichmentReady`); cliente / `EXECUTED` → “Ver detalhes” |
 | **dynamic-form** | Blocos `completion_criterion` / `static_text` no checklist (fotos via galeria do service-completion) |
 | **message-dispatcher** | Intents `SERVICE_EXECUTED`, `SERVICE_COMPLETED`, `SERVICE_AUTO_COMPLETED` |
 | **payments** | Domínio financeiro; **não** escreve EXECUTED/COMPLETED de produto |

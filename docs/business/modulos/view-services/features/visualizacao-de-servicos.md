@@ -220,7 +220,7 @@ Calculada em `derive_service_list_phase`:
 
 Fotos de evidência: thumbnails com lightbox fullscreen (padrão galeria do pedido). Checklist/evidências via RPC `get_service_completion_context` **dentro** do sheet/wizard (não no load do detalhe). Paths de evidência precisam estar registrados antes do mark-executed.
 
-Na **lista** Meus Serviços (`my-services`), cards `in_progress` podem mostrar highlight de follow-up (pós-data-fim com `CONFIRMED`, ou `EXECUTED`) e CTA “Ver detalhes” — sem prefetch de contexto nem CTAs de mutação na listagem. Ver [solicitacoes-do-cliente](../../my-services/features/solicitacoes-do-cliente.md) Anexo D.
+Na **lista** Meus Serviços (`my-services`), cards `in_progress` podem mostrar highlight de follow-up (pós-data-fim com `CONFIRMED`, ou `EXECUTED`). **Prestador** `CONFIRMED` + past: primário **“Concluir serviço”** abre sheet/wizard no card (`CompletionFlowSheetDialog` + `ProviderExecutedWizard`; contexto RPC só ao abrir; disabled + tooltip se `!enrichmentReady`); secundário “Ver detalhes”. Cliente e demais ramos: CTA “Ver detalhes” — sem prefetch de contexto na lista. Ver [solicitacoes-do-cliente](../../my-services/features/solicitacoes-do-cliente.md) Anexo D.
 
 Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md).
 
@@ -417,4 +417,4 @@ Reescrita para o padrão 20+ seções do orquestrador: sheet vs página, diferen
 
 **2026-08-05 (UX):** conclusão/avaliação via CTAs na `ServiceContractedSection` + sheet/dialog (não wizards inline no detalhe); stepper cliente 2 etapas; galeria de evidências.
 
-**2026-08-06:** banner e gate de conclusão no detalhe usam só `enrichmentStatus`/`enrichmentReady` de `get_service` (sem `get_service_completion_context` ao abrir); CTA prestador = `CONFIRMED` + `enrichmentReady`; contexto RPC no wizard; CTA cliente só em `EXECUTED`/`COMPLETED`.
+**2026-08-06:** banner e gate de conclusão no detalhe usam só `enrichmentStatus`/`enrichmentReady` de `get_service` (sem `get_service_completion_context` ao abrir); CTA prestador = `CONFIRMED` + `enrichmentReady`; contexto RPC no wizard; CTA cliente só em `EXECUTED`/`COMPLETED`. Cross-ref lista: prestador `CONFIRMED` + past pode concluir pelo card em `my-services` (ver Anexo D de solicitacoes-do-cliente).

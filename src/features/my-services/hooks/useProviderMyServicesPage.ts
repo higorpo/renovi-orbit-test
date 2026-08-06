@@ -9,12 +9,14 @@ import {
 import { openGoogleMaps } from "@/lib/maps/openGoogleMaps";
 import { useMyServicesPageCore } from "./useMyServicesPageCore";
 import { useProviderServiceProposalDialogs } from "./useProviderServiceProposalDialogs";
+import { useProviderMarkExecutedDialog } from "./useProviderMarkExecutedDialog";
 
 export function useProviderMyServicesPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const core = useMyServicesPageCore();
   const proposalDialogs = useProviderServiceProposalDialogs();
+  const markExecutedDialog = useProviderMarkExecutedDialog();
 
   const handleOpenDetails = useCallback(
     (model: ServiceModel) => {
@@ -54,6 +56,13 @@ export function useProviderMyServicesPage() {
     [proposalDialogs],
   );
 
+  const handleMarkExecuted = useCallback(
+    (model: ServiceModel) => {
+      markExecutedDialog.openMarkExecuted(model);
+    },
+    [markExecutedDialog.openMarkExecuted],
+  );
+
   return {
     ...core,
     handleOpenDetails,
@@ -61,6 +70,8 @@ export function useProviderMyServicesPage() {
     handleOpenMap,
     handleReviseProposal,
     handleViewProposal,
+    handleMarkExecuted,
     proposalDialogs,
+    markExecutedDialog,
   };
 }

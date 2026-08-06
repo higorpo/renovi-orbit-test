@@ -8,7 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Eye, MapPin, MessageSquare } from "lucide-react";
+import { CheckCircle2, Eye, MapPin, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getUrgencyConfig, type ServiceModel } from "@/features/view-services";
 import { usePublicProfileImageUrl } from "@/features/provider-profile/hooks/usePublicProfileImageUrl";
@@ -32,6 +32,7 @@ export interface ProviderServiceListCardProps {
   onOpenMap?: (model: ServiceModel) => void;
   onReviseProposal?: (model: ServiceModel) => void;
   onViewProposal?: (model: ServiceModel) => void;
+  onMarkExecuted?: (model: ServiceModel) => void;
   className?: string;
 }
 
@@ -63,6 +64,7 @@ interface ProviderCardActionsProps {
   onOpenMap?: (model: ServiceModel) => void;
   onReviseProposal?: (model: ServiceModel) => void;
   onViewProposal?: (model: ServiceModel) => void;
+  onMarkExecuted?: () => void;
 }
 
 function ProviderCardActions({
@@ -74,6 +76,7 @@ function ProviderCardActions({
   onOpenMap,
   onReviseProposal,
   onViewProposal,
+  onMarkExecuted,
 }: ProviderCardActionsProps) {
   const handleAction = (action: ProviderCardAction) => {
     const intent: ProviderCardActionIntent | "details" | "chat" = action.intent;
@@ -93,6 +96,10 @@ function ProviderCardActions({
       onViewProposal?.(model);
       return;
     }
+    if (intent === "mark_executed") {
+      onMarkExecuted?.();
+      return;
+    }
     if (intent === "details") {
       onOpenDetails?.(model);
     }
@@ -104,6 +111,8 @@ function ProviderCardActions({
         <MessageSquare className="h-4 w-4 shrink-0" aria-hidden />
       ) : action.intent === "open_map" ? (
         <MapPin className="h-4 w-4 shrink-0" aria-hidden />
+      ) : action.intent === "mark_executed" ? (
+        <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
       ) : (
         <Eye className="h-4 w-4 shrink-0" aria-hidden />
       );
@@ -234,6 +243,7 @@ export function ProviderServiceListCard({
   onOpenMap,
   onReviseProposal,
   onViewProposal,
+  onMarkExecuted,
   className,
 }: ProviderServiceListCardProps) {
   const presentation = getProviderServiceCardPresentation(model);
@@ -337,6 +347,7 @@ export function ProviderServiceListCard({
           onOpenMap={onOpenMap}
           onReviseProposal={onReviseProposal}
           onViewProposal={onViewProposal}
+          onMarkExecuted={() => onMarkExecuted?.(model)}
         />
       </div>
     </Card>

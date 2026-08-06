@@ -13,6 +13,9 @@ export type { EnrichmentProcessingBannerProps } from "./components/EnrichmentPro
 export { ProviderMarkExecutedAction } from "./components/ProviderMarkExecutedAction";
 export type { ProviderMarkExecutedActionProps } from "./components/ProviderMarkExecutedAction";
 
+export { ProviderMarkExecutedSheet } from "./components/ProviderMarkExecutedSheet";
+export type { ProviderMarkExecutedSheetProps } from "./components/ProviderMarkExecutedSheet";
+
 export { ClientEvaluateServiceAction } from "./components/ClientEvaluateServiceAction";
 export type { ClientEvaluateServiceActionProps } from "./components/ClientEvaluateServiceAction";
 

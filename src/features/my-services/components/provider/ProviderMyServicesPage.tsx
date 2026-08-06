@@ -3,6 +3,7 @@ import { ProviderCalendarEntryBanner } from "@/features/provider-calendar";
 import { ProviderMyServicesEmptyState } from "./ProviderMyServicesEmptyState";
 import { ProviderServiceListCard } from "./ProviderServiceListCard";
 import { ProviderServiceProposalDialogs } from "./ProviderServiceProposalDialogs";
+import { ProviderMarkExecutedDialogs } from "./ProviderMarkExecutedDialogs";
 import { MyServicesPageShell } from "../MyServicesPageShell";
 import { useProviderMyServicesPage } from "../../hooks/useProviderMyServicesPage";
 
@@ -35,7 +36,9 @@ export function ProviderMyServicesPage() {
     handleOpenMap,
     handleReviseProposal,
     handleViewProposal,
+    handleMarkExecuted,
     proposalDialogs,
+    markExecutedDialog,
   } = useProviderMyServicesPage();
 
   return (
@@ -81,10 +84,12 @@ export function ProviderMyServicesPage() {
             onOpenMap={handleOpenMap}
             onReviseProposal={handleReviseProposal}
             onViewProposal={handleViewProposal}
+            onMarkExecuted={handleMarkExecuted}
           />
         )}
       />
       <ProviderServiceProposalDialogs dialogs={proposalDialogs} />
+      <ProviderMarkExecutedDialogs dialog={markExecutedDialog} />
     </>
   );
 }

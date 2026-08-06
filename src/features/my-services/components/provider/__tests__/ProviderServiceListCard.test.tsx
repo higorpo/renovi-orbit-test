@@ -193,11 +193,71 @@ describe("ProviderServiceListCard", () => {
     vi.useRealTimers();
   });
 
+  it("calls onMarkExecuted when Concluir serviço is clicked", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2025, 5, 8, 12, 0, 0));
+
+    const onMarkExecuted = vi.fn();
+    const pastDueModel: ServiceModel = {
+      ...baseModel,
+      listPhase: "in_progress",
+      statusTabId: "in_progress",
+      enrichmentReady: true,
+      enrichmentStatus: "READY",
+      executedLate: null,
+      pendingProposalCount: 0,
+      activeChatCount: 1,
+      unreadChatCount: 0,
+      chatSummary: {
+        id: "chat-1",
+        isUnread: false,
+        lastInteractionAt: "2025-06-01T00:00:00Z",
+        lastMessagePreview: null,
+      },
+      contracted: {
+        id: "cs-1",
+        status: "CONFIRMED",
+        agreedSlot: null,
+        durationUnit: "hours",
+        durationValue: 5,
+        scheduledStartDate: "2025-06-05",
+        scheduledEndDate: null,
+        scheduledShift: "full_day",
+        provider: null,
+        chatId: "chat-1",
+        updatedAt: null,
+      },
+    };
+
+    render(
+      <MemoryRouter>
+        <ProviderServiceListCard
+          model={pastDueModel}
+          onOpenDetails={vi.fn()}
+          onMarkExecuted={onMarkExecuted}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText(/Marque o serviço como executado/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Ver detalhes$/i })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Concluir serviço/i }));
+
+    expect(onMarkExecuted).toHaveBeenCalledWith(pastDueModel);
+
+    vi.useRealTimers();
+  });
+
   it("renders Ver conversa and Ver detalhes for in_progress phase", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2025, 5, 8, 12, 0, 0));
+
     const inProgressModel: ServiceModel = {
       ...baseModel,
       listPhase: "in_progress",
       statusTabId: "in_progress",
+      enrichmentReady: true,
       chatSummary: {
         id: "chat-1",
         isUnread: false,
@@ -224,7 +284,9 @@ describe("ProviderServiceListCard", () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole("button", { name: /Ver conversa/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Ver detalhes/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Ver detalhes$/i })).toBeInTheDocument();
+
+    vi.useRealTimers();
   });
 
   it("renders Revisar proposta primary button for REVISION_REQUESTED proposal status", () => {
