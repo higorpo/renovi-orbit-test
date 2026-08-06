@@ -66,7 +66,7 @@
 - **negotiation-proposals** — sheet de orçamentos; composer no detalhe prestador.
 - **chats** — conversas, initiate, botão chat contratado.
 - **payments** / **service-reschedule** — ações na `ServiceContractedSection`.
-- **service-completion** — banner enrichment; **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceContractedSection` (wizards embutidos no sheet/dialog); só Public API.
+- **service-completion** — banner enrichment (`enrichmentStatus`/`enrichmentReady` do `get_service`, como no card); **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceContractedSection` (contexto RPC só no sheet/wizard); só Public API.
 - **DashboardLayout** — hospeda `ServiceDetailSheet`.
 
 ## 9. Riscos e lacunas

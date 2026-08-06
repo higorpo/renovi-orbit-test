@@ -8,7 +8,6 @@ import { useAuth } from "@/features/auth";
 import {
   EnrichmentProcessingBanner,
   deriveEnrichmentProcessingUi,
-  useServiceCompletionContext,
 } from "@/features/service-completion";
 import { ReceivedBudgetDetailsSheet } from "@/features/negotiation-proposals";
 import { useCancelService } from "../hooks/useCancelService";
@@ -52,11 +51,6 @@ export function ServiceDetailPage({
   const { profile } = useAuth();
   useRecordProviderOpportunityView(id);
   const { data: model, isLoading, isError, refetch } = useService(id);
-  const { data: completionContext } = useServiceCompletionContext(id, {
-    pollWhileProcessing: true,
-    requestStatus: model?.requestStatus ?? null,
-    listPhase: model?.listPhase ?? null,
-  });
   const { cancelService, isCancelling } = useCancelService();
   const { republishCancelledService, isRepublishing } = useRepublishCancelledService();
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -141,13 +135,9 @@ export function ServiceDetailPage({
     (isClient && model.contracted);
   const showSecondarySections = showClientNegotiationChats || isProvider;
 
-  const enrichmentStatus =
-    completionContext?.enrichment?.status ?? model.enrichmentStatus;
-  const enrichmentReady =
-    completionContext?.enrichment?.status === "READY" || model.enrichmentReady;
   const enrichmentBannerUi = deriveEnrichmentProcessingUi({
-    enrichmentStatus,
-    enrichmentReady,
+    enrichmentStatus: model.enrichmentStatus,
+    enrichmentReady: model.enrichmentReady,
     requestStatus: model.requestStatus,
     listPhase: model.listPhase,
   });
@@ -164,8 +154,8 @@ export function ServiceDetailPage({
         {enrichmentBannerUi.kind !== "hidden" ? (
           <div className="border-t border-border/80 px-4 py-3 sm:px-6">
             <EnrichmentProcessingBanner
-              enrichmentStatus={enrichmentStatus}
-              enrichmentReady={enrichmentReady}
+              enrichmentStatus={model.enrichmentStatus}
+              enrichmentReady={model.enrichmentReady}
               requestStatus={model.requestStatus}
               listPhase={model.listPhase}
             />
@@ -200,6 +190,7 @@ export function ServiceDetailPage({
           <ServiceContractedSection
             contracted={model.contracted}
             serviceRequestId={model.id}
+            enrichmentReady={model.enrichmentReady}
             showManualPayment={Boolean(isClient)}
             showProviderSettlement={isProvider}
             showServiceCancellation={Boolean(isClient || isProvider)}

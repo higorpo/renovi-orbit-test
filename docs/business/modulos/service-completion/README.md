@@ -70,7 +70,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 - Upload de evidência (padrão KYC): `service_completion_create_upload_session` → upload autenticado no bucket `completion-evidence` sob prefixo da sessão (RLS) → `service_completion_register_upload_object`. **Sem** Edge de URL assinada.
 - INSERT no storage `completion-evidence` exige sessão `open`, não expirada, CS `CONFIRMED`, contagem &lt; `max_files`.
 - Evidência **frozen** e schema de enrichment **READY** são imutáveis no DB (triggers); CS `EXECUTED`/`COMPLETED` exige evidência frozen (constraint deferred); FK evidência→CS é **ON DELETE RESTRICT**.
-- Leitura de produto: RPC `get_service_completion_context` (não SELECT direto em `service_request_enrichments` por `authenticated`). Detalhe completo só para cliente do SR, prestador contratado ou admin; prestador só-marketplace recebe payload limitado (status/`ready`, sem checklist nem ids de contraparte).
+- Leitura de produto: status/`ready` leves em `get_service` / `list_services` (banner, card, gate do CTA prestador). Checklist/evidências/capabilities: RPC `get_service_completion_context` (não SELECT direto em `service_request_enrichments` por `authenticated`) — detalhe completo só para cliente do SR, prestador contratado ou admin; marketplace → payload limitado; no app, a RPC roda ao abrir o wizard de conclusão/avaliação (não ao montar o detalhe).
 - Constantes: `auto_complete_batch_size` (default **100**, distinto de `enrichment_claim_batch_size`); sweeper READY-sem-dispatch limitado a enrichment materializado nos **últimos 7 dias**.
 - Sessão de upload: `storage_bucket` = `completion-evidence`; `provider_id` deve coincidir com o CS.
 

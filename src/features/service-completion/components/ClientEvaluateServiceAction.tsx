@@ -1,5 +1,6 @@
 /**
  * Client CTA + 2-step sheet/dialog to review evidence and rate the service.
+ * Skips get_service_completion_context unless contracted status can need evaluate/dispute.
  */
 
 import { useCallback, useState } from "react";
@@ -12,18 +13,29 @@ import { ClientConfirmRatingWizard } from "./ClientConfirmRatingWizard";
 
 export type ClientEvaluateServiceActionProps = {
   serviceRequestId: string;
+  /** From get_service — avoids completion-context fetch when not yet eligible. */
+  contractedStatus?: string | null;
   onCompleted?: () => void;
 };
 
+function shouldFetchEvaluateContext(status: string | null | undefined): boolean {
+  if (status == null || status === "") return true;
+  const normalized = status.toUpperCase();
+  return normalized === "EXECUTED" || normalized === "COMPLETED";
+}
+
 export function ClientEvaluateServiceAction({
   serviceRequestId,
+  contractedStatus = null,
   onCompleted,
 }: ClientEvaluateServiceActionProps) {
   const [open, setOpen] = useState(false);
   const [dismissDisabled, setDismissDisabled] = useState(false);
   const [stepAside, setStepAside] = useState<string | null>("1 de 2");
+
+  const needsContext = shouldFetchEvaluateContext(contractedStatus);
   const { data: context, isLoading } = useServiceCompletionContext(
-    serviceRequestId,
+    needsContext ? serviceRequestId : null,
     { pollWhileProcessing: false },
   );
 
@@ -42,6 +54,10 @@ export function ClientEvaluateServiceAction({
     },
     [],
   );
+
+  if (!needsContext) {
+    return null;
+  }
 
   if (isLoading) {
     return null;

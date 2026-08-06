@@ -113,7 +113,8 @@ export function CompletionFlowSheetDialog({
               </div>
             </div>
           </DialogHeader>
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {/* Min-height avoids a title-only flash while checklist body mounts/loads. */}
+          <div className="flex min-h-[min(52vh,420px)] flex-1 flex-col overflow-hidden">
             {children}
           </div>
         </ShellDialogContent>

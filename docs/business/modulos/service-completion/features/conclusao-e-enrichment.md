@@ -94,7 +94,7 @@ flowchart TD
 9. Stub disputa: env `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL` ou remote `orbit.dispute_support_url`; sem FSM.
 10. Imutabilidade DB: trigger bloqueia alteração de schema/source/`materialized_at` (e saída de status) após enrichment `READY`; evidência `frozen` tem colunas críticas imutáveis; CS em `EXECUTED`/`COMPLETED` exige linha de evidência `frozen` (constraint trigger deferred); FK evidência→CS **ON DELETE RESTRICT**.
 11. Upload (padrão KYC, sem Edge de URL assinada): RPC `service_completion_create_upload_session` → `supabase.storage.from('completion-evidence').upload()` autenticado sob prefixo da sessão (RLS) → RPC `service_completion_register_upload_object`. Sessão com `storage_bucket = completion-evidence` e `provider_id` = CS; INSERT storage só com sessão `open`, não expirada, CS `CONFIRMED`, abaixo de `max_files`.
-12. Leitura: `authenticated` **não** faz SELECT em `service_request_enrichments`; usa `get_service_completion_context` (detalhe completo vs limitado — §4).
+12. Leitura: `authenticated` **não** faz SELECT em `service_request_enrichments`. Status/`ready` leves vêm de `get_service` / `list_services` (banner/card e gate de CTA). Checklist, evidências e capabilities: RPC `get_service_completion_context` (detalhe completo vs limitado — §4), só quando o fluxo de conclusão/avaliação precisa (abrir sheet/wizard ou CTA cliente elegível).
 13. Janitor de órfãos (SQL, padrão KYC): expira sessões open passadas do TTL; remove objetos com `referenced_in_responses = false` via `DELETE FROM storage.objects` + limpeza do registry; checagem defensiva de frozen só no batch locked; cron com `job_runs`; sem Edge / sem finalize RPC.
 14. Repair READY-sem-dispatch: apenas enrichments com `materialized_at >= now() - 7 days`.
 
@@ -104,10 +104,10 @@ flowchart TD
 
 | Elemento | Conteúdo |
 |----------|----------|
-| Banner processing | “Checklist de conclusão em processamento…” (`PENDING`/`RUNNING`) — detalhe/card; **não** é o checklist de execução |
-| CTA prestador | Botão **“Marcar serviço como concluído”** na seção Serviço contratado (visível se `canSaveDraft` / `canMarkExecuted`) |
-| Sheet/dialog prestador | Título “Checklist de conclusão”; conteúdo = `ProviderExecutedWizard` embutido (draft + upload + submit EXECUTED) |
-| CTA cliente | Botão **“Avaliar serviço”** na mesma seção (`canConfirmWithRating` ou rating opcional pós auto-complete) |
+| Banner processing | “Checklist de conclusão em processamento…” (`PENDING`/`RUNNING`) — detalhe/card via `enrichmentStatus` / `enrichmentReady` de `get_service`/`list_services` (mesmo padrão do card); **não** dispara `get_service_completion_context`; **não** é o checklist de execução |
+| CTA prestador | Botão **“Marcar serviço como concluído”** na seção Serviço contratado (visível se contrato `CONFIRMED` **e** `enrichmentReady` do `get_service` — sem prefetch do completion context) |
+| Sheet/dialog prestador | Título “Checklist de conclusão”; ao abrir, `ProviderExecutedWizard` busca `get_service_completion_context` e embute draft + upload + submit EXECUTED |
+| CTA cliente | Botão **“Avaliar serviço”** na mesma seção: só monta/busca contexto se contrato `EXECUTED` ou `COMPLETED`; então usa `canConfirmWithRating` / rating opcional do contexto |
 | Sheet/dialog cliente | Stepper **2 etapas** (“1 de 2” / “2 de 2”): (1) revisar evidências/checklist congelado; (2) avaliar prestador/serviço (`ClientConfirmRatingWizard` embutido) |
 | Fotos de evidência | Thumbnails (`CompletionEvidenceGallery`); clique abre lightbox fullscreen (padrão `ServicePhotoGallery`); prestador ao preencher e cliente ao revisar |
 | Badge atraso | “Executado com atraso” (`executed_late`) |
@@ -121,7 +121,7 @@ flowchart TD
 - Confirm cliente (etapa 2 do sheet): scores completos antes do submit.
 - Upload de evidência: sessão RPC + upload autenticado no storage (prefixo/RLS) + register; limites de imagem; URLs assinadas para thumbnails via `useCompletionEvidencePhotoUrls`.
 - Shell modal: dismiss bloqueado enquanto mutação em voo (`dismissDisabled`).
-- Enrichment: poll enquanto `shouldPoll` (processing).
+- Banner enrichment no detalhe/lista: campos leves do modelo (`get_service` / `list_services`); **sem** poll via `get_service_completion_context` ao abrir o detalhe. O hook ainda *pode* pollar se algum consumidor passar `pollWhileProcessing`, mas o host atual do detalhe não o usa para o banner.
 
 ---
 
@@ -160,7 +160,7 @@ flowchart TD
 
 ## 12. Persistência
 
-Servidor: tabelas enrichment/evidence/upload sessions+objects/ratings; `platform_constants` (checklist, enrichment, `auto_complete_grace_hours`, **`auto_complete_batch_size`**, orphan TTL). Cliente: React Query via `get_service_completion_context`; sem SELECT autenticado em `service_request_enrichments`; sem draft local próprio além do estado do wizard.
+Servidor: tabelas enrichment/evidence/upload sessions+objects/ratings; `platform_constants` (checklist, enrichment, `auto_complete_grace_hours`, **`auto_complete_batch_size`**, orphan TTL). Cliente: projeção leve `enrichmentStatus`/`enrichmentReady` em `get_service`/`list_services`; React Query com `get_service_completion_context` só no wizard/CTA elegível; sem SELECT autenticado em `service_request_enrichments`; sem draft local próprio além do estado do wizard.
 
 ---
 
@@ -172,7 +172,7 @@ Servidor: tabelas enrichment/evidence/upload sessions+objects/ratings; `platform
 | Edge | `generate-completion-checklist` (só enrichment; upload de evidência **sem** Edge) |
 | Storage | Bucket `completion-evidence` — upload autenticado sob sessão (RLS) |
 | MMD | `SERVICE_EXECUTED` / `SERVICE_COMPLETED` / `SERVICE_AUTO_COMPLETED` |
-| view-services | Host: banner enrichment no detalhe/card; CTAs de conclusão na `ServiceContractedSection` (Public API); projeção `enrichmentStatus` / `executedLate` |
+| view-services | Host: banner enrichment no detalhe/card (`enrichmentStatus`/`enrichmentReady` do modelo); CTAs na `ServiceContractedSection` (Public API; gate leve + contexto só no fluxo); projeção também `executedLate` |
 | Analytics | `service_completion_dispute_stub_opened` |
 
 ---
@@ -181,11 +181,11 @@ Servidor: tabelas enrichment/evidence/upload sessions+objects/ratings; `platform
 
 | Ação | Quem | Pré-condição | Resultado |
 |------|------|--------------|-----------|
-| Abrir “Marcar serviço como concluído” | Prestador contratado | `canSaveDraft` / `canMarkExecuted` | Sheet/dialog com checklist |
-| Salvar draft | Prestador contratado | `CONFIRMED` | Evidência draft |
+| Abrir “Marcar serviço como concluído” | Prestador contratado | UI: `CONFIRMED` + `enrichmentReady` (`get_service`); contexto RPC ao abrir o sheet | Sheet/dialog; wizard carrega checklist |
+| Salvar draft | Prestador contratado | `CONFIRMED` (+ capability do contexto no wizard) | Evidência draft |
 | Criar sessão → upload autenticado → register path | Prestador contratado | CS CONFIRMED; sessão open; &lt; max_files | Objeto em `completion-evidence` + registry |
 | Marcar executado (submit no sheet) | Prestador contratado | `CONFIRMED` + paths registrados + validação | `EXECUTED`; sessões → committed; fecha sheet |
-| Abrir “Avaliar serviço” | Cliente | `canConfirmWithRating` ou rating opcional | Sheet/dialog 2 etapas |
+| Abrir “Avaliar serviço” | Cliente | UI: contrato `EXECUTED` ou `COMPLETED`; então `canConfirmWithRating` / rating opcional do contexto | Sheet/dialog 2 etapas |
 | Confirmar + avaliar | Cliente | `EXECUTED` | `COMPLETED` + rating; fecha sheet |
 | Abrir disputa (stub) | Cliente | tipicamente pós-rating / `EXECUTED`/`COMPLETED` | URL ou toast (inline se sem CTA avaliar) |
 | Submeter rating pós auto | Cliente | `COMPLETED` system | Rating opcional (mesmo CTA/sheet) |
@@ -203,6 +203,9 @@ Upstream: pedido (`request-quote` / republish), contrato pago (`payments`/`CNS`)
 - Consumidores externos **não** importam internals de `service-completion` — só `index.ts`.
 - Host preferencial: `ProviderMarkExecutedAction` / `ClientEvaluateServiceAction` (wizards ainda exportados para composição embutida / legado de API, mas **não** montados inline no detalhe).
 - Checklist de execução **não** permanece aberto na página de detalhe — só dentro do sheet/dialog.
+- `ServiceDetailPage` **não** chama `get_service_completion_context` ao abrir o detalhe; banner e gate do CTA prestador usam só o modelo de `get_service`.
+- `ProviderMarkExecutedAction` **não** prefetcha contexto ao montar; a RPC roda no `ProviderExecutedWizard` ao abrir o dialog.
+- `ClientEvaluateServiceAction` **não** busca contexto em `CONFIRMED` (só `EXECUTED`/`COMPLETED`).
 - `view-services` não reexporta mais lifecycle de payments para conclusão.
 - Chargeback / `is_disputed` em payments **não** é o stub de disputa do app.
 
@@ -244,3 +247,4 @@ Upstream: pedido (`request-quote` / republish), contrato pago (`payments`/`CNS`)
 - **2026-08-04** — Documentação de negócio alinhada ao cutover service-completion (READY-handoff, RPCs `service_completion_*`, UX enrichment/EXECUTED/confirm/auto-complete/dispute stub).
 - **2026-08-05** — Endurecimento SQL: paths registrados / `EVIDENCE_PATH_NOT_REGISTERED`; sessões → `committed` no freeze; storage INSERT gated; imutabilidade frozen/READY; FK RESTRICT; constraint EXECUTED/COMPLETED↔frozen; contexto full vs marketplace; sem SELECT autenticado em enrichments; `auto_complete_batch_size`; repair ≤7 dias; janitor via `referenced_in_responses`.
 - **2026-08-05 (UX)** — Checklist/avaliação saem do inline do detalhe: CTAs na seção Serviço contratado → sheet (mobile) / dialog (desktop); cliente com stepper 2 etapas; fotos de evidência como thumbnails + lightbox.
+- **2026-08-06** — Lazy load do completion context: detalhe/banner usam só `enrichmentStatus`/`enrichmentReady` de `get_service` (como o card); CTA prestador gated por `CONFIRMED` + `enrichmentReady` sem prefetch; RPC `get_service_completion_context` ao abrir o wizard; CTA cliente só busca contexto em `EXECUTED`/`COMPLETED`.

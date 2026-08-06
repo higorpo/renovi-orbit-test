@@ -130,6 +130,7 @@ flowchart TD
 | `service` | platform_service | Ícone/cor/título |
 | `proposalCount`, `hasPendingProposal`, counts de chat | negotiation | Badge “Aguardando decisão”; CTA orçamentos |
 | `contracted` | contracted_services + payment_schedule_state, far_recapture_pending, reschedule | Seção contratada |
+| `enrichmentStatus` / `enrichmentReady` | projeção enrichment em `get_service` / `list_services` | Banner “em processamento”; gate do CTA prestador (sem `get_service_completion_context` no detalhe) |
 | `counterparty` / `counterpartyName` | papel-dependente | Prestador vê solicitante; cliente vê profissional se contratado |
 | `myProposal`, `chatSummary` | negotiation (lista prestador/cliente conforme SQL) | Cards em `my-services` (fora desta feature de UI de lista) |
 | Insights IA | urgency, tags, equipment, materials, … | `SimpleServiceInsightPanel` / sugestões |
@@ -211,13 +212,13 @@ Calculada em `derive_service_list_phase`:
 
 | Papel | Pré-condição | Superfície |
 |-------|--------------|------------|
-| Prestador (contratado) | Contrato `CONFIRMED` (`canSaveDraft` / `canMarkExecuted`) | Botão **“Marcar serviço como concluído”** na seção Serviço contratado (ao lado de cancelar/reagendar) → bottom sheet (mobile) ou dialog (desktop) com `ProviderExecutedWizard` embutido (draft + upload + EXECUTED) |
-| Cliente | `canConfirmWithRating` ou rating opcional pós auto-complete | Botão **“Avaliar serviço”** na mesma seção → sheet/dialog com stepper **2 etapas**: (1) revisar evidências/checklist congelado; (2) avaliar prestador/serviço (`ClientConfirmRatingWizard` embutido); badge `executed_late` se atrasado |
-| Ambos / cliente | Enrichment `PENDING`/`RUNNING` | `EnrichmentProcessingBanner` no detalhe/card — “Checklist de conclusão em processamento…” (pedido ainda não no feed) |
+| Prestador (contratado) | Contrato `CONFIRMED` **e** `enrichmentReady` do `get_service` (sem prefetch do completion context) | Botão **“Marcar serviço como concluído”** na seção Serviço contratado (ao lado de cancelar/reagendar) → bottom sheet (mobile) ou dialog (desktop); ao abrir, `ProviderExecutedWizard` chama `get_service_completion_context` (draft + upload + EXECUTED) |
+| Cliente | Contrato `EXECUTED` ou `COMPLETED` (só então busca contexto); CTA se `canConfirmWithRating` ou rating opcional pós auto-complete | Botão **“Avaliar serviço”** na mesma seção → sheet/dialog com stepper **2 etapas**: (1) revisar evidências/checklist congelado; (2) avaliar prestador/serviço (`ClientConfirmRatingWizard` embutido); badge `executed_late` se atrasado |
+| Ambos / cliente | Enrichment `PENDING`/`RUNNING` | `EnrichmentProcessingBanner` no detalhe/card — campos leves do modelo (`enrichmentStatus`/`enrichmentReady`); **não** usa `get_service_completion_context` ao abrir o detalhe |
 | Cliente | Sem CTA avaliar, mas stub elegível | `DisputeStubEntry` **inline** na seção contratada |
 | Sistema | ~24h após EXECUTED | Auto-complete → `COMPLETED` (`completed_by=system`); rating opcional depois |
 
-Fotos de evidência: thumbnails com lightbox fullscreen (padrão galeria do pedido). Contexto via RPC `get_service_completion_context`. Paths de evidência precisam estar registrados antes do mark-executed.
+Fotos de evidência: thumbnails com lightbox fullscreen (padrão galeria do pedido). Checklist/evidências via RPC `get_service_completion_context` **dentro** do sheet/wizard (não no load do detalhe). Paths de evidência precisam estar registrados antes do mark-executed.
 
 Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md).
 
@@ -287,8 +288,8 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | Chat contratado | Cliente | `model.contracted` | `ServiceRequestContractedChatButton` |
 | Lista conversas negociação | Cliente | negotiation sem contracted | `ServiceRequestConversationList` |
 | Ajustar pagamento | Cliente | `showManualPayment` + elegibilidade schedule (`FAILED` / `FAILED_PERMANENT` etc. em payments) | `ManualPaymentRecovery` |
-| Marcar executado | Prestador | contracted `CONFIRMED` + capabilities | CTA “Marcar serviço como concluído” → sheet/dialog → RPC `service_completion_mark_executed` |
-| Confirmar + avaliar | Cliente | `canConfirmWithRating` (ou rating opcional) | CTA “Avaliar serviço” → sheet 2 etapas → `service_completion_confirm_with_rating` (scores obrigatórios no caminho manual); badge `executed_late` se atrasado |
+| Marcar executado | Prestador | contracted `CONFIRMED` + `enrichmentReady` (`get_service`); contexto ao abrir sheet | CTA “Marcar serviço como concluído” → sheet/dialog → RPC `service_completion_mark_executed` |
+| Confirmar + avaliar | Cliente | contracted `EXECUTED`/`COMPLETED` + `canConfirmWithRating` (ou rating opcional) | CTA “Avaliar serviço” → sheet 2 etapas → `service_completion_confirm_with_rating` (scores obrigatórios no caminho manual); badge `executed_late` se atrasado |
 | Abrir disputa (stub) | Cliente | sem CTA avaliar elegível, tipicamente pós-rating / `EXECUTED`/`COMPLETED` | Inline na seção contratada: URL suporte ou toast “Em breve” + analytics — sem FSM |
 | Cancelar serviço contratado | Client/provider | flags + status no componente payments | `ContractedServiceCancelAction` |
 | Reagendar (CTA) | Client/provider | role client\|provider + seção contratada | `ContractedServiceRescheduleAction` |
@@ -413,3 +414,5 @@ Reescrita para o padrão 20+ seções do orquestrador: sheet vs página, diferen
 **2026-08-05:** alinhamento ao endurecimento SQL de conclusão (contexto full vs marketplace; evidências registradas no mark-executed) — normas em [service-completion](../../service-completion/README.md).
 
 **2026-08-05 (UX):** conclusão/avaliação via CTAs na `ServiceContractedSection` + sheet/dialog (não wizards inline no detalhe); stepper cliente 2 etapas; galeria de evidências.
+
+**2026-08-06:** banner e gate de conclusão no detalhe usam só `enrichmentStatus`/`enrichmentReady` de `get_service` (sem `get_service_completion_context` ao abrir); CTA prestador = `CONFIRMED` + `enrichmentReady`; contexto RPC no wizard; CTA cliente só em `EXECUTED`/`COMPLETED`.

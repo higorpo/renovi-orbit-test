@@ -59,32 +59,86 @@ function renderEvidence(args: CompletionCriterionEvidenceRenderArgs) {
   );
 }
 
+/** Mirrors CompletionCriterionBlock: label, help, Atendido/Não atendido, evidence row. */
+function CompletionCriterionBlockSkeleton() {
+  return (
+    <div className="space-y-3" data-testid="provider-executed-criterion-skeleton">
+      <Skeleton className="h-4 w-3/4 max-w-sm" />
+      <Skeleton className="h-3.5 w-full max-w-md" />
+      <div className="grid grid-cols-2 gap-3">
+        <Skeleton className="h-14 w-full rounded-xl" />
+        <Skeleton className="h-14 w-full rounded-xl" />
+      </div>
+      <div className="flex items-center justify-between gap-2 pt-0.5">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-9 w-32 rounded-md" />
+      </div>
+    </div>
+  );
+}
+
 function ProviderExecutedWizardSkeleton({
   className,
+  isDesktop,
 }: {
   className?: string;
+  isDesktop: boolean;
 }) {
+  const criteria = (
+    <div className={isDesktop ? "space-y-6" : "space-y-4"}>
+      <CompletionCriterionBlockSkeleton />
+      <CompletionCriterionBlockSkeleton />
+      <CompletionCriterionBlockSkeleton />
+    </div>
+  );
+
+  const footer = (
+    <div
+      className={cn("space-y-2", isDesktop && "flex flex-col items-end")}
+      data-testid="provider-executed-footer-skeleton"
+    >
+      <Skeleton
+        className={cn("h-10 w-full", isDesktop && "w-56")}
+      />
+      <Skeleton
+        className={cn(
+          "h-3 w-full max-w-sm",
+          isDesktop ? "ml-auto" : "mx-auto",
+        )}
+      />
+    </div>
+  );
+
+  // Match loaded layout: desktop scrolls as one column; mobile keeps sticky footer.
+  if (isDesktop) {
+    return (
+      <div
+        className={cn(
+          "min-h-[min(52vh,420px)] flex-1 space-y-5 overflow-y-auto overscroll-y-contain px-5 py-4",
+          className,
+        )}
+        aria-busy="true"
+        aria-label="Carregando checklist"
+        data-testid="provider-executed-wizard-loading"
+      >
+        {criteria}
+        <div className="space-y-2 border-t border-border/80 pt-4">{footer}</div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className={cn(
-        "flex min-h-0 flex-1 flex-col gap-4 p-4 sm:p-6",
-        className,
-      )}
+      className={cn("flex min-h-0 flex-1 flex-col", className)}
       aria-busy="true"
       aria-label="Carregando checklist"
       data-testid="provider-executed-wizard-loading"
     >
-      <div className="space-y-2">
-        <Skeleton className="h-5 w-52 max-w-full" />
-        <Skeleton className="h-4 w-full max-w-md" />
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain px-4 py-4 touch-pan-y">
+        {criteria}
       </div>
-      <div className="space-y-3">
-        <Skeleton className="h-24 w-full rounded-lg" />
-        <Skeleton className="h-24 w-full rounded-lg" />
-        <Skeleton className="h-16 w-full rounded-lg" />
-      </div>
-      <div className="flex justify-end border-t border-border/80 pt-4">
-        <Skeleton className="h-10 w-40" />
+      <div className="shrink-0 border-t border-border/80 bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md">
+        {footer}
       </div>
     </div>
   );
@@ -127,8 +181,14 @@ export function ProviderExecutedWizard({
     Boolean(context?.capabilities.canSaveDraft) ||
     Boolean(context?.capabilities.canMarkExecuted);
 
-  if (isLoading) {
-    return <ProviderExecutedWizardSkeleton className={className} />;
+  // Keep a layout-stable skeleton while context resolves (avoids title-only flash).
+  if (isLoading || (!context && !isError)) {
+    return (
+      <ProviderExecutedWizardSkeleton
+        className={className}
+        isDesktop={isDesktop}
+      />
+    );
   }
 
   if (isError || !context) {

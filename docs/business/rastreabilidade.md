@@ -197,7 +197,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | Artefato | Uso na documentação |
 |----------|---------------------|
 | `docs/business/modulos/matching-dispatch/` | README + feature dispatch/visibilidade; lifecycle sem proposta (24h/48h); bootstrap READY-handoff (CONTEXT #135); repair READY-sem-dispatch ≤7 dias |
-| `docs/business/modulos/service-completion/` | Enrichment, conclusão EXECUTED/confirm/auto-complete, stub disputa; CTAs sheet/dialog + galeria evidências; endurecimento SQL (evidência registrada, contexto full vs marketplace, imutabilidade) |
+| `docs/business/modulos/service-completion/` | Enrichment, conclusão EXECUTED/confirm/auto-complete, stub disputa; CTAs sheet/dialog + galeria evidências; endurecimento SQL (evidência registrada, contexto full vs marketplace, imutabilidade); lazy load de `get_service_completion_context` (detalhe via campos leves de `get_service`) |
 | `docs/service-completion/` | Design técnico / ADR (fonte normativa de engenharia) |
 | `supabase/migrations/20260804010000_service_completion_platform_constants.sql` | Seeds checklist/enrichment/`auto_complete_batch_size`/orphan TTL |
 | `supabase/migrations/20260804060000_*`–`20260804100000_*` | Evidence + upload sessions/objects + storage INSERT gates; frozen imutável; FK RESTRICT; deferred EXECUTED/COMPLETED↔frozen |

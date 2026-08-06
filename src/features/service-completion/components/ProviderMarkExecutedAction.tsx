@@ -1,16 +1,21 @@
 /**
  * Provider CTA + sheet/dialog to mark a contracted service as executed.
+ * Visibility uses lightweight service-detail fields; completion context loads
+ * only when the checklist dialog opens (ProviderExecutedWizard).
  */
 
 import { useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useServiceCompletionContext } from "../hooks/useServiceCompletionContext";
 import { CompletionFlowSheetDialog } from "./CompletionFlowSheetDialog";
 import { ProviderExecutedWizard } from "./ProviderExecutedWizard";
 
 export type ProviderMarkExecutedActionProps = {
   serviceRequestId: string;
+  /** Contracted service status from get_service (CONFIRMED = eligible). */
+  contractedStatus?: string | null;
+  /** Enrichment ready flag from get_service; required to mark executed. */
+  enrichmentReady?: boolean;
   scheduledStartDate?: string | null;
   scheduledEndDate?: string | null;
   onExecuted?: () => void;
@@ -18,22 +23,20 @@ export type ProviderMarkExecutedActionProps = {
 
 export function ProviderMarkExecutedAction({
   serviceRequestId,
+  contractedStatus = null,
+  enrichmentReady = false,
   scheduledStartDate = null,
   scheduledEndDate = null,
   onExecuted,
 }: ProviderMarkExecutedActionProps) {
   const [open, setOpen] = useState(false);
   const [dismissDisabled, setDismissDisabled] = useState(false);
-  const { data: context, isLoading } = useServiceCompletionContext(
-    serviceRequestId,
-    { pollWhileProcessing: false },
-  );
 
+  // Mirrors get_service_completion_context capabilities without an extra RPC.
   const canShow =
-    Boolean(context?.capabilities.canSaveDraft) ||
-    Boolean(context?.capabilities.canMarkExecuted);
+    (contractedStatus ?? "").toUpperCase() === "CONFIRMED" && enrichmentReady;
 
-  if (isLoading || !canShow) {
+  if (!canShow) {
     return null;
   }
 

@@ -12,8 +12,8 @@ const contextState: { current: ServiceCompletionContext | null } = {
 };
 
 vi.mock("../../hooks/useServiceCompletionContext", () => ({
-  useServiceCompletionContext: () => ({
-    data: contextState.current,
+  useServiceCompletionContext: (serviceRequestId: string | null | undefined) => ({
+    data: serviceRequestId ? contextState.current : null,
     isLoading: false,
     isError: false,
     refetch: vi.fn(),
@@ -84,12 +84,15 @@ describe("completion action CTAs", () => {
     contextState.current = null;
   });
 
-  it("opens provider mark-executed dialog when capable", () => {
-    contextState.current = baseContext({
-      canSaveDraft: true,
-      canMarkExecuted: true,
-    });
-    render(<ProviderMarkExecutedAction serviceRequestId="sr-1" />, { wrapper });
+  it("opens provider mark-executed dialog when CONFIRMED and enrichment ready", () => {
+    render(
+      <ProviderMarkExecutedAction
+        serviceRequestId="sr-1"
+        contractedStatus="CONFIRMED"
+        enrichmentReady
+      />,
+      { wrapper },
+    );
 
     fireEvent.click(
       screen.getByRole("button", { name: /Marcar serviço como concluído/i }),
@@ -98,24 +101,57 @@ describe("completion action CTAs", () => {
     expect(screen.getByTestId("provider-executed-wizard")).toBeInTheDocument();
   });
 
-  it("hides provider CTA when not capable", () => {
-    contextState.current = baseContext({});
+  it("hides provider CTA when not CONFIRMED", () => {
     const { container } = render(
-      <ProviderMarkExecutedAction serviceRequestId="sr-1" />,
+      <ProviderMarkExecutedAction
+        serviceRequestId="sr-1"
+        contractedStatus="EXECUTED"
+        enrichmentReady
+      />,
       { wrapper },
     );
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("opens client evaluate dialog when capable", () => {
+  it("hides provider CTA when enrichment is not ready", () => {
+    const { container } = render(
+      <ProviderMarkExecutedAction
+        serviceRequestId="sr-1"
+        contractedStatus="CONFIRMED"
+        enrichmentReady={false}
+      />,
+      { wrapper },
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("opens client evaluate dialog when capable and EXECUTED", () => {
     contextState.current = baseContext({
       canConfirmWithRating: true,
     });
     contextState.current.contractedService.status = "EXECUTED";
-    render(<ClientEvaluateServiceAction serviceRequestId="sr-1" />, { wrapper });
+    render(
+      <ClientEvaluateServiceAction
+        serviceRequestId="sr-1"
+        contractedStatus="EXECUTED"
+      />,
+      { wrapper },
+    );
 
     fireEvent.click(screen.getByRole("button", { name: /Avaliar serviço/i }));
     expect(screen.getByTestId("client-evaluate-service-sheet")).toBeInTheDocument();
     expect(screen.getByTestId("client-confirm-rating-wizard")).toBeInTheDocument();
+  });
+
+  it("skips client context fetch when status is not eligible", () => {
+    contextState.current = baseContext({ canConfirmWithRating: true });
+    const { container } = render(
+      <ClientEvaluateServiceAction
+        serviceRequestId="sr-1"
+        contractedStatus="CONFIRMED"
+      />,
+      { wrapper },
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 });

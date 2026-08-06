@@ -20,6 +20,8 @@ import { ServiceDetailSection } from "./ServiceDetailSection";
 interface ServiceContractedSectionProps {
   contracted: ContractedServiceSummary;
   serviceRequestId?: string;
+  /** From get_service; gates provider mark-executed without fetching completion context. */
+  enrichmentReady?: boolean;
   showManualPayment?: boolean;
   showProviderSettlement?: boolean;
   showServiceCancellation?: boolean;
@@ -32,6 +34,7 @@ interface ServiceContractedSectionProps {
 export function ServiceContractedSection({
   contracted,
   serviceRequestId,
+  enrichmentReady = false,
   showManualPayment = false,
   showProviderSettlement = false,
   showServiceCancellation = false,
@@ -94,6 +97,8 @@ export function ServiceContractedSection({
         {isProvider && serviceRequestId ? (
           <ProviderMarkExecutedAction
             serviceRequestId={serviceRequestId}
+            contractedStatus={contracted.status}
+            enrichmentReady={enrichmentReady}
             scheduledStartDate={contracted.scheduledStartDate}
             scheduledEndDate={contracted.scheduledEndDate}
             onExecuted={onCompletionSuccess}
@@ -102,6 +107,7 @@ export function ServiceContractedSection({
         {isClient && serviceRequestId ? (
           <ClientEvaluateServiceAction
             serviceRequestId={serviceRequestId}
+            contractedStatus={contracted.status}
             onCompleted={onCompletionSuccess}
           />
         ) : null}
