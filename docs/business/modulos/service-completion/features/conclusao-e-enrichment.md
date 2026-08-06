@@ -6,7 +6,7 @@ Documentação de negócio do módulo **service-completion**. Host de UI: [visua
 
 ## 1. Resumo executivo
 
-Pedido `OPEN` enfileira **enrichment** (`PENDING`). Enquanto `PENDING`/`RUNNING`, o pedido **não** entra no feed. Em `READY`, o matching faz bootstrap (delay de 5 min a partir daí). Pós-contrato, na seção **Serviço contratado** do detalhe: o prestador usa o botão **“Marcar serviço como concluído”** (abre sheet/dialog com o checklist — **não** fica inline na página); se não marcar a tempo, o sistema **auto-marca EXECUTED** sem checklist (~24h após fim do dia BRT da data agendada). O cliente usa **“Avaliar serviço”** (sheet/dialog em 2 etapas: revisar evidências + declarar execução → avaliar). Sem confirmação, auto-complete EXECUTED→COMPLETED ~24h após `executed_at` (janela distinta). Disputa no app é stub **somente** no wizard Avaliar serviço (banner título “Abrir disputa”, botão “Falar com o suporte”; descrição sobre correção/devolução; suporte ou “Em breve”) — **nunca** inline no detalhe.
+Pedido `OPEN` enfileira **enrichment** (`PENDING`). Enquanto `PENDING`/`RUNNING`, o pedido **não** entra no feed. Em `READY`, o matching faz bootstrap (delay de 5 min a partir daí). Pós-contrato, na seção **Serviço contratado** do detalhe: o prestador usa o botão **“Marcar serviço como concluído”** (abre sheet/dialog com o checklist — **não** fica inline na página); se não marcar a tempo, o sistema **auto-marca EXECUTED** sem checklist (~24h após fim do dia BRT da data agendada). O cliente usa **“Avaliar serviço”** (sheet/dialog em 2 etapas no detalhe/lista: revisar evidências + declarar execução → avaliar). No **app open**, clientes com `EXECUTED` ainda na grace de auto-complete podem ver um **prompt de avaliação pendente** (3 etapas: intro → review → rating), sempre **depois** de localização e soft prompt de push. Sem confirmação, auto-complete EXECUTED→COMPLETED ~24h após `executed_at` (janela distinta). Disputa no app é stub **somente** no wizard Avaliar serviço (banner título “Abrir disputa”, botão “Falar com o suporte”; descrição sobre correção/devolução; suporte ou “Em breve”) — **nunca** inline no detalhe.
 
 ---
 
@@ -22,12 +22,13 @@ Pedido `OPEN` enfileira **enrichment** (`PENDING`). Enquanto `PENDING`/`RUNNING`
 
 | Superfície | Path / entry |
 |------------|----------------|
-| Sem rota própria | Embutido em `/dashboard/services/:id` e cards (`view-services`) |
+| Sem rota própria | Embutido em `/dashboard/services/:id` e cards (`view-services`); prompt global no `RootLayout` |
 | Feature | `src/features/service-completion/` (Public API em `index.ts`) |
 | CTAs no host | `ProviderMarkExecutedAction` / `ClientEvaluateServiceAction` na `ServiceContractedSection` (ao lado de cancelar/reagendar) |
-| Fluxo modal | `CompletionFlowSheetDialog`: bottom sheet (mobile) ou dialog (desktop); wizards embutidos (`presentation="embedded"`) |
+| Prompt global | `PendingEvaluationPromptHost` no `RootLayout` (role `client`; após fila localização + push) |
+| Fluxo modal | `CompletionFlowSheetDialog`: bottom sheet (mobile) ou dialog (desktop); wizards embutidos (`presentation="embedded"`); variante `prompt` com intro |
 | Edge | `generate-completion-checklist` |
-| RPCs produto | `get_service_completion_context`, `service_completion_mark_executed`, `service_completion_confirm_with_rating`, draft/upload (`create_upload_session` / `register_upload_object`), ratings |
+| RPCs produto | `get_service_completion_context`, `get_client_pending_evaluation_prompt`, `service_completion_mark_executed`, `service_completion_confirm_with_rating`, draft/upload (`create_upload_session` / `register_upload_object`), ratings |
 
 ---
 
@@ -35,7 +36,7 @@ Pedido `OPEN` enfileira **enrichment** (`PENDING`). Enquanto `PENDING`/`RUNNING`
 
 | Quem | Pode | Não pode |
 |------|------|----------|
-| **Cliente** (dono do SR) | Contexto completo via RPC; revisar evidência frozen; **SELECT storage / `createSignedUrl`** em paths do CS quando evidência está `frozen` (thumbnails/lightbox em “Avaliar serviço”); confirm+rating; stub disputa | Marcar EXECUTED; SELECT direto em `service_request_enrichments`; SELECT storage de evidência ainda em `draft` |
+| **Cliente** (dono do SR) | Contexto completo via RPC; revisar evidência frozen; **SELECT storage / `createSignedUrl`** em paths do CS quando evidência está `frozen` (thumbnails/lightbox em “Avaliar serviço”); confirm+rating; stub disputa; **prompt global** se `EXECUTED` na grace | Marcar EXECUTED; SELECT direto em `service_request_enrichments`; SELECT storage de evidência ainda em `draft` |
 | **Prestador contratado** | Contexto completo; draft + mark EXECUTED em `CONFIRMED`; upload sob sessão própria | Confirmar COMPLETED manual; SELECT direto em enrichments |
 | **Prestador só-marketplace** (visibilidade no feed, sem contrato) | Payload **limitado** no contexto (status/`ready`; sem checklist nem `client_id`/`provider_id`) | Checklist, evidências, mutações de conclusão |
 | **Admin** (plataforma) | Contexto completo (mesmo sem ser participante) | Mutações de produto via UI do app (sem painel) |
@@ -60,7 +61,9 @@ flowchart TD
   J --> K{Cliente confirma?}
   J2 --> K
   K -->|CTA Avaliar serviço| K2[Sheet: 1 revisão + declaração · 2 avaliação]
+  K -->|Prompt global app open| K3[Sheet: intro · review · rating]
   K2 -->|scores| L[COMPLETED + rating]
+  K3 -->|scores| L
   K -->|Não ~24h após executed_at| M[auto_complete COMPLETED system]
   M --> N[Rating opcional depois]
 ```
@@ -79,7 +82,11 @@ flowchart TD
 | Execução atrasada | `executed_late = true` no freeze; badge “Executado com atraso” |
 | Prestador não marca EXECUTED a tempo | Auto-mark: após `service_completion_scheduled_end_at` + `auto_mark_executed_grace_hours` (default **24**) → `EXECUTED` com evidência frozen sintética (`responses = {}`, `auto_executed_without_checklist = true`); audit system; MMD `SERVICE_EXECUTED`; invariante EXECUTED↔frozen mantido |
 | Auto-mark sem checklist (UI cliente) | Em Avaliar serviço: alerta “Conclusão automática sem checklist”; **não** lista critérios vazios; checkbox de declaração com copy suavizada |
-| Auto-complete já rodou | Cliente ainda pode enviar rating opcional |
+| Auto-complete já rodou | Cliente ainda pode enviar rating opcional (**fora** do prompt global — só janela `EXECUTED` + grace) |
+| Prompt sem pending / role ≠ client | `PendingEvaluationPromptHost` não abre |
+| Prompt snoozed | Fechar (X) grava Preferences (~4h) para o mesmo `service_request_id`; não reabre até expirar |
+| Prompt vs overlays | Só avalia após `waitForProviderLocationPermissionFlow` + `waitForPushPermissionPromptFlow`; delay 600 ms **depois** da fila |
+| Vários EXECUTED na grace | RPC retorna o mais recente (`executed_at DESC LIMIT 1`); após avaliar com sucesso, invalida query e pode abrir o próximo após ~800 ms |
 | Disputa sem URL | Toast “Em breve” + analytics; **não** muda status do CS |
 | Disputa com URL | Abre URL externa; analytics |
 
@@ -100,9 +107,10 @@ flowchart TD
 11. Imutabilidade DB: trigger bloqueia alteração de schema/source/`materialized_at` (e saída de status) após enrichment `READY`; evidência `frozen` tem colunas críticas imutáveis (incl. `auto_executed_without_checklist`); CS em `EXECUTED`/`COMPLETED` exige linha de evidência `frozen` (constraint trigger deferred); FK evidência→CS **ON DELETE RESTRICT**.
 12. Upload (padrão KYC, sem Edge de URL assinada): RPC `service_completion_create_upload_session` → `supabase.storage.from('completion-evidence').upload()` autenticado sob prefixo da sessão (RLS) → RPC `service_completion_register_upload_object`. Sessão com `storage_bucket = completion-evidence` e `provider_id` = CS; INSERT storage só com sessão `open`, não expirada, CS `CONFIRMED`, abaixo de `max_files` (**só prestador**).
 13. Leitura de produto: `authenticated` **não** faz SELECT em `service_request_enrichments`. Status/`ready` leves vêm de `get_service` / `list_services` (gate de CTA e campos do modelo). Checklist, evidências e capabilities: RPC `get_service_completion_context` (detalhe completo vs limitado — §4; expõe `auto_executed_without_checklist`), só quando o fluxo de conclusão/avaliação precisa (abrir sheet/wizard ou CTA cliente elegível).
-14. Storage SELECT `completion-evidence` (`storage_objects_completion_evidence_select`): prestador contratado (prefixo próprio, draft + frozen via `service_completion_evidence_storage_path_owned`); **ou** cliente do CS quando a evidência está `frozen` (`service_completion_evidence_storage_path_client_readable` — permite `createSignedUrl` para thumbnails/lightbox em “Avaliar serviço”); **ou** admin de plataforma. INSERT permanece só prestador.
-15. Janitor de órfãos (SQL, padrão KYC): expira sessões open passadas do TTL; remove objetos com `referenced_in_responses = false` via `DELETE FROM storage.objects` + limpeza do registry; checagem defensiva de frozen só no batch locked; cron com `job_runs`; sem Edge / sem finalize RPC.
-16. Repair READY-sem-dispatch: apenas enrichments com `materialized_at >= now() - 7 days`.
+14. **Prompt de avaliação pendente:** RPC `get_client_pending_evaluation_prompt` (SECURITY DEFINER; `authenticated`): no máximo 1 CS do `auth.uid()` com `status = EXECUTED`, `executed_at` ainda dentro de `auto_complete_grace_hours` (default 24), `ORDER BY executed_at DESC LIMIT 1`. Payload leve (título, categoria, nome do prestador, datas) — **não** substitui `get_service_completion_context`. Índice parcial `(client_id, executed_at DESC) WHERE status = EXECUTED`. UI: `PendingEvaluationPromptHost` no `RootLayout`; sheet `variant="prompt"` com intro → review → rating; contexto completo só após “Continuar para avaliação”. Snooze Preferences `orbit_pending_evaluation_prompt_snooze` (~4h por `serviceRequestId`). Ordem de overlays: localização → push → este prompt.
+15. Storage SELECT `completion-evidence` (`storage_objects_completion_evidence_select`): prestador contratado (prefixo próprio, draft + frozen via `service_completion_evidence_storage_path_owned`); **ou** cliente do CS quando a evidência está `frozen` (`service_completion_evidence_storage_path_client_readable` — permite `createSignedUrl` para thumbnails/lightbox em “Avaliar serviço”); **ou** admin de plataforma. INSERT permanece só prestador.
+16. Janitor de órfãos (SQL, padrão KYC): expira sessões open passadas do TTL; remove objetos com `referenced_in_responses = false` via `DELETE FROM storage.objects` + limpeza do registry; checagem defensiva de frozen só no batch locked; cron com `job_runs`; sem Edge / sem finalize RPC.
+17. Repair READY-sem-dispatch: apenas enrichments com `materialized_at >= now() - 7 days`.
 
 ---
 
@@ -113,8 +121,9 @@ flowchart TD
 | CTA prestador | Botão **“Marcar serviço como concluído”** na seção Serviço contratado (visível se contrato `CONFIRMED` **e** `enrichmentReady` do `get_service` — sem prefetch do completion context) |
 | Sheet/dialog prestador | Título “Checklist de conclusão”; ao abrir, `ProviderExecutedWizard` busca `get_service_completion_context` e embute draft + upload + submit EXECUTED |
 | CTA cliente | Botão **“Avaliar serviço”** na mesma seção: só monta/busca contexto se contrato `EXECUTED` ou `COMPLETED`; então usa `canConfirmWithRating` / rating opcional do contexto |
-| Sheet/dialog cliente | Stepper **2 etapas** (“1 de 2” / “2 de 2”): (1) revisar evidências/checklist congelado + checkbox obrigatório de declaração de execução; (2) avaliar prestador/serviço (`ClientConfirmRatingWizard` embutido). Se `auto_executed_without_checklist`: alerta em `FrozenEvidenceReview` (sem lista vazia de critérios) + copy suavizada do checkbox |
-| Declaração de execução (checkbox) | Só no **step de revisão** do wizard Avaliar serviço, **abaixo** do card de disputa (quando houver). Texto padrão: “Declaro que revisei as evidências acima e que o serviço foi executado corretamente, conforme o combinado.” Com auto-mark sem checklist: “Declaro que o serviço foi executado corretamente, conforme o combinado.” Botão **“Continuar para avaliação”** fica **disabled** até o checkbox estar marcado. Declaração do cliente para validade jurídica / aceite da execução antes das notas. **Não** aparece no step de rating |
+| Sheet/dialog cliente | Stepper **2 etapas** no CTA (“1 de 2” / “2 de 2”): (1) revisar evidências/checklist congelado + checkbox obrigatório de declaração de execução; (2) avaliar prestador/serviço (`ClientConfirmRatingWizard` embutido). Se `auto_executed_without_checklist`: alerta em `FrozenEvidenceReview` (sem lista vazia de critérios) + copy suavizada do checkbox |
+| Prompt global (intro) | Título “É hora de avaliar a execução do serviço”; card com título / categoria / prestador / executado em / agenda; CTA “Continuar para avaliação”; **sem** fetch de `get_service_completion_context` até Continuar. Stepper **3 etapas** (“1 de 3” …) |
+| Declaração de execução (checkbox) | Só no **step de revisão** do wizard Avaliar serviço, **abaixo** do card de disputa (quando houver). Texto padrão: “Declaro que revisei as evidências acima e que o serviço foi executado corretamente, conforme o combinado.” Com auto-mark sem checklist: “Declaro que o serviço foi executado corretamente, conforme o combinado.” Botão **“Continuar para avaliação”** fica **disabled** até o checkbox estar marcado. Declaração do cliente para validade jurídica / aceite da execução antes das notas. **Não** aparece no step de rating nem no intro do prompt |
 | Alerta auto-mark sem checklist | Título “Conclusão automática sem checklist”; explica que o sistema marcou a conclusão porque o prestador não registrou no prazo (`FrozenEvidenceReview` / `ClientConfirmRatingWizard`) |
 | Fotos de evidência | Thumbnails (`CompletionEvidenceGallery`); clique abre lightbox fullscreen (padrão `ServicePhotoGallery`); prestador ao preencher e cliente ao revisar; URLs via `createSignedUrl` — cliente só após evidência `frozen` (RLS). Ausente no ramo auto-mark (sem critérios/fotos) |
 | Badge atraso | “Executado com atraso” (`executed_late`) |
@@ -139,6 +148,7 @@ flowchart TD
 |-----------|--------|
 | `enrichment_finalize_ready` | CAS + schema + bootstrap matching mesma TX; após READY schema imutável |
 | `get_service_completion_context` | Auth; detalhe completo (checklist + ids) só cliente SR / prestador CS / admin; marketplace → status/`ready` limitado; sem SELECT de tabela enrichment pelo client |
+| `get_client_pending_evaluation_prompt` | Auth obrigatório; cliente: 1 CS `EXECUTED` mais recente ainda na grace `auto_complete_grace_hours`; jsonb leve ou null; sem checklist/evidências |
 | `service_completion_create_upload_session` | CS `CONFIRMED`; bucket `completion-evidence`; `provider_id` = CS; retorna prefixo da sessão |
 | Storage INSERT `completion-evidence` (prestador autenticado) | Upload sob prefixo da sessão; sessão open, não expirada, CS CONFIRMED, contagem &lt; `max_files` (RLS); **sem** Edge de URL assinada de upload |
 | Storage SELECT `completion-evidence` | Prestador: prefixo próprio (draft + frozen). Cliente do CS: paths do CS **somente** se evidência `frozen` (`service_completion_evidence_storage_path_client_readable`) — `createSignedUrl` para galeria em “Avaliar serviço”. Admin: sim. |
@@ -170,7 +180,7 @@ flowchart TD
 
 ## 12. Persistência
 
-Servidor: tabelas enrichment/evidence/upload sessions+objects/ratings; `platform_constants` (checklist, enrichment, `auto_mark_executed_grace_hours` / `auto_mark_executed_batch_size`, `auto_complete_grace_hours`, **`auto_complete_batch_size`**, orphan TTL). Helper SQL `service_completion_scheduled_end_at(start, end)` = fim do dia BRT de `coalesce(end, start)`. Cliente: projeção leve `enrichmentStatus`/`enrichmentReady` em `get_service`/`list_services`; React Query com `get_service_completion_context` só no wizard/CTA elegível; sem SELECT autenticado em `service_request_enrichments`; sem draft local próprio além do estado do wizard.
+Servidor: tabelas enrichment/evidence/upload sessions+objects/ratings; `platform_constants` (checklist, enrichment, `auto_mark_executed_grace_hours` / `auto_mark_executed_batch_size`, `auto_complete_grace_hours`, **`auto_complete_batch_size`**, orphan TTL). Helper SQL `service_completion_scheduled_end_at(start, end)` = fim do dia BRT de `coalesce(end, start)`. Cliente: projeção leve `enrichmentStatus`/`enrichmentReady` em `get_service`/`list_services`; React Query com `get_service_completion_context` só no wizard/CTA elegível; prompt global com query `get_client_pending_evaluation_prompt` (`staleTime` ~10 min, sem refetch on focus); snooze Preferences `orbit_pending_evaluation_prompt_snooze`; sem SELECT autenticado em `service_request_enrichments`; sem draft local próprio além do estado do wizard.
 
 ---
 
@@ -184,7 +194,8 @@ Servidor: tabelas enrichment/evidence/upload sessions+objects/ratings; `platform
 | MMD | `SERVICE_EXECUTED` / `SERVICE_COMPLETED` / `SERVICE_AUTO_COMPLETED` |
 | view-services | Host: CTAs na `ServiceContractedSection` (Public API; gate leve via `enrichmentReady` do modelo + contexto só no fluxo); projeção também `executedLate` |
 | my-services | Cards `in_progress`: highlight de follow-up (pós-data-fim `CONFIRMED` / `EXECUTED`); prestador `CONFIRMED` + past → CTA **“Concluir serviço”** no card (sheet; contexto ao abrir); cliente `EXECUTED` → CTA **“Avaliar serviço”** no card (`ClientEvaluateServiceSheet` hospedado na página; contexto RPC só ao abrir o wizard); demais → “Ver detalhes” — ver [solicitacoes-do-cliente](../../my-services/features/solicitacoes-do-cliente.md) Anexo D |
-| Analytics | `service_completion_dispute_stub_opened` |
+| RootLayout / push-permission | `PendingEvaluationPromptHost` após fila localização + push (`appOpenOverlaySequence`) |
+| Analytics | `service_completion_dispute_stub_opened`; `pending_evaluation_prompt_opened` / `_dismissed` / `_completed` |
 
 ---
 
@@ -198,7 +209,8 @@ Servidor: tabelas enrichment/evidence/upload sessions+objects/ratings; `platform
 | Marcar executado (submit no sheet) | Prestador contratado | `CONFIRMED` + paths registrados + validação | `EXECUTED`; sessões → committed; fecha sheet |
 | Auto-mark EXECUTED (sistema) | Sistema (cron) | `CONFIRMED` + grace após fim agenda BRT | `EXECUTED` + evidência frozen sintética (`auto_executed_without_checklist`) |
 | Abrir “Avaliar serviço” | Cliente | UI: contrato `EXECUTED` ou `COMPLETED`; então `canConfirmWithRating` / rating opcional do contexto | Sheet/dialog 2 etapas (detalhe via `ClientEvaluateServiceAction`; lista Meus Serviços via `ClientEvaluateServiceSheet` hospedado na página); etapa 1 exige checkbox de declaração; alerta se auto-mark sem checklist |
-| Confirmar + avaliar | Cliente | `EXECUTED` | `COMPLETED` + rating; fecha sheet |
+| Prompt de avaliação pendente | Cliente (`RootLayout`) | Role `client`; RPC retorna pending na grace; não snoozed; fila localização+push concluída | Sheet 3 etapas (intro → review → rating); dismiss = snooze ~4h |
+| Confirmar + avaliar | Cliente | `EXECUTED` | `COMPLETED` + rating; fecha sheet; no prompt, pode abrir próximo pending |
 | Falar com o suporte (stub disputa) | Cliente | durante o fluxo Avaliar serviço (`EXECUTED`/`COMPLETED` com CTA) | Banner título “Abrir disputa”; botão “Falar com o suporte” → URL ou toast **somente** no wizard Avaliar serviço — **nunca** inline no detalhe (ver §8) |
 | Submeter rating pós auto | Cliente | `COMPLETED` system | Rating opcional (mesmo CTA/sheet) |
 
@@ -219,6 +231,7 @@ Upstream: pedido (`request-quote` / republish), contrato pago (`payments`/`CNS`)
 - `ProviderMarkExecutedAction` **não** prefetcha contexto ao montar; a RPC roda no `ProviderExecutedWizard` ao abrir o dialog.
 - `ClientEvaluateServiceAction` **não** busca contexto em `CONFIRMED` (só `EXECUTED`/`COMPLETED`); o sheet controlado (`ClientEvaluateServiceSheet`) monta o wizard só com `open` e carrega contexto ao abrir.
 - `ClientEvaluateServiceAction` reutiliza `ClientEvaluateServiceSheet` (mesmo shell da lista).
+- Prompt global (`variant="prompt"`) monta intro **antes** do wizard; `get_service_completion_context` só após Continuar.
 - `view-services` não reexporta mais lifecycle de payments para conclusão.
 - Chargeback / `is_disputed` em payments **não** é o stub de disputa do app.
 
@@ -236,14 +249,14 @@ Upstream: pedido (`request-quote` / republish), contrato pago (`payments`/`CNS`)
 
 ## 18. Evidências
 
-- `src/features/service-completion/**` (incl. `ProviderMarkExecutedAction`, `ProviderMarkExecutedSheet`, `ClientEvaluateServiceAction`, `ClientEvaluateServiceSheet`, `CompletionFlowSheetDialog`, `CompletionEvidenceGallery`)
-- `src/features/view-services/components/ServiceContractedSection.tsx`, `ServiceDetailPage.tsx`, `SimpleServiceCard.tsx`
-- Migrations `20260804010000`–`2026080452*` (constants, RLS, evidence/sessions, mark/confirm/auto-complete, context RPC, janitor, indexes); `20260806180328_service_completion_auto_mark_executed.sql`
+- `src/features/service-completion/**` (incl. `ProviderMarkExecutedAction`, `ProviderMarkExecutedSheet`, `ClientEvaluateServiceAction`, `ClientEvaluateServiceSheet`, `PendingEvaluationPromptHost`, `PendingEvaluationIntroStep`, `CompletionFlowSheetDialog`, `CompletionEvidenceGallery`)
+- `src/layouts/RootLayout.tsx`; `src/lib/appOpenOverlaySequence.ts`
+- Migrations `20260804010000`–`2026080452*` (constants, RLS, evidence/sessions, mark/confirm/auto-complete, context RPC, janitor, indexes); `20260806180328_service_completion_auto_mark_executed.sql`; `20260806205555_get_client_pending_evaluation_prompt.sql`
 - Edge: `generate-completion-checklist` (upload evidência: RPCs create/register + storage autenticado; sem Edge)
 - Janitor SQL: `service_completion_janitor_orphan_uploads` + `service_completion_cron_orphan_upload_janitor`
 - Auto-mark: `service_completion_auto_mark_executed` + `service_completion_cron_auto_mark_executed` (`15 9,15,21,3 * * *`); helper `service_completion_scheduled_end_at`
 - `docs/service-completion/design.md` §3.7 / §4.1; matching CONTEXT **#135**
-- Testes: `src/features/service-completion/**/__tests__` (CTAs, gallery, auto-executed UI), boundary em `view-services`; pgTAP `supabase/tests/service_completion/*` (incl. `auto_mark_executed_grace_and_cron_test.sql`)
+- Testes: `src/features/service-completion/**/__tests__` (CTAs, gallery, auto-executed UI, pending eval prompt/host/hook/api/storage); boundary em `view-services`; pgTAP `supabase/tests/service_completion/*` (incl. `auto_mark_executed_grace_and_cron_test.sql`, `get_client_pending_evaluation_prompt_test.sql`)
 
 ---
 
@@ -269,3 +282,4 @@ Upstream: pedido (`request-quote` / republish), contrato pago (`payments`/`CNS`)
 - **2026-08-06 (Avaliar serviço — declaração + CTA disputa)** — Step de revisão do `ClientConfirmRatingWizard`: checkbox obrigatório de declaração de execução (copy fixa; “Continuar para avaliação” disabled até marcar); só no review, abaixo do stub de disputa quando houver; ausente no step de rating. `DisputeStubEntry`: título permanece “Abrir disputa”; botão interno passa a **“Falar com o suporte”** (URL/toast + analytics, sem FSM).
 - **2026-08-06 (auto-mark EXECUTED)** — Se prestador não marca `CONFIRMED`→`EXECUTED` em `auto_mark_executed_grace_hours` (default 24) após fim do dia BRT de `coalesce(scheduled_end, scheduled_start)` (`service_completion_scheduled_end_at`), batch/cron promove a EXECUTED com evidência frozen sintética (`responses = {}`, `auto_executed_without_checklist = true`), audit system, MMD `SERVICE_EXECUTED`; invariante frozen mantido. UI Avaliar serviço: alerta + sem lista vazia de critérios + copy do checkbox suavizada. Distinto do auto-complete EXECUTED→COMPLETED (`auto_complete_grace_hours` após `executed_at`).
 - **2026-08-06 (stub disputa — só no wizard)** — `ClientEvaluateServiceAction` deixa de renderizar `DisputeStubEntry` inline no detalhe / `ServiceContractedSection` quando não há CTA Avaliar serviço. Stub **nunca** no host do detalhe; permanece **somente** dentro do `ClientConfirmRatingWizard` no fluxo Avaliar serviço.
+- **2026-08-06 (prompt de avaliação pendente)** — RPC `get_client_pending_evaluation_prompt` + índice parcial; `PendingEvaluationPromptHost` no `RootLayout` (só client); sheet 3 passos (intro leve → review → rating); snooze Preferences ~4h; abre **por último** na fila localização → push → avaliação; pós auto-complete (rating opcional) fora do escopo deste prompt.

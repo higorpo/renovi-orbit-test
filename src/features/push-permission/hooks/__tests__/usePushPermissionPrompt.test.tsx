@@ -28,9 +28,11 @@ vi.mock('@/lib/logger', () => ({
 
 const sequenceMocks = vi.hoisted(() => ({
   waitForProviderLocationPermissionFlow: vi.fn(async () => undefined),
+  markPushPermissionPromptFlowStarted: vi.fn(),
+  markPushPermissionPromptFlowComplete: vi.fn(),
 }))
 
-vi.mock('@/lib/providerPermissionSequence', () => sequenceMocks)
+vi.mock('@/lib/appOpenOverlaySequence', () => sequenceMocks)
 
 vi.mock('../../utils/pushPermissionPrompt.storage', () => ({
   isPushPermissionPromptDismissed: vi.fn(async () => false),
@@ -59,6 +61,32 @@ describe('usePushPermissionPrompt', () => {
       permission: 'granted',
     })
     vi.mocked(isPushPermissionPromptDismissed).mockResolvedValue(false)
+  })
+
+  it('marks push flow started before evaluating and complete when not opening', async () => {
+    pushMocks.getPushPermissionStatus.mockResolvedValue('granted')
+    const { result } = renderHook(() => usePushPermissionPrompt())
+
+    await waitFor(() =>
+      expect(sequenceMocks.markPushPermissionPromptFlowStarted).toHaveBeenCalled(),
+    )
+    await waitFor(() =>
+      expect(sequenceMocks.markPushPermissionPromptFlowComplete).toHaveBeenCalled(),
+    )
+    expect(result.current.open).toBe(false)
+  })
+
+  it('marks push flow complete after dismiss', async () => {
+    const { result } = renderHook(() => usePushPermissionPrompt())
+
+    await waitFor(() => expect(result.current.open).toBe(true), { timeout: 2000 })
+
+    act(() => {
+      result.current.dismiss()
+    })
+
+    expect(sequenceMocks.markPushPermissionPromptFlowComplete).toHaveBeenCalled()
+    expect(result.current.open).toBe(false)
   })
 
   it('opens dialog when permission is pending', async () => {

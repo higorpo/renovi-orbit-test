@@ -13,7 +13,7 @@
 - **Objetivo:** exibir um dialog in-app (“Ative as notificações”) quando a permissão do sistema ainda está **pendente** (`default` / `prompt`), e, se o usuário aceitar, chamar `setupPushNotifications` com `requestPermission: true`.
 - **Escopo:** apenas front-end (`src/features/push-permission/`) + consumo de libs (`@/lib/push`, Preferences, sequência com localização do prestador).
 - **Limites:** não registra clique/engagement; não ingest de dispatch; não UI de configurações de notificação no app; não força re-pedido se o OS já marcou `denied`.
-- **Relação com outros módulos:** montado no `RootLayout` junto a `DeviceBeaconProvider` (registro de token sem pedir permissão) e, indiretamente, ao pipeline de entrega (`message-dispatcher` + `notifications` para clique).
+- **Relação com outros módulos:** montado no `RootLayout` junto a `DeviceBeaconProvider` (registro de token sem pedir permissão) e, indiretamente, ao pipeline de entrega (`message-dispatcher` + `notifications` para clique). Na fila de overlays do app open, o soft prompt de push vem **depois** da localização (prestador) e **antes** do prompt de avaliação pendente (`service-completion`).
 
 ## 3. Features do módulo
 
@@ -35,7 +35,7 @@
 - **Entrada:** `RootLayout` monta `PushPermissionPromptHost` sob `AuthProvider` + `DeviceBeaconProvider`.
 - **Processamento:** após delay de 600 ms (sessão pronta), avalia status de permissão; se pendente e fora do cooldown, abre dialog; “Continuar” fecha o dialog, espera 320 ms e solicita permissão do sistema.
 - **Saída:** permissão `granted` → limpa flag de dismiss; `denied` / erro / “Agora não” → grava timestamp de dismiss (cooldown 7 dias).
-- **Dependências:** `auth` (usuário/perfil), `@/lib/push`, Preferences (`orbit_push_permission_prompt_dismissed_at`), sequência de localização do prestador (`device-beacon` / `providerPermissionSequence`).
+- **Dependências:** `auth` (usuário/perfil), `@/lib/push`, Preferences (`orbit_push_permission_prompt_dismissed_at`), sequência de localização do prestador (`device-beacon` / `appOpenOverlaySequence`).
 
 ## 6. Regras de negócio transversais
 
@@ -44,6 +44,7 @@
 3. Se já `granted`, limpa o timestamp de dismiss e **não** abre o dialog.
 4. Prestador: não avalia/abre push enquanto o fluxo de localização (quando iniciado) não concluir.
 5. Pedido de permissão do sistema ocorre **somente** após gesto “Continuar” (`requestPermission: true`); o beacon sincroniza push com `requestPermission: false`.
+6. Ao concluir a avaliação do soft prompt (abriu e fechou, ou decidiu não abrir), marca `markPushPermissionPromptFlowComplete` para liberar o próximo overlay (prompt de avaliação pendente).
 
 ## 7. Entidades e dados relevantes
 
@@ -60,6 +61,7 @@
 | Firebase Messaging + Service Worker | Push web/PWA |
 | `DeviceBeaconProvider` | Setup silencioso de push e sync de token no beacon |
 | Message Dispatcher / `notifications` | **Fora do escopo de código deste módulo** — entrega e clique (ver lacunas) |
+| `service-completion` (`PendingEvaluationPromptHost`) | Consome a conclusão do fluxo de push via `waitForPushPermissionPromptFlow` — avaliação só abre depois |
 
 ## 9. Riscos, lacunas e observações
 
@@ -72,6 +74,6 @@
 - `src/features/push-permission/` (components, hooks, utils, testes)
 - `src/layouts/RootLayout.tsx` (`PushPermissionPromptHost`)
 - `src/lib/push.ts`, `src/lib/nativeNotificationPermission.ts`
-- `src/lib/providerPermissionSequence.ts`
+- `src/lib/appOpenOverlaySequence.ts`
 - `src/features/device-beacon/components/DeviceBeaconProvider.tsx` (setup com `requestPermission: false`)
 - `src/features/device-beacon/hooks/useLocationPermissionDialog.ts` (marca início/fim da sequência de localização)

@@ -87,7 +87,8 @@ flowchart TD
 7. **Gesto obrigatório para pedir ao sistema:** aceite chama `setupPushNotifications(undefined, { requestPermission: true })` após `DISMISS_BEFORE_SYSTEM_PROMPT_MS = 320`.
 8. **Copy por papel:** `client` / `provider` / fallback (`admin`, `null`, etc.) via `getPushPermissionCopy`.
 9. **Ordem prestador:** localização (quando iniciada) **antes** do soft prompt de push.
-10. **Timestamp inválido ou erro de leitura Preferences:** trata como **não** dismissed (pode reabrir o soft prompt).
+10. **Ordem vs avaliação pendente:** ao terminar a avaliação do soft prompt (abriu/fechou ou não abriu), `markPushPermissionPromptFlowComplete` libera o prompt de avaliação pendente (`service-completion`) — que **aguarda** este fluxo e nunca compete com o dialog de push.
+11. **Timestamp inválido ou erro de leitura Preferences:** trata como **não** dismissed (pode reabrir o soft prompt).
 
 ## 8. Campos e dados da feature
 
@@ -164,7 +165,7 @@ clear / granted  →  elegível limpo
 | `@/lib/push.getPushPermissionStatus` | Nativo: `checkNativeNotificationPermission` (Android LocalNotifications.display; iOS PushNotifications.receive). Web: `Notification.permission` se Firebase configurado; senão `unsupported` |
 | `@/lib/push.setupPushNotifications(..., { requestPermission: true })` | Solicita permissão e tenta obter token (FCM nativo/web) |
 | `DeviceBeaconProvider` | Em paralelo no layout: `setupPushNotifications(..., { requestPermission: false })` e sync de beacon ao mudar estado de registro |
-| `providerPermissionSequence` | Serializa soft prompts do prestador (localização → push) |
+| `appOpenOverlaySequence` | Serializa overlays na abertura: localização (prestador) → push → avaliação pendente (cliente) |
 | Logger / Sentry (via logger) | Warn em falha do request |
 | Message Dispatcher | **Não chamado** por este módulo |
 | `notifications.recordPushClick` | **Não chamado** por este módulo (usado em `@/lib/push` no open/click de notificação) |
@@ -194,7 +195,7 @@ clear / granted  →  elegível limpo
 | `auth` (`useAuth`) | user, profile.role, loadingSession |
 | `@/lib/push` | Status e setup |
 | `@/lib/capacitor/preferencesStorage` | Cooldown |
-| `@/lib/providerPermissionSequence` | Ordem com localização (prestador) |
+| `@/lib/appOpenOverlaySequence` | Ordem localização (prestador) → push → avaliação |
 | UI shell (`Dialog`, `ShellDialogContent`, `Button`) | Apresentação |
 | `device-beacon` (indireto) | Inicia/completa fluxo de localização; registra token sem pedir permissão |
 
@@ -226,7 +227,7 @@ clear / granted  →  elegível limpo
 - `src/layouts/RootLayout.tsx`
 - `src/lib/push.ts` (`getPushPermissionStatus`, `isPushPermissionPending`, `setupPushNotifications`)
 - `src/lib/nativeNotificationPermission.ts`
-- `src/lib/providerPermissionSequence.ts`
+- `src/lib/appOpenOverlaySequence.ts`
 - `src/features/device-beacon/components/DeviceBeaconProvider.tsx`
 - `src/features/device-beacon/hooks/useLocationPermissionDialog.ts`
 - Testes: `hooks/__tests__/usePushPermissionPrompt.test.tsx`, `utils/__tests__/pushPermissionPrompt.storage.test.ts`, `utils/__tests__/pushPermissionCopy.test.ts`, `components/__tests__/*`
@@ -260,6 +261,7 @@ clear / granted  →  elegível limpo
 - [ ] Sem login → nunca abre
 - [ ] Prestador: localização em andamento → push só depois do complete
 - [ ] Cliente: não chama wait de localização
+- [ ] Ao concluir (abriu/fechou ou não abriu), marca fluxo de push completo (libera prompt de avaliação pendente)
 - [ ] Copy client vs provider vs fallback (admin/null)
 - [ ] Web sem Notification/Firebase → status unsupported → não abre
 - [ ] Nativo Android/iOS: fluxo Continuar abre sheet do sistema (após ~320 ms)
@@ -272,4 +274,5 @@ clear / granted  →  elegível limpo
 | Cooldown de dismiss | 7 dias sem reexibir o soft prompt após dispensa/negativa/falha |
 | Permissão pendente | Status `default` ou `prompt` |
 | Pedido do sistema | `Notification.requestPermission` (web) ou plugins Capacitor (nativo), via `setupPushNotifications({ requestPermission: true })` |
-| Sequência prestador | Localização primeiro, depois push (`providerPermissionSequence`) |
+| Sequência de overlays | Localização (prestador) → push → avaliação (`appOpenOverlaySequence`) |
+| Fila de overlays | Localização → soft prompt push → prompt de avaliação pendente (último; `service-completion`) |

@@ -30,13 +30,17 @@ import {
 } from "./ServiceRatingForm";
 import { CompletionEvidenceGallery } from "./CompletionEvidenceGallery";
 
+export type ClientConfirmRatingWizardVariant = "default" | "prompt";
+
 export type ClientConfirmRatingWizardProps = {
   serviceRequestId: string;
   className?: string;
   onCompleted?: () => void;
   onPendingChange?: (pending: boolean) => void;
-  /** Bubble step to the shell header (e.g. "1 de 2"). */
+  /** Bubble step to the shell header (e.g. "1 de 2" or "2 de 3" for prompt). */
   onStepChange?: (step: "review" | "rating", label: string) => void;
+  /** Prompt flow already showed intro as step 1 — labels become 2/3 de 3. */
+  variant?: ClientConfirmRatingWizardVariant;
 };
 
 type Step = "review" | "rating";
@@ -87,6 +91,7 @@ export function ClientConfirmRatingWizard({
   onCompleted,
   onPendingChange,
   onStepChange,
+  variant = "default",
 }: ClientConfirmRatingWizardProps) {
   const { data: context, isLoading, isError, refetch } =
     useServiceCompletionContext(serviceRequestId, {
@@ -98,6 +103,7 @@ export function ClientConfirmRatingWizard({
   const [scoreError, setScoreError] = useState<string | null>(null);
   const [executionAcknowledged, setExecutionAcknowledged] = useState(false);
   const isDesktop = useBreakpointMd();
+  const isPrompt = variant === "prompt";
 
   const canConfirm = Boolean(context?.capabilities.canConfirmWithRating);
   const canOptional = Boolean(context?.capabilities.canSubmitOptionalRating);
@@ -119,7 +125,13 @@ export function ClientConfirmRatingWizard({
   const title = canConfirm
     ? "Confirmar recebimento"
     : "Avaliar serviço (opcional)";
-  const stepLabel = step === "review" ? "1 de 2" : "2 de 2";
+  const stepLabel = isPrompt
+    ? step === "review"
+      ? "2 de 3"
+      : "3 de 3"
+    : step === "review"
+      ? "1 de 2"
+      : "2 de 2";
 
   useEffect(() => {
     if (!canConfirm && !canOptional) return;

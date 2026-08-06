@@ -250,7 +250,7 @@ Sem IA, sem e-mail direto neste módulo.
 | `@/features/auth` | `useAuth`, logout unregister |
 | `@/lib/push` | setup/subscribe FCM no provider |
 | `@/lib/capacitor/preferencesStorage` | Preferences |
-| `@/lib/providerPermissionSequence` | Ordenar location → push |
+| `@/lib/appOpenOverlaySequence` | Ordenar location → push |
 | `@/features/provider-jobs` (**consumidor**) | `useProviderLocation` importa Public API |
 | `@/features/push-permission` (**consumidor indireto**) | Aguarda fim do fluxo de localização |
 | matching-dispatch / SQL | Efeito de negócio do beacon fresco |
@@ -300,7 +300,7 @@ Sem IA, sem e-mail direto neste módulo.
 | Montagem | `src/layouts/RootLayout.tsx` |
 | Logout | `src/features/auth/AuthProvider.tsx` |
 | Consumo feed | `src/features/provider-jobs/hooks/useProviderLocation.ts` |
-| Sequência push | `src/lib/providerPermissionSequence.ts`, `src/features/push-permission/hooks/usePushPermissionPrompt.ts` |
+| Sequência push | `src/lib/appOpenOverlaySequence.ts`, `src/features/push-permission/hooks/usePushPermissionPrompt.ts` |
 | Capacitor init (sem beacon) | `src/lib/capacitor/initCapacitorPlugins.ts` |
 | Migrations | `20260520100000_create_user_device_beacons.sql`, `20260711020000_*`, `20260711030000_*`, `20260711000000_matching_platform_constants_seeds.sql`, `20260711240000_matching_h3_index_population.sql`, `20260705216000_instrument_purge_stale_user_device_beacons_job_runs.sql` |
 | Docs relacionadas (somente leitura neste pedido) | `docs/business/modulos/matching-dispatch/`, `docs/business/rastreabilidade.md` |

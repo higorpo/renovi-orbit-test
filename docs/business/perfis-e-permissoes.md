@@ -119,7 +119,7 @@ Montados no `RootLayout` (todas as rotas sob o layout raiz) — fora do menu.
 | Cooldown dismiss soft prompt | 7 dias (Preferences) | Idem | Idem | — |
 | Sync beacon / token FCM (`user_device_beacons`) | Sim (metadados / push; **sem** lat/lng operacionais) | Sim | Evidência: autenticados syncam beacon; campos de geo só se `role === 'provider'` | Não |
 | Localização operacional (dialog + tracking → `provider_latest_locations`) | **Não** | **Sim** (exceto `operational_status = suspended`) | **Não** (gate `role === 'provider'`) | Não |
-| Sequência `providerPermissionSequence` | N/A | Localização → depois push | N/A | — |
+| Sequência `appOpenOverlaySequence` | Localização skip → push → avaliação pendente | Localização → push | N/A | — |
 
 Evidências: [prompt-e-cooldown](./modulos/push-permission/features/prompt-e-cooldown.md), [rastreamento-dispositivo](./modulos/device-beacon/features/rastreamento-dispositivo.md).
 

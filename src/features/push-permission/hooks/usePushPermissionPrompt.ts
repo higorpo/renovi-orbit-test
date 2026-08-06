@@ -1,8 +1,10 @@
 import { useAuth } from '@/features/auth'
 import { logger } from '@/lib/logger'
 import {
+  markPushPermissionPromptFlowComplete,
+  markPushPermissionPromptFlowStarted,
   waitForProviderLocationPermissionFlow,
-} from '@/lib/providerPermissionSequence'
+} from '@/lib/appOpenOverlaySequence'
 import {
   getPushPermissionStatus,
   isPushPermissionPending,
@@ -27,9 +29,14 @@ export function usePushPermissionPrompt() {
 
   const isProvider = profile?.role === 'provider'
 
+  const finishPushFlow = useCallback(() => {
+    markPushPermissionPromptFlowComplete()
+  }, [])
+
   const evaluatePrompt = useCallback(async () => {
     if (!user?.id) {
       setOpen(false)
+      finishPushFlow()
       return
     }
 
@@ -43,34 +50,43 @@ export function usePushPermissionPrompt() {
         await clearPushPermissionPromptDismissed()
       }
       setOpen(false)
+      finishPushFlow()
       return
     }
 
     if (await isPushPermissionPromptDismissed()) {
       setOpen(false)
+      finishPushFlow()
       return
     }
 
     setOpen(true)
-  }, [isProvider, user?.id])
+  }, [finishPushFlow, isProvider, user?.id])
 
   useEffect(() => {
     if (loadingSession || !user?.id) {
       setOpen(false)
+      if (!loadingSession && !user?.id) {
+        finishPushFlow()
+      }
       return
     }
+
+    // Mark started before the delay so later overlays can await this flow.
+    markPushPermissionPromptFlowStarted()
 
     const timeout = window.setTimeout(() => {
       void evaluatePrompt()
     }, PROMPT_OPEN_DELAY_MS)
 
     return () => window.clearTimeout(timeout)
-  }, [user?.id, loadingSession, evaluatePrompt])
+  }, [user?.id, loadingSession, evaluatePrompt, finishPushFlow])
 
   const dismiss = useCallback(() => {
     void markPushPermissionPromptDismissed()
     setOpen(false)
-  }, [])
+    finishPushFlow()
+  }, [finishPushFlow])
 
   const acceptAndRequestPermission = useCallback(async () => {
     setRequesting(true)
@@ -95,8 +111,9 @@ export function usePushPermissionPrompt() {
       await markPushPermissionPromptDismissed()
     } finally {
       setRequesting(false)
+      finishPushFlow()
     }
-  }, [])
+  }, [finishPushFlow])
 
   return {
     open,

@@ -4,8 +4,8 @@ import { logger } from '@/lib/logger'
 import {
   markProviderLocationPermissionFlowComplete,
   markProviderLocationPermissionFlowStarted,
-  resetProviderPermissionSequence,
-} from '@/lib/providerPermissionSequence'
+  resetAppOpenOverlaySequence,
+} from '@/lib/appOpenOverlaySequence'
 import { useCallback, useEffect, useState } from 'react'
 
 import {
@@ -71,7 +71,7 @@ export function useLocationPermissionDialog() {
 
   useEffect(() => {
     return () => {
-      resetProviderPermissionSequence()
+      resetAppOpenOverlaySequence()
     }
   }, [user?.id])
 

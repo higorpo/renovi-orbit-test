@@ -133,7 +133,6 @@ Itens relacionados a conclusão do serviço:
 - Há muita coisa em comum entre a nova parte de gerar checklist com IA e a parte antiga que gerava algumas coisas com IA também, vamos tentar compartilhar mais recursos
 
 
-- Quando o cliente tiver uma avaliação de serviço concluído pendente, ao abrir o app aparecer popup para ele preencher as informações.
 
 
 

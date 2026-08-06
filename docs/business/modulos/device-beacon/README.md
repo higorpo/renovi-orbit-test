@@ -47,7 +47,7 @@
 
 - **RLS:** usuário autenticado só gerencia linhas com `profile_id = auth.uid()` (`user_device_beacons_all`).
 - **Modelo duplo de GPS:** beacon alimenta **elegibilidade de lote**; GPS de feed (`useProviderLocation` em provider-jobs) alimenta sort **Mais próximos** — ver matching-dispatch §4.
-- **Sequência com push:** `providerPermissionSequence` faz o prompt de push (`push-permission`) esperar o fluxo de localização do prestador.
+- **Sequência com push:** `appOpenOverlaySequence` faz o prompt de push (`push-permission`) esperar o fluxo de localização do prestador.
 - **`initCapacitorPlugins`:** **não** inicia beacon/geo; só SystemBars, teclado, lifecycle e back button. Tracking começa nos providers React.
 
 ## 7. Entidades

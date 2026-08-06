@@ -19,6 +19,8 @@ export type { ClientEvaluateServiceActionProps } from "./components/ClientEvalua
 export { ClientEvaluateServiceSheet } from "./components/ClientEvaluateServiceSheet";
 export type { ClientEvaluateServiceSheetProps } from "./components/ClientEvaluateServiceSheet";
 
+export { PendingEvaluationPromptHost } from "./components/PendingEvaluationPromptHost";
+
 export { ProviderExecutedWizard } from "./components/ProviderExecutedWizard";
 export type { ProviderExecutedWizardProps } from "./components/ProviderExecutedWizard";
 

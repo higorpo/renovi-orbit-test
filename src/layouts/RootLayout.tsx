@@ -4,6 +4,7 @@ import { CapacitorSplashHider } from '@/lib/capacitor'
 import { AuthProvider } from '@/features/auth'
 import { DeviceBeaconProvider } from '@/features/device-beacon'
 import { PushPermissionPromptHost } from '@/features/push-permission'
+import { PendingEvaluationPromptHost } from '@/features/service-completion'
 import { PushNotificationNavigationHost } from '@/components/PushNotificationNavigationHost'
 import { OfflineBanner } from '@/components/OfflineBanner'
 import { OverlayNavigationBlocker } from '@/components/OverlayNavigationBlocker'
@@ -18,6 +19,7 @@ export function RootLayout() {
         <CapacitorSplashHider />
         <DeviceBeaconProvider>
           <PushPermissionPromptHost />
+          <PendingEvaluationPromptHost />
           <PushNotificationNavigationHost />
           <OfflineBanner />
           <Outlet />

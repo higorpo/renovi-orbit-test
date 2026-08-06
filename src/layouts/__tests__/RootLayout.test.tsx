@@ -18,6 +18,10 @@ vi.mock('@/features/push-permission', () => ({
   PushPermissionPromptHost: () => null,
 }))
 
+vi.mock('@/features/service-completion', () => ({
+  PendingEvaluationPromptHost: () => null,
+}))
+
 vi.mock('@/components/OfflineBanner', () => ({
   OfflineBanner: () => null,
 }))
