@@ -64,8 +64,8 @@ describe("ClientEvaluateServiceSheet prompt variant", () => {
           title: "Pintura sala",
           categoryTitle: "Pintura",
           providerFullName: "Ana Silva",
-          executedAt: "2026-08-06T12:00:00.000Z",
           scheduledStartDate: "2026-08-05",
+          scheduledEndDate: null,
         }}
       />,
     );

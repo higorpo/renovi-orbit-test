@@ -14,6 +14,7 @@ export type PendingEvaluationPrompt = {
   categoryTitle: string | null;
   providerFullName: string | null;
   scheduledStartDate: string | null;
+  scheduledEndDate: string | null;
 };
 
 /** Lightweight fields shown on the prompt intro step (before context fetch). */
@@ -22,8 +23,8 @@ export type PendingEvaluationPromptSummary = Pick<
   | "title"
   | "categoryTitle"
   | "providerFullName"
-  | "executedAt"
   | "scheduledStartDate"
+  | "scheduledEndDate"
 >;
 
 type RpcPendingEvaluationPrompt = {
@@ -34,6 +35,7 @@ type RpcPendingEvaluationPrompt = {
   category_title?: string | null;
   provider_full_name?: string | null;
   scheduled_start_date?: string | null;
+  scheduled_end_date?: string | null;
 };
 
 export type GetClientPendingEvaluationPromptResult = {
@@ -56,6 +58,7 @@ function mapPrompt(
     categoryTitle: raw.category_title ?? null,
     providerFullName: raw.provider_full_name ?? null,
     scheduledStartDate: raw.scheduled_start_date ?? null,
+    scheduledEndDate: raw.scheduled_end_date ?? null,
   };
 }
 

@@ -53,6 +53,7 @@ const samplePrompt = {
   categoryTitle: "Pintura",
   providerFullName: "Ana Silva",
   scheduledStartDate: "2026-08-05",
+  scheduledEndDate: "2026-08-06",
 };
 
 function wrapper({ children }: { children: ReactNode }) {

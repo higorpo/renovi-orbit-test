@@ -17,17 +17,17 @@ export type PendingEvaluationIntroStepProps = {
   className?: string;
 };
 
-function formatExecutedLabel(executedAt: string): string | null {
-  if (!executedAt) return null;
-  return formatDatePtBr(executedAt);
-}
-
-function formatScheduledLabel(scheduledStartDate: string | null): string | null {
-  if (!scheduledStartDate) return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(scheduledStartDate)) {
-    return formatCalendarDate(scheduledStartDate);
+/** Service completion date: scheduled_end_date, else scheduled_start_date. */
+function formatCompletionDateLabel(
+  scheduledEndDate: string | null,
+  scheduledStartDate: string | null,
+): string | null {
+  const raw = scheduledEndDate || scheduledStartDate;
+  if (!raw) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return formatCalendarDate(raw);
   }
-  return formatDatePtBr(scheduledStartDate);
+  return formatDatePtBr(raw);
 }
 
 export function PendingEvaluationIntroStep({
@@ -36,8 +36,10 @@ export function PendingEvaluationIntroStep({
   className,
 }: PendingEvaluationIntroStepProps) {
   const isDesktop = useBreakpointMd();
-  const executedLabel = formatExecutedLabel(summary.executedAt);
-  const scheduledLabel = formatScheduledLabel(summary.scheduledStartDate);
+  const completionLabel = formatCompletionDateLabel(
+    summary.scheduledEndDate,
+    summary.scheduledStartDate,
+  );
 
   const body = (
     <div
@@ -63,16 +65,12 @@ export function PendingEvaluationIntroStep({
               </span>
             </p>
           ) : null}
-          {executedLabel ? (
+          {completionLabel ? (
             <p className="text-sm text-muted-foreground">
-              Executado em{" "}
-              <span className="font-medium text-foreground">{executedLabel}</span>
-            </p>
-          ) : null}
-          {scheduledLabel ? (
-            <p className="text-sm text-muted-foreground">
-              Agenda:{" "}
-              <span className="font-medium text-foreground">{scheduledLabel}</span>
+              Conclusão:{" "}
+              <span className="font-medium text-foreground">
+                {completionLabel}
+              </span>
             </p>
           ) : null}
         </div>

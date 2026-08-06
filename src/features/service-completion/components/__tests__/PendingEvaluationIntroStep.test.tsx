@@ -17,8 +17,8 @@ describe("PendingEvaluationIntroStep", () => {
           title: "Pintura sala",
           categoryTitle: "Pintura",
           providerFullName: "Ana Silva",
-          executedAt: "2026-08-06T12:00:00.000Z",
           scheduledStartDate: "2026-08-05",
+          scheduledEndDate: null,
         }}
         onContinue={onContinue}
       />,
@@ -27,6 +27,9 @@ describe("PendingEvaluationIntroStep", () => {
     expect(screen.getByTestId("pending-evaluation-intro")).toBeInTheDocument();
     expect(screen.getByText("Pintura sala")).toBeInTheDocument();
     expect(screen.getByText("Ana Silva")).toBeInTheDocument();
+    expect(screen.getByText(/Conclusão:/)).toBeInTheDocument();
+    expect(screen.queryByText(/Executado em/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Agenda:/)).not.toBeInTheDocument();
 
     fireEvent.click(
       screen.getByTestId("pending-evaluation-intro-continue"),
@@ -37,5 +40,25 @@ describe("PendingEvaluationIntroStep", () => {
       "pending-evaluation-intro-continue",
     );
     expect(continueButton.parentElement).toHaveClass("shrink-0");
+  });
+
+  it("prefers scheduledEndDate over scheduledStartDate for Conclusão", () => {
+    render(
+      <PendingEvaluationIntroStep
+        summary={{
+          title: "Pintura sala",
+          categoryTitle: null,
+          providerFullName: null,
+          scheduledStartDate: "2026-08-05",
+          scheduledEndDate: "2026-08-07",
+        }}
+        onContinue={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/Conclusão:/)).toBeInTheDocument();
+    // formatCalendarDate of 2026-08-07 (pt-BR calendar)
+    expect(screen.getByText("07/08/2026")).toBeInTheDocument();
+    expect(screen.queryByText("05/08/2026")).not.toBeInTheDocument();
   });
 });

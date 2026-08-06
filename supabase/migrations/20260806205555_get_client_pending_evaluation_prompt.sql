@@ -46,7 +46,8 @@ begin
     'title', sr.title,
     'category_title', ps.title,
     'provider_full_name', prov.full_name,
-    'scheduled_start_date', cs.scheduled_start_date
+    'scheduled_start_date', cs.scheduled_start_date,
+    'scheduled_end_date', cs.scheduled_end_date
   )
   into v_result
   from public.contracted_services cs

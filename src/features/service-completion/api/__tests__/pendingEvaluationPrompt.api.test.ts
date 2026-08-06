@@ -29,6 +29,7 @@ describe("getClientPendingEvaluationPrompt", () => {
         category_title: "Pintura",
         provider_full_name: "Ana Silva",
         scheduled_start_date: "2026-08-05",
+        scheduled_end_date: "2026-08-06",
       },
       error: null,
     });
@@ -45,6 +46,7 @@ describe("getClientPendingEvaluationPrompt", () => {
         categoryTitle: "Pintura",
         providerFullName: "Ana Silva",
         scheduledStartDate: "2026-08-05",
+        scheduledEndDate: "2026-08-06",
       },
       error: null,
     });

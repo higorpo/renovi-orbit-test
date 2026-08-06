@@ -5,7 +5,7 @@ begin;
 
 \ir fixtures/seed_rls_actors.inc
 
-select plan(13);
+select plan(14);
 
 select set_config('rls.client_id', gen_random_uuid()::text, true);
 select set_config('rls.other_client_id', gen_random_uuid()::text, true);
@@ -256,6 +256,13 @@ select is(
   (_prompt.payload->>'scheduled_start_date')::date,
   (select scheduled_start from _fx),
   'payload scheduled_start_date matches contracted_services'
+)
+from _prompt;
+
+select is(
+  (_prompt.payload->>'scheduled_end_date')::date,
+  (select scheduled_start from _fx),
+  'payload scheduled_end_date matches contracted_services'
 )
 from _prompt;
 

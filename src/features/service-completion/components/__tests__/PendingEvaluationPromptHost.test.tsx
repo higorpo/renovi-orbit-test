@@ -8,14 +8,14 @@ const hookMocks = vi.hoisted(() => ({
     title: "Pintura",
     categoryTitle: "Pintura",
     providerFullName: "Ana Silva",
-    executedAt: "2026-08-06T12:00:00.000Z",
     scheduledStartDate: "2026-08-05",
+    scheduledEndDate: null,
   } as {
     title: string;
     categoryTitle: string | null;
     providerFullName: string | null;
-    executedAt: string;
     scheduledStartDate: string | null;
+    scheduledEndDate: string | null;
   } | null,
   setOpen: vi.fn(),
   dismiss: vi.fn(),
@@ -62,8 +62,8 @@ describe("PendingEvaluationPromptHost", () => {
       title: "Pintura",
       categoryTitle: "Pintura",
       providerFullName: "Ana Silva",
-      executedAt: "2026-08-06T12:00:00.000Z",
       scheduledStartDate: "2026-08-05",
+      scheduledEndDate: null,
     };
     hookMocks.open = true;
 

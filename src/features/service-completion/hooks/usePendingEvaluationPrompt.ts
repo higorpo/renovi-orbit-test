@@ -217,8 +217,8 @@ export function usePendingEvaluationPrompt() {
         title: activePrompt.title,
         categoryTitle: activePrompt.categoryTitle,
         providerFullName: activePrompt.providerFullName,
-        executedAt: activePrompt.executedAt,
         scheduledStartDate: activePrompt.scheduledStartDate,
+        scheduledEndDate: activePrompt.scheduledEndDate,
       }
     : null;
 
