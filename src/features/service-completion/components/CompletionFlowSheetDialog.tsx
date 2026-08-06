@@ -2,16 +2,11 @@
  * Responsive shell for service-completion flows:
  * mobile bottom sheet · desktop centered dialog.
  *
- * Opens above ServiceDetailSheet (also Radix Dialog). Nested Radix modals share
- * one DismissableLayer context: body gets pointer-events:none and each layer
- * receives inline pointer-events auto|none. When the top layer incorrectly stays
- * at none, clicks fall through to the overlay and inputs look frozen.
- *
- * Fix: keep modal + backdrop, stack at z-[60], force pointer-events:auto via
- * Tailwind `!` (beats inline none) + inline style + a MutationObserver while open.
+ * Opens above ServiceDetailSheet (also a Radix dialog). Stack at z-[60] so the
+ * backdrop/content sit above the host sheet (z-50).
  */
 
-import { useEffect, useLayoutEffect, type CSSProperties, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { X } from "lucide-react";
 import {
   Dialog,
@@ -54,53 +49,6 @@ export type CompletionFlowSheetDialogProps = {
 const closeButtonClassName =
   "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-150 ease-out hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50";
 
-/** Wins over DismissableLayer's inline pointer-events when merged last. */
-const nestedContentStyle: CSSProperties = { pointerEvents: "auto" };
-
-function restoreHostSheetAfterNestedClose() {
-  window.setTimeout(() => {
-    const openDialogs = document.querySelectorAll<HTMLElement>(
-      '[role="dialog"][data-state="open"]',
-    );
-
-    if (openDialogs.length === 0) {
-      document.body.style.pointerEvents = "";
-      return;
-    }
-
-    // Only the host sheet remains — clear leftover inert styles from nesting.
-    if (openDialogs.length === 1) {
-      const host = openDialogs[0];
-      if (host.style.pointerEvents === "none") {
-        host.style.pointerEvents = "";
-      }
-      if (host.getAttribute("aria-hidden") === "true") {
-        host.removeAttribute("aria-hidden");
-        delete host.dataset.ariaHidden;
-      }
-    }
-  }, 0);
-}
-
-function ensureNestedContentPointerEvents(testId: string | undefined) {
-  const nested = testId
-    ? document.querySelector<HTMLElement>(`[data-testid="${testId}"]`)
-    : null;
-  if (!nested) return;
-
-  if (nested.style.pointerEvents !== "auto") {
-    nested.style.pointerEvents = "auto";
-  }
-  if (nested.getAttribute("aria-hidden") === "true") {
-    nested.removeAttribute("aria-hidden");
-    delete nested.dataset.ariaHidden;
-  }
-
-  // Host sheet content must stay inert while nested is open; its overlay can keep
-  // pe:auto at z-50 without blocking z-60. If another open dialog still has pe:none
-  // as the topmost layer, force only our nested shell to auto (already done above).
-}
-
 export function CompletionFlowSheetDialog({
   open,
   onOpenChange,
@@ -120,51 +68,12 @@ export function CompletionFlowSheetDialog({
     onOpenChange(next);
   };
 
-  useEffect(() => {
-    if (open) return;
-    restoreHostSheetAfterNestedClose();
-  }, [open]);
-
-  // Keep PE/aria-hidden healthy for the whole open lifetime — Radix can re-apply
-  // inline pointer-events:none after draft saves / layer updates, and React may
-  // skip rewriting the same style object, leaving the DOM stuck.
-  useLayoutEffect(() => {
-    if (!open) return;
-
-    ensureNestedContentPointerEvents(testId);
-
-    const nested = testId
-      ? document.querySelector<HTMLElement>(`[data-testid="${testId}"]`)
-      : null;
-
-    let observer: MutationObserver | undefined;
-    if (nested) {
-      observer = new MutationObserver(() => {
-        ensureNestedContentPointerEvents(testId);
-      });
-      observer.observe(nested, {
-        attributes: true,
-        attributeFilter: ["style", "aria-hidden", "data-aria-hidden"],
-      });
-    }
-
-    const raf = window.requestAnimationFrame(() => {
-      ensureNestedContentPointerEvents(testId);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(raf);
-      observer?.disconnect();
-    };
-  }, [open, testId]);
-
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <ShellDialogContent
           size={size}
           overlayClassName={nestedOverlayClassName}
-          style={nestedContentStyle}
           className={cn(
             nestedOverlayContentClassName,
             "gap-0 overflow-hidden p-0 sm:max-h-[min(85vh,720px)] sm:p-0",
@@ -218,7 +127,6 @@ export function CompletionFlowSheetDialog({
         side="bottom"
         hideCloseButton
         overlayClassName={nestedOverlayClassName}
-        style={nestedContentStyle}
         className={cn(
           nestedOverlayContentClassName,
           "flex max-h-[92vh] flex-col gap-0 rounded-t-2xl p-0",

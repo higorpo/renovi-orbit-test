@@ -55,10 +55,6 @@ export const mediaLightboxOverlayClassName = "z-[100] bg-black/90";
 /**
  * Completion checklist / evaluate flows open above ServiceDetailSheet (z-50).
  * Keep below media lightbox (z-100).
- *
- * `!pointer-events-auto` beats Radix DismissableLayer's inline `pointer-events:none`
- * when layer registration races (nested modal above ServiceDetailSheet). Without it,
- * clicks fall through the content onto the overlay and inputs feel frozen.
  */
-export const nestedOverlayClassName = "z-[60] !pointer-events-auto";
-export const nestedOverlayContentClassName = "z-[60] !pointer-events-auto";
+export const nestedOverlayClassName = "z-[60]";
+export const nestedOverlayContentClassName = "z-[60]";
