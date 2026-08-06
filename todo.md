@@ -124,6 +124,8 @@ Coisas para fazer next
 
 - Na tela de onboarding de prestador colocar o * de campo obrigatoŕio
 
+- Informação "Previsão de depósito na conta" está incorreta na tela de detalhes do serviço (quando tem parcelamento ou algo do tipo). Ao invés disso, redirecionar para tela de Ganhos com filtro específico apenas para os ganhos relacionados aquele serviço.
+
 
 
 Itens relacionados a conclusão do serviço:
@@ -134,7 +136,6 @@ Itens relacionados a conclusão do serviço:
 
 - Revisar todo  o mecanismo de rating da aplicação, ainda não está funcional em alguns lugares e está mocado.
 
-- Informação "Previsão de depósito na conta" está incorreta (quando tem parcelamento ou algo do tipo). Ao invés disso, redirecionar para tela de Ganhos com filtro específico apenas para os ganhos relacionados aquele serviço.
 
 - Quando o cliente tiver uma avaliação de serviço concluído pendente, ao abrir o app aparecer popup para ele preencher as informações.
 

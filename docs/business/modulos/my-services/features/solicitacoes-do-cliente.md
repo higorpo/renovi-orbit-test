@@ -89,13 +89,15 @@ flowchart TD
 11. **Ajustar pagamento:** `listPhase` in_progress + `contracted.status === PENDING_PAYMENT` + `paymentScheduleState === FAILED_PERMANENT` → CTA primário; prioridade sobre unread.
 12. **Destaque pagamento (cliente):** em `FAILED_PERMANENT`, alerta de falha prevalece sobre unread; nos demais `PENDING_PAYMENT`, unread sobrescreve o destaque de pagamento.
 13. **Destaque pagamento (prestador):** unread sobrescreve pagamento; se não unread e `PENDING_PAYMENT` → destaque “Aguardando pagamento do cliente”.
-14. **Urgência no card:** badge/urgência visual só se `urgency === "high"` (`showUrgency`).
-15. **Proposta expirando (prestador):** `expiredAt` dentro de 3 dias e ainda no futuro → sufixo “Expira em breve” / ênfase attention.
-16. **Banner calendário:** apenas na página do prestador; link para `ROUTE_PROVIDER_CALENDAR` (`/dashboard/services/calendar`).
-17. **Portfólio de CTAs do card:** no máximo 2 ações (primary + secondary); detalhes sempre disponíveis como fallback em vários ramos.
-18. **Categoria no filtro:** valor selecionado é o **título** do serviço enviado como `p_category_title`.
-19. **staleTime da lista:** 60 s; `refetchOnWindowFocus: false`.
-20. **Invalidação pós-pagamento manual / proposta:** invalida `SERVICES_LIST_QUERY_KEY` (e chaves de payment/proposal conforme hook).
+14. **Follow-up de conclusão no card (`in_progress`):** usa só dados de `list_services` / `ServiceModel` (`contracted.status`, `scheduledStartDate` / `scheduledEndDate` via `getScheduledTiming`; end null ou dia inteiro → end = start; `past` = rangeEnd &lt; hoje). **Prestador:** `CONFIRMED` + past → “Marque o serviço como executado” (+ detalhe pedindo evidências); `EXECUTED` → “Aguardando confirmação do cliente”. **Cliente:** `CONFIRMED` + past → “Aguardando conclusão do prestador”; `EXECUTED` → “Aceite a conclusão e avalie o serviço” (ênfase `attention`). Primário nesses ramos: “Ver detalhes” (CTAs reais de marcar executado / avaliar ficam no detalhe via `ProviderMarkExecutedAction` / `ClientEvaluateServiceAction`). Sem prefetch de `get_service_completion_context` na lista.
+15. **Prioridade do highlight `in_progress`:** unread e pagamento pendente **vencem** o banner de follow-up de conclusão; só então agenda (“Agendado para…” / “Serviço hoje”) se não houver follow-up.
+16. **Urgência no card:** badge/urgência visual só se `urgency === "high"` (`showUrgency`).
+17. **Proposta expirando (prestador):** `expiredAt` dentro de 3 dias e ainda no futuro → sufixo “Expira em breve” / ênfase attention.
+18. **Banner calendário:** apenas na página do prestador; link para `ROUTE_PROVIDER_CALENDAR` (`/dashboard/services/calendar`).
+19. **Portfólio de CTAs do card:** no máximo 2 ações (primary + secondary); detalhes sempre disponíveis como fallback em vários ramos.
+20. **Categoria no filtro:** valor selecionado é o **título** do serviço enviado como `p_category_title`.
+21. **staleTime da lista:** 60 s; `refetchOnWindowFocus: false`.
+22. **Invalidação pós-pagamento manual / proposta:** invalida `SERVICES_LIST_QUERY_KEY` (e chaves de payment/proposal conforme hook).
 
 ## 8. Campos e dados (inputs / shape)
 
@@ -140,7 +142,7 @@ Delegadas a `view-services` / migrations:
 | `listPhase` / aba | UI |
 |-------------------|-----|
 | `negotiation` | Cards de negociação; sheet **compare** |
-| `in_progress` | Agenda / pagamento / chat |
+| `in_progress` | Agenda / pagamento / chat / follow-up de conclusão (pós-data-fim ou `EXECUTED`) |
 | `completed` | Concluído; CTA só detalhes |
 | `cancelled` | Cancelado; CTA só detalhes |
 | `dispute` (aba) | Sem itens |
@@ -165,6 +167,7 @@ Transições de domínio (OPEN → contratado → etc.) **não** são feitas nes
 | `chats` | `getChatsPageUrlWithServiceRequestFilter`; `/dashboard/chats/:chatId` |
 | `payments` | `ManualPaymentDialog`, `usePaymentSchedule`, `PAYMENT_SCHEDULE_QUERY_KEY` |
 | `provider-calendar` | Banner + rota calendar |
+| `service-completion` | Só no detalhe: mark-executed / avaliar; o card apenas aponta “Ver detalhes” quando follow-up é devido |
 | Maps | `openGoogleMaps` + `getServiceCoordinates` (prestador, serviço hoje) |
 
 ## 14. Listagens, buscas, filtros, paginação, ordenação
@@ -188,6 +191,7 @@ Transições de domínio (OPEN → contratado → etc.) **não** são feitas nes
 | Cancelar pedido | `OPEN` e sem propostas/unread priorizados | `cancel_service_request` | `isCancelling` |
 | Responder / ver conversa | in_progress | Chat | Sem `chatSummary.id` |
 | Ajustar pagamento | `PENDING_PAYMENT` + `FAILED_PERMANENT` | `ManualPaymentDialog` | Toast se sem contracted id / erro schedule |
+| Ver detalhes (follow-up conclusão) | `EXECUTED` ou (`CONFIRMED` + timing `past`) — sem unread/pagamento prioritário | Detalhe (avaliar / revisar evidências no host `service-completion`) | — |
 | Novo serviço | Header/FAB/empty | `/pedir-orcamento` | — |
 | Limpar foco | Query focus | Remove `serviceRequestId` | — |
 
@@ -199,6 +203,7 @@ Transições de domínio (OPEN → contratado → etc.) **não** são feitas nes
 | Ver proposta | Proposta PENDING/REVISED/hasPending | Dialog detalhes |
 | Revisar proposta | `REVISION_REQUESTED` | Composer com proposta carregada |
 | Abrir no mapa | Serviço **hoje** + coordenadas | Google Maps |
+| Ver detalhes (follow-up conclusão) | `EXECUTED` ou (`CONFIRMED` + timing `past`) — sem unread prioritário | Detalhe (mark-executed / evidências no host `service-completion`) |
 | Ver detalhes | — | Detalhe sheet/página |
 | Ver calendário | Banner | `/dashboard/services/calendar` |
 | Ver trabalhos | Empty state | `/dashboard/jobs` |
@@ -231,7 +236,8 @@ Transições de domínio (OPEN → contratado → etc.) **não** são feitas nes
 - `src/features/my-services/components/client/ClientMyServicesPage.tsx`
 - `src/features/my-services/components/provider/ProviderMyServicesPage.tsx`
 - `src/features/my-services/hooks/useClientMyServicesPage.ts`, `useProviderMyServicesPage.ts`, `useMyServicesPageCore.ts`, `useMyServicesList.ts`, `useClientCardManualPayment.ts`, `useClientMyServicesCancel.ts`, `useProviderServiceProposalDialogs.ts`
-- `src/features/my-services/utils/clientServiceCardPresentation.ts`, `providerServiceCardPresentation.ts`, `pendingPaymentHighlight.ts`, `providerProposalStatus.ts`
+- `src/features/my-services/utils/clientServiceCardPresentation.ts`, `providerServiceCardPresentation.ts`, `clientServiceCardTheme.ts`, `pendingPaymentHighlight.ts`, `providerProposalStatus.ts`
+- Timing de agenda: `getScheduledTiming` / `getScheduleHighlightContent` em `view-services` (`formatScheduledSummary.ts`)
 - `src/features/my-services/constants/routes.ts`, `constants/statusTabs.ts`
 - `src/features/view-services/hooks/useServicesList.ts`, `utils/serviceRequestBudgetAction.ts`
 - `src/features/provider-calendar/components/ProviderCalendarEntryBanner.tsx`
@@ -273,15 +279,33 @@ Transições de domínio (OPEN → contratado → etc.) **não** são feitas nes
 - Destino: `/dashboard/services/calendar` (`ROUTE_PROVIDER_CALENDAR`).
 - Renderizado no header da `ProviderMyServicesPage` abaixo de `ProviderMyServicesHeader`.
 
-## Anexo D — Checklist QA (cenários)
+## Anexo D — Highlight de follow-up de conclusão (`in_progress`)
+
+Dados: `contracted.status` + `getScheduledTiming(scheduledStartDate, scheduledEndDate)` do `ServiceModel` (lista). Sem RPC extra.
+
+| Papel | Condição | Título | Detalhe (resumo) | Ênfase | Primário |
+|-------|----------|--------|------------------|--------|----------|
+| Prestador | `CONFIRMED` + timing `past` | Marque o serviço como executado | Pedido de evidências de conclusão | `attention` | Ver detalhes |
+| Prestador | `EXECUTED` | Aguardando confirmação do cliente | Evidências enviadas; cliente confirma/avalia | `default` | Ver detalhes |
+| Cliente | `CONFIRMED` + timing `past` | Aguardando conclusão do prestador | Aguarda conclusão e evidências do profissional | `default` | Ver detalhes |
+| Cliente | `EXECUTED` | Aceite a conclusão e avalie o serviço | Prestador enviou evidências; confirmar e avaliar | `attention` | Ver detalhes |
+
+Prioridade: unread / pagamento pendente vencem este banner. Caso contrário, se não houver follow-up, mantém highlight de agenda (`getScheduleHighlightContent`: “Agendado para…”, “Serviço hoje”, etc.).
+
+## Anexo E — Checklist QA (cenários)
 
 - [ ] Cliente: lista vazia → CTA pedir orçamento
 - [ ] Cliente: foco válido / inválido / limpar
 - [ ] Cliente: abas + carregar mais + erro de rede
 - [ ] Cliente: compare (negociação) vs history (outras fases)
 - [ ] Cliente: cancelar OPEN; FAILED_PERMANENT → ajustar pagamento
+- [ ] Cliente: `CONFIRMED` + data fim passada → highlight “Aguardando conclusão do prestador”; primário Ver detalhes
+- [ ] Cliente: `EXECUTED` → highlight “Aceite a conclusão e avalie…”; primário Ver detalhes (não avalia na lista)
 - [ ] Prestador: banner calendário → rota calendar (só provider)
 - [ ] Prestador: revisar / ver proposta; mapa só “hoje” com coords
+- [ ] Prestador: `CONFIRMED` + past → “Marque o serviço como executado”; primário Ver detalhes
+- [ ] Prestador: `EXECUTED` → “Aguardando confirmação do cliente”
+- [ ] Unread / PENDING_PAYMENT vencem o banner de follow-up de conclusão
 - [ ] Disputas: lista vazia mesmo com outros itens
 - [ ] Sheet detalhe: lista permanece montada (persistent slot)
 
@@ -292,3 +316,9 @@ Transições de domínio (OPEN → contratado → etc.) **não** são feitas nes
 - Modo sheet por `listPhase` (não status legado `open`).
 - CTAs e prioridades de `PENDING_PAYMENT` / unread revalidados em presentation utils.
 - Empty states e labels de filtro por papel documentados.
+
+## 22. Atualização (2026-08-06) — follow-up de conclusão no card
+
+- Highlight `in_progress` pós-data-fim / `EXECUTED` documentado (Anexo D; regras 14–15).
+- Lista não prefetcha `get_service_completion_context`; CTAs de mutação permanecem no detalhe (`service-completion`).
+- Evidência: `clientServiceCardPresentation.ts`, `providerServiceCardPresentation.ts`, `clientServiceCardTheme.ts` + testes associados.

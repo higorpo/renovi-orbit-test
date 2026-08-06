@@ -56,9 +56,13 @@ import type { ServiceRescheduleSnapshot } from "@/features/service-reschedule";
 export type PaymentScheduleState =
   Database["public"]["Enums"]["payment_schedule_state"];
 
+/** Canonical CS lifecycle status from Postgres enum `contracted_service_status`. */
+export type ContractedServiceStatus =
+  Database["public"]["Enums"]["contracted_service_status"];
+
 export interface ContractedServiceSummary {
   id: string;
-  status: string;
+  status: ContractedServiceStatus;
   agreedSlot: Record<string, unknown> | null;
   durationUnit: string;
   durationValue: number;

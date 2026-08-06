@@ -682,6 +682,95 @@ describe("getProviderServiceCardPresentation additional branches", () => {
     }
   });
 
+  it("prompts mark-executed when the scheduled end date is past", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2025, 5, 8, 12, 0, 0));
+
+    try {
+      const allDayPast = getProviderServiceCardPresentation(
+        baseModel({
+          listPhase: "in_progress",
+          statusTabId: "in_progress",
+          chatSummary: {
+            id: "chat-1",
+            isUnread: false,
+            lastInteractionAt: "2025-06-01T00:00:00Z",
+            lastMessagePreview: null,
+          },
+          contracted: contracted({
+            status: "CONFIRMED",
+            scheduledStartDate: "2025-06-05",
+            scheduledEndDate: null,
+            scheduledShift: "full_day",
+          }),
+        }),
+      );
+
+      expect(allDayPast.highlight).toMatchObject({
+        icon: "completed",
+        title: "Marque o serviço como executado",
+        detail: "Adicione as evidências de conclusão para finalizar o serviço",
+        emphasis: "attention",
+      });
+      expect(allDayPast.primaryAction).toMatchObject({
+        label: "Ver detalhes",
+        intent: "details",
+      });
+      expect(allDayPast.secondaryAction?.intent).toBe("chat");
+
+      const rangedPast = getProviderServiceCardPresentation(
+        baseModel({
+          listPhase: "in_progress",
+          statusTabId: "in_progress",
+          contracted: contracted({
+            status: "CONFIRMED",
+            scheduledStartDate: "2025-06-01",
+            scheduledEndDate: "2025-06-07",
+            scheduledShift: "morning",
+          }),
+        }),
+      );
+      expect(rangedPast.highlight?.title).toBe("Marque o serviço como executado");
+
+      const rangeStillActive = getProviderServiceCardPresentation(
+        baseModel({
+          listPhase: "in_progress",
+          statusTabId: "in_progress",
+          contracted: contracted({
+            status: "CONFIRMED",
+            scheduledStartDate: "2025-06-07",
+            scheduledEndDate: "2025-06-09",
+            scheduledShift: "morning",
+          }),
+        }),
+      );
+      expect(rangeStillActive.highlight?.icon).toBe("today");
+      expect(rangeStillActive.highlight?.title).toMatch(/Serviço hoje/i);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("awaits client confirmation after the provider marks the service executed", () => {
+    const pres = getProviderServiceCardPresentation(
+      baseModel({
+        listPhase: "in_progress",
+        statusTabId: "in_progress",
+        contracted: contracted({
+          status: "EXECUTED",
+          scheduledStartDate: "2025-06-15",
+        }),
+      }),
+    );
+
+    expect(pres.highlight).toMatchObject({
+      icon: "waiting",
+      title: "Aguardando confirmação do cliente",
+      emphasis: "default",
+    });
+    expect(pres.primaryAction.intent).toBe("details");
+  });
+
   it("prioritizes unread chat over pending payment", () => {
     const pres = getProviderServiceCardPresentation(
       baseModel({

@@ -173,6 +173,7 @@ Servidor: tabelas enrichment/evidence/upload sessions+objects/ratings; `platform
 | Storage | Bucket `completion-evidence` — upload autenticado sob sessão (RLS) |
 | MMD | `SERVICE_EXECUTED` / `SERVICE_COMPLETED` / `SERVICE_AUTO_COMPLETED` |
 | view-services | Host: banner enrichment no detalhe/card (`enrichmentStatus`/`enrichmentReady` do modelo); CTAs na `ServiceContractedSection` (Public API; gate leve + contexto só no fluxo); projeção também `executedLate` |
+| my-services | Cards `in_progress`: highlight de follow-up (pós-data-fim `CONFIRMED` / `EXECUTED`) com CTA “Ver detalhes”; mutações só no detalhe — ver [solicitacoes-do-cliente](../../my-services/features/solicitacoes-do-cliente.md) Anexo D |
 | Analytics | `service_completion_dispute_stub_opened` |
 
 ---
@@ -248,3 +249,4 @@ Upstream: pedido (`request-quote` / republish), contrato pago (`payments`/`CNS`)
 - **2026-08-05** — Endurecimento SQL: paths registrados / `EVIDENCE_PATH_NOT_REGISTERED`; sessões → `committed` no freeze; storage INSERT gated; imutabilidade frozen/READY; FK RESTRICT; constraint EXECUTED/COMPLETED↔frozen; contexto full vs marketplace; sem SELECT autenticado em enrichments; `auto_complete_batch_size`; repair ≤7 dias; janitor via `referenced_in_responses`.
 - **2026-08-05 (UX)** — Checklist/avaliação saem do inline do detalhe: CTAs na seção Serviço contratado → sheet (mobile) / dialog (desktop); cliente com stepper 2 etapas; fotos de evidência como thumbnails + lightbox.
 - **2026-08-06** — Lazy load do completion context: detalhe/banner usam só `enrichmentStatus`/`enrichmentReady` de `get_service` (como o card); CTA prestador gated por `CONFIRMED` + `enrichmentReady` sem prefetch; RPC `get_service_completion_context` ao abrir o wizard; CTA cliente só busca contexto em `EXECUTED`/`COMPLETED`.
+- **2026-08-06 (lista)** — Cards em Meus Serviços: highlight de follow-up pós-data-fim / `EXECUTED` (sem prefetch de contexto na lista); CTAs reais permanecem no detalhe.

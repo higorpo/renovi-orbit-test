@@ -99,6 +99,15 @@ function highlightForPhase(
   }
 
   if (phase === "in_progress") {
+    if (emphasis === "attention") {
+      return {
+        box: "border border-primary/30 bg-primary/8 dark:border-primary/35 dark:bg-primary/12",
+        title: "text-foreground",
+        detail: "text-foreground/70",
+        iconBox: "bg-primary/15 text-primary dark:bg-primary/20",
+        icon: "text-primary",
+      };
+    }
     return {
       box: "border border-primary/20 bg-primary/5 dark:border-primary/25 dark:bg-primary/10",
       title: "text-foreground",

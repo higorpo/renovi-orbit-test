@@ -98,6 +98,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 | **request-quote** / republish | Enfileiram enrichment `PENDING` (não bootstrap matching) |
 | **matching-dispatch** | Bootstrap só após READY |
 | **view-services** | Consome Public API: banner; **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceContractedSection` |
+| **my-services** | Cards da lista: highlight de follow-up pós-data-fim / `EXECUTED` aponta para o detalhe (sem wizards nem prefetch de contexto) |
 | **dynamic-form** | Blocos `completion_criterion` / `static_text` no checklist (fotos via galeria do service-completion) |
 | **message-dispatcher** | Intents `SERVICE_EXECUTED`, `SERVICE_COMPLETED`, `SERVICE_AUTO_COMPLETED` |
 | **payments** | Domínio financeiro; **não** escreve EXECUTED/COMPLETED de produto |

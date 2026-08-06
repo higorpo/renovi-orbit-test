@@ -5,6 +5,7 @@ import type {
 } from "@/features/negotiation-proposals";
 import type {
   AddressSummary,
+  ContractedServiceStatus,
   ContractedServiceSummary,
   CounterpartySummary,
   PlatformServiceSummary,
@@ -175,7 +176,7 @@ function mapContracted(contracted: RpcContractedService | null | undefined): Con
   if (!contracted?.id || !contracted.status) return null;
   return {
     id: contracted.id,
-    status: contracted.status,
+    status: contracted.status as ContractedServiceStatus,
     agreedSlot: isRecord(contracted.agreed_slot) ? contracted.agreed_slot : null,
     durationUnit: contracted.duration_unit ?? "",
     durationValue: contracted.duration_value ?? 0,

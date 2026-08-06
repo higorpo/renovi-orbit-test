@@ -5,6 +5,7 @@ import {
   getServiceRequestBudgetActionState,
   getStatusBadgeVariant,
   getStatusLabel,
+  type ContractedServiceStatus,
   type ServiceModel,
   type StatusBadgeVariant,
 } from "@/features/view-services";
@@ -43,6 +44,7 @@ export type ClientCardInfoIcon =
   | "amount"
   | "date"
   | "provider"
+  | "info"
   | "tag"
   | "chat";
 
@@ -251,6 +253,33 @@ function buildNegotiationPresentation(
   };
 }
 
+function buildCompletionFollowUpHighlight(
+  status: ContractedServiceStatus | undefined,
+  timing: ReturnType<typeof getScheduledTiming>,
+): ClientCardHighlight | null {
+  // Provider already submitted evidence — client must accept + rate.
+  if (status === "EXECUTED") {
+    return {
+      icon: "completed",
+      title: "Aceite a conclusão e avalie o serviço",
+      detail: "O prestador enviou as evidências — confirme a conclusão e deixe sua avaliação",
+      emphasis: "attention",
+    };
+  }
+
+  // Past scheduled end (end defaults to start for all-day) → wait for provider completion.
+  if (status === "CONFIRMED" && timing === "past") {
+    return {
+      icon: "waiting",
+      title: "Aguardando conclusão do prestador",
+      detail: "Estamos aguardando a conclusão do serviço e as evidências do profissional",
+      emphasis: "default",
+    };
+  }
+
+  return null;
+}
+
 function buildInProgressPresentation(
   model: ServiceModel,
 ): Pick<ClientServiceCardPresentation, "highlight" | "secondaryInfo" | "isTodayService" | "showProviderHeader"> {
@@ -264,6 +293,7 @@ function buildInProgressPresentation(
   const paymentPending = contracted?.status === "PENDING_PAYMENT";
   const unreadCount = model.unreadChatCount;
   const isTodayService = timing === "today";
+  const completionHighlight = buildCompletionFollowUpHighlight(contracted?.status, timing);
 
   pushSecondaryInfo(secondaryInfo, {
     icon: "location",
@@ -295,14 +325,23 @@ function buildInProgressPresentation(
 
   if (unreadCount > 0) {
     pushSecondaryInfo(secondaryInfo, {
-      icon: "date",
-      text: scheduleHighlight?.title,
+      icon: completionHighlight?.title ? "info" : "date",
+      text: completionHighlight?.title ?? scheduleHighlight?.title,
     });
 
     return {
       showProviderHeader: true,
       isTodayService,
       highlight: buildUnreadHighlight(model),
+      secondaryInfo,
+    };
+  }
+
+  if (completionHighlight) {
+    return {
+      showProviderHeader: true,
+      isTodayService,
+      highlight: completionHighlight,
       secondaryInfo,
     };
   }
@@ -464,6 +503,24 @@ function buildInProgressActions(
     return {
       primaryAction: chatAction(model, "Responder"),
       secondaryAction: { label: "Ver detalhes", intent: "details" },
+    };
+  }
+
+  const timing = model.contracted?.scheduledStartDate
+    ? getScheduledTiming(
+        model.contracted.scheduledStartDate,
+        model.contracted.scheduledEndDate,
+      )
+    : "future";
+  const status = model.contracted?.status;
+  const needsCompletionFollowUp =
+    status === "EXECUTED" || (status === "CONFIRMED" && timing === "past");
+
+  // Detail hosts evaluate / evidence review CTAs when completion follow-up is due.
+  if (needsCompletionFollowUp) {
+    return {
+      primaryAction: { label: "Ver detalhes", intent: "details" },
+      secondaryAction: chatAction(model),
     };
   }
 

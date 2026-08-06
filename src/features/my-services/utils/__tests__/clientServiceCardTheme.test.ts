@@ -14,6 +14,11 @@ describe("getClientCardTheme", () => {
     expect(theme.phaseBadge).toContain("amber");
   });
 
+  it("uses stronger primary attention styling for in-progress follow-ups", () => {
+    const theme = getClientCardTheme("in_progress", "attention");
+    expect(theme.highlight.box).toContain("primary/30");
+  });
+
   it("uses muted negotiation highlight for default emphasis", () => {
     const theme = getClientCardTheme("negotiation", "default");
     expect(theme.highlight.box).toContain("muted");

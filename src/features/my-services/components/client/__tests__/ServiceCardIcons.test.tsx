@@ -35,6 +35,11 @@ describe("service card icons", () => {
       <ClientCardInfoIcon icon="location" className="info" />,
     );
     expect(info.querySelector("svg")).toBeTruthy();
+
+    const { container: infoHint } = render(
+      <ClientCardInfoIcon icon="info" className="info" />,
+    );
+    expect(infoHint.querySelector("svg")).toBeTruthy();
   });
 
   it("maps client budget action icons by negotiation phase", () => {
@@ -58,5 +63,10 @@ describe("service card icons", () => {
     const svg = rating.querySelector("svg");
     expect(svg).toBeTruthy();
     expect(svg?.className.toString()).toContain("fill-amber-400");
+
+    const { container: infoHint } = render(
+      <ProviderCardInfoIcon icon="info" className="info" />,
+    );
+    expect(infoHint.querySelector("svg")).toBeTruthy();
   });
 });

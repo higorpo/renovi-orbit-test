@@ -6,6 +6,7 @@ import {
   CreditCard,
   FileText,
   Flame,
+  Info,
   Mail,
   MapPin,
   MessageSquare,
@@ -37,6 +38,7 @@ const INFO_ICONS: Record<ClientCardInfoIcon, LucideIcon> = {
   amount: Tag,
   date: CalendarDays,
   provider: UserRound,
+  info: Info,
   tag: Tag,
   chat: MessageSquare,
 };

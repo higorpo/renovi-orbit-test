@@ -616,6 +616,80 @@ describe("getClientServiceCardPresentation additional branches", () => {
     }
   });
 
+  it("waits for provider completion when the scheduled end date is past", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2025, 5, 8, 12, 0, 0));
+
+    try {
+      const allDayPast = getClientServiceCardPresentation(
+        baseModel({
+          listPhase: "in_progress",
+          statusTabId: "in_progress",
+          chatSummary: {
+            id: "chat-1",
+            isUnread: false,
+            lastInteractionAt: "2025-06-01T00:00:00Z",
+            lastMessagePreview: null,
+            providerDisplayName: "Maria",
+          },
+          contracted: contracted({
+            status: "CONFIRMED",
+            scheduledStartDate: "2025-06-05",
+            scheduledEndDate: null,
+            scheduledShift: "full_day",
+          }),
+        }),
+      );
+
+      expect(allDayPast.highlight).toMatchObject({
+        icon: "waiting",
+        title: "Aguardando conclusão do prestador",
+        detail:
+          "Estamos aguardando a conclusão do serviço e as evidências do profissional",
+        emphasis: "default",
+      });
+      expect(allDayPast.primaryAction).toMatchObject({
+        label: "Ver detalhes",
+        intent: "details",
+      });
+
+      const rangedStillActive = getClientServiceCardPresentation(
+        baseModel({
+          listPhase: "in_progress",
+          statusTabId: "in_progress",
+          contracted: contracted({
+            status: "CONFIRMED",
+            scheduledStartDate: "2025-06-07",
+            scheduledEndDate: "2025-06-09",
+          }),
+        }),
+      );
+      expect(rangedStillActive.highlight?.icon).toBe("today");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("asks the client to accept and rate after the provider marks executed", () => {
+    const pres = getClientServiceCardPresentation(
+      baseModel({
+        listPhase: "in_progress",
+        statusTabId: "in_progress",
+        contracted: contracted({
+          status: "EXECUTED",
+          scheduledStartDate: "2025-06-15",
+        }),
+      }),
+    );
+
+    expect(pres.highlight).toMatchObject({
+      icon: "completed",
+      title: "Aceite a conclusão e avalie o serviço",
+      emphasis: "attention",
+    });
+    expect(pres.primaryAction.intent).toBe("details");
+  });
+
   it("uses future timing without a contract or scheduled date", () => {
     const withoutContract = getClientServiceCardPresentation(
       baseModel({ listPhase: "in_progress", statusTabId: "in_progress", contracted: null }),

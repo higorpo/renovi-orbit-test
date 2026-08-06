@@ -6,6 +6,7 @@ import {
   getStatusBadgeVariant,
   getStatusLabel,
   getServiceCoordinates,
+  type ContractedServiceStatus,
   type ServiceModel,
   type StatusBadgeVariant,
 } from "@/features/view-services";
@@ -43,6 +44,7 @@ export type ProviderCardInfoIcon =
   | "location"
   | "amount"
   | "date"
+  | "info"
   | "rating"
   | "quote"
   | "tag";
@@ -244,6 +246,33 @@ function buildNegotiationPresentation(
   };
 }
 
+function buildCompletionFollowUpHighlight(
+  status: ContractedServiceStatus | undefined,
+  timing: ReturnType<typeof getScheduledTiming>,
+): ProviderCardHighlight | null {
+  // After mark-executed, wait for client confirmation/rating (schedule no longer relevant).
+  if (status === "EXECUTED") {
+    return {
+      icon: "waiting",
+      title: "Aguardando confirmação do cliente",
+      detail: "Aguardando a confirmação e avaliação do cliente",
+      emphasis: "default",
+    };
+  }
+
+  // Past scheduled end (end defaults to start for all-day) → prompt mark-executed + evidence.
+  if (status === "CONFIRMED" && timing === "past") {
+    return {
+      icon: "completed",
+      title: "Marque o serviço como executado",
+      detail: "Adicione as evidências de conclusão para finalizar o serviço",
+      emphasis: "attention",
+    };
+  }
+
+  return null;
+}
+
 function buildInProgressPresentation(
   model: ServiceModel,
 ): Pick<ProviderServiceCardPresentation, "highlight" | "secondaryInfo" | "isTodayService"> {
@@ -259,6 +288,7 @@ function buildInProgressPresentation(
   const isUnread = model.chatSummary?.isUnread ?? false;
   const lastPreview = model.chatSummary?.lastMessagePreview;
   const isTodayService = timing === "today";
+  const completionHighlight = buildCompletionFollowUpHighlight(contracted?.status, timing);
 
   pushSecondaryInfo(secondaryInfo, {
     icon: "location",
@@ -268,8 +298,8 @@ function buildInProgressPresentation(
 
   if (isUnread) {
     pushSecondaryInfo(secondaryInfo, {
-      icon: "date",
-      text: scheduleHighlight?.title,
+      icon: completionHighlight?.title ? "info" : "date",
+      text: completionHighlight?.title ?? scheduleHighlight?.title,
     });
 
     return {
@@ -289,6 +319,14 @@ function buildInProgressPresentation(
         detail: pendingPayment.detail,
         emphasis: "attention",
       },
+      secondaryInfo,
+    };
+  }
+
+  if (completionHighlight) {
+    return {
+      isTodayService,
+      highlight: completionHighlight,
       secondaryInfo,
     };
   }
@@ -422,6 +460,18 @@ function buildInProgressActions(
         model.contracted.scheduledEndDate,
       )
     : "future";
+  const status = model.contracted?.status;
+  const needsCompletionFollowUp =
+    status === "EXECUTED" || (status === "CONFIRMED" && timing === "past");
+
+  // Detail hosts mark-executed / evidence CTAs — prefer it over chat when follow-up is due.
+  if (needsCompletionFollowUp) {
+    return {
+      primaryAction: { label: "Ver detalhes", intent: "details" },
+      secondaryAction: chatAction(model),
+    };
+  }
+
   const isTodayService = timing === "today";
   const hasCoordinates = getServiceCoordinates(model.address) !== null;
 

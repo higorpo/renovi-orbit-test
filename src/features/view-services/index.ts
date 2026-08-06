@@ -34,6 +34,8 @@ export type {
   PaginatedServicesResult,
   AddressSummary,
   PlatformServiceSummary,
+  ContractedServiceStatus,
+  ContractedServiceSummary,
 } from "./types/service.types";
 
 export {

@@ -220,6 +220,8 @@ Calculada em `derive_service_list_phase`:
 
 Fotos de evidência: thumbnails com lightbox fullscreen (padrão galeria do pedido). Checklist/evidências via RPC `get_service_completion_context` **dentro** do sheet/wizard (não no load do detalhe). Paths de evidência precisam estar registrados antes do mark-executed.
 
+Na **lista** Meus Serviços (`my-services`), cards `in_progress` podem mostrar highlight de follow-up (pós-data-fim com `CONFIRMED`, ou `EXECUTED`) e CTA “Ver detalhes” — sem prefetch de contexto nem CTAs de mutação na listagem. Ver [solicitacoes-do-cliente](../../my-services/features/solicitacoes-do-cliente.md) Anexo D.
+
 Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md).
 
 ---
