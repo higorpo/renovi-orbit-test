@@ -19,12 +19,17 @@ describe("PendingEvaluationIntroStep", () => {
           providerFullName: "Ana Silva",
           scheduledStartDate: "2026-08-05",
           scheduledEndDate: null,
+          iconKey: "Paintbrush",
+          colorKey: "amber_orange",
         }}
         onContinue={onContinue}
       />,
     );
 
     expect(screen.getByTestId("pending-evaluation-intro")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("pending-evaluation-intro-service-icon"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Pintura sala")).toBeInTheDocument();
     expect(screen.getByText("Ana Silva")).toBeInTheDocument();
     expect(screen.getByText(/Conclusão:/)).toBeInTheDocument();
@@ -51,6 +56,8 @@ describe("PendingEvaluationIntroStep", () => {
           providerFullName: null,
           scheduledStartDate: "2026-08-05",
           scheduledEndDate: "2026-08-07",
+          iconKey: null,
+          colorKey: null,
         }}
         onContinue={vi.fn()}
       />,

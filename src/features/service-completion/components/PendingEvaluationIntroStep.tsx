@@ -4,11 +4,12 @@
  */
 
 import { Button } from "@/components/ui/button";
+import { getServiceCardStyle } from "@/features/request-quote";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { cn } from "@/lib/utils";
 import { formatCalendarDate } from "@/lib/utils/calendarDate";
 import { formatDatePtBr } from "@/lib/utils/formatDate";
-import { ChevronRight, Star } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { PendingEvaluationPromptSummary } from "../api/pendingEvaluationPrompt.api";
 
 export type PendingEvaluationIntroStepProps = {
@@ -40,6 +41,11 @@ export function PendingEvaluationIntroStep({
     summary.scheduledEndDate,
     summary.scheduledStartDate,
   );
+  const serviceStyle = getServiceCardStyle({
+    icon_key: summary.iconKey,
+    color_key: summary.colorKey,
+  });
+  const ServiceIcon = serviceStyle.Icon;
 
   const body = (
     <div
@@ -47,8 +53,15 @@ export function PendingEvaluationIntroStep({
       data-testid="pending-evaluation-intro"
     >
       <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 px-3 py-3">
-        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Star className="h-4 w-4" aria-hidden />
+        <div
+          className={cn(
+            "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-sm",
+            serviceStyle.color,
+          )}
+          aria-hidden
+          data-testid="pending-evaluation-intro-service-icon"
+        >
+          <ServiceIcon className="h-4 w-4" />
         </div>
         <div className="min-w-0 space-y-1">
           <p className="text-sm font-semibold leading-snug text-foreground">

@@ -5,7 +5,7 @@ begin;
 
 \ir fixtures/seed_rls_actors.inc
 
-select plan(14);
+select plan(16);
 
 select set_config('rls.client_id', gen_random_uuid()::text, true);
 select set_config('rls.other_client_id', gen_random_uuid()::text, true);
@@ -110,6 +110,8 @@ declare
   v_grace int;
   v_category text;
   v_provider_name text;
+  v_icon_key text;
+  v_color_key text;
   v_scheduled date;
 begin
   v_grace := public.platform_constant_int('auto_complete_grace_hours', 24);
@@ -120,7 +122,8 @@ begin
     'shift', 'morning'
   );
 
-  select ps.title into v_category
+  select ps.title, ps.icon_key, ps.color_key
+  into v_category, v_icon_key, v_color_key
   from public.service_requests sr
   join public.platform_services ps on ps.id = sr.service_id
   where sr.id = (select sr_newer from _fx);
@@ -131,6 +134,8 @@ begin
 
   perform set_config('rls.expected_category', coalesce(v_category, ''), true);
   perform set_config('rls.expected_provider_name', coalesce(v_provider_name, ''), true);
+  perform set_config('rls.expected_icon_key', coalesce(v_icon_key, ''), true);
+  perform set_config('rls.expected_color_key', coalesce(v_color_key, ''), true);
 
   perform pg_temp.rls_set_jwt(current_setting('rls.provider_id')::uuid);
   select * into v_pricing from public.calculate_provider_service_pricing(100.00::numeric);
@@ -263,6 +268,20 @@ select is(
   (_prompt.payload->>'scheduled_end_date')::date,
   (select scheduled_start from _fx),
   'payload scheduled_end_date matches contracted_services'
+)
+from _prompt;
+
+select is(
+  _prompt.payload->>'icon_key',
+  nullif(current_setting('rls.expected_icon_key'), ''),
+  'payload icon_key comes from platform_services'
+)
+from _prompt;
+
+select is(
+  _prompt.payload->>'color_key',
+  nullif(current_setting('rls.expected_color_key'), ''),
+  'payload color_key comes from platform_services'
 )
 from _prompt;
 

@@ -30,6 +30,8 @@ describe("getClientPendingEvaluationPrompt", () => {
         provider_full_name: "Ana Silva",
         scheduled_start_date: "2026-08-05",
         scheduled_end_date: "2026-08-06",
+        icon_key: "Wind",
+        color_key: "sky_indigo",
       },
       error: null,
     });
@@ -47,6 +49,8 @@ describe("getClientPendingEvaluationPrompt", () => {
         providerFullName: "Ana Silva",
         scheduledStartDate: "2026-08-05",
         scheduledEndDate: "2026-08-06",
+        iconKey: "Wind",
+        colorKey: "sky_indigo",
       },
       error: null,
     });

@@ -66,6 +66,8 @@ describe("ClientEvaluateServiceSheet prompt variant", () => {
           providerFullName: "Ana Silva",
           scheduledStartDate: "2026-08-05",
           scheduledEndDate: null,
+          iconKey: "Paintbrush",
+          colorKey: "amber_orange",
         }}
       />,
     );

@@ -219,6 +219,8 @@ export function usePendingEvaluationPrompt() {
         providerFullName: activePrompt.providerFullName,
         scheduledStartDate: activePrompt.scheduledStartDate,
         scheduledEndDate: activePrompt.scheduledEndDate,
+        iconKey: activePrompt.iconKey,
+        colorKey: activePrompt.colorKey,
       }
     : null;
 

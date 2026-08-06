@@ -133,7 +133,7 @@ Itens relacionados a conclusão do serviço:
 - Há muita coisa em comum entre a nova parte de gerar checklist com IA e a parte antiga que gerava algumas coisas com IA também, vamos tentar compartilhar mais recursos
 
 
-
+- Na tela do checklist do prestador, quando ele concluir o checklist falar que agora o cliente precisa confirmar etc..
 
 
 - Mover colunas checklist_schema, source, materialized_at, schema_version para dentro do service_requests. 

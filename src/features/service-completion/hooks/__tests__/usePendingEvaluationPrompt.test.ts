@@ -54,6 +54,8 @@ const samplePrompt = {
   providerFullName: "Ana Silva",
   scheduledStartDate: "2026-08-05",
   scheduledEndDate: "2026-08-06",
+  iconKey: "Wind",
+  colorKey: "sky_indigo",
 };
 
 function wrapper({ children }: { children: ReactNode }) {
