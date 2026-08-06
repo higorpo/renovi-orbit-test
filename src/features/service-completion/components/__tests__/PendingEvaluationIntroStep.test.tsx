@@ -32,5 +32,10 @@ describe("PendingEvaluationIntroStep", () => {
       screen.getByTestId("pending-evaluation-intro-continue"),
     );
     expect(onContinue).toHaveBeenCalled();
+
+    const continueButton = screen.getByTestId(
+      "pending-evaluation-intro-continue",
+    );
+    expect(continueButton.parentElement).toHaveClass("shrink-0");
   });
 });

@@ -96,26 +96,26 @@ export function PendingEvaluationIntroStep({
     </Button>
   );
 
-  if (isDesktop) {
-    return (
+  // Flex column so the CTA stays pinned to the dialog/sheet bottom
+  // (CompletionFlowSheetDialog body uses a min-height on desktop).
+  return (
+    <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
       <div
         className={cn(
-          "min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-y-contain px-5 py-4",
-          className,
+          "min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain py-4",
+          isDesktop ? "px-5" : "px-4 touch-pan-y",
         )}
       >
         {body}
-        <div className="flex justify-end border-t border-border/80 pt-4">{footer}</div>
       </div>
-    );
-  }
-
-  return (
-    <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain px-4 py-4 touch-pan-y">
-        {body}
-      </div>
-      <div className="shrink-0 border-t border-border/80 bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md">
+      <div
+        className={cn(
+          "shrink-0 border-t border-border/80 bg-background/95 py-3 backdrop-blur-md",
+          isDesktop
+            ? "flex justify-end px-5"
+            : "px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)]",
+        )}
+      >
         {footer}
       </div>
     </div>
