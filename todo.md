@@ -147,6 +147,10 @@ Itens relacionados a conclusão do serviço:
 
 -  As 24hrs que o cliente tem para marcar serviço como concluído deve contar a partir da data em que o prestador marca o serviço como concluído.
 
+- Se prestador não marcar o serviço como concluído até 24hrs depois da data de fim do serviço, então nós marcamos o serviço concluído automaticamente e sem o checklist, e aí quando o cliente for concluir o serviço nós falamos que o serviço foi concluído automaticamente sem o checklist porque o prestador não marcou como concluído no sistema.  
+
+- Testar cenário de auto conclusão do serviço porque o cliente não concluiu o serviço dentro das 24hrs fornecidas.
+
 ---
 
 
