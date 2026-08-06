@@ -81,6 +81,53 @@ $$;
 comment on function public.service_completion_evidence_storage_path_owned(text) is
   'True when storage path is under {cs_id}/{session_id}/… owned by auth.uid() as contracted provider (design §11.4).';
 
+-- Client may createSignedUrl for evidence under their CS once the package is frozen
+-- (design §11.1: read frozen responses = client + provider). Draft paths stay provider-only.
+create or replace function public.service_completion_evidence_storage_path_client_readable(
+  p_storage_path text
+)
+returns boolean
+language plpgsql
+stable
+security definer
+set search_path = public, storage
+as $$
+declare
+  v_path text := trim(coalesce(p_storage_path, ''));
+  v_parts text[];
+  v_cs_id uuid;
+begin
+  if v_path = '' or v_path ~ '^https?://' or position(chr(10) in v_path) > 0 then
+    return false;
+  end if;
+
+  v_parts := storage.foldername(v_path);
+  if coalesce(array_length(v_parts, 1), 0) < 1 then
+    return false;
+  end if;
+
+  begin
+    v_cs_id := v_parts[1]::uuid;
+  exception
+    when invalid_text_representation then
+      return false;
+  end;
+
+  return exists (
+    select 1
+    from public.contracted_services cs
+    join public.contracted_service_completion_evidence ev
+      on ev.contracted_service_id = cs.id
+    where cs.id = v_cs_id
+      and cs.client_id = (select auth.uid())
+      and ev.phase = 'frozen'::public.completion_evidence_phase
+  );
+end;
+$$;
+
+comment on function public.service_completion_evidence_storage_path_client_readable(text) is
+  'True when auth.uid() is the CS client and evidence is frozen — allows signed display URLs (design §11.1).';
+
 create or replace function public.service_completion_evidence_storage_upload_allowed(
   p_storage_path text
 )
@@ -139,15 +186,17 @@ comment on function public.service_completion_evidence_storage_upload_allowed(te
   'True when auth.uid() may INSERT into completion-evidence under an open, non-expired owned session on a CONFIRMED CS with object count under session max_files.';
 
 revoke all on function public.service_completion_evidence_storage_path_owned(text) from public;
+revoke all on function public.service_completion_evidence_storage_path_client_readable(text) from public;
 revoke all on function public.service_completion_evidence_storage_upload_allowed(text) from public;
 grant execute on function public.service_completion_evidence_storage_path_owned(text) to authenticated, service_role;
+grant execute on function public.service_completion_evidence_storage_path_client_readable(text) to authenticated, service_role;
 grant execute on function public.service_completion_evidence_storage_upload_allowed(text) to authenticated, service_role;
 
 drop policy if exists storage_objects_completion_evidence_select on storage.objects;
 drop policy if exists storage_objects_completion_evidence_insert on storage.objects;
 drop policy if exists storage_objects_completion_evidence_service_role on storage.objects;
 
--- Provider (and later client via signed URL / RPC) SELECT own-prefix objects
+-- Provider SELECT own-prefix; client SELECT under own CS once evidence is frozen (signed URLs)
 create policy storage_objects_completion_evidence_select
   on storage.objects
   for select
@@ -156,6 +205,7 @@ create policy storage_objects_completion_evidence_select
     bucket_id = 'completion-evidence'
     and (
       public.service_completion_evidence_storage_path_owned(name)
+      or public.service_completion_evidence_storage_path_client_readable(name)
       or (select public.is_platform_admin())
     )
   );

@@ -22,11 +22,11 @@ Normative: [design §11.4](./design.md) · migration `20260804100000_service_com
 
 | Policy | Role | Effect |
 |--------|------|--------|
-| `storage_objects_completion_evidence_select` | `authenticated` | SELECT when path owned by contracted provider (or platform admin) |
+| `storage_objects_completion_evidence_select` | `authenticated` | SELECT when path owned by contracted provider, **or** CS client with frozen evidence, or platform admin |
 | `storage_objects_completion_evidence_insert` | `authenticated` | INSERT under **open** owned session prefix (provider only) |
 | `storage_objects_completion_evidence_service_role` | `service_role` | ALL — SQL orphan janitor deletes |
 
-Helpers: `service_completion_evidence_storage_path_owned`, `service_completion_evidence_storage_upload_allowed`.
+Helpers: `service_completion_evidence_storage_path_owned`, `service_completion_evidence_storage_path_client_readable`, `service_completion_evidence_storage_upload_allowed`.
 
 ---
 
@@ -78,7 +78,7 @@ Smoke (staging):
 1. Provider on `CONFIRMED` CS opens draft checklist.
 2. App creates upload session + `storage.upload` into bucket `completion-evidence` under session prefix.
 3. Upload succeeds; path matches `{cs}/{session}/{uuid}`.
-4. Client cannot list arbitrary keys; provider SELECT works for own prefix.
+4. Client cannot list arbitrary keys; provider SELECT works for own prefix; **client SELECT (signed URLs) works for paths under their CS once evidence is frozen**.
 5. Mark executed freezes paths; subsequent orphan janitor skips those objects.
 
 ---

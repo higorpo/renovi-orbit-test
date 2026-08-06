@@ -186,7 +186,8 @@ Fonte: [payments](./modulos/payments/README.md), [checkout-e-cobranca](./modulos
 | SELECT direto `service_request_enrichments` | **Não** (REVOKE authenticated) | **Não** | **Não** | `service_role` / workers |
 | Ver banner enrichment “em processamento” | Sim (`PENDING`/`RUNNING` via `get_service`/`list_services`) | Sim (mesmos campos leves no detalhe/card) | Status limitado se tiver acesso ao SR | Worker enrichment → READY |
 | Draft checklist + marcar `EXECUTED` | — | Sim (`CONFIRMED` + enrichment ready; CTA → sheet/dialog; contexto RPC ao abrir; paths registrados) | — | — |
-| Upload evidência (RPC create session → storage.upload autenticado → register) | — | Sim (sessão open, CS CONFIRMED, &lt; max_files, bucket `completion-evidence`; thumbnails+lightbox na UI; sem Edge de URL assinada) | — | Janitor SQL órfãos (`service_completion_janitor_orphan_uploads` / cron; sem Edge) |
+| Upload evidência (RPC create session → storage.upload autenticado → register) | — | Sim (sessão open, CS CONFIRMED, &lt; max_files, bucket `completion-evidence`; thumbnails+lightbox na UI; sem Edge de URL assinada de upload) | — | Janitor SQL órfãos (`service_completion_janitor_orphan_uploads` / cron; sem Edge) |
+| Storage SELECT / `createSignedUrl` em `completion-evidence` | Sim — paths do CS **somente** se evidência `frozen` (`service_completion_evidence_storage_path_client_readable`; galeria em “Avaliar serviço”) | Sim — prefixo próprio (draft + frozen via `*_path_owned`) | — | Admin de plataforma |
 | Confirmar + rating (scores obrigatórios) | Sim (`EXECUTED`/`COMPLETED` na UI; CTA “Avaliar serviço” → sheet 2 etapas; contexto só se elegível) | — | — | — |
 | Auto-complete ~24h após `EXECUTED` | — | — | — | Cron (`completed_by=system`; batch `auto_complete_batch_size`) |
 | Stub disputa (URL ou “Em breve”) | Sim | — | — | — |
@@ -220,6 +221,7 @@ RLS/admin em tabelas de pagamento e catálogo **não** implica painel operaciona
 | `service_requests` | CRUD sobre próprios pedidos onde aplicável | Leitura / fluxos de job conforme RPC e RLS | Muitas políticas incluem admin |
 | `provider_proposals` / CNS | Ver/responder no fluxo de orçamento | Criar/atualizar próprias propostas; mutações CNS de participante | Sem mutação de produto autenticada documentada no app |
 | `service_request_enrichments` | **Não** SELECT autenticado — RPC `get_service_completion_context` | Idem (detalhe completo só se prestador do CS) | Contexto completo via RPC; workers `service_role` |
+| Storage `completion-evidence` | SELECT/`createSignedUrl` se evidência do CS `frozen` | INSERT sob sessão + SELECT no próprio prefixo | SELECT (admin); janitor `service_role` |
 | Helpers `platform_constant_*` | **Não** — EXECUTE revogado para `authenticated` / `anon` / `public` | Idem | `service_role` (e funções `SECURITY DEFINER` internas) |
 | Catálogo (`platform_services`, `platform_forms`, cidades…) | Leitura conforme política | Leitura conforme política | Gestão onde política exige `admin` |
 

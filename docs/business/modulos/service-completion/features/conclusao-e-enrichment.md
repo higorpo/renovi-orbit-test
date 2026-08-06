@@ -35,7 +35,7 @@ Pedido `OPEN` enfileira **enrichment** (`PENDING`). Enquanto `PENDING`/`RUNNING`
 
 | Quem | Pode | Não pode |
 |------|------|----------|
-| **Cliente** (dono do SR) | Contexto completo via RPC; processing; revisar evidência frozen; confirm+rating; stub disputa | Marcar EXECUTED; SELECT direto em `service_request_enrichments` |
+| **Cliente** (dono do SR) | Contexto completo via RPC; processing; revisar evidência frozen; **SELECT storage / `createSignedUrl`** em paths do CS quando evidência está `frozen` (thumbnails/lightbox em “Avaliar serviço”); confirm+rating; stub disputa | Marcar EXECUTED; SELECT direto em `service_request_enrichments`; SELECT storage de evidência ainda em `draft` |
 | **Prestador contratado** | Contexto completo; draft + mark EXECUTED em `CONFIRMED`; upload sob sessão própria | Confirmar COMPLETED manual; SELECT direto em enrichments |
 | **Prestador só-marketplace** (visibilidade no feed, sem contrato) | Payload **limitado** no contexto (status/`ready`; sem checklist nem `client_id`/`provider_id`) | Checklist, evidências, mutações de conclusão |
 | **Admin** (plataforma) | Contexto completo (mesmo sem ser participante) | Mutações de produto via UI do app (sem painel) |
@@ -93,10 +93,11 @@ flowchart TD
 8. Writers removidos do produto: `payment_mark_service_executed`, `payment_confirm_service_completed`, `payment_cron_auto_complete_*`.
 9. Stub disputa: env `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL` ou remote `orbit.dispute_support_url`; sem FSM.
 10. Imutabilidade DB: trigger bloqueia alteração de schema/source/`materialized_at` (e saída de status) após enrichment `READY`; evidência `frozen` tem colunas críticas imutáveis; CS em `EXECUTED`/`COMPLETED` exige linha de evidência `frozen` (constraint trigger deferred); FK evidência→CS **ON DELETE RESTRICT**.
-11. Upload (padrão KYC, sem Edge de URL assinada): RPC `service_completion_create_upload_session` → `supabase.storage.from('completion-evidence').upload()` autenticado sob prefixo da sessão (RLS) → RPC `service_completion_register_upload_object`. Sessão com `storage_bucket = completion-evidence` e `provider_id` = CS; INSERT storage só com sessão `open`, não expirada, CS `CONFIRMED`, abaixo de `max_files`.
-12. Leitura: `authenticated` **não** faz SELECT em `service_request_enrichments`. Status/`ready` leves vêm de `get_service` / `list_services` (banner/card e gate de CTA). Checklist, evidências e capabilities: RPC `get_service_completion_context` (detalhe completo vs limitado — §4), só quando o fluxo de conclusão/avaliação precisa (abrir sheet/wizard ou CTA cliente elegível).
-13. Janitor de órfãos (SQL, padrão KYC): expira sessões open passadas do TTL; remove objetos com `referenced_in_responses = false` via `DELETE FROM storage.objects` + limpeza do registry; checagem defensiva de frozen só no batch locked; cron com `job_runs`; sem Edge / sem finalize RPC.
-14. Repair READY-sem-dispatch: apenas enrichments com `materialized_at >= now() - 7 days`.
+11. Upload (padrão KYC, sem Edge de URL assinada): RPC `service_completion_create_upload_session` → `supabase.storage.from('completion-evidence').upload()` autenticado sob prefixo da sessão (RLS) → RPC `service_completion_register_upload_object`. Sessão com `storage_bucket = completion-evidence` e `provider_id` = CS; INSERT storage só com sessão `open`, não expirada, CS `CONFIRMED`, abaixo de `max_files` (**só prestador**).
+12. Leitura de produto: `authenticated` **não** faz SELECT em `service_request_enrichments`. Status/`ready` leves vêm de `get_service` / `list_services` (banner/card e gate de CTA). Checklist, evidências e capabilities: RPC `get_service_completion_context` (detalhe completo vs limitado — §4), só quando o fluxo de conclusão/avaliação precisa (abrir sheet/wizard ou CTA cliente elegível).
+13. Storage SELECT `completion-evidence` (`storage_objects_completion_evidence_select`): prestador contratado (prefixo próprio, draft + frozen via `service_completion_evidence_storage_path_owned`); **ou** cliente do CS quando a evidência está `frozen` (`service_completion_evidence_storage_path_client_readable` — permite `createSignedUrl` para thumbnails/lightbox em “Avaliar serviço”); **ou** admin de plataforma. INSERT permanece só prestador.
+14. Janitor de órfãos (SQL, padrão KYC): expira sessões open passadas do TTL; remove objetos com `referenced_in_responses = false` via `DELETE FROM storage.objects` + limpeza do registry; checagem defensiva de frozen só no batch locked; cron com `job_runs`; sem Edge / sem finalize RPC.
+15. Repair READY-sem-dispatch: apenas enrichments com `materialized_at >= now() - 7 days`.
 
 ---
 
@@ -109,7 +110,7 @@ flowchart TD
 | Sheet/dialog prestador | Título “Checklist de conclusão”; ao abrir, `ProviderExecutedWizard` busca `get_service_completion_context` e embute draft + upload + submit EXECUTED |
 | CTA cliente | Botão **“Avaliar serviço”** na mesma seção: só monta/busca contexto se contrato `EXECUTED` ou `COMPLETED`; então usa `canConfirmWithRating` / rating opcional do contexto |
 | Sheet/dialog cliente | Stepper **2 etapas** (“1 de 2” / “2 de 2”): (1) revisar evidências/checklist congelado; (2) avaliar prestador/serviço (`ClientConfirmRatingWizard` embutido) |
-| Fotos de evidência | Thumbnails (`CompletionEvidenceGallery`); clique abre lightbox fullscreen (padrão `ServicePhotoGallery`); prestador ao preencher e cliente ao revisar |
+| Fotos de evidência | Thumbnails (`CompletionEvidenceGallery`); clique abre lightbox fullscreen (padrão `ServicePhotoGallery`); prestador ao preencher e cliente ao revisar; URLs via `createSignedUrl` — cliente só após evidência `frozen` (RLS) |
 | Badge atraso | “Executado com atraso” (`executed_late`) |
 | Dispute stub | Após avaliação (ou sem CTA de avaliar): copy “Abrir disputa” / “Em breve…” **inline** na seção contratada |
 
@@ -119,7 +120,7 @@ flowchart TD
 
 - Draft/wizard prestador (no sheet): `validateExecutedResponses` + gate temporal (`deriveExecutedTemporalGate`).
 - Confirm cliente (etapa 2 do sheet): scores completos antes do submit.
-- Upload de evidência: sessão RPC + upload autenticado no storage (prefixo/RLS) + register; limites de imagem; URLs assinadas para thumbnails via `useCompletionEvidencePhotoUrls`.
+- Upload de evidência: sessão RPC + upload autenticado no storage (prefixo/RLS) + register; limites de imagem; URLs assinadas para thumbnails via `useCompletionEvidencePhotoUrls` (`createSignedUrl` — prestador no próprio prefixo; cliente do CS quando evidência `frozen`).
 - Shell modal: dismiss bloqueado enquanto mutação em voo (`dismissDisabled`).
 - Banner enrichment no detalhe/lista: campos leves do modelo (`get_service` / `list_services`); **sem** poll via `get_service_completion_context` ao abrir o detalhe. O hook ainda *pode* pollar se algum consumidor passar `pollWhileProcessing`, mas o host atual do detalhe não o usa para o banner.
 
@@ -132,7 +133,8 @@ flowchart TD
 | `enrichment_finalize_ready` | CAS + schema + bootstrap matching mesma TX; após READY schema imutável |
 | `get_service_completion_context` | Auth; detalhe completo (checklist + ids) só cliente SR / prestador CS / admin; marketplace → status/`ready` limitado; sem SELECT de tabela enrichment pelo client |
 | `service_completion_create_upload_session` | CS `CONFIRMED`; bucket `completion-evidence`; `provider_id` = CS; retorna prefixo da sessão |
-| Storage INSERT `completion-evidence` (cliente autenticado) | Upload sob prefixo da sessão; sessão open, não expirada, CS CONFIRMED, contagem &lt; `max_files` (RLS); **sem** URL assinada / Edge |
+| Storage INSERT `completion-evidence` (prestador autenticado) | Upload sob prefixo da sessão; sessão open, não expirada, CS CONFIRMED, contagem &lt; `max_files` (RLS); **sem** Edge de URL assinada de upload |
+| Storage SELECT `completion-evidence` | Prestador: prefixo próprio (draft + frozen). Cliente do CS: paths do CS **somente** se evidência `frozen` (`service_completion_evidence_storage_path_client_readable`) — `createSignedUrl` para galeria em “Avaliar serviço”. Admin: sim. |
 | `service_completion_register_upload_object` | Sessão `open` do prestador; path sob prefixo; registra em `completion_evidence_upload_objects` |
 | `service_completion_mark_executed` | Auth prestador do CS; `CONFIRMED`; payload checklist; paths registrados (`EVIDENCE_PATH_NOT_REGISTERED`); freeze atômico; sessões open → committed |
 | `service_completion_confirm_with_rating` | Auth cliente; `EXECUTED`; scores obrigatórios; evidência frozen (invariante deferred) |
@@ -170,7 +172,7 @@ Servidor: tabelas enrichment/evidence/upload sessions+objects/ratings; `platform
 |---------|----------|
 | Matching | `matching_bootstrap_dispatch_for_service_request` (+ repair ≤7 dias) |
 | Edge | `generate-completion-checklist` (só enrichment; upload de evidência **sem** Edge) |
-| Storage | Bucket `completion-evidence` — upload autenticado sob sessão (RLS) |
+| Storage | Bucket `completion-evidence` — INSERT autenticado sob sessão (prestador); SELECT também para cliente do CS com evidência `frozen` (`createSignedUrl`) |
 | MMD | `SERVICE_EXECUTED` / `SERVICE_COMPLETED` / `SERVICE_AUTO_COMPLETED` |
 | view-services | Host: banner enrichment no detalhe/card (`enrichmentStatus`/`enrichmentReady` do modelo); CTAs na `ServiceContractedSection` (Public API; gate leve + contexto só no fluxo); projeção também `executedLate` |
 | my-services | Cards `in_progress`: highlight de follow-up (pós-data-fim `CONFIRMED` / `EXECUTED`); prestador `CONFIRMED` + past → CTA **“Concluir serviço”** no card (sheet; contexto ao abrir); cliente `EXECUTED` → CTA **“Avaliar serviço”** no card (`ClientEvaluateServiceSheet` hospedado na página; contexto RPC só ao abrir o wizard); demais → “Ver detalhes” — ver [solicitacoes-do-cliente](../../my-services/features/solicitacoes-do-cliente.md) Anexo D |
@@ -253,3 +255,4 @@ Upstream: pedido (`request-quote` / republish), contrato pago (`payments`/`CNS`)
 - **2026-08-06 (lista)** — Cards em Meus Serviços: highlight de follow-up pós-data-fim / `EXECUTED` (sem prefetch de contexto na lista).
 - **2026-08-06 (card prestador)** — Prestador `CONFIRMED` + past: CTA **“Concluir serviço”** no card abre sheet (`ProviderMarkExecutedSheet`; contexto RPC ao abrir; gate `enrichmentReady`); secundário “Ver detalhes”.
 - **2026-08-06 (card cliente)** — Cliente `EXECUTED`: CTA **“Avaliar serviço”** no card abre `ClientEvaluateServiceSheet` hospedado na página (`ClientEvaluateServiceDialogs` + `useClientEvaluateServiceDialog`); secundário “Ver detalhes”; contexto RPC só ao abrir o wizard; `ClientEvaluateServiceAction` no detalhe reutiliza o mesmo sheet.
+- **2026-08-06 (storage SELECT cliente)** — Política `storage_objects_completion_evidence_select` passa a permitir SELECT/`createSignedUrl` ao cliente do CS quando a evidência está `frozen` (helper `service_completion_evidence_storage_path_client_readable`); corrige thumbnails/lightbox “Indisponível” em “Avaliar serviço”. INSERT continua só prestador; SELECT do prestador (draft + frozen no próprio prefixo) inalterado. Migração editada in-place: `20260804100000_service_completion_evidence_storage.sql`.

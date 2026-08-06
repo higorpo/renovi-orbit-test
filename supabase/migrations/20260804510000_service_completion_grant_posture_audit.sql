@@ -141,6 +141,11 @@ revoke all on function public.service_completion_evidence_storage_path_owned(tex
 grant execute on function public.service_completion_evidence_storage_path_owned(text)
   to authenticated, service_role;
 
+revoke all on function public.service_completion_evidence_storage_path_client_readable(text)
+  from public, anon;
+grant execute on function public.service_completion_evidence_storage_path_client_readable(text)
+  to authenticated, service_role;
+
 revoke all on function public.service_completion_evidence_storage_upload_allowed(text)
   from public, anon;
 grant execute on function public.service_completion_evidence_storage_upload_allowed(text)

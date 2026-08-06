@@ -68,7 +68,8 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 - **Paths de evidência** no mark-executed devem estar registrados em `completion_evidence_upload_objects` sob sessão do CS/prestador; caso contrário → `EVIDENCE_PATH_NOT_REGISTERED`.
 - No freeze, sessões de upload **`open`** do CS passam a **`committed`**.
 - Upload de evidência (padrão KYC): `service_completion_create_upload_session` → upload autenticado no bucket `completion-evidence` sob prefixo da sessão (RLS) → `service_completion_register_upload_object`. **Sem** Edge de URL assinada.
-- INSERT no storage `completion-evidence` exige sessão `open`, não expirada, CS `CONFIRMED`, contagem &lt; `max_files`.
+- INSERT no storage `completion-evidence` exige sessão `open`, não expirada, CS `CONFIRMED`, contagem &lt; `max_files` (**só prestador**).
+- SELECT no storage `completion-evidence`: prestador no próprio prefixo (draft + frozen); **cliente do CS** quando a evidência está `frozen` (`service_completion_evidence_storage_path_client_readable`) — permite `createSignedUrl` para thumbnails/lightbox em “Avaliar serviço”; admin de plataforma. Sem isso, a UI mostrava “Indisponível”.
 - Evidência **frozen** e schema de enrichment **READY** são imutáveis no DB (triggers); CS `EXECUTED`/`COMPLETED` exige evidência frozen (constraint deferred); FK evidência→CS é **ON DELETE RESTRICT**.
 - Leitura de produto: status/`ready` leves em `get_service` / `list_services` (banner, card, gate do CTA prestador). Checklist/evidências/capabilities: RPC `get_service_completion_context` (não SELECT direto em `service_request_enrichments` por `authenticated`) — detalhe completo só para cliente do SR, prestador contratado ou admin; marketplace → payload limitado; no app, a RPC roda ao abrir o wizard de conclusão/avaliação (não ao montar o detalhe).
 - Constantes: `auto_complete_batch_size` (default **100**, distinto de `enrichment_claim_batch_size`); sweeper READY-sem-dispatch limitado a enrichment materializado nos **últimos 7 dias**.
@@ -123,7 +124,8 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 | Host UI | `ServiceContractedSection.tsx` (CTAs); `ServiceDetailPage.tsx` (banner); `SimpleServiceCard.tsx` |
 | Migrations | `supabase/migrations/20260804*` (enrichment, bootstrap DROP, RPCs, cron) |
 | Edge | `generate-completion-checklist/` (enrichment only) |
-| Upload evidência | RPCs `service_completion_create_upload_session` / `service_completion_register_upload_object` + storage autenticado `completion-evidence` (sem Edge) |
+| Upload evidência | RPCs `service_completion_create_upload_session` / `service_completion_register_upload_object` + storage autenticado `completion-evidence` (sem Edge); SELECT/`createSignedUrl` também para cliente do CS com evidência `frozen` |
+| Storage policies | Migração `20260804100000_service_completion_evidence_storage.sql`; helpers `*_path_owned` / `*_path_client_readable` / `*_upload_allowed`; pgTAP `completion_evidence_storage_test.sql` |
 | Janitor SQL | `service_completion_janitor_orphan_uploads` + cron `service_completion_cron_orphan_upload_janitor` |
 | Design / ADR | `docs/service-completion/design.md`, ADR-0004 |
 | Matching CONTEXT | decisão **#135** em `docs/matching-algorithm/CONTEXT.md` |

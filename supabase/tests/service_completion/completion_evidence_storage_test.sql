@@ -4,7 +4,7 @@ begin;
 
 \ir fixtures/seed_rls_actors.inc
 
-select plan(10);
+select plan(13);
 
 select ok(
   exists (
@@ -169,6 +169,39 @@ select ok(
     (select cs_id::text || '/' || session_id::text || '/photo.jpg' from _fx)
   ),
   'path_owned false for non-provider actor'
+);
+
+-- Client cannot read storage until evidence is frozen
+select ok(
+  not public.service_completion_evidence_storage_path_client_readable(
+    (select cs_id::text || '/' || session_id::text || '/photo.jpg' from _fx)
+  ),
+  'client_readable false while evidence not frozen'
+);
+
+insert into public.contracted_service_completion_evidence (
+  contracted_service_id, phase, frozen_at, responses_hash, executed_late, responses
+)
+select
+  cs_id,
+  'frozen'::public.completion_evidence_phase,
+  now(),
+  'hash',
+  false,
+  '{"crit_work_done":{"met":true,"evidence_paths":["x.jpg"]}}'::jsonb
+from _fx;
+
+select ok(
+  public.service_completion_evidence_storage_path_client_readable(
+    (select cs_id::text || '/' || session_id::text || '/photo.jpg' from _fx)
+  ),
+  'client_readable true for CS client after evidence frozen'
+);
+
+select ok(
+  not public.service_completion_evidence_storage_path_client_readable('')
+  and not public.service_completion_evidence_storage_path_client_readable('https://evil.example/x'),
+  'client_readable rejects empty and http URL'
 );
 
 select * from finish();
