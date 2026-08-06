@@ -19,7 +19,8 @@ export type ClientCardActionIntent =
   | "cancel"
   | "messages"
   | "chat"
-  | "adjust_payment";
+  | "adjust_payment"
+  | "evaluate_service";
 
 export type ClientCardHighlightEmphasis =
   | "default"
@@ -513,11 +514,17 @@ function buildInProgressActions(
       )
     : "future";
   const status = model.contracted?.status;
-  const needsCompletionFollowUp =
-    status === "EXECUTED" || (status === "CONFIRMED" && timing === "past");
 
-  // Detail hosts evaluate / evidence review CTAs when completion follow-up is due.
-  if (needsCompletionFollowUp) {
+  // Provider submitted evidence — open evaluate sheet from the card.
+  if (status === "EXECUTED") {
+    return {
+      primaryAction: { label: "Avaliar serviço", intent: "evaluate_service" },
+      secondaryAction: { label: "Ver detalhes", intent: "details" },
+    };
+  }
+
+  // Waiting on provider completion — prefer details over chat.
+  if (status === "CONFIRMED" && timing === "past") {
     return {
       primaryAction: { label: "Ver detalhes", intent: "details" },
       secondaryAction: chatAction(model),

@@ -173,7 +173,7 @@ Servidor: tabelas enrichment/evidence/upload sessions+objects/ratings; `platform
 | Storage | Bucket `completion-evidence` — upload autenticado sob sessão (RLS) |
 | MMD | `SERVICE_EXECUTED` / `SERVICE_COMPLETED` / `SERVICE_AUTO_COMPLETED` |
 | view-services | Host: banner enrichment no detalhe/card (`enrichmentStatus`/`enrichmentReady` do modelo); CTAs na `ServiceContractedSection` (Public API; gate leve + contexto só no fluxo); projeção também `executedLate` |
-| my-services | Cards `in_progress`: highlight de follow-up (pós-data-fim `CONFIRMED` / `EXECUTED`); prestador `CONFIRMED` + past → CTA **“Concluir serviço”** no card (sheet/wizard; contexto ao abrir); cliente / `EXECUTED` → “Ver detalhes” — ver [solicitacoes-do-cliente](../../my-services/features/solicitacoes-do-cliente.md) Anexo D |
+| my-services | Cards `in_progress`: highlight de follow-up (pós-data-fim `CONFIRMED` / `EXECUTED`); prestador `CONFIRMED` + past → CTA **“Concluir serviço”** no card (sheet; contexto ao abrir); cliente `EXECUTED` → CTA **“Avaliar serviço”** no card (`ClientEvaluateServiceSheet` hospedado na página; contexto RPC só ao abrir o wizard); demais → “Ver detalhes” — ver [solicitacoes-do-cliente](../../my-services/features/solicitacoes-do-cliente.md) Anexo D |
 | Analytics | `service_completion_dispute_stub_opened` |
 
 ---
@@ -186,7 +186,7 @@ Servidor: tabelas enrichment/evidence/upload sessions+objects/ratings; `platform
 | Salvar draft | Prestador contratado | `CONFIRMED` (+ capability do contexto no wizard) | Evidência draft |
 | Criar sessão → upload autenticado → register path | Prestador contratado | CS CONFIRMED; sessão open; &lt; max_files | Objeto em `completion-evidence` + registry |
 | Marcar executado (submit no sheet) | Prestador contratado | `CONFIRMED` + paths registrados + validação | `EXECUTED`; sessões → committed; fecha sheet |
-| Abrir “Avaliar serviço” | Cliente | UI: contrato `EXECUTED` ou `COMPLETED`; então `canConfirmWithRating` / rating opcional do contexto | Sheet/dialog 2 etapas |
+| Abrir “Avaliar serviço” | Cliente | UI: contrato `EXECUTED` ou `COMPLETED`; então `canConfirmWithRating` / rating opcional do contexto | Sheet/dialog 2 etapas (detalhe via `ClientEvaluateServiceAction`; lista Meus Serviços via `ClientEvaluateServiceSheet` hospedado na página) |
 | Confirmar + avaliar | Cliente | `EXECUTED` | `COMPLETED` + rating; fecha sheet |
 | Abrir disputa (stub) | Cliente | tipicamente pós-rating / `EXECUTED`/`COMPLETED` | URL ou toast (inline se sem CTA avaliar) |
 | Submeter rating pós auto | Cliente | `COMPLETED` system | Rating opcional (mesmo CTA/sheet) |
@@ -202,11 +202,12 @@ Upstream: pedido (`request-quote` / republish), contrato pago (`payments`/`CNS`)
 ## 16. Regras implícitas
 
 - Consumidores externos **não** importam internals de `service-completion` — só `index.ts`.
-- Host preferencial: `ProviderMarkExecutedAction` / `ClientEvaluateServiceAction` (wizards ainda exportados para composição embutida / legado de API, mas **não** montados inline no detalhe).
+- Host preferencial: `ProviderMarkExecutedAction` / `ClientEvaluateServiceAction` no detalhe; na lista Meus Serviços, hosts usam `ProviderMarkExecutedSheet` / `ClientEvaluateServiceSheet` (wizards ainda exportados para composição embutida / legado de API, mas **não** montados inline no detalhe).
 - Checklist de execução **não** permanece aberto na página de detalhe — só dentro do sheet/dialog.
 - `ServiceDetailPage` **não** chama `get_service_completion_context` ao abrir o detalhe; banner e gate do CTA prestador usam só o modelo de `get_service`.
 - `ProviderMarkExecutedAction` **não** prefetcha contexto ao montar; a RPC roda no `ProviderExecutedWizard` ao abrir o dialog.
-- `ClientEvaluateServiceAction` **não** busca contexto em `CONFIRMED` (só `EXECUTED`/`COMPLETED`).
+- `ClientEvaluateServiceAction` **não** busca contexto em `CONFIRMED` (só `EXECUTED`/`COMPLETED`); o sheet controlado (`ClientEvaluateServiceSheet`) monta o wizard só com `open` e carrega contexto ao abrir.
+- `ClientEvaluateServiceAction` reutiliza `ClientEvaluateServiceSheet` (mesmo shell da lista).
 - `view-services` não reexporta mais lifecycle de payments para conclusão.
 - Chargeback / `is_disputed` em payments **não** é o stub de disputa do app.
 
@@ -224,7 +225,7 @@ Upstream: pedido (`request-quote` / republish), contrato pago (`payments`/`CNS`)
 
 ## 18. Evidências
 
-- `src/features/service-completion/**` (incl. `ProviderMarkExecutedAction`, `ClientEvaluateServiceAction`, `CompletionFlowSheetDialog`, `CompletionEvidenceGallery`)
+- `src/features/service-completion/**` (incl. `ProviderMarkExecutedAction`, `ProviderMarkExecutedSheet`, `ClientEvaluateServiceAction`, `ClientEvaluateServiceSheet`, `CompletionFlowSheetDialog`, `CompletionEvidenceGallery`)
 - `src/features/view-services/components/ServiceContractedSection.tsx`, `ServiceDetailPage.tsx`, `SimpleServiceCard.tsx`
 - Migrations `20260804010000`–`2026080452*` (constants, RLS, evidence/sessions, mark/confirm/auto-complete, context RPC, janitor, indexes)
 - Edge: `generate-completion-checklist` (upload evidência: RPCs create/register + storage autenticado; sem Edge)
@@ -250,4 +251,5 @@ Upstream: pedido (`request-quote` / republish), contrato pago (`payments`/`CNS`)
 - **2026-08-05 (UX)** — Checklist/avaliação saem do inline do detalhe: CTAs na seção Serviço contratado → sheet (mobile) / dialog (desktop); cliente com stepper 2 etapas; fotos de evidência como thumbnails + lightbox.
 - **2026-08-06** — Lazy load do completion context: detalhe/banner usam só `enrichmentStatus`/`enrichmentReady` de `get_service` (como o card); CTA prestador gated por `CONFIRMED` + `enrichmentReady` sem prefetch; RPC `get_service_completion_context` ao abrir o wizard; CTA cliente só busca contexto em `EXECUTED`/`COMPLETED`.
 - **2026-08-06 (lista)** — Cards em Meus Serviços: highlight de follow-up pós-data-fim / `EXECUTED` (sem prefetch de contexto na lista).
-- **2026-08-06 (card prestador)** — Prestador `CONFIRMED` + past: CTA **“Concluir serviço”** no card abre `CompletionFlowSheetDialog` + `ProviderExecutedWizard` (contexto RPC ao abrir; gate `enrichmentReady`); secundário “Ver detalhes”.
+- **2026-08-06 (card prestador)** — Prestador `CONFIRMED` + past: CTA **“Concluir serviço”** no card abre sheet (`ProviderMarkExecutedSheet`; contexto RPC ao abrir; gate `enrichmentReady`); secundário “Ver detalhes”.
+- **2026-08-06 (card cliente)** — Cliente `EXECUTED`: CTA **“Avaliar serviço”** no card abre `ClientEvaluateServiceSheet` hospedado na página (`ClientEvaluateServiceDialogs` + `useClientEvaluateServiceDialog`); secundário “Ver detalhes”; contexto RPC só ao abrir o wizard; `ClientEvaluateServiceAction` no detalhe reutiliza o mesmo sheet.

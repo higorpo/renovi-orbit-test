@@ -3,13 +3,12 @@
  * Skips get_service_completion_context unless contracted status can need evaluate/dispute.
  */
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useServiceCompletionContext } from "../hooks/useServiceCompletionContext";
 import { shouldShowDisputeStub, DisputeStubEntry } from "./DisputeStubEntry";
-import { CompletionFlowSheetDialog } from "./CompletionFlowSheetDialog";
-import { ClientConfirmRatingWizard } from "./ClientConfirmRatingWizard";
+import { ClientEvaluateServiceSheet } from "./ClientEvaluateServiceSheet";
 
 export type ClientEvaluateServiceActionProps = {
   serviceRequestId: string;
@@ -30,8 +29,6 @@ export function ClientEvaluateServiceAction({
   onCompleted,
 }: ClientEvaluateServiceActionProps) {
   const [open, setOpen] = useState(false);
-  const [dismissDisabled, setDismissDisabled] = useState(false);
-  const [stepAside, setStepAside] = useState<string | null>("1 de 2");
 
   const needsContext = shouldFetchEvaluateContext(contractedStatus);
   const { data: context, isLoading } = useServiceCompletionContext(
@@ -47,13 +44,6 @@ export function ClientEvaluateServiceAction({
   });
   const contractedId = context?.contractedService.id ?? "";
   const csStatus = context?.contractedService.status ?? "";
-
-  const handleStepChange = useCallback(
-    (_step: "review" | "rating", label: string) => {
-      setStepAside(label);
-    },
-    [],
-  );
 
   if (!needsContext) {
     return null;
@@ -94,43 +84,20 @@ export function ClientEvaluateServiceAction({
         size="sm"
         className="w-full rounded-pill text-primary transition-transform duration-fast ease-renovi hover:bg-primary/5 hover:text-primary active:scale-[0.97] sm:w-auto"
         data-testid="client-evaluate-service-action"
-        onClick={() => {
-          setStepAside("1 de 2");
-          setOpen(true);
-        }}
+        onClick={() => setOpen(true)}
       >
         <Star className="h-4 w-4" aria-hidden />
         Avaliar serviço
       </Button>
 
-      <CompletionFlowSheetDialog
+      <ClientEvaluateServiceSheet
         open={open}
         onOpenChange={setOpen}
+        serviceRequestId={serviceRequestId}
         title={title}
         description={description}
-        headerAside={
-          stepAside ? (
-            <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium tabular-nums text-muted-foreground">
-              {stepAside}
-            </span>
-          ) : null
-        }
-        dismissDisabled={dismissDisabled}
-        size="md"
-        testId="client-evaluate-service-sheet"
-      >
-        {open ? (
-          <ClientConfirmRatingWizard
-            serviceRequestId={serviceRequestId}
-            onPendingChange={setDismissDisabled}
-            onStepChange={handleStepChange}
-            onCompleted={() => {
-              setOpen(false);
-              onCompleted?.();
-            }}
-          />
-        ) : null}
-      </CompletionFlowSheetDialog>
+        onCompleted={onCompleted}
+      />
     </>
   );
 }

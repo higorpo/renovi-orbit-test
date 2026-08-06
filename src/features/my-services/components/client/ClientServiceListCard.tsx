@@ -19,7 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CreditCard, Eye, MessageSquare, Trash2 } from "lucide-react";
+import { CreditCard, Eye, MessageSquare, Star, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getServiceCardStyle } from "@/features/request-quote";
 import { getUrgencyConfig, type ServiceModel } from "@/features/view-services";
@@ -46,6 +46,7 @@ export interface ClientServiceListCardProps {
   onOpenBudgets?: (model: ServiceModel) => void;
   onOpenMessages?: (model: ServiceModel) => void;
   onOpenChat?: (model: ServiceModel) => void;
+  onEvaluateService?: (model: ServiceModel) => void;
   onCancel?: (id: string) => void;
   isCancelling?: boolean;
   className?: string;
@@ -98,6 +99,7 @@ interface ClientCardActionsProps {
   onOpenBudgets?: (model: ServiceModel) => void;
   onOpenMessages?: (model: ServiceModel) => void;
   onOpenChat?: (model: ServiceModel) => void;
+  onEvaluateService?: (model: ServiceModel) => void;
   onAdjustPayment?: () => void;
   onCancel?: (id: string) => void;
   isCancelling?: boolean;
@@ -111,6 +113,7 @@ function ClientCardActions({
   onOpenBudgets,
   onOpenMessages,
   onOpenChat,
+  onEvaluateService,
   onAdjustPayment,
   onCancel,
   isCancelling,
@@ -134,6 +137,10 @@ function ClientCardActions({
       onAdjustPayment?.();
       return;
     }
+    if (action.intent === "evaluate_service") {
+      onEvaluateService?.(model);
+      return;
+    }
     if (action.intent === "cancel") {
       setCancelDialogOpen(true);
       return;
@@ -151,6 +158,9 @@ function ClientCardActions({
     }
     if (intent === "adjust_payment") {
       return <CreditCard className="h-4 w-4 shrink-0" aria-hidden />;
+    }
+    if (intent === "evaluate_service") {
+      return <Star className="h-4 w-4 shrink-0" aria-hidden />;
     }
     if (intent === "cancel") {
       return <Trash2 className="h-4 w-4 shrink-0" aria-hidden />;
@@ -310,6 +320,7 @@ export function ClientServiceListCard({
   onOpenBudgets,
   onOpenMessages,
   onOpenChat,
+  onEvaluateService,
   onCancel,
   isCancelling,
   className,
@@ -426,6 +437,7 @@ export function ClientServiceListCard({
           onOpenBudgets={onOpenBudgets}
           onOpenMessages={onOpenMessages}
           onOpenChat={onOpenChat}
+          onEvaluateService={onEvaluateService}
           onAdjustPayment={needsManualPayment ? manualPayment.openModal : undefined}
           onCancel={onCancel}
           isCancelling={isCancelling}

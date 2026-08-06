@@ -2,6 +2,7 @@ import { ReceivedBudgetDetailsSheet } from "@/features/negotiation-proposals";
 import { ClientMyServicesHeader } from "./ClientMyServicesHeader";
 import { ClientMyServicesEmptyState } from "./ClientMyServicesEmptyState";
 import { ClientServiceListCard } from "./ClientServiceListCard";
+import { ClientEvaluateServiceDialogs } from "./ClientEvaluateServiceDialogs";
 import { MyServicesFocusBanner } from "../shared/MyServicesFocusBanner";
 import { MyServicesPageShell } from "../MyServicesPageShell";
 import { useClientMyServicesPage } from "../../hooks/useClientMyServicesPage";
@@ -43,6 +44,8 @@ export function ClientMyServicesPage() {
     handleOpenDetails,
     handleOpenMessages,
     handleOpenChat,
+    handleEvaluateService,
+    evaluateServiceDialog,
   } = useClientMyServicesPage();
 
   return (
@@ -89,6 +92,7 @@ export function ClientMyServicesPage() {
             onOpenDetails={handleOpenDetails}
             onOpenMessages={handleOpenMessages}
             onOpenChat={handleOpenChat}
+            onEvaluateService={handleEvaluateService}
             isCancelling={isCancelling}
           />
         )}
@@ -103,6 +107,7 @@ export function ClientMyServicesPage() {
           />
         }
       />
+      <ClientEvaluateServiceDialogs dialog={evaluateServiceDialog} />
     </>
   );
 }

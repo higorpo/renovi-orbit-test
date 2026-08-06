@@ -10,6 +10,7 @@ import {
 import { getChatsPageUrlWithServiceRequestFilter } from "@/features/chats";
 import { useMyServicesPageCore } from "./useMyServicesPageCore";
 import { useClientMyServicesCancel } from "./useClientMyServicesCancel";
+import { useClientEvaluateServiceDialog } from "./useClientEvaluateServiceDialog";
 import { SERVICE_REQUEST_FOCUS_QUERY } from "../constants/routes";
 
 export function useClientMyServicesPage() {
@@ -18,6 +19,7 @@ export function useClientMyServicesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const focusServiceRequestId = searchParams.get(SERVICE_REQUEST_FOCUS_QUERY);
   const { cancelServiceRequest, isCancelling } = useClientMyServicesCancel();
+  const evaluateServiceDialog = useClientEvaluateServiceDialog();
 
   const core = useMyServicesPageCore({ serviceRequestId: focusServiceRequestId });
 
@@ -107,6 +109,13 @@ export function useClientMyServicesPage() {
     [navigate],
   );
 
+  const handleEvaluateService = useCallback(
+    (model: ServiceModel) => {
+      evaluateServiceDialog.openEvaluateService(model);
+    },
+    [evaluateServiceDialog.openEvaluateService],
+  );
+
   useEffect(() => {
     if (!budgetSheetOpen) return;
 
@@ -139,5 +148,7 @@ export function useClientMyServicesPage() {
     handleOpenDetails,
     handleOpenMessages,
     handleOpenChat,
+    handleEvaluateService,
+    evaluateServiceDialog,
   };
 }

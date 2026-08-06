@@ -687,7 +687,14 @@ describe("getClientServiceCardPresentation additional branches", () => {
       title: "Aceite a conclusão e avalie o serviço",
       emphasis: "attention",
     });
-    expect(pres.primaryAction.intent).toBe("details");
+    expect(pres.primaryAction).toMatchObject({
+      label: "Avaliar serviço",
+      intent: "evaluate_service",
+    });
+    expect(pres.secondaryAction).toMatchObject({
+      label: "Ver detalhes",
+      intent: "details",
+    });
   });
 
   it("uses future timing without a contract or scheduled date", () => {

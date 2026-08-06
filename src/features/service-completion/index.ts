@@ -19,6 +19,9 @@ export type { ProviderMarkExecutedSheetProps } from "./components/ProviderMarkEx
 export { ClientEvaluateServiceAction } from "./components/ClientEvaluateServiceAction";
 export type { ClientEvaluateServiceActionProps } from "./components/ClientEvaluateServiceAction";
 
+export { ClientEvaluateServiceSheet } from "./components/ClientEvaluateServiceSheet";
+export type { ClientEvaluateServiceSheetProps } from "./components/ClientEvaluateServiceSheet";
+
 export { ProviderExecutedWizard } from "./components/ProviderExecutedWizard";
 export type { ProviderExecutedWizardProps } from "./components/ProviderExecutedWizard";
 

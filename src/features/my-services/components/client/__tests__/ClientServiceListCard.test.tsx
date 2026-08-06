@@ -154,6 +154,7 @@ describe("ClientServiceListCard", () => {
     ["budgets", "Comparar orçamentos", "onOpenBudgets"],
     ["messages", "Ver mensagens", "onOpenMessages"],
     ["chat", "Ver conversa", "onOpenChat"],
+    ["evaluate_service", "Avaliar serviço", "onEvaluateService"],
   ] as const)("dispatches the %s action", (intent, label, callbackName) => {
     getPresentationMock.mockReturnValue(
       presentation({
@@ -165,6 +166,7 @@ describe("ClientServiceListCard", () => {
       onOpenBudgets: vi.fn(),
       onOpenMessages: vi.fn(),
       onOpenChat: vi.fn(),
+      onEvaluateService: vi.fn(),
     };
 
     render(<ClientServiceListCard model={model} {...callbacks} />);

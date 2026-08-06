@@ -26,6 +26,18 @@ vi.mock("../useClientMyServicesCancel", () => ({
   })),
 }));
 
+const openEvaluateService = vi.fn();
+
+vi.mock("../useClientEvaluateServiceDialog", () => ({
+  useClientEvaluateServiceDialog: () => ({
+    open: false,
+    model: null,
+    openEvaluateService,
+    handleOpenChange: vi.fn(),
+    handleCompleted: vi.fn(),
+  }),
+}));
+
 vi.mock("@/hooks/useDebouncedValue", () => ({
   useDebouncedValue: (value: string) => value,
 }));
@@ -157,6 +169,18 @@ describe("useClientMyServicesPage", () => {
       });
     });
     expect(mockNavigate).toHaveBeenCalledWith("/dashboard/chats/chat-9");
+  });
+
+  it("delegates evaluate service action to the dialog controller", () => {
+    const { result } = renderHook(() => useClientMyServicesPage(), {
+      wrapper: wrapper(["/dashboard/services"]),
+    });
+
+    act(() => {
+      result.current.handleEvaluateService(openModel);
+    });
+
+    expect(openEvaluateService).toHaveBeenCalledWith(openModel);
   });
 
   it("clears focus together with other filters", () => {
