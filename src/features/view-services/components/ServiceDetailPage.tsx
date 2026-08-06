@@ -5,10 +5,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/auth";
-import {
-  EnrichmentProcessingBanner,
-  deriveEnrichmentProcessingUi,
-} from "@/features/service-completion";
 import { ReceivedBudgetDetailsSheet } from "@/features/negotiation-proposals";
 import { useCancelService } from "../hooks/useCancelService";
 import { useRepublishCancelledService } from "../hooks/useRepublishCancelledService";
@@ -135,13 +131,6 @@ export function ServiceDetailPage({
     (isClient && model.contracted);
   const showSecondarySections = showClientNegotiationChats || isProvider;
 
-  const enrichmentBannerUi = deriveEnrichmentProcessingUi({
-    enrichmentStatus: model.enrichmentStatus,
-    enrichmentReady: model.enrichmentReady,
-    requestStatus: model.requestStatus,
-    listPhase: model.listPhase,
-  });
-
   return (
     <div className={pageClassName}>
       {isProvider ? (
@@ -150,17 +139,6 @@ export function ServiceDetailPage({
 
       <article className="overflow-hidden rounded-lg border border-border bg-card shadow-elevation-1">
         <ServiceDetailHeader model={model} isClient={isClient} isProvider={isProvider} />
-
-        {enrichmentBannerUi.kind !== "hidden" ? (
-          <div className="border-t border-border/80 px-4 py-3 sm:px-6">
-            <EnrichmentProcessingBanner
-              enrichmentStatus={model.enrichmentStatus}
-              enrichmentReady={model.enrichmentReady}
-              requestStatus={model.requestStatus}
-              listPhase={model.listPhase}
-            />
-          </div>
-        ) : null}
 
         {showClientActions ? (
           <div className="border-t border-border/80 px-4 py-3 sm:px-6">

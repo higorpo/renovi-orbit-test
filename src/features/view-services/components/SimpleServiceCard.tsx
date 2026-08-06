@@ -1,7 +1,6 @@
 import { MapPin } from "lucide-react";
 import { Card, CardHeader } from "@/components/ui/card";
 import { getServiceCardStyle } from "@/features/request-quote";
-import { EnrichmentProcessingBanner } from "@/features/service-completion";
 import { cn } from "@/lib/utils";
 import { formatDatePtBr } from "@/lib/utils/formatDate";
 import { formatLocationDisplay } from "../utils/locationDisplay";
@@ -78,14 +77,6 @@ export function SimpleServiceCard({
         ) : null}
 
         <SimpleServiceInsightPanel model={model} compact={compact} />
-
-        <EnrichmentProcessingBanner
-          enrichmentStatus={model.enrichmentStatus}
-          enrichmentReady={model.enrichmentReady}
-          requestStatus={model.requestStatus}
-          listPhase={model.listPhase}
-          compact
-        />
 
         {compact ? (
           <div className="flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground">

@@ -158,8 +158,6 @@ vi.mock("../ServiceContractedSection", () => ({
 }));
 
 vi.mock("@/features/service-completion", () => ({
-  EnrichmentProcessingBanner: () => null,
-  deriveEnrichmentProcessingUi: () => ({ kind: "hidden", message: null, shouldPoll: false }),
   ProviderMarkExecutedAction: () => <div data-testid="provider-mark-executed-action" />,
   ClientEvaluateServiceAction: () => <div data-testid="client-evaluate-service-action" />,
 }));

@@ -6,7 +6,7 @@ Documentação de negócio do módulo **service-completion**. Host de UI: [visua
 
 ## 1. Resumo executivo
 
-Pedido `OPEN` enfileira **enrichment** (`PENDING`). Enquanto `PENDING`/`RUNNING`, a UI mostra “Checklist de conclusão em processamento…” e o pedido **não** entra no feed. Em `READY`, o matching faz bootstrap (delay de 5 min a partir daí). Pós-contrato, na seção **Serviço contratado** do detalhe: o prestador usa o botão **“Marcar serviço como concluído”** (abre sheet/dialog com o checklist — **não** fica inline na página); se não marcar a tempo, o sistema **auto-marca EXECUTED** sem checklist (~24h após fim do dia BRT da data agendada). O cliente usa **“Avaliar serviço”** (sheet/dialog em 2 etapas: revisar evidências + declarar execução → avaliar). Sem confirmação, auto-complete EXECUTED→COMPLETED ~24h após `executed_at` (janela distinta). Disputa no app é stub (banner título “Abrir disputa”, botão “Falar com o suporte”; descrição sobre correção/devolução; suporte ou “Em breve”).
+Pedido `OPEN` enfileira **enrichment** (`PENDING`). Enquanto `PENDING`/`RUNNING`, o pedido **não** entra no feed. Em `READY`, o matching faz bootstrap (delay de 5 min a partir daí). Pós-contrato, na seção **Serviço contratado** do detalhe: o prestador usa o botão **“Marcar serviço como concluído”** (abre sheet/dialog com o checklist — **não** fica inline na página); se não marcar a tempo, o sistema **auto-marca EXECUTED** sem checklist (~24h após fim do dia BRT da data agendada). O cliente usa **“Avaliar serviço”** (sheet/dialog em 2 etapas: revisar evidências + declarar execução → avaliar). Sem confirmação, auto-complete EXECUTED→COMPLETED ~24h após `executed_at` (janela distinta). Disputa no app é stub (banner título “Abrir disputa”, botão “Falar com o suporte”; descrição sobre correção/devolução; suporte ou “Em breve”).
 
 ---
 
@@ -35,7 +35,7 @@ Pedido `OPEN` enfileira **enrichment** (`PENDING`). Enquanto `PENDING`/`RUNNING`
 
 | Quem | Pode | Não pode |
 |------|------|----------|
-| **Cliente** (dono do SR) | Contexto completo via RPC; processing; revisar evidência frozen; **SELECT storage / `createSignedUrl`** em paths do CS quando evidência está `frozen` (thumbnails/lightbox em “Avaliar serviço”); confirm+rating; stub disputa | Marcar EXECUTED; SELECT direto em `service_request_enrichments`; SELECT storage de evidência ainda em `draft` |
+| **Cliente** (dono do SR) | Contexto completo via RPC; revisar evidência frozen; **SELECT storage / `createSignedUrl`** em paths do CS quando evidência está `frozen` (thumbnails/lightbox em “Avaliar serviço”); confirm+rating; stub disputa | Marcar EXECUTED; SELECT direto em `service_request_enrichments`; SELECT storage de evidência ainda em `draft` |
 | **Prestador contratado** | Contexto completo; draft + mark EXECUTED em `CONFIRMED`; upload sob sessão própria | Confirmar COMPLETED manual; SELECT direto em enrichments |
 | **Prestador só-marketplace** (visibilidade no feed, sem contrato) | Payload **limitado** no contexto (status/`ready`; sem checklist nem `client_id`/`provider_id`) | Checklist, evidências, mutações de conclusão |
 | **Admin** (plataforma) | Contexto completo (mesmo sem ser participante) | Mutações de produto via UI do app (sem painel) |
@@ -49,7 +49,7 @@ Pedido `OPEN` enfileira **enrichment** (`PENDING`). Enquanto `PENDING`/`RUNNING`
 flowchart TD
   A[Create / republish OPEN] --> B[Enrichment PENDING]
   B --> C{PENDING / RUNNING}
-  C -->|UI| D[Banner em processamento]
+  C -->|fora do feed| C2[Aguarda READY]
   C --> E[Edge generate-completion-checklist]
   E --> F[READY + matching_bootstrap]
   F --> G[Delay 5 min → lotes matching]
@@ -99,7 +99,7 @@ flowchart TD
 10. Stub disputa: título “Abrir disputa”, botão **“Falar com o suporte”**; env `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL` ou remote `orbit.dispute_support_url`; sem FSM.
 11. Imutabilidade DB: trigger bloqueia alteração de schema/source/`materialized_at` (e saída de status) após enrichment `READY`; evidência `frozen` tem colunas críticas imutáveis (incl. `auto_executed_without_checklist`); CS em `EXECUTED`/`COMPLETED` exige linha de evidência `frozen` (constraint trigger deferred); FK evidência→CS **ON DELETE RESTRICT**.
 12. Upload (padrão KYC, sem Edge de URL assinada): RPC `service_completion_create_upload_session` → `supabase.storage.from('completion-evidence').upload()` autenticado sob prefixo da sessão (RLS) → RPC `service_completion_register_upload_object`. Sessão com `storage_bucket = completion-evidence` e `provider_id` = CS; INSERT storage só com sessão `open`, não expirada, CS `CONFIRMED`, abaixo de `max_files` (**só prestador**).
-13. Leitura de produto: `authenticated` **não** faz SELECT em `service_request_enrichments`. Status/`ready` leves vêm de `get_service` / `list_services` (banner/card e gate de CTA). Checklist, evidências e capabilities: RPC `get_service_completion_context` (detalhe completo vs limitado — §4; expõe `auto_executed_without_checklist`), só quando o fluxo de conclusão/avaliação precisa (abrir sheet/wizard ou CTA cliente elegível).
+13. Leitura de produto: `authenticated` **não** faz SELECT em `service_request_enrichments`. Status/`ready` leves vêm de `get_service` / `list_services` (gate de CTA e campos do modelo). Checklist, evidências e capabilities: RPC `get_service_completion_context` (detalhe completo vs limitado — §4; expõe `auto_executed_without_checklist`), só quando o fluxo de conclusão/avaliação precisa (abrir sheet/wizard ou CTA cliente elegível).
 14. Storage SELECT `completion-evidence` (`storage_objects_completion_evidence_select`): prestador contratado (prefixo próprio, draft + frozen via `service_completion_evidence_storage_path_owned`); **ou** cliente do CS quando a evidência está `frozen` (`service_completion_evidence_storage_path_client_readable` — permite `createSignedUrl` para thumbnails/lightbox em “Avaliar serviço”); **ou** admin de plataforma. INSERT permanece só prestador.
 15. Janitor de órfãos (SQL, padrão KYC): expira sessões open passadas do TTL; remove objetos com `referenced_in_responses = false` via `DELETE FROM storage.objects` + limpeza do registry; checagem defensiva de frozen só no batch locked; cron com `job_runs`; sem Edge / sem finalize RPC.
 16. Repair READY-sem-dispatch: apenas enrichments com `materialized_at >= now() - 7 days`.
@@ -110,7 +110,6 @@ flowchart TD
 
 | Elemento | Conteúdo |
 |----------|----------|
-| Banner processing | “Checklist de conclusão em processamento…” (`PENDING`/`RUNNING`) — detalhe/card via `enrichmentStatus` / `enrichmentReady` de `get_service`/`list_services` (mesmo padrão do card); **não** dispara `get_service_completion_context`; **não** é o checklist de execução |
 | CTA prestador | Botão **“Marcar serviço como concluído”** na seção Serviço contratado (visível se contrato `CONFIRMED` **e** `enrichmentReady` do `get_service` — sem prefetch do completion context) |
 | Sheet/dialog prestador | Título “Checklist de conclusão”; ao abrir, `ProviderExecutedWizard` busca `get_service_completion_context` e embute draft + upload + submit EXECUTED |
 | CTA cliente | Botão **“Avaliar serviço”** na mesma seção: só monta/busca contexto se contrato `EXECUTED` ou `COMPLETED`; então usa `canConfirmWithRating` / rating opcional do contexto |
@@ -183,7 +182,7 @@ Servidor: tabelas enrichment/evidence/upload sessions+objects/ratings; `platform
 | Edge | `generate-completion-checklist` (só enrichment; upload de evidência **sem** Edge) |
 | Storage | Bucket `completion-evidence` — INSERT autenticado sob sessão (prestador); SELECT também para cliente do CS com evidência `frozen` (`createSignedUrl`) |
 | MMD | `SERVICE_EXECUTED` / `SERVICE_COMPLETED` / `SERVICE_AUTO_COMPLETED` |
-| view-services | Host: banner enrichment no detalhe/card (`enrichmentStatus`/`enrichmentReady` do modelo); CTAs na `ServiceContractedSection` (Public API; gate leve + contexto só no fluxo); projeção também `executedLate` |
+| view-services | Host: CTAs na `ServiceContractedSection` (Public API; gate leve via `enrichmentReady` do modelo + contexto só no fluxo); projeção também `executedLate` |
 | my-services | Cards `in_progress`: highlight de follow-up (pós-data-fim `CONFIRMED` / `EXECUTED`); prestador `CONFIRMED` + past → CTA **“Concluir serviço”** no card (sheet; contexto ao abrir); cliente `EXECUTED` → CTA **“Avaliar serviço”** no card (`ClientEvaluateServiceSheet` hospedado na página; contexto RPC só ao abrir o wizard); demais → “Ver detalhes” — ver [solicitacoes-do-cliente](../../my-services/features/solicitacoes-do-cliente.md) Anexo D |
 | Analytics | `service_completion_dispute_stub_opened` |
 

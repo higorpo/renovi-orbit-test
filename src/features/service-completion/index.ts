@@ -7,9 +7,6 @@
  */
 
 // --- Host composition (view-services) ---
-export { EnrichmentProcessingBanner } from "./components/EnrichmentProcessingBanner";
-export type { EnrichmentProcessingBannerProps } from "./components/EnrichmentProcessingBanner";
-
 export { ProviderMarkExecutedAction } from "./components/ProviderMarkExecutedAction";
 export type { ProviderMarkExecutedActionProps } from "./components/ProviderMarkExecutedAction";
 
@@ -30,13 +27,6 @@ export type { ClientConfirmRatingWizardProps } from "./components/ClientConfirmR
 
 export { useServiceCompletionContext } from "./hooks/useServiceCompletionContext";
 export type { UseServiceCompletionContextOptions } from "./hooks/useServiceCompletionContext";
-
-export { deriveEnrichmentProcessingUi } from "./utils/enrichmentProcessing";
-export type {
-  EnrichmentProcessingKind,
-  EnrichmentProcessingUi,
-  DeriveEnrichmentProcessingInput,
-} from "./utils/enrichmentProcessing";
 
 // Types needed to type host props / projections
 export type {

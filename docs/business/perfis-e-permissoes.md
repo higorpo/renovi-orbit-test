@@ -184,7 +184,7 @@ Fonte: [payments](./modulos/payments/README.md), [checkout-e-cobranca](./modulos
 |------|-------------------|----------------------|--------------------------|---------|
 | `get_service_completion_context` (detalhe completo: checklist + ids) | Sim | Sim | **Não** — payload limitado (status/`ready`) | — |
 | SELECT direto `service_request_enrichments` | **Não** (REVOKE authenticated) | **Não** | **Não** | `service_role` / workers |
-| Ver banner enrichment “em processamento” | Sim (`PENDING`/`RUNNING` via `get_service`/`list_services`) | Sim (mesmos campos leves no detalhe/card) | Status limitado se tiver acesso ao SR | Worker enrichment → READY |
+| Pedido fora do feed enquanto enrichment `PENDING`/`RUNNING` | Sim (dono do SR) | N/A no feed até READY | N/A no feed até READY | Worker enrichment → READY |
 | Draft checklist + marcar `EXECUTED` | — | Sim (`CONFIRMED` + enrichment ready; CTA → sheet/dialog; contexto RPC ao abrir; paths registrados) | — | — |
 | Upload evidência (RPC create session → storage.upload autenticado → register) | — | Sim (sessão open, CS CONFIRMED, &lt; max_files, bucket `completion-evidence`; thumbnails+lightbox na UI; sem Edge de URL assinada de upload) | — | Janitor SQL órfãos (`service_completion_janitor_orphan_uploads` / cron; sem Edge) |
 | Storage SELECT / `createSignedUrl` em `completion-evidence` | Sim — paths do CS **somente** se evidência `frozen` (`service_completion_evidence_storage_path_client_readable`; galeria em “Avaliar serviço”) | Sim — prefixo próprio (draft + frozen via `*_path_owned`) | — | Admin de plataforma |

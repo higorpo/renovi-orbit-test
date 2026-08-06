@@ -133,17 +133,14 @@ Itens relacionados a conclusão do serviço:
 - Há muita coisa em comum entre a nova parte de gerar checklist com IA e a parte antiga que gerava algumas coisas com IA também, vamos tentar compartilhar mais recursos
 
 
-
-- Revisar todo  o mecanismo de rating da aplicação, ainda não está funcional em alguns lugares e está mocado.
-
-
 - Quando o cliente tiver uma avaliação de serviço concluído pendente, ao abrir o app aparecer popup para ele preencher as informações.
 
-- Mensagem "checklist em processamento" no card do componente não está tão legal, acho que não faz tanto sentido.
 
 - /home/higor/Área de Trabalho/Renovi/orbit/supabase/functions/generate-completion-checklist/loadContext.ts não faz sentido enviar ids pro llm analisar, seria melhor enviar textos em si e detalhes do serviço.
 
 - Mover colunas checklist_schema, source, materialized_at, schema_version para dentro do service_requests. 
+
+Componente de abrir disputa está aparecendo para serviço marcado como concluído na tela de detalhes do serviço para o cliente, não  deveria aparecer nunca nessa tela, remova
 
 
 - [TESTAR] "Agora precisamos  olhar pro lado do prestador. Se o prestador não marcar o serviço como concluído em até 24hrs depois da data de fim do serviço, então nós marcamos o serviço como EXECUTED automaticamente, porém sem o checklist preenchido, e aí quando o cliente for concluir o serviço nós informamos para o cliente na dialog de avaliação onde mostrariamos o checklist originalmente que o serviço foi concluído automaticamente sem o checklist porque o prestador não marcou como concluído no sistema.  Leve em consideração que a  data de fim agendada para um serviço  fica em contracted_services.scheduled_end_date, mas que serviços com sheduled_shift como full_day por exemplo não preenchem essa coluna, então nesse caso devemos usar como end_date a mesma data de start_date caso end_date esteja null. Faça as alterações necessárias, alterando as migrations já existentes e criando novas migrations apenas se necessário. Não resete o banco de dados, aplique as altearções que forem necessárias no próprio banco de daods local manualmente, sem reset e perca de dados."

@@ -130,7 +130,7 @@ flowchart TD
 | `service` | platform_service | Ícone/cor/título |
 | `proposalCount`, `hasPendingProposal`, counts de chat | negotiation | Badge “Aguardando decisão”; CTA orçamentos |
 | `contracted` | contracted_services + payment_schedule_state, far_recapture_pending, reschedule | Seção contratada |
-| `enrichmentStatus` / `enrichmentReady` | projeção enrichment em `get_service` / `list_services` | Banner “em processamento”; gate do CTA prestador (sem `get_service_completion_context` no detalhe) |
+| `enrichmentStatus` / `enrichmentReady` | projeção enrichment em `get_service` / `list_services` | Gate do CTA prestador (sem `get_service_completion_context` no detalhe); pedido fora do feed até READY |
 | `counterparty` / `counterpartyName` | papel-dependente | Prestador vê solicitante; cliente vê profissional se contratado |
 | `myProposal`, `chatSummary` | negotiation (lista prestador/cliente conforme SQL) | Cards em `my-services` (fora desta feature de UI de lista) |
 | Insights IA | urgency, tags, equipment, materials, … | `SimpleServiceInsightPanel` / sugestões |
@@ -214,7 +214,6 @@ Calculada em `derive_service_list_phase`:
 |-------|--------------|------------|
 | Prestador (contratado) | Contrato `CONFIRMED` **e** `enrichmentReady` do `get_service` (sem prefetch do completion context) | Botão **“Marcar serviço como concluído”** na seção Serviço contratado (ao lado de cancelar/reagendar) → bottom sheet (mobile) ou dialog (desktop); ao abrir, `ProviderExecutedWizard` chama `get_service_completion_context` (draft + upload + EXECUTED) |
 | Cliente | Contrato `EXECUTED` ou `COMPLETED` (só então busca contexto); CTA se `canConfirmWithRating` ou rating opcional pós auto-complete | Botão **“Avaliar serviço”** na mesma seção → sheet/dialog com stepper **2 etapas**: (1) revisar evidências/checklist congelado + checkbox obrigatório de declaração de execução (“Continuar para avaliação” disabled até marcar; se `auto_executed_without_checklist`, alerta sem lista vazia de critérios + copy suavizada); (2) avaliar prestador/serviço (`ClientConfirmRatingWizard` embutido); badge `executed_late` se atrasado |
-| Ambos / cliente | Enrichment `PENDING`/`RUNNING` | `EnrichmentProcessingBanner` no detalhe/card — campos leves do modelo (`enrichmentStatus`/`enrichmentReady`); **não** usa `get_service_completion_context` ao abrir o detalhe |
 | Cliente | Sem CTA avaliar, mas stub elegível | `DisputeStubEntry` **inline** na seção contratada (também no wizard Avaliar serviço): título “Abrir disputa”, botão **“Falar com o suporte”**; descrição sobre correção/devolução — URL/toast, sem FSM; superfície dispute-only **sem** checkbox de declaração |
 | Sistema | Duas janelas ~24h distintas: (1) `auto_mark_executed_grace_hours` após fim do dia BRT da data agendada → auto-mark `CONFIRMED`→`EXECUTED` sem checklist; (2) `auto_complete_grace_hours` após `executed_at` → auto-complete `EXECUTED`→`COMPLETED` (`completed_by=system`); rating opcional depois |
 
@@ -253,7 +252,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | **negotiation-proposals** | `ReceivedBudgetDetailsSheet`; composer/sumário no detalhe prestador; invalidate keys após mutações de proposta (evidência em outros módulos) |
 | **chats** | Lista de conversas do cliente em negociação; botão chat contratado; FAB inicia/abre conversa |
 | **payments** | `ManualPaymentRecovery`, `ContractedServiceCancelAction`, `PaymentDisputeStatus`, `ProviderSettlementStatus` |
-| **service-completion** | `EnrichmentProcessingBanner`; **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceContractedSection` (wizards embutidos no sheet/dialog; stub disputa); só Public API |
+| **service-completion** | **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceContractedSection` (wizards embutidos no sheet/dialog; stub disputa); só Public API |
 | **service-reschedule** | `ContractedServiceRescheduleAction` + snapshot `reschedule` no modelo |
 | **addresses** | `LocationPreviewMap` no local do prestador |
 | **matching** | Republicação INSERT `OPEN` **enfileira enrichment**; matching bootstrap só após READY (não mais trigger no OPEN) |
@@ -400,7 +399,7 @@ Helpers de state: `createClientMyServicesServiceDetailState`, `createProviderMyS
 - [ ] Cliente contracted PENDING_PAYMENT elegível: “Ajustar pagamento”
 - [ ] Prestador CONFIRMED: CTA “Marcar serviço como concluído” abre sheet/dialog com checklist (não inline); cliente EXECUTED: CTA “Avaliar serviço” com 2 etapas (review com checkbox de declaração; Continuar disabled até marcar); thumbnails de evidência + lightbox; badge atraso se `executed_late`
 - [ ] Stub disputa: título “Abrir disputa”, botão “Falar com o suporte”; dispute-only sem checkbox de declaração
-- [ ] Enrichment PENDING: banner “em processamento” no detalhe/card
+- [ ] Enrichment PENDING: pedido fora do feed até READY
 - [ ] Prestador: FAB inicia chat; local/mapa com contrato
 - [ ] Prestador sem proposta/contrato: detalhe negado / empty
 - [ ] Aba Disputas: lista vazia

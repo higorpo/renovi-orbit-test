@@ -25,7 +25,7 @@ describe("useServiceCompletionContext", () => {
     getServiceCompletionContext.mockReset();
   });
 
-  it("exposes processingUi that polls while PENDING", async () => {
+  it("loads completion context while enrichment is PENDING", async () => {
     getServiceCompletionContext.mockResolvedValue({
       data: {
         enrichment: { status: "PENDING" },
@@ -44,13 +44,10 @@ describe("useServiceCompletionContext", () => {
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.processingUi).toMatchObject({
-      kind: "processing",
-      shouldPoll: true,
-    });
+    expect(result.current.data?.enrichment?.status).toBe("PENDING");
   });
 
-  it("stops polling intent when READY", async () => {
+  it("loads completion context when enrichment is READY", async () => {
     getServiceCompletionContext.mockResolvedValue({
       data: {
         enrichment: { status: "READY" },
@@ -65,13 +62,10 @@ describe("useServiceCompletionContext", () => {
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.processingUi).toMatchObject({
-      kind: "hidden",
-      shouldPoll: false,
-    });
+    expect(result.current.data?.enrichment?.status).toBe("READY");
   });
 
-  it("surfaces cancelled messaging from requestStatus even while enrichment runs", async () => {
+  it("still loads context when request is CANCELLED during enrichment", async () => {
     getServiceCompletionContext.mockResolvedValue({
       data: {
         enrichment: { status: "RUNNING" },
@@ -89,9 +83,6 @@ describe("useServiceCompletionContext", () => {
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.processingUi).toMatchObject({
-      kind: "cancelled",
-      shouldPoll: false,
-    });
+    expect(result.current.data?.enrichment?.status).toBe("RUNNING");
   });
 });

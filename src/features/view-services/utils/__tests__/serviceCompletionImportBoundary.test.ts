@@ -58,25 +58,14 @@ describe("view-services service-completion cutover boundary", () => {
   });
 
   it("imports completion UX from service-completion Public API in detail surfaces", () => {
-    const detail = readFileSync(
-      join(FEATURE_ROOT, "components/ServiceDetailPage.tsx"),
-      "utf8",
-    );
     const contracted = readFileSync(
       join(FEATURE_ROOT, "components/ServiceContractedSection.tsx"),
       "utf8",
     );
-    const card = readFileSync(
-      join(FEATURE_ROOT, "components/SimpleServiceCard.tsx"),
-      "utf8",
-    );
 
-    expect(detail).toMatch(/from ["']@\/features\/service-completion["']/);
     expect(contracted).toMatch(/from ["']@\/features\/service-completion["']/);
     expect(contracted).toMatch(/ProviderMarkExecutedAction/);
     expect(contracted).toMatch(/ClientEvaluateServiceAction/);
-    expect(card).toMatch(/from ["']@\/features\/service-completion["']/);
-    expect(card).toMatch(/EnrichmentProcessingBanner/);
   });
 
   it("does not export mark/confirm lifecycle from view-services Public API", () => {

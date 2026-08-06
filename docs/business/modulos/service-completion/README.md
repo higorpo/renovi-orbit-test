@@ -22,9 +22,9 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 | Aspecto | Detalhe |
 |---------|---------|
 | Feature front | `src/features/service-completion/` |
-| Superfícies UI | Banner enrichment; CTAs na seção contratada → sheet (mobile) / dialog (desktop); wizards embutidos; stub de disputa (no fluxo Avaliar serviço e inline quando sem CTA avaliar) — título “Abrir disputa”, botão “Falar com o suporte”; no step de revisão do Avaliar serviço, checkbox obrigatório de declaração de execução |
-| Public API (host) | `EnrichmentProcessingBanner`, **`ProviderMarkExecutedAction`** / **`ProviderMarkExecutedSheet`**, **`ClientEvaluateServiceAction`** / **`ClientEvaluateServiceSheet`** (+ wizards ainda exportados para composição embutida) |
-| Host | `view-services` (`ServiceContractedSection`, `ServiceDetailPage`, `SimpleServiceCard`); `my-services` (sheets hospedados na página do card) — **só** imports da Public API |
+| Superfícies UI | CTAs na seção contratada → sheet (mobile) / dialog (desktop); wizards embutidos; stub de disputa (no fluxo Avaliar serviço e inline quando sem CTA avaliar) — título “Abrir disputa”, botão “Falar com o suporte”; no step de revisão do Avaliar serviço, checkbox obrigatório de declaração de execução |
+| Public API (host) | **`ProviderMarkExecutedAction`** / **`ProviderMarkExecutedSheet`**, **`ClientEvaluateServiceAction`** / **`ClientEvaluateServiceSheet`** (+ wizards ainda exportados para composição embutida) |
+| Host | `view-services` (`ServiceContractedSection`, `ServiceDetailPage`); `my-services` (sheets hospedados na página do card) — **só** imports da Public API |
 | Enrichment | Tabela `service_request_enrichments` (`PENDING` → `RUNNING` → `READY` \| `ABORTED`); enqueue em create/republish |
 | Matching | Bootstrap **só** via `matching_bootstrap_dispatch_for_service_request` na TX de READY (trigger OPEN **DROP**ado) |
 | Conclusão | RPCs `service_completion_mark_executed`, `service_completion_auto_mark_executed` (+ cron), `service_completion_confirm_with_rating`, `service_completion_auto_complete_executed` (+ cron) |
@@ -44,7 +44,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 
 | Perfil | Papel |
 |--------|--------|
-| **Cliente** | Vê banner “em processamento”; após EXECUTED: CTA **“Avaliar serviço”** (revisão + declaração de execução + scores; alerta se auto-mark sem checklist); stub de disputa; rating opcional pós auto-complete |
+| **Cliente** | Após EXECUTED: CTA **“Avaliar serviço”** (revisão + declaração de execução + scores; alerta se auto-mark sem checklist); stub de disputa; rating opcional pós auto-complete |
 | **Prestador** | Em `CONFIRMED`: CTA **“Marcar serviço como concluído”** (checklist no sheet/dialog, não inline); vê conclusão após COMPLETED |
 | **Sistema** | Worker/cron enrichment; cron **auto-mark EXECUTED** (`service_completion_auto_mark_executed`, grace `auto_mark_executed_grace_hours`); cron **auto-complete** EXECUTED→COMPLETED (`auto_complete_grace_hours`, `completed_by=system`); sweeper READY-sem-dispatch (≤7 dias); janitor de uploads órfãos |
 
@@ -74,7 +74,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 - INSERT no storage `completion-evidence` exige sessão `open`, não expirada, CS `CONFIRMED`, contagem &lt; `max_files` (**só prestador**).
 - SELECT no storage `completion-evidence`: prestador no próprio prefixo (draft + frozen); **cliente do CS** quando a evidência está `frozen` (`service_completion_evidence_storage_path_client_readable`) — permite `createSignedUrl` para thumbnails/lightbox em “Avaliar serviço”; admin de plataforma. Sem isso, a UI mostrava “Indisponível”.
 - Evidência **frozen** e schema de enrichment **READY** são imutáveis no DB (triggers); CS `EXECUTED`/`COMPLETED` exige evidência frozen (constraint deferred); FK evidência→CS é **ON DELETE RESTRICT**.
-- Leitura de produto: status/`ready` leves em `get_service` / `list_services` (banner, card, gate do CTA prestador). Checklist/evidências/capabilities: RPC `get_service_completion_context` (não SELECT direto em `service_request_enrichments` por `authenticated`) — detalhe completo só para cliente do SR, prestador contratado ou admin; marketplace → payload limitado; no app, a RPC roda ao abrir o wizard de conclusão/avaliação (não ao montar o detalhe).
+- Leitura de produto: status/`ready` leves em `get_service` / `list_services` (gate do CTA prestador). Checklist/evidências/capabilities: RPC `get_service_completion_context` (não SELECT direto em `service_request_enrichments` por `authenticated`) — detalhe completo só para cliente do SR, prestador contratado ou admin; marketplace → payload limitado; no app, a RPC roda ao abrir o wizard de conclusão/avaliação (não ao montar o detalhe).
 - Constantes: `auto_mark_executed_grace_hours` / `auto_mark_executed_batch_size`; `auto_complete_grace_hours` / `auto_complete_batch_size` (default **100**, distinto de `enrichment_claim_batch_size`); sweeper READY-sem-dispatch limitado a enrichment materializado nos **últimos 7 dias**.
 - Sessão de upload: `storage_bucket` = `completion-evidence`; `provider_id` deve coincidir com o CS.
 
@@ -101,7 +101,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 |------------|------|
 | **request-quote** / republish | Enfileiram enrichment `PENDING` (não bootstrap matching) |
 | **matching-dispatch** | Bootstrap só após READY |
-| **view-services** | Consome Public API: banner; **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceContractedSection` |
+| **view-services** | Consome Public API: **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceContractedSection` |
 | **my-services** | Cards da lista: highlight de follow-up pós-data-fim / `EXECUTED`; prestador `CONFIRMED` + past → **“Concluir serviço”** abre sheet no card (contexto ao abrir; gate `enrichmentReady`); cliente `EXECUTED` → **“Avaliar serviço”** abre `ClientEvaluateServiceSheet` hospedado na página (contexto RPC só ao abrir o wizard); demais follow-ups → “Ver detalhes” |
 | **dynamic-form** | Blocos `completion_criterion` / `static_text` no checklist (fotos via galeria do service-completion) |
 | **message-dispatcher** | Intents `SERVICE_EXECUTED`, `SERVICE_COMPLETED`, `SERVICE_AUTO_COMPLETED` |
@@ -124,7 +124,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 | Área | Caminhos |
 |------|----------|
 | App | `src/features/service-completion/` (`ProviderMarkExecutedAction`, `ProviderMarkExecutedSheet`, `ClientEvaluateServiceAction`, `ClientEvaluateServiceSheet`, `CompletionEvidenceGallery`, wizards) |
-| Host UI | `ServiceContractedSection.tsx` (CTAs); `ServiceDetailPage.tsx` (banner); `SimpleServiceCard.tsx` |
+| Host UI | `ServiceContractedSection.tsx` (CTAs); `ServiceDetailPage.tsx` |
 | Migrations | `supabase/migrations/20260804*` (enrichment, bootstrap DROP, RPCs, cron); `20260806180328_service_completion_auto_mark_executed.sql` (auto-mark CONFIRMED→EXECUTED) |
 | Edge | `generate-completion-checklist/` (enrichment only) |
 | Upload evidência | RPCs `service_completion_create_upload_session` / `service_completion_register_upload_object` + storage autenticado `completion-evidence` (sem Edge); SELECT/`createSignedUrl` também para cliente do CS com evidência `frozen` |

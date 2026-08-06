@@ -66,7 +66,7 @@
 - **negotiation-proposals** — sheet de orçamentos; composer no detalhe prestador.
 - **chats** — conversas, initiate, botão chat contratado.
 - **payments** / **service-reschedule** — ações na `ServiceContractedSection`.
-- **service-completion** — banner enrichment (`enrichmentStatus`/`enrichmentReady` do `get_service`, como no card); **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceContractedSection` (contexto RPC só no sheet/wizard); só Public API.
+- **service-completion** — **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceContractedSection` (contexto RPC só no sheet/wizard; gate leve via `enrichmentReady` do `get_service`); só Public API.
 - **DashboardLayout** — hospeda `ServiceDetailSheet`.
 
 ## 9. Riscos e lacunas
@@ -83,7 +83,7 @@
 | Public API | `src/features/view-services/index.ts` |
 | API | `api/services.api.ts`, `opportunityView.api.ts` (conclusão **não** vive mais em APIs locais de lifecycle) |
 | Hooks | `useServicesList`, `useService`, `useCancelService`, `useRepublishCancelledService`, `useServiceDetailModal`, chat, budget sheet |
-| UI | `ServiceDetailShell`, `ServiceDetailSheet`, `ServiceDetailPage` (banner enrichment); `ServiceContractedSection` (CTAs `service-completion`), `SimpleServiceCard`, … |
+| UI | `ServiceDetailShell`, `ServiceDetailSheet`, `ServiceDetailPage`; `ServiceContractedSection` (CTAs `service-completion`), `SimpleServiceCard`, … |
 | Tipos / nav | `types/service.types.ts`, `types/serviceDetailNavigation.types.ts` |
 | Constantes | `queryKeys.ts`, `routes.ts`, `statusTabs.ts`, `statusBadge.ts` |
 | SQL | `20260705207000_*`, `20260705208000_*`, `20260705209000_*`, `20260802170000_republish_*` |
