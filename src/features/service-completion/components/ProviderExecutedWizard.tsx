@@ -2,19 +2,20 @@
  * Provider EXECUTED wizard (Tasks 49–50).
  * Draft checklist + final submit via service_completion_mark_executed.
  * No post-EXECUTED self-serve edit (panel hides when canSaveDraft/canMarkExecuted false).
+ * Renders inside CompletionFlowSheetDialog (sticky footer on mobile).
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   CompletionCriterionBlock,
-  StaticTextBlock,
+  type CompletionCriterionEvidenceRenderArgs,
   type CompletionCriterionValue,
-  type FormBlock,
 } from "@/features/dynamic-form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -25,6 +26,7 @@ import { parseCompletionChecklistBlocks } from "../utils/parseChecklistSchema";
 import { deriveExecutedTemporalGate } from "../utils/executedTemporal";
 import { validateExecutedResponses } from "../utils/validateExecutedResponses";
 import type { CompletionCriterionResponse } from "../types/completion.types";
+import { CompletionEvidenceGallery } from "./CompletionEvidenceGallery";
 
 export type ProviderExecutedWizardProps = {
   serviceRequestId: string;
@@ -32,6 +34,8 @@ export type ProviderExecutedWizardProps = {
   scheduledEndDate?: string | null;
   className?: string;
   onExecuted?: () => void;
+  /** Notified when a mark-executed mutation starts/ends (for dismiss lock). */
+  onPendingChange?: (pending: boolean) => void;
 };
 
 function toCriterionValue(
@@ -45,25 +49,14 @@ function toCriterionValue(
   };
 }
 
-function saveStatusLabel(
-  saveState: ReturnType<typeof useProviderCompletionDraft>["saveState"],
-): string | null {
-  switch (saveState) {
-    case "dirty":
-      return "Alterações pendentes…";
-    case "saving":
-      return "Salvando rascunho…";
-    case "saved":
-      return "Rascunho salvo";
-    case "error":
-      return "Erro ao salvar";
-    default:
-      return null;
-  }
-}
-
-function renderStatic(block: FormBlock) {
-  return <StaticTextBlock block={block} />;
+function renderEvidence(args: CompletionCriterionEvidenceRenderArgs) {
+  return (
+    <CompletionEvidenceGallery
+      paths={args.paths}
+      readOnly={args.readOnly}
+      onRemovePath={args.readOnly ? undefined : args.onRemovePath}
+    />
+  );
 }
 
 function ProviderExecutedWizardSkeleton({
@@ -74,7 +67,7 @@ function ProviderExecutedWizardSkeleton({
   return (
     <div
       className={cn(
-        "space-y-4 rounded-lg border border-border bg-card p-4 shadow-elevation-1 sm:p-5",
+        "flex min-h-0 flex-1 flex-col gap-4 p-4 sm:p-6",
         className,
       )}
       aria-busy="true"
@@ -103,6 +96,7 @@ export function ProviderExecutedWizard({
   scheduledEndDate = null,
   className,
   onExecuted,
+  onPendingChange,
 }: ProviderExecutedWizardProps) {
   const queryClient = useQueryClient();
   const { data: context, isLoading, isError, refetch } =
@@ -115,7 +109,10 @@ export function ProviderExecutedWizard({
     context,
   });
   const markExecuted = useProviderMarkExecuted();
-  const [submitIssues, setSubmitIssues] = useState<string[]>([]);
+  const isDesktop = useBreakpointMd();
+  const formRef = useRef<HTMLDivElement>(null);
+  const [forceValidate, setForceValidate] = useState(false);
+  const [submitGateIssue, setSubmitGateIssue] = useState<string | null>(null);
 
   const temporal = useMemo(
     () =>
@@ -137,7 +134,7 @@ export function ProviderExecutedWizard({
   if (isError || !context) {
     return (
       <ErrorState
-        className={className}
+        className={cn("p-4 sm:p-6", className)}
         title="Não foi possível carregar o checklist"
         description="Verifique a conexão e tente novamente."
         onRetry={() => void refetch()}
@@ -153,7 +150,7 @@ export function ProviderExecutedWizard({
   const blocks = parseCompletionChecklistBlocks(schema);
   if (blocks.length === 0) {
     return (
-      <Alert className={className}>
+      <Alert className={cn("m-4 sm:m-6", className)}>
         <AlertTitle>Checklist indisponível</AlertTitle>
         <AlertDescription>
           O checklist ainda não está pronto para preenchimento.
@@ -162,7 +159,6 @@ export function ProviderExecutedWizard({
     );
   }
 
-  const statusLabel = saveStatusLabel(draft.saveState);
   const contractedServiceId = context.contractedService.id;
   const canSubmit =
     Boolean(context.capabilities.canMarkExecuted) &&
@@ -175,23 +171,34 @@ export function ProviderExecutedWizard({
 
   const handleSubmit = async () => {
     if (!contractedServiceId) return;
-    setSubmitIssues([]);
+    setSubmitGateIssue(null);
 
     const validation = validateExecutedResponses(blocks, draft.responses);
     if (!validation.valid) {
-      setSubmitIssues(
-        validation.issues.map((i) => `${i.label}: ${i.error}`),
-      );
+      setForceValidate(true);
+      requestAnimationFrame(() => {
+        const firstInvalidId = validation.issues[0]?.blockId;
+        const root = formRef.current;
+        const target = firstInvalidId
+          ? root?.querySelector<HTMLElement>(
+              `[data-completion-criterion-id="${firstInvalidId}"]`,
+            )
+          : root?.querySelector<HTMLElement>('[data-invalid="true"]');
+        target?.scrollIntoView({ behavior: "smooth", block: "center" });
+        const justification = target?.querySelector<HTMLTextAreaElement>("textarea");
+        justification?.focus({ preventScroll: true });
+      });
       return;
     }
 
     if (temporal.notYetDue) {
-      setSubmitIssues([
+      setSubmitGateIssue(
         "Este serviço só pode ser marcado como executado a partir da data agendada.",
-      ]);
+      );
       return;
     }
 
+    onPendingChange?.(true);
     try {
       await markExecuted.mutateAsync({
         serviceRequestId,
@@ -199,50 +206,25 @@ export function ProviderExecutedWizard({
         responses: draft.responses,
         expectedDraftVersion: draft.draftVersion,
       });
-      // Invalidate list/detail queries owned by view-services via callback.
       onExecuted?.();
       void queryClient.invalidateQueries({
         queryKey: ["services"],
       });
     } catch {
       // Toast handled in hook
+    } finally {
+      onPendingChange?.(false);
     }
   };
 
-  return (
-    <section
-      className={cn(
-        "space-y-4 rounded-lg border border-border bg-card p-4 shadow-elevation-1 sm:p-5",
-        className,
-      )}
-      data-testid="provider-executed-wizard"
-      aria-label="Checklist de conclusão"
-    >
-      <header className="space-y-1">
-        <h2 className="text-base font-semibold text-foreground">
-          Checklist de conclusão
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Preencha os critérios e envie quando o serviço estiver concluído. O cliente só
-          verá as respostas após a marcação como executado.
-        </p>
-        {statusLabel ? (
-          <p
-            className="text-xs text-muted-foreground"
-            data-testid="provider-draft-save-status"
-            data-state={draft.saveState}
-          >
-            {statusLabel}
-          </p>
-        ) : null}
-      </header>
-
+  const body = (
+    <>
       {temporal.notYetDue ? (
         <Alert data-testid="provider-executed-not-yet-due">
           <AlertTitle>Ainda não é possível marcar como executado</AlertTitle>
           <AlertDescription>
-            A data agendada ainda não chegou. Você pode salvar o rascunho do checklist
-            agora e enviar a partir do dia do serviço.
+            A data agendada ainda não chegou. Você pode salvar o rascunho do
+            checklist agora e enviar a partir do dia do serviço.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -251,8 +233,8 @@ export function ProviderExecutedWizard({
         <Alert data-testid="provider-executed-late-notice">
           <AlertTitle>Envio fora do prazo</AlertTitle>
           <AlertDescription>
-            A janela on-time já passou. Você ainda pode marcar como executado; o cliente
-            verá que a execução foi registrada com atraso.
+            A janela on-time já passou. Você ainda pode marcar como executado; o
+            cliente verá que a execução foi registrada com atraso.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -279,29 +261,26 @@ export function ProviderExecutedWizard({
         </Alert>
       ) : null}
 
-      <div className="space-y-6">
+      <div className="space-y-6" ref={formRef}>
         {blocks.map((block) => {
-          if (block.type === "static_text") {
-            return (
-              <div key={block.id} className="rounded-lg bg-muted/40 px-3 py-2">
-                {renderStatic(block)}
-              </div>
-            );
-          }
+          // Instructional static_text tips are redundant with field-level UX.
+          if (block.type === "static_text") return null;
 
           if (block.type !== "completion_criterion") return null;
 
-          const readOnly = draft.saveState === "conflict";
+          // Keep fields editable during conflict so keystrokes are not dropped;
+          // persistence stays blocked until the user reloads the draft.
           const value = toCriterionValue(draft.responses[block.id]);
+          const uploadsBlocked = draft.saveState === "conflict";
 
           return (
             <div key={block.id} className="space-y-2">
               <CompletionCriterionBlock
                 block={block}
                 value={value}
-                readOnly={readOnly}
+                forceValidate={forceValidate}
+                renderEvidence={renderEvidence}
                 onChange={(next) => {
-                  setSubmitIssues([]);
                   draft.setCriterionResponse(block.id, {
                     met: next.met,
                     justification: next.justification,
@@ -309,7 +288,7 @@ export function ProviderExecutedWizard({
                   });
                 }}
                 onUploadEvidenceFile={
-                  readOnly
+                  uploadsBlocked
                     ? undefined
                     : async (file) => {
                         const path = await draft.uploadEvidenceForCriterion(
@@ -331,46 +310,95 @@ export function ProviderExecutedWizard({
         })}
       </div>
 
-      {submitIssues.length > 0 ? (
+      {submitGateIssue ? (
         <Alert variant="destructive" data-testid="provider-executed-validation">
-          <AlertTitle>Checklist incompleto</AlertTitle>
-          <AlertDescription>
-            <ul className="mt-1 list-disc space-y-1 pl-4 text-sm">
-              {submitIssues.map((issue) => (
-                <li key={issue}>{issue}</li>
-              ))}
-            </ul>
-          </AlertDescription>
+          <AlertTitle>Não é possível enviar</AlertTitle>
+          <AlertDescription>{submitGateIssue}</AlertDescription>
         </Alert>
       ) : null}
+    </>
+  );
 
-      {context.capabilities.canMarkExecuted ? (
-        <div className="space-y-2 border-t border-border/80 pt-4">
-          {(draft.saveState === "dirty" || draft.saveState === "saving") && (
-            <p className="text-xs text-muted-foreground">
-              Aguarde o rascunho ser salvo antes de enviar.
-            </p>
-          )}
-          <Button
-            type="button"
-            className="w-full sm:w-auto"
-            disabled={!canSubmit}
-            data-testid="provider-mark-executed-submit"
-            onClick={() => void handleSubmit()}
-          >
-            {markExecuted.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
-            ) : (
-              <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden />
+  const footer =
+    context.capabilities.canMarkExecuted ? (
+      <div
+        className={cn("space-y-2", isDesktop && "flex flex-col items-end")}
+      >
+        {(draft.saveState === "dirty" || draft.saveState === "saving") && (
+          <p
+            className={cn(
+              "text-xs text-muted-foreground",
+              isDesktop ? "text-right" : "text-center",
             )}
-            Marcar serviço como executado
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Após o envio, as respostas ficam congeladas e não poderão ser editadas por
-            você.
+          >
+            Aguarde o rascunho ser salvo antes de enviar.
           </p>
+        )}
+        <Button
+          type="button"
+          className={cn(
+            "w-full transition-transform duration-150 ease-out active:scale-[0.97]",
+            isDesktop && "w-auto",
+          )}
+          disabled={!canSubmit}
+          data-testid="provider-mark-executed-submit"
+          onClick={() => void handleSubmit()}
+        >
+          {markExecuted.isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+          ) : (
+            <CheckCircle2 className="mr-2 h-4 w-4" aria-hidden />
+          )}
+          Marcar serviço como executado
+        </Button>
+        <p
+          className={cn(
+            "text-xs text-muted-foreground",
+            isDesktop ? "max-w-sm text-right" : "text-center",
+          )}
+        >
+          Após o envio, as respostas ficam congeladas e não poderão ser editadas
+          por você.
+        </p>
+      </div>
+    ) : null;
+
+  // Desktop: natural document flow — footer sits after checklist (not sticky).
+  // Mobile: sticky footer above the home indicator / keyboard.
+  if (isDesktop) {
+    return (
+      <div
+        className={cn(
+          "min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-y-contain px-5 py-4",
+          className,
+        )}
+        data-testid="provider-executed-wizard"
+        aria-label="Checklist de conclusão"
+      >
+        {body}
+        {footer ? (
+          <div className="space-y-2 border-t border-border/80 pt-4">
+            {footer}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn("flex min-h-0 flex-1 flex-col", className)}
+      data-testid="provider-executed-wizard"
+      aria-label="Checklist de conclusão"
+    >
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain px-4 py-4 touch-pan-y">
+        {body}
+      </div>
+      {footer ? (
+        <div className="shrink-0 border-t border-border/80 bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md">
+          {footer}
         </div>
       ) : null}
-    </section>
+    </div>
   );
 }

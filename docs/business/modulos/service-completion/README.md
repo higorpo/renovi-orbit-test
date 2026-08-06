@@ -10,8 +10,8 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 
 ## 1. Leitura para negócio
 
-- **Para que serve:** após criar/republicar um pedido, materializa um **checklist de conclusão** imutável; só então o matching pode começar. Depois do pagamento (`CONFIRMED`), o prestador preenche evidências e marca **EXECUTED**; o cliente confirma com **avaliação obrigatória**, ou o sistema **auto-completa** ~24h após EXECUTED.
-- **Quem usa:** cliente e prestador no detalhe do serviço; sistema (cron enrichment + auto-complete).
+- **Para que serve:** após criar/republicar um pedido, materializa um **checklist de conclusão** imutável; só então o matching pode começar. Depois do pagamento (`CONFIRMED`), o prestador abre **“Marcar serviço como concluído”** (sheet/dialog com checklist + evidências) e marca **EXECUTED**; o cliente abre **“Avaliar serviço”** (2 etapas: revisar → avaliar) ou o sistema **auto-completa** ~24h após EXECUTED.
+- **Quem usa:** cliente e prestador no detalhe do serviço (seção Serviço contratado); sistema (cron enrichment + auto-complete).
 - **Valor:** pedido só entra no feed após READY; conclusão com evidência congelada e rating; writers fora do domínio de pagamentos.
 - **Riscos de suporte:** pedido `OPEN` ainda “em processamento” **não** aparece no feed; disputa no app é **stub** (URL de suporte ou toast “Em breve”) — sem FSM de disputa.
 
@@ -22,8 +22,9 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 | Aspecto | Detalhe |
 |---------|---------|
 | Feature front | `src/features/service-completion/` |
-| Superfícies UI | Banner enrichment; wizard prestador (draft + EXECUTED); wizard cliente (evidência congelada + confirm+rating); stub de disputa |
-| Host | `view-services` (`ServiceDetailPage`, `SimpleServiceCard`) — **só** imports da Public API |
+| Superfícies UI | Banner enrichment; CTAs na seção contratada → sheet (mobile) / dialog (desktop); wizards embutidos; stub de disputa (inline quando sem CTA avaliar) |
+| Public API (host) | `EnrichmentProcessingBanner`, **`ProviderMarkExecutedAction`**, **`ClientEvaluateServiceAction`** (+ wizards ainda exportados para composição embutida) |
+| Host | `view-services` (`ServiceContractedSection`, `ServiceDetailPage`, `SimpleServiceCard`) — **só** imports da Public API |
 | Enrichment | Tabela `service_request_enrichments` (`PENDING` → `RUNNING` → `READY` \| `ABORTED`); enqueue em create/republish |
 | Matching | Bootstrap **só** via `matching_bootstrap_dispatch_for_service_request` na TX de READY (trigger OPEN **DROP**ado) |
 | Conclusão | RPCs `service_completion_mark_executed`, `service_completion_confirm_with_rating`, `service_completion_auto_complete_executed` (+ cron) |
@@ -43,8 +44,8 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 
 | Perfil | Papel |
 |--------|--------|
-| **Cliente** | Vê banner “em processamento”; após EXECUTED revisa evidências, confirma+avalia; stub de disputa; rating opcional pós auto-complete |
-| **Prestador** | Em `CONFIRMED`: draft do checklist + marcar executado (validação); vê conclusão após COMPLETED |
+| **Cliente** | Vê banner “em processamento”; após EXECUTED: CTA **“Avaliar serviço”** (revisão + scores); stub de disputa; rating opcional pós auto-complete |
+| **Prestador** | Em `CONFIRMED`: CTA **“Marcar serviço como concluído”** (checklist no sheet/dialog, não inline); vê conclusão após COMPLETED |
 | **Sistema** | Worker/cron enrichment; cron auto-complete (`completed_by=system`, batch `auto_complete_batch_size`); sweeper READY-sem-dispatch (≤7 dias); janitor de uploads órfãos |
 
 ---
@@ -52,9 +53,9 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 ## 5. Principais fluxos
 
 1. Create/republish → `OPEN` + enrichment `PENDING` → Edge `generate-completion-checklist` → READY → `matching_bootstrap_dispatch_for_service_request` (delay 5 min a partir daí).
-2. Prestador `CONFIRMED` → draft + upload evidência (RPC create session → `storage.from('completion-evidence').upload()` autenticado → RPC register; sem Edge) → `service_completion_mark_executed` → `EXECUTED` (+ `executed_late` se atrasado).
-3. Cliente → revisão congelada → `service_completion_confirm_with_rating` (scores obrigatórios) → `COMPLETED`.
-4. Sem confirmação manual → cron ~24h (`auto_complete_grace_hours`) → `COMPLETED` pelo sistema; rating pode vir depois.
+2. Prestador `CONFIRMED` → CTA “Marcar serviço como concluído” → sheet/dialog com draft + upload evidência (RPC create session → `storage.from('completion-evidence').upload()` autenticado → RPC register; sem Edge) → fotos como thumbnails + lightbox → `service_completion_mark_executed` → `EXECUTED` (+ `executed_late` se atrasado).
+3. Cliente → CTA “Avaliar serviço” → etapa 1 revisão congelada (thumbnails) → etapa 2 scores → `service_completion_confirm_with_rating` → `COMPLETED`.
+4. Sem confirmação manual → cron ~24h (`auto_complete_grace_hours`) → `COMPLETED` pelo sistema; rating pode vir depois (mesmo CTA, label opcional).
 
 ---
 
@@ -96,8 +97,8 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 |------------|------|
 | **request-quote** / republish | Enfileiram enrichment `PENDING` (não bootstrap matching) |
 | **matching-dispatch** | Bootstrap só após READY |
-| **view-services** | Consome Public API (banners/wizards) |
-| **dynamic-form** | Blocos `completion_criterion` / `static_text` no checklist |
+| **view-services** | Consome Public API: banner; **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceContractedSection` |
+| **dynamic-form** | Blocos `completion_criterion` / `static_text` no checklist (fotos via galeria do service-completion) |
 | **message-dispatcher** | Intents `SERVICE_EXECUTED`, `SERVICE_COMPLETED`, `SERVICE_AUTO_COMPLETED` |
 | **payments** | Domínio financeiro; **não** escreve EXECUTED/COMPLETED de produto |
 
@@ -117,8 +118,8 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 
 | Área | Caminhos |
 |------|----------|
-| App | `src/features/service-completion/` |
-| Host UI | `src/features/view-services/components/ServiceDetailPage.tsx`, `SimpleServiceCard.tsx` |
+| App | `src/features/service-completion/` (`ProviderMarkExecutedAction`, `ClientEvaluateServiceAction`, `CompletionEvidenceGallery`, wizards) |
+| Host UI | `ServiceContractedSection.tsx` (CTAs); `ServiceDetailPage.tsx` (banner); `SimpleServiceCard.tsx` |
 | Migrations | `supabase/migrations/20260804*` (enrichment, bootstrap DROP, RPCs, cron) |
 | Edge | `generate-completion-checklist/` (enrichment only) |
 | Upload evidência | RPCs `service_completion_create_upload_session` / `service_completion_register_upload_object` + storage autenticado `completion-evidence` (sem Edge) |

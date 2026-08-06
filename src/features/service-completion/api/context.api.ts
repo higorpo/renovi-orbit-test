@@ -93,13 +93,22 @@ function mapContracted(raw: RpcContracted | undefined): ServiceCompletionContrac
   };
 }
 
+function coerceDraftVersion(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 function mapEvidence(raw: RpcEvidence | undefined): ServiceCompletionEvidence {
   const phase = (raw?.phase as CompletionEvidencePhase | undefined) ?? "absent";
   return {
     phase,
     executedLate: typeof raw?.executed_late === "boolean" ? raw.executed_late : null,
     frozenAt: raw?.frozen_at ?? null,
-    draftVersion: typeof raw?.draft_version === "number" ? raw.draft_version : null,
+    draftVersion: coerceDraftVersion(raw?.draft_version),
     responses: raw?.responses ?? null,
   };
 }

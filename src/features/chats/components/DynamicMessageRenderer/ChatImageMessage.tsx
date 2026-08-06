@@ -3,7 +3,7 @@ import { areChatMessageListItemsEqual } from "../../utils/chatMessageEquality";
 import { X } from "lucide-react";
 import { Dialog, DialogClose, DialogTitle } from "@/components/ui/dialog";
 import { ShellDialogContent } from "@/components/ui/shell-dialog";
-import { mediaLightboxShellDialogClassName } from "@/components/ui/shell-dialog-classes";
+import { mediaLightboxOverlayClassName, mediaLightboxShellDialogClassName } from "@/components/ui/shell-dialog-classes";
 import { cn } from "@/lib/utils";
 import type { ChatMessageListItem } from "../../types/chats.types";
 import type { ChatMessageGroupPosition } from "../../utils/groupChatTimeline";
@@ -130,7 +130,11 @@ export const ChatImageMessage = memo(function ChatImageMessage({
           if (!open) setExpandedUrl(null);
         }}
       >
-        <ShellDialogContent size="xl" className={mediaLightboxShellDialogClassName}>
+        <ShellDialogContent
+          size="xl"
+          overlayClassName={mediaLightboxOverlayClassName}
+          className={mediaLightboxShellDialogClassName}
+        >          
           <DialogTitle className="sr-only">Imagem ampliada</DialogTitle>
           <div className="relative flex h-full items-center justify-center">
             <DialogClose asChild>

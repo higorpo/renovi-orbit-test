@@ -36,7 +36,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `addresses/` | `api/addresses.api.ts`, `api/statesAndCities.api.ts` | `AddressSelectionStep`, `AddressesSection`, `AddressFormDialog` |
 | `my-services/` | hooks page/list/filters/cancel (delegam a `view-services`); `pendingPaymentHighlight.ts`, `clientServiceCardPresentation.ts`, `providerServiceCardPresentation.ts` | `ClientMyServicesPage` / `ProviderMyServicesPage`, cards com highlight `PENDING_PAYMENT`, `ReceivedBudgetDetailsSheet` via `negotiation-proposals` |
 | `view-services/` | `api/services.api.ts` (RPC `get_service`, `list_services`, `cancel_service_request`, `republish_cancelled_service_request`); hooks list/detail/cancel/republish; UI compõe **service-completion** | `ServiceDetailShell` (rota `/dashboard/services/:id` — **não** placeholder), `ServiceDetailPage`, `ServiceDetailClientActions`, `ServiceListCard`, `ServiceSections` |
-| `service-completion/` | `api/lifecycle.api.ts`, `context.api.ts`, `draft.api.ts`, `upload.api.ts`, `ratings.api.ts`; hooks draft/mark/confirm/dispute/enrichment | `EnrichmentProcessingBanner`, `ProviderExecutedWizard`, `ClientConfirmRatingWizard`, `DisputeStubEntry` (Public API → `view-services`) |
+| `service-completion/` | `api/lifecycle.api.ts`, `context.api.ts`, `draft.api.ts`, `upload.api.ts`, `evidencePhotoStorage.api.ts`, `ratings.api.ts`; hooks draft/mark/confirm/dispute/enrichment/evidence URLs | `EnrichmentProcessingBanner`, **`ProviderMarkExecutedAction`**, **`ClientEvaluateServiceAction`**, `CompletionFlowSheetDialog`, `CompletionEvidenceGallery`, wizards embutidos, `DisputeStubEntry` (Public API → `view-services`) |
 | `provider-calendar/` | `api/providerCalendar.api.ts` (RPC `list_provider_scheduled_services`); hooks de intervalo/vista | `ProviderCalendarPage` (`/dashboard/services/calendar`); banner de entrada em `my-services` |
 | `device-beacon/` | `api/deviceBeacon.api.ts`, `deviceBeaconHttp.api.ts`; `useProviderLocationTracking`; `syncSchedule.ts` / `locationSync.ts` | `DeviceBeaconProvider` (RootLayout); dialog de permissão de localização (prestador) |
 | `push-permission/` | `utils/pushPermissionPrompt.storage.ts`; hooks/host do soft prompt | `PushPermissionPromptHost` (RootLayout); cooldown Preferences |
@@ -197,7 +197,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | Artefato | Uso na documentação |
 |----------|---------------------|
 | `docs/business/modulos/matching-dispatch/` | README + feature dispatch/visibilidade; lifecycle sem proposta (24h/48h); bootstrap READY-handoff (CONTEXT #135); repair READY-sem-dispatch ≤7 dias |
-| `docs/business/modulos/service-completion/` | Enrichment, conclusão EXECUTED/confirm/auto-complete, stub disputa; endurecimento SQL (evidência registrada, contexto full vs marketplace, imutabilidade) |
+| `docs/business/modulos/service-completion/` | Enrichment, conclusão EXECUTED/confirm/auto-complete, stub disputa; CTAs sheet/dialog + galeria evidências; endurecimento SQL (evidência registrada, contexto full vs marketplace, imutabilidade) |
 | `docs/service-completion/` | Design técnico / ADR (fonte normativa de engenharia) |
 | `supabase/migrations/20260804010000_service_completion_platform_constants.sql` | Seeds checklist/enrichment/`auto_complete_batch_size`/orphan TTL |
 | `supabase/migrations/20260804060000_*`–`20260804100000_*` | Evidence + upload sessions/objects + storage INSERT gates; frozen imutável; FK RESTRICT; deferred EXECUTED/COMPLETED↔frozen |

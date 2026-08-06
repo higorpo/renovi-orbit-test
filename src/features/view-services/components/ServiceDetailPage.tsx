@@ -7,8 +7,6 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/auth";
 import {
   EnrichmentProcessingBanner,
-  ProviderExecutedWizard,
-  ClientConfirmRatingWizard,
   deriveEnrichmentProcessingUi,
   useServiceCompletionContext,
 } from "@/features/service-completion";
@@ -210,20 +208,7 @@ export function ServiceDetailPage({
             }
             onCancellationSuccess={() => void refetch()}
             onRescheduleSuccess={() => void refetch()}
-          />
-        ) : null}
-        {isProvider && model.contracted ? (
-          <ProviderExecutedWizard
-            serviceRequestId={model.id}
-            scheduledStartDate={model.contracted.scheduledStartDate}
-            scheduledEndDate={model.contracted.scheduledEndDate}
-            onExecuted={() => void refetch()}
-          />
-        ) : null}
-        {isClient && model.contracted ? (
-          <ClientConfirmRatingWizard
-            serviceRequestId={model.id}
-            onCompleted={() => void refetch()}
+            onCompletionSuccess={() => void refetch()}
           />
         ) : null}
         {isProvider && model.contracted ? (

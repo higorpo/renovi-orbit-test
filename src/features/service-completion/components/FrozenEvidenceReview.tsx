@@ -2,7 +2,11 @@
  * Read-only frozen evidence review for the client (Task 51).
  */
 
-import { CompletionCriterionBlock, StaticTextBlock } from "@/features/dynamic-form";
+import type { ReactNode } from "react";
+import {
+  CompletionCriterionBlock,
+  type CompletionCriterionEvidenceRenderArgs,
+} from "@/features/dynamic-form";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { parseCompletionChecklistBlocks } from "../utils/parseChecklistSchema";
@@ -16,6 +20,7 @@ export type FrozenEvidenceReviewProps = {
   responses: CompletionResponsesMap | null | undefined;
   executedLate?: boolean | null;
   className?: string;
+  renderEvidence?: (args: CompletionCriterionEvidenceRenderArgs) => ReactNode;
 };
 
 export function FrozenEvidenceReview({
@@ -23,6 +28,7 @@ export function FrozenEvidenceReview({
   responses,
   executedLate = false,
   className,
+  renderEvidence,
 }: FrozenEvidenceReviewProps) {
   const blocks = parseCompletionChecklistBlocks(checklistSchema);
   const map = responses ?? {};
@@ -49,13 +55,8 @@ export function FrozenEvidenceReview({
       ) : (
         <ul className="space-y-4">
           {blocks.map((block) => {
-            if (block.type === "static_text") {
-              return (
-                <li key={block.id} className="rounded-lg bg-muted/40 px-3 py-2">
-                  <StaticTextBlock block={block} />
-                </li>
-              );
-            }
+            // Instructional static_text tips are redundant with field-level UX.
+            if (block.type === "static_text") return null;
             if (block.type !== "completion_criterion") return null;
 
             const response = map[block.id] as CompletionCriterionResponse | undefined;
@@ -89,6 +90,7 @@ export function FrozenEvidenceReview({
                       : undefined
                   }
                   readOnly
+                  renderEvidence={renderEvidence}
                 />
               </li>
             );

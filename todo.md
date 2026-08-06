@@ -120,6 +120,9 @@ Coisas para fazer next
 
 - Enviar notificação para prestadores que ainda não completaram o onboarding de tempos em tempos para eles completarem.
 
+- Não permitir parcelas menores do que 150 reais.
+
+- Na tela de onboarding de prestador colocar o * de campo obrigatoŕio
 
 
 
@@ -127,11 +130,7 @@ Itens relacionados a conclusão do serviço:
 
 - Há muita coisa em comum entre a nova parte de gerar checklist com IA e a parte antiga que gerava algumas coisas com IA também, vamos tentar compartilhar mais recursos
 
-- O checklist de conclusão do serviço está na própria tela de detalhes do serviço, na verdade, deveria ter um botão ao lado de Solicitar reagendamento ou Cancelar serviço escrito "Marcar serviço como concluído", onde aí sim, ao clicar, abre uma dialog onde o prestador pode preencher o checklist e demais informações. O mesmo serve para a visualização do cliente, deve ter um botão "Avaliar serviço", que quando ele clica abre uma dialog stepper de 2 etapas, a primeira para verificar o serviço feito e a segunda para avaliar o prestador de serviço e o serviço.
 
-- No checklist, a visualização para o cliente não mostra as imagens anexadas pelo prestador. Elas deveriam ser visíveis para o cliente e para o prestador depois, com opção de ao clicar nelas abrir elas em tela cheia  seguindo o padrão do projeto.
-
-- No checklist quando o prestador aperta "atendido" ou "não atendido", imediatamente já aparece um  erro falando para anexar pelo menos 1 foto, antes mesmo de eu tentar passar pela validação. Isso não deveria estar ocorrendo.
 
 - Revisar todo  o mecanismo de rating da aplicação, ainda não está funcional em alguns lugares e está mocado.
 
@@ -140,6 +139,12 @@ Itens relacionados a conclusão do serviço:
 - Quando o cliente tiver uma avaliação de serviço concluído pendente, ao abrir o app aparecer popup para ele preencher as informações.
 
 - Mensagem "checklist em processamento" no card do componente não está tão legal, acho que não faz tanto sentido.
+
+- /home/higor/Área de Trabalho/Renovi/orbit/supabase/functions/generate-completion-checklist/loadContext.ts não faz sentido enviar ids pro llm analisar, seria melhor enviar textos em si e detalhes do serviço.
+
+- Mover colunas checklist_schema, source, materialized_at, schema_version para dentro do service_requests. 
+
+-  As 24hrs que o cliente tem para marcar serviço como concluído deve contar a partir da data em que o prestador marca o serviço como concluído.
 
 ---
 

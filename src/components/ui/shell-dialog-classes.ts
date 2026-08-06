@@ -44,8 +44,21 @@ export function shellDialogContentClassName(
   );
 }
 
-/** Overrides for fullscreen media lightbox dialogs. */
+/** Overrides for fullscreen media lightbox dialogs (above nested sheet/dialog hosts). */
 export const mediaLightboxShellDialogClassName = cn(
-  "h-[100dvh] max-h-[100dvh] border-0 bg-black p-2 text-white",
+  "z-[100] h-[100dvh] max-h-[100dvh] border-0 bg-black p-2 text-white",
   "sm:h-auto sm:max-h-[90vh] sm:w-auto sm:max-w-5xl sm:rounded-lg sm:border sm:p-3",
 );
+
+export const mediaLightboxOverlayClassName = "z-[100] bg-black/90";
+
+/**
+ * Completion checklist / evaluate flows open above ServiceDetailSheet (z-50).
+ * Keep below media lightbox (z-100).
+ *
+ * `!pointer-events-auto` beats Radix DismissableLayer's inline `pointer-events:none`
+ * when layer registration races (nested modal above ServiceDetailSheet). Without it,
+ * clicks fall through the content onto the overlay and inputs feel frozen.
+ */
+export const nestedOverlayClassName = "z-[60] !pointer-events-auto";
+export const nestedOverlayContentClassName = "z-[60] !pointer-events-auto";

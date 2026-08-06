@@ -1,17 +1,23 @@
 /**
  * Completion checklist criterion block (ADR-0003).
- * Met/not-met + justification when unmet + embedded evidence path list.
+ * Met/not-met + justification when unmet + evidence list (paths or custom renderer).
  * Upload is wired by service-completion via onUploadEvidenceFile (or onRequestEvidenceUpload).
  */
 
 import { cn } from "@/lib/utils";
 import { AlertCircle, Check, ImagePlus, X } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import type { FormBlock, CompletionCriterionValue } from "../../types";
 import { useFieldValidation, getValidationErrorMessage } from "../../hooks/useFieldValidation";
 import { getCompletionCriterionConfig } from "../../utils/completionCriterion";
+
+export type CompletionCriterionEvidenceRenderArgs = {
+  paths: string[];
+  readOnly: boolean;
+  onRemovePath: (path: string) => void;
+};
 
 export type CompletionCriterionBlockProps = {
   block: FormBlock;
@@ -22,7 +28,14 @@ export type CompletionCriterionBlockProps = {
   onRequestEvidenceUpload?: () => void | Promise<void | string | null>;
   /** Preferred: pick file in the block, then upload via parent session flow. */
   onUploadEvidenceFile?: (file: File) => Promise<string | null>;
+  /**
+   * Custom evidence UI (thumbnails + lightbox). When omitted, falls back to
+   * monospace path chips for backwards compatibility.
+   */
+  renderEvidence?: (args: CompletionCriterionEvidenceRenderArgs) => ReactNode;
   readOnly?: boolean;
+  /** When true (e.g. after failed submit), force field-level validation UI. */
+  forceValidate?: boolean;
 };
 
 type DraftValue = {
@@ -50,7 +63,9 @@ export function CompletionCriterionBlock({
   onChange,
   onRequestEvidenceUpload,
   onUploadEvidenceFile,
+  renderEvidence,
   readOnly = false,
+  forceValidate = false,
 }: CompletionCriterionBlockProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const valueRef = useRef(value);
@@ -60,13 +75,18 @@ export function CompletionCriterionBlock({
   const { validation, markAsTouched } = useFieldValidation({
     block,
     value,
-    validateOnChange: false,
+    // Only revalidate while correcting after a failed submit — not on every click.
+    validateOnChange: forceValidate,
   });
+
+  useEffect(() => {
+    if (forceValidate && !readOnly) {
+      markAsTouched();
+    }
+  }, [forceValidate, readOnly, markAsTouched]);
 
   const errorMessage = getValidationErrorMessage(block, validation.error);
   const hasError = validation.touched && validation.state === "invalid";
-  const hasSuccess =
-    validation.touched && validation.state === "valid" && typeof current.met === "boolean";
 
   const emitChange = (next: CompletionCriterionValue) => {
     onChange?.(next);
@@ -81,7 +101,6 @@ export function CompletionCriterionBlock({
       evidence_paths: partial.evidence_paths ?? current.evidence_paths,
     };
     emitChange(next);
-    if (!validation.touched) setTimeout(() => markAsTouched(), 0);
   };
 
   const handleSelectMet = (met: boolean) => {
@@ -108,7 +127,6 @@ export function CompletionCriterionBlock({
       justification: latest.justification,
       evidence_paths: [...latest.evidence_paths, path],
     });
-    if (!validation.touched) setTimeout(() => markAsTouched(), 0);
   };
 
   const handleAddEvidenceClick = async () => {
@@ -140,8 +158,17 @@ export function CompletionCriterionBlock({
         ? `Anexe de ${config.evidence_min} a ${config.evidence_max} foto(s) como evidência.`
         : null;
 
+  const showEvidenceSection =
+    current.evidence_paths.length > 0 ||
+    current.met === false ||
+    (current.met === true && config.requires_evidence_when_met);
+
   return (
-    <div className="space-y-3">
+    <div
+      className="space-y-3"
+      data-completion-criterion-id={block.id}
+      data-invalid={hasError ? "true" : undefined}
+    >
       {block.label && (
         <label
           htmlFor={`${block.id}-group`}
@@ -181,12 +208,12 @@ export function CompletionCriterionBlock({
           aria-checked={current.met === true}
           disabled={readOnly}
           onClick={() => handleSelectMet(true)}
-          onBlur={markAsTouched}
           className={cn(
-            "relative flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all duration-200",
+            "relative flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 p-4 transition-[transform,border-color,background-color,box-shadow] duration-150 ease-out",
             "hover:border-primary/50 hover:bg-primary/5",
             "focus:outline-none focus:ring-2 focus:ring-primary/30",
-            "disabled:opacity-60 disabled:pointer-events-none",
+            "active:scale-[0.97]",
+            "disabled:pointer-events-none disabled:opacity-60",
             current.met === true
               ? "border-primary bg-primary/10 shadow-sm ring-2 ring-primary/20"
               : "border-border bg-card",
@@ -194,13 +221,13 @@ export function CompletionCriterionBlock({
           )}
         >
           {current.met === true && (
-            <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-              <Check className="w-3 h-3 text-primary-foreground" />
+            <div className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary">
+              <Check className="h-3 w-3 text-primary-foreground" />
             </div>
           )}
           <span
             className={cn(
-              "font-medium text-sm",
+              "text-sm font-medium",
               current.met === true ? "text-primary" : "text-foreground",
             )}
           >
@@ -213,12 +240,12 @@ export function CompletionCriterionBlock({
           aria-checked={current.met === false}
           disabled={readOnly}
           onClick={() => handleSelectMet(false)}
-          onBlur={markAsTouched}
           className={cn(
-            "relative flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all duration-200",
+            "relative flex min-h-11 items-center justify-center gap-2 rounded-xl border-2 p-4 transition-[transform,border-color,background-color,box-shadow] duration-150 ease-out",
             "hover:border-primary/50 hover:bg-primary/5",
             "focus:outline-none focus:ring-2 focus:ring-primary/30",
-            "disabled:opacity-60 disabled:pointer-events-none",
+            "active:scale-[0.97]",
+            "disabled:pointer-events-none disabled:opacity-60",
             current.met === false
               ? "border-primary bg-primary/10 shadow-sm ring-2 ring-primary/20"
               : "border-border bg-card",
@@ -226,13 +253,13 @@ export function CompletionCriterionBlock({
           )}
         >
           {current.met === false && (
-            <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-              <Check className="w-3 h-3 text-primary-foreground" />
+            <div className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary">
+              <Check className="h-3 w-3 text-primary-foreground" />
             </div>
           )}
           <span
             className={cn(
-              "font-medium text-sm",
+              "text-sm font-medium",
               current.met === false ? "text-primary" : "text-foreground",
             )}
           >
@@ -255,18 +282,26 @@ export function CompletionCriterionBlock({
           <Textarea
             id={`${block.id}-justification`}
             value={current.justification ?? ""}
+            // Prefer readOnly over disabled: disabled greys out the field and
+            // drops pointer events, which feels like a permanent lock.
             readOnly={readOnly}
-            disabled={readOnly}
+            aria-readonly={readOnly || undefined}
+            aria-invalid={hasError}
             placeholder="Explique o que não foi atendido…"
-            onChange={(e) => patch({ justification: e.target.value })}
-            onBlur={markAsTouched}
-            className="min-h-[88px]"
+            onChange={(e) => {
+              if (readOnly) return;
+              patch({ justification: e.target.value });
+            }}
+            className={cn(
+              "min-h-[88px] bg-card",
+              readOnly && "cursor-default opacity-80",
+              hasError && "border-destructive focus-visible:ring-destructive/30",
+            )}
           />
         </div>
       )}
 
-      {(current.met === false ||
-        (current.met === true && config.requires_evidence_when_met)) && (
+      {showEvidenceSection && (
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-medium text-foreground">Evidências</p>
@@ -287,7 +322,7 @@ export function CompletionCriterionBlock({
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="h-9"
+                  className="h-9 transition-transform duration-150 ease-out active:scale-[0.97]"
                   onClick={() => void handleAddEvidenceClick()}
                 >
                   <ImagePlus className="mr-1.5 h-4 w-4" aria-hidden />
@@ -296,10 +331,16 @@ export function CompletionCriterionBlock({
               </>
             )}
           </div>
-          {evidenceHint && (
+          {evidenceHint && !readOnly ? (
             <p className="text-xs text-muted-foreground">{evidenceHint}</p>
-          )}
-          {current.evidence_paths.length > 0 ? (
+          ) : null}
+          {renderEvidence ? (
+            renderEvidence({
+              paths: current.evidence_paths,
+              readOnly,
+              onRemovePath: handleRemovePath,
+            })
+          ) : current.evidence_paths.length > 0 ? (
             <ul className="space-y-1.5">
               {current.evidence_paths.map((path) => (
                 <li
@@ -311,7 +352,7 @@ export function CompletionCriterionBlock({
                     <button
                       type="button"
                       aria-label="Remover evidência"
-                      className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors duration-150 ease-out hover:bg-destructive/10 hover:text-destructive active:scale-[0.97]"
                       onClick={() => handleRemovePath(path)}
                     >
                       <X className="h-4 w-4" />
@@ -335,9 +376,6 @@ export function CompletionCriterionBlock({
           <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />
           {errorMessage}
         </p>
-      )}
-      {hasSuccess && !hasError && (
-        <p className="text-sm text-muted-foreground">Critério preenchido.</p>
       )}
     </div>
   );

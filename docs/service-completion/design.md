@@ -538,11 +538,6 @@ Templates MUST pass the same allowlist/cardinality validation as AI output befor
       "required": true,
       "config": { "requires_evidence_when_met": false, "evidence_min": 1, "evidence_max": 5 },
       "helpText": "Se não, explique e anexe evidência."
-    },
-    {
-      "id": "static_hint",
-      "type": "static_text",
-      "content": "Responda cada critério. Fotos são obrigatórias quando o critério não foi atendido."
     }
   ]
 }

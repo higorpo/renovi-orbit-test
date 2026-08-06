@@ -127,6 +127,42 @@ describe("CompletionCriterionBlock", () => {
     act(() => {
       vi.runAllTimers();
     });
+    // Validation is deferred until submit (forceValidate) — blur alone must not yell.
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("does not show photo error immediately after selecting Não atendido", () => {
+    const onChange = vi.fn();
+    render(
+      <CompletionCriterionBlock
+        block={block}
+        value={undefined}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "Não atendido" }));
+    act(() => {
+      vi.runAllTimers();
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(onChange).toHaveBeenCalled();
+  });
+
+  it("shows field error when forceValidate is set without selection", () => {
+    render(
+      <CompletionCriterionBlock
+        block={block}
+        value={undefined}
+        onChange={vi.fn()}
+        forceValidate
+      />,
+    );
+    act(() => {
+      vi.runAllTimers();
+    });
     expect(screen.getByRole("alert")).toHaveTextContent(/critério/i);
+    expect(
+      screen.getByRole("radiogroup").getAttribute("aria-invalid"),
+    ).toBe("true");
   });
 });

@@ -49,8 +49,8 @@ Documentação baseada em `src/features/view-services/`, rota `/dashboard/servic
 
 | Papel | Lista (`list_services`) | Detalhe (`get_service`) | UI no detalhe |
 |-------|-------------------------|-------------------------|---------------|
-| **Cliente** | Só `sr.client_id = viewer` | Dono do SR (ou admin) | Contagem de orçamentos; ações de orçamento/cancelar/republicar; chat contratado; pagamento manual; **confirm+rating** via `ClientConfirmRatingWizard` (`service-completion`) em contrato; cancelamento/reagendamento via `payments` / `service-reschedule` |
-| **Prestador** | SR com **proposta própria** ou **contrato** onde `provider_id = viewer` (não inclui pool `match_provider_jobs`) | Mesmo critério de acesso (`service_viewer_has_access`) | Nome do solicitante **mascarado** (`view_services_mask_client_name`); alerta de rejeição; seção de proposta; FAB chat; local do serviço se contratado; **draft + marcar EXECUTED** via `ProviderExecutedWizard` (`service-completion`) em `CONFIRMED`; settlement; cancel/reagendar |
+| **Cliente** | Só `sr.client_id = viewer` | Dono do SR (ou admin) | Contagem de orçamentos; ações de orçamento/cancelar/republicar; chat contratado; pagamento manual; CTA **“Avaliar serviço”** (`ClientEvaluateServiceAction`) na seção contratada; cancelamento/reagendamento via `payments` / `service-reschedule` |
+| **Prestador** | SR com **proposta própria** ou **contrato** onde `provider_id = viewer` (não inclui pool `match_provider_jobs`) | Mesmo critério de acesso (`service_viewer_has_access`) | Nome do solicitante **mascarado** (`view_services_mask_client_name`); alerta de rejeição; seção de proposta; FAB chat; local do serviço se contratado; CTA **“Marcar serviço como concluído”** (`ProviderMarkExecutedAction`) em `CONFIRMED`; settlement; cancel/reagendar |
 | **Admin plataforma** | Incluído no escopo SQL | Acesso via `is_platform_admin()` | Sem UI admin dedicada evidenciada neste módulo |
 | Visitante | N/A — RPCs exigem `auth.uid()` | N/A | Redirect login (dashboard) |
 
@@ -76,7 +76,7 @@ flowchart TD
   J -->|provider| L[Alert rejeição + proposta + FAB chat + local se contratado]
   K --> M{model.contracted?}
   L --> M
-  M -->|Sim| N[ServiceContractedSection + wizards service-completion]
+  M -->|Sim| N[ServiceContractedSection + CTAs service-completion]
   M -->|Não| O[Seções do pedido: descrição, formulário, fotos, sugestões]
   I --> ENR[Banner enrichment se PENDING/RUNNING]
 ```
@@ -161,7 +161,7 @@ Não há formulário Zod próprio nesta feature para o detalhe; mutações de li
 | `cancel_service_request` | Chamado por `cancelService` com `p_idempotency_key` (UUID novo a cada call na API TS) — regras detalhadas no domínio chats/CNS |
 | `republish_cancelled_service_request` | Só `client_id`; cancelado (SR ou CS); endereço ativo do ator; descrição/service_id; idempotency `view_services.republish_cancelled_service_request`; **enqueue enrichment** (não bootstrap matching) |
 | `record_provider_opportunity_view` | Prestador no detalhe (best-effort no front) |
-| Conclusão (`markServiceExecuted` / `confirmServiceCompleted`) | Ownership em **service-completion** (RPCs `service_completion_*`); UI via wizards da Public API — **não** reexport de payments |
+| Conclusão (`markServiceExecuted` / `confirmServiceCompleted`) | Ownership em **service-completion** (RPCs `service_completion_*`); UI via CTAs da Public API na `ServiceContractedSection` — **não** reexport de payments; checklist **não** inline no detalhe |
 
 ---
 
@@ -211,13 +211,13 @@ Calculada em `derive_service_list_phase`:
 
 | Papel | Pré-condição | Superfície |
 |-------|--------------|------------|
-| Prestador (contratado) | Contrato `CONFIRMED` | `ProviderExecutedWizard` — draft + upload (sessão/register) + marcar EXECUTED |
-| Cliente | Contrato presente (esp. `EXECUTED`) | `ClientConfirmRatingWizard` — revisão de evidência congelada + confirm+rating; badge `executed_late` (“Executado com atraso”) |
-| Ambos / cliente | Enrichment `PENDING`/`RUNNING` | `EnrichmentProcessingBanner` — “Checklist de conclusão em processamento…” (pedido ainda não no feed) |
-| Cliente | `EXECUTED` / `COMPLETED` (stub) | `DisputeStubEntry` — URL suporte ou toast “Em breve” |
+| Prestador (contratado) | Contrato `CONFIRMED` (`canSaveDraft` / `canMarkExecuted`) | Botão **“Marcar serviço como concluído”** na seção Serviço contratado (ao lado de cancelar/reagendar) → bottom sheet (mobile) ou dialog (desktop) com `ProviderExecutedWizard` embutido (draft + upload + EXECUTED) |
+| Cliente | `canConfirmWithRating` ou rating opcional pós auto-complete | Botão **“Avaliar serviço”** na mesma seção → sheet/dialog com stepper **2 etapas**: (1) revisar evidências/checklist congelado; (2) avaliar prestador/serviço (`ClientConfirmRatingWizard` embutido); badge `executed_late` se atrasado |
+| Ambos / cliente | Enrichment `PENDING`/`RUNNING` | `EnrichmentProcessingBanner` no detalhe/card — “Checklist de conclusão em processamento…” (pedido ainda não no feed) |
+| Cliente | Sem CTA avaliar, mas stub elegível | `DisputeStubEntry` **inline** na seção contratada |
 | Sistema | ~24h após EXECUTED | Auto-complete → `COMPLETED` (`completed_by=system`); rating opcional depois |
 
-Contexto via RPC `get_service_completion_context` (feature `service-completion`): detalhe completo para cliente do SR / prestador do CS / admin; prestador só-marketplace sem checklist nem ids de contraparte. Paths de evidência precisam estar registrados antes do mark-executed.
+Fotos de evidência: thumbnails com lightbox fullscreen (padrão galeria do pedido). Contexto via RPC `get_service_completion_context`. Paths de evidência precisam estar registrados antes do mark-executed.
 
 Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md).
 
@@ -250,7 +250,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | **negotiation-proposals** | `ReceivedBudgetDetailsSheet`; composer/sumário no detalhe prestador; invalidate keys após mutações de proposta (evidência em outros módulos) |
 | **chats** | Lista de conversas do cliente em negociação; botão chat contratado; FAB inicia/abre conversa |
 | **payments** | `ManualPaymentRecovery`, `ContractedServiceCancelAction`, `PaymentDisputeStatus`, `ProviderSettlementStatus` |
-| **service-completion** | `EnrichmentProcessingBanner`, `ProviderExecutedWizard`, `ClientConfirmRatingWizard` (+ `DisputeStubEntry` no wizard cliente); só Public API |
+| **service-completion** | `EnrichmentProcessingBanner`; **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceContractedSection` (wizards embutidos no sheet/dialog; stub disputa); só Public API |
 | **service-reschedule** | `ContractedServiceRescheduleAction` + snapshot `reschedule` no modelo |
 | **addresses** | `LocationPreviewMap` no local do prestador |
 | **matching** | Republicação INSERT `OPEN` **enfileira enrichment**; matching bootstrap só após READY (não mais trigger no OPEN) |
@@ -287,9 +287,9 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | Chat contratado | Cliente | `model.contracted` | `ServiceRequestContractedChatButton` |
 | Lista conversas negociação | Cliente | negotiation sem contracted | `ServiceRequestConversationList` |
 | Ajustar pagamento | Cliente | `showManualPayment` + elegibilidade schedule (`FAILED` / `FAILED_PERMANENT` etc. em payments) | `ManualPaymentRecovery` |
-| Marcar executado | Prestador | contracted `CONFIRMED` | Wizard `service-completion` → RPC `service_completion_mark_executed` |
-| Confirmar + avaliar | Cliente | contracted `EXECUTED` | Wizard `service-completion` → `service_completion_confirm_with_rating` (scores obrigatórios); badge `executed_late` se atrasado |
-| Abrir disputa (stub) | Cliente | `EXECUTED`/`COMPLETED` (via wizard) | URL suporte (`VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL` / `orbit.dispute_support_url`) ou toast “Em breve” + analytics — sem FSM |
+| Marcar executado | Prestador | contracted `CONFIRMED` + capabilities | CTA “Marcar serviço como concluído” → sheet/dialog → RPC `service_completion_mark_executed` |
+| Confirmar + avaliar | Cliente | `canConfirmWithRating` (ou rating opcional) | CTA “Avaliar serviço” → sheet 2 etapas → `service_completion_confirm_with_rating` (scores obrigatórios no caminho manual); badge `executed_late` se atrasado |
+| Abrir disputa (stub) | Cliente | sem CTA avaliar elegível, tipicamente pós-rating / `EXECUTED`/`COMPLETED` | Inline na seção contratada: URL suporte ou toast “Em breve” + analytics — sem FSM |
 | Cancelar serviço contratado | Client/provider | flags + status no componente payments | `ContractedServiceCancelAction` |
 | Reagendar (CTA) | Client/provider | role client\|provider + seção contratada | `ContractedServiceRescheduleAction` |
 | Iniciar / ver negociação | Prestador | sempre no detalhe (FAB) | `initiateConversation` ou navega chat existente |
@@ -395,7 +395,7 @@ Helpers de state: `createClientMyServicesServiceDetailState`, `createProviderMyS
 - [ ] Cliente negotiation: cancelar pedido (dialog) e comparar orçamentos
 - [ ] Cliente cancelled: republicar → novo id
 - [ ] Cliente contracted PENDING_PAYMENT elegível: “Ajustar pagamento”
-- [ ] Prestador CONFIRMED: wizard marcar executado; cliente EXECUTED: confirm+rating; badge atraso se `executed_late`
+- [ ] Prestador CONFIRMED: CTA “Marcar serviço como concluído” abre sheet/dialog com checklist (não inline); cliente EXECUTED: CTA “Avaliar serviço” com 2 etapas; thumbnails de evidência + lightbox; badge atraso se `executed_late`
 - [ ] Enrichment PENDING: banner “em processamento” no detalhe/card
 - [ ] Prestador: FAB inicia chat; local/mapa com contrato
 - [ ] Prestador sem proposta/contrato: detalhe negado / empty
@@ -411,3 +411,5 @@ Reescrita para o padrão 20+ seções do orquestrador: sheet vs página, diferen
 **2026-08-04:** conclusão cutover para `service-completion` (wizards, enrichment banner, RPCs `service_completion_*`); republish/enqueue enrichment sem bootstrap OPEN.
 
 **2026-08-05:** alinhamento ao endurecimento SQL de conclusão (contexto full vs marketplace; evidências registradas no mark-executed) — normas em [service-completion](../../service-completion/README.md).
+
+**2026-08-05 (UX):** conclusão/avaliação via CTAs na `ServiceContractedSection` + sheet/dialog (não wizards inline no detalhe); stepper cliente 2 etapas; galeria de evidências.

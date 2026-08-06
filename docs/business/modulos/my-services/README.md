@@ -72,7 +72,7 @@ Consumidas via `view-services` / RPCs (não há API própria de `my-services`):
 | Módulo | Uso |
 |--------|-----|
 | `view-services` | Lista, detalhe, cancelamento, budget sheet helpers, navegação sheet |
-| `service-completion` | Conclusão no **detalhe** (`view-services`): enrichment banner, wizards EXECUTED/confirm, stub disputa — não na listagem |
+| `service-completion` | Conclusão no **detalhe** (`view-services`): enrichment banner; CTAs “Marcar serviço como concluído” / “Avaliar serviço” (sheet/dialog); stub disputa — não na listagem |
 | `negotiation-proposals` | `ReceivedBudgetDetailsSheet`; dialogs de proposta do prestador |
 | `chats` | Navegação para conversa / filtro por service request |
 | `payments` | `ManualPaymentDialog` + `usePaymentSchedule` no card cliente |

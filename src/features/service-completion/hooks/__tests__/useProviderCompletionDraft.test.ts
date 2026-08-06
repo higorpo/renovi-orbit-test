@@ -84,11 +84,12 @@ describe("useProviderCompletionDraft", () => {
       error: null,
     });
 
+    const context = baseContext();
     const { result } = renderHook(
       () =>
         useProviderCompletionDraft({
           serviceRequestId: "sr-1",
-          context: baseContext(),
+          context,
         }),
       { wrapper: wrapper() },
     );
@@ -106,7 +107,7 @@ describe("useProviderCompletionDraft", () => {
     expect(result.current.saveState).toBe("dirty");
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(900);
+      await vi.advanceTimersByTimeAsync(1600);
     });
 
     await waitFor(() => expect(result.current.saveState).toBe("saved"));
@@ -126,44 +127,76 @@ describe("useProviderCompletionDraft", () => {
       errorCode: DRAFT_VERSION_CONFLICT_CODE,
     });
 
+    const context = baseContext();
     const { result } = renderHook(
       () =>
         useProviderCompletionDraft({
           serviceRequestId: "sr-1",
-          context: baseContext(),
+          context,
         }),
       { wrapper: wrapper() },
     );
 
     act(() => {
       result.current.setCriterionResponse("crit_1", {
-        met: true,
-        evidence_paths: [],
+        met: false,
+        justification: "parcial",
+        evidence_paths: ["a.jpg"],
       });
     });
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(900);
+      await vi.advanceTimersByTimeAsync(1600);
     });
 
     await waitFor(() => expect(result.current.saveState).toBe("conflict"));
     expect(result.current.saveError).toMatch(/recarregue/i);
   });
 
-  it("does not save when canSaveDraft is false", () => {
+  it("does not save when canSaveDraft is false but still keeps local edits", () => {
+    const context = baseContext({
+      capabilities: {
+        canMarkExecuted: true,
+        canSaveDraft: false,
+        canConfirmWithRating: false,
+        canSubmitOptionalRating: false,
+        showDisputeStub: false,
+      },
+    });
     const { result } = renderHook(
       () =>
         useProviderCompletionDraft({
           serviceRequestId: "sr-1",
-          context: baseContext({
-            capabilities: {
-              canMarkExecuted: false,
-              canSaveDraft: false,
-              canConfirmWithRating: false,
-              canSubmitOptionalRating: false,
-              showDisputeStub: false,
-            },
-          }),
+          context,
+        }),
+      { wrapper: wrapper() },
+    );
+
+    act(() => {
+      result.current.setCriterionResponse("crit_1", {
+        met: false,
+        justification: "faltou acabamento",
+        evidence_paths: [],
+      });
+    });
+
+    expect(result.current.canSave).toBe(false);
+    expect(result.current.responses.crit_1?.justification).toBe("faltou acabamento");
+    expect(saveEvidenceDraft).not.toHaveBeenCalled();
+  });
+
+  it("coalesces rapid edits into a single debounced save", async () => {
+    saveEvidenceDraft.mockResolvedValue({
+      data: { contractedServiceId: "cs-1", draftVersion: 3, phase: "draft" },
+      error: null,
+    });
+
+    const context = baseContext();
+    const { result } = renderHook(
+      () =>
+        useProviderCompletionDraft({
+          serviceRequestId: "sr-1",
+          context,
         }),
       { wrapper: wrapper() },
     );
@@ -173,9 +206,173 @@ describe("useProviderCompletionDraft", () => {
         met: true,
         evidence_paths: [],
       });
+      result.current.setCriterionResponse("crit_1", {
+        met: false,
+        justification: "a",
+        evidence_paths: [],
+      });
+      result.current.setCriterionResponse("crit_1", {
+        met: false,
+        justification: "ok",
+        evidence_paths: ["a.jpg"],
+      });
     });
 
-    expect(result.current.canSave).toBe(false);
-    expect(saveEvidenceDraft).not.toHaveBeenCalled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1600);
+    });
+
+    await waitFor(() => expect(result.current.saveState).toBe("saved"));
+    expect(saveEvidenceDraft).toHaveBeenCalledTimes(1);
+    expect(saveEvidenceDraft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        responses: {
+          crit_1: {
+            met: false,
+            justification: "ok",
+            evidence_paths: ["a.jpg"],
+          },
+        },
+      }),
+    );
+  });
+
+  it("writes draft version into the context query cache after save", async () => {
+    saveEvidenceDraft.mockResolvedValue({
+      data: { contractedServiceId: "cs-1", draftVersion: 3, phase: "draft" },
+      error: null,
+    });
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const initial = baseContext();
+    queryClient.setQueryData(
+      ["service-completion", "context", "sr-1"],
+      initial,
+    );
+
+    const { result } = renderHook(
+      () =>
+        useProviderCompletionDraft({
+          serviceRequestId: "sr-1",
+          context: initial,
+        }),
+      {
+        wrapper: ({ children }: { children: ReactNode }) =>
+          createElement(QueryClientProvider, { client: queryClient }, children),
+      },
+    );
+
+    act(() => {
+      result.current.setCriterionResponse("crit_1", {
+        met: false,
+        justification: "faltou acabamento",
+        evidence_paths: ["a.jpg"],
+      });
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1600);
+    });
+
+    await waitFor(() => expect(result.current.saveState).toBe("saved"));
+
+    const cached = queryClient.getQueryData<ServiceCompletionContext>([
+      "service-completion",
+      "context",
+      "sr-1",
+    ]);
+    expect(cached?.evidence.draftVersion).toBe(3);
+    expect(cached?.evidence.responses?.crit_1?.justification).toBe(
+      "faltou acabamento",
+    );
+  });
+
+  it("keeps accepting local edits after a version conflict", async () => {
+    saveEvidenceDraft.mockResolvedValue({
+      data: null,
+      error: "DRAFT_VERSION_CONFLICT",
+      errorCode: DRAFT_VERSION_CONFLICT_CODE,
+    });
+
+    const context = baseContext();
+    const { result } = renderHook(
+      () =>
+        useProviderCompletionDraft({
+          serviceRequestId: "sr-1",
+          context,
+        }),
+      { wrapper: wrapper() },
+    );
+
+    act(() => {
+      result.current.setCriterionResponse("crit_1", {
+        met: false,
+        justification: "parcial",
+        evidence_paths: ["a.jpg"],
+      });
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1600);
+    });
+
+    await waitFor(() => expect(result.current.saveState).toBe("conflict"));
+
+    act(() => {
+      result.current.setCriterionResponse("crit_1", {
+        met: false,
+        justification: "ainda dá para digitar",
+        evidence_paths: ["a.jpg"],
+      });
+    });
+
+    expect(result.current.responses.crit_1?.justification).toBe(
+      "ainda dá para digitar",
+    );
+    expect(result.current.saveState).toBe("conflict");
+  });
+
+  it("rehydrates when a newer server draft version arrives while quiet", async () => {
+    const { result, rerender } = renderHook(
+      ({
+        context,
+      }: {
+        context: ServiceCompletionContext;
+      }) =>
+        useProviderCompletionDraft({
+          serviceRequestId: "sr-1",
+          context,
+        }),
+      {
+        wrapper: wrapper(),
+        initialProps: { context: baseContext() },
+      },
+    );
+
+    expect(result.current.draftVersion).toBe(2);
+
+    rerender({
+      context: baseContext({
+        evidence: {
+          phase: "draft",
+          executedLate: null,
+          frozenAt: null,
+          draftVersion: 4,
+          responses: {
+            crit_1: {
+              met: false,
+              justification: "do servidor",
+              evidence_paths: [],
+            },
+          },
+        },
+      }),
+    });
+
+    await waitFor(() => expect(result.current.draftVersion).toBe(4));
+    expect(result.current.responses.crit_1?.justification).toBe("do servidor");
+    expect(result.current.saveState).toBe("idle");
   });
 });

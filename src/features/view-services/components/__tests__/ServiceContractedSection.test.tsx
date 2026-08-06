@@ -23,6 +23,15 @@ vi.mock("@/features/service-reschedule", () => ({
   ContractedServiceRescheduleAction: () => <div data-testid="reschedule-action" />,
 }));
 
+vi.mock("@/features/service-completion", () => ({
+  ProviderMarkExecutedAction: () => (
+    <div data-testid="provider-mark-executed-action" />
+  ),
+  ClientEvaluateServiceAction: () => (
+    <div data-testid="client-evaluate-service-action" />
+  ),
+}));
+
 const contracted: ContractedServiceSummary = {
   id: "cs-1",
   status: "CONFIRMED",
@@ -38,7 +47,7 @@ const contracted: ContractedServiceSummary = {
 };
 
 describe("ServiceContractedSection", () => {
-  it("renders contracted summary without completion CTAs (owned by service-completion wizards)", () => {
+  it("renders client evaluate CTA beside cancel/reschedule", () => {
     authMocks.profile = { role: "client" };
     render(
       <ServiceContractedSection
@@ -54,9 +63,25 @@ describe("ServiceContractedSection", () => {
     expect(screen.getByText(/João/)).toBeInTheDocument();
     expect(screen.getByText(/Agendado para/)).toBeInTheDocument();
     expect(screen.getByTestId("manual-payment")).toBeInTheDocument();
-    expect(screen.queryByTestId("completion-actions")).not.toBeInTheDocument();
+    expect(screen.getByTestId("client-evaluate-service-action")).toBeInTheDocument();
+    expect(screen.queryByTestId("provider-mark-executed-action")).not.toBeInTheDocument();
     expect(screen.getByTestId("cancel-action")).toBeInTheDocument();
     expect(screen.getByTestId("reschedule-action")).toBeInTheDocument();
+  });
+
+  it("renders provider mark-executed CTA for providers", () => {
+    authMocks.profile = { role: "provider" };
+    render(
+      <ServiceContractedSection
+        contracted={contracted}
+        serviceRequestId="sr-1"
+        showServiceCancellation
+        cancellationViewerRole="provider"
+      />,
+    );
+
+    expect(screen.getByTestId("provider-mark-executed-action")).toBeInTheDocument();
+    expect(screen.queryByTestId("client-evaluate-service-action")).not.toBeInTheDocument();
   });
 
   it("shows provider settlement when requested", () => {

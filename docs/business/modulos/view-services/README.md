@@ -18,7 +18,7 @@
 | Sheet | `ServiceDetailSheet` montado no `DashboardLayout` quando `useServiceDetailModal().isOpen` |
 | Cancelamento pedido (cliente) | RPC `cancel_service_request` via `cancelService` |
 | Republicação (cliente) | RPC `republish_cancelled_service_request` |
-| Contrato | Tabela `contracted_services`; seção payments/reschedule; conclusão via **service-completion** (wizards) |
+| Contrato | Tabela `contracted_services`; seção payments/reschedule; conclusão via **service-completion** (CTAs → sheet/dialog, não inline) |
 | Sem PostgREST list/detail | API TS só `supabase.rpc(...)` |
 
 ## 3. Features do módulo
@@ -66,7 +66,7 @@
 - **negotiation-proposals** — sheet de orçamentos; composer no detalhe prestador.
 - **chats** — conversas, initiate, botão chat contratado.
 - **payments** / **service-reschedule** — ações na `ServiceContractedSection`.
-- **service-completion** — banner enrichment; `ProviderExecutedWizard` / `ClientConfirmRatingWizard` (+ stub disputa no wizard); só Public API.
+- **service-completion** — banner enrichment; **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceContractedSection` (wizards embutidos no sheet/dialog); só Public API.
 - **DashboardLayout** — hospeda `ServiceDetailSheet`.
 
 ## 9. Riscos e lacunas
@@ -83,7 +83,7 @@
 | Public API | `src/features/view-services/index.ts` |
 | API | `api/services.api.ts`, `opportunityView.api.ts` (conclusão **não** vive mais em APIs locais de lifecycle) |
 | Hooks | `useServicesList`, `useService`, `useCancelService`, `useRepublishCancelledService`, `useServiceDetailModal`, chat, budget sheet |
-| UI | `ServiceDetailShell`, `ServiceDetailSheet`, `ServiceDetailPage` (compõe wizards de `service-completion`), `ServiceContractedSection`, `SimpleServiceCard`, … |
+| UI | `ServiceDetailShell`, `ServiceDetailSheet`, `ServiceDetailPage` (banner enrichment); `ServiceContractedSection` (CTAs `service-completion`), `SimpleServiceCard`, … |
 | Tipos / nav | `types/service.types.ts`, `types/serviceDetailNavigation.types.ts` |
 | Constantes | `queryKeys.ts`, `routes.ts`, `statusTabs.ts`, `statusBadge.ts` |
 | SQL | `20260705207000_*`, `20260705208000_*`, `20260705209000_*`, `20260802170000_republish_*` |

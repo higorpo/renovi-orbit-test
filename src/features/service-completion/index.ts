@@ -10,9 +10,13 @@
 export { EnrichmentProcessingBanner } from "./components/EnrichmentProcessingBanner";
 export type { EnrichmentProcessingBannerProps } from "./components/EnrichmentProcessingBanner";
 
-export {
-  ProviderExecutedWizard,
-} from "./components/ProviderExecutedWizard";
+export { ProviderMarkExecutedAction } from "./components/ProviderMarkExecutedAction";
+export type { ProviderMarkExecutedActionProps } from "./components/ProviderMarkExecutedAction";
+
+export { ClientEvaluateServiceAction } from "./components/ClientEvaluateServiceAction";
+export type { ClientEvaluateServiceActionProps } from "./components/ClientEvaluateServiceAction";
+
+export { ProviderExecutedWizard } from "./components/ProviderExecutedWizard";
 export type { ProviderExecutedWizardProps } from "./components/ProviderExecutedWizard";
 
 export { ClientConfirmRatingWizard } from "./components/ClientConfirmRatingWizard";

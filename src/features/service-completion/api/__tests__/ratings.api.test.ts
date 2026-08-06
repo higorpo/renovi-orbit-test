@@ -77,7 +77,7 @@ describe("ratings.api", () => {
       p_score_punctuality: 4,
       p_score_communication: 4,
       p_score_value: 5,
-      p_comment: null,
+      p_comment: undefined,
     });
     expect(result.ratingId).toBe("r-1");
     expect(result.error).toBeNull();

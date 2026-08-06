@@ -62,14 +62,19 @@ describe("view-services service-completion cutover boundary", () => {
       join(FEATURE_ROOT, "components/ServiceDetailPage.tsx"),
       "utf8",
     );
+    const contracted = readFileSync(
+      join(FEATURE_ROOT, "components/ServiceContractedSection.tsx"),
+      "utf8",
+    );
     const card = readFileSync(
       join(FEATURE_ROOT, "components/SimpleServiceCard.tsx"),
       "utf8",
     );
 
     expect(detail).toMatch(/from ["']@\/features\/service-completion["']/);
-    expect(detail).toMatch(/ProviderExecutedWizard/);
-    expect(detail).toMatch(/ClientConfirmRatingWizard/);
+    expect(contracted).toMatch(/from ["']@\/features\/service-completion["']/);
+    expect(contracted).toMatch(/ProviderMarkExecutedAction/);
+    expect(contracted).toMatch(/ClientEvaluateServiceAction/);
     expect(card).toMatch(/from ["']@\/features\/service-completion["']/);
     expect(card).toMatch(/EnrichmentProcessingBanner/);
   });

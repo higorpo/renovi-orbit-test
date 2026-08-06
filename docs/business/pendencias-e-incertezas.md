@@ -113,7 +113,7 @@ Também referenciados no módulo matching (fora desta consolidação se já fech
 | **Abertas (MMD operacional)** | P-08, P-09 |
 | **Abertas (matching legado)** | P-MD-04, P-MD-05 |
 | **Abertas (reagendamento residual)** | P-SR-01, P-SR-02, P-SR-03, P-SR-05, P-SR-06 |
-| **Abertas (conclusão / disputa stub)** | SC-01 (FSM disputa completa fora do escopo), SC-02 (aba Disputas vazia) — documentados; não bloqueiam comportamento shipped. Endurecimento SQL 2026-08-05 (evidência/sessões/contexto/RLS; janitor órfãos SQL-only, sem Edge) **documentado**; upload evidência Option A (RPC + storage autenticado, sem Edge `issue-completion-evidence-upload-url`) **documentado** — sem nova pendência. |
+| **Abertas (conclusão / disputa stub)** | SC-01 (FSM disputa completa fora do escopo), SC-02 (aba Disputas vazia) — documentados; não bloqueiam comportamento shipped. Endurecimento SQL 2026-08-05 (evidência/sessões/contexto/RLS; janitor órfãos SQL-only, sem Edge) **documentado**; upload evidência Option A **documentado**; UX CTAs sheet/dialog + galeria evidências (2026-08-05) **documentada** — sem nova pendência. |
 | **Abertas (calendário)** | PC-02…PC-05 |
 | **Abertas (push/payments)** | N-01, PAY-DC |
 | **Fechadas nesta auditoria** | P-05, P-10, P-11 (doc); P-12 (histórico); **PC-01** (índices transversais) |

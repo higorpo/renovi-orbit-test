@@ -7,6 +7,10 @@ import {
   type CancellationViewerRole,
 } from "@/features/payments";
 import { ContractedServiceRescheduleAction } from "@/features/service-reschedule";
+import {
+  ClientEvaluateServiceAction,
+  ProviderMarkExecutedAction,
+} from "@/features/service-completion";
 import { useAuth } from "@/features/auth";
 import type { ContractedServiceSummary } from "../types/service.types";
 import { getContractedServiceStatusLabel } from "../utils/contractedServiceStatusLabel";
@@ -22,6 +26,7 @@ interface ServiceContractedSectionProps {
   cancellationViewerRole?: CancellationViewerRole;
   onCancellationSuccess?: () => void;
   onRescheduleSuccess?: () => void;
+  onCompletionSuccess?: () => void;
 }
 
 export function ServiceContractedSection({
@@ -33,11 +38,14 @@ export function ServiceContractedSection({
   cancellationViewerRole,
   onCancellationSuccess,
   onRescheduleSuccess,
+  onCompletionSuccess,
 }: ServiceContractedSectionProps) {
   const { profile } = useAuth();
   const providerName = contracted.provider?.displayName;
   const statusLabel = getContractedServiceStatusLabel(contracted.status);
   const scheduledLabel = formatScheduledSummaryLabel(contracted);
+  const isProvider = profile?.role === "provider";
+  const isClient = profile?.role === "client";
 
   return (
     <ServiceDetailSection
@@ -79,7 +87,24 @@ export function ServiceContractedSection({
           <ProviderSettlementStatus contractedServiceId={contracted.id} />
         </div>
       ) : null}
-      <div className="flex flex-col gap-2 pt-2.5 sm:flex-row sm:flex-wrap empty:hidden">
+      <div
+        className="flex flex-col gap-2 pt-2.5 sm:flex-row sm:flex-wrap empty:hidden"
+        data-testid="contracted-service-actions"
+      >
+        {isProvider && serviceRequestId ? (
+          <ProviderMarkExecutedAction
+            serviceRequestId={serviceRequestId}
+            scheduledStartDate={contracted.scheduledStartDate}
+            scheduledEndDate={contracted.scheduledEndDate}
+            onExecuted={onCompletionSuccess}
+          />
+        ) : null}
+        {isClient && serviceRequestId ? (
+          <ClientEvaluateServiceAction
+            serviceRequestId={serviceRequestId}
+            onCompleted={onCompletionSuccess}
+          />
+        ) : null}
         {showManualPayment && serviceRequestId ? (
           <ManualPaymentRecovery
             contractedServiceId={contracted.id}

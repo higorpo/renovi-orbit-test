@@ -6,7 +6,7 @@ Documentação de negócio do módulo **service-completion**. Host de UI: [visua
 
 ## 1. Resumo executivo
 
-Pedido `OPEN` enfileira **enrichment** (`PENDING`). Enquanto `PENDING`/`RUNNING`, a UI mostra “Checklist de conclusão em processamento…” e o pedido **não** entra no feed. Em `READY`, o matching faz bootstrap (delay de 5 min a partir daí). Pós-contrato, o prestador preenche o checklist e marca **EXECUTED**; o cliente revisa evidências congeladas e confirma com **avaliação**; sem confirmação, auto-complete ~24h. Disputa no app é stub (suporte ou “Em breve”).
+Pedido `OPEN` enfileira **enrichment** (`PENDING`). Enquanto `PENDING`/`RUNNING`, a UI mostra “Checklist de conclusão em processamento…” e o pedido **não** entra no feed. Em `READY`, o matching faz bootstrap (delay de 5 min a partir daí). Pós-contrato, na seção **Serviço contratado** do detalhe: o prestador usa o botão **“Marcar serviço como concluído”** (abre sheet/dialog com o checklist — **não** fica inline na página); o cliente usa **“Avaliar serviço”** (sheet/dialog em 2 etapas: revisar evidências → avaliar). Sem confirmação, auto-complete ~24h. Disputa no app é stub (suporte ou “Em breve”).
 
 ---
 
@@ -24,6 +24,8 @@ Pedido `OPEN` enfileira **enrichment** (`PENDING`). Enquanto `PENDING`/`RUNNING`
 |------------|----------------|
 | Sem rota própria | Embutido em `/dashboard/services/:id` e cards (`view-services`) |
 | Feature | `src/features/service-completion/` (Public API em `index.ts`) |
+| CTAs no host | `ProviderMarkExecutedAction` / `ClientEvaluateServiceAction` na `ServiceContractedSection` (ao lado de cancelar/reagendar) |
+| Fluxo modal | `CompletionFlowSheetDialog`: bottom sheet (mobile) ou dialog (desktop); wizards embutidos (`presentation="embedded"`) |
 | Edge | `generate-completion-checklist` |
 | RPCs produto | `get_service_completion_context`, `service_completion_mark_executed`, `service_completion_confirm_with_rating`, draft/upload (`create_upload_session` / `register_upload_object`), ratings |
 
@@ -51,10 +53,12 @@ flowchart TD
   C --> E[Edge generate-completion-checklist]
   E --> F[READY + matching_bootstrap]
   F --> G[Delay 5 min → lotes matching]
-  H[CS CONFIRMED] --> I[Prestador: draft checklist]
-  I --> J[mark_executed → EXECUTED]
+  H[CS CONFIRMED] --> I[CTA Marcar como concluído]
+  I --> I2[Sheet/dialog: checklist + evidências]
+  I2 --> J[mark_executed → EXECUTED]
   J --> K{Cliente confirma?}
-  K -->|Sim + scores| L[COMPLETED + rating]
+  K -->|CTA Avaliar serviço| K2[Sheet: 1 revisão · 2 avaliação]
+  K2 -->|scores| L[COMPLETED + rating]
   K -->|Não ~24h| M[auto_complete COMPLETED system]
   M --> N[Rating opcional depois]
 ```
@@ -100,18 +104,23 @@ flowchart TD
 
 | Elemento | Conteúdo |
 |----------|----------|
-| Banner processing | “Checklist de conclusão em processamento…” (`PENDING`/`RUNNING`) |
+| Banner processing | “Checklist de conclusão em processamento…” (`PENDING`/`RUNNING`) — detalhe/card; **não** é o checklist de execução |
+| CTA prestador | Botão **“Marcar serviço como concluído”** na seção Serviço contratado (visível se `canSaveDraft` / `canMarkExecuted`) |
+| Sheet/dialog prestador | Título “Checklist de conclusão”; conteúdo = `ProviderExecutedWizard` embutido (draft + upload + submit EXECUTED) |
+| CTA cliente | Botão **“Avaliar serviço”** na mesma seção (`canConfirmWithRating` ou rating opcional pós auto-complete) |
+| Sheet/dialog cliente | Stepper **2 etapas** (“1 de 2” / “2 de 2”): (1) revisar evidências/checklist congelado; (2) avaliar prestador/serviço (`ClientConfirmRatingWizard` embutido) |
+| Fotos de evidência | Thumbnails (`CompletionEvidenceGallery`); clique abre lightbox fullscreen (padrão `ServicePhotoGallery`); prestador ao preencher e cliente ao revisar |
 | Badge atraso | “Executado com atraso” (`executed_late`) |
-| Confirm wizard | Evidência congelada + formulário de scores |
-| Dispute stub | Copy “Abrir disputa” / “Em breve — fale com o suporte Renovi” |
+| Dispute stub | Após avaliação (ou sem CTA de avaliar): copy “Abrir disputa” / “Em breve…” **inline** na seção contratada |
 
 ---
 
 ## 9. Validações de front-end
 
-- Draft/wizard prestador: `validateExecutedResponses` + gate temporal (`deriveExecutedTemporalGate`).
-- Confirm cliente: scores completos antes do submit.
-- Upload de evidência: sessão RPC + upload autenticado no storage (prefixo/RLS) + register; limites de imagem.
+- Draft/wizard prestador (no sheet): `validateExecutedResponses` + gate temporal (`deriveExecutedTemporalGate`).
+- Confirm cliente (etapa 2 do sheet): scores completos antes do submit.
+- Upload de evidência: sessão RPC + upload autenticado no storage (prefixo/RLS) + register; limites de imagem; URLs assinadas para thumbnails via `useCompletionEvidencePhotoUrls`.
+- Shell modal: dismiss bloqueado enquanto mutação em voo (`dismissDisabled`).
 - Enrichment: poll enquanto `shouldPoll` (processing).
 
 ---
@@ -163,7 +172,7 @@ Servidor: tabelas enrichment/evidence/upload sessions+objects/ratings; `platform
 | Edge | `generate-completion-checklist` (só enrichment; upload de evidência **sem** Edge) |
 | Storage | Bucket `completion-evidence` — upload autenticado sob sessão (RLS) |
 | MMD | `SERVICE_EXECUTED` / `SERVICE_COMPLETED` / `SERVICE_AUTO_COMPLETED` |
-| view-services | Composição UI + projeção `enrichmentStatus` / `executedLate` no `ServiceModel` |
+| view-services | Host: banner enrichment no detalhe/card; CTAs de conclusão na `ServiceContractedSection` (Public API); projeção `enrichmentStatus` / `executedLate` |
 | Analytics | `service_completion_dispute_stub_opened` |
 
 ---
@@ -172,12 +181,14 @@ Servidor: tabelas enrichment/evidence/upload sessions+objects/ratings; `platform
 
 | Ação | Quem | Pré-condição | Resultado |
 |------|------|--------------|-----------|
+| Abrir “Marcar serviço como concluído” | Prestador contratado | `canSaveDraft` / `canMarkExecuted` | Sheet/dialog com checklist |
 | Salvar draft | Prestador contratado | `CONFIRMED` | Evidência draft |
 | Criar sessão → upload autenticado → register path | Prestador contratado | CS CONFIRMED; sessão open; &lt; max_files | Objeto em `completion-evidence` + registry |
-| Marcar executado | Prestador contratado | `CONFIRMED` + paths registrados + validação | `EXECUTED`; sessões → committed |
-| Confirmar + avaliar | Cliente | `EXECUTED` | `COMPLETED` + rating |
-| Abrir disputa (stub) | Cliente | tipicamente `EXECUTED`/`COMPLETED` | URL ou toast |
-| Submeter rating pós auto | Cliente | `COMPLETED` system | Rating opcional |
+| Marcar executado (submit no sheet) | Prestador contratado | `CONFIRMED` + paths registrados + validação | `EXECUTED`; sessões → committed; fecha sheet |
+| Abrir “Avaliar serviço” | Cliente | `canConfirmWithRating` ou rating opcional | Sheet/dialog 2 etapas |
+| Confirmar + avaliar | Cliente | `EXECUTED` | `COMPLETED` + rating; fecha sheet |
+| Abrir disputa (stub) | Cliente | tipicamente pós-rating / `EXECUTED`/`COMPLETED` | URL ou toast (inline se sem CTA avaliar) |
+| Submeter rating pós auto | Cliente | `COMPLETED` system | Rating opcional (mesmo CTA/sheet) |
 
 ---
 
@@ -190,6 +201,8 @@ Upstream: pedido (`request-quote` / republish), contrato pago (`payments`/`CNS`)
 ## 16. Regras implícitas
 
 - Consumidores externos **não** importam internals de `service-completion` — só `index.ts`.
+- Host preferencial: `ProviderMarkExecutedAction` / `ClientEvaluateServiceAction` (wizards ainda exportados para composição embutida / legado de API, mas **não** montados inline no detalhe).
+- Checklist de execução **não** permanece aberto na página de detalhe — só dentro do sheet/dialog.
 - `view-services` não reexporta mais lifecycle de payments para conclusão.
 - Chargeback / `is_disputed` em payments **não** é o stub de disputa do app.
 
@@ -207,13 +220,13 @@ Upstream: pedido (`request-quote` / republish), contrato pago (`payments`/`CNS`)
 
 ## 18. Evidências
 
-- `src/features/service-completion/**`
-- `src/features/view-services/components/ServiceDetailPage.tsx`, `SimpleServiceCard.tsx`
+- `src/features/service-completion/**` (incl. `ProviderMarkExecutedAction`, `ClientEvaluateServiceAction`, `CompletionFlowSheetDialog`, `CompletionEvidenceGallery`)
+- `src/features/view-services/components/ServiceContractedSection.tsx`, `ServiceDetailPage.tsx`, `SimpleServiceCard.tsx`
 - Migrations `20260804010000`–`2026080452*` (constants, RLS, evidence/sessions, mark/confirm/auto-complete, context RPC, janitor, indexes)
 - Edge: `generate-completion-checklist` (upload evidência: RPCs create/register + storage autenticado; sem Edge)
 - Janitor SQL: `service_completion_janitor_orphan_uploads` + `service_completion_cron_orphan_upload_janitor`
 - `docs/service-completion/design.md` §3.7 / §4.1; matching CONTEXT **#135**
-- Testes: `src/features/service-completion/**/__tests__`, boundary em `view-services`; pgTAP `supabase/tests/service_completion/*`
+- Testes: `src/features/service-completion/**/__tests__` (CTAs, gallery), boundary em `view-services`; pgTAP `supabase/tests/service_completion/*`
 
 ---
 
@@ -230,3 +243,4 @@ Upstream: pedido (`request-quote` / republish), contrato pago (`payments`/`CNS`)
 
 - **2026-08-04** — Documentação de negócio alinhada ao cutover service-completion (READY-handoff, RPCs `service_completion_*`, UX enrichment/EXECUTED/confirm/auto-complete/dispute stub).
 - **2026-08-05** — Endurecimento SQL: paths registrados / `EVIDENCE_PATH_NOT_REGISTERED`; sessões → `committed` no freeze; storage INSERT gated; imutabilidade frozen/READY; FK RESTRICT; constraint EXECUTED/COMPLETED↔frozen; contexto full vs marketplace; sem SELECT autenticado em enrichments; `auto_complete_batch_size`; repair ≤7 dias; janitor via `referenced_in_responses`.
+- **2026-08-05 (UX)** — Checklist/avaliação saem do inline do detalhe: CTAs na seção Serviço contratado → sheet (mobile) / dialog (desktop); cliente com stepper 2 etapas; fotos de evidência como thumbnails + lightbox.

@@ -92,5 +92,8 @@ export {
 export type { CompletionChecklistValidationResult } from "./utils/completionChecklist";
 
 export { CompletionCriterionBlock } from "./components/blocks/CompletionCriterionBlock";
-export type { CompletionCriterionBlockProps } from "./components/blocks/CompletionCriterionBlock";
+export type {
+  CompletionCriterionBlockProps,
+  CompletionCriterionEvidenceRenderArgs,
+} from "./components/blocks/CompletionCriterionBlock";
 export { StaticTextBlock } from "./components/blocks/StaticTextBlock";
