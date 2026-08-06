@@ -31,8 +31,11 @@ describe("PendingEvaluationIntroStep", () => {
       screen.getByTestId("pending-evaluation-intro-service-icon"),
     ).toBeInTheDocument();
     expect(screen.getByText("Pintura sala")).toBeInTheDocument();
+    expect(screen.getByText("Pintura")).toBeInTheDocument();
     expect(screen.getByText("Ana Silva")).toBeInTheDocument();
-    expect(screen.getByText(/Conclusão:/)).toBeInTheDocument();
+    expect(screen.getByText("Prestador")).toBeInTheDocument();
+    expect(screen.getByText("Conclusão")).toBeInTheDocument();
+    expect(screen.getByText("Pronto para avaliação")).toBeInTheDocument();
     expect(screen.queryByText(/Executado em/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Agenda:/)).not.toBeInTheDocument();
 
@@ -63,7 +66,7 @@ describe("PendingEvaluationIntroStep", () => {
       />,
     );
 
-    expect(screen.getByText(/Conclusão:/)).toBeInTheDocument();
+    expect(screen.getByText("Conclusão")).toBeInTheDocument();
     // formatCalendarDate of 2026-08-07 (pt-BR calendar)
     expect(screen.getByText("07/08/2026")).toBeInTheDocument();
     expect(screen.queryByText("05/08/2026")).not.toBeInTheDocument();

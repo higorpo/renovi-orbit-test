@@ -9,7 +9,7 @@ import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { cn } from "@/lib/utils";
 import { formatCalendarDate } from "@/lib/utils/calendarDate";
 import { formatDatePtBr } from "@/lib/utils/formatDate";
-import { ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronRight, UserRound } from "lucide-react";
 import type { PendingEvaluationPromptSummary } from "../api/pendingEvaluationPrompt.api";
 
 export type PendingEvaluationIntroStepProps = {
@@ -31,6 +31,35 @@ function formatCompletionDateLabel(
   return formatDatePtBr(raw);
 }
 
+function MetaRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof UserRound;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex min-w-0 items-start gap-2.5">
+      <span
+        className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"
+        aria-hidden
+      >
+        <Icon className="h-3.5 w-3.5" strokeWidth={2} />
+      </span>
+      <div className="min-w-0 space-y-0.5">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          {label}
+        </p>
+        <p className="truncate text-sm font-medium leading-snug text-foreground">
+          {value}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function PendingEvaluationIntroStep({
   summary,
   onContinue,
@@ -46,51 +75,64 @@ export function PendingEvaluationIntroStep({
     color_key: summary.colorKey,
   });
   const ServiceIcon = serviceStyle.Icon;
+  const categoryLabel = summary.categoryTitle?.trim() || "Serviço";
 
   const body = (
     <div
       className="space-y-4"
       data-testid="pending-evaluation-intro"
     >
-      <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/40 px-3 py-3">
-        <div
-          className={cn(
-            "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-sm",
-            serviceStyle.color,
-          )}
-          aria-hidden
-          data-testid="pending-evaluation-intro-service-icon"
-        >
-          <ServiceIcon className="h-4 w-4" />
+      <div className="overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm">
+        <div className="flex min-w-0 items-center gap-3 border-b border-border/60 px-4 py-3">
+          <div
+            className={cn(
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-sm",
+              serviceStyle.color,
+            )}
+            aria-hidden
+            data-testid="pending-evaluation-intro-service-icon"
+          >
+            <ServiceIcon className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {categoryLabel}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Pronto para avaliação
+            </p>
+          </div>
         </div>
-        <div className="min-w-0 space-y-1">
-          <p className="text-sm font-semibold leading-snug text-foreground">
+
+        <div className="space-y-3 px-4 py-3.5">
+          <h3 className="text-base font-semibold leading-snug text-foreground">
             {summary.title}
-          </p>
-          {summary.categoryTitle ? (
-            <p className="text-xs text-muted-foreground">{summary.categoryTitle}</p>
-          ) : null}
-          {summary.providerFullName ? (
-            <p className="text-sm text-muted-foreground">
-              Prestador:{" "}
-              <span className="font-medium text-foreground">
-                {summary.providerFullName}
-              </span>
-            </p>
-          ) : null}
-          {completionLabel ? (
-            <p className="text-sm text-muted-foreground">
-              Conclusão:{" "}
-              <span className="font-medium text-foreground">
-                {completionLabel}
-              </span>
-            </p>
+          </h3>
+
+          {summary.providerFullName || completionLabel ? (
+            <div className="flex flex-col gap-2.5 rounded-lg border border-border/40 bg-muted/30 px-3 py-2.5">
+              {summary.providerFullName ? (
+                <MetaRow
+                  icon={UserRound}
+                  label="Prestador"
+                  value={summary.providerFullName}
+                />
+              ) : null}
+              {completionLabel ? (
+                <MetaRow
+                  icon={CalendarDays}
+                  label="Conclusão do serviço"
+                  value={completionLabel}
+                />
+              ) : null}
+            </div>
           ) : null}
         </div>
       </div>
 
-      <p className="text-sm text-muted-foreground">
-        Confirme o que foi executado e avalie o profissional. Leva só alguns minutos.
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        Confirme o que foi executado e avalie o profissional. Leva só alguns
+        minutos.
       </p>
     </div>
   );
