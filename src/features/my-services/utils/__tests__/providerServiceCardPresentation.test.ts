@@ -253,6 +253,10 @@ describe("getProviderServiceCardPresentation", () => {
       expect(pres.primaryAction.label).toBe("Abrir no mapa");
       expect(pres.primaryAction.intent).toBe("open_map");
       expect(pres.primaryAction.disabled).toBe(true);
+      expect(pres.secondaryAction).toMatchObject({
+        label: "Concluir serviço",
+        intent: "mark_executed",
+      });
     });
 
     it("highlights pending payment with charge timing for the provider", () => {
@@ -334,6 +338,10 @@ describe("getProviderServiceCardPresentation", () => {
       const pres = getProviderServiceCardPresentation(model);
       expect(pres.primaryAction.label).toBe("Abrir no mapa");
       expect(pres.primaryAction.disabled).toBe(false);
+      expect(pres.secondaryAction).toMatchObject({
+        label: "Concluir serviço",
+        intent: "mark_executed",
+      });
     });
 
     it("prioritizes unread message with location, amount and schedule in secondary info", () => {

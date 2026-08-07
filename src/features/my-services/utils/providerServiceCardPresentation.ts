@@ -493,7 +493,7 @@ function buildInProgressActions(
           ? undefined
           : "Localização do serviço indisponível",
       },
-      secondaryAction: { label: "Ver detalhes", intent: "details" },
+      secondaryAction: { label: "Concluir serviço", intent: "mark_executed" },
     };
   }
 

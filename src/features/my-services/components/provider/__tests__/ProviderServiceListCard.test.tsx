@@ -104,7 +104,7 @@ describe("ProviderServiceListCard", () => {
     expect(onOpenChat).toHaveBeenCalledWith(baseModel);
   });
 
-  it("renders Abrir no mapa and Ver detalhes for in_progress service scheduled today", () => {
+  it("renders Abrir no mapa and Concluir serviço for in_progress service scheduled today", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-06-08T12:00:00Z"));
 
@@ -144,7 +144,7 @@ describe("ProviderServiceListCard", () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole("button", { name: /Abrir no mapa/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Ver detalhes/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Concluir serviço/i })).toBeInTheDocument();
 
     vi.useRealTimers();
   });

@@ -86,7 +86,7 @@ Coisas para terminar do fluxo atual de trabalho:
   - mostrar o checklist de conclusão do serviço pro prestador na hora que ele vai fazer o orçamento e permitir que ele altere alguma coisa
   - apresentar o checklist de conclusão do serviço para o cliente quando ele vai fechar o serviço
 
-
+- Não permitir serviços longos com mais de 5 dias de duração.
 
 
 
