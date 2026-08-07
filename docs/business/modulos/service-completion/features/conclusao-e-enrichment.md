@@ -27,7 +27,7 @@ Pedido `OPEN` enfileira **enrichment** (`PENDING`). Enquanto `PENDING`/`RUNNING`
 | CTAs no host | `ProviderMarkExecutedAction` / `ClientEvaluateServiceAction` na `ServiceContractedSection` (ao lado de cancelar/reagendar) |
 | Prompt global | `PendingEvaluationPromptHost` no `RootLayout` (role `client`; após fila localização + push) |
 | Fluxo modal | `CompletionFlowSheetDialog`: bottom sheet (mobile) ou dialog (desktop); wizards embutidos (`presentation="embedded"`); variante `prompt` com intro |
-| Edge | `generate-completion-checklist`; `record-service-completion-declaration` (declaração de execução: IP + device + geo por IP) |
+| Edge | `generate-completion-checklist`; `record-service-completion-declaration` (declaração: IP + device + geo por IP via `ipwho.is` free **1.000 req/dia** — upgrade pago ao ultrapassar; 429 → `ip_geo` null sem bloquear) |
 | RPCs produto | `get_service_completion_context`, `get_client_pending_evaluation_prompt`, `service_completion_mark_executed`, `service_completion_upsert_execution_declaration`, `service_completion_confirm_with_rating`, draft/upload (`create_upload_session` / `register_upload_object`), ratings |
 
 ---

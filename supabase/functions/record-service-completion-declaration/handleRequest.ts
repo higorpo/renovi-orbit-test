@@ -14,6 +14,9 @@ import { checkRateLimit, getClientIP } from "../_shared/rateLimiter.ts";
 const logger = createLogger("record-service-completion-declaration");
 const RATE_LIMIT_CONFIG = { perMinute: 30, failClosed: true };
 const IP_GEO_TIMEOUT_MS = 2_000;
+// ipwho.is free: 1,000 req/day shared by Edge egress IP. Upgrade paid plan when
+// declaration volume exceeds that; 429/errors → ip_geo null (declaration still OK).
+// See docs/service-completion/adr/0005-execution-declaration-audit-trail.md.
 
 export type IpGeoPayload = {
   country: string | null;
