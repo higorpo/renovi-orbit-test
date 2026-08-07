@@ -1,7 +1,6 @@
 /** LLM call for checklist schema via Gemini — timeout ≪ enrichment lease (design §5.2 / Task 29). */
 
-import { fetchWithTimeout } from "../_shared/providerHttp.ts";
-import { GEMINI_DEFAULT_MODEL } from "../generate-smart-description/constants.ts";
+import { GEMINI_DEFAULT_MODEL, generateGeminiContent } from "../_shared/ai/index.ts";
 import { classifyEnrichmentError } from "./classifyError.ts";
 import { SYSTEM_PROMPT } from "./constants.ts";
 import { formatContextForPrompt } from "./loadContext.ts";
@@ -41,79 +40,47 @@ export async function generateChecklistWithGemini(
   const timeoutMs = deps.timeoutMs ?? resolveLlmTimeoutMs();
   const userPrompt = `Service request context:\n${formatContextForPrompt(ctx)}`;
 
-  const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${deps.apiKey}`;
+  const result = await generateGeminiContent({
+    apiKey: deps.apiKey,
+    model,
+    systemPrompt: SYSTEM_PROMPT,
+    userPrompt,
+    temperature: 0.2,
+    maxOutputTokens: 4096,
+    responseMimeType: "application/json",
+    timeoutMs,
+    fetchFn: deps.fetchFn,
+  });
 
-  try {
-    const response = await fetchWithTimeout(
-      url,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: userPrompt }],
-            },
-          ],
-          systemInstruction: {
-            parts: [{ text: SYSTEM_PROMPT }],
-          },
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 4096,
-            responseMimeType: "application/json",
-            thinkingConfig: { thinkingBudget: 0 },
-          },
-        }),
-      },
-      { timeoutMs, fetchFn: deps.fetchFn },
-    );
-
-    if (!response.ok) {
-      const status = response.status;
-      const snippet = (await response.text()).slice(0, 200);
-      return failure(`GEMINI_HTTP_${status}:${snippet}`);
+  if (!result.ok) {
+    if (result.aborted) {
+      return failure("LLM_TIMEOUT");
     }
-
-    const payload = await response.json() as {
-      candidates?: Array<{
-        content?: { parts?: Array<{ text?: string }> };
-        finishReason?: string;
-      }>;
-    };
-    const parts = payload.candidates?.[0]?.content?.parts ?? [];
-    const content = parts
-      .map((p) => (typeof p?.text === "string" ? p.text : ""))
-      .join("");
-    if (!content.trim()) {
+    if (result.httpStatus != null) {
+      return failure(`GEMINI_HTTP_${result.httpStatus}:${result.message}`);
+    }
+    if (result.message === "EMPTY_LLM_CONTENT") {
       return failure("EMPTY_LLM_CONTENT");
     }
-
-    let parsed: unknown;
-    try {
-      parsed = parseChecklistJson(content);
-    } catch {
-      return failure("LLM_JSON_PARSE");
-    }
-
-    const validated = validateChecklistSchema(parsed);
-    if (!validated.ok) {
-      return failure(`LLM_SCHEMA_${validated.reason}`);
-    }
-
-    return {
-      ok: true,
-      schema: validated.schema,
-      model,
-      promptVersion,
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const aborted = /abort/i.test(message);
-    return failure(
-      aborted ? "LLM_TIMEOUT" : `LLM_ERROR:${message.slice(0, 200)}`,
-    );
+    return failure(`LLM_ERROR:${result.message}`);
   }
+
+  let parsed: unknown;
+  try {
+    parsed = parseChecklistJson(result.rawContent);
+  } catch {
+    return failure("LLM_JSON_PARSE");
+  }
+
+  const validated = validateChecklistSchema(parsed);
+  if (!validated.ok) {
+    return failure(`LLM_SCHEMA_${validated.reason}`);
+  }
+
+  return {
+    ok: true,
+    schema: validated.schema,
+    model,
+    promptVersion,
+  };
 }

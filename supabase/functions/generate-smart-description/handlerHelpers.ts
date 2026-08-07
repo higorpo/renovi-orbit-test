@@ -1,4 +1,12 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import {
+  callOpenAIChatCompletions,
+  GEMINI_DEFAULT_MODEL,
+  generateGeminiContent,
+  OPEN_AI_DEFAULT_MODEL,
+  stripJsonCodeFence,
+} from "../_shared/ai/index.ts";
+import { jsonResponse as sharedJsonResponse } from "../_shared/jsonResponse.ts";
 import type {
   PromptConfig,
   StructuredAIResponse,
@@ -9,13 +17,11 @@ import type {
   SmartDescriptionMode,
   SmartDescriptionProvider,
 } from "./types.ts";
-import { corsHeaders, OPEN_AI_DEFAULT_MODEL, GEMINI_DEFAULT_MODEL } from "./constants.ts";
 import { formatProfessionalDescription, postProcessDescription } from "./formatting.ts";
 import { logPromptUsage } from "./usage.ts";
 import {
   validateStructuredResponse,
   generateFallbackResponse,
-  stripJsonCodeFence,
   unwrapNestedStructuredResponse,
 } from "./structured.ts";
 import {
@@ -67,13 +73,12 @@ export function parseRequestParams(
 
 export function validateRequestParams(
   params: ParsedRequestParams,
-  cors?: Record<string, string>
+  cors: Record<string, string> = {}
 ): Response | null {
   if (params.serviceId) return null;
   return jsonResponse(
     { error: "service é obrigatório (id do serviço)" },
     400,
-    undefined,
     cors
   );
 }
@@ -81,14 +86,10 @@ export function validateRequestParams(
 export function jsonResponse(
   body: unknown,
   status: number,
-  extraHeaders?: Record<string, string>,
-  cors?: Record<string, string>
+  headers: Record<string, string> = {},
+  extraHeaders?: Record<string, string>
 ): Response {
-  const headers = { ...(cors ?? corsHeaders), "Content-Type": "application/json", ...extraHeaders };
-  return new Response(JSON.stringify(body), {
-    status,
-    headers,
-  });
+  return sharedJsonResponse(body, status, { ...headers, ...extraHeaders });
 }
 
 export async function resolvePromptAndService(
@@ -169,34 +170,26 @@ export async function callOpenAI(params: {
     ? Math.min(promptConfig.temperature, 0.3)
     : promptConfig.temperature;
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: OPEN_AI_DEFAULT_MODEL,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      max_tokens: promptConfig.max_tokens,
-      temperature,
-      ...(enableStructured ? { response_format: { type: "json_object" } } : {}),
-    }),
+  const result = await callOpenAIChatCompletions({
+    apiKey,
+    model: OPEN_AI_DEFAULT_MODEL,
+    systemPrompt,
+    userPrompt,
+    temperature,
+    maxTokens: promptConfig.max_tokens,
+    jsonObject: enableStructured,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI ${response.status}: ${errorText.substring(0, 200)}`);
+  if (!result.ok) {
+    if (result.httpStatus != null) {
+      throw new Error(
+        `OpenAI ${result.httpStatus}: ${result.message.substring(0, 200)}`
+      );
+    }
+    throw new Error(result.message);
   }
 
-  const data = await response.json();
-  const rawContent = data.choices?.[0]?.message?.content ?? "";
-  const tokensUsed = data.usage?.total_tokens;
-
-  return { rawContent, tokensUsed };
+  return { rawContent: result.rawContent, tokensUsed: result.tokensUsed };
 }
 
 export async function callGemini(params: {
@@ -217,50 +210,26 @@ export async function callGemini(params: {
     ? Math.min(promptConfig.temperature, 0.3)
     : promptConfig.temperature;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_DEFAULT_MODEL}:generateContent?key=${apiKey}`;
-  const body: Record<string, unknown> = {
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: userPrompt }],
-      },
-    ],
-    systemInstruction: {
-      parts: [{ text: systemPrompt }],
-    },
-    generationConfig: {
-      temperature,
-      maxOutputTokens: Math.max(promptConfig.max_tokens, 4096),
-      thinkingConfig: { thinkingBudget: 0 },
-    },
-  };
-  if (enableStructured) {
-    (body.generationConfig as Record<string, unknown>).responseMimeType =
-      "application/json";
-  }
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+  const result = await generateGeminiContent({
+    apiKey,
+    model: GEMINI_DEFAULT_MODEL,
+    systemPrompt,
+    userPrompt,
+    temperature,
+    maxOutputTokens: Math.max(promptConfig.max_tokens, 4096),
+    responseMimeType: enableStructured ? "application/json" : undefined,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `Gemini ${response.status}: ${errorText.substring(0, 200)}`
-    );
+  if (!result.ok) {
+    if (result.httpStatus != null) {
+      throw new Error(
+        `Gemini ${result.httpStatus}: ${result.message.substring(0, 200)}`
+      );
+    }
+    throw new Error(result.message);
   }
 
-  const data = await response.json();
-  const parts = data.candidates?.[0]?.content?.parts ?? [];
-  const rawContent = parts
-    .map((p: { text?: string }) =>
-      typeof p?.text === "string" ? p.text : ""
-    )
-    .join("");
-  const tokensUsed = data.usageMetadata?.totalTokenCount;
-  const finishReason = data.candidates?.[0]?.finishReason;
+  const { rawContent, tokensUsed, finishReason } = result;
 
   if (finishReason === "MAX_TOKENS" || (rawContent.length < 100 && enableStructured)) {
     console.warn(
@@ -370,7 +339,7 @@ export function buildSuccessResponse(
     structuredResponse: StructuredAIResponse | null;
     provider: SmartDescriptionProvider;
   },
-  cors?: Record<string, string>
+  cors: Record<string, string> = {}
 ): Response {
   const {
     processedDescription,
@@ -409,12 +378,12 @@ export function buildSuccessResponse(
     responseData.structured = structuredResponse;
   }
 
-  return jsonResponse(responseData, 200, undefined, cors);
+  return jsonResponse(responseData, 200, cors);
 }
 
 export function buildErrorResponse(
   errMessage: string,
-  cors?: Record<string, string>
+  cors: Record<string, string> = {}
 ): Response {
   const fallback = generateFallbackResponse(
     `Erro ao gerar descrição: ${errMessage}`,
@@ -427,7 +396,6 @@ export function buildErrorResponse(
       structured: fallback,
     },
     500,
-    undefined,
     cors
   );
 }

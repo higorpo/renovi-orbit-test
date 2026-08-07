@@ -6,18 +6,6 @@ import {
 } from "./allowedValues.ts";
 
 /**
- * Strip markdown code fence around JSON (e.g. ```json ... ```) so it can be parsed.
- */
-export function stripJsonCodeFence(raw: string): string {
-  let s = raw.trim();
-  const open = /^```(?:json)?\s*\n?/i;
-  const close = /\n?```\s*$/;
-  if (open.test(s)) s = s.replace(open, "");
-  if (close.test(s)) s = s.replace(close, "");
-  return s.trim();
-}
-
-/**
  * If the model returned the full JSON inside professional_description (nested JSON),
  * unwrap it and return an object that has the actual text in professional_description.
  */

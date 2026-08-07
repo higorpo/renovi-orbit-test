@@ -9,7 +9,7 @@ import { checkRateLimit, getClientIP, getUserIdFromRequest } from "../_shared/ra
 import { getCorsHeaders } from "../_shared/cors.ts";
 import { createServiceRoleClient } from "../_shared/serviceRoleClient.ts";
 
-import { OPEN_AI_DEFAULT_MODEL, GEMINI_DEFAULT_MODEL } from "./constants.ts";
+import { OPEN_AI_DEFAULT_MODEL, GEMINI_DEFAULT_MODEL } from "../_shared/ai/index.ts";
 import type { GenerateSmartDescriptionBody, PromptConfig } from "./types.ts";
 import { formatFormDataToContext } from "./formContext.ts";
 import { logPromptUsage } from "./usage.ts";
@@ -59,8 +59,8 @@ serve(async (req) => {
           retryAfter: rl.retryAfter,
         },
         429,
-        { "Retry-After": String(rl.retryAfter) },
-        corsHeaders
+        corsHeaders,
+        { "Retry-After": String(rl.retryAfter) }
       );
     }
 

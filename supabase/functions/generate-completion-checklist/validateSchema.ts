@@ -3,6 +3,7 @@
  * Final authority remains the Postgres RPC inside enrichment_finalize_ready.
  */
 
+import { stripJsonCodeFence } from "../_shared/ai/jsonFence.ts";
 import {
   ALLOWED_BLOCK_TYPES,
   DEFAULT_CRITERION_MAX,
@@ -178,8 +179,5 @@ export function validateChecklistSchema(
 
 /** Parse LLM JSON content that may be wrapped in markdown fences. */
 export function parseChecklistJson(raw: string): unknown {
-  const trimmed = raw.trim();
-  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)```$/i);
-  const body = fenced ? fenced[1].trim() : trimmed;
-  return JSON.parse(body);
+  return JSON.parse(stripJsonCodeFence(raw));
 }
