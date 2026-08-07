@@ -1,0 +1,74 @@
+---
+description: Bottom sheets mobile devem usar Drawer (vaul) com arraste — não Sheet side=bottom
+alwaysApply: false
+globs: src/**/*.tsx,src/components/ui/drawer.tsx,src/components/ui/sheet.tsx
+---
+
+# Bottom sheet = Drawer (vaul)
+
+Em **mobile**, overlays que sobem de baixo (bottom sheet) **devem** usar `@/components/ui/drawer` (**vaul**), com handle arrastável para dismiss.
+
+**Não** use `Sheet` / `SheetContent` com `side="bottom"` para bottomsheets novos ou ao refatorar.
+
+## Por quê
+
+`Sheet` é Radix Dialog — handle decorativo **não** arrasta. `Drawer` (vaul) expõe `DrawerHandle` e gesto de dismiss.
+
+## Padrão
+
+```tsx
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
+
+<Drawer
+  open={open}
+  onOpenChange={onOpenChange}
+  shouldScaleBackground={false} // preferível se abrir sobre outro sheet/dialog
+  handleOnly // scroll interno não compete com dismiss
+  dismissible={!mutationPending}
+>
+  <DrawerContent className="flex max-h-[92vh] flex-col gap-0 rounded-t-2xl p-0">
+    <DrawerHeader className="…">
+      <DrawerTitle>…</DrawerTitle>
+      <DrawerDescription>…</DrawerDescription>
+    </DrawerHeader>
+    {/* corpo rolável: overscroll-y-contain touch-pan-y */}
+  </DrawerContent>
+</Drawer>
+```
+
+Referência: `CompletionFlowSheetDialog` (mobile), `ChatComposerAttachmentSourceSheet`, `ChatAudioRecordingSheet`.
+
+## Regras práticas
+
+1. **Handle real** — use o handle do `DrawerContent` (ou `DrawerHandle`). Não invente um `<div>` cinza só visual.
+2. **`handleOnly`** — use quando o corpo tem scroll (formulário, lista, checklist).
+3. **`dismissible={false}`** (ou equivalente) enquanto mutação crítica está em voo.
+4. **Desktop** — pode continuar `Dialog` / `ShellDialogContent` centrado; a regra vale para o **caminho mobile** bottom sheet.
+5. **Sheet lateral** (`side="left"` / `side="right"`) — OK permanecer em `Sheet` (detalhe, menu). Não é bottomsheet.
+
+## Anti-padrões
+
+```tsx
+// ❌ BAD — bottomsheet sem drag
+<Sheet open={open} onOpenChange={onOpenChange}>
+  <SheetContent side="bottom">…</SheetContent>
+</Sheet>
+
+// ❌ BAD — “handle” decorativo no Sheet
+<div className="mx-auto h-1.5 w-12 rounded-full bg-muted" />
+```
+
+## Migração pendente (Sheet bottom → Drawer)
+
+- `AddCardSheetDialog`
+- `MyServicesFiltersBar` (sheet de filtros)
+- `ChatDetailsMobileSheet`
+- `AddressFormDialog` (caminho mobile)
+- `ServiceAreaField` (caminho mobile)

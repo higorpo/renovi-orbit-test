@@ -33,6 +33,7 @@ Push: `src/lib/push.ts`, `src/features/push-permission/`. Build nativo: `yarn bu
 - `pb-[max(0.75rem,env(safe-area-inset-bottom))]` em footers fixos.
 - Scroll interno: `overscroll-y-contain`, `touch-pan-y`; textareas `max-sm:resize-none`.
 - Touch targets ≥ 44px; validar em ~360px de largura.
+- **Bottom sheet mobile** — usar **Drawer (vaul)** com arraste (`handleOnly`), não `Sheet` `side="bottom"`. Ver regra `bottom-sheet-vaul-drawer`.
 
 ```tsx
 const { contentRef, scheduleSync } = useMobileDialogViewport(open);

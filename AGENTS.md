@@ -37,6 +37,8 @@ Features em `src/features/<nome>/` (`api`, `components`, `hooks`, `types`, `util
 | | `server-side-pagination-and-filtering` → `src/features/**` |
 | | `routing-and-mobile-navigation` → `src/router.tsx`, `src/layouts/**` |
 | | `sentry`, `logger`, `analytics-tracking` → `src/**` |
+| | `mobile-first-ux` → (requestable) teclado/dialogs |
+| | `bottom-sheet-vaul-drawer` → `src/**/*.tsx` — bottomsheet = Drawer (vaul) + drag |
 | | `unit-tests` → `src/**`, `e2e/**`, testes |
 | | `business-docs-sync-after-code-changes` → `src/**`, `supabase/**`, `docs/business/**` |
 | | `request-quote-draft-version` → `src/features/request-quote/**` |
