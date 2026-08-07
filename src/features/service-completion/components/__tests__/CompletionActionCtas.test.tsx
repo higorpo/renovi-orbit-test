@@ -113,6 +113,36 @@ describe("completion action CTAs", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("keeps the sheet mounted after status becomes EXECUTED while open", () => {
+    const { rerender } = render(
+      <ProviderMarkExecutedAction
+        serviceRequestId="sr-1"
+        contractedStatus="CONFIRMED"
+        enrichmentReady
+      />,
+      { wrapper },
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Marcar serviço como concluído/i }),
+    );
+    expect(screen.getByTestId("provider-mark-executed-sheet")).toBeInTheDocument();
+
+    rerender(
+      <ProviderMarkExecutedAction
+        serviceRequestId="sr-1"
+        contractedStatus="EXECUTED"
+        enrichmentReady
+      />,
+    );
+
+    // CTA gone, but sheet stays so the success step can render.
+    expect(
+      screen.queryByRole("button", { name: /Marcar serviço como concluído/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("provider-mark-executed-sheet")).toBeInTheDocument();
+  });
+
   it("hides provider CTA when enrichment is not ready", () => {
     const { container } = render(
       <ProviderMarkExecutedAction

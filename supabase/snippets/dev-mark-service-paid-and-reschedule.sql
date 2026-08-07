@@ -1,5 +1,7 @@
 -- Local/dev helper: mark contracted service as paid (CONFIRMED) and move the
 -- scheduled execution date (default: today in America/Sao_Paulo).
+-- Also resets EXECUTED → CONFIRMED (unfreezes completion evidence) so mark-executed
+-- can be retested from the app.
 --
 -- Paste into Studio SQL (http://127.0.0.1:54323) or run via:
 --   docker exec -i supabase_db_<ref> psql -U postgres -d postgres -f -
@@ -11,6 +13,7 @@
 -- - payment_schedules FSM allows SCHEDULED/FAILED/... → PAID; trigger requires paid_amount.
 -- - service_execution_at is GENERATED — do not UPDATE it; it follows scheduled_* / agreed_slot.
 -- - Does NOT call NetCred (local seed only). Idempotent if already PAID/CONFIRMED.
+-- - EXECUTED reset: clears executed_at, unfreezes evidence to draft, reopens upload sessions.
 
 BEGIN;
 
@@ -99,6 +102,48 @@ BEGIN
     WHERE ps.id = v_ps_id;
   END IF;
 
+  -- Reset post-execution so the provider can mark-executed again in the app.
+  -- Frozen evidence is immutable in product — disable trigger only for this local seed.
+  IF v_cs_status IN (
+    'EXECUTED'::public.contracted_service_status,
+    'COMPLETED'::public.contracted_service_status
+  ) THEN
+    UPDATE public.contracted_services cs
+    SET
+      status = 'CONFIRMED'::public.contracted_service_status,
+      executed_at = null,
+      completed_at = null,
+      completed_by = null
+    WHERE cs.id = v_cs_id;
+
+    ALTER TABLE public.contracted_service_completion_evidence
+      DISABLE TRIGGER completion_evidence_frozen_immutable;
+
+    UPDATE public.contracted_service_completion_evidence ev
+    SET
+      phase = 'draft'::public.completion_evidence_phase,
+      frozen_at = null,
+      responses_hash = null,
+      idempotency_key = null,
+      auto_executed_without_checklist = false
+    WHERE ev.contracted_service_id = v_cs_id;
+
+    ALTER TABLE public.contracted_service_completion_evidence
+      ENABLE TRIGGER completion_evidence_frozen_immutable;
+
+    UPDATE public.completion_evidence_upload_sessions s
+    SET
+      status = 'open',
+      expires_at = greatest(s.expires_at, now() + interval '7 days')
+    WHERE s.contracted_service_id = v_cs_id
+      AND s.status = 'committed';
+
+    DELETE FROM public.service_completion_execution_declarations d
+    WHERE d.contracted_service_id = v_cs_id;
+
+    v_cs_status := 'CONFIRMED'::public.contracted_service_status;
+  END IF;
+
   UPDATE public.contracted_services cs
   SET
     status = CASE
@@ -115,7 +160,7 @@ BEGIN
     )
   WHERE cs.id = v_cs_id;
 
-  RAISE NOTICE 'OK cs=% status %→CONFIRMED (if was PENDING_PAYMENT); schedule=%; payment %→PAID',
+  RAISE NOTICE 'OK cs=% status=%; schedule=%; payment %→PAID (EXECUTED/COMPLETED reset to CONFIRMED when applicable)',
     v_cs_id, v_cs_status, v_scheduled_date, v_ps_state;
 END $$;
 
@@ -123,15 +168,20 @@ END $$;
 SELECT
   cs.id AS contracted_service_id,
   cs.service_request_id,
-  cs.status,
+  cs.status::text,
+  cs.executed_at,
   cs.scheduled_start_date,
   cs.service_execution_at,
   cs.agreed_slot,
-  ps.state AS payment_state,
+  ps.state::text AS payment_state,
   ps.paid_at,
-  ps.paid_amount
+  ps.paid_amount,
+  ev.phase::text AS evidence_phase,
+  ev.frozen_at
 FROM public.contracted_services cs
 JOIN public.payment_schedules ps ON ps.contracted_service_id = cs.id
+LEFT JOIN public.contracted_service_completion_evidence ev
+  ON ev.contracted_service_id = cs.id
 WHERE cs.service_request_id = '8017e006-5a32-44e7-b8da-1727a14f4d06';
 
 COMMIT;

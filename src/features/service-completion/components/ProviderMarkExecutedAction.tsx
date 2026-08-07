@@ -2,6 +2,9 @@
  * Provider CTA + sheet/dialog to mark a contracted service as executed.
  * Visibility uses lightweight service-detail fields; completion context loads
  * only when the checklist dialog opens (ProviderExecutedWizard).
+ *
+ * After mark-executed the parent status becomes EXECUTED — keep the sheet mounted
+ * while `open` so the immersive success step is not unmounted by canShow=false.
  */
 
 import { useState } from "react";
@@ -31,26 +34,29 @@ export function ProviderMarkExecutedAction({
   const [open, setOpen] = useState(false);
 
   // Mirrors get_service_completion_context capabilities without an extra RPC.
-  const canShow =
+  const canOpenChecklist =
     (contractedStatus ?? "").toUpperCase() === "CONFIRMED" && enrichmentReady;
 
-  if (!canShow) {
+  // After EXECUTED, parent refetch would unmount us and kill the success step.
+  if (!canOpenChecklist && !open) {
     return null;
   }
 
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="w-full rounded-pill text-primary transition-transform duration-fast ease-renovi hover:bg-primary/5 hover:text-primary active:scale-[0.97] sm:w-auto"
-        data-testid="provider-mark-executed-action"
-        onClick={() => setOpen(true)}
-      >
-        <CheckCircle2 className="h-4 w-4" aria-hidden />
-        Marcar serviço como concluído
-      </Button>
+      {canOpenChecklist ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full rounded-pill text-primary transition-transform duration-fast ease-renovi hover:bg-primary/5 hover:text-primary active:scale-[0.97] sm:w-auto"
+          data-testid="provider-mark-executed-action"
+          onClick={() => setOpen(true)}
+        >
+          <CheckCircle2 className="h-4 w-4" aria-hidden />
+          Marcar serviço como concluído
+        </Button>
+      ) : null}
 
       <ProviderMarkExecutedSheet
         open={open}
