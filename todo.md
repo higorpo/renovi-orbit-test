@@ -38,10 +38,8 @@ Urgentes:
 - Tela de onboarding do prestador, onde ele selecione as áreas de atuação e os serviços que ele faz, além de outras opções (verificação do perfil)
 - Há um problema com a captura de localização no formato atual. Ele está trazendo localização errada no PC, tem que checar se no Windows está assim também.
 - Adicionar google analytics em todos os fluxos
-- Sistema de verificação de perfil do prestador, onde ele anexa os documentos e a equipe interna avalia
 - remoteconfig para não permitir cadastrar profissionais etc
 - remoteconfig para redirecionar para grupo de whatsapp
--cadastro e criação de service requests não estão funcionando por conta da proteção 
 - Adicionar no chat botão para envio de proposta que fica visível a todo momento
 - Ver vídeo no Youtube sobre a questão que eu estou usando para precificação exibida para o prestador/cliente, pois parece que há um problema de segurança: https://www.youtube.com/watch?v=rTXy2p9aAVw&list=WL&index=75&t=601s&pp=iAQBsAgC.
 - Como eu garanto que alterações feitas em tabelas/rpcs não quebram versões  anteriores do app?
@@ -50,8 +48,6 @@ Urgentes:
 
 Telas/fluxos restantes:
 
-- Visualizar checklist de conclusão do serviço
-- Avaliação do serviço após sua conclusão
 - Tela de perfil do prestador
 - Sistema de disputas
 - Tela de notificação
@@ -75,16 +71,9 @@ Coisas para verificar:
 
 - Prestadores marcados como "Pioneiros" tem taxa de serviço menor
 - Direcionar prestador para que ele cadastre serviços que ele atenda para exibir trabalhos
-- Estrelas de avaliação dos cards devem estar usando dados reais
 - Verificar como estamos fazendo upload de arquivos hoje na plataforma. Precisamos usar pre-signed urls e não passar nada pelo servidor/EFs. Também precisamos eliminar arquivos órfãos.
 - Verificar se devemos usar ULID a o invés de UUID
 - Avaliação de onboarding de prestadores por parte da plataforma, depois que a netcred aprova nós precisamos aprovar também.
-
-Coisas para terminar do fluxo atual de trabalho:
-
-- ao gerar a descrição do pedido, também gerar o checklist de conclusão do serviço
-  - mostrar o checklist de conclusão do serviço pro prestador na hora que ele vai fazer o orçamento e permitir que ele altere alguma coisa
-  - apresentar o checklist de conclusão do serviço para o cliente quando ele vai fechar o serviço
 
 - Não permitir serviços longos com mais de 5 dias de duração.
 
@@ -92,7 +81,6 @@ Coisas para terminar do fluxo atual de trabalho:
 
 
 Coisas para fazer next
--[avaliar]simplificar query de get_service_list  (hoje ele tá trazendo um monte de dados que nem vai ser exibido no card)
 -fluxo de prestador recusar revisão de proposta
 
 - Verificar se todos os locais onde tenho carregando de mais páginas no sistema estão usando cursor de forma performática.
@@ -130,7 +118,6 @@ Coisas para fazer next
 
 Itens relacionados a conclusão do serviço:
 
-- Há muita coisa em comum entre a nova parte de gerar checklist com IA e a parte antiga que gerava algumas coisas com IA também, vamos tentar compartilhar mais recursos
 
 
 - Na tela do checklist do prestador, quando ele concluir o checklist falar que agora o cliente precisa confirmar etc..
