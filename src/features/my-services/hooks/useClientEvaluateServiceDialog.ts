@@ -23,9 +23,8 @@ export function useClientEvaluateServiceDialog() {
     }
   }, []);
 
+  // Invalidate while the sheet stays open on the success step; dismiss is owned by the sheet.
   const handleCompleted = useCallback(() => {
-    setOpen(false);
-    setModel(null);
     void queryClient.invalidateQueries({ queryKey: SERVICES_LIST_QUERY_KEY });
     void queryClient.invalidateQueries({ queryKey: SERVICE_DETAIL_QUERY_KEY });
   }, [queryClient]);

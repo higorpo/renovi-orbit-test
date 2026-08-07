@@ -41,6 +41,8 @@ export function usePendingEvaluationPrompt() {
   const openRef = useRef(false);
   /** Blocks effect-driven re-open briefly after a successful rating. */
   const suppressOpenUntilRef = useRef(0);
+  /** Rating submitted; sheet stays open on success — do not snooze on dismiss. */
+  const completedWhileOpenRef = useRef(false);
 
   const isClient = profile?.role === "client";
   const userId = user?.id;
@@ -85,6 +87,10 @@ export function usePendingEvaluationPrompt() {
   const evaluatePrompt = useCallback(
     async (promptOverride?: PendingEvaluationPrompt | null) => {
       if (!enabled || evaluatingRef.current) return;
+      // Keep the success step mounted until the user dismisses.
+      if (completedWhileOpenRef.current && openRef.current) {
+        return;
+      }
       if (
         promptOverride === undefined &&
         Date.now() < suppressOpenUntilRef.current
@@ -150,39 +156,8 @@ export function usePendingEvaluationPrompt() {
     setActivePrompt(null);
   }, [activePrompt?.serviceRequestId, trackEvent]);
 
-  const handleOpenChange = useCallback(
-    (nextOpen: boolean) => {
-      if (nextOpen) {
-        setOpen(true);
-        return;
-      }
-      if (openRef.current && activePrompt) {
-        dismiss();
-        return;
-      }
-      setOpen(false);
-    },
-    [activePrompt, dismiss],
-  );
-
-  const handleCompleted = useCallback(async () => {
-    const completedId = activePrompt?.serviceRequestId;
-    if (completedId) {
-      trackEvent("pending_evaluation_prompt_completed", {
-        service_request_id: completedId,
-      });
-    }
-
-    setOpen(false);
-    setActivePrompt(null);
-    openedForIdRef.current = null;
-    suppressOpenUntilRef.current = Date.now() + NEXT_PROMPT_DELAY_MS;
-
+  const scheduleNextPrompt = useCallback(() => {
     if (!userId) return;
-
-    await queryClient.invalidateQueries({
-      queryKey: pendingEvaluationPromptQueryKey(userId),
-    });
 
     window.setTimeout(() => {
       void (async () => {
@@ -204,13 +179,52 @@ export function usePendingEvaluationPrompt() {
         }
       })();
     }, NEXT_PROMPT_DELAY_MS);
-  }, [
-    activePrompt?.serviceRequestId,
-    evaluatePrompt,
-    queryClient,
-    trackEvent,
-    userId,
-  ]);
+  }, [evaluatePrompt, queryClient, userId]);
+
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (nextOpen) {
+        setOpen(true);
+        return;
+      }
+
+      // Success dismiss: clear prompt without snooze, then offer the next pending.
+      if (completedWhileOpenRef.current) {
+        completedWhileOpenRef.current = false;
+        setOpen(false);
+        setActivePrompt(null);
+        openedForIdRef.current = null;
+        scheduleNextPrompt();
+        return;
+      }
+
+      if (openRef.current && activePrompt) {
+        dismiss();
+        return;
+      }
+      setOpen(false);
+    },
+    [activePrompt, dismiss, scheduleNextPrompt],
+  );
+
+  // Keep sheet open for the success step; host owns dismiss via Entendi / onOpenChange.
+  const handleCompleted = useCallback(async () => {
+    const completedId = activePrompt?.serviceRequestId;
+    if (completedId) {
+      trackEvent("pending_evaluation_prompt_completed", {
+        service_request_id: completedId,
+      });
+    }
+
+    completedWhileOpenRef.current = true;
+    suppressOpenUntilRef.current = Date.now() + NEXT_PROMPT_DELAY_MS;
+
+    if (!userId) return;
+
+    await queryClient.invalidateQueries({
+      queryKey: pendingEvaluationPromptQueryKey(userId),
+    });
+  }, [activePrompt?.serviceRequestId, queryClient, trackEvent, userId]);
 
   const promptSummary: PendingEvaluationPromptSummary | null = activePrompt
     ? {

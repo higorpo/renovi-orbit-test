@@ -178,4 +178,36 @@ describe("usePendingEvaluationPrompt", () => {
       expect.objectContaining({ service_request_id: "sr-1" }),
     );
   });
+
+  it("keeps the sheet open on completed for the success step", async () => {
+    const { result } = renderHook(() => usePendingEvaluationPrompt(), {
+      wrapper,
+    });
+
+    await waitFor(() => expect(result.current.open).toBe(true), {
+      timeout: 3000,
+    });
+
+    await act(async () => {
+      result.current.onCompleted();
+      await Promise.resolve();
+    });
+
+    expect(result.current.open).toBe(true);
+    expect(result.current.serviceRequestId).toBe("sr-1");
+    expect(result.current.promptSummary).not.toBeNull();
+    expect(trackEvent).toHaveBeenCalledWith(
+      "pending_evaluation_prompt_completed",
+      expect.objectContaining({ service_request_id: "sr-1" }),
+    );
+    expect(storageMocks.markPendingEvaluationPromptSnoozed).not.toHaveBeenCalled();
+
+    act(() => {
+      result.current.setOpen(false);
+    });
+
+    expect(result.current.open).toBe(false);
+    expect(result.current.serviceRequestId).toBeNull();
+    expect(storageMocks.markPendingEvaluationPromptSnoozed).not.toHaveBeenCalled();
+  });
 });

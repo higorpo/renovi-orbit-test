@@ -96,7 +96,9 @@ describe("useClientEvaluateServiceDialog", () => {
     act(() => result.current.openEvaluateService(serviceModel()));
     act(() => result.current.handleCompleted());
 
-    expect(result.current.open).toBe(false);
+    // Sheet owns dismiss after the success step; host only refreshes lists.
+    expect(result.current.open).toBe(true);
+    expect(result.current.model).not.toBeNull();
     expect(invalidateQueries).toHaveBeenCalled();
   });
 });
