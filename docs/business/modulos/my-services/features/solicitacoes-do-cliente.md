@@ -90,14 +90,15 @@ flowchart TD
 12. **Destaque pagamento (cliente):** em `FAILED_PERMANENT`, alerta de falha prevalece sobre unread; nos demais `PENDING_PAYMENT`, unread sobrescreve o destaque de pagamento.
 13. **Destaque pagamento (prestador):** unread sobrescreve pagamento; se não unread e `PENDING_PAYMENT` → destaque “Aguardando pagamento do cliente”.
 14. **Follow-up de conclusão no card (`in_progress`):** usa só dados de `list_services` / `ServiceModel` (`contracted.status`, `scheduledStartDate` / `scheduledEndDate` via `getScheduledTiming`; end null ou dia inteiro → end = start; `past` = rangeEnd &lt; hoje). **Prestador:** `CONFIRMED` + past → banner “Marque o serviço como executado” (+ detalhe pedindo evidências); primário **“Concluir serviço”** (`intent: mark_executed`) abre sheet/dialog no card via `ProviderMarkExecutedSheet` (hospedado em `ProviderMarkExecutedDialogs` + `useProviderMarkExecutedDialog`); contexto RPC só ao abrir o wizard; se `enrichmentReady` for false, o botão fica disabled com tooltip (“Checklist de conclusão ainda não está pronto”); secundário “Ver detalhes”. `EXECUTED` → “Aguardando confirmação do cliente” (primário “Ver detalhes”). **Cliente:** `CONFIRMED` + past → “Aguardando conclusão do prestador” (primário “Ver detalhes”); `EXECUTED` → “Aceite a conclusão e avalie o serviço” (ênfase `attention`); primário **“Avaliar serviço”** (`intent: evaluate_service`) abre sheet/dialog via `ClientEvaluateServiceSheet` (Public API de `service-completion`) hospedado na página (`ClientEvaluateServiceDialogs` + `useClientEvaluateServiceDialog`), mesmo padrão do prestador com mark-executed; contexto RPC só ao abrir o wizard; secundário “Ver detalhes”. Sem prefetch de `get_service_completion_context` na lista.
-15. **Prioridade do highlight `in_progress`:** unread e pagamento pendente **vencem** o banner de follow-up de conclusão; só então agenda (“Agendado para…” / “Serviço hoje”) se não houver follow-up.
-16. **Urgência no card:** badge/urgência visual só se `urgency === "high"` (`showUrgency`).
-17. **Proposta expirando (prestador):** `expiredAt` dentro de 3 dias e ainda no futuro → sufixo “Expira em breve” / ênfase attention.
-18. **Banner calendário:** apenas na página do prestador; link para `ROUTE_PROVIDER_CALENDAR` (`/dashboard/services/calendar`).
-19. **Portfólio de CTAs do card:** no máximo 2 ações (primary + secondary); detalhes sempre disponíveis como fallback em vários ramos.
-20. **Categoria no filtro:** valor selecionado é o **título** do serviço enviado como `p_category_title`.
-21. **staleTime da lista:** 60 s; `refetchOnWindowFocus: false`.
-22. **Invalidação pós-pagamento manual / proposta:** invalida `SERVICES_LIST_QUERY_KEY` (e chaves de payment/proposal conforme hook).
+15. **Rating opcional no card `completed` (cliente):** se `contracted.status === COMPLETED` e `clientRatingOverallScore == null` (campo já no `ServiceModel` de `list_services` — sem request extra), primário **“Avaliar serviço”** (`intent: evaluate_service`); secundário “Ver detalhes”; o host (`ClientEvaluateServiceDialogs`) abre com `ratingOnly` (só etapa de notas; título “Avaliar serviço (opcional)”). Se já houver rating, só “Ver detalhes” (comportamento anterior).
+16. **Prioridade do highlight `in_progress`:** unread e pagamento pendente **vencem** o banner de follow-up de conclusão; só então agenda (“Agendado para…” / “Serviço hoje”) se não houver follow-up.
+17. **Urgência no card:** badge/urgência visual só se `urgency === "high"` (`showUrgency`).
+18. **Proposta expirando (prestador):** `expiredAt` dentro de 3 dias e ainda no futuro → sufixo “Expira em breve” / ênfase attention.
+19. **Banner calendário:** apenas na página do prestador; link para `ROUTE_PROVIDER_CALENDAR` (`/dashboard/services/calendar`).
+20. **Portfólio de CTAs do card:** no máximo 2 ações (primary + secondary); detalhes sempre disponíveis como fallback em vários ramos.
+21. **Categoria no filtro:** valor selecionado é o **título** do serviço enviado como `p_category_title`.
+22. **staleTime da lista:** 60 s; `refetchOnWindowFocus: false`.
+23. **Invalidação pós-pagamento manual / proposta:** invalida `SERVICES_LIST_QUERY_KEY` (e chaves de payment/proposal conforme hook).
 
 ## 8. Campos e dados (inputs / shape)
 
@@ -143,7 +144,7 @@ Delegadas a `view-services` / migrations:
 |-------------------|-----|
 | `negotiation` | Cards de negociação; sheet **compare** |
 | `in_progress` | Agenda / pagamento / chat / follow-up de conclusão (pós-data-fim ou `EXECUTED`) |
-| `completed` | Concluído; CTA só detalhes |
+| `completed` | Concluído; cliente sem rating → primário **“Avaliar serviço”** + secundário “Ver detalhes”; com rating → só “Ver detalhes” |
 | `cancelled` | Cancelado; CTA só detalhes |
 | `dispute` (aba) | Sem itens |
 | `all` | Todas as fases |
@@ -167,7 +168,7 @@ Transições de domínio (OPEN → contratado → etc.) **não** são feitas nes
 | `chats` | `getChatsPageUrlWithServiceRequestFilter`; `/dashboard/chats/:chatId` |
 | `payments` | `ManualPaymentDialog`, `usePaymentSchedule`, `PAYMENT_SCHEDULE_QUERY_KEY` |
 | `provider-calendar` | Banner + rota calendar |
-| `service-completion` | Prestador `CONFIRMED` + past: “Concluir serviço” no card abre `ProviderMarkExecutedSheet` (hospedado na página); cliente `EXECUTED`: “Avaliar serviço” no card abre `ClientEvaluateServiceSheet` (hospedado na página); contexto RPC só ao abrir o wizard; CTAs equivalentes também no detalhe (`ProviderMarkExecutedAction` / `ClientEvaluateServiceAction`) |
+| `service-completion` | Prestador `CONFIRMED` + past: “Concluir serviço” no card abre `ProviderMarkExecutedSheet` (hospedado na página); cliente `EXECUTED` (fase `in_progress`) **ou** `COMPLETED` sem `clientRatingOverallScore` (fase `completed`): “Avaliar serviço” no card abre `ClientEvaluateServiceSheet` (hospedado na página; `ratingOnly` no path opcional); contexto RPC só ao abrir o wizard; CTAs equivalentes também no detalhe (`ProviderMarkExecutedAction` / `ClientEvaluateServiceAction`) |
 | Maps | `openGoogleMaps` + `getServiceCoordinates` (prestador, serviço hoje) |
 
 ## 14. Listagens, buscas, filtros, paginação, ordenação
@@ -191,9 +192,9 @@ Transições de domínio (OPEN → contratado → etc.) **não** são feitas nes
 | Cancelar pedido | `OPEN` e sem propostas/unread priorizados | `cancel_service_request` | `isCancelling` |
 | Responder / ver conversa | in_progress | Chat | Sem `chatSummary.id` |
 | Ajustar pagamento | `PENDING_PAYMENT` + `FAILED_PERMANENT` | `ManualPaymentDialog` | Toast se sem contracted id / erro schedule |
-| Avaliar serviço (`evaluate_service`) | `EXECUTED` (banner follow-up; sem unread/pagamento prioritário) | Abre sheet/dialog na página (`ClientEvaluateServiceSheet` via `ClientEvaluateServiceDialogs` + `useClientEvaluateServiceDialog`); RPC de contexto só ao abrir o wizard | — |
+| Avaliar serviço (`evaluate_service`) | `EXECUTED` (fase `in_progress`, banner follow-up) **ou** `COMPLETED` + `clientRatingOverallScore == null` (fase `completed`; dados de `list_services`) | Abre sheet/dialog na página (`ClientEvaluateServiceSheet` via `ClientEvaluateServiceDialogs` + `useClientEvaluateServiceDialog`); em `COMPLETED` sem rating o host passa `ratingOnly`; RPC de contexto só ao abrir o wizard | — |
 | Ver detalhes (follow-up `CONFIRMED` + past) | `CONFIRMED` + timing `past` — sem unread/pagamento prioritário | Detalhe (aguardar conclusão do prestador) | — |
-| Ver detalhes | — (incl. secundário no ramo `EXECUTED`) | Detalhe sheet/página | — |
+| Ver detalhes | — (incl. secundário nos ramos `EXECUTED` e `completed` sem rating) | Detalhe sheet/página | — |
 | Novo serviço | Header/FAB/empty | `/pedir-orcamento` | — |
 | Limpar foco | Query focus | Remove `serviceRequestId` | — |
 
@@ -223,6 +224,7 @@ Transições de domínio (OPEN → contratado → etc.) **não** são feitas nes
 - `handleClearFilters` **não** reseta a aba de status nem a busca (só filtros da barra: categoria, cidade, bairro, datas, flags); no cliente, versão da página também limpa focus query.
 - Prestador **não** tem deep link `serviceRequestId` no hook.
 - Card concluído prestador: nota real `clientRatingOverallScore` (omitida se null).
+- Card concluído cliente: sem rating → CTA “Avaliar serviço” (`ratingOnly`); com rating → só “Ver detalhes”.
 - Motivos de cancelamento no card prestador: heurísticas de `myProposal` / status (`cancelReason`).
 - Body scroll lock também no sheet de filtros mobile.
 - CTA “Enviar orçamento” **não** aparece no card do prestador em negociação sem proposta — primário é “Ver negociação”.
@@ -298,6 +300,8 @@ Prioridade: unread / pagamento pendente vencem este banner. Caso contrário, se 
 
 **Cliente `EXECUTED`:** sheet/dialog hospedado na página (`ClientEvaluateServiceDialogs` + `useClientEvaluateServiceDialog` → `ClientEvaluateServiceSheet`); contexto RPC só ao abrir o wizard (`ClientConfirmRatingWizard`). Evidência: `clientServiceCardPresentation.ts`, `ClientServiceListCard.tsx`.
 
+**Nota — fase `completed`:** o CTA **“Avaliar serviço”** também aparece no card concluído quando `COMPLETED` + `clientRatingOverallScore == null` (rating opcional pós auto-complete; `ratingOnly`). Ver regra 15 e Anexo F — **não** confundir com o banner de follow-up deste anexo (só `in_progress` / `EXECUTED`).
+
 ## Anexo E — Checklist QA (cenários)
 
 - [ ] Cliente: lista vazia → CTA pedir orçamento
@@ -307,6 +311,8 @@ Prioridade: unread / pagamento pendente vencem este banner. Caso contrário, se 
 - [ ] Cliente: cancelar OPEN; FAILED_PERMANENT → ajustar pagamento
 - [ ] Cliente: `CONFIRMED` + data fim passada → highlight “Aguardando conclusão do prestador”; primário Ver detalhes
 - [ ] Cliente: `EXECUTED` → highlight “Aceite a conclusão e avalie…”; primário “Avaliar serviço” abre sheet na página; secundário “Ver detalhes”; contexto RPC só ao abrir o wizard
+- [ ] Cliente: fase `completed` + `COMPLETED` sem `clientRatingOverallScore` → primário “Avaliar serviço” (`ratingOnly`); secundário “Ver detalhes”
+- [ ] Cliente: fase `completed` com rating → só “Ver detalhes”
 - [ ] Prestador: banner calendário → rota calendar (só provider)
 - [ ] Prestador: revisar / ver proposta; mapa só “hoje” com coords
 - [ ] Prestador: `CONFIRMED` + past → “Marque o serviço como executado”; primário “Concluir serviço” abre sheet no card; secundário “Ver detalhes”; `!enrichmentReady` → botão disabled + tooltip
@@ -314,6 +320,17 @@ Prioridade: unread / pagamento pendente vencem este banner. Caso contrário, se 
 - [ ] Unread / PENDING_PAYMENT vencem o banner de follow-up de conclusão
 - [ ] Disputas: lista vazia mesmo com outros itens
 - [ ] Sheet detalhe: lista permanece montada (persistent slot)
+
+## Anexo F — CTA “Avaliar serviço” no card `completed` (cliente)
+
+Dados: `contracted.status` + `contracted.clientRatingOverallScore` do `ServiceModel` (`list_services`). Sem RPC extra.
+
+| Condição | Primário | Secundário | Sheet |
+|----------|----------|------------|-------|
+| `COMPLETED` + `clientRatingOverallScore == null` | **Avaliar serviço** (`evaluate_service`) | Ver detalhes | `ClientEvaluateServiceDialogs` com `ratingOnly` (título “Avaliar serviço (opcional)”; só etapa de notas) |
+| `COMPLETED` + rating existente | Ver detalhes | — | — |
+
+Evidência: `buildCompletedActions` em `clientServiceCardPresentation.ts`; host em `ClientEvaluateServiceDialogs.tsx`.
 
 ## 21. Atualização de auditoria (2026-08-02)
 
@@ -325,7 +342,7 @@ Prioridade: unread / pagamento pendente vencem este banner. Caso contrário, se 
 
 ## 22. Atualização (2026-08-06) — follow-up de conclusão no card
 
-- Highlight `in_progress` pós-data-fim / `EXECUTED` documentado (Anexo D; regras 14–15).
+- Highlight `in_progress` pós-data-fim / `EXECUTED` documentado (Anexo D; regras 14 e 16).
 - Lista não prefetcha `get_service_completion_context`.
 - Evidência: `clientServiceCardPresentation.ts`, `providerServiceCardPresentation.ts`, `clientServiceCardTheme.ts` + testes associados.
 
@@ -340,3 +357,8 @@ Prioridade: unread / pagamento pendente vencem este banner. Caso contrário, se 
 - Cliente `EXECUTED` (banner “Aceite a conclusão e avalie o serviço”): primário **“Avaliar serviço”** (`evaluate_service`) abre `ClientEvaluateServiceSheet` (Public API de `service-completion`) hospedado na página (`ClientEvaluateServiceDialogs` + `useClientEvaluateServiceDialog`); secundário “Ver detalhes”; contexto RPC só ao abrir o wizard — mesmo padrão do prestador com mark-executed.
 - `ClientEvaluateServiceAction` no detalhe refatorado para reutilizar `ClientEvaluateServiceSheet`.
 - Evidência: `clientServiceCardPresentation.ts`, `ClientServiceListCard.tsx`, `useClientEvaluateServiceDialog.ts`, `ClientEvaluateServiceDialogs.tsx` + testes.
+
+## 25. Atualização (2026-08-07) — “Avaliar serviço” também no card `completed`
+
+- Cliente fase `completed` com `contracted.status === COMPLETED` e `clientRatingOverallScore == null`: primário **“Avaliar serviço”** (`evaluate_service`); secundário “Ver detalhes”; host com `ratingOnly` (dados já em `list_services`). Com rating existente, mantém só “Ver detalhes”.
+- Evidência: `buildCompletedActions` em `clientServiceCardPresentation.ts`; `ClientEvaluateServiceDialogs.tsx` (`ratingOnly`). Documentado na regra 15 e Anexo F.

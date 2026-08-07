@@ -378,6 +378,8 @@ export function buildClientServiceCardShowcaseVariants(
           provider: { id: "prov-carlos", displayName: "Carlos Reparos", profileImagePath: null },
           chatId: null,
           updatedAt: addDays(now, -5).toISOString(),
+          clientRatingOverallScore: 4.8,
+          clientRatingSubmittedAt: addDays(now, -5).toISOString(),
         },
       }),
     },

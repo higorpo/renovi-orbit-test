@@ -537,10 +537,21 @@ function buildInProgressActions(
   };
 }
 
-function buildCompletedActions(): Pick<
-  ClientServiceCardPresentation,
-  "primaryAction" | "secondaryAction"
-> {
+function buildCompletedActions(
+  model: ServiceModel,
+): Pick<ClientServiceCardPresentation, "primaryAction" | "secondaryAction"> {
+  // list_services already embeds rating fields — no extra fetch.
+  const needsOptionalRating =
+    model.contracted?.status === "COMPLETED" &&
+    model.contracted.clientRatingOverallScore == null;
+
+  if (needsOptionalRating) {
+    return {
+      primaryAction: { label: "Avaliar serviço", intent: "evaluate_service" },
+      secondaryAction: { label: "Ver detalhes", intent: "details" },
+    };
+  }
+
   return {
     primaryAction: { label: "Ver detalhes", intent: "details" },
     secondaryAction: null,
@@ -576,7 +587,7 @@ export function getClientServiceCardPresentation(
       break;
     case "completed":
       content = buildCompletedPresentation(model);
-      actions = buildCompletedActions();
+      actions = buildCompletedActions(model);
       break;
     case "cancelled":
       content = buildCancelledPresentation(model);

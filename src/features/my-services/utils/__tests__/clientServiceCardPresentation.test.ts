@@ -407,6 +407,8 @@ describe("getClientServiceCardPresentation", () => {
           provider: { id: "p-1", displayName: "Carlos", profileImagePath: null },
           chatId: null,
           updatedAt: "2025-06-01T00:00:00Z",
+          clientRatingOverallScore: 4.5,
+          clientRatingSubmittedAt: "2025-06-01T00:00:00Z",
         },
       }),
     );
@@ -415,6 +417,41 @@ describe("getClientServiceCardPresentation", () => {
     expect(pres.highlight).toBeNull();
     expect(pres.secondaryInfo.some((item) => item.text?.includes("Concluído em"))).toBe(true);
     expect(pres.primaryAction.intent).toBe("details");
+    expect(pres.secondaryAction).toBeNull();
+  });
+
+  it("offers Avaliar serviço on completed cards when rating is still missing", () => {
+    const pres = getClientServiceCardPresentation(
+      baseModel({
+        listPhase: "completed",
+        statusTabId: "completed",
+        completedAt: "2025-06-01T00:00:00Z",
+        contracted: {
+          id: "cs-1",
+          status: "COMPLETED",
+          agreedSlot: null,
+          durationUnit: "hours",
+          durationValue: 2,
+          scheduledStartDate: "2025-05-30",
+          scheduledEndDate: null,
+          scheduledShift: "morning",
+          provider: { id: "p-1", displayName: "Carlos", profileImagePath: null },
+          chatId: null,
+          updatedAt: "2025-06-01T00:00:00Z",
+          clientRatingOverallScore: null,
+          clientRatingSubmittedAt: null,
+        },
+      }),
+    );
+
+    expect(pres.primaryAction).toEqual({
+      label: "Avaliar serviço",
+      intent: "evaluate_service",
+    });
+    expect(pres.secondaryAction).toEqual({
+      label: "Ver detalhes",
+      intent: "details",
+    });
   });
 
   it("shows contract cancelled reason when request is not cancelled", () => {
