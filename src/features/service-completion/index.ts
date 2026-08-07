@@ -24,6 +24,15 @@ export { PendingEvaluationPromptHost } from "./components/PendingEvaluationPromp
 export { ProviderExecutedWizard } from "./components/ProviderExecutedWizard";
 export type { ProviderExecutedWizardProps } from "./components/ProviderExecutedWizard";
 
+export { CompletionSuccessStep } from "./components/CompletionSuccessStep";
+export type {
+  CompletionSuccessStepProps,
+  CompletionSuccessTip,
+} from "./components/CompletionSuccessStep";
+
+export { ProviderExecutedSuccessStep } from "./components/ProviderExecutedSuccessStep";
+export type { ProviderExecutedSuccessStepProps } from "./components/ProviderExecutedSuccessStep";
+
 export { ClientConfirmRatingWizard } from "./components/ClientConfirmRatingWizard";
 export type { ClientConfirmRatingWizardProps } from "./components/ClientConfirmRatingWizard";
 

@@ -81,7 +81,7 @@ describe("useProviderMarkExecutedDialog", () => {
     expect(result.current.model).toBeNull();
   });
 
-  it("invalidates service queries after executed", () => {
+  it("invalidates service queries after executed without closing the sheet", () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
@@ -96,7 +96,9 @@ describe("useProviderMarkExecutedDialog", () => {
     act(() => result.current.openMarkExecuted(serviceModel()));
     act(() => result.current.handleExecuted());
 
-    expect(result.current.open).toBe(false);
+    // Sheet owns dismiss after the success step; host only refreshes lists.
+    expect(result.current.open).toBe(true);
+    expect(result.current.model).not.toBeNull();
     expect(invalidateQueries).toHaveBeenCalled();
   });
 });

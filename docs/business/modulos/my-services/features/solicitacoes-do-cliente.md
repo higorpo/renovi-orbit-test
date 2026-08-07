@@ -206,7 +206,7 @@ Transições de domínio (OPEN → contratado → etc.) **não** são feitas nes
 | Ver proposta | Proposta PENDING/REVISED/hasPending | Dialog detalhes | — |
 | Revisar proposta | `REVISION_REQUESTED` | Composer com proposta carregada | — |
 | Abrir no mapa | Serviço **hoje** + coordenadas | Google Maps | Sem coordenadas |
-| Concluir serviço (`mark_executed`) | `CONFIRMED` + timing `past` (banner follow-up; sem unread prioritário) | Abre sheet/dialog no card (`CompletionFlowSheetDialog` + `ProviderExecutedWizard`); RPC de contexto só ao abrir | Disabled + tooltip se `!enrichmentReady` |
+| Concluir serviço (`mark_executed`) | `CONFIRMED` + timing `past` (banner follow-up; sem unread prioritário) | Abre sheet/dialog no card (`ProviderMarkExecutedSheet` / `CompletionFlowSheetDialog` + `ProviderExecutedWizard` na fase `checklist`; após sucesso, fase `success` com `ProviderExecutedSuccessStep` → `CompletionSuccessStep`, `chrome="immersive"`); RPC de contexto só ao abrir; host `handleExecuted` invalida queries e **não** fecha | Disabled + tooltip se `!enrichmentReady` |
 | Ver detalhes (follow-up `EXECUTED`) | `EXECUTED` — sem unread prioritário | Detalhe (aguardar confirmação / evidências no host) | — |
 | Ver detalhes | — (incl. secundário no ramo `CONFIRMED` + past) | Detalhe sheet/página | — |
 | Ver calendário | Banner | `/dashboard/services/calendar` | — |
@@ -296,7 +296,7 @@ Dados: `contracted.status` + `getScheduledTiming(scheduledStartDate, scheduledEn
 
 Prioridade: unread / pagamento pendente vencem este banner. Caso contrário, se não houver follow-up, mantém highlight de agenda (`getScheduleHighlightContent`: “Agendado para…”, “Serviço hoje”, etc.).
 
-**Prestador `CONFIRMED` + past:** sheet/dialog hospedado na página (`ProviderMarkExecutedDialogs` + `useProviderMarkExecutedDialog` → `ProviderMarkExecutedSheet`); `get_service_completion_context` só ao montar o wizard. Evidência: `providerServiceCardPresentation.ts`, `ProviderServiceListCard.tsx`.
+**Prestador `CONFIRMED` + past:** sheet/dialog hospedado na página (`ProviderMarkExecutedDialogs` + `useProviderMarkExecutedDialog` → `ProviderMarkExecutedSheet`); `get_service_completion_context` só ao montar o wizard. Após mark-executed com sucesso, a sheet permanece na fase `success` (`ProviderExecutedSuccessStep` → `CompletionSuccessStep`); `handleExecuted` invalida list/detail e **não** fecha (dismiss com **“Entendi”**). Evidência: `providerServiceCardPresentation.ts`, `ProviderServiceListCard.tsx`, `useProviderMarkExecutedDialog.ts`.
 
 **Cliente `EXECUTED`:** sheet/dialog hospedado na página (`ClientEvaluateServiceDialogs` + `useClientEvaluateServiceDialog` → `ClientEvaluateServiceSheet`); contexto RPC só ao abrir o wizard (`ClientConfirmRatingWizard`). Evidência: `clientServiceCardPresentation.ts`, `ClientServiceListCard.tsx`.
 
@@ -362,3 +362,16 @@ Evidência: `buildCompletedActions` em `clientServiceCardPresentation.ts`; host 
 
 - Cliente fase `completed` com `contracted.status === COMPLETED` e `clientRatingOverallScore == null`: primário **“Avaliar serviço”** (`evaluate_service`); secundário “Ver detalhes”; host com `ratingOnly` (dados já em `list_services`). Com rating existente, mantém só “Ver detalhes”.
 - Evidência: `buildCompletedActions` em `clientServiceCardPresentation.ts`; `ClientEvaluateServiceDialogs.tsx` (`ratingOnly`). Documentado na regra 15 e Anexo F.
+
+## 26. Atualização (2026-08-07) — Step de sucesso após “Concluir serviço”
+
+- Após mark-executed com sucesso no card, `ProviderMarkExecutedSheet` permanece aberta na fase `success`: `ProviderExecutedSuccessStep` (copy do prestador) delega layout a `CompletionSuccessStep`; shell com `chrome="immersive"`; CTA **“Entendi”**.
+- `useProviderMarkExecutedDialog.handleExecuted` invalida `SERVICES_LIST_QUERY_KEY` / `SERVICE_DETAIL_QUERY_KEY` e **não** fecha a sheet (dismiss no step de sucesso).
+- Evidência: `useProviderMarkExecutedDialog.ts`; Public API `ProviderMarkExecutedSheet` / `CompletionSuccessStep` / `ProviderExecutedSuccessStep` em `service-completion`.
+
+## 27. Atualização (2026-08-07) — Arquitetura do step de sucesso (refatoração UI)
+
+- Sem mudança de produto: sheet continua aberta após mark-executed até **“Entendi”**.
+- `CompletionFlowSheetDialog`: `chrome="standard"` (checklist) vs `chrome="immersive"` (sucesso full-bleed; título sr-only + X/handle flutuantes).
+- `CompletionSuccessStep` (Public API) = corpo reutilizável; `ProviderExecutedSuccessStep` = wrapper de copy do prestador.
+- Normas detalhadas: [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md).

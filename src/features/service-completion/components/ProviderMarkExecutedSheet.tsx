@@ -1,10 +1,16 @@
 /**
  * Controlled mark-executed sheet/dialog for host surfaces (detail CTA, list card).
- * Completion context loads inside ProviderExecutedWizard only while open.
+ *
+ * Two bodies share one shell:
+ * - checklist → ProviderExecutedWizard (chrome=standard)
+ * - success → ProviderExecutedSuccessStep (chrome=immersive)
+ *
+ * Completion context loads inside the wizard only while open.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CompletionFlowSheetDialog } from "./CompletionFlowSheetDialog";
+import { ProviderExecutedSuccessStep } from "./ProviderExecutedSuccessStep";
 import { ProviderExecutedWizard } from "./ProviderExecutedWizard";
 
 export type ProviderMarkExecutedSheetProps = {
@@ -17,6 +23,15 @@ export type ProviderMarkExecutedSheetProps = {
   testId?: string;
 };
 
+type SheetPhase = "checklist" | "success";
+
+const CHECKLIST_TITLE = "Checklist de conclusão";
+const CHECKLIST_DESCRIPTION =
+  "Preencha os critérios e envie quando o serviço estiver concluído. O cliente só verá as respostas após a marcação como executado.";
+
+/** sr-only when immersive — visible copy lives in ProviderExecutedSuccessStep. */
+const SUCCESS_A11Y_TITLE = "Checklist enviado com sucesso";
+
 export function ProviderMarkExecutedSheet({
   open,
   onOpenChange,
@@ -27,29 +42,44 @@ export function ProviderMarkExecutedSheet({
   testId = "provider-mark-executed-sheet",
 }: ProviderMarkExecutedSheetProps) {
   const [dismissDisabled, setDismissDisabled] = useState(false);
+  const [phase, setPhase] = useState<SheetPhase>("checklist");
+
+  useEffect(() => {
+    if (!open) {
+      setPhase("checklist");
+      setDismissDisabled(false);
+    }
+  }, [open]);
+
+  const isSuccess = phase === "success";
 
   return (
     <CompletionFlowSheetDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Checklist de conclusão"
-      description="Preencha os critérios e envie quando o serviço estiver concluído. O cliente só verá as respostas após a marcação como executado."
+      chrome={isSuccess ? "immersive" : "standard"}
+      title={isSuccess ? SUCCESS_A11Y_TITLE : CHECKLIST_TITLE}
+      description={isSuccess ? undefined : CHECKLIST_DESCRIPTION}
       dismissDisabled={dismissDisabled}
       size="md"
       testId={testId}
     >
-      {open ? (
+      {!open ? null : isSuccess ? (
+        <ProviderExecutedSuccessStep
+          onDismiss={() => onOpenChange(false)}
+        />
+      ) : (
         <ProviderExecutedWizard
           serviceRequestId={serviceRequestId}
           scheduledStartDate={scheduledStartDate}
           scheduledEndDate={scheduledEndDate}
           onPendingChange={setDismissDisabled}
           onExecuted={() => {
-            onOpenChange(false);
+            setPhase("success");
             onExecuted?.();
           }}
         />
-      ) : null}
+      )}
     </CompletionFlowSheetDialog>
   );
 }

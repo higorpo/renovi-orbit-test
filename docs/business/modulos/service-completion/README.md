@@ -23,7 +23,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 |---------|---------|
 | Feature front | `src/features/service-completion/` |
 | Superfícies UI | CTAs na seção contratada → sheet (mobile) / dialog (desktop); wizards embutidos; **prompt global** de avaliação pendente (`PendingEvaluationPromptHost` no `RootLayout`); stub de disputa **somente** no wizard Avaliar serviço em `EXECUTED` (`ClientConfirmRatingWizard` / `shouldShowDisputeStub`; RPC `show_dispute_stub`) — **nunca** após `COMPLETED` nem inline no detalhe — título “Abrir disputa”, botão “Falar com o suporte”; no path manual (`canConfirmWithRating`), checkbox obrigatório de declaração no step de revisão; path opcional (`canSubmitOptionalRating`) = só rating (`ratingOnly`, sem contador “N de M”) |
-| Public API (host) | **`ProviderMarkExecutedAction`** / **`ProviderMarkExecutedSheet`**, **`ClientEvaluateServiceAction`** / **`ClientEvaluateServiceSheet`**, **`PendingEvaluationPromptHost`** (+ wizards ainda exportados para composição embutida) |
+| Public API (host) | **`ProviderMarkExecutedAction`** / **`ProviderMarkExecutedSheet`**, **`ClientEvaluateServiceAction`** / **`ClientEvaluateServiceSheet`**, **`PendingEvaluationPromptHost`**, **`CompletionSuccessStep`** (corpo genérico de sucesso; reuso futuro, ex. cliente) / **`ProviderExecutedSuccessStep`** (copy do prestador pós mark-executed) (+ wizards ainda exportados para composição embutida) |
 | Host | `view-services` (`ServiceContractedSection`, `ServiceDetailPage`); `my-services` (sheets hospedados na página do card); `RootLayout` (prompt global) — **só** imports da Public API |
 | Enrichment | Tabela `service_request_enrichments` (`PENDING` → `RUNNING` → `READY` \| `ABORTED`); enqueue em create/republish |
 | Matching | Bootstrap **só** via `matching_bootstrap_dispatch_for_service_request` na TX de READY (trigger OPEN **DROP**ado) |
@@ -45,7 +45,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 | Perfil | Papel |
 |--------|--------|
 | **Cliente** | Após EXECUTED: CTA **“Avaliar serviço”** (2 etapas: revisão + declaração + scores; alerta se auto-mark sem checklist; stub de disputa **só** no wizard e **só** em `EXECUTED`); **prompt global** se ainda na grace de auto-complete (último na fila de overlays); pós auto-complete: rating opcional (abre direto na etapa de notas; sem disputa) |
-| **Prestador** | Em `CONFIRMED`: CTA **“Marcar serviço como concluído”** (checklist no sheet/dialog, não inline); vê conclusão após COMPLETED |
+| **Prestador** | Em `CONFIRMED`: CTA **“Marcar serviço como concluído”** (checklist no sheet/dialog, não inline); após envio bem-sucedido, fase `success` na mesma sheet (`ProviderExecutedSuccessStep` → `CompletionSuccessStep`, chrome immersive; orientação ao cliente + **“Entendi”**); vê conclusão após COMPLETED |
 | **Sistema** | Worker/cron enrichment; cron **auto-mark EXECUTED** (`service_completion_auto_mark_executed`, grace `auto_mark_executed_grace_hours`); cron **auto-complete** EXECUTED→COMPLETED (`auto_complete_grace_hours`, `completed_by=system`); sweeper READY-sem-dispatch (≤7 dias); janitor de uploads órfãos |
 
 ---
@@ -53,7 +53,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 ## 5. Principais fluxos
 
 1. Create/republish → `OPEN` + enrichment `PENDING` → Edge `generate-completion-checklist` → READY → `matching_bootstrap_dispatch_for_service_request` (delay 5 min a partir daí).
-2. Prestador `CONFIRMED` → CTA “Marcar serviço como concluído” → sheet/dialog com draft + upload evidência (RPC create session → `storage.from('completion-evidence').upload()` autenticado → RPC register; sem Edge) → fotos como thumbnails + lightbox → `service_completion_mark_executed` → `EXECUTED` (rejeita se antes de `scheduled_start_date` BRT: `SERVICE_NOT_YET_DUE`; envio após o fim da agenda **não** marca atraso).
+2. Prestador `CONFIRMED` → CTA “Marcar serviço como concluído” → sheet/dialog com draft + upload evidência (RPC create session → `storage.from('completion-evidence').upload()` autenticado → RPC register; sem Edge) → fotos como thumbnails + lightbox → `service_completion_mark_executed` → `EXECUTED` (rejeita se antes de `scheduled_start_date` BRT: `SERVICE_NOT_YET_DUE`; envio após o fim da agenda **não** marca atraso). Após sucesso, `ProviderMarkExecutedSheet` mantém a sheet aberta: fase `checklist` (`ProviderExecutedWizard` + `chrome="standard"`) → fase `success` (`ProviderExecutedSuccessStep` → `CompletionSuccessStep` + `chrome="immersive"`; CTA **“Entendi”** fecha; sem toast de sucesso no hook).
 3. Se o prestador **não** marca EXECUTED a tempo → cron auto-mark (`auto_mark_executed_grace_hours`, default **24**, após fim do dia BRT de `coalesce(scheduled_end_date, scheduled_start_date)` via `service_completion_scheduled_end_at`) → `CONFIRMED` → `EXECUTED` com evidência frozen sintética (`responses = {}`, `auto_executed_without_checklist = true`), `executed_at = now()`, audit system, MMD `SERVICE_EXECUTED`. **Não** remove o invariante EXECUTED↔frozen.
 4. Cliente em `EXECUTED` (`canConfirmWithRating`) → CTA “Avaliar serviço” → etapa 1 revisão congelada (thumbnails) + stub de disputa (se elegível) + checkbox obrigatório de declaração (“Continuar para avaliação” só habilita com o aceite); se `auto_executed_without_checklist`, alerta em vez da lista vazia de critérios e copy do checkbox suavizada → etapa 2 scores → `service_completion_confirm_with_rating` → `COMPLETED`.
 5. **Prompt de avaliação pendente (app open):** cliente autenticado; RPC leve `get_client_pending_evaluation_prompt` (1 item `EXECUTED` mais recente ainda dentro de `auto_complete_grace_hours`); abre **depois** de localização (prestador) e soft prompt de push; sheet com 3 passos (intro com resumo leve → review → rating). Fechar (X) = snooze ~4h do mesmo `service_request_id` (Preferences). Pós auto-complete (rating opcional) **não** entra neste prompt.
@@ -126,7 +126,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 
 | Área | Caminhos |
 |------|----------|
-| App | `src/features/service-completion/` (`ProviderMarkExecutedAction`, `ProviderMarkExecutedSheet`, `ClientEvaluateServiceAction`, `ClientEvaluateServiceSheet`, `PendingEvaluationPromptHost`, `CompletionEvidenceGallery`, wizards) |
+| App | `src/features/service-completion/` (`ProviderMarkExecutedAction`, `ProviderMarkExecutedSheet`, `CompletionFlowSheetDialog` (`chrome` standard/immersive), `CompletionSuccessStep`, `ProviderExecutedSuccessStep`, `ClientEvaluateServiceAction`, `ClientEvaluateServiceSheet`, `PendingEvaluationPromptHost`, `CompletionEvidenceGallery`, wizards) |
 | Host UI | `ServiceContractedSection.tsx` (CTAs); `ServiceDetailPage.tsx`; `RootLayout.tsx` (prompt global) |
 | Migrations | `supabase/migrations/20260804*` (enrichment, bootstrap DROP, RPCs, cron); `20260806180328_service_completion_auto_mark_executed.sql` (auto-mark CONFIRMED→EXECUTED); `20260806205555_get_client_pending_evaluation_prompt.sql` (índice parcial + RPC do prompt) |
 | Edge | `generate-completion-checklist/` (enrichment only) |

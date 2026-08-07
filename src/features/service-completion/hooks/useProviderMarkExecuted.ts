@@ -68,7 +68,7 @@ export function useProviderMarkExecuted() {
       void queryClient.invalidateQueries({
         queryKey: serviceCompletionContextQueryKey(variables.serviceRequestId),
       });
-      toast.success("Serviço marcado como executado.");
+      // Success UI lives in CompletionSuccessStep (sheet stays open).
     },
     onError: (error: Error) => {
       toast.error(error.message);

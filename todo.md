@@ -120,7 +120,6 @@ Itens relacionados a conclusão do serviço:
 
 
 
-- Na tela do checklist do prestador, quando ele concluir o checklist falar que agora o cliente precisa confirmar etc..
 
 
 
@@ -128,7 +127,6 @@ Itens relacionados a conclusão do serviço:
 
 
 
-- Cliente, ao marcar o checkbox de serviço concluído com sucesso, coletar informações como IP, dispositivo, data, horário, local e salvar em uma tabela dedicada para termos histórico dessas informações.
 
 ---
 
