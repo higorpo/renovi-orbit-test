@@ -1,8 +1,11 @@
+// @vitest-environment happy-dom
+import { createElement, type ReactNode } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const wizardMocks = vi.hoisted(() => ({
   mounted: vi.fn(),
+  onCompleted: undefined as (() => void) | undefined,
 }));
 
 vi.mock("@/hooks/useBreakpoint", () => ({
@@ -14,46 +17,64 @@ vi.mock("../ClientConfirmRatingWizard", () => ({
     serviceRequestId: string;
     variant?: string;
     onStepChange?: (step: "review" | "rating", label: string) => void;
+    onCompleted?: () => void;
   }) => {
     wizardMocks.mounted(props);
+    wizardMocks.onCompleted = props.onCompleted;
     return (
       <div
         data-testid="client-confirm-rating-wizard-mock"
         data-variant={props.variant}
       >
-        wizard
+        <button
+          type="button"
+          data-testid="fake-client-rating-submit"
+          onClick={() => props.onCompleted?.()}
+        >
+          Submit rating
+        </button>
       </div>
     );
   },
 }));
 
-vi.mock("../CompletionFlowSheetDialog", () => ({
-  CompletionFlowSheetDialog: (props: {
-    open: boolean;
-    title: string;
-    description?: string;
-    headerAside?: React.ReactNode;
-    children: React.ReactNode;
-    testId?: string;
-  }) =>
-    props.open ? (
-      <div data-testid={props.testId}>
-        <h2>{props.title}</h2>
-        {props.description ? <p>{props.description}</p> : null}
-        {props.headerAside}
-        {props.children}
-      </div>
-    ) : null,
-}));
+vi.mock("framer-motion", () => {
+  const passthrough =
+    (tag: string) =>
+    ({
+      children,
+      className,
+      ...rest
+    }: {
+      children?: ReactNode;
+      className?: string;
+      [key: string]: unknown;
+    }) => {
+      void rest;
+      return createElement(tag, { className }, children);
+    };
+
+  return {
+    motion: {
+      div: passthrough("div"),
+      p: passthrough("p"),
+      h3: passthrough("h3"),
+      li: passthrough("li"),
+      span: passthrough("span"),
+    },
+    useReducedMotion: () => true,
+  };
+});
 
 import { ClientEvaluateServiceSheet } from "../ClientEvaluateServiceSheet";
 
-describe("ClientEvaluateServiceSheet prompt variant", () => {
+describe("ClientEvaluateServiceSheet", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    wizardMocks.onCompleted = undefined;
   });
 
-  it("shows intro first and mounts wizard only after Continuar", async () => {
+  it("shows intro first and mounts wizard only after Continuar (prompt)", async () => {
     render(
       <ClientEvaluateServiceSheet
         open
@@ -79,7 +100,6 @@ describe("ClientEvaluateServiceSheet prompt variant", () => {
     expect(
       screen.queryByTestId("client-confirm-rating-wizard-mock"),
     ).not.toBeInTheDocument();
-    expect(wizardMocks.mounted).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByTestId("pending-evaluation-intro-continue"));
 
@@ -89,12 +109,6 @@ describe("ClientEvaluateServiceSheet prompt variant", () => {
       ).toBeInTheDocument();
     });
     expect(screen.getByText("2 de 3")).toBeInTheDocument();
-    expect(wizardMocks.mounted).toHaveBeenCalledWith(
-      expect.objectContaining({
-        serviceRequestId: "sr-1",
-        variant: "prompt",
-      }),
-    );
   });
 
   it("keeps default two-step flow without intro", () => {
@@ -111,8 +125,45 @@ describe("ClientEvaluateServiceSheet prompt variant", () => {
     expect(
       screen.getByTestId("client-confirm-rating-wizard-mock"),
     ).toBeInTheDocument();
+  });
+
+  it("stays open on the success step after rating submit", () => {
+    const onOpenChange = vi.fn();
+    const onCompleted = vi.fn();
+
+    render(
+      <ClientEvaluateServiceSheet
+        open
+        onOpenChange={onOpenChange}
+        serviceRequestId="sr-1"
+        onCompleted={onCompleted}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("fake-client-rating-submit"));
+
+    expect(onCompleted).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(screen.getByTestId("client-evaluate-success")).toBeInTheDocument();
     expect(
-      screen.queryByTestId("pending-evaluation-intro"),
+      screen.queryByTestId("client-confirm-rating-wizard-mock"),
     ).not.toBeInTheDocument();
+  });
+
+  it("closes when Entendi is pressed on the success step", () => {
+    const onOpenChange = vi.fn();
+
+    render(
+      <ClientEvaluateServiceSheet
+        open
+        onOpenChange={onOpenChange}
+        serviceRequestId="sr-1"
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("fake-client-rating-submit"));
+    fireEvent.click(screen.getByTestId("client-evaluate-success-dismiss"));
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

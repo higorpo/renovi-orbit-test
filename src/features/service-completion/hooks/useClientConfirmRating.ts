@@ -75,12 +75,11 @@ export function useClientConfirmRating({
           contracted_service_id: contractedServiceId,
           has_comment: Boolean(scores.comment?.trim()),
         });
-        toast.success("Recebimento confirmado. Obrigado pela avaliação!");
+        // Success UI lives in ClientEvaluateSuccessStep (sheet stays open).
       } else {
         trackEvent("service_completion_optional_rating_submitted", {
           contracted_service_id: contractedServiceId,
         });
-        toast.success("Avaliação enviada. Obrigado!");
       }
       void queryClient.invalidateQueries({
         queryKey: serviceCompletionContextQueryKey(serviceRequestId),

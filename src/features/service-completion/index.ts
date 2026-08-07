@@ -19,6 +19,12 @@ export type { ClientEvaluateServiceActionProps } from "./components/ClientEvalua
 export { ClientEvaluateServiceSheet } from "./components/ClientEvaluateServiceSheet";
 export type { ClientEvaluateServiceSheetProps } from "./components/ClientEvaluateServiceSheet";
 
+export { ClientEvaluateSuccessStep } from "./components/ClientEvaluateSuccessStep";
+export type {
+  ClientEvaluateSuccessStepProps,
+  ClientEvaluateSuccessMode,
+} from "./components/ClientEvaluateSuccessStep";
+
 export { PendingEvaluationPromptHost } from "./components/PendingEvaluationPromptHost";
 
 export { ProviderExecutedWizard } from "./components/ProviderExecutedWizard";

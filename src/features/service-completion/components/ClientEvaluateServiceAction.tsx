@@ -4,6 +4,9 @@
  * Optional (COMPLETED by system): rating only — no checklist or dispute.
  * Skips get_service_completion_context unless contracted status can need evaluate.
  * Dispute stub is not shown on the service detail host — only inside the evaluate wizard (EXECUTED).
+ *
+ * After submit, capabilities flip off — keep the sheet mounted while `open` so the
+ * immersive success step is not unmounted.
  */
 
 import { useState } from "react";
@@ -40,17 +43,13 @@ export function ClientEvaluateServiceAction({
 
   const canConfirm = Boolean(context?.capabilities.canConfirmWithRating);
   const canOptional = Boolean(context?.capabilities.canSubmitOptionalRating);
+  const canEvaluate = canConfirm || canOptional;
 
-  if (!needsContext) {
-    return null;
-  }
-
-  if (isLoading) {
-    return null;
-  }
-
-  if (!canConfirm && !canOptional) {
-    return null;
+  // After rating, context/capabilities clear — keep sheet alive for success step.
+  if (!open) {
+    if (!needsContext) return null;
+    if (isLoading) return null;
+    if (!canEvaluate) return null;
   }
 
   const title = canConfirm ? "Avaliar serviço" : "Avaliar serviço (opcional)";
@@ -60,24 +59,30 @@ export function ClientEvaluateServiceAction({
 
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="w-full rounded-pill text-primary transition-transform duration-fast ease-renovi hover:bg-primary/5 hover:text-primary active:scale-[0.97] sm:w-auto"
-        data-testid="client-evaluate-service-action"
-        onClick={() => setOpen(true)}
-      >
-        <Star className="h-4 w-4" aria-hidden />
-        Avaliar serviço
-      </Button>
+      {canEvaluate ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full rounded-pill text-primary transition-transform duration-fast ease-renovi hover:bg-primary/5 hover:text-primary active:scale-[0.97] sm:w-auto"
+          data-testid="client-evaluate-service-action"
+          onClick={() => setOpen(true)}
+        >
+          <Star className="h-4 w-4" aria-hidden />
+          Avaliar serviço
+        </Button>
+      ) : null}
 
       <ClientEvaluateServiceSheet
         open={open}
         onOpenChange={setOpen}
         serviceRequestId={serviceRequestId}
-        title={title}
-        description={description}
+        title={canEvaluate ? title : "Avaliar serviço"}
+        description={
+          canEvaluate
+            ? description
+            : "Revise o que foi executado e avalie o profissional."
+        }
         ratingOnly={!canConfirm && canOptional}
         onCompleted={onCompleted}
       />

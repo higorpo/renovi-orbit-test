@@ -1,11 +1,16 @@
 /**
  * Controlled evaluate sheet/dialog for host surfaces (detail CTA, list card, global prompt).
- * ClientConfirmRatingWizard loads completion context only while open (and after intro Continuar).
+ *
+ * Bodies share one shell:
+ * - intro (prompt only) → PendingEvaluationIntroStep
+ * - wizard → ClientConfirmRatingWizard (chrome=standard)
+ * - success → ClientEvaluateSuccessStep (chrome=immersive)
  */
 
 import { useCallback, useEffect, useState } from "react";
 import { CompletionFlowSheetDialog } from "./CompletionFlowSheetDialog";
 import { ClientConfirmRatingWizard } from "./ClientConfirmRatingWizard";
+import { ClientEvaluateSuccessStep } from "./ClientEvaluateSuccessStep";
 import { PendingEvaluationIntroStep } from "./PendingEvaluationIntroStep";
 import type { PendingEvaluationPromptSummary } from "../api/pendingEvaluationPrompt.api";
 
@@ -29,9 +34,26 @@ export type ClientEvaluateServiceSheetProps = {
   ratingOnly?: boolean;
 };
 
+type SheetPhase = "intro" | "wizard" | "success";
+
 const PROMPT_INTRO_TITLE = "É hora de avaliar a execução do serviço";
 const PROMPT_INTRO_DESCRIPTION =
   "Revise o resumo abaixo e continue para confirmar a execução e avaliar o profissional.";
+
+const SUCCESS_A11Y_TITLE = "Avaliação enviada com sucesso";
+
+function initialPhase(isPrompt: boolean): SheetPhase {
+  return isPrompt ? "intro" : "wizard";
+}
+
+function initialStepAside(
+  isPrompt: boolean,
+  hideStepAside: boolean,
+): string | null {
+  if (isPrompt) return "1 de 3";
+  if (hideStepAside) return null;
+  return "1 de 2";
+}
 
 export function ClientEvaluateServiceSheet({
   open,
@@ -48,29 +70,29 @@ export function ClientEvaluateServiceSheet({
   const isPrompt = variant === "prompt";
   const hideStepAside = ratingOnly && !isPrompt;
   const [dismissDisabled, setDismissDisabled] = useState(false);
-  const [phase, setPhase] = useState<"intro" | "wizard">(
-    isPrompt ? "intro" : "wizard",
+  const [phase, setPhase] = useState<SheetPhase>(() => initialPhase(isPrompt));
+  const [stepAside, setStepAside] = useState<string | null>(() =>
+    initialStepAside(isPrompt, hideStepAside),
   );
-  const [stepAside, setStepAside] = useState<string | null>(
-    isPrompt ? "1 de 3" : hideStepAside ? null : "1 de 2",
+  // Freeze success copy at submit time (parent capabilities flip after COMPLETED).
+  const [successMode, setSuccessMode] = useState<"confirm" | "optional">(
+    hideStepAside ? "optional" : "confirm",
   );
 
+  // Reset bodies when the sheet closes (same pattern as provider mark-executed).
   useEffect(() => {
-    if (!open) return;
-    if (isPrompt) {
-      setPhase("intro");
-      setStepAside("1 de 3");
-      return;
+    if (!open) {
+      setPhase(initialPhase(isPrompt));
+      setStepAside(initialStepAside(isPrompt, hideStepAside));
+      setDismissDisabled(false);
     }
-    setPhase("wizard");
-    setStepAside(hideStepAside ? null : "1 de 2");
-  }, [hideStepAside, isPrompt, open, serviceRequestId]);
+  }, [hideStepAside, isPrompt, open]);
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (nextOpen) {
-        setPhase(isPrompt ? "intro" : "wizard");
-        setStepAside(isPrompt ? "1 de 3" : hideStepAside ? null : "1 de 2");
+        setPhase(initialPhase(isPrompt));
+        setStepAside(initialStepAside(isPrompt, hideStepAside));
       }
       onOpenChange(nextOpen);
     },
@@ -84,22 +106,30 @@ export function ClientEvaluateServiceSheet({
     [],
   );
 
-  const shellTitle =
-    isPrompt && phase === "intro" ? PROMPT_INTRO_TITLE : title;
-  const shellDescription =
-    isPrompt && phase === "intro" ? PROMPT_INTRO_DESCRIPTION : description;
-
+  const isSuccess = phase === "success";
   const showIntro = isPrompt && phase === "intro" && promptSummary;
-  const showWizard = open && (!isPrompt || phase === "wizard");
+  const showWizard = open && phase === "wizard";
+
+  const shellTitle = isSuccess
+    ? SUCCESS_A11Y_TITLE
+    : isPrompt && phase === "intro"
+      ? PROMPT_INTRO_TITLE
+      : title;
+  const shellDescription = isSuccess
+    ? undefined
+    : isPrompt && phase === "intro"
+      ? PROMPT_INTRO_DESCRIPTION
+      : description;
 
   return (
     <CompletionFlowSheetDialog
       open={open}
       onOpenChange={handleOpenChange}
+      chrome={isSuccess ? "immersive" : "standard"}
       title={shellTitle}
       description={shellDescription}
       headerAside={
-        stepAside ? (
+        !isSuccess && stepAside ? (
           <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium tabular-nums text-muted-foreground">
             {stepAside}
           </span>
@@ -125,9 +155,17 @@ export function ClientEvaluateServiceSheet({
           onPendingChange={setDismissDisabled}
           onStepChange={handleStepChange}
           onCompleted={() => {
-            onOpenChange(false);
+            setSuccessMode(ratingOnly ? "optional" : "confirm");
+            setPhase("success");
+            setStepAside(null);
             onCompleted?.();
           }}
+        />
+      ) : null}
+      {isSuccess ? (
+        <ClientEvaluateSuccessStep
+          mode={successMode}
+          onDismiss={() => onOpenChange(false)}
         />
       ) : null}
     </CompletionFlowSheetDialog>

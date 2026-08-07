@@ -192,7 +192,7 @@ Transições de domínio (OPEN → contratado → etc.) **não** são feitas nes
 | Cancelar pedido | `OPEN` e sem propostas/unread priorizados | `cancel_service_request` | `isCancelling` |
 | Responder / ver conversa | in_progress | Chat | Sem `chatSummary.id` |
 | Ajustar pagamento | `PENDING_PAYMENT` + `FAILED_PERMANENT` | `ManualPaymentDialog` | Toast se sem contracted id / erro schedule |
-| Avaliar serviço (`evaluate_service`) | `EXECUTED` (fase `in_progress`, banner follow-up) **ou** `COMPLETED` + `clientRatingOverallScore == null` (fase `completed`; dados de `list_services`) | Abre sheet/dialog na página (`ClientEvaluateServiceSheet` via `ClientEvaluateServiceDialogs` + `useClientEvaluateServiceDialog`); em `COMPLETED` sem rating o host passa `ratingOnly`; RPC de contexto só ao abrir o wizard | — |
+| Avaliar serviço (`evaluate_service`) | `EXECUTED` (fase `in_progress`, banner follow-up) **ou** `COMPLETED` + `clientRatingOverallScore == null` (fase `completed`; dados de `list_services`) | Abre sheet/dialog na página (`ClientEvaluateServiceSheet` via `ClientEvaluateServiceDialogs` + `useClientEvaluateServiceDialog`); em `COMPLETED` sem rating o host passa `ratingOnly`; RPC de contexto só ao abrir o wizard; após envio, a sheet troca para fase `success` (`ClientEvaluateSuccessStep` → `CompletionSuccessStep`, `chrome="immersive"`; CTA **“Entendi”**) | — |
 | Ver detalhes (follow-up `CONFIRMED` + past) | `CONFIRMED` + timing `past` — sem unread/pagamento prioritário | Detalhe (aguardar conclusão do prestador) | — |
 | Ver detalhes | — (incl. secundário nos ramos `EXECUTED` e `completed` sem rating) | Detalhe sheet/página | — |
 | Novo serviço | Header/FAB/empty | `/pedir-orcamento` | — |
@@ -298,7 +298,7 @@ Prioridade: unread / pagamento pendente vencem este banner. Caso contrário, se 
 
 **Prestador `CONFIRMED` + past:** sheet/dialog hospedado na página (`ProviderMarkExecutedDialogs` + `useProviderMarkExecutedDialog` → `ProviderMarkExecutedSheet`); `get_service_completion_context` só ao montar o wizard. Após mark-executed com sucesso, a sheet permanece na fase `success` (`ProviderExecutedSuccessStep` → `CompletionSuccessStep`); `handleExecuted` invalida list/detail e **não** fecha (dismiss com **“Entendi”**). Evidência: `providerServiceCardPresentation.ts`, `ProviderServiceListCard.tsx`, `useProviderMarkExecutedDialog.ts`.
 
-**Cliente `EXECUTED`:** sheet/dialog hospedado na página (`ClientEvaluateServiceDialogs` + `useClientEvaluateServiceDialog` → `ClientEvaluateServiceSheet`); contexto RPC só ao abrir o wizard (`ClientConfirmRatingWizard`). Evidência: `clientServiceCardPresentation.ts`, `ClientServiceListCard.tsx`.
+**Cliente `EXECUTED`:** sheet/dialog hospedado na página (`ClientEvaluateServiceDialogs` + `useClientEvaluateServiceDialog` → `ClientEvaluateServiceSheet`); contexto RPC só ao abrir o wizard (`ClientConfirmRatingWizard`). Após envio da avaliação, a sheet tem fase `success` (`ClientEvaluateSuccessStep` → `CompletionSuccessStep`, `chrome="immersive"`; CTA **“Entendi”**). Evidência: `clientServiceCardPresentation.ts`, `ClientServiceListCard.tsx`; Public API em `service-completion`.
 
 **Nota — fase `completed`:** o CTA **“Avaliar serviço”** também aparece no card concluído quando `COMPLETED` + `clientRatingOverallScore == null` (rating opcional pós auto-complete; `ratingOnly`). Ver regra 15 e Anexo F — **não** confundir com o banner de follow-up deste anexo (só `in_progress` / `EXECUTED`).
 
@@ -373,5 +373,12 @@ Evidência: `buildCompletedActions` em `clientServiceCardPresentation.ts`; host 
 
 - Sem mudança de produto: sheet continua aberta após mark-executed até **“Entendi”**.
 - `CompletionFlowSheetDialog`: `chrome="standard"` (checklist) vs `chrome="immersive"` (sucesso full-bleed; título sr-only + X/handle flutuantes).
-- `CompletionSuccessStep` (Public API) = corpo reutilizável; `ProviderExecutedSuccessStep` = wrapper de copy do prestador.
+- `CompletionSuccessStep` (Public API) = corpo reutilizável; `ProviderExecutedSuccessStep` = wrapper de copy do prestador; `ClientEvaluateSuccessStep` = wrapper de copy do cliente (modes `confirm` \| `optional`).
 - Normas detalhadas: [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md).
+
+## 28. Atualização (2026-08-07) — Step de sucesso após “Avaliar serviço”
+
+- Após envio bem-sucedido (confirm-with-rating ou optional rating), `ClientEvaluateServiceSheet` (Public API usada no card via `ClientEvaluateServiceDialogs`) troca para fase `success`: `ClientEvaluateSuccessStep` → `CompletionSuccessStep`; `chrome="immersive"`; CTA **“Entendi”**; copy `confirm` vs `optional` (`ratingOnly`).
+- Toast de sucesso removido de `useClientConfirmRating` (feedback = step na sheet).
+- No detalhe, `ClientEvaluateServiceAction` mantém a sheet montada enquanto `open` após as capabilities sumirem (mesmo padrão do prestador).
+- Evidência / normas: [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md); Public API `ClientEvaluateServiceSheet` / `ClientEvaluateSuccessStep` / `CompletionSuccessStep`.
