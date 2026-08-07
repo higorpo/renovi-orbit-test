@@ -167,6 +167,10 @@ export function ClientConfirmRatingWizard({
   const contractedId = context.contractedService.id ?? "";
   const csStatus = context.contractedService.status ?? "";
 
+  const autoWithoutChecklist = Boolean(
+    context.evidence.autoExecutedWithoutChecklist,
+  );
+
   // Dispute-only surface (e.g. COMPLETED after rating already submitted).
   if (!canConfirm && !canOptional && showDispute && contractedId) {
     return (
@@ -177,6 +181,7 @@ export function ClientConfirmRatingWizard({
         <DisputeStubEntry
           contractedServiceId={contractedId}
           csStatus={csStatus}
+          autoExecutedWithoutChecklist={autoWithoutChecklist}
         />
       </section>
     );
@@ -209,10 +214,6 @@ export function ClientConfirmRatingWizard({
       onPendingChange?.(false);
     }
   };
-
-  const autoWithoutChecklist = Boolean(
-    context.evidence.autoExecutedWithoutChecklist,
-  );
 
   const reviewBody = (
     <FrozenEvidenceReview
@@ -249,6 +250,7 @@ export function ClientConfirmRatingWizard({
         contractedServiceId={contractedId}
         csStatus={csStatus}
         className="border-t-0"
+        autoExecutedWithoutChecklist={autoWithoutChecklist}
       />
     ) : null;
 

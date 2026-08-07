@@ -13,15 +13,27 @@ export type DisputeStubEntryProps = {
   csStatus: string;
   className?: string;
   remoteSupportUrl?: string | null;
+  /** When true, omit checklist-based wording (auto-mark EXECUTED without checklist). */
+  autoExecutedWithoutChecklist?: boolean;
 };
+
+const DISPUTE_COPY_WITH_CHECKLIST =
+  "Se você acha que há algo errado na execução do serviço com base no checklist evidenciado acima, ou se algo não foi cumprido corretamente, pode abrir uma disputa. A plataforma avalia os detalhes e pode pedir ao prestador que corrija o que não está bom, ou devolver parcial ou integralmente o valor pago.";
+
+const DISPUTE_COPY_WITHOUT_CHECKLIST =
+  "Se você acha que há algo errado na execução do serviço, ou se algo não foi cumprido corretamente, pode abrir uma disputa. A plataforma avalia os detalhes e pode pedir ao prestador que corrija o que não está bom, ou devolver parcial ou integralmente o valor pago.";
 
 export function DisputeStubEntry({
   contractedServiceId,
   csStatus,
   className,
   remoteSupportUrl,
+  autoExecutedWithoutChecklist = false,
 }: DisputeStubEntryProps) {
   const { openDisputeStub } = useDisputeStub();
+  const description = autoExecutedWithoutChecklist
+    ? DISPUTE_COPY_WITHOUT_CHECKLIST
+    : DISPUTE_COPY_WITH_CHECKLIST;
 
   return (
     <div
@@ -40,11 +52,7 @@ export function DisputeStubEntry({
           <div className="space-y-1.5">
             <p className="text-sm font-medium text-foreground">Abrir disputa</p>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Se você acha que há algo errado na execução do serviço com base no
-              checklist evidenciado acima, ou se algo não foi cumprido
-              corretamente, pode abrir uma disputa. A plataforma avalia os
-              detalhes e pode pedir ao prestador que corrija o que não está bom,
-              ou devolver parcial ou integralmente o valor pago.
+              {description}
             </p>
           </div>
           <Button

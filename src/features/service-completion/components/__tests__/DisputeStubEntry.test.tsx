@@ -42,7 +42,7 @@ describe("DisputeStubEntry", () => {
     expect(screen.getByTestId("dispute-stub-entry")).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Se você acha que há algo errado na execução do serviço/i,
+        /Se você acha que há algo errado na execução do serviço com base no checklist evidenciado acima/i,
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Falar com o suporte/i })).toBeInTheDocument();
@@ -52,5 +52,24 @@ describe("DisputeStubEntry", () => {
       contracted_service_id: "cs-1",
       cs_status: "EXECUTED",
     });
+  });
+
+  it("uses copy without checklist reference when auto-executed without checklist", () => {
+    render(
+      <DisputeStubEntry
+        contractedServiceId="cs-1"
+        csStatus="EXECUTED"
+        autoExecutedWithoutChecklist
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        /Se você acha que há algo errado na execução do serviço, ou se algo não foi cumprido corretamente/i,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/checklist evidenciado acima/i),
+    ).not.toBeInTheDocument();
   });
 });
