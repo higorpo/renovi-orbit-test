@@ -237,7 +237,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | Mecanismo | Comportamento |
 |-----------|---------------|
 | React Query `["view-services","list"]` | Infinite query; `staleTime` 60s; sem refetch on focus |
-| React Query `["view-services","detail", id]` | Detalhe; invalidate após cancel/republish/conclusão (`service-completion`) |
+| React Query `["view-services","detail", id]` | Detalhe; invalidate após cancel/republish; após conclusão/avaliação via `useProviderMarkExecuted` / `useClientConfirmRating` (`service-completion`, também invalida `["view-services","list"]`) |
 | Sem Preferences/draft próprio nesta feature | — |
 
 ---

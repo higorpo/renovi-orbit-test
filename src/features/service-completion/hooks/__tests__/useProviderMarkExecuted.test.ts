@@ -60,8 +60,15 @@ describe("useProviderMarkExecuted", () => {
       error: null,
     });
 
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const Wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children);
+
     const { result } = renderHook(() => useProviderMarkExecuted(), {
-      wrapper: wrapper(),
+      wrapper: Wrapper,
     });
     const key = result.current.getIdempotencyKey();
 
@@ -79,6 +86,12 @@ describe("useProviderMarkExecuted", () => {
         expectedDraftVersion: 2,
       }),
     );
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ["view-services", "list"],
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ["view-services", "detail"],
+    });
   });
 
   it("surfaces CHECKLIST_PAYLOAD_REQUIRED from API", async () => {

@@ -4,6 +4,10 @@ import { toast } from "sonner";
 import { logger } from "@/lib/logger";
 import { metrics } from "@/lib/sentry";
 import {
+  SERVICE_DETAIL_QUERY_KEY,
+  SERVICES_LIST_QUERY_KEY,
+} from "@/features/view-services";
+import {
   markServiceExecuted,
   type MarkServiceExecutedSuccess,
 } from "../api/lifecycle.api";
@@ -68,6 +72,9 @@ export function useProviderMarkExecuted() {
       void queryClient.invalidateQueries({
         queryKey: serviceCompletionContextQueryKey(variables.serviceRequestId),
       });
+      // Refresh Meus Serviços / detail for every host (list card, detail).
+      void queryClient.invalidateQueries({ queryKey: SERVICES_LIST_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: SERVICE_DETAIL_QUERY_KEY });
       // Success UI lives in CompletionSuccessStep (sheet stays open).
     },
     onError: (error: Error) => {

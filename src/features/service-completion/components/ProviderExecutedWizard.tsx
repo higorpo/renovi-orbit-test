@@ -18,7 +18,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { cn } from "@/lib/utils";
 import { CheckCircle2, Loader2, RefreshCw } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useServiceCompletionContext } from "../hooks/useServiceCompletionContext";
 import { useProviderCompletionDraft } from "../hooks/useProviderCompletionDraft";
 import { useProviderMarkExecuted } from "../hooks/useProviderMarkExecuted";
@@ -152,7 +151,6 @@ export function ProviderExecutedWizard({
   onExecuted,
   onPendingChange,
 }: ProviderExecutedWizardProps) {
-  const queryClient = useQueryClient();
   const { data: context, isLoading, isError, refetch } =
     useServiceCompletionContext(serviceRequestId, {
       pollWhileProcessing: false,
@@ -267,9 +265,6 @@ export function ProviderExecutedWizard({
         expectedDraftVersion: draft.draftVersion,
       });
       onExecuted?.();
-      void queryClient.invalidateQueries({
-        queryKey: ["services"],
-      });
     } catch {
       // Toast handled in hook
     } finally {

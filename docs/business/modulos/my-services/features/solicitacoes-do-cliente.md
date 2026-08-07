@@ -206,7 +206,7 @@ Transições de domínio (OPEN → contratado → etc.) **não** são feitas nes
 | Ver proposta | Proposta PENDING/REVISED/hasPending | Dialog detalhes | — |
 | Revisar proposta | `REVISION_REQUESTED` | Composer com proposta carregada | — |
 | Abrir no mapa | Serviço **hoje** + coordenadas | Google Maps | Sem coordenadas |
-| Concluir serviço (`mark_executed`) | `CONFIRMED` + timing `past` (banner follow-up; sem unread prioritário) | Abre sheet/dialog no card (`ProviderMarkExecutedSheet` / `CompletionFlowSheetDialog` + `ProviderExecutedWizard` na fase `checklist`; após sucesso, fase `success` com `ProviderExecutedSuccessStep` → `CompletionSuccessStep`, `chrome="immersive"`); RPC de contexto só ao abrir; host `handleExecuted` invalida queries e **não** fecha | Disabled + tooltip se `!enrichmentReady` |
+| Concluir serviço (`mark_executed`) | `CONFIRMED` + timing `past` (banner follow-up; sem unread prioritário) | Abre sheet/dialog no card (`ProviderMarkExecutedSheet` / `CompletionFlowSheetDialog` + `ProviderExecutedWizard` na fase `checklist`; após sucesso, fase `success` com `ProviderExecutedSuccessStep` → `CompletionSuccessStep`, `chrome="immersive"`); RPC de contexto só ao abrir; lista/detalhe refrescam via invalidação em `useProviderMarkExecuted` `onSuccess`; host **não** fecha a sheet | Disabled + tooltip se `!enrichmentReady` |
 | Ver detalhes (follow-up `EXECUTED`) | `EXECUTED` — sem unread prioritário | Detalhe (aguardar confirmação / evidências no host) | — |
 | Ver detalhes | — (incl. secundário no ramo `CONFIRMED` + past) | Detalhe sheet/página | — |
 | Ver calendário | Banner | `/dashboard/services/calendar` | — |
@@ -296,7 +296,7 @@ Dados: `contracted.status` + `getScheduledTiming(scheduledStartDate, scheduledEn
 
 Prioridade: unread / pagamento pendente vencem este banner. Caso contrário, se não houver follow-up, mantém highlight de agenda (`getScheduleHighlightContent`: “Agendado para…”, “Serviço hoje”, etc.).
 
-**Prestador `CONFIRMED` + past:** sheet/dialog hospedado na página (`ProviderMarkExecutedDialogs` + `useProviderMarkExecutedDialog` → `ProviderMarkExecutedSheet`); `get_service_completion_context` só ao montar o wizard. Após mark-executed com sucesso, a sheet permanece na fase `success` (`ProviderExecutedSuccessStep` → `CompletionSuccessStep`); `handleExecuted` invalida list/detail e **não** fecha (dismiss com **“Entendi”**). Evidência: `providerServiceCardPresentation.ts`, `ProviderServiceListCard.tsx`, `useProviderMarkExecutedDialog.ts`.
+**Prestador `CONFIRMED` + past:** sheet/dialog hospedado na página (`ProviderMarkExecutedDialogs` + `useProviderMarkExecutedDialog` → `ProviderMarkExecutedSheet`); `get_service_completion_context` só ao montar o wizard. Após mark-executed com sucesso, a sheet permanece na fase `success` (`ProviderExecutedSuccessStep` → `CompletionSuccessStep`); lista/detalhe refrescam via `useProviderMarkExecuted` `onSuccess` (`SERVICES_LIST_QUERY_KEY` / `SERVICE_DETAIL_QUERY_KEY`); host **não** fecha (dismiss com **“Entendi”**). Evidência: `providerServiceCardPresentation.ts`, `ProviderServiceListCard.tsx`, `useProviderMarkExecutedDialog.ts`.
 
 **Cliente `EXECUTED`:** sheet/dialog hospedado na página (`ClientEvaluateServiceDialogs` + `useClientEvaluateServiceDialog` → `ClientEvaluateServiceSheet`); contexto RPC só ao abrir o wizard (`ClientConfirmRatingWizard`). Após envio da avaliação, a sheet tem fase `success` (`ClientEvaluateSuccessStep` → `CompletionSuccessStep`, `chrome="immersive"`; CTA **“Entendi”**). Evidência: `clientServiceCardPresentation.ts`, `ClientServiceListCard.tsx`; Public API em `service-completion`.
 
@@ -366,8 +366,8 @@ Evidência: `buildCompletedActions` em `clientServiceCardPresentation.ts`; host 
 ## 26. Atualização (2026-08-07) — Step de sucesso após “Concluir serviço”
 
 - Após mark-executed com sucesso no card, `ProviderMarkExecutedSheet` permanece aberta na fase `success`: `ProviderExecutedSuccessStep` (copy do prestador) delega layout a `CompletionSuccessStep`; shell com `chrome="immersive"`; CTA **“Entendi”**.
-- `useProviderMarkExecutedDialog.handleExecuted` invalida `SERVICES_LIST_QUERY_KEY` / `SERVICE_DETAIL_QUERY_KEY` e **não** fecha a sheet (dismiss no step de sucesso).
-- Evidência: `useProviderMarkExecutedDialog.ts`; Public API `ProviderMarkExecutedSheet` / `CompletionSuccessStep` / `ProviderExecutedSuccessStep` em `service-completion`.
+- Invalidação de `SERVICES_LIST_QUERY_KEY` / `SERVICE_DETAIL_QUERY_KEY` no `onSuccess` de `useProviderMarkExecuted` (feature `service-completion`) — Meus Serviços e detalhe refrescam de qualquer host; o host da lista **não** fecha a sheet (dismiss no step de sucesso).
+- Evidência: `useProviderMarkExecuted.ts`; Public API `ProviderMarkExecutedSheet` / `CompletionSuccessStep` / `ProviderExecutedSuccessStep` em `service-completion`.
 
 ## 27. Atualização (2026-08-07) — Arquitetura do step de sucesso (refatoração UI)
 
@@ -380,5 +380,12 @@ Evidência: `buildCompletedActions` em `clientServiceCardPresentation.ts`; host 
 
 - Após envio bem-sucedido (confirm-with-rating ou optional rating), `ClientEvaluateServiceSheet` (Public API usada no card via `ClientEvaluateServiceDialogs`) troca para fase `success`: `ClientEvaluateSuccessStep` → `CompletionSuccessStep`; `chrome="immersive"`; CTA **“Entendi”**; copy `confirm` vs `optional` (`ratingOnly`).
 - Toast de sucesso removido de `useClientConfirmRating` (feedback = step na sheet).
+- Invalidação de lista/detalhe no `onSuccess` de `useClientConfirmRating` (qualquer host: card, prompt, detalhe).
 - No detalhe, `ClientEvaluateServiceAction` mantém a sheet montada enquanto `open` após as capabilities sumirem (mesmo padrão do prestador).
 - Evidência / normas: [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md); Public API `ClientEvaluateServiceSheet` / `ClientEvaluateSuccessStep` / `CompletionSuccessStep`.
+
+## 29. Atualização (2026-08-07) — Invalidação lista/detalhe nos hooks de mutação
+
+- Após mark-executed ou confirm/rating, Meus Serviços e o detalhe passam a refrescar porque `useProviderMarkExecuted` e `useClientConfirmRating` invalidam `SERVICES_LIST_QUERY_KEY` / `SERVICE_DETAIL_QUERY_KEY` no `onSuccess` (além do contexto de conclusão).
+- Cobre card da lista, prompt global e CTA do detalhe — a lista não depende mais só do host `my-services` para ficar coerente.
+- Normas: [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md).

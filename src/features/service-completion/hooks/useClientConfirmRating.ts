@@ -5,6 +5,10 @@ import { useAnalytics } from "@/hooks/useAnalytics";
 import { logger } from "@/lib/logger";
 import { metrics } from "@/lib/sentry";
 import {
+  SERVICE_DETAIL_QUERY_KEY,
+  SERVICES_LIST_QUERY_KEY,
+} from "@/features/view-services";
+import {
   confirmServiceCompleted,
   type ConfirmServiceCompletedSuccess,
 } from "../api/lifecycle.api";
@@ -84,6 +88,9 @@ export function useClientConfirmRating({
       void queryClient.invalidateQueries({
         queryKey: serviceCompletionContextQueryKey(serviceRequestId),
       });
+      // Refresh Meus Serviços / detail for every host (list card, prompt, detail).
+      void queryClient.invalidateQueries({ queryKey: SERVICES_LIST_QUERY_KEY });
+      void queryClient.invalidateQueries({ queryKey: SERVICE_DETAIL_QUERY_KEY });
     },
     onError: (error: Error) => {
       logger.warn("client_confirm_rating_failed", {
