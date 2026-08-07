@@ -40,7 +40,7 @@ begin
 end;
 $$;
 
-select plan(19);
+select plan(20);
 
 select set_config('rls.client_id', '28e30f1d-3c47-441f-94c6-76b6ea0db470', true);
 select set_config('rls.provider_a_id', '5d09e025-20a2-4842-aeef-324d42a431e1', true);
@@ -276,6 +276,15 @@ select ok(
 select ok(
   not has_table_privilege('authenticated', 'public.service_request_enrichment_events', 'SELECT'),
   'authenticated lacks SELECT on enrichment_events'
+);
+
+select ok(
+  not has_table_privilege('authenticated', 'public.service_completion_execution_declarations', 'SELECT')
+    and not has_table_privilege('authenticated', 'public.service_completion_execution_declarations', 'INSERT')
+    and not has_table_privilege('authenticated', 'public.service_completion_execution_declarations', 'UPDATE')
+    and not has_table_privilege('authenticated', 'public.service_completion_execution_declarations', 'DELETE')
+    and has_table_privilege('service_role', 'public.service_completion_execution_declarations', 'SELECT'),
+  'execution_declarations: authenticated deny-all; service_role can SELECT'
 );
 
 select ok(

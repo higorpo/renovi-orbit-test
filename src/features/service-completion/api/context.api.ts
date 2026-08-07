@@ -152,7 +152,3 @@ export async function getServiceCompletionContext(
     error: null,
   };
 }
-
-export const contextApi = {
-  getServiceCompletionContext,
-};

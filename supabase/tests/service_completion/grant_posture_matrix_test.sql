@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(27);
+select plan(28);
 
 create or replace function pg_temp.fn_oid(p_name text)
 returns regprocedure
@@ -116,6 +116,13 @@ select ok(
   and not has_function_privilege('anon', pg_temp.fn_oid('service_completion_confirm_with_rating'), 'EXECUTE')
   and not has_function_privilege('service_role', pg_temp.fn_oid('service_completion_confirm_with_rating'), 'EXECUTE'),
   'service_completion_confirm_with_rating: authenticated only'
+);
+
+select ok(
+  has_function_privilege('authenticated', pg_temp.fn_oid('service_completion_upsert_execution_declaration'), 'EXECUTE')
+  and not has_function_privilege('anon', pg_temp.fn_oid('service_completion_upsert_execution_declaration'), 'EXECUTE')
+  and has_function_privilege('service_role', pg_temp.fn_oid('service_completion_upsert_execution_declaration'), 'EXECUTE'),
+  'service_completion_upsert_execution_declaration: authenticated + service_role'
 );
 
 select ok(

@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useServiceCompletionContext } from "../hooks/useServiceCompletionContext";
 import { useClientConfirmRating } from "../hooks/useClientConfirmRating";
+import { useClientExecutionDeclaration } from "../hooks/useClientExecutionDeclaration";
 import { FrozenEvidenceReview } from "./FrozenEvidenceReview";
 import {
   DisputeStubEntry,
@@ -102,7 +103,6 @@ export function ClientConfirmRatingWizard({
   const [step, setStep] = useState<Step>("review");
   const [scores, setScores] = useState<RatingScoresDraft>(EMPTY_RATING_SCORES);
   const [scoreError, setScoreError] = useState<string | null>(null);
-  const [executionAcknowledged, setExecutionAcknowledged] = useState(false);
   const isDesktop = useBreakpointMd();
   const isPrompt = variant === "prompt";
 
@@ -126,6 +126,15 @@ export function ClientConfirmRatingWizard({
     contractedServiceId,
     mode,
   });
+
+  const declaration = useClientExecutionDeclaration({
+    contractedServiceId,
+    enabled: canConfirm && Boolean(contractedServiceId),
+  });
+  const canContinueToRating =
+    declaration.checked &&
+    declaration.declarationPersisted &&
+    !declaration.isPersisting;
 
   const title = canConfirm
     ? "Confirmar recebimento"
@@ -188,7 +197,7 @@ export function ClientConfirmRatingWizard({
   }
 
   const handleContinueToRating = () => {
-    if (!executionAcknowledged) return;
+    if (!canContinueToRating) return;
     setStep("rating");
     setScoreError(null);
   };
@@ -254,27 +263,43 @@ export function ClientConfirmRatingWizard({
     ) : null;
 
   const executionAck = (
-    <div
-      className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-3"
-      data-testid="client-confirm-execution-ack"
-    >
-      <Checkbox
-        id="client-confirm-execution-acknowledged"
-        checked={executionAcknowledged}
-        onCheckedChange={(checked) =>
-          setExecutionAcknowledged(checked === true)
-        }
-        className="shrink-0"
-        data-testid="client-confirm-execution-acknowledged"
-      />
-      <label
-        htmlFor="client-confirm-execution-acknowledged"
-        className="cursor-pointer text-sm font-normal leading-snug text-foreground"
-      >
-        {autoWithoutChecklist
-          ? "Declaro que o serviço foi executado corretamente, conforme o combinado."
-          : "Declaro que revisei as evidências acima e que o serviço foi executado corretamente, conforme o combinado."}
-      </label>
+    <div className="space-y-2" data-testid="client-confirm-execution-ack">
+      <div className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-3">
+        <Checkbox
+          id="client-confirm-execution-acknowledged"
+          checked={declaration.checked}
+          onCheckedChange={(checked) =>
+            declaration.setChecked(checked === true)
+          }
+          disabled={declaration.isPersisting}
+          className="shrink-0"
+          data-testid="client-confirm-execution-acknowledged"
+        />
+        <label
+          htmlFor="client-confirm-execution-acknowledged"
+          className="cursor-pointer text-sm font-normal leading-snug text-foreground"
+        >
+          {autoWithoutChecklist
+            ? "Declaro que o serviço foi executado corretamente, conforme o combinado."
+            : "Declaro que revisei as evidências acima e que o serviço foi executado corretamente, conforme o combinado."}
+        </label>
+        {declaration.isPersisting ? (
+          <Loader2
+            className="ml-auto h-4 w-4 shrink-0 animate-spin text-muted-foreground"
+            aria-hidden
+            data-testid="client-confirm-execution-ack-spinner"
+          />
+        ) : null}
+      </div>
+      {declaration.error ? (
+        <Alert
+          variant="destructive"
+          data-testid="client-confirm-execution-ack-error"
+        >
+          <AlertTitle>Declaração não registrada</AlertTitle>
+          <AlertDescription>{declaration.error}</AlertDescription>
+        </Alert>
+      ) : null}
     </div>
   );
 
@@ -283,11 +308,16 @@ export function ClientConfirmRatingWizard({
       type="button"
       className="w-full transition-transform duration-150 ease-out active:scale-[0.97] sm:w-auto"
       data-testid="client-confirm-continue-rating"
-      disabled={!executionAcknowledged}
+      disabled={!canContinueToRating}
       onClick={handleContinueToRating}
     >
+      {declaration.isPersisting ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+      ) : null}
       Continuar para avaliação
-      <ChevronRight className="ml-1.5 h-4 w-4" aria-hidden />
+      {declaration.isPersisting ? null : (
+        <ChevronRight className="ml-1.5 h-4 w-4" aria-hidden />
+      )}
     </Button>
   );
 

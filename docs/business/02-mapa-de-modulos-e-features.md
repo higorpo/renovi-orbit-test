@@ -23,7 +23,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | **my-account** | [minha-conta](./modulos/my-account/features/minha-conta.md) | `/dashboard/conta` | `addresses`, storage, perfis público/privado; histórico de captura via `payments` |
 | **provider-jobs** | [trabalhos-e-propostas](./modulos/provider-jobs/features/trabalhos-e-propostas.md) | `/dashboard/jobs` (lista); detalhe `/dashboard/services/:id` (`ServiceDetailShell` / sheet) | Edge **viva** `list-provider-opportunities`; propostas / CNS; backend [matching-dispatch](./modulos/matching-dispatch/README.md); GPS feed via `device-beacon` |
 | **matching-dispatch** *(backend)* | [dispatch-e-visibilidade](./modulos/matching-dispatch/features/dispatch-e-visibilidade.md) | *Sem rota de UI* | Migrations `202607110*`, cron matching, visibilidade; bootstrap via READY-handoff ([service-completion](./modulos/service-completion/README.md)); consumido por **provider-jobs**; beacon → `provider_latest_locations` (**device-beacon**). Legado: Edge `match-provider-jobs` **morta** (pasta vazia); RPC `match_provider_jobs` **órfã** no schema |
-| **service-completion** | [conclusao-e-enrichment](./modulos/service-completion/features/conclusao-e-enrichment.md) | Embutido em detalhe/lista (`view-services`); prompt global no `RootLayout`; *sem rota própria* | Enrichment pré-matching; RPCs `service_completion_*` / `get_service_completion_context` / `get_client_pending_evaluation_prompt`; Edges checklist; janitor SQL de órfãos; host UI só Public API |
+| **service-completion** | [conclusao-e-enrichment](./modulos/service-completion/features/conclusao-e-enrichment.md) | Embutido em detalhe/lista (`view-services`); prompt global no `RootLayout`; *sem rota própria* | Enrichment pré-matching; RPCs `service_completion_*` / `get_service_completion_context` / `get_client_pending_evaluation_prompt`; Edges checklist + `record-service-completion-declaration`; declaração de execução (gate manual); janitor SQL de órfãos; host UI só Public API |
 | **provider-profile** | [pagina-publica](./modulos/provider-profile/features/pagina-publica.md) | `/perfil/:slug` (média/avaliações reais + cursor) | RPCs `get_public_provider_by_slug`, `list_public_provider_ratings`; storage; `ProviderRatingStars` também no compare |
 | **request-quote** | [pedir-orcamento](./modulos/request-quote/features/pedir-orcamento.md) | `/pedir-orcamento` | `dynamic-form`, `addresses`, `auth`, Edge Functions; enqueue enrichment (matching após READY) |
 | **chats** + **negotiation-proposals** | [conversas-e-negociacao](./modulos/chats/features/conversas-e-negociacao.md), [propostas-negociacao](./modulos/chats/features/propostas-negociacao.md), [comparar-orcamentos-meus-servicos](./modulos/chats/features/comparar-orcamentos-meus-servicos.md) | `/dashboard/chats`, `/dashboard/chats/:chatId` (item **Conversas** no menu cliente e prestador) | `auth`, `provider-jobs`, `message-dispatcher`, `my-services` / `view-services` (sheet compare/history com rating real via `get_provider_rating_summaries`), `payments` (aceite→checkout), `service-reschedule`, RPCs CNS |
@@ -62,6 +62,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | Função | Relação com módulos |
 |--------|---------------------|
 | `generate-completion-checklist` | `service-completion` — LLM/worker de enrichment do checklist |
+| `record-service-completion-declaration` | `service-completion` — Declaração de execução (IP + device + geo por IP; sem GPS) |
 | `create-request-quote-order` | `request-quote` |
 | `generate-smart-description` | `request-quote` |
 | `verify-recaptcha` | `auth`, `request-quote` |
@@ -92,7 +93,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | Pagamentos | **Implementado** — `payments` (+ reconciliacao-e-voids) + backend; runbooks em `docs/payment-system/` |
 | Message Dispatcher | Critério doc **OK** (pipeline, quotas, quiet hours, engagement); pendências de **produto** P-08 (janela hardcoded) e P-09 (fuso único BRT) |
 | service-reschedule | Critério doc **OK** (ciclo de estados + propor + pagamento pós-aceite); pendências P-SR-* (UX erros, templates MMD, consumo de `is_last_minute`) |
-| service-completion | Critério doc **OK** (enrichment READY-handoff + conclusão CTAs sheet/dialog + stub disputa + endurecimento SQL 2026-08-05); design técnico em `docs/service-completion/` |
+| service-completion | Critério doc **OK** (enrichment READY-handoff + conclusão CTAs sheet/dialog + declaração de execução + stub disputa + endurecimento SQL 2026-08-05); design técnico em `docs/service-completion/` |
 | PWA / Sentry / analytics | Mencionados na rastreabilidade; não detalhados como módulos de produto |
 | App nativo (Capacitor) | Infra cliente documentada em **device-beacon**, **push-permission**, **notifications** (+ libs `src/lib/push`, Preferences) |
 | Matching legado | Edge morta + RPC órfã documentados em matching-dispatch / provider-jobs |

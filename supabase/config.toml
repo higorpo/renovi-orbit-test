@@ -419,6 +419,9 @@ verify_jwt = true
 [functions.list-provider-opportunities]
 verify_jwt = true
 
+[functions.record-service-completion-declaration]
+verify_jwt = true
+
 # Payment subsystem Edge Functions (design.md §5.3 — seven MVP functions, tasks 64–70).
 # CORS: getCorsHeaders in each handleRequest.ts; entrypoint: index.ts per function folder.
 # verify_jwt=false for netcred-webhook (HMAC) and pg_cron-invoked workers (cron secret in handler).

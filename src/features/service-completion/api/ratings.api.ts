@@ -95,8 +95,3 @@ export async function updateServiceRating(
     error: null,
   };
 }
-
-export const ratingsApi = {
-  submitServiceRating,
-  updateServiceRating,
-};

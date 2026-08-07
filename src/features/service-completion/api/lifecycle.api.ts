@@ -28,6 +28,8 @@ const ERROR_MESSAGES: Record<string, string> = {
     "O rascunho foi atualizado em outro dispositivo. Recarregue e tente novamente.",
   MISSING_RATING_SCORES: "Informe as quatro notas para confirmar o recebimento.",
   RATING_SCORES_OUT_OF_RANGE: "Cada nota deve ser um inteiro de 1 a 5.",
+  EXECUTION_DECLARATION_REQUIRED:
+    "Confirme a declaração de execução antes de avaliar o serviço.",
 };
 
 function mapErrorMessage(errorCode: string): string {
@@ -226,8 +228,3 @@ export async function confirmServiceCompleted(
     error: null,
   };
 }
-
-export const lifecycleApi = {
-  markServiceExecuted,
-  confirmServiceCompleted,
-};

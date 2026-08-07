@@ -4,7 +4,7 @@ begin;
 
 \ir fixtures/seed_rls_actors.inc
 
-select plan(6);
+select plan(7);
 
 select set_config('rls.client_id', '28e30f1d-3c47-441f-94c6-76b6ea0db470', true);
 select set_config('rls.provider_id', '5d09e025-20a2-4842-aeef-324d42a431e1', true);
@@ -197,6 +197,28 @@ select throws_ok(
   'P0003',
   'SERVICE_NOT_FOUND_OR_UNAUTHORIZED',
   'provider caller → SERVICE_NOT_FOUND_OR_UNAUTHORIZED'
+);
+
+-- Manual confirm requires execution declaration
+select pg_temp.rls_set_auth(current_setting('rls.client_id')::uuid);
+
+select throws_ok(
+  $sql$
+    select public.service_completion_confirm_with_rating(
+      (select cs_exec from _fx),
+      5::smallint, 4::smallint, 3::smallint, 5::smallint,
+      'ok',
+      'idem-confirm-guards-no-decl'
+    )
+  $sql$,
+  'P0001',
+  'EXECUTION_DECLARATION_REQUIRED',
+  'confirm without declaration → EXECUTION_DECLARATION_REQUIRED'
+);
+
+select public.service_completion_upsert_execution_declaration(
+  (select cs_exec from _fx),
+  null, null, null, null, null, null, null, null, null, null, null, null, null
 );
 
 -- Happy confirm (complements race suite)

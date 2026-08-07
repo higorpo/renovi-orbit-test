@@ -54,7 +54,3 @@ export async function saveEvidenceDraft(
     error: null,
   };
 }
-
-export const draftApi = {
-  saveEvidenceDraft,
-};

@@ -226,10 +226,3 @@ export async function uploadEvidenceFile(
 
   return { path: registered.data.storagePath, error: null };
 }
-
-export const uploadApi = {
-  createUploadSession,
-  registerUploadObject,
-  uploadEvidenceFile,
-  validateEvidenceImageFile,
-};

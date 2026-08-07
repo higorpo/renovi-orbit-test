@@ -114,6 +114,18 @@ begin
       using errcode = 'P0001';
   end if;
 
+  -- Manual confirm requires a prior execution declaration (checkbox audit row).
+  -- Auto-complete does not use this RPC and does not require a declaration.
+  if not exists (
+    select 1
+    from public.service_completion_execution_declarations d
+    where d.contracted_service_id = p_contracted_service_id
+      and d.client_id = v_client_id
+  ) then
+    raise exception 'EXECUTION_DECLARATION_REQUIRED'
+      using errcode = 'P0001';
+  end if;
+
   if exists (
     select 1
     from public.service_ratings sr
@@ -270,7 +282,7 @@ $$;
 comment on function public.service_completion_confirm_with_rating(
   uuid, smallint, smallint, smallint, smallint, text, text
 ) is
-  'Client confirms EXECUTED CS with mandatory 4-dimension rating in one TX; requires frozen evidence; COMPLETED completed_by=client + MMD (Task 36 / decision 12). p_idempotency_key is audit/MMD metadata and status-replay only — not wired to rpc_idempotency_records.';
+  'Client confirms EXECUTED CS with mandatory 4-dimension rating in one TX; requires frozen evidence and execution declaration row; COMPLETED completed_by=client + MMD (Task 36 / decision 12). p_idempotency_key is audit/MMD metadata and status-replay only — not wired to rpc_idempotency_records.';
 
 revoke all on function public.service_completion_confirm_with_rating(
   uuid, smallint, smallint, smallint, smallint, text, text

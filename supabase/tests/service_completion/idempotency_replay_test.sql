@@ -307,6 +307,11 @@ select is(
 
 select pg_temp.rls_set_auth(current_setting('rls.client_id')::uuid);
 
+select public.service_completion_upsert_execution_declaration(
+  (select cs1 from _fx),
+  null, null, null, null, null, null, null, null, null, null, null, null, null
+);
+
 create temp table _confirm1 as
 select public.service_completion_confirm_with_rating(
   (select cs1 from _fx),
@@ -349,6 +354,11 @@ select is(
 -- ---------------------------------------------------------------------------
 
 select pg_temp.rls_set_auth(current_setting('rls.client_id')::uuid);
+
+select public.service_completion_upsert_execution_declaration(
+  (select cs3 from _fx),
+  null, null, null, null, null, null, null, null, null, null, null, null, null
+);
 
 create temp table _confirm_cs3 as
 select public.service_completion_confirm_with_rating(

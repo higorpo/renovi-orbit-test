@@ -2,7 +2,7 @@
 
 Módulo de produto que cobre (1) **prontidão de publicação** do pedido (checklist de conclusão gerado antes do matching) e (2) **conclusão pós-contrato** (evidências, EXECUTED, confirmação+avaliação, auto-complete).
 
-UI embutida no detalhe/lista via [view-services](../view-services/README.md) (só Public API). Backend: RPCs `service_completion_*` / `enrichment_*` + Edge `generate-completion-checklist` ([ADR-0004](../../../service-completion/adr/0004-completion-rpcs-outside-payments.md)).
+UI embutida no detalhe/lista via [view-services](../view-services/README.md) (só Public API). Backend: RPCs `service_completion_*` / `enrichment_*` + Edge `generate-completion-checklist` / `record-service-completion-declaration` ([ADR-0004](../../../service-completion/adr/0004-completion-rpcs-outside-payments.md), [ADR-0005](../../../service-completion/adr/0005-execution-declaration-audit-trail.md)).
 
 Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.md).
 
@@ -27,7 +27,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 | Host | `view-services` (`ServiceContractedSection`, `ServiceDetailPage`); `my-services` (sheets hospedados na página do card); `RootLayout` (prompt global) — **só** imports da Public API |
 | Enrichment | Tabela `service_request_enrichments` (`PENDING` → `RUNNING` → `READY` \| `ABORTED`); enqueue em create/republish |
 | Matching | Bootstrap **só** via `matching_bootstrap_dispatch_for_service_request` na TX de READY (trigger OPEN **DROP**ado) |
-| Conclusão | RPCs `service_completion_mark_executed`, `service_completion_auto_mark_executed` (+ cron), `service_completion_confirm_with_rating`, `service_completion_auto_complete_executed` (+ cron) |
+| Conclusão | RPCs `service_completion_mark_executed`, `service_completion_auto_mark_executed` (+ cron), `service_completion_upsert_execution_declaration`, `service_completion_confirm_with_rating`, `service_completion_auto_complete_executed` (+ cron); Edge `record-service-completion-declaration` |
 | Removidos | `payment_mark_service_executed`, `payment_confirm_service_completed`, `payment_cron_auto_complete_*` |
 
 ---

@@ -158,6 +158,16 @@ $seed$;
 
 select pg_temp.rls_set_auth(current_setting('rls.client_id')::uuid);
 
+-- Seed execution declarations required by confirm_with_rating hard gate
+select public.service_completion_upsert_execution_declaration(
+  (select cs_confirm from _fx),
+  null, null, null, null, null, null, null, null, null, null, null, null, null
+);
+select public.service_completion_upsert_execution_declaration(
+  (select cs_cw from _fx),
+  null, null, null, null, null, null, null, null, null, null, null, null, null
+);
+
 -- ---------------------------------------------------------------------------
 -- Missing score rolls back
 -- ---------------------------------------------------------------------------

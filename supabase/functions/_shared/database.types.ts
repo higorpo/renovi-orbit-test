@@ -3361,6 +3361,100 @@ export type Database = {
           },
         ]
       }
+      service_completion_execution_declarations: {
+        Row: {
+          client_id: string
+          client_ip: string | null
+          client_timezone: string | null
+          contracted_service_id: string
+          created_at: string
+          declared_at: string
+          device_id: string | null
+          device_name: string | null
+          id: string
+          ip_geo: Json | null
+          is_virtual: boolean | null
+          last_seen_at: string
+          manufacturer: string | null
+          model: string | null
+          operating_system: string | null
+          os_version: string | null
+          platform: string | null
+          service_request_id: string
+          updated_at: string
+          user_agent: string | null
+          web_view_version: string | null
+        }
+        Insert: {
+          client_id: string
+          client_ip?: string | null
+          client_timezone?: string | null
+          contracted_service_id: string
+          created_at?: string
+          declared_at?: string
+          device_id?: string | null
+          device_name?: string | null
+          id?: string
+          ip_geo?: Json | null
+          is_virtual?: boolean | null
+          last_seen_at?: string
+          manufacturer?: string | null
+          model?: string | null
+          operating_system?: string | null
+          os_version?: string | null
+          platform?: string | null
+          service_request_id: string
+          updated_at?: string
+          user_agent?: string | null
+          web_view_version?: string | null
+        }
+        Update: {
+          client_id?: string
+          client_ip?: string | null
+          client_timezone?: string | null
+          contracted_service_id?: string
+          created_at?: string
+          declared_at?: string
+          device_id?: string | null
+          device_name?: string | null
+          id?: string
+          ip_geo?: Json | null
+          is_virtual?: boolean | null
+          last_seen_at?: string
+          manufacturer?: string | null
+          model?: string | null
+          operating_system?: string | null
+          os_version?: string | null
+          platform?: string | null
+          service_request_id?: string
+          updated_at?: string
+          user_agent?: string | null
+          web_view_version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_completion_execution_declara_contracted_service_id_fkey"
+            columns: ["contracted_service_id"]
+            isOneToOne: true
+            referencedRelation: "contracted_services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_completion_execution_declaratio_service_request_id_fkey"
+            columns: ["service_request_id"]
+            isOneToOne: false
+            referencedRelation: "service_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_completion_execution_declarations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_ratings: {
         Row: {
           client_id: string
@@ -6129,6 +6223,25 @@ export type Database = {
       service_completion_scheduled_end_at: {
         Args: { p_scheduled_end_date: string; p_scheduled_start_date: string }
         Returns: string
+      }
+      service_completion_upsert_execution_declaration: {
+        Args: {
+          p_client_ip?: string
+          p_client_timezone?: string
+          p_contracted_service_id: string
+          p_device_id?: string
+          p_device_name?: string
+          p_ip_geo?: Json
+          p_is_virtual?: boolean
+          p_manufacturer?: string
+          p_model?: string
+          p_operating_system?: string
+          p_os_version?: string
+          p_platform?: string
+          p_user_agent?: string
+          p_web_view_version?: string
+        }
+        Returns: Json
       }
       service_completion_validate_evidence_responses: {
         Args: { p_responses: Json; p_schema: Json }

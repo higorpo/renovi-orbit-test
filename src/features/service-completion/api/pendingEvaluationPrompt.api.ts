@@ -95,7 +95,3 @@ export async function getClientPendingEvaluationPrompt(): Promise<GetClientPendi
     error: null,
   };
 }
-
-export const pendingEvaluationPromptApi = {
-  getClientPendingEvaluationPrompt,
-};

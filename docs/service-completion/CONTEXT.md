@@ -4,7 +4,7 @@ Termos canônicos do domínio de **enriquecimento pré-publicação do pedido**,
 
 Requisitos: [`requirements.md`](./requirements.md). Design: [`design.md`](./design.md). Tasks: [`tasks.md`](./tasks.md).
 
-ADR: [`adr/0001-separate-enrichment-fsm-for-publication-readiness.md`](./adr/0001-separate-enrichment-fsm-for-publication-readiness.md) · [`adr/0002-evidence-images-block-not-image-gallery.md`](./adr/0002-evidence-images-block-not-image-gallery.md) · [`adr/0003-completion-criterion-block.md`](./adr/0003-completion-criterion-block.md) · [`adr/0004-completion-rpcs-outside-payments.md`](./adr/0004-completion-rpcs-outside-payments.md).
+ADR: [`adr/0001-separate-enrichment-fsm-for-publication-readiness.md`](./adr/0001-separate-enrichment-fsm-for-publication-readiness.md) · [`adr/0002-evidence-images-block-not-image-gallery.md`](./adr/0002-evidence-images-block-not-image-gallery.md) · [`adr/0003-completion-criterion-block.md`](./adr/0003-completion-criterion-block.md) · [`adr/0004-completion-rpcs-outside-payments.md`](./adr/0004-completion-rpcs-outside-payments.md) · [`adr/0005-execution-declaration-audit-trail.md`](./adr/0005-execution-declaration-audit-trail.md).
 
 ## Language
 
@@ -69,8 +69,12 @@ Respostas/anexos do checklist persistidos no servidor enquanto o serviço está 
 _Avoid_: pacote de evidência de execução (imutável pós-EXECUTED)
 
 **Confirmação com avaliação**:
-Transição manual `EXECUTED`→`COMPLETED` acoplada atomicamente à criação da avaliação de serviço.
+Transição manual `EXECUTED`→`COMPLETED` acoplada atomicamente à criação da avaliação de serviço. Exige **Declaração de execução** prévia (UI + RPC).
 _Avoid_: confirm sem rating no path manual; saga compensável
+
+**Declaração de execução**:
+Gesto do checkbox no path manual de confirmação (revisão de evidências) + registro auditável (IP, dispositivo via Capacitor, geo aproximada por IP no Edge, `declared_at` imutável). Distinto da confirmação com avaliação. Hard gate na UI e `EXECUTION_DECLARATION_REQUIRED` na RPC de confirm. Auto-complete **não** exige. Leitura dos metadados só plataforma/`service_role`.
+_Avoid_: aceite (colide com aceite de proposta); confirmação com avaliação; GPS do dispositivo
 
 **Abortamento de enrichment**:
 Término do pipeline de enriquecimento porque o pedido foi cancelado antes da prontidão; impede materialização e bootstrap de matching.

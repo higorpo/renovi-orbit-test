@@ -9,6 +9,14 @@ import type { ServiceCompletionContext } from "../../types/completion.types";
 const confirmServiceCompleted = vi.fn();
 const submitServiceRating = vi.fn();
 
+const declarationOverride: {
+  forceError: string | null;
+  forcePersisted: boolean | null;
+} = {
+  forceError: null,
+  forcePersisted: null,
+};
+
 const contextState: { current: ServiceCompletionContext | null } = {
   current: null,
 };
@@ -30,6 +38,39 @@ vi.mock("../../hooks/useServiceCompletionContext", () => ({
     refetch: vi.fn(),
   }),
 }));
+
+vi.mock("../../hooks/useClientExecutionDeclaration", async () => {
+  const React = await import("react");
+  return {
+    useClientExecutionDeclaration: () => {
+      const [checked, setChecked] = React.useState(false);
+      const [declarationPersisted, setDeclarationPersisted] = React.useState(
+        false,
+      );
+      return {
+        checked,
+        setChecked: (next: boolean) => {
+          setChecked(next);
+          if (declarationOverride.forceError) {
+            setDeclarationPersisted(false);
+            return;
+          }
+          if (declarationOverride.forcePersisted === false) {
+            setDeclarationPersisted(false);
+            return;
+          }
+          setDeclarationPersisted(next);
+        },
+        declarationPersisted:
+          declarationOverride.forcePersisted === false
+            ? false
+            : declarationPersisted,
+        isPersisting: false,
+        error: declarationOverride.forceError,
+      };
+    },
+  };
+});
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -109,6 +150,8 @@ describe("ClientConfirmRatingWizard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     contextState.current = null;
+    declarationOverride.forceError = null;
+    declarationOverride.forcePersisted = null;
   });
 
   it("hides when capabilities and status do not allow confirm, optional rating, or dispute", () => {
@@ -121,7 +164,7 @@ describe("ClientConfirmRatingWizard", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("keeps Continuar para avaliação disabled until execution confirmation is checked", () => {
+  it("keeps Continuar para avaliação disabled until declaration is checked and persisted", () => {
     contextState.current = baseContext({ canConfirmWithRating: true });
     render(<ClientConfirmRatingWizard serviceRequestId="sr-1" />, { wrapper });
 
@@ -131,7 +174,25 @@ describe("ClientConfirmRatingWizard", () => {
     fireEvent.click(
       screen.getByTestId("client-confirm-execution-acknowledged"),
     );
-    expect(continueBtn).toBeEnabled();
+    expect(screen.getByTestId("client-confirm-continue-rating")).toBeEnabled();
+  });
+
+  it("keeps Continuar disabled and shows inline error when declaration persist fails", () => {
+    declarationOverride.forceError =
+      "Não foi possível registrar sua declaração. Remarque a caixa para tentar novamente.";
+    declarationOverride.forcePersisted = false;
+    contextState.current = baseContext({ canConfirmWithRating: true });
+
+    render(<ClientConfirmRatingWizard serviceRequestId="sr-1" />, { wrapper });
+
+    fireEvent.click(
+      screen.getByTestId("client-confirm-execution-acknowledged"),
+    );
+
+    expect(screen.getByTestId("client-confirm-continue-rating")).toBeDisabled();
+    expect(
+      screen.getByTestId("client-confirm-execution-ack-error"),
+    ).toHaveTextContent(/declaração/i);
   });
 
   it("blocks confirm submit when scores are missing", async () => {

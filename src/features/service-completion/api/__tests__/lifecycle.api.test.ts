@@ -208,6 +208,30 @@ describe("confirmServiceCompleted", () => {
     expect(result.error).toContain("disputa");
   });
 
+  it("maps EXECUTION_DECLARATION_REQUIRED to declaration user message", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: {
+        message: "EXECUTION_DECLARATION_REQUIRED",
+        details: JSON.stringify({ code: "EXECUTION_DECLARATION_REQUIRED" }),
+      },
+    });
+
+    const result = await confirmServiceCompleted({
+      contractedServiceId: "svc-no-decl",
+      scores: {
+        quality: 5,
+        punctuality: 5,
+        communication: 5,
+        value: 5,
+      },
+    });
+
+    expect(result.data).toBeNull();
+    expect(result.errorCode).toBe("EXECUTION_DECLARATION_REQUIRED");
+    expect(result.error).toMatch(/declaração de execução/i);
+  });
+
   it("maps unknown codes to generic fallback message", async () => {
     mockRpc.mockResolvedValue({
       data: null,
