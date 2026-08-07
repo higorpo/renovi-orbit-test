@@ -64,7 +64,6 @@ function serviceModel(): ServiceModel {
     chatSummary: null,
     enrichmentReady: true,
     enrichmentStatus: "READY",
-    executedLate: null,
   };
 }
 

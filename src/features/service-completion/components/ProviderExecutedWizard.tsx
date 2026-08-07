@@ -289,16 +289,6 @@ export function ProviderExecutedWizard({
         </Alert>
       ) : null}
 
-      {temporal.willBeLate && !temporal.notYetDue ? (
-        <Alert data-testid="provider-executed-late-notice">
-          <AlertTitle>Envio fora do prazo</AlertTitle>
-          <AlertDescription>
-            A janela on-time já passou. Você ainda pode marcar como executado; o
-            cliente verá que a execução foi registrada com atraso.
-          </AlertDescription>
-        </Alert>
-      ) : null}
-
       {draft.saveState === "conflict" ? (
         <Alert variant="destructive" data-testid="provider-draft-conflict">
           <AlertTitle>Conflito de versão</AlertTitle>

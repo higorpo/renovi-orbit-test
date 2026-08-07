@@ -59,7 +59,6 @@ declare
   v_since timestamptz := now() - make_interval(hours => v_hours);
   v_age jsonb;
   v_source jsonb;
-  v_late jsonb;
   v_complete jsonb;
   v_reclaim_count bigint;
   v_ops_attention_count bigint;
@@ -114,22 +113,6 @@ begin
   where e.status = 'READY'::public.enrichment_status
     and e.materialized_at is not null
     and e.materialized_at >= v_since;
-
-  select jsonb_build_object(
-    'frozen_total', count(*)::int,
-    'executed_late_count', count(*) filter (where ev.executed_late)::int,
-    'executed_late_ratio', case
-      when count(*) = 0 then null
-      else round(
-        (count(*) filter (where ev.executed_late)::numeric / count(*)::numeric),
-        4
-      )
-    end
-  )
-  into v_late
-  from public.contracted_service_completion_evidence ev
-  where ev.phase = 'frozen'::public.completion_evidence_phase
-    and ev.frozen_at >= v_since;
 
   select jsonb_build_object(
     'completed_total', count(*)::int,
@@ -211,7 +194,6 @@ begin
     'as_of', now(),
     'enrichment_age', v_age,
     'ai_vs_fallback', v_source,
-    'executed_late', v_late,
     'auto_vs_manual_complete', v_complete,
     'lease_reclaim_count_24h_window', v_reclaim_count,
     'ops_attention_open_count', v_ops_attention_count,
@@ -222,7 +204,7 @@ end;
 $$;
 
 comment on function public.service_completion_ops_metrics(int) is
-  'Ops metrics snapshot: enrichment age p50/p95, AI/fallback, executed_late, auto vs manual, reclaim, ops_attention, orphan deletes (Task 56). service_role only.';
+  'Ops metrics snapshot: enrichment age p50/p95, AI/fallback, auto vs manual, reclaim, ops_attention, orphan deletes (Task 56). service_role only.';
 
 revoke all on function public.service_completion_ops_metrics(int)
   from public, anon, authenticated;

@@ -1515,7 +1515,7 @@ The script MUST be loaded asynchronously to avoid blocking card form rendering; 
 > **Superseded for product writers (2026-08 / [ADR-0004](../service-completion/adr/0004-completion-rpcs-outside-payments.md)):**  
 > Self-serve `EXECUTED` / manual `COMPLETED`+rating / system auto-complete are **`service_completion_*`** only — see [service-completion design](../service-completion/design.md) (§5.4–5.5, auto-complete) and [CONTEXT decisions 28–29](../service-completion/CONTEXT.md).  
 > Legacy `payment_mark_service_executed`, `payment_confirm_service_completed`, and `payment_cron_auto_complete_*` are **DROPped** from the product API.  
-> **Payments still owns:** NetCred charge/refund/settlement, `is_disputed` chargeback handling that MUST NOT block completion, and D+30 payout disclosure from `paid_at` (AC below). Checklist evidence, `executed_late`, confirm+rating atomicity, and enrichment gates live in service-completion.
+> **Payments still owns:** NetCred charge/refund/settlement, `is_disputed` chargeback handling that MUST NOT block completion, and D+30 payout disclosure from `paid_at` (AC below). Checklist evidence, confirm+rating atomicity, and enrichment gates live in service-completion.
 
 *User Story*: As a service provider, I want to mark a service as executed after I deliver it, and as a client I want to confirm the service was completed, so that both parties have a clear record of service delivery.
 

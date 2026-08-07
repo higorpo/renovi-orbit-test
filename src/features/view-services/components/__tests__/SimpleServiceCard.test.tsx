@@ -26,7 +26,6 @@ const model: ServiceModel = {
   updatedAt: "2026-06-05T13:48:59.185593+00:00",
   enrichmentStatus: "READY",
   enrichmentReady: true,
-  executedLate: null,
   cancelledAt: null,
   completedAt: null,
   pendingProposalCount: 0,

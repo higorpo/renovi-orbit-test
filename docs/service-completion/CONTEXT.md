@@ -61,12 +61,8 @@ Ciclo de vida operacional que materializa o checklist de conclusão e sinaliza p
 _Avoid_: service_request_status, DISPATCH_PENDING
 
 **Janela de marcação de execução**:
-Intervalo de datas (America/Sao_Paulo, date-only) em que o prestador pode submeter o pacote de evidência e transicionar para `EXECUTED` **sem** flag de atraso. Fim efetivo = `coalesce(scheduled_end_date, scheduled_start_date)`; teto on-time = fim efetivo **+ 1 dia**.
-_Avoid_: payment_service_execution_at (hora do turno para pagamento)
-
-**Execução atrasada (`executed_late`)**:
-Marcação `EXECUTED` ocorrida após o teto on-time da janela. Permitida no self-serve; deve ser sinalizada ao cliente.
-_Avoid_: bloqueio hard pós-grace
+Intervalo de datas (America/Sao_Paulo, date-only) a partir de `scheduled_start_date` em que o prestador pode submeter o pacote de evidência e transicionar para `EXECUTED`. Antes do início → `SERVICE_NOT_YET_DUE`. Helpers BRT (`service_completion_brt_today`, `service_completion_scheduled_end_at`) também âncoram o grace do auto-mark. Envio do formulário após o fim da agenda **não** implica execução atrasada.
+_Avoid_: payment_service_execution_at (hora do turno para pagamento); flag/badge de “execução atrasada”
 
 **Draft de evidência**:
 Respostas/anexos do checklist persistidos no servidor enquanto o serviço está `CONFIRMED`, ainda não submetidos como pacote de evidência. Invisível ao cliente.
@@ -148,8 +144,8 @@ _Avoid_: auto-cancel do pedido; publicar vazio; retry infinito silencioso
 | 6 | **Emenda pós-EXECUTED (opção A):** respostas/evidências do checklist são **imutáveis** após a transição para `EXECUTED`. Sem emenda pelo prestador no MVP; correção só via suporte/ops (fora de escopo). | 2026-08-04 |
 | 7 | **Visibilidade (opção A):** schema do checklist legível pelo **cliente** desde a prontidão e por **prestadores com acesso ao pedido** (feed/detalhe/chat/proposta). **Respostas/evidências** só após `EXECUTED`, e apenas para o **cliente** e o **prestador contratado**. | 2026-08-04 |
 | 8 | **Modelo de prontidão (opção B):** FSM **separada** de enriquecimento do pedido (`PENDING` → `RUNNING` → `READY`, com ramo de retry e fallback → `READY`). Matching **só bootstrapa** quando enrichment = `READY`. `service_requests.status` **não** é a fonte de verdade do gate. UI “em processamento” projeta o estado do enrichment. ADR-0001. | 2026-08-04 |
-| 9 | **Janela temporal de EXECUTED:** date-only BRT; início = `scheduled_start_date`; fim efetivo = `coalesce(scheduled_end_date, scheduled_start_date)`; on-time até **fim efetivo + 1 dia**. | 2026-08-04 |
-| 10 | **Após o grace (opção B):** `executed_late` permitido self-serve após o teto on-time; visível ao cliente; sem bloqueio hard no MVP. | 2026-08-04 |
+| 9 | **Janela temporal de EXECUTED:** date-only BRT; início = `scheduled_start_date`; rejeitar mark-executed se `D < scheduled_start_date` (`SERVICE_NOT_YET_DUE`). Helpers `service_completion_brt_today` / `service_completion_scheduled_end_at` para esse gate e grace do auto-mark. | 2026-08-04 |
+| 10 | **Após o fim da agenda (produto):** marcar EXECUTED depois do fim da agenda **não** significa que o serviço foi executado com atraso — frequentemente o prestador só enviou o formulário depois. Conceito `executed_late` / badge “Executado com atraso” / projeção `executedLate` / sufixo MMD “(após o prazo)” / toast “fora do prazo” / métrica late ratio: **removidos**. Self-serve continua permitido após o fim; sem sinalização de atraso. | 2026-08-04 (revisado) |
 | 11 | **Draft (opção B):** draft server-side enquanto `CONFIRMED`, invisível ao cliente; submit final valida + congela + `EXECUTED` atômico. | 2026-08-04 |
 | 12 | **Confirmação + avaliação (opção A):** path manual em **uma TX/RPC** (`COMPLETED` + `service_ratings`). Auto-complete sem rating. | 2026-08-04 |
 | 13 | **Cancel durante enrichment (opção A):** cancelamento do pedido **aborta** o enrichment; workers MUST NO-OP se SR cancelado; MUST NOT materializar checklist nem bootstrap matching. | 2026-08-04 |
@@ -169,6 +165,6 @@ _Avoid_: auto-cancel do pedido; publicar vazio; retry infinito silencioso
 | 27 | **TX boundaries enrichment (design A):** claim (TX curta → RUNNING+lease+generation) → LLM fora do DB → finalize CAS `(lease_owner, lease_generation)` materializa schema+READY+bootstrap matching na mesma TX. | 2026-08-04 |
 | 28 | **RPCs de conclusão fora de payments:** remover `payment_mark_service_executed` e `payment_confirm_service_completed` da API de produto; criar `service_completion_mark_executed` e `service_completion_confirm_with_rating` como únicos writers self-serve de EXECUTED / COMPLETED+rating. | 2026-08-04 |
 | 29 | **Auto-complete fora de payments (design A):** mover para `service_completion_auto_complete_executed` + cron/`job_runs`; remover wrappers `payment_*` de auto-complete. | 2026-08-04 |
-| 30 | **Evidência (design A):** tabela `contracted_service_completion_evidence` 1:1 com CS (`draft`\|`frozen`, responses jsonb, version, executed_late no freeze). Freeze atômico com mark executed. | 2026-08-04 |
+| 30 | **Evidência (design A):** tabela `contracted_service_completion_evidence` 1:1 com CS (`draft`\|`frozen`, responses jsonb, version). Freeze atômico com mark executed. (`executed_late` no freeze: **removido** — ver decisão 10.) | 2026-08-04 |
 | 31 | **Bootstrap matching (design A):** `matching_bootstrap_dispatch_for_service_request(sr_id)` chamado na mesma TX de `enrichment_finalize_ready`; trigger OPEN removido; sweeper repara READY sem dispatch. | 2026-08-04 |
 | 32 | **Gap closure (design v1.1):** create e republish compartilham enqueue de enrichment (sem bootstrap no OPEN); read model `get_service_completion_context` + campos leves em lista; MMD catalog inclui `SERVICE_AUTO_COMPLETED` (template + routing); disputa stub com `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL` / `orbit.dispute_support_url`; `ops_attention_*` sem retry infinito; `responses_hash` = sha256(canonical JSON); GRANTs de rating restaurados. | 2026-08-04 |

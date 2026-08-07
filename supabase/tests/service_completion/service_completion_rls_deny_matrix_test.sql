@@ -224,11 +224,11 @@ select
 from _fx;
 
 insert into public.contracted_service_completion_evidence (
-  id, contracted_service_id, phase, frozen_at, responses_hash, executed_late, responses
+  id, contracted_service_id, phase, frozen_at, responses_hash, responses
 )
 select
   evidence_id, cs_id, 'frozen'::public.completion_evidence_phase,
-  now(), 'hash', false,
+  now(), 'hash',
   '{"c1":{"met":true,"evidence_paths":["x/y.jpg"]}}'::jsonb
 from _fx_frozen;
 

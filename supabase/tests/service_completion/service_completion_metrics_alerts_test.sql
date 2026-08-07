@@ -37,7 +37,6 @@ select pg_temp.set_service_role();
 select ok(
   (public.service_completion_ops_metrics(24) ? 'enrichment_age')
     and (public.service_completion_ops_metrics(24) ? 'ai_vs_fallback')
-    and (public.service_completion_ops_metrics(24) ? 'executed_late')
     and (public.service_completion_ops_metrics(24) ? 'auto_vs_manual_complete')
     and (public.service_completion_ops_metrics(24) ? 'ops_attention_open_count'),
   'ops_metrics returns expected metric keys'

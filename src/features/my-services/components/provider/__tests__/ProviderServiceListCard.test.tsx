@@ -204,7 +204,6 @@ describe("ProviderServiceListCard", () => {
       statusTabId: "in_progress",
       enrichmentReady: true,
       enrichmentStatus: "READY",
-      executedLate: null,
       pendingProposalCount: 0,
       activeChatCount: 1,
       unreadChatCount: 0,

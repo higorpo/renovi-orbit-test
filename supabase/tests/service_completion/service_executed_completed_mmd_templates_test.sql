@@ -11,13 +11,13 @@ select ok(
     where mt.template_key = 'service.service_executed'
       and mt.channel = 'push'
       and mt.active
-      and mt.body_template like '%executed_late_suffix%'
       and mt.body_template ilike '%confirm%'
-      and mt.body_template ilike '%avali%'
-      and (mt.variable_schema->'properties') ? 'executed_late'
+      and mt.body_template ilike '%checklist%'
       and (mt.variable_schema->'properties') ? 'deep_link_path'
+      and not ((mt.variable_schema->'properties') ? 'executed_late')
+      and not ((mt.variable_schema->'properties') ? 'executed_late_suffix')
   ),
-  'service.service_executed includes late suffix + confirm/avaliate copy'
+  'service.service_executed includes confirm/checklist copy without late suffix'
 );
 
 select ok(
@@ -53,8 +53,6 @@ select is(
     jsonb_build_object(
       'service_id', gen_random_uuid()::text,
       'service_request_title', 'Serviço pgTAP',
-      'executed_late', true,
-      'executed_late_suffix', ' (após o prazo)',
       'deep_link_path', '/dashboard/services/pgtap'
     ),
     '{}'::jsonb

@@ -54,7 +54,6 @@ function baseContext(
     },
     evidence: {
       phase: "draft",
-      executedLate: null,
       frozenAt: null,
       draftVersion: 2,
       responses: {
@@ -358,7 +357,6 @@ describe("useProviderCompletionDraft", () => {
       context: baseContext({
         evidence: {
           phase: "draft",
-          executedLate: null,
           frozenAt: null,
           draftVersion: 4,
           responses: {

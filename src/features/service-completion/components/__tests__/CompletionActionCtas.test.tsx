@@ -63,7 +63,6 @@ function baseContext(
     },
     evidence: {
       phase: "draft",
-      executedLate: false,
       frozenAt: null,
       draftVersion: 1,
       responses: {},

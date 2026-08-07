@@ -48,7 +48,6 @@ export type MarkServiceExecutedSuccess = {
   contractedServiceId: string;
   status: string;
   executedAt: string;
-  executedLate: boolean;
   evidenceId: string | null;
   idempotent: boolean;
 };
@@ -84,7 +83,6 @@ type MarkExecutedRpcResponse = {
   contracted_service_id?: string;
   status?: string;
   executed_at?: string;
-  executed_late?: boolean;
   evidence_id?: string;
   idempotent?: boolean;
 };
@@ -159,7 +157,6 @@ export async function markServiceExecuted(
         payload.contracted_service_id ?? contractedServiceId,
       status: payload.status ?? "EXECUTED",
       executedAt: payload.executed_at ?? "",
-      executedLate: Boolean(payload.executed_late),
       evidenceId: payload.evidence_id ?? null,
       idempotent: Boolean(payload.idempotent),
     },

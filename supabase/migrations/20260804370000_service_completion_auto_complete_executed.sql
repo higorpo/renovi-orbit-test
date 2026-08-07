@@ -23,7 +23,6 @@ declare
   v_schedule_id uuid;
   v_title text;
   v_mmd jsonb;
-  v_executed_late boolean;
 begin
   if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'service_role required for service_completion_auto_complete_executed'
@@ -64,13 +63,6 @@ begin
         continue;
       end if;
 
-      -- Preserve executed_late on frozen evidence (do not mutate package).
-      select ev.executed_late
-      into v_executed_late
-      from public.contracted_service_completion_evidence ev
-      where ev.contracted_service_id = v_cs.id
-        and ev.phase = 'frozen'::public.completion_evidence_phase;
-
       select ps.id
       into v_schedule_id
       from public.payment_schedules ps
@@ -91,7 +83,6 @@ begin
           p_metadata := jsonb_build_object(
             'executed_at', v_cs.executed_at,
             'completed_by', 'system',
-            'executed_late', v_executed_late,
             'source', 'service_completion_auto_complete_executed'
           )
         );
@@ -103,8 +94,7 @@ begin
           p_service_id := v_cs.id,
           p_payload := jsonb_build_object(
             'completed_by', 'system',
-            'executed_at', v_cs.executed_at,
-            'executed_late', v_executed_late
+            'executed_at', v_cs.executed_at
           )
         );
       end if;
@@ -124,7 +114,6 @@ begin
           'client_id', v_cs.client_id,
           'completed_by', 'system',
           'optional_rating_cta', true,
-          'executed_late', v_executed_late,
           'service_request_title', v_title,
           'deep_link_path', format('/dashboard/services/%s', v_cs.service_request_id)
         ),
@@ -143,7 +132,6 @@ begin
           'executed_at', v_cs.executed_at,
           'completed_at', v_completed_at,
           'completed_by', 'system',
-          'executed_late', v_executed_late,
           'mmd', v_mmd
         )
       );

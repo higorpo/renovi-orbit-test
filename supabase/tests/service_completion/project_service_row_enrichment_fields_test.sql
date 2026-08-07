@@ -8,7 +8,6 @@ select ok(
   (
     select pg_get_functiondef(p.oid) ~ 'enrichment_status'
       and pg_get_functiondef(p.oid) ~ 'enrichment_ready'
-      and pg_get_functiondef(p.oid) ~ 'executed_late'
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
@@ -18,7 +17,7 @@ select ok(
         'p_service_request_id uuid, p_viewer_id uuid'
       )
   ),
-  'project_service_row projects enrichment_status, enrichment_ready, executed_late'
+  'project_service_row projects enrichment_status, enrichment_ready'
 );
 
 select ok(

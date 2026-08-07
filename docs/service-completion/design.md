@@ -106,7 +106,7 @@ graph TB
 | `service_request_enrichments` | Stateful FSM | 1:1 publication readiness; lease; attempts; immutable schema when READY |
 | `service_request_enrichment_events` | Append-only | Transition audit; correlation; error payloads |
 | `completion_checklist_templates` | Configuration | Cascade platform_service → category → global |
-| `contracted_service_completion_evidence` | Stateful | Draft → frozen package 1:1 with CS; `executed_late` at freeze |
+| `contracted_service_completion_evidence` | Stateful | Draft → frozen package 1:1 with CS |
 | `completion_evidence_upload_sessions` | Stateful | KYC/chat-pattern upload sessions; orphan janitor |
 | `contracted_services` | Stateful (existing) | Lifecycle `PENDING_PAYMENT\|CONFIRMED\|EXECUTED\|COMPLETED\|CANCELLED` — extended, not forked |
 | `service_ratings` | Stateful (existing) | Manual confirm TX insert; optional post-auto-complete |
@@ -250,7 +250,6 @@ erDiagram
         evidence_phase phase
         jsonb responses
         int draft_version
-        boolean executed_late
         text responses_hash
         timestamptz frozen_at
     }
@@ -332,7 +331,7 @@ Evidence logical phases on `contracted_service_completion_evidence.phase`: `draf
 
 **Existing alterations:**
 
-- Prefer `executed_late` on `contracted_service_completion_evidence` at freeze (decision 30). Optionally mirror read-only projection on `contracted_services` for list queries — if mirrored, MUST be set only inside `service_completion_mark_executed` same TX.
+- Evidence package lives on `contracted_service_completion_evidence` at freeze (decision 30). No `executed_late` column or list projection (product decision: late form submit ≠ late execution).
 - DROP trigger `trg_service_request_dispatch_bootstrap` (OPEN-insert bootstrap) — decision 31.
 - REMOVE product grants / functions: `payment_mark_service_executed`, `payment_confirm_service_completed`, `payment_cron_auto_complete_*` (migrate callers).
 
@@ -559,7 +558,6 @@ CREATE TABLE public.contracted_service_completion_evidence (
   responses               JSONB NOT NULL DEFAULT '{}'::jsonb,
   draft_version           INTEGER NOT NULL DEFAULT 1
     CHECK (draft_version >= 1),
-  executed_late           BOOLEAN,              -- set only when freezing
   responses_hash          TEXT,                 -- tamper evidence at freeze
   frozen_at               TIMESTAMPTZ,
   idempotency_key         TEXT,                 -- last successful EXECUTED submit key
@@ -571,11 +569,7 @@ CREATE TABLE public.contracted_service_completion_evidence (
     OR (
       frozen_at IS NOT NULL
       AND responses_hash IS NOT NULL
-      AND executed_late IS NOT NULL
     )
-  ),
-  CONSTRAINT completion_evidence_draft_no_late CHECK (
-    phase <> 'draft' OR executed_late IS NULL
   )
 );
 
@@ -587,7 +581,7 @@ CREATE INDEX idx_completion_evidence_phase
   ON public.contracted_service_completion_evidence (phase);
 ```
 
-**Freeze semantics:** `service_completion_mark_executed` sets `phase = frozen`, computes `executed_late`, stores canonical `responses` + `responses_hash`, sets `frozen_at`, and transitions CS → `EXECUTED` in **one TX**.
+**Freeze semantics:** `service_completion_mark_executed` sets `phase = frozen`, stores canonical `responses` + `responses_hash`, sets `frozen_at`, and transitions CS → `EXECUTED` in **one TX**.
 
 ## 3.6 `completion_evidence_upload_sessions`
 
@@ -805,7 +799,7 @@ sequenceDiagram
     else validation fail
         RPC-->>P: reject; remain CONFIRMED
     else ok
-        RPC->>PG: freeze evidence + executed_late<br/>CS→EXECUTED + audit + MMD intent
+        RPC->>PG: freeze evidence<br/>CS→EXECUTED + audit + MMD intent
         PG->>MMD: SERVICE_EXECUTED enqueue
         RPC-->>P: success
     end
@@ -879,8 +873,6 @@ SELECT count(*) FROM upd;
 ```
 
 **Chargeback / `is_disputed`:** default policy continues auto-complete (Req 15 AC4) unless a newer payment rule explicitly blocks — check payment invariants at implementation time; do not invent a pause here.
-
-**`executed_late`:** MUST remain unchanged on COMPLETED (Req 11 AC8).
 
 ## 4.6 Cancel Abort Race
 
@@ -1183,11 +1175,11 @@ $$;
 - Caller = contracted provider (`auth.uid()`).
 - CS `status = CONFIRMED`; payment invariants as required by payments (PAID).
 - Checklist schema exists (enrichment READY for SR) — fail closed if missing.
-- Temporal: BRT date-only window — reject if `D < scheduled_start_date` (`SERVICE_NOT_YET_DUE`); allow late with `executed_late = true` when `D > effective_end + 1 day`.
+- Temporal: BRT date-only — reject if `D < scheduled_start_date` (`SERVICE_NOT_YET_DUE`); submit after schedule end is allowed and MUST NOT set any late-execution flag (late form submit ≠ late execution).
 - Per `completion_criterion`: answered; if `met=false` ⇒ non-empty justification + evidence count in `[min,max]`; if `met=true` and `requires_evidence_when_met` ⇒ evidence count in `[min,max]`.
 - Reject legacy callers without checklist payload.
 
-**Atomic effects:** freeze evidence; `executed_at = now()`; `executed_late`; CS → `EXECUTED`; audit; MMD `SERVICE_EXECUTED` intent; end draft mutability.
+**Atomic effects:** freeze evidence; `executed_at = now()`; CS → `EXECUTED`; audit; MMD `SERVICE_EXECUTED` intent; end draft mutability.
 
 **Idempotency:** UNIQUE idempotency key / already EXECUTED ⇒ return existing state without mutating package.
 
@@ -1202,19 +1194,9 @@ AS $$
   SELECT (now() AT TIME ZONE 'America/Sao_Paulo')::date;
 $$;
 
-CREATE OR REPLACE FUNCTION public.service_completion_compute_executed_late(
-  p_cs public.contracted_services
-) RETURNS BOOLEAN
-LANGUAGE sql
-STABLE
-AS $$
-  SELECT public.service_completion_brt_today()
-    > (COALESCE(p_cs.scheduled_end_date, p_cs.scheduled_start_date) + 1);
-$$;
-
--- Gate: reject when BRT today < scheduled_start_date
--- On-time: scheduled_start_date <= D <= effective_end + 1  ⇒ executed_late = false
--- Late:    D > effective_end + 1                           ⇒ executed_late = true (still allowed)
+-- Gate: reject when BRT today < scheduled_start_date (SERVICE_NOT_YET_DUE)
+-- After schedule end: mark-executed still allowed; no executed_late / late badge
+-- service_completion_scheduled_end_at: end-of-day BRT of coalesce(end, start) — auto-mark grace anchor
 -- NOTE: payment_service_execution_at() remains the payment shift clock — MUST NOT be used here.
 ```
 
@@ -1229,7 +1211,7 @@ BEGIN
   IF BRT today < scheduled_start_date → RAISE SERVICE_NOT_YET_DUE
   LOAD enrichment READY schema for SR; IF missing → RAISE CHECKLIST_REQUIRED
   VALIDATE responses against schema + evidence policy (Req 13)
-  UPSERT evidence SET phase=frozen, responses, responses_hash, executed_late, frozen_at, idempotency_key
+  UPSERT evidence SET phase=frozen, responses, responses_hash, frozen_at, idempotency_key
   UPDATE contracted_services SET status=EXECUTED, executed_at=now()
   INSERT audit SERVICE_EXECUTED
   mmd_ingest_event(SERVICE_EXECUTED, …)  -- same TX intent
@@ -1326,7 +1308,7 @@ where `canonical_json` = UTF-8 JSON with object keys sorted recursively, arrays 
 
 | Event type | Recipient | Template key | Channels | Notes |
 |---|---|---|---|---|
-| `SERVICE_EXECUTED` | client | `service.service_executed` | push (+ email MAY later) | Extend vars: `executed_late`, deep_link to confirm |
+| `SERVICE_EXECUTED` | client | `service.service_executed` | push (+ email MAY later) | Deep link to confirm (no late-execution vars) |
 | `SERVICE_COMPLETED` | provider | `service.service_completed` | push | Manual confirm path |
 | `SERVICE_AUTO_COMPLETED` | client | `service.service_auto_completed` | push | MUST seed template + `mmd_ingest_event` routing if missing today; vars include `optional_rating_cta` |
 
@@ -1362,7 +1344,6 @@ SECURITY DEFINER. Visibility MUST align with existing `get_service` / matching-f
   },
   "evidence": {
     "phase": "draft|frozen|absent",
-    "executed_late": null,
     "frozen_at": null,
     "responses": { },
     "draft_version": null
@@ -1393,7 +1374,6 @@ SECURITY DEFINER. Visibility MUST align with existing `get_service` / matching-f
 |---|---|
 | `enrichment_status` | `PENDING` \| `RUNNING` \| `READY` \| `ABORTED` \| null |
 | `enrichment_ready` | boolean (`status = READY`) |
-| `executed_late` | when CS is `EXECUTED`/`COMPLETED` and evidence frozen |
 
 MUST NOT embed full `checklist_schema` in list cards (payload size). Detail / sheet UIs load schema via `get_service_completion_context` or a detail enrichment branch of `get_service`.
 
@@ -1670,7 +1650,7 @@ All product cron wrappers MUST record scanned / succeeded / failed / error sampl
 | Event | Store |
 |---|---|
 | Enrichment transitions | `service_request_enrichment_events` |
-| EXECUTED / COMPLETED / AUTO_COMPLETED | Completion/payment audit log pattern (dedicated `service_completion_audit` or existing CS audit) with `executed_late` |
+| EXECUTED / COMPLETED / AUTO_COMPLETED | Completion/payment audit log pattern (dedicated `service_completion_audit` or existing CS audit) |
 | Rating insert/update | `service_ratings` + matching stats triggers |
 | MMD | Dispatcher message id chain from CS id |
 
@@ -1682,7 +1662,6 @@ Append-only enrichment events MUST explain cancel vs READY winners (Req 21 AC6).
 |---|---|
 | Enrichment age p50/p95 | Backlog SLO |
 | AI vs fallback ratio | Prompt/template quality |
-| EXECUTED late ratio | Ops / marketplace health |
 | Auto-complete vs manual confirm ratio | Client engagement |
 | Confirm+rating success rate | Funnel |
 | Lease reclaim count | Worker timeout tuning |
@@ -1830,7 +1809,7 @@ GRANT EXECUTE ON FUNCTION public.enrichment_clear_ops_attention TO service_role;
 
 ## 11.5 Ranking Neutrality (Req 23)
 
-Checklist schema, `source`, responses, and `executed_late` MUST NOT feed provider ranking features in this scope. Ratings after COMPLETED continue to update `provider_rating_stats` via existing triggers.
+Checklist schema, `source`, and responses MUST NOT feed provider ranking features in this scope. Ratings after COMPLETED continue to update `provider_rating_stats` via existing triggers.
 
 ## 11.6 Dispute Stub Safety
 
@@ -1865,7 +1844,7 @@ DB reset — no backfill of legacy OPEN SRs without enrichment. After deploy, OP
 | **8** Schema immutability + visibility | AC1–AC8 | §5.10, §11.1–11.2, §3.2, §3.5 | Read model omits schema until READY; draft never to client; RLS split |
 | **9** Evidence draft while CONFIRMED | AC1–AC8 | §3.5, §4.9, §7.1 | Draft phase + `draft_version`; client-invisible; incomplete OK |
 | **10** EXECUTED with checklist validation | AC1–AC9 | §5.4, §4.3, §3.5, §5.8 | `service_completion_mark_executed` + `responses_hash` freeze |
-| **11** Temporal on-time / `executed_late` | AC1–AC8 | §5.4, §3.5, §5.10 | BRT date-only; list projects `executed_late` |
+| **11** Temporal not-yet-due gate | AC1–AC5 | §5.4, §3.5, §5.10 | BRT date-only; `SERVICE_NOT_YET_DUE`; no late flag |
 | **12** Evidence package immutability | AC1–AC6 | §3.5, §5.8.3, §11.4 | `phase=frozen`; sha256 canonical hash; reject self-serve patch |
 | **13** Unmet criterion justification+evidence | AC1–AC7 | §5.4, §5.8.1–5.8.2 | Validate met=false rules; still EXECUTED; UI highlight |
 | **14** Manual confirm atomic rating | AC1–AC8 | §5.5, §4.4, §7.4 | `service_completion_confirm_with_rating` single TX |
@@ -1901,7 +1880,7 @@ Per [`infrastructure-constraints.md`](../infrastructure-constraints.md): **start
 8. Restore `submit_service_rating` / `update_service_rating` GRANTs; seed MMD `SERVICE_AUTO_COMPLETED` template + routing.
 9. Upload sessions + orphan janitor cron; list/detail projection fields.
 10. Feature module `src/features/service-completion/`; thin `view-services` integration; dispute stub config.
-11. pgTAP: FSM, republish enqueue, cancel race, idempotent EXECUTED/confirm, executed_late BRT, fallback/ops_attention; Deno: validation/retry; Vitest: hooks/gates.
+11. pgTAP: FSM, republish enqueue, cancel race, idempotent EXECUTED/confirm, not-yet-due BRT, fallback/ops_attention; Deno: validation/retry; Vitest: hooks/gates.
 12. Update matching docs bootstrap wording; sync payment design Req 32 references to this document; sync `docs/business/` as needed.
 
 ## 13.3 Testing Emphasis
@@ -1911,7 +1890,7 @@ Per [`infrastructure-constraints.md`](../infrastructure-constraints.md): **start
 | Enrichment FSM | PENDING→RUNNING→READY; retry; abort; CAS stale; ops_attention skip |
 | Bootstrap | No dispatch on OPEN; dispatch on READY; repair sweeper; idempotent conflict; republish enqueue |
 | Fallback | Cascade order; missing template → ops_attention; invalid template |
-| Temporal | Not-yet-due; on-time; late flag; reschedule dates |
+| Temporal | Not-yet-due; submit after schedule end allowed without late flag; reschedule dates honored |
 | EXECUTED | Validation negatives; idempotency; responses_hash; MMD intent same TX |
 | Confirm vs auto-complete | Race winner; no duplicate ratings; SERVICE_AUTO_COMPLETED MMD |
 | Read model / RLS | Client cannot read drafts; schema vs responses; list lightweight fields |
@@ -1935,7 +1914,7 @@ Per [`infrastructure-constraints.md`](../infrastructure-constraints.md): **start
 | Enrichment events (append-only) | Audit cancel/READY races |
 | Checklist templates + cascade uniqueness | Deterministic fallback without code deploy |
 | Matching bootstrap RPC + DROP OPEN trigger | Idempotent READY handoff |
-| `contracted_service_completion_evidence` | Draft/frozen 1:1; `executed_late` |
+| `contracted_service_completion_evidence` | Draft/frozen 1:1 |
 | Upload sessions + object registry | Orphan janitor correctness |
 | `service_completion_*` RPCs | Atomic EXECUTED / confirm+rating / auto-complete |
 | `service_ratings` writes on confirm | Same TX as COMPLETED |
@@ -1982,7 +1961,6 @@ Per [`infrastructure-constraints.md`](../infrastructure-constraints.md): **start
 | Dynamic Form checklist render/fill | Reuse DF + new blocks |
 | Provider draft + EXECUTED wizard | Single final submit API |
 | Client review + confirm+rating + dispute stub | Product UX; stub only |
-| `executed_late` badge | Read-only |
 | Upload session UX | create → upload → register |
 | Feature `api/` modules | No Supabase in components |
 | Public `index.ts` for `view-services` | Feature architecture |

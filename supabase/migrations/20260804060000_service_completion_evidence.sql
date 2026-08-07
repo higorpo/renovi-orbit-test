@@ -10,7 +10,6 @@ create table public.contracted_service_completion_evidence (
   responses jsonb not null default '{}'::jsonb,
   draft_version integer not null default 1
     check (draft_version >= 1),
-  executed_late boolean,
   responses_hash text,
   frozen_at timestamptz,
   idempotency_key text,
@@ -29,11 +28,7 @@ create table public.contracted_service_completion_evidence (
     or (
       frozen_at is not null
       and responses_hash is not null
-      and executed_late is not null
     )
-  ),
-  constraint completion_evidence_draft_no_late check (
-    phase <> 'draft' or executed_late is null
   )
 );
 
@@ -41,8 +36,6 @@ comment on table public.contracted_service_completion_evidence is
   '1:1 completion evidence package per contracted service: draft while CONFIRMED, frozen on EXECUTED.';
 comment on column public.contracted_service_completion_evidence.responses_hash is
   'sha256 of canonical JSON responses; set only at freeze (mark-executed).';
-comment on column public.contracted_service_completion_evidence.executed_late is
-  'BRT late flag set only when freezing; MUST be null while draft.';
 comment on column public.contracted_service_completion_evidence.idempotency_key is
   'Last successful EXECUTED submit key for replay.';
 comment on column public.contracted_service_completion_evidence.auto_executed_without_checklist is
@@ -150,7 +143,6 @@ begin
       or new.responses is distinct from old.responses
       or new.responses_hash is distinct from old.responses_hash
       or new.frozen_at is distinct from old.frozen_at
-      or new.executed_late is distinct from old.executed_late
       or new.checklist_schema_hash is distinct from old.checklist_schema_hash
       or new.enrichment_id is distinct from old.enrichment_id
       or new.contracted_service_id is distinct from old.contracted_service_id

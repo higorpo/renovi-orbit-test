@@ -15,7 +15,7 @@ values
     'push',
     'Serviço concluído automaticamente — {{service_request_title}}',
     'O prazo de confirmação expirou e o serviço foi concluído. Você ainda pode avaliar o prestador se quiser.',
-    '{"type":"object","properties":{"service_id":{"type":"string"},"provider_id":{"type":"string"},"client_id":{"type":"string"},"completed_by":{"type":"string"},"optional_rating_cta":{"type":"boolean"},"executed_late":{"type":"boolean"},"service_request_title":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["service_id","service_request_title"],"additionalProperties":true}'::jsonb,
+    '{"type":"object","properties":{"service_id":{"type":"string"},"provider_id":{"type":"string"},"client_id":{"type":"string"},"completed_by":{"type":"string"},"optional_rating_cta":{"type":"boolean"},"service_request_title":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["service_id","service_request_title"],"additionalProperties":true}'::jsonb,
     true
   )
 on conflict (template_key, channel) do update set

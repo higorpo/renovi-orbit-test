@@ -366,6 +366,8 @@ Acceptance Criteria covered:
 ---
 ### 6. [x] Create `contracted_service_completion_evidence` (draft|frozen, version, executed_late, responses_hash)
 
+> **Note (product reversal):** `executed_late` column / draft_no_late CHECK later **removed** — late form submit ≠ late execution. Table remains draft|frozen + responses_hash.
+
 Description:
 Create 1:1 evidence table per design §3.5: phase draft|frozen, responses jsonb, draft_version, executed_late (null on draft), responses_hash + frozen_at required when frozen, optional idempotency_key UNIQUE, enrichment_id/schema hash optional bind. CHECKs enforce frozen integrity and draft_no_late.
 
@@ -377,7 +379,7 @@ Responsibilities:
 Implementation Details:
 - UNIQUE(`contracted_service_id`).
 - `responses_hash = sha256(canonical_json(responses))` computed in mark-executed (Task 35).
-- Optionally mirror `executed_late` on CS only inside mark-executed same TX if list needs denorm — prefer evidence table as SoT.
+- Optionally mirror `executed_late` on CS only inside mark-executed same TX if list needs denorm — prefer evidence table as SoT. *(superseded: late flag removed)*
 
 Deliverables:
 - Migration DDL + indexes
@@ -1390,6 +1392,8 @@ Acceptance Criteria covered:
 
 ### 30. [x] Implement `service_completion_brt_today` + `service_completion_compute_executed_late`
 
+> **Note (product reversal):** `service_completion_compute_executed_late` **removed**. Keep `service_completion_brt_today` (+ `service_completion_scheduled_end_at`) for `SERVICE_NOT_YET_DUE` and auto-mark grace only.
+
 Description:
 Implement date-only America/Sao_Paulo helpers per design §5.4.1: brt_today(); executed_late when today > coalesce(scheduled_end_date, scheduled_start_date)+1. MUST NOT use `payment_service_execution_at` for completion gates.
 
@@ -1601,6 +1605,8 @@ Acceptance Criteria covered:
 Description:
 Authenticated provider RPC per design §5.4: LOCK CS; idempotent if EXECUTED+key; require CONFIRMED + payment invariants; reject D < scheduled_start_date (SERVICE_NOT_YET_DUE); validate all criteria (Req 13); compute executed_late; freeze evidence with responses_hash; CS→EXECUTED; audit SERVICE_EXECUTED; mmd_ingest_event same TX intent. Reject legacy callers without checklist payload. ADR-0004 product writer.
 
+> **Note (product reversal):** `compute executed_late` / audit late flag **removed**; not-yet-due gate kept.
+
 Responsibilities:
 - Atomic EXECUTED + freeze + notify intent.
 - Enforce checklist/evidence/temporal rules.
@@ -1625,6 +1631,8 @@ Failure Handling:
 
 Observability:
 - Audit includes executed_late
+
+> **Note (product reversal):** audit no longer records `executed_late`.
 
 Security Considerations:
 - Contracted provider only
@@ -1686,6 +1694,8 @@ Acceptance Criteria covered:
 
 Description:
 Service_role batch RPC: select EXECUTED where executed_at + grace elapsed, FOR UPDATE SKIP LOCKED, UPDATE WHERE status=EXECUTED → COMPLETED completed_by=system, audit SERVICE_AUTO_COMPLETED, MMD client notify with optional rating CTA. NO rating insert. Preserve executed_late. Per-row exception isolation. Default: do not block on payment is_disputed unless newer payment rule says so.
+
+> **Note (product reversal):** “Preserve executed_late” N/A — flag removed.
 
 Responsibilities:
 - Liquidity-preserving auto-complete without rating.
@@ -1935,6 +1945,8 @@ Acceptance Criteria covered:
 ---
 ### 43. [x] Extend MMD `SERVICE_EXECUTED` / `SERVICE_COMPLETED` templates for checklist/late
 
+> **Note (product reversal):** `executed_late` template vars / “(após o prazo)” suffix **removed**. Deep link to confirm remains.
+
 Description:
 Extend existing SERVICE_EXECUTED client template vars with executed_late + deep link to confirm; ensure SERVICE_COMPLETED provider template still fires on manual confirm. Reuse channels/priority patterns; no READY spam.
 
@@ -2060,6 +2072,8 @@ Acceptance Criteria covered:
 
 ---
 ### 46. [x] Add lightweight enrichment/executed_late fields to `list_services` / `get_service`
+
+> **Note (product reversal):** list/detail `executed_late` / `executedLate` projection **removed**. Keep enrichment_status / enrichment_ready.
 
 Description:
 Extend list/detail projections with enrichment_status, enrichment_ready, executed_late (when frozen). MUST NOT embed full checklist_schema in list cards. Detail may branch to context RPC for schema/responses.
@@ -2231,6 +2245,8 @@ Acceptance Criteria covered:
 Description:
 Wizard: complete all criteria, enforce unmet justification+evidence, show not-yet-due errors, allow late with executed_late messaging, single final submit calling `service_completion_mark_executed` with idempotency key. No post-EXECUTED self-serve edit.
 
+> **Note (product reversal):** late messaging / “fora do prazo” toast **removed**; not-yet-due errors kept; submit after schedule end still allowed.
+
 Responsibilities:
 - Product path to EXECUTED with validated package.
 
@@ -2271,6 +2287,8 @@ Acceptance Criteria covered:
 
 Description:
 Client UI: review frozen checklist/evidence (highlight unmet), enter 4 scores + optional comment, confirm via `service_completion_confirm_with_rating`. Order: review → ratings → confirm. Show executed_late badge. Support optional post-auto-complete rating via submit_service_rating when completed_by=system.
+
+> **Note (product reversal):** “Executado com atraso” badge **removed**.
 
 Responsibilities:
 - Manual COMPLETED with mandatory rating.
@@ -2477,6 +2495,8 @@ Acceptance Criteria covered:
 
 Description:
 Define/query metrics: enrichment age p50/p95, AI vs fallback ratio, executed_late ratio, auto-complete vs manual ratio, confirm success, lease reclaim count, orphan deletes. Alerts: ops_attention CRITICAL; missing templates CRITICAL; PENDING age threshold WARNING→CRITICAL (excluding ops_attention); auto-complete job_runs errors WARNING.
+
+> **Note (product reversal):** `executed_late` ops metric / late ratio **removed**.
 
 Responsibilities:
 - SLO and paging signals.
@@ -2954,10 +2974,12 @@ Acceptance Criteria covered:
 2.6, 7.1–7.5
 
 ---
-### 68. [x] pgTAP — `executed_late` BRT boundaries + not-yet-due
+### 68. [x] pgTAP — mark-executed not-yet-due BRT boundaries
+
+> **Note (product reversal):** file renamed to `mark_executed_not_yet_due_brt_test.sql`; late-flag assertions removed. Keep before-start → `SERVICE_NOT_YET_DUE`; after end still allowed without late signaling.
 
 Description:
-Freeze clock/BRT dates: before start → SERVICE_NOT_YET_DUE; on-time window → executed_late false; after end+1 → executed_late true still allowed; auto-complete does not clear flag; reschedule dates honored.
+Freeze clock/BRT dates: before start → SERVICE_NOT_YET_DUE; mark-executed allowed on/after start (including after schedule end); reschedule dates honored.
 
 Responsibilities:
 - Temporal rules Req 11.
@@ -3313,6 +3335,8 @@ ADR-0004; design precedence note
 
 Description:
 Update business docs for enrichment processing, checklist evidence, executed_late, confirm+rating, auto-complete, dispute stub support link — per business-docs-sync rule after product behavior ships.
+
+> **Note (product reversal):** docs later updated to **drop** `executed_late` product concept (late submit ≠ late execution).
 
 Responsibilities:
 - Business/product alignment.

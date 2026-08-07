@@ -8,7 +8,6 @@ import {
   type CompletionCriterionEvidenceRenderArgs,
 } from "@/features/dynamic-form";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { parseCompletionChecklistBlocks } from "../utils/parseChecklistSchema";
 import type {
@@ -19,7 +18,6 @@ import type {
 export type FrozenEvidenceReviewProps = {
   checklistSchema: Record<string, unknown> | null | undefined;
   responses: CompletionResponsesMap | null | undefined;
-  executedLate?: boolean | null;
   /** System auto-marked EXECUTED without provider checklist. */
   autoExecutedWithoutChecklist?: boolean | null;
   className?: string;
@@ -29,7 +27,6 @@ export type FrozenEvidenceReviewProps = {
 export function FrozenEvidenceReview({
   checklistSchema,
   responses,
-  executedLate = false,
   autoExecutedWithoutChecklist = false,
   className,
   renderEvidence,
@@ -61,16 +58,6 @@ export function FrozenEvidenceReview({
       className={cn("space-y-4", className)}
       data-testid="frozen-evidence-review"
     >
-      {executedLate ? (
-        <Badge
-          variant="outline"
-          className="border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200"
-          data-testid="executed-late-badge"
-        >
-          Executado com atraso
-        </Badge>
-      ) : null}
-
       {blocks.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           Pacote de evidências indisponível.

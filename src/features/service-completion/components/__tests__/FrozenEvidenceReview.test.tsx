@@ -24,11 +24,10 @@ const schema = {
 };
 
 describe("FrozenEvidenceReview", () => {
-  it("shows executed_late badge and highlights unmet criteria", () => {
+  it("highlights unmet criteria", () => {
     render(
       <FrozenEvidenceReview
         checklistSchema={schema}
-        executedLate
         responses={{
           c1: { met: true, evidence_paths: [] },
           c2: {
@@ -40,9 +39,7 @@ describe("FrozenEvidenceReview", () => {
       />,
     );
 
-    expect(screen.getByTestId("executed-late-badge")).toHaveTextContent(
-      /atraso/i,
-    );
+    expect(screen.queryByTestId("executed-late-badge")).not.toBeInTheDocument();
     const unmet = screen.getByText(/Critério não atendido/i);
     expect(unmet).toBeInTheDocument();
     expect(screen.getByText("Área limpa?")).toBeInTheDocument();

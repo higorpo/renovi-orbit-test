@@ -91,7 +91,6 @@ function baseContext(): ServiceCompletionContext {
     },
     evidence: {
       phase: "draft",
-      executedLate: false,
       frozenAt: null,
       draftVersion: 1,
       responses: {},

@@ -119,7 +119,6 @@ export interface RpcServiceRow {
   list_phase?: string;
   enrichment_status?: string | null;
   enrichment_ready?: boolean | null;
-  executed_late?: boolean | null;
   request?: RpcServiceRequest;
   negotiation?: RpcServiceNegotiation;
   contracted?: RpcContractedService | null;
@@ -316,7 +315,5 @@ export function mapRpcServiceRow(row: RpcServiceRow): ServiceModel {
     chatSummary: mapChatSummary(negotiation.chat),
     enrichmentStatus,
     enrichmentReady: Boolean(row.enrichment_ready) || enrichmentStatus === "READY",
-    executedLate:
-      typeof row.executed_late === "boolean" ? row.executed_late : null,
   };
 }

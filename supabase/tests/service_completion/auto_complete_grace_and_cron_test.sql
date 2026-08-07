@@ -134,14 +134,13 @@ begin
 
   insert into public.contracted_service_completion_evidence (
     contracted_service_id, enrichment_id, phase, frozen_at, responses_hash,
-    executed_late, responses, idempotency_key
+    responses, idempotency_key
   )
   select
     x.cs_id, x.enr_id,
     'frozen'::public.completion_evidence_phase,
     now() - interval '3 hours',
     'hash',
-    false,
     '{"crit_work_done":{"met":true,"evidence_paths":["a.jpg"]},
       "crit_area_clean":{"met":true},
       "crit_client_access":{"met":true}}'::jsonb,

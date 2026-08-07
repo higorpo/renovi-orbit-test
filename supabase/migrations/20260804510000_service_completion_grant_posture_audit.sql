@@ -113,20 +113,6 @@ grant execute on function public.service_completion_brt_today()
 grant execute on function public.service_completion_brt_today()
   to postgres;
 
-revoke all on function public.service_completion_compute_executed_late(public.contracted_services)
-  from public, anon, authenticated;
-grant execute on function public.service_completion_compute_executed_late(public.contracted_services)
-  to service_role;
-grant execute on function public.service_completion_compute_executed_late(public.contracted_services)
-  to postgres;
-
-revoke all on function public.service_completion_compute_executed_late(date, date)
-  from public, anon, authenticated;
-grant execute on function public.service_completion_compute_executed_late(date, date)
-  to service_role;
-grant execute on function public.service_completion_compute_executed_late(date, date)
-  to postgres;
-
 -- Response validation helper: not client-callable (mark_executed DEFINER nests).
 revoke all on function public.service_completion_validate_evidence_responses(jsonb, jsonb)
   from public, anon, authenticated;

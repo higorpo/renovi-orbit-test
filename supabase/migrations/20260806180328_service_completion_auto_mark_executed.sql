@@ -39,7 +39,6 @@ declare
   v_evidence public.contracted_service_completion_evidence%rowtype;
   v_enrichment public.service_request_enrichments%rowtype;
   v_has_enrichment boolean;
-  v_executed_late boolean;
   v_responses jsonb := '{}'::jsonb;
   v_responses_hash text;
   v_schema_hash text;
@@ -97,11 +96,6 @@ begin
         continue;
       end if;
 
-      v_executed_late := public.service_completion_compute_executed_late(
-        v_cs.scheduled_start_date,
-        v_cs.scheduled_end_date
-      );
-
       select e.*
       into v_enrichment
       from public.service_request_enrichments e
@@ -143,7 +137,6 @@ begin
           phase = 'frozen'::public.completion_evidence_phase,
           responses = v_responses,
           responses_hash = v_responses_hash,
-          executed_late = v_executed_late,
           frozen_at = v_frozen_at,
           idempotency_key = v_idem,
           auto_executed_without_checklist = true,
@@ -158,7 +151,6 @@ begin
           phase,
           responses,
           draft_version,
-          executed_late,
           responses_hash,
           frozen_at,
           idempotency_key,
@@ -171,7 +163,6 @@ begin
           'frozen'::public.completion_evidence_phase,
           v_responses,
           1,
-          v_executed_late,
           v_responses_hash,
           v_frozen_at,
           v_idem,
@@ -216,7 +207,6 @@ begin
           p_actor := 'system'::public.payment_audit_actor,
           p_metadata := jsonb_build_object(
             'executed_at', v_cs.executed_at,
-            'executed_late', v_executed_late,
             'responses_hash', v_responses_hash,
             'evidence_id', v_evidence.id,
             'auto_executed_without_checklist', true,
@@ -233,7 +223,6 @@ begin
             'provider_id', v_cs.provider_id,
             'client_id', v_cs.client_id,
             'executed_at', v_cs.executed_at,
-            'executed_late', v_executed_late,
             'auto_executed_without_checklist', true
           )
         );
@@ -252,8 +241,6 @@ begin
           'service_id', v_cs.id,
           'provider_id', v_cs.provider_id,
           'service_request_title', v_title,
-          'executed_late', v_executed_late,
-          'executed_late_suffix', case when v_executed_late then ' (após o prazo)' else '' end,
           'auto_executed_without_checklist', true,
           'deep_link_path', format('/dashboard/services/%s', v_cs.service_request_id)
         ),
@@ -270,7 +257,6 @@ begin
           'client_id', v_cs.client_id,
           'provider_id', v_cs.provider_id,
           'executed_at', v_cs.executed_at,
-          'executed_late', v_executed_late,
           'auto_executed_without_checklist', true,
           'evidence_id', v_evidence.id,
           'mmd', v_mmd

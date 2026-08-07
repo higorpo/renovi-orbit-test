@@ -219,7 +219,6 @@ export function ClientConfirmRatingWizard({
     <FrozenEvidenceReview
       checklistSchema={context.enrichment?.checklistSchema}
       responses={context.evidence.responses}
-      executedLate={context.evidence.executedLate}
       autoExecutedWithoutChecklist={autoWithoutChecklist}
       renderEvidence={renderEvidence}
     />

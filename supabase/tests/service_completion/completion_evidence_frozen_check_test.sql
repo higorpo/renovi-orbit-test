@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(4);
+select plan(3);
 
 create temp table _ev_fixture as
 select
@@ -81,20 +81,7 @@ select throws_ok(
   $sql$,
   '23514',
   null,
-  'frozen without frozen_at/responses_hash/executed_late is rejected'
-);
-
-select throws_ok(
-  $sql$
-    update public.contracted_service_completion_evidence
-    set
-      phase = 'draft'::public.completion_evidence_phase,
-      executed_late = false
-    where id = (select evidence_id from _ev_fixture)
-  $sql$,
-  '23514',
-  null,
-  'draft with executed_late set is rejected by draft_no_late CHECK'
+  'frozen without frozen_at/responses_hash is rejected'
 );
 
 select lives_ok(
@@ -104,7 +91,6 @@ select lives_ok(
       phase = 'frozen'::public.completion_evidence_phase,
       frozen_at = now(),
       responses_hash = 'abc',
-      executed_late = false,
       responses = '{"ok":true}'::jsonb
     where id = (select evidence_id from _ev_fixture)
   $sql$,

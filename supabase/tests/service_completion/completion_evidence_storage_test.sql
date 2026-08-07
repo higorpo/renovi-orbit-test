@@ -180,14 +180,13 @@ select ok(
 );
 
 insert into public.contracted_service_completion_evidence (
-  contracted_service_id, phase, frozen_at, responses_hash, executed_late, responses
+  contracted_service_id, phase, frozen_at, responses_hash, responses
 )
 select
   cs_id,
   'frozen'::public.completion_evidence_phase,
   now(),
   'hash',
-  false,
   '{"crit_work_done":{"met":true,"evidence_paths":["x.jpg"]}}'::jsonb
 from _fx;
 

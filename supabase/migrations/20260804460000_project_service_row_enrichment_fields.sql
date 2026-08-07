@@ -1,4 +1,4 @@
--- Service completion Task 46: lightweight enrichment_status / enrichment_ready / executed_late
+-- Service completion Task 46: lightweight enrichment_status / enrichment_ready
 -- on project_service_row (get_service + list_services). No checklist_schema in list payloads.
 
 create or replace function public.project_service_row(
@@ -33,7 +33,6 @@ declare
   v_chat jsonb := null;
   v_enrichment_status text := null;
   v_enrichment_ready boolean := false;
-  v_executed_late boolean := null;
 begin
   select pr.role
   into v_role
@@ -64,19 +63,6 @@ begin
   where e.service_request_id = p_service_request_id;
 
   v_enrichment_ready := (v_enrichment_status = 'READY');
-
-  if v_cs.id is not null
-    and v_cs.status in (
-      'EXECUTED'::public.contracted_service_status,
-      'COMPLETED'::public.contracted_service_status
-    )
-  then
-    select ev.executed_late
-    into v_executed_late
-    from public.contracted_service_completion_evidence ev
-    where ev.contracted_service_id = v_cs.id
-      and ev.phase = 'frozen'::public.completion_evidence_phase;
-  end if;
 
   if v_role = 'provider' then
     v_provider_sees_full_address := public.provider_sees_full_service_address(
@@ -341,7 +327,6 @@ begin
     'list_phase', v_list_phase,
     'enrichment_status', v_enrichment_status,
     'enrichment_ready', v_enrichment_ready,
-    'executed_late', v_executed_late,
     'request', jsonb_build_object(
       'title', v_sr.title,
       'description', v_sr.description,
@@ -413,4 +398,4 @@ end;
 $$;
 
 comment on function public.project_service_row(uuid, uuid) is
-  'Builds unified service JSON with enrichment_status/enrichment_ready/executed_late and contracted client_rating_* when present.';
+  'Builds unified service JSON with enrichment_status/enrichment_ready and contracted client_rating_* when present.';

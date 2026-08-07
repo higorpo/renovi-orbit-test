@@ -14,7 +14,6 @@ Returns JSON with:
 |-------|---------|
 | `enrichment_age.age_seconds_p50` / `p95` | Age of due PENDING enrichments (ops_attention excluded) |
 | `ai_vs_fallback` | READY materializations in lookback: AI vs `fallback_template` |
-| `executed_late` | Frozen evidence late ratio |
 | `auto_vs_manual_complete` | COMPLETED `completed_by=system` vs `client` |
 | `lease_reclaim_count_24h_window` | `RECLAIM` enrichment events in lookback |
 | `ops_attention_open_count` | Open ops-attention holds (must be 0 in steady state) |

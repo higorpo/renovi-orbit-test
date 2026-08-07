@@ -72,7 +72,6 @@ function baseModel(overrides: Partial<ServiceModel> & { id: string }): ServiceMo
     chatSummary: null,
     enrichmentReady: true,
     enrichmentStatus: "READY",
-    executedLate: null,
     ...rest,
   };
 }

@@ -1,7 +1,7 @@
 -- Service completion Task 43: extend SERVICE_EXECUTED / SERVICE_COMPLETED MMD templates + vars.
--- executed_late + confirm deep link for client; provider confirm copy includes rating context.
+-- Confirm deep link for client; provider confirm copy includes rating context.
 -- Lifecycle RPC bodies (mark_executed / confirm_with_rating) live in 043500 / 043600;
--- MMD payload deltas (executed_late_suffix, rating_id, overall_score) are folded there.
+-- MMD payload deltas (rating_id, overall_score) are folded there.
 
 insert into message_dispatcher.message_templates (
   template_key,
@@ -16,8 +16,8 @@ values
     'service.service_executed',
     'push',
     'Confirme o recebimento — {{service_request_title}}',
-    'O prestador marcou o serviço como executado{{executed_late_suffix}}. Revise o checklist e as evidências e confirme o recebimento.',
-    '{"type":"object","properties":{"service_id":{"type":"string"},"provider_id":{"type":"string"},"service_request_title":{"type":"string"},"executed_late":{"type":"boolean"},"executed_late_suffix":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["service_id","service_request_title"],"additionalProperties":true}'::jsonb,
+    'O prestador marcou o serviço como executado. Revise o checklist e as evidências e confirme o recebimento.',
+    '{"type":"object","properties":{"service_id":{"type":"string"},"provider_id":{"type":"string"},"service_request_title":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["service_id","service_request_title"],"additionalProperties":true}'::jsonb,
     true
   ),
   (

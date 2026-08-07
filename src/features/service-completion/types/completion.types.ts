@@ -55,7 +55,6 @@ export type ServiceCompletionContracted = {
 
 export type ServiceCompletionEvidence = {
   phase: CompletionEvidencePhase;
-  executedLate: boolean | null;
   frozenAt: string | null;
   draftVersion: number | null;
   responses: CompletionResponsesMap | null;

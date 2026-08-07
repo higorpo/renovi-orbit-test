@@ -47,7 +47,7 @@ The **Service Completion & Publication Readiness** subsystem owns two coupled bu
 - Block allowlist for checklist schemas: `completion_criterion`, `static_text` only ([ADR-0003](./adr/0003-completion-criterion-block.md)). Intake `yes_no` / `image_gallery` MUST NOT appear in completion schemas.
 - Cardinality: 3–12 `completion_criterion` items (bounds in `platform_constants`); `static_text` does not count.
 - Evidence policy: unmet ⇒ ≥1 photo + justification; met ⇒ photos only if `requires_evidence_when_met`; max 5 photos/criterion (constants).
-- EXECUTED on-time window is date-only `America/Sao_Paulo`; after grace, `executed_late` is allowed and visible to the client.
+- EXECUTED eligibility is date-only `America/Sao_Paulo`: reject before `scheduled_start_date` (`SERVICE_NOT_YET_DUE`); submit after schedule end is allowed and MUST NOT imply late execution (no late flag/badge).
 - Cancel of SR during enrichment MUST abort enrichment; workers MUST NO-OP; MUST NOT materialize checklist; MUST NOT bootstrap matching.
 
 **Architectural Principles:**
@@ -88,7 +88,7 @@ Dispute-stub support destination SHALL be configured via env / remote config, no
 - **Frontend**: React 19, Vite 7, TypeScript, TanStack Query, Dynamic Form engine (`src/features/dynamic-form/`) for checklist schema render and response capture.
 - **Backend**: Supabase PostgreSQL 15+, RLS on all new tables, Supabase Auth JWT sessions; `service_role` for workers/crons.
 - **Existing CS lifecycle**: `contracted_services.status ∈ {PENDING_PAYMENT, CONFIRMED, EXECUTED, COMPLETED, CANCELLED}` — extend, do not invent a parallel CS FSM.
-- **Completion RPCs (domain ownership)**: `service_completion_mark_executed`, `service_completion_confirm_with_rating`, `service_completion_auto_complete_executed` (+ cron wrappers with `job_runs`) — include checklist/evidence/`executed_late`/atomic rating. MUST NOT keep parallel product writers under `payment_*` for these transitions ([ADR-0004](./adr/0004-completion-rpcs-outside-payments.md)).
+- **Completion RPCs (domain ownership)**: `service_completion_mark_executed`, `service_completion_confirm_with_rating`, `service_completion_auto_complete_executed` (+ cron wrappers with `job_runs`) — include checklist/evidence/atomic rating. MUST NOT keep parallel product writers under `payment_*` for these transitions ([ADR-0004](./adr/0004-completion-rpcs-outside-payments.md)).
 - **Existing ratings**: `service_ratings` with dimensions quality, punctuality, communication, value (1–5); RPCs `submit_service_rating` / `update_service_rating` (authenticated EXECUTE grants restored as needed); stats refresh triggers from matching ADR-0005 remain authoritative for ranking inputs.
 - **Smart description**: Edge Function `generate-smart-description` remains **synchronous pre-create**; checklist enrichment is **asynchronous post-create** and MUST NOT block SR insert success beyond enqueueing enrichment.
 - **Matching today**: Dispatch bootstrap trigger fires on first `service_requests` `OPEN` — this MUST change to enrichment `READY` handoff; the 5-minute `matching.dispatch_start_delay_minutes` applies only after bootstrap.
@@ -116,7 +116,7 @@ Dispute-stub support destination SHALL be configured via env / remote config, no
 8. **Abort Phase** — On SR cancel before `READY`: enrichment → terminal aborted; workers NO-OP; no materialize; no matching bootstrap.
 9. **Schema Exposure Phase** — After `READY`, expose checklist schema to client and to providers with access to the request (feed/detail/chat/proposal); responses remain hidden.
 10. **Evidence Draft Phase** — While CS `CONFIRMED`, contracted provider MAY persist server-side draft responses/uploads; draft MUST be invisible to client.
-11. **EXECUTED Submit Phase** — Provider final submit validates responses (including negative-item justification + required evidence), freezes evidence package, sets `executed_late` per temporal rules, transitions CS → `EXECUTED` atomically; enqueues MMD `SERVICE_EXECUTED`.
+11. **EXECUTED Submit Phase** — Provider final submit validates responses (including negative-item justification + required evidence), freezes evidence package, transitions CS → `EXECUTED` atomically (rejects if before `scheduled_start_date` BRT); enqueues MMD `SERVICE_EXECUTED`.
 12. **Client Review & Manual Confirm+Rating Phase** — Client reviews immutable evidence; submits rating + confirm in one atomic TX/RPC → `COMPLETED` + `service_ratings`.
 13. **Auto-Complete Phase** — Cron promotes `EXECUTED` → `COMPLETED` after grace (~24h) with `completed_by = system` and **without** requiring rating.
 14. **Optional Post-Complete Rating Phase** — After auto-complete, client MAY submit/update rating while `COMPLETED` per matching rating rules.
@@ -180,7 +180,7 @@ Dispute-stub support destination SHALL be configured via env / remote config, no
 
 - **PENDING_PAYMENT**: Out of completion write-path; draft/EXECUTED MUST NOT apply.
 - **CONFIRMED**: Provider MAY write evidence drafts; final EXECUTED submit is eligible subject to temporal gate (`scheduled_start_date` reached) and checklist presence.
-- **EXECUTED**: Evidence package frozen; `executed_at` set; `executed_late` flag set per rules; awaiting client confirm or auto-complete; client + contracted provider MAY read responses; dispute stub MAY show.
+- **EXECUTED**: Evidence package frozen; `executed_at` set; awaiting client confirm or auto-complete; client + contracted provider MAY read responses; dispute stub MAY show.
 - **COMPLETED**: Terminal happy path via manual confirm+rating or auto-complete; rating required only on manual path; optional rating after system auto-complete.
 - **CANCELLED**: Terminal; completion transitions MUST NOT proceed.
 
@@ -600,7 +600,7 @@ The Service Completion & Publication Readiness subsystem SHALL operate as a pers
 
 2. **GIVEN** final submit  
    **WHEN** validation passes  
-   **THEN** the system MUST atomically: freeze evidence package; set `executed_at = now()`; set `executed_late` per Requirement 11; set `status = EXECUTED`; write audit `SERVICE_EXECUTED`; enqueue MMD notification to client; invalidate draft writes.
+   **THEN** the system MUST atomically: freeze evidence package; set `executed_at = now()`; set `status = EXECUTED`; write audit `SERVICE_EXECUTED`; enqueue MMD notification to client; invalidate draft writes.
 
 3. **GIVEN** duplicate EXECUTED submit  
    **WHEN** CS is already `EXECUTED` with frozen package  
@@ -632,43 +632,31 @@ The Service Completion & Publication Readiness subsystem SHALL operate as a pers
 
 ---
 
-## Requirement 11: Temporal Rules for On-Time Window and `executed_late`
+## Requirement 11: Temporal Rules for EXECUTED Eligibility (`SERVICE_NOT_YET_DUE`)
 
-*User Story*: As the marketplace, I want date-only BRT execution windows so that late executions remain possible but are clearly flagged to the client.
+*User Story*: As the marketplace, I want date-only BRT gates so providers cannot mark EXECUTED before the scheduled start, while still allowing submit after the schedule end without implying the work was late (form submit timing ≠ execution lateness).
 
 ### Acceptance Criteria
 
 1. **GIVEN** CS scheduling fields  
-   **WHEN** computing the on-time window  
-   **THEN** the system MUST use date-only values in `America/Sao_Paulo`: `start = scheduled_start_date`; `effective_end = coalesce(scheduled_end_date, scheduled_start_date)`; on-time ceiling date = `effective_end + 1 day`.
+   **WHEN** evaluating EXECUTED eligibility  
+   **THEN** the system MUST use date-only values in `America/Sao_Paulo`; helpers `service_completion_brt_today` and `service_completion_scheduled_end_at` (end-of-day BRT of `coalesce(scheduled_end_date, scheduled_start_date)`) remain for the not-yet-due gate and auto-mark grace.
 
 2. **GIVEN** current BRT date `D`  
    **WHEN** `D < scheduled_start_date`  
    **THEN** EXECUTED submit MUST be rejected (`SERVICE_NOT_YET_DUE` or equivalent); drafts MAY still be saved while CONFIRMED.
 
-3. **GIVEN** `scheduled_start_date <= D <= effective_end + 1 day`  
+3. **GIVEN** `D >= scheduled_start_date` (including after schedule end)  
    **WHEN** EXECUTED submit succeeds  
-   **THEN** `executed_late` MUST be `false`.
+   **THEN** the system MUST NOT set any late-execution flag, badge, MMD “(após o prazo)” suffix, or toast implying the service was executed late.
 
-4. **GIVEN** `D > effective_end + 1 day`  
-   **WHEN** EXECUTED submit succeeds  
-   **THEN** `executed_late` MUST be `true` and MUST be visible to the client on review UI.
-
-5. **GIVEN** after on-time ceiling  
-   **WHEN** provider self-serve EXECUTED  
-   **THEN** the system MUST still allow EXECUTED (no hard block in MVP).
-
-6. **GIVEN** payment helper `payment_service_execution_at` (timestamptz shift clock)  
+4. **GIVEN** payment helper `payment_service_execution_at` (timestamptz shift clock)  
    **WHEN** evaluating EXECUTED eligibility  
-   **THEN** completion temporal rules MUST NOT replace payment charge/cancel clocks; only the date-only window above governs `executed_late` / not-yet-due for mark-executed.
+   **THEN** completion temporal rules MUST NOT replace payment charge/cancel clocks; only the date-only BRT not-yet-due gate applies for mark-executed.
 
-7. **GIVEN** reschedule updates `scheduled_start_date` / `scheduled_end_date` while CONFIRMED  
+5. **GIVEN** reschedule updates `scheduled_start_date` / `scheduled_end_date` while CONFIRMED  
    **WHEN** later EXECUTED submit occurs  
-   **THEN** on-time/`executed_late` MUST be computed from the updated dates.
-
-8. **GIVEN** auto-complete cron  
-   **WHEN** promoting EXECUTED → COMPLETED  
-   **THEN** it MUST NOT clear or reinterpret `executed_late`; the flag remains historical.
+   **THEN** the not-yet-due gate MUST use the updated `scheduled_start_date`.
 
 ---
 
@@ -1008,7 +996,7 @@ The Service Completion & Publication Readiness subsystem SHALL operate as a pers
 
 3. **GIVEN** EXECUTED / COMPLETED / AUTO_COMPLETED / rating events  
    **WHEN** committed  
-   **THEN** payment/completion audit log (or dedicated completion audit) MUST record actor, timestamps, and `executed_late`.
+   **THEN** payment/completion audit log (or dedicated completion audit) MUST record actor and timestamps.
 
 4. **GIVEN** cron jobs  
    **WHEN** completing  
@@ -1024,7 +1012,7 @@ The Service Completion & Publication Readiness subsystem SHALL operate as a pers
 
 7. **GIVEN** metrics  
    **WHEN** exported or queried  
-   **THEN** the system SHOULD track enrichment age p50/p95, AI vs fallback ratio, EXECUTED late ratio, auto-complete ratio, confirm+rating success rate.
+   **THEN** the system SHOULD track enrichment age p50/p95, AI vs fallback ratio, auto-complete ratio, confirm+rating success rate.
 
 8. **GIVEN** PII in logs  
    **WHEN** logging checklist text  
@@ -1088,7 +1076,7 @@ The Service Completion & Publication Readiness subsystem SHALL operate as a pers
 
 3. **GIVEN** ranking features  
    **WHEN** computing operational scores  
-   **THEN** checklist schema, source (`ai`/`fallback_template`), responses, and `executed_late` MUST NOT be ranking inputs in this scope.
+   **THEN** checklist schema, source (`ai`/`fallback_template`), and responses MUST NOT be ranking inputs in this scope.
 
 4. **GIVEN** `service_ratings` after COMPLETED  
    **WHEN** stats refresh  
@@ -1170,9 +1158,9 @@ The Service Completion & Publication Readiness subsystem SHALL operate as a pers
    **WHEN** CS leaves CONFIRMED without EXECUTED (e.g., cancel)  
    **THEN** draft MUST become read-only/abandoned; janitor MAY clean uploads.
 
-6. **GIVEN** executed_late flag  
-   **WHEN** CS not EXECUTED  
-   **THEN** flag MUST be null/false and unsettable.
+6. **GIVEN** mark-executed before `scheduled_start_date`  
+   **WHEN** provider submits EXECUTED  
+   **THEN** RPC MUST reject with `SERVICE_NOT_YET_DUE`; no late-execution product surface exists.
 
 7. **GIVEN** documentation  
    **WHEN** onboarding engineers  
@@ -1195,7 +1183,7 @@ The Service Completion & Publication Readiness subsystem SHALL operate as a pers
 - **Seed checklist templates** with cascade coverage (per `platform_service`, category, and a **global** default) before enabling fallback in production; missing templates at all levels are CRITICAL.
 - **Seed platform_constants** per decision 23 table (criterion 3–12, evidence 1–5, AI attempts 3, lease 120s, batch 20, retry base 30s, orphan TTL 24h; reuse `auto_complete_grace_hours=24`).
 - **Feature modules**: MUST use `src/features/service-completion/` as the app ownership boundary (enrichment UX, checklist fill, confirm+rating, feature APIs). `view-services` consumes its public API. Payments feature retains money movement only (`payment_*` NetCred/settlement). Matching bootstrap remains matching-owned. API layer mandatory.
-- **Tests**: pgTAP for FSM transitions, cancel races, idempotent EXECUTED/confirm, executed_late boundaries (BRT date), fallback materialize; Deno tests for LLM validation/retry; Vitest for hooks/UI gates.
+- **Tests**: pgTAP for FSM transitions, cancel races, idempotent EXECUTED/confirm, not-yet-due BRT boundaries, fallback materialize; Deno tests for LLM validation/retry; Vitest for hooks/UI gates.
 - **Docs sync**: update matching requirements bootstrap wording when implementing; keep CONTEXT.md glossary authoritative.
 - **Cutover:** database will be reset in current development phase — no legacy OPEN grandfather/backfill. Enrichment gate applies to all post-deploy requests.
 - **Out of scope**: negotiation schema editing; full dispute FSM; ops evidence amendment UI; ranking features from checklist; changing `generate-smart-description` to async readiness.
@@ -1214,7 +1202,7 @@ The Service Completion & Publication Readiness subsystem SHALL operate as a pers
 | Matching dispatch bootstrap on READY | PostgreSQL trigger/RPC | Idempotent handoff |
 | Evidence draft + version | PostgreSQL | CONFIRMED only; RLS hides from client |
 | `completion_evidence_upload_sessions` + storage paths | PostgreSQL + Storage | Session lifecycle + orphan janitor |
-| Frozen evidence package + `executed_late` | PostgreSQL | Atomic with EXECUTED |
+| Frozen evidence package | PostgreSQL | Atomic with EXECUTED |
 | `contracted_services` status transitions | PostgreSQL RPCs | Extend payment RPCs |
 | `service_ratings` | PostgreSQL | Manual confirm TX + optional later |
 | Idempotency keys / UNIQUE guards | PostgreSQL | Duplicate prevention |
@@ -1236,7 +1224,6 @@ The Service Completion & Publication Readiness subsystem SHALL operate as a pers
 | Client review + confirm+rating flow | App | Single confirm RPC |
 | Optional post-auto-complete rating UI | App | Uses rating RPCs |
 | Dispute stub UI → support channel + analytics | App | No dispute FSM; auto-complete continues |
-| `executed_late` badge for client | App | Read-only flag |
 | Feature API modules (no direct Supabase in components) | App `api/` | Per feature-architecture |
 | Evidence upload session UX (create → upload → register) | App | Dedicated completion sessions; not chat/KYC buckets |
 

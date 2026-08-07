@@ -58,22 +58,17 @@ export function useProviderMarkExecuted() {
       }
 
       metrics.count("service_completion.mark_executed_ok", 1, {
-        late: result.data.executedLate ? "1" : "0",
         idempotent: result.data.idempotent ? "1" : "0",
       });
       return result.data;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (_data, variables) => {
       // New attempt key after success so a later retry (unlikely) is a new op.
       idempotencyKeyRef.current = null;
       void queryClient.invalidateQueries({
         queryKey: serviceCompletionContextQueryKey(variables.serviceRequestId),
       });
-      toast.success(
-        data.executedLate
-          ? "Serviço marcado como executado (fora do prazo)."
-          : "Serviço marcado como executado.",
-      );
+      toast.success("Serviço marcado como executado.");
     },
     onError: (error: Error) => {
       toast.error(error.message);

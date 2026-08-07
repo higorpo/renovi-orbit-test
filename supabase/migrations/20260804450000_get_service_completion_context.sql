@@ -196,7 +196,6 @@ begin
   if v_is_full_detail then
     v_evidence_json := jsonb_build_object(
       'phase', v_phase,
-      'executed_late', case when v_has_evidence then v_evidence.executed_late else null end,
       'frozen_at', case when v_has_evidence then v_evidence.frozen_at else null end,
       'auto_executed_without_checklist',
         case
@@ -217,7 +216,6 @@ begin
     -- Marketplace-only: phase flag without evidence body.
     v_evidence_json := jsonb_build_object(
       'phase', v_phase,
-      'executed_late', null,
       'frozen_at', null,
       'auto_executed_without_checklist', null,
       'draft_version', null

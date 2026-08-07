@@ -9,7 +9,6 @@ describe("serviceMapper", () => {
       list_phase: "in_progress",
       enrichment_status: "READY",
       enrichment_ready: true,
-      executed_late: false,
       request: {
         title: "Título",
         description: "Desc",
@@ -67,7 +66,6 @@ describe("serviceMapper", () => {
     expect(model.listPhase).toBe("in_progress");
     expect(model.enrichmentStatus).toBe("READY");
     expect(model.enrichmentReady).toBe(true);
-    expect(model.executedLate).toBe(false);
     expect(model.title).toBe("Título");
     expect(model.proposalCount).toBe(2);
     expect(model.hasPendingProposal).toBe(true);

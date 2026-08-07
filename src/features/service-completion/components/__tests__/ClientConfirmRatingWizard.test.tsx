@@ -87,7 +87,6 @@ function baseContext(
     },
     evidence: {
       phase: "frozen",
-      executedLate: true,
       frozenAt: "2026-08-04T12:00:00Z",
       draftVersion: null,
       responses: {
@@ -139,7 +138,6 @@ describe("ClientConfirmRatingWizard", () => {
     contextState.current = baseContext({ canConfirmWithRating: true });
     render(<ClientConfirmRatingWizard serviceRequestId="sr-1" />, { wrapper });
 
-    expect(screen.getByTestId("executed-late-badge")).toBeInTheDocument();
     fireEvent.click(
       screen.getByTestId("client-confirm-execution-acknowledged"),
     );

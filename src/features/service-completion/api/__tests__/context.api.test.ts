@@ -38,7 +38,6 @@ describe("mapServiceCompletionContextRpc", () => {
         },
         evidence: {
           phase: "draft",
-          executed_late: null,
           frozen_at: null,
           draft_version: 2,
           responses: { c1: { met: true, evidence_paths: [] } },

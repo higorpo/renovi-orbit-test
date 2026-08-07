@@ -45,7 +45,6 @@ type RpcContracted = {
 
 type RpcEvidence = {
   phase?: string;
-  executed_late?: boolean | null;
   frozen_at?: string | null;
   draft_version?: number | null;
   responses?: CompletionResponsesMap | null;
@@ -107,7 +106,6 @@ function mapEvidence(raw: RpcEvidence | undefined): ServiceCompletionEvidence {
   const phase = (raw?.phase as CompletionEvidencePhase | undefined) ?? "absent";
   return {
     phase,
-    executedLate: typeof raw?.executed_late === "boolean" ? raw.executed_late : null,
     frozenAt: raw?.frozen_at ?? null,
     draftVersion: coerceDraftVersion(raw?.draft_version),
     responses: raw?.responses ?? null,

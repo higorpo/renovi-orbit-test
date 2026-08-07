@@ -53,7 +53,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 ## 5. Principais fluxos
 
 1. Create/republish → `OPEN` + enrichment `PENDING` → Edge `generate-completion-checklist` → READY → `matching_bootstrap_dispatch_for_service_request` (delay 5 min a partir daí).
-2. Prestador `CONFIRMED` → CTA “Marcar serviço como concluído” → sheet/dialog com draft + upload evidência (RPC create session → `storage.from('completion-evidence').upload()` autenticado → RPC register; sem Edge) → fotos como thumbnails + lightbox → `service_completion_mark_executed` → `EXECUTED` (+ `executed_late` se atrasado).
+2. Prestador `CONFIRMED` → CTA “Marcar serviço como concluído” → sheet/dialog com draft + upload evidência (RPC create session → `storage.from('completion-evidence').upload()` autenticado → RPC register; sem Edge) → fotos como thumbnails + lightbox → `service_completion_mark_executed` → `EXECUTED` (rejeita se antes de `scheduled_start_date` BRT: `SERVICE_NOT_YET_DUE`; envio após o fim da agenda **não** marca atraso).
 3. Se o prestador **não** marca EXECUTED a tempo → cron auto-mark (`auto_mark_executed_grace_hours`, default **24**, após fim do dia BRT de `coalesce(scheduled_end_date, scheduled_start_date)` via `service_completion_scheduled_end_at`) → `CONFIRMED` → `EXECUTED` com evidência frozen sintética (`responses = {}`, `auto_executed_without_checklist = true`), `executed_at = now()`, audit system, MMD `SERVICE_EXECUTED`. **Não** remove o invariante EXECUTED↔frozen.
 4. Cliente em `EXECUTED` (`canConfirmWithRating`) → CTA “Avaliar serviço” → etapa 1 revisão congelada (thumbnails) + stub de disputa (se elegível) + checkbox obrigatório de declaração (“Continuar para avaliação” só habilita com o aceite); se `auto_executed_without_checklist`, alerta em vez da lista vazia de critérios e copy do checkbox suavizada → etapa 2 scores → `service_completion_confirm_with_rating` → `COMPLETED`.
 5. **Prompt de avaliação pendente (app open):** cliente autenticado; RPC leve `get_client_pending_evaluation_prompt` (1 item `EXECUTED` mais recente ainda dentro de `auto_complete_grace_hours`); abre **depois** de localização (prestador) e soft prompt de push; sheet com 3 passos (intro com resumo leve → review → rating). Fechar (X) = snooze ~4h do mesmo `service_request_id` (Preferences). Pós auto-complete (rating opcional) **não** entra neste prompt.
@@ -88,7 +88,7 @@ Detalhe: [features/conclusao-e-enrichment.md](./features/conclusao-e-enrichment.
 |----------|--------|
 | `service_request_enrichments` | FSM de prontidão + schema imutável após READY; sem SELECT direto autenticado |
 | `completion_checklist_templates` | Fallback se IA esgota tentativas |
-| `contracted_service_completion_evidence` | Draft → frozen; `executed_late` no freeze; `auto_executed_without_checklist` no auto-mark; FK CS RESTRICT |
+| `contracted_service_completion_evidence` | Draft → frozen; `auto_executed_without_checklist` no auto-mark; FK CS RESTRICT |
 | `completion_evidence_upload_sessions` | Sessões Option A (`open` → `committed` no mark-executed); bucket fixo |
 | `completion_evidence_upload_objects` | Paths registrados; `referenced_in_responses` no freeze; claim do janitor |
 | `contracted_services` | Status `CONFIRMED` → `EXECUTED` → `COMPLETED` |

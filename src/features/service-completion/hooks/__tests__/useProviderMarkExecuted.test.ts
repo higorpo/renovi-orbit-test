@@ -54,7 +54,6 @@ describe("useProviderMarkExecuted", () => {
         contractedServiceId: "cs-1",
         status: "EXECUTED",
         executedAt: "2026-08-04T12:00:00Z",
-        executedLate: true,
         evidenceId: "ev-1",
         idempotent: false,
       },

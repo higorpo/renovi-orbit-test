@@ -115,14 +115,13 @@ begin
   -- Deferred trigger: EXECUTED requires frozen evidence in the same TX
   insert into public.contracted_service_completion_evidence (
     contracted_service_id, enrichment_id, phase, frozen_at, responses_hash,
-    executed_late, responses, idempotency_key
+    responses, idempotency_key
   )
   select
     cs_exec, enr_exec,
     'frozen'::public.completion_evidence_phase,
     now() - interval '1 hour',
     'seed-exec-hash',
-    false,
     '{"crit_work_done":{"met":true},"crit_area_clean":{"met":true},"crit_client_access":{"met":true}}'::jsonb,
     'seed-exec-save-draft'
   from _fx;
@@ -264,7 +263,6 @@ set
   phase = 'frozen'::public.completion_evidence_phase,
   frozen_at = now(),
   responses_hash = 'frozen-hash',
-  executed_late = false,
   idempotency_key = 'freeze-for-draft-test'
 from _fx f
 where e.contracted_service_id = f.cs_id;
