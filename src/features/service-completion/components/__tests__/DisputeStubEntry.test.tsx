@@ -18,12 +18,12 @@ vi.mock("sonner", () => ({
 }));
 
 describe("shouldShowDisputeStub", () => {
-  it("shows for capability or EXECUTED/COMPLETED", () => {
+  it("shows for capability or EXECUTED only (not after COMPLETED)", () => {
     expect(shouldShowDisputeStub({ showDisputeStubCapability: true })).toBe(
       true,
     );
     expect(shouldShowDisputeStub({ csStatus: "EXECUTED" })).toBe(true);
-    expect(shouldShowDisputeStub({ csStatus: "COMPLETED" })).toBe(true);
+    expect(shouldShowDisputeStub({ csStatus: "COMPLETED" })).toBe(false);
     expect(shouldShowDisputeStub({ csStatus: "CONFIRMED" })).toBe(false);
   });
 });

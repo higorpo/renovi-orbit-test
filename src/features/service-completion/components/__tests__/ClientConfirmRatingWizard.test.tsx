@@ -214,9 +214,11 @@ describe("ClientConfirmRatingWizard", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("uses submit_service_rating for optional post-auto-complete path", async () => {
+  it("optional post-auto-complete opens on rating only — no checklist, ack, or dispute", async () => {
+    const onStepChange = vi.fn();
     contextState.current = baseContext({
       canSubmitOptionalRating: true,
+      showDisputeStub: false,
     });
     contextState.current.contractedService.status = "COMPLETED";
     contextState.current.contractedService.completedBy = "system";
@@ -226,11 +228,28 @@ describe("ClientConfirmRatingWizard", () => {
       error: null,
     });
 
-    render(<ClientConfirmRatingWizard serviceRequestId="sr-1" />, { wrapper });
-    fireEvent.click(
-      screen.getByTestId("client-confirm-execution-acknowledged"),
+    render(
+      <ClientConfirmRatingWizard
+        serviceRequestId="sr-1"
+        onStepChange={onStepChange}
+      />,
+      { wrapper },
     );
-    fireEvent.click(screen.getByTestId("client-confirm-continue-rating"));
+
+    const wizard = screen.getByTestId("client-confirm-rating-wizard");
+    expect(wizard).toHaveAttribute("data-step", "rating");
+    expect(
+      screen.queryByTestId("client-confirm-continue-rating"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("client-confirm-execution-ack"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId("dispute-stub-entry")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Feito\?/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Voltar/i }),
+    ).not.toBeInTheDocument();
+    expect(onStepChange).toHaveBeenCalledWith("rating", "");
 
     for (const name of ["quality", "punctuality", "communication", "value"]) {
       const group = screen.getByTestId(`score-dimension-${name}`);

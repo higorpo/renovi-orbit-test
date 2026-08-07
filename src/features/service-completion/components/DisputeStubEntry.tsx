@@ -69,12 +69,12 @@ export function DisputeStubEntry({
   );
 }
 
-/** True when client should see the stub for EXECUTED/COMPLETED (design §11.6). */
+/** True when client should see the stub — EXECUTED confirm window only (not after COMPLETED). */
 export function shouldShowDisputeStub(input: {
   showDisputeStubCapability?: boolean;
   csStatus?: string | null;
 }): boolean {
   if (input.showDisputeStubCapability) return true;
   const status = (input.csStatus ?? "").toUpperCase();
-  return status === "EXECUTED" || status === "COMPLETED";
+  return status === "EXECUTED";
 }

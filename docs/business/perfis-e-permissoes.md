@@ -188,10 +188,10 @@ Fonte: [payments](./modulos/payments/README.md), [checkout-e-cobranca](./modulos
 | Draft checklist + marcar `EXECUTED` | — | Sim (`CONFIRMED` + enrichment ready; CTA → sheet/dialog; contexto RPC ao abrir; paths registrados) | — | — |
 | Upload evidência (RPC create session → storage.upload autenticado → register) | — | Sim (sessão open, CS CONFIRMED, &lt; max_files, bucket `completion-evidence`; thumbnails+lightbox na UI; sem Edge de URL assinada de upload) | — | Janitor SQL órfãos (`service_completion_janitor_orphan_uploads` / cron; sem Edge) |
 | Storage SELECT / `createSignedUrl` em `completion-evidence` | Sim — paths do CS **somente** se evidência `frozen` (`service_completion_evidence_storage_path_client_readable`; galeria em “Avaliar serviço”) | Sim — prefixo próprio (draft + frozen via `*_path_owned`) | — | Admin de plataforma |
-| Confirmar + rating (scores obrigatórios) | Sim (`EXECUTED`/`COMPLETED` na UI; CTA “Avaliar serviço” → sheet 2 etapas; contexto só se elegível) | — | — | — |
+| Confirmar + rating (scores obrigatórios) | Sim (`EXECUTED` + `canConfirmWithRating`; CTA “Avaliar serviço” → sheet 2 etapas: revisão+ack+disputa → rating; contexto só se elegível) | — | — | — |
 | Auto-complete ~24h após `EXECUTED` | — | — | — | Cron (`completed_by=system`; batch `auto_complete_batch_size`) |
-| Stub disputa (URL ou “Em breve”) | Sim | — | — | — |
-| Rating opcional pós auto-complete | Sim | — | — | — |
+| Stub disputa (URL ou “Em breve”) | Sim — **somente** CS `EXECUTED` (`show_dispute_stub` / wizard Avaliar serviço); **não** após `COMPLETED` | — | — | — |
+| Rating opcional pós auto-complete | Sim (`COMPLETED` + `completed_by=system` + sem rating; sheet só notas, `ratingOnly`; sem disputa) | — | — | — |
 
 Admin de plataforma: contexto completo via RPC (mesmo sem ser participante); sem UI de mutação no app. Matching: create/republish **não** bootstrapa dispatch; só após enrichment READY; repair READY-sem-dispatch limitado a **7 dias**. Fonte: [service-completion](./modulos/service-completion/README.md).
 

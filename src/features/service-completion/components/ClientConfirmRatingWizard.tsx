@@ -1,6 +1,7 @@
 /**
  * Client confirm+rating wizard (Task 51).
- * Order: review frozen evidence → ratings → confirm (or optional post-auto-complete rating).
+ * Manual path: review frozen evidence → ratings → confirm.
+ * Optional post-auto-complete: rating only (no checklist, ack, or dispute).
  * Renders inside CompletionFlowSheetDialog (scroll + sticky footer on mobile).
  */
 
@@ -107,13 +108,17 @@ export function ClientConfirmRatingWizard({
 
   const canConfirm = Boolean(context?.capabilities.canConfirmWithRating);
   const canOptional = Boolean(context?.capabilities.canSubmitOptionalRating);
-  const showDispute = shouldShowDisputeStub({
-    showDisputeStubCapability: context?.capabilities.showDisputeStub,
-    csStatus: context?.contractedService.status,
-  });
+  const isOptionalOnly = canOptional && !canConfirm;
+  const showDispute =
+    !isOptionalOnly &&
+    shouldShowDisputeStub({
+      showDisputeStubCapability: context?.capabilities.showDisputeStub,
+      csStatus: context?.contractedService.status,
+    });
   const mode = canConfirm
     ? ("confirm_with_rating" as const)
     : ("optional_rating" as const);
+  const effectiveStep: Step = isOptionalOnly ? "rating" : step;
 
   const contractedServiceId = context?.contractedService.id ?? "";
   const confirm = useClientConfirmRating({
@@ -125,18 +130,20 @@ export function ClientConfirmRatingWizard({
   const title = canConfirm
     ? "Confirmar recebimento"
     : "Avaliar serviço (opcional)";
-  const stepLabel = isPrompt
-    ? step === "review"
-      ? "2 de 3"
-      : "3 de 3"
-    : step === "review"
-      ? "1 de 2"
-      : "2 de 2";
+  const stepLabel = isOptionalOnly
+    ? ""
+    : isPrompt
+      ? effectiveStep === "review"
+        ? "2 de 3"
+        : "3 de 3"
+      : effectiveStep === "review"
+        ? "1 de 2"
+        : "2 de 2";
 
   useEffect(() => {
     if (!canConfirm && !canOptional) return;
-    onStepChange?.(step, stepLabel);
-  }, [canConfirm, canOptional, onStepChange, step, stepLabel]);
+    onStepChange?.(effectiveStep, stepLabel);
+  }, [canConfirm, canOptional, effectiveStep, onStepChange, stepLabel]);
 
   if (isLoading) {
     return <ClientConfirmRatingWizardSkeleton className={className} />;
@@ -284,17 +291,24 @@ export function ClientConfirmRatingWizard({
   );
 
   const ratingFooter = (
-    <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-      <Button
-        type="button"
-        variant="outline"
-        className="w-full transition-transform duration-150 ease-out active:scale-[0.97] sm:w-auto"
-        disabled={confirm.isPending}
-        onClick={() => setStep("review")}
-      >
-        <ChevronLeft className="mr-1.5 h-4 w-4" aria-hidden />
-        {autoWithoutChecklist ? "Voltar" : "Voltar às evidências"}
-      </Button>
+    <div
+      className={cn(
+        "flex w-full flex-col-reverse gap-2 sm:flex-row",
+        isOptionalOnly ? "sm:justify-end" : "sm:justify-between",
+      )}
+    >
+      {isOptionalOnly ? null : (
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full transition-transform duration-150 ease-out active:scale-[0.97] sm:w-auto"
+          disabled={confirm.isPending}
+          onClick={() => setStep("review")}
+        >
+          <ChevronLeft className="mr-1.5 h-4 w-4" aria-hidden />
+          {autoWithoutChecklist ? "Voltar" : "Voltar às evidências"}
+        </Button>
+      )}
       <Button
         type="button"
         className="w-full transition-transform duration-150 ease-out active:scale-[0.97] sm:w-auto"
@@ -320,10 +334,10 @@ export function ClientConfirmRatingWizard({
           className,
         )}
         data-testid="client-confirm-rating-wizard"
-        data-step={step}
+        data-step={effectiveStep}
         aria-label={title}
       >
-        {step === "review" ? (
+        {effectiveStep === "review" ? (
           <>
             {reviewBody}
             {dispute}
@@ -333,7 +347,7 @@ export function ClientConfirmRatingWizard({
           ratingBody
         )}
         <div className="border-t border-border/80 pt-4">
-          {step === "review" ? (
+          {effectiveStep === "review" ? (
             <div className="flex justify-end">{reviewFooter}</div>
           ) : (
             ratingFooter
@@ -347,11 +361,11 @@ export function ClientConfirmRatingWizard({
     <div
       className={cn("flex min-h-0 flex-1 flex-col", className)}
       data-testid="client-confirm-rating-wizard"
-      data-step={step}
+      data-step={effectiveStep}
       aria-label={title}
     >
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-y-contain px-4 py-4 touch-pan-y">
-        {step === "review" ? (
+        {effectiveStep === "review" ? (
           <>
             {reviewBody}
             {dispute}
@@ -362,7 +376,7 @@ export function ClientConfirmRatingWizard({
         )}
       </div>
       <div className="shrink-0 border-t border-border/80 bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md">
-        {step === "review" ? reviewFooter : ratingFooter}
+        {effectiveStep === "review" ? reviewFooter : ratingFooter}
       </div>
     </div>
   );

@@ -1,7 +1,9 @@
 /**
- * Client CTA + 2-step sheet/dialog to review evidence and rate the service.
+ * Client CTA + sheet/dialog to rate the service.
+ * Manual (EXECUTED): review evidence + declaration → rating.
+ * Optional (COMPLETED by system): rating only — no checklist or dispute.
  * Skips get_service_completion_context unless contracted status can need evaluate.
- * Dispute stub is not shown on the service detail host — only inside the evaluate wizard.
+ * Dispute stub is not shown on the service detail host — only inside the evaluate wizard (EXECUTED).
  */
 
 import { useState } from "react";
@@ -76,6 +78,7 @@ export function ClientEvaluateServiceAction({
         serviceRequestId={serviceRequestId}
         title={title}
         description={description}
+        ratingOnly={!canConfirm && canOptional}
         onCompleted={onCompleted}
       />
     </>

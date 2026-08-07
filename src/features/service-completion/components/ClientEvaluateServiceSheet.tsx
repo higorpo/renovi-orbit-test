@@ -22,6 +22,11 @@ export type ClientEvaluateServiceSheetProps = {
   /** Global pending-evaluation prompt: intro → review → rating (3 steps). */
   variant?: ClientEvaluateServiceSheetVariant;
   promptSummary?: PendingEvaluationPromptSummary | null;
+  /**
+   * Optional post-auto-complete: single rating step — hide "N de M" aside.
+   * Ignored when variant is "prompt".
+   */
+  ratingOnly?: boolean;
 };
 
 const PROMPT_INTRO_TITLE = "É hora de avaliar a execução do serviço";
@@ -38,14 +43,16 @@ export function ClientEvaluateServiceSheet({
   testId = "client-evaluate-service-sheet",
   variant = "default",
   promptSummary = null,
+  ratingOnly = false,
 }: ClientEvaluateServiceSheetProps) {
   const isPrompt = variant === "prompt";
+  const hideStepAside = ratingOnly && !isPrompt;
   const [dismissDisabled, setDismissDisabled] = useState(false);
   const [phase, setPhase] = useState<"intro" | "wizard">(
     isPrompt ? "intro" : "wizard",
   );
   const [stepAside, setStepAside] = useState<string | null>(
-    isPrompt ? "1 de 3" : "1 de 2",
+    isPrompt ? "1 de 3" : hideStepAside ? null : "1 de 2",
   );
 
   useEffect(() => {
@@ -56,23 +63,23 @@ export function ClientEvaluateServiceSheet({
       return;
     }
     setPhase("wizard");
-    setStepAside("1 de 2");
-  }, [isPrompt, open, serviceRequestId]);
+    setStepAside(hideStepAside ? null : "1 de 2");
+  }, [hideStepAside, isPrompt, open, serviceRequestId]);
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
       if (nextOpen) {
         setPhase(isPrompt ? "intro" : "wizard");
-        setStepAside(isPrompt ? "1 de 3" : "1 de 2");
+        setStepAside(isPrompt ? "1 de 3" : hideStepAside ? null : "1 de 2");
       }
       onOpenChange(nextOpen);
     },
-    [isPrompt, onOpenChange],
+    [hideStepAside, isPrompt, onOpenChange],
   );
 
   const handleStepChange = useCallback(
     (_step: "review" | "rating", label: string) => {
-      setStepAside(label);
+      setStepAside(label.trim() ? label : null);
     },
     [],
   );
