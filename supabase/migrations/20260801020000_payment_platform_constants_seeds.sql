@@ -98,6 +98,11 @@ values
     'HMAC installment payload TTL minutes'
   ),
   (
+    'min_installment_value',
+    '150.00'::jsonb,
+    'Minimum BRL amount per installment when installment_number > 1'
+  ),
+  (
     'reconciliation_poll_interval_minutes',
     '30'::jsonb,
     'Stale payment schedule reconciliation poll interval minutes'
@@ -206,6 +211,7 @@ on conflict (key) do update set
 --   'auto_cancel_hours_before_service',
 --   'scheduled_charge_hours_before_service',
 --   'installment_hmac_expires_minutes',
+--   'min_installment_value',
 --   'reconciliation_poll_interval_minutes',
 --   'webhook_base_retry_interval_minutes',
 --   'charge_batch_size'

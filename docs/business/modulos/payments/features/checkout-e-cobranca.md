@@ -116,15 +116,16 @@ flowchart TD
 4. Tokens são sempre criados sob **`NETCRED_PLATFORM_COMPANY_ID`** (plataforma); a cobrança usa a company do **prestador** no split.
 5. Prestador só é cobrável/aceitável se `onboarding_status = ACTIVE` **e** `netcred_company_id` **e** `netcred_bank_account_id` preenchidos (`payment_provider_is_credentialed`).
 6. Parcelas escolhidas no checkout/manual passam por **HMAC** (`payment_verify_installment_selection_hmac`) com expiração.
-7. Sessão ClearSale é **emitida no servidor** (`payment_issue_clearsale_session`, purpose `accept` \| `manual`) e consumida one-shot no aceite / `payment_begin_manual_attempt`.
-8. Cobrança automática usa `charge_scheduled_at` ≈ **execução − 2 dias**; se faltar &lt; 48h no aceite, disclosure de emergência (“próximas horas”) e agenda pode ser imediata.
-9. Valor no cartão (`charge_amount`) = **gross-up NetCred** (MDR% + PROCESSING + RISK_ANALYSIS); split do prestador permanece `provider_payout` congelado no aceite.
-10. UI de cobrança manual só para estados `FAILED` \| `FAILED_PERMANENT` (`isManualPaymentEligible`).
-11. Edge `payment_begin_manual_attempt` também exige esses estados; se estiver a ≤ `auto_cancel_hours_before_service` (default **12h**) da execução → `SERVICE_AUTO_CANCELLED`.
-12. Em produção, falta de ClearSale no cron **impede** `createCharge`.
-13. Mensagens ao usuário: só códigos mapeados em pt-BR; texto bruto do gateway/ClearSale **não** aparece na UI.
-14. Rejeição “Análise de Risco: …” → códigos estáveis `RISK_ANALYSIS_*` em `failure_code`.
-15. Tokenização rejeitada fina do gateway chega ao cliente como **`CARD_REJECTED`** (opaco).
+7. **Mínimo por parcela (`min_installment_value`):** a RPC `payment_calculate_installment_options` **sempre** inclui **1x** (à vista). Para `n > 1`, só inclui a opção se `installment_amount >= min_installment_value` (padrão **R$ 150,00** em `platform_constants`). O HMAC assina **apenas** as opções filtradas; portanto `accept_proposal` / `payment_update_method` não conseguem aceitar parcelas abaixo do mínimo (não estão no payload assinado).
+8. Sessão ClearSale é **emitida no servidor** (`payment_issue_clearsale_session`, purpose `accept` \| `manual`) e consumida one-shot no aceite / `payment_begin_manual_attempt`.
+9. Cobrança automática usa `charge_scheduled_at` ≈ **execução − 2 dias**; se faltar &lt; 48h no aceite, disclosure de emergência (“próximas horas”) e agenda pode ser imediata.
+10. Valor no cartão (`charge_amount`) = **gross-up NetCred** (MDR% + PROCESSING + RISK_ANALYSIS); split do prestador permanece `provider_payout` congelado no aceite.
+11. UI de cobrança manual só para estados `FAILED` \| `FAILED_PERMANENT` (`isManualPaymentEligible`).
+12. Edge `payment_begin_manual_attempt` também exige esses estados; se estiver a ≤ `auto_cancel_hours_before_service` (default **12h**) da execução → `SERVICE_AUTO_CANCELLED`.
+13. Em produção, falta de ClearSale no cron **impede** `createCharge`.
+14. Mensagens ao usuário: só códigos mapeados em pt-BR; texto bruto do gateway/ClearSale **não** aparece na UI.
+15. Rejeição “Análise de Risco: …” → códigos estáveis `RISK_ANALYSIS_*` em `failure_code`.
+16. Tokenização rejeitada fina do gateway chega ao cliente como **`CARD_REJECTED`** (opaco).
 
 ---
 
@@ -184,9 +185,10 @@ Pré-passo: `payment_update_method` com novo token + parcelas/HMAC.
 | Camada | Regras relevantes |
 |--------|-------------------|
 | `payment_get_checkout_step_requirements` | Authenticated; deriva `needs_cpf` / `needs_phone` / `needs_card` |
-| `accept_proposal` | Cliente dono do pedido; CPF+phone; proposta `PENDING` não expirada; slot na lista; prestador credentialed; token+HMAC+ClearSale; company do token = platform |
+| `payment_calculate_installment_options` | Authenticated; tabela 1–12 com gross-up; filtra `n > 1` por `min_installment_value`; HMAC só sobre opções retornadas |
+| `accept_proposal` | Cliente dono do pedido; CPF+phone; proposta `PENDING` não expirada; slot na lista; prestador credentialed; token+HMAC+ClearSale; company do token = platform; parcela deve constar no payload HMAC |
 | `payment_issue_clearsale_session` | Purpose + proposal/schedule; sessão server-minted |
-| `payment_update_method` | Schedule `SCHEDULED` \| `FAILED` \| `FAILED_PERMANENT`; HMAC se bandeira/parcelas mudam |
+| `payment_update_method` | Schedule `SCHEDULED` \| `FAILED` \| `FAILED_PERMANENT`; HMAC se bandeira/parcelas mudam; parcela escolhida deve constar no payload HMAC |
 | `payment_begin_manual_attempt` | service_role; rate 10/min; estados FAILED*; janela T-12h; consome ClearSale |
 | `tokenize-payment-card` | Body validado; rate profile 3/min + 30/dia; checkout 10/min; fail-closed rate limit |
 | `manual-charge-payment` | JWT cliente; rate 10/min; acquire lease; anti double-charge via `getTransaction` |
@@ -261,7 +263,7 @@ FSM SQL: trigger de matriz em migração de `payment_schedules` (invariantes PAI
 Neste escopo (checkout/cobrança):
 
 - **Cartões salvos:** lista ACTIVE do cliente, ordenada por `created_at` desc — sem paginação server-side (volume naturalmente limitado).
-- **Opções de parcela:** conjunto finito retornado pela RPC (1x–12x tipicamente via constantes MDR).
+- **Opções de parcela:** RPC `payment_calculate_installment_options` avalia 1x–12x (MDR por faixa); **1x sempre** entra; para `n > 1` só se `installment_amount >= min_installment_value` (padrão R$ 150). O seletor da UI lista só o conjunto filtrado assinado por HMAC.
 - **Histórico paginado / settlements:** fora de escopo → historico-e-reembolso / provider-earnings.
 
 ---
@@ -274,8 +276,8 @@ Neste escopo (checkout/cobrança):
 | Salvar CPF/telefone | Cliente | Validação Zod | Persiste perfil | Mensagem inválido |
 | Tokenizar cartão | Cliente | Form válido + phone/cpf | Token ACTIVE | `CARD_REJECTED`, rate_limited, CPF_* |
 | Escolher cartão salvo | Cliente | Token ACTIVE | Avança parcelas | — |
-| Selecionar parcelas | Cliente | Brand + proposal/service | HMAC + amounts | Erro fetch options |
-| Confirmar pagamento (aceite) | Cliente | ClearSale + token + HMAC | Serviço + schedule SCHEDULED | PROFILE_INCOMPLETE, PROVIDER_NOT_CREDENTIALED, HMAC_*, etc. |
+| Selecionar parcelas | Cliente | Brand + proposal/service | Opções filtradas + HMAC | Erro fetch options; opções `n > 1` abaixo do mínimo não aparecem |
+| Confirmar pagamento (aceite) | Cliente | ClearSale + token + HMAC (parcela no payload) | Serviço + schedule SCHEDULED | PROFILE_INCOMPLETE, PROVIDER_NOT_CREDENTIALED, HMAC_*, etc. |
 | Ajustar pagamento | Cliente | FAILED* | Dialog manual | — |
 | Atualizar método + cobrar | Cliente | ClearSale fresca; janela &gt; T-12h | PAID / IN_ANALYSIS / terminal | SERVICE_AUTO_CANCELLED, RATE_LIMIT, CLEARSALE_* |
 | Remover cartão | Cliente | Token não ligado a schedule ativo | revoked | `CARD_TOKEN_LINKED_TO_ACTIVE_SCHEDULE` |
@@ -453,7 +455,9 @@ Fonte canônica: `mapPaymentUserMessage.ts` (+ `formatManualPaymentFailureMessag
 | Ação / superfície | Elegível quando | Inelegível quando |
 |-------------------|-----------------|-------------------|
 | Steps CPF/telefone | RPC `needs_*` true | Já preenchidos no perfil |
-| Aceite com pagamento | Cliente dono; proposta PENDING válida; prestador credentialed; token platform; ClearSale; HMAC | Prestador não ACTIVE; PROFILE_INCOMPLETE; proposta expirada |
+| Aceite com pagamento | Cliente dono; proposta PENDING válida; prestador credentialed; token platform; ClearSale; HMAC com parcela no payload filtrado | Prestador não ACTIVE; PROFILE_INCOMPLETE; proposta expirada; parcela fora do HMAC (ex.: abaixo do mínimo) |
+| Opção `n` parcelas (`n > 1`) | `installment_amount >= min_installment_value` (padrão R$ 150) | Parcela unitária abaixo do mínimo — opção omitida da RPC/HMAC |
+| Opção 1x (à vista) | Sempre elegível na tabela de opções | — |
 | Cobrança manual (UI) | `state ∈ {FAILED, FAILED_PERMANENT}` | Demais estados |
 | Cobrança manual (Edge acquire) | Mesmos estados + &gt; T-12h da execução + ClearSale válida + não CANCELLED | `SERVICE_AUTO_CANCELLED`, `INVALID_SCHEDULE_STATE`, lease em andamento |
 | `payment_update_method` | `SCHEDULED` \| `FAILED` \| `FAILED_PERMANENT` | Outros estados |
@@ -463,15 +467,17 @@ Fonte canônica: `mapPaymentUserMessage.ts` (+ `formatManualPaymentFailureMessag
 
 ---
 
-## Anexo D — Valor cobrado (`charge_amount`)
+## Anexo D — Valor cobrado (`charge_amount`) e opções de parcela
 
 ```
 fixed_fees    = cc_fixed_processing_fee_brl + cc_risk_analysis_fee_brl
 charge_amount = ROUND_HALF_EVEN((base_amount + fixed_fees) / (1 - MDR%/100), 2)
+installment_amount = ROUND_HALF_EVEN(charge_amount / n, 2)
 ```
 
 - **MDR%:** por bandeira (Visa/Master vs Elo/outras) e faixa de parcelas (1x, 2–6x, 7–12x) em `platform_constants`.
 - **Defaults prod tipicamente citados no módulo:** PROCESSING R$ 0,39; RISK_ANALYSIS R$ 0,49 (sandbox local pode usar valores de teste maiores).
+- **Filtro de parcelamento:** `payment_calculate_installment_options` sempre oferece 1x; para `n > 1`, exige `installment_amount >= min_installment_value` (seed **150.00** BRL). Opções excluídas **não** entram no HMAC → `accept_proposal` / `payment_update_method` rejeitam seleção fora do conjunto assinado.
 - Split prestador: `FIXED_AMOUNT = provider_payout` (congelado no aceite).
 - Webhook captura: `paid_amount` = valor **calculado pelo servidor**, não o do payload do gateway (payload fica em metadados se divergir).
 

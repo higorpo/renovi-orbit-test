@@ -107,7 +107,6 @@ Coisas para fazer next
 
 
 
-- Não permitir parcelas menores do que 150 reais.
 
 - Na tela de onboarding de prestador colocar o * de campo obrigatoŕio
 

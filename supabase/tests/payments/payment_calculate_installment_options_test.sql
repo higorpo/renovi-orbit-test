@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(7);
+select plan(10);
 
 create or replace function pg_temp.payment_set_client_auth(p_user_id uuid)
 returns void
@@ -119,6 +119,59 @@ select
   (select service_request_id from _installment_sr) as service_request_id
 from pricing;
 
+-- Small proposal: multi-installment options must be filtered by min_installment_value.
+create temp table _installment_sr_small as
+select gen_random_uuid() as service_request_id;
+
+insert into public.service_requests (
+  id,
+  client_id,
+  service_id,
+  address_id,
+  title,
+  description,
+  form_data,
+  form_version,
+  status,
+  urgency
+)
+select
+  sr_fixture.service_request_id,
+  '28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid,
+  sr.service_id,
+  sr.address_id,
+  'installment options small pgTAP fixture',
+  sr.description,
+  sr.form_data,
+  sr.form_version,
+  'OPEN',
+  sr.urgency
+from _installment_sr_small sr_fixture
+cross join public.service_requests sr
+where sr.id = '7017e457-5a32-44e7-b8da-1727a14f4d33'::uuid;
+
+create temp table _installment_proposal_small as
+with pricing as (
+  select * from public.calculate_provider_service_pricing(200.00::numeric)
+)
+select
+  (public.create_provider_proposal(
+    (select service_request_id from _installment_sr_small),
+    gen_random_uuid(),
+    pricing.original_amount,
+    'installment pgTAP small proposal',
+    2,
+    'days',
+    jsonb_build_array((select selected_slot from _installment_slot)),
+    '{}'::text[],
+    pricing.tax_rate,
+    pricing.tax_amount,
+    pricing.final_amount,
+    pricing.pricing_signature
+  )->'proposal'->>'id')::uuid as id,
+  (select service_request_id from _installment_sr_small) as service_request_id
+from pricing;
+
 select pg_temp.payment_set_client_auth('28e30f1d-3c47-441f-94c6-76b6ea0db470'::uuid);
 
 delete from vault.secrets
@@ -137,6 +190,52 @@ select throws_ok(
   'P0001',
   'Installment signing secret is not configured in vault',
   'rejects when vault installment_signing_secret is missing'
+);
+
+select vault.create_secret(
+  'pgTAP-installment-signing-secret',
+  'installment_signing_secret',
+  'pgTAP installment min value test'
+);
+
+create temp table _installment_result as
+select public.payment_calculate_installment_options(
+  (select id from _installment_proposal_small),
+  (select service_request_id from _installment_proposal_small),
+  'MASTER'
+) as payload;
+
+select ok(
+  (
+    select jsonb_array_length(payload->'installment_options') >= 1
+      and (payload->'installment_options'->0->>'installment_number')::int = 1
+    from _installment_result
+  ),
+  'always returns at least 1x even when total is near min_installment_value'
+);
+
+select ok(
+  (
+    select bool_and(
+      (opt->>'installment_number')::int = 1
+      or (opt->>'installment_amount')::numeric >= 150.00
+    )
+    from _installment_result,
+      jsonb_array_elements(payload->'installment_options') opt
+  ),
+  'excludes n>1 options whose installment_amount is below min_installment_value (R$150)'
+);
+
+select ok(
+  (
+    select not exists (
+      select 1
+      from _installment_result,
+        jsonb_array_elements(payload->'installment_options') opt
+      where (opt->>'installment_number')::int >= 3
+    )
+  ),
+  'R$200 proposal does not offer 3x+ when each installment would be below R$150'
 );
 
 select ok(

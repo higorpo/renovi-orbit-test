@@ -235,9 +235,9 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `docs/payment-system/design.md` | Design normativo (§3.13 views de histórico + `payment_settlement_movements`; §4.8 reembolso; §4.3.1 fórmula de taxas) |
 | `docs/payment-system/payments-api.md` §10 | Catálogo `PAYOUT_*` + `PayoutPayload` + enums de movement |
 | `docs/adr/0001-payment-split-commission-model.md` | Split: prestador `FIXED_AMOUNT` / plataforma `PERCENTAGE` 100% do restante |
-| `supabase/migrations/20260801020000_payment_platform_constants_seeds.sql` | Seeds MDR + `cc_fixed_processing_fee_brl` + `cc_risk_analysis_fee_brl` (prod R$ 0,49) |
+| `supabase/migrations/20260801020000_payment_platform_constants_seeds.sql` | Seeds MDR + `cc_fixed_processing_fee_brl` + `cc_risk_analysis_fee_brl` (prod R$ 0,49) + **`min_installment_value` = 150.00** |
 | `supabase/migrations/20260801150000_payment_calculate_charge_amount.sql` | `payment_total_with_card_fees` / `payment_calculate_charge_amount` (gross-up + `ROUND_HALF_EVEN`) |
-| `supabase/migrations/20260801160000_payment_calculate_installment_options.sql` | Opções de parcela + HMAC (mesma fórmula) |
+| `supabase/migrations/20260801160000_payment_calculate_installment_options.sql` | Opções 1–12 + HMAC; **1x sempre**; `n > 1` só se `installment_amount >= min_installment_value`; HMAC assina só opções filtradas |
 | `supabase/functions/_shared/payment/fee-calculator.ts` | Mesma fórmula no Edge compartilhado (cobrança / espelho) |
 | `supabase/functions/_shared/payment/netcred-charge-mapping.ts` | `automaticAdvance: false` (antecipação fora da fórmula padrão) |
 | `supabase/seed.sql` | Sandbox local: PROCESSING R$ 4,90 + RISK_ANALYSIS R$ 5,00 |

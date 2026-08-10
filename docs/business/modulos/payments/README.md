@@ -18,15 +18,16 @@
 | Cobrança automática | pg_cron → `schedule-netcred-charges` → `payment_claim_charge_batch` → NetCred |
 | Auto-cancel / void | T-12h `payment_auto_cancel_services` → se veio de `IN_ANALYSIS`, EF `reconcile-inanalysis-auto-cancel-voids` |
 | Reconciliação | EF `reconcile-netcred-payments` (stale vs gateway); webhook `netcred-webhook` (+ `DEAD_LETTER`) |
-| Constantes | `platform_constants` (MDR por bandeira/parcela, `cc_fixed_processing_fee_brl`, `cc_risk_analysis_fee_brl`, tentativas, batch sizes, `auto_cancel_hours_before_service`) |
-| Fórmula de cobrança | Gross-up: `ROUND_HALF_EVEN((base + PROCESSING + RISK_ANALYSIS) / (1 − MDR%/100), 2)` — ver [checkout-e-cobranca](./features/checkout-e-cobranca.md#valor-cobrado-no-cartão-charge_amount) |
+| Constantes | `platform_constants` (MDR por bandeira/parcela, `cc_fixed_processing_fee_brl`, `cc_risk_analysis_fee_brl`, **`min_installment_value`** (padrão R$ 150), tentativas, batch sizes, `auto_cancel_hours_before_service`) |
+| Fórmula de cobrança | Gross-up: `ROUND_HALF_EVEN((base + PROCESSING + RISK_ANALYSIS) / (1 − MDR%/100), 2)` — ver [checkout-e-cobranca](./features/checkout-e-cobranca.md#anexo-d--valor-cobrado-charge_amount-e-opções-de-parcela) |
+| Opções de parcela | RPC `payment_calculate_installment_options`: **1x sempre**; `n > 1` só se valor da parcela ≥ `min_installment_value`; HMAC assina só o conjunto filtrado (bloqueia aceite/update fora da lista) |
 | Auditoria de linha (`payment_schedules`) | Tabela append-only `payment_schedules_audit` grava o snapshot completo da parcela em toda INSERT/UPDATE/DELETE de `payment_schedules`, via um trigger de statement (transition tables) com versionamento set-based. Cada linha tem `audit_id`, `audit_op` (`INSERT`/`UPDATE`/`DELETE`), `audited_at`, `row_version` (só no audit; max+1 por parcela) e `audit_txid` (correlação com o mesmo TX). **Distinta** do `payment_audit_log` (eventos de ciclo de vida): esta é histórico técnico de linha, sem escrita pela aplicação. RLS: só admin lê (`SELECT`); sem UPDATE/DELETE/TRUNCATE; `service_role` só `SELECT` (INSERT só pelo trigger DEFINER). Sem uso na UI. |
 
 ## 3. Features do módulo
 
 | Documento | Conteúdo |
 |-----------|----------|
-| [features/checkout-e-cobranca.md](./features/checkout-e-cobranca.md) | **Doc elevado (20+ seções + anexos):** checkout stepper no aceite, ClearSale fail-closed, tokenização (CPF titular; company plataforma), T-2, FSM `payment_schedules`, gross-up `charge_amount`, gate KYC `ACTIVE`, cobrança manual (T-12h, anti double-charge), matrizes campo/erro/elegibilidade; reembolso/histórico e UI Ganhos em docs irmãos |
+| [features/checkout-e-cobranca.md](./features/checkout-e-cobranca.md) | **Doc elevado (20+ seções + anexos):** checkout stepper no aceite, ClearSale fail-closed, tokenização (CPF titular; company plataforma), T-2, FSM `payment_schedules`, gross-up `charge_amount`, **mínimo por parcela** (`min_installment_value`), gate KYC `ACTIVE`, cobrança manual (T-12h, anti double-charge), matrizes campo/erro/elegibilidade; reembolso/histórico e UI Ganhos em docs irmãos |
 | [features/historico-e-reembolso.md](./features/historico-e-reembolso.md) | Histórico cliente/prestador (**captura**); breakdown de reembolso; **gateway first** pós-`PAID`; faixa ToS pelo slot vigente pós-reagendamento (`refund_anchor` só auditoria); recaptura longe pós-reagendamento distinta de cancelamento ToS; `PAID`→`REFUNDED` via webhook; assinatura inválida terminal |
 | [features/reconciliacao-e-voids.md](./features/reconciliacao-e-voids.md) | **Ops/backend:** auto-cancel T-12h, void pós-`IN_ANALYSIS`, reconcile stale, sync settlements, `DEAD_LETTER`/gaps de webhook — sem UI dedicada |
 | Engenharia | `docs/payment-system/design.md` (§3.13 histórico captura + settlements; §4.8 reembolso; §4.12 auto-cancel/void) |
@@ -55,6 +56,7 @@
 ## 6. Regras transversais
 
 - Gross-up NetCred no `charge_amount`; split prestador congelado no aceite.
+- Parcelamento: 1x sempre; demais parcelas só se `installment_amount >= min_installment_value` (padrão R$ 150); HMAC só sobre opções filtradas.
 - Gate de cobrança: prestador `ACTIVE` + company + bank (`payment_provider_is_credentialed`).
 - Mensagens de erro ao usuário só por código mapeado (pt-BR).
 - Distinção **captura** (histórico em conta) vs **liquidação bancária** (Ganhos).
@@ -72,7 +74,7 @@
 | `payment_settlement_movements` | Liquidações bancárias (UI em provider-earnings) |
 | `payment_webhook_events` (+ queue) | Ingress NetCred; estados incl. `DEAD_LETTER` |
 | `provider_gateway_accounts` | Credenciamento NetCred do prestador |
-| `platform_constants` | Tarifas, T-2, T-12h, batches, retries webhook |
+| `platform_constants` | Tarifas, `min_installment_value`, T-2, T-12h, batches, retries webhook |
 
 ## 8. Integrações
 

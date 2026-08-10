@@ -2,7 +2,7 @@
 
 begin;
 
-select plan(7);
+select plan(8);
 
 select is(
   (
@@ -24,14 +24,15 @@ select is(
       'auto_cancel_hours_before_service',
       'scheduled_charge_hours_before_service',
       'installment_hmac_expires_minutes',
+      'min_installment_value',
       'reconciliation_poll_interval_minutes',
       'webhook_base_retry_interval_minutes',
       'charge_batch_size',
       'settlement_sync_batch_size'
     )
   ),
-  19,
-  'seeds core payment platform_constants keys including settlement_sync_batch_size'
+  20,
+  'seeds core payment platform_constants keys including min_installment_value and settlement_sync_batch_size'
 );
 
 -- Hermetic: migration defaults (seed.sql may override sandbox rates/risk on local DB)
@@ -72,6 +73,12 @@ select is(
   public.platform_constant_numeric('settlement_sync_batch_size', 0),
   20::numeric,
   'settlement_sync_batch_size default seed value'
+);
+
+select is(
+  public.platform_constant_numeric('min_installment_value', 0),
+  150.00::numeric,
+  'min_installment_value default seed value (R$150)'
 );
 
 select finish();

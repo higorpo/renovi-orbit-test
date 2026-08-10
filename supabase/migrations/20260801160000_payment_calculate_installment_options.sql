@@ -53,6 +53,7 @@ declare
   v_rate_pct numeric;
   v_total_with_fees numeric;
   v_installment_amount numeric;
+  v_min_installment_value numeric;
   v_options jsonb := '[]'::jsonb;
   v_n smallint;
   v_computed_at timestamptz := clock_timestamp();
@@ -101,6 +102,7 @@ begin
 
   v_ttl_minutes := public.platform_constant_numeric('installment_hmac_expires_minutes', 10);
   v_expires_at := v_computed_at + make_interval(mins => v_ttl_minutes::integer);
+  v_min_installment_value := public.platform_constant_numeric('min_installment_value', 150);
 
   for v_n in 1..12 loop
     v_rate_pct := public.platform_constant_numeric(
@@ -116,6 +118,11 @@ begin
       v_total_with_fees / v_n::numeric,
       2
     );
+
+    -- 1x is always offered; n > 1 requires installment_amount >= min_installment_value.
+    if v_n > 1 and v_installment_amount < v_min_installment_value then
+      continue;
+    end if;
 
     v_options := v_options || jsonb_build_array(
       jsonb_build_object(
@@ -166,7 +173,7 @@ end;
 $$;
 
 comment on function public.payment_calculate_installment_options(uuid, uuid, text) is
-  'Client checkout RPC: fee table 1–12 with HMAC-signed payload (Vault installment_signing_secret).';
+  'Client checkout RPC: fee table 1–12 (n>1 only when installment_amount >= min_installment_value) with HMAC-signed payload (Vault installment_signing_secret).';
 
 revoke all on function public.payment_installment_hmac_canonical_text(jsonb) from public;
 revoke all on function public.payment_installment_hmac_canonical_text(jsonb) from anon;
