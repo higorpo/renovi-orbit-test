@@ -32,16 +32,16 @@ const REASON_MAX_LENGTH = 2000;
 const WHAT_HAPPENS_NEXT = [
   {
     icon: Scale,
-    text: "A plataforma analisa o caso e pode pedir correção ou reembolso.",
-  },
-  {
-    icon: MessageCircle,
-    text: "O chat com o prestador permanece aberto durante a análise.",
+    text: "A Renovi analisa o caso e pode pedir correção ou reembolso.",
   },
   {
     icon: Wallet,
     text: "O pagamento ao prestador fica em retenção até a resolução.",
   },
+  {
+    icon: MessageCircle,
+    text: "Entramos em contato com você ou o prestador caso necessário.",
+  }
 ] as const;
 
 export type OpenDisputeConfirmDialogProps = {
@@ -152,15 +152,15 @@ export function OpenDisputeConfirmDialog({
               {WHAT_HAPPENS_NEXT.map(({ icon: Icon, text }) => (
                 <li
                   key={text}
-                  className="flex items-start gap-3 px-3.5 py-3"
+                  className="flex items-center gap-3 px-3.5 py-3"
                 >
                   <span
-                    className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-background text-foreground/80 ring-1 ring-border/70"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-background text-foreground/80 ring-1 ring-border/70"
                     aria-hidden
                   >
                     <Icon className="h-3.5 w-3.5" strokeWidth={2.25} />
                   </span>
-                  <p className="pt-1 text-sm leading-snug text-foreground/90">
+                  <p className="text-sm leading-snug text-foreground/90">
                     {text}
                   </p>
                 </li>
