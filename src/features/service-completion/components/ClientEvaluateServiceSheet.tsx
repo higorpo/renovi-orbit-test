@@ -5,12 +5,20 @@
  * - intro (prompt only) → PendingEvaluationIntroStep
  * - wizard → ClientConfirmRatingWizard (chrome=standard)
  * - success → ClientEvaluateSuccessStep (chrome=immersive)
+ *
+ * Dispute confirm opens as a sibling after this sheet is hidden locally.
+ * We do NOT call parent onOpenChange(false) until the dispute flow ends —
+ * hosts (Meus Serviços, prompt) clear model/id on close and would unmount us.
  */
 
 import { useCallback, useEffect, useState } from "react";
 import { CompletionFlowSheetDialog } from "./CompletionFlowSheetDialog";
-import { ClientConfirmRatingWizard } from "./ClientConfirmRatingWizard";
+import {
+  ClientConfirmRatingWizard,
+  type OpenDisputeRequestPayload,
+} from "./ClientConfirmRatingWizard";
 import { ClientEvaluateSuccessStep } from "./ClientEvaluateSuccessStep";
+import { OpenDisputeConfirmDialog } from "./OpenDisputeConfirmDialog";
 import { PendingEvaluationIntroStep } from "./PendingEvaluationIntroStep";
 import type { PendingEvaluationPromptSummary } from "../api/pendingEvaluationPrompt.api";
 
@@ -78,25 +86,43 @@ export function ClientEvaluateServiceSheet({
   const [successMode, setSuccessMode] = useState<"confirm" | "optional">(
     hideStepAside ? "optional" : "confirm",
   );
+  /** Hide evaluate shell without telling parent (keeps this component mounted). */
+  const [evaluateSuppressed, setEvaluateSuppressed] = useState(false);
+  const [pendingDispute, setPendingDispute] =
+    useState<OpenDisputeRequestPayload | null>(null);
+  const [disputeConfirmOpen, setDisputeConfirmOpen] = useState(false);
 
-  // Reset bodies when the sheet closes (same pattern as provider mark-executed).
+  const evaluateOpen = open && !evaluateSuppressed;
+
+  // Reset bodies when the parent closes the sheet.
   useEffect(() => {
     if (!open) {
       setPhase(initialPhase(isPrompt));
       setStepAside(initialStepAside(isPrompt, hideStepAside));
       setDismissDisabled(false);
+      setEvaluateSuppressed(false);
+      setPendingDispute(null);
+      setDisputeConfirmOpen(false);
     }
   }, [hideStepAside, isPrompt, open]);
 
   const handleOpenChange = useCallback(
     (nextOpen: boolean) => {
+      // Ignore shell close while we only suppressed evaluate for the dispute dialog
+      // (hosts clear model/id on onOpenChange(false) and would unmount this tree).
+      if (!nextOpen && evaluateSuppressed) {
+        return;
+      }
       if (nextOpen) {
         setPhase(initialPhase(isPrompt));
         setStepAside(initialStepAside(isPrompt, hideStepAside));
+        setEvaluateSuppressed(false);
+        setPendingDispute(null);
+        setDisputeConfirmOpen(false);
       }
       onOpenChange(nextOpen);
     },
-    [hideStepAside, isPrompt, onOpenChange],
+    [evaluateSuppressed, hideStepAside, isPrompt, onOpenChange],
   );
 
   const handleStepChange = useCallback(
@@ -106,9 +132,37 @@ export function ClientEvaluateServiceSheet({
     [],
   );
 
+  const handleRequestOpenDispute = useCallback(
+    (payload: OpenDisputeRequestPayload) => {
+      setPendingDispute(payload);
+      setEvaluateSuppressed(true);
+      setDisputeConfirmOpen(true);
+    },
+    [],
+  );
+
+  const handleDisputeConfirmOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      setDisputeConfirmOpen(nextOpen);
+      if (nextOpen) return;
+      // Cancelled: bring evaluate back (parent still thinks the flow is open).
+      setPendingDispute(null);
+      setEvaluateSuppressed(false);
+    },
+    [],
+  );
+
+  const handleDisputeOpened = useCallback(() => {
+    setDisputeConfirmOpen(false);
+    setPendingDispute(null);
+    setEvaluateSuppressed(false);
+    onOpenChange(false);
+  }, [onOpenChange]);
+
   const isSuccess = phase === "success";
-  const showIntro = isPrompt && phase === "intro" && promptSummary;
-  const showWizard = open && phase === "wizard";
+  const showIntro =
+    evaluateOpen && isPrompt && phase === "intro" && promptSummary;
+  const showWizard = evaluateOpen && phase === "wizard";
 
   const shellTitle = isSuccess
     ? SUCCESS_A11Y_TITLE
@@ -122,53 +176,65 @@ export function ClientEvaluateServiceSheet({
       : description;
 
   return (
-    <CompletionFlowSheetDialog
-      open={open}
-      onOpenChange={handleOpenChange}
-      chrome={isSuccess ? "immersive" : "standard"}
-      title={shellTitle}
-      description={shellDescription}
-      headerAside={
-        !isSuccess && stepAside ? (
-          <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium tabular-nums text-muted-foreground">
-            {stepAside}
-          </span>
-        ) : null
-      }
-      dismissDisabled={dismissDisabled}
-      size="md"
-      testId={testId}
-    >
-      {showIntro ? (
-        <PendingEvaluationIntroStep
-          summary={promptSummary}
-          onContinue={() => {
-            setPhase("wizard");
-            setStepAside("2 de 3");
-          }}
-        />
-      ) : null}
-      {showWizard ? (
-        <ClientConfirmRatingWizard
+    <>
+      <CompletionFlowSheetDialog
+        open={evaluateOpen}
+        onOpenChange={handleOpenChange}
+        chrome={isSuccess ? "immersive" : "standard"}
+        title={shellTitle}
+        description={shellDescription}
+        headerAside={
+          !isSuccess && stepAside ? (
+            <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium tabular-nums text-muted-foreground">
+              {stepAside}
+            </span>
+          ) : null
+        }
+        dismissDisabled={dismissDisabled}
+        size="md"
+        testId={testId}
+      >
+        {showIntro ? (
+          <PendingEvaluationIntroStep
+            summary={promptSummary}
+            onContinue={() => {
+              setPhase("wizard");
+              setStepAside("2 de 3");
+            }}
+          />
+        ) : null}
+        {showWizard ? (
+          <ClientConfirmRatingWizard
+            serviceRequestId={serviceRequestId}
+            variant={isPrompt ? "prompt" : "default"}
+            onPendingChange={setDismissDisabled}
+            onStepChange={handleStepChange}
+            onCompleted={() => {
+              setSuccessMode(ratingOnly ? "optional" : "confirm");
+              setPhase("success");
+              setStepAside(null);
+              onCompleted?.();
+            }}
+            onRequestOpenDispute={handleRequestOpenDispute}
+          />
+        ) : null}
+        {isSuccess ? (
+          <ClientEvaluateSuccessStep
+            mode={successMode}
+            onDismiss={() => onOpenChange(false)}
+          />
+        ) : null}
+      </CompletionFlowSheetDialog>
+
+      {pendingDispute ? (
+        <OpenDisputeConfirmDialog
+          open={disputeConfirmOpen}
+          onOpenChange={handleDisputeConfirmOpenChange}
           serviceRequestId={serviceRequestId}
-          variant={isPrompt ? "prompt" : "default"}
-          onPendingChange={setDismissDisabled}
-          onStepChange={handleStepChange}
-          onCompleted={() => {
-            setSuccessMode(ratingOnly ? "optional" : "confirm");
-            setPhase("success");
-            setStepAside(null);
-            onCompleted?.();
-          }}
-          onDisputeOpened={() => onOpenChange(false)}
+          contractedServiceId={pendingDispute.contractedServiceId}
+          onOpened={handleDisputeOpened}
         />
       ) : null}
-      {isSuccess ? (
-        <ClientEvaluateSuccessStep
-          mode={successMode}
-          onDismiss={() => onOpenChange(false)}
-        />
-      ) : null}
-    </CompletionFlowSheetDialog>
+    </>
   );
 }

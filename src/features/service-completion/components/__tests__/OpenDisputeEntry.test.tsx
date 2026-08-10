@@ -110,4 +110,22 @@ describe("OpenDisputeEntry", () => {
       reason: "Serviço incompleto",
     });
   });
+
+  it("delegates to onRequestOpen without embedding confirm dialog", () => {
+    const onRequestOpen = vi.fn();
+    render(
+      <OpenDisputeEntry
+        serviceRequestId="sr-1"
+        contractedServiceId="cs-1"
+        onRequestOpen={onRequestOpen}
+      />,
+      { wrapper },
+    );
+
+    fireEvent.click(screen.getByTestId("open-dispute-cta"));
+    expect(onRequestOpen).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByTestId("open-dispute-confirm-dialog"),
+    ).not.toBeInTheDocument();
+  });
 });

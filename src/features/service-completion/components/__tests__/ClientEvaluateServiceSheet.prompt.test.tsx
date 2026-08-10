@@ -6,6 +6,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const wizardMocks = vi.hoisted(() => ({
   mounted: vi.fn(),
   onCompleted: undefined as (() => void) | undefined,
+  onRequestOpenDispute: undefined as
+    | ((payload: {
+        contractedServiceId: string;
+        autoExecutedWithoutChecklist: boolean;
+      }) => void)
+    | undefined,
 }));
 
 vi.mock("@/hooks/useBreakpoint", () => ({
@@ -18,9 +24,14 @@ vi.mock("../ClientConfirmRatingWizard", () => ({
     variant?: string;
     onStepChange?: (step: "review" | "rating", label: string) => void;
     onCompleted?: () => void;
+    onRequestOpenDispute?: (payload: {
+      contractedServiceId: string;
+      autoExecutedWithoutChecklist: boolean;
+    }) => void;
   }) => {
     wizardMocks.mounted(props);
     wizardMocks.onCompleted = props.onCompleted;
+    wizardMocks.onRequestOpenDispute = props.onRequestOpenDispute;
     return (
       <div
         data-testid="client-confirm-rating-wizard-mock"
@@ -33,9 +44,35 @@ vi.mock("../ClientConfirmRatingWizard", () => ({
         >
           Submit rating
         </button>
+        <button
+          type="button"
+          data-testid="fake-request-open-dispute"
+          onClick={() =>
+            props.onRequestOpenDispute?.({
+              contractedServiceId: "cs-1",
+              autoExecutedWithoutChecklist: false,
+            })
+          }
+        >
+          Abrir disputa
+        </button>
       </div>
     );
   },
+}));
+
+vi.mock("../../hooks/useOpenDispute", () => ({
+  useOpenDispute: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+  }),
+}));
+
+vi.mock("@/hooks/useMobileDialogViewport", () => ({
+  useMobileDialogViewport: () => ({
+    contentRef: { current: null },
+    scheduleSync: vi.fn(),
+  }),
 }));
 
 vi.mock("framer-motion", () => {
@@ -72,6 +109,7 @@ describe("ClientEvaluateServiceSheet", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     wizardMocks.onCompleted = undefined;
+    wizardMocks.onRequestOpenDispute = undefined;
   });
 
   it("shows intro first and mounts wizard only after Continuar (prompt)", async () => {
@@ -165,5 +203,29 @@ describe("ClientEvaluateServiceSheet", () => {
     fireEvent.click(screen.getByTestId("client-evaluate-success-dismiss"));
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("hides evaluate and opens dispute confirm without dismissing parent", async () => {
+    const onOpenChange = vi.fn();
+
+    render(
+      <ClientEvaluateServiceSheet
+        open
+        onOpenChange={onOpenChange}
+        serviceRequestId="sr-1"
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("fake-request-open-dispute"));
+
+    expect(onOpenChange).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("open-dispute-confirm-dialog"),
+      ).toBeInTheDocument();
+    });
+    expect(
+      screen.queryByTestId("client-confirm-rating-wizard-mock"),
+    ).not.toBeInTheDocument();
   });
 });

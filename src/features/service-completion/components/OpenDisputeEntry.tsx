@@ -15,7 +15,12 @@ export type OpenDisputeEntryProps = {
   className?: string;
   /** When true, omit checklist-based wording (auto-mark EXECUTED without checklist). */
   autoExecutedWithoutChecklist?: boolean;
-  /** After dispute opens successfully (e.g. close evaluate wizard). */
+  /**
+   * When set, CTA delegates opening the confirm dialog to the parent
+   * (e.g. close evaluate sheet first so dialogs do not stack).
+   */
+  onRequestOpen?: () => void;
+  /** After dispute opens successfully (embedded confirm dialog only). */
   onOpened?: () => void;
 };
 
@@ -30,9 +35,11 @@ export function OpenDisputeEntry({
   contractedServiceId,
   className,
   autoExecutedWithoutChecklist = false,
+  onRequestOpen,
   onOpened,
 }: OpenDisputeEntryProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const embedConfirmDialog = !onRequestOpen;
   const description = autoExecutedWithoutChecklist
     ? DISPUTE_COPY_WITHOUT_CHECKLIST
     : DISPUTE_COPY_WITH_CHECKLIST;
@@ -66,7 +73,13 @@ export function OpenDisputeEntry({
               size="sm"
               className="h-9"
               data-testid="open-dispute-cta"
-              onClick={() => setConfirmOpen(true)}
+              onClick={() => {
+                if (onRequestOpen) {
+                  onRequestOpen();
+                  return;
+                }
+                setConfirmOpen(true);
+              }}
             >
               Abrir disputa
             </Button>
@@ -74,13 +87,15 @@ export function OpenDisputeEntry({
         </div>
       </div>
 
-      <OpenDisputeConfirmDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        serviceRequestId={serviceRequestId}
-        contractedServiceId={contractedServiceId}
-        onOpened={onOpened}
-      />
+      {embedConfirmDialog ? (
+        <OpenDisputeConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          serviceRequestId={serviceRequestId}
+          contractedServiceId={contractedServiceId}
+          onOpened={onOpened}
+        />
+      ) : null}
     </>
   );
 }

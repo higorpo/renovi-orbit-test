@@ -40,7 +40,10 @@ export { ProviderExecutedSuccessStep } from "./components/ProviderExecutedSucces
 export type { ProviderExecutedSuccessStepProps } from "./components/ProviderExecutedSuccessStep";
 
 export { ClientConfirmRatingWizard } from "./components/ClientConfirmRatingWizard";
-export type { ClientConfirmRatingWizardProps } from "./components/ClientConfirmRatingWizard";
+export type {
+  ClientConfirmRatingWizardProps,
+  OpenDisputeRequestPayload,
+} from "./components/ClientConfirmRatingWizard";
 
 export { OpenDisputeEntry, shouldShowOpenDispute } from "./components/OpenDisputeEntry";
 export type { OpenDisputeEntryProps } from "./components/OpenDisputeEntry";

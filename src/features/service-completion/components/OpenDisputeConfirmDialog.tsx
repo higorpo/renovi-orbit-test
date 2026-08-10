@@ -89,13 +89,12 @@ export function OpenDisputeConfirmDialog({
             </DialogClose>
           </div>
           <DialogDescription className="text-sm text-muted-foreground">
-            A plataforma analisa o caso. Você não poderá confirmar o
-            recebimento nem cancelar o serviço enquanto a disputa estiver
-            aberta. O chat permanece disponível.
+            Algo na execução do serviço não está correto? Abra uma disputa e nossa equipe irá analisar o caso e entrará em contato caso necessário.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4 touch-pan-y overscroll-y-contain [-webkit-overflow-scrolling:touch] sm:px-0 sm:py-0">
+        {/* Desktop gutter so focus rings are not clipped by overflow / dialog edges */}
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4 touch-pan-y overscroll-y-contain [-webkit-overflow-scrolling:touch] sm:mt-4 sm:-mx-1 sm:px-1 sm:py-1">
           <Label htmlFor="open-dispute-reason">Motivo (opcional)</Label>
           <Textarea
             id="open-dispute-reason"

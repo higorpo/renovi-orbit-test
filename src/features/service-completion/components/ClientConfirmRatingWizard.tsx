@@ -34,12 +34,20 @@ import { CompletionEvidenceGallery } from "./CompletionEvidenceGallery";
 
 export type ClientConfirmRatingWizardVariant = "default" | "prompt";
 
+export type OpenDisputeRequestPayload = {
+  contractedServiceId: string;
+  autoExecutedWithoutChecklist: boolean;
+};
+
 export type ClientConfirmRatingWizardProps = {
   serviceRequestId: string;
   className?: string;
   onCompleted?: () => void;
-  /** After dispute opens — host should close the evaluate sheet. */
-  onDisputeOpened?: () => void;
+  /**
+   * CTA "Abrir disputa" — host should close the evaluate sheet first,
+   * then open the confirm dialog (avoid stacked dialogs).
+   */
+  onRequestOpenDispute?: (payload: OpenDisputeRequestPayload) => void;
   onPendingChange?: (pending: boolean) => void;
   /** Bubble step to the shell header (e.g. "1 de 2" or "2 de 3" for prompt). */
   onStepChange?: (step: "review" | "rating", label: string) => void;
@@ -93,7 +101,7 @@ export function ClientConfirmRatingWizard({
   serviceRequestId,
   className,
   onCompleted,
-  onDisputeOpened,
+  onRequestOpenDispute,
   onPendingChange,
   onStepChange,
   variant = "default",
@@ -194,7 +202,15 @@ export function ClientConfirmRatingWizard({
           serviceRequestId={serviceRequestId}
           contractedServiceId={contractedId}
           autoExecutedWithoutChecklist={autoWithoutChecklist}
-          onOpened={onDisputeOpened}
+          onRequestOpen={
+            onRequestOpenDispute
+              ? () =>
+                  onRequestOpenDispute({
+                    contractedServiceId: contractedId,
+                    autoExecutedWithoutChecklist: autoWithoutChecklist,
+                  })
+              : undefined
+          }
         />
       </section>
     );
@@ -263,7 +279,15 @@ export function ClientConfirmRatingWizard({
         contractedServiceId={contractedId}
         className="border-t-0"
         autoExecutedWithoutChecklist={autoWithoutChecklist}
-        onOpened={onDisputeOpened}
+        onRequestOpen={
+          onRequestOpenDispute
+            ? () =>
+                onRequestOpenDispute({
+                  contractedServiceId: contractedId,
+                  autoExecutedWithoutChecklist: autoWithoutChecklist,
+                })
+            : undefined
+        }
       />
     ) : null;
 
