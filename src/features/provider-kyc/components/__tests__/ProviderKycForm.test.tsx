@@ -78,13 +78,13 @@ async function goToIdentityStep() {
 
 async function fillIdentityCpfAndContinue() {
   await goToIdentityStep();
-  fireEvent.change(screen.getByLabelText("Nome completo"), {
+  fireEvent.change(screen.getByLabelText(/Nome completo/), {
     target: { value: "João Silva" },
   });
-  fireEvent.change(screen.getByLabelText("CPF"), {
+  fireEvent.change(screen.getByLabelText(/^CPF/), {
     target: { value: "390.533.447-05" },
   });
-  fireEvent.change(screen.getByLabelText("Telefone"), {
+  fireEvent.change(screen.getByLabelText(/Telefone/), {
     target: { value: "48999999999" },
   });
   clickContinue();
@@ -99,7 +99,7 @@ async function fillBankAndContinue() {
   const option = await screen.findByText(/Banco do Brasil \(001\)/i);
   fireEvent.click(option);
 
-  fireEvent.change(screen.getByLabelText("Agência"), {
+  fireEvent.change(screen.getByLabelText(/Agência/), {
     target: { value: "1234" },
   });
   fireEvent.change(screen.getByLabelText(/Conta com dígito/i), {
@@ -146,6 +146,78 @@ describe("ProviderKycForm wizard", () => {
       submissionId: "sub-1",
       emailDispatched: true,
     });
+  });
+
+  it("marks required fields with a red asterisk and leaves PIX optional", async () => {
+    function expectRequiredAsteriskIn(stepTestId: string, labelText: string) {
+      const step = screen.getByTestId(stepTestId);
+      const fieldLabel = within(step)
+        .getAllByText((_, element) => {
+          if (element?.tagName !== "LABEL") return false;
+          return (element.textContent ?? "").replace(/\*$/, "").trim() === labelText;
+        })[0];
+      expect(fieldLabel.querySelector(".text-destructive")).toHaveTextContent("*");
+    }
+
+    render(
+      <ProviderKycForm
+        providerId="provider-1"
+        accountEmail="provider@example.com"
+      />,
+    );
+
+    await waitForWizardReady();
+    expectRequiredAsteriskIn("kyc-step-entity", "Tipo de cadastro");
+
+    clickContinue();
+    await waitFor(() => {
+      expectActiveStep("kyc-step-identity");
+    });
+
+    expectRequiredAsteriskIn("kyc-step-identity", "Nome completo");
+    expectRequiredAsteriskIn("kyc-step-identity", "CPF");
+    expectRequiredAsteriskIn("kyc-step-identity", "Telefone");
+    expectRequiredAsteriskIn("kyc-step-identity", "E-mail");
+
+    fireEvent.change(screen.getByLabelText(/Nome completo/), {
+      target: { value: "João Silva" },
+    });
+    fireEvent.change(screen.getByLabelText(/^CPF\*?$/), {
+      target: { value: "390.533.447-05" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Telefone\*?$/), {
+      target: { value: "48999999999" },
+    });
+    clickContinue();
+    await waitFor(() => {
+      expectActiveStep("kyc-step-bank");
+    });
+
+    expectRequiredAsteriskIn("kyc-step-bank", "Banco");
+    expectRequiredAsteriskIn("kyc-step-bank", "Agência");
+    expectRequiredAsteriskIn("kyc-step-bank", "Conta com dígito");
+    const pixLabel = within(screen.getByTestId("kyc-step-bank"))
+      .getAllByText((_, element) => {
+        if (element?.tagName !== "LABEL") return false;
+        return (element.textContent ?? "").includes("Chave PIX (opcional)");
+      })[0];
+    expect(pixLabel.querySelector(".text-destructive")).toBeNull();
+
+    fireEvent.click(screen.getByRole("combobox"));
+    fireEvent.click(await screen.findByText(/Banco do Brasil \(001\)/i));
+    fireEvent.change(screen.getByLabelText(/Agência/), {
+      target: { value: "1234" },
+    });
+    fireEvent.change(screen.getByLabelText(/Conta com dígito/i), {
+      target: { value: "56789-0" },
+    });
+    clickContinue();
+    await waitFor(() => {
+      expectActiveStep("kyc-step-documents");
+    });
+
+    expectRequiredAsteriskIn("kyc-step-documents", "Documento de identidade (CPF/CNH)");
+    expectRequiredAsteriskIn("kyc-step-documents", "Comprovante de endereço");
   });
 
   it("starts on entity step and shows CNPJ fields when PJ is selected", async () => {
@@ -203,28 +275,28 @@ describe("ProviderKycForm wizard", () => {
         expectWizardProgress(2);
       });
 
-      fireEvent.change(screen.getByLabelText("Nome completo"), {
+      fireEvent.change(screen.getByLabelText(/Nome completo/), {
         target: { value: "Empresa LTDA" },
       });
-      fireEvent.change(screen.getByLabelText("CNPJ"), {
+      fireEvent.change(screen.getByLabelText(/CNPJ/), {
         target: { value: "11.444.777/0001-61" },
       });
-      fireEvent.change(screen.getByLabelText("Telefone"), {
+      fireEvent.change(screen.getByLabelText(/^Telefone\*?$/), {
         target: { value: "48999999999" },
       });
-      fireEvent.change(screen.getByLabelText("Razão social"), {
+      fireEvent.change(screen.getByLabelText(/Razão social/), {
         target: { value: "Empresa LTDA" },
       });
-      fireEvent.change(screen.getByLabelText("Nome fantasia"), {
+      fireEvent.change(screen.getByLabelText(/Nome fantasia/), {
         target: { value: "Empresa" },
       });
-      fireEvent.change(screen.getByLabelText("Nome do representante legal"), {
+      fireEvent.change(screen.getByLabelText(/Nome do representante legal/), {
         target: { value: "Maria Silva" },
       });
-      fireEvent.change(screen.getByLabelText("CPF do representante"), {
+      fireEvent.change(screen.getByLabelText(/CPF do representante/), {
         target: { value: "390.533.447-05" },
       });
-      fireEvent.change(screen.getByLabelText("Telefone do representante"), {
+      fireEvent.change(screen.getByLabelText(/Telefone do representante/), {
         target: { value: "48988887777" },
       });
       clickContinue();
@@ -406,7 +478,7 @@ describe("ProviderKycForm wizard", () => {
 
     fireEvent.click(screen.getByRole("combobox"));
     fireEvent.click(await screen.findByText(/Banco do Brasil \(001\)/i));
-    fireEvent.change(screen.getByLabelText("Agência"), {
+    fireEvent.change(screen.getByLabelText(/Agência/), {
       target: { value: "1234" },
     });
     fireEvent.change(screen.getByLabelText(/Conta com dígito/i), {

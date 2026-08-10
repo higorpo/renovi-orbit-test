@@ -32,6 +32,7 @@ function FileField({
   value,
   onChange,
   disabled,
+  required = true,
 }: {
   id: string;
   label: string;
@@ -39,13 +40,16 @@ function FileField({
   value: File | null;
   onChange: (file: File | null) => void;
   disabled?: boolean;
+  required?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const describedById = useId();
 
   return (
     <div className="space-y-2">
-      <FormLabel htmlFor={id}>{label}</FormLabel>
+      <FormLabel htmlFor={id} required={required}>
+        {label}
+      </FormLabel>
       <FormDescription id={describedById}>{helper}</FormDescription>
       <input
         ref={inputRef}
@@ -191,6 +195,7 @@ export function ProviderKycWizardStepContent({
           name="entityType"
           render={({ field }) => (
             <FormItem>
+              <FormLabel required>Tipo de cadastro</FormLabel>
               <div className="grid gap-3 sm:grid-cols-2">
                 <EntityCard
                   selected={field.value === "CPF"}
@@ -223,7 +228,7 @@ export function ProviderKycWizardStepContent({
             name="fullName"
             render={({ field }) => (
               <FormItem className="sm:col-span-2">
-                <FormLabel>Nome completo</FormLabel>
+                <FormLabel required>Nome completo</FormLabel>
                 <FormControl>
                   <Input {...field} disabled={disabled} className="min-h-11" />
                 </FormControl>
@@ -236,7 +241,7 @@ export function ProviderKycWizardStepContent({
             name="document"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{isCnpj ? "CNPJ" : "CPF"}</FormLabel>
+                <FormLabel required>{isCnpj ? "CNPJ" : "CPF"}</FormLabel>
                 <FormControl>
                   <Input
                     {...field}
@@ -259,7 +264,7 @@ export function ProviderKycWizardStepContent({
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Telefone</FormLabel>
+                <FormLabel required>Telefone</FormLabel>
                 <FormControl>
                   <Input
                     {...field}
@@ -277,7 +282,7 @@ export function ProviderKycWizardStepContent({
             name="email"
             render={({ field }) => (
               <FormItem className="sm:col-span-2">
-                <FormLabel>E-mail</FormLabel>
+                <FormLabel required>E-mail</FormLabel>
                 <FormDescription>
                   E-mail cadastrado na plataforma. Não é possível alterar aqui.
                 </FormDescription>
@@ -297,7 +302,7 @@ export function ProviderKycWizardStepContent({
               name="razaoSocial"
               render={({ field }) => (
                 <FormItem className="sm:col-span-2">
-                  <FormLabel>Razão social</FormLabel>
+                  <FormLabel required>Razão social</FormLabel>
                   <FormControl>
                     <Input {...field} disabled={disabled} className="min-h-11" />
                   </FormControl>
@@ -310,7 +315,7 @@ export function ProviderKycWizardStepContent({
               name="nomeFantasia"
               render={({ field }) => (
                 <FormItem className="sm:col-span-2">
-                  <FormLabel>Nome fantasia</FormLabel>
+                  <FormLabel required>Nome fantasia</FormLabel>
                   <FormControl>
                     <Input {...field} disabled={disabled} className="min-h-11" />
                   </FormControl>
@@ -323,7 +328,7 @@ export function ProviderKycWizardStepContent({
               name="legalRepFullName"
               render={({ field }) => (
                 <FormItem className="sm:col-span-2">
-                  <FormLabel>Nome do representante legal</FormLabel>
+                  <FormLabel required>Nome do representante legal</FormLabel>
                   <FormControl>
                     <Input {...field} disabled={disabled} className="min-h-11" />
                   </FormControl>
@@ -336,7 +341,7 @@ export function ProviderKycWizardStepContent({
               name="legalRepCpf"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>CPF do representante</FormLabel>
+                  <FormLabel required>CPF do representante</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
@@ -354,7 +359,7 @@ export function ProviderKycWizardStepContent({
               name="legalRepPhone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Telefone do representante</FormLabel>
+                  <FormLabel required>Telefone do representante</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
@@ -382,7 +387,7 @@ export function ProviderKycWizardStepContent({
             name="bankInstitutionCode"
             render={({ field }) => (
               <FormItem className="sm:col-span-2">
-                <FormLabel>Banco</FormLabel>
+                <FormLabel required>Banco</FormLabel>
                 <FormControl>
                   <BankPicker
                     id="kyc-bank-picker"
@@ -401,7 +406,7 @@ export function ProviderKycWizardStepContent({
             name="bankBranch"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Agência</FormLabel>
+                <FormLabel required>Agência</FormLabel>
                 <FormDescription>Apenas números, sem dígito</FormDescription>
                 <FormControl>
                   <Input
@@ -423,7 +428,7 @@ export function ProviderKycWizardStepContent({
             name="bankAccount"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Conta com dígito</FormLabel>
+                <FormLabel required>Conta com dígito</FormLabel>
                 <FormDescription>Ex.: 12345-6</FormDescription>
                 <FormControl>
                   <Input {...field} disabled={disabled} className="min-h-11" />

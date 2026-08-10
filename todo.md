@@ -108,7 +108,6 @@ Coisas para fazer next
 
 
 
-- Na tela de onboarding de prestador colocar o * de campo obrigatoŕio
 
 - Informação "Previsão de depósito na conta" está incorreta na tela de detalhes do serviço (quando tem parcelamento ou algo do tipo). Ao invés disso, redirecionar para tela de Ganhos com filtro específico apenas para os ganhos relacionados aquele serviço.
 
