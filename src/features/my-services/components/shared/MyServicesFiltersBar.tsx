@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -6,14 +6,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 import { Label } from "@/components/ui/label";
 import { Filter, X } from "lucide-react";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
@@ -73,16 +73,6 @@ export function MyServicesFiltersBar({
   };
 
   const isDesktop = useBreakpointMd();
-
-  // Lock body scroll when mobile bottom sheet is open
-  useEffect(() => {
-    if (isDesktop || !open) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prevOverflow;
-    };
-  }, [open, isDesktop]);
 
   const filtersFormContent = (
     <div className="space-y-4 overflow-hidden">
@@ -281,16 +271,11 @@ export function MyServicesFiltersBar({
   }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>{triggerButton}</SheetTrigger>
-      <SheetContent
-        side="bottom"
-        className="flex max-h-[85vh] flex-col rounded-t-2xl p-0"
-        hideCloseButton={false}
-      >
-        <div className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-muted" aria-hidden />
-        <SheetHeader className="shrink-0 flex flex-row items-center justify-between border-b px-4 py-3 pr-12 text-left">
-          <SheetTitle className="text-lg font-medium">Filtros</SheetTitle>
+    <Drawer open={open} onOpenChange={setOpen} shouldScaleBackground={false} handleOnly>
+      <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
+      <DrawerContent className="flex max-h-[85vh] flex-col gap-0 rounded-t-2xl p-0" aria-describedby={undefined}>
+        <DrawerHeader className="shrink-0 flex flex-row items-center justify-between gap-3 border-b px-4 pb-3 pt-1 text-left">
+          <DrawerTitle className="text-lg font-medium">Filtros</DrawerTitle>
           {hasActiveFilters && (
             <Button
               variant="ghost"
@@ -301,18 +286,18 @@ export function MyServicesFiltersBar({
               <X className="h-3 w-3" /> Limpar
             </Button>
           )}
-        </SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        </DrawerHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto touch-pan-y overscroll-y-contain px-4 py-4">
           {filtersFormContent}
         </div>
-        <SheetFooter className="shrink-0 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <SheetClose asChild>
+        <DrawerFooter className="shrink-0 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <DrawerClose asChild>
             <Button className="w-full" size="lg">
               Aplicar filtros
             </Button>
-          </SheetClose>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+          </DrawerClose>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

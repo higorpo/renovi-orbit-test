@@ -43,7 +43,7 @@ import {
 </Drawer>
 ```
 
-Referência: `CompletionFlowSheetDialog` (mobile), `ChatComposerAttachmentSourceSheet`, `ChatAudioRecordingSheet`.
+Referência: `CompletionFlowSheetDialog` (mobile), `ChatComposerAttachmentSourceSheet`, `ChatAudioRecordingSheet`, `AddCardSheetDialog`, `ChatDetailsMobileSheet`.
 
 ## Regras práticas
 
@@ -64,11 +64,3 @@ Referência: `CompletionFlowSheetDialog` (mobile), `ChatComposerAttachmentSource
 // ❌ BAD — “handle” decorativo no Sheet
 <div className="mx-auto h-1.5 w-12 rounded-full bg-muted" />
 ```
-
-## Migração pendente (Sheet bottom → Drawer)
-
-- `AddCardSheetDialog`
-- `MyServicesFiltersBar` (sheet de filtros)
-- `ChatDetailsMobileSheet`
-- `AddressFormDialog` (caminho mobile)
-- `ServiceAreaField` (caminho mobile)

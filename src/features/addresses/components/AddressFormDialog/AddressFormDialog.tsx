@@ -8,12 +8,12 @@ import {
 } from "@/components/ui/dialog";
 import { ShellDialogContent } from "@/components/ui/shell-dialog";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
 import { unmask } from "@/lib/masks";
@@ -312,27 +312,26 @@ export function AddressFormDialog({
   }
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent
-        side="bottom"
-        className="flex max-h-[90vh] flex-col rounded-t-2xl p-0"
-      >
-        <div
-          className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-muted"
-          aria-hidden
-        />
-        <SheetHeader className="shrink-0 border-b px-4 py-3 text-left">
-          <SheetTitle className="text-lg font-semibold">{title}</SheetTitle>
-        </SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+    <Drawer
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      shouldScaleBackground={false}
+      handleOnly
+      dismissible={!submitting}
+    >
+      <DrawerContent className="flex max-h-[90vh] flex-col gap-0 rounded-t-2xl p-0" aria-describedby={undefined}>
+        <DrawerHeader className="shrink-0 border-b px-4 pb-3 pt-1 text-left">
+          <DrawerTitle className="text-lg font-semibold">{title}</DrawerTitle>
+        </DrawerHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto touch-pan-y overscroll-y-contain px-4 py-4">
           {formContent}
         </div>
-        <SheetFooter className="shrink-0 w-full flex-row gap-2 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <DrawerFooter className="shrink-0 w-full flex-row gap-2 border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="flex w-full gap-2 [&>button]:flex-1">
             {footerContent}
           </div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

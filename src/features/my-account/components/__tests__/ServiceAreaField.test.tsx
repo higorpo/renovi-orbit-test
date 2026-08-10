@@ -470,11 +470,10 @@ describe("ServiceAreaField", () => {
     expect(await within(sheet).findByText("Itajaí, SC")).toBeInTheDocument();
 
     fireEvent.keyDown(sheet, { key: "Escape" });
+    // Vaul keeps the drawer node mounted while closed (data-state=closed).
     await waitFor(() => {
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(screen.getByRole("dialog")).toHaveAttribute("data-state", "closed");
     });
-
-    fireEvent.click(screen.getByRole("button", { name: /Adicionar cidade/ }));
     expect(
       within(screen.getByRole("dialog")).getByPlaceholderText("Digite o nome da cidade...")
     ).toHaveValue("");

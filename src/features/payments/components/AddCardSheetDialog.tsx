@@ -9,14 +9,14 @@ import {
 } from "@/components/ui/dialog";
 import { ShellDialogContent } from "@/components/ui/shell-dialog";
 import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth";
 import { useBreakpointMd } from "@/hooks/useBreakpoint";
@@ -53,6 +53,14 @@ export function AddCardSheetDialog({
       return;
     }
     onOpenChange(false);
+  };
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      handleClose();
+      return;
+    }
+    onOpenChange(next);
   };
 
   const handleSuccess = (result: TokenizeCardSuccess) => {
@@ -94,7 +102,7 @@ export function AddCardSheetDialog({
 
   if (isDesktop) {
     return (
-      <Dialog open={open} onOpenChange={(next) => !next && handleClose()}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <ShellDialogContent size="sm" className="gap-0 overflow-hidden sm:p-0">
           <DialogHeader className="shrink-0 space-y-1.5 px-6 pt-6 pb-4">
             <DialogTitle>Adicionar cartão</DialogTitle>
@@ -114,17 +122,20 @@ export function AddCardSheetDialog({
   }
 
   return (
-    <Sheet open={open} onOpenChange={(next) => !next && handleClose()}>
-      <SheetContent
-        side="bottom"
-        hideCloseButton
-        className="flex max-h-[90vh] flex-col gap-0 rounded-t-2xl p-0"
-      >
-        <div className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-muted" aria-hidden />
-        <SheetHeader className="shrink-0 space-y-1.5 border-b px-4 pb-3 pt-2 text-left">
+    <Drawer
+      open={open}
+      onOpenChange={handleOpenChange}
+      shouldScaleBackground={false}
+      handleOnly
+      dismissible={!isPending}
+    >
+      <DrawerContent className="flex max-h-[90vh] flex-col gap-0 rounded-t-2xl p-0">
+        <DrawerHeader className="shrink-0 space-y-1.5 border-b px-4 pb-3 pt-1 text-left">
           <div className="flex items-center justify-between gap-3">
-            <SheetTitle className="text-base font-semibold sm:text-lg">Adicionar cartão</SheetTitle>
-            <SheetClose asChild>
+            <DrawerTitle className="text-base font-semibold sm:text-lg">
+              Adicionar cartão
+            </DrawerTitle>
+            <DrawerClose asChild>
               <button
                 type="button"
                 aria-label="Fechar"
@@ -133,19 +144,19 @@ export function AddCardSheetDialog({
               >
                 <X className="h-4 w-4" aria-hidden />
               </button>
-            </SheetClose>
+            </DrawerClose>
           </div>
-          <SheetDescription>
+          <DrawerDescription>
             Seus dados de cartão são enviados de forma segura e não ficam salvos neste dispositivo.
-          </SheetDescription>
-        </SheetHeader>
+          </DrawerDescription>
+        </DrawerHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 touch-pan-y overscroll-y-contain">
           {formContent}
         </div>
-        <SheetFooter className="shrink-0 w-full flex-row gap-2 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md">
+        <DrawerFooter className="shrink-0 w-full flex-row gap-2 border-t bg-background/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.18)] backdrop-blur-md">
           <div className="flex w-full gap-2 [&>button]:flex-1">{footerContent}</div>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+        </DrawerFooter>
+      </DrawerContent>
+    </Drawer>
   );
 }

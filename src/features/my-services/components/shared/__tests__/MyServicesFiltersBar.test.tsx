@@ -246,7 +246,7 @@ describe("MyServicesFiltersBar", () => {
     expect(screen.getByRole("button", { name: /Abrir filtros/i })).toBeDisabled();
   });
 
-  it("mobile: renders sheet layout and clears filters", () => {
+  it("mobile: renders drawer layout and clears filters", () => {
     vi.mocked(useBreakpointMd).mockReturnValue(false);
     const onCategoryChange = vi.fn();
     const onCityChange = vi.fn();
@@ -282,9 +282,8 @@ describe("MyServicesFiltersBar", () => {
     expect(onHasImagesChange).toHaveBeenCalledWith(null);
   });
 
-  it("locks body overflow on mobile while sheet is open", () => {
+  it("mobile: opens drawer with filters content", () => {
     vi.mocked(useBreakpointMd).mockReturnValue(false);
-    const prev = document.body.style.overflow;
     render(
       <MyServicesFiltersBar
         filters={baseFilters}
@@ -294,15 +293,16 @@ describe("MyServicesFiltersBar", () => {
         onDateRangeChange={vi.fn()}
         onHasProposalsChange={vi.fn()}
         onHasImagesChange={vi.fn()}
-        categoryOptions={[]}
+        categoryOptions={["Pintura"]}
         cityOptions={[]}
         neighborhoodOptions={[]}
       />
     );
 
     fireEvent.click(screen.getByRole("button", { name: /Abrir filtros/i }));
-    expect(document.body.style.overflow).toBe("hidden");
-    document.body.style.overflow = prev;
+    expect(screen.getByRole("heading", { name: "Filtros" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Filtrar por categoria/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Aplicar filtros/i })).toBeInTheDocument();
   });
 
   it("mobile: updates city, neighborhood, dates, proposals, and photos filters", () => {

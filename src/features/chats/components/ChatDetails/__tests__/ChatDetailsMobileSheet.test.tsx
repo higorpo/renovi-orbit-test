@@ -71,7 +71,6 @@ describe("ChatDetailsMobileSheet", () => {
     const sheet = screen.getByTestId("chat-details-mobile-sheet");
     expect(sheet.className).toContain("max-h-[90vh]");
     expect(sheet.className).toContain("rounded-t-2xl");
-    expect(sheet.className).toContain("slide-in-from-bottom");
     expect(screen.getByText("Mais informações")).toBeTruthy();
     expect(screen.getByTestId("chat-details-panel")).toBeTruthy();
   });

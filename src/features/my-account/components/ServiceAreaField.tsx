@@ -10,11 +10,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import {
   Command,
   CommandEmpty,
@@ -374,7 +374,7 @@ export function ServiceAreaField({ form, disabled }: ServiceAreaFieldProps) {
                     <Plus className="h-4 w-4" />
                     Adicionar cidade
                   </Button>
-                  <Sheet
+                  <Drawer
                     open={addPopoverOpen}
                     onOpenChange={(open) => {
                       setAddPopoverOpen(open);
@@ -384,25 +384,23 @@ export function ServiceAreaField({ form, disabled }: ServiceAreaFieldProps) {
                         setCityQuery("");
                       }
                     }}
+                    shouldScaleBackground={false}
+                    handleOnly
                   >
-                    <SheetContent
-                      side="bottom"
-                      className="flex max-h-[85vh] flex-col rounded-t-2xl p-0"
-                    >
-                      <div
-                        className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-muted"
-                        aria-hidden
-                      />
-                      <SheetHeader className="shrink-0 border-b px-4 py-3 text-left">
-                        <SheetTitle>
+                      <DrawerContent
+                        aria-describedby={undefined}
+                        className="flex max-h-[85vh] flex-col gap-0 rounded-t-2xl p-0"
+                      >
+                      <DrawerHeader className="shrink-0 border-b px-4 pb-3 pt-1 text-left">
+                        <DrawerTitle>
                           {!selectedCityIdForAdd ? "Adicionar cidade" : "Selecionar bairros"}
-                        </SheetTitle>
-                      </SheetHeader>
-                      <div className="min-h-0 flex-1 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] -mt-[20px]">
+                        </DrawerTitle>
+                      </DrawerHeader>
+                      <div className="min-h-0 flex-1 overflow-y-auto touch-pan-y overscroll-y-contain pb-[max(1rem,env(safe-area-inset-bottom))] -mt-[20px]">
                         {addCityContent}
                       </div>
-                    </SheetContent>
-                  </Sheet>
+                    </DrawerContent>
+                  </Drawer>
                 </>
               )}
 

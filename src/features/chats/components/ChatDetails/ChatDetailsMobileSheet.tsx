@@ -1,9 +1,9 @@
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import type { Profile } from "@/features/auth";
 import { cn } from "@/lib/utils";
 import type { ConversationDetailResponse } from "../../types/chats.types";
@@ -29,24 +29,20 @@ export function ChatDetailsMobileSheet({
   isArchiving = false,
 }: ChatDetailsMobileSheetProps) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
+    <Drawer
+      open={open}
+      onOpenChange={onOpenChange}
+      shouldScaleBackground={false}
+      handleOnly
+    >
+      <DrawerContent
         aria-describedby={undefined}
         data-testid="chat-details-mobile-sheet"
-        className={cn(
-          "flex max-h-[90vh] flex-col gap-0 rounded-t-2xl p-0",
-          "[&>button]:right-4 [&>button]:top-4",
-        )}
+        className={cn("flex max-h-[90vh] flex-col gap-0 rounded-t-2xl p-0")}
       >
-        <div
-          className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-muted"
-          aria-hidden
-        />
-
-        <SheetHeader className="shrink-0 space-y-0 border-b px-4 py-3 pr-14 text-left">
-          <SheetTitle className="text-lg font-semibold">Mais informações</SheetTitle>
-        </SheetHeader>
+        <DrawerHeader className="shrink-0 space-y-0 border-b px-4 pb-3 pt-1 text-left">
+          <DrawerTitle className="text-lg font-semibold">Mais informações</DrawerTitle>
+        </DrawerHeader>
 
         <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-y-contain px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch]">
           {detail && currentUser ? (
@@ -59,7 +55,7 @@ export function ChatDetailsMobileSheet({
             />
           ) : null}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }

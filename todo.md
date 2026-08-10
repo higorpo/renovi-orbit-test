@@ -120,27 +120,7 @@ Coisas para fazer next
 
 
 
-Adequar bottomsheets abaixo para usar drawer:
-Já usam Drawer (vaul) — OK
-Arquivo	Uso
-src/features/service-completion/components/CompletionFlowSheetDialog.tsx
-Checklist / sucesso / avaliar (mobile)
-src/features/chats/components/ChatScreen/ChatAudioRecordingSheet.tsx
-Gravação de áudio
-src/features/chats/components/ChatScreen/ChatComposerAttachmentSourceSheet.tsx
-Escolher câmera/galeria
-Bottom sheet com Sheet (Radix) — candidatos a migrar
-Arquivo	Uso
-src/features/payments/components/AddCardSheetDialog.tsx
-Adicionar cartão
-src/features/my-services/components/shared/MyServicesFiltersBar.tsx
-Filtros Meus Serviços
-src/features/chats/components/ChatDetails/ChatDetailsMobileSheet.tsx
-Detalhes do chat
-src/features/addresses/components/AddressFormDialog/AddressFormDialog.tsx
-Formulário de endereço
-src/features/my-account/components/ServiceAreaField.tsx
-Área de atendimento
+
 
 
 ---
