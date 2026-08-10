@@ -3,7 +3,11 @@ export type CancellationViewerRole = "client" | "provider";
 export type ClientRefundPenaltyTier = "FULL_REFUND" | "PENALTY_10" | "PENALTY_30";
 
 /** EXECUTED is cancellable when a PAID schedule exists (RPC allows; UI previously blocked). */
-const NON_CANCELLABLE_SERVICE_STATUSES = new Set(["CANCELLED", "COMPLETED"]);
+const NON_CANCELLABLE_SERVICE_STATUSES = new Set([
+  "CANCELLED",
+  "COMPLETED",
+  "IN_DISPUTE",
+]);
 
 const BLOCKED_SCHEDULE_STATES = new Set([
   "IN_ANALYSIS",

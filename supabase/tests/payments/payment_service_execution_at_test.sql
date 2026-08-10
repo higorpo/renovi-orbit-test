@@ -31,6 +31,10 @@ as $$
     null::timestamptz,
     null::timestamptz,
     null::text,
+    null::timestamptz,
+    null::timestamptz,
+    null::uuid,
+    null::text,
     null::timestamptz
   )::public.contracted_services;
 $$;

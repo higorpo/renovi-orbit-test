@@ -213,8 +213,8 @@ Calculada em `derive_service_list_phase`:
 | Papel | Pré-condição | Superfície |
 |-------|--------------|------------|
 | Prestador (contratado) | Contrato `CONFIRMED` **e** `enrichmentReady` do `get_service` (sem prefetch do completion context) | Botão **“Marcar serviço como concluído”** na seção Serviço contratado (ao lado de cancelar/reagendar) → bottom sheet (mobile) ou dialog (desktop); ao abrir, fase `checklist` com `ProviderExecutedWizard` (`get_service_completion_context`); após mark-executed, fase `success` (`ProviderExecutedSuccessStep` → `CompletionSuccessStep`, `chrome="immersive"`) |
-| Cliente | Contrato `EXECUTED` ou `COMPLETED` (só então busca contexto); CTA se `canConfirmWithRating` ou rating opcional pós auto-complete | Botão **“Avaliar serviço”** na mesma seção → sheet/dialog com stepper **2 etapas** no path manual: (1) revisar evidências/checklist congelado + checkbox obrigatório de declaração de execução (“Continuar para avaliação” disabled até marcar; se `auto_executed_without_checklist`, alerta sem lista vazia de critérios + copy suavizada); stub `DisputeStubEntry` **só** dentro do wizard (título “Abrir disputa”, botão “Falar com o suporte”); (2) avaliar prestador/serviço (`ClientConfirmRatingWizard` embutido). Após envio, fase `success` (`ClientEvaluateSuccessStep` → `CompletionSuccessStep`, `chrome="immersive"`; CTA **“Entendi”**); `ClientEvaluateServiceAction` mantém a sheet montada enquanto `open` após capabilities sumirem |
-| Cliente | Sem CTA avaliar (ex.: `COMPLETED` pós-rating) | **Sem** `DisputeStubEntry` no detalhe / seção contratada — stub **nunca** aparece inline no host do detalhe |
+| Cliente | Contrato `EXECUTED` ou `COMPLETED` (só então busca contexto); CTA se `canConfirmWithRating` ou rating opcional pós auto-complete | Botão **“Avaliar serviço”** na mesma seção → sheet/dialog com stepper **2 etapas** no path manual: (1) revisar evidências/checklist congelado + checkbox obrigatório de declaração de execução (“Continuar para avaliação” disabled até marcar; se `auto_executed_without_checklist`, alerta sem lista vazia de critérios + copy suavizada); entrada de **disputa de serviço** **só** dentro do wizard (confirmação + motivo opcional → `IN_DISPUTE`); (2) avaliar prestador/serviço (`ClientConfirmRatingWizard` embutido). Após envio, fase `success` (`ClientEvaluateSuccessStep` → `CompletionSuccessStep`, `chrome="immersive"`; CTA **“Entendi”**); `ClientEvaluateServiceAction` mantém a sheet montada enquanto `open` após capabilities sumirem |
+| Cliente | Sem CTA avaliar (ex.: `COMPLETED` pós-rating) ou CS `IN_DISPUTE` | **Sem** abertura de disputa no detalhe / seção contratada — disputa **nunca** aparece inline no host do detalhe; em `IN_DISPUTE` ocultar CTAs avaliar/cancelar |
 | Sistema | Duas janelas ~24h distintas: (1) `auto_mark_executed_grace_hours` após fim do dia BRT da data agendada → auto-mark `CONFIRMED`→`EXECUTED` sem checklist; (2) `auto_complete_grace_hours` após `executed_at` → auto-complete `EXECUTED`→`COMPLETED` (`completed_by=system`); rating opcional depois |
 
 Fotos de evidência: thumbnails com lightbox fullscreen (padrão galeria do pedido). Checklist/evidências via RPC `get_service_completion_context` **dentro** do sheet/wizard (não no load do detalhe). Paths de evidência precisam estar registrados antes do mark-executed.
@@ -252,7 +252,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | **negotiation-proposals** | `ReceivedBudgetDetailsSheet`; composer/sumário no detalhe prestador; invalidate keys após mutações de proposta (evidência em outros módulos) |
 | **chats** | Lista de conversas do cliente em negociação; botão chat contratado; FAB inicia/abre conversa |
 | **payments** | `ManualPaymentRecovery`, `ContractedServiceCancelAction`, `PaymentDisputeStatus`, `ProviderSettlementStatus` |
-| **service-completion** | **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceContractedSection` (wizards embutidos no sheet/dialog; stub disputa); só Public API |
+| **service-completion** | **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceContractedSection` (wizards embutidos no sheet/dialog; disputa de serviço); só Public API |
 | **service-reschedule** | `ContractedServiceRescheduleAction` + snapshot `reschedule` no modelo |
 | **addresses** | `LocationPreviewMap` no local do prestador |
 | **matching** | Republicação INSERT `OPEN` **enfileira enrichment**; matching bootstrap só após READY (não mais trigger no OPEN) |
@@ -266,7 +266,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 |---------|---------------|
 | RPC | `list_services(...)` |
 | Página | `p_page`, `p_page_size` (1–100) |
-| Fase | `p_list_phase` ← `statusTabIdToListPhase` (`all`/`dispute` → null / short-circuit) |
+| Fase | `p_list_phase` ← `statusTabIdToListPhase` (`all` → null; `dispute` → `dispute` quando CS `IN_DISPUTE`) |
 | Busca | `p_search` ILIKE título/descrição |
 | Categoria | `p_category_title` (= título platform_services; front passa `categoryId` como título — nome de campo legado) |
 | Cidade / bairro | `p_city_name`, `p_neighborhood` |
@@ -291,7 +291,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | Ajustar pagamento | Cliente | `showManualPayment` + elegibilidade schedule (`FAILED` / `FAILED_PERMANENT` etc. em payments) | `ManualPaymentRecovery` |
 | Marcar executado | Prestador | contracted `CONFIRMED` + `enrichmentReady` (`get_service`); contexto ao abrir sheet | CTA “Marcar serviço como concluído” → sheet/dialog → RPC `service_completion_mark_executed` → fase `success` na mesma sheet (`ProviderExecutedSuccessStep` → `CompletionSuccessStep`, `chrome="immersive"`; CTA **“Entendi”**) |
 | Confirmar + avaliar | Cliente | contracted `EXECUTED`/`COMPLETED` + `canConfirmWithRating` (ou rating opcional) | CTA “Avaliar serviço” → sheet 2 etapas (review exige checkbox de declaração) → `service_completion_confirm_with_rating` (scores obrigatórios no caminho manual) → fase `success` na mesma sheet (`ClientEvaluateSuccessStep` → `CompletionSuccessStep`, `chrome="immersive"`; CTA **“Entendi”**) |
-| Falar com o suporte (stub disputa) | Cliente | durante o fluxo Avaliar serviço (`EXECUTED`/`COMPLETED` com CTA) | Banner título “Abrir disputa”, botão “Falar com o suporte” **somente** no wizard Avaliar serviço (`ClientConfirmRatingWizard`) — **nunca** inline no detalhe: URL suporte ou toast “Em breve” + analytics — sem FSM. Detalhe: [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md) §8 |
+| Abrir disputa de serviço | Cliente | durante o fluxo Avaliar serviço (`EXECUTED`) | Confirmação + motivo opcional → `IN_DISPUTE` **somente** no wizard Avaliar serviço — **nunca** inline no detalhe. Detalhe: [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md) §8 |
 | Cancelar serviço contratado | Client/provider | flags + status no componente payments | `ContractedServiceCancelAction` |
 | Reagendar (CTA) | Client/provider | role client\|provider + seção contratada | `ContractedServiceRescheduleAction` |
 | Iniciar / ver negociação | Prestador | sempre no detalhe (FAB) | `initiateConversation` ou navega chat existente |
@@ -383,10 +383,10 @@ Helpers de state: `createClientMyServicesServiceDetailState`, `createProviderMyS
 
 | ID | Item | Status |
 |----|------|--------|
-| VS-01 | Aba Disputas sem dados | Aberta (produto) |
+| ~~VS-01~~ | Aba Disputas | **Fechada (2026-08-10):** `list_phase = dispute` / CS `IN_DISPUTE` |
 | VS-02 | Índices transversais ainda mencionam `:id` como placeholder | Gap para worker transversal (`modulos/README.md`, mapa) — fora deste escopo de edição |
 | VS-03 | Detalhe a partir do calendário sem sheet (intencional no código) | Documentado em provider-calendar; confirmar produto se quiser unificar |
-| VS-04 | Regras finas de conclusão | Documentadas em [service-completion](../../service-completion/README.md); writers `service_completion_*` (não payments) |
+| VS-04 | Regras finas de conclusão | Documentadas em [service-completion](../../service-completion/README.md); writers `service_completion_*` (não payments); Disputa de serviço ADR-0006 |
 
 ---
 
@@ -398,7 +398,7 @@ Helpers de state: `createClientMyServicesServiceDetailState`, `createProviderMyS
 - [ ] Cliente cancelled: republicar → novo id
 - [ ] Cliente contracted PENDING_PAYMENT elegível: “Ajustar pagamento”
 - [ ] Prestador CONFIRMED: CTA “Marcar serviço como concluído” abre sheet/dialog com checklist (não inline); cliente EXECUTED: CTA “Avaliar serviço” com 2 etapas (review com checkbox de declaração; Continuar disabled até marcar); thumbnails de evidência + lightbox
-- [ ] Stub disputa: só no wizard Avaliar serviço (título “Abrir disputa”, botão “Falar com o suporte”); **nunca** inline no detalhe / seção contratada sem CTA avaliar
+- [ ] Disputa de serviço: abertura só no wizard Avaliar serviço em `EXECUTED` → `IN_DISPUTE`; aba Disputas lista o item; **nunca** inline no detalhe sem fluxo de avaliação; resolve só ops (sem UI admin)
 - [ ] Enrichment PENDING: pedido fora do feed até READY
 - [ ] Prestador: FAB inicia chat; local/mapa com contrato
 - [ ] Prestador sem proposta/contrato: detalhe negado / empty

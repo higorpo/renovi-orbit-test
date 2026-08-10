@@ -21,6 +21,8 @@ type RpcCapabilities = {
   can_save_draft?: boolean;
   can_confirm_with_rating?: boolean;
   can_submit_optional_rating?: boolean;
+  can_open_dispute?: boolean;
+  is_in_dispute?: boolean;
   show_dispute_stub?: boolean;
 };
 
@@ -60,12 +62,19 @@ type RpcContext = {
 };
 
 function mapCapabilities(raw: RpcCapabilities | undefined): ServiceCompletionCapabilities {
+  const canOpenDispute =
+    typeof raw?.can_open_dispute === "boolean"
+      ? raw.can_open_dispute
+      : Boolean(raw?.show_dispute_stub);
   return {
     canMarkExecuted: Boolean(raw?.can_mark_executed),
     canSaveDraft: Boolean(raw?.can_save_draft),
     canConfirmWithRating: Boolean(raw?.can_confirm_with_rating),
     canSubmitOptionalRating: Boolean(raw?.can_submit_optional_rating),
-    showDisputeStub: Boolean(raw?.show_dispute_stub),
+    canOpenDispute,
+    isInDispute: Boolean(raw?.is_in_dispute),
+    // Transitional alias — same gate as can_open_dispute on the server.
+    showDisputeStub: canOpenDispute || Boolean(raw?.show_dispute_stub),
   };
 }
 

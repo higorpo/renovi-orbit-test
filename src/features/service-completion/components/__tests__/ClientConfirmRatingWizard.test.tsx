@@ -140,6 +140,8 @@ function baseContext(
       canSaveDraft: false,
       canConfirmWithRating: false,
       canSubmitOptionalRating: false,
+      canOpenDispute: false,
+      isInDispute: false,
       showDisputeStub: false,
       ...caps,
     },
@@ -277,6 +279,7 @@ describe("ClientConfirmRatingWizard", () => {
     const onStepChange = vi.fn();
     contextState.current = baseContext({
       canSubmitOptionalRating: true,
+      canOpenDispute: false,
       showDisputeStub: false,
     });
     contextState.current.contractedService.status = "COMPLETED";
@@ -303,7 +306,7 @@ describe("ClientConfirmRatingWizard", () => {
     expect(
       screen.queryByTestId("client-confirm-execution-ack"),
     ).not.toBeInTheDocument();
-    expect(screen.queryByTestId("dispute-stub-entry")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("open-dispute-entry")).not.toBeInTheDocument();
     expect(screen.queryByText(/Feito\?/i)).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /Voltar/i }),

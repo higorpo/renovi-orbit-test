@@ -1,7 +1,12 @@
 import type { StatusTabId } from "../constants/statusTabs";
 import type { ProposalRevisionReason, ProposalStatus } from "@/features/negotiation-proposals";
 
-export type ServiceListPhase = "negotiation" | "in_progress" | "completed" | "cancelled";
+export type ServiceListPhase =
+  | "negotiation"
+  | "in_progress"
+  | "completed"
+  | "cancelled"
+  | "dispute";
 
 export interface MyProposalSummary {
   id: string;

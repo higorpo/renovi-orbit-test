@@ -12,10 +12,11 @@ export type ContractedServiceCompletionStatus =
   | "PENDING_PAYMENT"
   | "CONFIRMED"
   | "EXECUTED"
+  | "IN_DISPUTE"
   | "COMPLETED"
   | "CANCELLED";
 
-export type CompletedBy = "client" | "system";
+export type CompletedBy = "client" | "system" | "admin";
 
 /** Response value keyed by criterion block id (design §5.8.2). */
 export type CompletionCriterionResponse = {
@@ -31,6 +32,14 @@ export type ServiceCompletionCapabilities = {
   canSaveDraft: boolean;
   canConfirmWithRating: boolean;
   canSubmitOptionalRating: boolean;
+  /** Client may open a service dispute (EXECUTED only). */
+  canOpenDispute: boolean;
+  /** Contracted service is currently IN_DISPUTE. */
+  isInDispute: boolean;
+  /**
+   * @deprecated Prefer `canOpenDispute`. Still mapped from RPC `show_dispute_stub`
+   * (same gate as can_open_dispute) for transitional callers/tests.
+   */
   showDisputeStub: boolean;
 };
 

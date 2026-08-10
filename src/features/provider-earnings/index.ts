@@ -12,8 +12,16 @@ export { EarningsPage } from "./components/EarningsPage";
 export { ProviderSettlementDisclosure } from "./components/ProviderSettlementDisclosure";
 export type { ProviderSettlementDisclosureProps } from "./components/ProviderSettlementDisclosure";
 
-// Shared copy used by payments history blurb
-export { PROVIDER_SETTLEMENT_COMPLETION_NOTE } from "./utils/providerSettlementDisclosure";
+// Shared copy + hold resolution used by payments (Recebimentos / service detail)
+export {
+  PROVIDER_SETTLEMENT_COMPLETION_NOTE,
+  resolveProviderSettlementHold,
+} from "./utils/providerSettlementDisclosure";
+export type {
+  ProviderSettlementHoldReason,
+  ResolveProviderSettlementHoldInput,
+  ResolveProviderSettlementHoldResult,
+} from "./utils/providerSettlementDisclosure";
 
 // Routes & query keys
 export { ROUTE_PROVIDER_EARNINGS } from "./constants/routes";

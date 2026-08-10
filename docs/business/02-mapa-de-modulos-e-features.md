@@ -93,7 +93,7 @@ Inventário alinhado ao código em `src/features/`. “Localização no código�
 | Pagamentos | **Implementado** — `payments` (+ reconciliacao-e-voids) + backend; runbooks em `docs/payment-system/` |
 | Message Dispatcher | Critério doc **OK** (pipeline, quotas, quiet hours, engagement); pendências de **produto** P-08 (janela hardcoded) e P-09 (fuso único BRT) |
 | service-reschedule | Critério doc **OK** (ciclo de estados + propor + pagamento pós-aceite); pendências P-SR-* (UX erros, templates MMD, consumo de `is_last_minute`) |
-| service-completion | Critério doc **OK** (enrichment READY-handoff + conclusão CTAs sheet/dialog + declaração de execução + stub disputa + endurecimento SQL 2026-08-05); design técnico em `docs/service-completion/` |
+| service-completion | Critério doc **OK** (enrichment READY-handoff + conclusão CTAs sheet/dialog + declaração de execução + Disputa de serviço `IN_DISPUTE` + endurecimento SQL 2026-08-05); design técnico em `docs/service-completion/` |
 | PWA / Sentry / analytics | Mencionados na rastreabilidade; não detalhados como módulos de produto |
 | App nativo (Capacitor) | Infra cliente documentada em **device-beacon**, **push-permission**, **notifications** (+ libs `src/lib/push`, Preferences) |
 | Matching legado | Edge morta + RPC órfã documentados em matching-dispatch / provider-jobs |

@@ -18,7 +18,7 @@ Itens que exigem validação humana, evidência parcial ou conflito entre trecho
 
 | ID | Tema | Resolução |
 |----|------|-----------|
-| ~~P-05~~ | `/dashboard/services/:id` | **Fechada (2026-08-02):** a rota **não** é placeholder. Evidência: `router.tsx` → `ServiceDetailShell` (`view-services`). Detalhe unificado por fase documentado em [visualizacao-de-servicos](./modulos/view-services/features/visualizacao-de-servicos.md). Evoluções restantes (ex.: aba Disputas vazia em Meus Serviços) são produto, não “página em construção”. |
+| ~~P-05~~ | `/dashboard/services/:id` | **Fechada (2026-08-02):** a rota **não** é placeholder. Evidência: `router.tsx` → `ServiceDetailShell` (`view-services`). Detalhe unificado por fase documentado em [visualizacao-de-servicos](./modulos/view-services/features/visualizacao-de-servicos.md). Aba Disputas / disputa de serviço: ver ~~SC-01~~ / ~~SC-02~~ (fechadas 2026-08-10). |
 | ~~P-10~~ | Cobertura documental parcial do Message Dispatcher | **Fechada (2026-08-02):** capacidades cobertas em `message-dispatcher/features/*` — [pipeline-e-fsm](./modulos/message-dispatcher/features/pipeline-e-fsm.md), [quotas-e-canais](./modulos/message-dispatcher/features/quotas-e-canais.md), [horario-silencioso](./modulos/message-dispatcher/features/horario-silencioso.md), [engagement-push-click](./modulos/message-dispatcher/features/engagement-push-click.md). Permanecem abertos só P-08/P-09 (parametrização operacional). |
 | ~~P-11~~ | Cobertura parcial de `service-reschedule` (ciclo FSM) | **Fechada como lacuna documental (2026-08-02):** FSM request/propose/adjustment/aceite/cancel/expire/supersede documentado em [ciclo-estados-reagendamento](./modulos/service-reschedule/features/ciclo-estados-reagendamento.md). Residuais de produto/evidência parcial → **P-SR-*** abaixo. |
 | ~~P-12~~ | Cancelamento pós-`PAID` com commit parcial | **Resolvido (2026-07-29):** Opção A (gateway first) — `payment_prepare_refund_request` → `refundTransaction` → `payment_commit_refund_after_gateway`; falha de gateway = zero mutações irreversíveis. Recovery: `payment_mark_refund_gateway_acked`, reconcile (PAID+SUBMITTED; completa cancel se gateway REFUNDED) e webhook. Doc: [`critical-bug-refund-partial-commit.md`](../payment-system/critical-bug-refund-partial-commit.md). Relacionado: CHK-008. |
@@ -39,12 +39,12 @@ Itens que exigem validação humana, evidência parcial ou conflito entre trecho
 
 Também referenciados no módulo matching (fora desta consolidação se já fechados no feature): P-MD-01…03.
 
-## Service-completion (produto shipped; lacunas de disputa)
+## Service-completion (produto shipped; disputa de serviço)
 
 | ID | Tema | Notas | Severidade |
 |----|------|-------|------------|
-| SC-01 | FSM de disputa in-app | Stub only (`DisputeStubEntry` + URL/toast). Chargeback/`is_disputed` permanece em payments. | Baixa — expectativa de produto |
-| SC-02 | Aba Disputas em Meus Serviços | Lista sempre vazia no client — ver view-services VS-01. | Baixa |
+| ~~SC-01~~ | Disputa de serviço in-app | **Fechada (2026-08-10):** status `IN_DISPUTE`; abertura self-serve `EXECUTED→IN_DISPUTE`; resolução admin RPC → `COMPLETED` (`completed_by=admin`). Chargeback/`is_disputed` permanece em payments (conceito distinto). Sem painel admin; resolve via `service_role`/SQL — ver [service-completion-monitoring](../service-completion/service-completion-monitoring.md). | — |
+| ~~SC-02~~ | Aba Disputas em Meus Serviços | **Fechada (2026-08-10):** `list_phase = dispute` quando CS = `IN_DISPUTE`; aba lista de verdade (server-side). Ver [my-services](./modulos/my-services/README.md). | — |
 
 ## Service-reschedule (residuais pós-P-11)
 
@@ -114,7 +114,7 @@ Também referenciados no módulo matching (fora desta consolidação se já fech
 | **Abertas (MMD operacional)** | P-08, P-09 |
 | **Abertas (matching legado)** | P-MD-04, P-MD-05 |
 | **Abertas (reagendamento residual)** | P-SR-01, P-SR-02, P-SR-03, P-SR-05, P-SR-06 |
-| **Abertas (conclusão / disputa stub)** | SC-01 (FSM disputa completa fora do escopo), SC-02 (aba Disputas vazia) — documentados; não bloqueiam comportamento shipped. Endurecimento SQL 2026-08-05 (evidência/sessões/contexto/RLS; janitor órfãos SQL-only, sem Edge) **documentado**; upload evidência Option A **documentado**; UX CTAs sheet/dialog + galeria evidências (2026-08-05) **documentada**; lazy load do completion context (2026-08-06) **documentado**; highlight de follow-up nos cards Meus Serviços pós-data-fim/`EXECUTED` (2026-08-06) **documentado**; CTA “Concluir serviço” no card do prestador (`CONFIRMED` + past) (2026-08-06) **documentado**; SELECT storage/`createSignedUrl` para cliente com evidência `frozen` (2026-08-06) **documentado**; Declaração de execução (tabela + Edge + gate manual; auto-complete sem declaração; sem SELECT autenticado) (2026-08-07) **documentada** — sem nova pendência. |
+| **Abertas (conclusão / disputa)** | ~~SC-01~~ / ~~SC-02~~ **fechadas (2026-08-10)** — Disputa de serviço (`IN_DISPUTE`) + aba Disputas com `list_phase=dispute`. Fora de escopo MVP: painel admin, reopen self-serve, `IN_DISPUTE→CANCELLED`, reembolso automático. Endurecimento SQL 2026-08-05 (evidência/sessões/contexto/RLS; janitor órfãos SQL-only, sem Edge) **documentado**; upload evidência Option A **documentado**; UX CTAs sheet/dialog + galeria evidências (2026-08-05) **documentada**; lazy load do completion context (2026-08-06) **documentado**; highlight de follow-up nos cards Meus Serviços pós-data-fim/`EXECUTED` (2026-08-06) **documentado**; CTA “Concluir serviço” no card do prestador (`CONFIRMED` + past) (2026-08-06) **documentado**; SELECT storage/`createSignedUrl` para cliente com evidência `frozen` (2026-08-06) **documentado**; Declaração de execução (tabela + Edge + gate manual; auto-complete sem declaração; sem SELECT autenticado) (2026-08-07) **documentada**. |
 | **Abertas (calendário)** | PC-02…PC-05 |
 | **Abertas (push/payments)** | N-01, PAY-DC |
 | **Fechadas nesta auditoria** | P-05, P-10, P-11 (doc); P-12 (histórico); **PC-01** (índices transversais) |

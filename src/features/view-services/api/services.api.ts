@@ -70,13 +70,6 @@ export async function listServices(
     };
   }
 
-  if (params.statusTabId === "dispute") {
-    return {
-      data: { items: [], total_count: 0, page, page_size: pageSize },
-      error: null,
-    };
-  }
-
   const listPhase = statusTabIdToListPhase(params.statusTabId);
 
   const { data, error } = await supabase.rpc("list_services", {

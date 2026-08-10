@@ -1,16 +1,22 @@
-import { ProviderSettlementDisclosure } from "@/features/provider-earnings";
+import {
+  ProviderSettlementDisclosure,
+  resolveProviderSettlementHold,
+} from "@/features/provider-earnings";
 import { usePaymentSchedule } from "../hooks/usePaymentSchedule";
 
 const PAID_SCHEDULE_STATES = new Set(["PAID", "REFUNDED", "PARTIALLY_REFUNDED", "REFUND_REQUESTED"]);
 
 export type ProviderSettlementStatusProps = {
   contractedServiceId: string;
+  /** contracted_services.status — enables service_dispute hold when IN_DISPUTE. */
+  contractedServiceStatus?: string | null;
   showCompletionNote?: boolean;
   className?: string;
 };
 
 export function ProviderSettlementStatus({
   contractedServiceId,
+  contractedServiceStatus = null,
   showCompletionNote = true,
   className,
 }: ProviderSettlementStatusProps) {
@@ -21,13 +27,11 @@ export function ProviderSettlementStatus({
     return null;
   }
 
-  const settlementOnHold =
-    schedule.isDisputed ||
-    schedule.state === "REFUND_REQUESTED" ||
-    schedule.state === "REFUNDED" ||
-    schedule.state === "PARTIALLY_REFUNDED";
-
-  const holdReason = schedule.isDisputed ? "dispute" : "refund";
+  const { settlementOnHold, holdReason } = resolveProviderSettlementHold({
+    isDisputed: schedule.isDisputed,
+    scheduleState: schedule.state,
+    contractedServiceStatus,
+  });
 
   return (
     <ProviderSettlementDisclosure

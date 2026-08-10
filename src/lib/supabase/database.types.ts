@@ -1282,6 +1282,10 @@ export type Database = {
           completed_at: string | null
           completed_by: string | null
           created_at: string
+          dispute_reason: string | null
+          dispute_resolved_at: string | null
+          disputed_at: string | null
+          disputed_by: string | null
           duration_unit: string
           duration_value: number
           executed_at: string | null
@@ -1303,6 +1307,10 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
+          dispute_reason?: string | null
+          dispute_resolved_at?: string | null
+          disputed_at?: string | null
+          disputed_by?: string | null
           duration_unit: string
           duration_value: number
           executed_at?: string | null
@@ -1324,6 +1332,10 @@ export type Database = {
           completed_at?: string | null
           completed_by?: string | null
           created_at?: string
+          dispute_reason?: string | null
+          dispute_resolved_at?: string | null
+          disputed_at?: string | null
+          disputed_by?: string | null
           duration_unit?: string
           duration_value?: number
           executed_at?: string | null
@@ -1348,6 +1360,13 @@ export type Database = {
           {
             foreignKeyName: "contracted_services_client_id_fkey"
             columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracted_services_disputed_by_fkey"
+            columns: ["disputed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -6137,6 +6156,10 @@ export type Database = {
         Returns: string
       }
       sanitize_job_error: { Args: { p_message: string }; Returns: string }
+      service_completion_admin_resolve_dispute: {
+        Args: { p_contracted_service_id: string }
+        Returns: Json
+      }
       service_completion_auto_complete_executed: {
         Args: { p_batch_size?: number }
         Returns: Json
@@ -6207,6 +6230,10 @@ export type Database = {
           p_idempotency_key: string
           p_responses: Json
         }
+        Returns: Json
+      }
+      service_completion_open_dispute: {
+        Args: { p_contracted_service_id: string; p_reason?: string }
         Returns: Json
       }
       service_completion_ops_metrics: {
@@ -6343,6 +6370,7 @@ export type Database = {
         | "CANCELLED"
         | "CONFIRMED"
         | "EXECUTED"
+        | "IN_DISPUTE"
       enrichment_status: "PENDING" | "RUNNING" | "READY" | "ABORTED"
       payment_attempt_initiator: "cron" | "client"
       payment_attempt_outcome:
@@ -6631,6 +6659,7 @@ export const Constants = {
         "CANCELLED",
         "CONFIRMED",
         "EXECUTED",
+        "IN_DISPUTE",
       ],
       enrichment_status: ["PENDING", "RUNNING", "READY", "ABORTED"],
       payment_attempt_initiator: ["cron", "client"],

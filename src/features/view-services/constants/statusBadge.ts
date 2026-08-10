@@ -5,6 +5,7 @@ export const LIST_PHASE_LABELS: Record<ServiceListPhase, string> = {
   in_progress: "Em andamento",
   completed: "Concluído",
   cancelled: "Cancelado",
+  dispute: "Em disputa",
 };
 
 export function getStatusLabel(
@@ -30,6 +31,7 @@ export const LIST_PHASE_BADGE_VARIANT: Record<ServiceListPhase, StatusBadgeVaria
   in_progress: "default",
   completed: "success",
   cancelled: "secondary",
+  dispute: "destructive",
 };
 
 export function getStatusBadgeVariant(

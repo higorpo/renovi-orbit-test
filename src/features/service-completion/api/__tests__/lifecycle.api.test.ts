@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { confirmServiceCompleted, markServiceExecuted } from "../lifecycle.api";
+import {
+  confirmServiceCompleted,
+  markServiceExecuted,
+  openDispute,
+} from "../lifecycle.api";
 import { logger } from "@/lib/logger";
 
 const mockRpc = vi.fn();
@@ -254,6 +258,71 @@ describe("confirmServiceCompleted", () => {
     expect(result.errorCode).toBe("SOME_UNKNOWN_CODE");
     expect(result.error).toBe(
       "Não foi possível concluir a operação. Tente novamente.",
+    );
+  });
+});
+
+describe("openDispute", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("calls service_completion_open_dispute with optional reason", async () => {
+    mockRpc.mockResolvedValue({
+      data: {
+        ok: true,
+        contracted_service_id: "svc-1",
+        status: "IN_DISPUTE",
+        disputed_at: "2026-08-10T12:00:00.000Z",
+        disputed_by: "client-1",
+        dispute_reason: "Incompleto",
+        chat_id: "chat-1",
+      },
+      error: null,
+    });
+
+    const result = await openDispute({
+      contractedServiceId: "svc-1",
+      reason: "  Incompleto  ",
+    });
+
+    expect(mockRpc).toHaveBeenCalledWith("service_completion_open_dispute", {
+      p_contracted_service_id: "svc-1",
+      p_reason: "Incompleto",
+    });
+    expect(result).toEqual({
+      data: {
+        contractedServiceId: "svc-1",
+        status: "IN_DISPUTE",
+        disputedAt: "2026-08-10T12:00:00.000Z",
+        disputedBy: "client-1",
+        disputeReason: "Incompleto",
+        chatId: "chat-1",
+      },
+      error: null,
+    });
+  });
+
+  it("maps DISPUTE_NOT_ALLOWED to user message", async () => {
+    mockRpc.mockResolvedValue({
+      data: null,
+      error: {
+        message: "DISPUTE_NOT_ALLOWED",
+        details: JSON.stringify({ code: "DISPUTE_NOT_ALLOWED" }),
+      },
+    });
+
+    const result = await openDispute({ contractedServiceId: "svc-done" });
+
+    expect(result.data).toBeNull();
+    expect(result.errorCode).toBe("DISPUTE_NOT_ALLOWED");
+    expect(result.error).toMatch(/não é possível abrir uma disputa/i);
+    expect(logger.warn).toHaveBeenCalledWith(
+      "service_completion_open_dispute_failed",
+      expect.objectContaining({
+        contracted_service_id: "svc-done",
+        errorCode: "DISPUTE_NOT_ALLOWED",
+      }),
     );
   });
 });

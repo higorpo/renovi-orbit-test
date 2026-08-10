@@ -191,7 +191,7 @@ Fonte: [payments](./modulos/payments/README.md), [checkout-e-cobranca](./modulos
 | Confirmar + rating (scores obrigatórios) | Sim (`EXECUTED` + `canConfirmWithRating`; exige Declaração de execução; CTA “Avaliar serviço” → sheet 2 etapas: revisão+declaração+disputa → rating; contexto só se elegível) | — | — | — |
 | Declaração de execução (checkbox → Edge/RPC) | Sim — só path manual (`canConfirmWithRating`); hard gate UI + `EXECUTION_DECLARATION_REQUIRED` | — | — | — |
 | Auto-complete ~24h após `EXECUTED` | — | — | — | Cron (`completed_by=system`; batch `auto_complete_batch_size`; **sem** declaração) |
-| Stub disputa (URL ou “Em breve”) | Sim — **somente** CS `EXECUTED` (`show_dispute_stub` / wizard Avaliar serviço); **não** após `COMPLETED` | — | — | — |
+| Abrir disputa de serviço | Sim — **somente** CS `EXECUTED` (wizard Avaliar serviço → `IN_DISPUTE`) | — | — | Resolve via RPC admin/`service_role` (sem UI) |
 | Rating opcional pós auto-complete | Sim (`COMPLETED` + `completed_by=system` + sem rating; sheet só notas, `ratingOnly`; sem declaração; sem disputa) | — | — | — |
 
 Admin de plataforma: contexto completo via RPC (mesmo sem ser participante); sem UI de mutação no app. Matching: create/republish **não** bootstrapa dispatch; só após enrichment READY; repair READY-sem-dispatch limitado a **7 dias**. Fonte: [service-completion](./modulos/service-completion/README.md).

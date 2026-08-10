@@ -22,12 +22,15 @@ describe("isPreChargeScheduleState", () => {
 });
 
 describe("canCancelContractedService", () => {
-  it("blocks CANCELLED and COMPLETED service statuses", () => {
+  it("blocks CANCELLED, COMPLETED, and IN_DISPUTE service statuses", () => {
     expect(
       canCancelContractedService({ serviceStatus: "CANCELLED", scheduleState: "PAID" }),
     ).toBe(false);
     expect(
       canCancelContractedService({ serviceStatus: "COMPLETED", scheduleState: "PAID" }),
+    ).toBe(false);
+    expect(
+      canCancelContractedService({ serviceStatus: "IN_DISPUTE", scheduleState: "PAID" }),
     ).toBe(false);
   });
 

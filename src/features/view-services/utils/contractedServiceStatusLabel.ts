@@ -4,6 +4,7 @@ const CONTRACTED_SERVICE_STATUS_LABELS: Record<ContractedServiceStatus, string> 
   PENDING_PAYMENT: "Aguardando pagamento",
   CONFIRMED: "Confirmado",
   EXECUTED: "Executado",
+  IN_DISPUTE: "Em disputa",
   COMPLETED: "Concluído",
   CANCELLED: "Cancelado",
 };

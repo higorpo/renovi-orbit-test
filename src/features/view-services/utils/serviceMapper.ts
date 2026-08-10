@@ -209,7 +209,8 @@ function normalizeListPhase(value: string | undefined): ServiceListPhase {
     normalized === "negotiation" ||
     normalized === "in_progress" ||
     normalized === "completed" ||
-    normalized === "cancelled"
+    normalized === "cancelled" ||
+    normalized === "dispute"
   ) {
     return normalized;
   }

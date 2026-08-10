@@ -128,9 +128,7 @@ Matriz detalhada: [Perfis e permissões](./perfis-e-permissoes.md).
 
 | Lacuna | Evidência |
 |--------|-----------|
-| **Painel admin** | Sem rotas `/admin/*` no `router.tsx`; papel `admin` redireciona para destino inexistente neste tree. |
-| **Aba Disputas (lista)** | Em Meus Serviços, tab `dispute` retorna **lista vazia** no client (`listServices` short-circuit) — não há listagem de disputas. |
-| **Fluxo de disputa completo na UI** | Stub em **service-completion** (`DisputeStubEntry`): banner título “Abrir disputa”, botão **“Falar com o suporte”** (descrição sobre correção pelo prestador ou devolução parcial/integral); **somente** no wizard Avaliar serviço — **nunca** inline no detalhe do serviço; URL de suporte via `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL` / `orbit.dispute_support_url`, ou toast “Em breve” + analytics — **sem** FSM de disputa. Separado: flag `is_disputed` / badge de chargeback no detalhe (payments) e webhook de dispute no gateway. |
+| **Painel admin** | Sem rotas `/admin/*` no `router.tsx`; papel `admin` redireciona para destino inexistente neste tree. Resolve de **Disputa de serviço** é via RPC privilegiada (`service_completion_admin_resolve_dispute` / `service_role`), não UI. |
 | **Placeholders do dashboard** | `/dashboard` (Visão geral), `/dashboard/addresses` (menu Endereços), `/dashboard/settings`, `/dashboard/help` → `DashboardFakePage`. Gestão real de endereços fica em Minha conta / wizard. |
 | **Calendário editável / disponibilidade** | Calendário do prestador é **só consulta** de serviços já contratados — não agenda livre nem CRUD de disponibilidade. |
 | **Onboarding de papel desconhecido** | Redirect para `/onboarding` sem rota correspondente no router. |

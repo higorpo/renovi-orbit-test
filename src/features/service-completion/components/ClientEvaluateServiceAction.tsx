@@ -3,7 +3,7 @@
  * Manual (EXECUTED): review evidence + declaration → rating.
  * Optional (COMPLETED by system): rating only — no checklist or dispute.
  * Skips get_service_completion_context unless contracted status can need evaluate.
- * Dispute stub is not shown on the service detail host — only inside the evaluate wizard (EXECUTED).
+ * Dispute entry is not shown on the service detail host — only inside the evaluate wizard (EXECUTED).
  *
  * After submit, capabilities flip off — keep the sheet mounted while `open` so the
  * immersive success step is not unmounted.

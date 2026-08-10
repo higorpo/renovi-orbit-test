@@ -3,6 +3,7 @@ import {
   formatProviderSettlementDisclosure,
   formatProviderSettlementHoldDisclosure,
   PROVIDER_SETTLEMENT_COMPLETION_NOTE,
+  type ProviderSettlementHoldReason,
 } from "../utils/providerSettlementDisclosure";
 
 export type ProviderSettlementDisclosureProps = {
@@ -12,7 +13,7 @@ export type ProviderSettlementDisclosureProps = {
   showCompletionNote?: boolean;
   /** When true, bank deposit estimate is withheld (refund/dispute in progress). */
   settlementOnHold?: boolean;
-  holdReason?: "refund" | "dispute";
+  holdReason?: ProviderSettlementHoldReason;
   className?: string;
 };
 

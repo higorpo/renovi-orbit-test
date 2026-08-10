@@ -53,7 +53,7 @@ Guards: dashboard sob `ProtectedRoute` `client` \| `provider`. Calendário: guar
 ## 6. Regras transversais
 
 - Paginação server-side (20 itens); busca debounced **300 ms**.
-- Aba **Disputas** existe na UI mas `tabIncludesStatus(..., dispute)` sempre `false` — sem linhas (stub de disputa fica no detalhe via **service-completion**, não nesta aba).
+- Aba **Disputas** filtra `list_phase = dispute` (CS `IN_DISPUTE`) — server-side; label de status “Em disputa”.
 - Opções de dropdown de filtro (categoria/cidade/bairro) derivadas dos **itens já carregados** — podem ficar incompletas com paginação.
 - Campo `categoryId` no estado de filtro envia **título** do serviço como `p_category_title` (não UUID).
 - Destaque `PENDING_PAYMENT`: copy compartilhada em `pendingPaymentHighlight.ts`; no cliente, `FAILED_PERMANENT` prevalece sobre unread.
@@ -67,14 +67,14 @@ Guards: dashboard sob `ProtectedRoute` `client` \| `provider`. Calendário: guar
 Consumidas via `view-services` / RPCs (não há API própria de `my-services`):
 
 - `service_requests`, `contracted_services`, propostas (`my_proposal`), chat summary, counterparty.
-- Fases de lista: `negotiation` \| `in_progress` \| `completed` \| `cancelled` (`list_phase`).
+- Fases de lista: `negotiation` \| `in_progress` \| `completed` \| `cancelled` \| `dispute` (`list_phase`).
 
 ## 8. Integrações
 
 | Módulo | Uso |
 |--------|-----|
 | `view-services` | Lista, detalhe, cancelamento, budget sheet helpers, navegação sheet |
-| `service-completion` | Conclusão: enrichment banner; no **detalhe**, CTAs “Marcar serviço como concluído” / “Avaliar serviço” (sheet/dialog); stub disputa. Na **listagem**: prestador `CONFIRMED` + past → **“Concluir serviço”** abre sheet no card (contexto RPC só ao abrir; gate `enrichmentReady`); cliente `EXECUTED` (fase `in_progress`) **ou** `COMPLETED` sem rating (fase `completed`, `clientRatingOverallScore == null`) → **“Avaliar serviço”** abre `ClientEvaluateServiceSheet` hospedado na página (`ClientEvaluateServiceDialogs` + `useClientEvaluateServiceDialog`; `ratingOnly` no path opcional; contexto RPC só ao abrir o wizard); demais follow-ups → “Ver detalhes” |
+| `service-completion` | Conclusão: enrichment banner; no **detalhe**, CTAs “Marcar serviço como concluído” / “Avaliar serviço” (sheet/dialog); abertura de disputa de serviço em `EXECUTED`. Na **listagem**: prestador `CONFIRMED` + past → **“Concluir serviço”** abre sheet no card (contexto RPC só ao abrir; gate `enrichmentReady`); cliente `EXECUTED` (fase `in_progress`) **ou** `COMPLETED` sem rating (fase `completed`, `clientRatingOverallScore == null`) → **“Avaliar serviço”** abre `ClientEvaluateServiceSheet` hospedado na página (`ClientEvaluateServiceDialogs` + `useClientEvaluateServiceDialog`; `ratingOnly` no path opcional; contexto RPC só ao abrir o wizard); fase `dispute` / CS `IN_DISPUTE` → sem CTAs avaliar/cancelar; demais follow-ups → “Ver detalhes” |
 | `negotiation-proposals` | `ReceivedBudgetDetailsSheet`; dialogs de proposta do prestador |
 | `chats` | Navegação para conversa / filtro por service request |
 | `payments` | `ManualPaymentDialog` + `usePaymentSchedule` no card cliente |
@@ -86,7 +86,7 @@ Consumidas via `view-services` / RPCs (não há API própria de `my-services`):
 
 | Item | Status |
 |------|--------|
-| Aba Disputas | Placeholder — sem dados |
+| Aba Disputas | Lista CS `IN_DISPUTE` (`list_phase = dispute`) — SC-02 fechada |
 | Opções de filtro só dos itens carregados | Lacuna de UX com paginação |
 | Rating no card concluído (prestador) | **Real** — `clientRatingOverallScore` do CS; omitido se null |
 | Sheet compare / modo | **Reconciliado (2026-08-02):** modo via `listPhase` (`getServiceRequestBudgetSheetMode`); ver [comparar-orcamentos](../chats/features/comparar-orcamentos-meus-servicos.md) |

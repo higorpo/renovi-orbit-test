@@ -4,7 +4,7 @@ Termos canônicos do domínio de **enriquecimento pré-publicação do pedido**,
 
 Requisitos: [`requirements.md`](./requirements.md). Design: [`design.md`](./design.md). Tasks: [`tasks.md`](./tasks.md).
 
-ADR: [`adr/0001-separate-enrichment-fsm-for-publication-readiness.md`](./adr/0001-separate-enrichment-fsm-for-publication-readiness.md) · [`adr/0002-evidence-images-block-not-image-gallery.md`](./adr/0002-evidence-images-block-not-image-gallery.md) · [`adr/0003-completion-criterion-block.md`](./adr/0003-completion-criterion-block.md) · [`adr/0004-completion-rpcs-outside-payments.md`](./adr/0004-completion-rpcs-outside-payments.md) · [`adr/0005-execution-declaration-audit-trail.md`](./adr/0005-execution-declaration-audit-trail.md).
+ADR: [`adr/0001-separate-enrichment-fsm-for-publication-readiness.md`](./adr/0001-separate-enrichment-fsm-for-publication-readiness.md) · [`adr/0002-evidence-images-block-not-image-gallery.md`](./adr/0002-evidence-images-block-not-image-gallery.md) · [`adr/0003-completion-criterion-block.md`](./adr/0003-completion-criterion-block.md) · [`adr/0004-completion-rpcs-outside-payments.md`](./adr/0004-completion-rpcs-outside-payments.md) · [`adr/0005-execution-declaration-audit-trail.md`](./adr/0005-execution-declaration-audit-trail.md) · [`adr/0006-service-dispute-status-on-contracted-service.md`](./adr/0006-service-dispute-status-on-contracted-service.md).
 
 ## Language
 
@@ -25,7 +25,7 @@ Estado de `contracted_services` em que o prestador declarou a execução do trab
 _Avoid_: concluído (reservado a COMPLETED), finalizado, entregue (sem qualificar ator)
 
 **Serviço concluído (COMPLETED)**:
-Estado terminal de `contracted_services` em que o cliente confirmou a entrega (ou o sistema auto-completou após grace). Habilita avaliação.
+Estado terminal de `contracted_services` em que o cliente confirmou a entrega, o sistema auto-completou após grace, ou o admin resolveu uma **Disputa de serviço** (`completed_by = admin`). Habilita avaliação (obrigatória no path manual; opcional pós system/admin).
 _Avoid_: EXECUTED, service_requests.COMPLETED (aceite de proposta)
 
 **Avaliação de serviço**:
@@ -96,9 +96,9 @@ _Avoid_: checklist sem bound
 Regras de obrigatoriedade de fotos no `completion_criterion`: sempre no não-atendido; no atendido somente se `requires_evidence_when_met`; bounds min/max por critério.
 _Avoid_: evidência global única no fim do formulário
 
-**Disputa (stub)**:
-Ação de UI no fluxo pós-EXECUTED que não abre FSM de disputa; no MVP redireciona o cliente a canal de suporte humano. Auto-complete permanece ativo.
-_Avoid_: dispute FSM; rejeitar EXECUTED; pausar auto-complete
+**Disputa de serviço**:
+Estado operacional de `contracted_services` (`IN_DISPUTE`) aberto pelo **cliente** a partir de `EXECUTED` (self-serve; motivo opcional), distinto de **chargeback** / `payment_schedules.is_disputed`. Em disputa: bloqueia auto-complete, confirm-with-rating e cancel self-serve; chat permanece aberto; sem rating; cliente/prestador **não** retiram. Saída só via RPC admin/`service_role` → `COMPLETED` (`completed_by = admin`). Lista: `list_phase = dispute`; Ganhos: hold `service_dispute` (copy ≠ chargeback). Sem painel admin in-app.
+_Avoid_: Disputa (stub); chargeback/`is_disputed`; rejeitar EXECUTED sem disputa; retirada self-serve
 
 **Sessão de upload de evidência**:
 Fluxo create session → upload assinado → register path para fotos do `completion_criterion`, análogo a KYC/chat; órfãos limpos por janitor.
@@ -117,8 +117,8 @@ Commit idempotente do worker que só aplica se lease_owner + lease_generation ai
 _Avoid_: update service_role sem geração; TX aberta durante LLM
 
 **RPCs de conclusão de serviço**:
-Funções Postgres do domínio de conclusão (`service_completion_*`) que escrevem `EXECUTED` / `COMPLETED` (+ rating no path manual) e auto-complete de sistema. Distintas do domínio de cobrança/payments.
-_Avoid_: payment_mark_service_executed, payment_confirm_service_completed, payment_cron_auto_complete_* como API de produto
+Funções Postgres do domínio de conclusão (`service_completion_*`) que escrevem `EXECUTED` / `COMPLETED` / `IN_DISPUTE` (+ rating no path manual; open/resolve disputa) e auto-complete de sistema. Distintas do domínio de cobrança/payments.
+_Avoid_: payment_mark_service_executed, payment_confirm_service_completed, payment_cron_auto_complete_* como API de produto; chargeback/`is_disputed` como disputa de serviço
 
 **Registro de evidência de conclusão**:
 Linha 1:1 com o serviço contratado que guarda draft mutável e, após EXECUTED, o pacote congelado de respostas/evidências.
@@ -143,7 +143,7 @@ _Avoid_: auto-cancel do pedido; publicar vazio; retry infinito silencioso
 | 1 | **Gate de publicação (opção A):** após criar o pedido, o matching **não** inicia até o checklist de conclusão estar materializado (ou política de fallback terminal definida). Pedido permanece em processamento/enrichment; não é visível a prestadores nem dispara batches. Distinto do delay de 5 min do matching, que só aplica **depois** da prontidão. | 2026-08-04 |
 | 2 | **Falha terminal da IA (opção B):** após esgotar retries, aplica template fallback (cascata serviço → categoria → global; decisão 19), origem `fallback_template`, libera prontidão. Sem publicar vazio; sem auto-cancel por falha de IA. | 2026-08-04 |
 | 3 | **Mutabilidade do schema (opção A):** após materialização (IA ou fallback), o **schema do checklist é imutável**. Cliente e prestador só leem o schema; o prestador escreve **respostas/evidências** na transição para `EXECUTED`. Edição do schema na negociação (`todo.md`) fica **fora de escopo** deste domínio por agora. | 2026-08-04 |
-| 4 | **Itens “não atendeu” (opção C):** `EXECUTED` é permitido com critérios `met=false` **somente se** cada um tiver justificativa + evidências exigidas; todos os critérios obrigatórios respondidos. Destino `EXECUTED`. Disputa stub. *(Justificativa/evidência modeladas no bloco `completion_criterion` — decisão 17.)* | 2026-08-04 |
+| 4 | **Itens “não atendeu” (opção C):** `EXECUTED` é permitido com critérios `met=false` **somente se** cada um tiver justificativa + evidências exigidas; todos os critérios obrigatórios respondidos. Destino `EXECUTED`. Cliente pode abrir **Disputa de serviço** a partir de `EXECUTED` (decisão 33). *(Justificativa/evidência modeladas no bloco `completion_criterion` — decisão 17.)* | 2026-08-04 |
 | 5 | **Avaliação × confirmação (opção A):** na confirmação **manual**, o cliente **deve** avaliar no mesmo fluxo (revisar checklist → notas → confirmar → `COMPLETED` + `service_ratings`). Auto-complete por grace (~24h, `completed_by=system`) **não** exige rating; após auto-complete, rating permanece opcional enquanto `COMPLETED` (regras de submit/edit do matching). | 2026-08-04 |
 | 6 | **Emenda pós-EXECUTED (opção A):** respostas/evidências do checklist são **imutáveis** após a transição para `EXECUTED`. Sem emenda pelo prestador no MVP; correção só via suporte/ops (fora de escopo). | 2026-08-04 |
 | 7 | **Visibilidade (opção A):** schema do checklist legível pelo **cliente** desde a prontidão e por **prestadores com acesso ao pedido** (feed/detalhe/chat/proposta). **Respostas/evidências** só após `EXECUTED`, e apenas para o **cliente** e o **prestador contratado**. | 2026-08-04 |
@@ -159,7 +159,7 @@ _Avoid_: auto-cancel do pedido; publicar vazio; retry infinito silencioso
 | 17 | **Unidade do item (opção B):** bloco **`completion_criterion`**. Allowlist: `completion_criterion` \| `static_text`. ADR-0003. | 2026-08-04 |
 | 18 | **Evidência fotográfica obrigatória (opção D):** `met=false` → ≥1 foto + justificativa; `met=true` → só se `requires_evidence_when_met`; min 1 / max 5. | 2026-08-04 |
 | 19 | **Templates de fallback (opção B):** cascata serviço → categoria → global; seed no deploy. | 2026-08-04 |
-| 20 | **Cliente discorda sem disputa (opção B):** Disputa stub abre suporte; auto-complete segue; sem FSM. | 2026-08-04 |
+| 20 | **Cliente discorda (histórico stub → supersedido por #33):** MVP inicial usava stub de suporte externo sem pausar auto-complete. **Retirado** em favor de Disputa de serviço (`IN_DISPUTE`). | 2026-08-04 (supersedido 2026-08-10) |
 | 21 | **Upload de evidência (opção A):** `completion_evidence_upload_sessions` (padrão KYC/chat); janitor de órfãos. | 2026-08-04 |
 | 22 | **Cutover (dev reset):** banco será resetado; sem grandfather/backfill de SRs OPEN legados. Enrichment gate aplica a todos os pedidos pós-deploy. | 2026-08-04 |
 | 23 | **Defaults operacionais (opção A):** criterion 3–12; evidence 1–5; AI attempts 3; lease 120s; batch 20; retry base 30s; orphan TTL 24h; auto-complete 24h. Support link via env/remote config. | 2026-08-04 |
@@ -171,4 +171,5 @@ _Avoid_: auto-cancel do pedido; publicar vazio; retry infinito silencioso
 | 29 | **Auto-complete fora de payments (design A):** mover para `service_completion_auto_complete_executed` + cron/`job_runs`; remover wrappers `payment_*` de auto-complete. | 2026-08-04 |
 | 30 | **Evidência (design A):** tabela `contracted_service_completion_evidence` 1:1 com CS (`draft`\|`frozen`, responses jsonb, version). Freeze atômico com mark executed. (`executed_late` no freeze: **removido** — ver decisão 10.) | 2026-08-04 |
 | 31 | **Bootstrap matching (design A):** `matching_bootstrap_dispatch_for_service_request(sr_id)` chamado na mesma TX de `enrichment_finalize_ready`; trigger OPEN removido; sweeper repara READY sem dispatch. | 2026-08-04 |
-| 32 | **Gap closure (design v1.1):** create e republish compartilham enqueue de enrichment (sem bootstrap no OPEN); read model `get_service_completion_context` + campos leves em lista; MMD catalog inclui `SERVICE_AUTO_COMPLETED` (template + routing); disputa stub com `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL` / `orbit.dispute_support_url`; `ops_attention_*` sem retry infinito; `responses_hash` = sha256(canonical JSON); GRANTs de rating restaurados. | 2026-08-04 |
+| 32 | **Gap closure (design v1.1):** create e republish compartilham enqueue de enrichment (sem bootstrap no OPEN); read model `get_service_completion_context` + campos leves em lista; MMD catalog inclui `SERVICE_AUTO_COMPLETED` (template + routing); *(stub de disputa com URL de suporte — supersedido pela decisão 33)*; `ops_attention_*` sem retry infinito; `responses_hash` = sha256(canonical JSON); GRANTs de rating restaurados. | 2026-08-04 |
+| 33 | **Disputa de serviço (MVP):** status `IN_DISPUTE` no próprio `contracted_services` (não entidade 1:1; ADR-0006). Entrada só `EXECUTED → IN_DISPUTE` (cliente dono do SR; CAS). Em disputa: bloqueia auto-complete, confirm-with-rating e cancel; chat aberto; irreversível self-serve. Saída só admin/`service_role` via `service_completion_admin_resolve_dispute` → `COMPLETED` (`completed_by=admin`); sem UI admin. Notificar prestador na abertura; ambos na resolução; SYSTEM no chat. `list_phase = dispute`; hold Ganhos `service_dispute` ≠ chargeback/`is_disputed`. Rating opcional pós-resolve admin (como pós auto-complete). | 2026-08-10 |

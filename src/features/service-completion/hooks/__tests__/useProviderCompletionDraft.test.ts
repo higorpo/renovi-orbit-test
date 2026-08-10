@@ -66,6 +66,8 @@ function baseContext(
       canSaveDraft: true,
       canConfirmWithRating: false,
       canSubmitOptionalRating: false,
+      canOpenDispute: false,
+      isInDispute: false,
       showDisputeStub: false,
     },
     ...overrides,
@@ -160,6 +162,8 @@ describe("useProviderCompletionDraft", () => {
         canSaveDraft: false,
         canConfirmWithRating: false,
         canSubmitOptionalRating: false,
+        canOpenDispute: false,
+        isInDispute: false,
         showDisputeStub: false,
       },
     });

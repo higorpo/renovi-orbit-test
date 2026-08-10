@@ -48,7 +48,9 @@ describe("mapServiceCompletionContextRpc", () => {
           can_save_draft: true,
           can_confirm_with_rating: false,
           can_submit_optional_rating: false,
-          show_dispute_stub: false,
+          can_open_dispute: true,
+          is_in_dispute: false,
+          show_dispute_stub: true,
         },
       },
       "sr-fallback",
@@ -60,6 +62,9 @@ describe("mapServiceCompletionContextRpc", () => {
     expect(mapped.evidence.draftVersion).toBe(2);
     expect(mapped.evidence.autoExecutedWithoutChecklist).toBe(false);
     expect(mapped.capabilities.canMarkExecuted).toBe(true);
+    expect(mapped.capabilities.canOpenDispute).toBe(true);
+    expect(mapped.capabilities.isInDispute).toBe(false);
+    expect(mapped.capabilities.showDisputeStub).toBe(true);
   });
 
   it("maps auto_executed_without_checklist flag", () => {

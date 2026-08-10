@@ -19,7 +19,7 @@
 
 | Feature | Resumo | Documento |
 |---------|--------|-----------|
-| Ganhos e liquidações | Lista, filtros, cards, disclosure D+30 / `settling_at`, hold estorno/disputa | [features/ganhos-e-liquidacoes.md](./features/ganhos-e-liquidacoes.md) |
+| Ganhos e liquidações | Lista, filtros, cards, disclosure D+30 / `settling_at`, hold estorno / chargeback / `service_dispute` | [features/ganhos-e-liquidacoes.md](./features/ganhos-e-liquidacoes.md) |
 
 ## 4. Perfis envolvidos
 

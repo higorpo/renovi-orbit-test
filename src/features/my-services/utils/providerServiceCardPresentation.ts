@@ -382,6 +382,31 @@ function buildCancelledPresentation(
   };
 }
 
+function buildDisputePresentation(
+  model: ServiceModel,
+): Pick<ProviderServiceCardPresentation, "highlight" | "secondaryInfo" | "isTodayService"> {
+  const secondaryInfo: ProviderCardSecondaryInfo[] = [];
+  const amount = proposalAmount(model);
+
+  pushSecondaryInfo(secondaryInfo, { icon: "amount", text: amount });
+  pushSecondaryInfo(secondaryInfo, {
+    icon: "location",
+    text: fullAddress(model),
+  });
+
+  return {
+    isTodayService: false,
+    highlight: {
+      icon: "waiting",
+      title: "Serviço em disputa",
+      detail:
+        "O cliente abriu uma disputa, nossa equipe irá analisar o caso e entrará em contato caso necessário.",
+      emphasis: "attention",
+    },
+    secondaryInfo,
+  };
+}
+
 function chatDisabled(model: ServiceModel): boolean {
   return !model.chatSummary?.id;
 }
@@ -481,6 +506,13 @@ function buildInProgressActions(
     };
   }
 
+  if (status === "IN_DISPUTE") {
+    return {
+      primaryAction: { label: "Ver detalhes", intent: "details" },
+      secondaryAction: chatAction(model),
+    };
+  }
+
   const isTodayService = timing === "today";
   const hasCoordinates = getServiceCoordinates(model.address) !== null;
 
@@ -523,6 +555,15 @@ function buildCancelledActions(): Pick<
   };
 }
 
+function buildDisputeActions(
+  model: ServiceModel,
+): Pick<ProviderServiceCardPresentation, "primaryAction" | "secondaryAction"> {
+  return {
+    primaryAction: { label: "Ver detalhes", intent: "details" },
+    secondaryAction: chatAction(model),
+  };
+}
+
 export function getProviderServiceCardPresentation(
   model: ServiceModel,
 ): ProviderServiceCardPresentation {
@@ -547,6 +588,10 @@ export function getProviderServiceCardPresentation(
     case "cancelled":
       content = buildCancelledPresentation(model);
       actions = buildCancelledActions();
+      break;
+    case "dispute":
+      content = buildDisputePresentation(model);
+      actions = buildDisputeActions(model);
       break;
     default:
       content = { ...buildNegotiationPresentation(model), isTodayService: false };

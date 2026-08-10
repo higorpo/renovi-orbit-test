@@ -42,6 +42,29 @@ export type { ProviderExecutedSuccessStepProps } from "./components/ProviderExec
 export { ClientConfirmRatingWizard } from "./components/ClientConfirmRatingWizard";
 export type { ClientConfirmRatingWizardProps } from "./components/ClientConfirmRatingWizard";
 
+export { OpenDisputeEntry, shouldShowOpenDispute } from "./components/OpenDisputeEntry";
+export type { OpenDisputeEntryProps } from "./components/OpenDisputeEntry";
+
+export { OpenDisputeConfirmDialog } from "./components/OpenDisputeConfirmDialog";
+export type { OpenDisputeConfirmDialogProps } from "./components/OpenDisputeConfirmDialog";
+
+export { useOpenDispute } from "./hooks/useOpenDispute";
+export type {
+  UseOpenDisputeOptions,
+  OpenDisputeMutationInput,
+} from "./hooks/useOpenDispute";
+export {
+  DISPUTE_OPENED_ANALYTICS_EVENT,
+  DISPUTE_OPEN_FAILED_ANALYTICS_EVENT,
+} from "./hooks/useOpenDispute";
+
+export { openDispute } from "./api/lifecycle.api";
+export type {
+  OpenDisputeInput,
+  OpenDisputeSuccess,
+  OpenDisputeResult,
+} from "./api/lifecycle.api";
+
 export { useServiceCompletionContext } from "./hooks/useServiceCompletionContext";
 export type { UseServiceCompletionContextOptions } from "./hooks/useServiceCompletionContext";
 
@@ -49,4 +72,5 @@ export type { UseServiceCompletionContextOptions } from "./hooks/useServiceCompl
 export type {
   EnrichmentStatus,
   ServiceCompletionContext,
+  ServiceCompletionCapabilities,
 } from "./types/completion.types";

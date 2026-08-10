@@ -34,6 +34,7 @@ export function statusTabIdToListPhase(tabId: StatusTabId): ServiceListPhase | n
     case "in_progress":
     case "completed":
     case "cancelled":
+    case "dispute":
       return tabId;
     default:
       return null;
@@ -42,6 +43,5 @@ export function statusTabIdToListPhase(tabId: StatusTabId): ServiceListPhase | n
 
 export function tabIncludesStatus(tabId: StatusTabId, phase: ServiceListPhase): boolean {
   if (tabId === "all") return true;
-  if (tabId === "dispute") return false;
   return tabId === phase;
 }

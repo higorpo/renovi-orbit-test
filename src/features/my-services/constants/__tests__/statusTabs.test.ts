@@ -22,7 +22,8 @@ describe("tabIncludesStatus", () => {
     expect(tabIncludesStatus("in_progress", "in_progress")).toBe(true);
   });
 
-  it("dispute tab does not include any phase", () => {
+  it("dispute tab includes only dispute phase", () => {
+    expect(tabIncludesStatus("dispute", "dispute")).toBe(true);
     expect(tabIncludesStatus("dispute", "negotiation")).toBe(false);
   });
 });

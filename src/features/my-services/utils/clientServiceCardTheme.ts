@@ -24,6 +24,8 @@ const PHASE_BADGE: Record<ServiceListPhase, string> = {
     "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/40 dark:text-emerald-100",
   cancelled:
     "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-100",
+  dispute:
+    "border-red-200 bg-red-50 text-red-900 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-100",
 };
 
 const PHASE_INFO: Record<ServiceListPhase, { icon: string; text: string }> = {
@@ -41,6 +43,10 @@ const PHASE_INFO: Record<ServiceListPhase, { icon: string; text: string }> = {
   },
   cancelled: {
     icon: "text-primary/80 dark:text-primary/90",
+    text: "text-foreground/85",
+  },
+  dispute: {
+    icon: "text-red-700/80 dark:text-red-300/90",
     text: "text-foreground/85",
   },
 };

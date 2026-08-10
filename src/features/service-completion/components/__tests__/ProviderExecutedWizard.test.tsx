@@ -101,6 +101,8 @@ function baseContext(): ServiceCompletionContext {
       canSaveDraft: true,
       canConfirmWithRating: false,
       canSubmitOptionalRating: false,
+      canOpenDispute: false,
+      isInDispute: false,
       showDisputeStub: false,
     },
   };

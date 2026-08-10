@@ -73,6 +73,8 @@ function baseContext(
       canSaveDraft: false,
       canConfirmWithRating: false,
       canSubmitOptionalRating: false,
+      canOpenDispute: false,
+      isInDispute: false,
       showDisputeStub: false,
       ...caps,
     },
@@ -185,10 +187,11 @@ describe("completion action CTAs", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("does not show dispute stub on the detail host when evaluate is unavailable", () => {
+  it("does not show dispute entry on the detail host when evaluate is unavailable", () => {
     contextState.current = baseContext({
       canConfirmWithRating: false,
       canSubmitOptionalRating: false,
+      canOpenDispute: true,
       showDisputeStub: true,
     });
     contextState.current.contractedService.status = "COMPLETED";
@@ -200,7 +203,7 @@ describe("completion action CTAs", () => {
       { wrapper },
     );
     expect(container).toBeEmptyDOMElement();
-    expect(screen.queryByTestId("dispute-stub-entry")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("open-dispute-entry")).not.toBeInTheDocument();
     expect(
       screen.queryByTestId("client-dispute-only-inline"),
     ).not.toBeInTheDocument();

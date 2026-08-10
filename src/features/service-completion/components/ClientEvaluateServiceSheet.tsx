@@ -160,6 +160,7 @@ export function ClientEvaluateServiceSheet({
             setStepAside(null);
             onCompleted?.();
           }}
+          onDisputeOpened={() => onOpenChange(false)}
         />
       ) : null}
       {isSuccess ? (

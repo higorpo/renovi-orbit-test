@@ -15,8 +15,9 @@ const ERROR_MESSAGES: Record<string, string> = {
     "Não é possível atualizar o status deste serviço no momento.",
   SERVICE_NOT_FOUND_OR_UNAUTHORIZED:
     "Serviço não encontrado ou você não tem permissão para esta ação.",
-  DISPUTE_OPEN:
-    "Há uma disputa em aberto. Confirme o recebimento após a resolução.",
+  DISPUTE_OPEN: "Já existe uma disputa aberta para este serviço.",
+  DISPUTE_NOT_ALLOWED:
+    "Não é possível abrir uma disputa neste momento. O serviço pode já ter sido concluído.",
   CHECKLIST_PAYLOAD_REQUIRED:
     "Preencha o checklist de conclusão antes de marcar como executado.",
   CHECKLIST_REQUIRED:
@@ -161,6 +162,84 @@ export async function markServiceExecuted(
       executedAt: payload.executed_at ?? "",
       evidenceId: payload.evidence_id ?? null,
       idempotent: Boolean(payload.idempotent),
+    },
+    error: null,
+  };
+}
+
+export type OpenDisputeInput = {
+  contractedServiceId: string;
+  /** Optional free-text reason (server trims / caps length). */
+  reason?: string | null;
+};
+
+export type OpenDisputeSuccess = {
+  contractedServiceId: string;
+  status: string;
+  disputedAt: string;
+  disputedBy: string | null;
+  disputeReason: string | null;
+  chatId: string | null;
+};
+
+export type OpenDisputeResult = {
+  data: OpenDisputeSuccess | null;
+  error: string | null;
+  errorCode?: string;
+};
+
+type OpenDisputeRpcResponse = {
+  ok?: boolean;
+  contracted_service_id?: string;
+  status?: string;
+  disputed_at?: string;
+  disputed_by?: string;
+  dispute_reason?: string | null;
+  chat_id?: string | null;
+};
+
+export async function openDispute(
+  input: OpenDisputeInput,
+): Promise<OpenDisputeResult> {
+  const { contractedServiceId, reason } = input;
+  const trimmedReason =
+    typeof reason === "string" ? reason.trim() || null : null;
+
+  const { data, error } = await supabase.rpc(
+    "service_completion_open_dispute" as never,
+    {
+      p_contracted_service_id: contractedServiceId,
+      p_reason: trimmedReason,
+    } as never,
+  );
+
+  if (error) {
+    const errorCode = extractRpcErrorCode(error);
+    logger.warn("service_completion_open_dispute_failed", {
+      feature: "service_completion",
+      outcome: "open_dispute",
+      contracted_service_id: contractedServiceId,
+      errorCode,
+      error: error.message,
+    });
+    return {
+      data: null,
+      error: mapErrorMessage(errorCode),
+      errorCode,
+    };
+  }
+
+  const payload = data as OpenDisputeRpcResponse;
+
+  return {
+    data: {
+      contractedServiceId:
+        payload.contracted_service_id ?? contractedServiceId,
+      status: payload.status ?? "IN_DISPUTE",
+      disputedAt: payload.disputed_at ?? "",
+      disputedBy: payload.disputed_by ?? null,
+      disputeReason: payload.dispute_reason ?? trimmedReason,
+      chatId: payload.chat_id ?? null,
     },
     error: null,
   };

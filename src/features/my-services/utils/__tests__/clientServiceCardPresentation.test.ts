@@ -734,6 +734,30 @@ describe("getClientServiceCardPresentation additional branches", () => {
     });
   });
 
+  it("hides evaluate CTA and shows dispute presentation when IN_DISPUTE", () => {
+    const pres = getClientServiceCardPresentation(
+      baseModel({
+        listPhase: "dispute",
+        statusTabId: "dispute",
+        contracted: contracted({
+          status: "IN_DISPUTE",
+          scheduledStartDate: "2025-06-15",
+        }),
+      }),
+    );
+
+    expect(pres.phaseLabel).toBe("Em disputa");
+    expect(pres.highlight).toMatchObject({
+      title: "Serviço em disputa",
+      emphasis: "attention",
+    });
+    expect(pres.primaryAction).toMatchObject({
+      label: "Ver detalhes",
+      intent: "details",
+    });
+    expect(pres.primaryAction?.intent).not.toBe("evaluate_service");
+  });
+
   it("uses future timing without a contract or scheduled date", () => {
     const withoutContract = getClientServiceCardPresentation(
       baseModel({ listPhase: "in_progress", statusTabId: "in_progress", contracted: null }),

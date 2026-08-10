@@ -111,6 +111,21 @@ group by source;
 - Completion writers: ADR-0004 `service_completion_*` only.
 - Structured logs / redaction: Task 55 (`service-completion-logger`).
 
+## Admin resolve — Disputa de serviço (MVP)
+
+There is **no** `/admin/*` UI. After a client opens a dispute (`EXECUTED → IN_DISPUTE` via `service_completion_open_dispute`), platform ops resolve with the privileged RPC only:
+
+```sql
+-- As platform admin JWT (is_platform_admin) or service_role
+select public.service_completion_admin_resolve_dispute('<contracted_service_id>'::uuid);
+```
+
+**Effect:** `IN_DISPUTE → COMPLETED` with `completed_by = 'admin'`, sets `dispute_resolved_at`, SYSTEM chat message, MMD to client + provider. Does **not** create a rating in the same TX (optional rating afterward, same pattern as post auto-complete). Releases the Ganhos hold reason `service_dispute`.
+
+**Do not** confuse with gateway chargeback (`payment_schedules.is_disputed`) or payment refund paths. Clients/providers cannot withdraw a dispute self-serve.
+
+See ADR-0006 and CONTEXT decisão 33.
+
 ## Recovery runbook (design §8 / Task 59)
 
 Automated coverage: `supabase/tests/service_completion/failure_matrix_recovery_test.sql` + Deno `processClaimedRow` §8.1 cases.

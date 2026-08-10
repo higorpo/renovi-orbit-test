@@ -80,4 +80,17 @@ describe("ProviderSettlementDisclosure", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/Marcar o serviço como concluído/i)).toBeNull();
   });
+
+  it("shows service dispute hold copy distinct from chargeback", () => {
+    render(
+      <ProviderSettlementDisclosure
+        capturePaidAt="2026-07-01T00:00:00.000Z"
+        settlementOnHold
+        holdReason="service_dispute"
+      />,
+    );
+
+    expect(screen.getByText(/Há uma disputa de serviço em andamento/i)).toBeInTheDocument();
+    expect(screen.queryByText(/chargeback/i)).toBeNull();
+  });
 });

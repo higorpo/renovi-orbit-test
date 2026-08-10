@@ -4,6 +4,7 @@ import {
   formatEstimatedBankReceiptDate,
   formatProviderSettlementDisclosure,
   formatProviderSettlementHoldDisclosure,
+  resolveProviderSettlementHold,
 } from "../providerSettlementDisclosure";
 
 describe("providerSettlementDisclosure", () => {
@@ -54,8 +55,93 @@ describe("providerSettlementDisclosure", () => {
     );
   });
 
-  it("describes dispute hold suspending bank deposit estimate", () => {
+  it("describes chargeback dispute hold suspending bank deposit estimate", () => {
     expect(formatProviderSettlementHoldDisclosure("dispute")).toContain("chargeback");
     expect(formatProviderSettlementHoldDisclosure("dispute")).toContain("disputa");
+    expect(formatProviderSettlementHoldDisclosure("dispute")).not.toContain(
+      "disputa de serviço",
+    );
+  });
+
+  it("describes service dispute hold with copy distinct from chargeback", () => {
+    const copy = formatProviderSettlementHoldDisclosure("service_dispute");
+    expect(copy).toContain("disputa de serviço");
+    expect(copy).toContain("previsão de depósito fica suspensa");
+    expect(copy).not.toContain("chargeback");
+    expect(copy).not.toContain("estorno");
+  });
+});
+
+describe("resolveProviderSettlementHold", () => {
+  it("returns no hold for paid schedule without dispute or refund", () => {
+    expect(
+      resolveProviderSettlementHold({
+        isDisputed: false,
+        scheduleState: "PAID",
+        contractedServiceStatus: "EXECUTED",
+      }),
+    ).toEqual({ settlementOnHold: false, holdReason: "refund" });
+  });
+
+  it("holds with dispute when payment schedule is_disputed (chargeback)", () => {
+    expect(
+      resolveProviderSettlementHold({
+        isDisputed: true,
+        scheduleState: "PAID",
+        contractedServiceStatus: "COMPLETED",
+      }),
+    ).toEqual({ settlementOnHold: true, holdReason: "dispute" });
+  });
+
+  it("holds with service_dispute when CS is IN_DISPUTE", () => {
+    expect(
+      resolveProviderSettlementHold({
+        isDisputed: false,
+        scheduleState: "PAID",
+        contractedServiceStatus: "IN_DISPUTE",
+      }),
+    ).toEqual({ settlementOnHold: true, holdReason: "service_dispute" });
+  });
+
+  it("holds with refund for refund-related schedule states", () => {
+    for (const scheduleState of ["REFUND_REQUESTED", "REFUNDED", "PARTIALLY_REFUNDED"]) {
+      expect(
+        resolveProviderSettlementHold({
+          isDisputed: false,
+          scheduleState,
+          contractedServiceStatus: "COMPLETED",
+        }),
+      ).toEqual({ settlementOnHold: true, holdReason: "refund" });
+    }
+  });
+
+  it("prefers chargeback over service dispute when both apply", () => {
+    expect(
+      resolveProviderSettlementHold({
+        isDisputed: true,
+        scheduleState: "PAID",
+        contractedServiceStatus: "IN_DISPUTE",
+      }),
+    ).toEqual({ settlementOnHold: true, holdReason: "dispute" });
+  });
+
+  it("prefers service dispute over refund when both apply", () => {
+    expect(
+      resolveProviderSettlementHold({
+        isDisputed: false,
+        scheduleState: "REFUND_REQUESTED",
+        contractedServiceStatus: "IN_DISPUTE",
+      }),
+    ).toEqual({ settlementOnHold: true, holdReason: "service_dispute" });
+  });
+
+  it("prefers chargeback over refund when both apply", () => {
+    expect(
+      resolveProviderSettlementHold({
+        isDisputed: true,
+        scheduleState: "REFUNDED",
+        contractedServiceStatus: "COMPLETED",
+      }),
+    ).toEqual({ settlementOnHold: true, holdReason: "dispute" });
   });
 });

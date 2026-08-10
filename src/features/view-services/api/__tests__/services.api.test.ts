@@ -130,19 +130,26 @@ describe("services.api", () => {
     expect(result).toEqual({ data: null, error: null });
   });
 
-  it("listServices returns empty page for dispute tab", async () => {
+  it("listServices passes dispute list phase to RPC", async () => {
+    rpc.mockResolvedValue({
+      data: { items: [], total_count: 0, page: 1, page_size: 10 },
+      error: null,
+    });
     const result = await listServices({
-      page: 2,
+      page: 1,
       pageSize: 10,
       statusTabId: "dispute",
     });
+    expect(rpc).toHaveBeenCalledWith(
+      "list_services",
+      expect.objectContaining({ p_list_phase: "dispute" }),
+    );
     expect(result.data).toEqual({
       items: [],
       total_count: 0,
-      page: 2,
+      page: 1,
       page_size: 10,
     });
-    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("listServices clamps page size and returns list errors", async () => {

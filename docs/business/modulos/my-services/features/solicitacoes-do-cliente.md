@@ -107,7 +107,7 @@ Não há formulário de criação nesta feature. Filtros locais:
 | Campo de UI / estado | Tipo | Envio RPC (via `listServices`) |
 |----------------------|------|--------------------------------|
 | Busca | string (debounced) | `p_search` |
-| Aba status | `StatusTabId` | `p_list_phase` (null se all/dispute) |
+| Aba status | `StatusTabId` | `p_list_phase` (null se all; `dispute` → fase dispute / CS `IN_DISPUTE`) |
 | Categoria | título string \| null (`categoryId` no state) | `p_category_title` |
 | Cidade | string \| null | `p_city_name` |
 | Bairro | string \| null | `p_neighborhood` |

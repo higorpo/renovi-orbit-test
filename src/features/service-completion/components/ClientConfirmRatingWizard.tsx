@@ -20,9 +20,9 @@ import { useClientConfirmRating } from "../hooks/useClientConfirmRating";
 import { useClientExecutionDeclaration } from "../hooks/useClientExecutionDeclaration";
 import { FrozenEvidenceReview } from "./FrozenEvidenceReview";
 import {
-  DisputeStubEntry,
-  shouldShowDisputeStub,
-} from "./DisputeStubEntry";
+  OpenDisputeEntry,
+  shouldShowOpenDispute,
+} from "./OpenDisputeEntry";
 import {
   EMPTY_RATING_SCORES,
   ServiceRatingForm,
@@ -38,6 +38,8 @@ export type ClientConfirmRatingWizardProps = {
   serviceRequestId: string;
   className?: string;
   onCompleted?: () => void;
+  /** After dispute opens — host should close the evaluate sheet. */
+  onDisputeOpened?: () => void;
   onPendingChange?: (pending: boolean) => void;
   /** Bubble step to the shell header (e.g. "1 de 2" or "2 de 3" for prompt). */
   onStepChange?: (step: "review" | "rating", label: string) => void;
@@ -91,6 +93,7 @@ export function ClientConfirmRatingWizard({
   serviceRequestId,
   className,
   onCompleted,
+  onDisputeOpened,
   onPendingChange,
   onStepChange,
   variant = "default",
@@ -111,7 +114,8 @@ export function ClientConfirmRatingWizard({
   const isOptionalOnly = canOptional && !canConfirm;
   const showDispute =
     !isOptionalOnly &&
-    shouldShowDisputeStub({
+    shouldShowOpenDispute({
+      canOpenDispute: context?.capabilities.canOpenDispute,
       showDisputeStubCapability: context?.capabilities.showDisputeStub,
       csStatus: context?.contractedService.status,
     });
@@ -174,23 +178,23 @@ export function ClientConfirmRatingWizard({
   }
 
   const contractedId = context.contractedService.id ?? "";
-  const csStatus = context.contractedService.status ?? "";
 
   const autoWithoutChecklist = Boolean(
     context.evidence.autoExecutedWithoutChecklist,
   );
 
-  // Dispute-only surface (e.g. COMPLETED after rating already submitted).
+  // Dispute-only surface (e.g. confirm window without rating path — rare).
   if (!canConfirm && !canOptional && showDispute && contractedId) {
     return (
       <section
         className={cn("space-y-3 p-4 sm:p-6", className)}
         data-testid="client-dispute-only-panel"
       >
-        <DisputeStubEntry
+        <OpenDisputeEntry
+          serviceRequestId={serviceRequestId}
           contractedServiceId={contractedId}
-          csStatus={csStatus}
           autoExecutedWithoutChecklist={autoWithoutChecklist}
+          onOpened={onDisputeOpened}
         />
       </section>
     );
@@ -254,11 +258,12 @@ export function ClientConfirmRatingWizard({
 
   const dispute =
     showDispute && contractedId ? (
-      <DisputeStubEntry
+      <OpenDisputeEntry
+        serviceRequestId={serviceRequestId}
         contractedServiceId={contractedId}
-        csStatus={csStatus}
         className="border-t-0"
         autoExecutedWithoutChecklist={autoWithoutChecklist}
+        onOpened={onDisputeOpened}
       />
     ) : null;
 

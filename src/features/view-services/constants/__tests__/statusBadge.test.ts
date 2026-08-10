@@ -11,6 +11,7 @@ describe("getStatusLabel", () => {
     expect(getStatusLabel("in_progress")).toBe("Em andamento");
     expect(getStatusLabel("completed")).toBe("Concluído");
     expect(getStatusLabel("cancelled")).toBe("Cancelado");
+    expect(getStatusLabel("dispute")).toBe("Em disputa");
   });
 });
 
@@ -28,5 +29,6 @@ describe("getStatusBadgeVariant", () => {
     expect(getStatusBadgeVariant("in_progress")).toBe("default");
     expect(getStatusBadgeVariant("completed")).toBe("success");
     expect(getStatusBadgeVariant("cancelled")).toBe("secondary");
+    expect(getStatusBadgeVariant("dispute")).toBe("destructive");
   });
 });

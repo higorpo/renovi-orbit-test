@@ -412,6 +412,40 @@ function buildCancelledPresentation(
   };
 }
 
+function buildDisputePresentation(
+  model: ServiceModel,
+): Pick<
+  ClientServiceCardPresentation,
+  "highlight" | "secondaryInfo" | "isTodayService" | "showProviderHeader"
+> {
+  const secondaryInfo: ClientCardSecondaryInfo[] = [];
+  const professional = providerName(model);
+
+  pushSecondaryInfo(secondaryInfo, {
+    icon: "location",
+    text: serviceLocationLabel(model),
+  });
+  if (professional) {
+    pushSecondaryInfo(secondaryInfo, {
+      icon: "provider",
+      text: `Profissional: ${professional}`,
+    });
+  }
+
+  return {
+    showProviderHeader: true,
+    isTodayService: false,
+    highlight: {
+      icon: "waiting",
+      title: "Serviço em disputa",
+      detail:
+        "A plataforma está analisando o caso, nossa equipe irá entrar em contato caso necessário.",
+      emphasis: "attention",
+    },
+    secondaryInfo,
+  };
+}
+
 function chatDisabled(model: ServiceModel): boolean {
   return !model.chatSummary?.id;
 }
@@ -523,6 +557,14 @@ function buildInProgressActions(
     };
   }
 
+  // Dispute blocks evaluate / cancel CTAs — chat stays available.
+  if (status === "IN_DISPUTE") {
+    return {
+      primaryAction: { label: "Ver detalhes", intent: "details" },
+      secondaryAction: chatAction(model),
+    };
+  }
+
   // Waiting on provider completion — prefer details over chat.
   if (status === "CONFIRMED" && timing === "past") {
     return {
@@ -568,6 +610,15 @@ function buildCancelledActions(): Pick<
   };
 }
 
+function buildDisputeActions(
+  model: ServiceModel,
+): Pick<ClientServiceCardPresentation, "primaryAction" | "secondaryAction"> {
+  return {
+    primaryAction: { label: "Ver detalhes", intent: "details" },
+    secondaryAction: chatAction(model),
+  };
+}
+
 export function getClientServiceCardPresentation(
   model: ServiceModel,
 ): ClientServiceCardPresentation {
@@ -592,6 +643,10 @@ export function getClientServiceCardPresentation(
     case "cancelled":
       content = buildCancelledPresentation(model);
       actions = buildCancelledActions();
+      break;
+    case "dispute":
+      content = buildDisputePresentation(model);
+      actions = buildDisputeActions(model);
       break;
     default:
       content = { ...buildNegotiationPresentation(model), isTodayService: false };

@@ -8,6 +8,7 @@ describe("getContractedServiceStatusLabel", () => {
     );
     expect(getContractedServiceStatusLabel("CONFIRMED")).toBe("Confirmado");
     expect(getContractedServiceStatusLabel("EXECUTED")).toBe("Executado");
+    expect(getContractedServiceStatusLabel("IN_DISPUTE")).toBe("Em disputa");
     expect(getContractedServiceStatusLabel("COMPLETED")).toBe("Concluído");
     expect(getContractedServiceStatusLabel("CANCELLED")).toBe("Cancelado");
   });

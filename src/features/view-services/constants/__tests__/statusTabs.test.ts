@@ -18,11 +18,11 @@ describe("statusTabIdToListPhase", () => {
     expect(statusTabIdToListPhase("in_progress")).toBe("in_progress");
     expect(statusTabIdToListPhase("completed")).toBe("completed");
     expect(statusTabIdToListPhase("cancelled")).toBe("cancelled");
+    expect(statusTabIdToListPhase("dispute")).toBe("dispute");
   });
 
-  it("returns null for all and dispute tabs", () => {
+  it("returns null for the all tab", () => {
     expect(statusTabIdToListPhase("all")).toBeNull();
-    expect(statusTabIdToListPhase("dispute")).toBeNull();
   });
 });
 
@@ -30,9 +30,11 @@ describe("tabIncludesStatus", () => {
   it("includes every phase on the all tab", () => {
     expect(tabIncludesStatus("all", "negotiation")).toBe(true);
     expect(tabIncludesStatus("all", "cancelled")).toBe(true);
+    expect(tabIncludesStatus("all", "dispute")).toBe(true);
   });
 
-  it("includes no phases on the dispute tab", () => {
+  it("matches dispute tab only for dispute phase", () => {
+    expect(tabIncludesStatus("dispute", "dispute")).toBe(true);
     expect(tabIncludesStatus("dispute", "negotiation")).toBe(false);
   });
 

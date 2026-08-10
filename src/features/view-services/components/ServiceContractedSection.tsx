@@ -87,7 +87,10 @@ export function ServiceContractedSection({
       </div>
       {showProviderSettlement ? (
         <div className="pt-2 empty:hidden">
-          <ProviderSettlementStatus contractedServiceId={contracted.id} />
+          <ProviderSettlementStatus
+            contractedServiceId={contracted.id}
+            contractedServiceStatus={contracted.status}
+          />
         </div>
       ) : null}
       <div
