@@ -75,8 +75,6 @@ Coisas para verificar:
 - Verificar se devemos usar ULID a o invés de UUID
 - Avaliação de onboarding de prestadores por parte da plataforma, depois que a netcred aprova nós precisamos aprovar também.
 
-- Não permitir serviços longos com mais de 5 dias de duração.
-
 
 
 
