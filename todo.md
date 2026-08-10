@@ -89,7 +89,6 @@ Coisas para fazer next
 - na tela de minha conta do cliente, precisa colocar skeleton para as informações relacionadas a pagamentos
 
 
-- verificar para o endereço: definir o tipo de endereço, se é casa ou apto ou algum outro tipo e permitir adicionar detalhes de interfone por exemplo. precisamos garantir que o prestador saiba como entrar em contato com o cliente.
 
 
 
