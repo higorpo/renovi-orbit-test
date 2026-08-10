@@ -1,4 +1,5 @@
-import { formatScheduledSummary, type ServiceModel } from "@/features/view-services";
+import { formatScheduledSummary } from "./formatScheduledSummary";
+import type { ServiceModel } from "../types/service.types";
 
 type ContractedServiceSummary = NonNullable<ServiceModel["contracted"]>;
 

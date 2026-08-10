@@ -98,6 +98,7 @@ export function ServiceContractedSection({
         data-testid="contracted-service-actions"
       >
         {isProvider && serviceRequestId ? (
+          // Deprecated: prefer ServiceNextStepCard as primary CTA; remove when next-step covers this surface.
           <ProviderMarkExecutedAction
             serviceRequestId={serviceRequestId}
             contractedStatus={contracted.status}
@@ -108,6 +109,7 @@ export function ServiceContractedSection({
           />
         ) : null}
         {isClient && serviceRequestId ? (
+          // Deprecated: prefer ServiceNextStepCard as primary CTA; remove when next-step covers this surface.
           <ClientEvaluateServiceAction
             serviceRequestId={serviceRequestId}
             contractedStatus={contracted.status}
@@ -115,6 +117,7 @@ export function ServiceContractedSection({
           />
         ) : null}
         {showManualPayment && serviceRequestId ? (
+          // Deprecated: prefer ServiceNextStepCard as primary CTA; remove when next-step covers this surface.
           <ManualPaymentRecovery
             contractedServiceId={contracted.id}
             serviceRequestId={serviceRequestId}

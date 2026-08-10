@@ -10,6 +10,7 @@ import {
   useServiceRequestProposalComposer,
 } from "@/features/negotiation-proposals";
 import { SERVICE_DETAIL_QUERY_KEY } from "../constants/queryKeys";
+import { SERVICE_PROVIDER_PROPOSAL_SECTION_ID } from "../constants/serviceDetailNextStep.constants";
 
 interface ServiceProviderProposalSectionProps {
   serviceRequestId: string;
@@ -53,7 +54,7 @@ export function ServiceProviderProposalSection({
   const canEdit = canEditServiceRequestProposal(proposal.summary.status);
 
   return (
-    <>
+    <div id={SERVICE_PROVIDER_PROPOSAL_SECTION_ID}>
       <ServiceRequestProposalSummaryCard
         summary={proposal.summary}
         canEdit={canEdit}
@@ -89,6 +90,6 @@ export function ServiceProviderProposalSection({
           await proposalComposer.submitProposal();
         }}
       />
-    </>
+    </div>
   );
 }

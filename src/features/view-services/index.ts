@@ -84,3 +84,42 @@ export {
   getScheduledTiming,
 } from "./utils/formatScheduledSummary";
 export { getContractedServiceStatusLabel } from "./utils/contractedServiceStatusLabel";
+export {
+  getPendingPaymentHighlightContent,
+  type PendingPaymentAudience,
+  type PendingPaymentHighlightContent,
+  type PendingPaymentHighlightEmphasis,
+} from "./utils/pendingPaymentHighlight";
+export {
+  resolveClientCardActions,
+  resolveClientPrimaryIntent,
+  type ClientServiceActionIntent,
+  type ClientServiceCardAction,
+  type ClientServiceCardActions,
+} from "./utils/resolveClientCardActions";
+export {
+  resolveProviderCardActions,
+  resolveProviderPrimaryIntent,
+  type ProviderServiceActionIntent,
+  type ProviderServiceCardAction,
+  type ProviderServiceCardActions,
+} from "./utils/resolveProviderCardActions";
+export {
+  getClientServiceNextStep,
+  getProviderServiceNextStep,
+  getServiceNextStep,
+  type ClientServiceNextStepIntent,
+  type ProviderServiceNextStepIntent,
+  type ServiceNextStep,
+  type ServiceNextStepIcon,
+  type ServiceNextStepIntent,
+  type ServiceNextStepTrustFooter,
+} from "./utils/serviceNextStep";
+export { ServiceNextStepCard } from "./components/ServiceNextStepCard";
+export type { ServiceNextStepCardProps } from "./components/ServiceNextStepCard";
+export { useServiceDetailNextStep } from "./hooks/useServiceDetailNextStep";
+export type {
+  UseServiceDetailNextStepParams,
+  UseServiceDetailNextStepResult,
+} from "./hooks/useServiceDetailNextStep";
+export { SERVICE_PROVIDER_PROPOSAL_SECTION_ID } from "./constants/serviceDetailNextStep.constants";

@@ -65,6 +65,7 @@ export function ServiceDetailClientActions({
       ) : null}
 
       {showClientBudgetAction && budgetAction && BudgetActionIcon ? (
+        // Deprecated: prefer ServiceNextStepCard as primary CTA; remove when next-step covers this surface.
         <Button
           type="button"
           variant={showRepublishAction ? "outline" : "default"}
@@ -78,6 +79,7 @@ export function ServiceDetailClientActions({
       ) : null}
 
       {showContractedChat ? (
+        // Deprecated: prefer ServiceNextStepCard as primary CTA; remove when next-step covers this surface.
         <ServiceRequestContractedChatButton
           chatId={contractedChatId}
           providerDisplayName={model.contracted?.provider?.displayName}

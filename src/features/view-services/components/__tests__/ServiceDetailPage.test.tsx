@@ -41,7 +41,18 @@ const chatNavMocks = vi.hoisted(() => ({
 
 vi.mock("react-router", () => ({
   useParams: () => ({ id: "sr-1" }),
+  useNavigate: () => vi.fn(),
 }));
+
+vi.mock("@tanstack/react-query", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tanstack/react-query")>();
+  return {
+    ...actual,
+    useQueryClient: () => ({
+      invalidateQueries: vi.fn(),
+    }),
+  };
+});
 
 vi.mock("@/features/auth", () => ({
   useAuth: () => authMocks,
@@ -160,6 +171,25 @@ vi.mock("../ServiceContractedSection", () => ({
 vi.mock("@/features/service-completion", () => ({
   ProviderMarkExecutedAction: () => <div data-testid="provider-mark-executed-action" />,
   ClientEvaluateServiceAction: () => <div data-testid="client-evaluate-service-action" />,
+  ClientEvaluateServiceSheet: () => <div data-testid="client-evaluate-sheet" />,
+  ProviderMarkExecutedSheet: () => <div data-testid="provider-mark-executed-sheet" />,
+}));
+
+vi.mock("@/features/payments", () => ({
+  ManualPaymentDialog: () => <div data-testid="manual-payment-dialog" />,
+}));
+
+vi.mock("../../hooks/useClientCardManualPaymentBridge", () => ({
+  useClientCardManualPaymentBridge: () => ({
+    open: false,
+    openModal: vi.fn(),
+    handleOpenChange: vi.fn(),
+    handleCompleted: vi.fn(),
+    schedule: null,
+    context: null,
+    isLoading: false,
+    error: null,
+  }),
 }));
 
 vi.mock("../ServiceProviderLocationSection", () => ({
@@ -227,6 +257,8 @@ function buildModel(overrides: Partial<ServiceModel> = {}): ServiceModel {
     lastActivityAt: null,
     myProposal: null,
     chatSummary: null,
+    enrichmentStatus: null,
+    enrichmentReady: false,
     ...overrides,
   };
 }
@@ -330,6 +362,42 @@ describe("ServiceDetailPage", () => {
     });
     render(<ServiceDetailPage />);
     expect(screen.queryByTestId("client-actions")).not.toBeInTheDocument();
+  });
+
+  it("shows next-step card for actionable client budgets intent", () => {
+    serviceMocks.data = buildModel({
+      proposalCount: 2,
+      pendingProposalCount: 2,
+    });
+    render(<ServiceDetailPage />);
+    expect(screen.getByTestId("service-next-step-card")).toBeInTheDocument();
+    expect(screen.getByText("Próximo passo")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("service-next-step-cta"));
+    expect(budgetSheetMocks.openBudgetSheet).toHaveBeenCalled();
+  });
+
+  it("hides next-step card when primary intent is not actionable", () => {
+    serviceMocks.data = buildModel({
+      listPhase: "completed",
+      statusTabId: "completed",
+      proposalCount: 0,
+      contracted: {
+        id: "cs-1",
+        status: "COMPLETED",
+        agreedSlot: null,
+        durationUnit: "hours",
+        durationValue: 2,
+        scheduledStartDate: "2026-01-01",
+        scheduledEndDate: null,
+        scheduledShift: "morning",
+        provider: null,
+        chatId: null,
+        updatedAt: null,
+        clientRatingOverallScore: 5,
+      },
+    });
+    render(<ServiceDetailPage />);
+    expect(screen.queryByTestId("service-next-step-card")).not.toBeInTheDocument();
   });
 });
 

@@ -9,7 +9,7 @@ Documentação baseada em `src/features/view-services/`, rota `/dashboard/servic
 - **O que é:** módulo **agnóstico de papel** que unifica **lista** e **detalhe** de pedidos (`service_request_id`) em um contrato JSON estável (`ServiceModel`), via RPCs (sem PostgREST `.from()` para listagem/detalhe).
 - **Problema que resolve:** evitar drift entre telas cliente/prestador e entre lista e detalhe; centralizar fase de produto (`list_phase`), badges e ações contextuais.
 - **Quem usa:** **cliente** e **prestador** autenticados (rota sob `ProtectedRoute` `client` | `provider`); admin de plataforma tem acesso SQL (`is_platform_admin`), sem UI dedicada evidenciada.
-- **Resultado esperado:** ver o pedido, status UI por fase/contrato, e executar ações permitidas (cancelar pedido em negociação, republicar, orçamentos, pagamento manual, conclusão, reagendar CTA, chat).
+- **Resultado esperado:** ver o pedido, status UI por fase/contrato, o card **Próximo passo** (quando houver ação acionável) e executar ações permitidas (cancelar pedido em negociação, republicar, orçamentos, pagamento manual, conclusão, reagendar CTA, chat).
 
 ---
 
@@ -295,6 +295,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | Cancelar serviço contratado | Client/provider | flags + status no componente payments | `ContractedServiceCancelAction` |
 | Reagendar (CTA) | Client/provider | role client\|provider + seção contratada | `ContractedServiceRescheduleAction` |
 | Iniciar / ver negociação | Prestador | sempre no detalhe (FAB) | `initiateConversation` ou navega chat existente |
+| **Próximo passo** (card) | Client/provider | Ranking acionável de `getClient/ProviderServiceNextStep` (mesmo intent primário da lista); senão não renderiza | `ServiceNextStepCard` no topo do conteúdo (após header); handlers via `useServiceDetailNextStep` — pagamento (`FAILED_PERMANENT`), avaliar, orçamentos, chat/mensagens, mark-executed, mapa, scroll à proposta. CTAs legados coexistentes (deprecated) |
 | Abrir no mapa | Prestador | contracted + coords | Google Maps |
 | Editar/enviar proposta | Prestador | seção proposta + `canEdit…` | negotiation-proposals |
 
@@ -322,6 +323,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 7. API `listServices` com foco ignora filtros de aba/fase.
 8. Cancel da API TS gera **novo** UUID de idempotência a cada chamada (não reutiliza em retry de UI — evidência: `crypto.randomUUID()` inline).
 9. Republicar **reutiliza** key no retry via `useRef` até sucesso.
+10. **Próximo passo:** ranking de intent compartilhado com Meus Serviços (`resolveClient/ProviderCardActions` em `view-services`); o card **não** busca dados além do `ServiceModel` de `useService`; exclusões V1: `details`, `cancel`, estados só informativos; prestador **sem** card de pagamento; footer contextual (lock em pagamento; shield curto em orçamentos).
 
 ---
 
@@ -404,6 +406,7 @@ Helpers de state: `createClientMyServicesServiceDetailState`, `createProviderMyS
 - [ ] Prestador sem proposta/contrato: detalhe negado / empty
 - [ ] Aba Disputas: lista vazia
 - [ ] Foco `?serviceRequestId=` na lista cliente: um item
+- [ ] Próximo passo: card aparece em FAILED_PERMANENT / EXECUTED / orçamentos / unread; some em completed com rating / cancelled / waiting sem ação
 
 ---
 
@@ -428,3 +431,5 @@ Reescrita para o padrão 20+ seções do orquestrador: sheet vs página, diferen
 **2026-08-07 (step de sucesso pós mark-executed / arquitetura):** após mark-executed a sheet permanece aberta até **“Entendi”**; UI refatorada em `CompletionSuccessStep` (genérico) + `ProviderExecutedSuccessStep` (copy prestador) + `chrome` standard/immersive no `CompletionFlowSheetDialog`. Normas em [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md).
 
 **2026-08-07 (step de sucesso pós avaliação do cliente):** após confirm-with-rating ou optional rating, `ClientEvaluateServiceSheet` permanece na fase `success` (`ClientEvaluateSuccessStep` → `CompletionSuccessStep`, `chrome="immersive"`; CTA **“Entendi”**); toast de sucesso removido do hook; `ClientEvaluateServiceAction` mantém a sheet montada enquanto `open`. Normas em [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md).
+
+**2026-08-10 (Próximo passo):** card `ServiceNextStepCard` no detalhe com ranking compartilhado (`resolveClient/ProviderCardActions` / `getClient/ProviderServiceNextStep`); CTAs legados coexistentes (deprecated). Glossário: termo **Próximo passo**.

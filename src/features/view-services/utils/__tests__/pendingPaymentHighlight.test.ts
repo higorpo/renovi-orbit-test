@@ -1,6 +1,5 @@
-// @vitest-environment happy-dom
 import { describe, expect, it } from "vitest";
-import type { ServiceModel } from "@/features/view-services";
+import type { ServiceModel } from "../../types/service.types";
 import { getPendingPaymentHighlightContent } from "../pendingPaymentHighlight";
 
 type Contracted = NonNullable<ServiceModel["contracted"]>;

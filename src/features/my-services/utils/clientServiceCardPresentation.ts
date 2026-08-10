@@ -1,26 +1,21 @@
 import {
   formatLocationDisplay,
+  getPendingPaymentHighlightContent,
   getScheduleHighlightContent,
   getScheduledTiming,
-  getServiceRequestBudgetActionState,
   getStatusBadgeVariant,
   getStatusLabel,
+  resolveClientCardActions,
+  type ClientServiceActionIntent,
+  type ClientServiceCardAction,
   type ContractedServiceStatus,
   type ServiceModel,
   type StatusBadgeVariant,
 } from "@/features/view-services";
 import { formatDatePtBr } from "@/lib/utils/formatDate";
 import { formatRelativeDate } from "@/lib/formatRelativeDate";
-import { getPendingPaymentHighlightContent } from "./pendingPaymentHighlight";
 
-export type ClientCardActionIntent =
-  | "details"
-  | "budgets"
-  | "cancel"
-  | "messages"
-  | "chat"
-  | "adjust_payment"
-  | "evaluate_service";
+export type ClientCardActionIntent = ClientServiceActionIntent;
 
 export type ClientCardHighlightEmphasis =
   | "default"
@@ -63,12 +58,7 @@ export interface ClientCardSecondaryInfo {
   text: string;
 }
 
-export interface ClientCardAction {
-  label: string;
-  intent: ClientCardActionIntent;
-  disabled?: boolean;
-  disabledReason?: string;
-}
+export type ClientCardAction = ClientServiceCardAction;
 
 export interface ClientServiceCardPresentation {
   phaseLabel: string;
@@ -456,211 +446,33 @@ function buildDisputePresentation(
   };
 }
 
-function chatDisabled(model: ServiceModel): boolean {
-  return !model.chatSummary?.id;
-}
-
-function chatAction(model: ServiceModel, label = "Ver conversa com prestador"): ClientCardAction {
-  const disabled = chatDisabled(model);
-  return {
-    label,
-    intent: "chat",
-    disabled,
-    disabledReason: disabled ? "Conversa ainda não disponível para este pedido" : undefined,
-  };
-}
-
-function unreadMessagesAction(model: ServiceModel): ClientCardAction {
-  const latestChat = model.chatSummary;
-  const providerLabel = latestChat?.providerDisplayName?.trim();
-  const singleUnreadChat =
-    model.unreadChatCount === 1 && Boolean(providerLabel) && Boolean(latestChat?.id);
-
-  if (singleUnreadChat) {
-    return { label: "Ver mensagem", intent: "chat" };
-  }
-
-  return { label: "Ver mensagens", intent: "messages" };
-}
-
-function budgetsAction(model: ServiceModel): ClientCardAction {
-  const action = getServiceRequestBudgetActionState(model);
-
-  return {
-    label: action.label,
-    intent: "budgets",
-    disabled: action.disabled,
-    disabledReason: action.disabledReason,
-  };
-}
-
-function buildNegotiationActions(
-  model: ServiceModel,
-): Pick<ClientServiceCardPresentation, "primaryAction" | "secondaryAction"> {
-  const unreadCount = model.unreadChatCount;
-  const pendingCount = model.pendingProposalCount;
-  const proposalCount = model.proposalCount;
-  const canCancel = model.requestStatus === "OPEN";
-
-  if (unreadCount > 0) {
-    return {
-      primaryAction: unreadMessagesAction(model),
-      secondaryAction:
-        proposalCount > 0 ? budgetsAction(model) : { label: "Ver detalhes", intent: "details" },
-    };
-  }
-
-  if (pendingCount > 0 || proposalCount > 0) {
-    return {
-      primaryAction: budgetsAction(model),
-      secondaryAction: { label: "Ver detalhes", intent: "details" },
-    };
-  }
-
-  if (canCancel) {
-    return {
-      primaryAction: { label: "Ver detalhes", intent: "details" },
-      secondaryAction: { label: "Cancelar pedido", intent: "cancel" },
-    };
-  }
-
-  return {
-    primaryAction: { label: "Ver detalhes", intent: "details" },
-    secondaryAction: null,
-  };
-}
-
-function buildInProgressActions(
-  model: ServiceModel,
-): Pick<ClientServiceCardPresentation, "primaryAction" | "secondaryAction"> {
-  const needsManualPayment =
-    model.contracted?.status === "PENDING_PAYMENT" &&
-    model.contracted.paymentScheduleState === "FAILED_PERMANENT";
-
-  if (needsManualPayment) {
-    return {
-      primaryAction: { label: "Ajustar pagamento", intent: "adjust_payment" },
-      secondaryAction: { label: "Ver detalhes", intent: "details" },
-    };
-  }
-
-  const timing = model.contracted?.scheduledStartDate
-    ? getScheduledTiming(
-        model.contracted.scheduledStartDate,
-        model.contracted.scheduledEndDate,
-      )
-    : "future";
-  const status = model.contracted?.status;
-
-  // Provider submitted evidence — evaluate outranks unread chat.
-  if (status === "EXECUTED") {
-    return {
-      primaryAction: { label: "Avaliar serviço", intent: "evaluate_service" },
-      secondaryAction: { label: "Ver detalhes", intent: "details" },
-    };
-  }
-
-  if (model.chatSummary?.isUnread || model.unreadChatCount > 0) {
-    return {
-      primaryAction: chatAction(model, "Responder"),
-      secondaryAction: { label: "Ver detalhes", intent: "details" },
-    };
-  }
-
-  // Dispute blocks evaluate / cancel CTAs — chat stays available.
-  if (status === "IN_DISPUTE") {
-    return {
-      primaryAction: { label: "Ver detalhes", intent: "details" },
-      secondaryAction: chatAction(model),
-    };
-  }
-
-  // Waiting on provider completion — prefer details over chat.
-  if (status === "CONFIRMED" && timing === "past") {
-    return {
-      primaryAction: { label: "Ver detalhes", intent: "details" },
-      secondaryAction: chatAction(model),
-    };
-  }
-
-  return {
-    primaryAction: chatAction(model),
-    secondaryAction: { label: "Ver detalhes", intent: "details" },
-  };
-}
-
-function buildCompletedActions(
-  model: ServiceModel,
-): Pick<ClientServiceCardPresentation, "primaryAction" | "secondaryAction"> {
-  // list_services already embeds rating fields — no extra fetch.
-  const needsOptionalRating =
-    model.contracted?.status === "COMPLETED" &&
-    model.contracted.clientRatingOverallScore == null;
-
-  if (needsOptionalRating) {
-    return {
-      primaryAction: { label: "Avaliar serviço", intent: "evaluate_service" },
-      secondaryAction: { label: "Ver detalhes", intent: "details" },
-    };
-  }
-
-  return {
-    primaryAction: { label: "Ver detalhes", intent: "details" },
-    secondaryAction: null,
-  };
-}
-
-function buildCancelledActions(): Pick<
-  ClientServiceCardPresentation,
-  "primaryAction" | "secondaryAction"
-> {
-  return {
-    primaryAction: { label: "Ver detalhes", intent: "details" },
-    secondaryAction: null,
-  };
-}
-
-function buildDisputeActions(
-  model: ServiceModel,
-): Pick<ClientServiceCardPresentation, "primaryAction" | "secondaryAction"> {
-  return {
-    primaryAction: { label: "Ver detalhes", intent: "details" },
-    secondaryAction: chatAction(model),
-  };
-}
-
 export function getClientServiceCardPresentation(
   model: ServiceModel,
 ): ClientServiceCardPresentation {
   const phaseLabel = getStatusLabel(model.listPhase, model.hasPendingProposal);
   const phaseBadgeVariant = getStatusBadgeVariant(model.listPhase, model.proposalCount);
+  const actions = resolveClientCardActions(model);
 
   let content: Pick<
     ClientServiceCardPresentation,
     "highlight" | "secondaryInfo" | "isTodayService" | "showProviderHeader"
   >;
-  let actions: Pick<ClientServiceCardPresentation, "primaryAction" | "secondaryAction">;
 
   switch (model.listPhase) {
     case "in_progress":
       content = buildInProgressPresentation(model);
-      actions = buildInProgressActions(model);
       break;
     case "completed":
       content = buildCompletedPresentation(model);
-      actions = buildCompletedActions(model);
       break;
     case "cancelled":
       content = buildCancelledPresentation(model);
-      actions = buildCancelledActions();
       break;
     case "dispute":
       content = buildDisputePresentation(model);
-      actions = buildDisputeActions(model);
       break;
     default:
       content = { ...buildNegotiationPresentation(model), isTodayService: false };
-      actions = buildNegotiationActions(model);
   }
 
   return {

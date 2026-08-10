@@ -21,8 +21,11 @@ import { useServiceRequestBudgetSheet } from "../hooks/useServiceRequestBudgetSh
 import { useProviderServiceRequestChat } from "../hooks/useProviderServiceRequestChat";
 import { useServiceDetailChatNavigation } from "../hooks/useServiceDetailChatNavigation";
 import { useRecordProviderOpportunityView } from "../hooks/useRecordProviderOpportunityView";
+import { useServiceDetailNextStep } from "../hooks/useServiceDetailNextStep";
 import { SERVICE_DETAIL_PAGE_SHELL_CLASS } from "../constants/serviceDetail.constants";
 import { ServiceContractedSection } from "./ServiceContractedSection";
+import { ServiceDetailNextStepOverlays } from "./ServiceDetailNextStepOverlays";
+import { ServiceNextStepCard } from "./ServiceNextStepCard";
 import { ServiceProviderLocationSection } from "./ServiceProviderLocationSection";
 import { ServiceDetailClientActions } from "./ServiceDetailClientActions";
 import { ServiceDetailFloatingActions } from "./ServiceDetailFloatingActions";
@@ -65,6 +68,15 @@ export function ServiceDetailPage({
   const { openChat, isOpeningChat } = useServiceDetailChatNavigation({
     serviceRequestId: id ?? "",
     existingChatId: providerChat?.chatId ?? null,
+  });
+
+  const nextStep = useServiceDetailNextStep({
+    model,
+    role: profile?.role,
+    openBudgetSheet,
+    openProviderChat: openChat,
+    isOpeningProviderChat: isOpeningChat,
+    onCompletionSuccess: () => void refetch(),
   });
 
   const suggestedEquipmentPt = useMemo(
@@ -164,6 +176,13 @@ export function ServiceDetailPage({
       </article>
 
       <div className="space-y-4">
+        {nextStep.step ? (
+          <ServiceNextStepCard
+            step={nextStep.step}
+            onAction={nextStep.handleAction}
+            disabled={nextStep.actionDisabled}
+          />
+        ) : null}
         {model.contracted ? (
           <ServiceContractedSection
             contracted={model.contracted}
@@ -218,6 +237,13 @@ export function ServiceDetailPage({
           }}
         />
       ) : null}
+
+      <ServiceDetailNextStepOverlays
+        model={model}
+        role={profile?.role}
+        step={nextStep.step}
+        nextStep={nextStep}
+      />
     </div>
   );
 }

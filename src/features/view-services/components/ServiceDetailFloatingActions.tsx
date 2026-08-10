@@ -16,6 +16,7 @@ export function ServiceDetailFloatingActions({
   isOpeningChat = false,
   onOpenChat,
 }: ServiceDetailFloatingActionsProps) {
+  // Deprecated: prefer ServiceNextStepCard as primary CTA; remove when next-step covers this surface.
   const desktopLabel = hasExistingChat
     ? "Visualizar negociação com o cliente"
     : "Iniciar negociação com o cliente";
