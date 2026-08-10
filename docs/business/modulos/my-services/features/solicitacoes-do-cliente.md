@@ -317,7 +317,10 @@ Prioridade (comprovada em `clientServiceCardPresentation` / `providerServiceCard
 - [ ] Prestador: revisar / ver proposta; mapa só “hoje” com coords
 - [ ] Prestador: `CONFIRMED` + past → “Marque o serviço como executado”; primário “Concluir serviço” abre sheet no card; secundário “Ver detalhes”; `!enrichmentReady` → botão disabled + tooltip
 - [ ] Prestador: `EXECUTED` → “Aguardando confirmação do cliente”; primário Ver detalhes
-- [ ] Unread / PENDING_PAYMENT vencem o banner de follow-up de conclusão
+- [ ] Cliente `EXECUTED` + unread → highlight “Aceite a conclusão…” + CTA “Avaliar serviço” (não “Responder”)
+- [ ] Prestador `CONFIRMED`+past ou `EXECUTED` + unread → highlight/CTA de conclusão (não “Responder”)
+- [ ] Cliente `FAILED_PERMANENT` + unread → “Ajustar pagamento” / alerta de falha (não unread)
+- [ ] Cliente `CONFIRMED`+past + unread → unread ainda pode vencer o banner “Aguardando conclusão…”
 - [ ] Disputas: lista vazia mesmo com outros itens
 - [ ] Sheet detalhe: lista permanece montada (persistent slot)
 
@@ -389,3 +392,9 @@ Evidência: `buildCompletedActions` em `clientServiceCardPresentation.ts`; host 
 - Após mark-executed ou confirm/rating, Meus Serviços e o detalhe passam a refrescar porque `useProviderMarkExecuted` e `useClientConfirmRating` invalidam `SERVICES_LIST_QUERY_KEY` / `SERVICE_DETAIL_QUERY_KEY` no `onSuccess` (além do contexto de conclusão).
 - Cobre card da lista, prompt global e CTA do detalhe — a lista não depende mais só do host `my-services` para ficar coerente.
 - Normas: [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md).
+
+## 30. Atualização (2026-08-10) — Follow-up de conclusão vence unread no card
+
+- Bugfix: com contrato `EXECUTED` (cliente) ou fluxo de conclusão do prestador (`CONFIRMED`+past / `EXECUTED`), o card priorizava “Responder” / highlight de nova mensagem quando havia unread — em vez do CTA/highlight de conclusão.
+- Correção: esses ramos passam a ter **prioridade sobre unread**, alinhados a `FAILED_PERMANENT`. Regra 16 e Anexo D atualizados; QA no Anexo E.
+- Evidência: `clientServiceCardPresentation.ts`, `providerServiceCardPresentation.ts` + testes associados.
