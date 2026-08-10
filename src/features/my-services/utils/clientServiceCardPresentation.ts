@@ -324,6 +324,16 @@ function buildInProgressPresentation(
     }
   }
 
+  // Provider already marked executed — evaluate outranks unread chat (same as permanent payment failure).
+  if (completionHighlight && contracted?.status === "EXECUTED") {
+    return {
+      showProviderHeader: true,
+      isTodayService,
+      highlight: completionHighlight,
+      secondaryInfo,
+    };
+  }
+
   if (unreadCount > 0) {
     pushSecondaryInfo(secondaryInfo, {
       icon: completionHighlight?.title ? "info" : "date",
@@ -534,13 +544,6 @@ function buildInProgressActions(
     };
   }
 
-  if (model.chatSummary?.isUnread || model.unreadChatCount > 0) {
-    return {
-      primaryAction: chatAction(model, "Responder"),
-      secondaryAction: { label: "Ver detalhes", intent: "details" },
-    };
-  }
-
   const timing = model.contracted?.scheduledStartDate
     ? getScheduledTiming(
         model.contracted.scheduledStartDate,
@@ -549,10 +552,17 @@ function buildInProgressActions(
     : "future";
   const status = model.contracted?.status;
 
-  // Provider submitted evidence — open evaluate sheet from the card.
+  // Provider submitted evidence — evaluate outranks unread chat.
   if (status === "EXECUTED") {
     return {
       primaryAction: { label: "Avaliar serviço", intent: "evaluate_service" },
+      secondaryAction: { label: "Ver detalhes", intent: "details" },
+    };
+  }
+
+  if (model.chatSummary?.isUnread || model.unreadChatCount > 0) {
+    return {
+      primaryAction: chatAction(model, "Responder"),
       secondaryAction: { label: "Ver detalhes", intent: "details" },
     };
   }

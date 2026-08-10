@@ -734,6 +734,42 @@ describe("getClientServiceCardPresentation additional branches", () => {
     });
   });
 
+  it("prefers evaluate over unread chat when the provider marked executed", () => {
+    const pres = getClientServiceCardPresentation(
+      baseModel({
+        listPhase: "in_progress",
+        statusTabId: "in_progress",
+        unreadChatCount: 1,
+        chatSummary: {
+          id: "chat-1",
+          isUnread: true,
+          lastInteractionAt: "2025-06-15T18:00:00Z",
+          lastMessagePreview: "Proposta",
+          providerDisplayName: "João Eletricista",
+        },
+        contracted: contracted({
+          status: "EXECUTED",
+          scheduledStartDate: "2025-06-15",
+        }),
+      }),
+    );
+
+    expect(pres.highlight).toMatchObject({
+      icon: "completed",
+      title: "Aceite a conclusão e avalie o serviço",
+      emphasis: "attention",
+    });
+    expect(pres.primaryAction).toMatchObject({
+      label: "Avaliar serviço",
+      intent: "evaluate_service",
+    });
+    expect(pres.secondaryAction).toMatchObject({
+      label: "Ver detalhes",
+      intent: "details",
+    });
+    expect(pres.primaryAction.intent).not.toBe("chat");
+  });
+
   it("hides evaluate CTA and shows dispute presentation when IN_DISPUTE", () => {
     const pres = getClientServiceCardPresentation(
       baseModel({
