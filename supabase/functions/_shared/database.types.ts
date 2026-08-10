@@ -2794,9 +2794,11 @@ export type Database = {
           email_dispatched_at: string | null
           gateway_slug: Database["public"]["Enums"]["payment_gateway_slug"]
           id: string
+          last_onboarding_reminder_at: string | null
           netcred_bank_account_id: string | null
           netcred_company_id: string | null
           onboarding_activated_at: string | null
+          onboarding_reminder_count: number
           onboarding_status: Database["public"]["Enums"]["payment_provider_onboarding_status"]
           onboarding_submitted_at: string | null
           provider_id: string
@@ -2808,9 +2810,11 @@ export type Database = {
           email_dispatched_at?: string | null
           gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
           id?: string
+          last_onboarding_reminder_at?: string | null
           netcred_bank_account_id?: string | null
           netcred_company_id?: string | null
           onboarding_activated_at?: string | null
+          onboarding_reminder_count?: number
           onboarding_status?: Database["public"]["Enums"]["payment_provider_onboarding_status"]
           onboarding_submitted_at?: string | null
           provider_id: string
@@ -2822,9 +2826,11 @@ export type Database = {
           email_dispatched_at?: string | null
           gateway_slug?: Database["public"]["Enums"]["payment_gateway_slug"]
           id?: string
+          last_onboarding_reminder_at?: string | null
           netcred_bank_account_id?: string | null
           netcred_company_id?: string | null
           onboarding_activated_at?: string | null
+          onboarding_reminder_count?: number
           onboarding_status?: Database["public"]["Enums"]["payment_provider_onboarding_status"]
           onboarding_submitted_at?: string | null
           provider_id?: string
@@ -4875,6 +4881,10 @@ export type Database = {
         Args: never
         Returns: Json
       }
+      cron_enqueue_provider_onboarding_incomplete_reminders: {
+        Args: never
+        Returns: Json
+      }
       cron_enqueue_service_reschedule_reminders: { Args: never; Returns: Json }
       cron_expire_stale_service_reschedule_requests: {
         Args: never
@@ -4914,6 +4924,10 @@ export type Database = {
       }
       domain_events_release_stale_leases: { Args: never; Returns: number }
       enqueue_proposal_expiring_soon_reminders: {
+        Args: { p_batch_size?: number }
+        Returns: Json
+      }
+      enqueue_provider_onboarding_incomplete_reminders: {
         Args: { p_batch_size?: number }
         Returns: Json
       }

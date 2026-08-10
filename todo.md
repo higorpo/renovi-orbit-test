@@ -106,7 +106,6 @@ Coisas para fazer next
 
 
 
-- Enviar notificação para prestadores que ainda não completaram o onboarding de tempos em tempos para eles completarem.
 
 - Não permitir parcelas menores do que 150 reais.
 

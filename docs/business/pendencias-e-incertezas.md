@@ -99,6 +99,7 @@ Também referenciados no módulo matching (fora desta consolidação se já fech
 - ~~**Drift de taxas checkout → T-2** — se congelar ou recalcular.~~ **Resolvido (produto):** drift intencional; UI divulga recálculo no momento da cobrança (`PaymentTrustDisclosure`).
 - ~~**Acesso do prestador ao dashboard antes do KYC `ACTIVE`.**~~ **Resolvido (2026-07-30, Fase 2; menu: 2026-08-03 ocultação via `useProviderKycBlocksNav`):** conteúdo operacional bloqueado até `ACTIVE`; chrome de navegação oculto durante loading/bloqueio.
 - ~~**Detalhe campo a campo do formulário KYC.**~~ **Resolvido (2026-07-30, Fase 3):** wizard multi-etapas documentado.
+- ~~**Lembretes de KYC incompleto.**~~ **Documentado (2026-08-10):** cron diário + MMD `PROVIDER_ONBOARDING_INCOMPLETE_REMINDER` para `PENDING_DOCUMENTS`/`REJECTED` — ver [lembretes-credenciamento-incompleto](./modulos/provider-kyc/features/lembretes-credenciamento-incompleto.md).
 
 ## Inferências explicitamente não comprovadas
 
@@ -117,4 +118,4 @@ Também referenciados no módulo matching (fora desta consolidação se já fech
 | **Abertas (calendário)** | PC-02…PC-05 |
 | **Abertas (push/payments)** | N-01, PAY-DC |
 | **Fechadas nesta auditoria** | P-05, P-10, P-11 (doc); P-12 (histórico); **PC-01** (índices transversais) |
-| **Profundidade documental (Onda 6 + 2026-08-04/05)** | **33/33** features com ≥20 seções (incl. `conclusao-e-enrichment`). Sem Parcial por profundidade na matriz. |
+| **Profundidade documental (Onda 6 + 2026-08-04/05/10)** | **34/34** features com ≥20 seções (incl. `conclusao-e-enrichment` + `lembretes-credenciamento-incompleto`). Sem Parcial por profundidade na matriz. |

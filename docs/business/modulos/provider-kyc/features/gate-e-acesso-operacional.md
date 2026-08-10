@@ -229,8 +229,9 @@ stateDiagram-v2
 | `PROVIDER_KYC_REJECTED` | `account.provider_kyc_rejected` | UI permite reenvio |
 | `PROVIDER_ACTIVATED` | `account.provider_activated` | Cron de ativação |
 | `PROVIDER_SUSPENDED` | `account.provider_suspended` (+ variantes) | Já no catálogo |
+| `PROVIDER_ONBOARDING_INCOMPLETE_REMINDER` | `account.provider_onboarding_incomplete_reminder` | Cron diário 11:00 UTC; só `PENDING_DOCUMENTS`/`REJECTED`; push+email; **sem** `bypass_limits`; deep link `/dashboard/conta` — [lembretes-credenciamento-incompleto](./lembretes-credenciamento-incompleto.md) |
 
-Evidência: migrations `payment_mmd_notification_catalog`, `provider_activated_mmd_notification`; testes `payment_mmd_notification_catalog_test.sql`. O **gate não dispara** MMD diretamente — só reflete estado.
+Evidência: migrations `payment_mmd_notification_catalog`, `provider_activated_mmd_notification`, `provider_onboarding_incomplete_reminders`; testes `payment_mmd_notification_catalog_test.sql`, `payment_provider_onboarding_incomplete_reminders_test.sql`. O **gate não dispara** MMD diretamente — só reflete estado (o deep link do lembrete cai na allowlist de conta).
 
 ## 14. Listagens, buscas, filtros, paginação, ordenação
 
@@ -307,7 +308,7 @@ Evidência: migrations `payment_mmd_notification_catalog`, `provider_activated_m
 | `src/features/provider-kyc/hooks/__tests__/useProviderPaymentAccount.test.tsx` | Polling |
 | `src/features/provider-kyc/hooks/__tests__/useProviderKycBlocksNav.test.tsx` | Loading / ACTIVE / bloqueio / não-provider |
 | `supabase/migrations/20260801060000_create_provider_gateway_accounts.sql` | FSM |
-| Docs relacionados | [formulário-credenciamento-wizard](./formulario-credenciamento-wizard.md), [checkout-e-cobranca](../../payments/features/checkout-e-cobranca.md), [placeholders-e-menu](../../dashboard-shell/features/placeholders-e-menu.md) |
+| Docs relacionados | [formulário-credenciamento-wizard](./formulario-credenciamento-wizard.md), [lembretes-credenciamento-incompleto](./lembretes-credenciamento-incompleto.md), [checkout-e-cobranca](../../payments/features/checkout-e-cobranca.md), [placeholders-e-menu](../../dashboard-shell/features/placeholders-e-menu.md) |
 
 ## 20. Pendências
 

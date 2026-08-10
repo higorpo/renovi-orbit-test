@@ -2,7 +2,7 @@
 
 Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linhas podem referir-se a múltiplos documentos derivados.
 
-**Última auditoria transversal:** 2026-08-02 (spot-check auth/addresses/dynamic-form/provider-profile/KYC-wizard; ops `orbit-emit-sentry-alerts`; módulos calendar/device-beacon/push/notifications e correlatos anteriores).
+**Última auditoria transversal:** 2026-08-10 (lembretes de credenciamento incompleto NetCred + spot-checks anteriores).
 
 ## Núcleo de aplicação e roteamento
 
@@ -276,11 +276,11 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `supabase/migrations/20260802180000_payment_schedules_audit_trigger.sql` | Tabela `payment_schedules_audit` (row-history append-only), `row_version`/`audit_txid` só no audit, trigger statement único set-based, RLS admin-only, INSERT só via DEFINER |
 | `supabase/tests/payments/payment_schedules_audit_trigger_test.sql` | pgTAP: snapshot INSERT/UPDATE/DELETE, versões contíguas, drift de colunas, bloqueio UPDATE/INSERT direto, privilégios |
 
-## Credenciamento do prestador (gate + wizard)
+## Credenciamento do prestador (gate + wizard + lembretes)
 
 | Artefato | Uso na documentação |
 |----------|---------------------|
-| `docs/business/modulos/provider-kyc/` | README + [gate-e-acesso-operacional](./modulos/provider-kyc/features/gate-e-acesso-operacional.md) + [formulário-credenciamento-wizard](./modulos/provider-kyc/features/formulario-credenciamento-wizard.md) |
+| `docs/business/modulos/provider-kyc/` | README + [gate-e-acesso-operacional](./modulos/provider-kyc/features/gate-e-acesso-operacional.md) + [formulário-credenciamento-wizard](./modulos/provider-kyc/features/formulario-credenciamento-wizard.md) + [lembretes-credenciamento-incompleto](./modulos/provider-kyc/features/lembretes-credenciamento-incompleto.md) |
 | `src/features/provider-kyc/components/ProviderKycGate.tsx` | Bloqueio do conteúdo; allowlist `/dashboard/conta*`; UIs por status; host do `ProviderKycForm` |
 | `src/features/provider-kyc/hooks/useProviderKycBlocksNav.ts` | Oculta chrome de nav no `DashboardLayout` (loading + bloqueio KYC) |
 | `src/features/provider-kyc/hooks/useProviderPaymentAccount.ts` | Polling 5s (e-mail pendente) / 30s (documentos enviados ou análise) |
@@ -300,8 +300,11 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `src/features/provider-kyc/components/__tests__/ProviderKycForm.test.tsx` | Wizard PJ: `legal-rep-id`, endereço da empresa (`address-proof`), dual-map identity |
 | `supabase/functions/dispatch-kyc-email/` | E-mail operacional (default `credenciamento@renovi.com.br`; env `NETCRED_CREDENCIAMENTO_EMAIL`; local Inbucket/Mailpit se `INBUCKET_SMTP_HOST`, senão Resend) |
 | `supabase/migrations/20260802210000_provider_kyc_upload_sessions.sql` | Sessões Option A + janitor `payment_janitor_orphan_kyc_documents` |
-| `supabase/migrations/20260801750000_payment_mmd_notification_catalog.sql` (+ `20260801900000_provider_activated_*`) | Templates/rotas MMD KYC (submitted, under review, rejected, activated, suspended) |
-| `supabase/migrations/20260801060000_create_provider_gateway_accounts.sql` | FSM `onboarding_status` (incl. `REJECTED` → `DOCUMENTS_SUBMITTED`) |
+| `supabase/migrations/20260801750000_payment_mmd_notification_catalog.sql` (+ `20260801900000_provider_activated_*`, `20260804420000_mmd_service_auto_completed.sql`) | Templates/rotas MMD KYC (submitted, under review, rejected, activated, suspended, **incomplete reminder**) |
+| `supabase/migrations/20260801060000_create_provider_gateway_accounts.sql` | FSM `onboarding_status`; colunas/índice de lembrete; trigger bootstrap stub `PENDING_DOCUMENTS` |
+| `supabase/migrations/20260801020000_payment_platform_constants_seeds.sql` | Constantes `provider_onboarding_reminder_*` (batch 100, initial 24h, interval 72h, max 8) |
+| `supabase/migrations/20260810162641_provider_onboarding_incomplete_reminders.sql` | `enqueue_provider_onboarding_incomplete_reminders` + cron `0 11 * * *` |
+| `supabase/tests/payments/payment_provider_onboarding_incomplete_reminders_test.sql` | pgTAP do cron/enqueue de lembretes |
 
 ## Documentação pré-existente (planos legados)
 

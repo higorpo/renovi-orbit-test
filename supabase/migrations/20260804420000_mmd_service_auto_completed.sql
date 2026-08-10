@@ -199,6 +199,11 @@ begin
       v_channels := array['push', 'email']::message_dispatcher.message_channel[];
       v_push_bypass_limits := true;
       v_email_bypass_limits := false;
+    when 'PROVIDER_ONBOARDING_INCOMPLETE_REMINDER' then
+      v_template_key := 'account.provider_onboarding_incomplete_reminder';
+      v_channels := array['push', 'email']::message_dispatcher.message_channel[];
+      v_push_bypass_limits := false;
+      v_email_bypass_limits := false;
     when 'TRANSACTION_DISPUTE' then
       v_template_key := 'payment.transaction_dispute';
       v_channels := array['push']::message_dispatcher.message_channel[];

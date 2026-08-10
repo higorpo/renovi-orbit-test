@@ -1096,6 +1096,12 @@ as $$
 $$;
 
 -- 13) Provider gateway account (NetCred)
+-- Bootstrap trigger may already have inserted PENDING_DOCUMENTS; replace with ACTIVE seed state.
+-- PENDING → ACTIVE is not an allowed FSM transition, so delete then insert.
+DELETE FROM "public"."provider_gateway_accounts"
+WHERE "provider_id" = '5d09e025-20a2-4842-aeef-324d42a431e1'
+  AND "gateway_slug" = 'netcred';
+
 INSERT INTO "public"."provider_gateway_accounts" ("id", "provider_id", "gateway_slug", "document", "netcred_company_id", "netcred_bank_account_id", "onboarding_status", "onboarding_submitted_at", "onboarding_activated_at", "email_dispatched_at", "created_at", "updated_at") VALUES ('24e5c730-6728-4eb9-a2e4-7cfc2c52355b', '5d09e025-20a2-4842-aeef-324d42a431e1', 'netcred', '49769985000103', '1048', '2053', 'ACTIVE', '2026-07-07 17:57:17+00', '2026-07-07 17:57:19+00', '2026-07-07 17:57:21+00', '2026-07-07 17:57:24.393658+00', '2026-07-07 17:57:24.393658+00');
 
 -- Seed RPCs run in one transaction; now() is frozen so message order ties on UUID.

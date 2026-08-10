@@ -12,6 +12,10 @@ create table public.provider_gateway_accounts (
   onboarding_submitted_at timestamptz,
   onboarding_activated_at timestamptz,
   email_dispatched_at timestamptz,
+  onboarding_reminder_count integer not null default 0
+    constraint provider_gateway_accounts_onboarding_reminder_count_nonneg
+      check (onboarding_reminder_count >= 0),
+  last_onboarding_reminder_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint provider_gateway_accounts_provider_gateway_unique
@@ -30,11 +34,28 @@ comment on column public.provider_gateway_accounts.netcred_company_id is
 comment on column public.provider_gateway_accounts.email_dispatched_at is
   'Set when KYC onboarding email is confirmed sent.';
 
+comment on column public.provider_gateway_accounts.onboarding_reminder_count is
+  'Count of incomplete-onboarding nudge reminders already enqueued (push+email).';
+
+comment on column public.provider_gateway_accounts.last_onboarding_reminder_at is
+  'Timestamp of the last incomplete-onboarding nudge reminder enqueue.';
+
 create index provider_gateway_accounts_onboarding_status_idx
   on public.provider_gateway_accounts (onboarding_status)
   where onboarding_status in (
     'DOCUMENTS_SUBMITTED'::public.payment_provider_onboarding_status,
     'UNDER_NETCRED_REVIEW'::public.payment_provider_onboarding_status
+  );
+
+-- Hot path for incomplete-onboarding reminder cron (PENDING_DOCUMENTS / REJECTED only).
+create index provider_gateway_accounts_onboarding_reminder_due_idx
+  on public.provider_gateway_accounts (
+    coalesce(last_onboarding_reminder_at, created_at),
+    id
+  )
+  where onboarding_status in (
+    'PENDING_DOCUMENTS'::public.payment_provider_onboarding_status,
+    'REJECTED'::public.payment_provider_onboarding_status
   );
 
 create trigger provider_gateway_accounts_updated_at
@@ -182,4 +203,51 @@ create trigger provider_gateway_accounts_guard_onboarding_transition
   before update on public.provider_gateway_accounts
   for each row
   execute procedure public.provider_gateway_accounts_guard_onboarding_transition();
+
+-- Ensure every provider has a netcred gateway row so incomplete-onboarding reminders
+-- can claim exclusively from provider_gateway_accounts (partial index + SKIP LOCKED).
+create or replace function public.trg_fn_profiles_bootstrap_provider_gateway_account()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.role is distinct from 'provider' then
+    return new;
+  end if;
+
+  if tg_op = 'UPDATE' and old.role is not distinct from 'provider' then
+    return new;
+  end if;
+
+  insert into public.provider_gateway_accounts (
+    provider_id,
+    gateway_slug,
+    document,
+    onboarding_status
+  )
+  values (
+    new.id,
+    'netcred'::public.payment_gateway_slug,
+    '',
+    'PENDING_DOCUMENTS'::public.payment_provider_onboarding_status
+  )
+  on conflict (provider_id, gateway_slug) do nothing;
+
+  return new;
+end;
+$$;
+
+comment on function public.trg_fn_profiles_bootstrap_provider_gateway_account() is
+  'Bootstraps PENDING_DOCUMENTS provider_gateway_accounts row when profiles.role becomes provider.';
+
+revoke all on function public.trg_fn_profiles_bootstrap_provider_gateway_account() from public;
+
+drop trigger if exists trg_profiles_bootstrap_provider_gateway_account on public.profiles;
+
+create trigger trg_profiles_bootstrap_provider_gateway_account
+  after insert or update of role on public.profiles
+  for each row
+  execute procedure public.trg_fn_profiles_bootstrap_provider_gateway_account();
 

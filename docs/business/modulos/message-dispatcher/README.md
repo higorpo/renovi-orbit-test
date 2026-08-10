@@ -119,6 +119,7 @@ Detalhe: [pipeline-e-fsm](./features/pipeline-e-fsm.md), [quotas-e-canais](./fea
 | Edge `message-dispatcher-ingest` | Ingest autenticado (JWT = `profileId`; `bypass_limits` forçado `false`) |
 | Edge `message-dispatcher-worker` | Entrega |
 | Edge `message-dispatcher-webhook-resend` | Ingress Resend |
+| Produtor KYC (reminders) | `enqueue_provider_onboarding_incomplete_reminders` → `mmd_ingest_event('PROVIDER_ONBOARDING_INCOMPLETE_REMINDER')` (push+email, **sem** bypass); ver [lembretes-credenciamento-incompleto](../provider-kyc/features/lembretes-credenciamento-incompleto.md) |
 
 `orbit-emit-sentry-alerts` é ponte SQL→Sentry de **ops/observabilidade** (pagamentos/crons), **fora** do pipeline MMD — ver [rastreabilidade § ops](../../rastreabilidade.md#opsobservabilidade--orbit-emit-sentry-alerts).
 ## 9. Riscos e lacunas

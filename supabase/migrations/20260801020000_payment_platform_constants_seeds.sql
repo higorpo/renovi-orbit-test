@@ -63,6 +63,26 @@ values
     'Max providers per detect-netcred-onboarding batch'
   ),
   (
+    'provider_onboarding_reminder_batch_size',
+    '100'::jsonb,
+    'Max incomplete-onboarding providers claimed per reminder cron tick'
+  ),
+  (
+    'provider_onboarding_reminder_initial_hours',
+    '24'::jsonb,
+    'Hours after gateway account created_at before the first incomplete-onboarding nudge'
+  ),
+  (
+    'provider_onboarding_reminder_interval_hours',
+    '72'::jsonb,
+    'Hours between subsequent incomplete-onboarding nudge reminders'
+  ),
+  (
+    'provider_onboarding_reminder_max_count',
+    '8'::jsonb,
+    'Maximum incomplete-onboarding nudge reminders per provider gateway account'
+  ),
+  (
     'auto_cancel_hours_before_service',
     '12'::jsonb,
     'T-12h auto-cancellation threshold hours before service execution'
