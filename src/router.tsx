@@ -30,6 +30,14 @@ const ProviderServiceCardShowcasePage =
         ),
       )
     : null
+const ServiceNextStepShowcasePage =
+  import.meta.env.DEV
+    ? lazy(() =>
+        import('@/features/view-services/components/ServiceNextStepShowcasePage').then(
+          (m) => ({ default: m.ServiceNextStepShowcasePage }),
+        ),
+      )
+    : null
 
 /** Lazy routes use direct file paths (not feature barrels) so Rollup splits chunks per screen. */
 const RequestQuote = lazy(() =>
@@ -140,6 +148,9 @@ export const router = createBrowserRouter([
         : []),
       ...(import.meta.env.DEV && ClientServiceCardShowcasePage
         ? [{ path: 'dev/demo/client-service-card-showcase', element: <ClientServiceCardShowcasePage /> }]
+        : []),
+      ...(import.meta.env.DEV && ServiceNextStepShowcasePage
+        ? [{ path: 'dev/demo/service-next-step-showcase', element: <ServiceNextStepShowcasePage /> }]
         : []),
       {
         path: 'pedir-orcamento',
