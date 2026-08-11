@@ -1,7 +1,6 @@
 import { Calendar, CircleCheck, User } from "lucide-react";
 import {
   PaymentDisputeStatus,
-  ProviderSettlementStatus,
 } from "@/features/payments";
 import type { ContractedServiceSummary } from "../types/service.types";
 import { getContractedServiceStatusLabel } from "../utils/contractedServiceStatusLabel";
@@ -10,13 +9,11 @@ import { ServiceDetailSection } from "./ServiceDetailSection";
 
 interface ServiceContractedSectionProps {
   contracted: ContractedServiceSummary;
-  showProviderSettlement?: boolean;
 }
 
 /** Read-only contracted summary. Action CTAs live in ServiceDetailActionsBar. */
 export function ServiceContractedSection({
   contracted,
-  showProviderSettlement = false,
 }: ServiceContractedSectionProps) {
   const providerName = contracted.provider?.displayName;
   const statusLabel = getContractedServiceStatusLabel(contracted.status);
@@ -57,14 +54,6 @@ export function ServiceContractedSection({
           </p>
         ) : null}
       </div>
-      {showProviderSettlement ? (
-        <div className="pt-2 empty:hidden">
-          <ProviderSettlementStatus
-            contractedServiceId={contracted.id}
-            contractedServiceStatus={contracted.status}
-          />
-        </div>
-      ) : null}
     </ServiceDetailSection>
   );
 }

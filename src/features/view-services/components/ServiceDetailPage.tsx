@@ -160,7 +160,6 @@ export function ServiceDetailPage({
         {model.contracted ? (
           <ServiceContractedSection
             contracted={model.contracted}
-            showProviderSettlement={isProvider}
           />
         ) : null}
         {isProvider && model.contracted ? (
