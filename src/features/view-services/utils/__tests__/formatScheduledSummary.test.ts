@@ -23,6 +23,7 @@ function contracted(
     provider: null,
     chatId: null,
     updatedAt: null,
+    finalAmount: null,
     ...overrides,
   };
 }

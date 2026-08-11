@@ -268,13 +268,20 @@ begin
         order by c.last_interaction_at desc, c.id desc
         limit 1
       ),
+      'final_amount', (
+        select pp.final_amount
+        from public.provider_proposals pp
+        where pp.id = cs.accepted_proposal_id
+      ),
       'provider', jsonb_build_object(
         'id', cs.provider_id,
         'display_name', coalesce(
           nullif(btrim(ppp.display_name), ''),
           nullif(btrim(prov.full_name), ''),
           'Profissional'
-        )
+        ),
+        'profile_image_path', prov.profile_image_path,
+        'slug', ppp.slug
       ),
       'reschedule', public.cns_service_reschedule_snapshot_for_viewer(cs.id, p_viewer_id),
       'client_rating_overall_score', (
@@ -398,4 +405,4 @@ end;
 $$;
 
 comment on function public.project_service_row(uuid, uuid) is
-  'Builds unified service JSON with enrichment_status/enrichment_ready and contracted client_rating_* when present.';
+  'Builds unified service JSON with enrichment fields, contracted final_amount, provider image/slug, and client_rating_* when present.';

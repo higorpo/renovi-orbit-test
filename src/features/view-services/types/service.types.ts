@@ -49,12 +49,6 @@ export interface PlatformServiceSummary {
   color_key?: string | null;
 }
 
-export interface CounterpartySummary {
-  id: string;
-  displayName: string;
-  profileImagePath: string | null;
-}
-
 import type { Database } from "@/lib/supabase/database.types";
 import type { ServiceRescheduleSnapshot } from "@/features/service-reschedule";
 
@@ -65,6 +59,17 @@ export type PaymentScheduleState =
 export type ContractedServiceStatus =
   Database["public"]["Enums"]["contracted_service_status"];
 
+export interface CounterpartySummary {
+  id: string;
+  displayName: string;
+  profileImagePath: string | null;
+}
+
+/** Contracted provider identity for detail card (extends list counterparty). */
+export interface ContractedProviderSummary extends CounterpartySummary {
+  slug: string | null;
+}
+
 export interface ContractedServiceSummary {
   id: string;
   status: ContractedServiceStatus;
@@ -74,9 +79,11 @@ export interface ContractedServiceSummary {
   scheduledStartDate: string;
   scheduledEndDate: string | null;
   scheduledShift: string;
-  provider: CounterpartySummary | null;
+  provider: ContractedProviderSummary | null;
   chatId: string | null;
   updatedAt: string | null;
+  /** Accepted proposal final amount (BRL). */
+  finalAmount: number | null;
   /** Current payment_schedules.state when a schedule exists for this contracted service. */
   paymentScheduleState?: PaymentScheduleState | null;
   /** True while post-PAID far reschedule refund+recapture is in flight. */

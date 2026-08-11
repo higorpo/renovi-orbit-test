@@ -57,12 +57,12 @@
 
 - **payments / NetCred:** (1) `PAYOUT_CREATE` / `PAYOUT_SETTLE` → `payment_webhook_handle_payout`; (2) após `TRANSACTION_CAPTURE` / `TRANSACTION_REFUND` com sucesso, `netcred-webhook` enriquece best-effort via GraphQL `movements(transactionId)` → `payment_upsert_settlement_movements` (mesmo pipeline do sync; falha do enrich **não** falha o ACK); (3) cron `sync-netcred-settlements` como backfill. Motivo do enrich: NetCred reusa lotes de payout por `(company, settling_at)` — movements novos em lote existente **não** disparam `PAYOUT_CREATE`.
 - **my-account / payments UI:** link cruzado Recebimentos ↔ Ganhos; disclosure importado da Public API.
-- **view-services:** `ProviderSettlementStatus` (payments) no detalhe contratado, usando o disclosure.
+- **payments:** `ProviderSettlementStatus` (componente + holds) e `ProviderPaymentHistoryList` consomem o disclosure; **não** montado em `ServiceContractedSection` após redesign do card Serviço contratado.
 - **provider-kyc / dashboard-shell:** gate do outlet + `useProviderKycBlocksNav` (chrome oculto até `ACTIVE`); definição de menu via `getDashboardMenu` (Ganhos no menu do prestador quando chrome visível).
 
 ## 9. Riscos e lacunas
 
-- Disclosure em Recebimentos e `ProviderSettlementStatus` **não passam** `settlingAt` — previsões embutidas usam D+30 até a lista Ganhos (ou outro consumidor) exibir a data real do movement.
+- Disclosure em Recebimentos e `ProviderSettlementStatus` (payments) **não passam** `settlingAt` — previsões embutidas usam D+30 até a lista Ganhos (ou outro consumidor) exibir a data real do movement.
 - Params de intervalo de datas da RPC existem sem UI.
 - Sem instrumentação de analytics na feature.
 - Detalhe operacional NetCred / runbooks: `docs/payment-system/` (fora deste módulo).

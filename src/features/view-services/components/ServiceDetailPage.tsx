@@ -160,6 +160,7 @@ export function ServiceDetailPage({
         {model.contracted ? (
           <ServiceContractedSection
             contracted={model.contracted}
+            viewerRole={isClient ? "client" : "provider"}
           />
         ) : null}
         {isProvider && model.contracted ? (

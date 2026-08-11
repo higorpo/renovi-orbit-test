@@ -19,7 +19,7 @@
 | Sheet | `ServiceDetailSheet` montado no `DashboardLayout` quando `useServiceDetailModal().isOpen` |
 | Cancelamento pedido (cliente) | RPC `cancel_service_request` via `cancelService` |
 | Republicação (cliente) | RPC `republish_cancelled_service_request` |
-| Contrato | Tabela `contracted_services`; resumo read-only em `ServiceContractedSection`; CTAs (payments / reschedule / conclusão) unificados em `ServiceDetailActionsBar` no header → sheet/dialog, não inline |
+| Contrato | Tabela `contracted_services`; card `ServiceContractedSection` (cliente: rico com reputação/CTA perfil; prestador: agenda/status/valor); CTAs de lifecycle (payments / reschedule / conclusão) em `ServiceDetailActionsBar` → sheet/dialog, não inline; **sem** `ProviderSettlementStatus` no card |
 | Sem PostgREST list/detail | API TS só `supabase.rpc(...)` |
 
 ## 3. Features do módulo
@@ -33,7 +33,7 @@
 | Papel | Lista | Detalhe |
 |-------|-------|---------|
 | Cliente | Seus `service_requests` | Dono; ações de orçamento/cancel/republicar/pagamento/conclusão |
-| Prestador | SRs com proposta **ou** contrato próprio (não o pool de jobs) | Mesmo acesso; proposta, chat FAB, local, executar, settlement |
+| Prestador | SRs com proposta **ou** contrato próprio (não o pool de jobs) | Mesmo acesso; proposta, chat FAB, local, executar; card contratado só resumo (sem settlement) |
 | Admin SQL | Escopo admin nas RPCs | Sem UI admin neste módulo |
 
 ## 5. Principais fluxos
@@ -66,7 +66,9 @@
 - **provider-jobs** / **provider-calendar** — entry points de detalhe (sheet vs página).
 - **negotiation-proposals** — sheet de orçamentos; composer no detalhe prestador.
 - **chats** — conversas, initiate, botão chat contratado (`ServiceDetailActionsBar`).
-- **payments** / **service-reschedule** — CTAs na `ServiceDetailActionsBar` (não na seção contratada); `ServiceContractedSection` só resumo + disputa/settlement.
+- **payments** / **service-reschedule** — CTAs na `ServiceDetailActionsBar` (não na seção contratada); `ServiceContractedSection`: `PaymentDisputeStatus` no topo quando aplicável; **sem** `ProviderSettlementStatus`.
+- **provider-profile** — CTA cliente “Ver perfil do profissional” quando há `slug`.
+- **ratings** — média/contagem no card cliente via `get_provider_rating_summaries` (não embutido em `get_service`).
 - **service-completion** — **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceDetailActionsBar` (contexto RPC só no sheet/wizard; gate leve via `enrichmentReady` do `get_service`); só Public API.
 - **DashboardLayout** — hospeda `ServiceDetailSheet`.
 
@@ -82,10 +84,10 @@
 | Área | Caminhos |
 |------|----------|
 | Public API | `src/features/view-services/index.ts` |
-| API | `api/services.api.ts`, `opportunityView.api.ts` (conclusão **não** vive mais em APIs locais de lifecycle) |
-| Hooks | `useServicesList`, `useService`, `useClientServiceJourney`, `useCancelService`, `useRepublishCancelledService`, `useServiceDetailModal`, chat, budget sheet |
-| UI | `ServiceDetailShell`, `ServiceDetailSheet`, `ServiceDetailPage`; `ServiceDetailHeader` + `ServiceDetailAttributeCards` + `ServiceDetailActionsBar`; `ServiceNextStepCard`; `ServiceJourneyCard` / skeleton (cliente); `ServiceContractedSection` (resumo read-only); `ServiceDetailSkeleton` (attribute cards + actions bar); `SimpleServiceCard` + `SimpleServiceInsightPanel` (lista), … |
+| API | `api/services.api.ts`, `opportunityView.api.ts`, `providerRatingSummary.api.ts` (conclusão **não** vive mais em APIs locais de lifecycle) |
+| Hooks | `useServicesList`, `useService`, `useClientServiceJourney`, `useProviderRatingSummary`, `useCancelService`, `useRepublishCancelledService`, `useServiceDetailModal`, chat, budget sheet |
+| UI | `ServiceDetailShell`, `ServiceDetailSheet`, `ServiceDetailPage`; `ServiceDetailHeader` + `ServiceDetailAttributeCards` + `ServiceDetailActionsBar`; `ServiceNextStepCard`; `ServiceJourneyCard` / skeleton (cliente); `ServiceContractedSection` (cliente rico / prestador resumo); `ServiceDetailSkeleton` (attribute cards + actions bar); `SimpleServiceCard` + `SimpleServiceInsightPanel` (lista), … |
 | Tipos / nav | `types/service.types.ts`, `types/serviceJourney.types.ts`, `types/serviceDetailNavigation.types.ts` |
 | Constantes | `queryKeys.ts`, `routes.ts`, `statusTabs.ts`, `statusBadge.ts`, `serviceJourney.constants.ts` |
-| SQL | `20260705207000_*`, `20260705208000_*`, `20260705209000_*`, `20260802170000_republish_*`, `20260810233000_get_client_service_journey.sql` |
+| SQL | `20260705207000_*`, `20260705208000_*`, `20260705209000_*`, `20260802170000_republish_*`, `20260804460000_project_service_row_enrichment_fields.sql`, `20260810233000_get_client_service_journey.sql` |
 | Testes | `src/features/view-services/**/__tests__`, `supabase/tests/view-services/`, `supabase/tests/view_services/get_client_service_journey_test.sql` |

@@ -54,6 +54,7 @@ select ok(
   (
     select pg_get_functiondef(p.oid) ~ 'client_rating_overall_score'
       and pg_get_functiondef(p.oid) ~ 'client_rating_submitted_at'
+      and pg_get_functiondef(p.oid) ~ 'final_amount'
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
@@ -63,7 +64,7 @@ select ok(
         'p_service_request_id uuid, p_viewer_id uuid'
       )
   ),
-  'project_service_row projects client_rating_overall_score and client_rating_submitted_at'
+  'project_service_row projects client_rating_* and contracted final_amount'
 );
 
 select * from finish();

@@ -50,7 +50,7 @@ Documentação baseada em `src/features/view-services/`, rota `/dashboard/servic
 | Papel | Lista (`list_services`) | Detalhe (`get_service`) | UI no detalhe |
 |-------|-------------------------|-------------------------|---------------|
 | **Cliente** | Só `sr.client_id = viewer` | Dono do SR (ou admin) | Contagem de orçamentos no header; CTAs unificados em `ServiceDetailActionsBar` (orçamento/cancelar/republicar; chat contratado; pagamento manual; **“Avaliar serviço”**; cancel/reagendar contratado) |
-| **Prestador** | SR com **proposta própria** ou **contrato** onde `provider_id = viewer` (não inclui pool `match_provider_jobs`) | Mesmo critério de acesso (`service_viewer_has_access`) | Nome do solicitante **mascarado** (chip “Solicitante: …” no header); alerta de rejeição; seção de proposta; FAB chat; local do serviço se contratado; CTAs em `ServiceDetailActionsBar` (**“Marcar serviço como concluído”** em `CONFIRMED`; cancel/reagendar); settlement no resumo contratado |
+| **Prestador** | SR com **proposta própria** ou **contrato** onde `provider_id = viewer` (não inclui pool `match_provider_jobs`) | Mesmo critério de acesso (`service_viewer_has_access`) | Nome do solicitante **mascarado** (chip “Solicitante: …” no header); alerta de rejeição; seção de proposta; FAB chat; local do serviço se contratado; CTAs em `ServiceDetailActionsBar` (**“Marcar serviço como concluído”** em `CONFIRMED`; cancel/reagendar); card **Serviço contratado** só com agenda/status/valor (sem header de reputação nem settlement) |
 | **Admin plataforma** | Incluído no escopo SQL | Acesso via `is_platform_admin()` | Sem UI admin dedicada evidenciada neste módulo |
 | Visitante | N/A — RPCs exigem `auth.uid()` | N/A | Redirect login (dashboard) |
 
@@ -76,7 +76,7 @@ flowchart TD
   J -->|provider| L[Alert rejeição + proposta + FAB chat + local se contratado]
   K --> M{model.contracted?}
   L --> M
-  M -->|Sim| N[ServiceContractedSection resumo read-only + disputa/settlement]
+  M -->|Sim| N[ServiceContractedSection: cliente card rico / prestador resumo]
   M -->|Não| O[Seções do pedido: descrição, formulário, fotos, sugestões]
   I --> ENR[Banner enrichment se PENDING/RUNNING]
 ```
@@ -130,9 +130,9 @@ flowchart TD
 | `address` | address summary | Localização; mapa só prestador+contratado |
 | `service` | platform_service | Ícone/cor/título |
 | `proposalCount`, `hasPendingProposal`, counts de chat | negotiation | Badge “Aguardando decisão”; CTA orçamentos |
-| `contracted` | contracted_services + payment_schedule_state, far_recapture_pending, reschedule | Resumo read-only (`ServiceContractedSection`); CTAs no header (`ServiceDetailActionsBar`) |
+| `contracted` | contracted_services + `final_amount` (proposta aceita) + `provider` (`profile_image_path`, `slug`) + payment_schedule_state, far_recapture_pending, reschedule | Card `ServiceContractedSection` (cliente rico / prestador resumo); CTAs de lifecycle no header (`ServiceDetailActionsBar`) |
 | `enrichmentStatus` / `enrichmentReady` | projeção enrichment em `get_service` / `list_services` | Gate do CTA prestador (sem `get_service_completion_context` no detalhe); pedido fora do feed até READY |
-| `counterparty` / `counterpartyName` | papel-dependente | Prestador: chip “Solicitante: …” no header; cliente vê profissional no resumo contratado |
+| `counterparty` / `counterpartyName` | papel-dependente | Prestador: chip “Solicitante: …” no header; cliente vê profissional no card contratado (avatar + rating via RPC separada) |
 | `myProposal`, `chatSummary` | negotiation (lista prestador/cliente conforme SQL) | Cards em `my-services` (fora desta feature de UI de lista) |
 | Insights / atributos | urgency, estimatedDurationHint, scopeComplexity, missingInfoWarnings, … | Detalhe: `ServiceDetailAttributeCards` (Prioridade / Duração estimada / Escopo + alerta âmbar “Informações pendentes”); lista (`SimpleServiceCard`): `SimpleServiceInsightPanel` |
 
@@ -275,7 +275,9 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | **provider-calendar** | Full-page (sem sheet) |
 | **negotiation-proposals** | `ReceivedBudgetDetailsSheet`; composer/sumário no detalhe prestador; invalidate keys após mutações de proposta (evidência em outros módulos) |
 | **chats** | Lista de conversas do cliente em negociação; botão chat contratado na `ServiceDetailActionsBar`; FAB inicia/abre conversa |
-| **payments** | Na `ServiceDetailActionsBar`: `ManualPaymentRecovery`, `ContractedServiceCancelAction`; no resumo contratado: `PaymentDisputeStatus`, `ProviderSettlementStatus` |
+| **payments** | Na `ServiceDetailActionsBar`: `ManualPaymentRecovery`, `ContractedServiceCancelAction`; no card contratado: `PaymentDisputeStatus` (topo, quando aplicável). **Sem** `ProviderSettlementStatus` neste card |
+| **provider-profile** | Cliente: CTA **“Ver perfil do profissional”** quando `contracted.provider.slug` existe (`getProviderProfilePath`) |
+| **ratings (leitura)** | Cliente: média + contagem no header do card via `get_provider_rating_summaries` (`useProviderRatingSummary`) — **não** embutido em `get_service`; oculto se `rating_count = 0` |
 | **service-completion** | **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceDetailActionsBar` (wizards embutidos no sheet/dialog; disputa de serviço); só Public API |
 | **service-reschedule** | `ContractedServiceRescheduleAction` na `ServiceDetailActionsBar` + snapshot `reschedule` no modelo |
 | **addresses** | `LocationPreviewMap` no local do prestador |
@@ -322,6 +324,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | **Próximo passo** (card) | Client/provider | Ranking acionável de `getClient/ProviderServiceNextStep` (mesmo intent primário da lista); senão não renderiza | `ServiceNextStepCard` no topo do conteúdo (após header); handlers via `useServiceDetailNextStep` — pagamento (`FAILED_PERMANENT`), avaliar, orçamentos, chat/mensagens, mark-executed, mapa, scroll à proposta. Prestador **sem chat**: copy “Inicie a negociação” + CTA habilitado (mesmo fluxo do FAB `initiateConversation`). CTAs legados coexistentes (deprecated) |
 | **Acompanhe seu pedido** (jornada) | Cliente | Sempre que a RPC devolve milestones (hook `enabled: isClient`) | `ServiceJourneyCard` **abaixo** do Próximo passo; skeleton enquanto carrega; **read-only** V1 (sem ação nos nós). Prestador: não monta |
 | Abrir no mapa | Prestador | contracted + coords | Google Maps |
+| Ver perfil do profissional | Cliente | `contracted.provider.slug` presente | Navega para perfil público (`/perfil/:slug`) |
 | Editar/enviar proposta | Prestador | seção proposta + `canEdit…` | negotiation-proposals |
 
 ---
@@ -345,14 +348,15 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 4. Contagem de orçamentos no header só para **cliente** (2ª linha de metadata: “Solicitado {relative} • N orçamentos”).
 5. Prestador no header: chip “Solicitante: {nome}” quando há `counterpartyName`.
 6. `ServiceProviderLocationSection` só se prestador **e** `model.contracted`.
-7. `farRecapturePending`: aviso discreto no resumo contratado (reajuste de cobrança pós-reagendamento longe).
+7. `farRecapturePending`: aviso discreto no card **Serviço contratado** (reajuste de cobrança pós-reagendamento longe) — cliente e prestador.
 8. API `listServices` com foco ignora filtros de aba/fase.
 9. Cancel da API TS gera **novo** UUID de idempotência a cada chamada (não reutiliza em retry de UI — evidência: `crypto.randomUUID()` inline).
 10. Republicar **reutiliza** key no retry via `useRef` até sucesso.
 11. **Próximo passo:** ranking de intent compartilhado com Meus Serviços (`resolveClient/ProviderCardActions` em `view-services`); o card **não** busca dados além do `ServiceModel` de `useService`; exclusões V1: `details`, `cancel`, estados só informativos; prestador **sem** card de pagamento; footer contextual (lock em pagamento; shield curto em orçamentos).
 12. **Jornada do pedido:** RPC e presentation separados do `ServiceModel`; prestador nunca vê o card; V1 sem deep-link/clique nos marcos.
-13. **Header / ações:** `ServiceDetailHeader` monta metadata + `ServiceDetailAttributeCards` + `ServiceDetailActionsBar` (não mais `ServiceDetailClientActions`); cancel/republish vivem na ActionsBar; abertura do sheet de orçamentos fica na página via callback; `ServiceContractedSection` é só resumo.
-14. **Insights:** detalhe usa `ServiceDetailAttributeCards`; `SimpleServiceInsightPanel` permanece só em cards de lista (`SimpleServiceCard`).
+13. **Header / ações:** `ServiceDetailHeader` monta metadata + `ServiceDetailAttributeCards` + `ServiceDetailActionsBar` (não mais `ServiceDetailClientActions`); cancel/republish vivem na ActionsBar; abertura do sheet de orçamentos fica na página via callback.
+14. **`ServiceContractedSection` (card Serviço contratado):** **Cliente** — card rico: avatar + nome do prestador, média + contagem de avaliações (ocultas se `rating_count = 0`), agenda, status (estilo neutro), valor (`final_amount`), CTA perfil se houver slug, `PaymentDisputeStatus` no topo quando aplicável; **sem** selo verificado. **Prestador** — só agenda / status / valor (+ disputa de pagamento e aviso far-recapture quando couber); **sem** header de reputação, **sem** CTA de perfil, **sem** `ProviderSettlementStatus`. Ratings: fetch front `get_provider_rating_summaries`, não no payload de `get_service`.
+15. **Insights:** detalhe usa `ServiceDetailAttributeCards`; `SimpleServiceInsightPanel` permanece só em cards de lista (`SimpleServiceCard`).
 
 ---
 
@@ -379,6 +383,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 - `supabase/migrations/20260705209000_fix_list_services_cte_scope.sql`
 - `supabase/migrations/20260802170000_republish_cancelled_service_request.sql`
 - `supabase/migrations/20260810233000_get_client_service_journey.sql`
+- `supabase/migrations/20260804460000_project_service_row_enrichment_fields.sql` (`final_amount`, `provider.profile_image_path` / `slug` em `project_service_row` / `get_service`)
 - `supabase/tests/view-services/` (pgTAP RPCs / republish)
 - `supabase/tests/view_services/get_client_service_journey_test.sql`
 - `src/features/view-services/components/ServiceJourneyCard.tsx`, `hooks/useClientServiceJourney.ts`, `utils/presentServiceJourney.ts`
@@ -394,10 +399,10 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | Header | Contagem de orçamentos na 2ª linha de metadata; CTAs na `ServiceDetailActionsBar` | Chip “Solicitante: …” + CTAs contratados na mesma barra |
 | Ações (barra unificada) | Orçamentos, cancelar pedido, republicar, chat CS, pagamento manual, avaliar, cancel/reagendar | Marcar executado, cancel/reagendar (FAB chat separado) |
 | Seção secundária | Conversas do pedido (negociação) | Proposta + alert rejeição |
-| Resumo contratado | Profissional, status, agenda, disputa; **sem** CTAs | Idem + settlement opcional; **sem** CTAs |
+| Card Serviço contratado | Rico: avatar/nome, rating (se `rating_count` > 0), agenda, status neutro, valor, CTA perfil (se slug), `PaymentDisputeStatus`; far-recapture | Só agenda / status / valor (+ disputa pagamento / far-recapture); **sem** reputação, perfil ou settlement |
 | Local/mapa | Não nesta seção dedicada | Sim se contratado |
 | Pagamento manual | Sim (`ServiceDetailActionsBar`) | Não |
-| Settlement | Não | `ProviderSettlementStatus` no resumo contratado |
+| Settlement no card contratado | Não | Não (`ProviderSettlementStatus` **não** monta neste card) |
 | Opportunity view | Não | Sim ao abrir detalhe |
 | **Acompanhe seu pedido** | Sim (`get_client_service_journey` + card) | Não |
 
@@ -436,7 +441,8 @@ Helpers de state: `createClientMyServicesServiceDetailState`, `createProviderMyS
 - [ ] Prestador CONFIRMED: CTA “Marcar serviço como concluído” abre sheet/dialog com checklist (não inline); cliente EXECUTED: CTA “Avaliar serviço” com 2 etapas (review com checkbox de declaração; Continuar disabled até marcar); thumbnails de evidência + lightbox
 - [ ] Disputa de serviço: abertura só no wizard Avaliar serviço em `EXECUTED` → `IN_DISPUTE`; aba Disputas lista o item; **nunca** inline no detalhe sem fluxo de avaliação; resolve só ops (sem UI admin)
 - [ ] Enrichment PENDING: pedido fora do feed até READY
-- [ ] Prestador: FAB inicia chat; local/mapa com contrato
+- [ ] Prestador: FAB inicia chat; local/mapa com contrato; card Serviço contratado **sem** header de reputação / CTA perfil / settlement
+- [ ] Cliente contracted: card rico com avatar, rating (oculto se count=0), valor, CTA perfil se slug; sem selo verificado
 - [ ] Prestador sem proposta/contrato: detalhe negado / empty
 - [ ] Aba Disputas: lista vazia
 - [ ] Foco `?serviceRequestId=` na lista cliente: um item
@@ -470,4 +476,6 @@ Reescrita para o padrão 20+ seções do orquestrador: sheet vs página, diferen
 
 **2026-08-10 (Jornada do pedido):** card cliente-only **Acompanhe seu pedido** (`ServiceJourneyCard`) abaixo do Próximo passo; RPC `get_client_service_journey` (ownership, gap-fill, cancel/dispute, rating opcional pós auto-complete); labels no front (pagamento “confirmado”/“pendente”). Glossário: **Jornada do pedido**.
 
-**2026-08-11 (header / ações unificadas):** `ServiceDetailHeader` reorganiza metadata (local; “Solicitado {relative}” + orçamentos no cliente; chip solicitante no prestador); `ServiceDetailAttributeCards` no detalhe (Prioridade / Duração estimada / Escopo + alerta “Informações pendentes”) no lugar do uso de `SimpleServiceInsightPanel` no detalhe; `ServiceDetailActionsBar` concentra CTAs de negociação e contratados (incl. conclusão, pagamento, chat CS, cancel/reagendar); removido `ServiceDetailClientActions`; `ServiceContractedSection` vira resumo read-only (+ disputa + settlement); skeleton cobre attribute cards + actions bar.
+**2026-08-11 (header / ações unificadas):** `ServiceDetailHeader` reorganiza metadata (local; “Solicitado {relative}” + orçamentos no cliente; chip solicitante no prestador); `ServiceDetailAttributeCards` no detalhe (Prioridade / Duração estimada / Escopo + alerta “Informações pendentes”) no lugar do uso de `SimpleServiceInsightPanel` no detalhe; `ServiceDetailActionsBar` concentra CTAs de negociação e contratados (incl. conclusão, pagamento, chat CS, cancel/reagendar); removido `ServiceDetailClientActions`; skeleton cobre attribute cards + actions bar.
+
+**2026-08-11 (card Serviço contratado):** redesign de `ServiceContractedSection` — cliente: card rico (avatar, rating via `get_provider_rating_summaries`, agenda, status neutro, `final_amount`, CTA “Ver perfil do profissional”, `PaymentDisputeStatus`); prestador: só agenda/status/valor; **sem** settlement neste card; **sem** selo verificado; enrichment SQL `20260804460000_project_service_row_enrichment_fields.sql`.

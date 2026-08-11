@@ -87,6 +87,8 @@ export interface RpcServiceNegotiation {
 export interface RpcContractedProvider {
   id?: string;
   display_name?: string | null;
+  profile_image_path?: string | null;
+  slug?: string | null;
 }
 
 export interface RpcContractedService {
@@ -102,6 +104,7 @@ export interface RpcContractedService {
   chat_id?: string | null;
   payment_schedule_state?: string | null;
   far_recapture_pending?: boolean | null;
+  final_amount?: number | string | null;
   provider?: RpcContractedProvider | null;
   reschedule?: unknown;
   client_rating_overall_score?: number | string | null;
@@ -173,12 +176,30 @@ function mapCounterparty(counterparty: RpcCounterparty | null | undefined): Coun
   };
 }
 
+function mapContractedProvider(
+  provider: RpcContractedProvider | null | undefined,
+): ContractedServiceSummary["provider"] {
+  if (!provider?.id) return null;
+  return {
+    id: provider.id,
+    displayName: provider.display_name?.trim() || "—",
+    profileImagePath: provider.profile_image_path?.trim() || null,
+    slug: provider.slug?.trim() || null,
+  };
+}
+
 function mapClientRatingOverallScore(
   value: RpcContractedService["client_rating_overall_score"],
 ): number | null {
   if (value == null) return null;
   const score = typeof value === "number" ? value : Number(value);
   return Number.isFinite(score) ? score : null;
+}
+
+function mapFinalAmount(value: RpcContractedService["final_amount"]): number | null {
+  if (value == null) return null;
+  const amount = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(amount) ? amount : null;
 }
 
 function mapContracted(contracted: RpcContractedService | null | undefined): ContractedServiceSummary | null {
@@ -192,9 +213,10 @@ function mapContracted(contracted: RpcContractedService | null | undefined): Con
     scheduledStartDate: contracted.scheduled_start_date ?? "",
     scheduledEndDate: contracted.scheduled_end_date ?? null,
     scheduledShift: contracted.scheduled_shift ?? "",
-    provider: mapCounterparty(contracted.provider),
+    provider: mapContractedProvider(contracted.provider),
     chatId: contracted.chat_id ?? null,
     updatedAt: contracted.updated_at ?? null,
+    finalAmount: mapFinalAmount(contracted.final_amount),
     paymentScheduleState: (contracted.payment_schedule_state as ContractedServiceSummary["paymentScheduleState"]) ?? null,
     farRecapturePending: Boolean(contracted.far_recapture_pending),
     reschedule: mapRescheduleSnapshot(contracted.reschedule),

@@ -42,6 +42,7 @@ export type {
   PlatformServiceSummary,
   ContractedServiceStatus,
   ContractedServiceSummary,
+  ContractedProviderSummary,
 } from "./types/service.types";
 export type {
   ClientServiceJourney,

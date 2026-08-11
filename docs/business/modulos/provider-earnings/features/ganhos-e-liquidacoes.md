@@ -30,7 +30,7 @@ Documentação baseada em `src/features/provider-earnings/`, rota `/dashboard/ea
 | Menu dashboard | Item **Ganhos** (`Wallet`) | Prestador | `dashboardMenu.ts`; 5º item dos `mainItems` (bottom nav mobile) |
 | Disclosure (Public API) | `ProviderSettlementDisclosure` | Prestador | Export `@/features/provider-earnings` |
 | Recebimentos (captura) | `/dashboard/conta` → `ProviderPaymentHistoryList` | Prestador | Importa disclosure + link para Ganhos (**código em payments**) |
-| Detalhe serviço contratado | `ProviderSettlementStatus` → disclosure | Prestador | `view-services` → payments; hold estorno / chargeback / `service_dispute` |
+| `ProviderSettlementStatus` | Componente em **payments** (Public API) | Prestador | Holds estorno / chargeback / `service_dispute`; **não** montado no card `ServiceContractedSection` (view-services) após redesign |
 
 **Constante de rota:** `ROUTE_PROVIDER_EARNINGS = "/dashboard/earnings"`.
 
@@ -111,7 +111,7 @@ flowchart TD
 9. Valores `gross_amount` / `net_amount` ≥ 0; parcela 1–48 ou null; `record_type` só `CREDIT`/`DEBIT`.
 10. `raw_snapshot` é ops-only (CLS / sem grant a authenticated na tabela).
 11. Marcar serviço como concluído **não** antecipa depósito (`PROVIDER_SETTLEMENT_COMPLETION_NOTE`).
-12. Em hold (reembolso, chargeback ou **disputa de serviço**), disclosure **suspende** a previsão (consumidor: `ProviderSettlementStatus` em payments / view-services).
+12. Em hold (reembolso, chargeback ou **disputa de serviço**), disclosure **suspende** a previsão (consumidor: `ProviderSettlementStatus` / Recebimentos em payments — **não** no card Serviço contratado de view-services).
 13. Agrupamento visual só une itens **consecutivos** com o mesmo `paymentScheduleId` (não reordena a lista).
 
 ## 8. Campos e dados (shape)
@@ -196,7 +196,7 @@ Evidência de teste: `supabase/tests/payments/payment_settlement_movements_test.
 2. Senão se `movementStatus === PAID_OUT` → `Liquidado`.
 3. Senão → `Pendente`.
 
-### Hold do disclosure (consumidor payments / view-services)
+### Hold do disclosure (consumidor payments)
 
 `ProviderSettlementStatus` coloca hold quando:
 
@@ -279,7 +279,7 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 |---------|--------------|---------|
 | Upstream dados | **payments** (schedules, webhooks, upsert, cron) | Persistência e ingestão |
 | Shell | **dashboard-shell**, **provider-kyc** | Menu, gate, chrome mobile |
-| Downstream UI | **payments** (`ProviderPaymentHistoryList`, `ProviderSettlementStatus`), **view-services** (`ServiceContractedSection`) | Consomem Public API do disclosure |
+| Downstream UI | **payments** (`ProviderPaymentHistoryList`, `ProviderSettlementStatus`) | Consomem Public API do disclosure; view-services **não** monta settlement no card contratado |
 | Cruzado | **my-account** | Destino do link Recebimentos |
 | Libs | `@/lib/supabase/client`, `@/lib/logger`, `@/lib/formatCurrency`, `@/lib/utils/calendarDate`, TanStack Query, UI shadcn |
 
@@ -314,7 +314,7 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 - Testes Vitest sob `**/__tests__/` na feature
 - `src/router.tsx` — lazy + guard provider em `earnings`
 - `src/layouts/DashboardLayout/dashboardMenu.ts`, `mobileNavigation.config.ts`, `DashboardLayout.tsx` (`getDashboardMenu` + `ProviderKycGate` + `useProviderKycBlocksNav`)
-- Consumidores: `src/features/payments/components/PaymentHistory/ProviderPaymentHistoryList.tsx`, `ProviderSettlementStatus.tsx`, `src/features/view-services/components/ServiceContractedSection.tsx`
+- Consumidores: `src/features/payments/components/PaymentHistory/ProviderPaymentHistoryList.tsx`, `ProviderSettlementStatus.tsx` (**não** `ServiceContractedSection`)
 
 ### Backend
 
@@ -370,7 +370,7 @@ Migrations: `20260802240000_create_payment_settlement_movements.sql`, `202608022
 - [ ] Erro simulado: ErrorState + retry.
 - [ ] Carregar mais quando `total_count` > 20.
 - [ ] Disclosure em Recebimentos: D+30 a partir de `receivedAt` (sem settling real).
-- [ ] Detalhe serviço: hold em chargeback / disputa de serviço (`service_dispute`) / REFUND_*; nota de conclusão quando `showCompletionNote` e não hold.
+- [ ] `ProviderSettlementStatus` (payments): hold em chargeback / disputa de serviço (`service_dispute`) / REFUND_* quando montado; **não** esperado no card Serviço contratado (view-services).
 - [ ] Confirmar que marcar concluído **não** muda texto de previsão (nota de produto).
 
 ## Anexo C — Distinção captura × liquidação
