@@ -346,6 +346,8 @@ begin
       'scope_complexity', v_sr.scope_complexity,
       'estimated_duration_hint', v_sr.estimated_duration_hint,
       'missing_info_warnings', v_sr.missing_info_warnings,
+      'suggested_equipment', coalesce(v_sr.suggested_equipment, '{}'::text[]),
+      'suggested_materials', coalesce(v_sr.suggested_materials, '{}'::text[]),
       'status', v_sr.status,
       'cancelled_at', v_sr.cancelled_at,
       'completed_at', v_sr.completed_at,
@@ -405,4 +407,4 @@ end;
 $$;
 
 comment on function public.project_service_row(uuid, uuid) is
-  'Builds unified service JSON with enrichment fields, contracted service_amount (proposed_amount), provider image/slug, and client_rating_* when present.';
+  'Builds unified service JSON with enrichment fields, suggested_equipment/materials, contracted service_amount (proposed_amount), provider image/slug, and client_rating_* when present.';
