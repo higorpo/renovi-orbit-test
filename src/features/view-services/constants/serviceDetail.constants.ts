@@ -60,6 +60,11 @@ export const SERVICE_DETAIL_PAGE_SHELL_CLASS =
   "mx-auto w-full min-w-0 max-w-5xl px-4 py-6";
 
 /**
+ * Activate Detail–Action Split when the page/sheet container is at least this wide.
+ * Measured via ResizeObserver (`useContainerMinWidth`), not the viewport.
+ */
+export const SERVICE_DETAIL_WIDE_LAYOUT_MIN_WIDTH_PX = 720;
+/**
  * Shared CTA sizing for detail header action bar.
  * Overrides design-system `rounded-pill` to match the detail mock (~8px).
  */

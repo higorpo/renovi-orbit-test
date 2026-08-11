@@ -13,8 +13,8 @@
 | Aspecto | Detalhe |
 |---------|---------|
 | Lista | RPC `list_services` — paginação, filtros, `list_phase`; hook `useServicesList` |
-| Detalhe | RPC `get_service`; hook `useService`; UI `ServiceDetailPage` |
-| Jornada (cliente) | RPC `get_client_service_journey`; hook `useClientServiceJourney`; card **Acompanhe seu pedido** abaixo do Próximo passo (read-only V1) |
+| Detalhe | RPC `get_service`; hook `useService`; UI `ServiceDetailPage` com layout **Detail–Action Split** (`ServiceDetailNarrowStack` / `ServiceDetailWideLayout`; limiar 720px do container via `useContainerMinWidth`; wide ~65/35 só com aside não vazia — senão 1 coluna / main full-width) |
+| Jornada (cliente) | RPC `get_client_service_journey`; hook `useClientServiceJourney`; card **Acompanhe seu pedido** na coluna de ação/progresso (read-only V1) |
 | Shell de rota | `ServiceDetailShell` — `null` se sheet; senão página |
 | Sheet | `ServiceDetailSheet` montado no `DashboardLayout` quando `useServiceDetailModal().isOpen` |
 | Cancelamento pedido (cliente) | RPC `cancel_service_request` via `cancelService` |
@@ -85,9 +85,9 @@
 |------|----------|
 | Public API | `src/features/view-services/index.ts` |
 | API | `api/services.api.ts`, `opportunityView.api.ts`, `providerRatingSummary.api.ts` (conclusão **não** vive mais em APIs locais de lifecycle) |
-| Hooks | `useServicesList`, `useService`, `useClientServiceJourney`, `useProviderRatingSummary`, `useCancelService`, `useRepublishCancelledService`, `useServiceDetailModal`, chat, budget sheet |
-| UI | `ServiceDetailShell`, `ServiceDetailSheet`, `ServiceDetailPage`; `ServiceDetailHeader` + `ServiceDetailAttributeCards` + `ServiceDetailActionsBar`; `ServiceNextStepCard`; `ServiceJourneyCard` / skeleton (cliente); `ServiceContractedSection` (cliente rico / prestador resumo); `FormResponsesSummary` (**Informações do pedido** — grid de cards por tipo de bloco); `ServiceDetailSection` (ex. **Conversas**); `ServiceDetailSkeleton` (attribute cards + actions bar); `SimpleServiceCard` + `SimpleServiceInsightPanel` (lista), … |
+| Hooks | `useServicesList`, `useService`, `useClientServiceJourney`, `useProviderRatingSummary`, `useCancelService`, `useRepublishCancelledService`, `useServiceDetailModal`, `useContainerMinWidth`, chat, budget sheet |
+| UI | `ServiceDetailShell`, `ServiceDetailSheet`, `ServiceDetailPage`; `ServiceDetailLayout` (`ServiceDetailNarrowStack` / `ServiceDetailWideLayout`); `useContainerMinWidth`; `ServiceDetailHeader` + `ServiceDetailAttributeCards` + `ServiceDetailActionsBar`; `ServiceNextStepCard`; `ServiceJourneyCard` / skeleton (cliente); `ServiceContractedSection` (cliente rico / prestador resumo); `FormResponsesSummary` (**Informações do pedido**); `ServiceDetailSection` (ex. **Conversas**); `ServiceSupportHelpCard`; `ServiceDetailSkeleton` (`isWideLayout`; espelha o layout ativo + attribute cards + actions bar); `SimpleServiceCard` + `SimpleServiceInsightPanel` (lista), … |
 | Tipos / nav | `types/service.types.ts`, `types/serviceJourney.types.ts`, `types/serviceDetailNavigation.types.ts` |
-| Constantes | `queryKeys.ts`, `routes.ts`, `statusTabs.ts`, `statusBadge.ts`, `serviceJourney.constants.ts` |
+| Constantes | `queryKeys.ts`, `routes.ts`, `statusTabs.ts`, `statusBadge.ts`, `serviceJourney.constants.ts`, `serviceDetail.constants.ts` (`SERVICE_DETAIL_WIDE_LAYOUT_MIN_WIDTH_PX` = 720 do container) |
 | SQL | `20260705207000_*`, `20260705208000_*`, `20260705209000_*`, `20260802170000_republish_*`, `20260804460000_project_service_row_enrichment_fields.sql`, `20260810233000_get_client_service_journey.sql` |
 | Testes | `src/features/view-services/**/__tests__`, `supabase/tests/view-services/`, `supabase/tests/view_services/get_client_service_journey_test.sql` |

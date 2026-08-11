@@ -503,7 +503,11 @@ describe("ServiceDetailPage branch coverage", () => {
     serviceMocks.data = buildModel();
     const { container } = render(<ServiceDetailPage />);
 
-    expect(container.firstElementChild).toHaveClass("space-y-4", "pb-24");
+    expect(container.firstElementChild).toHaveClass(
+      "mx-auto",
+      "max-w-5xl",
+      "pb-6",
+    );
     expect(container.firstElementChild).not.toHaveClass("px-0", "py-0");
   });
 

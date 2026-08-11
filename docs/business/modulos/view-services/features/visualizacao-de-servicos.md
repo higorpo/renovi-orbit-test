@@ -9,7 +9,7 @@ Documentação baseada em `src/features/view-services/`, rota `/dashboard/servic
 - **O que é:** módulo **agnóstico de papel** que unifica **lista** e **detalhe** de pedidos (`service_request_id`) em um contrato JSON estável (`ServiceModel`), via RPCs (sem PostgREST `.from()` para listagem/detalhe).
 - **Problema que resolve:** evitar drift entre telas cliente/prestador e entre lista e detalhe; centralizar fase de produto (`list_phase`), badges e ações contextuais.
 - **Quem usa:** **cliente** e **prestador** autenticados (rota sob `ProtectedRoute` `client` | `provider`); admin de plataforma tem acesso SQL (`is_platform_admin`), sem UI dedicada evidenciada.
-- **Resultado esperado:** ver o pedido, status UI por fase/contrato, o card **Próximo passo** (quando houver ação acionável), a timeline **Acompanhe seu pedido** (somente cliente, read-only V1), o banner **Precisa de ajuda?** (link para o site principal `/suporte`) e executar ações permitidas (cancelar pedido em negociação, republicar, orçamentos, pagamento manual, conclusão, reagendar CTA, chat).
+- **Resultado esperado:** ver o pedido no layout **Detail–Action Split** (entender o pedido na main; ação/progresso na aside), status UI por fase/contrato, o card **Próximo passo** (quando houver ação acionável), a timeline **Acompanhe seu pedido** (somente cliente, read-only V1), o banner **Precisa de ajuda?** (full-width abaixo da row de colunas; link `/suporte`) e executar ações permitidas (cancelar pedido em negociação, republicar, orçamentos, pagamento manual, conclusão, reagendar CTA, chat).
 
 ---
 
@@ -70,18 +70,20 @@ flowchart TD
   E --> G[useService → get_service]
   F --> G
   G --> H{Loading / erro / null / ok?}
-  H -->|ok| I[ServiceDetailHeader: ícone/título/badge + metadata + AttributeCards + ActionsBar]
-  I --> J{role?}
-  J -->|client| K[Seções cliente]
-  J -->|provider| L[Alert rejeição + proposta + FAB chat + local se contratado]
-  K --> M{model.contracted?}
-  L --> M
-  M -->|Sim| N[ServiceContractedSection: cliente card rico / prestador resumo]
-  M -->|Não| O[Seções do pedido: descrição, formulário, fotos]
-  O --> P{isProvider e há sugestões?}
-  P -->|Sim| Q[Equipamentos / Materiais que podem ser úteis]
-  P -->|Não| R[Cliente: sem esses blocos]
-  I --> ENR[Banner enrichment se PENDING/RUNNING]
+  H -->|ok| I[Detail–Action Split via useContainerMinWidth]
+  I --> COL{Largura do container ≥720px?}
+  COL -->|Sim| W[ServiceDetailWideLayout]
+  COL -->|Não / sheet estreito| N1[ServiceDetailNarrowStack: 1 coluna intercalada]
+  W --> ASIDE_EMPTY{Aside com conteúdo DOM?}
+  ASIDE_EMPTY -->|Sim| W2[Row ~65/35 + aside sticky]
+  ASIDE_EMPTY -->|Não| W1[grid-cols-1: main full-width; aside empty:hidden]
+  W2 --> J{role / seções condicionais}
+  W1 --> J
+  N1 --> J
+  J -->|main| MAIN[Header, descrição, form, fotos, equip/mat]
+  J -->|aside| ASIDE[Próximo passo, contratado, local/proposta/conversas, jornada]
+  J -->|full-width| FW[Alertas no topo; Suporte irmão abaixo da row]
+  ASIDE --> FAB[Prestador: FAB chat]
 ```
 
 ---
@@ -92,7 +94,7 @@ flowchart TD
 |---------|-------------------------|
 | Sem permissão / id inexistente | RPC `get_service` → exceção; front: `EmptyState` “Serviço não encontrado…” se `data` null sem throw de rede; ou `ErrorState` se query lança |
 | Erro de rede / RPC | `ErrorState` + retry (`refetch`) |
-| Loading | `ServiceDetailSkeleton` (inclui skeleton de attribute cards + actions bar) |
+| Loading | `ServiceDetailSkeleton` recebe `isWideLayout` e espelha um dos layouts (wide: main + aside sticky + suporte abaixo; narrow: stack; attribute cards + actions bar no header) |
 | Aba **Disputas** na lista | Front **não** chama RPC: retorna `{ items: [], total_count: 0 }` (`statusTabId === "dispute"`) |
 | Foco `serviceRequestId` na lista | Bypass filtros de fase; um único item via `get_service` |
 | Fechar sheet | `navigate(-1)` restaura `background` |
@@ -117,8 +119,9 @@ flowchart TD
 10. Aba Disputas: placeholder vazio no cliente da API TS (sem linhas).
 11. Paginação: `page_size` clamp 1–100; default UI lista = 20 (`useServicesList`).
 12. Sem embeds PostgREST na API TS de list/detail — só `supabase.rpc(...)`.
-13. **Jornada do pedido** (`ServiceJourneyCard` / “Acompanhe seu pedido”): **somente cliente** no detalhe; abaixo do `ServiceNextStepCard`; **read-only** na V1; payload via RPC dedicada `get_client_service_journey` (não estende `get_service` / `project_service_row`); fetch paralelo ao detalhe.
+13. **Jornada do pedido** (`ServiceJourneyCard` / “Acompanhe seu pedido”): **somente cliente** no detalhe; na coluna de ação/progresso (aside do wide / stack narrow); no wide, após os demais blocos da aside; no narrow, após equipamentos/materiais; **read-only** na V1; payload via RPC dedicada `get_client_service_journey` (não estende `get_service` / `project_service_row`); fetch paralelo ao detalhe.
 14. **Equipamentos / materiais sugeridos** (`suggested_equipment` / `suggested_materials` no `ServiceModel`): seções UI **“Equipamentos que podem ser úteis”** e **“Materiais que podem ser úteis”** no `ServiceDetailPage` **somente para prestador** (`isProvider`) e só se a lista mapeada em PT não estiver vazia; cliente **não** monta esses blocos (mesmo que o payload de `get_service` os traga).
+15. **Layout Detail–Action Split** (`ServiceDetailPage` + `ServiceDetailLayout`): wide quando a **largura do container** (elemento raiz da página ou sheet) ≥ **720px** (`SERVICE_DETAIL_WIDE_LAYOUT_MIN_WIDTH_PX`), medido via `useContainerMinWidth` (ResizeObserver) — **não** do viewport e **não** via CSS container queries. Renderização **condicional de uma única árvore**: `isWideLayout ? ServiceDetailWideLayout : ServiceDetailNarrowStack`. Wide: `flex-col` com alertas no topo; row das colunas começa em **`grid-cols-1`** e só passa a **~65/35** (`minmax(0,1.65fr)` / `minmax(0,1fr)`) quando a aside **não está vazia** (`has-[aside:not(:empty)]:grid-cols-[…]`); aside com `empty:hidden` + **sticky top-4 self-start** **somente dentro da row**; se todos os blocos da aside forem `null` / seções que retornam `null` após load (ex.: jornada sem marcos, proposta inexistente, sem próximo passo / contratado / conversas), a main ocupa a **largura total** (1 coluna). A página passa a aside como **array** de nós (não Fragment com whitespace) para que text nodes não quebrem `:empty`. Suporte (`ServiceSupportHelpCard` / “Precisa de ajuda?”) é **irmão abaixo** da row (full-width) — sticky não cobre o suporte. Narrow: stack intercalado (alertas → header → descrição → próximo passo → contratado → localização/proposta/conversas → form → fotos → equipamentos/materiais → jornada → suporte). Escopo: só blocos já existentes (sem Resumo financeiro / Conversa ativa / Editar pedido de mock).
 
 ---
 
@@ -326,8 +329,8 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | Cancelar serviço contratado | Client/provider | flags + status; CTA na `ServiceDetailActionsBar` | `ContractedServiceCancelAction` |
 | Reagendar (CTA) | Client/provider | role client\|provider + contrato; CTA na `ServiceDetailActionsBar` | `ContractedServiceRescheduleAction` |
 | Iniciar / ver negociação | Prestador | sempre no detalhe (FAB) | `initiateConversation` ou navega chat existente |
-| **Próximo passo** (card) | Client/provider | Ranking acionável de `getClient/ProviderServiceNextStep` (mesmo intent primário da lista); senão não renderiza | `ServiceNextStepCard` no topo do conteúdo (após header); handlers via `useServiceDetailNextStep` — pagamento (`FAILED_PERMANENT`), avaliar, orçamentos, chat/mensagens, mark-executed, mapa, scroll à proposta. Prestador **sem chat**: copy “Inicie a negociação” + CTA habilitado (mesmo fluxo do FAB `initiateConversation`). CTAs legados coexistentes (deprecated) |
-| **Acompanhe seu pedido** (jornada) | Cliente | Sempre que a RPC devolve milestones (hook `enabled: isClient`) | `ServiceJourneyCard` **abaixo** do Próximo passo; skeleton enquanto carrega; **read-only** V1 (sem ação nos nós). Prestador: não monta |
+| **Próximo passo** (card) | Client/provider | Ranking acionável de `getClient/ProviderServiceNextStep` (mesmo intent primário da lista); senão não renderiza | `ServiceNextStepCard` na coluna de ação (aside do `ServiceDetailWideLayout`; no narrow, após descrição, antes de contratado); handlers via `useServiceDetailNextStep` — pagamento (`FAILED_PERMANENT`), avaliar, orçamentos, chat/mensagens, mark-executed, mapa, scroll à proposta. Prestador **sem chat**: copy “Inicie a negociação” + CTA habilitado (mesmo fluxo do FAB `initiateConversation`). CTAs legados coexistentes (deprecated) |
+| **Acompanhe seu pedido** (jornada) | Cliente | Sempre que a RPC devolve milestones (hook `enabled: isClient`) | `ServiceJourneyCard` na aside (após conversas/local/proposta no wide; após equipamentos/materiais no narrow); skeleton enquanto carrega; **read-only** V1 (sem ação nos nós). Prestador: não monta |
 | **Equipamentos / Materiais que podem ser úteis** | Prestador | `isProvider` e lista PT não vazia | `ServiceDetailSection` com chips + popover `SuggestedItemsInfo` (copy: itens sugeridos com base no pedido; podem estar imprecisos). Cliente: não renderiza |
 | **Informações do pedido** | Client/provider | `buildSummaryEntries(formData, formSchema)` com ≥1 entrada | `FormResponsesSummary` em `ServiceDetailSection` “Informações do pedido”; grid de cards (ícone por tipo de bloco + label + valor); full-width em `textarea` / `description_ai` / `image_gallery`; sem entradas → não monta |
 | Abrir no mapa | Prestador | contracted + coords | Google Maps |
@@ -361,13 +364,14 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 9. Cancel da API TS gera **novo** UUID de idempotência a cada chamada (não reutiliza em retry de UI — evidência: `crypto.randomUUID()` inline).
 10. Republicar **reutiliza** key no retry via `useRef` até sucesso.
 11. **Próximo passo:** ranking de intent compartilhado com Meus Serviços (`resolveClient/ProviderCardActions` em `view-services`); o card **não** busca dados além do `ServiceModel` de `useService`; exclusões V1: `details`, `cancel`, estados só informativos; prestador **sem** card de pagamento; footer contextual (lock em pagamento; shield curto em orçamentos).
-12. **Jornada do pedido:** RPC e presentation separados do `ServiceModel`; prestador nunca vê o card; V1 sem deep-link/clique nos marcos.
+12. **Jornada do pedido:** RPC e presentation separados do `ServiceModel`; prestador nunca vê o card; V1 sem deep-link/clique nos marcos; posição no Detail–Action Split (aside wide / stack narrow — ver §7.13–7.15).
 13. **Header / ações:** `ServiceDetailHeader` monta metadata + `ServiceDetailAttributeCards` + `ServiceDetailActionsBar` (não mais `ServiceDetailClientActions`); cancel/republish vivem na ActionsBar; abertura do sheet de orçamentos fica na página via callback.
 14. **`ServiceContractedSection` (card Serviço contratado):** **Cliente** — card rico: avatar + nome do prestador, média + contagem de avaliações (ocultas se `rating_count = 0`), agenda, status (estilo neutro), valor (`service_amount` = `proposed_amount`, não o líquido do prestador), CTA perfil se houver slug, `PaymentDisputeStatus` no topo quando aplicável; **sem** selo verificado. **Prestador** — só agenda / status / valor (+ disputa de pagamento e aviso far-recapture quando couber); **sem** header de reputação, **sem** CTA de perfil, **sem** `ProviderSettlementStatus`. Ratings: fetch front `get_provider_rating_summaries`, não no payload de `get_service`.
 15. **Insights:** detalhe usa `ServiceDetailAttributeCards`; `SimpleServiceInsightPanel` permanece só em cards de lista (`SimpleServiceCard`).
-16. **Conversas (cliente, negociação):** lista embutida na sequência normal de cards (`space-y-4`), **sem** zona secundária com `border-t`; shell visual = `ServiceDetailSection` (título/descrição na página); lista vem de `chats` (`ServiceRequestConversationList` + `ServiceRequestConversationRow`). Proposta do prestador (`ServiceProviderProposalSection`) segue na mesma sequência, não agrupada com conversas.
-17. **Sugestões de equipamentos/materiais:** gate de UI no `ServiceDetailPage` é `isProvider` (não o papel no payload); cliente vê descrição/formulário/fotos, mas **não** as seções de sugestão.
-18. **Informações do pedido (`FormResponsesSummary`):** monta entradas flat via `buildSummaryEntries` (`dynamic-form`); se não houver entradas, **não** renderiza. Shell = `ServiceDetailSection` título **“Informações do pedido”**. Layout: grid **1 coluna** no mobile e **2 colunas** a partir de `sm`; cada item é um card com ícone (círculo neutro), label e valor. Ícone escolhido por `entry.type` (= `block.type` do schema) em `getFormResponseIcon` (`formResponsePresentation`); tipos longos `textarea`, `description_ai` e `image_gallery` ocupam **full-width** (`sm:col-span-2`).
+16. **Conversas (cliente, negociação):** na coluna de ação (aside do wide / trecho correspondente no narrow), **sem** zona secundária com `border-t`; shell visual = `ServiceDetailSection` (título/descrição na página); lista vem de `chats` (`ServiceRequestConversationList` + `ServiceRequestConversationRow`). Proposta do prestador (`ServiceProviderProposalSection`) também na aside (wide) / no trecho intercalado (narrow), não agrupada com conversas sob um wrapper comum.
+17. **Sugestões de equipamentos/materiais:** gate de UI no `ServiceDetailPage` é `isProvider` (não o papel no payload); cliente vê descrição/formulário/fotos, mas **não** as seções de sugestão (main no wide).
+18. **Informações do pedido (`FormResponsesSummary`):** monta entradas flat via `buildSummaryEntries` (`dynamic-form`); se não houver entradas, **não** renderiza. Shell = `ServiceDetailSection` título **“Informações do pedido”**. Layout interno: grid **1 coluna** no mobile e **2 colunas** a partir de `sm`; cada item é um card com ícone (círculo neutro), label e valor. Ícone escolhido por `entry.type` (= `block.type` do schema) em `getFormResponseIcon` (`formResponsePresentation`); tipos longos `textarea`, `description_ai` e `image_gallery` ocupam **full-width** (`sm:col-span-2`). Vive na **main** do Detail–Action Split (wide) / após conversas no narrow.
+19. **Detail–Action Split:** ver §7.15. Componentes: `ServiceDetailNarrowStack` + `ServiceDetailWideLayout` (`ServiceDetailLayout.tsx`); limiar `useContainerMinWidth` + `SERVICE_DETAIL_WIDE_LAYOUT_MIN_WIDTH_PX` (720). Narrow: stack intercalado alertas → header → descrição → próximo passo → contratado → localização/proposta/conversas → form → fotos → equipamentos/materiais → jornada → suporte. Wide: alertas no topo; row default **1 coluna**; ~65/35 só com aside `:not(:empty)` (`has-[aside:not(:empty)]…`, `empty:hidden`, `items-start`, aside sticky alinhada ao topo da main); aside vazia → main full-width; `ServiceDetailPage` passa aside como **array** de nós. Suporte irmão abaixo da row (fora do sticky).
 
 ---
 
@@ -400,6 +404,10 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 - `src/features/view-services/components/ServiceJourneyCard.tsx`, `hooks/useClientServiceJourney.ts`, `utils/presentServiceJourney.ts`
 - `src/features/view-services/components/FormResponsesSummary.tsx`, `utils/formResponsePresentation.ts` (`getFormResponseIcon`, `isFormResponseFullWidth`)
 - `src/features/dynamic-form/utils/summaryDisplay.ts` (`SummaryEntry` com `type`; `buildSummaryEntries`)
+- `src/features/view-services/components/ServiceDetailLayout.tsx` (`ServiceDetailNarrowStack` / `ServiceDetailWideLayout`)
+- `src/features/view-services/hooks/useContainerMinWidth.ts` (ResizeObserver; limiar wide)
+- `src/features/view-services/constants/serviceDetail.constants.ts` (`SERVICE_DETAIL_WIDE_LAYOUT_MIN_WIDTH_PX` = 720)
+- `src/features/view-services/components/ServiceDetailSkeleton.tsx` (`isWideLayout`; espelha um layout)
 
 ---
 
@@ -411,7 +419,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | Counterparty | Prestador do contrato (se houver) | Cliente mascarado |
 | Header | Contagem de orçamentos na 2ª linha de metadata; CTAs na `ServiceDetailActionsBar` | Chip “Solicitante: …” + CTAs contratados na mesma barra |
 | Ações (barra unificada) | Orçamentos, cancelar pedido, republicar, chat CS, pagamento manual, avaliar, cancel/reagendar | Marcar executado, cancel/reagendar (FAB chat separado) |
-| Cards na sequência (`space-y-4`) | Seção **Conversas** (`ServiceDetailSection` + lista `chats`) em negotiation sem contrato | Alert rejeição (topo) + seção de proposta (`ServiceProviderProposalSection`) |
+| Cards / colunas (Detail–Action Split) | Seção **Conversas** na aside (negotiation sem contrato) | Alert rejeição (topo full-width) + proposta na aside (`ServiceProviderProposalSection`) |
 | Card Serviço contratado | Rico: avatar/nome, rating (se `rating_count` > 0), agenda, status neutro, valor, CTA perfil (se slug), `PaymentDisputeStatus`; far-recapture | Só agenda / status / valor (+ disputa pagamento / far-recapture); **sem** reputação, perfil ou settlement |
 | Equipamentos / materiais sugeridos | **Não** exibe | Sim, se `suggestedEquipment` / `suggestedMaterials` mapeados em PT tiverem itens (“Equipamentos/Materiais que podem ser úteis” + `SuggestedItemsInfo`) |
 | Local/mapa | Não nesta seção dedicada | Sim se contratado |
@@ -463,6 +471,10 @@ Helpers de state: `createClientMyServicesServiceDetailState`, `createProviderMyS
 - [ ] Prestador sem proposta/contrato: detalhe negado / empty
 - [ ] Aba Disputas: lista vazia
 - [ ] Foco `?serviceRequestId=` na lista cliente: um item
+- [ ] Layout Detail–Action Split: `useContainerMinWidth` (container ≥720px) → `ServiceDetailWideLayout` (row ~65/35 só se aside tiver conteúdo DOM; senão 1 coluna / main full-width; aside sticky só na row, suporte irmão abaixo); sheet estreito / mobile → `ServiceDetailNarrowStack` intercalado (alertas → header → descrição → próximo passo → contratado → local/proposta/conversas → form → fotos → equip/mat → jornada → suporte)
+- [ ] Wide: topo da aside alinhado ao topo da main (`items-start` + `self-start`); sticky não cobre “Precisa de ajuda?”
+- [ ] Wide com aside vazia (todos os blocos null / seções null após load): grid permanece 1 coluna; main ocupa largura total; aside com `empty:hidden`
+- [ ] Skeleton de loading com `isWideLayout` espelha o layout ativo (main / aside / suporte abaixo no wide)
 - [ ] Próximo passo: card aparece em FAILED_PERMANENT / EXECUTED / orçamentos / unread; some em completed com rating / cancelled / waiting sem ação
 
 ---
@@ -497,8 +509,14 @@ Reescrita para o padrão 20+ seções do orquestrador: sheet vs página, diferen
 
 **2026-08-11 (card Serviço contratado):** redesign de `ServiceContractedSection` — cliente: card rico (avatar, rating via `get_provider_rating_summaries`, agenda, status neutro, `service_amount`/`proposed_amount`, CTA “Ver perfil do profissional”, `PaymentDisputeStatus`); prestador: só agenda/status/valor; **sem** settlement neste card; **sem** selo verificado; enrichment SQL `20260804460000_project_service_row_enrichment_fields.sql`.
 
-**2026-08-11 (Conversas no detalhe):** lista de conversas do cliente em negociação passa a ficar em `ServiceDetailSection` (**Conversas** / “Negociações deste pedido com prestadores.”) na sequência normal de cards; removida a zona secundária (`border-t`) que agrupava conversas + proposta. `ServiceRequestConversationList` é content-only (shell na página); row de detalhe (`ServiceRequestConversationRow`: avatar, nome, preview, horário, ponto não lida — sem ícone/título do serviço nem badge de status); skeleton 2 rows; empty interno permanece. Componente continua na Public API de `chats`.
+**2026-08-11 (Conversas no detalhe):** lista de conversas do cliente em negociação passa a ficar em `ServiceDetailSection` (**Conversas** / “Negociações deste pedido com prestadores.”); com o Detail–Action Split, fica na **aside** (não mais zona secundária `border-t`). `ServiceRequestConversationList` é content-only (shell na página); row de detalhe (`ServiceRequestConversationRow`: avatar, nome, preview, horário, ponto não lida — sem ícone/título do serviço nem badge de status); skeleton 2 rows; empty interno permanece. Componente continua na Public API de `chats`.
 
 **2026-08-11 (sugestões equipamentos/materiais):** no `ServiceDetailPage`, as seções **“Equipamentos que podem ser úteis”** e **“Materiais que podem ser úteis”** (`suggested_equipment` / `suggested_materials`) passam a ser exibidas **apenas para prestador** (`isProvider`); cliente não monta esses blocos.
 
 **2026-08-11 (Informações do pedido):** redesign visual de `FormResponsesSummary` — grid de cards (ícone em círculo neutro + label + valor), ícone dinâmico por `block.type` (`formResponsePresentation`), full-width em `textarea` / `description_ai` / `image_gallery`, 1 coluna mobile / 2 colunas `sm+`; permanece em `ServiceDetailSection` “Informações do pedido”. `SummaryEntry` em `dynamic-form` passa a incluir `type`.
+
+**2026-08-11 (Detail–Action Split):** redesign de layout da `ServiceDetailPage` — conceito Detail–Action Split com limiar ≥720px **do container** (não do viewport). Escopo: reorganização dos blocos existentes (sem Resumo financeiro / Conversa ativa / Editar pedido de mock).
+
+**2026-08-11 (Detail–Action Split — implementação atual):** deixa de usar CSS container queries + DOM dual show/hide (`ServiceDetailLayoutGrid` / `Main` / `Aside` / `Slot`). Passa a `useContainerMinWidth` (ResizeObserver) + `SERVICE_DETAIL_WIDE_LAYOUT_MIN_WIDTH_PX` (720) e renderização condicional `ServiceDetailWideLayout` | `ServiceDetailNarrowStack`. Fix de layout: aside sticky só na row das colunas (`items-start` / `self-start`) — topo alinhado à main; suporte (“Precisa de ajuda?”) sempre irmão abaixo da row (full-width), fora do sticky. `ServiceDetailSkeleton` recebe `isWideLayout` e espelha o layout ativo.
+
+**2026-08-11 (Detail–Action Split — aside vazia):** no wide, se a aside não tiver nenhum conteúdo DOM (todos os blocos `null` / seções que retornam `null` após load), a row fica em **1 coluna** e a main ocupa a largura total. `ServiceDetailWideLayout`: `grid-cols-1` + `has-[aside:not(:empty)]:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]` e `empty:hidden` na aside; `ServiceDetailPage` passa a aside como **array** de nós (evita text nodes de whitespace que quebrariam `:empty`).

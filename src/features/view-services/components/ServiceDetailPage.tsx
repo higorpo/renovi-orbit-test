@@ -1,6 +1,5 @@
-import { useMemo } from "react";
-import { FileQuestion, Wrench } from "lucide-react";
-import { Package } from "lucide-react";
+import { useMemo, useRef, type ReactNode } from "react";
+import { FileQuestion, Wrench, Package } from "lucide-react";
 import { useParams } from "react-router";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
@@ -8,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/auth";
 import { ReceivedBudgetDetailsSheet } from "@/features/negotiation-proposals";
 import { ManualPaymentFailureStatus } from "@/features/payments";
+import { ServiceRequestConversationList } from "@/features/chats";
+import type { FormSchema } from "@/features/dynamic-form";
 import { useService } from "../hooks/useService";
 import {
   mapSuggestedEquipmentToPt,
@@ -18,7 +19,11 @@ import { useProviderServiceRequestChat } from "../hooks/useProviderServiceReques
 import { useServiceDetailChatNavigation } from "../hooks/useServiceDetailChatNavigation";
 import { useRecordProviderOpportunityView } from "../hooks/useRecordProviderOpportunityView";
 import { useServiceDetailNextStep } from "../hooks/useServiceDetailNextStep";
-import { SERVICE_DETAIL_PAGE_SHELL_CLASS } from "../constants/serviceDetail.constants";
+import { useContainerMinWidth } from "../hooks/useContainerMinWidth";
+import {
+  SERVICE_DETAIL_PAGE_SHELL_CLASS,
+  SERVICE_DETAIL_WIDE_LAYOUT_MIN_WIDTH_PX,
+} from "../constants/serviceDetail.constants";
 import { ServiceContractedSection } from "./ServiceContractedSection";
 import { ServiceDetailNextStepOverlays } from "./ServiceDetailNextStepOverlays";
 import { ServiceNextStepCard } from "./ServiceNextStepCard";
@@ -30,12 +35,14 @@ import { ServiceDetailHeader } from "./ServiceDetailHeader";
 import { ServiceProviderProposalRejectionAlert } from "./ServiceProviderProposalRejectionAlert";
 import { ServiceProviderProposalSection } from "./ServiceProviderProposalSection";
 import { ServiceDetailSkeleton } from "./ServiceDetailSkeleton";
-import { ServiceRequestConversationList } from "@/features/chats";
 import { ServiceDetailSection } from "./ServiceDetailSection";
 import { FormResponsesSummary } from "./FormResponsesSummary";
-import type { FormSchema } from "@/features/dynamic-form";
 import { ServicePhotoGallery } from "./ServicePhotoGallery";
 import { SuggestedItemsInfo } from "./SuggestedItemsInfo";
+import {
+  ServiceDetailNarrowStack,
+  ServiceDetailWideLayout,
+} from "./ServiceDetailLayout";
 
 const suggestedItemClassName =
   "inline-flex items-center gap-1.5 rounded-sm border border-border bg-canvas-soft px-2.5 py-1 text-xs text-body";
@@ -43,6 +50,10 @@ const suggestedItemClassName =
 interface ServiceDetailPageProps {
   serviceRequestId?: string;
   isInsideSheet?: boolean;
+}
+
+function renderIf(condition: boolean, node: ReactNode): ReactNode {
+  return condition ? node : null;
 }
 
 export function ServiceDetailPage({
@@ -89,23 +100,30 @@ export function ServiceDetailPage({
     [model?.suggestedMaterials],
   );
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isWideLayout = useContainerMinWidth(
+    containerRef,
+    SERVICE_DETAIL_WIDE_LAYOUT_MIN_WIDTH_PX,
+  );
+
   const pageClassName = cn(
     SERVICE_DETAIL_PAGE_SHELL_CLASS,
-    "space-y-4",
-    isInsideSheet ? "px-0 py-0 pb-24 md:pb-28" : "pb-24 md:pb-28",
+    isInsideSheet ? "px-0 py-0" : null,
+    isProvider ? "pb-24" : "pb-6",
+    isWideLayout && "pb-6",
   );
 
   if (isLoading) {
     return (
-      <div className={pageClassName}>
-        <ServiceDetailSkeleton />
+      <div ref={containerRef} className={pageClassName}>
+        <ServiceDetailSkeleton isWideLayout={isWideLayout} />
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className={pageClassName}>
+      <div ref={containerRef} className={pageClassName}>
         <ErrorState
           title="Não foi possível carregar este serviço"
           description="Verifique sua conexão e tente novamente. Se o problema persistir, entre em contato com o suporte."
@@ -117,7 +135,7 @@ export function ServiceDetailPage({
 
   if (!model) {
     return (
-      <div className={pageClassName}>
+      <div ref={containerRef} className={pageClassName}>
         <EmptyState
           icon={FileQuestion}
           title="Serviço não encontrado"
@@ -131,116 +149,192 @@ export function ServiceDetailPage({
   const showClientNegotiationChats =
     isClient && model.listPhase === "negotiation" && !model.contracted;
 
-  return (
-    <div className={pageClassName}>
+  const alerts = (
+    <>
       {isProvider ? (
         <ServiceProviderProposalRejectionAlert serviceRequestId={model.id} />
       ) : null}
       {isClient && model.contracted ? (
         <ManualPaymentFailureStatus contractedServiceId={model.contracted.id} />
       ) : null}
+    </>
+  );
 
-      <article className="overflow-hidden rounded-lg border border-border bg-card shadow-elevation-1">
-        <ServiceDetailHeader
-          model={model}
-          isClient={isClient}
-          isProvider={isProvider}
-          onOpenBudgetSheet={openBudgetSheet}
-          onMutated={() => void refetch()}
-        />
-      </article>
+  const header = (
+    <article className="overflow-hidden rounded-lg border border-border bg-card shadow-elevation-1">
+      <ServiceDetailHeader
+        model={model}
+        isClient={isClient}
+        isProvider={isProvider}
+        onOpenBudgetSheet={openBudgetSheet}
+        onMutated={() => void refetch()}
+      />
+    </article>
+  );
 
-      <div className="space-y-4">
-        {nextStep.step ? (
-          <ServiceNextStepCard
-            step={nextStep.step}
-            onAction={nextStep.handleAction}
-            disabled={nextStep.actionDisabled}
-          />
-        ) : null}
-        {isClient ? (
-          <ClientServiceJourneySection
-            serviceRequestId={model.id}
-            ratingOptional={model.contracted?.status === "COMPLETED"}
-          />
-        ) : null}
-        {model.contracted ? (
-          <ServiceContractedSection
-            contracted={model.contracted}
-            viewerRole={isClient ? "client" : "provider"}
-          />
-        ) : null}
-        {isProvider && model.contracted ? (
-          <ServiceProviderLocationSection address={model.address} />
-        ) : null}
-        {model.description ? (
-          <ServiceDetailSection title="Descrição">
-            <p className="whitespace-pre-wrap text-caption leading-relaxed text-body">
-              {model.description}
-            </p>
-          </ServiceDetailSection>
-        ) : null}
-        <FormResponsesSummary
-          formData={model.formData}
-          formSchema={model.formSchema as FormSchema | null}
-        />
+  const description = renderIf(
+    Boolean(model.description),
+    <ServiceDetailSection title="Descrição do serviço">
+      <p className="whitespace-pre-wrap text-caption leading-relaxed text-body">
+        {model.description}
+      </p>
+    </ServiceDetailSection>,
+  );
 
-        {model.photoPaths.length > 0 ? (
-          <ServiceDetailSection
-            title={`Fotos (${model.photoPaths.length})`}
-            description="Toque para ampliar"
-          >
-            <ServicePhotoGallery photos={model.photoPaths} />
-          </ServiceDetailSection>
-        ) : null}
+  const form = (
+    <FormResponsesSummary
+      formData={model.formData}
+      formSchema={model.formSchema as FormSchema | null}
+    />
+  );
 
-        {isProvider && suggestedEquipmentPt.length > 0 ? (
-          <ServiceDetailSection
-            title="Equipamentos que podem ser úteis"
-            titleAccessory={
-              <SuggestedItemsInfo ariaLabel="Mais informações sobre equipamentos sugeridos" />
-            }
-          >
-            <div className="flex flex-wrap gap-2">
-              {suggestedEquipmentPt.map((eq) => (
-                <span key={eq} className={suggestedItemClassName}>
-                  <Wrench className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
-                  {eq}
-                </span>
-              ))}
-            </div>
-          </ServiceDetailSection>
-        ) : null}
+  const photos = renderIf(
+    model.photoPaths.length > 0,
+    <ServiceDetailSection
+      title={`Fotos (${model.photoPaths.length})`}
+      description="Toque para ampliar"
+    >
+      <ServicePhotoGallery photos={model.photoPaths} />
+    </ServiceDetailSection>,
+  );
 
-        {isProvider && suggestedMaterialsPt.length > 0 ? (
-          <ServiceDetailSection
-            title="Materiais que podem ser úteis"
-            titleAccessory={
-              <SuggestedItemsInfo ariaLabel="Mais informações sobre materiais sugeridos" />
-            }
-          >
-            <div className="flex flex-wrap gap-2">
-              {suggestedMaterialsPt.map((mat) => (
-                <span key={mat} className={suggestedItemClassName}>
-                  <Package className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
-                  {mat}
-                </span>
-              ))}
-            </div>
-          </ServiceDetailSection>
-        ) : null}
-        {showClientNegotiationChats ? (
-          <ServiceDetailSection
-            title="Conversas"
-            description="Negociações deste pedido com prestadores."
-          >
-            <ServiceRequestConversationList serviceRequestId={model.id} />
-          </ServiceDetailSection>
-        ) : null}
-        {isProvider ? <ServiceProviderProposalSection serviceRequestId={model.id} /> : null}
-
-        <ServiceSupportHelpCard />
+  const equipment = renderIf(
+    isProvider && suggestedEquipmentPt.length > 0,
+    <ServiceDetailSection
+      title="Equipamentos que podem ser úteis"
+      titleAccessory={
+        <SuggestedItemsInfo ariaLabel="Mais informações sobre equipamentos sugeridos" />
+      }
+    >
+      <div className="flex flex-wrap gap-2">
+        {suggestedEquipmentPt.map((eq) => (
+          <span key={eq} className={suggestedItemClassName}>
+            <Wrench className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
+            {eq}
+          </span>
+        ))}
       </div>
+    </ServiceDetailSection>,
+  );
+
+  const materials = renderIf(
+    isProvider && suggestedMaterialsPt.length > 0,
+    <ServiceDetailSection
+      title="Materiais que podem ser úteis"
+      titleAccessory={
+        <SuggestedItemsInfo ariaLabel="Mais informações sobre materiais sugeridos" />
+      }
+    >
+      <div className="flex flex-wrap gap-2">
+        {suggestedMaterialsPt.map((mat) => (
+          <span key={mat} className={suggestedItemClassName}>
+            <Package className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
+            {mat}
+          </span>
+        ))}
+      </div>
+    </ServiceDetailSection>,
+  );
+
+  const nextStepCard = renderIf(
+    Boolean(nextStep.step),
+    nextStep.step ? (
+      <ServiceNextStepCard
+        step={nextStep.step}
+        onAction={nextStep.handleAction}
+        disabled={nextStep.actionDisabled}
+      />
+    ) : null,
+  );
+
+  const contracted = renderIf(
+    Boolean(model.contracted),
+    model.contracted ? (
+      <ServiceContractedSection
+        contracted={model.contracted}
+        viewerRole={isClient ? "client" : "provider"}
+      />
+    ) : null,
+  );
+
+  const location = renderIf(
+    isProvider && Boolean(model.contracted),
+    <ServiceProviderLocationSection address={model.address} />,
+  );
+
+  const proposal = renderIf(
+    isProvider,
+    <ServiceProviderProposalSection serviceRequestId={model.id} />,
+  );
+
+  const conversations = renderIf(
+    showClientNegotiationChats,
+    <ServiceDetailSection
+      title="Conversas"
+      description="Negociações deste pedido com prestadores."
+    >
+      <ServiceRequestConversationList serviceRequestId={model.id} />
+    </ServiceDetailSection>,
+  );
+
+  const journey = renderIf(
+    isClient,
+    <ClientServiceJourneySection
+      serviceRequestId={model.id}
+      ratingOptional={model.contracted?.status === "COMPLETED"}
+    />,
+  );
+
+  const support = <ServiceSupportHelpCard />;
+
+  const mainColumn = (
+    <>
+      {header}
+      {description}
+      {form}
+      {photos}
+      {equipment}
+      {materials}
+    </>
+  );
+
+  // Array keeps the aside :empty when every slot is null (no Fragment whitespace nodes).
+  const asideColumn = [
+    nextStepCard,
+    contracted,
+    location,
+    proposal,
+    conversations,
+    journey,
+  ];
+
+  return (
+    <div ref={containerRef} className={pageClassName} data-testid="service-detail-page">
+      {isWideLayout ? (
+        <ServiceDetailWideLayout
+          alerts={alerts}
+          main={mainColumn}
+          aside={asideColumn}
+          support={support}
+        />
+      ) : (
+        <ServiceDetailNarrowStack>
+          {alerts}
+          {header}
+          {description}
+          {nextStepCard}
+          {contracted}
+          {location}
+          {proposal}
+          {conversations}
+          {form}
+          {photos}
+          {equipment}
+          {materials}
+          {journey}
+          {support}
+        </ServiceDetailNarrowStack>
+      )}
 
       {isProvider ? (
         <ServiceDetailFloatingActions
