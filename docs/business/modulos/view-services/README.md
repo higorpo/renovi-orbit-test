@@ -19,7 +19,7 @@
 | Sheet | `ServiceDetailSheet` montado no `DashboardLayout` quando `useServiceDetailModal().isOpen` |
 | Cancelamento pedido (cliente) | RPC `cancel_service_request` via `cancelService` |
 | Republicação (cliente) | RPC `republish_cancelled_service_request` |
-| Contrato | Tabela `contracted_services`; seção payments/reschedule; conclusão via **service-completion** (CTAs → sheet/dialog, não inline) |
+| Contrato | Tabela `contracted_services`; resumo read-only em `ServiceContractedSection`; CTAs (payments / reschedule / conclusão) unificados em `ServiceDetailActionsBar` no header → sheet/dialog, não inline |
 | Sem PostgREST list/detail | API TS só `supabase.rpc(...)` |
 
 ## 3. Features do módulo
@@ -65,9 +65,9 @@
 - **my-services** — shell de listagem; persistent slots + navegação sheet.
 - **provider-jobs** / **provider-calendar** — entry points de detalhe (sheet vs página).
 - **negotiation-proposals** — sheet de orçamentos; composer no detalhe prestador.
-- **chats** — conversas, initiate, botão chat contratado.
-- **payments** / **service-reschedule** — ações na `ServiceContractedSection`.
-- **service-completion** — **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceContractedSection` (contexto RPC só no sheet/wizard; gate leve via `enrichmentReady` do `get_service`); só Public API.
+- **chats** — conversas, initiate, botão chat contratado (`ServiceDetailActionsBar`).
+- **payments** / **service-reschedule** — CTAs na `ServiceDetailActionsBar` (não na seção contratada); `ServiceContractedSection` só resumo + disputa/settlement.
+- **service-completion** — **`ProviderMarkExecutedAction`** / **`ClientEvaluateServiceAction`** na `ServiceDetailActionsBar` (contexto RPC só no sheet/wizard; gate leve via `enrichmentReady` do `get_service`); só Public API.
 - **DashboardLayout** — hospeda `ServiceDetailSheet`.
 
 ## 9. Riscos e lacunas
@@ -84,7 +84,7 @@
 | Public API | `src/features/view-services/index.ts` |
 | API | `api/services.api.ts`, `opportunityView.api.ts` (conclusão **não** vive mais em APIs locais de lifecycle) |
 | Hooks | `useServicesList`, `useService`, `useClientServiceJourney`, `useCancelService`, `useRepublishCancelledService`, `useServiceDetailModal`, chat, budget sheet |
-| UI | `ServiceDetailShell`, `ServiceDetailSheet`, `ServiceDetailPage`; `ServiceNextStepCard`; `ServiceJourneyCard` / skeleton (cliente); `ServiceContractedSection` (CTAs `service-completion`), `SimpleServiceCard`, … |
+| UI | `ServiceDetailShell`, `ServiceDetailSheet`, `ServiceDetailPage`; `ServiceDetailHeader` + `ServiceDetailAttributeCards` + `ServiceDetailActionsBar`; `ServiceNextStepCard`; `ServiceJourneyCard` / skeleton (cliente); `ServiceContractedSection` (resumo read-only); `ServiceDetailSkeleton` (attribute cards + actions bar); `SimpleServiceCard` + `SimpleServiceInsightPanel` (lista), … |
 | Tipos / nav | `types/service.types.ts`, `types/serviceJourney.types.ts`, `types/serviceDetailNavigation.types.ts` |
 | Constantes | `queryKeys.ts`, `routes.ts`, `statusTabs.ts`, `statusBadge.ts`, `serviceJourney.constants.ts` |
 | SQL | `20260705207000_*`, `20260705208000_*`, `20260705209000_*`, `20260802170000_republish_*`, `20260810233000_get_client_service_journey.sql` |

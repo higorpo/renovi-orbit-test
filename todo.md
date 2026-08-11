@@ -111,7 +111,7 @@ Coisas para fazer next
 
 
 
-
+- Permitir editar informações do pedido quando  ele ainda está buscando por propostas.
 
 
 

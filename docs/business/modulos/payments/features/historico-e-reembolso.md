@@ -21,13 +21,13 @@
 |--------|------------|--------------|------------|
 | Cliente | Histórico de pagamentos | `/dashboard/conta` (`MyAccountClientPage`) | `PaymentHistorySection` → `ClientPaymentHistoryList` |
 | Prestador | Recebimentos (captura) | `/dashboard/conta` (`MyAccountProviderPage`) | `PaymentHistorySection` → `ProviderPaymentHistoryList` |
-| Cliente / Prestador | Cancelar serviço | Detalhe do serviço (`ServiceDetailPage` → `ServiceContractedSection`) | `ContractedServiceCancelAction` |
+| Cliente / Prestador | Cancelar serviço | Detalhe do serviço (`ServiceDetailPage` → `ServiceDetailActionsBar`) | `ContractedServiceCancelAction` |
 
 - **Rota própria:** nenhuma — seções embutidas.
 - **Deep links / query params:** não há parâmetros específicos desta feature.
 - **Guards:** conta e detalhe de serviço sob dashboard autenticado; views de histórico filtram por `auth.uid()` (ou admin).
 
-Evidência: `src/router.tsx` (`path: 'conta'`); `MyAccountClientPage.tsx`; `MyAccountProviderPage.tsx`; `ServiceDetailPage.tsx` (`showServiceCancellation={Boolean(isClient \|\| isProvider)}`).
+Evidência: `src/router.tsx` (`path: 'conta'`); `MyAccountClientPage.tsx`; `MyAccountProviderPage.tsx`; `ServiceDetailActionsBar.tsx` (`ContractedServiceCancelAction` quando há contrato e papel client/provider).
 
 ## 4. Perfis envolvidos
 
@@ -307,7 +307,7 @@ Cancelamento pós-commit / side effects → `contracted_services.status = CANCEL
 | Utils | `clientPaymentHistoryAmounts.ts`, `formatPaymentHistoryState.ts`, `contractedServiceCancellation.ts`, `mapCancellationError.ts`, `formatPostChargeCancelSuccessMessage.ts` |
 | Tipos | `types/paymentHistory.types.ts` |
 | Conta | `src/features/my-account/components/MyAccount{Client,Provider}Page.tsx` |
-| Detalhe serviço | `src/features/view-services/components/ServiceContractedSection.tsx`, `ServiceDetailPage.tsx` |
+| Detalhe serviço | `src/features/view-services/components/ServiceDetailActionsBar.tsx`, `ServiceDetailPage.tsx` |
 | Edge | `supabase/functions/process-refund/{index,handleRequest,types}.ts` |
 | Views | `supabase/migrations/20260801140000_create_payment_history_views.sql` |
 | Grants DML deny | `20260802290000_revoke_payment_view_dml_grants.sql` |
