@@ -7,6 +7,7 @@ import {
   SERVICE_SUPPORT_HELP_TITLE,
   SERVICE_SUPPORT_URL,
 } from "../constants/serviceSupport.constants";
+import { SERVICE_DETAIL_SURFACE_RADIUS_CLASS } from "../constants/serviceDetail.constants";
 
 export interface ServiceSupportHelpCardProps {
   className?: string;
@@ -20,7 +21,8 @@ export function ServiceSupportHelpCard({ className }: ServiceSupportHelpCardProp
   return (
     <aside
       className={cn(
-        "flex flex-col gap-4 rounded-xl border border-sky-200/80 bg-gradient-to-r from-sky-50 via-sky-50/70 to-card p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-5",
+        "flex flex-col gap-4 border border-sky-200/80 bg-gradient-to-r from-sky-50 via-sky-50/70 to-card p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:p-5",
+        SERVICE_DETAIL_SURFACE_RADIUS_CLASS,
         className,
       )}
       aria-label={SERVICE_SUPPORT_HELP_TITLE}

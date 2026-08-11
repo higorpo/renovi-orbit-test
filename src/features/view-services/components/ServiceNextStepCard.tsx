@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { ServiceNextStep, ServiceNextStepIcon } from "../utils/serviceNextStep";
+import { SERVICE_DETAIL_SURFACE_RADIUS_CLASS } from "../constants/serviceDetail.constants";
 
 export interface ServiceNextStepCardProps {
   step: ServiceNextStep;
@@ -76,7 +77,8 @@ export function ServiceNextStepCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       className={cn(
-        "rounded-2xl bg-gradient-to-br from-primary to-primary/80 p-5 text-primary-foreground shadow-elevation-1 sm:p-6",
+        SERVICE_DETAIL_SURFACE_RADIUS_CLASS,
+        "bg-gradient-to-br from-primary to-primary/80 p-5 text-primary-foreground shadow-elevation-1 sm:p-6",
         className,
       )}
       aria-label={`${step.eyebrow}: ${step.title}`}

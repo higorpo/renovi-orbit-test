@@ -59,6 +59,9 @@ export const SERVICE_DETAIL_PAGE_MAX_WIDTH_CLASS = "max-w-5xl";
 export const SERVICE_DETAIL_PAGE_SHELL_CLASS =
   "mx-auto w-full min-w-0 max-w-5xl px-4 py-6";
 
+/** Outer surface radius for cards/sections on the service detail page. */
+export const SERVICE_DETAIL_SURFACE_RADIUS_CLASS = "rounded-lg";
+
 /**
  * Activate Detail–Action Split when the page/sheet container is at least this wide.
  * Measured via ResizeObserver (`useContainerMinWidth`), not the viewport.

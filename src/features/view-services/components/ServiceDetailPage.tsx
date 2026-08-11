@@ -22,6 +22,7 @@ import { useServiceDetailNextStep } from "../hooks/useServiceDetailNextStep";
 import { useContainerMinWidth } from "../hooks/useContainerMinWidth";
 import {
   SERVICE_DETAIL_PAGE_SHELL_CLASS,
+  SERVICE_DETAIL_SURFACE_RADIUS_CLASS,
   SERVICE_DETAIL_WIDE_LAYOUT_MIN_WIDTH_PX,
 } from "../constants/serviceDetail.constants";
 import { ServiceContractedSection } from "./ServiceContractedSection";
@@ -125,6 +126,7 @@ export function ServiceDetailPage({
     return (
       <div ref={containerRef} className={pageClassName}>
         <ErrorState
+          className={SERVICE_DETAIL_SURFACE_RADIUS_CLASS}
           title="Não foi possível carregar este serviço"
           description="Verifique sua conexão e tente novamente. Se o problema persistir, entre em contato com o suporte."
           onRetry={() => void refetch()}
@@ -137,6 +139,7 @@ export function ServiceDetailPage({
     return (
       <div ref={containerRef} className={pageClassName}>
         <EmptyState
+          className={SERVICE_DETAIL_SURFACE_RADIUS_CLASS}
           icon={FileQuestion}
           title="Serviço não encontrado"
           description="Este serviço não existe ou você não tem permissão para visualizá-lo."
@@ -161,7 +164,12 @@ export function ServiceDetailPage({
   );
 
   const header = (
-    <article className="overflow-hidden rounded-lg border border-border bg-card shadow-elevation-1">
+    <article
+      className={cn(
+        "overflow-hidden border border-border bg-card shadow-elevation-1",
+        SERVICE_DETAIL_SURFACE_RADIUS_CLASS,
+      )}
+    >
       <ServiceDetailHeader
         model={model}
         isClient={isClient}

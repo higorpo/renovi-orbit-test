@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { SERVICE_DETAIL_SURFACE_RADIUS_CLASS } from "../constants/serviceDetail.constants";
 
 interface ServiceDetailSectionProps {
   title?: string;
@@ -19,7 +20,8 @@ export function ServiceDetailSection({
   return (
     <section
       className={cn(
-        "rounded-lg border border-border bg-card p-4 shadow-elevation-1 sm:p-5",
+        SERVICE_DETAIL_SURFACE_RADIUS_CLASS,
+        "border border-border bg-card p-4 shadow-elevation-1 sm:p-5",
         className,
       )}
     >
