@@ -26,6 +26,7 @@ import { SERVICE_DETAIL_PAGE_SHELL_CLASS } from "../constants/serviceDetail.cons
 import { ServiceContractedSection } from "./ServiceContractedSection";
 import { ServiceDetailNextStepOverlays } from "./ServiceDetailNextStepOverlays";
 import { ServiceNextStepCard } from "./ServiceNextStepCard";
+import { ClientServiceJourneySection } from "./ClientServiceJourneySection";
 import { ServiceProviderLocationSection } from "./ServiceProviderLocationSection";
 import { ServiceDetailClientActions } from "./ServiceDetailClientActions";
 import { ServiceDetailFloatingActions } from "./ServiceDetailFloatingActions";
@@ -181,6 +182,12 @@ export function ServiceDetailPage({
             step={nextStep.step}
             onAction={nextStep.handleAction}
             disabled={nextStep.actionDisabled}
+          />
+        ) : null}
+        {isClient ? (
+          <ClientServiceJourneySection
+            serviceRequestId={model.id}
+            ratingOptional={model.contracted?.status === "COMPLETED"}
           />
         ) : null}
         {model.contracted ? (

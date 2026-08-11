@@ -192,6 +192,22 @@ vi.mock("../../hooks/useClientCardManualPaymentBridge", () => ({
   }),
 }));
 
+const journeyMocks = vi.hoisted(() => ({
+  milestones: [] as Array<{
+    key: string;
+    status: string;
+    label: string;
+    secondaryText: string | null;
+  }>,
+  isLoading: false,
+  isError: false,
+  isFetching: false,
+}));
+
+vi.mock("../../hooks/useClientServiceJourney", () => ({
+  useClientServiceJourney: () => journeyMocks,
+}));
+
 vi.mock("../ServiceProviderLocationSection", () => ({
   ServiceProviderLocationSection: () => <div data-testid="location-section" />,
 }));
@@ -270,6 +286,10 @@ beforeEach(() => {
   serviceMocks.isLoading = false;
   serviceMocks.isError = false;
   serviceMocks.requestedId = undefined;
+  journeyMocks.milestones = [];
+  journeyMocks.isLoading = false;
+  journeyMocks.isError = false;
+  journeyMocks.isFetching = false;
 });
 
 describe("ServiceDetailPage", () => {
@@ -398,6 +418,77 @@ describe("ServiceDetailPage", () => {
     });
     render(<ServiceDetailPage />);
     expect(screen.queryByTestId("service-next-step-card")).not.toBeInTheDocument();
+  });
+
+  it("shows journey card for client below next step when milestones exist", () => {
+    serviceMocks.data = buildModel({
+      proposalCount: 2,
+      pendingProposalCount: 2,
+    });
+    journeyMocks.milestones = [
+      {
+        key: "request_created",
+        status: "completed",
+        label: "Pedido criado",
+        secondaryText: "Hoje, 10:00",
+      },
+      {
+        key: "payment",
+        status: "current",
+        label: "Pagamento pendente",
+        secondaryText: "Aguardando pagamento",
+      },
+    ];
+
+    render(<ServiceDetailPage />);
+
+    expect(screen.getByTestId("service-next-step-card")).toBeInTheDocument();
+    expect(screen.getByTestId("service-journey-card")).toBeInTheDocument();
+    expect(screen.getByText("Acompanhe seu pedido")).toBeInTheDocument();
+  });
+
+  it("shows journey skeleton while journey is loading for client", () => {
+    serviceMocks.data = buildModel();
+    journeyMocks.isLoading = true;
+
+    render(<ServiceDetailPage />);
+
+    expect(screen.getByTestId("service-journey-card-skeleton")).toBeInTheDocument();
+    expect(screen.queryByTestId("service-journey-card")).not.toBeInTheDocument();
+  });
+
+  it("hides journey card for providers", () => {
+    authMocks.profile = { role: "provider" };
+    serviceMocks.data = buildModel({
+      listPhase: "in_progress",
+      statusTabId: "in_progress",
+      contracted: {
+        id: "cs-1",
+        status: "CONFIRMED",
+        agreedSlot: null,
+        durationUnit: "hours",
+        durationValue: 2,
+        scheduledStartDate: "2026-06-01",
+        scheduledEndDate: null,
+        scheduledShift: "morning",
+        provider: { id: "p-1", displayName: "João", profileImagePath: null },
+        chatId: "chat-1",
+        updatedAt: null,
+      },
+    });
+    journeyMocks.milestones = [
+      {
+        key: "request_created",
+        status: "completed",
+        label: "Pedido criado",
+        secondaryText: null,
+      },
+    ];
+
+    render(<ServiceDetailPage />);
+
+    expect(screen.queryByTestId("service-journey-card")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("service-journey-card-skeleton")).not.toBeInTheDocument();
   });
 });
 

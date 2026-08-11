@@ -5060,6 +5060,10 @@ export type Database = {
         Returns: string
       }
       get_client_pending_evaluation_prompt: { Args: never; Returns: Json }
+      get_client_service_journey: {
+        Args: { p_service_request_id: string }
+        Returns: Json
+      }
       get_conversation_detail: { Args: { p_chat_id: string }; Returns: Json }
       get_negotiation_audit_timeline: {
         Args: { p_service_request_id: string }

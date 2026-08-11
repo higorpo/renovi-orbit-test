@@ -2,7 +2,59 @@ import { supabase } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
 import { statusTabIdToListPhase } from "../constants/statusTabs";
 import type { ListServicesParams, PaginatedServicesResult, ServiceModel } from "../types/service.types";
+import type {
+  ClientServiceJourney,
+  ServiceJourneyMilestone,
+  ServiceJourneyMilestoneKey,
+  ServiceJourneyMilestoneRpc,
+  ServiceJourneyMilestoneStatus,
+} from "../types/serviceJourney.types";
+import { SERVICE_JOURNEY_MILESTONE_KEYS } from "../constants/serviceJourney.constants";
 import { mapRpcServiceRow, type RpcServiceRow } from "../utils/serviceMapper";
+
+const MILESTONE_KEY_SET = new Set<string>(SERVICE_JOURNEY_MILESTONE_KEYS);
+const MILESTONE_STATUS_SET = new Set<ServiceJourneyMilestoneStatus>([
+  "completed",
+  "current",
+  "upcoming",
+]);
+
+function isServiceJourneyMilestoneKey(value: string): value is ServiceJourneyMilestoneKey {
+  return MILESTONE_KEY_SET.has(value);
+}
+
+function isServiceJourneyMilestoneStatus(
+  value: string,
+): value is ServiceJourneyMilestoneStatus {
+  return MILESTONE_STATUS_SET.has(value as ServiceJourneyMilestoneStatus);
+}
+
+function mapJourneyMilestone(
+  raw: ServiceJourneyMilestoneRpc,
+): ServiceJourneyMilestone | null {
+  if (!isServiceJourneyMilestoneKey(raw.key)) return null;
+  if (!isServiceJourneyMilestoneStatus(raw.status)) return null;
+  return {
+    key: raw.key,
+    status: raw.status,
+    occurredAt: typeof raw.occurred_at === "string" ? raw.occurred_at : null,
+  };
+}
+
+function parseClientServiceJourney(data: unknown): ClientServiceJourney | null {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+  const payload = data as { milestones?: unknown };
+  if (!Array.isArray(payload.milestones)) return null;
+
+  const milestones: ServiceJourneyMilestone[] = [];
+  for (const item of payload.milestones) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const mapped = mapJourneyMilestone(item as ServiceJourneyMilestoneRpc);
+    if (mapped) milestones.push(mapped);
+  }
+
+  return { milestones };
+}
 
 interface RpcListServicesResponse {
   items?: RpcServiceRow[];
@@ -164,4 +216,32 @@ export async function republishCancelledServiceRequest(
   }
 
   return { data: { requestId, sourceRequestId }, error: null };
+}
+
+export async function getClientServiceJourney(
+  serviceRequestId: string,
+): Promise<{ data: ClientServiceJourney | null; error: string | null }> {
+  const id = serviceRequestId.trim();
+  if (!id) {
+    return { data: null, error: "ID do serviço é obrigatório" };
+  }
+
+  const { data, error } = await supabase.rpc("get_client_service_journey", {
+    p_service_request_id: id,
+  });
+
+  if (error) {
+    logger.error("view_services_journey_error", {
+      serviceRequestId: id,
+      error: error.message,
+    });
+    return { data: null, error: error.message };
+  }
+
+  const parsed = parseClientServiceJourney(data);
+  if (!parsed) {
+    return { data: null, error: "Resposta inválida do servidor" };
+  }
+
+  return { data: parsed, error: null };
 }

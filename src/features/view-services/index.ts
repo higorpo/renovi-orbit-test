@@ -13,6 +13,7 @@ export {
   listServices,
   cancelService,
   republishCancelledServiceRequest,
+  getClientServiceJourney,
 } from "./api/services.api";
 export type { RepublishCancelledServiceResult } from "./api/services.api";
 export {
@@ -21,6 +22,11 @@ export {
 export type { RecordProviderOpportunityViewResult } from "./api/opportunityView.api";
 export { useServicesList } from "./hooks/useServicesList";
 export { useService } from "./hooks/useService";
+export { useClientServiceJourney } from "./hooks/useClientServiceJourney";
+export type {
+  UseClientServiceJourneyParams,
+  UseClientServiceJourneyResult,
+} from "./hooks/useClientServiceJourney";
 export { useCancelService } from "./hooks/useCancelService";
 export { useRepublishCancelledService } from "./hooks/useRepublishCancelledService";
 export { useServiceDetailModal } from "./hooks/useServiceDetailModal";
@@ -37,10 +43,18 @@ export type {
   ContractedServiceStatus,
   ContractedServiceSummary,
 } from "./types/service.types";
+export type {
+  ClientServiceJourney,
+  PresentedServiceJourneyMilestone,
+  ServiceJourneyMilestone,
+  ServiceJourneyMilestoneKey,
+  ServiceJourneyMilestoneStatus,
+} from "./types/serviceJourney.types";
 
 export {
   SERVICES_LIST_QUERY_KEY,
   SERVICE_DETAIL_QUERY_KEY,
+  SERVICE_JOURNEY_QUERY_KEY,
 } from "./constants/queryKeys";
 export { ROUTE_SERVICE_DETAIL, getServiceDetailPath } from "./constants/routes";
 export {
@@ -117,9 +131,20 @@ export {
 } from "./utils/serviceNextStep";
 export { ServiceNextStepCard } from "./components/ServiceNextStepCard";
 export type { ServiceNextStepCardProps } from "./components/ServiceNextStepCard";
+export { ServiceJourneyCard } from "./components/ServiceJourneyCard";
+export type { ServiceJourneyCardProps } from "./components/ServiceJourneyCard";
+export { ServiceJourneyCardSkeleton } from "./components/ServiceJourneyCardSkeleton";
+export type { ServiceJourneyCardSkeletonProps } from "./components/ServiceJourneyCardSkeleton";
+export { ClientServiceJourneySection } from "./components/ClientServiceJourneySection";
+export type { ClientServiceJourneySectionProps } from "./components/ClientServiceJourneySection";
 export { useServiceDetailNextStep } from "./hooks/useServiceDetailNextStep";
 export type {
   UseServiceDetailNextStepParams,
   UseServiceDetailNextStepResult,
 } from "./hooks/useServiceDetailNextStep";
 export { SERVICE_PROVIDER_PROPOSAL_SECTION_ID } from "./constants/serviceDetailNextStep.constants";
+export {
+  presentServiceJourneyMilestones,
+  formatJourneyOccurredAt,
+} from "./utils/presentServiceJourney";
+export { SERVICE_JOURNEY_CARD_TITLE } from "./constants/serviceJourney.constants";

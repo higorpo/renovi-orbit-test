@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   cancelService,
+  getClientServiceJourney,
   getServiceById,
   listServices,
   republishCancelledServiceRequest,
@@ -507,5 +508,53 @@ describe("services API branch coverage", () => {
       p_service_request_id: "sr-1",
     });
     expect(result.data?.id).toBe("sr-1");
+  });
+
+  it("getClientServiceJourney calls get_client_service_journey RPC", async () => {
+    rpc.mockResolvedValue({
+      data: {
+        milestones: [
+          {
+            key: "request_created",
+            status: "completed",
+            occurred_at: "2026-01-01T00:00:00Z",
+          },
+          { key: "payment", status: "current", occurred_at: null },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await getClientServiceJourney("sr-1");
+
+    expect(rpc).toHaveBeenCalledWith("get_client_service_journey", {
+      p_service_request_id: "sr-1",
+    });
+    expect(result.error).toBeNull();
+    expect(result.data?.milestones).toEqual([
+      {
+        key: "request_created",
+        status: "completed",
+        occurredAt: "2026-01-01T00:00:00Z",
+      },
+      { key: "payment", status: "current", occurredAt: null },
+    ]);
+  });
+
+  it("getClientServiceJourney returns error on RPC failure", async () => {
+    rpc.mockResolvedValue({
+      data: null,
+      error: { message: "not owner" },
+    });
+
+    const result = await getClientServiceJourney("sr-1");
+    expect(result.data).toBeNull();
+    expect(result.error).toBe("not owner");
+  });
+
+  it("getClientServiceJourney rejects blank ids", async () => {
+    const result = await getClientServiceJourney("  ");
+    expect(result).toEqual({ data: null, error: "ID do serviço é obrigatório" });
+    expect(rpc).not.toHaveBeenCalled();
   });
 });
