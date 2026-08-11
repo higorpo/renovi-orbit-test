@@ -55,7 +55,7 @@ function ContractedDetailRows({ contracted }: { contracted: ContractedServiceSum
   const scheduled = formatScheduledSummary(contracted);
   const statusLabel = getContractedServiceStatusLabel(contracted.status);
   const amount =
-    contracted.finalAmount != null ? formatCurrency(contracted.finalAmount) : null;
+    contracted.serviceAmount != null ? formatCurrency(contracted.serviceAmount) : null;
 
   return (
     <div className="space-y-3.5">

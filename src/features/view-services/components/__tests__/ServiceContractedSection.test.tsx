@@ -39,7 +39,7 @@ const contracted: ContractedServiceSummary = {
   },
   chatId: "chat-1",
   updatedAt: null,
-  finalAmount: 680,
+  serviceAmount: 680,
 };
 
 function renderSection(

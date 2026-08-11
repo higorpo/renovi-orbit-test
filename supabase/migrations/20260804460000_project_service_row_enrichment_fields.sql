@@ -268,8 +268,8 @@ begin
         order by c.last_interaction_at desc, c.id desc
         limit 1
       ),
-      'final_amount', (
-        select pp.final_amount
+      'service_amount', (
+        select pp.proposed_amount
         from public.provider_proposals pp
         where pp.id = cs.accepted_proposal_id
       ),
@@ -405,4 +405,4 @@ end;
 $$;
 
 comment on function public.project_service_row(uuid, uuid) is
-  'Builds unified service JSON with enrichment fields, contracted final_amount, provider image/slug, and client_rating_* when present.';
+  'Builds unified service JSON with enrichment fields, contracted service_amount (proposed_amount), provider image/slug, and client_rating_* when present.';

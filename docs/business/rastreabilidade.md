@@ -111,7 +111,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `supabase/tests/chats/*.sql` | pgTAP FSM, mensagem livre, concorrência |
 | `supabase/migrations/20260705207000`–`20260705209000` | Rename `contracted_services`; RPCs `get_service`, `list_services` |
 | `supabase/migrations/20260810233000_get_client_service_journey.sql` | RPC `get_client_service_journey` (timeline cliente-only; ownership; gap-fill; cancel/dispute) |
-| `supabase/migrations/20260804460000_project_service_row_enrichment_fields.sql` | `project_service_row` / `get_service`: `contracted.final_amount`, `provider.profile_image_path` + `slug` |
+| `supabase/migrations/20260804460000_project_service_row_enrichment_fields.sql` | `project_service_row` / `get_service`: `contracted.service_amount` (`proposed_amount`), `provider.profile_image_path` + `slug` |
 | `supabase/tests/view-services/view_services_rpcs_test.sql` | pgTAP acesso cliente/prestador, filtros e paginação |
 | `supabase/tests/view_services/republish_cancelled_service_request_test.sql` | pgTAP republicação de pedido cancelado (ownership, elegibilidade, idempotência) |
 | `supabase/tests/view_services/get_client_service_journey_test.sql` | pgTAP jornada do pedido (owner/non-owner, happy path, gap-fill, payment, cancel, dispute, rating opcional) |
@@ -189,7 +189,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `src/features/service-reschedule/components/ProposeRescheduleFlowReminder.tsx` | Banner “Como funciona o reagendamento?” (dispensável; visibilidade local à abertura do dialog) |
 | `src/features/service-reschedule/utils/mapRescheduleSnapshot.ts` | Lê `duration_unit`/`duration_value` do snapshot |
 | `src/features/service-reschedule/utils/rescheduleCardCopy.ts`, `formatRescheduleSlot.ts` | “Data proposta” / “Período proposto”; oculta range se fim nulo ou = início |
-| `src/features/view-services/components/ServiceContractedSection.tsx` | Card Serviço contratado: cliente rico (avatar, rating via `get_provider_rating_summaries`, valor `final_amount`, CTA perfil); prestador resumo; `PaymentDisputeStatus`; aviso `farRecapturePending`; **sem** `ProviderSettlementStatus` / selo verificado |
+| `src/features/view-services/components/ServiceContractedSection.tsx` | Card Serviço contratado: cliente rico (avatar, rating via `get_provider_rating_summaries`, valor `service_amount`/`proposed_amount`, CTA perfil); prestador resumo; `PaymentDisputeStatus`; aviso `farRecapturePending`; **sem** `ProviderSettlementStatus` / selo verificado |
 | `src/features/view-services/utils/serviceMapper.ts` | Mapeia `far_recapture_pending` → `farRecapturePending` |
 | `supabase/migrations/20260802020000_service_reschedule_helpers.sql` | `_cns_validate_reschedule_slot(slot, duration_unit, duration_value)` |
 | `supabase/migrations/20260802030000_service_reschedule_rpcs_core.sql` | `cns_request_service_reschedule`: elegibilidade `PENDING_PAYMENT`/`CONFIRMED` (cliente com janela 48h; prestador sem); mensagem SYSTEM; observação opcional com `\n\nObservação: ` |

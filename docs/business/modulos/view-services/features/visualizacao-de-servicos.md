@@ -130,7 +130,7 @@ flowchart TD
 | `address` | address summary | Localização; mapa só prestador+contratado |
 | `service` | platform_service | Ícone/cor/título |
 | `proposalCount`, `hasPendingProposal`, counts de chat | negotiation | Badge “Aguardando decisão”; CTA orçamentos |
-| `contracted` | contracted_services + `final_amount` (proposta aceita) + `provider` (`profile_image_path`, `slug`) + payment_schedule_state, far_recapture_pending, reschedule | Card `ServiceContractedSection` (cliente rico / prestador resumo); CTAs de lifecycle no header (`ServiceDetailActionsBar`) |
+| `contracted` | contracted_services + `service_amount` (`proposed_amount` da proposta aceita — valor do serviço para o cliente) + `provider` (`profile_image_path`, `slug`) + payment_schedule_state, far_recapture_pending, reschedule | Card `ServiceContractedSection` (cliente rico / prestador resumo); CTAs de lifecycle no header (`ServiceDetailActionsBar`) |
 | `enrichmentStatus` / `enrichmentReady` | projeção enrichment em `get_service` / `list_services` | Gate do CTA prestador (sem `get_service_completion_context` no detalhe); pedido fora do feed até READY |
 | `counterparty` / `counterpartyName` | papel-dependente | Prestador: chip “Solicitante: …” no header; cliente vê profissional no card contratado (avatar + rating via RPC separada) |
 | `myProposal`, `chatSummary` | negotiation (lista prestador/cliente conforme SQL) | Cards em `my-services` (fora desta feature de UI de lista) |
@@ -355,7 +355,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 11. **Próximo passo:** ranking de intent compartilhado com Meus Serviços (`resolveClient/ProviderCardActions` em `view-services`); o card **não** busca dados além do `ServiceModel` de `useService`; exclusões V1: `details`, `cancel`, estados só informativos; prestador **sem** card de pagamento; footer contextual (lock em pagamento; shield curto em orçamentos).
 12. **Jornada do pedido:** RPC e presentation separados do `ServiceModel`; prestador nunca vê o card; V1 sem deep-link/clique nos marcos.
 13. **Header / ações:** `ServiceDetailHeader` monta metadata + `ServiceDetailAttributeCards` + `ServiceDetailActionsBar` (não mais `ServiceDetailClientActions`); cancel/republish vivem na ActionsBar; abertura do sheet de orçamentos fica na página via callback.
-14. **`ServiceContractedSection` (card Serviço contratado):** **Cliente** — card rico: avatar + nome do prestador, média + contagem de avaliações (ocultas se `rating_count = 0`), agenda, status (estilo neutro), valor (`final_amount`), CTA perfil se houver slug, `PaymentDisputeStatus` no topo quando aplicável; **sem** selo verificado. **Prestador** — só agenda / status / valor (+ disputa de pagamento e aviso far-recapture quando couber); **sem** header de reputação, **sem** CTA de perfil, **sem** `ProviderSettlementStatus`. Ratings: fetch front `get_provider_rating_summaries`, não no payload de `get_service`.
+14. **`ServiceContractedSection` (card Serviço contratado):** **Cliente** — card rico: avatar + nome do prestador, média + contagem de avaliações (ocultas se `rating_count = 0`), agenda, status (estilo neutro), valor (`service_amount` = `proposed_amount`, não o líquido do prestador), CTA perfil se houver slug, `PaymentDisputeStatus` no topo quando aplicável; **sem** selo verificado. **Prestador** — só agenda / status / valor (+ disputa de pagamento e aviso far-recapture quando couber); **sem** header de reputação, **sem** CTA de perfil, **sem** `ProviderSettlementStatus`. Ratings: fetch front `get_provider_rating_summaries`, não no payload de `get_service`.
 15. **Insights:** detalhe usa `ServiceDetailAttributeCards`; `SimpleServiceInsightPanel` permanece só em cards de lista (`SimpleServiceCard`).
 
 ---
@@ -383,7 +383,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 - `supabase/migrations/20260705209000_fix_list_services_cte_scope.sql`
 - `supabase/migrations/20260802170000_republish_cancelled_service_request.sql`
 - `supabase/migrations/20260810233000_get_client_service_journey.sql`
-- `supabase/migrations/20260804460000_project_service_row_enrichment_fields.sql` (`final_amount`, `provider.profile_image_path` / `slug` em `project_service_row` / `get_service`)
+- `supabase/migrations/20260804460000_project_service_row_enrichment_fields.sql` (`service_amount` = `proposed_amount`, `provider.profile_image_path` / `slug` em `project_service_row` / `get_service`)
 - `supabase/tests/view-services/` (pgTAP RPCs / republish)
 - `supabase/tests/view_services/get_client_service_journey_test.sql`
 - `src/features/view-services/components/ServiceJourneyCard.tsx`, `hooks/useClientServiceJourney.ts`, `utils/presentServiceJourney.ts`
@@ -478,4 +478,4 @@ Reescrita para o padrão 20+ seções do orquestrador: sheet vs página, diferen
 
 **2026-08-11 (header / ações unificadas):** `ServiceDetailHeader` reorganiza metadata (local; “Solicitado {relative}” + orçamentos no cliente; chip solicitante no prestador); `ServiceDetailAttributeCards` no detalhe (Prioridade / Duração estimada / Escopo + alerta “Informações pendentes”) no lugar do uso de `SimpleServiceInsightPanel` no detalhe; `ServiceDetailActionsBar` concentra CTAs de negociação e contratados (incl. conclusão, pagamento, chat CS, cancel/reagendar); removido `ServiceDetailClientActions`; skeleton cobre attribute cards + actions bar.
 
-**2026-08-11 (card Serviço contratado):** redesign de `ServiceContractedSection` — cliente: card rico (avatar, rating via `get_provider_rating_summaries`, agenda, status neutro, `final_amount`, CTA “Ver perfil do profissional”, `PaymentDisputeStatus`); prestador: só agenda/status/valor; **sem** settlement neste card; **sem** selo verificado; enrichment SQL `20260804460000_project_service_row_enrichment_fields.sql`.
+**2026-08-11 (card Serviço contratado):** redesign de `ServiceContractedSection` — cliente: card rico (avatar, rating via `get_provider_rating_summaries`, agenda, status neutro, `service_amount`/`proposed_amount`, CTA “Ver perfil do profissional”, `PaymentDisputeStatus`); prestador: só agenda/status/valor; **sem** settlement neste card; **sem** selo verificado; enrichment SQL `20260804460000_project_service_row_enrichment_fields.sql`.

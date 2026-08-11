@@ -63,7 +63,7 @@ describe("serviceMapper", () => {
           profile_image_path: "avatars/joao.jpg",
           slug: "joao-eletricista",
         },
-        final_amount: 680,
+        service_amount: 680,
       },
       counterparty: { id: "p-1", display_name: "João Silva", profile_image_path: "avatars/joao.jpg" },
     });
@@ -80,7 +80,7 @@ describe("serviceMapper", () => {
     expect(model.contracted?.chatId).toBe("chat-contracted-1");
     expect(model.contracted?.paymentScheduleState).toBe("FAILED_PERMANENT");
     expect(model.contracted?.farRecapturePending).toBe(false);
-    expect(model.contracted?.finalAmount).toBe(680);
+    expect(model.contracted?.serviceAmount).toBe(680);
     expect(model.contracted?.provider?.slug).toBe("joao-eletricista");
     expect(model.contracted?.provider?.profileImagePath).toBe("avatars/joao.jpg");
     expect(model.tags).toBeNull();

@@ -614,7 +614,7 @@ select ok(
   (
     select pg_get_functiondef(p.oid) ~ 'client_rating_overall_score'
       and pg_get_functiondef(p.oid) ~ 'client_rating_submitted_at'
-      and pg_get_functiondef(p.oid) ~ 'final_amount'
+      and pg_get_functiondef(p.oid) ~ 'service_amount'
       and pg_get_functiondef(p.oid) ~ 'profile_image_path'
       and pg_get_functiondef(p.oid) ~ '''slug'''
     from pg_proc p
@@ -626,7 +626,7 @@ select ok(
         'p_service_request_id uuid, p_viewer_id uuid'
       )
   ),
-  'project_service_row projects client_rating_*, contracted final_amount, and provider image/slug'
+  'project_service_row projects client_rating_*, contracted service_amount, and provider image/slug'
 );
 
 select is(

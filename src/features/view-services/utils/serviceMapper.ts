@@ -104,7 +104,7 @@ export interface RpcContractedService {
   chat_id?: string | null;
   payment_schedule_state?: string | null;
   far_recapture_pending?: boolean | null;
-  final_amount?: number | string | null;
+  service_amount?: number | string | null;
   provider?: RpcContractedProvider | null;
   reschedule?: unknown;
   client_rating_overall_score?: number | string | null;
@@ -196,7 +196,7 @@ function mapClientRatingOverallScore(
   return Number.isFinite(score) ? score : null;
 }
 
-function mapFinalAmount(value: RpcContractedService["final_amount"]): number | null {
+function mapServiceAmount(value: RpcContractedService["service_amount"]): number | null {
   if (value == null) return null;
   const amount = typeof value === "number" ? value : Number(value);
   return Number.isFinite(amount) ? amount : null;
@@ -216,7 +216,7 @@ function mapContracted(contracted: RpcContractedService | null | undefined): Con
     provider: mapContractedProvider(contracted.provider),
     chatId: contracted.chat_id ?? null,
     updatedAt: contracted.updated_at ?? null,
-    finalAmount: mapFinalAmount(contracted.final_amount),
+    serviceAmount: mapServiceAmount(contracted.service_amount),
     paymentScheduleState: (contracted.payment_schedule_state as ContractedServiceSummary["paymentScheduleState"]) ?? null,
     farRecapturePending: Boolean(contracted.far_recapture_pending),
     reschedule: mapRescheduleSnapshot(contracted.reschedule),

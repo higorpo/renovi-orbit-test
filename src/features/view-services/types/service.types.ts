@@ -82,8 +82,8 @@ export interface ContractedServiceSummary {
   provider: ContractedProviderSummary | null;
   chatId: string | null;
   updatedAt: string | null;
-  /** Accepted proposal final amount (BRL). */
-  finalAmount: number | null;
+  /** Agreed service price from accepted proposal (`proposed_amount` / payment base_amount). */
+  serviceAmount: number | null;
   /** Current payment_schedules.state when a schedule exists for this contracted service. */
   paymentScheduleState?: PaymentScheduleState | null;
   /** True while post-PAID far reschedule refund+recapture is in flight. */
