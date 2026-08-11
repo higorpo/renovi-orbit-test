@@ -4,19 +4,19 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { ServiceDetailFloatingActions } from "../ServiceDetailFloatingActions";
 
 describe("ServiceDetailFloatingActions", () => {
-  it("shows start negotiation labels when chat does not exist", () => {
+  it("shows start negotiation mobile FAB when chat does not exist", () => {
     const onOpenChat = vi.fn();
     render(
       <ServiceDetailFloatingActions hasExistingChat={false} onOpenChat={onOpenChat} />,
     );
 
     expect(screen.getByText("Iniciar negociação >")).toBeInTheDocument();
-    expect(screen.getByText("Iniciar negociação com o cliente")).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole("button", { name: "Iniciar negociação com o cliente" })[0]);
+    expect(screen.queryByText("Iniciar negociação com o cliente")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Iniciar negociação com o cliente" }));
     expect(onOpenChat).toHaveBeenCalled();
   });
 
-  it("shows view negotiation labels when chat exists", () => {
+  it("shows view negotiation mobile FAB when chat exists", () => {
     render(
       <ServiceDetailFloatingActions
         hasExistingChat
@@ -28,7 +28,7 @@ describe("ServiceDetailFloatingActions", () => {
 
     expect(screen.getByText("Ver negociação >")).toBeInTheDocument();
     expect(
-      screen.getAllByRole("button", { name: "Visualizar negociação com o cliente" })[0],
+      screen.getByRole("button", { name: "Visualizar negociação com o cliente" }),
     ).toBeDisabled();
   });
 });

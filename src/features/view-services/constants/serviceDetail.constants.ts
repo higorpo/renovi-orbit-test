@@ -67,7 +67,3 @@ export const SERVICE_DETAIL_ACTION_BUTTON_CLASS =
   "h-10 w-full shrink-0 gap-2 !rounded-lg px-4 text-sm font-semibold transition-transform duration-fast ease-renovi active:scale-[0.97] sm:w-auto";
 /** Desktop service-detail sheet width (mobile stays full-bleed). */
 export const SERVICE_DETAIL_SHEET_WIDTH_CLASS = "w-full sm:w-[70vw] sm:max-w-[70vw]";
-
-/** Floating CTA bar width when hosted inside the detail sheet. */
-export const SERVICE_DETAIL_SHEET_FLOATING_ACTIONS_WIDTH_CLASS =
-  "w-[calc(100%-2rem)] sm:w-[calc(70vw-2rem)]";
