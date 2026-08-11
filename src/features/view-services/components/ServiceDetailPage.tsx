@@ -194,7 +194,7 @@ export function ServiceDetailPage({
           </ServiceDetailSection>
         ) : null}
 
-        {suggestedEquipmentPt.length > 0 ? (
+        {isProvider && suggestedEquipmentPt.length > 0 ? (
           <ServiceDetailSection
             title="Equipamentos que podem ser úteis"
             titleAccessory={
@@ -212,7 +212,7 @@ export function ServiceDetailPage({
           </ServiceDetailSection>
         ) : null}
 
-        {suggestedMaterialsPt.length > 0 ? (
+        {isProvider && suggestedMaterialsPt.length > 0 ? (
           <ServiceDetailSection
             title="Materiais que podem ser úteis"
             titleAccessory={

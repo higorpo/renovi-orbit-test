@@ -49,8 +49,8 @@ Documentação baseada em `src/features/view-services/`, rota `/dashboard/servic
 
 | Papel | Lista (`list_services`) | Detalhe (`get_service`) | UI no detalhe |
 |-------|-------------------------|-------------------------|---------------|
-| **Cliente** | Só `sr.client_id = viewer` | Dono do SR (ou admin) | Contagem de orçamentos no header; CTAs unificados em `ServiceDetailActionsBar` (orçamento/cancelar/republicar; chat contratado; pagamento manual; **“Avaliar serviço”**; cancel/reagendar contratado); em negotiation sem contrato, seção **Conversas** (`ServiceDetailSection` + lista `chats`) |
-| **Prestador** | SR com **proposta própria** ou **contrato** onde `provider_id = viewer` (não inclui pool `match_provider_jobs`) | Mesmo critério de acesso (`service_viewer_has_access`) | Nome do solicitante **mascarado** (chip “Solicitante: …” no header); alerta de rejeição; seção de proposta; FAB chat; local do serviço se contratado; CTAs em `ServiceDetailActionsBar` (**“Marcar serviço como concluído”** em `CONFIRMED`; cancel/reagendar); card **Serviço contratado** só com agenda/status/valor (sem header de reputação nem settlement) |
+| **Cliente** | Só `sr.client_id = viewer` | Dono do SR (ou admin) | Contagem de orçamentos no header; CTAs unificados em `ServiceDetailActionsBar` (orçamento/cancelar/republicar; chat contratado; pagamento manual; **“Avaliar serviço”**; cancel/reagendar contratado); em negotiation sem contrato, seção **Conversas** (`ServiceDetailSection` + lista `chats`); **não** vê blocos de equipamentos/materiais sugeridos |
+| **Prestador** | SR com **proposta própria** ou **contrato** onde `provider_id = viewer` (não inclui pool `match_provider_jobs`) | Mesmo critério de acesso (`service_viewer_has_access`) | Nome do solicitante **mascarado** (chip “Solicitante: …” no header); alerta de rejeição; seção de proposta; FAB chat; local do serviço se contratado; CTAs em `ServiceDetailActionsBar` (**“Marcar serviço como concluído”** em `CONFIRMED`; cancel/reagendar); card **Serviço contratado** só com agenda/status/valor (sem header de reputação nem settlement); seções **Equipamentos / Materiais que podem ser úteis** quando há itens (`suggested_equipment` / `suggested_materials`) |
 | **Admin plataforma** | Incluído no escopo SQL | Acesso via `is_platform_admin()` | Sem UI admin dedicada evidenciada neste módulo |
 | Visitante | N/A — RPCs exigem `auth.uid()` | N/A | Redirect login (dashboard) |
 
@@ -77,7 +77,10 @@ flowchart TD
   K --> M{model.contracted?}
   L --> M
   M -->|Sim| N[ServiceContractedSection: cliente card rico / prestador resumo]
-  M -->|Não| O[Seções do pedido: descrição, formulário, fotos, sugestões]
+  M -->|Não| O[Seções do pedido: descrição, formulário, fotos]
+  O --> P{isProvider e há sugestões?}
+  P -->|Sim| Q[Equipamentos / Materiais que podem ser úteis]
+  P -->|Não| R[Cliente: sem esses blocos]
   I --> ENR[Banner enrichment se PENDING/RUNNING]
 ```
 
@@ -115,6 +118,7 @@ flowchart TD
 11. Paginação: `page_size` clamp 1–100; default UI lista = 20 (`useServicesList`).
 12. Sem embeds PostgREST na API TS de list/detail — só `supabase.rpc(...)`.
 13. **Jornada do pedido** (`ServiceJourneyCard` / “Acompanhe seu pedido”): **somente cliente** no detalhe; abaixo do `ServiceNextStepCard`; **read-only** na V1; payload via RPC dedicada `get_client_service_journey` (não estende `get_service` / `project_service_row`); fetch paralelo ao detalhe.
+14. **Equipamentos / materiais sugeridos** (`suggested_equipment` / `suggested_materials` no `ServiceModel`): seções UI **“Equipamentos que podem ser úteis”** e **“Materiais que podem ser úteis”** no `ServiceDetailPage` **somente para prestador** (`isProvider`) e só se a lista mapeada em PT não estiver vazia; cliente **não** monta esses blocos (mesmo que o payload de `get_service` os traga).
 
 ---
 
@@ -135,6 +139,7 @@ flowchart TD
 | `counterparty` / `counterpartyName` | papel-dependente | Prestador: chip “Solicitante: …” no header; cliente vê profissional no card contratado (avatar + rating via RPC separada) |
 | `myProposal`, `chatSummary` | negotiation (lista prestador/cliente conforme SQL) | Cards em `my-services` (fora desta feature de UI de lista) |
 | Insights / atributos | urgency, estimatedDurationHint, scopeComplexity, missingInfoWarnings, … | Detalhe: `ServiceDetailAttributeCards` (Prioridade / Duração estimada / Escopo + alerta âmbar “Informações pendentes”); lista (`SimpleServiceCard`): `SimpleServiceInsightPanel` |
+| `suggestedEquipment` / `suggestedMaterials` | `suggested_equipment` / `suggested_materials` no pedido (projeção `project_service_row` / `get_service`) | Labels PT via `mapSuggestedEquipmentToPt` / `mapSuggestedMaterialsToPt`; UI **só prestador** (`ServiceDetailSection` + chips + `SuggestedItemsInfo`) |
 
 ---
 
@@ -323,6 +328,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | Iniciar / ver negociação | Prestador | sempre no detalhe (FAB) | `initiateConversation` ou navega chat existente |
 | **Próximo passo** (card) | Client/provider | Ranking acionável de `getClient/ProviderServiceNextStep` (mesmo intent primário da lista); senão não renderiza | `ServiceNextStepCard` no topo do conteúdo (após header); handlers via `useServiceDetailNextStep` — pagamento (`FAILED_PERMANENT`), avaliar, orçamentos, chat/mensagens, mark-executed, mapa, scroll à proposta. Prestador **sem chat**: copy “Inicie a negociação” + CTA habilitado (mesmo fluxo do FAB `initiateConversation`). CTAs legados coexistentes (deprecated) |
 | **Acompanhe seu pedido** (jornada) | Cliente | Sempre que a RPC devolve milestones (hook `enabled: isClient`) | `ServiceJourneyCard` **abaixo** do Próximo passo; skeleton enquanto carrega; **read-only** V1 (sem ação nos nós). Prestador: não monta |
+| **Equipamentos / Materiais que podem ser úteis** | Prestador | `isProvider` e lista PT não vazia | `ServiceDetailSection` com chips + popover `SuggestedItemsInfo` (copy: itens sugeridos com base no pedido; podem estar imprecisos). Cliente: não renderiza |
 | Abrir no mapa | Prestador | contracted + coords | Google Maps |
 | Ver perfil do profissional | Cliente | `contracted.provider.slug` presente | Navega para perfil público (`/perfil/:slug`) |
 | Editar/enviar proposta | Prestador | seção proposta + `canEdit…` | negotiation-proposals |
@@ -358,6 +364,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 14. **`ServiceContractedSection` (card Serviço contratado):** **Cliente** — card rico: avatar + nome do prestador, média + contagem de avaliações (ocultas se `rating_count = 0`), agenda, status (estilo neutro), valor (`service_amount` = `proposed_amount`, não o líquido do prestador), CTA perfil se houver slug, `PaymentDisputeStatus` no topo quando aplicável; **sem** selo verificado. **Prestador** — só agenda / status / valor (+ disputa de pagamento e aviso far-recapture quando couber); **sem** header de reputação, **sem** CTA de perfil, **sem** `ProviderSettlementStatus`. Ratings: fetch front `get_provider_rating_summaries`, não no payload de `get_service`.
 15. **Insights:** detalhe usa `ServiceDetailAttributeCards`; `SimpleServiceInsightPanel` permanece só em cards de lista (`SimpleServiceCard`).
 16. **Conversas (cliente, negociação):** lista embutida na sequência normal de cards (`space-y-4`), **sem** zona secundária com `border-t`; shell visual = `ServiceDetailSection` (título/descrição na página); lista vem de `chats` (`ServiceRequestConversationList` + `ServiceRequestConversationRow`). Proposta do prestador (`ServiceProviderProposalSection`) segue na mesma sequência, não agrupada com conversas.
+17. **Sugestões de equipamentos/materiais:** gate de UI no `ServiceDetailPage` é `isProvider` (não o papel no payload); cliente vê descrição/formulário/fotos, mas **não** as seções de sugestão.
 
 ---
 
@@ -401,6 +408,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | Ações (barra unificada) | Orçamentos, cancelar pedido, republicar, chat CS, pagamento manual, avaliar, cancel/reagendar | Marcar executado, cancel/reagendar (FAB chat separado) |
 | Cards na sequência (`space-y-4`) | Seção **Conversas** (`ServiceDetailSection` + lista `chats`) em negotiation sem contrato | Alert rejeição (topo) + seção de proposta (`ServiceProviderProposalSection`) |
 | Card Serviço contratado | Rico: avatar/nome, rating (se `rating_count` > 0), agenda, status neutro, valor, CTA perfil (se slug), `PaymentDisputeStatus`; far-recapture | Só agenda / status / valor (+ disputa pagamento / far-recapture); **sem** reputação, perfil ou settlement |
+| Equipamentos / materiais sugeridos | **Não** exibe | Sim, se `suggestedEquipment` / `suggestedMaterials` mapeados em PT tiverem itens (“Equipamentos/Materiais que podem ser úteis” + `SuggestedItemsInfo`) |
 | Local/mapa | Não nesta seção dedicada | Sim se contratado |
 | Pagamento manual | Sim (`ServiceDetailActionsBar`) | Não |
 | Settlement no card contratado | Não | Não (`ProviderSettlementStatus` **não** monta neste card) |
@@ -444,6 +452,7 @@ Helpers de state: `createClientMyServicesServiceDetailState`, `createProviderMyS
 - [ ] Disputa de serviço: abertura só no wizard Avaliar serviço em `EXECUTED` → `IN_DISPUTE`; aba Disputas lista o item; **nunca** inline no detalhe sem fluxo de avaliação; resolve só ops (sem UI admin)
 - [ ] Enrichment PENDING: pedido fora do feed até READY
 - [ ] Prestador: FAB inicia chat; local/mapa com contrato; card Serviço contratado **sem** header de reputação / CTA perfil / settlement
+- [ ] Prestador com `suggested_equipment` / `suggested_materials`: seções **Equipamentos / Materiais que podem ser úteis**; cliente no mesmo pedido: **não** vê essas seções
 - [ ] Cliente contracted: card rico com avatar, rating (oculto se count=0), valor, CTA perfil se slug; sem selo verificado
 - [ ] Prestador sem proposta/contrato: detalhe negado / empty
 - [ ] Aba Disputas: lista vazia
@@ -483,3 +492,5 @@ Reescrita para o padrão 20+ seções do orquestrador: sheet vs página, diferen
 **2026-08-11 (card Serviço contratado):** redesign de `ServiceContractedSection` — cliente: card rico (avatar, rating via `get_provider_rating_summaries`, agenda, status neutro, `service_amount`/`proposed_amount`, CTA “Ver perfil do profissional”, `PaymentDisputeStatus`); prestador: só agenda/status/valor; **sem** settlement neste card; **sem** selo verificado; enrichment SQL `20260804460000_project_service_row_enrichment_fields.sql`.
 
 **2026-08-11 (Conversas no detalhe):** lista de conversas do cliente em negociação passa a ficar em `ServiceDetailSection` (**Conversas** / “Negociações deste pedido com prestadores.”) na sequência normal de cards; removida a zona secundária (`border-t`) que agrupava conversas + proposta. `ServiceRequestConversationList` é content-only (shell na página); row de detalhe (`ServiceRequestConversationRow`: avatar, nome, preview, horário, ponto não lida — sem ícone/título do serviço nem badge de status); skeleton 2 rows; empty interno permanece. Componente continua na Public API de `chats`.
+
+**2026-08-11 (sugestões equipamentos/materiais):** no `ServiceDetailPage`, as seções **“Equipamentos que podem ser úteis”** e **“Materiais que podem ser úteis”** (`suggested_equipment` / `suggested_materials`) passam a ser exibidas **apenas para prestador** (`isProvider`); cliente não monta esses blocos.

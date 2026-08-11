@@ -32,8 +32,8 @@
 
 | Papel | Lista | Detalhe |
 |-------|-------|---------|
-| Cliente | Seus `service_requests` | Dono; ações de orçamento/cancel/republicar/pagamento/conclusão |
-| Prestador | SRs com proposta **ou** contrato próprio (não o pool de jobs) | Mesmo acesso; proposta, chat FAB, local, executar; card contratado só resumo (sem settlement) |
+| Cliente | Seus `service_requests` | Dono; ações de orçamento/cancel/republicar/pagamento/conclusão; **sem** seções de equipamentos/materiais sugeridos |
+| Prestador | SRs com proposta **ou** contrato próprio (não o pool de jobs) | Mesmo acesso; proposta, chat FAB, local, executar; card contratado só resumo (sem settlement); seções **Equipamentos / Materiais que podem ser úteis** quando houver itens |
 | Admin SQL | Escopo admin nas RPCs | Sem UI admin neste módulo |
 
 ## 5. Principais fluxos

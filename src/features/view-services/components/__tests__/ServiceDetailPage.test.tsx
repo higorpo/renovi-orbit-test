@@ -296,11 +296,31 @@ describe("ServiceDetailPage", () => {
     expect(screen.getByText("Negociações deste pedido com prestadores.")).toBeInTheDocument();
     expect(screen.getByTestId("conversation-list")).toBeInTheDocument();
     expect(screen.getByTestId("budget-sheet")).toBeInTheDocument();
+    expect(screen.queryByText("Equipamentos que podem ser úteis")).not.toBeInTheDocument();
+    expect(screen.queryByText("Materiais que podem ser úteis")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "open-budget" }));
     expect(budgetSheetMocks.openBudgetSheet).toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "close-budget" }));
     expect(budgetSheetMocks.setBudgetSheetOpen).toHaveBeenCalledWith(false);
+  });
+
+  it("shows suggested equipment and materials only for providers", () => {
+    authMocks.profile = { role: "provider" };
+    serviceMocks.data = buildModel({
+      listPhase: "negotiation",
+      statusTabId: "negotiation",
+      contracted: null,
+      suggestedEquipment: ["ladder"],
+      suggestedMaterials: ["other"],
+    });
+
+    render(<ServiceDetailPage />);
+
+    expect(screen.getByText("Equipamentos que podem ser úteis")).toBeInTheDocument();
+    expect(screen.getByText("Escada")).toBeInTheDocument();
+    expect(screen.getByText("Materiais que podem ser úteis")).toBeInTheDocument();
+    expect(screen.getByText("Outro")).toBeInTheDocument();
   });
 
   it("renders provider contracted content and floating chat", () => {
