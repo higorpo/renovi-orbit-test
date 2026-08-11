@@ -30,7 +30,6 @@ export function ServiceRequestContractedChatButton({
     <Button
       type="button"
       variant="outline"
-      size="sm"
       className={cn("gap-1.5", className)}
       disabled={!chatId}
       onClick={handleOpenChat}

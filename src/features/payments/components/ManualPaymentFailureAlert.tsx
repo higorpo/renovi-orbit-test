@@ -1,16 +1,19 @@
 import { AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
 import { isManualPaymentEligible } from "../types/paymentSchedule.types";
 import { formatManualPaymentFailureMessage } from "../utils/manualPaymentErrors";
 
 export type ManualPaymentFailureAlertProps = {
   scheduleState: string | null | undefined;
   failureCode?: string | null;
+  className?: string;
 };
 
 export function ManualPaymentFailureAlert({
   scheduleState,
   failureCode = null,
+  className,
 }: ManualPaymentFailureAlertProps) {
   if (!scheduleState || !isManualPaymentEligible(scheduleState)) {
     return null;
@@ -19,7 +22,10 @@ export function ManualPaymentFailureAlert({
   const failureMessage = formatManualPaymentFailureMessage(null, failureCode);
 
   return (
-    <Alert variant="destructive" className="border-destructive/30 bg-destructive/5">
+    <Alert
+      variant="destructive"
+      className={cn("border-destructive/30 bg-destructive/5", className)}
+    >
       <AlertTriangle className="h-4 w-4" />
       <AlertTitle className="text-sm font-semibold">Pagamento falhou</AlertTitle>
       <AlertDescription className="mt-1.5 space-y-1.5 text-sm leading-relaxed">

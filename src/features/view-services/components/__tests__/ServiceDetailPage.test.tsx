@@ -115,57 +115,31 @@ vi.mock("../ServiceDetailSkeleton", () => ({
 }));
 
 vi.mock("../ServiceDetailHeader", () => ({
-  ServiceDetailHeader: ({ model }: { model: ServiceModel }) => (
-    <h1>{model.title}</h1>
-  ),
-}));
-
-vi.mock("../ServiceDetailClientActions", () => ({
-  ServiceDetailClientActions: (props: {
-    onOpenBudgetSheet: () => void;
-    onCancelService: () => void;
-    onRepublishService: () => void;
-    onCancelDialogOpenChange: (open: boolean) => void;
-    showClientBudgetAction: boolean;
+  ServiceDetailHeader: ({
+    model,
+    onOpenBudgetSheet,
+    onMutated,
+  }: {
+    model: ServiceModel;
+    onOpenBudgetSheet?: (model: ServiceModel) => void;
+    onMutated?: () => void;
   }) => (
-    <div
-      data-testid="client-actions"
-      data-show-budget-action={String(props.showClientBudgetAction)}
-    >
-      <button type="button" onClick={props.onOpenBudgetSheet}>
-        open-budget
-      </button>
-      <button type="button" onClick={props.onCancelService}>
-        cancel-service
-      </button>
-      <button type="button" onClick={props.onRepublishService}>
-        republish-service
-      </button>
-      <button type="button" onClick={() => props.onCancelDialogOpenChange(true)}>
-        open-cancel-dialog
-      </button>
+    <div>
+      <h1>{model.title}</h1>
+      <div data-testid="service-detail-actions-bar">
+        <button type="button" onClick={() => onOpenBudgetSheet?.(model)}>
+          open-budget
+        </button>
+        <button type="button" onClick={() => onMutated?.()}>
+          mutate-ok
+        </button>
+      </div>
     </div>
   ),
 }));
 
 vi.mock("../ServiceContractedSection", () => ({
-  ServiceContractedSection: (props: {
-    onCancellationSuccess?: () => void;
-    onRescheduleSuccess?: () => void;
-    cancellationViewerRole?: string;
-  }) => (
-    <div
-      data-testid="contracted-section"
-      data-cancellation-viewer-role={props.cancellationViewerRole}
-    >
-      <button type="button" onClick={() => props.onCancellationSuccess?.()}>
-        cancel-ok
-      </button>
-      <button type="button" onClick={() => props.onRescheduleSuccess?.()}>
-        reschedule-ok
-      </button>
-    </div>
-  ),
+  ServiceContractedSection: () => <div data-testid="contracted-section" />,
 }));
 
 vi.mock("@/features/service-completion", () => ({
@@ -316,14 +290,12 @@ describe("ServiceDetailPage", () => {
     serviceMocks.data = buildModel();
     render(<ServiceDetailPage />);
     expect(screen.getByText("Pedido de teste")).toBeInTheDocument();
-    expect(screen.getByTestId("client-actions")).toBeInTheDocument();
+    expect(screen.getByTestId("service-detail-actions-bar")).toBeInTheDocument();
     expect(screen.getByTestId("conversation-list")).toBeInTheDocument();
     expect(screen.getByTestId("budget-sheet")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "open-budget" }));
     expect(budgetSheetMocks.openBudgetSheet).toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "cancel-service" }));
-    expect(cancelMocks.cancelService).toHaveBeenCalledWith("sr-1");
     fireEvent.click(screen.getByRole("button", { name: "close-budget" }));
     expect(budgetSheetMocks.setBudgetSheetOpen).toHaveBeenCalledWith(false);
   });
@@ -355,25 +327,21 @@ describe("ServiceDetailPage", () => {
     expect(screen.getByTestId("proposal-section")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Abrir chat/i }));
     expect(chatNavMocks.openChat).toHaveBeenCalled();
-    expect(screen.getByTestId("contracted-section")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "cancel-ok" }));
-    fireEvent.click(screen.getByRole("button", { name: "reschedule-ok" }));
-    expect(serviceMocks.refetch).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole("button", { name: "mutate-ok" }));
+    expect(serviceMocks.refetch).toHaveBeenCalled();
   });
 
-  it("shows republish path for cancelled client services", () => {
+  it("shows actions bar for cancelled client services", () => {
     serviceMocks.data = buildModel({
       listPhase: "cancelled",
       statusTabId: "cancelled",
       proposalCount: 0,
     });
     render(<ServiceDetailPage serviceRequestId="sr-1" />);
-    expect(screen.getByTestId("client-actions")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "republish-service" }));
-    expect(republishMocks.republishCancelledService).toHaveBeenCalledWith("sr-1");
+    expect(screen.getByTestId("service-detail-actions-bar")).toBeInTheDocument();
   });
 
-  it("hides client actions when there is nothing to show", () => {
+  it("still renders header actions bar for completed services without contracted", () => {
     serviceMocks.data = buildModel({
       listPhase: "completed",
       statusTabId: "completed",
@@ -381,7 +349,8 @@ describe("ServiceDetailPage", () => {
       contracted: null,
     });
     render(<ServiceDetailPage />);
-    expect(screen.queryByTestId("client-actions")).not.toBeInTheDocument();
+    // Header always mounts; actions bar may be empty (null) when no CTAs.
+    expect(screen.getByText("Pedido de teste")).toBeInTheDocument();
   });
 
   it("shows next-step card for actionable client budgets intent", () => {
@@ -531,14 +500,12 @@ describe("ServiceDetailPage branch coverage", () => {
     expect(screen.queryByTestId("budget-sheet")).not.toBeInTheDocument();
   });
 
-  it("passes a disabled budget action without showing its button", () => {
+  it("opens budget sheet from header actions", () => {
     serviceMocks.data = buildModel({ proposalCount: 0 });
     render(<ServiceDetailPage />);
 
-    expect(screen.getByTestId("client-actions")).toHaveAttribute(
-      "data-show-budget-action",
-      "false",
-    );
+    fireEvent.click(screen.getByRole("button", { name: "open-budget" }));
+    expect(budgetSheetMocks.openBudgetSheet).toHaveBeenCalled();
   });
 
   it("hides provider location when there is no contracted service", () => {
@@ -549,14 +516,12 @@ describe("ServiceDetailPage branch coverage", () => {
     expect(screen.queryByTestId("location-section")).not.toBeInTheDocument();
   });
 
-  it("passes undefined cancellation viewer role for an unknown profile role", () => {
+  it("renders contracted section for unknown profile role without crashing", () => {
     (authMocks as { profile: { role: string } }).profile = { role: "admin" };
     serviceMocks.data = buildModel({ contracted });
     render(<ServiceDetailPage />);
 
-    expect(screen.getByTestId("contracted-section")).not.toHaveAttribute(
-      "data-cancellation-viewer-role",
-    );
+    expect(screen.getByTestId("contracted-section")).toBeInTheDocument();
   });
 
   it("ignores an open=true budget sheet change", () => {
@@ -574,7 +539,7 @@ describe("ServiceDetailPage branch coverage", () => {
     expect(serviceMocks.requestedId).toBe("prop-id");
   });
 
-  it("hosts completion CTAs in contracted section for contracted client", () => {
+  it("hosts header actions for contracted client", () => {
     authMocks.profile = { role: "client" };
     serviceMocks.data = buildModel({
       listPhase: "in_progress",
@@ -585,11 +550,11 @@ describe("ServiceDetailPage branch coverage", () => {
     render(<ServiceDetailPage />);
 
     expect(screen.getByTestId("contracted-section")).toBeInTheDocument();
-    expect(screen.getByTestId("client-actions")).toBeInTheDocument();
+    expect(screen.getByTestId("service-detail-actions-bar")).toBeInTheDocument();
     expect(screen.queryByTestId("rejection-alert")).not.toBeInTheDocument();
   });
 
-  it("hosts completion CTAs in contracted section for contracted provider", () => {
+  it("hosts header and contracted section for contracted provider", () => {
     authMocks.profile = { role: "provider" };
     serviceMocks.data = buildModel({
       listPhase: "in_progress",
@@ -599,6 +564,7 @@ describe("ServiceDetailPage branch coverage", () => {
     render(<ServiceDetailPage />);
 
     expect(screen.getByTestId("contracted-section")).toBeInTheDocument();
+    expect(screen.getByTestId("service-detail-actions-bar")).toBeInTheDocument();
   });
 
   it("renders provider proposal section without contracted service", () => {
@@ -620,7 +586,7 @@ describe("ServiceDetailPage branch coverage", () => {
     serviceMocks.data = buildModel({ contracted });
     render(<ServiceDetailPage />);
 
-    expect(screen.queryByTestId("client-actions")).not.toBeInTheDocument();
+    expect(screen.getByTestId("service-detail-actions-bar")).toBeInTheDocument();
     expect(screen.queryByTestId("rejection-alert")).not.toBeInTheDocument();
     expect(screen.getByTestId("contracted-section")).toBeInTheDocument();
   });

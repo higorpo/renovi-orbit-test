@@ -4,32 +4,9 @@ import { render, screen } from "@testing-library/react";
 import { ServiceContractedSection } from "../ServiceContractedSection";
 import type { ContractedServiceSummary } from "../../types/service.types";
 
-const authMocks = vi.hoisted(() => ({
-  profile: { role: "client" as "client" | "provider" },
-}));
-
-vi.mock("@/features/auth", () => ({
-  useAuth: () => authMocks,
-}));
-
 vi.mock("@/features/payments", () => ({
   PaymentDisputeStatus: () => <div data-testid="dispute" />,
   ProviderSettlementStatus: () => <div data-testid="settlement" />,
-  ManualPaymentRecovery: () => <div data-testid="manual-payment" />,
-  ContractedServiceCancelAction: () => <div data-testid="cancel-action" />,
-}));
-
-vi.mock("@/features/service-reschedule", () => ({
-  ContractedServiceRescheduleAction: () => <div data-testid="reschedule-action" />,
-}));
-
-vi.mock("@/features/service-completion", () => ({
-  ProviderMarkExecutedAction: () => (
-    <div data-testid="provider-mark-executed-action" />
-  ),
-  ClientEvaluateServiceAction: () => (
-    <div data-testid="client-evaluate-service-action" />
-  ),
 }));
 
 const contracted: ContractedServiceSummary = {
@@ -47,45 +24,18 @@ const contracted: ContractedServiceSummary = {
 };
 
 describe("ServiceContractedSection", () => {
-  it("renders client evaluate CTA beside cancel/reschedule", () => {
-    authMocks.profile = { role: "client" };
-    render(
-      <ServiceContractedSection
-        contracted={contracted}
-        serviceRequestId="sr-1"
-        showManualPayment
-        showServiceCancellation
-        cancellationViewerRole="client"
-      />,
-    );
+  it("renders contracted summary without action CTAs", () => {
+    render(<ServiceContractedSection contracted={contracted} />);
 
     expect(screen.getByText("Serviço contratado")).toBeInTheDocument();
     expect(screen.getByText(/João/)).toBeInTheDocument();
     expect(screen.getByText(/Agendado para/)).toBeInTheDocument();
-    expect(screen.getByTestId("manual-payment")).toBeInTheDocument();
-    expect(screen.getByTestId("client-evaluate-service-action")).toBeInTheDocument();
-    expect(screen.queryByTestId("provider-mark-executed-action")).not.toBeInTheDocument();
-    expect(screen.getByTestId("cancel-action")).toBeInTheDocument();
-    expect(screen.getByTestId("reschedule-action")).toBeInTheDocument();
-  });
-
-  it("renders provider mark-executed CTA for providers", () => {
-    authMocks.profile = { role: "provider" };
-    render(
-      <ServiceContractedSection
-        contracted={contracted}
-        serviceRequestId="sr-1"
-        showServiceCancellation
-        cancellationViewerRole="provider"
-      />,
-    );
-
-    expect(screen.getByTestId("provider-mark-executed-action")).toBeInTheDocument();
+    expect(screen.queryByTestId("manual-payment")).not.toBeInTheDocument();
     expect(screen.queryByTestId("client-evaluate-service-action")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("cancel-action")).not.toBeInTheDocument();
   });
 
   it("shows provider settlement when requested", () => {
-    authMocks.profile = { role: "provider" };
     render(
       <ServiceContractedSection
         contracted={{ ...contracted, provider: null, scheduledStartDate: "" }}
@@ -98,7 +48,6 @@ describe("ServiceContractedSection", () => {
   });
 
   it("shows far-recapture pending notice when flag is set", () => {
-    authMocks.profile = { role: "client" };
     render(
       <ServiceContractedSection
         contracted={{ ...contracted, farRecapturePending: true }}

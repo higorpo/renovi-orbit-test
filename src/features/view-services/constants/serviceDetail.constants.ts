@@ -59,6 +59,12 @@ export const SERVICE_DETAIL_PAGE_MAX_WIDTH_CLASS = "max-w-5xl";
 export const SERVICE_DETAIL_PAGE_SHELL_CLASS =
   "mx-auto w-full min-w-0 max-w-5xl px-4 py-6";
 
+/**
+ * Shared CTA sizing for detail header action bar.
+ * Overrides design-system `rounded-pill` to match the detail mock (~8px).
+ */
+export const SERVICE_DETAIL_ACTION_BUTTON_CLASS =
+  "h-10 w-full shrink-0 gap-2 !rounded-lg px-4 text-sm font-semibold transition-transform duration-fast ease-renovi active:scale-[0.97] sm:w-auto";
 /** Desktop service-detail sheet width (mobile stays full-bleed). */
 export const SERVICE_DETAIL_SHEET_WIDTH_CLASS = "w-full sm:w-[70vw] sm:max-w-[70vw]";
 

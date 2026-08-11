@@ -10,6 +10,7 @@
 import { useState } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { ProviderMarkExecutedSheet } from "./ProviderMarkExecutedSheet";
 
 export type ProviderMarkExecutedActionProps = {
@@ -21,6 +22,7 @@ export type ProviderMarkExecutedActionProps = {
   scheduledStartDate?: string | null;
   scheduledEndDate?: string | null;
   onExecuted?: () => void;
+  className?: string;
 };
 
 export function ProviderMarkExecutedAction({
@@ -30,6 +32,7 @@ export function ProviderMarkExecutedAction({
   scheduledStartDate = null,
   scheduledEndDate = null,
   onExecuted,
+  className,
 }: ProviderMarkExecutedActionProps) {
   const [open, setOpen] = useState(false);
 
@@ -48,8 +51,10 @@ export function ProviderMarkExecutedAction({
         <Button
           type="button"
           variant="outline"
-          size="sm"
-          className="w-full rounded-pill text-primary transition-transform duration-fast ease-renovi hover:bg-primary/5 hover:text-primary active:scale-[0.97] sm:w-auto"
+          className={cn(
+            "w-full rounded-pill text-primary transition-transform duration-fast ease-renovi hover:bg-primary/5 hover:text-primary active:scale-[0.97] sm:w-auto",
+            className,
+          )}
           data-testid="provider-mark-executed-action"
           onClick={() => setOpen(true)}
         >

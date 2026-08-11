@@ -12,6 +12,7 @@
 import { useState } from "react";
 import { Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useServiceCompletionContext } from "../hooks/useServiceCompletionContext";
 import { ClientEvaluateServiceSheet } from "./ClientEvaluateServiceSheet";
 
@@ -20,6 +21,7 @@ export type ClientEvaluateServiceActionProps = {
   /** From get_service — avoids completion-context fetch when not yet eligible. */
   contractedStatus?: string | null;
   onCompleted?: () => void;
+  className?: string;
 };
 
 function shouldFetchEvaluateContext(status: string | null | undefined): boolean {
@@ -32,6 +34,7 @@ export function ClientEvaluateServiceAction({
   serviceRequestId,
   contractedStatus = null,
   onCompleted,
+  className,
 }: ClientEvaluateServiceActionProps) {
   const [open, setOpen] = useState(false);
 
@@ -63,8 +66,10 @@ export function ClientEvaluateServiceAction({
         <Button
           type="button"
           variant="outline"
-          size="sm"
-          className="w-full rounded-pill text-primary transition-transform duration-fast ease-renovi hover:bg-primary/5 hover:text-primary active:scale-[0.97] sm:w-auto"
+          className={cn(
+            "w-full rounded-pill text-primary transition-transform duration-fast ease-renovi hover:bg-primary/5 hover:text-primary active:scale-[0.97] sm:w-auto",
+            className,
+          )}
           data-testid="client-evaluate-service-action"
           onClick={() => setOpen(true)}
         >

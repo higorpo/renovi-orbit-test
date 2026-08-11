@@ -1,5 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { ServiceDetailAttributeCardsSkeleton } from "./ServiceDetailAttributeCards";
+import { ServiceDetailActionsBarSkeleton } from "./ServiceDetailActionsBar";
 
 export interface ServiceDetailSkeletonProps {
   className?: string;
@@ -37,24 +39,15 @@ export function ServiceDetailSkeleton({ className }: ServiceDetailSkeletonProps)
                 </div>
                 <Skeleton className="h-5 w-16 shrink-0 rounded-full" />
               </div>
-              <div className="flex flex-wrap gap-3">
-                <Skeleton className="h-3 w-32" />
-                <Skeleton className="h-3 w-28" />
+              <div className="space-y-1.5">
+                <Skeleton className="h-3 w-48" />
+                <Skeleton className="h-3 w-40" />
               </div>
             </div>
           </div>
 
-          <div className="space-y-3 rounded-lg border border-border/60 bg-muted/20 p-3">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-16 w-full" />
-          </div>
-        </div>
-
-        <div className="border-t border-border/80 px-4 py-3 sm:px-6">
-          <div className="flex flex-wrap gap-2">
-            <Skeleton className="h-9 w-28 rounded-md" />
-            <Skeleton className="h-9 w-32 rounded-md" />
-          </div>
+          <ServiceDetailAttributeCardsSkeleton />
+          <ServiceDetailActionsBarSkeleton />
         </div>
       </article>
 

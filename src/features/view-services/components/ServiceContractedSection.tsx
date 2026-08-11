@@ -1,17 +1,8 @@
 import { Calendar, CircleCheck, User } from "lucide-react";
 import {
-  ContractedServiceCancelAction,
-  ManualPaymentRecovery,
   PaymentDisputeStatus,
   ProviderSettlementStatus,
-  type CancellationViewerRole,
 } from "@/features/payments";
-import { ContractedServiceRescheduleAction } from "@/features/service-reschedule";
-import {
-  ClientEvaluateServiceAction,
-  ProviderMarkExecutedAction,
-} from "@/features/service-completion";
-import { useAuth } from "@/features/auth";
 import type { ContractedServiceSummary } from "../types/service.types";
 import { getContractedServiceStatusLabel } from "../utils/contractedServiceStatusLabel";
 import { formatScheduledSummaryLabel } from "../utils/formatScheduledSummary";
@@ -19,36 +10,17 @@ import { ServiceDetailSection } from "./ServiceDetailSection";
 
 interface ServiceContractedSectionProps {
   contracted: ContractedServiceSummary;
-  serviceRequestId?: string;
-  /** From get_service; gates provider mark-executed without fetching completion context. */
-  enrichmentReady?: boolean;
-  showManualPayment?: boolean;
   showProviderSettlement?: boolean;
-  showServiceCancellation?: boolean;
-  cancellationViewerRole?: CancellationViewerRole;
-  onCancellationSuccess?: () => void;
-  onRescheduleSuccess?: () => void;
-  onCompletionSuccess?: () => void;
 }
 
+/** Read-only contracted summary. Action CTAs live in ServiceDetailActionsBar. */
 export function ServiceContractedSection({
   contracted,
-  serviceRequestId,
-  enrichmentReady = false,
-  showManualPayment = false,
   showProviderSettlement = false,
-  showServiceCancellation = false,
-  cancellationViewerRole,
-  onCancellationSuccess,
-  onRescheduleSuccess,
-  onCompletionSuccess,
 }: ServiceContractedSectionProps) {
-  const { profile } = useAuth();
   const providerName = contracted.provider?.displayName;
   const statusLabel = getContractedServiceStatusLabel(contracted.status);
   const scheduledLabel = formatScheduledSummaryLabel(contracted);
-  const isProvider = profile?.role === "provider";
-  const isClient = profile?.role === "client";
 
   return (
     <ServiceDetailSection
@@ -93,56 +65,6 @@ export function ServiceContractedSection({
           />
         </div>
       ) : null}
-      <div
-        className="flex flex-col gap-2 pt-2.5 sm:flex-row sm:flex-wrap empty:hidden"
-        data-testid="contracted-service-actions"
-      >
-        {isProvider && serviceRequestId ? (
-          // Deprecated: prefer ServiceNextStepCard as primary CTA; remove when next-step covers this surface.
-          <ProviderMarkExecutedAction
-            serviceRequestId={serviceRequestId}
-            contractedStatus={contracted.status}
-            enrichmentReady={enrichmentReady}
-            scheduledStartDate={contracted.scheduledStartDate}
-            scheduledEndDate={contracted.scheduledEndDate}
-            onExecuted={onCompletionSuccess}
-          />
-        ) : null}
-        {isClient && serviceRequestId ? (
-          // Deprecated: prefer ServiceNextStepCard as primary CTA; remove when next-step covers this surface.
-          <ClientEvaluateServiceAction
-            serviceRequestId={serviceRequestId}
-            contractedStatus={contracted.status}
-            onCompleted={onCompletionSuccess}
-          />
-        ) : null}
-        {showManualPayment && serviceRequestId ? (
-          // Deprecated: prefer ServiceNextStepCard as primary CTA; remove when next-step covers this surface.
-          <ManualPaymentRecovery
-            contractedServiceId={contracted.id}
-            serviceRequestId={serviceRequestId}
-          />
-        ) : null}
-        {showServiceCancellation && cancellationViewerRole ? (
-          <ContractedServiceCancelAction
-            contractedServiceId={contracted.id}
-            serviceStatus={contracted.status}
-            scheduledStartDate={contracted.scheduledStartDate ?? ""}
-            scheduledShift={contracted.scheduledShift ?? "morning"}
-            viewerRole={cancellationViewerRole}
-            onSuccess={onCancellationSuccess}
-          />
-        ) : null}
-        {profile?.role === "client" || profile?.role === "provider" ? (
-          <ContractedServiceRescheduleAction
-            contractedServiceId={contracted.id}
-            chatId={contracted.chatId}
-            viewerRole={profile.role}
-            reschedule={contracted.reschedule}
-            onSuccess={onRescheduleSuccess}
-          />
-        ) : null}
-      </div>
     </ServiceDetailSection>
   );
 }

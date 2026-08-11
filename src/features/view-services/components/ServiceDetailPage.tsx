@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { FileQuestion } from "lucide-react";
 import { useParams } from "react-router";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -6,17 +6,11 @@ import { ErrorState } from "@/components/ui/error-state";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/auth";
 import { ReceivedBudgetDetailsSheet } from "@/features/negotiation-proposals";
-import { useCancelService } from "../hooks/useCancelService";
-import { useRepublishCancelledService } from "../hooks/useRepublishCancelledService";
 import { useService } from "../hooks/useService";
 import {
   mapSuggestedEquipmentToPt,
   mapSuggestedMaterialsToPt,
 } from "../utils/suggestedItemsMapper";
-import {
-  getServiceRequestBudgetActionIcon,
-  getServiceRequestBudgetActionState,
-} from "../utils/serviceRequestBudgetAction";
 import { useServiceRequestBudgetSheet } from "../hooks/useServiceRequestBudgetSheet";
 import { useProviderServiceRequestChat } from "../hooks/useProviderServiceRequestChat";
 import { useServiceDetailChatNavigation } from "../hooks/useServiceDetailChatNavigation";
@@ -29,7 +23,6 @@ import { ServiceNextStepCard } from "./ServiceNextStepCard";
 import { ClientServiceJourneySection } from "./ClientServiceJourneySection";
 import { ServiceSupportHelpCard } from "./ServiceSupportHelpCard";
 import { ServiceProviderLocationSection } from "./ServiceProviderLocationSection";
-import { ServiceDetailClientActions } from "./ServiceDetailClientActions";
 import { ServiceDetailFloatingActions } from "./ServiceDetailFloatingActions";
 import { ServiceDetailHeader } from "./ServiceDetailHeader";
 import { ServiceDetailRequestSections } from "./ServiceDetailRequestSections";
@@ -52,9 +45,6 @@ export function ServiceDetailPage({
   const { profile } = useAuth();
   useRecordProviderOpportunityView(id);
   const { data: model, isLoading, isError, refetch } = useService(id);
-  const { cancelService, isCancelling } = useCancelService();
-  const { republishCancelledService, isRepublishing } = useRepublishCancelledService();
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const {
     budgetSheetOpen,
     setBudgetSheetOpen,
@@ -131,18 +121,6 @@ export function ServiceDetailPage({
 
   const showClientNegotiationChats =
     isClient && model.listPhase === "negotiation" && !model.contracted;
-  const contractedChatId = model.contracted?.chatId ?? null;
-  const budgetAction = isClient ? getServiceRequestBudgetActionState(model) : null;
-  const BudgetActionIcon = budgetAction
-    ? getServiceRequestBudgetActionIcon(model.listPhase)
-    : null;
-  const showClientBudgetAction = Boolean(budgetAction && !budgetAction.disabled);
-  const showRepublishAction = isClient && model.listPhase === "cancelled";
-  const showClientActions =
-    showClientBudgetAction ||
-    showClientNegotiationChats ||
-    showRepublishAction ||
-    (isClient && model.contracted);
   const showSecondarySections = showClientNegotiationChats || isProvider;
 
   return (
@@ -152,29 +130,13 @@ export function ServiceDetailPage({
       ) : null}
 
       <article className="overflow-hidden rounded-lg border border-border bg-card shadow-elevation-1">
-        <ServiceDetailHeader model={model} isClient={isClient} isProvider={isProvider} />
-
-        {showClientActions ? (
-          <div className="border-t border-border/80 px-4 py-3 sm:px-6">
-            <ServiceDetailClientActions
-              model={model}
-              budgetAction={budgetAction}
-              BudgetActionIcon={BudgetActionIcon}
-              showClientBudgetAction={showClientBudgetAction}
-              showClientNegotiationChats={showClientNegotiationChats}
-              showContractedChat={Boolean(isClient && model.contracted)}
-              showRepublishAction={showRepublishAction}
-              contractedChatId={contractedChatId}
-              cancelDialogOpen={cancelDialogOpen}
-              onCancelDialogOpenChange={setCancelDialogOpen}
-              onOpenBudgetSheet={() => openBudgetSheet(model)}
-              onCancelService={() => cancelService(model.id)}
-              onRepublishService={() => republishCancelledService(model.id)}
-              isCancelling={isCancelling}
-              isRepublishing={isRepublishing}
-            />
-          </div>
-        ) : null}
+        <ServiceDetailHeader
+          model={model}
+          isClient={isClient}
+          isProvider={isProvider}
+          onOpenBudgetSheet={openBudgetSheet}
+          onMutated={() => void refetch()}
+        />
       </article>
 
       <div className="space-y-4">
@@ -194,17 +156,7 @@ export function ServiceDetailPage({
         {model.contracted ? (
           <ServiceContractedSection
             contracted={model.contracted}
-            serviceRequestId={model.id}
-            enrichmentReady={model.enrichmentReady}
-            showManualPayment={Boolean(isClient)}
             showProviderSettlement={isProvider}
-            showServiceCancellation={Boolean(isClient || isProvider)}
-            cancellationViewerRole={
-              isClient ? "client" : isProvider ? "provider" : undefined
-            }
-            onCancellationSuccess={() => void refetch()}
-            onRescheduleSuccess={() => void refetch()}
-            onCompletionSuccess={() => void refetch()}
           />
         ) : null}
         {isProvider && model.contracted ? (

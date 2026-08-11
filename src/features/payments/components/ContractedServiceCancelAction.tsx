@@ -12,6 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 import {
   canCancelContractedService,
   getCancellationDisclosure,
@@ -28,6 +29,7 @@ export type ContractedServiceCancelActionProps = {
   scheduledShift: string;
   viewerRole: CancellationViewerRole;
   onSuccess?: () => void;
+  className?: string;
 };
 
 export function ContractedServiceCancelAction({
@@ -37,6 +39,7 @@ export function ContractedServiceCancelAction({
   scheduledShift,
   viewerRole,
   onSuccess,
+  className,
 }: ContractedServiceCancelActionProps) {
   const [open, setOpen] = useState(false);
   const scheduleQuery = usePaymentScheduleLifecycle(contractedServiceId);
@@ -98,8 +101,10 @@ export function ContractedServiceCancelAction({
       <Button
         type="button"
         variant="outline"
-        size="sm"
-        className="w-full rounded-pill text-destructive transition-transform duration-fast ease-renovi hover:bg-destructive/5 hover:text-destructive active:scale-[0.97] sm:w-auto"
+        className={cn(
+          "w-full rounded-pill text-destructive transition-transform duration-fast ease-renovi hover:bg-destructive/5 hover:text-destructive active:scale-[0.97] sm:w-auto",
+          className,
+        )}
         onClick={() => setOpen(true)}
         disabled={processRefund.isPending}
       >

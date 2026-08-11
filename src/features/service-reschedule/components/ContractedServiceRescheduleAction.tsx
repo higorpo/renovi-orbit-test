@@ -3,6 +3,7 @@ import { CalendarClock } from "lucide-react";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import type { ProfileRole } from "@/features/auth";
+import { cn } from "@/lib/utils";
 import type { ServiceRescheduleSnapshot } from "../types/serviceReschedule.types";
 import { RequestRescheduleDialog } from "./RequestRescheduleDialog";
 
@@ -12,6 +13,7 @@ export interface ContractedServiceRescheduleActionProps {
   viewerRole: ProfileRole;
   reschedule: ServiceRescheduleSnapshot | null | undefined;
   onSuccess?: () => void;
+  className?: string;
 }
 
 export function ContractedServiceRescheduleAction({
@@ -20,6 +22,7 @@ export function ContractedServiceRescheduleAction({
   viewerRole,
   reschedule,
   onSuccess,
+  className,
 }: ContractedServiceRescheduleActionProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -47,11 +50,10 @@ export function ContractedServiceRescheduleAction({
         <Button
           type="button"
           variant="outline"
-          size="sm"
-          className="w-full rounded-pill sm:w-auto"
+          className={cn("w-full rounded-pill sm:w-auto", className)}
           onClick={() => setOpen(true)}
         >
-          <CalendarClock className="mr-2 h-4 w-4" aria-hidden />
+          <CalendarClock className="h-4 w-4" aria-hidden />
           Solicitar reagendamento
         </Button>
       ) : null}
@@ -60,8 +62,7 @@ export function ContractedServiceRescheduleAction({
         <Button
           type="button"
           variant="outline"
-          size="sm"
-          className="w-full rounded-pill sm:w-auto"
+          className={cn("w-full rounded-pill sm:w-auto", className)}
           onClick={handleNavigateToChat}
         >
           Ver pedido de reagendamento no chat

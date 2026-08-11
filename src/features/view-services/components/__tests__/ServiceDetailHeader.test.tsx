@@ -11,8 +11,12 @@ vi.mock("@/features/request-quote", () => ({
   }),
 }));
 
-vi.mock("../SimpleServiceInsightPanel", () => ({
-  SimpleServiceInsightPanel: () => <div data-testid="insight-panel" />,
+vi.mock("../ServiceDetailAttributeCards", () => ({
+  ServiceDetailAttributeCards: () => <div data-testid="attribute-cards" />,
+}));
+
+vi.mock("../ServiceDetailActionsBar", () => ({
+  ServiceDetailActionsBar: () => <div data-testid="service-detail-actions-bar" />,
 }));
 
 function buildModel(overrides: Partial<ServiceModel> = {}): ServiceModel {
@@ -61,6 +65,8 @@ function buildModel(overrides: Partial<ServiceModel> = {}): ServiceModel {
     lastActivityAt: null,
     myProposal: null,
     chatSummary: null,
+    enrichmentStatus: null,
+    enrichmentReady: false,
     ...overrides,
   };
 }
@@ -75,9 +81,11 @@ describe("ServiceDetailHeader", () => {
     expect(screen.getByText("Encanador")).toBeInTheDocument();
     expect(screen.getByText(/Centro, Florianópolis/)).toBeInTheDocument();
     expect(screen.getByText(/1 orçamento recebido/)).toBeInTheDocument();
+    expect(screen.getByTestId("attribute-cards")).toBeInTheDocument();
+    expect(screen.getByTestId("service-detail-actions-bar")).toBeInTheDocument();
   });
 
-  it("shows requester name for providers and plural proposal count for clients", () => {
+  it("shows requester chip for providers", () => {
     render(
       <ServiceDetailHeader
         model={buildModel({ proposalCount: 3, counterpartyName: "Ana" })}
