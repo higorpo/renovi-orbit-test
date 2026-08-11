@@ -4,8 +4,8 @@ import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useChatConversations } from "../../hooks/useChatConversations";
-import { ChatListItem } from "../ChatListItem/ChatListItem";
-import { ChatListItemSkeleton } from "../ChatListItem/ChatListItemSkeleton";
+import { ServiceRequestConversationRow } from "./ServiceRequestConversationRow";
+import { ServiceRequestConversationRowSkeleton } from "./ServiceRequestConversationRowSkeleton";
 
 export interface ServiceRequestConversationListProps {
   serviceRequestId: string;
@@ -36,29 +36,22 @@ export function ServiceRequestConversationList({
   );
 
   return (
-    <section
+    <div
       className={cn("space-y-3", className)}
       aria-label="Conversas do pedido com prestadores"
     >
-      <div>
-        <h3 className="text-sm font-semibold text-foreground">Conversas com prestadores</h3>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          Acompanhe negociações ativas, inativas ou encerradas neste pedido.
-        </p>
-      </div>
-
       {isLoading ? (
-        <ul className="space-y-2" aria-busy="true" aria-label="Carregando conversas">
-          {Array.from({ length: 3 }, (_, index) => (
+        <ul className="divide-y divide-border/80" aria-busy="true" aria-label="Carregando conversas">
+          {Array.from({ length: 2 }, (_, index) => (
             <li key={index}>
-              <ChatListItemSkeleton />
+              <ServiceRequestConversationRowSkeleton />
             </li>
           ))}
         </ul>
       ) : null}
 
       {!isLoading && isError ? (
-        <div className="flex flex-col items-start gap-3 rounded-lg border border-dashed px-4 py-5">
+        <div className="flex flex-col items-start gap-3 py-2">
           <p className="text-sm text-muted-foreground">
             {error instanceof Error ? error.message : "Não foi possível carregar as conversas."}
           </p>
@@ -69,12 +62,12 @@ export function ServiceRequestConversationList({
       ) : null}
 
       {!isLoading && !isError && conversations.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-8 text-center">
+        <div className="flex flex-col items-center gap-2 px-2 py-6 text-center">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
             <MessageSquare className="h-5 w-5 text-muted-foreground" aria-hidden />
           </div>
-          <p className="text-sm font-medium text-foreground">Nenhuma conversa ainda</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm font-medium text-ink">Nenhuma conversa ainda</p>
+          <p className="text-caption text-muted-foreground">
             Quando prestadores iniciarem uma negociação neste pedido, as conversas aparecerão
             aqui.
           </p>
@@ -82,10 +75,10 @@ export function ServiceRequestConversationList({
       ) : null}
 
       {!isLoading && !isError && conversations.length > 0 ? (
-        <ul className="space-y-2">
+        <ul className="divide-y divide-border/80">
           {conversations.map((conversation) => (
             <li key={conversation.id}>
-              <ChatListItem item={conversation} onSelect={handleSelect} />
+              <ServiceRequestConversationRow item={conversation} onSelect={handleSelect} />
             </li>
           ))}
         </ul>
@@ -96,13 +89,13 @@ export function ServiceRequestConversationList({
           type="button"
           variant="outline"
           size="sm"
-          className="w-full min-h-10"
+          className="h-11 w-full rounded-lg font-semibold"
           disabled={isFetchingNextPage}
           onClick={() => void fetchNextPage()}
         >
           {isFetchingNextPage ? "Carregando…" : "Carregar mais conversas"}
         </Button>
       ) : null}
-    </section>
+    </div>
   );
 }

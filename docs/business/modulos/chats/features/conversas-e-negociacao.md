@@ -23,6 +23,7 @@ Dar a cliente e prestador um **único fio** por pedido e par, com regras que for
 | Menu | Item “Conversas” → `/dashboard/chats` (`dashboardMenu.ts`) |
 | Mobile chrome | Lista: tab-root; conversa: `mode: "custom"` (header da feature, sem bottom nav) |
 | Entry points externos | Detalhe do serviço / botão chat contratado; deep links de notificação para `/dashboard/chats/{id}` |
+| Lista embutida (detalhe do pedido) | Cliente em negociação sem contrato: `ServiceRequestConversationList` dentro de `ServiceDetailSection` (**Conversas**) em `view-services` — content-only (sem título próprio); row `ServiceRequestConversationRow` (avatar foto/`profile_image_path` ou iniciais `bg-primary`, nome, preview, horário, ponto não lida; **sem** ícone/título do serviço nem badge de status); skeleton 2 rows; empty interno se vazio; Public API de `chats` |
 
 ## 4. Perfis envolvidos
 
@@ -243,6 +244,7 @@ flowchart TD
 | Rotas | `src/router.tsx`, `constants/routes.ts` |
 | Layout | `ChatsLayout.tsx`, `ChatsConversationRoute.tsx` |
 | Lista | `ChatListPage.tsx`, `useChatConversations.ts` |
+| Lista embutida (detalhe) | `ServiceRequestConversationList.tsx`, `ServiceRequestConversationRow.tsx` (+ skeleton); export Public API `chats` |
 | Thread | `ChatScreen.tsx`, `ChatTimeline.tsx`, `DynamicMessageRenderer.tsx` |
 | Composer | `composerState.ts`, `useChatComposerState.ts` |
 | API | `chats.api.ts`, `chats.rpc.ts`, `chatMedia.api.ts`, `realtime.api.ts` |
@@ -281,6 +283,7 @@ flowchart TD
 | # | Cenário | Esperado |
 |---|---------|----------|
 | Q1 | Abrir lista autenticado | Inbox ou empty |
+| Q1b | Detalhe serviço cliente negotiation sem contrato | Seção **Conversas** com rows de detalhe (avatar/nome/preview/horário/unread) ou empty interno; sem título duplicado na lista |
 | Q2 | Filtro `serviceRequestId` | Banner + subset |
 | Q3 | PENDING no chat | Composer bloqueado; CTAs na proposta |
 | Q4 | Enviar texto com PENDING | Erro free messaging |

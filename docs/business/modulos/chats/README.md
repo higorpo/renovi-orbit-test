@@ -20,6 +20,7 @@ Documentação de negócio baseada em `src/features/chats/`, `src/features/negot
 |---------|---------|
 | Rotas | `/dashboard/chats`, `/dashboard/chats/:chatId` — `ProtectedRoute` `client` + `provider` |
 | Lista / thread | Feature `chats`: `ChatListPage`, `ChatScreen`, RPCs `list_conversations`, `list_chat_messages`, `cns_send_message`, etc. |
+| Embutida no detalhe do serviço | `ServiceRequestConversationList` (+ `ServiceRequestConversationRow`) — content-only; shell/título na `ServiceDetailSection` de `view-services` (cliente, negociação sem contrato) |
 | Propostas | Feature `negotiation-proposals`: composer, aceite/recusa/revisão, sheet comparar orçamentos |
 | Aceite | Dialog slot → checkout (`payments`) → RPC `accept_proposal` (payload de pagamento obrigatório) |
 | Mídia | Edge `chat-upload-media` + sessão `cns_create_media_upload_session` / bucket `chat-media` |
@@ -108,7 +109,7 @@ flowchart TD
 | [negotiation-proposals](./features/propostas-negociacao.md) | Composer, dialogs, sheet, mutations |
 | [payments](../payments/README.md) | Checkout no aceite; dono de `acceptProposalWithPayment` em `checkout.api.ts` |
 | [message-dispatcher](../message-dispatcher/README.md) | Entrega push/e-mail de eventos CNS |
-| [my-services](../my-services/README.md) / [view-services](../view-services/README.md) | Entry points do sheet e composer no detalhe |
+| [my-services](../my-services/README.md) / [view-services](../view-services/README.md) | Entry points do sheet e composer no detalhe; detalhe hospeda lista embutida `ServiceRequestConversationList` |
 | [service-reschedule](../service-reschedule/README.md) | Pós-contrato: cards/`WORKFLOW_ACTION` no chat |
 | [matching-dispatch](../matching-dispatch/README.md) | Aceite → `DISPATCH_MATCHED`, revoga visibility, cancela MMD pending |
 | Edge `chat-upload-media` | Upload imagem/áudio |
@@ -129,7 +130,7 @@ flowchart TD
 
 | Área | Paths |
 |------|-------|
-| UI conversas | `src/features/chats/components/`, `hooks/`, `api/chats.api.ts`, `api/chats.rpc.ts` |
+| UI conversas | `src/features/chats/components/` (incl. `ServiceRequestConversationList/`), `hooks/`, `api/chats.api.ts`, `api/chats.rpc.ts` |
 | UI propostas | `src/features/negotiation-proposals/` |
 | Router / menu | `src/router.tsx`, `dashboardMenu.ts`, `mobileNavigation.config.ts` |
 | Edge mídia | `supabase/functions/chat-upload-media/` |

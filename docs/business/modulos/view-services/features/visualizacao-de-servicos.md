@@ -49,7 +49,7 @@ Documentação baseada em `src/features/view-services/`, rota `/dashboard/servic
 
 | Papel | Lista (`list_services`) | Detalhe (`get_service`) | UI no detalhe |
 |-------|-------------------------|-------------------------|---------------|
-| **Cliente** | Só `sr.client_id = viewer` | Dono do SR (ou admin) | Contagem de orçamentos no header; CTAs unificados em `ServiceDetailActionsBar` (orçamento/cancelar/republicar; chat contratado; pagamento manual; **“Avaliar serviço”**; cancel/reagendar contratado) |
+| **Cliente** | Só `sr.client_id = viewer` | Dono do SR (ou admin) | Contagem de orçamentos no header; CTAs unificados em `ServiceDetailActionsBar` (orçamento/cancelar/republicar; chat contratado; pagamento manual; **“Avaliar serviço”**; cancel/reagendar contratado); em negotiation sem contrato, seção **Conversas** (`ServiceDetailSection` + lista `chats`) |
 | **Prestador** | SR com **proposta própria** ou **contrato** onde `provider_id = viewer` (não inclui pool `match_provider_jobs`) | Mesmo critério de acesso (`service_viewer_has_access`) | Nome do solicitante **mascarado** (chip “Solicitante: …” no header); alerta de rejeição; seção de proposta; FAB chat; local do serviço se contratado; CTAs em `ServiceDetailActionsBar` (**“Marcar serviço como concluído”** em `CONFIRMED`; cancel/reagendar); card **Serviço contratado** só com agenda/status/valor (sem header de reputação nem settlement) |
 | **Admin plataforma** | Incluído no escopo SQL | Acesso via `is_platform_admin()` | Sem UI admin dedicada evidenciada neste módulo |
 | Visitante | N/A — RPCs exigem `auth.uid()` | N/A | Redirect login (dashboard) |
@@ -313,7 +313,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | Cancelar pedido | Cliente | negotiation + sem contracted | RPC `cancel_service_request`; toast |
 | Republicar novo pedido | Cliente | `listPhase === cancelled` | RPC republish; navega para novo id |
 | Chat contratado | Cliente | `model.contracted` | `ServiceRequestContractedChatButton` |
-| Lista conversas negociação | Cliente | negotiation sem contracted | `ServiceRequestConversationList` |
+| Lista conversas negociação | Cliente | negotiation sem contracted | `ServiceDetailSection` título **Conversas** / descrição “Negociações deste pedido com prestadores.” → conteúdo `ServiceRequestConversationList` (feature `chats`, Public API; content-only) |
 | Ajustar pagamento | Cliente | `showManualPayment` + elegibilidade schedule (`FAILED` / `FAILED_PERMANENT` etc. em payments) | `ManualPaymentRecovery` |
 | Marcar executado | Prestador | contracted `CONFIRMED` + `enrichmentReady` (`get_service`); contexto ao abrir sheet | CTA “Marcar serviço como concluído” → sheet/dialog → RPC `service_completion_mark_executed` → fase `success` na mesma sheet (`ProviderExecutedSuccessStep` → `CompletionSuccessStep`, `chrome="immersive"`; CTA **“Entendi”**) |
 | Confirmar + avaliar | Cliente | contracted `EXECUTED`/`COMPLETED` + `canConfirmWithRating` (ou rating opcional) | CTA “Avaliar serviço” → sheet 2 etapas (review exige checkbox de declaração) → `service_completion_confirm_with_rating` (scores obrigatórios no caminho manual) → fase `success` na mesma sheet (`ClientEvaluateSuccessStep` → `CompletionSuccessStep`, `chrome="immersive"`; CTA **“Entendi”**) |
@@ -357,6 +357,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 13. **Header / ações:** `ServiceDetailHeader` monta metadata + `ServiceDetailAttributeCards` + `ServiceDetailActionsBar` (não mais `ServiceDetailClientActions`); cancel/republish vivem na ActionsBar; abertura do sheet de orçamentos fica na página via callback.
 14. **`ServiceContractedSection` (card Serviço contratado):** **Cliente** — card rico: avatar + nome do prestador, média + contagem de avaliações (ocultas se `rating_count = 0`), agenda, status (estilo neutro), valor (`service_amount` = `proposed_amount`, não o líquido do prestador), CTA perfil se houver slug, `PaymentDisputeStatus` no topo quando aplicável; **sem** selo verificado. **Prestador** — só agenda / status / valor (+ disputa de pagamento e aviso far-recapture quando couber); **sem** header de reputação, **sem** CTA de perfil, **sem** `ProviderSettlementStatus`. Ratings: fetch front `get_provider_rating_summaries`, não no payload de `get_service`.
 15. **Insights:** detalhe usa `ServiceDetailAttributeCards`; `SimpleServiceInsightPanel` permanece só em cards de lista (`SimpleServiceCard`).
+16. **Conversas (cliente, negociação):** lista embutida na sequência normal de cards (`space-y-4`), **sem** zona secundária com `border-t`; shell visual = `ServiceDetailSection` (título/descrição na página); lista vem de `chats` (`ServiceRequestConversationList` + `ServiceRequestConversationRow`). Proposta do prestador (`ServiceProviderProposalSection`) segue na mesma sequência, não agrupada com conversas.
 
 ---
 
@@ -398,7 +399,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | Counterparty | Prestador do contrato (se houver) | Cliente mascarado |
 | Header | Contagem de orçamentos na 2ª linha de metadata; CTAs na `ServiceDetailActionsBar` | Chip “Solicitante: …” + CTAs contratados na mesma barra |
 | Ações (barra unificada) | Orçamentos, cancelar pedido, republicar, chat CS, pagamento manual, avaliar, cancel/reagendar | Marcar executado, cancel/reagendar (FAB chat separado) |
-| Seção secundária | Conversas do pedido (negociação) | Proposta + alert rejeição |
+| Cards na sequência (`space-y-4`) | Seção **Conversas** (`ServiceDetailSection` + lista `chats`) em negotiation sem contrato | Alert rejeição (topo) + seção de proposta (`ServiceProviderProposalSection`) |
 | Card Serviço contratado | Rico: avatar/nome, rating (se `rating_count` > 0), agenda, status neutro, valor, CTA perfil (se slug), `PaymentDisputeStatus`; far-recapture | Só agenda / status / valor (+ disputa pagamento / far-recapture); **sem** reputação, perfil ou settlement |
 | Local/mapa | Não nesta seção dedicada | Sim se contratado |
 | Pagamento manual | Sim (`ServiceDetailActionsBar`) | Não |
@@ -436,6 +437,7 @@ Helpers de state: `createClientMyServicesServiceDetailState`, `createProviderMyS
 - [ ] Cliente: lista → sheet detalhe → fechar volta lista
 - [ ] Deep link `/dashboard/services/{id}` sem state → stack “Detalhes do serviço”
 - [ ] Cliente negotiation: cancelar pedido (dialog) e comparar orçamentos
+- [ ] Cliente negotiation sem contrato: seção **Conversas** (título/descrição na `ServiceDetailSection`); rows com avatar/nome/preview/horário/ponto não lida (sem ícone do serviço nem badge de status); empty interno se vazio
 - [ ] Cliente cancelled: republicar → novo id
 - [ ] Cliente contracted PENDING_PAYMENT elegível: “Ajustar pagamento”
 - [ ] Prestador CONFIRMED: CTA “Marcar serviço como concluído” abre sheet/dialog com checklist (não inline); cliente EXECUTED: CTA “Avaliar serviço” com 2 etapas (review com checkbox de declaração; Continuar disabled até marcar); thumbnails de evidência + lightbox
@@ -479,3 +481,5 @@ Reescrita para o padrão 20+ seções do orquestrador: sheet vs página, diferen
 **2026-08-11 (header / ações unificadas):** `ServiceDetailHeader` reorganiza metadata (local; “Solicitado {relative}” + orçamentos no cliente; chip solicitante no prestador); `ServiceDetailAttributeCards` no detalhe (Prioridade / Duração estimada / Escopo + alerta “Informações pendentes”) no lugar do uso de `SimpleServiceInsightPanel` no detalhe; `ServiceDetailActionsBar` concentra CTAs de negociação e contratados (incl. conclusão, pagamento, chat CS, cancel/reagendar); removido `ServiceDetailClientActions`; skeleton cobre attribute cards + actions bar.
 
 **2026-08-11 (card Serviço contratado):** redesign de `ServiceContractedSection` — cliente: card rico (avatar, rating via `get_provider_rating_summaries`, agenda, status neutro, `service_amount`/`proposed_amount`, CTA “Ver perfil do profissional”, `PaymentDisputeStatus`); prestador: só agenda/status/valor; **sem** settlement neste card; **sem** selo verificado; enrichment SQL `20260804460000_project_service_row_enrichment_fields.sql`.
+
+**2026-08-11 (Conversas no detalhe):** lista de conversas do cliente em negociação passa a ficar em `ServiceDetailSection` (**Conversas** / “Negociações deste pedido com prestadores.”) na sequência normal de cards; removida a zona secundária (`border-t`) que agrupava conversas + proposta. `ServiceRequestConversationList` é content-only (shell na página); row de detalhe (`ServiceRequestConversationRow`: avatar, nome, preview, horário, ponto não lida — sem ícone/título do serviço nem badge de status); skeleton 2 rows; empty interno permanece. Componente continua na Public API de `chats`.

@@ -292,6 +292,8 @@ describe("ServiceDetailPage", () => {
     render(<ServiceDetailPage />);
     expect(screen.getByText("Pedido de teste")).toBeInTheDocument();
     expect(screen.getByTestId("service-detail-actions-bar")).toBeInTheDocument();
+    expect(screen.getByText("Conversas")).toBeInTheDocument();
+    expect(screen.getByText("Negociações deste pedido com prestadores.")).toBeInTheDocument();
     expect(screen.getByTestId("conversation-list")).toBeInTheDocument();
     expect(screen.getByTestId("budget-sheet")).toBeInTheDocument();
 

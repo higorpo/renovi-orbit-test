@@ -10,11 +10,8 @@ vi.mock("react-router", () => ({
   useNavigate: () => navigateMock,
 }));
 
-vi.mock("@/features/request-quote", () => ({
-  getServiceCardStyle: () => ({
-    Icon: () => <span data-testid="service-icon" />,
-    color: "from-slate-500 to-slate-600",
-  }),
+vi.mock("@/features/provider-profile", () => ({
+  usePublicProfileImageUrl: () => ({ url: null, isLoading: false }),
 }));
 
 const useChatConversationsMock = vi.fn();
@@ -84,9 +81,10 @@ describe("ServiceRequestConversationList", () => {
 
     expect(useChatConversationsMock).toHaveBeenCalledWith({ serviceRequestId: "sr-1" });
     expect(screen.getByText("Nenhuma conversa ainda")).toBeTruthy();
+    expect(screen.queryByText("Conversas com prestadores")).toBeNull();
   });
 
-  it("renders chat rows and navigates to the selected conversation", () => {
+  it("renders provider rows and navigates to the selected conversation", () => {
     useChatConversationsMock.mockReturnValue({
       conversations: [conversation],
       isLoading: false,
@@ -102,8 +100,26 @@ describe("ServiceRequestConversationList", () => {
 
     expect(screen.getByText("João Eletricista")).toBeTruthy();
     expect(screen.getByText("Olá, posso visitar amanhã?")).toBeTruthy();
+    expect(screen.queryByText("Instalação elétrica")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /Conversa com João Eletricista/i }));
     expect(navigateMock).toHaveBeenCalledWith("/dashboard/chats/chat-1");
+  });
+
+  it("shows two row skeletons while loading", () => {
+    useChatConversationsMock.mockReturnValue({
+      conversations: [],
+      isLoading: true,
+      isError: false,
+      error: null,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      fetchNextPage: vi.fn(),
+      refetch: vi.fn(),
+    });
+
+    render(<ServiceRequestConversationList serviceRequestId="sr-1" />);
+
+    expect(screen.getByLabelText("Carregando conversas").querySelectorAll("li")).toHaveLength(2);
   });
 });

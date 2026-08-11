@@ -130,7 +130,6 @@ export function ServiceDetailPage({
 
   const showClientNegotiationChats =
     isClient && model.listPhase === "negotiation" && !model.contracted;
-  const showSecondarySections = showClientNegotiationChats || isProvider;
 
   return (
     <div className={pageClassName}>
@@ -230,14 +229,15 @@ export function ServiceDetailPage({
             </div>
           </ServiceDetailSection>
         ) : null}
-        {showSecondarySections ? (
-          <div className="space-y-4 border-t border-border/80 pt-4">
-            {showClientNegotiationChats ? (
-              <ServiceRequestConversationList serviceRequestId={model.id} />
-            ) : null}
-            {isProvider ? <ServiceProviderProposalSection serviceRequestId={model.id} /> : null}
-          </div>
+        {showClientNegotiationChats ? (
+          <ServiceDetailSection
+            title="Conversas"
+            description="Negociações deste pedido com prestadores."
+          >
+            <ServiceRequestConversationList serviceRequestId={model.id} />
+          </ServiceDetailSection>
         ) : null}
+        {isProvider ? <ServiceProviderProposalSection serviceRequestId={model.id} /> : null}
 
         <ServiceSupportHelpCard />
       </div>
