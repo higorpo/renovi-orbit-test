@@ -70,5 +70,6 @@ export const SERVICE_DETAIL_WIDE_LAYOUT_MIN_WIDTH_PX = 720;
  */
 export const SERVICE_DETAIL_ACTION_BUTTON_CLASS =
   "h-10 w-full shrink-0 gap-2 !rounded-lg px-4 text-sm font-semibold transition-transform duration-fast ease-renovi active:scale-[0.97] sm:w-auto";
-/** Desktop service-detail sheet width (mobile stays full-bleed). */
-export const SERVICE_DETAIL_SHEET_WIDTH_CLASS = "w-full sm:w-[70vw] sm:max-w-[70vw]";
+/** Desktop service-detail sheet: hug page max-w-5xl + sheet body sm:p-6. */
+export const SERVICE_DETAIL_SHEET_WIDTH_CLASS =
+  "w-full sm:max-w-[calc(64rem+3rem)]";
