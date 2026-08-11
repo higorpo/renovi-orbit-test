@@ -108,7 +108,7 @@ function ClientProviderHeader({ contracted }: { contracted: ContractedServiceSum
     <div className="flex min-w-0 items-center gap-3" data-testid="contracted-provider-header">
       <Avatar className="h-12 w-12 shrink-0">
         {url ? <AvatarImage src={url} alt="" /> : null}
-        <AvatarFallback className="bg-muted text-sm font-semibold text-foreground">
+        <AvatarFallback className="bg-primary text-sm font-semibold text-primary-foreground">
           {initialsFromName(provider.displayName)}
         </AvatarFallback>
       </Avatar>
