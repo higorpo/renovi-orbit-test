@@ -49,6 +49,7 @@ describe("ClientServiceJourneySection", () => {
     render(<ClientServiceJourneySection serviceRequestId="sr-1" ratingOptional />);
 
     expect(screen.getByTestId("service-journey-card")).toBeInTheDocument();
+    expect(screen.getByText("Acompanhe seu pedido")).toBeInTheDocument();
     expect(screen.getByText("Pedido criado")).toBeInTheDocument();
     expect(useClientServiceJourneyMock).toHaveBeenCalledWith({
       serviceRequestId: "sr-1",

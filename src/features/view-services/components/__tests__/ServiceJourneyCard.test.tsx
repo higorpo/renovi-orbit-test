@@ -26,11 +26,11 @@ const milestones: PresentedServiceJourneyMilestone[] = [
 ];
 
 describe("ServiceJourneyCard", () => {
-  it("renders title and milestone labels", () => {
+  it("renders milestone labels without section title", () => {
     render(<ServiceJourneyCard milestones={milestones} />);
 
     expect(screen.getByTestId("service-journey-card")).toBeInTheDocument();
-    expect(screen.getByText("Acompanhe seu pedido")).toBeInTheDocument();
+    expect(screen.queryByText("Acompanhe seu pedido")).not.toBeInTheDocument();
     expect(screen.getByText("Pedido criado")).toBeInTheDocument();
     expect(screen.getByText("Pagamento pendente")).toBeInTheDocument();
     expect(screen.getByText("Aguardando pagamento")).toBeInTheDocument();

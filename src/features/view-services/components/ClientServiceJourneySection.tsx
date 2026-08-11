@@ -1,4 +1,6 @@
+import { SERVICE_JOURNEY_CARD_TITLE } from "../constants/serviceJourney.constants";
 import { useClientServiceJourney } from "../hooks/useClientServiceJourney";
+import { ServiceDetailSection } from "./ServiceDetailSection";
 import { ServiceJourneyCard } from "./ServiceJourneyCard";
 import { ServiceJourneyCardSkeleton } from "./ServiceJourneyCardSkeleton";
 
@@ -25,12 +27,20 @@ export function ClientServiceJourneySection({
   });
 
   if (isLoading) {
-    return <ServiceJourneyCardSkeleton className={className} />;
+    return (
+      <ServiceDetailSection title={SERVICE_JOURNEY_CARD_TITLE} className={className}>
+        <ServiceJourneyCardSkeleton />
+      </ServiceDetailSection>
+    );
   }
 
   if (milestones.length === 0) {
     return null;
   }
 
-  return <ServiceJourneyCard milestones={milestones} className={className} />;
+  return (
+    <ServiceDetailSection title={SERVICE_JOURNEY_CARD_TITLE} className={className}>
+      <ServiceJourneyCard milestones={milestones} />
+    </ServiceDetailSection>
+  );
 }

@@ -12,29 +12,23 @@ export function ServiceJourneyCardSkeleton({
   rows = 6,
 }: ServiceJourneyCardSkeletonProps) {
   return (
-    <section
-      className={cn(
-        "rounded-xl border border-border/80 bg-card px-5 py-5 shadow-elevation-1 sm:px-6 sm:py-6",
-        className,
-      )}
+    <ul
+      className={cn("space-y-5", className)}
       aria-busy="true"
       aria-label={`Carregando ${SERVICE_JOURNEY_CARD_TITLE}`}
       data-testid="service-journey-card-skeleton"
     >
-      <Skeleton className="h-5 w-48" />
-      <ul className="mt-5 space-y-5 sm:mt-6">
-        {Array.from({ length: rows }, (_, index) => (
-          <li key={index} className="grid grid-cols-[2rem_minmax(0,1fr)] gap-x-4">
-            <div className="flex h-11 items-center justify-center">
-              <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
-            </div>
-            <div className="flex h-11 min-w-0 flex-col justify-center gap-1.5">
-              <Skeleton className="h-4 w-44 max-w-full" />
-              <Skeleton className="h-3.5 w-28 max-w-[65%]" />
-            </div>
-          </li>
-        ))}
-      </ul>
-    </section>
+      {Array.from({ length: rows }, (_, index) => (
+        <li key={index} className="grid grid-cols-[2rem_minmax(0,1fr)] gap-x-4">
+          <div className="flex h-11 items-center justify-center">
+            <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+          </div>
+          <div className="flex h-11 min-w-0 flex-col justify-center gap-1.5">
+            <Skeleton className="h-4 w-44 max-w-full" />
+            <Skeleton className="h-3.5 w-28 max-w-[65%]" />
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
