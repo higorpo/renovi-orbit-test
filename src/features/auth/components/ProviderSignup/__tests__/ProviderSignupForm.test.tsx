@@ -138,7 +138,7 @@ describe("ProviderSignupForm", () => {
   it("renders completed progress checks at step 2", () => {
     const { container } = renderForm(<Harness initialStep={2} />);
     expect(container.firstElementChild?.querySelectorAll("svg")).toHaveLength(2);
-    expect(container.querySelectorAll(".bg-white.text-\\[\\#0F2F3A\\]")).toHaveLength(1);
+    expect(container.querySelectorAll(".bg-white.text-\\[\\#F97316\\]")).toHaveLength(1);
   });
 
   it("step 1 toggles password show and hide and renders strength branches", () => {

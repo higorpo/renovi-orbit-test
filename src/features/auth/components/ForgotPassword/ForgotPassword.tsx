@@ -12,7 +12,7 @@ export default function ForgotPassword() {
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url(/hero-client.jpg)" }}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0F2F3A]/95 via-[#0F2F3A]/90 to-black/80" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1E3A8A]/95 via-[#1E3A8A]/90 to-black/80" />
       </div>
 
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8">
@@ -56,7 +56,7 @@ export default function ForgotPassword() {
                     Lembrou sua senha?{" "}
                     <Link
                       to="/login"
-                      className="text-[#C57A3A] hover:underline font-semibold"
+                      className="text-[#F97316] hover:underline font-semibold"
                     >
                       Faça login
                     </Link>

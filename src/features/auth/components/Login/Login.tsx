@@ -20,7 +20,7 @@ export default function Login() {
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url(/hero-client.jpg)" }}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0F2F3A]/95 via-[#0F2F3A]/90 to-black/80" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1E3A8A]/95 via-[#1E3A8A]/90 to-black/80" />
       </div>
 
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8">
@@ -63,14 +63,14 @@ export default function Login() {
               <div className="grid grid-cols-2 gap-3">
                 <Link
                   to="/cadastro/cliente"
-                  className="py-3 px-4 rounded-xl border-2 border-white/30 bg-white/5 hover:border-[#C57A3A]/50 hover:bg-white/10 transition-all text-center flex flex-col items-center justify-center"
+                  className="py-3 px-4 rounded-xl border-2 border-white/30 bg-white/5 hover:border-[#2563EB]/50 hover:bg-white/10 transition-all text-center flex flex-col items-center justify-center"
                 >
                   <p className="font-semibold text-sm text-white">Sou Cliente</p>
                   <p className="text-xs text-white/60">Quero contratar</p>
                 </Link>
                 <Link
                   to="/cadastro/profissional"
-                  className="py-3 px-4 rounded-xl border-2 border-white/30 bg-white/5 hover:border-[#C57A3A]/50 hover:bg-white/10 transition-all text-center"
+                  className="py-3 px-4 rounded-xl border-2 border-white/30 bg-white/5 hover:border-[#F97316]/50 hover:bg-white/10 transition-all text-center"
                 >
                   <p className="font-semibold text-sm text-white">
                     Sou Profissional
@@ -83,13 +83,13 @@ export default function Login() {
             <div className="mt-8 pt-6 border-t border-white/20">
               <div className="flex items-center justify-center gap-6 text-xs text-white/50 mb-4">
                 <span className="flex items-center gap-1">
-                  <span className="text-[#C57A3A]">✓</span> Seguro
+                  <span className="text-[#F97316]">✓</span> Seguro
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="text-[#C57A3A]">✓</span> Verificado
+                  <span className="text-[#F97316]">✓</span> Verificado
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="text-[#C57A3A]">✓</span> Confiável
+                  <span className="text-[#F97316]">✓</span> Confiável
                 </span>
               </div>
               <div className="flex items-center justify-center gap-3 text-xs text-white/50 flex-wrap">
@@ -97,7 +97,7 @@ export default function Login() {
                   href={`${(import.meta.env.VITE_MAIN_SITE_URL ?? "").replace(/\/$/, "")}/juridico/termos-de-uso`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-[#C57A3A] transition-colors"
+                  className="hover:text-[#F97316] transition-colors"
                 >
                   Termos de Uso
                 </a>
@@ -106,7 +106,7 @@ export default function Login() {
                   href={`${(import.meta.env.VITE_MAIN_SITE_URL ?? "").replace(/\/$/, "")}/juridico/politica-de-privacidade`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-[#C57A3A] transition-colors"
+                  className="hover:text-[#F97316] transition-colors"
                 >
                   Privacidade
                 </a>

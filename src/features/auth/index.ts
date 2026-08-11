@@ -9,6 +9,11 @@
 // Provider & hook — wrap the app; consume auth state anywhere
 export { AuthProvider } from "./AuthProvider";
 export { useAuth } from "./hooks/useAuth";
+export {
+  resolveAudienceTheme,
+  syncAudienceTheme,
+} from "./utils/audienceTheme";
+export type { AudienceTheme } from "./utils/audienceTheme";
 
 // Route guards — used in router.tsx to protect/restrict routes
 export { ProtectedRoute, GuestOnlyRoute } from "./components/routeGuards";

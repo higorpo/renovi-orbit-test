@@ -12,7 +12,7 @@ export default function ResetPassword() {
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url(/hero-client.jpg)" }}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0F2F3A]/95 via-[#0F2F3A]/90 to-black/80" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1E3A8A]/95 via-[#1E3A8A]/90 to-black/80" />
       </div>
 
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8">
@@ -30,9 +30,9 @@ export default function ResetPassword() {
           {form.recoveryMode ? (
             <>
               <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 bg-[#C57A3A]/20 border border-[#C57A3A]/30 rounded-full px-4 py-1 mb-4">
-                  <KeyRound className="h-4 w-4 text-[#C57A3A]" />
-                  <span className="text-sm font-medium text-[#C57A3A]">
+                <div className="inline-flex items-center gap-2 bg-[#F97316]/20 border border-[#F97316]/30 rounded-full px-4 py-1 mb-4">
+                  <KeyRound className="h-4 w-4 text-[#F97316]" />
+                  <span className="text-sm font-medium text-[#F97316]">
                     Redefinir senha
                   </span>
                 </div>
@@ -63,7 +63,7 @@ export default function ResetPassword() {
                     Lembrou a senha?{" "}
                     <Link
                       to="/login"
-                      className="text-[#C57A3A] hover:underline font-semibold"
+                      className="text-[#F97316] hover:underline font-semibold"
                     >
                       Fazer login
                     </Link>
@@ -85,14 +85,14 @@ export default function ResetPassword() {
               </div>
               <Link
                 to="/esqueceu-senha"
-                className="inline-block w-full py-3 rounded-xl border-2 border-white/30 bg-white/5 hover:border-[#C57A3A]/50 hover:bg-white/10 transition-all text-center font-semibold text-white"
+                className="inline-block w-full py-3 rounded-xl border-2 border-white/30 bg-white/5 hover:border-[#F97316]/50 hover:bg-white/10 transition-all text-center font-semibold text-white"
               >
                 Solicitar novo link
               </Link>
               <div className="mt-6">
                 <Link
                   to="/login"
-                  className="text-sm text-[#C57A3A] hover:underline font-semibold"
+                  className="text-sm text-[#F97316] hover:underline font-semibold"
                 >
                   Voltar para o login
                 </Link>

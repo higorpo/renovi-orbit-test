@@ -45,6 +45,24 @@ export default {
           hover: "hsl(var(--primary-hover))",
           soft: "hsl(var(--primary-soft))",
         },
+        audience: {
+          DEFAULT: "hsl(var(--audience))",
+          foreground: "hsl(var(--audience-foreground))",
+          hover: "hsl(var(--audience-hover))",
+          soft: "hsl(var(--audience-soft))",
+        },
+        "brand-blue": {
+          DEFAULT: "hsl(var(--brand-blue))",
+          foreground: "hsl(var(--brand-blue-foreground))",
+          hover: "hsl(var(--brand-blue-hover))",
+          soft: "hsl(var(--brand-blue-soft))",
+        },
+        "brand-orange": {
+          DEFAULT: "hsl(var(--brand-orange))",
+          foreground: "hsl(var(--brand-orange-foreground))",
+          hover: "hsl(var(--brand-orange-hover))",
+          soft: "hsl(var(--brand-orange-soft))",
+        },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",
@@ -124,6 +142,8 @@ export default {
         slow: "var(--motion-slow)",
       },
       transitionTimingFunction: {
+        prestway: "var(--motion-easing)",
+        /* Legacy alias — prefer ease-prestway in new code */
         renovi: "var(--motion-easing)",
       },
       backgroundImage: {
@@ -157,8 +177,8 @@ export default {
           "100%": { opacity: "1", transform: "translate(-50%,-40%) scale(1)" },
         },
         "pulse-glow": {
-          "0%, 100%": { opacity: "1", boxShadow: "0 0 0 0 rgba(197, 122, 58, 0.4)" },
-          "50%": { opacity: "0.8", boxShadow: "0 0 20px 10px rgba(197, 122, 58, 0.2)" },
+          "0%, 100%": { opacity: "1", boxShadow: "0 0 0 0 rgba(249, 115, 22, 0.4)" },
+          "50%": { opacity: "0.8", boxShadow: "0 0 20px 10px rgba(249, 115, 22, 0.2)" },
         },
         "fade-in": {
           "0%": { opacity: "0" },

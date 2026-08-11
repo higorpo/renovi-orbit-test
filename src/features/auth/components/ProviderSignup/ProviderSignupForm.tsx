@@ -29,7 +29,7 @@ import type { ProviderSignupFormData } from "../../types/providerSignup.validati
 import { STEPS } from "../../hooks/useProviderSignupForm";
 
 const INPUT_CLASS =
-  "bg-white/10 border-white/30 text-white placeholder:text-white/50 h-12 focus:border-[#C57A3A]";
+  "bg-white/10 border-white/30 text-white placeholder:text-white/50 h-12 focus:border-[#F97316]";
 const INPUT_ERROR_CLASS = "border-red-400";
 const ERROR_MESSAGE_CLASS = "text-sm text-red-400";
 
@@ -100,8 +100,8 @@ export function ProviderSignupForm({
         className="space-y-6"
       >
         <div className="flex flex-col items-center text-center">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#C57A3A]/20">
-            <CheckCircle2 className="h-8 w-8 text-[#C57A3A]" aria-hidden />
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#F97316]/20">
+            <CheckCircle2 className="h-8 w-8 text-[#F97316]" aria-hidden />
           </div>
           <h2 className="text-xl font-semibold text-white">
             Cadastro realizado com sucesso!
@@ -122,7 +122,7 @@ export function ProviderSignupForm({
               const Icon = step.icon;
               return (
                 <li key={idx} className="flex gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#C57A3A]/20 text-[#C57A3A]">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#F97316]/20 text-[#F97316]">
                     <Icon className="h-4 w-4" aria-hidden />
                   </span>
                   <div>
@@ -165,8 +165,8 @@ export function ProviderSignupForm({
             <div
               className={cn(
                 "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all",
-                idx < currentStep && "bg-[#C57A3A] text-white",
-                idx === currentStep && "bg-white text-[#0F2F3A]",
+                idx < currentStep && "bg-[#F97316] text-white",
+                idx === currentStep && "bg-white text-[#F97316]",
                 idx > currentStep && "bg-white/20 text-white/50"
               )}
             >
@@ -180,7 +180,7 @@ export function ProviderSignupForm({
               <div
                 className={cn(
                   "w-8 md:w-12 h-1 mx-1 rounded",
-                  idx < currentStep ? "bg-[#C57A3A]" : "bg-white/20"
+                  idx < currentStep ? "bg-[#F97316]" : "bg-white/20"
                 )}
               />
             )}
@@ -239,7 +239,7 @@ export function ProviderSignupForm({
             <Button
               type="button"
               onClick={onNext}
-              className="w-full h-12 bg-[#C57A3A] hover:bg-[#C57A3A]/90 text-white font-semibold !mt-8"
+              className="w-full h-12 bg-[#F97316] hover:bg-[#C2410C] text-white font-semibold !mt-8"
             >
               Continuar
               <ArrowRight className="ml-2 h-5 w-5" />
@@ -397,7 +397,7 @@ export function ProviderSignupForm({
               <Button
                 type="button"
                 onClick={onNext}
-                className="flex-1 h-12 bg-[#C57A3A] hover:bg-[#C57A3A]/90 text-white font-semibold"
+                className="flex-1 h-12 bg-[#F97316] hover:bg-[#C2410C] text-white font-semibold"
               >
                 Continuar
                 <ArrowRight className="ml-2 h-5 w-5" />
@@ -421,15 +421,15 @@ export function ProviderSignupForm({
               </h3>
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-white/80 text-sm">
-                  <TrendingUp className="h-4 w-4 text-[#C57A3A]" />
+                  <TrendingUp className="h-4 w-4 text-[#F97316]" />
                   <span>Clientes qualificados na sua região</span>
                 </div>
                 <div className="flex items-center gap-2 text-white/80 text-sm">
-                  <Wallet className="h-4 w-4 text-[#C57A3A]" />
+                  <Wallet className="h-4 w-4 text-[#F97316]" />
                   <span>Pagamento garantido via Escrow</span>
                 </div>
                 <div className="flex items-center gap-2 text-white/80 text-sm">
-                  <Shield className="h-4 w-4 text-[#C57A3A]" />
+                  <Shield className="h-4 w-4 text-[#F97316]" />
                   <span>Selo de verificação exclusivo</span>
                 </div>
               </div>
@@ -452,7 +452,7 @@ export function ProviderSignupForm({
                     termsAccepted: checked === true,
                   }))
                 }
-                className="mt-1 border-white/30 data-[state=checked]:bg-[#C57A3A] data-[state=checked]:border-[#C57A3A]"
+                className="mt-1 border-white/30 data-[state=checked]:bg-[#F97316] data-[state=checked]:border-[#F97316]"
               />
               <label
                 htmlFor="terms"
@@ -461,7 +461,7 @@ export function ProviderSignupForm({
                 Li e aceito os{" "}
                 <a
                   href={`${BASE_URL}/juridico/termos-de-uso`}
-                  className="text-[#C57A3A] hover:underline"
+                  className="text-[#F97316] hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -470,7 +470,7 @@ export function ProviderSignupForm({
                 ,{" "}
                 <a
                   href={`${BASE_URL}/juridico/adesao-prestador`}
-                  className="text-[#C57A3A] hover:underline"
+                  className="text-[#F97316] hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -479,7 +479,7 @@ export function ProviderSignupForm({
                 e a{" "}
                 <a
                   href={`${BASE_URL}/juridico/comissao-prestador`}
-                  className="text-[#C57A3A] hover:underline"
+                  className="text-[#F97316] hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -512,7 +512,7 @@ export function ProviderSignupForm({
                 type="button"
                 onClick={onSubmit}
                 disabled={submitting || !formData.termsAccepted}
-                className="flex-1 h-12 bg-[#C57A3A] hover:bg-[#C57A3A]/90 text-white font-semibold"
+                className="flex-1 h-12 bg-[#F97316] hover:bg-[#C2410C] text-white font-semibold"
               >
                 {submitting ? (
                   <>

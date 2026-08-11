@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import type { ForgotPasswordFormData } from "../../types/forgotPassword.validation";
 
 const INPUT_CLASS =
-  "bg-white/10 border-white/30 text-white placeholder:text-white/50 h-12 focus:border-[#C57A3A] focus:ring-[#C57A3A]/20";
+  "bg-white/10 border-white/30 text-white placeholder:text-white/50 h-12 focus:border-[#2563EB] focus:ring-[#2563EB]/20";
 const INPUT_ERROR_CLASS = "border-red-400";
 const ERROR_MESSAGE_CLASS =
   "text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg p-2";
@@ -49,7 +49,7 @@ export function ForgotPasswordForm({
 
       <Button
         type="submit"
-        className="w-full h-12 md:h-14 text-base md:text-lg font-semibold bg-[#C57A3A] hover:bg-[#C57A3A]/90 text-white shadow-lg shadow-[#C57A3A]/30 hover:shadow-xl hover:shadow-[#C57A3A]/40 transition-all duration-300 hover:scale-[1.02]"
+        className="w-full h-12 md:h-14 text-base md:text-lg font-semibold bg-[#2563EB] hover:bg-[#1D4ED8] text-white shadow-lg shadow-[#2563EB]/30 hover:shadow-xl hover:shadow-[#2563EB]/40 transition-all duration-300 hover:scale-[1.02]"
         disabled={submitting}
       >
         {submitting ? (

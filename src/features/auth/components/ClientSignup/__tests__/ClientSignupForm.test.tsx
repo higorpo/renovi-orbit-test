@@ -172,7 +172,7 @@ describe("ClientSignupForm", () => {
     expect(
       final.container.firstElementChild?.querySelectorAll("svg")
     ).toHaveLength(2);
-    expect(final.container.querySelectorAll(".bg-white.text-\\[\\#0F2F3A\\]")).toHaveLength(1);
+    expect(final.container.querySelectorAll(".bg-white.text-\\[\\#2563EB\\]")).toHaveLength(1);
   });
 
   it("step 1 hides password again and toggles confirm password visibility", () => {

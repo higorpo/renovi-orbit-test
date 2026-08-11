@@ -163,7 +163,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `src/lib/capacitor/initCapacitorPlugins.ts` | Bootstrap: SystemBars (`@capacitor/core`), splash manual, teclado (`--keyboard-height`), ciclo de vida (`data-app-active`), botão voltar Android |
 | `src/lib/capacitor/preferencesStorage.ts` | Capacitor Preferences: auth storage (`createSupabaseAuthStorage`), helpers `preferencesGet/Set/Remove`, prefixo web `CapacitorStorage.` para E2E |
 | `src/lib/persistSession.ts` | Chave `orbit_persist_session`; hydrate no boot |
-| `src/lib/capacitor/constants.ts` | Cor de marca `#0F2F3A` (splash / tema) |
+| `src/lib/capacitor/constants.ts` | Cor de marca / theme `#000000` (primary) |
 | `capacitor.config.ts` | `appId` `br.com.renovi.orbit`, plugins `SystemBars`, `SplashScreen`, `Keyboard`; `server.url` aponta para dev local (evidência de ambiente de desenvolvimento) |
 | `src/features/device-beacon/hooks/useProviderLocationTracking.ts` | Beacon + background geo (Android) → `user_device_beacons` — ver [device-beacon](./modulos/device-beacon/README.md) |
 | `src/features/device-beacon/utils/locationSync.ts` | Debounce sync de localização operacional |

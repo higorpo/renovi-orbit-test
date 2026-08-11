@@ -1,0 +1,31 @@
+# Marca Prestway
+
+A marca de produto é **Prestway** (antes Renovi). Identidade completa: `BRAND.md`. Sistema visual: `DESIGN.md`.
+
+## Nome
+
+| Usar | Não usar (produto / UI / copy) |
+|---|---|
+| **Prestway** | Renovi |
+| Orbit | só como nome interno do repo / Capacitor `appName` — nunca como marca para o usuário |
+
+Em strings de UI, SEO, e-mails, toasts e docs de produto voltados ao usuário: **Prestway**.
+
+## Essência (lembrar ao desenhar / escrever)
+
+Confiança · Segurança · Transparência · Profissionalismo · Valorização
+
+Sensação-alvo: *"Estou protegido. Posso confiar. Estou no controle. Aqui meu trabalho tem valor."*
+
+## Visual (resumo)
+
+- **Primary:** `#000000` — CTAs e chrome padrão (`bg-primary`, etc.)
+- **Brand blue** `#2563EB` · **Brand orange** `#F97316` — uso pontual (`brand-blue-*` / `brand-orange-*`)
+- **Audience** (`audience-*`): role-aware — cliente → azul · prestador → laranja via `html[data-audience]`. Usar só quando precisar da cor automática por papel.
+- Display: Manrope · Body: Inter
+- Parecer com Airbnb / Stripe / Notion / Linear / Shopify
+- Evitar: visual de construtora, banco, seguradora, ícones de martelo/casa/capacete
+
+## Posicionamento
+
+Prestway não é marketplace genérico — é **infraestrutura de confiança** para serviços residenciais. Não é empresa de reformas.

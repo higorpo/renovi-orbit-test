@@ -14,6 +14,7 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import type { Profile, SignUpResult } from "@/features/auth/types/auth.types";
 import { processAuthEvent } from "@/features/auth/utils/authStateHandlers";
+import { syncAudienceTheme } from "@/features/auth/utils/audienceTheme";
 import { useAnalytics } from "@/hooks/useAnalytics";
 import { useProfileFetcher } from "@/features/auth/hooks/useProfileFetcher";
 import { metrics, addBreadcrumb, setSentryUser } from "@/lib/sentry";
@@ -124,6 +125,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSentryUser(null);
     }
   }, [user]);
+
+  // Audience palette (brand blue/orange) follows profile role via html[data-audience]
+  useEffect(() => {
+    syncAudienceTheme(profile?.role ?? null);
+  }, [profile?.role]);
 
   const getRedirectPath = useCallback(getRedirectPathForProfile, []);
 

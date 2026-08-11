@@ -100,10 +100,10 @@ export default defineConfig(({ mode }) => {
     },
 
     manifest: {
-      name: "Renovi - Plataforma de Serviços",
-      short_name: "Renovi",
-      description: "Conectamos você aos melhores profissionais de manutenção e reforma",
-      theme_color: "#0F2F3A",
+      name: "Prestway — Serviços residenciais com segurança",
+      short_name: "Prestway",
+      description: "Conectamos clientes e profissionais em um ambiente seguro, transparente e profissional",
+      theme_color: "#000000",
       background_color: "#ffffff",
       display: "standalone",
       orientation: "portrait",

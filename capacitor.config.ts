@@ -22,7 +22,7 @@ const config: CapacitorConfig = {
     SplashScreen: {
       launchAutoHide: false,
       launchShowDuration: 0,
-      backgroundColor: '#0F2F3A',
+      backgroundColor: '#000000',
       androidSplashResourceName: 'splash',
       showSpinner: false,
     },
@@ -37,7 +37,7 @@ const config: CapacitorConfig = {
     },
     LocalNotifications: {
       smallIcon: 'ic_notification',
-      iconColor: '#1a5f7a',
+      iconColor: '#2563EB',
     },
     CapacitorHttp: {
       enabled: true,

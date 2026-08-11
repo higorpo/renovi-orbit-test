@@ -1,49 +1,62 @@
 ---
-version: v1
-name: Renovi-design-system
-description: A premium residential services marketplace anchored on a clean white canvas and Azul Petróleo (#0F2F3A) as the dominant trust color. Cobre (#C57A3A) is reserved as a rare reward accent — premium badges, best proposals, reputation signals — never as a primary CTA fill. Display type runs Manrope (or Plus Jakarta Sans) at 28–48px in weight 600–700; body runs Inter at 400. The signature component is the Service Request Card — the product entry point that puts users inside the flow immediately, not a marketing hero. Pill buttons (`{rounded.pill}`), structured cards at 16px (`{rounded.lg}`), and 12px inputs (`{rounded.md}`) mix Uber operational discipline with Airbnb human trust. Micro-motion only (100–200ms); elevation stays discrete. Real photography of professionals, homes, and completed work — no stock vectors, no generic illustrations.
+version: v3.7
+name: Prestway-design-system
+description: Trust infrastructure for residential services. Primary is universal black (#000000). Brand blue (#2563EB) and brand orange (#F97316) are fixed tokens; audience-* is role-aware (client blue / provider orange via html[data-audience]) for punctual use. Display type Manrope (Bold/ExtraBold); body Inter. Signature component is the Service Request Card. Aesthetic peers Airbnb, Stripe, Notion, Linear, Shopify — never construction, banking, or generic service marketplaces. Micro-motion only (100–200ms). Abstract brand symbol; real photography of people and outcomes — no tool icons, no houses, no hard hats.
+brand: BRAND.md
 
 colors:
-  primary: "#0F2F3A"
-  primary-hover: "#174554"
-  primary-soft: "#EDF4F6"
-  accent: "#C57A3A"
-  accent-hover: "#B0682B"
-  accent-soft: "#F7EFE7"
-  success: "#2E7D32"
-  warning: "#D97706"
+  primary: "#000000"
+  primary-hover: "#2E2E2E"
+  primary-dark: "#000000"
+  primary-light: "#595959"
+  primary-soft: "#F5F5F5"
+  brand-blue: "#2563EB"
+  brand-blue-hover: "#1E3A8A"
+  brand-blue-soft: "#EFF6FF"
+  brand-orange: "#F97316"
+  brand-orange-hover: "#C2410C"
+  brand-orange-soft: "#FFF7ED"
+  audience-client: "#2563EB"
+  audience-provider: "#F97316"
+  accent: "#F97316"
+  accent-hover: "#C2410C"
+  accent-light: "#FDBA74"
+  accent-soft: "#FFF7ED"
+  success: "#16A34A"
+  warning: "#F59E0B"
   danger: "#DC2626"
+  info: "#0EA5E9"
   canvas: "#FFFFFF"
-  canvas-soft: "#F8FAFB"
-  border: "#E7ECEF"
-  ink: "#0F172A"
-  body: "#475569"
-  mute: "#94A3B8"
+  canvas-soft: "#F9FAFB"
+  border: "#E5E7EB"
+  ink: "#111827"
+  body: "#6B7280"
+  mute: "#9CA3AF"
   on-primary: "#FFFFFF"
   on-accent: "#FFFFFF"
   scrim: "#000000"
 
 typography:
   display-xl:
-    fontFamily: "'Manrope', 'Plus Jakarta Sans', Inter, -apple-system, system-ui, sans-serif"
+    fontFamily: "'Manrope', Inter, -apple-system, system-ui, sans-serif"
     fontSize: 48px
-    fontWeight: 700
+    fontWeight: 800
     lineHeight: 1.15
     letterSpacing: -0.48px
   display-lg:
-    fontFamily: "'Manrope', 'Plus Jakarta Sans', Inter, sans-serif"
+    fontFamily: "'Manrope', Inter, sans-serif"
     fontSize: 36px
     fontWeight: 700
     lineHeight: 1.2
     letterSpacing: -0.36px
   display-md:
-    fontFamily: "'Manrope', 'Plus Jakarta Sans', Inter, sans-serif"
+    fontFamily: "'Manrope', Inter, sans-serif"
     fontSize: 28px
     fontWeight: 700
     lineHeight: 1.25
     letterSpacing: -0.28px
   title:
-    fontFamily: "'Manrope', 'Plus Jakarta Sans', Inter, sans-serif"
+    fontFamily: "'Manrope', Inter, sans-serif"
     fontSize: 20px
     fontWeight: 600
     lineHeight: 1.3
@@ -79,7 +92,7 @@ typography:
     lineHeight: 1.18
     letterSpacing: 0.22px
   rating-display:
-    fontFamily: "'Manrope', 'Plus Jakarta Sans', Inter, sans-serif"
+    fontFamily: "'Manrope', Inter, sans-serif"
     fontSize: 48px
     fontWeight: 700
     lineHeight: 1.1
@@ -128,10 +141,25 @@ components:
     rounded: "{rounded.pill}"
     padding: 14px 24px
     height: 48px
+    audience: client
   button-primary-hover:
     backgroundColor: "{colors.primary-hover}"
     textColor: "{colors.on-primary}"
     rounded: "{rounded.pill}"
+    audience: client
+  button-primary-provider:
+    backgroundColor: "{colors.accent}"
+    textColor: "{colors.on-accent}"
+    typography: "{typography.button-md}"
+    rounded: "{rounded.pill}"
+    padding: 14px 24px
+    height: 48px
+    audience: provider
+  button-primary-provider-hover:
+    backgroundColor: "{colors.accent-hover}"
+    textColor: "{colors.on-accent}"
+    rounded: "{rounded.pill}"
+    audience: provider
   button-secondary:
     backgroundColor: "{colors.canvas}"
     textColor: "{colors.ink}"
@@ -146,6 +174,7 @@ components:
     typography: "{typography.badge}"
     rounded: "{rounded.pill}"
     padding: 4px 10px
+    audience: provider
   service-request-card:
     backgroundColor: "{colors.canvas}"
     textColor: "{colors.ink}"
@@ -180,10 +209,11 @@ components:
     height: 52px
     border: "1px solid {colors.border}"
   top-nav:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.ink}"
     typography: "{typography.nav-link}"
     height: 64px
+    borderBottom: "1px solid {colors.border}"
   premium-badge:
     backgroundColor: "{colors.accent-soft}"
     textColor: "{colors.accent}"
@@ -198,247 +228,263 @@ components:
 
 ## Overview
 
-Renovi is a **premium residential services marketplace**. The visual language must communicate **trust, quality, simplicity, and transparency** — not compete for attention. The product exists to transform uncertainty into confidence.
+Prestway is a **trust infrastructure for residential services** — a technology platform that connects clients and professionals in a secure, transparent, and professional environment. It is **not** a construction company, real-estate brand, bank, or insurer. Full brand strategy lives in [`BRAND.md`](./BRAND.md).
 
-The user typically arrives with a problem: a leak, painting job, cleaning, installation, or renovation. The design must reduce anxiety, not add to it.
+The visual language must communicate **confiança + humanidade + tecnologia + crescimento**. The product exists to turn informal, anxious hiring into a predictable, protected experience.
 
-Renovi does not copy Uber or Airbnb. It combines:
+The user typically arrives with a problem and uncertainty: who to trust, how to pay, what happens next. Design must deliver:
 
-| Influence | Weight | What we take |
+> **"Estou protegido. Posso confiar. Estou no controle."**
+
+### Audience color split (mandatory)
+
+| Audience | Palette | Use for |
 |---|---|---|
-| **Uber** | 60% | Operational discipline — clean interface, minimal noise, extreme hierarchy clarity, dispatch speed |
-| **Airbnb** | 25% | Human trust — real photos, real professionals, real reviews, reputation as the product |
-| **Nubank** | 15% | Clarity — simple language, intuitive flows, minimal bureaucracy |
+| **Cliente** | **Azul Prestway** (`brand-blue` / `audience` — #2563EB) | Pontual ou via `audience-*` |
+| **Prestador** | **Laranja** (`brand-orange` / `audience` — #F97316) | Pontual ou via `audience-*` |
 
-The core emotion is not travel or logistics. It is:
+Switched automatically by `html[data-audience]` — no separate color token.
 
-> **"Finalmente alguém vai resolver isso."**
+### Aesthetic balance
 
-The base canvas is **pure white** (`{colors.canvas}` — #ffffff) with a soft alternate floor (`{colors.canvas-soft}` — #f8fafb) for section bands. **Azul Petróleo** (`{colors.primary}` — #0F2F3A) is the dominant brand color — navbar, primary CTAs, active states, important links. **Cobre** (`{colors.accent}` — #C57A3A) is a **reward color**, used sparingly for premium badges, best proposals, reputation signals, and progress — never as the default CTA fill.
+| Pillar | Visual expression |
+|---|---|
+| **Confiança / Segurança (cliente)** | Prestway blue (`brand-blue` / `audience`), clear hierarchy, protected-payment cues |
+| **Crescimento / Oportunidade (prestador)** | Prestway orange (`brand-orange` / `audience`), energy, valorização profissional |
+| **Tecnologia / Modernidade** | Minimal UI, Inter body, precise spacing, Stripe/Linear clarity |
+| **Humanidade / Proximidade** | Warm copy, real people — brand orange / audience when intentional |
 
-Type splits into two families: **Manrope** (or **Plus Jakarta Sans**) for display and titles, **Inter** for body, captions, and UI chrome. Display headlines run 28–48px at weight 600–700 — heavier than Airbnb's modest Cereal weights because Renovi has less photography at the fold and must establish credibility through type and structure.
+Prestway should feel closer to **Airbnb · Stripe · Notion · Linear · Shopify** than to construtoras, imobiliárias, bancos, seguradoras, or generic service classifieds.
 
-The shape language is a **deliberate mix** — unlike Uber (all pill) or Airbnb (all soft-round). Buttons are pill-shaped (`{rounded.pill}`) because they signal action. Cards use 16px radius (`{rounded.lg}`) for stability. Inputs use 12px (`{rounded.md}`) for structure.
+### Canvas & color roles
 
-**Key Characteristics:**
+- **Canvas** (`{colors.canvas}` — #FFFFFF) with soft bands (`{colors.canvas-soft}` — #F9FAFB).
+- **Primary** (`{colors.primary}`): universal black (#000000) for CTAs, focus, chrome.
+- **Audience** (`audience-*`): role-aware brand color — Prestway blue for clients, orange for providers — use only when the role color is intentional.
+- **Brand blue / Brand orange**: fixed tokens for punctual use without role switching.
+- Type: **Manrope** (Bold / ExtraBold) for logo, display, and titles; **Inter** for body and UI chrome.
 
-- **Dual-color hierarchy:** `{colors.primary}` carries every primary CTA, navbar, and active state. `{colors.accent}` appears only on reward moments — premium provider badge, best proposal highlight, ranking progress. Cobre used scarcely — most pages are 90% white + petróleo with one or two copper moments.
-- **Signature component:** `{component.service-request-card}` — the Service Request Card. Equivalent to Uber's Request Card and Airbnb's Search Bar. The hero is a product entry, not a marketing site.
-- **Three dominant cards:** Service Request Card, Provider Card, Proposal Card — these three components should dominate nearly the entire experience.
-- **Real photography only:** professionals, homes, clients, completed work. No stock imagery, no vectors, no illustrated characters.
-- **Discrete elevation:** three shadow tiers (`{elevation.level-1}` through `level-3`); hierarchy comes primarily from spacing, not shadow.
-- **Micro-motion only:** `{motion.fast}` 100ms · `{motion.base}` 150ms · `{motion.slow}` 200ms. No elastic, no exaggerated transitions.
+### Shape language
+
+Mixed radii (intentional, not copy of Uber or Airbnb):
+
+- Buttons → pill (`{rounded.pill}`)
+- Cards → 16px (`{rounded.lg}`)
+- Inputs → 12px (`{rounded.md}`)
+
+### Key characteristics
+
+- **Role-aware primary:** one token (`primary`) carries both audiences.
+- **Signature component:** `{component.service-request-card}` — product entry, not a marketing hero.
+- **Three dominant cards:** Service Request, Provider, Proposal.
+- **Abstract brand mark:** connection / trust link / shared growth — never houses, tools, hard hats, or buildings.
+- **Real photography only:** people, outcomes, care — never stock vectors or generic tool illustrations.
+- **Micro-motion only:** 100–200ms; discrete elevation.
 
 ### What the brand must transmit
 
-When someone opens Renovi they should feel:
-
-1. **Segurança** — trust in who enters their home
-2. **Profissionalismo** — credible, not casual
-3. **Clareza** — no ambiguity about next steps
-4. **Rapidez** — operational efficiency
-5. **Qualidade** — premium, not discount
+1. **Segurança** — protection for both sides
+2. **Tranquilidade** — calm, controlled journey
+3. **Confiança** — credible digital relationship
+4. **Controle** — clear, predictable steps
+5. **Valorização** — dignity for clients and professionals
+6. **Profissionalismo** — informal market → professional experience
 
 ### What the brand must NOT feel like
 
-- Colorful startup
-- Promotions app
+- Construction / DIY catalog
+- Bank or insurance portal
+- Legal / corporate heavy UI
 - Cheap classifieds (OLX / GetNinjas)
-- Generic marketplace
-- Tourism / lifestyle (Airbnb)
-- Pure logistics (Uber)
+- Colorful promo startup
+- Generic marketplace noise
+- Tourism lifestyle (Airbnb copy) or pure logistics (Uber copy)
 
 ---
 
-## Positioning
+## Positioning (product UI)
 
-| Platform | Transmits | Renovi does NOT copy |
+| Reference | We take | We leave |
 |---|---|---|
-| **Uber** | Speed, movement, efficiency | Pill-everything aesthetic, illustration-led UI |
-| **Airbnb** | Warmth, community, experience | Lifestyle photography, Rausch-as-primary pattern |
-| **Mercado Livre** | Transaction density | Classifieds visual noise |
-| **Nubank** | Simplicity, clarity | Purple brand identity |
+| **Stripe** | Clarity, trust in money flows, precise hierarchy | Developer-only density |
+| **Airbnb** | Human trust, reputation as product | Lifestyle destination aesthetic |
+| **Notion / Linear** | Minimal international tech polish | Cold/empty product surfaces |
+| **Shopify** | Growth + accessibility for operators | Merchant-dashboard clutter |
 
-**Renovi transmits:** trust · quality · resolution
+**Prestway transmits:** trust · protection · transparency · professionalism · shared growth
 
-The problem Renovi solves involves entry into the client's home, payment, trust, and service execution — all requiring significantly more visual credibility than a travel or ride-hailing app.
+The problem involves entry into the client's home, protected payment, and service execution — requiring more visual credibility than a ride-hailing or classifieds app, without looking like a bank or contractor.
 
 ---
 
 ## Colors
 
-### Brand & Primary
+### Primary (universal black)
 
-- **Azul Petróleo** (`{colors.primary}` — #0F2F3A): The dominant brand color. Used for navbar (`{component.top-nav}`), primary CTAs (`{component.button-primary}`), active navigation states, important inline links, and focus rings. This is the color of trust and operational authority.
-- **Primary Hover** (`{colors.primary-hover}` — #174554): The press / pointer-down variant for primary buttons and interactive petróleo surfaces (`{component.button-primary-hover}`).
-- **Primary Soft** (`{colors.primary-soft}` — #EDF4F6): A pale petróleo tint for selected row backgrounds, info banners, and subtle highlight bands. Never used as a CTA fill.
+`{colors.primary}` is **#000000** for every role. Default CTAs, nav chrome, and focus use `primary-*`.
 
-### Accent (Reward)
+```tsx
+<button className="bg-primary text-primary-foreground hover:bg-primary-hover">…</button>
+```
 
-- **Cobre** (`{colors.accent}` — #C57A3A): The reward color. Used **only** for premium provider badges (`{component.premium-badge}`), best-proposal highlights (`{component.proposal-card-highlight}`), ranking indicators, progress milestones, and reputation seals. **Never** used as the default primary CTA background.
-- **Accent Hover** (`{colors.accent-hover}` — #B0682B): Darker copper for interactive reward elements on press.
-- **Accent Soft** (`{colors.accent-soft}` — #F7EFE7): Warm tint background for highlighted proposal cards and premium provider rows.
+### Brand + audience (punctual)
 
-#### Cobre usage rules
+| Token | Hex | Behavior |
+|---|---|---|
+| `brand-blue` | #2563EB | Fixed Prestway blue |
+| `brand-orange` | #F97316 | Fixed Prestway orange |
+| `audience` | auto | Client → brand-blue · Provider → brand-orange via `html[data-audience]` |
 
-| Use Cobre for | Do NOT use Cobre for |
-|---|---|
-| Premium provider seal | Primary "Solicitar orçamento" button |
-| Best proposal highlight | Navbar background |
-| Ranking / progress indicators | Default link color |
-| Reputation badges | Form input focus rings |
-| "Destaque" labels | Body text or headings |
+```tsx
+<span className="text-audience">…</span> {/* only when role color is intentional */}
+<span className="bg-brand-blue text-brand-blue-foreground">…</span>
+```
+
+### Primary scale
+
+- **Primary** (`{colors.primary}`): black fill for default actions.
+- **Primary Hover** (`{colors.primary-hover}`): press state.
+- **Primary Soft** (`{colors.primary-soft}`): tinted bands / selected rows.
+- **Primary Foreground** (`{colors.on-primary}` — #FFFFFF): text on primary fills.
+
+### Copper (optional reward)
+
+- **Copper** (`--copper` / Tailwind `copper-*` — #F97316): optional warm highlight for badges/progress. Prefer `primary` for default actions; `brand-orange` / `audience` when orange is intentional.
 
 ### Surface
 
-- **Canvas** (`{colors.canvas}` — #ffffff): The default page floor. Cards, modals, and form surfaces sit on white.
-- **Canvas Soft** (`{colors.canvas-soft}` — #f8fafb): Alternate section background for visual separation without heavy borders — used on list pages, settings bands, and empty states.
+- **Canvas** (`{colors.canvas}` — #FFFFFF): default page floor.
+- **Canvas Soft** (`{colors.canvas-soft}` — #F9FAFB): section bands, list floors, empty states.
 
 ### Borders
 
-- **Border** (`{colors.border}` — #e7ecef): The default 1px border tone — card outlines, input borders, table separators, secondary button strokes.
+- **Border** (`{colors.border}` — #E5E7EB): card outlines, inputs, separators, secondary button strokes.
 
 ### Text
 
-- **Ink** (`{colors.ink}` — #0F172A): Headlines, card titles, primary labels, nav links on light surfaces.
-- **Body** (`{colors.body}` — #475569): Running text, descriptions, secondary card meta.
-- **Mute** (`{colors.mute}` — #94a3b8): Placeholders, inactive tabs, timestamps, helper text, "Membro desde" labels.
-- **On Primary** (`{colors.on-primary}` — #ffffff): White text on petróleo CTAs and navbar.
-- **On Accent** (`{colors.on-accent}` — #ffffff): White text on filled copper badges (rare — prefer accent text on accent-soft background).
+- **Ink** (`{colors.ink}` — #111827): headlines, titles, primary labels.
+- **Body** (`{colors.body}` — #6B7280): running text, descriptions, secondary meta.
+- **Mute** (`{colors.mute}` — #9CA3AF): placeholders, inactive tabs, timestamps, helpers.
+- **On Primary / On Accent** (`{colors.on-primary}` / `{colors.on-accent}` — #FFFFFF): text on filled blue/orange.
 
 ### Semantic
 
-- **Success** (`{colors.success}` — #2e7d32): Confirmation states, completed service indicators, verified badges.
-- **Warning** (`{colors.warning}` — #d97706): Expiring proposals, pending actions, attention-needed banners.
-- **Danger** (`{colors.danger}` — #dc2626): Errors, destructive actions, validation failures.
+- **Success** (`{colors.success}` — #16A34A)
+- **Warning** (`{colors.warning}` — #F59E0B)
+- **Danger** (`{colors.danger}` — #DC2626)
+- **Info** (`{colors.info}` — #0EA5E9)
 
 ### Scrim
 
-- **Scrim** (`{colors.scrim}` — #000000 at 40–50% opacity): Modal backdrop for dialogs, bottom sheets, and full-screen overlays on mobile.
+- **Scrim** (`{colors.scrim}` — #000000 at 40–50% opacity): modal / bottom-sheet backdrop.
 
 ---
 
 ## Typography
 
-### Font Families
+### Font families
 
-| Role | Family | Fallback stack |
+| Role | Family | Characteristics |
 |---|---|---|
-| **Display / Titles** | Manrope (preferred) or Plus Jakarta Sans | Inter, -apple-system, system-ui, sans-serif |
-| **Body / UI** | Inter | -apple-system, system-ui, sans-serif |
-
-Display and body are intentionally split. Inter alone feels too generic for a premium trust brand; a geometric display face (Manrope) adds authority to headlines without the editorial softness of Airbnb Cereal.
+| **Logo / Branding / Display** | Manrope Bold · ExtraBold | moderna, tecnológica, amigável, memorável |
+| **Product / Interface** | Inter | legibilidade, simplicidade, clareza, confiança |
 
 ### Hierarchy
 
-| Token | Size | Weight | Line Height | Use |
-|---|---|---|---|---|
-| `{typography.display-xl}` | 48px | 700 | 1.15 | Landing hero headline (desktop) |
-| `{typography.display-lg}` | 36px | 700 | 1.20 | Section heroes, empty states |
-| `{typography.display-md}` | 28px | 700 | 1.25 | Page titles, modal headers |
-| `{typography.title}` | 20px | 600 | 1.30 | Card titles, provider name, proposal summary |
-| `{typography.body}` | 16px | 400 | 1.50 | Default running text, form values |
-| `{typography.caption}` | 14px | 400 | 1.43 | Card meta, timestamps, "127 serviços" |
-| `{typography.rating-display}` | 48px | 700 | 1.10 | Provider profile rating ("4.9") |
-| `{typography.button-md}` | 16px | 600 | 1.25 | Primary and secondary CTA labels |
-| `{typography.button-sm}` | 14px | 600 | 1.29 | Compact pill buttons, card actions |
-| `{typography.badge}` | 11px | 600 | 1.18 | Premium badge, status chips |
-| `{typography.nav-link}` | 16px | 600 | 1.25 | Top navigation links |
+| Token | Size | Weight | Use |
+|---|---|---|---|
+| `{typography.display-xl}` | 48px | 800 | Landing hero (desktop) |
+| `{typography.display-lg}` | 36px | 700 | Section heroes, empty states |
+| `{typography.display-md}` | 28px | 700 | Page titles, modal headers |
+| `{typography.title}` | 20px | 600 | Card titles, provider name |
+| `{typography.body}` | 16px | 400 | Running text, form values |
+| `{typography.caption}` | 14px | 400 | Meta, timestamps |
+| `{typography.rating-display}` | 48px | 700 | Provider rating peak signal |
+| `{typography.button-md}` / `button-sm` | 16 / 14 | 600 | CTAs |
+| `{typography.badge}` | 11px | 600 | Status / premium chips |
+| `{typography.nav-link}` | 16px | 600 | Navigation |
 
 ### Principles
 
-- Display weights are **deliberately strong** (600–700) — Renovi must establish credibility at the fold through type hierarchy, not photography alone.
-- Body stays at **400 weight** — clarity over typographic muscle in long-form copy.
-- The single loudest typographic moment is the **rating display** (`{typography.rating-display}` — 48px / 700) on provider profiles. Rating numbers are a peak trust signal.
-- Language in UI copy should be **simple and direct** (Nubank influence) — avoid jargon, bureaucratic phrasing, or marketing fluff.
+- Display is strong enough to carry credibility without construction imagery.
+- Body stays at 400 — clarity over typographic muscle.
+- UI copy is **simple, human, and direct** — no bureaucratic fluff, no contractor jargon.
+- Peak typographic trust moment: rating display on provider profiles.
 
-### Font Loading
+### Font loading
 
 ```html
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Manrope:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
 ```
-
-If Manrope is unavailable, **Plus Jakarta Sans** is the alternate display face. Inter remains the body fallback throughout.
 
 ---
 
 ## Shape Language
 
-Renovi uses a **mixed radius system** — intentional differentiation from Uber (all pill) and Airbnb (all soft-round).
-
 | Token | Value | Applied to |
 |---|---|---|
-| `{rounded.sm}` | 8px | Chips, tags, small badges |
-| `{rounded.md}` | 12px | Text inputs, select fields, textareas |
-| `{rounded.lg}` | 16px | Cards — Service Request, Provider, Proposal |
-| `{rounded.xl}` | 24px | Hero form card, modal containers |
-| `{rounded.pill}` | 999px | Buttons, filter pills, status badges |
-
-### Core Rule
+| `{rounded.sm}` | 8px | Chips, tags |
+| `{rounded.md}` | 12px | Inputs, selects, textareas |
+| `{rounded.lg}` | 16px | Cards |
+| `{rounded.xl}` | 24px | Hero form card, modals |
+| `{rounded.pill}` | 999px | Buttons, filter pills, badges |
 
 | Element | Radius | Rationale |
 |---|---|---|
-| **Buttons** | `{rounded.pill}` | Signals action and forward motion |
-| **Cards** | `{rounded.lg}` (16px) | Signals stability and trust |
-| **Inputs** | `{rounded.md}` (12px) | Signals structure and formality |
+| **Buttons** | pill | Action and forward motion |
+| **Cards** | 16px | Stability and trust |
+| **Inputs** | 12px | Structure and formality |
 
 ---
 
 ## Layout
 
-### Spacing System
+### Spacing
 
-- **Base unit:** 4px (with 2px micro-step).
-- **Tokens:** `{spacing.xxs}` 2px · `{spacing.xs}` 4px · `{spacing.sm}` 8px · `{spacing.md}` 12px · `{spacing.base}` 16px · `{spacing.lg}` 24px · `{spacing.xl}` 32px · `{spacing.xxl}` 48px · `{spacing.section}` 64px.
-- **Card internal padding:** `{spacing.lg}` (24px) for `{component.service-request-card}`; `{spacing.base}` (16px) for `{component.provider-card}`; `{spacing.lg}` (20–24px) for `{component.proposal-card}`.
-- **Card gutters:** `{spacing.base}` (16px) between cards in list views; `{spacing.lg}` (24px) in detail layouts.
+- Base unit 4px (2px micro-step).
+- Tokens: `{spacing.xxs}` → `{spacing.section}` as in frontmatter.
+- Card padding: 24px service-request · 16px provider · 20–24px proposal.
+- Gutters: 16px lists · 24px detail layouts.
 
-### Grid & Container
+### Grid & container
 
-- **Max content width:** ~1200px centered on marketing/landing; ~1080px on in-app flows to maintain focus.
-- **Hero layout:** Single-column centered — headline above `{component.service-request-card}`. No side-by-side marketing imagery at desktop; the form card IS the hero.
-- **List pages (proposals, providers):** Single-column card stack on mobile; 2-column grid on tablet+ with `{spacing.base}` gutters.
-- **Provider profile:** Photo + stats header, then tabbed content (reviews, services, about). Sticky "Contratar" CTA on mobile.
+- Max content ~1200px marketing; ~1080px in-app.
+- Hero: single-column — headline above `{component.service-request-card}`. The form **is** the hero.
+- Lists: 1-up mobile; 2-up tablet+.
+- Provider profile: photo + stats, tabbed content; sticky hire CTA on mobile.
 
-### Whitespace Philosophy
+### Whitespace
 
-Generous vertical breathing room at section boundaries (`{spacing.section}` — 64px) but **dense card stacks** in marketplace views — proposals and provider lists should feel scannable, not editorial. The contrast reinforces "clear entry, efficient browsing."
+Generous section breathing (`{spacing.section}`) with **dense card stacks** in marketplace views — scannable, not editorial.
 
 ---
 
 ## Elevation
 
-Three discrete shadow tiers. Hierarchy should come primarily from **spacing and typography**, not layered shadows.
+| Level | Token | Use |
+|---|---|---|
+| Flat | — | Body, most surfaces |
+| Level 1 | `{elevation.level-1}` | Provider cards, list items |
+| Level 2 | `{elevation.level-2}` | Service Request Card, floating bars |
+| Level 3 | `{elevation.level-3}` | Modals, sheets, menus |
 
-| Level | Token | Shadow | Use |
-|---|---|---|---|
-| **Flat** | — | none | Body, hero, footer, 90% of surfaces |
-| **Level 1** | `{elevation.level-1}` | `0 2px 8px rgba(0,0,0,.04)` | Provider cards at rest, list items |
-| **Level 2** | `{elevation.level-2}` | `0 8px 24px rgba(0,0,0,.08)` | Service Request Card (hero), floating action bars |
-| **Level 3** | `{elevation.level-3}` | `0 16px 40px rgba(0,0,0,.12)` | Modals, bottom sheets, dropdown menus |
-
-- **Card hover:** Elevate from level-1 to level-2 on pointer hover — subtle lift, no scale transform.
-- **Modal scrim:** `{colors.scrim}` at 40–50% opacity.
+Hover: level-1 → level-2, no scale. Hierarchy from spacing/type first, shadows second.
 
 ---
 
 ## Motion
 
-Micro-animations only. No elastic easing, no exaggerated bounce, no parallax.
-
 | Token | Duration | Use |
 |---|---|---|
-| `{motion.fast}` | 100ms | Button press, toggle, checkbox |
-| `{motion.base}` | 150ms | Card hover elevation, tab switch |
-| `{motion.slow}` | 200ms | Modal enter/exit, bottom sheet slide |
-| `{motion.easing}` | `cubic-bezier(0.4, 0, 0.2, 1)` | All transitions |
+| `{motion.fast}` | 100ms | Press, toggle |
+| `{motion.base}` | 150ms | Hover elevation, tabs |
+| `{motion.slow}` | 200ms | Modal / sheet |
+| `{motion.easing}` | `cubic-bezier(0.4, 0, 0.2, 1)` | All |
 
-Principles:
+No elastic bounce, no parallax. Skeletons over full-page spinners.
 
-- Transitions communicate **state change**, not decoration.
-- Page transitions use simple fade or slide-up (mobile bottom sheets).
-- Loading states use skeleton screens with subtle pulse — no spinners on full-page loads.
+> **Code note:** Tailwind `ease-prestway` (alias `ease-renovi`) maps to `{motion.easing}`.
 
 ---
 
@@ -446,24 +492,26 @@ Principles:
 
 ### Buttons
 
-**`button-primary`** — Petróleo fill, white text, pill shape, 14×24px padding, 48px height, weight 600. The dominant CTA: "Solicitar orçamento", "Continuar", "Enviar proposta".
+**`button-primary`** (cliente) — Azul Prestway fill, white text, pill, 48px height. Dominant client CTA: "Solicitar orçamento", "Continuar", "Pagar".
 
-**`button-primary-hover`** — Background flips to `{colors.primary-hover}`. No transform, no shadow change.
+**`button-primary-hover`** — `{colors.primary-hover}`. No transform, no shadow change.
 
-**`button-secondary`** — White fill, ink text, 1px `{colors.border}` outline, pill shape. Used for "Ver perfil", "Cancelar", inverse CTAs.
+**`button-primary-provider`** (prestador) — Laranja Prestway fill, white text, pill, 48px height. Dominant provider CTA: "Enviar proposta", "Aceitar oportunidade", "Continuar" in provider wizards.
 
-**`button-accent-badge`** — Accent-soft fill, accent text, pill shape. Used for reward-labeled actions ("Melhor proposta") — not a primary flow CTA.
+**`button-primary-provider-hover`** — `{colors.accent-hover}`. Same motion rules as client primary.
+
+**`button-secondary`** — White fill, ink text, 1px border, pill. Shared across audiences.
+
+**`button-accent-badge`** — Accent-soft + accent text. Provider-side labels ("Destaque", opportunity chips) — not a substitute for client primary CTAs.
 
 ### Signature: Service Request Card
 
-**`service-request-card`** — The most important component in the system. Equivalent to Uber's Request Card and Airbnb's Search Bar.
-
-Structure:
+**`service-request-card`** — Product entry point (Stripe checkout clarity × Airbnb search intent).
 
 ```text
 [headline]
-Resolva qualquer serviço residencial
-com profissionais verificados.
+Contrate com segurança.
+Profissionais verificados, pagamento protegido.
 
 [service-request-card]
   O que você precisa?
@@ -472,70 +520,52 @@ com profissionais verificados.
   [ Solicitar orçamento ]
 ```
 
-White surface, `{rounded.lg}` (16px) or `{rounded.xl}` (24px) on hero placement, `{elevation.level-2}`, 24px padding. Contains category selector, description field, and full-width `{component.button-primary}`.
-
-The hero should feel like a **product**, not a marketing site — the user starts inside the flow immediately.
+White surface, `{rounded.lg}` / `{rounded.xl}` on hero, `{elevation.level-2}`, 24px padding.
 
 ### Provider Card
 
-**`provider-card`** — The primary trust element. Photo-first layout:
-
-```text
-[Foto]
-
-Nome
-★★★★★ 4.9
-127 serviços
-Membro desde 2024
-
-[ Ver perfil ]
-```
-
-White surface, `{rounded.lg}`, `{elevation.level-1}`, 16px padding. Avatar is circular. Rating in ink (not gold/yellow — gold stars feel cheap). Meta lines in `{typography.caption}` muted. `{component.premium-badge}` (cobre) appears only on verified premium providers.
+**`provider-card`** — Trust element shown to clients (blue chrome context). Photo-first, circular avatar, rating in ink (not gold stars), meta in caption muted. Provider-side list cards use orange chrome for actions.
 
 ### Proposal Card
 
-**`proposal-card`** — Standard proposal row in comparison views. White surface, `{rounded.lg}`, `{elevation.level-1}`, 20px padding. Shows provider mini-card, price, timeline, and action buttons.
-
-**`proposal-card-highlight`** — Best proposal variant. `{colors.accent-soft}` background, 1px `{colors.accent}` border. The **only** place a full copper border appears in the card system. Used for "Melhor proposta" or client-recommended option.
+**`proposal-card`** — Comparison row (client view → blue actions; provider compose → orange actions).  
+**`proposal-card-highlight`** — Accent-soft + 1px accent border when highlighting a provider/opportunity moment.
 
 ### Forms
 
-**`text-input`** — White surface, 1px `{colors.border}` outline, `{rounded.md}` (12px), 52px height, 14×12px padding. Stacked label above in `{typography.caption}` muted. On focus: 2px `{colors.primary}` border — no glow ring.
+**`text-input`** — White, 1px border, 12px radius, 52px height. Focus: 2px border in the **audience color** — `{colors.primary}` on client forms, `{colors.accent}` on provider forms. No glow.
 
 ### Navigation
 
-**`top-nav`** — Petróleo surface (`{colors.primary}`), 64px height, white text and logo. Compact compared to Airbnb's 80px white nav — Renovi's nav IS the brand color moment.
+**`top-nav`** — White canvas, ink text, 64px, subtle bottom border. Active states and nav CTAs follow audience: blue in client app, orange in provider app. Feels international-tech (Notion / Stripe), not bank or contractor chrome.
 
 ### Badges
 
-**`premium-badge`** — Accent-soft fill, accent text, pill shape, 11px / 600. "Premium", "Verificado", "Destaque". The copper reward moment on provider cards.
+**`premium-badge`** — Accent-soft + accent text when the badge lives in provider communication ("Premium", "Destaque"). Client-facing status chips prefer the blue soft/primary scale.
 
 ---
 
-## Photography
-
-Renovi photography is the **opposite of Uber's illustration approach** and **different from Airbnb's destination aesthetic**.
+## Imagery & iconography
 
 | Use | Do NOT use |
 |---|---|
-| Real professionals at work | Stock photo models |
-| Real homes and completed jobs | Generic lifestyle imagery |
-| Real clients (with consent) | Illustrated characters or vectors |
-| Before/after service results | 3D renders or AI-generated faces |
+| Real professionals and clients (consent) | Stock models, illustrated characters |
+| Completed outcomes, care, harmony at home | Houses, roofs, hammers, wrenches, hard hats, buildings as brand icons |
+| Abstract Prestway mark (connection / trust link) | Generic tool iconography |
+| Calm, organized environments | Chaotic construction sites as hero |
 
-Photography supports trust — it is never decorative. Every photo should answer: "Can I trust this person in my home?"
+Photography answers: *"Can I trust this relationship?"* — never decoration.
 
 ---
 
 ## Hero
 
-The Renovi hero is a **product entry point**, not a marketing landing page.
+Product entry, not marketing theater:
 
 ```text
-[headline — display-md or display-lg]
-Resolva qualquer serviço residencial
-com profissionais verificados.
+[headline — display-md / display-lg]
+Contrate com segurança.
+Profissionais verificados, pagamento protegido.
 
 [service-request-card]
   O que você precisa?
@@ -544,96 +574,104 @@ com profissionais verificados.
   [ Solicitar orçamento          ]
 ```
 
-- No background video, no illustration, no feature grid above the fold.
-- Optional: a subtle `{colors.canvas-soft}` band behind the card for depth.
-- On mobile: card goes full-width with `{spacing.base}` horizontal padding; CTA sticky at bottom if multi-step.
+- No background video, no tool collage, no feature grid above the fold.
+- Optional `{colors.canvas-soft}` band behind the card.
+- Mobile: full-width card; sticky CTA on multi-step.
 
 ---
 
 ## Card System Overview
 
-Three cards dominate the experience:
-
 | Card | Role | Priority |
 |---|---|---|
-| **Service Request Card** | Entry point — starts the flow | Highest — signature component |
-| **Provider Card** | Trust signal — who will do the work | High — repeated in search, proposals, profile |
-| **Proposal Card** | Transaction unit — price, timeline, action | High — repeated in comparison and chat |
+| **Service Request Card** | Entry — starts the protected flow | Highest |
+| **Provider Card** | Trust — who will do the work | High |
+| **Proposal Card** | Transaction — price, timeline, action | High |
 
-All other UI elements (nav, forms, badges) exist in service of these three.
+All other UI serves these three.
 
 ---
 
 ## Design Principles
 
-### 1. Trust Before Beauty
+### 1. Trust before beauty
 
-Every element must increase trust. If a design choice is beautiful but reduces clarity or credibility, choose clarity.
+If beauty reduces clarity or credibility, choose clarity.
 
-### 2. The Service Is The Product
+### 2. Protection is the product
 
-The focus is not the platform — it is the service being performed. UI should foreground the professional, the proposal, and the outcome.
+Foreground protected payment, clear steps, and reputation — not the platform ego.
 
-### 3. Real People, Real Work
+### 3. Human technology
 
-Real photos. Real reviews. Real results. No fabricated social proof, no generic avatars in production surfaces.
+Modern and sophisticated, never cold. Accessible and welcoming without being casual or cheap.
 
-### 4. One Primary Action
+### 4. One primary action
 
-Each screen has exactly one dominant action. Secondary actions are visually subordinate (outline buttons, text links).
+Exactly one dominant action per screen.
 
-### 5. Clarity Beats Creativity
+### 5. Clarity beats creativity
 
-When in doubt between something beautiful and something clear, choose the clear option.
+When in doubt, choose the clear option.
+
+### 6. No construction clichés
+
+Never lean on hammers, roofs, hard hats, or building silhouettes to explain the brand.
 
 ---
 
 ## Responsive Behavior
 
-| Name | Width | Key Changes |
+| Name | Width | Key changes |
 |---|---|---|
-| **Mobile** | < 744px | Top nav compact (logo + menu); Service Request Card full-width; provider/proposal cards stack 1-up; sticky bottom CTA bar on detail pages; bottom sheets for filters and category picker |
-| **Tablet** | 744–1128px | Top nav with primary links; cards 2-up in list views; Service Request Card centered at ~480px max-width |
-| **Desktop** | 1128–1440px | Full nav; hero headline + Service Request Card centered; provider/proposal cards 2-up; detail pages 2-column (content + sticky action rail) |
-| **Wide** | > 1440px | Content caps at 1200px; gutters absorb excess space |
+| **Mobile** | < 744px | Compact nav; full-width request card; 1-up stacks; sticky bottom CTA; bottom sheets |
+| **Tablet** | 744–1128px | Nav links; 2-up cards; request card ~480px |
+| **Desktop** | 1128–1440px | Full nav; centered hero + request card; 2-column detail |
+| **Wide** | > 1440px | Content cap 1200px |
 
-### Touch Targets
+### Touch targets
 
-- Primary CTAs: minimum 48×48px (WCAG AAA).
-- Provider card tap area: full card is tappable, not just the "Ver perfil" button.
-- Filter pills: minimum 44px height with `{spacing.md}` horizontal padding.
+- Primary CTAs ≥ 48×48px.
+- Full provider card tappable.
+- Filter pills ≥ 44px height.
 
-### Mobile-First Notes
+### Mobile-first
 
-- Dialogs and multi-step flows use full-screen sheets on mobile (`100dvh`, safe-area padding).
-- Action footers sit above the virtual keyboard.
-- Scroll containers use `overscroll-y-contain` and `touch-pan-y`.
+- Full-screen sheets on mobile (`100dvh`, safe-area).
+- Action footers above virtual keyboard.
+- `overscroll-y-contain` + `touch-pan-y` on scroll regions.
 
 ---
 
 ## CSS Token Mapping
 
-Current implementation in `src/index.css` maps to this system:
+Implementation in `src/index.css`:
 
 | DESIGN.md token | CSS variable | Notes |
 |---|---|---|
-| `{colors.primary}` | `--primary` (196 60% 15%) | Azul Petróleo #0F2F3A |
-| `{colors.accent}` | `--secondary`, `--accent`, `--copper` | Cobre #C57A3A — migrate accent usage to reward-only contexts |
-| `{colors.border}` | `--border` | #E7ECEF equivalent |
-| `{rounded.lg}` | `--radius` (0.75rem = 12px) | **Gap:** current `--radius` is 12px; cards should use 16px (`--radius-lg`) |
-| Display font | h1–h6 currently Inter | **Gap:** migrate headings to Manrope |
+| `{colors.primary}` | `--primary` | Universal black #000000 |
+| `{colors.primary-hover}` | `--primary-hover` | Near-black hover |
+| `audience` | `--audience` | Role-aware: #2563EB client · #F97316 provider |
+| `brand-blue` | `--brand-blue` | Fixed #2563EB |
+| `brand-orange` | `--brand-orange` | Fixed #F97316 |
+| `{colors.primary-soft}` | `--primary-soft` | Near-white soft tint |
+| `{colors.canvas-soft}` | `--canvas-soft` | #F9FAFB |
+| `{colors.border}` | `--border` | #E5E7EB |
+| `{colors.ink}` | `--ink` | #111827 |
+| `{rounded.lg}` | `--radius-lg` | 16px cards |
+| Display font | `font-display` → Manrope | Headings use Manrope via `src/index.css` |
+| Motion easing | `--motion-easing` | `ease-prestway` / `ease-renovi` |
 
 ---
 
 ## Known Gaps
 
-- **Display font not yet loaded:** `src/index.css` uses Inter for all headings; Manrope / Plus Jakarta Sans pending integration.
-- **Accent overuse:** Cobre currently maps to `--secondary` and `--accent` broadly; audit needed to restrict copper to reward contexts only.
-- **Card radius mismatch:** Tailwind `--radius` is 12px; design spec calls for 16px on cards.
-- **Dark mode:** Tokens exist in `index.css` but the public product is light-mode-first; dark mode is not a v2 priority.
-- **Hover state colors:** Documented at component level; precise `:hover` extraction pending design QA pass.
-- **Skeleton / loading states:** Not yet standardized across all card types.
-- **Photography guidelines:** Production asset pipeline (consent, compression, aspect ratios) not yet documented.
+- **Product copy migration:** many UI strings still say "Renovi"; migrate to **Prestway** per [`BRAND.md`](./BRAND.md).
+- **Logo / symbol assets:** replace legacy Renovi marks with Prestway wordmark + abstract symbol.
+- **Audience color audit:** keep default chrome on `primary` (black); use `audience-*` / `brand-*` only for intentional brand-color moments.
+- **Dark mode:** tokens exist; public product is light-mode-first.
+- **Skeleton / loading states:** standardize across card types.
+- **Photography pipeline:** consent, compression, aspect ratios TBD.
 
 ---
 
@@ -641,4 +679,4 @@ Current implementation in `src/index.css` maps to this system:
 
 | Version | Date | Changes |
 |---|---|---|
-| v2 | 2026-06-08 | Initial Renovi design system — petróleo-dominant, copper-as-reward, Service Request Card as signature component, mixed shape language, real-photography mandate |
+| v3.7 | 2026-08-11 | Rebrand to **Prestway**. New DNA/positioning ([`BRAND.md`](./BRAND.md)). Palette → Azul #2563EB + Laranja #F97316. Peers Stripe/Notion/Linear. White top-nav. Ban construction imagery. Manrope ExtraBold for display. |

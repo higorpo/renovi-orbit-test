@@ -12,7 +12,7 @@ export default function ClientSignup() {
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url(/hero-client.jpg)" }}
       >
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0F2F3A]/95 via-[#0F2F3A]/90 to-black/80" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1E3A8A]/95 via-[#1E3A8A]/90 to-black/80" />
       </div>
 
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4 md:p-8">
@@ -63,7 +63,7 @@ export default function ClientSignup() {
                     Já tem uma conta?{" "}
                     <Link
                       to="/login"
-                      className="text-[#C57A3A] font-semibold hover:underline"
+                      className="text-[#F97316] font-semibold hover:underline"
                     >
                       Fazer login
                     </Link>

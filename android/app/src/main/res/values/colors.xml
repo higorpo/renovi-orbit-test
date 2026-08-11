@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#0F2F3A</color>
-    <color name="colorPrimaryDark">#0A2229</color>
-    <color name="colorAccent">#C17A4A</color>
-    <color name="splashBackground">#0F2F3A</color>
+    <color name="colorPrimary">#000000</color>
+    <color name="colorPrimaryDark">#000000</color>
+    <color name="colorAccent">#F97316</color>
+    <color name="splashBackground">#000000</color>
     <color name="statusBarColor">#FFFFFF</color>
     <color name="navigationBarColor">#FFFFFF</color>
-    <color name="notification_icon_color">#1a5f7a</color>
+    <color name="notification_icon_color">#000000</color>
 </resources>

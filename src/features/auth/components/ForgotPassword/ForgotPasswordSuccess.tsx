@@ -19,7 +19,7 @@ export function ForgotPasswordSuccess() {
         </p>
       </div>
 
-      <Button asChild className="w-full bg-[#C57A3A] hover:bg-[#C57A3A]/90 text-white">
+      <Button asChild className="w-full bg-[#2563EB] hover:bg-[#1D4ED8] text-white">
         <Link to="/login">Voltar para Login</Link>
       </Button>
     </div>

@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Renovi Design System v2 — see DESIGN.md. All semantic colors MUST be HSL. */
+/* Prestway Design System v3 — see DESIGN.md + BRAND.md. All semantic colors MUST be HSL. */
 
 @layer base {
   * {
@@ -55,11 +55,32 @@
     --popover: var(--canvas);
     --popover-foreground: var(--ink);
 
-    /* Primary — Azul Petróleo #0F2F3A */
-    --primary: 196 60% 15%;
-    --primary-hover: 196 57% 21%;
-    --primary-soft: 196 33% 95%;
+    /* Primary — universal black #000000 (not role-aware) */
+    --primary: 0 0% 0%;
+    --primary-hover: 0 0% 18%;
+    --primary-soft: 0 0% 96%;
     --primary-foreground: 0 0% 100%;
+    --primary-dark: 0 0% 0%;
+    --primary-light: 0 0% 35%;
+
+    /* Brand blue — Azul Prestway #2563EB (punctual / fixed) */
+    --brand-blue: 221 83% 53%;
+    --brand-blue-hover: 224 64% 33%;
+    --brand-blue-soft: 214 100% 97%;
+    --brand-blue-foreground: 0 0% 100%;
+
+    /* Brand orange — Laranja Prestway #F97316 (punctual / fixed) */
+    --brand-orange: 25 95% 53%;
+    --brand-orange-hover: 17 88% 40%;
+    --brand-orange-soft: 33 100% 96%;
+    --brand-orange-foreground: 0 0% 100%;
+
+    /* Audience — role-aware via html[data-audience] (see audienceTheme.ts).
+       Default / client → brand-blue · Provider → brand-orange */
+    --audience: var(--brand-blue);
+    --audience-hover: var(--brand-blue-hover);
+    --audience-soft: var(--brand-blue-soft);
+    --audience-foreground: var(--brand-blue-foreground);
 
     /* Secondary — neutral surface (canvas-soft) */
     --secondary: var(--canvas-soft);
@@ -67,34 +88,37 @@
 
     /* Muted */
     --muted: var(--canvas-soft);
-    --muted-foreground: 215 16% 65%;
+    --muted-foreground: 220 9% 64%;
 
-    /* Accent — hover/selection surface (warm soft tint) */
-    --accent: 30 50% 94%;
-    --accent-foreground: 26 54% 50%;
+    /* Accent surface — soft tint of primary */
+    --accent: var(--primary-soft);
+    --accent-foreground: var(--primary);
 
-    /* Reward — Cobre #C57A3A (badges, progress, highlights; prefer copper-* utilities) */
-    --copper: 26 54% 50%;
-    --copper-hover: 26 61% 43%;
-    --copper-soft: 30 50% 94%;
-    --copper-foreground: 0 0% 100%;
-    --copper-dark: 26 54% 40%;
+    /* Copper — warm reward/highlight (legacy; same hex as brand-orange) */
+    --copper: var(--brand-orange);
+    --copper-hover: var(--brand-orange-hover);
+    --copper-soft: var(--brand-orange-soft);
+    --copper-foreground: var(--brand-orange-foreground);
+    --copper-dark: var(--brand-orange-hover);
+    --copper-light: 31 97% 72%;
 
-    /* Text scale */
-    --ink: 222 47% 11%;
-    --body-text: 215 16% 35%;
+    /* Text scale — ink #111827, body #6B7280 */
+    --ink: 221 39% 11%;
+    --body-text: 220 9% 46%;
 
     /* Semantic */
-    --success: 123 46% 34%;
+    --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
-    --warning: 32 95% 44%;
+    --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
 
-    /* Borders & focus */
-    --border: 200 14% 92%;
-    --input: 200 14% 92%;
+    /* Borders & focus — #E5E7EB */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
     --ring: var(--primary);
 
     /* Shape language — buttons pill, cards 16px, inputs 12px */
@@ -117,71 +141,124 @@
     --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.08);
     --shadow-3: 0 16px 40px rgba(0, 0, 0, 0.12);
 
-    /* Brand aliases */
-    --teal: var(--primary);
-    --teal-hover: var(--primary-hover);
-    --teal-light: 196 50% 25%;
+    /* Brand aliases (teal → brand-blue for legacy utilities) */
+    --teal: var(--brand-blue);
+    --teal-hover: var(--brand-blue-hover);
+    --teal-light: 224 64% 33%;
 
-    /* Sidebar */
+    /* Sidebar — follows primary (black) */
     --sidebar-background: var(--primary);
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: var(--copper);
+    --sidebar-foreground: var(--primary-foreground);
+    --sidebar-primary: var(--brand-orange);
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 196 50% 20%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 196 50% 20%;
-    --sidebar-ring: var(--copper);
+    --sidebar-accent: var(--primary-hover);
+    --sidebar-accent-foreground: var(--primary-foreground);
+    --sidebar-border: var(--primary-hover);
+    --sidebar-ring: var(--brand-orange);
+  }
+
+  /* Provider — audience resolves to brand-orange */
+  html[data-audience="provider"] {
+    --audience: var(--brand-orange);
+    --audience-hover: var(--brand-orange-hover);
+    --audience-soft: var(--brand-orange-soft);
+    --audience-foreground: var(--brand-orange-foreground);
+  }
+
+  /* Explicit client (default) — audience resolves to brand-blue */
+  html[data-audience="client"] {
+    --audience: var(--brand-blue);
+    --audience-hover: var(--brand-blue-hover);
+    --audience-soft: var(--brand-blue-soft);
+    --audience-foreground: var(--brand-blue-foreground);
   }
 
   .dark {
-    --canvas: 222 47% 11%;
-    --canvas-soft: 196 50% 14%;
+    --canvas: 221 39% 11%;
+    --canvas-soft: 224 40% 14%;
     --background: var(--canvas);
     --foreground: 0 0% 100%;
 
-    --card: 196 60% 15%;
+    --card: 224 50% 16%;
     --card-foreground: 0 0% 100%;
 
-    --popover: 196 60% 15%;
+    --popover: 224 50% 16%;
     --popover-foreground: 0 0% 100%;
 
     --primary: 0 0% 100%;
-    --primary-hover: 196 33% 95%;
-    --primary-soft: 196 50% 20%;
-    --primary-foreground: 196 60% 15%;
+    --primary-hover: 0 0% 90%;
+    --primary-soft: 0 0% 16%;
+    --primary-foreground: 0 0% 0%;
+    --primary-dark: 0 0% 80%;
+    --primary-light: 0 0% 100%;
 
-    --secondary: 196 50% 20%;
+    --brand-blue: 221 83% 60%;
+    --brand-blue-hover: 221 75% 68%;
+    --brand-blue-soft: 221 40% 16%;
+    --brand-blue-foreground: 0 0% 100%;
+
+    --brand-orange: 25 95% 55%;
+    --brand-orange-hover: 25 90% 62%;
+    --brand-orange-soft: 25 40% 16%;
+    --brand-orange-foreground: 0 0% 100%;
+
+    --audience: var(--brand-blue);
+    --audience-hover: var(--brand-blue-hover);
+    --audience-soft: var(--brand-blue-soft);
+    --audience-foreground: var(--brand-blue-foreground);
+
+    --secondary: 224 40% 18%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 196 50% 20%;
-    --muted-foreground: 215 16% 65%;
+    --muted: 224 40% 18%;
+    --muted-foreground: 220 9% 65%;
 
-    --accent: 26 40% 18%;
-    --accent-foreground: 26 54% 62%;
+    --accent: var(--primary-soft);
+    --accent-foreground: var(--primary);
 
-    --copper: 26 54% 50%;
-    --copper-hover: 26 61% 43%;
-    --copper-soft: 26 40% 18%;
-    --copper-foreground: 0 0% 100%;
+    --copper: var(--brand-orange);
+    --copper-hover: var(--brand-orange-hover);
+    --copper-soft: var(--brand-orange-soft);
+    --copper-foreground: var(--brand-orange-foreground);
+    --copper-dark: var(--brand-orange-hover);
+    --copper-light: 31 97% 72%;
 
     --ink: 0 0% 100%;
-    --body-text: 215 16% 75%;
+    --body-text: 220 9% 70%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 100%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
 
-    --border: 196 50% 20%;
-    --input: 196 50% 20%;
+    --border: 224 40% 20%;
+    --input: 224 40% 20%;
     --ring: var(--primary);
 
-    --sidebar-background: 196 70% 10%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: var(--copper);
+    --sidebar-background: var(--primary);
+    --sidebar-foreground: var(--primary-foreground);
+    --sidebar-primary: var(--brand-orange);
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 196 50% 20%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 196 50% 20%;
-    --sidebar-ring: var(--copper);
+    --sidebar-accent: var(--primary-hover);
+    --sidebar-accent-foreground: var(--primary-foreground);
+    --sidebar-border: var(--primary-hover);
+    --sidebar-ring: var(--brand-orange);
+  }
+
+  .dark html[data-audience="provider"],
+  html.dark[data-audience="provider"] {
+    --audience: var(--brand-orange);
+    --audience-hover: var(--brand-orange-hover);
+    --audience-soft: var(--brand-orange-soft);
+    --audience-foreground: var(--brand-orange-foreground);
+  }
+
+  .dark html[data-audience="client"],
+  html.dark[data-audience="client"] {
+    --audience: var(--brand-blue);
+    --audience-hover: var(--brand-blue-hover);
+    --audience-soft: var(--brand-blue-soft);
+    --audience-foreground: var(--brand-blue-foreground);
   }
 }
 
@@ -457,8 +534,10 @@
   }
 
   /* Focus dentro de cards escuros (ProviderHUD) */
-  [style*='background: linear-gradient(135deg, #0F2F3A'] a:focus-visible,
-  [style*='background: linear-gradient(135deg, #0F2F3A'] button:focus-visible {
+  [style*='background: linear-gradient(135deg, #2563EB'] a:focus-visible,
+  [style*='background: linear-gradient(135deg, #2563EB'] button:focus-visible,
+  [style*='background: linear-gradient(135deg, #1E3A8A'] a:focus-visible,
+  [style*='background: linear-gradient(135deg, #1E3A8A'] button:focus-visible {
     @apply ring-copper ring-offset-primary;
   }
 
