@@ -14,8 +14,8 @@ const COMMON_PASSWORDS = [
   "qwerty",
   "admin",
   "admin123",
-  "renovi",
-  "renovi123",
+  "prestway",
+  "prestway123",
 ];
 
 export interface PasswordValidationResult {

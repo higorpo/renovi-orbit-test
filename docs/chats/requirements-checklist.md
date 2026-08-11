@@ -1,4 +1,4 @@
-# Checklist Completo de Requisitos — Fluxo Conversacional Cliente ↔ Prestador da Renovi
+# Checklist Completo de Requisitos — Fluxo Conversacional Cliente ↔ Prestador da Prestway
 
 # 1. Estrutura Geral do Fluxo
 
@@ -91,7 +91,7 @@
 
 # 6. Estrutura da Proposta
 
-71. Deve existir um componente estruturado de proposta formal (já existe hoje no código, precisa extrair para uma feature isolada /home/higor/Área de Trabalho/Renovi/orbit/src/features/provider-jobs/components/ProviderProposalComposerDialog.tsx).
+71. Deve existir um componente estruturado de proposta formal (já existe hoje no código, precisa extrair para uma feature isolada /home/higor/Área de Trabalho/Prestway/orbit/src/features/provider-jobs/components/ProviderProposalComposerDialog.tsx).
 72. O prestador deve conseguir criar proposta diretamente pelo chat (abrindo em uma nova tela/modal).
 73. A proposta deve conter valor.
 74. A proposta deve conter descrição de escopo.

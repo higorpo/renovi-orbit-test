@@ -11,17 +11,17 @@ Deno.test("resolveNetCredServiceTitle falls back to Serviço", () => {
   assertEquals(resolveNetCredServiceTitle("   "), "Serviço");
 });
 
-Deno.test("buildNetCredChargeExtraInfo prefixes Renovi brand", () => {
+Deno.test("buildNetCredChargeExtraInfo prefixes Prestway brand", () => {
   assertEquals(
     buildNetCredChargeExtraInfo("Pintura interna"),
-    "Renovi — Pintura interna",
+    "Prestway — Pintura interna",
   );
 });
 
 Deno.test("truncateNetCredChargeText enforces NetCred 150-char limit", () => {
   const longTitle = "A".repeat(200);
   assertEquals(
-    truncateNetCredChargeText(`Renovi — ${longTitle}`).length,
+    truncateNetCredChargeText(`Prestway — ${longTitle}`).length,
     NETCRED_CHARGE_TEXT_MAX_LENGTH,
   );
 });

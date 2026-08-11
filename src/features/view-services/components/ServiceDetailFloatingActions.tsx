@@ -46,7 +46,7 @@ export function ServiceDetailFloatingActions({
         variant="default"
         size="icon"
         className={cn(
-          "h-14 w-14 rounded-full transition-transform duration-fast ease-renovi active:scale-[0.97]",
+          "h-14 w-14 rounded-full transition-transform duration-fast ease-prestway active:scale-[0.97]",
           floatingActionButtonClassName,
         )}
         aria-label={ariaLabel}

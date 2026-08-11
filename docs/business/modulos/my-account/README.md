@@ -83,4 +83,4 @@
 - `src/features/my-account/`
 - `src/router.tsx` — `path: 'conta'`
 - Detalhe: [features/minha-conta.md](./features/minha-conta.md)
-- Constantes: `constants.ts` (2 MB foto, 5 MB portfólio, `dpo@renovi.com.br`)
+- Constantes: `constants.ts` (2 MB foto, 5 MB portfólio, `dpo@prestway.com`)

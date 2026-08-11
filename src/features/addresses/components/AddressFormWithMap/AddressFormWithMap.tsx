@@ -252,15 +252,15 @@ export function AddressFormWithMap({
         <div className="rounded-lg border border-border bg-muted/30 p-3 sm:p-4 flex gap-2 sm:gap-3">
           <Info className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground shrink-0 mt-0.5" />
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Não conseguiu selecionar estado, cidade ou bairro? A Renovi ainda não está presente na
+            Não conseguiu selecionar estado, cidade ou bairro? A Prestway ainda não está presente na
             sua região. Você pode seguir nosso Instagram em{" "}
             <a
-              href="https://www.instagram.com/renovi.com.br/"
+              href="https://www.instagram.com/prestway.com/"
               target="_blank"
               rel="noopener noreferrer"
               className="font-medium text-primary hover:underline"
             >
-              @renovi.com.br
+              @prestway.com
             </a>{" "}
             para acompanhar novidades.
           </p>

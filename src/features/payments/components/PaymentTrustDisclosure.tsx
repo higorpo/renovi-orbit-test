@@ -16,7 +16,7 @@ export function PaymentTrustDisclosure() {
           </p>
           <p className="text-muted-foreground">
             Seus dados de cartão são enviados com segurança ao nosso parceiro de
-            pagamentos para tokenização. A Renovi não armazena o número completo
+            pagamentos para tokenização. A Prestway não armazena o número completo
             do cartão nem o CVV — apenas referências tokenizadas. O envio passa
             por um serviço seguro da plataforma até o gateway (o cartão não fica
             gravado nos nossos sistemas).

@@ -91,7 +91,7 @@ test.describe("My Account — client", () => {
 
   test("privacy: Falar com o DPO link points to mailto DPO", async ({ page }) => {
     const acc = new MyAccountPage(page);
-    await expect(acc.getFalarComDpoLink()).toHaveAttribute("href", /^mailto:dpo@renovi\.com\.br/i);
+    await expect(acc.getFalarComDpoLink()).toHaveAttribute("href", /^mailto:dpo@prestway\.com\.br/i);
   });
 
   test("privacy: policy link when main site URL is configured", async ({ page }) => {
@@ -199,7 +199,7 @@ test.describe("My Account — client", () => {
     await acc.getExportarDadosButton().click();
     await expect(acc.getExportarAlertDialog()).toBeVisible({ timeout: 15_000 });
     await expect(acc.getExportarDialogTitle()).toBeVisible();
-    await expect(page.getByText("dpo@renovi.com.br")).toBeVisible();
+    await expect(page.getByText("dpo@prestway.com")).toBeVisible();
     await acc.getExportarEntendiButton().click();
   });
 
@@ -209,7 +209,7 @@ test.describe("My Account — client", () => {
     await acc.getExcluirContaButton().click();
     await expect(acc.getExcluirContaAlertDialog()).toBeVisible({ timeout: 15_000 });
     await expect(acc.getExcluirContaDialogTitle()).toBeVisible();
-    await expect(page.getByText("dpo@renovi.com.br")).toBeVisible();
+    await expect(page.getByText("dpo@prestway.com")).toBeVisible();
     await acc.getExcluirContaEntendiButton().click();
   });
 

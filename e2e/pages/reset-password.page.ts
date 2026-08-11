@@ -36,7 +36,7 @@ export class ResetPasswordPage {
     this.nonRecoveryHeading = page.getByRole("heading", { name: "Link de redefinição" });
     this.nonRecoveryLoginLink = page.getByRole("link", { name: "Voltar para o login" });
 
-    this.logo = page.getByAltText("Renovi");
+    this.logo = page.getByAltText("Prestway");
   }
 
   async goto() {

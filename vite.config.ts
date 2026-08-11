@@ -38,7 +38,7 @@ export default defineConfig(({ mode }) => {
   },
   server: {
     host: true,
-    allowedHosts: ['renovi-2.loca.lt']
+    allowedHosts: ['prestway-2.loca.lt']
   },
   test: {
     globals: false,
@@ -154,7 +154,7 @@ export default defineConfig(({ mode }) => {
           sizes: "390x844",
           type: "image/svg+xml",
           form_factor: "narrow",
-          label: "Tela principal do app Renovi",
+          label: "Tela principal do app Prestway",
         },
         {
           src: "/screenshot-wide.svg",

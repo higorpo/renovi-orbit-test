@@ -237,7 +237,7 @@ Cancelamento pós-commit / side effects → `contracted_services.status = CANCEL
 | Chats (`cns_close_contracted_service_chat`) | Fecha conversa no cancelamento |
 | `cns_cancel_active_service_reschedule_requests` | Cancela pedidos de reagendamento ativos |
 | Sentry / payment-logger | Erros críticos de gateway/commit |
-| `PAYMENT_SUPPORT_URL` | URL em payloads de falha crítica (default `https://renovi.com.br/suporte`) |
+| `PAYMENT_SUPPORT_URL` | URL em payloads de falha crítica (default `https://prestway.com/suporte`) |
 
 ## 14. Listagens, buscas, filtros, paginação, ordenação
 

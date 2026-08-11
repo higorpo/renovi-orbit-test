@@ -187,7 +187,7 @@ export function ProviderKycWizardStepContent({
     <>
       <StepPanel active={step === "entity"} testId="kyc-step-entity">
         <p className="text-sm text-muted-foreground">
-          Escolha como você atua na Renovi. Isso define quais documentos e dados
+          Escolha como você atua na Prestway. Isso define quais documentos e dados
           bancários pediremos a seguir.
         </p>
         <FormField
@@ -459,7 +459,7 @@ export function ProviderKycWizardStepContent({
       <StepPanel active={step === "documents"} testId="kyc-step-documents">
         <p className="text-sm text-muted-foreground">
           Envie documentos legíveis para concluirmos a verificação de segurança
-          da sua conta na Renovi.
+          da sua conta na Prestway.
         </p>
         {isCnpj ? (
           <>

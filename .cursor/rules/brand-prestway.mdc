@@ -1,12 +1,11 @@
 # Marca Prestway
 
-A marca de produto é **Prestway** (antes Renovi). Identidade completa: `BRAND.md`. Sistema visual: `DESIGN.md`.
+A marca de produto é **Prestway**. Identidade completa: `BRAND.md`. Sistema visual: `DESIGN.md`.
 
 ## Nome
 
 | Usar | Não usar (produto / UI / copy) |
 |---|---|
-| **Prestway** | Renovi |
 | Orbit | só como nome interno do repo / Capacitor `appName` — nunca como marca para o usuário |
 
 Em strings de UI, SEO, e-mails, toasts e docs de produto voltados ao usuário: **Prestway**.

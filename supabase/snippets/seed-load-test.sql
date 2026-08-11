@@ -2,7 +2,7 @@
 -- Run AFTER the main seed.sql (requires platform_states, platform_cities, forms, services).
 --
 -- All load-test accounts use password: Abc123
--- Emails: loadtest-01@renovi.com.br through loadtest-15@renovi.com.br
+-- Emails: loadtest-01@prestway.com through loadtest-15@prestway.com
 --
 -- Usage (local):
 --   1. Ensure main seed ran: supabase db reset
@@ -37,91 +37,91 @@ insert into auth.users (
 )
 values
   ('00000000-0000-0000-0000-000000000000', '1a000001-0000-4000-a000-000000000001', 'authenticated', 'authenticated',
-   'loadtest-01@renovi.com.br', crypt('Abc123', gen_salt('bf')), now(),
+   'loadtest-01@prestway.com', crypt('Abc123', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Ana Carolina Fernandes","role":"client"}'::jsonb,
    now() - interval '90 days', now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000', '1a000001-0000-4000-a000-000000000002', 'authenticated', 'authenticated',
-   'loadtest-02@renovi.com.br', crypt('Abc123', gen_salt('bf')), now(),
+   'loadtest-02@prestway.com', crypt('Abc123', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Bruno Henrique Costa","role":"client"}'::jsonb,
    now() - interval '85 days', now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000', '1a000001-0000-4000-a000-000000000003', 'authenticated', 'authenticated',
-   'loadtest-03@renovi.com.br', crypt('Abc123', gen_salt('bf')), now(),
+   'loadtest-03@prestway.com', crypt('Abc123', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Camila de Souza Oliveira","role":"client"}'::jsonb,
    now() - interval '80 days', now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000', '1a000001-0000-4000-a000-000000000004', 'authenticated', 'authenticated',
-   'loadtest-04@renovi.com.br', crypt('Abc123', gen_salt('bf')), now(),
+   'loadtest-04@prestway.com', crypt('Abc123', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Daniel Augusto Almeida","role":"client"}'::jsonb,
    now() - interval '75 days', now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000', '1a000001-0000-4000-a000-000000000005', 'authenticated', 'authenticated',
-   'loadtest-05@renovi.com.br', crypt('Abc123', gen_salt('bf')), now(),
+   'loadtest-05@prestway.com', crypt('Abc123', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Elena Rodrigues Pereira","role":"client"}'::jsonb,
    now() - interval '70 days', now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000', '1a000001-0000-4000-a000-000000000006', 'authenticated', 'authenticated',
-   'loadtest-06@renovi.com.br', crypt('Abc123', gen_salt('bf')), now(),
+   'loadtest-06@prestway.com', crypt('Abc123', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Felipe Nascimento da Silva","role":"client"}'::jsonb,
    now() - interval '65 days', now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000', '1a000001-0000-4000-a000-000000000007', 'authenticated', 'authenticated',
-   'loadtest-07@renovi.com.br', crypt('Abc123', gen_salt('bf')), now(),
+   'loadtest-07@prestway.com', crypt('Abc123', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Gabriela Santos Lima","role":"client"}'::jsonb,
    now() - interval '60 days', now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000', '1a000001-0000-4000-a000-000000000008', 'authenticated', 'authenticated',
-   'loadtest-08@renovi.com.br', crypt('Abc123', gen_salt('bf')), now(),
+   'loadtest-08@prestway.com', crypt('Abc123', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Heitor Oliveira Neto","role":"client"}'::jsonb,
    now() - interval '55 days', now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000', '1a000001-0000-4000-a000-000000000009', 'authenticated', 'authenticated',
-   'loadtest-09@renovi.com.br', crypt('Abc123', gen_salt('bf')), now(),
+   'loadtest-09@prestway.com', crypt('Abc123', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Isabela Martins Rocha","role":"client"}'::jsonb,
    now() - interval '50 days', now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000', '1a000001-0000-4000-a000-00000000000a', 'authenticated', 'authenticated',
-   'loadtest-10@renovi.com.br', crypt('Abc123', gen_salt('bf')), now(),
+   'loadtest-10@prestway.com', crypt('Abc123', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"João Pedro Lima Ferreira","role":"client"}'::jsonb,
    now() - interval '45 days', now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000', '1a000001-0000-4000-a000-00000000000b', 'authenticated', 'authenticated',
-   'loadtest-11@renovi.com.br', crypt('Abc123', gen_salt('bf')), now(),
+   'loadtest-11@prestway.com', crypt('Abc123', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Karen Barbosa dos Santos","role":"client"}'::jsonb,
    now() - interval '40 days', now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000', '1a000001-0000-4000-a000-00000000000c', 'authenticated', 'authenticated',
-   'loadtest-12@renovi.com.br', crypt('Abc123', gen_salt('bf')), now(),
+   'loadtest-12@prestway.com', crypt('Abc123', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Lucas Pereira Cardoso","role":"client"}'::jsonb,
    now() - interval '35 days', now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000', '1a000001-0000-4000-a000-00000000000d', 'authenticated', 'authenticated',
-   'loadtest-13@renovi.com.br', crypt('Abc123', gen_salt('bf')), now(),
+   'loadtest-13@prestway.com', crypt('Abc123', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Mariana Vieira Ribeiro","role":"client"}'::jsonb,
    now() - interval '30 days', now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000', '1a000001-0000-4000-a000-00000000000e', 'authenticated', 'authenticated',
-   'loadtest-14@renovi.com.br', crypt('Abc123', gen_salt('bf')), now(),
+   'loadtest-14@prestway.com', crypt('Abc123', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Nicolas Andrade Moreira","role":"client"}'::jsonb,
    now() - interval '25 days', now(), '', '', '', ''),
 
   ('00000000-0000-0000-0000-000000000000', '1a000001-0000-4000-a000-00000000000f', 'authenticated', 'authenticated',
-   'loadtest-15@renovi.com.br', crypt('Abc123', gen_salt('bf')), now(),
+   'loadtest-15@prestway.com', crypt('Abc123', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Priscila Mendes Araújo","role":"client"}'::jsonb,
    now() - interval '20 days', now(), '', '', '', '')
@@ -133,35 +133,35 @@ on conflict (id) do nothing;
 insert into auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
 values
   ('1a000001-0000-4000-a000-000000000001', '1a000001-0000-4000-a000-000000000001',
-   '{"sub":"1a000001-0000-4000-a000-000000000001","email":"loadtest-01@renovi.com.br"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000001', now(), now(), now()),
+   '{"sub":"1a000001-0000-4000-a000-000000000001","email":"loadtest-01@prestway.com"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000001', now(), now(), now()),
   ('1a000001-0000-4000-a000-000000000002', '1a000001-0000-4000-a000-000000000002',
-   '{"sub":"1a000001-0000-4000-a000-000000000002","email":"loadtest-02@renovi.com.br"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000002', now(), now(), now()),
+   '{"sub":"1a000001-0000-4000-a000-000000000002","email":"loadtest-02@prestway.com"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000002', now(), now(), now()),
   ('1a000001-0000-4000-a000-000000000003', '1a000001-0000-4000-a000-000000000003',
-   '{"sub":"1a000001-0000-4000-a000-000000000003","email":"loadtest-03@renovi.com.br"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000003', now(), now(), now()),
+   '{"sub":"1a000001-0000-4000-a000-000000000003","email":"loadtest-03@prestway.com"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000003', now(), now(), now()),
   ('1a000001-0000-4000-a000-000000000004', '1a000001-0000-4000-a000-000000000004',
-   '{"sub":"1a000001-0000-4000-a000-000000000004","email":"loadtest-04@renovi.com.br"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000004', now(), now(), now()),
+   '{"sub":"1a000001-0000-4000-a000-000000000004","email":"loadtest-04@prestway.com"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000004', now(), now(), now()),
   ('1a000001-0000-4000-a000-000000000005', '1a000001-0000-4000-a000-000000000005',
-   '{"sub":"1a000001-0000-4000-a000-000000000005","email":"loadtest-05@renovi.com.br"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000005', now(), now(), now()),
+   '{"sub":"1a000001-0000-4000-a000-000000000005","email":"loadtest-05@prestway.com"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000005', now(), now(), now()),
   ('1a000001-0000-4000-a000-000000000006', '1a000001-0000-4000-a000-000000000006',
-   '{"sub":"1a000001-0000-4000-a000-000000000006","email":"loadtest-06@renovi.com.br"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000006', now(), now(), now()),
+   '{"sub":"1a000001-0000-4000-a000-000000000006","email":"loadtest-06@prestway.com"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000006', now(), now(), now()),
   ('1a000001-0000-4000-a000-000000000007', '1a000001-0000-4000-a000-000000000007',
-   '{"sub":"1a000001-0000-4000-a000-000000000007","email":"loadtest-07@renovi.com.br"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000007', now(), now(), now()),
+   '{"sub":"1a000001-0000-4000-a000-000000000007","email":"loadtest-07@prestway.com"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000007', now(), now(), now()),
   ('1a000001-0000-4000-a000-000000000008', '1a000001-0000-4000-a000-000000000008',
-   '{"sub":"1a000001-0000-4000-a000-000000000008","email":"loadtest-08@renovi.com.br"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000008', now(), now(), now()),
+   '{"sub":"1a000001-0000-4000-a000-000000000008","email":"loadtest-08@prestway.com"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000008', now(), now(), now()),
   ('1a000001-0000-4000-a000-000000000009', '1a000001-0000-4000-a000-000000000009',
-   '{"sub":"1a000001-0000-4000-a000-000000000009","email":"loadtest-09@renovi.com.br"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000009', now(), now(), now()),
+   '{"sub":"1a000001-0000-4000-a000-000000000009","email":"loadtest-09@prestway.com"}'::jsonb, 'email', '1a000001-0000-4000-a000-000000000009', now(), now(), now()),
   ('1a000001-0000-4000-a000-00000000000a', '1a000001-0000-4000-a000-00000000000a',
-   '{"sub":"1a000001-0000-4000-a000-00000000000a","email":"loadtest-10@renovi.com.br"}'::jsonb, 'email', '1a000001-0000-4000-a000-00000000000a', now(), now(), now()),
+   '{"sub":"1a000001-0000-4000-a000-00000000000a","email":"loadtest-10@prestway.com"}'::jsonb, 'email', '1a000001-0000-4000-a000-00000000000a', now(), now(), now()),
   ('1a000001-0000-4000-a000-00000000000b', '1a000001-0000-4000-a000-00000000000b',
-   '{"sub":"1a000001-0000-4000-a000-00000000000b","email":"loadtest-11@renovi.com.br"}'::jsonb, 'email', '1a000001-0000-4000-a000-00000000000b', now(), now(), now()),
+   '{"sub":"1a000001-0000-4000-a000-00000000000b","email":"loadtest-11@prestway.com"}'::jsonb, 'email', '1a000001-0000-4000-a000-00000000000b', now(), now(), now()),
   ('1a000001-0000-4000-a000-00000000000c', '1a000001-0000-4000-a000-00000000000c',
-   '{"sub":"1a000001-0000-4000-a000-00000000000c","email":"loadtest-12@renovi.com.br"}'::jsonb, 'email', '1a000001-0000-4000-a000-00000000000c', now(), now(), now()),
+   '{"sub":"1a000001-0000-4000-a000-00000000000c","email":"loadtest-12@prestway.com"}'::jsonb, 'email', '1a000001-0000-4000-a000-00000000000c', now(), now(), now()),
   ('1a000001-0000-4000-a000-00000000000d', '1a000001-0000-4000-a000-00000000000d',
-   '{"sub":"1a000001-0000-4000-a000-00000000000d","email":"loadtest-13@renovi.com.br"}'::jsonb, 'email', '1a000001-0000-4000-a000-00000000000d', now(), now(), now()),
+   '{"sub":"1a000001-0000-4000-a000-00000000000d","email":"loadtest-13@prestway.com"}'::jsonb, 'email', '1a000001-0000-4000-a000-00000000000d', now(), now(), now()),
   ('1a000001-0000-4000-a000-00000000000e', '1a000001-0000-4000-a000-00000000000e',
-   '{"sub":"1a000001-0000-4000-a000-00000000000e","email":"loadtest-14@renovi.com.br"}'::jsonb, 'email', '1a000001-0000-4000-a000-00000000000e', now(), now(), now()),
+   '{"sub":"1a000001-0000-4000-a000-00000000000e","email":"loadtest-14@prestway.com"}'::jsonb, 'email', '1a000001-0000-4000-a000-00000000000e', now(), now(), now()),
   ('1a000001-0000-4000-a000-00000000000f', '1a000001-0000-4000-a000-00000000000f',
-   '{"sub":"1a000001-0000-4000-a000-00000000000f","email":"loadtest-15@renovi.com.br"}'::jsonb, 'email', '1a000001-0000-4000-a000-00000000000f', now(), now(), now())
+   '{"sub":"1a000001-0000-4000-a000-00000000000f","email":"loadtest-15@prestway.com"}'::jsonb, 'email', '1a000001-0000-4000-a000-00000000000f', now(), now(), now())
 on conflict (provider_id, provider) do nothing;
 
 -- =========================================================================

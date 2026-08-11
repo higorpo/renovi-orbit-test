@@ -67,7 +67,7 @@ export function ClientEvaluateServiceAction({
           type="button"
           variant="outline"
           className={cn(
-            "w-full rounded-pill text-primary transition-transform duration-fast ease-renovi hover:bg-primary/5 hover:text-primary active:scale-[0.97] sm:w-auto",
+            "w-full rounded-pill text-primary transition-transform duration-fast ease-prestway hover:bg-primary/5 hover:text-primary active:scale-[0.97] sm:w-auto",
             className,
           )}
           data-testid="client-evaluate-service-action"

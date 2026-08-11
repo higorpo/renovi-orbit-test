@@ -18,7 +18,7 @@ export class ForgotPasswordPage {
       name: /Enviar link de redefinição|Enviando/,
     });
     this.loginLink = page.getByRole("link", { name: "Faça login" });
-    this.logo = page.getByAltText("Renovi");
+    this.logo = page.getByAltText("Prestway");
   }
 
   async goto() {

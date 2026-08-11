@@ -40,8 +40,8 @@ export function LocationPermissionBanner({
             <p className="mt-0.5 text-amber-700 dark:text-amber-300">
               {isNativeApp ? (
                 <>
-                  Permita localização para a Renovi em{" "}
-                  <strong className="font-medium">Configurações do dispositivo</strong> (Apps → Renovi →
+                  Permita localização para a Prestway em{" "}
+                  <strong className="font-medium">Configurações do dispositivo</strong> (Apps → Prestway →
                   Localização → “Permitir o tempo todo” ou “Permitir apenas enquanto estiver em uso”).
                 </>
               ) : (

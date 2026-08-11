@@ -167,7 +167,7 @@ Deno.test("buildResendFromAddress uses default name when RESEND_FROM_NAME unset"
   Deno.env.delete("RESEND_FROM_NAME");
   try {
     const from = buildResendFromAddress();
-    assertEquals(from, "Renovi <noreply@app.com>");
+    assertEquals(from, "Prestway <noreply@app.com>");
   } finally {
     Deno.env.delete("RESEND_FROM_EMAIL");
   }

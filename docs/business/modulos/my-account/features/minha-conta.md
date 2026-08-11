@@ -6,7 +6,7 @@ Documentação alinhada a `src/features/my-account/`, guard em `src/router.tsx` 
 
 ## 1. Resumo executivo
 
-Tela única `/dashboard/conta` onde cliente e prestador mantêm cadastro, foto, privacidade/LGPD e sessão. O prestador gerencia ainda identidade legal, perfil público, serviços ofertados, área de atuação e portfólio. Auto-save com debounce diferente por papel. Exclusão de conta e exportação LGPD hoje são fluxos manuais via e-mail ao DPO (`dpo@renovi.com.br`).
+Tela única `/dashboard/conta` onde cliente e prestador mantêm cadastro, foto, privacidade/LGPD e sessão. O prestador gerencia ainda identidade legal, perfil público, serviços ofertados, área de atuação e portfólio. Auto-save com debounce diferente por papel. Exclusão de conta e exportação LGPD hoje são fluxos manuais via e-mail ao DPO (`dpo@prestway.com`).
 
 ## 2. Objetivo de negócio
 
@@ -93,7 +93,7 @@ flowchart TD
 6. Portfólio criado/atualizado pela página força `visibility: "public"`.
 7. Imagem de perfil: máx. **2 MB**; tipos JPEG/PNG/WebP/HEIC/HEIF.
 8. Imagem de portfólio: máx. **5 MB**; mesmos tipos; input pode acumular múltiplos arquivos; sem teto explícito de quantidade por item no front.
-9. DPO: `dpo@renovi.com.br`; prazo informado na UI: **15 dias úteis**.
+9. DPO: `dpo@prestway.com`; prazo informado na UI: **15 dias úteis**.
 10. E-mail do usuário não é editável no formulário.
 11. Slug: em `updateProviderPublicProfile`, se `display_name` atualiza e slug atual é null ou igual a `providerId`, gera slug único; após slug “real”, alterações de nome não mudam o slug (código analisado).
 12. Prestador: `useUpdateAccountProfile({ silent: true })` — toasts de profile base silenciados no fluxo de grupos.

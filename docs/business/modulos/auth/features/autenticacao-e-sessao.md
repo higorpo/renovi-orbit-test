@@ -12,7 +12,7 @@
 - **Finalidade:** porta de entrada segura e base para autorização no banco (RLS).
 - **Valor:** reduz fraude e acesso cruzado entre papéis.
 - **Impacto:** sem auth, dashboard e operações de pedido/proposta não funcionam.
-- **Contexto:** transversal a toda a Renovi.
+- **Contexto:** transversal a toda a Prestway.
 
 ## 3. Localização na plataforma
 

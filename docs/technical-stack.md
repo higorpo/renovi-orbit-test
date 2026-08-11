@@ -1,6 +1,6 @@
-# Technical Stack — Orbit (Renovi)
+# Technical Stack — Orbit (Prestway)
 
-**Orbit** é a plataforma mobile-first da Renovi para conectar clientes e prestadores de serviços de manutenção e reforma. Uma única codebase React entrega **web/PWA** e **apps nativos** (Android ativo; iOS planejado).
+**Orbit** é a plataforma mobile-first da Prestway para conectar clientes e prestadores de serviços de manutenção e reforma. Uma única codebase React entrega **web/PWA** e **apps nativos** (Android ativo; iOS planejado).
 
 ---
 

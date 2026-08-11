@@ -26,7 +26,7 @@ export class LoginPage {
     this.forgotPasswordLink = page.getByRole("link", { name: "Esqueceu a senha?" });
     this.clientSignupLink = page.getByRole("link", { name: /Sou Cliente/ });
     this.providerSignupLink = page.getByRole("link", { name: /Sou Profissional/ });
-    this.logo = page.getByAltText("Renovi");
+    this.logo = page.getByAltText("Prestway");
   }
 
   async goto() {

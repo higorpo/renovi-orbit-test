@@ -908,7 +908,7 @@ describe('push helpers', () => {
       const registration = mockServiceWorkerRegistration()
       await showWebForegroundSystemNotification({ title: '   ', body: undefined })
       expect(registration.showNotification).toHaveBeenCalledWith(
-        'Renovi',
+        'Prestway',
         expect.objectContaining({ body: '' }),
       )
     })

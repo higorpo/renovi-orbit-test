@@ -1,8 +1,8 @@
-# Renovi Dispatch & Progressive Matching Algorithm Requirements
+# Prestway Dispatch & Progressive Matching Algorithm Requirements
 
 ## Context
 
-Este documento descreve os requisitos funcionais iniciais do algoritmo de dispatch e matching progressivo da Renovi.
+Este documento descreve os requisitos funcionais iniciais do algoritmo de dispatch e matching progressivo da Prestway.
 
 O objetivo do sistema é distribuir pedidos de serviço de forma inteligente, escalável e progressiva, priorizando:
 
@@ -89,7 +89,7 @@ O dispatch SHALL tratar `location_recorded_at` e regras configuráveis de freshn
 
 # Dispatch Phases
 
-O dispatch progressivo da Renovi opera através das seguintes fases explícitas:
+O dispatch progressivo da Prestway opera através das seguintes fases explícitas:
 
 1. Eligibility Resolution Phase
 2. Operational Ranking Phase
@@ -103,7 +103,7 @@ Cada fase possui responsabilidades independentes e pode utilizar dados operacion
 
 # Dispatch State Machine
 
-O dispatch progressivo da Renovi SHALL operar através dos seguintes estados:
+O dispatch progressivo da Prestway SHALL operar através dos seguintes estados:
 
 - DISPATCH_PENDING
 - DISPATCH_ACTIVE
@@ -172,7 +172,7 @@ When both pause gates apply, the system SHALL persist exactly one operational st
 
 # Operational Architecture Constraints
 
-O dispatch progressivo da Renovi SHALL operar utilizando uma arquitetura orientada a persistência de estado, execução assíncrona resumível e coordenação transacional baseada em PostgreSQL.
+O dispatch progressivo da Prestway SHALL operar utilizando uma arquitetura orientada a persistência de estado, execução assíncrona resumível e coordenação transacional baseada em PostgreSQL.
 
 O sistema SHALL assumir:
 
@@ -324,7 +324,7 @@ The following remain **documented and designed** but are **not required for MVP 
 
 ## Requirement 1: Dynamic Candidate Resolution
 
-_User Story_: Como sistema da Renovi, eu quero resolver candidatos dinamicamente no momento da abertura de cada batch para garantir que o dispatch utilize informações atualizadas de disponibilidade, localização e capacidade operacional dos prestadores.
+_User Story_: Como sistema da Prestway, eu quero resolver candidatos dinamicamente no momento da abertura de cada batch para garantir que o dispatch utilize informações atualizadas de disponibilidade, localização e capacidade operacional dos prestadores.
 
 ### Acceptance Criteria
 
@@ -340,7 +340,7 @@ _User Story_: Como sistema da Renovi, eu quero resolver candidatos dinamicamente
 
 ## Requirement 2: Dispatch State Persistence
 
-_User Story_: Como sistema da Renovi, eu quero persistir o estado do dispatch entre batches para garantir consistência operacional durante dispatches de longa duração.
+_User Story_: Como sistema da Prestway, eu quero persistir o estado do dispatch entre batches para garantir consistência operacional durante dispatches de longa duração.
 
 ### Acceptance Criteria
 
@@ -354,7 +354,7 @@ _User Story_: Como sistema da Renovi, eu quero persistir o estado do dispatch en
 
 ## Requirement 3: Provider Eligibility Resolution
 
-_User Story_: Como sistema da Renovi, eu quero resolver a elegibilidade de prestadores utilizando filtros progressivos e geoespaciais otimizados para minimizar processamento desnecessário e reduzir queries de alto custo.
+_User Story_: Como sistema da Prestway, eu quero resolver a elegibilidade de prestadores utilizando filtros progressivos e geoespaciais otimizados para minimizar processamento desnecessário e reduzir queries de alto custo.
 
 ### Acceptance Criteria
 
@@ -380,7 +380,7 @@ _User Story_: Como sistema da Renovi, eu quero resolver a elegibilidade de prest
 
 ## Requirement 4: Provider Ranking Calculation
 
-_User Story_: Como sistema da Renovi, eu quero ranquear os prestadores elegíveis para priorizar aqueles com maior probabilidade de aceitar e concluir o serviço.
+_User Story_: Como sistema da Prestway, eu quero ranquear os prestadores elegíveis para priorizar aqueles com maior probabilidade de aceitar e concluir o serviço.
 
 ### Schema side effect — Provider quality / ratings (prerequisite)
 
@@ -435,7 +435,7 @@ The system SHALL introduce:
 
 ## Requirement 4A: Ranking Score Formalization
 
-_User Story_: Como sistema da Renovi, eu quero formalizar a composição dos scores operacionais de ranking para garantir consistência, auditabilidade e previsibilidade do dispatch.
+_User Story_: Como sistema da Prestway, eu quero formalizar a composição dos scores operacionais de ranking para garantir consistência, auditabilidade e previsibilidade do dispatch.
 
 ### Acceptance Criteria
 
@@ -455,7 +455,7 @@ _User Story_: Como sistema da Renovi, eu quero formalizar a composição dos sco
 
 ## Requirement 5: Progressive Batch Visibility and Dispatch
 
-_User Story_: Como sistema da Renovi, eu quero liberar Service Requests em batches progressivos mantendo visibilidade incremental permanente para prestadores já expostos ao Service Request.
+_User Story_: Como sistema da Prestway, eu quero liberar Service Requests em batches progressivos mantendo visibilidade incremental permanente para prestadores já expostos ao Service Request.
 
 ### Acceptance Criteria
 
@@ -501,7 +501,7 @@ _User Story_: Como sistema da Renovi, eu quero liberar Service Requests em batch
 
 ## Requirement 6: Provider Notification Dispatch (Message Dispatcher)
 
-_User Story_: Como sistema da Renovi, eu quero notificar prestadores apenas quando seus respectivos batches forem liberados, utilizando o Message Dispatcher integrado para entrega multicanal (push e e-mail).
+_User Story_: Como sistema da Prestway, eu quero notificar prestadores apenas quando seus respectivos batches forem liberados, utilizando o Message Dispatcher integrado para entrega multicanal (push e e-mail).
 
 ### Acceptance Criteria
 
@@ -516,7 +516,7 @@ _User Story_: Como sistema da Renovi, eu quero notificar prestadores apenas quan
 
 ## Requirement 7: Marketplace Load Balancing
 
-_User Story_: Como sistema da Renovi, eu quero distribuir oportunidades de forma equilibrada para evitar concentração excessiva de demanda e fadiga de notificações.
+_User Story_: Como sistema da Prestway, eu quero distribuir oportunidades de forma equilibrada para evitar concentração excessiva de demanda e fadiga de notificações.
 
 ### Acceptance Criteria
 
@@ -532,7 +532,7 @@ _User Story_: Como sistema da Renovi, eu quero distribuir oportunidades de forma
 
 ## Requirement 8: Dispatch Auditability
 
-_User Story_: Como sistema da Renovi, eu quero registrar eventos de dispatch para permitir auditoria e análise operacional.
+_User Story_: Como sistema da Prestway, eu quero registrar eventos de dispatch para permitir auditoria e análise operacional.
 
 ### Acceptance Criteria
 
@@ -547,7 +547,7 @@ _User Story_: Como sistema da Renovi, eu quero registrar eventos de dispatch par
 
 ## Requirement 9: Geospatial Indexing and Spatial Partitioning
 
-_User Story_: Como sistema da Renovi, eu quero utilizar indexação geoespacial eficiente para suportar dispatch em larga escala com baixa latência.
+_User Story_: Como sistema da Prestway, eu quero utilizar indexação geoespacial eficiente para suportar dispatch em larga escala com baixa latência.
 
 ### Acceptance Criteria
 
@@ -559,7 +559,7 @@ _User Story_: Como sistema da Renovi, eu quero utilizar indexação geoespacial 
 
 ## Requirement 10: Dispatch Scalability
 
-_User Story_: Como sistema da Renovi, eu quero minimizar processamento redundante para garantir escalabilidade operacional.
+_User Story_: Como sistema da Prestway, eu quero minimizar processamento redundante para garantir escalabilidade operacional.
 
 ### Acceptance Criteria
 
@@ -573,7 +573,7 @@ _User Story_: Como sistema da Renovi, eu quero minimizar processamento redundant
 
 ## Requirement 10A: Dispatch Idempotency and Concurrency Control
 
-_User Story_: Como sistema da Renovi, eu quero garantir execução idempotente e isolamento concorrente do dispatch para evitar batches duplicados, notificações duplicadas e inconsistências operacionais durante retries ou execução paralela.
+_User Story_: Como sistema da Prestway, eu quero garantir execução idempotente e isolamento concorrente do dispatch para evitar batches duplicados, notificações duplicadas e inconsistências operacionais durante retries ou execução paralela.
 
 ### Acceptance Criteria
 
@@ -599,7 +599,7 @@ _User Story_: Como sistema da Renovi, eu quero garantir execução idempotente e
 
 ## Requirement 10B: Dispatch Operational Scheduling
 
-_User Story_: Como sistema da Renovi, eu quero suportar scheduling operacional persistido para permitir progressão temporal de dispatches sem depender de processos continuamente ativos.
+_User Story_: Como sistema da Prestway, eu quero suportar scheduling operacional persistido para permitir progressão temporal de dispatches sem depender de processos continuamente ativos.
 
 ### Acceptance Criteria
 
@@ -617,7 +617,7 @@ _User Story_: Como sistema da Renovi, eu quero suportar scheduling operacional p
 
 ## Requirement 11: Provider Response Tracking
 
-_User Story_: Como sistema da Renovi, eu quero rastrear respostas dos prestadores para melhorar futuros rankings.
+_User Story_: Como sistema da Prestway, eu quero rastrear respostas dos prestadores para melhorar futuros rankings.
 
 ### Acceptance Criteria
 
@@ -628,9 +628,9 @@ _User Story_: Como sistema da Renovi, eu quero rastrear respostas dos prestadore
 
 ## Requirement 12: Provider Geolocation Tracking and Device Beacon Sync
 
-_User Story_: Como prestador logado na Renovi, eu quero que o app atualize periodicamente minha posição aproximada para receber oportunidades de serviço próximas, entendendo por que a localização é necessária e podendo controlar essa permissão no dispositivo.
+_User Story_: Como prestador logado na Prestway, eu quero que o app atualize periodicamente minha posição aproximada para receber oportunidades de serviço próximas, entendendo por que a localização é necessária e podendo controlar essa permissão no dispositivo.
 
-_User Story (sistema)_: Como sistema da Renovi, eu quero persistir a última posição conhecida de cada prestador por instalação de dispositivo em `user_device_beacons`, com indicação explícita de permissão concedida, para alimentar o matching geoespacial sem coletar localização de clientes.
+_User Story (sistema)_: Como sistema da Prestway, eu quero persistir a última posição conhecida de cada prestador por instalação de dispositivo em `user_device_beacons`, com indicação explícita de permissão concedida, para alimentar o matching geoespacial sem coletar localização de clientes.
 
 ### Acceptance Criteria — Escopo e gating por perfil
 
@@ -677,7 +677,7 @@ _User Story (sistema)_: Como sistema da Renovi, eu quero persistir a última pos
 
 ## Requirement 13: Provider Opportunities Feed (`list_provider_opportunities`)
 
-_User Story_: Como prestador da Renovi, eu quero ver apenas oportunidades de serviço às quais tenho direito de acesso, com ordenação útil conforme minha localização atual, sem expor todos os pedidos abertos no raio.
+_User Story_: Como prestador da Prestway, eu quero ver apenas oportunidades de serviço às quais tenho direito de acesso, com ordenação útil conforme minha localização atual, sem expor todos os pedidos abertos no raio.
 
 ### Acceptance Criteria
 

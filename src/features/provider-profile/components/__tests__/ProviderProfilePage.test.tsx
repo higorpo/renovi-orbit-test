@@ -151,7 +151,7 @@ describe("ProviderProfilePage", () => {
     expect(screen.getByTestId("cta-banner")).toBeInTheDocument();
   });
 
-  it("renders Renovi logo linking to home", () => {
+  it("renders Prestway logo linking to home", () => {
     useProviderPublicProfileMock.mockReturnValue({
       data: { data: mockProfile, error: null },
       isLoading: false,
@@ -159,7 +159,7 @@ describe("ProviderProfilePage", () => {
     } as ReturnType<typeof useProviderPublicProfileMock>);
 
     render(<TestWrapper slug="joao-silva" />);
-    const logo = screen.getByAltText("Renovi");
+    const logo = screen.getByAltText("Prestway");
     expect(logo).toBeInTheDocument();
     expect(logo.closest("a")).toHaveAttribute("href", "/");
   });

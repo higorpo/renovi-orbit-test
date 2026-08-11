@@ -484,7 +484,7 @@ Hover: level-1 → level-2, no scale. Hierarchy from spacing/type first, shadows
 
 No elastic bounce, no parallax. Skeletons over full-page spinners.
 
-> **Code note:** Tailwind `ease-prestway` (alias `ease-renovi`) maps to `{motion.easing}`.
+> **Code note:** Tailwind `ease-prestway` (alias `ease-prestway`) maps to `{motion.easing}`.
 
 ---
 
@@ -660,14 +660,14 @@ Implementation in `src/index.css`:
 | `{colors.ink}` | `--ink` | #111827 |
 | `{rounded.lg}` | `--radius-lg` | 16px cards |
 | Display font | `font-display` → Manrope | Headings use Manrope via `src/index.css` |
-| Motion easing | `--motion-easing` | `ease-prestway` / `ease-renovi` |
+| Motion easing | `--motion-easing` | `ease-prestway` / `ease-prestway` |
 
 ---
 
 ## Known Gaps
 
-- **Product copy migration:** many UI strings still say "Renovi"; migrate to **Prestway** per [`BRAND.md`](./BRAND.md).
-- **Logo / symbol assets:** replace legacy Renovi marks with Prestway wordmark + abstract symbol.
+- **Product copy migration:** many UI strings still say "Prestway"; migrate to **Prestway** per [`BRAND.md`](./BRAND.md).
+- **Logo / symbol assets:** replace legacy Prestway marks with Prestway wordmark + abstract symbol.
 - **Audience color audit:** keep default chrome on `primary` (black); use `audience-*` / `brand-*` only for intentional brand-color moments.
 - **Dark mode:** tokens exist; public product is light-mode-first.
 - **Skeleton / loading states:** standardize across card types.

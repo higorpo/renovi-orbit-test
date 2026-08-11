@@ -6,7 +6,7 @@
 
 # O QUE É A RENOVI
 
-A Renovi é uma plataforma de contratação de serviços residenciais que conecta clientes a prestadores de serviços verificados através de um processo seguro, transparente e confiável.
+A Prestway é uma plataforma de contratação de serviços residenciais que conecta clientes a prestadores de serviços verificados através de um processo seguro, transparente e confiável.
 
 A empresa nasceu para resolver um problema extremamente comum no mercado brasileiro:
 
@@ -22,7 +22,7 @@ Hoje, quando uma pessoa precisa de um eletricista, encanador, pintor, pedreiro o
 
 Esse processo gera insegurança para todos os envolvidos.
 
-A Renovi existe para eliminar essa insegurança.
+A Prestway existe para eliminar essa insegurança.
 
 ---
 
@@ -123,7 +123,7 @@ Modelos onde o profissional paga para disputar oportunidades.
 
 # A SOLUÇÃO RENOVI
 
-A Renovi cria um ecossistema de confiança.
+A Prestway cria um ecossistema de confiança.
 
 O cliente consegue:
 
@@ -233,7 +233,7 @@ Informações:
 
 ## Verificação
 
-A Renovi realiza validações.
+A Prestway realiza validações.
 
 Exemplos:
 
@@ -269,7 +269,7 @@ Cada serviço aumenta seu histórico.
 
 # DIFERENCIAL COMPETITIVO
 
-A Renovi não pretende ser apenas um diretório.
+A Prestway não pretende ser apenas um diretório.
 
 Ela pretende ser uma camada de confiança.
 
@@ -279,7 +279,7 @@ Ela pretende ser uma camada de confiança.
 
 "Encontre um profissional"
 
-## A Renovi diz:
+## A Prestway diz:
 
 "Contrate com confiança"
 
@@ -321,7 +321,7 @@ Resolver problemas rapidamente.
 
 # POSICIONAMENTO
 
-## O que a Renovi NÃO é
+## O que a Prestway NÃO é
 
 * Lista telefônica digital;
 * Classificados;
@@ -329,7 +329,7 @@ Resolver problemas rapidamente.
 
 ---
 
-## O que a Renovi É
+## O que a Prestway É
 
 Uma plataforma de contratação confiável de serviços residenciais.
 
@@ -419,7 +419,7 @@ Renda: R$ 2.000 a R$ 6.000
 
 ## Comissão por serviço
 
-A Renovi monetiza através de comissão sobre serviços concluídos.
+A Prestway monetiza através de comissão sobre serviços concluídos.
 
 Faixa inicial:
 
@@ -452,7 +452,7 @@ Proteções adicionais.
 
 # CULTURA DA EMPRESA
 
-A Renovi acredita que tecnologia não substitui confiança.
+A Prestway acredita que tecnologia não substitui confiança.
 
 Ela potencializa confiança.
 
@@ -476,6 +476,6 @@ Acreditamos que a reputação deve ser construída através de experiências rea
 
 Acreditamos que tecnologia pode tornar o mercado de serviços mais transparente.
 
-Por isso criamos a Renovi.
+Por isso criamos a Prestway.
 
 Uma plataforma construída para conectar pessoas através da confiança.

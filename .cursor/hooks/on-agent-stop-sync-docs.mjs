@@ -89,7 +89,7 @@ function main() {
 
       // Logs do hook no Cursor costumam exibir stderr
       console.error(
-        "[Renovi docs]\n" +
+        "[Prestway docs]\n" +
           `Alterações em código de produto detectadas (${productFiles.length} arquivo(s)).\n` +
           `Lembrete gravado em: ${PENDING_REL}\n` +
           "Atualize a documentação de negócio antes de encerrar o trabalho.",

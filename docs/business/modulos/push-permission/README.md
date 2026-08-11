@@ -2,7 +2,7 @@
 
 ## 1. Leitura para negócio
 
-- **Para que serve:** pedir ao usuário autenticado, de forma **explicativa e consentida**, que ative notificações push no aparelho ou navegador — **antes** do diálogo nativo/sistema — para que a Renovi possa avisá-lo de eventos importantes (orçamentos, pedidos, propostas, atualizações).
+- **Para que serve:** pedir ao usuário autenticado, de forma **explicativa e consentida**, que ative notificações push no aparelho ou navegador — **antes** do diálogo nativo/sistema — para que a Prestway possa avisá-lo de eventos importantes (orçamentos, pedidos, propostas, atualizações).
 - **Quem usa:** qualquer usuário **autenticado** com sessão carregada (cliente, prestador e demais papéis de `ProfileRole`); o texto do dialog varia por papel (`client` / `provider` / fallback).
 - **Processo suportado:** onboarding soft de permissão de notificação; não envia mensagens nem gerencia templates.
 - **Valor:** aumenta a chance de o usuário conceder permissão no momento certo (gesto explícito “Continuar”), em vez de o navegador/OS bloquear pedido automático.

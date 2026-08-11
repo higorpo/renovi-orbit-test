@@ -16,7 +16,7 @@ describe('getPushPermissionCopy', () => {
   })
 
   it('returns default copy for admin or unknown role', () => {
-    expect(getPushPermissionCopy('admin').benefits).toContain('Renovi')
-    expect(getPushPermissionCopy(null).benefits).toContain('Renovi')
+    expect(getPushPermissionCopy('admin').benefits).toContain('Prestway')
+    expect(getPushPermissionCopy(null).benefits).toContain('Prestway')
   })
 })

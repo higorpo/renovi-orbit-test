@@ -59,14 +59,14 @@ describe("useProfileSeo", () => {
   it("sets title and robots for public profile", () => {
     const profile = makeProfile();
     renderHook(() => useProfileSeo(profile, false, false));
-    expect(document.title).toBe("João Silva | Renovi");
+    expect(document.title).toBe("João Silva | Prestway");
     expect(getMetaRobots()).toBe("index, follow");
   });
 
   it("sets noindex for restricted profile", () => {
     const profile = makeProfile({ profile_visibility: "restricted" });
     renderHook(() => useProfileSeo(profile, false, false));
-    expect(document.title).toBe("João Silva | Renovi");
+    expect(document.title).toBe("João Silva | Prestway");
     expect(getMetaRobots()).toBe("noindex, nofollow");
   });
 
@@ -76,12 +76,12 @@ describe("useProfileSeo", () => {
       full_name: "Maria Souza",
     });
     renderHook(() => useProfileSeo(profile, false, false));
-    expect(document.title).toBe("Maria Souza | Renovi");
+    expect(document.title).toBe("Maria Souza | Prestway");
   });
 
   it("uses 'Perfil' when both names are empty", () => {
     const profile = makeProfile({ display_name: null, full_name: null });
     renderHook(() => useProfileSeo(profile, false, false));
-    expect(document.title).toBe("Perfil | Renovi");
+    expect(document.title).toBe("Perfil | Prestway");
   });
 });

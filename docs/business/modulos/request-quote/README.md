@@ -25,7 +25,7 @@ Detalhamento passo a passo, validações, analytics e matriz de lacunas: [featur
 | **Passos** | **5** (convidado) ou **4** (logado — sem passo “Cadastro”) |
 | **Criação** | POST multipart → Edge **`create-request-quote-order`** (`verify_jwt = false`; validação interna) |
 | **IA** | Edge **`generate-smart-description`** (`verify_jwt = true`); disparo automático ao entrar no passo 3 vindo do passo 2 |
-| **Rascunho** | Capacitor Preferences `renovi_request_quote_draft`, versão `REQUEST_QUOTE_DRAFT_VERSION`; sem PII do passo 5; debounce 400 ms |
+| **Rascunho** | Capacitor Preferences `prestway_request_quote_draft`, versão `REQUEST_QUOTE_DRAFT_VERSION`; sem PII do passo 5; debounce 400 ms |
 | **Antes do POST** | reCAPTCHA ação `request_quote_submit` (script **pré-carregado no mount** do submit hook; token no submit); opcionalmente **nsfwjs** nas fotos |
 | **Pós-sucesso** | Convidado → `ConfirmEmailScreen`; logado → toast + `navigate("/dashboard/client")` (**rota inexistente** — P-01) |
 | **Limites** | Não cobre listagem/acompanhamento do pedido (ver [my-services](../my-services/README.md) / [view-services](../view-services/README.md)) |
@@ -107,7 +107,7 @@ Detalhe: [pedir-orcamento.md](./features/pedir-orcamento.md).
 | **`client_addresses`** | Endereço existente ou criado no passo 4 — [addresses](../addresses/README.md) |
 | **`auth.users` / `profiles`** | Sessão logada ou signup convidado (`role: client`) |
 | **Storage `service-requests`** | Upload de fotos na Edge |
-| **Preferences `renovi_request_quote_draft`** | Rascunho local (Capacitor) |
+| **Preferences `prestway_request_quote_draft`** | Rascunho local (Capacitor) |
 
 ---
 

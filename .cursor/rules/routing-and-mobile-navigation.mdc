@@ -30,7 +30,7 @@ alwaysApply: false
 
 | Modo | Quando usar | Mobile header | Bottom nav | Transição |
 |------|-------------|---------------|------------|-----------|
-| **tab-root** | Abas principais (`/dashboard`, `/services`, `/chats`…) | ☰ + logo Renovi | Sim | Nenhuma |
+| **tab-root** | Abas principais (`/dashboard`, `/services`, `/chats`…) | ☰ + logo Prestway | Sim | Nenhuma |
 | **stack** | Filho empilhado (hamburger, deep link, detalhe full-page) | ← + título opcional | Não | Slide lateral |
 | **custom** | Header próprio da feature (ex.: conversa chat) | Feature (`ChatScreenHeader`) | Não | Slide na feature |
 | **sheet** | Detalhe sobre lista (modal routing) | Tab-root atrás | Sim (atrás) | Sheet Radix |

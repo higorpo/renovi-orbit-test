@@ -21,7 +21,7 @@ values
     'account.provider_activated',
     'email',
     'Credenciamento de pagamentos aprovado',
-    '<p>Seu credenciamento de pagamentos na Renovi foi aprovado.</p><p>Você já pode receber pagamentos e seguir com novos trabalhos na plataforma.</p><p><a href="{{deep_link_path}}">Acessar o app</a></p>',
+    '<p>Seu credenciamento de pagamentos na Prestway foi aprovado.</p><p>Você já pode receber pagamentos e seguir com novos trabalhos na plataforma.</p><p><a href="{{deep_link_path}}">Acessar o app</a></p>',
     '{"type":"object","properties":{"provider_id":{"type":"string"},"provider_gateway_account_id":{"type":"string"},"deep_link_path":{"type":"string"}},"required":["provider_id","deep_link_path"],"additionalProperties":true}'::jsonb,
     true
   )

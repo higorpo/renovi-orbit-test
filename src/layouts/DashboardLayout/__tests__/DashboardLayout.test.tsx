@@ -89,16 +89,16 @@ describe("DashboardLayout", () => {
     } as ReturnType<typeof useAuth>);
   });
 
-  it("renders desktop header with Renovi logo when useBreakpointMd is true", () => {
+  it("renders desktop header with Prestway logo when useBreakpointMd is true", () => {
     useBreakpointMd.mockReturnValue(true);
     render(
       <MemoryRouter initialEntries={["/dashboard"]}>
         <DashboardLayout />
       </MemoryRouter>
     );
-    const logo = screen.getByRole("img", { name: "Renovi" });
+    const logo = screen.getByRole("img", { name: "Prestway" });
     expect(logo).toBeInTheDocument();
-    const logoLink = screen.getByRole("link", { name: "Renovi" });
+    const logoLink = screen.getByRole("link", { name: "Prestway" });
     expect(logoLink.getAttribute("href")).toMatch(/^\/(dashboard)?$/);
     expect(screen.getByRole("navigation", { name: "Dashboard navigation" })).toBeInTheDocument();
   });
@@ -123,7 +123,7 @@ describe("DashboardLayout", () => {
         <DashboardLayout />
       </MemoryRouter>
     );
-    expect(screen.getByRole("img", { name: "Renovi" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Prestway" })).toBeInTheDocument();
   });
 
   it("renders desktop header with logo when profile is null", () => {
@@ -146,7 +146,7 @@ describe("DashboardLayout", () => {
         <DashboardLayout />
       </MemoryRouter>
     );
-    expect(screen.getByRole("img", { name: "Renovi" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Prestway" })).toBeInTheDocument();
   });
 
   it("renders mobile nav when useBreakpointMd is false", () => {

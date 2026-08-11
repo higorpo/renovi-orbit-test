@@ -124,9 +124,9 @@ describe("AddressFormWithMap", () => {
     expect(screen.getByText("Buscando endereço...")).toBeInTheDocument();
     expect(screen.getByText("Custom map help")).toBeInTheDocument();
     expect(screen.getByText(/ainda não está presente/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "@renovi.com.br" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "@prestway.com" })).toHaveAttribute(
       "href",
-      "https://www.instagram.com/renovi.com.br/",
+      "https://www.instagram.com/prestway.com/",
     );
   });
 

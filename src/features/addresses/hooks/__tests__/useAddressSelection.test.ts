@@ -258,7 +258,7 @@ describe("useAddressSelection", () => {
     });
     await waitFor(() => {
       expect(toast.warning).toHaveBeenCalledWith(
-        "A Renovi ainda não está disponível nessa localização."
+        "A Prestway ainda não está disponível nessa localização."
       );
     });
     await waitFor(() => {

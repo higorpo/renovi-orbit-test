@@ -4,7 +4,7 @@ import * as SwitchPrimitives from '@radix-ui/react-switch'
 import { cn } from '@/lib/utils'
 
 /**
- * Switch Component - Padrão Global Renovi
+ * Switch Component - Padrão Global Prestway
  * * Estilo: Comprimido Horizontal (Achatado)
  * Cor Ativo: Verde (#22c55e)
  * Comportamento: Bolinha percorre da extremidade esquerda à direita

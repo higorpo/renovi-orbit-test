@@ -6,7 +6,7 @@ function App() {
 
   return (
     <div className="max-w-[1280px] mx-auto px-8 py-8 text-center">
-      <h1>Renovi</h1>
+      <h1>Prestway</h1>
     
       <button onClick={() => navigate('/login')}>Login</button>
     </div>

@@ -144,7 +144,7 @@ export default {
       transitionTimingFunction: {
         prestway: "var(--motion-easing)",
         /* Legacy alias — prefer ease-prestway in new code */
-        renovi: "var(--motion-easing)",
+        prestway: "var(--motion-easing)",
       },
       backgroundImage: {
         "gradient-mesh":

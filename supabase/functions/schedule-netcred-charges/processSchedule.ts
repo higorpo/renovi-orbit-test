@@ -93,7 +93,7 @@ export type ProcessScheduleDeps = {
     metadata: Record<string, unknown>,
   ) => Promise<void>;
   maxAttempts: number;
-  /** Renovi platform NetCred company — card profiles and chargeCreate scope. */
+  /** Prestway platform NetCred company — card profiles and chargeCreate scope. */
   platformCompanyId: string;
   /** When true (production), missing ClearSale session fails closed without createCharge. */
   isProduction?: boolean;

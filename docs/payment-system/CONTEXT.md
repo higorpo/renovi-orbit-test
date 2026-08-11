@@ -70,12 +70,12 @@ _Avoid_: Preço congelado, re-aceite por divergência de taxa
 Valor exato que o prestador recebe no split (ex.: R$ 850 = R$ 1.000 − 15% comissão). Exibido ao prestador na plataforma **antes** do aceite. Enviado como parcela fixa no `chargeCreate`.
 _Avoid_: base_amount integral, Estimativa pós-MDR
 
-**Renovi Payout (split)**:
-Renovi retém 100% do restante após `provider_payout` (ex.: R$ 180 = R$ 1.030 − R$ 850). Inclui comissão (R$ 150) + repasse bruto das taxas de cartão (R$ 30). A NetCred desconta MDR proporcionalmente (`isLiable`); Renovi fica com o líquido ≈ comissão (R$ 150).
+**Prestway Payout (split)**:
+Prestway retém 100% do restante após `provider_payout` (ex.: R$ 180 = R$ 1.030 − R$ 850). Inclui comissão (R$ 150) + repasse bruto das taxas de cartão (R$ 30). A NetCred desconta MDR proporcionalmente (`isLiable`); Prestway fica com o líquido ≈ comissão (R$ 150).
 _Avoid_: Remainder = só taxas, Comissão fora do split
 
 **Exemplo canônico**:
-Prestador cota R$ 1.000 → vê R$ 850 na plataforma → cliente paga R$ 1.030 → split: prestador R$ 850 fixo, Renovi R$ 180 bruto → após MDR (~R$ 30), Renovi líquido ~R$ 150.
+Prestador cota R$ 1.000 → vê R$ 850 na plataforma → cliente paga R$ 1.030 → split: prestador R$ 850 fixo, Prestway R$ 180 bruto → após MDR (~R$ 30), Prestway líquido ~R$ 150.
 _Avoid_: Interpretações alternativas do remainder
 
 **Comissão congelada no aceite (Opção A)**:
@@ -85,7 +85,7 @@ _Avoid_: Recalcular comissão no T-2, Alterar payout prometido ao prestador
 ## Estornos
 
 **Refund Base (Opção A)**:
-Faixas ToS §2.2 (>48h / 48–12h / <12h) aplicam-se sobre `base_amount` (preço da proposta ao cliente). Taxas de cartão nunca reembolsáveis. Clawback no gateway distribuído proporcionalmente entre prestador e Renovi conforme split original (`isLiable`).
+Faixas ToS §2.2 (>48h / 48–12h / <12h) aplicam-se sobre `base_amount` (preço da proposta ao cliente). Taxas de cartão nunca reembolsáveis. Clawback no gateway distribuído proporcionalmente entre prestador e Prestway conforme split original (`isLiable`).
 _Avoid_: Penalidade sobre provider_payout, Estorno sobre charge_amount integral
 
 ## Histórico de pagamentos

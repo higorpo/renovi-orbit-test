@@ -1,4 +1,4 @@
-# Renovi Payment System Requirements
+# Prestway Payment System Requirements
 
 > **Document Type:** Architecture Requirements Specification (RFC-style)  
 > **Version:** 1.2  
@@ -13,7 +13,7 @@
 
 ### System Purpose
 
-The Renovi Payment System is a payment orchestration subsystem embedded within the Orbit marketplace platform. Its primary mandate is to provide a reliable, idempotent, observable, and provider-agnostic pipeline for processing service-contract payments between marketplace clients (payers) and service providers (payees).
+The Prestway Payment System is a payment orchestration subsystem embedded within the Orbit marketplace platform. Its primary mandate is to provide a reliable, idempotent, observable, and provider-agnostic pipeline for processing service-contract payments between marketplace clients (payers) and service providers (payees).
 
 **Problem Statement.** When a client accepts a service proposal, the platform must: (a) securely tokenize the client's payment method without persisting raw card data, (b) collect any missing profile fields required for antifraude and gateway compliance (CPF, phone, billing address), (c) schedule a deferred charge to execute exactly 48 hours prior to the service appointment date, (d) execute said charge via a payment gateway adapter with retry semantics, (e) distribute funds to the appropriate provider account via a configurable split rule, and (f) handle all failure modes—including automatic retries, manual client recovery, partial refunds subject to cancellation penalties, and auto-cancellation at the T-12h threshold—in a fully observable and auditable manner.
 
@@ -23,7 +23,7 @@ The Renovi Payment System is a payment orchestration subsystem embedded within t
 - Protect providers against service execution without payment by enforcing a charge-must-succeed-before-execution invariant.
 - Minimize revenue leakage from unpaid services through automated retry and escalation flows, with auto-cancellation as a final safeguard.
 - Enable provider onboarding via structured KYC collection and external gateway credentialing, gating all service delivery behind credentialing completion.
-- Comply with PCI DSS data-at-rest requirements: no raw card data (PAN, CVV) is persisted in Renovi infrastructure at any layer.
+- Comply with PCI DSS data-at-rest requirements: no raw card data (PAN, CVV) is persisted in Prestway infrastructure at any layer.
 - Enforce the cancellation penalty rules as defined in Terms of Service §2.2. Penalties are calculated over `base_amount` (service price, excluding card processing fees) for partial refunds: >48h before service = full refund of `charge_amount` (including card fees); 48h–12h = 90% of `base_amount`; <12h = 70% of `base_amount`. Card processing fees are refunded only on full (100%) client refunds and on all provider-initiated cancellations.
 
 **Technical Objectives:**
@@ -62,7 +62,7 @@ Full detail: [`design.md`](./design.md) §1.7 and [`CONTEXT.md`](./CONTEXT.md). 
 | **Aggregates** | `contracted_services` (product lifecycle) and `payment_schedules` (charge orchestration) are separate 1:1 aggregates |
 | **Provider calendar** | Visible only after `PAID` → `CONFIRMED`; never on `PENDING_PAYMENT` / `IN_ANALYSIS` |
 | **Scheduling** | `payment_payment_service_execution_at()` — shift-based timestamptz; `EXECUTED` gate is date-only |
-| **Split** | Client pays `base_amount` + card fees; provider `FIXED_AMOUNT = provider_payout` (frozen); Renovi `PERCENTAGE 100%` of remainder ([`ADR-0001`](../adr/0001-payment-split-commission-model.md)) |
+| **Split** | Client pays `base_amount` + card fees; provider `FIXED_AMOUNT = provider_payout` (frozen); Prestway `PERCENTAGE 100%` of remainder ([`ADR-0001`](../adr/0001-payment-split-commission-model.md)) |
 | **Commission** | Frozen at `accept_proposal`; card fees recalculated at T-2 |
 | **Refunds** | ToS §2.2: `FULL_REFUND` = `charge_amount`; `PENALTY_*` on `base_amount`; clawback ∝ `provider_payout / paid_amount` |
 | **IN_ANALYSIS** | No auto-cancel / no client cancel **before** T-12h; **after** T-12h → auto-cancel + gateway reconcile |
@@ -95,7 +95,7 @@ If any requirement below contradicts this table, **this table wins**.
 - **Webhook Reception**: Supabase Edge Function `netcred-webhook` receives NetCred webhook payloads. Validates `X-NETCRED-Signature = HMAC-SHA256(secretKey, rawBody)`. `secretKey` is Edge secret `NETCRED_WEBHOOK_SECRET` (not Vault).
 - **Retry Mechanism**: Automatic cron-initiated attempts tracked in `automatic_attempt_count`, up to `max_charge_attempts` (default: 3, from `platform_constants`); manual client-initiated attempts tracked in `manual_attempt_count` (unlimited until T-12h, rate-limited by Edge Function). Retry interval: `charge_retry_interval_minutes` (default: 30 minutes). All configurable without code changes.
 - **Installment Fees**: Configurable per card brand and installment range in `platform_constants`; RPC `payment_calculate_installment_options` computes final charged amounts; responses are HMAC-SHA256 signed to prevent client-side tampering of computed amounts.
-- **Split Model** ([`ADR-0001`](../adr/0001-payment-split-commission-model.md)): Client is charged `charge_amount = base_amount + card_fees`. Provider receives **`FIXED_AMOUNT = provider_payout`** where `provider_payout = base_amount × (1 − commission_rate_pct/100)`, **frozen at `accept_proposal`**. Renovi receives **`PERCENTAGE = 100.0`** of `(charge_amount − provider_payout)` (commission + gross card-fee pass-through). Both parties have `isLiable = true`; NetCred MDR is deducted proportionally; Renovi bank net ≈ commission. Example: base R$ 1.000, payout R$ 850, charge R$ 1.030 → provider R$ 850, Renovi gross R$ 180, Renovi net ~R$ 150 after MDR.
+- **Split Model** ([`ADR-0001`](../adr/0001-payment-split-commission-model.md)): Client is charged `charge_amount = base_amount + card_fees`. Provider receives **`FIXED_AMOUNT = provider_payout`** where `provider_payout = base_amount × (1 − commission_rate_pct/100)`, **frozen at `accept_proposal`**. Prestway receives **`PERCENTAGE = 100.0`** of `(charge_amount − provider_payout)` (commission + gross card-fee pass-through). Both parties have `isLiable = true`; NetCred MDR is deducted proportionally; Prestway bank net ≈ commission. Example: base R$ 1.000, payout R$ 850, charge R$ 1.030 → provider R$ 850, Prestway gross R$ 180, Prestway net ~R$ 150 after MDR.
 - **Commission freeze**: `commission_rate_pct` and `provider_payout` are persisted on `payment_schedules` at accept and MUST NOT change. Only `charge_amount` (card fees) may drift at T-2.
 - **PCI DSS**: No raw card data (PAN, CVV) persisted at rest. CHD transit through `tokenize-payment-card` Edge is in CDE until hosted-fields migration. Stored references: `gateway_payment_profile_id`, `netcred_company_id`, `card_number_masked`, `card_brand`, `gateway_card_token`.
 - **Cancellation Policy**: Per Terms of Service §2.2 — >48h: `refund_amount = charge_amount` (100% of amount paid, including card processing fees); 48h–12h: `refund_amount = base_amount × 0.90` (10% penalty on service price; card fees non-refundable); <12h: `refund_amount = base_amount × 0.70` (30% penalty on service price; card fees non-refundable). Provider-initiated cancellations: `refund_amount = charge_amount` (full amount including card fees). Gateway distributes the refund proportionally between all `isLiable` accounts.
@@ -104,8 +104,8 @@ If any requirement below contradicts this table, **this table wins**.
 - **Service scheduling anchor (`payment_service_execution_at`)**: Payment timing MUST NOT duplicate scheduling in a new column. The canonical service instant is derived from existing `contracted_services` columns: `scheduled_start_date` (DATE), `scheduled_shift` (`morning` \| `afternoon` \| `full_day`), combined as `(scheduled_start_date + shift start time) AT TIME ZONE 'America/Sao_Paulo'` where shift starts are `morning/full_day = 08:00`, `afternoon = 13:00`. Implemented as Postgres function `payment_service_execution_at(contracted_services)`. Multi-day jobs anchor on `scheduled_start_date` only. `mark_service_executed` uses date-only comparison on `scheduled_start_date`.
 - **Rescheduling Interaction**: When a service is rescheduled, the rescheduling subsystem updates slot columns. Pre-`PAID` (`state ∈ {SCHEDULED, FAILED, IN_ANALYSIS}`): recalculate `charge_scheduled_at = MAX(now(), payment_service_execution_at(cs) − 2 days)` (emergency → `now()`). Post-`PAID` **near** (new `payment_service_execution_at ≤ paid_at + far_reschedule_recapture_threshold_days`, default 15): allowed **only** while `contracted_services.status = 'CONFIRMED'` (not after `EXECUTED`); slot columns update only; **no new charge**; refund/T-12h windows use updated `payment_service_execution_at`. Post-`PAID` **far** (> threshold): full gateway refund + new `SCHEDULED` cycle at T-2; CS → `PENDING_PAYMENT`; backend-only orchestration (`far_recapture_pending_at` + pg_net wake + safety-net cron); does **not** cancel service/chat.
 - **Emergency Scheduling**: If `payment_service_execution_at(contracted_services) - now() < 48 hours` at acceptance time, `charge_scheduled_at` is set to `now()` so the next cron picks it up immediately.
-- **chargeCreate timing**: The NetCred `chargeCreate` mutation is NEVER called at proposal acceptance. It is ONLY called by the cron (or manual retry flow) at T-2. No `rrule` scheduling is used at the gateway; scheduling is owned entirely by Renovi's cron subsystem.
-- **ClearSale Behavior Analytics**: ClearSale Device Fingerprint / Behavior Analytics is enabled by default on the NetCred production account. The `orderInput.sessionId` field in `chargeCreate` is **mandatory** in production. The ClearSale Browser/WebView SDK (`fp.js`) MUST be initialized on the card step of the checkout stepper; it collects public device data (IP, device characteristics, network info) and transmits it to ClearSale servers asynchronously. The `sessionId` (a UUID generated by the frontend for each checkout session) binds the SDK collection to the subsequent `chargeCreate` call. Because `chargeCreate` runs at T-2 (48h later, via cron with no user context), the `sessionId` MUST be persisted in `payment_schedules.clearsale_session_id` at acceptance time. The `CLEARSALE_APP_KEY` (provided by ClearSale, identifies the Renovi application) is a non-secret value stored as a Vite env variable (`VITE_CLEARSALE_APP_KEY`). Since Orbit runs as a Capacitor WebView on Android, the Browser/WebView SDK applies to both web/PWA and Android deployments. `billingAddressInput` is also **mandatory** in all production tokenization calls when ClearSale is active.
+- **chargeCreate timing**: The NetCred `chargeCreate` mutation is NEVER called at proposal acceptance. It is ONLY called by the cron (or manual retry flow) at T-2. No `rrule` scheduling is used at the gateway; scheduling is owned entirely by Prestway's cron subsystem.
+- **ClearSale Behavior Analytics**: ClearSale Device Fingerprint / Behavior Analytics is enabled by default on the NetCred production account. The `orderInput.sessionId` field in `chargeCreate` is **mandatory** in production. The ClearSale Browser/WebView SDK (`fp.js`) MUST be initialized on the card step of the checkout stepper; it collects public device data (IP, device characteristics, network info) and transmits it to ClearSale servers asynchronously. The `sessionId` (a UUID generated by the frontend for each checkout session) binds the SDK collection to the subsequent `chargeCreate` call. Because `chargeCreate` runs at T-2 (48h later, via cron with no user context), the `sessionId` MUST be persisted in `payment_schedules.clearsale_session_id` at acceptance time. The `CLEARSALE_APP_KEY` (provided by ClearSale, identifies the Prestway application) is a non-secret value stored as a Vite env variable (`VITE_CLEARSALE_APP_KEY`). Since Orbit runs as a Capacitor WebView on Android, the Browser/WebView SDK applies to both web/PWA and Android deployments. `billingAddressInput` is also **mandatory** in all production tokenization calls when ClearSale is active.
 - **ClearSale Session Persistence**: `payment_schedules.clearsale_session_id` stores the `sessionId` captured at checkout. `payment_schedules.client_ip_address` stores the client IP captured at acceptance time; both fields are passed to `chargeCreate` (`orderInput.sessionId` and `customerIpAddress`) by the cron at T-2.
 - **Provider Payout Timing**: Split at `chargeCreate`. Bank settlement ~**D+30** from `paid_at` — **not** gated by `EXECUTED`/`COMPLETED`. Provider UI MUST display estimated bank receipt date derived from `paid_at`. `EXECUTED`/`COMPLETED` are operational only; escrow requires future NetCred negotiation.
 - **ClearSale Session at charge**: Cron T-2 reuses `clearsale_session_id` from accept (~48h). Manual payment retry MUST initialize ClearSale SDK with a **fresh** UUID and update `clearsale_session_id` before `chargeCreate`.
@@ -456,7 +456,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 ## Requirement 3: Provider Credentialing — KYC Collection
 
-*User Story*: As a service provider, I want to complete my KYC registration entirely within the Renovi app so that I can be credentialed with the payment gateway and receive compensation for services I deliver.
+*User Story*: As a service provider, I want to complete my KYC registration entirely within the Prestway app so that I can be credentialed with the payment gateway and receive compensation for services I deliver.
 
 ### Acceptance Criteria
 
@@ -466,7 +466,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** the provider is a natural person (CPF)  
 **WHEN** they submit KYC  
-**THEN** the system MUST collect and validate: full name, CPF (validated check digits, digits only), mobile phone, email (must match Renovi account email), identity document upload (CPF/CNH), proof of address upload, bank institution code, branch number without check digit, checking account with check digit, optional PIX key.
+**THEN** the system MUST collect and validate: full name, CPF (validated check digits, digits only), mobile phone, email (must match Prestway account email), identity document upload (CPF/CNH), proof of address upload, bank institution code, branch number without check digit, checking account with check digit, optional PIX key.
 
 **GIVEN** the provider is a legal entity (CNPJ)  
 **WHEN** they submit KYC  
@@ -474,7 +474,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** KYC form submission is complete and all validations pass  
 **WHEN** the provider taps "Submit"  
-**THEN** the system MUST atomically: (1) persist all data in `provider_kyc_submissions`, (2) set `provider_accounts.onboarding_status = 'DOCUMENTS_SUBMITTED'`, (3) record `onboarding_submitted_at = now()`, (4) enqueue a KYC email dispatch job containing all fields and document attachment URLs to `credenciamento@renovi.com.br`. (5) update provider_profiles_private accordingly.
+**THEN** the system MUST atomically: (1) persist all data in `provider_kyc_submissions`, (2) set `provider_accounts.onboarding_status = 'DOCUMENTS_SUBMITTED'`, (3) record `onboarding_submitted_at = now()`, (4) enqueue a KYC email dispatch job containing all fields and document attachment URLs to `credenciamento@prestway.com`. (5) update provider_profiles_private accordingly.
 
 **GIVEN** the KYC email dispatch fails (Resend API error, network failure)  
 **WHEN** the failure is caught  
@@ -584,7 +584,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 ## Requirement 6: PCI-Compliant Card Tokenization
 
-*User Story*: As a security engineer, I want raw card data never stored at rest in Renovi infrastructure, and transit through Orbit Edge acknowledged as CDE, so compliance posture stays accurate until hosted-fields migration.
+*User Story*: As a security engineer, I want raw card data never stored at rest in Prestway infrastructure, and transit through Orbit Edge acknowledged as CDE, so compliance posture stays accurate until hosted-fields migration.
 
 ### Acceptance Criteria
 
@@ -594,7 +594,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** the Edge Function `tokenize-payment-card` receives the card payload  
 **WHEN** it calls `paymentProfileCreate` via the `NetCredAdapter`  
-**THEN** `customerInput.persist` MUST be `false`; `customerInput.companyId` MUST be set to the Renovi platform company (`NETCRED_PLATFORM_COMPANY_ID`) for **both** profile and checkout contexts; `billingAddressInput` MUST be included in ALL calls (production and sandbox with ClearSale enabled) — it is not optional; omitting it when ClearSale is active causes `PaymentProfile requires BillingAddress` error from the gateway. **Orbit Edge is in PCI CDE for CHD transit** — do not claim out-of-scope while PAN/CVV transit this EF; follow-on: NetCred hosted fields.
+**THEN** `customerInput.persist` MUST be `false`; `customerInput.companyId` MUST be set to the Prestway platform company (`NETCRED_PLATFORM_COMPANY_ID`) for **both** profile and checkout contexts; `billingAddressInput` MUST be included in ALL calls (production and sandbox with ClearSale enabled) — it is not optional; omitting it when ClearSale is active causes `PaymentProfile requires BillingAddress` error from the gateway. **Orbit Edge is in PCI CDE for CHD transit** — do not claim out-of-scope while PAN/CVV transit this EF; follow-on: NetCred hosted fields.
 
 **GIVEN** `paymentProfileCreate` returns a successful response  
 **WHEN** `paymentProfile.isActive = true`  
@@ -602,7 +602,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** a saved token is presented at `accept_proposal`, `payment_update_method`, or charge  
 **WHEN** `client_card_tokens.netcred_company_id` does not match the platform company (`payment_netcred_platform_company_id()` / `NETCRED_PLATFORM_COMPANY_ID`)  
-**THEN** the operation MUST fail with `PAYMENT_TOKEN_COMPANY_MISMATCH` (token must be re-added under the Renovi platform merchant).
+**THEN** the operation MUST fail with `PAYMENT_TOKEN_COMPANY_MISMATCH` (token must be re-added under the Prestway platform merchant).
 
 **GIVEN** `chargeCreate` / `getTransaction` runs for a schedule  
 **WHEN** the adapter maps the charge  
@@ -758,7 +758,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** the lease is acquired and the gateway call is about to be made  
 **WHEN** the final charge amount is computed and the `chargeCreate` payload is assembled  
-**THEN** the cron MUST: (1) invoke `payment_calculate_charge_amount(...)` for `charge_amount` (current card fees — fee drift); (2) set `payoutRuleInput` with provider `FIXED_AMOUNT = payment_schedules.provider_payout` (frozen) and Renovi `PERCENTAGE = 100.0` of `(charge_amount − provider_payout)` per [`ADR-0001`](../adr/0001-payment-split-commission-model.md); (3) set `orderInput.sessionId = clearsale_session_id`; (4) set `customerIpAddress = client_ip_address`; (5) set `referenceCode = contracted_service_id`; (6) populate `orderItems`; MUST NOT recalculate `provider_payout` or `commission_rate_pct` at charge time.
+**THEN** the cron MUST: (1) invoke `payment_calculate_charge_amount(...)` for `charge_amount` (current card fees — fee drift); (2) set `payoutRuleInput` with provider `FIXED_AMOUNT = payment_schedules.provider_payout` (frozen) and Prestway `PERCENTAGE = 100.0` of `(charge_amount − provider_payout)` per [`ADR-0001`](../adr/0001-payment-split-commission-model.md); (3) set `orderInput.sessionId = clearsale_session_id`; (4) set `customerIpAddress = client_ip_address`; (5) set `referenceCode = contracted_service_id`; (6) populate `orderItems`; MUST NOT recalculate `provider_payout` or `commission_rate_pct` at charge time.
 
 **GIVEN** `chargeCreate` returns `transactionState = 'PAID'`  
 **WHEN** the success response is received  
@@ -946,7 +946,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** a client cancels a service where `payment_schedules.state = 'PAID'` AND `payment_service_execution_at(contracted_services) - now() > 48 hours`  
 **WHEN** the cancellation is confirmed  
-**THEN** the system MUST compute `refund_amount = charge_amount` (100% of the amount paid, including card processing fees); invoke `transactionRefund(transactionId, amount = refund_amount, reason = 'REQUESTED_BY_CUSTOMER')`; transition `payment_schedules.state = 'REFUND_REQUESTED'`; the gateway distributes the refund proportionally between all `isLiable` accounts (provider and Renovi).
+**THEN** the system MUST compute `refund_amount = charge_amount` (100% of the amount paid, including card processing fees); invoke `transactionRefund(transactionId, amount = refund_amount, reason = 'REQUESTED_BY_CUSTOMER')`; transition `payment_schedules.state = 'REFUND_REQUESTED'`; the gateway distributes the refund proportionally between all `isLiable` accounts (provider and Prestway).
 
 **GIVEN** a client cancels a service where `payment_schedules.state = 'PAID'` AND `12 hours <= payment_service_execution_at(contracted_services) - now() <= 48 hours`  
 **WHEN** the cancellation is confirmed  
@@ -1228,7 +1228,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 ## Requirement 24: PCI DSS Compliance and Security Controls
 
-*User Story*: As the security and compliance officer, I want the payment system to conform to PCI DSS for data at rest and to acknowledge CHD transit through Orbit Edge as CDE, so Renovi does not understate compliance obligations.
+*User Story*: As the security and compliance officer, I want the payment system to conform to PCI DSS for data at rest and to acknowledge CHD transit through Orbit Edge as CDE, so Prestway does not understate compliance obligations.
 
 ### Acceptance Criteria
 
@@ -1342,7 +1342,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** the card input or saved-card selection step is rendered  
 **WHEN** the client views the checkout stepper  
-**THEN** the UI MUST display a disclosure block stating: (a) transactions are processed by a commercial payment partner, (b) a tappable link labeled "Termos de Uso" that opens the partner's ToS in a browser, (c) that card data is tokenized and not stored in raw form by Renovi, (d) that by confirming, the client accepts the payment partner's terms; this block MUST be visually prominent, not hidden in small print.
+**THEN** the UI MUST display a disclosure block stating: (a) transactions are processed by a commercial payment partner, (b) a tappable link labeled "Termos de Uso" that opens the partner's ToS in a browser, (c) that card data is tokenized and not stored in raw form by Prestway, (d) that by confirming, the client accepts the payment partner's terms; this block MUST be visually prominent, not hidden in small print.
 
 **GIVEN** the client taps "Next" past the card step  
 **WHEN** the acceptance is processed server-side  
@@ -1378,7 +1378,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 **GIVEN** a client removes a card with no active linked schedules  
 **WHEN** the removal is confirmed  
-**THEN** `payment_tokens.state` MUST be set to `REVOKED`; the card MUST disappear from the profile list; no gateway API call is required for removal (the token remains valid at NetCred but Renovi will not use it for new charges).
+**THEN** `payment_tokens.state` MUST be set to `REVOKED`; the card MUST disappear from the profile list; no gateway API call is required for removal (the token remains valid at NetCred but Prestway will not use it for new charges).
 
 ---
 
@@ -1442,7 +1442,7 @@ All Edge Function charge execution paths MUST invoke operations through this int
 
 ClearSale is NetCred's antifraude partner. It uses a device fingerprinting script (Browser/WebView SDK) to identify whether a device and its transaction history are known to ClearSale. The system works as follows:
 
-1. The client-side SDK is initialized on the checkout screen with an `AppKey` (identifies the Renovi app) and a `sessionId` (unique per checkout session, UUID format).
+1. The client-side SDK is initialized on the checkout screen with an `AppKey` (identifies the Prestway app) and a `sessionId` (unique per checkout session, UUID format).
 2. The SDK collects public device information (IP, hardware/software characteristics, network info) and sends it asynchronously to ClearSale's servers, binding the data to the `sessionId`.
 3. When `chargeCreate` is called (at T-2 by the cron), `orderInput.sessionId` must carry the SAME `sessionId` used in step 1 so ClearSale can match the device data to the transaction.
 4. Since the cron runs 48 hours after checkout with no user context, the `sessionId` MUST be persisted in `payment_schedules` at acceptance time.
@@ -1505,7 +1505,7 @@ The script MUST be loaded asynchronously to avoid blocking card form rendering; 
 **THEN** `billingAddressInput` MUST always be included in production; if the billing address was not collected during the checkout stepper, the tokenization MUST fail at the validation layer with an explicit `BILLING_ADDRESS_REQUIRED` error BEFORE calling the gateway; this prevents the `PaymentProfile requires BillingAddress` gateway error.
 
 **GIVEN** ClearSale is configured for the NetCred production company  
-**WHEN** the Renovi team sets up the integration  
+**WHEN** the Prestway team sets up the integration  
 **THEN** the `VITE_CLEARSALE_APP_KEY` MUST be obtained directly from ClearSale (separate from the NetCred relationship); the AppKey is environment-specific (sandbox AppKey ≠ production AppKey); the team MUST confirm with NetCred/ClearSale whether ClearSale is enabled in sandbox to determine whether `orderInput.sessionId` is required in sandbox `chargeCreate` calls.
 
 ---

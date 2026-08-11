@@ -95,7 +95,7 @@ test.describe("My Account — provider", () => {
 
   test("privacy: DPO mailto and export dialog", async ({ page }) => {
     const acc = new MyAccountPage(page);
-    await expect(acc.getFalarComDpoLink()).toHaveAttribute("href", /^mailto:dpo@renovi\.com\.br/i);
+    await expect(acc.getFalarComDpoLink()).toHaveAttribute("href", /^mailto:dpo@prestway\.com\.br/i);
     await acc.getExportarDadosButton().scrollIntoViewIfNeeded();
     await acc.getExportarDadosButton().click();
     await expect(acc.getExportarAlertDialog()).toBeVisible({ timeout: 15_000 });
@@ -109,7 +109,7 @@ test.describe("My Account — provider", () => {
     await acc.getExcluirContaButton().click();
     await expect(acc.getExcluirContaAlertDialog()).toBeVisible({ timeout: 15_000 });
     await expect(acc.getExcluirContaDialogTitle()).toBeVisible();
-    await expect(page.getByText("dpo@renovi.com.br")).toBeVisible();
+    await expect(page.getByText("dpo@prestway.com")).toBeVisible();
     await acc.getExcluirContaEntendiButton().click();
   });
 

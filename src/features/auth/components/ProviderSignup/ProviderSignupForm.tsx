@@ -43,7 +43,7 @@ const CONFIRM_STEPS = [
   },
   {
     icon: Inbox,
-    title: "Procure o email da Renovi",
+    title: "Procure o email da Prestway",
     description:
       'Assunto algo como "Confirme seu email" ou "Confirmar cadastro".',
   },

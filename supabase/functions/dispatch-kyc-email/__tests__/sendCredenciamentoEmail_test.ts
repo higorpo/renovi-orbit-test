@@ -8,20 +8,20 @@ import {
   sendCredenciamentoEmail,
 } from "../sendCredenciamentoEmail.ts";
 
-Deno.test("DEFAULT_NETCRED_CREDENCIAMENTO_EMAIL is Renovi inbox", () => {
+Deno.test("DEFAULT_NETCRED_CREDENCIAMENTO_EMAIL is Prestway inbox", () => {
   assertEquals(
     DEFAULT_NETCRED_CREDENCIAMENTO_EMAIL,
-    "credenciamento@renovi.com.br",
+    "credenciamento@prestway.com",
   );
 });
 
-Deno.test("resolveCredenciamentoRecipientEmail falls back to Renovi default", () => {
+Deno.test("resolveCredenciamentoRecipientEmail falls back to Prestway default", () => {
   const previous = Deno.env.get(NETCRED_CREDENCIAMENTO_EMAIL_ENV);
   Deno.env.delete(NETCRED_CREDENCIAMENTO_EMAIL_ENV);
   try {
     assertEquals(
       resolveCredenciamentoRecipientEmail(),
-      "credenciamento@renovi.com.br",
+      "credenciamento@prestway.com",
     );
   } finally {
     if (previous === undefined) {
@@ -37,12 +37,12 @@ Deno.test("sendCredenciamentoEmail routes to Inbucket when INBUCKET_SMTP_HOST is
   const previousFrom = Deno.env.get("RESEND_FROM_EMAIL");
   Deno.env.set("INBUCKET_SMTP_HOST", "127.0.0.1");
   Deno.env.set("INBUCKET_SMTP_PORT", "9"); // closed port → SMTP failure, proves Inbucket path
-  Deno.env.set("RESEND_FROM_EMAIL", "noreply@renovi.com.br");
+  Deno.env.set("RESEND_FROM_EMAIL", "noreply@prestway.com");
   Deno.env.delete("RESEND_API_KEY");
 
   try {
     const result = await sendCredenciamentoEmail({
-      recipientEmail: "credenciamento@renovi.com.br",
+      recipientEmail: "credenciamento@prestway.com",
       subject: "KYC test",
       html: "<p>test</p>",
       attachments: [{ filename: "doc.pdf", contentBase64: btoa("pdf") }],

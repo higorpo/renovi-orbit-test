@@ -37,7 +37,7 @@ Documentação baseada em `src/features/request-quote/`, Edge Functions `create-
 
 ## 3. Componente raiz e UX global
 
-- **Header fixo:** logo Renovi → `/`; indicador de etapas (desktop) ou barra de progresso (mobile); oculto durante `ConfirmEmailScreen`.
+- **Header fixo:** logo Prestway → `/`; indicador de etapas (desktop) ou barra de progresso (mobile); oculto durante `ConfirmEmailScreen`.
 - **Passo 1 — faixas:** “Leva menos de 2 min”, “Pagamento Protegido”; headline e subtítulo de marketing (contratação verificada, até 3 orçamentos).
 - **`TrustSidebar`:** desktop sticky; variante mobile abaixo do card no passo 1.
 - **Animações:** `framer-motion` entre passos e tela de e-mail.
@@ -164,7 +164,7 @@ Documentação baseada em `src/features/request-quote/`, Edge Functions `create-
 
 | Item | Detalhe |
 |------|---------|
-| Chave | Capacitor **Preferences** **`renovi_request_quote_draft`** (via `preferencesGet` / `preferencesSet` em `requestQuoteDraft.persistence.ts`) |
+| Chave | Capacitor **Preferences** **`prestway_request_quote_draft`** (via `preferencesGet` / `preferencesSet` em `requestQuoteDraft.persistence.ts`) |
 | Versão | **`REQUEST_QUOTE_DRAFT_VERSION`** (`"1"` em `requestQuoteDraft.persistence.ts`) — alterar fluxo persistido exige **incrementar** (regra do projeto). |
 | Conteúdo | Passo atual, serviço, step2 + schema/version, step3 **só texto/structured/title** (sem fotos), step4. **Step 5 (PII) não é persistido.** |
 | Debounce gravação | **400 ms** (`PERSIST_DEBOUNCE_MS`) |

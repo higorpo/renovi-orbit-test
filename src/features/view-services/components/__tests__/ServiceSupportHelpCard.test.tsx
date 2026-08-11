@@ -8,7 +8,7 @@ describe("ServiceSupportHelpCard", () => {
   });
 
   it("renders copy and support link from VITE_MAIN_SITE_URL", async () => {
-    vi.stubEnv("VITE_MAIN_SITE_URL", "https://renovi.test/");
+    vi.stubEnv("VITE_MAIN_SITE_URL", "https://prestway.test/");
     const { ServiceSupportHelpCard } = await import("../ServiceSupportHelpCard");
 
     render(<ServiceSupportHelpCard />);
@@ -22,7 +22,7 @@ describe("ServiceSupportHelpCard", () => {
     ).toBeInTheDocument();
 
     const cta = screen.getByTestId("service-support-help-cta");
-    expect(cta).toHaveAttribute("href", "https://renovi.test/suporte");
+    expect(cta).toHaveAttribute("href", "https://prestway.test/suporte");
     expect(cta).toHaveAttribute("target", "_blank");
     expect(cta).toHaveTextContent("Falar com o suporte");
   });

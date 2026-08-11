@@ -39,11 +39,11 @@ Deno.test("mapToNetCredChargeInput uses provider companyId and service title", (
   const mapped = mapToNetCredChargeInput(baseInput, "2052");
 
   assertEquals(mapped.companyId, 1048);
-  assertEquals(mapped.extraInfo, "Renovi — Pintura interna");
+  assertEquals(mapped.extraInfo, "Prestway — Pintura interna");
   assertEquals(mapped.orderInput?.orderItems[0].productInput.name, "Pintura interna");
   assertEquals(
     mapped.orderInput?.orderItems[0].productInput.description,
-    "Renovi — Pintura interna",
+    "Prestway — Pintura interna",
   );
 });
 
@@ -53,7 +53,7 @@ Deno.test("mapToNetCredChargeInput falls back when service title is missing", ()
     "2052",
   );
 
-  assertEquals(mapped.extraInfo, "Renovi — Serviço");
+  assertEquals(mapped.extraInfo, "Prestway — Serviço");
   assertEquals(mapped.orderInput?.orderItems[0].productInput.name, "Serviço");
 });
 

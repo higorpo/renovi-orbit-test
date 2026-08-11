@@ -14,7 +14,7 @@ const TRUST_ITEMS = [
   },
   {
     icon: Star,
-    title: "Suporte Renovi",
+    title: "Suporte Prestway",
     description: "Nossa equipe acompanha a negociação quando você precisar de ajuda.",
   },
 ] as const;
@@ -26,14 +26,14 @@ interface BudgetCompareTrustPanelProps {
 export function BudgetCompareTrustPanel({ className }: BudgetCompareTrustPanelProps) {
   return (
     <section
-      aria-label="Segurança Renovi"
+      aria-label="Segurança Prestway"
       className={cn(
         "rounded-2xl border border-border/80 bg-muted/20 px-4 py-3.5",
         className,
       )}
     >
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Sua segurança na Renovi
+        Sua segurança na Prestway
       </p>
       <ul className="mt-3 space-y-3">
         {TRUST_ITEMS.map((item) => {

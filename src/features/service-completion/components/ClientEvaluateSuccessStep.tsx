@@ -70,7 +70,7 @@ export function ClientEvaluateSuccessStep({
       title="Obrigado pela sua avaliação!"
       description={
         isOptional
-          ? "Recebemos suas notas. Sua opinião ajuda a melhorar a experiência na Renovi."
+          ? "Recebemos suas notas. Sua opinião ajuda a melhorar a experiência na Prestway."
           : "Confirmamos o recebimento do serviço e registramos sua avaliação no app."
       }
       tipsHeading="O que acontece agora"

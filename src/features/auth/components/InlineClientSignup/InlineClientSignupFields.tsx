@@ -50,7 +50,7 @@ const DEFAULT_TERMS_LABEL = (
     >
       Termo de Adesão do Cliente
     </a>
-    {" "}da Renovi.
+    {" "}da Prestway.
   </>
 );
 

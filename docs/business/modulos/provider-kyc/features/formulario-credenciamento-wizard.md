@@ -48,7 +48,7 @@ flowchart TD
 
 Passos fixos (`KYC_WIZARD_STEPS`): **entity → identity → bank → documents → review**.
 
-Labels na UI: “Tipo de cadastro”, “Dados pessoais”, “Dados bancários”, “Documentos”, “Revisão”. Progresso visual: `KycWizardStepper` com 5 segmentos (preenche até o passo atual). Título de boas-vindas (“Boas-vindas à Renovi” + texto de conta quase pronta / onboarding de segurança) **somente no passo 1**; nos demais, o `h1` é o label do passo.
+Labels na UI: “Tipo de cadastro”, “Dados pessoais”, “Dados bancários”, “Documentos”, “Revisão”. Progresso visual: `KycWizardStepper` com 5 segmentos (preenche até o passo atual). Título de boas-vindas (“Boas-vindas à Prestway” + texto de conta quase pronta / onboarding de segurança) **somente no passo 1**; nos demais, o `h1` é o label do passo.
 
 ## 6. Fluxos alternativos e exceções
 
@@ -155,7 +155,7 @@ O wizard em si não altera status além do submit. Após sucesso, o gate refetch
 | `payment_register_provider_kyc_upload_path` | Associa path à sessão |
 | Signed URL | Expiração 7 dias (`KYC_DOCUMENT_SIGNED_URL_EXPIRY_SEC`) — usada no payload do dispatch de e-mail |
 | `payment_submit_provider_kyc` | Persiste identidade (`p_entity_type`, `p_document`, `p_full_name`, `p_phone`, campos PJ) + banco + paths em **`provider_profiles_private`** (fonte única; sem tabela de submissions) |
-| `dispatch-kyc-email` | Disparo / retry do e-mail operacional de credenciamento (default `credenciamento@renovi.com.br`; env `NETCRED_CREDENCIAMENTO_EMAIL`; local via Inbucket/Mailpit se `INBUCKET_SMTP_HOST`) |
+| `dispatch-kyc-email` | Disparo / retry do e-mail operacional de credenciamento (default `credenciamento@prestway.com`; env `NETCRED_CREDENCIAMENTO_EMAIL`; local via Inbucket/Mailpit se `INBUCKET_SMTP_HOST`) |
 | BrasilAPI `/banks/v1` | Catálogo de bancos do `BankPicker` (fallback JSON local se a API falhar) |
 
 ## 14. Listagens, buscas e filtros

@@ -74,7 +74,7 @@ Legenda: **OK** = documentado com evidência direta (README + feature); **Parcia
 | `sb-{ref}-auth-token` | Supabase Auth | `auth` |
 | `orbit_persist_session` | Manter conectado | `auth` |
 | `orbit.cache.persist.v1:*` | `cachePersist*` | rastreabilidade |
-| `renovi_request_quote_draft` | Rascunho do wizard | `request-quote` |
+| `prestway_request_quote_draft` | Rascunho do wizard | `request-quote` |
 | `orbit_device_beacon_last_sync_v1` | `device-beacon` / `syncSchedule.ts` | `device-beacon` |
 | `orbit_push_permission_prompt_dismissed_at` | `push-permission` | `push-permission` |
 | `orbit_pending_evaluation_prompt_snooze` | `service-completion` | `service-completion` |

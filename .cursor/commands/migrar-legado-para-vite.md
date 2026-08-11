@@ -141,11 +141,11 @@ Ao migrar ou escrever código novo, siga os padrões já adotados no projeto:
 
 ## 11. Mapeamento Legado → Orbit: formulário dinâmico (MicroStepForm)
 
-Ao migrar código do **projeto legado (renovi)** que usa o motor de formulário dinâmico, tenha em mente que a implementação no **Orbit** foi refatorada e os nomes/estrutura mudaram.
+Ao migrar código do **projeto legado (prestway)** que usa o motor de formulário dinâmico, tenha em mente que a implementação no **Orbit** foi refatorada e os nomes/estrutura mudaram.
 
-### 11.1 Onde fica no legado (renovi)
+### 11.1 Onde fica no legado (prestway)
 
-- **Componente principal:** `renovi/src/components/forms/engine/MicroStepForm.tsx`
+- **Componente principal:** `prestway/src/components/forms/engine/MicroStepForm.tsx`
 - O legado pode expor ou importar esse componente e tipos/helpers associados a partir dessa área.
 
 ### 11.2 Onde fica no Orbit
@@ -156,7 +156,7 @@ Ao migrar código do **projeto legado (renovi)** que usa o motor de formulário 
 
 ### 11.3 O que mudou de nome / estrutura
 
-| Legado (renovi) | Orbit |
+| Legado (prestway) | Orbit |
 |-----------------|--------|
 | `MicroStepForm` | **`DynamicForm`** |
 | `MicroStepRenderer` | **`StepRenderer`** |

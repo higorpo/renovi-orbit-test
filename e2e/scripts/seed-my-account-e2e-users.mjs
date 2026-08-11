@@ -8,9 +8,9 @@ import { applyE2eEnv } from "../load-e2e-env.mjs";
 applyE2eEnv();
 
 const DEFAULT_CLIENT_EMAIL =
-  process.env.E2E_MY_ACCOUNT_CLIENT_EMAIL ?? "e2e.myaccount.client@renovi.test";
+  process.env.E2E_MY_ACCOUNT_CLIENT_EMAIL ?? "e2e.myaccount.client@prestway.test";
 const DEFAULT_PROVIDER_EMAIL =
-  process.env.E2E_MY_ACCOUNT_PROVIDER_EMAIL ?? "e2e.myaccount.provider@renovi.test";
+  process.env.E2E_MY_ACCOUNT_PROVIDER_EMAIL ?? "e2e.myaccount.provider@prestway.test";
 const DEFAULT_PASSWORD =
   process.env.E2E_MY_ACCOUNT_PASSWORD ?? "E2E_SecurePass123!";
 

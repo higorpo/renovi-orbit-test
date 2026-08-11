@@ -18,10 +18,10 @@ function renderHeader(
 }
 
 describe("MobileTabHeader", () => {
-  it("renders sticky header with Renovi logo link", () => {
+  it("renders sticky header with Prestway logo link", () => {
     renderHeader();
     expect(screen.getByTestId("mobile-tab-header")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Renovi" })).toHaveAttribute("href", "/dashboard");
+    expect(screen.getByRole("link", { name: "Prestway" })).toHaveAttribute("href", "/dashboard");
   });
 
   it("offsets sticky top when offline banner is present", () => {

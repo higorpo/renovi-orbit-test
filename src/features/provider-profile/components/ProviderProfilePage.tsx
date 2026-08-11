@@ -53,7 +53,7 @@ export function ProviderProfilePage() {
         <Link to="/">
           <img
             src="/logo-renovi.webp"
-            alt="Renovi"
+            alt="Prestway"
             className="h-7 md:h-8 w-auto"
           />
         </Link>

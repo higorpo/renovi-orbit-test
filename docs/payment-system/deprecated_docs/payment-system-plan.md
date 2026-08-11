@@ -1,4 +1,4 @@
-# Renovi — Plano de Implementação do Sistema de Pagamentos
+# Prestway — Plano de Implementação do Sistema de Pagamentos
 ## Processador: Asaas | Modelo: Escrow
 ### Versão 4.0 — 2026-03-26 (parcelamento, taxas dinâmicas, decisões finais)
 
@@ -49,10 +49,10 @@ O fluxo de aprovação de orçamento deve ser **bloqueado por pagamento**:
 | Expiração do checkout? | Lock de 30 min no proposal + Pix válido por 12 meses a partir do due date | QR Pix não expira em 1h — é dinâmico, válido por 12 meses do due date |
 | `client_charge_amount` em `provider_proposals`? | **NÃO** | Preço do cliente é dinâmico; calculado via RPC sob demanda; congelado apenas no `service_payments` |
 | `pricing_signature` cobre campos do cliente? | **NÃO** | Assinatura protege somente precificação do prestador (4 campos); cliente é domínio separado |
-| Quem paga taxa mensal escrow (R$9,90)? | **Plataforma (Renovi)** | `isFeePayer: false` — a Renovi absorve o custo operacional do escrow como custo da plataforma |
+| Quem paga taxa mensal escrow (R$9,90)? | **Plataforma (Prestway)** | `isFeePayer: false` — a Prestway absorve o custo operacional do escrow como custo da plataforma |
 | `daysToExpire` do escrow? | **45 dias** (máximo suportado pelo Asaas) | Máximo buffer antes da liberação automática; garante proteção ao cliente |
 | Cartão parcelado em V1? | **SIM — Pix + Cartão 1x + Cartão parcelado desde o dia 1** | Cliente paga TODAS as taxas financeiras adicionais do parcelamento |
-| Quem paga taxas de gateway/cartão/antecipação? | **Cliente paga TUDO** | Renovi e prestador recebem valores líquidos sem dedução de taxas Asaas |
+| Quem paga taxas de gateway/cartão/antecipação? | **Cliente paga TUDO** | Prestway e prestador recebem valores líquidos sem dedução de taxas Asaas |
 
 ---
 
@@ -100,10 +100,10 @@ Possui `cpf` — necessário para criar customer no Asaas.
 
 ### 2.6 `platform_constants`
 
-Possui: `renovi_tax_provider = 0.15`, `pricing_signature_secret`.
+Possui: `prestway_tax_provider = 0.15`, `pricing_signature_secret`.
 
 Faltam:
-- `renovi_tax_client` — ex.: `0.05` (5% de taxa do cliente — **confirmar com produto**)
+- `prestway_tax_client` — ex.: `0.05` (5% de taxa do cliente — **confirmar com produto**)
 - `checkout_lock_duration_minutes` — ex.: `30`
 - `escrow_days_to_expire` — ex.: `30` (dias de backup se release manual falhar)
 - `asaas_environment` — `sandbox` ou `production`
@@ -198,7 +198,7 @@ CREATE UNIQUE INDEX ppp_asaas_wallet_id_idx
 
 ```sql
 INSERT INTO public.platform_constants (key, value) VALUES
-  ('renovi_tax_client',             '0.05'),
+  ('prestway_tax_client',             '0.05'),
   ('checkout_lock_duration_minutes','30'),
   ('escrow_days_to_expire',         '45'),       -- UPDATED: máximo suportado pelo Asaas
   ('asaas_environment',             '"sandbox"'),
@@ -320,9 +320,9 @@ CREATE TABLE public.service_payments (
   provider_net_amount         numeric(10,2) NOT NULL,   -- proposed_amount - provider_fee_amount (final_amount)
 
   -- Lado do cliente (calculado no initiate_checkout via _calculate_client_pricing)
-  -- Fonte: platform_constants.renovi_tax_client vigente no momento do checkout
-  client_fee_rate             numeric(6,4)  NOT NULL,   -- taxa Renovi do cliente no momento do checkout
-  client_fee_amount           numeric(10,2) NOT NULL,   -- proposed_amount * client_fee_rate (taxa Renovi)
+  -- Fonte: platform_constants.prestway_tax_client vigente no momento do checkout
+  client_fee_rate             numeric(6,4)  NOT NULL,   -- taxa Prestway do cliente no momento do checkout
+  client_fee_amount           numeric(10,2) NOT NULL,   -- proposed_amount * client_fee_rate (taxa Prestway)
   client_charge_amount        numeric(10,2) NOT NULL,   -- valor TOTAL cobrado do cliente (inclui TODAS as taxas)
 
   -- // ADDED: Snapshot de taxas de gateway e parcelamento (congelado no checkout)
@@ -337,7 +337,7 @@ CREATE TABLE public.service_payments (
   total_gateway_cost          numeric(10,2) NOT NULL DEFAULT 0,    -- gateway_fee_amount + gateway_fixed_fee + anticipation_fee_amount
 
   -- Plataforma
-  platform_total_fee_amount   numeric(10,2) NOT NULL,   -- provider_fee_amount + client_fee_amount (receita Renovi)
+  platform_total_fee_amount   numeric(10,2) NOT NULL,   -- provider_fee_amount + client_fee_amount (receita Prestway)
 
   -- Liquidação Asaas
   asaas_net_value             numeric(10,2),            -- preenchido via webhook (netValue após taxas Asaas)
@@ -482,7 +482,7 @@ CAMADA 2 — PRECIFICAÇÃO DO CLIENTE (dinâmica, calculada sob demanda)
 Onde: NÃO é armazenada em provider_proposals
 Quando calculada: somente quando o cliente acessa a tela de orçamentos
 Como calculada: RPC pública get_client_proposal_pricing() invocada pelo frontend
-Fonte: platform_constants.renovi_tax_client (taxa vigente no momento da consulta)
+Fonte: platform_constants.prestway_tax_client (taxa vigente no momento da consulta)
 Preparada para evolução: aceita p_payment_method desde V1 (parâmetro ignorado
 por ora; será usado para taxas diferenciadas por método de pagamento no futuro)
 
@@ -505,13 +505,13 @@ Dado `proposed_amount = R$1.000,00` com as taxas atuais:
 
 ```
 ── CAMADA 1 (armazenada em provider_proposals) ──────────────────────
-provider_fee_rate      = 0.15   (platform_constants.renovi_tax_provider)
+provider_fee_rate      = 0.15   (platform_constants.prestway_tax_provider)
 provider_fee_amount    = R$150,00
 provider_net_amount    = R$850,00   (= atual final_amount)
 pricing_signature      = HMAC(proposed_amount|tax_rate|tax_amount|final_amount)
 
 ── CAMADA 2 (calculada em tempo de acesso via RPC) ───────────────────
-client_fee_rate        = 0.05   (platform_constants.renovi_tax_client — vigente no momento)
+client_fee_rate        = 0.05   (platform_constants.prestway_tax_client — vigente no momento)
 client_fee_amount      = R$50,00
 client_charge_amount   = R$1.050,00  ← único valor mostrado ao cliente (PIX / Cartão 1x)
 
@@ -534,9 +534,9 @@ O cliente paga **TODAS** as taxas financeiras. O pipeline de cálculo é:
 ETAPA 1 — Base
   base_price           = proposed_amount                         (ex.: R$1.000,00)
 
-ETAPA 2 — Taxa Renovi (sempre aplicada)
-  renovi_fee           = base_price × renovi_tax_client          (ex.: R$50,00)
-  subtotal_1           = base_price + renovi_fee                 (ex.: R$1.050,00)
+ETAPA 2 — Taxa Prestway (sempre aplicada)
+  prestway_fee           = base_price × prestway_tax_client          (ex.: R$50,00)
+  subtotal_1           = base_price + prestway_fee                 (ex.: R$1.050,00)
 
 ETAPA 3 — Taxa do gateway (varia por método e parcelas)
   gateway_fee          = subtotal_1 × card_processing_fee_percent  (ex.: R$36,65 para 2-6x a 3,49%)
@@ -556,7 +556,7 @@ ETAPA 6 — Valor por parcela
 ```
 
 **Regra de resultado garantido:**
-- Renovi SEMPRE recebe `provider_fee_amount + client_fee_amount` (R$200 no exemplo) — líquido, sem dedução de taxas Asaas
+- Prestway SEMPRE recebe `provider_fee_amount + client_fee_amount` (R$200 no exemplo) — líquido, sem dedução de taxas Asaas
 - Prestador SEMPRE recebe `provider_net_amount` (R$850 no exemplo) — via split fixo
 - Cliente paga o `client_charge_amount` que já embute TODAS as taxas
 - Taxas Asaas são cobertas pelo spread entre `client_charge_amount` e `provider_net_amount + platform_total_fee`
@@ -568,7 +568,7 @@ Dado `proposed_amount = R$1.000,00`:
 ```
 ── PIX ───────────────────────────────────────────────────────────────
 base_price           = R$1.000,00
-renovi_fee           = R$50,00       (5%)
+prestway_fee           = R$50,00       (5%)
 subtotal_1           = R$1.050,00
 gateway_fee          = R$10,40       (0,99%)
 gateway_fixed        = R$0,00
@@ -578,7 +578,7 @@ Resultado: Cliente paga R$1.060,40
 
 ── CARTÃO 1x (à vista) ──────────────────────────────────────────────
 base_price           = R$1.000,00
-renovi_fee           = R$50,00       (5%)
+prestway_fee           = R$50,00       (5%)
 subtotal_1           = R$1.050,00
 gateway_fee          = R$31,40       (2,99%)
 gateway_fixed        = R$0,49
@@ -588,7 +588,7 @@ Resultado: Cliente paga R$1.081,89
 
 ── CARTÃO 6x ─────────────────────────────────────────────────────────
 base_price           = R$1.000,00
-renovi_fee           = R$50,00       (5%)
+prestway_fee           = R$50,00       (5%)
 subtotal_1           = R$1.050,00
 gateway_fee          = R$36,65       (3,49%)
 gateway_fixed        = R$0,49
@@ -599,7 +599,7 @@ Resultado: Cliente vê "6x de R$191,60"
 
 ── CARTÃO 12x ────────────────────────────────────────────────────────
 base_price           = R$1.000,00
-renovi_fee           = R$50,00       (5%)
+prestway_fee           = R$50,00       (5%)
 subtotal_1           = R$1.050,00
 gateway_fee          = R$41,90       (3,99%)
 gateway_fixed        = R$0,49
@@ -615,7 +615,7 @@ Resultado: Cliente vê "12x de R$100,70"
 > Média = (0 + 1 + 2 + ... + (N-1)) / N = (N-1)/2 meses.
 > Portanto: `anticipation_fee = subtotal_1 × rate_per_month × (N-1)/2`
 >
-> **Nota sobre Pix:** O Pix também tem taxa Asaas (0,99%). Para manter a garantia de que a Renovi e o prestador recebem seus valores líquidos, o cliente paga esta taxa também. Sem esta inclusão, a Renovi absorveria ~1% de cada transação Pix.
+> **Nota sobre Pix:** O Pix também tem taxa Asaas (0,99%). Para manter a garantia de que a Prestway e o prestador recebem seus valores líquidos, o cliente paga esta taxa também. Sem esta inclusão, a Prestway absorveria ~1% de cada transação Pix.
 
 ### 5.2 Estratégia de Split: VALOR FIXO
 
@@ -658,7 +658,7 @@ Esta RPC é o **ponto central** da Camada 2. Toda lógica de precificação do c
 Esta função é a **única implementação** do cálculo de precificação do cliente. Tanto a RPC pública quanto o `initiate_checkout` a chamam, garantindo consistência:
 
 ```sql
--- // UPDATED: Função interna agora calcula TODAS as taxas financeiras (Renovi + gateway + antecipação)
+-- // UPDATED: Função interna agora calcula TODAS as taxas financeiras (Prestway + gateway + antecipação)
 -- O cliente paga TODAS as taxas. Nenhuma taxa é hardcoded — todas vêm de platform_constants.
 -- Retorna todos os campos necessários ao snapshot financeiro, incluindo parcelamento.
 CREATE OR REPLACE FUNCTION public._calculate_client_pricing(
@@ -715,8 +715,8 @@ BEGIN
     RAISE EXCEPTION 'PIX não suporta parcelamento';
   END IF;
 
-  -- ETAPA 1+2: Taxa Renovi
-  v_client_fee_rate := _get_const('renovi_tax_client');
+  -- ETAPA 1+2: Taxa Prestway
+  v_client_fee_rate := _get_const('prestway_tax_client');
   v_client_fee_amount := round(p_proposed_amount * v_client_fee_rate, 2);
   v_subtotal := p_proposed_amount + v_client_fee_amount;
 
@@ -889,7 +889,7 @@ DECLARE
 BEGIN
   -- Buscar taxa vigente UMA vez para toda a query
   SELECT (value::text)::numeric INTO v_client_fee_rate
-  FROM public.platform_constants WHERE key = 'renovi_tax_client';
+  FROM public.platform_constants WHERE key = 'prestway_tax_client';
 
   -- Calcular client_charge_amount inline no SELECT para cada proposta:
   -- proposed_amount + round(proposed_amount * v_client_fee_rate, 2) AS client_charge_amount
@@ -918,7 +918,7 @@ O escrow do Asaas opera **no nível do subaccount do prestador**:
 POST /v3/accounts/{subaccount_id}/escrow
 {
   "enabled": true,
-  "isFeePayer": false,      // UPDATED: plataforma (Renovi) paga a taxa de R$9,90/mês — NÃO o prestador
+  "isFeePayer": false,      // UPDATED: plataforma (Prestway) paga a taxa de R$9,90/mês — NÃO o prestador
   "daysToExpire": 45        // UPDATED: máximo suportado pelo Asaas (45 dias); liberação automática como backup
 }
 ```
@@ -1010,7 +1010,7 @@ CREATE TABLE public.service_payment_releases (
 
 ### 7.1 Clientes → Asaas Customers (Criação LAZY)
 
-| Entidade Renovi | Entidade Asaas | Onde Armazenar |
+| Entidade Prestway | Entidade Asaas | Onde Armazenar |
 |----------------|---------------|----------------|
 | `profiles.id` (role=client) | Customer (`cus_xxx`) | `profiles.asaas_customer_id` |
 
@@ -1033,7 +1033,7 @@ CREATE TABLE public.service_payment_releases (
 
 ### 7.2 Prestadores → Asaas Subaccounts (Criação EAGER no onboarding)
 
-| Entidade Renovi | Entidade Asaas | Onde Armazenar |
+| Entidade Prestway | Entidade Asaas | Onde Armazenar |
 |----------------|---------------|----------------|
 | `profiles.id` (role=provider) | Subaccount + WalletId | `provider_profiles_private` |
 
@@ -1084,7 +1084,7 @@ POST /v3/payments
   "billingType": "PIX" | "CREDIT_CARD",
   "value": <client_charge_amount>,          ← vem do snapshot em service_payments
   "dueDate": "<hoje + 1 dia>",
-  "description": "Renovi - <service_title> - <provider_display_name>",
+  "description": "Prestway - <service_title> - <provider_display_name>",
   "externalReference": "<service_payments.id>",   ← CRÍTICO: fallback de lookup no webhook
   "split": [
     { "walletId": "<provider_asaas_wallet_id>", "fixedValue": <provider_net_amount> }
@@ -1099,7 +1099,7 @@ POST /v3/payments
   "installmentCount": <installment_count>,  ← do snapshot em service_payments
   "installmentValue": <installment_value>,  ← do snapshot em service_payments
   "dueDate": "<hoje>",
-  "description": "Renovi - <service_title> - <provider_display_name>",
+  "description": "Prestway - <service_title> - <provider_display_name>",
   "externalReference": "<service_payments.id>",
   "split": [
     { "walletId": "<provider_asaas_wallet_id>", "totalFixedValue": <provider_net_amount> }
@@ -1183,13 +1183,13 @@ Pós-confirmação: `confirmed → refunded`, `confirmed → chargeback`
 2.  Cliente clica em um pedido de serviço para ver detalhes
 3.  Tela mostra propostas dos prestadores
 
-4.  // UPDATED: Tela de Orçamento — exibir APENAS valor base + taxa Renovi
+4.  // UPDATED: Tela de Orçamento — exibir APENAS valor base + taxa Prestway
     Para cada proposta, exibir:
     - Valor do serviço (proposed_amount): "Valor do orçamento: R$1.000,00"
-    - Taxa Renovi (+5%): "Taxa da plataforma: R$50,00"
+    - Taxa Prestway (+5%): "Taxa da plataforma: R$50,00"
     - Total base: "Total: R$1.050,00"
     NÃO exibir taxas de cartão, parcelamento, ou valores por parcela nesta tela.
-    O cálculo inline em list_client_received_budgets usa renovi_tax_client vigente.
+    O cálculo inline em list_client_received_budgets usa prestway_tax_client vigente.
 
     O detalhamento de taxas de gateway e opções de parcelamento aparece
     SOMENTE na tela de checkout (passo 8), após o cliente clicar "Quero contratar".
@@ -1321,7 +1321,7 @@ Pós-confirmação: `confirmed → refunded`, `confirmed → chargeback`
     - ...até Nx de R$X
     - Cada opção mostra: valor por parcela + total entre parênteses
     - Ex.: "6x de R$191,60 (total R$1.149,62)"
-- O valor exibido em CADA opção já inclui TODAS as taxas (Renovi + gateway + antecipação)
+- O valor exibido em CADA opção já inclui TODAS as taxas (Prestway + gateway + antecipação)
 - O cliente NUNCA vê o breakdown das taxas — apenas o total e o valor por parcela
 - Aviso: "Esta proposta está reservada por 28 min."
 
@@ -1331,7 +1331,7 @@ Pós-confirmação: `confirmed → refunded`, `confirmed → chargeback`
 
 > // ADDED: Regra de UX — Resumo de valores na tela
 > **Na tela de orçamento (ANTES de clicar "Quero contratar"):**
-> - Mostrar: Valor do serviço + Taxa Renovi (5%) = Total base
+> - Mostrar: Valor do serviço + Taxa Prestway (5%) = Total base
 > - NÃO mostrar: taxas de cartão, opções de parcelamento
 >
 > **Na tela de checkout (APÓS clicar "Quero contratar"):**
@@ -1451,7 +1451,7 @@ POST /v3/payments
 
 ### 12.3 Webhooks de Cartão
 
-| Webhook | Ação Renovi |
+| Webhook | Ação Prestway |
 |---------|-------------|
 | `PAYMENT_APPROVED_BY_RISK_ANALYSIS` | Fluxo completo de sucesso |
 | `PAYMENT_REPROVED_BY_RISK_ANALYSIS` | Marcar failed; reverter proposta e SR |
@@ -1464,7 +1464,7 @@ POST /v3/payments
 
 ### 13.1 Tabela Completa de Eventos
 
-| Evento Asaas | Significado | Ação Renovi |
+| Evento Asaas | Significado | Ação Prestway |
 |-------------|-------------|-------------|
 | `PAYMENT_CREATED` | Cobrança criada no Asaas | Confirmar `asaas_payment_id`; status permanece 'pending' |
 | `PAYMENT_UPDATED` | Due date ou valor alterado | Log; verificar integridade |
@@ -1682,7 +1682,7 @@ proposed_amount | tax_rate | tax_amount | final_amount
 
 A assinatura protege a integridade do combinado financeiro entre prestador e plataforma: o prestador submete uma proposta, a plataforma calcula os valores do prestador e os assina. Esta assinatura garante que, no momento do checkout, o `provider_net_amount` que será enviado ao Asaas via split é exatamente o que estava na proposta original — nenhum ator consegue alterar os valores do prestador sem invalidar a assinatura.
 
-O preço do cliente é calculado *depois*, com base em `platform_constants.renovi_tax_client` vigente no momento do checkout. Ele não pode ser "forjado" via assinatura falsa porque é calculado pelo backend (nunca pelo cliente), diretamente de uma tabela interna. Sua auditabilidade vem do snapshot em `service_payments` (que registra `client_fee_rate` e o timestamp do checkout), não de uma assinatura na proposta.
+O preço do cliente é calculado *depois*, com base em `platform_constants.prestway_tax_client` vigente no momento do checkout. Ele não pode ser "forjado" via assinatura falsa porque é calculado pelo backend (nunca pelo cliente), diretamente de uma tabela interna. Sua auditabilidade vem do snapshot em `service_payments` (que registra `client_fee_rate` e o timestamp do checkout), não de uma assinatura na proposta.
 
 ### 16.2 Função de Assinatura (sem alteração de V1)
 
@@ -1725,7 +1725,7 @@ provider_proposals.pricing_signature
 service_payments.proposal_pricing_signature  (imutável — prova do que estava na proposta)
 service_payments.provider_net_amount         → split_fixed_value → enviado ao Asaas
 
-platform_constants.renovi_tax_client (taxa vigente no momento do checkout)
+platform_constants.prestway_tax_client (taxa vigente no momento do checkout)
     ↓ calculado por _calculate_client_pricing(proposed_amount)
     ↓ congelado em
 service_payments.client_fee_rate             (rastreabilidade da taxa aplicada)
@@ -1820,9 +1820,9 @@ export default async function handler(req: Request) {
 ```json
 POST /v3/webhooks
 {
-  "name": "Renovi Payments",
+  "name": "Prestway Payments",
   "url": "https://{project}.supabase.co/functions/v1/asaas-webhook",
-  "email": "pagamentos@renovi.com.br",
+  "email": "pagamentos@prestway.com",
   "enabled": true,
   "interrupted": false,
   "authToken": "<ASAAS_WEBHOOK_SECRET>",
@@ -2193,7 +2193,7 @@ O sandbox envia emails e SMS reais. **Não criar clientes com dados reais de ter
 - Alertar admin; realizar release manual via dashboard Asaas
 - Prevenir: validar `asaas_account_api_key IS NOT NULL` no checkout
 
-### 23.12 Mudança de `renovi_tax_client` com Checkouts Ativos
+### 23.12 Mudança de `prestway_tax_client` com Checkouts Ativos
 - Checkouts em andamento não são afetados: seu `client_charge_amount` já está congelado em `service_payments`
 - Apenas novos checkouts iniciados após a mudança usarão a nova taxa
 - A taxa aplicada a cada transação é sempre auditável via `service_payments.client_fee_rate`
@@ -2218,7 +2218,7 @@ O sandbox envia emails e SMS reais. **Não criar clientes com dados reais de ter
   - Asaas envia webhook `PAYMENT_OVERDUE` para a parcela individual
   - A cobrança do parcelamento como um todo NÃO é cancelada automaticamente
   - Asaas pode enviar `PAYMENT_DUNNING_REQUESTED` para tentativa de cobrança
-  - Ação Renovi: alertar admin; NÃO cancelar o serviço automaticamente (parcelas anteriores já foram pagas)
+  - Ação Prestway: alertar admin; NÃO cancelar o serviço automaticamente (parcelas anteriores já foram pagas)
   - Escrow: manter bloqueado até resolução
   - Ação futura: definir política de tolerância a parcelas inadimplentes
 
@@ -2253,12 +2253,12 @@ O sandbox envia emails e SMS reais. **Não criar clientes com dados reais de ter
 - Migration: CREATE `services`
 - Migration: CREATE `service_payment_events`
 - Migration: CREATE `service_payment_releases`
-- Migration: Novos platform_constants (`renovi_tax_client`, `checkout_lock_duration_minutes`, `escrow_days_to_expire`, `asaas_environment`)
+- Migration: Novos platform_constants (`prestway_tax_client`, `checkout_lock_duration_minutes`, `escrow_days_to_expire`, `asaas_environment`)
 - Migration: CREATE `_calculate_client_pricing(p_proposed_amount, p_payment_method)`
 - Migration: CREATE `get_client_proposal_pricing(p_proposal_id, p_payment_method)`
 - Migration: Trigger `prevent_financial_snapshot_mutation` em service_payments
 - Atualizar `expire_stale_provider_proposals` para usar status `expired` e pular `payment_pending`
-- Atualizar `list_client_received_budgets` para calcular e retornar `client_charge_amount` (via `renovi_tax_client` inline — não mais `proposed_amount`)
+- Atualizar `list_client_received_budgets` para calcular e retornar `client_charge_amount` (via `prestway_tax_client` inline — não mais `proposed_amount`)
 - **NÃO alterar** `calculate_provider_service_pricing`, `generate_provider_pricing_signature`, nem `validate_provider_proposal_pricing` — estes continuam cobrindo apenas os 4 campos do prestador, exatamente como hoje
 - **NÃO fazer backfill** de campos de precificação do cliente em `provider_proposals` — eles não pertencem lá
 
@@ -2433,7 +2433,7 @@ WHERE round(sp.proposed_amount * sp.client_fee_rate, 2) <> sp.client_fee_amount;
 | Fila de webhooks pausada (15 falhas consecutivas) | Alta | Monitor + alerta imediato; recuperação em < 14 dias |
 | Cliente sem CPF no perfil | Alta | Bloquear checkout; exigir CPF antes de prosseguir |
 | Escrow release falha silenciosamente | Alta | Cron monitor; alertar se 'blocked' + 'confirmed' > 24h |
-| `renovi_tax_client` alterado enquanto `get_client_proposal_pricing` é chamada e `initiate_checkout` usa outro valor | Baixa | Ambos usam `_calculate_client_pricing` (mesma fonte); risco real apenas se alterado *durante* a transação de checkout — janela de microsegundos |
+| `prestway_tax_client` alterado enquanto `get_client_proposal_pricing` é chamada e `initiate_checkout` usa outro valor | Baixa | Ambos usam `_calculate_client_pricing` (mesma fonte); risco real apenas se alterado *durante* a transação de checkout — janela de microsegundos |
 | `client_fee_rate` alterada sem alinhamento operacional | Média | Mudança controlada via `platform_constants` + checklist de comunicação interna + auditoria de snapshot |
 | Emails/SMS reais disparados no sandbox | Média | Não usar emails/telefones reais de terceiros no sandbox |
 | Custo de escrow (R$9,90/prestador/mês) | Média | Considerar no modelo financeiro; pode ser repassado ao prestador |
@@ -2443,8 +2443,8 @@ WHERE round(sp.proposed_amount * sp.client_fee_rate, 2) <> sp.client_fee_amount;
 // UPDATED: Questões 1-3 e 5 resolvidas; novas questões adicionadas
 
 **Resolvidas:**
-1. ~~**Taxa do cliente:**~~ ✅ Confirmado: 5% (`renovi_tax_client`).
-2. ~~**Quem paga o escrow:**~~ ✅ Plataforma (Renovi) paga R$9,90/mês por prestador. `isFeePayer: false`.
+1. ~~**Taxa do cliente:**~~ ✅ Confirmado: 5% (`prestway_tax_client`).
+2. ~~**Quem paga o escrow:**~~ ✅ Plataforma (Prestway) paga R$9,90/mês por prestador. `isFeePayer: false`.
 3. ~~**`daysToExpire` do escrow:**~~ ✅ 45 dias (máximo suportado pelo Asaas).
 5. ~~**Cartão parcelado:**~~ ✅ Suportado desde V1. PIX + Cartão 1x + Cartão parcelado (até 12x). Cliente paga todas as taxas.
 
@@ -2456,14 +2456,14 @@ WHERE round(sp.proposed_amount * sp.client_fee_rate, 2) <> sp.client_fee_amount;
 // ADDED: Novas questões de parcelamento
 8. **Taxas Asaas promocionais vs padrão:** Nos primeiros 3 meses, as taxas de cartão são menores (ex.: 1,99% vs 2,99% para 1x). Os valores em `platform_constants` devem ser atualizados após o período promocional. Criar alerta/reminder para atualização.
 9. **Split em parcelamento:** ~~Verificar comportamento exato do split quando a cobrança é parcelada — se o `fixedValue` é dividido entre parcelas ou aplicado ao total.~~ ✅ Confirmado: para parcelado usar `totalFixedValue`; para Pix/1x usar `fixedValue`.
-10. **Antecipação automática vs manual:** ~~Definir se a Renovi vai usar antecipação automática de recebíveis no Asaas ou se vai aguardar o recebimento natural de cada parcela.~~ ✅ Confirmado: usar antecipação automática para parcelado.
+10. **Antecipação automática vs manual:** ~~Definir se a Prestway vai usar antecipação automática de recebíveis no Asaas ou se vai aguardar o recebimento natural de cada parcela.~~ ✅ Confirmado: usar antecipação automática para parcelado.
 11. **Valor mínimo por parcela:** ~~Definir valor mínimo por parcela (ex.: R$20,00).~~ ✅ Confirmado: R$100,00 por parcela (`min_installment_value = 100`).
 
 ---
 
 ## 27. RECOMENDAÇÕES ANTES DE CODIFICAR
 
-1. **Taxa do cliente definida:** `renovi_tax_client = 5%` em `platform_constants`. Toda precificação do cliente deriva desta constante.
+1. **Taxa do cliente definida:** `prestway_tax_client = 5%` em `platform_constants`. Toda precificação do cliente deriva desta constante.
 
 2. **Testar o fluxo Pix completo no sandbox antes da Fase 3:**
    Criar conta sandbox → gerar API key → registrar chave Pix → criar customer → criar cobrança Pix → obter QR code → simular com `/receiveInCash` → verificar webhook.

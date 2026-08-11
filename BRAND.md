@@ -139,7 +139,6 @@ Prestway **não** é apenas um marketplace.
 
 | Correto | Evitar |
 |---|---|
-| **Prestway** | Renovi (nome anterior — não usar em UI, copy ou docs novos) |
 | Prestway (produto / marca) | Orbit (nome interno do repositório / app shell — não é a marca de produto) |
 
 Em copy voltada ao usuário, sempre **Prestway**.

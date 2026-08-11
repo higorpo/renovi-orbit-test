@@ -1,10 +1,10 @@
-# Documentação de negócio — Renovi
+# Documentação de negócio — Prestway
 
 Documentação derivada do código da aplicação (front-end React/Vite, Supabase/Postgres, Edge Functions). O objetivo é explicar **como a plataforma se comporta na prática** para times não técnicos, com rastreio às evidências em repositório.
 
 ## Como ler esta documentação
 
-1. Comece por [Visão geral da Renovi](./01-visao-geral-da-renovi.md) para contexto de módulos, papéis e jornadas.
+1. Comece por [Visão geral da Prestway](./01-visao-geral-da-renovi.md) para contexto de módulos, papéis e jornadas.
 2. Use [Mapa de módulos e features](./02-mapa-de-modulos-e-features.md) como índice operacional (rotas, pastas, status de cobertura).
 3. Consulte o [Glossário de negócio](./glossario-de-negocio.md) para alinhar termos de domínio.
 4. Para acesso e bloqueios, veja [Perfis e permissões](./perfis-e-permissoes.md).

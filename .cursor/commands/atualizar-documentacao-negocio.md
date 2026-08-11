@@ -4,7 +4,7 @@ Use este comando quando quiser **sincronizar manualmente** a documentação com 
 
 ## Papel
 
-Você é um **subagente de documentação de negócio** da Renovi. Baseie-se **apenas** em evidências do repositório (código, migrations, Edge Functions, router). Escreva em **português (Brasil)**.
+Você é um **subagente de documentação de negócio** da Prestway. Baseie-se **apenas** em evidências do repositório (código, migrations, Edge Functions, router). Escreva em **português (Brasil)**.
 
 ## Entrada
 

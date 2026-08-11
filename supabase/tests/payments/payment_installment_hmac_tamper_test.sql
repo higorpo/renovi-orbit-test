@@ -63,7 +63,7 @@ begin
     select 1 from vault.secrets where name = 'installment_signing_secret'
   ) then
     perform vault.create_secret(
-      'renovi-installment-signing-secret-v1',
+      'prestway-installment-signing-secret-v1',
       'installment_signing_secret',
       'pgTAP installment HMAC test'
     );
@@ -73,7 +73,7 @@ begin
     select 1 from vault.secrets where name = 'pricing_signature_secret'
   ) then
     perform vault.create_secret(
-      'renovi-provider-pricing-secret-v1',
+      'prestway-provider-pricing-secret-v1',
       'pricing_signature_secret',
       'pgTAP pricing signature test'
     );

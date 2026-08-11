@@ -36,7 +36,7 @@ export const PROVIDER_PORTFOLIO_IMAGE_ALLOWED_TYPES = [
   "image/heif",
 ] as const;
 
-export const DPO_EMAIL = "dpo@renovi.com.br";
+export const DPO_EMAIL = "dpo@prestway.com";
 
 /** Privacy policy URL (main site + path). Null when VITE_MAIN_SITE_URL is not set. */
 const MAIN_SITE_BASE = (import.meta.env.VITE_MAIN_SITE_URL ?? "").replace(/\/$/, "");

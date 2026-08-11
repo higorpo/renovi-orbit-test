@@ -51,7 +51,7 @@ comment on column public.client_card_tokens.gateway_payment_profile_id is
   'NetCred paymentProfile.id — opaque gateway reference; service_role / charge pipeline only.';
 
 comment on column public.client_card_tokens.netcred_company_id is
-  'NetCred companyId used at tokenization; always Renovi platform company. Accept/charge MUST match payment_netcred_platform_company_id(). chargeCreate uses provider company separately.';
+  'NetCred companyId used at tokenization; always Prestway platform company. Accept/charge MUST match payment_netcred_platform_company_id(). chargeCreate uses provider company separately.';
 
 comment on column public.client_card_tokens.gateway_card_token is
   'NetCred paymentProfile.token — opaque gateway reference; not exposed via client_card_tokens_safe_v.';
@@ -159,7 +159,7 @@ end;
 $$;
 
 comment on function public.payment_netcred_platform_company_id() is
-  'Vault netcred_platform_company_id — Renovi platform merchant that owns card payment profiles.';
+  'Vault netcred_platform_company_id — Prestway platform merchant that owns card payment profiles.';
 
 revoke all on function public.payment_netcred_platform_company_id() from public;
 revoke all on function public.payment_netcred_platform_company_id() from anon;

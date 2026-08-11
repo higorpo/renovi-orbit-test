@@ -1,6 +1,6 @@
 # Chat Screen Component — Detailed Design Specification
 
-The chat screen is the primary real-time communication interface between clients and service providers inside the Renovi platform. Its purpose is to provide a clean, trustworthy, modern, and frictionless messaging experience optimized for service negotiation, clarification, and operational communication.
+The chat screen is the primary real-time communication interface between clients and service providers inside the Prestway platform. Its purpose is to provide a clean, trustworthy, modern, and frictionless messaging experience optimized for service negotiation, clarification, and operational communication.
 
 The interface should feel lightweight, highly readable, and mobile-first, while still scaling elegantly to desktop environments.
 
@@ -931,7 +931,7 @@ Avoid:
 <html class="light" lang="en"><head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
-<title>Renovi Chat - Karen</title>
+<title>Prestway Chat - Karen</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>

@@ -19,11 +19,11 @@ function renderMobileNav(
 }
 
 describe("MobileNav", () => {
-  it("renders with Renovi logo in the top bar", () => {
+  it("renders with Prestway logo in the top bar", () => {
     renderMobileNav("client");
-    const logo = screen.getByRole("img", { name: "Renovi" });
+    const logo = screen.getByRole("img", { name: "Prestway" });
     expect(logo).toBeInTheDocument();
-    const logoLink = screen.getByRole("link", { name: "Renovi" });
+    const logoLink = screen.getByRole("link", { name: "Prestway" });
     expect(logoLink.getAttribute("href")).toMatch(/^\/(dashboard)?$/);
   });
 

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import type { ProviderPublicProfile } from "../types/providerProfilePublic.types";
 
-const SITE_NAME = "Renovi";
+const SITE_NAME = "Prestway";
 
 function setMetaRobots(content: string) {
   let el = document.querySelector('meta[name="robots"]');
@@ -15,7 +15,7 @@ function setMetaRobots(content: string) {
 
 /**
  * Sets document title and robots meta based on profile and visibility.
- * - Public profile: index, follow; title "{display_name} | Renovi"
+ * - Public profile: index, follow; title "{display_name} | Prestway"
  * - Restricted or not found: noindex, nofollow
  */
 export function useProfileSeo(

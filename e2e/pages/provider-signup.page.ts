@@ -46,7 +46,7 @@ export class ProviderSignupPage {
 
     // Common
     this.loginLink = page.getByRole("link", { name: /Faça login|Fazer login/ });
-    this.logo = page.getByAltText("Renovi");
+    this.logo = page.getByAltText("Prestway");
   }
 
   async goto() {

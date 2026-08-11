@@ -2,7 +2,7 @@
 
 ## 1. Resumo executivo
 
-- **O que é:** rota **index** da SPA (`/`), renderizada pelo componente `App` — tela **mínima** com título “Renovi” e um botão que navega para `/login`.
+- **O que é:** rota **index** da SPA (`/`), renderizada pelo componente `App` — tela **mínima** com título “Prestway” e um botão que navega para `/login`.
 - **Quem usa:** qualquer visitante (rota **pública**, sem `ProtectedRoute` / `GuestOnlyRoute`).
 - **O que não é:** landing de marketing, catálogo de serviços, dashboard autenticado nem redirect automático por sessão.
 - **Pasta de feature:** **não existe** `src/features/app-home/`; o módulo documental cobre `src/App.tsx` + registro em `src/router.tsx`.
@@ -67,7 +67,7 @@ flowchart TD
   A[Usuário abre origem do app] --> B[Bootstrap main.tsx]
   B --> C[RootLayout + Router]
   C --> D[Rota index: App]
-  D --> E[UI: título Renovi + botão Login]
+  D --> E[UI: título Prestway + botão Login]
   E --> F{Usuário toca Login?}
   F -->|Sim| G[navigate /login]
   F -->|Não| E
@@ -77,7 +77,7 @@ Passos:
 
 1. App sobe (`bootstrap` em `main.tsx`).
 2. Router resolve `index` → chunk lazy de `App`.
-3. Usuário vê “Renovi” e o botão `Login`.
+3. Usuário vê “Prestway” e o botão `Login`.
 4. Clique → `navigate('/login')` (sem `replace`, sem state, sem query).
 
 ## 6. Fluxos alternativos e exceções
@@ -108,7 +108,7 @@ Nenhum campo de formulário, nenhum estado local além do hook `useNavigate`, ne
 
 | Elemento UI | Tipo | Conteúdo |
 |-------------|------|----------|
-| Título | `h1` estático | `Renovi` |
+| Título | `h1` estático | `Prestway` |
 | CTA | `button` | Texto `Login`; `onClick` → `navigate('/login')` |
 
 Container: `div` com classes Tailwind `max-w-[1280px] mx-auto px-8 py-8 text-center`.
@@ -148,7 +148,7 @@ Não há FSM de domínio. Estados implícitos de UI:
 | Capacitor splash / system bars | Via `RootLayout` ao montar qualquer rota |
 | Push / device beacon / PWA badge | Hosts no `RootLayout`; home não configura |
 | Analytics / Sentry na home | **Não** há `trackEvent` / breadcrumb em `App.tsx` |
-| `index.html` | Meta SEO/PWA do shell HTML (`noindex`, theme-color, título Renovi); não é render React da home |
+| `index.html` | Meta SEO/PWA do shell HTML (`noindex`, theme-color, título Prestway); não é render React da home |
 
 ## 14. Listagens, buscas, filtros, paginação, ordenação
 
@@ -181,7 +181,7 @@ Não há criar/editar/excluir/aprovar.
 2. **Sem `replace` no botão Login** — histórico mantém `/` atrás de `/login` (back do browser volta à home).
 3. **Lazy load** — `App` não entra no bundle síncrono inicial do router; first paint da index depende do chunk.
 4. **Comentário em `App.css`** — “Layout constraints only for the home page; #root stays full width for routes like /login” — intenção de não restringir `#root` globalmente; o layout atual da home está nas classes Tailwind do JSX.
-5. **Nome do app nativo ≠ título da home** — Capacitor `appName: 'Orbit'`; UI da home mostra `Renovi`.
+5. **Nome do app nativo ≠ título da home** — Capacitor `appName: 'Orbit'`; UI da home mostra `Prestway`.
 6. **Shell HTML promete marketplace** (`index.html` title/description) enquanto a rota `/` React **não** entrega esse conteúdo — desalinhamento documentado como lacuna de produto, não como regra implementada.
 
 ## 18. Riscos
@@ -226,7 +226,7 @@ Não há criar/editar/excluir/aprovar.
 
 | # | Cenário | Esperado |
 |---|---------|----------|
-| QA-01 | Abrir `/` deslogado | Vê “Renovi” + botão Login |
+| QA-01 | Abrir `/` deslogado | Vê “Prestway” + botão Login |
 | QA-02 | Clicar Login | Vai para `/login` |
 | QA-03 | Back após Login | Pode voltar para `/` |
 | QA-04 | Abrir `/` logado (client/provider) | Continua na home mínima (sem ir ao dashboard sozinho) |

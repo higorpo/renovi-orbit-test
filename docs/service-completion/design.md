@@ -1820,7 +1820,7 @@ MVP dispute is a **stub** (decision 20): human support only; no dispute aggregat
 | Env (web/app) | `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL` |
 | Remote config override (optional) | `orbit.dispute_support_url` — same precedence as other Orbit remote configs when present; else env only |
 | Visibility | Client only; CS status ∈ `{EXECUTED, COMPLETED}` |
-| Copy | Title: **Abrir disputa**; subtitle: **Em breve — fale com o suporte Renovi** |
+| Copy | Title: **Abrir disputa**; subtitle: **Em breve — fale com o suporte Prestway** |
 | On tap | `trackEvent('service_completion_dispute_stub_opened', { contracted_service_id, cs_status })` then open URL (external browser / Capacitor Browser). If URL unset: toast **Em breve** only — MUST NOT crash |
 | MUST NOT | Pause auto-complete; mutate evidence; create dispute rows; block confirm/rating |
 

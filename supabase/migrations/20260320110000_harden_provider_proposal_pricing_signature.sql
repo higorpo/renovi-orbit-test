@@ -47,7 +47,7 @@ $$;
 
 create or replace function public.calculate_provider_service_pricing(
   p_original_amount numeric,
-  p_tax_key text default 'renovi_tax_provider'
+  p_tax_key text default 'prestway_tax_provider'
 )
 returns table (
   original_amount numeric,

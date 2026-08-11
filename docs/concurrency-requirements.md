@@ -1,4 +1,4 @@
-# Concurrency Requirements — Orbit (Renovi)
+# Concurrency Requirements — Orbit (Prestway)
 
 Requisitos transversais de **concorrência, paralelismo, consistência e idempotência** da plataforma Orbit. Complementa [`technical-stack.md`](./technical-stack.md).
 

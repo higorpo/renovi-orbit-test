@@ -51,7 +51,7 @@ Cartões sandbox (do seu `todo.md`): aprovado `4970100000000048` / rejeitado `49
 | 4.3 | REJECTED / terminal | → `FAILED_PERMANENT` (cartão, CPF inválido, etc.) |
 | 4.4 | Retryable | Timeout/5xx → `FAILED` + `next_retry_at`; re-cobrança |
 | 4.5 | Fee drift | `charge_amount` recalculado no T-2 (não o do HMAC) |
-| 4.6 | Split ADR-0001 | Provider FIXED + Renovi PERCENTAGE |
+| 4.6 | Split ADR-0001 | Provider FIXED + Prestway PERCENTAGE |
 | 4.7 | PAID &lt;24h | Push urgente ao prestador |
 | 4.8 | Notificação pré-cobrança | 24h antes (exceto emergência) |
 

@@ -173,7 +173,7 @@ export async function handleDispatchKycEmailRequest(
       return jsonResponse(
         {
           error_code: "FORBIDDEN",
-          error: "E-mail deve ser o da conta Renovi",
+          error: "E-mail deve ser o da conta Prestway",
           field: "email",
         },
         403,

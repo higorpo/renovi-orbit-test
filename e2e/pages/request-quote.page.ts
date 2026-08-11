@@ -402,7 +402,7 @@ export class RequestQuotePage {
   }
 
   getToastRegionNotAvailable() {
-    return this.page.getByText("A Renovi ainda não está disponível nessa localização.");
+    return this.page.getByText("A Prestway ainda não está disponível nessa localização.");
   }
 
   getToastSmartDescriptionError() {
@@ -423,7 +423,7 @@ export class RequestQuotePage {
 
   // ─── Header / layout ─────────────────────────────────────────────────────
   getLogoLink() {
-    return this.page.getByRole("link", { name: "Renovi" }).first();
+    return this.page.getByRole("link", { name: "Prestway" }).first();
   }
 
   getTrustBadgeTwoMin() {

@@ -1,4 +1,4 @@
-# Renovi Payment System — Design Document
+# Prestway Payment System — Design Document
 
 > **Covers:** Requirements 1–33 (all acceptance criteria)
 > **Version:** 2.11 — 2026-06-25 (domain decisions validated in grill session; split/commission model; notifications; T-12h/IN_ANALYSIS; see §1.7, [`CONTEXT.md`](./CONTEXT.md), [`ADR-0001`](../adr/0001-payment-split-commission-model.md))
@@ -13,7 +13,7 @@
 
 ## 1.1 Architectural Intent
 
-The Renovi Payment System is a **database-centric, event-driven orchestration layer** embedded within the Orbit marketplace. All authoritative state—payment schedule lifecycle, charge attempt history, webhook events, audit logs, and provider credentialing—lives in PostgreSQL.
+The Prestway Payment System is a **database-centric, event-driven orchestration layer** embedded within the Orbit marketplace. All authoritative state—payment schedule lifecycle, charge attempt history, webhook events, audit logs, and provider credentialing—lives in PostgreSQL.
 
 **RPC-first rule (Orbit platform):** every operation that is primarily SQL (reads, writes, state machines, eligibility, HMAC validation with Vault secrets, cron batches, notification enqueue via MMD) MUST be implemented as **PostgreSQL RPCs** callable via `supabase.rpc()` or `pg_cron`. **Edge Functions exist only where strictly necessary:** PCI card transit, NetCred GraphQL I/O, webhook HTTP ingress with raw-body HMAC, or other external APIs that Postgres cannot call directly.
 
@@ -204,11 +204,11 @@ Two aggregates, 1:1, coupled only at atomic boundaries (`PAID`→`CONFIRMED`, ca
 
 ```
 provider ruleItem:  FIXED_AMOUNT = provider_payout
-renovi ruleItem:    PERCENTAGE 100% of (charge_amount − provider_payout)
+prestway ruleItem:    PERCENTAGE 100% of (charge_amount − provider_payout)
 both:               isLiable = true
 ```
 
-**Example:** R$ 1.030 charge → provider R$ 850, Renovi gross R$ 180 → after MDR (~R$ 30) Renovi net ~R$ 150 (commission).
+**Example:** R$ 1.030 charge → provider R$ 850, Prestway gross R$ 180 → after MDR (~R$ 30) Prestway net ~R$ 150 (commission).
 
 **Checkout disclosures (mandatory):** (1) card fees recalculated at charge date; (2) provider net receivable shown on proposal; (3) charge timing (T-2 or emergency).
 
@@ -488,7 +488,7 @@ CREATE TABLE client_card_tokens (
 CREATE INDEX idx_client_card_tokens_client_state ON client_card_tokens(client_id, state);
 -- RLS on base table: (select auth.uid()) = client_id for SELECT; mutations via service_role only.
 -- Invariant: accept/charge/update_method MUST reject when token.netcred_company_id
--- differs from Renovi platform company (Vault netcred_platform_company_id / Edge NETCRED_PLATFORM_COMPANY_ID).
+-- differs from Prestway platform company (Vault netcred_platform_company_id / Edge NETCRED_PLATFORM_COMPANY_ID).
 -- ChargeCreate.companyId is the provider merchant (payout banks); cards tokenize under platform.
 ```
 
@@ -825,7 +825,7 @@ INSERT INTO platform_constants (key, value, description) VALUES
   ('webhook_base_retry_interval_minutes','5',    'Exponential backoff base for webhook retry');
 ```
 
-Provider commission at accept comes from the accepted proposal (`tax_rate`, `final_amount`), not a separate payment constant — see `renovi_tax_provider` at proposal creation (§1.7.4).
+Provider commission at accept comes from the accepted proposal (`tax_rate`, `final_amount`), not a separate payment constant — see `prestway_tax_provider` at proposal creation (§1.7.4).
 
 ## 3.13 Payment history read models (client + provider views)
 
@@ -1029,7 +1029,7 @@ sequenceDiagram
     P->>EF: POST dispatch-kyc-email (JWT)
     EF->>PG: SELECT provider_profiles_private + profiles (service_role)
     EF->>ST: download objects (service_role)
-    EF->>ML: email credenciamento@renovi.com.br (or NETCRED_CREDENCIAMENTO_EMAIL) with MIME attachments (Inbucket when INBUCKET_SMTP_HOST set; else Resend; no public URLs)
+    EF->>ML: email credenciamento@prestway.com (or NETCRED_CREDENCIAMENTO_EMAIL) with MIME attachments (Inbucket when INBUCKET_SMTP_HOST set; else Resend; no public URLs)
     alt send success
         EF->>PG: payment_mark_kyc_credenciamento_email_dispatched(id)
     else send failure
@@ -1398,7 +1398,7 @@ export function buildPayoutRule(
 ): PayoutRuleInput {
   const charge = Number.parseFloat(chargeAmount);
   const payout = Number.parseFloat(providerPayout);
-  const renoviRemainder = Math.max(0, Math.round((charge - payout) * 100) / 100);
+  const prestwayRemainder = Math.max(0, Math.round((charge - payout) * 100) / 100);
 
   return {
     providerAccount: { /* netcred ids */ },
@@ -1420,7 +1420,7 @@ export function buildPayoutRule(
 }
 ```
 
-**Example:** `chargeAmount = 1030.00`, `providerPayout = 850.00` → provider FIXED R$ 850; Renovi PERCENTAGE 100% of R$ 180 gross → ~R$ 150 net after MDR.
+**Example:** `chargeAmount = 1030.00`, `providerPayout = 850.00` → provider FIXED R$ 850; Prestway PERCENTAGE 100% of R$ 180 gross → ~R$ 150 net after MDR.
 
 **Anti-pattern (forbidden):** two `FIXED_AMOUNT` items with no `PERCENTAGE` — rejected by NetCred API.
 
@@ -1629,7 +1629,7 @@ sequenceDiagram
 
 **Refund amount / eligibility are RPC;** gateway I/O and ordering (prepare → NetCred → commit) are in the Edge Function. Domain cancel side effects are centralized in `payment_complete_refund_domain_side_effects` (also used by reconcile/webhook when service is still open).
 
-**Gateway split distribution:** The `isLiable: true` flag on both provider and Renovi `ruleItems` causes NetCred to distribute refunds proportionally between all liable accounts. No custom split logic needed in Renovi code.
+**Gateway split distribution:** The `isLiable: true` flag on both provider and Prestway `ruleItems` causes NetCred to distribute refunds proportionally between all liable accounts. No custom split logic needed in Prestway code.
 
 ## 4.9 Phase 10: Reconciliation Polling (Req 20)
 
@@ -1979,7 +1979,7 @@ Batch RPCs accept `p_record_job_run boolean DEFAULT true` where applicable; **cr
 | Function | Trigger | Auth | Role |
 |---|---|---|---|
 | `tokenize-payment-card` | Client POST | JWT | PCI → NetCred `paymentProfileCreate` → `payment_persist_client_card_token` RPC |
-| `dispatch-kyc-email` | Client POST after KYC RPC | JWT (provider) | Load KYC row + **download private Storage objects** → email with **attachments** to default `credenciamento@renovi.com.br` (override env `NETCRED_CREDENCIAMENTO_EMAIL`; local Inbucket/Mailpit when `INBUCKET_SMTP_HOST` is set, otherwise Resend) → `payment_mark_kyc_credenciamento_email_dispatched` RPC |
+| `dispatch-kyc-email` | Client POST after KYC RPC | JWT (provider) | Load KYC row + **download private Storage objects** → email with **attachments** to default `credenciamento@prestway.com` (override env `NETCRED_CREDENCIAMENTO_EMAIL`; local Inbucket/Mailpit when `INBUCKET_SMTP_HOST` is set, otherwise Resend) → `payment_mark_kyc_credenciamento_email_dispatched` RPC |
 | `schedule-netcred-charges` | pg_cron 4×/day via `payment_cron_schedule_netcred_charges()` | cron secret | `payment_claim_charge_batch` → NetCred loop → `payment_commit_charge_outcome` RPC |
 | `manual-charge-payment` | Client POST | JWT + rate limit | `payment_begin_manual_attempt` → NetCred → `payment_commit_charge_outcome` RPC |
 | `netcred-webhook` | NetCred POST | HMAC (no JWT) | Ingest + HMAC → inline `payment_process_webhook_event` OR `payment_enqueue_webhook_processing` RPC |
@@ -2389,7 +2389,7 @@ The `payment_audit_log` provides a complete, immutable, chronologically ordered 
 | No raw PAN/CVV at rest | `client_card_tokens` schema has no PAN/CVV columns; CHECK constraints; audited columns |
 | Raw card data in transit (CDE) | Browser → `tokenize-payment-card` Edge → NetCred GraphQL. **Orbit Edge is in PCI CDE for CHD transit** — it receives PAN/CVV briefly, forwards to the gateway, and must never log or persist them. Follow-on: NetCred hosted fields so PAN never hits Orbit (product/QSA). |
 | CHD log hygiene | Deep recursive scrubbers in Edge `payment-logger` and client `sentryPiiScrubbing` (deny `cardData`, `securityCode`, CPF, phone, email, …) |
-| Token ↔ company binding | Tokenize under Renovi platform company; `client_card_tokens.netcred_company_id` must match Vault/`NETCRED_PLATFORM_COMPANY_ID`; `chargeCreate.companyId` = provider merchant for payout banks |
+| Token ↔ company binding | Tokenize under Prestway platform company; `client_card_tokens.netcred_company_id` must match Vault/`NETCRED_PLATFORM_COMPANY_ID`; `chargeCreate.companyId` = provider merchant for payout banks |
 | ClearSale SDK supply chain | `injectClearSaleSdk` pins SRI `integrity` + `crossOrigin=anonymous` for `fp.js` |
 | No card data in React Query cache | Card input state is managed in local component state only; cleared after EF call |
 | No card data in IndexedDB | TanStack Query `gcTime: 0` for card input queries; never persisted |
@@ -2663,6 +2663,6 @@ RPC claim/begin → EF external I/O → RPC commit → RPC enqueue notifications
 
 ---
 
-*Design document — Renovi Payment System v2.10 — 2026-06-25 (RLS & least-privilege RPC model §11.2; extended RPC migration source-of-truth §5.2; payment history views §3.13; mandatory `job_runs` §6.4; **`payment_` RPC naming §5.2**).*
+*Design document — Prestway Payment System v2.10 — 2026-06-25 (RLS & least-privilege RPC model §11.2; extended RPC migration source-of-truth §5.2; payment history views §3.13; mandatory `job_runs` §6.4; **`payment_` RPC naming §5.2**).*
 *Aligned with `payment-system-requirements.md` v1.0 and Orbit platform constraints (`infrastructure-constraints.md`, `concurrency-requirements.md`, `scalability-requirements.md`).*
 *Must be updated when: (a) a new payment provider adapter is introduced, (b) new payment methods (Pix, Boleto) are activated, (c) ToS §2.2 cancellation penalties are revised, (d) `platform_constants` fee schema is extended, (e) the NetCred webhook catalog is expanded, (f) the pg_cron schedule is changed, (g) a new payment pg_cron job is added (requires `payment_cron_*` wrapper + `job_runs` per §6.4), (h) a new payment RPC is added (requires `payment_` prefix per §5.2), or (i) RLS or RPC grant patterns change (§11.2).*

@@ -32,9 +32,9 @@ export function useShareProfile(profile: ProviderPublicProfile) {
 
   const share = useCallback(async () => {
     const shareData = {
-      title: `${displayName} | Renovi`,
+      title: `${displayName} | Prestway`,
       url: profileUrl,
-      text: `Conheça o perfil de ${displayName} na Renovi.`,
+      text: `Conheça o perfil de ${displayName} na Prestway.`,
     };
 
     if (navigator.share) {

@@ -8,7 +8,7 @@ import type { AddressSelection } from "@/features/addresses";
 import type { ServiceWithChildren } from "../types/request-quote.types";
 import type { ServiceRequestStructuredData } from "../types/request-quote.types";
 
-const STORAGE_KEY = "renovi_request_quote_draft";
+const STORAGE_KEY = "prestway_request_quote_draft";
 
 /**
  * Bump this version whenever the request-quote flow schema changes (new step,

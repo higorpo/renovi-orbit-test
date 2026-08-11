@@ -2,7 +2,7 @@
 
 ## 1. Resumo executivo
 
-- **O que é:** dialog in-app que explica o valor das notificações Renovi e, se o usuário continuar, dispara o pedido de permissão do **sistema** (OS ou navegador), com **cooldown de 7 dias** após dispensa/negativa/falha.
+- **O que é:** dialog in-app que explica o valor das notificações Prestway e, se o usuário continuar, dispara o pedido de permissão do **sistema** (OS ou navegador), com **cooldown de 7 dias** após dispensa/negativa/falha.
 - **Problema que resolve:** browsers/OS costumam exigir gesto do usuário e rejeitam pedido automático; o soft prompt educa e concentra o pedido no botão “Continuar”.
 - **Quem usa:** usuário autenticado com permissão ainda pendente.
 - **Resultado esperado:** permissão `granted` (e registro de push via `setupPushNotifications`) **ou** dismiss persistido até o cooldown expirar.

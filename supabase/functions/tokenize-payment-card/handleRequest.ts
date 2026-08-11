@@ -191,7 +191,7 @@ export async function handleTokenizePaymentCardRequest(
     }
   }
 
-  // Marketplace model: always tokenize under Renovi platform company (not provider).
+  // Marketplace model: always tokenize under Prestway platform company (not provider).
   const platformCompany = await deps.resolvePlatformCompany();
   if (!platformCompany?.netcredCompanyId?.trim()) {
     return jsonResponse({ error: "platform_company_not_configured" }, 503, cors);

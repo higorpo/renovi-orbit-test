@@ -44,7 +44,7 @@ describe("NominatimGeocodingAdapter", () => {
         expect.stringContaining("nominatim.openstreetmap.org/search"),
         expect.objectContaining({
           headers: expect.objectContaining({
-            "User-Agent": "RenoviOrbit/1.0 (contact@renovi.com.br)",
+            "User-Agent": "PrestwayOrbit/1.0 (contact@prestway.com)",
             "Accept": "application/json",
           }),
         })

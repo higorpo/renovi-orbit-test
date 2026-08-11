@@ -5,7 +5,7 @@ import { TrustSidebar } from "../TrustSidebar";
 describe("TrustSidebar", () => {
   it("renders trust content for default desktop variant", () => {
     render(<TrustSidebar />);
-    expect(screen.getByText("Por que usar a Renovi?")).toBeInTheDocument();
+    expect(screen.getByText("Por que usar a Prestway?")).toBeInTheDocument();
     expect(screen.getByText("Profissionais verificados")).toBeInTheDocument();
     expect(screen.getByText("Pagamento protegido")).toBeInTheDocument();
     expect(screen.getByText("Satisfação garantida")).toBeInTheDocument();
@@ -16,7 +16,7 @@ describe("TrustSidebar", () => {
 
   it("renders mobile variant with same sections", () => {
     const { container } = render(<TrustSidebar variant="mobile" />);
-    expect(screen.getByText("Por que usar a Renovi?")).toBeInTheDocument();
+    expect(screen.getByText("Por que usar a Prestway?")).toBeInTheDocument();
     expect(container.querySelector(".space-y-4")).toBeInTheDocument();
   });
 });

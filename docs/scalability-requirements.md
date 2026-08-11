@@ -1,8 +1,8 @@
-# Scalability Requirements — Orbit (Renovi)
+# Scalability Requirements — Orbit (Prestway)
 
 ## Context
 
-O **Orbit** é a plataforma mobile-first da Renovi que conecta clientes e prestadores de serviços de manutenção e reforma. A mesma codebase entrega **web/PWA**, **Android** (Capacitor) e, em breve, **iOS**. O backend transacional é **Supabase** (PostgreSQL, Auth, Storage, RLS, Edge Functions).
+O **Orbit** é a plataforma mobile-first da Prestway que conecta clientes e prestadores de serviços de manutenção e reforma. A mesma codebase entrega **web/PWA**, **Android** (Capacitor) e, em breve, **iOS**. O backend transacional é **Supabase** (PostgreSQL, Auth, Storage, RLS, Edge Functions).
 
 Este documento define **requisitos de escalabilidade** — capacidade de crescer em usuários, pedidos, notificações e volume de dados sem degradação inaceitável de latência, custo ou confiabilidade. Ele complementa:
 

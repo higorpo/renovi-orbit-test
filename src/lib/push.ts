@@ -71,8 +71,8 @@ type NativeFcmTokenWaiter = {
 let nativeFcmTokenWaiters: NativeFcmTokenWaiter[] = []
 
 const PUSH_NOTIFICATION_ICON = '/icon-192.svg'
-const DEFAULT_PUSH_NOTIFICATION_TITLE = 'Renovi'
-const DEFAULT_PUSH_NOTIFICATION_TAG = 'renovi-push'
+const DEFAULT_PUSH_NOTIFICATION_TITLE = 'Prestway'
+const DEFAULT_PUSH_NOTIFICATION_TAG = 'prestway-push'
 
 const pushStateListeners = new Set<(state: PushRegistrationState) => void>()
 let activePushCallbacks: PushSetupCallbacks | undefined

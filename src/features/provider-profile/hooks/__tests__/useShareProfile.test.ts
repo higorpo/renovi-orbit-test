@@ -73,7 +73,7 @@ describe("useShareProfile", () => {
 
     expect(shareMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: "João Silva | Renovi",
+        title: "João Silva | Prestway",
         url: expect.stringContaining("/perfil/joao-silva"),
       }),
     );

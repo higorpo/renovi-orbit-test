@@ -37,6 +37,6 @@ describe("constants", () => {
   });
 
   it("exports DPO_EMAIL", () => {
-    expect(DPO_EMAIL).toBe("dpo@renovi.com.br");
+    expect(DPO_EMAIL).toBe("dpo@prestway.com");
   });
 });

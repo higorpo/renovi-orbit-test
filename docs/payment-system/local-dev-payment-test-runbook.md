@@ -28,7 +28,7 @@ Copie `supabase/functions/.env.example` → `supabase/functions/.env` e preencha
 |----------|-----|
 | `NETCRED_USERNAME` / `NETCRED_PASSWORD` | API GraphQL sandbox |
 | `NETCRED_API_BASE_URL` | `https://api.sandbox.netcredbrasil.com.br` |
-| `NETCRED_PLATFORM_BANK_ACCOUNT_ID` | Conta bancária da Renovi no sandbox (ex.: `2052`) |
+| `NETCRED_PLATFORM_BANK_ACCOUNT_ID` | Conta bancária da Prestway no sandbox (ex.: `2052`) |
 | `NETCRED_WEBHOOK_SECRET` | HMAC do webhook |
 | `ORBIT_CRON_SECRET` | Mesmo valor do `.env` raiz (pg_cron → EF) |
 
@@ -515,7 +515,7 @@ FROM public.contracted_services cs
 JOIN public.payment_schedules ps ON ps.contracted_service_id = cs.id
 JOIN public.service_requests sr ON sr.contracted_service_id = cs.id
 WHERE cs.client_id = (
-  SELECT id FROM public.profiles WHERE email = 'cliente@renovi.com.br'
+  SELECT id FROM public.profiles WHERE email = 'cliente@prestway.com'
 )
 ORDER BY cs.created_at DESC
 LIMIT 5;
@@ -568,7 +568,7 @@ npx supabase status -o env | grep -E 'ANON_KEY|API_URL'
 curl -s -X POST 'http://127.0.0.1:54321/auth/v1/token?grant_type=password' \
   -H "apikey: <ANON_KEY>" \
   -H "Content-Type: application/json" \
-  -d '{"email":"cliente@renovi.com.br","password":"Abc123"}' \
+  -d '{"email":"cliente@prestway.com","password":"Abc123"}' \
   | jq -r '.access_token'
 ```
 
@@ -687,7 +687,7 @@ Esperado: `payment_schedules.state = CANCELLED`, serviço `CANCELLED`, sem `tran
 1. Fluxo §8 — serviço PAID (paid_amount 640,65, base 600)
 2. SQL §11.3 — contracted_service_id
 3. SQL §11.4 — (opcional) ajustar data para FULL_REFUND
-4. §11.5 — JWT cliente@renovi.com.br
+4. §11.5 — JWT cliente@prestway.com
 5. §11.6 — POST process-refund
 6. SQL §11.7 — REFUND_REQUESTED + CANCELLED
 7. Webhook ou §11.8 — REFUNDED

@@ -143,7 +143,7 @@ export const authApi = {
           options.emailRedirectTo ??
           (typeof window !== "undefined"
             ? `${window.location.origin}/`
-            : "https://renovi.com.br/"),
+            : "https://prestway.com/"),
         data: options.data,
       },
     });

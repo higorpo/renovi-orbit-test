@@ -773,7 +773,7 @@ begin
         detail = jsonb_build_object('code', 'PAYMENT_TOKEN_INACTIVE')::text;
   end if;
 
-  -- Token must be issued under Renovi platform NetCred company (marketplace model).
+  -- Token must be issued under Prestway platform NetCred company (marketplace model).
   if nullif(btrim(v_card_token.netcred_company_id), '')
     is distinct from public.payment_netcred_platform_company_id() then
     raise exception 'PAYMENT_TOKEN_COMPANY_MISMATCH'

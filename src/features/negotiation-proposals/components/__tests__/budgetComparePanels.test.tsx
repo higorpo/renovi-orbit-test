@@ -20,10 +20,10 @@ describe("BudgetCompareTrustPanel", () => {
   it("renders trust items under the security section", () => {
     render(<BudgetCompareTrustPanel />);
 
-    expect(screen.getByLabelText("Segurança Renovi")).toBeInTheDocument();
+    expect(screen.getByLabelText("Segurança Prestway")).toBeInTheDocument();
     expect(screen.getByText("Pagamento protegido")).toBeInTheDocument();
     expect(screen.getByText("Profissionais verificados")).toBeInTheDocument();
-    expect(screen.getByText("Suporte Renovi")).toBeInTheDocument();
+    expect(screen.getByText("Suporte Prestway")).toBeInTheDocument();
   });
 });
 

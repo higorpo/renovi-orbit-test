@@ -253,7 +253,7 @@ function sampleTokenizeInput(): TokenizeCardInput {
     },
     cpf: "03019758092",
     phone: "48999999999",
-    email: "cliente@renovi.com.br",
+    email: "cliente@prestway.com",
   };
 }
 
@@ -318,7 +318,7 @@ Deno.test("tokenizeCard includes email in customerInput", async () => {
 
   await adapter.tokenizeCard(sampleTokenizeInput());
 
-  assertEquals(requestBody?.variables?.input?.customerInput?.email, "cliente@renovi.com.br");
+  assertEquals(requestBody?.variables?.input?.customerInput?.email, "cliente@prestway.com");
 });
 
 Deno.test("tokenizeCard surfaces rejectedReason when profile is inactive", async () => {

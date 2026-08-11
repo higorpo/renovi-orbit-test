@@ -187,12 +187,12 @@ describe("PublicProfileSettingsSection", () => {
   it("updates bio and display name fields when typed", () => {
     render(<Wrapper profileSlug={null} />);
     fireEvent.change(screen.getByLabelText(/Nome profissional/), {
-      target: { value: "Studio Renovi" },
+      target: { value: "Studio Prestway" },
     });
     fireEvent.change(screen.getByLabelText(/Biografia/), {
       target: { value: "Especialista em pintura" },
     });
-    expect(screen.getByLabelText(/Nome profissional/)).toHaveValue("Studio Renovi");
+    expect(screen.getByLabelText(/Nome profissional/)).toHaveValue("Studio Prestway");
     expect(screen.getByLabelText(/Biografia/)).toHaveValue("Especialista em pintura");
   });
 

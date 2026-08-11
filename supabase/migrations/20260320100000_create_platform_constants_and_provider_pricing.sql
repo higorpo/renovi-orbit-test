@@ -34,5 +34,5 @@ create policy "Admins can manage platform constants"
   );
 
 insert into public.platform_constants (key, value, description)
-values ('renovi_tax_provider', '0.15'::jsonb, 'Platform tax rate applied to provider earnings (e.g. 0.15 = 15%)')
+values ('prestway_tax_provider', '0.15'::jsonb, 'Platform tax rate applied to provider earnings (e.g. 0.15 = 15%)')
 on conflict (key) do update set value = excluded.value, description = excluded.description;

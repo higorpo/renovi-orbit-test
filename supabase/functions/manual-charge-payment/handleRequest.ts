@@ -71,7 +71,7 @@ export type ManualChargePaymentDeps = {
     metadata: Record<string, unknown>,
   ) => Promise<void>;
   checkRateLimit: typeof checkRateLimit;
-  /** Renovi platform NetCred company — card profiles and chargeCreate scope. */
+  /** Prestway platform NetCred company — card profiles and chargeCreate scope. */
   platformCompanyId: string;
   now?: () => number;
 };

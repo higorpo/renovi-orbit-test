@@ -173,7 +173,7 @@ function createDeps(): ProcessRefundDeps {
       }));
     },
     getSupportUrl: () =>
-      Deno.env.get("PAYMENT_SUPPORT_URL")?.trim() ?? "https://renovi.com.br/suporte",
+      Deno.env.get("PAYMENT_SUPPORT_URL")?.trim() ?? "https://prestway.com/suporte",
     checkRateLimit,
   };
 }

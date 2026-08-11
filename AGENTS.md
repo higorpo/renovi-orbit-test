@@ -3,7 +3,7 @@
 ## Marca
 
 Produto: **Prestway** ([`BRAND.md`](./BRAND.md)). Visual: [`DESIGN.md`](./DESIGN.md).  
-Repo/app shell interno: Orbit. Em UI e copy para usuário, sempre Prestway — nunca Renovi.
+Repo/app shell interno: Orbit. Em UI e copy para usuário, sempre Prestway.
 
 ## Plataformas
 

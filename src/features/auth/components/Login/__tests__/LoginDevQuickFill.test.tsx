@@ -22,14 +22,14 @@ describe("LoginDevQuickFill", () => {
   it("fills client credentials", () => {
     render(<Harness />);
     fireEvent.click(screen.getByRole("button", { name: /^Cliente$/i }));
-    expect(screen.getByTestId("email")).toHaveTextContent("cliente@renovi.com.br");
+    expect(screen.getByTestId("email")).toHaveTextContent("cliente@prestway.com");
     expect(screen.getByTestId("password")).toHaveTextContent("Abc123");
   });
 
   it("fills provider credentials", () => {
     render(<Harness />);
     fireEvent.click(screen.getByRole("button", { name: /^Prestador$/i }));
-    expect(screen.getByTestId("email")).toHaveTextContent("prestador@renovi.com.br");
+    expect(screen.getByTestId("email")).toHaveTextContent("prestador@prestway.com");
     expect(screen.getByTestId("password")).toHaveTextContent("Abc123");
   });
 
@@ -38,7 +38,7 @@ describe("LoginDevQuickFill", () => {
     render(<LoginDevQuickFill setFormData={setFormData} />);
     fireEvent.click(screen.getByRole("button", { name: /^Cliente$/i }));
     expect(setFormData).toHaveBeenCalledWith({
-      email: "cliente@renovi.com.br",
+      email: "cliente@prestway.com",
       password: "Abc123",
     });
   });

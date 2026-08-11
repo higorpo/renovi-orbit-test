@@ -38,12 +38,12 @@ Deno.test("buildResendEmailPayload uses only recipientEmail for to", () => {
   Deno.env.set("RESEND_FROM_EMAIL", "noreply@test.com");
   try {
     const payload = buildResendEmailPayload({
-      recipientEmail: "checkout@renovi.com.br",
+      recipientEmail: "checkout@prestway.com",
       subject: "Welcome",
       html: "<p>Welcome</p>",
       correlationId: "corr-1",
     });
-    assertEquals(payload.to, ["checkout@renovi.com.br"]);
+    assertEquals(payload.to, ["checkout@prestway.com"]);
   } finally {
     Deno.env.delete("RESEND_FROM_EMAIL");
   }

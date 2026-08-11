@@ -41,10 +41,10 @@ export function ProviderKycForm({
             />
             {wizard.isFirstStep ? (
               <div className="space-y-2">
-                <h1 className="text-xl font-semibold">Boas-vindas à Renovi</h1>
+                <h1 className="text-xl font-semibold">Boas-vindas à Prestway</h1>
                 <p className="text-sm text-muted-foreground">
                   É um prazer ter você conosco. Sua conta está quase pronta, complete
-                  o onboarding de segurança da Renovi para começar a prestar serviços
+                  o onboarding de segurança da Prestway para começar a prestar serviços
                   na plataforma.
                 </p>
               </div>

@@ -3,8 +3,8 @@
 -- and test users (clients + providers) with all related table data populated.
 --
 -- Test accounts (password: Abc123):
---   clients:  cliente@renovi.com.br, cliente1@renovi.com.br … cliente4@renovi.com.br
---   provider: prestador@renovi.com.br, prestador2@renovi.com.br
+--   clients:  cliente@prestway.com, cliente1@prestway.com … cliente4@prestway.com
+--   provider: prestador@prestway.com, prestador2@prestway.com
 --
 -- After db reset, upload service-request photos to Storage:
 --   yarn seed:dev-images        (offline gradient placeholders)
@@ -217,8 +217,8 @@ on conflict (slug) do nothing;
 
 -- ---------------------------------------------------------------------------
 -- Seed users for local development
--- clients:  cliente@renovi.com.br, cliente1@ … cliente4@renovi.com.br / Abc123
--- provider: prestador@renovi.com.br, prestador2@renovi.com.br / Abc123
+-- clients:  cliente@prestway.com, cliente1@ … cliente4@prestway.com / Abc123
+-- provider: prestador@prestway.com, prestador2@prestway.com / Abc123
 --
 -- Triggers chain:
 --   auth.users INSERT -> handle_new_user -> profiles INSERT
@@ -238,7 +238,7 @@ values
     '00000000-0000-0000-0000-000000000000',
     '28e30f1d-3c47-441f-94c6-76b6ea0db470',
     'authenticated', 'authenticated',
-    'cliente@renovi.com.br',
+    'cliente@prestway.com',
     crypt('Abc123', gen_salt('bf')),
     now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
@@ -249,7 +249,7 @@ values
     '00000000-0000-0000-0000-000000000000',
     '38e30f1d-3c47-441f-94c6-76b6ea0db471',
     'authenticated', 'authenticated',
-    'cliente1@renovi.com.br',
+    'cliente1@prestway.com',
     crypt('Abc123', gen_salt('bf')),
     now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
@@ -260,7 +260,7 @@ values
     '00000000-0000-0000-0000-000000000000',
     '48e30f1d-3c47-441f-94c6-76b6ea0db472',
     'authenticated', 'authenticated',
-    'cliente2@renovi.com.br',
+    'cliente2@prestway.com',
     crypt('Abc123', gen_salt('bf')),
     now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
@@ -271,7 +271,7 @@ values
     '00000000-0000-0000-0000-000000000000',
     '58e30f1d-3c47-441f-94c6-76b6ea0db473',
     'authenticated', 'authenticated',
-    'cliente3@renovi.com.br',
+    'cliente3@prestway.com',
     crypt('Abc123', gen_salt('bf')),
     now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
@@ -282,7 +282,7 @@ values
     '00000000-0000-0000-0000-000000000000',
     '68e30f1d-3c47-441f-94c6-76b6ea0db474',
     'authenticated', 'authenticated',
-    'cliente4@renovi.com.br',
+    'cliente4@prestway.com',
     crypt('Abc123', gen_salt('bf')),
     now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
@@ -293,7 +293,7 @@ values
     '00000000-0000-0000-0000-000000000000',
     '5d09e025-20a2-4842-aeef-324d42a431e1',
     'authenticated', 'authenticated',
-    'prestador@renovi.com.br',
+    'prestador@prestway.com',
     crypt('Abc123', gen_salt('bf')),
     now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
@@ -304,7 +304,7 @@ values
     '00000000-0000-0000-0000-000000000000',
     '4cf92e3a-64cd-4491-998e-9163138f8e96',
     'authenticated', 'authenticated',
-    'prestador2@renovi.com.br',
+    'prestador2@prestway.com',
     crypt('Abc123', gen_salt('bf')),
     now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
@@ -322,7 +322,7 @@ values
   (
     '28e30f1d-3c47-441f-94c6-76b6ea0db470',
     '28e30f1d-3c47-441f-94c6-76b6ea0db470',
-    '{"sub":"28e30f1d-3c47-441f-94c6-76b6ea0db470","email":"cliente@renovi.com.br"}'::jsonb,
+    '{"sub":"28e30f1d-3c47-441f-94c6-76b6ea0db470","email":"cliente@prestway.com"}'::jsonb,
     'email',
     '28e30f1d-3c47-441f-94c6-76b6ea0db470',
     now(), now(), now()
@@ -330,7 +330,7 @@ values
   (
     '38e30f1d-3c47-441f-94c6-76b6ea0db471',
     '38e30f1d-3c47-441f-94c6-76b6ea0db471',
-    '{"sub":"38e30f1d-3c47-441f-94c6-76b6ea0db471","email":"cliente1@renovi.com.br"}'::jsonb,
+    '{"sub":"38e30f1d-3c47-441f-94c6-76b6ea0db471","email":"cliente1@prestway.com"}'::jsonb,
     'email',
     '38e30f1d-3c47-441f-94c6-76b6ea0db471',
     now(), now(), now()
@@ -338,7 +338,7 @@ values
   (
     '48e30f1d-3c47-441f-94c6-76b6ea0db472',
     '48e30f1d-3c47-441f-94c6-76b6ea0db472',
-    '{"sub":"48e30f1d-3c47-441f-94c6-76b6ea0db472","email":"cliente2@renovi.com.br"}'::jsonb,
+    '{"sub":"48e30f1d-3c47-441f-94c6-76b6ea0db472","email":"cliente2@prestway.com"}'::jsonb,
     'email',
     '48e30f1d-3c47-441f-94c6-76b6ea0db472',
     now(), now(), now()
@@ -346,7 +346,7 @@ values
   (
     '58e30f1d-3c47-441f-94c6-76b6ea0db473',
     '58e30f1d-3c47-441f-94c6-76b6ea0db473',
-    '{"sub":"58e30f1d-3c47-441f-94c6-76b6ea0db473","email":"cliente3@renovi.com.br"}'::jsonb,
+    '{"sub":"58e30f1d-3c47-441f-94c6-76b6ea0db473","email":"cliente3@prestway.com"}'::jsonb,
     'email',
     '58e30f1d-3c47-441f-94c6-76b6ea0db473',
     now(), now(), now()
@@ -354,7 +354,7 @@ values
   (
     '68e30f1d-3c47-441f-94c6-76b6ea0db474',
     '68e30f1d-3c47-441f-94c6-76b6ea0db474',
-    '{"sub":"68e30f1d-3c47-441f-94c6-76b6ea0db474","email":"cliente4@renovi.com.br"}'::jsonb,
+    '{"sub":"68e30f1d-3c47-441f-94c6-76b6ea0db474","email":"cliente4@prestway.com"}'::jsonb,
     'email',
     '68e30f1d-3c47-441f-94c6-76b6ea0db474',
     now(), now(), now()
@@ -362,7 +362,7 @@ values
   (
     '5d09e025-20a2-4842-aeef-324d42a431e1',
     '5d09e025-20a2-4842-aeef-324d42a431e1',
-    '{"sub":"5d09e025-20a2-4842-aeef-324d42a431e1","email":"prestador@renovi.com.br"}'::jsonb,
+    '{"sub":"5d09e025-20a2-4842-aeef-324d42a431e1","email":"prestador@prestway.com"}'::jsonb,
     'email',
     '5d09e025-20a2-4842-aeef-324d42a431e1',
     now(), now(), now()
@@ -370,7 +370,7 @@ values
   (
     '4cf92e3a-64cd-4491-998e-9163138f8e96',
     '4cf92e3a-64cd-4491-998e-9163138f8e96',
-    '{"sub":"4cf92e3a-64cd-4491-998e-9163138f8e96","email":"prestador2@renovi.com.br"}'::jsonb,
+    '{"sub":"4cf92e3a-64cd-4491-998e-9163138f8e96","email":"prestador2@prestway.com"}'::jsonb,
     'email',
     '4cf92e3a-64cd-4491-998e-9163138f8e96',
     now(), now(), now()
@@ -1626,8 +1626,8 @@ values
   (
     'welcome_template',
     'email',
-    'Welcome to Renovi, {{name}}!',
-    '<p>Hello {{name}}, welcome to Renovi.</p>{{#coupon}}<p>Your coupon: {{coupon}}</p>{{/coupon}}',
+    'Welcome to Prestway, {{name}}!',
+    '<p>Hello {{name}}, welcome to Prestway.</p>{{#coupon}}<p>Your coupon: {{coupon}}</p>{{/coupon}}',
     '{
       "type": "object",
       "properties": {

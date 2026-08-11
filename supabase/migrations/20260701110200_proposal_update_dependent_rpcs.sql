@@ -1224,7 +1224,7 @@ begin
         'chat_id', v_chat.id,
         'service_request_id', v_sr.id,
         'service_request_title', coalesce(v_sr.title, 'Service request'),
-        'sender_display_name', 'Renovi',
+        'sender_display_name', 'Prestway',
         'message_preview', 'Proposal expiring soon',
         'deep_link_path', format('/dashboard/chats/%s', v_chat.id),
         'proposal_id', v_proposal.id

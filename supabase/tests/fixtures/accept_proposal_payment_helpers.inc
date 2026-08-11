@@ -9,7 +9,7 @@ begin
     select 1 from vault.secrets where name = 'installment_signing_secret'
   ) then
     perform vault.create_secret(
-      'renovi-installment-signing-secret-v1',
+      'prestway-installment-signing-secret-v1',
       'installment_signing_secret',
       'pgTAP accept_proposal payment helpers'
     );
@@ -19,7 +19,7 @@ begin
     select 1 from vault.secrets where name = 'pricing_signature_secret'
   ) then
     perform vault.create_secret(
-      'renovi-provider-pricing-secret-v1',
+      'prestway-provider-pricing-secret-v1',
       'pricing_signature_secret',
       'pgTAP accept_proposal payment helpers'
     );
@@ -31,7 +31,7 @@ begin
     perform vault.create_secret(
       '1014',
       'netcred_platform_company_id',
-      'pgTAP Renovi platform NetCred company (card tokenize scope)'
+      'pgTAP Prestway platform NetCred company (card tokenize scope)'
     );
   end if;
 end;

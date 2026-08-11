@@ -145,7 +145,7 @@ flowchart TD
 | Canal | Assunto / título | Corpo (resumo) |
 |-------|------------------|----------------|
 | push | Complete seu credenciamento | Falta pouco para liberar oportunidades e receber pagamentos… |
-| email | Complete seu credenciamento na Renovi | Ainda não concluiu o credenciamento… link “Completar credenciamento” |
+| email | Complete seu credenciamento na Prestway | Ainda não concluiu o credenciamento… link “Completar credenciamento” |
 
 ## 14. Listagens, buscas, filtros, paginação, ordenação
 

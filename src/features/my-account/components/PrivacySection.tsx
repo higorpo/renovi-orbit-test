@@ -81,7 +81,7 @@ export function PrivacySection({
 
         <div>
           <p className="text-sm mb-3">
-            Baixe uma cópia dos dados que a Renovi possui sobre você.
+            Baixe uma cópia dos dados que a Prestway possui sobre você.
           </p>
           <Button
             variant="outline"

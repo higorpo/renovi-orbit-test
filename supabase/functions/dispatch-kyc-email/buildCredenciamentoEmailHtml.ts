@@ -34,7 +34,7 @@ export function buildCredenciamentoEmailSubject(context: ProviderKycContext): st
     ? context.privateProfile.razaoSocial ?? document
     : context.profile.fullName;
 
-  return `[Renovi] Credenciamento prestador — ${suffix}`;
+  return `[Prestway] Credenciamento prestador — ${suffix}`;
 }
 
 export function buildCredenciamentoEmailHtml(context: ProviderKycContext): string {
@@ -73,8 +73,8 @@ export function buildCredenciamentoEmailHtml(context: ProviderKycContext): strin
   return `<!DOCTYPE html>
 <html lang="pt-BR">
   <body style="font-family:Arial,sans-serif;color:#111;line-height:1.5;">
-    <h2 style="margin-bottom:8px;">Credenciamento de prestador — Renovi</h2>
-    <p style="margin-top:0;">Solicitação de credenciamento enviada via plataforma Renovi.</p>
+    <h2 style="margin-bottom:8px;">Credenciamento de prestador — Prestway</h2>
+    <p style="margin-top:0;">Solicitação de credenciamento enviada via plataforma Prestway.</p>
     <h3>Dados cadastrais</h3>
     <table style="border-collapse:collapse;">${identityRows}</table>
     <h3>Dados bancários</h3>

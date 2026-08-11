@@ -1,10 +1,10 @@
-# Visão geral da Renovi
+# Visão geral da Prestway
 
-Documento macro da plataforma Orbit (Renovi). Inventário operacional (rotas, pastas, status): [Mapa de módulos e features](./02-mapa-de-modulos-e-features.md). Detalhe por área: [índice de módulos](./modulos/README.md).
+Documento macro da plataforma Orbit (Prestway). Inventário operacional (rotas, pastas, status): [Mapa de módulos e features](./02-mapa-de-modulos-e-features.md). Detalhe por área: [índice de módulos](./modulos/README.md).
 
 ## Propósito da plataforma (evidência no código)
 
-A Renovi conecta **clientes** que pedem orçamentos para serviços do catálogo a **prestadores** que recebem oportunidades compatíveis (serviço, geografia, matching progressivo **após enrichment READY**), negociam in-app (**CNS** — conversas e propostas), aceitam/recusam orçamentos e, após aceite, seguem para **pagamento** (checkout NetCred), execução agendada, **conclusão com checklist/evidências** (`service-completion`), eventual **reagendamento**, **liquidação** (ganhos do prestador) e notificações (**MMD** — e-mail/push).
+A Prestway conecta **clientes** que pedem orçamentos para serviços do catálogo a **prestadores** que recebem oportunidades compatíveis (serviço, geografia, matching progressivo **após enrichment READY**), negociam in-app (**CNS** — conversas e propostas), aceitam/recusam orçamentos e, após aceite, seguem para **pagamento** (checkout NetCred), execução agendada, **conclusão com checklist/evidências** (`service-completion`), eventual **reagendamento**, **liquidação** (ganhos do prestador) e notificações (**MMD** — e-mail/push).
 
 Plataformas: **Web/PWA** + **Android** (Capacitor); iOS previsto. Bootstrap: sessão, beacons de dispositivo e permissão de push no root da app.
 

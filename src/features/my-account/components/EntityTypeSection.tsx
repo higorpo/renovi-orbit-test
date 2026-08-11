@@ -68,7 +68,7 @@ export function EntityTypeSection({
                   <p>{PJ_DESCRIPTION}</p>
                 </div>
                 <p className="text-xs">
-                  A Renovi não fornece assessoria jurídica ou contábil. Em caso de dúvida,
+                  A Prestway não fornece assessoria jurídica ou contábil. Em caso de dúvida,
                   consulte um contador ou advogado.
                 </p>
               </div>

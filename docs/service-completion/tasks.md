@@ -2330,7 +2330,7 @@ Acceptance Criteria covered:
 ### 52. [x] Dispute stub UI + `VITE_SERVICE_COMPLETION_DISPUTE_SUPPORT_URL`
 
 Description:
-Client dispute entry on EXECUTED/COMPLETED: copy “Abrir disputa” / “Em breve — fale com o suporte Renovi”; trackEvent then open support URL (env or orbit.dispute_support_url). If URL unset → toast Em breve only; MUST NOT crash. MUST NOT pause auto-complete, mutate evidence, or create dispute rows.
+Client dispute entry on EXECUTED/COMPLETED: copy “Abrir disputa” / “Em breve — fale com o suporte Prestway”; trackEvent then open support URL (env or orbit.dispute_support_url). If URL unset → toast Em breve only; MUST NOT crash. MUST NOT pause auto-complete, mutate evidence, or create dispute rows.
 
 Responsibilities:
 - Demand-sensing stub without dispute FSM.

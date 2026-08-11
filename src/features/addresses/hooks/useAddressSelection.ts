@@ -156,7 +156,7 @@ export function useAddressSelection({
           address_neighborhood_id: "",
           address_neighborhood: "",
         }));
-        toast.warning("A Renovi ainda não está disponível nessa localização.");
+        toast.warning("A Prestway ainda não está disponível nessa localização.");
         return;
       }
 

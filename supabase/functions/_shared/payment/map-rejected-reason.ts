@@ -1,5 +1,5 @@
 /**
- * Maps NetCred transaction `rejectedReason` strings to stable Renovi failure codes.
+ * Maps NetCred transaction `rejectedReason` strings to stable Prestway failure codes.
  * ClearSale risk-analysis copy is gateway-owned; we never surface the raw string to users.
  */
 
@@ -62,7 +62,7 @@ const RISK_ANALYSIS_MATCHERS: ReasonMatcher[] = [
 ];
 
 /**
- * Returns a Renovi failure code when `rejectedReason` is a ClearSale risk-analysis
+ * Returns a Prestway failure code when `rejectedReason` is a ClearSale risk-analysis
  * summary; otherwise `null` (caller keeps gateway `REJECTED`).
  */
 export function mapRejectedReasonToFailureCode(

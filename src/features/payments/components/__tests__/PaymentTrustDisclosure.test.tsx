@@ -8,7 +8,7 @@ describe("PaymentTrustDisclosure", () => {
   });
 
   it("renders trust copy and terms link", async () => {
-    vi.stubEnv("VITE_MAIN_SITE_URL", "https://renovi.com.br/");
+    vi.stubEnv("VITE_MAIN_SITE_URL", "https://prestway.com/");
     const { PaymentTrustDisclosure } = await import("../PaymentTrustDisclosure");
     render(<PaymentTrustDisclosure />);
 
@@ -21,7 +21,7 @@ describe("PaymentTrustDisclosure", () => {
     expect(screen.getByText(/recalculadas no momento da cobrança/i)).toBeInTheDocument();
 
     const termsLink = screen.getByRole("link", { name: /Termos de Uso/i });
-    expect(termsLink).toHaveAttribute("href", "https://renovi.com.br/juridico/termos-de-uso");
+    expect(termsLink).toHaveAttribute("href", "https://prestway.com/juridico/termos-de-uso");
     expect(termsLink).toHaveAttribute("target", "_blank");
     expect(termsLink).toHaveAttribute("rel", "noopener noreferrer");
   });

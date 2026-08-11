@@ -45,7 +45,7 @@ export function DashboardLayout() {
         >
           <div className="container flex h-14 items-center justify-between px-4">
             <Link to="/dashboard" className="flex shrink-0 items-center">
-              <img src="/logo-renovi.webp" alt="Renovi" className="h-7 w-auto md:h-8" />
+              <img src="/logo-renovi.webp" alt="Prestway" className="h-7 w-auto md:h-8" />
             </Link>
             {hideNavForKyc ? null : (
               <DesktopNav items={menu.allItems} className="min-w-0 flex-1 justify-end" />

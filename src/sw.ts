@@ -49,7 +49,7 @@ if (firebaseConfig) {
   const messaging = getMessaging(firebaseApp)
 
   onBackgroundMessage(messaging, (payload) => {
-    const title = payload.notification?.title ?? payload.data?.title ?? 'Renovi'
+    const title = payload.notification?.title ?? payload.data?.title ?? 'Prestway'
     const body = payload.notification?.body ?? payload.data?.body ?? ''
     const tag = pushNotificationCollapseKey(
       {
@@ -57,7 +57,7 @@ if (firebaseConfig) {
         body,
         data: payload.data as Record<string, string> | undefined,
       },
-      payload.messageId ?? 'renovi-push',
+      payload.messageId ?? 'prestway-push',
     )
 
     return self.registration.showNotification(title, {

@@ -1,6 +1,6 @@
 ## Chat List Item Component — Detailed Design Specification
 
-The chat list item is a compact, touch-friendly conversation preview component designed for a service marketplace platform such as Renovi. Its purpose is to give users a quick understanding of:
+The chat list item is a compact, touch-friendly conversation preview component designed for a service marketplace platform such as Prestway. Its purpose is to give users a quick understanding of:
 
 * who they are talking to,
 * which service request the chat belongs to,

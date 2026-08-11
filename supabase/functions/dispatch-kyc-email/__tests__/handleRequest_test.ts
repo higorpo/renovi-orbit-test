@@ -81,7 +81,7 @@ function createDeps(overrides: Partial<DispatchKycEmailDeps> = {}): DispatchKycE
     }),
     markEmailDispatched: async () => {},
     ingestProviderKycSubmitted: async () => {},
-    resolveCredenciamentoRecipientEmail: () => "credenciamento@renovi.com.br",
+    resolveCredenciamentoRecipientEmail: () => "credenciamento@prestway.com",
     checkRateLimit: async () => ({ allowed: true, retryAfter: 0 }),
     ...overrides,
   };

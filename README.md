@@ -1,6 +1,6 @@
-# Orbit (Renovi)
+# Orbit (Prestway)
 
-Plataforma mobile-first da Renovi: **uma codebase** React (Vite) que entrega **web/PWA** e **apps nativos** via [Capacitor](https://capacitorjs.com/).
+Plataforma mobile-first da Prestway: **uma codebase** React (Vite) que entrega **web/PWA** e **apps nativos** via [Capacitor](https://capacitorjs.com/).
 
 ## Plataformas
 

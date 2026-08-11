@@ -1,6 +1,6 @@
 # VISÃO GERAL DA RENOVI
 
-A Renovi é um marketplace que conecta clientes e prestadores de serviços.
+A Prestway é um marketplace que conecta clientes e prestadores de serviços.
 
 Fluxo simplificado:
 
@@ -76,7 +76,7 @@ Antes de receber pagamentos, o prestador precisa ser credenciado junto à NetCre
 
 O credenciamento envolve:
 
-* Fluxos internos da Renovi
+* Fluxos internos da Prestway
 * Processos de KYC
 * Envio de informações para a NetCred
 * Comunicação por e-mail com a NetCred
@@ -123,7 +123,7 @@ Utilizar tokenização.
 Fluxo:
 
 Frontend
-→ Edge Function Renovi
+→ Edge Function Prestway
 → API NetCred
 → Token retornado
 → Salvar apenas token

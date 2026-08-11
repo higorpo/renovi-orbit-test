@@ -28,7 +28,7 @@ const customerFields = {
 function createDeps(overrides: Partial<TokenizePaymentCardDeps> = {}): TokenizePaymentCardDeps {
   return {
     getUser: async () => ({
-      user: { id: "client-1", email: "cliente@renovi.com.br" },
+      user: { id: "client-1", email: "cliente@prestway.com" },
       error: null,
     }),
     validateCheckoutAccess: async () => {},
@@ -114,7 +114,7 @@ Deno.test("user email is forwarded to tokenization", async () => {
     }),
   );
 
-  assertEquals(tokenizeEmail, "cliente@renovi.com.br");
+  assertEquals(tokenizeEmail, "cliente@prestway.com");
 });
 
 Deno.test("missing cpf returns HTTP 422", async () => {

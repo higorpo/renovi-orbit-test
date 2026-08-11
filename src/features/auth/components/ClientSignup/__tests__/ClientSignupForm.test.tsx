@@ -232,21 +232,21 @@ describe("ClientSignupForm", () => {
   });
 
   it("normalizes legal link URLs with or without a trailing slash", () => {
-    vi.stubEnv("VITE_MAIN_SITE_URL", "https://renovi.test/");
+    vi.stubEnv("VITE_MAIN_SITE_URL", "https://prestway.test/");
     const { unmount } = renderForm(<Harness initialStep={2} />);
     expect(screen.getByRole("link", { name: "Termos de Uso" })).toHaveAttribute(
       "href",
-      "https://renovi.test/juridico/termos-de-uso"
+      "https://prestway.test/juridico/termos-de-uso"
     );
     unmount();
 
-    vi.stubEnv("VITE_MAIN_SITE_URL", "https://renovi.test");
+    vi.stubEnv("VITE_MAIN_SITE_URL", "https://prestway.test");
     renderForm(<Harness initialStep={2} />);
     expect(
       screen.getByRole("link", { name: "Política de Privacidade" })
     ).toHaveAttribute(
       "href",
-      "https://renovi.test/juridico/politica-de-privacidade"
+      "https://prestway.test/juridico/politica-de-privacidade"
     );
     vi.unstubAllEnvs();
   });

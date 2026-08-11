@@ -276,7 +276,7 @@ describe("ReceivedBudgetDetailsSheet", () => {
         onOpenChange={vi.fn()}
       />,
     );
-    expect(screen.getByText(/Sua segurança na Renovi/i)).toBeInTheDocument();
+    expect(screen.getByText(/Sua segurança na Prestway/i)).toBeInTheDocument();
   });
 
   it("shows error alert and refetches on retry", () => {

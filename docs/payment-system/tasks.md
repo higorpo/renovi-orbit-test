@@ -1,5 +1,5 @@
 
-# Implementation Tasks — Renovi Payment System
+# Implementation Tasks — Prestway Payment System
 
 > **Source of truth:** [`design.md`](./design.md) (v2.11) + [`payment-system-requirements.md`](./payment-system-requirements.md) (Req 1–33)
 > **Generated:** engineering execution plan for squad linearization
@@ -3513,7 +3513,7 @@ Acceptance Criteria covered:
 ## 63. [x] Implement `buildPayoutRule` split helper (ADR-0001)
 
 Description:
-FIXED provider + PERCENTAGE renovi remainder.
+FIXED provider + PERCENTAGE prestway remainder.
 
 **Orbit project standards (MUST on every task):**
 - Follow feature-based architecture: `src/features/payments/` with `api/`, `hooks/`, `components/`, `types/`, `index.ts` public API.

@@ -1,4 +1,4 @@
-# Renovi — Plano de Implementação: Sistema de Pagamentos
+# Prestway — Plano de Implementação: Sistema de Pagamentos
 ## Referência: payment-system-plan.md v4.0
 ### Última atualização: 2026-03-26
 
@@ -24,7 +24,7 @@
 ## 1. Visão Geral
 
 ### Sistema
-Integração de pagamentos da plataforma Renovi usando Asaas como processador. O modelo central é **aprovação de orçamento bloqueada por pagamento com escrow**: o cliente paga antes da proposta ser aceita, e os fundos ficam retidos até a confirmação do serviço pelo cliente.
+Integração de pagamentos da plataforma Prestway usando Asaas como processador. O modelo central é **aprovação de orçamento bloqueada por pagamento com escrow**: o cliente paga antes da proposta ser aceita, e os fundos ficam retidos até a confirmação do serviço pelo cliente.
 
 ### Objetivo da implementação
 Transformar o fluxo atual — onde a proposta é aceita diretamente pelo cliente sem pagamento — em um fluxo completo de checkout com Pix, cartão de crédito, split automático, escrow e liberação condicional dos fundos ao prestador.
@@ -61,13 +61,13 @@ As decisões abaixo foram definidas na arquitetura e já estão confirmadas para
 | D5 | Pix com QR válido por 12 meses a partir do `dueDate` | Confirmado |
 | D6 | Idempotência via `UNIQUE(asaas_event_id)` nos eventos e `UNIQUE(proposal_id)` nos services | Confirmado |
 | D7 | Webhook sempre retorna 200 ao Asaas; erros são logados internamente | Confirmado |
-| D8 | `renovi_tax_client` = 5% | **Confirmado** — taxa de 5% aplicada sobre o `proposed_amount` |
-| D9 | `isFeePayer`: plataforma paga os R$9,90/mês do escrow | **Confirmado** — `isFeePayer: false`; Renovi absorve como custo operacional |
+| D8 | `prestway_tax_client` = 5% | **Confirmado** — taxa de 5% aplicada sobre o `proposed_amount` |
+| D9 | `isFeePayer`: plataforma paga os R$9,90/mês do escrow | **Confirmado** — `isFeePayer: false`; Prestway absorve como custo operacional |
 | D10 | `daysToExpire` = 45 dias (máximo Asaas) para liberação automática do escrow | **Confirmado** — máximo suportado pela API Asaas |
 | D11 | Cartão parcelado: suportado desde V1 (PIX + Cartão 1x + Cartão parcelado até 12x) | **Confirmado** — cliente paga TODAS as taxas financeiras (gateway + antecipação) |
 | D14 | Antecipação de recebíveis no parcelado | **Confirmado** — antecipação automática no Asaas para parcelados |
 | D15 | Parcela mínima | **Confirmado** — mínimo de R$100,00 por parcela |
-| D12 | Cliente paga TODAS as taxas financeiras (Renovi + gateway + antecipação) | **Confirmado** — pipeline completo em `_calculate_client_pricing` |
+| D12 | Cliente paga TODAS as taxas financeiras (Prestway + gateway + antecipação) | **Confirmado** — pipeline completo em `_calculate_client_pricing` |
 | D13 | Taxas de gateway configuráveis via `platform_constants` (nunca hardcoded) | **Confirmado** — fallback com exceção se chave ausente |
 | D16 | Segurança de webhook por origem | **Confirmado** — allowlist dos IPs oficiais do Asaas + `authToken` |
 
@@ -148,7 +148,7 @@ Inserir as 4 novas constantes de configuração do sistema de pagamentos na tabe
 ```sql
 -- // UPDATED: valores confirmados + novas constantes de taxas de gateway e parcelamento
 INSERT INTO public.platform_constants (key, value) VALUES
-  ('renovi_tax_client',                     '0.05'),       -- ✅ Confirmado (D8): 5%
+  ('prestway_tax_client',                     '0.05'),       -- ✅ Confirmado (D8): 5%
   ('checkout_lock_duration_minutes',        '30'),
   ('escrow_days_to_expire',                 '45'),         -- ✅ Confirmado (D10): máximo suportado pelo Asaas
   ('asaas_environment',                     '"sandbox"'),
@@ -172,7 +172,7 @@ ON CONFLICT (key) DO NOTHING;
 **Validação:**
 ```sql
 SELECT key, value FROM platform_constants
-WHERE key LIKE 'renovi_%' OR key LIKE 'checkout_%' OR key LIKE 'escrow_%'
+WHERE key LIKE 'prestway_%' OR key LIKE 'checkout_%' OR key LIKE 'escrow_%'
    OR key LIKE 'asaas_%' OR key LIKE 'card_%' OR key LIKE 'anticipation_%'
    OR key LIKE 'pix_%' OR key = 'max_installments';
 -- Deve retornar 14 linhas
@@ -181,7 +181,7 @@ WHERE key LIKE 'renovi_%' OR key LIKE 'checkout_%' OR key LIKE 'escrow_%'
 **Dependências:** Nenhuma.
 **Impacto:** Somente database. Nenhuma alteração de código necessária neste ponto.
 
-**Ponto crítico:** `renovi_tax_client` é a base da taxa Renovi do cliente. As constantes de gateway (`card_processing_fee_*`, `anticipation_fee_*`) são a base do cálculo de taxas financeiras. Se qualquer valor estiver errado, o `client_charge_amount` será incorreto.
+**Ponto crítico:** `prestway_tax_client` é a base da taxa Prestway do cliente. As constantes de gateway (`card_processing_fee_*`, `anticipation_fee_*`) são a base do cálculo de taxas financeiras. Se qualquer valor estiver errado, o `client_charge_amount` será incorreto.
 
 **Atualização de taxas:** As taxas Asaas podem mudar (ex.: fim do período promocional de 3 meses). Para atualizar:
 1. Alterar o `value` da constante via `UPDATE platform_constants SET value = '0.0199' WHERE key = 'card_processing_fee_1x_percent'`
@@ -559,8 +559,8 @@ CREATE TABLE public.service_payments (
   provider_fee_rate           numeric(6,4)  NOT NULL,
   provider_fee_amount         numeric(10,2) NOT NULL,
   provider_net_amount         numeric(10,2) NOT NULL,
-  client_fee_rate             numeric(6,4)  NOT NULL,   -- taxa Renovi (5%)
-  client_fee_amount           numeric(10,2) NOT NULL,   -- valor da taxa Renovi
+  client_fee_rate             numeric(6,4)  NOT NULL,   -- taxa Prestway (5%)
+  client_fee_amount           numeric(10,2) NOT NULL,   -- valor da taxa Prestway
   client_charge_amount        numeric(10,2) NOT NULL,   -- total cobrado (inclui TODAS as taxas)
 
   -- // ADDED: Snapshot de taxas de gateway e parcelamento (congelado no checkout)
@@ -573,7 +573,7 @@ CREATE TABLE public.service_payments (
   anticipation_fee_amount     numeric(10,2) NOT NULL DEFAULT 0,    -- valor absoluto da antecipação
   total_gateway_cost          numeric(10,2) NOT NULL DEFAULT 0,    -- soma: gateway + fixo + antecipação
 
-  platform_total_fee_amount   numeric(10,2) NOT NULL,   -- receita Renovi: provider_fee + client_fee
+  platform_total_fee_amount   numeric(10,2) NOT NULL,   -- receita Prestway: provider_fee + client_fee
 
   -- Liquidação
   asaas_net_value             numeric(10,2),
@@ -828,7 +828,7 @@ Criar a função interna que centraliza toda a lógica de precificação do clie
 
 ```sql
 -- // UPDATED: Função interna agora calcula TODAS as taxas financeiras
--- Pipeline: taxa Renovi + taxa gateway (por método/parcelas) + antecipação (parcelado)
+-- Pipeline: taxa Prestway + taxa gateway (por método/parcelas) + antecipação (parcelado)
 -- O cliente paga TUDO. Nenhuma taxa é hardcoded — todas vêm de platform_constants.
 CREATE OR REPLACE FUNCTION public._calculate_client_pricing(
   p_proposed_amount    numeric,
@@ -880,9 +880,9 @@ BEGIN
     RAISE EXCEPTION 'PIX não suporta parcelamento';
   END IF;
 
-  -- ETAPA 1+2: Taxa Renovi
-  SELECT (value::text)::numeric INTO v_client_fee_rate FROM platform_constants WHERE key = 'renovi_tax_client';
-  IF v_client_fee_rate IS NULL THEN RAISE EXCEPTION 'renovi_tax_client não encontrada'; END IF;
+  -- ETAPA 1+2: Taxa Prestway
+  SELECT (value::text)::numeric INTO v_client_fee_rate FROM platform_constants WHERE key = 'prestway_tax_client';
+  IF v_client_fee_rate IS NULL THEN RAISE EXCEPTION 'prestway_tax_client não encontrada'; END IF;
 
   v_client_fee_amount := round(p_proposed_amount * v_client_fee_rate, 2);
   v_subtotal := p_proposed_amount + v_client_fee_amount;
@@ -930,7 +930,7 @@ BEGIN
     END IF;
   END IF;
 
-  -- V1: pipeline completo — taxa Renovi + gateway + antecipação.
+  -- V1: pipeline completo — taxa Prestway + gateway + antecipação.
   RETURN QUERY SELECT
     v_client_fee_rate,
     v_client_fee_amount,
@@ -956,7 +956,7 @@ REVOKE ALL ON FUNCTION public._calculate_client_pricing(numeric, text, integer) 
 ```sql
 -- Executar como service_role
 
--- PIX (taxa Renovi + taxa gateway Pix)
+-- PIX (taxa Prestway + taxa gateway Pix)
 SELECT * FROM public._calculate_client_pricing(1000.00, 'PIX', 1);
 -- Esperado: client_fee_rate=0.05, client_fee_amount=50.00,
 --           gateway_fee_percent=0.0099, gateway_fee_amount=10.40,
@@ -1114,7 +1114,7 @@ SELECT get_client_proposal_pricing('<uuid-proposta-existente>');
 **O que fazer:**
 A RPC `list_client_received_budgets` atualmente retorna `proposed_amount` no campo `budgets_preview`. Ela deve ser atualizada para retornar `client_charge_amount` calculado dinamicamente, sem usar `get_client_proposal_pricing` individualmente (evitar N+1).
 
-**Estratégia:** Buscar `renovi_tax_client` uma vez no início da função e calcular inline no SELECT.
+**Estratégia:** Buscar `prestway_tax_client` uma vez no início da função e calcular inline no SELECT.
 
 **Mudança crítica no contrato de retorno:** O campo que antes retornava `proposed_amount` deve retornar `client_charge_amount`. O frontend deve ser atualizado em conjunto para usar o novo campo.
 
@@ -1128,7 +1128,7 @@ A RPC `list_client_received_budgets` atualmente retorna `proposed_amount` no cam
 --   v_client_fee_rate numeric(6,4);
 -- Buscar antes do SELECT principal:
 --   SELECT (value::text)::numeric INTO v_client_fee_rate
---   FROM platform_constants WHERE key = 'renovi_tax_client';
+--   FROM platform_constants WHERE key = 'prestway_tax_client';
 -- No SELECT:
 --   (pp.proposed_amount + round(pp.proposed_amount * v_client_fee_rate, 2)) AS client_charge_amount
 ```
@@ -1137,14 +1137,14 @@ A RPC `list_client_received_budgets` atualmente retorna `proposed_amount` no cam
 
 **Impacto de breaking change:** O contrato da RPC muda. O frontend deve atualizar o campo usado para exibição do valor das propostas. **Coordenar deploy da migration com o deploy do frontend.**
 
-**Dependências:** Tarefa 1.1 (renovi_tax_client), Tarefa 1.12 (_calculate_client_pricing).
+**Dependências:** Tarefa 1.1 (prestway_tax_client), Tarefa 1.12 (_calculate_client_pricing).
 
 ---
 
 ### Checklist de Conclusão da Fase 1
 
 - [ ] Todos os arquivos de migration criados e testados em banco local
-- [x] D8 confirmado: `renovi_tax_client` = 0.05 (5%) ✅
+- [x] D8 confirmado: `prestway_tax_client` = 0.05 (5%) ✅
 - [x] D9 confirmado: `isFeePayer` = false (plataforma paga) ✅
 - [x] D10 confirmado: `daysToExpire` = 45 (máximo Asaas) ✅
 - [x] D11 confirmado: Parcelamento suportado em V1 ✅
@@ -1154,7 +1154,7 @@ A RPC `list_client_received_budgets` atualmente retorna `proposed_amount` no cam
 - [ ] Trigger de imutabilidade testado (tentativa de UPDATE nos 17 campos do snapshot deve falhar)
 - [ ] `_calculate_client_pricing` testada com PIX, Cartão 1x, 6x, 12x
 - [ ] `get_client_proposal_pricing` retornando `payment_options[]` correto
-- [ ] `list_client_received_budgets` retornando `client_charge_amount` correto (apenas taxa Renovi, sem taxas de gateway)
+- [ ] `list_client_received_budgets` retornando `client_charge_amount` correto (apenas taxa Prestway, sem taxas de gateway)
 - [ ] Frontend atualizado para usar `client_charge_amount` da listagem
 - [ ] Todas as 14 constantes de `platform_constants` inseridas e validadas
 - [ ] Deploy em banco de staging verificado antes de produção
@@ -1473,7 +1473,7 @@ const charge = await fetch(`${ASAAS_BASE_URL}/v3/payments`, {
     billingType: 'PIX',
     value: service_payment.client_charge_amount,  // do snapshot — nunca recalcular
     dueDate: new Date(Date.now() + 86400000).toISOString().split('T')[0], // hoje + 1 dia
-    description: `Renovi - ${service_type} - ${provider_name}`,
+    description: `Prestway - ${service_type} - ${provider_name}`,
     externalReference: service_payment.id,         // CRÍTICO: fallback de lookup no webhook
     split: [{
       walletId: service_payment.split_wallet_id,
@@ -1656,7 +1656,7 @@ curl -X POST https://api-sandbox.asaas.com/v3/webhooks \
   -H "Authorization: $ASAAS_SANDBOX_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Renovi Payments Dev",
+    "name": "Prestway Payments Dev",
     "url": "https://{ngrok-url}/functions/v1/asaas-webhook",
     "enabled": true,
     "authToken": "seu-webhook-secret",
@@ -1997,7 +1997,7 @@ Adicionar estados adicionais e seletor de parcelas à tela de checkout:
 
 // ADDED: Regra de UX para tela de orçamento vs checkout
 **Tela de orçamento (ANTES de clicar "Quero contratar"):**
-- Mostrar SOMENTE: valor do serviço + taxa Renovi = total base
+- Mostrar SOMENTE: valor do serviço + taxa Prestway = total base
 - Ex.: "R$1.000,00 + R$50,00 (taxa plataforma) = R$1.050,00"
 - NÃO mostrar opções de parcelamento ou taxas de cartão
 
@@ -2018,7 +2018,7 @@ Adicionar estados adicionais e seletor de parcelas à tela de checkout:
 - [ ] // ADDED: Simulação pré-criação (`POST /v3/payments/simulate`) valida netValue vs split
 - [ ] // ADDED: Seletor de parcelas exibe todas as opções com valores corretos
 - [ ] // ADDED: `_calculate_client_pricing` retorna valores consistentes para todas as faixas (1x, 2-6x, 7-12x)
-- [ ] // ADDED: Tela de orçamento mostra APENAS valor base + taxa Renovi (sem taxas de cartão)
+- [ ] // ADDED: Tela de orçamento mostra APENAS valor base + taxa Prestway (sem taxas de cartão)
 - [ ] // ADDED: Tela de checkout mostra opções com taxas embutidas (sem breakdown)
 
 ---
@@ -2374,7 +2374,7 @@ WHERE installment_count > 1
 
 **Mitigação:** Coordenar o deploy da migration com o deploy do frontend. Não fazer deploy da migration sem o frontend preparado para o novo campo.
 
-### R6 — `renovi_tax_client` alterado em produção
+### R6 — `prestway_tax_client` alterado em produção
 **Severidade:** Baixa. Checkouts já iniciados (com snapshot em `service_payments`) não são afetados. Apenas novos checkouts usarão a nova taxa.
 
 **Monitoramento:** Auditoria do snapshot (query 5 em Tarefa 6.5) deve continuar retornando 0 linhas após qualquer mudança de taxa.
@@ -2382,7 +2382,7 @@ WHERE installment_count > 1
 // ADDED: Riscos relacionados a parcelamento e taxas de gateway
 
 ### R7 — Taxas Asaas promocionais expiram sem atualização
-**Severidade:** Média. Nos primeiros 3 meses, as taxas de cartão são menores (ex.: 1,99% vs 2,99% para 1x). Se as constantes em `platform_constants` não forem atualizadas após o período promocional, o `client_charge_amount` será menor que o necessário para cobrir as taxas reais do Asaas, e a Renovi absorverá a diferença.
+**Severidade:** Média. Nos primeiros 3 meses, as taxas de cartão são menores (ex.: 1,99% vs 2,99% para 1x). Se as constantes em `platform_constants` não forem atualizadas após o período promocional, o `client_charge_amount` será menor que o necessário para cobrir as taxas reais do Asaas, e a Prestway absorverá a diferença.
 
 **Mitigação:** Criar alerta/reminder para a data de expiração da promoção Asaas. Atualizar `platform_constants` ANTES da mudança de taxa entrar em vigor.
 
@@ -2422,7 +2422,7 @@ A tabela `services` tem FK `provider_id` (singular). Se no futuro houver mais de
 ### F5 — ~~Parcelamento no cartão~~ ✅ IMPLEMENTADO EM V1
 // UPDATED: Parcelamento faz parte do V1 (Fase 4). Campos `installment_count`, `installment_value`, taxas de gateway e antecipação já estão no schema de `service_payments` e no pipeline `_calculate_client_pricing`.
 
-### F6 — Histórico de mudanças em `renovi_tax_client`
+### F6 — Histórico de mudanças em `prestway_tax_client`
 Criar tabela `platform_constants_history` com trigger de audit em `platform_constants`. Permite auditoria retroativa de qual taxa estava vigente em qualquer momento — complementa o `client_fee_rate` já armazenado no snapshot.
 
 ---
@@ -2460,7 +2460,7 @@ curl -X POST https://api-sandbox.asaas.com/v3/webhooks \
   -H "Authorization: $ASAAS_API_KEY" \
   -H "Content-Type: application/json" \
   -d "{
-    \"name\": \"Renovi Dev\",
+    \"name\": \"Prestway Dev\",
     \"url\": \"https://{ngrok-url}/functions/v1/asaas-webhook\",
     \"enabled\": true,
     \"authToken\": \"$ASAAS_WEBHOOK_SECRET\",
@@ -2481,7 +2481,7 @@ SELECT * FROM cron.job;
 
 | Fase | Arquivo | Conteúdo |
 |------|---------|----------|
-| 1 | `20260325100000` | platform_constants (15 entradas: taxa Renovi + taxas gateway + antecipação + max_installments + min_installment_value) |
+| 1 | `20260325100000` | platform_constants (15 entradas: taxa Prestway + taxas gateway + antecipação + max_installments + min_installment_value) |
 | 1 | `20260325100100` | ALTER provider_proposals (lock + status) |
 | 1 | `20260325100200` | Triggers provider_proposals atualizados |
 | 1 | `20260325100300` | ALTER service_requests (status) |
@@ -2492,7 +2492,7 @@ SELECT * FROM cron.job;
 | 1 | `20260325100750` | Trigger imutabilidade snapshot |
 | 1 | `20260325100800` | CREATE service_payment_events + RLS |
 | 1 | `20260325100900` | CREATE service_payment_releases + RLS |
-| 1 | `20260325101000` | CREATE _calculate_client_pricing (pipeline completo: Renovi + gateway + antecipação) + get_client_proposal_pricing (retorna payment_options[]) |
+| 1 | `20260325101000` | CREATE _calculate_client_pricing (pipeline completo: Prestway + gateway + antecipação) + get_client_proposal_pricing (retorna payment_options[]) |
 | 1 | `20260325101100` | UPDATE list_client_received_budgets |
 | 3 | `20260325102000` | CREATE initiate_checkout RPC |
 | 3 | `20260325102100` | CREATE get_checkout_details RPC |

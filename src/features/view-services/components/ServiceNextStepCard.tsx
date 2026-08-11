@@ -61,7 +61,7 @@ export function ServiceNextStepCard({
       className={cn(
         "h-12 w-full gap-2 rounded-full bg-white font-semibold text-primary shadow-md",
         "hover:bg-white/90 active:scale-[0.98]",
-        "transition-transform duration-fast ease-renovi",
+        "transition-transform duration-fast ease-prestway",
         "disabled:bg-white/70 disabled:text-primary/60",
       )}
       data-testid="service-next-step-cta"

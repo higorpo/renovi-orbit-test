@@ -80,7 +80,7 @@ export function MobileTabHeader({
         )}
       </div>
       <Link to="/dashboard" className="flex flex-1 justify-center">
-        <img src="/logo-renovi.webp" alt="Renovi" className="h-7 w-auto" />
+        <img src="/logo-renovi.webp" alt="Prestway" className="h-7 w-auto" />
       </Link>
       <div className="w-10 shrink-0" aria-hidden="true" />
     </header>

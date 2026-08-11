@@ -38,7 +38,7 @@ End-to-end validation on **staging** that provider location flows through device
 |------|--------|---------------|
 | 1.1 | Log in as test provider on target platform | Session active; role `provider` |
 | 1.2 | Accept operational location prompt (first launch or settings) | App shows success / tracking started; no permission-denied loop |
-| 1.3 | **Android only:** confirm background notification | Notification title **Renovi Orbit**; body mentions updating location for nearby opportunities |
+| 1.3 | **Android only:** confirm background notification | Notification title **Prestway Orbit**; body mentions updating location for nearby opportunities |
 | 1.4 | Move device ~50m+ (or simulate location in emulator) | Client logs / network show location sync attempt (optional: enable verbose logging) |
 
 **Android background check:** after sending app to background, wait ≥1 min, return to app — `user_device_beacons.location_recorded_at` should advance.

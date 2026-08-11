@@ -1,10 +1,10 @@
-# Plano de migração: Motor de formulários dinâmicos (Renovi → Orbit)
+# Plano de migração: Motor de formulários dinâmicos (Prestway → Orbit)
 
 ## Objetivo
-Migrar o sistema de formulários dinâmicos (micro-steps, schema-driven) do Renovi para o Orbit como feature `dynamic-form`, sem persistência de draft (local/DB), com código mais limpo e arquitetura extensível.
+Migrar o sistema de formulários dinâmicos (micro-steps, schema-driven) do Prestway para o Orbit como feature `dynamic-form`, sem persistência de draft (local/DB), com código mais limpo e arquitetura extensível.
 
 ## Escopo migrado
-| Origem (Renovi) | Destino (Orbit) |
+| Origem (Prestway) | Destino (Orbit) |
 |-----------------|-----------------|
 | `types/formSchemaV2/*` | `features/dynamic-form/types/` |
 | `lib/schemaValidator.ts` | `features/dynamic-form/utils/schemaValidator.ts` |

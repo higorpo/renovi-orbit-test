@@ -12,7 +12,7 @@ import {
   REQUEST_QUOTE_DRAFT_VERSION,
 } from "../requestQuoteDraft.persistence";
 
-const STORAGE_KEY = "renovi_request_quote_draft";
+const STORAGE_KEY = "prestway_request_quote_draft";
 
 function createMinimalDraft() {
   return {

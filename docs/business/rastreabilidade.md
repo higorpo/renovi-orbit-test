@@ -261,7 +261,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `supabase/migrations/20260801210000_payment_update_method.sql` | RPC: `p_installment_number` opcional; estados `SCHEDULED`/`FAILED`/`FAILED_PERMANENT`; HMAC ao mudar bandeira/parcelas |
 | `supabase/functions/manual-charge-payment/` (+ `executeManualCharge.ts`) | Cobrança manual: reconcilia `gateway_reference_code` anterior antes de nova charge; exige sessão ClearSale fresca |
 | `supabase/functions/schedule-netcred-charges/processSchedule.ts` | Cron T-2: fail-closed sem `clearsale_session_id` em produção; exige provider `ACTIVE` com company+bank |
-| `supabase/functions/tokenize-payment-card/` | Tokenização sob merchant da **plataforma** Renovi (`NETCRED_PLATFORM_COMPANY_ID` / Vault); `CARD_REJECTED` opaco ao cliente; rate limit mais restrito no path de perfil |
+| `supabase/functions/tokenize-payment-card/` | Tokenização sob merchant da **plataforma** Prestway (`NETCRED_PLATFORM_COMPANY_ID` / Vault); `CARD_REJECTED` opaco ao cliente; rate limit mais restrito no path de perfil |
 | `src/features/payments/components/PaymentHistory/*` | UI histórico cliente/prestador em Minha conta |
 | `src/features/payments/utils/clientPaymentHistoryAmounts.ts` | Breakdown: original riscado, líquido, “Reembolsado: …” |
 | `src/features/payments/api/history.api.ts` | Leitura das views de histórico |
@@ -302,7 +302,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `src/features/provider-kyc/types/providerKyc.validation.ts` | Schemas Zod por passo; mapeamento `pf`/`pj` |
 | `src/features/provider-kyc/components/__tests__/ProviderKycGate.test.tsx` | Cobertura de status e allowlist |
 | `src/features/provider-kyc/components/__tests__/ProviderKycForm.test.tsx` | Wizard PJ: `legal-rep-id`, endereço da empresa (`address-proof`), dual-map identity |
-| `supabase/functions/dispatch-kyc-email/` | E-mail operacional (default `credenciamento@renovi.com.br`; env `NETCRED_CREDENCIAMENTO_EMAIL`; local Inbucket/Mailpit se `INBUCKET_SMTP_HOST`, senão Resend) |
+| `supabase/functions/dispatch-kyc-email/` | E-mail operacional (default `credenciamento@prestway.com`; env `NETCRED_CREDENCIAMENTO_EMAIL`; local Inbucket/Mailpit se `INBUCKET_SMTP_HOST`, senão Resend) |
 | `supabase/migrations/20260802210000_provider_kyc_upload_sessions.sql` | Sessões Option A + janitor `payment_janitor_orphan_kyc_documents` |
 | `supabase/migrations/20260801750000_payment_mmd_notification_catalog.sql` (+ `20260801900000_provider_activated_*`, `20260804420000_mmd_service_auto_completed.sql`) | Templates/rotas MMD KYC (submitted, under review, rejected, activated, suspended, **incomplete reminder**) |
 | `supabase/migrations/20260801060000_create_provider_gateway_accounts.sql` | FSM `onboarding_status`; colunas/índice de lembrete; trigger bootstrap stub `PENDING_DOCUMENTS` |

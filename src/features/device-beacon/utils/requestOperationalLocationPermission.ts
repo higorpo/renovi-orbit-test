@@ -129,7 +129,7 @@ export function captureNativeOperationalLocationFix(): Promise<RequestOperationa
 
     void BackgroundGeolocation.start(
       {
-        backgroundTitle: 'Renovi',
+        backgroundTitle: 'Prestway',
         backgroundMessage: 'Obtendo sua localização.',
         requestPermissions: false,
         stale: true,

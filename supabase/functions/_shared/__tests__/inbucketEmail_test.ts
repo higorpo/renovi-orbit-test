@@ -62,8 +62,8 @@ Deno.test("resolveSmtpConfig throws on invalid port", () => {
 // --- buildSmtpMessage ---
 
 Deno.test("buildSmtpMessage builds message with from address from env", () => {
-  Deno.env.set("RESEND_FROM_EMAIL", "noreply@renovi.com.br");
-  Deno.env.set("RESEND_FROM_NAME", "Renovi");
+  Deno.env.set("RESEND_FROM_EMAIL", "noreply@prestway.com");
+  Deno.env.set("RESEND_FROM_NAME", "Prestway");
   try {
     const msg = buildSmtpMessage({
       recipientEmail: "user@example.com",
@@ -71,7 +71,7 @@ Deno.test("buildSmtpMessage builds message with from address from env", () => {
       html: "<p>Hello</p>",
       correlationId: "corr-123",
     });
-    assertEquals(msg.from, "Renovi <noreply@renovi.com.br>");
+    assertEquals(msg.from, "Prestway <noreply@prestway.com>");
     assertEquals(msg.to, "user@example.com");
     assertEquals(msg.subject, "Test Subject");
     assertEquals(msg.html, "<p>Hello</p>");
@@ -86,7 +86,7 @@ Deno.test("buildSmtpMessage builds message with from address from env", () => {
 
 Deno.test("formatSmtpPayload includes required MIME headers", () => {
   const payload = formatSmtpPayload({
-    from: "Renovi <noreply@renovi.com.br>",
+    from: "Prestway <noreply@prestway.com>",
     to: "user@example.com",
     subject: "Welcome",
     html: "<p>Hi</p>",
@@ -94,7 +94,7 @@ Deno.test("formatSmtpPayload includes required MIME headers", () => {
     attachments: [],
   });
 
-  assertEquals(payload.includes("From: Renovi <noreply@renovi.com.br>"), true);
+  assertEquals(payload.includes("From: Prestway <noreply@prestway.com>"), true);
   assertEquals(payload.includes("To: user@example.com"), true);
   assertEquals(payload.includes("Subject: Welcome"), true);
   assertEquals(payload.includes("Message-ID: <msg-001@orbit.local>"), true);
@@ -118,8 +118,8 @@ Deno.test("formatSmtpPayload uses CRLF line endings", () => {
 
 Deno.test("formatSmtpPayload builds multipart when attachments are present", () => {
   const payload = formatSmtpPayload({
-    from: "Renovi <noreply@renovi.com.br>",
-    to: "credenciamento@renovi.com.br",
+    from: "Prestway <noreply@prestway.com>",
+    to: "credenciamento@prestway.com",
     subject: "KYC",
     html: "<p>Docs</p>",
     messageId: "kyc-1",
@@ -136,8 +136,8 @@ Deno.test("formatSmtpPayload builds multipart when attachments are present", () 
 });
 
 Deno.test("buildSmtpMessage includes attachments when provided", () => {
-  Deno.env.set("RESEND_FROM_EMAIL", "noreply@renovi.com.br");
-  Deno.env.set("RESEND_FROM_NAME", "Renovi");
+  Deno.env.set("RESEND_FROM_EMAIL", "noreply@prestway.com");
+  Deno.env.set("RESEND_FROM_NAME", "Prestway");
   try {
     const msg = buildSmtpMessage({
       recipientEmail: "user@example.com",

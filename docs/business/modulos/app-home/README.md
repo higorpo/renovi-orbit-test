@@ -2,7 +2,7 @@
 
 ## 1. Leitura para negócio
 
-- **Para que serve:** rota raiz **`/`** da SPA — tela **mínima** (marca “Renovi” + botão para login).
+- **Para que serve:** rota raiz **`/`** da SPA — tela **mínima** (marca “Prestway” + botão para login).
 - **Quem usa:** qualquer visitante (e também usuários autenticados que abrirem `/` ou aterrem após logout).
 - **Contexto:** não há pasta `src/features/app-home/`; o módulo documental cobre `src/App.tsx` registrado como index em `src/router.tsx`, sob `RootLayout`.
 - **Não inventar expectativa:** não é landing de marketing, catálogo nem “home logada”; pós-login autenticado vai para `/dashboard` (auth), não para esta tela — esta tela **é** o destino típico pós-**logout**.

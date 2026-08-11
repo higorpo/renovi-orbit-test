@@ -1,6 +1,6 @@
-# Netcred — Fluxo de pagamentos Renovi
+# Netcred — Fluxo de pagamentos Prestway
 
-Guia de implementação: **somente** o que a Renovi usa na comunicação com a API Netcred (GraphQL).
+Guia de implementação: **somente** o que a Prestway usa na comunicação com a API Netcred (GraphQL).
 
 Referência completa da API: [`docs/payments-api.md`](./payments-api.md) · Coleção Postman [API Netcred](https://go.postman.co/collection/55609940-a4b17641-251f-4c8e-a147-c3a5facc5715)
 
@@ -19,12 +19,12 @@ Referência completa da API: [`docs/payments-api.md`](./payments-api.md) · Cole
 ### Fluxo completo (ordem)
 
 ```
-1. Prestador → KYC no app Renovi → e-mail à Netcred → cron detecta credenciamento
+1. Prestador → KYC no app Prestway → e-mail à Netcred → cron detecta credenciamento
 2. Cliente → tokenização do cartão (checkout / aceite do orçamento)
 3. Aceite → tokenização + persistir `charge_scheduled_at` (T-2) — **sem** `chargeCreate` no aceite
 4. Cron T-2 → `chargeCreate` (cobrança + split + parcelas) → `PAID`
 5. Cancelamento pós-cobrança → `transactionRefund`
-   (Cancelamento antes de T-2 → só domínio Renovi; cron não dispara cobrança)
+   (Cancelamento antes de T-2 → só domínio Prestway; cron não dispara cobrança)
 ```
 
 ```mermaid
@@ -99,7 +99,7 @@ mutation tokenAuth($username: String!, $password: String!) {
 
 ### Resposta (sucesso)
 
-| Campo | Uso Renovi |
+| Campo | Uso Prestway |
 |-------|------------|
 | `token` | Enviar em `Authorization: JWT <token>` |
 | `refreshExpiresIn` | Referência de expiração |
@@ -112,7 +112,7 @@ mutation tokenAuth($username: String!, $password: String!) {
 | Credenciais inválidas | `errors[]` em `tokenAuth`; sem `token` |
 | Token expirado nas demais calls | HTTP 401 — renovar com `tokenAuth` |
 
-### Implementação Renovi
+### Implementação Prestway
 
 - Credenciais em variáveis de ambiente (Edge Functions / backend).
 - Cache do token com renovação antes de expirar (ex.: a cada 23 h).
@@ -122,14 +122,14 @@ mutation tokenAuth($username: String!, $password: String!) {
 
 ## 2. Credenciamento de prestadores
 
-### Acordo Renovi × Netcred
+### Acordo Prestway × Netcred
 
 Não existe API de credenciamento. A Netcred aceita:
 
 1. Link próprio da Netcred, ou  
 2. E-mail com dados e documentos.
 
-**Decisão Renovi:** o prestador faz **tudo no app**. A Renovi coleta KYC, envia e-mail formatado para **`credenciamento@netcred.com.br`** e detecta a conclusão via **cron diário** (consulta `companies` por CPF/CNPJ). Webhook de credenciamento está em desenvolvimento na Netcred — quando existir, complementar o cron.
+**Decisão Prestway:** o prestador faz **tudo no app**. A Prestway coleta KYC, envia e-mail formatado para **`credenciamento@netcred.com.br`** e detecta a conclusão via **cron diário** (consulta `companies` por CPF/CNPJ). Webhook de credenciamento está em desenvolvimento na Netcred — quando existir, complementar o cron.
 
 ### 2.1 Dados coletados no app (KYC)
 
@@ -153,7 +153,7 @@ Coleta **obrigatória** após o cadastro do prestador (tela bloqueante até conc
 | Nome do representante legal | |
 | CPF do representante legal | |
 | Telefone do representante legal | |
-| E-mail do representante legal | **Mesmo e-mail da conta Renovi** |
+| E-mail do representante legal | **Mesmo e-mail da conta Prestway** |
 
 #### Pessoa física (CPF)
 
@@ -355,7 +355,7 @@ Prestador só participa de serviços pagos via cartão quando:
 
 ### 2.4 Erros / ausência de resultado
 
-| Situação | Ação Renovi |
+| Situação | Ação Prestway |
 |----------|-------------|
 | `edges` vazio | Prestador ainda não credenciado — manter `submitted`; tentar no próximo dia |
 | Vários `edges` com mesmo document | Log + revisão manual |
@@ -369,7 +369,7 @@ Prestador só participa de serviços pagos via cartão quando:
 **Quando:** checkout / aceite do orçamento (antes da cobrança T-2).  
 **Efeito:** salva cartão tokenizado; **não cobra**.
 
-### Dados do cliente na Renovi
+### Dados do cliente na Prestway
 
 Campos exibidos no checkout **somente se ainda não existirem** em `profiles` / `client_profiles_private`. Se o usuário preencher no formulário, **persistir nas tabelas de perfil**; nas próximas tokenizações, reutilizar do banco — **não pedir de novo**.
 
@@ -391,7 +391,7 @@ Fluxo:
 
 **Obrigatório** se ClearSale estiver habilitado na company (produção).
 
-| Regra Renovi | Detalhe |
+| Regra Prestway | Detalhe |
 |--------------|---------|
 | Primeiro cartão | Usar endereço do **primeiro serviço** em que o cliente cadastra o cartão |
 | Cartões seguintes | Reutilizar billing address salvo localmente ou do perfil |
@@ -431,7 +431,7 @@ mutation paymentProfileCreateCard($input: PaymentProfileCreateInput!) {
 }
 ```
 
-### Input (campos Renovi)
+### Input (campos Prestway)
 
 ```jsonc
 {
@@ -502,16 +502,16 @@ Opcional para UI (não enviar à Netcred de novo): `expiryMonth`, `expiryYear`, 
 
 - Coletar PAN/CVV **somente no checkout** e enviar direto à Netcred na mutation.
 - **Nunca** persistir número completo do cartão nem CVV.
-- No banco Renovi: apenas `netcred_payment_profile_id`, `card_number_masked`, `card_brand`, `netcred_card_token` (ver tabela acima).
+- No banco Prestway: apenas `netcred_payment_profile_id`, `card_number_masked`, `card_brand`, `netcred_card_token` (ver tabela acima).
 
 ---
 
 ## 4. Cobrança T-2 (`chargeCreate`)
 
-**Decisão Renovi:** **não usar `rrule`** na API Netcred. O campo existe na documentação da parceira, porém é **mutuamente exclusivo com `installmentNumber`** (parcelamento no cartão) — como a Renovi precisa de parcelas, o agendamento da cobrança fica **100% no domínio Renovi**, via **cron job**.
+**Decisão Prestway:** **não usar `rrule`** na API Netcred. O campo existe na documentação da parceira, porém é **mutuamente exclusivo com `installmentNumber`** (parcelamento no cartão) — como a Prestway precisa de parcelas, o agendamento da cobrança fica **100% no domínio Prestway**, via **cron job**.
 
 **Quando cobrar:** no dia **`charge_scheduled_at` = `service_scheduled_at − 2 dias`** (T-2).  
-**Quem dispara:** worker/cron Renovi — **não** chamar `chargeCreate` no aceite do orçamento.  
+**Quem dispara:** worker/cron Prestway — **não** chamar `chargeCreate` no aceite do orçamento.  
 **Efeito da mutation:** autorização + captura automática (`manualCapture: false`) → `transactionState: PAID` na mesma execução (ou `REJECTED` / `IN_ANALYSIS` se antifraude recusar).
 
 ### 4.1 No aceite do orçamento (antes do T-2)
@@ -521,7 +521,7 @@ Opcional para UI (não enviar à Netcred de novo): `expiryMonth`, `expiryYear`, 
 | Tokenizar cartão | `paymentProfileCreate` | — |
 | Persistir agendamento | `charge_scheduled_at`, `netcred_payment_profile_id`, `installment_number`, `reference_code` | — |
 | Cobrar | — | **`chargeCreate`** (esperar o cron) |
-| Agendar na Netcred | — | **`rrule`** (fora do escopo Renovi) |
+| Agendar na Netcred | — | **`rrule`** (fora do escopo Prestway) |
 
 ### 4.2 Cron `schedule-netcred-charges`
 
@@ -567,7 +567,7 @@ Ex.: serviço **05/07/2026** → cron roda em **03/07/2026** e chama `chargeCrea
 
 #### Cancelamento antes do T-2
 
-Enquanto o cron **não** rodou, **não há cobrança na Netcred**. Cancelar o serviço na Renovi (`payment_phase = 'cancelled'`, status cancelado) — o cron **ignora** o registro. **Não** é necessário `chargeVoid`/`transactionVoid` neste cenário.
+Enquanto o cron **não** rodou, **não há cobrança na Netcred**. Cancelar o serviço na Prestway (`payment_phase = 'cancelled'`, status cancelado) — o cron **ignora** o registro. **Não** é necessário `chargeVoid`/`transactionVoid` neste cenário.
 
 #### Frequência recomendada
 
@@ -585,13 +585,13 @@ Documentar timezone: usar o fuso do endereço do serviço ou UTC consistente em 
 | `companyId` | `netcred_company_id` do **prestador** | Identifica o EC (`MERCHANT`) da cobrança |
 | `paymentProfileId` | Etapa 3 | Cartão tokenizado |
 | `bankAccountId` (prestador) | Cron credenciamento | Split `PERCENTAGE` 100% |
-| `bankAccountId` (Renovi) | Conta da plataforma na Netcred | Split `FIXED_AMOUNT` (taxa Renovi) |
+| `bankAccountId` (Prestway) | Conta da plataforma na Netcred | Split `FIXED_AMOUNT` (taxa Prestway) |
 
-> A cobrança roda na **company do prestador**, não na company marketplace da Renovi.
+> A cobrança roda na **company do prestador**, não na company marketplace da Prestway.
 
-### 4.4 Split (modelo Renovi)
+### 4.4 Split (modelo Prestway)
 
-Comissão Renovi = **`FIXED_AMOUNT`** (valor acordado por serviço).  
+Comissão Prestway = **`FIXED_AMOUNT`** (valor acordado por serviço).  
 Restante = **`PERCENTAGE` 100%** para a conta do prestador.
 
 A Netcred exige **ao menos um** `ruleItem` `PERCENTAGE` somando **100.0** na regra.
@@ -630,12 +630,12 @@ A Netcred exige **ao menos um** `ruleItem` `PERCENTAGE` somando **100.0** na reg
 
 | `ruleItem` | Campo | Descrição |
 |------------|-------|-----------|
-| Prestador | `splitType: PERCENTAGE`, `proportion: "100.0"` | 100% do valor **após** descontar o fixo Renovi |
+| Prestador | `splitType: PERCENTAGE`, `proportion: "100.0"` | 100% do valor **após** descontar o fixo Prestway |
 | Prestador | `bankAccountId` | `netcred_bank_account_id` do prestador |
 | Prestador | `isLiable: false` | Chargeback proporcional fora desta parcela |
-| Renovi | `splitType: FIXED_AMOUNT`, `amount` | Taxa fixa acordada (ex.: `"100.00"`) |
-| Renovi | `bankAccountId` | Conta bancária da **Renovi** na Netcred |
-| Renovi | `isLiable: true` | Renovi arca com chargeback/estorno sobre a comissão |
+| Prestway | `splitType: FIXED_AMOUNT`, `amount` | Taxa fixa acordada (ex.: `"100.00"`) |
+| Prestway | `bankAccountId` | Conta bancária da **Prestway** na Netcred |
+| Prestway | `isLiable: true` | Prestway arca com chargeback/estorno sobre a comissão |
 
 ### 4.5 Mutation e payload
 
@@ -666,7 +666,7 @@ mutation chargeCreateCardWithSplit($input: ChargeCreateInput!) {
 
 ### Input completo (referência — chamado pelo cron T-2)
 
-> **Não incluir `rrule`.** Agendamento é responsabilidade do cron Renovi (§4.2).
+> **Não incluir `rrule`.** Agendamento é responsabilidade do cron Prestway (§4.2).
 
 ```jsonc
 {
@@ -678,7 +678,7 @@ mutation chargeCreateCardWithSplit($input: ChargeCreateInput!) {
     "referenceCode": "uuid-do-servico",
     "billDaysInAdvance": 0,
     "manualCapture": false,
-    "extraInfo": "Renovi · Pintura · …",
+    "extraInfo": "Prestway · Pintura · …",
     "customerIpAddress": "189.0.0.1",
     "orderInput": {
       "sessionId": "uuid-clearsale-sessao",
@@ -687,7 +687,7 @@ mutation chargeCreateCardWithSplit($input: ChargeCreateInput!) {
         "productInput": {
           "name": "Pintura — Sala",
           "amount": "1000.00",
-          "description": "Serviço contratado via Renovi…",
+          "description": "Serviço contratado via Prestway…",
           "category": "Serviços"
         }
       }]
@@ -704,7 +704,7 @@ mutation chargeCreateCardWithSplit($input: ChargeCreateInput!) {
 | `companyId` | Sim | **`netcred_company_id` do prestador** |
 | `paymentProfileId` | Sim | ID da tokenização (não reenviar cartão) |
 | `amount` | Sim | Total cobrado do cliente (`"1000.00"`) |
-| `installmentNumber` | Não | Parcelas no cartão do cliente (ex.: `10`); default `1`. **Não combinar com `rrule`** — Renovi não usa `rrule` |
+| `installmentNumber` | Não | Parcelas no cartão do cliente (ex.: `10`); default `1`. **Não combinar com `rrule`** — Prestway não usa `rrule` |
 | `referenceCode` | Sim | UUID do serviço — **idempotência** (repetir → erro) |
 | `extraInfo` | Não | Resumo operacional — **máx. 150 caracteres** |
 | `billDaysInAdvance` | Não | Default `0` |
@@ -753,7 +753,7 @@ Disputas formalizadas podem exigir **e-mail à Netcred** além da API — ver [`
 
 ### Cancelamento antes do T-2
 
-Enquanto o cron **não executou** `chargeCreate`, não existe cobrança na Netcred. Basta cancelar o serviço na Renovi — o cron não incluirá o registro (§4.2). `chargeVoid` / `transactionVoid` só se aplicam se a cobrança já foi criada e ainda não está `PAID` (caso raro de retry/reconciliação).
+Enquanto o cron **não executou** `chargeCreate`, não existe cobrança na Netcred. Basta cancelar o serviço na Prestway — o cron não incluirá o registro (§4.2). `chargeVoid` / `transactionVoid` só se aplicam se a cobrança já foi criada e ainda não está `PAID` (caso raro de retry/reconciliação).
 
 ### Mutation
 
@@ -794,7 +794,7 @@ mutation transactionRefund($input: TransactionRefundInput!) {
 
 | Valor | Uso |
 |-------|-----|
-| `REQUESTED_BY_CUSTOMER` | Cancelamento/disputa a favor do cliente (**padrão Renovi**) |
+| `REQUESTED_BY_CUSTOMER` | Cancelamento/disputa a favor do cliente (**padrão Prestway**) |
 | `DUPLICATE` | Cobrança duplicada |
 | `FRAUDULENT` | Fraude confirmada |
 | `OTHER` | Outros motivos |
@@ -843,13 +843,13 @@ Estorno na fatura do cliente: **30–60 dias** (comunicar na UI de disputa).
 
 ## 6. Webhooks
 
-Webhooks são a **fonte primária** de conciliação entre Netcred e o banco Renovi. O handler (Edge Function `netcred-webhook`) deve ser **idempotente** (deduplicar por `event` + `payload.id` + timestamp) e responder **200** rapidamente; processamento pesado em fila/worker se necessário.
+Webhooks são a **fonte primária** de conciliação entre Netcred e o banco Prestway. O handler (Edge Function `netcred-webhook`) deve ser **idempotente** (deduplicar por `event` + `payload.id` + timestamp) e responder **200** rapidamente; processamento pesado em fila/worker se necessário.
 
 Referência completa da API: [`payments-api.md` §10](./payments-api.md).
 
 ### 6.1 Cadastro
 
-**Preferência Renovi:** cadastrar e manter webhooks **pelo painel administrativo da Netcred**, não via API em runtime. O painel é o canal operacional acordado com a parceira (sandbox e produção); reduz acoplamento e evita gerenciar `secretKey` / eventos por mutation no app.
+**Preferência Prestway:** cadastrar e manter webhooks **pelo painel administrativo da Netcred**, não via API em runtime. O painel é o canal operacional acordado com a parceira (sandbox e produção); reduz acoplamento e evita gerenciar `secretKey` / eventos por mutation no app.
 
 Preencher no painel os mesmos parâmetros da tabela abaixo. Guardar a `secretKey` gerada no painel em secret do Supabase (validação de `X-NETCRED-Signature`).
 
@@ -864,10 +864,10 @@ mutation webhookCreate($input: WebhookCreateInput!) {
 }
 ```
 
-| Campo | Renovi |
+| Campo | Prestway |
 |-------|--------|
 | `targetUrl` | `https://<projeto>.supabase.co/functions/v1/netcred-webhook` (HTTPS obrigatório) |
-| `companyId` | Company **MERCHANT** da Renovi (marketplace) ou por EC — alinhar com Netcred |
+| `companyId` | Company **MERCHANT** da Prestway (marketplace) ou por EC — alinhar com Netcred |
 | `secretKey` | Gerada no painel (ou na mutation); armazenar em secret; validar `X-NETCRED-Signature` |
 | `events` | Lista abaixo (§6.3) — inscrever todos os eventos usados na conciliação |
 | `maskUserAgent` | `true` se firewall bloquear user-agent da Netcred |
@@ -885,9 +885,9 @@ mutation webhookCreate($input: WebhookCreateInput!) {
 
 Rejeitar request se assinatura inválida. Logar `X-NETCRED-Event` + IDs do payload para auditoria.
 
-### 6.3 Catálogo de eventos e conciliação Renovi
+### 6.3 Catálogo de eventos e conciliação Prestway
 
-| Evento | Quando dispara | Payload | Uso / conciliação no banco Renovi |
+| Evento | Quando dispara | Payload | Uso / conciliação no banco Prestway |
 |--------|----------------|---------|-----------------------------------|
 | `ANY` | Qualquer evento inscrito | Variável | Atalho no cadastro; o header `X-NETCRED-Event` indica o tipo real — tratar como os demais |
 | `WEBHOOK_PING` | `webhookPing` | Ping | Health check; não alterar dados de pagamento |
@@ -896,7 +896,7 @@ Rejeitar request se assinatura inválida. Logar `X-NETCRED-Event` + IDs do paylo
 | `PAYMENT_PROFILE_DELETE` | Perfil desativado/removido | `PaymentProfilePayload` | Soft-delete ou `is_active = false` no cartão local; impedir uso em novas cobranças |
 | `PAYMENT_PROFILE_EXPIRING` | Cartão expira em ~1 mês | `PaymentProfilePayload` | Notificar cliente para atualizar cartão antes do T-2 |
 | `CHARGE_CREATE` | Cobrança criada pelo cron (`chargeCreate`) | `ChargePayload` | Persistir `netcred_charge_id`, `reference_code` ↔ serviço |
-| `CHARGE_UPDATE` | Cobrança alterada (valor, datas, estado) | `ChargePayload` | Conciliar `charge_state`, datas de billing; alertar se divergir do agendamento Renovi |
+| `CHARGE_UPDATE` | Cobrança alterada (valor, datas, estado) | `ChargePayload` | Conciliar `charge_state`, datas de billing; alertar se divergir do agendamento Prestway |
 | `CHARGE_VOID` | Cobrança cancelada antes da execução | `ChargePayload` | `payment_phase` → `voided`; serviço cancelado sem débito |
 | `TRANSACTION_CREATE` | Transação filha criada na charge | `TransactionPayload` | Persistir `netcred_transaction_id`; ligar `charge.reference_code` ao serviço |
 | `TRANSACTION_AUTHORIZE` | Autorização / emissão (antifraude) | `TransactionPayload` | `payment_phase` → `authorizing` ou `in_analysis`; aguardar captura |
@@ -905,7 +905,7 @@ Rejeitar request se assinatura inválida. Logar `X-NETCRED-Event` + IDs do paylo
 | `TRANSACTION_EXPIRED` | Prazo da transação expirou | `TransactionPayload` | `payment_phase` → `expired`; solicitar novo cartão ou reagendar |
 | `TRANSACTION_VOID` | Cancelamento da transação (pré ou pós-análise, conforme regra Netcred) | `TransactionPayload` | Confirmar cancelamento solicitado via `chargeVoid`/`transactionVoid`; `payment_phase` → `voided`; fechar ciclo sem depender só de e-mail |
 | `TRANSACTION_REFUND` | Estorno processado | `TransactionPayload` | Confirmar refund no schedule; enrich GraphQL movements (DEBIT/clawback) → upsert; comunicar prazo 30–60 dias na fatura |
-| `TRANSACTION_DISPUTE` | Chargeback / disputa iniciada | `TransactionPayload` | `is_disputed = true`; abrir fluxo de disputa Renovi; bloquear payout se aplicável |
+| `TRANSACTION_DISPUTE` | Chargeback / disputa iniciada | `TransactionPayload` | `is_disputed = true`; abrir fluxo de disputa Prestway; bloquear payout se aplicável |
 | `PAYOUT_CREATE` | Lote de liquidação criado (previsão) | `PayoutPayload` | Upsert `payment_settlement_movements` a partir de `payload.movements[]` (`payment_webhook_handle_payout`); join `movements.transaction_id` → `payment_schedules.gateway_transaction_id` |
 | `PAYOUT_SETTLE` | Lote liquidado / atualizado | `PayoutPayload` | Mesmo handler; avança `settled_at` / `movement_status` (`PAID_OUT` etc.) |
 
@@ -917,7 +917,7 @@ Rejeitar request se assinatura inválida. Logar `X-NETCRED-Event` + IDs do paylo
 
 ### 6.4 Chaves de match (payload → linha local)
 
-| Chave Netcred | Campo Renovi | Observação |
+| Chave Netcred | Campo Prestway | Observação |
 |---------------|--------------|------------|
 | `charge.reference_code` | UUID do serviço / proposta | Idempotência principal |
 | `transaction.id` | `netcred_transaction_id` / `gateway_transaction_id` | Refund, void, disputa; **join de settlement** |
@@ -928,9 +928,9 @@ Rejeitar request se assinatura inválida. Logar `X-NETCRED-Event` + IDs do paylo
 
 ### 6.5 Máquina de estados → `payment_phase`
 
-| `transaction_state` (payload) | Ação Renovi |
+| `transaction_state` (payload) | Ação Prestway |
 |-------------------------------|-------------|
-| `SCHEDULED` | Não esperado no fluxo Renovi (sem `rrule`); tratar como estado transitório se aparecer |
+| `SCHEDULED` | Não esperado no fluxo Prestway (sem `rrule`); tratar como estado transitório se aparecer |
 | `IN_ANALYSIS` / `MANUAL_ANALYSIS` | Aguardar antifraude; UI “em análise” |
 | `PAID` | Pagamento confirmado; liberar fluxo pós-pagamento |
 | `REJECTED` | Falha na cobrança; notificar cliente |
@@ -954,7 +954,7 @@ Preferir atualizar a partir de `transaction_state` no payload; usar `operations[
 
 Manter cron `reconcile-netcred-webhooks` consultando `transactions(referenceCode: …)` para serviços em estados intermediários (`scheduled`, `refund_requested`) quando webhook falhar ou atrasar. Webhook = primário; polling = backup.
 
-### 6.8 Eventos recomendados no cadastro Renovi
+### 6.8 Eventos recomendados no cadastro Prestway
 
 Inscrever no mínimo:
 
@@ -993,4 +993,4 @@ Inscrever no mínimo:
 
 ---
 
-*Baseado em [`docs/payments-api.md`](./payments-api.md) e alinhamentos Renovi × Netcred (2026-06). Homologação sandbox: tokenização, `chargeCreate` com split e `transactionRefund` (2026-06-23).*
+*Baseado em [`docs/payments-api.md`](./payments-api.md) e alinhamentos Prestway × Netcred (2026-06). Homologação sandbox: tokenização, `chargeCreate` com split e `transactionRefund` (2026-06-23).*

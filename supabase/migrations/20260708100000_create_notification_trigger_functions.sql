@@ -410,7 +410,7 @@ begin
   where sr.id = v_proposal.service_request_id;
 
   if p_actor_id is null and p_event_type = 'PROPOSAL_EXPIRED' then
-    v_sender_name := 'Renovi';
+    v_sender_name := 'Prestway';
   else
     select coalesce(nullif(trim(p.full_name), ''), 'User')
     into v_sender_name

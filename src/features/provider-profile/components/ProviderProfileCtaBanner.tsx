@@ -9,7 +9,7 @@ export function ProviderProfileCtaBanner() {
         Precisa de um serviço para sua casa?
       </h2>
       <p className="mt-2 text-sm sm:text-base text-primary-foreground/80 max-w-md mx-auto">
-        Na Renovi você encontra profissionais qualificados e recebe orçamentos
+        Na Prestway você encontra profissionais qualificados e recebe orçamentos
         sem compromisso. Rápido, fácil e gratuito.
       </p>
       <Button

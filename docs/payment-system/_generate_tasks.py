@@ -458,7 +458,7 @@ EF_TASKS = [
     (60, "Scaffold `src/features/payments` and `_shared/payment` module layout", "Create feature public API, types, constants.ts Option A gateway config, folder structure per design §13.", ["1"], [], ["1.1"]),
     (61, "Implement `PaymentProvider` interface and `NetCredAdapter` core", "tokenizeCard, createCharge, getTransaction, refund, void, refreshAuthToken with ProviderAuthError single retry.", ["1", "2"], ["60"], ["1.1–1.6"]),
     (62, "Implement NetCred JWT cache with SELECT FOR UPDATE in adapter", "payment_gateway_tokens read/refresh; 60min threshold; sandbox assertion CRITICAL.", ["2"], ["6", "61"], ["2.1–2.5"]),
-    (63, "Implement `buildPayoutRule` split helper (ADR-0001)", "FIXED provider + PERCENTAGE renovi remainder.", ["10"], ["61"], ["10.2", "1.7.4"]),
+    (63, "Implement `buildPayoutRule` split helper (ADR-0001)", "FIXED provider + PERCENTAGE prestway remainder.", ["10"], ["61"], ["10.2", "1.7.4"]),
     (64, "Edge Function `tokenize-payment-card`", "PCI path → paymentProfileCreate → payment_persist_client_card_token RPC.", ["6", "24"], ["20", "61"], ["6.1–6.4"]),
     (65, "Edge Function `schedule-netcred-charges`", "claim → loop chargeCreate → commit → enqueue notifications; timeout getTransaction first.", ["10", "11", "23"], ["28", "29", "31", "61", "63"], ["10.1–10.8"]),
     (66, "Edge Function `manual-charge-payment`", "begin_manual_attempt → chargeCreate → commit; fresh ClearSale session.", ["13", "31"], ["30", "61"], ["13.2–13.5"]),
@@ -590,7 +590,7 @@ for num, title, desc, reqs, deps, acs in LATE_TASKS:
 
 
 HEADER = dedent("""
-# Implementation Tasks — Renovi Payment System
+# Implementation Tasks — Prestway Payment System
 
 > **Source of truth:** [`design.md`](./design.md) (v2.11) + [`payment-system-requirements.md`](./payment-system-requirements.md) (Req 1–33)
 > **Generated:** engineering execution plan for squad linearization

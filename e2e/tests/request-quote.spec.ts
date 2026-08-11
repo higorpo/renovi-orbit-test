@@ -573,7 +573,7 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     page,
   }) => {
     const rq = new RequestQuotePage(page);
-    const storageKey = "renovi_request_quote_draft";
+    const storageKey = "prestway_request_quote_draft";
     const draftPayload = JSON.stringify({
       version: "1",
       draft: {
@@ -604,7 +604,7 @@ test.describe("Request Quote - /pedir-orcamento", () => {
 
   test("draft discard closes dialog and shows step 1", async ({ page }) => {
     const rq = new RequestQuotePage(page);
-    const storageKey = "renovi_request_quote_draft";
+    const storageKey = "prestway_request_quote_draft";
     const draftPayload = JSON.stringify({
       version: "1",
       draft: {
@@ -634,7 +634,7 @@ test.describe("Request Quote - /pedir-orcamento", () => {
 
   test("draft Continuar restores draft and shows step 2", async ({ page }) => {
     const rq = new RequestQuotePage(page);
-    const storageKey = "renovi_request_quote_draft";
+    const storageKey = "prestway_request_quote_draft";
     const draftPayload = JSON.stringify({
       version: "1",
       draft: {
@@ -674,7 +674,7 @@ test.describe("Request Quote - /pedir-orcamento", () => {
     page,
   }) => {
     const rq = new RequestQuotePage(page);
-    const storageKey = "renovi_request_quote_draft";
+    const storageKey = "prestway_request_quote_draft";
     const draftPayload = JSON.stringify({
       version: "99",
       draft: {

@@ -393,7 +393,7 @@ export function getMyAccountClientCredentials() {
   return {
     email:
       process.env.E2E_MY_ACCOUNT_CLIENT_EMAIL ??
-      "e2e.myaccount.client@renovi.test",
+      "e2e.myaccount.client@prestway.test",
     password: process.env.E2E_MY_ACCOUNT_PASSWORD ?? "E2E_SecurePass123!",
   };
 }
@@ -402,7 +402,7 @@ export function getMyAccountProviderCredentials() {
   return {
     email:
       process.env.E2E_MY_ACCOUNT_PROVIDER_EMAIL ??
-      "e2e.myaccount.provider@renovi.test",
+      "e2e.myaccount.provider@prestway.test",
     password: process.env.E2E_MY_ACCOUNT_PASSWORD ?? "E2E_SecurePass123!",
   };
 }

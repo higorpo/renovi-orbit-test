@@ -21,7 +21,7 @@ export default function ResetPassword() {
             <Link to="/">
               <img
                 src="/logo-renovi-white.webp"
-                alt="Renovi"
+                alt="Prestway"
                 className="h-10"
               />
             </Link>

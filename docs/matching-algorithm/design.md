@@ -1,4 +1,4 @@
-# Renovi Progressive Dispatch & Matching — Design Document
+# Prestway Progressive Dispatch & Matching — Design Document
 
 **Status:** Complete for implementation kickoff (2026-06-17)  
 **Covers:** Requirements 1–13, 4A, 10A, 10B (200 acceptance criteria)  

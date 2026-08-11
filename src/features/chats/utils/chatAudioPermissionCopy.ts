@@ -10,7 +10,7 @@ export interface ChatAudioPermissionCopy {
 export const CHAT_AUDIO_PERMISSION_COPY: ChatAudioPermissionCopy = {
   title: "Permitir microfone",
   benefits:
-    "Para enviar mensagens de áudio no chat, a Renovi precisa acessar o microfone do seu aparelho.",
+    "Para enviar mensagens de áudio no chat, a Prestway precisa acessar o microfone do seu aparelho.",
   nextStep:
     "Na próxima etapa, o sistema do seu aparelho vai pedir permissão para usar o microfone. Você pode mudar isso depois nas configurações.",
   blockedTitle: "Microfone bloqueado",

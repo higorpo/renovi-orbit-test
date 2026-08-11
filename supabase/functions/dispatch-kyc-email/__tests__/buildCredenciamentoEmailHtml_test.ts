@@ -42,7 +42,7 @@ const baseContext: ProviderKycContext = {
 Deno.test("buildCredenciamentoEmailSubject includes provider name for PF", () => {
   assertEquals(
     buildCredenciamentoEmailSubject(baseContext),
-    "[Renovi] Credenciamento prestador — João Silva",
+    "[Prestway] Credenciamento prestador — João Silva",
   );
 });
 
@@ -95,7 +95,7 @@ Deno.test("buildCredenciamentoEmailSubject falls back to document for PJ without
         razaoSocial: null,
       },
     }),
-    "[Renovi] Credenciamento prestador — 12345678000190",
+    "[Prestway] Credenciamento prestador — 12345678000190",
   );
 });
 

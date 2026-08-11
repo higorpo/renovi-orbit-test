@@ -454,7 +454,7 @@ describe("RequestQuote", () => {
 
   it("logo links to home", () => {
     renderWithRequestQuoteProviders(<RequestQuote />);
-    const logo = screen.getByRole("link", { name: /Renovi/i });
+    const logo = screen.getByRole("link", { name: /Prestway/i });
     expect(logo).toHaveAttribute("href", "/");
   });
 

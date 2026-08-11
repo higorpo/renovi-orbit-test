@@ -1,4 +1,4 @@
-# Sistema de Reagendamento e Cancelamento de Serviços - Renovi
+# Sistema de Reagendamento e Cancelamento de Serviços - Prestway
 
 ## Objetivo
 
@@ -34,7 +34,7 @@ Fluxo atual de contratação:
 
 ## 1. O chat é o centro da negociação
 
-A Renovi possui um sistema de mensagens robusto.
+A Prestway possui um sistema de mensagens robusto.
 
 Portanto:
 
@@ -354,7 +354,7 @@ Por isso:
 
 # Histórico de Confiabilidade
 
-A Renovi manterá um histórico interno de comportamento dos clientes.
+A Prestway manterá um histórico interno de comportamento dos clientes.
 
 Indicadores possíveis:
 
@@ -441,7 +441,7 @@ Permitir que a plataforma:
 
 ## Histórico de Confiabilidade
 
-* A Renovi poderá utilizar o histórico de reagendamentos, cancelamentos e ausências para aprimorar mecanismos de segurança, confiança e qualidade da plataforma.
+* A Prestway poderá utilizar o histórico de reagendamentos, cancelamentos e ausências para aprimorar mecanismos de segurança, confiança e qualidade da plataforma.
 
 ---
 
@@ -636,7 +636,7 @@ Cancelamentos realizados pelo prestador com menos de 24 horas de antecedência d
 
 # Histórico de Confiabilidade
 
-A Renovi manterá um histórico interno de comportamento tanto para clientes quanto para prestadores.
+A Prestway manterá um histórico interno de comportamento tanto para clientes quanto para prestadores.
 
 ## Indicadores dos Clientes
 
@@ -727,10 +727,10 @@ Permitir que a plataforma:
 * O prestador poderá cancelar um serviço a qualquer momento.
 * Cancelamentos realizados pelo prestador serão registrados em seu histórico de confiabilidade.
 * Cancelamentos realizados com menos de 24 horas de antecedência poderão ser classificados como cancelamentos de última hora.
-* Quando um prestador cancelar um serviço, a Renovi poderá reabrir automaticamente o pedido para permitir que outros prestadores enviem propostas ao cliente.
+* Quando um prestador cancelar um serviço, a Prestway poderá reabrir automaticamente o pedido para permitir que outros prestadores enviem propostas ao cliente.
 
 ---
 
 ## Histórico de Confiabilidade
 
-* A Renovi poderá utilizar o histórico de cancelamentos, reagendamentos, ausências e taxa de conclusão dos serviços para aprimorar mecanismos de segurança, confiança e qualidade da plataforma.
+* A Prestway poderá utilizar o histórico de cancelamentos, reagendamentos, ausências e taxa de conclusão dos serviços para aprimorar mecanismos de segurança, confiança e qualidade da plataforma.

@@ -32,7 +32,7 @@ const REASON_MAX_LENGTH = 2000;
 const WHAT_HAPPENS_NEXT = [
   {
     icon: Scale,
-    text: "A Renovi analisa o caso e pode pedir correção ou reembolso.",
+    text: "A Prestway analisa o caso e pode pedir correção ou reembolso.",
   },
   {
     icon: Wallet,

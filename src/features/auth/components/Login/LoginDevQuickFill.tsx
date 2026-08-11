@@ -4,8 +4,8 @@ import type { SignInFormData } from "../../types/login.validation";
 const DEV_PASSWORD = "Abc123";
 
 const DEV_ACCOUNTS = {
-  client: { email: "cliente@renovi.com.br", password: DEV_PASSWORD },
-  provider: { email: "prestador@renovi.com.br", password: DEV_PASSWORD },
+  client: { email: "cliente@prestway.com", password: DEV_PASSWORD },
+  provider: { email: "prestador@prestway.com", password: DEV_PASSWORD },
 } as const;
 
 export interface LoginDevQuickFillProps {

@@ -43,7 +43,7 @@ const PAYMENT_USER_MESSAGES: Record<string, string> = {
   PAYMENT_TOKEN_INACTIVE:
     "Este cartão não está mais disponível. Selecione ou adicione outro cartão.",
   PAYMENT_TOKEN_COMPANY_MISMATCH:
-    "Este cartão não está vinculado à empresa de pagamento da Renovi. Adicione o cartão novamente.",
+    "Este cartão não está vinculado à empresa de pagamento da Prestway. Adicione o cartão novamente.",
   CHARGE_AMOUNT_CALCULATION_FAILED:
     "Não foi possível calcular o valor do pagamento. Tente novamente.",
   COMMIT_FAILED: "Não foi possível concluir o pagamento. Tente novamente em instantes.",

@@ -77,7 +77,7 @@ async function startNativeTracking(profileId: string): Promise<void> {
   await BackgroundGeolocation.start(
     {
       backgroundMessage: 'Atualizando sua localização para oportunidades próximas.',
-      backgroundTitle: 'Renovi',
+      backgroundTitle: 'Prestway',
       requestPermissions: false,
       stale: false,
       distanceFilter: LOCATION_DISTANCE_FILTER_METERS,

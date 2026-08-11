@@ -11,7 +11,7 @@ export function TrustSidebar({ variant = "desktop" }: TrustSidebarProps) {
     <div className={isDesktop ? "space-y-4" : "space-y-4"}>
       <div className="bg-white rounded-xl p-4 xl:p-5 shadow-md border border-border">
         <h3 className="font-semibold text-foreground mb-3 text-sm xl:text-base">
-          Por que usar a Renovi?
+          Por que usar a Prestway?
         </h3>
         <div className="space-y-2.5">
           <div className="flex gap-2.5">

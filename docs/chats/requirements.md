@@ -2,7 +2,7 @@
 
 ## Context
 
-O **Sistema de Negociação Conversacional Cliente ↔ Prestador** (doravante *Chat & Negotiation System*, CNS) é o subsistema transacional da plataforma **Orbit** (Renovi) responsável por orquestrar comunicação bilateral, descoberta de escopo, envio estruturado de propostas, revisões limitadas, aceite atômico e encerramento coordenado de negociações concorrentes — tudo ancorado a um **Service Request** (`service_request`) em estado `OPEN`.
+O **Sistema de Negociação Conversacional Cliente ↔ Prestador** (doravante *Chat & Negotiation System*, CNS) é o subsistema transacional da plataforma **Orbit** (Prestway) responsável por orquestrar comunicação bilateral, descoberta de escopo, envio estruturado de propostas, revisões limitadas, aceite atômico e encerramento coordenado de negociações concorrentes — tudo ancorado a um **Service Request** (`service_request`) em estado `OPEN`.
 
 O CNS resolve o problema operacional de marketplaces de serviços onde múltiplos prestadores competem simultaneamente pela preferência do cliente, sem degradar a experiência do cliente (sobrecarga cognitiva, spam, perda de contexto) nem a eficiência do marketplace (slots de chats ativos por pedido, cotas de engajamento). O fluxo canônico de negócio está especificado em [`platform-flow.mmd`](../platform-flow.mmd) e constitui a referência normativa para transições entre **Service Request**, **Chat**, **Proposal** e **Service** pós-aceite.
 

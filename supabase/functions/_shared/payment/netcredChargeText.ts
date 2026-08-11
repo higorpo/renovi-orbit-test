@@ -23,6 +23,6 @@ export function buildNetCredChargeExtraInfo(
   serviceTitle: string | null | undefined,
 ): string {
   return truncateNetCredChargeText(
-    `Renovi — ${resolveNetCredServiceTitle(serviceTitle)}`,
+    `Prestway — ${resolveNetCredServiceTitle(serviceTitle)}`,
   );
 }

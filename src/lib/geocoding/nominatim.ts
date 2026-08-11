@@ -8,7 +8,7 @@ import { logger } from "@/lib/logger";
 import type { GeocodingService, GeocodingResult, ReverseGeocodingResult } from "./types";
 
 const NOMINATIM_BASE = "https://nominatim.openstreetmap.org";
-const USER_AGENT = "RenoviOrbit/1.0 (contact@renovi.com.br)";
+const USER_AGENT = "PrestwayOrbit/1.0 (contact@prestway.com)";
 
 function getHeaders(): HeadersInit {
   return {

@@ -101,7 +101,7 @@ flowchart TD
 5. Filtro de movimento no background nativo: **350 m** (`LOCATION_DISTANCE_FILTER_METERS`).
 6. Snapshot local: re-sync forçado se mudou push/token/permissão/coordenadas/`location_recorded_at`, ou se passaram **7 dias** desde `lastSyncedAt` (`DEVICE_BEACON_SYNC_INTERVAL_MS`).
 7. Tracking nativo: `requestPermissions: false` no plugin (permissão já tratada pelo fluxo do explainer).
-8. Web: `watchPosition` só em foreground; native: `@capgo/background-geolocation` com título “Renovi” e mensagem de oportunidades próximas.
+8. Web: `watchPosition` só em foreground; native: `@capgo/background-geolocation` com título “Prestway” e mensagem de oportunidades próximas.
 9. H3 no cliente (path supabase-js): resolução **7** (`H3_RESOLUTION_MATCHING`), alinhada a `matching.h3_resolution`.
 10. Freshness no servidor para `provider_latest_locations`: beacon com `location_recorded_at` dentro de **`matching.beacon_location_max_age_hours`** (seed **24**).
 11. Raio de discovery no matching: **`matching.discovery_beacon_radius_meters`** = **20000** (alinha ao copy “~20 km”).

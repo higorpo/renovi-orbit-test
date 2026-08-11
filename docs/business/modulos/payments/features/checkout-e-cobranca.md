@@ -20,7 +20,7 @@ Documentação baseada em `src/features/payments/` (stepper, APIs, hooks, ClearS
 ## 2. Objetivo de negócio
 
 1. Coletar/confirmar CPF, telefone e cartão do cliente antes de contratar.
-2. Tokenizar o cartão sob a **company NetCred da plataforma Renovi** (PCI no gateway; app não persiste PAN/CVV).
+2. Tokenizar o cartão sob a **company NetCred da plataforma Prestway** (PCI no gateway; app não persiste PAN/CVV).
 3. Fixar parcelamento com HMAC e criar agenda de cobrança com split do prestador (`FIXED_AMOUNT = provider_payout`).
 4. Cobrar automaticamente perto do serviço (T-2) e permitir recuperação manual em falha, com antifraude ClearSale e anti double-charge.
 
@@ -112,7 +112,7 @@ flowchart TD
 
 1. **Método suportado:** apenas cartão de crédito (`CREDIT_CARD` / gateway `netcred`).
 2. **CPF e telefone da conta** são obrigatórios no servidor antes de `accept_proposal` (`PROFILE_INCOMPLETE`).
-3. **CPF do titular do cartão** é campo do formulário de cartão e vai à NetCred na tokenização; **não** precisa ser igual ao CPF da conta Renovi.
+3. **CPF do titular do cartão** é campo do formulário de cartão e vai à NetCred na tokenização; **não** precisa ser igual ao CPF da conta Prestway.
 4. Tokens são sempre criados sob **`NETCRED_PLATFORM_COMPANY_ID`** (plataforma); a cobrança usa a company do **prestador** no split.
 5. Prestador só é cobrável/aceitável se `onboarding_status = ACTIVE` **e** `netcred_company_id` **e** `netcred_bank_account_id` preenchidos (`payment_provider_is_credentialed`).
 6. Parcelas escolhidas no checkout/manual passam por **HMAC** (`payment_verify_installment_selection_hmac`) com expiração.
@@ -420,7 +420,7 @@ Fonte canônica: `mapPaymentUserMessage.ts` (+ `formatManualPaymentFailureMessag
 |--------|------------------------------|
 | `PROFILE_INCOMPLETE` | Complete seu CPF e telefone no checkout antes de confirmar. |
 | `PROVIDER_NOT_CREDENTIALED` / `provider_not_credentialed` | Prestador ainda não apto a receber; tente mais tarde. |
-| `PAYMENT_TOKEN_COMPANY_MISMATCH` | Cartão não vinculado à empresa Renovi; adicione de novo. |
+| `PAYMENT_TOKEN_COMPANY_MISMATCH` | Cartão não vinculado à empresa Prestway; adicione de novo. |
 | `CARD_REJECTED` | Não foi possível cadastrar este cartão… |
 | `REJECTED` / `CARD_DECLINED` | Cartão recusado… |
 | `INSUFFICIENT_FUNDS` | Saldo insuficiente… |

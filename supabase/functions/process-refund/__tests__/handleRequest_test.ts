@@ -47,7 +47,7 @@ function createDeps(overrides: Partial<ProcessRefundDeps> = {}): ProcessRefundDe
     markRefundGatewayAcked: async () => {},
     refundTransaction: async () => ({ success: true }),
     captureCriticalError: () => {},
-    getSupportUrl: () => "https://renovi.com.br/suporte",
+    getSupportUrl: () => "https://prestway.com/suporte",
     checkRateLimit: async () => ({ allowed: true, retryAfter: 0 }),
     now: () => new Date("2026-07-01T10:00:00.000Z"),
     ...overrides,
@@ -156,7 +156,7 @@ Deno.test("PAID gateway fail: zero DB writes (no commit, no mark ACK)", async ()
   assertEquals(commitCalled, false);
   assertEquals(markAcked, false);
   const body = await response.json();
-  assertEquals(body.support_url, "https://renovi.com.br/suporte");
+  assertEquals(body.support_url, "https://prestway.com/suporte");
   assertEquals(body.error, "refund_failed");
   assertEquals(body.refund_submit_status, undefined);
 });

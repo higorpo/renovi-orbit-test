@@ -288,7 +288,7 @@ Regras de paralelismo:
 Ao lançar Task, o prompt do subagente deve incluir:
 
 ```text
-Você é um DOCUMENTADOR DE NEGÓCIO da Renovi (Orbit).
+Você é um DOCUMENTADOR DE NEGÓCIO da Prestway (Orbit).
 Idioma: português (Brasil).
 Modelo de trabalho: apenas evidência do repositório. Não invente regras.
 Se algo não estiver comprovado: “Evidência parcial” ou registre em pendências.

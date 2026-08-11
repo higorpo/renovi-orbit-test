@@ -73,7 +73,7 @@ describe("EntityTypeSection", () => {
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText(/Para profissionais autônomos/)).toBeInTheDocument();
     expect(within(dialog).getByText(/Para empresas ou profissionais que atuam com CNPJ/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/A Renovi não fornece assessoria jurídica/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/A Prestway não fornece assessoria jurídica/)).toBeInTheDocument();
   });
 
   it("marks PJ option with aria-pressed when value is pj", () => {

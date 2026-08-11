@@ -244,7 +244,7 @@ begin
   where p.id = v_actor_id;
 
   if v_sender_name is null and v_event.event_type = 'PROPOSAL_EXPIRED' then
-    v_sender_name := 'Renovi';
+    v_sender_name := 'Prestway';
   elsif v_sender_name is null then
     v_sender_name := 'User';
   end if;

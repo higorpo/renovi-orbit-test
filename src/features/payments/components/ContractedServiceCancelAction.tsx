@@ -102,7 +102,7 @@ export function ContractedServiceCancelAction({
         type="button"
         variant="outline"
         className={cn(
-          "w-full gap-2 rounded-pill transition-transform duration-fast ease-renovi active:scale-[0.97] sm:w-auto",
+          "w-full gap-2 rounded-pill transition-transform duration-fast ease-prestway active:scale-[0.97] sm:w-auto",
           className,
         )}
         onClick={() => setOpen(true)}

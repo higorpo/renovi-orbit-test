@@ -263,7 +263,7 @@ values
   (
     'account.provider_onboarding_incomplete_reminder',
     'email',
-    'Complete seu credenciamento na Renovi',
+    'Complete seu credenciamento na Prestway',
     '<p>Você ainda não concluiu o credenciamento de pagamentos.</p><p>Finalize o envio dos documentos para liberar oportunidades e receber pelos serviços.</p><p><a href="{{deep_link_path}}">Completar credenciamento</a></p>',
     '{"type":"object","properties":{"provider_id":{"type":"string"},"provider_gateway_account_id":{"type":"string"},"onboarding_status":{"type":"string"},"reminder_count":{"type":"integer"},"deep_link_path":{"type":"string"}},"required":["provider_id","deep_link_path"],"additionalProperties":true}'::jsonb,
     true
