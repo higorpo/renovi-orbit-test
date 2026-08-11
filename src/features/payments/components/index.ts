@@ -29,6 +29,8 @@ export type {
 } from "./ManualPaymentButton";
 export { ManualPaymentFailureAlert } from "./ManualPaymentFailureAlert";
 export type { ManualPaymentFailureAlertProps } from "./ManualPaymentFailureAlert";
+export { ManualPaymentFailureStatus } from "./ManualPaymentFailureStatus";
+export type { ManualPaymentFailureStatusProps } from "./ManualPaymentFailureStatus";
 export { ManualPaymentDialog } from "./ManualPaymentDialog";
 export type { ManualPaymentDialogProps } from "./ManualPaymentDialog";
 /** @deprecated Prefer ManualPaymentDialog */

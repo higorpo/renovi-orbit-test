@@ -151,6 +151,7 @@ vi.mock("@/features/service-completion", () => ({
 
 vi.mock("@/features/payments", () => ({
   ManualPaymentDialog: () => <div data-testid="manual-payment-dialog" />,
+  ManualPaymentFailureStatus: () => <div data-testid="manual-payment-failure-alert" />,
 }));
 
 vi.mock("../../hooks/useClientCardManualPaymentBridge", () => ({
@@ -551,6 +552,7 @@ describe("ServiceDetailPage branch coverage", () => {
 
     expect(screen.getByTestId("contracted-section")).toBeInTheDocument();
     expect(screen.getByTestId("service-detail-actions-bar")).toBeInTheDocument();
+    expect(screen.getByTestId("manual-payment-failure-alert")).toBeInTheDocument();
     expect(screen.queryByTestId("rejection-alert")).not.toBeInTheDocument();
   });
 
@@ -565,6 +567,7 @@ describe("ServiceDetailPage branch coverage", () => {
 
     expect(screen.getByTestId("contracted-section")).toBeInTheDocument();
     expect(screen.getByTestId("service-detail-actions-bar")).toBeInTheDocument();
+    expect(screen.queryByTestId("manual-payment-failure-alert")).not.toBeInTheDocument();
   });
 
   it("renders provider proposal section without contracted service", () => {

@@ -112,10 +112,7 @@ describe("ManualPaymentRecovery", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Ajustar pagamento/i }));
     expect(screen.getByTestId("manual-payment-dialog")).toBeInTheDocument();
-    expect(screen.getByText("Pagamento falhou")).toBeInTheDocument();
-    expect(
-      screen.getByText(/cancelado automaticamente perto da data agendada/i),
-    ).toBeInTheDocument();
+    expect(screen.queryByText("Pagamento falhou")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Ajustar pagamento/i })).toHaveClass(
       "sm:w-auto",
     );

@@ -101,7 +101,7 @@ describe("ServiceDetailActionsBar", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Comparar orçamentos|Ver orçamento/i }));
     expect(onOpenBudgetSheet).toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Cancelar pedido" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancelar pedido de serviço" })).toBeInTheDocument();
   });
 
   it("renders republish for cancelled client request", () => {
@@ -114,7 +114,7 @@ describe("ServiceDetailActionsBar", () => {
     );
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Republicar novo pedido de serviço" }),
+      screen.getByRole("button", { name: "Republicar este pedido de serviço" }),
     );
     expect(republishMock).toHaveBeenCalledWith("sr-1");
   });

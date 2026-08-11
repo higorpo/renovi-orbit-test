@@ -29,6 +29,7 @@ import {
   getServiceRequestBudgetActionState,
 } from "../utils/serviceRequestBudgetAction";
 import { SERVICE_DETAIL_ACTION_BUTTON_CLASS } from "../constants/serviceDetail.constants";
+import { RefreshCcw, X } from "lucide-react";
 
 export interface ServiceDetailActionsBarProps {
   model: ServiceModel;
@@ -101,7 +102,8 @@ export function ServiceDetailActionsBar({
           onClick={() => republishCancelledService(model.id)}
           disabled={isRepublishing}
         >
-          {isRepublishing ? "Republicando…" : "Republicar novo pedido de serviço"}
+          <RefreshCcw className="h-4 w-4 shrink-0" aria-hidden />
+          {isRepublishing ? "Republicando…" : "Republicar este pedido de serviço"}
         </Button>
       ) : null}
 
@@ -144,7 +146,7 @@ export function ServiceDetailActionsBar({
         <ManualPaymentRecovery
           contractedServiceId={contracted.id}
           serviceRequestId={model.id}
-          className={SERVICE_DETAIL_ACTION_BUTTON_CLASS}
+          className={outlineActionClass}
         />
       ) : null}
 
@@ -175,10 +177,7 @@ export function ServiceDetailActionsBar({
           scheduledShift={contracted.scheduledShift ?? "morning"}
           viewerRole={isClient ? "client" : "provider"}
           onSuccess={onMutated}
-          className={cn(
-            outlineActionClass,
-            "text-destructive hover:bg-destructive/5 hover:text-destructive",
-          )}
+          className={outlineActionClass}
         />
       ) : null}
 
@@ -194,7 +193,8 @@ export function ServiceDetailActionsBar({
             onClick={() => setCancelDialogOpen(true)}
             disabled={isCancelling}
           >
-            Cancelar pedido
+            <X className="h-4 w-4 shrink-0" aria-hidden />
+            Cancelar pedido de serviço
           </Button>
           <AlertDialogContent>
             <AlertDialogHeader>

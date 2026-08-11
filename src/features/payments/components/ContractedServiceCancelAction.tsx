@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -102,12 +102,13 @@ export function ContractedServiceCancelAction({
         type="button"
         variant="outline"
         className={cn(
-          "w-full rounded-pill text-destructive transition-transform duration-fast ease-renovi hover:bg-destructive/5 hover:text-destructive active:scale-[0.97] sm:w-auto",
+          "w-full gap-2 rounded-pill transition-transform duration-fast ease-renovi active:scale-[0.97] sm:w-auto",
           className,
         )}
         onClick={() => setOpen(true)}
         disabled={processRefund.isPending}
       >
+        <X className="h-4 w-4 shrink-0" aria-hidden />
         Cancelar serviço
       </Button>
       <AlertDialogContent>

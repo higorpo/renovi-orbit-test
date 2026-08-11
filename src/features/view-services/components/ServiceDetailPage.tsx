@@ -6,6 +6,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/auth";
 import { ReceivedBudgetDetailsSheet } from "@/features/negotiation-proposals";
+import { ManualPaymentFailureStatus } from "@/features/payments";
 import { useService } from "../hooks/useService";
 import {
   mapSuggestedEquipmentToPt,
@@ -127,6 +128,9 @@ export function ServiceDetailPage({
     <div className={pageClassName}>
       {isProvider ? (
         <ServiceProviderProposalRejectionAlert serviceRequestId={model.id} />
+      ) : null}
+      {isClient && model.contracted ? (
+        <ManualPaymentFailureStatus contractedServiceId={model.contracted.id} />
       ) : null}
 
       <article className="overflow-hidden rounded-lg border border-border bg-card shadow-elevation-1">

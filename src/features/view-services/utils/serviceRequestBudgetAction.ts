@@ -25,7 +25,7 @@ export function getServiceRequestBudgetActionLabel({
     return isNegotiation ? "Comparar orçamentos" : "Histórico de orçamentos";
   }
 
-  return isNegotiation ? "Ver orçamento" : "Ver histórico";
+  return isNegotiation ? "Ver orçamento recebido" : "Ver orçamento recebido";
 }
 
 export function getServiceRequestBudgetActionIcon(

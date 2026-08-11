@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { CalendarClock } from "lucide-react";
-import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import type { ProfileRole } from "@/features/auth";
 import { cn } from "@/lib/utils";
+import { CalendarClock } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router";
 import type { ServiceRescheduleSnapshot } from "../types/serviceReschedule.types";
 import { RequestRescheduleDialog } from "./RequestRescheduleDialog";
 
@@ -27,8 +27,7 @@ export function ContractedServiceRescheduleAction({
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
-  const canRequest =
-    viewerRole === "client"
+  const canRequest = viewerRole === "client"
       ? Boolean(reschedule?.canClientRequestReschedule)
       : Boolean(reschedule?.canProviderRequestReschedule);
 
@@ -65,7 +64,8 @@ export function ContractedServiceRescheduleAction({
           className={cn("w-full rounded-pill sm:w-auto", className)}
           onClick={handleNavigateToChat}
         >
-          Ver pedido de reagendamento no chat
+          <CalendarClock className="h-4 w-4" aria-hidden />
+          Ver pedido de reagendamento
         </Button>
       ) : null}
 

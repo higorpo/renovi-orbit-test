@@ -84,6 +84,7 @@ export {
   ManualPaymentButton,
   ManualPaymentRecovery,
   ManualPaymentFailureAlert,
+  ManualPaymentFailureStatus,
   ManualPaymentDialog,
   ManualPaymentModal,
   ContractedServiceCancelAction,

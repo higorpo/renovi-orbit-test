@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { isManualPaymentEligible } from "../types/paymentSchedule.types";
 import { usePaymentSchedule } from "../hooks/usePaymentSchedule";
-import { ManualPaymentFailureAlert } from "./ManualPaymentFailureAlert";
 import { ManualPaymentDialog } from "./ManualPaymentDialog";
 
 export type ManualPaymentButtonProps = {
@@ -27,12 +26,12 @@ export function ManualPaymentButton({
   return (
     <Button
       type="button"
-      size="sm"
-      className={className}
+      variant="outline"
+      className={cn("w-full gap-2 rounded-pill sm:w-auto", className)}
       onClick={onClick}
       disabled={disabled}
     >
-      <CreditCard className="mr-2 h-4 w-4" aria-hidden />
+      <CreditCard className="h-4 w-4 shrink-0" aria-hidden />
       Ajustar pagamento
     </Button>
   );
@@ -44,6 +43,7 @@ export type ManualPaymentRecoveryProps = {
   className?: string;
 };
 
+/** CTA + dialog only. Failure alert lives on the host page (`ManualPaymentFailureStatus`). */
 export function ManualPaymentRecovery({
   contractedServiceId,
   serviceRequestId,
@@ -61,19 +61,11 @@ export function ManualPaymentRecovery({
 
   return (
     <>
-      <ManualPaymentFailureAlert
-        scheduleState={scheduleState}
-        failureCode={schedule?.failureCode}
-        className="w-full basis-full"
-      />
       <ManualPaymentButton
         scheduleState={scheduleState}
         onClick={() => setOpen(true)}
         disabled={scheduleQuery.isLoading}
-        className={cn(
-          "w-full self-stretch rounded-pill sm:w-auto sm:self-start",
-          className,
-        )}
+        className={className}
       />
       {schedule && context ? (
         <ManualPaymentDialog

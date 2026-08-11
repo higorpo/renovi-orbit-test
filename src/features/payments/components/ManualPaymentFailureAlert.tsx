@@ -27,7 +27,7 @@ export function ManualPaymentFailureAlert({
       className={cn("border-destructive/30 bg-destructive/5", className)}
     >
       <AlertTriangle className="h-4 w-4" />
-      <AlertTitle className="text-sm font-semibold">Pagamento falhou</AlertTitle>
+      <AlertTitle className="text-sm font-semibold">Não foi possível processar o pagamento</AlertTitle>
       <AlertDescription className="mt-1.5 space-y-1.5 text-sm leading-relaxed">
         <p>{failureMessage}</p>
         <p>
