@@ -79,7 +79,7 @@ export function ServiceDetailAttributeCards({
           icon: Crosshair,
           label: "Prioridade",
           value: priority,
-          accent: "priority" as const,
+          accent: "neutral" as const,
         }
       : null,
     duration
