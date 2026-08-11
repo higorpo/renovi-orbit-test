@@ -9,7 +9,7 @@ Documentação baseada em `src/features/view-services/`, rota `/dashboard/servic
 - **O que é:** módulo **agnóstico de papel** que unifica **lista** e **detalhe** de pedidos (`service_request_id`) em um contrato JSON estável (`ServiceModel`), via RPCs (sem PostgREST `.from()` para listagem/detalhe).
 - **Problema que resolve:** evitar drift entre telas cliente/prestador e entre lista e detalhe; centralizar fase de produto (`list_phase`), badges e ações contextuais.
 - **Quem usa:** **cliente** e **prestador** autenticados (rota sob `ProtectedRoute` `client` | `provider`); admin de plataforma tem acesso SQL (`is_platform_admin`), sem UI dedicada evidenciada.
-- **Resultado esperado:** ver o pedido, status UI por fase/contrato, o card **Próximo passo** (quando houver ação acionável), a timeline **Acompanhe seu pedido** (somente cliente, read-only V1) e executar ações permitidas (cancelar pedido em negociação, republicar, orçamentos, pagamento manual, conclusão, reagendar CTA, chat).
+- **Resultado esperado:** ver o pedido, status UI por fase/contrato, o card **Próximo passo** (quando houver ação acionável), a timeline **Acompanhe seu pedido** (somente cliente, read-only V1), o banner **Precisa de ajuda?** (link para o site principal `/suporte`) e executar ações permitidas (cancelar pedido em negociação, republicar, orçamentos, pagamento manual, conclusão, reagendar CTA, chat).
 
 ---
 

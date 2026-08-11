@@ -27,6 +27,7 @@ import { ServiceContractedSection } from "./ServiceContractedSection";
 import { ServiceDetailNextStepOverlays } from "./ServiceDetailNextStepOverlays";
 import { ServiceNextStepCard } from "./ServiceNextStepCard";
 import { ClientServiceJourneySection } from "./ClientServiceJourneySection";
+import { ServiceSupportHelpCard } from "./ServiceSupportHelpCard";
 import { ServiceProviderLocationSection } from "./ServiceProviderLocationSection";
 import { ServiceDetailClientActions } from "./ServiceDetailClientActions";
 import { ServiceDetailFloatingActions } from "./ServiceDetailFloatingActions";
@@ -214,6 +215,7 @@ export function ServiceDetailPage({
           suggestedEquipmentPt={suggestedEquipmentPt}
           suggestedMaterialsPt={suggestedMaterialsPt}
         />
+        <ServiceSupportHelpCard />
       </div>
 
       {showSecondarySections ? (

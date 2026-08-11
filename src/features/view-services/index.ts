@@ -137,6 +137,14 @@ export { ServiceJourneyCardSkeleton } from "./components/ServiceJourneyCardSkele
 export type { ServiceJourneyCardSkeletonProps } from "./components/ServiceJourneyCardSkeleton";
 export { ClientServiceJourneySection } from "./components/ClientServiceJourneySection";
 export type { ClientServiceJourneySectionProps } from "./components/ClientServiceJourneySection";
+export { ServiceSupportHelpCard } from "./components/ServiceSupportHelpCard";
+export type { ServiceSupportHelpCardProps } from "./components/ServiceSupportHelpCard";
+export {
+  SERVICE_SUPPORT_URL,
+  SERVICE_SUPPORT_HELP_TITLE,
+  SERVICE_SUPPORT_HELP_DESCRIPTION,
+  SERVICE_SUPPORT_HELP_CTA,
+} from "./constants/serviceSupport.constants";
 export { useServiceDetailNextStep } from "./hooks/useServiceDetailNextStep";
 export type {
   UseServiceDetailNextStepParams,
