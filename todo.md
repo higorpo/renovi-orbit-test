@@ -113,6 +113,8 @@ Coisas para fazer next
 
 - Permitir editar informações do pedido quando  ele ainda está buscando por propostas.
 
+- Chat não está mostrando avatar do prestador mesmo quando ele tem imagem. Verificar todos os outros lugares que possuem avatares se eles estão carregando a informação corretamente.
+
 
 
 
