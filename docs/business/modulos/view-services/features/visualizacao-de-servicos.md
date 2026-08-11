@@ -1,6 +1,6 @@
 # Visualização de serviços (`view-services`)
 
-Documentação baseada em `src/features/view-services/`, rota `/dashboard/services/:id`, consumo por `my-services` / `provider-jobs` / `provider-calendar`, e RPCs SQL `get_service` / `list_services` (migrations `20260705207000`–`20260705209000`, republicação `20260802170000`).
+Documentação baseada em `src/features/view-services/`, rota `/dashboard/services/:id`, consumo por `my-services` / `provider-jobs` / `provider-calendar`, e RPCs SQL `get_service` / `list_services` (migrations `20260705207000`–`20260705209000`, republicação `20260802170000`) e `get_client_service_journey` (`20260810233000`).
 
 ---
 
@@ -9,7 +9,7 @@ Documentação baseada em `src/features/view-services/`, rota `/dashboard/servic
 - **O que é:** módulo **agnóstico de papel** que unifica **lista** e **detalhe** de pedidos (`service_request_id`) em um contrato JSON estável (`ServiceModel`), via RPCs (sem PostgREST `.from()` para listagem/detalhe).
 - **Problema que resolve:** evitar drift entre telas cliente/prestador e entre lista e detalhe; centralizar fase de produto (`list_phase`), badges e ações contextuais.
 - **Quem usa:** **cliente** e **prestador** autenticados (rota sob `ProtectedRoute` `client` | `provider`); admin de plataforma tem acesso SQL (`is_platform_admin`), sem UI dedicada evidenciada.
-- **Resultado esperado:** ver o pedido, status UI por fase/contrato, o card **Próximo passo** (quando houver ação acionável) e executar ações permitidas (cancelar pedido em negociação, republicar, orçamentos, pagamento manual, conclusão, reagendar CTA, chat).
+- **Resultado esperado:** ver o pedido, status UI por fase/contrato, o card **Próximo passo** (quando houver ação acionável), a timeline **Acompanhe seu pedido** (somente cliente, read-only V1) e executar ações permitidas (cancelar pedido em negociação, republicar, orçamentos, pagamento manual, conclusão, reagendar CTA, chat).
 
 ---
 
@@ -114,6 +114,7 @@ flowchart TD
 10. Aba Disputas: placeholder vazio no cliente da API TS (sem linhas).
 11. Paginação: `page_size` clamp 1–100; default UI lista = 20 (`useServicesList`).
 12. Sem embeds PostgREST na API TS de list/detail — só `supabase.rpc(...)`.
+13. **Jornada do pedido** (`ServiceJourneyCard` / “Acompanhe seu pedido”): **somente cliente** no detalhe; abaixo do `ServiceNextStepCard`; **read-only** na V1; payload via RPC dedicada `get_client_service_journey` (não estende `get_service` / `project_service_row`); fetch paralelo ao detalhe.
 
 ---
 
@@ -162,7 +163,30 @@ Não há formulário Zod próprio nesta feature para o detalhe; mutações de li
 | `cancel_service_request` | Chamado por `cancelService` com `p_idempotency_key` (UUID novo a cada call na API TS) — regras detalhadas no domínio chats/CNS |
 | `republish_cancelled_service_request` | Só `client_id`; cancelado (SR ou CS); endereço ativo do ator; descrição/service_id; idempotency `view_services.republish_cancelled_service_request`; **enqueue enrichment** (não bootstrap matching) |
 | `record_provider_opportunity_view` | Prestador no detalhe (best-effort no front) |
+| `get_client_service_journey` | `auth.uid()`; ownership `service_requests.client_id`; retorna `{ milestones: [{ key, status, occurred_at }] }`; não-dono / inexistente → 42501 / not found; **GRANT** só `authenticated` (+ `postgres`); sem prestador |
 | Conclusão (`markServiceExecuted` / `confirmServiceCompleted`) | Ownership em **service-completion** (RPCs `service_completion_*`); UI via CTAs da Public API na `ServiceContractedSection` — **não** reexport de payments; checklist **não** inline no detalhe |
+
+### 10.1 Jornada do pedido — derivação e regras (RPC)
+
+Cadeia feliz (8 keys): `request_created` → `professionals_interested` → `quote_received` → `quote_approved` → `payment` → `service_scheduled` → `service_executed` → `rating`. Terminais: `cancelled`, `in_dispute`.
+
+| key | Completed quando | `occurred_at` (resumo) |
+|-----|------------------|------------------------|
+| `request_created` | SR existe | `service_requests.created_at` |
+| `professionals_interested` | existe chat do SR | `min(chats.created_at)` |
+| `quote_received` | existe proposta | `min(coalesce(submitted_at, created_at))` em propostas |
+| `quote_approved` | existe CS | `contracted_services.created_at` |
+| `payment` | CS passou de pending (pago / confirmado+) | `payment_schedules.paid_at`; **current** se `PENDING_PAYMENT` |
+| `service_scheduled` | CS `CONFIRMED`+ (`CONFIRMED`, `EXECUTED`, `COMPLETED`, `IN_DISPUTE`) | `paid_at` (fallback `cs.updated_at`) |
+| `service_executed` | `EXECUTED` / `COMPLETED` / `IN_DISPUTE` | `executed_at` |
+| `rating` | linha em `service_ratings` | `submitted_at` |
+| `cancelled` | SR ou CS `CANCELLED` | `cancelled_at` / fallback |
+| `in_dispute` | CS `IN_DISPUTE` | `cs.updated_at` (V1) |
+
+- **Gap-fill:** se o índice `i` não tem evento e algum `j > i` tem, `i` vira completed com `occurred_at` do primeiro `j` real.
+- **Current:** primeiro não-completed na cadeia feliz; em cancel/dispute, truncar futuros e append nó terminal current.
+- **Rating pós auto-complete:** CS `COMPLETED` sem rating → `rating` fica **current** (não completed); UI usa subtexto “Avaliação opcional” quando `contracted.status === COMPLETED`.
+- **Labels no front:** pagamento completed → “Pagamento confirmado”; current/upcoming → “Pagamento pendente”. Demais labels/subtextos em `serviceJourney.constants` / `presentServiceJourneyMilestones`.
 
 ---
 
@@ -296,6 +320,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | Reagendar (CTA) | Client/provider | role client\|provider + seção contratada | `ContractedServiceRescheduleAction` |
 | Iniciar / ver negociação | Prestador | sempre no detalhe (FAB) | `initiateConversation` ou navega chat existente |
 | **Próximo passo** (card) | Client/provider | Ranking acionável de `getClient/ProviderServiceNextStep` (mesmo intent primário da lista); senão não renderiza | `ServiceNextStepCard` no topo do conteúdo (após header); handlers via `useServiceDetailNextStep` — pagamento (`FAILED_PERMANENT`), avaliar, orçamentos, chat/mensagens, mark-executed, mapa, scroll à proposta. CTAs legados coexistentes (deprecated) |
+| **Acompanhe seu pedido** (jornada) | Cliente | Sempre que a RPC devolve milestones (hook `enabled: isClient`) | `ServiceJourneyCard` **abaixo** do Próximo passo; skeleton enquanto carrega; **read-only** V1 (sem ação nos nós). Prestador: não monta |
 | Abrir no mapa | Prestador | contracted + coords | Google Maps |
 | Editar/enviar proposta | Prestador | seção proposta + `canEdit…` | negotiation-proposals |
 
@@ -324,6 +349,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 8. Cancel da API TS gera **novo** UUID de idempotência a cada chamada (não reutiliza em retry de UI — evidência: `crypto.randomUUID()` inline).
 9. Republicar **reutiliza** key no retry via `useRef` até sucesso.
 10. **Próximo passo:** ranking de intent compartilhado com Meus Serviços (`resolveClient/ProviderCardActions` em `view-services`); o card **não** busca dados além do `ServiceModel` de `useService`; exclusões V1: `details`, `cancel`, estados só informativos; prestador **sem** card de pagamento; footer contextual (lock em pagamento; shield curto em orçamentos).
+11. **Jornada do pedido:** RPC e presentation separados do `ServiceModel`; prestador nunca vê o card; V1 sem deep-link/clique nos marcos.
 
 ---
 
@@ -349,7 +375,10 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 - `supabase/migrations/20260705208000_create_view_services_rpcs.sql`
 - `supabase/migrations/20260705209000_fix_list_services_cte_scope.sql`
 - `supabase/migrations/20260802170000_republish_cancelled_service_request.sql`
+- `supabase/migrations/20260810233000_get_client_service_journey.sql`
 - `supabase/tests/view-services/` (pgTAP RPCs / republish)
+- `supabase/tests/view_services/get_client_service_journey_test.sql`
+- `src/features/view-services/components/ServiceJourneyCard.tsx`, `hooks/useClientServiceJourney.ts`, `utils/presentServiceJourney.ts`
 
 ---
 
@@ -366,6 +395,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | Pagamento manual | Sim | Não (`showManualPayment={isClient}`) |
 | Settlement | Não | `ProviderSettlementStatus` |
 | Opportunity view | Não | Sim ao abrir detalhe |
+| **Acompanhe seu pedido** | Sim (`get_client_service_journey` + card) | Não |
 
 ---
 
@@ -433,3 +463,5 @@ Reescrita para o padrão 20+ seções do orquestrador: sheet vs página, diferen
 **2026-08-07 (step de sucesso pós avaliação do cliente):** após confirm-with-rating ou optional rating, `ClientEvaluateServiceSheet` permanece na fase `success` (`ClientEvaluateSuccessStep` → `CompletionSuccessStep`, `chrome="immersive"`; CTA **“Entendi”**); toast de sucesso removido do hook; `ClientEvaluateServiceAction` mantém a sheet montada enquanto `open`. Normas em [conclusao-e-enrichment](../../service-completion/features/conclusao-e-enrichment.md).
 
 **2026-08-10 (Próximo passo):** card `ServiceNextStepCard` no detalhe com ranking compartilhado (`resolveClient/ProviderCardActions` / `getClient/ProviderServiceNextStep`); CTAs legados coexistentes (deprecated). Glossário: termo **Próximo passo**.
+
+**2026-08-10 (Jornada do pedido):** card cliente-only **Acompanhe seu pedido** (`ServiceJourneyCard`) abaixo do Próximo passo; RPC `get_client_service_journey` (ownership, gap-fill, cancel/dispute, rating opcional pós auto-complete); labels no front (pagamento “confirmado”/“pendente”). Glossário: **Jornada do pedido**.

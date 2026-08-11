@@ -14,6 +14,7 @@
 |---------|---------|
 | Lista | RPC `list_services` — paginação, filtros, `list_phase`; hook `useServicesList` |
 | Detalhe | RPC `get_service`; hook `useService`; UI `ServiceDetailPage` |
+| Jornada (cliente) | RPC `get_client_service_journey`; hook `useClientServiceJourney`; card **Acompanhe seu pedido** abaixo do Próximo passo (read-only V1) |
 | Shell de rota | `ServiceDetailShell` — `null` se sheet; senão página |
 | Sheet | `ServiceDetailSheet` montado no `DashboardLayout` quando `useServiceDetailModal().isOpen` |
 | Cancelamento pedido (cliente) | RPC `cancel_service_request` via `cancelService` |
@@ -39,7 +40,7 @@
 
 1. Lista em `my-services` → clique → navigate com state sheet → `ServiceDetailSheet`.
 2. Deep link `/dashboard/services/:id` → `ServiceDetailPage` full-page / stack mobile.
-3. Detalhe carrega `get_service` → seções por `listPhase` / `contracted` / role.
+3. Detalhe carrega `get_service` → seções por `listPhase` / `contracted` / role; cliente também carrega a jornada em paralelo (`get_client_service_journey`).
 4. Cliente cancela pedido em negociação ou republica cancelado; prestador inicia/abre chat.
 
 ## 6. Regras transversais
@@ -82,9 +83,9 @@
 |------|----------|
 | Public API | `src/features/view-services/index.ts` |
 | API | `api/services.api.ts`, `opportunityView.api.ts` (conclusão **não** vive mais em APIs locais de lifecycle) |
-| Hooks | `useServicesList`, `useService`, `useCancelService`, `useRepublishCancelledService`, `useServiceDetailModal`, chat, budget sheet |
-| UI | `ServiceDetailShell`, `ServiceDetailSheet`, `ServiceDetailPage`; `ServiceContractedSection` (CTAs `service-completion`), `SimpleServiceCard`, … |
-| Tipos / nav | `types/service.types.ts`, `types/serviceDetailNavigation.types.ts` |
-| Constantes | `queryKeys.ts`, `routes.ts`, `statusTabs.ts`, `statusBadge.ts` |
-| SQL | `20260705207000_*`, `20260705208000_*`, `20260705209000_*`, `20260802170000_republish_*` |
-| Testes | `src/features/view-services/**/__tests__`, `supabase/tests/view-services/` |
+| Hooks | `useServicesList`, `useService`, `useClientServiceJourney`, `useCancelService`, `useRepublishCancelledService`, `useServiceDetailModal`, chat, budget sheet |
+| UI | `ServiceDetailShell`, `ServiceDetailSheet`, `ServiceDetailPage`; `ServiceNextStepCard`; `ServiceJourneyCard` / skeleton (cliente); `ServiceContractedSection` (CTAs `service-completion`), `SimpleServiceCard`, … |
+| Tipos / nav | `types/service.types.ts`, `types/serviceJourney.types.ts`, `types/serviceDetailNavigation.types.ts` |
+| Constantes | `queryKeys.ts`, `routes.ts`, `statusTabs.ts`, `statusBadge.ts`, `serviceJourney.constants.ts` |
+| SQL | `20260705207000_*`, `20260705208000_*`, `20260705209000_*`, `20260802170000_republish_*`, `20260810233000_get_client_service_journey.sql` |
+| Testes | `src/features/view-services/**/__tests__`, `supabase/tests/view-services/`, `supabase/tests/view_services/get_client_service_journey_test.sql` |
