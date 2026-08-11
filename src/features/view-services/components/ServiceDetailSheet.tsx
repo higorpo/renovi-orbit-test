@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { X } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { SERVICE_DETAIL_SHEET_WIDTH_CLASS } from "../constants/serviceDetail.constants";
 import { ServiceDetailPage } from "./ServiceDetailPage";
+import { cn } from "@/lib/utils";
 
 interface ServiceDetailSheetProps {
   serviceRequestId: string;
@@ -24,7 +26,10 @@ export function ServiceDetailSheet({ serviceRequestId }: ServiceDetailSheetProps
       <SheetContent
         side="right"
         hideCloseButton
-        className="flex w-full flex-col gap-0 border-l p-0 sm:max-w-xl md:max-w-2xl lg:max-w-3xl"
+        className={cn(
+          "flex flex-col gap-0 border-l p-0",
+          SERVICE_DETAIL_SHEET_WIDTH_CLASS,
+        )}
       >
         <SheetHeader className="relative h-14 flex-row items-center space-y-0 border-b px-4 pr-16 sm:h-16 sm:px-6 sm:pr-20">
           <SheetTitle>Detalhes do serviço</SheetTitle>

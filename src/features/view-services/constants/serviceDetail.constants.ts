@@ -58,3 +58,10 @@ export const SERVICE_DETAIL_PAGE_MAX_WIDTH_CLASS = "max-w-5xl";
 
 export const SERVICE_DETAIL_PAGE_SHELL_CLASS =
   "mx-auto w-full min-w-0 max-w-5xl px-4 py-6";
+
+/** Desktop service-detail sheet width (mobile stays full-bleed). */
+export const SERVICE_DETAIL_SHEET_WIDTH_CLASS = "w-full sm:w-[70vw] sm:max-w-[70vw]";
+
+/** Floating CTA bar width when hosted inside the detail sheet. */
+export const SERVICE_DETAIL_SHEET_FLOATING_ACTIONS_WIDTH_CLASS =
+  "w-[calc(100%-2rem)] sm:w-[calc(70vw-2rem)]";

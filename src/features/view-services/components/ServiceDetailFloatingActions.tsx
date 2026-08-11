@@ -1,7 +1,7 @@
 import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { SERVICE_DETAIL_PAGE_MAX_WIDTH_CLASS } from "../constants/serviceDetail.constants";
+import { SERVICE_DETAIL_PAGE_MAX_WIDTH_CLASS, SERVICE_DETAIL_SHEET_FLOATING_ACTIONS_WIDTH_CLASS } from "../constants/serviceDetail.constants";
 
 interface ServiceDetailFloatingActionsProps {
   hasExistingChat: boolean;
@@ -66,7 +66,7 @@ export function ServiceDetailFloatingActions({
         className={cn(
           "fixed bottom-5 z-40 hidden rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/85 md:block",
           isInsideSheet
-            ? "right-4 w-[calc(100%-2rem)] sm:w-[calc(36rem-2rem)] md:w-[calc(42rem-2rem)] lg:w-[calc(48rem-2rem)]"
+            ? cn("right-4", SERVICE_DETAIL_SHEET_FLOATING_ACTIONS_WIDTH_CLASS)
             : cn("left-1/2 w-[calc(100%-2rem)] -translate-x-1/2", SERVICE_DETAIL_PAGE_MAX_WIDTH_CLASS),
         )}
       >
