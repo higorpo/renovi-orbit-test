@@ -13,7 +13,7 @@
 - **Objetivo:** motor multi-etapa: blocos, visibilidade condicional, validação, progresso, resumo.
 - **Escopo:** puramente front (sem pasta `api` dedicada).
 - **Limites:** não persiste sozinho — quem persiste é o fluxo de pedido.
-- **Relação:** `request-quote` consome schemas obtidos via APIs de serviço/formulário.
+- **Relação:** `request-quote` consome schemas obtidos via APIs de serviço/formulário; `view-services` consome `buildSummaryEntries` / `SummaryEntry` (com `type`) para **Informações do pedido** no detalhe.
 
 ## 3. Features
 

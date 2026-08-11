@@ -8,8 +8,10 @@ vi.mock("@/features/dynamic-form", () => ({
     if (!formData) return [];
     return Object.entries(formData).map(([id, value]) => ({
       id,
-      label: id,
+      label: id === "descricao" ? "Descreva o que precisa" : id,
       displayValue: String(value),
+      type: id === "descricao" ? "description_ai" : id === "urgency" ? "urgency" : "text",
+      rawValue: value,
     }));
   },
 }));
@@ -22,15 +24,17 @@ describe("FormResponsesSummary", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders labeled form answers", () => {
+  it("renders labeled form answers with icons", () => {
     render(
       <FormResponsesSummary
-        formData={{ rooms: 2 }}
+        formData={{ urgency: "Alta", descricao: "Texto longo do pedido" }}
         formSchema={null}
       />,
     );
     expect(screen.getByText("Informações do pedido")).toBeInTheDocument();
-    expect(screen.getByText("rooms")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("urgency")).toBeInTheDocument();
+    expect(screen.getByText("Alta")).toBeInTheDocument();
+    expect(screen.getByText("Descreva o que precisa")).toBeInTheDocument();
+    expect(screen.getByText("Texto longo do pedido")).toBeInTheDocument();
   });
 });

@@ -60,6 +60,7 @@ describe("summaryDisplay", () => {
         label: "Name",
         displayValue: "Alice",
         rawValue: "Alice",
+        type: "text",
       });
     });
 

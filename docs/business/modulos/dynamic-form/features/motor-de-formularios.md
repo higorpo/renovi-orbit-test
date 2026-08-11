@@ -64,6 +64,7 @@ Os campos **não são fixos**: cada serviço define blocos no JSON. Para documen
 | Step | Agrupamento de blocos |
 | Visibilidade | Regra opcional que mostra/oculta blocos |
 | Progresso | Derivado de passos visíveis e completos |
+| `SummaryEntry` | Entrada de resumo flat (`buildSummaryEntries`): `id`, `label`, `displayValue`, `rawValue`, **`type`** (do `block.type` do schema), `emoji?` — usada pelo detalhe do serviço (`FormResponsesSummary`) |
 
 ## 9. Validações de front-end
 
@@ -87,6 +88,7 @@ Os campos **não são fixos**: cada serviço define blocos no JSON. Para documen
 ## 13. Integrações
 
 - Dados do formulário alimentam **generate-smart-description** (contexto).
+- **view-services:** detalhe do serviço consome `buildSummaryEntries` + `SummaryEntry` (Public API) em `FormResponsesSummary` — apresentação visual fica em `view-services` (não no motor).
 
 ## 14. Listagens, buscas e filtros
 
@@ -99,6 +101,7 @@ Os campos **não são fixos**: cada serviço define blocos no JSON. Para documen
 | Avançar passo | Usuário | Valida blocos atuais |
 | Voltar | Usuário | Navegação interna |
 | Ver resumo | Usuário | `buildSummarySections` / completude |
+| Entradas flat (detalhe do serviço) | Consumidor (`view-services`) | `buildSummaryEntries` → `SummaryEntry[]` com `id`, `label`, `displayValue`, `rawValue`, **`type`** (= `block.type`) |
 
 ## 16. Dependências
 
@@ -118,7 +121,7 @@ Os campos **não são fixos**: cada serviço define blocos no JSON. Para documen
 
 - `src/features/dynamic-form/components/DynamicForm.tsx`, `FormProvider`, `StepRenderer`, `FormDemoPage.tsx` (demo DEV; `initialTab` opcional para testes)
 - `src/features/dynamic-form/hooks/useFieldValidation.ts`
-- Helpers: `getVisibleSteps`, `evaluateVisibilityRule`, `validateFormSchema`
+- Helpers: `getVisibleSteps`, `evaluateVisibilityRule`, `validateFormSchema`, `buildSummaryEntries` / `SummaryEntry` (`summaryDisplay.ts`)
 - `supabase/migrations/20260226100000_create_forms.sql`
 - `src/router.tsx` (rota demo DEV)
 
@@ -139,3 +142,7 @@ Os campos **não são fixos**: cada serviço define blocos no JSON. Para documen
 
 - **Drift:** rota DEV da demo é `/dev/demo/form` (`router.tsx`), não `/demo/form`.
 - Demais regras da auditoria 2026-04-27 revalidadas sem drift adicional (`validateFormSchema`, `useServiceSchema`, schema v2).
+
+## 23. Atualização de auditoria (2026-08-11)
+
+- **`SummaryEntry.type`:** `buildSummaryEntries` / `blockToEntry` passam a incluir `type` (= `block.type`) para o consumidor `FormResponsesSummary` (view-services) escolher ícone e largura por tipo de bloco. Apresentação visual documentada em [visualizacao-de-servicos](../../view-services/features/visualizacao-de-servicos.md).

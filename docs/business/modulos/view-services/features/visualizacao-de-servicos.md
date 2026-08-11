@@ -129,7 +129,7 @@ flowchart TD
 | `id` | `service_request_id` | Rota, mutações |
 | `listPhase` / `statusTabId` | `list_phase` | Badge, abas, ações |
 | `title`, `description`, `descriptionPreview` | request | Header / card simples |
-| `formData` / `formSchema` | request | `FormResponsesSummary` |
+| `formData` / `formSchema` | request | `FormResponsesSummary` — seção **Informações do pedido** (`ServiceDetailSection`); grid de cards (ícone por `block.type` + label + valor); ver §17.18 |
 | `photoPaths` | request.photos | Galeria |
 | `address` | address summary | Localização; mapa só prestador+contratado |
 | `service` | platform_service | Ícone/cor/título |
@@ -329,6 +329,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | **Próximo passo** (card) | Client/provider | Ranking acionável de `getClient/ProviderServiceNextStep` (mesmo intent primário da lista); senão não renderiza | `ServiceNextStepCard` no topo do conteúdo (após header); handlers via `useServiceDetailNextStep` — pagamento (`FAILED_PERMANENT`), avaliar, orçamentos, chat/mensagens, mark-executed, mapa, scroll à proposta. Prestador **sem chat**: copy “Inicie a negociação” + CTA habilitado (mesmo fluxo do FAB `initiateConversation`). CTAs legados coexistentes (deprecated) |
 | **Acompanhe seu pedido** (jornada) | Cliente | Sempre que a RPC devolve milestones (hook `enabled: isClient`) | `ServiceJourneyCard` **abaixo** do Próximo passo; skeleton enquanto carrega; **read-only** V1 (sem ação nos nós). Prestador: não monta |
 | **Equipamentos / Materiais que podem ser úteis** | Prestador | `isProvider` e lista PT não vazia | `ServiceDetailSection` com chips + popover `SuggestedItemsInfo` (copy: itens sugeridos com base no pedido; podem estar imprecisos). Cliente: não renderiza |
+| **Informações do pedido** | Client/provider | `buildSummaryEntries(formData, formSchema)` com ≥1 entrada | `FormResponsesSummary` em `ServiceDetailSection` “Informações do pedido”; grid de cards (ícone por tipo de bloco + label + valor); full-width em `textarea` / `description_ai` / `image_gallery`; sem entradas → não monta |
 | Abrir no mapa | Prestador | contracted + coords | Google Maps |
 | Ver perfil do profissional | Cliente | `contracted.provider.slug` presente | Navega para perfil público (`/perfil/:slug`) |
 | Editar/enviar proposta | Prestador | seção proposta + `canEdit…` | negotiation-proposals |
@@ -340,6 +341,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 | Tipo | Módulo / lib |
 |------|----------------|
 | Upstream dados | Pedido (`request-quote`), propostas, chats, payments, reschedule, **service-completion** |
+| **dynamic-form** | `buildSummaryEntries` / `SummaryEntry` (inclui `type`) para `FormResponsesSummary` |
 | Downstream UI hosts | `my-services`, `provider-jobs`, `provider-calendar`, `DashboardLayout` (sheet) |
 | Auth | `useAuth` / `profile.role` |
 | UI shared | `EmptyState`, `ErrorState`, Sheet Radix |
@@ -365,6 +367,7 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 15. **Insights:** detalhe usa `ServiceDetailAttributeCards`; `SimpleServiceInsightPanel` permanece só em cards de lista (`SimpleServiceCard`).
 16. **Conversas (cliente, negociação):** lista embutida na sequência normal de cards (`space-y-4`), **sem** zona secundária com `border-t`; shell visual = `ServiceDetailSection` (título/descrição na página); lista vem de `chats` (`ServiceRequestConversationList` + `ServiceRequestConversationRow`). Proposta do prestador (`ServiceProviderProposalSection`) segue na mesma sequência, não agrupada com conversas.
 17. **Sugestões de equipamentos/materiais:** gate de UI no `ServiceDetailPage` é `isProvider` (não o papel no payload); cliente vê descrição/formulário/fotos, mas **não** as seções de sugestão.
+18. **Informações do pedido (`FormResponsesSummary`):** monta entradas flat via `buildSummaryEntries` (`dynamic-form`); se não houver entradas, **não** renderiza. Shell = `ServiceDetailSection` título **“Informações do pedido”**. Layout: grid **1 coluna** no mobile e **2 colunas** a partir de `sm`; cada item é um card com ícone (círculo neutro), label e valor. Ícone escolhido por `entry.type` (= `block.type` do schema) em `getFormResponseIcon` (`formResponsePresentation`); tipos longos `textarea`, `description_ai` e `image_gallery` ocupam **full-width** (`sm:col-span-2`).
 
 ---
 
@@ -395,6 +398,8 @@ Detalhe normativo: [conclusao-e-enrichment](../../service-completion/features/co
 - `supabase/tests/view-services/` (pgTAP RPCs / republish)
 - `supabase/tests/view_services/get_client_service_journey_test.sql`
 - `src/features/view-services/components/ServiceJourneyCard.tsx`, `hooks/useClientServiceJourney.ts`, `utils/presentServiceJourney.ts`
+- `src/features/view-services/components/FormResponsesSummary.tsx`, `utils/formResponsePresentation.ts` (`getFormResponseIcon`, `isFormResponseFullWidth`)
+- `src/features/dynamic-form/utils/summaryDisplay.ts` (`SummaryEntry` com `type`; `buildSummaryEntries`)
 
 ---
 
@@ -453,6 +458,7 @@ Helpers de state: `createClientMyServicesServiceDetailState`, `createProviderMyS
 - [ ] Enrichment PENDING: pedido fora do feed até READY
 - [ ] Prestador: FAB inicia chat; local/mapa com contrato; card Serviço contratado **sem** header de reputação / CTA perfil / settlement
 - [ ] Prestador com `suggested_equipment` / `suggested_materials`: seções **Equipamentos / Materiais que podem ser úteis**; cliente no mesmo pedido: **não** vê essas seções
+- [ ] Detalhe com `formData`/`formSchema`: seção **Informações do pedido** em cards (ícone por tipo + label + valor); mobile 1 col / `sm+` 2 cols; campos longos (`textarea`, `description_ai`, `image_gallery`) em full-width; sem entradas → seção ausente
 - [ ] Cliente contracted: card rico com avatar, rating (oculto se count=0), valor, CTA perfil se slug; sem selo verificado
 - [ ] Prestador sem proposta/contrato: detalhe negado / empty
 - [ ] Aba Disputas: lista vazia
@@ -494,3 +500,5 @@ Reescrita para o padrão 20+ seções do orquestrador: sheet vs página, diferen
 **2026-08-11 (Conversas no detalhe):** lista de conversas do cliente em negociação passa a ficar em `ServiceDetailSection` (**Conversas** / “Negociações deste pedido com prestadores.”) na sequência normal de cards; removida a zona secundária (`border-t`) que agrupava conversas + proposta. `ServiceRequestConversationList` é content-only (shell na página); row de detalhe (`ServiceRequestConversationRow`: avatar, nome, preview, horário, ponto não lida — sem ícone/título do serviço nem badge de status); skeleton 2 rows; empty interno permanece. Componente continua na Public API de `chats`.
 
 **2026-08-11 (sugestões equipamentos/materiais):** no `ServiceDetailPage`, as seções **“Equipamentos que podem ser úteis”** e **“Materiais que podem ser úteis”** (`suggested_equipment` / `suggested_materials`) passam a ser exibidas **apenas para prestador** (`isProvider`); cliente não monta esses blocos.
+
+**2026-08-11 (Informações do pedido):** redesign visual de `FormResponsesSummary` — grid de cards (ícone em círculo neutro + label + valor), ícone dinâmico por `block.type` (`formResponsePresentation`), full-width em `textarea` / `description_ai` / `image_gallery`, 1 coluna mobile / 2 colunas `sm+`; permanece em `ServiceDetailSection` “Informações do pedido”. `SummaryEntry` em `dynamic-form` passa a incluir `type`.

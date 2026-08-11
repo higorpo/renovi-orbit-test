@@ -25,6 +25,7 @@ export interface SummaryEntry {
   label: string;
   displayValue: string;
   rawValue: unknown;
+  type: string;
   emoji?: string;
 }
 
@@ -47,6 +48,7 @@ function blockToEntry(blockId: string, block: { label: string; type: string; opt
     label: block.label,
     displayValue: getDisplayValue(block as Parameters<typeof getDisplayValue>[0], value),
     rawValue: value,
+    type: block.type,
     emoji: block.options?.[0]?.emoji ?? undefined,
   };
 }
