@@ -172,6 +172,20 @@ export function buildServiceNextStepShowcaseVariants(): ServiceNextStepShowcaseV
       }),
     },
     {
+      id: "provider-chat-start",
+      group: "Prestador",
+      label: "Iniciar negociação",
+      description: "Sem chat ainda — CTA inicia conversa (como o FAB).",
+      step: step({
+        intent: "chat",
+        title: "Inicie a negociação",
+        description:
+          "Comece a conversa com o cliente para tirar dúvidas e alinhar o serviço",
+        actionLabel: "Iniciar negociação",
+        icon: "message",
+      }),
+    },
+    {
       id: "provider-chat-no-unread",
       group: "Prestador",
       label: "Negociação / conversa",

@@ -296,6 +296,49 @@ describe("getProviderServiceNextStep", () => {
     ).toBeNull();
   });
 
+  it("returns start-negotiation chat step when provider has no chat yet", () => {
+    const step = getProviderServiceNextStep(
+      baseModel({
+        listPhase: "negotiation",
+        statusTabId: "negotiation",
+        chatSummary: null,
+        myProposal: null,
+        hasPendingProposal: false,
+      }),
+    );
+
+    expect(step).toMatchObject({
+      intent: "chat",
+      title: "Inicie a negociação",
+      actionLabel: "Iniciar negociação",
+      disabled: false,
+    });
+  });
+
+  it("returns continue-negotiation chat step when provider already has a chat", () => {
+    const step = getProviderServiceNextStep(
+      baseModel({
+        listPhase: "negotiation",
+        statusTabId: "negotiation",
+        chatSummary: {
+          id: "chat-1",
+          isUnread: false,
+          lastInteractionAt: "2025-03-02T00:00:00Z",
+          lastMessagePreview: null,
+        },
+        myProposal: null,
+        hasPendingProposal: false,
+      }),
+    );
+
+    expect(step).toMatchObject({
+      intent: "chat",
+      title: "Fale com o cliente",
+      actionLabel: "Ver negociação",
+      disabled: false,
+    });
+  });
+
   it("does not show payment next step for provider", () => {
     const step = getProviderServiceNextStep(
       baseModel({

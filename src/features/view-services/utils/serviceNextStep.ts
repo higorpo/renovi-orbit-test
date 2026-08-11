@@ -257,6 +257,22 @@ function buildProviderChatStep(
   model: ServiceModel,
   action: ProviderServiceCardAction,
 ): ServiceNextStep {
+  const hasChat = Boolean(model.chatSummary?.id);
+
+  // Detail can initiate chat (same as FAB); do not leave a disabled dead-end CTA.
+  if (!hasChat) {
+    return {
+      intent: "chat",
+      eyebrow: "Próximo passo",
+      title: "Inicie a negociação",
+      description:
+        "Comece a conversa com o cliente para tirar dúvidas e alinhar o serviço",
+      actionLabel: "Iniciar negociação",
+      icon: "message",
+      disabled: false,
+    };
+  }
+
   if (model.chatSummary?.isUnread) {
     return withActionState(
       {
