@@ -12,7 +12,7 @@ export function SuggestedItemsInfo({ ariaLabel }: { ariaLabel: string }) {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex h-5 w-5 min-h-0 min-w-0 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={ariaLabel}
         >
           <CircleHelp className="h-3.5 w-3.5" aria-hidden />

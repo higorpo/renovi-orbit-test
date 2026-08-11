@@ -24,13 +24,13 @@ export function ServiceDetailSection({
       )}
     >
       {title ? (
-        <div className="mb-3">
+        <div className="mb-2.5">
           <div className="flex items-center gap-1.5">
-            <h2 className="font-display text-sm font-semibold text-ink">{title}</h2>
+            <h2 className="font-display text-sm font-semibold leading-none text-ink">{title}</h2>
             {titleAccessory}
           </div>
           {description ? (
-            <p className="mt-0.5 text-caption text-muted-foreground">{description}</p>
+            <p className="mt-1 text-caption text-muted-foreground">{description}</p>
           ) : null}
         </div>
       ) : null}
