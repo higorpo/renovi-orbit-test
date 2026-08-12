@@ -47,7 +47,6 @@ export function AccountSummaryCard({
   const sinceFormatted = formatClientSince(createdAt);
   const initials = initialsFromName(fullName);
   const busy = isUploading || isRemoving;
-  const canEditPhoto = Boolean(onPhotoSelect || (onPhotoRemove && (url || profileImagePath)));
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -60,6 +59,10 @@ export function AccountSummaryCard({
 
   const isStack = layout === "stack";
 
+  const showActions =
+    Boolean(profileLink && onCopyProfileLink) ||
+    Boolean(onPhotoRemove && (url || profileImagePath));
+
   return (
     <section
       className={cn(
@@ -70,15 +73,17 @@ export function AccountSummaryCard({
       <div
         className={cn(
           "flex gap-4 sm:gap-5",
-          isStack ? "flex-col items-center text-center" : "flex-col items-center text-center sm:flex-row sm:items-start sm:text-left",
+          isStack
+            ? "flex-col items-center text-center"
+            : "flex-col items-center text-center sm:flex-row sm:items-center sm:text-left",
         )}
       >
         <div className="relative shrink-0">
-          <Avatar className="h-24 w-24 overflow-hidden bg-primary-soft ring-1 ring-border sm:h-28 sm:w-28">
+          <Avatar className="h-20 w-20 overflow-hidden bg-primary-soft ring-1 ring-border sm:h-24 sm:w-24">
             {url ? <AvatarImage src={url} alt="" className="object-cover" /> : null}
-            <AvatarFallback className="bg-primary-soft font-display text-2xl font-semibold text-primary">
+            <AvatarFallback className="bg-primary-soft font-display text-xl font-semibold text-primary sm:text-2xl">
               {isLoading && !url ? (
-                <Loader2 className="h-8 w-8 animate-spin text-mute" aria-hidden />
+                <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" aria-hidden />
               ) : (
                 initials
               )}
@@ -100,32 +105,38 @@ export function AccountSummaryCard({
                 onClick={() => fileInputRef.current?.click()}
                 disabled={busy}
                 aria-label="Alterar foto"
-                className="absolute bottom-0 right-0 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-canvas text-ink shadow-sm transition-colors duration-150 hover:bg-canvas-soft disabled:opacity-50"
+                className="absolute -bottom-0.5 -right-0.5 flex h-8 w-8 items-center justify-center rounded-full border border-border bg-canvas text-ink shadow-sm transition-colors duration-150 hover:bg-canvas-soft disabled:opacity-50"
               >
                 {isUploading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
                 ) : (
-                  <Camera className="h-4 w-4" aria-hidden />
+                  <Camera className="h-3.5 w-3.5" aria-hidden />
                 )}
               </button>
             </>
           ) : null}
         </div>
 
-        <div className="min-w-0 flex-1 space-y-3">
-          <div className="space-y-1">
-            <h2 className="truncate font-display text-xl font-semibold tracking-tight text-ink sm:text-title">
+        <div
+          className={cn(
+            "min-w-0 flex-1",
+            showActions ? "space-y-3" : "space-y-0",
+            !isStack && "sm:py-0.5",
+          )}
+        >
+          <div className="space-y-0.5">
+            <h2 className="truncate font-display text-lg font-semibold tracking-tight text-ink sm:text-xl">
               {fullName || "—"}
             </h2>
             <p className="truncate text-sm text-body">{email || "—"}</p>
             {sinceFormatted ? (
-              <p className="text-caption text-mute">
+              <p className="text-caption text-muted-foreground">
                 {sinceLabel} {sinceFormatted}
               </p>
             ) : null}
           </div>
 
-          {(canEditPhoto || (profileLink && onCopyProfileLink)) && (
+          {showActions ? (
             <div
               className={cn(
                 "flex flex-wrap gap-2",
@@ -167,7 +178,7 @@ export function AccountSummaryCard({
                 </Button>
               ) : null}
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </section>
@@ -181,12 +192,12 @@ export function AccountSummaryCardSkeleton({ layout = "band" }: { layout?: "band
       <div
         className={cn(
           "flex gap-4 sm:gap-5",
-          isStack ? "flex-col items-center" : "flex-col items-center sm:flex-row sm:items-start",
+          isStack ? "flex-col items-center" : "flex-col items-center sm:flex-row sm:items-center",
         )}
       >
-        <Skeleton className="h-24 w-24 shrink-0 rounded-full sm:h-28 sm:w-28" />
+        <Skeleton className="h-20 w-20 shrink-0 rounded-full sm:h-24 sm:w-24" />
         <div className="flex w-full flex-col items-center space-y-2 sm:items-start">
-          <Skeleton className="h-6 w-44" />
+          <Skeleton className="h-5 w-44" />
           <Skeleton className="h-4 w-52" />
           <Skeleton className="h-3.5 w-32" />
         </div>
