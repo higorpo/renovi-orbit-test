@@ -55,6 +55,33 @@ export function ClientFormSkeleton() {
   );
 }
 
+/** Skeleton for the Identidade legal page (entity tiles + document fields). */
+export function LegalIdentityFormSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-36" />
+          <Skeleton className="h-4 w-64" />
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Skeleton className="h-36 w-full rounded-2xl" />
+          <Skeleton className="h-36 w-full rounded-2xl" />
+        </div>
+        <Skeleton className="h-4 w-72" />
+      </div>
+      <div className="rounded-2xl border border-border bg-canvas p-4 sm:p-5">
+        <div className="space-y-4">
+          <Skeleton className="h-4 w-28" />
+          <SkeletonField />
+          <SkeletonField />
+        </div>
+      </div>
+      <Skeleton className="h-4 w-52" />
+    </div>
+  );
+}
+
 /** Skeleton for EntityTypeSection (two large option buttons). */
 function EntityTypeSkeleton() {
   return (

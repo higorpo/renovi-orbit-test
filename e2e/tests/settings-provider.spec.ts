@@ -408,12 +408,13 @@ test.describe("My Account — provider", () => {
     await expect(page.getByText("Link copiado.")).toBeVisible({ timeout: 8000 });
   });
 
-  test("entity type help opens dialog", async ({ page }) => {
-    await page.getByRole("button", { name: /Preciso de ajuda para escolher/i }).click();
-    await expect(
-      page.getByRole("dialog").getByRole("heading", { name: "Tipo de entidade" })
-    ).toBeVisible();
-    await page.keyboard.press("Escape");
+  test("entity type shows PF/PJ choice and legal disclaimer", async ({ page }) => {
+    const acc = new SettingsPage(page);
+    await page.goto("/dashboard/settings/legal-identity");
+    await expect(acc.getEntityTypeSectionTitle()).toBeVisible({ timeout: 20_000 });
+    await expect(acc.getPessoaFisicaButton()).toBeVisible();
+    await expect(acc.getPessoaJuridicaButton()).toBeVisible();
+    await expect(page.getByText(/A Prestway não fornece assessoria jurídica/)).toBeVisible();
   });
 
   test("does not show fatal error state when session is valid", async ({ page }) => {

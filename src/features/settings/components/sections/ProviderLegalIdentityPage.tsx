@@ -2,7 +2,7 @@ import { Form } from "@/components/ui/form";
 import { useProviderSettingsForm } from "../../hooks/useProviderSettingsForm";
 import { SettingsRoleGate } from "../SettingsRoleGate";
 import { AccountErrorState } from "../AccountErrorState";
-import { ProviderFormSkeleton } from "../AccountFormSkeletons";
+import { LegalIdentityFormSkeleton } from "../AccountFormSkeletons";
 import { EntityTypeSection } from "../EntityTypeSection";
 import { LegalIdentitySection } from "../LegalIdentitySection";
 import { SettingsSectionHeader } from "../SettingsSectionHeader";
@@ -27,14 +27,14 @@ export function ProviderLegalIdentityPage() {
       <SettingsSectionShell>
         <SettingsSectionHeader
           title="Identidade legal"
-          description="PF/PJ e documentos cadastrais"
+          description="Como você atua na Prestway e os documentos do cadastro"
         />
 
         {profileLoading ? (
-          <ProviderFormSkeleton />
+          <LegalIdentityFormSkeleton />
         ) : (
           <Form {...form}>
-            <div className="space-y-5">
+            <div className="space-y-6">
               <EntityTypeSection
                 value={form.watch("entity_type")}
                 onChange={(v) => form.setValue("entity_type", v, { shouldDirty: true })}

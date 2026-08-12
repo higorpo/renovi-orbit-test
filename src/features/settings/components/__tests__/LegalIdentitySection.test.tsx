@@ -43,9 +43,9 @@ function WrapperPj() {
 }
 
 describe("LegalIdentitySection", () => {
-  it("renders section title", () => {
+  it("renders the PF document group", () => {
     render(<WrapperPf />);
-    expect(screen.getByText("Dados legais / identidade")).toBeInTheDocument();
+    expect(screen.getByText("Documento")).toBeInTheDocument();
   });
 
   it("renders only CPF field when entityType is pf", () => {
@@ -60,9 +60,11 @@ describe("LegalIdentitySection", () => {
     expect(screen.getByLabelText(/CNPJ/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Razão social/)).toBeInTheDocument();
     expect(screen.getByLabelText(/Nome fantasia/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Representante legal/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/CPF do representante legal/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Contato comercial/)).toBeInTheDocument();
+    expect(screen.getByText("Empresa")).toBeInTheDocument();
+    expect(screen.getByText("Representante legal")).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Nome completo$/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^CPF$/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Telefone ou e-mail/)).toBeInTheDocument();
   });
 
   it("disables inputs when disabled is true", () => {
@@ -94,7 +96,7 @@ describe("LegalIdentitySection", () => {
     fireEvent.change(cnpj, { target: { value: "12abc34501de35" } });
     expect(cnpj).toHaveValue("12.ABC.345/01DE-35");
 
-    const repCpf = screen.getByLabelText(/CPF do representante legal/);
+    const repCpf = screen.getByLabelText(/^CPF$/);
     fireEvent.change(repCpf, { target: { value: "52998224725" } });
     expect(repCpf).toHaveValue("529.982.247-25");
   });

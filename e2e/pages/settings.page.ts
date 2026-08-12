@@ -186,15 +186,15 @@ export class SettingsPage {
   }
 
   getPessoaFisicaButton() {
-    return this.page.getByRole("button", { name: /Pessoa física/ });
+    return this.page.getByRole("radio", { name: /Pessoa física/ });
   }
 
   getPessoaJuridicaButton() {
-    return this.page.getByRole("button", { name: /Pessoa jurídica/ });
+    return this.page.getByRole("radio", { name: /Pessoa jurídica/ });
   }
 
   getLegalSectionTitle() {
-    return this.page.getByText("Dados legais / identidade").first();
+    return this.page.getByText(/Documento|Empresa/).first();
   }
 
   getCnpjInput() {
@@ -210,7 +210,9 @@ export class SettingsPage {
   }
 
   getCommercialContactInput() {
-    return this.page.getByLabel("Contato comercial");
+    return this.page
+      .getByRole("group", { name: /Contato comercial/ })
+      .getByLabel("Telefone ou e-mail");
   }
 
   getLegalCpfInput() {
@@ -383,7 +385,7 @@ export class SettingsPage {
   }
 
   getLegalRepresentativeCpfInput() {
-    return this.page.getByLabel("CPF do representante legal");
+    return this.page.getByRole("group", { name: /Representante legal/ }).getByLabel("CPF");
   }
 
   portfolioItemRowByTitle(titleSubstring: string): Locator {

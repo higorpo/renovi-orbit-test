@@ -37,7 +37,7 @@
 2. Abrir seção → carregar/editar (auto-save / ações explícitas conforme seção).
 3. Foto → upload/remove storage + path em `profiles` (summary no índice mobile / personal-info desktop).
 4. Cliente: endereços / pagamentos (Tabs **Formas de pagamento** + **Histórico** de captura).
-5. Prestador: Informações pessoais (nome, e-mail, telefone — sem CPF); identidade legal (PF: CPF; PJ: CNPJ + CPF do representante); perfil profissional; recebimentos (captura); ganhos (liquidação — feature `provider-earnings`).
+5. Prestador: Informações pessoais (nome, e-mail, telefone — sem CPF); identidade legal (`/dashboard/settings/legal-identity`: escolha PF/PJ em tiles `radiogroup` + painel de documentos; PF: grupo Documento/CPF; PJ: Empresa, Representante legal, Contato comercial; disclaimer jurídico abaixo das tiles; auto-save via `useProviderSettingsForm` inalterado); perfil profissional; recebimentos (captura); ganhos (liquidação — feature `provider-earnings`).
 6. Privacidade → exportação/mailto DPO (+ atalho da política); Jurídico (`/dashboard/settings/legal`) → hub de documentos oficiais (termos, política; prestador também contrato de uso); Conta (`/dashboard/settings/session`) → exclusão via `DangerZoneSection` (mailto DPO); **Sair da conta** (item de rodapé da nav, sem rota) → `LogoutConfirmDialog` → `signOut`.
 
 ## 6. Regras transversais
@@ -47,6 +47,7 @@
 - Documentos jurídicos (seção Jurídico + atalho em Privacidade): URLs só se `VITE_MAIN_SITE_URL`; senão texto “em breve” por documento. Paths: `/juridico/termos-de-uso`, `/juridico/politica-de-privacidade`, `/juridico/adesao-prestador` (só UI prestador). Não inclui política de comissões nem adesão-cliente.
 - Exclusão de conta: orientação mailto DPO em `DangerZoneSection` na seção Conta (sem delete imediato na API).
 - **Jurídico** (`legal`) ≠ **Identidade legal** (`legal-identity`): o primeiro é hub de links externos; o segundo é cadastro PF/PJ do prestador (onde o prestador edita CPF/CNPJ). Em `personal-info`, o cliente vê CPF em Dados pessoais; o prestador **não** (`DadosPessoaisSection` com `showCpf={false}`).
+- **Identidade legal (UI):** header “Identidade legal” / “Como você atua na Prestway e os documentos do cadastro”; `EntityTypeSection` (tiles PF/PJ, sem dialog de ajuda); `LegalIdentitySection` (um painel); loading com `LegalIdentityFormSkeleton` (não o skeleton monolítico do prestador). Sem mudança de persistência/API.
 - Logout: item **Sair da conta** no rodapé de `SettingsNavList` (sidebar desktop + índice mobile); confirmação em `LogoutConfirmDialog` (`AlertDialog`); não é slug/rota.
 - Rotas removidas (sem redirect): `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses`.
 
@@ -85,7 +86,7 @@
 
 ## 10. Evidências
 
-- `src/features/settings/` — `SettingsLayout`, `SettingsIndexPage`, `SettingsNavList`, `LogoutConfirmDialog`, `constants/routes.ts`, `constants/settingsNav.ts`, `components/sections/*` (Jurídico = `AccountLegalPage` + `LegalDocumentsSection`; Conta = `AccountSessionPage` + `DangerZoneSection`)
+- `src/features/settings/` — `SettingsLayout`, `SettingsIndexPage`, `SettingsNavList`, `LogoutConfirmDialog`, `constants/routes.ts`, `constants/settingsNav.ts`, `components/sections/*` (Jurídico = `AccountLegalPage` + `LegalDocumentsSection`; Conta = `AccountSessionPage` + `DangerZoneSection`; Identidade legal = `ProviderLegalIdentityPage` + `EntityTypeSection` + `LegalIdentitySection` + `LegalIdentityFormSkeleton`)
 - `src/router.tsx` — `path: 'settings'` + children
 - `src/layouts/DashboardLayout/dashboardMenu.ts` — Configurações → `ROUTE_SETTINGS`
 - `src/layouts/DashboardLayout/mobileNavigation.config.ts` — índice tab-root; seções stack → `/dashboard/settings`
