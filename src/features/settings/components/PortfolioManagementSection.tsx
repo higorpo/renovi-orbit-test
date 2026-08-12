@@ -423,7 +423,7 @@ export function PortfolioManagementSection({
 
   return (
     <Card className="rounded-2xl border-border shadow-sm">
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-3 sm:pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <SettingsCardHeader
             title="Portfólio"
@@ -446,7 +446,7 @@ export function PortfolioManagementSection({
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4 pt-2">
+      <CardContent className="space-y-4 pt-0 sm:pt-0">
         {orderedItems.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border bg-canvas-soft py-10 text-center text-sm text-body">
             Nenhum item no portfólio. Clique em &quot;Adicionar trabalho&quot; para começar.

@@ -50,14 +50,14 @@ export function PublicProfileSettingsSection({
 
   return (
     <Card className="rounded-2xl border-border shadow-sm">
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-3 sm:pb-3">
         <SettingsCardHeader
           title="Perfil público"
           icon={Eye}
           description="Como clientes veem você na Prestway"
         />
       </CardHeader>
-      <CardContent className="space-y-4 pt-2">
+      <CardContent className="space-y-4 pt-0 sm:pt-0">
         <FormField
           control={form.control}
           name="display_name"

@@ -52,14 +52,14 @@ export function PrivacySection({ privacyPolicyUrl }: PrivacySectionProps) {
       </AlertDialog>
 
       <Card className="rounded-2xl border-border shadow-sm">
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-3 sm:pb-3">
           <SettingsCardHeader
             title="Privacidade e LGPD"
             icon={Shield}
             description="Seus direitos e como tratamos seus dados"
           />
         </CardHeader>
-        <CardContent className="space-y-6 pt-2">
+        <CardContent className="space-y-6 pt-0 sm:pt-0">
           <div className="space-y-3">
             <p className="text-sm leading-relaxed text-body">
               Se você tiver dúvidas sobre como tratamos seus dados pessoais ou quiser

@@ -94,10 +94,10 @@ export function ProviderPersonalInfoPage() {
           <div className="space-y-6">
             <ProviderDadosPessoaisAdapter form={form} email={email} />
             <Card className="rounded-2xl border-border shadow-sm">
-              <CardHeader className="pb-2">
+              <CardHeader className="pb-3 sm:pb-3">
                 <SettingsCardHeader title="Contato" icon={Phone} />
               </CardHeader>
-              <CardContent className="pt-2">
+              <CardContent className="pt-0 sm:pt-0">
                 <FormField
                   control={form.control}
                   name="phone"

@@ -33,7 +33,7 @@ export function EntityTypeSection({
 
   return (
     <Card className="rounded-2xl border-border shadow-sm">
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-3 sm:pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <SettingsCardHeader
             title="Tipo de entidade"
@@ -74,7 +74,7 @@ export function EntityTypeSection({
           </Dialog>
         </div>
       </CardHeader>
-      <CardContent className="pt-2">
+      <CardContent className="pt-0 sm:pt-0">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <button
             type="button"

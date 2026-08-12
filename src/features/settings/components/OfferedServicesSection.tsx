@@ -78,14 +78,14 @@ export function OfferedServicesSection({
 
   return (
     <Card className="rounded-2xl border-border shadow-sm">
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-3 sm:pb-3">
         <SettingsCardHeader
           title="Serviços oferecidos"
           icon={Search}
           description="Pesquise e selecione os serviços que aparecem no seu perfil público"
         />
       </CardHeader>
-      <CardContent className="space-y-4 pt-2">
+      <CardContent className="space-y-4 pt-0 sm:pt-0">
         <div className="relative w-full">
           <Input
             placeholder="Buscar serviços..."

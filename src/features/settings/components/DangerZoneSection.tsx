@@ -48,7 +48,7 @@ export function DangerZoneSection() {
       </AlertDialog>
 
       <Card className="rounded-2xl border-destructive/30 bg-destructive/5 shadow-sm">
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-3 sm:pb-3">
           <SettingsCardHeader
             title="Zona de perigo"
             icon={AlertTriangle}
@@ -56,7 +56,7 @@ export function DangerZoneSection() {
             description="Ações irreversíveis relacionadas à sua conta"
           />
         </CardHeader>
-        <CardContent className="space-y-4 pt-2">
+        <CardContent className="space-y-4 pt-0 sm:pt-0">
           <p className="text-sm leading-relaxed text-body">
             Essa ação é irreversível. Seus dados serão removidos conforme as regras
             aplicáveis da LGPD e os requisitos legais de retenção.
