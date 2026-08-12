@@ -5,10 +5,19 @@ interface SettingsSectionShellProps {
   className?: string;
 }
 
-/** Consistent section page padding for mobile stack + desktop outlet. */
+/**
+ * Consistent section page padding for mobile stack + desktop outlet.
+ * Uses flex gap (not space-y) so a `hidden` SettingsSectionHeader on mobile
+ * does not still push the first visible card down.
+ */
 export function SettingsSectionShell({ children, className }: SettingsSectionShellProps) {
   return (
-    <div className={cn("space-y-5 px-4 py-5 md:space-y-6 md:px-0 md:py-0", className)}>
+    <div
+      className={cn(
+        "flex flex-col gap-5 px-4 py-4 md:gap-6 md:px-0 md:py-0",
+        className,
+      )}
+    >
       {children}
     </div>
   );

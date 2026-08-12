@@ -7,7 +7,7 @@ import { SettingsSectionShell } from "../SettingsSectionShell";
 export function ProviderEarningsSectionPage() {
   return (
     <SettingsRoleGate allow={["provider"]}>
-      <SettingsSectionShell className="space-y-4 md:space-y-5">
+      <SettingsSectionShell className="gap-4 md:gap-5">
         <SettingsSectionHeader
           title="Ganhos"
           description="Liquidações previstas e depositadas na sua conta bancária"
