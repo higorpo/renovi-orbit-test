@@ -38,11 +38,21 @@ export const PROVIDER_PORTFOLIO_IMAGE_ALLOWED_TYPES = [
 
 export const DPO_EMAIL = "dpo@prestway.com";
 
-/** Privacy policy URL (main site + path). Null when VITE_MAIN_SITE_URL is not set. */
+/** Main marketing site origin. Null when VITE_MAIN_SITE_URL is not set. */
 const MAIN_SITE_BASE = (import.meta.env.VITE_MAIN_SITE_URL ?? "").replace(/\/$/, "");
-export const PRIVACY_POLICY_URL: string | null = MAIN_SITE_BASE
-  ? `${MAIN_SITE_BASE}/juridico/politica-de-privacidade`
-  : null;
+
+function mainSiteLegalUrl(slug: string): string | null {
+  return MAIN_SITE_BASE ? `${MAIN_SITE_BASE}/juridico/${slug}` : null;
+}
+
+/** Privacy policy URL (main site + path). Null when VITE_MAIN_SITE_URL is not set. */
+export const PRIVACY_POLICY_URL: string | null = mainSiteLegalUrl("politica-de-privacidade");
+
+/** Terms of use URL. Null when VITE_MAIN_SITE_URL is not set. */
+export const TERMS_OF_USE_URL: string | null = mainSiteLegalUrl("termos-de-uso");
+
+/** Provider platform adhesion contract. Null when VITE_MAIN_SITE_URL is not set. */
+export const PROVIDER_PLATFORM_CONTRACT_URL: string | null = mainSiteLegalUrl("adesao-prestador");
 
 /** Max profile image file size in bytes (2 MB). */
 export const PROFILE_IMAGE_MAX_BYTES = 2 * 1024 * 1024;

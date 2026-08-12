@@ -358,6 +358,26 @@ export class SettingsPage {
     return this.page.getByRole("link", { name: "Ver política de privacidade" });
   }
 
+  getNavJuridico() {
+    return this.page.getByRole("link", { name: "Jurídico" });
+  }
+
+  async gotoLegal() {
+    await this.page.goto("/dashboard/settings/legal");
+  }
+
+  getLegalDocumentsSection() {
+    return this.page.getByLabel("Documentos jurídicos");
+  }
+
+  getTermsOfUseLink() {
+    return this.page.getByRole("link", { name: "Ver termos de uso" });
+  }
+
+  getProviderPlatformContractLink() {
+    return this.page.getByRole("link", { name: "Ver contrato de uso da plataforma" });
+  }
+
   getLogoutDialogCancelButton() {
     return this.getLogoutAlertDialog().getByRole("button", { name: "Cancelar" });
   }

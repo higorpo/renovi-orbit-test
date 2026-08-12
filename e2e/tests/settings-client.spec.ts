@@ -102,6 +102,18 @@ test.describe("My Account — client", () => {
     }
   });
 
+  test("legal: terms and privacy links without provider contract", async ({ page }) => {
+    const acc = new SettingsPage(page);
+    await acc.gotoLegal();
+    await expect(acc.getLegalDocumentsSection()).toBeVisible({ timeout: 20_000 });
+    const terms = acc.getTermsOfUseLink();
+    if (await terms.isVisible().catch(() => false)) {
+      await expect(terms).toHaveAttribute("href", /termos-de-uso/);
+      await expect(terms).toHaveAttribute("target", "_blank");
+    }
+    await expect(acc.getProviderPlatformContractLink()).toHaveCount(0);
+  });
+
   test("session: logout dialog cancel keeps user on conta", async ({ page }) => {
     const acc = new SettingsPage(page);
     await acc.getSairDaContaButton().scrollIntoViewIfNeeded();

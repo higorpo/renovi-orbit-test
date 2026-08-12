@@ -5,6 +5,7 @@ import {
   IdCard,
   LogOut,
   MapPin,
+  Scale,
   Shield,
   User,
   UserCog,
@@ -54,6 +55,12 @@ const SHARED_TAIL: SettingsNavItem[] = [
     path: settingsSectionPath(SETTINGS_SECTION.privacy),
     label: "Privacidade",
     icon: Shield,
+  },
+  {
+    slug: SETTINGS_SECTION.legal,
+    path: settingsSectionPath(SETTINGS_SECTION.legal),
+    label: "Jurídico",
+    icon: Scale,
   },
   {
     slug: SETTINGS_SECTION.session,
@@ -134,6 +141,7 @@ export const SETTINGS_SECTION_STACK_TITLE: Record<SettingsSectionSlug, string> =
   receivables: "Recebimentos",
   earnings: "Ganhos",
   privacy: "Privacidade",
+  legal: "Jurídico",
   session: "Conta",
 };
 

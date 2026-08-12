@@ -8,7 +8,7 @@ ADR de navegação: [`docs/adr/0002-account-settings-hub.md`](../../../../adr/00
 
 ## 1. Resumo executivo
 
-Hub responsivo de configurações sob `/dashboard/settings` (slugs em inglês), não mais uma página única em scroll em `/dashboard/conta`. Cliente e prestador mantêm cadastro, foto, privacidade/LGPD e exclusão de conta (seção Conta) em seções; o prestador gerencia ainda identidade legal, perfil profissional (público, ofertados, área, portfólio), recebimentos na captura e Ganhos (liquidação). Logout fica no rodapé da navegação do hub (**Sair da conta**), não em rota. **Fase 1:** só o shell de navegação; UIs de formulário/seção existentes reutilizadas; auto-save inalterado. Exclusão de conta e exportação LGPD hoje são fluxos manuais via e-mail ao DPO (`dpo@prestway.com`).
+Hub responsivo de configurações sob `/dashboard/settings` (slugs em inglês), não mais uma página única em scroll em `/dashboard/conta`. Cliente e prestador mantêm cadastro, foto, privacidade/LGPD, documentos oficiais (seção **Jurídico**, slug `legal`) e exclusão de conta (seção Conta) em seções; o prestador gerencia ainda identidade legal (`legal-identity` — cadastro PF/PJ, distinto de Jurídico), perfil profissional (público, ofertados, área, portfólio), recebimentos na captura e Ganhos (liquidação). Logout fica no rodapé da navegação do hub (**Sair da conta**), não em rota. **Fase 1:** só o shell de navegação; UIs de formulário/seção existentes reutilizadas; auto-save inalterado. Exclusão de conta e exportação LGPD hoje são fluxos manuais via e-mail ao DPO (`dpo@prestway.com`). Jurídico não persiste dados (só links externos).
 
 ## 2. Objetivo de negócio
 
@@ -28,24 +28,25 @@ Hub responsivo de configurações sob `/dashboard/settings` (slugs em inglês), 
 
 | Papel | Slugs |
 |-------|-------|
-| Cliente | `personal-info`, `addresses`, `payments`, `privacy`, `session` |
-| Prestador | `personal-info`, `legal-identity`, `professional-profile`, `receivables`, `earnings`, `privacy`, `session` |
+| Cliente | `personal-info`, `addresses`, `payments`, `privacy`, `legal`, `session` |
+| Prestador | `personal-info`, `legal-identity`, `professional-profile`, `receivables`, `earnings`, `privacy`, `legal`, `session` |
 
 - **Layout:** `SettingsLayout` — desktop: sidebar `SettingsNavList` + `<Outlet />`; mobile: só outlet.
 - **Índice mobile:** `SettingsIndexPage` — título “Configurações”, `AccountSummaryCard`, lista de seções + rodapé **Sair da conta**.
-- **Nav do hub (`settingsNav.ts` / `SettingsNavList`):** lista principal termina com **Privacidade** → **Conta** (`session`, ícone `UserCog`); abaixo do divisor, item de rodapé **Sair da conta** (`kind: "logout"`, ícone `LogOut`) — **não** é rota; abre `LogoutConfirmDialog`.
+- **Nav do hub (`settingsNav.ts` / `SettingsNavList`):** cauda compartilhada (`SHARED_TAIL`) **Privacidade** → **Jurídico** (`legal`, ícone Lucide `Scale`) → **Conta** (`session`, ícone `UserCog`); abaixo do divisor, item de rodapé **Sair da conta** (`kind: "logout"`, ícone `LogOut`) — **não** é rota; abre `LogoutConfirmDialog`. Título stack mobile: `SETTINGS_SECTION_STACK_TITLE.legal = "Jurídico"`.
+- **Jurídico vs Identidade legal:** slug `legal` (`ROUTE_SETTINGS_LEGAL` = `/dashboard/settings/legal`) é hub de documentos oficiais para **ambos** os papéis (sem `SettingsRoleGate`); `legal-identity` é só prestador (cadastro PF/PJ). Não confundir.
 - **Summary card:** mobile no índice; desktop só em `personal-info` (`ClientPersonalInfoPage` / `ProviderPersonalInfoPage`).
 - **KYC:** prefixo allowlist `PROVIDER_KYC_ALLOWED_PATH_PREFIX = "/dashboard/settings"` — ver [gate-e-acesso-operacional](../../provider-kyc/features/gate-e-acesso-operacional.md).
 - **Menu dashboard:** item **Configurações** → `/dashboard/settings` (`dashboardMenu.ts`). Removidos itens **Endereços** e **Ganhos**.
 - **Rotas removidas (sem redirect):** `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses`.
-- **Constante:** `ROUTE_SETTINGS`; helpers `settingsSectionPath` / `SETTINGS_SECTION` em `constants/routes.ts`.
+- **Constante:** `ROUTE_SETTINGS`; helpers `settingsSectionPath` / `SETTINGS_SECTION` (incl. `legal`) / `ROUTE_SETTINGS_LEGAL` em `constants/routes.ts`.
 
 ## 4. Perfis envolvidos
 
 | Perfil | Acesso | Não acessa |
 |--------|--------|------------|
-| `client` | Seções cliente; `SettingsRoleGate` nas seções client-only | legal-identity, professional-profile, receivables, earnings |
-| `provider` | Seções prestador | addresses, payments (cartões/histórico cliente) |
+| `client` | Seções cliente + cauda compartilhada (`privacy`, `legal`, `session`); `SettingsRoleGate` nas seções client-only | legal-identity, professional-profile, receivables, earnings |
+| `provider` | Seções prestador + mesma cauda compartilhada; em Jurídico vê também o contrato de uso | addresses, payments (cartões/histórico cliente) |
 | Visitante | Não | Guard do dashboard |
 | `admin` | Sem superfície dedicada neste hub | — |
 
@@ -67,6 +68,7 @@ flowchart TD
   G -->|provider receivables| L[PaymentHistory provider]
   G -->|provider earnings| M[EarningsPage via provider-earnings]
   G -->|privacy| N[PrivacySection]
+  G -->|legal Jurídico| R[LegalDocumentsSection]
   G -->|session Conta| O[DangerZoneSection]
   D --> P["Sair da conta (footer nav)"]
   F --> P
@@ -78,14 +80,14 @@ flowchart TD
 1. Abre hub → mobile lista; desktop personal-info.
 2. Edita nome/telefone/CPF em personal-info → após 1500 ms valida Zod e persiste `profiles` + `client_profiles_private`.
 3. Endereços / pagamentos nas seções dedicadas; em Pagamentos, abas **Formas de pagamento** (cartões) e **Histórico**.
-4. Privacidade; Conta (exclusão / DPO); ou **Sair da conta** no rodapé da nav (logout).
+4. Privacidade (DPO / exportar / atalho da política); Jurídico (termos + política); Conta (exclusão / DPO); ou **Sair da conta** no rodapé da nav (logout).
 
 ### Prestador — feliz
 
 1. Abre hub → mesma lógica mobile/desktop.
 2. personal-info / legal-identity / professional-profile → debounce 2000 ms e mutações por grupos dirty onde aplicável.
 3. Recebimentos (captura); Ganhos (liquidação bancária — feature externa hospedada).
-4. Privacidade; Conta (DPO); ou **Sair da conta** no rodapé da nav.
+4. Privacidade; Jurídico (termos + política + **Contrato de uso da plataforma**); Conta (DPO); ou **Sair da conta** no rodapé da nav.
 
 ## 6. Fluxos alternativos e exceções
 
@@ -97,7 +99,7 @@ flowchart TD
 | Schema inválido (prestador) | Erro no campo + toast “Não foi possível salvar… campo inválido.” |
 | Catch genérico auto-save | Toast “Não foi possível atualizar seus dados…” |
 | Sucesso prestador | Toast “Dados atualizados com sucesso.” |
-| Sem `VITE_MAIN_SITE_URL` | Texto “Política de privacidade em breve.” |
+| Sem `VITE_MAIN_SITE_URL` | Links jurídicos `null` → textos “em breve” por documento (Privacidade e seção Jurídico) |
 | Copiar link falha | Toasts distintos no card vs seção pública |
 | Foto inválida no seletor | Validação retorna e **encerra sem toast** (`AccountSummaryCard`) |
 | Exclusão | Dialog informa mailto DPO — **não** chama delete API |
@@ -121,7 +123,8 @@ flowchart TD
 14. Prestador — receivables: header “Recebimentos” + `PaymentHistorySection role="provider"` (sem abas). Contratos/views no módulo payments.
 15. Logout: item **Sair da conta** no rodapé de `SettingsNavList` (sidebar desktop + índice mobile) → `LogoutConfirmDialog` (`AlertDialog`) → `signOut()` (`useAuth`). Não é rota/`session`.
 16. Seção Conta (`/dashboard/settings/session`): header “Conta” / “Exclusão permanente da sua conta”; só `DangerZoneSection` (orientação DPO). `LogoutSection` removida.
-17. Fase 1: shell de navegação; sem redesign row-by-row dos formulários.
+17. Seção Jurídico (`/dashboard/settings/legal`): header “Jurídico” / “Documentos oficiais da Prestway”; `LegalDocumentsSection` (`aria-label="Documentos jurídicos"`). Links (mesmo padrão do cadastro; `null` se `VITE_MAIN_SITE_URL` ausente): Termos de uso → `TERMS_OF_USE_URL` (`…/juridico/termos-de-uso`); Política de privacidade → `PRIVACY_POLICY_URL`; **só prestador** (`showProviderContract` via `profile.role === "provider"`): Contrato de uso da plataforma → `PROVIDER_PLATFORM_CONTRACT_URL` (`…/juridico/adesao-prestador`, mesmo path do “Contrato de Adesão” no signup). **Não** lista política de comissões nem adesão-cliente. Sem `SettingsRoleGate`, sem persistência/API/migration. Privacidade permanece com DPO / exportar / atalho da política — Jurídico não a substitui.
+18. Fase 1: shell de navegação; sem redesign row-by-row dos formulários.
 
 ## 8. Campos e dados
 
@@ -192,7 +195,7 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | `payments` | Cartões + histórico — [histórico e reembolso](../../payments/features/historico-e-reembolso.md); erros de cartão em [checkout](../../payments/features/checkout-e-cobranca.md) |
 | `provider-earnings` | Hospedado em `/dashboard/settings/earnings` (`ProviderEarningsSectionPage` → `EarningsPage`); `ROUTE_PROVIDER_EARNINGS` |
 | `provider-profile` | Link `/perfil/{slug}` |
-| Site jurídico | `PRIVACY_POLICY_URL` = `{VITE_MAIN_SITE_URL}/juridico/politica-de-privacidade` |
+| Site jurídico | Com `VITE_MAIN_SITE_URL`: `TERMS_OF_USE_URL` = `…/juridico/termos-de-uso`; `PRIVACY_POLICY_URL` = `…/juridico/politica-de-privacidade`; `PROVIDER_PLATFORM_CONTRACT_URL` = `…/juridico/adesao-prestador` (UI Jurídico só prestador). Sem env → `null` / “em breve”. Sem política de comissões nem adesão-cliente nesta seção. |
 
 ## 14. Listagens, buscas, filtros, paginação
 
@@ -217,6 +220,8 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | Copiar / abrir perfil | Prestador | slug | Clipboard / nova URL |
 | CRUD portfólio | Prestador | Título | Items + imagens |
 | Falar DPO / Exportar | Ambos | privacy | mailto / dialog |
+| Abrir documentos oficiais | Ambos | legal (`LegalDocumentsSection`); URLs se `VITE_MAIN_SITE_URL` | Nova aba / “em breve” |
+| Ver contrato de uso da plataforma | Prestador | legal + `showProviderContract` | Link `PROVIDER_PLATFORM_CONTRACT_URL` ou “em breve” |
 | Excluir conta (UI) | Ambos | Conta (`session`) / `DangerZoneSection` | Orientação DPO |
 | Sair da conta | Ambos | Rodapé da nav (`SettingsNavList`) | `LogoutConfirmDialog` → `signOut` |
 
@@ -240,14 +245,14 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - Usuário pode interpretar “Excluir minha conta” como delete imediato.
 - Validação de foto silenciosa na UI.
 - Dados sensíveis (CPF/CNPJ) na mesma superfície do auto-save.
-- Dependência de env para política de privacidade.
+- Dependência de env (`VITE_MAIN_SITE_URL`) para links de documentos jurídicos (Privacidade + Jurídico).
 - Deep links legados para `/dashboard/conta` (ex.: enqueue de lembrete KYC na migration) **não** redirecionam — rota removida.
 
 ## 19. Evidências
 
 - Shell: `SettingsLayout.tsx`, `SettingsIndexPage.tsx`, `SettingsNavList.tsx`, `SettingsSectionHeader.tsx`, `SettingsRoleGate.tsx`
-- Seções: `components/sections/PersonalInfoPage.tsx`, `ClientPersonalInfoPage.tsx`, `ProviderPersonalInfoPage.tsx`, `ClientAddressesPage.tsx`, `ClientPaymentsPage.tsx`, `ProviderLegalIdentityPage.tsx`, `ProviderProfessionalProfilePage.tsx`, `ProviderReceivablesPage.tsx`, `ProviderEarningsSectionPage.tsx`, `AccountPrivacyPage.tsx`, `AccountSessionPage.tsx`
-- Blocos reutilizados: `DadosPessoaisSection`, `ContatoIdentidadeSection`, `EntityTypeSection`, `LegalIdentitySection`, `OfferedServicesSection`, `PublicProfileSettingsSection`, `ServiceAreaField`, `PortfolioManagementSection`, `PrivacySection`, `DangerZoneSection`, `LogoutConfirmDialog`, `AccountSummaryCard`, `AccountErrorState`
+- Seções: `components/sections/PersonalInfoPage.tsx`, `ClientPersonalInfoPage.tsx`, `ProviderPersonalInfoPage.tsx`, `ClientAddressesPage.tsx`, `ClientPaymentsPage.tsx`, `ProviderLegalIdentityPage.tsx`, `ProviderProfessionalProfilePage.tsx`, `ProviderReceivablesPage.tsx`, `ProviderEarningsSectionPage.tsx`, `AccountPrivacyPage.tsx`, `AccountLegalPage.tsx`, `AccountSessionPage.tsx`
+- Blocos reutilizados: `DadosPessoaisSection`, `ContatoIdentidadeSection`, `EntityTypeSection`, `LegalIdentitySection`, `OfferedServicesSection`, `PublicProfileSettingsSection`, `ServiceAreaField`, `PortfolioManagementSection`, `PrivacySection`, `LegalDocumentsSection`, `DangerZoneSection`, `LogoutConfirmDialog`, `AccountSummaryCard`, `AccountErrorState`
 - Nav: `SettingsNavList` (variantes sidebar/list) + `constants/settingsNav.ts` (item logout de rodapé)
 - APIs: `api/clientProfilePrivate.api.ts`, `providerPrivateProfile.api.ts`, `providerPublicProfile.api.ts`, `offeredServices.api.ts`, `portfolio.api.ts`, `profileImageStorage.api.ts`, `portfolioImageStorage.api.ts`, `providerProfile.api.ts`
 - Hooks: `useAccountProfile`, `useClientPrivateProfile`, `useUpdateAccountProfile`, `useProviderProfile`, `useUpdateProviderProfile`, `useProviderSettingsForm`, `useOfferedServices`, `usePortfolioItems`, `useProfilePhotoMutation`, `useProfileImageUrl`
@@ -277,7 +282,8 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | personal-info | Header; Summary (só desktop); Dados pessoais (nome, e-mail, CPF) + Contato (telefone) + auto-save |
 | addresses | `AddressesSection` |
 | payments | Header “Pagamentos”; Tabs **Formas de pagamento** (`SavedCardsList`) e **Histórico** (`PaymentHistorySection role="client"`) |
-| privacy | `PrivacySection` |
+| privacy | `PrivacySection` (DPO / exportar / atalho da política) |
+| legal (Jurídico) | Header “Jurídico” / “Documentos oficiais da Prestway”; `LegalDocumentsSection` (termos + política; sem contrato de prestador) |
 | session (Conta) | Header “Conta” / “Exclusão permanente da sua conta”; só `DangerZoneSection` |
 | Rodapé nav (não é seção) | **Sair da conta** → `LogoutConfirmDialog` |
 
@@ -287,11 +293,12 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 |-------|-------------------|
 | Índice (mobile) | Summary (+ link/copiar perfil) + nav list |
 | personal-info | Header; Summary (só desktop); dados + contato |
-| legal-identity | Entity type + identidade legal |
+| legal-identity | Entity type + identidade legal (cadastro PF/PJ — ≠ Jurídico) |
 | professional-profile | Ofertados + perfil público/área + portfólio |
 | receivables | `PaymentHistorySection role="provider"` |
 | earnings | `SettingsSectionHeader` + `EarningsPage` (header interno oculto no host) |
 | privacy | `PrivacySection` |
+| legal (Jurídico) | Igual cliente + linha **Contrato de uso da plataforma** (`PROVIDER_PLATFORM_CONTRACT_URL`) |
 | session (Conta) | Header “Conta” / “Exclusão permanente da sua conta”; só `DangerZoneSection` |
 | Rodapé nav (não é seção) | **Sair da conta** → `LogoutConfirmDialog` |
 
@@ -308,6 +315,7 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 | Link copiado para a área de transferência. / Não foi possível copiar o link. | Seção pública |
 | Não foi possível atualizar. / o perfil. | Hooks update provider |
 | Textos DPO / 15 dias úteis | Privacy + DangerZone |
+| Termos / política / contrato “… em breve.” | `LegalDocumentsSection` (e atalho em Privacidade) quando URL `null` |
 | Confirmação logout (“Sair da conta”) | `LogoutConfirmDialog` (via `SettingsNavList`) |
 
 ## Anexo C — Checklist QA
@@ -323,9 +331,12 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - [ ] Menu sem Endereços / Ganhos; Configurações → `/dashboard/settings`
 - [ ] `/dashboard/conta`, `/dashboard/earnings`, `/dashboard/addresses` 404 (sem redirect)
 - [ ] Prestador sem KYC ACTIVE ainda acessa `/dashboard/settings*`
-- [ ] Nav: **Conta** (UserCog) logo após **Privacidade**; **Sair da conta** (LogOut) abaixo do divisor
+- [ ] Nav: **Privacidade** → **Jurídico** (Scale) → **Conta** (UserCog); **Sair da conta** (LogOut) abaixo do divisor
+- [ ] Jurídico (`/dashboard/settings/legal`): ambos os papéis; cliente vê termos + política; prestador vê também contrato de uso; sem comissões/adesão-cliente; sem `SettingsRoleGate`
+- [ ] Sem `VITE_MAIN_SITE_URL`: textos “em breve” por documento em Jurídico (e atalho em Privacidade)
 - [ ] Conta (`/dashboard/settings/session`): só exclusão (`DangerZoneSection`); sem logout na página
 - [ ] **Sair da conta** abre `LogoutConfirmDialog` e chama `signOut` (desktop sidebar + índice mobile)
+- [ ] Não confundir Jurídico (`legal`) com Identidade legal (`legal-identity`)
 
 ## 21. Atualização de auditoria (2026-08-12)
 
@@ -335,4 +346,5 @@ Não há FSM de domínio próprio além de `entity_type` PF/PJ e `profile_visibi
 - Regras de formulário/auto-save revalidadas como inalteradas na fase 1.
 - Superfície monolítica removida: `SettingsPage` / `SettingsClientPage` / `SettingsProviderPage` / `DeleteAccountDialog` — produção só `SettingsLayout` + `SettingsIndexPage` + `components/sections/*`; exclusão permanece mailto DPO em `DangerZoneSection`.
 - **UI Pagamentos (cliente):** `ClientPaymentsPage` com Tabs Formas de pagamento / Histórico; listas Prestway (skeleton, empty dashed); CRUD/rotas inalterados.
-- **UX Conta / logout:** **Conta** na lista principal (após Privacidade, ícone `UserCog`); **Sair da conta** no rodapé da nav (`LogoutConfirmDialog` → `signOut`, sem rota); `AccountSessionPage` só `DangerZoneSection`; `LogoutSection` removida.
+- **UX Conta / logout:** **Conta** na lista principal (após Jurídico, ícone `UserCog`); **Sair da conta** no rodapé da nav (`LogoutConfirmDialog` → `signOut`, sem rota); `AccountSessionPage` só `DangerZoneSection`; `LogoutSection` removida.
+- **Seção Jurídico (`legal`):** `AccountLegalPage` + `LegalDocumentsSection`; nav `SHARED_TAIL` Privacidade → Jurídico → Conta; rota `/dashboard/settings/legal`; links site jurídico (termos, política; prestador + contrato `adesao-prestador`); Privacidade não substituída; sem persistência/API.

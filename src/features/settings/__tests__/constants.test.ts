@@ -7,6 +7,9 @@ import {
   PROVIDER_PORTFOLIO_IMAGE_MAX_BYTES,
   PROFILE_IMAGE_MAX_BYTES,
   DPO_EMAIL,
+  PRIVACY_POLICY_URL,
+  PROVIDER_PLATFORM_CONTRACT_URL,
+  TERMS_OF_USE_URL,
 } from "../constants";
 
 describe("profileImagePath", () => {
@@ -38,5 +41,17 @@ describe("constants", () => {
 
   it("exports DPO_EMAIL", () => {
     expect(DPO_EMAIL).toBe("dpo@prestway.com");
+  });
+
+  it("builds legal document URLs from the same juridico path prefix when set", () => {
+    const urls = [TERMS_OF_USE_URL, PRIVACY_POLICY_URL, PROVIDER_PLATFORM_CONTRACT_URL];
+    if (urls.every((url) => url == null)) {
+      expect(urls).toEqual([null, null, null]);
+      return;
+    }
+
+    expect(TERMS_OF_USE_URL).toMatch(/\/juridico\/termos-de-uso$/);
+    expect(PRIVACY_POLICY_URL).toMatch(/\/juridico\/politica-de-privacidade$/);
+    expect(PROVIDER_PLATFORM_CONTRACT_URL).toMatch(/\/juridico\/adesao-prestador$/);
   });
 });

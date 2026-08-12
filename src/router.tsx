@@ -123,6 +123,11 @@ const AccountPrivacyPage = lazy(() =>
     default: m.AccountPrivacyPage,
   })),
 )
+const AccountLegalPage = lazy(() =>
+  import('@/features/settings/components/sections/AccountLegalPage').then((m) => ({
+    default: m.AccountLegalPage,
+  })),
+)
 const AccountSessionPage = lazy(() =>
   import('@/features/settings/components/sections/AccountSessionPage').then((m) => ({
     default: m.AccountSessionPage,
@@ -254,6 +259,7 @@ export const router = createBrowserRouter([
               { path: 'receivables', element: <ProviderReceivablesPage /> },
               { path: 'earnings', element: <ProviderEarningsSectionPage /> },
               { path: 'privacy', element: <AccountPrivacyPage /> },
+              { path: 'legal', element: <AccountLegalPage /> },
               { path: 'session', element: <AccountSessionPage /> },
             ],
           },

@@ -104,6 +104,16 @@ describe("resolveMobileChrome", () => {
     expect(chrome.showBottomNav).toBe(false);
   });
 
+  it("returns Jurídico stack title for the legal settings section", () => {
+    const chrome = resolveMobileChrome(
+      "/dashboard/settings/legal",
+      location("/dashboard/settings/legal"),
+    );
+    expect(chrome.mode).toBe("stack");
+    expect(chrome.stackTitle).toBe("Jurídico");
+    expect(chrome.backFallback).toBe("/dashboard/settings");
+  });
+
   it("returns hidden chrome outside dashboard", () => {
     const chrome = resolveMobileChrome("/login", location("/login"));
     expect(chrome.mode).toBe("hidden");

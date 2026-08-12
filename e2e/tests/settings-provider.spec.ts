@@ -378,6 +378,21 @@ test.describe("My Account — provider", () => {
     }
   });
 
+  test("legal: terms, privacy and provider platform contract", async ({ page }) => {
+    const acc = new SettingsPage(page);
+    await acc.gotoLegal();
+    await expect(acc.getLegalDocumentsSection()).toBeVisible({ timeout: 20_000 });
+    const terms = acc.getTermsOfUseLink();
+    if (await terms.isVisible().catch(() => false)) {
+      await expect(terms).toHaveAttribute("href", /termos-de-uso/);
+    }
+    const contract = acc.getProviderPlatformContractLink();
+    if (await contract.isVisible().catch(() => false)) {
+      await expect(contract).toHaveAttribute("href", /adesao-prestador/);
+      await expect(contract).toHaveAttribute("target", "_blank");
+    }
+  });
+
   test("public profile: copy link shows toast", async ({ page }) => {
     const acc = new SettingsPage(page);
     await acc.getPublicProfileCopiarLinkButton().scrollIntoViewIfNeeded();

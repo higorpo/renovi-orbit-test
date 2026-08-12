@@ -26,10 +26,11 @@ describe("SettingsNavList", () => {
     } as unknown as ReturnType<typeof useAuth>);
   });
 
-  it("places Conta after Privacidade and Sair da conta below the divider", () => {
+  it("places Jurídico after Privacidade, Conta after Jurídico, and Sair da conta below the divider", () => {
     renderNav();
     const links = screen.getAllByRole("link").map((el) => el.textContent);
-    expect(links.indexOf("Privacidade")).toBeLessThan(links.indexOf("Conta"));
+    expect(links.indexOf("Privacidade")).toBeLessThan(links.indexOf("Jurídico"));
+    expect(links.indexOf("Jurídico")).toBeLessThan(links.indexOf("Conta"));
     expect(screen.getByRole("button", { name: "Sair da conta" })).toBeInTheDocument();
     expect(screen.getByRole("separator")).toBeInTheDocument();
   });

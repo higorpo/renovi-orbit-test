@@ -10,6 +10,7 @@ export const SETTINGS_SECTION = {
   receivables: "receivables",
   earnings: "earnings",
   privacy: "privacy",
+  legal: "legal",
   session: "session",
 } as const;
 
@@ -29,4 +30,5 @@ export const ROUTE_SETTINGS_PROFESSIONAL_PROFILE = settingsSectionPath(
 export const ROUTE_SETTINGS_RECEIVABLES = settingsSectionPath(SETTINGS_SECTION.receivables);
 export const ROUTE_SETTINGS_EARNINGS = settingsSectionPath(SETTINGS_SECTION.earnings);
 export const ROUTE_SETTINGS_PRIVACY = settingsSectionPath(SETTINGS_SECTION.privacy);
+export const ROUTE_SETTINGS_LEGAL = settingsSectionPath(SETTINGS_SECTION.legal);
 export const ROUTE_SETTINGS_SESSION = settingsSectionPath(SETTINGS_SECTION.session);

@@ -189,6 +189,7 @@ describe("router", () => {
         "/dashboard/settings/receivables",
         "/dashboard/settings/earnings",
         "/dashboard/settings/privacy",
+        "/dashboard/settings/legal",
         "/dashboard/settings/session",
         "/dashboard/jobs",
         "/dashboard/chats",
