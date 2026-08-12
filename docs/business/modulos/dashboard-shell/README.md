@@ -7,7 +7,7 @@
 - **Problema que resolve:** experiência consistente do painel após login — menu por papel, deep links e chrome mobile previsíveis.
 - **Risco operacional:**
   - Prestador sem KYC `ACTIVE` (ou enquanto a conta carrega): **conteúdo** operacional substituído pelo gate; **menus completamente ocultos** (DesktopNav, bottom nav, hamburger); header/logo permanece; detalhes em [provider-kyc](../provider-kyc/README.md).
-- **Não inventar expectativa:** calendário do prestador **não** aparece no menu — entrada via banner em Meus Serviços. **Ganhos** e **Endereços** também **não** são itens do menu; vivem no hub Minha conta (`/dashboard/account/*`).
+- **Não inventar expectativa:** calendário do prestador **não** aparece no menu — entrada via banner em Meus Serviços. **Ganhos** e **Endereços** também **não** são itens do menu; vivem no hub Configurações (`/dashboard/settings/*`).
 
 ## 2. Visão geral funcional
 
@@ -31,14 +31,14 @@ Páginas filhas podem ser **reais** (features) ou **placeholder** (`DashboardFak
 
 | Perfil | No shell |
 |--------|----------|
-| `client` | Menu cliente; Minha conta → `/dashboard/account`; sem jobs/calendar |
-| `provider` | Menu prestador quando KYC `ACTIVE`; jobs e calendar (fora do menu); Ganhos no hub account; gate KYC + allowlist `/dashboard/account*`; chrome oculto se loading/não-`ACTIVE` |
+| `client` | Menu cliente; Configurações → `/dashboard/settings`; sem jobs/calendar |
+| `provider` | Menu prestador quando KYC `ACTIVE`; jobs e calendar (fora do menu); Ganhos no hub account; gate KYC + allowlist `/dashboard/settings*`; chrome oculto se loading/não-`ACTIVE` |
 | Outros / guest | Bloqueados pelo `ProtectedRoute` pai do dashboard |
 
 ## 5. Principais fluxos
 
 1. Usuário autenticado entra em `/dashboard/...` → layout resolve menu, `useProviderKycBlocksNav` e chrome.
-2. Prestador loading ou sem `ACTIVE` → chrome de nav oculto; outlet operacional substituído pelas UIs do `ProviderKycGate` (exceto conteúdo em `/dashboard/account*`).
+2. Prestador loading ou sem `ACTIVE` → chrome de nav oculto; outlet operacional substituído pelas UIs do `ProviderKycGate` (exceto conteúdo em `/dashboard/settings*`).
 3. Prestador `ACTIVE` → navegação por item de menu ou deep link → `Outlet` (ou slot/sheet) da feature.
 4. Offline → offset do header (`top-11` vs `top-0`) via `useOnlineStatus`.
 
@@ -62,7 +62,7 @@ Nenhuma persistência própria do shell. Lê `profile.role` via `useAuth`. Conta
 | **my-services** | `ClientMyServicesPersistentSlot`, `ProviderMyServicesPersistentSlot` |
 | **provider-jobs** | `ProviderJobsPersistentSlot` |
 | **view-services** | `ServiceDetailSheet`, `useServiceDetailModal` |
-| **chats**, **provider-earnings**, **my-account**, **provider-calendar** | Páginas lazy no `router.tsx` sob `/dashboard/*` (não importadas pelo layout diretamente, salvo slots acima) |
+| **chats**, **provider-earnings**, **settings**, **provider-calendar** | Páginas lazy no `router.tsx` sob `/dashboard/*` (não importadas pelo layout diretamente, salvo slots acima) |
 
 ## 9. Riscos e lacunas
 
@@ -70,7 +70,7 @@ Nenhuma persistência própria do shell. Lê `profile.role` via `useAuth`. Conta
 |------|--------|
 | `/dashboard/settings` existe como placeholder mas **não** está no menu | Confirmado |
 | Conteúdo futuro de Visão geral / Ajuda / Configurações | Não localizado no código |
-| Itens Endereços / Ganhos / rota `/dashboard/conta` | **Removidos** do menu/router; hub `/dashboard/account` |
+| Itens Endereços / Ganhos / rota `/dashboard/conta` | **Removidos** do menu/router; hub `/dashboard/settings` |
 | Item antigo de menu “Orçamentos” (prestador) | **Removido** — não está em `dashboardMenu.ts` atual |
 
 ## 10. Evidências

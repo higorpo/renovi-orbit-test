@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { ROUTE_ACCOUNT_RECEIVABLES } from "@/features/my-account";
+import { ROUTE_SETTINGS_RECEIVABLES } from "@/features/settings/constants/routes";
 import { DEFAULT_SETTLEMENT_FILTER_ID } from "../constants/filterTabs";
 import { useProviderSettlements } from "../hooks/useProviderSettlements";
 import type { SettlementFilterId } from "../types/settlements.types";
@@ -31,10 +31,10 @@ export function EarningsPage() {
         <p className="text-sm text-muted-foreground">
           Valores pagos pelo cliente na plataforma ficam em{" "}
           <Link
-            to={ROUTE_ACCOUNT_RECEIVABLES}
+            to={ROUTE_SETTINGS_RECEIVABLES}
             className="font-medium text-foreground underline-offset-4 hover:underline"
           >
-            Minha conta → Recebimentos
+            Configurações → Recebimentos
           </Link>
           .
         </p>

@@ -7,9 +7,9 @@ applyE2eEnv();
 const BASE_URL = "http://localhost:5173";
 
 /** Specs that use injected Supabase session (storageState) — excluded from default browser projects. */
-const MY_ACCOUNT_IGNORE = [
-  "**/my-account-client.spec.ts",
-  "**/my-account-provider.spec.ts",
+const SETTINGS_SPECS_IGNORE = [
+  "**/settings-client.spec.ts",
+  "**/settings-provider.spec.ts",
   "**/*.setup.ts",
 ];
 
@@ -40,30 +40,30 @@ export default defineConfig({
   },
 
   projects: [
-    { name: "setup-my-account-client", testMatch: "**/my-account-client.setup.ts" },
-    { name: "setup-my-account-provider", testMatch: "**/my-account-provider.setup.ts" },
+    { name: "setup-settings-client", testMatch: "**/settings-client.setup.ts" },
+    { name: "setup-settings-provider", testMatch: "**/settings-provider.setup.ts" },
     ...browserProjects.map((b) => ({
       name: b.name,
-      testIgnore: [...MY_ACCOUNT_IGNORE],
+      testIgnore: [...SETTINGS_SPECS_IGNORE],
       use: { ...b.device },
     })),
     ...browserProjects.flatMap((b) => [
       {
-        name: `${b.name}-my-account-client`,
-        dependencies: ["setup-my-account-client"],
-        testMatch: "**/my-account-client.spec.ts" as const,
+        name: `${b.name}-settings-client`,
+        dependencies: ["setup-settings-client"],
+        testMatch: "**/settings-client.spec.ts" as const,
         use: {
           ...b.device,
-          storageState: "e2e/.auth/my-account-client.json",
+          storageState: "e2e/.auth/settings-client.json",
         },
       },
       {
-        name: `${b.name}-my-account-provider`,
-        dependencies: ["setup-my-account-provider"],
-        testMatch: "**/my-account-provider.spec.ts" as const,
+        name: `${b.name}-settings-provider`,
+        dependencies: ["setup-settings-provider"],
+        testMatch: "**/settings-provider.spec.ts" as const,
         use: {
           ...b.device,
-          storageState: "e2e/.auth/my-account-provider.json",
+          storageState: "e2e/.auth/settings-provider.json",
         },
       },
     ]),

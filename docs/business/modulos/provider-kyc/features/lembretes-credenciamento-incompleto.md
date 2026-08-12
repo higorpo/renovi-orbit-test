@@ -5,7 +5,7 @@
 - **O que é:** job diário (SQL + pg_cron) que envia **push + e-mail** via Message Dispatcher (MMD) ao prestador com onboarding NetCred ainda incompleto (`PENDING_DOCUMENTS` ou `REJECTED`).
 - **Problema que resolve:** lembrar o prestador de concluir ou reenviar o credenciamento, sem depender de abrir o app.
 - **Quem usa:** prestadores com linha em `provider_gateway_accounts` (gateway `netcred`) nos status elegíveis; ops observam via `job_runs`.
-- **Resultado esperado:** até **8** lembretes por conta gateway, com 1º após **24 h** da criação da conta e seguintes a cada **72 h**; deep link enqueue ainda `/dashboard/conta` (rota removida, sem redirect — gap; allowlist do gate é `/dashboard/account`); **sem** `bypass_limits` (quota/cooldown do MMD aplicam).
+- **Resultado esperado:** até **8** lembretes por conta gateway, com 1º após **24 h** da criação da conta e seguintes a cada **72 h**; deep link enqueue ainda `/dashboard/conta` (rota removida, sem redirect — gap; allowlist do gate é `/dashboard/settings`); **sem** `bypass_limits` (quota/cooldown do MMD aplicam).
 
 ## 2. Objetivo de negócio
 
@@ -20,14 +20,14 @@
 | Módulo | `provider-kyc` (comportamento de produto); execução **só backend** (sem UI dedicada) |
 | Entry point | `cron_enqueue_provider_onboarding_incomplete_reminders` → `enqueue_provider_onboarding_incomplete_reminders` |
 | Cron | pg_cron job `enqueue_provider_onboarding_incomplete_reminders`, schedule `0 11 * * *` (11:00 UTC; após `detect-netcred-onboarding` às 10:00) |
-| Rota / deep link | Enqueue usa `deep_link_path` = `/dashboard/conta` (legado; allowlist do gate agora `/dashboard/account`) |
+| Rota / deep link | Enqueue usa `deep_link_path` = `/dashboard/conta` (legado; allowlist do gate agora `/dashboard/settings`) |
 | Edge Function | **Nenhuma** — claim + `mmd_ingest_event` em SQL |
 
 ## 4. Perfis envolvidos
 
 | Papel | Comportamento |
 |-------|---------------|
-| Prestador | Destinatário dos canais push + e-mail; abre deep link em Minha conta / fluxo KYC |
+| Prestador | Destinatário dos canais push + e-mail; abre deep link em Configurações / fluxo KYC |
 | Cliente | Não recebe este evento |
 | `service_role` / `postgres` | Executam a RPC de enqueue e o wrapper de cron |
 | Ops | Telemetria em `job_runs` (`job_name` = `enqueue_provider_onboarding_incomplete_reminders`) |
@@ -102,7 +102,7 @@ flowchart TD
 
 ## 9. Validações de front-end
 
-**Não aplicável** — não há tela ou hook de UI deste cron. O deep link cai no shell (allowlist `/dashboard/account*` + UIs; deep link legado ainda aponta `/dashboard/conta` do gate/wizard).
+**Não aplicável** — não há tela ou hook de UI deste cron. O deep link cai no shell (allowlist `/dashboard/settings*` + UIs; deep link legado ainda aponta `/dashboard/conta` do gate/wizard).
 
 ## 10. Validações de back-end
 
@@ -135,7 +135,7 @@ flowchart TD
 | Integração | Papel |
 |------------|-------|
 | **message-dispatcher** | `mmd_ingest_event` → push + e-mail; quotas aplicam (sem bypass) |
-| **Gate / my-account** | Deep link legado `/dashboard/conta` (quebrado sem redirect; allowlist atual `/dashboard/account*`) |
+| **Gate / settings** | Deep link legado `/dashboard/conta` (quebrado sem redirect; allowlist atual `/dashboard/settings*`) |
 | **detect-netcred-onboarding** | Cron distinto (10:00 UTC); este job roda 11:00 UTC |
 | Trigger `trg_profiles_bootstrap_provider_gateway_account` | Stub `PENDING_DOCUMENTS` quando role vira provider |
 | Catálogo MMD | Seeds em `payment_mmd_notification_catalog`; rota do evento em `mmd_ingest_event` (`mmd_service_auto_completed` e correlatas) |
@@ -160,7 +160,7 @@ Batch interno (não é listagem de produto):
 | Ação | Quem | Pré-condição | Resultado |
 |------|------|--------------|-----------|
 | Enfileirar lembretes | Cron / `service_role` | Contas due | Push+email MMD; contadores atualizados |
-| Abrir deep link | Prestador | Recebeu notificação | `/dashboard/conta` (legado) — rota inexistente; esperado alinhar a `/dashboard/account` |
+| Abrir deep link | Prestador | Recebeu notificação | `/dashboard/conta` (legado) — rota inexistente; esperado alinhar a `/dashboard/settings` |
 | Concluir / reenviar KYC | Prestador | Wizard | Sai da elegibilidade ao mudar de status |
 
 ## 16. Dependências
@@ -212,6 +212,6 @@ Batch interno (não é listagem de produto):
 - [ ] Após 72h do último nudge e count &lt; 8 → novo enqueue.
 - [ ] `DOCUMENTS_SUBMITTED` / `UNDER_NETCRED_REVIEW` / `ACTIVE` / `SUSPENDED` → não entram no batch.
 - [ ] `REJECTED` elegível nas mesmas janelas.
-- [ ] Deep link: migration ainda `/dashboard/conta`; produto deve alinhar a `/dashboard/account`.
+- [ ] Deep link: migration ainda `/dashboard/conta`; produto deve alinhar a `/dashboard/settings`.
 - [ ] Cron `0 11 * * *` e linha em `job_runs`.
 - [ ] Sem `bypass_limits` no evento (push e email).

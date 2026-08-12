@@ -40,7 +40,7 @@ function makeItem(overrides: Partial<SettlementMovement> = {}): SettlementMoveme
 
 function renderCard(item: SettlementMovement, props?: { showServiceLink?: boolean }) {
   return render(
-    <MemoryRouter initialEntries={["/dashboard/account/earnings"]}>
+    <MemoryRouter initialEntries={["/dashboard/settings/earnings"]}>
       <SettlementMovementCard item={item} showServiceLink={props?.showServiceLink} />
     </MemoryRouter>,
   );

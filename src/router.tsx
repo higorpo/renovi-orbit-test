@@ -73,58 +73,58 @@ const ServiceDetailShell = lazy(() =>
     default: m.ServiceDetailShell,
   })),
 )
-const MyAccountLayout = lazy(() =>
-  import('@/features/my-account/components/MyAccountLayout').then((m) => ({
-    default: m.MyAccountLayout,
+const SettingsLayout = lazy(() =>
+  import('@/features/settings/components/SettingsLayout').then((m) => ({
+    default: m.SettingsLayout,
   })),
 )
-const MyAccountIndexPage = lazy(() =>
-  import('@/features/my-account/components/MyAccountIndexPage').then((m) => ({
-    default: m.MyAccountIndexPage,
+const SettingsIndexPage = lazy(() =>
+  import('@/features/settings/components/SettingsIndexPage').then((m) => ({
+    default: m.SettingsIndexPage,
   })),
 )
 const PersonalInfoPage = lazy(() =>
-  import('@/features/my-account/components/sections/PersonalInfoPage').then((m) => ({
+  import('@/features/settings/components/sections/PersonalInfoPage').then((m) => ({
     default: m.PersonalInfoPage,
   })),
 )
 const ClientAddressesPage = lazy(() =>
-  import('@/features/my-account/components/sections/ClientAddressesPage').then((m) => ({
+  import('@/features/settings/components/sections/ClientAddressesPage').then((m) => ({
     default: m.ClientAddressesPage,
   })),
 )
 const ClientPaymentsPage = lazy(() =>
-  import('@/features/my-account/components/sections/ClientPaymentsPage').then((m) => ({
+  import('@/features/settings/components/sections/ClientPaymentsPage').then((m) => ({
     default: m.ClientPaymentsPage,
   })),
 )
 const ProviderLegalIdentityPage = lazy(() =>
-  import('@/features/my-account/components/sections/ProviderLegalIdentityPage').then((m) => ({
+  import('@/features/settings/components/sections/ProviderLegalIdentityPage').then((m) => ({
     default: m.ProviderLegalIdentityPage,
   })),
 )
 const ProviderProfessionalProfilePage = lazy(() =>
-  import('@/features/my-account/components/sections/ProviderProfessionalProfilePage').then((m) => ({
+  import('@/features/settings/components/sections/ProviderProfessionalProfilePage').then((m) => ({
     default: m.ProviderProfessionalProfilePage,
   })),
 )
 const ProviderReceivablesPage = lazy(() =>
-  import('@/features/my-account/components/sections/ProviderReceivablesPage').then((m) => ({
+  import('@/features/settings/components/sections/ProviderReceivablesPage').then((m) => ({
     default: m.ProviderReceivablesPage,
   })),
 )
 const ProviderEarningsSectionPage = lazy(() =>
-  import('@/features/my-account/components/sections/ProviderEarningsSectionPage').then((m) => ({
+  import('@/features/settings/components/sections/ProviderEarningsSectionPage').then((m) => ({
     default: m.ProviderEarningsSectionPage,
   })),
 )
 const AccountPrivacyPage = lazy(() =>
-  import('@/features/my-account/components/sections/AccountPrivacyPage').then((m) => ({
+  import('@/features/settings/components/sections/AccountPrivacyPage').then((m) => ({
     default: m.AccountPrivacyPage,
   })),
 )
 const AccountSessionPage = lazy(() =>
-  import('@/features/my-account/components/sections/AccountSessionPage').then((m) => ({
+  import('@/features/settings/components/sections/AccountSessionPage').then((m) => ({
     default: m.AccountSessionPage,
   })),
 )
@@ -242,10 +242,10 @@ export const router = createBrowserRouter([
             element: <ServiceDetailShell />,
           },
           {
-            path: 'account',
-            element: <MyAccountLayout />,
+            path: 'settings',
+            element: <SettingsLayout />,
             children: [
-              { index: true, element: <MyAccountIndexPage /> },
+              { index: true, element: <SettingsIndexPage /> },
               { path: 'personal-info', element: <PersonalInfoPage /> },
               { path: 'addresses', element: <ClientAddressesPage /> },
               { path: 'payments', element: <ClientPaymentsPage /> },
@@ -257,7 +257,6 @@ export const router = createBrowserRouter([
               { path: 'session', element: <AccountSessionPage /> },
             ],
           },
-          { path: 'settings', element: <DashboardFakePage title="Configurações" /> },
           { path: 'help', element: <DashboardFakePage title="Ajuda" /> },
           {
             path: 'jobs',

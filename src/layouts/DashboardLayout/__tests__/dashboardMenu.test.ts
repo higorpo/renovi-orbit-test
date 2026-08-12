@@ -18,13 +18,13 @@ describe("getDashboardMenu", () => {
       "/dashboard",
       "/dashboard/services",
       "/dashboard/chats",
-      "/dashboard/account",
+      "/dashboard/settings",
       "/dashboard/help",
     ]);
     expect(labels).toContain("Visão geral");
     expect(labels).toContain("Meus Serviços");
     expect(labels).toContain("Conversas");
-    expect(labels).toContain("Minha conta");
+    expect(labels).toContain("Configurações");
     expect(labels).toContain("Ajuda");
     expect(labels).not.toContain("Endereços");
   });
@@ -54,14 +54,14 @@ describe("getDashboardMenu", () => {
       "/dashboard/services",
       "/dashboard/jobs",
       "/dashboard/chats",
-      "/dashboard/account",
+      "/dashboard/settings",
       "/dashboard/help",
     ]);
     expect(labels).toContain("Visão geral");
     expect(labels).toContain("Meus Serviços");
     expect(labels).toContain("Trabalhos");
     expect(labels).toContain("Conversas");
-    expect(labels).toContain("Minha conta");
+    expect(labels).toContain("Configurações");
     expect(labels).toContain("Ajuda");
     expect(labels).not.toContain("Ganhos");
   });

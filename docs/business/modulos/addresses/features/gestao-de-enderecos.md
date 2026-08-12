@@ -12,15 +12,15 @@
 - **Finalidade:** garantir localização confiável do serviço.
 - **Valor operacional:** menos retrabalho de cadastro e melhor qualidade de lead para prestadores.
 - **Impacto:** alimenta campos de localização em pedidos (triggers/migrations relacionadas).
-- **Contexto:** peça transversal entre **Minha conta** e **Pedir orçamento**.
+- **Contexto:** peça transversal entre **Configurações** e **Pedir orçamento**.
 
 ## 3. Localização na plataforma
 
 | Aspecto | Detalhe |
 |---------|---------|
 | Módulo | `addresses` |
-| Menu | Sem item Endereços no `dashboardMenu`; acesso via Minha conta |
-| Uso real | `/dashboard/account/addresses` → `AddressesSection`; `RequestQuote` → `AddressSelectionStep` |
+| Menu | Sem item Endereços no `dashboardMenu`; acesso via Configurações |
+| Uso real | `/dashboard/settings/addresses` → `AddressesSection`; `RequestQuote` → `AddressSelectionStep` |
 | Rotas públicas | Indireto via `/pedir-orcamento` |
 | Dependências | `auth` (usuário), Supabase |
 
@@ -39,7 +39,7 @@
 ```mermaid
 flowchart TD
   A[Usuário autenticado] --> B{Fluxo}
-  B -->|Minha conta| C[Abre AddressesSection]
+  B -->|Configurações| C[Abre AddressesSection]
   B -->|Pedir orçamento| D[AddressSelectionStep]
   C --> E[Lista endereços ou novo formulário]
   D --> F{Já tem endereços?}
@@ -131,7 +131,7 @@ flowchart TD
 
 ## 18. Riscos e pontos de atenção
 
-- ~~**Menu “Endereços” leva a página fake**~~ — item/rota removidos; acesso via hub Minha conta.
+- ~~**Menu “Endereços” leva a página fake**~~ — item/rota removidos; acesso via hub Configurações.
 - Dependência de qualidade do cadastro de bairros/cidades na plataforma.
 
 ## 19. Evidências no código
@@ -139,12 +139,12 @@ flowchart TD
 - `src/features/addresses/types/addressForm.validation.ts`
 - `src/features/addresses/api/addresses.api.ts`, `api/statesAndCities.api.ts`
 - `src/features/addresses/components/AddressSelectionStep/`, `AddressesSection`, `AddressFormDialog`
-- `src/features/my-account/components/sections/ClientAddressesPage.tsx`
+- `src/features/settings/components/sections/ClientAddressesPage.tsx`
 - `supabase/migrations/20260226100200_create_client_addresses.sql`
 
 ## 20. Pendências para validação com negócio/produto
 
-- ~~Corrigir ou remover rota `/dashboard/addresses` placeholder.~~ **Feito:** rota e item de menu removidos; hub `/dashboard/account/addresses`.
+- ~~Corrigir ou remover rota `/dashboard/addresses` placeholder.~~ **Feito:** rota e item de menu removidos; hub `/dashboard/settings/addresses`.
 - Confirmar política de **endereço obrigatório** vs opcional em pedidos (código permite `address_id` opcional em migrations — validar regra comercial).
 
 ## 21. Atualização de auditoria (2026-04-27)

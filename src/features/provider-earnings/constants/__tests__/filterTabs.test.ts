@@ -42,6 +42,6 @@ describe("getSettlementFilterConfig", () => {
 
 describe("ROUTE_PROVIDER_EARNINGS", () => {
   it("exposes dashboard earnings path", () => {
-    expect(ROUTE_PROVIDER_EARNINGS).toBe("/dashboard/account/earnings");
+    expect(ROUTE_PROVIDER_EARNINGS).toBe("/dashboard/settings/earnings");
   });
 });

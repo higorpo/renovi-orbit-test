@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ProfileRole } from "@/features/auth";
-import { ROUTE_ACCOUNT } from "@/features/my-account";
+import { ROUTE_SETTINGS } from "@/features/settings/constants/routes";
 
 export interface DashboardMenuItem {
   path: string;
@@ -25,7 +25,7 @@ function clientMenuItems(): DashboardMenuItem[] {
     { path: "/dashboard", label: "Visão geral", icon: LayoutDashboard },
     { path: "/dashboard/services", label: "Meus Serviços", icon: FileText },
     { path: "/dashboard/chats", label: "Conversas", icon: MessageSquare },
-    { path: ROUTE_ACCOUNT, label: "Minha conta", icon: Settings },
+    { path: ROUTE_SETTINGS, label: "Configurações", icon: Settings },
     { path: "/dashboard/help", label: "Ajuda", icon: HelpCircle },
   ];
 }
@@ -36,7 +36,7 @@ function providerMenuItems(): DashboardMenuItem[] {
     { path: "/dashboard/services", label: "Meus Serviços", icon: FileText },
     { path: "/dashboard/jobs", label: "Trabalhos", icon: Briefcase },
     { path: "/dashboard/chats", label: "Conversas", icon: MessageSquare },
-    { path: ROUTE_ACCOUNT, label: "Minha conta", icon: Settings },
+    { path: ROUTE_SETTINGS, label: "Configurações", icon: Settings },
     { path: "/dashboard/help", label: "Ajuda", icon: HelpCircle },
   ];
 }

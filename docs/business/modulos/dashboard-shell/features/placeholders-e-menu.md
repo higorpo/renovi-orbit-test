@@ -26,7 +26,7 @@ Dar navegação estável e previsível no painel pós-login, sem misturar regras
 | `/dashboard/services` | `MyServicesRouteSlot` | **Real** (`my-services`) | — |
 | `/dashboard/services/calendar` | `ProviderCalendarPage` | **Real** (`provider-calendar`) | `provider` |
 | `/dashboard/services/:id` | `ServiceDetailShell` | **Real** (`view-services`) | — |
-| `/dashboard/account` (+ seções) | `MyAccountLayout` / seções / host earnings | **Real** (`my-account` + `provider-earnings` em `earnings`) | `client`/`provider` por seção |
+| `/dashboard/settings` (+ seções) | `SettingsLayout` / seções / host earnings | **Real** (`settings` + `provider-earnings` em `earnings`) | `client`/`provider` por seção |
 | `/dashboard/settings` | `DashboardFakePage` título “Configurações” | **Fake** | — (pai); **fora do menu** |
 | `/dashboard/help` | `DashboardFakePage` título “Ajuda” | **Fake** | — (pai) |
 | `/dashboard/jobs` | `ProviderJobsRouteSlot` | **Real** (`provider-jobs`) | `provider` |
@@ -61,7 +61,7 @@ flowchart TD
   N -->|true| O[Oculta DesktopNav / bottom nav / hamburger]
   N -->|false| G[Renderiza chrome do papel]
   B --> H[ProviderKycGate]
-  H --> I{role provider e path fora de /dashboard/account*?}
+  H --> I{role provider e path fora de /dashboard/settings*?}
   I -->|Não ACTIVE| J[Telas KYC / status]
   I -->|ACTIVE ou allowlist ou client| K[Slots prestador + Outlet]
   B --> L[ClientMyServicesPersistentSlot fora do gate]
@@ -91,7 +91,7 @@ Passos:
    | 1 | Visão geral | `/dashboard` | Sim (main) | Fake |
    | 2 | Meus Serviços | `/dashboard/services` | Sim (main) | Real |
    | 3 | Conversas | `/dashboard/chats` | Sim (main) | Real |
-   | 4 | Minha conta | `/dashboard/account` | Sim (main) | Real (hub) |
+   | 4 | Configurações | `/dashboard/settings` | Sim (main) | Real (hub) |
    | 5 | Ajuda | `/dashboard/help` | Sim (main) | Fake |
 
 2. **Menu prestador** (`providerMenuItems`), ordem fixa — primeiros 5 = bottom nav:
@@ -102,14 +102,14 @@ Passos:
    | 2 | Meus Serviços | `/dashboard/services` | Sim (main) | Real |
    | 3 | Trabalhos | `/dashboard/jobs` | Sim (main) | Real |
    | 4 | Conversas | `/dashboard/chats` | Sim (main) | Real |
-   | 5 | Minha conta | `/dashboard/account` | Sim (main) | Real (hub; Ganhos dentro) |
+   | 5 | Configurações | `/dashboard/settings` | Sim (main) | Real (hub; Ganhos dentro) |
    | 6 | Ajuda | `/dashboard/help` | Sim (overflow) | Fake |
 
 3. **Não há item “Orçamentos”** no menu atual (nem cliente nem prestador). Orçamentos/negociação vivem em Conversas / Meus Serviços (outros módulos).
 
 4. **Calendário** (`/dashboard/services/calendar`): rota real **provider-only**; **não** é item de `dashboardMenu.ts`; entrada via banner em Meus Serviços do prestador; mobile stack “Calendário” com back para `/dashboard/services`.
 
-5. **Allowlist KYC:** paths `/dashboard/account` e `/dashboard/account/…` passam pelo gate sem substituir children. Constante `PROVIDER_KYC_ALLOWED_PATH_PREFIX = "/dashboard/account"`.
+5. **Allowlist KYC:** paths `/dashboard/settings` e `/dashboard/settings/…` passam pelo gate sem substituir children. Constante `PROVIDER_KYC_ALLOWED_PATH_PREFIX = "/dashboard/settings"`.
 
 6. **Menu e KYC:** `getDashboardMenu` define o menu completo do prestador; o layout **omite** DesktopNav, bottom nav e hamburger quando `useProviderKycBlocksNav()` é `true` (loading ou `shouldBlockProviderForKyc`). O `ProviderKycGate` substitui o **conteúdo**. Substitui o comportamento anterior de “menu completo sempre visível”.
 
@@ -138,7 +138,7 @@ Nenhuma RPC/RLS própria do shell. Persistência e regras de KYC/contas estão e
 | Cliente | Menu cliente completo | Sem gate |
 | Prestador `ACTIVE` | Menu prestador completo | Children liberados |
 | Prestador loading conta | **Oculto** (logo permanece) | Spinner “Verificando credenciamento…” |
-| Prestador não-`ACTIVE` em `/dashboard/account*` | **Oculto** | Children (Minha conta) |
+| Prestador não-`ACTIVE` em `/dashboard/settings*` | **Oculto** | Children (Configurações) |
 | Prestador não-`ACTIVE` fora da allowlist | **Oculto** | Telas de status / formulário KYC |
 
 FSM detalhada de `onboarding_status`: [gate-e-acesso-operacional](../../provider-kyc/features/gate-e-acesso-operacional.md).
@@ -178,22 +178,22 @@ Não aplicável ao shell/placeholder. Listagens ficam nas features hospedadas.
 | `auth` | Sessão, role, guards |
 | `provider-kyc` | Gate de conteúdo + `useProviderKycBlocksNav` (chrome) |
 | `my-services`, `provider-jobs`, `view-services` | Slots / sheet |
-| Features lazy no router (`chats`, `provider-earnings`, `my-account`, `provider-calendar`, …) | Conteúdo real das rotas |
+| Features lazy no router (`chats`, `provider-earnings`, `settings`, `provider-calendar`, …) | Conteúdo real das rotas |
 | Docs canônicas de domínio | Não duplicar regras: apontar para o módulo da feature |
 
 ## 17. Regras implícitas
 
-- Endereços e Ganhos **não** são itens do menu; gestão em `/dashboard/account/addresses` e `/dashboard/account/earnings`.
+- Endereços e Ganhos **não** são itens do menu; gestão em `/dashboard/settings/addresses` e `/dashboard/settings/earnings`.
 - `/dashboard/settings` é acessível por URL para client e provider (sem subguard), mas **não** aparece no menu.
 - Prestador pode digitar URL de `/dashboard/jobs` etc. sem KYC `ACTIVE`: o router deixa passar o guard de role; o **gate substitui** o conteúdo (exceto allowlist); chrome de nav permanece oculto.
 - Matching de ativo no desktop: path `/dashboard` só ativo em igualdade exata; demais itens usam `pathname.startsWith(itemPath)` (`DesktopNav`).
-- Contagem mainItems: sempre `allItems.slice(0, 5)` por papel — cliente: Ajuda no bottom nav (5 itens); prestador: Minha conta no bottom nav, Ajuda no overflow.
+- Contagem mainItems: sempre `allItems.slice(0, 5)` por papel — cliente: Ajuda no bottom nav (5 itens); prestador: Configurações no bottom nav, Ajuda no overflow.
 
 ## 18. Riscos
 
 | Risco | Impacto | Mitigação observada no código |
 |-------|---------|-------------------------------|
-| Expectativa de item Endereços / Ganhos no menu | Navegação antiga | Removidos; hub Minha conta |
+| Expectativa de item Endereços / Ganhos no menu | Navegação antiga | Removidos; hub Configurações |
 | Expectativa de “Orçamentos” no menu | Doc/legado desatualizado | Menu atual não inclui o item |
 | Calendário “invisível” no menu | Prestador não acha pela nav | Banner em Meus Serviços |
 | Gate + URL direta | Usuário vê status KYC em vez da feature | Comportamento intencional do gate |
@@ -236,12 +236,12 @@ Evidência: `mobileNavigation.config.ts`, `mobileNavigation.types.ts`.
 
 ## Anexo B — Checklist QA (shell)
 
-- [ ] Cliente: bottom nav = Visão geral, Meus Serviços, Conversas, Minha conta, Ajuda.
-- [ ] Prestador ACTIVE: bottom nav = Visão geral, Meus Serviços, Trabalhos, Conversas, Minha conta; Ajuda no overflow.
-- [ ] Prestador não-ACTIVE (ou loading): menus **ocultos**; header/logo permanece; rotas operacionais mostram UI KYC (exceto conteúdo em `/dashboard/account*`).
-- [ ] Sem itens Endereços / Ganhos no menu; Ganhos em `/dashboard/account/earnings`.
+- [ ] Cliente: bottom nav = Visão geral, Meus Serviços, Conversas, Configurações, Ajuda.
+- [ ] Prestador ACTIVE: bottom nav = Visão geral, Meus Serviços, Trabalhos, Conversas, Configurações; Ajuda no overflow.
+- [ ] Prestador não-ACTIVE (ou loading): menus **ocultos**; header/logo permanece; rotas operacionais mostram UI KYC (exceto conteúdo em `/dashboard/settings*`).
+- [ ] Sem itens Endereços / Ganhos no menu; Ganhos em `/dashboard/settings/earnings`.
 - [ ] `/dashboard/chats` → layout real de conversas.
 - [ ] Calendário acessível pelo banner em Meus Serviços (prestador), não pelo menu.
 - [ ] `/dashboard/settings` por URL → placeholder; sem item de menu.
 - [ ] Offline: header deslocado.
-- [ ] Índice mobile `/dashboard/account` = tab-root; seções account = stack com back ao hub.
+- [ ] Índice mobile `/dashboard/settings` = tab-root; seções account = stack com back ao hub.

@@ -12,7 +12,7 @@
 
 - **Objetivo:** página `/perfil/:slug` com SEO, serviços, portfólio, área, avaliações, CTA.
 - **Escopo:** leitura via RPCs `get_public_provider_by_slug` e `list_public_provider_ratings` (+ dados públicos).
-- **Limites:** não edita perfil (edição em `my-account`); não escreve rating (escrita em **service-completion**).
+- **Limites:** não edita perfil (edição em `settings`); não escreve rating (escrita em **service-completion**).
 - **Relação:** depende de `provider_profiles_public`, `service_ratings` / `provider_rating_stats` e entidades associadas.
 
 ## 3. Features

@@ -13,7 +13,7 @@
 - **Objetivo:** CRUD de endereços + utilitários de geografia (estados, cidades, bairros) e resolução por CEP quando aplicável.
 - **Escopo:** front-end + chamadas Supabase; regras de persistência no Postgres.
 - **Limites:** não define política comercial de raio de atendimento (isso é do prestador).
-- **Relação com outros módulos:** consumido por `request-quote` e `my-account`.
+- **Relação com outros módulos:** consumido por `request-quote` e `settings`.
 
 ## 3. Features do módulo
 
@@ -53,16 +53,16 @@
 
 ## 9. Riscos, lacunas e observações
 
-- Rota top-level `/dashboard/addresses` **removida**; gestão no hub `/dashboard/account/addresses`.
+- Rota top-level `/dashboard/addresses` **removida**; gestão no hub `/dashboard/settings/addresses`.
 
 ## 10. Evidências no código
 
 - `src/features/addresses/` (api, components, hooks, schemas)
 - `supabase/migrations/20260226100200_create_client_addresses.sql`
 - `src/router.tsx` (rota placeholder)
-- `src/features/my-account/components/MyAccountClientPage.tsx` (`AddressesSection`)
+- `src/features/settings/components/SettingsClientPage.tsx` (`AddressesSection`)
 
 
 ## 11. Atualização de auditoria (2026-08-02)
 
-- CRUD em `client_addresses`; uso real em Minha conta (`/dashboard/account/addresses`) / pedido; rota menu `/dashboard/addresses` removida.
+- CRUD em `client_addresses`; uso real em Configurações (`/dashboard/settings/addresses`) / pedido; rota menu `/dashboard/addresses` removida.

@@ -66,7 +66,7 @@ Diagrama detalhado: [trabalhos-e-propostas §5](./features/trabalhos-e-propostas
 | `device-beacon` | Beacon + samples GPS |
 | `view-services` | Detalhe unificado + audit view + FAB |
 | `chats` / `negotiation-proposals` | Negociação e orçamento |
-| `my-account` | Serviços e bairros (elegibilidade) |
+| `settings` | Serviços e bairros (elegibilidade) |
 | `message-dispatcher` | Template `matching.new_opportunity` |
 
 ## 9. Riscos e lacunas

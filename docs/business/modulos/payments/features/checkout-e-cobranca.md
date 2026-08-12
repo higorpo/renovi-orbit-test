@@ -31,7 +31,7 @@ Documentação baseada em `src/features/payments/` (stepper, APIs, hooks, ClearS
 | Superfície | Onde | Observação |
 |------------|------|------------|
 | **Checkout (aceite)** | Dialog `AcceptProposalDialog` (`negotiation-proposals`) — fase `slot` → `checkout` embute `CheckoutStepper` | Sem rota própria; abre a partir do chat / fluxo de proposta. |
-| **Cartões salvos** | `SavedCardsList` em `/dashboard/account/payments` (`my-account` cliente) | Tokenização contexto `profile`. |
+| **Cartões salvos** | `SavedCardsList` em `/dashboard/settings/payments` (`settings` cliente) | Tokenização contexto `profile`. |
 | **Cobrança manual — detalhe** | `ManualPaymentRecovery` em `ServiceDetailActionsBar` (`view-services`) | Alerta + botão “Ajustar pagamento”. |
 | **Cobrança manual — lista** | Card Meus serviços (cliente): CTA “Ajustar pagamento” quando `PENDING_PAYMENT` + `FAILED_PERMANENT` | Ver [solicitacoes-do-cliente](../../my-services/features/solicitacoes-do-cliente.md). |
 | **Query / deep link** | Não há rota `/checkout` dedicada | Deep links de notificação MMD usam paths de serviço (ex. `/dashboard/services/...`). |
@@ -292,7 +292,7 @@ Neste escopo (checkout/cobrança):
 | `negotiation-proposals` / `chats` | Host do dialog; mutação `useAcceptProposalMutation` |
 | `auth` | Perfil, telefone, sessão |
 | `view-services` / `my-services` | Superfície de cobrança manual |
-| `my-account` | Cartões salvos + histórico (histórico em outro doc) |
+| `settings` | Cartões salvos + histórico (histórico em outro doc) |
 | `provider-kyc` | UI até ACTIVE (backend credentialing neste domínio) |
 | `provider-earnings` | UI de settlements (dados gravados por webhook/sync de payments) |
 | `message-dispatcher` | Notificações de cobrança |
@@ -339,7 +339,7 @@ Neste escopo (checkout/cobrança):
 - `src/features/payments/utils/mapPaymentUserMessage.ts`, `chargeTimingDisclosure.ts`, `injectClearSaleSdk.ts`, `cardholderIdentity.ts`, `resolveCheckoutSteps.ts`
 - `src/features/negotiation-proposals/components/AcceptProposalDialog.tsx`, `hooks/useProposalClientMutations.ts`
 - `src/features/view-services/components/ServiceDetailActionsBar.tsx`
-- `src/features/my-account/components/sections/ClientPaymentsPage.tsx` (SavedCardsList)
+- `src/features/settings/components/sections/ClientPaymentsPage.tsx` (SavedCardsList)
 
 **Backend**
 

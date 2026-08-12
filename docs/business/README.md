@@ -41,7 +41,7 @@ Documentação derivada do código da aplicação (front-end React/Vite, Supabas
 | Formulários dinâmicos | [modulos/dynamic-form](./modulos/dynamic-form/README.md) |
 | Matching progressivo / dispatch | [modulos/matching-dispatch](./modulos/matching-dispatch/README.md) |
 | Message Dispatcher (notificações) | [modulos/message-dispatcher](./modulos/message-dispatcher/README.md) |
-| Minha conta | [modulos/my-account](./modulos/my-account/README.md) |
+| Configurações | [modulos/settings](./modulos/settings/README.md) |
 | Meus serviços / pedidos (cliente) | [modulos/my-services](./modulos/my-services/README.md) |
 | Notifications (engagement de push) | [modulos/notifications](./modulos/notifications/README.md) |
 | Pagamentos | [modulos/payments](./modulos/payments/README.md) |

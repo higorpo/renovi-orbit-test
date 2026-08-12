@@ -76,7 +76,7 @@ flowchart TD
 
 ## 7. Regras de negócio (numeradas)
 
-1. **Papel define a página:** `profile.role === "provider"` → prestador; caso contrário (com perfil) → cliente (`MyAccount`/`slots` equivalentes em my-services).
+1. **Papel define a página:** `profile.role === "provider"` → prestador; caso contrário (com perfil) → cliente (`Settings`/`slots` equivalentes em my-services).
 2. **Paginação:** 20 itens por página (`useServicesList`); “Carregar mais” via `fetchNextPage`.
 3. **Busca:** debounce 300 ms antes de ir ao RPC (`SEARCH_DEBOUNCE_MS`).
 4. **Fase / aba:** `statusTabIdToListPhase` — `all` e `dispute` → `p_list_phase` null / sem match; demais mapeiam 1:1.

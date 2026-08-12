@@ -63,11 +63,6 @@ describe("resolveMobileChrome", () => {
 
   it.each([
     {
-      pathname: "/dashboard/settings",
-      stackTitle: "Configurações",
-      backFallback: "/dashboard",
-    },
-    {
       pathname: "/dashboard/services/calendar",
       stackTitle: "Calendário",
       backFallback: "/dashboard/services",
@@ -92,20 +87,20 @@ describe("resolveMobileChrome", () => {
     expect(chrome.enableStackTransition).toBe(false);
   });
 
-  it("returns tab-root for account hub index", () => {
-    const chrome = resolveMobileChrome("/dashboard/account", location("/dashboard/account"));
+  it("returns tab-root for settings hub index", () => {
+    const chrome = resolveMobileChrome("/dashboard/settings", location("/dashboard/settings"));
     expect(chrome.mode).toBe("tab-root");
     expect(chrome.showBottomNav).toBe(true);
   });
 
-  it("returns stack chrome for account section pages", () => {
+  it("returns stack chrome for settings section pages", () => {
     const chrome = resolveMobileChrome(
-      "/dashboard/account/personal-info",
-      location("/dashboard/account/personal-info"),
+      "/dashboard/settings/personal-info",
+      location("/dashboard/settings/personal-info"),
     );
     expect(chrome.mode).toBe("stack");
     expect(chrome.stackTitle).toBe("Informações pessoais");
-    expect(chrome.backFallback).toBe("/dashboard/account");
+    expect(chrome.backFallback).toBe("/dashboard/settings");
     expect(chrome.showBottomNav).toBe(false);
   });
 

@@ -81,8 +81,8 @@ describe("EarningsPage", () => {
 
     expect(screen.getByRole("heading", { name: "Ganhos" })).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /Minha conta → Recebimentos/i }),
-    ).toHaveAttribute("href", "/dashboard/account/receivables");
+      screen.getByRole("link", { name: /Configurações → Recebimentos/i }),
+    ).toHaveAttribute("href", "/dashboard/settings/receivables");
     expect(mocks.useProviderSettlementsArgs.at(-1)).toEqual({ filterId: "all" });
   });
 

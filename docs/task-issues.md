@@ -147,9 +147,9 @@ Status: `[ ]` pendente · `[~]` em progresso · `[x]` concluído
   - `src/features/chats/hooks/useInboxRealtime.ts`
   - `src/features/chats/hooks/useConversationRealtime.ts`
   - `src/features/chats/hooks/useConversationTypingPresence.ts`
-  - `src/features/my-account/hooks/usePortfolioItems.ts`
-  - `src/features/my-account/hooks/useProfilePhotoMutation.ts`
-  - `src/features/my-account/hooks/useProfileImageUrl.ts`
+  - `src/features/settings/hooks/usePortfolioItems.ts`
+  - `src/features/settings/hooks/useProfilePhotoMutation.ts`
+  - `src/features/settings/hooks/useProfileImageUrl.ts`
   - `src/features/request-quote/hooks/useServiceRequestPhotoUrls.ts`
   - `src/features/device-beacon/utils/locationSync.ts`
 - **Problema:** Realtime, storage e beacon sync importavam `@/lib/supabase/client` diretamente em hooks/utils, violando a regra `api-layer`. RLS ainda se aplica, mas queries ficavam fora de validação centralizada, logging e testes da camada API. `locationSync.ts` postava direto em `/rest/v1/user_device_beacons`.
@@ -240,7 +240,7 @@ Status: `[ ]` pendente · `[~]` em progresso · `[x]` concluído
 ### 18. `PortfolioManagementSection` — monólito de UI (~671 linhas)
 
 - [ ] **Área:** Arquitetura  
-- **Arquivos:** `src/features/my-account/components/PortfolioManagementSection.tsx`
+- **Arquivos:** `src/features/settings/components/PortfolioManagementSection.tsx`
 - **Problema:** DnD sortable, dialogs create/edit/delete, subcomponentes que chamam `getPortfolioImageSignedUrl` direto com `useEffect` + `Promise.all`. Lógica de signed URLs deveria estar em hook.
 - **Solução sugerida:** Extrair `usePortfolioImageUrls(paths)`; dividir em `PortfolioItemList`, `PortfolioItemFormDialog`, `SortablePortfolioItem`.
 
@@ -260,7 +260,7 @@ Status: `[ ]` pendente · `[~]` em progresso · `[x]` concluído
 ### 20. `ServiceAreaField` — lógica de negócio no componente (~555 linhas)
 
 - [ ] **Área:** Arquitetura  
-- **Arquivos:** `src/features/my-account/components/ServiceAreaField.tsx`
+- **Arquivos:** `src/features/settings/components/ServiceAreaField.tsx`
 - **Problema:** `useQuery` para busca de cidade + resolução de bairro, debounce, branching desktop popover vs mobile sheet, helper `groupByCity` — tudo no componente.
 - **Solução sugerida:** Extrair `useServiceAreaSelection(form)`; componente renderiza apenas UI do picker.
 
@@ -353,9 +353,9 @@ Status: `[ ]` pendente · `[~]` em progresso · `[x]` concluído
 - [ ] **Área:** Arquitetura  
 - **Arquivos:**
   - `src/features/notifications/` (3 arquivos, só `recordPushClick`)
-  - `src/features/my-account/index.ts` (exporta só `MyAccountPage`)
+  - `src/features/settings/index.ts` (exporta só `SettingsPage`)
   - `src/features/auth/index.ts` (superfície pública muito ampla — exporta APIs diretamente)
-- **Problema:** Disciplina de public API varia: `chats`/`negotiation-proposals` exemplares; `my-account`/`notifications` mínimos. `notifications` candidato a merge.
+- **Problema:** Disciplina de public API varia: `chats`/`negotiation-proposals` exemplares; `settings`/`notifications` mínimos. `notifications` candidato a merge.
 - **Solução sugerida:** Template padronizado de public API (comment block + `publicApi.test.ts`); fundir `notifications` em `push-permission` ou `chats` até crescer.
 
 ---

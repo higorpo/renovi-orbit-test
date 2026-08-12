@@ -239,7 +239,7 @@ Reutiliza `negotiation-proposals`: `PENDING`, `ACCEPTED`, `REJECTED`, `REVISION_
 | **negotiation-proposals** | Composer / `create_provider_proposal` / resumo no detalhe (`ServiceProviderProposalSection`) |
 | **request-quote** | `getServiceCardStyle` no card |
 | **message-dispatcher** | Push/e-mail `matching.new_opportunity` após lote (não invocado pelo front jobs) |
-| **my-account** | Serviços ofertados e bairros (elegibilidade discovery/fallback) |
+| **settings** | Serviços ofertados e bairros (elegibilidade discovery/fallback) |
 | **Sentry** | Span `provider_jobs.fetch_list` |
 | **GA** | `provider_opportunity_dismissed` |
 

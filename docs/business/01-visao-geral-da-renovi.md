@@ -22,7 +22,7 @@ flowchart TB
     MS[Meus Serviços / detalhe]
     CH_C[Conversas CNS]
     PAY_C[Checkout e histórico]
-    ACC_C[Minha conta / endereços]
+    ACC_C[Configurações / endereços]
   end
 
   subgraph Prestador["Prestador autenticado"]
@@ -31,7 +31,7 @@ flowchart TB
     CH_P[Conversas CNS]
     CAL[Calendário contratado]
     EARN[Ganhos / liquidações]
-    ACC_P[Minha conta]
+    ACC_P[Configurações]
   end
 
   subgraph Backend["Backend / infra"]
@@ -63,13 +63,13 @@ Espelham `src/features/` (e shells/backends documentados). Links apontam para o 
 
 | Área | Módulo | O que entrega (negócio) |
 |------|--------|-------------------------|
-| Entrada / pedido | [request-quote](./modulos/request-quote/README.md), [dynamic-form](./modulos/dynamic-form/README.md), [addresses](./modulos/addresses/README.md) | Wizard pedir orçamento; formulário dinâmico; endereços (embutidos no wizard e em Minha conta) |
-| Identidade | [auth](./modulos/auth/README.md), [my-account](./modulos/my-account/README.md), [provider-profile](./modulos/provider-profile/README.md) | Login/cadastro/sessão; conta; perfil público `/perfil/:slug` |
+| Entrada / pedido | [request-quote](./modulos/request-quote/README.md), [dynamic-form](./modulos/dynamic-form/README.md), [addresses](./modulos/addresses/README.md) | Wizard pedir orçamento; formulário dinâmico; endereços (embutidos no wizard e em Configurações) |
+| Identidade | [auth](./modulos/auth/README.md), [settings](./modulos/settings/README.md), [provider-profile](./modulos/provider-profile/README.md) | Login/cadastro/sessão; conta; perfil público `/perfil/:slug` |
 | Pedidos e serviços | [my-services](./modulos/my-services/README.md), [view-services](./modulos/view-services/README.md) | Lista Meus Serviços; detalhe unificado `/dashboard/services/:id` |
 | Oportunidades | [provider-jobs](./modulos/provider-jobs/README.md), [matching-dispatch](./modulos/matching-dispatch/README.md), [service-completion](./modulos/service-completion/README.md) (enrichment) | Feed Trabalhos; dispatch após READY; checklist pré-matching |
 | Negociação (CNS) | [chats](./modulos/chats/README.md) (+ `negotiation-proposals`) | Conversas, propostas, aceite → checkout; sheet comparar orçamentos |
 | Pós-contrato | [service-completion](./modulos/service-completion/README.md), [service-reschedule](./modulos/service-reschedule/README.md), [provider-calendar](./modulos/provider-calendar/README.md) | Conclusão (EXECUTED/confirm/auto-complete); reagendar; agenda **somente leitura** |
-| Dinheiro | [payments](./modulos/payments/README.md), [provider-earnings](./modulos/provider-earnings/README.md) | Checkout, cobrança T-2, histórico/reembolso; Ganhos (`/dashboard/account/earnings`) |
+| Dinheiro | [payments](./modulos/payments/README.md), [provider-earnings](./modulos/provider-earnings/README.md) | Checkout, cobrança T-2, histórico/reembolso; Ganhos (`/dashboard/settings/earnings`) |
 | Credenciamento | [provider-kyc](./modulos/provider-kyc/README.md) | Gate do shell até KYC `ACTIVE`; chrome de nav oculto; wizard; lembretes MMD de incompleto |
 | Notificações | [message-dispatcher](./modulos/message-dispatcher/README.md) (MMD), [push-permission](./modulos/push-permission/README.md), [notifications](./modulos/notifications/README.md), [device-beacon](./modulos/device-beacon/README.md) | Fila e-mail/push; soft prompt de permissão; clique em push; beacon FCM + geo operacional do prestador |
 | Shell | [dashboard-shell](./modulos/dashboard-shell/README.md), [app-home](./modulos/app-home/README.md) | Layout/menu/placeholders; home |
@@ -95,8 +95,8 @@ Espelham `src/features/` (e shells/backends documentados). Links apontam para o 
 
 | Papel | Uso típico na aplicação |
 |-------|-------------------------|
-| **Cliente** | Pedir orçamento; Meus Serviços; Conversas; checkout/histórico; Minha conta (endereços reais aqui). |
-| **Prestador** | KYC → Trabalhos; Conversas; Meus Serviços / calendário; Minha conta (inclui Ganhos). Sem KYC `ACTIVE` (ou conta carregando): conteúdo operacional bloqueado pelo gate; menus ocultos; header/logo permanece. |
+| **Cliente** | Pedir orçamento; Meus Serviços; Conversas; checkout/histórico; Configurações (endereços reais aqui). |
+| **Prestador** | KYC → Trabalhos; Conversas; Meus Serviços / calendário; Configurações (inclui Ganhos). Sem KYC `ACTIVE` (ou conta carregando): conteúdo operacional bloqueado pelo gate; menus ocultos; header/logo permanece. |
 | **Admin** | Existe no banco e em parte das políticas RLS/RPC; **não há painel `/admin` no `router.tsx`**. Redirecionamento pós-login aponta para `/admin/dashboard` (rota inexistente neste tree). |
 
 Matriz detalhada: [Perfis e permissões](./perfis-e-permissoes.md).
@@ -107,16 +107,16 @@ Matriz detalhada: [Perfis e permissões](./perfis-e-permissoes.md).
 
 1. **Pedir orçamento** — `/pedir-orcamento` → serviço → formulário dinâmico → descrição/fotos (IA opcional) → endereço → identidade (logado ou cadastro convidado) → Edge `create-request-quote-order`.
 2. **Acompanhar e negociar** — `/dashboard/services` (+ detalhe) e `/dashboard/chats` (CNS: perguntas implícitas na thread, propostas, aceite).
-3. **Pagar, executar e concluir** — checkout pós-aceite; histórico em Minha conta; prestador marca EXECUTED com checklist (ou auto-mark sem checklist se não marcar a tempo); cliente confirma+avalia (ou auto-complete ~24h após EXECUTED); reagendamento embutido quando elegível.
-4. **Conta** — hub `/dashboard/account` (dados, endereços, privacidade, etc.).
+3. **Pagar, executar e concluir** — checkout pós-aceite; histórico em Configurações; prestador marca EXECUTED com checklist (ou auto-mark sem checklist se não marcar a tempo); cliente confirma+avalia (ou auto-complete ~24h após EXECUTED); reagendamento embutido quando elegível.
+4. **Conta** — hub `/dashboard/settings` (dados, endereços, privacidade, etc.).
 
 ### Prestador
 
-1. **Credenciar (KYC)** — gate no dashboard até onboarding NetCred `ACTIVE` (conteúdo + chrome de nav oculto); wizard / telas de status; allowlist `/dashboard/account*`.
+1. **Credenciar (KYC)** — gate no dashboard até onboarding NetCred `ACTIVE` (conteúdo + chrome de nav oculto); wizard / telas de status; allowlist `/dashboard/settings*`.
 2. **Receber oportunidades** — matching progressivo + beacon de localização; feed `/dashboard/jobs` (`list-provider-opportunities`).
 3. **Negociar e propor** — detalhe do job → CNS (`/dashboard/chats`); envio de proposta; aceite pelo cliente dispara pagamento.
 4. **Executar e concluir** — Meus Serviços + calendário; checklist/EXECUTED (`service-completion`); reagendamento quando aplicável.
-5. **Receber** — Minha conta → Ganhos `/dashboard/account/earnings` (previsto / liquidado / estorno).
+5. **Receber** — Configurações → Ganhos `/dashboard/settings/earnings` (previsto / liquidado / estorno).
 6. **Perfil público** — `/perfil/:slug` para captação.
 
 ### Transversal (infra de produto)
@@ -129,7 +129,7 @@ Matriz detalhada: [Perfis e permissões](./perfis-e-permissoes.md).
 | Lacuna | Evidência |
 |--------|-----------|
 | **Painel admin** | Sem rotas `/admin/*` no `router.tsx`; papel `admin` redireciona para destino inexistente neste tree. Resolve de **Disputa de serviço** é via RPC privilegiada (`service_completion_admin_resolve_dispute` / `service_role`), não UI. |
-| **Placeholders do dashboard** | `/dashboard` (Visão geral), `/dashboard/settings`, `/dashboard/help` → `DashboardFakePage`. Gestão real de endereços fica em Minha conta (`/dashboard/account/addresses`) / wizard. |
+| **Placeholders do dashboard** | `/dashboard` (Visão geral), `/dashboard/settings`, `/dashboard/help` → `DashboardFakePage`. Gestão real de endereços fica em Configurações (`/dashboard/settings/addresses`) / wizard. |
 | **Calendário editável / disponibilidade** | Calendário do prestador é **só consulta** de serviços já contratados — não agenda livre nem CRUD de disponibilidade. |
 | **Onboarding de papel desconhecido** | Redirect para `/onboarding` sem rota correspondente no router. |
 

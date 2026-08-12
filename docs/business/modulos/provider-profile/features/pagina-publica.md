@@ -4,7 +4,7 @@
 
 - **O que é:** página **pública** em **`/perfil/:slug`** que exibe dados do prestador (bio, serviços, portfólio, área de atuação, **reputação/avaliações**, CTA) para visitantes, com preocupação de **SEO**.
 - **Problema que resolve:** marketing individual do prestador e confiança antes do pedido.
-- **Quem usa:** visitantes; prestador como autor do conteúdo via `my-account`.
+- **Quem usa:** visitantes; prestador como autor do conteúdo via `settings`.
 - **Resultado esperado:** impressão positiva e clique para **Pedir orçamento** ou contato conforme CTA.
 
 ## 2. Objetivo de negócio
@@ -25,7 +25,7 @@ Helpers: `getProviderProfilePath`, `buildProfileUrl` (`provider-profile`).
 ## 4. Perfis envolvidos
 
 - **Visitante:** leitura.
-- **Prestador:** não edita nesta rota — edita em Minha conta.
+- **Prestador:** não edita nesta rota — edita em Configurações.
 - **Cliente logado:** pode usar como referência sem barreira.
 
 **Visibilidade:** respeitar `profile_visibility` (`public` / `restricted`) — **detalhe de o que muda na UI: evidência parcial sem leitura completa da RPC**.
@@ -103,7 +103,7 @@ Helpers: `getProviderProfilePath`, `buildProfileUrl` (`provider-profile`).
 
 ## 16. Dependências
 
-- Conteúdo mantido em `my-account`.
+- Conteúdo mantido em `settings`.
 - Imagens em storage de portfólio.
 - Ratings persistidos por **service-completion** / matching stats.
 

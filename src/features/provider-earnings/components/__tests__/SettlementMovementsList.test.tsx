@@ -51,7 +51,7 @@ const baseProps = {
 };
 
 function renderList(ui: ReactElement) {
-  return render(<MemoryRouter initialEntries={["/dashboard/account/earnings"]}>{ui}</MemoryRouter>);
+  return render(<MemoryRouter initialEntries={["/dashboard/settings/earnings"]}>{ui}</MemoryRouter>);
 }
 
 describe("SettlementMovementsList", () => {

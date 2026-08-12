@@ -1,2 +1,2 @@
-/** Canonical Ganhos path (hosted under Minha conta hub). */
-export const ROUTE_PROVIDER_EARNINGS = "/dashboard/account/earnings";
+/** Canonical Ganhos path (hosted under Configurações hub). */
+export const ROUTE_PROVIDER_EARNINGS = "/dashboard/settings/earnings";

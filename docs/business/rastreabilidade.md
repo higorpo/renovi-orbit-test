@@ -42,15 +42,15 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `push-permission/` | `utils/pushPermissionPrompt.storage.ts`; hooks/host do soft prompt; marca conclusão na fila `appOpenOverlaySequence` | `PushPermissionPromptHost` (RootLayout); cooldown Preferences; precede o prompt de avaliação |
 | `notifications/` | `api/engagementTracking.api.ts` (`recordPushClick`) | Sem UI — consumido por `src/lib/push.ts` (listeners nativos) |
 | `dynamic-form/` | `utils/summaryDisplay.ts` (`SummaryEntry` com `type`; `buildSummaryEntries`) | `DynamicForm`, `FormDemoPage`; resumo flat consumido por `FormResponsesSummary` (view-services) |
-| `my-account/` | `api/*Profile*.api.ts`, `portfolio.api.ts`, `offeredServices.api.ts`; `constants/routes.ts`, `accountNav.ts` | Hub `MyAccountLayout` / `MyAccountIndexPage` / `sections/*`; `AccountSummaryCard`, `ServiceAreaField` |
+| `settings/` | `api/*Profile*.api.ts`, `portfolio.api.ts`, `offeredServices.api.ts`; `constants/routes.ts`, `settingsNav.ts` | Hub `SettingsLayout` / `SettingsIndexPage` / `sections/*`; `AccountSummaryCard`, `ServiceAreaField` |
 | `provider-jobs/` | `api/providerJobs.api.ts`, `dismissOpportunity.api.ts`; propostas via `negotiation-proposals` | `ProviderJobsPage`, `JobCard`; detalhe via `view-services` |
 | `provider-profile/` | `api/providerProfilePublic.api.ts`, `api/providerProfileRatings.api.ts`; hooks `useProviderPublicProfile`, `usePublicProviderRatings`, SEO/share | `ProviderProfilePage`, `ProviderProfileHeader` (média/contagem), `ProviderProfileReviews` (cursor), `ProviderRatingStars` |
 | `request-quote/` | `api/createRequestQuoteOrder.api.ts`, `smartDescription.api.ts`, `services.api.ts`, `forms.api.ts`; hooks submit (`preloadRecaptcha` no mount)/navigation/draft/IA | `RequestQuote.tsx`, passos 1–5, `ConfirmEmailScreen`, `TrustSidebar`; rascunho `requestQuoteDraft.persistence.ts` |
 | `chats/` | `api/chats.api.ts`, `chats.rpc.ts`; hooks lista, thread, mensagens, Realtime | `ChatListPage`, `ChatScreen`, `ChatsLayout`; `ServiceRequestConversationList` + `ServiceRequestConversationRow` (content-only no detalhe do serviço via Public API) |
 | `negotiation-proposals/` | `api/proposals.api.ts`, `api/serviceRequestBudgetCompare.api.ts` (+ `get_provider_rating_summaries`); `proposals.rpc.ts`; RPCs `create_provider_proposal`, `get_proposal_detail_for_provider`, `get_proposal_detail_for_participant`; countdown `useProposalCountdown`, `ProposalCountdownBanner` | `ProposalComposerDialog`, `AcceptProposalDialog`, `ReceivedBudgetDetailsSheet`, `BudgetCompareProviderHeader` (rating real), composer em jobs |
 | `service-reschedule/` | `api/serviceReschedule.api.ts`; hooks mutações/detalhe; `deriveRescheduleDateMode`, `mapRescheduleSnapshot`; FSM em docs `ciclo-estados-reagendamento.md` | `ProposeRescheduleDialog` (inclui lembrete dispensável `ProposeRescheduleFlowReminder`), `RequestRescheduleDialog`, cards/ações no chat e no serviço contratado |
-| `payments/` | APIs checkout/cartões/histórico/cobrança; RPCs `payment_*` | Checkout stepper, `ManualPaymentDialog`, histórico em Minha conta |
-| `provider-earnings/` | `api/settlements.api.ts`; `useProviderSettlements`; disclosure D+30 / `settling_at`; `ROUTE_PROVIDER_EARNINGS` | `EarningsPage` (host em `my-account` `/dashboard/account/earnings`), filtros Previsto/Liquidado/Estorno, `ProviderSettlementDisclosure` |
+| `payments/` | APIs checkout/cartões/histórico/cobrança; RPCs `payment_*` | Checkout stepper, `ManualPaymentDialog`, histórico em Configurações |
+| `provider-earnings/` | `api/settlements.api.ts`; `useProviderSettlements`; disclosure D+30 / `settling_at`; `ROUTE_PROVIDER_EARNINGS` | `EarningsPage` (host em `settings` `/dashboard/settings/earnings`), filtros Previsto/Liquidado/Estorno, `ProviderSettlementDisclosure` |
 | `provider-kyc/` | `api/kyc.api.ts`, `providerKyc.rpc.ts`, `brazilianBanks.api.ts`; hooks `useProviderPaymentAccount`, `useProviderKycBlocksNav`, `useProviderKycWizard`, `useDispatchKyc`, `useBrazilianBanks` | `ProviderKycGate`, `ProviderKycForm`, `BankPicker`, `ProviderKycWizardStepContent`, telas `components/status/*` |
 | `auth/` | (já listado) | — |
 
@@ -262,7 +262,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | `supabase/functions/manual-charge-payment/` (+ `executeManualCharge.ts`) | Cobrança manual: reconcilia `gateway_reference_code` anterior antes de nova charge; exige sessão ClearSale fresca |
 | `supabase/functions/schedule-netcred-charges/processSchedule.ts` | Cron T-2: fail-closed sem `clearsale_session_id` em produção; exige provider `ACTIVE` com company+bank |
 | `supabase/functions/tokenize-payment-card/` | Tokenização sob merchant da **plataforma** Prestway (`NETCRED_PLATFORM_COMPANY_ID` / Vault); `CARD_REJECTED` opaco ao cliente; rate limit mais restrito no path de perfil |
-| `src/features/payments/components/PaymentHistory/*` | UI histórico cliente/prestador em Minha conta |
+| `src/features/payments/components/PaymentHistory/*` | UI histórico cliente/prestador em Configurações |
 | `src/features/payments/utils/clientPaymentHistoryAmounts.ts` | Breakdown: original riscado, líquido, “Reembolsado: …” |
 | `src/features/payments/api/history.api.ts` | Leitura das views de histórico |
 | `supabase/migrations/20260801140000_create_payment_history_views.sql` | `client_payment_transactions_v`; `provider_payment_receivables_v` (clawback só com `refunded_at`) |
@@ -285,7 +285,7 @@ Mapeamento dos principais artefatos analisados para gerar `/docs/business`. Linh
 | Artefato | Uso na documentação |
 |----------|---------------------|
 | `docs/business/modulos/provider-kyc/` | README + [gate-e-acesso-operacional](./modulos/provider-kyc/features/gate-e-acesso-operacional.md) + [formulário-credenciamento-wizard](./modulos/provider-kyc/features/formulario-credenciamento-wizard.md) + [lembretes-credenciamento-incompleto](./modulos/provider-kyc/features/lembretes-credenciamento-incompleto.md) |
-| `src/features/provider-kyc/components/ProviderKycGate.tsx` | Bloqueio do conteúdo; allowlist `/dashboard/account*`; UIs por status; host do `ProviderKycForm` |
+| `src/features/provider-kyc/components/ProviderKycGate.tsx` | Bloqueio do conteúdo; allowlist `/dashboard/settings*`; UIs por status; host do `ProviderKycForm` |
 | `src/features/provider-kyc/hooks/useProviderKycBlocksNav.ts` | Oculta chrome de nav no `DashboardLayout` (loading + bloqueio KYC) |
 | `src/features/provider-kyc/hooks/useProviderPaymentAccount.ts` | Polling 5s (e-mail pendente) / 30s (documentos enviados ou análise) |
 | `src/features/provider-kyc/hooks/__tests__/useProviderKycBlocksNav.test.tsx` | Loading / ACTIVE / bloqueio / não-provider |

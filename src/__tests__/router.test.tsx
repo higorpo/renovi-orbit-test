@@ -72,37 +72,37 @@ vi.mock("@/features/my-services/components/MyServicesRouteSlot", () => ({
 vi.mock("@/features/view-services/components/ServiceDetailShell", () => ({
   ServiceDetailShell: () => null,
 }));
-vi.mock("@/features/my-account/components/MyAccountLayout", () => ({
-  MyAccountLayout: () => null,
+vi.mock("@/features/settings/components/SettingsLayout", () => ({
+  SettingsLayout: () => null,
 }));
-vi.mock("@/features/my-account/components/MyAccountIndexPage", () => ({
-  MyAccountIndexPage: () => null,
+vi.mock("@/features/settings/components/SettingsIndexPage", () => ({
+  SettingsIndexPage: () => null,
 }));
-vi.mock("@/features/my-account/components/sections/PersonalInfoPage", () => ({
+vi.mock("@/features/settings/components/sections/PersonalInfoPage", () => ({
   PersonalInfoPage: () => null,
 }));
-vi.mock("@/features/my-account/components/sections/ClientAddressesPage", () => ({
+vi.mock("@/features/settings/components/sections/ClientAddressesPage", () => ({
   ClientAddressesPage: () => null,
 }));
-vi.mock("@/features/my-account/components/sections/ClientPaymentsPage", () => ({
+vi.mock("@/features/settings/components/sections/ClientPaymentsPage", () => ({
   ClientPaymentsPage: () => null,
 }));
-vi.mock("@/features/my-account/components/sections/ProviderLegalIdentityPage", () => ({
+vi.mock("@/features/settings/components/sections/ProviderLegalIdentityPage", () => ({
   ProviderLegalIdentityPage: () => null,
 }));
-vi.mock("@/features/my-account/components/sections/ProviderProfessionalProfilePage", () => ({
+vi.mock("@/features/settings/components/sections/ProviderProfessionalProfilePage", () => ({
   ProviderProfessionalProfilePage: () => null,
 }));
-vi.mock("@/features/my-account/components/sections/ProviderReceivablesPage", () => ({
+vi.mock("@/features/settings/components/sections/ProviderReceivablesPage", () => ({
   ProviderReceivablesPage: () => null,
 }));
-vi.mock("@/features/my-account/components/sections/ProviderEarningsSectionPage", () => ({
+vi.mock("@/features/settings/components/sections/ProviderEarningsSectionPage", () => ({
   ProviderEarningsSectionPage: () => null,
 }));
-vi.mock("@/features/my-account/components/sections/AccountPrivacyPage", () => ({
+vi.mock("@/features/settings/components/sections/AccountPrivacyPage", () => ({
   AccountPrivacyPage: () => null,
 }));
-vi.mock("@/features/my-account/components/sections/AccountSessionPage", () => ({
+vi.mock("@/features/settings/components/sections/AccountSessionPage", () => ({
   AccountSessionPage: () => null,
 }));
 vi.mock("@/features/provider-profile/components/ProviderProfilePage", () => ({
@@ -180,16 +180,16 @@ describe("router", () => {
         "/dashboard/services",
         "/dashboard/services/calendar",
         "/dashboard/services/:id",
-        "/dashboard/account",
-        "/dashboard/account/personal-info",
-        "/dashboard/account/addresses",
-        "/dashboard/account/payments",
-        "/dashboard/account/legal-identity",
-        "/dashboard/account/professional-profile",
-        "/dashboard/account/receivables",
-        "/dashboard/account/earnings",
-        "/dashboard/account/privacy",
-        "/dashboard/account/session",
+        "/dashboard/settings",
+        "/dashboard/settings/personal-info",
+        "/dashboard/settings/addresses",
+        "/dashboard/settings/payments",
+        "/dashboard/settings/legal-identity",
+        "/dashboard/settings/professional-profile",
+        "/dashboard/settings/receivables",
+        "/dashboard/settings/earnings",
+        "/dashboard/settings/privacy",
+        "/dashboard/settings/session",
         "/dashboard/jobs",
         "/dashboard/chats",
         "/dashboard/chats/:chatId",
@@ -221,9 +221,9 @@ describe("router", () => {
   it("scopes provider-only dashboard children with ProtectedRoute roles", () => {
     const dashboard = router.routes[0]?.children?.find((route) => route.path === "dashboard");
     const jobs = dashboard?.children?.find((route) => route.path === "jobs");
-    const account = dashboard?.children?.find((route) => route.path === "account");
+    const settings = dashboard?.children?.find((route) => route.path === "settings");
     expect(jobs?.element).toBeTruthy();
-    expect(account?.element).toBeTruthy();
-    expect(account?.children?.some((route) => route.path === "earnings")).toBe(true);
+    expect(settings?.element).toBeTruthy();
+    expect(settings?.children?.some((route) => route.path === "earnings")).toBe(true);
   });
 });

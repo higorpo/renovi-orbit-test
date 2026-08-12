@@ -108,8 +108,8 @@ describe("ProviderKycGate", () => {
     expect(screen.getByText(/Verificando credenciamento/i)).toBeInTheDocument();
   });
 
-  it("allows Minha conta route while KYC is blocking", () => {
-    mockUseLocation.mockReturnValue({ pathname: "/dashboard/account" });
+  it("allows Configurações route while KYC is blocking", () => {
+    mockUseLocation.mockReturnValue({ pathname: "/dashboard/settings" });
     mockUseProviderPaymentAccount.mockReturnValue({
       data: account("PENDING_DOCUMENTS"),
       isLoading: false,
@@ -127,7 +127,7 @@ describe("ProviderKycGate", () => {
   });
 
   it("allows nested conta paths", () => {
-    mockUseLocation.mockReturnValue({ pathname: "/dashboard/account/payments" });
+    mockUseLocation.mockReturnValue({ pathname: "/dashboard/settings/payments" });
     mockUseProviderPaymentAccount.mockReturnValue({
       data: account("SUSPENDED"),
       isLoading: false,

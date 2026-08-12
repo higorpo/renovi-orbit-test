@@ -5,7 +5,7 @@
 - **Para que serve:** impedir que o prestador use o **conteúdo operacional** do painel e o **chrome de navegação** (desktop nav, bottom nav, hamburger) até o onboarding NetCred estar **`ACTIVE`**; coletar/reenviar documentos via wizard; informar o status da análise.
 - **Quem usa:** prestadores autenticados (`profiles.role === provider`).
 - **Não é:** onboarding de cadastro/auth (`/cadastro/profissional`). É **credenciamento de pagamentos NetCred** (KYC para split/recebimento).
-- **Valor:** só prestadores credenciados operam na plataforma; header com **logo** permanece; allowlist de conteúdo **`/dashboard/account*`**. Menus ficam **completamente ocultos** enquanto loading ou status ≠ `ACTIVE`.
+- **Valor:** só prestadores credenciados operam na plataforma; header com **logo** permanece; allowlist de conteúdo **`/dashboard/settings*`**. Menus ficam **completamente ocultos** enquanto loading ou status ≠ `ACTIVE`.
 - **Fases de UI:** Fase 2 — gate no shell + telas de status + polling; Fase 3 — wizard (`entity → identity → bank → documents → review`) hospedado pelo gate; chrome de nav oculto via `useProviderKycBlocksNav`. Backend de cobrança/KYC (RPCs `payment_*`, Edge NetCred) permanece no domínio de pagamentos.
 
 ## 2. Visão geral funcional
@@ -13,7 +13,7 @@
 - **Objetivo:** `ProviderKycGate` no `DashboardLayout` substitui slots do prestador + `<Outlet />` por status/wizard enquanto `onboarding_status !== ACTIVE` (ou conta NetCred ausente). Em paralelo, `useProviderKycBlocksNav` faz o layout esconder DesktopNav, bottom nav e hamburger (e remover `pb-20` do `main`). Isso **substitui** o comportamento de “menu completo sempre visível enquanto o gate bloqueia só o conteúdo”.
 - **Escopo deste módulo (front):** gate, hook de bloqueio de nav, telas `components/status/*`, query/polling da conta, retry de e-mail, wizard e API de upload/submit usadas pelo wizard.
 - **Limites:** não redefine guards de rota; não implementa cobrança; `ClientMyServicesPersistentSlot` e `ServiceDetailSheet` ficam **fora** do gate; `getDashboardMenu` ainda define o menu completo — o layout **omite** a renderização quando bloqueado.
-- **Exceção de path:** `/dashboard/account` e `/dashboard/account/…` liberam children **depois** do loading (allowlist `PROVIDER_KYC_ALLOWED_PATH_PREFIX`); chrome de nav **permanece oculto** se ainda não-`ACTIVE`.
+- **Exceção de path:** `/dashboard/settings` e `/dashboard/settings/…` liberam children **depois** do loading (allowlist `PROVIDER_KYC_ALLOWED_PATH_PREFIX`); chrome de nav **permanece oculto** se ainda não-`ACTIVE`.
 
 ## 3. Features do módulo
 
@@ -36,7 +36,7 @@
 1. Prestador autenticado entra em `/dashboard/...`.
 2. Layout calcula `getDashboardMenu(role)` e `useProviderKycBlocksNav`; `ProviderKycGate` consulta `provider_gateway_accounts` (`gateway_slug = netcred`).
 3. Loading → spinner “Verificando credenciamento…” + menus já ocultos (sem flash).
-4. Path Minha conta (allowlist) → conteúdo da conta (chrome ainda oculto se bloqueado).
+4. Path Configurações (allowlist) → conteúdo da conta (chrome ainda oculto se bloqueado).
 5. `ACTIVE` → slots + outlet + menus normais.
 6. Caso contrário → tela de status ou wizard; deep links operacionais mostram KYC, não a feature alvo; sem chrome de nav.
 
@@ -64,7 +64,7 @@
 | Módulo / peça | Relação |
 |---------------|---------|
 | **dashboard-shell** | `DashboardLayout` hospeda `ProviderKycGate` e consome `useProviderKycBlocksNav` (`hideMenu`, DesktopNav, bottom nav, `pb-20`) |
-| **my-account** | Allowlist `/dashboard/account*` — conteúdo liberado com KYC bloqueado |
+| **settings** | Allowlist `/dashboard/settings*` — conteúdo liberado com KYC bloqueado |
 | **payments** | Conta NetCred; RPCs `payment_*`; cron `detect-netcred-onboarding` (10:00 UTC); cobrança exige `ACTIVE` |
 | **message-dispatcher** | Eventos `PROVIDER_KYC_SUBMITTED`, `PROVIDER_ONBOARDING_UNDER_REVIEW`, `PROVIDER_KYC_REJECTED`, `PROVIDER_ACTIVATED`, `PROVIDER_SUSPENDED`, `PROVIDER_ONBOARDING_INCOMPLETE_REMINDER` |
 | Cron lembretes incompletos | `enqueue_provider_onboarding_incomplete_reminders` / `cron_enqueue_*` + pg_cron `0 11 * * *` (job `enqueue_provider_onboarding_incomplete_reminders`); telemetria `job_runs` |

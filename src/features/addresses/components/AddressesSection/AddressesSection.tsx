@@ -12,7 +12,7 @@ import { AddressFormDialog } from "../AddressFormDialog/AddressFormDialog";
 import { DeleteAddressDialog } from "../DeleteAddressDialog/DeleteAddressDialog";
 
 export interface AddressesSectionProps {
-  /** Optional card header class (e.g. for my-account compact style). */
+  /** Optional card header class (e.g. for settings compact style). */
   cardHeaderClassName?: string;
   /** Optional section title size. */
   titleSize?: "default" | "compact";
