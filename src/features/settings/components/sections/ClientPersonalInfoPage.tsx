@@ -28,18 +28,22 @@ export function ClientPersonalInfoPage() {
   const isDesktop = useBreakpointMd();
   const { user } = useAuth();
   const { profile, isLoading: profileLoading, error: profileError, refetch } = useAccountProfile();
+  const { updateProfileAsync, isUpdating: isUpdatingProfile } = useUpdateAccountProfile({
+    silent: true,
+  });
   const {
     cpf: clientPrivateCpf,
     updateCpfAsync,
     isLoading: privateLoading,
+    isUpdating: isUpdatingCpf,
   } = useClientPrivateProfile();
-  const { updateProfileAsync, isUpdating } = useUpdateAccountProfile();
   const { uploadPhotoAsync, isUploading } = useUploadProfilePhoto();
   const { removePhotoAsync, isRemoving } = useRemoveProfilePhoto();
 
   // Wait for private profile too — otherwise CPF hydrates empty and never updates
   // (hydratedProfileIdRef locks after the first reset).
   const isFormLoading = profileLoading || privateLoading;
+  const isUpdating = isUpdatingProfile || isUpdatingCpf;
 
   const defaultValues = useMemo(
     () =>
@@ -70,9 +74,27 @@ export function ClientPersonalInfoPage() {
 
   const email = user?.email ?? "";
   const watchedValues = form.watch();
+  const { isDirty } = form.formState;
+  const prevWatchedRef = useRef<Pick<AccountFormData, "full_name" | "phone" | "cpf">>({
+    full_name: "",
+    phone: "",
+    cpf: "",
+  });
 
   useEffect(() => {
-    if (!form.formState.isDirty) return;
+    const prev = prevWatchedRef.current;
+    (["full_name", "phone", "cpf"] as const).forEach((key) => {
+      if (watchedValues[key] !== prev[key]) {
+        form.clearErrors(key);
+      }
+    });
+    prevWatchedRef.current = {
+      full_name: watchedValues.full_name,
+      phone: watchedValues.phone,
+      cpf: watchedValues.cpf,
+    };
+
+    if (!isDirty) return;
 
     if (autoSaveTimeoutRef.current != null) {
       clearTimeout(autoSaveTimeoutRef.current);
@@ -87,6 +109,8 @@ export function ClientPersonalInfoPage() {
         form.setError(first.path[0] as keyof AccountFormData, { message: first.message });
         return;
       }
+
+      form.clearErrors();
       const full_name = parsed.data.full_name.trim();
       const phone = parsed.data.phone.trim() || null;
       const cpf = parsed.data.cpf.trim() || null;
@@ -125,6 +149,7 @@ export function ClientPersonalInfoPage() {
     watchedValues.full_name,
     watchedValues.phone,
     watchedValues.cpf,
+    isDirty,
     form,
     updateProfileAsync,
     updateCpfAsync,
