@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { PrestwayIcon } from "@/components/brand";
 import { useForgotPasswordForm } from "../../hooks/useForgotPasswordForm";
 import { ForgotPasswordForm } from "./ForgotPasswordForm";
 import { ForgotPasswordSuccess } from "./ForgotPasswordSuccess";
@@ -19,9 +20,10 @@ export default function ForgotPassword() {
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-6">
             <Link to="/">
-              <img
-                src="/logo-renovi-white.webp"
-                alt="Prestway"
+              <PrestwayIcon
+                variant="white"
+                layout="full"
+                aria-label="Prestway"
                 className="h-10"
               />
             </Link>

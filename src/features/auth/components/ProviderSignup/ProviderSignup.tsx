@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 import { Briefcase } from "lucide-react";
+import { PrestwayIcon } from "@/components/brand";
 import { useProviderSignupForm } from "../../hooks/useProviderSignupForm";
 import { ProviderSignupForm } from "./ProviderSignupForm";
 
@@ -19,9 +20,10 @@ export default function ProviderSignup() {
         <div className="w-full max-w-lg">
           <div className="flex justify-center mb-6">
             <Link to="/">
-              <img
-                src="/logo-renovi-white.webp"
-                alt="Prestway"
+              <PrestwayIcon
+                variant="white"
+                layout="full"
+                aria-label="Prestway"
                 className="h-10"
               />
             </Link>

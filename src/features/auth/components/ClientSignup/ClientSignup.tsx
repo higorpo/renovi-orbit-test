@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import { PrestwayIcon } from "@/components/brand";
 import { useClientSignupForm } from "../../hooks/useClientSignupForm";
 import { ClientSignupForm } from "./ClientSignupForm";
 import { Button } from "@/components/ui/button";
@@ -19,9 +20,10 @@ export default function ClientSignup() {
         <div className="w-full max-w-lg">
           <div className="flex justify-center mb-6">
             <Link to="/">
-              <img
-                src="/logo-renovi-white.webp"
-                alt="Prestway"
+              <PrestwayIcon
+                variant="white"
+                layout="full"
+                aria-label="Prestway"
                 className="h-10"
               />
             </Link>

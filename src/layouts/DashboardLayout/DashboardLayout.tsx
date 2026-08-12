@@ -1,4 +1,5 @@
 import { Link, Outlet } from "react-router";
+import { PrestwayIcon } from "@/components/brand";
 import { useAuth } from "@/features/auth";
 import { ProviderKycGate, useProviderKycBlocksNav } from "@/features/provider-kyc";
 import { ClientMyServicesPersistentSlot, ProviderMyServicesPersistentSlot } from "@/features/my-services";
@@ -45,7 +46,12 @@ export function DashboardLayout() {
         >
           <div className="container flex h-14 items-center justify-between px-4">
             <Link to="/dashboard" className="flex shrink-0 items-center">
-              <img src="/logo-renovi.webp" alt="Prestway" className="h-7 w-auto md:h-8" />
+              <PrestwayIcon
+                variant="inst"
+                layout="full"
+                aria-label="Prestway"
+                className="h-7 w-auto md:h-8"
+              />
             </Link>
             {hideNavForKyc ? null : (
               <DesktopNav items={menu.allItems} className="min-w-0 flex-1 justify-end" />

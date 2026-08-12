@@ -1,7 +1,8 @@
 import { Link } from "react-router";
+import { KeyRound } from "lucide-react";
+import { PrestwayIcon } from "@/components/brand";
 import { useResetPassword } from "../../hooks/useResetPassword";
 import { ResetPasswordForm } from "./ResetPasswordForm";
-import { KeyRound } from "lucide-react";
 
 export default function ResetPassword() {
   const form = useResetPassword();
@@ -19,9 +20,10 @@ export default function ResetPassword() {
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-6">
             <Link to="/">
-              <img
-                src="/logo-renovi-white.webp"
-                alt="Prestway"
+              <PrestwayIcon
+                variant="white"
+                layout="full"
+                aria-label="Prestway"
                 className="h-10"
               />
             </Link>

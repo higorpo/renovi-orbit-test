@@ -1,3 +1,4 @@
+import { PrestwayIcon } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { SectionTitleWithIcon } from "@/components/ui/section-title-with-icon";
 import {
@@ -186,7 +187,12 @@ export function RequestQuote() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-primary/95 backdrop-blur-lg border-b border-white/10">
         <div className="container mx-auto px-3 sm:px-4 py-2 sm:py-3 flex items-center justify-between gap-2">
           <Link to="/">
-            <img src="/logo-renovi-white.webp" alt="Prestway" className="h-7 sm:h-8 md:h-10 w-auto" />
+            <PrestwayIcon
+              variant="white"
+              layout="full"
+              aria-label="Prestway"
+              className="h-7 sm:h-8 md:h-10 w-auto"
+            />
           </Link>
 
           <div className="hidden sm:flex items-center gap-1 md:gap-2 mx-auto pr-[96px]">

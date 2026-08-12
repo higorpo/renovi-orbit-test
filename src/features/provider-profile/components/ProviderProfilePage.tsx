@@ -1,4 +1,6 @@
 import { Link, useParams, useNavigate } from "react-router";
+import { PrestwayIcon } from "@/components/brand";
+import { Button } from "@/components/ui/button";
 import { ProviderProfileHeader } from "./ProviderProfileHeader";
 import { ProviderProfileAbout } from "./ProviderProfileAbout";
 import { ProviderProfileServices } from "./ProviderProfileServices";
@@ -9,7 +11,6 @@ import { ProviderProfileCtaBanner } from "./ProviderProfileCtaBanner";
 import { ProviderProfileSkeleton } from "./ProviderProfileSkeleton";
 import { useProviderPublicProfile } from "../hooks/useProviderPublicProfile";
 import { useProfileSeo } from "../hooks/useProfileSeo";
-import { Button } from "@/components/ui/button";
 
 export function ProviderProfilePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -51,9 +52,10 @@ export function ProviderProfilePage() {
     <div className="container max-w-4xl py-8 px-4">
       <div className="mb-8 flex justify-center">
         <Link to="/">
-          <img
-            src="/logo-renovi.webp"
-            alt="Prestway"
+          <PrestwayIcon
+            variant="inst"
+            layout="full"
+            aria-label="Prestway"
             className="h-7 md:h-8 w-auto"
           />
         </Link>
